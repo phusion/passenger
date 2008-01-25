@@ -15,6 +15,9 @@ class FrameworkSpawner < AbstractServer
 	APP_SPAWNER_MAX_IDLE_TIME = 120
 
 	include Utils
+	
+	# An attribute, used internally. This should not be used outside mod_rails.
+	attr_accessor :time
 
 	# Creates a new instance of FrameworkSpawner.
 	#
@@ -79,8 +82,12 @@ class FrameworkSpawner < AbstractServer
 		end
 	end
 	
-	def reload(app_root)
-		send_to_server("reload", normalize_path(app_root))
+	def reload(app_root = nil)
+		if app_root.nil?
+			send_to_server("reload")
+		else
+			send_to_server("reload", normalize_path(app_root))
+		end
 	rescue Errno::EPIPE, Errno::EBADF, IOError, SocketError
 		raise IOError, "Cannot send reload command to the framework spawner server."
 	end
@@ -163,9 +170,20 @@ private
 		end
 	end
 	
-	def handle_reload(app_root)
+	def handle_reload(app_root = nil)
 		@spawners_lock.synchronize do
-			@spawners.delete(app_root)
+			if app_root.nil?
+				@spawners.each_value do |spawner|
+					spawner.stop
+				end
+				@spawners.clear
+			else
+				spawner = @spawners[app_root]
+				if spawner
+					spawner.stop
+				end
+				@spawners.delete(app_root)
+			end
 		end
 	end
 	

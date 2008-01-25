@@ -1,3 +1,4 @@
+require 'mod_rails/native_support'
 module ModRails # :nodoc:
 
 # This class can be wrapped around an IO object to provide the ability
@@ -19,6 +20,9 @@ class MessageChannel
 	HEADER_SIZE = 2
 	DELIMITER = "\0"
 	DELIMITER_NAME = "null byte"
+	
+	include NativeSupport
+	private :send_fd
 	
 	# The wrapped IO object.
 	attr_reader :io
@@ -88,7 +92,11 @@ class MessageChannel
 	# connection.
 	# Raises IOError if the IO stream is already closed on this side.
 	def send_io(io)
-		@io.send_io(io)
+		if io.respond_to?(:send_io)
+			@io.send_io(io)
+		else
+			send_fd(@io.fileno, io.fileno)
+		end
 	end
 	
 	# Receive an IO object (a file descriptor) from the channel. The other

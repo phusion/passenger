@@ -1,7 +1,7 @@
 # NOTE: we make use of pipes instead of Unix sockets, because
 # experimentation has shown that pipes are slightly faster.
-
 module ModRails # :nodoc:
+
 class RequestHandler
 	def initialize(reader_pipe, writer_pipe)
 		@reader = reader_pipe
@@ -48,5 +48,6 @@ private
 			trap(signal, handler)
 		end
 	end
-end # class SCGIHandler
+end
+
 end # module ModRails
