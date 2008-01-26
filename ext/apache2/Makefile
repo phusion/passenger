@@ -4,7 +4,6 @@ APACHECTL=apache2ctl
 all:
 	$(APXS) -c mod_rails.c
 
-# XXX should not need the -c option but for some reason it's required :-(
 install:
 	$(APXS) -i -c mod_rails.c
 

@@ -116,11 +116,13 @@ private
 		@previous_signal_handlers = {}
 	end
 
-	def handle_spawn_application(app_root, username)
+	def handle_spawn_application(app_root, username = nil)
+		username = nil if username && username.empty?
 		app = spawn_application(app_root, username)
 		@channel.write(app.pid)
-		@channel.send_io(app.socket)
-		app.socket.close
+		@channel.send_io(app.reader)
+		@channel.send_io(app.writer)
+		app.close
 	end
 	
 	def cleaner_thread_main
