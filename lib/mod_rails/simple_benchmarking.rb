@@ -1,7 +1,7 @@
 class Object
 	@@benchmark_results = {}
 
-	def self.b!(name)
+	def b!(name)
 		time1 = Time.now
 		begin
 			yield
@@ -12,7 +12,7 @@ class Object
 		end 
 	end
 	
-	def self.benchmark_report
+	def benchmark_report
 		total = 0
 		@@benchmark_results.each_value do |time|
 			total += time
