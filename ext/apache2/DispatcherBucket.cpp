@@ -119,7 +119,6 @@ public:
 	ApplicationPtr app;
 	int pipe;
 	apr_interval_time_t timeout;
-	bool closed;
 	
 	apr_status_t
 	read(apr_bucket *b, const char **str, apr_size_t *len, apr_read_type_e block) {
@@ -140,8 +139,7 @@ public:
 			P_DEBUG("DispatcherBucket " << this << ": EOF");
 			b = apr_bucket_immortal_make(b, "", 0);
 			*str = (const char *) b->data;
-			close(pipe);
-			closed = true;
+			app->closeReader();
 			return APR_SUCCESS;
 		} else if (result != APR_SUCCESS) {
 			P_DEBUG("DispatcherBucket " << this << ": APR error " << result);
@@ -154,7 +152,7 @@ public:
 			apr_bucket_heap *h;
 			
 			h = (apr_bucket_heap *) apr_bucket_heap_make(b, chunk, chunk_size, apr_bucket_free)->data;
-			h->alloc_len = APR_BUCKET_BUFF_SIZE; /* note the real buffer size */
+			h->alloc_len = APR_BUCKET_BUFF_SIZE; // note the real buffer size
 			*str = chunk;
 			*len = chunk_size;
 			APR_BUCKET_INSERT_AFTER(b, dup_bucket(b->list));
@@ -164,8 +162,7 @@ public:
 			P_DEBUG("DispatcherBucket " << this << ": EOF");
 			b = apr_bucket_immortal_make(b, "", 0);
 			*str = (const char *) b->data;
-			close(pipe);
-			closed = true;
+			app->closeReader();
 			return APR_SUCCESS;
 		} else {
 			P_DEBUG("DispatcherBucket " << this << ": APR error " << result);
@@ -198,7 +195,6 @@ dispatcher_bucket_create(apr_pool_t *pool, ApplicationPtr app, apr_interval_time
 	data->app = app;
 	data->pipe = app->getReader();
 	data->timeout = timeout;
-	data->closed = false;
 	b->data = data;
 	apr_pool_cleanup_register(pool, data, dispatcher_bucket_pool_cleaner, apr_pool_cleanup_null);
 	
@@ -214,11 +210,6 @@ dispatcher_bucket_read(apr_bucket *b, const char **str, apr_size_t *len, apr_rea
 static void
 dispatcher_bucket_destroy(void *d) {
 	DispatcherBucket *data = (DispatcherBucket *) d;
-	if (!data->closed) {
-		P_DEBUG("Closing file descriptor for DispatcherBucket " << d);
-		data->closed = true;
-		close(data->pipe);
-	}
 	data->app = ApplicationPtr();
 	P_DEBUG("DispatcherBucket " << d << " destroyed.");
 }

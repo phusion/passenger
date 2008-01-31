@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <boost/shared_ptr.hpp>
 #include <string>
+#include "Utils.h"
 
 namespace Passenger {
 
@@ -22,11 +23,13 @@ public:
 		this->pid = pid;
 		this->reader = reader;
 		this->writer = writer;
+		P_DEBUG("Application " << this << ": created.");
 	}
 	
 	~Application() {
 		closeReader();
 		closeWriter();
+		P_DEBUG("Application " << this << ": destroyed.");
 	}
 	
 	void detachCommunicationChannels() {
@@ -54,6 +57,7 @@ public:
 		if (reader != -1) {
 			close(reader);
 			reader = -1;
+			P_DEBUG("Application " << this << ": reader closed.");
 		}
 	}
 	
@@ -61,6 +65,7 @@ public:
 		if (writer != -1) {
 			close(writer);
 			writer = -1;
+			P_DEBUG("Application " << this << ": writer closed.");
 		}
 	}
 };

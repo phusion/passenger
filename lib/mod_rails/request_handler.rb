@@ -38,12 +38,13 @@ class RequestHandler
 	def main_loop
 		reset_signal_handlers
 		begin
-			done = false
-			while !done
+			@done = @reader.eof?
+			while !@done
 				begin
 					process_next_request
+					@done = @done || @reader.eof?
 				rescue EOFError
-					done = true
+					@done = true
 				end
 			end
 		ensure
@@ -52,12 +53,15 @@ class RequestHandler
 	end
 	
 	def process_next_request
-		content = "hello <b>world</b>!<br>\n"
+		content = "hello <b>world</b>! #{rand}<br>\n"
 
-		STDERR.puts "--- #{$$} BEGIN"
 		done = false
 		while !done
 			header, value = @reader_channel.read
+			if header.nil?
+				@done = true
+				return
+			end
 			if !header.empty?
 				content << "<tt>#{header} = #{value}</tt><br>\n"
 			end
@@ -70,8 +74,6 @@ class RequestHandler
 		write_chunk("\r\n")
 		write_chunk(content)
 		write_chunk("")
-		STDERR.puts "--- #{$$} END"
-		STDERR.flush
 	end
 
 private
