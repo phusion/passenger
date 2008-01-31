@@ -61,7 +61,6 @@ class SpawnManager
 					elsif !MESSAGE_HANDLERS.has_key?(name)
 						raise StandardError, "Unknown message '#{name}' received."
 					else
-						name, *args = message
 						__send__(MESSAGE_HANDLERS[name], *args)
 					end
 				rescue ExitNow
