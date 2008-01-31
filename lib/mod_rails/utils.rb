@@ -32,9 +32,10 @@ private
 	
 	def print_exception(current_location, exception)
 		STDERR.puts("** Exception #{exception.class} in #{current_location} " <<
-			"(#{exception}):\n" <<
+			"(#{exception}) (process #{$$}):\n" <<
 			"\tfrom " <<
 			exception.backtrace.join("\n\tfrom "))
+		STDERR.flush
 	end
 end
 

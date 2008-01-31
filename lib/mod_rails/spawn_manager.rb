@@ -36,6 +36,7 @@ class SpawnManager
 
 	def spawn_application(app_root, username = nil)
 		framework_version = Application.get_framework_version(app_root)
+		spawner = nil
 		@lock.synchronize do
 			spawner = @spawners[framework_version]
 			if !spawner

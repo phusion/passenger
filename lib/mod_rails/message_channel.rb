@@ -53,9 +53,17 @@ class MessageChannel
 			buffer << @io.readpartial(chunk_size - buffer.size)
 		end
 		
-		message = buffer.split(DELIMITER)
-		if buffer[chunk_size - 1] == DELIMITER[0]
-			message << ""
+		message = []
+		offset = 0
+		delimiter_pos = buffer.index(DELIMITER, offset)
+		while !delimiter_pos.nil?
+			if delimiter_pos == 0
+				message << ""
+			else
+				message << buffer[offset .. delimiter_pos - 1]
+			end
+			offset = delimiter_pos + 1
+			delimiter_pos = buffer.index(DELIMITER, offset)
 		end
 		return message
 	rescue EOFError
@@ -75,9 +83,9 @@ class MessageChannel
 			check_argument(arg)
 		end
 		
-		message = "#{name}"
-		if !args.empty?
-			message << DELIMITER << args.join(DELIMITER)
+		message = "#{name}#{DELIMITER}"
+		args.each do |arg|
+			message << arg.to_s << DELIMITER
 		end
 		@io.write([message.size].pack('n') << message)
 		@io.flush

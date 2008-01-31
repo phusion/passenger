@@ -43,25 +43,18 @@ public:
 		list<string>::const_iterator it;
 		string data;
 		uint16_t dataSize = 0;
-		unsigned int i = 0;
 		string::size_type written;
 		int ret;
 
 		for (it = args.begin(); it != args.end(); it++) {
 			dataSize += it->size() + 1;
 		}
-		if (!args.empty()) {
-			dataSize--;
-			data.reserve(dataSize + sizeof(dataSize));
-			dataSize = htons(dataSize);
-			data.append((const char *) &dataSize, sizeof(dataSize));
-		}
+		data.reserve(dataSize + sizeof(dataSize));
+		dataSize = htons(dataSize);
+		data.append((const char *) &dataSize, sizeof(dataSize));
 		for (it = args.begin(); it != args.end(); it++) {
 			data.append(*it);
-			if (i != args.size() - 1) {
-				data.append(1, DELIMITER);
-			}
-			i++;
+			data.append(1, DELIMITER);
 		}
 		
 		written = 0;
@@ -168,7 +161,6 @@ public:
 				args.push_back(const_buffer.substr(start, pos - start));
 				start = pos + 1;
 			}
-			args.push_back(const_buffer.substr(start));
 		}
 		return true;
 	}

@@ -27,7 +27,7 @@ class Application
 	# Return the Ruby on Rails version that the application requires, or nil
 	# if it doesn't require a particular version.
 	def self.get_framework_version(app_root)
-		File.read("#{app_root}/environment.rb") =~ /^[^#]*RAILS_GEM_VERSION\s+=\s+'([\d.]+)'/
+		File.read("#{app_root}/config/environment.rb") =~ /^[^#]*RAILS_GEM_VERSION\s+=\s+'([\d.]+)'/
 		return $1
 	end
 

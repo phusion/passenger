@@ -3,15 +3,9 @@
 
 #include <apr_pools.h>
 #include <apr_buckets.h>
+#include "Application.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-apr_bucket *dispatcher_bucket_create(apr_pool_t *pool, int pipe, apr_interval_time_t timeout, apr_bucket_alloc_t *list);
-
-#ifdef __cplusplus
-}
-#endif
+apr_bucket *dispatcher_bucket_create(apr_pool_t *pool, Passenger::ApplicationPtr app,
+	apr_interval_time_t timeout, apr_bucket_alloc_t *list);
 
 #endif /* _DISPATCHER_BUCKET_H_ */

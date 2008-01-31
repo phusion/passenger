@@ -1,3 +1,4 @@
+require 'mod_rails/message_channel'
 # NOTE: we make use of pipes instead of Unix sockets, because
 # experimentation has shown that pipes are slightly faster.
 module ModRails # :nodoc:
@@ -27,9 +28,10 @@ class RequestHandler
 		end
 	end
 
-	def initialize(reader_pipe, writer_pipe)
-		@reader = reader_pipe
-		@writer = writer_pipe
+	def initialize(reader, writer)
+		@reader = reader
+		@writer = writer
+		@reader_channel = MessageChannel.new(reader)
 		@previous_signal_handlers = {}
 	end
 	
@@ -50,18 +52,26 @@ class RequestHandler
 	end
 	
 	def process_next_request
+		content = "hello <b>world</b>!<br>\n"
+
+		STDERR.puts "--- #{$$} BEGIN"
 		done = false
-		chunk = read_chunk
-		while !chunk.nil?
-			chunk = read_chunk
+		while !done
+			header, value = @reader_channel.read
+			if !header.empty?
+				content << "<tt>#{header} = #{value}</tt><br>\n"
+			end
+			done = header.empty?
 		end
-		content = "hello <b>world</b>!"
+		
 		write_chunk("Status: 200 OK\r\n")
 		write_chunk("Content-Type: text/html\r\n")
 		write_chunk("Content-Length: #{content.size}\r\n")
 		write_chunk("\r\n")
 		write_chunk(content)
 		write_chunk("")
+		STDERR.puts "--- #{$$} END"
+		STDERR.flush
 	end
 
 private

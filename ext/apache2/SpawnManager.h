@@ -32,9 +32,10 @@ private:
 	pid_t pid;
 
 public:
-	SpawnManager(const string &spawnManagerCommand, const string &rubyCommand = "ruby") {
+	SpawnManager(const string &spawnManagerCommand, const string &logFile = "", const string &rubyCommand = "ruby") {
 		int fds[2];
 		char fd_string[20];
+		FILE *logFileHandle;
 		
 		if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
 			throw SystemException("Cannot create a Unix socket", errno);
@@ -42,12 +43,26 @@ public:
 		if (apr_snprintf(fd_string, sizeof(fd_string), "%d", fds[1]) <= 0) {
 			throw MemoryException();
 		}
-		
+		if (!logFile.empty()) {
+			logFileHandle = fopen(logFile.c_str(), "a");
+			if (logFileHandle == NULL) {
+				string message("Cannot open log file '");
+				message.append(logFile);
+				message.append("' for writing.");
+				throw IOException(message);
+			}
+		}
+
 		pid = fork();
 		if (pid == 0) {
 			// TODO: redirect stderr to a log file
 			pid = fork();
 			if (pid == 0) {
+				if (!logFile.empty()) {
+					dup2(fileno(logFileHandle), STDOUT_FILENO);
+					dup2(fileno(logFileHandle), STDERR_FILENO);
+					fclose(logFileHandle);
+				}
 				close(fds[0]);
 				execlp(rubyCommand.c_str(), rubyCommand.c_str(), spawnManagerCommand.c_str(), fd_string, NULL);
 				fprintf(stderr, "Unable to run ruby: %s\n", strerror(errno));
@@ -64,6 +79,9 @@ public:
 			throw SystemException("Unable to fork a process", errno);
 		} else {
 			close(fds[1]);
+			if (!logFile.empty()) {
+				fclose(logFileHandle);
+			}
 			waitpid(pid, NULL, 0);
 			channel = MessageChannel(fds[0]);
 		}
