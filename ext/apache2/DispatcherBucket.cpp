@@ -1,3 +1,4 @@
+#include <string>
 #include <poll.h>
 #include <errno.h>
 #include <unistd.h>
@@ -5,17 +6,15 @@
 #define APR_WANT_BYTEFUNC
 #include <apr_want.h>
 
-#define DEBUG
-#ifdef DEBUG
-	#include <cstdarg>
-	#include <cstdio>
-	#include <apr_strings.h>
-#endif
-
+#include "Utils.h"
 #include "DispatcherBucket.h"
+
+using namespace std;
+using namespace Passenger;
 
 static apr_status_t dispatcher_bucket_read(apr_bucket *b, const char **str, apr_size_t *len, apr_read_type_e block);
 static void dispatcher_bucket_destroy(void *data);
+static apr_status_t dispatcher_bucket_pool_cleaner(void *d);
 
 static const apr_bucket_type_t bucket_type_dispatcher = {
 	"Dispatcher",
@@ -27,24 +26,6 @@ static const apr_bucket_type_t bucket_type_dispatcher = {
 	apr_bucket_split_notimpl,
 	apr_bucket_copy_notimpl
 };
-
-
-#ifdef DEBUG
-static void
-debug(const char *format, ...) {
-	va_list ap;
-	char message[1024];
-	
-	va_start(ap, format);
-	int size = apr_vsnprintf(message, sizeof(message), format, ap);
-	FILE *f = fopen("/dev/pts/2", "w");
-	if (f != NULL) {
-		fwrite(message, 1, size, f);
-		fclose(f);
-	}
-	va_end(ap);
-}
-#endif
 
 
 class DispatcherBucket {
@@ -135,6 +116,7 @@ private:
 	}
 	
 public:
+	ApplicationPtr app;
 	int pipe;
 	apr_interval_time_t timeout;
 	bool closed;
@@ -155,12 +137,14 @@ public:
 		
 		result = read_chunk_size(chunk_size, current_timeout);
 		if (result == APR_EOF || (result == APR_SUCCESS && chunk_size == 0)) {
+			P_DEBUG("DispatcherBucket " << this << ": EOF");
 			b = apr_bucket_immortal_make(b, "", 0);
 			*str = (const char *) b->data;
 			close(pipe);
 			closed = true;
 			return APR_SUCCESS;
 		} else if (result != APR_SUCCESS) {
+			P_DEBUG("DispatcherBucket " << this << ": APR error " << result);
 			return result;
 		}
 
@@ -174,21 +158,24 @@ public:
 			*str = chunk;
 			*len = chunk_size;
 			APR_BUCKET_INSERT_AFTER(b, dup_bucket(b->list));
+			P_DEBUG("DispatcherBucket " << this << ": read (" << string(*str, *len) << ")");
 			return APR_SUCCESS;
 		} else if (result == APR_EOF) {
+			P_DEBUG("DispatcherBucket " << this << ": EOF");
 			b = apr_bucket_immortal_make(b, "", 0);
 			*str = (const char *) b->data;
 			close(pipe);
 			closed = true;
 			return APR_SUCCESS;
 		} else {
+			P_DEBUG("DispatcherBucket " << this << ": APR error " << result);
 			return result;
 		}
 	}
 };
 
-extern "C" apr_bucket *
-dispatcher_bucket_create(apr_pool_t *pool, int pipe, apr_interval_time_t timeout, apr_bucket_alloc_t *list) {
+apr_bucket *
+dispatcher_bucket_create(apr_pool_t *pool, ApplicationPtr app, apr_interval_time_t timeout, apr_bucket_alloc_t *list) {
 	apr_bucket *b;
 	DispatcherBucket *data;
 
@@ -208,10 +195,14 @@ dispatcher_bucket_create(apr_pool_t *pool, int pipe, apr_interval_time_t timeout
 		apr_bucket_free(b);
 		return NULL;
 	}
-	data->pipe = pipe;
+	data->app = app;
+	data->pipe = app->getReader();
 	data->timeout = timeout;
 	data->closed = false;
 	b->data = data;
+	apr_pool_cleanup_register(pool, data, dispatcher_bucket_pool_cleaner, apr_pool_cleanup_null);
+	
+	P_DEBUG("DispatcherBucket " << data << " created.");
 	return b;
 }
 
@@ -224,6 +215,16 @@ static void
 dispatcher_bucket_destroy(void *d) {
 	DispatcherBucket *data = (DispatcherBucket *) d;
 	if (!data->closed) {
+		P_DEBUG("Closing file descriptor for DispatcherBucket " << d);
+		data->closed = true;
 		close(data->pipe);
 	}
+	data->app = ApplicationPtr();
+	P_DEBUG("DispatcherBucket " << d << " destroyed.");
+}
+
+static apr_status_t
+dispatcher_bucket_pool_cleaner(void *d) {
+	dispatcher_bucket_destroy(d);
+	return APR_SUCCESS;
 }

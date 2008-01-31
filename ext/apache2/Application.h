@@ -29,6 +29,11 @@ public:
 		closeWriter();
 	}
 	
+	void detachCommunicationChannels() {
+		reader = -1;
+		writer = -1;
+	}
+	
 	string getAppRoot() const {
 		return appRoot;
 	}

@@ -35,7 +35,7 @@ namespace tut {
 		vector<string> args;
 		
 		writer.write("hello", "world", "!", NULL);
-		ensure("end-of-file has not been reached", reader.read(args));
+		ensure("End of file has not been reached", reader.read(args));
 		ensure_equals("read() returns the same number of arguments as passed to write()", args.size(), 3u);
 		ensure_equals(args[0], "hello");
 		ensure_equals(args[1], "world");
@@ -51,7 +51,7 @@ namespace tut {
 		input.push_back("world");
 		input.push_back("!");
 		writer.write(input);
-		ensure("end-of-file has not been reached", reader.read(output));
+		ensure("End of file has not been reached", reader.read(output));
 		ensure_equals("read() returns the same number of arguments as passed to write()", input.size(), output.size());
 		
 		list<string>::const_iterator it;
@@ -98,19 +98,22 @@ namespace tut {
 			input.write("you have", "not enough", "minerals", NULL);
 			input.close();
 			
-			vector<string> message1, message2;
-			ensure("End of stream has not been reached", output.read(message1));
-			ensure("End of stream has not been reached", output.read(message2));
+			vector<string> message1, message2, message3;
+			ensure("End of stream has not been reached (1)", output.read(message1));
+			ensure("End of stream has not been reached (2)", output.read(message2));
+			ensure("End of file has been reached", !output.read(message3));
 			output.close();
 			waitpid(pid, NULL, 0);
 			
-			ensure_equals(message1.size(), 4u);
+			ensure_equals("First message is correctly transformed by the mock object",
+				message1.size(), 4u);
 			ensure_equals(message1[0], "hello");
 			ensure_equals(message1[1], "my beautiful");
 			ensure_equals(message1[2], "world");
 			ensure_equals(message1[3], "!!");
 			
-			ensure_equals(message2.size(), 4u);
+			ensure_equals("Second message is correctly transformed by the mock object",
+				message2.size(), 4u);
 			ensure_equals(message2[0], "you have");
 			ensure_equals(message2[1], "not enough");
 			ensure_equals(message2[2], "minerals");
@@ -147,5 +150,16 @@ namespace tut {
 		close(s[1]);
 		close(my_pipe[0]);
 		close(my_pipe[1]);
+	}
+	
+	TEST_METHOD(8) {
+		// write() should be able to construct a message that consists of only an empty string.
+		// read() should be able to read a message that consists of only an empty string.
+		vector<string> args;
+		
+		writer.write("", NULL);
+		reader.read(args);
+		ensure_equals(args.size(), 1u);
+		ensure_equals(args[0], "");
 	}
 }

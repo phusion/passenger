@@ -62,6 +62,17 @@ class MessageChannelTest < Test::Unit::TestCase
 			end
 		)
 	end
+	
+	def test_empty_arguments
+		with_pipe_channel do
+			@writer.write("hello", "", "world")
+			@writer.write("")
+			@writer.write(nil, "foo")
+			assert_equal(["hello", "", "world"], @reader.read)
+			assert_equal([""], @reader.read)
+			assert_equal(["", "foo"], @reader.read)
+		end
+	end
 
 private
 	def with_pipe_channel
