@@ -41,13 +41,13 @@ public:
 		//scoped_lock l(lock);
 		
 		ApplicationPtr app;
-		ApplicationMap::iterator it(apps.find(appRoot));
-		if (it == apps.end()) {
+		//ApplicationMap::iterator it(apps.find(appRoot));
+		//if (it == apps.end()) {
 			app = spawnManager.spawn(appRoot, username);
-			apps[appRoot] = app;
-		} else {
-			app = it->second;
-		}
+		//	apps[appRoot] = app;
+		//} else {
+		//	app = it->second;
+		//}
 		return app;
 	}
 };
