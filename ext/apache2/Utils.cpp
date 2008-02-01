@@ -12,7 +12,12 @@ void
 initDebugging(const char *logFile) {
 	#ifdef PASSENGER_DEBUG
 		if (logFile != NULL) {
-			_debugStream = new ofstream(logFile, ios_base::out | ios_base::app);
+			ostream *stream = new ofstream(logFile, ios_base::out | ios_base::app);
+			if (stream->fail()) {
+				delete stream;
+			} else {
+				_debugStream = stream;
+			}
 		} else {
 			_debugStream = &cerr;
 		}
