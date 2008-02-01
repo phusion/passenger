@@ -26,8 +26,11 @@ private:
 	}
 	
 public:
-	ApplicationPool(const string &spawnManagerCommand, const string &logFile = "")
-		: spawnManager(spawnManagerCommand, logFile) {}
+	ApplicationPool(const string &spawnManagerCommand,
+	                const string &logFile = "",
+	                const string &environment = "production",
+	                const string &rubyCommand = "ruby")
+	: spawnManager(spawnManagerCommand, logFile, environment, rubyCommand) {}
 	
 	ApplicationPtr get(const string &appRoot) {
 		return get(appRoot, "");

@@ -53,19 +53,21 @@ class RequestHandler
 	end
 	
 	def process_next_request
-		content = "hello <b>world</b>! #{rand}<br>\n"
+		content = "hello <b>world</b>!<br>\n"
+		content << "env = #{RAILS_ENV}<br>\n"
+		content << "pid = #{$$}<br>\n"
+		content << "rand = #{rand}<br>\n"
 
-		done = false
-		while !done
-			header, value = @reader_channel.read
-			if header.nil?
-				@done = true
-				return
+		headers = @reader_channel.read
+		if headers.nil?
+			@done = true
+			return
+		else
+			i = 0
+			while i < headers.size
+				content << "<tt>#{headers[i]} = #{headers[i + 1]}</tt><br>\n"
+				i += 2
 			end
-			if !header.empty?
-				content << "<tt>#{header} = #{value}</tt><br>\n"
-			end
-			done = header.empty?
 		end
 		
 		write_chunk("Status: 200 OK\r\n")

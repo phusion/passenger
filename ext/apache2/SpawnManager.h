@@ -32,10 +32,13 @@ private:
 	pid_t pid;
 
 public:
-	SpawnManager(const string &spawnManagerCommand, const string &logFile = "", const string &rubyCommand = "ruby") {
+	SpawnManager(const string &spawnManagerCommand,
+	             const string &logFile = "",
+	             const string &environment = "production",
+	             const string &rubyCommand = "ruby") {
 		int fds[2];
 		char fd_string[20];
-		FILE *logFileHandle;
+		FILE *logFileHandle = NULL;
 		
 		if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
 			throw SystemException("Cannot create a Unix socket", errno);
@@ -63,9 +66,12 @@ public:
 					dup2(fileno(logFileHandle), STDERR_FILENO);
 					fclose(logFileHandle);
 				}
+				if (!environment.empty()) {
+					setenv("RAILS_ENV", environment.c_str(), true);
+				}
 				close(fds[0]);
 				execlp(rubyCommand.c_str(), rubyCommand.c_str(), spawnManagerCommand.c_str(), fd_string, NULL);
-				fprintf(stderr, "Unable to run ruby: %s\n", strerror(errno));
+				fprintf(stderr, "Unable to run %s: %s\n", rubyCommand.c_str(), strerror(errno));
 				_exit(1);
 			} else if (pid == -1) {
 				fprintf(stderr, "Unable to fork a process: %s\n", strerror(errno));

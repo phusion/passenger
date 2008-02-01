@@ -23,13 +23,13 @@ public:
 		this->pid = pid;
 		this->reader = reader;
 		this->writer = writer;
-		P_DEBUG("Application " << this << ": created.");
+		P_TRACE("Application " << this << ": created.");
 	}
 	
 	~Application() {
 		closeReader();
 		closeWriter();
-		P_DEBUG("Application " << this << ": destroyed.");
+		P_TRACE("Application " << this << ": destroyed.");
 	}
 	
 	void detachCommunicationChannels() {
@@ -57,7 +57,7 @@ public:
 		if (reader != -1) {
 			close(reader);
 			reader = -1;
-			P_DEBUG("Application " << this << ": reader closed.");
+			P_TRACE("Application " << this << ": reader closed.");
 		}
 	}
 	
@@ -65,7 +65,7 @@ public:
 		if (writer != -1) {
 			close(writer);
 			writer = -1;
-			P_DEBUG("Application " << this << ": writer closed.");
+			P_TRACE("Application " << this << ": writer closed.");
 		}
 	}
 };
