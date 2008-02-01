@@ -6,9 +6,14 @@
 namespace Passenger {
 
 #ifdef PASSENGER_DEBUG
-	#define P_DEBUG(expr) *Passenger::_debugStream << \
-		"[" << __FILE__ << ":" << __LINE__ << "] " << \
-		expr << std::endl
+	#define P_DEBUG(expr) \
+		do { \
+			if (Passenger::_debugStream != 0) { \
+				*Passenger::_debugStream << \
+					"[" << __FILE__ << ":" << __LINE__ << "] " << \
+					expr << std::endl; \
+			} \
+		} while (false)
 #else
 	#define P_DEBUG(expr) do { /* nothing */ } while (false)
 #endif
