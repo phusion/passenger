@@ -1,5 +1,8 @@
 #!/usr/bin/env ruby
+# Benchmarks raw Unix socket I/O performance versus pipe I/O performance.
 require 'benchmark'
+
+ITERATIONS = 150000
 
 def start
 	if ARGV.empty?
@@ -10,7 +13,7 @@ def start
 	elsif ARGV.size == 1 && ARGV[0] == 'pipes'
 		benchmark(:pipes)
 	else
-		puts "Benchmarks Unix socket performance versus pipe performance."
+		puts "Benchmarks raw Unix socket I/O performance versus pipe I/O performance."
 		puts "Usage: unix_sockets_vs_pipes.rb <unix_sockets|pipes>"
 		exit(1)
 	end
@@ -25,7 +28,7 @@ def benchmark(type)
 		pid, reader, writer = setup_pipes
 	end
 	result = Benchmark.measure do
-		150000.times do |i|
+		ITERATIONS.times do |i|
 			writer.write("hello world\n")
 			reader.readline
 		end
@@ -36,6 +39,7 @@ def benchmark(type)
 		Process.waitpid(pid)
 	end
 	puts "User/system/real time: #{result}"
+	printf "%.2f lines per second\n", ITERATIONS / result.real
 end
 
 def setup_unix_sockets
