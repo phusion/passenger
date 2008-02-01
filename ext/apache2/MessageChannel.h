@@ -48,6 +48,7 @@ using namespace std;
  *       If the other side of the communication channel first tries to
  *       receive a file descriptor, and then tries to receive a message,
  *       then bad things will happen.
+ * @note MessageChannel is thread-safe.
  */
 class MessageChannel {
 private:
