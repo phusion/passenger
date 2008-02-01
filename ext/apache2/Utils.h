@@ -14,8 +14,10 @@ namespace Passenger {
 					expr << std::endl; \
 			} \
 		} while (false)
+	#define P_TRACE P_DEBUG
 #else
 	#define P_DEBUG(expr) do { /* nothing */ } while (false)
+	#define P_TRACE P_DEBUG
 #endif
 
 	// Internal; do not use directly.

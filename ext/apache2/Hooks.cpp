@@ -1,3 +1,8 @@
+/*
+ * A few functions are based on the code from mod_scgi 1.9. mod_scgi is
+ * Copyright (c) 2004 Corporation for National Research Initiatives; All Rights Reserved
+ */
+
 #include <ap_config.h>
 #include <httpd.h>
 #include <http_config.h>
@@ -8,6 +13,7 @@
 #include <util_script.h>
 #include <apr_pools.h>
 #include <apr_strings.h>
+#include <apr_lib.h>
 
 #include <exception>
 #include <unistd.h>
@@ -27,8 +33,8 @@ extern "C" module AP_MODULE_DECLARE_DATA rails_module;
 
 class Hooks {
 private:
-	static ApplicationPoolPtr applicationPool;
-
+	ApplicationPoolPtr applicationPool;
+	
 	RailsConfig *getConfig(request_rec *r) {
 		return (RailsConfig *) ap_get_module_config(r->per_dir_config, &rails_module);
 	}
@@ -62,6 +68,71 @@ private:
 	bool verifyRailsDir(apr_pool_t *pool, const char *dir) {
 		return fileExists(pool, apr_pstrcat(pool, dir, "/../config/environment.rb", NULL));
 	}
+	
+	char *http2env(apr_pool_t *p, const char *name) {
+		char *env_name = apr_pstrcat(p, "HTTP_", name, NULL);
+		char *cp;
+		
+		for (cp = env_name + 5; *cp != 0; cp++) {
+			if (*cp == '-') {
+				*cp = '_';
+			} else {
+				*cp = apr_toupper(*cp);
+			}
+		}
+		
+		return env_name;
+	}
+	
+	char *lookupName(apr_table_t *t, const char *name) {
+		const apr_array_header_t *hdrs_arr = apr_table_elts(t);
+		apr_table_entry_t *hdrs = (apr_table_entry_t *) hdrs_arr->elts;
+		int i;
+		
+		for (i = 0; i < hdrs_arr->nelts; ++i) {
+			if (hdrs[i].key == NULL) {
+				continue;
+			}
+			if (strcasecmp(hdrs[i].key, name) == 0) {
+				return hdrs[i].val;
+			}
+		}
+		return NULL;
+	}
+	
+	char *lookupHeader(request_rec *r, const char *name) {
+		return lookupName(r->headers_in, name);
+	}
+	
+	char *lookupEnv(request_rec *r, const char *name) {
+		return lookupName(r->subprocess_env, name);
+	}
+	
+	// This code is a duplicate of what's in util_script.c.  We can't use
+	// r->unparsed_uri because it gets changed if there was a redirect.
+	char *originalURI(request_rec *r) {
+		char *first, *last;
+
+		if (r->the_request == NULL) {
+			return (char *) apr_pcalloc(r->pool, 1);
+		}
+		
+		first = r->the_request;	// use the request-line
+		
+		while (*first && !apr_isspace(*first)) {
+			++first;		// skip over the method
+		}
+		while (apr_isspace(*first)) {
+			++first;		//   and the space(s)
+		}
+		
+		last = first;
+		while (*last && !apr_isspace(*last)) {
+			++last;			// end at next whitespace
+		}
+		
+		return apr_pstrmemdup(r->pool, first, last - first);
+	}
 
 	void addHeader(apr_table_t *table, const char *name, const char *value) {
 		if (name != NULL && value != NULL) {
@@ -87,7 +158,7 @@ private:
 		addHeader(headers, "REMOTE_PORT",     apr_psprintf(r->pool, "%d", r->connection->remote_addr->port));
 		addHeader(headers, "REMOTE_USER",     r->user);
 		addHeader(headers, "REQUEST_METHOD",  r->method);
-		//addHeader(headers, "REQUEST_URI",     original_uri(r));
+		addHeader(headers, "REQUEST_URI",     originalURI(r));
 		addHeader(headers, "QUERY_STRING",    r->args ? r->args : "");
 		addHeader(headers, "SCRIPT_NAME",     r->uri);
 		if (r->path_info) {
@@ -98,8 +169,8 @@ private:
 		} else {
 			addHeader(headers, "SCRIPT_NAME", r->uri);
 		}
-		//addHeader(headers, "HTTPS",           lookup_env(r, "HTTPS"));
-		//addHeader(headers, "CONTENT_TYPE",    lookup_header(r, "Content-type"));
+		addHeader(headers, "HTTPS",           lookupEnv(r, "HTTPS"));
+		addHeader(headers, "CONTENT_TYPE",    lookupHeader(r, "Content-type"));
 		addHeader(headers, "DOCUMENT_ROOT",   ap_document_root(r));
 	
 		// Set HTTP headers.
@@ -111,7 +182,7 @@ private:
 		hdrs = (apr_table_entry_t *) hdrs_arr->elts;
 		for (i = 0; i < hdrs_arr->nelts; ++i) {
 			if (hdrs[i].key) {
-				//addHeader(headers, http2env(r->pool, hdrs[i].key), hdrs[i].val);
+				addHeader(headers, http2env(r->pool, hdrs[i].key), hdrs[i].val);
 			}
 		}
 	
@@ -126,46 +197,38 @@ private:
 		}
 		
 		MessageChannel channel(fd);
+		list<string> entries;
 		hdrs_arr = apr_table_elts(headers);
     		hdrs = (apr_table_entry_t*) hdrs_arr->elts;
 		for (i = 0; i < hdrs_arr->nelts; ++i) {
-			// TODO: Internally, this creates a new list every time.
-			// It can be optimized by using an array or a vector.
-			channel.write(hdrs[i].key, hdrs[i].val, NULL);
+			// TODO: optimize this. too much copying.
+			entries.push_back(hdrs[i].key);
+			entries.push_back(hdrs[i].val);
 		}
-		channel.write("", NULL);
+		channel.write(entries);
 	
 		return APR_SUCCESS;
 	}
 
-	void
-	debug(const char *format, ...) {
-		va_list ap;
-		char message[1024];
-		
-		va_start(ap, format);
-		int size = apr_vsnprintf(message, sizeof(message), format, ap);
-		FILE *f = fopen("/dev/pts/3", "w");
-		if (f != NULL) {
-			fwrite(message, 1, size, f);
-			fclose(f);
-		}
-		va_end(ap);
-	}
-
 public:
-	int
-	init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *base_server) {
-		initDebugging("/tmp/passenger.txt");
-		ap_add_version_component(p, "Phusion_Passenger/" PASSENGER_VERSION);
+	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s) {
+		initDebugging();
+		P_DEBUG("Initializing mod_passenger.");
+		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
+		
 		const char *spawnManagerCommand = "/home/hongli/Projects/mod_rails/lib/mod_rails/spawn_manager.rb";
 		const char *logFile = "/home/hongli/Projects/mod_rails/spawner_log.txt";
-		applicationPool = ApplicationPoolPtr(new ApplicationPool(spawnManagerCommand, logFile));
-		return OK;
+		applicationPool = ApplicationPoolPtr(new ApplicationPool(spawnManagerCommand, logFile, "production"));
 	}
 	
-	int
-	handleRequest(request_rec *r) {
+	~Hooks() {
+		P_DEBUG("Shutting down mod_passenger.");
+	}
+	
+	void initChild(apr_pool_t *pchild, server_rec *s) {
+	}
+	
+	int handleRequest(request_rec *r) {
 		// The main request handler hook function.
 		RailsConfig *config = getConfig(r);
 		const char *railsDir;
@@ -191,6 +254,8 @@ public:
 			return OK;
 		}
 		
+		
+		
 		/* int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_ERROR);
     		if (httpStatus != OK) {
 			return httpStatus;
@@ -202,7 +267,7 @@ public:
 			
 			P_DEBUG("Processing HTTP request: " << r->uri);
 			ApplicationPtr app(applicationPool->get(string(railsDir) + "/.."));
-			P_DEBUG("Connected to application: reader FD = " << app->getReader() << ", writer FD = " << app->getWriter());
+			P_TRACE("Connected to application: reader FD = " << app->getReader() << ", writer FD = " << app->getWriter());
 			sendHeaders(r, app->getWriter());
 
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
@@ -258,27 +323,77 @@ public:
 };
 
 
-ApplicationPoolPtr Hooks::applicationPool;
 
+/******************************************************************
+ * Below follows lightweight C wrappers around the C++ Hook class.
+ ******************************************************************/
+
+static Hooks *hooks = NULL;
+
+static apr_status_t
+destroy_hooks(void *arg) {
+	delete hooks;
+	return APR_SUCCESS;
+}
 
 static int
-init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *base_server) {
-	return Hooks().init(p, plog, ptemp, base_server);
+init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s) {
+	/*
+	 * 1. Apache on Unix calls the post_config hook twice, once before detach() and once
+	 *    after. On Windows it never calls detach().
+	 * 2. When Apache is compiled to use DSO modules, the modules are unloaded between the
+	 *    two post_config hook calls.
+	 * 3. On Unix, if the -X commandline option is given, detach() will not be called.
+	 *
+	 * Because of these 3 issues (and especially #2), we only want to intialize the second
+	 * time the post_config hook is called.
+	 */
+	void *firstInitCall = NULL;
+	apr_pool_t *processPool = s->process->pool;
+	
+	apr_pool_userdata_get(&firstInitCall, "mod_passenger", processPool);
+	if (firstInitCall == NULL) {
+		apr_pool_userdata_set((const void *) 1, "mod_passenger",
+			apr_pool_cleanup_null, processPool);
+		return OK;
+	} else {
+		hooks = new Hooks(pconf, plog, ptemp, s);
+		apr_pool_cleanup_register(pconf, NULL,
+			destroy_hooks,
+			apr_pool_cleanup_null);
+		return OK;
+	}
+}
+
+static void
+init_child(apr_pool_t *pchild, server_rec *s) {
+	if (hooks != NULL) {
+		return hooks->initChild(pchild, s);
+	}
 }
 
 static int
 handle_request(request_rec *r) {
-	return Hooks().handleRequest(r);
+	if (hooks != NULL) {
+		return hooks->handleRequest(r);
+	} else {
+		return DECLINED;
+	}
 }
 
 static int
 map_to_storage(request_rec *r) {
-	return Hooks().mapToStorage(r);
+	if (hooks != NULL) {
+		return hooks->mapToStorage(r);
+	} else {
+		return DECLINED;
+	}
 }
 
 void
 passenger_register_hooks(apr_pool_t *p) {
-	ap_hook_post_config(init, NULL, NULL, APR_HOOK_MIDDLE);
+	ap_hook_post_config(init_module, NULL, NULL, APR_HOOK_MIDDLE);
+	ap_hook_child_init(init_child, NULL, NULL, APR_HOOK_MIDDLE);
 	ap_hook_map_to_storage(map_to_storage, NULL, NULL, APR_HOOK_FIRST);
 	ap_hook_handler(handle_request, NULL, NULL, APR_HOOK_FIRST);
 }

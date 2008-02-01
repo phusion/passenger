@@ -136,13 +136,13 @@ public:
 		
 		result = read_chunk_size(chunk_size, current_timeout);
 		if (result == APR_EOF || (result == APR_SUCCESS && chunk_size == 0)) {
-			P_DEBUG("DispatcherBucket " << this << ": EOF");
+			P_TRACE("DispatcherBucket " << this << ": EOF");
 			b = apr_bucket_immortal_make(b, "", 0);
 			*str = (const char *) b->data;
 			app->closeReader();
 			return APR_SUCCESS;
 		} else if (result != APR_SUCCESS) {
-			P_DEBUG("DispatcherBucket " << this << ": APR error " << result);
+			P_TRACE("DispatcherBucket " << this << ": APR error " << result);
 			return result;
 		}
 
@@ -156,16 +156,16 @@ public:
 			*str = chunk;
 			*len = chunk_size;
 			APR_BUCKET_INSERT_AFTER(b, dup_bucket(b->list));
-			P_DEBUG("DispatcherBucket " << this << ": read (" << string(*str, *len) << ")");
+			P_TRACE("DispatcherBucket " << this << ": read (" << string(*str, *len) << ")");
 			return APR_SUCCESS;
 		} else if (result == APR_EOF) {
-			P_DEBUG("DispatcherBucket " << this << ": EOF");
+			P_TRACE("DispatcherBucket " << this << ": EOF");
 			b = apr_bucket_immortal_make(b, "", 0);
 			*str = (const char *) b->data;
 			app->closeReader();
 			return APR_SUCCESS;
 		} else {
-			P_DEBUG("DispatcherBucket " << this << ": APR error " << result);
+			P_TRACE("DispatcherBucket " << this << ": APR error " << result);
 			return result;
 		}
 	}
@@ -198,7 +198,7 @@ dispatcher_bucket_create(apr_pool_t *pool, ApplicationPtr app, apr_interval_time
 	b->data = data;
 	apr_pool_cleanup_register(pool, data, dispatcher_bucket_pool_cleaner, apr_pool_cleanup_null);
 	
-	P_DEBUG("DispatcherBucket " << data << " created.");
+	P_TRACE("DispatcherBucket " << data << " created.");
 	return b;
 }
 
@@ -211,7 +211,7 @@ static void
 dispatcher_bucket_destroy(void *d) {
 	DispatcherBucket *data = (DispatcherBucket *) d;
 	data->app = ApplicationPtr();
-	P_DEBUG("DispatcherBucket " << d << " destroyed.");
+	P_TRACE("DispatcherBucket " << d << " destroyed.");
 }
 
 static apr_status_t
