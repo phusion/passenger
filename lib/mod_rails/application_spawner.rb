@@ -31,20 +31,22 @@ class ApplicationSpawner < AbstractServer
 	# or a directory that doesn't appear to be a Rails application root directory,
 	# then an ArgumentError will be raised.
 	#
-	# You may optionally specify _username_. If specified, ApplicationSpawner will
-	# switch very spawned instance to the given user. This only works if
+	# You may optionally specify _user_ and _group_. If specified, ApplicationSpawner will
+	# switch very spawned instance to the given user and group. This only works if
 	# ApplicationSpawner is running as root (or has the capability to change the
 	# current process's user).
-	# If given an invalid username, then an ArgumentError will be raised.
-	# If the current process's user cannot be changed, then a UserChangeError
+	# If given an invalid user or group, then an ArgumentError will be raised.
+	# If the current process's user/group cannot be changed, then a UserChangeError
 	# will be raised.
-	def initialize(app_root, username = nil)
+	def initialize(app_root, user = nil, group = nil)
 		super()
 		@app_root = normalize_path(app_root)
-		@username = username
+		@user = user
+		@group = group
 		self.time = Time.now
 		assert_valid_app_root(@app_root)
-		assert_valid_username(@username) unless @username.nil?
+		assert_valid_username(@user) unless @user.nil?
+		assert_valid_groupname(@group) unless @group.nil?
 		define_message_handler(:spawn_application, :handle_spawn_application)
 	end
 	

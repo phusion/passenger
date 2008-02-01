@@ -1,10 +1,9 @@
 #ifndef _PASSENGER_EXCEPTIONS_H_
 #define _PASSENGER_EXCEPTIONS_H_
 
-#include <apr_strings.h>
 #include <exception>
 #include <string>
-#include <cstring>
+#include <sstream>
 
 namespace Passenger {
 
@@ -16,14 +15,9 @@ private:
 	int m_code;
 public:
 	SystemException(const string &message, int errorCode) {
-		char buffer[10];
-		
-		msg.assign(message);
-		msg.append(": ");
-		msg.append(strerror(errorCode));
-		if (apr_snprintf(buffer, sizeof(buffer), " (%d)", errorCode) > 0) {
-			msg.append(buffer);
-		}
+		stringstream str(message);
+		str << ":" << strerror(errorCode) << " (" << errorCode << ")";
+		msg = str.str();
 		m_code = errorCode;
 	}
 	

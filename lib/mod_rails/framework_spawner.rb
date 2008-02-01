@@ -65,12 +65,13 @@ class FrameworkSpawner < AbstractServer
 	# or a problem in the Ruby on Rails framework), then a ApplicationSpawner::SpawnError
 	# will be raised. The application's exception message will be printed to standard
 	# error.
-	def spawn_application(app_root, username = nil)
+	def spawn_application(app_root, user = nil, group = nil)
 		app_root = normalize_path(app_root)
 		assert_valid_app_root(app_root)
-		assert_valid_username(username) unless username.nil?
+		assert_valid_username(user) unless user.nil?
+		assert_valid_groupname(group) unless group.nil?
 		begin
-			send_to_server("spawn_application", app_root, username)
+			send_to_server("spawn_application", app_root, user, group)
 			pid = recv_from_server
 			reader = recv_io_from_server
 			writer = recv_io_from_server
@@ -152,11 +153,13 @@ private
 		end
 	end
 
-	def handle_spawn_application(app_root, username)
+	def handle_spawn_application(app_root, user, group)
+		user = nil if user && user.empty?
+		group = nil if group && group.empty?
 		@spawners_lock.synchronize do
 			spawner = @spawners[app_root]
 			if spawner.nil?
-				spawner = ApplicationSpawner.new(app_root, username.empty? ? nil : username)
+				spawner = ApplicationSpawner.new(app_root, user, group)
 				spawner.file_descriptors_to_close = [@child_socket.fileno]
 				spawner.start
 				@spawners[app_root] = spawner

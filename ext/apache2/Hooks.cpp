@@ -279,7 +279,7 @@ public:
 			
 			return OK;
 		} catch (const exception &e) {
-			ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "mod_passenger unknown error: %s", e.what());
+			ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "mod_passenger: unknown uncaught error: %s", e.what());
 			return HTTP_INTERNAL_SERVER_ERROR;
 		}
 	}

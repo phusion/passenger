@@ -8,10 +8,10 @@ LIBTOOL_OBJECTS=Configuration.o,Hooks.o,DispatcherBucket.o,Utils.o
 .PHONY: all install clean start restart stop
 
 all: $(OBJECTS)
-	$(APXS) -c mod_rails.c -Wc,$(LIBTOOL_OBJECTS) -Wl,-lstdc++
+	$(APXS) -c mod_rails.c -Wc,$(LIBTOOL_OBJECTS) -Wl,-lstdc++,-lboost_thread
 
 install: $(OBJECTS)
-	$(APXS) -i -c mod_rails.c -Wc,$(LIBTOOL_OBJECTS) -Wl,-lstdc++
+	$(APXS) -i -c mod_rails.c -Wc,$(LIBTOOL_OBJECTS) -Wl,-lstdc++,-lboost_thread
 
 Configuration.o: Configuration.cpp
 	$(CXX) $(CXXFLAGS) -c Configuration.cpp

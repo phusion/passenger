@@ -26,8 +26,13 @@ private
 	end
 	
 	def assert_valid_username(username)
-		# If username does not exist then getpwnam() will throw an ArgumentError.
-		username.nil? || !Etc.getpwnam(username).nil?
+		# If username does not exist then getpwnam() will raise an ArgumentError.
+		username && Etc.getpwnam(username)
+	end
+	
+	def assert_valid_groupname(groupname)
+		# If groupname does not exist then getgrnam() will raise an ArgumentError.
+		groupname && Etc.getgrnam(groupname)
 	end
 	
 	def print_exception(current_location, exception)
