@@ -118,16 +118,18 @@ private:
 			}
 			
 			execlp(rubyCommand.c_str(), rubyCommand.c_str(), spawnServerCommand.c_str(), NULL);
-			fprintf(stderr, "Unable to run %s: %s\n", rubyCommand.c_str(), strerror(errno));
+			int e = errno;
+			fprintf(stderr, "Unable to run %s: %s\n", rubyCommand.c_str(), strerror(e));
 			_exit(1);
 		} else if (pid == -1) {
+			int e = errno;
 			close(fds[0]);
 			close(fds[1]);
 			if (logFileHandle != NULL) {
 				fclose(logFileHandle);
 			}
 			pid = 0;
-			throw SystemException("Unable to fork a process", errno);
+			throw SystemException("Unable to fork a process", e);
 		} else {
 			close(fds[1]);
 			if (!logFile.empty()) {
@@ -224,6 +226,8 @@ public:
 		mutex::scoped_lock l(lock);
 		
 		if (serverNeedsRestart) {
+			// TODO: This is not the best place to restart the server.
+			// Ideally a spawn() should fail as least as possible.
 			try {
 				P_TRACE("Restarting spawn server.");
 				restartServer();
