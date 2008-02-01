@@ -162,9 +162,8 @@ private
 end
 
 if __FILE__ == $0
-	unix_socket = IO.new(ARGV[0].to_i, "a+")
 	spawn_manager = SpawnManager.new
-	spawn_manager.server_main(unix_socket)
+	spawn_manager.server_main(IO.new(0, "a+"))
 	spawn_manager.cleanup
 end
 
