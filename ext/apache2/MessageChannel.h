@@ -18,20 +18,64 @@ namespace Passenger {
 
 using namespace std;
 
+/**
+ * This class provides convenience methods for:
+ *  - sending and receiving discrete messages over a file descriptor.
+ *    A message is just a list of strings.
+ *  - file descriptor passing over a Unix socket.
+ *
+ * MessageChannel is to be wrapped around a file descriptor. For example:
+ * @code
+ *    int p[2];
+ *    pipe(p);
+ *    MessageChannel channel1(p[0]);
+ *    MessageChannel channel2(p[1]);
+ *    
+ *    channel2.write("hello", "world !!", NULL);
+ *    list<string> args;
+ *    channel1.read(args);  // args now contains { "hello", "world !!" }
+ * @endcode
+ *
+ * The life time of a MessageChannel is independent from that of the
+ * wrapped file descriptor. If a MessageChannel object is destroyed,
+ * the file descriptor is not automatically closed. Call close()
+ * if you want to close the file descriptor.
+ *
+ * @note I/O operations are not buffered.
+ * @note Be careful with mixing the sending/receiving of messages file
+ *       descriptor passing. These operations have stream properties.
+ *       Suppose you first send a message, then pass a file descriptor.
+ *       If the other side of the communication channel first tries to
+ *       receive a file descriptor, and then tries to receive a message,
+ *       then bad things will happen.
+ */
 class MessageChannel {
 private:
 	const static char DELIMITER = '\0';
 	int fd;
 
 public:
+	/**
+	 * Construct a new MessageChannel with no underlying file descriptor.
+	 * Thus the resulting MessageChannel object will not be usable.
+	 * This constructor exists to allow one to declare an "empty"
+	 * MessageChannel variable which is to be initialized later.
+	 */
 	MessageChannel() {
 		this->fd = -1;
 	}
 
+	/**
+	 * Construct a new MessageChannel with the given file descriptor.
+	 */
 	MessageChannel(int fd) {
 		this->fd = fd;
 	}
 	
+	/**
+	 * Close the underlying file descriptor. If this method is called multiple
+	 * times, the file descriptor will only be closed the first time.
+	 */
 	void close() {
 		if (fd != -1) {
 			::close(fd);
@@ -39,6 +83,12 @@ public:
 		}
 	}
 
+	/**
+	 * Send the message, which consists of the given elements, over the underlying
+	 * file descriptor.
+	 *
+	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 */
 	void write(const list<string> &args) {
 		list<string>::const_iterator it;
 		string data;
@@ -70,6 +120,15 @@ public:
 		} while (written < data.size());
 	}
 	
+	/**
+	 * Send the message, which consists of the given strings, over the underlying
+	 * file descriptor.
+	 *
+	 * @param name The first element of the message to send.
+	 * @param ... Other elements of the message. These *must* be strings, i.e. of type char*.
+	 *            It is also required to terminate this list with a NULL.
+	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 */
 	void write(const char *name, ...) {
 		list<string> args;
 		args.push_back(name);
@@ -88,6 +147,14 @@ public:
 		write(args);
 	}
 	
+	/**
+	 * Pass a file descriptor. This only works if the underlying file
+	 * descriptor is a Unix socket.
+	 *
+	 * @param fileDescriptor The file descriptor to pass.
+	 * @throws SystemException Something went wrong during file descriptor passing.
+	 * @pre <tt>fileDescriptor >= 0</tt>
+	 */
 	void writeFileDescriptor(int fileDescriptor) {
 		struct msghdr msg;
 		struct iovec vec[1];
@@ -120,6 +187,14 @@ public:
 		}
 	}
 	
+	/**
+	 * Receive a message from the underlying file descriptor.
+	 *
+	 * @param args The message will be put in this variable.
+	 * @return Whether end-of-file has been reached. If so, then the contents
+	 *         of <tt>args</tt> will be undefined.
+	 * @throws SystemException If an error occured while receiving the message.
+	 */
 	bool read(vector<string> &args) {
 		uint16_t size;
 		int ret;
@@ -165,6 +240,17 @@ public:
 		return true;
 	}
 	
+	/**
+	 * Receive a file descriptor, which had been passed over the underlying
+	 * file descriptor.
+	 *
+	 * @return The passed file descriptor.
+	 * @throws SystemException If something went wrong during the
+	 *            receiving of a file descriptor. Perhaps the underlying
+	 *            file descriptor isn't a Unix socket.
+	 * @throws IOException Whatever was received doesn't seem to be a
+	 *            file descriptor.
+	 */
 	int readFileDescriptor() {
 		struct msghdr msg;
 		struct iovec vec[2];

@@ -217,8 +217,7 @@ public:
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
 		
 		const char *spawnManagerCommand = "/home/hongli/Projects/mod_rails/lib/mod_rails/spawn_manager.rb";
-		const char *logFile = "/home/hongli/Projects/mod_rails/spawner_log.txt";
-		applicationPool = ApplicationPoolPtr(new ApplicationPool(spawnManagerCommand, logFile, "production"));
+		applicationPool = ApplicationPoolPtr(new ApplicationPool(spawnManagerCommand, "", "production"));
 	}
 	
 	~Hooks() {
@@ -229,7 +228,6 @@ public:
 	}
 	
 	int handleRequest(request_rec *r) {
-		// The main request handler hook function.
 		RailsConfig *config = getConfig(r);
 		const char *railsDir;
 		
@@ -253,8 +251,6 @@ public:
 			ap_rputs("\", but it doesn't seem to be valid.", r);
 			return OK;
 		}
-		
-		
 		
 		/* int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_ERROR);
     		if (httpStatus != OK) {
@@ -280,10 +276,12 @@ public:
 
 			ap_scan_script_header_err_brigade(r, bb, NULL);
 			ap_pass_brigade(r->output_filters, bb);
+			
+			return OK;
 		} catch (const exception &e) {
 			ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "mod_passenger unknown error: %s", e.what());
+			return HTTP_INTERNAL_SERVER_ERROR;
 		}
-		return OK;
 	}
 	
 	int
