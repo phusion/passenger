@@ -1,3 +1,8 @@
+/**
+ * This file implements an APR bucket which understands the request handler's
+ * (= the dispatcher's) protocol.
+ * See http://www.apachetutor.org/dev/brigades for information on APR buckets.
+ */
 #ifndef _DISPATCHER_BUCKET_H_
 #define _DISPATCHER_BUCKET_H_
 

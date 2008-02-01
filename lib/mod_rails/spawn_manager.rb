@@ -34,7 +34,7 @@ class SpawnManager
 		end
 	end
 
-	def spawn_application(app_root, username = nil)
+	def spawn_application(app_root, user = nil, group = nil)
 		framework_version = Application.get_framework_version(app_root)
 		spawner = nil
 		@lock.synchronize do
@@ -46,7 +46,7 @@ class SpawnManager
 			end
 		end
 		spawner.time = Time.now
-		return spawner.spawn_application(app_root, username)
+		return spawner.spawn_application(app_root, user, group)
 	end
 	
 	def server_main(unix_socket)
@@ -116,9 +116,10 @@ private
 		@previous_signal_handlers = {}
 	end
 
-	def handle_spawn_application(app_root, username = nil)
-		username = nil if username && username.empty?
-		app = spawn_application(app_root, username)
+	def handle_spawn_application(app_root, user, group)
+		user = nil if user && user.empty?
+		group = nil if group && group.empty?
+		app = spawn_application(app_root, user, group)
 		@channel.write(app.pid)
 		@channel.send_io(app.reader)
 		@channel.send_io(app.writer)

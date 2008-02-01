@@ -24,7 +24,6 @@ class RequestHandler
 		
 		def self.write(io, data)
 			io.write([data.size].pack('n') << data)
-			io.flush
 		end
 	end
 
@@ -76,6 +75,7 @@ class RequestHandler
 		write_chunk("\r\n")
 		write_chunk(content)
 		write_chunk("")
+		@writer.flush
 	end
 
 private
