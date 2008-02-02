@@ -50,7 +50,7 @@ private:
 			this->sock = sock;
 		}
 		
-		~ApplicationPoolClient() {
+		virtual ~ApplicationPoolClient() {
 			close(sock);
 		}
 		

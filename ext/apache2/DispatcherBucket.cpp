@@ -139,7 +139,6 @@ public:
 			P_TRACE("DispatcherBucket " << this << ": EOF");
 			b = apr_bucket_immortal_make(b, "", 0);
 			*str = (const char *) b->data;
-			app->closeReader();
 			return APR_SUCCESS;
 		} else if (result != APR_SUCCESS) {
 			P_TRACE("DispatcherBucket " << this << ": APR error " << result);
@@ -156,13 +155,11 @@ public:
 			*str = chunk;
 			*len = chunk_size;
 			APR_BUCKET_INSERT_AFTER(b, dup_bucket(b->list));
-			P_TRACE("DispatcherBucket " << this << ": read (" << string(*str, *len) << ")");
 			return APR_SUCCESS;
 		} else if (result == APR_EOF) {
 			P_TRACE("DispatcherBucket " << this << ": EOF");
 			b = apr_bucket_immortal_make(b, "", 0);
 			*str = (const char *) b->data;
-			app->closeReader();
 			return APR_SUCCESS;
 		} else {
 			P_TRACE("DispatcherBucket " << this << ": APR error " << result);
@@ -186,12 +183,8 @@ dispatcher_bucket_create(apr_pool_t *pool, ApplicationPtr app, apr_interval_time
 	b->type = &bucket_type_dispatcher;
 	b->length = (apr_size_t) -1;
 	b->start = -1;
-	
-	data = (DispatcherBucket *) apr_palloc(pool, sizeof(DispatcherBucket));
-	if (data == NULL) {
-		apr_bucket_free(b);
-		return NULL;
-	}
+
+	data = new DispatcherBucket();
 	data->app = app;
 	data->pipe = app->getReader();
 	data->timeout = timeout;
@@ -210,7 +203,7 @@ dispatcher_bucket_read(apr_bucket *b, const char **str, apr_size_t *len, apr_rea
 static void
 dispatcher_bucket_destroy(void *d) {
 	DispatcherBucket *data = (DispatcherBucket *) d;
-	data->app = ApplicationPtr();
+	delete data;
 	P_TRACE("DispatcherBucket " << d << " destroyed.");
 }
 

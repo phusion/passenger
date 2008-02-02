@@ -173,7 +173,7 @@ private:
 		addHeader(headers, "HTTPS",           lookupEnv(r, "HTTPS"));
 		addHeader(headers, "CONTENT_TYPE",    lookupHeader(r, "Content-type"));
 		addHeader(headers, "DOCUMENT_ROOT",   ap_document_root(r));
-	
+		
 		// Set HTTP headers.
 		const apr_array_header_t *hdrs_arr;
 		apr_table_entry_t *hdrs;
@@ -206,6 +206,7 @@ private:
 			entries.push_back(hdrs[i].key);
 			entries.push_back(hdrs[i].val);
 		}
+		
 		channel.write(entries);
 	
 		return APR_SUCCESS;
@@ -216,7 +217,6 @@ public:
 		initDebugging();
 		P_DEBUG("Initializing mod_passenger.");
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
-		
 		const char *spawnManagerCommand = "/home/hongli/Projects/mod_rails/lib/mod_rails/spawn_manager.rb";
 		applicationPoolServer = ptr(new ApplicationPoolServer(spawnManagerCommand, "", "production"));
 	}
@@ -264,7 +264,7 @@ public:
 			apr_bucket_brigade *bb;
 			apr_bucket *b;
 			
-			P_DEBUG("Processing HTTP request: " << r->uri);
+			P_DEBUG("Processing HTTP request on process " << getpid() << ": " << r->uri);
 			ApplicationPtr app(applicationPool->get(string(railsDir) + "/.."));
 			P_TRACE("Connected to application: reader FD = " << app->getReader() << ", writer FD = " << app->getWriter());
 			sendHeaders(r, app->getWriter());
@@ -279,7 +279,7 @@ public:
 
 			ap_scan_script_header_err_brigade(r, bb, NULL);
 			ap_pass_brigade(r->output_filters, bb);
-			
+
 			return OK;
 		} catch (const exception &e) {
 			ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "mod_passenger: unknown uncaught error: %s", e.what());

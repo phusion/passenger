@@ -5,6 +5,9 @@
 #include <ostream>
 #include <sstream>
 
+#include <sys/types.h>
+#include <unistd.h>
+
 namespace Passenger {
 
 #ifdef PASSENGER_DEBUG
@@ -12,7 +15,7 @@ namespace Passenger {
 		do { \
 			if (Passenger::_debugStream != 0) { \
 				*Passenger::_debugStream << \
-					"[" << __FILE__ << ":" << __LINE__ << "] " << \
+					"[" << getpid() << ":" << __FILE__ << ":" << __LINE__ << "] " << \
 					expr << std::endl; \
 			} \
 		} while (false)
