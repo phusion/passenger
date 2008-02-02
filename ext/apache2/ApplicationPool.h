@@ -2,6 +2,8 @@
 #define _PASSENGER_APPLICATION_POOL_H_
 
 #include <boost/shared_ptr.hpp>
+#include <boost/thread/mutex.hpp>
+
 #include <string>
 #include <map>
 
@@ -26,6 +28,8 @@ private:
 
 	SpawnManager spawnManager;
 	ApplicationMap apps;
+	mutex lock;
+	bool threadSafe;
 	
 	string normalizePath(const string &path) {
 		// TODO
@@ -37,23 +41,27 @@ public:
 	             const string &logFile = "",
 	             const string &environment = "production",
 	             const string &rubyCommand = "ruby")
-	: spawnManager(spawnManagerCommand, logFile, environment, rubyCommand) {}
+	: spawnManager(spawnManagerCommand, logFile, environment, rubyCommand) {
+		threadSafe = false;
+	}
+	
+	void setThreadSafe() {
+		threadSafe = true;
+	}
 	
 	// TODO: improve algorithm
-	// TODO: make thread-safe
-	// TODO: make it possible to share an ApplicationPool between processes
 	virtual ApplicationPtr get(const string &appRoot, const string &user = "", const string &group = "") {
 		string normalizedAppRoot(normalizePath(appRoot));
-		//scoped_lock l(lock);
-		
 		ApplicationPtr app;
-		//ApplicationMap::iterator it(apps.find(appRoot));
-		//if (it == apps.end()) {
+		mutex::scoped_lock l(lock, threadSafe);
+		
+		ApplicationMap::iterator it(apps.find(appRoot));
+		if (it == apps.end()) {
 			app = spawnManager.spawn(appRoot, user, group);
-		//	apps[appRoot] = app;
-		//} else {
-		//	app = it->second;
-		//}
+			apps[appRoot] = app;
+		} else {
+			app = it->second;
+		}
 		return app;
 	}
 };
