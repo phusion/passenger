@@ -1,11 +1,13 @@
 #include "tut.h"
 #include "tut_reporter.h"
+#include <apr_general.h>
 
 namespace tut {
 	test_runner_singleton runner;
 }
 
 int main() {
+	apr_initialize();
 	tut::reporter reporter;
 	tut::runner.get().set_callback(&reporter);
 	try {

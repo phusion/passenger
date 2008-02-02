@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <unistd.h>
+#include <cstdarg>
 
 #include "Exceptions.h"
 

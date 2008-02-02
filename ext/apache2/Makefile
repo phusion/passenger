@@ -16,7 +16,7 @@ install: $(OBJECTS)
 Configuration.o: Configuration.cpp
 	$(CXX) $(CXXFLAGS) -c Configuration.cpp
 
-Hooks.o: Hooks.cpp Hooks.h Types.h DispatcherBucket.h ApplicationPool.h SpawnManager.h Exceptions.h Application.h MessageChannel.h Utils.h
+Hooks.o: Hooks.cpp Hooks.h Types.h DispatcherBucket.h ApplicationPool.h ApplicationPoolClientServer.h SpawnManager.h Exceptions.h Application.h MessageChannel.h Utils.h
 	$(CXX) $(CXXFLAGS) -c Hooks.cpp
 
 DispatcherBucket.o: DispatcherBucket.h DispatcherBucket.cpp Utils.h

@@ -16,6 +16,9 @@ initDebugging(const char *logFile) {
 			if (stream->fail()) {
 				delete stream;
 			} else {
+				if (_debugStream != NULL && _debugStream != &cerr) {
+					delete _debugStream;
+				}
 				_debugStream = stream;
 			}
 		} else {

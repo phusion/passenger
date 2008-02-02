@@ -22,7 +22,7 @@
 #include "Types.h"
 #include "Utils.h"
 #include "DispatcherBucket.h"
-#include "ApplicationPool.h"
+#include "ApplicationPoolClientServer.h"
 #include "MessageChannel.h"
 
 using namespace std;
@@ -33,6 +33,7 @@ extern "C" module AP_MODULE_DECLARE_DATA rails_module;
 
 class Hooks {
 private:
+	ApplicationPoolServerPtr applicationPoolServer;
 	ApplicationPoolPtr applicationPool;
 	
 	RailsConfig *getConfig(request_rec *r) {
@@ -217,7 +218,7 @@ public:
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
 		
 		const char *spawnManagerCommand = "/home/hongli/Projects/mod_rails/lib/mod_rails/spawn_manager.rb";
-		applicationPool = ApplicationPoolPtr(new ApplicationPool(spawnManagerCommand, "", "production"));
+		applicationPoolServer = ptr(new ApplicationPoolServer(spawnManagerCommand, "", "production"));
 	}
 	
 	~Hooks() {
@@ -225,6 +226,8 @@ public:
 	}
 	
 	void initChild(apr_pool_t *pchild, server_rec *s) {
+		applicationPool = applicationPoolServer->connect();
+		applicationPoolServer->detach();
 	}
 	
 	int handleRequest(request_rec *r) {

@@ -1,7 +1,7 @@
 CXX=g++
-CXXFLAGS=-Isupport -g -Wall `pkg-config --cflags apr-1 apr-util-1`
+CXXFLAGS=-Isupport -DVALGRIND_FRIENDLY -g -Wall `pkg-config --cflags apr-1 apr-util-1`
 AP2_FLAGS=-I../ext/apache2
-AP2_OBJECTS=CxxTestMain.o MessageChannelTest.o SpawnManagerTest.o
+AP2_OBJECTS=CxxTestMain.o MessageChannelTest.o SpawnManagerTest.o ApplicationPoolClientServerTest.o
 
 .PHONY: test_all clean
 
@@ -9,7 +9,7 @@ test_all: Apache2ModuleTests
 	./Apache2ModuleTests
 
 Apache2ModuleTests: $(AP2_OBJECTS)
-	$(CXX) $(AP2_OBJECTS) -o Apache2ModuleTests `pkg-config --libs apr-1 apr-util-1`
+	$(CXX) $(AP2_OBJECTS) -o Apache2ModuleTests `pkg-config --libs apr-1 apr-util-1` -lboost_thread
 
 CxxTestMain.o: CxxTestMain.cpp
 	$(CXX) $(CXXFLAGS) -c CxxTestMain.cpp
@@ -19,6 +19,9 @@ MessageChannelTest.o: MessageChannelTest.cpp ../ext/apache2/MessageChannel.h
 
 SpawnManagerTest.o: SpawnManagerTest.cpp ../ext/apache2/SpawnManager.h
 	$(CXX) $(CXXFLAGS) $(AP2_FLAGS) -c SpawnManagerTest.cpp
+
+ApplicationPoolClientServerTest.o: ApplicationPoolClientServerTest.cpp ../ext/apache2/ApplicationPoolClientServer.h
+	$(CXX) $(CXXFLAGS) $(AP2_FLAGS) -c ApplicationPoolClientServerTest.cpp
 
 clean:
 	rm -f Apache2ModuleTests *.o

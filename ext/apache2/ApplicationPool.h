@@ -2,9 +2,9 @@
 #define _PASSENGER_APPLICATION_POOL_H_
 
 #include <boost/shared_ptr.hpp>
+#include <string>
 #include <map>
 
-#include "Application.h"
 #include "SpawnManager.h"
 
 namespace Passenger {
@@ -12,8 +12,15 @@ namespace Passenger {
 using namespace std;
 using namespace boost;
 
-// TODO: document this
 class ApplicationPool {
+public:
+	virtual ~ApplicationPool() {};
+	
+	virtual ApplicationPtr get(const string &appRoot, const string &user = "", const string &group = "") = 0;
+};
+
+// TODO: document this
+class StandardApplicationPool: public ApplicationPool {
 private:
 	typedef map<string, ApplicationPtr> ApplicationMap;
 
@@ -26,27 +33,23 @@ private:
 	}
 	
 public:
-	ApplicationPool(const string &spawnManagerCommand,
-	                const string &logFile = "",
-	                const string &environment = "production",
-	                const string &rubyCommand = "ruby")
+	StandardApplicationPool(const string &spawnManagerCommand,
+	             const string &logFile = "",
+	             const string &environment = "production",
+	             const string &rubyCommand = "ruby")
 	: spawnManager(spawnManagerCommand, logFile, environment, rubyCommand) {}
-	
-	ApplicationPtr get(const string &appRoot) {
-		return get(appRoot, "");
-	}
 	
 	// TODO: improve algorithm
 	// TODO: make thread-safe
 	// TODO: make it possible to share an ApplicationPool between processes
-	ApplicationPtr get(const string &appRoot, const string &username) {
+	virtual ApplicationPtr get(const string &appRoot, const string &user = "", const string &group = "") {
 		string normalizedAppRoot(normalizePath(appRoot));
 		//scoped_lock l(lock);
 		
 		ApplicationPtr app;
 		//ApplicationMap::iterator it(apps.find(appRoot));
 		//if (it == apps.end()) {
-			app = spawnManager.spawn(appRoot, username);
+			app = spawnManager.spawn(appRoot, user, group);
 		//	apps[appRoot] = app;
 		//} else {
 		//	app = it->second;
