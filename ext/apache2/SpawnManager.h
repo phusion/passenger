@@ -10,9 +10,9 @@
 #include <sys/wait.h>
 #include <arpa/inet.h>
 #include <cstdio>
+#include <cstdarg>
 #include <unistd.h>
 #include <errno.h>
-#include <stdarg.h>
 
 #include "Application.h"
 #include "MessageChannel.h"

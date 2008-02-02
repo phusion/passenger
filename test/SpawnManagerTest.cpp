@@ -7,17 +7,13 @@ using namespace Passenger;
 
 namespace tut {
 	struct SpawnManagerTest {
-		SpawnManagerPtr spawnManager;
-
-		SpawnManagerTest() {
-		}
 	};
 
 	DEFINE_TEST_GROUP(SpawnManagerTest);
 
 	TEST_METHOD(1) {
 		// Spawning an application should return a valid Application object.
-		SpawnManager manager("support/spawn_manager_mock.rb");
+		SpawnManager manager("support/spawn_server_mock.rb");
 		ApplicationPtr app(manager.spawn("."));
 		char buf[5];
 

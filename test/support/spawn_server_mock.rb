@@ -4,7 +4,7 @@ require 'mod_rails/spawn_manager'
 
 include ModRails
 class SpawnManager
-	def handle_spawn_application(app_root, username = nil)
+	def handle_spawn_application(app_root, user, group)
 		r, w = IO.pipe
 		@channel.write(1234)
 		@channel.send_io(r)

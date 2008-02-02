@@ -1,7 +1,9 @@
 #ifndef _PASSENGER_UTILS_H_
 #define _PASSENGER_UTILS_H_
 
+#include <boost/shared_ptr.hpp>
 #include <ostream>
+#include <sstream>
 
 namespace Passenger {
 
@@ -20,10 +22,22 @@ namespace Passenger {
 	#define P_TRACE P_DEBUG
 #endif
 
-	// Internal; do not use directly.
-	extern std::ostream *_debugStream;
+void initDebugging(const char *logFile = NULL);
 
-	void initDebugging(const char *logFile = NULL);
+template<typename T> boost::shared_ptr<T>
+ptr(T *pointer) {
+	return boost::shared_ptr<T>(pointer);
+}
+
+template<typename T> std::string
+toString(T something) {
+	std::stringstream s;
+	s << something;
+	return s.str();
+}
+
+// Internal; do not use directly.
+extern std::ostream *_debugStream;
 
 } // namespace Passenger
 
