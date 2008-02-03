@@ -1,6 +1,6 @@
 #include "tut.h"
 #include "ApplicationPoolClientServer.h"
-#include "Utils.cpp"
+#include "Utils.h"
 #include <cstring>
 #include <unistd.h>
 #include <errno.h>
@@ -9,10 +9,12 @@ using namespace Passenger;
 
 namespace tut {
 	static bool firstRun = true;
+	static bool timeToTestThePoolItself = false;
 	static unsigned int initialFileDescriptors;
 
 	struct ApplicationPoolClientServerTest {
 		ApplicationPoolServerPtr server;
+		ApplicationPoolPtr pool;
 		
 		ApplicationPoolClientServerTest() {
 			if (firstRun) {
@@ -20,6 +22,9 @@ namespace tut {
 				firstRun = false;
 			}
 			server = ptr(new ApplicationPoolServer("support/spawn_server_mock.rb"));
+			if (timeToTestThePoolItself) {
+				pool = server->connect();
+			}
 		}
 		
 		unsigned int countOpenFileDescriptors() {
@@ -41,6 +46,7 @@ namespace tut {
 
 	TEST_METHOD(1) {
 		// Constructor and destructor should not crash.
+		// (And yes, this test method is intended to be blank.)
 	}
 	
 	TEST_METHOD(2) {
@@ -81,5 +87,12 @@ namespace tut {
 		// of the above tests.
 		server = ApplicationPoolServerPtr();
 		ensure_equals(countOpenFileDescriptors(), initialFileDescriptors);
+		
+		// A flag for the test methods in ApplicationPoolTestTemplate.cpp
+		timeToTestThePoolItself = true;
 	}
+	
+	#define APPLICATION_POOL_TEST_START 5
+	#define USE_TEMPLATE
+	#include "ApplicationPoolTestTemplate.cpp"
 }

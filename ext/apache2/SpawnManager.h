@@ -120,6 +120,7 @@ private:
 			execlp(rubyCommand.c_str(), rubyCommand.c_str(), spawnServerCommand.c_str(), NULL);
 			int e = errno;
 			fprintf(stderr, "Unable to run %s: %s\n", rubyCommand.c_str(), strerror(e));
+			fflush(stderr);
 			_exit(1);
 		} else if (pid == -1) {
 			int e = errno;

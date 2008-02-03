@@ -7,9 +7,12 @@
 
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <cstdio>
 #include <unistd.h>
+#include <errno.h>
 
 #include "Application.h"
+#include "Exceptions.h"
 
 namespace Passenger {
 
@@ -34,8 +37,14 @@ public:
 		int fd1[2], fd2[2];
 		pid_t pid;
 		
-		pipe(fd1);
-		pipe(fd2);
+		if (pipe(fd1) == -1) {
+			throw SystemException("Cannot create a pipe", errno);
+		}
+		if (pipe(fd2) == -1) {
+			close(fd1[0]);
+			close(fd1[1]);
+			throw SystemException("Cannot create a pipe", errno);
+		}
 		pid = fork();
 		if (pid == 0) {
 			pid = fork();
@@ -47,10 +56,23 @@ public:
 				close(fd2[0]);
 				close(fd2[1]);
 				execlp(DUMMY_REQUEST_HANDLER_EXECUTABLE, DUMMY_REQUEST_HANDLER_EXECUTABLE, NULL);
+				int e = errno;
+				fprintf(stderr, "Unable to run %s: %s\n", DUMMY_REQUEST_HANDLER_EXECUTABLE, strerror(e));
+				fflush(stderr);
+				_exit(1);
+			} else if (pid == -1) {
+				perror("Cannot fork a new process");
+				fflush(stderr);
 				_exit(1);
 			} else {
 				_exit(0);
 			}
+		} else if (pid == -1) {
+			close(fd1[0]);
+			close(fd1[1]);
+			close(fd2[0]);
+			close(fd2[1]);
+			throw SystemException("Cannot fork a new process", errno);
 		} else {
 			int reader, writer;
 			

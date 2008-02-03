@@ -123,7 +123,9 @@ public:
 	 * Send an array message, which consists of the given elements, over the underlying
 	 * file descriptor.
 	 *
+	 * @param args The message elements.
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 * @pre None of the message elements may contain a NUL character ('\0').
 	 */
 	void write(const list<string> &args) {
 		list<string>::const_iterator it;
@@ -164,6 +166,7 @@ public:
 	 * @param ... Other elements of the message. These *must* be strings, i.e. of type char*.
 	 *            It is also required to terminate this list with a NULL.
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 * @pre None of the message elements may contain a NUL character ('\0').
 	 */
 	void write(const char *name, ...) {
 		list<string> args;
@@ -183,10 +186,24 @@ public:
 		write(args);
 	}
 	
+	/**
+	 * Send a scalar message over the underlying file descriptor.
+	 *
+	 * @param str The scalar message's content.
+	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 */
 	void writeScalar(const string &str) {
 		writeScalar(str.c_str(), str.size());
 	}
 	
+	/**
+	 * Send a scalar message over the underlying file descriptor.
+	 *
+	 * @param data The scalar message's content.
+	 * @param size The number of bytes in <tt>data</tt>.
+	 * @pre <tt>data != NULL</tt>
+	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 */
 	void writeScalar(const char *data, unsigned short size) {
 		writeLength(size);
 		

@@ -71,6 +71,7 @@ namespace tut {
 	
 	TEST_METHOD(4) {
 		// read() should be able to read messages constructed by the Ruby implementation.
+		// write() should be able to construct messages that can be read by the Ruby implementation.
 		// Multiple read() and write() calls should work (i.e. the MessageChannel should have stream properties).
 		int p1[2], p2[2];
 		pid_t pid;
@@ -121,12 +122,13 @@ namespace tut {
 		}
 	}
 	
-	TEST_METHOD(5) {
-		// write() should be able to construct messages that can be read by the Ruby implementation.
-	}
-	
 	TEST_METHOD(6) {
 		// write(name) should generate a correct message even if there are no additional arguments.
+		writer.write("hello", NULL);
+		vector<string> args;
+		reader.read(args);
+		ensure_equals(args.size(), 1u);
+		ensure_equals(args[0], "hello");
 	}
 	
 	TEST_METHOD(7) {
@@ -161,5 +163,23 @@ namespace tut {
 		reader.read(args);
 		ensure_equals(args.size(), 1u);
 		ensure_equals(args[0], "");
+	}
+	
+	TEST_METHOD(9) {
+		// TODO:
+		// readScalar() should be able to read messages constructed by writeScalar().
+	}
+	
+	TEST_METHOD(10) {
+		// TODO:
+		// writeScalar() should be able to produce messages that are compatible with the Ruby implementation.
+		// readScalar() should be able to read messages produced by the Ruby implementation.
+	}
+	
+	TEST_METHOD(11) {
+		// TODO:
+		// If we send a lot of different messages (including file descriptor passing),
+		// and the other side sends the same stuff back to us, then MessageChannel
+		// should be able to read them all, if done in the correct order.
 	}
 }
