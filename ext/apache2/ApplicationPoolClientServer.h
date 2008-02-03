@@ -127,9 +127,7 @@ private:
 			free(pollResult);
 			// Apparently APR does not always close the file descriptor,
 			// so we do it manually.
-			for (set<int>::const_iterator it(fds.begin()); it != fds.end(); it++) {
-				close(*it);
-			}
+			closeAll();
 		}
 	
 		void add(int fd) {
@@ -191,6 +189,12 @@ private:
 			*fileDescriptors = pollResult;
 			return num;
 		}
+		
+		void closeAll() {
+			for (set<int>::const_iterator it(fds.begin()); it != fds.end(); it++) {
+				close(*it);
+			}
+		}
 	};
 	
 	StandardApplicationPool pool;
@@ -201,7 +205,6 @@ private:
 	SocketDemultiplexer demultiplexer;
 	
 	void threadMain() {
-		demultiplexer.add(serverSocket);
 		while (!done) {
 			int *fds;
 			unsigned int num;
@@ -287,7 +290,8 @@ private:
 	} */
 	
 	void finalize() {
-		close(serverSocket);
+		demultiplexer.closeAll();
+		// serverSocket will be closed by demultiplexer.
 		close(connectSocket);
 	}
 	
@@ -306,6 +310,7 @@ public:
 		connectSocket = fds[1];
 		done = false;
 		detached = false;
+		demultiplexer.add(serverSocket);
 		thr = new thread(ServerThreadDelegator(this));
 	}
 	
