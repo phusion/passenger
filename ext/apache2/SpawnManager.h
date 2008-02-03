@@ -111,7 +111,7 @@ private:
 			close(fds[1]);
 			
 			// Close all other file descriptors
-			for (int i = sysconf(_SC_OPEN_MAX); i >= 0; i--) {
+			for (long i = sysconf(_SC_OPEN_MAX) - 1; i >= 0; i--) {
 				if (i != STDIN_FILENO && i != STDOUT_FILENO && i != STDERR_FILENO) {
 					close(i);
 				}
