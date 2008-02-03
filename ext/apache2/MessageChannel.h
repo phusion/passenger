@@ -21,9 +21,17 @@ using namespace std;
 
 /**
  * This class provides convenience methods for:
- *  - sending and receiving discrete messages over a file descriptor.
- *    A message is just a list of strings.
+ *  - sending and receiving messages over a file descriptor.
  *  - file descriptor passing over a Unix socket.
+ *
+ * There are two kinds of messages:
+ *  - Array messages. These are just a list of strings, and the message
+ *    itself has a specific length. The contained strings may not
+ *    contain NUL characters ('\0').
+ *  - Scalar messages. These are byte strings which may contain arbitrary
+ *    binary data. Scalar messages also have a specific length.
+ * The protocol is designed to be low overhead, easy to implement and
+ * easy to parse.
  *
  * MessageChannel is to be wrapped around a file descriptor. For example:
  * @code
@@ -32,9 +40,14 @@ using namespace std;
  *    MessageChannel channel1(p[0]);
  *    MessageChannel channel2(p[1]);
  *    
+ *    // Send an array message.
  *    channel2.write("hello", "world !!", NULL);
  *    list<string> args;
- *    channel1.read(args);  // args now contains { "hello", "world !!" }
+ *    channel1.read(args);    // args now contains { "hello", "world !!" }
+ *
+ *    // Send a scalar message.
+ *    channel2.writeScalar("some long string which can contain arbitrary binary data");
+ *    string str = channel1.readScalar();
  * @endcode
  *
  * The life time of a MessageChannel is independent from that of the
@@ -43,18 +56,39 @@ using namespace std;
  * if you want to close the file descriptor.
  *
  * @note I/O operations are not buffered.
- * @note Be careful with mixing the sending/receiving of messages file
- *       descriptor passing. These operations have stream properties.
- *       Suppose you first send a message, then pass a file descriptor.
- *       If the other side of the communication channel first tries to
- *       receive a file descriptor, and then tries to receive a message,
- *       then bad things will happen.
+ * @note Be careful with mixing the sending/receiving of array messages,
+ *    scalar messages and file descriptors. If you send a collection of any
+ *    of these in a specific order, then the receiving side must receive them
+ *    in the exact some order. So suppose you first send a message, then a
+ *    file descriptor, then a scalar, then the receiving side must first
+ *    receive a message, then a file descriptor, then a scalar. If the
+ *    receiving side does things in the wrong order then bad things will
+ *    happen.
  * @note MessageChannel is thread-safe.
  */
 class MessageChannel {
 private:
 	const static char DELIMITER = '\0';
 	int fd;
+
+	void writeLength(unsigned short len) {
+		uint16_t l;
+		ssize_t ret;
+		unsigned int written;
+		
+		l = htons(len);
+		written = 0;
+		do {
+			do {
+				ret = ::write(fd, (char *) &l + written, sizeof(l) - written);
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1) {
+				throw SystemException("write() failed", errno);
+			} else {
+				written += ret;
+			}
+		} while (written < sizeof(l));
+	}
 
 public:
 	/**
@@ -86,7 +120,7 @@ public:
 	}
 
 	/**
-	 * Send the message, which consists of the given elements, over the underlying
+	 * Send an array message, which consists of the given elements, over the underlying
 	 * file descriptor.
 	 *
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
@@ -123,7 +157,7 @@ public:
 	}
 	
 	/**
-	 * Send the message, which consists of the given strings, over the underlying
+	 * Send an array message, which consists of the given strings, over the underlying
 	 * file descriptor.
 	 *
 	 * @param name The first element of the message to send.
@@ -147,6 +181,27 @@ public:
 		}
 		va_end(ap);
 		write(args);
+	}
+	
+	void writeScalar(const string &str) {
+		writeScalar(str.c_str(), str.size());
+	}
+	
+	void writeScalar(const char *data, unsigned short size) {
+		writeLength(size);
+		
+		ssize_t ret;
+		unsigned int written = 0;
+		do {
+			do {
+				ret = ::write(fd, data + written, size - written);
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1) {
+				throw SystemException("write() failed", errno);
+			} else {
+				written += ret;
+			}
+		} while (written < size);
 	}
 	
 	/**

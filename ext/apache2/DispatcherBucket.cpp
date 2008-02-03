@@ -1,4 +1,6 @@
 #include <string>
+#include <algorithm>
+
 #include <poll.h>
 #include <errno.h>
 #include <unistd.h>
@@ -67,10 +69,10 @@ private:
 					return errno_to_apr_status(errno);
 				}
 			}
-			
+
 			apr_time_t begin = apr_time_now();
 			tmp = ::read(pipe, (char *) buffer + already_read, size - already_read);
-			timeout -= apr_time_now() - begin;
+			timeout = max((apr_time_t) 0, timeout - (apr_time_now() - begin));
 			if (tmp > 0) {
 				// Data has been read.
 				already_read += tmp;
@@ -141,7 +143,11 @@ public:
 			*str = (const char *) b->data;
 			return APR_SUCCESS;
 		} else if (result != APR_SUCCESS) {
-			P_TRACE("DispatcherBucket " << this << ": APR error " << result);
+			char buf[1024];
+			P_TRACE("DispatcherBucket " << this << ": APR error " << result
+				<< ": " << apr_strerror(result, buf, sizeof(buf)));
+			b = apr_bucket_immortal_make(b, "", 0);
+			*str = (const char *) b->data;
 			return result;
 		}
 
@@ -162,7 +168,11 @@ public:
 			*str = (const char *) b->data;
 			return APR_SUCCESS;
 		} else {
-			P_TRACE("DispatcherBucket " << this << ": APR error " << result);
+			char buf[1024];
+			P_TRACE("DispatcherBucket " << this << ": APR error " << result
+				<< ": " << apr_strerror(result, buf, sizeof(buf)));
+			b = apr_bucket_immortal_make(b, "", 0);
+			*str = (const char *) b->data;
 			return result;
 		}
 	}
