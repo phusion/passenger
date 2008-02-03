@@ -60,10 +60,9 @@ class ApplicationSpawner < AbstractServer
 	def spawn_application
 		send_to_server("spawn_application")
 		pid = recv_from_server
-		reader = recv_io_from_server
-		writer = recv_io_from_server
-		return Application.new(@app_root, pid, reader, writer)
-	rescue Errno::EPIPE, Errno::EBADF, IOError, SocketError
+		listen_socket = recv_io_from_server
+		return Application.new(@app_root, pid, listen_socket)
+	rescue SystemCallError, IOError, SocketError
 		raise SpawnError, "Unable to spawn the application: application died unexpectedly during initialization."
 	end
 
@@ -100,17 +99,13 @@ private
 					begin
 						send_to_client(Process.pid)
 						
-						reader1, writer1 = IO.pipe
-						reader2, writer2 = IO.pipe
-						send_io_to_client(reader1)
-						send_io_to_client(writer2)
-						reader1.close
-						writer2.close
-						
+						socket1, socket2 = UNIXSocket.pair
+						send_io_to_client(socket1)
+						socket1.close
 						@child_socket.close
-						RequestHandler.new(reader2, writer1).main_loop
-						reader2.close
-						writer1.close
+						
+						RequestHandler.new(socket2).main_loop
+						socket2.close
 					rescue Exception => e
 						print_exception('application', e)
 					ensure

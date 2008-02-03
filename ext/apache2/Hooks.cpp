@@ -21,7 +21,6 @@
 #include "Hooks.h"
 #include "Types.h"
 #include "Utils.h"
-#include "DispatcherBucket.h"
 #include "ApplicationPoolClientServer.h"
 #include "MessageChannel.h"
 
@@ -161,15 +160,16 @@ private:
 		addHeader(headers, "REQUEST_METHOD",  r->method);
 		addHeader(headers, "REQUEST_URI",     originalURI(r));
 		addHeader(headers, "QUERY_STRING",    r->args ? r->args : "");
-		addHeader(headers, "SCRIPT_NAME",     r->uri);
-		if (r->path_info) {
+		// TODO: we can use this to set Rails's relative_url_root!
+		//addHeader(headers, "SCRIPT_NAME",     r->uri);
+		/* if (r->path_info) {
 			int path_info_start = strlen(r->uri) - strlen(r->path_info);
 			ap_assert(path_info_start >= 0);
 			addHeader(headers, "SCRIPT_NAME", apr_pstrndup(r->pool, r->uri, path_info_start));
 			addHeader(headers, "PATH_INFO",   r->path_info);
 		} else {
 			addHeader(headers, "SCRIPT_NAME", r->uri);
-		}
+		} */
 		addHeader(headers, "HTTPS",           lookupEnv(r, "HTTPS"));
 		addHeader(headers, "CONTENT_TYPE",    lookupHeader(r, "Content-type"));
 		addHeader(headers, "DOCUMENT_ROOT",   ap_document_root(r));
@@ -197,17 +197,32 @@ private:
 			addHeader(headers, env[i].key, env[i].val);
 		}
 		
-		MessageChannel channel(fd);
-		list<string> entries;
+		// Now send the headers.
+		string buffer;
+		
 		hdrs_arr = apr_table_elts(headers);
     		hdrs = (apr_table_entry_t*) hdrs_arr->elts;
+    		buffer.reserve(1024 * 4);
 		for (i = 0; i < hdrs_arr->nelts; ++i) {
-			// TODO: optimize this. too much copying.
-			entries.push_back(hdrs[i].key);
-			entries.push_back(hdrs[i].val);
+			buffer.append(hdrs[i].key);
+			buffer.append(1, '\0');
+			buffer.append(hdrs[i].val);
+			buffer.append(1, '\0');
 		}
 		
-		channel.write(entries);
+		ssize_t ret;
+		unsigned int written = 0;
+		const char *data = const_cast<const string &>(buffer).c_str();
+		do {
+			do {
+				ret = write(fd, data + written, buffer.size() - written);
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1) {
+				throw SystemException("An error occured while writing headers to the request handler", errno);
+			} else {
+				written += ret;
+			}
+		} while (written < buffer.size());
 	
 		return APR_SUCCESS;
 	}
@@ -272,12 +287,15 @@ public:
 			
 			P_DEBUG("Processing HTTP request: " << r->uri);
 			ApplicationPtr app(applicationPool->get(string(railsDir) + "/.."));
-			P_TRACE("Connected to application: reader FD = " << app->getReader() << ", writer FD = " << app->getWriter());
-			sendHeaders(r, app->getWriter());
+			pair<int, int> pipes(app->connect());
+			sendHeaders(r, pipes.second);
+			close(pipes.second);
+			
+			apr_file_t *readerPipe = NULL;
+			apr_os_pipe_put(&readerPipe, &pipes.first, r->pool);
 
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
-			b = dispatcher_bucket_create(r->pool, app,
-				r->server->timeout, r->connection->bucket_alloc);
+			b = apr_bucket_pipe_create(readerPipe, r->connection->bucket_alloc);
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 
 			b = apr_bucket_eos_create(r->connection->bucket_alloc);

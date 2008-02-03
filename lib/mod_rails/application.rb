@@ -1,5 +1,6 @@
 module ModRails # :nodoc:
 
+# TODO: synchronize this documentation with the C++ one
 # Represents a single running instance of a Ruby on Rails application.
 class Application
 	# The root directory of this application, i.e. the directory that contains 'app/', 'public/', etc.
@@ -8,21 +9,7 @@ class Application
 	# The process ID of this application instance.
 	attr_reader :pid
 	
-	# An IO object, used for reading data from the application instance.
-	# This, together with _writer_, is the application's main communication
-	# channel with the outside world.
-	#
-	# This may or may not be the same object as _writer_, depending on whether
-	# it is a (single-duplex) pipe or a (full-duplex) socket.
-	attr_reader :reader
-	
-	# An IO object, used for writing data to the application instance.
-	# This, together with _reader_, is the application's main communication
-	# channel with the outside world.
-	#
-	# This may or may not be the same object as _reader_, depending on whether
-	# it is a (single-duplex) pipe or a (full-duplex) socket.
-	attr_reader :writer
+	attr_reader :listen_socket
 
 	# Return the Ruby on Rails version that the application requires, or nil
 	# if it doesn't require a particular version.
@@ -33,19 +20,14 @@ class Application
 
 	# Creates a new instance of Application. The parameters correspond with the attributes
 	# of the same names. No exceptions will be thrown.
-	def initialize(app_root, pid, reader, writer)
+	def initialize(app_root, pid, listen_socket)
 		@app_root = app_root
 		@pid = pid
-		@reader = reader
-		@writer = writer
+		@listen_socket = listen_socket
 	end
 	
-	# Close the application's communication channels, i.e. close _reader_ and _writer_.
 	def close
-		@reader.close
-		if @reader != @writer
-			@writer.close
-		end
+		@listen_socket.close
 	end
 end
 

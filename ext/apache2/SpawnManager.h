@@ -249,9 +249,8 @@ public:
 				throw IOException("The spawn server has exited unexpectedly.");
 			}
 			pid_t pid = atoi(args.front().c_str());
-			int reader = channel.readFileDescriptor();
-			int writer = channel.readFileDescriptor();
-			return ApplicationPtr(new Application(appRoot, pid, reader, writer));
+			int listenSocket = channel.readFileDescriptor();
+			return ApplicationPtr(new Application(appRoot, pid, listenSocket));
 		} catch (const exception &e) {
 			P_TRACE("Spawn server died. Will restart it next time.");
 			serverNeedsRestart = true;
