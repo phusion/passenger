@@ -19,7 +19,7 @@ Configuration.o: Configuration.cpp
 Hooks.o: Hooks.cpp Hooks.h Types.h DispatcherBucket.h ApplicationPool.h ApplicationPoolClientServer.h SpawnManager.h Exceptions.h Application.h MessageChannel.h Utils.h
 	$(CXX) $(CXXFLAGS) -c Hooks.cpp
 
-DispatcherBucket.o: DispatcherBucket.h DispatcherBucket.cpp Utils.h
+DispatcherBucket.o: DispatcherBucket.h DispatcherBucket.cpp Utils.h Application.h
 	$(CXX) $(CXXFLAGS) -c DispatcherBucket.cpp
 
 Utils.o: Utils.cpp Utils.h

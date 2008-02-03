@@ -15,7 +15,9 @@ handleRequest(MessageChannel &reader, MessageChannel &writer) {
 	}
 	P_TRACE("Done reading request headers");
 	
-	string content("<b>Using C++ DummyRequestHandler</b><br>\n");
+	string content;
+	content.reserve(1024 * 7);
+	content += "<b>Using C++ DummyRequestHandler</b><br>\n";
 	unsigned int i;
 	for (i = 0; i < headers.size(); i += 2) {
 		content += "<tt>";
@@ -25,11 +27,11 @@ handleRequest(MessageChannel &reader, MessageChannel &writer) {
 		content += "</tt><br>\n";
 	}
 	
-	string header(
-		"Status: 200 OK\r\n"
+	string header;
+	header.reserve(512);
+	header += "Status: 200 OK\r\n"
 		"Content-Type: text/html\r\n"
-		"Content-Length: "
-	);
+		"Content-Length: ";
 	header += toString(content.size());
 	header += "\r\n\r\n";
 	P_TRACE("Sending response header");
