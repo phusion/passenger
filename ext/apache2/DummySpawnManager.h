@@ -34,27 +34,19 @@ using namespace std;
 class DummySpawnManager {
 public:
 	ApplicationPtr spawn(const string &appRoot, const string &user = "", const string &group = "") {
-		int fd1[2], fd2[2];
+		int fds[2];
 		pid_t pid;
 		
-		if (pipe(fd1) == -1) {
-			throw SystemException("Cannot create a pipe", errno);
-		}
-		if (pipe(fd2) == -1) {
-			close(fd1[0]);
-			close(fd1[1]);
-			throw SystemException("Cannot create a pipe", errno);
+		if(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
+			throw SystemException("Cannot create a Unix socket", errno);
 		}
 		pid = fork();
 		if (pid == 0) {
 			pid = fork();
 			if (pid == 0) {
-				dup2(fd1[0], 0);
-				dup2(fd2[1], 1);
-				close(fd1[0]);
-				close(fd1[1]);
-				close(fd2[0]);
-				close(fd2[1]);
+				dup2(fds[0], STDIN_FILENO);
+				close(fds[0]);
+				close(fds[1]);
 				execlp(DUMMY_REQUEST_HANDLER_EXECUTABLE, DUMMY_REQUEST_HANDLER_EXECUTABLE, NULL);
 				int e = errno;
 				fprintf(stderr, "Unable to run %s: %s\n", DUMMY_REQUEST_HANDLER_EXECUTABLE, strerror(e));
@@ -68,20 +60,13 @@ public:
 				_exit(0);
 			}
 		} else if (pid == -1) {
-			close(fd1[0]);
-			close(fd1[1]);
-			close(fd2[0]);
-			close(fd2[1]);
+			close(fds[0]);
+			close(fds[1]);
 			throw SystemException("Cannot fork a new process", errno);
 		} else {
-			int reader, writer;
-			
-			close(fd1[0]);
-			close(fd2[1]);
-			reader = fd2[0];
-			writer = fd1[1];
+			close(fds[0]);
 			waitpid(pid, NULL, 0);
-			return ApplicationPtr(new Application(appRoot, pid, reader, writer));
+			return ApplicationPtr(new Application(appRoot, pid, fds[1]));
 		}
 	}
 };

@@ -1,56 +1,112 @@
 #include "MessageChannel.h"
 #include "Utils.cpp"
 #include <vector>
+#include <unistd.h>
+#include <errno.h>
 
 using namespace std;
 using namespace Passenger;
 
-static bool
-handleRequest(MessageChannel &reader, MessageChannel &writer) {
-	vector<string> headers;
+typedef vector< pair<string, string> > HeaderSet;
 
-	P_TRACE("Reading request headers");
-	if (!reader.read(headers)) {
-		return true;
+static void
+readHeaders(int reader, HeaderSet &headers) {
+	string buffer;
+	char buffer2[1024 * 32];
+	buffer.reserve(1024 * 32);
+	while (true) {
+		ssize_t ret = read(reader, buffer2, sizeof(buffer2));
+		if (ret == 0) {
+			break;
+		} else {
+			buffer.append(buffer2, ret);
+		}
 	}
-	P_TRACE("Done reading request headers");
+	
+	string::size_type start = 0;
+	string::size_type pos;
+	while (true) {
+		pos = buffer.find('\0', start);
+		if (pos != string::npos) {
+			string name(buffer.substr(start, pos - start));
+			start = pos + 1;
+			pos = buffer.find('\0', start);
+			string value(buffer.substr(start, pos - start));
+			start = pos + 1;
+			headers.push_back(make_pair(name, value));
+		} else {
+			break;
+		}
+	}
+}
+
+static void
+writeString(int writer, const string &str) {
+	ssize_t ret;
+	unsigned int written = 0;
+	do {
+		do {
+			ret = write(writer, str.c_str() + written, str.size() - written);
+		} while (ret == -1 && errno == EINTR);
+		written += ret;
+	} while (written < str.size());
+}
+
+static void
+processRequest(int reader, int writer) {
+	HeaderSet headers;
+	readHeaders(reader, headers);
+	close(reader);
 	
 	string content;
 	content.reserve(1024 * 7);
 	content += "<b>Using C++ DummyRequestHandler</b><br>\n";
-	unsigned int i;
-	for (i = 0; i < headers.size(); i += 2) {
-		content += "<tt>";
-		content += headers[i];
-		content += " = ";
-		content += headers[i + 1];
-		content += "</tt><br>\n";
+	for (HeaderSet::const_iterator it(headers.begin()); it != headers.end(); it++) {
+		content.append("<tt>");
+		content.append(it->first);
+		content.append(" = ");
+		content.append(it->second);
+		content.append("</tt><br>\n");
 	}
 	
 	string header;
 	header.reserve(512);
-	header += "Status: 200 OK\r\n"
+	header.append("Status: 200 OK\r\n"
 		"Content-Type: text/html\r\n"
-		"Content-Length: ";
-	header += toString(content.size());
-	header += "\r\n\r\n";
-	P_TRACE("Sending response header");
-	writer.writeScalar(header);
-	P_TRACE("Sending response content");
-	writer.writeScalar(content);
-	P_TRACE("All done");
-	writer.writeScalar("", 0);
+		"Content-Length: ");
+	header.append(toString(content.size()));
+	header.append("\r\n\r\n");
+	
+	writeString(writer, header);
+	writeString(writer, content);
+	close(writer);
+}
+
+static bool
+acceptNextRequest(int fd) {
+	char c;
+	if (read(fd, &c, 1) == 0) {
+		return true;
+	}
+	
+	MessageChannel listener(fd);
+	int fd1[2], fd2[2];
+	pipe(fd1);
+	pipe(fd2);
+	listener.writeFileDescriptor(fd1[0]);
+	listener.writeFileDescriptor(fd2[1]);
+	close(fd1[0]);
+	close(fd2[1]);
+	processRequest(fd2[0], fd1[1]);
 	return false;
 }
 
 int
 main() {
-	MessageChannel reader(STDIN_FILENO);
-	MessageChannel writer(STDOUT_FILENO);
 	bool done = false;
 	initDebugging();
 	while (!done) {
-		done = handleRequest(reader, writer);
+		done = acceptNextRequest(STDIN_FILENO);
 	}
 	return 0;
 }
