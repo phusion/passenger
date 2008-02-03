@@ -22,7 +22,8 @@ class ApplicationPool {
 public:
 	virtual ~ApplicationPool() {};
 	
-	virtual ApplicationPtr get(const string &appRoot, const string &user = "", const string &group = "") = 0;
+	virtual pair<ApplicationPtr, Application::LockPtr>
+	get(const string &appRoot, const string &user = "", const string &group = "") = 0;
 };
 
 // TODO: document this
@@ -38,11 +39,6 @@ private:
 	ApplicationMap apps;
 	mutex lock;
 	bool threadSafe;
-	
-	string normalizePath(const string &path) {
-		// TODO
-		return path;
-	}
 	
 public:
 	StandardApplicationPool(const string &spawnManagerCommand,
@@ -61,8 +57,8 @@ public:
 	}
 	
 	// TODO: improve algorithm
-	virtual ApplicationPtr get(const string &appRoot, const string &user = "", const string &group = "") {
-		string normalizedAppRoot(normalizePath(appRoot));
+	virtual pair<ApplicationPtr, Application::LockPtr>
+	get(const string &appRoot, const string &user = "", const string &group = "") {
 		ApplicationPtr app;
 		mutex::scoped_lock l(lock, threadSafe);
 		
@@ -72,8 +68,12 @@ public:
 			apps[appRoot] = app;
 		} else {
 			app = it->second;
+			if (app->hasError()) {
+				app = spawnManager.spawn(appRoot, user, group);
+				apps[appRoot] = app;
+			}
 		}
-		return app;
+		return make_pair(app, app->openSession());
 	}
 };
 

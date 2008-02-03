@@ -29,7 +29,7 @@ static const apr_bucket_type_t bucket_type_dispatcher = {
 	apr_bucket_copy_notimpl
 };
 
-
+static bool x = false;
 class DispatcherBucket {
 private:
 	apr_status_t
@@ -119,6 +119,7 @@ private:
 	
 public:
 	ApplicationPtr app;
+	Application::LockPtr lock;
 	int pipe;
 	apr_interval_time_t timeout;
 	
@@ -137,10 +138,14 @@ public:
 		}
 		
 		result = read_chunk_size(chunk_size, current_timeout);
+		if (x) { result = APR_EBADF; x = !x; }
 		if (result == APR_EOF || (result == APR_SUCCESS && chunk_size == 0)) {
 			P_TRACE("DispatcherBucket " << this << ": EOF");
 			b = apr_bucket_immortal_make(b, "", 0);
 			*str = (const char *) b->data;
+			x = true;
+			lock = Application::LockPtr();
+			app->closeSession();
 			return APR_SUCCESS;
 		} else if (result != APR_SUCCESS) {
 			char buf[1024];
@@ -179,7 +184,8 @@ public:
 };
 
 apr_bucket *
-dispatcher_bucket_create(apr_pool_t *pool, ApplicationPtr app, apr_interval_time_t timeout, apr_bucket_alloc_t *list) {
+dispatcher_bucket_create(apr_pool_t *pool, ApplicationPtr app, Application::LockPtr lock,
+                         apr_interval_time_t timeout, apr_bucket_alloc_t *list) {
 	apr_bucket *b;
 	DispatcherBucket *data;
 
@@ -196,6 +202,7 @@ dispatcher_bucket_create(apr_pool_t *pool, ApplicationPtr app, apr_interval_time
 
 	data = new DispatcherBucket();
 	data->app = app;
+	data->lock = lock;
 	data->pipe = app->getReader();
 	data->timeout = timeout;
 	b->data = data;
