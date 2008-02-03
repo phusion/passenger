@@ -1,7 +1,7 @@
 APXS=apxs2
 APACHECTL=apache2ctl
 CXX=g++
-CXXFLAGS=-Wall -fPIC -g -DPASSENGER_DEBUG `pkg-config --cflags apr-1 apr-util-1` `$(APXS) -q CFLAGS` -I`$(APXS) -q INCLUDEDIR`
+CXXFLAGS=-Wall -fPIC -g -DPASSENGER_DEBUG -DPASSENGER_USE_DUMMY_SPAWN_MANAGER `pkg-config --cflags apr-1 apr-util-1` `$(APXS) -q CFLAGS` -I`$(APXS) -q INCLUDEDIR`
 OBJECTS=Configuration.o Hooks.o Utils.o
 LIBTOOL_OBJECTS=Configuration.o,Hooks.o,Utils.o
 
