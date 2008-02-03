@@ -1,9 +1,9 @@
 APXS=apxs2
 APACHECTL=apache2ctl
 CXX=g++
-CXXFLAGS=-Wall -fPIC -g -DPASSENGER_DEBUG -DPASSENGER_USE_DUMMY_SPAWN_MANAGER `pkg-config --cflags apr-1 apr-util-1` `$(APXS) -q CFLAGS` -I`$(APXS) -q INCLUDEDIR`
-OBJECTS=Configuration.o Hooks.o DispatcherBucket.o Utils.o
-LIBTOOL_OBJECTS=Configuration.o,Hooks.o,DispatcherBucket.o,Utils.o
+CXXFLAGS=-Wall -fPIC -g -DPASSENGER_DEBUG `pkg-config --cflags apr-1 apr-util-1` `$(APXS) -q CFLAGS` -I`$(APXS) -q INCLUDEDIR`
+OBJECTS=Configuration.o Hooks.o Utils.o
+LIBTOOL_OBJECTS=Configuration.o,Hooks.o,Utils.o
 
 .PHONY: all install clean start restart stop
 
@@ -16,11 +16,8 @@ install: $(OBJECTS)
 Configuration.o: Configuration.cpp
 	$(CXX) $(CXXFLAGS) -c Configuration.cpp
 
-Hooks.o: Hooks.cpp Hooks.h Types.h DispatcherBucket.h ApplicationPool.h ApplicationPoolClientServer.h SpawnManager.h Exceptions.h Application.h MessageChannel.h Utils.h
+Hooks.o: Hooks.cpp Hooks.h Types.h ApplicationPool.h ApplicationPoolClientServer.h SpawnManager.h Exceptions.h Application.h MessageChannel.h Utils.h
 	$(CXX) $(CXXFLAGS) -c Hooks.cpp
-
-DispatcherBucket.o: DispatcherBucket.h DispatcherBucket.cpp Utils.h Application.h
-	$(CXX) $(CXXFLAGS) -c DispatcherBucket.cpp
 
 Utils.o: Utils.cpp Utils.h
 	$(CXX) $(CXXFLAGS) -c Utils.cpp

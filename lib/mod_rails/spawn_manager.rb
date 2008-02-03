@@ -64,6 +64,10 @@ class SpawnManager
 					else
 						__send__(MESSAGE_HANDLERS[name], *args)
 					end
+				rescue SignalException => signal
+					if signal.message != "SIGTERM"
+						raise
+					end
 				rescue ExitNow
 					@done = true
 				end
@@ -121,8 +125,7 @@ private
 		group = nil if group && group.empty?
 		app = spawn_application(app_root, user, group)
 		@channel.write(app.pid)
-		@channel.send_io(app.reader)
-		@channel.send_io(app.writer)
+		@channel.send_io(app.listen_socket)
 		app.close
 	end
 	

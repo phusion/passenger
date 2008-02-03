@@ -58,13 +58,12 @@ private:
 		virtual ApplicationPtr get(const string &appRoot, const string &user = "", const string &group = "") {
 			MessageChannel channel(sock);
 			vector<string> args;
-			int reader, writer;
+			int listenSocket;
 			
 			channel.write(appRoot.c_str(), user.c_str(), group.c_str(), NULL);
 			channel.read(args);
-			reader = channel.readFileDescriptor();
-			writer = channel.readFileDescriptor();
-			ApplicationPtr app(new Application(appRoot, atoi(args[0].c_str()), reader, writer));
+			listenSocket = channel.readFileDescriptor();
+			ApplicationPtr app(new Application(appRoot, atoi(args[0].c_str()), listenSocket));
 			return app;
 		}
 	};
@@ -243,8 +242,7 @@ private:
 		if (channel.read(args) && args.size() == 3) {
 			ApplicationPtr app(pool.get(args[0], args[1], args[2]));
 			channel.write(toString(app->getPid()).c_str(), NULL);
-			channel.writeFileDescriptor(app->getReader());
-			channel.writeFileDescriptor(app->getWriter());
+			channel.writeFileDescriptor(app->getListenSocket());
 		}
 	}
 	

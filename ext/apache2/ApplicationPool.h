@@ -68,6 +68,7 @@ public:
 		
 		ApplicationMap::iterator it(apps.find(appRoot));
 		if (it == apps.end()) {
+			P_TRACE("Spawn!");
 			app = spawnManager.spawn(appRoot, user, group);
 			apps[appRoot] = app;
 		} else {

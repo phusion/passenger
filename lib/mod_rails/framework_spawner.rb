@@ -73,10 +73,9 @@ class FrameworkSpawner < AbstractServer
 		begin
 			send_to_server("spawn_application", app_root, user, group)
 			pid = recv_from_server
-			reader = recv_io_from_server
-			writer = recv_io_from_server
-			return Application.new(app_root, pid, reader, writer)
-		rescue Errno::EPIPE, Errno::EBADF, IOError, SocketError
+			listen_socket = recv_io_from_server
+			return Application.new(app_root, pid, listen_socket)
+		rescue SystemCallError, IOError, SocketError
 			raise ApplicationSpawner::SpawnError, "Unable to spawn the application: " <<
 				"either the Ruby on Rails framework failed to load, " <<
 				"or the application died unexpectedly during initialization."
@@ -167,8 +166,7 @@ private
 			spawner.time = Time.now
 			app = spawner.spawn_application
 			send_to_client(app.pid)
-			send_io_to_client(app.reader)
-			send_io_to_client(app.writer)
+			send_io_to_client(app.listen_socket)
 			app.close
 		end
 	end

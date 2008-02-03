@@ -1,6 +1,7 @@
 require 'mod_rails/native_support'
 module ModRails # :nodoc:
 
+# TODO: synchronize this documentation with the C++ one
 # This class can be wrapped around an IO object to provide the ability
 # to send and receive discrete messages over byte streams.
 # Messages are lists of strings, with at least one element in each list.
@@ -70,6 +71,25 @@ class MessageChannel
 		return nil
 	end
 	
+	def read_scalar(data)
+		buffer = ''
+		while buffer.size < 2
+			buffer << @io.readpartial(2 - buffer.size)
+		end
+		chunk_size = buffer.unpack('n')[0]
+		if chunk_size == 0
+			return nil
+		else
+			buffer = ''
+			while buffer.size < chunk_size
+				buffer << @io.readpartial(chunk_size - buffer.size)
+			end
+			return buffer
+		end
+	rescue EOFError
+		return nil
+	end
+	
 	# Write a new message into the message channel. _name_ is the first element in
 	# the message name, and _args_ are the other elements. These arguments will internally
 	# be converted to strings by calling to_s().
@@ -89,6 +109,10 @@ class MessageChannel
 		end
 		@io.write([message.size].pack('n') << message)
 		@io.flush
+	end
+	
+	def write_scalar(data)
+		@io.write([data.size].pack('n') << data)
 	end
 	
 	# Send an IO object (a file descriptor) over the channel. The other

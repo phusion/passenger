@@ -14,6 +14,7 @@
 #include <cstdarg>
 
 #include "Exceptions.h"
+#include "Utils.h"
 
 namespace Passenger {
 
