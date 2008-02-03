@@ -7,7 +7,11 @@
 #include <string>
 #include <map>
 
-#include "SpawnManager.h"
+#ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER
+	#include "DummySpawnManager.h"
+#else
+	#include "SpawnManager.h"
+#endif
 
 namespace Passenger {
 
@@ -26,7 +30,11 @@ class StandardApplicationPool: public ApplicationPool {
 private:
 	typedef map<string, ApplicationPtr> ApplicationMap;
 
-	SpawnManager spawnManager;
+	#ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER
+		DummySpawnManager spawnManager;
+	#else
+		SpawnManager spawnManager;
+	#endif
 	ApplicationMap apps;
 	mutex lock;
 	bool threadSafe;
@@ -41,7 +49,10 @@ public:
 	             const string &logFile = "",
 	             const string &environment = "production",
 	             const string &rubyCommand = "ruby")
-	: spawnManager(spawnManagerCommand, logFile, environment, rubyCommand) {
+	#ifndef PASSENGER_USE_DUMMY_SPAWN_MANAGER
+		: spawnManager(spawnManagerCommand, logFile, environment, rubyCommand)
+	#endif
+	{
 		threadSafe = false;
 	}
 	

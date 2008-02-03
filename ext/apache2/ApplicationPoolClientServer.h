@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "ApplicationPool.h"
+#include "MessageChannel.h"
 #include "Exceptions.h"
 #include "Utils.h"
 

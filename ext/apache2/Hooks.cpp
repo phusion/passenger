@@ -260,11 +260,17 @@ public:
 			return httpStatus;
 		} */
 		
+		/*
+		 * TODO: fix these bugs:
+		 * - If the request handler dies, it does not get removed from the application pool. It should.
+		 * - If Apache dies, then the request handler's protocol state is left in an inconsistent state.
+		 */
+		
 		try {
 			apr_bucket_brigade *bb;
 			apr_bucket *b;
 			
-			P_DEBUG("Processing HTTP request on process " << getpid() << ": " << r->uri);
+			P_DEBUG("Processing HTTP request: " << r->uri);
 			ApplicationPtr app(applicationPool->get(string(railsDir) + "/.."));
 			P_TRACE("Connected to application: reader FD = " << app->getReader() << ", writer FD = " << app->getWriter());
 			sendHeaders(r, app->getWriter());
@@ -279,6 +285,8 @@ public:
 
 			ap_scan_script_header_err_brigade(r, bb, NULL);
 			ap_pass_brigade(r->output_filters, bb);
+			
+			P_TRACE("Dispatcher brigade passed to output filters");
 
 			return OK;
 		} catch (const exception &e) {

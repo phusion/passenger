@@ -57,7 +57,6 @@ public:
 		if (reader != -1) {
 			close(reader);
 			reader = -1;
-			P_TRACE("Application " << this << ": reader closed.");
 		}
 	}
 	
@@ -65,7 +64,6 @@ public:
 		if (writer != -1) {
 			close(writer);
 			writer = -1;
-			P_TRACE("Application " << this << ": writer closed.");
 		}
 	}
 };
