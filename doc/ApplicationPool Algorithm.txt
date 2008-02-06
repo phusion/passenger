@@ -1,0 +1,57 @@
+Instance variables:
+- apps: map[string => list<App>]
+  Maps an application root to a list of applications. Each list is
+  guaranteed to be nonempty, and its elements are ordered from
+  active to non-active. An active application is one that has
+  more than 0 active sessions.
+- max: integer
+  The maximum number of application objects that may exist in 'apps'.
+- count: integer
+  The current number of application objects in 'apps'.
+- active: integer
+  The number of application objects in 'apps' that are active.
+  Invariant: active <= count
+
+def get(app_root):
+	if needs_restart(app_root):
+		apps.remove(app_root)
+	
+	list = apps[app_root]
+	if list != nil:
+		# There are apps for this app root.
+		if list.front.sessions == 0:
+			# There is an inactive app, so we use it.
+			app = list.front
+			list.move_to_back(app)
+			active++
+		else if count < max:
+			# They are all active, so we spawn a new one
+			# if that's allowed by the limits.
+			app = spawn(app)
+			list.add_to_back(app)
+			count++
+			active++
+		else:
+			# All apps are active. We're not allowed to
+			# spawn a new one, but we try to connect to
+			# an existing one anyway. Our connection
+			# request will be put into that app's queue.
+			app = list.front
+			list.move_to_back(app)
+			active++
+	else:
+		# There are no apps for this app root.
+		wait until count < max
+		app = spawn(app)
+		list = new list()
+		list.add_to_back(app)
+		apps[app_root] = list
+		count++
+		active++
+	return app.connect()  # Returns a Session object
+
+def session_has_been_closed(app):
+	list = apps[app.app_root]
+	if app.sessions == 0:
+		list.move_to_front(app)
+	active--
