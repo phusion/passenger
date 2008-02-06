@@ -25,15 +25,18 @@ using namespace std;
 using namespace boost;
 
 /**
+ * @brief Spawning of Ruby on Rails application instances.
+ *
  * This class is responsible for spawning new instances of Ruby on Rails applications.
  * Use the spawn() method to do so.
  *
- * This class is fully thread-safe.
+ * @note This class is fully thread-safe.
  *
  * <h2>Implementation details</h2>
- * Internally, it makes use of a spawn server, which is written in Ruby. This server
+ * Internally, this class makes use of a spawn server, which is written in Ruby. This server
  * is automatically started when a SpawnManager instance is created, and automatically
- * shutdown when that instance is destroyed. Spawning requests are sent to the server,
+ * shutdown when that instance is destroyed. The existance of the spawn server is almost
+ * totally transparent to users of this class. Spawn requests are sent to the server,
  * and details about the spawned process is returned.
  *
  * If the spawn server dies during the middle of an operation, it will be restarted.
@@ -214,7 +217,8 @@ public:
 	 * @param appRoot The application root of a RoR application, i.e. the folder that
 	 *             contains 'app/', 'public/', 'config/', etc. This must be a valid directory,
 	 *             but the path does not have to be absolute.
-	 * @param user The user
+	 * @param user The user to run the instance as.
+	 * @param group The group to run the instance as.
 	 * @return A smart pointer to an Application object, which represents the application
 	 *         instance that has been spawned. Use this object to communicate with the
 	 *         spawned application.
@@ -259,6 +263,7 @@ public:
 	}
 };
 
+/** Convenient alias for SpawnManager smart pointer. */
 typedef shared_ptr<SpawnManager> SpawnManagerPtr;
 
 } // namespace Passenger

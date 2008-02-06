@@ -19,7 +19,7 @@
 #include <unistd.h>
 
 #include "Hooks.h"
-#include "Types.h"
+#include "Configuration.h"
 #include "Utils.h"
 #include "ApplicationPoolClientServer.h"
 #include "MessageChannel.h"

@@ -1,6 +1,7 @@
 #ifndef _PASSENGER_DUMMY_SPAWN_MANAGER_H_
 #define _PASSENGER_DUMMY_SPAWN_MANAGER_H_
 
+// TODO: make this path not hardcoded
 #define DUMMY_REQUEST_HANDLER_EXECUTABLE "/home/hongli/Projects/mod_rails/benchmark/DummyRequestHandler"
 
 #include <string>
@@ -19,17 +20,18 @@ namespace Passenger {
 using namespace std;
 
 /**
- * This class implements a dummy spawn manager. This spawn manager will spawn
- * benchmark/DummyRequestHandler, which is probably the fastest possible
- * implementation of a request handler. The purpose of this class to benchmark
- * the performance of the Apache module (i.e. not benchmarking the Ruby request
- * handler or Rails itself).
+ * A dummy SpawnManager replacement for testing/debugging purposes.
  *
- * This header file is not used by default. Modify ApplicationPool to make use
- * of this file/class.
+ * This class implements a dummy spawn manager, and is 100% interface-compatible with
+ * SpawnManager. This spawn manager will spawn <tt>benchmark/DummyRequestHandler</tt>,
+ * which is probably the fastest possible implementation of a request handler. The purpose
+ * of this class to benchmark the performance of the Apache module (i.e. not benchmarking
+ * the Ruby request handler or Rails itself).
  *
- * Of course, don't forget to compile benchmark/DummyRequestHandler before you
- * use this class!
+ * This header file is not used by default. Define the macro <tt>PASSENGER_USE_DUMMY_SPAWN_MANAGER</tt>
+ * to make ApplicationPool use DummySpawnManager instead of SpawnManager.
+ *
+ * Of course, don't forget to compile benchmark/DummyRequestHandler!
  */
 class DummySpawnManager {
 public:

@@ -21,6 +21,8 @@ namespace Passenger {
 using namespace std;
 
 /**
+ * Convenience class for message sending/receival and file descriptor passing.
+ *
  * This class provides convenience methods for:
  *  - sending and receiving messages over a file descriptor.
  *  - file descriptor passing over a Unix socket.
@@ -28,7 +30,7 @@ using namespace std;
  * There are two kinds of messages:
  *  - Array messages. These are just a list of strings, and the message
  *    itself has a specific length. The contained strings may not
- *    contain NUL characters ('\0').
+ *    contain NUL characters (<tt>'\\0'</tt>).
  *  - Scalar messages. These are byte strings which may contain arbitrary
  *    binary data. Scalar messages also have a specific length.
  * The protocol is designed to be low overhead, easy to implement and
@@ -126,7 +128,7 @@ public:
 	 *
 	 * @param args The message elements.
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
-	 * @pre None of the message elements may contain a NUL character ('\0').
+	 * @pre None of the message elements may contain a NUL character (<tt>'\\0'</tt>).
 	 */
 	void write(const list<string> &args) {
 		list<string>::const_iterator it;
@@ -167,7 +169,7 @@ public:
 	 * @param ... Other elements of the message. These *must* be strings, i.e. of type char*.
 	 *            It is also required to terminate this list with a NULL.
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
-	 * @pre None of the message elements may contain a NUL character ('\0').
+	 * @pre None of the message elements may contain a NUL character (<tt>'\\0'</tt>).
 	 */
 	void write(const char *name, ...) {
 		list<string> args;
