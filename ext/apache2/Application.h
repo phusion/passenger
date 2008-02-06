@@ -8,6 +8,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <errno.h>
+#include <time.h>
+
 #include "MessageChannel.h"
 #include "Exceptions.h"
 #include "Utils.h"
@@ -110,6 +112,7 @@ private:
 	string appRoot;
 	pid_t pid;
 	int listenSocket;
+	time_t lastUsed;
 	SharedDataPtr data;
 
 public:
@@ -117,6 +120,7 @@ public:
 		appRoot = theAppRoot;
 		this->pid = pid;
 		this->listenSocket = listenSocket;
+		lastUsed = time(NULL);
 		this->data = ptr(new SharedData());
 		this->data->sessions = 0;
 		P_TRACE("Application " << this << ": created.");
@@ -156,6 +160,14 @@ public:
 	
 	unsigned int getSessions() const {
 		return data->sessions;
+	}
+	
+	time_t getLastUsed() const {
+		return lastUsed;
+	}
+	
+	void setLastUsed(time_t time) {
+		lastUsed = time;
 	}
 };
 
