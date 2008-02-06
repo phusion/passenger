@@ -2,6 +2,7 @@
 #define _PASSENGER_APPLICATION_H_
 
 #include <boost/shared_ptr.hpp>
+#include <boost/function.hpp>
 #include <string>
 
 #include <sys/types.h>
@@ -18,19 +19,110 @@ using namespace boost;
 
 // TODO: write better documentation
 class Application {
+public:
+	class Session;
+	typedef function<void (Session &session)> CloseCallback;
+	typedef shared_ptr<Session> SessionPtr;
+	
+	class Session {
+	public:
+		virtual ~Session() {}
+		
+		virtual void sendHeaders(const string &headers) {
+			int writer = getWriter();
+			ssize_t ret;
+			unsigned int written = 0;
+			const char *data = const_cast<const string &>(headers).c_str();
+			do {
+				do {
+					ret = write(writer, data + written, headers.size() - written);
+				} while (ret == -1 && errno == EINTR);
+				if (ret == -1) {
+					throw SystemException("An error occured while writing headers to the request handler", errno);
+				} else {
+					written += ret;
+				}
+			} while (written < headers.size());
+			closeWriter();
+		}
+		
+		virtual void sendBody(const string &body) { /* TODO */ }
+		
+		virtual int getReader() = 0;
+		virtual void closeReader() = 0;
+		virtual int getWriter() = 0;
+		virtual void closeWriter() = 0;
+	};
+
 private:
+	struct SharedData {
+		unsigned int sessions;
+	};
+	
+	typedef shared_ptr<SharedData> SharedDataPtr;
+
+	class StandardSession: public Session {
+	protected:
+		SharedDataPtr data;
+		CloseCallback closeCallback;
+		int reader;
+		int writer;
+		
+	public:
+		StandardSession(SharedDataPtr data, const CloseCallback &closeCallback, int reader, int writer) {
+			this->data = data;
+			this->closeCallback = closeCallback;
+			data->sessions++;
+			this->reader = reader;
+			this->writer = writer;
+		}
+	
+		virtual ~StandardSession() {
+			data->sessions--;
+			closeReader();
+			closeWriter();
+			closeCallback(*this);
+		}
+		
+		virtual int getReader() {
+			return reader;
+		}
+		
+		virtual void closeReader() {
+			if (reader != -1) {
+				close(reader);
+				reader = -1;
+			}
+		}
+		
+		virtual int getWriter() {
+			return writer;
+		}
+		
+		virtual void closeWriter() {
+			if (writer != -1) {
+				close(writer);
+				writer = -1;
+			}
+		}
+	};
+
 	string appRoot;
 	pid_t pid;
 	int listenSocket;
+	SharedDataPtr data;
+
 public:
 	Application(const string &theAppRoot, pid_t pid, int listenSocket) {
 		appRoot = theAppRoot;
 		this->pid = pid;
 		this->listenSocket = listenSocket;
+		this->data = ptr(new SharedData());
+		this->data->sessions = 0;
 		P_TRACE("Application " << this << ": created.");
 	}
 	
-	~Application() {
+	virtual ~Application() {
 		close(listenSocket);
 		P_TRACE("Application " << this << ": destroyed.");
 	}
@@ -43,7 +135,7 @@ public:
 		return pid;
 	}
 	
-	pair<int, int> connect() const {
+	SessionPtr connect(const CloseCallback &closeCallback) const {
 		int ret;
 		do {
 			ret = write(listenSocket, "", 1);
@@ -55,11 +147,15 @@ public:
 		MessageChannel channel(listenSocket);
 		int reader = channel.readFileDescriptor();
 		int writer = channel.readFileDescriptor();
-		return make_pair(reader, writer);
+		return ptr(new StandardSession(data, closeCallback, reader, writer));
 	}
 	
 	int getListenSocket() const {
 		return listenSocket;
+	}
+	
+	unsigned int getSessions() const {
+		return data->sessions;
 	}
 };
 

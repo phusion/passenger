@@ -1,14 +1,14 @@
 #ifndef _PASSENGER_APPLICATION_POOL_CLIENT_SERVER_H_
 #define _PASSENGER_APPLICATION_POOL_CLIENT_SERVER_H_
 
+#include <boost/bind.hpp>
 #include <boost/thread/thread.hpp>
-#include <set>
 
-#include <apr_portable.h>
-#include <apr_poll.h>
+#include <set>
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <cstdlib>
 #include <errno.h>
 #include <unistd.h>
 
@@ -19,279 +19,193 @@
 
 namespace Passenger {
 
-using namespace boost;
 using namespace std;
+using namespace boost;
 
 class ApplicationPoolServer {
 private:
-	/*
-	 * The only thing this struct does is making sure that the
-	 * ApplicationPoolServer's thread function runs in the context
-	 * of ApplicationPoolServer. Look at threadMain() instead for
-	 * the interesting stuff.
-	 */
-	struct ServerThreadDelegator {
-		ApplicationPoolServer *self;
+	struct SharedData {
+		int server;
+	};
+	
+	typedef shared_ptr<SharedData> SharedDataPtr;
 
-		ServerThreadDelegator(ApplicationPoolServer *self) {
-			this->self = self;
+	class RemoteSession: public Application::Session {
+	private:
+		SharedDataPtr data;
+		int id;
+		int reader;
+		int writer;
+	public:
+		RemoteSession(SharedDataPtr data, int id, int reader, int writer) {
+			this->data = data;
+			this->id = id;
+			this->reader = reader;
+			this->writer = writer;
 		}
 		
-		void operator()() {
-			self->threadMain();
+		virtual ~RemoteSession() {
+			closeReader();
+			closeWriter();
+			MessageChannel(data->server).write("close", toString(id).c_str(), NULL);
+		}
+		
+		virtual int getReader() {
+			return reader;
+		}
+		
+		virtual void closeReader() {
+			if (reader != -1) {
+				close(reader);
+				reader = -1;
+			}
+		}
+		
+		virtual int getWriter() {
+			return writer;
+		}
+		
+		virtual void closeWriter() {
+			if (writer != -1) {
+				close(writer);
+				writer = -1;
+			}
 		}
 	};
-	
-	class ApplicationPoolClient: public ApplicationPool {
+
+	class Client: public ApplicationPool {
 	private:
-		int sock;
+		SharedDataPtr data;
 		
 	public:
-		ApplicationPoolClient(int sock) {
-			this->sock = sock;
+		Client(int sock) {
+			data = ptr(new SharedData());
+			data->server = sock;
 		}
 		
-		virtual ~ApplicationPoolClient() {
-			close(sock);
+		virtual ~Client() {
+			if (data->server != -1) {
+				close(data->server);
+				data->server = -1;
+			}
 		}
 		
-		virtual ApplicationPtr get(const string &appRoot, const string &user = "", const string &group = "") {
-			MessageChannel channel(sock);
+		virtual void setMax(unsigned int max) {
+			MessageChannel channel(data->server);
+			channel.write("setMax", toString(max).c_str(), NULL);
+		}
+		
+		virtual unsigned int getActive() const {
+			MessageChannel channel(data->server);
 			vector<string> args;
-			int listenSocket;
 			
-			channel.write(appRoot.c_str(), user.c_str(), group.c_str(), NULL);
+			channel.write("getActive", NULL);
 			channel.read(args);
-			listenSocket = channel.readFileDescriptor();
-			ApplicationPtr app(new Application(appRoot, atoi(args[0].c_str()), listenSocket));
-			return app;
+			return atoi(args[0].c_str());
+		}
+		
+		virtual unsigned int getCount() const {
+			MessageChannel channel(data->server);
+			vector<string> args;
+			
+			channel.write("getCount", NULL);
+			channel.read(args);
+			return atoi(args[0].c_str());
+		}
+		
+		virtual Application::SessionPtr get(const string &appRoot, const string &user = "", const string &group = "") {
+			MessageChannel channel(data->server);
+			vector<string> args;
+			int reader, writer;
+			
+			channel.write("get", appRoot.c_str(), user.c_str(), group.c_str(), NULL);
+			channel.read(args);
+			reader = channel.readFileDescriptor();
+			writer = channel.readFileDescriptor();
+			return ptr(new RemoteSession(data, atoi(args[0].c_str()), reader, writer));
 		}
 	};
 	
-	class SocketDemultiplexer {
-	private:
-		apr_pool_t *pool;
-		apr_pollset_t *pollset;
-		apr_uint32_t used, capacity;
-		set<int> fds;
-		int *pollResult;
+	struct ClientInfo {
+		int fd;
+		thread *thr;
 		
-		void createAprPollFd(int fd, apr_pollfd_t *apr_fd) {
-			apr_socket_t *sock = NULL;
-			apr_status_t ret;
-			
-			ret = apr_os_sock_put(&sock, &fd, pool);
-			if (ret != APR_SUCCESS) {
-				throw APRException("Unable to convert a file descriptor to an APR socket", ret);
-			}
-			
-			apr_fd->desc_type = APR_POLL_SOCKET;
-			apr_fd->reqevents = APR_POLLIN;
-			apr_fd->p = pool;
-			apr_fd->desc.s = sock;
-			apr_fd->client_data = (void *) fd;
-		}
-		
-		void addToPollset(apr_pollset_t *pollset, int fd) {
-			apr_pollfd_t apr_fd;
-			apr_status_t ret;
-			
-			createAprPollFd(fd, &apr_fd);
-			ret = apr_pollset_add(pollset, &apr_fd);
-			if (ret != APR_SUCCESS) {
-				throw APRException("Cannot add file descriptor to poll set", ret);
-			}
-		}
-		
-	public:
-		SocketDemultiplexer() {
-			apr_status_t ret;
-			
-			ret = apr_pool_create(&pool, NULL);
-			if (ret != APR_SUCCESS) {
-				throw APRException("Cannot create an APR memory pool", ret);
-			}
-			used = 0;
-			capacity = 8;
-			
-			ret = apr_pollset_create(&pollset, capacity, pool, 0);
-			if (ret != APR_SUCCESS) {
-				apr_pool_destroy(pool);
-				throw APRException("Cannot create an APR poll set", ret);
-			}
-			pollResult = (int *) malloc(sizeof(int) * capacity);
-		}
-		
-		~SocketDemultiplexer() {
-			apr_pool_destroy(pool);
-			free(pollResult);
-			// Apparently APR does not always close the file descriptor,
-			// so we do it manually.
-			closeAll();
-		}
-	
-		void add(int fd) {
-			if (used == capacity) {
-				apr_pollset_t *newPollset;
-				int *newPollResult;
-				apr_status_t ret;
-				
-				ret = apr_pollset_create(&newPollset, capacity * 2, pool, 0);
-				if (ret != APR_SUCCESS) {
-					throw APRException("Cannot create a new APR poll set", ret);
-				}
-				newPollResult = (int *) realloc(pollResult, sizeof(int) * capacity * 2);
-				if (newPollResult == NULL) {
-					throw MemoryException("Cannot allocate memory for result vector.");
-				}
-				
-				apr_pollset_destroy(pollset);
-				pollset = newPollset;
-				pollResult = newPollResult;
-				capacity *= 2;
-				
-				for (set<int>::const_iterator it(fds.begin()); it != fds.end(); it++) {
-					addToPollset(pollset, *it);
-				}
-			}
-			addToPollset(pollset, fd);
-			fds.insert(fd);
-			used++;
-		}
-		
-		void remove(int fd) {
-			apr_pollfd_t apr_fd;
-			
-			createAprPollFd(fd, &apr_fd);
-			if (apr_pollset_remove(pollset, &apr_fd) != APR_SUCCESS) {
-				throw MemoryException("Cannot remove a file descriptor from the poll set.");
-			}
-			fds.erase(fds.find(fd));
-			used--;
-		}
-		
-		unsigned int poll(int **fileDescriptors, unsigned int timeout) {
-			apr_int32_t num;
-			const apr_pollfd_t *result;
-			apr_status_t ret;
-			
-			do {
-				ret = apr_pollset_poll(pollset, timeout * 1000, &num, &result);
-			} while (ret == APR_EINTR);
-			if (ret == APR_TIMEUP) {
-				return 0;
-			} else if (ret != APR_SUCCESS) {
-				throw APRException("Cannot poll file descriptor set", ret);
-			}
-			for (apr_int32_t i = 0; i < num; i++) {
-				pollResult[i] = (int) result[i].client_data;
-			}
-			*fileDescriptors = pollResult;
-			return num;
-		}
-		
-		void closeAll() {
-			for (set<int>::const_iterator it(fds.begin()); it != fds.end(); it++) {
-				close(*it);
-			}
+		~ClientInfo() {
+			close(fd);
+			delete thr;
 		}
 	};
+	
+	typedef shared_ptr<ClientInfo> ClientInfoPtr;
 	
 	StandardApplicationPool pool;
 	int serverSocket;
 	int connectSocket;
 	bool done, detached;
-	thread *thr;
-	SocketDemultiplexer demultiplexer;
 	
-	void threadMain() {
+	mutex lock;
+	thread *serverThread;
+	set<ClientInfoPtr> clients;
+	
+	void serverThreadMainLoop() {
 		while (!done) {
-			int *fds;
-			unsigned int num;
+			int fds[2], ret;
+			char x;
 			
-			num = demultiplexer.poll(&fds, 500);
-			for (unsigned int i = 0; i < num; i++) {
-				if (fds[i] == serverSocket) {
-					acceptNewClient(demultiplexer);
-				} else {
-					handleClient(fds[i]);
-				}
+			// The received data only serves to wake up the server socket,
+			// and is not important.
+			do {
+				ret = read(serverSocket, &x, 1);
+			} while (ret == -1 && errno == EINTR);
+			if (ret == 0) {
+				break;
 			}
+			
+			socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+			MessageChannel(serverSocket).writeFileDescriptor(fds[1]);
+			close(fds[1]);
+			
+			ClientInfoPtr info(new ClientInfo());
+			info->fd = fds[0];
+			info->thr = new thread(bind(&ApplicationPoolServer::clientThreadMainLoop, this, info));
+			mutex::scoped_lock l(lock);
+			clients.insert(info);
 		}
 	}
 	
-	void acceptNewClient(SocketDemultiplexer &demultiplexer) {
-		int fds[2], ret;
-		char x;
-
-		// Discard data, not important. Whatever data was sent only serves
-		// to wake up the server socket.
-		do {
-			ret = read(serverSocket, &x, 1);
-		} while (ret == -1 && errno == EINTR);
-		socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-		demultiplexer.add(fds[0]);
-		MessageChannel(serverSocket).writeFileDescriptor(fds[1]);
-		close(fds[1]);
-	}
-	
-	void handleClient(int client) {
-		MessageChannel channel(client);
+	void clientThreadMainLoop(ClientInfoPtr client) {
+		MessageChannel channel(client->fd);
 		vector<string> args;
-		
-		if (channel.read(args) && args.size() == 3) {
-			ApplicationPtr app(pool.get(args[0], args[1], args[2]));
-			channel.write(toString(app->getPid()).c_str(), NULL);
-			channel.writeFileDescriptor(app->getListenSocket());
-		}
-	}
-	
-/*	unsigned int randomNumber() {
-		FILE *f = fopen("/dev/urandom", "r");
-		if (f == NULL) {
-			return rand();
-		} else {
-			unsigned int result;
-			if (fread(&result, 1, sizeof(result), f) == 0) {
-				result = rand();
+		map<int, Application::SessionPtr> sessions;
+		int lastID = 0;
+
+		while (!done) {
+			if (!channel.read(args)) {
+				break;
 			}
-			fclose(f);
-			return result;
-		}
-	}
-	
-	bool generateUniqueSocketFilename(char *output, size_t size) {
-		stringstream base;
-		
-		if (getenv("TMPDIR") && *getenv("TMPDIR")) {
-			base << getenv("TMPDIR");
-		} else {
-			base << "/tmp";
-		}
-		base << "/phusion_passenger.tmp." << getpid() << ".";
-		
-		for (int i = 0; i < 10000; i++) {
-			stringstream filename;
-			const char *filenameString;
-			struct stat buf;
 			
-			filename << base.str() << randomNumber() << ".sock";
-			if (filename.str().size() > size - 1) {
-				continue;
-			}
-			filenameString = filename.str().c_str();
-			if (stat(filenameString, &buf) == -1 && errno == ENOENT) {
-				strncpy(output, filenameString, size);
-				return true;
+			if (args[0] == "get" && args.size() == 4) {
+				Application::SessionPtr session(pool.get(args[1], args[2], args[3]));
+				channel.write(toString(lastID).c_str(), NULL);
+				channel.writeFileDescriptor(session->getReader());
+				channel.writeFileDescriptor(session->getWriter());
+				session->closeReader();
+				session->closeWriter();
+				sessions[lastID] = session;
+				lastID++;
+			} else if (args[0] == "close" && args.size() == 2) {
+				sessions.erase(atoi(args[1].c_str()));
+			} else if (args[0] == "setMax") {
+				pool.setMax(atoi(args[1].c_str()));
+			} else if (args[0] == "getActive") {
+				channel.write(toString(pool.getActive()).c_str(), NULL);
+			} else if (args[0] == "getCount") {
+				channel.write(toString(pool.getCount()).c_str(), NULL);
 			}
 		}
-		return false;
-	} */
-	
-	void finalize() {
-		demultiplexer.closeAll();
-		// serverSocket will be closed by demultiplexer.
-		close(connectSocket);
+		
+		mutex::scoped_lock l(lock);
+		clients.erase(client);
 	}
 	
 public:
@@ -309,16 +223,26 @@ public:
 		connectSocket = fds[1];
 		done = false;
 		detached = false;
-		demultiplexer.add(serverSocket);
-		thr = new thread(ServerThreadDelegator(this));
+		serverThread = new thread(bind(&ApplicationPoolServer::serverThreadMainLoop, this));
 	}
 	
 	~ApplicationPoolServer() {
 		if (!detached) {
 			done = true;
-			thr->join();
-			delete thr;
-			finalize();
+			close(connectSocket);
+			serverThread->join();
+			delete serverThread;
+			close(serverSocket);
+			
+			set<ClientInfoPtr> clientsCopy;
+			{
+				mutex::scoped_lock l(lock);
+				clientsCopy = clients;
+			}
+			set<ClientInfoPtr>::iterator it;
+			for (it = clientsCopy.begin(); it != clientsCopy.end(); it++) {
+				(*it)->thr->join();
+			}
 		}
 	}
 	
@@ -329,7 +253,7 @@ public:
 			ret = write(connectSocket, "x", 1);
 		} while ((ret == -1 && errno == EAGAIN) || ret == 0);
 		ret = MessageChannel(connectSocket).readFileDescriptor();
-		return ptr(new ApplicationPoolClient(ret));
+		return ptr(new Client(ret));
 	}
 	
 	/**
@@ -338,10 +262,12 @@ public:
 	 */
 	void detach() {
 		detached = true;
+		close(connectSocket);
+		close(serverSocket);
 		#ifdef VALGRIND_FRIENDLY
-			delete thr;
+			delete serverThread;
 		#endif
-		finalize();
+		clients.clear();
 	}
 };
 
