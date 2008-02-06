@@ -12,7 +12,7 @@
 #include <map>
 #include <list>
 
-#include <time.h>
+#include <ctime>
 
 #ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER
 	#include "DummySpawnManager.h"
@@ -25,18 +25,114 @@ namespace Passenger {
 using namespace std;
 using namespace boost;
 
+/**
+ * A persistent pool of Applications.
+ *
+ * Spawning Ruby on Rails application instances is a very expensive operation.
+ * Despite best efforts to make the operation less expensive (see SpawnManager),
+ * it remains expensive compared to the cost of processing an HTTP request/response.
+ * So, in order to solve this, some sort of caching/pooling mechanism will be required.
+ * ApplicationPool provides this.
+ *
+ * Normally, one would use SpawnManager to spawn a new RoR application instance,
+ * then use Application::connect() to create a new session with that application
+ * instance, and then use the returned Session object to send the request and
+ * to read the HTTP response. ApplicationPool replaces the first step with
+ * a call to Application::get(). For example:
+ * @code
+ *   ApplicationPool pool = some_function_which_creates_an_application_pool();
+ *   
+ *   // Connect to the application and get the newly opened session.
+ *   Application::SessionPtr session(pool->get("/home/webapps/foo"));
+ *   
+ *   // Send the request headers and request body data.
+ *   session->sendHeaders(...);
+ *   session->sendBody(...);
+ *
+ *   // Now read the HTTP response.
+ *   string responseData = readAllDataFromSocket(session->getReader());
+ *
+ *   // This session has now finished, so we close the session by resetting
+ *   // the smart pointer to NULL (thereby destroying the Session object).
+ *   session.reset();
+ *
+ *   // We can connect to an Application multiple times. Just make sure
+ *   // the previous session is closed.
+ *   session = app->connect("/home/webapps/bar")
+ * @endcode
+ *
+ * Internally, Application::get() will keep spawned applications instances in
+ * memory, and reuse them if possible. It will try to keep spawning to a minimum.
+ * Furthermore, if an application instance hasn't been used for a while, it
+ * will be automatically shutdown in order to save memory. And finally, one can
+ * set a hard limit on the maximum number of applications instances that may be
+ * spawned (see ApplicationPool::setMax()).
+ *
+ * Note that ApplicationPool is just an interface (i.e. a pure virtual class).
+ * For concrete classes, see StandardApplicationPool and ApplicationPoolServer.
+ */
 class ApplicationPool {
 public:
 	virtual ~ApplicationPool() {};
 	
+	/**
+	 * Open a new session with the application specified by <tt>appRoot</tt>.
+	 * See the class description for ApplicationPool, as well as Application::connect(),
+	 * on how to use the returned session object.
+	 *
+	 * @param appRoot The application root of a RoR application, i.e. the folder that
+	 *             contains 'app/', 'public/', 'config/', etc. This must be a valid
+	 *             directory, but does not have to be an absolute path.
+	 * @param user The user to run the application instance as.
+	 * @param group The group to run the application instance as.
+	 * @return A session object.
+	 * @note Applications are uniquely identified with the application root
+	 *       string. So although <tt>appRoot</tt> does not have to be absolute, it
+	 *       should be. If one calls <tt>get("/home/foo")</tt> and
+	 *       <tt>get("/home/../home/foo")</tt>, then ApplicationPool will think
+	 *       they're 2 different applications, and thus will spawn 2 application instances.
+	 */
 	virtual Application::SessionPtr get(const string &appRoot, const string &user = "", const string &group = "") = 0;
 	
+	/**
+	 * Set a hard limit on the number of application instances that this ApplicationPool
+	 * may spawn. The exact behavior depends on the used algorithm, and is not specified by
+	 * these API docs.
+	 *
+	 * It is allowed to set a limit lower than the current number of spawned applications.
+	 */
 	virtual void setMax(unsigned int max) = 0;
+	
+	/**
+	 * Get the number of active applications in the pool.
+	 *
+	 * This method exposes an implementation detail of the underlying pooling algorithm.
+	 * It is used by unit tests to verify that the implementation is correct,
+	 * and thus should not be called directly.
+	 */
 	virtual unsigned int getActive() const = 0;
+	
+	/**
+	 * Get the number of active applications in the pool.
+	 *
+	 * This method exposes an implementation detail of the underlying pooling algorithm.
+	 * It is used by unit tests to verify that the implementation is correct,
+	 * and thus should not be called directly.
+	 */
 	virtual unsigned int getCount() const = 0;
 };
 
-// TODO: document this
+/**
+ * A standard implementation of ApplicationPool. This implementation is to be used in a
+ * single-process environment, which may or may not be multithreaded. For example, Apache
+ * with the threading MPM (and <b>not</b> the prefork MPM).
+ *
+ * For multi-process environments, use ApplicationPoolServer instead.
+ *
+ * @warning
+ *   StandardApplicationPool uses threads internally. Because threads disappear after a fork(),
+ *   a StandardApplicationPool object will become unusable after a fork().
+ */
 class StandardApplicationPool: public ApplicationPool {
 private:
 	static const int CLEAN_INTERVAL = 62;
