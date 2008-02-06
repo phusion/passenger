@@ -32,6 +32,15 @@ extern "C" module AP_MODULE_DECLARE_DATA rails_module;
 
 class Hooks {
 private:
+	struct Container {
+		Application::SessionPtr session;
+		
+		static apr_status_t cleanup(void *p) {
+			delete (Container *) p;
+			return APR_SUCCESS;
+		}
+	};
+
 	ApplicationPoolServerPtr applicationPoolServer;
 	ApplicationPoolPtr applicationPool;
 	
@@ -140,7 +149,7 @@ private:
 		}
 	}
 	
-	apr_status_t sendHeaders(request_rec *r, int fd) {
+	apr_status_t sendHeaders(request_rec *r, Application::SessionPtr &session) {
 		apr_table_t *headers;
 		headers = apr_table_make(r->pool, 40);
 		if (headers == NULL) {
@@ -209,21 +218,7 @@ private:
 			buffer.append(hdrs[i].val);
 			buffer.append(1, '\0');
 		}
-		
-		ssize_t ret;
-		unsigned int written = 0;
-		const char *data = const_cast<const string &>(buffer).c_str();
-		do {
-			do {
-				ret = write(fd, data + written, buffer.size() - written);
-			} while (ret == -1 && errno == EINTR);
-			if (ret == -1) {
-				throw SystemException("An error occured while writing headers to the request handler", errno);
-			} else {
-				written += ret;
-			}
-		} while (written < buffer.size());
-	
+		session->sendHeaders(buffer);
 		return APR_SUCCESS;
 	}
 
@@ -243,6 +238,8 @@ public:
 	void initChild(apr_pool_t *pchild, server_rec *s) {
 		applicationPool = applicationPoolServer->connect();
 		applicationPoolServer->detach();
+		//const char *spawnManagerCommand = "/home/hongli/Projects/mod_rails/lib/mod_rails/spawn_manager.rb";
+		//applicationPool = ptr(new StandardApplicationPool(spawnManagerCommand, "", "production"));
 	}
 	
 	int handleRequest(request_rec *r) {
@@ -286,13 +283,12 @@ public:
 			apr_bucket *b;
 			
 			P_DEBUG("Processing HTTP request: " << r->uri);
-			ApplicationPtr app(applicationPool->get(string(railsDir) + "/.."));
-			pair<int, int> pipes(app->connect());
-			sendHeaders(r, pipes.second);
-			close(pipes.second);
+			Application::SessionPtr session(applicationPool->get(string(railsDir) + "/.."));
+			sendHeaders(r, session);
 			
 			apr_file_t *readerPipe = NULL;
-			apr_os_pipe_put(&readerPipe, &pipes.first, r->pool);
+			int reader = session->getReader();
+			apr_os_pipe_put(&readerPipe, &reader, r->pool);
 
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
 			b = apr_bucket_pipe_create(readerPipe, r->connection->bucket_alloc);
@@ -304,7 +300,9 @@ public:
 			ap_scan_script_header_err_brigade(r, bb, NULL);
 			ap_pass_brigade(r->output_filters, bb);
 			
-			P_TRACE("Dispatcher brigade passed to output filters");
+			Container *container = new Container();
+			container->session = session;
+			apr_pool_cleanup_register(r->pool, container, Container::cleanup, apr_pool_cleanup_null);
 
 			return OK;
 		} catch (const exception &e) {

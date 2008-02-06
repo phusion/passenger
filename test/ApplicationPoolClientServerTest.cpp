@@ -21,8 +21,10 @@ namespace tut {
 				initialFileDescriptors = countOpenFileDescriptors();
 				firstRun = false;
 			}
-			server = ptr(new ApplicationPoolServer("support/spawn_server_mock.rb"));
-			if (timeToTestThePoolItself) {
+			if (!timeToTestThePoolItself) {
+				server = ptr(new ApplicationPoolServer("stub/spawn_server.rb"));
+			} else {
+				server = ptr(new ApplicationPoolServer("../lib/mod_rails/spawn_manager.rb"));
 				pool = server->connect();
 			}
 		}
@@ -83,13 +85,13 @@ namespace tut {
 	}
 	
 	TEST_METHOD(5) {
+		// A flag for the test methods in ApplicationPoolTestTemplate.cpp
+		timeToTestThePoolItself = true;
+	
 		// ApplicationPoolServer should not leak file descriptors after running all
 		// of the above tests.
 		server = ApplicationPoolServerPtr();
 		ensure_equals(countOpenFileDescriptors(), initialFileDescriptors);
-		
-		// A flag for the test methods in ApplicationPoolTestTemplate.cpp
-		timeToTestThePoolItself = true;
 	}
 	
 	#define APPLICATION_POOL_TEST_START 5

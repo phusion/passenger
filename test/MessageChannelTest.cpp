@@ -86,7 +86,7 @@ namespace tut {
 			close(p1[1]);
 			close(p2[0]);
 			close(p2[1]);
-			execlp("ruby", "ruby", "./support/message_channel_mock.rb", NULL);
+			execlp("ruby", "ruby", "./stub/message_channel.rb", NULL);
 			perror("Cannot execute ruby");
 			_exit(1);
 		} else {
