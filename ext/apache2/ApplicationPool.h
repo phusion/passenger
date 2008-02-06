@@ -3,12 +3,16 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
+#include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/thread/condition.hpp>
 #include <boost/bind.hpp>
 
 #include <string>
 #include <map>
 #include <list>
+
+#include <time.h>
 
 #ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER
 	#include "DummySpawnManager.h"
@@ -35,12 +39,16 @@ public:
 // TODO: document this
 class StandardApplicationPool: public ApplicationPool {
 private:
+	static const int CLEAN_INTERVAL = 62;
+	static const int MAX_IDLE_TIME = 60;
+
 	typedef list<ApplicationPtr> ApplicationList;
 	typedef shared_ptr<ApplicationList> ApplicationListPtr;
 	typedef map<string, ApplicationListPtr> ApplicationMap;
 	
 	struct SharedData {
 		mutex lock;
+		condition countOrMaxChanged;
 		
 		ApplicationMap apps;
 		unsigned int max;
@@ -60,7 +68,6 @@ private:
 		}
 		
 		void operator()(Application::Session &session) {
-			P_TRACE("Session closed!");
 			mutex::scoped_lock l(data->lock);
 			ApplicationPtr app(this->app.lock());
 			
@@ -71,10 +78,10 @@ private:
 						// TODO: make this operation constant time
 						it->second->remove(app);
 						it->second->push_front(app);
-						P_TRACE("Moving app to front of the list");
 					}
 					data->active--;
 				}
+				app->setLastUsed(time(NULL));
 			}
 		}
 	};
@@ -85,7 +92,12 @@ private:
 		SpawnManager spawnManager;
 	#endif
 	SharedDataPtr data;
+	thread *cleanerThread;
+	bool done;
+	condition cleanerThreadSleeper;
+	
 	mutex &lock;
+	condition &countOrMaxChanged;
 	ApplicationMap &apps;
 	unsigned int &max;
 	unsigned int &count;
@@ -93,6 +105,41 @@ private:
 	
 	bool needsRestart(const string &appRoot) const {
 		return false;
+	}
+	
+	void cleanerThreadMainLoop() {
+		while (!done) {
+			mutex::scoped_lock l(lock);
+			
+			xtime xt;
+			xtime_get(&xt, TIME_UTC);
+			xt.sec += CLEAN_INTERVAL;
+			cleanerThreadSleeper.timed_wait(l, xt);
+			if (done) {
+				break;
+			}
+			
+			ApplicationMap::iterator appsIter;
+			time_t now = time(NULL);
+			for (appsIter = apps.begin(); appsIter != apps.end(); appsIter++) {
+				ApplicationList &appList(*appsIter->second);
+				ApplicationList::iterator listIter;
+				list<ApplicationList::iterator> elementsToRemove;
+				
+				for (listIter = appList.begin(); listIter != appList.end(); listIter++) {
+					Application &app(**listIter);
+					if (now - app.getLastUsed() > MAX_IDLE_TIME) {
+						P_TRACE("Cleaning idle app " << app.getAppRoot());
+						elementsToRemove.push_back(listIter);
+					}
+				}
+				
+				list<ApplicationList::iterator>::iterator it;
+				for (it = elementsToRemove.begin(); it != elementsToRemove.end(); it++) {
+					appList.erase(*it);
+				}
+			}
+		}
 	}
 	
 public:
@@ -106,18 +153,35 @@ public:
 		#endif
 		data(new SharedData()),
 		lock(data->lock),
+		countOrMaxChanged(data->countOrMaxChanged),
 		apps(data->apps),
 		max(data->max),
 		count(data->count),
 		active(data->active)
 	{
+		done = false;
 		max = 100;
 		count = 0;
 		active = 0;
+		cleanerThread = new thread(bind(&StandardApplicationPool::cleanerThreadMainLoop, this));
+	}
+	
+	virtual ~StandardApplicationPool() {
+		done = true;
+		{
+			mutex::scoped_lock l(lock);
+			cleanerThreadSleeper.notify_one();
+		}
+		cleanerThread->join();
+		delete cleanerThread;
 	}
 	
 	virtual Application::SessionPtr
 	get(const string &appRoot, const string &user = "", const string &group = "") {
+		/*
+		 * See "doc/ApplicationPool Algorithm.txt" for a more readable description
+		 * of the algorithm.
+		 */
 		ApplicationPtr app;
 		mutex::scoped_lock l(lock);
 		
@@ -127,44 +191,45 @@ public:
 		
 		ApplicationMap::iterator it(apps.find(appRoot));
 		if (it != apps.end()) {
-			P_TRACE("AppRoot already in list");
 			ApplicationList &appList(*it->second);
 		
 			if (appList.front()->getSessions() == 0) {
-				P_TRACE("First app in list has 0 sessions");
 				app = appList.front();
 				appList.pop_front();
 				appList.push_back(app);
 				active++;
 			} else if (count < max) {
-				P_TRACE("Spawning new");
 				app = spawnManager.spawn(appRoot, user, group);
 				appList.push_back(app);
 				count++;
+				countOrMaxChanged.notify_all();
 				active++;
 			} else {
-				P_TRACE("Queueing to existing app");
 				app = appList.front();
 				appList.pop_front();
 				appList.push_back(app);
 				active++;
 			}
 		} else {
-			P_TRACE("AppRoot not in list");
-			//wait until count < max;
+			while (count >= max) {
+				countOrMaxChanged.wait(l);
+			}
 			app = spawnManager.spawn(appRoot, user, group);
 			ApplicationListPtr appList(new ApplicationList());
 			appList->push_back(app);
 			apps[appRoot] = appList;
 			count++;
+			countOrMaxChanged.notify_all();
 			active++;
 		}
+		app->setLastUsed(time(NULL));
 		return app->connect(SessionCloseCallback(data, app));
 	}
 	
 	virtual void setMax(unsigned int max) {
 		mutex::scoped_lock l(lock);
 		this->max = max;
+		countOrMaxChanged.notify_all();
 	}
 	
 	virtual unsigned int getActive() const {
