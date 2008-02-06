@@ -1,0 +1,5 @@
+<area shape="rect" title="STL class." alt="" coords="5,81,117,108">
+<area shape="rect" href="$classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation." alt="" coords="237,5,413,32">
+<area shape="rect" href="$classPassenger_1_1MemoryException.html" title="Represents an out&#45;of&#45;memory error." alt="" coords="217,56,433,83">
+<area shape="rect" href="$classPassenger_1_1SpawnManager_1_1RestartException.html" title="Thrown when SpawnManager tried to restart the spawn server, but failed." alt="" coords="167,107,484,133">
+<area shape="rect" href="$classPassenger_1_1SystemException.html" title="Represents an error returned by a system call or a standard library call." alt="" coords="220,157,431,184">
