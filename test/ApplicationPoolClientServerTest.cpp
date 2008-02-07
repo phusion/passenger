@@ -64,7 +64,7 @@ namespace tut {
 		if (pid == 0) {
 			server->connect();
 			server->detach();
-			server = ApplicationPoolServerPtr();
+			server.reset();
 			_exit(0);
 		} else {
 			waitpid(pid, NULL, 0);
@@ -77,7 +77,7 @@ namespace tut {
 		pid_t pid = fork();
 		if (pid == 0) {
 			server->detach();
-			server = ApplicationPoolServerPtr();
+			server.reset();
 			_exit(0);
 		} else {
 			waitpid(pid, NULL, 0);

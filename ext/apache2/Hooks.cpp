@@ -29,6 +29,10 @@ using namespace Passenger;
 
 extern "C" module AP_MODULE_DECLARE_DATA rails_module;
 
+#define DEFAULT_RUBY_COMMAND "ruby"
+#define DEFAULT_RAILS_ENV "production"
+#define DEFAULT_SPAWN_SERVER_COMMAND "/home/hongli/Projects/mod_rails/lib/mod_rails/spawn_manager.rb"
+
 
 class Hooks {
 private:
@@ -44,28 +48,44 @@ private:
 	ApplicationPoolServerPtr applicationPoolServer;
 	ApplicationPoolPtr applicationPool;
 	
-	RailsConfig *getDirConfig(request_rec *r) {
-		return (RailsConfig *) ap_get_module_config(r->per_dir_config, &rails_module);
+	DirConfig *getDirConfig(request_rec *r) {
+		return (DirConfig *) ap_get_module_config(r->per_dir_config, &rails_module);
 	}
-
+	
+	ServerConfig *getServerConfig(request_rec *r) {
+		return getServerConfig(r->server);
+	}
+	
+	ServerConfig *getServerConfig(server_rec *s) {
+		return (ServerConfig *) ap_get_module_config(s->module_config, &rails_module);
+	}
+	
 	int fileExists(apr_pool_t *pool, const char *filename) {
 		apr_finfo_t info;
-		return apr_stat(&info, filename, APR_FINFO_NORM, pool) == APR_SUCCESS;
+		return apr_stat(&info, filename, APR_FINFO_NORM, pool) == APR_SUCCESS && info.filetype == APR_REG;
 	}
 	
-	bool isWellFormedURI(const char *uri) {
-		return uri[0] == '/';
+	const char *determineRailsBaseURI(request_rec *r, DirConfig *config) {
+		set<string>::const_iterator it;
+		const char *uri = r->uri;
+		size_t uri_len = strlen(uri);
+		
+		if (uri_len == 0 || uri[0] != '/') {
+			return NULL;
+		}
+		
+		for (it = config->base_uris.begin(); it != config->base_uris.end(); it++) {
+			const string &base(*it);
+			if (  base == "/"
+			 || ( uri_len == base.size() && memcmp(uri, base.c_str(), uri_len) == 0 )
+			 || ( uri_len  > base.size() && memcmp(uri, base.c_str(), base.size()) == 0 && uri[base.size()] == '/' )) {
+				return apr_pstrdup(r->pool, base.c_str());
+			}
+		}
+		return NULL;
 	}
 	
-	/**
-	 * Check whether config->base_uri is a base URI of the URI of the given request.
-	 */
-	bool insideBaseURI(request_rec *r, RailsConfig *config) {
-		return strcmp(r->uri, config->base_uri) == 0
-		    || strncmp(r->uri, config->base_uri_with_slash, strlen(config->base_uri_with_slash)) == 0;
-	}
-	
-	const char *determineRailsDir(request_rec *r, RailsConfig *config) {
+	const char *determineRailsDir(request_rec *r, const char *baseURI) {
 		const char *docRoot = ap_document_root(r);
 		size_t len = strlen(docRoot);
 		if (len > 0) {
@@ -75,7 +95,7 @@ private:
 			} else {
 				temp.assign(docRoot, len);
 			}
-			temp.append(r->uri);
+			temp.append(baseURI);
 			return apr_pstrdup(r->pool, temp.c_str());
 		} else {
 			return NULL;
@@ -159,7 +179,7 @@ private:
 		}
 	}
 	
-	apr_status_t sendHeaders(request_rec *r, Application::SessionPtr &session) {
+	apr_status_t sendHeaders(request_rec *r, Application::SessionPtr &session, const char *baseURI) {
 		apr_table_t *headers;
 		headers = apr_table_make(r->pool, 40);
 		if (headers == NULL) {
@@ -179,8 +199,7 @@ private:
 		addHeader(headers, "REQUEST_METHOD",  r->method);
 		addHeader(headers, "REQUEST_URI",     originalURI(r));
 		addHeader(headers, "QUERY_STRING",    r->args ? r->args : "");
-		// TODO: we can use this to set Rails's relative_url_root!
-		//addHeader(headers, "SCRIPT_NAME",     r->uri);
+		addHeader(headers, "SCRIPT_NAME",     baseURI);
 		/* if (r->path_info) {
 			int path_info_start = strlen(r->uri) - strlen(r->path_info);
 			ap_assert(path_info_start >= 0);
@@ -235,34 +254,33 @@ private:
 public:
 	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s) {
 		initDebugging();
-		P_DEBUG("Initializing mod_passenger.");
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
-		const char *spawnManagerCommand = "/home/hongli/Projects/mod_rails/lib/mod_rails/spawn_manager.rb";
-		applicationPoolServer = ptr(new ApplicationPoolServer(spawnManagerCommand, "", "production"));
-	}
-	
-	~Hooks() {
-		P_DEBUG("Shutting down mod_passenger.");
+		passenger_config_merge_all_servers(pconf, s);
+		
+		ServerConfig *config = getServerConfig(s);
+		const char *ruby, *environment, *spawnServer;
+		
+		ruby = (config->ruby != NULL) ? config->ruby : DEFAULT_RUBY_COMMAND;
+		environment = (config->env != NULL) ? config->env : DEFAULT_RAILS_ENV;
+		spawnServer = (config->spawnServer != NULL) ? config->spawnServer : DEFAULT_SPAWN_SERVER_COMMAND;
+		
+		applicationPoolServer = ptr(new ApplicationPoolServer(spawnServer, "", environment, ruby));
 	}
 	
 	void initChild(apr_pool_t *pchild, server_rec *s) {
+		// TODO: check for exceptions here
 		applicationPool = applicationPoolServer->connect();
 		applicationPoolServer->detach();
-		//const char *spawnManagerCommand = "/home/hongli/Projects/mod_rails/lib/mod_rails/spawn_manager.rb";
-		//applicationPool = ptr(new StandardApplicationPool(spawnManagerCommand, "", "production"));
 	}
 	
 	int handleRequest(request_rec *r) {
-		RailsConfig *config = getDirConfig(r);
-		const char *railsDir;
-		
-		if (!isWellFormedURI(r->uri)  || config->base_uri == NULL
-		 || !insideBaseURI(r, config) || r->filename == NULL
-		 || fileExists(r->pool, r->filename)) {
+		DirConfig *config = getDirConfig(r);
+		const char *railsBaseURI = determineRailsBaseURI(r, config);
+		if (railsBaseURI == NULL || r->filename == NULL || fileExists(r->pool, r->filename)) {
 			return DECLINED;
 		}
 		
-		railsDir = determineRailsDir(r, config);
+		const char *railsDir = determineRailsDir(r, railsBaseURI);
 		if (railsDir == NULL) {
 			ap_set_content_type(r, "text/html; charset=UTF-8");
 			ap_rputs("<h1>mod_rails error #1</h1>\n", r);
@@ -283,9 +301,9 @@ public:
 		} */
 		
 		/*
-		 * TODO: fix these bugs:
+		 * TODO:
 		 * - If the request handler dies, it does not get removed from the application pool. It should.
-		 * - If Apache dies, then the request handler's protocol state is left in an inconsistent state.
+		 * - Implement HTTP body forwarding
 		 */
 		
 		try {
@@ -294,7 +312,7 @@ public:
 			
 			P_DEBUG("Processing HTTP request: " << r->uri);
 			Application::SessionPtr session(applicationPool->get(string(railsDir) + "/.."));
-			sendHeaders(r, session);
+			sendHeaders(r, session, railsBaseURI);
 			
 			apr_file_t *readerPipe = NULL;
 			int reader = session->getReader();
@@ -316,17 +334,21 @@ public:
 
 			return OK;
 		} catch (const exception &e) {
-			ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "mod_passenger: unknown uncaught error: %s", e.what());
+			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "*** Passenger: uncaught error: %s", e.what());
 			return HTTP_INTERNAL_SERVER_ERROR;
 		}
 	}
 	
 	int
 	mapToStorage(request_rec *r) {
-		RailsConfig *config = getDirConfig(r);
-		
-		if (!isWellFormedURI(r->uri) || config->base_uri == NULL
-		 || !insideBaseURI(r, config)) {
+		DirConfig *config = getDirConfig(r);
+		if (determineRailsBaseURI(r, config) == NULL
+		 || fileExists(r->pool, r->filename)) {
+			/*
+			 * fileExists():
+			 * If the file already exists, serve it directly.
+			 * This is for static assets like .css and .js files.
+			 */
 			return DECLINED;
 		} else {
 			char *html_file = apr_pstrcat(r->pool, r->filename, ".html", NULL);
@@ -397,11 +419,19 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 			apr_pool_cleanup_null, processPool);
 		return OK;
 	} else {
-		hooks = new Hooks(pconf, plog, ptemp, s);
-		apr_pool_cleanup_register(pconf, NULL,
-			destroy_hooks,
-			apr_pool_cleanup_null);
-		return OK;
+		try {
+			hooks = new Hooks(pconf, plog, ptemp, s);
+			apr_pool_cleanup_register(pconf, NULL,
+				destroy_hooks,
+				apr_pool_cleanup_null);
+			return OK;
+		} catch (const exception &e) {
+			ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,
+				"*** Passenger could not be initialized because of this error: %s",
+				e.what());
+			hooks = NULL;
+			return DECLINED;
+		}
 	}
 }
 

@@ -21,11 +21,13 @@ namespace Passenger {
 using namespace std;
 
 /**
- * Convenience class for message sending/receival and file descriptor passing.
+ * Convenience class for I/O operations on file descriptors.
  *
  * This class provides convenience methods for:
+ *  - sending and receiving raw data over a file descriptor.
  *  - sending and receiving messages over a file descriptor.
  *  - file descriptor passing over a Unix socket.
+ * All of these methods use exceptions for error reporting.
  *
  * There are two kinds of messages:
  *  - Array messages. These are just a list of strings, and the message
@@ -136,8 +138,6 @@ public:
 		list<string>::const_iterator it;
 		string data;
 		uint16_t dataSize = 0;
-		string::size_type written;
-		int ret;
 
 		for (it = args.begin(); it != args.end(); it++) {
 			dataSize += it->size() + 1;
@@ -150,17 +150,7 @@ public:
 			data.append(1, DELIMITER);
 		}
 		
-		written = 0;
-		do {
-			do {
-				ret = ::write(fd, data.data() + written, data.size() - written);
-			} while (ret == -1 && errno == EINTR);
-			if (ret == -1) {
-				throw SystemException("write() failed", errno);
-			} else {
-				written += ret;
-			}
-		} while (written < data.size());
+		writeRaw(data.c_str(), data.size());
 	}
 	
 	/**
@@ -211,7 +201,19 @@ public:
 	 */
 	void writeScalar(const char *data, unsigned short size) {
 		writeLength(size);
-		
+		writeRaw(data, size);
+	}
+	
+	/**
+	 * Send a block of data over the underlying file descriptor.
+	 * This method blocks until everything is sent.
+	 *
+	 * @param data The data to send.
+	 * @param size The number of bytes in <tt>data</tt>.
+	 * @pre <tt>data != NULL</tt>
+	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 */
+	void writeRaw(const char *data, unsigned int size) {
 		ssize_t ret;
 		unsigned int written = 0;
 		do {
