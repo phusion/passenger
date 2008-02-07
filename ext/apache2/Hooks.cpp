@@ -301,9 +301,9 @@ public:
 		} */
 		
 		/*
-		 * TODO: fix these bugs:
+		 * TODO:
 		 * - If the request handler dies, it does not get removed from the application pool. It should.
-		 * - If Apache dies, then the request handler's protocol state is left in an inconsistent state.
+		 * - Implement HTTP body forwarding
 		 */
 		
 		try {

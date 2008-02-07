@@ -148,6 +148,7 @@ private:
 	set<ClientInfoPtr> clients;
 	
 	// TODO: check for exceptions in threads, possibly forwarding them
+	// Don't forget to test them
 	
 	void serverThreadMainLoop() {
 		while (!done) {
