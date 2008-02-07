@@ -255,10 +255,7 @@ public:
 	int handleRequest(request_rec *r) {
 		RailsConfig *config = getDirConfig(r);
 		const char *railsDir;
-for (set<string>::const_iterator it(config->base_uris.begin()); it != config->base_uris.end(); it++) {
-	fprintf(stderr, "URI: %s\n", it->c_str());
-}
-fflush(stderr);
+		
 		if (!isWellFormedURI(r->uri)  || config->base_uri == NULL
 		 || !insideBaseURI(r, config) || r->filename == NULL
 		 || fileExists(r->pool, r->filename)) {
