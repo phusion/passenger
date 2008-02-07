@@ -5,6 +5,10 @@
 #include <string>
 #include <sstream>
 
+/**
+ * @defgroup Exceptions Exceptions
+ */
+
 namespace Passenger {
 
 using namespace std;
@@ -14,6 +18,8 @@ using namespace std;
  *
  * Use the code() method to find out the value of <tt>errno</tt> at the time
  * the error occured.
+ *
+ * @ingroup Exceptions
  */
 class SystemException: public exception {
 private:
@@ -53,6 +59,8 @@ public:
 
 /**
  * Represents an out-of-memory error.
+ *
+ * @ingroup Exceptions
  */
 class MemoryException: public exception {
 private:
@@ -71,6 +79,8 @@ public:
 
 /**
  * Represents an error that occured during an I/O operation.
+ *
+ * @ingroup Exceptions
  */
 class IOException: public exception {
 private:

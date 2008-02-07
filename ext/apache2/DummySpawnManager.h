@@ -32,6 +32,8 @@ using namespace std;
  * to make ApplicationPool use DummySpawnManager instead of SpawnManager.
  *
  * Of course, don't forget to compile benchmark/DummyRequestHandler!
+ *
+ * @ingroup Support
  */
 class DummySpawnManager {
 public:

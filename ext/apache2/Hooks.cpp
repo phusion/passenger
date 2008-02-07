@@ -44,7 +44,7 @@ private:
 	ApplicationPoolServerPtr applicationPoolServer;
 	ApplicationPoolPtr applicationPool;
 	
-	RailsConfig *getConfig(request_rec *r) {
+	RailsConfig *getDirConfig(request_rec *r) {
 		return (RailsConfig *) ap_get_module_config(r->per_dir_config, &rails_module);
 	}
 
@@ -66,16 +66,26 @@ private:
 	}
 	
 	const char *determineRailsDir(request_rec *r, RailsConfig *config) {
-		size_t len = strlen(r->filename) - strlen(r->uri);
-		if (len <= 0) {
-			return NULL;
+		const char *docRoot = ap_document_root(r);
+		size_t len = strlen(docRoot);
+		if (len > 0) {
+			string temp;
+			if (docRoot[len - 1] == '/') {
+				temp.assign(docRoot, len - 1);
+			} else {
+				temp.assign(docRoot, len);
+			}
+			temp.append(r->uri);
+			return apr_pstrdup(r->pool, temp.c_str());
 		} else {
-			return apr_pstrndup(r->pool, r->filename, len);
+			return NULL;
 		}
 	}
 	
 	bool verifyRailsDir(apr_pool_t *pool, const char *dir) {
-		return fileExists(pool, apr_pstrcat(pool, dir, "/../config/environment.rb", NULL));
+		string temp(dir);
+		temp.append("/../config/environment.rb");
+		return fileExists(pool, temp.c_str());
 	}
 	
 	char *http2env(apr_pool_t *p, const char *name) {
@@ -243,7 +253,7 @@ public:
 	}
 	
 	int handleRequest(request_rec *r) {
-		RailsConfig *config = getConfig(r);
+		RailsConfig *config = getDirConfig(r);
 		const char *railsDir;
 		
 		if (!isWellFormedURI(r->uri)  || config->base_uri == NULL
@@ -313,7 +323,7 @@ public:
 	
 	int
 	mapToStorage(request_rec *r) {
-		RailsConfig *config = getConfig(r);
+		RailsConfig *config = getDirConfig(r);
 		
 		if (!isWellFormedURI(r->uri) || config->base_uri == NULL
 		 || !insideBaseURI(r, config)) {
@@ -338,7 +348,7 @@ public:
 				 *
 				 * Incidentally, this also disables mod_rewrite. That is a
 				 * good thing because the default Rails .htaccess file
-				 * interferes with mod_rails anyway (it delegates request
+				 * interferes with mod_rails anyway (it delegates requests
 				 * to the CGI script dispatch.cgi).
 				 */
 				return OK;
@@ -352,6 +362,11 @@ public:
 /******************************************************************
  * Below follows lightweight C wrappers around the C++ Hook class.
  ******************************************************************/
+
+/**
+ * @ingroup Hooks
+ * @{
+ */
 
 static Hooks *hooks = NULL;
 
@@ -415,6 +430,9 @@ map_to_storage(request_rec *r) {
 	}
 }
 
+/**
+ * Apache hook registration function.
+ */
 void
 passenger_register_hooks(apr_pool_t *p) {
 	ap_hook_post_config(init_module, NULL, NULL, APR_HOOK_MIDDLE);
@@ -422,3 +440,7 @@ passenger_register_hooks(apr_pool_t *p) {
 	ap_hook_map_to_storage(map_to_storage, NULL, NULL, APR_HOOK_FIRST);
 	ap_hook_handler(handle_request, NULL, NULL, APR_HOOK_FIRST);
 }
+
+/**
+ * @}
+ */

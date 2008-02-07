@@ -1,6 +1,5 @@
 #include <apr_strings.h>
 #include "Configuration.h"
-#include "Types.h"
 
 extern "C" {
 
@@ -52,7 +51,7 @@ typedef const char * (*Take1Func)(); // Workaround for some weird C++-specific c
 const command_rec passenger_commands[] = {
 	AP_INIT_TAKE1("RailsBaseURI", (Take1Func) cmd_rails_base_uri, NULL, OR_OPTIONS,
 		"Reserve the given URI to a Rails application."),
-	AP_INIT_TAKE1("RailsEnv", (Take1Func) ap_set_string_slot, (void *) APR_OFFSETOF(RailsConfig, env), OR_OPTIONS,
+	AP_INIT_TAKE1("RailsEnv", (Take1Func) ap_set_string_slot, (void *) APR_OFFSETOF(RailsConfig, env), RSRC_CONF,
 		"The environment under which a Rails app must run."),
 	{ NULL }
 };

@@ -68,6 +68,8 @@ using namespace std;
  *    receiving side does things in the wrong order then bad things will
  *    happen.
  * @note MessageChannel is thread-safe.
+ *
+ * @ingroup Support
  */
 class MessageChannel {
 private:

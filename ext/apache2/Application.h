@@ -21,6 +21,8 @@ using namespace boost;
 
 /**
  * Represents a single Ruby on Rails application instance.
+ *
+ * @ingroup Support
  */
 class Application {
 public:

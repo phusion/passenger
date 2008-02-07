@@ -54,6 +54,8 @@ using namespace boost;
  * avoided whenever possible.
  *
  * See the documentation of the spawn server for full implementation details.
+ *
+ * @ingroup Support
  */
 class SpawnManager {
 private:
