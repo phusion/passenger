@@ -1,8 +1,12 @@
 #include <apr_strings.h>
 #include <algorithm>
 #include "Configuration.h"
+#include "Utils.h"
 
 using namespace Passenger;
+
+extern "C" module AP_MODULE_DECLARE_DATA rails_module;
+
 
 template<typename T> static apr_status_t
 destroy_config_struct(void *x) {
@@ -52,18 +56,37 @@ passenger_config_create_server(apr_pool_t *p, server_rec *s) {
 	ServerConfig *config = create_server_config_struct(p);
 	config->ruby = NULL;
 	config->env = NULL;
+	config->spawnServer = NULL;
 	return config;
 }
 
 void *
-passenger_config_merge_server(apr_pool_t *p, void *basev, void *overridesv) {
-	DirConfig *config = create_dir_config_struct(p);
-	DirConfig *base = (DirConfig *) basev;
-	DirConfig *add = (DirConfig *) addv;
+passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
+	ServerConfig *config = create_server_config_struct(p);
+	ServerConfig *base = (ServerConfig *) basev;
+	ServerConfig *add = (ServerConfig *) addv;
 	
 	config->ruby = (add->ruby == NULL) ? base->ruby : add->ruby;
 	config->env = (add->env == NULL) ? base->env : add->env;
+	config->spawnServer = (add->spawnServer == NULL) ? base->spawnServer : add->spawnServer;
 	return config;
+}
+
+void
+passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
+	ServerConfig *final = create_server_config_struct(pool);
+	server_rec *s;
+	
+	for (s = main_server; s != NULL; s = s->next) {
+		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &rails_module);
+		final->ruby = (final->ruby != NULL) ? final->ruby : config->ruby;
+		final->env = (final->env != NULL) ? final->env : config->env;
+		final->spawnServer = (final->spawnServer != NULL) ? final->spawnServer : config->spawnServer;
+	}
+	for (s = main_server; s != NULL; s = s->next) {
+		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &rails_module);
+		*config = *final;
+	}
 }
 
 static const char *
@@ -73,15 +96,53 @@ cmd_rails_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 	return NULL;
 }
 
+static const char *
+cmd_rails_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
+	ServerConfig *config = (ServerConfig *) ap_get_module_config(
+		cmd->server->module_config, &rails_module);
+	config->ruby = arg;
+	return NULL;
+}
+
+static const char *
+cmd_rails_env(cmd_parms *cmd, void *pcfg, const char *arg) {
+	ServerConfig *config = (ServerConfig *) ap_get_module_config(
+		cmd->server->module_config, &rails_module);
+	config->env = arg;
+	return NULL;
+}
+
+static const char *
+cmd_rails_spawn_server(cmd_parms *cmd, void *pcfg, const char *arg) {
+	ServerConfig *config = (ServerConfig *) ap_get_module_config(
+		cmd->server->module_config, &rails_module);
+	config->spawnServer = arg;
+	return NULL;
+}
+
 typedef const char * (*Take1Func)(); // Workaround for some weird C++-specific compiler error.
 
 const command_rec passenger_commands[] = {
-	AP_INIT_TAKE1("RailsBaseURI", (Take1Func) cmd_rails_base_uri, NULL, OR_OPTIONS,
+	AP_INIT_TAKE1("RailsBaseURI",
+		(Take1Func) cmd_rails_base_uri,
+		NULL,
+		OR_OPTIONS,
 		"Reserve the given URI to a Rails application."),
-	AP_INIT_TAKE1("RailsRuby", (Take1Func) ap_set_string_slot, (void *) APR_OFFSETOF(ServerConfig, ruby), RSRC_CONF,
+	AP_INIT_TAKE1("RailsRuby",
+		(Take1Func) cmd_rails_ruby,
+		NULL,
+		RSRC_CONF,
 		"The Ruby interpreter to use."),
-	AP_INIT_TAKE1("RailsEnv", (Take1Func) ap_set_string_slot, (void *) APR_OFFSETOF(ServerConfig, env), RSRC_CONF,
+	AP_INIT_TAKE1("RailsEnv",
+		(Take1Func) cmd_rails_env,
+		NULL,
+		RSRC_CONF,
 		"The environment under which a Rails app must run."),
+	AP_INIT_TAKE1("RailsSpawnServer",
+		(Take1Func) cmd_rails_spawn_server,
+		NULL,
+		RSRC_CONF,
+		"..."),
 	{ NULL }
 };
 

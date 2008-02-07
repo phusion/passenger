@@ -147,6 +147,8 @@ private:
 	thread *serverThread;
 	set<ClientInfoPtr> clients;
 	
+	// TODO: check for exceptions in threads, possibly forwarding them
+	
 	void serverThreadMainLoop() {
 		while (!done) {
 			int fds[2], ret;

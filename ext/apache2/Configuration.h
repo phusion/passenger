@@ -34,6 +34,8 @@
 			
 			/** The environment (i.e. value for RAILS_ENV) under which the Rails application should operate. */
 			const char *env;
+			
+			const char *spawnServer;
 		};
 	}
 
@@ -51,6 +53,8 @@ void *passenger_config_create_server(apr_pool_t *p, server_rec *s);
 
 /** Configuration hook for per-server configuration structure merging. */
 void *passenger_config_merge_server(apr_pool_t *p, void *basev, void *overridesv);
+
+void passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server);
 
 /** Apache module commands array. */
 extern const command_rec passenger_commands[];
