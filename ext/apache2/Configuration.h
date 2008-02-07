@@ -18,15 +18,24 @@
 	#include <set>
 	#include <string>
 
-	/**
-	 * Per-directory configuration information.
-	 */
-	struct RailsDirConfig {
-		std::set<std::string> base_uris;
+	namespace Passenger {
+	
+		using namespace std;
+
+		/**
+		* Per-directory configuration information.
+		*/
+		struct DirConfig {
+			std::set<std::string> base_uris;
+		};
 		
-		/** The environment (i.e. value for RAILS_ENV) under which the Rails application should operate. */
-		const char *env;
-	};
+		struct ServerConfig {
+			const char *ruby;
+			
+			/** The environment (i.e. value for RAILS_ENV) under which the Rails application should operate. */
+			const char *env;
+		};
+	}
 
 	extern "C" {
 #endif
