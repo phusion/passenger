@@ -19,19 +19,13 @@
 	#include <string>
 
 	/**
-	* Per-server configuration information.
-	*/
-	struct RailsConfig {
-		/** The base URI at which the Rails application operates. */
-		const char *base_uri;
-		
-		/** The same as base_uri, but with a trailing slash. This is to make matching URIs easier. */
-		char *base_uri_with_slash;
+	 * Per-directory configuration information.
+	 */
+	struct RailsDirConfig {
+		std::set<std::string> base_uris;
 		
 		/** The environment (i.e. value for RAILS_ENV) under which the Rails application should operate. */
 		const char *env;
-		
-		std::set<std::string> base_uris;
 	};
 
 	extern "C" {

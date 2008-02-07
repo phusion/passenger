@@ -44,28 +44,36 @@ private:
 	ApplicationPoolServerPtr applicationPoolServer;
 	ApplicationPoolPtr applicationPool;
 	
-	RailsConfig *getDirConfig(request_rec *r) {
-		return (RailsConfig *) ap_get_module_config(r->per_dir_config, &rails_module);
+	RailsDirConfig *getDirConfig(request_rec *r) {
+		return (RailsDirConfig *) ap_get_module_config(r->per_dir_config, &rails_module);
 	}
 
 	int fileExists(apr_pool_t *pool, const char *filename) {
 		apr_finfo_t info;
-		return apr_stat(&info, filename, APR_FINFO_NORM, pool) == APR_SUCCESS;
+		return apr_stat(&info, filename, APR_FINFO_NORM, pool) == APR_SUCCESS && info.filetype == APR_REG;
 	}
 	
-	bool isWellFormedURI(const char *uri) {
-		return uri[0] == '/';
+	const char *determineRailsBaseURI(request_rec *r, RailsDirConfig *config) {
+		set<string>::const_iterator it;
+		const char *uri = r->uri;
+		size_t uri_len = strlen(uri);
+		
+		if (uri_len == 0 || uri[0] != '/') {
+			return NULL;
+		}
+		
+		for (it = config->base_uris.begin(); it != config->base_uris.end(); it++) {
+			const string &base(*it);
+			if (  base == "/"
+			 || ( uri_len == base.size() && memcmp(uri, base.c_str(), uri_len) == 0 )
+			 || ( uri_len  > base.size() && memcmp(uri, base.c_str(), base.size()) == 0 && uri[base.size()] == '/' )) {
+				return apr_pstrdup(r->pool, base.c_str());
+			}
+		}
+		return NULL;
 	}
 	
-	/**
-	 * Check whether config->base_uri is a base URI of the URI of the given request.
-	 */
-	bool insideBaseURI(request_rec *r, RailsConfig *config) {
-		return strcmp(r->uri, config->base_uri) == 0
-		    || strncmp(r->uri, config->base_uri_with_slash, strlen(config->base_uri_with_slash)) == 0;
-	}
-	
-	const char *determineRailsDir(request_rec *r, RailsConfig *config) {
+	const char *determineRailsDir(request_rec *r, const char *baseURI) {
 		const char *docRoot = ap_document_root(r);
 		size_t len = strlen(docRoot);
 		if (len > 0) {
@@ -75,7 +83,7 @@ private:
 			} else {
 				temp.assign(docRoot, len);
 			}
-			temp.append(r->uri);
+			temp.append(baseURI);
 			return apr_pstrdup(r->pool, temp.c_str());
 		} else {
 			return NULL;
@@ -159,7 +167,7 @@ private:
 		}
 	}
 	
-	apr_status_t sendHeaders(request_rec *r, Application::SessionPtr &session) {
+	apr_status_t sendHeaders(request_rec *r, Application::SessionPtr &session, const char *baseURI) {
 		apr_table_t *headers;
 		headers = apr_table_make(r->pool, 40);
 		if (headers == NULL) {
@@ -179,8 +187,7 @@ private:
 		addHeader(headers, "REQUEST_METHOD",  r->method);
 		addHeader(headers, "REQUEST_URI",     originalURI(r));
 		addHeader(headers, "QUERY_STRING",    r->args ? r->args : "");
-		// TODO: we can use this to set Rails's relative_url_root!
-		//addHeader(headers, "SCRIPT_NAME",     r->uri);
+		addHeader(headers, "SCRIPT_NAME",     baseURI);
 		/* if (r->path_info) {
 			int path_info_start = strlen(r->uri) - strlen(r->path_info);
 			ap_assert(path_info_start >= 0);
@@ -248,24 +255,16 @@ public:
 	void initChild(apr_pool_t *pchild, server_rec *s) {
 		applicationPool = applicationPoolServer->connect();
 		applicationPoolServer->detach();
-		//const char *spawnManagerCommand = "/home/hongli/Projects/mod_rails/lib/mod_rails/spawn_manager.rb";
-		//applicationPool = ptr(new StandardApplicationPool(spawnManagerCommand, "", "production"));
 	}
 	
 	int handleRequest(request_rec *r) {
-		RailsConfig *config = getDirConfig(r);
-		const char *railsDir;
-for (set<string>::const_iterator it(config->base_uris.begin()); it != config->base_uris.end(); it++) {
-	fprintf(stderr, "URI: %s\n", it->c_str());
-}
-fflush(stderr);
-		if (!isWellFormedURI(r->uri)  || config->base_uri == NULL
-		 || !insideBaseURI(r, config) || r->filename == NULL
-		 || fileExists(r->pool, r->filename)) {
+		RailsDirConfig *config = getDirConfig(r);
+		const char *railsBaseURI = determineRailsBaseURI(r, config);
+		if (railsBaseURI == NULL || r->filename == NULL || fileExists(r->pool, r->filename)) {
 			return DECLINED;
 		}
 		
-		railsDir = determineRailsDir(r, config);
+		const char *railsDir = determineRailsDir(r, railsBaseURI);
 		if (railsDir == NULL) {
 			ap_set_content_type(r, "text/html; charset=UTF-8");
 			ap_rputs("<h1>mod_rails error #1</h1>\n", r);
@@ -297,7 +296,7 @@ fflush(stderr);
 			
 			P_DEBUG("Processing HTTP request: " << r->uri);
 			Application::SessionPtr session(applicationPool->get(string(railsDir) + "/.."));
-			sendHeaders(r, session);
+			sendHeaders(r, session, railsBaseURI);
 			
 			apr_file_t *readerPipe = NULL;
 			int reader = session->getReader();
@@ -326,10 +325,14 @@ fflush(stderr);
 	
 	int
 	mapToStorage(request_rec *r) {
-		RailsConfig *config = getDirConfig(r);
-		
-		if (!isWellFormedURI(r->uri) || config->base_uri == NULL
-		 || !insideBaseURI(r, config)) {
+		RailsDirConfig *config = getDirConfig(r);
+		if (determineRailsBaseURI(r, config) == NULL
+		 || fileExists(r->pool, r->filename)) {
+			/*
+			 * fileExists():
+			 * If the file already exists, serve it directly.
+			 * This is for static assets like .css and .js files.
+			 */
 			return DECLINED;
 		} else {
 			char *html_file = apr_pstrcat(r->pool, r->filename, ".html", NULL);
