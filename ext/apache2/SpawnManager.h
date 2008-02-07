@@ -124,7 +124,8 @@ private:
 			
 			execlp(rubyCommand.c_str(), rubyCommand.c_str(), spawnServerCommand.c_str(), NULL);
 			int e = errno;
-			fprintf(stderr, "Unable to run %s: %s\n", rubyCommand.c_str(), strerror(e));
+			fprintf(stderr, "*** Passenger ERROR: Could not start the spawn server: %s: %s\n",
+				rubyCommand.c_str(), strerror(e));
 			fflush(stderr);
 			_exit(1);
 		} else if (pid == -1) {
@@ -145,33 +146,63 @@ private:
 			serverNeedsRestart = false;
 		}
 	}
+	
+	/**
+	 * Send the spawn command to the spawn server.
+	 *
+	 * @param appRoot The application root of the application to spawn.
+	 * @param user The user to run the application as.
+	 * @param group The group to run the application as.
+	 * @return An Application smart pointer, representing the spawned application.
+	 * @throws IOException
+	 * @throws SystemException
+	 */
+	ApplicationPtr sendSpawnCommand(const string &appRoot, const string &user, const string &group) {
+		vector<string> args;
+		
+		channel.write("spawn_application", appRoot.c_str(), user.c_str(), group.c_str(), NULL);
+		if (!channel.read(args)) {
+			throw IOException("The spawn server has exited unexpectedly.");
+		}
+		pid_t pid = atoi(args.front().c_str());
+		int listenSocket = channel.readFileDescriptor();
+		return ApplicationPtr(new Application(appRoot, pid, listenSocket));
+	}
+	
+	template<typename E> ApplicationPtr
+	handleSpawnException(const E &e, const string &appRoot, const string &user, const string &group) {
+		bool restarted;
+		try {
+			P_DEBUG("Spawn server died. Attempting to restart it...");
+			restartServer();
+			P_DEBUG("Restart seems to be successful.");
+			restarted = true;
+		} catch (const IOException &e) {
+			P_DEBUG("Restart failed: " << e.what());
+			restarted = false;
+		} catch (const SystemException &e) {
+			P_DEBUG("Restart failed: " << e.what());
+			restarted = false;
+		}
+		if (restarted) {
+			return sendSpawnCommand(appRoot, user, group);
+		} else {
+			string message("Could not spawn the application at '");
+			message.append(appRoot);
+			message.append("'");
+			throw prependMessageToException(e, message);
+		}
+	}
+	
+	IOException prependMessageToException(const IOException &e, const string &message) {
+		return IOException(message + ": " + e.what());
+	}
+	
+	SystemException prependMessageToException(const SystemException &e, const string &message) {
+		return SystemException(message + ": " + e.brief(), e.code());
+	}
 
 public:
-	/**
-	 * Thrown when SpawnManager tried to restart the spawn server, but failed.
-	 * Use getSubException() to find out more details about the failure.
-	 */
-	class RestartException: public exception {
-	private:
-		shared_ptr<exception> m_subexception;
-	public:
-		RestartException(shared_ptr<exception> subexception)
-			: m_subexception(subexception) {}
-		
-		virtual ~RestartException() throw() {}
-		
-		virtual const char *what() const throw() {
-			return m_subexception->what();
-		}
-	
-		/**
-		 * An exception which contains more details about why the restart failed.
-		 */
-		shared_ptr<exception> getSubException() const throw() {
-			return m_subexception;
-		}
-	};
-
 	/**
 	 * Construct a new SpawnManager.
 	 *
@@ -198,7 +229,13 @@ public:
 		this->environment = environment;
 		this->rubyCommand = rubyCommand;
 		pid = 0;
-		restartServer();
+		try {
+			restartServer();
+		} catch (const IOException &e) {
+			throw prependMessageToException(e, "Could not start the spawn server");
+		} catch (const SystemException &e) {
+			throw prependMessageToException(e, "Could not start the spawn server");
+		}
 	}
 	
 	~SpawnManager() throw() {
@@ -211,10 +248,10 @@ public:
 	/**
 	 * Spawn a new instance of a Ruby on Rails application.
 	 *
-	 * If something went wrong in the server during the spawning process,
-	 * then an IOException or a SystemException will be thrown. The server will
-	 * be restarted next time spawn() is called. If the server crashes during
-	 * the restart, a RestartException will be thrown.
+	 * If the spawn server died during the spawning process, then the server
+	 * will be automatically restarted, and another spawn attempt will made made.
+	 * If restarting the server fails, or if the second spawn attempt fails,
+	 * then an exception will be thrown.
 	 *
 	 * @param appRoot The application root of a RoR application, i.e. the folder that
 	 *             contains 'app/', 'public/', 'config/', etc. This must be a valid directory,
@@ -224,43 +261,19 @@ public:
 	 * @return A smart pointer to an Application object, which represents the application
 	 *         instance that has been spawned. Use this object to communicate with the
 	 *         spawned application.
-	 * @throws IOException Something went wrong during spawning.
-	 * @throws SystemException Something went wrong during spawning.
-	 * @throws RestartException An attempt to restart the spawn server was made, but that failed.
+	 * @throws IOException Something went wrong.
+	 * @throws SystemException Something went wrong.
 	 */
 	ApplicationPtr spawn(const string &appRoot, const string &user = "", const string &group = "") {
 		vector<string> args;
 		mutex::scoped_lock l(lock);
 		
-		if (serverNeedsRestart) {
-			// TODO: This is not the best place to restart the server.
-			// Ideally a spawn() should fail as least as possible.
-			try {
-				P_TRACE("Restarting spawn server.");
-				restartServer();
-			} catch (const IOException &e) {
-				P_TRACE("Failed to restart spawn server: " << e.what());
-				shared_ptr<IOException> copy(new IOException(e));
-				throw RestartException(copy);
-			} catch (const SystemException &e) {
-				P_TRACE("Failed to restart spawn server: " << e.what());
-				shared_ptr<SystemException> copy(new SystemException(e));
-				throw RestartException(copy);
-			}
-		}
-	
 		try {
-			channel.write("spawn_application", appRoot.c_str(), user.c_str(), group.c_str(), NULL);
-			if (!channel.read(args)) {
-				throw IOException("The spawn server has exited unexpectedly.");
-			}
-			pid_t pid = atoi(args.front().c_str());
-			int listenSocket = channel.readFileDescriptor();
-			return ApplicationPtr(new Application(appRoot, pid, listenSocket));
-		} catch (const exception &e) {
-			P_TRACE("Spawn server died. Will restart it next time.");
-			serverNeedsRestart = true;
-			throw;
+			return sendSpawnCommand(appRoot, user, group);
+		} catch (const IOException &e) {
+			return handleSpawnException(e, appRoot, user, group);
+		} catch (const SystemException &e) {
+			return handleSpawnException(e, appRoot, user, group);
 		}
 	}
 };

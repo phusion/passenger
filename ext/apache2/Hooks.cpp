@@ -29,6 +29,10 @@ using namespace Passenger;
 
 extern "C" module AP_MODULE_DECLARE_DATA rails_module;
 
+#define DEFAULT_RUBY_COMMAND "ruby"
+#define DEFAULT_RAILS_ENV "production"
+#define DEFAULT_SPAWN_SERVER_COMMAND "/home/hongli/Projects/mod_rails/lib/mod_rails/spawn_manager.rb"
+
 
 class Hooks {
 private:
@@ -47,7 +51,15 @@ private:
 	DirConfig *getDirConfig(request_rec *r) {
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &rails_module);
 	}
-
+	
+	ServerConfig *getServerConfig(request_rec *r) {
+		return getServerConfig(r->server);
+	}
+	
+	ServerConfig *getServerConfig(server_rec *s) {
+		return (ServerConfig *) ap_get_module_config(s->module_config, &rails_module);
+	}
+	
 	int fileExists(apr_pool_t *pool, const char *filename) {
 		apr_finfo_t info;
 		return apr_stat(&info, filename, APR_FINFO_NORM, pool) == APR_SUCCESS && info.filetype == APR_REG;
@@ -242,17 +254,21 @@ private:
 public:
 	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s) {
 		initDebugging();
-		P_DEBUG("Initializing mod_passenger.");
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
-		const char *spawnManagerCommand = "/home/hongli/Projects/mod_rails/lib/mod_rails/spawn_manager.rb";
-		applicationPoolServer = ptr(new ApplicationPoolServer(spawnManagerCommand, "", "production"));
-	}
-	
-	~Hooks() {
-		P_DEBUG("Shutting down mod_passenger.");
+		passenger_config_merge_all_servers(pconf, s);
+		
+		ServerConfig *config = getServerConfig(s);
+		const char *ruby, *environment, *spawnServer;
+		
+		ruby = (config->ruby != NULL) ? config->ruby : DEFAULT_RUBY_COMMAND;
+		environment = (config->env != NULL) ? config->env : DEFAULT_RAILS_ENV;
+		spawnServer = (config->spawnServer != NULL) ? config->spawnServer : DEFAULT_SPAWN_SERVER_COMMAND;
+		
+		applicationPoolServer = ptr(new ApplicationPoolServer(spawnServer, "", environment, ruby));
 	}
 	
 	void initChild(apr_pool_t *pchild, server_rec *s) {
+		// TODO: check for exceptions here
 		applicationPool = applicationPoolServer->connect();
 		applicationPoolServer->detach();
 	}
@@ -318,7 +334,7 @@ public:
 
 			return OK;
 		} catch (const exception &e) {
-			ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "mod_passenger: unknown uncaught error: %s", e.what());
+			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "*** Passenger: uncaught error: %s", e.what());
 			return HTTP_INTERNAL_SERVER_ERROR;
 		}
 	}
@@ -403,11 +419,19 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 			apr_pool_cleanup_null, processPool);
 		return OK;
 	} else {
-		hooks = new Hooks(pconf, plog, ptemp, s);
-		apr_pool_cleanup_register(pconf, NULL,
-			destroy_hooks,
-			apr_pool_cleanup_null);
-		return OK;
+		try {
+			hooks = new Hooks(pconf, plog, ptemp, s);
+			apr_pool_cleanup_register(pconf, NULL,
+				destroy_hooks,
+				apr_pool_cleanup_null);
+			return OK;
+		} catch (const exception &e) {
+			ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,
+				"*** Passenger could not be initialized because of this error: %s",
+				e.what());
+			hooks = NULL;
+			return DECLINED;
+		}
 	}
 }
 
