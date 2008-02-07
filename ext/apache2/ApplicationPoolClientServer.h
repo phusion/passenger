@@ -271,6 +271,7 @@ public:
 			delete serverThread;
 		#endif
 		clients.clear();
+		pool.detach();
 	}
 };
 
