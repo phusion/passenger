@@ -1,17 +1,17 @@
 APXS=apxs2
 APACHECTL=apache2ctl
 CXX=g++
-CXXFLAGS=-Wall -fPIC -g -DPASSENGER_DEBUG `pkg-config --cflags apr-1 apr-util-1` `$(APXS) -q CFLAGS` -I`$(APXS) -q INCLUDEDIR`
+CXXFLAGS=-Wall -fPIC -g -DPASSENGER_DEBUG `pkg-config --cflags apr-1 apr-util-1` `$(APXS) -q CFLAGS` -I`$(APXS) -q INCLUDEDIR` -I/usr/local/include
 OBJECTS=Configuration.o Hooks.o Utils.o
 LIBTOOL_OBJECTS=Configuration.o,Hooks.o,Utils.o
 
 .PHONY: all install clean start restart stop
 
 all: $(OBJECTS)
-	$(APXS) -c mod_rails.c -Wc,$(LIBTOOL_OBJECTS) -Wl,-lstdc++,-lboost_thread
+	$(APXS) -c mod_rails.c -Wc,$(LIBTOOL_OBJECTS) -I/usr/local/include -L/usr/local/lib -Wl,-lstdc++,-lboost_thread
 
 install: $(OBJECTS)
-	$(APXS) -i -c mod_rails.c -Wc,$(LIBTOOL_OBJECTS) -Wl,-lstdc++,-lboost_thread
+	$(APXS) -i -c mod_rails.c -Wc,$(LIBTOOL_OBJECTS) -I/usr/local/include -L/usr/local/lib -Wl,-lstdc++,-lboost_thread
 
 Configuration.o: Configuration.cpp
 	$(CXX) $(CXXFLAGS) -c Configuration.cpp

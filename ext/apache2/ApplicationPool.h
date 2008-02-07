@@ -70,6 +70,8 @@ using namespace boost;
  *
  * Note that ApplicationPool is just an interface (i.e. a pure virtual class).
  * For concrete classes, see StandardApplicationPool and ApplicationPoolServer.
+ *
+ * @ingroup Support
  */
 class ApplicationPool {
 public:
@@ -132,6 +134,8 @@ public:
  * @warning
  *   StandardApplicationPool uses threads internally. Because threads disappear after a fork(),
  *   a StandardApplicationPool object will become unusable after a fork().
+ *
+ * @ingroup Support
  */
 class StandardApplicationPool: public ApplicationPool {
 private:

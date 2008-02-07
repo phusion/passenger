@@ -7,6 +7,11 @@
 extern "C" {
 #endif
 
+/**
+ * @defgroup Hooks Apache hooks
+ * @ingroup Core
+ */
+
 extern void passenger_register_hooks(apr_pool_t *p);
 
 #ifdef __cplusplus
