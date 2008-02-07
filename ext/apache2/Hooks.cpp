@@ -44,8 +44,8 @@ private:
 	ApplicationPoolServerPtr applicationPoolServer;
 	ApplicationPoolPtr applicationPool;
 	
-	RailsDirConfig *getDirConfig(request_rec *r) {
-		return (RailsDirConfig *) ap_get_module_config(r->per_dir_config, &rails_module);
+	DirConfig *getDirConfig(request_rec *r) {
+		return (DirConfig *) ap_get_module_config(r->per_dir_config, &rails_module);
 	}
 
 	int fileExists(apr_pool_t *pool, const char *filename) {
@@ -53,7 +53,7 @@ private:
 		return apr_stat(&info, filename, APR_FINFO_NORM, pool) == APR_SUCCESS && info.filetype == APR_REG;
 	}
 	
-	const char *determineRailsBaseURI(request_rec *r, RailsDirConfig *config) {
+	const char *determineRailsBaseURI(request_rec *r, DirConfig *config) {
 		set<string>::const_iterator it;
 		const char *uri = r->uri;
 		size_t uri_len = strlen(uri);
@@ -258,7 +258,7 @@ public:
 	}
 	
 	int handleRequest(request_rec *r) {
-		RailsDirConfig *config = getDirConfig(r);
+		DirConfig *config = getDirConfig(r);
 		const char *railsBaseURI = determineRailsBaseURI(r, config);
 		if (railsBaseURI == NULL || r->filename == NULL || fileExists(r->pool, r->filename)) {
 			return DECLINED;
@@ -325,7 +325,7 @@ public:
 	
 	int
 	mapToStorage(request_rec *r) {
-		RailsDirConfig *config = getDirConfig(r);
+		DirConfig *config = getDirConfig(r);
 		if (determineRailsBaseURI(r, config) == NULL
 		 || fileExists(r->pool, r->filename)) {
 			/*
