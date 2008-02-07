@@ -138,6 +138,11 @@
 		// have been closed.
 		// TODO
 	}
+	
+	TEST_METHOD(APPLICATION_POOL_TEST_START + 9) {
+		// Test whether get() throws the right exceptions
+		// TODO
+	}
 	#endif
 
 #endif /* USE_TEMPLATE */

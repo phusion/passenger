@@ -124,6 +124,8 @@ public:
 	virtual unsigned int getCount() const = 0;
 };
 
+class ApplicationPoolServer;
+
 /**
  * A standard implementation of ApplicationPool. This implementation is to be used in a
  * single-process environment, which may or may not be multithreaded. For example, Apache
@@ -141,6 +143,8 @@ class StandardApplicationPool: public ApplicationPool {
 private:
 	static const int CLEAN_INTERVAL = 62;
 	static const int MAX_IDLE_TIME = 60;
+
+	friend class ApplicationPoolServer;
 
 	typedef list<ApplicationPtr> ApplicationList;
 	typedef shared_ptr<ApplicationList> ApplicationListPtr;
@@ -193,6 +197,7 @@ private:
 	#endif
 	SharedDataPtr data;
 	thread *cleanerThread;
+	bool detached;
 	bool done;
 	condition cleanerThreadSleeper;
 	
@@ -208,9 +213,8 @@ private:
 	}
 	
 	void cleanerThreadMainLoop() {
+		mutex::scoped_lock l(lock);
 		while (!done) {
-			mutex::scoped_lock l(lock);
-			
 			xtime xt;
 			xtime_get(&xt, TIME_UTC);
 			xt.sec += CLEAN_INTERVAL;
@@ -242,6 +246,10 @@ private:
 		}
 	}
 	
+	void detach() {
+		detached = true;
+	}
+	
 public:
 	StandardApplicationPool(const string &spawnManagerCommand,
 	             const string &logFile = "",
@@ -259,6 +267,7 @@ public:
 		count(data->count),
 		active(data->active)
 	{
+		detached = false;
 		done = false;
 		max = 100;
 		count = 0;
@@ -267,12 +276,14 @@ public:
 	}
 	
 	virtual ~StandardApplicationPool() {
-		done = true;
-		{
-			mutex::scoped_lock l(lock);
-			cleanerThreadSleeper.notify_one();
+		if (!detached) {
+			{
+				mutex::scoped_lock l(lock);
+				done = true;
+				cleanerThreadSleeper.notify_one();
+			}
+			cleanerThread->join();
 		}
-		cleanerThread->join();
 		delete cleanerThread;
 	}
 	

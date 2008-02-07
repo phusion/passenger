@@ -14,39 +14,53 @@
 /** Module version number. */
 #define PASSENGER_VERSION "1.0.0"
 
-/**
- * Per-server configuration information.
- */
-struct RailsConfig {
-	/** The base URI at which the Rails application operates. */
-	const char *base_uri;
-	
-	/** The same as base_uri, but with a trailing slash. This is to make matching URIs easier. */
-	char *base_uri_with_slash;
-	
-	/** The environment (i.e. value for RAILS_ENV) under which the Rails application should operate. */
-	const char *env;
-};
-
 #ifdef __cplusplus
-extern "C" {
+	#include <set>
+	#include <string>
+
+	namespace Passenger {
+	
+		using namespace std;
+
+		/**
+		* Per-directory configuration information.
+		*/
+		struct DirConfig {
+			std::set<std::string> base_uris;
+		};
+		
+		struct ServerConfig {
+			const char *ruby;
+			
+			/** The environment (i.e. value for RAILS_ENV) under which the Rails application should operate. */
+			const char *env;
+			
+			const char *spawnServer;
+		};
+	}
+
+	extern "C" {
 #endif
 
+/** Configuration hook for per-directory configuration structure creation. */
+void *passenger_config_create_dir(apr_pool_t *p, char *dirspec);
 
+/** Configuration hook for per-directory configuration structure merging. */
+void *passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv);
 
-	/** Configuration hook for per-directory configuration structure creation. */
-	void *passenger_config_create_dir(apr_pool_t *p, char *dirspec);
-	/** Configuration hook for per-directory configuration structure merging. */
-	void *passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv);
-	/** Configuration hook for per-server configuration structure creation. */
-	void *passenger_config_create_server(apr_pool_t *p, server_rec *s);
-	/** Configuration hook for per-server configuration structure merging. */
-	void *passenger_config_merge_server(apr_pool_t *p, void *basev, void *overridesv);
-	/** Apache module commands array. */
-	extern const command_rec passenger_commands[];
+/** Configuration hook for per-server configuration structure creation. */
+void *passenger_config_create_server(apr_pool_t *p, server_rec *s);
+
+/** Configuration hook for per-server configuration structure merging. */
+void *passenger_config_merge_server(apr_pool_t *p, void *basev, void *overridesv);
+
+void passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server);
+
+/** Apache module commands array. */
+extern const command_rec passenger_commands[];
 
 #ifdef __cplusplus
-}
+	}
 #endif
 
 /**

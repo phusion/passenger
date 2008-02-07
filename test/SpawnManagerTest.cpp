@@ -18,4 +18,9 @@ namespace tut {
 		ensure_equals("The Application object's PID is the same as the one specified by the stub",
 			app->getPid(), 1234);
 	}
+	
+	TEST_METHOD(2) {
+		// test restarting
+		// TODO
+	}
 }
