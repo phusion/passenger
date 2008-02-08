@@ -47,10 +47,14 @@ using namespace boost;
  *   
  *   // Send the request headers and request body data.
  *   session->sendHeaders(...);
- *   session->sendBody(...);
+ *   session->sendBodyBlock(...);
+ *   // Done sending data, so we close the writer channel.
+ *   session->closeWriter();
  *
  *   // Now read the HTTP response.
  *   string responseData = readAllDataFromSocket(session->getReader());
+ *   // Done reading data, so we close the reader channel.
+ *   session->closeReader();
  *
  *   // This session has now finished, so we close the session by resetting
  *   // the smart pointer to NULL (thereby destroying the Session object).
