@@ -71,26 +71,6 @@ public:
 };
 
 /**
- * Represents an out-of-memory error.
- *
- * @ingroup Exceptions
- */
-class MemoryException: public exception {
-private:
-	string message;
-public:
-	MemoryException(): message("Unable to allocate memory.") {}
-	
-	MemoryException(const string &msg): message(msg) {}
-	
-	virtual ~MemoryException() throw() {}
-	
-	virtual const char *what() const throw() {
-		return message.c_str();
-	}
-};
-
-/**
  * Represents an error that occured during an I/O operation.
  *
  * @ingroup Exceptions

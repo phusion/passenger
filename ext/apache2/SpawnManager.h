@@ -207,7 +207,7 @@ public:
 	 * Construct a new SpawnManager.
 	 *
 	 * @param spawnServerCommand The filename of the spawn server to use.
-	 * @param logFile Specify a log file that the spawn manager should use.
+	 * @param logFile Specify a log file that the spawn server should use.
 	 *            Messages on its standard output and standard error channels
 	 *            will be written to this log file. If an empty string is
 	 *            specified, no log file will be used, and the spawn server

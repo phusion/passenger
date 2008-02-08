@@ -266,13 +266,30 @@ private:
 	}
 	
 public:
-	StandardApplicationPool(const string &spawnManagerCommand,
+	/**
+	 * Create a new StandardApplicationPool object.
+	 *
+	 * @param spawnServerCommand The filename of the spawn server to use.
+	 * @param logFile Specify a log file that the spawn server should use.
+	 *            Messages on its standard output and standard error channels
+	 *            will be written to this log file. If an empty string is
+	 *            specified, no log file will be used, and the spawn server
+	 *            will use the same standard output/error channels as the
+	 *            current process.
+	 * @param environment The RAILS_ENV environment that all RoR applications
+	 *            should use. If an empty string is specified, the current value
+	 *            of the RAILS_ENV environment variable will be used.
+	 * @param rubyCommand The Ruby interpreter's command.
+	 * @throws SystemException An error occured while trying to setup the spawn server.
+	 * @throws IOException The specified log file could not be opened.
+	 */
+	StandardApplicationPool(const string &spawnServerCommand,
 	             const string &logFile = "",
 	             const string &environment = "production",
 	             const string &rubyCommand = "ruby")
 	        :
 		#ifndef PASSENGER_USE_DUMMY_SPAWN_MANAGER
-		spawnManager(spawnManagerCommand, logFile, environment, rubyCommand),
+		spawnManager(spawnServerCommand, logFile, environment, rubyCommand),
 		#endif
 		data(new SharedData()),
 		lock(data->lock),

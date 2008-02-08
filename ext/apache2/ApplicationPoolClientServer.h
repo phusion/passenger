@@ -95,6 +95,8 @@ using namespace boost;
  * for StandardApplicationPool::get() can block (in the case that the spawning limit has
  * been exceeded). While it is possible to get around this problem without using threads,
  * a thread-based implementation is easier to write.
+ *
+ * @ingroup Support
  */
 class ApplicationPoolServer {
 private:
@@ -319,11 +321,29 @@ private:
 	}
 	
 public:
-	ApplicationPoolServer(const string &spawnManagerCommand,
+	/**
+	 * Create a new ApplicationPoolServer object.
+	 *
+	 * @param spawnServerCommand The filename of the spawn server to use.
+	 * @param logFile Specify a log file that the spawn server should use.
+	 *            Messages on its standard output and standard error channels
+	 *            will be written to this log file. If an empty string is
+	 *            specified, no log file will be used, and the spawn server
+	 *            will use the same standard output/error channels as the
+	 *            current process.
+	 * @param environment The RAILS_ENV environment that all RoR applications
+	 *            should use. If an empty string is specified, the current value
+	 *            of the RAILS_ENV environment variable will be used.
+	 * @param rubyCommand The Ruby interpreter's command.
+	 * @throws SystemException An error occured while trying to setup the spawn server
+	 *            or the server socket.
+	 * @throws IOException The specified log file could not be opened.
+	 */
+	ApplicationPoolServer(const string &spawnServerCommand,
 	             const string &logFile = "",
 	             const string &environment = "production",
 	             const string &rubyCommand = "ruby")
-	: pool(spawnManagerCommand, logFile, environment, rubyCommand) {
+	: pool(spawnServerCommand, logFile, environment, rubyCommand) {
 		int fds[2];
 		
 		if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
@@ -380,7 +400,8 @@ public:
 	 * This should be called by child processes that wish to use a server, but do
 	 * not run the server itself.
 	 *
-	 * This method may only be called once.
+	 * This method may only be called once. The ApplicationPoolServer object
+	 * will become unusable once detach() has been called.
 	 *
 	 * @warning Never call this method in the process in which this
 	 *    ApplicationPoolServer was created!
