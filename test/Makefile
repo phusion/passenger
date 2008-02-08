@@ -1,7 +1,8 @@
 CXX=g++
 CXXFLAGS=-Isupport -DVALGRIND_FRIENDLY -g -Wall `pkg-config --cflags apr-1 apr-util-1`
 AP2_FLAGS=-I../ext/apache2
-AP2_OBJECTS=CxxTestMain.o MessageChannelTest.o
+AP2_OBJECTS=CxxTestMain.o MessageChannelTest.o SpawnManagerTest.o ApplicationPoolClientServerTest.o \
+	StandardApplicationPoolTest.o
 
 .PHONY: test_all clean
 

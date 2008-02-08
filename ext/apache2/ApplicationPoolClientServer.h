@@ -22,14 +22,107 @@ namespace Passenger {
 using namespace std;
 using namespace boost;
 
+/**
+ * Multi-process usage support for ApplicationPool.
+ *
+ * ApplicationPoolServer implements a client/server architecture for ApplicationPool.
+ * This allows one to use ApplicationPool in a multi-process environment (unlike
+ * StandardApplicationPool). The cache/pool data is stored in the server. Different
+ * processes can then access the pool through the server.
+ *
+ * ApplicationPoolServer itself does not inherit ApplicationPool. Instead, it returns
+ * an ApplicationPool object via the connect() call. For example:
+ * @code
+ *   // Create an ApplicationPoolServer.
+ *   ApplicationPoolServer server(...);
+ *   
+ *   // Now fork a child process, like Apache's prefork MPM eventually will.
+ *   pid_t pid = fork();
+ *   if (pid == 0) {
+ *       // Child process
+ *       
+ *       // Connect to the server. After connection, we have an ApplicationPool
+ *       // object!
+ *       ApplicationPoolPtr pool(server.connect());
+ *
+ *       // The child process doesn't run a server (only the parent process does)
+ *       // so we call detach to free the server resources (things like file
+ *       // descriptors).
+ *       server.detach();
+ *
+ *       ApplicationPool::SessionPtr session(pool->get("/home/webapps/foo"));
+ *       do_something_with(session);
+ *
+ *       _exit(0);
+ *   } else {
+ *       // Parent process
+ *       waitpid(pid, NULL, 0);
+ *   }
+ * @endcode
+ *
+ * @warning
+ *   ApplicationPoolServer uses threads internally. Threads will disappear after a fork(),
+ *   so ApplicationPoolServer will become usable after a fork(). So in case of Apache with
+ *   the prefork MPM, be sure to create an ApplicationPoolServer() <em>after</em> Apache
+ *   has daemonized.
+ *
+ * <h2>Implementation notes</h2>
+ * Notice that ApplicationPoolServer does do not use TCP sockets at all, or even named Unix
+ * sockets, depite being a server that can handle multiple clients! So ApplicationPoolServer
+ * will expose no open ports or temporary Unix socket files. Only child processes are able
+ * to use the ApplicationPoolServer.
+ *
+ * This is implemented through anonymous Unix sockets (<tt>socketpair()</tt>) and file descriptor
+ * passing. It allows one to emulate <tt>accept()</tt>. During initialization,
+ * ApplicationPoolServer creates a pair of Unix sockets, one called <tt>serverSocket</tt>
+ * and the other called <tt>connectSocket</tt>. There is a thread which continuously
+ * listens on serverSocket for incoming data. The data itself is not important, because it
+ * only serves to wake up the thread. ApplicationPoolServer::connect() sends some data through
+ * connectSocket, which wakes up the server thread. The server thread will then create
+ * a pair of Unix sockets. One of them is passed through serverSocket. The other will be
+ * handled by a newly created client thread. So the socket that was passed through serverSocket
+ * is the client's connection to the server, while the other socket is the server's connection
+ * to the client.
+ *
+ * Note that serverSocket and connectSocket are solely used for setting up new connections
+ * ala accept(). They are not used for any actual data. In fact, they cannot be used in any
+ * other way without some sort of synchronization mechanism, because all child processes
+ * are connected to the same serverSocket. In contrast, ApplicationPool::connect() sets up
+ * a private communicate channel between the server and the current child process.
+ *
+ * Also note that each client is handled by a seperate thread. This is necessary because
+ * ApplicationPoolServer internally uses StandardApplicationPool, and the current algorithm
+ * for StandardApplicationPool::get() can block (in the case that the spawning limit has
+ * been exceeded). While it is possible to get around this problem without using threads,
+ * a thread-based implementation is easier to write.
+ */
 class ApplicationPoolServer {
 private:
+	/**
+	 * Contains data shared between RemoteSession and Client.
+	 * Since RemoteSession and Client have different life times, i.e. one may be
+	 * destroyed before the other, they both use a smart pointer that points to
+	 * a SharedData. This way, the SharedData object is only destroyed when
+	 * both the RemoteSession and the Client object has been destroyed.
+	 */
 	struct SharedData {
+		/**
+		 * The socket connection to the server, as was established by
+		 * ApplicationPoolServer::connect().
+		 */
 		int server;
+		
+		~SharedData() {
+			close(server);
+		}
 	};
 	
 	typedef shared_ptr<SharedData> SharedDataPtr;
 
+	/**
+	 * An Application::Session which works together with ApplicationPoolServer.
+	 * 
+	 */
 	class RemoteSession: public Application::Session {
 	private:
 		SharedDataPtr data;
@@ -73,21 +166,24 @@ private:
 		}
 	};
 
+	/**
+	 * An ApplicationPool implementation that works together with ApplicationPoolServer.
+	 * It doesn't do much by itself, its job is mostly to forward queries/commands to
+	 * the server and returning the result. Most of the logic is in the server.
+	 */
 	class Client: public ApplicationPool {
 	private:
 		SharedDataPtr data;
 		
 	public:
+		/**
+		 * Create a new Client.
+		 *
+		 * @param sock The newly established socket connection with the ApplicationPoolServer.
+		 */
 		Client(int sock) {
 			data = ptr(new SharedData());
 			data->server = sock;
-		}
-		
-		virtual ~Client() {
-			if (data->server != -1) {
-				close(data->server);
-				data->server = -1;
-			}
 		}
 		
 		virtual void setMax(unsigned int max) {
@@ -126,8 +222,13 @@ private:
 		}
 	};
 	
+	/**
+	 * Contains information about exactly one client.
+	 */
 	struct ClientInfo {
+		/** The connection to the client. */
 		int fd;
+		/** The thread which handles the client. */
 		thread *thr;
 		
 		~ClientInfo() {
@@ -148,8 +249,11 @@ private:
 	set<ClientInfoPtr> clients;
 	
 	// TODO: check for exceptions in threads, possibly forwarding them
-	// Don't forget to test them
 	
+	/**
+	 * The entry point of the server thread which sets up private connections.
+	 * See the class overview's implementation notes for details.
+	 */
 	void serverThreadMainLoop() {
 		while (!done) {
 			int fds[2], ret;
@@ -176,6 +280,9 @@ private:
 		}
 	}
 	
+	/**
+	 * The entry point of a thread which handles exactly one client.
+	 */
 	void clientThreadMainLoop(ClientInfoPtr client) {
 		MessageChannel channel(client->fd);
 		vector<string> args;
@@ -249,19 +356,34 @@ public:
 		}
 	}
 	
+	/**
+	 * Connects to the server and returns a usable ApplicationPool object.
+	 * All cache/pool data of this ApplicationPool is actually stored on the server
+	 * and shared with other clients, but that is totally transparent.
+	 *
+	 * @throws SystemException Something went wrong.
+	 * @throws IOException Something went wrong.
+	 */
 	ApplicationPoolPtr connect() {
-		int ret;
-		do {
-			// Write some random data to wake up the server.
-			ret = write(connectSocket, "x", 1);
-		} while ((ret == -1 && errno == EAGAIN) || ret == 0);
-		ret = MessageChannel(connectSocket).readFileDescriptor();
-		return ptr(new Client(ret));
+		MessageChannel channel(connectSocket);
+		int fd;
+		
+		// Write some random data to wake up the server.
+		channel.writeRaw("x", 1);
+		
+		fd = channel.readFileDescriptor();
+		return ptr(new Client(fd));
 	}
 	
 	/**
+	 * Detach the server by freeing up some server resources such as file descriptors.
+	 * This should be called by child processes that wish to use a server, but do
+	 * not run the server itself.
+	 *
+	 * This method may only be called once.
+	 *
 	 * @warning Never call this method in the process in which this
-	 *          ApplicationPoolServer was created!
+	 *    ApplicationPoolServer was created!
 	 */
 	void detach() {
 		detached = true;
