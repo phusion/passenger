@@ -131,15 +131,26 @@ public:
 class ApplicationPoolServer;
 
 /**
- * A standard implementation of ApplicationPool. This implementation is to be used in a
- * single-process environment, which may or may not be multithreaded. For example, Apache
- * with the threading MPM (and <b>not</b> the prefork MPM).
+ * A standard implementation of ApplicationPool for single-process environments.
  *
- * For multi-process environments, use ApplicationPoolServer instead.
+ * The environment may or may not be multithreaded - StandardApplicationPool is completely
+ * thread-safe. Apache with the threading MPM is an example of a multithreaded single-process
+ * environment.
  *
- * @warning
- *   StandardApplicationPool uses threads internally. Because threads disappear after a fork(),
- *   a StandardApplicationPool object will become unusable after a fork().
+ * This class is unusable in multi-process environments such as Apache with the prefork MPM.
+ * The reasons as as follows:
+ *  - StandardApplicationPool uses threads internally. Because threads disappear after a fork(),
+ *    a StandardApplicationPool object will become unusable after a fork().
+ *  - StandardApplicationPool stores its internal cache on the heap. Different processes
+ *    cannot share their heaps, so they will not be able to access each others' pool cache.
+ *  - StandardApplicationPool has a connection to the spawn server. If there are multiple
+ *    processes, and they all use the spawn servers's connection at the same time without
+ *    some sort of synchronization, then bad things will happen.
+ *
+ * (Of course, StandardApplicationPool <em>is</em> usable if each process creates its own
+ * StandardApplicationPool object, but that would defeat the point of having a shared pool.)
+ *
+ * For multi-process environments, one should use ApplicationPoolServer instead.
  *
  * @ingroup Support
  */

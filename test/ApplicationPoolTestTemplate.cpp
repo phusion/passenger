@@ -140,9 +140,13 @@
 		// TODO
 	}
 	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 9) {
+	TEST_METHOD(APPLICATION_POOL_TEST_START + 10) {
 		// Test whether get() throws the right exceptions
 		// TODO
+	}
+	
+	TEST_METHOD(APPLICATION_POOL_TEST_START + 11) {
+		// Test whether Session is still usable after the Application has been destroyed.
 	}
 	#endif
 
