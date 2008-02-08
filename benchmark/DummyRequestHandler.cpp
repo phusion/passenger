@@ -41,18 +41,6 @@ readHeaders(int reader, HeaderSet &headers) {
 }
 
 static void
-writeString(int writer, const string &str) {
-	ssize_t ret;
-	unsigned int written = 0;
-	do {
-		do {
-			ret = write(writer, str.c_str() + written, str.size() - written);
-		} while (ret == -1 && errno == EINTR);
-		written += ret;
-	} while (written < str.size());
-}
-
-static void
 processRequest(int reader, int writer) {
 	HeaderSet headers;
 	readHeaders(reader, headers);
@@ -77,9 +65,10 @@ processRequest(int reader, int writer) {
 	header.append(toString(content.size()));
 	header.append("\r\n\r\n");
 	
-	writeString(writer, header);
-	writeString(writer, content);
-	close(writer);
+	MessageChannel channel(writer);
+	channel.writeRaw(header);
+	channel.writeRaw(content);
+	channel.close();
 }
 
 static bool

@@ -65,7 +65,7 @@ namespace tut {
 		// write() should be able to properly serialize arguments that contain whitespace.
 		vector<string> args;
 		writer.write("hello", "world with whitespaces", "!!!", NULL);
-		ensure("end-of-file has not been reached", reader.read(args));
+		ensure("End of file has not been reached", reader.read(args));
 		ensure_equals(args[1], "world with whitespaces");
 	}
 	
@@ -73,6 +73,7 @@ namespace tut {
 		// read() should be able to read messages constructed by the Ruby implementation.
 		// write() should be able to construct messages that can be read by the Ruby implementation.
 		// Multiple read() and write() calls should work (i.e. the MessageChannel should have stream properties).
+		// End of file should be properly detected.
 		int p1[2], p2[2];
 		pid_t pid;
 		
@@ -166,8 +167,18 @@ namespace tut {
 	}
 	
 	TEST_METHOD(9) {
-		// TODO:
 		// readScalar() should be able to read messages constructed by writeScalar().
+		// This also tests readRaw()/writeRaw() because readScalar()/writeScalar() uses
+		// them internally.
+		writer.writeScalar("hello\n\r world!!!");
+		writer.writeScalar("  and this is a second message");
+		
+		string output;
+		ensure("End of stream has not been reached (1)", reader.readScalar(output));
+		ensure_equals(output, "hello\n\r world!!!");
+		
+		ensure("End of stream has not been reached (2)", reader.readScalar(output));
+		ensure_equals(output, "  and this is a second message");
 	}
 	
 	TEST_METHOD(10) {
@@ -182,4 +193,6 @@ namespace tut {
 		// and the other side sends the same stuff back to us, then MessageChannel
 		// should be able to read them all, if done in the correct order.
 	}
+	
+	// TODO: test end-of-file detection in readScalar()/readRaw()
 }

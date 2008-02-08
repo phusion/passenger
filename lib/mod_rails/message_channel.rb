@@ -71,18 +71,19 @@ class MessageChannel
 		return nil
 	end
 	
-	def read_scalar(data)
+	def read_scalar
 		buffer = ''
-		while buffer.size < 2
-			buffer << @io.readpartial(2 - buffer.size)
+		temp = ''
+		while buffer.size < 4
+			buffer << @io.readpartial(4 - buffer.size, temp)
 		end
-		chunk_size = buffer.unpack('n')[0]
+		chunk_size = buffer.unpack('N')[0]
 		if chunk_size == 0
 			return nil
 		else
 			buffer = ''
 			while buffer.size < chunk_size
-				buffer << @io.readpartial(chunk_size - buffer.size)
+				buffer << @io.readpartial(chunk_size - buffer.size, temp)
 			end
 			return buffer
 		end
@@ -112,7 +113,7 @@ class MessageChannel
 	end
 	
 	def write_scalar(data)
-		@io.write([data.size].pack('n') << data)
+		@io.write([data.size].pack('N') << data)
 	end
 	
 	# Send an IO object (a file descriptor) over the channel. The other

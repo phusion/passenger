@@ -46,10 +46,11 @@
 		// Calling ApplicationPool.get() once should return a valid Session.
 		Application::SessionPtr session(pool->get("stub/railsapp"));
 		session->sendHeaders(createRequestHeaders());
+		session->closeWriter();
 		
 		int reader = session->getReader();
 		string result(readAll(reader));
-		close(reader);
+		session->closeReader();
 		ensure(result.find("hello world") != string::npos);
 	}
 	

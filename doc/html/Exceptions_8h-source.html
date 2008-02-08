@@ -38,78 +38,91 @@
 <a name="l00023"></a>00023 <span class="comment"> */</span>
 <a name="l00024"></a><a class="code" href="classPassenger_1_1SystemException.html">00024</a> <span class="keyword">class </span><a class="code" href="classPassenger_1_1SystemException.html" title="Represents an error returned by a system call or a standard library call.">SystemException</a>: <span class="keyword">public</span> exception {
 <a name="l00025"></a>00025 <span class="keyword">private</span>:
-<a name="l00026"></a>00026         <span class="keywordtype">string</span> msg;
-<a name="l00027"></a>00027         <span class="keywordtype">int</span> m_code;
-<a name="l00028"></a>00028 <span class="keyword">public</span>:<span class="comment"></span>
-<a name="l00029"></a>00029 <span class="comment">        /**</span>
-<a name="l00030"></a>00030 <span class="comment">         * Create a new SystemException.</span>
-<a name="l00031"></a>00031 <span class="comment">         *</span>
-<a name="l00032"></a>00032 <span class="comment">         * @param message A message describing the error.</span>
-<a name="l00033"></a>00033 <span class="comment">         * @param errorCode The error code, i.e. the value of errno right after the error occured.</span>
-<a name="l00034"></a>00034 <span class="comment">         * @note A system description of the error will be appended to the given message.</span>
-<a name="l00035"></a>00035 <span class="comment">         *    For example, if &lt;tt&gt;errorCode&lt;/tt&gt; is &lt;tt&gt;EBADF&lt;/tt&gt;, and &lt;tt&gt;message&lt;/tt&gt;</span>
-<a name="l00036"></a>00036 <span class="comment">         *    is &lt;em&gt;"Something happened"&lt;/em&gt;, then what() will return &lt;em&gt;"Something happened: Bad</span>
-<a name="l00037"></a>00037 <span class="comment">         *    file descriptor (10)"&lt;/em&gt; (if 10 is the number for EBADF).</span>
-<a name="l00038"></a>00038 <span class="comment">         */</span>
-<a name="l00039"></a><a class="code" href="classPassenger_1_1SystemException.html#4ee42f81106408c91726a62287e8471c">00039</a>         <a class="code" href="classPassenger_1_1SystemException.html#4ee42f81106408c91726a62287e8471c" title="Create a new SystemException.">SystemException</a>(<span class="keyword">const</span> <span class="keywordtype">string</span> &amp;message, <span class="keywordtype">int</span> errorCode) {
-<a name="l00040"></a>00040                 stringstream str;
-<a name="l00041"></a>00041                 str &lt;&lt; message &lt;&lt; <span class="stringliteral">": "</span> &lt;&lt; strerror(errorCode) &lt;&lt; <span class="stringliteral">" ("</span> &lt;&lt; errorCode &lt;&lt; <span class="stringliteral">")"</span>;
-<a name="l00042"></a>00042                 msg = str.str();
-<a name="l00043"></a>00043                 m_code = errorCode;
-<a name="l00044"></a>00044         }
-<a name="l00045"></a>00045         
-<a name="l00046"></a>00046         <span class="keyword">virtual</span> ~<a class="code" href="classPassenger_1_1SystemException.html" title="Represents an error returned by a system call or a standard library call.">SystemException</a>() throw() {}
-<a name="l00047"></a>00047         
-<a name="l00048"></a>00048         <span class="keyword">virtual</span> <span class="keyword">const</span> <span class="keywordtype">char</span> *what() <span class="keyword">const</span> throw() {
-<a name="l00049"></a>00049                 <span class="keywordflow">return</span> msg.c_str();
-<a name="l00050"></a>00050         }
-<a name="l00051"></a>00051         <span class="comment"></span>
-<a name="l00052"></a>00052 <span class="comment">        /**</span>
-<a name="l00053"></a>00053 <span class="comment">         * The value of &lt;tt&gt;errno&lt;/tt&gt; at the time the error occured.</span>
-<a name="l00054"></a>00054 <span class="comment">         */</span>
-<a name="l00055"></a><a class="code" href="classPassenger_1_1SystemException.html#ee7a6672bf79b72a4c3ee70c57d6a47c">00055</a>         <span class="keywordtype">int</span> <a class="code" href="classPassenger_1_1SystemException.html#ee7a6672bf79b72a4c3ee70c57d6a47c" title="The value of errno at the time the error occured.">code</a>() <span class="keyword">const</span> throw() {
-<a name="l00056"></a>00056                 <span class="keywordflow">return</span> m_code;
-<a name="l00057"></a>00057         }
-<a name="l00058"></a>00058 };
-<a name="l00059"></a>00059 <span class="comment"></span>
-<a name="l00060"></a>00060 <span class="comment">/**</span>
-<a name="l00061"></a>00061 <span class="comment"> * Represents an out-of-memory error.</span>
-<a name="l00062"></a>00062 <span class="comment"> *</span>
-<a name="l00063"></a>00063 <span class="comment"> * @ingroup Exceptions</span>
-<a name="l00064"></a>00064 <span class="comment"> */</span>
-<a name="l00065"></a><a class="code" href="classPassenger_1_1MemoryException.html">00065</a> <span class="keyword">class </span><a class="code" href="classPassenger_1_1MemoryException.html" title="Represents an out-of-memory error.">MemoryException</a>: <span class="keyword">public</span> exception {
-<a name="l00066"></a>00066 <span class="keyword">private</span>:
-<a name="l00067"></a>00067         <span class="keywordtype">string</span> message;
-<a name="l00068"></a>00068 <span class="keyword">public</span>:
-<a name="l00069"></a>00069         <a class="code" href="classPassenger_1_1MemoryException.html" title="Represents an out-of-memory error.">MemoryException</a>(): message(<span class="stringliteral">"Unable to allocate memory."</span>) {}
-<a name="l00070"></a>00070         
-<a name="l00071"></a>00071         <a class="code" href="classPassenger_1_1MemoryException.html" title="Represents an out-of-memory error.">MemoryException</a>(<span class="keyword">const</span> <span class="keywordtype">string</span> &amp;msg): message(msg) {}
-<a name="l00072"></a>00072         
-<a name="l00073"></a>00073         <span class="keyword">virtual</span> ~<a class="code" href="classPassenger_1_1MemoryException.html" title="Represents an out-of-memory error.">MemoryException</a>() <span class="keywordflow">throw</span>() {}
-<a name="l00074"></a>00074         
-<a name="l00075"></a>00075         <span class="keyword">virtual</span> <span class="keyword">const</span> <span class="keywordtype">char</span> *what() <span class="keyword">const</span> <span class="keywordflow">throw</span>() {
-<a name="l00076"></a>00076                 <span class="keywordflow">return</span> message.c_str();
-<a name="l00077"></a>00077         }
-<a name="l00078"></a>00078 };
-<a name="l00079"></a>00079 <span class="comment"></span>
-<a name="l00080"></a>00080 <span class="comment">/**</span>
-<a name="l00081"></a>00081 <span class="comment"> * Represents an error that occured during an I/O operation.</span>
-<a name="l00082"></a>00082 <span class="comment"> *</span>
-<a name="l00083"></a>00083 <span class="comment"> * @ingroup Exceptions</span>
-<a name="l00084"></a>00084 <span class="comment"> */</span>
-<a name="l00085"></a><a class="code" href="classPassenger_1_1IOException.html">00085</a> <span class="keyword">class </span><a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a>: <span class="keyword">public</span> exception {
-<a name="l00086"></a>00086 <span class="keyword">private</span>:
-<a name="l00087"></a>00087         <span class="keywordtype">string</span> msg;
-<a name="l00088"></a>00088 <span class="keyword">public</span>:
-<a name="l00089"></a>00089         <a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a>(<span class="keyword">const</span> <span class="keywordtype">string</span> &amp;message): msg(message) {}
-<a name="l00090"></a>00090         <span class="keyword">virtual</span> ~<a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a>() <span class="keywordflow">throw</span>() {}
-<a name="l00091"></a>00091         <span class="keyword">virtual</span> <span class="keyword">const</span> <span class="keywordtype">char</span> *what() <span class="keyword">const</span> <span class="keywordflow">throw</span>() { <span class="keywordflow">return</span> msg.c_str(); }
-<a name="l00092"></a>00092 };
-<a name="l00093"></a>00093 
-<a name="l00094"></a>00094 } <span class="comment">// namespace Passenger</span>
-<a name="l00095"></a>00095 
-<a name="l00096"></a>00096 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_EXCEPTIONS_H_ */</span>
-</pre></div><hr size="1"><address style="text-align: right;"><small>Generated on Wed Feb 6 20:41:32 2008 for Passenger by&nbsp;
+<a name="l00026"></a>00026         <span class="keywordtype">string</span> shortMessage;
+<a name="l00027"></a>00027         <span class="keywordtype">string</span> fullMessage;
+<a name="l00028"></a>00028         <span class="keywordtype">int</span> m_code;
+<a name="l00029"></a>00029 <span class="keyword">public</span>:<span class="comment"></span>
+<a name="l00030"></a>00030 <span class="comment">        /**</span>
+<a name="l00031"></a>00031 <span class="comment">         * Create a new SystemException.</span>
+<a name="l00032"></a>00032 <span class="comment">         *</span>
+<a name="l00033"></a>00033 <span class="comment">         * @param message A message describing the error.</span>
+<a name="l00034"></a>00034 <span class="comment">         * @param errorCode The error code, i.e. the value of errno right after the error occured.</span>
+<a name="l00035"></a>00035 <span class="comment">         * @note A system description of the error will be appended to the given message.</span>
+<a name="l00036"></a>00036 <span class="comment">         *    For example, if &lt;tt&gt;errorCode&lt;/tt&gt; is &lt;tt&gt;EBADF&lt;/tt&gt;, and &lt;tt&gt;message&lt;/tt&gt;</span>
+<a name="l00037"></a>00037 <span class="comment">         *    is &lt;em&gt;"Something happened"&lt;/em&gt;, then what() will return &lt;em&gt;"Something happened: Bad</span>
+<a name="l00038"></a>00038 <span class="comment">         *    file descriptor (10)"&lt;/em&gt; (if 10 is the number for EBADF).</span>
+<a name="l00039"></a>00039 <span class="comment">         * @post code() == errorCode</span>
+<a name="l00040"></a>00040 <span class="comment">         * @post brief() == message</span>
+<a name="l00041"></a>00041 <span class="comment">         */</span>
+<a name="l00042"></a><a class="code" href="classPassenger_1_1SystemException.html#4ee42f81106408c91726a62287e8471c">00042</a>         <a class="code" href="classPassenger_1_1SystemException.html#4ee42f81106408c91726a62287e8471c" title="Create a new SystemException.">SystemException</a>(<span class="keyword">const</span> <span class="keywordtype">string</span> &amp;message, <span class="keywordtype">int</span> errorCode) {
+<a name="l00043"></a>00043                 stringstream str;
+<a name="l00044"></a>00044                 shortMessage = message;
+<a name="l00045"></a>00045                 str &lt;&lt; message &lt;&lt; <span class="stringliteral">": "</span> &lt;&lt; strerror(errorCode) &lt;&lt; <span class="stringliteral">" ("</span> &lt;&lt; errorCode &lt;&lt; <span class="stringliteral">")"</span>;
+<a name="l00046"></a>00046                 fullMessage = str.str();
+<a name="l00047"></a>00047                 m_code = errorCode;
+<a name="l00048"></a>00048         }
+<a name="l00049"></a>00049         
+<a name="l00050"></a>00050         <span class="keyword">virtual</span> ~<a class="code" href="classPassenger_1_1SystemException.html" title="Represents an error returned by a system call or a standard library call.">SystemException</a>() throw() {}
+<a name="l00051"></a>00051         
+<a name="l00052"></a>00052         <span class="keyword">virtual</span> <span class="keyword">const</span> <span class="keywordtype">char</span> *what() <span class="keyword">const</span> throw() {
+<a name="l00053"></a>00053                 <span class="keywordflow">return</span> fullMessage.c_str();
+<a name="l00054"></a>00054         }
+<a name="l00055"></a>00055         <span class="comment"></span>
+<a name="l00056"></a>00056 <span class="comment">        /**</span>
+<a name="l00057"></a>00057 <span class="comment">         * The value of &lt;tt&gt;errno&lt;/tt&gt; at the time the error occured.</span>
+<a name="l00058"></a>00058 <span class="comment">         */</span>
+<a name="l00059"></a><a class="code" href="classPassenger_1_1SystemException.html#ee7a6672bf79b72a4c3ee70c57d6a47c">00059</a>         <span class="keywordtype">int</span> <a class="code" href="classPassenger_1_1SystemException.html#ee7a6672bf79b72a4c3ee70c57d6a47c" title="The value of errno at the time the error occured.">code</a>() <span class="keyword">const</span> throw() {
+<a name="l00060"></a>00060                 <span class="keywordflow">return</span> m_code;
+<a name="l00061"></a>00061         }
+<a name="l00062"></a>00062         <span class="comment"></span>
+<a name="l00063"></a>00063 <span class="comment">        /**</span>
+<a name="l00064"></a>00064 <span class="comment">         * A brief version of the exception message. This message does</span>
+<a name="l00065"></a>00065 <span class="comment">         * not include the system error description, and is equivalent to the</span>
+<a name="l00066"></a>00066 <span class="comment">         * value of the &lt;tt&gt;message&lt;/tt&gt; parameter as passed to the constructor.</span>
+<a name="l00067"></a>00067 <span class="comment">         */</span>
+<a name="l00068"></a><a class="code" href="classPassenger_1_1SystemException.html#84fa2ab4f5b7b96704734fcdfdaa0269">00068</a>         <span class="keywordtype">string</span> <a class="code" href="classPassenger_1_1SystemException.html#84fa2ab4f5b7b96704734fcdfdaa0269" title="A brief version of the exception message.">brief</a>() <span class="keyword">const</span> throw() {
+<a name="l00069"></a>00069                 <span class="keywordflow">return</span> shortMessage;
+<a name="l00070"></a>00070         }
+<a name="l00071"></a>00071 };
+<a name="l00072"></a>00072 <span class="comment"></span>
+<a name="l00073"></a>00073 <span class="comment">/**</span>
+<a name="l00074"></a>00074 <span class="comment"> * Represents an out-of-memory error.</span>
+<a name="l00075"></a>00075 <span class="comment"> *</span>
+<a name="l00076"></a>00076 <span class="comment"> * @ingroup Exceptions</span>
+<a name="l00077"></a>00077 <span class="comment"> */</span>
+<a name="l00078"></a><a class="code" href="classPassenger_1_1MemoryException.html">00078</a> <span class="keyword">class </span><a class="code" href="classPassenger_1_1MemoryException.html" title="Represents an out-of-memory error.">MemoryException</a>: <span class="keyword">public</span> exception {
+<a name="l00079"></a>00079 <span class="keyword">private</span>:
+<a name="l00080"></a>00080         <span class="keywordtype">string</span> message;
+<a name="l00081"></a>00081 <span class="keyword">public</span>:
+<a name="l00082"></a>00082         <a class="code" href="classPassenger_1_1MemoryException.html" title="Represents an out-of-memory error.">MemoryException</a>(): message(<span class="stringliteral">"Unable to allocate memory."</span>) {}
+<a name="l00083"></a>00083         
+<a name="l00084"></a>00084         <a class="code" href="classPassenger_1_1MemoryException.html" title="Represents an out-of-memory error.">MemoryException</a>(<span class="keyword">const</span> <span class="keywordtype">string</span> &amp;msg): message(msg) {}
+<a name="l00085"></a>00085         
+<a name="l00086"></a>00086         <span class="keyword">virtual</span> ~<a class="code" href="classPassenger_1_1MemoryException.html" title="Represents an out-of-memory error.">MemoryException</a>() <span class="keywordflow">throw</span>() {}
+<a name="l00087"></a>00087         
+<a name="l00088"></a>00088         <span class="keyword">virtual</span> <span class="keyword">const</span> <span class="keywordtype">char</span> *what() <span class="keyword">const</span> <span class="keywordflow">throw</span>() {
+<a name="l00089"></a>00089                 <span class="keywordflow">return</span> message.c_str();
+<a name="l00090"></a>00090         }
+<a name="l00091"></a>00091 };
+<a name="l00092"></a>00092 <span class="comment"></span>
+<a name="l00093"></a>00093 <span class="comment">/**</span>
+<a name="l00094"></a>00094 <span class="comment"> * Represents an error that occured during an I/O operation.</span>
+<a name="l00095"></a>00095 <span class="comment"> *</span>
+<a name="l00096"></a>00096 <span class="comment"> * @ingroup Exceptions</span>
+<a name="l00097"></a>00097 <span class="comment"> */</span>
+<a name="l00098"></a><a class="code" href="classPassenger_1_1IOException.html">00098</a> <span class="keyword">class </span><a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a>: <span class="keyword">public</span> exception {
+<a name="l00099"></a>00099 <span class="keyword">private</span>:
+<a name="l00100"></a>00100         <span class="keywordtype">string</span> msg;
+<a name="l00101"></a>00101 <span class="keyword">public</span>:
+<a name="l00102"></a>00102         <a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a>(<span class="keyword">const</span> <span class="keywordtype">string</span> &amp;message): msg(message) {}
+<a name="l00103"></a>00103         <span class="keyword">virtual</span> ~<a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a>() <span class="keywordflow">throw</span>() {}
+<a name="l00104"></a>00104         <span class="keyword">virtual</span> <span class="keyword">const</span> <span class="keywordtype">char</span> *what() <span class="keyword">const</span> <span class="keywordflow">throw</span>() { <span class="keywordflow">return</span> msg.c_str(); }
+<a name="l00105"></a>00105 };
+<a name="l00106"></a>00106 
+<a name="l00107"></a>00107 } <span class="comment">// namespace Passenger</span>
+<a name="l00108"></a>00108 
+<a name="l00109"></a>00109 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_EXCEPTIONS_H_ */</span>
+</pre></div><hr size="1"><address style="text-align: right;"><small>Generated on Fri Feb 8 13:03:41 2008 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.3 </small></address>
 </body>

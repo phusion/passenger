@@ -52,10 +52,6 @@ private:
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &rails_module);
 	}
 	
-	ServerConfig *getServerConfig(request_rec *r) {
-		return getServerConfig(r->server);
-	}
-	
 	ServerConfig *getServerConfig(server_rec *s) {
 		return (ServerConfig *) ap_get_module_config(s->module_config, &rails_module);
 	}
@@ -200,14 +196,6 @@ private:
 		addHeader(headers, "REQUEST_URI",     originalURI(r));
 		addHeader(headers, "QUERY_STRING",    r->args ? r->args : "");
 		addHeader(headers, "SCRIPT_NAME",     baseURI);
-		/* if (r->path_info) {
-			int path_info_start = strlen(r->uri) - strlen(r->path_info);
-			ap_assert(path_info_start >= 0);
-			addHeader(headers, "SCRIPT_NAME", apr_pstrndup(r->pool, r->uri, path_info_start));
-			addHeader(headers, "PATH_INFO",   r->path_info);
-		} else {
-			addHeader(headers, "SCRIPT_NAME", r->uri);
-		} */
 		addHeader(headers, "HTTPS",           lookupEnv(r, "HTTPS"));
 		addHeader(headers, "CONTENT_TYPE",    lookupHeader(r, "Content-type"));
 		addHeader(headers, "DOCUMENT_ROOT",   ap_document_root(r));
@@ -248,6 +236,22 @@ private:
 			buffer.append(1, '\0');
 		}
 		session->sendHeaders(buffer);
+		return APR_SUCCESS;
+	}
+	
+	apr_status_t sendRequestBody(request_rec *r, Application::SessionPtr &session) {
+		if (ap_should_client_block(r)) {
+			char buf[1024 * 32];
+			apr_off_t len;
+			
+			while ((len = ap_get_client_block(r, buf, sizeof(buf))) > 0) {
+				session->sendBodyBlock(buf, len);
+			}
+			if (len == -1) {
+				return HTTP_INTERNAL_SERVER_ERROR;
+			}
+		}
+		session->closeWriter();
 		return APR_SUCCESS;
 	}
 
@@ -295,10 +299,10 @@ public:
 			return OK;
 		}
 		
-		/* int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_ERROR);
+		int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_ERROR);
     		if (httpStatus != OK) {
 			return httpStatus;
-		} */
+		}
 		
 		/*
 		 * TODO:
@@ -313,6 +317,7 @@ public:
 			P_DEBUG("Processing HTTP request: " << r->uri);
 			Application::SessionPtr session(applicationPool->get(string(railsDir) + "/.."));
 			sendHeaders(r, session, railsBaseURI);
+			sendRequestBody(r, session);
 			
 			apr_file_t *readerPipe = NULL;
 			int reader = session->getReader();

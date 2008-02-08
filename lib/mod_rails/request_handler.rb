@@ -42,7 +42,7 @@ class RequestHandler
 		reader1.close
 		writer2.close
 		process_request(reader2, writer1)
-		return false
+		return
 	end
 
 private
@@ -77,49 +77,26 @@ private
 	end
 	
 	def process_request(reader, writer)
-		headers_list = reader.read.split("\0")
-		reader.close
-		
-		headers = {}
-		i = 0
-		while i < headers_list.size
-			headers[headers_list[i]] = headers_list[i + 1]
-			i += 2
-		end
-		
-		cgi = CGIFixed.new(headers, StringIO.new(""), STDERR)
-		::Dispatcher.dispatch(cgi, ::ActionController::CgiRequest::DEFAULT_SESSION_OPTIONS,
-			ResponseSender.new(writer))
-		writer.close
-	end
-	
-	if false
-		def process_request(reader, writer)
-			headers = reader.read.split("\0")
-			content = "hello <b>world</b>!<br>\n"
-			content << "env = #{RAILS_ENV}<br>\n"
-			content << "pid = #{$$}<br>\n"
-			content << "rand = #{rand}<br>\n"
-			i = 0
-			while i < headers.size
-				content << "<tt>"
-				content << headers[i]
-				content << "="
-				content << headers[i + 1]
-				content << "</tt><br>\n"
-				i += 2
-			end
+		reader_channel = MessageChannel.new(reader)
+		headers_data = reader_channel.read_scalar
+		if headers_data.nil?
 			reader.close
-			
-			writer.write(
-				"Status: 200 OK\r\n" <<
-				"Content-Type: text/html\r\n" <<
-				"X-Foo: bar\r\n" <<
-				"Content-Length: #{content.size}\r\n" <<
-				"\r\n")
-			writer.write(content)
 			writer.close
+			return
 		end
+		
+		headers = Hash[*headers_data.split("\0")]
+		headers["CONTENT_LENGTH"] = headers["HTTP_CONTENT_LENGTH"]
+		
+		# TODO:
+		# Uploaded files are apparently put in /tmp, but not as temp files.
+		# That should be fixed.
+		
+		cgi = CGIFixed.new(headers, reader, ResponseSender.new(writer))
+		::Dispatcher.dispatch(cgi, ::ActionController::CgiRequest::DEFAULT_SESSION_OPTIONS,
+			cgi.stdoutput)
+		reader.close
+		writer.close
 	end
 end
 

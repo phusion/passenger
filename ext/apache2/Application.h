@@ -48,25 +48,33 @@ public:
 		// Also document when exactly the writer socket is closed.
 		virtual ~Session() {}
 		
-		virtual void sendHeaders(const string &headers) {
+		virtual void sendHeaders(const char *headers, unsigned int size) {
 			int writer = getWriter();
-			ssize_t ret;
-			unsigned int written = 0;
-			const char *data = const_cast<const string &>(headers).c_str();
-			do {
-				do {
-					ret = write(writer, data + written, headers.size() - written);
-				} while (ret == -1 && errno == EINTR);
-				if (ret == -1) {
-					throw SystemException("An error occured while writing headers to the request handler", errno);
-				} else {
-					written += ret;
-				}
-			} while (written < headers.size());
-			closeWriter();
+			if (writer == -1) {
+				throw IOException("Cannot write headers to the request handler because the writer channel has already been closed.");
+			}
+			try {
+				MessageChannel(writer).writeScalar(headers, size);
+			} catch (const SystemException &e) {
+				throw SystemException("An error occured while writing headers to the request handler", e.code());
+			}
 		}
 		
-		virtual void sendBody(const string &body) { /* TODO */ }
+		virtual void sendHeaders(const string &headers) {
+			sendHeaders(headers.c_str(), headers.size());
+		}
+		
+		virtual void sendBodyBlock(const char *block, unsigned int size) {
+			int writer = getWriter();
+			if (writer == -1) {
+				throw IOException("Cannot write request body block to the request handler because the writer channel has already been closed.");
+			}
+			try {
+				MessageChannel(writer).writeRaw(block, size);
+			} catch (const SystemException &e) {
+				throw SystemException("An error occured while request body to the request handler", e.code());
+			}
+		}
 		
 		virtual int getReader() = 0;
 		virtual void closeReader() = 0;
