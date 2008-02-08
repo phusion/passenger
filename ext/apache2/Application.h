@@ -44,13 +44,13 @@ public:
 	 *
 	 * In general, a session object is to be used in the following manner:
 	 *
-	 *  1. Convert the HTTP request headers into a string, as expected by sendHeaders().
+	 *  -# Convert the HTTP request headers into a string, as expected by sendHeaders().
 	 *     Then send that string by calling sendHeaders().
-	 *  2. In case of a POST of PUT request, send the HTTP request body by calling
+	 *  -# In case of a POST of PUT request, send the HTTP request body by calling
 	 *     sendBodyBlock(), possibly multiple times.
-	 *  3. Close the writer channel since you're now done sending data.
-	 *  4. The HTTP response can now be read through the reader channel (getReader()).
-	 *  5. When the HTTP response has been read, the session must be closed.
+	 *  -# Close the writer channel since you're now done sending data.
+	 *  -# The HTTP response can now be read through the reader channel (getReader()).
+	 *  -# When the HTTP response has been read, the session must be closed.
 	 *     This is done by destroying the Session object.
 	 *
 	 * A usage example is shown in Application::connect(). 
