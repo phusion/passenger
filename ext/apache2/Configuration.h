@@ -27,6 +27,7 @@
 		*/
 		struct DirConfig {
 			std::set<std::string> base_uris;
+			enum { ENABLED, DISABLED, UNSET } autoDetect;
 		};
 		
 		struct ServerConfig {

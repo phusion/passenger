@@ -56,11 +56,27 @@ private:
 		return (ServerConfig *) ap_get_module_config(s->module_config, &rails_module);
 	}
 	
+	/**
+	 * Check whether the specified file exists.
+	 *
+	 * @param pool The memory pool to use for temporary resource allocation.
+	 * @param filename The filename to check.
+	 */
 	int fileExists(apr_pool_t *pool, const char *filename) {
 		apr_finfo_t info;
-		return apr_stat(&info, filename, APR_FINFO_NORM, pool) == APR_SUCCESS && info.filetype == APR_REG;
+		return apr_stat(&info, filename, APR_FINFO_NORM, pool) == APR_SUCCESS
+			&& info.filetype == APR_REG;
 	}
 	
+	/**
+	 * Determine whether the given HTTP request falls under one of the specified
+	 * RailsBaseURIs. If yes, then the first matching base URI will be returned.
+	 *
+	 * If Rails autodetection was enabled in the configuration, then this function
+	 * will return '/' if the document root seems to be a valid Rails 'public' folder.
+	 *
+	 * Otherwise, NULL will be returned.
+	 */
 	const char *determineRailsBaseURI(request_rec *r, DirConfig *config) {
 		set<string>::const_iterator it;
 		const char *uri = r->uri;
@@ -78,6 +94,12 @@ private:
 				return apr_pstrdup(r->pool, base.c_str());
 			}
 		}
+		
+		if ((config->autoDetect == DirConfig::ENABLED || config->autoDetect == DirConfig::UNSET)
+		 && verifyRailsDir(r->pool, ap_document_root(r))) {
+			return "/";
+		}
+		
 		return NULL;
 	}
 	
@@ -195,7 +217,9 @@ private:
 		addHeader(headers, "REQUEST_METHOD",  r->method);
 		addHeader(headers, "REQUEST_URI",     originalURI(r));
 		addHeader(headers, "QUERY_STRING",    r->args ? r->args : "");
-		addHeader(headers, "SCRIPT_NAME",     baseURI);
+		if (strcmp(baseURI, "/") != 0) {
+			addHeader(headers, "SCRIPT_NAME",     baseURI);
+		}
 		addHeader(headers, "HTTPS",           lookupEnv(r, "HTTPS"));
 		addHeader(headers, "CONTENT_TYPE",    lookupHeader(r, "Content-type"));
 		addHeader(headers, "DOCUMENT_ROOT",   ap_document_root(r));
