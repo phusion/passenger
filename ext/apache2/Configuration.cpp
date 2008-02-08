@@ -32,7 +32,9 @@ extern "C" {
 
 void *
 passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
-	return create_dir_config_struct(p);
+	DirConfig *config = create_dir_config_struct(p);
+	config->autoDetect = DirConfig::UNSET;
+	return config;
 }
 
 void *
@@ -41,12 +43,12 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	DirConfig *base = (DirConfig *) basev;
 	DirConfig *add = (DirConfig *) addv;
 	
-	//config->env = (add->env == NULL) ? base->env : add->env;
-	
 	config->base_uris = base->base_uris;
 	for (set<string>::const_iterator it(add->base_uris.begin()); it != add->base_uris.end(); it++) {
 		config->base_uris.insert(*it);
 	}
+	
+	config->autoDetect = (add->autoDetect == DirConfig::UNSET) ? base->autoDetect : add->autoDetect;
 	
 	return config;
 }
@@ -97,6 +99,13 @@ cmd_rails_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
+cmd_rails_auto_detect(cmd_parms *cmd, void *pcfg, int arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->autoDetect = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
+	return NULL;
+}
+
+static const char *
 cmd_rails_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
 	ServerConfig *config = (ServerConfig *) ap_get_module_config(
 		cmd->server->module_config, &rails_module);
@@ -128,6 +137,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS,
 		"Reserve the given URI to a Rails application."),
+	AP_INIT_FLAG("RailsAutoDetect",
+		(Take1Func) cmd_rails_auto_detect,
+		NULL,
+		OR_OPTIONS,
+		"Whether auto-detection of Ruby on Rails applications should be enabled."),
 	AP_INIT_TAKE1("RailsRuby",
 		(Take1Func) cmd_rails_ruby,
 		NULL,
@@ -142,7 +156,7 @@ const command_rec passenger_commands[] = {
 		(Take1Func) cmd_rails_spawn_server,
 		NULL,
 		RSRC_CONF,
-		"..."),
+		"The filename of the spawn server to use."),
 	{ NULL }
 };
 
