@@ -77,13 +77,13 @@ class MessageChannel
 		while buffer.size < 4
 			buffer << @io.readpartial(4 - buffer.size, temp)
 		end
-		chunk_size = buffer.unpack('N')[0]
-		if chunk_size == 0
-			return nil
+		size = buffer.unpack('N')[0]
+		if size == 0
+			return ''
 		else
 			buffer = ''
-			while buffer.size < chunk_size
-				buffer << @io.readpartial(chunk_size - buffer.size, temp)
+			while buffer.size < size
+				buffer << @io.readpartial(size - buffer.size, temp)
 			end
 			return buffer
 		end
@@ -114,6 +114,23 @@ class MessageChannel
 	
 	def write_scalar(data)
 		@io.write([data.size].pack('N') << data)
+		@io.flush
+	end
+	
+	# Receive an IO object (a file descriptor) from the channel. The other
+	# side must have sent an IO object by calling send_io(). Note that
+	# this only works on Unix sockets. Please read about Unix sockets
+	# file descriptor passing for more information.
+	#
+	# Raises SocketError if the next item in the IO stream is not a file descriptor,
+	# or if end-of-stream has been reached.
+	# Raises IOError if the IO stream is already closed on this side.
+	def recv_io
+		if io.respond_to?(:recv_io)
+			return @io.recv_io
+		else
+			return IO.new(recv_fd(@io.fileno))
+		end
 	end
 	
 	# Send an IO object (a file descriptor) over the channel. The other
@@ -130,18 +147,6 @@ class MessageChannel
 		else
 			send_fd(@io.fileno, io.fileno)
 		end
-	end
-	
-	# Receive an IO object (a file descriptor) from the channel. The other
-	# side must have sent an IO object by calling send_io(). Note that
-	# this only works on Unix sockets. Please read about Unix sockets
-	# file descriptor passing for more information.
-	#
-	# Raises SocketError if the next item in the IO stream is not a file descriptor,
-	# or if end-of-stream has been reached.
-	# Raises IOError if the IO stream is already closed on this side.
-	def recv_io
-		return @io.recv_io
 	end
 	
 	# Close the underlying IO stream. Raises IOError if the stream is already closed.
