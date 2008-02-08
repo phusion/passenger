@@ -35,19 +35,53 @@ public:
 	typedef shared_ptr<Session> SessionPtr;
 	
 	/**
-	 * Represents the life time of a single request/response pair.
+	 * Represents the life time of a single request/response pair of a Ruby on Rails
+	 * application.
 	 *
-	 * A Session object can be used to send request data and to receive response data.
-	 * A usage example is shown in Application::connect().
+	 * Session is used to forward a single HTTP request to a Ruby on Rails application.
+	 * A Session has two communication channels: one for reading data from
+	 * the RoR application, and one for writing data to the RoR application.
 	 *
-	 * A session is said to be closed when the Session object is destroyed.
+	 * In general, a session object is to be used in the following manner:
+	 *
+	 *  1. Convert the HTTP request headers into a string, as expected by sendHeaders().
+	 *     Then send that string by calling sendHeaders().
+	 *  2. In case of a POST of PUT request, send the HTTP request body by calling
+	 *     sendBodyBlock(), possibly multiple times.
+	 *  3. Close the writer channel since you're now done sending data.
+	 *  4. The HTTP response can now be read through the reader channel (getReader()).
+	 *  5. When the HTTP response has been read, the session must be closed.
+	 *     This is done by destroying the Session object.
+	 *
+	 * A usage example is shown in Application::connect(). 
 	 */
 	class Session {
 	public:
-		// TODO: Finalize API. sendBody() doesn't do anything yet.
-		// Also document when exactly the writer socket is closed.
 		virtual ~Session() {}
 		
+		/**
+		 * Send HTTP request headers to the RoR application. The HTTP headers must be
+		 * converted into CGI headers, and then encoded into a string that matches this grammar:
+		 *
+		   @verbatim
+		   headers ::= header*
+		   header ::= name NUL value NUL
+		   name ::= notnull+
+		   value ::= notnull+
+		   notnull ::= "\x01" | "\x02" | "\x02" | ... | "\xFF"
+		   NUL = "\x00"
+		   @endverbatim
+		 *
+		 * This method should be the first one to be called during the lifetime of a Session
+		 * object. Otherwise strange things may happen.
+		 *
+		 * @param headers The HTTP request headers, converted into CGI headers and encoded as
+		 *                a string, according to the description.
+		 * @param size The size, in bytes, of <tt>headers</tt>.
+		 * @pre headers != NULL
+		 * @throws IOException The writer channel has already been closed.
+		 * @throws SystemException Something went wrong during writing.
+		 */
 		virtual void sendHeaders(const char *headers, unsigned int size) {
 			int writer = getWriter();
 			if (writer == -1) {
@@ -60,10 +94,29 @@ public:
 			}
 		}
 		
+		/**
+		 * Convenience shortcut for sendHeaders(const char *, unsigned int)
+		 * @param headers
+		 * @throws IOException The writer channel has already been closed.
+		 * @throws SystemException Something went wrong during writing.
+		 */
 		virtual void sendHeaders(const string &headers) {
 			sendHeaders(headers.c_str(), headers.size());
 		}
 		
+		/**
+		 * Send a chunk of HTTP request body data to the RoR application.
+		 * You can call this method as many times as is required to transfer
+		 * the entire HTTP request body.
+		 *
+		 * This method should only be called after a sendHeaders(). Otherwise
+		 * strange things may happen.
+		 *
+		 * @param block A block of HTTP request body data to send.
+		 * @param size The size, in bytes, of <tt>block</tt>.
+		 * @throws IOException The writer channel has already been closed.
+		 * @throws SystemException Something went wrong during writing.
+		 */
 		virtual void sendBodyBlock(const char *block, unsigned int size) {
 			int writer = getWriter();
 			if (writer == -1) {
@@ -76,9 +129,30 @@ public:
 			}
 		}
 		
+		/**
+		 * Get the reader channel's file descriptor.
+		 *
+		 * @pre The reader channel has not been closed.
+		 */
 		virtual int getReader() = 0;
+		
+		/**
+		 * Close the reader channel. This method may be safely called multiple times.
+		 */
 		virtual void closeReader() = 0;
+		
+		/**
+		 * Get the writer channel's file descriptor. You should rarely have to
+		 * use this directly. One should only use sendHeaders() and sendBodyBlock()
+		 * whenever possible.
+		 *
+		 * @pre The writer channel has not been closed.
+		 */
 		virtual int getWriter() = 0;
+		
+		/**
+		 * Close the writer channel. This method may be safely called multiple times.
+		 */
 		virtual void closeWriter() = 0;
 	};
 
@@ -208,10 +282,14 @@ public:
 	 *   
 	 *   // Send the request headers and request body data.
 	 *   session->sendHeaders(...);
-	 *   session->sendBody(...);
+	 *   session->sendBodyBlock(...);
+	 *   // Done sending data, so we close the writer channel.
+	 *   session->closeWriter();
 	 *
 	 *   // Now read the HTTP response.
 	 *   string responseData = readAllDataFromSocket(session->getReader());
+	 *   // Done reading data, so we close the reader channel.
+	 *   session->closeReader();
 	 *
 	 *   // This session has now finished, so we close the session by resetting
 	 *   // the smart pointer to NULL (thereby destroying the Session object).
