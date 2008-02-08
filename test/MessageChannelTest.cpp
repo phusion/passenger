@@ -81,6 +81,8 @@ namespace tut {
 		pipe(p2);
 		pid = fork();
 		if (pid == 0) {
+			close(p[0]);
+			close(p[1]);
 			dup2(p1[0], 0);
 			dup2(p2[1], 1);
 			close(p1[0]);
@@ -182,17 +184,102 @@ namespace tut {
 	}
 	
 	TEST_METHOD(10) {
-		// TODO:
 		// writeScalar() should be able to produce messages that are compatible with the Ruby implementation.
 		// readScalar() should be able to read messages produced by the Ruby implementation.
+		int p1[2], p2[2];
+		pid_t pid;
+		
+		pipe(p1);
+		pipe(p2);
+		pid = fork();
+		if (pid == 0) {
+			close(p[0]);
+			close(p[1]);
+			dup2(p1[0], 0);
+			dup2(p2[1], 1);
+			close(p1[0]);
+			close(p1[1]);
+			close(p2[0]);
+			close(p2[1]);
+			execlp("ruby", "ruby", "./stub/message_channel_2.rb", NULL);
+			perror("Cannot execute ruby");
+			_exit(1);
+		} else {
+			MessageChannel reader(p2[0]);
+			MessageChannel writer(p1[1]);
+			string output;
+			close(p1[0]);
+			close(p2[1]);
+			
+			writer.writeScalar("hello world\n!\r!");
+			ensure("End of file has not yet been reached (1)", reader.readScalar(output));
+			ensure_equals(output, "hello world\n!\r!!!");
+			
+			writer.writeScalar("");
+			ensure("End of file has not yet been reached (2)", reader.readScalar(output));
+			ensure_equals(output, "??");
+			writer.close();
+			
+			ensure("End of file has been reached", !reader.readScalar(output));
+			reader.close();
+			waitpid(pid, NULL, 0);
+		}
 	}
 	
 	TEST_METHOD(11) {
-		// TODO:
 		// If we send a lot of different messages (including file descriptor passing),
 		// and the other side sends the same stuff back to us, then MessageChannel
 		// should be able to read them all, if done in the correct order.
+		// writeScalar() should be able to produce messages that are compatible with the Ruby implementation.
+		// readScalar() should be able to read messages produced by the Ruby implementation.
+		int fd[2];
+		pid_t pid;
+		
+		socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
+		pid = fork();
+		if (pid == 0) {
+			close(p[0]);
+			close(p[1]);
+			dup2(fd[0], 3);
+			close(fd[0]);
+			close(fd[1]);
+			execlp("ruby", "ruby", "./stub/message_channel_3.rb", NULL);
+			perror("Cannot execute ruby");
+			_exit(1);
+		} else {
+			MessageChannel channel(fd[1]);
+			close(fd[0]);
+			
+			vector<string> args;
+			string output;
+			int tmp[2];
+			
+			channel.write("hello ", "my!", "world", NULL);
+			ensure("End of file has not yet been reached", channel.read(args));
+			ensure_equals(args.size(), 3u);
+			ensure_equals(args[0], "hello ");
+			ensure_equals(args[1], "my!");
+			ensure_equals(args[2], "world");
+			
+			channel.writeScalar("testing 123");
+			ensure("End of file has not yet been reached", channel.readScalar(output));
+			ensure_equals(output, "testing 123");
+			
+			pipe(tmp);
+			close(tmp[0]);
+			channel.writeFileDescriptor(tmp[1]);
+			close(tmp[1]);
+			int x = channel.readFileDescriptor();
+			close(x);
+			
+			channel.write("the end", NULL);
+			ensure("End of file has not yet been reached", channel.read(args));
+			ensure_equals(args.size(), 1u);
+			ensure_equals(args[0], "the end");
+			
+			ensure("End of file has been reached", !channel.read(args));
+			channel.close();
+			waitpid(pid, NULL, 0);
+		}
 	}
-	
-	// TODO: test end-of-file detection in readScalar()/readRaw()
 }
