@@ -52,7 +52,8 @@ using namespace std;
  *
  *    // Send a scalar message.
  *    channel2.writeScalar("some long string which can contain arbitrary binary data");
- *    string str = channel1.readScalar();
+ *    string str;
+ *    channel1.readScalar(str);
  * @endcode
  *
  * The life time of a MessageChannel is independent from that of the
@@ -77,25 +78,6 @@ class MessageChannel {
 private:
 	const static char DELIMITER = '\0';
 	int fd;
-
-	void writeLength(unsigned short len) {
-		uint16_t l;
-		ssize_t ret;
-		unsigned int written;
-		
-		l = htons(len);
-		written = 0;
-		do {
-			do {
-				ret = ::write(fd, (char *) &l + written, sizeof(l) - written);
-			} while (ret == -1 && errno == EINTR);
-			if (ret == -1) {
-				throw SystemException("write() failed", errno);
-			} else {
-				written += ret;
-			}
-		} while (written < sizeof(l));
-	}
 
 public:
 	/**
@@ -133,6 +115,7 @@ public:
 	 * @param args The message elements.
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
 	 * @pre None of the message elements may contain a NUL character (<tt>'\\0'</tt>).
+	 * @see read(), write(const char *, ...)
 	 */
 	void write(const list<string> &args) {
 		list<string>::const_iterator it;
@@ -150,7 +133,7 @@ public:
 			data.append(1, DELIMITER);
 		}
 		
-		writeRaw(data.c_str(), data.size());
+		writeRaw(data);
 	}
 	
 	/**
@@ -162,6 +145,7 @@ public:
 	 *            It is also required to terminate this list with a NULL.
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
 	 * @pre None of the message elements may contain a NUL character (<tt>'\\0'</tt>).
+	 * @see read(), write(const list<string> &)
 	 */
 	void write(const char *name, ...) {
 		list<string> args;
@@ -186,6 +170,7 @@ public:
 	 *
 	 * @param str The scalar message's content.
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 * @see readScalar(), writeScalar(const char *, unsigned int)
 	 */
 	void writeScalar(const string &str) {
 		writeScalar(str.c_str(), str.size());
@@ -198,9 +183,11 @@ public:
 	 * @param size The number of bytes in <tt>data</tt>.
 	 * @pre <tt>data != NULL</tt>
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 * @see readScalar(), writeScalar(const string &)
 	 */
-	void writeScalar(const char *data, unsigned short size) {
-		writeLength(size);
+	void writeScalar(const char *data, unsigned int size) {
+		uint32_t l = htonl(size);
+		writeRaw((const char *) &l, sizeof(uint32_t));
 		writeRaw(data, size);
 	}
 	
@@ -212,6 +199,7 @@ public:
 	 * @param size The number of bytes in <tt>data</tt>.
 	 * @pre <tt>data != NULL</tt>
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 * @see readRaw()
 	 */
 	void writeRaw(const char *data, unsigned int size) {
 		ssize_t ret;
@@ -229,12 +217,25 @@ public:
 	}
 	
 	/**
+	 * Send a block of data over the underlying file descriptor.
+	 * This method blocks until everything is sent.
+	 *
+	 * @param data The data to send.
+	 * @pre <tt>data != NULL</tt>
+	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 */
+	void writeRaw(const string &data) {
+		writeRaw(data.c_str(), data.size());
+	}
+	
+	/**
 	 * Pass a file descriptor. This only works if the underlying file
 	 * descriptor is a Unix socket.
 	 *
 	 * @param fileDescriptor The file descriptor to pass.
 	 * @throws SystemException Something went wrong during file descriptor passing.
 	 * @pre <tt>fileDescriptor >= 0</tt>
+	 * @see readFileDescriptor()
 	 */
 	void writeFileDescriptor(int fileDescriptor) {
 		struct msghdr msg;
@@ -275,6 +276,7 @@ public:
 	 * @return Whether end-of-file has been reached. If so, then the contents
 	 *         of <tt>args</tt> will be undefined.
 	 * @throws SystemException If an error occured while receiving the message.
+	 * @see write()
 	 */
 	bool read(vector<string> &args) {
 		uint16_t size;
@@ -316,6 +318,73 @@ public:
 			while ((pos = const_buffer.find('\0', start)) != string::npos) {
 				args.push_back(const_buffer.substr(start, pos - start));
 				start = pos + 1;
+			}
+		}
+		return true;
+	}
+	
+	/**
+	 * Read a scalar message from the underlying file descriptor.
+	 *
+	 * @param output The message will be put in here.
+	 * @returns Whether end-of-file was reached during reading.
+	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 * @see writeScalar()
+	 */
+	bool readScalar(string &output) {
+		uint32_t size;
+		unsigned int remaining;
+		
+		if (!readRaw(&size, sizeof(uint32_t))) {
+			return false;
+		}
+		size = ntohl(size);
+		
+		output.clear();
+		output.reserve(size);
+		remaining = size;
+		while (remaining > 0) {
+			char buf[1024 * 32];
+			unsigned int blockSize = min(sizeof(buf), remaining);
+			
+			if (!readRaw(buf, blockSize)) {
+				return false;
+			}
+			output.append(buf, blockSize);
+			remaining -= blockSize;
+		}
+		return true;
+	}
+	
+	/**
+	 * Read exactly <tt>size</tt> bytes of data from the underlying file descriptor,
+	 * and put the result in <tt>buf</tt>. If end-of-file has been reached, or if
+	 * end-of-file was encountered before <tt>size</tt> bytes have been read, then
+	 * <tt>false</tt> will be returned. Otherwise (i.e. if the read was successful),
+	 * <tt>true</tt> will be returned.
+	 *
+	 * @param buf The buffer to place the read data in. This buffer must be at least
+	 *            <tt>size</tt> bytes long.
+	 * @param size The number of bytes to read.
+	 * @return Whether reading was successful or whether EOF was reached.
+	 * @pre buf != NULL
+	 * @throws SystemException Something went wrong during reading.
+	 * @see writeRaw()
+	 */
+	bool readRaw(void *buf, unsigned int size) {
+		ssize_t ret;
+		unsigned int alreadyRead = 0;
+		
+		while (alreadyRead < size) {
+			do {
+				ret = ::read(fd, (char *) buf + alreadyRead, size - alreadyRead);
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1) {
+				throw SystemException("read() failed", errno);
+			} else if (ret == 0) {
+				return false;
+			} else {
+				alreadyRead += ret;
 			}
 		}
 		return true;

@@ -150,6 +150,7 @@ private
 		else
 			require 'action_web_service'
 		end
+		require 'active_support/whiny_nil'
 	end
 
 	def handle_spawn_application(app_root, user, group)
