@@ -47,7 +47,7 @@ module ModRails # :nodoc:
 #  server.stop
 class AbstractServer
 	include Utils
-	SERVER_TERMINATION_SIGNAL = "SIGTERM"
+	SERVER_TERMINATION_SIGNALS = ["SIGTERM", "SIGINT"]
 
 	# Raised when the server receives a message with an unknown message name.
 	class UnknownMessage < StandardError
@@ -67,6 +67,8 @@ class AbstractServer
 	def initialize
 		@done = false
 		@message_handlers = {}
+		@signal_handlers = {}
+		@orig_signal_handlers = {}
 	end
 	
 	# Start the server. This method does not block since the server runs
@@ -84,12 +86,7 @@ class AbstractServer
 		@pid = fork do
 			begin
 				@parent_socket.close
-				@child_channel = MessageChannel.new(@child_socket)
-				close_file_descriptors
-				initialize_server
-				reset_signal_handlers
-				main_loop
-				finalize_server
+				start_synchronously(@child_socket)
 			rescue Exception => e
 				print_exception(self.class.to_s, e)
 			ensure
@@ -98,6 +95,20 @@ class AbstractServer
 		end
 		@child_socket.close
 		@parent_channel = MessageChannel.new(@parent_socket)
+	end
+	
+	def start_synchronously(socket)
+		@child_socket = socket
+		@child_channel = MessageChannel.new(socket)
+		close_file_descriptors
+		initialize_server
+		begin
+			reset_signal_handlers
+			main_loop
+		ensure
+			revert_signal_handlers
+			finalize_server
+		end
 	end
 	
 	# Stop the server. The server will quit as soon as possible. This method waits
@@ -112,7 +123,7 @@ class AbstractServer
 		
 		@parent_socket.close
 		@parent_channel = nil
-		Process.kill(SERVER_TERMINATION_SIGNAL, @pid) rescue nil
+		Process.kill(SERVER_TERMINATION_SIGNALS[0], @pid) rescue nil
 		Process.waitpid(@pid) rescue nil
 	end
 
@@ -121,7 +132,7 @@ protected
 	def close_file_descriptors
 		if !file_descriptors_to_close.nil?
 			file_descriptors_to_close.each do |fd|
-				IO.new(fd, "r").close
+				IO.new(fd).close
 			end
 		end
 	end
@@ -150,6 +161,10 @@ protected
 	# arguments, excluding the first element. See also the example in the class description.
 	def define_message_handler(message_name, handler)
 		@message_handlers[message_name.to_s] = handler
+	end
+	
+	def define_signal_handler(signal, handler)
+		@signal_handlers[signal.to_s] = handler
 	end
 	
 	# Send a message to the server. _name_ is the name of the message, and _args_ are optional
@@ -228,12 +243,24 @@ private
 	def reset_signal_handlers
 		Signal.list.each_key do |signal|
 			begin
-				trap(signal, 'DEFAULT')
+				@orig_signal_handlers[signal] = trap(signal, 'DEFAULT')
 			rescue ArgumentError
 				# Signal cannot be trapped; ignore it.
 			end
 		end
+		@signal_handlers.each_pair do |signal, handler|
+			trap(signal) do
+				__send__(handler)
+			end
+		end
 		trap('HUP', 'IGNORE')
+	end
+	
+	def revert_signal_handlers
+		@orig_signal_handlers.each_pair do |signal, handler|
+			trap(signal, handler)
+		end
+		@orig_signal_handlers.clear
 	end
 	
 	# The server's main loop. This is called in the child process.
@@ -255,7 +282,7 @@ private
 					raise UnknownMessage, "Unknown message '#{name}' received."
 				end
 			rescue SignalException => signal
-				if signal.message == SERVER_TERMINATION_SIGNAL
+				if SERVER_TERMINATION_SIGNALS.include?(signal.message) || signal.is_a?(Interrupt)
 					@done = true
 				else
 					raise

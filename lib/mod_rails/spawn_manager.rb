@@ -1,37 +1,24 @@
-if __FILE__ == $0
-	$LOAD_PATH << "#{File.dirname(__FILE__)}/.."
-end
+require 'mod_rails/abstract_server'
 require 'mod_rails/framework_spawner'
 require 'mod_rails/application'
 require 'mod_rails/message_channel'
 require 'mod_rails/core_extensions'
 module ModRails # :nodoc:
 
-class SpawnManager
+class SpawnManager < AbstractServer
 	SPAWNER_CLEAN_INTERVAL = 125
 	SPAWNER_MAX_IDLE_TIME = 120
-
+	
 	def initialize
-		@previous_signal_handlers = {}
+		super()
 		@spawners = {}
 		@lock = Mutex.new
 		@cond = ConditionVariable.new
 		@cleaner_thread = Thread.new do
 			cleaner_thread_main
 		end
-	end
-	
-	def cleanup
-		@lock.synchronize do
-			@cond.signal
-		end
-		@cleaner_thread.join
-		@lock.synchronize do
-			@spawners.each_value do |spawner|
-				spawner.stop
-			end
-			@spawners.clear
-		end
+		define_message_handler(:spawn_application, :handle_spawn_application)
+		define_signal_handler('SIGHUP', :reload)
 	end
 
 	def spawn_application(app_root, user = nil, group = nil)
@@ -49,77 +36,20 @@ class SpawnManager
 		return spawner.spawn_application(app_root, user, group)
 	end
 	
-	def server_main(unix_socket)
-		@done = false
-		@channel = MessageChannel.new(unix_socket)
-		install_signal_handlers
-		begin
-			while !@done
-				begin
-					name, *args = @channel.read
-					if name.nil?
-						@done = true
-					elsif !MESSAGE_HANDLERS.has_key?(name)
-						raise StandardError, "Unknown message '#{name}' received."
-					else
-						__send__(MESSAGE_HANDLERS[name], *args)
-					end
-				rescue SignalException => signal
-					if signal.message != "SIGTERM"
-						raise
-					end
-				rescue ExitNow
-					@done = true
-				end
+	def cleanup
+		@lock.synchronize do
+			@cond.signal
+		end
+		@cleaner_thread.join
+		@lock.synchronize do
+			@spawners.each_value do |spawner|
+				spawner.stop
 			end
-		ensure
-			revert_signal_handlers
+			@spawners.clear
 		end
 	end
 
 private
-	class ExitNow < RuntimeError
-	end
-
-	SIGNAL_HANDLERS = {
-		'TERM' => :exit_now!,
-		'INT'  => :exit_now!,
-		'USR1' => :exit_asap,
-		'HUP'  => :reload
-	}
-	MESSAGE_HANDLERS = {
-		'spawn_application' => :handle_spawn_application
-	}
-	
-	def install_signal_handlers
-		Signal.list.each_key do |signal|
-			begin
-				prev_handler = trap(signal, 'DEFAULT')
-				if prev_handler != 'DEFAULT'
-					@previous_signal_handlers[signal] = prev_handler
-				end
-			rescue ArgumentError
-				# Signal cannot be trapped; ignore it.
-			end
-		end
-		SIGNAL_HANDLERS.each_pair do |signal, handler|
-			if handler == :ignore
-				trap(signal, 'IGNORE')
-			else
-				trap(signal) do
-					__send__(handler)
-				end
-			end
-		end
-	end
-	
-	def revert_signal_handlers
-		@previous_signal_handlers.each_pair do |signal, handler|
-			trap(signal, handler)
-		end
-		@previous_signal_handlers = {}
-	end
-
 	def handle_spawn_application(app_root, user, group)
 		user = nil if user && user.empty?
 		group = nil if group && group.empty?
@@ -148,14 +78,6 @@ private
 		end
 	end
 	
-	def exit_now!
-		raise ExitNow, "Exit requested"
-	end
-	
-	def exit_asap
-		@done = true
-	end
-	
 	def reload
 		@lock.synchronize do
 			@spawners.each_each do |spawner|
@@ -163,12 +85,6 @@ private
 			end
 		end
 	end
-end
-
-if __FILE__ == $0
-	spawn_manager = SpawnManager.new
-	spawn_manager.server_main(IO.new(0, "a+"))
-	spawn_manager.cleanup
 end
 
 end # module ModRails
