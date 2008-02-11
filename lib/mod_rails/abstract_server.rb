@@ -8,14 +8,15 @@ module ModRails # :nodoc:
 #
 #  - The server has exactly one client, and is connected to that client at all times. The server will
 #    quit when the connection closes.
-#  - The server's main loop is run in a child process (and so is asynchronous from the main process).
+#  - The server's main loop may be run in a child process (and so is asynchronous from the main process).
 #  - One can communicate with the server through discrete messages (as opposed to byte streams).
 #  - The server can pass file descriptors (IO objects) back to the client.
 #
 # A message is just an ordered list of strings. The first element in the message is the _message name_.
 #
 # The server will also reset all signal handlers (in the child process). That is, it will respond to
-# all signals in the default manner. The only exception is SIGHUP, which is ignored.
+# all signals in the default manner. The only exception is SIGHUP, which is ignored. One may define
+# additional signal handlers using define_signal_handler().
 #
 # Before an AbstractServer can be used, it must first be started by calling start(). When it is no
 # longer needed, stop() should be called.
@@ -97,6 +98,11 @@ class AbstractServer
 		@parent_channel = MessageChannel.new(@parent_socket)
 	end
 	
+	# Start the server, but in the current process instead of in a child process.
+	# This method blocks until the server's main loop has ended.
+	#
+	# _socket_ is the socket that the server should listen on. The server main
+	# loop will end if the socket has been closed.
 	def start_synchronously(socket)
 		@child_socket = socket
 		@child_channel = MessageChannel.new(socket)
@@ -163,6 +169,7 @@ protected
 		@message_handlers[message_name.to_s] = handler
 	end
 	
+	# Define a handler for a signal.
 	def define_signal_handler(signal, handler)
 		@signal_handlers[signal.to_s] = handler
 	end

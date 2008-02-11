@@ -6,8 +6,8 @@ require 'mod_rails/core_extensions'
 module ModRails # :nodoc:
 
 class SpawnManager < AbstractServer
-	SPAWNER_CLEAN_INTERVAL = 125
-	SPAWNER_MAX_IDLE_TIME = 120
+	SPAWNER_CLEAN_INTERVAL = 30 * 60
+	SPAWNER_MAX_IDLE_TIME = 29 * 60
 	
 	def initialize
 		super()
@@ -54,8 +54,8 @@ private
 		user = nil if user && user.empty?
 		group = nil if group && group.empty?
 		app = spawn_application(app_root, user, group)
-		@channel.write(app.pid)
-		@channel.send_io(app.listen_socket)
+		send_to_client(app.pid)
+		send_io_to_client(app.listen_socket)
 		app.close
 	end
 	
