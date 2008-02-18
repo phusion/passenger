@@ -158,13 +158,6 @@ private:
 	 * @throws SystemException Something went wrong.
 	 */
 	ApplicationPtr sendSpawnCommand(const string &appRoot, const string &user, const string &group) {
-		#ifdef TESTING_SPAWN_MANAGER
-			if (nextSpawnShouldFail) {
-				nextSpawnShouldFail = false;
-				throw IOException("Something went wrong.");
-			}
-		#endif
-		
 		vector<string> args;
 		
 		channel.write("spawn_application", appRoot.c_str(), user.c_str(), group.c_str(), NULL);
@@ -172,8 +165,12 @@ private:
 			throw IOException("The spawn server has exited unexpectedly.");
 		}
 		pid_t pid = atoi(args.front().c_str());
-		int listenSocket = channel.readFileDescriptor();
-		return ApplicationPtr(new Application(appRoot, pid, listenSocket));
+		try {
+			int listenSocket = channel.readFileDescriptor();
+			return ApplicationPtr(new Application(appRoot, pid, listenSocket));
+		} catch (const IOException &e) {
+			throw prependMessageToException(e, "Could not receive a file descriptor from the spawn server");
+		}
 	}
 	
 	template<typename E> ApplicationPtr
@@ -210,10 +207,6 @@ private:
 	}
 
 public:
-	#ifdef TESTING_SPAWN_MANAGER
-		bool nextSpawnShouldFail;
-	#endif
-
 	/**
 	 * Construct a new SpawnManager.
 	 *
@@ -240,9 +233,6 @@ public:
 		this->environment = environment;
 		this->rubyCommand = rubyCommand;
 		pid = 0;
-		#ifdef TESTING_SPAWN_MANAGER
-			nextSpawnShouldFail = false;
-		#endif
 		try {
 			restartServer();
 		} catch (const IOException &e) {
@@ -289,6 +279,10 @@ public:
 		} catch (const SystemException &e) {
 			return handleSpawnException(e, appRoot, user, group);
 		}
+	}
+	
+	pid_t getServerPID() {
+		return pid;
 	}
 };
 

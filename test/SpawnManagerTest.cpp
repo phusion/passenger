@@ -1,6 +1,8 @@
 #include "tut.h"
 #define TESTING_SPAWN_MANAGER
 #include "SpawnManager.h"
+#include <sys/types.h>
+#include <signal.h>
 #include <cstring>
 #include <unistd.h>
 
@@ -24,10 +26,11 @@ namespace tut {
 	
 	TEST_METHOD(2) {
 		// If something goes wrong during spawning, the spawn manager
-		// should be restarted and another spawn should be attempted.
-		manager.nextSpawnShouldFail = true;
+		// should be restarted and another (successful) spawn should be attempted.
+		pid_t old_pid = manager.getServerPID();
+		kill(manager.getServerPID(), SIGTERM);
 		ApplicationPtr app(manager.spawn("."));
-		ensure(!manager.nextSpawnShouldFail);
+		ensure("The spawn server was restarted", manager.getServerPID() != old_pid);
 		ensure_equals("The Application object's PID is the same as the one specified by the stub",
 			app->getPid(), 1234);
 	}
