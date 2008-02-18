@@ -12,26 +12,6 @@
 
 namespace Passenger {
 
-struct StaticBuffer {
-	const char *data;
-	std::string::size_type size;
-
-	StaticBuffer(const std::string &str) {
-		data = str.data();
-		size = str.size();
-	}
-	
-	StaticBuffer(const char *data) {
-		this->data = data;
-		this->size = strlen(data);
-	}
-	
-	StaticBuffer(const char *data, unsigned int size) {
-		this->data = data;
-		this->size = size;
-	}
-};
-
 template<typename T> boost::shared_ptr<T>
 ptr(T *pointer) {
 	return boost::shared_ptr<T>(pointer);
@@ -43,6 +23,18 @@ toString(T something) {
 	s << something;
 	return s.str();
 }
+
+/* static inline void
+split(const string &str, char sep, vector<string> &output) {
+	string::size_t start, pos;
+	start = 0;
+	output.clear();
+	while ((pos = str.find(sep, start)) != string::npos) {
+		output.push_back(str.substr(start, pos - start));
+		start = pos + 1;
+	}
+	output.push_back(str.substr(start));
+} */
 
 
 #ifdef PASSENGER_DEBUG
@@ -68,3 +60,4 @@ extern std::ostream *_debugStream;
 } // namespace Passenger
 
 #endif /* _PASSENGER_UTILS_H_ */
+

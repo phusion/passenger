@@ -24,7 +24,7 @@ namespace tut {
 			if (!timeToTestThePoolItself) {
 				server = ptr(new ApplicationPoolServer("stub/spawn_server.rb"));
 			} else {
-				server = ptr(new ApplicationPoolServer("../lib/mod_rails/spawn_manager.rb"));
+				server = ptr(new ApplicationPoolServer("../bin/passenger-spawn-server"));
 				pool = server->connect();
 			}
 		}

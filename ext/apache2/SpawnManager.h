@@ -154,10 +154,17 @@ private:
 	 * @param user The user to run the application as.
 	 * @param group The group to run the application as.
 	 * @return An Application smart pointer, representing the spawned application.
-	 * @throws IOException
-	 * @throws SystemException
+	 * @throws IOException Something went wrong.
+	 * @throws SystemException Something went wrong.
 	 */
 	ApplicationPtr sendSpawnCommand(const string &appRoot, const string &user, const string &group) {
+		#ifdef TESTING_SPAWN_MANAGER
+			if (nextSpawnShouldFail) {
+				nextSpawnShouldFail = false;
+				throw IOException("Something went wrong.");
+			}
+		#endif
+		
 		vector<string> args;
 		
 		channel.write("spawn_application", appRoot.c_str(), user.c_str(), group.c_str(), NULL);
@@ -203,6 +210,10 @@ private:
 	}
 
 public:
+	#ifdef TESTING_SPAWN_MANAGER
+		bool nextSpawnShouldFail;
+	#endif
+
 	/**
 	 * Construct a new SpawnManager.
 	 *
@@ -229,6 +240,9 @@ public:
 		this->environment = environment;
 		this->rubyCommand = rubyCommand;
 		pid = 0;
+		#ifdef TESTING_SPAWN_MANAGER
+			nextSpawnShouldFail = false;
+		#endif
 		try {
 			restartServer();
 		} catch (const IOException &e) {
@@ -249,7 +263,7 @@ public:
 	 * Spawn a new instance of a Ruby on Rails application.
 	 *
 	 * If the spawn server died during the spawning process, then the server
-	 * will be automatically restarted, and another spawn attempt will made made.
+	 * will be automatically restarted, and another spawn attempt will be made.
 	 * If restarting the server fails, or if the second spawn attempt fails,
 	 * then an exception will be thrown.
 	 *
