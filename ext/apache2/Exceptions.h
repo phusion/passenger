@@ -84,6 +84,18 @@ public:
 	virtual const char *what() const throw() { return msg.c_str(); }
 };
 
+/**
+ * Thrown when ApplicationPool fails to spawn an application instance.
+ */
+class SpawnException: public exception {
+private:
+	string msg;
+public:
+	SpawnException(const string &message): msg(message) {}
+	virtual ~SpawnException() throw() {}
+	virtual const char *what() const throw() { return msg.c_str(); }
+};
+
 } // namespace Passenger
 
 #endif /* _PASSENGER_EXCEPTIONS_H_ */
