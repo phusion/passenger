@@ -154,29 +154,36 @@ private:
 	 * @param user The user to run the application as.
 	 * @param group The group to run the application as.
 	 * @return An Application smart pointer, representing the spawned application.
-	 * @throws IOException Something went wrong.
-	 * @throws SystemException Something went wrong.
+	 * @throws SpawnException Something went wrong.
 	 */
 	ApplicationPtr sendSpawnCommand(const string &appRoot, const string &user, const string &group) {
 		vector<string> args;
 		
 		channel.write("spawn_application", appRoot.c_str(), user.c_str(), group.c_str(), NULL);
-		if (!channel.read(args)) {
-			throw IOException("The spawn server has exited unexpectedly.");
+		try {
+			if (!channel.read(args)) {
+				throw SpawnException("The spawn server has exited unexpectedly.");
+			}
+		} catch (const SystemException &e) {
+			throw SpawnException(string("Could not read from the spawn server: ") + e.what());
 		}
 		pid_t pid = atoi(args.front().c_str());
 		try {
 			int listenSocket = channel.readFileDescriptor();
 			return ApplicationPtr(new Application(appRoot, pid, listenSocket));
 		} catch (const IOException &e) {
-			throw prependMessageToException(e, "Could not receive a file descriptor from the spawn server");
+			string message("Could not receive a file descriptor from the spawn server: ");
+			message.append(e.what());
+			throw SpawnException(message);
 		} catch (const SystemException &e) {
-			throw prependMessageToException(e, "Could not receive a file descriptor from the spawn server");
+			string message("Could not receive a file descriptor from the spawn server: ");
+			message.append(e.what());
+			throw SpawnException(message);
 		}
 	}
 	
-	template<typename E> ApplicationPtr
-	handleSpawnException(const E &e, const string &appRoot, const string &user, const string &group) {
+	ApplicationPtr
+	handleSpawnException(const SpawnException &e, const string &appRoot, const string &user, const string &group) {
 		bool restarted;
 		try {
 			P_DEBUG("Spawn server died. Attempting to restart it...");
@@ -193,10 +200,7 @@ private:
 		if (restarted) {
 			return sendSpawnCommand(appRoot, user, group);
 		} else {
-			string message("Could not spawn the application at '");
-			message.append(appRoot);
-			message.append("'");
-			throw prependMessageToException(e, message);
+			throw SpawnException("The spawn server died unexpectedly, and restarting it failed.");
 		}
 	}
 	
@@ -267,8 +271,7 @@ public:
 	 * @return A smart pointer to an Application object, which represents the application
 	 *         instance that has been spawned. Use this object to communicate with the
 	 *         spawned application.
-	 * @throws IOException Something went wrong.
-	 * @throws SystemException Something went wrong.
+	 * @throws SpawnException Something went wrong.
 	 */
 	ApplicationPtr spawn(const string &appRoot, const string &user = "", const string &group = "") {
 		vector<string> args;
@@ -276,13 +279,15 @@ public:
 		
 		try {
 			return sendSpawnCommand(appRoot, user, group);
-		} catch (const IOException &e) {
-			return handleSpawnException(e, appRoot, user, group);
-		} catch (const SystemException &e) {
+		} catch (const SpawnException &e) {
 			return handleSpawnException(e, appRoot, user, group);
 		}
 	}
 	
+	/**
+	 * Get the PID of the spawn server. This method is used in the unit tests
+	 * and should not be used directly.
+	 */
 	pid_t getServerPID() {
 		return pid;
 	}

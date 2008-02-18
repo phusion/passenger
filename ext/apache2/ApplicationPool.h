@@ -92,6 +92,8 @@ public:
 	 * @param user The user to run the application instance as.
 	 * @param group The group to run the application instance as.
 	 * @return A session object.
+	 * @throw SpawnException An attempt was made to spawn a new application instance, but that attempt failed.
+	 * @throw IOException Something else went wrong.
 	 * @note Applications are uniquely identified with the application root
 	 *       string. So although <tt>appRoot</tt> does not have to be absolute, it
 	 *       should be. If one calls <tt>get("/home/foo")</tt> and
@@ -332,41 +334,70 @@ public:
 			apps.erase(appRoot);
 		}
 		
-		ApplicationMap::iterator it(apps.find(appRoot));
-		if (it != apps.end()) {
-			ApplicationList &appList(*it->second);
+		try {
+			ApplicationMap::iterator it(apps.find(appRoot));
+			if (it != apps.end()) {
+				ApplicationList &appList(*it->second);
 		
-			if (appList.front()->getSessions() == 0) {
-				app = appList.front();
-				appList.pop_front();
-				appList.push_back(app);
-				active++;
-			} else if (count < max) {
+				if (appList.front()->getSessions() == 0) {
+					app = appList.front();
+					appList.pop_front();
+					appList.push_back(app);
+					active++;
+				} else if (count < max) {
+					app = spawnManager.spawn(appRoot, user, group);
+					appList.push_back(app);
+					count++;
+					countOrMaxChanged.notify_all();
+					active++;
+				} else {
+					app = appList.front();
+					appList.pop_front();
+					appList.push_back(app);
+					active++;
+				}
+			} else {
+				while (count >= max) {
+					countOrMaxChanged.wait(l);
+				}
 				app = spawnManager.spawn(appRoot, user, group);
-				appList.push_back(app);
+				ApplicationListPtr appList(new ApplicationList());
+				appList->push_back(app);
+				apps[appRoot] = appList;
 				count++;
 				countOrMaxChanged.notify_all();
 				active++;
-			} else {
-				app = appList.front();
-				appList.pop_front();
-				appList.push_back(app);
-				active++;
 			}
-		} else {
-			while (count >= max) {
-				countOrMaxChanged.wait(l);
-			}
-			app = spawnManager.spawn(appRoot, user, group);
-			ApplicationListPtr appList(new ApplicationList());
-			appList->push_back(app);
-			apps[appRoot] = appList;
-			count++;
-			countOrMaxChanged.notify_all();
-			active++;
+		} catch (const SpawnException &e) {
+			string message("Cannot spawn application '");
+			message.append(appRoot);
+			message.append("': ");
+			message.append(e.what());
+			throw SpawnException(message);
 		}
+		
 		app->setLastUsed(time(NULL));
-		return app->connect(SessionCloseCallback(data, app));
+		
+		// TODO: This should not just throw an exception.
+		// If we fail to connect to one application we should just use another, or
+		// spawn a new application. Of course, this must not be done too often
+		// because every app might crash at startup. There should be a limit
+		// to the number of retries.
+		try {
+			return app->connect(SessionCloseCallback(data, app));
+		} catch (const IOException &e) {
+			string message("Cannot connect to an existing application instance for '");
+			message.append(appRoot);
+			message.append("': ");
+			message.append(e.what());
+			throw IOException(message);
+		} catch (const SystemException &e) {
+			string message("Cannot connect to an existing application instance for '");
+			message.append(appRoot);
+			message.append("': ");
+			message.append(e.what());
+			throw IOException(message);
+		}
 	}
 	
 	virtual void setMax(unsigned int max) {
