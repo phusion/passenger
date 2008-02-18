@@ -170,6 +170,8 @@ private:
 			return ApplicationPtr(new Application(appRoot, pid, listenSocket));
 		} catch (const IOException &e) {
 			throw prependMessageToException(e, "Could not receive a file descriptor from the spawn server");
+		} catch (const SystemException &e) {
+			throw prependMessageToException(e, "Could not receive a file descriptor from the spawn server");
 		}
 	}
 	
