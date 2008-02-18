@@ -9,7 +9,7 @@ namespace tut {
 		ApplicationPoolPtr pool;
 		
 		StandardApplicationPoolTest() {
-			pool = ptr(new StandardApplicationPool("../lib/mod_rails/spawn_manager.rb"));
+			pool = ptr(new StandardApplicationPool("../bin/passenger-spawn-server"));
 		}
 	};
 
