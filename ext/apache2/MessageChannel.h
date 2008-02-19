@@ -32,7 +32,8 @@ using namespace std;
  * There are two kinds of messages:
  *  - Array messages. These are just a list of strings, and the message
  *    itself has a specific length. The contained strings may not
- *    contain NUL characters (<tt>'\\0'</tt>).
+ *    contain NUL characters (<tt>'\\0'</tt>). Note that an array message
+ *    must have at least one element.
  *  - Scalar messages. These are byte strings which may contain arbitrary
  *    binary data. Scalar messages also have a specific length.
  * The protocol is designed to be low overhead, easy to implement and
