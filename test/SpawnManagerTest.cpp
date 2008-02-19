@@ -34,4 +34,7 @@ namespace tut {
 		ensure_equals("The Application object's PID is the same as the one specified by the stub",
 			app->getPid(), 1234);
 	}
+	
+	// TODO: test spawning application as a different user
+	// TODO: if the spawn server dies after a restart, a SpawnException should be thrown
 }
