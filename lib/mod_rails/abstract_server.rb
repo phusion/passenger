@@ -48,7 +48,7 @@ module ModRails # :nodoc:
 #  server.stop
 class AbstractServer
 	include Utils
-	SERVER_TERMINATION_SIGNALS = ["SIGTERM", "SIGINT"]
+	SERVER_TERMINATION_SIGNAL = "SIGTERM"
 
 	# Raised when the server receives a message with an unknown message name.
 	class UnknownMessage < StandardError
@@ -88,6 +88,14 @@ class AbstractServer
 			begin
 				@parent_socket.close
 				start_synchronously(@child_socket)
+			rescue Interrupt
+				# Do nothing.
+			rescue SignalException => signal
+				if signal.message == SERVER_TERMINATION_SIGNAL
+					# Do nothing.
+				else
+					raise
+				end
 			rescue Exception => e
 				print_exception(self.class.to_s, e)
 			ensure
@@ -106,14 +114,17 @@ class AbstractServer
 	def start_synchronously(socket)
 		@child_socket = socket
 		@child_channel = MessageChannel.new(socket)
-		close_file_descriptors
-		initialize_server
 		begin
 			reset_signal_handlers
-			main_loop
+			close_file_descriptors
+			initialize_server
+			begin
+				main_loop
+			ensure
+				finalize_server
+			end
 		ensure
 			revert_signal_handlers
-			finalize_server
 		end
 	end
 	
@@ -129,7 +140,7 @@ class AbstractServer
 		
 		@parent_socket.close
 		@parent_channel = nil
-		Process.kill(SERVER_TERMINATION_SIGNALS[0], @pid) rescue nil
+		Process.kill(SERVER_TERMINATION_SIGNAL, @pid) rescue nil
 		Process.waitpid(@pid) rescue nil
 	end
 
@@ -288,8 +299,10 @@ private
 				else
 					raise UnknownMessage, "Unknown message '#{name}' received."
 				end
+			rescue Interrupt
+				@done = true
 			rescue SignalException => signal
-				if SERVER_TERMINATION_SIGNALS.include?(signal.message) || signal.is_a?(Interrupt)
+				if signal.message == SERVER_TERMINATION_SIGNAL
 					@done = true
 				else
 					raise
