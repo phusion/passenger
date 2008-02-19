@@ -65,15 +65,19 @@ using namespace boost;
  *   session = app->connect("/home/webapps/bar")
  * @endcode
  *
- * Internally, Application::get() will keep spawned applications instances in
+ * Internally, ApplicationPool::get() will keep spawned applications instances in
  * memory, and reuse them if possible. It will try to keep spawning to a minimum.
  * Furthermore, if an application instance hasn't been used for a while, it
- * will be automatically shutdown in order to save memory. And finally, one can
- * set a hard limit on the maximum number of applications instances that may be
- * spawned (see ApplicationPool::setMax()).
+ * will be automatically shutdown in order to save memory. Restart requests are
+ * honored: if an application has the file 'restart.txt' in its 'tmp' folder,
+ * then get() will shutdown existing instances of that application and spawn
+ * a new instance (this is useful when a new version of an application has been
+ * deployed). And finally, one can set a hard limit on the maximum number of
+ * applications instances that may be spawned (see ApplicationPool::setMax()).
  *
  * Note that ApplicationPool is just an interface (i.e. a pure virtual class).
  * For concrete classes, see StandardApplicationPool and ApplicationPoolServer.
+ * The exact pooling algorithm depends on the implementation class.
  *
  * @ingroup Support
  */
@@ -85,6 +89,9 @@ public:
 	 * Open a new session with the application specified by <tt>appRoot</tt>.
 	 * See the class description for ApplicationPool, as well as Application::connect(),
 	 * on how to use the returned session object.
+	 *
+	 * Internally, this method may either spawn a new application instance, or use
+	 * an existing one.
 	 *
 	 * @param appRoot The application root of a RoR application, i.e. the folder that
 	 *             contains 'app/', 'public/', 'config/', etc. This must be a valid
@@ -258,6 +265,10 @@ private:
 				list<ApplicationList::iterator>::iterator it;
 				for (it = elementsToRemove.begin(); it != elementsToRemove.end(); it++) {
 					appList.erase(*it);
+				}
+				
+				if (appList.empty()) {
+					// TODO: remove it from 'apps'. Currently it violates the invariant!!!
 				}
 			}
 		}

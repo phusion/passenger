@@ -1,18 +1,50 @@
-Instance variables:
+= ApplicationPool algorithm
+
+
+== Introduction
+
+For efficiency reasons, Passenger keeps a pool spawned Rails applications.
+Please read the C++ API documentation for the ApplicationPool class for a full
+introduction. This document describes an algorithm for managing the pool.
+
+The algorithm should strive to keep spawning to a minimum.
+
+
+== Instance variables
+
+The algorithm requires the following instance variables for storing state
+information:
+
 - apps: map[string => list<App>]
-  Maps an application root to a list of applications. Each list is
-  guaranteed to be nonempty, and its elements are ordered from
-  active to non-active. An active application is one that has
-  more than 0 active sessions.
+  Maps an application root to a list of applications.
+  
+  Invariant:
+     For all values v in app:
+        v is nonempty.
+        v's elements are ordered from active to non-active.
+  
+  An active application is one that has more than 0 active sessions.
+
 - max: integer
   The maximum number of application objects that may exist in 'apps'.
+
 - count: integer
   The current number of application objects in 'apps'.
+  Since 'max' can be set dynamically during the life time of an application
+  pool, 'count > max' is possible.
+
 - active: integer
   The number of application objects in 'apps' that are active.
-  Invariant: active <= count
+  Invariant:
+     active <= count
 
-def get(app_root):
+
+== Algorithm in pseudo code
+
+# Thread-safetiness note: all functions described here are to be run in a
+# critical section. That is, no two functions can be running at the same time.
+
+function get(app_root):
 	if needs_restart(app_root):
 		apps.remove(app_root)
 	
@@ -48,10 +80,37 @@ def get(app_root):
 		apps[app_root] = list
 		count++
 		active++
+	
+	# Set a timestamp on the application. This will be used by the cleaner.
+	app.last_used = current_time()
+	
 	return app.connect()  # Returns a Session object
 
-def session_has_been_closed(app):
-	list = apps[app.app_root]
-	if app.sessions == 0:
-		list.move_to_front(app)
-	active--
+
+# The following function is to be called when a session
+# has been closed.
+function session_has_been_closed(session):
+	list = apps[session.app.app_root]
+	if list != nil:
+		if app.sessions == 0:
+			list.move_to_front(app)
+		active--
+	app.last_used = current_time()
+
+# The following thread will be responsible for cleaning up idle application
+# instances, i.e. instances that haven't been used for a while.
+# This thread function is also run in a critical section.
+thread cleaner:
+	while !done:
+		Wait until CLEAN_INTERVAL seconds have expired, or the thread has been signalled to quit. During waiting, it must not be holding a lock on the critical section.
+		if thread has been signalled to quit:
+			done = true
+			break
+		
+		now = current_time()
+		for all values l in apps:
+			for all app in l:
+				if now - app.last_time > MAX_IDLE_TIME:
+					l.remove(app)
+			if l.empty():
+				apps.remove_value(l)
