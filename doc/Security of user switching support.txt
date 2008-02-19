@@ -18,6 +18,10 @@ So the Rails applications could, for example, read other peoples' database
 passwords, delete other peoples' files, or mess with the web server logs.
 This problem also typically plagues web hosts that host PHP via mod_php.
 
+There are multiple ways to solve this problem. The goal of this document is to
+inform the reader about the solutions have we have analyzed, so that
+Passenger's security may be reviewed.
+
 
 == Analysis of possible solutions
 
@@ -31,6 +35,8 @@ one of the following methods to implement this:
     to obtain root privileges (or at least, the privilege to switch user).
  4. For each user $X that Passenger will need to switch to, there must exist
     a setuid $X wrapper application.
+ 5. Using 'su'.
+ 6. Using 'sudo'.
 
 Let us take a look at each method in detail.
 
@@ -115,12 +121,34 @@ methods.
 Implementing this will also take more work. One has to create a different
 wrapper for each user, and to install it.
 
+=== Using 'su'
+
+The standard Unix 'su' tool asks for the root password. It's a bad idea for
+Apache to know the root password, so using 'su' is not a viable alternative.
+
+=== Using 'sudo'
+
+It might be possible to use the 'sudo' utility. sudo can be configured in
+such a way that the user Apache runs as can use sudo without having to enter a
+password.
+
+However, Passenger uses an anonymous communication channel (an unnamed Unix
+socket) to communicate with the spawn server. sudo seems to close all file
+descriptors before executing an application, so Passenger will have to
+communicate with the spawn server via a non-anonymous channel, such as a named
+Unix socket. Because other processes can access this channel, it can introduce
+potential security problems.
+
+So it seems 'sudo' is not a viable alternative.
+
 === Common security issues
 
 Whatever method Passenger will use, the following security principles must be
 honored:
 
  - Rails applications must never be run as root.
+
+It might also be worthy to look into suEXEC's security model for inspiration.
 
 Also, the following questions remain:
 
