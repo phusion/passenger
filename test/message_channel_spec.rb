@@ -1,7 +1,9 @@
 $LOAD_PATH << "#{File.dirname(__FILE__)}/../lib"
 require 'socket'
 require 'mod_rails/message_channel'
+require 'mod_rails/utils'
 include ModRails
+include ModRails::Utils
 
 describe MessageChannel do
 	describe "scenarios with a single channel" do
@@ -66,7 +68,7 @@ describe MessageChannel do
 	describe "scenarios with 2 channels and 2 concurrent processes" do
 		after :each do
 			@parent_socket.close
-			Process.waitpid(@pid)
+			Process.waitpid(@pid) rescue nil
 		end
 		
 		it "both processes should be able to read and write a single array message" do
@@ -131,8 +133,7 @@ describe MessageChannel do
 				begin
 					yield
 				rescue Exception => e
-					STDERR.puts("*** Exception in child process: #{e}")
-					STDERR.flush
+					print_exception("child", e)
 				ensure
 					@child_socket.close
 					exit!
