@@ -149,5 +149,8 @@
 		// Test whether Session is still usable after the Application has been destroyed.
 	}
 	#endif
+	
+	// TODO: test spawning application as a different user
+	// TODO: test restarting of applications
 
 #endif /* USE_TEMPLATE */
