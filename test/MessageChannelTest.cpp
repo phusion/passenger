@@ -282,4 +282,6 @@ namespace tut {
 			waitpid(pid, NULL, 0);
 		}
 	}
+	
+	// TODO: readScalar()/writeScalar() should be able to handle arbitrary binary data
 }
