@@ -51,4 +51,16 @@ describe ApplicationSpawner do
 		app.pid.should_not == 0
 		app.app_root.should_not be_nil
 	end
+	
+	it "should be able to spawn an application as a different user" do
+		violated "not implemented yet"
+	end
+	
+	it "should be able to spawn an application as a different group" do
+		violated "not implemented yet"
+	end
+	
+	it "should be able to spawn an application as a different user and group" do
+		violated "not implemented yet"
+	end
 end
