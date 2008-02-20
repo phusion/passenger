@@ -1,0 +1,16 @@
+references
+*.rb
+scgi_demo
+
+ext/apache2/*.la
+ext/apache2/*.lo
+ext/apache2/*.o
+ext/apache2/*.slo
+ext/apache2/.libs
+ext/boost/src/*.o
+ext/boost/src/*.a
+test/*.o
+test/Apache2ModuleTests
+test/stub/railsapp/log/*
+test/stub/railsapp2/log/*
+benchmark/DummyRequestHandler
