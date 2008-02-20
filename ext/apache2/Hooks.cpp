@@ -57,18 +57,6 @@ private:
 	}
 	
 	/**
-	 * Check whether the specified file exists.
-	 *
-	 * @param pool The memory pool to use for temporary resource allocation.
-	 * @param filename The filename to check.
-	 */
-	int fileExists(apr_pool_t *pool, const char *filename) {
-		apr_finfo_t info;
-		return apr_stat(&info, filename, APR_FINFO_NORM, pool) == APR_SUCCESS
-			&& info.filetype == APR_REG;
-	}
-	
-	/**
 	 * Determine whether the given HTTP request falls under one of the specified
 	 * RailsBaseURIs. If yes, then the first matching base URI will be returned.
 	 *
@@ -123,7 +111,7 @@ private:
 	bool verifyRailsDir(apr_pool_t *pool, const char *dir) {
 		string temp(dir);
 		temp.append("/../config/environment.rb");
-		return fileExists(pool, temp.c_str());
+		return fileExists(temp.c_str());
 	}
 	
 	char *http2env(apr_pool_t *p, const char *name) {
@@ -286,11 +274,28 @@ public:
 		passenger_config_merge_all_servers(pconf, s);
 		
 		ServerConfig *config = getServerConfig(s);
-		const char *ruby, *environment, *spawnServer;
+		const char *ruby, *environment;
+		string spawnServer;
 		
 		ruby = (config->ruby != NULL) ? config->ruby : DEFAULT_RUBY_COMMAND;
 		environment = (config->env != NULL) ? config->env : DEFAULT_RAILS_ENV;
-		spawnServer = (config->spawnServer != NULL) ? config->spawnServer : DEFAULT_SPAWN_SERVER_COMMAND;
+		if (config->spawnServer != NULL) {
+			spawnServer = config->spawnServer;
+		} else {
+			spawnServer = findSpawnServer();
+			if (spawnServer.empty()) {
+				throw FileNotFoundException("The Passenger spawn server script "
+					"could not be found. Please ensure that it can be found "
+					"in $PATH, or specify it with the RailsSpawnServer "
+					"configuration option.");
+			}
+		}
+		if (!fileExists(spawnServer.c_str())) {
+			string message("The specified Passenger spawn server script, '");
+			message.append(spawnServer);
+			message.append("', does not exist.");
+			throw FileNotFoundException(message);
+		}
 		
 		applicationPoolServer = ptr(new ApplicationPoolServer(spawnServer, "", environment, ruby));
 	}
@@ -304,7 +309,7 @@ public:
 	int handleRequest(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
 		const char *railsBaseURI = determineRailsBaseURI(r, config);
-		if (railsBaseURI == NULL || r->filename == NULL || fileExists(r->pool, r->filename)) {
+		if (railsBaseURI == NULL || r->filename == NULL || fileExists(r->filename)) {
 			return DECLINED;
 		}
 		
@@ -372,7 +377,7 @@ public:
 	mapToStorage(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
 		if (determineRailsBaseURI(r, config) == NULL
-		 || fileExists(r->pool, r->filename)) {
+		 || fileExists(r->filename)) {
 			/*
 			 * fileExists():
 			 * If the file already exists, serve it directly.
@@ -381,7 +386,7 @@ public:
 			return DECLINED;
 		} else {
 			char *html_file = apr_pstrcat(r->pool, r->filename, ".html", NULL);
-			if (fileExists(r->pool, html_file)) {
+			if (fileExists(html_file)) {
 				/* If a .html version of the URI exists, serve it directly.
 				 * This is used by page caching.
 				 */

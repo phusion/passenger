@@ -85,7 +85,16 @@ public:
 };
 
 /**
- * Thrown when ApplicationPool fails to spawn an application instance.
+ * Thrown when a certain file cannot be found.
+ */
+class FileNotFoundException: public IOException {
+public:
+	FileNotFoundException(const string &message): IOException(message) {}
+	virtual ~FileNotFoundException() throw() {}
+};
+
+/**
+ * Thrown when SpawnManager or ApplicationPool fail to spawn an application instance.
  */
 class SpawnException: public exception {
 private:
