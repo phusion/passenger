@@ -4,7 +4,6 @@ require 'pathname'
 require 'mod_rails/abstract_server'
 require 'mod_rails/application_spawner'
 require 'mod_rails/utils'
-require 'mod_rails/core_extensions'
 module ModRails # :nodoc:
 
 # TODO: check whether Rails version is supported
