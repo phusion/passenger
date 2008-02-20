@@ -4,8 +4,6 @@
 
 namespace Passenger {
 
-using namespace std;
-
 ostream *_debugStream = NULL;
 
 void
@@ -25,6 +23,18 @@ initDebugging(const char *logFile) {
 			_debugStream = &cerr;
 		}
 	#endif
+}
+
+void
+split(const string &str, char sep, vector<string> &output) {
+	string::size_type start, pos;
+	start = 0;
+	output.clear();
+	while ((pos = str.find(sep, start)) != string::npos) {
+		output.push_back(str.substr(start, pos - start));
+		start = pos + 1;
+	}
+	output.push_back(str.substr(start));
 }
 
 } // namespace Passenger

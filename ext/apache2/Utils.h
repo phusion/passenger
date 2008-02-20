@@ -3,6 +3,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <string>
+#include <vector>
 #include <ostream>
 #include <sstream>
 
@@ -12,29 +13,22 @@
 
 namespace Passenger {
 
-template<typename T> boost::shared_ptr<T>
+using namespace std;
+using namespace boost;
+
+template<typename T> shared_ptr<T>
 ptr(T *pointer) {
-	return boost::shared_ptr<T>(pointer);
+	return shared_ptr<T>(pointer);
 }
 
-template<typename T> std::string
+template<typename T> string
 toString(T something) {
-	std::stringstream s;
+	stringstream s;
 	s << something;
 	return s.str();
 }
 
-/* static inline void
-split(const string &str, char sep, vector<string> &output) {
-	string::size_t start, pos;
-	start = 0;
-	output.clear();
-	while ((pos = str.find(sep, start)) != string::npos) {
-		output.push_back(str.substr(start, pos - start));
-		start = pos + 1;
-	}
-	output.push_back(str.substr(start));
-} */
+void split(const string &str, char sep, vector<string> &output);
 
 
 #ifdef PASSENGER_DEBUG
@@ -55,7 +49,7 @@ split(const string &str, char sep, vector<string> &output) {
 void initDebugging(const char *logFile = NULL);
 
 // Internal; do not use directly.
-extern std::ostream *_debugStream;
+extern ostream *_debugStream;
 
 } // namespace Passenger
 

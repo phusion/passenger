@@ -3,7 +3,7 @@ CXX=g++
 CXXFLAGS=-Isupport -DVALGRIND_FRIENDLY -g -Wall `pkg-config --cflags apr-1 apr-util-1`
 AP2_FLAGS=-I../ext/apache2 -I../ext
 AP2_OBJECTS=CxxTestMain.o MessageChannelTest.o SpawnManagerTest.o ApplicationPoolClientServerTest.o \
-	StandardApplicationPoolTest.o
+	StandardApplicationPoolTest.o UtilsTest.o
 LIBBOOST_THREAD=../ext/boost/src/libboost_thread.a
 
 .PHONY: test_all clean
@@ -31,6 +31,9 @@ ApplicationPoolClientServerTest.o: ApplicationPoolClientServerTest.cpp Applicati
 
 StandardApplicationPoolTest.o: StandardApplicationPoolTest.cpp ApplicationPoolTestTemplate.cpp ../ext/apache2/ApplicationPool.h
 	$(CXX) $(CXXFLAGS) $(AP2_FLAGS) -c StandardApplicationPoolTest.cpp
+
+UtilsTest.o: UtilsTest.cpp ../ext/apache2/Utils.h
+	$(CXX) $(CXXFLAGS) $(AP2_FLAGS) -c UtilsTest.cpp
 
 clean:
 	rm -f Apache2ModuleTests *.o
