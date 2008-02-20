@@ -30,9 +30,10 @@ namespace tut {
 		pid_t old_pid = manager.getServerPID();
 		kill(manager.getServerPID(), SIGTERM);
 		ApplicationPtr app(manager.spawn("."));
-		ensure("The spawn server was restarted", manager.getServerPID() != old_pid);
 		ensure_equals("The Application object's PID is the same as the one specified by the stub",
 			app->getPid(), 1234);
+		// Note: the following test will fail if we're inside Valgrind, but that's normal!
+		ensure("The spawn server was restarted", manager.getServerPID() != old_pid);
 	}
 	
 	// TODO: test spawning application as a different user
