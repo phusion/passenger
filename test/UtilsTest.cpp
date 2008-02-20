@@ -1,5 +1,7 @@
 #include "tut.h"
 #include "Utils.cpp"
+#include <unistd.h>
+#include <limits.h>
 
 using namespace Passenger;
 using namespace std;
@@ -7,6 +9,15 @@ using namespace std;
 namespace tut {
 	struct UtilsTest {
 		vector<string> output;
+		string oldPath;
+		
+		UtilsTest() {
+			oldPath = getenv("PATH");
+		}
+		
+		~UtilsTest() {
+			setenv("PATH", oldPath.c_str(), 1);
+		}
 	};
 
 	DEFINE_TEST_GROUP(UtilsTest);
@@ -62,5 +73,28 @@ namespace tut {
 		ensure_equals(output[1], "");
 		ensure_equals(output[2], "");
 		ensure_equals(output[3], "def");
+	}
+	
+	
+	/**** Test findSpawnServer() ****/
+	
+	TEST_METHOD(8) {
+		// If $PATH is empty, it should not find anything.
+		setenv("PATH", "", 1);
+		ensure_equals(findSpawnServer(), "");
+	}
+	
+	TEST_METHOD(9) {
+		// It should ignore relative paths.
+		setenv("PATH", "../bin", 1);
+		ensure_equals(findSpawnServer(), "");
+	}
+	
+	TEST_METHOD(10) {
+		char cwd[PATH_MAX];
+		string binpath(getcwd(cwd, sizeof(cwd)));
+		binpath.append("/../bin");
+		setenv("PATH", binpath.c_str(), 1);
+		ensure("Spawn server is found.", !findSpawnServer().empty());
 	}
 }
