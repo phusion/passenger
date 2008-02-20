@@ -1,6 +1,6 @@
 references
-*.rb
 scgi_demo
+test*.rb
 
 ext/apache2/*.la
 ext/apache2/*.lo
