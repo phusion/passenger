@@ -31,7 +31,6 @@ extern "C" module AP_MODULE_DECLARE_DATA rails_module;
 
 #define DEFAULT_RUBY_COMMAND "ruby"
 #define DEFAULT_RAILS_ENV "production"
-#define DEFAULT_SPAWN_SERVER_COMMAND "/home/hongli/Projects/mod_rails/lib/mod_rails/spawn_manager.rb"
 
 
 class Hooks {
