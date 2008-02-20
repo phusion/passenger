@@ -5,11 +5,11 @@ module ModRails # :nodoc:
 
 # An abstract base class for a server, with the following properties:
 #
-#  - The server has exactly one client, and is connected to that client at all times. The server will
-#    quit when the connection closes.
-#  - The server's main loop may be run in a child process (and so is asynchronous from the main process).
-#  - One can communicate with the server through discrete messages (as opposed to byte streams).
-#  - The server can pass file descriptors (IO objects) back to the client.
+# - The server has exactly one client, and is connected to that client at all times. The server will
+#   quit when the connection closes.
+# - The server's main loop may be run in a child process (and so is asynchronous from the main process).
+# - One can communicate with the server through discrete messages (as opposed to byte streams).
+# - The server can pass file descriptors (IO objects) back to the client.
 #
 # A message is just an ordered list of strings. The first element in the message is the _message name_.
 #

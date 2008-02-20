@@ -14,3 +14,5 @@ test/Apache2ModuleTests
 test/stub/railsapp/log/*
 test/stub/railsapp2/log/*
 benchmark/DummyRequestHandler
+doc/rdoc
+doc/c++api

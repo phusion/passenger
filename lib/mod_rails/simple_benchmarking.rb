@@ -1,4 +1,4 @@
-class Object
+class Object # :nodoc:
 	@@benchmark_results = {}
 
 	def b!(name)
@@ -11,7 +11,7 @@ class Object
 			@@benchmark_results[name] += time2 - time1
 		end 
 	end
-	
+
 	def benchmark_report
 		total = 0
 		@@benchmark_results.each_value do |time|

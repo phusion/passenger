@@ -9,7 +9,7 @@ require(File.dirname(__FILE__) << "/../../ext/mod_rails/native_support.so")
 module ModRails # :nodoc:
 
 module Utils
-private
+protected
 	# Return the absolute version of _path_. This path is guaranteed to
 	# to be "normal", i.e. it doesn't contain stuff like ".." or "/",
 	# and it correctly respects symbolic links.
@@ -69,6 +69,8 @@ class ConditionVariable
 		return false
 	end
 	
+	# This is like ConditionVariable.wait(), but allows one to wait a maximum
+	# amount of time. Raises Timeout::Error if the timeout has elapsed.
 	def timed_wait!(mutex, secs)
 		if secs > 0
 			Timeout.timeout(secs) do
@@ -82,6 +84,8 @@ end
 
 module GC
 	if !respond_to?(:cow_friendly?)
+		# Checks whether the current Ruby interpreter's garbage
+		# collector is copy-on-write friendly.
 		def self.cow_friendly?
 			return false
 		end
