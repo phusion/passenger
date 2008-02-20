@@ -70,14 +70,21 @@ root.
 
 === Using Apache's suEXEC
 
-To be investigated...
+Apache's suEXEC allows one to run CGI processes as different users. But it
+seems that suEXEC can only be used for CGI, and is not a general-purpose
+mechanism. The PHP-suEXEC software allows one to run PHP applications via
+suEXEC, but it requires patching suEXEC. If Passenger is to use suEXEC, then
+it is likely that we'll have to patch suEXEC. The suEXEC website strongly
+discourages patching.
 
 === Using a setuid root wrapper application
 
 If we use this method, we must be extremely careful. It must not be possible
 for arbitrary processes to gain root privileges. We want Passenger, and only
-Passenger, to be able to gain root privileges. This can be implemented by
-using a password file, which only Apache and the wrapper can read, through
+Passenger, to be able to gain root privileges.
+
+There are multiple ways to implement this security. The first one is to use
+a password file, which only Apache and the wrapper can read, through
 the use of proper file permissions. The password file must never be world
 readable or writable.
 
@@ -97,8 +104,12 @@ an argument to the wrapper: that would defeat the point of the password file.
 The solution is that the filename is to be hardcoded into the binary during
 compile time.
 
-The advantage of this method is that it is easy to implement. Furthermore,
-unit tests do not have to be run as root.
+Another way to implement security is to use a whitelist of users that are
+allowed to use the wrapper. The wrapper can then check whether the calling
+process's user is in the whitelist.
+
+Writing a wrapper is not too hard. Furthermore, unit tests do not have to be
+run as root, in contrast to the run-Apache-as-root method.
 
 === Using a setuid $X wrapper application.
 
@@ -154,6 +165,11 @@ Also, the following questions remain:
 
  - Is there a need for a user whitelist/blacklist? That is, is there a need for
    the ability to restrict the set of users that Passenger can switch to?
+
+
+== Chosen solution
+
+?? what to do?
 
 
 == Conclusion
