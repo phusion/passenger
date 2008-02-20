@@ -2,7 +2,7 @@ require 'mod_rails/abstract_server'
 require 'mod_rails/framework_spawner'
 require 'mod_rails/application'
 require 'mod_rails/message_channel'
-require 'mod_rails/core_extensions'
+require 'mod_rails/utils'
 module ModRails # :nodoc:
 
 class SpawnManager < AbstractServer

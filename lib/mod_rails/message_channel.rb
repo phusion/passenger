@@ -1,4 +1,4 @@
-require 'mod_rails/native_support'
+require 'mod_rails/utils'
 module ModRails # :nodoc:
 
 # TODO: synchronize this documentation with the C++ one

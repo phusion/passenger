@@ -1,7 +1,6 @@
 require 'socket'
 require 'mod_rails/message_channel'
 require 'mod_rails/utils'
-require 'mod_rails/core_extensions'
 module ModRails # :nodoc:
 
 # An abstract base class for a server, with the following properties:
