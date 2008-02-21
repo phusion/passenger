@@ -71,12 +71,16 @@ class Subdir # :nodoc:
 			sources = mangle_path_or_path_array(args[0].values[0])
 			args[0] = { target => sources }
 		end
-		Rake::Task.define_task(*args) do
-			puts "### In #{@dir}:"
-			Dir.chdir(@dir) do
-				Object.class_eval(&block)
+		if block_given?
+			Rake::Task.define_task(*args) do
+				puts "### In #{@dir}:"
+				Dir.chdir(@dir) do
+					Object.class_eval(&block)
+				end
+				puts ""
 			end
-			puts ""
+		else
+			Rake::Task.define_task(*args)
 		end
 	end
 

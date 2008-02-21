@@ -93,7 +93,9 @@ subdir 'ext/apache2' do
 	apxs_objects = APACHE2::OBJECTS.keys.join(',')
 
 	desc "Build mod_passenger Apache 2 module"
-	task :apache2 => ['../boost/src/libboost_thread.a', 'mod_rails.o'] + APACHE2::OBJECTS.keys do
+	task :apache2 => 'mod_rails.so'
+	
+	file 'mod_rails.so' => ['../boost/src/libboost_thread.a', 'mod_rails.o'] + APACHE2::OBJECTS.keys do
 		# apxs totally sucks. We couldn't get it working correctly
 		# on MacOS X (it had various problems with building universal
 		# binaries), so we decided to ditch it and build/install the
@@ -111,7 +113,7 @@ subdir 'ext/apache2' do
 	end
 	
 	desc "Install mod_passenger Apache 2 module"
-	task 'apache2:install' => :apache2 do
+	task 'apache2:install' => 'mod_rails.o' do
 		install_dir = `#{APACHE2::XS} -q LIBEXECDIR`.strip
 		sh "cp", "mod_rails.so", install_dir
 	end
@@ -138,7 +140,7 @@ subdir 'ext/apache2' do
 		end
 	end
 	
-	task :clean => 'apache2:clean'
+	task :clean => 'apache2:clean'.to_sym
 	
 	desc "Remove generated files for mod_passenger Apache 2 module"
 	task 'apache2:clean' do
