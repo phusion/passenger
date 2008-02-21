@@ -1,0 +1,3 @@
+#!/usr/bin/env ruby
+Dir.chdir("#{File.dirname(__FILE__)}/..")
+exec "rake", "apache2:install"
