@@ -4,7 +4,12 @@ require 'rake/rdoctask'
 require 'rake/extensions'
 
 desc "Build everything"
-task :default => ['ext/mod_rails/native_support.so', :apache2]
+task :default => [
+	'ext/mod_rails/native_support.so',
+	:apache2,
+	'test/Apache2ModuleTests',
+	'benchmark/DummyRequestHandler'
+]
 
 desc "Remove generated files"
 task :clean
@@ -14,13 +19,15 @@ task :clean
 
 CXX = "g++"
 CXXFLAGS = "-Wall -g -I/usr/local/include"
+LDFLAGS = ""
 APR_FLAGS = `pkg-config --cflags apr-1 apr-util-1`.strip
 APR_LIBS = `pkg-config --libs apr-1 apr-util-1`.strip
 
 require 'rake/cplusplus'
 if RUBY_PLATFORM =~ /darwin/
 	# MacOS X
-	CXXFLAGS << " -arch ppc7400 -arch ppc64 -arch i386 -arch x86_64"
+	OSX_ARCHS = "-arch ppc7400 -arch ppc64 -arch i386 -arch x86_64"
+	CXXFLAGS << " " << OSX_ARCHS
 end
 
 
@@ -51,7 +58,11 @@ subdir 'ext/boost/src' do
 		# processes, sometimes pthread errors will occur. These errors are harmless
 		# and should be ignored. Defining NDEBUG guarantees that boost::thread() will
 		# not abort if such an error occured.
-		compile_cxx "*.cpp", "-O2 -fPIC -DNDEBUG"
+		flags = "-O2 -fPIC -DNDEBUG"
+		if defined?(OSX_ARCHS)
+			flags << " " << OSX_ARCHS
+		end
+		compile_cxx "*.cpp", flags
 		create_static_library "libboost_thread.a", "*.o"
 	end
 	
@@ -79,20 +90,36 @@ class APACHE2
 end
 
 subdir 'ext/apache2' do
+	apxs_objects = APACHE2::OBJECTS.keys.join(',')
+
 	desc "Build mod_passenger Apache 2 module"
 	task :apache2 => ['../boost/src/libboost_thread.a'] + APACHE2::OBJECTS.keys do
-		libtool_objects = APACHE2::OBJECTS.keys.join(',')
-		sh "#{APACHE2::XS} -c mod_rails.c -Wc,#{libtool_objects} " <<
-			"-I/usr/local/include -L/usr/local/lib " <<
-			"-Wl,-lstdc++,-lpthread,../boost/src/libboost_thread.a"
+		command = "#{APACHE2::XS} -c mod_rails.c -Wc,#{apxs_objects} "
+		if defined?(OSX_ARCHS)
+			command << "\"-Wc,#{OSX_ARCHS}\" "
+		end
+		command << "-I/usr/local/include -L/usr/local/lib " <<
+			"-lstdc++ -lpthread -Wl,../boost/src/libboost_thread.a"
+		if defined?(OSX_ARCHS)
+			archs = OSX_ARCHS.split(" ").join(",")
+			command << " \"-Wl,#{archs}\""
+		end
+		sh command
 	end
 	
 	desc "Install mod_passenger Apache 2 module"
 	task 'apache2:install' => ['../boost/src/libboost_thread.a'] + APACHE2::OBJECTS.keys do
-		libtool_objects = APACHE2::OBJECTS.keys.join(',')
-		sh "#{APACHE2::XS} -i -c mod_rails.c -Wc,#{libtool_objects} " <<
-			"-I/usr/local/include -L/usr/local/lib " <<
-			"-Wl,-lstdc++,-lpthread,../boost/src/libboost_thread.a"
+		command = "#{APACHE2::XS} -c -i mod_rails.c -Wc,#{apxs_objects} "
+		if defined?(OSX_ARCHS)
+			command << "\"-Wc,#{OSX_ARCHS}\" "
+		end
+		command << "-I/usr/local/include -L/usr/local/lib " <<
+			"-lstdc++ -lpthread -Wl,../boost/src/libboost_thread.a"
+		if defined?(OSX_ARCHS)
+			archs = OSX_ARCHS.split(" ").join(",")
+			command << " \"-Wl,#{archs}\""
+		end
+		sh command
 	end
 	
 	desc "Install mod_passenger Apache 2 module and restart Apache"
@@ -144,8 +171,8 @@ end
 subdir 'test' do
 	file 'Apache2ModuleTests' => TEST::AP2_OBJECTS.keys + ['../ext/boost/src/libboost_thread.a'] do
 		objects = TEST::AP2_OBJECTS.keys.join(' ')
-		sh "#{CXX} #{objects} -o Apache2ModuleTests #{TEST::APR_LIBS} " <<
-			"../ext/boost/src/libboost_thread.a -lpthread"
+		create_executable "Apache2ModuleTests", objects,
+			"#{LDFLAGS} #{APR_LIBS} ../ext/boost/src/libboost_thread.a -lpthread"
 	end
 	
 	TEST::AP2_OBJECTS.each_pair do |target, sources|
@@ -165,7 +192,8 @@ end
 subdir 'benchmark' do
 	file 'DummyRequestHandler' => ['DummyRequestHandler.cpp',
 	  '../ext/apache2/MessageChannel.h'] do
-		sh "#{CXX} #{CXXFLAGS} -o DummyRequestHandler DummyRequestHandler.cpp"
+		create_executable "DummyRequestHandler", "DummyRequestHandler.cpp",
+			"#{CXXFLAGS} -I../ext/apache2 #{LDFLAGS}"
 	end
 	
 	task :clean do
