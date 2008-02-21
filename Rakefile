@@ -182,6 +182,11 @@ subdir 'test' do
 		sh "./Apache2ModuleTests"
 	end
 	
+	desc "Run unit tests for the Apache 2 module in Valgrind"
+	task 'test:valgrind' => 'Apache2ModuleTests' do
+		sh "valgrind #{ENV['ARGS']} ./Apache2ModuleTests"
+	end
+	
 	desc "Run unit tests for the Ruby libraries"
 	task 'test:ruby' => ['../ext/mod_rails/native_support.so'] do
 		sh "spec -f s *_spec.rb"
@@ -189,8 +194,9 @@ subdir 'test' do
 
 	file 'Apache2ModuleTests' => TEST::AP2_OBJECTS.keys +
 	  ['../ext/boost/src/libboost_thread.a',
-	   '../ext/mod_rails/native_support.so'] do
-		objects = TEST::AP2_OBJECTS.keys.join(' ')
+	   '../ext/mod_rails/native_support.so',
+	   '../ext/apache2/Utils.o'] do
+		objects = TEST::AP2_OBJECTS.keys.join(' ') << " ../ext/apache2/Utils.o"
 		create_executable "Apache2ModuleTests", objects,
 			"#{LDFLAGS} #{APR_LIBS} ../ext/boost/src/libboost_thread.a -lpthread"
 	end

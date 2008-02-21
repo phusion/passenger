@@ -1,5 +1,5 @@
 #include "tut.h"
-#include "Utils.cpp"
+#include "Utils.h"
 #include <unistd.h>
 #include <limits.h>
 

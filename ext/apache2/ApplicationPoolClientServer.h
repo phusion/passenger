@@ -241,10 +241,26 @@ private:
 		int fd;
 		/** The thread which handles the client. */
 		thread *thr;
+		bool detached;
+		
+		ClientInfo() {
+			detached = false;
+		}
+		
+		void detach() {
+			detached = true;
+		}
 		
 		~ClientInfo() {
 			close(fd);
-			delete thr;
+			// For some reason, joining or deleting (detaching)
+			// the thread after fork() will cause a segfault.
+			// I haven't figured out why that happens, so for now
+			// I'll just ignore the thread (which isn't running
+			// anyway).
+			if (!detached) {
+				delete thr;
+			}
 		}
 	};
 	
@@ -473,10 +489,24 @@ public:
 		detached = true;
 		close(connectSocket);
 		close(serverSocket);
-		#ifdef VALGRIND_FRIENDLY
-			delete serverThread;
-		#endif
+		serverThread->join();
+		delete serverThread;
+		
+		// A client thread might have a reference to a ClientInfo
+		// object. And because that thread doesn't run anymore after a
+		// fork(), the reference never gets removed and the ClientInfo
+		// object never gets destroyed. So we forcefully delete
+		// ClientInfo objects in order to close the client file
+		// descriptors.
+		set<ClientInfoPtr>::iterator it;
+		for (it = clients.begin(); it != clients.end(); it++) {
+			if (!it->unique()) {
+				(*it)->detach();
+				delete it->get();
+			}
+		}
 		clients.clear();
+		
 		pool.detach();
 	}
 };

@@ -278,6 +278,21 @@ private:
 		detached = true;
 	}
 	
+	void handleConnectException(const exception &e, const ApplicationPtr &app,
+					ApplicationList &appList) {
+		string message("Cannot connect to an existing application instance for '");
+		message.append(app->getAppRoot());
+		message.append("': ");
+		message.append(e.what());
+		appList.remove(app);
+		if (appList.empty()) {
+			apps.erase(app->getAppRoot());
+		}
+		count--;
+		active--;
+		throw IOException(message);
+	}
+	
 public:
 	/**
 	 * Create a new StandardApplicationPool object.
@@ -339,6 +354,7 @@ public:
 		 * of the algorithm.
 		 */
 		ApplicationPtr app;
+		ApplicationList *appList;
 		mutex::scoped_lock l(lock);
 		
 		if (needsRestart(appRoot)) {
@@ -348,23 +364,23 @@ public:
 		try {
 			ApplicationMap::iterator it(apps.find(appRoot));
 			if (it != apps.end()) {
-				ApplicationList &appList(*it->second);
+				appList = it->second.get();
 		
-				if (appList.front()->getSessions() == 0) {
-					app = appList.front();
-					appList.pop_front();
-					appList.push_back(app);
+				if (appList->front()->getSessions() == 0) {
+					app = appList->front();
+					appList->pop_front();
+					appList->push_back(app);
 					active++;
 				} else if (count < max) {
 					app = spawnManager.spawn(appRoot, user, group);
-					appList.push_back(app);
+					appList->push_back(app);
 					count++;
 					countOrMaxChanged.notify_all();
 					active++;
 				} else {
-					app = appList.front();
-					appList.pop_front();
-					appList.push_back(app);
+					app = appList->front();
+					appList->pop_front();
+					appList->push_back(app);
 					active++;
 				}
 			} else {
@@ -372,9 +388,9 @@ public:
 					countOrMaxChanged.wait(l);
 				}
 				app = spawnManager.spawn(appRoot, user, group);
-				ApplicationListPtr appList(new ApplicationList());
+				appList = new ApplicationList();
 				appList->push_back(app);
-				apps[appRoot] = appList;
+				apps[appRoot] = ptr(appList);
 				count++;
 				countOrMaxChanged.notify_all();
 				active++;
@@ -397,17 +413,13 @@ public:
 		try {
 			return app->connect(SessionCloseCallback(data, app));
 		} catch (const IOException &e) {
-			string message("Cannot connect to an existing application instance for '");
-			message.append(appRoot);
-			message.append("': ");
-			message.append(e.what());
-			throw IOException(message);
+			handleConnectException(e, app, *appList);
+			// Never reached; shut up compiler warning
+			return Application::SessionPtr();
 		} catch (const SystemException &e) {
-			string message("Cannot connect to an existing application instance for '");
-			message.append(appRoot);
-			message.append("': ");
-			message.append(e.what());
-			throw IOException(message);
+			handleConnectException(e, app, *appList);
+			// Never reached; shut up compiler warning
+			return Application::SessionPtr();
 		}
 	}
 	
