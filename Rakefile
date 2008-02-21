@@ -95,9 +95,9 @@ subdir 'ext/apache2' do
 	apxs_objects = APACHE2::OBJECTS.keys.join(',')
 
 	desc "Build mod_passenger Apache 2 module"
-	task :apache2 => 'mod_rails.so'
+	task :apache2 => 'mod_passenger.so'
 	
-	file 'mod_rails.so' => ['../boost/src/libboost_thread.a', 'mod_rails.o'] + APACHE2::OBJECTS.keys do
+	file 'mod_passenger.so' => ['../boost/src/libboost_thread.a', 'mod_passenger.o'] + APACHE2::OBJECTS.keys do
 		# apxs totally sucks. We couldn't get it working correctly
 		# on MacOS X (it had various problems with building universal
 		# binaries), so we decided to ditch it and build/install the
@@ -109,15 +109,15 @@ subdir 'ext/apache2' do
 			linkflags << " " << OSX_ARCHS
 		end
 		linkflags << " -lstdc++ -lpthread ../boost/src/libboost_thread.a #{APR_LIBS}"
-		create_shared_library 'mod_rails.so',
-			APACHE2::OBJECTS.keys.join(' ') << ' mod_rails.o',
+		create_shared_library 'mod_passenger.so',
+			APACHE2::OBJECTS.keys.join(' ') << ' mod_passenger.o',
 			linkflags
 	end
 	
 	desc "Install mod_passenger Apache 2 module"
-	task 'apache2:install' => 'mod_rails.o' do
+	task 'apache2:install' => 'mod_passenger.so' do
 		install_dir = `#{APACHE2::XS} -q LIBEXECDIR`.strip
-		sh "cp", "mod_rails.so", install_dir
+		sh "cp", "mod_passenger.so", install_dir
 	end
 	
 	desc "Install mod_passenger Apache 2 module and restart Apache"
@@ -132,8 +132,8 @@ subdir 'ext/apache2' do
 		sh "#{APACHE2::CTL} start"
 	end
 	
-	file 'mod_rails.o' => ['mod_rails.c'] do
-		compile_c 'mod_rails.c', APACHE2::CXXFLAGS
+	file 'mod_passenger.o' => ['mod_passenger.c'] do
+		compile_c 'mod_passenger.c', APACHE2::CXXFLAGS
 	end
 	
 	APACHE2::OBJECTS.each_pair do |target, sources|
@@ -146,7 +146,7 @@ subdir 'ext/apache2' do
 	
 	desc "Remove generated files for mod_passenger Apache 2 module"
 	task 'apache2:clean' do
-		files = [APACHE2::OBJECTS.keys, %w(mod_rails.lo mod_rails.slo mod_rails.la .libs)]
+		files = [APACHE2::OBJECTS.keys, %w(mod_passenger.o mod_passenger.so)]
 		sh("rm", "-rf", *files.flatten)
 	end
 end
@@ -226,11 +226,12 @@ spec = Gem::Specification.new do |s|
 	s.homepage = "http://passenger.phusion.nl/"
 	s.summary = "Apache module for Ruby on Rails support."
 	s.name = "passenger"
-	s.version = "1.0.0"
+	s.version = "0.9.0"
 	s.requirements << "fastthread" << "Apache 2 with development headers"
 	s.require_path = "lib"
 	s.add_dependency 'rake', '>= 0.8.1'
 	s.add_dependency 'fastthread', '>= 1.0.1'
+	s.add_dependency 'rspec', '>= 1.1.2'
 	s.extensions << 'ext/mod_rails/extconf.rb'
 	s.files = FileList[
 		'Rakefile',
@@ -250,8 +251,9 @@ spec = Gem::Specification.new do |s|
 		'test/stub/*/*/*/*/*'
 	] - Dir['test/stub/*/log/*'] \
 	  - Dir['test/stub/*/tmp/*/*']
-	s.executables = 'passenger-spawn-server'
+	s.executables = ['passenger-spawn-server', 'passenger-install-apache2-module']
 	s.has_rdoc = true
+	s.test_file = 'test/support/run_rspec_tests.rb'
 	s.description = "Passenger is an Apache module for Ruby on Rails support."
 end
 
@@ -272,6 +274,7 @@ task :sloccount do
 		"ext/apache2",
 		"ext/mod_rails/*.c",
 		"test/*.{cpp,rb}",
+		"test/support/*.rb",
 		"test/stub/*.rb",
 		"benchmark/*.{cpp,rb}"
 	]

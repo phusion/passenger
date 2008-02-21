@@ -5,7 +5,7 @@
 
 using namespace Passenger;
 
-extern "C" module AP_MODULE_DECLARE_DATA rails_module;
+extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
 
 template<typename T> static apr_status_t
@@ -80,13 +80,13 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 	server_rec *s;
 	
 	for (s = main_server; s != NULL; s = s->next) {
-		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &rails_module);
+		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
 		final->ruby = (final->ruby != NULL) ? final->ruby : config->ruby;
 		final->env = (final->env != NULL) ? final->env : config->env;
 		final->spawnServer = (final->spawnServer != NULL) ? final->spawnServer : config->spawnServer;
 	}
 	for (s = main_server; s != NULL; s = s->next) {
-		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &rails_module);
+		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
 		*config = *final;
 	}
 }
@@ -108,7 +108,7 @@ cmd_rails_auto_detect(cmd_parms *cmd, void *pcfg, int arg) {
 static const char *
 cmd_rails_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
 	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &rails_module);
+		cmd->server->module_config, &passenger_module);
 	config->ruby = arg;
 	return NULL;
 }
@@ -116,7 +116,7 @@ cmd_rails_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_rails_env(cmd_parms *cmd, void *pcfg, const char *arg) {
 	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &rails_module);
+		cmd->server->module_config, &passenger_module);
 	config->env = arg;
 	return NULL;
 }
@@ -124,7 +124,7 @@ cmd_rails_env(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_rails_spawn_server(cmd_parms *cmd, void *pcfg, const char *arg) {
 	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &rails_module);
+		cmd->server->module_config, &passenger_module);
 	config->spawnServer = arg;
 	return NULL;
 }
