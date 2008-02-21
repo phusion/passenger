@@ -1,3 +1,113 @@
 #!/usr/bin/env ruby
-Dir.chdir("#{File.dirname(__FILE__)}/..")
-exec "rake", "apache2:install"
+PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) << "/..")
+PASSENGER_WEBSITE = "http://passenger.phusion.nl/"
+PHUSION_WEBSITE = "www.phusion.nl"
+Dir.chdir(PASSENGER_ROOT)
+
+def banner(text)
+	return "\e[33m\e[44m\e[1m#{text}\e[0m"
+end
+
+def bold(text)
+	return "\e[1m#{text}\e[0m"
+end
+
+def red(text)
+	return "\e[1m\e[31m#{text}\e[0m"
+end
+
+def wait
+	begin
+		STDIN.readline
+	rescue Interrupt
+		exit 2
+	end
+end
+
+puts <<EOF
+#{banner("Welcome to the Passenger Apache 2 module installer.")}
+
+This installer will guide you through the entire installation process. It
+shouldn't take more than 3 minutes in total.
+
+Here's what you can expect from the installation process:
+
+ #{bold('1.')} The Apache 2 module will be automatically installed for you.
+ #{bold('2.')} This installer will teach you how to configure Apache.
+ #{bold('3.')} This installer will teach you how to deploy a Ruby on Rails application.
+ #{bold('4.')} There is no step 4.
+
+Don't worry if anything goes wrong. This installer will advise you on how to
+solve the problem.
+
+#{bold('Press Enter to continue, or Ctrl-C to abort.')}
+EOF
+wait
+puts "--------------------------------------------------------------------"
+
+puts banner('Compiling and installing Apache 2 module...')
+puts "cd #{PASSENGER_ROOT}"
+puts "rake apache2:install"
+
+if system "rake", "apache2:install"
+	module_location = `apxs2 -q LIBEXECDIR`.strip << "/mod_passenger.so"
+	spawn_server_location = "#{PASSENGER_ROOT}/bin/passenger-spawn-server"
+	
+	puts "--------------------------------------------------------------------"
+	puts banner('The Apache 2 module was successfully installed.')
+	message = <<EOF
+	Please edit your Apache configuration file, and add these lines:
+	
+	   #{bold('LoadModule passenger_module ' << module_location)}
+	   #{bold('RailsSpawnServer ' << spawn_server_location)}
+	
+	After you restart Apache, you are ready to deploy any number of Ruby on Rails
+	applications on Apache, without any further Ruby on Rails-specific
+	configuration!
+	
+	#{bold('Press ENTER to continue.')}
+EOF
+	puts message.gsub(/^\t/, '')
+	wait
+	
+	puts "--------------------------------------------------------------------"
+	message = <<EOF
+	#{banner('Deploying a Ruby on Rails application: an example')}
+	Suppose you have a Ruby on Rails application in #{bold('/somewhere')}.
+	
+	  #{bold('1.')} Add a virtual host to your Apache configuration file.
+	  #{bold('2.')} Set the virtual host's DocumentRoot to #{bold('/somewhere/public')}.
+	
+	And that's it! You may also want to check the documentation on our website,
+	#{bold(PASSENGER_WEBSITE)}, for security and optimization tips and other
+	useful information.
+	
+	Enjoy Passenger, a product of Phusion (#{bold(PHUSION_WEBSITE)}) :-)
+	
+EOF
+	puts message.gsub(/^\t/, '')
+else
+	message = <<EOF
+	--------------------------------------------------------------------
+	#{red('It looks like something went wrong.')}
+	
+	 #{bold('*')} Do you see any #{bold('permission errors?')} If so, then please rerun this installer
+	   as root.
+	 #{bold('*')} Do you see any errors about #{bold(".h files that can't be found")}? If so, then you
+	   probably don't have the Apache/APR development headers installed. Please
+	   install the Apache/APR development headers and try again.
+	   
+	   It is also possible that the headers are installed, but your compiler can't
+	   find them. Please set the environment variables #{bold('C_INCLUDE_PATH')} and
+	   #{bold('CPLUS_INCLUDE_PATH')} to the directory where your Apache/APR headers are
+	   located.
+
+	If the above checklist didn't help, please use our support facilities at
+	
+	  #{bold(PASSENGER_WEBSITE)}
+	
+EOF
+	puts message.gsub(/^\t/, '')
+	exit 1
+end
+

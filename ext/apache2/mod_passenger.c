@@ -3,7 +3,7 @@
 #include "Configuration.h"
 #include "Hooks.h"
 
-module AP_MODULE_DECLARE_DATA rails_module = {
+module AP_MODULE_DECLARE_DATA passenger_module = {
 	STANDARD20_MODULE_STUFF,
 	passenger_config_create_dir,        /* create per-dir config structs */
 	passenger_config_merge_dir,         /* merge per-dir config structs */

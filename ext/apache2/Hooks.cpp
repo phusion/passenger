@@ -27,7 +27,7 @@
 using namespace std;
 using namespace Passenger;
 
-extern "C" module AP_MODULE_DECLARE_DATA rails_module;
+extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
 #define DEFAULT_RUBY_COMMAND "ruby"
 #define DEFAULT_RAILS_ENV "production"
@@ -48,11 +48,11 @@ private:
 	ApplicationPoolPtr applicationPool;
 	
 	DirConfig *getDirConfig(request_rec *r) {
-		return (DirConfig *) ap_get_module_config(r->per_dir_config, &rails_module);
+		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
 	}
 	
 	ServerConfig *getServerConfig(server_rec *s) {
-		return (ServerConfig *) ap_get_module_config(s->module_config, &rails_module);
+		return (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
 	}
 	
 	/**
