@@ -174,6 +174,19 @@ class TEST
 end
 
 subdir 'test' do
+	desc "Run all unit tests"
+	task :test => ['test:apache2'.to_sym, 'test:ruby'.to_sym]
+	
+	desc "Run unit tests for the Apache 2 module"
+	task 'test:apache2' => 'Apache2ModuleTests' do
+		sh "./Apache2ModuleTests"
+	end
+	
+	desc "Run unit tests for the Ruby libraries"
+	task 'test:ruby' do
+		sh "spec -f s *_spec.rb"
+	end
+
 	file 'Apache2ModuleTests' => TEST::AP2_OBJECTS.keys + ['../ext/boost/src/libboost_thread.a'] do
 		objects = TEST::AP2_OBJECTS.keys.join(' ')
 		create_executable "Apache2ModuleTests", objects,
