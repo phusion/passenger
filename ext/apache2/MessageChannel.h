@@ -346,7 +346,7 @@ public:
 		remaining = size;
 		while (remaining > 0) {
 			char buf[1024 * 32];
-			unsigned int blockSize = min(sizeof(buf), remaining);
+			unsigned int blockSize = min((unsigned int) sizeof(buf), remaining);
 			
 			if (!readRaw(buf, blockSize)) {
 				return false;
