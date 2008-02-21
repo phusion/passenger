@@ -1,6 +1,8 @@
 # kate: syntax ruby
 $LOAD_PATH.unshift("#{File.dirname(__FILE__)}/lib")
+require 'rubygems'
 require 'rake/rdoctask'
+require 'rake/gempackagetask'
 require 'rake/extensions'
 
 desc "Build everything"
@@ -214,4 +216,41 @@ Rake::RDocTask.new do |rd|
 	rd.title = "Passenger Ruby API"
 	rd.options << "-S"
 	rd.options << "-N"
+end
+
+
+##### Gem
+
+spec = Gem::Specification.new do |s|
+	s.platform = Gem::Platform::RUBY
+	s.homepage = "http://passenger.phusion.nl/"
+	s.summary = "Apache module for Ruby on Rails support."
+	s.name = "passenger"
+	s.version = "1.0.0"
+	s.requirements << "fastthread" << "Apache 2 with development headers"
+	s.require_path = "lib"
+	s.add_dependency 'rake', '>= 0.8.1'
+	s.add_dependency 'fastthread', '>= 1.0.1'
+	s.extensions << 'ext/mod_rails/extconf.rb'
+	s.files = FileList[
+		'Rakefile',
+		'lib/**',
+		'bin/*',
+		'ext/apache2/*.{cpp,h,c}',
+		'ext/boost/*.{hpp,TXT}',
+		'ext/boost/**/*.{hpp,cpp,pl,inl}',
+		'ext/mod_rails/*.{c,rb}',
+		'benchmark/*.{cpp,rb}',
+		'test/*.{rb,cpp}',
+		'test/support/*',
+		'test/stub/**'
+	] - FileList['test/stub/**/log/**'] \
+	  - FileList['test/stub/**/tmp/*/*']
+	s.executables = FileList['passenger-spawn-server']
+	s.has_rdoc = true
+	s.description = "Passenger is an Apache module for Ruby on Rails support."
+end
+
+Rake::GemPackageTask.new(spec) do |pkg|
+	pkg.need_tar_gz = true
 end
