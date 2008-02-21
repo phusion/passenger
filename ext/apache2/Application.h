@@ -154,6 +154,11 @@ public:
 		 * Close the writer channel. This method may be safely called multiple times.
 		 */
 		virtual void closeWriter() = 0;
+		
+		/**
+		 * Get the process ID of the application instance that belongs to this session.
+		 */
+		virtual pid_t getPid() = 0;
 	};
 
 private:
@@ -180,10 +185,13 @@ private:
 		CloseCallback closeCallback;
 		int reader;
 		int writer;
+		pid_t pid;
 		
 	public:
-		StandardSession(SharedDataPtr data, const CloseCallback &closeCallback, int reader, int writer) {
+		StandardSession(SharedDataPtr data, pid_t pid, const CloseCallback &closeCallback,
+		                int reader, int writer) {
 			this->data = data;
+			this->pid = pid;
 			this->closeCallback = closeCallback;
 			data->sessions++;
 			this->reader = reader;
@@ -217,6 +225,10 @@ private:
 				close(writer);
 				writer = -1;
 			}
+		}
+		
+		virtual pid_t getPid() {
+			return pid;
 		}
 	};
 
@@ -326,9 +338,10 @@ public:
 			MessageChannel channel(listenSocket);
 			int reader = channel.readFileDescriptor();
 			int writer = channel.readFileDescriptor();
-			return ptr(new StandardSession(data, closeCallback, reader, writer));
+			return ptr(new StandardSession(data, pid, closeCallback, reader, writer));
 		} catch (const SystemException &e) {
-			throw SystemException("Cannot receive one of the session file descriptors from the request handler", e.code());
+			throw SystemException("Cannot receive one of the session file "
+				"descriptors from the request handler", e.code());
 		} catch (const IOException &e) {
 			string message("Cannot receive one of the session file descriptors from the request handler");
 			message.append(e.what());

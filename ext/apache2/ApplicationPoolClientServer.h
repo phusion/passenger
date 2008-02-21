@@ -130,9 +130,11 @@ private:
 		int id;
 		int reader;
 		int writer;
+		pid_t pid;
 	public:
-		RemoteSession(SharedDataPtr data, int id, int reader, int writer) {
+		RemoteSession(SharedDataPtr data, pid_t pid, int id, int reader, int writer) {
 			this->data = data;
+			this->pid = pid;
 			this->id = id;
 			this->reader = reader;
 			this->writer = writer;
@@ -164,6 +166,10 @@ private:
 				close(writer);
 				writer = -1;
 			}
+		}
+		
+		virtual pid_t getPid() {
+			return pid;
 		}
 	};
 
@@ -222,7 +228,7 @@ private:
 			if (args[0] == "ok") {
 				reader = channel.readFileDescriptor();
 				writer = channel.readFileDescriptor();
-				return ptr(new RemoteSession(data, atoi(args[1]), reader, writer));
+				return ptr(new RemoteSession(data, atoi(args[1]), atoi(args[2]), reader, writer));
 			} else if (args[0] == "SpawnException") {
 				throw SpawnException(args[1]);
 			} else if (args[0] == "IOException") {
@@ -347,17 +353,19 @@ private:
 			
 				if (args[0] == "get" && args.size() == 4) {
 					Application::SessionPtr session;
+					bool failed = false;
 					try {
 						session = pool.get(args[1], args[2], args[3]);
 					} catch (const SpawnException &e) {
 						channel.write("SpawnException", e.what(), NULL);
-						done = true;
+						failed = true;
 					} catch (const IOException &e) {
 						channel.write("IOException", e.what(), NULL);
-						done = true;
+						failed = true;
 					}
-					if (!done) {
-						channel.write("ok", toString(lastID).c_str(), NULL);
+					if (!failed) {
+						channel.write("ok", toString(session->getPid()).c_str(),
+							toString(lastID).c_str(), NULL);
 						channel.writeFileDescriptor(session->getReader());
 						channel.writeFileDescriptor(session->getWriter());
 						session->closeReader();
