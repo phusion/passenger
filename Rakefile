@@ -234,7 +234,7 @@ spec = Gem::Specification.new do |s|
 	s.extensions << 'ext/mod_rails/extconf.rb'
 	s.files = FileList[
 		'Rakefile',
-		'lib/**',
+		'lib/**/*.rb',
 		'bin/*',
 		'ext/apache2/*.{cpp,h,c}',
 		'ext/boost/*.{hpp,TXT}',
@@ -243,10 +243,14 @@ spec = Gem::Specification.new do |s|
 		'benchmark/*.{cpp,rb}',
 		'test/*.{rb,cpp}',
 		'test/support/*',
-		'test/stub/**'
-	] - FileList['test/stub/**/log/**'] \
-	  - FileList['test/stub/**/tmp/*/*']
-	s.executables = FileList['passenger-spawn-server']
+		'test/stub/*',
+		'test/stub/*/*',
+		'test/stub/*/*/*',
+		'test/stub/*/*/*/*',
+		'test/stub/*/*/*/*/*'
+	] - Dir['test/stub/*/log/*'] \
+	  - Dir['test/stub/*/tmp/*/*']
+	s.executables = 'passenger-spawn-server'
 	s.has_rdoc = true
 	s.description = "Passenger is an Apache module for Ruby on Rails support."
 end
@@ -254,3 +258,22 @@ end
 Rake::GemPackageTask.new(spec) do |pkg|
 	pkg.need_tar_gz = true
 end
+
+
+##### Misc
+
+desc "Run 'sloccount' to see how much code Passenger has"
+task :sloccount do
+	ENV['LC_ALL'] = 'C'
+	sh "sloccount", *Dir[
+		"bin/*",
+		"lib/mod_rails/*",
+		"lib/rake/{cplusplus,extensions}.rb",
+		"ext/apache2",
+		"ext/mod_rails/*.c",
+		"test/*.{cpp,rb}",
+		"test/stub/*.rb",
+		"benchmark/*.{cpp,rb}"
+	]
+end
+
