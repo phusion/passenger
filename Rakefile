@@ -93,33 +93,27 @@ subdir 'ext/apache2' do
 	apxs_objects = APACHE2::OBJECTS.keys.join(',')
 
 	desc "Build mod_passenger Apache 2 module"
-	task :apache2 => ['../boost/src/libboost_thread.a'] + APACHE2::OBJECTS.keys do
-		command = "#{APACHE2::XS} -c mod_rails.c -Wc,#{apxs_objects} "
+	task :apache2 => ['../boost/src/libboost_thread.a', 'mod_rails.o'] + APACHE2::OBJECTS.keys do
+		# apxs totally sucks. We couldn't get it working correctly
+		# on MacOS X (it had various problems with building universal
+		# binaries), so we decided to ditch it and build/install the
+		# Apache module ourselves.
+		#
+		# Oh, and libtool sucks too. Do we even need it anymore in 2008?
+		linkflags = LDFLAGS.dup
 		if defined?(OSX_ARCHS)
-			command << "\"-Wc,#{OSX_ARCHS}\" "
+			linkflags << " " << OSX_ARCHS
 		end
-		command << "-I/usr/local/include -L/usr/local/lib " <<
-			"-lstdc++ -lpthread -Wl,../boost/src/libboost_thread.a"
-		if defined?(OSX_ARCHS)
-			archs = OSX_ARCHS.split(" ").join(",")
-			command << " \"-Wl,#{archs}\""
-		end
-		sh command
+		linkflags << " -lstdc++ -lpthread ../boost/src/libboost_thread.a #{APR_LIBS}"
+		create_shared_library 'mod_rails.so',
+			APACHE2::OBJECTS.keys.join(' ') << ' mod_rails.o',
+			linkflags
 	end
 	
 	desc "Install mod_passenger Apache 2 module"
-	task 'apache2:install' => ['../boost/src/libboost_thread.a'] + APACHE2::OBJECTS.keys do
-		command = "#{APACHE2::XS} -c -i mod_rails.c -Wc,#{apxs_objects} "
-		if defined?(OSX_ARCHS)
-			command << "\"-Wc,#{OSX_ARCHS}\" "
-		end
-		command << "-I/usr/local/include -L/usr/local/lib " <<
-			"-lstdc++ -lpthread -Wl,../boost/src/libboost_thread.a"
-		if defined?(OSX_ARCHS)
-			archs = OSX_ARCHS.split(" ").join(",")
-			command << " \"-Wl,#{archs}\""
-		end
-		sh command
+	task 'apache2:install' => :apache2 do
+		install_dir = `#{APACHE2::XS} -q LIBEXECDIR`.strip
+		sh "cp", "mod_rails.so", install_dir
 	end
 	
 	desc "Install mod_passenger Apache 2 module and restart Apache"
@@ -134,13 +128,20 @@ subdir 'ext/apache2' do
 		sh "#{APACHE2::CTL} start"
 	end
 	
+	file 'mod_rails.o' => ['mod_rails.c'] do
+		compile_c 'mod_rails.c', APACHE2::CXXFLAGS
+	end
+	
 	APACHE2::OBJECTS.each_pair do |target, sources|
 		file target => sources do
 			compile_cxx sources[0], APACHE2::CXXFLAGS
 		end
 	end
 	
-	task :clean do
+	task :clean => 'apache2:clean'
+	
+	desc "Remove generated files for mod_passenger Apache 2 module"
+	task 'apache2:clean' do
 		files = [APACHE2::OBJECTS.keys, %w(mod_rails.lo mod_rails.slo mod_rails.la .libs)]
 		sh("rm", "-rf", *files.flatten)
 	end
