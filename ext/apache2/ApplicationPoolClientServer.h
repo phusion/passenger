@@ -123,7 +123,6 @@ private:
 
 	/**
 	 * An Application::Session which works together with ApplicationPoolServer.
-	 * 
 	 */
 	class RemoteSession: public Application::Session {
 	private:
@@ -217,10 +216,20 @@ private:
 			int reader, writer;
 			
 			channel.write("get", appRoot.c_str(), user.c_str(), group.c_str(), NULL);
-			channel.read(args);
-			reader = channel.readFileDescriptor();
-			writer = channel.readFileDescriptor();
-			return ptr(new RemoteSession(data, atoi(args[0].c_str()), reader, writer));
+			if (!channel.read(args)) {
+				throw IOException("The ApplicationPool server unexpectedly disconnected the connection.");
+			}
+			if (args[0] == "ok") {
+				reader = channel.readFileDescriptor();
+				writer = channel.readFileDescriptor();
+				return ptr(new RemoteSession(data, atoi(args[1]), reader, writer));
+			} else if (args[0] == "SpawnException") {
+				throw SpawnException(args[1]);
+			} else if (args[0] == "IOException") {
+				throw IOException(args[1]);
+			} else {
+				throw IOException("The ApplicationPool server returned an unknown message.");
+			}
 		}
 	};
 	
@@ -270,9 +279,32 @@ private:
 				break;
 			}
 			
-			socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-			MessageChannel(serverSocket).writeFileDescriptor(fds[1]);
-			close(fds[1]);
+			// Incoming connect request.
+			do {
+				ret = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1) {
+				int e = errno;
+				P_ERROR("Cannot create an anonymous Unix socket: " <<
+					strerror(e) << " (" << e << ")");
+				abort();
+				
+				// Shut up compiler warning.
+				bool x = false;
+				if (x) {
+					printf("%d", e);
+				}
+			}
+			
+			try {
+				MessageChannel(serverSocket).writeFileDescriptor(fds[1]);
+				do {
+					ret = close(fds[1]);
+				} while (ret == -1 && errno == EINTR);
+			} catch (const exception &e) {
+				P_ERROR("Cannot send a file descriptor: " << e.what());
+				abort();
+			}
 			
 			ClientInfoPtr info(new ClientInfo());
 			info->fd = fds[0];
@@ -291,29 +323,60 @@ private:
 		map<int, Application::SessionPtr> sessions;
 		int lastID = 0;
 
-		while (!done) {
-			if (!channel.read(args)) {
-				break;
-			}
+		try {
+			while (!done) {
+				if (!channel.read(args)) {
+					break;
+				}
 			
-			if (args[0] == "get" && args.size() == 4) {
-				Application::SessionPtr session(pool.get(args[1], args[2], args[3]));
-				channel.write(toString(lastID).c_str(), NULL);
-				channel.writeFileDescriptor(session->getReader());
-				channel.writeFileDescriptor(session->getWriter());
-				session->closeReader();
-				session->closeWriter();
-				sessions[lastID] = session;
-				lastID++;
-			} else if (args[0] == "close" && args.size() == 2) {
-				sessions.erase(atoi(args[1].c_str()));
-			} else if (args[0] == "setMax") {
-				pool.setMax(atoi(args[1].c_str()));
-			} else if (args[0] == "getActive") {
-				channel.write(toString(pool.getActive()).c_str(), NULL);
-			} else if (args[0] == "getCount") {
-				channel.write(toString(pool.getCount()).c_str(), NULL);
+				if (args[0] == "get" && args.size() == 4) {
+					Application::SessionPtr session;
+					try {
+						session = pool.get(args[1], args[2], args[3]);
+					} catch (const SpawnException &e) {
+						channel.write("SpawnException", e.what(), NULL);
+						done = true;
+					} catch (const IOException &e) {
+						channel.write("IOException", e.what(), NULL);
+						done = true;
+					}
+					if (!done) {
+						channel.write("ok", toString(lastID).c_str(), NULL);
+						channel.writeFileDescriptor(session->getReader());
+						channel.writeFileDescriptor(session->getWriter());
+						session->closeReader();
+						session->closeWriter();
+						sessions[lastID] = session;
+						lastID++;
+					}
+				
+				} else if (args[0] == "close" && args.size() == 2) {
+					sessions.erase(atoi(args[1]));
+				
+				} else if (args[0] == "setMax" && args.size() == 2) {
+					pool.setMax(atoi(args[1]));
+				
+				} else if (args[0] == "getActive" && args.size() == 1) {
+					channel.write(toString(pool.getActive()).c_str(), NULL);
+				
+				} else if (args[0] == "getCount" && args.size() == 1) {
+					channel.write(toString(pool.getCount()).c_str(), NULL);
+				
+				} else {
+					string name;
+					if (args.empty()) {
+						name = "(null)";
+					} else {
+						name = args[0];
+					}
+					P_WARN("An ApplicationPoolServer client sent an invalid command: "
+						<< name << " (" << args.size() << " elements)");
+					done = true;
+				}
 			}
+		} catch (const exception &e) {
+			P_WARN("Uncaught exception in ApplicationPoolServer client thread: " <<
+				e.what());
 		}
 		
 		mutex::scoped_lock l(lock);

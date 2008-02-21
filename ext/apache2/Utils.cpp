@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <cstdlib>
 #include <unistd.h>
 #include <fstream>
 #include <iostream>
@@ -28,6 +29,11 @@ initDebugging(const char *logFile) {
 			_debugStream = &cerr;
 		}
 	#endif
+}
+
+int
+atoi(const string &s) {
+	return ::atoi(s.c_str());
 }
 
 void

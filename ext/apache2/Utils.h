@@ -51,6 +51,11 @@ toString(T something) {
 }
 
 /**
+ * Converts the given string to an integer.
+ */
+int atoi(const string &s);
+
+/**
  * Split the given string using the given separator.
  *
  * @param str The string to split.
@@ -87,9 +92,13 @@ string findSpawnServer();
 					expr << std::endl; \
 			} \
 		} while (false)
+	#define P_WARN P_DEBUG
+	#define P_ERROR P_DEBUG
 	#define P_TRACE P_DEBUG
 #else
 	#define P_DEBUG(expr) do { /* nothing */ } while (false)
+	#define P_WARN P_DEBUG
+	#define P_ERROR P_DEBUG
 	#define P_TRACE P_DEBUG
 #endif
 
