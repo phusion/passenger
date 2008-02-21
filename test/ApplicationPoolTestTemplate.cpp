@@ -4,7 +4,7 @@
 
 /**
  * This file is used as a template to test the different ApplicationPool implementations.
- * It is #included in StandardApplicationPool.cpp
+ * It is #included in StandardApplicationPoolTest.cpp and ApplicationClientServerTest.cpp
  */
 #ifdef USE_TEMPLATE
 
@@ -112,6 +112,27 @@
 		session2.reset();
 		ensure_equals(pool->getActive(), 0u);
 		ensure_equals(pool->getCount(), 2u);
+	}
+	
+	TEST_METHOD(APPLICATION_POOL_TEST_START + 8) {
+		// If ApplicationPool spawns a new instance,
+		// and we kill it, then the next get() with the
+		// same application root should throw an exception.
+		// But the get() thereafter should not:
+		// ApplicationPool should have spawned a new instance
+		// after detecting that the original one died.
+		Application::SessionPtr session(pool->get("stub/railsapp"));
+		kill(session->getPid(), SIGTERM);
+		session.reset();
+		try {
+			session = pool->get("stub/railsapp");
+			fail("ApplicationPool::get() is supposed to "
+				"throw an exception because we killed "
+				"the app instance.");
+		} catch (const exception &e) {
+			session = pool->get("stub/railsapp");
+			// Should not throw.
+		}
 	}
 	
 	#if 0
