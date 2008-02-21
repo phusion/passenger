@@ -183,11 +183,13 @@ subdir 'test' do
 	end
 	
 	desc "Run unit tests for the Ruby libraries"
-	task 'test:ruby' do
+	task 'test:ruby' => ['../ext/mod_rails/native_support.so'] do
 		sh "spec -f s *_spec.rb"
 	end
 
-	file 'Apache2ModuleTests' => TEST::AP2_OBJECTS.keys + ['../ext/boost/src/libboost_thread.a'] do
+	file 'Apache2ModuleTests' => TEST::AP2_OBJECTS.keys +
+	  ['../ext/boost/src/libboost_thread.a',
+	   '../ext/mod_rails/native_support.so'] do
 		objects = TEST::AP2_OBJECTS.keys.join(' ')
 		create_executable "Apache2ModuleTests", objects,
 			"#{LDFLAGS} #{APR_LIBS} ../ext/boost/src/libboost_thread.a -lpthread"
