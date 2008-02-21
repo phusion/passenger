@@ -335,7 +335,6 @@ public:
 		/*
 		 * TODO:
 		 * - If the request handler dies, it does not get removed from the application pool. It should.
-		 * - Implement HTTP body forwarding
 		 */
 		
 		try {
