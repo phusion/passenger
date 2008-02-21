@@ -288,16 +288,29 @@ end
 desc "Run 'sloccount' to see how much code Passenger has"
 task :sloccount do
 	ENV['LC_ALL'] = 'C'
-	sh "sloccount", *Dir[
-		"bin/*",
-		"lib/mod_rails/*",
-		"lib/rake/{cplusplus,extensions}.rb",
-		"ext/apache2",
-		"ext/mod_rails/*.c",
-		"test/*.{cpp,rb}",
-		"test/support/*.rb",
-		"test/stub/*.rb",
-		"benchmark/*.{cpp,rb}"
-	]
+	begin
+		# sloccount doesn't recognize the scripts in
+		# bin/ as Ruby, so we make symlinks with proper
+		# extensions.
+		tmpdir = ".sloccount"
+		system "rm -rf #{tmpdir}"
+		mkdir tmpdir
+		Dir['bin/*'].each do |file|
+			safe_ln file, "#{tmpdir}/#{File.basename(file)}.rb"
+		end
+		sh "sloccount", *Dir[
+			"#{tmpdir}/*",
+			"lib/mod_rails/*",
+			"lib/rake/{cplusplus,extensions}.rb",
+			"ext/apache2",
+			"ext/mod_rails/*.c",
+			"test/*.{cpp,rb}",
+			"test/support/*.rb",
+			"test/stub/*.rb",
+			"benchmark/*.{cpp,rb}"
+		]
+	ensure
+		system "rm -rf #{tmpdir}"
+	end
 end
 
