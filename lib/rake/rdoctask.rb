@@ -94,11 +94,9 @@ module Rake
       task paste(name, ":force") => [paste("clobber_", name), name]
       
       desc "Remove rdoc products" 
-      task paste(name, ":clean") do
+      task paste(name, ":clobber") do
         rm_r rdoc_dir rescue nil
       end
-      task :clean => paste(name, ":clean")
-
       task :clobber => [paste(name, ":clobber")]
       
       directory @rdoc_dir
