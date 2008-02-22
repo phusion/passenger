@@ -1,0 +1,8 @@
+TODO: write this....
+
+
+== Known issues
+
+- The default Apache as provided by MacOS X seems to be broken.
+  Passenger does not work on it. OS X users are recommended to install
+  Apache manually.
