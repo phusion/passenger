@@ -93,7 +93,7 @@ class FrameworkSpawner < AbstractServer
 
 protected
 	# Overrided method.
-	def before_fork
+	def before_fork # :nodoc:
 		if GC.cow_friendly?
 			# Garbage collect to so that the child process doesn't have to
 			# do that (to prevent making pages dirty).
@@ -102,7 +102,7 @@ protected
 	end
 
 	# Overrided method.
-	def initialize_server
+	def initialize_server # :nodoc:
 		preload_rails
 		@spawners = {}
 		@spawners_lock = Mutex.new
@@ -117,7 +117,7 @@ protected
 	end
 	
 	# Overrided method.
-	def finalize_server
+	def finalize_server # :nodoc:
 		@spawners_lock.synchronize do
 			@spawners_cond.signal
 		end

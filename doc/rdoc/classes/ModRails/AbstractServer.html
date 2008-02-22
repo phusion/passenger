@@ -104,13 +104,13 @@ The server will also reset all signal handlers (in the child process). That
 is, it will respond to all signals in the default manner. The only
 exception is SIGHUP, which is ignored. One may define additional signal
 handlers using <a
-href="AbstractServer.html#M000046">define_signal_handler</a>().
+href="AbstractServer.html#M000041">define_signal_handler</a>().
 </p>
 <p>
 Before an <a href="AbstractServer.html">AbstractServer</a> can be used, it
 must first be started by calling <a
-href="AbstractServer.html#M000038">start</a>(). When it is no longer
-needed, <a href="AbstractServer.html#M000040">stop</a>() should be called.
+href="AbstractServer.html#M000033">start</a>(). When it is no longer
+needed, <a href="AbstractServer.html#M000035">stop</a>() should be called.
 </p>
 <p>
 Here&#8216;s an example on using <a
@@ -147,23 +147,23 @@ href="AbstractServer.html">AbstractServer</a>:
 
   <div class="sectiontitle">Methods</div>
   <ul>
-  <li><a href="#M000042">before_fork</a></li>
-  <li><a href="#M000041">close_file_descriptors</a></li>
-  <li><a href="#M000045">define_message_handler</a></li>
-  <li><a href="#M000046">define_signal_handler</a></li>
-  <li><a href="#M000044">finalize_server</a></li>
-  <li><a href="#M000043">initialize_server</a></li>
-  <li><a href="#M000037">new</a></li>
-  <li><a href="#M000053">quit_main</a></li>
-  <li><a href="#M000050">recv_from_client</a></li>
-  <li><a href="#M000048">recv_from_server</a></li>
-  <li><a href="#M000049">recv_io_from_server</a></li>
-  <li><a href="#M000052">send_io_to_client</a></li>
-  <li><a href="#M000051">send_to_client</a></li>
-  <li><a href="#M000047">send_to_server</a></li>
-  <li><a href="#M000038">start</a></li>
-  <li><a href="#M000039">start_synchronously</a></li>
-  <li><a href="#M000040">stop</a></li>
+  <li><a href="#M000037">before_fork</a></li>
+  <li><a href="#M000036">close_file_descriptors</a></li>
+  <li><a href="#M000040">define_message_handler</a></li>
+  <li><a href="#M000041">define_signal_handler</a></li>
+  <li><a href="#M000039">finalize_server</a></li>
+  <li><a href="#M000038">initialize_server</a></li>
+  <li><a href="#M000032">new</a></li>
+  <li><a href="#M000048">quit_main</a></li>
+  <li><a href="#M000045">recv_from_client</a></li>
+  <li><a href="#M000043">recv_from_server</a></li>
+  <li><a href="#M000044">recv_io_from_server</a></li>
+  <li><a href="#M000047">send_io_to_client</a></li>
+  <li><a href="#M000046">send_to_client</a></li>
+  <li><a href="#M000042">send_to_server</a></li>
+  <li><a href="#M000033">start</a></li>
+  <li><a href="#M000034">start_synchronously</a></li>
+  <li><a href="#M000035">stop</a></li>
   </ul>
 
 <div class="sectiontitle">Included Modules</div>
@@ -206,11 +206,11 @@ used internally by mod_rails and should not be used directly.
 <div class="sectiontitle">Public Class methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000037"></a><b>new</b>()
+    <a name="M000032"></a><b>new</b>()
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000037_source')" id="l_M000037_source">show source</a> ]</p>
-  <div id="M000037_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000032_source')" id="l_M000032_source">show source</a> ]</p>
+  <div id="M000032_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/mod_rails/abstract_server.rb, line 67</span>
 67:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>
@@ -226,7 +226,7 @@ used internally by mod_rails and should not be used directly.
 <div class="sectiontitle">Public Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000038"></a><b>start</b>()
+    <a name="M000033"></a><b>start</b>()
   </div>
   <div class="description">
   <p>
@@ -241,8 +241,8 @@ will be raised.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000038_source')" id="l_M000038_source">show source</a> ]</p>
-  <div id="M000038_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000033_source')" id="l_M000033_source">show source</a> ]</p>
+  <div id="M000033_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/mod_rails/abstract_server.rb, line 79</span>
  79:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">start</span>
@@ -279,7 +279,7 @@ will be raised.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000039"></a><b>start_synchronously</b>(socket)
+    <a name="M000034"></a><b>start_synchronously</b>(socket)
   </div>
   <div class="description">
   <p>
@@ -292,8 +292,8 @@ main loop will end if the socket has been closed.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000039_source')" id="l_M000039_source">show source</a> ]</p>
-  <div id="M000039_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000034_source')" id="l_M000034_source">show source</a> ]</p>
+  <div id="M000034_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/mod_rails/abstract_server.rb, line 113</span>
 113:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">start_synchronously</span>(<span class="ruby-identifier">socket</span>)
@@ -318,7 +318,7 @@ main loop will end if the socket has been closed.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000040"></a><b>stop</b>()
+    <a name="M000035"></a><b>stop</b>()
   </div>
   <div class="description">
   <p>
@@ -332,8 +332,8 @@ raised.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000040_source')" id="l_M000040_source">show source</a> ]</p>
-  <div id="M000040_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000035_source')" id="l_M000035_source">show source</a> ]</p>
+  <div id="M000035_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/mod_rails/abstract_server.rb, line 135</span>
 135:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">stop</span>
@@ -353,19 +353,19 @@ raised.
 <div class="sectiontitle">Protected Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000042"></a><b>before_fork</b>()
+    <a name="M000037"></a><b>before_fork</b>()
   </div>
   <div class="description">
   <p>
 A hook which is called when the server is being started, just before
-forking a <a href="AbstractServer.html#M000037">new</a> process. The
+forking a <a href="AbstractServer.html#M000032">new</a> process. The
 default implementation does nothing, this method is supposed to be
 overrided by child classes.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000042_source')" id="l_M000042_source">show source</a> ]</p>
-  <div id="M000042_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000037_source')" id="l_M000037_source">show source</a> ]</p>
+  <div id="M000037_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/mod_rails/abstract_server.rb, line 158</span>
 158:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">before_fork</span>
@@ -376,7 +376,7 @@ overrided by child classes.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000041"></a><b>close_file_descriptors</b>()
+    <a name="M000036"></a><b>close_file_descriptors</b>()
   </div>
   <div class="description">
   <p>
@@ -385,8 +385,8 @@ Close the file descriptors, as specified by
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000041_source')" id="l_M000041_source">show source</a> ]</p>
-  <div id="M000041_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000036_source')" id="l_M000036_source">show source</a> ]</p>
+  <div id="M000036_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/mod_rails/abstract_server.rb, line 148</span>
 148:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">close_file_descriptors</span>
@@ -402,7 +402,7 @@ Close the file descriptors, as specified by
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000045"></a><b>define_message_handler</b>(message_name, handler)
+    <a name="M000040"></a><b>define_message_handler</b>(message_name, handler)
   </div>
   <div class="description">
   <p>
@@ -417,8 +417,8 @@ the example in the class description.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000045_source')" id="l_M000045_source">show source</a> ]</p>
-  <div id="M000045_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000040_source')" id="l_M000040_source">show source</a> ]</p>
+  <div id="M000040_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/mod_rails/abstract_server.rb, line 178</span>
 178:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">define_message_handler</span>(<span class="ruby-identifier">message_name</span>, <span class="ruby-identifier">handler</span>)
@@ -430,7 +430,7 @@ the example in the class description.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000046"></a><b>define_signal_handler</b>(signal, handler)
+    <a name="M000041"></a><b>define_signal_handler</b>(signal, handler)
   </div>
   <div class="description">
   <p>
@@ -438,8 +438,8 @@ Define a handler for a signal.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000046_source')" id="l_M000046_source">show source</a> ]</p>
-  <div id="M000046_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000041_source')" id="l_M000041_source">show source</a> ]</p>
+  <div id="M000041_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/mod_rails/abstract_server.rb, line 183</span>
 183:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">define_signal_handler</span>(<span class="ruby-identifier">signal</span>, <span class="ruby-identifier">handler</span>)
@@ -451,7 +451,7 @@ Define a handler for a signal.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000044"></a><b>finalize_server</b>()
+    <a name="M000039"></a><b>finalize_server</b>()
   </div>
   <div class="description">
   <p>
@@ -462,8 +462,8 @@ child classes.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000044_source')" id="l_M000044_source">show source</a> ]</p>
-  <div id="M000044_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000039_source')" id="l_M000039_source">show source</a> ]</p>
+  <div id="M000039_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/mod_rails/abstract_server.rb, line 170</span>
 170:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">finalize_server</span>
@@ -474,7 +474,7 @@ child classes.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000043"></a><b>initialize_server</b>()
+    <a name="M000038"></a><b>initialize_server</b>()
   </div>
   <div class="description">
   <p>
@@ -485,8 +485,8 @@ child classes.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000043_source')" id="l_M000043_source">show source</a> ]</p>
-  <div id="M000043_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000038_source')" id="l_M000038_source">show source</a> ]</p>
+  <div id="M000038_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/mod_rails/abstract_server.rb, line 164</span>
 164:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize_server</span>
@@ -497,17 +497,17 @@ child classes.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000053"></a><b>quit_main</b>()
+    <a name="M000048"></a><b>quit_main</b>()
   </div>
   <div class="description">
   <p>
-Tell the main loop to <a href="AbstractServer.html#M000040">stop</a> as
+Tell the main loop to <a href="AbstractServer.html#M000035">stop</a> as
 soon as possible.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000053_source')" id="l_M000053_source">show source</a> ]</p>
-  <div id="M000053_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000048_source')" id="l_M000048_source">show source</a> ]</p>
+  <div id="M000048_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/mod_rails/abstract_server.rb, line 253</span>
 253:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">quit_main</span>
@@ -519,7 +519,7 @@ soon as possible.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000050"></a><b>recv_from_client</b>()
+    <a name="M000045"></a><b>recv_from_client</b>()
   </div>
   <div class="description">
   <p>
@@ -529,8 +529,8 @@ connection. This method never throws any exceptions.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000050_source')" id="l_M000050_source">show source</a> ]</p>
-  <div id="M000050_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000045_source')" id="l_M000045_source">show source</a> ]</p>
+  <div id="M000045_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/mod_rails/abstract_server.rb, line 225</span>
 225:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">recv_from_client</span>
@@ -542,7 +542,7 @@ connection. This method never throws any exceptions.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000048"></a><b>recv_from_server</b>()
+    <a name="M000043"></a><b>recv_from_server</b>()
   </div>
   <div class="description">
   <p>
@@ -552,8 +552,8 @@ connection. This method never throws any exceptions.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000048_source')" id="l_M000048_source">show source</a> ]</p>
-  <div id="M000048_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000043_source')" id="l_M000043_source">show source</a> ]</p>
+  <div id="M000043_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/mod_rails/abstract_server.rb, line 208</span>
 208:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">recv_from_server</span>
@@ -565,7 +565,7 @@ connection. This method never throws any exceptions.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000049"></a><b>recv_io_from_server</b>()
+    <a name="M000044"></a><b>recv_io_from_server</b>()
   </div>
   <div class="description">
   <p>
@@ -579,8 +579,8 @@ the server connection stream is already closed on this side.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000049_source')" id="l_M000049_source">show source</a> ]</p>
-  <div id="M000049_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000044_source')" id="l_M000044_source">show source</a> ]</p>
+  <div id="M000044_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/mod_rails/abstract_server.rb, line 218</span>
 218:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">recv_io_from_server</span>
@@ -592,7 +592,7 @@ the server connection stream is already closed on this side.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000052"></a><b>send_io_to_client</b>(io)
+    <a name="M000047"></a><b>send_io_to_client</b>(io)
   </div>
   <div class="description">
   <p>
@@ -606,8 +606,8 @@ the client connection stream is already closed on this side.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000052_source')" id="l_M000052_source">show source</a> ]</p>
-  <div id="M000052_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000047_source')" id="l_M000047_source">show source</a> ]</p>
+  <div id="M000047_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/mod_rails/abstract_server.rb, line 248</span>
 248:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">send_io_to_client</span>(<span class="ruby-identifier">io</span>)
@@ -619,7 +619,7 @@ the client connection stream is already closed on this side.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000051"></a><b>send_to_client</b>(name, *args)
+    <a name="M000046"></a><b>send_to_client</b>(name, *args)
   </div>
   <div class="description">
   <p>
@@ -638,8 +638,8 @@ never does this).
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000051_source')" id="l_M000051_source">show source</a> ]</p>
-  <div id="M000051_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000046_source')" id="l_M000046_source">show source</a> ]</p>
+  <div id="M000046_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/mod_rails/abstract_server.rb, line 238</span>
 238:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">send_to_client</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
@@ -651,7 +651,7 @@ never does this).
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000047"></a><b>send_to_server</b>(name, *args)
+    <a name="M000042"></a><b>send_to_server</b>(name, *args)
   </div>
   <div class="description">
   <p>
@@ -669,12 +669,12 @@ raised. Raises Errno::EPIPE if the server has already closed the
 connection. Raises IOError if the server connection channel has already
 been closed on this side (unlikely to happen; <a
 href="AbstractServer.html">AbstractServer</a> never does this except when
-<a href="AbstractServer.html#M000040">stop</a>() is called).
+<a href="AbstractServer.html#M000035">stop</a>() is called).
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000047_source')" id="l_M000047_source">show source</a> ]</p>
-  <div id="M000047_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000042_source')" id="l_M000042_source">show source</a> ]</p>
+  <div id="M000042_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/mod_rails/abstract_server.rb, line 198</span>
 198:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">send_to_server</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)

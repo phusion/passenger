@@ -80,7 +80,7 @@ module Rake
     # given to +new+).
     def define
       super
-      task :package => [:gem]
+      task :package => ['package:gem']
       desc "Build the gem file #{gem_file}"
       task 'package:gem' => ["#{package_dir}/#{gem_file}"]
       file "#{package_dir}/#{gem_file}" => [package_dir] + @gem_spec.files do
