@@ -73,6 +73,10 @@ public:
 			return ApplicationPtr(new Application(appRoot, pid, fds[1]));
 		}
 	}
+	
+	pid_t getServerPid() const {
+		return 0;
+	}
 };
 
 } // namespace Passenger

@@ -149,7 +149,7 @@ private:
 			MessageChannel(data->server).write("close", toString(id).c_str(), NULL);
 		}
 		
-		virtual int getReader() {
+		virtual int getReader() const {
 			return reader;
 		}
 		
@@ -160,7 +160,7 @@ private:
 			}
 		}
 		
-		virtual int getWriter() {
+		virtual int getWriter() const {
 			return writer;
 		}
 		
@@ -171,7 +171,7 @@ private:
 			}
 		}
 		
-		virtual pid_t getPid() {
+		virtual pid_t getPid() const {
 			return pid;
 		}
 	};
@@ -215,6 +215,15 @@ private:
 			vector<string> args;
 			
 			channel.write("getCount", NULL);
+			channel.read(args);
+			return atoi(args[0].c_str());
+		}
+		
+		virtual pid_t getSpawnServerPid() const {
+			MessageChannel channel(data->server);
+			vector<string> args;
+			
+			channel.write("getSpawnServerPid", NULL);
 			channel.read(args);
 			return atoi(args[0].c_str());
 		}
@@ -391,6 +400,9 @@ private:
 				
 				} else if (args[0] == "getCount" && args.size() == 1) {
 					channel.write(toString(pool.getCount()).c_str(), NULL);
+				
+				} else if (args[0] == "getSpawnServerPid" && args.size() == 1) {
+					channel.write(toString(pool.getSpawnServerPid()).c_str(), NULL);
 				
 				} else {
 					string name;

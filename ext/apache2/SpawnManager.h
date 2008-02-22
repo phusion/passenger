@@ -144,6 +144,13 @@ private:
 			}
 			channel = MessageChannel(fds[0]);
 			serverNeedsRestart = false;
+			
+			#ifdef TESTING_SPAWN_MANAGER
+				if (nextRestartShouldFail) {
+					kill(pid, SIGTERM);
+					usleep(500000);
+				}
+			#endif
 		}
 	}
 	
@@ -159,13 +166,18 @@ private:
 	ApplicationPtr sendSpawnCommand(const string &appRoot, const string &user, const string &group) {
 		vector<string> args;
 		
-		channel.write("spawn_application", appRoot.c_str(), user.c_str(), group.c_str(), NULL);
+		try {
+			channel.write("spawn_application", appRoot.c_str(),
+				user.c_str(), group.c_str(), NULL);
+		} catch (const SystemException &e) {
+			throw SpawnException(string("Could not write to the spawn server: ") + e.brief());
+		}
 		try {
 			if (!channel.read(args)) {
 				throw SpawnException("The spawn server has exited unexpectedly.");
 			}
 		} catch (const SystemException &e) {
-			throw SpawnException(string("Could not read from the spawn server: ") + e.what());
+			throw SpawnException(string("Could not read from the spawn server: ") + e.brief());
 		}
 		pid_t pid = atoi(args.front().c_str());
 		try {
@@ -177,7 +189,7 @@ private:
 			throw SpawnException(message);
 		} catch (const SystemException &e) {
 			string message("Could not receive a file descriptor from the spawn server: ");
-			message.append(e.what());
+			message.append(e.brief());
 			throw SpawnException(message);
 		}
 	}
@@ -213,6 +225,10 @@ private:
 	}
 
 public:
+	#ifdef TESTING_SPAWN_MANAGER
+		bool nextRestartShouldFail;
+	#endif
+
 	/**
 	 * Construct a new SpawnManager.
 	 *
@@ -239,6 +255,9 @@ public:
 		this->environment = environment;
 		this->rubyCommand = rubyCommand;
 		pid = 0;
+		#ifdef TESTING_SPAWN_MANAGER
+			nextRestartShouldFail = false;
+		#endif
 		try {
 			restartServer();
 		} catch (const IOException &e) {
@@ -285,10 +304,10 @@ public:
 	}
 	
 	/**
-	 * Get the PID of the spawn server. This method is used in the unit tests
+	 * Get the Process ID of the spawn server. This method is used in the unit tests
 	 * and should not be used directly.
 	 */
-	pid_t getServerPID() {
+	pid_t getServerPid() const {
 		return pid;
 	}
 };

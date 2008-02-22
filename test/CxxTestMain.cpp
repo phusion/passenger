@@ -1,6 +1,7 @@
 #include "tut.h"
 #include "tut_reporter.h"
 #include <apr_general.h>
+#include <signal.h>
 
 namespace tut {
 	test_runner_singleton runner;
@@ -10,6 +11,7 @@ int main() {
 	apr_initialize();
 	tut::reporter reporter;
 	tut::runner.get().set_callback(&reporter);
+	signal(SIGPIPE, SIG_IGN);
 	try {
 		tut::runner.get().run_tests();
 	} catch (const std::exception &ex) {

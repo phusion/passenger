@@ -135,6 +135,14 @@ public:
 	 * and thus should not be called directly.
 	 */
 	virtual unsigned int getCount() const = 0;
+	
+	/**
+	 * Get the process ID of the spawn server that is used.
+	 *
+	 * This method exposes an implementation detail. It is used by unit tests to verify
+	 * that the implementation is correct, and thus should not be used directly.
+	 */
+	virtual pid_t getSpawnServerPid() const = 0;
 };
 
 class ApplicationPoolServer;
@@ -441,6 +449,10 @@ public:
 	
 	virtual unsigned int getCount() const {
 		return count;
+	}
+	
+	virtual pid_t getSpawnServerPid() const {
+		return spawnManager.getServerPid();
 	}
 };
 

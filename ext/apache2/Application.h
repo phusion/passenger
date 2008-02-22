@@ -134,7 +134,7 @@ public:
 		 *
 		 * @pre The reader channel has not been closed.
 		 */
-		virtual int getReader() = 0;
+		virtual int getReader() const = 0;
 		
 		/**
 		 * Close the reader channel. This method may be safely called multiple times.
@@ -148,7 +148,7 @@ public:
 		 *
 		 * @pre The writer channel has not been closed.
 		 */
-		virtual int getWriter() = 0;
+		virtual int getWriter() const = 0;
 		
 		/**
 		 * Close the writer channel. This method may be safely called multiple times.
@@ -158,7 +158,7 @@ public:
 		/**
 		 * Get the process ID of the application instance that belongs to this session.
 		 */
-		virtual pid_t getPid() = 0;
+		virtual pid_t getPid() const = 0;
 	};
 
 private:
@@ -205,7 +205,7 @@ private:
 			closeCallback(*this);
 		}
 		
-		virtual int getReader() {
+		virtual int getReader() const {
 			return reader;
 		}
 		
@@ -216,7 +216,7 @@ private:
 			}
 		}
 		
-		virtual int getWriter() {
+		virtual int getWriter() const {
 			return writer;
 		}
 		
@@ -227,7 +227,7 @@ private:
 			}
 		}
 		
-		virtual pid_t getPid() {
+		virtual pid_t getPid() const {
 			return pid;
 		}
 	};

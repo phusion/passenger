@@ -181,7 +181,7 @@ end
 ##### Unit tests
 
 class TEST
-	CXXFLAGS = ::CXXFLAGS + " -Isupport -DVALGRIND_FRIENDLY"
+	CXXFLAGS = ::CXXFLAGS + " -Isupport -DTESTING_SPAWN_MANAGER "
 	AP2_FLAGS = "-I../ext/apache2 -I../ext #{APR_FLAGS}"
 	
 	AP2_OBJECTS = {
@@ -191,10 +191,12 @@ class TEST
 		'ApplicationPoolClientServerTest.o' => %w(ApplicationPoolClientServerTest.cpp
 			ApplicationPoolTestTemplate.cpp
 			../ext/apache2/ApplicationPoolClientServer.h
-			../ext/apache2/ApplicationPool.h),
+			../ext/apache2/ApplicationPool.h
+			../ext/apache2/SpawnManager.h),
 		'StandardApplicationPoolTest.o' => %w(StandardApplicationPoolTest.cpp
 			ApplicationPoolTestTemplate.cpp
-			../ext/apache2/ApplicationPool.h),
+			../ext/apache2/ApplicationPool.h
+			../ext/apache2/SpawnManager.h),
 		'UtilsTest.o' => %w(UtilsTest.cpp ../ext/apache2/Utils.h)
 	}
 end
