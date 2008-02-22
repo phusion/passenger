@@ -169,227 +169,240 @@
 <a name="l00154"></a>00154 <span class="comment">                 * Close the writer channel. This method may be safely called multiple times.</span>
 <a name="l00155"></a>00155 <span class="comment">                 */</span>
 <a name="l00156"></a>00156                 <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classPassenger_1_1Application_1_1Session.html#ecaa3575efd70130a4adfec203120d74" title="Close the writer channel.">closeWriter</a>() = 0;
-<a name="l00157"></a>00157         };
-<a name="l00158"></a>00158 
-<a name="l00159"></a>00159 <span class="keyword">private</span>:<span class="comment"></span>
-<a name="l00160"></a>00160 <span class="comment">        /**</span>
-<a name="l00161"></a>00161 <span class="comment">         * A structure containing data that both StandardSession and Application</span>
-<a name="l00162"></a>00162 <span class="comment">         * may access. Since Application and StandardSession may have different</span>
-<a name="l00163"></a>00163 <span class="comment">         * life times (i.e. one can be destroyed before the other), they both</span>
-<a name="l00164"></a>00164 <span class="comment">         * have a smart pointer referencing a SharedData structure. Only</span>
-<a name="l00165"></a>00165 <span class="comment">         * when both the StandardSession and the Application object have been</span>
-<a name="l00166"></a>00166 <span class="comment">         * destroyed, will the SharedData object be destroyed as well.</span>
-<a name="l00167"></a>00167 <span class="comment">         */</span>
-<a name="l00168"></a>00168         <span class="keyword">struct </span>SharedData {
-<a name="l00169"></a>00169                 <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> sessions;
-<a name="l00170"></a>00170         };
-<a name="l00171"></a>00171         
-<a name="l00172"></a>00172         <span class="keyword">typedef</span> shared_ptr&lt;SharedData&gt; SharedDataPtr;
-<a name="l00173"></a>00173 <span class="comment"></span>
-<a name="l00174"></a>00174 <span class="comment">        /**</span>
-<a name="l00175"></a>00175 <span class="comment">         * A "standard" implementation of Session.</span>
-<a name="l00176"></a>00176 <span class="comment">         */</span>
-<a name="l00177"></a>00177         <span class="keyword">class </span>StandardSession: <span class="keyword">public</span> Session {
-<a name="l00178"></a>00178         <span class="keyword">protected</span>:
-<a name="l00179"></a>00179                 SharedDataPtr data;
-<a name="l00180"></a>00180                 <a class="code" href="classPassenger_1_1Application.html#a904ba56a6b0413f8da245a762cd681e" title="A type for callback functions that are called when a session is closed.">CloseCallback</a> closeCallback;
-<a name="l00181"></a>00181                 <span class="keywordtype">int</span> reader;
-<a name="l00182"></a>00182                 <span class="keywordtype">int</span> writer;
-<a name="l00183"></a>00183                 
-<a name="l00184"></a>00184         <span class="keyword">public</span>:
-<a name="l00185"></a>00185                 StandardSession(SharedDataPtr data, <span class="keyword">const</span> <a class="code" href="classPassenger_1_1Application.html#a904ba56a6b0413f8da245a762cd681e" title="A type for callback functions that are called when a session is closed.">CloseCallback</a> &amp;closeCallback, <span class="keywordtype">int</span> reader, <span class="keywordtype">int</span> writer) {
-<a name="l00186"></a>00186                         this-&gt;data = data;
-<a name="l00187"></a>00187                         this-&gt;closeCallback = closeCallback;
-<a name="l00188"></a>00188                         data-&gt;sessions++;
-<a name="l00189"></a>00189                         this-&gt;reader = reader;
-<a name="l00190"></a>00190                         this-&gt;writer = writer;
-<a name="l00191"></a>00191                 }
-<a name="l00192"></a>00192         
-<a name="l00193"></a>00193                 <span class="keyword">virtual</span> ~StandardSession() {
-<a name="l00194"></a>00194                         data-&gt;sessions--;
-<a name="l00195"></a>00195                         closeReader();
-<a name="l00196"></a>00196                         closeWriter();
-<a name="l00197"></a>00197                         closeCallback(*<span class="keyword">this</span>);
-<a name="l00198"></a>00198                 }
-<a name="l00199"></a>00199                 
-<a name="l00200"></a>00200                 <span class="keyword">virtual</span> <span class="keywordtype">int</span> getReader() {
-<a name="l00201"></a>00201                         <span class="keywordflow">return</span> reader;
-<a name="l00202"></a>00202                 }
-<a name="l00203"></a>00203                 
-<a name="l00204"></a>00204                 <span class="keyword">virtual</span> <span class="keywordtype">void</span> closeReader() {
-<a name="l00205"></a>00205                         <span class="keywordflow">if</span> (reader != -1) {
-<a name="l00206"></a>00206                                 close(reader);
-<a name="l00207"></a>00207                                 reader = -1;
-<a name="l00208"></a>00208                         }
-<a name="l00209"></a>00209                 }
-<a name="l00210"></a>00210                 
-<a name="l00211"></a>00211                 <span class="keyword">virtual</span> <span class="keywordtype">int</span> getWriter() {
-<a name="l00212"></a>00212                         <span class="keywordflow">return</span> writer;
-<a name="l00213"></a>00213                 }
-<a name="l00214"></a>00214                 
-<a name="l00215"></a>00215                 <span class="keyword">virtual</span> <span class="keywordtype">void</span> closeWriter() {
-<a name="l00216"></a>00216                         <span class="keywordflow">if</span> (writer != -1) {
-<a name="l00217"></a>00217                                 close(writer);
-<a name="l00218"></a>00218                                 writer = -1;
-<a name="l00219"></a>00219                         }
-<a name="l00220"></a>00220                 }
-<a name="l00221"></a>00221         };
-<a name="l00222"></a>00222 
-<a name="l00223"></a>00223         <span class="keywordtype">string</span> appRoot;
-<a name="l00224"></a>00224         pid_t pid;
-<a name="l00225"></a>00225         <span class="keywordtype">int</span> listenSocket;
-<a name="l00226"></a>00226         time_t lastUsed;
-<a name="l00227"></a>00227         SharedDataPtr data;
-<a name="l00228"></a>00228 
-<a name="l00229"></a>00229 <span class="keyword">public</span>:<span class="comment"></span>
-<a name="l00230"></a>00230 <span class="comment">        /**</span>
-<a name="l00231"></a>00231 <span class="comment">         * Construct a new Application object.</span>
-<a name="l00232"></a>00232 <span class="comment">         *</span>
-<a name="l00233"></a>00233 <span class="comment">         * @param theAppRoot The application root of a RoR application, i.e. the folder that</span>
-<a name="l00234"></a>00234 <span class="comment">         *             contains 'app/', 'public/', 'config/', etc. This must be a valid directory,</span>
-<a name="l00235"></a>00235 <span class="comment">         *             but the path does not have to be absolute.</span>
-<a name="l00236"></a>00236 <span class="comment">         * @param pid The process ID of this application instance.</span>
-<a name="l00237"></a>00237 <span class="comment">         * @param listenSocket The listener socket of this application instance.</span>
-<a name="l00238"></a>00238 <span class="comment">         * @post getAppRoot() == theAppRoot &amp;&amp; getPid() == pid</span>
-<a name="l00239"></a>00239 <span class="comment">         */</span>
-<a name="l00240"></a><a class="code" href="classPassenger_1_1Application.html#2504cb46b625c1b4c5344cae944b633d">00240</a>         <a class="code" href="classPassenger_1_1Application.html#2504cb46b625c1b4c5344cae944b633d" title="Construct a new Application object.">Application</a>(<span class="keyword">const</span> <span class="keywordtype">string</span> &amp;theAppRoot, pid_t pid, <span class="keywordtype">int</span> listenSocket) {
-<a name="l00241"></a>00241                 appRoot = theAppRoot;
-<a name="l00242"></a>00242                 this-&gt;pid = pid;
-<a name="l00243"></a>00243                 this-&gt;listenSocket = listenSocket;
-<a name="l00244"></a>00244                 lastUsed = time(NULL);
-<a name="l00245"></a>00245                 this-&gt;data = ptr(<span class="keyword">new</span> SharedData());
-<a name="l00246"></a>00246                 this-&gt;data-&gt;sessions = 0;
-<a name="l00247"></a>00247                 P_TRACE(<span class="stringliteral">"Application "</span> &lt;&lt; <span class="keyword">this</span> &lt;&lt; <span class="stringliteral">": created."</span>);
-<a name="l00248"></a>00248         }
-<a name="l00249"></a>00249         
-<a name="l00250"></a>00250         <span class="keyword">virtual</span> ~<a class="code" href="classPassenger_1_1Application.html" title="Represents a single Ruby on Rails application instance.">Application</a>() {
-<a name="l00251"></a>00251                 close(listenSocket);
-<a name="l00252"></a>00252                 P_TRACE(<span class="stringliteral">"Application "</span> &lt;&lt; <span class="keyword">this</span> &lt;&lt; <span class="stringliteral">": destroyed."</span>);
-<a name="l00253"></a>00253         }
-<a name="l00254"></a>00254         <span class="comment"></span>
-<a name="l00255"></a>00255 <span class="comment">        /**</span>
-<a name="l00256"></a>00256 <span class="comment">         * Returns the application root for this RoR application. See the constructor</span>
-<a name="l00257"></a>00257 <span class="comment">         * for information about the application root.</span>
-<a name="l00258"></a>00258 <span class="comment">         */</span>
-<a name="l00259"></a><a class="code" href="classPassenger_1_1Application.html#0a0665852e7ebc8fb8ab0772fa90bc56">00259</a>         <span class="keywordtype">string</span> <a class="code" href="classPassenger_1_1Application.html#0a0665852e7ebc8fb8ab0772fa90bc56" title="Returns the application root for this RoR application.">getAppRoot</a>()<span class="keyword"> const </span>{
-<a name="l00260"></a>00260                 <span class="keywordflow">return</span> appRoot;
-<a name="l00261"></a>00261         }
-<a name="l00262"></a>00262         <span class="comment"></span>
-<a name="l00263"></a>00263 <span class="comment">        /**</span>
-<a name="l00264"></a>00264 <span class="comment">         * Returns the process ID of this application instance.</span>
-<a name="l00265"></a>00265 <span class="comment">         */</span>
-<a name="l00266"></a><a class="code" href="classPassenger_1_1Application.html#94d2cce1c2c1d3441325f1498a22bf02">00266</a>         pid_t <a class="code" href="classPassenger_1_1Application.html#94d2cce1c2c1d3441325f1498a22bf02" title="Returns the process ID of this application instance.">getPid</a>()<span class="keyword"> const </span>{
-<a name="l00267"></a>00267                 <span class="keywordflow">return</span> pid;
-<a name="l00268"></a>00268         }
-<a name="l00269"></a>00269         <span class="comment"></span>
-<a name="l00270"></a>00270 <span class="comment">        /**</span>
-<a name="l00271"></a>00271 <span class="comment">         * Connect to this application instance with the purpose of sending</span>
-<a name="l00272"></a>00272 <span class="comment">         * a request to the application. Once connected, a new session will</span>
-<a name="l00273"></a>00273 <span class="comment">         * be opened. This session represents the life time of a single</span>
-<a name="l00274"></a>00274 <span class="comment">         * request/response pair, and can be used to send the request</span>
-<a name="l00275"></a>00275 <span class="comment">         * data to the application instance, as well as receiving the response</span>
-<a name="l00276"></a>00276 <span class="comment">         * data.</span>
-<a name="l00277"></a>00277 <span class="comment">         *</span>
-<a name="l00278"></a>00278 <span class="comment">         * The use of connect() is demonstrated in the following example.</span>
-<a name="l00279"></a>00279 <span class="comment">         * @code</span>
-<a name="l00280"></a>00280 <span class="comment">         *   // Connect to the application and get the newly opened session.</span>
-<a name="l00281"></a>00281 <span class="comment">         *   Application::SessionPtr session(app-&gt;connect("/home/webapps/foo"));</span>
-<a name="l00282"></a>00282 <span class="comment">         *   </span>
-<a name="l00283"></a>00283 <span class="comment">         *   // Send the request headers and request body data.</span>
-<a name="l00284"></a>00284 <span class="comment">         *   session-&gt;sendHeaders(...);</span>
-<a name="l00285"></a>00285 <span class="comment">         *   session-&gt;sendBodyBlock(...);</span>
-<a name="l00286"></a>00286 <span class="comment">         *   // Done sending data, so we close the writer channel.</span>
-<a name="l00287"></a>00287 <span class="comment">         *   session-&gt;closeWriter();</span>
-<a name="l00288"></a>00288 <span class="comment">         *</span>
-<a name="l00289"></a>00289 <span class="comment">         *   // Now read the HTTP response.</span>
-<a name="l00290"></a>00290 <span class="comment">         *   string responseData = readAllDataFromSocket(session-&gt;getReader());</span>
-<a name="l00291"></a>00291 <span class="comment">         *   // Done reading data, so we close the reader channel.</span>
-<a name="l00292"></a>00292 <span class="comment">         *   session-&gt;closeReader();</span>
-<a name="l00293"></a>00293 <span class="comment">         *</span>
-<a name="l00294"></a>00294 <span class="comment">         *   // This session has now finished, so we close the session by resetting</span>
-<a name="l00295"></a>00295 <span class="comment">         *   // the smart pointer to NULL (thereby destroying the Session object).</span>
-<a name="l00296"></a>00296 <span class="comment">         *   session.reset();</span>
-<a name="l00297"></a>00297 <span class="comment">         *</span>
-<a name="l00298"></a>00298 <span class="comment">         *   // We can connect to an Application multiple times. Just make sure</span>
-<a name="l00299"></a>00299 <span class="comment">         *   // the previous session is closed.</span>
-<a name="l00300"></a>00300 <span class="comment">         *   session = app-&gt;connect("/home/webapps/bar")</span>
-<a name="l00301"></a>00301 <span class="comment">         * @endcode</span>
-<a name="l00302"></a>00302 <span class="comment">         *</span>
-<a name="l00303"></a>00303 <span class="comment">         * Note that a RoR application instance can only process one</span>
-<a name="l00304"></a>00304 <span class="comment">         * request at the same time, and thus only one session at the same time.</span>
-<a name="l00305"></a>00305 <span class="comment">         * You &lt;b&gt;must&lt;/b&gt; close a session when you no longer need if. You you</span>
-<a name="l00306"></a>00306 <span class="comment">         * call connect() without having properly closed a previous session,</span>
-<a name="l00307"></a>00307 <span class="comment">         * you might cause a deadlock because the application instance may be</span>
-<a name="l00308"></a>00308 <span class="comment">         * waiting for you to close the previous session.</span>
+<a name="l00157"></a>00157                 <span class="comment"></span>
+<a name="l00158"></a>00158 <span class="comment">                /**</span>
+<a name="l00159"></a>00159 <span class="comment">                 * Get the process ID of the application instance that belongs to this session.</span>
+<a name="l00160"></a>00160 <span class="comment">                 */</span>
+<a name="l00161"></a>00161                 <span class="keyword">virtual</span> pid_t <a class="code" href="classPassenger_1_1Application_1_1Session.html#329fd8a1def4fda5a1497c3a488060b0" title="Get the process ID of the application instance that belongs to this session.">getPid</a>() = 0;
+<a name="l00162"></a>00162         };
+<a name="l00163"></a>00163 
+<a name="l00164"></a>00164 <span class="keyword">private</span>:<span class="comment"></span>
+<a name="l00165"></a>00165 <span class="comment">        /**</span>
+<a name="l00166"></a>00166 <span class="comment">         * A structure containing data that both StandardSession and Application</span>
+<a name="l00167"></a>00167 <span class="comment">         * may access. Since Application and StandardSession may have different</span>
+<a name="l00168"></a>00168 <span class="comment">         * life times (i.e. one can be destroyed before the other), they both</span>
+<a name="l00169"></a>00169 <span class="comment">         * have a smart pointer referencing a SharedData structure. Only</span>
+<a name="l00170"></a>00170 <span class="comment">         * when both the StandardSession and the Application object have been</span>
+<a name="l00171"></a>00171 <span class="comment">         * destroyed, will the SharedData object be destroyed as well.</span>
+<a name="l00172"></a>00172 <span class="comment">         */</span>
+<a name="l00173"></a>00173         <span class="keyword">struct </span>SharedData {
+<a name="l00174"></a>00174                 <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> sessions;
+<a name="l00175"></a>00175         };
+<a name="l00176"></a>00176         
+<a name="l00177"></a>00177         <span class="keyword">typedef</span> shared_ptr&lt;SharedData&gt; SharedDataPtr;
+<a name="l00178"></a>00178 <span class="comment"></span>
+<a name="l00179"></a>00179 <span class="comment">        /**</span>
+<a name="l00180"></a>00180 <span class="comment">         * A "standard" implementation of Session.</span>
+<a name="l00181"></a>00181 <span class="comment">         */</span>
+<a name="l00182"></a>00182         <span class="keyword">class </span>StandardSession: <span class="keyword">public</span> Session {
+<a name="l00183"></a>00183         <span class="keyword">protected</span>:
+<a name="l00184"></a>00184                 SharedDataPtr data;
+<a name="l00185"></a>00185                 <a class="code" href="classPassenger_1_1Application.html#a904ba56a6b0413f8da245a762cd681e" title="A type for callback functions that are called when a session is closed.">CloseCallback</a> closeCallback;
+<a name="l00186"></a>00186                 <span class="keywordtype">int</span> reader;
+<a name="l00187"></a>00187                 <span class="keywordtype">int</span> writer;
+<a name="l00188"></a>00188                 pid_t pid;
+<a name="l00189"></a>00189                 
+<a name="l00190"></a>00190         <span class="keyword">public</span>:
+<a name="l00191"></a>00191                 StandardSession(SharedDataPtr data, pid_t pid, <span class="keyword">const</span> <a class="code" href="classPassenger_1_1Application.html#a904ba56a6b0413f8da245a762cd681e" title="A type for callback functions that are called when a session is closed.">CloseCallback</a> &amp;closeCallback,
+<a name="l00192"></a>00192                                 <span class="keywordtype">int</span> reader, <span class="keywordtype">int</span> writer) {
+<a name="l00193"></a>00193                         this-&gt;data = data;
+<a name="l00194"></a>00194                         this-&gt;pid = pid;
+<a name="l00195"></a>00195                         this-&gt;closeCallback = closeCallback;
+<a name="l00196"></a>00196                         data-&gt;sessions++;
+<a name="l00197"></a>00197                         this-&gt;reader = reader;
+<a name="l00198"></a>00198                         this-&gt;writer = writer;
+<a name="l00199"></a>00199                 }
+<a name="l00200"></a>00200         
+<a name="l00201"></a>00201                 <span class="keyword">virtual</span> ~StandardSession() {
+<a name="l00202"></a>00202                         data-&gt;sessions--;
+<a name="l00203"></a>00203                         closeReader();
+<a name="l00204"></a>00204                         closeWriter();
+<a name="l00205"></a>00205                         closeCallback(*<span class="keyword">this</span>);
+<a name="l00206"></a>00206                 }
+<a name="l00207"></a>00207                 
+<a name="l00208"></a>00208                 <span class="keyword">virtual</span> <span class="keywordtype">int</span> getReader() {
+<a name="l00209"></a>00209                         <span class="keywordflow">return</span> reader;
+<a name="l00210"></a>00210                 }
+<a name="l00211"></a>00211                 
+<a name="l00212"></a>00212                 <span class="keyword">virtual</span> <span class="keywordtype">void</span> closeReader() {
+<a name="l00213"></a>00213                         <span class="keywordflow">if</span> (reader != -1) {
+<a name="l00214"></a>00214                                 close(reader);
+<a name="l00215"></a>00215                                 reader = -1;
+<a name="l00216"></a>00216                         }
+<a name="l00217"></a>00217                 }
+<a name="l00218"></a>00218                 
+<a name="l00219"></a>00219                 <span class="keyword">virtual</span> <span class="keywordtype">int</span> getWriter() {
+<a name="l00220"></a>00220                         <span class="keywordflow">return</span> writer;
+<a name="l00221"></a>00221                 }
+<a name="l00222"></a>00222                 
+<a name="l00223"></a>00223                 <span class="keyword">virtual</span> <span class="keywordtype">void</span> closeWriter() {
+<a name="l00224"></a>00224                         <span class="keywordflow">if</span> (writer != -1) {
+<a name="l00225"></a>00225                                 close(writer);
+<a name="l00226"></a>00226                                 writer = -1;
+<a name="l00227"></a>00227                         }
+<a name="l00228"></a>00228                 }
+<a name="l00229"></a>00229                 
+<a name="l00230"></a>00230                 <span class="keyword">virtual</span> pid_t <a class="code" href="classPassenger_1_1Application.html#94d2cce1c2c1d3441325f1498a22bf02" title="Returns the process ID of this application instance.">getPid</a>() {
+<a name="l00231"></a>00231                         <span class="keywordflow">return</span> pid;
+<a name="l00232"></a>00232                 }
+<a name="l00233"></a>00233         };
+<a name="l00234"></a>00234 
+<a name="l00235"></a>00235         <span class="keywordtype">string</span> appRoot;
+<a name="l00236"></a>00236         pid_t pid;
+<a name="l00237"></a>00237         <span class="keywordtype">int</span> listenSocket;
+<a name="l00238"></a>00238         time_t lastUsed;
+<a name="l00239"></a>00239         SharedDataPtr data;
+<a name="l00240"></a>00240 
+<a name="l00241"></a>00241 <span class="keyword">public</span>:<span class="comment"></span>
+<a name="l00242"></a>00242 <span class="comment">        /**</span>
+<a name="l00243"></a>00243 <span class="comment">         * Construct a new Application object.</span>
+<a name="l00244"></a>00244 <span class="comment">         *</span>
+<a name="l00245"></a>00245 <span class="comment">         * @param theAppRoot The application root of a RoR application, i.e. the folder that</span>
+<a name="l00246"></a>00246 <span class="comment">         *             contains 'app/', 'public/', 'config/', etc. This must be a valid directory,</span>
+<a name="l00247"></a>00247 <span class="comment">         *             but the path does not have to be absolute.</span>
+<a name="l00248"></a>00248 <span class="comment">         * @param pid The process ID of this application instance.</span>
+<a name="l00249"></a>00249 <span class="comment">         * @param listenSocket The listener socket of this application instance.</span>
+<a name="l00250"></a>00250 <span class="comment">         * @post getAppRoot() == theAppRoot &amp;&amp; getPid() == pid</span>
+<a name="l00251"></a>00251 <span class="comment">         */</span>
+<a name="l00252"></a><a class="code" href="classPassenger_1_1Application.html#2504cb46b625c1b4c5344cae944b633d">00252</a>         <a class="code" href="classPassenger_1_1Application.html#2504cb46b625c1b4c5344cae944b633d" title="Construct a new Application object.">Application</a>(<span class="keyword">const</span> <span class="keywordtype">string</span> &amp;theAppRoot, pid_t pid, <span class="keywordtype">int</span> listenSocket) {
+<a name="l00253"></a>00253                 appRoot = theAppRoot;
+<a name="l00254"></a>00254                 this-&gt;pid = pid;
+<a name="l00255"></a>00255                 this-&gt;listenSocket = listenSocket;
+<a name="l00256"></a>00256                 lastUsed = time(NULL);
+<a name="l00257"></a>00257                 this-&gt;data = <a class="code" href="group__Support.html#g41b6c4a82fed72531a147de0505a8396" title="Convenience shortcut for creating a shared_ptr.">ptr</a>(<span class="keyword">new</span> SharedData());
+<a name="l00258"></a>00258                 this-&gt;data-&gt;sessions = 0;
+<a name="l00259"></a>00259                 P_TRACE(<span class="stringliteral">"Application "</span> &lt;&lt; <span class="keyword">this</span> &lt;&lt; <span class="stringliteral">": created."</span>);
+<a name="l00260"></a>00260         }
+<a name="l00261"></a>00261         
+<a name="l00262"></a>00262         <span class="keyword">virtual</span> ~<a class="code" href="classPassenger_1_1Application.html" title="Represents a single Ruby on Rails application instance.">Application</a>() {
+<a name="l00263"></a>00263                 close(listenSocket);
+<a name="l00264"></a>00264                 P_TRACE(<span class="stringliteral">"Application "</span> &lt;&lt; <span class="keyword">this</span> &lt;&lt; <span class="stringliteral">": destroyed."</span>);
+<a name="l00265"></a>00265         }
+<a name="l00266"></a>00266         <span class="comment"></span>
+<a name="l00267"></a>00267 <span class="comment">        /**</span>
+<a name="l00268"></a>00268 <span class="comment">         * Returns the application root for this RoR application. See the constructor</span>
+<a name="l00269"></a>00269 <span class="comment">         * for information about the application root.</span>
+<a name="l00270"></a>00270 <span class="comment">         */</span>
+<a name="l00271"></a><a class="code" href="classPassenger_1_1Application.html#0a0665852e7ebc8fb8ab0772fa90bc56">00271</a>         <span class="keywordtype">string</span> <a class="code" href="classPassenger_1_1Application.html#0a0665852e7ebc8fb8ab0772fa90bc56" title="Returns the application root for this RoR application.">getAppRoot</a>()<span class="keyword"> const </span>{
+<a name="l00272"></a>00272                 <span class="keywordflow">return</span> appRoot;
+<a name="l00273"></a>00273         }
+<a name="l00274"></a>00274         <span class="comment"></span>
+<a name="l00275"></a>00275 <span class="comment">        /**</span>
+<a name="l00276"></a>00276 <span class="comment">         * Returns the process ID of this application instance.</span>
+<a name="l00277"></a>00277 <span class="comment">         */</span>
+<a name="l00278"></a><a class="code" href="classPassenger_1_1Application.html#94d2cce1c2c1d3441325f1498a22bf02">00278</a>         pid_t <a class="code" href="classPassenger_1_1Application.html#94d2cce1c2c1d3441325f1498a22bf02" title="Returns the process ID of this application instance.">getPid</a>()<span class="keyword"> const </span>{
+<a name="l00279"></a>00279                 <span class="keywordflow">return</span> pid;
+<a name="l00280"></a>00280         }
+<a name="l00281"></a>00281         <span class="comment"></span>
+<a name="l00282"></a>00282 <span class="comment">        /**</span>
+<a name="l00283"></a>00283 <span class="comment">         * Connect to this application instance with the purpose of sending</span>
+<a name="l00284"></a>00284 <span class="comment">         * a request to the application. Once connected, a new session will</span>
+<a name="l00285"></a>00285 <span class="comment">         * be opened. This session represents the life time of a single</span>
+<a name="l00286"></a>00286 <span class="comment">         * request/response pair, and can be used to send the request</span>
+<a name="l00287"></a>00287 <span class="comment">         * data to the application instance, as well as receiving the response</span>
+<a name="l00288"></a>00288 <span class="comment">         * data.</span>
+<a name="l00289"></a>00289 <span class="comment">         *</span>
+<a name="l00290"></a>00290 <span class="comment">         * The use of connect() is demonstrated in the following example.</span>
+<a name="l00291"></a>00291 <span class="comment">         * @code</span>
+<a name="l00292"></a>00292 <span class="comment">         *   // Connect to the application and get the newly opened session.</span>
+<a name="l00293"></a>00293 <span class="comment">         *   Application::SessionPtr session(app-&gt;connect("/home/webapps/foo"));</span>
+<a name="l00294"></a>00294 <span class="comment">         *   </span>
+<a name="l00295"></a>00295 <span class="comment">         *   // Send the request headers and request body data.</span>
+<a name="l00296"></a>00296 <span class="comment">         *   session-&gt;sendHeaders(...);</span>
+<a name="l00297"></a>00297 <span class="comment">         *   session-&gt;sendBodyBlock(...);</span>
+<a name="l00298"></a>00298 <span class="comment">         *   // Done sending data, so we close the writer channel.</span>
+<a name="l00299"></a>00299 <span class="comment">         *   session-&gt;closeWriter();</span>
+<a name="l00300"></a>00300 <span class="comment">         *</span>
+<a name="l00301"></a>00301 <span class="comment">         *   // Now read the HTTP response.</span>
+<a name="l00302"></a>00302 <span class="comment">         *   string responseData = readAllDataFromSocket(session-&gt;getReader());</span>
+<a name="l00303"></a>00303 <span class="comment">         *   // Done reading data, so we close the reader channel.</span>
+<a name="l00304"></a>00304 <span class="comment">         *   session-&gt;closeReader();</span>
+<a name="l00305"></a>00305 <span class="comment">         *</span>
+<a name="l00306"></a>00306 <span class="comment">         *   // This session has now finished, so we close the session by resetting</span>
+<a name="l00307"></a>00307 <span class="comment">         *   // the smart pointer to NULL (thereby destroying the Session object).</span>
+<a name="l00308"></a>00308 <span class="comment">         *   session.reset();</span>
 <a name="l00309"></a>00309 <span class="comment">         *</span>
-<a name="l00310"></a>00310 <span class="comment">         * @return A smart pointer to a Session object, which represents the created session.</span>
-<a name="l00311"></a>00311 <span class="comment">         * @param closeCallback A function which will be called when the session has been closed.</span>
-<a name="l00312"></a>00312 <span class="comment">         * @post this-&gt;getSessions() == old-&gt;getSessions() + 1</span>
-<a name="l00313"></a>00313 <span class="comment">         * @throws SystemException Something went wrong during the connection process.</span>
-<a name="l00314"></a>00314 <span class="comment">         * @throws IOException Something went wrong during the connection process.</span>
-<a name="l00315"></a>00315 <span class="comment">         */</span>
-<a name="l00316"></a><a class="code" href="classPassenger_1_1Application.html#2db08b6559ead2586f5c68f7bff0c188">00316</a>         <a class="code" href="classPassenger_1_1Application.html#d14f673494991460b16246a527ad8ad9" title="Convenient alias for Session smart pointer.">SessionPtr</a> <a class="code" href="classPassenger_1_1Application.html#2db08b6559ead2586f5c68f7bff0c188" title="Connect to this application instance with the purpose of sending a request to the...">connect</a>(<span class="keyword">const</span> <a class="code" href="classPassenger_1_1Application.html#a904ba56a6b0413f8da245a762cd681e" title="A type for callback functions that are called when a session is closed.">CloseCallback</a> &amp;closeCallback)<span class="keyword"> const </span>{
-<a name="l00317"></a>00317                 <span class="keywordtype">int</span> ret;
-<a name="l00318"></a>00318                 <span class="keywordflow">do</span> {
-<a name="l00319"></a>00319                         ret = write(listenSocket, <span class="stringliteral">""</span>, 1);
-<a name="l00320"></a>00320                 } <span class="keywordflow">while</span> ((ret == -1 &amp;&amp; errno == EINTR) || ret == 0);
-<a name="l00321"></a>00321                 <span class="keywordflow">if</span> (ret == -1) {
-<a name="l00322"></a>00322                         <span class="keywordflow">throw</span> <a class="code" href="classPassenger_1_1SystemException.html" title="Represents an error returned by a system call or a standard library call.">SystemException</a>(<span class="stringliteral">"Cannot request a new session from the request handler"</span>, errno);
-<a name="l00323"></a>00323                 }
-<a name="l00324"></a>00324                 
-<a name="l00325"></a>00325                 <span class="keywordflow">try</span> {
-<a name="l00326"></a>00326                         <a class="code" href="classPassenger_1_1MessageChannel.html" title="Convenience class for I/O operations on file descriptors.">MessageChannel</a> channel(listenSocket);
-<a name="l00327"></a>00327                         <span class="keywordtype">int</span> reader = channel.<a class="code" href="classPassenger_1_1MessageChannel.html#1561b7e4a0f4d39ea431f456e5655488" title="Receive a file descriptor, which had been passed over the underlying file descriptor...">readFileDescriptor</a>();
-<a name="l00328"></a>00328                         <span class="keywordtype">int</span> writer = channel.<a class="code" href="classPassenger_1_1MessageChannel.html#1561b7e4a0f4d39ea431f456e5655488" title="Receive a file descriptor, which had been passed over the underlying file descriptor...">readFileDescriptor</a>();
-<a name="l00329"></a>00329                         <span class="keywordflow">return</span> ptr(<span class="keyword">new</span> StandardSession(data, closeCallback, reader, writer));
-<a name="l00330"></a>00330                 } <span class="keywordflow">catch</span> (<span class="keyword">const</span> <a class="code" href="classPassenger_1_1SystemException.html" title="Represents an error returned by a system call or a standard library call.">SystemException</a> &amp;e) {
-<a name="l00331"></a>00331                         <span class="keywordflow">throw</span> <a class="code" href="classPassenger_1_1SystemException.html" title="Represents an error returned by a system call or a standard library call.">SystemException</a>(<span class="stringliteral">"Cannot receive one of the session file descriptors from the request handler"</span>, e.<a class="code" href="classPassenger_1_1SystemException.html#ee7a6672bf79b72a4c3ee70c57d6a47c" title="The value of errno at the time the error occured.">code</a>());
-<a name="l00332"></a>00332                 } <span class="keywordflow">catch</span> (<span class="keyword">const</span> <a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a> &amp;e) {
-<a name="l00333"></a>00333                         <span class="keywordtype">string</span> message(<span class="stringliteral">"Cannot receive one of the session file descriptors from the request handler"</span>);
-<a name="l00334"></a>00334                         message.append(e.<a class="code" href="classPassenger_1_1IOException.html#1b65d0fdb9bc5136f5b7df759c14768a">what</a>());
-<a name="l00335"></a>00335                         <span class="keywordflow">throw</span> <a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a>(message);
-<a name="l00336"></a>00336                 }
-<a name="l00337"></a>00337         }
-<a name="l00338"></a>00338         <span class="comment"></span>
-<a name="l00339"></a>00339 <span class="comment">        /**</span>
-<a name="l00340"></a>00340 <span class="comment">         * Get the number of currently opened sessions.</span>
-<a name="l00341"></a>00341 <span class="comment">         */</span>
-<a name="l00342"></a><a class="code" href="classPassenger_1_1Application.html#6ddf2dcd2dd9993a8262c207d4154f2c">00342</a>         <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="classPassenger_1_1Application.html#6ddf2dcd2dd9993a8262c207d4154f2c" title="Get the number of currently opened sessions.">getSessions</a>()<span class="keyword"> const </span>{
-<a name="l00343"></a>00343                 <span class="keywordflow">return</span> data-&gt;sessions;
-<a name="l00344"></a>00344         }
-<a name="l00345"></a>00345         <span class="comment"></span>
-<a name="l00346"></a>00346 <span class="comment">        /**</span>
-<a name="l00347"></a>00347 <span class="comment">         * Returns the last value set by setLastUsed(). This represents the time</span>
-<a name="l00348"></a>00348 <span class="comment">         * at which this application object was last used.</span>
-<a name="l00349"></a>00349 <span class="comment">         *</span>
-<a name="l00350"></a>00350 <span class="comment">         * This is used by StandardApplicationPool's cleaner thread to determine which</span>
-<a name="l00351"></a>00351 <span class="comment">         * Application objects have been idle for too long and need to be cleaned</span>
-<a name="l00352"></a>00352 <span class="comment">         * up. Thus, outside StandardApplicationPool, one should never have to call this</span>
-<a name="l00353"></a>00353 <span class="comment">         * method directly.</span>
+<a name="l00310"></a>00310 <span class="comment">         *   // We can connect to an Application multiple times. Just make sure</span>
+<a name="l00311"></a>00311 <span class="comment">         *   // the previous session is closed.</span>
+<a name="l00312"></a>00312 <span class="comment">         *   session = app-&gt;connect("/home/webapps/bar")</span>
+<a name="l00313"></a>00313 <span class="comment">         * @endcode</span>
+<a name="l00314"></a>00314 <span class="comment">         *</span>
+<a name="l00315"></a>00315 <span class="comment">         * Note that a RoR application instance can only process one</span>
+<a name="l00316"></a>00316 <span class="comment">         * request at the same time, and thus only one session at the same time.</span>
+<a name="l00317"></a>00317 <span class="comment">         * You &lt;b&gt;must&lt;/b&gt; close a session when you no longer need if. You you</span>
+<a name="l00318"></a>00318 <span class="comment">         * call connect() without having properly closed a previous session,</span>
+<a name="l00319"></a>00319 <span class="comment">         * you might cause a deadlock because the application instance may be</span>
+<a name="l00320"></a>00320 <span class="comment">         * waiting for you to close the previous session.</span>
+<a name="l00321"></a>00321 <span class="comment">         *</span>
+<a name="l00322"></a>00322 <span class="comment">         * @return A smart pointer to a Session object, which represents the created session.</span>
+<a name="l00323"></a>00323 <span class="comment">         * @param closeCallback A function which will be called when the session has been closed.</span>
+<a name="l00324"></a>00324 <span class="comment">         * @post this-&gt;getSessions() == old-&gt;getSessions() + 1</span>
+<a name="l00325"></a>00325 <span class="comment">         * @throws SystemException Something went wrong during the connection process.</span>
+<a name="l00326"></a>00326 <span class="comment">         * @throws IOException Something went wrong during the connection process.</span>
+<a name="l00327"></a>00327 <span class="comment">         */</span>
+<a name="l00328"></a><a class="code" href="classPassenger_1_1Application.html#2db08b6559ead2586f5c68f7bff0c188">00328</a>         <a class="code" href="classPassenger_1_1Application.html#d14f673494991460b16246a527ad8ad9" title="Convenient alias for Session smart pointer.">SessionPtr</a> <a class="code" href="classPassenger_1_1Application.html#2db08b6559ead2586f5c68f7bff0c188" title="Connect to this application instance with the purpose of sending a request to the...">connect</a>(<span class="keyword">const</span> <a class="code" href="classPassenger_1_1Application.html#a904ba56a6b0413f8da245a762cd681e" title="A type for callback functions that are called when a session is closed.">CloseCallback</a> &amp;closeCallback)<span class="keyword"> const </span>{
+<a name="l00329"></a>00329                 <span class="keywordtype">int</span> ret;
+<a name="l00330"></a>00330                 <span class="keywordflow">do</span> {
+<a name="l00331"></a>00331                         ret = write(listenSocket, <span class="stringliteral">""</span>, 1);
+<a name="l00332"></a>00332                 } <span class="keywordflow">while</span> ((ret == -1 &amp;&amp; errno == EINTR) || ret == 0);
+<a name="l00333"></a>00333                 <span class="keywordflow">if</span> (ret == -1) {
+<a name="l00334"></a>00334                         <span class="keywordflow">throw</span> <a class="code" href="classPassenger_1_1SystemException.html" title="Represents an error returned by a system call or a standard library call.">SystemException</a>(<span class="stringliteral">"Cannot request a new session from the request handler"</span>, errno);
+<a name="l00335"></a>00335                 }
+<a name="l00336"></a>00336                 
+<a name="l00337"></a>00337                 <span class="keywordflow">try</span> {
+<a name="l00338"></a>00338                         <a class="code" href="classPassenger_1_1MessageChannel.html" title="Convenience class for I/O operations on file descriptors.">MessageChannel</a> channel(listenSocket);
+<a name="l00339"></a>00339                         <span class="keywordtype">int</span> reader = channel.<a class="code" href="classPassenger_1_1MessageChannel.html#1561b7e4a0f4d39ea431f456e5655488" title="Receive a file descriptor, which had been passed over the underlying file descriptor...">readFileDescriptor</a>();
+<a name="l00340"></a>00340                         <span class="keywordtype">int</span> writer = channel.<a class="code" href="classPassenger_1_1MessageChannel.html#1561b7e4a0f4d39ea431f456e5655488" title="Receive a file descriptor, which had been passed over the underlying file descriptor...">readFileDescriptor</a>();
+<a name="l00341"></a>00341                         <span class="keywordflow">return</span> <a class="code" href="group__Support.html#g41b6c4a82fed72531a147de0505a8396" title="Convenience shortcut for creating a shared_ptr.">ptr</a>(<span class="keyword">new</span> StandardSession(data, pid, closeCallback, reader, writer));
+<a name="l00342"></a>00342                 } <span class="keywordflow">catch</span> (<span class="keyword">const</span> <a class="code" href="classPassenger_1_1SystemException.html" title="Represents an error returned by a system call or a standard library call.">SystemException</a> &amp;e) {
+<a name="l00343"></a>00343                         <span class="keywordflow">throw</span> <a class="code" href="classPassenger_1_1SystemException.html" title="Represents an error returned by a system call or a standard library call.">SystemException</a>(<span class="stringliteral">"Cannot receive one of the session file "</span>
+<a name="l00344"></a>00344                                 <span class="stringliteral">"descriptors from the request handler"</span>, e.<a class="code" href="classPassenger_1_1SystemException.html#ee7a6672bf79b72a4c3ee70c57d6a47c" title="The value of errno at the time the error occured.">code</a>());
+<a name="l00345"></a>00345                 } <span class="keywordflow">catch</span> (<span class="keyword">const</span> <a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a> &amp;e) {
+<a name="l00346"></a>00346                         <span class="keywordtype">string</span> message(<span class="stringliteral">"Cannot receive one of the session file descriptors from the request handler"</span>);
+<a name="l00347"></a>00347                         message.append(e.<a class="code" href="classPassenger_1_1IOException.html#1b65d0fdb9bc5136f5b7df759c14768a">what</a>());
+<a name="l00348"></a>00348                         <span class="keywordflow">throw</span> <a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a>(message);
+<a name="l00349"></a>00349                 }
+<a name="l00350"></a>00350         }
+<a name="l00351"></a>00351         <span class="comment"></span>
+<a name="l00352"></a>00352 <span class="comment">        /**</span>
+<a name="l00353"></a>00353 <span class="comment">         * Get the number of currently opened sessions.</span>
 <a name="l00354"></a>00354 <span class="comment">         */</span>
-<a name="l00355"></a><a class="code" href="classPassenger_1_1Application.html#58e74f6a598dbc16d87ce0a1bf8da1d6">00355</a>         time_t <a class="code" href="classPassenger_1_1Application.html#58e74f6a598dbc16d87ce0a1bf8da1d6" title="Returns the last value set by setLastUsed().">getLastUsed</a>()<span class="keyword"> const </span>{
-<a name="l00356"></a>00356                 <span class="keywordflow">return</span> lastUsed;
+<a name="l00355"></a><a class="code" href="classPassenger_1_1Application.html#6ddf2dcd2dd9993a8262c207d4154f2c">00355</a>         <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="classPassenger_1_1Application.html#6ddf2dcd2dd9993a8262c207d4154f2c" title="Get the number of currently opened sessions.">getSessions</a>()<span class="keyword"> const </span>{
+<a name="l00356"></a>00356                 <span class="keywordflow">return</span> data-&gt;sessions;
 <a name="l00357"></a>00357         }
 <a name="l00358"></a>00358         <span class="comment"></span>
 <a name="l00359"></a>00359 <span class="comment">        /**</span>
-<a name="l00360"></a>00360 <span class="comment">         * Set the time at which this Application object was last used. See getLastUsed()</span>
-<a name="l00361"></a>00361 <span class="comment">         * for information.</span>
+<a name="l00360"></a>00360 <span class="comment">         * Returns the last value set by setLastUsed(). This represents the time</span>
+<a name="l00361"></a>00361 <span class="comment">         * at which this application object was last used.</span>
 <a name="l00362"></a>00362 <span class="comment">         *</span>
-<a name="l00363"></a>00363 <span class="comment">         * @param time The time.</span>
-<a name="l00364"></a>00364 <span class="comment">         * @post getLastUsed() == time</span>
-<a name="l00365"></a>00365 <span class="comment">         */</span>
-<a name="l00366"></a><a class="code" href="classPassenger_1_1Application.html#f0cf4bbf3dd5f45a573c061bda643d86">00366</a>         <span class="keywordtype">void</span> <a class="code" href="classPassenger_1_1Application.html#f0cf4bbf3dd5f45a573c061bda643d86" title="Set the time at which this Application object was last used.">setLastUsed</a>(time_t time) {
-<a name="l00367"></a>00367                 lastUsed = time;
-<a name="l00368"></a>00368         }
-<a name="l00369"></a>00369 };
-<a name="l00370"></a>00370 <span class="comment"></span>
-<a name="l00371"></a>00371 <span class="comment">/** Convenient alias for Application smart pointer. */</span>
-<a name="l00372"></a>00372 <span class="keyword">typedef</span> shared_ptr&lt;Application&gt; ApplicationPtr;
-<a name="l00373"></a>00373 
-<a name="l00374"></a>00374 } <span class="comment">// namespace Passenger</span>
-<a name="l00375"></a>00375 
-<a name="l00376"></a>00376 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_APPLICATION_H_ */</span>
-</pre></div><hr size="1"><address style="text-align: right;"><small>Generated on Fri Feb 8 20:08:48 2008 for Passenger by&nbsp;
+<a name="l00363"></a>00363 <span class="comment">         * This is used by StandardApplicationPool's cleaner thread to determine which</span>
+<a name="l00364"></a>00364 <span class="comment">         * Application objects have been idle for too long and need to be cleaned</span>
+<a name="l00365"></a>00365 <span class="comment">         * up. Thus, outside StandardApplicationPool, one should never have to call this</span>
+<a name="l00366"></a>00366 <span class="comment">         * method directly.</span>
+<a name="l00367"></a>00367 <span class="comment">         */</span>
+<a name="l00368"></a><a class="code" href="classPassenger_1_1Application.html#58e74f6a598dbc16d87ce0a1bf8da1d6">00368</a>         time_t <a class="code" href="classPassenger_1_1Application.html#58e74f6a598dbc16d87ce0a1bf8da1d6" title="Returns the last value set by setLastUsed().">getLastUsed</a>()<span class="keyword"> const </span>{
+<a name="l00369"></a>00369                 <span class="keywordflow">return</span> lastUsed;
+<a name="l00370"></a>00370         }
+<a name="l00371"></a>00371         <span class="comment"></span>
+<a name="l00372"></a>00372 <span class="comment">        /**</span>
+<a name="l00373"></a>00373 <span class="comment">         * Set the time at which this Application object was last used. See getLastUsed()</span>
+<a name="l00374"></a>00374 <span class="comment">         * for information.</span>
+<a name="l00375"></a>00375 <span class="comment">         *</span>
+<a name="l00376"></a>00376 <span class="comment">         * @param time The time.</span>
+<a name="l00377"></a>00377 <span class="comment">         * @post getLastUsed() == time</span>
+<a name="l00378"></a>00378 <span class="comment">         */</span>
+<a name="l00379"></a><a class="code" href="classPassenger_1_1Application.html#f0cf4bbf3dd5f45a573c061bda643d86">00379</a>         <span class="keywordtype">void</span> <a class="code" href="classPassenger_1_1Application.html#f0cf4bbf3dd5f45a573c061bda643d86" title="Set the time at which this Application object was last used.">setLastUsed</a>(time_t time) {
+<a name="l00380"></a>00380                 lastUsed = time;
+<a name="l00381"></a>00381         }
+<a name="l00382"></a>00382 };
+<a name="l00383"></a>00383 <span class="comment"></span>
+<a name="l00384"></a>00384 <span class="comment">/** Convenient alias for Application smart pointer. */</span>
+<a name="l00385"></a>00385 <span class="keyword">typedef</span> shared_ptr&lt;Application&gt; ApplicationPtr;
+<a name="l00386"></a>00386 
+<a name="l00387"></a>00387 } <span class="comment">// namespace Passenger</span>
+<a name="l00388"></a>00388 
+<a name="l00389"></a>00389 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_APPLICATION_H_ */</span>
+</pre></div><hr size="1"><address style="text-align: right;"><small>Generated on Fri Feb 22 10:18:25 2008 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.3 </small></address>
 </body>

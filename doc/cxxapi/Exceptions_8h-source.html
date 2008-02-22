@@ -98,11 +98,32 @@
 <a name="l00083"></a>00083         <span class="keyword">virtual</span> ~<a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a>() <span class="keywordflow">throw</span>() {}
 <a name="l00084"></a>00084         <span class="keyword">virtual</span> <span class="keyword">const</span> <span class="keywordtype">char</span> *what() <span class="keyword">const</span> <span class="keywordflow">throw</span>() { <span class="keywordflow">return</span> msg.c_str(); }
 <a name="l00085"></a>00085 };
-<a name="l00086"></a>00086 
-<a name="l00087"></a>00087 } <span class="comment">// namespace Passenger</span>
-<a name="l00088"></a>00088 
-<a name="l00089"></a>00089 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_EXCEPTIONS_H_ */</span>
-</pre></div><hr size="1"><address style="text-align: right;"><small>Generated on Fri Feb 8 20:08:48 2008 for Passenger by&nbsp;
+<a name="l00086"></a>00086 <span class="comment"></span>
+<a name="l00087"></a>00087 <span class="comment">/**</span>
+<a name="l00088"></a>00088 <span class="comment"> * Thrown when a certain file cannot be found.</span>
+<a name="l00089"></a>00089 <span class="comment"> */</span>
+<a name="l00090"></a><a class="code" href="classPassenger_1_1FileNotFoundException.html">00090</a> <span class="keyword">class </span><a class="code" href="classPassenger_1_1FileNotFoundException.html" title="Thrown when a certain file cannot be found.">FileNotFoundException</a>: <span class="keyword">public</span> <a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a> {
+<a name="l00091"></a>00091 <span class="keyword">public</span>:
+<a name="l00092"></a>00092         <a class="code" href="classPassenger_1_1FileNotFoundException.html" title="Thrown when a certain file cannot be found.">FileNotFoundException</a>(<span class="keyword">const</span> <span class="keywordtype">string</span> &amp;message): <a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a>(message) {}
+<a name="l00093"></a>00093         <span class="keyword">virtual</span> ~<a class="code" href="classPassenger_1_1FileNotFoundException.html" title="Thrown when a certain file cannot be found.">FileNotFoundException</a>() <span class="keywordflow">throw</span>() {}
+<a name="l00094"></a>00094 };
+<a name="l00095"></a>00095 <span class="comment"></span>
+<a name="l00096"></a>00096 <span class="comment">/**</span>
+<a name="l00097"></a>00097 <span class="comment"> * Thrown when SpawnManager or ApplicationPool fail to spawn an application instance.</span>
+<a name="l00098"></a>00098 <span class="comment"> */</span>
+<a name="l00099"></a><a class="code" href="classPassenger_1_1SpawnException.html">00099</a> <span class="keyword">class </span><a class="code" href="classPassenger_1_1SpawnException.html" title="Thrown when SpawnManager or ApplicationPool fail to spawn an application instance...">SpawnException</a>: <span class="keyword">public</span> exception {
+<a name="l00100"></a>00100 <span class="keyword">private</span>:
+<a name="l00101"></a>00101         <span class="keywordtype">string</span> msg;
+<a name="l00102"></a>00102 <span class="keyword">public</span>:
+<a name="l00103"></a>00103         <a class="code" href="classPassenger_1_1SpawnException.html" title="Thrown when SpawnManager or ApplicationPool fail to spawn an application instance...">SpawnException</a>(<span class="keyword">const</span> <span class="keywordtype">string</span> &amp;message): msg(message) {}
+<a name="l00104"></a>00104         <span class="keyword">virtual</span> ~<a class="code" href="classPassenger_1_1SpawnException.html" title="Thrown when SpawnManager or ApplicationPool fail to spawn an application instance...">SpawnException</a>() <span class="keywordflow">throw</span>() {}
+<a name="l00105"></a>00105         <span class="keyword">virtual</span> <span class="keyword">const</span> <span class="keywordtype">char</span> *what() <span class="keyword">const</span> <span class="keywordflow">throw</span>() { <span class="keywordflow">return</span> msg.c_str(); }
+<a name="l00106"></a>00106 };
+<a name="l00107"></a>00107 
+<a name="l00108"></a>00108 } <span class="comment">// namespace Passenger</span>
+<a name="l00109"></a>00109 
+<a name="l00110"></a>00110 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_EXCEPTIONS_H_ */</span>
+</pre></div><hr size="1"><address style="text-align: right;"><small>Generated on Fri Feb 22 10:18:25 2008 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.3 </small></address>
 </body>

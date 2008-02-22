@@ -24,7 +24,7 @@
 <b>Passenger</b>::<a class="el" href="classPassenger_1_1MessageChannel.html">MessageChannel</a></div>
 <h1>Passenger::MessageChannel Class Reference<br>
 <small>
-[<a class="el" href="group__Support.html">Apache-independent support classes</a>]</small>
+[<a class="el" href="group__Support.html">Apache-independent support classes and function</a>]</small>
 </h1><!-- doxytag: class="Passenger::MessageChannel" --><code>#include &lt;<a class="el" href="MessageChannel_8h-source.html">MessageChannel.h</a>&gt;</code>
 <p>
 
@@ -36,7 +36,7 @@ This class provides convenience methods for:<ul>
 <li>sending and receiving raw data over a file descriptor.</li><li>sending and receiving messages over a file descriptor.</li><li>file descriptor passing over a Unix socket. All of these methods use exceptions for error reporting.</li></ul>
 <p>
 There are two kinds of messages:<ul>
-<li>Array messages. These are just a list of strings, and the message itself has a specific length. The contained strings may not contain NUL characters (<code>'\0'</code>).</li><li>Scalar messages. These are byte strings which may contain arbitrary binary data. Scalar messages also have a specific length. The protocol is designed to be low overhead, easy to implement and easy to parse.</li></ul>
+<li>Array messages. These are just a list of strings, and the message itself has a specific length. The contained strings may not contain NUL characters (<code>'\0'</code>). Note that an array message must have at least one element.</li><li>Scalar messages. These are byte strings which may contain arbitrary binary data. Scalar messages also have a specific length. The protocol is designed to be low overhead, easy to implement and easy to parse.</li></ul>
 <p>
 <a class="el" href="classPassenger_1_1MessageChannel.html" title="Convenience class for I/O operations on file descriptors.">MessageChannel</a> is to be wrapped around a file descriptor. For example: <div class="fragment"><pre class="fragment">    <span class="keywordtype">int</span> p[2];
     pipe(p);
@@ -561,7 +561,7 @@ Receive a file descriptor, which had been passed over the underlying file descri
 </div><p>
 <hr>The documentation for this class was generated from the following file:<ul>
 <li><a class="el" href="MessageChannel_8h-source.html">MessageChannel.h</a></ul>
-<hr size="1"><address style="text-align: right;"><small>Generated on Fri Feb 8 20:08:49 2008 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Fri Feb 22 10:18:25 2008 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.3 </small></address>
 </body>

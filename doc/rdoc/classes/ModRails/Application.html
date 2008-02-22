@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Class: ModRails::Application</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Class</span><br />ModRails::Application</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../../files/lib/mod_rails/application_rb.html">lib/mod_rails/application.rb</a>
+        </td>
+      </tr>
+    <tr>
+      <td>Parent:</td>
+      <td>
+Object
+     </td>
+   </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+  <div class="description"><p>
+TODO: synchronize this documentation with the C++ one Represents a single
+running instance of a Ruby on Rails application.
+</p>
+</div>
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000024">close</a></li>
+  <li><a href="#M000022">get_framework_version</a></li>
+  <li><a href="#M000023">new</a></li>
+  </ul>
+
+
+
+
+
+  <div class="sectiontitle">Attributes</div>
+  <table border='0' cellpadding='5'>
+  <tr valign='top'>
+    <td class='attr-rw'>
+[R]
+    </td>
+    <td class='attr-name'>app_root</td>
+    <td class='attr-desc'>
+The root directory of this application, i.e. the directory that contains
+&#8216;app/&#8217;, &#8216;public/&#8217;, etc.
+
+</td>
+  </tr>
+  <tr valign='top'>
+    <td class='attr-rw'>
+[R]
+    </td>
+    <td class='attr-name'>listen_socket</td>
+    <td class='attr-desc'></td>
+  </tr>
+  <tr valign='top'>
+    <td class='attr-rw'>
+[R]
+    </td>
+    <td class='attr-name'>pid</td>
+    <td class='attr-desc'>
+The process ID of this application instance.
+
+</td>
+  </tr>
+  </table>
+
+<div class="sectiontitle">Public Class methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000022"></a><b>get_framework_version</b>(app_root)
+  </div>
+  <div class="description">
+  <p>
+Return the Ruby on Rails version that the application requires, or nil if
+it doesn&#8216;t require a particular version.
+</p>
+<p>
+The version string is a RubyGems version specification. So it might also
+look like &quot;&gt;= 1.2.2&quot; or &quot;~&gt; 2.0.0&quot;.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000022_source')" id="l_M000022_source">show source</a> ]</p>
+  <div id="M000022_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/mod_rails/application.rb, line 19</span>
+19:         <span class="ruby-keyword kw">def</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">get_framework_version</span>(<span class="ruby-identifier">app_root</span>)
+20:                 <span class="ruby-constant">File</span>.<span class="ruby-identifier">read</span>(<span class="ruby-node">&quot;#{app_root}/config/environment.rb&quot;</span>) <span class="ruby-operator">=~</span> <span class="ruby-regexp re">/^[^#]*RAILS_GEM_VERSION\s+=\s+'([\d.]+)'/</span>
+21:                 <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">$1</span>
+22:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000023"></a><b>new</b>(app_root, pid, listen_socket)
+  </div>
+  <div class="description">
+  <p>
+Creates a <a href="Application.html#M000023">new</a> instance of <a
+href="Application.html">Application</a>. The parameters correspond with the
+attributes of the same names. No exceptions will be thrown.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000023_source')" id="l_M000023_source">show source</a> ]</p>
+  <div id="M000023_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/mod_rails/application.rb, line 26</span>
+26:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">pid</span>, <span class="ruby-identifier">listen_socket</span>)
+27:                 <span class="ruby-ivar">@app_root</span> = <span class="ruby-identifier">app_root</span>
+28:                 <span class="ruby-ivar">@pid</span> = <span class="ruby-identifier">pid</span>
+29:                 <span class="ruby-ivar">@listen_socket</span> = <span class="ruby-identifier">listen_socket</span>
+30:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="sectiontitle">Public Instance methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000024"></a><b>close</b>()
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000024_source')" id="l_M000024_source">show source</a> ]</p>
+  <div id="M000024_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/mod_rails/application.rb, line 32</span>
+32:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">close</span>
+33:                 <span class="ruby-ivar">@listen_socket</span>.<span class="ruby-identifier">close</span>
+34:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

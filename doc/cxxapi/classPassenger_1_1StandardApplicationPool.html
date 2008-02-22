@@ -24,7 +24,7 @@
 <b>Passenger</b>::<a class="el" href="classPassenger_1_1StandardApplicationPool.html">StandardApplicationPool</a></div>
 <h1>Passenger::StandardApplicationPool Class Reference<br>
 <small>
-[<a class="el" href="group__Support.html">Apache-independent support classes</a>]</small>
+[<a class="el" href="group__Support.html">Apache-independent support classes and function</a>]</small>
 </h1><!-- doxytag: class="Passenger::StandardApplicationPool" --><!-- doxytag: inherits="Passenger::ApplicationPool" --><code>#include &lt;<a class="el" href="ApplicationPool_8h-source.html">ApplicationPool.h</a>&gt;</code>
 <p>
 <div class="dynheader">
@@ -40,7 +40,7 @@ Inheritance diagram for Passenger::StandardApplicationPool:</div>
 A standard implementation of <a class="el" href="classPassenger_1_1ApplicationPool.html" title="A persistent pool of Applications.">ApplicationPool</a> for single-process environments. 
 <p>
 The environment may or may not be multithreaded - <a class="el" href="classPassenger_1_1StandardApplicationPool.html" title="A standard implementation of ApplicationPool for single-process environments.">StandardApplicationPool</a> is completely thread-safe. Apache with the threading MPM is an example of a multithreaded single-process environment.<p>
-This class is unusable in multi-process environments such as Apache with the prefork MPM. The reasons as as follows:<ul>
+This class is unusable in multi-process environments such as Apache with the prefork MPM. The reasons are as follows:<ul>
 <li><a class="el" href="classPassenger_1_1StandardApplicationPool.html" title="A standard implementation of ApplicationPool for single-process environments.">StandardApplicationPool</a> uses threads internally. Because threads disappear after a fork(), a <a class="el" href="classPassenger_1_1StandardApplicationPool.html" title="A standard implementation of ApplicationPool for single-process environments.">StandardApplicationPool</a> object will become unusable after a fork().</li><li><a class="el" href="classPassenger_1_1StandardApplicationPool.html" title="A standard implementation of ApplicationPool for single-process environments.">StandardApplicationPool</a> stores its internal cache on the heap. Different processes cannot share their heaps, so they will not be able to access each others' pool cache.</li><li><a class="el" href="classPassenger_1_1StandardApplicationPool.html" title="A standard implementation of ApplicationPool for single-process environments.">StandardApplicationPool</a> has a connection to the spawn server. If there are multiple processes, and they all use the spawn servers's connection at the same time without some sort of synchronization, then bad things will happen.</li></ul>
 <p>
 (Of course, <a class="el" href="classPassenger_1_1StandardApplicationPool.html" title="A standard implementation of ApplicationPool for single-process environments.">StandardApplicationPool</a> <em>is</em> usable if each process creates its own <a class="el" href="classPassenger_1_1StandardApplicationPool.html" title="A standard implementation of ApplicationPool for single-process environments.">StandardApplicationPool</a> object, but that would defeat the point of having a shared pool.)<p>
@@ -158,6 +158,7 @@ Create a new <a class="el" href="classPassenger_1_1StandardApplicationPool.html"
 Open a new session with the application specified by <code>appRoot</code>. 
 <p>
 See the class description for <a class="el" href="classPassenger_1_1ApplicationPool.html" title="A persistent pool of Applications.">ApplicationPool</a>, as well as <a class="el" href="classPassenger_1_1Application.html#2db08b6559ead2586f5c68f7bff0c188" title="Connect to this application instance with the purpose of sending a request to the...">Application::connect()</a>, on how to use the returned session object.<p>
+Internally, this method may either spawn a new application instance, or use an existing one.<p>
 <dl compact><dt><b>Parameters:</b></dt><dd>
   <table border="0" cellspacing="2" cellpadding="0">
     <tr><td valign="top"></td><td valign="top"><em>appRoot</em>&nbsp;</td><td>The application root of a RoR application, i.e. the folder that contains 'app/', 'public/', 'config/', etc. This must be a valid directory, but does not have to be an absolute path. </td></tr>
@@ -166,6 +167,12 @@ See the class description for <a class="el" href="classPassenger_1_1ApplicationP
   </table>
 </dl>
 <dl class="return" compact><dt><b>Returns:</b></dt><dd>A session object. </dd></dl>
+<dl compact><dt><b>Exceptions:</b></dt><dd>
+  <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em><a class="el" href="classPassenger_1_1SpawnException.html" title="Thrown when SpawnManager or ApplicationPool fail to spawn an application instance...">SpawnException</a></em>&nbsp;</td><td>An attempt was made to spawn a new application instance, but that attempt failed. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em><a class="el" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a></em>&nbsp;</td><td>Something else went wrong. </td></tr>
+  </table>
+</dl>
 <dl class="note" compact><dt><b>Note:</b></dt><dd>Applications are uniquely identified with the application root string. So although <code>appRoot</code> does not have to be absolute, it should be. If one calls <code>get("/home/foo")</code> and <code>get("/home/../home/foo")</code>, then <a class="el" href="classPassenger_1_1ApplicationPool.html" title="A persistent pool of Applications.">ApplicationPool</a> will think they're 2 different applications, and thus will spawn 2 application instances. </dd></dl>
 
 <p>Implements <a class="el" href="classPassenger_1_1ApplicationPool.html#64f16f0f69e56550e58266c41ebefbd9">Passenger::ApplicationPool</a>.</p>
@@ -245,7 +252,7 @@ This method exposes an implementation detail of the underlying pooling algorithm
 </div><p>
 <hr>The documentation for this class was generated from the following file:<ul>
 <li><a class="el" href="ApplicationPool_8h-source.html">ApplicationPool.h</a></ul>
-<hr size="1"><address style="text-align: right;"><small>Generated on Fri Feb 8 20:08:49 2008 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Fri Feb 22 10:18:25 2008 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.3 </small></address>
 </body>

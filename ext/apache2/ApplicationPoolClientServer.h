@@ -88,9 +88,10 @@ using namespace boost;
  *
  * Note that serverSocket and connectSocket are solely used for setting up new connections
  * ala accept(). They are not used for any actual data. In fact, they cannot be used in any
- * other way without some sort of synchronization mechanism, because all child processes
- * are connected to the same serverSocket. In contrast, ApplicationPool::connect() sets up
- * a private communicate channel between the server and the current child process.
+ * other way without some sort of inter-process synchronization mechanism, because all
+ * child processes are connected to the same serverSocket. In contrast,
+ * ApplicationPoolServer::connect() allows one to setup a private communicate channel between
+ * the server and the current child process.
  *
  * Also note that each client is handled by a seperate thread. This is necessary because
  * ApplicationPoolServer internally uses StandardApplicationPool, and the current algorithm
