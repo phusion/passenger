@@ -5,18 +5,6 @@ require 'rake/rdoctask'
 require 'rake/gempackagetask'
 require 'rake/extensions'
 
-desc "Build everything"
-task :default => [
-	'ext/mod_rails/native_support.so',
-	:apache2,
-	'test/Apache2ModuleTests',
-	'benchmark/DummyRequestHandler'
-]
-
-desc "Remove generated files"
-task :clean
-
-
 ##### Configuration
 
 CXX = "g++"
@@ -39,7 +27,24 @@ if RUBY_PLATFORM =~ /darwin/
 	# MacOS X
 	OSX_ARCHS = "-arch ppc7400 -arch ppc64 -arch i386 -arch x86_64"
 	CXXFLAGS << " " << OSX_ARCHS
+	LIBEXT = "bundle"
+else
+	LIBEXT = "so"
 end
+
+
+#### Default tasks
+
+desc "Build everything"
+task :default => [
+	"ext/mod_rails/native_support.#{LIBEXT}",
+	:apache2,
+	'test/Apache2ModuleTests',
+	'benchmark/DummyRequestHandler'
+]
+
+desc "Remove generated files"
+task :clean
 
 
 ##### Ruby C extension
@@ -49,7 +54,7 @@ subdir 'ext/mod_rails' do
 		sh "ruby extconf.rb"
 	end
 	
-	file 'native_support.so' => ['Makefile', 'native_support.c'] do
+	file "native_support.#{LIBEXT}" => ['Makefile', 'native_support.c'] do
 		sh "make"
 	end
 	
@@ -113,7 +118,7 @@ subdir 'ext/apache2' do
 	apxs_objects = APACHE2::OBJECTS.keys.join(',')
 
 	desc "Build mod_passenger Apache 2 module"
-	task :apache2 => 'mod_passenger.so'
+	task :apache2 => ['mod_passenger.so', "../mod_rails/native_support.#{LIBEXT}"]
 	
 	file 'mod_passenger.so' => ['../boost/src/libboost_thread.a', 'mod_passenger.o'] + APACHE2::OBJECTS.keys do
 		# apxs totally sucks. We couldn't get it working correctly
@@ -133,7 +138,7 @@ subdir 'ext/apache2' do
 	end
 	
 	desc "Install mod_passenger Apache 2 module"
-	task 'apache2:install' => 'mod_passenger.so' do
+	task 'apache2:install' => :apache2 do
 		install_dir = `#{APACHE2::XS} -q LIBEXECDIR`.strip
 		sh "cp", "mod_passenger.so", install_dir
 	end
@@ -206,13 +211,13 @@ subdir 'test' do
 	end
 	
 	desc "Run unit tests for the Ruby libraries"
-	task 'test:ruby' => ['../ext/mod_rails/native_support.so'] do
+	task 'test:ruby' => ["../ext/mod_rails/native_support.#{LIBEXT}"] do
 		sh "spec -f s *_spec.rb"
 	end
 
 	file 'Apache2ModuleTests' => TEST::AP2_OBJECTS.keys +
 	  ['../ext/boost/src/libboost_thread.a',
-	   '../ext/mod_rails/native_support.so',
+	   "../ext/mod_rails/native_support.#{LIBEXT}",
 	   '../ext/apache2/Utils.o'] do
 		objects = TEST::AP2_OBJECTS.keys.join(' ') << " ../ext/apache2/Utils.o"
 		create_executable "Apache2ModuleTests", objects,
@@ -293,6 +298,7 @@ spec = Gem::Specification.new do |s|
 	s.add_dependency 'rake', '>= 0.8.1'
 	s.add_dependency 'fastthread', '>= 1.0.1'
 	s.add_dependency 'rspec', '>= 1.1.2'
+	s.add_dependency 'rails', '>= 1.2.0'
 	s.extensions << 'ext/mod_rails/extconf.rb'
 	s.files = FileList[
 		'Rakefile',
