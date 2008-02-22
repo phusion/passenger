@@ -23,7 +23,7 @@ class ApplicationSpawner < AbstractServer
 	class UserChangeError < StandardError
 	end
 	
-	# An attribute, used internally. This should not be used outside mod_rails.
+	# An attribute, used internally. This should not be used outside Passenger.
 	attr_accessor :time
 
 	# _app_root_ is the root directory of this application, i.e. the directory
@@ -68,7 +68,7 @@ class ApplicationSpawner < AbstractServer
 
 protected
 	# Overrided method.
-	def before_fork
+	def before_fork # :nodoc:
 		if GC.cow_friendly?
 			# Garbage collect to so that the child process doesn't have to
 			# do that (to prevent making pages dirty).
@@ -77,7 +77,7 @@ protected
 	end
 	
 	# Overrided method.
-	def initialize_server
+	def initialize_server # :nodoc:
 		Dir.chdir(@app_root)
 		preload_application
 	end

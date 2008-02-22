@@ -239,8 +239,16 @@ Rake::RDocTask.new do |rd|
 	rd.options << "-N"
 end
 
-desc "Generate Doxygen C++ API documentation"
-task :doxygen do
+desc "Generate Doxygen C++ API documentation if necessary"
+task :doxygen => ['doc/cxxapi']
+file 'doc/cxxapi' => Dir['ext/apache2/*.{h,c,cpp}'] do
+	Dir.chdir('doc') do
+		sh "doxygen"
+	end
+end
+
+desc "Force generation of Doxygen C++ API documentation"
+task 'doxygen:force' do
 	Dir.chdir('doc') do
 		sh "doxygen"
 	end
@@ -272,6 +280,13 @@ spec = Gem::Specification.new do |s|
 		'Rakefile',
 		'lib/**/*.rb',
 		'bin/*',
+		'doc/*',
+		'doc/cxxapi/*',
+		'doc/rdoc/*',
+		'doc/rdoc/*/*',
+		'doc/rdoc/*/*/*',
+		'doc/rdoc/*/*/*/*',
+		'doc/rdoc/*/*/*/*/*',
 		'ext/apache2/*.{cpp,h,c}',
 		'ext/boost/*.{hpp,TXT}',
 		'ext/boost/**/*.{hpp,cpp,pl,inl}',
@@ -295,6 +310,10 @@ end
 Rake::GemPackageTask.new(spec) do |pkg|
 	pkg.need_tar_gz = true
 end
+
+Rake::Task['package'].prerequisites.push('rdoc', 'doxygen')
+Rake::Task['package:gem'].prerequisites.push('rdoc', 'doxygen')
+Rake::Task['package:force'].prerequisites.push('rdoc', 'doxygen')
 
 
 ##### Misc

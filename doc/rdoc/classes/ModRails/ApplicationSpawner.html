@@ -95,10 +95,8 @@ multiple different Ruby on Rails applications.
 
   <div class="sectiontitle">Methods</div>
   <ul>
-  <li><a href="#M000027">before_fork</a></li>
-  <li><a href="#M000028">initialize_server</a></li>
-  <li><a href="#M000025">new</a></li>
-  <li><a href="#M000026">spawn_application</a></li>
+  <li><a href="#M000022">new</a></li>
+  <li><a href="#M000023">spawn_application</a></li>
   </ul>
 
 <div class="sectiontitle">Included Modules</div>
@@ -121,7 +119,7 @@ Class <a href="ApplicationSpawner/UserChangeError.html" class="link">ModRails::A
     </td>
     <td class='attr-name'>time</td>
     <td class='attr-desc'>
-An attribute, used internally. This should not be used outside mod_rails.
+An attribute, used internally. This should not be used outside Passenger.
 
 </td>
   </tr>
@@ -130,7 +128,7 @@ An attribute, used internally. This should not be used outside mod_rails.
 <div class="sectiontitle">Public Class methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000025"></a><b>new</b>(app_root, user = nil, group = nil)
+    <a name="M000022"></a><b>new</b>(app_root, user = nil, group = nil)
   </div>
   <div class="description">
   <p>
@@ -152,8 +150,8 @@ raised.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000025_source')" id="l_M000025_source">show source</a> ]</p>
-  <div id="M000025_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000022_source')" id="l_M000022_source">show source</a> ]</p>
+  <div id="M000022_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/mod_rails/application_spawner.rb, line 41</span>
 41:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">user</span> = <span class="ruby-keyword kw">nil</span>, <span class="ruby-identifier">group</span> = <span class="ruby-keyword kw">nil</span>)
@@ -174,7 +172,7 @@ raised.
 <div class="sectiontitle">Public Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000026"></a><b>spawn_application</b>()
+    <a name="M000023"></a><b>spawn_application</b>()
   </div>
   <div class="description">
   <p>
@@ -192,8 +190,8 @@ error.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000026_source')" id="l_M000026_source">show source</a> ]</p>
-  <div id="M000026_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000023_source')" id="l_M000023_source">show source</a> ]</p>
+  <div id="M000023_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/mod_rails/application_spawner.rb, line 60</span>
 60:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">spawn_application</span>
@@ -204,54 +202,6 @@ error.
 65:         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">SystemCallError</span>, <span class="ruby-constant">IOError</span>, <span class="ruby-constant">SocketError</span>
 66:                 <span class="ruby-identifier">raise</span> <span class="ruby-constant">SpawnError</span>, <span class="ruby-value str">&quot;Unable to spawn the application: application died unexpectedly during initialization.&quot;</span>
 67:         <span class="ruby-keyword kw">end</span>
-</pre>
-  </div>
-</div>
-</div>
-<div class="sectiontitle">Protected Instance methods</div>
-<div class="method">
-  <div class="title">
-    <a name="M000027"></a><b>before_fork</b>()
-  </div>
-  <div class="description">
-  <p>
-Overrided method.
-</p>
-  </div>
-<div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000027_source')" id="l_M000027_source">show source</a> ]</p>
-  <div id="M000027_source" class="dyn-source">
-<pre>
-    <span class="ruby-comment cmt"># File lib/mod_rails/application_spawner.rb, line 71</span>
-71:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">before_fork</span>
-72:                 <span class="ruby-keyword kw">if</span> <span class="ruby-constant">GC</span>.<span class="ruby-identifier">cow_friendly?</span>
-73:                         <span class="ruby-comment cmt"># Garbage collect to so that the child process doesn't have to</span>
-74:                         <span class="ruby-comment cmt"># do that (to prevent making pages dirty).</span>
-75:                         <span class="ruby-constant">GC</span>.<span class="ruby-identifier">start</span>
-76:                 <span class="ruby-keyword kw">end</span>
-77:         <span class="ruby-keyword kw">end</span>
-</pre>
-  </div>
-</div>
-</div>
-<div class="method">
-  <div class="title">
-    <a name="M000028"></a><b>initialize_server</b>()
-  </div>
-  <div class="description">
-  <p>
-Overrided method.
-</p>
-  </div>
-<div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000028_source')" id="l_M000028_source">show source</a> ]</p>
-  <div id="M000028_source" class="dyn-source">
-<pre>
-    <span class="ruby-comment cmt"># File lib/mod_rails/application_spawner.rb, line 80</span>
-80:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize_server</span>
-81:                 <span class="ruby-constant">Dir</span>.<span class="ruby-identifier">chdir</span>(<span class="ruby-ivar">@app_root</span>)
-82:                 <span class="ruby-identifier">preload_application</span>
-83:         <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>

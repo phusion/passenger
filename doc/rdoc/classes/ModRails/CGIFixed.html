@@ -77,10 +77,10 @@
 
   <div class="description"><p>
 Modifies CGI so that we can use it. Main thing it does is expose the <a
-href="CGIFixed.html#M000020">stdinput</a> and <a
-href="CGIFixed.html#M000021">stdoutput</a> so SCGI::Processor can connect
+href="CGIFixed.html#M000017">stdinput</a> and <a
+href="CGIFixed.html#M000018">stdoutput</a> so SCGI::Processor can connect
 them to the right sources. It also exposes the <a
-href="CGIFixed.html#M000019">env_table</a> so that SCGI::Processor and hook
+href="CGIFixed.html#M000016">env_table</a> so that SCGI::Processor and hook
 the SCGI parameters into the environment table.
 </p>
 <p>
@@ -97,11 +97,11 @@ package, version 0.4.3.
 
   <div class="sectiontitle">Methods</div>
   <ul>
-  <li><a href="#M000018">args</a></li>
-  <li><a href="#M000019">env_table</a></li>
-  <li><a href="#M000017">new</a></li>
-  <li><a href="#M000020">stdinput</a></li>
-  <li><a href="#M000021">stdoutput</a></li>
+  <li><a href="#M000015">args</a></li>
+  <li><a href="#M000016">env_table</a></li>
+  <li><a href="#M000014">new</a></li>
+  <li><a href="#M000017">stdinput</a></li>
+  <li><a href="#M000018">stdoutput</a></li>
   </ul>
 
 
@@ -112,11 +112,11 @@ package, version 0.4.3.
 <div class="sectiontitle">Public Class methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000017"></a><b>new</b>(params, input, output, *args)
+    <a name="M000014"></a><b>new</b>(params, input, output, *args)
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000017_source')" id="l_M000017_source">show source</a> ]</p>
-  <div id="M000017_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000014_source')" id="l_M000014_source">show source</a> ]</p>
+  <div id="M000014_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/mod_rails/cgi_fixed.rb, line 18</span>
 18:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">params</span>, <span class="ruby-identifier">input</span>, <span class="ruby-identifier">output</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
@@ -133,11 +133,11 @@ package, version 0.4.3.
 <div class="sectiontitle">Public Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000018"></a><b>args</b>()
+    <a name="M000015"></a><b>args</b>()
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000018_source')" id="l_M000018_source">show source</a> ]</p>
-  <div id="M000018_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000015_source')" id="l_M000015_source">show source</a> ]</p>
+  <div id="M000015_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/mod_rails/cgi_fixed.rb, line 26</span>
 26:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">args</span>
@@ -149,11 +149,11 @@ package, version 0.4.3.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000019"></a><b>env_table</b>()
+    <a name="M000016"></a><b>env_table</b>()
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000019_source')" id="l_M000019_source">show source</a> ]</p>
-  <div id="M000019_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000016_source')" id="l_M000016_source">show source</a> ]</p>
+  <div id="M000016_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/mod_rails/cgi_fixed.rb, line 30</span>
 30:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">env_table</span>
@@ -165,11 +165,11 @@ package, version 0.4.3.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000020"></a><b>stdinput</b>()
+    <a name="M000017"></a><b>stdinput</b>()
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000020_source')" id="l_M000020_source">show source</a> ]</p>
-  <div id="M000020_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000017_source')" id="l_M000017_source">show source</a> ]</p>
+  <div id="M000017_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/mod_rails/cgi_fixed.rb, line 34</span>
 34:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">stdinput</span>
@@ -181,11 +181,11 @@ package, version 0.4.3.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000021"></a><b>stdoutput</b>()
+    <a name="M000018"></a><b>stdoutput</b>()
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000021_source')" id="l_M000021_source">show source</a> ]</p>
-  <div id="M000021_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000018_source')" id="l_M000018_source">show source</a> ]</p>
+  <div id="M000018_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/mod_rails/cgi_fixed.rb, line 38</span>
 38:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">stdoutput</span>
