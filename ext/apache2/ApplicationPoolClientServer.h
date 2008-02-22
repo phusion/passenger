@@ -223,7 +223,7 @@ private:
 			
 			channel.write("get", appRoot.c_str(), user.c_str(), group.c_str(), NULL);
 			if (!channel.read(args)) {
-				throw IOException("The ApplicationPool server unexpectedly disconnected the connection.");
+				throw IOException("The ApplicationPool server unexpectedly closed the connection.");
 			}
 			if (args[0] == "ok") {
 				reader = channel.readFileDescriptor();
