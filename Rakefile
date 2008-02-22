@@ -43,8 +43,11 @@ task :default => [
 	'benchmark/DummyRequestHandler'
 ]
 
-desc "Remove generated files"
+desc "Remove compiled files"
 task :clean
+
+desc "Remove all generated files"
+task :clobber
 
 
 ##### Ruby C extension
@@ -278,11 +281,12 @@ task 'doxygen:force' do
 end
 
 desc "Remove generated Doxygen C++ API documentation"
-task 'doxygen:clean' do
+task 'doxygen:clobber' do
 	Dir.chdir('doc') do
 		sh "rm -rf cxxapi"
 	end
 end
+task :clobber => 'doxygen:clobber'
 
 
 ##### Gem
