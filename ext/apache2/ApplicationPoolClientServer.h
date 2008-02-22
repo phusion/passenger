@@ -326,6 +326,9 @@ private:
 				do {
 					ret = close(fds[1]);
 				} while (ret == -1 && errno == EINTR);
+			} catch (SystemException &e) {
+				P_ERROR("Cannot send a file descriptor: " << e.brief());
+				abort();
 			} catch (const exception &e) {
 				P_ERROR("Cannot send a file descriptor: " << e.what());
 				abort();

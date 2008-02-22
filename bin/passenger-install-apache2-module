@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+require 'rbconfig'
 PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) << "/..")
 PASSENGER_WEBSITE = "http://passenger.phusion.nl/"
 PHUSION_WEBSITE = "www.phusion.nl"
@@ -86,6 +87,7 @@ if system "rake", "apache2:install"
 	
 	   #{bold('LoadModule passenger_module ' << module_location)}
 	   #{bold('RailsSpawnServer ' << spawn_server_location)}
+	   #{bold('RailsRuby ' << Config::CONFIG['bindir'] << '/' << Config::CONFIG['RUBY_INSTALL_NAME'])}
 	
 	After you restart Apache, you are ready to deploy any number of Ruby on Rails
 	applications on Apache, without any further Ruby on Rails-specific
