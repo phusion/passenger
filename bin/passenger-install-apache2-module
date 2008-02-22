@@ -76,7 +76,7 @@ puts banner('Compiling and installing Apache 2 module...')
 puts "cd #{PASSENGER_ROOT}"
 puts "rake apache2:install"
 
-if system "rake", "apache2:install"
+if system("rake", "clean", "apache2:install")
 	module_location = `#{APXS} -q LIBEXECDIR`.strip << "/mod_passenger.so"
 	spawn_server_location = "#{PASSENGER_ROOT}/bin/passenger-spawn-server"
 	
