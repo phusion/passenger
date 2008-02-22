@@ -62,9 +62,11 @@ using namespace boost;
  *
  * @warning
  *   ApplicationPoolServer uses threads internally. Threads will disappear after a fork(),
- *   so ApplicationPoolServer will become usable after a fork(). So in case of Apache with
- *   the prefork MPM, be sure to create an ApplicationPoolServer() <em>after</em> Apache
- *   has daemonized.
+ *   so ApplicationPoolServer will become usable as a server after a fork(). After a fork(),
+ *   you can still call connect() (and, of course, detach()), but the same
+ *   ApplicationPoolServer better still be running in the parent process. So in case of
+ *   Apache with the prefork MPM, be sure to create an ApplicationPoolServer
+ *   <em>after</em> Apache has daemonized.
  *
  * <h2>Implementation notes</h2>
  * Notice that ApplicationPoolServer does do not use TCP sockets at all, or even named Unix

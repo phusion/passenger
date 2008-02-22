@@ -147,7 +147,7 @@ class ApplicationPoolServer;
  * environment.
  *
  * This class is unusable in multi-process environments such as Apache with the prefork MPM.
- * The reasons as as follows:
+ * The reasons are as follows:
  *  - StandardApplicationPool uses threads internally. Because threads disappear after a fork(),
  *    a StandardApplicationPool object will become unusable after a fork().
  *  - StandardApplicationPool stores its internal cache on the heap. Different processes

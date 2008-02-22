@@ -228,7 +228,7 @@ subdir 'benchmark' do
 end
 
 
-##### RDoc
+##### Documentation
 
 Rake::RDocTask.new do |rd|
 	rd.rdoc_dir = "doc/rdoc"
@@ -237,6 +237,20 @@ Rake::RDocTask.new do |rd|
 	rd.title = "Passenger Ruby API"
 	rd.options << "-S"
 	rd.options << "-N"
+end
+
+desc "Generate Doxygen C++ API documentation"
+task :doxygen do
+	Dir.chdir('doc') do
+		sh "doxygen"
+	end
+end
+
+desc "Remove generated Doxygen C++ API documentation"
+task 'doxygen:clean' do
+	Dir.chdir('doc') do
+		sh "rm -rf cxxapi"
+	end
 end
 
 
