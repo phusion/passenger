@@ -4,33 +4,18 @@ require 'rubygems'
 require 'rake/rdoctask'
 require 'rake/gempackagetask'
 require 'rake/extensions'
+require 'rake/cplusplus'
+require 'mod_rails/platform_info'
 
 ##### Configuration
 
-CXX = "g++"
-CXXFLAGS = "-Wall -g -I/usr/local/include"
-LDFLAGS = ""
-if `which pkg-config`.empty?
-	if `which apr-1-config`.empty?
-		raise "Could not find Apache Portable Runtime (APR). Please install it."
-	else
-		APR_FLAGS = `apr-1-config --cppflags --includes`.strip
-		APR_LIBS = `apr-1-config --link-ld`.strip
-	end
-else
-	APR_FLAGS = `pkg-config --cflags apr-1 apr-util-1`.strip
-	APR_LIBS = `pkg-config --libs apr-1 apr-util-1`.strip
-end
+include PlatformInfo
+APACHE2CTL.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
+APXS2.nil? and raise "Could not find Apache Portable Runtime (APR)."
 
-require 'rake/cplusplus'
-if RUBY_PLATFORM =~ /darwin/
-	# MacOS X
-	OSX_ARCHS = "-arch ppc7400 -arch ppc64 -arch i386 -arch x86_64"
-	CXXFLAGS << " " << OSX_ARCHS
-	LIBEXT = "bundle"
-else
-	LIBEXT = "so"
-end
+CXX = "g++"
+CXXFLAGS = "-Wall -g -I/usr/local/include " << MULTI_ARCH_FLAGS
+LDFLAGS = ""
 
 
 #### Default tasks
@@ -77,10 +62,7 @@ subdir 'ext/boost/src' do
 		# processes, sometimes pthread errors will occur. These errors are harmless
 		# and should be ignored. Defining NDEBUG guarantees that boost::thread() will
 		# not abort if such an error occured.
-		flags = "-O2 -fPIC -DNDEBUG"
-		if defined?(OSX_ARCHS)
-			flags << " " << OSX_ARCHS
-		end
+		flags = "-O2 -fPIC -DNDEBUG #{MULTI_ARCH_FLAGS}"
 		compile_cxx "*.cpp", flags
 		create_static_library "libboost_thread.a", "*.o"
 	end
@@ -94,19 +76,7 @@ end
 ##### Apache module
 
 class APACHE2
-	if `which apxs2`.empty?
-		if `which apxs`.empty?
-			raise "Cannot find 'apxs' or 'apxs2'. Apache doesn't seem to be installed. Please install it."
-		else
-			XS = 'apxs'
-			CTL = 'apachectl'
-		end
-	else
-		XS = 'apxs2'
-		CTL = 'apache2ctl'
-	end
-	APXS_FLAGS = `#{XS} -q CFLAGS`.strip << " -I" << `#{XS} -q INCLUDEDIR`.strip
-	CXXFLAGS = CXXFLAGS + " -fPIC -g -DPASSENGER_DEBUG #{APR_FLAGS} #{APXS_FLAGS} -I.."
+	CXXFLAGS = CXXFLAGS + " -fPIC -g -DPASSENGER_DEBUG #{APR1_FLAGS} #{APXS2_FLAGS} -I.."
 	OBJECTS = {
 		'Configuration.o' => %w(Configuration.cpp),
 		'Hooks.o' => %w(Hooks.cpp Hooks.h
@@ -130,11 +100,8 @@ subdir 'ext/apache2' do
 		# Apache module ourselves.
 		#
 		# Oh, and libtool sucks too. Do we even need it anymore in 2008?
-		linkflags = LDFLAGS.dup
-		if defined?(OSX_ARCHS)
-			linkflags << " " << OSX_ARCHS
-		end
-		linkflags << " -lstdc++ -lpthread ../boost/src/libboost_thread.a #{APR_LIBS}"
+		linkflags = "#{LDFLAGS} #{MULTI_ARCH_FLAGS}"
+		linkflags << " -lstdc++ -lpthread ../boost/src/libboost_thread.a #{APR1_LIBS}"
 		create_shared_library 'mod_passenger.so',
 			APACHE2::OBJECTS.keys.join(' ') << ' mod_passenger.o',
 			linkflags
@@ -142,20 +109,20 @@ subdir 'ext/apache2' do
 	
 	desc "Install mod_passenger Apache 2 module"
 	task 'apache2:install' => :apache2 do
-		install_dir = `#{APACHE2::XS} -q LIBEXECDIR`.strip
+		install_dir = `#{APXS2} -q LIBEXECDIR`.strip
 		sh "cp", "mod_passenger.so", install_dir
 	end
 	
 	desc "Install mod_passenger Apache 2 module and restart Apache"
 	task 'apache2:install_restart' do
-		sh "#{APACHE2::CTL} stop" do end
+		sh "#{APACHE2CTL} stop" do end
 		unless `pidof apache2`.strip.empty?
 			sh "killall apache2" do end
 		end
 		Dir.chdir("../..") do
 			Rake::Task['apache2:install'].invoke
 		end
-		sh "#{APACHE2::CTL} start"
+		sh "#{APACHE2CTL} start"
 	end
 	
 	file 'mod_passenger.o' => ['mod_passenger.c'] do
@@ -182,7 +149,7 @@ end
 
 class TEST
 	CXXFLAGS = ::CXXFLAGS + " -Isupport -DTESTING_SPAWN_MANAGER "
-	AP2_FLAGS = "-I../ext/apache2 -I../ext #{APR_FLAGS}"
+	AP2_FLAGS = "-I../ext/apache2 -I../ext #{APR1_FLAGS}"
 	
 	AP2_OBJECTS = {
 		'CxxTestMain.o' => %w(CxxTestMain.cpp),

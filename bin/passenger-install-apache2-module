@@ -1,9 +1,11 @@
 #!/usr/bin/env ruby
-require 'rbconfig'
 PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) << "/..")
 PASSENGER_WEBSITE = "http://passenger.phusion.nl/"
 PHUSION_WEBSITE = "www.phusion.nl"
+$LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
+require 'mod_rails/platform_info'
 Dir.chdir(PASSENGER_ROOT)
+include PlatformInfo
 
 def banner(text)
 	return "\e[33m\e[44m\e[1m#{text}\e[0m"
@@ -47,9 +49,7 @@ wait
 
 puts "--------------------------------------------------------------------"
 puts banner('Checking whether the Apache development kit is installed...')
-has_apxs2 = !`which apxs2`.empty?
-has_apxs = !`which apxs`.empty?
-if !has_apxs2 && !has_apxs
+if APXS2.nil?
 	puts red("The Apache development kit does not seem to be installed.")
 	message = <<EOF
 	
@@ -65,10 +65,6 @@ if !has_apxs2 && !has_apxs
 EOF
 	puts message.gsub(/^\t/, '')
 	exit 1
-elsif has_apxs2
-	APXS = 'apxs2'
-else
-	APXS = 'apxs'
 end
 
 puts "--------------------------------------------------------------------"
@@ -77,7 +73,7 @@ puts "cd #{PASSENGER_ROOT}"
 puts "rake apache2:install"
 
 if system("rake", "clean", "apache2:install")
-	module_location = `#{APXS} -q LIBEXECDIR`.strip << "/mod_passenger.so"
+	module_location = `#{APXS2} -q LIBEXECDIR`.strip << "/mod_passenger.so"
 	spawn_server_location = "#{PASSENGER_ROOT}/bin/passenger-spawn-server"
 	
 	puts "--------------------------------------------------------------------"
@@ -87,7 +83,7 @@ if system("rake", "clean", "apache2:install")
 	
 	   #{bold('LoadModule passenger_module ' << module_location)}
 	   #{bold('RailsSpawnServer ' << spawn_server_location)}
-	   #{bold('RailsRuby ' << Config::CONFIG['bindir'] << '/' << Config::CONFIG['RUBY_INSTALL_NAME'])}
+	   #{bold('RailsRuby ' << RUBY)}
 	
 	After you restart Apache, you are ready to deploy any number of Ruby on Rails
 	applications on Apache, without any further Ruby on Rails-specific
