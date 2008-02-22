@@ -24,7 +24,7 @@
 <b>Passenger</b>::<a class="el" href="classPassenger_1_1ApplicationPool.html">ApplicationPool</a></div>
 <h1>Passenger::ApplicationPool Class Reference<br>
 <small>
-[<a class="el" href="group__Support.html">Apache-independent support classes</a>]</small>
+[<a class="el" href="group__Support.html">Apache-independent support classes and function</a>]</small>
 </h1><!-- doxytag: class="Passenger::ApplicationPool" --><code>#include &lt;<a class="el" href="ApplicationPool_8h-source.html">ApplicationPool.h</a>&gt;</code>
 <p>
 <div class="dynheader">
@@ -64,8 +64,8 @@ Normally, one would use <a class="el" href="classPassenger_1_1SpawnManager.html"
    <span class="comment">// the previous session is closed.</span>
    session = app-&gt;connect(<span class="stringliteral">"/home/webapps/bar"</span>)
 </pre></div><p>
-Internally, Application::get() will keep spawned applications instances in memory, and reuse them if possible. It will try to keep spawning to a minimum. Furthermore, if an application instance hasn't been used for a while, it will be automatically shutdown in order to save memory. And finally, one can set a hard limit on the maximum number of applications instances that may be spawned (see <a class="el" href="classPassenger_1_1ApplicationPool.html#0e0f21972ab130c9c0f90c2212328794" title="Set a hard limit on the number of application instances that this ApplicationPool...">ApplicationPool::setMax()</a>).<p>
-Note that <a class="el" href="classPassenger_1_1ApplicationPool.html" title="A persistent pool of Applications.">ApplicationPool</a> is just an interface (i.e. a pure virtual class). For concrete classes, see <a class="el" href="classPassenger_1_1StandardApplicationPool.html" title="A standard implementation of ApplicationPool for single-process environments.">StandardApplicationPool</a> and <a class="el" href="classPassenger_1_1ApplicationPoolServer.html" title="Multi-process usage support for ApplicationPool.">ApplicationPoolServer</a>. <table border="0" cellpadding="0" cellspacing="0">
+Internally, <a class="el" href="classPassenger_1_1ApplicationPool.html#64f16f0f69e56550e58266c41ebefbd9" title="Open a new session with the application specified by appRoot.">ApplicationPool::get()</a> will keep spawned applications instances in memory, and reuse them if possible. It will try to keep spawning to a minimum. Furthermore, if an application instance hasn't been used for a while, it will be automatically shutdown in order to save memory. Restart requests are honored: if an application has the file 'restart.txt' in its 'tmp' folder, then <a class="el" href="classPassenger_1_1ApplicationPool.html#64f16f0f69e56550e58266c41ebefbd9" title="Open a new session with the application specified by appRoot.">get()</a> will shutdown existing instances of that application and spawn a new instance (this is useful when a new version of an application has been deployed). And finally, one can set a hard limit on the maximum number of applications instances that may be spawned (see <a class="el" href="classPassenger_1_1ApplicationPool.html#0e0f21972ab130c9c0f90c2212328794" title="Set a hard limit on the number of application instances that this ApplicationPool...">ApplicationPool::setMax()</a>).<p>
+Note that <a class="el" href="classPassenger_1_1ApplicationPool.html" title="A persistent pool of Applications.">ApplicationPool</a> is just an interface (i.e. a pure virtual class). For concrete classes, see <a class="el" href="classPassenger_1_1StandardApplicationPool.html" title="A standard implementation of ApplicationPool for single-process environments.">StandardApplicationPool</a> and <a class="el" href="classPassenger_1_1ApplicationPoolServer.html" title="Multi-process usage support for ApplicationPool.">ApplicationPoolServer</a>. The exact pooling algorithm depends on the implementation class. <table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
 <tr><td colspan="2"><br><h2>Public Member Functions</h2></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">virtual <br>
@@ -118,6 +118,7 @@ Note that <a class="el" href="classPassenger_1_1ApplicationPool.html" title="A p
 Open a new session with the application specified by <code>appRoot</code>. 
 <p>
 See the class description for <a class="el" href="classPassenger_1_1ApplicationPool.html" title="A persistent pool of Applications.">ApplicationPool</a>, as well as <a class="el" href="classPassenger_1_1Application.html#2db08b6559ead2586f5c68f7bff0c188" title="Connect to this application instance with the purpose of sending a request to the...">Application::connect()</a>, on how to use the returned session object.<p>
+Internally, this method may either spawn a new application instance, or use an existing one.<p>
 <dl compact><dt><b>Parameters:</b></dt><dd>
   <table border="0" cellspacing="2" cellpadding="0">
     <tr><td valign="top"></td><td valign="top"><em>appRoot</em>&nbsp;</td><td>The application root of a RoR application, i.e. the folder that contains 'app/', 'public/', 'config/', etc. This must be a valid directory, but does not have to be an absolute path. </td></tr>
@@ -126,6 +127,12 @@ See the class description for <a class="el" href="classPassenger_1_1ApplicationP
   </table>
 </dl>
 <dl class="return" compact><dt><b>Returns:</b></dt><dd>A session object. </dd></dl>
+<dl compact><dt><b>Exceptions:</b></dt><dd>
+  <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em><a class="el" href="classPassenger_1_1SpawnException.html" title="Thrown when SpawnManager or ApplicationPool fail to spawn an application instance...">SpawnException</a></em>&nbsp;</td><td>An attempt was made to spawn a new application instance, but that attempt failed. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em><a class="el" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a></em>&nbsp;</td><td>Something else went wrong. </td></tr>
+  </table>
+</dl>
 <dl class="note" compact><dt><b>Note:</b></dt><dd>Applications are uniquely identified with the application root string. So although <code>appRoot</code> does not have to be absolute, it should be. If one calls <code>get("/home/foo")</code> and <code>get("/home/../home/foo")</code>, then <a class="el" href="classPassenger_1_1ApplicationPool.html" title="A persistent pool of Applications.">ApplicationPool</a> will think they're 2 different applications, and thus will spawn 2 application instances. </dd></dl>
 
 <p>Implemented in <a class="el" href="classPassenger_1_1StandardApplicationPool.html#cb338093c3368bf1cbcba02099c6c76e">Passenger::StandardApplicationPool</a>.</p>
@@ -205,7 +212,7 @@ This method exposes an implementation detail of the underlying pooling algorithm
 </div><p>
 <hr>The documentation for this class was generated from the following file:<ul>
 <li><a class="el" href="ApplicationPool_8h-source.html">ApplicationPool.h</a></ul>
-<hr size="1"><address style="text-align: right;"><small>Generated on Fri Feb 8 20:08:49 2008 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Fri Feb 22 10:18:25 2008 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.3 </small></address>
 </body>

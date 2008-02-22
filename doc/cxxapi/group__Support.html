@@ -1,6 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
-<title>Passenger: Apache-independent support classes</title>
+<title>Passenger: Apache-independent support classes and function</title>
 <link href="doxygen.css" rel="stylesheet" type="text/css">
 <link href="tabs.css" rel="stylesheet" type="text/css">
 </head><body>
@@ -13,7 +13,7 @@
     <li><a href="files.html"><span>Files</span></a></li>
   </ul>
 </div>
-<h1>Apache-independent support classes</h1>
+<h1>Apache-independent support classes and function</h1>
 <p>
 <table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
@@ -38,8 +38,191 @@
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Convenience class for I/O operations on file descriptors.  <a href="classPassenger_1_1MessageChannel.html#_details">More...</a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1SpawnManager.html">Passenger::SpawnManager</a></td></tr>
 
+<tr><td colspan="2"><br><h2>Functions</h2></td></tr>
+<tr><td class="memTemplParams" nowrap colspan="2">template&lt;typename T&gt; </td></tr>
+<tr><td class="memTemplItemLeft" nowrap align="right" valign="top">shared_ptr&lt; T &gt;&nbsp;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__Support.html#g41b6c4a82fed72531a147de0505a8396">Passenger::ptr</a> (T *pointer)</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Convenience shortcut for creating a <code>shared_ptr</code>.  <a href="#g41b6c4a82fed72531a147de0505a8396"></a><br></td></tr>
+<tr><td class="memTemplParams" nowrap colspan="2">template&lt;typename T&gt; </td></tr>
+<tr><td class="memTemplItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="group__Support.html#gf6fab368d70c18fdf16bf5a24f630407">Passenger::toString</a> (T something)</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Convert anything to a string.  <a href="#gf6fab368d70c18fdf16bf5a24f630407"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="g73b17b509ee44938a56bf16cbf82fb48"></a><!-- doxytag: member="Support::atoi" ref="g73b17b509ee44938a56bf16cbf82fb48" args="(const string &amp;s)" -->
+int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Support.html#g73b17b509ee44938a56bf16cbf82fb48">Passenger::atoi</a> (const string &amp;s)</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Converts the given string to an integer. <br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Support.html#g4b8320aedc6a164a535c920234e3d8bf">Passenger::split</a> (const string &amp;str, char sep, vector&lt; string &gt; &amp;output)</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Split the given string using the given separator.  <a href="#g4b8320aedc6a164a535c920234e3d8bf"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Support.html#g56199e2a907b6791017eee7e0625e449">Passenger::fileExists</a> (const char *filename)</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Check whether the specified file exists.  <a href="#g56199e2a907b6791017eee7e0625e449"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Support.html#g8344136b509be840e866c08d4708249d">Passenger::findSpawnServer</a> ()</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Find the location of the Passenger spawn server script.  <a href="#g8344136b509be840e866c08d4708249d"></a><br></td></tr>
 </table>
-<hr size="1"><address style="text-align: right;"><small>Generated on Fri Feb 8 20:08:48 2008 for Passenger by&nbsp;
+<hr><h2>Function Documentation</h2>
+<a class="anchor" name="g56199e2a907b6791017eee7e0625e449"></a><!-- doxytag: member="Passenger::fileExists" ref="g56199e2a907b6791017eee7e0625e449" args="(const char *filename)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Passenger::fileExists           </td>
+          <td>(</td>
+          <td class="paramtype">const char *&nbsp;</td>
+          <td class="paramname"> <em>filename</em>          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td width="100%"></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+Check whether the specified file exists. 
+<p>
+<dl compact><dt><b>Parameters:</b></dt><dd>
+  <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em>filename</em>&nbsp;</td><td>The filename to check. </td></tr>
+  </table>
+</dl>
+<dl class="return" compact><dt><b>Returns:</b></dt><dd>Whether the file exists. </dd></dl>
+
+</div>
+</div><p>
+<a class="anchor" name="g8344136b509be840e866c08d4708249d"></a><!-- doxytag: member="Passenger::findSpawnServer" ref="g8344136b509be840e866c08d4708249d" args="()" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">string Passenger::findSpawnServer           </td>
+          <td>(</td>
+          <td class="paramname">          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td width="100%"></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+Find the location of the Passenger spawn server script. 
+<p>
+This is done by scanning $PATH. For security reasons, only absolute paths are scanned.<p>
+<dl class="return" compact><dt><b>Returns:</b></dt><dd>An absolute path to the spawn server script, or an empty string on error. </dd></dl>
+
+</div>
+</div><p>
+<a class="anchor" name="g41b6c4a82fed72531a147de0505a8396"></a><!-- doxytag: member="Passenger::ptr" ref="g41b6c4a82fed72531a147de0505a8396" args="(T *pointer)" -->
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">shared_ptr&lt;T&gt; Passenger::ptr           </td>
+          <td>(</td>
+          <td class="paramtype">T *&nbsp;</td>
+          <td class="paramname"> <em>pointer</em>          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td width="100%"><code> [inline]</code></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+Convenience shortcut for creating a <code>shared_ptr</code>. 
+<p>
+Instead of: <div class="fragment"><pre class="fragment">    shared_ptr&lt;Foo&gt; foo;
+    ...
+    foo = shared_ptr&lt;Foo&gt;(<span class="keyword">new</span> Foo());
+</pre></div> one can write: <div class="fragment"><pre class="fragment">    shared_ptr&lt;Foo&gt; foo;
+    ...
+    foo = <a class="code" href="group__Support.html#g41b6c4a82fed72531a147de0505a8396" title="Convenience shortcut for creating a shared_ptr.">ptr</a>(<span class="keyword">new</span> Foo());
+</pre></div><p>
+<dl compact><dt><b>Parameters:</b></dt><dd>
+  <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em>pointer</em>&nbsp;</td><td>The item to put in the shared_ptr object. </td></tr>
+  </table>
+</dl>
+
+</div>
+</div><p>
+<a class="anchor" name="g4b8320aedc6a164a535c920234e3d8bf"></a><!-- doxytag: member="Passenger::split" ref="g4b8320aedc6a164a535c920234e3d8bf" args="(const string &amp;str, char sep, vector&lt; string &gt; &amp;output)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Passenger::split           </td>
+          <td>(</td>
+          <td class="paramtype">const string &amp;&nbsp;</td>
+          <td class="paramname"> <em>str</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">char&nbsp;</td>
+          <td class="paramname"> <em>sep</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">vector&lt; string &gt; &amp;&nbsp;</td>
+          <td class="paramname"> <em>output</em></td><td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td><td width="100%"></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+Split the given string using the given separator. 
+<p>
+<dl compact><dt><b>Parameters:</b></dt><dd>
+  <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em>str</em>&nbsp;</td><td>The string to split. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>sep</em>&nbsp;</td><td>The separator to use. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>output</em>&nbsp;</td><td>The vector to write the output to. </td></tr>
+  </table>
+</dl>
+
+</div>
+</div><p>
+<a class="anchor" name="gf6fab368d70c18fdf16bf5a24f630407"></a><!-- doxytag: member="Passenger::toString" ref="gf6fab368d70c18fdf16bf5a24f630407" args="(T something)" -->
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">string Passenger::toString           </td>
+          <td>(</td>
+          <td class="paramtype">T&nbsp;</td>
+          <td class="paramname"> <em>something</em>          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td width="100%"><code> [inline]</code></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+Convert anything to a string. 
+<p>
+<dl compact><dt><b>Parameters:</b></dt><dd>
+  <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em>something</em>&nbsp;</td><td>The thing to convert. </td></tr>
+  </table>
+</dl>
+
+</div>
+</div><p>
+<hr size="1"><address style="text-align: right;"><small>Generated on Fri Feb 22 10:18:25 2008 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.3 </small></address>
 </body>

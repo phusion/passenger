@@ -32,6 +32,7 @@ using namespace boost;
  * @endcode
  *
  * @param pointer The item to put in the shared_ptr object.
+ * @ingroup Support
  */
 template<typename T> shared_ptr<T>
 ptr(T *pointer) {
@@ -42,6 +43,7 @@ ptr(T *pointer) {
  * Convert anything to a string.
  *
  * @param something The thing to convert.
+ * @ingroup Support
  */
 template<typename T> string
 toString(T something) {
@@ -52,6 +54,7 @@ toString(T something) {
 
 /**
  * Converts the given string to an integer.
+ * @ingroup Support
  */
 int atoi(const string &s);
 
@@ -61,6 +64,7 @@ int atoi(const string &s);
  * @param str The string to split.
  * @param sep The separator to use.
  * @param output The vector to write the output to.
+ * @ingroup Support
  */
 void split(const string &str, char sep, vector<string> &output);
 
@@ -69,6 +73,7 @@ void split(const string &str, char sep, vector<string> &output);
  *
  * @param filename The filename to check.
  * @return Whether the file exists.
+ * @ingroup Support
  */
 bool fileExists(const char *filename);
 
@@ -79,6 +84,7 @@ bool fileExists(const char *filename);
  *
  * @return An absolute path to the spawn server script, or
  *         an empty string on error.
+ * @ingroup Support
  */
 string findSpawnServer();
 
