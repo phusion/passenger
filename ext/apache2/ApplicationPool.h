@@ -249,6 +249,8 @@ private:
 			
 			ApplicationMap::iterator appsIter;
 			time_t now = time(NULL);
+			list<string> appRootsToRemove;
+			
 			for (appsIter = apps.begin(); appsIter != apps.end(); appsIter++) {
 				ApplicationList &appList(*appsIter->second);
 				ApplicationList::iterator listIter;
@@ -266,10 +268,14 @@ private:
 				for (it = elementsToRemove.begin(); it != elementsToRemove.end(); it++) {
 					appList.erase(*it);
 				}
-				
 				if (appList.empty()) {
-					// TODO: remove it from 'apps'. Currently it violates the invariant!!!
+					appRootsToRemove.push_back(appsIter->first);
 				}
+			}
+			
+			list<string>::const_iterator it;
+			for (it = appRootsToRemove.begin(); it != appRootsToRemove.end(); it++) {
+				apps.erase(*it);
 			}
 		}
 	}
