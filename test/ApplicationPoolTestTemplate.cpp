@@ -1,6 +1,8 @@
+#include <sys/types.h>
 #include <unistd.h>
 #include <errno.h>
 #include <cstring>
+#include <signal.h>
 
 /**
  * This file is used as a template to test the different ApplicationPool implementations.
