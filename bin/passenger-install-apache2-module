@@ -43,14 +43,40 @@ solve the problem.
 #{bold('Press Enter to continue, or Ctrl-C to abort.')}
 EOF
 wait
-puts "--------------------------------------------------------------------"
 
+puts "--------------------------------------------------------------------"
+puts banner('Checking whether the Apache development kit is installed...')
+has_apxs2 = !`which apxs2`.empty?
+has_apxs = !`which apxs`.empty?
+if !has_apxs2 && !has_apxs
+	puts red("The Apache development kit does not seem to be installed.")
+	message = <<EOF
+	
+	The command "apxs" or "apxs2", a part of the Apache development kit, cannot be
+	found.
+	
+	If you haven't installed the Apache development kit (i.e. the development
+	headers and libraries), then please install it.
+	
+	If you know that it is installed, then please update the #{bold('PATH')} environment
+	variable so that this installer can find it.
+	
+EOF
+	puts message.gsub(/^\t/, '')
+	exit 1
+elsif has_apxs2
+	APXS = 'apxs2'
+else
+	APXS = 'apxs'
+end
+
+puts "--------------------------------------------------------------------"
 puts banner('Compiling and installing Apache 2 module...')
 puts "cd #{PASSENGER_ROOT}"
 puts "rake apache2:install"
 
 if system "rake", "apache2:install"
-	module_location = `apxs2 -q LIBEXECDIR`.strip << "/mod_passenger.so"
+	module_location = `#{APXS} -q LIBEXECDIR`.strip << "/mod_passenger.so"
 	spawn_server_location = "#{PASSENGER_ROOT}/bin/passenger-spawn-server"
 	
 	puts "--------------------------------------------------------------------"
@@ -94,8 +120,8 @@ else
 	 #{bold('*')} Do you see any #{bold('permission errors?')} If so, then please rerun this installer
 	   as root.
 	 #{bold('*')} Do you see any errors about #{bold(".h files that can't be found")}? If so, then you
-	   probably don't have the Apache/APR development headers installed. Please
-	   install the Apache/APR development headers and try again.
+	   probably don't have the Apache/APR development headers installed properly.
+	   Please reinstall the Apache/APR development headers and try again.
 	   
 	   It is also possible that the headers are installed, but your compiler can't
 	   find them. Please set the environment variables #{bold('C_INCLUDE_PATH')} and

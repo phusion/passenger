@@ -22,8 +22,17 @@ task :clean
 CXX = "g++"
 CXXFLAGS = "-Wall -g -I/usr/local/include"
 LDFLAGS = ""
-APR_FLAGS = `pkg-config --cflags apr-1 apr-util-1`.strip
-APR_LIBS = `pkg-config --libs apr-1 apr-util-1`.strip
+if `which pkg-config`.empty?
+	if `which apr-1-config`.empty?
+		raise "Could not find Apache Portable Runtime (APR). Please install it."
+	else
+		APR_FLAGS = `apr-1-config --cppflags --includes`.strip
+		APR_LIBS = `apr-1-config --link-ld`.strip
+	end
+else
+	APR_FLAGS = `pkg-config --cflags apr-1 apr-util-1`.strip
+	APR_LIBS = `pkg-config --libs apr-1 apr-util-1`.strip
+end
 
 require 'rake/cplusplus'
 if RUBY_PLATFORM =~ /darwin/
@@ -77,8 +86,17 @@ end
 ##### Apache module
 
 class APACHE2
-	XS = 'apxs2'
-	CTL = 'apache2ctl'
+	if `which apxs2`.empty?
+		if `which apxs`.empty?
+			raise "Cannot find 'apxs' or 'apxs2'. Apache doesn't seem to be installed. Please install it."
+		else
+			XS = 'apxs'
+			CTL = 'apachectl'
+		end
+	else
+		XS = 'apxs2'
+		CTL = 'apache2ctl'
+	end
 	APXS_FLAGS = `#{XS} -q CFLAGS`.strip << " -I" << `#{XS} -q INCLUDEDIR`.strip
 	CXXFLAGS = CXXFLAGS + " -fPIC -g -DPASSENGER_DEBUG #{APR_FLAGS} #{APXS_FLAGS} -I.."
 	OBJECTS = {
