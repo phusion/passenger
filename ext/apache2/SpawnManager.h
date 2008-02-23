@@ -13,6 +13,9 @@
 #include <cstdarg>
 #include <unistd.h>
 #include <errno.h>
+#ifdef TESTING_SPAWN_MANAGER
+	#include <signal.h>
+#endif
 
 #include "Application.h"
 #include "MessageChannel.h"

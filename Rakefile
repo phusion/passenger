@@ -193,7 +193,7 @@ subdir 'test' do
 	   '../ext/apache2/Utils.o'] do
 		objects = TEST::AP2_OBJECTS.keys.join(' ') << " ../ext/apache2/Utils.o"
 		create_executable "Apache2ModuleTests", objects,
-			"#{LDFLAGS} #{APR_LIBS} ../ext/boost/src/libboost_thread.a -lpthread"
+			"#{LDFLAGS} #{APR1_LIBS} ../ext/boost/src/libboost_thread.a -lpthread"
 	end
 	
 	TEST::AP2_OBJECTS.each_pair do |target, sources|
