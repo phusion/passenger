@@ -320,7 +320,7 @@ private:
 			if (ret == -1) {
 				int e = errno;
 				P_ERROR("Cannot create an anonymous Unix socket: " <<
-					strerror(e) << " (" << e << ")");
+					strerror(e) << " (" << e << ") --- aborting!");
 				abort();
 				
 				// Shut up compiler warning.
@@ -336,10 +336,12 @@ private:
 					ret = close(fds[1]);
 				} while (ret == -1 && errno == EINTR);
 			} catch (SystemException &e) {
-				P_ERROR("Cannot send a file descriptor: " << e.brief());
+				P_ERROR("Cannot send a file descriptor: " << e.brief() <<
+					" --- aborting!");
 				abort();
 			} catch (const exception &e) {
-				P_ERROR("Cannot send a file descriptor: " << e.what());
+				P_ERROR("Cannot send a file descriptor: " << e.what() <<
+					" --- aborting!");
 				abort();
 			}
 			
