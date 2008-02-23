@@ -65,9 +65,9 @@ function get(app_root):
 			active++
 		else:
 			# All apps are active. We're not allowed to
-			# spawn a new one, but we try to connect to
-			# an existing one anyway. Our connection
-			# request will be put into that app's queue.
+			# spawn a new one, so we try to connect to
+			# an existing one. Our connection request
+			# will be put into that app's queue.
 			app = list.front
 			list.move_to_back(app)
 			active++

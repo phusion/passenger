@@ -13,6 +13,7 @@ protected
 	# Return the absolute version of _path_. This path is guaranteed to
 	# to be "normal", i.e. it doesn't contain stuff like ".." or "/",
 	# and it correctly respects symbolic links.
+	#
 	# Raises Errno::ENOENT if _path_ doesn't exist.
 	def normalize_path(path)
 		return Pathname.new(path).realpath.to_s
@@ -20,14 +21,20 @@ protected
 	
 	def assert_valid_app_root(app_root)
 		assert_valid_directory(app_root)
-		assert_valid_directory("#{app_root}/app")
-		assert_valid_directory("#{app_root}/public")
+		assert_valid_file("#{app_root}/config/environment.rb")
 	end
 	
-	# Assert that _path_ is a directory.
+	# Assert that _path_ is a directory. Raises ArgumentError if it isn't.
 	def assert_valid_directory(path)
 		if !File.directory?(path)
 			raise ArgumentError, "'#{path}' is not a valid directory."
+		end
+	end
+	
+	# Assert that _path_ is a file. Raises ArgumentError if it isn't.
+	def assert_valid_file(path)
+		if !File.file?(path)
+			raise ArgumentError, "'#{path}' is not a valid file."
 		end
 	end
 	

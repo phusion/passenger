@@ -125,7 +125,17 @@ private:
 				}
 			}
 			
-			execlp(rubyCommand.c_str(), rubyCommand.c_str(), spawnServerCommand.c_str(), NULL);
+			execlp(rubyCommand.c_str(),
+				rubyCommand.c_str(),
+				spawnServerCommand.c_str(),
+				// The spawn server changes the process names of the subservers
+				// that it starts, for better usability. However, the process name length
+				// (as shown by ps) is limited. Here, we try to expand that limit by
+				// deliberately passing a useless whitespace string to the spawn server.
+				// This argument is ignored by the spawn server. This works on some
+				// systems, such as Ubuntu Linux.
+				"                                                             ",
+				NULL);
 			int e = errno;
 			fprintf(stderr, "*** Passenger ERROR: Could not start the spawn server: %s: %s\n",
 				rubyCommand.c_str(), strerror(e));
@@ -161,17 +171,20 @@ private:
 	 * Send the spawn command to the spawn server.
 	 *
 	 * @param appRoot The application root of the application to spawn.
-	 * @param user The user to run the application as.
-	 * @param group The group to run the application as.
+	 * @param lowerPrivilege Whether to lower the application's privileges.
+	 * @param lowestUser The user to fallback to if lowering privilege fails.
 	 * @return An Application smart pointer, representing the spawned application.
 	 * @throws SpawnException Something went wrong.
 	 */
-	ApplicationPtr sendSpawnCommand(const string &appRoot, const string &user, const string &group) {
+	ApplicationPtr sendSpawnCommand(const string &appRoot, bool lowerPrivilege, const string &lowestUser) {
 		vector<string> args;
 		
 		try {
-			channel.write("spawn_application", appRoot.c_str(),
-				user.c_str(), group.c_str(), NULL);
+			channel.write("spawn_application",
+				appRoot.c_str(),
+				(lowerPrivilege) ? "true" : "false",
+				lowestUser.c_str(),
+				NULL);
 		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not write to the spawn server: ") + e.brief());
 		}
@@ -198,7 +211,8 @@ private:
 	}
 	
 	ApplicationPtr
-	handleSpawnException(const SpawnException &e, const string &appRoot, const string &user, const string &group) {
+	handleSpawnException(const SpawnException &e, const string &appRoot,
+	                     bool lowerPrivilege, const string &lowestUser) {
 		bool restarted;
 		try {
 			P_DEBUG("Spawn server died. Attempting to restart it...");
@@ -213,7 +227,7 @@ private:
 			restarted = false;
 		}
 		if (restarted) {
-			return sendSpawnCommand(appRoot, user, group);
+			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser);
 		} else {
 			throw SpawnException("The spawn server died unexpectedly, and restarting it failed.");
 		}
@@ -285,24 +299,43 @@ public:
 	 * If restarting the server fails, or if the second spawn attempt fails,
 	 * then an exception will be thrown.
 	 *
+	 * If <tt>lowerPrivilege</tt> is true, then it will be attempt to
+	 * switch the spawned application instance to the user who owns the
+	 * application's <tt>config/environment.rb</tt>, and to the default
+	 * group of that user.
+	 *
+	 * If that user doesn't exist on the system, or if that user is root,
+	 * then it will be attempted to switch to the username given by
+	 * <tt>lowestUser</tt> (and to the default group of that user).
+	 * If <tt>lowestUser</tt> doesn't exist either, or if switching user failed
+	 * (because the spawn server process does not have the privilege to do so),
+	 * then the application will be spawned anyway, without reporting an error.
+	 *
+	 * It goes without saying that lowering privilege is only possible if
+	 * the spawn server is running as root (and thus, by induction, that
+	 * Passenger and Apache's control process are also running as root).
+	 * Note that if Apache is listening on port 80, then its control process must
+	 * be running as root. See "doc/Security of user switching.txt" for
+	 * a detailed explanation.
+	 *
 	 * @param appRoot The application root of a RoR application, i.e. the folder that
 	 *             contains 'app/', 'public/', 'config/', etc. This must be a valid directory,
 	 *             but the path does not have to be absolute.
-	 * @param user The user to run the instance as.
-	 * @param group The group to run the instance as.
+	 * @param lowerPrivilege Whether to lower the application's privileges.
+	 * @param lowestUser The user to fallback to if lowering privilege fails.
 	 * @return A smart pointer to an Application object, which represents the application
 	 *         instance that has been spawned. Use this object to communicate with the
 	 *         spawned application.
 	 * @throws SpawnException Something went wrong.
 	 */
-	ApplicationPtr spawn(const string &appRoot, const string &user = "", const string &group = "") {
+	ApplicationPtr spawn(const string &appRoot, bool lowerPrivilege = true, const string &lowestUser = "nobody") {
 		vector<string> args;
 		mutex::scoped_lock l(lock);
 		
 		try {
-			return sendSpawnCommand(appRoot, user, group);
+			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser);
 		} catch (const SpawnException &e) {
-			return handleSpawnException(e, appRoot, user, group);
+			return handleSpawnException(e, appRoot, lowerPrivilege, lowestUser);
 		}
 	}
 	

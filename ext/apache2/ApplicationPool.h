@@ -93,11 +93,15 @@ public:
 	 * Internally, this method may either spawn a new application instance, or use
 	 * an existing one.
 	 *
+	 * If <tt>lowerPrivilege</tt> is true, then any newly spawned application
+	 * instances will have lower privileges. See SpawnManager::SpawnManager()'s
+	 * description of <tt>lowerPrivilege</tt> and <tt>lowestUser</tt> for details.
+	 *
 	 * @param appRoot The application root of a RoR application, i.e. the folder that
 	 *             contains 'app/', 'public/', 'config/', etc. This must be a valid
 	 *             directory, but does not have to be an absolute path.
-	 * @param user The user to run the application instance as.
-	 * @param group The group to run the application instance as.
+	 * @param lowerPrivilege Whether to lower the application's privileges.
+	 * @param lowestUser The user to fallback to if lowering privilege fails.
 	 * @return A session object.
 	 * @throw SpawnException An attempt was made to spawn a new application instance, but that attempt failed.
 	 * @throw IOException Something else went wrong.
@@ -107,7 +111,7 @@ public:
 	 *       <tt>get("/home/../home/foo")</tt>, then ApplicationPool will think
 	 *       they're 2 different applications, and thus will spawn 2 application instances.
 	 */
-	virtual Application::SessionPtr get(const string &appRoot, const string &user = "", const string &group = "") = 0;
+	virtual Application::SessionPtr get(const string &appRoot, bool lowerPrivilege = true, const string &lowestUser = "nobody") = 0;
 	
 	/**
 	 * Set a hard limit on the number of application instances that this ApplicationPool
@@ -362,7 +366,7 @@ public:
 	}
 	
 	virtual Application::SessionPtr
-	get(const string &appRoot, const string &user = "", const string &group = "") {
+	get(const string &appRoot, bool lowerPrivilege = true, const string &lowestUser = "nobody") {
 		/*
 		 * See "doc/ApplicationPool Algorithm.txt" for a more readable description
 		 * of the algorithm.
@@ -386,7 +390,7 @@ public:
 					appList->push_back(app);
 					active++;
 				} else if (count < max) {
-					app = spawnManager.spawn(appRoot, user, group);
+					app = spawnManager.spawn(appRoot, lowerPrivilege, lowestUser);
 					appList->push_back(app);
 					count++;
 					countOrMaxChanged.notify_all();
@@ -401,7 +405,7 @@ public:
 				while (count >= max) {
 					countOrMaxChanged.wait(l);
 				}
-				app = spawnManager.spawn(appRoot, user, group);
+				app = spawnManager.spawn(appRoot, lowerPrivilege, lowestUser);
 				appList = new ApplicationList();
 				appList->push_back(app);
 				apps[appRoot] = ptr(appList);

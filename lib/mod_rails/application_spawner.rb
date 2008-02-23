@@ -1,11 +1,10 @@
 require 'socket'
+require 'etc'
 require 'mod_rails/abstract_server'
 require 'mod_rails/application'
 require 'mod_rails/utils'
 require 'mod_rails/request_handler'
 module ModRails # :nodoc
-
-# TODO: implement user switching
 
 # This class is capable of spawns instances of a single Ruby on Rails application.
 # It does so by preloading as much of the application's code as possible, then creating
@@ -17,10 +16,10 @@ module ModRails # :nodoc
 class ApplicationSpawner < AbstractServer
 	include Utils
 	
-	class SpawnError < StandardError
-	end
+	ROOT_UID = 0
+	ROOT_GID = 0
 	
-	class UserChangeError < StandardError
+	class SpawnError < StandardError
 	end
 	
 	# An attribute, used internally. This should not be used outside Passenger.
@@ -31,22 +30,23 @@ class ApplicationSpawner < AbstractServer
 	# or a directory that doesn't appear to be a Rails application root directory,
 	# then an ArgumentError will be raised.
 	#
-	# You may optionally specify _user_ and _group_. If specified, ApplicationSpawner will
-	# switch very spawned instance to the given user and group. This only works if
-	# ApplicationSpawner is running as root (or has the capability to change the
-	# current process's user).
-	# If given an invalid user or group, then an ArgumentError will be raised.
-	# If the current process's user/group cannot be changed, then a UserChangeError
-	# will be raised.
-	def initialize(app_root, user = nil, group = nil)
+	# If _lower_privilege_ is true, then ApplicationSpawner will attempt to
+	# switch to the user who owns the application's <tt>config/environment.rb</tt>,
+	# and to the default group of that user.
+	#
+	# If that user doesn't exist on the system, or if that user is root,
+	# then ApplicationSpawner will attempt to switch to the username given by
+	# _lowest_user_ (and to the default group of that user).
+	# If _lowest_user_ doesn't exist either, or if switching user failed
+	# (because the current process does not have the privilege to do so),
+	# then ApplicationSpawner will continue without reporting an error.
+	def initialize(app_root, lower_privilege = true, lowest_user = "nobody")
 		super()
 		@app_root = normalize_path(app_root)
-		@user = user
-		@group = group
+		@lower_privilege = lower_privilege
+		@lowest_user = lowest_user
 		self.time = Time.now
 		assert_valid_app_root(@app_root)
-		assert_valid_username(@user) unless @user.nil?
-		assert_valid_groupname(@group) unless @group.nil?
 		define_message_handler(:spawn_application, :handle_spawn_application)
 	end
 	
@@ -78,11 +78,42 @@ protected
 	
 	# Overrided method.
 	def initialize_server # :nodoc:
+		$0 = "Passenger ApplicationSpawner: #{@app_root}"
 		Dir.chdir(@app_root)
+		lower_privilege! if @lower_privilege
 		preload_application
 	end
 	
 private
+	def lower_privilege!
+		stat = File.stat("config/environment.rb")
+		if !switch_to_user(stat.uid)
+			switch_to_user(@lowest_user)
+		end
+	end
+
+	def switch_to_user(user)
+		begin
+			if user.is_a?(String)
+				pw = Etc.getpwnam(user)
+				uid = pw.uid
+				gid = pw.gid
+			else
+				uid = user
+				gid = Etc.getpwuid(uid).gid
+			end
+		rescue
+			return false
+		end
+		if uid == ROOT_UID
+			return false
+		else
+			Process::Sys.setgid(gid)
+			Process::Sys.setuid(uid)
+			return true
+		end
+	end
+
 	def preload_application
 		require 'config/environment'
 		require_dependency 'application'
@@ -97,6 +128,7 @@ private
 			begin
 				pid = fork do
 					begin
+						$0 = "Rails: #{@app_root}"
 						send_to_client(Process.pid)
 						
 						socket1, socket2 = UNIXSocket.pair
