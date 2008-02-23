@@ -34,7 +34,7 @@ Represents the life time of a single request/response pair of a Ruby on Rails ap
 <a class="el" href="classPassenger_1_1Application_1_1Session.html" title="Represents the life time of a single request/response pair of a Ruby on Rails application...">Session</a> is used to forward a single HTTP request to a Ruby on Rails application. A <a class="el" href="classPassenger_1_1Application_1_1Session.html" title="Represents the life time of a single request/response pair of a Ruby on Rails application...">Session</a> has two communication channels: one for reading data from the RoR application, and one for writing data to the RoR application.<p>
 In general, a session object is to be used in the following manner:<p>
 <ol type=1>
-<li>Convert the HTTP request headers into a string, as expected by <a class="el" href="classPassenger_1_1Application_1_1Session.html#78a4c93fd80f6d913f092c488ea4d360" title="Send HTTP request headers to the RoR application.">sendHeaders()</a>. Then send that string by calling <a class="el" href="classPassenger_1_1Application_1_1Session.html#78a4c93fd80f6d913f092c488ea4d360" title="Send HTTP request headers to the RoR application.">sendHeaders()</a>.</li><li>In case of a POST of PUT request, send the HTTP request body by calling <a class="el" href="classPassenger_1_1Application_1_1Session.html#2091e4b60dcbe42ab80fa387610fd669" title="Send a chunk of HTTP request body data to the RoR application.">sendBodyBlock()</a>, possibly multiple times.</li><li>Close the writer channel since you're now done sending data.</li><li>The HTTP response can now be read through the reader channel (<a class="el" href="classPassenger_1_1Application_1_1Session.html#c0ae073a36a3b5c9bb9dd672e9cad196" title="Get the reader channel&#39;s file descriptor.">getReader()</a>).</li><li>When the HTTP response has been read, the session must be closed. This is done by destroying the <a class="el" href="classPassenger_1_1Application_1_1Session.html" title="Represents the life time of a single request/response pair of a Ruby on Rails application...">Session</a> object.</li></ol>
+<li>Convert the HTTP request headers into a string, as expected by <a class="el" href="classPassenger_1_1Application_1_1Session.html#78a4c93fd80f6d913f092c488ea4d360" title="Send HTTP request headers to the RoR application.">sendHeaders()</a>. Then send that string by calling <a class="el" href="classPassenger_1_1Application_1_1Session.html#78a4c93fd80f6d913f092c488ea4d360" title="Send HTTP request headers to the RoR application.">sendHeaders()</a>.</li><li>In case of a POST of PUT request, send the HTTP request body by calling <a class="el" href="classPassenger_1_1Application_1_1Session.html#2091e4b60dcbe42ab80fa387610fd669" title="Send a chunk of HTTP request body data to the RoR application.">sendBodyBlock()</a>, possibly multiple times.</li><li>Close the writer channel since you're now done sending data.</li><li>The HTTP response can now be read through the reader channel (<a class="el" href="classPassenger_1_1Application_1_1Session.html#5635d9d04f400b0caefaacf1e4859c02" title="Get the reader channel&#39;s file descriptor.">getReader()</a>).</li><li>When the HTTP response has been read, the session must be closed. This is done by destroying the <a class="el" href="classPassenger_1_1Application_1_1Session.html" title="Represents the life time of a single request/response pair of a Ruby on Rails application...">Session</a> object.</li></ol>
 <p>
 A usage example is shown in <a class="el" href="classPassenger_1_1Application.html#2db08b6559ead2586f5c68f7bff0c188" title="Connect to this application instance with the purpose of sending a request to the...">Application::connect()</a>. <table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
@@ -48,20 +48,20 @@ A usage example is shown in <a class="el" href="classPassenger_1_1Application.ht
 <tr><td class="memItemLeft" nowrap align="right" valign="top">virtual void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Application_1_1Session.html#2091e4b60dcbe42ab80fa387610fd669">sendBodyBlock</a> (const char *block, unsigned int size)</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Send a chunk of HTTP request body data to the RoR application.  <a href="#2091e4b60dcbe42ab80fa387610fd669"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">virtual int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Application_1_1Session.html#c0ae073a36a3b5c9bb9dd672e9cad196">getReader</a> ()=0</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">virtual int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Application_1_1Session.html#5635d9d04f400b0caefaacf1e4859c02">getReader</a> () const =0</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the reader channel's file descriptor.  <a href="#c0ae073a36a3b5c9bb9dd672e9cad196"></a><br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the reader channel's file descriptor.  <a href="#5635d9d04f400b0caefaacf1e4859c02"></a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">virtual void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Application_1_1Session.html#49230041744ff4e48ddd3358febd56a9">closeReader</a> ()=0</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Close the reader channel.  <a href="#49230041744ff4e48ddd3358febd56a9"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">virtual int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Application_1_1Session.html#5aac80e4c06fe967a561a99ea06705e3">getWriter</a> ()=0</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">virtual int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Application_1_1Session.html#ffdb4345b8fd695e66d123cb62a9b160">getWriter</a> () const =0</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the writer channel's file descriptor.  <a href="#5aac80e4c06fe967a561a99ea06705e3"></a><br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the writer channel's file descriptor.  <a href="#ffdb4345b8fd695e66d123cb62a9b160"></a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">virtual void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Application_1_1Session.html#ecaa3575efd70130a4adfec203120d74">closeWriter</a> ()=0</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Close the writer channel.  <a href="#ecaa3575efd70130a4adfec203120d74"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="329fd8a1def4fda5a1497c3a488060b0"></a><!-- doxytag: member="Passenger::Application::Session::getPid" ref="329fd8a1def4fda5a1497c3a488060b0" args="()=0" -->
-virtual pid_t&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Application_1_1Session.html#329fd8a1def4fda5a1497c3a488060b0">getPid</a> ()=0</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="2215bec32917c48d1a9f6386b88d018b"></a><!-- doxytag: member="Passenger::Application::Session::getPid" ref="2215bec32917c48d1a9f6386b88d018b" args="() const =0" -->
+virtual pid_t&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Application_1_1Session.html#2215bec32917c48d1a9f6386b88d018b">getPid</a> () const =0</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the process ID of the application instance that belongs to this session. <br></td></tr>
 </table>
@@ -198,7 +198,7 @@ This method should only be called after a <a class="el" href="classPassenger_1_1
 
 </div>
 </div><p>
-<a class="anchor" name="c0ae073a36a3b5c9bb9dd672e9cad196"></a><!-- doxytag: member="Passenger::Application::Session::getReader" ref="c0ae073a36a3b5c9bb9dd672e9cad196" args="()=0" -->
+<a class="anchor" name="5635d9d04f400b0caefaacf1e4859c02"></a><!-- doxytag: member="Passenger::Application::Session::getReader" ref="5635d9d04f400b0caefaacf1e4859c02" args="() const =0" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -207,7 +207,7 @@ This method should only be called after a <a class="el" href="classPassenger_1_1
           <td>(</td>
           <td class="paramname">          </td>
           <td>&nbsp;)&nbsp;</td>
-          <td width="100%"><code> [pure virtual]</code></td>
+          <td width="100%"> const<code> [pure virtual]</code></td>
         </tr>
       </table>
 </div>
@@ -241,7 +241,7 @@ Close the reader channel.
 This method may be safely called multiple times. 
 </div>
 </div><p>
-<a class="anchor" name="5aac80e4c06fe967a561a99ea06705e3"></a><!-- doxytag: member="Passenger::Application::Session::getWriter" ref="5aac80e4c06fe967a561a99ea06705e3" args="()=0" -->
+<a class="anchor" name="ffdb4345b8fd695e66d123cb62a9b160"></a><!-- doxytag: member="Passenger::Application::Session::getWriter" ref="ffdb4345b8fd695e66d123cb62a9b160" args="() const =0" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -250,7 +250,7 @@ This method may be safely called multiple times.
           <td>(</td>
           <td class="paramname">          </td>
           <td>&nbsp;)&nbsp;</td>
-          <td width="100%"><code> [pure virtual]</code></td>
+          <td width="100%"> const<code> [pure virtual]</code></td>
         </tr>
       </table>
 </div>
@@ -287,7 +287,7 @@ This method may be safely called multiple times.
 </div><p>
 <hr>The documentation for this class was generated from the following file:<ul>
 <li><a class="el" href="Application_8h-source.html">Application.h</a></ul>
-<hr size="1"><address style="text-align: right;"><small>Generated on Fri Feb 22 21:23:17 2008 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Sat Feb 23 15:21:05 2008 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.3 </small></address>
 </body>

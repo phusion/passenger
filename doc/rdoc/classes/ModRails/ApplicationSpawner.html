@@ -95,8 +95,8 @@ multiple different Ruby on Rails applications.
 
   <div class="sectiontitle">Methods</div>
   <ul>
-  <li><a href="#M000022">new</a></li>
-  <li><a href="#M000023">spawn_application</a></li>
+  <li><a href="#M000023">new</a></li>
+  <li><a href="#M000024">spawn_application</a></li>
   </ul>
 
 <div class="sectiontitle">Included Modules</div>
@@ -107,9 +107,21 @@ multiple different Ruby on Rails applications.
 
   <div class="sectiontitle">Classes and Modules</div>
   Class <a href="ApplicationSpawner/SpawnError.html" class="link">ModRails::ApplicationSpawner::SpawnError</a><br />
-Class <a href="ApplicationSpawner/UserChangeError.html" class="link">ModRails::ApplicationSpawner::UserChangeError</a><br />
 
 
+  <div class="sectiontitle">Constants</div>
+  <table border='0' cellpadding='5'>
+  <tr valign='top'>
+    <td class="attr-name">ROOT_UID</td>
+    <td>=</td>
+    <td class="attr-value">0</td>
+  </tr>
+  <tr valign='top'>
+    <td class="attr-name">ROOT_GID</td>
+    <td>=</td>
+    <td class="attr-value">0</td>
+  </tr>
+  </table>
 
   <div class="sectiontitle">Attributes</div>
   <table border='0' cellpadding='5'>
@@ -128,7 +140,7 @@ An attribute, used internally. This should not be used outside Passenger.
 <div class="sectiontitle">Public Class methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000022"></a><b>new</b>(app_root, user = nil, group = nil)
+    <a name="M000023"></a><b>new</b>(app_root, lower_privilege = true, lowest_user = &quot;nobody&quot;)
   </div>
   <div class="description">
   <p>
@@ -138,31 +150,34 @@ given an invalid directory, or a directory that doesn&#8216;t appear to be
 a Rails application root directory, then an ArgumentError will be raised.
 </p>
 <p>
-You may optionally specify <em>user</em> and <em>group</em>. If specified,
-<a href="ApplicationSpawner.html">ApplicationSpawner</a> will switch very
-spawned instance to the given user and group. This only works if <a
-href="ApplicationSpawner.html">ApplicationSpawner</a> is running as root
-(or has the capability to change the current process&#8216;s user). If
-given an invalid user or group, then an ArgumentError will be raised. If
-the current process&#8216;s user/group cannot be changed, then a <a
-href="ApplicationSpawner/UserChangeError.html">UserChangeError</a> will be
-raised.
+If <em>lower_privilege</em> is true, then <a
+href="ApplicationSpawner.html">ApplicationSpawner</a> will attempt to
+switch to the user who owns the application&#8216;s
+<tt>config/environment.rb</tt>, and to the default group of that user.
+</p>
+<p>
+If that user doesn&#8216;t exist on the system, or if that user is root,
+then <a href="ApplicationSpawner.html">ApplicationSpawner</a> will attempt
+to switch to the username given by <em>lowest_user</em> (and to the default
+group of that user). If <em>lowest_user</em> doesn&#8216;t exist either, or
+if switching user failed (because the current process does not have the
+privilege to do so), then <a
+href="ApplicationSpawner.html">ApplicationSpawner</a> will continue without
+reporting an error.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000022_source')" id="l_M000022_source">show source</a> ]</p>
-  <div id="M000022_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000023_source')" id="l_M000023_source">show source</a> ]</p>
+  <div id="M000023_source" class="dyn-source">
 <pre>
-    <span class="ruby-comment cmt"># File lib/mod_rails/application_spawner.rb, line 41</span>
-41:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">user</span> = <span class="ruby-keyword kw">nil</span>, <span class="ruby-identifier">group</span> = <span class="ruby-keyword kw">nil</span>)
-42:                 <span class="ruby-keyword kw">super</span>()
-43:                 <span class="ruby-ivar">@app_root</span> = <span class="ruby-identifier">normalize_path</span>(<span class="ruby-identifier">app_root</span>)
-44:                 <span class="ruby-ivar">@user</span> = <span class="ruby-identifier">user</span>
-45:                 <span class="ruby-ivar">@group</span> = <span class="ruby-identifier">group</span>
-46:                 <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">time</span> = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span>
-47:                 <span class="ruby-identifier">assert_valid_app_root</span>(<span class="ruby-ivar">@app_root</span>)
-48:                 <span class="ruby-identifier">assert_valid_username</span>(<span class="ruby-ivar">@user</span>) <span class="ruby-keyword kw">unless</span> <span class="ruby-ivar">@user</span>.<span class="ruby-identifier">nil?</span>
-49:                 <span class="ruby-identifier">assert_valid_groupname</span>(<span class="ruby-ivar">@group</span>) <span class="ruby-keyword kw">unless</span> <span class="ruby-ivar">@group</span>.<span class="ruby-identifier">nil?</span>
+    <span class="ruby-comment cmt"># File lib/mod_rails/application_spawner.rb, line 43</span>
+43:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">lower_privilege</span> = <span class="ruby-keyword kw">true</span>, <span class="ruby-identifier">lowest_user</span> = <span class="ruby-value str">&quot;nobody&quot;</span>)
+44:                 <span class="ruby-keyword kw">super</span>()
+45:                 <span class="ruby-ivar">@app_root</span> = <span class="ruby-identifier">normalize_path</span>(<span class="ruby-identifier">app_root</span>)
+46:                 <span class="ruby-ivar">@lower_privilege</span> = <span class="ruby-identifier">lower_privilege</span>
+47:                 <span class="ruby-ivar">@lowest_user</span> = <span class="ruby-identifier">lowest_user</span>
+48:                 <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">time</span> = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span>
+49:                 <span class="ruby-identifier">assert_valid_app_root</span>(<span class="ruby-ivar">@app_root</span>)
 50:                 <span class="ruby-identifier">define_message_handler</span>(<span class="ruby-identifier">:spawn_application</span>, <span class="ruby-identifier">:handle_spawn_application</span>)
 51:         <span class="ruby-keyword kw">end</span>
 </pre>
@@ -172,7 +187,7 @@ raised.
 <div class="sectiontitle">Public Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000023"></a><b>spawn_application</b>()
+    <a name="M000024"></a><b>spawn_application</b>()
   </div>
   <div class="description">
   <p>
@@ -190,8 +205,8 @@ error.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000023_source')" id="l_M000023_source">show source</a> ]</p>
-  <div id="M000023_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000024_source')" id="l_M000024_source">show source</a> ]</p>
+  <div id="M000024_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/mod_rails/application_spawner.rb, line 60</span>
 60:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">spawn_application</span>

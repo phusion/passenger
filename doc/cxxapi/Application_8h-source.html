@@ -98,7 +98,7 @@
 <a name="l00083"></a>00083 <span class="comment">                 * @throws SystemException Something went wrong during writing.</span>
 <a name="l00084"></a>00084 <span class="comment">                 */</span>
 <a name="l00085"></a><a class="code" href="classPassenger_1_1Application_1_1Session.html#78a4c93fd80f6d913f092c488ea4d360">00085</a>                 <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classPassenger_1_1Application_1_1Session.html#78a4c93fd80f6d913f092c488ea4d360" title="Send HTTP request headers to the RoR application.">sendHeaders</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *headers, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> size) {
-<a name="l00086"></a>00086                         <span class="keywordtype">int</span> writer = <a class="code" href="classPassenger_1_1Application_1_1Session.html#5aac80e4c06fe967a561a99ea06705e3" title="Get the writer channel&amp;#39;s file descriptor.">getWriter</a>();
+<a name="l00086"></a>00086                         <span class="keywordtype">int</span> writer = <a class="code" href="classPassenger_1_1Application_1_1Session.html#ffdb4345b8fd695e66d123cb62a9b160" title="Get the writer channel&amp;#39;s file descriptor.">getWriter</a>();
 <a name="l00087"></a>00087                         <span class="keywordflow">if</span> (writer == -1) {
 <a name="l00088"></a>00088                                 <span class="keywordflow">throw</span> <a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a>(<span class="stringliteral">"Cannot write headers to the request handler because the writer channel has already been closed."</span>);
 <a name="l00089"></a>00089                         }
@@ -133,7 +133,7 @@
 <a name="l00118"></a>00118 <span class="comment">                 * @throws SystemException Something went wrong during writing.</span>
 <a name="l00119"></a>00119 <span class="comment">                 */</span>
 <a name="l00120"></a><a class="code" href="classPassenger_1_1Application_1_1Session.html#2091e4b60dcbe42ab80fa387610fd669">00120</a>                 <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classPassenger_1_1Application_1_1Session.html#2091e4b60dcbe42ab80fa387610fd669" title="Send a chunk of HTTP request body data to the RoR application.">sendBodyBlock</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *block, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> size) {
-<a name="l00121"></a>00121                         <span class="keywordtype">int</span> writer = <a class="code" href="classPassenger_1_1Application_1_1Session.html#5aac80e4c06fe967a561a99ea06705e3" title="Get the writer channel&amp;#39;s file descriptor.">getWriter</a>();
+<a name="l00121"></a>00121                         <span class="keywordtype">int</span> writer = <a class="code" href="classPassenger_1_1Application_1_1Session.html#ffdb4345b8fd695e66d123cb62a9b160" title="Get the writer channel&amp;#39;s file descriptor.">getWriter</a>();
 <a name="l00122"></a>00122                         <span class="keywordflow">if</span> (writer == -1) {
 <a name="l00123"></a>00123                                 <span class="keywordflow">throw</span> <a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a>(<span class="stringliteral">"Cannot write request body block to the request handler because the writer channel has already been closed."</span>);
 <a name="l00124"></a>00124                         }
@@ -149,7 +149,7 @@
 <a name="l00134"></a>00134 <span class="comment">                 *</span>
 <a name="l00135"></a>00135 <span class="comment">                 * @pre The reader channel has not been closed.</span>
 <a name="l00136"></a>00136 <span class="comment">                 */</span>
-<a name="l00137"></a>00137                 <span class="keyword">virtual</span> <span class="keywordtype">int</span> <a class="code" href="classPassenger_1_1Application_1_1Session.html#c0ae073a36a3b5c9bb9dd672e9cad196" title="Get the reader channel&amp;#39;s file descriptor.">getReader</a>() = 0;
+<a name="l00137"></a>00137                 <span class="keyword">virtual</span> <span class="keywordtype">int</span> <a class="code" href="classPassenger_1_1Application_1_1Session.html#5635d9d04f400b0caefaacf1e4859c02" title="Get the reader channel&amp;#39;s file descriptor.">getReader</a>() <span class="keyword">const</span> = 0;
 <a name="l00138"></a>00138                 <span class="comment"></span>
 <a name="l00139"></a>00139 <span class="comment">                /**</span>
 <a name="l00140"></a>00140 <span class="comment">                 * Close the reader channel. This method may be safely called multiple times.</span>
@@ -163,7 +163,7 @@
 <a name="l00148"></a>00148 <span class="comment">                 *</span>
 <a name="l00149"></a>00149 <span class="comment">                 * @pre The writer channel has not been closed.</span>
 <a name="l00150"></a>00150 <span class="comment">                 */</span>
-<a name="l00151"></a>00151                 <span class="keyword">virtual</span> <span class="keywordtype">int</span> <a class="code" href="classPassenger_1_1Application_1_1Session.html#5aac80e4c06fe967a561a99ea06705e3" title="Get the writer channel&amp;#39;s file descriptor.">getWriter</a>() = 0;
+<a name="l00151"></a>00151                 <span class="keyword">virtual</span> <span class="keywordtype">int</span> <a class="code" href="classPassenger_1_1Application_1_1Session.html#ffdb4345b8fd695e66d123cb62a9b160" title="Get the writer channel&amp;#39;s file descriptor.">getWriter</a>() <span class="keyword">const</span> = 0;
 <a name="l00152"></a>00152                 <span class="comment"></span>
 <a name="l00153"></a>00153 <span class="comment">                /**</span>
 <a name="l00154"></a>00154 <span class="comment">                 * Close the writer channel. This method may be safely called multiple times.</span>
@@ -173,7 +173,7 @@
 <a name="l00158"></a>00158 <span class="comment">                /**</span>
 <a name="l00159"></a>00159 <span class="comment">                 * Get the process ID of the application instance that belongs to this session.</span>
 <a name="l00160"></a>00160 <span class="comment">                 */</span>
-<a name="l00161"></a>00161                 <span class="keyword">virtual</span> pid_t <a class="code" href="classPassenger_1_1Application_1_1Session.html#329fd8a1def4fda5a1497c3a488060b0" title="Get the process ID of the application instance that belongs to this session.">getPid</a>() = 0;
+<a name="l00161"></a>00161                 <span class="keyword">virtual</span> pid_t <a class="code" href="classPassenger_1_1Application_1_1Session.html#2215bec32917c48d1a9f6386b88d018b" title="Get the process ID of the application instance that belongs to this session.">getPid</a>() <span class="keyword">const</span> = 0;
 <a name="l00162"></a>00162         };
 <a name="l00163"></a>00163 
 <a name="l00164"></a>00164 <span class="keyword">private</span>:<span class="comment"></span>
@@ -220,7 +220,7 @@
 <a name="l00205"></a>00205                         closeCallback(*<span class="keyword">this</span>);
 <a name="l00206"></a>00206                 }
 <a name="l00207"></a>00207                 
-<a name="l00208"></a>00208                 <span class="keyword">virtual</span> <span class="keywordtype">int</span> getReader() {
+<a name="l00208"></a>00208                 <span class="keyword">virtual</span> <span class="keywordtype">int</span> getReader()<span class="keyword"> const </span>{
 <a name="l00209"></a>00209                         <span class="keywordflow">return</span> reader;
 <a name="l00210"></a>00210                 }
 <a name="l00211"></a>00211                 
@@ -231,7 +231,7 @@
 <a name="l00216"></a>00216                         }
 <a name="l00217"></a>00217                 }
 <a name="l00218"></a>00218                 
-<a name="l00219"></a>00219                 <span class="keyword">virtual</span> <span class="keywordtype">int</span> getWriter() {
+<a name="l00219"></a>00219                 <span class="keyword">virtual</span> <span class="keywordtype">int</span> getWriter()<span class="keyword"> const </span>{
 <a name="l00220"></a>00220                         <span class="keywordflow">return</span> writer;
 <a name="l00221"></a>00221                 }
 <a name="l00222"></a>00222                 
@@ -242,7 +242,7 @@
 <a name="l00227"></a>00227                         }
 <a name="l00228"></a>00228                 }
 <a name="l00229"></a>00229                 
-<a name="l00230"></a>00230                 <span class="keyword">virtual</span> pid_t <a class="code" href="classPassenger_1_1Application.html#94d2cce1c2c1d3441325f1498a22bf02" title="Returns the process ID of this application instance.">getPid</a>() {
+<a name="l00230"></a>00230                 <span class="keyword">virtual</span> pid_t <a class="code" href="classPassenger_1_1Application.html#94d2cce1c2c1d3441325f1498a22bf02" title="Returns the process ID of this application instance.">getPid</a>()<span class="keyword"> const </span>{
 <a name="l00231"></a>00231                         <span class="keywordflow">return</span> pid;
 <a name="l00232"></a>00232                 }
 <a name="l00233"></a>00233         };
@@ -402,7 +402,7 @@
 <a name="l00387"></a>00387 } <span class="comment">// namespace Passenger</span>
 <a name="l00388"></a>00388 
 <a name="l00389"></a>00389 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_APPLICATION_H_ */</span>
-</pre></div><hr size="1"><address style="text-align: right;"><small>Generated on Fri Feb 22 21:23:17 2008 for Passenger by&nbsp;
+</pre></div><hr size="1"><address style="text-align: right;"><small>Generated on Sat Feb 23 15:21:04 2008 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.3 </small></address>
 </body>

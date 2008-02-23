@@ -105,19 +105,19 @@ timeout occurred.
   <p class="source-link">[ <a href="javascript:toggleSource('M000001_source')" id="l_M000001_source">show source</a> ]</p>
   <div id="M000001_source" class="dyn-source">
 <pre>
-    <span class="ruby-comment cmt"># File lib/mod_rails/utils.rb, line 59</span>
-59:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">timed_wait</span>(<span class="ruby-identifier">mutex</span>, <span class="ruby-identifier">secs</span>)
-60:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">secs</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>
-61:                         <span class="ruby-constant">Timeout</span>.<span class="ruby-identifier">timeout</span>(<span class="ruby-identifier">secs</span>) <span class="ruby-keyword kw">do</span>
-62:                                 <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>)
-63:                         <span class="ruby-keyword kw">end</span>
-64:                 <span class="ruby-keyword kw">else</span>
-65:                         <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>)
-66:                 <span class="ruby-keyword kw">end</span>
-67:                 <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">true</span>
-68:         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Timeout</span><span class="ruby-operator">::</span><span class="ruby-constant">Error</span>
-69:                 <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">false</span>
-70:         <span class="ruby-keyword kw">end</span>
+    <span class="ruby-comment cmt"># File lib/mod_rails/utils.rb, line 66</span>
+66:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">timed_wait</span>(<span class="ruby-identifier">mutex</span>, <span class="ruby-identifier">secs</span>)
+67:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">secs</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>
+68:                         <span class="ruby-constant">Timeout</span>.<span class="ruby-identifier">timeout</span>(<span class="ruby-identifier">secs</span>) <span class="ruby-keyword kw">do</span>
+69:                                 <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>)
+70:                         <span class="ruby-keyword kw">end</span>
+71:                 <span class="ruby-keyword kw">else</span>
+72:                         <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>)
+73:                 <span class="ruby-keyword kw">end</span>
+74:                 <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">true</span>
+75:         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Timeout</span><span class="ruby-operator">::</span><span class="ruby-constant">Error</span>
+76:                 <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">false</span>
+77:         <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>
@@ -136,16 +136,16 @@ amount of time. Raises Timeout::Error if the timeout has elapsed.
   <p class="source-link">[ <a href="javascript:toggleSource('M000002_source')" id="l_M000002_source">show source</a> ]</p>
   <div id="M000002_source" class="dyn-source">
 <pre>
-    <span class="ruby-comment cmt"># File lib/mod_rails/utils.rb, line 74</span>
-74:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">timed_wait!</span>(<span class="ruby-identifier">mutex</span>, <span class="ruby-identifier">secs</span>)
-75:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">secs</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>
-76:                         <span class="ruby-constant">Timeout</span>.<span class="ruby-identifier">timeout</span>(<span class="ruby-identifier">secs</span>) <span class="ruby-keyword kw">do</span>
-77:                                 <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>)
-78:                         <span class="ruby-keyword kw">end</span>
-79:                 <span class="ruby-keyword kw">else</span>
-80:                         <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>)
-81:                 <span class="ruby-keyword kw">end</span>
-82:         <span class="ruby-keyword kw">end</span>
+    <span class="ruby-comment cmt"># File lib/mod_rails/utils.rb, line 81</span>
+81:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">timed_wait!</span>(<span class="ruby-identifier">mutex</span>, <span class="ruby-identifier">secs</span>)
+82:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">secs</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>
+83:                         <span class="ruby-constant">Timeout</span>.<span class="ruby-identifier">timeout</span>(<span class="ruby-identifier">secs</span>) <span class="ruby-keyword kw">do</span>
+84:                                 <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>)
+85:                         <span class="ruby-keyword kw">end</span>
+86:                 <span class="ruby-keyword kw">else</span>
+87:                         <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>)
+88:                 <span class="ruby-keyword kw">end</span>
+89:         <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>

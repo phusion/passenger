@@ -87,9 +87,9 @@ preloading Rails was successful
 
   <div class="sectiontitle">Methods</div>
   <ul>
-  <li><a href="#M000011">new</a></li>
-  <li><a href="#M000013">reload</a></li>
-  <li><a href="#M000012">spawn_application</a></li>
+  <li><a href="#M000012">new</a></li>
+  <li><a href="#M000014">reload</a></li>
+  <li><a href="#M000013">spawn_application</a></li>
   </ul>
 
 <div class="sectiontitle">Included Modules</div>
@@ -130,11 +130,11 @@ An attribute, used internally. This should not be used outside mod_rails.
 <div class="sectiontitle">Public Class methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000011"></a><b>new</b>(version = nil)
+    <a name="M000012"></a><b>new</b>(version = nil)
   </div>
   <div class="description">
   <p>
-Creates a <a href="FrameworkSpawner.html#M000011">new</a> instance of <a
+Creates a <a href="FrameworkSpawner.html#M000012">new</a> instance of <a
 href="FrameworkSpawner.html">FrameworkSpawner</a>.
 </p>
 <p>
@@ -146,14 +146,14 @@ Rails version will be loaded. The choice will depend on RubyGems.
 <p>
 Note that this Rails version will be loaded during the entire life time of
 the <a href="FrameworkSpawner.html">FrameworkSpawner</a> server. If you
-wish to <a href="FrameworkSpawner.html#M000013">reload</a> the Rails
+wish to <a href="FrameworkSpawner.html#M000014">reload</a> the Rails
 framework&#8216;s code, then restart the server by calling stop() and
 start().
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000011_source')" id="l_M000011_source">show source</a> ]</p>
-  <div id="M000011_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000012_source')" id="l_M000012_source">show source</a> ]</p>
+  <div id="M000012_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/mod_rails/framework_spawner.rb, line 31</span>
 31:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">version</span> = <span class="ruby-keyword kw">nil</span>)
@@ -177,29 +177,29 @@ start().
 <div class="sectiontitle">Public Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000013"></a><b>reload</b>(app_root = nil)
+    <a name="M000014"></a><b>reload</b>(app_root = nil)
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000013_source')" id="l_M000013_source">show source</a> ]</p>
-  <div id="M000013_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000014_source')" id="l_M000014_source">show source</a> ]</p>
+  <div id="M000014_source" class="dyn-source">
 <pre>
-    <span class="ruby-comment cmt"># File lib/mod_rails/framework_spawner.rb, line 84</span>
-84:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">reload</span>(<span class="ruby-identifier">app_root</span> = <span class="ruby-keyword kw">nil</span>)
-85:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">app_root</span>.<span class="ruby-identifier">nil?</span>
-86:                         <span class="ruby-identifier">send_to_server</span>(<span class="ruby-value str">&quot;reload&quot;</span>)
-87:                 <span class="ruby-keyword kw">else</span>
-88:                         <span class="ruby-identifier">send_to_server</span>(<span class="ruby-value str">&quot;reload&quot;</span>, <span class="ruby-identifier">normalize_path</span>(<span class="ruby-identifier">app_root</span>))
-89:                 <span class="ruby-keyword kw">end</span>
-90:         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Errno</span><span class="ruby-operator">::</span><span class="ruby-constant">EPIPE</span>, <span class="ruby-constant">Errno</span><span class="ruby-operator">::</span><span class="ruby-constant">EBADF</span>, <span class="ruby-constant">IOError</span>, <span class="ruby-constant">SocketError</span>
-91:                 <span class="ruby-identifier">raise</span> <span class="ruby-constant">IOError</span>, <span class="ruby-value str">&quot;Cannot send reload command to the framework spawner server.&quot;</span>
-92:         <span class="ruby-keyword kw">end</span>
+    <span class="ruby-comment cmt"># File lib/mod_rails/framework_spawner.rb, line 85</span>
+85:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">reload</span>(<span class="ruby-identifier">app_root</span> = <span class="ruby-keyword kw">nil</span>)
+86:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">app_root</span>.<span class="ruby-identifier">nil?</span>
+87:                         <span class="ruby-identifier">send_to_server</span>(<span class="ruby-value str">&quot;reload&quot;</span>)
+88:                 <span class="ruby-keyword kw">else</span>
+89:                         <span class="ruby-identifier">send_to_server</span>(<span class="ruby-value str">&quot;reload&quot;</span>, <span class="ruby-identifier">normalize_path</span>(<span class="ruby-identifier">app_root</span>))
+90:                 <span class="ruby-keyword kw">end</span>
+91:         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">SystemCallError</span>, <span class="ruby-constant">SocketError</span>
+92:                 <span class="ruby-identifier">raise</span> <span class="ruby-constant">IOError</span>, <span class="ruby-value str">&quot;Cannot send reload command to the framework spawner server.&quot;</span>
+93:         <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000012"></a><b>spawn_application</b>(app_root, user = nil, group = nil)
+    <a name="M000013"></a><b>spawn_application</b>(app_root, lower_privilege = true, lowest_user = &quot;nobody&quot;)
   </div>
   <div class="description">
   <p>
@@ -209,12 +209,17 @@ When successful, an <a href="Application.html">Application</a> object will
 be returned, which represents the spawned RoR application.
 </p>
 <p>
+See <a href="ApplicationSpawner.html#M000023">ApplicationSpawner.new</a>()
+for an explanation for the <em>lower_privilege</em> and
+<em>lowest_user</em> parameters.
+</p>
+<p>
 <a href="FrameworkSpawner.html">FrameworkSpawner</a> will internally use <a
 href="ApplicationSpawner.html">ApplicationSpawner</a>, and cache <a
 href="ApplicationSpawner.html">ApplicationSpawner</a> objects for a while.
 As a result, spawning an instance of a RoR application for the first time
-will be relatively slow, but following attempts will be very fast, as long
-as the cache idle timeout hasn&#8216;t been reached.
+will be relatively slow, but subsequent attempts will be very fast, as long
+as the cache clear timeout hasn&#8216;t been reached.
 </p>
 <p>
 This also implies that the application&#8216;s code will be cached in
@@ -227,7 +232,7 @@ calling stop(), then start().
 
 </li>
 <li>Reload the application by calling <a
-href="FrameworkSpawner.html#M000013">reload</a>().
+href="FrameworkSpawner.html#M000014">reload</a>().
 
 </li>
 </ul>
@@ -242,26 +247,24 @@ to standard error.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000012_source')" id="l_M000012_source">show source</a> ]</p>
-  <div id="M000012_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000013_source')" id="l_M000013_source">show source</a> ]</p>
+  <div id="M000013_source" class="dyn-source">
 <pre>
-    <span class="ruby-comment cmt"># File lib/mod_rails/framework_spawner.rb, line 67</span>
-67:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">spawn_application</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">user</span> = <span class="ruby-keyword kw">nil</span>, <span class="ruby-identifier">group</span> = <span class="ruby-keyword kw">nil</span>)
-68:                 <span class="ruby-identifier">app_root</span> = <span class="ruby-identifier">normalize_path</span>(<span class="ruby-identifier">app_root</span>)
-69:                 <span class="ruby-identifier">assert_valid_app_root</span>(<span class="ruby-identifier">app_root</span>)
-70:                 <span class="ruby-identifier">assert_valid_username</span>(<span class="ruby-identifier">user</span>) <span class="ruby-keyword kw">unless</span> <span class="ruby-identifier">user</span>.<span class="ruby-identifier">nil?</span>
-71:                 <span class="ruby-identifier">assert_valid_groupname</span>(<span class="ruby-identifier">group</span>) <span class="ruby-keyword kw">unless</span> <span class="ruby-identifier">group</span>.<span class="ruby-identifier">nil?</span>
-72:                 <span class="ruby-keyword kw">begin</span>
-73:                         <span class="ruby-identifier">send_to_server</span>(<span class="ruby-value str">&quot;spawn_application&quot;</span>, <span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">user</span>, <span class="ruby-identifier">group</span>)
-74:                         <span class="ruby-identifier">pid</span> = <span class="ruby-identifier">recv_from_server</span>
-75:                         <span class="ruby-identifier">listen_socket</span> = <span class="ruby-identifier">recv_io_from_server</span>
-76:                         <span class="ruby-keyword kw">return</span> <span class="ruby-constant">Application</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">pid</span>, <span class="ruby-identifier">listen_socket</span>)
-77:                 <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">SystemCallError</span>, <span class="ruby-constant">IOError</span>, <span class="ruby-constant">SocketError</span>
-78:                         <span class="ruby-identifier">raise</span> <span class="ruby-constant">ApplicationSpawner</span><span class="ruby-operator">::</span><span class="ruby-constant">SpawnError</span>, <span class="ruby-value str">&quot;Unable to spawn the application: &quot;</span> <span class="ruby-operator">&lt;&lt;</span>
-79:                                 <span class="ruby-value str">&quot;either the Ruby on Rails framework failed to load, &quot;</span> <span class="ruby-operator">&lt;&lt;</span>
-80:                                 <span class="ruby-value str">&quot;or the application died unexpectedly during initialization.&quot;</span>
-81:                 <span class="ruby-keyword kw">end</span>
-82:         <span class="ruby-keyword kw">end</span>
+    <span class="ruby-comment cmt"># File lib/mod_rails/framework_spawner.rb, line 70</span>
+70:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">spawn_application</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">lower_privilege</span> = <span class="ruby-keyword kw">true</span>, <span class="ruby-identifier">lowest_user</span> = <span class="ruby-value str">&quot;nobody&quot;</span>)
+71:                 <span class="ruby-identifier">app_root</span> = <span class="ruby-identifier">normalize_path</span>(<span class="ruby-identifier">app_root</span>)
+72:                 <span class="ruby-identifier">assert_valid_app_root</span>(<span class="ruby-identifier">app_root</span>)
+73:                 <span class="ruby-keyword kw">begin</span>
+74:                         <span class="ruby-identifier">send_to_server</span>(<span class="ruby-value str">&quot;spawn_application&quot;</span>, <span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">lower_privilege</span>, <span class="ruby-identifier">lowest_user</span>)
+75:                         <span class="ruby-identifier">pid</span> = <span class="ruby-identifier">recv_from_server</span>
+76:                         <span class="ruby-identifier">listen_socket</span> = <span class="ruby-identifier">recv_io_from_server</span>
+77:                         <span class="ruby-keyword kw">return</span> <span class="ruby-constant">Application</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">pid</span>, <span class="ruby-identifier">listen_socket</span>)
+78:                 <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">SystemCallError</span>, <span class="ruby-constant">IOError</span>, <span class="ruby-constant">SocketError</span>
+79:                         <span class="ruby-identifier">raise</span> <span class="ruby-constant">ApplicationSpawner</span><span class="ruby-operator">::</span><span class="ruby-constant">SpawnError</span>, <span class="ruby-value str">&quot;Unable to spawn the application: &quot;</span> <span class="ruby-operator">&lt;&lt;</span>
+80:                                 <span class="ruby-value str">&quot;either the Ruby on Rails framework failed to load, &quot;</span> <span class="ruby-operator">&lt;&lt;</span>
+81:                                 <span class="ruby-value str">&quot;or the application died unexpectedly during initialization.&quot;</span>
+82:                 <span class="ruby-keyword kw">end</span>
+83:         <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>

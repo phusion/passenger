@@ -88,12 +88,16 @@
 <a name="l00073"></a>00073                         <span class="keywordflow">return</span> ApplicationPtr(<span class="keyword">new</span> <a class="code" href="classPassenger_1_1Application.html" title="Represents a single Ruby on Rails application instance.">Application</a>(appRoot, pid, fds[1]));
 <a name="l00074"></a>00074                 }
 <a name="l00075"></a>00075         }
-<a name="l00076"></a>00076 };
-<a name="l00077"></a>00077 
-<a name="l00078"></a>00078 } <span class="comment">// namespace Passenger</span>
-<a name="l00079"></a>00079 
-<a name="l00080"></a>00080 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_DUMMY_SPAWN_MANAGER_H_ */</span>
-</pre></div><hr size="1"><address style="text-align: right;"><small>Generated on Fri Feb 22 21:23:17 2008 for Passenger by&nbsp;
+<a name="l00076"></a>00076         
+<a name="l00077"></a>00077         pid_t getServerPid()<span class="keyword"> const </span>{
+<a name="l00078"></a>00078                 <span class="keywordflow">return</span> 0;
+<a name="l00079"></a>00079         }
+<a name="l00080"></a>00080 };
+<a name="l00081"></a>00081 
+<a name="l00082"></a>00082 } <span class="comment">// namespace Passenger</span>
+<a name="l00083"></a>00083 
+<a name="l00084"></a>00084 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_DUMMY_SPAWN_MANAGER_H_ */</span>
+</pre></div><hr size="1"><address style="text-align: right;"><small>Generated on Sat Feb 23 15:21:04 2008 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.3 </small></address>
 </body>
