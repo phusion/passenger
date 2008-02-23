@@ -82,9 +82,9 @@ AbstractServer
 
   <div class="sectiontitle">Methods</div>
   <ul>
-  <li><a href="#M000026">cleanup</a></li>
-  <li><a href="#M000024">new</a></li>
-  <li><a href="#M000025">spawn_application</a></li>
+  <li><a href="#M000027">cleanup</a></li>
+  <li><a href="#M000025">new</a></li>
+  <li><a href="#M000026">spawn_application</a></li>
   </ul>
 
 
@@ -108,11 +108,11 @@ AbstractServer
 <div class="sectiontitle">Public Class methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000024"></a><b>new</b>()
+    <a name="M000025"></a><b>new</b>()
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000024_source')" id="l_M000024_source">show source</a> ]</p>
-  <div id="M000024_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000025_source')" id="l_M000025_source">show source</a> ]</p>
+  <div id="M000025_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/mod_rails/spawn_manager.rb, line 12</span>
 12:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>
@@ -133,11 +133,11 @@ AbstractServer
 <div class="sectiontitle">Public Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000026"></a><b>cleanup</b>()
+    <a name="M000027"></a><b>cleanup</b>()
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000026_source')" id="l_M000026_source">show source</a> ]</p>
-  <div id="M000026_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000027_source')" id="l_M000027_source">show source</a> ]</p>
+  <div id="M000027_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/mod_rails/spawn_manager.rb, line 39</span>
 39:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">cleanup</span>
@@ -158,14 +158,14 @@ AbstractServer
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000025"></a><b>spawn_application</b>(app_root, user = nil, group = nil)
+    <a name="M000026"></a><b>spawn_application</b>(app_root, lower_privilege = true, lowest_user = &quot;nobody&quot;)
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000025_source')" id="l_M000025_source">show source</a> ]</p>
-  <div id="M000025_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000026_source')" id="l_M000026_source">show source</a> ]</p>
+  <div id="M000026_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/mod_rails/spawn_manager.rb, line 24</span>
-24:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">spawn_application</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">user</span> = <span class="ruby-keyword kw">nil</span>, <span class="ruby-identifier">group</span> = <span class="ruby-keyword kw">nil</span>)
+24:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">spawn_application</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">lower_privilege</span> = <span class="ruby-keyword kw">true</span>, <span class="ruby-identifier">lowest_user</span> = <span class="ruby-value str">&quot;nobody&quot;</span>)
 25:                 <span class="ruby-identifier">framework_version</span> = <span class="ruby-constant">Application</span>.<span class="ruby-identifier">get_framework_version</span>(<span class="ruby-identifier">app_root</span>)
 26:                 <span class="ruby-identifier">spawner</span> = <span class="ruby-keyword kw">nil</span>
 27:                 <span class="ruby-ivar">@lock</span>.<span class="ruby-identifier">synchronize</span> <span class="ruby-keyword kw">do</span>
@@ -177,7 +177,7 @@ AbstractServer
 33:                         <span class="ruby-keyword kw">end</span>
 34:                 <span class="ruby-keyword kw">end</span>
 35:                 <span class="ruby-identifier">spawner</span>.<span class="ruby-identifier">time</span> = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span>
-36:                 <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">spawner</span>.<span class="ruby-identifier">spawn_application</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">user</span>, <span class="ruby-identifier">group</span>)
+36:                 <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">spawner</span>.<span class="ruby-identifier">spawn_application</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">lower_privilege</span>, <span class="ruby-identifier">lowest_user</span>)
 37:         <span class="ruby-keyword kw">end</span>
 </pre>
   </div>

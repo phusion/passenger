@@ -108,363 +108,379 @@
 <a name="l00093"></a>00093 <span class="comment">         * Internally, this method may either spawn a new application instance, or use</span>
 <a name="l00094"></a>00094 <span class="comment">         * an existing one.</span>
 <a name="l00095"></a>00095 <span class="comment">         *</span>
-<a name="l00096"></a>00096 <span class="comment">         * @param appRoot The application root of a RoR application, i.e. the folder that</span>
-<a name="l00097"></a>00097 <span class="comment">         *             contains 'app/', 'public/', 'config/', etc. This must be a valid</span>
-<a name="l00098"></a>00098 <span class="comment">         *             directory, but does not have to be an absolute path.</span>
-<a name="l00099"></a>00099 <span class="comment">         * @param user The user to run the application instance as.</span>
-<a name="l00100"></a>00100 <span class="comment">         * @param group The group to run the application instance as.</span>
-<a name="l00101"></a>00101 <span class="comment">         * @return A session object.</span>
-<a name="l00102"></a>00102 <span class="comment">         * @throw SpawnException An attempt was made to spawn a new application instance, but that attempt failed.</span>
-<a name="l00103"></a>00103 <span class="comment">         * @throw IOException Something else went wrong.</span>
-<a name="l00104"></a>00104 <span class="comment">         * @note Applications are uniquely identified with the application root</span>
-<a name="l00105"></a>00105 <span class="comment">         *       string. So although &lt;tt&gt;appRoot&lt;/tt&gt; does not have to be absolute, it</span>
-<a name="l00106"></a>00106 <span class="comment">         *       should be. If one calls &lt;tt&gt;get("/home/foo")&lt;/tt&gt; and</span>
-<a name="l00107"></a>00107 <span class="comment">         *       &lt;tt&gt;get("/home/../home/foo")&lt;/tt&gt;, then ApplicationPool will think</span>
-<a name="l00108"></a>00108 <span class="comment">         *       they're 2 different applications, and thus will spawn 2 application instances.</span>
-<a name="l00109"></a>00109 <span class="comment">         */</span>
-<a name="l00110"></a>00110         <span class="keyword">virtual</span> <a class="code" href="classPassenger_1_1Application.html#d14f673494991460b16246a527ad8ad9" title="Convenient alias for Session smart pointer.">Application::SessionPtr</a> <span class="keyword">get</span>(<span class="keyword">const</span> <span class="keywordtype">string</span> &amp;appRoot, <span class="keyword">const</span> <span class="keywordtype">string</span> &amp;user = <span class="stringliteral">""</span>, <span class="keyword">const</span> <span class="keywordtype">string</span> &amp;group = <span class="stringliteral">""</span>) = 0;
-<a name="l00111"></a>00111         <span class="comment"></span>
-<a name="l00112"></a>00112 <span class="comment">        /**</span>
-<a name="l00113"></a>00113 <span class="comment">         * Set a hard limit on the number of application instances that this ApplicationPool</span>
-<a name="l00114"></a>00114 <span class="comment">         * may spawn. The exact behavior depends on the used algorithm, and is not specified by</span>
-<a name="l00115"></a>00115 <span class="comment">         * these API docs.</span>
-<a name="l00116"></a>00116 <span class="comment">         *</span>
-<a name="l00117"></a>00117 <span class="comment">         * It is allowed to set a limit lower than the current number of spawned applications.</span>
-<a name="l00118"></a>00118 <span class="comment">         */</span>
-<a name="l00119"></a>00119         <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classPassenger_1_1ApplicationPool.html#0e0f21972ab130c9c0f90c2212328794" title="Set a hard limit on the number of application instances that this ApplicationPool...">setMax</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> max) = 0;
-<a name="l00120"></a>00120         <span class="comment"></span>
-<a name="l00121"></a>00121 <span class="comment">        /**</span>
-<a name="l00122"></a>00122 <span class="comment">         * Get the number of active applications in the pool.</span>
-<a name="l00123"></a>00123 <span class="comment">         *</span>
-<a name="l00124"></a>00124 <span class="comment">         * This method exposes an implementation detail of the underlying pooling algorithm.</span>
-<a name="l00125"></a>00125 <span class="comment">         * It is used by unit tests to verify that the implementation is correct,</span>
-<a name="l00126"></a>00126 <span class="comment">         * and thus should not be called directly.</span>
-<a name="l00127"></a>00127 <span class="comment">         */</span>
-<a name="l00128"></a>00128         <span class="keyword">virtual</span> <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="classPassenger_1_1ApplicationPool.html#06d1eae044d4d761ce77cf09049df8c8" title="Get the number of active applications in the pool.">getActive</a>() <span class="keyword">const</span> = 0;
-<a name="l00129"></a>00129         <span class="comment"></span>
-<a name="l00130"></a>00130 <span class="comment">        /**</span>
-<a name="l00131"></a>00131 <span class="comment">         * Get the number of active applications in the pool.</span>
-<a name="l00132"></a>00132 <span class="comment">         *</span>
-<a name="l00133"></a>00133 <span class="comment">         * This method exposes an implementation detail of the underlying pooling algorithm.</span>
-<a name="l00134"></a>00134 <span class="comment">         * It is used by unit tests to verify that the implementation is correct,</span>
-<a name="l00135"></a>00135 <span class="comment">         * and thus should not be called directly.</span>
-<a name="l00136"></a>00136 <span class="comment">         */</span>
-<a name="l00137"></a>00137         <span class="keyword">virtual</span> <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="classPassenger_1_1ApplicationPool.html#93b0277beb510855f85fee5de5c369bb" title="Get the number of active applications in the pool.">getCount</a>() <span class="keyword">const</span> = 0;
-<a name="l00138"></a>00138 };
-<a name="l00139"></a>00139 
-<a name="l00140"></a>00140 <span class="keyword">class </span><a class="code" href="classPassenger_1_1ApplicationPoolServer.html" title="Multi-process usage support for ApplicationPool.">ApplicationPoolServer</a>;
-<a name="l00141"></a>00141 <span class="comment"></span>
-<a name="l00142"></a>00142 <span class="comment">/**</span>
-<a name="l00143"></a>00143 <span class="comment"> * A standard implementation of ApplicationPool for single-process environments.</span>
-<a name="l00144"></a>00144 <span class="comment"> *</span>
-<a name="l00145"></a>00145 <span class="comment"> * The environment may or may not be multithreaded - StandardApplicationPool is completely</span>
-<a name="l00146"></a>00146 <span class="comment"> * thread-safe. Apache with the threading MPM is an example of a multithreaded single-process</span>
-<a name="l00147"></a>00147 <span class="comment"> * environment.</span>
-<a name="l00148"></a>00148 <span class="comment"> *</span>
-<a name="l00149"></a>00149 <span class="comment"> * This class is unusable in multi-process environments such as Apache with the prefork MPM.</span>
-<a name="l00150"></a>00150 <span class="comment"> * The reasons are as follows:</span>
-<a name="l00151"></a>00151 <span class="comment"> *  - StandardApplicationPool uses threads internally. Because threads disappear after a fork(),</span>
-<a name="l00152"></a>00152 <span class="comment"> *    a StandardApplicationPool object will become unusable after a fork().</span>
-<a name="l00153"></a>00153 <span class="comment"> *  - StandardApplicationPool stores its internal cache on the heap. Different processes</span>
-<a name="l00154"></a>00154 <span class="comment"> *    cannot share their heaps, so they will not be able to access each others' pool cache.</span>
-<a name="l00155"></a>00155 <span class="comment"> *  - StandardApplicationPool has a connection to the spawn server. If there are multiple</span>
-<a name="l00156"></a>00156 <span class="comment"> *    processes, and they all use the spawn servers's connection at the same time without</span>
-<a name="l00157"></a>00157 <span class="comment"> *    some sort of synchronization, then bad things will happen.</span>
-<a name="l00158"></a>00158 <span class="comment"> *</span>
-<a name="l00159"></a>00159 <span class="comment"> * (Of course, StandardApplicationPool &lt;em&gt;is&lt;/em&gt; usable if each process creates its own</span>
-<a name="l00160"></a>00160 <span class="comment"> * StandardApplicationPool object, but that would defeat the point of having a shared pool.)</span>
-<a name="l00161"></a>00161 <span class="comment"> *</span>
-<a name="l00162"></a>00162 <span class="comment"> * For multi-process environments, one should use ApplicationPoolServer instead.</span>
-<a name="l00163"></a>00163 <span class="comment"> *</span>
-<a name="l00164"></a>00164 <span class="comment"> * @ingroup Support</span>
-<a name="l00165"></a>00165 <span class="comment"> */</span>
-<a name="l00166"></a><a class="code" href="classPassenger_1_1StandardApplicationPool.html">00166</a> <span class="keyword">class </span><a class="code" href="classPassenger_1_1StandardApplicationPool.html" title="A standard implementation of ApplicationPool for single-process environments.">StandardApplicationPool</a>: <span class="keyword">public</span> <a class="code" href="classPassenger_1_1ApplicationPool.html" title="A persistent pool of Applications.">ApplicationPool</a> {
-<a name="l00167"></a>00167 <span class="keyword">private</span>:
-<a name="l00168"></a>00168         <span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">int</span> CLEAN_INTERVAL = 62;
-<a name="l00169"></a>00169         <span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">int</span> MAX_IDLE_TIME = 60;
-<a name="l00170"></a>00170 
-<a name="l00171"></a>00171         <span class="keyword">friend</span> <span class="keyword">class </span><a class="code" href="classPassenger_1_1ApplicationPoolServer.html" title="Multi-process usage support for ApplicationPool.">ApplicationPoolServer</a>;
-<a name="l00172"></a>00172 
-<a name="l00173"></a>00173         <span class="keyword">typedef</span> list&lt;ApplicationPtr&gt; ApplicationList;
-<a name="l00174"></a>00174         <span class="keyword">typedef</span> shared_ptr&lt;ApplicationList&gt; ApplicationListPtr;
-<a name="l00175"></a>00175         <span class="keyword">typedef</span> map&lt;string, ApplicationListPtr&gt; ApplicationMap;
-<a name="l00176"></a>00176         
-<a name="l00177"></a>00177         <span class="keyword">struct </span>SharedData {
-<a name="l00178"></a>00178                 mutex lock;
-<a name="l00179"></a>00179                 condition countOrMaxChanged;
-<a name="l00180"></a>00180                 
-<a name="l00181"></a>00181                 ApplicationMap apps;
-<a name="l00182"></a>00182                 <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> max;
-<a name="l00183"></a>00183                 <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> count;
-<a name="l00184"></a>00184                 <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> active;
-<a name="l00185"></a>00185         };
-<a name="l00186"></a>00186         
-<a name="l00187"></a>00187         <span class="keyword">typedef</span> shared_ptr&lt;SharedData&gt; SharedDataPtr;
+<a name="l00096"></a>00096 <span class="comment">         * If &lt;tt&gt;lowerPrivilege&lt;/tt&gt; is true, then any newly spawned application</span>
+<a name="l00097"></a>00097 <span class="comment">         * instances will have lower privileges. See SpawnManager::SpawnManager()'s</span>
+<a name="l00098"></a>00098 <span class="comment">         * description of &lt;tt&gt;lowerPrivilege&lt;/tt&gt; and &lt;tt&gt;lowestUser&lt;/tt&gt; for details.</span>
+<a name="l00099"></a>00099 <span class="comment">         *</span>
+<a name="l00100"></a>00100 <span class="comment">         * @param appRoot The application root of a RoR application, i.e. the folder that</span>
+<a name="l00101"></a>00101 <span class="comment">         *             contains 'app/', 'public/', 'config/', etc. This must be a valid</span>
+<a name="l00102"></a>00102 <span class="comment">         *             directory, but does not have to be an absolute path.</span>
+<a name="l00103"></a>00103 <span class="comment">         * @param lowerPrivilege Whether to lower the application's privileges.</span>
+<a name="l00104"></a>00104 <span class="comment">         * @param lowestUser The user to fallback to if lowering privilege fails.</span>
+<a name="l00105"></a>00105 <span class="comment">         * @return A session object.</span>
+<a name="l00106"></a>00106 <span class="comment">         * @throw SpawnException An attempt was made to spawn a new application instance, but that attempt failed.</span>
+<a name="l00107"></a>00107 <span class="comment">         * @throw IOException Something else went wrong.</span>
+<a name="l00108"></a>00108 <span class="comment">         * @note Applications are uniquely identified with the application root</span>
+<a name="l00109"></a>00109 <span class="comment">         *       string. So although &lt;tt&gt;appRoot&lt;/tt&gt; does not have to be absolute, it</span>
+<a name="l00110"></a>00110 <span class="comment">         *       should be. If one calls &lt;tt&gt;get("/home/foo")&lt;/tt&gt; and</span>
+<a name="l00111"></a>00111 <span class="comment">         *       &lt;tt&gt;get("/home/../home/foo")&lt;/tt&gt;, then ApplicationPool will think</span>
+<a name="l00112"></a>00112 <span class="comment">         *       they're 2 different applications, and thus will spawn 2 application instances.</span>
+<a name="l00113"></a>00113 <span class="comment">         */</span>
+<a name="l00114"></a>00114         <span class="keyword">virtual</span> <a class="code" href="classPassenger_1_1Application.html#d14f673494991460b16246a527ad8ad9" title="Convenient alias for Session smart pointer.">Application::SessionPtr</a> <span class="keyword">get</span>(<span class="keyword">const</span> <span class="keywordtype">string</span> &amp;appRoot, <span class="keywordtype">bool</span> lowerPrivilege = <span class="keyword">true</span>, <span class="keyword">const</span> <span class="keywordtype">string</span> &amp;lowestUser = <span class="stringliteral">"nobody"</span>) = 0;
+<a name="l00115"></a>00115         <span class="comment"></span>
+<a name="l00116"></a>00116 <span class="comment">        /**</span>
+<a name="l00117"></a>00117 <span class="comment">         * Set a hard limit on the number of application instances that this ApplicationPool</span>
+<a name="l00118"></a>00118 <span class="comment">         * may spawn. The exact behavior depends on the used algorithm, and is not specified by</span>
+<a name="l00119"></a>00119 <span class="comment">         * these API docs.</span>
+<a name="l00120"></a>00120 <span class="comment">         *</span>
+<a name="l00121"></a>00121 <span class="comment">         * It is allowed to set a limit lower than the current number of spawned applications.</span>
+<a name="l00122"></a>00122 <span class="comment">         */</span>
+<a name="l00123"></a>00123         <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classPassenger_1_1ApplicationPool.html#0e0f21972ab130c9c0f90c2212328794" title="Set a hard limit on the number of application instances that this ApplicationPool...">setMax</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> max) = 0;
+<a name="l00124"></a>00124         <span class="comment"></span>
+<a name="l00125"></a>00125 <span class="comment">        /**</span>
+<a name="l00126"></a>00126 <span class="comment">         * Get the number of active applications in the pool.</span>
+<a name="l00127"></a>00127 <span class="comment">         *</span>
+<a name="l00128"></a>00128 <span class="comment">         * This method exposes an implementation detail of the underlying pooling algorithm.</span>
+<a name="l00129"></a>00129 <span class="comment">         * It is used by unit tests to verify that the implementation is correct,</span>
+<a name="l00130"></a>00130 <span class="comment">         * and thus should not be called directly.</span>
+<a name="l00131"></a>00131 <span class="comment">         */</span>
+<a name="l00132"></a>00132         <span class="keyword">virtual</span> <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="classPassenger_1_1ApplicationPool.html#06d1eae044d4d761ce77cf09049df8c8" title="Get the number of active applications in the pool.">getActive</a>() <span class="keyword">const</span> = 0;
+<a name="l00133"></a>00133         <span class="comment"></span>
+<a name="l00134"></a>00134 <span class="comment">        /**</span>
+<a name="l00135"></a>00135 <span class="comment">         * Get the number of active applications in the pool.</span>
+<a name="l00136"></a>00136 <span class="comment">         *</span>
+<a name="l00137"></a>00137 <span class="comment">         * This method exposes an implementation detail of the underlying pooling algorithm.</span>
+<a name="l00138"></a>00138 <span class="comment">         * It is used by unit tests to verify that the implementation is correct,</span>
+<a name="l00139"></a>00139 <span class="comment">         * and thus should not be called directly.</span>
+<a name="l00140"></a>00140 <span class="comment">         */</span>
+<a name="l00141"></a>00141         <span class="keyword">virtual</span> <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="classPassenger_1_1ApplicationPool.html#93b0277beb510855f85fee5de5c369bb" title="Get the number of active applications in the pool.">getCount</a>() <span class="keyword">const</span> = 0;
+<a name="l00142"></a>00142         <span class="comment"></span>
+<a name="l00143"></a>00143 <span class="comment">        /**</span>
+<a name="l00144"></a>00144 <span class="comment">         * Get the process ID of the spawn server that is used.</span>
+<a name="l00145"></a>00145 <span class="comment">         *</span>
+<a name="l00146"></a>00146 <span class="comment">         * This method exposes an implementation detail. It is used by unit tests to verify</span>
+<a name="l00147"></a>00147 <span class="comment">         * that the implementation is correct, and thus should not be used directly.</span>
+<a name="l00148"></a>00148 <span class="comment">         */</span>
+<a name="l00149"></a>00149         <span class="keyword">virtual</span> pid_t <a class="code" href="classPassenger_1_1ApplicationPool.html#d9149c3b434ef8e18fd15a77af1a6c2c" title="Get the process ID of the spawn server that is used.">getSpawnServerPid</a>() <span class="keyword">const</span> = 0;
+<a name="l00150"></a>00150 };
+<a name="l00151"></a>00151 
+<a name="l00152"></a>00152 <span class="keyword">class </span><a class="code" href="classPassenger_1_1ApplicationPoolServer.html" title="Multi-process usage support for ApplicationPool.">ApplicationPoolServer</a>;
+<a name="l00153"></a>00153 <span class="comment"></span>
+<a name="l00154"></a>00154 <span class="comment">/**</span>
+<a name="l00155"></a>00155 <span class="comment"> * A standard implementation of ApplicationPool for single-process environments.</span>
+<a name="l00156"></a>00156 <span class="comment"> *</span>
+<a name="l00157"></a>00157 <span class="comment"> * The environment may or may not be multithreaded - StandardApplicationPool is completely</span>
+<a name="l00158"></a>00158 <span class="comment"> * thread-safe. Apache with the threading MPM is an example of a multithreaded single-process</span>
+<a name="l00159"></a>00159 <span class="comment"> * environment.</span>
+<a name="l00160"></a>00160 <span class="comment"> *</span>
+<a name="l00161"></a>00161 <span class="comment"> * This class is unusable in multi-process environments such as Apache with the prefork MPM.</span>
+<a name="l00162"></a>00162 <span class="comment"> * The reasons are as follows:</span>
+<a name="l00163"></a>00163 <span class="comment"> *  - StandardApplicationPool uses threads internally. Because threads disappear after a fork(),</span>
+<a name="l00164"></a>00164 <span class="comment"> *    a StandardApplicationPool object will become unusable after a fork().</span>
+<a name="l00165"></a>00165 <span class="comment"> *  - StandardApplicationPool stores its internal cache on the heap. Different processes</span>
+<a name="l00166"></a>00166 <span class="comment"> *    cannot share their heaps, so they will not be able to access each others' pool cache.</span>
+<a name="l00167"></a>00167 <span class="comment"> *  - StandardApplicationPool has a connection to the spawn server. If there are multiple</span>
+<a name="l00168"></a>00168 <span class="comment"> *    processes, and they all use the spawn servers's connection at the same time without</span>
+<a name="l00169"></a>00169 <span class="comment"> *    some sort of synchronization, then bad things will happen.</span>
+<a name="l00170"></a>00170 <span class="comment"> *</span>
+<a name="l00171"></a>00171 <span class="comment"> * (Of course, StandardApplicationPool &lt;em&gt;is&lt;/em&gt; usable if each process creates its own</span>
+<a name="l00172"></a>00172 <span class="comment"> * StandardApplicationPool object, but that would defeat the point of having a shared pool.)</span>
+<a name="l00173"></a>00173 <span class="comment"> *</span>
+<a name="l00174"></a>00174 <span class="comment"> * For multi-process environments, one should use ApplicationPoolServer instead.</span>
+<a name="l00175"></a>00175 <span class="comment"> *</span>
+<a name="l00176"></a>00176 <span class="comment"> * @ingroup Support</span>
+<a name="l00177"></a>00177 <span class="comment"> */</span>
+<a name="l00178"></a><a class="code" href="classPassenger_1_1StandardApplicationPool.html">00178</a> <span class="keyword">class </span><a class="code" href="classPassenger_1_1StandardApplicationPool.html" title="A standard implementation of ApplicationPool for single-process environments.">StandardApplicationPool</a>: <span class="keyword">public</span> <a class="code" href="classPassenger_1_1ApplicationPool.html" title="A persistent pool of Applications.">ApplicationPool</a> {
+<a name="l00179"></a>00179 <span class="keyword">private</span>:
+<a name="l00180"></a>00180         <span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">int</span> CLEAN_INTERVAL = 62;
+<a name="l00181"></a>00181         <span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">int</span> MAX_IDLE_TIME = 60;
+<a name="l00182"></a>00182 
+<a name="l00183"></a>00183         <span class="keyword">friend</span> <span class="keyword">class </span><a class="code" href="classPassenger_1_1ApplicationPoolServer.html" title="Multi-process usage support for ApplicationPool.">ApplicationPoolServer</a>;
+<a name="l00184"></a>00184 
+<a name="l00185"></a>00185         <span class="keyword">typedef</span> list&lt;ApplicationPtr&gt; ApplicationList;
+<a name="l00186"></a>00186         <span class="keyword">typedef</span> shared_ptr&lt;ApplicationList&gt; ApplicationListPtr;
+<a name="l00187"></a>00187         <span class="keyword">typedef</span> map&lt;string, ApplicationListPtr&gt; ApplicationMap;
 <a name="l00188"></a>00188         
-<a name="l00189"></a>00189         <span class="keyword">struct </span>SessionCloseCallback {
-<a name="l00190"></a>00190                 SharedDataPtr data;
-<a name="l00191"></a>00191                 weak_ptr&lt;Application&gt; app;
+<a name="l00189"></a>00189         <span class="keyword">struct </span>SharedData {
+<a name="l00190"></a>00190                 mutex lock;
+<a name="l00191"></a>00191                 condition countOrMaxChanged;
 <a name="l00192"></a>00192                 
-<a name="l00193"></a>00193                 SessionCloseCallback(SharedDataPtr data, weak_ptr&lt;Application&gt; app) {
-<a name="l00194"></a>00194                         this-&gt;data = data;
-<a name="l00195"></a>00195                         this-&gt;app = app;
-<a name="l00196"></a>00196                 }
-<a name="l00197"></a>00197                 
-<a name="l00198"></a>00198                 <span class="keywordtype">void</span> operator()(<a class="code" href="classPassenger_1_1Application_1_1Session.html" title="Represents the life time of a single request/response pair of a Ruby on Rails application...">Application::Session</a> &amp;session) {
-<a name="l00199"></a>00199                         mutex::scoped_lock l(data-&gt;lock);
-<a name="l00200"></a>00200                         ApplicationPtr app(this-&gt;app.lock());
-<a name="l00201"></a>00201                         
-<a name="l00202"></a>00202                         <span class="keywordflow">if</span> (app != NULL) {
-<a name="l00203"></a>00203                                 ApplicationMap::iterator it(data-&gt;apps.find(app-&gt;getAppRoot()));
-<a name="l00204"></a>00204                                 <span class="keywordflow">if</span> (it != data-&gt;apps.end()) {
-<a name="l00205"></a>00205                                         <span class="keywordflow">if</span> (app-&gt;getSessions() == 0) {
-<a name="l00206"></a>00206                                                 <span class="comment">// TODO: make this operation constant time</span>
-<a name="l00207"></a>00207                                                 it-&gt;second-&gt;remove(app);
-<a name="l00208"></a>00208                                                 it-&gt;second-&gt;push_front(app);
-<a name="l00209"></a>00209                                         }
-<a name="l00210"></a>00210                                         data-&gt;active--;
-<a name="l00211"></a>00211                                 }
-<a name="l00212"></a>00212                                 app-&gt;setLastUsed(time(NULL));
-<a name="l00213"></a>00213                         }
-<a name="l00214"></a>00214                 }
-<a name="l00215"></a>00215         };
-<a name="l00216"></a>00216 
-<a name="l00217"></a>00217 <span class="preprocessor">        #ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER</span>
-<a name="l00218"></a>00218 <span class="preprocessor"></span>                <a class="code" href="classPassenger_1_1DummySpawnManager.html" title="A dummy SpawnManager replacement for testing/debugging purposes.">DummySpawnManager</a> spawnManager;
-<a name="l00219"></a>00219 <span class="preprocessor">        #else</span>
-<a name="l00220"></a>00220 <span class="preprocessor"></span>                <a class="code" href="classPassenger_1_1SpawnManager.html">SpawnManager</a> spawnManager;
-<a name="l00221"></a>00221 <span class="preprocessor">        #endif</span>
-<a name="l00222"></a>00222 <span class="preprocessor"></span>        SharedDataPtr data;
-<a name="l00223"></a>00223         thread *cleanerThread;
-<a name="l00224"></a>00224         <span class="keywordtype">bool</span> detached;
-<a name="l00225"></a>00225         <span class="keywordtype">bool</span> done;
-<a name="l00226"></a>00226         condition cleanerThreadSleeper;
-<a name="l00227"></a>00227         
-<a name="l00228"></a>00228         mutex &amp;lock;
-<a name="l00229"></a>00229         condition &amp;countOrMaxChanged;
-<a name="l00230"></a>00230         ApplicationMap &amp;apps;
-<a name="l00231"></a>00231         <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> &amp;max;
-<a name="l00232"></a>00232         <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> &amp;count;
-<a name="l00233"></a>00233         <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> &amp;active;
-<a name="l00234"></a>00234         
-<a name="l00235"></a>00235         <span class="keywordtype">bool</span> needsRestart(<span class="keyword">const</span> <span class="keywordtype">string</span> &amp;appRoot)<span class="keyword"> const </span>{
-<a name="l00236"></a>00236                 <span class="keywordflow">return</span> <span class="keyword">false</span>;
-<a name="l00237"></a>00237         }
-<a name="l00238"></a>00238         
-<a name="l00239"></a>00239         <span class="keywordtype">void</span> cleanerThreadMainLoop() {
-<a name="l00240"></a>00240                 mutex::scoped_lock l(lock);
-<a name="l00241"></a>00241                 <span class="keywordflow">while</span> (!done) {
-<a name="l00242"></a>00242                         xtime xt;
-<a name="l00243"></a>00243                         xtime_get(&amp;xt, TIME_UTC);
-<a name="l00244"></a>00244                         xt.sec += CLEAN_INTERVAL;
-<a name="l00245"></a>00245                         cleanerThreadSleeper.timed_wait(l, xt);
-<a name="l00246"></a>00246                         <span class="keywordflow">if</span> (done) {
-<a name="l00247"></a>00247                                 <span class="keywordflow">break</span>;
-<a name="l00248"></a>00248                         }
-<a name="l00249"></a>00249                         
-<a name="l00250"></a>00250                         ApplicationMap::iterator appsIter;
-<a name="l00251"></a>00251                         time_t now = time(NULL);
-<a name="l00252"></a>00252                         list&lt;string&gt; appRootsToRemove;
-<a name="l00253"></a>00253                         
-<a name="l00254"></a>00254                         <span class="keywordflow">for</span> (appsIter = apps.begin(); appsIter != apps.end(); appsIter++) {
-<a name="l00255"></a>00255                                 ApplicationList &amp;appList(*appsIter-&gt;second);
-<a name="l00256"></a>00256                                 ApplicationList::iterator listIter;
-<a name="l00257"></a>00257                                 list&lt;ApplicationList::iterator&gt; elementsToRemove;
-<a name="l00258"></a>00258                                 
-<a name="l00259"></a>00259                                 <span class="keywordflow">for</span> (listIter = appList.begin(); listIter != appList.end(); listIter++) {
-<a name="l00260"></a>00260                                         <a class="code" href="classPassenger_1_1Application.html" title="Represents a single Ruby on Rails application instance.">Application</a> &amp;app(**listIter);
-<a name="l00261"></a>00261                                         <span class="keywordflow">if</span> (now - app.<a class="code" href="classPassenger_1_1Application.html#58e74f6a598dbc16d87ce0a1bf8da1d6" title="Returns the last value set by setLastUsed().">getLastUsed</a>() &gt; MAX_IDLE_TIME) {
-<a name="l00262"></a>00262                                                 P_TRACE(<span class="stringliteral">"Cleaning idle app "</span> &lt;&lt; app.<a class="code" href="classPassenger_1_1Application.html#0a0665852e7ebc8fb8ab0772fa90bc56" title="Returns the application root for this RoR application.">getAppRoot</a>());
-<a name="l00263"></a>00263                                                 elementsToRemove.push_back(listIter);
-<a name="l00264"></a>00264                                         }
-<a name="l00265"></a>00265                                 }
-<a name="l00266"></a>00266                                 
-<a name="l00267"></a>00267                                 list&lt;ApplicationList::iterator&gt;::iterator it;
-<a name="l00268"></a>00268                                 <span class="keywordflow">for</span> (it = elementsToRemove.begin(); it != elementsToRemove.end(); it++) {
-<a name="l00269"></a>00269                                         appList.erase(*it);
-<a name="l00270"></a>00270                                 }
-<a name="l00271"></a>00271                                 <span class="keywordflow">if</span> (appList.empty()) {
-<a name="l00272"></a>00272                                         appRootsToRemove.push_back(appsIter-&gt;first);
-<a name="l00273"></a>00273                                 }
-<a name="l00274"></a>00274                         }
-<a name="l00275"></a>00275                         
-<a name="l00276"></a>00276                         list&lt;string&gt;::const_iterator it;
-<a name="l00277"></a>00277                         <span class="keywordflow">for</span> (it = appRootsToRemove.begin(); it != appRootsToRemove.end(); it++) {
-<a name="l00278"></a>00278                                 apps.erase(*it);
-<a name="l00279"></a>00279                         }
-<a name="l00280"></a>00280                 }
-<a name="l00281"></a>00281         }
-<a name="l00282"></a>00282         
-<a name="l00283"></a>00283         <span class="keywordtype">void</span> detach() {
-<a name="l00284"></a>00284                 detached = <span class="keyword">true</span>;
-<a name="l00285"></a>00285         }
-<a name="l00286"></a>00286         
-<a name="l00287"></a>00287         <span class="keywordtype">void</span> handleConnectException(<span class="keyword">const</span> exception &amp;e, <span class="keyword">const</span> ApplicationPtr &amp;app,
-<a name="l00288"></a>00288                                         ApplicationList &amp;appList) {
-<a name="l00289"></a>00289                 <span class="keywordtype">string</span> message(<span class="stringliteral">"Cannot connect to an existing application instance for '"</span>);
-<a name="l00290"></a>00290                 message.append(app-&gt;getAppRoot());
-<a name="l00291"></a>00291                 message.append(<span class="stringliteral">"': "</span>);
-<a name="l00292"></a>00292                 message.append(e.what());
-<a name="l00293"></a>00293                 appList.remove(app);
-<a name="l00294"></a>00294                 <span class="keywordflow">if</span> (appList.empty()) {
-<a name="l00295"></a>00295                         apps.erase(app-&gt;getAppRoot());
-<a name="l00296"></a>00296                 }
-<a name="l00297"></a>00297                 count--;
-<a name="l00298"></a>00298                 active--;
-<a name="l00299"></a>00299                 <span class="keywordflow">throw</span> <a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a>(message);
-<a name="l00300"></a>00300         }
-<a name="l00301"></a>00301         
-<a name="l00302"></a>00302 <span class="keyword">public</span>:<span class="comment"></span>
-<a name="l00303"></a>00303 <span class="comment">        /**</span>
-<a name="l00304"></a>00304 <span class="comment">         * Create a new StandardApplicationPool object.</span>
-<a name="l00305"></a>00305 <span class="comment">         *</span>
-<a name="l00306"></a>00306 <span class="comment">         * @param spawnServerCommand The filename of the spawn server to use.</span>
-<a name="l00307"></a>00307 <span class="comment">         * @param logFile Specify a log file that the spawn server should use.</span>
-<a name="l00308"></a>00308 <span class="comment">         *            Messages on its standard output and standard error channels</span>
-<a name="l00309"></a>00309 <span class="comment">         *            will be written to this log file. If an empty string is</span>
-<a name="l00310"></a>00310 <span class="comment">         *            specified, no log file will be used, and the spawn server</span>
-<a name="l00311"></a>00311 <span class="comment">         *            will use the same standard output/error channels as the</span>
-<a name="l00312"></a>00312 <span class="comment">         *            current process.</span>
-<a name="l00313"></a>00313 <span class="comment">         * @param environment The RAILS_ENV environment that all RoR applications</span>
-<a name="l00314"></a>00314 <span class="comment">         *            should use. If an empty string is specified, the current value</span>
-<a name="l00315"></a>00315 <span class="comment">         *            of the RAILS_ENV environment variable will be used.</span>
-<a name="l00316"></a>00316 <span class="comment">         * @param rubyCommand The Ruby interpreter's command.</span>
-<a name="l00317"></a>00317 <span class="comment">         * @throws SystemException An error occured while trying to setup the spawn server.</span>
-<a name="l00318"></a>00318 <span class="comment">         * @throws IOException The specified log file could not be opened.</span>
-<a name="l00319"></a>00319 <span class="comment">         */</span>
-<a name="l00320"></a><a class="code" href="classPassenger_1_1StandardApplicationPool.html#de7c6e9dcaa37ac5640ed91fe0ac1bbc">00320</a>         <a class="code" href="classPassenger_1_1StandardApplicationPool.html#de7c6e9dcaa37ac5640ed91fe0ac1bbc" title="Create a new StandardApplicationPool object.">StandardApplicationPool</a>(<span class="keyword">const</span> <span class="keywordtype">string</span> &amp;spawnServerCommand,
-<a name="l00321"></a>00321                      <span class="keyword">const</span> <span class="keywordtype">string</span> &amp;logFile = <span class="stringliteral">""</span>,
-<a name="l00322"></a>00322                      <span class="keyword">const</span> <span class="keywordtype">string</span> &amp;environment = <span class="stringliteral">"production"</span>,
-<a name="l00323"></a>00323                      <span class="keyword">const</span> <span class="keywordtype">string</span> &amp;rubyCommand = <span class="stringliteral">"ruby"</span>)
-<a name="l00324"></a>00324                 :
-<a name="l00325"></a>00325                 #ifndef PASSENGER_USE_DUMMY_SPAWN_MANAGER
-<a name="l00326"></a>00326                 spawnManager(spawnServerCommand, logFile, environment, rubyCommand),
-<a name="l00327"></a>00327                 #endif
-<a name="l00328"></a>00328                 data(new SharedData()),
-<a name="l00329"></a>00329                 lock(data-&gt;lock),
-<a name="l00330"></a>00330                 countOrMaxChanged(data-&gt;countOrMaxChanged),
-<a name="l00331"></a>00331                 apps(data-&gt;apps),
-<a name="l00332"></a>00332                 max(data-&gt;max),
-<a name="l00333"></a>00333                 count(data-&gt;count),
-<a name="l00334"></a>00334                 active(data-&gt;active)
-<a name="l00335"></a>00335         {
-<a name="l00336"></a>00336                 detached = <span class="keyword">false</span>;
-<a name="l00337"></a>00337                 done = <span class="keyword">false</span>;
-<a name="l00338"></a>00338                 max = 100;
-<a name="l00339"></a>00339                 count = 0;
-<a name="l00340"></a>00340                 active = 0;
-<a name="l00341"></a>00341                 cleanerThread = <span class="keyword">new</span> thread(bind(&amp;StandardApplicationPool::cleanerThreadMainLoop, <span class="keyword">this</span>));
-<a name="l00342"></a>00342         }
-<a name="l00343"></a>00343         
-<a name="l00344"></a>00344         <span class="keyword">virtual</span> ~<a class="code" href="classPassenger_1_1StandardApplicationPool.html" title="A standard implementation of ApplicationPool for single-process environments.">StandardApplicationPool</a>() {
-<a name="l00345"></a>00345                 <span class="keywordflow">if</span> (!detached) {
-<a name="l00346"></a>00346                         {
-<a name="l00347"></a>00347                                 mutex::scoped_lock l(lock);
-<a name="l00348"></a>00348                                 done = <span class="keyword">true</span>;
-<a name="l00349"></a>00349                                 cleanerThreadSleeper.notify_one();
-<a name="l00350"></a>00350                         }
-<a name="l00351"></a>00351                         cleanerThread-&gt;join();
-<a name="l00352"></a>00352                 }
-<a name="l00353"></a>00353                 <span class="keyword">delete</span> cleanerThread;
+<a name="l00193"></a>00193                 ApplicationMap apps;
+<a name="l00194"></a>00194                 <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> max;
+<a name="l00195"></a>00195                 <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> count;
+<a name="l00196"></a>00196                 <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> active;
+<a name="l00197"></a>00197         };
+<a name="l00198"></a>00198         
+<a name="l00199"></a>00199         <span class="keyword">typedef</span> shared_ptr&lt;SharedData&gt; SharedDataPtr;
+<a name="l00200"></a>00200         
+<a name="l00201"></a>00201         <span class="keyword">struct </span>SessionCloseCallback {
+<a name="l00202"></a>00202                 SharedDataPtr data;
+<a name="l00203"></a>00203                 weak_ptr&lt;Application&gt; app;
+<a name="l00204"></a>00204                 
+<a name="l00205"></a>00205                 SessionCloseCallback(SharedDataPtr data, weak_ptr&lt;Application&gt; app) {
+<a name="l00206"></a>00206                         this-&gt;data = data;
+<a name="l00207"></a>00207                         this-&gt;app = app;
+<a name="l00208"></a>00208                 }
+<a name="l00209"></a>00209                 
+<a name="l00210"></a>00210                 <span class="keywordtype">void</span> operator()(<a class="code" href="classPassenger_1_1Application_1_1Session.html" title="Represents the life time of a single request/response pair of a Ruby on Rails application...">Application::Session</a> &amp;session) {
+<a name="l00211"></a>00211                         mutex::scoped_lock l(data-&gt;lock);
+<a name="l00212"></a>00212                         ApplicationPtr app(this-&gt;app.lock());
+<a name="l00213"></a>00213                         
+<a name="l00214"></a>00214                         <span class="keywordflow">if</span> (app != NULL) {
+<a name="l00215"></a>00215                                 ApplicationMap::iterator it(data-&gt;apps.find(app-&gt;getAppRoot()));
+<a name="l00216"></a>00216                                 <span class="keywordflow">if</span> (it != data-&gt;apps.end()) {
+<a name="l00217"></a>00217                                         <span class="keywordflow">if</span> (app-&gt;getSessions() == 0) {
+<a name="l00218"></a>00218                                                 <span class="comment">// TODO: make this operation constant time</span>
+<a name="l00219"></a>00219                                                 it-&gt;second-&gt;remove(app);
+<a name="l00220"></a>00220                                                 it-&gt;second-&gt;push_front(app);
+<a name="l00221"></a>00221                                         }
+<a name="l00222"></a>00222                                         data-&gt;active--;
+<a name="l00223"></a>00223                                 }
+<a name="l00224"></a>00224                                 app-&gt;setLastUsed(time(NULL));
+<a name="l00225"></a>00225                         }
+<a name="l00226"></a>00226                 }
+<a name="l00227"></a>00227         };
+<a name="l00228"></a>00228 
+<a name="l00229"></a>00229 <span class="preprocessor">        #ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER</span>
+<a name="l00230"></a>00230 <span class="preprocessor"></span>                <a class="code" href="classPassenger_1_1DummySpawnManager.html" title="A dummy SpawnManager replacement for testing/debugging purposes.">DummySpawnManager</a> spawnManager;
+<a name="l00231"></a>00231 <span class="preprocessor">        #else</span>
+<a name="l00232"></a>00232 <span class="preprocessor"></span>                <a class="code" href="classPassenger_1_1SpawnManager.html">SpawnManager</a> spawnManager;
+<a name="l00233"></a>00233 <span class="preprocessor">        #endif</span>
+<a name="l00234"></a>00234 <span class="preprocessor"></span>        SharedDataPtr data;
+<a name="l00235"></a>00235         thread *cleanerThread;
+<a name="l00236"></a>00236         <span class="keywordtype">bool</span> detached;
+<a name="l00237"></a>00237         <span class="keywordtype">bool</span> done;
+<a name="l00238"></a>00238         condition cleanerThreadSleeper;
+<a name="l00239"></a>00239         
+<a name="l00240"></a>00240         mutex &amp;lock;
+<a name="l00241"></a>00241         condition &amp;countOrMaxChanged;
+<a name="l00242"></a>00242         ApplicationMap &amp;apps;
+<a name="l00243"></a>00243         <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> &amp;max;
+<a name="l00244"></a>00244         <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> &amp;count;
+<a name="l00245"></a>00245         <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> &amp;active;
+<a name="l00246"></a>00246         
+<a name="l00247"></a>00247         <span class="keywordtype">bool</span> needsRestart(<span class="keyword">const</span> <span class="keywordtype">string</span> &amp;appRoot)<span class="keyword"> const </span>{
+<a name="l00248"></a>00248                 <span class="keywordflow">return</span> <span class="keyword">false</span>;
+<a name="l00249"></a>00249         }
+<a name="l00250"></a>00250         
+<a name="l00251"></a>00251         <span class="keywordtype">void</span> cleanerThreadMainLoop() {
+<a name="l00252"></a>00252                 mutex::scoped_lock l(lock);
+<a name="l00253"></a>00253                 <span class="keywordflow">while</span> (!done) {
+<a name="l00254"></a>00254                         xtime xt;
+<a name="l00255"></a>00255                         xtime_get(&amp;xt, TIME_UTC);
+<a name="l00256"></a>00256                         xt.sec += CLEAN_INTERVAL;
+<a name="l00257"></a>00257                         cleanerThreadSleeper.timed_wait(l, xt);
+<a name="l00258"></a>00258                         <span class="keywordflow">if</span> (done) {
+<a name="l00259"></a>00259                                 <span class="keywordflow">break</span>;
+<a name="l00260"></a>00260                         }
+<a name="l00261"></a>00261                         
+<a name="l00262"></a>00262                         ApplicationMap::iterator appsIter;
+<a name="l00263"></a>00263                         time_t now = time(NULL);
+<a name="l00264"></a>00264                         list&lt;string&gt; appRootsToRemove;
+<a name="l00265"></a>00265                         
+<a name="l00266"></a>00266                         <span class="keywordflow">for</span> (appsIter = apps.begin(); appsIter != apps.end(); appsIter++) {
+<a name="l00267"></a>00267                                 ApplicationList &amp;appList(*appsIter-&gt;second);
+<a name="l00268"></a>00268                                 ApplicationList::iterator listIter;
+<a name="l00269"></a>00269                                 list&lt;ApplicationList::iterator&gt; elementsToRemove;
+<a name="l00270"></a>00270                                 
+<a name="l00271"></a>00271                                 <span class="keywordflow">for</span> (listIter = appList.begin(); listIter != appList.end(); listIter++) {
+<a name="l00272"></a>00272                                         <a class="code" href="classPassenger_1_1Application.html" title="Represents a single Ruby on Rails application instance.">Application</a> &amp;app(**listIter);
+<a name="l00273"></a>00273                                         <span class="keywordflow">if</span> (now - app.<a class="code" href="classPassenger_1_1Application.html#58e74f6a598dbc16d87ce0a1bf8da1d6" title="Returns the last value set by setLastUsed().">getLastUsed</a>() &gt; MAX_IDLE_TIME) {
+<a name="l00274"></a>00274                                                 P_TRACE(<span class="stringliteral">"Cleaning idle app "</span> &lt;&lt; app.<a class="code" href="classPassenger_1_1Application.html#0a0665852e7ebc8fb8ab0772fa90bc56" title="Returns the application root for this RoR application.">getAppRoot</a>());
+<a name="l00275"></a>00275                                                 elementsToRemove.push_back(listIter);
+<a name="l00276"></a>00276                                         }
+<a name="l00277"></a>00277                                 }
+<a name="l00278"></a>00278                                 
+<a name="l00279"></a>00279                                 list&lt;ApplicationList::iterator&gt;::iterator it;
+<a name="l00280"></a>00280                                 <span class="keywordflow">for</span> (it = elementsToRemove.begin(); it != elementsToRemove.end(); it++) {
+<a name="l00281"></a>00281                                         appList.erase(*it);
+<a name="l00282"></a>00282                                 }
+<a name="l00283"></a>00283                                 <span class="keywordflow">if</span> (appList.empty()) {
+<a name="l00284"></a>00284                                         appRootsToRemove.push_back(appsIter-&gt;first);
+<a name="l00285"></a>00285                                 }
+<a name="l00286"></a>00286                         }
+<a name="l00287"></a>00287                         
+<a name="l00288"></a>00288                         list&lt;string&gt;::const_iterator it;
+<a name="l00289"></a>00289                         <span class="keywordflow">for</span> (it = appRootsToRemove.begin(); it != appRootsToRemove.end(); it++) {
+<a name="l00290"></a>00290                                 apps.erase(*it);
+<a name="l00291"></a>00291                         }
+<a name="l00292"></a>00292                 }
+<a name="l00293"></a>00293         }
+<a name="l00294"></a>00294         
+<a name="l00295"></a>00295         <span class="keywordtype">void</span> detach() {
+<a name="l00296"></a>00296                 detached = <span class="keyword">true</span>;
+<a name="l00297"></a>00297         }
+<a name="l00298"></a>00298         
+<a name="l00299"></a>00299         <span class="keywordtype">void</span> handleConnectException(<span class="keyword">const</span> exception &amp;e, <span class="keyword">const</span> ApplicationPtr &amp;app,
+<a name="l00300"></a>00300                                         ApplicationList &amp;appList) {
+<a name="l00301"></a>00301                 <span class="keywordtype">string</span> message(<span class="stringliteral">"Cannot connect to an existing application instance for '"</span>);
+<a name="l00302"></a>00302                 message.append(app-&gt;getAppRoot());
+<a name="l00303"></a>00303                 message.append(<span class="stringliteral">"': "</span>);
+<a name="l00304"></a>00304                 message.append(e.what());
+<a name="l00305"></a>00305                 appList.remove(app);
+<a name="l00306"></a>00306                 <span class="keywordflow">if</span> (appList.empty()) {
+<a name="l00307"></a>00307                         apps.erase(app-&gt;getAppRoot());
+<a name="l00308"></a>00308                 }
+<a name="l00309"></a>00309                 count--;
+<a name="l00310"></a>00310                 active--;
+<a name="l00311"></a>00311                 <span class="keywordflow">throw</span> <a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a>(message);
+<a name="l00312"></a>00312         }
+<a name="l00313"></a>00313         
+<a name="l00314"></a>00314 <span class="keyword">public</span>:<span class="comment"></span>
+<a name="l00315"></a>00315 <span class="comment">        /**</span>
+<a name="l00316"></a>00316 <span class="comment">         * Create a new StandardApplicationPool object.</span>
+<a name="l00317"></a>00317 <span class="comment">         *</span>
+<a name="l00318"></a>00318 <span class="comment">         * @param spawnServerCommand The filename of the spawn server to use.</span>
+<a name="l00319"></a>00319 <span class="comment">         * @param logFile Specify a log file that the spawn server should use.</span>
+<a name="l00320"></a>00320 <span class="comment">         *            Messages on its standard output and standard error channels</span>
+<a name="l00321"></a>00321 <span class="comment">         *            will be written to this log file. If an empty string is</span>
+<a name="l00322"></a>00322 <span class="comment">         *            specified, no log file will be used, and the spawn server</span>
+<a name="l00323"></a>00323 <span class="comment">         *            will use the same standard output/error channels as the</span>
+<a name="l00324"></a>00324 <span class="comment">         *            current process.</span>
+<a name="l00325"></a>00325 <span class="comment">         * @param environment The RAILS_ENV environment that all RoR applications</span>
+<a name="l00326"></a>00326 <span class="comment">         *            should use. If an empty string is specified, the current value</span>
+<a name="l00327"></a>00327 <span class="comment">         *            of the RAILS_ENV environment variable will be used.</span>
+<a name="l00328"></a>00328 <span class="comment">         * @param rubyCommand The Ruby interpreter's command.</span>
+<a name="l00329"></a>00329 <span class="comment">         * @throws SystemException An error occured while trying to setup the spawn server.</span>
+<a name="l00330"></a>00330 <span class="comment">         * @throws IOException The specified log file could not be opened.</span>
+<a name="l00331"></a>00331 <span class="comment">         */</span>
+<a name="l00332"></a><a class="code" href="classPassenger_1_1StandardApplicationPool.html#de7c6e9dcaa37ac5640ed91fe0ac1bbc">00332</a>         <a class="code" href="classPassenger_1_1StandardApplicationPool.html#de7c6e9dcaa37ac5640ed91fe0ac1bbc" title="Create a new StandardApplicationPool object.">StandardApplicationPool</a>(<span class="keyword">const</span> <span class="keywordtype">string</span> &amp;spawnServerCommand,
+<a name="l00333"></a>00333                      <span class="keyword">const</span> <span class="keywordtype">string</span> &amp;logFile = <span class="stringliteral">""</span>,
+<a name="l00334"></a>00334                      <span class="keyword">const</span> <span class="keywordtype">string</span> &amp;environment = <span class="stringliteral">"production"</span>,
+<a name="l00335"></a>00335                      <span class="keyword">const</span> <span class="keywordtype">string</span> &amp;rubyCommand = <span class="stringliteral">"ruby"</span>)
+<a name="l00336"></a>00336                 :
+<a name="l00337"></a>00337                 #ifndef PASSENGER_USE_DUMMY_SPAWN_MANAGER
+<a name="l00338"></a>00338                 spawnManager(spawnServerCommand, logFile, environment, rubyCommand),
+<a name="l00339"></a>00339                 #endif
+<a name="l00340"></a>00340                 data(new SharedData()),
+<a name="l00341"></a>00341                 lock(data-&gt;lock),
+<a name="l00342"></a>00342                 countOrMaxChanged(data-&gt;countOrMaxChanged),
+<a name="l00343"></a>00343                 apps(data-&gt;apps),
+<a name="l00344"></a>00344                 max(data-&gt;max),
+<a name="l00345"></a>00345                 count(data-&gt;count),
+<a name="l00346"></a>00346                 active(data-&gt;active)
+<a name="l00347"></a>00347         {
+<a name="l00348"></a>00348                 detached = <span class="keyword">false</span>;
+<a name="l00349"></a>00349                 done = <span class="keyword">false</span>;
+<a name="l00350"></a>00350                 max = 100;
+<a name="l00351"></a>00351                 count = 0;
+<a name="l00352"></a>00352                 active = 0;
+<a name="l00353"></a>00353                 cleanerThread = <span class="keyword">new</span> thread(bind(&amp;StandardApplicationPool::cleanerThreadMainLoop, <span class="keyword">this</span>));
 <a name="l00354"></a>00354         }
 <a name="l00355"></a>00355         
-<a name="l00356"></a>00356         <span class="keyword">virtual</span> <a class="code" href="classPassenger_1_1Application.html#d14f673494991460b16246a527ad8ad9" title="Convenient alias for Session smart pointer.">Application::SessionPtr</a>
-<a name="l00357"></a><a class="code" href="classPassenger_1_1StandardApplicationPool.html#cb338093c3368bf1cbcba02099c6c76e">00357</a>         <span class="keyword">get</span>(<span class="keyword">const</span> <span class="keywordtype">string</span> &amp;appRoot, <span class="keyword">const</span> <span class="keywordtype">string</span> &amp;user = <span class="stringliteral">""</span>, <span class="keyword">const</span> <span class="keywordtype">string</span> &amp;group = <span class="stringliteral">""</span>) {
-<a name="l00358"></a>00358                 <span class="comment">/*</span>
-<a name="l00359"></a>00359 <span class="comment">                 * See "doc/ApplicationPool Algorithm.txt" for a more readable description</span>
-<a name="l00360"></a>00360 <span class="comment">                 * of the algorithm.</span>
-<a name="l00361"></a>00361 <span class="comment">                 */</span>
-<a name="l00362"></a>00362                 ApplicationPtr app;
-<a name="l00363"></a>00363                 ApplicationList *appList;
-<a name="l00364"></a>00364                 mutex::scoped_lock l(lock);
-<a name="l00365"></a>00365                 
-<a name="l00366"></a>00366                 <span class="keywordflow">if</span> (needsRestart(appRoot)) {
-<a name="l00367"></a>00367                         apps.erase(appRoot);
-<a name="l00368"></a>00368                 }
-<a name="l00369"></a>00369                 
-<a name="l00370"></a>00370                 <span class="keywordflow">try</span> {
-<a name="l00371"></a>00371                         ApplicationMap::iterator it(apps.find(appRoot));
-<a name="l00372"></a>00372                         <span class="keywordflow">if</span> (it != apps.end()) {
-<a name="l00373"></a>00373                                 appList = it-&gt;second.get();
-<a name="l00374"></a>00374                 
-<a name="l00375"></a>00375                                 <span class="keywordflow">if</span> (appList-&gt;front()-&gt;getSessions() == 0) {
-<a name="l00376"></a>00376                                         app = appList-&gt;front();
-<a name="l00377"></a>00377                                         appList-&gt;pop_front();
-<a name="l00378"></a>00378                                         appList-&gt;push_back(app);
-<a name="l00379"></a>00379                                         active++;
-<a name="l00380"></a>00380                                 } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (count &lt; max) {
-<a name="l00381"></a>00381                                         app = spawnManager.<a class="code" href="classPassenger_1_1SpawnManager.html#5949f7eea4a6b4ef88d5f4ba5031cf1a" title="Spawn a new instance of a Ruby on Rails application.">spawn</a>(appRoot, user, group);
-<a name="l00382"></a>00382                                         appList-&gt;push_back(app);
-<a name="l00383"></a>00383                                         count++;
-<a name="l00384"></a>00384                                         countOrMaxChanged.notify_all();
-<a name="l00385"></a>00385                                         active++;
-<a name="l00386"></a>00386                                 } <span class="keywordflow">else</span> {
-<a name="l00387"></a>00387                                         app = appList-&gt;front();
-<a name="l00388"></a>00388                                         appList-&gt;pop_front();
-<a name="l00389"></a>00389                                         appList-&gt;push_back(app);
-<a name="l00390"></a>00390                                         active++;
-<a name="l00391"></a>00391                                 }
-<a name="l00392"></a>00392                         } <span class="keywordflow">else</span> {
-<a name="l00393"></a>00393                                 <span class="keywordflow">while</span> (count &gt;= max) {
-<a name="l00394"></a>00394                                         countOrMaxChanged.wait(l);
-<a name="l00395"></a>00395                                 }
-<a name="l00396"></a>00396                                 app = spawnManager.<a class="code" href="classPassenger_1_1SpawnManager.html#5949f7eea4a6b4ef88d5f4ba5031cf1a" title="Spawn a new instance of a Ruby on Rails application.">spawn</a>(appRoot, user, group);
-<a name="l00397"></a>00397                                 appList = <span class="keyword">new</span> ApplicationList();
-<a name="l00398"></a>00398                                 appList-&gt;push_back(app);
-<a name="l00399"></a>00399                                 apps[appRoot] = <a class="code" href="group__Support.html#g41b6c4a82fed72531a147de0505a8396" title="Convenience shortcut for creating a shared_ptr.">ptr</a>(appList);
-<a name="l00400"></a>00400                                 count++;
-<a name="l00401"></a>00401                                 countOrMaxChanged.notify_all();
-<a name="l00402"></a>00402                                 active++;
-<a name="l00403"></a>00403                         }
-<a name="l00404"></a>00404                 } <span class="keywordflow">catch</span> (<span class="keyword">const</span> <a class="code" href="classPassenger_1_1SpawnException.html" title="Thrown when SpawnManager or ApplicationPool fail to spawn an application instance...">SpawnException</a> &amp;e) {
-<a name="l00405"></a>00405                         <span class="keywordtype">string</span> message(<span class="stringliteral">"Cannot spawn application '"</span>);
-<a name="l00406"></a>00406                         message.append(appRoot);
-<a name="l00407"></a>00407                         message.append(<span class="stringliteral">"': "</span>);
-<a name="l00408"></a>00408                         message.append(e.<a class="code" href="classPassenger_1_1SpawnException.html#d2da180f89a43423a4b37248249972ff">what</a>());
-<a name="l00409"></a>00409                         <span class="keywordflow">throw</span> <a class="code" href="classPassenger_1_1SpawnException.html" title="Thrown when SpawnManager or ApplicationPool fail to spawn an application instance...">SpawnException</a>(message);
-<a name="l00410"></a>00410                 }
-<a name="l00411"></a>00411                 
-<a name="l00412"></a>00412                 app-&gt;setLastUsed(time(NULL));
-<a name="l00413"></a>00413                 
-<a name="l00414"></a>00414                 <span class="comment">// TODO: This should not just throw an exception.</span>
-<a name="l00415"></a>00415                 <span class="comment">// If we fail to connect to one application we should just use another, or</span>
-<a name="l00416"></a>00416                 <span class="comment">// spawn a new application. Of course, this must not be done too often</span>
-<a name="l00417"></a>00417                 <span class="comment">// because every app might crash at startup. There should be a limit</span>
-<a name="l00418"></a>00418                 <span class="comment">// to the number of retries.</span>
-<a name="l00419"></a>00419                 <span class="keywordflow">try</span> {
-<a name="l00420"></a>00420                         <span class="keywordflow">return</span> app-&gt;connect(SessionCloseCallback(data, app));
-<a name="l00421"></a>00421                 } <span class="keywordflow">catch</span> (<span class="keyword">const</span> <a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a> &amp;e) {
-<a name="l00422"></a>00422                         handleConnectException(e, app, *appList);
-<a name="l00423"></a>00423                         <span class="comment">// Never reached; shut up compiler warning</span>
-<a name="l00424"></a>00424                         <span class="keywordflow">return</span> <a class="code" href="classPassenger_1_1Application.html#d14f673494991460b16246a527ad8ad9" title="Convenient alias for Session smart pointer.">Application::SessionPtr</a>();
-<a name="l00425"></a>00425                 } <span class="keywordflow">catch</span> (<span class="keyword">const</span> <a class="code" href="classPassenger_1_1SystemException.html" title="Represents an error returned by a system call or a standard library call.">SystemException</a> &amp;e) {
-<a name="l00426"></a>00426                         handleConnectException(e, app, *appList);
-<a name="l00427"></a>00427                         <span class="comment">// Never reached; shut up compiler warning</span>
-<a name="l00428"></a>00428                         <span class="keywordflow">return</span> <a class="code" href="classPassenger_1_1Application.html#d14f673494991460b16246a527ad8ad9" title="Convenient alias for Session smart pointer.">Application::SessionPtr</a>();
-<a name="l00429"></a>00429                 }
-<a name="l00430"></a>00430         }
-<a name="l00431"></a>00431         
-<a name="l00432"></a><a class="code" href="classPassenger_1_1StandardApplicationPool.html#04ef8c92da189520ad2022f4f82e9553">00432</a>         <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classPassenger_1_1StandardApplicationPool.html#04ef8c92da189520ad2022f4f82e9553" title="Set a hard limit on the number of application instances that this ApplicationPool...">setMax</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> max) {
-<a name="l00433"></a>00433                 mutex::scoped_lock l(lock);
-<a name="l00434"></a>00434                 this-&gt;max = max;
-<a name="l00435"></a>00435                 countOrMaxChanged.notify_all();
-<a name="l00436"></a>00436         }
-<a name="l00437"></a>00437         
-<a name="l00438"></a><a class="code" href="classPassenger_1_1StandardApplicationPool.html#7773c4a3dfbd88eac72401d063831788">00438</a>         <span class="keyword">virtual</span> <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="classPassenger_1_1StandardApplicationPool.html#7773c4a3dfbd88eac72401d063831788" title="Get the number of active applications in the pool.">getActive</a>()<span class="keyword"> const </span>{
-<a name="l00439"></a>00439                 <span class="keywordflow">return</span> active;
-<a name="l00440"></a>00440         }
-<a name="l00441"></a>00441         
-<a name="l00442"></a><a class="code" href="classPassenger_1_1StandardApplicationPool.html#cdbfe2b9ffacdab4438c879c2411bf02">00442</a>         <span class="keyword">virtual</span> <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="classPassenger_1_1StandardApplicationPool.html#cdbfe2b9ffacdab4438c879c2411bf02" title="Get the number of active applications in the pool.">getCount</a>()<span class="keyword"> const </span>{
-<a name="l00443"></a>00443                 <span class="keywordflow">return</span> count;
-<a name="l00444"></a>00444         }
-<a name="l00445"></a>00445 };
-<a name="l00446"></a>00446 
-<a name="l00447"></a>00447 <span class="keyword">typedef</span> shared_ptr&lt;ApplicationPool&gt; ApplicationPoolPtr;
-<a name="l00448"></a>00448 
-<a name="l00449"></a>00449 }; <span class="comment">// namespace Passenger</span>
-<a name="l00450"></a>00450 
-<a name="l00451"></a>00451 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_APPLICATION_POOL_H_ */</span>
-</pre></div><hr size="1"><address style="text-align: right;"><small>Generated on Fri Feb 22 21:23:17 2008 for Passenger by&nbsp;
+<a name="l00356"></a>00356         <span class="keyword">virtual</span> ~<a class="code" href="classPassenger_1_1StandardApplicationPool.html" title="A standard implementation of ApplicationPool for single-process environments.">StandardApplicationPool</a>() {
+<a name="l00357"></a>00357                 <span class="keywordflow">if</span> (!detached) {
+<a name="l00358"></a>00358                         {
+<a name="l00359"></a>00359                                 mutex::scoped_lock l(lock);
+<a name="l00360"></a>00360                                 done = <span class="keyword">true</span>;
+<a name="l00361"></a>00361                                 cleanerThreadSleeper.notify_one();
+<a name="l00362"></a>00362                         }
+<a name="l00363"></a>00363                         cleanerThread-&gt;join();
+<a name="l00364"></a>00364                 }
+<a name="l00365"></a>00365                 <span class="keyword">delete</span> cleanerThread;
+<a name="l00366"></a>00366         }
+<a name="l00367"></a>00367         
+<a name="l00368"></a>00368         <span class="keyword">virtual</span> <a class="code" href="classPassenger_1_1Application.html#d14f673494991460b16246a527ad8ad9" title="Convenient alias for Session smart pointer.">Application::SessionPtr</a>
+<a name="l00369"></a><a class="code" href="classPassenger_1_1StandardApplicationPool.html#45cfa1878f1018f1626669cad9885caf">00369</a>         <span class="keyword">get</span>(<span class="keyword">const</span> <span class="keywordtype">string</span> &amp;appRoot, <span class="keywordtype">bool</span> lowerPrivilege = <span class="keyword">true</span>, <span class="keyword">const</span> <span class="keywordtype">string</span> &amp;lowestUser = <span class="stringliteral">"nobody"</span>) {
+<a name="l00370"></a>00370                 <span class="comment">/*</span>
+<a name="l00371"></a>00371 <span class="comment">                 * See "doc/ApplicationPool Algorithm.txt" for a more readable description</span>
+<a name="l00372"></a>00372 <span class="comment">                 * of the algorithm.</span>
+<a name="l00373"></a>00373 <span class="comment">                 */</span>
+<a name="l00374"></a>00374                 ApplicationPtr app;
+<a name="l00375"></a>00375                 ApplicationList *appList;
+<a name="l00376"></a>00376                 mutex::scoped_lock l(lock);
+<a name="l00377"></a>00377                 
+<a name="l00378"></a>00378                 <span class="keywordflow">if</span> (needsRestart(appRoot)) {
+<a name="l00379"></a>00379                         apps.erase(appRoot);
+<a name="l00380"></a>00380                 }
+<a name="l00381"></a>00381                 
+<a name="l00382"></a>00382                 <span class="keywordflow">try</span> {
+<a name="l00383"></a>00383                         ApplicationMap::iterator it(apps.find(appRoot));
+<a name="l00384"></a>00384                         <span class="keywordflow">if</span> (it != apps.end()) {
+<a name="l00385"></a>00385                                 appList = it-&gt;second.get();
+<a name="l00386"></a>00386                 
+<a name="l00387"></a>00387                                 <span class="keywordflow">if</span> (appList-&gt;front()-&gt;getSessions() == 0) {
+<a name="l00388"></a>00388                                         app = appList-&gt;front();
+<a name="l00389"></a>00389                                         appList-&gt;pop_front();
+<a name="l00390"></a>00390                                         appList-&gt;push_back(app);
+<a name="l00391"></a>00391                                         active++;
+<a name="l00392"></a>00392                                 } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (count &lt; max) {
+<a name="l00393"></a>00393                                         app = spawnManager.<a class="code" href="classPassenger_1_1SpawnManager.html#f60a88777284578f905e272122f4b8e6" title="Spawn a new instance of a Ruby on Rails application.">spawn</a>(appRoot, lowerPrivilege, lowestUser);
+<a name="l00394"></a>00394                                         appList-&gt;push_back(app);
+<a name="l00395"></a>00395                                         count++;
+<a name="l00396"></a>00396                                         countOrMaxChanged.notify_all();
+<a name="l00397"></a>00397                                         active++;
+<a name="l00398"></a>00398                                 } <span class="keywordflow">else</span> {
+<a name="l00399"></a>00399                                         app = appList-&gt;front();
+<a name="l00400"></a>00400                                         appList-&gt;pop_front();
+<a name="l00401"></a>00401                                         appList-&gt;push_back(app);
+<a name="l00402"></a>00402                                         active++;
+<a name="l00403"></a>00403                                 }
+<a name="l00404"></a>00404                         } <span class="keywordflow">else</span> {
+<a name="l00405"></a>00405                                 <span class="keywordflow">while</span> (count &gt;= max) {
+<a name="l00406"></a>00406                                         countOrMaxChanged.wait(l);
+<a name="l00407"></a>00407                                 }
+<a name="l00408"></a>00408                                 app = spawnManager.<a class="code" href="classPassenger_1_1SpawnManager.html#f60a88777284578f905e272122f4b8e6" title="Spawn a new instance of a Ruby on Rails application.">spawn</a>(appRoot, lowerPrivilege, lowestUser);
+<a name="l00409"></a>00409                                 appList = <span class="keyword">new</span> ApplicationList();
+<a name="l00410"></a>00410                                 appList-&gt;push_back(app);
+<a name="l00411"></a>00411                                 apps[appRoot] = <a class="code" href="group__Support.html#g41b6c4a82fed72531a147de0505a8396" title="Convenience shortcut for creating a shared_ptr.">ptr</a>(appList);
+<a name="l00412"></a>00412                                 count++;
+<a name="l00413"></a>00413                                 countOrMaxChanged.notify_all();
+<a name="l00414"></a>00414                                 active++;
+<a name="l00415"></a>00415                         }
+<a name="l00416"></a>00416                 } <span class="keywordflow">catch</span> (<span class="keyword">const</span> <a class="code" href="classPassenger_1_1SpawnException.html" title="Thrown when SpawnManager or ApplicationPool fail to spawn an application instance...">SpawnException</a> &amp;e) {
+<a name="l00417"></a>00417                         <span class="keywordtype">string</span> message(<span class="stringliteral">"Cannot spawn application '"</span>);
+<a name="l00418"></a>00418                         message.append(appRoot);
+<a name="l00419"></a>00419                         message.append(<span class="stringliteral">"': "</span>);
+<a name="l00420"></a>00420                         message.append(e.<a class="code" href="classPassenger_1_1SpawnException.html#d2da180f89a43423a4b37248249972ff">what</a>());
+<a name="l00421"></a>00421                         <span class="keywordflow">throw</span> <a class="code" href="classPassenger_1_1SpawnException.html" title="Thrown when SpawnManager or ApplicationPool fail to spawn an application instance...">SpawnException</a>(message);
+<a name="l00422"></a>00422                 }
+<a name="l00423"></a>00423                 
+<a name="l00424"></a>00424                 app-&gt;setLastUsed(time(NULL));
+<a name="l00425"></a>00425                 
+<a name="l00426"></a>00426                 <span class="comment">// TODO: This should not just throw an exception.</span>
+<a name="l00427"></a>00427                 <span class="comment">// If we fail to connect to one application we should just use another, or</span>
+<a name="l00428"></a>00428                 <span class="comment">// spawn a new application. Of course, this must not be done too often</span>
+<a name="l00429"></a>00429                 <span class="comment">// because every app might crash at startup. There should be a limit</span>
+<a name="l00430"></a>00430                 <span class="comment">// to the number of retries.</span>
+<a name="l00431"></a>00431                 <span class="keywordflow">try</span> {
+<a name="l00432"></a>00432                         <span class="keywordflow">return</span> app-&gt;connect(SessionCloseCallback(data, app));
+<a name="l00433"></a>00433                 } <span class="keywordflow">catch</span> (<span class="keyword">const</span> <a class="code" href="classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation.">IOException</a> &amp;e) {
+<a name="l00434"></a>00434                         handleConnectException(e, app, *appList);
+<a name="l00435"></a>00435                         <span class="comment">// Never reached; shut up compiler warning</span>
+<a name="l00436"></a>00436                         <span class="keywordflow">return</span> <a class="code" href="classPassenger_1_1Application.html#d14f673494991460b16246a527ad8ad9" title="Convenient alias for Session smart pointer.">Application::SessionPtr</a>();
+<a name="l00437"></a>00437                 } <span class="keywordflow">catch</span> (<span class="keyword">const</span> <a class="code" href="classPassenger_1_1SystemException.html" title="Represents an error returned by a system call or a standard library call.">SystemException</a> &amp;e) {
+<a name="l00438"></a>00438                         handleConnectException(e, app, *appList);
+<a name="l00439"></a>00439                         <span class="comment">// Never reached; shut up compiler warning</span>
+<a name="l00440"></a>00440                         <span class="keywordflow">return</span> <a class="code" href="classPassenger_1_1Application.html#d14f673494991460b16246a527ad8ad9" title="Convenient alias for Session smart pointer.">Application::SessionPtr</a>();
+<a name="l00441"></a>00441                 }
+<a name="l00442"></a>00442         }
+<a name="l00443"></a>00443         
+<a name="l00444"></a><a class="code" href="classPassenger_1_1StandardApplicationPool.html#04ef8c92da189520ad2022f4f82e9553">00444</a>         <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classPassenger_1_1StandardApplicationPool.html#04ef8c92da189520ad2022f4f82e9553" title="Set a hard limit on the number of application instances that this ApplicationPool...">setMax</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> max) {
+<a name="l00445"></a>00445                 mutex::scoped_lock l(lock);
+<a name="l00446"></a>00446                 this-&gt;max = max;
+<a name="l00447"></a>00447                 countOrMaxChanged.notify_all();
+<a name="l00448"></a>00448         }
+<a name="l00449"></a>00449         
+<a name="l00450"></a><a class="code" href="classPassenger_1_1StandardApplicationPool.html#7773c4a3dfbd88eac72401d063831788">00450</a>         <span class="keyword">virtual</span> <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="classPassenger_1_1StandardApplicationPool.html#7773c4a3dfbd88eac72401d063831788" title="Get the number of active applications in the pool.">getActive</a>()<span class="keyword"> const </span>{
+<a name="l00451"></a>00451                 <span class="keywordflow">return</span> active;
+<a name="l00452"></a>00452         }
+<a name="l00453"></a>00453         
+<a name="l00454"></a><a class="code" href="classPassenger_1_1StandardApplicationPool.html#cdbfe2b9ffacdab4438c879c2411bf02">00454</a>         <span class="keyword">virtual</span> <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="classPassenger_1_1StandardApplicationPool.html#cdbfe2b9ffacdab4438c879c2411bf02" title="Get the number of active applications in the pool.">getCount</a>()<span class="keyword"> const </span>{
+<a name="l00455"></a>00455                 <span class="keywordflow">return</span> count;
+<a name="l00456"></a>00456         }
+<a name="l00457"></a>00457         
+<a name="l00458"></a><a class="code" href="classPassenger_1_1StandardApplicationPool.html#6955152d237920988d20297d2fff5660">00458</a>         <span class="keyword">virtual</span> pid_t <a class="code" href="classPassenger_1_1StandardApplicationPool.html#6955152d237920988d20297d2fff5660" title="Get the process ID of the spawn server that is used.">getSpawnServerPid</a>()<span class="keyword"> const </span>{
+<a name="l00459"></a>00459                 <span class="keywordflow">return</span> spawnManager.<a class="code" href="classPassenger_1_1SpawnManager.html#1f77e2e7e6cb464028c13a29f983ad8e" title="Get the Process ID of the spawn server.">getServerPid</a>();
+<a name="l00460"></a>00460         }
+<a name="l00461"></a>00461 };
+<a name="l00462"></a>00462 
+<a name="l00463"></a>00463 <span class="keyword">typedef</span> shared_ptr&lt;ApplicationPool&gt; ApplicationPoolPtr;
+<a name="l00464"></a>00464 
+<a name="l00465"></a>00465 }; <span class="comment">// namespace Passenger</span>
+<a name="l00466"></a>00466 
+<a name="l00467"></a>00467 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_APPLICATION_POOL_H_ */</span>
+</pre></div><hr size="1"><address style="text-align: right;"><small>Generated on Sat Feb 23 15:21:04 2008 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.3 </small></address>
 </body>

@@ -76,10 +76,11 @@
   <ul>
   <li><a href="#M000006">assert_valid_app_root</a></li>
   <li><a href="#M000007">assert_valid_directory</a></li>
-  <li><a href="#M000009">assert_valid_groupname</a></li>
-  <li><a href="#M000008">assert_valid_username</a></li>
+  <li><a href="#M000008">assert_valid_file</a></li>
+  <li><a href="#M000010">assert_valid_groupname</a></li>
+  <li><a href="#M000009">assert_valid_username</a></li>
   <li><a href="#M000005">normalize_path</a></li>
-  <li><a href="#M000010">print_exception</a></li>
+  <li><a href="#M000011">print_exception</a></li>
   </ul>
 
 
@@ -96,11 +97,10 @@
   <p class="source-link">[ <a href="javascript:toggleSource('M000006_source')" id="l_M000006_source">show source</a> ]</p>
   <div id="M000006_source" class="dyn-source">
 <pre>
-    <span class="ruby-comment cmt"># File lib/mod_rails/utils.rb, line 21</span>
-21:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">assert_valid_app_root</span>(<span class="ruby-identifier">app_root</span>)
-22:                 <span class="ruby-identifier">assert_valid_directory</span>(<span class="ruby-identifier">app_root</span>)
-23:                 <span class="ruby-identifier">assert_valid_directory</span>(<span class="ruby-node">&quot;#{app_root}/app&quot;</span>)
-24:                 <span class="ruby-identifier">assert_valid_directory</span>(<span class="ruby-node">&quot;#{app_root}/public&quot;</span>)
+    <span class="ruby-comment cmt"># File lib/mod_rails/utils.rb, line 22</span>
+22:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">assert_valid_app_root</span>(<span class="ruby-identifier">app_root</span>)
+23:                 <span class="ruby-identifier">assert_valid_directory</span>(<span class="ruby-identifier">app_root</span>)
+24:                 <span class="ruby-identifier">assert_valid_file</span>(<span class="ruby-node">&quot;#{app_root}/config/environment.rb&quot;</span>)
 25:         <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
@@ -112,7 +112,8 @@
   </div>
   <div class="description">
   <p>
-Assert that <em>path</em> is a directory.
+Assert that <em>path</em> is a directory. Raises ArgumentError if it
+isn&#8216;t.
 </p>
   </div>
 <div class="sourcecode">
@@ -131,34 +132,58 @@ Assert that <em>path</em> is a directory.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000009"></a><b>assert_valid_groupname</b>(groupname)
+    <a name="M000008"></a><b>assert_valid_file</b>(path)
+  </div>
+  <div class="description">
+  <p>
+Assert that <em>path</em> is a file. Raises ArgumentError if it
+isn&#8216;t.
+</p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000009_source')" id="l_M000009_source">show source</a> ]</p>
-  <div id="M000009_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000008_source')" id="l_M000008_source">show source</a> ]</p>
+  <div id="M000008_source" class="dyn-source">
 <pre>
-    <span class="ruby-comment cmt"># File lib/mod_rails/utils.rb, line 39</span>
-39:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">assert_valid_groupname</span>(<span class="ruby-identifier">groupname</span>)
-40:                 <span class="ruby-comment cmt"># If groupname does not exist then getgrnam() will raise an ArgumentError.</span>
-41:                 <span class="ruby-identifier">groupname</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-constant">Etc</span>.<span class="ruby-identifier">getgrnam</span>(<span class="ruby-identifier">groupname</span>)
-42:         <span class="ruby-keyword kw">end</span>
+    <span class="ruby-comment cmt"># File lib/mod_rails/utils.rb, line 35</span>
+35:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">assert_valid_file</span>(<span class="ruby-identifier">path</span>)
+36:                 <span class="ruby-keyword kw">if</span> <span class="ruby-operator">!</span><span class="ruby-constant">File</span>.<span class="ruby-identifier">file?</span>(<span class="ruby-identifier">path</span>)
+37:                         <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-node">&quot;'#{path}' is not a valid file.&quot;</span>
+38:                 <span class="ruby-keyword kw">end</span>
+39:         <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000008"></a><b>assert_valid_username</b>(username)
+    <a name="M000010"></a><b>assert_valid_groupname</b>(groupname)
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000008_source')" id="l_M000008_source">show source</a> ]</p>
-  <div id="M000008_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000010_source')" id="l_M000010_source">show source</a> ]</p>
+  <div id="M000010_source" class="dyn-source">
 <pre>
-    <span class="ruby-comment cmt"># File lib/mod_rails/utils.rb, line 34</span>
-34:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">assert_valid_username</span>(<span class="ruby-identifier">username</span>)
-35:                 <span class="ruby-comment cmt"># If username does not exist then getpwnam() will raise an ArgumentError.</span>
-36:                 <span class="ruby-identifier">username</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-constant">Etc</span>.<span class="ruby-identifier">getpwnam</span>(<span class="ruby-identifier">username</span>)
-37:         <span class="ruby-keyword kw">end</span>
+    <span class="ruby-comment cmt"># File lib/mod_rails/utils.rb, line 46</span>
+46:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">assert_valid_groupname</span>(<span class="ruby-identifier">groupname</span>)
+47:                 <span class="ruby-comment cmt"># If groupname does not exist then getgrnam() will raise an ArgumentError.</span>
+48:                 <span class="ruby-identifier">groupname</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-constant">Etc</span>.<span class="ruby-identifier">getgrnam</span>(<span class="ruby-identifier">groupname</span>)
+49:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000009"></a><b>assert_valid_username</b>(username)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000009_source')" id="l_M000009_source">show source</a> ]</p>
+  <div id="M000009_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/mod_rails/utils.rb, line 41</span>
+41:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">assert_valid_username</span>(<span class="ruby-identifier">username</span>)
+42:                 <span class="ruby-comment cmt"># If username does not exist then getpwnam() will raise an ArgumentError.</span>
+43:                 <span class="ruby-identifier">username</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-constant">Etc</span>.<span class="ruby-identifier">getpwnam</span>(<span class="ruby-identifier">username</span>)
+44:         <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>
@@ -172,6 +197,8 @@ Assert that <em>path</em> is a directory.
 Return the absolute version of <em>path</em>. This path is guaranteed to to
 be &quot;normal&quot;, i.e. it doesn&#8216;t contain stuff like
 &quot;..&quot; or &quot;/&quot;, and it correctly respects symbolic links.
+</p>
+<p>
 Raises Errno::ENOENT if <em>path</em> doesn&#8216;t exist.
 </p>
   </div>
@@ -179,30 +206,30 @@ Raises Errno::ENOENT if <em>path</em> doesn&#8216;t exist.
   <p class="source-link">[ <a href="javascript:toggleSource('M000005_source')" id="l_M000005_source">show source</a> ]</p>
   <div id="M000005_source" class="dyn-source">
 <pre>
-    <span class="ruby-comment cmt"># File lib/mod_rails/utils.rb, line 17</span>
-17:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">normalize_path</span>(<span class="ruby-identifier">path</span>)
-18:                 <span class="ruby-keyword kw">return</span> <span class="ruby-constant">Pathname</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">path</span>).<span class="ruby-identifier">realpath</span>.<span class="ruby-identifier">to_s</span>
-19:         <span class="ruby-keyword kw">end</span>
+    <span class="ruby-comment cmt"># File lib/mod_rails/utils.rb, line 18</span>
+18:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">normalize_path</span>(<span class="ruby-identifier">path</span>)
+19:                 <span class="ruby-keyword kw">return</span> <span class="ruby-constant">Pathname</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">path</span>).<span class="ruby-identifier">realpath</span>.<span class="ruby-identifier">to_s</span>
+20:         <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000010"></a><b>print_exception</b>(current_location, exception)
+    <a name="M000011"></a><b>print_exception</b>(current_location, exception)
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000010_source')" id="l_M000010_source">show source</a> ]</p>
-  <div id="M000010_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000011_source')" id="l_M000011_source">show source</a> ]</p>
+  <div id="M000011_source" class="dyn-source">
 <pre>
-    <span class="ruby-comment cmt"># File lib/mod_rails/utils.rb, line 44</span>
-44:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">print_exception</span>(<span class="ruby-identifier">current_location</span>, <span class="ruby-identifier">exception</span>)
-45:                 <span class="ruby-constant">STDERR</span>.<span class="ruby-identifier">puts</span>(<span class="ruby-node">&quot;** Exception #{exception.class} in #{current_location} &quot;</span> <span class="ruby-operator">&lt;&lt;</span>
-46:                         <span class="ruby-node">&quot;(#{exception}) (process #{$$}):\n&quot;</span> <span class="ruby-operator">&lt;&lt;</span>
-47:                         <span class="ruby-value str">&quot;\tfrom &quot;</span> <span class="ruby-operator">&lt;&lt;</span>
-48:                         <span class="ruby-identifier">exception</span>.<span class="ruby-identifier">backtrace</span>.<span class="ruby-identifier">join</span>(<span class="ruby-value str">&quot;\n\tfrom &quot;</span>))
-49:                 <span class="ruby-constant">STDERR</span>.<span class="ruby-identifier">flush</span>
-50:         <span class="ruby-keyword kw">end</span>
+    <span class="ruby-comment cmt"># File lib/mod_rails/utils.rb, line 51</span>
+51:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">print_exception</span>(<span class="ruby-identifier">current_location</span>, <span class="ruby-identifier">exception</span>)
+52:                 <span class="ruby-constant">STDERR</span>.<span class="ruby-identifier">puts</span>(<span class="ruby-node">&quot;** Exception #{exception.class} in #{current_location} &quot;</span> <span class="ruby-operator">&lt;&lt;</span>
+53:                         <span class="ruby-node">&quot;(#{exception}) (process #{$$}):\n&quot;</span> <span class="ruby-operator">&lt;&lt;</span>
+54:                         <span class="ruby-value str">&quot;\tfrom &quot;</span> <span class="ruby-operator">&lt;&lt;</span>
+55:                         <span class="ruby-identifier">exception</span>.<span class="ruby-identifier">backtrace</span>.<span class="ruby-identifier">join</span>(<span class="ruby-value str">&quot;\n\tfrom &quot;</span>))
+56:                 <span class="ruby-constant">STDERR</span>.<span class="ruby-identifier">flush</span>
+57:         <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>

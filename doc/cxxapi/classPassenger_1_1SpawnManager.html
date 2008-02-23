@@ -31,12 +31,12 @@
 <p>
 <a href="classPassenger_1_1SpawnManager-members.html">List of all members.</a><hr><a name="_details"></a><h2>Detailed Description</h2>
 Spawning of Ruby on Rails application instances.<p>
-This class is responsible for spawning new instances of Ruby on Rails applications. Use the <a class="el" href="classPassenger_1_1SpawnManager.html#5949f7eea4a6b4ef88d5f4ba5031cf1a" title="Spawn a new instance of a Ruby on Rails application.">spawn()</a> method to do so.<p>
+This class is responsible for spawning new instances of Ruby on Rails applications. Use the <a class="el" href="classPassenger_1_1SpawnManager.html#f60a88777284578f905e272122f4b8e6" title="Spawn a new instance of a Ruby on Rails application.">spawn()</a> method to do so.<p>
 <dl class="note" compact><dt><b>Note:</b></dt><dd>This class is fully thread-safe.</dd></dl>
 <h2>Implementation details</h2>
 <p>
 Internally, this class makes use of a spawn server, which is written in Ruby. This server is automatically started when a <a class="el" href="classPassenger_1_1SpawnManager.html">SpawnManager</a> instance is created, and automatically shutdown when that instance is destroyed. The existance of the spawn server is almost totally transparent to users of this class. Spawn requests are sent to the server, and details about the spawned process is returned.<p>
-If the spawn server dies during the middle of an operation, it will be restarted. See <a class="el" href="classPassenger_1_1SpawnManager.html#5949f7eea4a6b4ef88d5f4ba5031cf1a" title="Spawn a new instance of a Ruby on Rails application.">spawn()</a> for full details.<p>
+If the spawn server dies during the middle of an operation, it will be restarted. See <a class="el" href="classPassenger_1_1SpawnManager.html#f60a88777284578f905e272122f4b8e6" title="Spawn a new instance of a Ruby on Rails application.">spawn()</a> for full details.<p>
 The communication channel with the server is anonymous, i.e. no other processes can access the communication channel, so communication is guaranteed to be safe (unless, of course, if the spawn server itself is a trojan).<p>
 The server will try to keep the spawning time as small as possible, by keeping corresponding Ruby on Rails frameworks and application code in memory. So the second time an instance of the same application is spawned, the spawn time is significantly lower than the first time. Nevertheless, spawning is a relatively expensive operation (compared to the processing of a typical HTTP request/response), and so should be avoided whenever possible.<p>
 See the documentation of the spawn server for full implementation details. <table border="0" cellpadding="0" cellspacing="0">
@@ -45,12 +45,12 @@ See the documentation of the spawn server for full implementation details. <tabl
 <tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1SpawnManager.html#9cc7466414fe2ed29fb269ce7b4d4670">SpawnManager</a> (const string &amp;spawnServerCommand, const string &amp;logFile=&quot;&quot;, const string &amp;environment=&quot;production&quot;, const string &amp;rubyCommand=&quot;ruby&quot;)</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Construct a new <a class="el" href="classPassenger_1_1SpawnManager.html">SpawnManager</a>.  <a href="#9cc7466414fe2ed29fb269ce7b4d4670"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">ApplicationPtr&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1SpawnManager.html#5949f7eea4a6b4ef88d5f4ba5031cf1a">spawn</a> (const string &amp;appRoot, const string &amp;user=&quot;&quot;, const string &amp;group=&quot;&quot;)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">ApplicationPtr&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1SpawnManager.html#f60a88777284578f905e272122f4b8e6">spawn</a> (const string &amp;appRoot, bool lowerPrivilege=true, const string &amp;lowestUser=&quot;nobody&quot;)</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Spawn a new instance of a Ruby on Rails application.  <a href="#5949f7eea4a6b4ef88d5f4ba5031cf1a"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">pid_t&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1SpawnManager.html#ffbb5c7375808434f51772cc3489bb15">getServerPID</a> ()</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Spawn a new instance of a Ruby on Rails application.  <a href="#f60a88777284578f905e272122f4b8e6"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">pid_t&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1SpawnManager.html#1f77e2e7e6cb464028c13a29f983ad8e">getServerPid</a> () const </td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the PID of the spawn server.  <a href="#ffbb5c7375808434f51772cc3489bb15"></a><br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the Process ID of the spawn server.  <a href="#1f77e2e7e6cb464028c13a29f983ad8e"></a><br></td></tr>
 </table>
 <hr><h2>Constructor &amp; Destructor Documentation</h2>
 <a class="anchor" name="9cc7466414fe2ed29fb269ce7b4d4670"></a><!-- doxytag: member="Passenger::SpawnManager::SpawnManager" ref="9cc7466414fe2ed29fb269ce7b4d4670" args="(const string &amp;spawnServerCommand, const string &amp;logFile=&quot;&quot;, const string &amp;environment=&quot;production&quot;, const string &amp;rubyCommand=&quot;ruby&quot;)" -->
@@ -111,7 +111,7 @@ Construct a new <a class="el" href="classPassenger_1_1SpawnManager.html">SpawnMa
 </div>
 </div><p>
 <hr><h2>Member Function Documentation</h2>
-<a class="anchor" name="5949f7eea4a6b4ef88d5f4ba5031cf1a"></a><!-- doxytag: member="Passenger::SpawnManager::spawn" ref="5949f7eea4a6b4ef88d5f4ba5031cf1a" args="(const string &amp;appRoot, const string &amp;user=&quot;&quot;, const string &amp;group=&quot;&quot;)" -->
+<a class="anchor" name="f60a88777284578f905e272122f4b8e6"></a><!-- doxytag: member="Passenger::SpawnManager::spawn" ref="f60a88777284578f905e272122f4b8e6" args="(const string &amp;appRoot, bool lowerPrivilege=true, const string &amp;lowestUser=&quot;nobody&quot;)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -124,14 +124,14 @@ Construct a new <a class="el" href="classPassenger_1_1SpawnManager.html">SpawnMa
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const string &amp;&nbsp;</td>
-          <td class="paramname"> <em>user</em> = <code>&quot;&quot;</code>, </td>
+          <td class="paramtype">bool&nbsp;</td>
+          <td class="paramname"> <em>lowerPrivilege</em> = <code>true</code>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const string &amp;&nbsp;</td>
-          <td class="paramname"> <em>group</em> = <code>&quot;&quot;</code></td><td>&nbsp;</td>
+          <td class="paramname"> <em>lowestUser</em> = <code>&quot;nobody&quot;</code></td><td>&nbsp;</td>
         </tr>
         <tr>
           <td></td>
@@ -146,11 +146,14 @@ Construct a new <a class="el" href="classPassenger_1_1SpawnManager.html">SpawnMa
 Spawn a new instance of a Ruby on Rails application. 
 <p>
 If the spawn server died during the spawning process, then the server will be automatically restarted, and another spawn attempt will be made. If restarting the server fails, or if the second spawn attempt fails, then an exception will be thrown.<p>
+If <code>lowerPrivilege</code> is true, then it will be attempt to switch the spawned application instance to the user who owns the application's <code>config/environment.rb</code>, and to the default group of that user.<p>
+If that user doesn't exist on the system, or if that user is root, then it will be attempted to switch to the username given by <code>lowestUser</code> (and to the default group of that user). If <code>lowestUser</code> doesn't exist either, or if switching user failed (because the spawn server process does not have the privilege to do so), then the application will be spawned anyway, without reporting an error.<p>
+It goes without saying that lowering privilege is only possible if the spawn server is running as root (and thus, by induction, that Passenger and Apache's control process are also running as root). Note that if Apache is listening on port 80, then its control process must be running as root. See "doc/Security of user switching.txt" for a detailed explanation.<p>
 <dl compact><dt><b>Parameters:</b></dt><dd>
   <table border="0" cellspacing="2" cellpadding="0">
     <tr><td valign="top"></td><td valign="top"><em>appRoot</em>&nbsp;</td><td>The application root of a RoR application, i.e. the folder that contains 'app/', 'public/', 'config/', etc. This must be a valid directory, but the path does not have to be absolute. </td></tr>
-    <tr><td valign="top"></td><td valign="top"><em>user</em>&nbsp;</td><td>The user to run the instance as. </td></tr>
-    <tr><td valign="top"></td><td valign="top"><em>group</em>&nbsp;</td><td>The group to run the instance as. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>lowerPrivilege</em>&nbsp;</td><td>Whether to lower the application's privileges. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>lowestUser</em>&nbsp;</td><td>The user to fallback to if lowering privilege fails. </td></tr>
   </table>
 </dl>
 <dl class="return" compact><dt><b>Returns:</b></dt><dd>A smart pointer to an <a class="el" href="classPassenger_1_1Application.html" title="Represents a single Ruby on Rails application instance.">Application</a> object, which represents the application instance that has been spawned. Use this object to communicate with the spawned application. </dd></dl>
@@ -162,30 +165,30 @@ If the spawn server died during the spawning process, then the server will be au
 
 </div>
 </div><p>
-<a class="anchor" name="ffbb5c7375808434f51772cc3489bb15"></a><!-- doxytag: member="Passenger::SpawnManager::getServerPID" ref="ffbb5c7375808434f51772cc3489bb15" args="()" -->
+<a class="anchor" name="1f77e2e7e6cb464028c13a29f983ad8e"></a><!-- doxytag: member="Passenger::SpawnManager::getServerPid" ref="1f77e2e7e6cb464028c13a29f983ad8e" args="() const " -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">pid_t Passenger::SpawnManager::getServerPID           </td>
+          <td class="memname">pid_t Passenger::SpawnManager::getServerPid           </td>
           <td>(</td>
           <td class="paramname">          </td>
           <td>&nbsp;)&nbsp;</td>
-          <td width="100%"><code> [inline]</code></td>
+          <td width="100%"> const<code> [inline]</code></td>
         </tr>
       </table>
 </div>
 <div class="memdoc">
 
 <p>
-Get the PID of the spawn server. 
+Get the Process ID of the spawn server. 
 <p>
 This method is used in the unit tests and should not be used directly. 
 </div>
 </div><p>
 <hr>The documentation for this class was generated from the following file:<ul>
 <li><a class="el" href="SpawnManager_8h-source.html">SpawnManager.h</a></ul>
-<hr size="1"><address style="text-align: right;"><small>Generated on Fri Feb 22 21:23:17 2008 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Sat Feb 23 15:21:05 2008 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.3 </small></address>
 </body>
