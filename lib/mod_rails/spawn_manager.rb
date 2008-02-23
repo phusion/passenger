@@ -53,8 +53,8 @@ private
 	def handle_spawn_application(app_root, lower_privilege, lowest_user)
 		lower_privilege = lower_privilege == "true"
 		app = spawn_application(app_root, lower_privilege, lowest_user)
-		send_to_client(app.pid)
-		send_io_to_client(app.listen_socket)
+		client.write(app.pid)
+		client.send_io(app.listen_socket)
 		app.close
 	end
 	
