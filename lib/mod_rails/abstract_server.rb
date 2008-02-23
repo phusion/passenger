@@ -184,69 +184,24 @@ protected
 		@signal_handlers[signal.to_s] = handler
 	end
 	
-	# Send a message to the server. _name_ is the name of the message, and _args_ are optional
-	# arguments for the message. Note that all arguments will be turned into strings before they
-	# are sent to the server, so you cannot specify complex objects as arguments. Furthermore,
-	# all arguments, when stringified, may not contain the character as specified by
-	# MessageChannel::DELIMITER.
+	# Return the communication channel with the server. This is a MessageChannel
+	# object.
 	#
-	# The server must already be started. Otherwise, a ServerNotStarted will be raised.
-	# Raises Errno::EPIPE if the server has already closed the connection.
-	# Raises IOError if the server connection channel has already been closed on
-	# this side (unlikely to happen; AbstractServer never does this except when stop()
-	# is called).
-	def send_to_server(name, *args)
+	# Raises ServerNotStarted if the server hasn't been started yet.
+	#
+	# This method may only be called in the parent process, and not
+	# in the started server process.
+	def server
 		if @parent_channel.nil?
 			raise ServerNotStarted, "Server hasn't been started yet. Please call start() first."
 		end
-		@parent_channel.write(name, *args)
+		return @parent_channel
 	end
 	
-	# Receive a message from the server. Returns an array of strings, which represents the message.
-	# Returns nil if the server has already closed the connection.
-	# This method never throws any exceptions.
-	def recv_from_server
-		return @parent_channel.read
-	end
-	
-	# Receive an IO object from the server. Please search Google on Unix sockets file descriptors
-	# passing if you're unfamiliar with this.
-	#
-	# Raises SocketError if the next item in the server connection stream is not a file descriptor,
-	# or if end-of-stream has been reached.
-	# Raises IOError if the server connection stream is already closed on this side.
-	def recv_io_from_server
-		return @parent_channel.recv_io
-	end
-	
-	# Receive a message from the client. Returns an array of strings, which represents the message.
-	# Returns nil if the client has already closed the connection.
-	# This method never throws any exceptions.
-	def recv_from_client
-		return @child_channel.read
-	end
-	
-	# Send a message back to the server. _name_ is the name of the message, and _args_ are optional
-	# arguments for the message. Note that all arguments will be turned into strings before they
-	# are sent to the server, so you cannot specify complex objects as arguments. Furthermore,
-	# all arguments, when stringified, may not contain the character as specified by
-	# MessageChannel::DELIMITER.
-	#
-	# Raises Errno::EPIPE if the server has already closed the connection.
-	# Raises IOError if the client connection channel has already been closed on
-	# this side (unlikely to happen; AbstractServer never does this).
-	def send_to_client(name, *args)
-		@child_channel.write(name, *args)
-	end
-	
-	# Send an IO object back to the client. Please search Google on Unix sockets file descriptors
-	# passing if you're unfamiliar with this.
-	#
-	# Raises SocketError if the next item in the client connection stream is not a file descriptor,
-	# or if end-of-stream has been reached.
-	# Raises IOError if the client connection stream is already closed on this side.
-	def send_io_to_client(io)
-		@child_channel.send_io(io)
+	# Return the communication channel with the client (i.e. the parent process
+	# that started the server). This is a MessageChannel object.
+	def client
+		return @child_channel
 	end
 	
 	# Tell the main loop to stop as soon as possible.

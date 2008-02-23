@@ -58,9 +58,9 @@ class ApplicationSpawner < AbstractServer
 	# If the RoR application failed to start, then a SpawnError will be raised. The
 	# application's exception message will be printed to standard error.
 	def spawn_application
-		send_to_server("spawn_application")
-		pid = recv_from_server
-		listen_socket = recv_io_from_server
+		server.write("spawn_application")
+		pid = server.read[0]
+		listen_socket = server.recv_io
 		return Application.new(@app_root, pid, listen_socket)
 	rescue SystemCallError, IOError, SocketError
 		raise SpawnError, "Unable to spawn the application: application died unexpectedly during initialization."
@@ -129,12 +129,12 @@ private
 				pid = fork do
 					begin
 						$0 = "Rails: #{@app_root}"
-						send_to_client(Process.pid)
+						client.write(Process.pid)
 						
 						socket1, socket2 = UNIXSocket.pair
-						send_io_to_client(socket1)
+						client.send_io(socket1)
 						socket1.close
-						@child_socket.close
+						client.close
 						
 						RequestHandler.new(socket2).main_loop
 						socket2.close

@@ -5,8 +5,8 @@ require 'mod_rails/spawn_manager'
 include ModRails
 class SpawnManager
 	def handle_spawn_application(app_root, user, group)
-		send_to_client(1234)
-		send_io_to_client(STDOUT)
+		client.write(1234)
+		client.send_io(STDOUT)
 	end
 end
 

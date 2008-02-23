@@ -71,9 +71,9 @@ class FrameworkSpawner < AbstractServer
 		app_root = normalize_path(app_root)
 		assert_valid_app_root(app_root)
 		begin
-			send_to_server("spawn_application", app_root, lower_privilege, lowest_user)
-			pid = recv_from_server
-			listen_socket = recv_io_from_server
+			server.write("spawn_application", app_root, lower_privilege, lowest_user)
+			pid = server.read[0]
+			listen_socket = server.recv_io
 			return Application.new(app_root, pid, listen_socket)
 		rescue SystemCallError, IOError, SocketError
 			raise ApplicationSpawner::SpawnError, "Unable to spawn the application: " <<
@@ -84,9 +84,9 @@ class FrameworkSpawner < AbstractServer
 	
 	def reload(app_root = nil)
 		if app_root.nil?
-			send_to_server("reload")
+			server.write("reload")
 		else
-			send_to_server("reload", normalize_path(app_root))
+			server.write("reload", normalize_path(app_root))
 		end
 	rescue SystemCallError, SocketError
 		raise IOError, "Cannot send reload command to the framework spawner server."
@@ -166,8 +166,8 @@ private
 			end
 			spawner.time = Time.now
 			app = spawner.spawn_application
-			send_to_client(app.pid)
-			send_io_to_client(app.listen_socket)
+			client.write(app.pid)
+			client.send_io(app.listen_socket)
 			app.close
 		end
 	end
