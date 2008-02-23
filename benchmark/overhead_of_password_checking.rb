@@ -3,9 +3,9 @@ require 'benchmark'
 require 'socket'
 
 ITERATIONS = 100000
-REQUEST = " " * 512
+REQUEST = " " * 800
 REQUEST_SIZE = REQUEST.size
-RESPONSE = " " * 2048
+RESPONSE = " " * 5 * 1024
 RESPONSE_SIZE = RESPONSE.size
 PASSWORD = "x" * 128
 PASSWORD_SIZE = PASSWORD.size
@@ -26,6 +26,8 @@ def benchmark_with_password_checking
 			if password == PASSWORD
 				child.read(REQUEST_SIZE)
 				child.write(RESPONSE)
+				# This flush here improves performance significantly!
+				child.flush
 			else
 				child.close
 				break
@@ -38,9 +40,11 @@ def benchmark_with_password_checking
 		ITERATIONS.times do
 			parent.write(PASSWORD)
 			parent.write(REQUEST)
+			parent.flush
 			parent.read(RESPONSE_SIZE)
 		end
 	end
+	parent.close
 	Process.waitpid(pid)
 	puts "User/system/real time: #{result}"
 	printf "%.2f messages per second\n", ITERATIONS / result.real
@@ -54,6 +58,8 @@ def benchmark_without_password_checking
 		ITERATIONS.times do
 			child.read(REQUEST_SIZE)
 			child.write(RESPONSE)
+			# This flush here improves performance significantly!
+			child.flush
 		end
 	end
 	child.close
@@ -61,9 +67,11 @@ def benchmark_without_password_checking
 	result = Benchmark.measure do
 		ITERATIONS.times do
 			parent.write(REQUEST)
+			# We do not call flush. For some reason it degrades performance.
 			parent.read(RESPONSE_SIZE)
 		end
 	end
+	parent.close
 	Process.waitpid(pid)
 	puts "Without password checking:"
 	puts "User/system/real time: #{result}"
