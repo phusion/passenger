@@ -1,4 +1,14 @@
 #!/usr/bin/env ruby
+# We've tried to implement the usage of persistent pipes in Passenger,
+# but we found out that it made Apache slower than when we use socket
+# connections. That is in contrast to the results of this benchmark.
+#
+# We couldn't have used persistent pipes (for multiple sessions) in
+# Passenger anyway, because it's too fragile. If something goes wrong
+# in one session, then the entire pipe becomes unusable for subsequent
+# sessions because the protocol will be in an undefined state. Sockets
+# don't have this problem because if an error occurs because each socket
+# connection belongs to exactly one session.
 require 'benchmark'
 
 ITERATIONS = 100000
