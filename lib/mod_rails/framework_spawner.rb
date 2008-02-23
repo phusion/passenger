@@ -48,10 +48,13 @@ class FrameworkSpawner < AbstractServer
 	# When successful, an Application object will be returned, which represents
 	# the spawned RoR application.
 	#
+	# See ApplicationSpawner.new() for an explanation for the _lower_privilege_
+	# and _lowest_user_ parameters.
+	#
 	# FrameworkSpawner will internally use ApplicationSpawner, and cache ApplicationSpawner
 	# objects for a while. As a result, spawning an instance of a RoR application for the
-	# first time will be relatively slow, but following attempts will be very fast, as long
-	# as the cache idle timeout hasn't been reached.
+	# first time will be relatively slow, but subsequent attempts will be very fast, as long
+	# as the cache clear timeout hasn't been reached.
 	#
 	# This also implies that the application's code will be cached in memory. If you've
 	# changed the application's code, you must do one of these things:
@@ -64,13 +67,11 @@ class FrameworkSpawner < AbstractServer
 	# or a problem in the Ruby on Rails framework), then a ApplicationSpawner::SpawnError
 	# will be raised. The application's exception message will be printed to standard
 	# error.
-	def spawn_application(app_root, user = nil, group = nil)
+	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody")
 		app_root = normalize_path(app_root)
 		assert_valid_app_root(app_root)
-		assert_valid_username(user) unless user.nil?
-		assert_valid_groupname(group) unless group.nil?
 		begin
-			send_to_server("spawn_application", app_root, user, group)
+			send_to_server("spawn_application", app_root, lower_privilege, lowest_user)
 			pid = recv_from_server
 			listen_socket = recv_io_from_server
 			return Application.new(app_root, pid, listen_socket)
@@ -87,7 +88,7 @@ class FrameworkSpawner < AbstractServer
 		else
 			send_to_server("reload", normalize_path(app_root))
 		end
-	rescue Errno::EPIPE, Errno::EBADF, IOError, SocketError
+	rescue SystemCallError, SocketError
 		raise IOError, "Cannot send reload command to the framework spawner server."
 	end
 
@@ -103,6 +104,7 @@ protected
 
 	# Overrided method.
 	def initialize_server # :nodoc:
+		$0 = "Passenger FrameworkSpawner: #{@version}"
 		preload_rails
 		@spawners = {}
 		@spawners_lock = Mutex.new
@@ -152,13 +154,12 @@ private
 		require 'active_support/whiny_nil'
 	end
 
-	def handle_spawn_application(app_root, user, group)
-		user = nil if user && user.empty?
-		group = nil if group && group.empty?
+	def handle_spawn_application(app_root, lower_privilege, lowest_user)
+		lower_privilege = lower_privilege == "true"
 		@spawners_lock.synchronize do
 			spawner = @spawners[app_root]
 			if spawner.nil?
-				spawner = ApplicationSpawner.new(app_root, user, group)
+				spawner = ApplicationSpawner.new(app_root, lower_privilege, lowest_user)
 				spawner.file_descriptors_to_close = [@child_socket.fileno]
 				spawner.start
 				@spawners[app_root] = spawner

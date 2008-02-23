@@ -228,12 +228,14 @@ private:
 			return atoi(args[0].c_str());
 		}
 		
-		virtual Application::SessionPtr get(const string &appRoot, const string &user = "", const string &group = "") {
+		virtual Application::SessionPtr get(const string &appRoot, bool lowerPrivilege = true, const string &lowestUser = "nobody") {
 			MessageChannel channel(data->server);
 			vector<string> args;
 			int reader, writer;
 			
-			channel.write("get", appRoot.c_str(), user.c_str(), group.c_str(), NULL);
+			channel.write("get", appRoot.c_str(),
+				(lowerPrivilege) ? "true" : "false",
+				lowestUser.c_str(), NULL);
 			if (!channel.read(args)) {
 				throw IOException("The ApplicationPool server unexpectedly closed the connection.");
 			}
@@ -372,7 +374,7 @@ private:
 					Application::SessionPtr session;
 					bool failed = false;
 					try {
-						session = pool.get(args[1], args[2], args[3]);
+						session = pool.get(args[1], args[2] == "true", args[3]);
 					} catch (const SpawnException &e) {
 						channel.write("SpawnException", e.what(), NULL);
 						failed = true;

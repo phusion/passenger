@@ -148,7 +148,9 @@ socket) to communicate with the spawn server. sudo seems to close all file
 descriptors before executing an application, so Passenger will have to
 communicate with the spawn server via a non-anonymous channel, such as a named
 Unix socket. Because other processes can access this channel, it can introduce
-potential security problems.
+potential security problems. Note that passing information via program arguments
+is not secure: it is possible to view that information with tools like 'ps',
+or (on Linux) by reading the file /proc/$PID/cmdline.
 
 So it seems 'sudo' is not a viable alternative.
 
@@ -169,9 +171,17 @@ Also, the following questions remain:
 
 == Chosen solution
 
-?? what to do?
+Running Apache as root and writing a setuid root wrapper are the main
+contestants. The former is preferred, because it's easier to implement.
 
+We have had some conversations with people on the IRC channel #rubyonrails.
+Among those people, nobody has ever run Apache as non-root. Because of this
+we have chosen to implement the "Running Apache as root" solution, until
+a significant number of users request us to implement the "setuid root wrapper"
+solution.
 
-== Conclusion
-
-??
+See the Ruby API documentation for the 'ApplicationSpawner' class for
+implementation details. In short: it will switch to the owner of the file
+'config/environment.rb'. User whitelisting/blacklisting is currently not
+implemented. We rely on the system administrator to set the correct owner
+on that file.

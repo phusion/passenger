@@ -3,6 +3,9 @@
 #include <errno.h>
 #include <cstring>
 #include <signal.h>
+#include <boost/thread.hpp>
+
+using namespace boost;
 
 /**
  * This file is used as a template to test the different ApplicationPool implementations.
@@ -116,7 +119,38 @@
 		ensure_equals(pool->getCount(), 2u);
 	}
 	
+	struct FullPoolTestThread {
+		ApplicationPoolPtr pool;
+		
+		FullPoolTestThread(const ApplicationPoolPtr &pool) {
+			this->pool = pool;
+		}
+		
+		void operator()() const {
+			Application::SessionPtr session2(pool->get("stub/railsapp"));
+		}
+	};
+	
 	TEST_METHOD(APPLICATION_POOL_TEST_START + 8) {
+		// If we call get() even though the pool is already full
+		// (active == max), and the application root is already
+		// in the pool, then the pool should have tried to open
+		// a session in an already active app.
+		/*
+		pool->setMax(1);
+		Application::SessionPtr session1(pool->get("stub/railsapp"));
+		
+		thread *thr = new thread(FullPoolTestThread(pool));
+		usleep(50000); // Give the thread's get() call some time to do its job.
+
+		ensure_equals("An attempt to open a session on an already busy app was made", pool->getActive(), 2u);
+		ensure_equals("No new app has been spawned", pool->getCount(), 1u);
+		session1.reset();
+		thr->join();
+		*/
+	}
+	
+	TEST_METHOD(APPLICATION_POOL_TEST_START + 9) {
 		// If ApplicationPool spawns a new instance,
 		// and we kill it, then the next get() with the
 		// same application root should throw an exception.
@@ -138,23 +172,6 @@
 	}
 	
 	#if 0
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 8) {
-		// If we call get() even though the pool is already full
-		// (active == max), and the application root is already
-		// in the pool, then the pool should have tried to open
-		// a session in an already active app.
-		
-		// TODO: How do we test this? Creating session2 will deadlock because
-		// Application.connect() is waiting for the app to accept the connection,
-		// and the app is waiting for session1 to finish.
-		return;
-		pool->setMax(1);
-		Application::SessionPtr session1(pool->get("stub/railsapp"));
-		Application::SessionPtr session2(pool->get("stub/railsapp"));
-		ensure_equals("An attempt to open a session at an already busy app was made", pool->getActive(), 2u);
-		ensure_equals("No new app has been spawned", pool->getCount(), 1u);
-	}
-	
 	TEST_METHOD(APPLICATION_POOL_TEST_START + 9) {
 		// If we call get() even though the pool is already full
 		// (active == max), and the application root is *not* already

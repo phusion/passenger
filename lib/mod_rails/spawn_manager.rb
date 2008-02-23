@@ -21,7 +21,7 @@ class SpawnManager < AbstractServer
 		define_signal_handler('SIGHUP', :reload)
 	end
 
-	def spawn_application(app_root, user = nil, group = nil)
+	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody")
 		framework_version = Application.get_framework_version(app_root)
 		spawner = nil
 		@lock.synchronize do
@@ -33,7 +33,7 @@ class SpawnManager < AbstractServer
 			end
 		end
 		spawner.time = Time.now
-		return spawner.spawn_application(app_root, user, group)
+		return spawner.spawn_application(app_root, lower_privilege, lowest_user)
 	end
 	
 	def cleanup
@@ -50,10 +50,9 @@ class SpawnManager < AbstractServer
 	end
 
 private
-	def handle_spawn_application(app_root, user, group)
-		user = nil if user && user.empty?
-		group = nil if group && group.empty?
-		app = spawn_application(app_root, user, group)
+	def handle_spawn_application(app_root, lower_privilege, lowest_user)
+		lower_privilege = lower_privilege == "true"
+		app = spawn_application(app_root, lower_privilege, lowest_user)
 		send_to_client(app.pid)
 		send_io_to_client(app.listen_socket)
 		app.close
