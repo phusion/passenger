@@ -59,8 +59,9 @@ class ApplicationSpawner < AbstractServer
 	# application's exception message will be printed to standard error.
 	def spawn_application
 		server.write("spawn_application")
-		pid, listen_socket = server.read
-		return Application.new(@app_root, pid, listen_socket)
+		pid, socket_name = server.read
+		owner_pipe = server.recv_io
+		return Application.new(@app_root, pid, socket_name, owner_pipe)
 	rescue SystemCallError, IOError, SocketError
 		raise SpawnError, "Unable to spawn the application: application died unexpectedly during initialization."
 	end
@@ -149,18 +150,19 @@ private
 	end
 	
 	def start_request_handler
-		socket_basename = "passenger.#{Process.pid}.#{rand(1000000)}.socket"
-		socket_filename = "#{RAILS_ROOT}/tmp/sockets/#{socket_basename}"
+		$0 = "Rails: #{@app_root}"
+		reader, writer = IO.pipe
 		begin
-			$0 = "Rails: #{@app_root}"
-			socket = UNIXServer.new(socket_filename)
-			File.chmod(0600, socket_filename)
-			client.write(Process.pid, socket_filename)
+			handler = RequestHandler.new(reader)
+			client.write(Process.pid, handler.socket_name)
+			client.send_io(writer)
+			writer.close
 			client.close
-			RequestHandler.new(socket_filename, socket).main_loop
+			handler.main_loop
 		ensure
-			socket.close
-			File.unlink(socket_filename) rescue nil
+			client.close rescue nil
+			writer.close rescue nil
+			handler.cleanup rescue nil
 		end
 	end
 end

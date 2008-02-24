@@ -179,6 +179,7 @@ private:
 	 */
 	ApplicationPtr sendSpawnCommand(const string &appRoot, bool lowerPrivilege, const string &lowestUser) {
 		vector<string> args;
+		int ownerPipe;
 		
 		try {
 			channel.write("spawn_application",
@@ -187,22 +188,33 @@ private:
 				lowestUser.c_str(),
 				NULL);
 		} catch (const SystemException &e) {
-			throw SpawnException(string("Could not write to the spawn server: ") + e.brief());
+			throw SpawnException(string("Could not write to the spawn server: ") + e.sys());
 		}
 		try {
 			if (!channel.read(args)) {
 				throw SpawnException("The spawn server has exited unexpectedly.");
 			}
 		} catch (const SystemException &e) {
-			throw SpawnException(string("Could not read from the spawn server: ") + e.brief());
+			throw SpawnException(string("Could not read from the spawn server: ") + e.sys());
 		}
+		try {
+			ownerPipe = channel.readFileDescriptor();
+		} catch (const SystemException &e) {
+			throw SpawnException(string("Could not receive the spawned "
+				"application's owner pipe from the spawn server: ") +
+				e.sys());
+		} catch (const IOException &e) {
+			throw SpawnException(string("Could not receive the spawned "
+				"application's owner pipe from the spawn server: ") +
+				e.what());
+		}
+		
 		if (args.size() != 2) {
+			close(ownerPipe);
 			throw SpawnException("The spawn server sent an unknown message.");
 		}
 		pid_t pid = atoi(args[0]);
-		chown(args[1].c_str(), getuid(), getgid());
-		chmod(args[1].c_str(), S_IRUSR | S_IWUSR);
-		return ApplicationPtr(new Application(appRoot, pid, args[1]));
+		return ApplicationPtr(new Application(appRoot, pid, args[1], ownerPipe));
 	}
 	
 	ApplicationPtr

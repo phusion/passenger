@@ -22,9 +22,6 @@ class MessageChannel
 	DELIMITER = "\0"
 	DELIMITER_NAME = "null byte"
 	
-	include NativeSupport
-	private :send_fd
-	
 	# The wrapped IO object.
 	attr_reader :io
 
@@ -126,11 +123,7 @@ class MessageChannel
 	# or if end-of-stream has been reached.
 	# Raises IOError if the IO stream is already closed on this side.
 	def recv_io
-		if io.respond_to?(:recv_io)
-			return @io.recv_io
-		else
-			return IO.new(recv_fd(@io.fileno))
-		end
+		return IO.new(NativeSupport.recv_fd(@io.fileno))
 	end
 	
 	# Send an IO object (a file descriptor) over the channel. The other
@@ -142,11 +135,7 @@ class MessageChannel
 	# connection.
 	# Raises IOError if the IO stream is already closed on this side.
 	def send_io(io)
-		if io.respond_to?(:send_io)
-			@io.send_io(io)
-		else
-			send_fd(@io.fileno, io.fileno)
-		end
+		@io.send_io(io)
 	end
 	
 	# Close the underlying IO stream. Raises IOError if the stream is already closed.

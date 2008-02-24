@@ -53,7 +53,9 @@ private
 	def handle_spawn_application(app_root, lower_privilege, lowest_user)
 		lower_privilege = lower_privilege == "true"
 		app = spawn_application(app_root, lower_privilege, lowest_user)
-		client.write(app.pid, app.listen_socket)
+		client.write(app.pid, app.listen_socket_name)
+		client.send_io(app.owner_pipe)
+		app.close
 	end
 	
 	def cleaner_thread_main

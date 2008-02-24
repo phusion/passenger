@@ -239,7 +239,8 @@ private:
 
 	string appRoot;
 	pid_t pid;
-	string listenSocket;
+	string listenSocketName;
+	int ownerPipe;
 	time_t lastUsed;
 	SharedDataPtr data;
 
@@ -251,13 +252,15 @@ public:
 	 *             contains 'app/', 'public/', 'config/', etc. This must be a valid directory,
 	 *             but the path does not have to be absolute.
 	 * @param pid The process ID of this application instance.
-	 * @param listenSocket The listener socket of this application instance.
+	 * @param listenSocketName The name of the listener socket of this application instance.
+	 * @param ownerPipe The owner pipe of this application instance.
 	 * @post getAppRoot() == theAppRoot && getPid() == pid
 	 */
-	Application(const string &theAppRoot, pid_t pid, const string &listenSocket) {
+	Application(const string &theAppRoot, pid_t pid, const string &listenSocketName, int ownerPipe) {
 		appRoot = theAppRoot;
 		this->pid = pid;
-		this->listenSocket = listenSocket;
+		this->listenSocketName = listenSocketName;
+		this->ownerPipe = ownerPipe;
 		lastUsed = time(NULL);
 		this->data = ptr(new SharedData());
 		this->data->sessions = 0;
@@ -265,7 +268,7 @@ public:
 	}
 	
 	virtual ~Application() {
-		kill(pid, SIGUSR1);
+		close(ownerPipe);
 		P_TRACE("Application " << this << ": destroyed.");
 	}
 	
@@ -342,15 +345,17 @@ public:
 		
 		struct sockaddr_un addr;
 		addr.sun_family = AF_UNIX;
-		strncpy(addr.sun_path, listenSocket.c_str(), sizeof(addr.sun_path));
+		strncpy(addr.sun_path + 1, listenSocketName.c_str(), sizeof(addr.sun_path) - 1);
+		addr.sun_path[0] = '\0';
+		addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
 		do {
 			ret = ::connect(fd, (const sockaddr *) &addr, sizeof(addr));
 		} while (ret == -1 && errno == EINTR);
 		if (ret == -1) {
 			int e = errno;
 			string message("Cannot connect to Unix socket '");
-			message.append(listenSocket);
-			message.append("'");
+			message.append(listenSocketName);
+			message.append("' on the abstract namespace");
 			throw SystemException(message, e);
 		}
 		
