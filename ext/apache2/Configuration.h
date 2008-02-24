@@ -12,7 +12,7 @@
  */
 
 /** Module version number. */
-#define PASSENGER_VERSION "1.0.0"
+#define PASSENGER_VERSION "0.9.1"
 
 #ifdef __cplusplus
 	#include <set>

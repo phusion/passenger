@@ -269,7 +269,7 @@ spec = Gem::Specification.new do |s|
 	s.homepage = "http://passenger.phusion.nl/"
 	s.summary = "Apache module for Ruby on Rails support."
 	s.name = "passenger"
-	s.version = "0.9.0"
+	s.version = "0.9.1"
 	s.requirements << "fastthread" << "Apache 2 with development headers"
 	s.require_path = "lib"
 	s.add_dependency 'rake', '>= 0.8.1'
@@ -279,6 +279,7 @@ spec = Gem::Specification.new do |s|
 	s.extensions << 'ext/mod_rails/extconf.rb'
 	s.files = FileList[
 		'Rakefile',
+		'README',
 		'lib/**/*.rb',
 		'bin/*',
 		'doc/*',

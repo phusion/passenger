@@ -1,5 +1,28 @@
-TODO: write this....
+== Introduction
 
+Passenger is an Apache module for Ruby on Rails support.
+
+Since it hasn't been released yet, if you're reading this, then you must be a
+beta tester. :) We only ask of you not to give out this software to others.
+Even though it's going to be open source, we want the first release to leave a
+good impression. And with good, we mean GREAT.
+
+We're pretty confident that the current version is pretty stable: we have lots
+of tests, and we've even tested the insertion of random errors, and so far we
+haven't been able to make it crash. But we're not done yet, and there is a lot
+more to test before we're confident enough that it can be released to the
+public. Leaking an unstable beta will influence peoples' first impression, so
+we prefer to prevent that.
+
+Thank you for your understanding.
+
+== Installation
+
+Run the script ./bin/passenger-install-apache2-module
+
+This README will not give you any further instructions. The idea is that the
+installation should be so simple, that the above one-liner is enough
+instructions. If you encounter any problems, please tell us.
 
 == Known issues
 
