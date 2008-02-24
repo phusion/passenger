@@ -8,6 +8,7 @@
 
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include <arpa/inet.h>
 #include <cstdio>
 #include <cstdarg>
@@ -195,19 +196,13 @@ private:
 		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not read from the spawn server: ") + e.brief());
 		}
-		pid_t pid = atoi(args.front().c_str());
-		try {
-			int listenSocket = channel.readFileDescriptor();
-			return ApplicationPtr(new Application(appRoot, pid, listenSocket));
-		} catch (const IOException &e) {
-			string message("Could not receive a file descriptor from the spawn server: ");
-			message.append(e.what());
-			throw SpawnException(message);
-		} catch (const SystemException &e) {
-			string message("Could not receive a file descriptor from the spawn server: ");
-			message.append(e.brief());
-			throw SpawnException(message);
+		if (args.size() != 2) {
+			throw SpawnException("The spawn server sent an unknown message.");
 		}
+		pid_t pid = atoi(args[0]);
+		chown(args[1].c_str(), getuid(), getgid());
+		chmod(args[1].c_str(), S_IRUSR | S_IWUSR);
+		return ApplicationPtr(new Application(appRoot, pid, args[1]));
 	}
 	
 	ApplicationPtr
@@ -329,9 +324,7 @@ public:
 	 * @throws SpawnException Something went wrong.
 	 */
 	ApplicationPtr spawn(const string &appRoot, bool lowerPrivilege = true, const string &lowestUser = "nobody") {
-		vector<string> args;
 		mutex::scoped_lock l(lock);
-		
 		try {
 			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser);
 		} catch (const SpawnException &e) {

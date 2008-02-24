@@ -5,8 +5,7 @@ require 'mod_rails/spawn_manager'
 include ModRails
 class SpawnManager
 	def handle_spawn_application(app_root, user, group)
-		client.write(1234)
-		client.send_io(STDOUT)
+		client.write(1234, "/tmp/nonexistant.socket")
 	end
 end
 

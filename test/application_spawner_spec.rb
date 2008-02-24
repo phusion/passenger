@@ -20,6 +20,7 @@ describe ApplicationSpawner do
 		app = @spawner.spawn_application
 		app.pid.should_not == 0
 		app.app_root.should_not be_nil
+		app.shutdown
 	end
 	
 	it "should be able to spawn an arbitary number of applications" do
@@ -29,7 +30,7 @@ describe ApplicationSpawner do
 			app.pid.should_not == last_pid
 			app.app_root.should_not be_nil
 			last_pid = app.pid
-			app.close
+			app.shutdown
 		end
 	end
 	
@@ -51,7 +52,7 @@ describe ApplicationSpawner do
 		app = @spawner.spawn_application
 		app.pid.should_not == 0
 		app.app_root.should_not be_nil
-		app.close
+		app.shutdown
 	end
 	
 	it "should be able to spawn an application as a different user" do

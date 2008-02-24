@@ -54,7 +54,7 @@ namespace tut {
 	TEST_METHOD(2) {
 		// Connecting to the ApplicationPoolServer, as well as destroying the
 		// returned ApplicationPool object, should not crash.
-		//server->connect();
+		server->connect();
 	}
 
 	TEST_METHOD(3) {
