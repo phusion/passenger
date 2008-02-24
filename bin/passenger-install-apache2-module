@@ -47,6 +47,32 @@ solve the problem.
 EOF
 wait
 
+if RUBY_PLATFORM =~ /darwin/ && APXS2 == "/usr/sbin/apxs"
+	puts "--------------------------------------------------------------------"
+	puts (banner('WARNING') << " " << red('WARNING') << " ") * 3
+	message = <<EOF
+	
+	You seem to be running MacOS X. Testers have reported that the default Apache
+	installation, as provided by MacOS X, is broken. Passenger seems to crash for
+	unknown reasons on OS X's default Apache installation.
+	
+	And it seems that you are about to install Passenger against OS X's default
+	Apache installation (/usr/sbin/apxs).
+	
+	We recommend you to install Apache manually, and to install Passenger against
+	that Apache instead. To tell Passenger to use a different Apache installation,
+	please set the following environment variables and run this installer again:
+	
+	  #{bold('APXS2=/prefix-of-the-correct-apxs-binary')}
+	  #{bold('APACHE2CTL=/prefix-of-the-correct-apachectl-binary')}
+	
+	#{bold("Press Enter if you want to install Passenger against OS X's default Apache.")}
+	#{bold("Press Ctrl-C to abort this installer.")}
+EOF
+	puts message.gsub(/^\t/, '')
+	wait
+end
+
 puts "--------------------------------------------------------------------"
 puts banner('Checking whether the Apache development kit is installed...')
 if APXS2.nil?
