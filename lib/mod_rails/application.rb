@@ -9,6 +9,7 @@ class Application
 	# The process ID of this application instance.
 	attr_reader :pid
 	
+	# The filename of the Unix socket on which the application instance will accept new connections.
 	attr_reader :listen_socket
 
 	# Return the Ruby on Rails version that the application requires, or nil
@@ -29,8 +30,9 @@ class Application
 		@listen_socket = listen_socket
 	end
 	
-	def close
-		@listen_socket.close
+	# Notify the application to shutdown as soon as possible.
+	def shutdown
+		Process.kill('SIGUSR1', @pid) rescue nil
 	end
 end
 

@@ -37,23 +37,28 @@ namespace tut {
 			app->getPid(), 1234);
 		
 		// The following test will fail if we're inside Valgrind, but that's normal.
+		// Killing the spawn server doesn't work.
 		if (!RUNNING_ON_VALGRIND) {
 			ensure("The spawn server was restarted", manager.getServerPid() != old_pid);
 		}
 	}
 	
 	TEST_METHOD(3) {
-		// If the spawn server dies after a restart, a SpawnException should be thrown.
-		kill(manager.getServerPid(), SIGTERM);
-		// Give the spawn server the time to properly terminate.
-		usleep(500000);
+		// This test fails in Valgrind, but that's normal.
+		// Killing the spawn server doesn't work.
+		if (!RUNNING_ON_VALGRIND) {
+			// If the spawn server dies after a restart, a SpawnException should be thrown.
+			kill(manager.getServerPid(), SIGTERM);
+			// Give the spawn server the time to properly terminate.
+			usleep(500000);
 		
-		try {
-			manager.nextRestartShouldFail = true;
-			ApplicationPtr app(manager.spawn("."));
-			fail("SpawnManager did not throw a SpawnException");
-		} catch (const SpawnException &e) {
-			// Success.
+			try {
+				manager.nextRestartShouldFail = true;
+				ApplicationPtr app(manager.spawn("."));
+				fail("SpawnManager did not throw a SpawnException");
+			} catch (const SpawnException &e) {
+				// Success.
+			}
 		}
 	}
 	

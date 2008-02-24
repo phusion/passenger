@@ -121,13 +121,15 @@ using namespace boost;
 	
 	struct FullPoolTestThread {
 		ApplicationPoolPtr pool;
+		Application::SessionPtr &m_session;
 		
-		FullPoolTestThread(const ApplicationPoolPtr &pool) {
+		FullPoolTestThread(const ApplicationPoolPtr &pool, Application::SessionPtr &session)
+		: m_session(session) {
 			this->pool = pool;
 		}
 		
-		void operator()() const {
-			Application::SessionPtr session2(pool->get("stub/railsapp"));
+		void operator()() {
+			m_session = pool->get("stub/railsapp");
 		}
 	};
 	
@@ -136,18 +138,17 @@ using namespace boost;
 		// (active == max), and the application root is already
 		// in the pool, then the pool should have tried to open
 		// a session in an already active app.
-		/*
 		pool->setMax(1);
 		Application::SessionPtr session1(pool->get("stub/railsapp"));
 		
-		thread *thr = new thread(FullPoolTestThread(pool));
+		Application::SessionPtr session2;
+		thread *thr = new thread(FullPoolTestThread(pool, session2));
 		usleep(50000); // Give the thread's get() call some time to do its job.
 
 		ensure_equals("An attempt to open a session on an already busy app was made", pool->getActive(), 2u);
 		ensure_equals("No new app has been spawned", pool->getCount(), 1u);
-		session1.reset();
 		thr->join();
-		*/
+		delete thr;
 	}
 	
 	TEST_METHOD(APPLICATION_POOL_TEST_START + 9) {

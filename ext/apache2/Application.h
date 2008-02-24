@@ -6,9 +6,12 @@
 #include <string>
 
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 #include <errno.h>
 #include <ctime>
+#include <cstring>
 
 #include "MessageChannel.h"
 #include "Exceptions.h"
@@ -183,19 +186,19 @@ private:
 	protected:
 		SharedDataPtr data;
 		CloseCallback closeCallback;
-		int reader;
-		int writer;
+		bool readerClosed, writerClosed;
+		int fd;
 		pid_t pid;
 		
 	public:
-		StandardSession(SharedDataPtr data, pid_t pid, const CloseCallback &closeCallback,
-		                int reader, int writer) {
+		StandardSession(SharedDataPtr data, pid_t pid,
+		                const CloseCallback &closeCallback, int fd) {
 			this->data = data;
 			this->pid = pid;
 			this->closeCallback = closeCallback;
 			data->sessions++;
-			this->reader = reader;
-			this->writer = writer;
+			this->fd = fd;
+			readerClosed = writerClosed = false;
 		}
 	
 		virtual ~StandardSession() {
@@ -206,24 +209,26 @@ private:
 		}
 		
 		virtual int getReader() const {
-			return reader;
+			return fd;
 		}
 		
 		virtual void closeReader() {
-			if (reader != -1) {
-				close(reader);
-				reader = -1;
+			readerClosed = true;
+			if (readerClosed && writerClosed && fd != -1) {
+				close(fd);
+				fd = -1;
 			}
 		}
 		
 		virtual int getWriter() const {
-			return writer;
+			return fd;
 		}
 		
 		virtual void closeWriter() {
-			if (writer != -1) {
-				close(writer);
-				writer = -1;
+			writerClosed = true;
+			if (readerClosed && writerClosed && fd != -1) {
+				close(fd);
+				fd = -1;
 			}
 		}
 		
@@ -234,7 +239,7 @@ private:
 
 	string appRoot;
 	pid_t pid;
-	int listenSocket;
+	string listenSocket;
 	time_t lastUsed;
 	SharedDataPtr data;
 
@@ -249,7 +254,7 @@ public:
 	 * @param listenSocket The listener socket of this application instance.
 	 * @post getAppRoot() == theAppRoot && getPid() == pid
 	 */
-	Application(const string &theAppRoot, pid_t pid, int listenSocket) {
+	Application(const string &theAppRoot, pid_t pid, const string &listenSocket) {
 		appRoot = theAppRoot;
 		this->pid = pid;
 		this->listenSocket = listenSocket;
@@ -260,7 +265,7 @@ public:
 	}
 	
 	virtual ~Application() {
-		close(listenSocket);
+		kill(pid, SIGUSR1);
 		P_TRACE("Application " << this << ": destroyed.");
 	}
 	
@@ -326,27 +331,30 @@ public:
 	 * @throws IOException Something went wrong during the connection process.
 	 */
 	SessionPtr connect(const CloseCallback &closeCallback) const {
-		int ret;
+		int fd, ret;
+		
 		do {
-			ret = write(listenSocket, "", 1);
-		} while ((ret == -1 && errno == EINTR) || ret == 0);
-		if (ret == -1) {
-			throw SystemException("Cannot request a new session from the request handler", errno);
+			fd = socket(PF_UNIX, SOCK_STREAM, 0);
+		} while (fd == -1 && errno == EINTR);
+		if (fd == -1) {
+			throw SystemException("Cannot create a new unconnected Unix socket", errno);
 		}
 		
-		try {
-			MessageChannel channel(listenSocket);
-			int reader = channel.readFileDescriptor();
-			int writer = channel.readFileDescriptor();
-			return ptr(new StandardSession(data, pid, closeCallback, reader, writer));
-		} catch (const SystemException &e) {
-			throw SystemException("Cannot receive one of the session file "
-				"descriptors from the request handler", e.code());
-		} catch (const IOException &e) {
-			string message("Cannot receive one of the session file descriptors from the request handler");
-			message.append(e.what());
-			throw IOException(message);
+		struct sockaddr_un addr;
+		addr.sun_family = AF_UNIX;
+		strncpy(addr.sun_path, listenSocket.c_str(), sizeof(addr.sun_path));
+		do {
+			ret = ::connect(fd, (const sockaddr *) &addr, sizeof(addr));
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
+			int e = errno;
+			string message("Cannot connect to Unix socket '");
+			message.append(listenSocket);
+			message.append("'");
+			throw SystemException(message, e);
 		}
+		
+		return ptr(new StandardSession(data, pid, closeCallback, fd));
 	}
 	
 	/**

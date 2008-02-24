@@ -59,8 +59,7 @@ class ApplicationSpawner < AbstractServer
 	# application's exception message will be printed to standard error.
 	def spawn_application
 		server.write("spawn_application")
-		pid = server.read[0]
-		listen_socket = server.recv_io
+		pid, listen_socket = server.read
 		return Application.new(@app_root, pid, listen_socket)
 	rescue SystemCallError, IOError, SocketError
 		raise SpawnError, "Unable to spawn the application: application died unexpectedly during initialization."
@@ -128,16 +127,12 @@ private
 			begin
 				pid = fork do
 					begin
-						$0 = "Rails: #{@app_root}"
-						client.write(Process.pid)
-						
-						socket1, socket2 = UNIXSocket.pair
-						client.send_io(socket1)
-						socket1.close
-						client.close
-						
-						RequestHandler.new(socket2).main_loop
-						socket2.close
+						start_request_handler
+					rescue SignalException => signal
+						if e.message != RequestHandler::HARD_TERMINATION_SIGNAL &&
+						   e.message != RequestHandler::SOFT_TERMINATION_SIGNAL
+							print_exception('application', e)
+						end
 					rescue Exception => e
 						print_exception('application', e)
 					ensure
@@ -151,6 +146,22 @@ private
 			end
 		end
 		Process.waitpid(pid)
+	end
+	
+	def start_request_handler
+		socket_basename = "passenger.#{Process.pid}.#{rand(1000000)}.socket"
+		socket_filename = "#{RAILS_ROOT}/tmp/sockets/#{socket_basename}"
+		begin
+			$0 = "Rails: #{@app_root}"
+			socket = UNIXServer.new(socket_filename)
+			File.chmod(0600, socket_filename)
+			client.write(Process.pid, socket_filename)
+			client.close
+			RequestHandler.new(socket_filename, socket).main_loop
+		ensure
+			socket.close
+			File.unlink(socket_filename) rescue nil
+		end
 	end
 end
 

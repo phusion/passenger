@@ -72,8 +72,7 @@ class FrameworkSpawner < AbstractServer
 		assert_valid_app_root(app_root)
 		begin
 			server.write("spawn_application", app_root, lower_privilege, lowest_user)
-			pid = server.read[0]
-			listen_socket = server.recv_io
+			pid, listen_socket = server.read
 			return Application.new(app_root, pid, listen_socket)
 		rescue SystemCallError, IOError, SocketError
 			raise ApplicationSpawner::SpawnError, "Unable to spawn the application: " <<
@@ -166,9 +165,7 @@ private
 			end
 			spawner.time = Time.now
 			app = spawner.spawn_application
-			client.write(app.pid)
-			client.send_io(app.listen_socket)
-			app.close
+			client.write(app.pid, app.listen_socket)
 		end
 	end
 	
