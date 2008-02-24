@@ -1,6 +1,6 @@
-require 'timeout'
 require 'mod_rails/message_channel'
 require 'mod_rails/cgi_fixed'
+require 'mod_rails/utils'
 
 module ModRails # :nodoc:
 
@@ -9,17 +9,37 @@ class RequestHandler
 	HARD_TERMINATION_SIGNAL = "SIGTERM"
 	# Signal which will cause the Rails application to exit as soon as it's done processing a request.
 	SOFT_TERMINATION_SIGNAL = "SIGUSR1"
+	BACKLOG_SIZE = 50
 	
 	# String constants which exist to relieve Ruby's garbage collector.
 	IGNORE = 'IGNORE' # :nodoc:
 	DEFAULT = 'DEFAULT' # :nodoc:
 	CONTENT_LENGTH = 'CONTENT_LENGTH' # :nodoc:
 	HTTP_CONTENT_LENGTH = 'HTTP_CONTENT_LENGTH' # :nodoc:
+	
+	attr_reader :socket_name
 
-	def initialize(socket_filename, listen_socket)
-		@socket_filename = socket_filename
-		@listen_socket = listen_socket
+	def initialize(owner_pipe)
+		# This Unix socket is in the abstract namespace.
+		done = false
+		while !done
+			begin
+				@socket_name = "/tmp/passenger.#{generate_random_id}"
+				@socket_name = @socket_name.slice(0, NativeSupport::UNIX_PATH_MAX - 2)
+				fd = NativeSupport.create_unix_socket("\x00#{socket_name}", BACKLOG_SIZE)
+				@socket = IO.new(fd)
+				done = true
+			rescue Errno::EADDRINUSE
+				done = false
+			end
+		end
+		@owner_pipe = owner_pipe
 		@previous_signal_handlers = {}
+	end
+	
+	def cleanup
+		@socket.close rescue nil
+		@owner_pipe.close rescue nil
 	end
 	
 	def main_loop
@@ -27,7 +47,10 @@ class RequestHandler
 		begin
 			done = false
 			while !done
-				client = accept_connection_or_exit
+				client = accept_connection
+				if client.nil?
+					break
+				end
 				trap SOFT_TERMINATION_SIGNAL do
 					done = true
 				end
@@ -69,17 +92,15 @@ private
 		end
 	end
 	
-	def accept_connection_or_exit
-		while true
-			# TODO: poll some IO object in order to check whether the
-			# owning process has exited.
-			begin
-				Timeout.timeout(60) do
-					return @listen_socket.accept
-				end
-			rescue Timeout::Error
-				# Do nothing.
-			end
+	def accept_connection
+		ios = select([@socket, @owner_pipe])[0]
+		if ios.include?(@socket)
+			fd = NativeSupport.accept(@socket.fileno)
+			return IO.new(fd)
+		else
+			# The other end of the pipe has been closed.
+			# So we know all owning processes have quit.
+			return nil
 		end
 	end
 	
@@ -112,6 +133,10 @@ private
 		::Dispatcher.dispatch(cgi, ::ActionController::CgiRequest::DEFAULT_SESSION_OPTIONS,
 			cgi.stdoutput)
 		socket.close
+	end
+	
+	def generate_random_id
+		return File.read("/dev/urandom", 64).unpack("H*")[0]
 	end
 end
 

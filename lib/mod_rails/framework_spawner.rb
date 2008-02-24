@@ -72,8 +72,9 @@ class FrameworkSpawner < AbstractServer
 		assert_valid_app_root(app_root)
 		begin
 			server.write("spawn_application", app_root, lower_privilege, lowest_user)
-			pid, listen_socket = server.read
-			return Application.new(app_root, pid, listen_socket)
+			pid, listen_socket_name = server.read
+			owner_pipe = server.recv_io
+			return Application.new(app_root, pid, listen_socket_name, owner_pipe)
 		rescue SystemCallError, IOError, SocketError
 			raise ApplicationSpawner::SpawnError, "Unable to spawn the application: " <<
 				"either the Ruby on Rails framework failed to load, " <<
@@ -165,7 +166,9 @@ private
 			end
 			spawner.time = Time.now
 			app = spawner.spawn_application
-			client.write(app.pid, app.listen_socket)
+			client.write(app.pid, app.listen_socket_name)
+			client.send_io(app.owner_pipe)
+			app.close
 		end
 	end
 	

@@ -23,7 +23,8 @@ using namespace std;
  */
 class SystemException: public exception {
 private:
-	string shortMessage;
+	string briefMessage;
+	string systemMessage;
 	string fullMessage;
 	int m_code;
 public:
@@ -41,9 +42,12 @@ public:
 	 */
 	SystemException(const string &message, int errorCode) {
 		stringstream str;
-		shortMessage = message;
-		str << message << ": " << strerror(errorCode) << " (" << errorCode << ")";
-		fullMessage = str.str();
+		
+		briefMessage = message;
+		str << strerror(errorCode) << " (" << errorCode << ")";
+		systemMessage = str.str();
+		
+		fullMessage = briefMessage + ": " + systemMessage;
 		m_code = errorCode;
 	}
 	
@@ -61,12 +65,20 @@ public:
 	}
 	
 	/**
-	 * A brief version of the exception message. This message does
+	 * Returns a brief version of the exception message. This message does
 	 * not include the system error description, and is equivalent to the
 	 * value of the <tt>message</tt> parameter as passed to the constructor.
 	 */
 	string brief() const throw() {
-		return shortMessage;
+		return briefMessage;
+	}
+	
+	/**
+	 * Returns the system's error message. This message contains both the
+	 * content of <tt>strerror(errno)</tt> and the errno number itself.
+	 */
+	string sys() const throw() {
+		return systemMessage;
 	}
 };
 

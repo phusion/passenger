@@ -154,16 +154,20 @@ class TEST
 	AP2_OBJECTS = {
 		'CxxTestMain.o' => %w(CxxTestMain.cpp),
 		'MessageChannelTest.o' => %w(MessageChannelTest.cpp ../ext/apache2/MessageChannel.h),
-		'SpawnManagerTest.o' => %w(SpawnManagerTest.cpp ../ext/apache2/SpawnManager.h),
+		'SpawnManagerTest.o' => %w(SpawnManagerTest.cpp
+			../ext/apache2/SpawnManager.h
+			../ext/apache2/Application.h),
 		'ApplicationPoolClientServerTest.o' => %w(ApplicationPoolClientServerTest.cpp
 			ApplicationPoolTestTemplate.cpp
 			../ext/apache2/ApplicationPoolClientServer.h
 			../ext/apache2/ApplicationPool.h
-			../ext/apache2/SpawnManager.h),
+			../ext/apache2/SpawnManager.h
+			../ext/apache2/Application.h),
 		'StandardApplicationPoolTest.o' => %w(StandardApplicationPoolTest.cpp
 			ApplicationPoolTestTemplate.cpp
 			../ext/apache2/ApplicationPool.h
-			../ext/apache2/SpawnManager.h),
+			../ext/apache2/SpawnManager.h
+			../ext/apache2/Application.h),
 		'UtilsTest.o' => %w(UtilsTest.cpp ../ext/apache2/Utils.h)
 	}
 end
@@ -227,7 +231,7 @@ end
 
 Rake::RDocTask.new do |rd|
 	rd.rdoc_dir = "doc/rdoc"
-	rd.rdoc_files.include("lib/mod_rails/*.rb", "lib/rake/extensions.rb")
+	rd.rdoc_files.include("lib/mod_rails/*.rb", "lib/rake/extensions.rb", "ext/mod_rails/*.c")
 	rd.template = "jamis"
 	rd.title = "Passenger Ruby API"
 	rd.options << "-S"

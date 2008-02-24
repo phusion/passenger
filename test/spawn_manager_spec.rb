@@ -26,7 +26,7 @@ describe SpawnManager do
 	
 	it "should not crash on spawning when running asynchronously" do
 		app = @manager.spawn_application('stub/railsapp')
-		app.shutdown
+		app.close
 	end
 	
 	it "should not crash on spawning when running synchronously" do
@@ -38,8 +38,8 @@ describe SpawnManager do
 				channel = MessageChannel.new(b)
 				channel.write("spawn_application", "stub/railsapp", "", "")
 				pid, listen_socket = channel.read
+				channel.recv_io.close
 				channel.close
-				Application.new("stub/railsapp", pid, listen_socket).shutdown
 			rescue Exception => e
 				print_exception("child", e)
 			ensure

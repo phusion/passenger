@@ -9,8 +9,12 @@ class Application
 	# The process ID of this application instance.
 	attr_reader :pid
 	
-	# The filename of the Unix socket on which the application instance will accept new connections.
-	attr_reader :listen_socket
+	# The name of the Unix socket on which the application instance will accept
+	# new connections. This name refers to a socket in the abstract namespace,
+	# but does not contain the leading null byte.
+	attr_reader :listen_socket_name
+	
+	attr_reader :owner_pipe
 
 	# Return the Ruby on Rails version that the application requires, or nil
 	# if it doesn't require a particular version.
@@ -24,15 +28,18 @@ class Application
 
 	# Creates a new instance of Application. The parameters correspond with the attributes
 	# of the same names. No exceptions will be thrown.
-	def initialize(app_root, pid, listen_socket)
+	def initialize(app_root, pid, listen_socket_name, owner_pipe)
 		@app_root = app_root
 		@pid = pid
-		@listen_socket = listen_socket
+		@listen_socket_name = listen_socket_name
+		@owner_pipe = owner_pipe
 	end
 	
-	# Notify the application to shutdown as soon as possible.
-	def shutdown
-		Process.kill('SIGUSR1', @pid) rescue nil
+	# Close the connection with the application instance. If there are no other
+	# processes that have connections to this application instance, then it will
+	# shutdown as soon as possible.
+	def close
+		@owner_pipe.close
 	end
 end
 
