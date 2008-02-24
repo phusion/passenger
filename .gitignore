@@ -10,6 +10,8 @@ ext/apache2/*.slo
 ext/apache2/.libs
 ext/mod_rails/Makefile
 ext/boost/src/*.a
+doc/rdoc
+doc/cxxapi
 test/Apache2ModuleTests
 test/stub/railsapp/log/*
 test/stub/railsapp2/log/*

@@ -1,5 +1,0 @@
-<area shape="rect" title="STL class." alt="" coords="5,56,117,83">
-<area shape="rect" href="$classPassenger_1_1IOException.html" title="Represents an error that occured during an I/O operation." alt="" coords="184,5,360,32">
-<area shape="rect" href="$classPassenger_1_1SpawnException.html" title="Thrown when SpawnManager or ApplicationPool fail to spawn an application instance..." alt="" coords="169,56,375,83">
-<area shape="rect" href="$classPassenger_1_1SystemException.html" title="Represents an error returned by a system call or a standard library call." alt="" coords="167,107,377,133">
-<area shape="rect" href="$classPassenger_1_1FileNotFoundException.html" title="Thrown when a certain file cannot be found." alt="" coords="427,5,672,32">
