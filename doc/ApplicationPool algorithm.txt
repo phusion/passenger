@@ -110,7 +110,7 @@ thread cleaner:
 		now = current_time()
 		for all values l in apps:
 			for all app in l:
-				if now - app.last_time > MAX_IDLE_TIME:
+				if app.sessions == 0 && now - app.last_time > MAX_IDLE_TIME:
 					l.remove(app)
 			if l.empty():
 				apps.remove_value(l)

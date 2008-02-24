@@ -270,7 +270,7 @@ private:
 				
 				for (listIter = appList.begin(); listIter != appList.end(); listIter++) {
 					Application &app(**listIter);
-					if (now - app.getLastUsed() > MAX_IDLE_TIME) {
+					if (app.getSessions() == 0 && now - app.getLastUsed() > MAX_IDLE_TIME) {
 						P_TRACE("Cleaning idle app " << app.getAppRoot());
 						elementsToRemove.push_back(listIter);
 					}
