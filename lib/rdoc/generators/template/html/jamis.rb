@@ -22,8 +22,15 @@ body, td, p {
   font-size: small;
 }
 
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
 #content {
   margin: 2em;
+  margin-left: 3.5em;
+  margin-right: 3.5em;
 }
 
 #description p {
@@ -38,7 +45,6 @@ body, td, p {
   background: #005;
   color: #FFF;
   font-weight: bold;
-  border: 1px dotted black;
 }
 
 .attr-rw {
@@ -92,9 +98,9 @@ h1 a:hover, h2 a:hover, .sectiontitle a:hover, .banner a:hover {
 
 .dyn-source {
   display: none;
-  background: #FFE;
+  background: #fffde8;
   color: #000;
-  border: 1px dotted black;
+  border: #ffe0bb dotted 1px;
   margin: 0.5em 2em 0.5em 2em;
   padding: 0.5em;
 }
@@ -117,8 +123,8 @@ h1 a:hover, h2 a:hover, .sectiontitle a:hover, .banner a:hover {
 
 .description pre {
   padding: 0.5em;
-  border: 1px dotted black;
-  background: #FFE;
+  border: #ffe0bb dotted 1px;
+  background: #fffde8;
 }
 
 .method .title {
@@ -151,7 +157,7 @@ h1 a:hover, h2 a:hover, .sectiontitle a:hover, .banner a:hover {
 
 h1 {
   padding: 1em;
-  border: 1px solid black;
+  margin-left: -1.5em;
   font-size: x-large;
   font-weight: bold;
   color: #FFF;
@@ -160,7 +166,7 @@ h1 {
 
 h2 {
   padding: 0.5em 1em 0.5em 1em;
-  border: 1px solid black;
+  margin-left: -1.5em;
   font-size: large;
   font-weight: bold;
   color: #FFF;
@@ -168,10 +174,8 @@ h2 {
 }
 
 h3, h4, h5, h6 {
-  padding: 0.2em 1em 0.2em 1em;
-  border: 1px dashed black;
-  color: #000;
-  background: #AAF;
+  color: #220088;
+  border-bottom: #5522bb solid 1px;
 }
 
 .sourcecode > pre {
@@ -180,6 +184,13 @@ h3, h4, h5, h6 {
   background: #FFE;
 }
 
+dt {
+  font-weight: bold
+}
+
+dd {
+  margin-bottom: 0.7em;
+}
 CSS
 
 XHTML_PREAMBLE = %{<?xml version="1.0" encoding="%charset%"?>

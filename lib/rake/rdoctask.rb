@@ -91,7 +91,7 @@ module Rake
       task name
       
       desc "Force a rebuild of the RDOC files"
-      task paste(name, ":force") => [paste("clobber_", name), name]
+      task paste(name, ":force") => [paste(name, ":clobber"), name]
       
       desc "Remove rdoc products" 
       task paste(name, ":clobber") do

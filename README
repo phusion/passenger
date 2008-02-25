@@ -1,31 +1,139 @@
 == Introduction
 
-Passenger is an Apache module for Ruby on Rails support.
+Passenger is an Apache module, which makes deploying Ruby on Rails applications
+on Apache a breeze. It follows the usual Ruby on Rails conventions, such as
+"Don't-Repeat-Yourself" and ease of setup. Passenger's key goals are:
 
-Since it hasn't been released yet, if you're reading this, then you must be a
-beta tester. :) We only ask of you not to give out this software to others.
-Even though it's going to be open source, we want the first release to leave a
-good impression. And with good, we mean GREAT.
+[ Ease of use (for the developer) ]
+  Deploying a Rails application is as easy as uploading the files to the web
+  server. The applications should _Just Work(tm)_ without any further manual
+  configurations.
+
+[ Ease of installation ]
+  It is possible to install Passenger in less than 3 minutes, with minimal
+  reading of documentation. The system administrator should not have to edit
+  30 configuration files to get Passenger working.
+
+[ Stability ]
+  We strive for the highest level of stability. Passenger should never crash,
+  and should never leave Apache into an unusable state which requires a
+  restart.
+
+[ Zero maintenance ]
+  Software that is the easiest to maintain is software that doesn't have to be
+  maintained. Just like a (train) passenger, who can step into a train and
+  enjoy the trip, Passenger strives to allow the developer and system
+  administrator to sit back, enjoy, and relax.
+  
+  * Ruby on Rails applications are started and stopped automatically based on
+    site traffic. There should be no need to think about application server
+    management.
+  * Passenger makes no use of temporary files or sockets, so even after a hard
+    system crash, the administrator does not have to manually clean up stale
+    files.
+  * If Passenger encounters an error, and it knows that it can be automatically
+    recovered, then Passenger will do that. The administrator should not have
+    to run server monitoring software to monitor Rails applications. Rails
+    applications that crash are automatically restarted.
+
+[ Security ]
+  We take security very seriously. We review our code for security issues to
+  the best of our ability. Design- and implementation issues that have security
+  implications are carefully documented, making it possible for third parties to
+  review Passenger's security, in the true spirit in Open Source.
+  
+  A key security feature of Passenger is the ability to run different Ruby on
+  Rails applications under different users, in an efficient manner. This is
+  perfect for shared hosts. And in the line of ease of installation, this can
+  be done automatically without any further need for configuration.
+
+[ Performance ]
+  Performance is an important issue, so we strive for the highest possible
+  performance. We use the performance of Mongrel, a popular Ruby on Rails
+  application server, as our performance base line. We carefully consider every
+  aspect of Passenger, and under no circumstances must Passenger perform
+  significantly worse than Mongrel.
+
+[ Efficient resource usage ]
+  Unlike other Ruby on Rails deployment systems, Passenger makes efficient use
+  of memory when possible. Passenger allows different Ruby on Rails
+  applications to share memory with each other, resulting in as much of 30%
+  memory saving on average. *
+  
+  <em>* This requires additional software. Please read the user guide for
+  information. Please visit our website for technical details and
+  measurements.</em>
+
+[ Well-documented ]
+  We know that documentation is of great importance to everybody. We put a
+  great deal of effort into documenting Passenger, for system administrators
+  who use Passenger, as well as developers who want to contribute to Passenger.
+
+
+== Welcome, beta tester
+
+Since Passenger hasn't been released yet, if you're reading this, then you must
+be a beta tester. :) We only ask of you not to give out this software to
+others. Even though it's going to be open source, we want the first release to
+leave a good - no, GREAT - impression. Leaking an unfinished beta will likely
+spoil peoples' first impression. Thank you for your understanding.
 
 We're pretty confident that the current version is pretty stable: we have lots
 of tests, and we've even tested the insertion of random errors, and so far we
 haven't been able to make it crash. But we're not done yet, and there is a lot
 more to test before we're confident enough that it can be released to the
-public. Leaking an unstable beta will influence peoples' first impression, so
-we prefer to prevent that.
+public.
 
-Thank you for your understanding.
 
 == Installation
 
-Run the script ./bin/passenger-install-apache2-module
+=== Supported configurations
 
-This README will not give you any further instructions. The idea is that the
-installation should be so simple, that the above one-liner is enough
-instructions. If you encounter any problems, please tell us.
+* Apache 2.x with the prefork MPM
 
-== Known issues
+Other MPMs have not been tested (yet). Apache 1 is not supported at the moment.
 
-- The default Apache as provided by MacOS X seems to be broken.
-  Passenger does not work on it. OS X users are recommended to install
-  Apache manually.
+=== Installation instructions
+
+Run the following script as root:
+
+ ./bin/passenger-install-apache2-module
+
+This README will not provide any further instructions. The idea is that the
+installation should be so simple, that the above one-liner instruction is
+more than enough. If you encounter any problems, please tell us.
+
+
+== Developers
+
+=== Requirements
+
+Developers who wish to modify or to contribute to Passenger will need to have
+the following software installed:
+
+* Ruby, RubyGems and Ruby on Rails (obviously ;)
+* The GNU C++ compiler (g++)
+* Apache 2 and APR, including development headers
+* rake >= 0.8.1
+* fastthread >= 1.0.1
+* rspec >= 1.1.2, for the Ruby unit tests
+
+The following software is optional:
+
+* RDoc, for generating HTML Ruby API documentation
+* Doxygen, for generating HTML C++ API documentation
+* dot, for generating diagrams in HTML API documentation
+
+=== Compilation, unit tests and other tasks
+
+To compile Passenger, run the following command:
+
+ rake
+
+To run the unit tests, run the following command:
+
+ rake test
+
+For a full list of Rake tests, run:
+
+ rake -T

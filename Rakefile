@@ -231,12 +231,12 @@ end
 ##### Documentation
 
 Rake::RDocTask.new do |rd|
+	rd.main = "README"
 	rd.rdoc_dir = "doc/rdoc"
-	rd.rdoc_files.include("lib/mod_rails/*.rb", "lib/rake/extensions.rb", "ext/mod_rails/*.c")
+	rd.rdoc_files.include("README", "lib/mod_rails/*.rb", "lib/rake/extensions.rb", "ext/mod_rails/*.c")
 	rd.template = "jamis"
 	rd.title = "Passenger Ruby API"
-	rd.options << "-S"
-	rd.options << "-N"
+	rd.options << "-S" << "-N" << "-p" << "-d"
 end
 
 desc "Generate Doxygen C++ API documentation if necessary"
@@ -306,6 +306,12 @@ spec = Gem::Specification.new do |s|
 	  - Dir['test/stub/*/tmp/*/*']
 	s.executables = ['passenger-spawn-server', 'passenger-install-apache2-module']
 	s.has_rdoc = true
+	s.extra_rdoc_files = ['README']
+	s.rdoc_options <<
+		'-S' <<
+		'-N' <<
+		'--main' << 'README' <<
+		'--title' << 'Passenger Ruby API'
 	s.test_file = 'test/support/run_rspec_tests.rb'
 	s.description = "Passenger is an Apache module for Ruby on Rails support."
 end
