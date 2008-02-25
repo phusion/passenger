@@ -95,6 +95,14 @@ information:
         c is in apps.
         c.sessions == 0
 
+- restart_file_times: map[string => time]
+  Maps an application root to the last known modification time of
+  'restart.txt'.
+  
+  Invariant:
+     for all keys app_root in restart_times:
+        apps.has_key(app_root)
+
 
 == Algorithm in pseudo code
 
@@ -104,37 +112,47 @@ information:
 # - All wait commands are to unlock the lock during waiting.
 
 function get(app_root):
-	if needs_restart(app_root):
-		apps.remove(app_root)
-	
 	list = apps[app_root]
 	if list != nil:
 		# There are apps for this app root.
-		if list.front.sessions == 0:
+		if list.front.sessions == 0 || count == max:
 			# There is an inactive app, so we use it.
-			container = list.front
-			list.move_to_back(container.iterator)
-			if container.sessions == 0:
-				inactive_apps.remove(container.ia_iterator)
-			active++
-		else if count < max:
-			# They are all active, so we spawn a new one if that's
-			# allowed by the limits.
+			#  -OR-
+			# All apps are active, and the pool is full. We're not
+			# allowed to spawn a new app, so we try to connect to
+			# an existing one. Our connection request will be put
+			# into that app's connection queue.
+			
+			if needs_restart(app_root):
+				for all container in list:
+					if container.sessions == 0:
+						inactive_apps.remove(container.ia_iterator)
+					else:
+						active--
+					list.remove(container.iterator)
+					count--
+				Tell spawn server to reload code for app_root.
+				container = null
+			else:
+				container = list.front
+				list.move_to_back(container.iterator)
+				if container.sessions == 0:
+					inactive_apps.remove(container.ia_iterator)
+				active++
+		
+		if container == null:
+			# All apps are active, but the pool hasn't reached its
+			# maximum yet. So we spawn a new app.
+			#  -OR-
+			# The application specified by app_root needed to be
+			# restarted, so all application instances that belong
+			# to that app_root have been removed. Here, we spawn a
+			# new instance.
 			container = new AppContainer
 			container.app = spawn(app_root)
 			iterator = list.add_to_back(container)
 			container.iterator = iterator
 			count++
-			active++
-		else:
-			# All apps are active. We're not allowed to
-			# spawn a new one, so we try to connect to
-			# an existing one. Our connection request
-			# will be put into that app's queue.
-			container = list.front
-			list.move_to_back(container.iterator)
-			if container.sessions == 0:
-				inactive_apps.remove(container.ia_iterator)
 			active++
 	else:
 		# There are no apps for this app root.
@@ -156,6 +174,7 @@ function get(app_root):
 			list.remove(container.iterator)
 			if list.empty():
 				apps.remove(container.app.app_root)
+				restart_file_times.remove(container.app.app_root)
 			count--
 		container = new AppContainer
 		container.app = spawn(app)
@@ -188,6 +207,28 @@ function session_has_been_closed(container):
 			inactive_apps.add_to_back(container.app)
 		active--
 
+
+function needs_restart(app_root):
+	restart_file = "$app_root/tmp/restart.txt"
+	s = stat(restart_file)
+	if s != null:
+		if delete_file(restart_file):
+			restart_file_times.remove(app_root)
+			result = true
+		else:
+			last_restart_file_time = restart_file_times[app_root]
+			if last_restart_time == null:
+				restart_times[app_root] = current_time()
+				result = true
+			else:
+				result = s.mtime != last_restart_file_time
+				restart_file_times[app_root] = s.mtime
+	else:
+		restart_file_times.remove(app_root)
+		result = false
+	return result
+
+
 # The following thread will be responsible for cleaning up idle application
 # instances, i.e. instances that haven't been used for a while.
 thread cleaner:
@@ -208,4 +249,5 @@ thread cleaner:
 				count--
 			if app_list.empty():
 				apps.remove(app.app_root)
+				restart_file_times.remove(app.app_root)
 
