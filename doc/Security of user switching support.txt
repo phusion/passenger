@@ -185,3 +185,10 @@ implementation details. In short: it will switch to the owner of the file
 'config/environment.rb'. User whitelisting/blacklisting is currently not
 implemented. We rely on the system administrator to set the correct owner
 on that file.
+
+We have also not implemented suEXEC's security model. suEXEC's model is quite
+paranoid, and although paranoia is good to a certain extend, it can be in the
+way of usability while proving little extra security. We are not entirely
+convinced that implementing suEXEC's full security model will provide
+significant benefits, but if you have good reasons to think otherwise, please
+feel free to discuss it with us.
