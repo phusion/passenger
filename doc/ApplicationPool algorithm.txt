@@ -206,7 +206,7 @@ function session_has_been_closed(container):
 		container.sessions--
 		if container.sessions == 0:
 			list.move_to_front(container.iterator)
-			inactive_apps.add_to_back(container.app)
+			container.ia_iterator = inactive_apps.add_to_back(container.app)
 		active--
 
 
@@ -245,7 +245,7 @@ thread cleaner:
 		for all container in inactive_apps:
 			app = container.app
 			app_list = apps[app.app_root]
-			if now - app.last_used > MAX_IDLE_TIME:
+			if now - container.last_used > MAX_IDLE_TIME:
 				app_list.remove(container.iterator)
 				inactive_apps.remove(iterator for container)
 				count--
