@@ -1,10 +1,119 @@
 require 'rbconfig'
 
-module PlatformInfo # :nodoc:
+# Wow, I can't believe in how many ways one can build Apache in OS
+# X! We have to resort to all sorts of tricks to make Passenger build
+# out of the box on OS X. :-(
+#
+# In the name of usability and the "end user is the king" line of thought,
+# I shall suffer the horrible faith of writing tons of autodetection code!
+
+# This module autodetects various platform-specific information, and
+# provides that information through constants.
+#
+# Users can change the detection behavior by setting the environment variable
+# <tt>APXS2</tt> to the correct 'apxs' (or 'apxs2') binary, as provided by
+# Apache.
+module PlatformInfo
 private
+	def self.env_defined?(name)
+		return !ENV[name].nil? && !ENV[name]
+	end
+	
+	def self.find_command(name)
+		# system('which') is not compatible across Linux and BSD
+		ENV['PATH'].split(File::PATH_SEPARATOR).detect do |directory|
+			path = File.join(directory, name.to_s)
+			if File.executable?(path)
+				return path
+			end
+		end
+		return nil
+	end
+
+	def self.find_apxs2
+		if env_defined?("APXS2")
+			return ENV["APXS2"]
+		end
+		['apxs2', 'apxs'].each do |name|
+			command = find_command(name)
+			if !command.nil?
+				return command
+			end
+		end
+		return nil
+	end
+	
+	def self.determine_apache2_bindir
+		if APXS2.nil?
+			return nil
+		else
+			return `#{APXS2} -q BINDIR`.strip
+		end
+	end
+	
+	def self.determine_apache2_sbindir
+		if APXS2.nil?
+			return nil
+		else
+			return `#{APXS2} -q SBINDIR`.strip
+		end
+	end
+	
+	def self.find_apache2_executable(*possible_names)
+		[APACHE2_BINDIR, APACHE2_SBINDIR].each do |bindir|
+			if bindir.nil?
+				next
+			end
+			possible_names.each do |name|
+				filename = "#{bindir}/#{name}"
+				if File.executable?(filename)
+					return filename
+				end
+			end
+		end
+		return nil
+	end
+	
+	def self.find_apache2ctl
+		return find_apache2_executable('apache2ctl', 'apachectl')
+	end
+	
+	def self.find_httpd
+		return find_apache2_executable('httpd', 'httpd2', 'apache2', 'apache')
+	end
+	
+	def self.determine_apxs2_flags
+		if APXS2.nil?
+			return nil
+		else
+			return `#{APXS2} -q CFLAGS`.strip << " -I" << `#{APXS2} -q INCLUDEDIR`.strip
+		end
+	end
+	
+	def self.determine_apr1_info
+		if find_command('pkg-config')
+			flags = `pkg-config --cflags apr-1 apr-util-1`.strip
+			libs = `pkg-config --libs apr-1 apr-util-1`.strip
+		else
+			apr_config = find_command('apr-1-config')
+			if apr_config.nil?
+				return nil
+			else
+				flags = `apr-1-config --cppflags --includes`.strip
+				libs = `apr-1-config --link-ld`.strip
+			end
+		end
+		return [flags, libs]
+	end
+	
 	def self.determine_multi_arch_flags
-		if RUBY_PLATFORM =~ /darwin/
-			return "-arch ppc7400 -arch ppc64 -arch i386 -arch x86_64"
+		if RUBY_PLATFORM =~ /darwin/ || true
+			architectures = []
+			`file "#{HTTPD}"`.split("\n").grep(/for architecture/).each do |line|
+				line =~ /for architecture (.*?)\)/
+				architectures << "-arch #{$1}"
+			end
+			return architectures.join(' ')
 		else
 			return ""
 		end
@@ -18,61 +127,28 @@ private
 		end
 	end
 
-	def self.env_defined?(name)
-		return !ENV[name].nil? && !ENV[name]
-	end
-
-	def self.find_apache2ctl
-		if env_defined?("APACHE2CTL")
-			return ENV["APACHE2CTL"]
-		elsif !`which apache2ctl`.empty?
-			return "apache2ctl"
-		elsif !`which apachectl`.empty?
-			return "apachectl"
-		else
-			return nil
-		end
-	end
-	
-	def self.find_apxs2
-		if env_defined?("APXS2")
-			return ENV["APXS2"]
-		elsif !`which apxs2`.empty?
-			return "apxs2"
-		elsif !`which apxs`.empty?
-			return "apxs"
-		else
-			return nil
-		end
-	end
-	
-	def self.determine_apr1_info
-		if `which pkg-config`.empty?
-			if `which apr-1-config`.empty?
-				return nil
-			else
-				flags = `apr-1-config --cppflags --includes`.strip
-				libs = `apr-1-config --link-ld`.strip
-			end
-		else
-			flags = `pkg-config --cflags apr-1 apr-util-1`.strip
-			libs = `pkg-config --libs apr-1 apr-util-1`.strip
-		end
-		return [flags, libs]
-	end
-
 public
+	# The absolute path to the current Ruby interpreter.
 	RUBY = Config::CONFIG['bindir'] + '/' + Config::CONFIG['RUBY_INSTALL_NAME']
-	MULTI_ARCH_FLAGS = determine_multi_arch_flags
-	LIBEXT = determine_library_extension
 	
-	APACHE2CTL = find_apache2ctl
+	# The absolute path to the 'apxs' or 'apxs2' executable.
 	APXS2 = find_apxs2
-	if APXS2.nil?
-		APXS2_FLAGS = nil
-	else
-		APXS2_FLAGS = `#{APXS2} -q CFLAGS`.strip << " -I" << `#{APXS2} -q INCLUDEDIR`.strip
-	end
+	# The absolute path to the Apache 2 'bin' directory.
+	APACHE2_BINDIR = determine_apache2_bindir
+	# The absolute path to the Apache 2 'sbin' directory.
+	APACHE2_SBINDIR = determine_apache2_sbindir
+	# The absolute path to the 'apachectl' or 'apache2ctl' binary.
+	APACHE2CTL = find_apache2ctl
+	# The absolute path to the Apache binary (that is, 'httpd', 'httpd2', 'apache' or 'apache2').
+	HTTPD = find_httpd
 	
-	APR1_FLAGS, APR1_LIBS = determine_apr1_info	
+	# The C compiler flags that are necessary to compile an Apache module.
+	APXS2_FLAGS = determine_apxs2_flags
+	# The C compiler flags that are necessary for programs that use APR.
+	APR1_FLAGS, APR1_LIBS = determine_apr1_info
+	
+	# The C compiler flags that are necessary for building binaries in the same architecture(s) as Apache.
+	MULTI_ARCH_FLAGS = determine_multi_arch_flags
+	# The current platform's shared library extension ('so' on most Unices).
+	LIBEXT = determine_library_extension
 end
