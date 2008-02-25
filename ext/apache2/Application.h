@@ -30,10 +30,6 @@ using namespace boost;
 class Application {
 public:
 	class Session;
-	/** A type for callback functions that are called when a session is closed.
-	 * @see Application::connect()
-	 */
-	typedef function<void (Session &session)> CloseCallback;
 	/** Convenient alias for Session smart pointer. */
 	typedef shared_ptr<Session> SessionPtr;
 	
@@ -166,46 +162,29 @@ public:
 
 private:
 	/**
-	 * A structure containing data that both StandardSession and Application
-	 * may access. Since Application and StandardSession may have different
-	 * life times (i.e. one can be destroyed before the other), they both
-	 * have a smart pointer referencing a SharedData structure. Only
-	 * when both the StandardSession and the Application object have been
-	 * destroyed, will the SharedData object be destroyed as well.
-	 */
-	struct SharedData {
-		unsigned int sessions;
-	};
-	
-	typedef shared_ptr<SharedData> SharedDataPtr;
-
-	/**
 	 * A "standard" implementation of Session.
 	 */
 	class StandardSession: public Session {
 	protected:
-		SharedDataPtr data;
-		CloseCallback closeCallback;
+		function<void()> closeCallback;
 		bool readerClosed, writerClosed;
 		int fd;
 		pid_t pid;
 		
 	public:
-		StandardSession(SharedDataPtr data, pid_t pid,
-		                const CloseCallback &closeCallback, int fd) {
-			this->data = data;
+		StandardSession(pid_t pid,
+		                const function<void()> &closeCallback,
+		                int fd) {
 			this->pid = pid;
 			this->closeCallback = closeCallback;
-			data->sessions++;
 			this->fd = fd;
 			readerClosed = writerClosed = false;
 		}
 	
 		virtual ~StandardSession() {
-			data->sessions--;
 			closeReader();
 			closeWriter();
-			closeCallback(*this);
+			closeCallback();
 		}
 		
 		virtual int getReader() const {
@@ -241,8 +220,6 @@ private:
 	pid_t pid;
 	string listenSocketName;
 	int ownerPipe;
-	time_t lastUsed;
-	SharedDataPtr data;
 
 public:
 	/**
@@ -261,9 +238,6 @@ public:
 		this->pid = pid;
 		this->listenSocketName = listenSocketName;
 		this->ownerPipe = ownerPipe;
-		lastUsed = time(NULL);
-		this->data = ptr(new SharedData());
-		this->data->sessions = 0;
 		P_TRACE("Application " << this << ": created.");
 	}
 	
@@ -333,7 +307,7 @@ public:
 	 * @throws SystemException Something went wrong during the connection process.
 	 * @throws IOException Something went wrong during the connection process.
 	 */
-	SessionPtr connect(const CloseCallback &closeCallback) const {
+	SessionPtr connect(const function<void()> &closeCallback) const {
 		int fd, ret;
 		
 		do {
@@ -359,38 +333,7 @@ public:
 			throw SystemException(message, e);
 		}
 		
-		return ptr(new StandardSession(data, pid, closeCallback, fd));
-	}
-	
-	/**
-	 * Get the number of currently opened sessions.
-	 */
-	unsigned int getSessions() const {
-		return data->sessions;
-	}
-	
-	/**
-	 * Returns the last value set by setLastUsed(). This represents the time
-	 * at which this application object was last used.
-	 *
-	 * This is used by StandardApplicationPool's cleaner thread to determine which
-	 * Application objects have been idle for too long and need to be cleaned
-	 * up. Thus, outside StandardApplicationPool, one should never have to call this
-	 * method directly.
-	 */
-	time_t getLastUsed() const {
-		return lastUsed;
-	}
-	
-	/**
-	 * Set the time at which this Application object was last used. See getLastUsed()
-	 * for information.
-	 *
-	 * @param time The time.
-	 * @post getLastUsed() == time
-	 */
-	void setLastUsed(time_t time) {
-		lastUsed = time;
+		return ptr(new StandardSession(pid, closeCallback, fd));
 	}
 };
 
