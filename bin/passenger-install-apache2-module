@@ -47,32 +47,6 @@ solve the problem.
 EOF
 wait
 
-if RUBY_PLATFORM =~ /darwin/ && APXS2 == "/usr/sbin/apxs"
-	puts "--------------------------------------------------------------------"
-	puts (banner('WARNING') << " " << red('WARNING') << " ") * 3
-	message = <<EOF
-	
-	You seem to be running MacOS X. Testers have reported that the default Apache
-	installation, as provided by MacOS X, is broken. Passenger seems to crash for
-	unknown reasons on OS X's default Apache installation.
-	
-	And it seems that you are about to install Passenger against OS X's default
-	Apache installation (/usr/sbin/apxs).
-	
-	We recommend you to install Apache manually, and to install Passenger against
-	that Apache instead. To tell Passenger to use a different Apache installation,
-	please set the following environment variables and run this installer again:
-	
-	  #{bold('APXS2=/prefix-of-the-correct-apxs-binary')}
-	  #{bold('APACHE2CTL=/prefix-of-the-correct-apachectl-binary')}
-	
-	#{bold("Press Enter if you want to install Passenger against OS X's default Apache.")}
-	#{bold("Press Ctrl-C to abort this installer.")}
-EOF
-	puts message.gsub(/^\t/, '')
-	wait
-end
-
 puts "--------------------------------------------------------------------"
 puts banner('Checking whether the Apache development kit is installed...')
 if APXS2.nil?
@@ -91,6 +65,37 @@ if APXS2.nil?
 EOF
 	puts message.gsub(/^\t/, '')
 	exit 1
+end
+
+if RUBY_PLATFORM =~ /darwin/ && APXS2 == "/usr/sbin/apxs"
+	puts "--------------------------------------------------------------------"
+	puts (banner('WARNING') << " " << red('WARNING') << " ") * 3
+	message = <<EOF
+	
+	You seem to be running MacOS X. Testers have reported that the default Apache
+	installation, as provided by MacOS X, is broken. Passenger seems to crash for
+	unknown reasons on OS X's default Apache installation.
+	
+	And it seems that you are about to install Passenger against OS X's default
+	Apache installation (/usr/sbin/apxs).
+	
+	We recommend you to install Apache manually, and to install Passenger against
+	that Apache instead. To tell Passenger to use a different Apache installation,
+	please set the #{bold('APXS2')} environment variable, and run this installer again.
+	For example, if Apache is installed in /opt/apache2, then please set:
+	
+	  APXS2=/opt/apache2/bin/apxs
+	    -or-
+	  APXS2=/opt/apache2/bin/apxs2
+	
+	...depending on whether your Apache installation's apxs is called 'apxs' or
+	'apxs2'.
+	
+	#{bold("Press Enter if you want to install Passenger against OS X's default Apache.")}
+	#{bold("Press Ctrl-C to abort this installer.")}
+EOF
+	puts message.gsub(/^\t/, '')
+	wait
 end
 
 puts "--------------------------------------------------------------------"
@@ -146,18 +151,28 @@ else
 	 #{bold('*')} Do you see any errors about #{bold(".h files that can't be found")}? If so, then you
 	   probably don't have the Apache/APR development headers installed properly.
 	   Please reinstall the Apache/APR development headers and try again.
-	   
+
 	   It is also possible that the headers are installed, but your compiler can't
 	   find them. Please set the environment variables #{bold('C_INCLUDE_PATH')} and
 	   #{bold('CPLUS_INCLUDE_PATH')} to the directory where your Apache/APR headers are
 	   located.
-
+EOF
+	if RUBY_PLATFORM =~ /darwin/
+		message << <<EOF
+		 #{bold('*')} You're running MacOS X. You might have multiple versions of Apache
+		   installed. You're currently compiling Passenger against #{bold(HTTPD)}
+		   If you want to compile it against a different Apache, please set the #{bold('APXS2')}
+		   environment variable, e.g. APXS2=/path-to-your-apache/bin/apxs
+EOF
+	end
+	message << <<EOF
+	
 	If the above checklist didn't help, please use our support facilities at
 	
 	  #{bold(PASSENGER_WEBSITE)}
 	
 EOF
-	puts message.gsub(/^\t/, '')
+	puts message.gsub(/^\t*/, '')
 	exit 1
 end
 

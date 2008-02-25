@@ -10,8 +10,9 @@ require 'mod_rails/platform_info'
 ##### Configuration
 
 include PlatformInfo
-APACHE2CTL.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
 APXS2.nil? and raise "Could not find Apache Portable Runtime (APR)."
+APACHE2CTL.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
+HTTPD.nil? and raise "Could not find the Apache web server binary."
 
 CXX = "g++"
 CXXFLAGS = "-Wall -g -I/usr/local/include " << MULTI_ARCH_FLAGS
