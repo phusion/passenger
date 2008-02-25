@@ -234,7 +234,7 @@ Rake::RDocTask.new do |rd|
 	rd.main = "README"
 	rd.rdoc_dir = "doc/rdoc"
 	rd.rdoc_files.include("README", "lib/mod_rails/*.rb", "lib/rake/extensions.rb", "ext/mod_rails/*.c")
-	rd.template = "jamis"
+	rd.template = "./doc/template/horo"
 	rd.title = "Passenger Ruby API"
 	rd.options << "-S" << "-N" << "-p" << "-d"
 end
@@ -284,12 +284,11 @@ spec = Gem::Specification.new do |s|
 		'lib/**/*.rb',
 		'bin/*',
 		'doc/*',
-		'doc/cxxapi/*',
-		'doc/rdoc/*',
-		'doc/rdoc/*/*',
-		'doc/rdoc/*/*/*',
-		'doc/rdoc/*/*/*/*',
-		'doc/rdoc/*/*/*/*/*',
+		'doc/*/*',
+		'doc/*/*/*',
+		'doc/*/*/*/*',
+		'doc/*/*/*/*/*',
+		'doc/*/*/*/*/*/*',
 		'ext/apache2/*.{cpp,h,c}',
 		'ext/boost/*.{hpp,TXT}',
 		'ext/boost/**/*.{hpp,cpp,pl,inl}',
@@ -311,6 +310,7 @@ spec = Gem::Specification.new do |s|
 		'-S' <<
 		'-N' <<
 		'--main' << 'README' <<
+		'--template' << './doc/template/horo' <<
 		'--title' << 'Passenger Ruby API'
 	s.test_file = 'test/support/run_rspec_tests.rb'
 	s.description = "Passenger is an Apache module for Ruby on Rails support."

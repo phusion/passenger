@@ -578,7 +578,7 @@ INDEX = XHTML_FRAMESET_PREAMBLE + <<HTML
 </head>
 
 <frameset cols="20%,*">
-    <frameset rows="15%,35%,50%">
+    <frameset rows="15%,55%,30%">
         <frame src="fr_file_index.html"   title="Files" name="Files" />
         <frame src="fr_class_index.html"  name="Classes" />
         <frame src="fr_method_index.html" name="Methods" />
