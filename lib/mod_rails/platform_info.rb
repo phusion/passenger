@@ -79,7 +79,11 @@ private
 	end
 	
 	def self.find_httpd
-		return find_apache2_executable('httpd', 'httpd2', 'apache2', 'apache')
+		if APXS2.nil?
+			return nil
+		else
+			return find_apache2_executable(`#{APXS2} -q TARGET`.strip)
+		end
 	end
 	
 	def self.determine_apxs2_flags
@@ -107,7 +111,7 @@ private
 	end
 	
 	def self.determine_multi_arch_flags
-		if RUBY_PLATFORM =~ /darwin/ || true
+		if RUBY_PLATFORM =~ /darwin/ && !HTTPD.nil?
 			architectures = []
 			`file "#{HTTPD}"`.split("\n").grep(/for architecture/).each do |line|
 				line =~ /for architecture (.*?)\)/
