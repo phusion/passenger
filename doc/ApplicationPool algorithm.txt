@@ -150,6 +150,7 @@ function get(app_root):
 			# new instance.
 			container = new AppContainer
 			container.app = spawn(app_root)
+			container.sessions = 0;
 			iterator = list.add_to_back(container)
 			container.iterator = iterator
 			count++
@@ -178,6 +179,7 @@ function get(app_root):
 			count--
 		container = new AppContainer
 		container.app = spawn(app)
+		container.sessions = 0;
 		list = new list
 		iterator = list.add_to_back(container)
 		container.iterator = iterator
@@ -244,7 +246,7 @@ thread cleaner:
 			app = container.app
 			app_list = apps[app.app_root]
 			if now - app.last_used > MAX_IDLE_TIME:
-				app_list.remove(app.iterator)
+				app_list.remove(container.iterator)
 				inactive_apps.remove(iterator for container)
 				count--
 			if app_list.empty():
