@@ -408,6 +408,8 @@ public:
 						container = list->front();
 						list->pop_front();
 						list->push_back(container);
+						container->iterator = list->end();
+						container->iterator--;
 						if (container->sessions == 0) {
 							inactiveApps.erase(container->ia_iterator);
 						}
