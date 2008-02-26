@@ -12,7 +12,11 @@
 #include <map>
 #include <list>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <ctime>
+#include <cerrno>
 
 #ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER
 	#include "DummySpawnManager.h"
@@ -277,8 +281,33 @@ private:
 	AppContainerList &inactiveApps;
 	map<string, time_t> &restartFileTimes;
 	
-	bool needsRestart(const string &appRoot) const {
-		return false;
+	bool needsRestart(const string &appRoot) {
+		string restartFile(appRoot);
+		restartFile.append("/tmp/restart.txt");
+		
+		struct stat buf;
+		bool result;
+		if (stat(restartFile.c_str(), &buf) == 0) {
+			int ret = unlink(restartFile.c_str());
+			if (ret == 0 || errno == ENOENT) {
+				restartFileTimes.erase(appRoot);
+				result = true;
+			} else {
+				map<string, time_t>::const_iterator it;
+				
+				it = restartFileTimes.find(appRoot);
+				if (it == restartFileTimes.end()) {
+					result = true;
+				} else {
+					result = buf.st_mtime != restartFileTimes[appRoot];
+				}
+				restartFileTimes[appRoot] = buf.st_mtime;
+			}
+		} else {
+			restartFileTimes.erase(appRoot);
+			result = false;
+		}
+		return result;
 	}
 	
 	void cleanerThreadMainLoop() {
