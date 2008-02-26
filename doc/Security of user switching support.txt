@@ -21,7 +21,7 @@ This problem also typically plagues web hosts that host PHP via mod_php.
 
 There are multiple ways to solve this problem. The goal of this document is to
 inform the reader about the solutions have we have analyzed, so that
-Passenger's security may be reviewed.
+Passenger's security may be peer reviewed.
 
 
 Analysis of possible solutions
