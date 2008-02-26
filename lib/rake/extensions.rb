@@ -32,8 +32,47 @@ module RakeExtensions
 #      end
 #  end
 #
-# <b>Note:</b> Only the <tt>file</tt> and <tt>target</tt> Rake
-# commands are supported.
+# === String dependencies are assumed to be filenames
+#
+# But be careful with string dependencies. They are assumed to be filenames,
+# and will be automatically converted. For example:
+#
+#  subdir 'foo' do
+#     task 'super_app' => ['super_app:compile', 'super_app:unit_test']
+#  
+#     task 'super_app:compile' do
+#        ...
+#     end
+#  
+#     task 'super_app:unit_test' do
+#        ...
+#     end
+#  end
+#
+# will be treated like:
+#
+#  subdir 'foo' do
+#     # !!!!!!!
+#     task 'super_app' => ['foo/super_app:compile', 'foo/super_app:unit_test']
+#  
+#     task 'super_app:compile' do
+#        ...
+#     end
+#  
+#     task 'super_app:unit_test' do
+#        ...
+#     end
+#  end
+#
+# To solve this, declare your dependencies as symbols:
+#
+#  task 'super_app' => [:'super_app:compile', :'super_app:unit_test']
+#
+# (note the leading ':' character)
+#
+# === Supported Rake commands
+#
+# Only the <tt>file</tt> and <tt>target</tt> Rake commands are supported.
 def subdir(dir, &block)
 	subdir = Subdir.new(dir)
 	Dir.chdir(dir) do
