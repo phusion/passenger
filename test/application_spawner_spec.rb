@@ -1,11 +1,22 @@
 $LOAD_PATH << "#{File.dirname(__FILE__)}/../lib"
 require 'mod_rails/application_spawner'
 require 'abstract_server_spec'
+require 'spawner_privilege_lowering_spec'
+require 'support/config'
 include ModRails
 
 describe ApplicationSpawner do
+	before :all do
+		ENV['RAILS_ENV'] = 'production'
+		@test_app = "stub/railsapp"
+		Dir["#{@test_app}/log/*"].each do |file|
+			File.chmod(0666, file) rescue nil
+		end
+		File.chmod(0777, "#{@test_app}/log") rescue nil
+	end
+	
 	before :each do
-		@spawner = ApplicationSpawner.new('stub/railsapp')
+		@spawner = ApplicationSpawner.new(@test_app)
 		@spawner.start
 		@server = @spawner
 	end
@@ -54,16 +65,28 @@ describe ApplicationSpawner do
 		app.app_root.should_not be_nil
 		app.close
 	end
+end
+
+if Process.euid == ApplicationSpawner::ROOT_UID
+	describe "ApplicationSpawner privilege lowering support" do
+		before :all do
+			@test_app = "stub/railsapp"
+			ENV['RAILS_ENV'] = 'production'
+		end
 	
-	it "should be able to spawn an application as a different user" do
-		violated "not implemented yet"
-	end
-	
-	it "should be able to spawn an application as a different group" do
-		violated "not implemented yet"
-	end
-	
-	it "should be able to spawn an application as a different user and group" do
-		violated "not implemented yet"
+		it_should_behave_like "spawner that supports lowering of privileges"
+		
+		def spawn_app(options = {})
+			lowest_user = options[:lowest_user] || CONFIG['lowest_user']
+			@spawner = ApplicationSpawner.new(@test_app, true, lowest_user)
+			@spawner.start
+			begin
+				app = @spawner.spawn_application
+				yield app
+			ensure
+				app.close
+				@spawner.stop
+			end
+		end
 	end
 end
