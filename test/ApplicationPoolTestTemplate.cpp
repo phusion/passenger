@@ -119,20 +119,6 @@ using namespace boost;
 		ensure_equals(pool->getCount(), 2u);
 	}
 	
-	struct FullPoolTestThread {
-		ApplicationPoolPtr pool;
-		Application::SessionPtr &m_session;
-		
-		FullPoolTestThread(const ApplicationPoolPtr &pool, Application::SessionPtr &session)
-		: m_session(session) {
-			this->pool = pool;
-		}
-		
-		void operator()() {
-			m_session = pool->get("stub/railsapp");
-		}
-	};
-	
 	TEST_METHOD(APPLICATION_POOL_TEST_START + 8) {
 		// If we call get() even though the pool is already full
 		// (active == max), and the application root is already
@@ -140,15 +126,9 @@ using namespace boost;
 		// a session in an already active app.
 		pool->setMax(1);
 		Application::SessionPtr session1(pool->get("stub/railsapp"));
-		
-		Application::SessionPtr session2;
-		thread *thr = new thread(FullPoolTestThread(pool, session2));
-		usleep(50000); // Give the thread's get() call some time to do its job.
-
+		Application::SessionPtr session2(pool->get("stub/railsapp"));
 		ensure_equals("An attempt to open a session on an already busy app was made", pool->getActive(), 2u);
 		ensure_equals("No new app has been spawned", pool->getCount(), 1u);
-		thr->join();
-		delete thr;
 	}
 	
 	TEST_METHOD(APPLICATION_POOL_TEST_START + 9) {
@@ -172,24 +152,83 @@ using namespace boost;
 		}
 	}
 	
-	#if 0
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 9) {
+	struct TestThread1 {
+		ApplicationPoolPtr pool;
+		Application::SessionPtr &m_session;
+		bool &m_done;
+		
+		TestThread1(const ApplicationPoolPtr &pool,
+			Application::SessionPtr &session,
+			bool &done)
+		: m_session(session), m_done(done) {
+			this->pool = pool;
+			done = false;
+		}
+		
+		void operator()() {
+			m_session = pool->get("stub/railsapp2");
+			m_done = true;
+		}
+	};
+
+	TEST_METHOD(APPLICATION_POOL_TEST_START + 10) {
 		// If we call get() even though the pool is already full
 		// (active == max), and the application root is *not* already
 		// in the pool, then the pool will wait until enough sessions
 		// have been closed.
-		// TODO
+		pool->setMax(2);
+		Application::SessionPtr session1(pool->get("stub/railsapp"));
+		Application::SessionPtr session2(pool->get("stub/railsapp"));
+		Application::SessionPtr session3;
+		bool done;
+		
+		thread *thr = new thread(TestThread1(pool2, session3, done));
+		usleep(500000);
+		ensure("ApplicationPool is waiting", !done);
+		ensure_equals(pool->getActive(), 2u);
+		ensure_equals(pool->getCount(), 2u);
+		
+		session1.reset();
+		usleep(500000);
+		ensure("Session 3 is openend", done);
+		ensure_equals(pool->getActive(), 2u);
+		ensure_equals(pool->getCount(), 2u);
+		
+		thr->join();
+		delete thr;
 	}
 	
+	TEST_METHOD(APPLICATION_POOL_TEST_START + 12) {
+		// If we call get(), and:
+		// * the pool is already full, but there are inactive apps
+		//   (active < count && count == max)
+		// and
+		// * the application root is *not* already in the pool
+		// then the an inactive app should be killed in order to
+		// satisfy this get() command.
+		pool->setMax(2);
+		Application::SessionPtr session1(pool->get("stub/railsapp"));
+		Application::SessionPtr session2(pool->get("stub/railsapp"));
+		session1.reset();
+		session2.reset();
+		
+		ensure_equals(pool->getActive(), 0u);
+		ensure_equals(pool->getCount(), 2u);
+		session1 = pool2->get("stub/railsapp2");
+		ensure_equals(pool->getActive(), 1u);
+		ensure_equals(pool->getCount(), 2u);
+	}
+	
+	TEST_METHOD(APPLICATION_POOL_TEST_START + 13) {
+		// Test whether Session is still usable after the Application has been destroyed.
+	}
+	#endif
+	
+	#if 0
 	TEST_METHOD(APPLICATION_POOL_TEST_START + 10) {
 		// Test whether get() throws the right exceptions
 		// TODO
 	}
-	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 11) {
-		// Test whether Session is still usable after the Application has been destroyed.
-	}
-	#endif
 	
 	// TODO: test spawning application as a different user
 	// TODO: test restarting of applications

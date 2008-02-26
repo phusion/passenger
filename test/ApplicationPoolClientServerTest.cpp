@@ -14,7 +14,7 @@ namespace tut {
 
 	struct ApplicationPoolClientServerTest {
 		ApplicationPoolServerPtr server;
-		ApplicationPoolPtr pool;
+		ApplicationPoolPtr pool, pool2;
 		
 		ApplicationPoolClientServerTest() {
 			if (firstRun) {
@@ -26,6 +26,7 @@ namespace tut {
 			} else {
 				server = ptr(new ApplicationPoolServer("../bin/passenger-spawn-server"));
 				pool = server->connect();
+				pool2 = server->connect();
 			}
 		}
 		
