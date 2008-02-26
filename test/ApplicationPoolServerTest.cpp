@@ -9,42 +9,38 @@ using namespace Passenger;
 
 namespace tut {
 	static bool firstRun = true;
-	static bool timeToTestThePoolItself = false;
 	static unsigned int initialFileDescriptors;
+	
+	static unsigned int countOpenFileDescriptors() {
+		int ret;
+		unsigned int result = 0;
+		for (long i = sysconf(_SC_OPEN_MAX) - 1; i >= 0; i--) {
+			do {
+				ret = dup2(i, i);
+			} while (ret == -1 && errno == EINTR);
+			if (ret != -1) {
+				result++;
+			}
+		}
+		return result;
+	}
 
-	struct ApplicationPoolClientServerTest {
+	struct ApplicationPoolServerTest {
 		ApplicationPoolServerPtr server;
-		ApplicationPoolPtr pool;
+		ApplicationPoolPtr pool, pool2;
 		
-		ApplicationPoolClientServerTest() {
+		ApplicationPoolServerTest() {
 			if (firstRun) {
 				initialFileDescriptors = countOpenFileDescriptors();
 				firstRun = false;
 			}
-			if (!timeToTestThePoolItself) {
-				server = ptr(new ApplicationPoolServer("stub/spawn_server.rb"));
-			} else {
-				server = ptr(new ApplicationPoolServer("../bin/passenger-spawn-server"));
-				pool = server->connect();
-			}
+			server = ptr(new ApplicationPoolServer("stub/spawn_server.rb"));
 		}
 		
-		unsigned int countOpenFileDescriptors() {
-			int ret;
-			unsigned int result = 0;
-			for (long i = sysconf(_SC_OPEN_MAX) - 1; i >= 0; i--) {
-				do {
-					ret = dup2(i, i);
-				} while (ret == -1 && errno == EINTR);
-				if (ret != -1) {
-					result++;
-				}
-			}
-			return result;
-		}
+		
 	};
 
-	DEFINE_TEST_GROUP(ApplicationPoolClientServerTest);
+	DEFINE_TEST_GROUP(ApplicationPoolServerTest);
 
 	TEST_METHOD(1) {
 		// Constructor and destructor should not crash.
@@ -95,17 +91,10 @@ namespace tut {
 	}
 	
 	TEST_METHOD(5) {
-		// A flag for the test methods in ApplicationPoolTestTemplate.cpp
-		timeToTestThePoolItself = true;
-	
 		// ApplicationPoolServer should not leak file descriptors after running all
 		// of the above tests.
 		server = ApplicationPoolServerPtr();
 		ensure_equals(countOpenFileDescriptors(), initialFileDescriptors);
 	}
-	
-	#define APPLICATION_POOL_TEST_START 5
-	#define USE_TEMPLATE
-	#include "ApplicationPoolTestTemplate.cpp"
 }
 

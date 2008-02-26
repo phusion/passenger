@@ -9,108 +9,247 @@ introduction. This document describes an algorithm for managing the pool.
 
 The algorithm should strive to keep spawning to a minimum.
 
+TODO: check whether the algorithm has thrashing behavior.
 
-== Instance variables
+
+== Definitions
+
+=== Types
+
+Most of the types that we use in this document are pretty standard. But we
+explicitly define some special types:
+
+- list<SomeType>
+  A doubly linked list which contains elements of type SomeType. It supports
+  all the usual list operations that one can expect from a linked list, like
+  add_to_back(), etc.
+  
+  The following operations deserve special mention:
+  * remove(iterator)
+    Removes the specified element from the list. _iterator_ is a linked list
+    iterator: it probably contains the links and a reference to the actual
+    list element, depending on the list implementation. This operation can be
+    done in O(1) time.
+  
+  * move_to_front(iterator)
+    Moves the specified element to the front of the list. _iterator_ is an
+    iterator, as described earlier.
+  
+- AppContainer
+  A compound type which contains an application instance, as well as iterators
+  for various linked lists. These iterators make it possible to perform actions
+  on the linked list in O(1) time.
+  
+  An AppContainer has the following members:
+  * app - An Application object, representing an application instance.
+  * last_used (time) - The last time a session for this application instance
+    was opened or closed.
+  * sessions (integer) - The number of open sessions for this application
+    instance.
+    Invariant:
+       (sessions == 0) == (This AppContainer is in inactive_apps.)
+  * iterator - The iterator for this AppContainer in the linked list
+    apps[app.app_root]
+  * ia_iterator - The iterator for this AppContainer in the linked list
+    inactive_apps. This iterator is only valid if this AppContainer really is
+    in that list.
+
+=== Instance variables
 
 The algorithm requires the following instance variables for storing state
 information:
 
-- apps: map[string => list<App>]
-  Maps an application root to a list of applications.
+- apps: map[string => list<AppContainer>]
+  Maps an application root to a list of AppContainers. Thus, this map contains
+  all application instances that are in the pool.
   
   Invariant:
-     For all values v in app:
+     for all values v in app:
         v is nonempty.
-        v's elements are ordered from active to non-active.
+        for all 0 <= i < v.size() - 1:
+           if v[i].app is active:
+              v[i + 1].app is active
   
   An active application is one that has more than 0 active sessions.
 
 - max: integer
-  The maximum number of application objects that may exist in 'apps'.
+  The maximum number of AppContainer objects that may exist in 'apps'.
 
 - count: integer
-  The current number of application objects in 'apps'.
+  The current number of AppContainer objects in 'apps'.
   Since 'max' can be set dynamically during the life time of an application
   pool, 'count > max' is possible.
 
 - active: integer
-  The number of application objects in 'apps' that are active.
+  The number of application instances in 'apps' that are active.
   Invariant:
      active <= count
+
+- inactive_apps: list<AppContainer>
+  A linked list of AppContainer objects. All application instances in this list
+  are inactive.
+  
+  Invariant:
+     inactive_apps.size() == count - active
+     for all c in inactive_apps:
+        c is in apps.
+        c.sessions == 0
+
+- restart_file_times: map[string => time]
+  Maps an application root to the last known modification time of
+  'restart.txt'.
+  
+  Invariant:
+     for all keys app_root in restart_times:
+        apps.has_key(app_root)
 
 
 == Algorithm in pseudo code
 
-# Thread-safetiness note: all functions described here are to be run in a
-# critical section. That is, no two functions can be running at the same time.
+# Thread-safetiness notes:
+# - All functions (including thread main functions) described here are to be
+#   run inside the same lock.
+# - All wait commands are to unlock the lock during waiting.
 
 function get(app_root):
-	if needs_restart(app_root):
-		apps.remove(app_root)
-	
 	list = apps[app_root]
 	if list != nil:
 		# There are apps for this app root.
-		if list.front.sessions == 0:
+		if list.front.sessions == 0 || count == max:
 			# There is an inactive app, so we use it.
-			app = list.front
-			list.move_to_back(app)
-			active++
-		else if count < max:
-			# They are all active, so we spawn a new one
-			# if that's allowed by the limits.
-			app = spawn(app)
-			list.add_to_back(app)
+			#  -OR-
+			# All apps are active, and the pool is full. We're not
+			# allowed to spawn a new app, so we try to connect to
+			# an existing one. Our connection request will be put
+			# into that app's connection queue.
+			
+			if needs_restart(app_root):
+				for all container in list:
+					if container.sessions == 0:
+						inactive_apps.remove(container.ia_iterator)
+					else:
+						active--
+					list.remove(container.iterator)
+					count--
+				Tell spawn server to reload code for app_root.
+				container = null
+			else:
+				container = list.front
+				list.move_to_back(container.iterator)
+				if container.sessions == 0:
+					inactive_apps.remove(container.ia_iterator)
+				active++
+		
+		if container == null:
+			# All apps are active, but the pool hasn't reached its
+			# maximum yet. So we spawn a new app.
+			#  -OR-
+			# The application specified by app_root needed to be
+			# restarted, so all application instances that belong
+			# to that app_root have been removed. Here, we spawn a
+			# new instance.
+			container = new AppContainer
+			container.app = spawn(app_root)
+			container.sessions = 0;
+			iterator = list.add_to_back(container)
+			container.iterator = iterator
 			count++
-			active++
-		else:
-			# All apps are active. We're not allowed to
-			# spawn a new one, so we try to connect to
-			# an existing one. Our connection request
-			# will be put into that app's queue.
-			app = list.front
-			list.move_to_back(app)
 			active++
 	else:
 		# There are no apps for this app root.
-		wait until count < max
-		app = spawn(app)
-		list = new list()
-		list.add_to_back(app)
+		wait until active < max
+		if count == max:
+			# Here we are in a though situation. There are several
+			# apps which are inactive, and none of them have
+			# application root _app_root_, so we must kill one of
+			# them in order to free a spot in the pool. But which
+			# one do we kill? We want to minimize spawning.
+			#
+			# It's probably a good idea to keep some kind of
+			# statistics in order to decide this. We want the
+			# application root that gets the least traffic to be
+			# killed. But for now, we kill a random application
+			# instance.
+			container = inactive_apps.pop_front
+			list = apps[container.app.app_root]
+			list.remove(container.iterator)
+			if list.empty():
+				apps.remove(container.app.app_root)
+				restart_file_times.remove(container.app.app_root)
+			count--
+		container = new AppContainer
+		container.app = spawn(app)
+		container.sessions = 0;
+		list = new list
+		iterator = list.add_to_back(container)
+		container.iterator = iterator
 		apps[app_root] = list
 		count++
 		active++
 	
-	# Set a timestamp on the application. This will be used by the cleaner.
-	app.last_used = current_time()
-	
-	return app.connect()  # Returns a Session object
+	container.last_used = current_time()
+	container.sessions++
+	try:
+		return container.app.connect()  # Returns a Session object
+	on exception:
+		container.session--
+		propagate exception
 
 
-# The following function is to be called when a session
-# has been closed.
-function session_has_been_closed(session):
-	list = apps[session.app.app_root]
+# The following function is to be called when a session has been closed.
+# _container_ is the AppContainer that contains the application for which a
+# session has been closed.
+function session_has_been_closed(container):
+	list = apps[container.app.app_root]
 	if list != nil:
-		if app.sessions == 0:
-			list.move_to_front(app)
+		container.last_used = current_time()
+		container.sessions--
+		if container.sessions == 0:
+			list.move_to_front(container.iterator)
+			container.ia_iterator = inactive_apps.add_to_back(container.app)
 		active--
-	app.last_used = current_time()
+
+
+function needs_restart(app_root):
+	restart_file = "$app_root/tmp/restart.txt"
+	s = stat(restart_file)
+	if s != null:
+		if delete_file(restart_file):
+			restart_file_times.remove(app_root)
+			result = true
+		else:
+			last_restart_file_time = restart_file_times[app_root]
+			if last_restart_time == null:
+				restart_times[app_root] = current_time()
+				result = true
+			else:
+				result = s.mtime != last_restart_file_time
+				restart_file_times[app_root] = s.mtime
+	else:
+		restart_file_times.remove(app_root)
+		result = false
+	return result
+
 
 # The following thread will be responsible for cleaning up idle application
 # instances, i.e. instances that haven't been used for a while.
-# This thread function is also run in a critical section.
 thread cleaner:
+	done = false
 	while !done:
-		Wait until CLEAN_INTERVAL seconds have expired, or the thread has been signalled to quit. During waiting, it must not be holding a lock on the critical section.
+		Wait until CLEAN_INTERVAL seconds have expired, or until the thread has been signalled to quit.
 		if thread has been signalled to quit:
 			done = true
 			break
 		
 		now = current_time()
-		for all values l in apps:
-			for all app in l:
-				if app.sessions == 0 && now - app.last_time > MAX_IDLE_TIME:
-					l.remove(app)
-			if l.empty():
-				apps.remove_value(l)
+		for all container in inactive_apps:
+			app = container.app
+			app_list = apps[app.app_root]
+			if now - container.last_used > MAX_IDLE_TIME:
+				app_list.remove(container.iterator)
+				inactive_apps.remove(iterator for container)
+				count--
+			if app_list.empty():
+				apps.remove(app.app_root)
+				restart_file_times.remove(app.app_root)
+

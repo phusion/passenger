@@ -9,7 +9,7 @@ using namespace boost;
 
 /**
  * This file is used as a template to test the different ApplicationPool implementations.
- * It is #included in StandardApplicationPoolTest.cpp and ApplicationClientServerTest.cpp
+ * It is #included in StandardApplicationPoolTest.cpp and ApplicationServer_ApplicationPoolTest.cpp
  */
 #ifdef USE_TEMPLATE
 
@@ -47,7 +47,7 @@ using namespace boost;
 		return result;
 	}
 
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 1) {
+	TEST_METHOD(1) {
 		// Calling ApplicationPool.get() once should return a valid Session.
 		Application::SessionPtr session(pool->get("stub/railsapp"));
 		session->sendHeaders(createRequestHeaders());
@@ -59,7 +59,7 @@ using namespace boost;
 		ensure(result.find("hello world") != string::npos);
 	}
 	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 2) {
+	TEST_METHOD(2) {
 		// Verify that the pool spawns a new app, and that
 		// after the session is closed, the app is kept around.
 		Application::SessionPtr session(pool->get("stub/railsapp"));
@@ -70,7 +70,7 @@ using namespace boost;
 		ensure_equals("After the session is closed, the app is kept around", pool->getCount(), 1u);
 	}
 	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 4) {
+	TEST_METHOD(4) {
 		// If we call get() with an application root, then we close the session,
 		// and then we call get() again with the same application root,
 		// then the pool should not have spawned more than 1 app in total.
@@ -80,7 +80,7 @@ using namespace boost;
 		ensure_equals(pool->getCount(), 1u);
 	}
 	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 5) {
+	TEST_METHOD(5) {
 		// If we call get() with an application root, then we call get() again before closing
 		// the session, then the pool should have spawned 2 apps in total.
 		Application::SessionPtr session(pool->get("stub/railsapp"));
@@ -88,7 +88,7 @@ using namespace boost;
 		ensure_equals(pool->getCount(), 2u);
 	}
 	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 6) {
+	TEST_METHOD(6) {
 		// If we call get() twice with different application roots,
 		// then the pool should spawn two different apps.
 		Application::SessionPtr session(pool->get("stub/railsapp"));
@@ -107,7 +107,7 @@ using namespace boost;
 		session2.reset();
 	}
 	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 7) {
+	TEST_METHOD(7) {
 		// If we call get() twice with different application roots,
 		// and we close both sessions, then both 2 apps should still
 		// be in the pool.
@@ -119,39 +119,19 @@ using namespace boost;
 		ensure_equals(pool->getCount(), 2u);
 	}
 	
-	struct FullPoolTestThread {
-		ApplicationPoolPtr pool;
-		Application::SessionPtr &m_session;
-		
-		FullPoolTestThread(const ApplicationPoolPtr &pool, Application::SessionPtr &session)
-		: m_session(session) {
-			this->pool = pool;
-		}
-		
-		void operator()() {
-			m_session = pool->get("stub/railsapp");
-		}
-	};
-	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 8) {
+	TEST_METHOD(8) {
 		// If we call get() even though the pool is already full
 		// (active == max), and the application root is already
 		// in the pool, then the pool should have tried to open
 		// a session in an already active app.
 		pool->setMax(1);
 		Application::SessionPtr session1(pool->get("stub/railsapp"));
-		
-		Application::SessionPtr session2;
-		thread *thr = new thread(FullPoolTestThread(pool, session2));
-		usleep(50000); // Give the thread's get() call some time to do its job.
-
+		Application::SessionPtr session2(pool->get("stub/railsapp"));
 		ensure_equals("An attempt to open a session on an already busy app was made", pool->getActive(), 2u);
 		ensure_equals("No new app has been spawned", pool->getCount(), 1u);
-		thr->join();
-		delete thr;
 	}
 	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 9) {
+	TEST_METHOD(9) {
 		// If ApplicationPool spawns a new instance,
 		// and we kill it, then the next get() with the
 		// same application root should throw an exception.
@@ -172,26 +152,97 @@ using namespace boost;
 		}
 	}
 	
-	#if 0
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 9) {
+	struct TestThread1 {
+		ApplicationPoolPtr pool;
+		Application::SessionPtr &m_session;
+		bool &m_done;
+		
+		TestThread1(const ApplicationPoolPtr &pool,
+			Application::SessionPtr &session,
+			bool &done)
+		: m_session(session), m_done(done) {
+			this->pool = pool;
+			done = false;
+		}
+		
+		void operator()() {
+			m_session = pool->get("stub/railsapp2");
+			m_done = true;
+		}
+	};
+
+	TEST_METHOD(10) {
 		// If we call get() even though the pool is already full
 		// (active == max), and the application root is *not* already
 		// in the pool, then the pool will wait until enough sessions
 		// have been closed.
-		// TODO
+		pool->setMax(2);
+		Application::SessionPtr session1(pool->get("stub/railsapp"));
+		Application::SessionPtr session2(pool->get("stub/railsapp"));
+		Application::SessionPtr session3;
+		bool done;
+		
+		thread *thr = new thread(TestThread1(pool2, session3, done));
+		usleep(500000);
+		ensure("ApplicationPool is waiting", !done);
+		ensure_equals(pool->getActive(), 2u);
+		ensure_equals(pool->getCount(), 2u);
+		
+		session1.reset();
+		usleep(500000);
+		ensure("Session 3 is openend", done);
+		ensure_equals(pool->getActive(), 2u);
+		ensure_equals(pool->getCount(), 2u);
+		
+		thr->join();
+		delete thr;
 	}
 	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 10) {
+	TEST_METHOD(12) {
+		// If we call get(), and:
+		// * the pool is already full, but there are inactive apps
+		//   (active < count && count == max)
+		// and
+		// * the application root is *not* already in the pool
+		// then the an inactive app should be killed in order to
+		// satisfy this get() command.
+		pool->setMax(2);
+		Application::SessionPtr session1(pool->get("stub/railsapp"));
+		Application::SessionPtr session2(pool->get("stub/railsapp"));
+		session1.reset();
+		session2.reset();
+		
+		ensure_equals(pool->getActive(), 0u);
+		ensure_equals(pool->getCount(), 2u);
+		session1 = pool2->get("stub/railsapp2");
+		ensure_equals(pool->getActive(), 1u);
+		ensure_equals(pool->getCount(), 2u);
+	}
+	
+	TEST_METHOD(13) {
+		// Test whether Session is still usable after the Application has been destroyed.
+		Application::SessionPtr session(pool->get("stub/railsapp"));
+		pool->clear();
+		pool.reset();
+		pool2.reset();
+		
+		session->sendHeaders(createRequestHeaders());
+		session->closeWriter();
+		
+		int reader = session->getReader();
+		string result(readAll(reader));
+		session->closeReader();
+		ensure(result.find("hello world") != string::npos);
+	}
+	
+	#if 0
+	TEST_METHOD(10) {
 		// Test whether get() throws the right exceptions
 		// TODO
 	}
 	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 11) {
-		// Test whether Session is still usable after the Application has been destroyed.
-	}
-	#endif
-	
 	// TODO: test spawning application as a different user
 	// TODO: test restarting of applications
+	#endif
 
 #endif /* USE_TEMPLATE */
