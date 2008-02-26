@@ -13,6 +13,7 @@ ext/boost/src/*.a
 doc/rdoc
 doc/cxxapi
 test/Apache2ModuleTests
+test/config.yml
 test/stub/railsapp/log/*
 test/stub/railsapp2/log/*
 benchmark/DummyRequestHandler

@@ -1,0 +1,15 @@
+### This file contains system-specific configuration options that the test suite needs.
+### Please customize it for your system.
+
+# These are the user names of two normal, non-administrator users.
+normal_user_1: games
+normal_user_2: daemon
+
+# The username of a user that has less privileges than a normal user.
+lowest_user: nobody
+
+# A nonexistant username.
+nonexistant_user: xxxxxxxxxxxxxxxxxxx
+# A nonexistant user ID.
+nonexistant_uid: 9999
+
