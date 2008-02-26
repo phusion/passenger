@@ -196,6 +196,11 @@ private:
 			data->server = sock;
 		}
 		
+		virtual void clear() {
+			MessageChannel channel(data->server);
+			channel.write("clear", NULL);
+		}
+		
 		virtual void setMax(unsigned int max) {
 			MessageChannel channel(data->server);
 			channel.write("setMax", toString(max).c_str(), NULL);
@@ -396,6 +401,9 @@ private:
 				} else if (args[0] == "close" && args.size() == 2) {
 					sessions.erase(atoi(args[1]));
 				
+				} else if (args[0] == "clear" && args.size() == 1) {
+					pool.clear();
+				
 				} else if (args[0] == "setMax" && args.size() == 2) {
 					pool.setMax(atoi(args[1]));
 				
@@ -487,8 +495,28 @@ public:
 	
 	/**
 	 * Connects to the server and returns a usable ApplicationPool object.
-	 * All cache/pool data of this ApplicationPool is actually stored on the server
-	 * and shared with other clients, but that is totally transparent.
+	 * All cache/pool data of this ApplicationPool is actually stored on
+	 * the server and shared with other clients, but that is totally
+	 * transparent to the user of the ApplicationPool object.
+	 *
+	 * @warning
+	 * One may only use the returned ApplicationPool object for handling
+	 * one session at a time. For example, don't do stuff like this:
+	 * @code
+	 *   ApplicationPoolPtr pool = server.connect();
+	 *   Application::SessionPtr session1 = pool->get(...);
+	 *   Application::SessionPtr session2 = pool->get(...);
+	 * @endcode
+	 * Otherwise, a deadlock can occur under certain circumstances.
+	 * @warning
+	 * Instead, one should call connect() multiple times:
+	 * @code
+	 *   ApplicationPoolPtr pool1 = server.connect();
+	 *   Application::SessionPtr session1 = pool1->get(...);
+	 *   
+	 *   ApplicationPoolPtr pool2 = server.connect();
+	 *   Application::SessionPtr session2 = pool2->get(...);
+	 * @endcode
 	 *
 	 * @throws SystemException Something went wrong.
 	 * @throws IOException Something went wrong.

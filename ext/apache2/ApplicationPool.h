@@ -114,6 +114,14 @@ public:
 	virtual Application::SessionPtr get(const string &appRoot, bool lowerPrivilege = true, const string &lowestUser = "nobody") = 0;
 	
 	/**
+	 * Clear all application instances that are currently in the pool.
+	 *
+	 * This method is used by unit tests to verify that the implementation is correct,
+	 * and thus should not be called directly.
+	 */
+	virtual void clear() = 0;
+	
+	/**
 	 * Set a hard limit on the number of application instances that this ApplicationPool
 	 * may spawn. The exact behavior depends on the used algorithm, and is not specified by
 	 * these API docs.
@@ -181,47 +189,69 @@ private:
 	static const int MAX_IDLE_TIME = 60;
 
 	friend class ApplicationPoolServer;
-
-	typedef list<ApplicationPtr> ApplicationList;
-	typedef shared_ptr<ApplicationList> ApplicationListPtr;
-	typedef map<string, ApplicationListPtr> ApplicationMap;
+	struct AppContainer;
+	
+	typedef shared_ptr<AppContainer> AppContainerPtr;
+	typedef list<AppContainerPtr> AppContainerList;
+	typedef shared_ptr<AppContainerList> AppContainerListPtr;
+	typedef map<string, AppContainerListPtr> ApplicationMap;
+	
+	struct AppContainer {
+		ApplicationPtr app;
+		time_t lastUsed;
+		unsigned int sessions;
+		AppContainerList::iterator iterator;
+		AppContainerList::iterator ia_iterator;
+	};
 	
 	struct SharedData {
 		mutex lock;
-		condition countOrMaxChanged;
+		condition activeOrMaxChanged;
 		
 		ApplicationMap apps;
 		unsigned int max;
 		unsigned int count;
 		unsigned int active;
+		AppContainerList inactiveApps;
+		map<string, time_t> restartFileTimes;
 	};
 	
 	typedef shared_ptr<SharedData> SharedDataPtr;
 	
 	struct SessionCloseCallback {
 		SharedDataPtr data;
-		weak_ptr<Application> app;
+		weak_ptr<AppContainer> container;
 		
-		SessionCloseCallback(SharedDataPtr data, weak_ptr<Application> app) {
+		SessionCloseCallback(SharedDataPtr data,
+		                     const weak_ptr<AppContainer> &container) {
 			this->data = data;
-			this->app = app;
+			this->container = container;
 		}
 		
-		void operator()(Application::Session &session) {
+		void operator()() {
 			mutex::scoped_lock l(data->lock);
-			ApplicationPtr app(this->app.lock());
+			AppContainerPtr container(this->container.lock());
 			
-			if (app != NULL) {
-				ApplicationMap::iterator it(data->apps.find(app->getAppRoot()));
-				if (it != data->apps.end()) {
-					if (app->getSessions() == 0) {
-						// TODO: make this operation constant time
-						it->second->remove(app);
-						it->second->push_front(app);
-					}
-					data->active--;
+			if (container == NULL) {
+				return;
+			}
+			
+			ApplicationMap::iterator it;
+			it = data->apps.find(container->app->getAppRoot());
+			if (it != data->apps.end()) {
+				AppContainerListPtr list(it->second);
+				container->lastUsed = time(NULL);
+				container->sessions--;
+				if (container->sessions == 0) {
+					list->erase(container->iterator);
+					list->push_front(container);
+					container->iterator = list->begin();
+					data->inactiveApps.push_back(container);
+					container->ia_iterator = data->inactiveApps.end();
+					container->ia_iterator--;
 				}
-				app->setLastUsed(time(NULL));
+				data->active--;
+				data->activeOrMaxChanged.notify_all();
 			}
 		}
 	};
@@ -237,12 +267,15 @@ private:
 	bool done;
 	condition cleanerThreadSleeper;
 	
+	// Shortcuts to save typing in get().
 	mutex &lock;
-	condition &countOrMaxChanged;
+	condition &activeOrMaxChanged;
 	ApplicationMap &apps;
 	unsigned int &max;
 	unsigned int &count;
 	unsigned int &active;
+	AppContainerList &inactiveApps;
+	map<string, time_t> &restartFileTimes;
 	
 	bool needsRestart(const string &appRoot) const {
 		return false;
@@ -259,35 +292,23 @@ private:
 				break;
 			}
 			
-			ApplicationMap::iterator appsIter;
 			time_t now = time(NULL);
-			list<string> appRootsToRemove;
-			
-			for (appsIter = apps.begin(); appsIter != apps.end(); appsIter++) {
-				ApplicationList &appList(*appsIter->second);
-				ApplicationList::iterator listIter;
-				list<ApplicationList::iterator> elementsToRemove;
+			AppContainerList::iterator it;
+			for (it = inactiveApps.begin(); it != inactiveApps.end(); it++) {
+				AppContainer &container(*it->get());
+				ApplicationPtr app(container.app);
+				AppContainerListPtr appList(apps[app->getAppRoot()]);
 				
-				for (listIter = appList.begin(); listIter != appList.end(); listIter++) {
-					Application &app(**listIter);
-					if (app.getSessions() == 0 && now - app.getLastUsed() > MAX_IDLE_TIME) {
-						P_TRACE("Cleaning idle app " << app.getAppRoot());
-						elementsToRemove.push_back(listIter);
-					}
+				if (now - container.lastUsed > MAX_IDLE_TIME) {
+					P_TRACE("Cleaning idle app " << app->getAppRoot());
+					appList->erase(container.iterator);
+					inactiveApps.erase(it);
+					count--;
 				}
-				
-				list<ApplicationList::iterator>::iterator it;
-				for (it = elementsToRemove.begin(); it != elementsToRemove.end(); it++) {
-					appList.erase(*it);
+				if (appList->empty()) {
+					apps.erase(app->getAppRoot());
+					data->restartFileTimes.erase(app->getAppRoot());
 				}
-				if (appList.empty()) {
-					appRootsToRemove.push_back(appsIter->first);
-				}
-			}
-			
-			list<string>::const_iterator it;
-			for (it = appRootsToRemove.begin(); it != appRootsToRemove.end(); it++) {
-				apps.erase(*it);
 			}
 		}
 	}
@@ -296,18 +317,24 @@ private:
 		detached = true;
 	}
 	
-	void handleConnectException(const exception &e, const ApplicationPtr &app,
-					ApplicationList &appList) {
+	void handleConnectException(const string &exceptionMessage,
+	              const AppContainerPtr &container,
+	              AppContainerList &list) {
+		// TODO: merge this back into the algorithm description
 		string message("Cannot connect to an existing application instance for '");
-		message.append(app->getAppRoot());
+		message.append(container->app->getAppRoot());
 		message.append("': ");
-		message.append(e.what());
-		appList.remove(app);
-		if (appList.empty()) {
-			apps.erase(app->getAppRoot());
+		message.append(exceptionMessage);
+		
+		container->sessions--;
+		list.erase(container->iterator);
+		if (list.empty()) {
+			apps.erase(container->app->getAppRoot());
+			restartFileTimes.erase(container->app->getAppRoot());
 		}
 		count--;
 		active--;
+		activeOrMaxChanged.notify_all();
 		throw IOException(message);
 	}
 	
@@ -339,11 +366,13 @@ public:
 		#endif
 		data(new SharedData()),
 		lock(data->lock),
-		countOrMaxChanged(data->countOrMaxChanged),
+		activeOrMaxChanged(data->activeOrMaxChanged),
 		apps(data->apps),
 		max(data->max),
 		count(data->count),
-		active(data->active)
+		active(data->active),
+		inactiveApps(data->inactiveApps),
+		restartFileTimes(data->restartFileTimes)
 	{
 		detached = false;
 		done = false;
@@ -371,47 +400,69 @@ public:
 		 * See "doc/ApplicationPool Algorithm.txt" for a more readable description
 		 * of the algorithm.
 		 */
-		ApplicationPtr app;
-		ApplicationList *appList;
+		AppContainerPtr container;
+		AppContainerList *list;
 		mutex::scoped_lock l(lock);
-		
-		if (needsRestart(appRoot)) {
-			apps.erase(appRoot);
-		}
 		
 		try {
 			ApplicationMap::iterator it(apps.find(appRoot));
 			if (it != apps.end()) {
-				appList = it->second.get();
+				list = it->second.get();
 		
-				if (appList->front()->getSessions() == 0) {
-					app = appList->front();
-					appList->pop_front();
-					appList->push_back(app);
-					active++;
-				} else if (count < max) {
-					app = spawnManager.spawn(appRoot, lowerPrivilege, lowestUser);
-					appList->push_back(app);
+				if (list->front()->sessions == 0 || count == max) {
+					if (needsRestart(appRoot)) {
+						// ...
+					} else {
+						container = list->front();
+						list->pop_front();
+						list->push_back(container);
+						container->iterator = list->end();
+						container->iterator--;
+						if (container->sessions == 0) {
+							inactiveApps.erase(container->ia_iterator);
+						}
+						active++;
+					}
+				}
+				
+				if (container == NULL) {
+					container = ptr(new AppContainer());
+					container->app = spawnManager.spawn(appRoot,
+						lowerPrivilege, lowestUser);
+					container->sessions = 0;
+					list->push_back(container);
+					container->iterator = list->end();
+					container->iterator--;
 					count++;
-					countOrMaxChanged.notify_all();
 					active++;
-				} else {
-					app = appList->front();
-					appList->pop_front();
-					appList->push_back(app);
-					active++;
+					activeOrMaxChanged.notify_all();
 				}
 			} else {
-				while (count >= max) {
-					countOrMaxChanged.wait(l);
+				while (active >= max) {
+					activeOrMaxChanged.wait(l);
 				}
-				app = spawnManager.spawn(appRoot, lowerPrivilege, lowestUser);
-				appList = new ApplicationList();
-				appList->push_back(app);
-				apps[appRoot] = ptr(appList);
+				if (count == max) {
+					container = inactiveApps.front();
+					inactiveApps.pop_front();
+					list = apps[container->app->getAppRoot()].get();
+					list->erase(container->iterator);
+					if (list->empty()) {
+						apps.erase(container->app->getAppRoot());
+						restartFileTimes.erase(container->app->getAppRoot());
+					}
+					count--;
+				}
+				container = ptr(new AppContainer());
+				container->app = spawnManager.spawn(appRoot, lowerPrivilege, lowestUser);
+				container->sessions = 0;
+				list = new AppContainerList();
+				list->push_back(container);
+				container->iterator = list->end();
+				container->iterator--;
+				apps[appRoot] = ptr(list);
 				count++;
-				countOrMaxChanged.notify_all();
 				active++;
+				activeOrMaxChanged.notify_all();
 			}
 		} catch (const SpawnException &e) {
 			string message("Cannot spawn application '");
@@ -421,7 +472,8 @@ public:
 			throw SpawnException(message);
 		}
 		
-		app->setLastUsed(time(NULL));
+		container->lastUsed = time(NULL);
+		container->sessions++;
 		
 		// TODO: This should not just throw an exception.
 		// If we fail to connect to one application we should just use another, or
@@ -429,22 +481,29 @@ public:
 		// because every app might crash at startup. There should be a limit
 		// to the number of retries.
 		try {
-			return app->connect(SessionCloseCallback(data, app));
+			return container->app->connect(SessionCloseCallback(data, container));
 		} catch (const IOException &e) {
-			handleConnectException(e, app, *appList);
-			// Never reached; shut up compiler warning
-			return Application::SessionPtr();
+			handleConnectException(e.what(), container, *list);
 		} catch (const SystemException &e) {
-			handleConnectException(e, app, *appList);
-			// Never reached; shut up compiler warning
-			return Application::SessionPtr();
+			handleConnectException(e.sys(), container, *list);
 		}
+		// Never reached; shut up compiler warning
+		return Application::SessionPtr();
+	}
+	
+	virtual void clear() {
+		mutex::scoped_lock l(lock);
+		apps.clear();
+		inactiveApps.clear();
+		restartFileTimes.clear();
+		count = 0;
+		active = 0;
 	}
 	
 	virtual void setMax(unsigned int max) {
 		mutex::scoped_lock l(lock);
 		this->max = max;
-		countOrMaxChanged.notify_all();
+		activeOrMaxChanged.notify_all();
 	}
 	
 	virtual unsigned int getActive() const {
