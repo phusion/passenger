@@ -1,3 +1,10 @@
+if defined?(RDoc::Diagram)
+	RDoc::Diagram.class_eval do
+		remove_const(:FONT)
+		const_set(:FONT, "\"Bitstream Vera Sans\"")
+	end
+end
+
 module RDoc
 module Page
 

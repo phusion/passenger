@@ -123,6 +123,7 @@ The following software is optional:
 * RDoc, for generating HTML Ruby API documentation
 * Doxygen, for generating HTML C++ API documentation
 * dot, for generating diagrams in HTML API documentation
+* The font "Bitstream Vera Sans", used in the class diagrams. See http://www.gnome.org/fonts
 
 === Compilation, unit tests and other tasks
 
