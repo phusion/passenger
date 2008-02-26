@@ -136,7 +136,7 @@ subdir 'ext/apache2' do
 		end
 	end
 	
-	task :clean => 'apache2:clean'.to_sym
+	task :clean => :'apache2:clean'
 	
 	desc "Remove generated files for mod_passenger Apache 2 module"
 	task 'apache2:clean' do
@@ -175,7 +175,7 @@ end
 
 subdir 'test' do
 	desc "Run all unit tests (but not integration tests)"
-	task :test => ['test:apache2'.to_sym, 'test:ruby'.to_sym]
+	task :test => [:'test:apache2', :'test:ruby']
 	
 	desc "Run unit tests for the Apache 2 module"
 	task 'test:apache2' => 'Apache2ModuleTests' do
