@@ -426,8 +426,8 @@ public:
 	virtual Application::SessionPtr
 	get(const string &appRoot, bool lowerPrivilege = true, const string &lowestUser = "nobody") {
 		/*
-		 * See "doc/ApplicationPool Algorithm.txt" for a more readable description
-		 * of the algorithm.
+		 * See "doc/ApplicationPool algorithm.txt" for a more readable
+		 * and detailed description of the algorithm implemented here.
 		 */
 		AppContainerPtr container;
 		AppContainerList *list;
@@ -440,7 +440,23 @@ public:
 		
 				if (list->front()->sessions == 0 || count == max) {
 					if (needsRestart(appRoot)) {
-						// ...
+						AppContainerList::iterator it;
+						for (it = list->begin(); it != list->end(); it++) {
+							container = *it;
+							if (container->sessions == 0) {
+								inactiveApps.erase(container->ia_iterator);
+							} else {
+								active--;
+							}
+							list->erase(container->iterator);
+						}
+						try {
+							spawnManager.reload(appRoot);
+						} catch (const exception &e) {
+							apps.erase(appRoot);
+							throw;
+						}
+						container.reset();
 					} else {
 						container = list->front();
 						list->pop_front();
@@ -493,7 +509,7 @@ public:
 				active++;
 				activeOrMaxChanged.notify_all();
 			}
-		} catch (const SpawnException &e) {
+		} catch (const exception &e) {
 			string message("Cannot spawn application '");
 			message.append(appRoot);
 			message.append("': ");
