@@ -9,7 +9,7 @@ using namespace boost;
 
 /**
  * This file is used as a template to test the different ApplicationPool implementations.
- * It is #included in StandardApplicationPoolTest.cpp and ApplicationClientServerTest.cpp
+ * It is #included in StandardApplicationPoolTest.cpp and ApplicationServer_ApplicationPoolTest.cpp
  */
 #ifdef USE_TEMPLATE
 
@@ -47,7 +47,7 @@ using namespace boost;
 		return result;
 	}
 
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 1) {
+	TEST_METHOD(1) {
 		// Calling ApplicationPool.get() once should return a valid Session.
 		Application::SessionPtr session(pool->get("stub/railsapp"));
 		session->sendHeaders(createRequestHeaders());
@@ -59,7 +59,7 @@ using namespace boost;
 		ensure(result.find("hello world") != string::npos);
 	}
 	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 2) {
+	TEST_METHOD(2) {
 		// Verify that the pool spawns a new app, and that
 		// after the session is closed, the app is kept around.
 		Application::SessionPtr session(pool->get("stub/railsapp"));
@@ -70,7 +70,7 @@ using namespace boost;
 		ensure_equals("After the session is closed, the app is kept around", pool->getCount(), 1u);
 	}
 	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 4) {
+	TEST_METHOD(4) {
 		// If we call get() with an application root, then we close the session,
 		// and then we call get() again with the same application root,
 		// then the pool should not have spawned more than 1 app in total.
@@ -80,7 +80,7 @@ using namespace boost;
 		ensure_equals(pool->getCount(), 1u);
 	}
 	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 5) {
+	TEST_METHOD(5) {
 		// If we call get() with an application root, then we call get() again before closing
 		// the session, then the pool should have spawned 2 apps in total.
 		Application::SessionPtr session(pool->get("stub/railsapp"));
@@ -88,7 +88,7 @@ using namespace boost;
 		ensure_equals(pool->getCount(), 2u);
 	}
 	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 6) {
+	TEST_METHOD(6) {
 		// If we call get() twice with different application roots,
 		// then the pool should spawn two different apps.
 		Application::SessionPtr session(pool->get("stub/railsapp"));
@@ -107,7 +107,7 @@ using namespace boost;
 		session2.reset();
 	}
 	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 7) {
+	TEST_METHOD(7) {
 		// If we call get() twice with different application roots,
 		// and we close both sessions, then both 2 apps should still
 		// be in the pool.
@@ -119,7 +119,7 @@ using namespace boost;
 		ensure_equals(pool->getCount(), 2u);
 	}
 	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 8) {
+	TEST_METHOD(8) {
 		// If we call get() even though the pool is already full
 		// (active == max), and the application root is already
 		// in the pool, then the pool should have tried to open
@@ -131,7 +131,7 @@ using namespace boost;
 		ensure_equals("No new app has been spawned", pool->getCount(), 1u);
 	}
 	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 9) {
+	TEST_METHOD(9) {
 		// If ApplicationPool spawns a new instance,
 		// and we kill it, then the next get() with the
 		// same application root should throw an exception.
@@ -171,7 +171,7 @@ using namespace boost;
 		}
 	};
 
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 10) {
+	TEST_METHOD(10) {
 		// If we call get() even though the pool is already full
 		// (active == max), and the application root is *not* already
 		// in the pool, then the pool will wait until enough sessions
@@ -198,7 +198,7 @@ using namespace boost;
 		delete thr;
 	}
 	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 12) {
+	TEST_METHOD(12) {
 		// If we call get(), and:
 		// * the pool is already full, but there are inactive apps
 		//   (active < count && count == max)
@@ -219,13 +219,13 @@ using namespace boost;
 		ensure_equals(pool->getCount(), 2u);
 	}
 	
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 13) {
+	TEST_METHOD(13) {
 		// Test whether Session is still usable after the Application has been destroyed.
 	}
 	#endif
 	
 	#if 0
-	TEST_METHOD(APPLICATION_POOL_TEST_START + 10) {
+	TEST_METHOD(10) {
 		// Test whether get() throws the right exceptions
 		// TODO
 	}
