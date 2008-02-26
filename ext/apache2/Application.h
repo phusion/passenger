@@ -219,6 +219,7 @@ private:
 	string appRoot;
 	pid_t pid;
 	string listenSocketName;
+	bool usingAbstractNamespace;
 	int ownerPipe;
 
 public:
@@ -230,19 +231,27 @@ public:
 	 *             but the path does not have to be absolute.
 	 * @param pid The process ID of this application instance.
 	 * @param listenSocketName The name of the listener socket of this application instance.
+	 * @param usingAbstractNamespace Whether <tt>listenSocketName</tt> refers to a Unix
+	 *        socket on the abstract namespace. Note that listenSocketName must not
+	 *        contain the leading null byte, even if it's an abstract namespace socket.
 	 * @param ownerPipe The owner pipe of this application instance.
 	 * @post getAppRoot() == theAppRoot && getPid() == pid
 	 */
-	Application(const string &theAppRoot, pid_t pid, const string &listenSocketName, int ownerPipe) {
+	Application(const string &theAppRoot, pid_t pid, const string &listenSocketName,
+	            bool usingAbstractNamespace, int ownerPipe) {
 		appRoot = theAppRoot;
 		this->pid = pid;
 		this->listenSocketName = listenSocketName;
+		this->usingAbstractNamespace = usingAbstractNamespace;
 		this->ownerPipe = ownerPipe;
 		P_TRACE("Application " << this << ": created.");
 	}
 	
 	virtual ~Application() {
 		close(ownerPipe);
+		if (usingAbstractNamespace) {
+			unlink(listenSocketName.c_str());
+		}
 		P_TRACE("Application " << this << ": destroyed.");
 	}
 	
@@ -319,8 +328,12 @@ public:
 		
 		struct sockaddr_un addr;
 		addr.sun_family = AF_UNIX;
-		strncpy(addr.sun_path + 1, listenSocketName.c_str(), sizeof(addr.sun_path) - 1);
-		addr.sun_path[0] = '\0';
+		if (usingAbstractNamespace) {
+			strncpy(addr.sun_path + 1, listenSocketName.c_str(), sizeof(addr.sun_path) - 1);
+			addr.sun_path[0] = '\0';
+		} else {
+			strncpy(addr.sun_path, listenSocketName.c_str(), sizeof(addr.sun_path));
+		}
 		addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
 		do {
 			ret = ::connect(fd, (const sockaddr *) &addr, sizeof(addr));

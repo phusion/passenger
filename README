@@ -30,7 +30,10 @@ on Apache a breeze. It follows the usual Ruby on Rails conventions, such as
     management.
   * Passenger makes no use of temporary files or sockets, so even after a hard
     system crash, the administrator does not have to manually clean up stale
-    files.
+    files. *
+    
+    <em>* This is only possible on Linux. On systems such as BSD, Passenger
+    falls back to using temporary Unix sockets.</em>
   * If Passenger encounters an error, and it knows that it can be automatically
     recovered, then Passenger will do that. The administrator should not have
     to run server monitoring software to monitor Rails applications. Rails
