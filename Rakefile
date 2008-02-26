@@ -234,9 +234,9 @@ end
 
 subdir 'doc' do
 	desc "Generate all documentation"
-	task :doc => [:rdoc, :doxygen, 'Security of user switching support.txt']
+	task :doc => [:rdoc, :doxygen, 'Security of user switching support.html']
 	
-	file 'Security of user switching support.txt' do
+	file 'Security of user switching support.html' do
 		sh "asciidoc -a toc -a numbered -a toclevels=3 'Security of user switching support.txt'"
 	end
 	
