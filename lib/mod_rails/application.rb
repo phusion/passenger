@@ -10,8 +10,7 @@ class Application
 	attr_reader :pid
 	
 	# The name of the Unix socket on which the application instance will accept
-	# new connections. This name refers to a socket in the abstract namespace,
-	# but does not contain the leading null byte.
+	# new connections.
 	attr_reader :listen_socket_name
 	
 	attr_reader :owner_pipe
@@ -28,11 +27,21 @@ class Application
 
 	# Creates a new instance of Application. The parameters correspond with the attributes
 	# of the same names. No exceptions will be thrown.
-	def initialize(app_root, pid, listen_socket_name, owner_pipe)
+	def initialize(app_root, pid, listen_socket_name, using_abstract_namespace, owner_pipe)
 		@app_root = app_root
 		@pid = pid
 		@listen_socket_name = listen_socket_name
+		@using_abstract_namespace = using_abstract_namespace
 		@owner_pipe = owner_pipe
+	end
+	
+	# Whether _listen_socket_name_ refers to a Unix socket in the abstract namespace.
+	# In any case, _listen_socket_name_ does *not* contain the leading null byte.
+	#
+	# Note that abstract namespace Unix sockets are only supported on Linux
+	# at the moment.
+	def using_abstract_namespace?
+		return @using_abstract_namespace
 	end
 	
 	# Close the connection with the application instance. If there are no other

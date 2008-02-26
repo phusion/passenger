@@ -59,9 +59,10 @@ class ApplicationSpawner < AbstractServer
 	# application's exception message will be printed to standard error.
 	def spawn_application
 		server.write("spawn_application")
-		pid, socket_name = server.read
+		pid, socket_name, using_abstract_namespace = server.read
 		owner_pipe = server.recv_io
-		return Application.new(@app_root, pid, socket_name, owner_pipe)
+		return Application.new(@app_root, pid, socket_name,
+			using_abstract_namespace == "true", owner_pipe)
 	rescue SystemCallError, IOError, SocketError
 		raise SpawnError, "Unable to spawn the application: application died unexpectedly during initialization."
 	end
@@ -154,7 +155,8 @@ private
 		reader, writer = IO.pipe
 		begin
 			handler = RequestHandler.new(reader)
-			client.write(Process.pid, handler.socket_name)
+			client.write(Process.pid, handler.socket_name,
+				handler.using_abstract_namespace?)
 			client.send_io(writer)
 			writer.close
 			client.close

@@ -210,12 +210,20 @@ private:
 				e.what());
 		}
 		
-		if (args.size() != 2) {
+		if (args.size() != 3) {
 			close(ownerPipe);
 			throw SpawnException("The spawn server sent an unknown message.");
 		}
+		
 		pid_t pid = atoi(args[0]);
-		return ApplicationPtr(new Application(appRoot, pid, args[1], ownerPipe));
+		bool usingAbstractNamespace = args[2] == "true";
+		
+		if (!usingAbstractNamespace) {
+			chmod(args[1].c_str(), S_IRUSR | S_IWUSR);
+			chown(args[1].c_str(), getuid(), getgid());
+		}
+		return ApplicationPtr(new Application(appRoot, pid, args[1],
+			usingAbstractNamespace, ownerPipe));
 	}
 	
 	ApplicationPtr

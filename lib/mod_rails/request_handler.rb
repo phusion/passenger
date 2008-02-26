@@ -1,3 +1,4 @@
+require 'socket'
 require 'mod_rails/message_channel'
 require 'mod_rails/cgi_fixed'
 require 'mod_rails/utils'
@@ -20,18 +21,9 @@ class RequestHandler
 	attr_reader :socket_name
 
 	def initialize(owner_pipe)
-		# This Unix socket is in the abstract namespace.
-		done = false
-		while !done
-			begin
-				@socket_name = "/tmp/passenger.#{generate_random_id}"
-				@socket_name = @socket_name.slice(0, NativeSupport::UNIX_PATH_MAX - 2)
-				fd = NativeSupport.create_unix_socket("\x00#{socket_name}", BACKLOG_SIZE)
-				@socket = IO.new(fd)
-				done = true
-			rescue Errno::EADDRINUSE
-				done = false
-			end
+		@using_abstract_namespace = create_unix_socket_on_abstract_namespace
+		if !@using_abstract_namespace	
+			create_unix_socket_on_filesystem
 		end
 		@owner_pipe = owner_pipe
 		@previous_signal_handlers = {}
@@ -40,6 +32,13 @@ class RequestHandler
 	def cleanup
 		@socket.close rescue nil
 		@owner_pipe.close rescue nil
+		if !using_abstract_namespace?
+			File.unlink(@socket_name) rescue nil
+		end
+	end
+	
+	def using_abstract_namespace?
+		return @using_abstract_namespace
 	end
 	
 	def main_loop
@@ -72,6 +71,37 @@ class RequestHandler
 	end
 
 private
+	def create_unix_socket_on_abstract_namespace
+		while true
+			begin
+				@socket_name = generate_random_id
+				@socket_name = @socket_name.slice(0, NativeSupport::UNIX_PATH_MAX - 2)
+				fd = NativeSupport.create_unix_socket("\x00#{socket_name}", BACKLOG_SIZE)
+				@socket = IO.new(fd)
+				return true
+			rescue Errno::EADDRINUSE
+				# Do nothing, try again with another name.
+			rescue Errno::ENOENT
+				# Abstract namespace sockets not supported on this system.
+				return false
+			end
+		end
+	end
+	
+	def create_unix_socket_on_filesystem
+		done = false
+		while !done
+			begin
+				@socket_name = "/tmp/#{generate_random_id}"
+				@socket_name = @socket_name.slice(0, NativeSupport::UNIX_PATH_MAX - 1)
+				@socket = UNIXServer.new(@socket_name)
+				done = true
+			rescue Errno::EADDRINUSE
+				# Do nothing, try again with another name.
+			end
+		end
+	end
+
 	def reset_signal_handlers
 		Signal.list.each_key do |signal|
 			begin

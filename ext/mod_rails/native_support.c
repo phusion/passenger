@@ -148,5 +148,7 @@ Init_native_support() {
 	rb_define_singleton_method(mNativeSupport, "recv_fd", recv_fd, 1);
 	rb_define_singleton_method(mNativeSupport, "create_unix_socket", create_unix_socket, 2);
 	rb_define_singleton_method(mNativeSupport, "accept", f_accept, 1);
+	
+	/* The maximum length of a Unix socket path, including terminating null. */
 	rb_define_const(mNativeSupport, "UNIX_PATH_MAX", INT2NUM(sizeof(addr.sun_path)));
 }
