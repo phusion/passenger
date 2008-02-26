@@ -2,6 +2,7 @@
 ### Please customize it for your system.
 
 # These are the user names of two normal, non-administrator users.
+# Preferably, these are user accounts that are normally not used.
 normal_user_1: games
 normal_user_2: daemon
 

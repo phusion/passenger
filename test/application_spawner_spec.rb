@@ -77,8 +77,13 @@ if Process.euid == ApplicationSpawner::ROOT_UID
 		it_should_behave_like "spawner that supports lowering of privileges"
 		
 		def spawn_app(options = {})
-			lowest_user = options[:lowest_user] || CONFIG['lowest_user']
-			@spawner = ApplicationSpawner.new(@test_app, true, lowest_user)
+			options = {
+				:lower_privilege => true,
+				:lowest_user => CONFIG['lowest_user']
+			}.merge(options)
+			@spawner = ApplicationSpawner.new(@test_app,
+				options[:lower_privilege],
+				options[:lowest_user])
 			@spawner.start
 			begin
 				app = @spawner.spawn_application
