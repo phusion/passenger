@@ -158,14 +158,16 @@ class TEST
 		'SpawnManagerTest.o' => %w(SpawnManagerTest.cpp
 			../ext/apache2/SpawnManager.h
 			../ext/apache2/Application.h),
-		'ApplicationPoolClientServerTest.o' => %w(ApplicationPoolClientServerTest.cpp
-			ApplicationPoolTestTemplate.cpp
+		'ApplicationPoolServerTest.o' => %w(ApplicationPoolServerTest.cpp
+			../ext/apache2/ApplicationPoolClientServer.h),
+		'ApplicationPoolServer_ApplicationPoolTest.o' => %w(ApplicationPoolServer_ApplicationPoolTest.cpp
+			ApplicationPoolTest.cpp
 			../ext/apache2/ApplicationPoolClientServer.h
 			../ext/apache2/ApplicationPool.h
 			../ext/apache2/SpawnManager.h
 			../ext/apache2/Application.h),
 		'StandardApplicationPoolTest.o' => %w(StandardApplicationPoolTest.cpp
-			ApplicationPoolTestTemplate.cpp
+			ApplicationPoolTest.cpp
 			../ext/apache2/ApplicationPool.h
 			../ext/apache2/SpawnManager.h
 			../ext/apache2/Application.h),

@@ -17,6 +17,5 @@ namespace tut {
 	DEFINE_TEST_GROUP(StandardApplicationPoolTest);
 
 	#define USE_TEMPLATE
-	#define APPLICATION_POOL_TEST_START 0
-	#include "ApplicationPoolTestTemplate.cpp"
+	#include "ApplicationPoolTest.cpp"
 }
