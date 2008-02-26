@@ -6,10 +6,11 @@ using namespace Passenger;
 
 namespace tut {
 	struct StandardApplicationPoolTest {
-		ApplicationPoolPtr pool;
+		ApplicationPoolPtr pool, pool2;
 		
 		StandardApplicationPoolTest() {
 			pool = ptr(new StandardApplicationPool("../bin/passenger-spawn-server"));
+			pool2 = pool;
 		}
 	};
 
