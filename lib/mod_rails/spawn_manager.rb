@@ -18,6 +18,7 @@ class SpawnManager < AbstractServer
 			cleaner_thread_main
 		end
 		define_message_handler(:spawn_application, :handle_spawn_application)
+		define_message_handler(:reload, :handle_reload)
 		define_signal_handler('SIGHUP', :reload)
 	end
 
@@ -34,6 +35,27 @@ class SpawnManager < AbstractServer
 		end
 		spawner.time = Time.now
 		return spawner.spawn_application(app_root, lower_privilege, lowest_user)
+	end
+	
+	# Remove the cached application instances at the given application root.
+	# If nil is specified as application root, then all cached application
+	# instances will be removed, no matter the application root.
+	#
+	# _Long description:_
+	# Application code might be cached in memory. But once it a while, it will
+	# be necessary to reload the code for an application, such as after
+	# deploying a new version of the application. This method makes sure that
+	# any cached application code is removed, so that the next time an
+	# application instance is spawned, the application code will be freshly
+	# loaded into memory.
+	#
+	# Raises IOError if something went wrong.
+	def reload(app_root = nil)
+		@lock.synchronize do
+			@spawners.each_pair do |framework_version, spawner|
+				spawner.reload(app_root)
+			end
+		end
 	end
 	
 	def cleanup
@@ -56,6 +78,10 @@ private
 		client.write(app.pid, app.listen_socket_name)
 		client.send_io(app.owner_pipe)
 		app.close
+	end
+	
+	def handle_reload(app_root)
+		reload(app_root)
 	end
 	
 	def cleaner_thread_main

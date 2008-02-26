@@ -188,7 +188,8 @@ private:
 				lowestUser.c_str(),
 				NULL);
 		} catch (const SystemException &e) {
-			throw SpawnException(string("Could not write to the spawn server: ") + e.sys());
+			throw SpawnException(string("Could not write 'spawn_application' "
+				"command to the spawn server: ") + e.sys());
 		}
 		try {
 			if (!channel.read(args)) {
@@ -235,6 +236,42 @@ private:
 		}
 		if (restarted) {
 			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser);
+		} else {
+			throw SpawnException("The spawn server died unexpectedly, and restarting it failed.");
+		}
+	}
+	
+	/**
+	 * Send the reload command to the spawn server.
+	 *
+	 * @param appRoot The application root to reload.
+	 * @throws SystemException Something went wrong.
+	 */
+	void sendReloadCommand(const string &appRoot) {
+		try {
+			channel.write("reload", appRoot.c_str(), NULL);
+		} catch (const SystemException &e) {
+			throw SystemException("Could not write 'reload' command "
+				"to the spawn server", e.code());
+		}
+	}
+	
+	void handleReloadException(const SystemException &e, const string &appRoot) {
+		bool restarted;
+		try {
+			P_DEBUG("Spawn server died. Attempting to restart it...");
+			restartServer();
+			P_DEBUG("Restart seems to be successful.");
+			restarted = true;
+		} catch (const IOException &e) {
+			P_DEBUG("Restart failed: " << e.what());
+			restarted = false;
+		} catch (const SystemException &e) {
+			P_DEBUG("Restart failed: " << e.what());
+			restarted = false;
+		}
+		if (restarted) {
+			return sendReloadCommand(appRoot);
 		} else {
 			throw SpawnException("The spawn server died unexpectedly, and restarting it failed.");
 		}
@@ -341,6 +378,29 @@ public:
 			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser);
 		} catch (const SpawnException &e) {
 			return handleSpawnException(e, appRoot, lowerPrivilege, lowestUser);
+		}
+	}
+	
+	/**
+	 * Remove the cached application instances at the given application root.
+	 *
+	 * Application code might be cached in memory. But once it a while, it will
+	 * be necessary to reload the code for an application, such as after
+	 * deploying a new version of the application. This method makes sure that
+	 * any cached application code is removed, so that the next time an
+	 * application instance is spawned, the application code will be freshly
+	 * loaded into memory.
+	 *
+	 * @throws SystemException Unable to communicate with the spawn server,
+	 *         even after a restart.
+	 * @throws SpawnException The spawn server died unexpectedly, and a
+	 *         restart was attempted, but it failed.
+	 */
+	void reload(const string &appRoot) {
+		try {
+			return sendReloadCommand(appRoot);
+		} catch (const SystemException &e) {
+			return handleReloadException(e, appRoot);
 		}
 	}
 	

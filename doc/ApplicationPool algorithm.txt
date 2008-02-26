@@ -131,7 +131,11 @@ function get(app_root):
 						active--
 					list.remove(container.iterator)
 					count--
-				Tell spawn server to reload code for app_root.
+				try:
+					Tell spawn server to reload code for app_root.
+				on exception:
+					apps.remove(app_root)
+					propagate exception
 				container = null
 			else:
 				container = list.front

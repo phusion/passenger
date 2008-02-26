@@ -64,7 +64,7 @@ class FrameworkSpawner < AbstractServer
 	# If the FrameworkSpawner server hasn't already been started, a ServerNotStarted
 	# will be raised.
 	# If the RoR application failed to start (which may be a problem in the application,
-	# or a problem in the Ruby on Rails framework), then a ApplicationSpawner::SpawnError
+	# or a problem in the Ruby on Rails framework), then an ApplicationSpawner::SpawnError
 	# will be raised. The application's exception message will be printed to standard
 	# error.
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody")
@@ -82,13 +82,26 @@ class FrameworkSpawner < AbstractServer
 		end
 	end
 	
+	# Remove the cached application instances at the given application root.
+	# If nil is specified as application root, then all cached application
+	# instances will be removed, no matter the application root.
+	#
+	# _Long description:_
+	# Application code might be cached in memory by a FrameworkSpawner. But
+	# once it a while, it will be necessary to reload the code for an
+	# application, such as after deploying a new version of the application.
+	# This method makes sure that any cached application code is removed, so
+	# that the next time an application instance is spawned, the application
+	# code will be freshly loaded into memory.
+	#
+	# Raises IOError if something went wrong.
 	def reload(app_root = nil)
 		if app_root.nil?
 			server.write("reload")
 		else
 			server.write("reload", normalize_path(app_root))
 		end
-	rescue SystemCallError, SocketError
+	rescue SystemCallError, IOError, SocketError
 		raise IOError, "Cannot send reload command to the framework spawner server."
 	end
 
@@ -183,8 +196,8 @@ private
 				spawner = @spawners[app_root]
 				if spawner
 					spawner.stop
+					@spawners.delete(app_root)
 				end
-				@spawners.delete(app_root)
 			end
 		end
 	end

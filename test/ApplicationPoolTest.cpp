@@ -235,6 +235,11 @@ using namespace boost;
 		ensure(result.find("hello world") != string::npos);
 	}
 	
+	TEST_METHOD(14) {
+		// If tmp/restart.txt is present, then the applications under app_root
+		// should be restarted.
+	}
+	
 	#if 0
 	TEST_METHOD(10) {
 		// Test whether get() throws the right exceptions
