@@ -196,6 +196,11 @@ private:
 			data->server = sock;
 		}
 		
+		virtual void clear() {
+			MessageChannel channel(data->server);
+			channel.write("clear", NULL);
+		}
+		
 		virtual void setMax(unsigned int max) {
 			MessageChannel channel(data->server);
 			channel.write("setMax", toString(max).c_str(), NULL);
@@ -395,6 +400,9 @@ private:
 				
 				} else if (args[0] == "close" && args.size() == 2) {
 					sessions.erase(atoi(args[1]));
+				
+				} else if (args[0] == "clear" && args.size() == 1) {
+					pool.clear();
 				
 				} else if (args[0] == "setMax" && args.size() == 2) {
 					pool.setMax(atoi(args[1]));

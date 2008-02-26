@@ -221,8 +221,19 @@ using namespace boost;
 	
 	TEST_METHOD(13) {
 		// Test whether Session is still usable after the Application has been destroyed.
+		Application::SessionPtr session(pool->get("stub/railsapp"));
+		pool->clear();
+		pool.reset();
+		pool2.reset();
+		
+		session->sendHeaders(createRequestHeaders());
+		session->closeWriter();
+		
+		int reader = session->getReader();
+		string result(readAll(reader));
+		session->closeReader();
+		ensure(result.find("hello world") != string::npos);
 	}
-	#endif
 	
 	#if 0
 	TEST_METHOD(10) {
@@ -232,5 +243,6 @@ using namespace boost;
 	
 	// TODO: test spawning application as a different user
 	// TODO: test restarting of applications
+	#endif
 
 #endif /* USE_TEMPLATE */

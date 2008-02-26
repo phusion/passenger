@@ -114,6 +114,14 @@ public:
 	virtual Application::SessionPtr get(const string &appRoot, bool lowerPrivilege = true, const string &lowestUser = "nobody") = 0;
 	
 	/**
+	 * Clear all application instances that are currently in the pool.
+	 *
+	 * This method is used by unit tests to verify that the implementation is correct,
+	 * and thus should not be called directly.
+	 */
+	virtual void clear() = 0;
+	
+	/**
 	 * Set a hard limit on the number of application instances that this ApplicationPool
 	 * may spawn. The exact behavior depends on the used algorithm, and is not specified by
 	 * these API docs.
@@ -481,6 +489,15 @@ public:
 		}
 		// Never reached; shut up compiler warning
 		return Application::SessionPtr();
+	}
+	
+	virtual void clear() {
+		mutex::scoped_lock l(lock);
+		apps.clear();
+		inactiveApps.clear();
+		restartFileTimes.clear();
+		count = 0;
+		active = 0;
 	}
 	
 	virtual void setMax(unsigned int max) {
