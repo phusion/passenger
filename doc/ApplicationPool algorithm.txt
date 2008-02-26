@@ -214,17 +214,16 @@ function needs_restart(app_root):
 	restart_file = "$app_root/tmp/restart.txt"
 	s = stat(restart_file)
 	if s != null:
-		if delete_file(restart_file):
+		if delete_file(restart_file) || file is already deleted:
 			restart_file_times.remove(app_root)
 			result = true
 		else:
 			last_restart_file_time = restart_file_times[app_root]
 			if last_restart_time == null:
-				restart_times[app_root] = current_time()
 				result = true
 			else:
 				result = s.mtime != last_restart_file_time
-				restart_file_times[app_root] = s.mtime
+			restart_file_times[app_root] = s.mtime
 	else:
 		restart_file_times.remove(app_root)
 		result = false
