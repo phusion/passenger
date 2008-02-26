@@ -49,6 +49,13 @@ shared_examples_for "spawner that supports lowering of privileges" do
 		end
 	end
 	
+	it "should not switch user if _lower_privilege_ is set to false" do
+		File.chown(uid_for('normal_user_2'), nil, @environment_rb)
+		spawn_app(:lower_privilege => false) do |app|
+			user_of_process(app.pid).should == user_of_process(Process.pid)
+		end
+	end
+	
 	def uid_for(name)
 		return Etc.getpwnam(CONFIG[name]).uid
 	end
