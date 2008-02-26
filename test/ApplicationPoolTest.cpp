@@ -314,7 +314,6 @@ using namespace boost;
 	}
 	
 	// TODO: test spawning application as a different user
-	// TODO: test restarting of applications
 	#endif
 
 #endif /* USE_TEMPLATE */
