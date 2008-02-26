@@ -149,7 +149,7 @@ end
 ##### Unit tests
 
 class TEST
-	CXXFLAGS = ::CXXFLAGS + " -Isupport -DTESTING_SPAWN_MANAGER "
+	CXXFLAGS = ::CXXFLAGS + " -Isupport -DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL "
 	AP2_FLAGS = "-I../ext/apache2 -I../ext #{APR1_FLAGS}"
 	
 	AP2_OBJECTS = {

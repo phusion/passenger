@@ -1,7 +1,9 @@
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
-#include <errno.h>
 #include <cstring>
+#include <cstdlib>
+#include <cerrno>
 #include <signal.h>
 #include <boost/thread.hpp>
 
@@ -238,6 +240,71 @@ using namespace boost;
 	TEST_METHOD(14) {
 		// If tmp/restart.txt is present, then the applications under app_root
 		// should be restarted.
+		struct stat buf;
+		Application::SessionPtr session1 = pool->get("stub/railsapp");
+		Application::SessionPtr session2 = pool2->get("stub/railsapp");
+		session1.reset();
+		session2.reset();
+		
+		system("touch stub/railsapp/tmp/restart.txt");
+		pool->get("stub/railsapp");
+		
+		ensure_equals("No apps are active", pool->getActive(), 0u);
+		ensure_equals("Both apps are killed, and a new one was spawned",
+			pool->getCount(), 1u);
+		ensure("Restart file has been deleted",
+			stat("stub/railsapp/tmp/restart.txt", &buf) == -1
+			&& errno == ENOENT);
+	}
+	
+	TEST_METHOD(15) {
+		// If tmp/restart.txt is present, but cannot be deleted, then
+		// the applications under app_root should still be restarted.
+		// However, a subsequent get() should not result in a restart.
+		pid_t old_pid, pid;
+		struct stat buf;
+		Application::SessionPtr session1 = pool->get("stub/railsapp");
+		Application::SessionPtr session2 = pool2->get("stub/railsapp");
+		session1.reset();
+		session2.reset();
+		
+		setenv("nextRestartTxtDeletionShouldFail", "1", 1);
+		system("touch stub/railsapp/tmp/restart.txt");
+		
+		old_pid = pool->get("stub/railsapp")->getPid();
+		ensure("Restart file has not been deleted",
+			stat("stub/railsapp/tmp/restart.txt", &buf) == 0);
+		
+		setenv("nextRestartTxtDeletionShouldFail", "1", 1);
+		pid = pool->get("stub/railsapp")->getPid();
+		ensure_equals("The app was not restarted", pid, old_pid);
+		
+		unlink("stub/railsapp/tmp/restart.txt");
+	}
+	
+	TEST_METHOD(16) {
+		// If tmp/restart.txt is present, but cannot be deleted, then
+		// the applications under app_root should still be restarted.
+		// A subsequent get() should only restart if we've changed
+		// restart.txt's mtime.
+		pid_t old_pid;
+		Application::SessionPtr session1 = pool->get("stub/railsapp");
+		Application::SessionPtr session2 = pool2->get("stub/railsapp");
+		session1.reset();
+		session2.reset();
+		
+		setenv("nextRestartTxtDeletionShouldFail", "1", 1);
+		system("touch stub/railsapp/tmp/restart.txt");
+		old_pid = pool->get("stub/railsapp")->getPid();
+		ensure_equals(pool->getActive(), 0u);
+		ensure_equals(pool->getCount(), 1u);
+
+		sleep(1); // Allow the next mtime to be different.
+		system("touch stub/railsapp/tmp/restart.txt");
+		ensure("The app is restarted, and the last app instance was not reused",
+			pool2->get("stub/railsapp")->getPid() != old_pid);
+		
+		unlink("stub/railsapp/tmp/restart.txt");
 	}
 	
 	#if 0

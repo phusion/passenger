@@ -102,14 +102,6 @@ private
 			end
 		end
 	end
-	
-	def reload
-		@lock.synchronize do
-			@spawners.each_each do |spawner|
-				spawner.reload
-			end
-		end
-	end
 end
 
 end # module ModRails

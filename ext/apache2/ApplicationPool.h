@@ -17,6 +17,9 @@
 #include <unistd.h>
 #include <ctime>
 #include <cerrno>
+#ifdef TESTING_APPLICATION_POOL
+	#include <cstdlib>
+#endif
 
 #ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER
 	#include "DummySpawnManager.h"
@@ -288,7 +291,18 @@ private:
 		struct stat buf;
 		bool result;
 		if (stat(restartFile.c_str(), &buf) == 0) {
-			int ret = unlink(restartFile.c_str());
+			int ret;
+			#ifdef TESTING_APPLICATION_POOL
+				if (getenv("nextRestartTxtDeletionShouldFail") != NULL) {
+					unsetenv("nextRestartTxtDeletionShouldFail");
+					ret = -1;
+					errno = EACCES;
+				} else {
+					ret = unlink(restartFile.c_str());
+				}
+			#else
+				ret = unlink(restartFile.c_str());
+			#endif
 			if (ret == 0 || errno == ENOENT) {
 				restartFileTimes.erase(appRoot);
 				result = true;
@@ -448,7 +462,9 @@ public:
 							} else {
 								active--;
 							}
+							it--;
 							list->erase(container->iterator);
+							count--;
 						}
 						try {
 							spawnManager.reload(appRoot);
