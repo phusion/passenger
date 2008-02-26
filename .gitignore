@@ -12,6 +12,7 @@ ext/mod_rails/Makefile
 ext/boost/src/*.a
 doc/rdoc
 doc/cxxapi
+doc/*.html
 test/Apache2ModuleTests
 test/config.yml
 test/stub/railsapp/log/*

@@ -232,6 +232,35 @@ end
 
 ##### Documentation
 
+subdir 'doc' do
+	desc "Generate all documentation"
+	task :doc => [:rdoc, :doxygen, 'Security of user switching support.txt']
+	
+	file 'Security of user switching support.txt' do
+		sh "asciidoc -a toc -a numbered -a toclevels=3 'Security of user switching support.txt'"
+	end
+	
+	task :clobber => [:'doxygen:clobber'] do
+		sh "rm -f *.html"
+	end
+	
+	desc "Generate Doxygen C++ API documentation if necessary"
+	task :doxygen => ['cxxapi']
+	file 'cxxapi' => Dir['../ext/apache2/*.{h,c,cpp}'] do
+		sh "doxygen"
+	end
+
+	desc "Force generation of Doxygen C++ API documentation"
+	task :'doxygen:force' do
+		sh "doxygen"
+	end
+
+	desc "Remove generated Doxygen C++ API documentation"
+	task :'doxygen:clobber' do
+		sh "rm -rf cxxapi"
+	end
+end
+
 Rake::RDocTask.new do |rd|
 	rd.main = "README"
 	rd.rdoc_dir = "doc/rdoc"
@@ -240,29 +269,6 @@ Rake::RDocTask.new do |rd|
 	rd.title = "Passenger Ruby API"
 	rd.options << "-S" << "-N" << "-p" << "-d"
 end
-
-desc "Generate Doxygen C++ API documentation if necessary"
-task :doxygen => ['doc/cxxapi']
-file 'doc/cxxapi' => Dir['ext/apache2/*.{h,c,cpp}'] do
-	Dir.chdir('doc') do
-		sh "doxygen"
-	end
-end
-
-desc "Force generation of Doxygen C++ API documentation"
-task 'doxygen:force' do
-	Dir.chdir('doc') do
-		sh "doxygen"
-	end
-end
-
-desc "Remove generated Doxygen C++ API documentation"
-task 'doxygen:clobber' do
-	Dir.chdir('doc') do
-		sh "rm -rf cxxapi"
-	end
-end
-task :clobber => 'doxygen:clobber'
 
 
 ##### Gem
@@ -322,9 +328,10 @@ Rake::GemPackageTask.new(spec) do |pkg|
 	pkg.need_tar_gz = true
 end
 
-Rake::Task['package'].prerequisites.push('rdoc', 'doxygen')
-Rake::Task['package:gem'].prerequisites.push('rdoc', 'doxygen')
-Rake::Task['package:force'].prerequisites.push('rdoc', 'doxygen')
+Rake::Task['package'].prerequisites.push(:doc)
+Rake::Task['package:gem'].prerequisites.push(:doc)
+Rake::Task['package:force'].prerequisites.push(:doc)
+task :clobber => :'package:clean'
 
 
 ##### Misc
