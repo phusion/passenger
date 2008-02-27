@@ -139,6 +139,9 @@ To run the unit tests, run the following command:
 
  rake test
 
-For a full list of Rake tests, run:
+*Note*: some tests, such as the ones that test privilege lowering, require
+root privileges. Those will only be run if the test suit is run as root.
+
+For a full list of Rake tasks, run:
 
  rake -T

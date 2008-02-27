@@ -308,11 +308,7 @@ using namespace boost;
 	}
 	
 	#if 0
-	TEST_METHOD(10) {
-		// Test whether get() throws the right exceptions
-		// TODO
-	}
-	
+	// TODO: test whether restarting really results in code reload
 	// TODO: test spawning application as a different user
 	#endif
 
