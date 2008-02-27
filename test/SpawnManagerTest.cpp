@@ -61,6 +61,4 @@ namespace tut {
 			}
 		}
 	}
-	
-	// TODO: test spawning application as a different user
 }
