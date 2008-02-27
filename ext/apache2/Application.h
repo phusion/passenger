@@ -249,7 +249,7 @@ public:
 	
 	virtual ~Application() {
 		close(ownerPipe);
-		if (usingAbstractNamespace) {
+		if (!usingAbstractNamespace) {
 			unlink(listenSocketName.c_str());
 		}
 		P_TRACE("Application " << this << ": destroyed.");

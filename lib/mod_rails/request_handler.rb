@@ -1,4 +1,5 @@
 require 'socket'
+require 'base64'
 require 'mod_rails/message_channel'
 require 'mod_rails/cgi_fixed'
 require 'mod_rails/utils'
@@ -96,9 +97,10 @@ private
 		done = false
 		while !done
 			begin
-				@socket_name = "/tmp/passenger#{generate_random_id}"
+				@socket_name = "/tmp/passenger.#{generate_random_id}"
 				@socket_name = @socket_name.slice(0, NativeSupport::UNIX_PATH_MAX - 1)
 				@socket = UNIXServer.new(@socket_name)
+				File.chmod(0600, @socket_name)
 				done = true
 			rescue Errno::EADDRINUSE
 				# Do nothing, try again with another name.
@@ -169,8 +171,14 @@ private
 		socket.close
 	end
 	
+	# Generate a long, cryptographically secure random ID string, which
+	# is also a valid filename.
 	def generate_random_id
-		return File.read("/dev/urandom", 64).unpack("H*")[0]
+		data = Base64.encode64(File.read("/dev/urandom", 64))
+		data.gsub!("\n", '')
+		data.gsub!("/", '-')
+		data.gsub!(/==$/, '')
+		return data
 	end
 end
 
