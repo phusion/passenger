@@ -547,7 +547,6 @@ public:
 		detached = true;
 		close(connectSocket);
 		close(serverSocket);
-		serverThread->join();
 		delete serverThread;
 		
 		// A client thread might have a reference to a ClientInfo
