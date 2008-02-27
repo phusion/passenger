@@ -21,8 +21,12 @@ class RequestHandler
 	attr_reader :socket_name
 
 	def initialize(owner_pipe)
-		@using_abstract_namespace = create_unix_socket_on_abstract_namespace
-		if !@using_abstract_namespace	
+		if ENV['PASSENGER_NO_ABSTRACT_NAMESPACE_SOCKETS'].blank?
+			@using_abstract_namespace = create_unix_socket_on_abstract_namespace
+		else
+			@using_abstract_namespace = false
+		end
+		if !@using_abstract_namespace
 			create_unix_socket_on_filesystem
 		end
 		@owner_pipe = owner_pipe
@@ -92,7 +96,7 @@ private
 		done = false
 		while !done
 			begin
-				@socket_name = "/tmp/#{generate_random_id}"
+				@socket_name = "/tmp/passenger#{generate_random_id}"
 				@socket_name = @socket_name.slice(0, NativeSupport::UNIX_PATH_MAX - 1)
 				@socket = UNIXServer.new(@socket_name)
 				done = true
