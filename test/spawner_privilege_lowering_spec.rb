@@ -1,8 +1,7 @@
-$LOAD_PATH << "#{File.dirname(__FILE__)}/../lib"
 require 'support/config'
 require 'etc'
 
-shared_examples_for "spawner that supports lowering of privileges" do
+shared_examples_for "a spawner that supports lowering of privileges" do
 	before :all do
 		@environment_rb = "#{@test_app}/config/environment.rb"
 		@original_uid = File.stat(@environment_rb).uid

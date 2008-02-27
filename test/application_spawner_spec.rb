@@ -1,8 +1,7 @@
-$LOAD_PATH << "#{File.dirname(__FILE__)}/../lib"
+require 'support/config'
 require 'mod_rails/application_spawner'
 require 'abstract_server_spec'
 require 'spawner_privilege_lowering_spec'
-require 'support/config'
 include ModRails
 
 describe ApplicationSpawner do
@@ -74,7 +73,7 @@ if Process.euid == ApplicationSpawner::ROOT_UID
 			ENV['RAILS_ENV'] = 'production'
 		end
 	
-		it_should_behave_like "spawner that supports lowering of privileges"
+		it_should_behave_like "a spawner that supports lowering of privileges"
 		
 		def spawn_app(options = {})
 			options = {
