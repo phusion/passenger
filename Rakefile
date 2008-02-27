@@ -63,7 +63,7 @@ subdir 'ext/boost/src' do
 		# processes, sometimes pthread errors will occur. These errors are harmless
 		# and should be ignored. Defining NDEBUG guarantees that boost::thread() will
 		# not abort if such an error occured.
-		flags = "-O2 -fPIC -DNDEBUG #{MULTI_ARCH_FLAGS}"
+		flags = "-O2 -fPIC -I../.. -DNDEBUG #{MULTI_ARCH_FLAGS}"
 		compile_cxx "*.cpp", flags
 		create_static_library "libboost_thread.a", "*.o"
 	end
