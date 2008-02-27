@@ -79,10 +79,20 @@ private
 	def create_unix_socket_on_abstract_namespace
 		while true
 			begin
-				@socket_name = generate_random_id
+				# I have no idea why, but using base64-encoded IDs
+				# don't pass the unit tests. I couldn't find the cause
+				# of the problem. The system supports base64-encoded
+				# names for abstract namespace unix sockets just fine.
+				@socket_name = generate_random_id(:hex)
 				@socket_name = @socket_name.slice(0, NativeSupport::UNIX_PATH_MAX - 2)
 				fd = NativeSupport.create_unix_socket("\x00#{socket_name}", BACKLOG_SIZE)
 				@socket = IO.new(fd)
+				@socket.instance_eval do
+					def accept
+						fd = NativeSupport.accept(fileno)
+						return IO.new(fd)
+					end
+				end
 				return true
 			rescue Errno::EADDRINUSE
 				# Do nothing, try again with another name.
@@ -97,7 +107,7 @@ private
 		done = false
 		while !done
 			begin
-				@socket_name = "/tmp/passenger.#{generate_random_id}"
+				@socket_name = "/tmp/passenger.#{generate_random_id(:base64)}"
 				@socket_name = @socket_name.slice(0, NativeSupport::UNIX_PATH_MAX - 1)
 				@socket = UNIXServer.new(@socket_name)
 				File.chmod(0600, @socket_name)
@@ -131,8 +141,7 @@ private
 	def accept_connection
 		ios = select([@socket, @owner_pipe])[0]
 		if ios.include?(@socket)
-			fd = NativeSupport.accept(@socket.fileno)
-			return IO.new(fd)
+			return @socket.accept
 		else
 			# The other end of the pipe has been closed.
 			# So we know all owning processes have quit.
@@ -173,11 +182,17 @@ private
 	
 	# Generate a long, cryptographically secure random ID string, which
 	# is also a valid filename.
-	def generate_random_id
-		data = Base64.encode64(File.read("/dev/urandom", 64))
-		data.gsub!("\n", '')
-		data.gsub!("/", '-')
-		data.gsub!(/==$/, '')
+	def generate_random_id(method)
+		case method
+		when :base64
+			data = Base64.encode64(File.read("/dev/urandom", 64))
+			data.gsub!("\n", '')
+			data.gsub!("+", '')
+			data.gsub!("/", '')
+			data.gsub!(/==$/, '')
+		when :hex
+			data = File.read("/dev/urandom", 64).unpack('H*')[0]
+		end
 		return data
 	end
 end
