@@ -142,6 +142,11 @@ class AbstractServer
 		Process.kill(SERVER_TERMINATION_SIGNAL, @pid) rescue nil
 		Process.waitpid(@pid) rescue nil
 	end
+	
+	# Return the PID of the started server. This is only valid if start() has been called.
+	def server_pid
+		return @pid
+	end
 
 protected
 	# Close the file descriptors, as specified by _file_descriptors_to_close_.
