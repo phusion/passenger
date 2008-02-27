@@ -65,6 +65,6 @@ shared_examples_for "spawner that supports lowering of privileges" do
 	end
 	
 	def group_of_process(pid)
-		return `ps -p #{pid} -o group`.split("\n")[1].to_s.strip
+		return `ps -p #{pid} -o rgroup`.split("\n")[1].to_s.strip
 	end
 end
