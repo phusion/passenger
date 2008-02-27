@@ -1,9 +1,8 @@
-$LOAD_PATH << "#{File.dirname(__FILE__)}/../lib"
 require 'socket'
+require 'support/config'
 require 'mod_rails/message_channel'
 require 'mod_rails/utils'
 include ModRails
-include ModRails::Utils
 
 describe MessageChannel do
 	describe "scenarios with a single channel" do
@@ -122,7 +121,27 @@ describe MessageChannel do
 		end
 		
 		it "should have stream properties" do
-			violated "test not implemented yet"
+			garbage = File.read("stub/garbage1.dat")
+			spawn_process do
+				@channel.write("hello", "world")
+				@channel.write_scalar(garbage)
+				@channel.send_io(STDIN)
+				@channel.write_scalar(":-)")
+				
+				a = @channel.read_scalar
+				b = @channel.read
+				b << a
+				@channel.write(*b)
+			end
+			@channel.read.should == ["hello", "world"]
+			@channel.read_scalar.should == garbage
+			@channel.recv_io.close
+			@channel.read_scalar.should == ":-)"
+			
+			@channel.write_scalar("TASTE MY WRATH! ULTIMATE SWORD TECHNIQUE!! DRAGON'S BREATH SL--")
+			@channel.write("Uhm, watch your step.", "WAAHH?!", "Calm down, Motoko!!")
+			@channel.read.should == ["Uhm, watch your step.", "WAAHH?!", "Calm down, Motoko!!",
+				"TASTE MY WRATH! ULTIMATE SWORD TECHNIQUE!! DRAGON'S BREATH SL--"]
 		end
 		
 		def spawn_process
