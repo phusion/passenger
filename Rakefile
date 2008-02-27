@@ -221,7 +221,7 @@ subdir 'benchmark' do
 	file 'DummyRequestHandler' => ['DummyRequestHandler.cpp',
 	  '../ext/apache2/MessageChannel.h'] do
 		create_executable "DummyRequestHandler", "DummyRequestHandler.cpp",
-			"#{CXXFLAGS} -I../ext/apache2 #{LDFLAGS}"
+			"#{CXXFLAGS} -I../ext -I../ext/apache2 #{LDFLAGS}"
 	end
 	
 	task :clean do
