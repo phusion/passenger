@@ -283,5 +283,28 @@ namespace tut {
 		}
 	}
 	
-	// TODO: readScalar()/writeScalar() should be able to handle arbitrary binary data
+	TEST_METHOD(12) {
+		// readScalar()/writeScalar() should be able to handle arbitrary binary data.
+		string data;
+		FILE *f = fopen("stub/garbage3.dat", "r");
+		while (!feof(f)) {
+			char buf[1024 * 32];
+			size_t ret = fread(buf, 1, sizeof(buf), f);
+			data.append(buf, ret);
+		}
+		fclose(f);
+		
+		pid_t pid = fork();
+		if (pid == 0) {
+			reader.close();
+			writer.writeScalar(data);
+			_exit(0);
+		} else {
+			writer.close();
+			string result;
+			reader.readScalar(result);
+			ensure_equals(result, data);
+			waitpid(pid, NULL, 0);
+		}
+	}
 }
