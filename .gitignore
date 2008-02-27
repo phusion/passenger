@@ -15,6 +15,7 @@ doc/cxxapi
 doc/*.html
 test/Apache2ModuleTests
 test/config.yml
+test/stub/railsapp/app/controllers/bar_controller.rb
 test/stub/railsapp/log/*
 test/stub/railsapp2/log/*
 benchmark/DummyRequestHandler

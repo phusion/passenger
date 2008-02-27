@@ -15,7 +15,7 @@ using namespace boost;
  */
 #ifdef USE_TEMPLATE
 
-	static string createRequestHeaders() {
+	static string createRequestHeaders(const char *uri = "/foo/new") {
 		string headers;
 		#define ADD_HEADER(name, value) \
 			headers.append(name); \
@@ -24,7 +24,7 @@ using namespace boost;
 			headers.append(1, '\0')
 		ADD_HEADER("HTTP_HOST", "www.test.com");
 		ADD_HEADER("QUERY_STRING", "");
-		ADD_HEADER("REQUEST_URI", "/foo/new");
+		ADD_HEADER("REQUEST_URI", uri);
 		ADD_HEADER("REQUEST_METHOD", "GET");
 		ADD_HEADER("REMOTE_ADDR", "localhost");
 		return headers;
@@ -307,9 +307,24 @@ using namespace boost;
 		unlink("stub/railsapp/tmp/restart.txt");
 	}
 	
-	#if 0
-	// TODO: test whether restarting really results in code reload
-	// TODO: test spawning application as a different user
-	#endif
+	TEST_METHOD(17) {
+		// Test whether restarting really results in code reload.
+		system("cp -f stub/railsapp/app/controllers/bar_controller_1.rb "
+			"stub/railsapp/app/controllers/bar_controller.rb");
+		Application::SessionPtr session = pool->get("stub/railsapp");
+		session->sendHeaders(createRequestHeaders("/bar"));
+		string result = readAll(session->getReader());
+		ensure(result.find("bar 1!"));
+		session.reset();
+		
+		system("cp -f stub/railsapp/app/controllers/bar_controller_2.rb "
+			"stub/railsapp/app/controllers/bar_controller.rb");
+		system("touch stub/railsapp/tmp/restart.txt");
+		session = pool->get("stub/railsapp");
+		session->sendHeaders(createRequestHeaders("/bar"));
+		result = readAll(session->getReader());
+		ensure("App code has been reloaded", result.find("bar 2!"));
+		unlink("stub/railsapp/app/controllers/bar_controller.rb");
+	}
 
 #endif /* USE_TEMPLATE */
