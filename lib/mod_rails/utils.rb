@@ -49,11 +49,13 @@ protected
 	end
 	
 	def print_exception(current_location, exception)
-		STDERR.puts("** Exception #{exception.class} in #{current_location} " <<
-			"(#{exception}) (process #{$$}):\n" <<
-			"\tfrom " <<
-			exception.backtrace.join("\n\tfrom "))
-		STDERR.flush
+		if !exception.is_a?(SystemExit)
+			STDERR.puts("** Exception #{exception.class} in #{current_location} " <<
+				"(#{exception}) (process #{$$}):\n" <<
+				"\tfrom " <<
+				exception.backtrace.join("\n\tfrom "))
+			STDERR.flush
+		end
 	end
 end
 
