@@ -302,7 +302,7 @@ spec = Gem::Specification.new do |s|
 		'ext/boost/**/*.{hpp,cpp,pl,inl}',
 		'ext/mod_rails/*.{c,rb}',
 		'benchmark/*.{cpp,rb}',
-		'test/*.{rb,cpp}',
+		'test/*.{rb,cpp,example}',
 		'test/support/*',
 		'test/stub/*',
 		'test/stub/*/*',
