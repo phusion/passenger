@@ -329,9 +329,9 @@ Rake::GemPackageTask.new(spec) do |pkg|
 	pkg.need_tar_gz = true
 end
 
-Rake::Task['package'].prerequisites.push(:doc)
-Rake::Task['package:gem'].prerequisites.push(:doc)
-Rake::Task['package:force'].prerequisites.push(:doc)
+Rake::Task['package'].prerequisites.unshift(:doc)
+Rake::Task['package:gem'].prerequisites.unshift(:doc)
+Rake::Task['package:force'].prerequisites.unshift(:doc)
 task :clobber => :'package:clean'
 
 
