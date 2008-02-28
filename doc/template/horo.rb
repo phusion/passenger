@@ -1,3 +1,9 @@
+# Horo RDoc template
+# Author: Hongli Lai - http://izumi.plan99.net/blog/
+#
+# Based on the Jamis template:
+# http://weblog.jamisbuck.org/2005/4/8/rdoc-template
+
 if defined?(RDoc::Diagram)
 	RDoc::Diagram.class_eval do
 		remove_const(:FONT)
