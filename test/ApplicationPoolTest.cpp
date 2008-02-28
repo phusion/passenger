@@ -153,7 +153,7 @@ using namespace boost;
 			// Should not throw.
 		}
 	}
-	
+	#endif
 	struct TestThread1 {
 		ApplicationPoolPtr pool;
 		Application::SessionPtr &m_session;
@@ -168,7 +168,7 @@ using namespace boost;
 		}
 		
 		void operator()() {
-			m_session = pool->get("stub/railsapp2");
+			m_session = pool->get("stub/minimal-railsapp");
 			m_done = true;
 		}
 	};
@@ -191,7 +191,13 @@ using namespace boost;
 		ensure_equals(pool->getCount(), 2u);
 		
 		session1.reset();
-		usleep(500000);
+		
+		// Wait at most 10 seconds.
+		time_t begin = time(NULL);
+		while (!done && time(NULL) - begin < 10) {
+			usleep(100000);
+		}
+		
 		ensure("Session 3 is openend", done);
 		ensure_equals(pool->getActive(), 2u);
 		ensure_equals(pool->getCount(), 2u);
@@ -325,6 +331,10 @@ using namespace boost;
 		result = readAll(session->getReader());
 		ensure("App code has been reloaded", result.find("bar 2!"));
 		unlink("stub/railsapp/app/controllers/bar_controller.rb");
+	}
+	
+	TEST_METHOD(18) {
+		// TODO: check cleaner thread
 	}
 
 #endif /* USE_TEMPLATE */
