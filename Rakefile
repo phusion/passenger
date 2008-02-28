@@ -308,7 +308,9 @@ spec = Gem::Specification.new do |s|
 		'test/stub/*/*',
 		'test/stub/*/*/*',
 		'test/stub/*/*/*/*',
-		'test/stub/*/*/*/*/*'
+		'test/stub/*/*/*/*/*',
+		'test/stub/*/*/*/*/*/*',
+		'test/stub/*/*/*/*/*/*/*'
 	] - Dir['test/stub/*/log/*'] \
 	  - Dir['test/stub/*/tmp/*/*']
 	s.executables = ['passenger-spawn-server', 'passenger-install-apache2-module']

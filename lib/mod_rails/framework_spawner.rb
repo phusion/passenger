@@ -145,6 +145,11 @@ private
 			gem 'rails', "=#{@version}"
 			require 'initializer'
 		else
+			$LOAD_PATH.unshift("#{@vendor}/railties/builtin/rails_info")
+			Dir["#{@vendor}/*"].each do |entry|
+				next unless File.directory?(entry)
+				$LOAD_PATH.unshift("#{entry}/lib")
+			end
 			require "#{@vendor}/railties/lib/initializer"
 		end
 		require 'active_support'
