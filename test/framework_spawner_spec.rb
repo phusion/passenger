@@ -32,6 +32,8 @@ describe FrameworkSpawner do
 		# TODO
 	end
 	
+	# TODO: test reloading
+	
 	def spawn_application
 		@spawner.spawn_application('stub/railsapp')
 	end
@@ -51,7 +53,8 @@ if Process.euid == ApplicationSpawner::ROOT_UID
 				:lower_privilege => true,
 				:lowest_user => CONFIG['lowest_user']
 			}.merge(options)
-			@spawner = FrameworkSpawner.new('2.0.2')
+			framework_version = Application.detect_framework_version(@test_app)
+			@spawner = FrameworkSpawner.new(framework_version)
 			@spawner.start
 			begin
 				app = @spawner.spawn_application(@test_app,

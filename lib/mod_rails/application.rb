@@ -1,4 +1,14 @@
+require 'rubygems'
 module ModRails # :nodoc:
+
+class VersionNotFound < StandardError
+	attr_reader :gem_version_spec
+	
+	def initialize(message, gem_version_spec)
+		super(message)
+		@gem_version_spec = gem_version_spec
+	end
+end
 
 # TODO: synchronize this documentation with the C++ one
 # Represents a single running instance of a Ruby on Rails application.
@@ -15,14 +25,27 @@ class Application
 	
 	attr_reader :owner_pipe
 
-	# Return the Ruby on Rails version that the application requires, or nil
-	# if it doesn't require a particular version.
-	#
-	# The version string is a RubyGems version specification. So it might
-	# also look like ">= 1.2.2" or "~> 2.0.0".
-	def self.get_framework_version(app_root)
-		File.read("#{app_root}/config/environment.rb") =~ /^[^#]*RAILS_GEM_VERSION\s+=\s+'([\d.]+)'/
-		return $1
+	# Return the Ruby on Rails version that the application requires.
+	# Returns nil if the application has a vendored Rails.
+	# Raises VersionNotFound if the required Rails version is not installed.
+	def self.detect_framework_version(app_root)
+		if File.directory?("#{app_root}/vendor/rails")
+			return nil
+		end
+		
+		environment_rb = File.read("#{app_root}/config/environment.rb")
+		environment_rb =~ /^[^#]*RAILS_GEM_VERSION\s*=\s*["']([!~<>=]*\s*[\d.]+)["']/
+		gem_version_spec = $1
+		found_version = Gem.cache.search('rails', gem_version_spec).map do |x|
+			x.version.version
+		end.sort.last
+		if found_version.nil?
+			raise VersionNotFound.new("There is no Ruby on Rails version " <<
+				"installed that matches version \"#{gem_version_spec}\"",
+				gem_version_spec)
+		else
+			return found_version
+		end
 	end
 
 	# Creates a new instance of Application. The parameters correspond with the attributes

@@ -20,25 +20,21 @@ class FrameworkSpawner < AbstractServer
 
 	# Creates a new instance of FrameworkSpawner.
 	#
-	# _version_ is the Ruby on Rails version to use. If this version is not
-	# installed (through RubyGems), then an ArgumentError will be raised.
-	# _version_ may also be nil. In this case, it is unspecified which Rails
-	# version will be loaded. The choice will depend on RubyGems.
+	# Valid options:
+	# - <tt>:version</tt>: The Ruby on Rails version to use. It is not checked whether
+	#                      this version is actually installed.
+	# - <tt>:vendor</tt>: The directory to the vendor Rails framework to use. This is
+	#                     usually something like "/webapps/foo/vendor/rails".
 	#
-	# Note that this Rails version will be loaded during the entire life time
+	# One may not specify both <tt>version</tt> and <tt>vendor</tt>.
+	#
+	# Note that the specified Rails framework will be loaded during the entire life time
 	# of the FrameworkSpawner server. If you wish to reload the Rails framework's code,
 	# then restart the server by calling stop() and start().
-	def initialize(version = nil)
+	def initialize(options = {})
 		super()
-		@version = version
-		if !version.nil?
-			@gem = Gem.cache.search('rails', "=#{version}.0").sort_by { |g| g.version.version }.last
-			if @gem.nil?
-				raise ArgumentError, "Ruby on Rails version #{version} is not installed."
-			end
-		else
-			@gem = nil
-		end
+		@version = options[:version]
+		@vendor = options[:vendor]
 		define_message_handler(:spawn_application, :handle_spawn_application)
 		define_message_handler(:reload, :handle_reload)
 	end
@@ -145,12 +141,11 @@ protected
 
 private
 	def preload_rails
-		if @gem
+		if @version
 			gem 'rails', "=#{@version}"
-			require "#{@gem.full_gem_path}/lib/initializer"
-		else
-			gem 'rails'
 			require 'initializer'
+		else
+			require "#{@vendor}/railties/lib/initializer"
 		end
 		require 'active_support'
 		require 'active_record'
@@ -160,7 +155,7 @@ private
 		require 'action_mailer'
 		require 'dispatcher'
 		require 'ruby_version_check'
-		if Rails::VERSION::MAJOR >= 2
+		if ::Rails::VERSION::MAJOR >= 2
 			require 'active_resource'
 		else
 			require 'action_web_service'

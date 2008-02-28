@@ -1,8 +1,10 @@
-$LOAD_PATH << "#{File.dirname(__FILE__)}/../lib"
+require 'support/config'
 require 'mod_rails/spawn_manager'
 require 'mod_rails/message_channel'
 require 'mod_rails/utils'
 require 'abstract_server_spec'
+require 'minimal_spawner_spec'
+require 'spawner_privilege_lowering_spec'
 include ModRails
 include ModRails::Utils
 
@@ -24,6 +26,8 @@ describe SpawnManager do
 		it_should_behave_like "AbstractServer"
 	end
 	
+	it_should_behave_like "a minimal spawner"
+	
 	it "should not crash on spawning when running asynchronously" do
 		app = @manager.spawn_application('stub/railsapp')
 		app.close
@@ -36,7 +40,7 @@ describe SpawnManager do
 				a.close
 				sleep(1) # Give @manager the chance to start.
 				channel = MessageChannel.new(b)
-				channel.write("spawn_application", "stub/railsapp", "", "")
+				channel.write("spawn_application", "stub/minimal-railsapp", "true", "nobody")
 				pid, listen_socket = channel.read
 				channel.recv_io.close
 				channel.close
@@ -52,8 +56,8 @@ describe SpawnManager do
 		Process.waitpid(pid) rescue nil
 	end
 	
-	#it "should be able to spawn a usable application" do
-	#	@manager.spawn_
-	#end
+	def spawn_application
+		@manager.spawn_application('stub/minimal-railsapp')
+	end
 end
 
