@@ -271,7 +271,7 @@ public:
 	}
 	
 	/**
-	 * Receive a message from the underlying file descriptor.
+	 * Read an array message from the underlying file descriptor.
 	 *
 	 * @param args The message will be put in this variable.
 	 * @return Whether end-of-file has been reached. If so, then the contents

@@ -10,6 +10,16 @@
 static VALUE mModRails;
 static VALUE mNativeSupport;
 
+/*
+ * call-seq: send_fd(socket_fd, fd_to_send)
+ *
+ * Send a file descriptor over the given Unix socket. You do not have to call
+ * this function directly. A convenience wrapper is provided by IO#send_io.
+ *
+ * - +socket_fd+ (integer): The file descriptor of the socket.
+ * - +fd_to_send+ (integer): The file descriptor to send.
+ * - Raises +SystemCallError+ if something went wrong.
+ */
 static VALUE
 send_fd(VALUE self, VALUE socket_fd, VALUE fd_to_send) {
 	int fd;
@@ -48,6 +58,16 @@ send_fd(VALUE self, VALUE socket_fd, VALUE fd_to_send) {
 	return Qnil;
 }
 
+/*
+ * call-seq: recv_fd(socket_fd)
+ *
+ * Receive a file descriptor from the given Unix socket. Returns the received
+ * file descriptor as an integer. Raises +SystemCallError+ if something went
+ * wrong.
+ *
+ * You do not have call this method directly. A convenience wrapper is
+ * provided by IO#recv_io.
+ */
 static VALUE
 recv_fd(VALUE self, VALUE socket_fd) {
 	struct msghdr msg;
@@ -89,6 +109,18 @@ recv_fd(VALUE self, VALUE socket_fd) {
 	return INT2NUM(cmsg.fd);
 }
 
+/*
+ * call-seq: create_unix_socket(filename, backlog)
+ *
+ * Create a SOCK_STREAM server Unix socket. Unlike Ruby's UNIXServer class,
+ * this function is also able to create Unix sockets on the abstract namespace
+ * by prepending the filename with a null byte.
+ *
+ * - +filename+ (string): The filename of the Unix socket to create.
+ * - +backlog+ (integer): The backlog to use for listening on the socket.
+ * - Returns: The file descriptor of the created Unix socket, as an integer.
+ * - Raises +SystemCallError+ if something went wrong.
+ */
 static VALUE
 create_unix_socket(VALUE self, VALUE filename, VALUE backlog) {
 	int fd, ret;
@@ -128,6 +160,15 @@ create_unix_socket(VALUE self, VALUE filename, VALUE backlog) {
 	return INT2NUM(fd);
 }
 
+/*
+ * call-seq: accept(fileno)
+ *
+ * Accept a new client from the given socket.
+ *
+ * - +fileno+ (integer): The file descriptor of the server socket.
+ * - Returns: The accepted client's file descriptor.
+ * - Raises +SystemCallError+ if something went wrong.
+ */
 static VALUE
 f_accept(VALUE self, VALUE fileno) {
 	int fd = accept(NUM2INT(fileno), NULL, NULL);
@@ -142,8 +183,14 @@ f_accept(VALUE self, VALUE fileno) {
 void
 Init_native_support() {
 	struct sockaddr_un addr;
+	
 	mModRails = rb_define_module("ModRails");
+	
+	/*
+	 * Utility functions for accessing system functionality.
+	 */
 	mNativeSupport = rb_define_module_under(mModRails, "NativeSupport");
+	
 	rb_define_singleton_method(mNativeSupport, "send_fd", send_fd, 2);
 	rb_define_singleton_method(mNativeSupport, "recv_fd", recv_fd, 1);
 	rb_define_singleton_method(mNativeSupport, "create_unix_socket", create_unix_socket, 2);
