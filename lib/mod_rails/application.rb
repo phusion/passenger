@@ -1,9 +1,13 @@
 require 'rubygems'
 module ModRails # :nodoc:
 
+# Indicates that there is no Ruby on Rails version installed that satisfies
+# a given Ruby on Rails Gem version specification.
 class VersionNotFound < StandardError
 	attr_reader :gem_version_spec
 	
+	# - +message+: The exception message.
+	# - +gem_version_spec+: The Ruby on Rails Gem version specification that caused this error.
 	def initialize(message, gem_version_spec)
 		super(message)
 		@gem_version_spec = gem_version_spec

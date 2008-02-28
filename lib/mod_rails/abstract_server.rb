@@ -53,9 +53,13 @@ class AbstractServer
 	class UnknownMessage < StandardError
 	end
 	
+	# Raised when a command is invoked that requires that the server is
+	# not already started.
 	class ServerAlreadyStarted < StandardError
 	end
 	
+	# Raised when a command is invoked that requires that the server is
+	# already started.
 	class ServerNotStarted < StandardError
 	end
 	
