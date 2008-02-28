@@ -8,7 +8,7 @@ include ModRails
 describe FrameworkSpawner do
 	before :all do
 		ENV['RAILS_ENV'] = 'production'
-		@test_app = "stub/railsapp"
+		@test_app = "stub/minimal-railsapp"
 		Dir["#{@test_app}/log/*"].each do |file|
 			File.chmod(0666, file) rescue nil
 		end
@@ -16,7 +16,7 @@ describe FrameworkSpawner do
 	end
 	
 	before :each do
-		@spawner = FrameworkSpawner.new('2.0.2')
+		@spawner = FrameworkSpawner.new(:vendor => "#{@test_app}/vendor/rails")
 		@spawner.start
 		@server = @spawner
 	end
@@ -35,14 +35,14 @@ describe FrameworkSpawner do
 	# TODO: test reloading
 	
 	def spawn_application
-		@spawner.spawn_application('stub/railsapp')
+		@spawner.spawn_application(@test_app)
 	end
 end
 
 if Process.euid == ApplicationSpawner::ROOT_UID
 	describe "FrameworkSpawner privilege lowering support" do
 		before :all do
-			@test_app = "stub/railsapp"
+			@test_app = "stub/minimal-railsapp"
 			ENV['RAILS_ENV'] = 'production'
 		end
 	
@@ -53,8 +53,8 @@ if Process.euid == ApplicationSpawner::ROOT_UID
 				:lower_privilege => true,
 				:lowest_user => CONFIG['lowest_user']
 			}.merge(options)
-			framework_version = Application.detect_framework_version(@test_app)
-			@spawner = FrameworkSpawner.new(framework_version)
+			@spawner = FrameworkSpawner.new(:vendor =>
+				'stub/minimal-railsapp/vendor/rails')
 			@spawner.start
 			begin
 				app = @spawner.spawn_application(@test_app,
