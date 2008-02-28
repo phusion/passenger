@@ -60,7 +60,7 @@ class FrameworkSpawner < AbstractServer
 	# If the FrameworkSpawner server hasn't already been started, a ServerNotStarted
 	# will be raised.
 	# If the RoR application failed to start (which may be a problem in the application,
-	# or a problem in the Ruby on Rails framework), then an ApplicationSpawner::SpawnError
+	# or a problem in the Ruby on Rails framework), then a SpawnError
 	# will be raised. The application's exception message will be printed to standard
 	# error.
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody")
@@ -73,7 +73,7 @@ class FrameworkSpawner < AbstractServer
 			return Application.new(app_root, pid, listen_socket_name,
 				using_abstract_namespace == "true", owner_pipe)
 		rescue SystemCallError, IOError, SocketError
-			raise ApplicationSpawner::SpawnError, "Unable to spawn the application: " <<
+			raise SpawnError, "Unable to spawn the application: " <<
 				"either the Ruby on Rails framework failed to load, " <<
 				"or the application died unexpectedly during initialization."
 		end

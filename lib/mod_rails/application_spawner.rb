@@ -6,6 +6,11 @@ require 'mod_rails/utils'
 require 'mod_rails/request_handler'
 module ModRails # :nodoc
 
+# Raised when an ApplicationSpawner, FrameworkSpawner or SpawnManager is
+# unable to spawn a new application.
+class SpawnError < StandardError
+end
+
 # This class is capable of spawns instances of a single Ruby on Rails application.
 # It does so by preloading as much of the application's code as possible, then creating
 # instances of the application using what is already preloaded. This makes it spawning
@@ -16,28 +21,27 @@ module ModRails # :nodoc
 class ApplicationSpawner < AbstractServer
 	include Utils
 	
+	# The user ID of the root user.
 	ROOT_UID = 0
+	# The group ID of the root user.
 	ROOT_GID = 0
-	
-	class SpawnError < StandardError
-	end
 	
 	# An attribute, used internally. This should not be used outside Passenger.
 	attr_accessor :time
 
-	# _app_root_ is the root directory of this application, i.e. the directory
+	# +app_root+ is the root directory of this application, i.e. the directory
 	# that contains 'app/', 'public/', etc. If given an invalid directory,
 	# or a directory that doesn't appear to be a Rails application root directory,
 	# then an ArgumentError will be raised.
 	#
-	# If _lower_privilege_ is true, then ApplicationSpawner will attempt to
-	# switch to the user who owns the application's <tt>config/environment.rb</tt>,
+	# If +lower_privilege+ is true, then ApplicationSpawner will attempt to
+	# switch to the user who owns the application's +config/environment.rb+,
 	# and to the default group of that user.
 	#
 	# If that user doesn't exist on the system, or if that user is root,
 	# then ApplicationSpawner will attempt to switch to the username given by
-	# _lowest_user_ (and to the default group of that user).
-	# If _lowest_user_ doesn't exist either, or if switching user failed
+	# +lowest_user+ (and to the default group of that user).
+	# If +lowest_user+ doesn't exist either, or if switching user failed
 	# (because the current process does not have the privilege to do so),
 	# then ApplicationSpawner will continue without reporting an error.
 	def initialize(app_root, lower_privilege = true, lowest_user = "nobody")
