@@ -94,12 +94,16 @@ end
 class IO
 	# Send an IO object (i.e. a file descriptor) over this IO channel.
 	# This only works if this IO channel is a Unix socket.
+	#
+	# Raises SystemCallError if something went wrong.
 	def send_io(io)
 		ModRails::NativeSupport.send_fd(self.fileno, io.fileno)
 	end
 	
 	# Receive an IO object (i.e. a file descriptor) from this IO channel.
 	# This only works if this IO channel is a Unix socket.
+	#
+	# Raises SystemCallError if something went wrong.
 	def recv_io
 		return IO.new(ModRails::NativeSupport.recv_fd(self.fileno))
 	end
