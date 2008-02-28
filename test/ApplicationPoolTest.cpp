@@ -153,7 +153,7 @@ using namespace boost;
 			// Should not throw.
 		}
 	}
-	#endif
+	
 	struct TestThread1 {
 		ApplicationPoolPtr pool;
 		Application::SessionPtr &m_session;
@@ -334,7 +334,15 @@ using namespace boost;
 	}
 	
 	TEST_METHOD(18) {
-		// TODO: check cleaner thread
+		// The cleaner thread should clean idle applications without crashing.
+		pool->setMaxIdleTime(1);
+		pool->get("stub/minimal-railsapp");
+		
+		time_t begin = time(NULL);
+		while (pool->getCount() == 1u && time(NULL) - begin < 10) {
+			usleep(100000);
+		}
+		ensure_equals("App should have been cleaned up", pool->getCount(), 0u);
 	}
 
 #endif /* USE_TEMPLATE */

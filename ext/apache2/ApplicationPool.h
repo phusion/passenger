@@ -128,6 +128,8 @@ public:
 	 */
 	virtual void clear() = 0;
 	
+	virtual void setMaxIdleTime(unsigned int seconds) = 0;
+	
 	/**
 	 * Set a hard limit on the number of application instances that this ApplicationPool
 	 * may spawn. The exact behavior depends on the used algorithm, and is not specified by
@@ -192,8 +194,7 @@ class ApplicationPoolServer;
  */
 class StandardApplicationPool: public ApplicationPool {
 private:
-	static const int CLEAN_INTERVAL = 62;
-	static const int MAX_IDLE_TIME = 60;
+	static const int DEFAULT_MAX_IDLE_TIME = 60;
 
 	friend class ApplicationPoolServer;
 	struct AppContainer;
@@ -272,9 +273,10 @@ private:
 	thread *cleanerThread;
 	bool detached;
 	bool done;
+	unsigned int maxIdleTime;
 	condition cleanerThreadSleeper;
 	
-	// Shortcuts to save typing in get().
+	// Shortcuts for instance variables in SharedData. Saves typing in get().
 	mutex &lock;
 	condition &activeOrMaxChanged;
 	ApplicationMap &apps;
@@ -329,10 +331,15 @@ private:
 		while (!done) {
 			xtime xt;
 			xtime_get(&xt, TIME_UTC);
-			xt.sec += CLEAN_INTERVAL;
-			cleanerThreadSleeper.timed_wait(l, xt);
-			if (done) {
-				break;
+			xt.sec += maxIdleTime + 1;
+			if (cleanerThreadSleeper.timed_wait(l, xt)) {
+				// Condition was woken up.
+				if (done) {
+					// StandardApplicationPool is being destroyed.
+					break;
+				} else {
+					continue;
+				}
 			}
 			
 			time_t now = time(NULL);
@@ -342,10 +349,15 @@ private:
 				ApplicationPtr app(container.app);
 				AppContainerListPtr appList(apps[app->getAppRoot()]);
 				
-				if (now - container.lastUsed > MAX_IDLE_TIME) {
+				if (now - container.lastUsed > (time_t) maxIdleTime) {
 					P_TRACE("Cleaning idle app " << app->getAppRoot());
 					appList->erase(container.iterator);
+					
+					AppContainerList::iterator prev = it;
+					prev--;
 					inactiveApps.erase(it);
+					it = prev;
+					
 					count--;
 				}
 				if (appList->empty()) {
@@ -422,6 +434,7 @@ public:
 		max = 100;
 		count = 0;
 		active = 0;
+		maxIdleTime = DEFAULT_MAX_IDLE_TIME;
 		cleanerThread = new thread(bind(&StandardApplicationPool::cleanerThreadMainLoop, this));
 	}
 	
@@ -559,6 +572,12 @@ public:
 		restartFileTimes.clear();
 		count = 0;
 		active = 0;
+	}
+	
+	virtual void setMaxIdleTime(unsigned int seconds) {
+		mutex::scoped_lock l(lock);
+		maxIdleTime = seconds;
+		cleanerThreadSleeper.notify_one();
 	}
 	
 	virtual void setMax(unsigned int max) {
