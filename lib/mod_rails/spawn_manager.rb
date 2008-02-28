@@ -9,6 +9,8 @@ class SpawnManager < AbstractServer
 	SPAWNER_CLEAN_INTERVAL = 30 * 60
 	SPAWNER_MAX_IDLE_TIME = 29 * 60
 	
+	include Utils
+	
 	def initialize
 		super()
 		@spawners = {}
@@ -23,13 +25,19 @@ class SpawnManager < AbstractServer
 	end
 
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody")
-		framework_version = Application.get_framework_version(app_root)
+		options = {}
+		framework_version = Application.detect_framework_version(app_root)
+		if framework_version.nil?
+			options[:vendor] = normalize_path("#{app_root}/vendor/rails")
+		else
+			options[:version] = framework_version
+		end
 		spawner = nil
 		@lock.synchronize do
-			spawner = @spawners[framework_version]
+			spawner = @spawners[options]
 			if !spawner
-				spawner = FrameworkSpawner.new(framework_version)
-				@spawners[framework_version] = spawner
+				spawner = FrameworkSpawner.new(options)
+				@spawners[options] = spawner
 				spawner.start
 			end
 		end
@@ -52,7 +60,7 @@ class SpawnManager < AbstractServer
 	# Raises IOError if something went wrong.
 	def reload(app_root = nil)
 		@lock.synchronize do
-			@spawners.each_pair do |framework_version, spawner|
+			@spawners.each_value do |spawner|
 				spawner.reload(app_root)
 			end
 		end
