@@ -116,9 +116,12 @@ describe "mod_passenger running in Apache 2" do
 		before :each do
 			@server = "http://zsfa.passenger.test:64506/mycook"
 			@app_root = "stub/mycook"
-			if !File.exist?("stub/zsfa/mycook")
-				File.symlink("../mycook/public", "stub/zsfa/mycook")
-			end
+			File.unlink("stub/zsfa/mycook") rescue nil
+			File.symlink("../mycook/public", "stub/zsfa/mycook")
+		end
+		
+		after :each do
+			File.unlink("stub/zsfa/mycook") rescue nil
 		end
 		
 		it_should_behave_like "MyCook(tm) beta"
@@ -128,9 +131,12 @@ describe "mod_passenger running in Apache 2" do
 		before :each do
 			@server = "http://zsfa.passenger.test:64506/foo"
 			@app_root = "stub/railsapp"
-			if !File.exist?("stub/zsfa/foo")
-				File.symlink("../railsapp/public", "stub/zsfa/foo")
-			end
+			File.unlink("stub/zsfa/foo") rescue nil
+			File.symlink("../railsapp/public", "stub/zsfa/foo")
+		end
+		
+		after :each do
+			File.unlink("stub/zsfa/foo") rescue nil
 		end
 		
 		it "should respond to /foo/new" do

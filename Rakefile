@@ -318,7 +318,8 @@ spec = Gem::Specification.new do |s|
 		'test/stub/*/*/*/*/*/*',
 		'test/stub/*/*/*/*/*/*/*'
 	] - Dir['test/stub/*/log/*'] \
-	  - Dir['test/stub/*/tmp/*/*']
+	  - Dir['test/stub/*/tmp/*/*'] \
+	  - Dir['test/stub/apache2/*.{pid,lock,log}']
 	s.executables = ['passenger-spawn-server', 'passenger-install-apache2-module']
 	s.has_rdoc = true
 	s.extra_rdoc_files = ['README']
