@@ -90,7 +90,10 @@ private
 		if APXS2.nil?
 			return nil
 		else
-			return `#{APXS2} -q CFLAGS`.strip << " -I" << `#{APXS2} -q INCLUDEDIR`.strip
+			flags = `#{APXS2} -q CFLAGS`.strip << " -I" << `#{APXS2} -q INCLUDEDIR`
+			flags.strip!
+			flags.gsub!(/-O\d? /, '')
+			return flags
 		end
 	end
 	
@@ -107,6 +110,7 @@ private
 				libs = `apr-1-config --link-ld`.strip
 			end
 		end
+		flags.gsub!(/-O\d? /, '')
 		return [flags, libs]
 	end
 	
