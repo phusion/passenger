@@ -119,12 +119,28 @@ describe "mod_passenger running in Apache 2" do
 			if !File.exist?("stub/zsfa/mycook")
 				File.symlink("../mycook/public", "stub/zsfa/mycook")
 			end
+		end
+		
+		it_should_behave_like "MyCook(tm) beta"
+	end
+	
+	describe ": railsapp running in a sub-URI" do
+		before :each do
+			@server = "http://zsfa.passenger.test:64506/foo"
+			@app_root = "stub/railsapp"
 			if !File.exist?("stub/zsfa/foo")
 				File.symlink("../railsapp/public", "stub/zsfa/foo")
 			end
 		end
 		
-		it_should_behave_like "MyCook(tm) beta"
+		it "should respond to /foo/new" do
+			get('/foo/new').should == 'hello world'
+		end
+		
+		it "should not interfere with the ZSFA website" do
+			@server = "http://zsfa.passenger.test:64506"
+			get('/').should =~ /Zed, you rock\!/
+		end
 	end
 	
 	##### Helper methods #####
