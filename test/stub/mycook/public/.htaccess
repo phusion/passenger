@@ -10,6 +10,7 @@ Options +FollowSymLinks +ExecCGI
 #   RewriteCond %{REQUEST_URI} ^/notrails.*
 #   RewriteRule .* - [L]
 
+<IfModule mod_rewrite.c>
 # Redirect all requests not available on the filesystem to Rails
 # By default the cgi dispatcher is used which is very slow
 # 
@@ -30,6 +31,7 @@ RewriteRule ^$ index.html [QSA]
 RewriteRule ^([^.]+)$ $1.html [QSA]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^(.*)$ dispatch.cgi [QSA,L]
+</IfModule>
 
 # In case Rails experiences terminal errors
 # Instead of displaying this message you can supply a file here which will be rendered instead

@@ -224,6 +224,5 @@ describe "mod_passenger running in Apache 2" do
 		rescue Timeout::Error
 			raise "Unable to stop Apache."
 		end
-		File.unlink(*Dir["stub/apache2/*.{log,lock}"]) rescue nil
 	end
 end
