@@ -27,7 +27,11 @@ private
 		return binding
 	end
 	
-	def has_module?(name)
+	def has_builtin_module?(name)
 		return @modules.include?(name)
+	end
+	
+	def has_module?(name)
+		return File.exist?("#{@modules_dir}/#{name}")
 	end
 end
