@@ -23,7 +23,7 @@ LDFLAGS = ""
 
 desc "Build everything"
 task :default => [
-	"ext/mod_rails/native_support.#{LIBEXT}",
+	:native_support,
 	:apache2,
 	'test/Apache2ModuleTests',
 	'benchmark/DummyRequestHandler'
@@ -39,6 +39,8 @@ task :clobber
 ##### Ruby C extension
 
 subdir 'ext/mod_rails' do
+	task :native_support => ["native_support.#{LIBEXT}"]
+	
 	file 'Makefile' => 'extconf.rb' do
 		sh "ruby extconf.rb"
 	end
@@ -92,7 +94,7 @@ subdir 'ext/apache2' do
 	apxs_objects = APACHE2::OBJECTS.keys.join(',')
 
 	desc "Build mod_passenger Apache 2 module"
-	task :apache2 => ['mod_passenger.so', "../mod_rails/native_support.#{LIBEXT}"]
+	task :apache2 => ['mod_passenger.so', :native_support]
 	
 	file 'mod_passenger.so' => ['../boost/src/libboost_thread.a', 'mod_passenger.o'] + APACHE2::OBJECTS.keys do
 		# apxs totally sucks. We couldn't get it working correctly
@@ -177,26 +179,30 @@ end
 
 subdir 'test' do
 	desc "Run all unit tests (but not integration tests)"
-	task :test => [:'test:apache2', :'test:ruby']
+	task :test => [:'test:apache2', :'test:ruby', :'test:integration']
 	
 	desc "Run unit tests for the Apache 2 module"
-	task 'test:apache2' => 'Apache2ModuleTests' do
+	task 'test:apache2' => ['Apache2ModuleTests', :native_support] do
 		sh "./Apache2ModuleTests"
 	end
 	
 	desc "Run unit tests for the Apache 2 module in Valgrind"
-	task 'test:valgrind' => 'Apache2ModuleTests' do
+	task 'test:valgrind' => ['Apache2ModuleTests', :native_support] do
 		sh "valgrind #{ENV['ARGS']} ./Apache2ModuleTests"
 	end
 	
 	desc "Run unit tests for the Ruby libraries"
-	task 'test:ruby' => ["../ext/mod_rails/native_support.#{LIBEXT}"] do
+	task 'test:ruby' => [:native_support] do
 		sh "spec -f s *_spec.rb"
+	end
+	
+	desc "Run integration tests"
+	task 'test:integration' => [:apache2, :native_support] do
+		sh "spec -f s integration_tests.rb"
 	end
 
 	file 'Apache2ModuleTests' => TEST::AP2_OBJECTS.keys +
 	  ['../ext/boost/src/libboost_thread.a',
-	   "../ext/mod_rails/native_support.#{LIBEXT}",
 	   '../ext/apache2/Utils.o'] do
 		objects = TEST::AP2_OBJECTS.keys.join(' ') << " ../ext/apache2/Utils.o"
 		create_executable "Apache2ModuleTests", objects,
