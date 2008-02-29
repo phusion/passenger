@@ -29,19 +29,21 @@ class SpawnManager < AbstractServer
 		framework_version = Application.detect_framework_version(app_root)
 		if framework_version.nil?
 			options[:vendor] = normalize_path("#{app_root}/vendor/rails")
+			key = "vendor:#{options[:vendor]}"
 		else
 			options[:version] = framework_version
+			key = "version:#{options[:version]}"
 		end
 		spawner = nil
 		@lock.synchronize do
-			spawner = @spawners[options]
+			spawner = @spawners[key]
 			if !spawner
 				spawner = FrameworkSpawner.new(options)
 				spawner.file_descriptors_to_close = []
 				@spawners.each_value do |s|
 					spawner.file_descriptors_to_close << s.server.fileno
 				end
-				@spawners[options] = spawner
+				@spawners[key] = spawner
 				spawner.start
 			end
 		end
