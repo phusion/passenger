@@ -1,4 +1,5 @@
 require 'socket'
+require 'timeout'
 require 'mod_rails/message_channel'
 require 'mod_rails/utils'
 module ModRails # :nodoc:
@@ -140,8 +141,25 @@ class AbstractServer
 		
 		@parent_socket.close
 		@parent_channel = nil
-		Process.kill(SERVER_TERMINATION_SIGNAL, @pid) rescue nil
-		Process.waitpid(@pid) rescue nil
+		
+		# Wait at most 5 seconds for server to exit. If it doesn't do that,
+		# we kill it. If that doesn't work either, we kill it forcefully with
+		# SIGKILL.
+		begin
+			Timeout::timeout(3) do
+				Process.waitpid(@pid) rescue nil
+			end
+		rescue Timeout::Error
+			Process.kill(SERVER_TERMINATION_SIGNAL, @pid) rescue nil
+			begin
+				Timeout::timeout(3) do
+					Process.waitpid(@pid) rescue nil
+				end
+			rescue Timeout::Error
+				Process.kill('SIGKILL', @pid) rescue nil
+				Process.waitpid(@pid, Process::WNOHANG) rescue nil
+			end
+		end
 	end
 	
 	# Return the PID of the started server. This is only valid if start() has been called.
