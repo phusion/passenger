@@ -6,6 +6,7 @@ require 'mod_rails/utils'
 module ModRails # :nodoc:
 
 class SpawnManager < AbstractServer
+	DEFAULT_INPUT_FD = 3
 	SPAWNER_CLEAN_INTERVAL = 30 * 60
 	SPAWNER_MAX_IDLE_TIME = 29 * 60
 	
@@ -39,10 +40,6 @@ class SpawnManager < AbstractServer
 			spawner = @spawners[key]
 			if !spawner
 				spawner = FrameworkSpawner.new(options)
-				spawner.file_descriptors_to_close = []
-				@spawners.each_value do |s|
-					spawner.file_descriptors_to_close << s.server.fileno
-				end
 				@spawners[key] = spawner
 				spawner.start
 			end

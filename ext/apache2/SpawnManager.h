@@ -63,6 +63,8 @@ using namespace boost;
  */
 class SpawnManager {
 private:
+	static const int SPAWN_SERVER_INPUT_FD = 3;
+
 	string spawnServerCommand;
 	string logFile;
 	string environment;
@@ -115,13 +117,11 @@ private:
 			if (!environment.empty()) {
 				setenv("RAILS_ENV", environment.c_str(), true);
 			}
-			dup2(fds[1], STDIN_FILENO);
-			close(fds[0]);
-			close(fds[1]);
+			dup2(fds[1], SPAWN_SERVER_INPUT_FD);
 			
 			// Close all other file descriptors
 			for (long i = sysconf(_SC_OPEN_MAX) - 1; i >= 0; i--) {
-				if (i != STDIN_FILENO && i != STDOUT_FILENO && i != STDERR_FILENO) {
+				if (i > SPAWN_SERVER_INPUT_FD) {
 					close(i);
 				}
 			}

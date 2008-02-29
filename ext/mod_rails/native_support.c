@@ -3,6 +3,7 @@
 #include <sys/un.h>
 #include <sys/socket.h>
 #include <string.h>
+#include <unistd.h>
 #include <errno.h>
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -180,6 +181,32 @@ f_accept(VALUE self, VALUE fileno) {
 	}
 }
 
+/*
+ * call-seq: close_all_file_descriptors(exceptions)
+ *
+ * Close all file descriptors, except those given in the +exceptions+ array.
+ * For example, the following would close all file descriptors except standard
+ * input (0) and standard output (1).
+ *
+ *  close_all_file_descriptors([0, 1])
+ */
+static VALUE
+close_all_file_descriptors(VALUE self, VALUE exceptions) {
+	long i, j;
+	
+	for (i = sysconf(_SC_OPEN_MAX) - 1; i >= 0; i--) {
+		int is_exception = 0;
+		for (j = 0; j < RARRAY(exceptions)->len && !is_exception; j++) {
+			long fd = NUM2INT(rb_ary_entry(exceptions, j));
+			is_exception = i == fd;
+		}
+		if (!is_exception) {
+			close(i);
+		}
+	}
+	return Qnil;
+}
+
 void
 Init_native_support() {
 	struct sockaddr_un addr;
@@ -195,6 +222,7 @@ Init_native_support() {
 	rb_define_singleton_method(mNativeSupport, "recv_fd", recv_fd, 1);
 	rb_define_singleton_method(mNativeSupport, "create_unix_socket", create_unix_socket, 2);
 	rb_define_singleton_method(mNativeSupport, "accept", f_accept, 1);
+	rb_define_singleton_method(mNativeSupport, "close_all_file_descriptors", close_all_file_descriptors, 1);
 	
 	/* The maximum length of a Unix socket path, including terminating null. */
 	rb_define_const(mNativeSupport, "UNIX_PATH_MAX", INT2NUM(sizeof(addr.sun_path)));
