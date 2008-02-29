@@ -114,7 +114,9 @@ more than enough. If you encounter any problems, please tell us.
 Developers who wish to modify or to contribute to Passenger will need to have
 the following software installed:
 
-* Ruby, RubyGems and Ruby on Rails (obviously ;)
+* Ruby and RubyGems
+* Ruby on Rails >= 1.2.0. At least version 2.0.1 is required to run the
+  test suit.
 * The GNU C++ compiler (g++)
 * Apache 2 and APR, including development headers
 * rake >= 0.8.1
