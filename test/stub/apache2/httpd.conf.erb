@@ -1,0 +1,44 @@
+ServerRoot "<%= @server_root %>"
+Listen 127.0.0.1:64506
+
+<% if !has_module?('mod_log_config.c') %>
+	LoadModule log_config_module "<%= @modules_dir %>/mod_log_config.so"
+<% end %>
+LoadModule unique_id_module "<%= @modules_dir %>/mod_unique_id.so"
+LoadModule mime_module "<%= @modules_dir %>/mod_mime.so"
+LoadModule dir_module "<%= @modules_dir %>/mod_dir.so"
+LoadModule alias_module "<%= @modules_dir %>/mod_alias.so"
+LoadModule rewrite_module "<%= @modules_dir %>/mod_rewrite.so"
+LoadModule passenger_module "<%= @mod_passenger %>"
+
+RailsSpawnServer "<%= @spawn_server %>"
+RailsRuby "<%= RUBY %>"
+
+TypesConfig "<%= @server_root %>/mime.types"
+<IfModule mpm_prefork_module>
+	StartServers          1
+	MinSpareServers       1
+	MaxSpareServers       3
+	MaxClients           50
+	MaxRequestsPerChild  50
+</IfModule>
+
+<Directory />
+	AllowOverride all
+</Directory>
+
+ServerAdmin foo@localhost
+ServerName localhost
+DocumentRoot "<%= @stub_dir %>/mycook/public"
+
+LockFile  <%= @server_root %>/httpd.lock
+PidFile   <%= @server_root %>/httpd.pid
+ErrorLog  <%= @server_root %>/errors.log
+CustomLog <%= @server_root %>/access.log combined
+
+NameVirtualHost *:64506
+
+<VirtualHost *:64506>
+	ServerName passenger.test
+	DocumentRoot "<%= @stub_dir %>/mycook/public"
+</VirtualHost>
