@@ -1,6 +1,7 @@
 require 'net/http'
 require 'uri'
 require 'resolv'
+require 'timeout'
 require 'support/config'
 require 'support/apache2_config_writer'
 require 'mod_rails/platform_info'
@@ -12,8 +13,12 @@ shared_examples_for "MyCook(tm) beta" do
 		get('/images/rails.png').should == public_file('images/rails.png')
 	end
 	
-	it "should support page caching" do
-		get('/welcome/cached').should =~ /This is the cached version/
+	it "should support page caching on non-index URIs" do
+		get('/welcome/cached').should =~ %r{This is the cached version of /welcome/cached}
+	end
+	
+	it "should support page caching on index URIs" do
+		get('/uploads').should =~ %r{This is the cached version of /uploads}
 	end
 	
 	it "should not be interfered by Rails's default .htaccess dispatcher rules" do
@@ -62,32 +67,33 @@ describe "mod_passenger running in Apache 2" do
 		stop_apache
 	end
 	
-	before :each do
-		@server = "http://mycook.passenger.test:64506"
+	describe ": MyCook(tm) beta running on root URI" do
+		before :each do
+			@server = "http://mycook.passenger.test:64506"
+			@app_root = "stub/mycook"
+		end
+		
+		it_should_behave_like "MyCook(tm) beta"
 	end
 	
-	it_should_behave_like "MyCook(tm) beta"
+	it "should support restarting via restart.txt"
 	
-	def get(uri, options = {})
-		defaults = { :server => @server }
-		options = defaults.merge(options)
-		return Net::HTTP.get(URI.parse("#{options[:server]}#{uri}"))
+	##### Helper methods #####
+	
+	def get(uri)
+		return Net::HTTP.get(URI.parse("#{@server}#{uri}"))
 	end
 	
-	def get_response(uri, options = {})
-		defaults = { :server => @server }
-		options = defaults.merge(options)
-		return Net::HTTP.get_response(URI.parse("#{options[:server]}#{uri}"))
+	def get_response(uri)
+		return Net::HTTP.get_response(URI.parse("#{@server}#{uri}"))
 	end
 	
-	def post(uri, params, options = {})
-		defaults = { :server => @server }
-		options = defaults.merge(options)
-		return Net::HTTP.post_form(URI.parse("#{options[:server]}#{uri}"), params).body
+	def post(uri, params)
+		return Net::HTTP.post_form(URI.parse("#{@server}#{uri}"), params).body
 	end
 	
 	def public_file(name)
-		return File.read("stub/mycook/public/#{name}")
+		return File.read("#{@app_root}/public/#{name}")
 	end
 	
 	def check_hosts_configuration
@@ -116,16 +122,30 @@ describe "mod_passenger running in Apache 2" do
 	end
 	
 	def start_apache
-		system("#{HTTPD} -f stub/apache2/httpd.conf -k stop >/dev/null 2>/dev/null")
-		sleep(0.5)
-		system("rm -f stub/apache2/*.{log,pid,lock}")
+		if File.exist?("stub/apache2/httpd.pid")
+			stop_apache
+		end
 		if !system("#{HTTPD} -f stub/apache2/httpd.conf -k start")
 			raise "Could not start a test Apache server"
+		end
+		Timeout::timeout(5) do
+			while !File.exist?("stub/apache2/httpd.pid")
+				sleep(0.25)
+			end
 		end
 	end
 	
 	def stop_apache
-		system("#{HTTPD} -f stub/apache2/httpd.conf -k stop")
-		system("rm -f stub/apache2/*.{log,pid,lock}")
+		begin
+			pid = File.read('stub/apache2/httpd.pid').strip.to_i
+			Process.kill('SIGTERM', pid)
+		rescue
+		end
+		Timeout::timeout(5) do
+			while File.exist?("stub/apache2/httpd.pid")
+				sleep(0.25)
+			end
+		end
+		File.unlink(*Dir["stub/apache2/*.{log,lock}"]) rescue nil
 	end
 end
