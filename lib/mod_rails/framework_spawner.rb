@@ -174,7 +174,7 @@ private
 			spawner = @spawners[app_root]
 			if spawner.nil?
 				spawner = ApplicationSpawner.new(app_root, lower_privilege, lowest_user)
-				spawner.file_descriptors_to_close = [@child_socket.fileno]
+				spawner.file_descriptors_to_close = [client.fileno]
 				@spawners.each_value do |s|
 					spawner.file_descriptors_to_close << s.server.fileno
 				end

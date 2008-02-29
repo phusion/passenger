@@ -97,7 +97,7 @@ class AbstractServer
 				if signal.message == SERVER_TERMINATION_SIGNAL
 					# Do nothing.
 				else
-					raise
+					print_exception(self.class.to_s, signal)
 				end
 			rescue Exception => e
 				print_exception(self.class.to_s, e)
