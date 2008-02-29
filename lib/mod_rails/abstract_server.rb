@@ -63,11 +63,6 @@ class AbstractServer
 	class ServerNotStarted < StandardError
 	end
 	
-	# An array of integers, representing the file descriptors that should be closed in the
-	# server's child process. It can also be nil. This is used internally by mod_rails and should
-	# not be used directly.
-	attr_accessor :file_descriptors_to_close
-
 	def initialize
 		@done = false
 		@message_handlers = {}
@@ -90,6 +85,7 @@ class AbstractServer
 		@pid = fork do
 			begin
 				@parent_socket.close
+				NativeSupport.close_all_file_descriptors([0, 1, 2, @child_socket.fileno])
 				start_synchronously(@child_socket)
 			rescue Interrupt
 				# Do nothing.
@@ -114,12 +110,13 @@ class AbstractServer
 	#
 	# _socket_ is the socket that the server should listen on. The server main
 	# loop will end if the socket has been closed.
+	#
+	# All hooks will be called, except before_fork().
 	def start_synchronously(socket)
 		@child_socket = socket
 		@child_channel = MessageChannel.new(socket)
 		begin
 			reset_signal_handlers
-			close_file_descriptors
 			initialize_server
 			begin
 				main_loop
@@ -153,15 +150,6 @@ class AbstractServer
 	end
 
 protected
-	# Close the file descriptors, as specified by _file_descriptors_to_close_.
-	def close_file_descriptors
-		if !file_descriptors_to_close.nil?
-			file_descriptors_to_close.each do |fd|
-				IO.new(fd).close
-			end
-		end
-	end
-	
 	# A hook which is called when the server is being started, just before forking a new process.
 	# The default implementation does nothing, this method is supposed to be overrided by child classes.
 	def before_fork

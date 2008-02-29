@@ -11,5 +11,6 @@ class SpawnManager
 end
 
 manager = SpawnManager.new
-manager.start_synchronously(IO.new(0))
+input = IO.new(ModRails::SpawnManager::DEFAULT_INPUT_FD)
+manager.start_synchronously(input)
 manager.cleanup

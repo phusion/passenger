@@ -114,7 +114,7 @@ protected
 
 	# Overrided method.
 	def initialize_server # :nodoc:
-		$0 = "Passenger FrameworkSpawner: #{@version}"
+		$0 = "Passenger FrameworkSpawner: #{@version || @vendor}"
 		preload_rails
 		@spawners = {}
 		@spawners_lock = Mutex.new
@@ -174,10 +174,6 @@ private
 			spawner = @spawners[app_root]
 			if spawner.nil?
 				spawner = ApplicationSpawner.new(app_root, lower_privilege, lowest_user)
-				spawner.file_descriptors_to_close = [client.fileno]
-				@spawners.each_value do |s|
-					spawner.file_descriptors_to_close << s.server.fileno
-				end
 				spawner.start
 				@spawners[app_root] = spawner
 			end
