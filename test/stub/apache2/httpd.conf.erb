@@ -28,8 +28,8 @@ TypesConfig "<%= @server_root %>/mime.types"
 	AllowOverride all
 </Directory>
 
-ServerAdmin foo@localhost
-ServerName localhost
+ServerAdmin admin@passenger.test
+ServerName passenger.test
 DocumentRoot "<%= @stub_dir %>/mycook/public"
 
 LockFile  <%= @server_root %>/httpd.lock
@@ -40,6 +40,11 @@ CustomLog <%= @server_root %>/access.log combined
 NameVirtualHost *:64506
 
 <VirtualHost *:64506>
-	ServerName passenger.test
+	ServerName mycook.passenger.test
 	DocumentRoot "<%= @stub_dir %>/mycook/public"
+</VirtualHost>
+
+<VirtualHost *:64506>
+	ServerName zsfa.passenger.test
+	DocumentRoot "<%= @stub_dir %>/zsfa"
 </VirtualHost>
