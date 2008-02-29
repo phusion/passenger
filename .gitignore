@@ -21,5 +21,7 @@ test/stub/railsapp2/log/*
 test/stub/apache2/*.log
 test/stub/apache2/httpd.conf
 test/stub/mycook/log
+test/stub/zsfa/mycook
+test/stub/zsfa/foo
 benchmark/DummyRequestHandler
 pkg

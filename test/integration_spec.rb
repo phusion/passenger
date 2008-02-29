@@ -52,6 +52,42 @@ shared_examples_for "MyCook(tm) beta" do
 		response = get_response('/welcome/headers_test')
 		response["X-Foo"].should == "Bar"
 	end
+	
+	it "should support restarting via restart.txt" do
+		begin
+			controller = "#{@app_root}/app/controllers/test_controller.rb"
+			restart_file = "#{@app_root}/tmp/restart.txt"
+			
+			File.open(controller, 'w') do |f|
+				f.write %q{
+					class TestController < ApplicationController
+						layout nil
+						def index
+							render :text => "foo"
+						end
+					end
+				}
+			end
+			File.open(restart_file, 'w') do end
+			get('/test').should == "foo"
+		
+			File.open(controller, 'w') do |f|
+				f.write %q{
+					class TestController < ApplicationController
+						layout nil
+						def index
+							render :text => "bar"
+						end
+					end
+				}
+			end
+			File.open(restart_file, 'w') do end
+			get('/test').should == 'bar'
+		ensure
+			File.unlink(controller) rescue nil
+			File.unlink(restart_file) rescue nil
+		end
+	end
 end
 
 describe "mod_passenger running in Apache 2" do
@@ -76,7 +112,20 @@ describe "mod_passenger running in Apache 2" do
 		it_should_behave_like "MyCook(tm) beta"
 	end
 	
-	it "should support restarting via restart.txt"
+	describe ": MyCook(tm) beta running in a sub-URI" do
+		before :each do
+			@server = "http://zsfa.passenger.test:64506/mycook"
+			@app_root = "stub/mycook"
+			if !File.exist?("stub/zsfa/mycook")
+				File.symlink("../mycook/public", "stub/zsfa/mycook")
+			end
+			if !File.exist?("stub/zsfa/foo")
+				File.symlink("../railsapp/public", "stub/zsfa/foo")
+			end
+		end
+		
+		it_should_behave_like "MyCook(tm) beta"
+	end
 	
 	##### Helper methods #####
 	
