@@ -37,6 +37,10 @@ class SpawnManager < AbstractServer
 			spawner = @spawners[options]
 			if !spawner
 				spawner = FrameworkSpawner.new(options)
+				spawner.file_descriptors_to_close = []
+				@spawners.each_value do |s|
+					spawner.file_descriptors_to_close << s.server.fileno
+				end
 				@spawners[options] = spawner
 				spawner.start
 			end
