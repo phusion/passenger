@@ -81,6 +81,8 @@ shared_examples_for "MyCook(tm) beta" do
 					end
 				}
 			end
+			# NOTE: this test might fail when the system is under high load. There
+			# appears to be some racing condition somewhere.
 			File.open(restart_file, 'w') do end
 			get('/test').should == 'bar'
 		ensure
@@ -196,10 +198,11 @@ describe "mod_passenger running in Apache 2" do
 		if File.exist?("stub/apache2/httpd.pid")
 			stop_apache
 		end
-		if !system("#{HTTPD} -f stub/apache2/httpd.conf -k start")
+		config_file = File.expand_path("stub/apache2/httpd.conf")
+		if !system(HTTPD, "-f", config_file, "-k", "start")
 			raise "Could not start a test Apache server"
 		end
-		Timeout::timeout(5) do
+		Timeout::timeout(15) do
 			while !File.exist?("stub/apache2/httpd.pid")
 				sleep(0.25)
 			end
@@ -212,10 +215,14 @@ describe "mod_passenger running in Apache 2" do
 			Process.kill('SIGTERM', pid)
 		rescue
 		end
-		Timeout::timeout(5) do
-			while File.exist?("stub/apache2/httpd.pid")
-				sleep(0.25)
+		begin
+			Timeout::timeout(15) do
+				while File.exist?("stub/apache2/httpd.pid")
+					sleep(0.25)
+				end
 			end
+		rescue Timeout::Error
+			raise "Unable to stop Apache."
 		end
 		File.unlink(*Dir["stub/apache2/*.{log,lock}"]) rescue nil
 	end
