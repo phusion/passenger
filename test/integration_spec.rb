@@ -25,9 +25,8 @@ describe "mod_passenger running in Apache 2" do
 	end
 	
 	it "should support page caching" do
-		get('').should == 
+		get('/welcome/cached').should =~ /This is the cached version/
 	end
-	
 	
 	##### Helper methods #####
 	

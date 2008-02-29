@@ -13,6 +13,7 @@ LoadModule passenger_module "<%= @mod_passenger %>"
 
 RailsSpawnServer "<%= @spawn_server %>"
 RailsRuby "<%= RUBY %>"
+RailsEnv production
 
 TypesConfig "<%= @server_root %>/mime.types"
 <IfModule mpm_prefork_module>
