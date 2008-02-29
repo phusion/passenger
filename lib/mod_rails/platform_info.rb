@@ -47,7 +47,7 @@ private
 		if APXS2.nil?
 			return nil
 		else
-			return `#{APXS2} -q BINDIR`.strip
+			return `#{APXS2} -q BINDIR 2>/dev/null`.strip
 		end
 	end
 	
