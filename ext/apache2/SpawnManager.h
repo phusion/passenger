@@ -119,7 +119,7 @@ private:
 			}
 			dup2(fds[1], SPAWN_SERVER_INPUT_FD);
 			
-			// Close all other file descriptors
+			// Close all unnecessary file descriptors
 			for (long i = sysconf(_SC_OPEN_MAX) - 1; i >= 0; i--) {
 				if (i > SPAWN_SERVER_INPUT_FD) {
 					close(i);
