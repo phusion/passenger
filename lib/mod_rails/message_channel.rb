@@ -171,6 +171,11 @@ class MessageChannel
 		@io.send_io(io)
 	end
 	
+	# Return the file descriptor of the underlying IO object.
+	def fileno
+		return @io.fileno
+	end
+	
 	# Close the underlying IO stream. Might raise SystemCallError or
 	# IOError when something goes wrong.
 	def close
