@@ -1,0 +1,17 @@
+<h1>Uh oh...</h1>
+
+<p>
+Have we already told you that MyCook&trade; is currently in beta? We haven't implemented saving of recipes yet!
+But for your information, this is what you submitted:
+</p>
+
+<table border="2">
+<tr>
+	<td><b>Name:</b></td>
+	<td><%=h params[:recipe][:name] %></td>
+</tr>
+<tr>
+	<td><b>Instructions:</b></td>
+	<td><pre><%=h params[:recipe][:instructions] %></pre></td>
+</tr>
+</table>
