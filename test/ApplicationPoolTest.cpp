@@ -72,7 +72,7 @@ using namespace boost;
 		ensure_equals("After the session is closed, the app is kept around", pool->getCount(), 1u);
 	}
 	
-	TEST_METHOD(4) {
+	TEST_METHOD(3) {
 		// If we call get() with an application root, then we close the session,
 		// and then we call get() again with the same application root,
 		// then the pool should not have spawned more than 1 app in total.
@@ -82,19 +82,19 @@ using namespace boost;
 		ensure_equals(pool->getCount(), 1u);
 	}
 	
-	TEST_METHOD(5) {
+	TEST_METHOD(4) {
 		// If we call get() with an application root, then we call get() again before closing
 		// the session, then the pool should have spawned 2 apps in total.
 		Application::SessionPtr session(pool->get("stub/railsapp"));
-		Application::SessionPtr session2(pool->get("stub/railsapp"));
+		Application::SessionPtr session2(pool2->get("stub/railsapp"));
 		ensure_equals(pool->getCount(), 2u);
 	}
 	
-	TEST_METHOD(6) {
+	TEST_METHOD(5) {
 		// If we call get() twice with different application roots,
 		// then the pool should spawn two different apps.
 		Application::SessionPtr session(pool->get("stub/railsapp"));
-		Application::SessionPtr session2(pool->get("stub/railsapp2"));
+		Application::SessionPtr session2(pool2->get("stub/railsapp2"));
 		ensure_equals("Before the sessions were closed, both apps were busy", pool->getActive(), 2u);
 		ensure_equals("Before the sessions were closed, both apps were in the pool", pool->getCount(), 2u);
 		
@@ -109,7 +109,7 @@ using namespace boost;
 		session2.reset();
 	}
 	
-	TEST_METHOD(7) {
+	TEST_METHOD(6) {
 		// If we call get() twice with different application roots,
 		// and we close both sessions, then both 2 apps should still
 		// be in the pool.
@@ -121,7 +121,7 @@ using namespace boost;
 		ensure_equals(pool->getCount(), 2u);
 	}
 	
-	TEST_METHOD(8) {
+	TEST_METHOD(7) {
 		// If we call get() even though the pool is already full
 		// (active == max), and the application root is already
 		// in the pool, then the pool should have tried to open
@@ -133,7 +133,7 @@ using namespace boost;
 		ensure_equals("No new app has been spawned", pool->getCount(), 1u);
 	}
 	
-	TEST_METHOD(9) {
+	TEST_METHOD(8) {
 		// If ApplicationPool spawns a new instance,
 		// and we kill it, then the next get() with the
 		// same application root should throw an exception.
@@ -173,14 +173,14 @@ using namespace boost;
 		}
 	};
 
-	TEST_METHOD(10) {
+	TEST_METHOD(9) {
 		// If we call get() even though the pool is already full
 		// (active == max), and the application root is *not* already
 		// in the pool, then the pool will wait until enough sessions
 		// have been closed.
 		pool->setMax(2);
 		Application::SessionPtr session1(pool->get("stub/railsapp"));
-		Application::SessionPtr session2(pool->get("stub/railsapp"));
+		Application::SessionPtr session2(pool2->get("stub/railsapp"));
 		Application::SessionPtr session3;
 		bool done;
 		
@@ -206,7 +206,7 @@ using namespace boost;
 		delete thr;
 	}
 	
-	TEST_METHOD(12) {
+	TEST_METHOD(10) {
 		// If we call get(), and:
 		// * the pool is already full, but there are inactive apps
 		//   (active < count && count == max)
@@ -227,7 +227,7 @@ using namespace boost;
 		ensure_equals(pool->getCount(), 2u);
 	}
 	
-	TEST_METHOD(13) {
+	TEST_METHOD(11) {
 		// Test whether Session is still usable after the Application has been destroyed.
 		Application::SessionPtr session(pool->get("stub/railsapp"));
 		pool->clear();
@@ -243,7 +243,7 @@ using namespace boost;
 		ensure(result.find("hello world") != string::npos);
 	}
 	
-	TEST_METHOD(14) {
+	TEST_METHOD(12) {
 		// If tmp/restart.txt is present, then the applications under app_root
 		// should be restarted.
 		struct stat buf;
@@ -263,7 +263,7 @@ using namespace boost;
 			&& errno == ENOENT);
 	}
 	
-	TEST_METHOD(15) {
+	TEST_METHOD(13) {
 		// If tmp/restart.txt is present, but cannot be deleted, then
 		// the applications under app_root should still be restarted.
 		// However, a subsequent get() should not result in a restart.
@@ -288,7 +288,7 @@ using namespace boost;
 		unlink("stub/railsapp/tmp/restart.txt");
 	}
 	
-	TEST_METHOD(16) {
+	TEST_METHOD(14) {
 		// If tmp/restart.txt is present, but cannot be deleted, then
 		// the applications under app_root should still be restarted.
 		// A subsequent get() should only restart if we've changed
@@ -313,7 +313,7 @@ using namespace boost;
 		unlink("stub/railsapp/tmp/restart.txt");
 	}
 	
-	TEST_METHOD(17) {
+	TEST_METHOD(15) {
 		// Test whether restarting really results in code reload.
 		system("cp -f stub/railsapp/app/controllers/bar_controller_1.rb "
 			"stub/railsapp/app/controllers/bar_controller.rb");
@@ -333,7 +333,7 @@ using namespace boost;
 		unlink("stub/railsapp/app/controllers/bar_controller.rb");
 	}
 	
-	TEST_METHOD(18) {
+	TEST_METHOD(16) {
 		// The cleaner thread should clean idle applications without crashing.
 		pool->setMaxIdleTime(1);
 		pool->get("stub/minimal-railsapp");
