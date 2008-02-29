@@ -20,13 +20,16 @@ describe "mod_passenger running in Apache 2" do
 		stop_apache
 	end
 	
-	it "should ignore static assets" do
-		get('/images/rails.png').should == File.read('stub/mycook/public/images/rails.png')
+	it "should support static assets" do
+		get('/images/rails.png').should == public_file('images/rails.png')
 	end
 	
 	it "should support page caching" do
-		# TODO
+		get('').should == 
 	end
+	
+	
+	##### Helper methods #####
 	
 	def get(uri, server = "http://passenger.test:64506")
 		return Net::HTTP.get(URI.parse("#{server}#{uri}"))
@@ -68,5 +71,9 @@ describe "mod_passenger running in Apache 2" do
 	def stop_apache
 		system("#{HTTPD} -f stub/apache2/httpd.conf -k stop")
 		system("rm -f stub/apache2/*.{log,pid,lock}")
+	end
+	
+	def public_file(name)
+		return File.read("stub/mycook/public/#{name}")
 	end
 end
