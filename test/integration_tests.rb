@@ -220,6 +220,8 @@ describe "mod_passenger running in Apache 2" do
 				sleep(0.25)
 			end
 		end
+		File.chmod(0666, *Dir['stub/apache2/*.{log,lock,pid}']) rescue nil
+		File.chmod(0777, *Dir['stub/mycook/{public,log}']) rescue nil
 	end
 	
 	def stop_apache
