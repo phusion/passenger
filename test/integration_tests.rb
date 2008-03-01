@@ -3,6 +3,7 @@ require 'uri'
 require 'resolv'
 require 'timeout'
 require 'support/config'
+require 'support/multipart'
 require 'support/apache2_config_writer'
 require 'passenger/platform_info'
 
@@ -19,6 +20,10 @@ shared_examples_for "MyCook(tm) beta" do
 	
 	it "should support page caching on index URIs" do
 		get('/uploads').should =~ %r{This is the cached version of /uploads}
+	end
+	
+	it "should not use page caching if the HTTP request is not GET" do
+		post('/welcome/cached').should =~ %r{This content should never be displayed}
 	end
 	
 	it "should not be interfered by Rails's default .htaccess dispatcher rules" do
@@ -46,7 +51,24 @@ shared_examples_for "MyCook(tm) beta" do
 		result.should =~ %r{Instructions: Call 0900-BANANAPANCAKES}
 	end
 	
-	it "should be possible to upload a file"
+	it "should be possible to upload a file" do
+		rails_png = File.open("#{@app_root}/public/images/rails.png", 'rb')
+		params = {
+			'upload[name1]' => 'Kotonoha',
+			'upload[name2]' => 'Sekai',
+			'upload[data]' => rails_png
+		}
+		begin
+			response = post('/uploads', params)
+			rails_png.rewind
+			response.should ==
+				"name 1 = Kotonoha\n" <<
+				"name 2 = Sekai\n" <<
+				"data = " << rails_png.read
+		ensure
+			rails_png.close
+		end
+	end
 	
 	it "should properly handle custom headers" do
 		response = get_response('/welcome/headers_test')
@@ -81,6 +103,7 @@ shared_examples_for "MyCook(tm) beta" do
 					end
 				}
 			end
+			sleep(1)
 			# NOTE: this test might fail when the system is under high load. There
 			# appears to be some racing condition somewhere.
 			File.open(restart_file, 'w') do end
@@ -179,7 +202,16 @@ describe "mod_passenger running in Apache 2" do
 	end
 	
 	def post(uri, params = {})
-		return Net::HTTP.post_form(URI.parse("#{@server}#{uri}"), params).body
+		url = URI.parse("#{@server}#{uri}")
+		if params.values.any? { |x| x.respond_to?(:read) }
+			mp = Multipart::MultipartPost.new
+			query, headers = mp.prepare_query(params)
+			Net::HTTP.start(url.host, url.port) do |http|
+				return http.post(url.path, query, headers).body
+			end
+		else
+			return Net::HTTP.post_form(url, params).body
+		end
 	end
 	
 	def public_file(name)

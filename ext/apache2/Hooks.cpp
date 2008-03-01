@@ -369,6 +369,8 @@ public:
 	int
 	mapToStorage(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
+		bool forwardToRails;
+		
 		if (determineRailsBaseURI(r, config) == NULL
 		 || fileExists(r->filename)) {
 			/*
@@ -376,32 +378,48 @@ public:
 			 * If the file already exists, serve it directly.
 			 * This is for static assets like .css and .js files.
 			 */
-			return DECLINED;
-		} else {
+			forwardToRails = false;
+		} else if (r->method_number == M_GET) {
 			char *html_file = apr_pstrcat(r->pool, r->filename, ".html", NULL);
 			if (fileExists(html_file)) {
 				/* If a .html version of the URI exists, serve it directly.
-				 * This is used by page caching.
+				 * We're essentially accelerating Rails page caching.
 				 */
 				r->filename = html_file;
 				r->canonical_filename = html_file;
-				return DECLINED;
+				forwardToRails = false;
 			} else {
-				/* Apache's default map_to_storage process does strange
-				 * things with the filename. Suppose that the DocumentRoot
-				 * is /website, on server http://test.com/. If we access
-				 * http://test.com/foo/bar, and /website/foo/bar does not
-				 * exist, then Apache will change the filename to
-				 * /website/foo instead of the expected /website/bar.
-				 * We make sure that doesn't happen.
-				 *
-				 * Incidentally, this also disables mod_rewrite. That is a
-				 * good thing because the default Rails .htaccess file
-				 * interferes with Passenger anyway (it delegates requests
-				 * to the CGI script dispatch.cgi).
-				 */
-				return OK;
+				forwardToRails = true;
 			}
+		} else {
+			/*
+			 * Non-GET requests are always forwarded to Rails.
+			 * This important because of REST conventions, e.g.
+			 * 'POST /foo' maps to 'FooController.create',
+			 * while 'GET /foo' maps to 'FooController.index'.
+			 * We wouldn't want our page caching support to interfere
+			 * with that.
+			 */
+			forwardToRails = true;
+		}
+		
+		if (forwardToRails) {
+			/* Apache's default map_to_storage process does strange
+			 * things with the filename. Suppose that the DocumentRoot
+			 * is /website, on server http://test.com/. If we access
+			 * http://test.com/foo/bar, and /website/foo/bar does not
+			 * exist, then Apache will change the filename to
+			 * /website/foo instead of the expected /website/bar.
+			 * We make sure that doesn't happen.
+			 *
+			 * Incidentally, this also disables mod_rewrite. That is a
+			 * good thing because the default Rails .htaccess file
+			 * interferes with Passenger anyway (it delegates requests
+			 * to the CGI script dispatch.cgi).
+			 */
+			return OK;
+		} else {
+			return DECLINED;
 		}
 	}
 };
