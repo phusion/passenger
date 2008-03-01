@@ -2,7 +2,7 @@
 #define _PASSENGER_DUMMY_SPAWN_MANAGER_H_
 
 // TODO: make this path not hardcoded
-#define DUMMY_REQUEST_HANDLER_EXECUTABLE "/home/hongli/Projects/mod_rails/benchmark/DummyRequestHandler"
+#define DUMMY_REQUEST_HANDLER_EXECUTABLE "/home/hongli/Projects/passenger/benchmark/DummyRequestHandler"
 
 #include <string>
 

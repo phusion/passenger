@@ -1,5 +1,5 @@
 require 'erb'
-require 'mod_rails/platform_info'
+require 'passenger/platform_info'
 
 class Apache2ConfigWriter
 	include PlatformInfo

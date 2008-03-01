@@ -315,13 +315,13 @@ public:
 		const char *railsDir = determineRailsDir(r, railsBaseURI);
 		if (railsDir == NULL) {
 			ap_set_content_type(r, "text/html; charset=UTF-8");
-			ap_rputs("<h1>mod_rails error #1</h1>\n", r);
+			ap_rputs("<h1>Passenger error #1</h1>\n", r);
 			ap_rputs("Cannot determine the location of the Rails application's \"public\" directory.", r);
 			return OK;
 		} else if (!verifyRailsDir(r->pool, railsDir)) {
 			ap_set_content_type(r, "text/html; charset=UTF-8");
-			ap_rputs("<h1>mod_rails error #2</h1>\n", r);
-			ap_rputs("mod_rails thinks that the Rails application's \"public\" directory is \"", r);
+			ap_rputs("<h1>Passenger error #2</h1>\n", r);
+			ap_rputs("Passenger thinks that the Rails application's \"public\" directory is \"", r);
 			ap_rputs(ap_escape_html(r->pool, railsDir), r);
 			ap_rputs("\", but it doesn't seem to be valid.", r);
 			return OK;
@@ -402,7 +402,7 @@ public:
 				 *
 				 * Incidentally, this also disables mod_rewrite. That is a
 				 * good thing because the default Rails .htaccess file
-				 * interferes with mod_rails anyway (it delegates requests
+				 * interferes with Passenger anyway (it delegates requests
 				 * to the CGI script dispatch.cgi).
 				 */
 				return OK;

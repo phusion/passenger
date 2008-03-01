@@ -8,7 +8,7 @@ ext/apache2/*.la
 ext/apache2/*.lo
 ext/apache2/*.slo
 ext/apache2/.libs
-ext/mod_rails/Makefile
+ext/passenger/Makefile
 ext/boost/src/*.a
 doc/rdoc
 doc/cxxapi

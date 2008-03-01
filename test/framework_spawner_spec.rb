@@ -1,5 +1,5 @@
 require 'support/config'
-require 'mod_rails/framework_spawner'
+require 'passenger/framework_spawner'
 require 'minimal_spawner_spec'
 require 'spawn_server_spec'
 require 'spawner_privilege_lowering_spec'

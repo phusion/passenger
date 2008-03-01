@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 require 'pathname'
 $LOAD_PATH.unshift(File.expand_path("#{File.dirname(__FILE__)}/../lib"))
-require 'mod_rails/spawn_manager'
+require 'passenger/spawn_manager'
 
 $0 = "Passenger spawn server"
 spawn_manager = Passenger::SpawnManager.new

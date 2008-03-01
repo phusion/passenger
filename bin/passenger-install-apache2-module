@@ -3,7 +3,7 @@ PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) << "/..")
 PASSENGER_WEBSITE = "http://passenger.phusion.nl/"
 PHUSION_WEBSITE = "www.phusion.nl"
 $LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
-require 'mod_rails/platform_info'
+require 'passenger/platform_info'
 Dir.chdir(PASSENGER_ROOT)
 include PlatformInfo
 

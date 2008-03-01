@@ -1,9 +1,9 @@
 require 'rubygems'
 require 'socket'
 require 'pathname'
-require 'mod_rails/abstract_server'
-require 'mod_rails/application_spawner'
-require 'mod_rails/utils'
+require 'passenger/abstract_server'
+require 'passenger/application_spawner'
+require 'passenger/utils'
 module Passenger
 
 # TODO: check whether Rails version is supported

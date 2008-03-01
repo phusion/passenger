@@ -1,8 +1,8 @@
 require 'socket'
 require 'base64'
-require 'mod_rails/message_channel'
-require 'mod_rails/cgi_fixed'
-require 'mod_rails/utils'
+require 'passenger/message_channel'
+require 'passenger/cgi_fixed'
+require 'passenger/utils'
 
 module Passenger
 

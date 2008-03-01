@@ -1,7 +1,7 @@
 require 'socket'
 require 'support/config'
-require 'mod_rails/message_channel'
-require 'mod_rails/utils'
+require 'passenger/message_channel'
+require 'passenger/utils'
 include Passenger
 
 describe MessageChannel do

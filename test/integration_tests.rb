@@ -4,7 +4,7 @@ require 'resolv'
 require 'timeout'
 require 'support/config'
 require 'support/apache2_config_writer'
-require 'mod_rails/platform_info'
+require 'passenger/platform_info'
 
 include PlatformInfo
 

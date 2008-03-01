@@ -1,9 +1,9 @@
 require 'socket'
 require 'etc'
-require 'mod_rails/abstract_server'
-require 'mod_rails/application'
-require 'mod_rails/utils'
-require 'mod_rails/request_handler'
+require 'passenger/abstract_server'
+require 'passenger/application'
+require 'passenger/utils'
+require 'passenger/request_handler'
 module Passenger
 
 # Raised when an ApplicationSpawner, FrameworkSpawner or SpawnManager is
