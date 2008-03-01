@@ -82,7 +82,7 @@ end
 class APACHE2
 	CXXFLAGS = CXXFLAGS + " -fPIC -g -DPASSENGER_DEBUG #{APR1_FLAGS} #{APXS2_FLAGS} -I.."
 	OBJECTS = {
-		'Configuration.o' => %w(Configuration.cpp),
+		'Configuration.o' => %w(Configuration.cpp Configuration.h),
 		'Hooks.o' => %w(Hooks.cpp Hooks.h
 				Configuration.h ApplicationPool.h ApplicationPoolClientServer.h
 				SpawnManager.h Exceptions.h Application.h MessageChannel.h
@@ -285,7 +285,7 @@ spec = Gem::Specification.new do |s|
 	s.homepage = "http://passenger.phusion.nl/"
 	s.summary = "Apache module for Ruby on Rails support."
 	s.name = "passenger"
-	s.version = "0.9.2"  # Don't forget to edit Configuration.h too
+	s.version = "0.9.3"  # Don't forget to edit Configuration.h too
 	s.requirements << "fastthread" << "Apache 2 with development headers"
 	s.require_path = "lib"
 	s.add_dependency 'rake', '>= 0.8.1'
