@@ -22,6 +22,18 @@ using the commandline.
 Before Passenger can be installed, the following requirements must be
 satisfied.
 
+==== Operating system ====
+
+Passenger works on any POSIX-compliant operating system. In other words:
+practically any operating system on earth, except Microsoft Windows.
+
+Passenger has been tested on:
+
+- Ubuntu Linux 7.10
+- FreeBSD 6.1-RELEASE
+- MacOS X Tiger
+- MacOS X Leopard
+
 ==== Apache with development headers ====
 
 Passenger requires Apache 2.x. Apache 1.x is not supported at the moment.
@@ -54,6 +66,10 @@ Because Passenger is a deployment system for Ruby on Rails, it goes without
 saying that Ruby, RubyGems and Ruby on Rails must be installed. Please refer
 to the http://www.ruby-lang.org/[Ruby] and http://www.rubyonrails.org/[Ruby
 on Rails] websites for installation instructions.
+
+NOTE: Passenger is not compatible with JRuby, IronRuby or Ruby.NET. It should
+be compatible with Rubinius, although at the time of writing Rubinius cannot
+run Ruby on Rails yet.
 
 [TIP]
 .Installing multiple Ruby on Rails versions
@@ -298,6 +314,8 @@ inside the Apache error logs. It will tell you what exactly went wrong.
 Any exceptions that your Ruby on Rails applications throws during startup,
 will also be written to that file.
 =====================================================
+
+TODO: document common problems here
 
 
 == Tips ==
