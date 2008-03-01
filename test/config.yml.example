@@ -3,10 +3,15 @@
 
 # These are the user names of two normal, non-administrator users.
 # Preferably, these are user accounts that are normally not used.
+#
+# NOTE: these users MUST be able to access this 'test' directory,
+# otherwise the tests will fail.
 normal_user_1: games
 normal_user_2: daemon
 
 # The username of a user that has less privileges than a normal user.
+# NOTE: this user MUST be able to access this 'test' directory, otherwise
+# the tests will fail.
 lowest_user: nobody
 
 # A nonexistant username.
