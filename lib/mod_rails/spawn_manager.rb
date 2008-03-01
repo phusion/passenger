@@ -3,7 +3,7 @@ require 'mod_rails/framework_spawner'
 require 'mod_rails/application'
 require 'mod_rails/message_channel'
 require 'mod_rails/utils'
-module ModRails # :nodoc:
+module Passenger
 
 class SpawnManager < AbstractServer
 	DEFAULT_INPUT_FD = 3
@@ -115,4 +115,4 @@ private
 	end
 end
 
-end # module ModRails
+end # module Passenger

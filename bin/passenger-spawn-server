@@ -4,7 +4,7 @@ $LOAD_PATH.unshift(File.expand_path("#{File.dirname(__FILE__)}/../lib"))
 require 'mod_rails/spawn_manager'
 
 $0 = "Passenger spawn server"
-spawn_manager = ModRails::SpawnManager.new
-input = IO.new(ModRails::SpawnManager::DEFAULT_INPUT_FD)
+spawn_manager = Passenger::SpawnManager.new
+input = IO.new(Passenger::SpawnManager::DEFAULT_INPUT_FD)
 spawn_manager.start_synchronously(input)
 spawn_manager.cleanup

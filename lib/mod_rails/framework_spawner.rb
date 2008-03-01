@@ -4,7 +4,7 @@ require 'pathname'
 require 'mod_rails/abstract_server'
 require 'mod_rails/application_spawner'
 require 'mod_rails/utils'
-module ModRails # :nodoc:
+module Passenger
 
 # TODO: check whether Rails version is supported
 # TODO: check whether preloading Rails was successful
@@ -15,7 +15,7 @@ class FrameworkSpawner < AbstractServer
 
 	include Utils
 	
-	# An attribute, used internally. This should not be used outside mod_rails.
+	# An attribute, used internally. This should not be used outside Passenger.
 	attr_accessor :time
 
 	# Creates a new instance of FrameworkSpawner.
@@ -26,15 +26,24 @@ class FrameworkSpawner < AbstractServer
 	# - <tt>:vendor</tt>: The directory to the vendor Rails framework to use. This is
 	#                     usually something like "/webapps/foo/vendor/rails".
 	#
-	# One may not specify both <tt>version</tt> and <tt>vendor</tt>.
+	# It is not allowed to specify both <tt>version</tt> and <tt>vendor</tt>.
 	#
 	# Note that the specified Rails framework will be loaded during the entire life time
 	# of the FrameworkSpawner server. If you wish to reload the Rails framework's code,
 	# then restart the server by calling stop() and start().
 	def initialize(options = {})
-		super()
+		if !options.respond_to?(:'[]')
+			raise ArgumentError, "The 'options' argument not seem to be an options hash"
+		end
 		@version = options[:version]
 		@vendor = options[:vendor]
+		if !@version && !@vendor
+			raise ArgumentError, "Either the 'version' or the 'vendor' option must specified"
+		elsif @version && @vendor
+			raise ArgumentError, "It is not allowed to specify both the 'version' and the 'vendor' options"
+		end
+		
+		super()
 		define_message_handler(:spawn_application, :handle_spawn_application)
 		define_message_handler(:reload, :handle_reload)
 	end
@@ -226,4 +235,4 @@ private
 	end
 end
 
-end # module ModRails
+end # module Passenger

@@ -1,5 +1,5 @@
 require 'rubygems'
-module ModRails # :nodoc:
+module Passenger
 
 # Indicates that there is no Ruby on Rails version installed that satisfies
 # a given Ruby on Rails Gem version specification.
@@ -79,4 +79,4 @@ class Application
 	end
 end
 
-end # module ModRails
+end # module Passenger

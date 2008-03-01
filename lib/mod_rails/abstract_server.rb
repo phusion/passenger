@@ -2,7 +2,7 @@ require 'socket'
 require 'timeout'
 require 'mod_rails/message_channel'
 require 'mod_rails/utils'
-module ModRails # :nodoc:
+module Passenger
 
 # An abstract base class for a server, with the following properties:
 #
@@ -23,7 +23,7 @@ module ModRails # :nodoc:
 #
 # Here's an example on using AbstractServer:
 #
-#  class MyServer < ModRails::AbstractServer
+#  class MyServer < Passenger::AbstractServer
 #     def initialize
 #        super()
 #        define_message_handler(:hello, :handle_hello)
@@ -281,4 +281,4 @@ private
 	end
 end
 
-end # module ModRails
+end # module Passenger

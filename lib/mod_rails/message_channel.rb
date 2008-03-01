@@ -1,5 +1,5 @@
 require 'mod_rails/utils'
-module ModRails # :nodoc:
+module Passenger
 
 # This class provides convenience methods for:
 # - sending and receiving raw data over an IO channel.
@@ -190,4 +190,4 @@ private
 	end
 end
 
-end # module ModRails
+end # module Passenger

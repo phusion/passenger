@@ -5,8 +5,8 @@ require 'mod_rails/utils'
 require 'abstract_server_spec'
 require 'minimal_spawner_spec'
 require 'spawner_privilege_lowering_spec'
-include ModRails
-include ModRails::Utils
+include Passenger
+include Passenger::Utils
 
 describe SpawnManager do
 	before :each do
