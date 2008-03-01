@@ -63,7 +63,7 @@ on Apache a breeze. It follows the usual Ruby on Rails conventions, such as
   applications to share memory with each other, resulting in as much of 30%
   memory saving on average. *
   
-  <em>* This requires additional software. Please read the user guide for
+  <em>* This requires additional software. Please read the users guide for
   information. Please visit our website for technical details and
   measurements.</em>
 
