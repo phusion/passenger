@@ -1,4 +1,5 @@
 require 'erb'
+require 'etc'
 require 'passenger/platform_info'
 
 class Apache2ConfigWriter
@@ -13,6 +14,8 @@ class Apache2ConfigWriter
 			line.strip
 		end
 		@mod_passenger = File.expand_path(File.dirname(__FILE__) + "/../../ext/apache2/mod_passenger.so")
+		@normal_user = CONFIG['normal_user_1']
+		@normal_group = Etc.getgrgid(Etc.getpwnam(@normal_user).gid).name
 	end
 	
 	def write
@@ -33,5 +36,9 @@ private
 	
 	def has_module?(name)
 		return File.exist?("#{@modules_dir}/#{name}")
+	end
+	
+	def running_as_root?
+		return Process.uid == 0
 	end
 end

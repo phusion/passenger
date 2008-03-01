@@ -10,4 +10,10 @@ class WelcomeController < ApplicationController
 		headers["X-Foo"] = "Bar"
 		render :nothing => true
 	end
+	
+	def touch
+		File.unlink('public/touch.txt') rescue nil
+		File.open('public/touch.txt', 'w') do end
+		render :nothing => true
+	end
 end
