@@ -1,5 +1,5 @@
 require 'support/config'
-require 'mod_rails/application'
+require 'passenger/application'
 include Passenger
 
 describe Application do

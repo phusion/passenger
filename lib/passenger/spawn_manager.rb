@@ -1,8 +1,8 @@
-require 'mod_rails/abstract_server'
-require 'mod_rails/framework_spawner'
-require 'mod_rails/application'
-require 'mod_rails/message_channel'
-require 'mod_rails/utils'
+require 'passenger/abstract_server'
+require 'passenger/framework_spawner'
+require 'passenger/application'
+require 'passenger/message_channel'
+require 'passenger/utils'
 module Passenger
 
 class SpawnManager < AbstractServer

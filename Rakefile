@@ -5,7 +5,7 @@ require 'rake/rdoctask'
 require 'rake/gempackagetask'
 require 'rake/extensions'
 require 'rake/cplusplus'
-require 'mod_rails/platform_info'
+require 'passenger/platform_info'
 
 ##### Configuration
 
@@ -39,7 +39,7 @@ task :clobber
 
 ##### Ruby C extension
 
-subdir 'ext/mod_rails' do
+subdir 'ext/passenger' do
 	task :native_support => ["native_support.#{LIBEXT}"]
 	
 	file 'Makefile' => 'extconf.rb' do
@@ -271,7 +271,7 @@ end
 Rake::RDocTask.new do |rd|
 	rd.main = "README"
 	rd.rdoc_dir = "doc/rdoc"
-	rd.rdoc_files.include("README", "lib/mod_rails/*.rb", "lib/rake/extensions.rb", "ext/mod_rails/*.c")
+	rd.rdoc_files.include("README", "lib/passenger/*.rb", "lib/rake/extensions.rb", "ext/passenger/*.c")
 	rd.template = "./doc/template/horo"
 	rd.title = "Passenger Ruby API"
 	rd.options << "-S" << "-N" << "-p" << "-H"
@@ -292,7 +292,7 @@ spec = Gem::Specification.new do |s|
 	s.add_dependency 'fastthread', '>= 1.0.1'
 	s.add_dependency 'rspec', '>= 1.1.2'
 	s.add_dependency 'rails', '>= 1.2.0'
-	s.extensions << 'ext/mod_rails/extconf.rb'
+	s.extensions << 'ext/passenger/extconf.rb'
 	s.files = FileList[
 		'Rakefile',
 		'README',
@@ -307,7 +307,7 @@ spec = Gem::Specification.new do |s|
 		'ext/apache2/*.{cpp,h,c}',
 		'ext/boost/*.{hpp,TXT}',
 		'ext/boost/**/*.{hpp,cpp,pl,inl}',
-		'ext/mod_rails/*.{c,rb}',
+		'ext/passenger/*.{c,rb}',
 		'benchmark/*.{cpp,rb}',
 		'test/*.{rb,cpp,example}',
 		'test/support/*',
@@ -360,10 +360,10 @@ task :sloccount do
 		end
 		sh "sloccount", *Dir[
 			"#{tmpdir}/*",
-			"lib/mod_rails/*",
+			"lib/passenger/*",
 			"lib/rake/{cplusplus,extensions}.rb",
 			"ext/apache2",
-			"ext/mod_rails/*.c",
+			"ext/passenger/*.c",
 			"test/*.{cpp,rb}",
 			"test/support/*.rb",
 			"test/stub/*.rb",

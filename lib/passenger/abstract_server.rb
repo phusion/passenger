@@ -1,7 +1,7 @@
 require 'socket'
 require 'timeout'
-require 'mod_rails/message_channel'
-require 'mod_rails/utils'
+require 'passenger/message_channel'
+require 'passenger/utils'
 module Passenger
 
 # An abstract base class for a server, with the following properties:

@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 $LOAD_PATH << "#{File.dirname(__FILE__)}/../../lib"
-require 'mod_rails/spawn_manager'
+require 'passenger/spawn_manager'
 
 include Passenger
 class SpawnManager

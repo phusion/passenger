@@ -1,4 +1,4 @@
-require 'mod_rails/utils'
+require 'passenger/utils'
 module Passenger
 
 # This class provides convenience methods for:
