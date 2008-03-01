@@ -150,31 +150,32 @@ installation. Passenger will need files from that folder. Furthermore, the
 
 Suppose you have a Ruby on Rails application in '/webapps/mycook', and you own
 the domain 'www.mycook.com'. You can either deploy your application in the
-document root (i.e. the application will be accessible from the root URL,
-'http://www.mycook.com/'), or in a subfolder (i.e. the application will be
+virtual host's root (i.e. the application will be accessible from the root URL,
+'http://www.mycook.com/'), or in a sub URI (i.e. the application will be
 accessible from a sub URL, such as 'http://www.mycook.com/railsapplication').
 
-=== Deploying to a document root ===
+=== Deploying to a virtual host's root ===
 
 Add a virtual host entry to your Apache configuration file. The virtual host's
 document root must point to your Ruby on Rails application's 'public' folder.
 For example:
 -------------------------------------------
 <VirtualHost *:80>
-	ServerName www.mycook.com
-	DocumentRoot /webapps/mycook/public
+    ServerName www.mycook.com
+    DocumentRoot /webapps/mycook/public
 </VirtualHost>
 -------------------------------------------
 Then restart Apache. The application has now been deployed.
 
+[[deploying_to_sub_uri]]
 === Deploying to a sub URI ===
 
 Suppose that you already have a virtual host:
 
 -------------------------------------------
 <VirtualHost *:80>
-	ServerName www.zsfa.com
-	DocumentRoot /websites/zsfa
+    ServerName www.zsfa.com
+    DocumentRoot /websites/zsfa
 </VirtualHost>
 -------------------------------------------
 
@@ -190,9 +191,9 @@ ln -s /webapps/mycook/public /websites/zsfa/rails
 Next, add a `RailsBaseURI` option to the virtual host configuration:
 -------------------------------------------
 <VirtualHost *:80>
-	ServerName www.zsfa.com
-	DocumentRoot /websites/zsfa
-	RailsBaseURI /rails
+    ServerName www.zsfa.com
+    DocumentRoot /websites/zsfa
+    RailsBaseURI /rails
 </VirtualHost>
 -------------------------------------------
 Then restart Apache. The application has now been deployed.
@@ -223,4 +224,89 @@ Nevertheless, the system administrator may be interested in changing
 Passenger's behavior. Passenger's Apache module supports the following
 configuration options:
 
+RailsSpawnServer <filename>::
+	The location to the Passenger spawn server. This configuration option is
+	essential to Passenger. The correct value is given by the installer,
+	and should not be changed manually.
++
+This option may only occur once, in the global server configuration. If
+this option is not given, then Passenger will look for the program
+`passenger-spawn-server` in `$PATH`.
+
+RailsBaseURI <uri>::
+	Used to specify that the given URI is a Rails application. See
+	<<deploying_to_sub_uri,Deploying to a sub URI>> for an example.
++
+This option may occur multiple times, in the global server configuration, in a
+virtual host configuration block, or in '.htaccess'.
+
+RailsAutoDetect <on|off>::
+	Whether Passenger should automatically detect whether a virtual host's
+	document root is a Ruby on Rails application. The default is 'on'.
++
+This option may occur in the global server configuration, in a virtual host
+configuration block, or in '.htaccess'.
++
+For example, consider the following configuration:
++
+-----------------------------
+RailsAutoDetect off
+<VirtualHost *:80>
+    ServerName www.mycook.com
+    DocumentRoot /webapps/mycook/public
+</VirtualHost>
+-----------------------------
++
+If one goes to 'http://www.mycook.com/', the visitor will see the contents of
+the '/webapps/mycook/public' folder, instead of the output of the Ruby on Rails
+application.
++
+It is possible to explicitly specify that the host is a Ruby on Rails
+application by using the `RailsBaseURI` configuration option:
++
+-----------------------------
+RailsAutoDetect off
+<VirtualHost *:80>
+    ServerName www.mycook.com
+    DocumentRoot /webapps/mycook/public
+    RailsBaseURI /
+</VirtualHost>
+-----------------------------
+
+RailsRuby <filename>::
+	This option allows one to specify the Ruby interpreter to use.
++
+This option may only occur once, in the global server configuration.
+The default is 'ruby'.
+
+RailsEnv <filename>::
+	This option allows one to specify the default `RAILS_ENV` value.
+	The default is 'production'.
++
+This option may only occur once, in the global server configuration.
+
+
+== Troubleshooting ==
+
+[TIP]
+.The golden tip: read your Apache error logs!
+=====================================================
+'mod_passenger' will write all errors to the Apache's error log. So if
+'mod_passenger' is installed, and you're experiencing problems, please look
+inside the Apache error logs. It will tell you what exactly went wrong.
+
+Any exceptions that your Ruby on Rails applications throws during startup,
+will also be written to that file.
+=====================================================
+
+
+== Tips ==
+
+=== User switching (security) ===
+
+TODO
+
+=== Reducing memory consumption of Ruby on Rails apps by 33% ===
+
+TODO
 
