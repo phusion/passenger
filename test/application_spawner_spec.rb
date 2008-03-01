@@ -3,7 +3,7 @@ require 'mod_rails/application_spawner'
 require 'minimal_spawner_spec'
 require 'spawn_server_spec'
 require 'spawner_privilege_lowering_spec'
-include ModRails
+include Passenger
 
 describe ApplicationSpawner do
 	before :all do

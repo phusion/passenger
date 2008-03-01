@@ -8,7 +8,7 @@
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
-static VALUE mModRails;
+static VALUE mPassenger;
 static VALUE mNativeSupport;
 
 /*
@@ -211,12 +211,12 @@ void
 Init_native_support() {
 	struct sockaddr_un addr;
 	
-	mModRails = rb_define_module("ModRails");
+	mPassenger = rb_define_module("Passenger");
 	
 	/*
 	 * Utility functions for accessing system functionality.
 	 */
-	mNativeSupport = rb_define_module_under(mModRails, "NativeSupport");
+	mNativeSupport = rb_define_module_under(mPassenger, "NativeSupport");
 	
 	rb_define_singleton_method(mNativeSupport, "send_fd", send_fd, 2);
 	rb_define_singleton_method(mNativeSupport, "recv_fd", recv_fd, 1);

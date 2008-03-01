@@ -2,7 +2,7 @@ require 'socket'
 require 'support/config'
 require 'mod_rails/message_channel'
 require 'mod_rails/utils'
-include ModRails
+include Passenger
 
 describe MessageChannel do
 	describe "scenarios with a single channel" do

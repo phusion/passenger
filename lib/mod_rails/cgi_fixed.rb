@@ -27,7 +27,7 @@
 require 'cgi'
 require 'stringio'
 
-module ModRails # :nodoc:
+module Passenger
 
 # Modifies CGI so that we can use it.  Main thing it does is expose
 # the stdinput and stdoutput so SCGI::Processor can connect them to
@@ -63,4 +63,4 @@ class CGIFixed < ::CGI
 		@out
 	end
 end
-end # module ModRails
+end # module Passenger

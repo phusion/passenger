@@ -1,6 +1,6 @@
 require 'support/config'
 require 'mod_rails/application'
-include ModRails
+include Passenger
 
 describe Application do
 	it "should correctly detect Rails version numbers specified in environment.rb" do

@@ -4,9 +4,9 @@ require 'etc'
 require 'thread'
 require 'fastthread'
 require 'timeout'
-require(File.dirname(__FILE__) << "/../../ext/mod_rails/native_support.so")
+require File.expand_path("#{File.dirname(__FILE__)}/../../ext/mod_rails/native_support.so")
 
-module ModRails # :nodoc:
+module Passenger
 
 module Utils
 protected
@@ -59,7 +59,7 @@ protected
 	end
 end
 
-end # module ModRails
+end # module Passenger
 
 class ConditionVariable
 	# This is like ConditionVariable.wait(), but allows one to wait a maximum
@@ -97,7 +97,7 @@ class IO
 	#
 	# Raises SystemCallError if something went wrong.
 	def send_io(io)
-		ModRails::NativeSupport.send_fd(self.fileno, io.fileno)
+		Passenger::NativeSupport.send_fd(self.fileno, io.fileno)
 	end
 	
 	# Receive an IO object (i.e. a file descriptor) from this IO channel.
@@ -105,7 +105,7 @@ class IO
 	#
 	# Raises SystemCallError if something went wrong.
 	def recv_io
-		return IO.new(ModRails::NativeSupport.recv_fd(self.fileno))
+		return IO.new(Passenger::NativeSupport.recv_fd(self.fileno))
 	end
 end
 

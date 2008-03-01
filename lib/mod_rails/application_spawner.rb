@@ -4,7 +4,7 @@ require 'mod_rails/abstract_server'
 require 'mod_rails/application'
 require 'mod_rails/utils'
 require 'mod_rails/request_handler'
-module ModRails # :nodoc
+module Passenger
 
 # Raised when an ApplicationSpawner, FrameworkSpawner or SpawnManager is
 # unable to spawn a new application.
@@ -173,4 +173,4 @@ private
 	end
 end
 
-end # module ModRails
+end # module Passenger

@@ -4,7 +4,7 @@ require 'mod_rails/message_channel'
 require 'mod_rails/cgi_fixed'
 require 'mod_rails/utils'
 
-module ModRails # :nodoc:
+module Passenger
 
 class RequestHandler
 	# Signal which will cause the Rails application to exit immediately.
@@ -197,4 +197,4 @@ private
 	end
 end
 
-end # module ModRails
+end # module Passenger
