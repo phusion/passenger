@@ -106,8 +106,6 @@ shared_examples_for "MyCook(tm) beta" do
 end
 
 describe "mod_passenger running in Apache 2" do
-	# TODO: test all of these with and without subdir
-	
 	before :all do
 		check_hosts_configuration
 		Apache2ConfigWriter.new.write
@@ -162,6 +160,12 @@ describe "mod_passenger running in Apache 2" do
 			@server = "http://zsfa.passenger.test:64506"
 			get('/').should =~ /Zed, you rock\!/
 		end
+	end
+	
+	describe "configuration options" do
+		it "should be possible to specify RailsBaseURI in .htaccess"
+		it "should ignore the Rails application if RailsAutoDetect is off"
+		it "should be possible to specify RailsAutoDetect in .htaccess"
 	end
 	
 	##### Helper methods #####
