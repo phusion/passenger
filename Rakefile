@@ -296,6 +296,7 @@ spec = Gem::Specification.new do |s|
 	s.files = FileList[
 		'Rakefile',
 		'README',
+		'LICENSE',
 		'lib/**/*.rb',
 		'bin/*',
 		'doc/*',
@@ -304,7 +305,7 @@ spec = Gem::Specification.new do |s|
 		'doc/*/*/*/*',
 		'doc/*/*/*/*/*',
 		'doc/*/*/*/*/*/*',
-		'ext/apache2/*.{cpp,h,c}',
+		'ext/apache2/*.{cpp,h,c,TXT}',
 		'ext/boost/*.{hpp,TXT}',
 		'ext/boost/**/*.{hpp,cpp,pl,inl}',
 		'ext/passenger/*.{c,rb}',

@@ -1,8 +1,3 @@
-/*
- * A few functions are based on the code from mod_scgi 1.9. mod_scgi is
- * Copyright (c) 2004 Corporation for National Research Initiatives; All Rights Reserved
- */
-
 #include <ap_config.h>
 #include <httpd.h>
 #include <http_config.h>
