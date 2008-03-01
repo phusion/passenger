@@ -90,6 +90,19 @@ shared_examples_for "MyCook(tm) beta" do
 			File.unlink(restart_file) rescue nil
 		end
 	end
+	
+	if Process.uid == 0
+		it "should be running as unprivileged user" do
+			post('/welcome/touch')
+			begin
+				stat = File.stat("#{@app_root}/public/touch.txt")
+				stat.uid.should_not == 0
+				stat.gid.should_not == 0
+			ensure
+				File.unlink("#{@app_root}/public/touch.txt") rescue nil
+			end
+		end
+	end
 end
 
 describe "mod_passenger running in Apache 2" do
@@ -161,7 +174,7 @@ describe "mod_passenger running in Apache 2" do
 		return Net::HTTP.get_response(URI.parse("#{@server}#{uri}"))
 	end
 	
-	def post(uri, params)
+	def post(uri, params = {})
 		return Net::HTTP.post_form(URI.parse("#{@server}#{uri}"), params).body
 	end
 	
@@ -210,6 +223,7 @@ describe "mod_passenger running in Apache 2" do
 	end
 	
 	def stop_apache
+		File.chmod(0666, *Dir['stub/apache2/*.{log,lock,pid}']) rescue nil
 		begin
 			pid = File.read('stub/apache2/httpd.pid').strip.to_i
 			Process.kill('SIGTERM', pid)

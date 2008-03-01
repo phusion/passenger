@@ -1,6 +1,11 @@
 ServerRoot "<%= @server_root %>"
 Listen 127.0.0.1:64506
 
+<% if running_as_root? %>
+	User <%= @normal_user %>
+	Group <%= @normal_group %>
+<% end %>
+
 <% if !has_builtin_module?('mod_log_config.c') %>
 	LoadModule log_config_module "<%= @modules_dir %>/mod_log_config.so"
 <% end %>

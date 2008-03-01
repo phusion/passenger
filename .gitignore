@@ -19,6 +19,7 @@ test/stub/railsapp/app/controllers/bar_controller.rb
 test/stub/railsapp/log/*
 test/stub/railsapp2/log/*
 test/stub/apache2/*.log
+test/stub/apache2/*.pid
 test/stub/apache2/httpd.conf
 test/stub/mycook/log
 test/stub/zsfa/mycook
