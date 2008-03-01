@@ -1,0 +1,226 @@
+= Passenger users guide =
+
+Passenger is an Apache module, which makes deploying Ruby on Rails applications
+on Apache a breeze. It follows the usual Ruby on Rails conventions, such as
+"Don't-Repeat-Yourself" and ease of setup.
+
+This users guide will teach you:
+
+- How to install Passenger.
+- How to configure Passenger.
+- How to deploy a Ruby on Rails application.
+- How to solve common problems.
+
+This guide assumes that the reader is somewhat familiar with Apache and with
+using the commandline.
+
+
+== Installation ==
+
+=== Requirements ===
+
+Before Passenger can be installed, the following requirements must be
+satisfied.
+
+==== Apache with development headers ====
+
+Passenger requires Apache 2.x. Apache 1.x is not supported at the moment.
+Apache must be setup with the prefork MPM. Other MPMs have not been tested
+(yet), so we cannot guarantee that Passenger will work if your Apache does
+not use the prefork MPM.
+
+To check which MPM your Apache installation is compiled with, please type:
+-----------------------------------
+ apache2 -V | grep 'Server MPM'
+-----------------------------------
+or
+-----------------------------------
+ httpd -V | grep 'Server MPM'
+-----------------------------------
+or
+-----------------------------------
+ apache -V | grep 'Server MPM'
+-----------------------------------
+depending on whether your Apache binary is called `apache2`, `httpd` or
+`apache`.
+
+The development headers for Apache and the Apache Portable Runtime (APR)
+must also be installed. You do not have to check for this, because the
+Passenger installer will check it for you.
+
+==== Ruby, RubyGems and Ruby on Rails ====
+
+Because Passenger is a deployment system for Ruby on Rails, it goes without
+saying that Ruby, RubyGems and Ruby on Rails must be installed. Please refer
+to the http://www.ruby-lang.org/[Ruby] and http://www.rubyonrails.org/[Ruby
+on Rails] websites for installation instructions.
+
+[TIP]
+.Installing multiple Ruby on Rails versions
+==========================================================
+Each Ruby on Rails applications that are going to be deployed may require a
+specific Ruby on Rails version. You can install a specific version with
+this command:
+-----------------------------
+gem install rails -v X.X.X
+-----------------------------
+where 'X.X.X' is the version number of Ruby on Rails.
+
+All of these versions will exist in parallel, and will not conflict with each
+other. Passenger will automatically make use of the correct version.
+==========================================================
+
+=== Downloading and installing Passenger ===
+
+Please download Passenger from the Passenger download page. You can either
+download the gem ('passenger-x.x.x.gem') or the source tarball
+('passenger-x.x.x.tar.gz'). We strongly recommend you to download the gem,
+because it automatically installs any required Ruby dependencies.
+
+Passenger provides an easy-to-use installer for installing the Passenger
+Apache module ('mod_passenger').
+
+[CAUTION]
+.Note for MacOS X users
+============================================
+Users have reported that the default Apache installation, as provided by MacOS
+X, is broken. We recommend OS X users to install Apache themselves, either by
+compiling from source or through the use of tools such as MacPorts.
+
+OS X users will also need to tell the Passenger installer to use a different
+Apache installation. Please read the following sections to learn how to do
+that.
+============================================
+
+NOTE: You might have to run the installation commands in the following sections
+as 'root'. If the installer fails because of permission errors, it will tell
+you.
+
+==== Specifying the correct Apache installation ====
+
+If your system has multiple Apache installations (this is likely the case on
+MacOS X), then you will need to tell the Passenger installer which one to use.
+If you only have one Apache installation (the case on most Linux systems), then
+you can skip this section because Passenger will automatically detect it.
+
+Every Apache installation has its own `apxs` program. You will need to tell
+Passenger the location of this program, by specifying the `APXS2` environment
+variable. Suppose that you want to use the Apache installation in
+'/opt/apache2'. Then, assuming that the corresponding `apxs` program is located
+'/opt/apache2/bin/apxs', type:
+----------------------------------
+export APXS2=/opt/apache2/bin/apxs
+----------------------------------
+
+NOTE: On some systems, the `apxs` program might be called `apxs2`, and it might
+be located in the `sbin` folder instead of the `bin` folder.
+
+==== Installing via the gem ====
+
+Please install the gem and then run the Passenger installer, by typing the
+following commands:
+------------------------------------------------------
+gem install passenger-x.x.x.gem
+passenger-install-apache2-module
+------------------------------------------------------
+Please follow the instructions given by the installer.
+
+==== Installing via the source tarball ====
+
+Before installing Passenger from the source tarball, please install required
+Ruby dependencies by typing this command:
+------------------------------------------------------
+gem install rake fastthread
+------------------------------------------------------
+
+Then, extract the tarball and run the included installer, by typing the
+following commands:
+------------------------------------------------------
+tar xzvf passenger-x.x.x.tar.gz
+./passenger-x.x.x/bin/passenger-install-apache2-module
+------------------------------------------------------
+Please follow the instructions given by the installer.
+
+IMPORTANT: Please do not remove the 'passenger-x.x.x' folder after
+installation. Passenger will need files from that folder. Furthermore, the
+'passenger-x.x.x' folder must be accessible by Apache.
+
+
+== Deploying a Ruby on Rails application ==
+
+Suppose you have a Ruby on Rails application in '/webapps/mycook', and you own
+the domain 'www.mycook.com'. You can either deploy your application in the
+document root (i.e. the application will be accessible from the root URL,
+'http://www.mycook.com/'), or in a subfolder (i.e. the application will be
+accessible from a sub URL, such as 'http://www.mycook.com/railsapplication').
+
+=== Deploying to a document root ===
+
+Add a virtual host entry to your Apache configuration file. The virtual host's
+document root must point to your Ruby on Rails application's 'public' folder.
+For example:
+-------------------------------------------
+<VirtualHost *:80>
+	ServerName www.mycook.com
+	DocumentRoot /webapps/mycook/public
+</VirtualHost>
+-------------------------------------------
+Then restart Apache. The application has now been deployed.
+
+=== Deploying to a sub URI ===
+
+Suppose that you already have a virtual host:
+
+-------------------------------------------
+<VirtualHost *:80>
+	ServerName www.zsfa.com
+	DocumentRoot /websites/zsfa
+</VirtualHost>
+-------------------------------------------
+
+And you want your Ruby on Rails application to be accessible from the URL
+'http://www.zsfa.com/rails'.
+
+To do this, make a symlink from your Ruby on Rails application's 'public'
+folder to a directory in the document root. For example:
+-------------------------------------------
+ln -s /webapps/mycook/public /websites/zsfa/rails
+-------------------------------------------
+
+Next, add a `RailsBaseURI` option to the virtual host configuration:
+-------------------------------------------
+<VirtualHost *:80>
+	ServerName www.zsfa.com
+	DocumentRoot /websites/zsfa
+	RailsBaseURI /rails
+</VirtualHost>
+-------------------------------------------
+Then restart Apache. The application has now been deployed.
+
+=== Redeploying (restarting the Ruby on Rails application) ===
+
+Deploying a new version of a Ruby on Rails application is as simple as
+re-uploading the application files, and restarting the application.
+
+There are two ways to restart the application:
+
+1. By restarting Apache.
+2. By creating or modifying the file 'tmp/restart.txt' in the Rails
+   application's root folder. Passenger will automatically restart the
+   application.
+
+For example, to restart our example MyCook application, we type this in the
+command line:
+-------------------------------------------
+touch /webapps/mycook/tmp/restart.txt
+-------------------------------------------
+
+
+== Configuring Passenger ==
+
+After installation, Passenger does not need any further configurations.
+Nevertheless, the system administrator may be interested in changing
+Passenger's behavior. Passenger's Apache module supports the following
+configuration options:
+
+

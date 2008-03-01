@@ -241,10 +241,15 @@ end
 
 subdir 'doc' do
 	desc "Generate all documentation"
-	task :doc => [:rdoc, :doxygen, 'Security of user switching support.html']
+	task :doc => [:rdoc, :doxygen, 'Security of user switching support.html',
+			'Users guide.html']
 	
-	file 'Security of user switching support.html' do
+	file 'Security of user switching support.html' => ['Security of user switching support.txt'] do
 		sh "asciidoc -a toc -a numbered -a toclevels=3 'Security of user switching support.txt'"
+	end
+	
+	file 'Users guide.html' => ['Users guide.txt'] do
+		sh "asciidoc -a toc -a numbered -a toclevels=3 -a icons 'Users guide.txt'"
 	end
 	
 	task :clobber => [:'doxygen:clobber'] do
