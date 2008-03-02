@@ -30,9 +30,9 @@ require 'stringio'
 module Passenger
 
 # Modifies CGI so that we can use it.  Main thing it does is expose
-# the stdinput and stdoutput so SCGI::Processor can connect them to
-# the right sources.  It also exposes the env_table so that SCGI::Processor
-# and hook the SCGI parameters into the environment table.
+# the stdinput and stdoutput so RequestHandler can connect them to
+# the right sources.  It also exposes the env_table so that RequestHandler
+# can hook the request parameters into the environment table.
 #
 # This is partially based on the FastCGI code, but much of the Ruby 1.6 
 # backwards compatibility is removed.

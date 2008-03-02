@@ -5,6 +5,14 @@ require 'passenger/message_channel'
 require 'passenger/utils'
 module Passenger
 
+# This class is capable of spawning Ruby on Rails application instances.
+# Spawning a Ruby on Rails application is usually slow. But SpawnManager
+# will preload and cache Ruby on Rails frameworks, as well as application
+# code, so subsequent spawns will be very fast.
+#
+# Internally, SpawnManager uses FrameworkSpawner to preload and cache
+# Ruby on Rails frameworks. FrameworkSpawner, in turn, uses
+# ApplicationSpawner to preload and cache application code.
 class SpawnManager < AbstractServer
 	DEFAULT_INPUT_FD = 3
 	SPAWNER_CLEAN_INTERVAL = 30 * 60
