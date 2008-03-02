@@ -26,6 +26,13 @@ class InitializationError < StandardError
 	end
 end
 
+class UnknownError < StandardError
+	def initialize(message, class_name, backtrace)
+		super("#{message} (#{class_name})")
+		set_backtrace(backtrace)
+	end
+end
+
 # This class is capable of spawns instances of a single Ruby on Rails application.
 # It does so by preloading as much of the application's code as possible, then creating
 # instances of the application using what is already preloaded. This makes it spawning
@@ -51,9 +58,6 @@ class ApplicationSpawner < AbstractServer
 	# that contains 'app/', 'public/', etc. If given an invalid directory,
 	# or a directory that doesn't appear to be a Rails application root directory,
 	# then an ArgumentError will be raised.
-	#
-	# If the application raised an exception or called exit() during startup,
-	# then an InitializationError will be raised.
 	#
 	# If +lower_privilege+ is true, then ApplicationSpawner will attempt to
 	# switch to the user who owns the application's <tt>config/environment.rb</tt>,
@@ -101,12 +105,20 @@ class ApplicationSpawner < AbstractServer
 	# Overrided from AbstractServer#start.
 	#
 	# This method raises InitializationError if the Ruby on Rails application
-	# failed to start.
+	# raised an exception or called exit() during startup.
 	def start
 		super
 		status = server.read[0]
 		if status == 'exception'
-			child_exception = Marshal.load(server.read_scalar)
+			begin
+				child_exception = Marshal.load(server.read_scalar)
+				server.read
+				server.read_scalar
+			rescue ArgumentError
+				message, class_name = server.read
+				backtrace = Marshal.load(server.read_scalar)
+				child_exception = UnknownError.new(message, class_name, backtrace)
+			end
 			stop
 			raise InitializationError.new(
 				"Application '#{@app_root}' raised an exception: " <<
@@ -138,6 +150,8 @@ protected
 		rescue => e
 			client.write('exception')
 			client.write_scalar(Marshal.dump(e))
+			client.write(e.message, e.class.to_s)
+			client.write_scalar(Marshal.dump(e.backtrace))
 			return
 		rescue SystemExit
 			client.write('exit')
