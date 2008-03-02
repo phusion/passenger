@@ -8,6 +8,7 @@ require File.expand_path("#{File.dirname(__FILE__)}/../../ext/passenger/native_s
 
 module Passenger
 
+# Utility functions.
 module Utils
 protected
 	# Return the absolute version of +path+. This path is guaranteed to
@@ -19,6 +20,8 @@ protected
 		return Pathname.new(path).realpath.to_s
 	end
 	
+	# Assert that +app_root+ is a valid Ruby on Rails application root.
+	# Raises ArgumentError if that is not the case.
 	def assert_valid_app_root(app_root)
 		assert_valid_directory(app_root)
 		assert_valid_file("#{app_root}/config/environment.rb")
@@ -38,16 +41,24 @@ protected
 		end
 	end
 	
+	# Assert that +username+ is a valid username. Raises
+	# ArgumentError if that is not the case.
 	def assert_valid_username(username)
 		# If username does not exist then getpwnam() will raise an ArgumentError.
 		username && Etc.getpwnam(username)
 	end
 	
+	# Assert that +groupname+ is a valid group name. Raises
+	# ArgumentError if that is not the case.
 	def assert_valid_groupname(groupname)
 		# If groupname does not exist then getgrnam() will raise an ArgumentError.
 		groupname && Etc.getgrnam(groupname)
 	end
 	
+	# Print the given exception, including the stack trace, to STDERR.
+	#
+	# +current_location+ is a string which describes where the code is
+	# currently at. Usually the current class name will be enough.
 	def print_exception(current_location, exception)
 		if !exception.is_a?(SystemExit)
 			STDERR.puts("** Exception #{exception.class} in #{current_location} " <<
