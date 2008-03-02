@@ -3,8 +3,10 @@ require 'passenger/application_spawner'
 require 'minimal_spawner_spec'
 require 'spawn_server_spec'
 require 'spawner_privilege_lowering_spec'
+require 'spawner_error_handling_spec'
 include Passenger
 
+if false
 describe ApplicationSpawner do
 	before :all do
 		ENV['RAILS_ENV'] = 'production'
@@ -30,6 +32,21 @@ describe ApplicationSpawner do
 	
 	def spawn_application
 		@spawner.spawn_application
+	end
+end
+end
+
+describe ApplicationSpawner do
+	it_should_behave_like "a spawner that correctly handles errors"
+	
+	def spawn_application(app_root)
+		@spawner = ApplicationSpawner.new(app_root)
+		begin
+			@spawner.start
+			return @spawner.spawn_application
+		ensure
+			@spawner.stop rescue nil
+		end
 	end
 end
 

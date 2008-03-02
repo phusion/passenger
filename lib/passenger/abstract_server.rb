@@ -76,6 +76,8 @@ class AbstractServer
 	#
 	# You may only call this method if the server is not already started.
 	# Otherwise, a ServerAlreadyStarted will be raised.
+	#
+	# Derived classes may raise additional exceptions.
 	def start
 		if !@parent_channel.nil?
 			raise ServerAlreadyStarted, "Server is already started"

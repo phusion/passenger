@@ -11,8 +11,20 @@ module Passenger
 class SpawnError < StandardError
 end
 
-# TODO: check whether preloading the application succeeded. spawn_application()
-# should throw an exception with the error message if the app couldn't initialize.
+# Raised when an ApplicationSpawner, FrameworkSpawner or SpawnManager
+# is able to spawn an application instance, but the application instance
+# exited during startup, or raised an exception during startup.
+class InitializationError < StandardError
+	# The exception that the application instance raised during startup.
+	# This may be nil, which means that the application instance exited
+	# with exit() instead of having raised an exception.
+	attr_reader :child_exception
+
+	def initialize(message, child_exception = nil)
+		super(message)
+		@child_exception = child_exception
+	end
+end
 
 # This class is capable of spawns instances of a single Ruby on Rails application.
 # It does so by preloading as much of the application's code as possible, then creating
@@ -40,6 +52,9 @@ class ApplicationSpawner < AbstractServer
 	# or a directory that doesn't appear to be a Rails application root directory,
 	# then an ArgumentError will be raised.
 	#
+	# If the application raised an exception or called exit() during startup,
+	# then an InitializationError will be raised.
+	#
 	# If +lower_privilege+ is true, then ApplicationSpawner will attempt to
 	# switch to the user who owns the application's <tt>config/environment.rb</tt>,
 	# and to the default group of that user.
@@ -52,7 +67,13 @@ class ApplicationSpawner < AbstractServer
 	# then ApplicationSpawner will continue without reporting an error.
 	def initialize(app_root, lower_privilege = true, lowest_user = "nobody")
 		super()
-		@app_root = normalize_path(app_root)
+		begin
+			@app_root = normalize_path(app_root)
+		rescue SystemCallError => e
+			raise ArgumentError, e.message
+		rescue ArgumentError
+			raise
+		end
 		@lower_privilege = lower_privilege
 		@lowest_user = lowest_user
 		self.time = Time.now
@@ -76,6 +97,26 @@ class ApplicationSpawner < AbstractServer
 	rescue SystemCallError, IOError, SocketError
 		raise SpawnError, "Unable to spawn the application: application died unexpectedly during initialization."
 	end
+	
+	# Overrided from AbstractServer#start.
+	#
+	# This method raises InitializationError if the Ruby on Rails application
+	# failed to start.
+	def start
+		super
+		status = server.read[0]
+		if status == 'exception'
+			child_exception = Marshal.load(server.read_scalar)
+			stop
+			raise InitializationError.new(
+				"Application '#{@app_root}' raised an exception: " <<
+				"#{child_exception.class} (#{child_exception.message})",
+				child_exception)
+		elsif status == 'exit'
+			stop
+			raise InitializationError.new("Application '#{@app_root}' exited during startup")
+		end
+	end
 
 protected
 	# Overrided method.
@@ -89,10 +130,20 @@ protected
 	
 	# Overrided method.
 	def initialize_server # :nodoc:
-		$0 = "Passenger ApplicationSpawner: #{@app_root}"
-		Dir.chdir(@app_root)
-		lower_privilege! if @lower_privilege
-		preload_application
+		begin
+			$0 = "Passenger ApplicationSpawner: #{@app_root}"
+			Dir.chdir(@app_root)
+			lower_privilege! if @lower_privilege
+			preload_application
+		rescue => e
+			client.write('exception')
+			client.write_scalar(Marshal.dump(e))
+			return
+		rescue SystemExit
+			client.write('exit')
+			raise
+		end
+		client.write('success')
 	end
 	
 private
