@@ -41,7 +41,7 @@ class ApplicationSpawner < AbstractServer
 	# then an ArgumentError will be raised.
 	#
 	# If +lower_privilege+ is true, then ApplicationSpawner will attempt to
-	# switch to the user who owns the application's +config/environment.rb+,
+	# switch to the user who owns the application's <tt>config/environment.rb</tt>,
 	# and to the default group of that user.
 	#
 	# If that user doesn't exist on the system, or if that user is root,
