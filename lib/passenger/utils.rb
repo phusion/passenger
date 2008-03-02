@@ -8,6 +8,13 @@ require File.expand_path("#{File.dirname(__FILE__)}/../../ext/passenger/native_s
 
 module Passenger
 
+class UnknownError < StandardError
+	def initialize(message, class_name, backtrace)
+		super("#{message} (#{class_name})")
+		set_backtrace(backtrace)
+	end
+end
+
 # Utility functions.
 module Utils
 protected
@@ -55,6 +62,26 @@ protected
 	def assert_valid_groupname(groupname)
 		# If groupname does not exist then getgrnam() will raise an ArgumentError.
 		groupname && Etc.getgrnam(groupname)
+	end
+	
+	def marshal_exception(exception)
+		data = {
+			:exception => Marshal.dump(exception),
+			:message => exception.message,
+			:class => exception.class.to_s,
+			:backtrace => exception.backtrace
+		}
+		return Marshal.dump(data)
+	end
+	
+	def unmarshal_exception(data)
+		hash = Marshal.load(data)
+		begin
+			return Marshal.load(hash[:exception])
+		rescue ArgumentError
+			exception = UnknownError.new(hash[:message], hash[:class], hash[:backtrace])
+			return exception
+		end
 	end
 	
 	# Print the given exception, including the stack trace, to STDERR.
