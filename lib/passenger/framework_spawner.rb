@@ -6,9 +6,21 @@ require 'passenger/application_spawner'
 require 'passenger/utils'
 module Passenger
 
-# TODO: check whether Rails version is supported
 # TODO: check whether preloading Rails was successful
 
+# This class is capable of spawning Ruby on Rails application instances
+# quickly. This is done by preloading the Ruby on Rails framework into memory,
+# before spawning the application instances.
+#
+# A single FrameworkSpawner instance can only hold a single Ruby on Rails
+# framework version. So be careful when using FrameworkSpawner: the applications
+# that you spawn through it must require the same RoR version. To handle multiple
+# RoR versions, use multiple FrameworkSpawner instances.
+#
+# FrameworkSpawner uses ApplicationSpawner internally.
+#
+# *Note*: FrameworkSpawner may only be started asynchronously with AbstractServer#start.
+# Starting it synchronously with AbstractServer#start_synchronously has not been tested.
 class FrameworkSpawner < AbstractServer
 	APP_SPAWNER_CLEAN_INTERVAL = 125
 	APP_SPAWNER_MAX_IDLE_TIME = 120

@@ -7,6 +7,8 @@ of the application's own licensing terms. The application will not be bound to
 the terms of the GPL in any way. That is, the GPL only applies to Passenger
 itself, and not to applications that are run through Passenger.
 
+We also explicitly allow Apache to load the Passenger Apache module.
+
 ----------------------------------------------------------------------
 
 		    GNU GENERAL PUBLIC LICENSE
