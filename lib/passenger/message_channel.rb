@@ -92,6 +92,8 @@ class MessageChannel
 			delimiter_pos = buffer.index(DELIMITER, offset)
 		end
 		return message
+	rescue Errno::ECONNRESET
+		return nil
 	rescue EOFError
 		return nil
 	end
@@ -117,6 +119,8 @@ class MessageChannel
 			end
 			return buffer
 		end
+	rescue Errno::ECONNRESET
+		return nil
 	rescue EOFError
 		return nil
 	end

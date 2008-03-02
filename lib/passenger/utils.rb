@@ -15,8 +15,10 @@ protected
 	# to be "normal", i.e. it doesn't contain stuff like ".." or "/",
 	# and it correctly respects symbolic links.
 	#
-	# Raises SystemCallError if something went wrong.
+	# Raises SystemCallError if something went wrong. Raises ArgumentError
+	# if +path+ is nil.
 	def normalize_path(path)
+		raise ArgumentError, "The 'path' argument may not be nil" if path.nil?
 		return Pathname.new(path).realpath.to_s
 	end
 	
@@ -61,16 +63,26 @@ protected
 	# currently at. Usually the current class name will be enough.
 	def print_exception(current_location, exception)
 		if !exception.is_a?(SystemExit)
-			STDERR.puts("** Exception #{exception.class} in #{current_location} " <<
-				"(#{exception}) (process #{$$}):\n" <<
-				"\tfrom " <<
-				exception.backtrace.join("\n\tfrom "))
+			STDERR.puts(exception.backtrace_string(current_location))
 			STDERR.flush
 		end
 	end
 end
 
 end # module Passenger
+
+class Exception
+	def backtrace_string(current_location = nil)
+		if current_location.nil?
+			location = nil
+		else
+			location = "in #{current_location} "
+		end
+		return "*** Exception #{self.class} #{location}" <<
+			"(#{self}) (process #{$$}):\n" <<
+			"\tfrom " << backtrace.join("\n\tfrom ")
+	end
+end
 
 class ConditionVariable
 	# This is like ConditionVariable.wait(), but allows one to wait a maximum
