@@ -14,10 +14,10 @@ class VersionNotFound < StandardError
 	end
 end
 
-# TODO: synchronize this documentation with the C++ one
-# Represents a single running instance of a Ruby on Rails application.
+# Represents a single Ruby on Rails application instance.
 class Application
-	# The root directory of this application, i.e. the directory that contains 'app/', 'public/', etc.
+	# The root directory of this application, i.e. the directory that contains
+	# 'app/', 'public/', etc.
 	attr_reader :app_root
 	
 	# The process ID of this application instance.
@@ -27,6 +27,8 @@ class Application
 	# new connections.
 	attr_reader :listen_socket_name
 	
+	# The owner pipe of the application instance (an IO object). Please see
+	# RequestHandler for a description of the owner pipe.
 	attr_reader :owner_pipe
 
 	# Return the Ruby on Rails version that the application requires.
@@ -65,8 +67,8 @@ class Application
 	# Whether _listen_socket_name_ refers to a Unix socket in the abstract namespace.
 	# In any case, _listen_socket_name_ does *not* contain the leading null byte.
 	#
-	# Note that abstract namespace Unix sockets are only supported on Linux
-	# at the moment.
+	# Note that at the moment, only Linux seems to support abstract namespace Unix
+	# sockets.
 	def using_abstract_namespace?
 		return @using_abstract_namespace
 	end
@@ -74,6 +76,8 @@ class Application
 	# Close the connection with the application instance. If there are no other
 	# processes that have connections to this application instance, then it will
 	# shutdown as soon as possible.
+	#
+	# See also RequestHandler#owner_pipe.
 	def close
 		@owner_pipe.close
 	end
