@@ -26,13 +26,6 @@ class InitializationError < StandardError
 	end
 end
 
-class UnknownError < StandardError
-	def initialize(message, class_name, backtrace)
-		super("#{message} (#{class_name})")
-		set_backtrace(backtrace)
-	end
-end
-
 # This class is capable of spawns instances of a single Ruby on Rails application.
 # It does so by preloading as much of the application's code as possible, then creating
 # instances of the application using what is already preloaded. This makes it spawning
@@ -110,15 +103,7 @@ class ApplicationSpawner < AbstractServer
 		super
 		status = server.read[0]
 		if status == 'exception'
-			begin
-				child_exception = Marshal.load(server.read_scalar)
-				server.read
-				server.read_scalar
-			rescue ArgumentError
-				message, class_name = server.read
-				backtrace = Marshal.load(server.read_scalar)
-				child_exception = UnknownError.new(message, class_name, backtrace)
-			end
+			child_exception = unmarshal_exception(server.read_scalar)
 			stop
 			raise InitializationError.new(
 				"Application '#{@app_root}' raised an exception: " <<
@@ -149,9 +134,7 @@ protected
 			preload_application
 		rescue => e
 			client.write('exception')
-			client.write_scalar(Marshal.dump(e))
-			client.write(e.message, e.class.to_s)
-			client.write_scalar(Marshal.dump(e.backtrace))
+			client.write_scalar(marshal_exception(e))
 			return
 		rescue SystemExit
 			client.write('exit')
