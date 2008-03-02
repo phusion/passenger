@@ -102,9 +102,8 @@ Run the following script as root:
 
  ./bin/passenger-install-apache2-module
 
-This README will not provide any further instructions. The idea is that the
-installation should be so simple, that the above one-liner instruction is
-more than enough. If you encounter any problems, please tell us.
+That's it. :) For detailed instructions and troubleshooting, please read the
+file 'doc/Users guide.html'.
 
 
 == Developers
