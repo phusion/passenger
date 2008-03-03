@@ -66,21 +66,41 @@ protected
 	
 	def marshal_exception(exception)
 		data = {
-			:exception => Marshal.dump(exception),
 			:message => exception.message,
 			:class => exception.class.to_s,
 			:backtrace => exception.backtrace
 		}
+		if exception.is_a?(InitializationError)
+			if exception.child_exception
+				data[:child_exception] = marshal_exception(exception.child_exception)
+			end
+		else
+			begin
+				data[:exception] = Marshal.dump(exception)
+			rescue ArgumentError, TypeError
+				e = UnknownError.new(exception.message, exception.class.to_s,
+							exception.backtrace)
+				data[:exception] = Marshal.dump(e)
+			end
+		end
 		return Marshal.dump(data)
 	end
 	
 	def unmarshal_exception(data)
 		hash = Marshal.load(data)
-		begin
-			return Marshal.load(hash[:exception])
-		rescue ArgumentError
-			exception = UnknownError.new(hash[:message], hash[:class], hash[:backtrace])
-			return exception
+		if hash[:class] == InitializationError.to_s
+			if hash[:child_exception]
+				child_exception = unmarshal_exception(hash[:child_exception])
+			else
+				child_exception = nil
+			end
+			return InitializationError.new(hash[:message], child_exception)
+		else
+			begin
+				return Marshal.load(hash[:exception])
+			rescue ArgumentError, TypeError
+				return UnknownError.new(hash[:message], hash[:class], hash[:backtrace])
+			end
 		end
 	end
 	

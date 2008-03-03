@@ -7,13 +7,13 @@ shared_examples_for "a spawn server" do
 	it "should raise a SpawnError if something went wrong" do
 		Process.kill('SIGABRT', @spawner.server_pid)
 		spawning = lambda { spawn_application }
-		spawning.should raise_error(ApplicationSpawner::SpawnError)
+		spawning.should raise_error(SpawnError)
 	end
 	
 	it "should work correctly after a restart, if something went wrong" do
 		Process.kill('SIGABRT', @spawner.server_pid)
 		spawning = lambda { spawn_application }
-		spawning.should raise_error(ApplicationSpawner::SpawnError)
+		spawning.should raise_error(SpawnError)
 		
 		@spawner.stop
 		@spawner.start
