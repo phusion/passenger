@@ -18,7 +18,7 @@ class InitializationError < StandardError
 	# The exception that the application instance raised during startup.
 	# This may be nil, which means that the application instance exited
 	# with exit() instead of having raised an exception.
-	attr_reader :child_exception
+	attr_accessor :child_exception
 
 	def initialize(message, child_exception = nil)
 		super(message)
@@ -81,18 +81,18 @@ class ApplicationSpawner < AbstractServer
 	# Spawn an instance of the RoR application. When successful, an Application object
 	# will be returned, which represents the spawned RoR application.
 	#
-	# If the ApplicationSpawner server hasn't already been started, a ServerNotStarted
-	# will be raised.
-	# If the RoR application failed to start, then a SpawnError will be raised. The
-	# application's exception message will be printed to standard error.
+	# Raises:
+	# - AbstractServer::ServerNotStarted: The ApplicationSpawner server hasn't already been started.
+	# - SpawnError: Something went wrong while spawning the application instance.
+	#   The application instance's exception message will be printed to standard error.
 	def spawn_application
 		server.write("spawn_application")
 		pid, socket_name, using_abstract_namespace = server.read
 		owner_pipe = server.recv_io
 		return Application.new(@app_root, pid, socket_name,
 			using_abstract_namespace == "true", owner_pipe)
-	rescue SystemCallError, IOError, SocketError
-		raise SpawnError, "Unable to spawn the application: application died unexpectedly during initialization."
+	rescue SystemCallError, IOError, SocketError => e
+		raise SpawnError, e.message
 	end
 	
 	# Overrided from AbstractServer#start.
@@ -132,7 +132,7 @@ protected
 			Dir.chdir(@app_root)
 			lower_privilege! if @lower_privilege
 			preload_application
-		rescue => e
+		rescue StandardError, ScriptError, NoMemoryError => e
 			client.write('exception')
 			client.write_scalar(marshal_exception(e))
 			return

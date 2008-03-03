@@ -191,6 +191,10 @@ describe "mod_passenger running in Apache 2" do
 		it "should be possible to specify RailsAutoDetect in .htaccess"
 	end
 	
+	describe "error handling" do
+		it "should not crash if the RoR application crashes"
+	end
+	
 	##### Helper methods #####
 	
 	def get(uri)

@@ -3,6 +3,7 @@ require 'passenger/framework_spawner'
 require 'minimal_spawner_spec'
 require 'spawn_server_spec'
 require 'spawner_privilege_lowering_spec'
+require 'spawner_error_handling_spec'
 include Passenger
 
 describe FrameworkSpawner do
@@ -29,13 +30,41 @@ describe FrameworkSpawner do
 	it_should_behave_like "a spawn server"
 	
 	it "should support vendor Rails" do
-		# TODO
+		# Already being tested by all the other tests.
 	end
-	
-	# TODO: test reloading
 	
 	def spawn_application
 		@spawner.spawn_application(@test_app)
+	end
+end
+
+describe FrameworkSpawner do
+	it_should_behave_like "handling errors in application initialization"
+	it_should_behave_like "handling errors in framework initialization"
+	
+	def spawn_application(app_root)
+		version = Application.detect_framework_version(app_root)
+		if version.nil?
+			options = { :vendor => "#{@app_root}/vendor/rails" }
+		else
+			options = { :version => version }
+		end
+		spawner = FrameworkSpawner.new(options)
+		spawner.start
+		begin
+			return spawner.spawn_application(app_root)
+		ensure
+			spawner.stop
+		end
+	end
+	
+	def load_nonexistant_framework
+		spawner = FrameworkSpawner.new(:version => "1.9.827")
+		begin
+			spawner.start
+		ensure
+			spawner.stop rescue nil
+		end
 	end
 end
 
