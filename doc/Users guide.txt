@@ -30,6 +30,7 @@ practically any operating system on earth, except Microsoft Windows.
 Passenger has been tested on:
 
 - Ubuntu Linux 7.10
+- Debian Etch v4
 - FreeBSD 6.1-RELEASE
 - MacOS X Tiger
 - MacOS X Leopard
@@ -186,6 +187,10 @@ virtual host's root (i.e. the application will be accessible from the root URL,
 'http://www.mycook.com/'), or in a sub URI (i.e. the application will be
 accessible from a sub URL, such as 'http://www.mycook.com/railsapplication').
 
+NOTE: The default `RAILS_ENV` environment in which deployed Rails applications
+are run, is ``production''. You can change this by changing the
+<<rails_env,'RailsEnv'>> configuration option.
+
 === Deploying to a virtual host's root ===
 
 Add a virtual host entry to your Apache configuration file. The virtual host's
@@ -311,7 +316,8 @@ RailsRuby <filename>::
 This option may only occur once, in the global server configuration.
 The default is 'ruby'.
 
-RailsEnv <filename>::
+[[rails_env]]
+RailsEnv <<string>::
 	This option allows one to specify the default `RAILS_ENV` value.
 	The default is 'production'.
 +
@@ -331,8 +337,10 @@ Any exceptions that your Ruby on Rails applications throws during startup,
 will also be written to that file.
 =====================================================
 
+=== Problems during installation ===
+
 [[installing_ruby_dev]]
-=== Ruby development headers aren't installed ===
+==== Ruby development headers aren't installed ====
 
 .Symptoms
 *******************************************************************************
@@ -351,11 +359,19 @@ automatically imply having the development headers installed.
 
 Here's how you can install the development headers:
 
-Ubuntu Linux::
-	Please type: `sudo apt-get install ruby1.8-dev`
+Ubuntu/Debian::
+	Please type:
++
+-----------------------------------------
+sudo apt-get install ruby1.8-dev
+-----------------------------------------
 
 Fedora/CentOS/RHEL::
-	Please type: `sudo yum install ruby-devel`
+	Please type:
++
+-----------------------------------------
+su -c 'yum install ruby-devel'
+-----------------------------------------
 
 FreeBSD::
 	Please install Ruby from 'ports' or with `pkg_add`. If that fails,
@@ -374,7 +390,54 @@ multiple Ruby installations), then you will need to tell Passenger which Ruby
 installation you want to use. Please read
 <<specifying_ruby_installation,Specifying the correct Ruby installation>>.
 
-=== Apache development headers aren't installed ===
+==== Apache development headers aren't installed ====
+
+.Symptoms
+*******************************************************************************
+Installing Passenger fails because of one of the following errors:
+
+- The installer says that the Apache development headers aren't installed.
+- The error message ``'httpd.h: No such file or directory''' occurs.
++
+(Instead of 'httpd.h', the message might also be 'http_config.h' or something
+else similar to 'http_*.h'.)
+*******************************************************************************
+
+Ubuntu::
+	Please type:
++
+-----------------------------------------
+sudo apt-get install apache2-prefork-dev
+-----------------------------------------
+
+Debian::
+	Please type:
++
+-----------------------------------------
+sudo apt-get install apache2-dev
+-----------------------------------------
+
+Fedora/CentOS/RHEL::
+	Please type:
++
+--------------------------------
+su -c 'yum install httpd-devel'
+--------------------------------
+
+FreeBSD::
+	Please install Apache from 'ports' or with `pkg_add`. If that fails,
+	please install Apache from source.
+
+MacOS X::
+	Please install Apache from source.
+
+Other operating systems::
+	Please consult your operating system's native package database.
+	There should be a package containing the Apache development headers.
+	If that fails, please install Apache from source.
+
+
+==== APR development headers aren't installed ====
 
 .Symptoms
 *******************************************************************************
@@ -383,30 +446,23 @@ Installing Passenger fails because of one of the following errors:
 - ?
 *******************************************************************************
 
-=== APR development headers aren't installed ===
-
-.Symptoms
-*******************************************************************************
-Installing Passenger fails because of one of the following errors:
-
-- ?
-*******************************************************************************
-
-=== Passenger is using the wrong Apache during installation ===
+==== Passenger is using the wrong Apache during installation ====
 
 .Symptoms
 *******************************************************************************
 ?
 *******************************************************************************
 
-=== Passenger is using the wrong Ruby during installation ===
+==== Passenger is using the wrong Ruby during installation ====
 
 .Symptoms
 *******************************************************************************
 ?
 *******************************************************************************
 
-=== Passenger has been compiled against the wrong Apache installation ===
+=== Problems after installation ===
+
+==== Passenger has been compiled against the wrong Apache installation ====
 
 .Symptoms
 *******************************************************************************
@@ -428,6 +484,10 @@ correct Apache installation>>, and <<install_passenger,reinstall Passenger>>.
 TODO
 
 === Reducing memory consumption of Ruby on Rails apps by 33% ===
+
+TODO
+
+=== Moving Passenger to a different directory ===
 
 TODO
 
