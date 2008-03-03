@@ -99,8 +99,8 @@ private
 	
 	def self.determine_apr1_info
 		if find_command('pkg-config')
-			flags = `pkg-config --cflags apr-1 apr-util-1`.strip
-			libs = `pkg-config --libs apr-1 apr-util-1`.strip
+			flags = `pkg-config --cflags apr-1 apr-util-1 2>/dev/null`.strip
+			libs = `pkg-config --libs apr-1 apr-util-1 2>/dev/null`.strip
 		else
 			apr_config = find_command('apr-1-config')
 			if apr_config.nil?
