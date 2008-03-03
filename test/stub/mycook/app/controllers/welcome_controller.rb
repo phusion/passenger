@@ -16,4 +16,8 @@ class WelcomeController < ApplicationController
 		File.open('public/touch.txt', 'w') do end
 		render :nothing => true
 	end
+	
+	def terminate
+		exit!
+	end
 end
