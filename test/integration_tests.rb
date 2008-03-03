@@ -114,6 +114,15 @@ shared_examples_for "MyCook(tm) beta" do
 		end
 	end
 	
+	it "should not make the web server crash if the app crashes" do
+		post('/welcome/terminate')
+		# TODO: The first request after the app crash results in a 500 Internal
+		# Server Error. Passenger should restart the app immediately instead of
+		# doing that.
+		get('/')
+		get('/').should =~ /Welcome to MyCook/
+	end
+	
 	if Process.uid == 0
 		it "should be running as unprivileged user" do
 			post('/welcome/touch')
@@ -189,10 +198,6 @@ describe "mod_passenger running in Apache 2" do
 		it "should be possible to specify RailsBaseURI in .htaccess"
 		it "should ignore the Rails application if RailsAutoDetect is off"
 		it "should be possible to specify RailsAutoDetect in .htaccess"
-	end
-	
-	describe "error handling" do
-		it "should not crash if the RoR application crashes"
 	end
 	
 	##### Helper methods #####
