@@ -62,22 +62,28 @@ class FrameworkSpawner < AbstractServer
 	
 	# Overrided from AbstractServer#start.
 	#
-	# This method raises InitializationError if the given Ruby on Rails framework
-	# could not be loaded.
+	# May raise these additional exceptions:
+	# - InitializationError: The given Ruby on Rails framework could not be loaded.
+	# - IOError, SystemCallError, SocketError: The FrameworkSpawner server crashed.
 	def start
 		super
-		status = server.read[0]
-		if status == 'exception'
-			child_exception = unmarshal_exception(server.read_scalar)
-			stop
-			if @version
-				message = "Could not load Ruby on Rails framework version #{@version}: " <<
-					"#{child_exception.class} (#{child_exception.message})"
-			else
-				message = "Could not load Ruby on Rails framework at '#{@vendor}': " <<
-					"#{child_exception.class} (#{child_exception.message})"
+		begin
+			status = server.read[0]
+			if status == 'exception'
+				child_exception = unmarshal_exception(server.read_scalar)
+				stop
+				if @version
+					message = "Could not load Ruby on Rails framework version #{@version}: " <<
+						"#{child_exception.class} (#{child_exception.message})"
+				else
+					message = "Could not load Ruby on Rails framework at '#{@vendor}': " <<
+						"#{child_exception.class} (#{child_exception.message})"
+				end
+				raise InitializationError.new(message, child_exception)
 			end
-			raise InitializationError.new(message, child_exception)
+		rescue IOError, SystemCallError, SocketError
+			stop
+			raise
 		end
 	end
 	
@@ -86,44 +92,49 @@ class FrameworkSpawner < AbstractServer
 	# When successful, an Application object will be returned, which represents
 	# the spawned RoR application.
 	#
-	# See ApplicationSpawner.new for an explanation for the +lower_privilege+
+	# See ApplicationSpawner.new for an explanation of the +lower_privilege+
 	# and +lowest_user+ parameters.
 	#
-	# FrameworkSpawner will internally use ApplicationSpawner, and cache ApplicationSpawner
-	# objects for a while. As a result, spawning an instance of a RoR application for the
-	# first time will be relatively slow, but subsequent attempts will be very fast, as long
-	# as the cache clear timeout hasn't been reached.
-	#
-	# This also implies that the application's code will be cached in memory. If you've
-	# changed the application's code, you must do one of these things:
-	# - Restart this FrameworkSpawner by calling stop(), then start().
-	# - Reload the application by calling reload().
+	# FrameworkSpawner will internally cache the code of applications, in order to
+	# speed up future spawning attempts. This implies that, if you've changed
+	# the application's code, you must do one of these things:
+	# - Restart this FrameworkSpawner by calling AbstractServer#stop, then AbstractServer#start.
+	# - Reload the application by calling reload with the correct app_root argument.
 	#
 	# Raises:
 	# - AbstractServer::ServerNotStarted: The FrameworkSpawner server hasn't already been started.
 	# - ArgumentError: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
 	# - InitializationError: The application raised an exception or called exit() during startup.
-	# - SpawnError: Something went wrong while spawning the application instance.
-	#   The application instance's exception message will be printed to standard error.
+	# - IOError: The ApplicationSpawner server exited unexpectedly.
+	# - SpawnError: The FrameworkSpawner server exited unexpectedly.
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody")
 		app_root = normalize_path(app_root)
 		assert_valid_app_root(app_root)
+		exception_to_propagate = nil
 		begin
 			server.write("spawn_application", app_root, lower_privilege, lowest_user)
 			result = server.read
 			if result.nil?
 				raise IOError, "Connection closed"
-			elsif result[0] == 'exception'
-				raise unmarshal_exception(server.read_scalar)
+			end
+			if result[0] == 'exception'
+				exception_to_propagate = unmarshal_exception(server.read_scalar)
+				raise exception_to_propagate
 			else
 				pid, listen_socket_name, using_abstract_namespace = server.read
+				if pid.nil?
+					raise IOError, "Connection closed"
+				end
 				owner_pipe = server.recv_io
 				return Application.new(app_root, pid, listen_socket_name,
 					using_abstract_namespace == "true", owner_pipe)
 			end
-		rescue SystemCallError, IOError, SocketError
-			# TODO: consider restarting the corresponding framework spawner
-			raise SpawnError, "The framework spawner server exited unexpectedly"
+		rescue SystemCallError, IOError, SocketError => e
+			if e == exception_to_propagate
+				raise
+			else
+				raise SpawnError, "The framework spawner server exited unexpectedly"
+			end
 		end
 	end
 	
@@ -139,7 +150,10 @@ class FrameworkSpawner < AbstractServer
 	# that the next time an application instance is spawned, the application
 	# code will be freshly loaded into memory.
 	#
-	# Raises IOError if something went wrong.
+	# Raises:
+	# - ArgumentError: +app_root+ doesn't appear to be a valid Ruby on Rails
+	#   application root.
+	# - IOError: The FrameworkSpawner server exited unexpectedly.
 	def reload(app_root = nil)
 		if app_root.nil?
 			server.write("reload")
@@ -147,7 +161,7 @@ class FrameworkSpawner < AbstractServer
 			server.write("reload", normalize_path(app_root))
 		end
 	rescue SystemCallError, IOError, SocketError
-		raise IOError, "Cannot send reload command to the framework spawner server"
+		raise IOError, "The framework spawner server exited unexpectedly"
 	end
 
 protected
@@ -231,7 +245,7 @@ private
 				begin
 					spawner = ApplicationSpawner.new(app_root, lower_privilege, lowest_user)
 					spawner.start
-				rescue ArgumentError, InitializationError => e
+				rescue ArgumentError, InitializationError, IOError => e
 					client.write('exception')
 					client.write_scalar(marshal_exception(e))
 					return
