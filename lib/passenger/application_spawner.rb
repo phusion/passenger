@@ -83,35 +83,44 @@ class ApplicationSpawner < AbstractServer
 	#
 	# Raises:
 	# - AbstractServer::ServerNotStarted: The ApplicationSpawner server hasn't already been started.
-	# - SpawnError: Something went wrong while spawning the application instance.
-	#   The application instance's exception message will be printed to standard error.
+	# - SpawnError: The ApplicationSpawner server exited unexpectedly.
 	def spawn_application
 		server.write("spawn_application")
 		pid, socket_name, using_abstract_namespace = server.read
+		if pid.nil?
+			raise IOError, "Connection closed"
+		end
 		owner_pipe = server.recv_io
 		return Application.new(@app_root, pid, socket_name,
 			using_abstract_namespace == "true", owner_pipe)
 	rescue SystemCallError, IOError, SocketError => e
-		raise SpawnError, e.message
+		raise SpawnError, "The application spawner server exited unexpectedly"
 	end
 	
 	# Overrided from AbstractServer#start.
 	#
-	# This method raises InitializationError if the Ruby on Rails application
-	# raised an exception or called exit() during startup.
+	# May raise these additional exceptions:
+	# - InitializationError: The Ruby on Rails application raised an exception
+	#   or called exit() during startup.
+	# - IOError: The ApplicationSpawner server exited unexpectedly.
 	def start
 		super
-		status = server.read[0]
-		if status == 'exception'
-			child_exception = unmarshal_exception(server.read_scalar)
+		begin
+			status = server.read[0]
+			if status == 'exception'
+				child_exception = unmarshal_exception(server.read_scalar)
+				stop
+				raise InitializationError.new(
+					"Application '#{@app_root}' raised an exception: " <<
+					"#{child_exception.class} (#{child_exception.message})",
+					child_exception)
+			elsif status == 'exit'
+				stop
+				raise InitializationError.new("Application '#{@app_root}' exited during startup")
+			end
+		rescue IOError, SystemCallError, SocketError
 			stop
-			raise InitializationError.new(
-				"Application '#{@app_root}' raised an exception: " <<
-				"#{child_exception.class} (#{child_exception.message})",
-				child_exception)
-		elsif status == 'exit'
-			stop
-			raise InitializationError.new("Application '#{@app_root}' exited during startup")
+			raise IOError, "The application spawner server exited unexpectedly"
 		end
 	end
 
