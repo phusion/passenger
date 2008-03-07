@@ -7,8 +7,20 @@ require 'passenger/utils'
 module Passenger
 
 # Raised when FrameworkSpawner or SpawnManager was unable to load a version of
-# the Ruby on Rails framework.
+# the Ruby on Rails framework. The +child_exception+ attribute is guaranteed
+# non-nil.
 class FrameworkInitError < InitializationError
+	attr_reader :vendor
+	attr_reader :version
+	
+	def initialize(message, child_exception, options)
+		super(message, child_exception)
+		if options[:vendor]
+			@vendor = options[:vendor]
+		else
+			@version = options[:version]
+		end
+	end
 end
 
 # This class is capable of spawning Ruby on Rails application instances
@@ -86,7 +98,8 @@ class FrameworkSpawner < AbstractServer
 					message = "Could not load Ruby on Rails framework at '#{@vendor}': " <<
 						"#{child_exception.class} (#{child_exception.message})"
 				end
-				raise FrameworkInitError.new(message, child_exception)
+				options = { :vendor => @vendor, :version => @version }
+				raise FrameworkInitError.new(message, child_exception, options)
 			end
 		rescue IOError, SystemCallError, SocketError
 			stop

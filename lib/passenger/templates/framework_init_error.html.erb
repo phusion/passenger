@@ -1,0 +1,45 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<title>Ruby on Rails framework could not be loaded</title>
+</head>
+
+<body>
+
+	<h1>Ruby on Rails framework could not be loaded</h1>
+	<dl>
+	<dt>Attempted to load version:</dt>
+	<dd>
+		<% if @error.vendor %>
+			Vendor directory: <tt><%=h @error.vendor %></tt>
+		<% else %>
+			<%=h @error.version %>
+		<% end %>
+	</dd>
+	
+	<dt>Error message:</dt>
+	<dd><%=h @error.message %></dd>
+	
+	<dt>What to do:</dt>
+	<dd>
+		<% if @error.vendor %>
+			The application's developer seems to have bundled a non-working
+			version of the Ruby on Rails framework. Please contact the
+			application's developer.
+		<% else %>
+			Please (re)install Ruby on Rails version <%=h @error.version %>.
+			This can be done with the following command:
+			<pre class="commands">sudo gem install rails -y <%=h @error.version %></pre>
+		<% end %>
+	</dd>
+	
+	<dt>Backtrace:</dt>
+	<dd>
+		<%= backtrace_html_for(@error.child_exception) %>
+	</dd>
+	</dl>
+
+</body>
+</html>
+
