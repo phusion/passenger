@@ -6,6 +6,11 @@ require 'passenger/application_spawner'
 require 'passenger/utils'
 module Passenger
 
+# Raised when FrameworkSpawner or SpawnManager was unable to load a version of
+# the Ruby on Rails framework.
+class FrameworkInitError < InitializationError
+end
+
 # This class is capable of spawning Ruby on Rails application instances
 # quickly. This is done by preloading the Ruby on Rails framework into memory,
 # before spawning the application instances.
@@ -24,6 +29,10 @@ class FrameworkSpawner < AbstractServer
 	APP_SPAWNER_MAX_IDLE_TIME = 120
 
 	include Utils
+	
+	# This exception means that the FrameworkSpawner server process exited unexpectedly.
+	class Error < AbstractServer::ServerError
+	end
 	
 	# An attribute, used internally. This should not be used outside Passenger.
 	attr_accessor :time
@@ -61,8 +70,8 @@ class FrameworkSpawner < AbstractServer
 	# Overrided from AbstractServer#start.
 	#
 	# May raise these additional exceptions:
-	# - InitializationError: The specified Ruby on Rails framework could not be loaded.
-	# - IOError, SystemCallError, SocketError: The FrameworkSpawner server crashed.
+	# - FrameworkInitError: The specified Ruby on Rails framework could not be loaded.
+	# - FrameworkSpawner::Error: The FrameworkSpawner server exited unexpectedly.
 	def start
 		super
 		begin
@@ -77,11 +86,11 @@ class FrameworkSpawner < AbstractServer
 					message = "Could not load Ruby on Rails framework at '#{@vendor}': " <<
 						"#{child_exception.class} (#{child_exception.message})"
 				end
-				raise InitializationError.new(message, child_exception)
+				raise FrameworkInitError.new(message, child_exception)
 			end
 		rescue IOError, SystemCallError, SocketError
 			stop
-			raise
+			raise Error, "The framework spawner server exited unexpectedly"
 		end
 	end
 	
@@ -102,9 +111,9 @@ class FrameworkSpawner < AbstractServer
 	# Raises:
 	# - AbstractServer::ServerNotStarted: The FrameworkSpawner server hasn't already been started.
 	# - ArgumentError: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
-	# - InitializationError: The application raised an exception or called exit() during startup.
-	# - IOError: The ApplicationSpawner server exited unexpectedly.
-	# - SpawnError: The FrameworkSpawner server exited unexpectedly.
+	# - AppInitError: The application raised an exception or called exit() during startup.
+	# - ApplicationSpawner::Error: The ApplicationSpawner server exited unexpectedly.
+	# - FrameworkSpawner::Error: The FrameworkSpawner server exited unexpectedly.
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody")
 		app_root = normalize_path(app_root)
 		assert_valid_app_root(app_root)
@@ -116,8 +125,7 @@ class FrameworkSpawner < AbstractServer
 				raise IOError, "Connection closed"
 			end
 			if result[0] == 'exception'
-				exception_to_propagate = unmarshal_exception(server.read_scalar)
-				raise exception_to_propagate
+				raise unmarshal_exception(server.read_scalar)
 			else
 				pid, listen_socket_name, using_abstract_namespace = server.read
 				if pid.nil?
@@ -128,11 +136,7 @@ class FrameworkSpawner < AbstractServer
 					using_abstract_namespace == "true", owner_pipe)
 			end
 		rescue SystemCallError, IOError, SocketError => e
-			if e == exception_to_propagate
-				raise
-			else
-				raise SpawnError, "The framework spawner server exited unexpectedly"
-			end
+			raise Error, "The framework spawner server exited unexpectedly"
 		end
 	end
 	
@@ -151,7 +155,7 @@ class FrameworkSpawner < AbstractServer
 	# Raises:
 	# - ArgumentError: +app_root+ doesn't appear to be a valid Ruby on Rails
 	#   application root.
-	# - IOError: The FrameworkSpawner server exited unexpectedly.
+	# - FrameworkSpawner::Error: The FrameworkSpawner server exited unexpectedly.
 	def reload(app_root = nil)
 		if app_root.nil?
 			server.write("reload")
@@ -159,7 +163,7 @@ class FrameworkSpawner < AbstractServer
 			server.write("reload", normalize_path(app_root))
 		end
 	rescue SystemCallError, IOError, SocketError
-		raise IOError, "The framework spawner server exited unexpectedly"
+		raise Error, "The framework spawner server exited unexpectedly"
 	end
 
 protected
@@ -243,7 +247,7 @@ private
 				begin
 					spawner = ApplicationSpawner.new(app_root, lower_privilege, lowest_user)
 					spawner.start
-				rescue ArgumentError, InitializationError, IOError => e
+				rescue ArgumentError, AppInitError, ApplicationSpawner::Error => e
 					client.write('exception')
 					client.write_scalar(marshal_exception(e))
 					return
@@ -253,7 +257,7 @@ private
 			spawner.time = Time.now
 			begin
 				app = spawner.spawn_application
-			rescue SpawnError => e
+			rescue ApplicationSpawner::Error => e
 				client.write('exception')
 				client.write_scalar(marshal_exception(e))
 				return

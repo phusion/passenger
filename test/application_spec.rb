@@ -12,4 +12,9 @@ describe Application do
 		rails_version = Application.detect_framework_version('stub/minimal-railsapp')
 		rails_version.should be_nil
 	end
+	
+	it "should raise VersionNotFound if a nonexistant Rails version is specified" do
+		detector = lambda { Application.detect_framework_version('stub/broken-railsapp4') }
+		detector.should raise_error(VersionNotFound)
+	end
 end

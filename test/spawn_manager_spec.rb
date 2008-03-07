@@ -5,6 +5,7 @@ require 'passenger/utils'
 require 'abstract_server_spec'
 require 'minimal_spawner_spec'
 require 'spawner_privilege_lowering_spec'
+require 'spawner_error_handling_spec'
 include Passenger
 include Passenger::Utils
 
@@ -61,3 +62,32 @@ describe SpawnManager do
 	end
 end
 
+describe SpawnManager do
+	it_should_behave_like "handling errors in application initialization"
+	it_should_behave_like "handling errors in framework initialization"
+	
+	def spawn_application(app_root)
+		spawner = SpawnManager.new
+		begin
+			return spawner.spawn_application(app_root)
+		ensure
+			spawner.cleanup
+		end
+	end
+	
+	def load_nonexistant_framework
+		Application.instance_eval do
+			alias orig_detect_framework_version detect_framework_version
+			def detect_framework_version(app_root)
+				return "1.9.827"
+			end
+		end
+		begin
+			return spawn_application('stub/broken-railsapp4')
+		ensure
+			Application.instance_eval do
+				alias detect_framework_version orig_detect_framework_version
+			end
+		end
+	end
+end

@@ -27,6 +27,8 @@ protected
 	def normalize_path(path)
 		raise ArgumentError, "The 'path' argument may not be nil" if path.nil?
 		return Pathname.new(path).realpath.to_s
+	rescue Errno::ENOENT => e
+		raise ArgumentError, e.message
 	end
 	
 	# Assert that +app_root+ is a valid Ruby on Rails application root.
@@ -71,6 +73,7 @@ protected
 			:backtrace => exception.backtrace
 		}
 		if exception.is_a?(InitializationError)
+			data[:is_initialization_error] = true
 			if exception.child_exception
 				data[:child_exception] = marshal_exception(exception.child_exception)
 			end
@@ -88,13 +91,22 @@ protected
 	
 	def unmarshal_exception(data)
 		hash = Marshal.load(data)
-		if hash[:class] == InitializationError.to_s
+		if hash[:is_initialization_error]
 			if hash[:child_exception]
 				child_exception = unmarshal_exception(hash[:child_exception])
 			else
 				child_exception = nil
 			end
-			return InitializationError.new(hash[:message], child_exception)
+			
+			case hash[:class]
+			when AppInitError.to_s
+				exception_class = AppInitError
+			when FrameworkInitError.to_s
+				exception_class = FrameworkInitError
+			else
+				exception_class = InitializationError
+			end
+			return exception_class.new(hash[:message], child_exception)
 		else
 			begin
 				return Marshal.load(hash[:exception])

@@ -54,11 +54,9 @@ class SpawnManager < AbstractServer
 	# - ArgumentError: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
 	# - VersionNotFound: The Ruby on Rails framework version that the given application requires
 	#   is not installed.
-	# - InitializationError: Either the Ruby on Rails framework version that the given application
-	#   requires could not be loaded, or the application raised an exception or called exit()
-	#   during startup.
-	# - IOError: The ApplicationSpawner server exited unexpectedly.
-	# - SpawnError: The FrameworkSpawner server exited unexpectedly.
+	# - AbstractServer::ServerError: One of the server processes exited unexpectedly.
+	# - FrameworkInitError: The Ruby on Rails framework that the application requires could not be loaded.
+	# - AppInitError: The application raised an exception or called exit() during startup.
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody")
 		options = {}
 		framework_version = Application.detect_framework_version(app_root)
@@ -74,8 +72,8 @@ class SpawnManager < AbstractServer
 			spawner = @spawners[key]
 			if !spawner
 				spawner = FrameworkSpawner.new(options)
-				@spawners[key] = spawner
 				spawner.start
+				@spawners[key] = spawner
 			end
 		end
 		spawner.time = Time.now
@@ -94,7 +92,7 @@ class SpawnManager < AbstractServer
 	# application instance is spawned, the application code will be freshly
 	# loaded into memory.
 	#
-	# Raises IOError if something went wrong.
+	# Raises AbstractServer::SpawnError if something went wrong.
 	def reload(app_root = nil)
 		@lock.synchronize do
 			@spawners.each_value do |spawner|
@@ -103,8 +101,7 @@ class SpawnManager < AbstractServer
 		end
 	end
 	
-	# Cleanup resources. Should be called after AbstractServer#start_synchronously
-	# is called.
+	# Cleanup resources. Should be called when this SpawnManager is no longer needed.
 	def cleanup
 		@lock.synchronize do
 			@cond.signal

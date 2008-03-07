@@ -6,24 +6,28 @@ require 'passenger/utils'
 require 'passenger/request_handler'
 module Passenger
 
-# Raised when an ApplicationSpawner, FrameworkSpawner or SpawnManager is
-# unable to spawn a new application.
-class SpawnError < StandardError
-end
-
-# Raised when an ApplicationSpawner, FrameworkSpawner or SpawnManager
-# is able to spawn an application instance, but the application instance
-# exited during startup, or raised an exception during startup.
+# An abstract base class for AppInitError and FrameworkInitError. This represents
+# the failure when initializing something.
 class InitializationError < StandardError
-	# The exception that the application instance raised during startup.
-	# This may be nil, which means that the application instance exited
-	# with exit() instead of having raised an exception.
+	# The exception that caused initialization to fail. This may be nil.
 	attr_accessor :child_exception
 
+	# Create a new InitializationError. +message+ is the error message,
+	# and +child_exception+ is the exception that caused initialization
+	# to fail.
 	def initialize(message, child_exception = nil)
 		super(message)
 		@child_exception = child_exception
 	end
+end
+
+# Raised when ApplicationSpawner, FrameworkSpawner or SpawnManager was unable
+# spawn a Ruby on Rails application, because the application either threw an
+# exception or called exit.
+#
+# If the +child_exception+ attribute is nil, then it means that the application
+# called exit.
+class AppInitError < InitializationError
 end
 
 # This class is capable of spawns instances of a single Ruby on Rails application.
@@ -38,6 +42,10 @@ end
 # Starting it synchronously with AbstractServer#start_synchronously has not been tested.
 class ApplicationSpawner < AbstractServer
 	include Utils
+	
+	# This exception means that the ApplicationSpawner server process exited unexpectedly.
+	class Error < AbstractServer::ServerError
+	end
 	
 	# The user ID of the root user.
 	ROOT_UID = 0
@@ -83,7 +91,7 @@ class ApplicationSpawner < AbstractServer
 	#
 	# Raises:
 	# - AbstractServer::ServerNotStarted: The ApplicationSpawner server hasn't already been started.
-	# - SpawnError: The ApplicationSpawner server exited unexpectedly.
+	# - ApplicationSpawner::Error: The ApplicationSpawner server exited unexpectedly.
 	def spawn_application
 		server.write("spawn_application")
 		pid, socket_name, using_abstract_namespace = server.read
@@ -94,15 +102,15 @@ class ApplicationSpawner < AbstractServer
 		return Application.new(@app_root, pid, socket_name,
 			using_abstract_namespace == "true", owner_pipe)
 	rescue SystemCallError, IOError, SocketError => e
-		raise SpawnError, "The application spawner server exited unexpectedly"
+		raise Error, "The application spawner server exited unexpectedly"
 	end
 	
 	# Overrided from AbstractServer#start.
 	#
 	# May raise these additional exceptions:
-	# - InitializationError: The Ruby on Rails application raised an exception
+	# - AppInitError: The Ruby on Rails application raised an exception
 	#   or called exit() during startup.
-	# - IOError: The ApplicationSpawner server exited unexpectedly.
+	# - ApplicationSpawner::Error: The ApplicationSpawner server exited unexpectedly.
 	def start
 		super
 		begin
@@ -110,17 +118,17 @@ class ApplicationSpawner < AbstractServer
 			if status == 'exception'
 				child_exception = unmarshal_exception(server.read_scalar)
 				stop
-				raise InitializationError.new(
+				raise AppInitError.new(
 					"Application '#{@app_root}' raised an exception: " <<
 					"#{child_exception.class} (#{child_exception.message})",
 					child_exception)
 			elsif status == 'exit'
 				stop
-				raise InitializationError.new("Application '#{@app_root}' exited during startup")
+				raise AppInitError.new("Application '#{@app_root}' exited during startup")
 			end
 		rescue IOError, SystemCallError, SocketError
 			stop
-			raise IOError, "The application spawner server exited unexpectedly"
+			raise Error, "The application spawner server exited unexpectedly"
 		end
 	end
 
