@@ -13,6 +13,11 @@ module Passenger
 # Internally, SpawnManager uses FrameworkSpawner to preload and cache
 # Ruby on Rails frameworks. FrameworkSpawner, in turn, uses
 # ApplicationSpawner to preload and cache application code.
+#
+# *Note*: SpawnManager may only be started synchronously with
+# AbstractServer#start_synchronously. Starting asynchronously has not been
+# tested. Don't forget to call cleanup after the server's main loop has
+# finished.
 class SpawnManager < AbstractServer
 	DEFAULT_INPUT_FD = 3
 	SPAWNER_CLEAN_INTERVAL = 30 * 60
@@ -33,6 +38,27 @@ class SpawnManager < AbstractServer
 		define_signal_handler('SIGHUP', :reload)
 	end
 
+	# Spawn a RoR application When successful, an Application object will be
+	# returned, which represents the spawned RoR application.
+	#
+	# See ApplicationSpawner.new for an explanation of the +lower_privilege+
+	# and +lowest_user+ parameters.
+	#
+	# SpawnManager will internally cache the code of applications, in order to
+	# speed up future spawning attempts. This implies that, if you've
+	# changed the application's code, you must do one of these things:
+	# - Restart this SpawnManager by calling AbstractServer#stop, then AbstractServer#start.
+	# - Reload the application by calling reload with the correct app_root argument.
+	#
+	# Raises:
+	# - ArgumentError: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
+	# - VersionNotFound: The Ruby on Rails framework version that the given application requires
+	#   is not installed.
+	# - InitializationError: Either the Ruby on Rails framework version that the given application
+	#   requires could not be loaded, or the application raised an exception or called exit()
+	#   during startup.
+	# - IOError: The ApplicationSpawner server exited unexpectedly.
+	# - SpawnError: The FrameworkSpawner server exited unexpectedly.
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody")
 		options = {}
 		framework_version = Application.detect_framework_version(app_root)
@@ -60,7 +86,7 @@ class SpawnManager < AbstractServer
 	# If nil is specified as application root, then all cached application
 	# instances will be removed, no matter the application root.
 	#
-	# _Long description:_
+	# <b>Long description:</b>
 	# Application code might be cached in memory. But once it a while, it will
 	# be necessary to reload the code for an application, such as after
 	# deploying a new version of the application. This method makes sure that
@@ -77,6 +103,8 @@ class SpawnManager < AbstractServer
 		end
 	end
 	
+	# Cleanup resources. Should be called after AbstractServer#start_synchronously
+	# is called.
 	def cleanup
 		@lock.synchronize do
 			@cond.signal
