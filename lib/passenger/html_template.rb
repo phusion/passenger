@@ -37,13 +37,14 @@ private
 			class_name = in_passenger ? "passenger" : "framework"
 			html << %Q{
 				<tr class="#{class_name}">
-					<td>#{i}</th>
+					<td>#{i}</td>
 					<td>#{filename}</td>
 					<td>#{line}</td>
 					<td>#{location}</td>
 				</tr>
 			}
 		end
+		html << "</table>\n"
 		return html
 	end
 	
