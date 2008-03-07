@@ -6,8 +6,6 @@ require 'passenger/application_spawner'
 require 'passenger/utils'
 module Passenger
 
-# TODO: check whether preloading Rails was successful
-
 # This class is capable of spawning Ruby on Rails application instances
 # quickly. This is done by preloading the Ruby on Rails framework into memory,
 # before spawning the application instances.
@@ -63,7 +61,7 @@ class FrameworkSpawner < AbstractServer
 	# Overrided from AbstractServer#start.
 	#
 	# May raise these additional exceptions:
-	# - InitializationError: The given Ruby on Rails framework could not be loaded.
+	# - InitializationError: The specified Ruby on Rails framework could not be loaded.
 	# - IOError, SystemCallError, SocketError: The FrameworkSpawner server crashed.
 	def start
 		super
