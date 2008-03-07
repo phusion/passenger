@@ -19,7 +19,10 @@
 	</dd>
 	
 	<dt>Error message:</dt>
-	<dd><%=h @error.message %></dd>
+	<dd><%=h @error.child_exception.message %></dd>
+
+	<dt>Exception class:</dt>
+	<dd><%=h @error.child_exception.class %></dd>
 	
 	<dt>What to do:</dt>
 	<dd>
@@ -30,7 +33,7 @@
 		<% else %>
 			Please (re)install Ruby on Rails version <%=h @error.version %>.
 			This can be done with the following command:
-			<pre class="commands">sudo gem install rails -y <%=h @error.version %></pre>
+			<pre class="commands">sudo gem install rails --version <%=h @error.version %></pre>
 		<% end %>
 	</dd>
 	
