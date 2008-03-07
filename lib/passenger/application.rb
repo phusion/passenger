@@ -79,7 +79,7 @@ class Application
 	#
 	# See also RequestHandler#owner_pipe.
 	def close
-		@owner_pipe.close
+		@owner_pipe.close rescue nil
 	end
 end
 

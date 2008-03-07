@@ -237,6 +237,8 @@ private
 	
 	def process_request(socket)
 		channel = MessageChannel.new(socket)
+		# TODO: We should check the size of the header data. We don't want attackers to
+		# make the server swap storm to dead by sending a header of 4 GB.
 		headers_data = channel.read_scalar
 		if headers_data.nil?
 			socket.close

@@ -64,6 +64,10 @@ class AbstractServer
 	class ServerNotStarted < StandardError
 	end
 	
+	# This exception means that the server process exited unexpectedly.
+	class ServerError < StandardError
+	end
+	
 	def initialize
 		@done = false
 		@message_handlers = {}
