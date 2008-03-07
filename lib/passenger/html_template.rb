@@ -27,12 +27,12 @@ private
 				<th>#</th>
 				<th>File</th>
 				<th>Line</th>
-				<th>Source</th>
+				<th>Location</th>
 			</tr>
 		}
 		in_passenger = false
 		error.backtrace.each_with_index do |item, i|
-			filename, line, source = item.split(':', 3)
+			filename, line, location = item.split(':', 3)
 			in_passenger ||= starts_with(filename, PASSENGER_FILE_PREFIX)
 			class_name = in_passenger ? "passenger" : "framework"
 			html << %Q{
@@ -40,7 +40,7 @@ private
 					<td>#{i}</th>
 					<td>#{filename}</td>
 					<td>#{line}</td>
-					<td>#{source}</td>
+					<td>#{location}</td>
 				</tr>
 			}
 		end
