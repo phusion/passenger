@@ -85,8 +85,32 @@ private:
 	void restartServer() {
 		if (pid != 0) {
 			channel.close();
-			// TODO: should not wait infinitely
-			waitpid(pid, NULL, 0);
+			
+			// Wait at most 5 seconds for the spawn server to exit.
+			// If that doesn't work, kill it, then wait at most 5 seconds
+			// for it to exit.
+			time_t begin = time(NULL);
+			bool done = false;
+			while (!done && time(NULL) - begin < 5) {
+				if (waitpid(pid, NULL, WNOHANG) > 0) {
+					done = true;
+				} else {
+					usleep(100000);
+				}
+			}
+			if (!done) {
+				P_TRACE("Spawn server did not exit in time, killing it...");
+				kill(pid, SIGTERM);
+				begin = time(NULL);
+				while (time(NULL) - begin < 5) {
+					if (waitpid(pid, NULL, WNOHANG) > 0) {
+						break;
+					} else {
+						usleep(100000);
+					}
+				}
+				P_TRACE("Spawn server has exited.");
+			}
 			pid = 0;
 		}
 		
@@ -203,7 +227,7 @@ private:
 			if (args[0] == "error_page") {
 				string errorPage;
 				
-				if (channel.readScalar(errorPage)) {
+				if (!channel.readScalar(errorPage)) {
 					throw SpawnException("The spawn server has exited unexpectedly.");
 				}
 				throw SpawnException("An error occured while spawning the application.",
@@ -407,7 +431,11 @@ public:
 		try {
 			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser);
 		} catch (const SpawnException &e) {
-			return handleSpawnException(e, appRoot, lowerPrivilege, lowestUser);
+			if (e.hasErrorPage()) {
+				throw;
+			} else {
+				return handleSpawnException(e, appRoot, lowerPrivilege, lowestUser);
+			}
 		}
 	}
 	

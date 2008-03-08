@@ -335,9 +335,23 @@ public:
 		try {
 			apr_bucket_brigade *bb;
 			apr_bucket *b;
+			Application::SessionPtr session;
 			
 			P_DEBUG("Processing HTTP request: " << r->uri);
-			Application::SessionPtr session(applicationPool->get(string(railsDir) + "/.."));
+			try {
+				session = applicationPool->get(string(railsDir) + "/..");
+			} catch (const SpawnException &e) {
+				P_TRACE("has error = " << e.hasErrorPage());
+				if (e.hasErrorPage()) {
+					ap_set_content_type(r, "text/html; charset=utf-8");
+					ap_rputs(e.getErrorPage().c_str(), r);
+					// Unfortunately we can't return a 500 Internal Server
+					// Error. Apache's HTTP error handler would kick in.
+					return OK;
+				} else {
+					throw;
+				}
+			}
 			sendHeaders(r, session, railsBaseURI);
 			sendRequestBody(r, session);
 			
