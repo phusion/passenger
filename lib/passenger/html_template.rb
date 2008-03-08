@@ -66,10 +66,10 @@ private
 			class_names << ((i & 1 == 0) ? " uneven" : " even")
 			html << %Q{
 				<tr class="backtrace_line #{class_names}">
-					<td>#{i}</td>
-					<td>#{filename}</td>
-					<td>#{line}</td>
-					<td>#{location}</td>
+					<td class="index">#{i}</td>
+					<td class="filename">#{filename}</td>
+					<td class="line">#{line}</td>
+					<td class="location">#{location}</td>
 				</tr>
 			}
 		end

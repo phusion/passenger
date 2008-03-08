@@ -21,6 +21,11 @@ h1.title {
 	margin-top: 0;
 }
 
+h1.error_title {
+	color: red;
+	border-bottom: 1px solid red;
+}
+
 a {
 	text-decoration: none;
 }
@@ -65,6 +70,10 @@ table.backtrace tr td {
 
 table.backtrace tr.even td {
 	background: #f7f2ff;
+}
+
+table.backtrace td.index {
+	font-weight: bold;
 }
 
 #footer {
