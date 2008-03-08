@@ -44,7 +44,14 @@ dd {
 	margin-bottom: 1em;
 }
 
-pre.commands {
+hr {
+	border: none;
+	border-bottom: solid 1px black;
+	margin-top: 1em;
+	margin-bottom: 1em;
+}
+
+.commands {
 	border: 1px solid #b594e7;
 	background: #ddc6ff;
 	padding: 0.5em;

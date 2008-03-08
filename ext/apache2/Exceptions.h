@@ -106,15 +106,44 @@ public:
 };
 
 /**
- * Thrown when SpawnManager or ApplicationPool fail to spawn an application instance.
+ * Thrown when SpawnManager or ApplicationPool fails to spawn an application
+ * instance. The exception may contain an error page, which is a user-friendly
+ * HTML page with details about the error.
  */
 class SpawnException: public exception {
 private:
 	string msg;
+	bool m_hasErrorPage;
+	string m_errorPage;
 public:
-	SpawnException(const string &message): msg(message) {}
+	SpawnException(const string &message)
+		: msg(message) {
+		m_hasErrorPage = false;
+	}
+	
+	SpawnException(const string &message, const string &errorPage)
+		: msg(message), m_errorPage(errorPage) {
+		m_hasErrorPage = true;
+	}
+	
 	virtual ~SpawnException() throw() {}
 	virtual const char *what() const throw() { return msg.c_str(); }
+	
+	/**
+	 * Check whether an error page is available.
+	 */
+	bool hasErrorPage() const {
+		return m_hasErrorPage;
+	}
+	
+	/**
+	 * Return the error page content.
+	 *
+	 * @pre hasErrorPage()
+	 */
+	const string getErrorPage() const {
+		return m_errorPage;
+	}
 };
 
 } // namespace Passenger

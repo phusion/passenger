@@ -2,6 +2,7 @@ require 'passenger/abstract_server'
 require 'passenger/framework_spawner'
 require 'passenger/application'
 require 'passenger/message_channel'
+require 'passenger/html_template'
 require 'passenger/utils'
 module Passenger
 
@@ -118,10 +119,24 @@ class SpawnManager < AbstractServer
 private
 	def handle_spawn_application(app_root, lower_privilege, lowest_user)
 		lower_privilege = lower_privilege == "true"
-		app = spawn_application(app_root, lower_privilege, lowest_user)
-		client.write(app.pid, app.listen_socket_name, app.using_abstract_namespace?)
-		client.send_io(app.owner_pipe)
-		app.close
+		app = nil
+		begin
+			app = spawn_application(app_root, lower_privilege, lowest_user)
+		rescue ArgumentError, AbstractServer::ServerError
+			raise # TODO
+		rescue VersionNotFound => e
+			send_error_page(client, 'version_not_found', :error => e, :app_root => app_root)
+		rescue AppInitError => e
+			send_error_page(client, 'app_init_error', :error => e, :app_root => app_root)
+		rescue FrameworkInitError => e
+			send_error_page(client, 'framework_init_error', :error => e)
+		end
+		if app
+			client.write('ok')
+			client.write(app.pid, app.listen_socket_name, app.using_abstract_namespace?)
+			client.send_io(app.owner_pipe)
+			app.close
+		end
 	end
 	
 	def handle_reload(app_root)
@@ -145,6 +160,12 @@ private
 				end
 			end
 		end
+	end
+	
+	def send_error_page(channel, template_name, options = {})
+		data = HTMLTemplate.new(template_name, options).result
+		channel.write('error_page')
+		channel.write_scalar(data)
 	end
 end
 

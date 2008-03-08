@@ -254,7 +254,16 @@ private:
 				writer = channel.readFileDescriptor();
 				return ptr(new RemoteSession(data, atoi(args[1]), atoi(args[2]), reader, writer));
 			} else if (args[0] == "SpawnException") {
-				throw SpawnException(args[1]);
+				if (args[2] == "true") {
+					string errorPage;
+					
+					if (!channel.readScalar(errorPage)) {
+						throw IOException("The ApplicationPool server unexpectedly closed the connection.");
+					}
+					throw SpawnException(args[1], errorPage);
+				} else {
+					throw SpawnException(args[1]);
+				}
 			} else if (args[0] == "IOException") {
 				throw IOException(args[1]);
 			} else {
@@ -386,7 +395,12 @@ private:
 					try {
 						session = pool.get(args[1], args[2] == "true", args[3]);
 					} catch (const SpawnException &e) {
-						channel.write("SpawnException", e.what(), NULL);
+						if (e.hasErrorPage()) {
+							channel.write("SpawnException", e.what(), "true", NULL);
+							channel.writeScalar(e.getErrorPage());
+						} else {
+							channel.write("SpawnException", e.what(), "false", NULL);
+						}
 						failed = true;
 					} catch (const IOException &e) {
 						channel.write("IOException", e.what(), NULL);
