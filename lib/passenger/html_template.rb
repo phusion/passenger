@@ -3,8 +3,16 @@ require 'erb'
 module Passenger
 
 class HTMLTemplate # :nodoc:
-	def initialize(template_name)
-		@template = ERB.new(File.read("#{File.dirname(__FILE__)}/templates/#{template_name}.html.erb"))
+	PASSENGER_FILE_PREFIX = File.dirname(__FILE__)
+	TEMPLATE_DIR = "#{PASSENGER_FILE_PREFIX}/templates"
+
+	def initialize(template_name, options = {})
+		@buffer = ''
+		@template = ERB.new(File.read("#{TEMPLATE_DIR}/#{template_name}.html.erb"),
+			nil, nil, '@buffer')
+		options.each_pair do |name, value|
+			self[name] = value
+		end
 	end
 	
 	def []=(name, value)
@@ -18,12 +26,32 @@ class HTMLTemplate # :nodoc:
 
 private
 	include ERB::Util
-	PASSENGER_FILE_PREFIX = File.dirname(__FILE__)
+	
+	def get_binding
+		return binding
+	end
+	
+	def layout(template_name, options = {})
+		options.each_pair do |name, value|
+			self[name] = value
+		end
+		layout_template = ERB.new(File.read("#{TEMPLATE_DIR}/#{template_name}.html.erb"))
+		b = get_binding do
+			old_size = @buffer.size
+			yield
+			@buffer.slice!(old_size .. @buffer.size)
+		end
+		@buffer << layout_template.result(b)
+	end
+	
+	def include(filename)
+		return File.read("#{TEMPLATE_DIR}/#{filename}")
+	end
 	
 	def backtrace_html_for(error)
 		html = %Q{
-			<table>
-			<tr>
+			<table class="backtrace">
+			<tr class="headers">
 				<th>#</th>
 				<th>File</th>
 				<th>Line</th>
@@ -34,9 +62,10 @@ private
 		error.backtrace.each_with_index do |item, i|
 			filename, line, location = item.split(':', 3)
 			in_passenger ||= starts_with(filename, PASSENGER_FILE_PREFIX)
-			class_name = in_passenger ? "passenger" : "framework"
+			class_names = in_passenger ? "passenger" : "framework"
+			class_names << ((i & 1 == 0) ? " uneven" : " even")
 			html << %Q{
-				<tr class="#{class_name}">
+				<tr class="backtrace_line #{class_names}">
 					<td>#{i}</td>
 					<td>#{filename}</td>
 					<td>#{line}</td>
