@@ -538,6 +538,16 @@ public:
 				active++;
 				activeOrMaxChanged.notify_all();
 			}
+		} catch (const SpawnException &e) {
+			string message("Cannot spawn application '");
+			message.append(appRoot);
+			message.append("': ");
+			message.append(e.what());
+			if (e.hasErrorPage()) {
+				throw SpawnException(message, e.getErrorPage());
+			} else {
+				throw SpawnException(message);
+			}
 		} catch (const exception &e) {
 			string message("Cannot spawn application '");
 			message.append(appRoot);
