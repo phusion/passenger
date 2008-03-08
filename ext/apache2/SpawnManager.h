@@ -191,13 +191,35 @@ private:
 			throw SpawnException(string("Could not write 'spawn_application' "
 				"command to the spawn server: ") + e.sys());
 		}
+		
 		try {
+			// Read status.
+			if (!channel.read(args)) {
+				throw SpawnException("The spawn server has exited unexpectedly.");
+			}
+			if (args.size() != 1) {
+				throw SpawnException("The spawn server sent an invalid message.");
+			}
+			if (args[0] == "error_page") {
+				string errorPage;
+				
+				if (channel.readScalar(errorPage)) {
+					throw SpawnException("The spawn server has exited unexpectedly.");
+				}
+				throw SpawnException("An error occured while spawning the application.",
+					errorPage);
+			} else if (args[0] != "ok") {
+				throw SpawnException("The spawn server sent an invalid message.");
+			}
+			
+			// Read application info.
 			if (!channel.read(args)) {
 				throw SpawnException("The spawn server has exited unexpectedly.");
 			}
 		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not read from the spawn server: ") + e.sys());
 		}
+		
 		try {
 			ownerPipe = channel.readFileDescriptor();
 		} catch (const SystemException &e) {
@@ -212,7 +234,7 @@ private:
 		
 		if (args.size() != 3) {
 			close(ownerPipe);
-			throw SpawnException("The spawn server sent an unknown message.");
+			throw SpawnException("The spawn server sent an invalid message.");
 		}
 		
 		pid_t pid = atoi(args[0]);
