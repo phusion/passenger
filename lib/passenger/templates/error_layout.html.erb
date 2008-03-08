@@ -1,0 +1,29 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<title><%=h @title %></title>
+	<style type="text/css">
+		<%= include 'error_layout.css' %>
+	</style>
+</head>
+
+<body>
+
+	<div id="content">
+		<%= yield %>
+	</div>
+	<div id="footer">
+		<hr>
+		<!--
+		   You are free to modify the footer as you see fit,
+		   but we kindly ask of you to preserve to following
+		   footer. Thank you.
+		-->
+		Powered by <a href="http://passenger.phusion.nl/">Phusion Passenger</a>,
+		<tt>mod_rails</tt> for Apache.
+	</div>
+
+</body>
+</html>
+
