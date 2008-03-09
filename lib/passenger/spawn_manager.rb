@@ -122,8 +122,10 @@ private
 		app = nil
 		begin
 			app = spawn_application(app_root, lower_privilege, lowest_user)
-		rescue ArgumentError, AbstractServer::ServerError
-			raise # TODO
+		rescue ArgumentError => e
+			send_error_page(client, 'invalid_app_root', :error => e, :app_root => app_root)
+		rescue AbstractServer::ServerError => e
+			send_error_page(client, 'general_error', :error => e)
 		rescue VersionNotFound => e
 			send_error_page(client, 'version_not_found', :error => e, :app_root => app_root)
 		rescue AppInitError => e
