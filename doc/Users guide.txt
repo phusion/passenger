@@ -146,7 +146,24 @@ be located in the `sbin` folder instead of the `bin` folder.
 [[specifying_ruby_installation]]
 ==== Specifying the correct Ruby installation ====
 
-TODO
+If your system has multiple Ruby installations (this is likely the case on
+MacOS X), then you will need to tell the Passenger installer which one to use.
+If you only have one Ruby installation (the case on most Linux systems), then
+you can skip this section because Passenger will automatically detect it.
+
+To specify the Ruby installation, prepend your Ruby installation's `bin`
+directory to the `PATH` environment variable. For example, if you have the
+following Ruby installations:
+
+- /usr/bin/ruby
+- /opt/myruby/bin/ruby
+
+and you want to use the latter, then type:
+
+----------------------------------
+export PATH=/opt/myruby/bin:$PATH
+----------------------------------
+
 
 ==== Installing via the gem ====
 
@@ -166,17 +183,22 @@ Ruby dependencies by typing this command:
 gem install rake fastthread
 ------------------------------------------------------
 
-Then, extract the tarball and run the included installer, by typing the
-following commands:
+Then, extract the tarball to whatever location you prefer. The Passenger files
+are to reside in that location permanently. For example, if you would like
+Passenger to reside in `/opt/passenger-x.x.x`:
 ------------------------------------------------------
-tar xzvf passenger-x.x.x.tar.gz
-./passenger-x.x.x/bin/passenger-install-apache2-module
+cd /opt
+tar xzvf ~/YourDownloadsFolder/passenger-x.x.x.tar.gz
+------------------------------------------------------
+
+Next, run the included installer:
+------------------------------------------------------
+/opt/passenger-x.x.x/bin/passenger-install-apache2-module
 ------------------------------------------------------
 Please follow the instructions given by the installer.
 
 IMPORTANT: Please do not remove the 'passenger-x.x.x' folder after
-installation. Passenger will need files from that folder. Furthermore, the
-'passenger-x.x.x' folder must be accessible by Apache.
+installation. Furthermore, the 'passenger-x.x.x' folder must be accessible by Apache.
 
 
 == Deploying a Ruby on Rails application ==
@@ -441,24 +463,55 @@ Other operating systems::
 
 .Symptoms
 *******************************************************************************
-Installing Passenger fails because of one of the following errors:
+Installing Passenger fails because one of the following errors:
 
-- ?
+- The installer tells you that APR development headers aren't installed.
+- The error message ``'apr_pools.h: No such file or directory''' occurs.
+- The error message ``'apr_strings.h: No such file or directory''' occurs.
 *******************************************************************************
+
+Ubuntu::
+	Please type:
++
+-----------------------------------------
+sudo apt-get install libapr1-dev
+-----------------------------------------
+
+Debian::
+	Please type:
++
+-----------------------------------------
+sudo apt-get install libapr1-dev
+-----------------------------------------
+
+Fedora/CentOS/RHEL::
+	Please type:
++
+--------------------------------
+su -c 'yum install apr-devel'
+--------------------------------
+
+Other Linux distributions::
+	Please consult your distribution's package database. There should be a
+	package which provides APR development headers.
+
+Other operating systems::
+	The APR development are bundled with Apache. If the APR headers aren't,
+	then it probably means that they have been removed after Apache's been
+	installed. Please reinstall Apache to get back the APR headers.
+
 
 ==== Passenger is using the wrong Apache during installation ====
 
-.Symptoms
-*******************************************************************************
-?
-*******************************************************************************
+Please <<specifying_correct_apache_install,specify the correct Apache
+installation>>, and re-run the Passenger installer.
+
 
 ==== Passenger is using the wrong Ruby during installation ====
 
-.Symptoms
-*******************************************************************************
-?
-*******************************************************************************
+Please <<specifying_ruby_installation,specify the correct Ruby installation>>,
+and re-run the Passenger installer.
+
 
 === Problems after installation ===
 
