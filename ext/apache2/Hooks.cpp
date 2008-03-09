@@ -341,7 +341,6 @@ public:
 			try {
 				session = applicationPool->get(string(railsDir) + "/..");
 			} catch (const SpawnException &e) {
-				P_TRACE("has error = " << e.hasErrorPage());
 				if (e.hasErrorPage()) {
 					ap_set_content_type(r, "text/html; charset=utf-8");
 					ap_rputs(e.getErrorPage().c_str(), r);
