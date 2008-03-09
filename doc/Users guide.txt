@@ -274,15 +274,15 @@ RailsBaseURI <uri>::
 	Used to specify that the given URI is a Rails application. See
 	<<deploying_to_sub_uri,Deploying to a sub URI>> for an example.
 +
-This option may occur multiple times, in the global server configuration, in a
-virtual host configuration block, or in '.htaccess'.
+This option may occur multiple times, in the global server configuration or in a
+virtual host configuration block.
 
 RailsAutoDetect <on|off>::
 	Whether Passenger should automatically detect whether a virtual host's
 	document root is a Ruby on Rails application. The default is 'on'.
 +
-This option may occur in the global server configuration, in a virtual host
-configuration block, or in '.htaccess'.
+This option may occur in the global server configuration or in a virtual host
+configuration block.
 +
 For example, consider the following configuration:
 +
