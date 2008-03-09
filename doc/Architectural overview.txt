@@ -1,0 +1,106 @@
+Passenger architecture overview
+===============================
+
+This document describes Passenger's architure in a global way. The purpose of
+this document is to lower the barrier to entry for new contributors, as well
+as to explain (some of the) design choices that we have made.
+
+
+About the involved technologies
+-------------------------------
+
+=== Typical web applications ===
+
+Before we describe Passenger, it is important to understand how typical web
+applications work, from the point of view of someone who wants to connect the
+application to a web server.
+
+A typical, isolated, web application accepts an HTTP request from some I/O
+channel, processes it internally, and outputs an HTTP response, which is sent
+back to the client. This is done in a loop, until the application is commanded
+to exit.
+
+image:images/typical_isolated_web_application.png[Architecture of a typical
+web application in isolation]
+
+Few web applications are accessible directly by HTTP clients. Common setups
+are:
+
+1. The web application is contained in an application server. This application
+server may or may not be able to contain multiple web applications. The
+application server is then connected to the web server. The web server
+dispatches requests to the application server, which in turn dispatches
+requests to the correct web application. Conversely, HTTP responses
+outputted by the web application is sent to the application server, which
+in turn sends it to the web server, and eventually to the HTTP client.
++
+A typical example of such a setup is a J2EE application, contained in the
+Tomcat web server, behind the Apache web server.
+
+2. The web application is contained in a web server. In this case, the web
+server acts like an application server. This is the case for PHP applications,
+on Apache servers with 'mod_php'.
+
+3. The web application *is* a web server, and can accept HTTP requests
+directly. This is the case for the Trac bug tracking system, running in its
+standalone server. In many setups, such web applications sit behind a different
+web server, instead of accepting HTTP requests directly. The frontend web
+server acts like a reverse HTTP proxy.
+
+4. The web application does not speak HTTP directly, but is connected directly
+to the web server through some communication adapter. CGI, FastCGI and SCGI
+are good examples of this.
+
+These descriptions are true for virtually all web applications, whether they're
+based on PHP, Django, J2EE, ASP.NET, Ruby on Rails, or whatever. Note that all
+of these setups provide the same functionality, i.e. no setup can do something
+that a different setup can. The critical reader will notice that all of these
+setups are identical to the one described in the first diagram, if the
+combination of web servers, application servers, web applications etc. are
+considered to be a single entity; a black box if you will.
+
+It should also be noted that these setups do not enforce any particular
+I/O processing implementation. The web servers, application servers, web
+applications, etc. could process I/O serially (i.e. one request at a time),
+could multiplex I/O with a single thread (e.g. by using `select(2)` or
+`poll(2)`) or it could process I/O with multiple threads and/or multiple
+processes.
+
+Of course, there are many variations possible. For example, load balancers
+could be used. But that is outside the scope of this article.
+
+
+=== Ruby on Rails ===
+
+Every Ruby on Rails application has a 'dispatcher'. This dispatcher is
+responsible for processing HTTP requests. It does not speak HTTP directly.
+Instead, it accepts data structures that contain the information of an
+HTTP request. Thus, the dispatcher is particularly interesting to
+developers who wish to develop software which connects Ruby on Rails to an
+HTTP processing layer (e.g. a web server).
+
+The Ruby on Rails dispatcher can only process requests serially, i.e. one
+at a time. It is not possible to process two requests at the same time
+with threads, because parts of Ruby on Rails are not thread-safe. *
+
+* This is not as big of a problem as some people imagine. TODO: write article about this
+
+A particularly interesting thing to note, is that a lot of the memory
+occupied by Ruby on Rails applications is spent on storing the program code
+(i.e. the Ruby AST) in memory. See Appendix A for details. TODO: write this
+
+
+=== Apache ===
+
+The Apache web server has a pluggable I/O multiprocessing (the ability to
+handle more than 1 concurrent HTTP client at the same time) architecture. An
+Apache module which implements a particular multiprocessing strategy, is called
+a Multi-Processing Module (MPM). The 'prefork' MPM -- which also happens to be
+the default -- appears to be the most popular one. This MPM uses a 'control process'
+
+
+Passenger architecture
+----------------------
+
+=== Design goals ===
+
