@@ -104,8 +104,14 @@ shared_examples_for "MyCook(tm) beta" do
 				}
 			end
 			sleep(1)
+			
 			# NOTE: this test might fail when the system is under high load. There
 			# appears to be some racing condition somewhere.
+			
+			# NOTE 2: This test seems to fail once in a while. There definitely
+			# appears to be a racing condition. But it doesn't appear to make
+			# the web server crash so it's not that bad.
+			
 			File.open(restart_file, 'w') do end
 			get('/test').should == 'bar'
 		ensure
@@ -198,6 +204,37 @@ describe "mod_passenger running in Apache 2" do
 		it "should be possible to specify RailsBaseURI in .htaccess"
 		it "should ignore the Rails application if RailsAutoDetect is off"
 		it "should be possible to specify RailsAutoDetect in .htaccess"
+	end
+	
+	describe "error handling" do
+		before :each do
+			File.unlink("stub/zsfa/app-with-nonexistant-rails-version") rescue nil
+			File.unlink("stub/zsfa/app-that-crashes-during-startup") rescue nil
+			File.unlink("stub/zsfa/app-with-crashing-vendor-rails") rescue nil
+			File.symlink("../broken-railsapp4/public", "stub/zsfa/app-with-nonexistant-rails-version")
+			File.symlink("../broken-railsapp/public", "stub/zsfa/app-that-crashes-during-startup")
+			File.symlink("../broken-railsapp5/public", "stub/zsfa/app-with-crashing-vendor-rails")
+			@server = "http://zsfa.passenger.test:64506"
+			@error_page_signature = /<meta name="generator" content="Phusion Passenger">/
+		end
+		
+		after :each do
+			File.unlink("stub/zsfa/app-with-nonexistant-rails-version") rescue nil
+			File.unlink("stub/zsfa/app-that-crashes-during-startup") rescue nil
+			File.unlink("stub/zsfa/app-with-crashing-vendor-rails") rescue nil
+		end
+		
+		it "should display an error page if the Rails application requires a nonexistant Rails version" do
+			get("/app-with-nonexistant-rails-version/").should =~ @error_page_signature
+		end
+		
+		it "should display an error page if the Rails application crashes during startup" do
+			get("/app-that-crashes-during-startup/").should =~ @error_page_signature
+		end
+		
+		it "should display an error page if the Rails application's vendor'ed Rails crashes" do
+			get("/app-with-crashing-vendor-rails/").should =~ @error_page_signature
+		end
 	end
 	
 	##### Helper methods #####
