@@ -348,17 +348,6 @@ This option may only occur once, in the global server configuration.
 
 == Troubleshooting ==
 
-[TIP]
-.The golden tip: read your Apache error logs!
-=====================================================
-'mod_passenger' will write all errors to the Apache's error log. So if
-'mod_passenger' is installed, and you're experiencing problems, please look
-inside the Apache error logs. It will tell you what exactly went wrong.
-
-Any exceptions that your Ruby on Rails applications throws during startup,
-will also be written to that file.
-=====================================================
-
 === Problems during installation ===
 
 [[installing_ruby_dev]]
@@ -515,12 +504,20 @@ and re-run the Passenger installer.
 
 === Problems after installation ===
 
+[TIP]
+.The golden tip: read your Apache error logs!
+=====================================================
+'mod_passenger' will write all errors to the Apache error log. So if
+you're experiencing post-installation problems, please look
+inside the Apache error logs. It will tell you what exactly went wrong.
+=====================================================
+
 ==== Passenger has been compiled against the wrong Apache installation ====
 
 .Symptoms
 *******************************************************************************
 Apache crashes during startup (after being daemonized). The Apache error log
-says 'seg fault or similar nasty error detected in the parent process'.
+says ``'seg fault or similar nasty error detected in the parent process'''.
 *******************************************************************************
 
 This problem is most likely to occur on MacOS X. Most OS X users have multiple
@@ -542,5 +539,22 @@ TODO
 
 === Moving Passenger to a different directory ===
 
-TODO
+It is possible to relocate the Passenger files to a different directory. It
+involves two steps:
 
+1. Moving the directory.
+2. Updating the ``RailsSpawnServer'' configuration option in Apache.
+
+For example, if Passenger is located in '/opt/passenger/', and you'd like to
+move it to '/usr/local/passenger/', then do this:
+
+1. Run the following command:
++
+------------------------------------
+mv /opt/passenger /usr/local/passenger
+------------------------------------
+2. Edit your Apache configuration file, and set:
++
+------------------------------------
+RailsSpawnServer /usr/local/passenger/bin/passenger-spawn-server
+------------------------------------
