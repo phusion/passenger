@@ -327,11 +327,6 @@ public:
 			return httpStatus;
 		}
 		
-		/*
-		 * TODO:
-		 * - If the request handler dies, it does not get removed from the application pool. It should.
-		 */
-		
 		try {
 			apr_bucket_brigade *bb;
 			apr_bucket *b;
