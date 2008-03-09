@@ -64,4 +64,7 @@ NameVirtualHost *:64506
 	DocumentRoot "<%= @stub_dir %>/zsfa"
 	RailsBaseURI /mycook
 	RailsBaseURI /foo
+	RailsBaseURI /app-with-nonexistant-rails-version
+	RailsBaseURI /app-that-crashes-during-startup
+	RailsBaseURI /app-with-crashing-vendor-rails
 </VirtualHost>
