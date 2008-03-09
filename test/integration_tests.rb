@@ -103,15 +103,17 @@ shared_examples_for "MyCook(tm) beta" do
 					end
 				}
 			end
-			sleep(1)
+			sleep(0.25)
 			
-			# NOTE: this test might fail when the system is under high load. There
-			# appears to be some racing condition somewhere.
+			# NOTE:
+			# The first GET request to /test should result in a restart, but
+			# when the system is under high load, it doesn't seem to reload
+			# the app immediately. There appears to be some racing condition
+			# somewhere. This is relatively innocent, so we send two GET
+			# requests to make sure the test doesn't fail.
 			
-			# NOTE 2: This test seems to fail once in a while. There definitely
-			# appears to be a racing condition. But it doesn't appear to make
-			# the web server crash so it's not that bad.
-			
+			File.open(restart_file, 'w') do end
+			get('/test')
 			File.open(restart_file, 'w') do end
 			get('/test').should == 'bar'
 		ensure
@@ -125,6 +127,7 @@ shared_examples_for "MyCook(tm) beta" do
 		# TODO: The first request after the app crash results in a 500 Internal
 		# Server Error. Passenger should restart the app immediately instead of
 		# doing that.
+		get('/')
 		get('/')
 		get('/').should =~ /Welcome to MyCook/
 	end
@@ -201,9 +204,14 @@ describe "mod_passenger running in Apache 2" do
 	end
 	
 	describe "configuration options" do
-		it "should be possible to specify RailsBaseURI in .htaccess"
-		it "should ignore the Rails application if RailsAutoDetect is off"
-		it "should be possible to specify RailsAutoDetect in .htaccess"
+		it "should ignore the Rails application if RailsAutoDetect is off" do
+			@server = "http://norails.passenger.test:64506"
+			get('/').should_not =~ /MyCook/
+		end
+		
+		it "setting RailsAutoDetect for one virtual host should not interfere with others" do
+			# Already covered by other tests.
+		end
 	end
 	
 	describe "error handling" do
@@ -276,7 +284,8 @@ describe "mod_passenger running in Apache 2" do
 				"Please add these to your /etc/hosts:\n\n" <<
 				"  127.0.0.1 passenger.test\n" <<
 				"  127.0.0.1 mycook.passenger.test\n" <<
-				"  127.0.0.1 zsfa.passenger.test"
+				"  127.0.0.1 zsfa.passenger.test\n" <<
+				"  127.0.0.1 norails.passenger.test\n"
 			if RUBY_PLATFORM =~ /darwin/
 				message << "\n\nThen run:\n\n" <<
 					"  lookupd -flushcache      (OS X Tiger)\n\n" <<

@@ -49,7 +49,6 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	}
 	
 	config->autoDetect = (add->autoDetect == DirConfig::UNSET) ? base->autoDetect : add->autoDetect;
-	
 	return config;
 }
 
@@ -135,12 +134,12 @@ const command_rec passenger_commands[] = {
 	AP_INIT_TAKE1("RailsBaseURI",
 		(Take1Func) cmd_rails_base_uri,
 		NULL,
-		OR_OPTIONS,
+		RSRC_CONF,
 		"Reserve the given URI to a Rails application."),
 	AP_INIT_FLAG("RailsAutoDetect",
 		(Take1Func) cmd_rails_auto_detect,
 		NULL,
-		OR_OPTIONS,
+		RSRC_CONF,
 		"Whether auto-detection of Ruby on Rails applications should be enabled."),
 	AP_INIT_TAKE1("RailsRuby",
 		(Take1Func) cmd_rails_ruby,
