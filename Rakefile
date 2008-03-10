@@ -240,16 +240,16 @@ end
 ##### Documentation
 
 subdir 'doc' do
+	ASCIIDOC = "asciidoc -a toc -a numbered -a toclevels=3 -a icons"
+
 	desc "Generate all documentation"
 	task :doc => [:rdoc, :doxygen, 'Security of user switching support.html',
 			'Users guide.html']
 	
-	file 'Security of user switching support.html' => ['Security of user switching support.txt'] do
-		sh "asciidoc -a toc -a numbered -a toclevels=3 'Security of user switching support.txt'"
-	end
-	
-	file 'Users guide.html' => ['Users guide.txt'] do
-		sh "asciidoc -a toc -a numbered -a toclevels=3 -a icons 'Users guide.txt'"
+	['Security of user switching support', 'Users guide', 'Architectural overview'].each do |name|
+		file "#{name}.html" => ["#{name}.txt"] do
+			sh "#{ASCIIDOC} '#{name}.txt'"
+		end
 	end
 	
 	task :clobber => [:'doxygen:clobber'] do
