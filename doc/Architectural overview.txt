@@ -5,6 +5,8 @@ This document describes Passenger's architure in a global way. The purpose of
 this document is to lower the barrier to entry for new contributors, as well
 as to explain (some of the) design choices that we have made.
 
+Or it can be a fun read for people who just want to know how Passenger works.
+
 
 About the involved technologies
 -------------------------------
@@ -19,7 +21,9 @@ application to a web server.
 A typical, isolated, web application accepts an HTTP request from some I/O
 channel, processes it internally, and outputs an HTTP response, which is sent
 back to the client. This is done in a loop, until the application is commanded
-to exit.
+to exit. This does not necessarily mean that the web application speaks HTTP
+directly: it just means that the web application accepts some kind of
+representation of an HTTP request.
 
 image:images/typical_isolated_web_application.png[Architecture of a typical
 web application in isolation]
@@ -31,9 +35,10 @@ are:
 server may or may not be able to contain multiple web applications. The
 application server is then connected to the web server. The web server
 dispatches requests to the application server, which in turn dispatches
-requests to the correct web application. Conversely, HTTP responses
-outputted by the web application is sent to the application server, which
-in turn sends it to the web server, and eventually to the HTTP client.
+requests to the correct web application, in a format that the web application
+understands. Conversely, HTTP responses outputted by the web application are
+sent to the application server, which in turn sends them to the web server,
+and eventually to the HTTP client.
 +
 A typical example of such a setup is a J2EE application, contained in the
 Tomcat web server, behind the Apache web server.
@@ -90,7 +95,7 @@ with threads, because parts of Ruby on Rails are not thread-safe. *
 
 A particularly interesting thing to note, is that a lot of the memory
 occupied by Ruby on Rails applications is spent on storing the program code
-(i.e. the Ruby AST) in memory. See Appendix A for details. (TODO: write this)
+(i.e. the Ruby AST) in memory. See <<appendix_a,Appendix A>> for details.
 Also, a lot of the startup time of a Ruby on Rails application is spent on
 bootstrapping the Rails framework.
 
@@ -114,7 +119,7 @@ Passenger architecture
 
 Passenger's architecture is a lot like setup #2 described in
 <<typical_web_applications,Typical web applications>>. In other words,
-Passenger runs extends Apache and allows it to act like an application server.
+Passenger extends Apache and allows it to act like an application server.
 Passenger's architecture -- assuming Apache 2 with the prefork MPM is used --
 is shown in the following diagram:
 
@@ -143,7 +148,8 @@ application every time an HTTP request is received, just like CGI would.
 However, spawning Ruby on Rails applications is expensive. It can take 1 or 2
 seconds on a modern PC, and possible much longer on a heavily loaded server.
 This overhead is particularily unacceptable on shared hosts. A less naive
-implementation would keep spawned Ruby on Rails application instances alive.
+implementation would keep spawned Ruby on Rails application instances alive,
+similar to how Lighttpd's FastCGI implementation works.
 However, this still has several problems:
 
 1. The first request to a Rails website will be slow, and subsequent requests
@@ -205,7 +211,7 @@ NOTE: At the moment, Passenger does not support Apache with the worker MPM
 implemented in a modular way, supporting the worker MPM shouldn't take more
 than 10 lines of code.
 
-The application pool is fully responsible for spawning applications, caching
+The application pool is responsible for spawning applications, caching
 spawned applications' handles, and cleaning up applications which have been
 idle for an extended period of time.
 
@@ -213,14 +219,78 @@ idle for an extended period of time.
 === The spawn server ===
 
 The spawn server is written in Ruby, and its code can be found in the directory
-'lib/passenger'. The spawn server's main executable is
-'bin/passenger-spawn-server'.
+'lib/passenger'. Its main executable is 'bin/passenger-spawn-server'.
 link:rdoc/index.html[The spawn server's RDoc documentation] documents the
 implementation in detail.
 
-TODO: write something about sharing memory, possibly referring to Appendix A
+The spawn server consists of 3 layers:
+
+1. *The spawn manager.* This is the topmost layer, and acts like a fascade for
+   all the underlying layers. Clients who use the spawn server only communicate
+   with this layer.
+2. *The framework spawner server.* The spawn manager spawns a framework spawner
+   server for each unique Ruby on Rails framework version. Each framework
+   spawner server caches the code for exactly one Ruby on Rails framework
+   version. A spawn request for an application is forwarded to the framework
+   spawner server that contains the correct Ruby on Rails version for the
+   application.
+3. *The application spawner server.* This is to the framework spawner server
+   what the framework spawner server is to the spawn manager. The framework
+   spawner server spawns an application spawner server for each unique Ruby on
+   Rails application (here ``application'' does not mean a running process, but
+   a set of (source code) files). The application spawner server caches the
+   code for exactly one application.
+
+image:images/spawn_server_architecture.png[The spawn server's architecture]
+
+As you can see, we have two layers of code caching: when the spawn server
+receives a request to spawn a new application instance, it will forward the
+request to the correct framework spawner server (and will spawn that framework
+spawner server if it doesn't already exist), which -- in turn -- will forward
+it to the correct application spawner server (which will, again, be created if
+it doesn't already exist).
+
+Each layer is only responsible for the layer directly below. The spawn manager
+only knows about framework spawner servers, and a framework spawner server only
+knows about its application spawner servers. The application spawner server is,
+however, not responsible for managing spawned application instances. If an
+application instance is spawned by mod_passenger, its information will be sent
+back to mod_passenger, which will be fully responsible for managing the
+application instance's life time (through the application pool).
+
+Also note that each layer is a seperate process.
+
+==== Memory sharing ====
+
+On most modern Unix operating systems, when a child process is created, it will
+share most of its memory with the parent process. Processes are not supposed to
+be able to access each others' memory, so the operating system makes a copy of
+a piece of memory when it is written to by the parent process or the child
+process. This is called copy-on-write (COW). Background information can be
+found in <<appendix_a,Appendix A>>.
+
+The spawn server makes use of this useful fact. Each layer shares its Ruby AST
+memory with all of its lower layers, as long as the AST nodes in question
+haven't been written to. This means that all spawned Rails applications will
+-- if possible -- share the Ruby on Rails framework's code, as well as its own
+application code, with each other. This results in a dramatic reduction in
+memory usage.
+
+There is one catch: one must use our modified Ruby. This is because default
+Ruby garbage collector (GC) is not copy-on-write friendly. The GC uses a
+mark-and-sweep garbage collection algorithm, but it stores the marks inside
+the objects themselves. So all objects are written to during a GC cycle,
+forcing the operating system to copy all that memory, thus effectively making
+copy-on-write useless. Our modified Ruby fixes that behavior.
+TODO: link to download page
+
+Note that Rubinius's garbage collector is already copy-on-write friendly.
 
 
+=== Handling of concurrent requests ===
+
+
+[[appendix_a]]
 Appendix A: Sharing of memory between applications on modern operating systems
 ------------------------------------------------------------------------------
 TODO
