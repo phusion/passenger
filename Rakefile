@@ -241,12 +241,13 @@ end
 
 subdir 'doc' do
 	ASCIIDOC = "asciidoc -a toc -a numbered -a toclevels=3 -a icons"
+	ASCII_DOCS = ['Security of user switching support', 'Users guide',
+		'Architectural overview']
 
 	desc "Generate all documentation"
-	task :doc => [:rdoc, :doxygen, 'Security of user switching support.html',
-			'Users guide.html']
+	task :doc => [:rdoc, :doxygen] + ASCII_DOCS.map{ |x| "#{x}.html" }
 	
-	['Security of user switching support', 'Users guide', 'Architectural overview'].each do |name|
+	ASCII_DOCS.each do |name|
 		file "#{name}.html" => ["#{name}.txt"] do
 			sh "#{ASCIIDOC} '#{name}.txt'"
 		end
