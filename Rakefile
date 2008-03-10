@@ -316,6 +316,7 @@ spec = Gem::Specification.new do |s|
 		'ext/boost/**/*.{hpp,cpp,pl,inl}',
 		'ext/passenger/*.{c,rb}',
 		'benchmark/*.{cpp,rb}',
+		'misc/*',
 		'test/*.{rb,cpp,example}',
 		'test/support/*',
 		'test/stub/*',
