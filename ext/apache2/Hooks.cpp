@@ -369,7 +369,7 @@ public:
 
 			return OK;
 		} catch (const exception &e) {
-			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "*** Passenger: uncaught error: %s", e.what());
+			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "*** Unexpected error in Passenger: %s", e.what());
 			return HTTP_INTERNAL_SERVER_ERROR;
 		}
 	}
