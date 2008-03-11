@@ -115,7 +115,7 @@ function get(app_root):
 	list = apps[app_root]
 	if list != nil:
 		# There are apps for this app root.
-		if list.front.sessions == 0 || count == max:
+		if (list.front.sessions == 0) or (count == max):
 			# There is an inactive app, so we use it.
 			#  -OR-
 			# All apps are active, and the pool is full. We're not
@@ -218,7 +218,8 @@ function needs_restart(app_root):
 	restart_file = "$app_root/tmp/restart.txt"
 	s = stat(restart_file)
 	if s != null:
-		if delete_file(restart_file) || file is already deleted:
+		delete_file(restart_file)
+		if (deletion was successful) or (file was already deleted):
 			restart_file_times.remove(app_root)
 			result = true
 		else:
