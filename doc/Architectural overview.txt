@@ -258,7 +258,9 @@ application instance is spawned by mod_passenger, its information will be sent
 back to mod_passenger, which will be fully responsible for managing the
 application instance's life time (through the application pool).
 
-Also note that each layer is a seperate process.
+Also note that each layer is a seperate process. This is required because a
+single Ruby process can only load a single Ruby on Rails framework and a
+single application.
 
 ==== Memory sharing ====
 
@@ -288,6 +290,33 @@ Note that Rubinius's garbage collector is already copy-on-write friendly.
 
 
 === Handling of concurrent requests ===
+
+As explained earlier, a single Rails application instance can only handle a
+single request at the same time. This is obviously undesirable. But before we
+dive into the solution, let us take a look how the ``competition'' solves this
+problem. PHP has similar problems: a single PHP script can also process only
+one HTTP request at a time.
+
+- mod_php ``solves'' this problem by using Apache's MPM. In other words,
+  mod_php doesn't do anything by itself at all. A single Apache worker
+  process/thread can only handle 1 PHP request at a time, but Apache spawns
+  multiple worker processes/threads.
+- PHP-FastCGI solves the problem by spawning multiple persistent PHP servers.
+  The number of PHP servers is independent from the number of Apache worker
+  processes/threads. This approach is a lot like existing Rails setups, in
+  which a frontend web server proxies requests to a persistent Mongrel cluster.
+
+Passenger cannot use the mod_php way because it would force us to spawn a new
+Rails application for each request, which is -- as explained earlier --
+unacceptably slow. Instead, Passenger uses the PHP-FastCGI approach. We
+maintain a pool of application instances, and whenever a request is received,
+we forward the request to one of the application instances in the pool. The
+size of the pool is configurable, which is useful for administrators of servers
+that are either heavily loaded or have little memory.
+
+The reader might also be interested in studying the application pool's
+algorithm, which is non-trivial. The algorithm is documented in detail in
+link:ApplicationPool%20algorithm.txt[ApplicationPool algorithm.txt].
 
 
 [[appendix_a]]
