@@ -11,7 +11,7 @@ shared_examples_for "a spawner that supports lowering of privileges" do
 		File.chown(@original_uid, nil, @environment_rb)
 	end
 	
-	it "should lower its privileges to the owner environment.rb" do
+	it "should lower its privileges to the owner of environment.rb" do
 		File.chown(uid_for('normal_user_1'), nil, @environment_rb)
 		spawn_app do |app|
 			user_of_process(app.pid).should == CONFIG['normal_user_1']
@@ -27,28 +27,28 @@ shared_examples_for "a spawner that supports lowering of privileges" do
 		end
 	end
 	
-	it "should lower its privileges to _lowest_user_ if environment.rb is owned by root" do
+	it "should lower its privileges to 'lowest_user' if environment.rb is owned by root" do
 		File.chown(ApplicationSpawner::ROOT_UID, nil, @environment_rb)
 		spawn_app do |app|
 			user_of_process(app.pid).should == CONFIG['lowest_user']
 		end
 	end
 	
-	it "should lower its privileges to _lowest_user_ if environment.rb is owned by a nonexistant user" do
+	it "should lower its privileges to 'lowest_user' if environment.rb is owned by a nonexistant user" do
 		File.chown(CONFIG['nonexistant_uid'], nil, @environment_rb)
 		spawn_app do |app|
 			user_of_process(app.pid).should == CONFIG['lowest_user']
 		end
 	end
 	
-	it "should not switch user if environment.rb is owned by a nonexistant user, and _lowest_user_ doesn't exist either" do
+	it "should not switch user if environment.rb is owned by a nonexistant user, and 'lowest_user' doesn't exist either" do
 		File.chown(CONFIG['nonexistant_uid'], nil, @environment_rb)
 		spawn_app(:lowest_user => CONFIG['nonexistant_user']) do |app|
 			user_of_process(app.pid).should == user_of_process(Process.pid)
 		end
 	end
 	
-	it "should not switch user if _lower_privilege_ is set to false" do
+	it "should not switch user if 'lower_privilege' is set to false" do
 		File.chown(uid_for('normal_user_2'), nil, @environment_rb)
 		spawn_app(:lower_privilege => false) do |app|
 			user_of_process(app.pid).should == user_of_process(Process.pid)
