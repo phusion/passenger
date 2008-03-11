@@ -351,7 +351,7 @@ This option may only occur once, in the global server configuration.
 The default is 'ruby'.
 
 [[rails_env]]
-RailsEnv <<string>::
+RailsEnv <string>::
 	This option allows one to specify the default `RAILS_ENV` value.
 	The default is 'production'.
 +
@@ -588,3 +588,24 @@ mv /opt/passenger /usr/local/passenger
 ------------------------------------
 RailsSpawnServer /usr/local/passenger/bin/passenger-spawn-server
 ------------------------------------
+
+=== Conflicting Apache modules ===
+
+Passenger conflicts with 'mod_rewrite' and 'mod_alias'. Those modules may be
+installed and loaded together with 'mod_passenger', but we recommend you not
+to use their features on Rails virtual hosts.
+
+Passenger will override mod_rewrite rules on Rails hosts. This is because the
+default .htaccess, as provided by Ruby on Rails, redirects all requests to
+`dispatch.cgi' using mod_rewrite. This is a CGI application which loads the
+entire Ruby on Rails framework for every request, and thus is very slow. If we
+do not override mod_rewrite, then Ruby on Rails apps will be slow on Passenger
+by default -- but we want a good out-of-the-box experience.
+
+Furthermore, the primary reason why people use mod_rewrite with Rails
+applications, is to accelerate page caching. Passenger supports page caching
+out-of-the-box, without mod_rewrite.
+
+It is not fully understood how mod_alias conflicts with Passenger, but we
+recommend you not to use it on Rails hosts. mod_alias rules can result in
+surprising problems.
