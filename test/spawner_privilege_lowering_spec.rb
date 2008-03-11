@@ -5,6 +5,8 @@ shared_examples_for "a spawner that supports lowering of privileges" do
 	before :all do
 		@environment_rb = "#{@test_app}/config/environment.rb"
 		@original_uid = File.stat(@environment_rb).uid
+		system("chmod -R o+rx #{@test_app}")
+		system("chmod o+rx . ..")
 	end
 	
 	after :all do

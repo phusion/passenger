@@ -1,6 +1,7 @@
 require 'net/http'
 require 'uri'
 require 'resolv'
+require 'socket'
 require 'timeout'
 require 'support/config'
 require 'support/multipart'
@@ -301,10 +302,28 @@ describe "mod_passenger running in Apache 2" do
 		if !system(HTTPD, "-f", config_file, "-k", "start")
 			raise "Could not start a test Apache server"
 		end
-		Timeout::timeout(15) do
-			while !File.exist?("stub/apache2/httpd.pid")
-				sleep(0.25)
+		begin
+			# Wait until the PID file has been created.
+			Timeout::timeout(15) do
+				while !File.exist?("stub/apache2/httpd.pid")
+					sleep(0.25)
+				end
 			end
+			# Wait until Apache is listening on the server port.
+			Timeout::timeout(5) do
+				done = false
+				while !done
+					begin
+						socket = TCPSocket.new('localhost', 64506)
+						socket.close
+						done = true
+					rescue Errno::ECONNREFUSED
+						sleep(0.25)
+					end
+				end
+			end
+		rescue Timeout::Error
+			raise "Unable to start Apache."
 		end
 		File.chmod(0666, *Dir['stub/apache2/*.{log,lock,pid}']) rescue nil
 		File.chmod(0777, *Dir['stub/mycook/{public,log}']) rescue nil
@@ -318,9 +337,23 @@ describe "mod_passenger running in Apache 2" do
 		rescue
 		end
 		begin
+			# Wait until the PID file is removed.
 			Timeout::timeout(15) do
 				while File.exist?("stub/apache2/httpd.pid")
 					sleep(0.25)
+				end
+			end
+			# Wait until the server socket is closed.
+			Timeout::timeout(5) do
+				done = false
+				while !done
+					begin
+						socket = TCPSocket.new('localhost', 64506)
+						socket.close
+						sleep(0.25)
+					rescue SystemCallError
+						done = true
+					end
 				end
 			end
 		rescue Timeout::Error
