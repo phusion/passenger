@@ -201,7 +201,7 @@ class ApplicationPoolServer;
  */
 class StandardApplicationPool: public ApplicationPool {
 private:
-	static const int DEFAULT_MAX_IDLE_TIME = 30;
+	static const int DEFAULT_MAX_IDLE_TIME = 120;
 	static const int DEFAULT_MAX_POOL_SIZE = 20;
 
 	friend class ApplicationPoolServer;
