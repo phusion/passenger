@@ -539,11 +539,29 @@ To solve this problem, please <<specifying_correct_apache_install,specify the
 correct Apache installation>>, and <<install_passenger,reinstall Passenger>>.
 
 
-== Tips ==
+== Tips and notes ==
 
 === User switching (security) ===
 
-TODO
+There is a problem that plagues most PHP web host, namely the fact that all PHP
+applications are run in the same user context as the web server. So for
+example, Joe's PHP application will be able to read Jane's PHP application's
+passwords. This is obviously undesirable on many servers.
+
+Passenger solves this problem by implementing 'user switching'. A Rails
+application is started as the owner of the file 'config/environment.rb'. So if
+'/home/webapps/foo/config/environment.rb' is owned by 'joe', then Passenger
+will launch the corresponding Rails application as 'joe' as well.
+
+This behavior is the default, and you don't need to configure anything. But
+there are things that you should keep in mind:
+
+- The owner of 'environment.rb' must have read access to the Rails application's
+  folder, and read/write access to the Rails application's 'logs' folder.
+- This feature is only available if Apache is started by 'root'. This is the
+  case on most Apache installations.
+
+TODO: document the config option to disable this.
 
 === Reducing memory consumption of Ruby on Rails apps by 33% ===
 
