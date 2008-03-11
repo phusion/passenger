@@ -68,9 +68,8 @@ def show_owner_pipe_listing(map, reverse_map)
 	end
 	if count == 0
 		puts "(none)"
-	else
-		puts ""
 	end
+	puts ""
 end
 
 def show_owner_pipe_leaks(map, reverse_map)
@@ -85,10 +84,15 @@ def show_owner_pipe_leaks(map, reverse_map)
 	end
 	
 	puts "------------ Leaks ------------"
+	count = 0
 	apache_owner_pipe_map.each_pair do |pipe, pids|
 		if pids.size >= 2
 			puts "Rails PID #{reverse_map[pipe]} owned by Apache processes: #{pids.join(", ")}"
+			count += 1
 		end
+	end
+	if count == 0
+		puts "(none)"
 	end
 end
 

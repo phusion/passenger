@@ -317,7 +317,20 @@ private:
 	thread *serverThread;
 	set<ClientInfoPtr> clients;
 	
-	// TODO: check for exceptions in threads, possibly forwarding them
+	/* TODO: the current design makes it possible to leak file descriptors.
+	 * For example, suppose that a fork() happens right after
+	 * serverThreadMainLoop() created a socketpair. Uh-oh. The problem is that
+	 * Apache can fork no matter what the threads are currently doing.
+	 *
+	 * This problem can be solved by running the server thread main loop in
+	 * its own process, instead of a thread in the Apache control process.
+	 *
+	 * This situation is a corner case though, and doesn't happen very often.
+	 * When it does happen, the problem isn't that great: an Apache worker
+	 * process will eventually get killed, thus freeing all its file
+	 * descriptors. So it should be acceptable to fix this problem in
+	 * a post-1.0.1 release.
+	 */
 	
 	/**
 	 * The entry point of the server thread which sets up private connections.
@@ -397,6 +410,8 @@ private:
 					bool failed = false;
 					try {
 						session = pool.get(args[1], args[2] == "true", args[3]);
+						sessions[lastID] = session;
+						lastID++;
 					} catch (const SpawnException &e) {
 						if (e.hasErrorPage()) {
 							channel.write("SpawnException", e.what(), "true", NULL);
@@ -410,14 +425,17 @@ private:
 						failed = true;
 					}
 					if (!failed) {
-						channel.write("ok", toString(session->getPid()).c_str(),
-							toString(lastID).c_str(), NULL);
-						channel.writeFileDescriptor(session->getReader());
-						channel.writeFileDescriptor(session->getWriter());
-						session->closeReader();
-						session->closeWriter();
-						sessions[lastID] = session;
-						lastID++;
+						try {
+							channel.write("ok", toString(session->getPid()).c_str(),
+								toString(lastID - 1).c_str(), NULL);
+							channel.writeFileDescriptor(session->getReader());
+							channel.writeFileDescriptor(session->getWriter());
+							session->closeReader();
+							session->closeWriter();
+						} catch (const exception &) {
+							sessions.erase(lastID - 1);
+							throw;
+						}
 					}
 				
 				} else if (args[0] == "close" && args.size() == 2) {
