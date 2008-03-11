@@ -1,23 +1,18 @@
 Security of user switching support in Passenger
 ===============================================
 
+Problem description
+-------------------
+TIP: It is strongly recommended that you first read our
+link:Architectural%20overview.html[Architectural Overview].
 
-Introduction and problem description
-------------------------------------
-Passenger is an Apache module for Ruby on Rails support. When a URL of a Rails
-application is accessed, Passenger will be responsible for forwarding the HTTP
-request to the Rails application. Passenger does not run Rails applications
-directly in the Apache process. Instead, it launches Rails application servers.
-That is, Rails applications will be running as external processes. If a Rails
-application crashes, it will not affect Passenger.
-
-However, Rails application servers will be run in the same user context as
-Apache itself. On server machines which host multiple websites for multiple
-users, this may not be desired. All Rails applications launched by Passenger
-will be able to read and write to all directories that the web server can.
-So the Rails applications could, for example, read other peoples' database
-passwords, delete other peoples' files, or mess with the web server logs.
-This problem also typically plagues web hosts that host PHP via mod_php.
+A straightforward implementation of Passenger will spawn Rails applications in
+the same user context as Apache itself. On server machines which host multiple
+websites for multiple users, this may not be desired. All Rails applications
+spawned by Passenger will be able to read and write to all directories that the
+web server can. So for example, Joe's Rails applications could read Jane's
+Rails application's 'database.yml' or delete her application files. This is
+also a problem that typically plagues PHP web hosts.
 
 There are multiple ways to solve this problem. The goal of this document is to
 inform the reader about the solutions have we have analyzed, so that
@@ -60,8 +55,10 @@ Since Passenger has access to the control process, in the typical Apache setup,
 Passenger can already launch Rails applications as a different user. But now we
 have to ask this question:
 
-  If Apache is not running as root, are there still any Passenger users who
-  want to run Rails applications as different users?
+=================================
+If Apache is not running as root, are there still any Passenger users who
+want to run Rails applications as different users?
+=================================
 
 If the answer is yes, then we cannot use this method.
 
@@ -185,8 +182,9 @@ we have chosen to implement the <<apache_root,Running Apache as root>>
 solution, until a significant number of users request us to implement the
 <<setuid_root,setuid root wrapper>> solution.
 
-See the Ruby API documentation for the 'ApplicationSpawner' class for
-implementation details. In short: it will switch to the owner of the file
+Please read link:rdoc/index.html[the Ruby API documentation] -- in particular
+that of the 'ApplicationSpawner' class -- for implementation details. But to
+make a long story short: it will switch to the owner of the file
 'config/environment.rb'. User whitelisting/blacklisting is currently not
 implemented. We rely on the system administrator to set the correct owner
 on that file.
