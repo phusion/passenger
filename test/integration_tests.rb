@@ -124,11 +124,6 @@ shared_examples_for "MyCook(tm) beta" do
 	
 	it "should not make the web server crash if the app crashes" do
 		post('/welcome/terminate')
-		# TODO: The first request after the app crash results in a 500 Internal
-		# Server Error. Passenger should restart the app immediately instead of
-		# doing that.
-		get('/')
-		get('/')
 		get('/').should =~ /Welcome to MyCook/
 	end
 	
