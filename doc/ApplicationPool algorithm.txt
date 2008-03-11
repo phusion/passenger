@@ -107,11 +107,41 @@ information:
 == Algorithm in pseudo code
 
 # Thread-safetiness notes:
-# - All functions (including thread main functions) described here are to be
-#   run inside the same lock.
+# - The following functions are to be run inside the same lock:
+#   * get()
+#   * session_has_been_closed()
+#   * The cleaner thread's main function.
 # - All wait commands are to unlock the lock during waiting.
 
 function get(app_root):
+	MAX_ATTEMPTS = 5
+	attempt = 0
+	while (true):
+		attempt++
+		container, list = spawn_or_use_existing(app_root)
+		container.last_used = current_time()
+		container.sessions++
+		try:
+			return container.app.connect()
+		on exception:
+			container.sessions--
+			if (attempt == MAX_ATTEMPTS):
+				propagate exception
+			else:
+				# The app instance seems to have crashed. So we remove this
+				# instance from our data structures.
+				list.remove(container.iterator)
+				if list.empty():
+					apps.remove(app_root)
+				count--
+				active--
+
+
+# Returns a pair of [AppContainer, list<AppContainer>] that matches the
+# given application root. If no such AppContainer exists, then it is created
+# and a new application instance is spawned. All exceptions that occur are
+# propagated.
+function spawn_or_use_existing(app_root):
 	list = apps[app_root]
 	if list != nil:
 		# There are apps for this app root.
@@ -190,14 +220,7 @@ function get(app_root):
 		apps[app_root] = list
 		count++
 		active++
-	
-	container.last_used = current_time()
-	container.sessions++
-	try:
-		return container.app.connect()  # Returns a Session object
-	on exception:
-		container.session--
-		propagate exception
+	return [container, list]
 
 
 # The following function is to be called when a session has been closed.

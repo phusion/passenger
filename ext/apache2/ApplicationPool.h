@@ -168,6 +168,13 @@ public:
 
 class ApplicationPoolServer;
 
+/****************************************************************
+ *
+ *  See "doc/ApplicationPool algorithm.txt" for a more readable
+ *  and detailed description of the algorithm implemented here.
+ *
+ ****************************************************************/
+
 /**
  * A standard implementation of ApplicationPool for single-process environments.
  *
@@ -303,7 +310,9 @@ private:
 					ret = unlink(restartFile.c_str());
 				}
 			#else
-				ret = unlink(restartFile.c_str());
+				do {
+					ret = unlink(restartFile.c_str());
+				} while (ret == -1 && errno == EAGAIN);
 			#endif
 			if (ret == 0 || errno == ENOENT) {
 				restartFileTimes.erase(appRoot);
@@ -372,93 +381,11 @@ private:
 		detached = true;
 	}
 	
-	void handleConnectException(const string &exceptionMessage,
-	              const AppContainerPtr &container,
-	              AppContainerList &list) {
-		// TODO: merge this back into the algorithm description
-		string message("Cannot connect to an existing application instance for '");
-		message.append(container->app->getAppRoot());
-		message.append("': ");
-		message.append(exceptionMessage);
-		
-		container->sessions--;
-		list.erase(container->iterator);
-		if (list.empty()) {
-			apps.erase(container->app->getAppRoot());
-			restartFileTimes.erase(container->app->getAppRoot());
-		}
-		count--;
-		active--;
-		activeOrMaxChanged.notify_all();
-		throw IOException(message);
-	}
-	
-public:
-	/**
-	 * Create a new StandardApplicationPool object.
-	 *
-	 * @param spawnServerCommand The filename of the spawn server to use.
-	 * @param logFile Specify a log file that the spawn server should use.
-	 *            Messages on its standard output and standard error channels
-	 *            will be written to this log file. If an empty string is
-	 *            specified, no log file will be used, and the spawn server
-	 *            will use the same standard output/error channels as the
-	 *            current process.
-	 * @param environment The RAILS_ENV environment that all RoR applications
-	 *            should use. If an empty string is specified, the current value
-	 *            of the RAILS_ENV environment variable will be used.
-	 * @param rubyCommand The Ruby interpreter's command.
-	 * @throws SystemException An error occured while trying to setup the spawn server.
-	 * @throws IOException The specified log file could not be opened.
-	 */
-	StandardApplicationPool(const string &spawnServerCommand,
-	             const string &logFile = "",
-	             const string &environment = "production",
-	             const string &rubyCommand = "ruby")
-	        :
-		#ifndef PASSENGER_USE_DUMMY_SPAWN_MANAGER
-		spawnManager(spawnServerCommand, logFile, environment, rubyCommand),
-		#endif
-		data(new SharedData()),
-		lock(data->lock),
-		activeOrMaxChanged(data->activeOrMaxChanged),
-		apps(data->apps),
-		max(data->max),
-		count(data->count),
-		active(data->active),
-		inactiveApps(data->inactiveApps),
-		restartFileTimes(data->restartFileTimes)
-	{
-		detached = false;
-		done = false;
-		max = 100;
-		count = 0;
-		active = 0;
-		maxIdleTime = DEFAULT_MAX_IDLE_TIME;
-		cleanerThread = new thread(bind(&StandardApplicationPool::cleanerThreadMainLoop, this));
-	}
-	
-	virtual ~StandardApplicationPool() {
-		if (!detached) {
-			{
-				mutex::scoped_lock l(lock);
-				done = true;
-				cleanerThreadSleeper.notify_one();
-			}
-			cleanerThread->join();
-		}
-		delete cleanerThread;
-	}
-	
-	virtual Application::SessionPtr
-	get(const string &appRoot, bool lowerPrivilege = true, const string &lowestUser = "nobody") {
-		/*
-		 * See "doc/ApplicationPool algorithm.txt" for a more readable
-		 * and detailed description of the algorithm implemented here.
-		 */
+	pair<AppContainerPtr, AppContainerList *>
+	spawnOrUseExisting(mutex::scoped_lock &l, const string &appRoot,
+	                   bool lowerPrivilege, const string &lowestUser) {
 		AppContainerPtr container;
 		AppContainerList *list;
-		mutex::scoped_lock l(lock);
 		
 		try {
 			ApplicationMap::iterator it(apps.find(appRoot));
@@ -556,20 +483,108 @@ public:
 			throw SpawnException(message);
 		}
 		
-		container->lastUsed = time(NULL);
-		container->sessions++;
+		return make_pair(container, list);
+	}
+	
+public:
+	/**
+	 * Create a new StandardApplicationPool object.
+	 *
+	 * @param spawnServerCommand The filename of the spawn server to use.
+	 * @param logFile Specify a log file that the spawn server should use.
+	 *            Messages on its standard output and standard error channels
+	 *            will be written to this log file. If an empty string is
+	 *            specified, no log file will be used, and the spawn server
+	 *            will use the same standard output/error channels as the
+	 *            current process.
+	 * @param environment The RAILS_ENV environment that all RoR applications
+	 *            should use. If an empty string is specified, the current value
+	 *            of the RAILS_ENV environment variable will be used.
+	 * @param rubyCommand The Ruby interpreter's command.
+	 * @throws SystemException An error occured while trying to setup the spawn server.
+	 * @throws IOException The specified log file could not be opened.
+	 */
+	StandardApplicationPool(const string &spawnServerCommand,
+	             const string &logFile = "",
+	             const string &environment = "production",
+	             const string &rubyCommand = "ruby")
+	        :
+		#ifndef PASSENGER_USE_DUMMY_SPAWN_MANAGER
+		spawnManager(spawnServerCommand, logFile, environment, rubyCommand),
+		#endif
+		data(new SharedData()),
+		lock(data->lock),
+		activeOrMaxChanged(data->activeOrMaxChanged),
+		apps(data->apps),
+		max(data->max),
+		count(data->count),
+		active(data->active),
+		inactiveApps(data->inactiveApps),
+		restartFileTimes(data->restartFileTimes)
+	{
+		detached = false;
+		done = false;
+		max = 100;
+		count = 0;
+		active = 0;
+		maxIdleTime = DEFAULT_MAX_IDLE_TIME;
+		cleanerThread = new thread(bind(&StandardApplicationPool::cleanerThreadMainLoop, this));
+	}
+	
+	virtual ~StandardApplicationPool() {
+		if (!detached) {
+			{
+				mutex::scoped_lock l(lock);
+				done = true;
+				cleanerThreadSleeper.notify_one();
+			}
+			cleanerThread->join();
+		}
+		delete cleanerThread;
+	}
+	
+	virtual Application::SessionPtr
+	get(const string &appRoot, bool lowerPrivilege = true, const string &lowestUser = "nobody") {
+		mutex::scoped_lock l(lock);
+		unsigned int attempt;
+		const unsigned int MAX_ATTEMPTS = 5;
 		
-		// TODO: This should not just throw an exception.
-		// If we fail to connect to one application we should just use another, or
-		// spawn a new application. Of course, this must not be done too often
-		// because every app might crash at startup. There should be a limit
-		// to the number of retries.
-		try {
-			return container->app->connect(SessionCloseCallback(data, container));
-		} catch (const IOException &e) {
-			handleConnectException(e.what(), container, *list);
-		} catch (const SystemException &e) {
-			handleConnectException(e.sys(), container, *list);
+		attempt = 0;
+		while (true) {
+			attempt++;
+			
+			pair<AppContainerPtr, AppContainerList *> p(
+				spawnOrUseExisting(l, appRoot, lowerPrivilege, lowestUser)
+			);
+			AppContainerPtr &container(p.first);
+			AppContainerList &list(*p.second);
+			
+			container->lastUsed = time(NULL);
+			container->sessions++;
+			try {
+				return container->app->connect(SessionCloseCallback(data, container));
+			} catch (const exception &e) {
+				container->sessions--;
+				if (attempt == MAX_ATTEMPTS) {
+					string message("Cannot connect to an existing application instance for '");
+					message.append(appRoot);
+					message.append("': ");
+					try {
+						const SystemException &syse = dynamic_cast<const SystemException &>(e);
+						message.append(syse.brief());
+					} catch (const bad_cast &) {
+						message.append(e.what());
+					}
+					throw IOException(message);
+				} else {
+					list.erase(container->iterator);
+					if (list.empty()) {
+						apps.erase(appRoot);
+					}
+					count--;
+					active--;
+				}
+			}
 		}
 		// Never reached; shut up compiler warning
 		return Application::SessionPtr();
