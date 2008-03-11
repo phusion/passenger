@@ -248,7 +248,9 @@ public:
 	}
 	
 	virtual ~Application() {
-		close(ownerPipe);
+		if (ownerPipe != -1) {
+			close(ownerPipe);
+		}
 		if (!usingAbstractNamespace) {
 			unlink(listenSocketName.c_str());
 		}
@@ -347,6 +349,11 @@ public:
 		}
 		
 		return ptr(new StandardSession(pid, closeCallback, fd));
+	}
+	
+	void detach() {
+		close(ownerPipe);
+		ownerPipe = -1;
 	}
 };
 
