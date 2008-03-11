@@ -201,7 +201,8 @@ class ApplicationPoolServer;
  */
 class StandardApplicationPool: public ApplicationPool {
 private:
-	static const int DEFAULT_MAX_IDLE_TIME = 60;
+	static const int DEFAULT_MAX_IDLE_TIME = 30;
+	static const int DEFAULT_MAX_POOL_SIZE = 20;
 
 	friend class ApplicationPoolServer;
 	struct AppContainer;
@@ -359,7 +360,8 @@ private:
 				AppContainerListPtr appList(apps[app->getAppRoot()]);
 				
 				if (now - container.lastUsed > (time_t) maxIdleTime) {
-					P_TRACE("Cleaning idle app " << app->getAppRoot());
+					P_TRACE("Cleaning idle app " << app->getAppRoot() <<
+						" (PID " << app->getPid() << ")");
 					appList->erase(container.iterator);
 					
 					AppContainerList::iterator prev = it;
@@ -379,6 +381,15 @@ private:
 	
 	void detach() {
 		detached = true;
+		
+		ApplicationMap::iterator it;
+		for (it = apps.begin(); it != apps.end(); it++) {
+			AppContainerList &list = *(it->second.get());
+			AppContainerList::iterator it2;
+			for (it2 = list.begin(); it2 != list.end(); it2++) {
+				(*it2)->app->detach();
+			}
+		}
 	}
 	
 	pair<AppContainerPtr, AppContainerList *>
@@ -524,7 +535,7 @@ public:
 	{
 		detached = false;
 		done = false;
-		max = 100;
+		max = DEFAULT_MAX_POOL_SIZE;
 		count = 0;
 		active = 0;
 		maxIdleTime = DEFAULT_MAX_IDLE_TIME;
