@@ -546,14 +546,14 @@ Other operating systems::
 
 ==== Passenger is using the wrong Apache during installation ====
 
-Please <<specifying_correct_apache_install,specify the correct Apache
+Please <<specifying_correct_apache_install,Specifying the correct Apache
 installation>>, and re-run the Passenger installer.
 
 
 ==== Passenger is using the wrong Ruby during installation ====
 
-Please <<specifying_ruby_installation,specify the correct Ruby installation>>,
-and re-run the Passenger installer.
+Please <<specifying_ruby_installation,Specifying the correct Ruby
+installation>>, and re-run the Passenger installer.
 
 
 === Problems after installation ===
