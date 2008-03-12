@@ -88,6 +88,15 @@ bool fileExists(const char *filename);
  */
 string findSpawnServer();
 
+/**
+ * Returns a canonical version of the specified path. All symbolic links
+ * and relative path elements are resolved.
+ * Returns an empty string if something went wrong.
+ *
+ * @ingroup Support
+ */
+string canonicalizePath(const string &path);
+
 
 #ifdef PASSENGER_DEBUG
 	#define P_DEBUG(expr) \

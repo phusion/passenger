@@ -72,7 +72,9 @@ private:
 			const string &base(*it);
 			if (  base == "/"
 			 || ( uri_len == base.size() && memcmp(uri, base.c_str(), uri_len) == 0 )
-			 || ( uri_len  > base.size() && memcmp(uri, base.c_str(), base.size()) == 0 && uri[base.size()] == '/' )) {
+			 || ( uri_len  > base.size() && memcmp(uri, base.c_str(), base.size()) == 0
+			                             && uri[base.size()] == '/' )
+			) {
 				return apr_pstrdup(r->pool, base.c_str());
 			}
 		}
@@ -85,24 +87,26 @@ private:
 		return NULL;
 	}
 	
-	const char *determineRailsDir(request_rec *r, const char *baseURI) {
+	string determineRailsDir(request_rec *r, const char *baseURI) {
 		const char *docRoot = ap_document_root(r);
 		size_t len = strlen(docRoot);
 		if (len > 0) {
-			string temp;
+			string path;
 			if (docRoot[len - 1] == '/') {
-				temp.assign(docRoot, len - 1);
+				path.assign(docRoot, len - 1);
 			} else {
-				temp.assign(docRoot, len);
+				path.assign(docRoot, len);
 			}
-			temp.append(baseURI);
-			return apr_pstrdup(r->pool, temp.c_str());
+			if (strcmp(baseURI, "/") != 0) {
+				path.append(baseURI);
+			}
+			return path;
 		} else {
-			return NULL;
+			return "";
 		}
 	}
 	
-	bool verifyRailsDir(apr_pool_t *pool, const char *dir) {
+	bool verifyRailsDir(apr_pool_t *pool, const string &dir) {
 		string temp(dir);
 		temp.append("/../config/environment.rb");
 		return fileExists(temp.c_str());
@@ -316,8 +320,8 @@ public:
 			return DECLINED;
 		}
 		
-		const char *railsDir = determineRailsDir(r, railsBaseURI);
-		if (railsDir == NULL) {
+		string railsDir(determineRailsDir(r, railsBaseURI));
+		if (railsDir.empty()) {
 			ap_set_content_type(r, "text/html; charset=UTF-8");
 			ap_rputs("<h1>Passenger error #1</h1>\n", r);
 			ap_rputs("Cannot determine the location of the Rails application's \"public\" directory.", r);
@@ -326,7 +330,7 @@ public:
 			ap_set_content_type(r, "text/html; charset=UTF-8");
 			ap_rputs("<h1>Passenger error #2</h1>\n", r);
 			ap_rputs("Passenger thinks that the Rails application's \"public\" directory is \"", r);
-			ap_rputs(ap_escape_html(r->pool, railsDir), r);
+			ap_rputs(ap_escape_html(r->pool, railsDir.c_str()), r);
 			ap_rputs("\", but it doesn't seem to be valid.", r);
 			return OK;
 		}
@@ -343,7 +347,7 @@ public:
 			
 			P_DEBUG("Processing HTTP request: " << r->uri);
 			try {
-				session = applicationPool->get(string(railsDir) + "/..");
+				session = applicationPool->get(canonicalizePath(railsDir + "/.."));
 			} catch (const SpawnException &e) {
 				if (e.hasErrorPage()) {
 					ap_set_content_type(r, "text/html; charset=utf-8");
