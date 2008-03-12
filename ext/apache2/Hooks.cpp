@@ -295,9 +295,18 @@ public:
 	}
 	
 	void initChild(apr_pool_t *pchild, server_rec *s) {
-		// TODO: check for exceptions here
-		applicationPool = applicationPoolServer->connect();
-		applicationPoolServer->detach();
+		ServerConfig *config = getServerConfig(s);
+		
+		try {
+			applicationPool = applicationPoolServer->connect();
+			applicationPoolServer->detach();
+			applicationPool->setMax(config->maxPoolSize);
+			applicationPool->setMaxIdleTime(config->poolIdleTime);
+		} catch (const exception &e) {
+			fprintf(stderr, "*** Cannot initialize Passenger: %s", e.what());
+			fflush(stderr);
+			abort();
+		}
 	}
 	
 	int handleRequest(request_rec *r) {

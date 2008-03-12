@@ -23,20 +23,42 @@
 		using namespace std;
 
 		/**
-		* Per-directory configuration information.
-		*/
+		 * Per-directory configuration information.
+		 */
 		struct DirConfig {
 			std::set<std::string> base_uris;
 			enum { ENABLED, DISABLED, UNSET } autoDetect;
 		};
 		
+		/**
+		 * Server-wide configuration information.
+		 */
 		struct ServerConfig {
+			/** The filename of the Ruby interpreter to use. */
 			const char *ruby;
 			
-			/** The environment (i.e. value for RAILS_ENV) under which the Rails application should operate. */
+			/** The environment (i.e. value for RAILS_ENV) under which the
+			 * Rails application should operate. */
 			const char *env;
 			
+			/** The filename of the spawn server to use. */
 			const char *spawnServer;
+			
+			/** The maximum number of simultaneously alive Rails application
+			 * instances. */
+			unsigned int maxPoolSize;
+			
+			/** Whether the maxPoolSize option was explicitly specified in
+			 * this server config. */
+			bool maxPoolSizeSpecified;
+			
+			/** The maximum number of seconds that a Rails application may be
+			 * idle before it gets terminated. */
+			unsigned int poolIdleTime;
+			
+			/** Whether the poolIdleTime option was explicitly specified in
+			 * this server config. */
+			bool poolIdleTimeSpecified;
 		};
 	}
 

@@ -582,7 +582,7 @@ public:
 					message.append("': ");
 					try {
 						const SystemException &syse = dynamic_cast<const SystemException &>(e);
-						message.append(syse.brief());
+						message.append(syse.sys());
 					} catch (const bad_cast &) {
 						message.append(e.what());
 					}
