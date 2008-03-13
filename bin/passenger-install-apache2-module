@@ -1,9 +1,115 @@
 #!/usr/bin/env ruby
 PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) << "/..")
-PASSENGER_WEBSITE = "http://passenger.phusion.nl/"
-PHUSION_WEBSITE = "www.phusion.nl"
 $LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
 require 'passenger/platform_info'
+require 'passenger/dependencies'
+require 'passenger/console_text_template'
+include Passenger
+include PlatformInfo
+
+class Installer
+	REQUIRED_DEPENDENCIES = [
+		Dependencies::Ruby_DevHeaders,
+		Dependencies::RubyGems,
+		Dependencies::Rake,
+		Dependencies::Apache2,
+		Dependencies::Apache2_DevHeaders,
+		Dependencies::APR_DevHeaders
+	]
+	
+	def start
+		check_dependencies
+	ensure
+		reset_terminal_colors
+	end
+
+	def init_terminal_colors
+		STDOUT.write("\e[0m\e[37m\e[40m")
+		STDOUT.flush
+	end
+	
+	def reset_terminal_colors
+		STDOUT.write("\e[0m")
+		STDOUT.flush
+	end
+
+	def check_dependencies
+		missing_dependencies = []
+		color_puts "<banner>Checking for required software...</banner>"
+		puts
+		REQUIRED_DEPENDENCIES.each do |dep|
+			color_print " * #{dep.name}... "
+			result = dep.check
+			if result.found?
+				if result.found_at
+					color_puts "<green>found at #{result.found_at}</green>"
+				else
+					color_puts "<green>found</green>"
+				end
+			else
+				color_puts "<red>not found</red>"
+				missing_dependencies << dep
+			end
+		end
+		
+		missing_dependencies = REQUIRED_DEPENDENCIES
+		if !missing_dependencies.empty?
+			puts
+			color_puts "<red>Some required software is not installed.</red>"
+			color_puts "But don't worry, this installer will tell you how to install them.\n"
+			color_puts "<b>Press Enter to continue, or Ctrl-C to abort.</b>"
+			wait
+			
+			line
+			color_puts "<banner>Installation instructions for required software</banner>"
+			puts
+			missing_dependencies.each do |dep|
+				color_puts " * To install <yellow>#{dep.name}</yellow>:"
+				if !dep.install_command.nil?
+					color_puts "   Please run <b>#{dep.install_command}</b> as root."
+				elsif !dep.install_instructions.nil?
+					color_puts "   " << dep.install_instructions
+				elsif !dep.website.nil?
+					color_puts "   Please download it from <b>#{dep.website}</b>"
+				else
+					color_puts "   Search Google."
+				end
+				puts
+			end
+		end
+	end
+
+private
+	def color_print(text)
+		STDOUT.write(ConsoleTextTemplate.new(:text => text).result)
+		STDOUT.flush
+	end
+	
+	def color_puts(text)
+		color_print("#{text}\n")
+	end
+	
+	def line
+		puts "--------------------------------------------"
+	end
+	
+	def wait
+		begin
+			STDIN.readline
+		rescue Interrupt
+			exit 2
+		end
+	end
+end
+
+Installer.new.start
+exit
+
+
+PASSENGER_WEBSITE = "http://passenger.phusion.nl/"
+PHUSION_WEBSITE = "www.phusion.nl"
+
+
 Dir.chdir(PASSENGER_ROOT)
 include PlatformInfo
 
