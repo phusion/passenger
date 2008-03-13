@@ -21,6 +21,7 @@ class Installer
 	
 	def start
 		Dir.chdir(PASSENGER_ROOT)
+		show_welcome_screen
 		check_dependencies || exit(1)
 		warn_about_broken_apache_on_osx
 		check_write_permission_to_passenger_root || exit(1)
@@ -45,6 +46,11 @@ private
 	def reset_terminal_colors
 		STDOUT.write("\e[0m")
 		STDOUT.flush
+	end
+	
+	def show_welcome_screen
+		render_template 'welcome'
+		wait
 	end
 
 	def check_dependencies
