@@ -18,17 +18,6 @@ private
 	def self.env_defined?(name)
 		return !ENV[name].nil? && !ENV[name]
 	end
-	
-	def self.find_command(name)
-		# system('which') is not compatible across Linux and BSD
-		ENV['PATH'].split(File::PATH_SEPARATOR).detect do |directory|
-			path = File.join(directory, name.to_s)
-			if File.executable?(path)
-				return path
-			end
-		end
-		return nil
-	end
 
 	def self.find_apxs2
 		if env_defined?("APXS2")
@@ -80,6 +69,12 @@ private
 	
 	def self.find_httpd
 		if APXS2.nil?
+			["apache2", "httpd2", "apache", "httpd"].each do |name|
+				command = find_command(name)
+				if !command.nil?
+					return command
+				end
+			end
 			return nil
 		else
 			return find_apache2_executable(`#{APXS2} -q TARGET`.strip)
@@ -134,8 +129,53 @@ private
 			return "so"
 		end
 	end
+	
+	def self.read_file(filename)
+		return File.read(filename)
+	rescue
+		return ""
+	end
+	
+	def self.determine_linux_distro
+		if RUBY_PLATFORM !~ /linux/
+			return nil
+		end
+		lsb_release = read_file("/etc/lsb-release")
+		if lsb_release =~ /Ubuntu/
+			return :ubuntu
+		elsif File.exist?("/etc/debian_version")
+			return :debian
+		elsif File.exist?("/etc/redhat-release")
+			redhat_release = read_file("/etc/redhat-release")
+			if redhat_release =~ /CentOS/
+				return :centos
+			elsif redhat_release =~ /Fedora/  # is this correct?
+				return :fedora
+			else
+				return :rhel
+			end
+		elsif File.exist?("/etc/suse-release")
+			return :suse
+		elsif File.exist?("/etc/gentoo-release")
+			return :gentoo
+		else
+			return :unknown
+		end
+		# TODO: Slackware, Mandrake/Mandriva
+	end
 
 public
+	def self.find_command(name)
+		# system('which') is not compatible across Linux and BSD
+		ENV['PATH'].split(File::PATH_SEPARATOR).detect do |directory|
+			path = File.join(directory, name.to_s)
+			if File.executable?(path)
+				return path
+			end
+		end
+		return nil
+	end
+
 	# The absolute path to the current Ruby interpreter.
 	RUBY = Config::CONFIG['bindir'] + '/' + Config::CONFIG['RUBY_INSTALL_NAME']
 	
@@ -159,4 +199,6 @@ public
 	MULTI_ARCH_FLAGS = determine_multi_arch_flags
 	# The current platform's shared library extension ('so' on most Unices).
 	LIBEXT = determine_library_extension
+	# An identifier for the current Linux distribution. nil if the operating system is not Linux.
+	LINUX_DISTRO = determine_linux_distro
 end
