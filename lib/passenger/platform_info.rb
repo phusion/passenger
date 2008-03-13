@@ -165,8 +165,12 @@ private
 	end
 
 public
+	# Check whether the specified command is in $PATH, and return its
+	# absolute filename. Returns nil if the command is not found.
+	#
+	# This function exists because system('which') doesn't always behave
+	# correctly, for some weird reason.
 	def self.find_command(name)
-		# system('which') is not compatible across Linux and BSD
 		ENV['PATH'].split(File::PATH_SEPARATOR).detect do |directory|
 			path = File.join(directory, name.to_s)
 			if File.executable?(path)
