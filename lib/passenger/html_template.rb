@@ -2,7 +2,8 @@ require 'erb'
 
 module Passenger
 
-class HTMLTemplate # :nodoc:
+# A convenience utility class for rendering our error pages.
+class HTMLTemplate
 	PASSENGER_FILE_PREFIX = File.dirname(__FILE__)
 	TEMPLATE_DIR = "#{PASSENGER_FILE_PREFIX}/templates"
 
