@@ -1,0 +1,18 @@
+<banner>Deploying a Ruby on Rails application: an example</banner>
+
+Suppose you have a Ruby on Rails application in <b>/somewhere</b>. Add a virtual host
+to your Apache configuration file, and set its DocumentRoot to
+<b>/somewhere/public</b>, like this:
+<b>
+   <VirtualHost *:80>
+      ServerName www.yourhost.com
+      DocumentRoot /somewhere/public
+   </VirtualHost>
+</b>
+And that's it! You may also want to check the Users Guide for security and
+optimization tips and other useful information:
+
+  <%= @users_guide %>
+
+Enjoy Passenger, a product of Phusion (<b><%= @phusion_website %></b>) :-)
+<b><%= @passenger_website %></b>

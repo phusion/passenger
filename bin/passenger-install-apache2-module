@@ -8,6 +8,8 @@ include Passenger
 include PlatformInfo
 
 class Installer
+	PASSENGER_WEBSITE = "http://passenger.phusion.nl/"
+	PHUSION_WEBSITE = "www.phusion.nl"
 	REQUIRED_DEPENDENCIES = [
 		Dependencies::Ruby_DevHeaders,
 		Dependencies::RubyGems,
@@ -18,11 +20,23 @@ class Installer
 	]
 	
 	def start
-		check_dependencies
+		Dir.chdir(PASSENGER_ROOT)
+		check_dependencies || exit(1)
+		warn_about_broken_apache_on_osx
+		check_write_permission_to_passenger_root || exit(1)
+		check_write_permission_to_apache_modules_dir || exit(1)
+		if install_apache2_module
+			show_apache2_config_snippets
+			show_deployment_example
+		else
+			show_possible_solutions_for_compilation_problems
+			exit(1)
+		end
 	ensure
 		reset_terminal_colors
 	end
 
+private
 	def init_terminal_colors
 		STDOUT.write("\e[0m\e[37m\e[40m")
 		STDOUT.flush
@@ -52,8 +66,9 @@ class Installer
 			end
 		end
 		
-		missing_dependencies = REQUIRED_DEPENDENCIES
-		if !missing_dependencies.empty?
+		if missing_dependencies.empty?
+			return true
+		else
 			puts
 			color_puts "<red>Some required software is not installed.</red>"
 			color_puts "But don't worry, this installer will tell you how to install them.\n"
@@ -64,19 +79,86 @@ class Installer
 			color_puts "<banner>Installation instructions for required software</banner>"
 			puts
 			missing_dependencies.each do |dep|
-				color_puts " * To install <yellow>#{dep.name}</yellow>:"
-				if !dep.install_command.nil?
-					color_puts "   Please run <b>#{dep.install_command}</b> as root."
-				elsif !dep.install_instructions.nil?
-					color_puts "   " << dep.install_instructions
-				elsif !dep.website.nil?
-					color_puts "   Please download it from <b>#{dep.website}</b>"
-				else
-					color_puts "   Search Google."
-				end
+				print_dependency_installation_instructions(dep)
 				puts
 			end
+			return false
 		end
+	end
+	
+	def warn_about_broken_apache_on_osx
+		return unless RUBY_PLATFORM =~ /darwin/ && APXS2 == "/usr/sbin/apxs"
+		line
+		render_template 'osx_broken_apache_warning'
+		wait
+	end
+	
+	def check_write_permission_to_passenger_root
+		File.new("__test__.txt", "w").close
+		return true
+	rescue
+		puts
+		line
+		if Process.uid == 0
+			render_template 'no_write_permission_to_passenger_root'
+		else
+			render_template 'run_installer_as_root'
+		end
+		return false
+	ensure
+		File.unlink("__test__.txt") rescue nil
+	end
+	
+	def check_write_permission_to_apache_modules_dir
+		install_dir = `#{APXS2} -q LIBEXECDIR`.strip
+		begin
+			File.new("#{install_dir}/__test__.txt", "w").close
+			return true
+		rescue
+			puts
+			line
+			if Process.uid == 0
+				render_template 'no_write_permission_to_passenger_root',
+					:path => install_dir
+			else
+				render_template 'run_installer_as_root',
+					:path => install_dir
+			end
+			return false
+		ensure
+			File.unlink("#{install_dir}/__test__.txt") rescue nil
+		end
+	end
+	
+	def install_apache2_module
+		puts
+		line
+		color_puts '<banner>Compiling and installing Apache 2 module...</banner>'
+		puts "cd #{PASSENGER_ROOT}"
+		puts "rake clean apache2:install"
+		return system("rake", "clean", "apache2:install")
+	end
+	
+	def show_apache2_config_snippets
+		puts
+		line
+		render_template 'apache2_config_snippets',
+			:module_location => `#{APXS2} -q LIBEXECDIR`.strip << "/mod_passenger.so",
+			:spawn_server_location => "#{PASSENGER_ROOT}/bin/passenger-spawn-server",
+			:ruby => RUBY
+		wait
+	end
+	
+	def show_deployment_example
+		puts
+		line
+		render_template 'deployment_example',
+			:users_guide => "#{PASSENGER_ROOT}/doc/Users guide.html",
+			:phusion_website => PHUSION_WEBSITE,
+			:passenger_website => PASSENGER_WEBSITE
+	end
+	
+	def show_possible_solutions_for_compilation_problems
 	end
 
 private
@@ -87,6 +169,10 @@ private
 	
 	def color_puts(text)
 		color_print("#{text}\n")
+	end
+	
+	def render_template(name, options = {})
+		puts ConsoleTextTemplate.new({ :file => name }, options).result
 	end
 	
 	def line
@@ -100,14 +186,26 @@ private
 			exit 2
 		end
 	end
+	
+	def print_dependency_installation_instructions(dep)
+		color_puts " * To install <yellow>#{dep.name}</yellow>:"
+		if !dep.install_command.nil?
+			color_puts "   Please run <b>#{dep.install_command}</b> as root."
+		elsif !dep.install_instructions.nil?
+			color_puts "   " << dep.install_instructions
+		elsif !dep.website.nil?
+			color_puts "   Please download it from <b>#{dep.website}</b>"
+			if !dep.website_comments.nil?
+				color_puts "   (#{dep.website_comments})"
+			end
+		else
+			color_puts "   Search Google."
+		end
+	end
 end
 
 Installer.new.start
 exit
-
-
-PASSENGER_WEBSITE = "http://passenger.phusion.nl/"
-PHUSION_WEBSITE = "www.phusion.nl"
 
 
 Dir.chdir(PASSENGER_ROOT)

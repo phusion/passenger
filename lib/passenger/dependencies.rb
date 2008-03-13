@@ -7,8 +7,8 @@ module Passenger
 # detecting whether it is installed, and installation instructions for the
 # current platform.
 class Dependency
-	[:name, :install_command, :install_instructions, :website,
-	 :website_comments, :provides].each do |attr_name|
+	[:name, :install_command, :install_instructions, :install_comments,
+	 :website, :website_comments, :provides].each do |attr_name|
 		attr_writer attr_name
 		
 		define_method(attr_name) do
@@ -189,7 +189,7 @@ module Dependencies
 			end
 		end
 		dep.website = "http://httpd.apache.org/"
-		dep.website_comments = "Part of Apache"
+		dep.website_comments = "APR is an integrated part of Apache."
 	end
 end
 

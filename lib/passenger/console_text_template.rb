@@ -31,11 +31,11 @@ private
 	DEFAULT_TERMINAL_COLORS = "\e[0m\e[37m\e[40m"
 
 	def substitute_color_tags(data)
-		data = data.gsub(%r{<b>(.*?)</b>}, "\e[1m\\1#{DEFAULT_TERMINAL_COLORS}")
-		data.gsub!(%r{<red>(.*?)</red>}, "\e[1m\e[31m\\1#{DEFAULT_TERMINAL_COLORS}")
-		data.gsub!(%r{<green>(.*?)</green>}, "\e[1m\e[32m\\1#{DEFAULT_TERMINAL_COLORS}")
-		data.gsub!(%r{<yellow>(.*?)</yellow>}, "\e[1m\e[33m\\1#{DEFAULT_TERMINAL_COLORS}")
-		data.gsub!(%r{<banner>(.*?)</banner>}, "\e[33m\e[44m\e[1m\\1#{DEFAULT_TERMINAL_COLORS}")
+		data = data.gsub(%r{<b>(.*?)</b>}m, "\e[1m\\1#{DEFAULT_TERMINAL_COLORS}")
+		data.gsub!(%r{<red>(.*?)</red>}m, "\e[1m\e[31m\\1#{DEFAULT_TERMINAL_COLORS}")
+		data.gsub!(%r{<green>(.*?)</green>}m, "\e[1m\e[32m\\1#{DEFAULT_TERMINAL_COLORS}")
+		data.gsub!(%r{<yellow>(.*?)</yellow>}m, "\e[1m\e[33m\\1#{DEFAULT_TERMINAL_COLORS}")
+		data.gsub!(%r{<banner>(.*?)</banner>}m, "\e[33m\e[44m\e[1m\\1#{DEFAULT_TERMINAL_COLORS}")
 		return data
 	end
 end
