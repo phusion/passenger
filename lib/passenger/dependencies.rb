@@ -6,7 +6,7 @@ module Passenger
 # contains full information about a dependency, such as its name, code for
 # detecting whether it is installed, and installation instructions for the
 # current platform.
-class Dependency
+class Dependency # :nodoc: all
 	[:name, :install_command, :install_instructions, :install_comments,
 	 :website, :website_comments, :provides].each do |attr_name|
 		attr_writer attr_name
@@ -69,10 +69,33 @@ private
 	end
 end
 
-# Namespace which contains the different dependencies. See Dependency
-# for more information.
-module Dependencies
+# Namespace which contains the different dependencies that Passenger may require.
+# See Dependency for more information.
+module Dependencies # :nodoc: all
 	include PlatformInfo
+	
+	GCC = Dependency.new do |dep|
+		dep.name = "GNU C++ compiler"
+		dep.define_checker do |result|
+			gxx = PlatformInfo.find_command('g++')
+			if gxx.nil?
+				result.not_found
+			else
+				result.found(gxx)
+			end
+		end
+		if RUBY_PLATFORM =~ /linux/
+			case LINUX_DISTRO
+			when :ubuntu, :debian
+				dep.install_command = "apt-get install build-essential"
+			when :rhel, :fedora, :centos
+				dep.install_command = "yum install gcc-c++"
+			end
+		elsif RUBY_PLATFORM =~ /darwin/
+			dep.install_instructions = "Please install the Apple Development Tools: http://developer.apple.com/tools/"
+		end
+		dep.website = "http://gcc.gnu.org/"
+	end
 	
 	Ruby_DevHeaders = Dependency.new do |dep|
 		dep.name = "Ruby development headers"
@@ -190,6 +213,23 @@ module Dependencies
 		end
 		dep.website = "http://httpd.apache.org/"
 		dep.website_comments = "APR is an integrated part of Apache."
+	end
+	
+	FastThread = Dependency.new do |dep|
+		dep.name = "fastthread"
+		dep.define_checker do |result|
+			begin
+				begin
+					require 'rubygems'
+				rescue LoadError
+				end
+				require 'fastthread'
+				result.found
+			rescue LoadError
+				result.not_found
+			end
+		end
+		dep.install_instructions = "Please install RubyGems first, then run <b>gem install fastthread</b>"
 	end
 end
 
