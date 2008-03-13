@@ -304,6 +304,7 @@ spec = Gem::Specification.new do |s|
 		'README',
 		'LICENSE',
 		'lib/**/*.rb',
+		'lib/passenger/templates/*',
 		'bin/*',
 		'doc/*',
 		'doc/*/*',
