@@ -1,178 +1,222 @@
 #!/usr/bin/env ruby
 PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) << "/..")
-PASSENGER_WEBSITE = "http://passenger.phusion.nl/"
-PHUSION_WEBSITE = "www.phusion.nl"
 $LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
 require 'passenger/platform_info'
-Dir.chdir(PASSENGER_ROOT)
+require 'passenger/dependencies'
+require 'passenger/console_text_template'
+include Passenger
 include PlatformInfo
 
-def banner(text)
-	return "\e[33m\e[44m\e[1m#{text}\e[0m"
-end
+class Installer
+	PASSENGER_WEBSITE = "http://passenger.phusion.nl/"
+	PHUSION_WEBSITE = "www.phusion.nl"
+	USERS_GUIDE = "#{PASSENGER_ROOT}/doc/Users guide.html"
+	
+	REQUIRED_DEPENDENCIES = [
+		Dependencies::GCC,
+		Dependencies::Ruby_DevHeaders,
+		Dependencies::RubyGems,
+		Dependencies::Rake,
+		Dependencies::Apache2,
+		Dependencies::Apache2_DevHeaders,
+		Dependencies::APR_DevHeaders,
+		Dependencies::FastThread
+	]
+	
+	def start
+		Dir.chdir(PASSENGER_ROOT)
+		show_welcome_screen
+		check_dependencies || exit(1)
+		warn_about_broken_apache_on_osx
+		check_write_permission_to_passenger_root || exit(1)
+		check_write_permission_to_apache_modules_dir || exit(1)
+		if install_apache2_module
+			show_apache2_config_snippets
+			show_deployment_example
+		else
+			show_possible_solutions_for_compilation_and_installation_problems
+			exit(1)
+		end
+	ensure
+		reset_terminal_colors
+	end
 
-def bold(text)
-	return "\e[1m#{text}\e[0m"
-end
+private
+	def init_terminal_colors
+		STDOUT.write("\e[0m\e[37m\e[40m")
+		STDOUT.flush
+	end
+	
+	def reset_terminal_colors
+		STDOUT.write("\e[0m")
+		STDOUT.flush
+	end
+	
+	def show_welcome_screen
+		render_template 'welcome'
+		wait
+	end
 
-def red(text)
-	return "\e[1m\e[31m#{text}\e[0m"
-end
+	def check_dependencies
+		missing_dependencies = []
+		color_puts "<banner>Checking for required software...</banner>"
+		puts
+		REQUIRED_DEPENDENCIES.each do |dep|
+			color_print " * #{dep.name}... "
+			result = dep.check
+			if result.found?
+				if result.found_at
+					color_puts "<green>found at #{result.found_at}</green>"
+				else
+					color_puts "<green>found</green>"
+				end
+			else
+				color_puts "<red>not found</red>"
+				missing_dependencies << dep
+			end
+		end
+		
+		if missing_dependencies.empty?
+			return true
+		else
+			puts
+			color_puts "<red>Some required software is not installed.</red>"
+			color_puts "But don't worry, this installer will tell you how to install them.\n"
+			color_puts "<b>Press Enter to continue, or Ctrl-C to abort.</b>"
+			wait
+			
+			line
+			color_puts "<banner>Installation instructions for required software</banner>"
+			puts
+			missing_dependencies.each do |dep|
+				print_dependency_installation_instructions(dep)
+				puts
+			end
+			return false
+		end
+	end
+	
+	def warn_about_broken_apache_on_osx
+		return unless RUBY_PLATFORM =~ /darwin/ && APXS2 == "/usr/sbin/apxs"
+		line
+		render_template 'osx_broken_apache_warning'
+		wait
+	end
+	
+	def check_write_permission_to_passenger_root
+		File.new("__test__.txt", "w").close
+		return true
+	rescue
+		puts
+		line
+		if Process.uid == 0
+			render_template 'no_write_permission_to_passenger_root'
+		else
+			render_template 'run_installer_as_root'
+		end
+		return false
+	ensure
+		File.unlink("__test__.txt") rescue nil
+	end
+	
+	def check_write_permission_to_apache_modules_dir
+		install_dir = `#{APXS2} -q LIBEXECDIR`.strip
+		begin
+			File.new("#{install_dir}/__test__.txt", "w").close
+			return true
+		rescue
+			puts
+			line
+			if Process.uid == 0
+				render_template 'no_write_permission_to_passenger_root',
+					:path => install_dir
+			else
+				render_template 'run_installer_as_root',
+					:path => install_dir
+			end
+			return false
+		ensure
+			File.unlink("#{install_dir}/__test__.txt") rescue nil
+		end
+	end
+	
+	def install_apache2_module
+		puts
+		line
+		color_puts '<banner>Compiling and installing Apache 2 module...</banner>'
+		puts "cd #{PASSENGER_ROOT}"
+		puts "rake clean apache2:install"
+		return system("rake", "clean", "apache2:install")
+	end
+	
+	def show_apache2_config_snippets
+		puts
+		line
+		render_template 'apache2_config_snippets',
+			:module_location => `#{APXS2} -q LIBEXECDIR`.strip << "/mod_passenger.so",
+			:spawn_server_location => "#{PASSENGER_ROOT}/bin/passenger-spawn-server",
+			:ruby => RUBY
+		wait
+	end
+	
+	def show_deployment_example
+		puts
+		line
+		render_template 'deployment_example',
+			:users_guide => USERS_GUIDE,
+			:phusion_website => PHUSION_WEBSITE,
+			:passenger_website => PASSENGER_WEBSITE
+	end
+	
+	def show_possible_solutions_for_compilation_and_installation_problems
+		puts
+		line
+		render_template 'possible_solutions_for_compilation_and_installation_problems',
+			:users_guide => USERS_GUIDE,
+			:passenger_website => PASSENGER_WEBSITE
+	end
 
-def wait
-	begin
-		STDIN.readline
-	rescue Interrupt
-		exit 2
+private
+	def color_print(text)
+		STDOUT.write(ConsoleTextTemplate.new(:text => text).result)
+		STDOUT.flush
+	end
+	
+	def color_puts(text)
+		color_print("#{text}\n")
+	end
+	
+	def render_template(name, options = {})
+		puts ConsoleTextTemplate.new({ :file => name }, options).result
+	end
+	
+	def line
+		puts "--------------------------------------------"
+	end
+	
+	def wait
+		begin
+			STDIN.readline
+		rescue Interrupt
+			exit 2
+		end
+	end
+	
+	def print_dependency_installation_instructions(dep)
+		color_puts " * To install <yellow>#{dep.name}</yellow>:"
+		if !dep.install_command.nil?
+			color_puts "   Please run <b>#{dep.install_command}</b> as root."
+		elsif !dep.install_instructions.nil?
+			color_puts "   " << dep.install_instructions
+		elsif !dep.website.nil?
+			color_puts "   Please download it from <b>#{dep.website}</b>"
+			if !dep.website_comments.nil?
+				color_puts "   (#{dep.website_comments})"
+			end
+		else
+			color_puts "   Search Google."
+		end
 	end
 end
 
-puts <<EOF
-#{banner("Welcome to the Passenger Apache 2 module installer.")}
-
-This installer will guide you through the entire installation process. It
-shouldn't take more than 3 minutes in total.
-
-Here's what you can expect from the installation process:
-
- #{bold('1.')} The Apache 2 module will be automatically installed for you.
- #{bold('2.')} This installer will teach you how to configure Apache.
- #{bold('3.')} This installer will teach you how to deploy a Ruby on Rails application.
- #{bold('4.')} There is no step 4.
-
-Don't worry if anything goes wrong. This installer will advise you on how to
-solve the problem.
-
-#{bold('Press Enter to continue, or Ctrl-C to abort.')}
-EOF
-wait
-
-puts "--------------------------------------------------------------------"
-puts banner('Checking whether the Apache development kit is installed...')
-if APXS2.nil?
-	puts red("The Apache development kit does not seem to be installed.")
-	message = <<EOF
-	
-	The command "apxs" or "apxs2", a part of the Apache development kit, cannot be
-	found.
-	
-	If you haven't installed the Apache development kit (i.e. the development
-	headers and libraries), then please install it.
-	
-	If you know that it is installed, then please update the #{bold('PATH')} environment
-	variable so that this installer can find it.
-	
-EOF
-	puts message.gsub(/^\t/, '')
-	exit 1
-end
-
-if RUBY_PLATFORM =~ /darwin/ && APXS2 == "/usr/sbin/apxs"
-	puts "--------------------------------------------------------------------"
-	puts (banner('WARNING') << " " << red('WARNING') << " ") * 3
-	message = <<EOF
-	
-	You seem to be running MacOS X. Testers have reported that the default Apache
-	installation, as provided by MacOS X, is broken. Passenger seems to crash for
-	unknown reasons on OS X's default Apache installation.
-	
-	And it seems that you are about to install Passenger against OS X's default
-	Apache installation (/usr/sbin/apxs).
-	
-	We recommend you to install Apache manually, and to install Passenger against
-	that Apache instead. To tell Passenger to use a different Apache installation,
-	please set the #{bold('APXS2')} environment variable, and run this installer again.
-	For example, if Apache is installed in /opt/apache2, then please set:
-	
-	  APXS2=/opt/apache2/bin/apxs
-	    -or-
-	  APXS2=/opt/apache2/bin/apxs2
-	
-	...depending on whether your Apache installation's apxs is called 'apxs' or
-	'apxs2'.
-	
-	#{bold("Press Enter if you want to install Passenger against OS X's default Apache.")}
-	#{bold("Press Ctrl-C to abort this installer.")}
-EOF
-	puts message.gsub(/^\t/, '')
-	wait
-end
-
-puts "--------------------------------------------------------------------"
-puts banner('Compiling and installing Apache 2 module...')
-puts "cd #{PASSENGER_ROOT}"
-puts "rake apache2:install"
-
-if system("rake", "clean", "apache2:install")
-	module_location = `#{APXS2} -q LIBEXECDIR`.strip << "/mod_passenger.so"
-	spawn_server_location = "#{PASSENGER_ROOT}/bin/passenger-spawn-server"
-	
-	puts "--------------------------------------------------------------------"
-	puts banner('The Apache 2 module was successfully installed.')
-	message = <<EOF
-	Please edit your Apache configuration file, and add these lines:
-	
-	   #{bold('LoadModule passenger_module ' << module_location)}
-	   #{bold('RailsSpawnServer ' << spawn_server_location)}
-	   #{bold('RailsRuby ' << RUBY)}
-	
-	After you restart Apache, you are ready to deploy any number of Ruby on Rails
-	applications on Apache, without any further Ruby on Rails-specific
-	configuration!
-	
-	#{bold('Press ENTER to continue.')}
-EOF
-	puts message.gsub(/^\t/, '')
-	wait
-	
-	puts "--------------------------------------------------------------------"
-	message = <<EOF
-	#{banner('Deploying a Ruby on Rails application: an example')}
-	Suppose you have a Ruby on Rails application in #{bold('/somewhere')}.
-	
-	  #{bold('1.')} Add a virtual host to your Apache configuration file.
-	  #{bold('2.')} Set the virtual host's DocumentRoot to #{bold('/somewhere/public')}.
-	
-	And that's it! You may also want to check the documentation on our website,
-	#{bold(PASSENGER_WEBSITE)}, for security and optimization tips and other
-	useful information.
-	
-	Enjoy Passenger, a product of Phusion (#{bold(PHUSION_WEBSITE)}) :-)
-	
-EOF
-	puts message.gsub(/^\t/, '')
-else
-	message = <<EOF
-	--------------------------------------------------------------------
-	#{red('It looks like something went wrong.')}
-	
-	 #{bold('*')} Do you see any #{bold('permission errors?')} If so, then please rerun this installer
-	   as root.
-	 #{bold('*')} Do you see any errors about #{bold(".h files that can't be found")}? If so, then you
-	   probably don't have the Apache/APR development headers installed properly.
-	   Please reinstall the Apache/APR development headers and try again.
-
-	   It is also possible that the headers are installed, but your compiler can't
-	   find them. Please set the environment variables #{bold('C_INCLUDE_PATH')} and
-	   #{bold('CPLUS_INCLUDE_PATH')} to the directory where your Apache/APR headers are
-	   located.
-EOF
-	if RUBY_PLATFORM =~ /darwin/
-		message << <<EOF
-		 #{bold('*')} You're running MacOS X. You might have multiple versions of Apache
-		   installed. You're currently compiling Passenger against #{bold(HTTPD)}
-		   If you want to compile it against a different Apache, please set the #{bold('APXS2')}
-		   environment variable, e.g. APXS2=/path-to-your-apache/bin/apxs
-EOF
-	end
-	message << <<EOF
-	
-	If the above checklist didn't help, please use our support facilities at
-	
-	  #{bold(PASSENGER_WEBSITE)}
-	
-EOF
-	puts message.gsub(/^\t*/, '')
-	exit 1
-end
-
+Installer.new.start
