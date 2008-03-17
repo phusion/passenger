@@ -18,6 +18,16 @@ private
 	def self.env_defined?(name)
 		return !ENV[name].nil? && !ENV[name]
 	end
+	
+	def self.determine_gem_command
+		gem_exe_in_path = find_command("gem")
+		correct_gem_exe = File.dirname(RUBY) + "/gem"
+		if gem_exe_in_path.nil? || gem_exe_in_path == correct_gem_exe
+			return "gem"
+		else
+			return correct_gem_exe
+		end
+	end
 
 	def self.find_apxs2
 		if env_defined?("APXS2")
@@ -182,6 +192,8 @@ public
 
 	# The absolute path to the current Ruby interpreter.
 	RUBY = Config::CONFIG['bindir'] + '/' + Config::CONFIG['RUBY_INSTALL_NAME']
+	# The correct 'gem' command for this Ruby interpreter.
+	GEM = determine_gem_command
 	
 	# The absolute path to the 'apxs' or 'apxs2' executable.
 	APXS2 = find_apxs2

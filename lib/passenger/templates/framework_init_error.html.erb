@@ -27,7 +27,7 @@
 		<% else %>
 			Please (re)install Ruby on Rails version <%=h @error.version %>.
 			This can be done with the following command:
-			<pre class="commands">sudo gem install rails --version <%=h @error.version %></pre>
+			<pre class="commands"><%= PlatformInfo::GEM %> install rails --version <%=h @error.version %></pre>
 		<% end %>
 	</dd>
 	
