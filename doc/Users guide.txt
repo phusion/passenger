@@ -30,7 +30,8 @@ practically any operating system on earth, except Microsoft Windows.
 Passenger has been tested on:
 
 - Ubuntu Linux 7.10 (x86)
-- Debian Etch v4 (x86)
+- Debian Etch (x86)
+- Debian Lenny/Sid (x86)
 - Gentoo, March 14 2008 (AMD64)
 - FreeBSD 6.1-RELEASE (x86)
 - MacOS X Tiger (x86)
