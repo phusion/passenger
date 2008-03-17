@@ -2,6 +2,7 @@
 $LOAD_PATH << "#{File.dirname(__FILE__)}/../lib"
 require 'passenger/html_template'
 require 'passenger/spawn_manager'
+require 'passenger/platform_info'
 include Passenger
 
 def create_dummy_exception
