@@ -605,12 +605,13 @@ there are things that you should keep in mind:
 - This feature is only available if Apache is started by 'root'. This is the
   case on most Apache installations.
 
-TODO: document the config option to disable this.
 
 [[reducing_memory_usage]]
 === Reducing memory consumption of Ruby on Rails apps by 33% ===
 
-TODO
+Is it possible to reduce memory consumptioin of your Rails apps by 33% on average,
+by using http://emm-ruby.phusion.nl/[Enhanced Memory Manager Ruby (EMM-Ruby)].
+Please visit the website for details.
 
 === Moving Passenger to a different directory ===
 
