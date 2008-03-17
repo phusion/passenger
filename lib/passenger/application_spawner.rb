@@ -135,8 +135,8 @@ class ApplicationSpawner < AbstractServer
 protected
 	# Overrided method.
 	def before_fork # :nodoc:
-		if GC.cow_friendly?
-			# Garbage collect to so that the child process doesn't have to
+		if GC.copy_on_write_friendly?
+			# Garbage collect now so that the child process doesn't have to
 			# do that (to prevent making pages dirty).
 			GC.start
 		end

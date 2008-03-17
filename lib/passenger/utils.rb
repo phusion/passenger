@@ -192,10 +192,10 @@ class IO
 end
 
 module GC
-	if !respond_to?(:cow_friendly?)
+	if !respond_to?(:copy_on_write_friendly?)
 		# Checks whether the current Ruby interpreter's garbage
 		# collector is copy-on-write friendly.
-		def self.cow_friendly?
+		def self.copy_on_write_friendly?
 			return false
 		end
 	end
