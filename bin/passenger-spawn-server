@@ -4,6 +4,9 @@ $LOAD_PATH.unshift(File.expand_path("#{File.dirname(__FILE__)}/../lib"))
 require 'passenger/spawn_manager'
 
 $0 = "Passenger spawn server"
+if GC.respond_to?(:copy_on_write_friendly=)
+	GC.copy_on_write_friendly = true
+end
 spawn_manager = Passenger::SpawnManager.new
 input = IO.new(Passenger::SpawnManager::DEFAULT_INPUT_FD)
 spawn_manager.start_synchronously(input)
