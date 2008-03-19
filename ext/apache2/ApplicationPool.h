@@ -400,44 +400,40 @@ private:
 		
 		try {
 			ApplicationMap::iterator it(apps.find(appRoot));
+			
+			if (it != apps.end() && needsRestart(appRoot)) {
+				AppContainerList::iterator it2;
+				list = it->second.get();
+				for (it2 = list->begin(); it2 != list->end(); it2++) {
+					container = *it2;
+					if (container->sessions == 0) {
+						inactiveApps.erase(container->ia_iterator);
+					} else {
+						active--;
+					}
+					it2--;
+					list->erase(container->iterator);
+					count--;
+				}
+				apps.erase(appRoot);
+				spawnManager.reload(appRoot);
+				it = apps.end();
+			}
+			
 			if (it != apps.end()) {
 				list = it->second.get();
 		
-				if (list->front()->sessions == 0 || count == max) {
-					if (needsRestart(appRoot)) {
-						AppContainerList::iterator it;
-						for (it = list->begin(); it != list->end(); it++) {
-							container = *it;
-							if (container->sessions == 0) {
-								inactiveApps.erase(container->ia_iterator);
-							} else {
-								active--;
-							}
-							it--;
-							list->erase(container->iterator);
-							count--;
-						}
-						try {
-							spawnManager.reload(appRoot);
-						} catch (const exception &e) {
-							apps.erase(appRoot);
-							throw;
-						}
-						container.reset();
-					} else {
-						container = list->front();
-						list->pop_front();
-						list->push_back(container);
-						container->iterator = list->end();
-						container->iterator--;
-						if (container->sessions == 0) {
-							inactiveApps.erase(container->ia_iterator);
-						}
-						active++;
+				if (list->front()->sessions == 0 || count >= max) {
+					container = list->front();
+					list->pop_front();
+					list->push_back(container);
+					container->iterator = list->end();
+					container->iterator--;
+					if (container->sessions == 0) {
+						inactiveApps.erase(container->ia_iterator);
 					}
-				}
-				
-				if (container == NULL) {
+					active++;
+				} else {
 					container = ptr(new AppContainer());
 					container->app = spawnManager.spawn(appRoot,
 						lowerPrivilege, lowestUser);
