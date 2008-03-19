@@ -199,7 +199,7 @@ subdir 'test' do
 	
 	desc "Run integration tests"
 	task 'test:integration' => [:apache2, :native_support] do
-		sh "spec -f s integration_tests.rb"
+		sh "spec -c -f s integration_tests.rb"
 	end
 
 	file 'Apache2ModuleTests' => TEST::AP2_OBJECTS.keys +
@@ -213,6 +213,18 @@ subdir 'test' do
 	TEST::AP2_OBJECTS.each_pair do |target, sources|
 		file target => sources do
 			compile_cxx sources[0], TEST::CXXFLAGS + " " + TEST::AP2_FLAGS
+		end
+	end
+	
+	desc "Run the restart integration test infinitely, and abort if/when it fails"
+	task 'test:restart' => [:apache2, :native_support] do
+		color_code_start = "\e[33m\e[44m\e[1m"
+		color_code_end = "\e[0m"
+		i = 1
+		while true do
+			puts "#{color_code_start}Test run #{i} (press Ctrl-C multiple times to abort)#{color_code_end}"
+			sh "spec -c -f s integration_tests.rb -e 'mod_passenger running in Apache 2 : MyCook(tm) beta running on root URI should support restarting via restart.txt'"
+			i += 1
 		end
 	end
 	

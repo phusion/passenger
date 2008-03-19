@@ -183,6 +183,8 @@ function spawn_or_use_existing(app_root):
 			# to that app_root have been removed. Here, we spawn a
 			# new instance.
 			container = new AppContainer
+			# TODO: we should unlock the mutex during spawning,
+			# and add some kind of timeout check.
 			container.app = spawn(app_root)
 			container.sessions = 0;
 			iterator = list.add_to_back(container)
@@ -212,12 +214,16 @@ function spawn_or_use_existing(app_root):
 				restart_file_times.remove(container.app.app_root)
 			count--
 		container = new AppContainer
+		# TODO: we should unlock the mutex during spawning,
+		# and add some kind of timeout check.
 		container.app = spawn(app)
 		container.sessions = 0;
-		list = new list
+		list = apps[app_root]
+		if list == nil:
+			list = new list
+			apps[app_root] = list
 		iterator = list.add_to_back(container)
 		container.iterator = iterator
-		apps[app_root] = list
 		count++
 		active++
 	return [container, list]
