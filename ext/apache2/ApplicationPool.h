@@ -467,11 +467,16 @@ private:
 				container = ptr(new AppContainer());
 				container->app = spawnManager.spawn(appRoot, lowerPrivilege, lowestUser);
 				container->sessions = 0;
-				list = new AppContainerList();
+				it = apps.find(appRoot);
+				if (it == apps.end()) {
+					list = new AppContainerList();
+					apps[appRoot] = ptr(list);
+				} else {
+					list = it->second.get();
+				}
 				list->push_back(container);
 				container->iterator = list->end();
 				container->iterator--;
-				apps[appRoot] = ptr(list);
 				count++;
 				active++;
 				activeOrMaxChanged.notify_all();
