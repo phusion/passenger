@@ -90,60 +90,10 @@ public.
 
 == Installation
 
-=== Supported configurations
-
-* Apache 2.x with the prefork MPM
-
-Other MPMs have not been tested (yet). Apache 1 is not supported at the moment.
-
-=== Installation instructions
-
 Run the following script as root:
 
  ./bin/passenger-install-apache2-module
 
-That's it. :) For detailed instructions and troubleshooting, please read the
+That's it. :) For troubleshooting, configuration and tips, please read the
 file 'doc/Users guide.html'.
 
-
-== Developers
-
-=== Requirements
-
-Developers who wish to modify or to contribute to Passenger will need to have
-the following software installed:
-
-* Ruby and RubyGems
-* Ruby on Rails >= 1.2.0. At least version 2.0.1 is required to run the
-  test suit.
-* The GNU C++ compiler (g++)
-* Apache 2 and APR, including development headers
-* rake >= 0.8.1
-* fastthread >= 1.0.1
-* rspec >= 1.1.2, for the Ruby unit tests
-* mime-types >= 1.15, for the integration tests
-
-The following software is optional:
-
-* RDoc, for generating HTML Ruby API documentation
-* Doxygen, for generating HTML C++ API documentation
-* dot (part of Graphviz), for generating diagrams in HTML API documentation
-* The font "Bitstream Vera Sans", used in the class diagrams. See http://www.gnome.org/fonts
-* AsciiDoc >= 8.2.5, for converting various doc/*.txt documents to HTML
-
-=== Compilation, unit tests and other tasks
-
-To compile Passenger, run the following command:
-
- rake
-
-To run the unit tests, run the following command:
-
- rake test
-
-*Note*: some tests, such as the ones that test privilege lowering, require
-root privileges. Those will only be run if the test suit is run as root.
-
-For a full list of Rake tasks, run:
-
- rake -T

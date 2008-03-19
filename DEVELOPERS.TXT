@@ -1,0 +1,52 @@
+= Developers information
+
+== Required software
+
+The tests need the following software installed:
+
+* All the usual Passenger dependencies.
+* Ruby on Rails >= 2.0.1
+* rspec >= 1.1.2
+* mime-types >= 1.15
+
+The following software is optional:
+
+* RDoc, for generating HTML Ruby API documentation
+* Doxygen, for generating HTML C++ API documentation
+* dot (part of Graphviz), for generating diagrams in HTML API documentation
+* The font "Bitstream Vera Sans", used in the class diagrams. See http://www.gnome.org/fonts
+* AsciiDoc >= 8.2.5, for converting various doc/*.txt documents to HTML
+
+== Compiling Passenger
+
+Run the following command to compile everything:
+
+ rake
+
+== Tests
+
+Run all tests:
+
+ rake
+
+Run just the tests for the Apache 2 module:
+
+ rake test:apache2
+
+Run just the unit tests for the Ruby spawn server:
+
+ rake test:ruby
+
+Run just the integration tests:
+
+ rake test:integration
+
+*Note*: some tests, such as the ones that test privilege lowering, require
+root privileges. Those will only be run if Rake is run as root.
+
+== Documentation
+
+Various developer documents can be found in 'doc/*.html'.
+
+The Ruby part's API reference is located in 'doc/rdoc/'.
+The C++ part's API reference is located in 'doc/cxxapi/'.

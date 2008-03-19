@@ -277,7 +277,8 @@ end
 Rake::RDocTask.new do |rd|
 	rd.main = "README"
 	rd.rdoc_dir = "doc/rdoc"
-	rd.rdoc_files.include("README", "lib/passenger/*.rb", "lib/rake/extensions.rb", "ext/passenger/*.c")
+	rd.rdoc_files.include("README", "DEVELOPERS.TXT",
+		"lib/passenger/*.rb", "lib/rake/extensions.rb", "ext/passenger/*.c")
 	rd.template = "./doc/template/horo"
 	rd.title = "Passenger Ruby API"
 	rd.options << "-S" << "-N" << "-p" << "-H"
@@ -302,6 +303,7 @@ spec = Gem::Specification.new do |s|
 	s.files = FileList[
 		'Rakefile',
 		'README',
+		'DEVELOPERS.TXT',
 		'LICENSE',
 		'lib/**/*.rb',
 		'lib/passenger/templates/*',
