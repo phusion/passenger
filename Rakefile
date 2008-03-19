@@ -194,7 +194,7 @@ subdir 'test' do
 	
 	desc "Run unit tests for the Ruby libraries"
 	task 'test:ruby' => [:native_support] do
-		sh "spec -f s *_spec.rb"
+		sh "spec -c -f s *_spec.rb"
 	end
 	
 	desc "Run integration tests"

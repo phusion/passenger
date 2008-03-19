@@ -104,17 +104,7 @@ shared_examples_for "MyCook(tm) beta" do
 					end
 				}
 			end
-			sleep(0.25)
-			
-			# NOTE:
-			# The first GET request to /test should result in a restart, but
-			# when the system is under high load, it doesn't seem to reload
-			# the app immediately. There appears to be some racing condition
-			# somewhere. This is relatively innocent, so we send two GET
-			# requests to make sure the test doesn't fail.
-			
-			File.open(restart_file, 'w') do end
-			get('/test')
+
 			File.open(restart_file, 'w') do end
 			get('/test').should == 'bar'
 		ensure
