@@ -42,9 +42,20 @@ class Application
 		environment_rb = File.read("#{app_root}/config/environment.rb")
 		environment_rb =~ /^[^#]*RAILS_GEM_VERSION\s*=\s*["']([!~<>=]*\s*[\d.]+)["']/
 		gem_version_spec = $1
+		
 		found_version = Gem.cache.search('rails', gem_version_spec).map do |x|
 			x.version.version
 		end.sort.last
+		if found_version.nil?
+			# If this error was reported before, then the cache might be out of
+			# date because the Rails version may have been installed now.
+			# So we reload the cache and try again.
+			Gem.cache.refresh!
+			found_version = Gem.cache.search('rails', gem_version_spec).map do |x|
+				x.version.version
+			end.sort.last
+		end
+		
 		if found_version.nil?
 			raise VersionNotFound.new("There is no Ruby on Rails version " <<
 				"installed that matches version \"#{gem_version_spec}\"",
