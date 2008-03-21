@@ -152,6 +152,8 @@ class RequestHandler
 	end
 
 private
+	include Utils
+
 	def create_unix_socket_on_abstract_namespace
 		while true
 			begin
@@ -256,6 +258,8 @@ private
 		::Dispatcher.dispatch(cgi, ::ActionController::CgiRequest::DEFAULT_SESSION_OPTIONS,
 			cgi.stdoutput)
 		socket.close
+	rescue IOError, SocketError, SystemCallError => e
+		print_exception("Passenger RequestHandler", e)
 	end
 	
 	# Generate a long, cryptographically secure random ID string, which
