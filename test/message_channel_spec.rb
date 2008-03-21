@@ -62,6 +62,11 @@ describe MessageChannel do
 			@writer.close
 			@reader.read_scalar.should be_nil
 		end
+		
+		it "should raise SecurityError when a received scalar message's size is larger than a specified maximum" do
+			@writer.write_scalar(" " * 100)
+			lambda { @reader.read_scalar(99) }.should raise_error(SecurityError)
+		end
 	end
 	
 	describe "scenarios with 2 channels and 2 concurrent processes" do

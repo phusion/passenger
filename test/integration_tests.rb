@@ -115,6 +115,7 @@ shared_examples_for "MyCook(tm) beta" do
 	
 	it "should not make the web server crash if the app crashes" do
 		post('/welcome/terminate')
+		sleep(0.25) # Give the app the time to terminate itself.
 		get('/').should =~ /Welcome to MyCook/
 	end
 	

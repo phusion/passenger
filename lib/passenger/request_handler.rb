@@ -74,6 +74,7 @@ class RequestHandler
 	# Signal which will cause the Rails application to exit as soon as it's done processing a request.
 	SOFT_TERMINATION_SIGNAL = "SIGUSR1"
 	BACKLOG_SIZE = 50
+	MAX_HEADER_SIZE = 128 * 1024
 	
 	# String constants which exist to relieve Ruby's garbage collector.
 	IGNORE = 'IGNORE' # :nodoc:
@@ -239,9 +240,7 @@ private
 	
 	def process_request(socket)
 		channel = MessageChannel.new(socket)
-		# TODO: We should check the size of the header data. We don't want attackers to
-		# make the server swap storm to dead by sending a header of 4 GB.
-		headers_data = channel.read_scalar
+		headers_data = channel.read_scalar(MAX_HEADER_SIZE)
 		if headers_data.nil?
 			socket.close
 			return

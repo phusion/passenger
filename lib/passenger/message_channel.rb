@@ -103,7 +103,11 @@ class MessageChannel
 	#
 	# Might raise SystemCallError, IOError or SocketError when something
 	# goes wrong.
-	def read_scalar
+	#
+	# The +max_size+ argument allows one to specify the maximum allowed
+	# size for the scalar message. If the received scalar message's size
+	# is larger than +max_size+, then a SecurityError will be raised.
+	def read_scalar(max_size = nil)
 		buffer = ''
 		temp = ''
 		while buffer.size < 4
@@ -113,6 +117,10 @@ class MessageChannel
 		if size == 0
 			return ''
 		else
+			if !max_size.nil? && size > max_size
+				raise SecurityError, "Scalar message size (#{size}) " <<
+					"exceeds maximum allowed size (#{max_size})."
+			end
 			buffer = ''
 			while buffer.size < size
 				buffer << @io.readpartial(size - buffer.size, temp)
