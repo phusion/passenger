@@ -259,6 +259,11 @@ private
 		socket.close
 	rescue IOError, SocketError, SystemCallError => e
 		print_exception("Passenger RequestHandler", e)
+	rescue SecurityError => e
+		STDERR.puts("*** Passenger RequestHandler: HTTP header size exceeded maximum.")
+		STDERR.flush
+		print_exception("Passenger RequestHandler", e)
+		socket.close rescue nil
 	end
 	
 	# Generate a long, cryptographically secure random ID string, which
