@@ -60,8 +60,10 @@
 			 * this server config. */
 			bool poolIdleTimeSpecified;
 			
-			/** The value of Apache's "User" configuration option. */
-			const char *user;
+			/** User that Rails applications must run as if user switching
+			 * fails or is disabled. NULL means the option is not specified.
+			 */
+			const char *defaultUser;
 		};
 	}
 

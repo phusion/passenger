@@ -401,6 +401,15 @@ of seconds that a visitor spends on a single Rails web page. Your mileage may va
 This option may only occur once, in the global server configuration.
 The default value is '120'.
 
+[[RailsDefaultUser]]
+RailsDefaultUser <string>::
+	Passenger enables <<user_switching,user switching support>> by default.
+	This configuration option allows one to specify which user Rails
+	applications must run as, if user switching fails or is disabled.
++
+This option may only occur once, in the global server configuration.
+The default value is 'nobody'.
+
 
 == Troubleshooting ==
 
@@ -585,6 +594,7 @@ correct Apache installation>>, and <<install_passenger,reinstall Passenger>>.
 
 == Tips and notes ==
 
+[[user_switching]]
 === User switching (security) ===
 
 There is a problem that plagues most PHP web host, namely the fact that all PHP
@@ -604,6 +614,10 @@ there are things that you should keep in mind:
   folder, and read/write access to the Rails application's 'logs' folder.
 - This feature is only available if Apache is started by 'root'. This is the
   case on most Apache installations.
+- Under no circumstances will Rails applications be run as 'root'. If
+  'environment.rb' is owned as root or by an unknown user, then the Rails
+  application will run as the user specified by
+  <<RailsDefaultUser,RailsDefaultUser>>.
 
 
 [[reducing_memory_usage]]
