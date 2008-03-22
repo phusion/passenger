@@ -66,13 +66,9 @@ passenger_config_create_server(apr_pool_t *p, server_rec *s) {
 	config->maxPoolSizeSpecified = false;
 	config->poolIdleTime = DEFAULT_POOL_IDLE_TIME;
 	config->poolIdleTimeSpecified = false;
-<<<<<<< HEAD:ext/apache2/Configuration.cpp
 	config->userSwitching = true;
 	config->userSwitchingSpecified = false;
-	config->user = NULL;
-=======
 	config->defaultUser = NULL;
->>>>>>> 43867a0c1c44d03f39ded1c527e636ec80683a83:ext/apache2/Configuration.cpp
 	return config;
 }
 
@@ -204,6 +200,7 @@ cmd_rails_user_switching(cmd_parms *cmd, void *pcfg, int arg) {
 	return NULL;
 }
 
+static const char *
 cmd_rails_default_user(cmd_parms *cmd, void *dummy, const char *arg) {
 	ServerConfig *config = (ServerConfig *) ap_get_module_config(
 		cmd->server->module_config, &passenger_module);
@@ -250,19 +247,13 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The maximum number of seconds that a Rails application may be idle before it gets terminated."),
-<<<<<<< HEAD:ext/apache2/Configuration.cpp
 	AP_INIT_FLAG("RailsUserSwitching",
 		(Take1Func) cmd_rails_user_switching,
 		NULL,
 		RSRC_CONF,
 		"Whether to enable user switching support."),
-	
-	AP_INIT_TAKE1("User",
-		(Take1Func) cmd_user,
-=======
 	AP_INIT_TAKE1("RailsDefaultUser",
 		(Take1Func) cmd_rails_default_user,
->>>>>>> 43867a0c1c44d03f39ded1c527e636ec80683a83:ext/apache2/Configuration.cpp
 		NULL,
 		RSRC_CONF,
 		"The user that Rails applications must run as when user switching fails or is disabled."),
