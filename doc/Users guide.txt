@@ -29,9 +29,11 @@ practically any operating system on earth, except Microsoft Windows.
 
 Passenger has been tested on:
 
+- Ubuntu Linux 6.06 (x86)
 - Ubuntu Linux 7.10 (x86)
 - Debian Etch (x86)
 - Debian Lenny/Sid (x86)
+- CentOS 5 (x86)
 - Gentoo, March 14 2008 (AMD64)
 - FreeBSD 6.1-RELEASE (x86)
 - MacOS X Tiger (x86)
@@ -401,6 +403,15 @@ of seconds that a visitor spends on a single Rails web page. Your mileage may va
 This option may only occur once, in the global server configuration.
 The default value is '120'.
 
+[[RailsDefaultUser]]
+RailsDefaultUser <string>::
+	Passenger enables <<user_switching,user switching support>> by default.
+	This configuration option allows one to specify which user Rails
+	applications must run as, if user switching fails or is disabled.
++
+This option may only occur once, in the global server configuration.
+The default value is 'nobody'.
+
 
 == Troubleshooting ==
 
@@ -582,9 +593,78 @@ Apache installations on their system.
 To solve this problem, please <<specifying_correct_apache_install,specify the
 correct Apache installation>>, and <<install_passenger,reinstall Passenger>>.
 
+==== A Rails application claims that a specific library is not installed, but it actually is installed ====
+
+.Symptoms
+*******************************************************************************
+Consider the following example scenario: You've just deployed a Rails
+application. When you access it, it says that the library ``example_lib'' cannot be
+loaded. So you go ahead and install ``example_lib'' with RubyGems:
+------------------
+gem install example_lib
+------------------
+Then you access the Rails application again, but it still complains that
+``example_lib'' cannot be found. The problem persists even after touching
+'tmp/restart.txt'.
+*******************************************************************************
+
+This is because Passenger's RubyGems cache is out of date. It doesn't detect
+newly installed gems.
+
+There are two ways to fix this:
+
+1. Restart Apache.
+2. Modify your Rails application's ``environment.rb''. Add this line to the
+very beginning of the file:
++
+--------------------
+Gem.cache.refresh!
+--------------------
+
+==== The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it ====
+
+If you are sure that the RailsSpawnServer configuration option is set correctly,
+then this problem is most likely caused by the fact that you're running Apache
+with SELinux. On Fedora, CentOS and RedHat Enterprise Linux, Apache is locked
+down by SELinux policies.
+
+To solve this problem, you must set some permissions on the Passenger files and
+folders, so that Apache can access them.
+
+- If you've installed Passenger via a gem, then you must first find out the
+  location in which RubyGems stores gem files. Type the following command:
++
+------------------------------------------------------------------
+gem environment | grep 'INSTALLATION DIRECTORY'
+------------------------------------------------------------------
++
+It should show something along the lines of:
++
+------------------------------------------------------------------
+  - INSTALLATION DIRECTORY: /usr/lib/ruby/gems/1.8
+------------------------------------------------------------------
++
+The directory name that you see in the output is the RubyGems gem folder.
+Next, we'll fix the Passenger folder permissions as follows:
++
+------------------------------------------------------------------
+cd /usr/lib/ruby/gems/1.8     # Replace this with whatever your gem folder is.
+cd gems
+chcon -R -h -t httpd_sys_content_t passenger-*
+------------------------------------------------------------------
+- If you've installed Passenger via the source tarball, then run the following
+  command:
++
+------------------------------------------------------------------
+chcon -R -h -t httpd_sys_content_t /path/to/passenger/folder
+------------------------------------------------------------------
+
+Once the permissions are fixed, restart Apache.
+
 
 == Tips and notes ==
 
+[[user_switching]]
 === User switching (security) ===
 
 There is a problem that plagues most PHP web host, namely the fact that all PHP
@@ -604,6 +684,10 @@ there are things that you should keep in mind:
   folder, and read/write access to the Rails application's 'logs' folder.
 - This feature is only available if Apache is started by 'root'. This is the
   case on most Apache installations.
+- Under no circumstances will Rails applications be run as 'root'. If
+  'environment.rb' is owned as root or by an unknown user, then the Rails
+  application will run as the user specified by
+  <<RailsDefaultUser,RailsDefaultUser>>.
 
 
 [[reducing_memory_usage]]

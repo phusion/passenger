@@ -35,7 +35,9 @@ class Application
 	# Returns nil if the application has a vendored Rails.
 	# Raises VersionNotFound if the required Rails version is not installed.
 	def self.detect_framework_version(app_root)
-		if File.directory?("#{app_root}/vendor/rails")
+		if File.directory?("#{app_root}/vendor/rails/railties")
+			# NOTE: We must check for 'rails/railties' and not just 'rails'.
+			# Typo's vendor directory contains an empty 'rails' directory.
 			return nil
 		end
 		
