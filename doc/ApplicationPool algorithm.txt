@@ -54,10 +54,22 @@ explicitly define some special types:
     inactive_apps. This iterator is only valid if this AppContainer really is
     in that list.
 
+=== Special functions
+
+- spawn(app_root)
+  Spawns a new instance of the application at the given application root.
+  Throws an exception if something went wrong. This function is thread-safe.
+  Note that application initialization can take an arbitrary amount of time.
+
 === Instance variables
 
 The algorithm requires the following instance variables for storing state
 information:
+
+- lock: mutex
+  This lock is used for implementing thread-safetiness. We assume that it
+  is non-recursive, i.e. if a thread locks a mutex that it has already locked,
+  then it will result in a deadlock.
 
 - apps: map[string => list<AppContainer>]
   Maps an application root to a list of AppContainers. Thus, this map contains
@@ -107,10 +119,6 @@ information:
 == Algorithm in pseudo code
 
 # Thread-safetiness notes:
-# - The following functions are to be run inside the same lock:
-#   * get()
-#   * session_has_been_closed()
-#   * The cleaner thread's main function.
 # - All wait commands are to unlock the lock during waiting.
 
 function get(app_root):
@@ -118,23 +126,24 @@ function get(app_root):
 	attempt = 0
 	while (true):
 		attempt++
-		container, list = spawn_or_use_existing(app_root)
-		container.last_used = current_time()
-		container.sessions++
-		try:
-			return container.app.connect()
-		on exception:
-			container.sessions--
-			if (attempt == MAX_ATTEMPTS):
-				propagate exception
-			else:
-				# The app instance seems to have crashed. So we remove this
-				# instance from our data structures.
-				list.remove(container.iterator)
-				if list.empty():
-					apps.remove(app_root)
-				count--
-				active--
+		lock.synchronize:
+			container, list = spawn_or_use_existing(app_root)
+			container.last_used = current_time()
+			container.sessions++
+			try:
+				return container.app.connect()
+			on exception:
+				container.sessions--
+				if (attempt == MAX_ATTEMPTS):
+					propagate exception
+				else:
+					# The app instance seems to have crashed. So we remove this
+					# instance from our data structures.
+					list.remove(container.iterator)
+					if list.empty():
+						apps.remove(app_root)
+					count--
+					active--
 
 
 # Returns a pair of [AppContainer, list<AppContainer>] that matches the
@@ -207,7 +216,7 @@ function spawn_or_use_existing(app_root):
 		container = new AppContainer
 		# TODO: we should unlock the mutex during spawning,
 		# and add some kind of timeout check.
-		container.app = spawn(app)
+		container.app = spawn(app_root)
 		container.sessions = 0;
 		list = apps[app_root]
 		if list == nil:
@@ -224,14 +233,15 @@ function spawn_or_use_existing(app_root):
 # _container_ is the AppContainer that contains the application for which a
 # session has been closed.
 function session_has_been_closed(container):
-	list = apps[container.app.app_root]
-	if list != nil:
-		container.last_used = current_time()
-		container.sessions--
-		if container.sessions == 0:
-			list.move_to_front(container.iterator)
-			container.ia_iterator = inactive_apps.add_to_back(container.app)
-		active--
+	lock.synchronize:
+		list = apps[container.app.app_root]
+		if list != nil:
+			container.last_used = current_time()
+			container.sessions--
+			if container.sessions == 0:
+				list.move_to_front(container.iterator)
+				container.ia_iterator = inactive_apps.add_to_back(container.app)
+			active--
 
 
 function needs_restart(app_root):
@@ -258,22 +268,23 @@ function needs_restart(app_root):
 # The following thread will be responsible for cleaning up idle application
 # instances, i.e. instances that haven't been used for a while.
 thread cleaner:
-	done = false
-	while !done:
-		Wait until CLEAN_INTERVAL seconds have expired, or until the thread has been signalled to quit.
-		if thread has been signalled to quit:
-			done = true
-			break
+	lock.synchronize:
+		done = false
+		while !done:
+			Wait until CLEAN_INTERVAL seconds have expired, or until the thread has been signalled to quit.
+			if thread has been signalled to quit:
+				done = true
+				break
 		
-		now = current_time()
-		for all container in inactive_apps:
-			app = container.app
-			app_list = apps[app.app_root]
-			if now - container.last_used > MAX_IDLE_TIME:
-				app_list.remove(container.iterator)
-				inactive_apps.remove(iterator for container)
-				count--
-			if app_list.empty():
-				apps.remove(app.app_root)
-				restart_file_times.remove(app.app_root)
+			now = current_time()
+			for all container in inactive_apps:
+				app = container.app
+				app_list = apps[app.app_root]
+				if now - container.last_used > MAX_IDLE_TIME:
+					app_list.remove(container.iterator)
+					inactive_apps.remove(iterator for container)
+					count--
+				if app_list.empty():
+					apps.remove(app.app_root)
+					restart_file_times.remove(app.app_root)
 

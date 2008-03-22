@@ -557,7 +557,6 @@ public:
 	
 	virtual Application::SessionPtr
 	get(const string &appRoot, bool lowerPrivilege = true, const string &lowestUser = "nobody") {
-		mutex::scoped_lock l(lock);
 		unsigned int attempt;
 		const unsigned int MAX_ATTEMPTS = 5;
 		
@@ -565,6 +564,7 @@ public:
 		while (true) {
 			attempt++;
 			
+			mutex::scoped_lock l(lock);
 			pair<AppContainerPtr, AppContainerList *> p(
 				spawnOrUseExisting(l, appRoot, lowerPrivilege, lowestUser)
 			);
