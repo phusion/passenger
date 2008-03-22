@@ -10,6 +10,8 @@ require 'passenger/platform_info'
 
 include PlatformInfo
 
+# TODO: test the 'RailsUserSwitching' and 'RailsDefaultUser' option.
+
 shared_examples_for "MyCook(tm) beta" do
 	it "should be possible to fetch static assets" do
 		get('/images/rails.png').should == public_file('images/rails.png')
