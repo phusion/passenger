@@ -103,11 +103,13 @@ private
 	end
 	
 	def self.determine_apr1_info
+		flags = nil
+		libs = nil
 		if find_command('pkg-config')
 			flags = `pkg-config --cflags apr-1 apr-util-1 2>/dev/null`.strip
 			libs = `pkg-config --libs apr-1 apr-util-1 2>/dev/null`.strip
 		end
-		if flags.empty? && libs.empty?
+		if (flags.nil? || flags.empty?) && (libs.nil? || libs.empty?)
 			apr_config = find_command('apr-1-config')
 			if apr_config.nil?
 				apr_config = find_command('apr-config')
