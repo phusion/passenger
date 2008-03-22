@@ -614,7 +614,7 @@ There are two ways to fix this:
 
 1. Restart Apache.
 2. Modify your Rails application's ``environment.rb''. Add this line to the
-very beginning: of the file:
+very beginning of the file:
 +
 --------------------
 Gem.cache.refresh!
