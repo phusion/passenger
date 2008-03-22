@@ -347,7 +347,17 @@ public:
 			
 			P_DEBUG("Processing HTTP request: " << r->uri);
 			try {
-				session = applicationPool->get(canonicalizePath(railsDir + "/.."));
+				const char *lowestUser;
+				ServerConfig *sconfig;
+				
+				sconfig = getServerConfig(r->server);
+				if (sconfig->user != NULL) {
+					lowestUser = sconfig->user;
+				} else {
+					lowestUser = "nobody";
+				}
+				session = applicationPool->get(canonicalizePath(railsDir + "/.."),
+					true, lowestUser);
 			} catch (const SpawnException &e) {
 				if (e.hasErrorPage()) {
 					ap_set_content_type(r, "text/html; charset=utf-8");

@@ -59,6 +59,9 @@
 			/** Whether the poolIdleTime option was explicitly specified in
 			 * this server config. */
 			bool poolIdleTimeSpecified;
+			
+			/** The value of Apache's "User" configuration option. */
+			const char *user;
 		};
 	}
 
