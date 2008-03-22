@@ -163,8 +163,12 @@ protected
 private
 	def lower_privilege!
 		stat = File.stat("config/environment.rb")
-		if !switch_to_user(stat.uid)
-			switch_to_user(@lowest_user)
+		begin
+			if !switch_to_user(stat.uid)
+				switch_to_user(@lowest_user)
+			end
+		rescue Errno::EPERM
+			# No problem if we were unable to switch user.
 		end
 	end
 

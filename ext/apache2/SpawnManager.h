@@ -135,14 +135,6 @@ private:
 
 		pid = fork();
 		if (pid == 0) {
-			if (!user.empty()) {
-				struct passwd *entry = getpwnam(user.c_str());
-				if (entry != NULL) {
-					setgid(entry->pw_gid);
-					setuid(entry->pw_uid);
-				}
-			}
-		
 			if (!logFile.empty()) {
 				dup2(fileno(logFileHandle), STDERR_FILENO);
 				fclose(logFileHandle);
@@ -158,6 +150,33 @@ private:
 				if (i > SPAWN_SERVER_INPUT_FD) {
 					close(i);
 				}
+			}
+			
+			if (!user.empty()) {
+				struct passwd *entry = getpwnam(user.c_str());
+				if (entry != NULL) {
+					if (setgid(entry->pw_gid) != 0) {
+						int e = errno;
+						fprintf(stderr, "*** Passenger: cannot run spawn "
+							"manager as group %d: %s (%d)\n",
+							entry->pw_gid,
+							strerror(e),
+							e);
+					}
+					if (setuid(entry->pw_uid) != 0) {
+						int e = errno;
+						fprintf(stderr, "*** Passenger: cannot run spawn "
+							"manager as user %s (%d): %s (%d)\n",
+							user.c_str(), entry->pw_uid,
+							strerror(e),
+							e);
+					}
+				} else {
+					fprintf(stderr, "*** Passenger: cannot run spawn manager "
+						"as nonexistant user '%s'.\n",
+						user.c_str());
+				}
+				fflush(stderr);
 			}
 			
 			execlp(rubyCommand.c_str(),

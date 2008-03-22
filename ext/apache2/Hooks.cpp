@@ -266,11 +266,18 @@ public:
 		passenger_config_merge_all_servers(pconf, s);
 		
 		ServerConfig *config = getServerConfig(s);
-		const char *ruby, *environment;
+		const char *ruby, *environment, *user;
 		string spawnServer;
 		
 		ruby = (config->ruby != NULL) ? config->ruby : DEFAULT_RUBY_COMMAND;
 		environment = (config->env != NULL) ? config->env : DEFAULT_RAILS_ENV;
+		if (config->userSwitching) {
+			user = "";
+		} else if (config->defaultUser != NULL) {
+			user = config->defaultUser;
+		} else {
+			user = "nobody";
+		}
 		if (config->spawnServer != NULL) {
 			spawnServer = config->spawnServer;
 		} else {
@@ -289,7 +296,9 @@ public:
 			throw FileNotFoundException(message);
 		}
 		
-		applicationPoolServer = ptr(new ApplicationPoolServer(spawnServer, "", environment, ruby));
+		applicationPoolServer = ptr(
+			new ApplicationPoolServer(spawnServer, "", environment, ruby, user)
+		);
 	}
 	
 	void initChild(apr_pool_t *pchild, server_rec *s) {
