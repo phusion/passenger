@@ -97,6 +97,13 @@ string findSpawnServer();
  */
 string canonicalizePath(const string &path);
 
+/**
+ * Check whether the specified directory is a valid Ruby on Rails
+ * 'public' directory.
+ *
+ * @ingroup Support
+ */
+bool verifyRailsDir(const string &dir);
 
 #ifdef PASSENGER_DEBUG
 	#define P_DEBUG(expr) \
