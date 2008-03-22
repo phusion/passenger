@@ -106,13 +106,17 @@ private
 		if find_command('pkg-config')
 			flags = `pkg-config --cflags apr-1 apr-util-1 2>/dev/null`.strip
 			libs = `pkg-config --libs apr-1 apr-util-1 2>/dev/null`.strip
-		else
+		end
+		if flags.empty? && libs.empty?
 			apr_config = find_command('apr-1-config')
+			if apr_config.nil?
+				apr_config = find_command('apr-config')
+			end
 			if apr_config.nil?
 				return nil
 			else
-				flags = `apr-1-config --cppflags --includes`.strip
-				libs = `apr-1-config --link-ld`.strip
+				flags = `#{apr_config} --cppflags --includes`.strip
+				libs = `#{apr_config} --link-ld`.strip
 			end
 		end
 		flags.gsub!(/-O\d? /, '')
