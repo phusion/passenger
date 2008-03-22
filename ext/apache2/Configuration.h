@@ -66,9 +66,11 @@
 			/** Whether the userSwitching option was explicitly specified in
 			 * this server config. */
 			bool userSwitchingSpecified;
-			
-			/** The value of Apache's "User" configuration option. */
-			const char *user;
+
+			/** User that Rails applications must run as if user switching
+			 * fails or is disabled. NULL means the option is not specified.
+			 */
+			const char *defaultUser;
 		};
 	}
 

@@ -191,6 +191,10 @@ private
 	end
 
 	def preload_application
+		Object.const_set(:RAILS_ROOT, @app_root)
+		if defined?(Rails::Initializer)
+			Rails::Initializer.run(:set_load_path)
+		end
 		require 'config/environment'
 		require_dependency 'application'
 		Dir.glob('app/{models,controllers,helpers}/*.rb').each do |file|
