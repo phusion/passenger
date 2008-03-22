@@ -403,6 +403,13 @@ of seconds that a visitor spends on a single Rails web page. Your mileage may va
 This option may only occur once, in the global server configuration.
 The default value is '120'.
 
+[[RailsUserSwitching]]
+RailsUserSwitching <on|off>::
+	Whether to enable <<user_switching,user switching support>>.
++
+This option may only occur once, in the global server configuration.
+The default value is 'on'.
+
 [[RailsDefaultUser]]
 RailsDefaultUser <string>::
 	Passenger enables <<user_switching,user switching support>> by default.
@@ -688,6 +695,9 @@ there are things that you should keep in mind:
   'environment.rb' is owned as root or by an unknown user, then the Rails
   application will run as the user specified by
   <<RailsDefaultUser,RailsDefaultUser>>.
+
+User switching can be disabled with the
+<<RailsUserSwitching,RailsUserSwitching>> option.
 
 
 [[reducing_memory_usage]]
