@@ -495,6 +495,11 @@ public:
 	 *            should use. If an empty string is specified, the current value
 	 *            of the RAILS_ENV environment variable will be used.
 	 * @param rubyCommand The Ruby interpreter's command.
+	 * @param user The user that the spawn manager should run as. This
+	 *             parameter only has effect if the current process is
+	 *             running as root. If the empty string is given, or if
+	 *             the <tt>user</tt> is not a valid username, then
+	 *             the spawn manager will be run as the current user.
 	 * @throws SystemException An error occured while trying to setup the spawn server
 	 *            or the server socket.
 	 * @throws IOException The specified log file could not be opened.
@@ -502,8 +507,9 @@ public:
 	ApplicationPoolServer(const string &spawnServerCommand,
 	             const string &logFile = "",
 	             const string &environment = "production",
-	             const string &rubyCommand = "ruby")
-	: pool(spawnServerCommand, logFile, environment, rubyCommand) {
+	             const string &rubyCommand = "ruby",
+	             const string &user = "")
+	: pool(spawnServerCommand, logFile, environment, rubyCommand, user) {
 		int fds[2];
 		
 		if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {

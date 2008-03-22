@@ -380,6 +380,12 @@ public:
 	 *            should use. If an empty string is specified, the current value
 	 *            of the RAILS_ENV environment variable will be used.
 	 * @param rubyCommand The Ruby interpreter's command.
+	 * @param user The user that the spawn manager should run as. This
+	 *             parameter only has effect if the current process is
+	 *             running as root. If the empty string is given, or if
+	 *             the <tt>user</tt> is not a valid username, then
+	 *             the spawn manager will be run as the current user.
+	 * @param rubyCommand The Ruby interpreter's command.
 	 * @throws SystemException An error occured while trying to setup the spawn server.
 	 * @throws IOException The specified log file could not be opened.
 	 */
@@ -390,7 +396,7 @@ public:
 	             const string &user = "")
 	        :
 		#ifndef PASSENGER_USE_DUMMY_SPAWN_MANAGER
-		spawnManager(spawnServerCommand, logFile, environment, rubyCommand),
+		spawnManager(spawnServerCommand, logFile, environment, rubyCommand, user),
 		#endif
 		data(new SharedData()),
 		lock(data->lock),

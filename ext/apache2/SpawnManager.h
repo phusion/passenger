@@ -14,6 +14,7 @@
 #include <cstdarg>
 #include <unistd.h>
 #include <errno.h>
+#include <pwd.h>
 #ifdef TESTING_SPAWN_MANAGER
 	#include <signal.h>
 #endif
@@ -69,6 +70,7 @@ private:
 	string logFile;
 	string environment;
 	string rubyCommand;
+	string user;
 	
 	mutex lock;
 	
@@ -133,6 +135,14 @@ private:
 
 		pid = fork();
 		if (pid == 0) {
+			if (!user.empty()) {
+				struct passwd *entry = getpwnam(user.c_str());
+				if (entry != NULL) {
+					setgid(entry->pw_gid);
+					setuid(entry->pw_uid);
+				}
+			}
+		
 			if (!logFile.empty()) {
 				dup2(fileno(logFileHandle), STDERR_FILENO);
 				fclose(logFileHandle);
@@ -358,17 +368,24 @@ public:
 	 *            should use. If an empty string is specified, the current value
 	 *            of the RAILS_ENV environment variable will be used.
 	 * @param rubyCommand The Ruby interpreter's command.
+	 * @param user The user that the spawn manager should run as. This
+	 *             parameter only has effect if the current process is
+	 *             running as root. If the empty string is given, or if
+	 *             the <tt>user</tt> is not a valid username, then
+	 *             the spawn manager will be run as the current user.
 	 * @throws SystemException An error occured while trying to setup the spawn server.
 	 * @throws IOException The specified log file could not be opened.
 	 */
 	SpawnManager(const string &spawnServerCommand,
 	             const string &logFile = "",
 	             const string &environment = "production",
-	             const string &rubyCommand = "ruby") {
+	             const string &rubyCommand = "ruby",
+	             const string &user = "") {
 		this->spawnServerCommand = spawnServerCommand;
 		this->logFile = logFile;
 		this->environment = environment;
 		this->rubyCommand = rubyCommand;
+		this->user = user;
 		pid = 0;
 		#ifdef TESTING_SPAWN_MANAGER
 			nextRestartShouldFail = false;
