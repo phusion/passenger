@@ -60,6 +60,13 @@
 			 * this server config. */
 			bool poolIdleTimeSpecified;
 			
+			/** Whether user switching support is enabled. */
+			bool userSwitching;
+			
+			/** Whether the userSwitching option was explicitly specified in
+			 * this server config. */
+			bool userSwitchingSpecified;
+			
 			/** The value of Apache's "User" configuration option. */
 			const char *user;
 		};

@@ -66,6 +66,8 @@ passenger_config_create_server(apr_pool_t *p, server_rec *s) {
 	config->maxPoolSizeSpecified = false;
 	config->poolIdleTime = DEFAULT_POOL_IDLE_TIME;
 	config->poolIdleTimeSpecified = false;
+	config->userSwitching = true;
+	config->userSwitchingSpecified = false;
 	config->user = NULL;
 	return config;
 }
@@ -83,13 +85,15 @@ passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
 	config->maxPoolSizeSpecified = base->maxPoolSizeSpecified || add->maxPoolSizeSpecified;
 	config->poolIdleTime = (add->poolIdleTime) ? base->poolIdleTime : add->poolIdleTime;
 	config->poolIdleTimeSpecified = base->poolIdleTimeSpecified || add->poolIdleTimeSpecified;
+	config->userSwitching = (add->userSwitchingSpecified) ? add->userSwitching : base->userSwitching;
+	config->userSwitchingSpecified = base->userSwitchingSpecified || add->userSwitchingSpecified;
 	config->user = (add->user == NULL) ? base->user : add->user;
 	return config;
 }
 
 void
 passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
-	ServerConfig *final = create_server_config_struct(pool);
+	ServerConfig *final = (ServerConfig *) passenger_config_create_server(pool, main_server);
 	server_rec *s;
 	
 	for (s = main_server; s != NULL; s = s->next) {
@@ -101,6 +105,8 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 		final->maxPoolSizeSpecified = final->maxPoolSizeSpecified || config->maxPoolSizeSpecified;
 		final->poolIdleTime = (final->poolIdleTimeSpecified) ? final->poolIdleTime : config->poolIdleTime;
 		final->poolIdleTimeSpecified = final->poolIdleTimeSpecified || config->poolIdleTimeSpecified;
+		final->userSwitching = (config->userSwitchingSpecified) ? config->userSwitching : final->userSwitching;
+		final->userSwitchingSpecified = final->userSwitchingSpecified || config->userSwitchingSpecified;
 		final->user = (final->user != NULL) ? final->user : config->user;
 	}
 	for (s = main_server; s != NULL; s = s->next) {
@@ -186,6 +192,16 @@ cmd_rails_pool_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
+cmd_rails_user_switching(cmd_parms *cmd, void *pcfg, int arg) {
+	ServerConfig *config = (ServerConfig *) ap_get_module_config(
+		cmd->server->module_config, &passenger_module);
+	config->userSwitching = arg;
+	config->userSwitchingSpecified = true;
+	P_DEBUG("\n\n\nUser Switching!!\n\n\n");
+	return NULL;
+}
+
+static const char *
 cmd_user(cmd_parms *cmd, void *dummy, const char *arg) {
 	ServerConfig *config = (ServerConfig *) ap_get_module_config(
 		cmd->server->module_config, &passenger_module);
@@ -232,6 +248,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The maximum number of seconds that a Rails application may be idle before it gets terminated."),
+	AP_INIT_FLAG("RailsUserSwitching",
+		(Take1Func) cmd_rails_user_switching,
+		NULL,
+		RSRC_CONF,
+		"Whether to enable user switching support."),
 	
 	AP_INIT_TAKE1("User",
 		(Take1Func) cmd_user,
