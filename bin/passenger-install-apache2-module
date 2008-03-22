@@ -8,7 +8,7 @@ include Passenger
 include PlatformInfo
 
 class Installer
-	PASSENGER_WEBSITE = "http://passenger.phusion.nl/"
+	PASSENGER_WEBSITE = "http://www.modrails.com/"
 	PHUSION_WEBSITE = "www.phusion.nl"
 	USERS_GUIDE = "#{PASSENGER_ROOT}/doc/Users guide.html"
 	

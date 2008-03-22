@@ -396,7 +396,7 @@ free up resources used by Rails applications more quickly.
 +
 The optimal value depends on the average time that a visitor spends on a single
 Rails web page. We recommend a value of `2 * x`, where `x` is the average number
-of seconds that a visitor spends on a single Rails web page. Your milage may vary.
+of seconds that a visitor spends on a single Rails web page. Your mileage may vary.
 +
 This option may only occur once, in the global server configuration.
 The default value is '120'.
@@ -421,7 +421,7 @@ Installing Passenger fails because of one of the following errors:
 
 Passenger makes use of a native extension, so the Ruby development headers
 must be installed. On most Linux systems, Ruby and the Ruby development headers
-are contained in seperate packages, so having Ruby installed does not
+are contained in separate packages, so having Ruby installed does not
 automatically imply having the development headers installed.
 
 Here's how you can install the development headers:
@@ -609,8 +609,8 @@ there are things that you should keep in mind:
 [[reducing_memory_usage]]
 === Reducing memory consumption of Ruby on Rails apps by 33% ===
 
-Is it possible to reduce memory consumptioin of your Rails apps by 33% on average,
-by using http://emm-ruby.phusion.nl/[Enhanced Memory Manager Ruby (EMM-Ruby)].
+Is it possible to reduce memory consumption of your Rails apps by 33% on average,
+by using http://www.rubyenterpriseedition.com/[Ruby Enterprise Edition].
 Please visit the website for details.
 
 === Moving Passenger to a different directory ===
