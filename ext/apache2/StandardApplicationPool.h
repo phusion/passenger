@@ -386,7 +386,8 @@ public:
 	StandardApplicationPool(const string &spawnServerCommand,
 	             const string &logFile = "",
 	             const string &environment = "production",
-	             const string &rubyCommand = "ruby")
+	             const string &rubyCommand = "ruby",
+	             const string &user = "")
 	        :
 		#ifndef PASSENGER_USE_DUMMY_SPAWN_MANAGER
 		spawnManager(spawnServerCommand, logFile, environment, rubyCommand),
