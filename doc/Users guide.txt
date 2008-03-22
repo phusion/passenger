@@ -591,6 +591,34 @@ Apache installations on their system.
 To solve this problem, please <<specifying_correct_apache_install,specify the
 correct Apache installation>>, and <<install_passenger,reinstall Passenger>>.
 
+==== A Rails application claims that a specific library is not installed, but it actually is installed ====
+
+.Symptoms
+*******************************************************************************
+Consider the following example scenario: You've just deployed a Rails
+application. When you access it, it says that the library ``example_lib'' cannot be
+loaded. So you go ahead and install ``example_lib'' with RubyGems:
+------------------
+gem install example_lib
+------------------
+Then you access the Rails application again, but it still complains that
+``example_lib'' cannot be found. The problem persists even after touching
+'tmp/restart.txt'.
+*******************************************************************************
+
+This is because Passenger's RubyGems cache is out of date. It doesn't detect
+newly installed gems.
+
+There are two ways to fix this:
+
+1. Restart Apache.
+2. Modify your Rails application's ``environment.rb''. Add this line to the
+very beginning: of the file:
++
+--------------------
+Gem.cache.refresh!
+--------------------
+
 
 == Tips and notes ==
 
