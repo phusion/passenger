@@ -66,7 +66,7 @@ passenger_config_create_server(apr_pool_t *p, server_rec *s) {
 	config->maxPoolSizeSpecified = false;
 	config->poolIdleTime = DEFAULT_POOL_IDLE_TIME;
 	config->poolIdleTimeSpecified = false;
-	config->user = NULL;
+	config->defaultUser = NULL;
 	return config;
 }
 
@@ -83,7 +83,7 @@ passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
 	config->maxPoolSizeSpecified = base->maxPoolSizeSpecified || add->maxPoolSizeSpecified;
 	config->poolIdleTime = (add->poolIdleTime) ? base->poolIdleTime : add->poolIdleTime;
 	config->poolIdleTimeSpecified = base->poolIdleTimeSpecified || add->poolIdleTimeSpecified;
-	config->user = (add->user == NULL) ? base->user : add->user;
+	config->defaultUser = (add->defaultUser == NULL) ? base->defaultUser : add->defaultUser;
 	return config;
 }
 
@@ -101,7 +101,7 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 		final->maxPoolSizeSpecified = final->maxPoolSizeSpecified || config->maxPoolSizeSpecified;
 		final->poolIdleTime = (final->poolIdleTimeSpecified) ? final->poolIdleTime : config->poolIdleTime;
 		final->poolIdleTimeSpecified = final->poolIdleTimeSpecified || config->poolIdleTimeSpecified;
-		final->user = (final->user != NULL) ? final->user : config->user;
+		final->defaultUser = (final->defaultUser != NULL) ? final->defaultUser : config->defaultUser;
 	}
 	for (s = main_server; s != NULL; s = s->next) {
 		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
@@ -186,10 +186,10 @@ cmd_rails_pool_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
-cmd_user(cmd_parms *cmd, void *dummy, const char *arg) {
+cmd_rails_default_user(cmd_parms *cmd, void *dummy, const char *arg) {
 	ServerConfig *config = (ServerConfig *) ap_get_module_config(
 		cmd->server->module_config, &passenger_module);
-	config->user = arg;
+	config->defaultUser = arg;
 	return NULL;
 }
 
@@ -232,13 +232,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The maximum number of seconds that a Rails application may be idle before it gets terminated."),
-	
-	AP_INIT_TAKE1("User",
-		(Take1Func) cmd_user,
+	AP_INIT_TAKE1("RailsDefaultUser",
+		(Take1Func) cmd_rails_default_user,
 		NULL,
 		RSRC_CONF,
-		"Effective user id for this server"),
-
+		"The user that Rails applications must run as when user switching fails or is disabled."),
 	{ NULL }
 };
 

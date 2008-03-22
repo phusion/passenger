@@ -341,17 +341,17 @@ public:
 			
 			P_DEBUG("Processing HTTP request: " << r->uri);
 			try {
-				const char *lowestUser;
+				const char *defaultUser;
 				ServerConfig *sconfig;
 				
 				sconfig = getServerConfig(r->server);
-				if (sconfig->user != NULL) {
-					lowestUser = sconfig->user;
+				if (sconfig->defaultUser != NULL) {
+					defaultUser = sconfig->defaultUser;
 				} else {
-					lowestUser = "nobody";
+					defaultUser = "nobody";
 				}
 				session = applicationPool->get(canonicalizePath(railsDir + "/.."),
-					true, lowestUser);
+					true, defaultUser);
 			} catch (const SpawnException &e) {
 				if (e.hasErrorPage()) {
 					ap_set_content_type(r, "text/html; charset=utf-8");
