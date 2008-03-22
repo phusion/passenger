@@ -29,6 +29,7 @@ practically any operating system on earth, except Microsoft Windows.
 
 Passenger has been tested on:
 
+- Ubuntu Linux 6.06 (x86)
 - Ubuntu Linux 7.10 (x86)
 - Debian Etch (x86)
 - Debian Lenny/Sid (x86)
