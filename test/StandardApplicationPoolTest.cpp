@@ -1,5 +1,5 @@
 #include "tut.h"
-#include "ApplicationPool.h"
+#include "StandardApplicationPool.h"
 #include "Utils.h"
 
 using namespace Passenger;
