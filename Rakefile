@@ -84,7 +84,8 @@ class APACHE2
 	OBJECTS = {
 		'Configuration.o' => %w(Configuration.cpp Configuration.h),
 		'Hooks.o' => %w(Hooks.cpp Hooks.h
-				Configuration.h ApplicationPool.h ApplicationPoolClientServer.h
+				Configuration.h ApplicationPool.h StandardApplicationPool.h
+				ApplicationPoolClientServer.h
 				SpawnManager.h Exceptions.h Application.h MessageChannel.h
 				Utils.h),
 		'Utils.o' => %w(Utils.cpp Utils.h)
@@ -162,16 +163,19 @@ class TEST
 			../ext/apache2/SpawnManager.h
 			../ext/apache2/Application.h),
 		'ApplicationPoolServerTest.o' => %w(ApplicationPoolServerTest.cpp
+			../ext/apache2/StandardApplicationPool.h
 			../ext/apache2/ApplicationPoolClientServer.h),
 		'ApplicationPoolServer_ApplicationPoolTest.o' => %w(ApplicationPoolServer_ApplicationPoolTest.cpp
 			ApplicationPoolTest.cpp
 			../ext/apache2/ApplicationPoolClientServer.h
 			../ext/apache2/ApplicationPool.h
+			../ext/apache2/StandardApplicationPool.h
 			../ext/apache2/SpawnManager.h
 			../ext/apache2/Application.h),
 		'StandardApplicationPoolTest.o' => %w(StandardApplicationPoolTest.cpp
 			ApplicationPoolTest.cpp
 			../ext/apache2/ApplicationPool.h
+			../ext/apache2/StandardApplicationPool.h
 			../ext/apache2/SpawnManager.h
 			../ext/apache2/Application.h),
 		'UtilsTest.o' => %w(UtilsTest.cpp ../ext/apache2/Utils.h)
