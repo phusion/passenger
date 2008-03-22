@@ -80,7 +80,7 @@ private:
 		}
 		
 		if ((config->autoDetect == DirConfig::ENABLED || config->autoDetect == DirConfig::UNSET)
-		 && verifyRailsDir(r->pool, ap_document_root(r))) {
+		 && verifyRailsDir(ap_document_root(r))) {
 			return "/";
 		}
 		
@@ -104,12 +104,6 @@ private:
 		} else {
 			return "";
 		}
-	}
-	
-	bool verifyRailsDir(apr_pool_t *pool, const string &dir) {
-		string temp(dir);
-		temp.append("/../config/environment.rb");
-		return fileExists(temp.c_str());
 	}
 	
 	char *http2env(apr_pool_t *p, const char *name) {
@@ -326,7 +320,7 @@ public:
 			ap_rputs("<h1>Passenger error #1</h1>\n", r);
 			ap_rputs("Cannot determine the location of the Rails application's \"public\" directory.", r);
 			return OK;
-		} else if (!verifyRailsDir(r->pool, railsDir)) {
+		} else if (!verifyRailsDir(railsDir)) {
 			ap_set_content_type(r, "text/html; charset=UTF-8");
 			ap_rputs("<h1>Passenger error #2</h1>\n", r);
 			ap_rputs("Passenger thinks that the Rails application's \"public\" directory is \"", r);
