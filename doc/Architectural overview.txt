@@ -62,7 +62,7 @@ are good examples of this.
 These descriptions are true for virtually all web applications, whether they're
 based on PHP, Django, J2EE, ASP.NET, Ruby on Rails, or whatever. Note that all
 of these setups provide the same functionality, i.e. no setup can do something
-that a different setup can. The critical reader will notice that all of these
+that a different setup can't. The critical reader will notice that all of these
 setups are identical to the one described in the first diagram, if the
 combination of web servers, application servers, web applications etc. are
 considered to be a single entity; a black box if you will.
@@ -75,7 +75,7 @@ could multiplex I/O with a single thread (e.g. by using `select(2)` or
 processes.
 
 Of course, there are many variations possible. For example, load balancers
-could be used. But that is outside the scope of this article.
+could be used. But that is outside the scope of this document.
 
 
 === Ruby on Rails ===
@@ -89,15 +89,18 @@ HTTP processing layer (e.g. a web server).
 
 The Ruby on Rails dispatcher can only process requests serially, i.e. one
 at a time. It is not possible to process two requests at the same time
-with threads, because parts of Ruby on Rails are not thread-safe. *
-
-* This is not as big of a problem as some people imagine. TODO: write article about this
+with threads, because parts of Ruby on Rails are not thread-safe. (In
+practice, this isn't as big of a problem as some people imagine. This will
+be elaborated further in <<concurrent_requests,Handling of concurrent
+requests>>.)
 
 A particularly interesting thing to note, is that a lot of the memory
 occupied by Ruby on Rails applications is spent on storing the program code
-(i.e. the Ruby AST) in memory. See <<appendix_a,Appendix A>> for details.
-Also, a lot of the startup time of a Ruby on Rails application is spent on
-bootstrapping the Rails framework.
+(i.e. the link:http://en.wikipedia.org/wiki/Abstract_syntax_tree[abstract
+syntax tree (AST)]) in memory. This is observed through the use of the
+memory statistics function in link:http://www.rubyenterpriseedition.com/[Ruby
+Enterprise Edition]. Also, a lot of the startup time of a Ruby on Rails
+application is spent on bootstrapping the Rails framework.
 
 
 === Apache ===
@@ -105,11 +108,12 @@ bootstrapping the Rails framework.
 The Apache web server has a pluggable I/O multiprocessing (the ability to
 handle more than 1 concurrent HTTP client at the same time) architecture. An
 Apache module which implements a particular multiprocessing strategy, is called
-a Multi-Processing Module (MPM). The 'prefork' MPM -- which also happens to be
-the default -- appears to be the most popular one. This MPM spawns multiple
-worker child processes. HTTP requests are first accepted by the control
-process, and then forwarded to one of the worker processes. The next section
-contains a diagram which shows the prefork MPM's architecture.
+a Multi-Processing Module (MPM). The
+link:http://httpd.apache.org/docs/2.0/mod/prefork.html[prefork MPM] -- which
+also happens to be the default -- appears to be the most popular one. This MPM
+spawns multiple worker child processes. HTTP requests are first accepted by a
+so-called control process, and then forwarded to one of the worker processes.
+The next section contains a diagram which shows the prefork MPM's architecture.
 
 
 Passenger architecture
@@ -146,7 +150,7 @@ of Passenger.
 A very naive implementation of Passenger would spawn a Ruby on Rails
 application every time an HTTP request is received, just like CGI would.
 However, spawning Ruby on Rails applications is expensive. It can take 1 or 2
-seconds on a modern PC, and possible much longer on a heavily loaded server.
+seconds on a modern PC, and possibly much longer on a heavily loaded server.
 This overhead is particularily unacceptable on shared hosts. A less naive
 implementation would keep spawned Ruby on Rails application instances alive,
 similar to how Lighttpd's FastCGI implementation works.
@@ -169,7 +173,7 @@ This is the approach taken by most Rails hosts, for example in the form of a
 Mongrel cluster which is running all the time. However, this is unacceptable
 for a shared host: such an application would just sit there and waste memory
 even if it's not doing anything. Instead, we've chosen to take a different
-path, which solves both of the aforementioned problems.
+approach, which solves both of the aforementioned problems.
 
 We spawn Rails applications via a 'spawn server'. The spawn server caches Ruby
 on Rails framework code and application code in memory. Spawning a Rails
@@ -186,19 +190,19 @@ detail in <<spawn_server, the next section>>.
 But despite the caching of framework code and application code, spawning is
 still expensive compared to an HTTP request. We want to avoid spawning whenever
 possible. This is why we've introduced the *application pool*. Spawned
-applications are kept alive, and their handles are stored into this pool,
-allowing them to be reused later. Thus, Passenger has very good average case
-performance.
+application instances are kept alive, and their handles are stored into this
+pool, allowing each application instance to be reused later. Thus, Passenger
+has very good average case performance.
 
-Because the different worker processes cannot share memory with each other,
-either shared memory must be used for the application pool, or a client/server
-architecture must be implemented. We've chosen the latter because it is easier
+The application pool is shared between different worker processes. Because the
+worker processes cannot share memory with each other, either shared memory must
+be used to implement the application pool, or a client/server architecture must
+be implemented. We've chosen the latter because it is easier
 to implement. The Apache control process acts like a server for the application
-pool. The worker processes access the pool through the control process.
-However, this does not mean that all data goes through the control process.
-A worker process queries the pool for a connection session with a Rails
-application. Once this session has been obtained, the worker process will
-communicate directly with the Rails application.
+pool. However, this does not mean that all HTTP request/response data go
+through the control process. A worker process queries the pool for a connection
+session with a Rails application. Once this session has been obtained, the
+worker process will communicate directly with the Rails application.
 
 The application pool is implemented inside 'mod_passenger'. One can find
 detailed documentation about it in
@@ -223,7 +227,7 @@ The spawn server is written in Ruby, and its code can be found in the directory
 link:rdoc/index.html[The spawn server's RDoc documentation] documents the
 implementation in detail.
 
-The spawn server consists of 3 layers:
+The spawn server consists of 3 logical layers:
 
 1. *The spawn manager.* This is the topmost layer, and acts like a fascade for
    all the underlying layers. Clients who use the spawn server only communicate
@@ -238,7 +242,7 @@ The spawn server consists of 3 layers:
    what the framework spawner server is to the spawn manager. The framework
    spawner server spawns an application spawner server for each unique Ruby on
    Rails application (here ``application'' does not mean a running process, but
-   a set of (source code) files). The application spawner server caches the
+   a set of (source code) files). An application spawner server caches the
    code for exactly one application.
 
 image:images/spawn_server_architecture.png[The spawn server's architecture]
@@ -268,8 +272,9 @@ On most modern Unix operating systems, when a child process is created, it will
 share most of its memory with the parent process. Processes are not supposed to
 be able to access each others' memory, so the operating system makes a copy of
 a piece of memory when it is written to by the parent process or the child
-process. This is called copy-on-write (COW). Background information can be
-found in <<appendix_a,Appendix A>>.
+process. This is called copy-on-write (COW). Detailed background information
+can be found on link:http://www.rubyenterpriseedition.com/[Ruby Enterprise
+Edition's website].
 
 The spawn server makes use of this useful fact. Each layer shares its Ruby AST
 memory with all of its lower layers, as long as the AST nodes in question
@@ -278,17 +283,22 @@ haven't been written to. This means that all spawned Rails applications will
 application code, with each other. This results in a dramatic reduction in
 memory usage.
 
-There is one catch: one must use our modified Ruby. This is because default
-Ruby garbage collector (GC) is not copy-on-write friendly. The GC uses a
-mark-and-sweep garbage collection algorithm, but it stores the marks inside
-the objects themselves. So all objects are written to during a GC cycle,
-forcing the operating system to copy all that memory, thus effectively making
-copy-on-write useless. Our modified Ruby fixes that behavior.
-TODO: link to download page
+[NOTE]
+==================================================================
+Sharing memory only works if link:http://www.rubyenterpriseedition.com/[Ruby
+Enterprise Edition] is used. This is because the standard Ruby interpreter's
+garbage collector isn't copy-on-write friendly. Please visit the Ruby
+Enterprise Edition website for technical details.
 
-Note that Rubinius's garbage collector is already copy-on-write friendly.
+Passenger works fine with standard Ruby. You still get to enjoy reduced Rails
+startup times. You just won't be able to benefit from memory sharing.
+==================================================================
+
+Note that link:http://rubini.us/[Rubinius]'s garbage collector is already
+copy-on-write friendly.
 
 
+[[concurrent_requests]]
 === Handling of concurrent requests ===
 
 As explained earlier, a single Rails application instance can only handle a
@@ -317,10 +327,4 @@ that are either heavily loaded or have little memory.
 The reader might also be interested in studying the application pool's
 algorithm, which is non-trivial. The algorithm is documented in detail in
 link:ApplicationPool%20algorithm.txt[ApplicationPool algorithm.txt].
-
-
-[[appendix_a]]
-Appendix A: Sharing of memory between applications on modern operating systems
-------------------------------------------------------------------------------
-TODO
 
