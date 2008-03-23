@@ -16,7 +16,7 @@ require 'rbconfig'
 module PlatformInfo
 private
 	def self.env_defined?(name)
-		return !ENV[name].nil? && !ENV[name]
+		return !ENV[name].nil? && ENV[name]
 	end
 	
 	def self.determine_gem_command
