@@ -44,13 +44,6 @@ dd {
 	margin-bottom: 1em;
 }
 
-hr {
-	border: none;
-	border-bottom: solid 1px black;
-	margin-top: 1em;
-	margin-bottom: 1em;
-}
-
 .commands {
 	border: 1px solid #b594e7;
 	background: #ddc6ff;
@@ -83,16 +76,22 @@ table.backtrace td.index {
 	font-weight: bold;
 }
 
-#footer {
+#site_footer {
+	border-top: solid 1px black;
+	margin-top: 1em;
+	padding-top: 1em;
 	font-size: small;
 	color: #777777;
 }
 
-#footer a {
+#site_footer a {
 	color: #65498e;
 }
 
-#footer a:hover {
+#site_footer a:hover {
 	color: #9681d9;
 }
 
+#site_header .corporate_identity {
+	display: none;
+}

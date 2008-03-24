@@ -7,22 +7,32 @@
 	<style type="text/css">
 		<%= include 'error_layout.css' %>
 	</style>
+	<link rel="stylesheet" type="text/css" href="http://www.modrails.com/error_pages/1.0/error_page.css">
+	<link rel="stylesheet" type="text/css" href="file:///home/hongli/Projects/passenger_website/output/error_pages/1.0/error_page.css">
 </head>
 
 <body>
 
-	<div id="content">
-		<%= yield %>
-	</div>
-	<div id="footer">
-		<hr>
-		<!--
-		   You are free to modify the footer as you see fit,
-		   but we kindly ask of you to preserve to following
-		   footer. Thank you.
-		-->
-		Powered by <a href="http://passenger.phusion.nl/">Phusion Passenger</a>,
-		<tt>mod_rails</tt> for Apache.
+	<div id="site_container">
+		<div id="site_header">
+			<ul class="corporate_identity">
+				<li class="logo"><a href="http://www.modrails.com"><span>Phusion Passenger</span></a></li>
+			</ul>
+		</div>
+		<div id="site_body">
+			<%= yield %>
+		</div>
+		<div id="site_footer">
+			<!--
+			   You are free to modify the footer as you see fit,
+			   but we kindly ask of you to preserve to following
+			   footer. Thank you.
+			-->
+			<div class="container">
+				Powered by <a href="http://www.modrails.com/">Phusion Passenger</a>,
+				<tt>mod_rails</tt> for Apache.
+			</div>
+		</div>
 	</div>
 
 </body>
