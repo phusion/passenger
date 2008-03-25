@@ -308,7 +308,7 @@ spec = Gem::Specification.new do |s|
 	s.homepage = "http://passenger.phusion.nl/"
 	s.summary = "Apache module for Ruby on Rails support."
 	s.name = "passenger"
-	s.version = "0.9.4"  # Don't forget to edit Configuration.h too
+	s.version = "0.9.5"  # Don't forget to edit Configuration.h too
 	s.requirements << "fastthread" << "Apache 2 with development headers"
 	s.require_path = "lib"
 	s.add_dependency 'rake', '>= 0.8.1'
