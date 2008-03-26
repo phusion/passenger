@@ -202,7 +202,7 @@ private
 		require 'config/environment'
 		require_dependency 'application'
 		Dir.glob('app/{models,controllers,helpers}/*.rb').each do |file|
-			require normalize_path(file)
+			require_dependency normalize_path(file)
 		end
 	end
 
