@@ -9,9 +9,12 @@ require File.expand_path("#{File.dirname(__FILE__)}/../../ext/passenger/native_s
 module Passenger
 
 class UnknownError < StandardError
+	attr_accessor :real_class_name
+	
 	def initialize(message, class_name, backtrace)
 		super("#{message} (#{class_name})")
 		set_backtrace(backtrace)
+		@real_class_name = class_name
 	end
 end
 
