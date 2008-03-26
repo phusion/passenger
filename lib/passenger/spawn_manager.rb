@@ -129,7 +129,14 @@ private
 		rescue VersionNotFound => e
 			send_error_page(client, 'version_not_found', :error => e, :app_root => app_root)
 		rescue AppInitError => e
-			send_error_page(client, 'app_init_error', :error => e, :app_root => app_root)
+			if (defined?(Mysql::Error) && e.child_exception.is_a?(Mysql::Error)) ||
+			   (e.child_exception.is_a?(UnknownError) && e.child_exception.real_class_name =~ /^ActiveRecord/)
+				send_error_page(client, 'database_error', :error => e,
+					:app_root => app_root)
+			else
+				send_error_page(client, 'app_init_error', :error => e,
+					:app_root => app_root)
+			end
 		rescue FrameworkInitError => e
 			send_error_page(client, 'framework_init_error', :error => e)
 		end

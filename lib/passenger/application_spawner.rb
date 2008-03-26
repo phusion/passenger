@@ -1,9 +1,23 @@
+require 'rubygems'
 require 'socket'
 require 'etc'
 require 'passenger/abstract_server'
 require 'passenger/application'
 require 'passenger/utils'
 require 'passenger/request_handler'
+
+begin
+	# Preload MySQL if possible. We want to preload it and we need
+	# its exception classes.
+	require 'mysql'
+rescue LoadError
+end
+begin
+	# Preload SQLite 3 if possible. Rails 2.0 apps use it by default.
+	require 'sqlite3'
+rescue LoadError
+end
+
 module Passenger
 
 # An abstract base class for AppInitError and FrameworkInitError. This represents
