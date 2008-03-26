@@ -1,5 +1,6 @@
 #include "MessageChannel.h"
 #include "Utils.cpp"
+#include "Logging.cpp"
 #include <vector>
 #include <unistd.h>
 #include <errno.h>
@@ -93,7 +94,6 @@ acceptNextRequest(int fd) {
 int
 main() {
 	bool done = false;
-	initDebugging();
 	while (!done) {
 		done = acceptNextRequest(STDIN_FILENO);
 	}

@@ -15,7 +15,7 @@
 
 #include "MessageChannel.h"
 #include "Exceptions.h"
-#include "Utils.h"
+#include "Logging.h"
 
 namespace Passenger {
 
@@ -244,7 +244,7 @@ public:
 		this->listenSocketName = listenSocketName;
 		this->usingAbstractNamespace = usingAbstractNamespace;
 		this->ownerPipe = ownerPipe;
-		P_TRACE("Application " << this << ": created.");
+		P_TRACE(2, "Application " << this << ": created.");
 	}
 	
 	virtual ~Application() {
@@ -254,7 +254,7 @@ public:
 		if (!usingAbstractNamespace) {
 			unlink(listenSocketName.c_str());
 		}
-		P_TRACE("Application " << this << ": destroyed.");
+		P_TRACE(2, "Application " << this << ": destroyed.");
 	}
 	
 	/**

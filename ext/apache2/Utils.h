@@ -4,12 +4,7 @@
 #include <boost/shared_ptr.hpp>
 #include <string>
 #include <vector>
-#include <ostream>
 #include <sstream>
-
-#include <sys/types.h>
-#include <unistd.h>
-#include <cstring>
 
 namespace Passenger {
 
@@ -40,6 +35,41 @@ ptr(T *pointer) {
 }
 
 /**
+ * Used internally by toString(). Do not use directly.
+ */
+template<typename T>
+struct AnythingToString {
+	string operator()(T something) {
+		stringstream s;
+		s << something;
+		return s.str();
+	}
+};
+
+/**
+ * Used internally by toString(). Do not use directly.
+ */
+template<>
+struct AnythingToString< vector<string> > {
+	string operator()(const vector<string> &v) {
+		string result("[");
+		vector<string>::const_iterator it;
+		unsigned int i;
+		for (it = v.begin(), i = 0; it != v.end(); it++, i++) {
+			result.append("'");
+			result.append(*it);
+			if (i == v.size() - 1) {
+				result.append("'");
+			} else {
+				result.append("', ");
+			}
+		}
+		result.append("]");
+		return result;
+	}
+};
+
+/**
  * Convert anything to a string.
  *
  * @param something The thing to convert.
@@ -47,9 +77,7 @@ ptr(T *pointer) {
  */
 template<typename T> string
 toString(T something) {
-	stringstream s;
-	s << something;
-	return s.str();
+	return AnythingToString<T>()(something);
 }
 
 /**
@@ -104,30 +132,6 @@ string canonicalizePath(const string &path);
  * @ingroup Support
  */
 bool verifyRailsDir(const string &dir);
-
-#ifdef PASSENGER_DEBUG
-	#define P_DEBUG(expr) \
-		do { \
-			if (Passenger::_debugStream != 0) { \
-				*Passenger::_debugStream << \
-					"[" << getpid() << ":" << __FILE__ << ":" << __LINE__ << "] " << \
-					expr << std::endl; \
-			} \
-		} while (false)
-	#define P_WARN P_DEBUG
-	#define P_ERROR P_DEBUG
-	#define P_TRACE P_DEBUG
-#else
-	#define P_DEBUG(expr) do { /* nothing */ } while (false)
-	#define P_WARN P_DEBUG
-	#define P_ERROR P_DEBUG
-	#define P_TRACE P_DEBUG
-#endif
-
-void initDebugging(const char *logFile = NULL);
-
-// Internal; do not use directly.
-extern ostream *_debugStream;
 
 } // namespace Passenger
 

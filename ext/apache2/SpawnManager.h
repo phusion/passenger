@@ -22,7 +22,7 @@
 #include "Application.h"
 #include "MessageChannel.h"
 #include "Exceptions.h"
-#include "Utils.h"
+#include "Logging.h"
 
 namespace Passenger {
 
@@ -101,7 +101,7 @@ private:
 				}
 			}
 			if (!done) {
-				P_TRACE("Spawn server did not exit in time, killing it...");
+				P_TRACE(2, "Spawn server did not exit in time, killing it...");
 				kill(pid, SIGTERM);
 				begin = time(NULL);
 				while (time(NULL) - begin < 5) {
@@ -111,7 +111,7 @@ private:
 						usleep(100000);
 					}
 				}
-				P_TRACE("Spawn server has exited.");
+				P_TRACE(2, "Spawn server has exited.");
 			}
 			pid = 0;
 		}
