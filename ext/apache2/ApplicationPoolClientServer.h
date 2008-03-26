@@ -405,7 +405,8 @@ private:
 					break;
 				}
 				
-				P_TRACE(3, "Client thread received message: " << toString(args));
+				P_TRACE(3, "Client " << this << ": received message: " <<
+					toString(args));
 				if (args[0] == "get" && args.size() == 4) {
 					Application::SessionPtr session;
 					bool failed = false;
@@ -415,11 +416,13 @@ private:
 						lastID++;
 					} catch (const SpawnException &e) {
 						if (e.hasErrorPage()) {
-							P_TRACE(3, "SpawnException occured (with error page)");
+							P_TRACE(3, "Client " << this << ": SpawnException "
+								"occured (with error page)");
 							channel.write("SpawnException", e.what(), "true", NULL);
 							channel.writeScalar(e.getErrorPage());
 						} else {
-							P_TRACE(3, "SpawnException occured (no error page)");
+							P_TRACE(3, "Client " << this << ": SpawnException "
+								"occured (no error page)");
 							channel.write("SpawnException", e.what(), "false", NULL);
 						}
 						failed = true;
@@ -436,8 +439,8 @@ private:
 							session->closeReader();
 							session->closeWriter();
 						} catch (const exception &) {
-							P_TRACE(3, "Something went wrong while sending 'ok'"
-								" back to the client.");
+							P_TRACE(3, "Client " << this << ": something went wrong "
+								"while sending 'ok' back to the client.");
 							sessions.erase(lastID - 1);
 							throw;
 						}
