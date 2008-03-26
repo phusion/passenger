@@ -22,6 +22,7 @@
 #endif
 
 #include "ApplicationPool.h"
+#include "Logging.h"
 #ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER
 	#include "DummySpawnManager.h"
 #else
@@ -227,7 +228,7 @@ private:
 				AppContainerListPtr appList(apps[app->getAppRoot()]);
 				
 				if (now - container.lastUsed > (time_t) maxIdleTime) {
-					P_TRACE("Cleaning idle app " << app->getAppRoot() <<
+					P_DEBUG("Cleaning idle app " << app->getAppRoot() <<
 						" (PID " << app->getPid() << ")");
 					appList->erase(container.iterator);
 					

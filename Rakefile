@@ -88,7 +88,8 @@ class APACHE2
 				ApplicationPoolClientServer.h
 				SpawnManager.h Exceptions.h Application.h MessageChannel.h
 				Utils.h),
-		'Utils.o' => %w(Utils.cpp Utils.h)
+		'Utils.o' => %w(Utils.cpp Utils.h),
+		'Logging.o' => %w(Logging.cpp Logging.h)
 	}
 end
 
@@ -209,7 +210,9 @@ subdir 'test' do
 	file 'Apache2ModuleTests' => TEST::AP2_OBJECTS.keys +
 	  ['../ext/boost/src/libboost_thread.a',
 	   '../ext/apache2/Utils.o'] do
-		objects = TEST::AP2_OBJECTS.keys.join(' ') << " ../ext/apache2/Utils.o"
+		objects = TEST::AP2_OBJECTS.keys.join(' ') <<
+			" ../ext/apache2/Utils.o" <<
+			" ../ext/apache2/Logging.o"
 		create_executable "Apache2ModuleTests", objects,
 			"#{LDFLAGS} #{APR1_LIBS} ../ext/boost/src/libboost_thread.a -lpthread"
 	end

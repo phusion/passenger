@@ -16,6 +16,7 @@
 #include "Hooks.h"
 #include "Configuration.h"
 #include "Utils.h"
+#include "Logging.h"
 #include "ApplicationPoolClientServer.h"
 #include "MessageChannel.h"
 
@@ -261,7 +262,6 @@ private:
 
 public:
 	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s) {
-		initDebugging();
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
 		passenger_config_merge_all_servers(pconf, s);
 		
