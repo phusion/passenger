@@ -7,14 +7,25 @@
 	<li class="first">
 		<div class="container">
 		<div class="content">
-		Please check whether <em>config/database.yml</em> is written correctly.
+		Your <em>config/database.yml</em> may not be written correctly.
+		Please check it and fix any errors.
+		</div>
+		</div>
+	</li>
+	<li>
+		<div class="container">
+		<div class="content">
+		Your database schema may be out of date or nonexistant.
+		Please run <code>rake db:migrate</code> to ensure that
+		the database schema is up-to-date.
 		</div>
 		</div>
 	</li>
 	<li class="last">
 		<div class="container">
 		<div class="content">
-		Please check whether you've run <code>rake db:migrate</code>.
+		The database server may not be running. Please check whether it's
+		running, and start it if it isn't.
 		</div>
 		</div>
 	</li>

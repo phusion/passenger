@@ -5,6 +5,8 @@ require 'passenger/spawn_manager'
 require 'passenger/utils'
 
 begin
+	STDOUT.sync = true
+	STDERR.sync = true
 	$0 = "Passenger spawn server"
 	if GC.respond_to?(:copy_on_write_friendly=)
 		GC.copy_on_write_friendly = true
