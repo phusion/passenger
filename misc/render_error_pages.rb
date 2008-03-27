@@ -5,9 +5,24 @@ require 'passenger/spawn_manager'
 require 'passenger/platform_info'
 include Passenger
 
+if !defined?(Mysql::Error)
+	module Mysql
+		class Error < StandardError
+		end
+	end
+end
+
 def create_dummy_exception
 	begin
 		raise StandardError, "A dummy exception."
+	rescue => e
+		return e
+	end
+end
+
+def create_database_exception
+	begin
+		raise Mysql::Error, "Cannot connect to database localhost:12345: connection refused (1234)"
 	rescue => e
 		return e
 	end
@@ -57,6 +72,10 @@ def start
 	e = AppInitError.new("Some error message", create_dummy_exception)
 	render_error_page(e, 'app_init_error.html',
 		'app_init_error')
+	
+	e = AppInitError.new("Some error message", create_database_exception)
+	render_error_page(e, 'database_error.html',
+		'database_error')
 	
 	e = ArgumentError.new("Some error message")
 	render_error_page(e, 'invalid_app_root.html',
