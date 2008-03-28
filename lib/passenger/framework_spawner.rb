@@ -253,6 +253,10 @@ private
 	end
 
 	def handle_spawn_application(app_root, lower_privilege, lowest_user)
+		if @refresh_gems_cache
+			Gem.refresh_all_caches!
+			@refresh_gems_cache = false
+		end
 		lower_privilege = lower_privilege == "true"
 		@spawners_lock.synchronize do
 			spawner = @spawners[app_root]
@@ -263,6 +267,14 @@ private
 				rescue ArgumentError, AppInitError, ApplicationSpawner::Error => e
 					client.write('exception')
 					client.write_scalar(marshal_exception(e))
+					if e.child_exception.is_a?(LoadError)
+						# A source file failed to load, maybe because of a
+						# missing gem. If that's the case then the sysadmin
+						# will install probably the gem. So next time an app
+						# is launched, we'll refresh the RubyGems cache so
+						# that we can detect new gems.
+						@refresh_gems_cache = true
+					end
 					return
 				end
 				@spawners[app_root] = spawner

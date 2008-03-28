@@ -194,6 +194,17 @@ class IO
 	end
 end
 
+module Gem
+	# Refresh all RubyGems caches so that newly installed gems can be found.
+	def self.refresh_all_caches!
+		# Why doesn't RubyGems already provide an API for this?
+		cache.refresh!
+		MUTEX.synchronize do
+			@searcher = nil
+		end
+	end
+end
+
 module GC
 	if !respond_to?(:copy_on_write_friendly?)
 		# Checks whether the current Ruby interpreter's garbage
