@@ -12,10 +12,14 @@ class Object # :nodoc:
 		end 
 	end
 
-	def benchmark_report
+	def benchmark_report(main = nil)
 		total = 0
-		@@benchmark_results.each_value do |time|
-			total += time
+		if main.nil?
+			@@benchmark_results.each_value do |time|
+				total += time
+			end
+		else
+			total = @@benchmark_results[main]
 		end
 		@@benchmark_results.each_pair do |name, time|
 			printf "%-12s: %.4f (%.2f%%)\n", name, time, time / total * 100
