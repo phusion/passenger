@@ -25,6 +25,12 @@ class Installer
 	
 	def start
 		Dir.chdir(PASSENGER_ROOT)
+		# The Apache executable may be located in an 'sbin' folder. We add
+		# the 'sbin' folders to $PATH just in case. On some systems
+		# 'sbin' isn't in $PATH unless the user is logged in as root from
+		# the start (i.e. not via 'su' or 'sudo').
+		ENV["PATH"] += ":/usr/sbin:/sbin:/usr/local/sbin"
+		
 		show_welcome_screen
 		check_dependencies || exit(1)
 		warn_about_broken_apache_on_osx

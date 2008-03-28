@@ -168,6 +168,8 @@ private
 			elsif redhat_release =~ /Fedora/  # is this correct?
 				return :fedora
 			else
+				# On official RHEL distros, the content is in the form of
+				# "Red Hat Enterprise Linux Server release 5.1 (Tikanga)"
 				return :rhel
 			end
 		elsif File.exist?("/etc/suse-release")
