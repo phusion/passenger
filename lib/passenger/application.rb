@@ -52,7 +52,7 @@ class Application
 			# If this error was reported before, then the cache might be out of
 			# date because the Rails version may have been installed now.
 			# So we reload the cache and try again.
-			Gem.cache.refresh!
+			Gem.refresh_all_caches!
 			found_version = Gem.cache.search('rails', gem_version_spec).map do |x|
 				x.version.version
 			end.sort.last

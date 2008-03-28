@@ -120,6 +120,10 @@ private
 	def handle_spawn_application(app_root, lower_privilege, lowest_user)
 		lower_privilege = lower_privilege == "true"
 		app = nil
+		if @refresh_gems_cache
+			Gem.refresh_all_caches!
+			@refresh_gems_cache = false
+		end
 		begin
 			app = spawn_application(app_root, lower_privilege, lowest_user)
 		rescue ArgumentError => e
@@ -133,6 +137,15 @@ private
 			   (e.child_exception.is_a?(UnknownError) && e.child_exception.real_class_name =~ /^ActiveRecord/)
 				send_error_page(client, 'database_error', :error => e,
 					:app_root => app_root)
+			elsif e.child_exception.is_a?(LoadError) ||
+			   (e.child_exception.is_a?(UnknownError) && e.child_exception.real_class_name == "MissingSourceFile")
+				# A source file failed to load, maybe because of a
+				# missing gem. If that's the case then the sysadmin
+				# will install probably the gem. So next time an app
+				# is launched, we'll refresh the RubyGems cache so
+				# that we can detect new gems.
+				@refresh_gems_cache = true
+				send_error_page(client, 'load_error', :error => e, :app_root => app_root)
 			else
 				send_error_page(client, 'app_init_error', :error => e,
 					:app_root => app_root)
