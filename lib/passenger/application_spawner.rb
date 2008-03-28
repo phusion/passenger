@@ -210,6 +210,7 @@ private
 
 	def preload_application
 		Object.const_set(:RAILS_ROOT, @app_root)
+		ActionController::Base.page_cache_directory = "#{RAILS_ROOT}/public"
 		if defined?(Rails::Initializer)
 			Rails::Initializer.run(:set_load_path)
 		end
