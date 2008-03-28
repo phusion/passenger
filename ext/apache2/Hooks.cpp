@@ -414,7 +414,15 @@ public:
 			 */
 			forwardToRails = false;
 		} else if (r->method_number == M_GET) {
-			char *html_file = apr_pstrcat(r->pool, r->filename, ".html", NULL);
+			char *html_file;
+			size_t len;
+			
+			len = strlen(r->filename);
+			if (len > 0 && r->filename[len - 1] == '/') {
+				html_file = apr_pstrcat(r->pool, r->filename, "index.html", NULL);
+			} else {
+				html_file = apr_pstrcat(r->pool, r->filename, ".html", NULL);
+			}
 			if (fileExists(html_file)) {
 				/* If a .html version of the URI exists, serve it directly.
 				 * We're essentially accelerating Rails page caching.
