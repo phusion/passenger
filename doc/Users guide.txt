@@ -17,12 +17,7 @@ using the commandline.
 
 == Installation ==
 
-=== Requirements ===
-
-Before Passenger can be installed, the following requirements must be
-satisfied.
-
-==== Operating system ====
+=== Supported operating systems ===
 
 Passenger works on any POSIX-compliant operating system. In other words:
 practically any operating system on earth, except Microsoft Windows.
@@ -34,113 +29,40 @@ Passenger has been tested on:
 - Debian Etch (x86)
 - Debian Lenny/Sid (x86)
 - CentOS 5 (x86)
+- Red Hat Enterprise Linux 5 (x86)
 - Gentoo, March 14 2008 (AMD64)
 - FreeBSD 6.1-RELEASE (x86)
 - MacOS X Tiger (x86)
 - MacOS X Leopard (x86)
 
-==== GNU Compiler Collection with C++ support ====
-
-The GNU Compiler Collection (GCC) must be installed, including $$C++$$ support
-(`$$g++$$`). You can check whether `$$g++$$` is installed by running the following
-command:
-----------
-g++ -v
-----------
-
-On most operating systems, `$$g++$$` is installed by default. If you're on MacOS X,
-then you will have to install Apple Developer Tools.
-
-==== Apache with development headers ====
-
-Passenger requires Apache 2.x. Apache 1.x is not supported at the moment.
-Apache must be setup with the prefork MPM. Other MPMs have not been tested
-(yet), so we cannot guarantee that Passenger will work if your Apache does
-not use the prefork MPM.
-
-To check which MPM your Apache installation is compiled with, please type:
------------------------------------
- apache2 -V | grep 'Server MPM'
------------------------------------
+Other operating systems have not been tested, but Passenger will probably work
+fine on them. Please
+link:http://code.google.com/p/phusion-passenger/issues/list[report a bug]
 or
------------------------------------
- httpd -V | grep 'Server MPM'
------------------------------------
-or
------------------------------------
- apache -V | grep 'Server MPM'
------------------------------------
-depending on whether your Apache binary is called `apache2`, `httpd` or
-`apache`.
-
-The development headers for Apache and the Apache Portable Runtime (APR)
-must also be installed. You do not have to check for this, because the
-Passenger installer will check it for you.
-
-==== Ruby, RubyGems and Ruby on Rails ====
-
-Because Passenger is a deployment system for Ruby on Rails, it goes without
-saying that Ruby, RubyGems and Ruby on Rails must be installed. Please refer
-to the http://www.ruby-lang.org/[Ruby] and http://www.rubyonrails.org/[Ruby
-on Rails] websites for installation instructions.
-
-The Ruby development headers must also be installed. To check whether it's
-installed, type the following command:
-----------------------------------
-ruby -r mkmf -e ''
-----------------------------------
-If the command finishes without an error, then it means that the development
-headers are installed. Please read <<installing_ruby_dev, this section>> to
-learn how to install the Ruby development headers.
-
-NOTE: Passenger is not compatible with JRuby, IronRuby or Ruby.NET. It should
-be compatible with Rubinius, although at the time of writing Rubinius cannot
-run Ruby on Rails yet.
-
-[TIP]
-.Installing multiple Ruby on Rails versions
-==========================================================
-Each Ruby on Rails applications that are going to be deployed may require a
-specific Ruby on Rails version. You can install a specific version with
-this command:
------------------------------
-gem install rails -v X.X.X
------------------------------
-where 'X.X.X' is the version number of Ruby on Rails.
-
-All of these versions will exist in parallel, and will not conflict with each
-other. Passenger will automatically make use of the correct version.
-==========================================================
+link:http://groups.google.com/group/phusion-passenger[join our discussion list]
+if it doesn't.
 
 [[install_passenger]]
-=== Downloading and installing Passenger ===
+=== Overview of download and installation methods ===
 
-Please download Passenger from the Passenger download page. You can either
-download the gem ('passenger-x.x.x.gem') or the source tarball
-('passenger-x.x.x.tar.gz'). We strongly recommend you to download the gem,
-because it automatically installs any required Ruby dependencies.
+There are two ways to install Passenger:
+
+1. By installing the Passenger gem, as instructed on the ``Install'' page
+   on the Passenger website.
+2. By downloading the source tarball from the Passenger website
+   ('passenger-x.x.x.tar.gz').
+
+In our opinion, installing the gem is easiest.
 
 Passenger provides an easy-to-use installer for installing the Passenger
 Apache module ('mod_passenger').
-
-[CAUTION]
-.Note for MacOS X users
-============================================
-Users have reported that the default Apache installation, as provided by MacOS
-X, is broken. We recommend OS X users to install Apache themselves, either by
-compiling from source or through the use of tools such as MacPorts.
-
-OS X users will also need to tell the Passenger installer to use a different
-Apache installation. Please read the following sections to learn how to do
-that.
-============================================
 
 NOTE: You might have to run the installation commands in the following sections
 as 'root'. If the installer fails because of permission errors, it will tell
 you.
 
 [[specifying_correct_apache_install]]
-==== Specifying the correct Apache installation ====
+=== Specifying the correct Apache installation ===
 
 If your system has multiple Apache installations (this is likely the case on
 MacOS X), then you will need to tell the Passenger installer which one to use.
@@ -160,7 +82,7 @@ NOTE: On some systems, the `apxs` program might be called `apxs2`, and it might
 be located in the `sbin` folder instead of the `bin` folder.
 
 [[specifying_ruby_installation]]
-==== Specifying the correct Ruby installation ====
+=== Specifying the correct Ruby installation ===
 
 If your system has multiple Ruby installations (this is likely the case on
 MacOS X), then you will need to tell the Passenger installer which one to use.
@@ -181,7 +103,7 @@ export PATH=/opt/myruby/bin:$PATH
 ----------------------------------
 
 
-==== Installing via the gem ====
+=== Installing via the gem ===
 
 Please install the gem and then run the Passenger installer, by typing the
 following commands:
@@ -191,15 +113,9 @@ passenger-install-apache2-module
 ------------------------------------------------------
 Please follow the instructions given by the installer.
 
-==== Installing via the source tarball ====
+=== Installing via the source tarball ===
 
-Before installing Passenger from the source tarball, please install required
-Ruby dependencies by typing this command:
-------------------------------------------------------
-gem install rake fastthread
-------------------------------------------------------
-
-Then, extract the tarball to whatever location you prefer. The Passenger files
+Extract the tarball to whatever location you prefer. The Passenger files
 are to reside in that location permanently. For example, if you would like
 Passenger to reside in `/opt/passenger-x.x.x`:
 ------------------------------------------------------
@@ -728,6 +644,19 @@ mv /opt/passenger /usr/local/passenger
 ------------------------------------
 RailsSpawnServer /usr/local/passenger/bin/passenger-spawn-server
 ------------------------------------
+
+=== Installing multiple Ruby on Rails versions ===
+
+Each Ruby on Rails applications that are going to be deployed may require a
+specific Ruby on Rails version. You can install a specific version with
+this command:
+-----------------------------
+gem install rails -v X.X.X
+-----------------------------
+where 'X.X.X' is the version number of Ruby on Rails.
+
+All of these versions will exist in parallel, and will not conflict with each
+other. Passenger will automatically make use of the correct version.
 
 === Conflicting Apache modules ===
 
