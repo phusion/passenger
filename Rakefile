@@ -116,6 +116,9 @@ subdir 'ext/apache2' do
 	desc "Install mod_passenger Apache 2 module"
 	task 'apache2:install' => :apache2 do
 		install_dir = `#{APXS2} -q LIBEXECDIR`.strip
+		# We must remove the module before we copy it, otherwise Apache
+		# may crash. See http://tinyurl.com/2n6ws4
+		sh "rm", "-f", "#{install_dir}/mod_passenger.so"
 		sh "cp", "mod_passenger.so", install_dir
 	end
 	
