@@ -146,6 +146,9 @@ private
 				# that we can detect new gems.
 				@refresh_gems_cache = true
 				send_error_page(client, 'load_error', :error => e, :app_root => app_root)
+			elsif e.child_exception.nil?
+				send_error_page(client, 'app_exited_during_initialization', :error => e,
+					:app_root => app_root)
 			else
 				send_error_page(client, 'app_init_error', :error => e,
 					:app_root => app_root)
