@@ -59,26 +59,43 @@ class SpawnManager < AbstractServer
 	# - FrameworkInitError: The Ruby on Rails framework that the application requires could not be loaded.
 	# - AppInitError: The application raised an exception or called exit() during startup.
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody")
-		options = {}
 		framework_version = Application.detect_framework_version(app_root)
-		if framework_version.nil?
-			options[:vendor] = normalize_path("#{app_root}/vendor/rails")
-			key = "vendor:#{options[:vendor]}"
+		if framework_version == :vendor
+			vendor_path = normalize_path("#{app_root}/vendor/rails")
+			key = "vendor:#{vendor_path}"
+			create_spawner = proc do
+				FrameworkSpawner.new(:vendor => vendor_path)
+			end
+		elsif framework_version.nil?
+			app_root = normalize_path(app_root)
+			key = "app:#{app_root}"
+			create_spawner = proc do
+				ApplicationSpawner.new(app_root, lower_privilege, lowest_user)
+			end
 		else
-			options[:version] = framework_version
-			key = "version:#{options[:version]}"
+			key = "version:#{framework_version}"
+			create_spawner = proc do
+				FrameworkSpawner.new(:version => framework_version)
+			end
 		end
+		
 		spawner = nil
 		@lock.synchronize do
 			spawner = @spawners[key]
 			if !spawner
-				spawner = FrameworkSpawner.new(options)
+				spawner = create_spawner.call
 				spawner.start
 				@spawners[key] = spawner
 			end
 		end
+		
 		spawner.time = Time.now
-		return spawner.spawn_application(app_root, lower_privilege, lowest_user)
+		if spawner.is_a?(FrameworkSpawner)
+			return spawner.spawn_application(app_root, lower_privilege,
+				lowest_user)
+		else
+			return spawner.spawn_application(app_root)
+		end
 	end
 	
 	# Remove the cached application instances at the given application root.
@@ -95,9 +112,20 @@ class SpawnManager < AbstractServer
 	#
 	# Raises AbstractServer::SpawnError if something went wrong.
 	def reload(app_root = nil)
+		begin
+			app_root = normalize_path(app_root)
+		rescue ArgumentError
+			return
+		end
 		@lock.synchronize do
-			@spawners.each_value do |spawner|
-				spawner.reload(app_root)
+			@spawners.keys.each do |key|
+				spawner = @spawners[key]
+				if spawner.respond_to?(:reload)
+					spawner.reload(app_root)
+				elsif spawner.respond_to?(:app_root) && spawner.app_root == app_root
+					spawner.stop
+					@spawners.delete(key)
+				end
 			end
 		end
 	end
