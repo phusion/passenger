@@ -112,19 +112,26 @@ class SpawnManager < AbstractServer
 	#
 	# Raises AbstractServer::SpawnError if something went wrong.
 	def reload(app_root = nil)
-		begin
-			app_root = normalize_path(app_root)
-		rescue ArgumentError
-			return
+		if app_root
+			begin
+				app_root = normalize_path(app_root)
+			rescue ArgumentError
+			end
 		end
 		@lock.synchronize do
-			@spawners.keys.each do |key|
+			if app_root
+				# Delete associated ApplicationSpawner.
+				key = "app:#{app_root}"
 				spawner = @spawners[key]
-				if spawner.respond_to?(:reload)
-					spawner.reload(app_root)
-				elsif spawner.respond_to?(:app_root) && spawner.app_root == app_root
+				if spawner
 					spawner.stop
 					@spawners.delete(key)
+				end
+			end
+			@spawners.each_value do |spawn|
+				# Reload FrameworkSpawners.
+				if spawner.respond_to?(:reload)
+					spawner.reload(app_root)
 				end
 			end
 		end
