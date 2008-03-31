@@ -1,4 +1,5 @@
 require 'rubygems'
+require 'passenger/utils'
 module Passenger
 
 # Indicates that there is no Ruby on Rails version installed that satisfies
@@ -31,19 +32,23 @@ class Application
 	# RequestHandler for a description of the owner pipe.
 	attr_reader :owner_pipe
 
-	# Return the Ruby on Rails version that the application requires.
-	# Returns nil if the application has a vendored Rails.
+	# - Returns the Ruby on Rails version that the application requires.
+	# - Returns <tt>:vendor</tt> if the application has a vendored Rails.
+	# - Returns nil if the application doesn't specify a particular version.
 	# Raises VersionNotFound if the required Rails version is not installed.
 	def self.detect_framework_version(app_root)
 		if File.directory?("#{app_root}/vendor/rails/railties")
 			# NOTE: We must check for 'rails/railties' and not just 'rails'.
 			# Typo's vendor directory contains an empty 'rails' directory.
-			return nil
+			return :vendor
 		end
 		
 		environment_rb = File.read("#{app_root}/config/environment.rb")
 		environment_rb =~ /^[^#]*RAILS_GEM_VERSION\s*=\s*["']([!~<>=]*\s*[\d.]+)["']/
 		gem_version_spec = $1
+		if gem_version_spec.nil?
+			return nil
+		end
 		
 		found_version = Gem.cache.search('rails', gem_version_spec).map do |x|
 			x.version.version
@@ -51,7 +56,7 @@ class Application
 		if found_version.nil?
 			# If this error was reported before, then the cache might be out of
 			# date because the Rails version may have been installed now.
-			# So we reload the cache and try again.
+			# So we reload the RubyGems cache and try again.
 			Gem.refresh_all_caches!
 			found_version = Gem.cache.search('rails', gem_version_spec).map do |x|
 				x.version.version
