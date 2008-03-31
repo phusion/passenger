@@ -219,6 +219,9 @@ private
 			Rails::Initializer.run(:set_load_path)
 		end
 		require 'config/environment'
+		if !defined?(Dispatcher)
+			require 'dispatcher'
+		end
 		require_dependency 'application'
 		Dir.glob('app/{models,controllers,helpers}/*.rb').each do |file|
 			require_dependency normalize_path(file)

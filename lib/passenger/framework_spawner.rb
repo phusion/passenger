@@ -37,8 +37,8 @@ end
 # *Note*: FrameworkSpawner may only be started asynchronously with AbstractServer#start.
 # Starting it synchronously with AbstractServer#start_synchronously has not been tested.
 class FrameworkSpawner < AbstractServer
-	APP_SPAWNER_CLEAN_INTERVAL = 125
 	APP_SPAWNER_MAX_IDLE_TIME = 120
+	APP_SPAWNER_CLEAN_INTERVAL = APP_SPAWNER_MAX_IDLE_TIME + 5
 
 	include Utils
 	

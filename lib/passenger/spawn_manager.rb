@@ -21,8 +21,10 @@ module Passenger
 # finished.
 class SpawnManager < AbstractServer
 	DEFAULT_INPUT_FD = 3
-	SPAWNER_CLEAN_INTERVAL = 30 * 60
-	SPAWNER_MAX_IDLE_TIME = 29 * 60
+	FRAMEWORK_SPAWNER_MAX_IDLE_TIME = 30 * 60
+	APP_SPAWNER_MAX_IDLE_TIME = FrameworkSpawner::APP_SPAWNER_MAX_IDLE_TIME
+	SPAWNER_CLEAN_INTERVAL = [FRAMEWORK_SPAWNER_MAX_IDLE_TIME,
+		APP_SPAWNER_MAX_IDLE_TIME].min + 5
 	
 	include Utils
 	
@@ -94,7 +96,7 @@ class SpawnManager < AbstractServer
 			return spawner.spawn_application(app_root, lower_privilege,
 				lowest_user)
 		else
-			return spawner.spawn_application(app_root)
+			return spawner.spawn_application
 		end
 	end
 	
@@ -212,7 +214,12 @@ private
 					current_time = Time.now
 					@spawners.keys.each do |key|
 						spawner = @spawners[key]
-						if current_time - spawner.time > SPAWNER_MAX_IDLE_TIME
+						if spawner.is_a?(FrameworkSpawner)
+							max_idle_time = FRAMEWORK_SPAWNER_MAX_IDLE_TIME
+						else
+							max_idle_time = APP_SPAWNER_MAX_IDLE_TIME
+						end
+						if current_time - spawner.time > max_idle_time
 							spawner.stop
 							@spawners.delete(key)
 						end
