@@ -658,11 +658,18 @@ where 'X.X.X' is the version number of Ruby on Rails.
 All of these versions will exist in parallel, and will not conflict with each
 other. Passenger will automatically make use of the correct version.
 
+=== X-Sendfile support ===
+
+Passenger does not provide X-Sendfile support by itself. Please install
+link:http://tn123.ath.cx/mod_xsendfile/[mod_xsendfile] for X-Sendfile support.
+
 === Conflicting Apache modules ===
 
 Passenger conflicts with 'mod_rewrite' and 'mod_alias'. Those modules may be
-installed and loaded together with 'mod_passenger', but we recommend you not
-to use their features on Rails virtual hosts.
+installed and loaded together with 'mod_passenger', and they will work fine
+outside virtual hosts that contain a Rails application, but we recommend you
+not to use their features inside virtual hosts that contain a Rails
+application.
 
 Passenger will override mod_rewrite rules on Rails hosts. This is because the
 default .htaccess, as provided by Ruby on Rails, redirects all requests to
@@ -676,5 +683,5 @@ applications, is to accelerate page caching. Passenger supports page caching
 out-of-the-box, without mod_rewrite.
 
 It is not fully understood how mod_alias conflicts with Passenger, but we
-recommend you not to use it on Rails hosts. mod_alias rules can result in
-surprising problems.
+recommend you not to use it on Rails virtual hosts. mod_alias rules can result
+in surprising problems.
