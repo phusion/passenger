@@ -305,8 +305,8 @@ hardware or getting more servers.)
 This option may only occur once, in the global server configuration.
 The default value is '20'.
 +
-TIP: We strongly recommend you to <<reducing_memory_usage,use our patched Ruby
-version>>. This allows you to reduce your memory usage by about 33%. And it's
+TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
+Edition>>. This allows you to reduce your memory usage by about 33%. And it's
 not hard to install.
 
 RailsPoolIdleTime <integer>::
@@ -524,34 +524,6 @@ Apache installations on their system.
 To solve this problem, please <<specifying_correct_apache_install,specify the
 correct Apache installation>>, and <<install_passenger,reinstall Passenger>>.
 
-==== A Rails application claims that a specific library is not installed, but it actually is installed ====
-
-.Symptoms
-*******************************************************************************
-Consider the following example scenario: You've just deployed a Rails
-application. When you access it, it says that the library ``example_lib'' cannot be
-loaded. So you go ahead and install ``example_lib'' with RubyGems:
-------------------
-gem install example_lib
-------------------
-Then you access the Rails application again, but it still complains that
-``example_lib'' cannot be found. The problem persists even after touching
-'tmp/restart.txt'.
-*******************************************************************************
-
-This is because Passenger's RubyGems cache is out of date. It doesn't detect
-newly installed gems.
-
-There are two ways to fix this:
-
-1. Restart Apache.
-2. Modify your Rails application's ``environment.rb''. Add this line to the
-very beginning of the file:
-+
---------------------
-Gem.cache.refresh!
---------------------
-
 ==== The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it ====
 
 If you are sure that the RailsSpawnServer configuration option is set correctly,
@@ -591,6 +563,17 @@ chcon -R -h -t httpd_sys_content_t /path/to/passenger/folder
 ------------------------------------------------------------------
 
 Once the permissions are fixed, restart Apache.
+
+=== The Rails application reports that it's unable to start because of a permission error ===
+
+Please check whether your Rails application's folder has the correct
+permissions. By default, Rails applications are started as the owner of the
+file 'config/environment.rb', except if the file is owned by root. If the
+file is owned by root, then the Rails application will be started as 'nobody'
+(or as the user specify by <<RailsDefaultUser,RailsDefaultUser>>, if that's
+specified).
+
+Please read <<user_switching,User switching (security)>> for details.
 
 
 == Tips and notes ==
