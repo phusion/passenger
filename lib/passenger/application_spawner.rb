@@ -212,13 +212,15 @@ private
 
 	def preload_application
 		Object.const_set(:RAILS_ROOT, @app_root)
-		if defined?(ActionController::Base)
-			ActionController::Base.page_cache_directory = "#{RAILS_ROOT}/public"
-		end
 		if defined?(Rails::Initializer)
 			Rails::Initializer.run(:set_load_path)
 		end
 		require 'config/environment'
+		ActionController::Base.page_cache_directory = "#{RAILS_ROOT}/public"
+		if defined?(ActionController::Dispatcher) \
+		   && ActionController::Dispatcher.respond_to?(:error_file_path)
+			ActionController::Dispatcher.error_file_path = "#{RAILS_ROOT}/public"
+		end
 		if !defined?(Dispatcher)
 			require 'dispatcher'
 		end
