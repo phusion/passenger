@@ -113,8 +113,25 @@ private
 	
 	def check_whether_apache_uses_prefork_mpm
 		line
-		mpm = `#{HTTPD} -V | grep 'Server MPM'`.strip.split(/:/, 2)[1].strip
-		if mpm != "Prefork"
+		# 'httpd -V' output is in the form of:
+		#
+		# Server MPM:      Prefork     # <--- this line is not always available!
+		# ...
+		# Server compiled with....
+		#  -D APACHE_MPM_DIR="server/mpm/prefork"
+		output = `#{HTTPD} -V`
+		output =~ /^Server MPM: +(.*)$/
+		if $1
+			mpm = $1.downcase
+		else
+			output =~ /APACHE_MPM_DIR="server\/mpm\/(.*)"/
+			if $1
+				mpm = $1.downcase
+			else
+				mpm = nil
+			end
+		end
+		if mpm != "prefork"
 			render_template 'apache_must_be_compiled_with_prefork_mpm',
 				:current_mpm => mpm
 			wait
