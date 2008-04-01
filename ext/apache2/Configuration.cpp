@@ -38,6 +38,7 @@ void *
 passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	DirConfig *config = create_dir_config_struct(p);
 	config->autoDetect = DirConfig::UNSET;
+	config->allowModRewrite = DirConfig::UNSET;
 	return config;
 }
 
@@ -53,6 +54,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	}
 	
 	config->autoDetect = (add->autoDetect == DirConfig::UNSET) ? base->autoDetect : add->autoDetect;
+	config->allowModRewrite = (add->allowModRewrite == DirConfig::UNSET) ? base->allowModRewrite : add->allowModRewrite;
 	return config;
 }
 
@@ -126,6 +128,13 @@ static const char *
 cmd_rails_auto_detect(cmd_parms *cmd, void *pcfg, int arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->autoDetect = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
+	return NULL;
+}
+
+static const char *
+cmd_rails_allow_mod_rewrite(cmd_parms *cmd, void *pcfg, int arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->allowModRewrite = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
 	return NULL;
 }
 
@@ -222,6 +231,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Whether auto-detection of Ruby on Rails applications should be enabled."),
+	AP_INIT_FLAG("RailsAllowModRewrite",
+		(Take1Func) cmd_rails_allow_mod_rewrite,
+		NULL,
+		RSRC_CONF,
+		"Whether custom mod_rewrite rules should be allowed."),
 	AP_INIT_TAKE1("RailsRuby",
 		(Take1Func) cmd_rails_ruby,
 		NULL,

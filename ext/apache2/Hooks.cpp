@@ -459,7 +459,18 @@ public:
 			 * interferes with Passenger anyway (it delegates requests
 			 * to the CGI script dispatch.cgi).
 			 */
-			return OK;
+			if (config->allowModRewrite == DirConfig::UNSET
+			 || config->allowModRewrite == DirConfig::DISABLED) {
+				/* Of course, we only do that if the config allows us
+				 * to. Some people have complex mod_rewrite rules that
+				 * they don't want to abandon. Those people will have to
+				 * make sure that the Rails app's .htaccess doesn't
+				 * interfere.
+				 */
+				return OK;
+			} else {
+				return DECLINED;
+			}
 		} else {
 			return DECLINED;
 		}
@@ -555,7 +566,7 @@ passenger_register_hooks(apr_pool_t *p) {
 	ap_hook_post_config(init_module, NULL, NULL, APR_HOOK_MIDDLE);
 	ap_hook_child_init(init_child, NULL, NULL, APR_HOOK_MIDDLE);
 	ap_hook_map_to_storage(map_to_storage, NULL, NULL, APR_HOOK_FIRST);
-	ap_hook_handler(handle_request, NULL, NULL, APR_HOOK_FIRST);
+	ap_hook_handler(handle_request, NULL, NULL, APR_HOOK_MIDDLE);
 }
 
 /**

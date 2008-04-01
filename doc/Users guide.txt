@@ -264,6 +264,14 @@ RailsAutoDetect off
 </VirtualHost>
 -----------------------------
 
+[[RailsAllowModRewrite]]
+RailsAllowModRewrite <on|off>::
+	If enabled, Passenger will not override mod_rewrite rules. Please read
+	<<conflicting_apache_modules,Conflicting Apache modules>> for details.
++
+This option may occur in the global server configuration or in a virtual host
+configuration block. The default value is 'off'.
+
 RailsRuby <filename>::
 	This option allows one to specify the Ruby interpreter to use.
 +
@@ -663,6 +671,7 @@ other. Passenger will automatically make use of the correct version.
 Passenger does not provide X-Sendfile support by itself. Please install
 link:http://tn123.ath.cx/mod_xsendfile/[mod_xsendfile] for X-Sendfile support.
 
+[[conflicting_apache_modules]]
 === Conflicting Apache modules ===
 
 Passenger conflicts with 'mod_rewrite' and 'mod_alias'. Those modules may be
@@ -671,12 +680,12 @@ outside virtual hosts that contain a Rails application, but we recommend you
 not to use their features inside virtual hosts that contain a Rails
 application.
 
-Passenger will override mod_rewrite rules on Rails hosts. This is because the
-default .htaccess, as provided by Ruby on Rails, redirects all requests to
-`dispatch.cgi' using mod_rewrite. This is a CGI application which loads the
-entire Ruby on Rails framework for every request, and thus is very slow. If we
-do not override mod_rewrite, then Ruby on Rails apps will be slow on Passenger
-by default -- but we want a good out-of-the-box experience.
+By default, Passenger will override mod_rewrite rules on Rails hosts. This is
+because the default .htaccess, as provided by Ruby on Rails, redirects all
+requests to `dispatch.cgi' using mod_rewrite. This is a CGI application which
+loads the entire Ruby on Rails framework for every request, and thus is very
+slow. If we do not override mod_rewrite, then Ruby on Rails apps will be slow
+on Passenger by default -- but we want a good out-of-the-box experience.
 
 Furthermore, the primary reason why people use mod_rewrite with Rails
 applications, is to accelerate page caching. Passenger supports page caching
@@ -685,3 +694,8 @@ out-of-the-box, without mod_rewrite.
 It is not fully understood how mod_alias conflicts with Passenger, but we
 recommend you not to use it on Rails virtual hosts. mod_alias rules can result
 in surprising problems.
+
+If you really want to use mod_rewrite on Rails virtual hosts, then please set
+the <<RailsAllowModRewrite,RailsAllowModRewrite>> configuration option. But
+please note that you will have to delete Rails applications' default .htaccess
+file, or add rewrite rules to negate its effects.

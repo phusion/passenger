@@ -26,8 +26,11 @@
 		 * Per-directory configuration information.
 		 */
 		struct DirConfig {
+			enum Threeway { ENABLED, DISABLED, UNSET };
+			
 			std::set<std::string> base_uris;
-			enum { ENABLED, DISABLED, UNSET } autoDetect;
+			Threeway autoDetect;
+			Threeway allowModRewrite;
 		};
 		
 		/**
