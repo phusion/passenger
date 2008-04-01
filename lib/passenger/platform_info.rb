@@ -16,7 +16,7 @@ require 'rbconfig'
 module PlatformInfo
 private
 	def self.env_defined?(name)
-		return !ENV[name].nil? && ENV[name]
+		return !ENV[name].nil? && !ENV[name].empty?
 	end
 	
 	def self.determine_gem_command
@@ -65,7 +65,7 @@ private
 			end
 			possible_names.each do |name|
 				filename = "#{bindir}/#{name}"
-				if File.executable?(filename)
+				if File.file?(filename) && File.executable?(filename)
 					return filename
 				end
 			end
@@ -78,7 +78,9 @@ private
 	end
 	
 	def self.find_httpd
-		if APXS2.nil?
+		if env_defined?('HTTPD')
+			return ENV['HTTPD']
+		elsif APXS2.nil?
 			["apache2", "httpd2", "apache", "httpd"].each do |name|
 				command = find_command(name)
 				if !command.nil?
