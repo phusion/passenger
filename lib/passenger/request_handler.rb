@@ -247,6 +247,7 @@ private
 		end
 		
 		headers = Hash[*headers_data.split("\0")]
+		headers_data = nil
 		headers[CONTENT_LENGTH] = headers[HTTP_CONTENT_LENGTH]
 		
 		# TODO:
