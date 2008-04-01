@@ -68,6 +68,8 @@ class ApplicationSpawner < AbstractServer
 	
 	# An attribute, used internally. This should not be used outside Passenger.
 	attr_accessor :time
+	# The application root of this spawner.
+	attr_reader :app_root
 
 	# +app_root+ is the root directory of this application, i.e. the directory
 	# that contains 'app/', 'public/', etc. If given an invalid directory,
@@ -217,6 +219,9 @@ private
 			Rails::Initializer.run(:set_load_path)
 		end
 		require 'config/environment'
+		if !defined?(Dispatcher)
+			require 'dispatcher'
+		end
 		require_dependency 'application'
 		Dir.glob('app/{models,controllers,helpers}/*.rb').each do |file|
 			require_dependency normalize_path(file)

@@ -44,7 +44,7 @@ describe FrameworkSpawner do
 	
 	def spawn_application(app_root)
 		version = Application.detect_framework_version(app_root)
-		if version.nil?
+		if version == :vendor
 			options = { :vendor => "#{@app_root}/vendor/rails" }
 		else
 			options = { :version => version }

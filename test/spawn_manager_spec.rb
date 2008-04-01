@@ -58,6 +58,17 @@ describe SpawnManager do
 		Process.waitpid(pid) rescue nil
 	end
 	
+	it "should not crash upon spawning an application that doesn't specify its Rails version" do
+		@manager.spawn_application('stub/railsapp-without-version-spec').close
+	end
+	
+	it "should properly reload applications that do not specify a Rails version" do
+		@manager.spawn_application('stub/railsapp-without-version-spec').close
+		@manager.reload('stub/railsapp-without-version-spec')
+		spawners = @manager.instance_eval { @spawners }
+		spawners.should be_empty
+	end
+	
 	def spawn_application
 		@manager.spawn_application('stub/minimal-railsapp')
 	end

@@ -37,8 +37,8 @@ end
 # *Note*: FrameworkSpawner may only be started asynchronously with AbstractServer#start.
 # Starting it synchronously with AbstractServer#start_synchronously has not been tested.
 class FrameworkSpawner < AbstractServer
-	APP_SPAWNER_CLEAN_INTERVAL = 125
 	APP_SPAWNER_MAX_IDLE_TIME = 120
+	APP_SPAWNER_CLEAN_INTERVAL = APP_SPAWNER_MAX_IDLE_TIME + 5
 
 	include Utils
 	
@@ -253,10 +253,6 @@ private
 	end
 
 	def handle_spawn_application(app_root, lower_privilege, lowest_user)
-		if @refresh_gems_cache
-			Gem.refresh_all_caches!
-			@refresh_gems_cache = false
-		end
 		lower_privilege = lower_privilege == "true"
 		@spawners_lock.synchronize do
 			spawner = @spawners[app_root]
@@ -270,10 +266,9 @@ private
 					if e.child_exception.is_a?(LoadError)
 						# A source file failed to load, maybe because of a
 						# missing gem. If that's the case then the sysadmin
-						# will install probably the gem. So next time an app
-						# is launched, we'll refresh the RubyGems cache so
-						# that we can detect new gems.
-						@refresh_gems_cache = true
+						# will install probably the gem. So we clear RubyGems's
+						# cache so that it can detect new gems.
+						Gem.clear_paths
 					end
 					return
 				end
