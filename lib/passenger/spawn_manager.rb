@@ -21,8 +21,10 @@ module Passenger
 # finished.
 class SpawnManager < AbstractServer
 	DEFAULT_INPUT_FD = 3
-	SPAWNER_CLEAN_INTERVAL = 30 * 60
-	SPAWNER_MAX_IDLE_TIME = 29 * 60
+	FRAMEWORK_SPAWNER_MAX_IDLE_TIME = 30 * 60
+	APP_SPAWNER_MAX_IDLE_TIME = FrameworkSpawner::APP_SPAWNER_MAX_IDLE_TIME
+	SPAWNER_CLEAN_INTERVAL = [FRAMEWORK_SPAWNER_MAX_IDLE_TIME,
+		APP_SPAWNER_MAX_IDLE_TIME].min + 5
 	
 	include Utils
 	
@@ -59,26 +61,43 @@ class SpawnManager < AbstractServer
 	# - FrameworkInitError: The Ruby on Rails framework that the application requires could not be loaded.
 	# - AppInitError: The application raised an exception or called exit() during startup.
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody")
-		options = {}
 		framework_version = Application.detect_framework_version(app_root)
-		if framework_version.nil?
-			options[:vendor] = normalize_path("#{app_root}/vendor/rails")
-			key = "vendor:#{options[:vendor]}"
+		if framework_version == :vendor
+			vendor_path = normalize_path("#{app_root}/vendor/rails")
+			key = "vendor:#{vendor_path}"
+			create_spawner = proc do
+				FrameworkSpawner.new(:vendor => vendor_path)
+			end
+		elsif framework_version.nil?
+			app_root = normalize_path(app_root)
+			key = "app:#{app_root}"
+			create_spawner = proc do
+				ApplicationSpawner.new(app_root, lower_privilege, lowest_user)
+			end
 		else
-			options[:version] = framework_version
-			key = "version:#{options[:version]}"
+			key = "version:#{framework_version}"
+			create_spawner = proc do
+				FrameworkSpawner.new(:version => framework_version)
+			end
 		end
+		
 		spawner = nil
 		@lock.synchronize do
 			spawner = @spawners[key]
 			if !spawner
-				spawner = FrameworkSpawner.new(options)
+				spawner = create_spawner.call
 				spawner.start
 				@spawners[key] = spawner
 			end
 		end
+		
 		spawner.time = Time.now
-		return spawner.spawn_application(app_root, lower_privilege, lowest_user)
+		if spawner.is_a?(FrameworkSpawner)
+			return spawner.spawn_application(app_root, lower_privilege,
+				lowest_user)
+		else
+			return spawner.spawn_application
+		end
 	end
 	
 	# Remove the cached application instances at the given application root.
@@ -95,9 +114,27 @@ class SpawnManager < AbstractServer
 	#
 	# Raises AbstractServer::SpawnError if something went wrong.
 	def reload(app_root = nil)
+		if app_root
+			begin
+				app_root = normalize_path(app_root)
+			rescue ArgumentError
+			end
+		end
 		@lock.synchronize do
+			if app_root
+				# Delete associated ApplicationSpawner.
+				key = "app:#{app_root}"
+				spawner = @spawners[key]
+				if spawner
+					spawner.stop
+					@spawners.delete(key)
+				end
+			end
 			@spawners.each_value do |spawner|
-				spawner.reload(app_root)
+				# Reload FrameworkSpawners.
+				if spawner.respond_to?(:reload)
+					spawner.reload(app_root)
+				end
 			end
 		end
 	end
@@ -120,10 +157,6 @@ private
 	def handle_spawn_application(app_root, lower_privilege, lowest_user)
 		lower_privilege = lower_privilege == "true"
 		app = nil
-		if @refresh_gems_cache
-			Gem.refresh_all_caches!
-			@refresh_gems_cache = false
-		end
 		begin
 			app = spawn_application(app_root, lower_privilege, lowest_user)
 		rescue ArgumentError => e
@@ -141,10 +174,9 @@ private
 			   (e.child_exception.is_a?(UnknownError) && e.child_exception.real_class_name == "MissingSourceFile")
 				# A source file failed to load, maybe because of a
 				# missing gem. If that's the case then the sysadmin
-				# will install probably the gem. So next time an app
-				# is launched, we'll refresh the RubyGems cache so
-				# that we can detect new gems.
-				@refresh_gems_cache = true
+				# will install probably the gem. So we clear RubyGems's
+				# cache so that it can detect new gems.
+				Gem.clear_paths
 				send_error_page(client, 'load_error', :error => e, :app_root => app_root)
 			elsif e.child_exception.nil?
 				send_error_page(client, 'app_exited_during_initialization', :error => e,
@@ -177,7 +209,12 @@ private
 					current_time = Time.now
 					@spawners.keys.each do |key|
 						spawner = @spawners[key]
-						if current_time - spawner.time > SPAWNER_MAX_IDLE_TIME
+						if spawner.is_a?(FrameworkSpawner)
+							max_idle_time = FRAMEWORK_SPAWNER_MAX_IDLE_TIME
+						else
+							max_idle_time = APP_SPAWNER_MAX_IDLE_TIME
+						end
+						if current_time - spawner.time > max_idle_time
 							spawner.stop
 							@spawners.delete(key)
 						end

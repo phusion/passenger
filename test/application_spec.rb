@@ -8,8 +8,13 @@ describe Application do
 		rails_version.should =~ /^2\.0\.(\d+)$/
 	end
 	
-	it "should correctly detect vendor Rails" do
+	it "should return :vendor if an application uses a vendored Rails" do
 		rails_version = Application.detect_framework_version('stub/minimal-railsapp')
+		rails_version.should == :vendor
+	end
+	
+	it "should return nil if an application does not specify its Rails version" do
+		rails_version = Application.detect_framework_version('stub/railsapp-without-version-spec')
 		rails_version.should be_nil
 	end
 	
