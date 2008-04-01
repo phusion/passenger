@@ -130,7 +130,7 @@ class SpawnManager < AbstractServer
 					@spawners.delete(key)
 				end
 			end
-			@spawners.each_value do |spawn|
+			@spawners.each_value do |spawner|
 				# Reload FrameworkSpawners.
 				if spawner.respond_to?(:reload)
 					spawner.reload(app_root)
