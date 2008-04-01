@@ -315,6 +315,9 @@ spec = Gem::Specification.new do |s|
 	s.summary = "Apache module for Ruby on Rails support."
 	s.name = "passenger"
 	s.version = "0.9.6"  # Don't forget to edit Configuration.h too
+	s.rubyforge_project = "passenger"
+	s.author = "Phusion - http://www.phusion.nl/"
+	s.email = "info@phusion.nl"
 	s.requirements << "fastthread" << "Apache 2 with development headers"
 	s.require_path = "lib"
 	s.add_dependency 'rake', '>= 0.8.1'
