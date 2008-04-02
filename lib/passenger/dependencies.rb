@@ -90,6 +90,8 @@ module Dependencies # :nodoc: all
 				dep.install_command = "apt-get install build-essential"
 			when :rhel, :fedora, :centos
 				dep.install_command = "yum install gcc-c++"
+			when :gentoo
+				dep.install_command = "emerge -av gcc"
 			end
 		elsif RUBY_PLATFORM =~ /darwin/
 			dep.install_instructions = "Please install the Apple Development Tools: http://developer.apple.com/tools/"
@@ -114,6 +116,8 @@ module Dependencies # :nodoc: all
 				dep.install_command = "apt-get install ruby1.8-dev"
 			when :rhel, :fedora, :centos
 				dep.install_command = "yum install ruby-devel"
+			when :gentoo
+				dep.install_command = "emerge -av ruby"
 			end
 		elsif RUBY_PLATFORM =~ /freebsd/
 			dep.install_command = "make -C /usr/ports/lang/ruby18 install"
@@ -166,6 +170,8 @@ module Dependencies # :nodoc: all
 				dep.install_command = "apt-get install apache2-mpm-prefork"
 			when :rhel, :fedora, :centos
 				dep.install_command = "yum install httpd"
+			when :gentoo
+				dep.install_command = "emerge -av apache"
 			end
 		elsif RUBY_PLATFORM =~ /freebsd/
 			dep.install_command = "make -C /usr/ports/www/apache22 install"
@@ -191,6 +197,9 @@ module Dependencies # :nodoc: all
 			when :rhel, :fedora, :centos
 				dep.install_command = "yum install httpd-devel"
 				dep.provides = [Apache2]
+			when :gentoo
+				dep.install_command = "emerge -av apache"
+				dep.provides = [Apache2]
 			end
 		elsif RUBY_PLATFORM =~ /freebsd/
 			dep.install_command = "make -C /usr/ports/www/apache22 install"
@@ -209,6 +218,8 @@ module Dependencies # :nodoc: all
 				dep.install_command = "apt-get install libapr1-dev"
 			when :rhel, :fedora, :centos
 				dep.install_command = "yum install apr-devel"
+			when :gentoo
+				dep.install_command = "emerge -av apr"
 			end
 		end
 		dep.website = "http://httpd.apache.org/"
