@@ -184,7 +184,7 @@ Next, add a `RailsBaseURI` option to the virtual host configuration:
 <VirtualHost *:80>
     ServerName www.zsfa.com
     DocumentRoot /websites/zsfa
-    RailsBaseURI /rails
+    RailsBaseURI /rails                # This line has been added.
 </VirtualHost>
 -------------------------------------------
 Then restart Apache. The application has now been deployed.
@@ -218,7 +218,7 @@ configuration options:
 RailsSpawnServer <filename>::
 	The location to the Passenger spawn server. This configuration option is
 	essential to Passenger. The correct value is given by the installer,
-	and should not be changed manually.
+	and should usually not be changed manually.
 +
 This option may only occur once, in the global server configuration. If
 this option is not given, then Passenger will look for the program
@@ -281,9 +281,9 @@ The default is 'ruby'.
 [[rails_env]]
 RailsEnv <string>::
 	This option allows one to specify the default `RAILS_ENV` value.
-	The default is 'production'.
 +
 This option may only occur once, in the global server configuration.
+The default is 'production'.
 
 RailsMaxPoolSize <integer>::
 	The maximum number of Ruby on Rails application instances that may
@@ -312,7 +312,7 @@ not hard to install.
 RailsPoolIdleTime <integer>::
 	The maximum number of seconds that a Ruby on Rails application instance
 	may be idle. That is, if an application instance hasn't done anything after
-	the given amount of seconds, then it will be shutdown in order to conserve
+	the given number of seconds, then it will be shutdown in order to conserve
 	memory.
 +
 Decreasing this value means that Rails applications will have to be spawned
@@ -321,8 +321,9 @@ notice a small delay when they visit your Rails site. However, it will also
 free up resources used by Rails applications more quickly.
 +
 The optimal value depends on the average time that a visitor spends on a single
-Rails web page. We recommend a value of `2 * x`, where `x` is the average number
-of seconds that a visitor spends on a single Rails web page. Your mileage may vary.
+Rails web page. We recommend a value of `2 * x`, where `x` is the average
+number of seconds that a visitor spends on a single Rails web page. But your
+mileage may vary.
 +
 This option may only occur once, in the global server configuration.
 The default value is '120'.
@@ -335,7 +336,7 @@ This option may only occur once, in the global server configuration.
 The default value is 'on'.
 
 [[RailsDefaultUser]]
-RailsDefaultUser <string>::
+RailsDefaultUser <username>::
 	Passenger enables <<user_switching,user switching support>> by default.
 	This configuration option allows one to specify which user Rails
 	applications must run as, if user switching fails or is disabled.
