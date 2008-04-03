@@ -1,4 +1,6 @@
 #!/usr/bin/env ruby
+# Passenger note: this file is copied from Rake 0.8.1. The task names
+# have been changed.
 
 require 'rake'
 require 'rake/tasklib'
