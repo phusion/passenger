@@ -16,7 +16,8 @@ HTTPD.nil? and raise "Could not find the Apache web server binary."
 APR1_FLAGS.nil? and raise "Could not find Apache Portable Runtime (APR)."
 
 CXX = "g++"
-CXXFLAGS = "-Wall -g -I/usr/local/include " << MULTI_ARCH_FLAGS
+THREADING_FLAGS = "-D_REENTRANT"
+CXXFLAGS = "#{THREADING_FLAGS} -Wall -g -I/usr/local/include " << MULTI_ARCH_FLAGS
 LDFLAGS = ""
 
 
@@ -66,7 +67,7 @@ subdir 'ext/boost/src' do
 		# processes, sometimes pthread errors will occur. These errors are harmless
 		# and should be ignored. Defining NDEBUG guarantees that boost::thread() will
 		# not abort if such an error occured.
-		flags = "-O2 -fPIC -I../.. -DNDEBUG #{MULTI_ARCH_FLAGS}"
+		flags = "-O2 -fPIC -I../.. #{THREADING_FLAGS} -DNDEBUG #{MULTI_ARCH_FLAGS}"
 		compile_cxx "*.cpp", flags
 		create_static_library "libboost_thread.a", "*.o"
 	end
