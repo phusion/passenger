@@ -213,7 +213,8 @@ subdir 'test' do
 
 	file 'Apache2ModuleTests' => TEST::AP2_OBJECTS.keys +
 	  ['../ext/boost/src/libboost_thread.a',
-	   '../ext/apache2/Utils.o'] do
+	   '../ext/apache2/Utils.o',
+	   '../ext/apache2/Logging.o'] do
 		objects = TEST::AP2_OBJECTS.keys.join(' ') <<
 			" ../ext/apache2/Utils.o" <<
 			" ../ext/apache2/Logging.o"
