@@ -213,7 +213,7 @@ module Dependencies # :nodoc: all
 			end
 		elsif RUBY_PLATFORM =~ /freebsd/
 			dep.install_command = "make -C /usr/ports/www/apache22 install"
-			dep.provides = [Apache2_DevHeaders, APR_Headers]
+			dep.provides = [Apache2_DevHeaders, APR_DevHeaders]
 		end
 		dep.website = "http://httpd.apache.org/"
 	end
