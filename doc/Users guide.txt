@@ -26,6 +26,7 @@ Passenger has been tested on:
 
 - Ubuntu Linux 6.06 (x86)
 - Ubuntu Linux 7.10 (x86)
+- Debian Sarge (x86)
 - Debian Etch (x86)
 - Debian Lenny/Sid (x86)
 - CentOS 5 (x86)
