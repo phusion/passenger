@@ -126,6 +126,28 @@ module Dependencies # :nodoc: all
 		dep.install_instructions = "Please reinstall Ruby by downloading it from <bold>#{dep.website}</b>"
 	end
 	
+	Ruby_OpenSSL = Dependency.new do |dep|
+		dep.name = "OpenSSL support for Ruby"
+		dep.define_checker do |result|
+			begin
+				require 'openssl'
+				result.found
+			rescue LoadError
+				result.not_found
+			end
+		end
+		if RUBY_PLATFORM =~ /linux/
+			case LINUX_DISTRO
+			when :ubuntu, :debian
+				dep.install_command = "apt-get install libopenssl-ruby"
+			end
+		else
+			dep.website = "http://www.ruby-lang.org/"
+			dep.install_instructions = "Please (re)install Ruby with OpenSSL " <<
+				"support by downloading it from <bold>#{dep.website}</bold>."
+		end
+	end
+	
 	RubyGems = Dependency.new do |dep|
 		dep.name = "RubyGems"
 		dep.define_checker do |result|

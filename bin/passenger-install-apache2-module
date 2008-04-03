@@ -22,6 +22,7 @@ class Installer
 	REQUIRED_DEPENDENCIES = [
 		Dependencies::GCC,
 		Dependencies::Ruby_DevHeaders,
+		Dependencies::Ruby_OpenSSL,
 		Dependencies::RubyGems,
 		Dependencies::Rake,
 		Dependencies::Apache2,
