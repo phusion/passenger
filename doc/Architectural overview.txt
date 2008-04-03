@@ -328,3 +328,12 @@ The reader might also be interested in studying the application pool's
 algorithm, which is non-trivial. The algorithm is documented in detail in
 link:ApplicationPool%20algorithm.txt[ApplicationPool algorithm.txt].
 
+
+== Appendix A: About this document ==
+
+The text of this document is licensed under the
+link:http://creativecommons.org/licenses/by-sa/3.0/[Creative Commons
+Attribution-Share Alike 3.0 Unported License].
+
+image:images/by_sa.png[link="link:http://creativecommons.org/licenses/by-sa/3.0/"]
+
