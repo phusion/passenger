@@ -4,6 +4,7 @@ require 'passenger/application'
 require 'passenger/message_channel'
 require 'passenger/html_template'
 require 'passenger/utils'
+require 'passenger/platform_info'
 module Passenger
 
 # This class is capable of spawning Ruby on Rails application instances.
