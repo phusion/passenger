@@ -684,3 +684,13 @@ If you really want to use mod_rewrite on Rails virtual hosts, then please set
 the <<RailsAllowModRewrite,RailsAllowModRewrite>> configuration option. But
 please note that you will have to delete Rails applications' default .htaccess
 file, or add rewrite rules to negate its effects.
+
+
+== Appendix A: About this document ==
+
+The text of this document is licensed under the
+link:http://creativecommons.org/licenses/by-sa/3.0/[Creative Commons
+Attribution-Share Alike 3.0 Unported License].
+
+image:images/by_sa.png[link="link:http://creativecommons.org/licenses/by-sa/3.0/"]
+
