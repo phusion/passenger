@@ -23,13 +23,17 @@ namespace boost {
 class BOOST_THREAD_DECL thread_exception : public std::exception
 {
 protected:
+    std::string message;
     thread_exception();
+    thread_exception(const std::string &description, int sys_err_code);
     thread_exception(int sys_err_code);
 
 public:
     ~thread_exception() throw();
 
     int native_error() const;
+    
+    virtual const char *what() const throw();
 
 private:
     int m_sys_err;
@@ -49,10 +53,9 @@ class BOOST_THREAD_DECL thread_resource_error : public thread_exception
 {
 public:
     thread_resource_error();
+    thread_resource_error(const std::string &description, int sys_err_code);
     thread_resource_error(int sys_err_code);
     ~thread_resource_error() throw();
-
-    virtual const char* what() const throw();
 };
 
 class BOOST_THREAD_DECL unsupported_thread_option : public thread_exception

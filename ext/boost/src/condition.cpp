@@ -341,7 +341,7 @@ condition_impl::condition_impl()
     int res = 0;
     res = pthread_cond_init(&m_condition, 0);
     if (res != 0)
-        throw thread_resource_error();
+        throw thread_resource_error("Cannot initialize a condition variable", errno);
 }
 
 condition_impl::~condition_impl()
