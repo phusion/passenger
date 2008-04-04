@@ -349,6 +349,7 @@ spec = Gem::Specification.new do |s|
 		'README',
 		'DEVELOPERS.TXT',
 		'LICENSE',
+		'INSTALL',
 		'lib/**/*.rb',
 		'lib/passenger/templates/*',
 		'bin/*',
