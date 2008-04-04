@@ -155,7 +155,7 @@ thread::thread(const function0<void>& threadfunc)
     int res = 0;
     res = pthread_create(&m_thread, 0, &thread_proxy, &param);
     if (res != 0)
-        throw thread_resource_error();
+        throw thread_resource_error("Cannot create a thread", errno);
 #elif defined(BOOST_HAS_MPTASKS)
     threads::mac::detail::thread_init();
     threads::mac::detail::create_singletons();

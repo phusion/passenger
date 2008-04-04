@@ -17,6 +17,7 @@
 
 #if defined(BOOST_HAS_PTHREADS)
 #   include <pthread.h>
+#   include <errno.h>
 #   include <boost/thread/condition.hpp>
 #elif defined(BOOST_HAS_MPTASKS)
 #   include <Multiprocessing.h>

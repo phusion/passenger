@@ -196,7 +196,7 @@ mutex::mutex()
     int res = 0;
     res = pthread_mutex_init(&m_mutex, 0);
     if (res != 0)
-        throw thread_resource_error();
+        throw thread_resource_error("Cannot initialize a mutex", errno);
 }
 
 mutex::~mutex()
@@ -236,7 +236,7 @@ try_mutex::try_mutex()
     int res = 0;
     res = pthread_mutex_init(&m_mutex, 0);
     if (res != 0)
-        throw thread_resource_error();
+        throw thread_resource_error("Cannot initialize a mutex", errno);
 }
 
 try_mutex::~try_mutex()
@@ -286,13 +286,13 @@ timed_mutex::timed_mutex()
     int res = 0;
     res = pthread_mutex_init(&m_mutex, 0);
     if (res != 0)
-        throw thread_resource_error();
+        throw thread_resource_error("Cannot initialize a mutex", errno);
 
     res = pthread_cond_init(&m_condition, 0);
     if (res != 0)
     {
         pthread_mutex_destroy(&m_mutex);
-        throw thread_resource_error();
+        throw thread_resource_error("Cannot destroy a mutex", errno);
     }
 }
 
