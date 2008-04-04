@@ -27,6 +27,8 @@
 #include <apr_strings.h>
 #include <apr_lib.h>
 
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <exception>
 #include <unistd.h>
 
@@ -540,6 +542,43 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 				destroy_hooks,
 				apr_pool_cleanup_null);
 			return OK;
+		} catch (const thread_resource_error &e) {
+			struct rlimit lim;
+			string pthread_threads_max;
+			
+			lim.rlim_cur = 0;
+			lim.rlim_max = 0;
+			getrlimit(RLIMIT_NPROC, &lim);
+			#ifdef PTHREAD_THREADS_MAX
+				pthread_threads_max = toString(PTHREAD_THREADS_MAX);
+			#else
+				pthread_threads_max = "unknown";
+			#endif
+			
+			ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,
+				"*** Passenger could not be initialize because a "
+				"threading resource could not be allocated or initialized. "
+				"The error message is:");
+			fprintf(stderr,
+				"  %s\n\n"
+				"System settings:\n"
+				"  RLIMIT_NPROC: soft = %d, hard = %d\n"
+				"  PTHREAD_THREADS_MAX: %s\n"
+				"\n",
+				e.what(),
+				(int) lim.rlim_cur, (int) lim.rlim_max,
+				pthread_threads_max.c_str());
+			
+			fprintf(stderr, "Output of 'uname -a' follows:\n");
+			fflush(stderr);
+			system("uname -a >&2");
+			
+			fprintf(stderr, "\nOutput of 'ulimit -a' follows:\n");
+			fflush(stderr);
+			system("ulimit -a >&2");
+			
+			return DECLINED;
+			
 		} catch (const exception &e) {
 			ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,
 				"*** Passenger could not be initialized because of this error: %s",

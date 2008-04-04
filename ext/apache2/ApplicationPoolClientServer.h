@@ -528,6 +528,8 @@ public:
 	 * @throws SystemException An error occured while trying to setup the spawn server
 	 *            or the server socket.
 	 * @throws IOException The specified log file could not be opened.
+	 * @throws boost::thread_resource_error A threading resource could not be
+	 *            allocated or initialized.
 	 */
 	ApplicationPoolServer(const string &spawnServerCommand,
 	             const string &logFile = "",
@@ -544,7 +546,12 @@ public:
 		connectSocket = fds[1];
 		done = false;
 		detached = false;
-		serverThread = new thread(bind(&ApplicationPoolServer::serverThreadMainLoop, this));
+		try {
+			serverThread = new thread(bind(&ApplicationPoolServer::serverThreadMainLoop, this));
+		} catch (const thread_resource_error &e) {
+			throw thread_resource_error("Could not create the ApplicationPoolServer "
+				"server main loop thread", e.native_error());
+		}
 	}
 	
 	~ApplicationPoolServer() {
