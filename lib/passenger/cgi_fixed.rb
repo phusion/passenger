@@ -1,4 +1,4 @@
-# NOTE: This code was copied verbatim from Zed Shaw's scgi_rails
+# NOTE: This code is based on cgi_fixed.rb from Zed Shaw's scgi_rails
 # package, version 0.4.3. The license of this single file is as follows:
 #
 #  Copyright (c) 2004 Zed A. Shaw
