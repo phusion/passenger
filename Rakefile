@@ -26,6 +26,9 @@ require 'passenger/platform_info'
 
 ##### Configuration
 
+# Don't forget to edit Configuration.h too
+PACKAGE_VERSION = "0.9.6"
+
 include PlatformInfo
 APXS2.nil? and raise "Could not find 'apxs' or 'apxs2'."
 APACHE2CTL.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
@@ -333,7 +336,7 @@ spec = Gem::Specification.new do |s|
 	s.homepage = "http://passenger.phusion.nl/"
 	s.summary = "Apache module for Ruby on Rails support."
 	s.name = "passenger"
-	s.version = "0.9.6"  # Don't forget to edit Configuration.h too
+	s.version = PACKAGE_VERSION
 	s.rubyforge_project = "passenger"
 	s.author = "Phusion - http://www.phusion.nl/"
 	s.email = "info@phusion.nl"

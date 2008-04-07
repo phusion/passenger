@@ -98,6 +98,12 @@ class RequestHandler
 	CONTENT_LENGTH = 'CONTENT_LENGTH' # :nodoc:
 	HTTP_CONTENT_LENGTH = 'HTTP_CONTENT_LENGTH' # :nodoc:
 	
+	NINJA_PATCHING_LOCK = Mutex.new
+	@@ninja_patched_action_controller = false
+	
+	File.read("#{File.dirname(__FILE__)}/../../Rakefile") =~ /^PACKAGE_VERSION = "(.*)"$/
+	PASSENGER_VERSION = $1
+	
 	# The name of the socket on which the request handler accepts
 	# new connections. This is either a Unix socket filename, or
 	# the name for an abstract namespace Unix socket.
@@ -121,6 +127,21 @@ class RequestHandler
 		end
 		@owner_pipe = owner_pipe
 		@previous_signal_handlers = {}
+		
+		NINJA_PATCHING_LOCK.synchronize do
+			if !@@ninja_patched_action_controller && defined?(::ActionController::Base) \
+			&& ::ActionController::Base.private_method_defined?(:perform_action)
+				@@ninja_patched_action_controller = true
+				::ActionController::Base.class_eval do
+					alias passenger_orig_perform_action perform_action
+					
+					def perform_action(*whatever)
+						headers["X-Powered-By"] = "Phusion Passenger (mod_rails) #{PASSENGER_VERSION}"
+						passenger_orig_perform_action(*whatever)
+					end
+				end
+			end
+		end
 	end
 	
 	# Clean up temporary stuff created by the request handler.
