@@ -166,25 +166,25 @@ Suppose that you already have a virtual host:
 
 -------------------------------------------
 <VirtualHost *:80>
-    ServerName www.zsfa.com
-    DocumentRoot /websites/zsfa
+    ServerName www.phusion.nl
+    DocumentRoot /websites/phusion
 </VirtualHost>
 -------------------------------------------
 
 And you want your Ruby on Rails application to be accessible from the URL
-'http://www.zsfa.com/rails'.
+'http://www.phusion.nl/rails'.
 
 To do this, make a symlink from your Ruby on Rails application's 'public'
 folder to a directory in the document root. For example:
 -------------------------------------------
-ln -s /webapps/mycook/public /websites/zsfa/rails
+ln -s /webapps/mycook/public /websites/phusion/rails
 -------------------------------------------
 
 Next, add a `RailsBaseURI` option to the virtual host configuration:
 -------------------------------------------
 <VirtualHost *:80>
-    ServerName www.zsfa.com
-    DocumentRoot /websites/zsfa
+    ServerName www.phusion.nl
+    DocumentRoot /websites/phusion
     RailsBaseURI /rails                # This line has been added.
 </VirtualHost>
 -------------------------------------------
