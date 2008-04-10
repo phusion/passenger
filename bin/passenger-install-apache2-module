@@ -197,15 +197,15 @@ private
 		line
 		color_puts '<banner>Compiling and installing Apache 2 module...</banner>'
 		puts "cd #{PASSENGER_ROOT}"
-		puts "rake clean apache2:install"
-		return system("rake", "clean", "apache2:install")
+		puts "rake clean apache2"
+		return system("rake", "clean", "apache2")
 	end
 	
 	def show_apache2_config_snippets
 		puts
 		line
 		render_template 'apache2_config_snippets',
-			:module_location => `#{APXS2} -q LIBEXECDIR`.strip << "/mod_passenger.so",
+			:module_location => "#{PASSENGER_ROOT}/ext/apache2/mod_passenger.so",
 			:spawn_server_location => "#{PASSENGER_ROOT}/bin/passenger-spawn-server",
 			:ruby => RUBY
 		wait
