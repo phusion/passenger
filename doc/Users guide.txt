@@ -285,6 +285,11 @@ RailsEnv <string>::
 +
 This option may only occur once, in the global server configuration.
 The default is 'production'.
++
+TIP: Even though it is not possible to specify a different RailsEnv
+per virtual host in the Apache configuration file, one can set the
+Rails environment by editing `RAILS_ENV=...` in the application's
+'config/environment.rb'.
 
 RailsMaxPoolSize <integer>::
 	The maximum number of Ruby on Rails application instances that may
