@@ -1,5 +1,7 @@
 = Passenger users guide =
 
+image:images/phusion_banner.png[link="http://www.phusion.nl/"]
+
 Passenger is an Apache module, which makes deploying Ruby on Rails applications
 on Apache a breeze. It follows the usual Ruby on Rails conventions, such as
 "Don't-Repeat-Yourself" and ease of setup.
@@ -697,5 +699,9 @@ The text of this document is licensed under the
 link:http://creativecommons.org/licenses/by-sa/3.0/[Creative Commons
 Attribution-Share Alike 3.0 Unported License].
 
-image:images/by_sa.png[link="link:http://creativecommons.org/licenses/by-sa/3.0/"]
+image:images/by_sa.png[link="http://creativecommons.org/licenses/by-sa/3.0/"]
+
+Passenger is brought to you by Phusion.
+
+image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
