@@ -27,7 +27,7 @@ require 'passenger/platform_info'
 ##### Configuration
 
 # Don't forget to edit Configuration.h too
-PACKAGE_VERSION = "0.9.6"
+PACKAGE_VERSION = "1.0.1"
 
 include PlatformInfo
 APXS2.nil? and raise "Could not find 'apxs' or 'apxs2'."
