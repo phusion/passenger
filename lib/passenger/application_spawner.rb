@@ -232,7 +232,9 @@ private
 			Rails::Initializer.run(:set_load_path)
 		end
 		require 'config/environment'
-		ActionController::Base.page_cache_directory = "#{RAILS_ROOT}/public"
+		if ActionController::Base.page_cache_directory.empty?
+			ActionController::Base.page_cache_directory = "#{RAILS_ROOT}/public"
+		end
 		if defined?(ActionController::Dispatcher) \
 		   && ActionController::Dispatcher.respond_to?(:error_file_path)
 			ActionController::Dispatcher.error_file_path = "#{RAILS_ROOT}/public"
