@@ -101,7 +101,7 @@ end
 ##### Apache module
 
 class APACHE2
-	CXXFLAGS = CXXFLAGS + " -fPIC -g -DPASSENGER_DEBUG #{APR1_FLAGS} #{APXS2_FLAGS} -I.."
+	CXXFLAGS = "-I.. -fPIC -g -DPASSENGER_DEBUG #{APR1_FLAGS} #{APXS2_FLAGS} #{CXXFLAGS}"
 	OBJECTS = {
 		'Configuration.o' => %w(Configuration.cpp Configuration.h),
 		'Hooks.o' => %w(Hooks.cpp Hooks.h
@@ -244,7 +244,7 @@ subdir 'test' do
 	
 	TEST::AP2_OBJECTS.each_pair do |target, sources|
 		file target => sources do
-			compile_cxx sources[0], TEST::CXXFLAGS + " " + TEST::AP2_FLAGS
+			compile_cxx sources[0], "#{TEST::AP2_FLAGS} #{TEST::CXXFLAGS}"
 		end
 	end
 	
@@ -272,7 +272,7 @@ subdir 'benchmark' do
 	file 'DummyRequestHandler' => ['DummyRequestHandler.cpp',
 	  '../ext/apache2/MessageChannel.h'] do
 		create_executable "DummyRequestHandler", "DummyRequestHandler.cpp",
-			"#{CXXFLAGS} -I../ext -I../ext/apache2 #{LDFLAGS}"
+			"-I../ext -I../ext/apache2 #{CXXFLAGS} #{LDFLAGS}"
 	end
 	
 	task :clean do
