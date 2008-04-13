@@ -17,9 +17,7 @@ This guide assumes that the reader is somewhat familiar with Apache and with
 using the commandline.
 
 
-== Installation ==
-
-=== Supported operating systems ===
+== Supported operating systems ==
 
 Passenger works on any POSIX-compliant operating system. In other words:
 practically any operating system on earth, except Microsoft Windows.
@@ -44,6 +42,9 @@ link:http://code.google.com/p/phusion-passenger/issues/list[report a bug]
 or
 link:http://groups.google.com/group/phusion-passenger[join our discussion list]
 if it doesn't.
+
+
+== Generic installation instructions ==
 
 [[install_passenger]]
 === Overview of download and installation methods ===
@@ -134,6 +135,15 @@ Please follow the instructions given by the installer.
 
 IMPORTANT: Please do not remove the 'passenger-x.x.x' folder after
 installation. Furthermore, the 'passenger-x.x.x' folder must be accessible by Apache.
+
+
+== Operating system-specific installation instructions ==
+
+=== MacOS X ===
+
+Ben Ruebenstein has written an excellent
+link:http://benr75.com/articles/2008/04/12/setup-mod_rails-phusion-mac-os-x-leopard[tutorial
+on installing Phusion Passenger on OS X].
 
 
 == Deploying a Ruby on Rails application ==
@@ -533,6 +543,35 @@ Apache installations on their system.
 To solve this problem, please <<specifying_correct_apache_install,specify the
 correct Apache installation>>, and <<install_passenger,reinstall Passenger>>.
 
+==== I get a "304 Forbidden" error ====
+
+See next subsection.
+
+==== Static assets such as images and stylesheets aren't being displayed ====
+
+Static assets are accelerated, i.e. they are served directly by Apache and do not
+go through the Rails stack. There are two reasons why Apache doesn't serve static
+assets correctly:
+
+1. Your Apache configuration is too strict, and does not allow HTTP clients to
+   access static assets. This can be achieved with an `Allow from all` directive
+   in the correct place. For example:
++
+-----------------------------------------
+<Directory "/webapps/mycook/public">
+   Options FollowSymLinks
+   AllowOverride None
+   Order allow,deny
+   Allow from all
+</Directory>
+-----------------------------------------
++
+See also link:http://groups.google.com/group/phusion-passenger/browse_thread/thread/9699a639a87f85f4/b9d71a03bf2670a5[this discussion].
+
+2. The Apache process doesn't have permission to access your Rails application's folder.
+   Please make sure that the Rails application's folder, as well as all of its parent folders,
+   have the correct permissions and/or ownerships.
+
 ==== The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it ====
 
 If you are sure that the RailsSpawnServer configuration option is set correctly,
@@ -573,7 +612,7 @@ chcon -R -h -t httpd_sys_content_t /path/to/passenger/folder
 
 Once the permissions are fixed, restart Apache.
 
-=== The Rails application reports that it's unable to start because of a permission error ===
+==== The Rails application reports that it's unable to start because of a permission error ====
 
 Please check whether your Rails application's folder has the correct
 permissions. By default, Rails applications are started as the owner of the
@@ -583,6 +622,29 @@ file is owned by root, then the Rails application will be started as 'nobody'
 specified).
 
 Please read <<user_switching,User switching (security)>> for details.
+
+==== My Rails application's log file is not being written to ====
+
+There are a couple things that you should be aware of:
+
+- By default, Passenger runs Rails applications in 'production' mode, so please
+  be sure to check 'production.log' instead of 'development.log'. See
+  <<RailsEnv,RailsEnv>> for configuration.
+- By default, Passenger runs Rails applications as the owner of 'environment.rb'.
+  So the log file can only be written to if that user has write permission to the
+  log file. Please 'chmod' or 'chown' your log file accordingly.
++
+See <<User_switching,User switching (security)>> for details.
+
+If you're using a RedHat-derived Linux distribution (such as Fedora or CentOS)
+then it is link:http://code.google.com/p/phusion-passenger/issues/detail?id=4[possible
+that SELinux is interfering]. RedHat's SELinux policy only allows Apache to read/write
+directories that have the 'httpd_sys_content_t' security context. Please run the
+following command to give your Rails application folder that context:
+
+-----------------------------------------------------------
+chcon -R -h -t httpd_sys_content_t /path/to/your/rails/app
+-----------------------------------------------------------
 
 
 == Tips and notes ==
