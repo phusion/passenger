@@ -11,6 +11,7 @@ require 'passenger/platform_info'
 include PlatformInfo
 
 # TODO: test the 'RailsUserSwitching' and 'RailsDefaultUser' option.
+# TODO: test custom page caching directory
 
 shared_examples_for "MyCook(tm) beta" do
 	it "should be possible to fetch static assets" do
