@@ -351,9 +351,12 @@ public:
 		} else if (!verifyRailsDir(railsDir)) {
 			ap_set_content_type(r, "text/html; charset=UTF-8");
 			ap_rputs("<h1>Passenger error #2</h1>\n", r);
-			ap_rputs("Passenger thinks that the Rails application's \"public\" directory is \"", r);
+			ap_rputs("Passenger thought that the Rails application's \"public\" directory is \"", r);
 			ap_rputs(ap_escape_html(r->pool, railsDir.c_str()), r);
-			ap_rputs("\", but it doesn't seem to be valid.", r);
+			ap_rputs("\". But upon further inspection, it doesn't seem to be a valid Rails ", r);
+			ap_rputs("\"public\" folder. It is possible that Apache doesn't have read ", r);
+			ap_rputs("permissions to your Rails application's folder. Please check your ", r);
+			ap_rputs("file permissions.", r);
 			return OK;
 		}
 		
