@@ -118,9 +118,12 @@ subdir 'ext/apache2' do
 	apxs_objects = APACHE2::OBJECTS.keys.join(',')
 
 	desc "Build mod_passenger Apache 2 module"
-	task :apache2 => ['mod_passenger.so', :native_support]
+	task :apache2 => ['mod_passenger.so', 'ApplicationPoolServerExecutable', :native_support]
 	
-	file 'mod_passenger.so' => ['../boost/src/libboost_thread.a', 'mod_passenger.o'] + APACHE2::OBJECTS.keys do
+	file 'mod_passenger.so' => [
+		'../boost/src/libboost_thread.a',
+		'mod_passenger.o'
+	] + APACHE2::OBJECTS.keys do
 		# apxs totally sucks. We couldn't get it working correctly
 		# on MacOS X (it had various problems with building universal
 		# binaries), so we decided to ditch it and build/install the
@@ -132,6 +135,19 @@ subdir 'ext/apache2' do
 		create_shared_library 'mod_passenger.so',
 			APACHE2::OBJECTS.keys.join(' ') << ' mod_passenger.o',
 			linkflags
+	end
+	
+	file 'ApplicationPoolServerExecutable' => [
+		'../boost/src/libboost_thread.a',
+		'ApplicationPoolServerExecutable.cpp',
+		'ApplicationPool.h',
+		'StandardApplicationPool.h',
+		'Utils.o',
+		'Logging.o'
+	] do
+		create_executable "ApplicationPoolServerExecutable",
+			'ApplicationPoolServerExecutable.cpp Utils.o Logging.o',
+			"#{LDFLAGS} ../boost/src/libboost_thread.a -lpthread"
 	end
 	
 	desc "Install mod_passenger Apache 2 module"
@@ -212,7 +228,11 @@ subdir 'test' do
 	task :test => [:'test:apache2', :'test:ruby', :'test:integration']
 	
 	desc "Run unit tests for the Apache 2 module"
-	task 'test:apache2' => ['Apache2ModuleTests', :native_support] do
+	task 'test:apache2' => [
+		'Apache2ModuleTests',
+		'../ext/apache2/ApplicationPoolServerExecutable',
+		:native_support
+	] do
 		sh "./Apache2ModuleTests"
 	end
 	
