@@ -182,6 +182,9 @@ protected
 			lower_privilege! if @lower_privilege
 			preload_application
 		rescue StandardError, ScriptError, NoMemoryError => e
+			if ENV['TESTING_PASSENGER'] == '1'
+				print_exception(self.class.to_s, e)
+			end
 			client.write('exception')
 			client.write_scalar(marshal_exception(e))
 			return
@@ -232,7 +235,7 @@ private
 			Rails::Initializer.run(:set_load_path)
 		end
 		require 'config/environment'
-		if ActionController::Base.page_cache_directory.empty?
+		if ActionController::Base.page_cache_directory.blank?
 			ActionController::Base.page_cache_directory = "#{RAILS_ROOT}/public"
 		end
 		if defined?(ActionController::Dispatcher) \
@@ -279,6 +282,13 @@ private
 		$0 = "Rails: #{@app_root}"
 		reader, writer = IO.pipe
 		begin
+			# Re-establish connection if a connection was established
+			# in environment.rb. This prevents us from concurrently
+			# accessing the same MySQL connection handle.
+			if defined?(::ActiveRecord::Base) && ::ActiveRecord::Base.connected?
+				::ActiveRecord::Base.establish_connection
+			end
+			
 			handler = RequestHandler.new(reader)
 			client.write(Process.pid, handler.socket_name,
 				handler.using_abstract_namespace?)

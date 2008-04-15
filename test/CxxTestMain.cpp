@@ -14,6 +14,7 @@ int main() {
 	tut::runner.get().set_callback(&reporter);
 	signal(SIGPIPE, SIG_IGN);
 	setenv("RAILS_ENV", "production", 1);
+	setenv("TESTING_PASSENGER", "1", 1);
 	try {
 		tut::runner.get().run_tests();
 	} catch (const std::exception &ex) {
