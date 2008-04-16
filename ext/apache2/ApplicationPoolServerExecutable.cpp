@@ -334,6 +334,7 @@ Server::start() {
 		}
 		client->start(p.first);
 	}
+	return 0;
 }
 
 int
