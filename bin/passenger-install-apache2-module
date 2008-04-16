@@ -27,10 +27,11 @@ ENV["PATH"] += ":/usr/sbin:/sbin:/usr/local/sbin"
 require 'passenger/platform_info'
 require 'passenger/dependencies'
 require 'passenger/console_text_template'
-include Passenger
 include PlatformInfo
 
 class Installer
+	include Passenger
+	
 	PASSENGER_WEBSITE = "http://www.modrails.com/"
 	PHUSION_WEBSITE = "www.phusion.nl"
 	USERS_GUIDE = "#{PASSENGER_ROOT}/doc/Users guide.html"
