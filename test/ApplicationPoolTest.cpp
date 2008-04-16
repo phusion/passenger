@@ -5,9 +5,6 @@
 #include <cstdlib>
 #include <cerrno>
 #include <signal.h>
-#include <boost/thread.hpp>
-
-using namespace boost;
 
 /**
  * This file is used as a template to test the different ApplicationPool implementations.

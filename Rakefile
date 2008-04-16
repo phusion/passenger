@@ -106,7 +106,7 @@ class APACHE2
 		'Configuration.o' => %w(Configuration.cpp Configuration.h),
 		'Hooks.o' => %w(Hooks.cpp Hooks.h
 				Configuration.h ApplicationPool.h StandardApplicationPool.h
-				ApplicationPoolClientServer.h
+				ApplicationPoolServer.h
 				SpawnManager.h Exceptions.h Application.h MessageChannel.h
 				Utils.h),
 		'Utils.o' => %w(Utils.cpp Utils.h),
@@ -185,7 +185,8 @@ subdir 'ext/apache2' do
 	
 	desc "Remove generated files for mod_passenger Apache 2 module"
 	task 'apache2:clean' do
-		files = [APACHE2::OBJECTS.keys, %w(mod_passenger.o mod_passenger.so)]
+		files = [APACHE2::OBJECTS.keys, %w(mod_passenger.o mod_passenger.so
+			ApplicationPoolServerExecutable)]
 		sh("rm", "-rf", *files.flatten)
 	end
 end
@@ -204,13 +205,11 @@ class TEST
 			../ext/apache2/SpawnManager.h
 			../ext/apache2/Application.h),
 		'ApplicationPoolServerTest.o' => %w(ApplicationPoolServerTest.cpp
-			../ext/apache2/StandardApplicationPool.h
-			../ext/apache2/ApplicationPoolClientServer.h),
+			../ext/apache2/ApplicationPoolServer.h),
 		'ApplicationPoolServer_ApplicationPoolTest.o' => %w(ApplicationPoolServer_ApplicationPoolTest.cpp
 			ApplicationPoolTest.cpp
-			../ext/apache2/ApplicationPoolClientServer.h
+			../ext/apache2/ApplicationPoolServer.h
 			../ext/apache2/ApplicationPool.h
-			../ext/apache2/StandardApplicationPool.h
 			../ext/apache2/SpawnManager.h
 			../ext/apache2/Application.h),
 		'StandardApplicationPoolTest.o' => %w(StandardApplicationPoolTest.cpp
@@ -237,7 +236,11 @@ subdir 'test' do
 	end
 	
 	desc "Run unit tests for the Apache 2 module in Valgrind"
-	task 'test:valgrind' => ['Apache2ModuleTests', :native_support] do
+	task 'test:valgrind' => [
+		'Apache2ModuleTests',
+		'../ext/apache2/ApplicationPoolServerExecutable',
+		:native_support
+	] do
 		sh "valgrind #{ENV['ARGS']} ./Apache2ModuleTests"
 	end
 	

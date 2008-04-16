@@ -27,6 +27,8 @@
 #include <apr_strings.h>
 #include <apr_lib.h>
 
+#include <boost/thread.hpp>
+
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <exception>
@@ -36,7 +38,7 @@
 #include "Configuration.h"
 #include "Utils.h"
 #include "Logging.h"
-#include "ApplicationPoolClientServer.h"
+#include "ApplicationPoolServer.h"
 #include "MessageChannel.h"
 
 using namespace std;

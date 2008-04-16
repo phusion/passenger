@@ -1,5 +1,5 @@
 #include "tut.h"
-#include "ApplicationPoolClientServer.h"
+#include "ApplicationPoolServer.h"
 #include "Utils.h"
 #include <cstring>
 #include <unistd.h>
@@ -34,7 +34,8 @@ namespace tut {
 				initialFileDescriptors = countOpenFileDescriptors();
 				firstRun = false;
 			}
-			server = ptr(new ApplicationPoolServer("stub/spawn_server.rb"));
+			server = ptr(new ApplicationPoolServer("../ext/apache2/ApplicationPoolServerExecutable",
+				"stub/spawn_server.rb"));
 		}
 		
 		
