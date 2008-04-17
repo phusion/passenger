@@ -45,7 +45,7 @@ namespace tut {
 	DEFINE_TEST_GROUP(ApplicationPoolServerTest);
 
 	TEST_METHOD(1) {
-		// Constructor and destructor should not crash.
+		// Constructor and destructor should not crash or block indefinitely.
 		// (And yes, this test method is intended to be blank.)
 	}
 	

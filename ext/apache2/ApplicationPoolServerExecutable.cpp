@@ -18,6 +18,8 @@
 #ifndef _PASSENGER_APPLICATION_POOL_SERVER_EXECUTABLE_H_
 #define _PASSENGER_APPLICATION_POOL_SERVER_EXECUTABLE_H_
 
+#include <boost/shared_ptr.hpp>
+#include <boost/weak_ptr.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread/thread.hpp>
 
@@ -75,8 +77,18 @@ public:
 		} while (ret == -1 && errno == EINTR);
 		
 		// Wait for all clients to disconnect.
-		mutex::scoped_lock l(lock);
-		clients.clear();
+		set<ClientPtr> clientsCopy;
+		{
+			/* If we clear _clients_ directly, then it may result in a deadlock.
+			 * So we make a copy of the set inside a critical section in order to increase
+			 * the reference counts, and then we release all references outside the critical
+			 * section.
+			 */
+			mutex::scoped_lock l(lock);
+			clientsCopy = clients;
+			clients.clear();
+		}
+		clientsCopy.clear();
 	}
 	
 	int start(); // Will be defined later, because Client depends on Server's interface.
@@ -199,7 +211,7 @@ private:
 	/**
 	 * The entry point of the thread that handles the client connection.
 	 */
-	void threadMain(const set<ClientPtr>::iterator &it) {
+	void threadMain(const weak_ptr<Client> self) {
 		try {
 			vector<string> args;
 			while (true) {
@@ -237,7 +249,10 @@ private:
 		}
 		
 		mutex::scoped_lock l(server.lock);
-		server.clients.erase(it);
+		ClientPtr myself(self.lock());
+		if (myself != NULL) {
+			server.clients.erase(myself);
+		}
 	}
 
 public:
@@ -265,8 +280,8 @@ public:
 	 *        the <tt>clients</tt> set once the client has closed the
 	 *        connection.
 	 */
-	void start(const set<ClientPtr>::iterator &it) {
-		thr = new thread(bind(&Client::threadMain, this, it));
+	void start(const weak_ptr<Client> self) {
+		thr = new thread(bind(&Client::threadMain, this, self));
 	}
 	
 	~Client() {
@@ -330,9 +345,9 @@ Server::start() {
 		pair<set<ClientPtr>::iterator, bool> p;
 		{
 			mutex::scoped_lock l(lock);
-			p = clients.insert(client);
+			clients.insert(client);
 		}
-		client->start(p.first);
+		client->start(client);
 	}
 	return 0;
 }

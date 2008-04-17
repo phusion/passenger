@@ -212,6 +212,8 @@ private:
 	};
 	
 	
+	static const int SERVER_SOCKET_FD = 3;
+	
 	string m_serverExecutable;
 	string m_spawnServerCommand;
 	string m_logFile;
@@ -235,11 +237,17 @@ private:
 			dup2(fds[0], 3);
 			
 			// Close all unnecessary file descriptors
-			for (long i = sysconf(_SC_OPEN_MAX) - 1; i > 2; i--) {
+			for (long i = sysconf(_SC_OPEN_MAX) - 1; i > SERVER_SOCKET_FD; i--) {
 				close(i);
 			}
 			
-			execlp(m_serverExecutable.c_str(),
+			execlp(
+				#if 0
+					"valgrind",
+					"valgrind",
+				#else
+					m_serverExecutable.c_str(),
+				#endif
 				m_serverExecutable.c_str(),
 				m_spawnServerCommand.c_str(),
 				m_logFile.c_str(),
