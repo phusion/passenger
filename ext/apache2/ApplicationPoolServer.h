@@ -247,7 +247,9 @@ private:
 				m_rubyCommand.c_str(),
 				m_user.c_str(),
 				NULL);
-			fprintf(stderr, "*** Cannot ");
+			int e = errno;
+			fprintf(stderr, "*** Passenger ERROR: Cannot execute %s: %s (%d)\n",
+				m_serverExecutable.c_str(), strerror(e), e);
 			fflush(stderr);
 			_exit(1);
 		} else if (pid == -1) { // Error.
@@ -294,6 +296,7 @@ public:
 	             const string &rubyCommand = "ruby",
 	             const string &user = "")
 	: m_serverExecutable(serverExecutable),
+	  m_spawnServerCommand(spawnServerCommand),
 	  m_logFile(logFile),
 	  m_environment(environment),
 	  m_rubyCommand(rubyCommand),

@@ -34,7 +34,8 @@ namespace tut {
 				initialFileDescriptors = countOpenFileDescriptors();
 				firstRun = false;
 			}
-			server = ptr(new ApplicationPoolServer("../ext/apache2/ApplicationPoolServerExecutable",
+			server = ptr(new ApplicationPoolServer(
+				"../ext/apache2/ApplicationPoolServerExecutable",
 				"stub/spawn_server.rb"));
 		}
 		

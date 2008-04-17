@@ -208,8 +208,8 @@ private:
 				"                                                             ",
 				NULL);
 			int e = errno;
-			fprintf(stderr, "*** Passenger ERROR: Could not start the spawn server: %s: %s\n",
-				rubyCommand.c_str(), strerror(e));
+			fprintf(stderr, "*** Passenger ERROR: Could not start the spawn server: %s: %s (%d)\n",
+				rubyCommand.c_str(), strerror(e), e);
 			fflush(stderr);
 			_exit(1);
 		} else if (pid == -1) {

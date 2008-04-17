@@ -339,7 +339,7 @@ Server::start() {
 
 int
 main(int argc, char *argv[]) {
-	Server server(SERVER_SOCKET_FD, argv[1], argv[2], argv[2], argv[3], argv[5]);
+	Server server(SERVER_SOCKET_FD, argv[1], argv[2], argv[3], argv[4], argv[5]);
 	return server.start();
 }
 
