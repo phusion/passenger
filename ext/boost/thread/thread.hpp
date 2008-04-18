@@ -36,7 +36,7 @@ class BOOST_THREAD_DECL thread : private noncopyable
 {
 public:
     thread();
-    explicit thread(const function0<void>& threadfunc);
+    explicit thread(const function0<void>& threadfunc, unsigned int stack_size = 0);
     ~thread();
 
     bool operator==(const thread& other) const;

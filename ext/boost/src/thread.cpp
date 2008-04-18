@@ -142,7 +142,7 @@ thread::thread()
 #endif
 }
 
-thread::thread(const function0<void>& threadfunc)
+thread::thread(const function0<void>& threadfunc, unsigned int stack_size)
     : m_joinable(true)
 {
     thread_param param(threadfunc);
@@ -152,10 +152,24 @@ thread::thread(const function0<void>& threadfunc)
     if (!m_thread)
         throw thread_resource_error();
 #elif defined(BOOST_HAS_PTHREADS)
-    int res = 0;
-    res = pthread_create(&m_thread, 0, &thread_proxy, &param);
+    int res = 0, e;
+    pthread_attr_t attr;
+    
+    if (pthread_attr_init(&attr) != 0) {
+        throw thread_resource_error("Cannot initialize thread attributes", e);
+    }
+    if (stack_size > 0) {
+        if (pthread_attr_setstacksize(&attr, stack_size) != 0) {
+            e = errno;
+            pthread_attr_destroy(&attr);
+            throw thread_resource_error("Cannot set thread stack size attribute", e);
+        }
+    }
+    res = pthread_create(&m_thread, &attr, &thread_proxy, &param);
+    e = errno;
+    pthread_attr_destroy(&attr);
     if (res != 0)
-        throw thread_resource_error("Cannot create a thread", errno);
+        throw thread_resource_error("Cannot create a thread", e);
 #elif defined(BOOST_HAS_MPTASKS)
     threads::mac::detail::thread_init();
     threads::mac::detail::create_singletons();
