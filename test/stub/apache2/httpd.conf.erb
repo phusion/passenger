@@ -26,7 +26,7 @@ Listen 127.0.0.1:64506
 <% end %>
 LoadModule passenger_module "<%= @mod_passenger %>"
 
-RailsSpawnServer "<%= @spawn_server %>"
+PassengerRoot "<%= @passenger_root %>"
 RailsRuby "<%= RUBY %>"
 RailsEnv production
 

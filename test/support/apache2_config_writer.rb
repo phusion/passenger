@@ -8,7 +8,7 @@ class Apache2ConfigWriter
 	def initialize
 		@stub_dir = File.expand_path(File.dirname(__FILE__) + "/../stub")
 		@server_root = "#{@stub_dir}/apache2"
-		@spawn_server = File.expand_path(File.dirname(__FILE__) + "/../../bin/passenger-spawn-server")
+		@passenger_root = File.expand_path(File.dirname(__FILE__) + "/../..")
 		@modules_dir = `#{APXS2} -q LIBEXECDIR`.strip
 		@modules = `#{HTTPD} -l`.split("\n").grep(/\.c$/).map do |line|
 			line.strip
