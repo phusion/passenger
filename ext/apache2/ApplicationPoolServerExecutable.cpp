@@ -283,7 +283,7 @@ public:
 	 *        connection.
 	 */
 	void start(const weak_ptr<Client> self) {
-		thr = new thread(bind(&Client::threadMain, this, self));
+		thr = new thread(bind(&Client::threadMain, this, self), 1024 * 128);
 	}
 	
 	~Client() {
@@ -356,14 +356,6 @@ Server::start() {
 
 int
 main(int argc, char *argv[]) {
-	// Set stack size (also for threads) to 3 MB. Some people have
-	// configured a rediculously large stack size and we don't want
-	// to be bitten by that.
-	struct rlimit limit;
-	limit.rlim_cur = 3 * 1024 * 1024;
-	limit.rlim_max = limit.rlim_cur + 2048;
-	setrlimit(RLIMIT_STACK, &limit);
-	
 	Server server(SERVER_SOCKET_FD, argv[1], argv[2], argv[3], argv[4], argv[5]);
 	return server.start();
 }
