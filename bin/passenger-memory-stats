@@ -35,8 +35,8 @@ class Table
 			end
 		end
 		
-		format_string = max_column_widths.map{ |i| "%-#{i}s" }.join("  ") << "\n"
-		header = sprintf(format_string, *@column_names)
+		format_string = max_column_widths.map{ |i| "%-#{i}s" }.join("  ")
+		header = sprintf(format_string, *@column_names).rstrip << "\n"
 		if title
 			free_space = header.size - title.size - 2
 			if free_space <= 0
@@ -53,7 +53,7 @@ class Table
 		end
 		result << ("-" * header.size) << "\n"
 		@rows.each do |row|
-			result << sprintf(format_string, *row)
+			result << sprintf(format_string, *row).rstrip << "\n"
 		end
 		result
 	end
