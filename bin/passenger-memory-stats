@@ -2,6 +2,63 @@
 $LOAD_PATH.unshift("#{File.dirname(__FILE__)}/../lib")
 require 'passenger/platform_info'
 
+# Container for tabular data.
+class Table
+	def initialize(column_names)
+		@column_names = column_names
+		@rows = []
+	end
+	
+	def add_row(values)
+		@rows << values.to_a
+	end
+	
+	def add_rows(list_of_rows)
+		list_of_rows.each do |row|
+			add_row(row)
+		end
+	end
+	
+	def remove_column(name)
+		i = @column_names.index(name)
+		@column_names.delete_at(i)
+		@rows.each do |row|
+			row.delete_at(i)
+		end
+	end
+	
+	def to_s(title = nil)
+		max_column_widths = [1] * @column_names.size
+		(@rows + [@column_names]).each do |row|
+			row.each_with_index do |value, i|
+				max_column_widths[i] = [value.to_s.size, max_column_widths[i]].max
+			end
+		end
+		
+		format_string = max_column_widths.map{ |i| "%-#{i}s" }.join("  ") << "\n"
+		header = sprintf(format_string, *@column_names)
+		if title
+			free_space = header.size - title.size - 2
+			if free_space <= 0
+				left_bar_size = 3
+				right_bar_size = 3
+			else
+				left_bar_size = free_space / 2
+				right_bar_size = free_space - left_bar_size
+			end
+			result = "#{"-" * left_bar_size} #{title} #{"-" * right_bar_size}\n"
+			result << header
+		else
+			result = header.dup
+		end
+		result << ("-" * header.size) << "\n"
+		@rows.each do |row|
+			result << sprintf(format_string, *row)
+		end
+		result
+	end
+end
+
 class MemoryStats
 	class Process
 		attr_accessor :pid
@@ -23,19 +80,18 @@ class MemoryStats
 			end
 		end
 		
-		def print
-			printf "%-6d %-6d %-6d %-9s %-9s %s\n", pid, ppid, threads,
-				vm_size_in_mb, private_dirty_rss_in_mb, name
+		def to_a
+			return [pid, ppid, threads, vm_size_in_mb, private_dirty_rss_in_mb, name]
 		end
 	end
 	
 	def start
 		apache_processes = list_processes(:exe => PlatformInfo::HTTPD)
-		print_process_list_stats(apache_processes)
+		print_process_list("Apache processes", apache_processes)
 		
 		puts
 		passenger_processes = list_processes(:match => /(^Passenger |^Rails:|ApplicationPoolServerExecutable)/)
-		print_process_list_stats(passenger_processes)
+		print_process_list("Passenger processes", passenger_processes, :show_ppid => false)
 		
 		if ::Process.uid != 0 && (apache_processes + passenger_processes).any?{ |p| p.private_dirty_rss.nil? }
 			puts
@@ -101,23 +157,22 @@ private
 		return nil
 	end
 	
-	def print_header
-		puts "PID    PPID   Thrds  VM Size   Private   Name"
-		puts "-" * 79
-	end
-	
-	def print_process_list_stats(processes)
+	def print_process_list(title, processes, options = {})
+		table = Table.new(%w{PID PPID Threads VMSize Private Name})
+		table.add_rows(processes)
+		if options.has_key?(:show_ppid) && !options[:show_ppid]
+			table.remove_column('PPID')
+		end
+		puts table.to_s(title)
+		
 		total_private_dirty_rss = 0
 		some_private_dirty_rss_cannot_be_determined = false
-		
-		print_header
 		processes.each do |p|
 			if p.private_dirty_rss.is_a?(Numeric)
 				total_private_dirty_rss += p.private_dirty_rss
 			else
 				some_private_dirty_rss_cannot_be_determined = true
 			end
-			p.print
 		end
 		puts   "### Processes: #{processes.size}"
 		printf "### Total private dirty RSS: %.2f MB", total_private_dirty_rss / 1024.0
