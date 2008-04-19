@@ -239,7 +239,8 @@ subdir 'test' do
 			" ../ext/apache2/Utils.o" <<
 			" ../ext/apache2/Logging.o"
 		create_executable "Apache2ModuleTests", objects,
-			"#{LDFLAGS} #{APR1_LIBS} ../ext/boost/src/libboost_thread.a -lpthread"
+			"#{LDFLAGS} #{APR1_LIBS} #{MULTI_ARCH_FLAGS} " <<
+			"../ext/boost/src/libboost_thread.a -lpthread"
 	end
 	
 	TEST::AP2_OBJECTS.each_pair do |target, sources|
@@ -333,7 +334,7 @@ end
 
 spec = Gem::Specification.new do |s|
 	s.platform = Gem::Platform::RUBY
-	s.homepage = "http://passenger.phusion.nl/"
+	s.homepage = "http://www.modrails.com/"
 	s.summary = "Apache module for Ruby on Rails support."
 	s.name = "passenger"
 	s.version = PACKAGE_VERSION
@@ -344,8 +345,6 @@ spec = Gem::Specification.new do |s|
 	s.require_path = "lib"
 	s.add_dependency 'rake', '>= 0.8.1'
 	s.add_dependency 'fastthread', '>= 1.0.1'
-	s.add_dependency 'rspec', '>= 1.1.2'
-	s.add_dependency 'rails', '>= 1.2.0'
 	s.extensions << 'ext/passenger/extconf.rb'
 	s.files = FileList[
 		'Rakefile',
