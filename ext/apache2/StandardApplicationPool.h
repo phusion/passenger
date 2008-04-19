@@ -187,19 +187,9 @@ private:
 		bool result;
 		if (stat(restartFile.c_str(), &buf) == 0) {
 			int ret;
-			#ifdef TESTING_APPLICATION_POOL
-				if (getenv("nextRestartTxtDeletionShouldFail") != NULL) {
-					unsetenv("nextRestartTxtDeletionShouldFail");
-					ret = -1;
-					errno = EACCES;
-				} else {
-					ret = unlink(restartFile.c_str());
-				}
-			#else
-				do {
-					ret = unlink(restartFile.c_str());
-				} while (ret == -1 && errno == EAGAIN);
-			#endif
+			do {
+				ret = unlink(restartFile.c_str());
+			} while (ret == -1 && errno == EAGAIN);
 			if (ret == 0 || errno == ENOENT) {
 				restartFileTimes.erase(appRoot);
 				result = true;
