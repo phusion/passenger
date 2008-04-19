@@ -44,10 +44,12 @@ link:http://groups.google.com/group/phusion-passenger[join our discussion list]
 if it doesn't.
 
 
-== Generic installation instructions ==
+== Installing Passenger ==
+
+=== Generic installation instructions ===
 
 [[install_passenger]]
-=== Overview of download and installation methods ===
+==== Overview of download and installation methods ====
 
 There are two ways to install Passenger:
 
@@ -66,7 +68,7 @@ as 'root'. If the installer fails because of permission errors, it will tell
 you.
 
 [[specifying_correct_apache_install]]
-=== Specifying the correct Apache installation ===
+==== Specifying the correct Apache installation ====
 
 If your system has multiple Apache installations (this is likely the case on
 MacOS X), then you will need to tell the Passenger installer which one to use.
@@ -86,7 +88,7 @@ NOTE: On some systems, the `apxs` program might be called `apxs2`, and it might
 be located in the `sbin` folder instead of the `bin` folder.
 
 [[specifying_ruby_installation]]
-=== Specifying the correct Ruby installation ===
+==== Specifying the correct Ruby installation ====
 
 If your system has multiple Ruby installations (this is likely the case on
 MacOS X), then you will need to tell the Passenger installer which one to use.
@@ -107,7 +109,7 @@ export PATH=/opt/myruby/bin:$PATH
 ----------------------------------
 
 
-=== Installing via the gem ===
+==== Installing via the gem ====
 
 Please install the gem and then run the Passenger installer, by typing the
 following commands:
@@ -117,7 +119,7 @@ passenger-install-apache2-module
 ------------------------------------------------------
 Please follow the instructions given by the installer.
 
-=== Installing via the source tarball ===
+==== Installing via the source tarball ====
 
 Extract the tarball to whatever location you prefer. The Passenger files
 are to reside in that location permanently. For example, if you would like
@@ -137,13 +139,17 @@ IMPORTANT: Please do not remove the 'passenger-x.x.x' folder after
 installation. Furthermore, the 'passenger-x.x.x' folder must be accessible by Apache.
 
 
-== Operating system-specific installation instructions ==
+=== Operating system-specific instructions and information ===
 
-=== MacOS X ===
+==== MacOS X ====
 
 Ben Ruebenstein has written an excellent
 link:http://benr75.com/articles/2008/04/12/setup-mod_rails-phusion-mac-os-x-leopard[tutorial
 on installing Phusion Passenger on OS X].
+
+==== Ubuntu Linux ====
+
+Ben Hughes has written an link:http://www.railsgarden.com/2008/04/12/configurating-passenger-mod_rails-on-slicehost-with-ubuntu-710/[article on installing Passenger on Ubuntu].
 
 
 == Deploying a Ruby on Rails application ==
@@ -603,27 +609,22 @@ down by SELinux policies.
 To solve this problem, you must set some permissions on the Passenger files and
 folders, so that Apache can access them.
 
-- If you've installed Passenger via a gem, then you must first find out the
-  location in which RubyGems stores gem files. Type the following command:
+- If you've installed Passenger via a gem, then run this command to determine
+  Passenger's root folder:
 +
 ------------------------------------------------------------------
-gem environment | grep 'INSTALLATION DIRECTORY'
+passenger-config --root
 ------------------------------------------------------------------
 +
-It should show something along the lines of:
+Next, run the following command:
 +
 ------------------------------------------------------------------
-  - INSTALLATION DIRECTORY: /usr/lib/ruby/gems/1.8
+chcon -R -h -t httpd_sys_content_t /path-to-passenger-root
 ------------------------------------------------------------------
 +
-The directory name that you see in the output is the RubyGems gem folder.
-Next, we'll fix the Passenger folder permissions as follows:
-+
-------------------------------------------------------------------
-cd /usr/lib/ruby/gems/1.8     # Replace this with whatever your gem folder is.
-cd gems
-chcon -R -h -t httpd_sys_content_t passenger-*
-------------------------------------------------------------------
+where '/path-to-passenger-root' should be replaced with whatever
+`passenger-config --root` printed.
+
 - If you've installed Passenger via the source tarball, then run the following
   command:
 +
@@ -666,6 +667,41 @@ following command to give your Rails application folder that context:
 -----------------------------------------------------------
 chcon -R -h -t httpd_sys_content_t /path/to/your/rails/app
 -----------------------------------------------------------
+
+[[conflicting_apache_modules]]
+=== Conflicting Apache modules ===
+
+==== mod_rewrite and mod_alias ====
+
+Passenger conflicts with 'mod_rewrite' and 'mod_alias'. Those modules may be
+installed and loaded together with 'mod_passenger', and they will work fine
+outside virtual hosts that contain a Rails application, but we recommend you
+not to use their features inside virtual hosts that contain a Rails
+application.
+
+By default, Passenger will override mod_rewrite rules on Rails hosts. This is
+because the default .htaccess, as provided by Ruby on Rails, redirects all
+requests to `dispatch.cgi' using mod_rewrite. This is a CGI application which
+loads the entire Ruby on Rails framework for every request, and thus is very
+slow. If we do not override mod_rewrite, then Ruby on Rails apps will be slow
+on Passenger by default -- but we want a good out-of-the-box experience.
+
+Furthermore, the primary reason why people use mod_rewrite with Rails
+applications, is to accelerate page caching. Passenger supports page caching
+out-of-the-box, without mod_rewrite.
+
+It is not fully understood how mod_alias conflicts with Passenger, but we
+recommend you not to use it on Rails virtual hosts. mod_alias rules can result
+in surprising problems.
+
+If you really want to use mod_rewrite on Rails virtual hosts, then please set
+the <<RailsAllowModRewrite,RailsAllowModRewrite>> configuration option. But
+please note that you will have to delete Rails applications' default .htaccess
+file, or add rewrite rules to negate its effects.
+
+==== mod_userdir ====
+
+'mod_userdir' is not compatible with Phusion Passenger at the moment.
 
 
 == Tips and notes ==
@@ -745,35 +781,6 @@ other. Passenger will automatically make use of the correct version.
 
 Passenger does not provide X-Sendfile support by itself. Please install
 link:http://tn123.ath.cx/mod_xsendfile/[mod_xsendfile] for X-Sendfile support.
-
-[[conflicting_apache_modules]]
-=== Conflicting Apache modules ===
-
-Passenger conflicts with 'mod_rewrite' and 'mod_alias'. Those modules may be
-installed and loaded together with 'mod_passenger', and they will work fine
-outside virtual hosts that contain a Rails application, but we recommend you
-not to use their features inside virtual hosts that contain a Rails
-application.
-
-By default, Passenger will override mod_rewrite rules on Rails hosts. This is
-because the default .htaccess, as provided by Ruby on Rails, redirects all
-requests to `dispatch.cgi' using mod_rewrite. This is a CGI application which
-loads the entire Ruby on Rails framework for every request, and thus is very
-slow. If we do not override mod_rewrite, then Ruby on Rails apps will be slow
-on Passenger by default -- but we want a good out-of-the-box experience.
-
-Furthermore, the primary reason why people use mod_rewrite with Rails
-applications, is to accelerate page caching. Passenger supports page caching
-out-of-the-box, without mod_rewrite.
-
-It is not fully understood how mod_alias conflicts with Passenger, but we
-recommend you not to use it on Rails virtual hosts. mod_alias rules can result
-in surprising problems.
-
-If you really want to use mod_rewrite on Rails virtual hosts, then please set
-the <<RailsAllowModRewrite,RailsAllowModRewrite>> configuration option. But
-please note that you will have to delete Rails applications' default .htaccess
-file, or add rewrite rules to negate its effects.
 
 
 == Appendix A: About this document ==
