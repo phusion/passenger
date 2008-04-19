@@ -121,26 +121,35 @@ private
 	end
 	
 	def self.determine_apr1_info
-		flags = nil
-		libs = nil
-		if find_command('pkg-config')
-			flags = `pkg-config --cflags apr-1 apr-util-1 2>/dev/null`.strip
-			libs = `pkg-config --libs apr-1 apr-util-1 2>/dev/null`.strip
-		end
-		if (flags.nil? || flags.empty?) && (libs.nil? || libs.empty?)
-			apr_config = find_command('apr-1-config')
-			if apr_config.nil?
-				apr_config = find_command('apr-config')
-			end
-			if apr_config.nil?
-				return nil
-			else
-				flags = `#{apr_config} --cppflags --includes`.strip
-				libs = `#{apr_config} --link-ld`.strip
+		# If we're on MacOS X, and we're compiling against the
+		# default provided Apache, then we'll want to query the
+		# correct 'apr-1-config' command. However, that command
+		# is not in $PATH by default. Instead, it lives in
+		# /Developer/SDKs/MacOSX*sdk/usr/bin.
+		# So we forcefully add this path to $PATH, if we notice
+		# that we're compiling against the default Apache.
+		if RUBY_PLATFORM =~ /darwin/ && HTTPD == "/usr/sbin/httpd"
+			sdk_dir = Dir["/Developer/SDKs/MacOSX*sdk"].sort.last
+			if sdk_dir
+				sdk_bindir = "#{sdk_dir}/usr/bin"
+				if !ENV['PATH'].split(':').include?(sdk_bindir)
+					ENV['PATH'] = "#{sdk_bindir}:#{ENV['PATH']}"
+				end
 			end
 		end
-		flags.gsub!(/-O\d? /, '')
-		return [flags, libs]
+
+		apr_config = find_command('apr-1-config')
+		if apr_config.nil?
+			apr_config = find_command('apr-config')
+		end
+		if apr_config.nil?
+			return nil
+		else
+			flags = `#{apr_config} --cppflags --includes`.strip
+			libs = `#{apr_config} --link-ld`.strip
+			flags.gsub!(/-O\d? /, '')
+			return [flags, libs]
+		end
 	end
 	
 	def self.determine_multi_arch_flags

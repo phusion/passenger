@@ -259,6 +259,10 @@ module Dependencies # :nodoc: all
 			when :gentoo
 				dep.install_command = "emerge -av apr"
 			end
+		elsif RUBY_PLATFORM =~ /darwin/
+			dep.install_instructions = "Please install Apache from MacPorts, which will " <<
+				"provide APR automatically. <b>Or</b>, if you're installing against MacOS X's " <<
+				"default provided Apache, then please install the OS X Developer SDK."
 		end
 		dep.website = "http://httpd.apache.org/"
 		dep.website_comments = "APR is an integrated part of Apache."
