@@ -55,7 +55,6 @@ class Installer
 		warn_about_broken_apache_on_osx
 		check_whether_apache_uses_prefork_mpm
 		check_write_permission_to_passenger_root || exit(1)
-		check_write_permission_to_apache_modules_dir || exit(1)
 		if install_apache2_module
 			show_apache2_config_snippets
 			show_deployment_example
@@ -170,27 +169,6 @@ private
 		return false
 	ensure
 		File.unlink("__test__.txt") rescue nil
-	end
-	
-	def check_write_permission_to_apache_modules_dir
-		install_dir = `#{APXS2} -q LIBEXECDIR`.strip
-		begin
-			File.new("#{install_dir}/__test__.txt", "w").close
-			return true
-		rescue
-			puts
-			line
-			if Process.uid == 0
-				render_template 'no_write_permission_to_passenger_root',
-					:path => install_dir
-			else
-				render_template 'run_installer_as_root',
-					:path => install_dir
-			end
-			return false
-		ensure
-			File.unlink("#{install_dir}/__test__.txt") rescue nil
-		end
 	end
 	
 	def install_apache2_module
