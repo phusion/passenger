@@ -52,7 +52,6 @@ class Installer
 		Dir.chdir(PASSENGER_ROOT)
 		show_welcome_screen
 		check_dependencies || exit(1)
-		warn_about_broken_apache_on_osx
 		check_whether_apache_uses_prefork_mpm
 		check_write_permission_to_passenger_root || exit(1)
 		if install_apache2_module
@@ -119,13 +118,6 @@ private
 			end
 			return false
 		end
-	end
-	
-	def warn_about_broken_apache_on_osx
-		return unless RUBY_PLATFORM =~ /darwin/ && APXS2 == "/usr/sbin/apxs"
-		line
-		render_template 'osx_broken_apache_warning'
-		wait
 	end
 	
 	def check_whether_apache_uses_prefork_mpm
