@@ -1,0 +1,22 @@
+#!/usr/bin/env ruby
+PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) << "/..")
+
+def help
+	puts "Tool for showing Passenger configuration information."
+	puts "Usage: passenger-config <OPTIONS>"
+	puts
+	puts "Options:"
+	puts "  --root      Show Passenger's root directory."
+	puts "  --version   Show Passenger's version number."
+end
+
+case ARGV[0]
+when "--root"
+	puts PASSENGER_ROOT
+when "--version"
+	File.read("#{PASSENGER_ROOT}/Rakefile") =~ /^PACKAGE_VERSION = "(.*)"/
+	puts $1
+else
+	help
+	exit 1
+end

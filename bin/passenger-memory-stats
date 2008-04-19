@@ -30,12 +30,18 @@ class MemoryStats
 	end
 	
 	def start
-		processes = list_processes(:exe => PlatformInfo::HTTPD)
-		print_process_list_stats(processes)
+		apache_processes = list_processes(:exe => PlatformInfo::HTTPD)
+		print_process_list_stats(apache_processes)
 		
 		puts
-		processes = list_processes(:match => /(^Passenger |^Rails:|ApplicationPoolServerExecutable)/)
-		print_process_list_stats(processes)
+		passenger_processes = list_processes(:match => /(^Passenger |^Rails:|ApplicationPoolServerExecutable)/)
+		print_process_list_stats(passenger_processes)
+		
+		if ::Process.uid != 0 && (apache_processes + passenger_processes).any?{ |p| p.private_dirty_rss.nil? }
+			puts
+			puts "*** WARNING: Please run this tool as root. Otherwise the " <<
+				"private dirty RSS of processes cannot be determined."
+		end
 	end
 	
 	# Returns a list of Process objects that match the given search criteria.
