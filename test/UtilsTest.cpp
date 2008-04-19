@@ -91,10 +91,21 @@ namespace tut {
 	}
 	
 	TEST_METHOD(10) {
+		// It should find in $PATH.
 		char cwd[PATH_MAX];
 		string binpath(getcwd(cwd, sizeof(cwd)));
 		binpath.append("/../bin");
 		setenv("PATH", binpath.c_str(), 1);
 		ensure("Spawn server is found.", !findSpawnServer().empty());
+	}
+	
+	TEST_METHOD(11) {
+		// It should use _passengerRoot_.
+		ensure_equals(findSpawnServer("/foo"), "/foo/bin/passenger-spawn-server");
+	}
+	
+	TEST_METHOD(12) {
+		// It ignore trailing slash in _passengerRoot_.
+		ensure_equals(findSpawnServer("/foo/"), "/foo/bin/passenger-spawn-server");
 	}
 }

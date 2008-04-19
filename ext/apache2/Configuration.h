@@ -61,8 +61,8 @@
 			 * Rails application should operate. */
 			const char *env;
 			
-			/** The filename of the spawn server to use. */
-			const char *spawnServer;
+			/** The Passenger root folder. */
+			const char *root;
 			
 			/** The maximum number of simultaneously alive Rails application
 			 * instances. */

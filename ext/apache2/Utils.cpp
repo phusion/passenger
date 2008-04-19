@@ -19,6 +19,7 @@
 #include <sys/stat.h>
 #include <cstdlib>
 #include <climits>
+#include <cassert>
 #include <unistd.h>
 #include "Utils.h"
 
@@ -54,24 +55,44 @@ bool fileExists(const char *filename) {
 }
 
 string
-findSpawnServer() {
-	const char *path = getenv("PATH");
-	if (path == NULL) {
-		return "";
-	}
+findSpawnServer(const char *passengerRoot) {
+	if (passengerRoot != NULL) {
+		string path(passengerRoot);
+		if (path.at(path.size() - 1) != '/') {
+			path.append(1, '/');
+		}
+		path.append("bin/passenger-spawn-server");
+		return path;
+	} else {
+		const char *path = getenv("PATH");
+		if (path == NULL) {
+			return "";
+		}
 	
-	vector<string> paths;
-	split(getenv("PATH"), ':', paths);
-	for (vector<string>::const_iterator it(paths.begin()); it != paths.end(); it++) {
-		if (!it->empty() && (*it).at(0) == '/') {
-			string filename(*it);
-			filename.append("/" SPAWN_SERVER_SCRIPT_NAME);
-			if (fileExists(filename.c_str())) {
-				return filename;
+		vector<string> paths;
+		split(getenv("PATH"), ':', paths);
+		for (vector<string>::const_iterator it(paths.begin()); it != paths.end(); it++) {
+			if (!it->empty() && (*it).at(0) == '/') {
+				string filename(*it);
+				filename.append("/" SPAWN_SERVER_SCRIPT_NAME);
+				if (fileExists(filename.c_str())) {
+					return filename;
+				}
 			}
 		}
+		return "";
 	}
-	return "";
+}
+
+string
+findApplicationPoolServer(const char *passengerRoot) {
+	assert(passengerRoot != NULL);
+	string path(passengerRoot);
+	if (path.at(path.size() - 1) != '/') {
+		path.append(1, '/');
+	}
+	path.append("ext/apache2/ApplicationPoolServerExecutable");
+	return path;
 }
 
 string
