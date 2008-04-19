@@ -120,33 +120,35 @@ private
 		end
 	end
 	
-	def self.determine_apr1_info
+	def self.find_apr_config
 		# If we're on MacOS X, and we're compiling against the
 		# default provided Apache, then we'll want to query the
 		# correct 'apr-1-config' command. However, that command
 		# is not in $PATH by default. Instead, it lives in
 		# /Developer/SDKs/MacOSX*sdk/usr/bin.
-		# So we forcefully add this path to $PATH, if we notice
-		# that we're compiling against the default Apache.
 		if RUBY_PLATFORM =~ /darwin/ && HTTPD == "/usr/sbin/httpd"
 			sdk_dir = Dir["/Developer/SDKs/MacOSX*sdk"].sort.last
 			if sdk_dir
-				sdk_bindir = "#{sdk_dir}/usr/bin"
-				if !ENV['PATH'].split(':').include?(sdk_bindir)
-					ENV['PATH'] = "#{sdk_bindir}:#{ENV['PATH']}"
+				apr_config = "#{sdk_dir}/usr/bin/apr-1-config"
+				if !File.executable?(apr_config)
+					apr_config = nil
 				end
 			end
+		else
+			apr_config = find_command('apr-1-config')
+			if apr_config.nil?
+				apr_config = find_command('apr-config')
+			end
 		end
-
-		apr_config = find_command('apr-1-config')
-		if apr_config.nil?
-			apr_config = find_command('apr-config')
-		end
-		if apr_config.nil?
+		return apr_config
+	end
+	
+	def self.determine_apr_info
+		if APR_CONFIG.nil?
 			return nil
 		else
-			flags = `#{apr_config} --cppflags --includes`.strip
-			libs = `#{apr_config} --link-ld`.strip
+			flags = `#{APR_CONFIG} --cppflags --includes`.strip
+			libs = `#{APR_CONFIG} --link-ld`.strip
 			flags.gsub!(/-O\d? /, '')
 			return [flags, libs]
 		end
@@ -240,11 +242,13 @@ public
 	APACHE2CTL = find_apache2ctl
 	# The absolute path to the Apache binary (that is, 'httpd', 'httpd2', 'apache' or 'apache2').
 	HTTPD = find_httpd
+	# The absolute path to the 'apr-config' or 'apr-1-config' executable.
+	APR_CONFIG = find_apr_config
 	
 	# The C compiler flags that are necessary to compile an Apache module.
 	APXS2_FLAGS = determine_apxs2_flags
 	# The C compiler flags that are necessary for programs that use APR.
-	APR1_FLAGS, APR1_LIBS = determine_apr1_info
+	APR_FLAGS, APR_LIBS = determine_apr_info
 	
 	# The C compiler flags that are necessary for building binaries in the same architecture(s) as Apache.
 	MULTI_ARCH_FLAGS = determine_multi_arch_flags

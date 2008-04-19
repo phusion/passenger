@@ -248,7 +248,7 @@ module Dependencies # :nodoc: all
 	APR_DevHeaders = Dependency.new do |dep|
 		dep.name = "Apache Portable Runtime (APR) development headers"
 		dep.define_checker do |result|
-			result.found(!APR1_FLAGS.nil?)
+			result.found(APR_CONFIG)
 		end
 		if RUBY_PLATFORM =~ /linux/
 			case LINUX_DISTRO

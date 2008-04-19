@@ -33,7 +33,7 @@ include PlatformInfo
 APXS2.nil? and raise "Could not find 'apxs' or 'apxs2'."
 APACHE2CTL.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
 HTTPD.nil? and raise "Could not find the Apache web server binary."
-APR1_FLAGS.nil? and raise "Could not find Apache Portable Runtime (APR)."
+APR_FLAGS.nil? and raise "Could not find Apache Portable Runtime (APR)."
 
 CXX = "g++"
 THREADING_FLAGS = "-D_REENTRANT"
@@ -101,7 +101,7 @@ end
 ##### Apache module
 
 class APACHE2
-	CXXFLAGS = "-I.. -fPIC -g -DPASSENGER_DEBUG #{APR1_FLAGS} #{APXS2_FLAGS} #{CXXFLAGS}"
+	CXXFLAGS = "-I.. -fPIC -g -DPASSENGER_DEBUG #{APR_FLAGS} #{APXS2_FLAGS} #{CXXFLAGS}"
 	OBJECTS = {
 		'Configuration.o' => %w(Configuration.cpp Configuration.h),
 		'Hooks.o' => %w(Hooks.cpp Hooks.h
@@ -128,7 +128,7 @@ subdir 'ext/apache2' do
 		#
 		# Oh, and libtool sucks too. Do we even need it anymore in 2008?
 		linkflags = "#{LDFLAGS} #{MULTI_ARCH_FLAGS}"
-		linkflags << " -lstdc++ -lpthread ../boost/src/libboost_thread.a #{APR1_LIBS}"
+		linkflags << " -lstdc++ -lpthread ../boost/src/libboost_thread.a #{APR_LIBS}"
 		create_shared_library 'mod_passenger.so',
 			APACHE2::OBJECTS.keys.join(' ') << ' mod_passenger.o',
 			linkflags
@@ -179,7 +179,7 @@ end
 
 class TEST
 	CXXFLAGS = ::CXXFLAGS + " -Isupport -DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL "
-	AP2_FLAGS = "-I../ext/apache2 -I../ext #{APR1_FLAGS}"
+	AP2_FLAGS = "-I../ext/apache2 -I../ext #{APR_FLAGS}"
 	
 	AP2_OBJECTS = {
 		'CxxTestMain.o' => %w(CxxTestMain.cpp),
@@ -239,7 +239,7 @@ subdir 'test' do
 			" ../ext/apache2/Utils.o" <<
 			" ../ext/apache2/Logging.o"
 		create_executable "Apache2ModuleTests", objects,
-			"#{LDFLAGS} #{APR1_LIBS} #{MULTI_ARCH_FLAGS} " <<
+			"#{LDFLAGS} #{APR_LIBS} #{MULTI_ARCH_FLAGS} " <<
 			"../ext/boost/src/libboost_thread.a -lpthread"
 	end
 	
