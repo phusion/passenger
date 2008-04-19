@@ -30,25 +30,12 @@ class MemoryStats
 	end
 	
 	def start
-		some_private_dirty_rss_cannot_be_determined = false
 		processes = list_processes(:exe => PlatformInfo::HTTPD)
-		some_private_dirty_rss_cannot_be_determined = processes.any? do |p|
-			p.private_dirty_rss.nil?
-		end
 		print_process_list_stats(processes)
 		
 		puts
-		processes = list_processes(:match => /^(Passenger|Rails) /)
-		some_private_dirty_rss_cannot_be_determined ||= processes.any? do |p|
-			p.private_dirty_rss.nil?
-		end
+		processes = list_processes(:match => /(^Passenger |^Rails:|ApplicationPoolServerExecutable)/)
 		print_process_list_stats(processes)
-
-		if ::Process.uid != 0 && some_private_dirty_rss_cannot_be_determined
-			puts
-			puts "*** WARNING: Please run this tool as root, otherwise it " <<
-				"can't determine the private dirty RSS of processes."
-		end
 	end
 	
 	# Returns a list of Process objects that match the given search criteria.
@@ -98,13 +85,13 @@ private
 	def determine_private_dirty_rss(pid)
 		total = 0
 		File.read("/proc/#{pid}/smaps").split("\n").each do |line|
-			line =~ /^(Shared|Private)_Dirty: +(\d+)/
+			line =~ /^(Private)_Dirty: +(\d+)/
 			if $2
 				total += $2.to_i
 			end
 		end
 		return total
-	rescue Errno::EACCES
+	rescue Errno::EACCES, Errno::ENOENT
 		return nil
 	end
 	
