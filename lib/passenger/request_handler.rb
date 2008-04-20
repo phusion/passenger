@@ -273,6 +273,10 @@ private
 		def write(block)
 			@io.write(block)
 		end
+		
+		def <<(block)
+			@io.write(block)
+		end
 	end
 	
 	def process_request(socket)
