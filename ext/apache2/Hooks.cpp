@@ -259,6 +259,33 @@ private:
 			buffer.append(hdrs[i].val);
 			buffer.append(1, '\0');
 		}
+		
+		/*
+		 * If the last header value is an empty string, then the buffer
+		 * will end with "\0\0". For example, if 'SSLOptions +ExportCertData'
+		 * is set, and there's no client certificate, and 'SSL_CLIENT_CERT'
+		 * is the last header, then the buffer will end with:
+		 *
+		 *   "SSL_CLIENT_CERT\0\0"
+		 *
+		 * The data in the buffer will be processed by the RequestHandler class,
+		 * which is implemented in Ruby. But it uses Hash[*data.split("\0")] to
+		 * unserialize the data. Unfortunately String#split will not transform
+		 * the trailing "\0\0" into an empty string:
+		 *
+		 *   "SSL_CLIENT_CERT\0\0".split("\0")
+		 *   # => desired result: ["SSL_CLIENT_CERT", ""]
+		 *   # => actual result:  ["SSL_CLIENT_CERT"]
+		 *
+		 * When that happens, Hash[..] will raise an ArgumentError because
+		 * data.split("\0") does not return an array with a length that is a
+		 * multiple of 2.
+		 *
+		 * So here, we add a dummy header to prevent situations like that from
+		 * happening.
+		 */
+		buffer.append("_\0_\0", 4);
+		
 		session->sendHeaders(buffer);
 		return APR_SUCCESS;
 	}
