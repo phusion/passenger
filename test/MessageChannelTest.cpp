@@ -17,7 +17,9 @@ namespace tut {
 		int p[2];
 
 		MessageChannelTest() {
-			pipe(p);
+			if (pipe(p) != 0) {
+				throw SystemException("Cannot create a pipe", errno);
+			}
 			reader = MessageChannel(p[0]);
 			writer = MessageChannel(p[1]);
 		}
