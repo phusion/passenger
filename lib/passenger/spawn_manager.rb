@@ -115,6 +115,7 @@ class SpawnManager < AbstractServer
 					return spawner.spawn_application
 				end
 			rescue AbstractServer::ServerError
+				spawner.stop
 				@spawners.delete(key)
 				raise
 			end
