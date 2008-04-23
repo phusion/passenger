@@ -294,6 +294,7 @@ private
 			begin
 				app = spawner.spawn_application
 			rescue ApplicationSpawner::Error => e
+				@spawners.delete(app_root)
 				client.write('exception')
 				client.write_scalar(marshal_exception(e))
 				return

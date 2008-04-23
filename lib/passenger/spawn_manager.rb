@@ -106,14 +106,18 @@ class SpawnManager < AbstractServer
 				spawner.start
 				@spawners[key] = spawner
 			end
-		end
-		
-		spawner.time = Time.now
-		if spawner.is_a?(FrameworkSpawner)
-			return spawner.spawn_application(app_root, lower_privilege,
-				lowest_user)
-		else
-			return spawner.spawn_application
+			spawner.time = Time.now
+			begin
+				if spawner.is_a?(FrameworkSpawner)
+					return spawner.spawn_application(app_root, lower_privilege,
+						lowest_user)
+				else
+					return spawner.spawn_application
+				end
+			rescue AbstractServer::ServerError
+				@spawners.delete(key)
+				raise
+			end
 		end
 	end
 	
