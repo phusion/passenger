@@ -9,6 +9,8 @@ require 'spawner_error_handling_spec'
 include Passenger
 include Passenger::Utils
 
+# TODO: test whether SpawnManager restarts FrameworkSpawner if it crashed
+
 describe SpawnManager do
 	before :each do
 		@manager = SpawnManager.new

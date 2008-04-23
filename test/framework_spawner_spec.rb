@@ -6,6 +6,8 @@ require 'spawner_privilege_lowering_spec'
 require 'spawner_error_handling_spec'
 include Passenger
 
+# TODO: test whether FrameworkSpawner restarts ApplicationSpawner if it crashed
+
 describe FrameworkSpawner do
 	before :all do
 		ENV['RAILS_ENV'] = 'production'
