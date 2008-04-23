@@ -225,8 +225,34 @@ private:
 	int serverSocket;
 	
 	void restartServer() {
-		int fds[2];
+		int fds[2], ret;
 		pid_t pid;
+		
+		if (serverPid != 0) {
+			time_t begin;
+			bool done;
+			
+			// Shutdown existing server instance.
+			do {
+				ret = close(serverSocket);
+			} while (ret == -1 && errno == EINTR);
+			
+			P_DEBUG("Waiting for existing ApplicationPoolServerExecutable to exit...");
+			begin = time(NULL);
+			while (!done && time(NULL) < begin + 5) {
+				done = waitpid(serverPid, NULL, WNOHANG) > 0;
+				usleep(100000);
+			}
+			if (done) {
+				P_DEBUG("ApplicationPoolServerExecutable exited.");
+			} else {
+				P_DEBUG("ApplicationPoolServerExecutable not exited in time. Killing it...");
+				kill(serverPid, SIGTERM);
+				waitpid(serverPid, NULL, 0);
+			}
+			serverSocket = -1;
+			serverPid = 0;
+		}
 		
 		if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
 			throw SystemException("Cannot create a Unix socket pair", errno);
@@ -310,6 +336,7 @@ public:
 	  m_rubyCommand(rubyCommand),
 	  m_user(user) {
 		serverSocket = -1;
+		serverPid = 0;
 		restartServer();
 	}
 	
