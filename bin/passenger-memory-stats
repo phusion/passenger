@@ -93,7 +93,11 @@ class MemoryStats
 		passenger_processes = list_processes(:match => /(^Passenger |^Rails:|ApplicationPoolServerExecutable)/)
 		print_process_list("Passenger processes", passenger_processes, :show_ppid => false)
 		
-		if ::Process.uid != 0 && (apache_processes + passenger_processes).any?{ |p| p.private_dirty_rss.nil? }
+		if RUBY_PLATFORM !~ /linux/
+			puts
+			puts "*** WARNING: The private dirty RSS can only be displayed " <<
+				"on Linux. You're currently using '#{RUBY_PLATFORM}'."
+		elsif ::Process.uid != 0 && (apache_processes + passenger_processes).any?{ |p| p.private_dirty_rss.nil? }
 			puts
 			puts "*** WARNING: Please run this tool as root. Otherwise the " <<
 				"private dirty RSS of processes cannot be determined."

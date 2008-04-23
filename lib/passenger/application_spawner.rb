@@ -233,6 +233,21 @@ private
 		Object.const_set(:RAILS_ROOT, @app_root)
 		if defined?(Rails::Initializer)
 			Rails::Initializer.run(:set_load_path)
+			
+			# The Rails framework is loaded at the moment.
+			# environment.rb may set ENV['RAILS_ENV']. So we re-initialize
+			# RAILS_ENV in Rails::Initializer.load_environment.
+			Rails::Initializer.class_eval do
+				def load_environment_with_passenger
+					if defined?(::RAILS_ENV)
+						Object.send(:remove_const, :RAILS_ENV)
+					end
+					Object.const_set(:RAILS_ENV, (ENV['RAILS_ENV'] || 'development').dup)
+					load_environment_without_passenger
+				end
+				
+				alias_method_chain :load_environment, :passenger
+			end
 		end
 		require 'config/environment'
 		if ActionController::Base.page_cache_directory.blank?
@@ -246,8 +261,10 @@ private
 			require 'dispatcher'
 		end
 		require_dependency 'application'
-		Dir.glob('app/{models,controllers,helpers}/*.rb').each do |file|
-			require_dependency normalize_path(file)
+		if GC.copy_on_write_friendly?
+			Dir.glob('app/{models,controllers,helpers}/*.rb').each do |file|
+				require_dependency normalize_path(file)
+			end
 		end
 	end
 

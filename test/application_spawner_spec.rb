@@ -6,6 +6,8 @@ require 'spawner_privilege_lowering_spec'
 require 'spawner_error_handling_spec'
 include Passenger
 
+# TODO: write unit test which checks whether setting ENV['RAILS_ENV'] in environment.rb is respected (issue #6)
+
 describe ApplicationSpawner do
 	before :all do
 		ENV['RAILS_ENV'] = 'production'
