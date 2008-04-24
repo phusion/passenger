@@ -121,12 +121,14 @@ private
 	end
 	
 	def self.find_apr_config
-		# If we're on MacOS X, and we're compiling against the
-		# default provided Apache, then we'll want to query the
-		# correct 'apr-1-config' command. However, that command
-		# is not in $PATH by default. Instead, it lives in
-		# /Developer/SDKs/MacOSX*sdk/usr/bin.
-		if RUBY_PLATFORM =~ /darwin/ && HTTPD == "/usr/sbin/httpd"
+		if env_defined?('APR_CONFIG')
+			apr_config = ENV['APR_CONFIG']
+		elsif RUBY_PLATFORM =~ /darwin/ && HTTPD == "/usr/sbin/httpd"
+			# If we're on MacOS X, and we're compiling against the
+			# default provided Apache, then we'll want to query the
+			# correct 'apr-1-config' command. However, that command
+			# is not in $PATH by default. Instead, it lives in
+			# /Developer/SDKs/MacOSX*sdk/usr/bin.
 			sdk_dir = Dir["/Developer/SDKs/MacOSX*sdk"].sort.last
 			if sdk_dir
 				apr_config = "#{sdk_dir}/usr/bin/apr-1-config"
