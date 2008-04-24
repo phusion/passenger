@@ -110,6 +110,8 @@ public:
  */
 class Client {
 private:
+	static const int CLIENT_THREAD_STACK_SIZE = 1024 * 128;
+
 	/** The Server that this Client object belongs to. */
 	Server &server;
 	
@@ -283,7 +285,10 @@ public:
 	 *        connection.
 	 */
 	void start(const weak_ptr<Client> self) {
-		thr = new thread(bind(&Client::threadMain, this, self), 1024 * 128);
+		thr = new thread(
+			bind(&Client::threadMain, this, self),
+			CLIENT_THREAD_STACK_SIZE
+		);
 	}
 	
 	~Client() {

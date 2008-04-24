@@ -88,6 +88,7 @@ class StandardApplicationPool: public ApplicationPool {
 private:
 	static const int DEFAULT_MAX_IDLE_TIME = 120;
 	static const int DEFAULT_MAX_POOL_SIZE = 20;
+	static const int CLEANER_THREAD_STACK_SIZE = 1024 * 128;
 
 	friend class ApplicationPoolServer;
 	struct AppContainer;
@@ -422,7 +423,10 @@ public:
 		count = 0;
 		active = 0;
 		maxIdleTime = DEFAULT_MAX_IDLE_TIME;
-		cleanerThread = new thread(bind(&StandardApplicationPool::cleanerThreadMainLoop, this));
+		cleanerThread = new thread(
+			bind(&StandardApplicationPool::cleanerThreadMainLoop, this),
+			CLEANER_THREAD_STACK_SIZE
+		);
 	}
 	
 	virtual ~StandardApplicationPool() {
