@@ -221,37 +221,71 @@ private:
 	string m_rubyCommand;
 	string m_user;
 	
+	/**
+	 * The PID of the ApplicationPool server process. If no server process
+	 * is running, then <tt>serverPid == 0</tt>.
+	 *
+	 * @invariant
+	 *    if serverPid == 0:
+	 *       serverSocket == -1
+	 */
 	pid_t serverPid;
+	
+	/**
+	 * The connection to the ApplicationPool server process. If no server
+	 * process is running, then <tt>serverSocket == -1</tt>.
+	 *
+	 * @invariant
+	 *    if serverPid == 0:
+	 *       serverSocket == -1
+	 */
 	int serverSocket;
 	
+	/**
+	 * Shutdown the currently running ApplicationPool server process.
+	 *
+	 * @pre serverSocket != -1 && serverPid != 0
+	 * @post serverSocket == -1 && serverPid == 0
+	 */
+	void shutdownServer() {
+		time_t begin;
+		bool done;
+		int ret;
+		
+		do {
+			ret = close(serverSocket);
+		} while (ret == -1 && errno == EINTR);
+		
+		P_DEBUG("Waiting for existing ApplicationPoolServerExecutable to exit...");
+		begin = time(NULL);
+		while (!done && time(NULL) < begin + 5) {
+			done = waitpid(serverPid, NULL, WNOHANG) > 0;
+			usleep(100000);
+		}
+		if (done) {
+			P_DEBUG("ApplicationPoolServerExecutable exited.");
+		} else {
+			P_DEBUG("ApplicationPoolServerExecutable not exited in time. Killing it...");
+			kill(serverPid, SIGTERM);
+			waitpid(serverPid, NULL, 0);
+		}
+		serverSocket = -1;
+		serverPid = 0;
+	}
+	
+	/**
+	 * Start an ApplicationPool server process. If there's already one running,
+	 * then the currently running one will be shutdown.
+	 *
+	 * @post serverSocket != -1 && serverPid != 0
+	 * @throw SystemException Something went wrong.
+	 */
 	void restartServer() {
-		int fds[2], ret;
+		int fds[2];
 		pid_t pid;
 		
 		if (serverPid != 0) {
-			time_t begin;
-			bool done;
-			
-			// Shutdown existing server instance.
-			do {
-				ret = close(serverSocket);
-			} while (ret == -1 && errno == EINTR);
-			
-			P_DEBUG("Waiting for existing ApplicationPoolServerExecutable to exit...");
-			begin = time(NULL);
-			while (!done && time(NULL) < begin + 5) {
-				done = waitpid(serverPid, NULL, WNOHANG) > 0;
-				usleep(100000);
-			}
-			if (done) {
-				P_DEBUG("ApplicationPoolServerExecutable exited.");
-			} else {
-				P_DEBUG("ApplicationPoolServerExecutable not exited in time. Killing it...");
-				kill(serverPid, SIGTERM);
-				waitpid(serverPid, NULL, 0);
-			}
-			serverSocket = -1;
-			serverPid = 0;
+			shutdownServer();
 		}
 		
 		if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
@@ -342,9 +376,7 @@ public:
 	
 	~ApplicationPoolServer() {
 		if (serverSocket != -1) {
-			close(serverSocket);
-			// TODO: don't wait indefinitely
-			waitpid(serverPid, NULL, 0);
+			shutdownServer();
 		}
 	}
 	
@@ -388,15 +420,18 @@ public:
 	}
 	
 	/**
-	 * Detach the server by freeing up some server resources such as file descriptors.
-	 * This should be called by child processes that wish to use a server, but do
-	 * not run the server itself.
+	 * Detach the server, thereby telling it that we don't want to connect
+	 * to it anymore. This frees up some resources in the current process,
+	 * such as file descriptors.
+	 *
+	 * This method is particularily useful to Apache worker processes that
+	 * have just established a connection with the ApplicationPool server.
+	 * Any sessions that are opened prior to calling detach(), will keep
+	 * working even after a detach().
 	 *
 	 * This method may only be called once. The ApplicationPoolServer object
-	 * will become unusable once detach() has been called.
-	 *
-	 * @warning Never call this method in the process in which this
-	 *    ApplicationPoolServer was created!
+	 * will become unusable once detach() has been called, so call connect()
+	 * before calling detach().
 	 */
 	void detach() {
 		close(serverSocket);
