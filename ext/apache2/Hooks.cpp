@@ -548,24 +548,27 @@ destroy_hooks(void *arg) {
 static int
 init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s) {
 	/*
+	 * The Apache initialization process has the following properties:
+	 *
 	 * 1. Apache on Unix calls the post_config hook twice, once before detach() and once
 	 *    after. On Windows it never calls detach().
 	 * 2. When Apache is compiled to use DSO modules, the modules are unloaded between the
 	 *    two post_config hook calls.
-	 * 3. On Unix, if the -X commandline option is given, detach() will not be called.
+	 * 3. On Unix, if the -X commandline option is given (the 'DEBUG' config is set),
+	 *    detach() will not be called.
 	 *
-	 * Because of these 3 issues (and especially #2), we only want to intialize the second
-	 * time the post_config hook is called.
+	 * The Passenger initialization process is pretty expensive because a spawn server has
+	 * to be started, so we'll want to avoid initializing twice because of property #2.
+	 *
+	 * The most straightforward solution is to initialize Passenger the second time
+	 * post_config is called. But unfortunately, that doesn't work if the Passenger
+	 * module is loaded after a graceful restart. There also doesn't seem to be any
+	 * good hooks that we can use to avoid double initialization.
+	 *
+	 * So as a hack, we check whether Apache has already been daemonized, by checking
+	 * whether ppid() returns 1.
 	 */
-	void *firstInitCall = NULL;
-	apr_pool_t *processPool = s->process->pool;
-	
-	apr_pool_userdata_get(&firstInitCall, "mod_passenger", processPool);
-	if (firstInitCall == NULL) {
-		apr_pool_userdata_set((const void *) 1, "mod_passenger",
-			apr_pool_cleanup_null, processPool);
-		return OK;
-	} else {
+	if (getppid() == 1 || ap_exists_config_define("DEBUG")) {
 		try {
 			hooks = new Hooks(pconf, plog, ptemp, s);
 			apr_pool_cleanup_register(pconf, NULL,
@@ -616,6 +619,8 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 			hooks = NULL;
 			return DECLINED;
 		}
+	} else {
+		return OK;
 	}
 }
 
