@@ -453,9 +453,10 @@ public:
 	mapToStorage(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
 		bool forwardToRails;
+		const char *baseURI;
 		
-		if (determineRailsBaseURI(r, config) == NULL
-		 || fileExists(r->filename)) {
+		baseURI = determineRailsBaseURI(r, config);
+		if (baseURI == NULL || fileExists(r->filename)) {
 			/*
 			 * fileExists():
 			 * If the file already exists, serve it directly.
@@ -515,6 +516,12 @@ public:
 				 * they don't want to abandon. Those people will have to
 				 * make sure that the Rails app's .htaccess doesn't
 				 * interfere.
+				 */
+				return OK;
+			} else if (strcmp(r->uri, baseURI) == 0) {
+				/* But we ignore RailsAllowModRewrite for the base URI of
+				 * the Rails application. Otherwise, Apache will show a
+				 * directory listing. This fixes issue #11.
 				 */
 				return OK;
 			} else {
