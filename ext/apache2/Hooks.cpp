@@ -464,9 +464,10 @@ public:
 	mapToStorage(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
 		bool forwardToRails;
+		const char *baseURI;
 		
-		if (determineRailsBaseURI(r, config) == NULL
-		 || fileExists(r->filename)) {
+		baseURI = determineRailsBaseURI(r, config);
+		if (baseURI == NULL || fileExists(r->filename)) {
 			/*
 			 * fileExists():
 			 * If the file already exists, serve it directly.
@@ -528,6 +529,12 @@ public:
 				 * interfere.
 				 */
 				return OK;
+			} else if (strcmp(r->uri, baseURI) == 0) {
+				/* But we ignore RailsAllowModRewrite for the base URI of
+				 * the Rails application. Otherwise, Apache will show a
+				 * directory listing. This fixes issue #11.
+				 */
+				return OK;
 			} else {
 				return DECLINED;
 			}
@@ -577,9 +584,18 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 	 * good hooks that we can use to avoid double initialization.
 	 *
 	 * So as a hack, we check whether Apache has already been daemonized, by checking
-	 * whether ppid() returns 1.
+	 * whether ppid() returns 1. This doesn't work with Apache 2.0.x though: ppid()
+	 * doesn't return 1. So Apache 2.0.x users will just have to live with the double
+	 * initialization overhead.
 	 */
-	if (getppid() == 1 || ap_exists_config_define("DEBUG")) {
+	bool passengerShouldBeInitialized;
+	
+	#if (AP_SERVER_MAJORVERSION_NUMBER == 2 && AP_SERVER_MINORVERSION_NUMBER >= 2) || AP_SERVER_MAJORVERSION_NUMBER > 2
+		passengerShouldBeInitialized = getppid() == 1 || ap_exists_config_define("DEBUG");
+	#else
+		passengerShouldBeInitialized = true;
+	#endif
+	if (passengerShouldBeInitialized) {
 		try {
 			hooks = new Hooks(pconf, plog, ptemp, s);
 			apr_pool_cleanup_register(pconf, NULL,
@@ -674,3 +690,4 @@ passenger_register_hooks(apr_pool_t *p) {
 /**
  * @}
  */
+

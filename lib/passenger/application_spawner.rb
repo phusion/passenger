@@ -211,11 +211,14 @@ private
 		begin
 			if user.is_a?(String)
 				pw = Etc.getpwnam(user)
+				username = user
 				uid = pw.uid
 				gid = pw.gid
 			else
+				pw = Etc.getpwuid(user)
+				username = pw.name
 				uid = user
-				gid = Etc.getpwuid(uid).gid
+				gid = pw.gid
 			end
 		rescue
 			return false
@@ -223,6 +226,7 @@ private
 		if uid == ROOT_UID
 			return false
 		else
+			Process.groups = Process.initgroups(username, gid)
 			Process::Sys.setgid(gid)
 			Process::Sys.setuid(uid)
 			return true

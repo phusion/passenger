@@ -26,6 +26,7 @@ shared_examples_for "a spawner that supports lowering of privileges" do
 			expected_gid = Etc.getpwnam(CONFIG['normal_user_1']).gid
 			expected_group = Etc.getgrgid(expected_gid).name
 			group_of_process(app.pid).should == expected_group
+			# TODO: check supplementary group list
 		end
 	end
 	
