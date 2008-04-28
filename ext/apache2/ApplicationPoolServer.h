@@ -39,6 +39,85 @@ using namespace std;
 using namespace boost;
 
 
+/**
+ * Multi-process usage support for ApplicationPool.
+ *
+ * ApplicationPoolServer implements a client/server architecture for ApplicationPool.
+ * This allows one to use ApplicationPool in a multi-process environment (unlike
+ * StandardApplicationPool). The cache/pool data is stored in the server. Different
+ * processes can then access the pool through the server.
+ *
+ * ApplicationPoolServer itself does not inherit ApplicationPool. Instead, it returns
+ * an ApplicationPool object via the connect() call. For example:
+ * @code
+ *   // Create an ApplicationPoolServer.
+ *   ApplicationPoolServer server(...);
+ *   
+ *   // Now fork a child process, like Apache's prefork MPM eventually will.
+ *   pid_t pid = fork();
+ *   if (pid == 0) {
+ *       // Child process
+ *       
+ *       // Connect to the server. After connection, we have an ApplicationPool
+ *       // object!
+ *       ApplicationPoolPtr pool(server.connect());
+ *
+ *       // We don't need to connect to the server anymore, so we detach from it.
+ *       // This frees up some resources, such as file descriptors.
+ *       server.detach();
+ *
+ *       ApplicationPool::SessionPtr session(pool->get("/home/webapps/foo"));
+ *       do_something_with(session);
+ *
+ *       _exit(0);
+ *   } else {
+ *       // Parent process
+ *       waitpid(pid, NULL, 0);
+ *   }
+ * @endcode
+ *
+ * <h2>Implementation notes</h2>
+ *
+ * <h3>Separate server executable</h3>
+ * The actual server is implemented in ApplicationPoolServerExecutable.cpp, this class is
+ * just a convenience class for starting/stopping the server executable and connecting
+ * to it.
+ *
+ * In the past, the server logic itself was implemented in this class. This implies that
+ * the ApplicationPool server ran inside the Apache process. This presented us with several
+ * problems:
+ * - Because of the usage of threads in the ApplicationPool server, the Apache VM size would
+ *   go way up. This gave people the (wrong) impression that Passenger uses a lot of memory,
+ *   or that it leaks memory.
+ * - Although it's not entirely confirmed, we suspect that it caused heap fragmentation as
+ *   well. Apache allocates lots and lots of small objects on the heap, and ApplicationPool
+ *   server isn't exactly helping. This too gave people the (wrong) impression that
+ *   Passenger leaks memory.
+ * - It would unnecessarily bloat the VM size of Apache worker processes.
+ * - We had to resort to all kinds of tricks to make sure that fork()ing a process doesn't
+ *   result in file descriptor leaks.
+ * - Despite everything, there was still a small chance that file descriptor leaks would
+ *   occur, and this could not be fixed. The reason for this is that the Apache control
+ *   process may call fork() right after the ApplicationPool server has established a new
+ *   connection with a client.
+ *
+ * Because of these problems, it was decided to split the ApplicationPool server to a
+ * separate executable. This comes with no performance hit.
+ *
+ * <h3>Anonymous server socket</h3>
+ * Notice that ApplicationPoolServer does do not use TCP sockets at all, or even named Unix
+ * sockets, despite being a server that can handle multiple clients! So ApplicationPoolServer
+ * will expose no open ports or temporary Unix socket files. Only child processes are able
+ * to use the ApplicationPoolServer.
+ *
+ * This is implemented through anonymous Unix sockets (<tt>socketpair()</tt>) and file descriptor
+ * passing. It allows one to emulate <tt>accept()</tt>. ApplicationPoolServer is connected to
+ * the server executable through a Unix socket pair. connect() sends a connect request to the
+ * server through that socket. The server will then create a new socket pair, and pass one of
+ * them back. This new socket pair represents the newly established connection.
+ *
+ * @ingroup Support
+ */
 class ApplicationPoolServer {
 private:
 	/**

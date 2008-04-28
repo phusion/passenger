@@ -18,6 +18,17 @@
 #ifndef _PASSENGER_APPLICATION_POOL_SERVER_EXECUTABLE_H_
 #define _PASSENGER_APPLICATION_POOL_SERVER_EXECUTABLE_H_
 
+/*
+ * This is the ApplicationPool server executable. See the ApplicationPoolServer
+ * class for background information.
+ *
+ * Each client is handled by a seperate thread. This is necessary because we use
+ * StandardApplicationPool, and the current algorithm for StandardApplicationPool::get()
+ * can block (in the case that the spawning limit has been exceeded). While it is
+ * possible to get around this problem without using threads, a thread-based implementation
+ * is easier to write.
+ */
+
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/bind.hpp>
@@ -263,6 +274,7 @@ public:
 	/**
 	 * Create a new Client object.
 	 *
+	 * @param the_server The Server object that this Client belongs to.
 	 * @param connection The connection to the ApplicationPool client.
 	 *
 	 * @note
@@ -279,7 +291,7 @@ public:
 	/**
 	 * Start the thread for handling the connection with this client.
 	 *
-	 * @param The iterator of this Client object inside the server's
+	 * @param self The iterator of this Client object inside the server's
 	 *        <tt>clients</tt> set. This is used to remove itself from
 	 *        the <tt>clients</tt> set once the client has closed the
 	 *        connection.
@@ -361,8 +373,17 @@ Server::start() {
 
 int
 main(int argc, char *argv[]) {
-	Server server(SERVER_SOCKET_FD, argv[1], argv[2], argv[3], argv[4], argv[5]);
-	return server.start();
+	try {
+		Server server(SERVER_SOCKET_FD, argv[1], argv[2], argv[3], argv[4], argv[5]);
+		return server.start();
+	} catch (const exception &e) {
+		fprintf(stderr, "*** An unexpected error occured in the Passenger "
+			"ApplicationPool server:\n%s\n",
+			e.what());
+		fflush(stderr);
+		abort();
+		return 1;
+	}
 }
 
 #endif /* _PASSENGER_APPLICATION_POOL_SERVER_EXECUTABLE_H_ */
