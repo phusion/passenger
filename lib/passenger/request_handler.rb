@@ -97,12 +97,17 @@ class RequestHandler
 	DEFAULT = 'DEFAULT' # :nodoc:
 	CONTENT_LENGTH = 'CONTENT_LENGTH' # :nodoc:
 	HTTP_CONTENT_LENGTH = 'HTTP_CONTENT_LENGTH' # :nodoc:
+	X_POWERED_BY = 'X-Powered-By'
 	
 	NINJA_PATCHING_LOCK = Mutex.new
 	@@ninja_patched_action_controller = false
 	
 	File.read("#{File.dirname(__FILE__)}/../../Rakefile") =~ /^PACKAGE_VERSION = "(.*)"$/
 	PASSENGER_VERSION = $1
+	PASSENGER_HEADER = "Phusion Passenger (mod_rails) #{PASSENGER_VERSION}"
+	if File.exist?("#{File.dirname(__FILE__)}/../../enterprisey.txt")
+		PASSENGER_HEADER << ", Enterprise Edition"
+	end
 	
 	# The name of the socket on which the request handler accepts
 	# new connections. This is either a Unix socket filename, or
@@ -136,7 +141,7 @@ class RequestHandler
 					alias passenger_orig_perform_action perform_action
 					
 					def perform_action(*whatever)
-						headers["X-Powered-By"] = "Phusion Passenger (mod_rails) #{PASSENGER_VERSION}"
+						headers[X_POWERED_BY] = PASSENGER_HEADER
 						passenger_orig_perform_action(*whatever)
 					end
 				end

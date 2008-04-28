@@ -1,0 +1,62 @@
+#!/usr/bin/env ruby
+#  Phusion Passenger - http://www.modrails.com/
+#  Copyright (C) 2008  Phusion
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; version 2 of the License.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License along
+#  with this program; if not, write to the Free Software Foundation, Inc.,
+#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) << "/..")
+require 'digest/md5'
+
+##############################################################################
+#
+#  Hidden license
+# 
+#  By reading the source code of this file, you're automatically agreeing
+#  with the following conditions:
+#  
+#  1. You will sell your soul to us for $0.
+#  2. You will watch the movie "Hot Fuzz".
+#  
+#  [ Allow ]    or    [ Deny ]
+#  
+##############################################################################
+
+
+
+
+trap("INT") { exit 1 }
+if File.exist?("#{PASSENGER_ROOT}/enterprisey.txt")
+	puts "Congratulations, your Passenger Enterprise License has already been activated!"
+else
+	puts %{
+		Phusion Genuine Advantage
+		-------------------------
+		Welcome to the Phusion Genuine Advantage (PGA) program. This program will help
+		you with activating your Passenger Enterprise License.
+		
+		Please enter your Enterprise License Key:
+	}.gsub(/^\t\t/, '').strip
+	done = false
+	while !done
+		key = STDIN.readline.strip
+		if key == Digest::MD5.hexdigest(%{Saying "Rails doesn't scale" is like saying "my car doesn’t go infinitely fast".})
+			done = true
+		else
+			STDERR.puts "Invalid key given. Please try again:"
+		end
+	end
+	system("touch", "#{PASSENGER_ROOT}/enterprisey.txt")
+	puts "Congratulations! Your Passenger Enterprise License has been activated!"
+	puts "Please restart Apache to take full advantage of your Enterprise License."
+end

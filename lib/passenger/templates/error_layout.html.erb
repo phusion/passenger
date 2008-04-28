@@ -14,7 +14,7 @@
 
 	<div id="site_container">
 		<div id="site_header">
-			<ul class="corporate_identity">
+			<ul class="corporate_identity <% if @enterprisey %>enterprise_edition<% end %>">
 				<li class="logo"><a href="http://www.modrails.com"><span>Phusion Passenger</span></a></li>
 			</ul>
 		</div>
@@ -28,7 +28,7 @@
 			   text. Thank you.
 			-->
 			<div class="container">
-				Powered by <a href="http://www.modrails.com/">Phusion Passenger</a>,
+				Powered by <a href="http://www.modrails.com/">Phusion Passenger</a><% if @enterprisey %> (Enterprise Edition)<% end %>,
 				<tt>mod_rails</tt> for Apache.
 			</div>
 		</div>
