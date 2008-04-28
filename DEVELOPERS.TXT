@@ -23,6 +23,36 @@ Run the following command to compile everything:
 
  rake
 
+== Directory structure
+
+The most important directories are:
+[ lib/passenger ]
+  The source code for the spawn server, which is written in Ruby.
+[ ext/passenger ]
+  Native extensions for Ruby, used by the spawn server.
+[ ext/apache2 ]
+  The Passenger Apache 2 module (mod_passenger).
+[ bin ]
+  Executables.
+[ doc ]
+  Various documentation.
+[ test ]
+  Unit tests and integration tests.
+[ test/support ]
+  Support/utility code, used in the tests.
+[ test/stub ]
+  Stub code, used in the tests.
+
+Less important directories:
+[ lib/rake ]
+  Rake tasks.
+[ ext/boost ]
+  A vendor copy of the Boost C++ library (www.boost.org).
+[ benchmark ]
+  Benchmark tools.
+[ misc ]
+  Miscellaneous tools.
+
 == Tests
 
 Run all tests:
