@@ -56,7 +56,11 @@ else
 			STDERR.puts "Invalid key given. Please try again:"
 		end
 	end
-	system("touch", "#{PASSENGER_ROOT}/enterprisey.txt")
-	puts "Congratulations! Your Passenger Enterprise License has been activated!"
-	puts "Please restart Apache to take full advantage of your Enterprise License."
+	if system("touch", "#{PASSENGER_ROOT}/enterprisey.txt")
+		puts "Congratulations! Your Passenger Enterprise License has been activated!"
+		puts "Please restart Apache to take full advantage of your Enterprise License."
+	else
+		STDERR.puts "Could not write to the Passenger folder. Please run this tool as root."
+		exit 1
+	end
 end
