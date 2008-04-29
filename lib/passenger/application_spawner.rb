@@ -251,7 +251,7 @@ private
 				end
 				
 				alias_method :load_environment_without_passenger, :load_environment
-				alias_method :load_environment, :load_environment_with_feature
+				alias_method :load_environment, :load_environment_with_passenger
 			end
 		end
 		require 'config/environment'
