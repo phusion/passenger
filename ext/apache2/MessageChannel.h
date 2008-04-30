@@ -256,7 +256,6 @@ public:
 	 * @see readFileDescriptor()
 	 */
 	void writeFileDescriptor(int fileDescriptor) {
-		int fd;
 		struct msghdr msg;
 		struct iovec vec;
 		char dummy[1];

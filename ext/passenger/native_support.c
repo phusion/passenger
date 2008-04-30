@@ -40,7 +40,6 @@ static VALUE mNativeSupport;
  */
 static VALUE
 send_fd(VALUE self, VALUE socket_fd, VALUE fd_to_send) {
-	int fd;
 	struct msghdr msg;
 	struct iovec vec;
 	char dummy[1];
