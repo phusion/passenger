@@ -262,7 +262,6 @@ public:
 		char dummy[1];
 		char control_data[CMSG_SPACE(sizeof(int))];
 		struct cmsghdr *control_header;
-		int *control_payload;
 	
 		msg.msg_name = NULL;
 		msg.msg_namelen = 0;
@@ -282,8 +281,7 @@ public:
 		control_header->cmsg_len   = CMSG_LEN(sizeof(int));
 		control_header->cmsg_level = SOL_SOCKET;
 		control_header->cmsg_type  = SCM_RIGHTS;
-		control_payload = (int *) CMSG_DATA(CMSG_FIRSTHDR(&msg));
-		*control_payload = fileDescriptor;
+		memcpy(CMSG_DATA(control_header), &fileDescriptor, sizeof(int));
 		
 		if (sendmsg(fd, &msg, 0) == -1) {
 			throw SystemException("Cannot send file descriptor with sendmsg()", errno);
@@ -443,7 +441,7 @@ public:
 		msg.msg_flags      = 0;
 		
 		if (recvmsg(fd, &msg, 0) == -1) {
-			throw SystemException("Cannot read file descriptor with recvmsg()", errno);
+			throw SystemException("Cannot rCMSG_DATA(control_header)ead file descriptor with recvmsg()", errno);
 		}
 		
 		control_header = CMSG_FIRSTHDR(&msg);

@@ -46,7 +46,7 @@ send_fd(VALUE self, VALUE socket_fd, VALUE fd_to_send) {
 	char dummy[1];
 	char control_data[CMSG_SPACE(sizeof(int))];
 	struct cmsghdr *control_header;
-	int *control_payload;
+	int control_payload;
 	
 	msg.msg_name = NULL;
 	msg.msg_namelen = 0;
@@ -66,8 +66,8 @@ send_fd(VALUE self, VALUE socket_fd, VALUE fd_to_send) {
 	control_header->cmsg_len   = CMSG_LEN(sizeof(int));
 	control_header->cmsg_level = SOL_SOCKET;
 	control_header->cmsg_type  = SCM_RIGHTS;
-	control_payload = (int *) CMSG_DATA(CMSG_FIRSTHDR(&msg));
-	*control_payload = NUM2INT(fd_to_send);
+	control_payload = NUM2INT(fd_to_send);
+	memcpy(CMSG_DATA(control_header), &control_payload, sizeof(int));
 	
 	if (sendmsg(NUM2INT(socket_fd), &msg, 0) == -1) {
 		rb_sys_fail("sendmsg(2)");
