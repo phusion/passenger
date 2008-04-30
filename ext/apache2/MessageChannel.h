@@ -256,33 +256,34 @@ public:
 	 * @see readFileDescriptor()
 	 */
 	void writeFileDescriptor(int fileDescriptor) {
-		struct {
-			struct cmsghdr header;
-			int fd;
-		} control;
-
-		control.header.cmsg_len   = sizeof(control);
-		control.header.cmsg_level = SOL_SOCKET;
-		control.header.cmsg_type  = SCM_RIGHTS;
-		control.fd = fileDescriptor;
-
+		int fd;
 		struct msghdr msg;
 		struct iovec vec;
 		char dummy[1];
-		
+		char control_data[CMSG_SPACE(sizeof(int))];
+		struct cmsghdr *control_header;
+		int *control_payload;
+	
 		msg.msg_name = NULL;
 		msg.msg_namelen = 0;
-		
-		/* Linux and Solaris require msg_iov to be non-NULL.. */
+	
+		/* Linux and Solaris require msg_iov to be non-NULL. */
 		dummy[0]       = '\0';
 		vec.iov_base   = dummy;
 		vec.iov_len    = sizeof(dummy);
 		msg.msg_iov    = &vec;
 		msg.msg_iovlen = 1;
-		
-		msg.msg_control    = (caddr_t) &control;
-		msg.msg_controllen = sizeof(control);
+	
+		msg.msg_control    = (caddr_t) control_data;
+		msg.msg_controllen = sizeof(control_data);
 		msg.msg_flags      = 0;
+	
+		control_header             = CMSG_FIRSTHDR(&msg);
+		control_header->cmsg_len   = CMSG_LEN(sizeof(int));
+		control_header->cmsg_level = SOL_SOCKET;
+		control_header->cmsg_type  = SCM_RIGHTS;
+		control_payload = (int *) CMSG_DATA(CMSG_FIRSTHDR(&msg));
+		*control_payload = fileDescriptor;
 		
 		if (sendmsg(fd, &msg, 0) == -1) {
 			throw SystemException("Cannot send file descriptor with sendmsg()", errno);
@@ -422,19 +423,11 @@ public:
 	 *            file descriptor.
 	 */
 	int readFileDescriptor() {
-		struct {
-			struct cmsghdr header;
-			int fd;
-		} control;
-
-		control.header.cmsg_len   = sizeof(control);
-		control.header.cmsg_level = SOL_SOCKET;
-		control.header.cmsg_type  = SCM_RIGHTS;
-		control.fd = -1;
-
 		struct msghdr msg;
 		struct iovec vec;
 		char dummy[1];
+		char control_data[CMSG_SPACE(sizeof(int))];
+		struct cmsghdr *control_header;
 
 		msg.msg_name    = NULL;
 		msg.msg_namelen = 0;
@@ -445,21 +438,22 @@ public:
 		msg.msg_iov    = &vec;
 		msg.msg_iovlen = 1;
 
-		msg.msg_control    = (caddr_t) &control;
-		msg.msg_controllen = sizeof(control);
+		msg.msg_control    = (caddr_t) control_data;
+		msg.msg_controllen = sizeof(control_data);
 		msg.msg_flags      = 0;
-
+		
 		if (recvmsg(fd, &msg, 0) == -1) {
 			throw SystemException("Cannot read file descriptor with recvmsg()", errno);
 		}
 		
-		if (msg.msg_controllen        != sizeof(control)
-		 || control.header.cmsg_len   != sizeof(control)
-		 || control.header.cmsg_level != SOL_SOCKET
-		 || control.header.cmsg_type  != SCM_RIGHTS) {
+		control_header = CMSG_FIRSTHDR(&msg);
+		if (msg.msg_controllen         != sizeof(control_data)
+		 || control_header->cmsg_len   != CMSG_LEN(sizeof(int))
+		 || control_header->cmsg_level != SOL_SOCKET
+		 || control_header->cmsg_type  != SCM_RIGHTS) {
 			throw IOException("No valid file descriptor received.");
 		}
-		return control.fd;
+		return *((int *) CMSG_DATA(control_header));
 	}
 };
 

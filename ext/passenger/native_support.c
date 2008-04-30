@@ -41,32 +41,33 @@ static VALUE mNativeSupport;
 static VALUE
 send_fd(VALUE self, VALUE socket_fd, VALUE fd_to_send) {
 	int fd;
-	struct {
-		struct cmsghdr header;
-		int fd;
-	} control;
 	struct msghdr msg;
 	struct iovec vec;
 	char dummy[1];
-
-	control.header.cmsg_len   = sizeof(control);
-	control.header.cmsg_level = SOL_SOCKET;
-	control.header.cmsg_type  = SCM_RIGHTS;
-	control.fd = NUM2INT(fd_to_send);
-
+	char control_data[CMSG_SPACE(sizeof(int))];
+	struct cmsghdr *control_header;
+	int *control_payload;
+	
 	msg.msg_name = NULL;
 	msg.msg_namelen = 0;
 	
-	/* Linux and Solaris require msg_iov to be non-NULL.. */
+	/* Linux and Solaris require msg_iov to be non-NULL. */
 	dummy[0]       = '\0';
 	vec.iov_base   = dummy;
 	vec.iov_len    = sizeof(dummy);
 	msg.msg_iov    = &vec;
 	msg.msg_iovlen = 1;
 	
-	msg.msg_control    = (caddr_t) &control;
-	msg.msg_controllen = sizeof(control);
+	msg.msg_control    = (caddr_t) control_data;
+	msg.msg_controllen = sizeof(control_data);
 	msg.msg_flags      = 0;
+	
+	control_header             = CMSG_FIRSTHDR(&msg);
+	control_header->cmsg_len   = CMSG_LEN(sizeof(int));
+	control_header->cmsg_level = SOL_SOCKET;
+	control_header->cmsg_type  = SCM_RIGHTS;
+	control_payload = (int *) CMSG_DATA(CMSG_FIRSTHDR(&msg));
+	*control_payload = NUM2INT(fd_to_send);
 	
 	if (sendmsg(NUM2INT(socket_fd), &msg, 0) == -1) {
 		rb_sys_fail("sendmsg(2)");
@@ -88,19 +89,11 @@ send_fd(VALUE self, VALUE socket_fd, VALUE fd_to_send) {
  */
 static VALUE
 recv_fd(VALUE self, VALUE socket_fd) {
-	struct {
-		struct cmsghdr header;
-		int fd;
-	} control;
-
-	control.header.cmsg_len   = sizeof(control);
-	control.header.cmsg_level = SOL_SOCKET;
-	control.header.cmsg_type  = SCM_RIGHTS;
-	control.fd = -1;
-
 	struct msghdr msg;
 	struct iovec vec;
 	char dummy[1];
+	char control_data[CMSG_SPACE(sizeof(int))];
+	struct cmsghdr *control_header;
 
 	msg.msg_name    = NULL;
 	msg.msg_namelen = 0;
@@ -111,23 +104,24 @@ recv_fd(VALUE self, VALUE socket_fd) {
 	msg.msg_iov    = &vec;
 	msg.msg_iovlen = 1;
 
-	msg.msg_control    = (caddr_t) &control;
-	msg.msg_controllen = sizeof(control);
+	msg.msg_control    = (caddr_t) control_data;
+	msg.msg_controllen = sizeof(control_data);
 	msg.msg_flags      = 0;
-
+	
 	if (recvmsg(NUM2INT(socket_fd), &msg, 0) == -1) {
 		rb_sys_fail("Cannot read file descriptor with recvmsg()");
 		return Qnil;
 	}
 	
-	if (msg.msg_controllen        != sizeof(control)
-	 || control.header.cmsg_len   != sizeof(control)
-	 || control.header.cmsg_level != SOL_SOCKET
-	 || control.header.cmsg_type  != SCM_RIGHTS) {
+	control_header = CMSG_FIRSTHDR(&msg);
+	if (msg.msg_controllen         != sizeof(control_data)
+	 || control_header->cmsg_len   != CMSG_LEN(sizeof(int))
+	 || control_header->cmsg_level != SOL_SOCKET
+	 || control_header->cmsg_type  != SCM_RIGHTS) {
 		rb_sys_fail("No valid file descriptor received.");
 		return Qnil;
 	}
-	return INT2NUM(control.fd);
+	return INT2NUM(*((int *) CMSG_DATA(control_header)));
 }
 
 /*
