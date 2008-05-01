@@ -234,14 +234,12 @@ Nevertheless, the system administrator may be interested in changing
 Passenger's behavior. Passenger's Apache module supports the following
 configuration options:
 
-RailsSpawnServer <filename>::
-	The location to the Passenger spawn server. This configuration option is
+PassengerRoot <directory>::
+	The location to the Passenger root directory. This configuration option is
 	essential to Passenger. The correct value is given by the installer,
 	and should usually not be changed manually.
 +
-This option may only occur once, in the global server configuration. If
-this option is not given, then Passenger will look for the program
-`passenger-spawn-server` in `$PATH`.
+This required option may only occur once, in the global server configuration.
 
 RailsBaseURI <uri>::
 	Used to specify that the given URI is a Rails application. See
@@ -601,7 +599,7 @@ See also link:http://groups.google.com/group/phusion-passenger/browse_thread/thr
 
 ==== The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it ====
 
-If you are sure that the RailsSpawnServer configuration option is set correctly,
+If you are sure that the 'PassengerRoot' configuration option is set correctly,
 then this problem is most likely caused by the fact that you're running Apache
 with SELinux. On Fedora, CentOS and RedHat Enterprise Linux, Apache is locked
 down by SELinux policies.
@@ -748,7 +746,7 @@ It is possible to relocate the Passenger files to a different directory. It
 involves two steps:
 
 1. Moving the directory.
-2. Updating the ``RailsSpawnServer'' configuration option in Apache.
+2. Updating the ``PassengerRoot'' configuration option in Apache.
 
 For example, if Passenger is located in '/opt/passenger/', and you'd like to
 move it to '/usr/local/passenger/', then do this:
@@ -761,7 +759,7 @@ mv /opt/passenger /usr/local/passenger
 2. Edit your Apache configuration file, and set:
 +
 ------------------------------------
-RailsSpawnServer /usr/local/passenger/bin/passenger-spawn-server
+PassengerRoot /usr/local/passenger
 ------------------------------------
 
 === Installing multiple Ruby on Rails versions ===

@@ -177,7 +177,7 @@ private
 		line
 		render_template 'apache2_config_snippets',
 			:module_location => "#{PASSENGER_ROOT}/ext/apache2/mod_passenger.so",
-			:spawn_server_location => "#{PASSENGER_ROOT}/bin/passenger-spawn-server",
+			:passenger_root => PASSENGER_ROOT,
 			:ruby => RUBY
 		wait
 	end
