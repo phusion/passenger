@@ -555,6 +555,8 @@ destroy_hooks(void *arg) {
 static int
 init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s) {
 	/*
+	 * HISTORICAL NOTE:
+	 *
 	 * The Apache initialization process has the following properties:
 	 *
 	 * 1. Apache on Unix calls the post_config hook twice, once before detach() and once
@@ -564,79 +566,63 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 	 * 3. On Unix, if the -X commandline option is given (the 'DEBUG' config is set),
 	 *    detach() will not be called.
 	 *
-	 * The Passenger initialization process is pretty expensive because a spawn server has
-	 * to be started, so we'll want to avoid initializing twice because of property #2.
-	 *
-	 * The most straightforward solution is to initialize Passenger the second time
-	 * post_config is called. But unfortunately, that doesn't work if the Passenger
-	 * module is loaded after a graceful restart. There also doesn't seem to be any
-	 * good hooks that we can use to avoid double initialization.
-	 *
-	 * So as a hack, we check whether Apache has already been daemonized, by checking
-	 * whether ppid() returns 1. This doesn't work with Apache 2.0.x though: ppid()
-	 * doesn't return 1. So Apache 2.0.x users will just have to live with the double
-	 * initialization overhead.
+	 * Because of property #2, the post_config hook is called twice. We initially tried
+	 * to avoid this with all kinds of hacks and workarounds, but none of them are
+	 * universal, i.e. it works for some people but not for others. So we got rid of the
+	 * hacks, and now we always initialize in the post_config hook.
 	 */
-	bool passengerShouldBeInitialized;
-	
-	#if (AP_SERVER_MAJORVERSION_NUMBER == 2 && AP_SERVER_MINORVERSION_NUMBER >= 2) || AP_SERVER_MAJORVERSION_NUMBER > 2
-		passengerShouldBeInitialized = getppid() == 1 || ap_exists_config_define("DEBUG");
-	#else
-		passengerShouldBeInitialized = true;
-	#endif
-	if (passengerShouldBeInitialized) {
-		try {
-			hooks = new Hooks(pconf, plog, ptemp, s);
-			apr_pool_cleanup_register(pconf, NULL,
-				destroy_hooks,
-				apr_pool_cleanup_null);
-			return OK;
-		} catch (const thread_resource_error &e) {
-			struct rlimit lim;
-			string pthread_threads_max;
-			
-			lim.rlim_cur = 0;
-			lim.rlim_max = 0;
-			getrlimit(RLIMIT_NPROC, &lim);
-			#ifdef PTHREAD_THREADS_MAX
-				pthread_threads_max = toString(PTHREAD_THREADS_MAX);
-			#else
-				pthread_threads_max = "unknown";
-			#endif
-			
-			ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,
-				"*** Passenger could not be initialize because a "
-				"threading resource could not be allocated or initialized. "
-				"The error message is:");
-			fprintf(stderr,
-				"  %s\n\n"
-				"System settings:\n"
-				"  RLIMIT_NPROC: soft = %d, hard = %d\n"
-				"  PTHREAD_THREADS_MAX: %s\n"
-				"\n",
-				e.what(),
-				(int) lim.rlim_cur, (int) lim.rlim_max,
-				pthread_threads_max.c_str());
-			
-			fprintf(stderr, "Output of 'uname -a' follows:\n");
-			fflush(stderr);
-			system("uname -a >&2");
-			
-			fprintf(stderr, "\nOutput of 'ulimit -a' follows:\n");
-			fflush(stderr);
-			system("ulimit -a >&2");
-			
-			return DECLINED;
-			
-		} catch (const exception &e) {
-			ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,
-				"*** Passenger could not be initialized because of this error: %s",
-				e.what());
-			hooks = NULL;
-			return DECLINED;
-		}
-	} else {
+	if (hooks != NULL) {
+		delete hooks;
+	}
+	try {
+		hooks = new Hooks(pconf, plog, ptemp, s);
+		apr_pool_cleanup_register(pconf, NULL,
+			destroy_hooks,
+			apr_pool_cleanup_null);
 		return OK;
+	} catch (const thread_resource_error &e) {
+		struct rlimit lim;
+		string pthread_threads_max;
+		
+		lim.rlim_cur = 0;
+		lim.rlim_max = 0;
+		getrlimit(RLIMIT_NPROC, &lim);
+		#ifdef PTHREAD_THREADS_MAX
+			pthread_threads_max = toString(PTHREAD_THREADS_MAX);
+		#else
+			pthread_threads_max = "unknown";
+		#endif
+		
+		ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,
+			"*** Passenger could not be initialize because a "
+			"threading resource could not be allocated or initialized. "
+			"The error message is:");
+		fprintf(stderr,
+			"  %s\n\n"
+			"System settings:\n"
+			"  RLIMIT_NPROC: soft = %d, hard = %d\n"
+			"  PTHREAD_THREADS_MAX: %s\n"
+			"\n",
+			e.what(),
+			(int) lim.rlim_cur, (int) lim.rlim_max,
+			pthread_threads_max.c_str());
+		
+		fprintf(stderr, "Output of 'uname -a' follows:\n");
+		fflush(stderr);
+		system("uname -a >&2");
+		
+		fprintf(stderr, "\nOutput of 'ulimit -a' follows:\n");
+		fflush(stderr);
+		system("ulimit -a >&2");
+		
+		return DECLINED;
+		
+	} catch (const exception &e) {
+		ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,
+			"*** Passenger could not be initialized because of this error: %s",
+			e.what());
+		hooks = NULL;
+		return DECLINED;
 	}
 }
 

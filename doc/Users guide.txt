@@ -703,6 +703,10 @@ file, or add rewrite rules to negate its effects.
 
 'mod_userdir' is not compatible with Phusion Passenger at the moment.
 
+==== VirtualDocumentRoot ====
+
+VirtualDocumentRoot is not compatible with Phusion Passenger at the moment.
+
 
 == Tips and notes ==
 
