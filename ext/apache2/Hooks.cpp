@@ -27,6 +27,8 @@
 #include <apr_strings.h>
 #include <apr_lib.h>
 
+#include <boost/thread.hpp>
+
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <exception>
@@ -36,7 +38,7 @@
 #include "Configuration.h"
 #include "Utils.h"
 #include "Logging.h"
-#include "ApplicationPoolClientServer.h"
+#include "ApplicationPoolServer.h"
 #include "MessageChannel.h"
 
 using namespace std;
@@ -313,7 +315,7 @@ public:
 		
 		ServerConfig *config = getServerConfig(s);
 		const char *ruby, *environment, *user;
-		string spawnServer;
+		string applicationPoolServerExe, spawnServer;
 		
 		ruby = (config->ruby != NULL) ? config->ruby : DEFAULT_RUBY_COMMAND;
 		environment = (config->env != NULL) ? config->env : DEFAULT_RAILS_ENV;
@@ -324,26 +326,35 @@ public:
 		} else {
 			user = "nobody";
 		}
-		if (config->spawnServer != NULL) {
-			spawnServer = config->spawnServer;
-		} else {
-			spawnServer = findSpawnServer();
-			if (spawnServer.empty()) {
-				throw FileNotFoundException("The Passenger spawn server script "
-					"could not be found. Please ensure that it can be found "
-					"in $PATH, or specify it with the RailsSpawnServer "
-					"configuration option.");
-			}
+		
+		if (config->root == NULL) {
+			throw ConfigurationException("The 'PassengerRoot' configuration option "
+				"is not specified. This option is required, so please specify it. "
+				"TIP: The correct value for this option was given to you by "
+				"'passenger-install-apache2-module'.");
 		}
+		
+		spawnServer = findSpawnServer(config->root);
 		if (!fileExists(spawnServer.c_str())) {
-			string message("The specified Passenger spawn server script, '");
+			string message("The Passenger spawn server script, '");
 			message.append(spawnServer);
-			message.append("', does not exist.");
+			message.append("', does not exist. Please check whether the 'PassengerRoot' "
+				"option is specified correctly.");
+			throw FileNotFoundException(message);
+		}
+		applicationPoolServerExe = findApplicationPoolServer(config->root);
+		if (!fileExists(applicationPoolServerExe.c_str())) {
+			string message("The Passenger application pool server, '");
+			message.append(applicationPoolServerExe);
+			message.append("', does not exist. Please check whether the 'PassengerRoot' "
+				"option is specified correctly.");
 			throw FileNotFoundException(message);
 		}
 		
 		applicationPoolServer = ptr(
-			new ApplicationPoolServer(spawnServer, "", environment, ruby, user)
+			new ApplicationPoolServer(
+				applicationPoolServerExe, spawnServer, "",
+				environment, ruby, user)
 		);
 	}
 	

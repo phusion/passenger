@@ -124,14 +124,27 @@ bool fileExists(const char *filename);
 
 /**
  * Find the location of the Passenger spawn server script.
- * This is done by scanning $PATH. For security reasons, only
- * absolute paths are scanned.
+ * If passengerRoot is given, t T
  *
+ * @param passengerRoot The Passenger root folder. If NULL is given, then
+ *      the spawn server is found by scanning $PATH. For security reasons,
+ *      only absolute paths are scanned.
  * @return An absolute path to the spawn server script, or
  *         an empty string on error.
  * @ingroup Support
  */
-string findSpawnServer();
+string findSpawnServer(const char *passengerRoot = NULL);
+
+/**
+ * Find the location of the Passenger ApplicationPool server
+ * executable.
+ *
+ * @param passengerRoot The Passenger root folder.
+ * @return An absolute path to the executable.
+ * @pre passengerRoot != NULL
+ * @ingroup Support
+ */
+string findApplicationPoolServer(const char *passengerRoot);
 
 /**
  * Returns a canonical version of the specified path. All symbolic links

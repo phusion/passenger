@@ -5,9 +5,6 @@
 #include <cstdlib>
 #include <cerrno>
 #include <signal.h>
-#include <boost/thread.hpp>
-
-using namespace boost;
 
 /**
  * This file is used as a template to test the different ApplicationPool implementations.
@@ -274,17 +271,20 @@ using namespace boost;
 		session1.reset();
 		session2.reset();
 		
-		setenv("nextRestartTxtDeletionShouldFail", "1", 1);
-		system("touch stub/railsapp/tmp/restart.txt");
+		system("mkdir -p stub/railsapp/tmp/restart.txt");
 		
 		old_pid = pool->get("stub/railsapp")->getPid();
-		ensure("Restart file has not been deleted",
-			stat("stub/railsapp/tmp/restart.txt", &buf) == 0);
+		try {
+			ensure("Restart file has not been deleted",
+				stat("stub/railsapp/tmp/restart.txt", &buf) == 0);
+			system("rmdir stub/railsapp/tmp/restart.txt");
+		} catch (...) {
+			system("rmdir stub/railsapp/tmp/restart.txt");
+			throw;
+		}
 		
-		setenv("nextRestartTxtDeletionShouldFail", "1", 1);
 		pid = pool->get("stub/railsapp")->getPid();
 		ensure_equals("The app was not restarted", pid, old_pid);
-		
 		unlink("stub/railsapp/tmp/restart.txt");
 	}
 	

@@ -163,10 +163,8 @@ private:
 			dup2(fds[1], SPAWN_SERVER_INPUT_FD);
 			
 			// Close all unnecessary file descriptors
-			for (long i = sysconf(_SC_OPEN_MAX) - 1; i >= 0; i--) {
-				if (i > SPAWN_SERVER_INPUT_FD) {
-					close(i);
-				}
+			for (long i = sysconf(_SC_OPEN_MAX) - 1; i > SPAWN_SERVER_INPUT_FD; i--) {
+				close(i);
 			}
 			
 			if (!user.empty()) {
@@ -208,8 +206,8 @@ private:
 				"                                                             ",
 				NULL);
 			int e = errno;
-			fprintf(stderr, "*** Passenger ERROR: Could not start the spawn server: %s: %s\n",
-				rubyCommand.c_str(), strerror(e));
+			fprintf(stderr, "*** Passenger ERROR: Could not start the spawn server: %s: %s (%d)\n",
+				rubyCommand.c_str(), strerror(e), e);
 			fflush(stderr);
 			_exit(1);
 		} else if (pid == -1) {

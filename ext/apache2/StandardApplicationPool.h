@@ -88,6 +88,7 @@ class StandardApplicationPool: public ApplicationPool {
 private:
 	static const int DEFAULT_MAX_IDLE_TIME = 120;
 	static const int DEFAULT_MAX_POOL_SIZE = 20;
+	static const int CLEANER_THREAD_STACK_SIZE = 1024 * 128;
 
 	friend class ApplicationPoolServer;
 	struct AppContainer;
@@ -187,19 +188,9 @@ private:
 		bool result;
 		if (stat(restartFile.c_str(), &buf) == 0) {
 			int ret;
-			#ifdef TESTING_APPLICATION_POOL
-				if (getenv("nextRestartTxtDeletionShouldFail") != NULL) {
-					unsetenv("nextRestartTxtDeletionShouldFail");
-					ret = -1;
-					errno = EACCES;
-				} else {
-					ret = unlink(restartFile.c_str());
-				}
-			#else
-				do {
-					ret = unlink(restartFile.c_str());
-				} while (ret == -1 && errno == EAGAIN);
-			#endif
+			do {
+				ret = unlink(restartFile.c_str());
+			} while (ret == -1 && errno == EAGAIN);
 			if (ret == 0 || errno == ENOENT) {
 				restartFileTimes.erase(appRoot);
 				result = true;
@@ -432,7 +423,10 @@ public:
 		count = 0;
 		active = 0;
 		maxIdleTime = DEFAULT_MAX_IDLE_TIME;
-		cleanerThread = new thread(bind(&StandardApplicationPool::cleanerThreadMainLoop, this));
+		cleanerThread = new thread(
+			bind(&StandardApplicationPool::cleanerThreadMainLoop, this),
+			CLEANER_THREAD_STACK_SIZE
+		);
 	}
 	
 	virtual ~StandardApplicationPool() {

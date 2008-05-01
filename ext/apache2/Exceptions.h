@@ -123,6 +123,18 @@ public:
 };
 
 /**
+ * Thrown when an invalid configuration is given.
+ */
+class ConfigurationException: public exception {
+private:
+	string msg;
+public:
+	ConfigurationException(const string &message): msg(message) {}
+	virtual ~ConfigurationException() throw() {}
+	virtual const char *what() const throw() { return msg.c_str(); }
+};
+
+/**
  * Thrown when SpawnManager or ApplicationPool fails to spawn an application
  * instance. The exception may contain an error page, which is a user-friendly
  * HTML page with details about the error.

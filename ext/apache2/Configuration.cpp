@@ -80,7 +80,7 @@ passenger_config_create_server(apr_pool_t *p, server_rec *s) {
 	ServerConfig *config = create_server_config_struct(p);
 	config->ruby = NULL;
 	config->env = NULL;
-	config->spawnServer = NULL;
+	config->root = NULL;
 	config->maxPoolSize = DEFAULT_MAX_POOL_SIZE;
 	config->maxPoolSizeSpecified = false;
 	config->poolIdleTime = DEFAULT_POOL_IDLE_TIME;
@@ -99,7 +99,7 @@ passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
 	
 	config->ruby = (add->ruby == NULL) ? base->ruby : add->ruby;
 	config->env = (add->env == NULL) ? base->env : add->env;
-	config->spawnServer = (add->spawnServer == NULL) ? base->spawnServer : add->spawnServer;
+	config->root = (add->root == NULL) ? base->root : add->root;
 	config->maxPoolSize = (add->maxPoolSizeSpecified) ? base->maxPoolSize : add->maxPoolSize;
 	config->maxPoolSizeSpecified = base->maxPoolSizeSpecified || add->maxPoolSizeSpecified;
 	config->poolIdleTime = (add->poolIdleTime) ? base->poolIdleTime : add->poolIdleTime;
@@ -119,7 +119,7 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
 		final->ruby = (final->ruby != NULL) ? final->ruby : config->ruby;
 		final->env = (final->env != NULL) ? final->env : config->env;
-		final->spawnServer = (final->spawnServer != NULL) ? final->spawnServer : config->spawnServer;
+		final->root = (final->root != NULL) ? final->root : config->root;
 		final->maxPoolSize = (final->maxPoolSizeSpecified) ? final->maxPoolSize : config->maxPoolSize;
 		final->maxPoolSizeSpecified = final->maxPoolSizeSpecified || config->maxPoolSizeSpecified;
 		final->poolIdleTime = (final->poolIdleTimeSpecified) ? final->poolIdleTime : config->poolIdleTime;
@@ -132,6 +132,14 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
 		*config = *final;
 	}
+}
+
+static const char *
+cmd_passenger_root(cmd_parms *cmd, void *pcfg, const char *arg) {
+	ServerConfig *config = (ServerConfig *) ap_get_module_config(
+		cmd->server->module_config, &passenger_module);
+	config->root = arg;
+	return NULL;
 }
 
 static const char *
@@ -168,14 +176,6 @@ cmd_rails_env(cmd_parms *cmd, void *pcfg, const char *arg) {
 	ServerConfig *config = (ServerConfig *) ap_get_module_config(
 		cmd->server->module_config, &passenger_module);
 	config->env = arg;
-	return NULL;
-}
-
-static const char *
-cmd_rails_spawn_server(cmd_parms *cmd, void *pcfg, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	config->spawnServer = arg;
 	return NULL;
 }
 
@@ -234,10 +234,25 @@ cmd_rails_default_user(cmd_parms *cmd, void *dummy, const char *arg) {
 	return NULL;
 }
 
+static const char *
+cmd_rails_spawn_server(cmd_parms *cmd, void *pcfg, const char *arg) {
+	fprintf(stderr, "WARNING: The 'RailsSpawnServer' option is obsolete. "
+		"Please specify 'PassengerRoot' instead. The correct value was "
+		"given to you by 'passenger-install-apache2-module'.");
+	fflush(stderr);
+	return NULL;
+}
+
 
 typedef const char * (*Take1Func)(); // Workaround for some weird C++-specific compiler error.
 
 const command_rec passenger_commands[] = {
+	AP_INIT_TAKE1("PassengerRoot",
+		(Take1Func) cmd_passenger_root,
+		NULL,
+		RSRC_CONF,
+		"The Passenger root folder."),
+
 	AP_INIT_TAKE1("RailsBaseURI",
 		(Take1Func) cmd_rails_base_uri,
 		NULL,
@@ -263,11 +278,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The environment under which a Rails app must run."),
-	AP_INIT_TAKE1("RailsSpawnServer",
-		(Take1Func) cmd_rails_spawn_server,
-		NULL,
-		RSRC_CONF,
-		"The filename of the spawn server to use."),
 	AP_INIT_TAKE1("RailsMaxPoolSize",
 		(Take1Func) cmd_rails_max_pool_size,
 		NULL,
@@ -288,6 +298,14 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The user that Rails applications must run as when user switching fails or is disabled."),
+	
+	// Obsolete options.
+	AP_INIT_TAKE1("RailsSpawnServer",
+		(Take1Func) cmd_rails_spawn_server,
+		NULL,
+		RSRC_CONF,
+		"Obsolete option."),
+	
 	{ NULL }
 };
 
