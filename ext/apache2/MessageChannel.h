@@ -440,7 +440,7 @@ public:
 		msg.msg_flags      = 0;
 		
 		if (recvmsg(fd, &msg, 0) == -1) {
-			throw SystemException("Cannot rCMSG_DATA(control_header)ead file descriptor with recvmsg()", errno);
+			throw SystemException("Cannot read file descriptor with recvmsg()", errno);
 		}
 		
 		control_header = CMSG_FIRSTHDR(&msg);
