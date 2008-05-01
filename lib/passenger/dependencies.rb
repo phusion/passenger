@@ -139,7 +139,7 @@ module Dependencies # :nodoc: all
 			dep.install_command = "make -C /usr/ports/lang/ruby18 install"
 		end
 		dep.website = "http://www.ruby-lang.org/"
-		dep.install_instructions = "Please reinstall Ruby by downloading it from <bold>#{dep.website}</b>"
+		dep.install_instructions = "Please reinstall Ruby by downloading it from <b>#{dep.website}</b>"
 	end
 	
 	Ruby_OpenSSL = Dependency.new do |dep|
@@ -157,10 +157,11 @@ module Dependencies # :nodoc: all
 			when :ubuntu, :debian
 				dep.install_command = "apt-get install libopenssl-ruby"
 			end
-		else
+		end
+		if dep.install_command.nil?
 			dep.website = "http://www.ruby-lang.org/"
 			dep.install_instructions = "Please (re)install Ruby with OpenSSL " <<
-				"support by downloading it from <bold>#{dep.website}</bold>."
+				"support by downloading it from <b>#{dep.website}</b>."
 		end
 	end
 	

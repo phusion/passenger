@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <errno.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "MessageChannel.h"
 #include "ApplicationPool.h"
