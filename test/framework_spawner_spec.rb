@@ -39,7 +39,7 @@ describe FrameworkSpawner do
 		
 		it_should_behave_like "a minimal spawner"
 		it_should_behave_like "a spawn server"
-	end if false
+	end
 	
 	describe "situations in which Rails is loaded via vendor folder" do
 		def use_vendor_rails?
