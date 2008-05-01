@@ -241,6 +241,7 @@ protected
 
 private
 	def preload_rails
+		Object.const_set(:RAILS_ROOT, ".")
 		if @version
 			gem 'rails', "=#{@version}"
 			require 'initializer'
@@ -266,6 +267,7 @@ private
 			require 'action_web_service'
 		end
 		require 'active_support/whiny_nil'
+		Object.send(:remove_const, :RAILS_ROOT)
 	end
 
 	def handle_spawn_application(app_root, lower_privilege, lowest_user)
