@@ -32,9 +32,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <pwd.h>
-#ifdef TESTING_SPAWN_MANAGER
-	#include <signal.h>
-#endif
+#include <signal.h>
 
 #include "Application.h"
 #include "MessageChannel.h"
