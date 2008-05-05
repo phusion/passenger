@@ -225,6 +225,7 @@ private:
 		addHeader(headers, "HTTPS",           lookupEnv(r, "HTTPS"));
 		addHeader(headers, "CONTENT_TYPE",    lookupHeader(r, "Content-type"));
 		addHeader(headers, "DOCUMENT_ROOT",   ap_document_root(r));
+		addHeader(headers, "PATH_INFO",       r->parsed_uri.path);
 		
 		// Set HTTP headers.
 		const apr_array_header_t *hdrs_arr;
