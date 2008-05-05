@@ -100,6 +100,9 @@ def start
 	e = StandardError.new("Some error message")
 	render_error_page(e, 'general_error.html',
 		'general_error')
+	
+	e = StandardError.new("Some error message")
+	render_error_page(e, 'app_exited.html', 'app_exited_during_initialization')
 end
 
 start
