@@ -35,6 +35,8 @@ class Installer
 	PASSENGER_WEBSITE = "http://www.modrails.com/"
 	PHUSION_WEBSITE = "www.phusion.nl"
 	USERS_GUIDE = "#{PASSENGER_ROOT}/doc/Users guide.html"
+	File.read("#{PASSENGER_ROOT}/Rakefile") =~ /^PACKAGE_VERSION = "(.*)"$/
+	PASSENGER_VERSION = $1
 	
 	REQUIRED_DEPENDENCIES = [
 		Dependencies::GCC,
@@ -77,7 +79,7 @@ private
 	end
 	
 	def show_welcome_screen
-		render_template 'welcome'
+		render_template 'welcome', :version => PASSENGER_VERSION
 		wait
 	end
 
