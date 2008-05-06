@@ -110,8 +110,10 @@ recv_fd(VALUE self, VALUE socket_fd) {
 			struct cmsghdr header;
 			int fd;
 		} control_data;
+		#define EXPECTED_CMSG_LEN sizeof(control_data)
 	#else
 		char control_data[CMSG_SPACE(sizeof(int))];
+		#define EXPECTED_CMSG_LEN CMSG_LEN(sizeof(int))
 	#endif
 	struct cmsghdr *control_header;
 
@@ -134,7 +136,7 @@ recv_fd(VALUE self, VALUE socket_fd) {
 	}
 	
 	control_header = CMSG_FIRSTHDR(&msg);
-	if (control_header->cmsg_len   != CMSG_LEN(sizeof(int))
+	if (control_header->cmsg_len   != EXPECTED_CMSG_LEN
 	 || control_header->cmsg_level != SOL_SOCKET
 	 || control_header->cmsg_type  != SCM_RIGHTS) {
 		rb_sys_fail("No valid file descriptor received.");
