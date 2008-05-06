@@ -17,22 +17,22 @@ describe MessageChannel do
 			@writer_pipe.close unless @writer_pipe.closed?
 		end
 		
-		it "should be able to read a single written array message" do
+		it "can read a single written array message" do
 			@writer.write("hello")
 			@reader.read.should == ["hello"]
 		end
 		
-		it "should be able to handle array messages that contain spaces" do
+		it "can handle array messages that contain spaces" do
 			@writer.write("hello world", "! ")
 			@reader.read.should == ["hello world", "! "]
 		end
 		
-		it "should be able to handle array messages that have only a single empty string" do
+		it "can handle array messages that have only a single empty string" do
 			@writer.write("")
 			@reader.read.should == [""]
 		end
 		
-		it "should be able to handle array messages with empty arguments" do
+		it "can handle array messages with empty arguments" do
 			@writer.write("hello", "", "world")
 			@reader.read.should == ["hello", "", "world"]
 			
@@ -43,27 +43,27 @@ describe MessageChannel do
 			@reader.read.should == ["", "foo"]
 		end
 		
-		it "should properly detect end-of-file when reading an array message" do
+		it "properly detects end-of-file when reading an array message" do
 			@writer.close
 			@reader.read.should be_nil
 		end
 		
-		it "should be able to read a single written scalar message" do
+		it "can read a single written scalar message" do
 			@writer.write_scalar("hello world")
 			@reader.read_scalar.should == "hello world"
 		end
 		
-		it "should be able to handle empty scalar messages" do
+		it "can handle empty scalar messages" do
 			@writer.write_scalar("")
 			@reader.read_scalar.should == ""
 		end
 		
-		it "should properly detect end-of-file when reading a scalar message" do
+		it "properly detects end-of-file when reading a scalar message" do
 			@writer.close
 			@reader.read_scalar.should be_nil
 		end
 		
-		it "should raise SecurityError when a received scalar message's size is larger than a specified maximum" do
+		it "raises SecurityError when a received scalar message's size is larger than a specified maximum" do
 			@writer.write_scalar(" " * 100)
 			lambda { @reader.read_scalar(99) }.should raise_error(SecurityError)
 		end
@@ -75,7 +75,7 @@ describe MessageChannel do
 			Process.waitpid(@pid) rescue nil
 		end
 		
-		it "both processes should be able to read and write a single array message" do
+		it "both processes can read and write a single array message" do
 			spawn_process do
 				x = @channel.read
 				@channel.write("#{x}!")
@@ -84,7 +84,7 @@ describe MessageChannel do
 			@channel.read.should == ["hello!"]
 		end
 		
-		it "should be able to handle scalar messages with arbitrary binary data" do
+		it "can handle scalar messages with arbitrary binary data" do
 			garbage_files = ["garbage1.dat", "garbage2.dat", "garbage3.dat"]
 			spawn_process do
 				garbage_files.each do |name|
@@ -99,7 +99,7 @@ describe MessageChannel do
 			end
 		end
 		
-		it "should support IO object (file descriptor) passing" do
+		it "supports IO object (file descriptor) passing" do
 			spawn_process do
 				writer = @channel.recv_io
 				writer.write("it works")
@@ -112,7 +112,7 @@ describe MessageChannel do
 			reader.close
 		end
 		
-		it "should support large amounts of data" do
+		it "supports large amounts of data" do
 			iterations = 1000
 			blob = "123" * 1024
 			spawn_process do
@@ -125,7 +125,7 @@ describe MessageChannel do
 			end
 		end
 		
-		it "should have stream properties" do
+		it "has stream properties" do
 			garbage = File.read("stub/garbage1.dat")
 			spawn_process do
 				@channel.write("hello", "world")
