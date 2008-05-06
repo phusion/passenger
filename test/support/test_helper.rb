@@ -1,12 +1,14 @@
 require 'fileutils'
 
 module TestHelper
+	STUB_TEMP_DIR = 'tmp.stub'
+
 	class Stub
 		attr_reader :app_root
 		
 		def initialize(name)
 			@name = name
-			@app_root = "tmp"
+			@app_root = STUB_TEMP_DIR
 		end
 		
 		def environment_rb
@@ -23,16 +25,16 @@ module TestHelper
 	end
 	
 	def setup_rails_stub(name)
-		FileUtils.rm_rf('tmp')
-		FileUtils.mkdir_p('tmp')
-		FileUtils.cp_r("stub/rails_apps/#{name}/.", 'tmp')
-		FileUtils.mkdir_p('tmp/log')
-		system("chmod", "-R", "a+rw", 'tmp')
+		FileUtils.rm_rf(STUB_TEMP_DIR)
+		FileUtils.mkdir_p(STUB_TEMP_DIR)
+		FileUtils.cp_r("stub/rails_apps/#{name}/.", STUB_TEMP_DIR)
+		FileUtils.mkdir_p("#{STUB_TEMP_DIR}/log")
+		system("chmod", "-R", "a+rw", STUB_TEMP_DIR)
 		return Stub.new(name)
 	end
 	
 	def teardown_rails_stub
-		FileUtils.rm_rf('tmp')
+		FileUtils.rm_rf(STUB_TEMP_DIR)
 	end
 	
 	def use_rails_stub(name)
