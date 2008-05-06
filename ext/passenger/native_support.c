@@ -57,18 +57,21 @@ send_fd(VALUE self, VALUE socket_fd, VALUE fd_to_send) {
 	msg.msg_iov    = &vec;
 	msg.msg_iovlen = 1;
 	
-	msg.msg_control    = (caddr_t) control_data;
+	msg.msg_control    = (caddr_t) &control_data;
 	msg.msg_controllen = sizeof(control_data);
 	msg.msg_flags      = 0;
 	
-	control_header             = CMSG_FIRSTHDR(&msg);
-	control_header->cmsg_len   = CMSG_LEN(sizeof(int));
+	control_header = CMSG_FIRSTHDR(&msg);
 	control_header->cmsg_level = SOL_SOCKET;
 	control_header->cmsg_type  = SCM_RIGHTS;
 	control_payload = NUM2INT(fd_to_send);
-	memcpy(CMSG_DATA(control_header), &control_payload, sizeof(int));
-	
-	msg.msg_controllen = control_header->cmsg_len;
+	#ifdef __APPLE__
+		control_header->cmsg_len = sizeof(control_data);
+		control_data.fd = control_payload;
+	#else
+		control_header->cmsg_len = CMSG_LEN(sizeof(int));
+		memcpy(CMSG_DATA(control_header), &control_payload, sizeof(int));
+	#endif
 	
 	if (sendmsg(NUM2INT(socket_fd), &msg, 0) == -1) {
 		rb_sys_fail("sendmsg(2)");
@@ -93,7 +96,14 @@ recv_fd(VALUE self, VALUE socket_fd) {
 	struct msghdr msg;
 	struct iovec vec;
 	char dummy[1];
-	char control_data[CMSG_SPACE(sizeof(int))];
+	#ifdef __APPLE__
+		struct {
+			struct cmsghdr header;
+			int fd;
+		} control_data;
+	#else
+		char control_data[CMSG_SPACE(sizeof(int))];
+	#endif
 	struct cmsghdr *control_header;
 
 	msg.msg_name    = NULL;
@@ -105,7 +115,7 @@ recv_fd(VALUE self, VALUE socket_fd) {
 	msg.msg_iov    = &vec;
 	msg.msg_iovlen = 1;
 
-	msg.msg_control    = (caddr_t) control_data;
+	msg.msg_control    = (caddr_t) &control_data;
 	msg.msg_controllen = sizeof(control_data);
 	msg.msg_flags      = 0;
 	
@@ -115,14 +125,17 @@ recv_fd(VALUE self, VALUE socket_fd) {
 	}
 	
 	control_header = CMSG_FIRSTHDR(&msg);
-	if (msg.msg_controllen         != sizeof(control_data)
-	 || control_header->cmsg_len   != CMSG_LEN(sizeof(int))
+	if (control_header->cmsg_len   != CMSG_LEN(sizeof(int))
 	 || control_header->cmsg_level != SOL_SOCKET
 	 || control_header->cmsg_type  != SCM_RIGHTS) {
 		rb_sys_fail("No valid file descriptor received.");
 		return Qnil;
 	}
-	return INT2NUM(*((int *) CMSG_DATA(control_header)));
+	#ifdef __APPLE__
+		return INT2NUM(control_data.fd);
+	#else
+		return INT2NUM(*((int *) CMSG_DATA(control_header)));
+	#endif
 }
 
 /*
