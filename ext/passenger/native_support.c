@@ -68,6 +68,8 @@ send_fd(VALUE self, VALUE socket_fd, VALUE fd_to_send) {
 	control_payload = NUM2INT(fd_to_send);
 	memcpy(CMSG_DATA(control_header), &control_payload, sizeof(int));
 	
+	msg.msg_controllen = control_header->cmsg_len;
+	
 	if (sendmsg(NUM2INT(socket_fd), &msg, 0) == -1) {
 		rb_sys_fail("sendmsg(2)");
 		return Qnil;
