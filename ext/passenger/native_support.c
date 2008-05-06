@@ -43,7 +43,14 @@ send_fd(VALUE self, VALUE socket_fd, VALUE fd_to_send) {
 	struct msghdr msg;
 	struct iovec vec;
 	char dummy[1];
-	char control_data[CMSG_SPACE(sizeof(int))];
+	#ifdef __APPLE__
+		struct {
+			struct cmsghdr header;
+			int fd;
+		} control_data;
+	#else
+		char control_data[CMSG_SPACE(sizeof(int))];
+	#endif
 	struct cmsghdr *control_header;
 	int control_payload;
 	
@@ -97,6 +104,8 @@ recv_fd(VALUE self, VALUE socket_fd) {
 	struct iovec vec;
 	char dummy[1];
 	#ifdef __APPLE__
+		// File descriptor passing macros (CMSG_*) seem to be broken
+		// on 64-bit MacOS X. This structure works around the problem.
 		struct {
 			struct cmsghdr header;
 			int fd;

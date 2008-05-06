@@ -436,6 +436,8 @@ public:
 		struct iovec vec;
 		char dummy[1];
 		#ifdef __APPLE__
+			// File descriptor passing macros (CMSG_*) seem to be broken
+			// on 64-bit MacOS X. This structure works around the problem.
 			struct {
 				struct cmsghdr header;
 				int fd;
