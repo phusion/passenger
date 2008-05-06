@@ -1,5 +1,5 @@
 shared_examples_for "AbstractServer" do
-	it "should not crash if it's started and stopped multiple times" do
+	it "doesn't crash if it's started and stopped multiple times" do
 		3.times do
 			# Give the server some time to install the
 			# signal handlers. If we don't give it enough
@@ -11,7 +11,7 @@ shared_examples_for "AbstractServer" do
 		end
 	end
 	
-	it "should raise a ServerAlreadyStarted if the server is already started" do
+	it "raises a ServerAlreadyStarted if the server is already started" do
 		lambda { @server.start }.should raise_error(AbstractServer::ServerAlreadyStarted)
 	end
 end
