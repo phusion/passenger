@@ -282,6 +282,8 @@ public:
 		control_header->cmsg_type  = SCM_RIGHTS;
 		memcpy(CMSG_DATA(control_header), &fileDescriptor, sizeof(int));
 		
+		msg.msg_controllen = control_header->cmsg_len;
+		
 		if (sendmsg(fd, &msg, 0) == -1) {
 			throw SystemException("Cannot send file descriptor with sendmsg()", errno);
 		}
