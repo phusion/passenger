@@ -17,6 +17,10 @@ class WelcomeController < ApplicationController
 		render :nothing => true
 	end
 	
+	def in_passenger
+		render :text => !!defined?(Passenger::SpawnManager)
+	end
+	
 	def terminate
 		exit!
 	end

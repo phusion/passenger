@@ -2,10 +2,12 @@ require 'net/http'
 require 'uri'
 require 'resolv'
 require 'socket'
+require 'fileutils'
 require 'timeout'
 require 'support/config'
+require 'support/test_helper'
 require 'support/multipart'
-require 'support/apache2_config_writer'
+require 'support/apache2_controller'
 require 'passenger/platform_info'
 
 include PlatformInfo
@@ -14,38 +16,38 @@ include PlatformInfo
 # TODO: test custom page caching directory
 
 shared_examples_for "MyCook(tm) beta" do
-	it "should be possible to fetch static assets" do
+	it "is be possible to fetch static assets" do
 		get('/images/rails.png').should == public_file('images/rails.png')
 	end
 	
-	it "should support page caching on non-index URIs" do
+	it "supports page caching on non-index URIs" do
 		get('/welcome/cached').should =~ %r{This is the cached version of /welcome/cached}
 	end
 	
-	it "should support page caching on index URIs" do
+	it "supports page caching on index URIs" do
 		get('/uploads').should =~ %r{This is the cached version of /uploads}
 	end
 	
-	it "should not use page caching if the HTTP request is not GET" do
+	it "doesn't use page caching if the HTTP request is not GET" do
 		post('/welcome/cached').should =~ %r{This content should never be displayed}
 	end
 	
-	it "should not be interfered by Rails's default .htaccess dispatcher rules" do
-		# Already being tested by all the other tests.
+	it "isn't interfered by Rails's default .htaccess dispatcher rules" do
+		get('/welcome/in_passenger').should == 'true'
 	end
 	
-	it "should be possible to GET a regular Rails page" do
+	it "is possible to GET a regular Rails page" do
 		get('/').should =~ /Welcome to MyCook/
 	end
 	
-	it "should be possible to pass GET parameters to a Rails page" do
+	it "is possible to pass GET parameters to a Rails page" do
 		result = get('/welcome/parameters_test?hello=world&recipe[name]=Green+Bananas')
 		result.should =~ %r{<hello>world</hello>}
 		result.should =~ %r{<recipe>}
 		result.should =~ %r{<name>Green Bananas</name>}
 	end
 	
-	it "should be possible to POST to a Rails page" do
+	it "is possible to POST to a Rails page" do
 		result = post('/recipes', {
 			'recipe[name]' => 'Banana Pancakes',
 			'recipe[instructions]' => 'Call 0900-BANANAPANCAKES'
@@ -55,8 +57,8 @@ shared_examples_for "MyCook(tm) beta" do
 		result.should =~ %r{Instructions: Call 0900-BANANAPANCAKES}
 	end
 	
-	it "should be possible to upload a file" do
-		rails_png = File.open("#{@app_root}/public/images/rails.png", 'rb')
+	it "is possible to upload a file" do
+		rails_png = File.open("#{@stub.app_root}/public/images/rails.png", 'rb')
 		params = {
 			'upload[name1]' => 'Kotonoha',
 			'upload[name2]' => 'Sekai',
@@ -74,15 +76,15 @@ shared_examples_for "MyCook(tm) beta" do
 		end
 	end
 	
-	it "should properly handle custom headers" do
+	it "can properly handle custom headers" do
 		response = get_response('/welcome/headers_test')
 		response["X-Foo"].should == "Bar"
 	end
 	
-	it "should support restarting via restart.txt" do
+	it "supports restarting via restart.txt" do
 		begin
-			controller = "#{@app_root}/app/controllers/test_controller.rb"
-			restart_file = "#{@app_root}/tmp/restart.txt"
+			controller = "#{@stub.app_root}/app/controllers/test_controller.rb"
+			restart_file = "#{@stub.app_root}/tmp/restart.txt"
 			
 			File.open(controller, 'w') do |f|
 				f.write %q{
@@ -116,136 +118,182 @@ shared_examples_for "MyCook(tm) beta" do
 		end
 	end
 	
-	it "should not make the web server crash if the app crashes" do
+	it "does not make the web server crash if the app crashes" do
 		post('/welcome/terminate')
 		sleep(0.25) # Give the app the time to terminate itself.
 		get('/').should =~ /Welcome to MyCook/
 	end
 	
 	if Process.uid == 0
-		it "should be running as unprivileged user" do
+		it "runs as an unprivileged user" do
 			post('/welcome/touch')
 			begin
-				stat = File.stat("#{@app_root}/public/touch.txt")
+				stat = File.stat("#{@stub.app_root}/public/touch.txt")
 				stat.uid.should_not == 0
 				stat.gid.should_not == 0
 			ensure
-				File.unlink("#{@app_root}/public/touch.txt") rescue nil
+				File.unlink("#{@stub.app_root}/public/touch.txt") rescue nil
 			end
 		end
 	end
 end
 
 describe "mod_passenger running in Apache 2" do
+	include TestHelper
+	
 	before :all do
 		check_hosts_configuration
-		Apache2ConfigWriter.new.write
-		start_apache
+		@apache2 = Apache2Controller.new
 	end
 	
 	after :all do
-		stop_apache
+		@apache2.stop
 	end
 	
 	describe ": MyCook(tm) beta running on root URI" do
-		before :each do
-			@server = "http://mycook.passenger.test:64506"
-			@app_root = "stub/mycook"
+		before :all do
+			@server = "http://passenger.test:#{@apache2.port}"
+			@stub = setup_rails_stub('mycook')
+			@apache2.add_vhost("passenger.test", File.expand_path("#{@stub.app_root}/public"))
+			@apache2.start
+		end
+		
+		after :all do
+			@stub.destroy
 		end
 		
 		it_should_behave_like "MyCook(tm) beta"
 	end
 	
 	describe ": MyCook(tm) beta running in a sub-URI" do
-		before :each do
-			@server = "http://zsfa.passenger.test:64506/mycook"
-			@app_root = "stub/mycook"
-			File.unlink("stub/zsfa/mycook") rescue nil
-			File.symlink("../mycook/public", "stub/zsfa/mycook")
+		before :all do
+			@stub = setup_rails_stub('mycook')
+			FileUtils.rm_rf('tmp.webdir')
+			FileUtils.mkdir_p('tmp.webdir')
+			FileUtils.cp_r('stub/zsfa/.', 'tmp.webdir')
+			FileUtils.ln_sf(File.expand_path(@stub.app_root) + "/public", 'tmp.webdir/mycook')
+			
+			@apache2.add_vhost('passenger.test', File.expand_path('tmp.webdir')) do |vhost|
+				vhost << "RailsBaseURI /mycook"
+			end
+			@apache2.start
 		end
 		
-		after :each do
-			File.unlink("stub/zsfa/mycook") rescue nil
+		after :all do
+			FileUtils.rm_rf('tmp.webdir')
+			@stub.destroy
+		end
+		
+		before :each do
+			@server = "http://passenger.test:#{@apache2.port}/mycook"
 		end
 		
 		it_should_behave_like "MyCook(tm) beta"
-	end
-	
-	describe ": railsapp running in a sub-URI" do
-		before :each do
-			@server = "http://zsfa.passenger.test:64506/foo"
-			@app_root = "stub/railsapp"
-			File.unlink("stub/zsfa/foo") rescue nil
-			File.symlink("../railsapp/public", "stub/zsfa/foo")
-		end
 		
-		after :each do
-			File.unlink("stub/zsfa/foo") rescue nil
-		end
-		
-		it "should respond to /foo/new" do
-			get('/foo/new').should == 'hello world'
-		end
-		
-		it "should not interfere with the ZSFA website" do
-			@server = "http://zsfa.passenger.test:64506"
+		it "does not interfere with the root website" do
+			@server = "http://passenger.test:#{@apache2.port}"
 			get('/').should =~ /Zed, you rock\!/
 		end
 	end
 	
 	describe "configuration options" do
+		before :all do
+			@stub = setup_rails_stub('mycook')
+			rails_dir = File.expand_path(@stub.app_root) + "/public"
+			@apache2.add_vhost('passenger.test', rails_dir)
+			@apache2.add_vhost('norails.passenger.test', rails_dir) do |vhost|
+				vhost << "RailsAutoDetect off"
+			end
+			@apache2.start
+		end
+		
+		after :all do
+			@stub.destroy
+		end
+		
 		it "should ignore the Rails application if RailsAutoDetect is off" do
-			@server = "http://norails.passenger.test:64506"
+			@server = "http://norails.passenger.test:#{@apache2.port}"
 			get('/').should_not =~ /MyCook/
 		end
 		
 		it "setting RailsAutoDetect for one virtual host should not interfere with others" do
-			# Already covered by other tests.
+			@server = "http://passenger.test:#{@apache2.port}"
+			get('/').should =~ /MyCook/
 		end
 	end
 	
 	describe "error handling" do
+		before :all do
+			FileUtils.rm_rf('tmp.webdir')
+			FileUtils.mkdir_p('tmp.webdir')
+			@webdir = File.expand_path('tmp.webdir')
+			@apache2.add_vhost('passenger.test', @webdir) do |vhost|
+				vhost << "RailsBaseURI /app-with-nonexistant-rails-version/public"
+				vhost << "RailsBaseURI /app-that-crashes-during-startup/public"
+				vhost << "RailsBaseURI /app-with-crashing-vendor-rails/public"
+			end
+			@apache2.start
+		end
+		
+		after :all do
+			FileUtils.rm_rf('tmp.webdir')
+		end
+		
 		before :each do
-			File.unlink("stub/zsfa/app-with-nonexistant-rails-version") rescue nil
-			File.unlink("stub/zsfa/app-that-crashes-during-startup") rescue nil
-			File.unlink("stub/zsfa/app-with-crashing-vendor-rails") rescue nil
-			File.symlink("../broken-railsapp4/public", "stub/zsfa/app-with-nonexistant-rails-version")
-			File.symlink("../broken-railsapp/public", "stub/zsfa/app-that-crashes-during-startup")
-			File.symlink("../broken-railsapp5/public", "stub/zsfa/app-with-crashing-vendor-rails")
 			@server = "http://zsfa.passenger.test:64506"
 			@error_page_signature = /<meta name="generator" content="Phusion Passenger">/
 		end
 		
-		after :each do
-			File.unlink("stub/zsfa/app-with-nonexistant-rails-version") rescue nil
-			File.unlink("stub/zsfa/app-that-crashes-during-startup") rescue nil
-			File.unlink("stub/zsfa/app-with-crashing-vendor-rails") rescue nil
-		end
-		
 		it "should display an error page if the Rails application requires a nonexistant Rails version" do
-			get("/app-with-nonexistant-rails-version/").should =~ @error_page_signature
+			use_rails_stub('foobar', "#{@webdir}/app-with-nonexistant-rails-version") do |stub|
+				File.write(stub.environment_rb) do |content|
+					content.sub(/^RAILS_GEM_VERSION = .*$/, "RAILS_GEM_VERSION = '1.9.1234'")
+				end
+				get("/app-with-nonexistant-rails-version/public").should =~ @error_page_signature
+			end
 		end
 		
 		it "should display an error page if the Rails application crashes during startup" do
-			get("/app-that-crashes-during-startup/").should =~ @error_page_signature
+			use_rails_stub('foobar', "#{@webdir}/app-that-crashes-during-startup") do |stub|
+				File.prepend(stub.environment_rb, "raise 'app crash'")
+				result = get("/app-that-crashes-during-startup/public")
+				result.should =~ @error_page_signature
+				result.should =~ /app crash/
+			end
 		end
 		
 		it "should display an error page if the Rails application's vendor'ed Rails crashes" do
-			get("/app-with-crashing-vendor-rails/").should =~ @error_page_signature
+			use_rails_stub('foobar', "#{@webdir}/app-with-crashing-vendor-rails") do |stub|
+				stub.use_vendor_rails('minimal')
+				File.append("#{stub.app_root}/vendor/rails/railties/lib/initializer.rb",
+					"raise 'vendor crash'")
+				result = get("/app-with-crashing-vendor-rails/public")
+				result.should =~ @error_page_signature
+				result.should =~ /vendor crash/
+			end
 		end
 	end
 	
 	##### Helper methods #####
 	
 	def get(uri)
+		if !@apache2.running?
+			@apache2.start
+		end
 		return Net::HTTP.get(URI.parse("#{@server}#{uri}"))
 	end
 	
 	def get_response(uri)
+		if !@apache2.running?
+			@apache2.start
+		end
 		return Net::HTTP.get_response(URI.parse("#{@server}#{uri}"))
 	end
 	
 	def post(uri, params = {})
+		if !@apache2.running?
+			@apache2.start
+		end
 		url = URI.parse("#{@server}#{uri}")
 		if params.values.any? { |x| x.respond_to?(:read) }
 			mp = Multipart::MultipartPost.new
@@ -259,7 +307,7 @@ describe "mod_passenger running in Apache 2" do
 	end
 	
 	def public_file(name)
-		return File.read("#{@app_root}/public/#{name}")
+		return File.read("#{@stub.app_root}/public/#{name}")
 	end
 	
 	def check_hosts_configuration
@@ -285,73 +333,6 @@ describe "mod_passenger running in Apache 2" do
 			STDERR.puts "---------------------------"
 			STDERR.puts message
 			exit!
-		end
-	end
-	
-	def start_apache
-		if File.exist?("stub/apache2/httpd.pid")
-			stop_apache
-		end
-		config_file = File.expand_path("stub/apache2/httpd.conf")
-		if !system(HTTPD, "-f", config_file, "-k", "start")
-			raise "Could not start a test Apache server"
-		end
-		begin
-			# Wait until the PID file has been created.
-			Timeout::timeout(15) do
-				while !File.exist?("stub/apache2/httpd.pid")
-					sleep(0.25)
-				end
-			end
-			# Wait until Apache is listening on the server port.
-			Timeout::timeout(5) do
-				done = false
-				while !done
-					begin
-						socket = TCPSocket.new('localhost', 64506)
-						socket.close
-						done = true
-					rescue Errno::ECONNREFUSED
-						sleep(0.25)
-					end
-				end
-			end
-		rescue Timeout::Error
-			raise "Unable to start Apache."
-		end
-		File.chmod(0666, *Dir['stub/apache2/*.{log,lock,pid}']) rescue nil
-		File.chmod(0777, *Dir['stub/mycook/{public,log}']) rescue nil
-	end
-	
-	def stop_apache
-		File.chmod(0666, *Dir['stub/apache2/*.{log,lock,pid}']) rescue nil
-		begin
-			pid = File.read('stub/apache2/httpd.pid').strip.to_i
-			Process.kill('SIGTERM', pid)
-		rescue
-		end
-		begin
-			# Wait until the PID file is removed.
-			Timeout::timeout(15) do
-				while File.exist?("stub/apache2/httpd.pid")
-					sleep(0.25)
-				end
-			end
-			# Wait until the server socket is closed.
-			Timeout::timeout(5) do
-				done = false
-				while !done
-					begin
-						socket = TCPSocket.new('localhost', 64506)
-						socket.close
-						sleep(0.25)
-					rescue SystemCallError
-						done = true
-					end
-				end
-			end
-		rescue Timeout::Error
-			raise "Unable to stop Apache."
 		end
 	end
 end
