@@ -229,6 +229,7 @@ private
 			Process.groups = Process.initgroups(username, gid)
 			Process::Sys.setgid(gid)
 			Process::Sys.setuid(uid)
+			ENV['HOME'] = pw.dir
 			return true
 		end
 	end

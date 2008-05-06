@@ -13,7 +13,8 @@ shared_examples_for "a spawner that supports lowering of privileges" do
 				:username => `whoami`.strip,
 				:user_id  => `id -u`.strip.to_i,
 				:group_id => `id -g`.strip.to_i,
-				:groups   => `groups "#{`whoami`.strip}"`.strip
+				:groups   => `groups "#{`whoami`.strip}"`.strip,
+				:home     => ENV['HOME']
 			}
 			File.open("#{RAILS_ROOT}/dump.yml", 'w') do |f|
 				YAML::dump(info, f)
@@ -73,6 +74,12 @@ shared_examples_for "a spawner that supports lowering of privileges" do
 		File.chown(uid_for('normal_user_2'), nil, @environment_rb)
 		spawn_stub_application(:lower_privilege => false) do |app|
 			read_dumped_info[:username].should == my_username
+		end
+	end
+	
+	it "sets $HOME to the user's home directory, after privilege lowering" do
+		spawn_stub_application(:lowest_user => CONFIG['normal_user_1']) do |app|
+			read_dumped_info[:home].should == Etc.getpwnam(CONFIG['normal_user_1']).dir
 		end
 	end
 	
