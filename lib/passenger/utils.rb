@@ -145,6 +145,22 @@ protected
 			STDERR.flush
 		end
 	end
+	
+	# Fork a new process and run the given block inside the child process, just like
+	# fork(). Unlike fork(), this method is safe, i.e. there's no way for the child
+	# process to escape the block. Any uncaught exceptions in the child process will
+	# be printed to standard output, citing _current_location_ as the source.
+	def safe_fork(current_location)
+		return fork do
+			begin
+				yield
+			rescue Exception => e
+				print_exception(current_location, e)
+			ensure
+				exit!
+			end
+		end
+	end
 end
 
 end # module Passenger

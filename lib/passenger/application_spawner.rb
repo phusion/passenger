@@ -141,7 +141,8 @@ class ApplicationSpawner < AbstractServer
 	# will be returned, which represents the spawned RoR application.
 	#
 	# Unlike spawn_application, this method may be called even when the ApplicationSpawner
-	# server isn't started.
+	# server isn't started. This allows one to spawn a RoR application without preloading
+	# any source files.
 	#
 	# Raises:
 	# - SystemCallError: Something went wrong.
@@ -149,55 +150,45 @@ class ApplicationSpawner < AbstractServer
 	def spawn_application!
 		# Double fork to prevent zombie processes.
 		a, b = UNIXSocket.pair
-		pid = fork do
-			begin
-				pid = fork do
-					begin
-						$0 = "Rails: #{@app_root}"
-						a.close
-						channel = MessageChannel.new(b)
-						reader, writer = IO.pipe
-						begin
-							handler = RequestHandler.new(reader)
-							channel.write(Process.pid, handler.socket_name,
-								handler.using_abstract_namespace?)
-							channel.send_io(writer)
-							writer.close
-							channel.close
-							handler.main_loop
-						ensure
-							channel.close rescue nil
-							writer.close rescue nil
-							handler.cleanup rescue nil
-						end
-					rescue SignalException => signal
-						if e.message != RequestHandler::HARD_TERMINATION_SIGNAL &&
-						   e.message != RequestHandler::SOFT_TERMINATION_SIGNAL
-							print_exception('application', e)
-						end
-					rescue Exception => e
-						print_exception('application', e)
-					ensure
-						exit!
+		pid = safe_fork(self.class.to_s) do
+			pid = safe_fork('application') do
+				begin
+					a.close
+					channel = MessageChannel.new(b)
+					ok = report_app_init_errors(channel) do
+						Dir.chdir(@app_root)
+						lower_privilege! if @lower_privilege
+						require 'config/enviroment'
+					end
+					exit! if !ok
+					channel.write('ok')
+					start_request_handler(channel)
+				rescue SignalException => signal
+					if e.message != RequestHandler::HARD_TERMINATION_SIGNAL &&
+					   e.message != RequestHandler::SOFT_TERMINATION_SIGNAL
+						raise
 					end
 				end
-			rescue Exception => e
-				print_exception(self.class.to_s, e)
-			ensure
-				exit!
 			end
 		end
 		b.close
 		Process.waitpid(pid)
 		
 		channel = MessageChannel.new(a)
-		pid, socket_name, using_abstract_namespace = channel.read
-		if pid.nil?
+		status = channel.read
+		if status.nil?
 			raise IOError, "Connection closed"
+		elsif status == "ok"
+			pid, socket_name, using_abstract_namespace = channel.read
+			if pid.nil?
+				raise IOError, "Connection closed"
+			end
+			owner_pipe = server.recv_io
+			return Application.new(@app_root, pid, socket_name,
+				using_abstract_namespace == "true", owner_pipe)
+		else
+			# ...
 		end
-		owner_pipe = server.recv_io
-		return Application.new(@app_root, pid, socket_name,
-			using_abstract_namespace == "true", owner_pipe)
 	end
 	
 	# Overrided from AbstractServer#start.
@@ -342,32 +333,24 @@ private
 
 	def handle_spawn_application
 		# Double fork to prevent zombie processes.
-		pid = fork do
-			begin
-				pid = fork do
-					begin
-						start_request_handler
-					rescue SignalException => signal
-						if e.message != RequestHandler::HARD_TERMINATION_SIGNAL &&
-						   e.message != RequestHandler::SOFT_TERMINATION_SIGNAL
-							print_exception('application', e)
-						end
-					rescue Exception => e
-						print_exception('application', e)
-					ensure
-						exit!
+		pid = safe_fork(self.class.to_s) do
+			pid = safe_fork('application') do
+				begin
+					start_request_handler(client)
+				rescue SignalException => signal
+					if e.message != RequestHandler::HARD_TERMINATION_SIGNAL &&
+					   e.message != RequestHandler::SOFT_TERMINATION_SIGNAL
+						raise
 					end
 				end
-			rescue Exception => e
-				print_exception(self.class.to_s, e)
-			ensure
-				exit!
 			end
 		end
 		Process.waitpid(pid)
 	end
 	
-	def start_request_handler
+	# Initialize the request handler and enter its main loop.
+	# Spawn information will be sent back via _channel_.
+	def start_request_handler(channel)
 		$0 = "Rails: #{@app_root}"
 		reader, writer = IO.pipe
 		begin
@@ -379,14 +362,14 @@ private
 			end
 			
 			handler = RequestHandler.new(reader)
-			client.write(Process.pid, handler.socket_name,
+			channel.write(Process.pid, handler.socket_name,
 				handler.using_abstract_namespace?)
-			client.send_io(writer)
+			channel.send_io(writer)
 			writer.close
-			client.close
+			channel.close
 			handler.main_loop
 		ensure
-			client.close rescue nil
+			channel.close rescue nil
 			writer.close rescue nil
 			handler.cleanup rescue nil
 		end
