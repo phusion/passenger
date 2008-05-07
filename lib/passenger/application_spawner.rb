@@ -137,6 +137,69 @@ class ApplicationSpawner < AbstractServer
 		raise Error, "The application spawner server exited unexpectedly"
 	end
 	
+	# Spawn an instance of the RoR application. When successful, an Application object
+	# will be returned, which represents the spawned RoR application.
+	#
+	# Unlike spawn_application, this method may be called even when the ApplicationSpawner
+	# server isn't started.
+	#
+	# Raises:
+	# - SystemCallError: Something went wrong.
+	# - IOError: Something went wrong.
+	def spawn_application!
+		# Double fork to prevent zombie processes.
+		a, b = UNIXSocket.pair
+		pid = fork do
+			begin
+				pid = fork do
+					begin
+						$0 = "Rails: #{@app_root}"
+						a.close
+						channel = MessageChannel.new(b)
+						reader, writer = IO.pipe
+						begin
+							handler = RequestHandler.new(reader)
+							channel.write(Process.pid, handler.socket_name,
+								handler.using_abstract_namespace?)
+							channel.send_io(writer)
+							writer.close
+							channel.close
+							handler.main_loop
+						ensure
+							channel.close rescue nil
+							writer.close rescue nil
+							handler.cleanup rescue nil
+						end
+					rescue SignalException => signal
+						if e.message != RequestHandler::HARD_TERMINATION_SIGNAL &&
+						   e.message != RequestHandler::SOFT_TERMINATION_SIGNAL
+							print_exception('application', e)
+						end
+					rescue Exception => e
+						print_exception('application', e)
+					ensure
+						exit!
+					end
+				end
+			rescue Exception => e
+				print_exception(self.class.to_s, e)
+			ensure
+				exit!
+			end
+		end
+		b.close
+		Process.waitpid(pid)
+		
+		channel = MessageChannel.new(a)
+		pid, socket_name, using_abstract_namespace = channel.read
+		if pid.nil?
+			raise IOError, "Connection closed"
+		end
+		owner_pipe = server.recv_io
+		return Application.new(@app_root, pid, socket_name,
+			using_abstract_namespace == "true", owner_pipe)
+	end
+	
 	# Overrided from AbstractServer#start.
 	#
 	# May raise these additional exceptions:
