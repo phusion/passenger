@@ -259,7 +259,14 @@ public:
 		struct msghdr msg;
 		struct iovec vec;
 		char dummy[1];
-		char control_data[CMSG_SPACE(sizeof(int))];
+		#ifdef __APPLE__
+			struct {
+				struct cmsghdr header;
+				int fd;
+			} control_data;
+		#else
+			char control_data[CMSG_SPACE(sizeof(int))];
+		#endif
 		struct cmsghdr *control_header;
 	
 		msg.msg_name = NULL;
@@ -272,17 +279,20 @@ public:
 		msg.msg_iov    = &vec;
 		msg.msg_iovlen = 1;
 	
-		msg.msg_control    = (caddr_t) control_data;
+		msg.msg_control    = (caddr_t) &control_data;
 		msg.msg_controllen = sizeof(control_data);
 		msg.msg_flags      = 0;
-	
-		control_header             = CMSG_FIRSTHDR(&msg);
-		control_header->cmsg_len   = CMSG_LEN(sizeof(int));
+		
+		control_header = CMSG_FIRSTHDR(&msg);
 		control_header->cmsg_level = SOL_SOCKET;
 		control_header->cmsg_type  = SCM_RIGHTS;
-		memcpy(CMSG_DATA(control_header), &fileDescriptor, sizeof(int));
-		
-		msg.msg_controllen = control_header->cmsg_len;
+		#ifdef __APPLE__
+			control_header->cmsg_len = sizeof(control_data);
+			control_data.fd = fileDescriptor;
+		#else
+			control_header->cmsg_len = CMSG_LEN(sizeof(int));
+			memcpy(CMSG_DATA(control_header), &fileDescriptor, sizeof(int));
+		#endif
 		
 		if (sendmsg(fd, &msg, 0) == -1) {
 			throw SystemException("Cannot send file descriptor with sendmsg()", errno);
@@ -425,7 +435,18 @@ public:
 		struct msghdr msg;
 		struct iovec vec;
 		char dummy[1];
-		char control_data[CMSG_SPACE(sizeof(int))];
+		#ifdef __APPLE__
+			// File descriptor passing macros (CMSG_*) seem to be broken
+			// on 64-bit MacOS X. This structure works around the problem.
+			struct {
+				struct cmsghdr header;
+				int fd;
+			} control_data;
+			#define EXPECTED_CMSG_LEN sizeof(control_data)
+		#else
+			char control_data[CMSG_SPACE(sizeof(int))];
+			#define EXPECTED_CMSG_LEN CMSG_LEN(sizeof(int))
+		#endif
 		struct cmsghdr *control_header;
 
 		msg.msg_name    = NULL;
@@ -437,7 +458,7 @@ public:
 		msg.msg_iov    = &vec;
 		msg.msg_iovlen = 1;
 
-		msg.msg_control    = (caddr_t) control_data;
+		msg.msg_control    = (caddr_t) &control_data;
 		msg.msg_controllen = sizeof(control_data);
 		msg.msg_flags      = 0;
 		
@@ -446,13 +467,16 @@ public:
 		}
 		
 		control_header = CMSG_FIRSTHDR(&msg);
-		if (msg.msg_controllen         != sizeof(control_data)
-		 || control_header->cmsg_len   != CMSG_LEN(sizeof(int))
+		if (control_header->cmsg_len   != EXPECTED_CMSG_LEN
 		 || control_header->cmsg_level != SOL_SOCKET
 		 || control_header->cmsg_type  != SCM_RIGHTS) {
 			throw IOException("No valid file descriptor received.");
 		}
-		return *((int *) CMSG_DATA(control_header));
+		#ifdef __APPLE__
+			return control_data.fd;
+		#else
+			return *((int *) CMSG_DATA(control_header));
+		#endif
 	}
 };
 

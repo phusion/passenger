@@ -203,15 +203,18 @@ class TEST
 		'MessageChannelTest.o' => %w(MessageChannelTest.cpp ../ext/apache2/MessageChannel.h),
 		'SpawnManagerTest.o' => %w(SpawnManagerTest.cpp
 			../ext/apache2/SpawnManager.h
-			../ext/apache2/Application.h),
+			../ext/apache2/Application.h
+			../ext/apache2/MessageChannel.h),
 		'ApplicationPoolServerTest.o' => %w(ApplicationPoolServerTest.cpp
-			../ext/apache2/ApplicationPoolServer.h),
+			../ext/apache2/ApplicationPoolServer.h
+			../ext/apache2/MessageChannel.h),
 		'ApplicationPoolServer_ApplicationPoolTest.o' => %w(ApplicationPoolServer_ApplicationPoolTest.cpp
 			ApplicationPoolTest.cpp
 			../ext/apache2/ApplicationPoolServer.h
 			../ext/apache2/ApplicationPool.h
 			../ext/apache2/SpawnManager.h
-			../ext/apache2/Application.h),
+			../ext/apache2/Application.h
+			../ext/apache2/MessageChannel.h),
 		'StandardApplicationPoolTest.o' => %w(StandardApplicationPoolTest.cpp
 			ApplicationPoolTest.cpp
 			../ext/apache2/ApplicationPool.h
