@@ -234,29 +234,29 @@ Nevertheless, the system administrator may be interested in changing
 Passenger's behavior. Passenger's Apache module supports the following
 configuration options:
 
-PassengerRoot <directory>::
-	The location to the Passenger root directory. This configuration option is
-	essential to Passenger. The correct value is given by the installer,
-	and should usually not be changed manually.
-+
+=== PassengerRoot <directory> ===
+The location to the Passenger root directory. This configuration option is
+essential to Passenger. The correct value is given by the installer,
+and should usually not be changed manually.
+
 This required option may only occur once, in the global server configuration.
 
-RailsBaseURI <uri>::
-	Used to specify that the given URI is a Rails application. See
-	<<deploying_to_sub_uri,Deploying to a sub URI>> for an example.
-+
+=== RailsBaseURI <uri> ===
+Used to specify that the given URI is a Rails application. See
+<<deploying_to_sub_uri,Deploying to a sub URI>> for an example.
+
 This option may occur multiple times, in the global server configuration or in a
 virtual host configuration block.
 
-RailsAutoDetect <on|off>::
-	Whether Passenger should automatically detect whether a virtual host's
-	document root is a Ruby on Rails application. The default is 'on'.
-+
+=== RailsAutoDetect <on|off> ===
+Whether Passenger should automatically detect whether a virtual host's
+document root is a Ruby on Rails application. The default is 'on'.
+
 This option may occur in the global server configuration or in a virtual host
 configuration block.
-+
+
 For example, consider the following configuration:
-+
+
 -----------------------------
 RailsAutoDetect off
 <VirtualHost *:80>
@@ -264,14 +264,14 @@ RailsAutoDetect off
     DocumentRoot /webapps/mycook/public
 </VirtualHost>
 -----------------------------
-+
+
 If one goes to 'http://www.mycook.com/', the visitor will see the contents of
 the '/webapps/mycook/public' folder, instead of the output of the Ruby on Rails
 application.
-+
+
 It is possible to explicitly specify that the host is a Ruby on Rails
 application by using the `RailsBaseURI` configuration option:
-+
+
 -----------------------------
 RailsAutoDetect off
 <VirtualHost *:80>
@@ -282,82 +282,130 @@ RailsAutoDetect off
 -----------------------------
 
 [[RailsAllowModRewrite]]
-RailsAllowModRewrite <on|off>::
-	If enabled, Passenger will not override mod_rewrite rules. Please read
-	<<conflicting_apache_modules,Conflicting Apache modules>> for details.
-+
+=== RailsAllowModRewrite <on|off> ===
+If enabled, Passenger will not override mod_rewrite rules. Please read
+<<conflicting_apache_modules,Conflicting Apache modules>> for details.
+
 This option may occur once, in the global server configuration or in a virtual host
 configuration block. The default value is 'off'.
 
-RailsRuby <filename>::
-	This option allows one to specify the Ruby interpreter to use.
-+
+=== RailsRuby <filename> ===
+This option allows one to specify the Ruby interpreter to use.
+
 This option may only occur once, in the global server configuration.
 The default is 'ruby'.
 
 [[rails_env]]
-RailsEnv <string>::
-	This option allows one to specify the default `RAILS_ENV` value.
-+
+=== RailsEnv <string> ===
+This option allows one to specify the default `RAILS_ENV` value.
+
 This option may occur once, in the global server configuration or in a virtual host
 configuration block. The default value is 'production'.
 
-RailsMaxPoolSize <integer>::
-	The maximum number of Ruby on Rails application instances that may
-	be simultaneously active. A larger number results in higher memory usage,
-	but improved ability to handle concurrent HTTP clients.
+=== RailsSpawnMethod <string> ===
+[TIP]
+."What spawn method should I use?"
+=========================================================
+This subsection attempts to describe spawn methods, but it's okay if you don't (want to)
+understand it, as it's mostly a technical detail. You can basically follow this rule of thumb:
+
+************************************************
+If your application works on Mongrel, but not on Passenger, then set `RailsSpawnMethod`
+to 'conservative'. Otherwise, leave it at 'smart' (the default).
+************************************************
+
+However, we do recommend you to try to understand it. The 'smart' spawn method brings
+many benefits.
+=========================================================
+
+Internally, Passenger spawns multiple Ruby on Rails processes in order to handle requests.
+But there are multiple ways with which processes can be spawned, each having its own set of
+pros and cons. Supported spawn methods are:
+
+smart::
+When this spawn method is used, Passenger will attempt to cache Ruby on Rails framework
+code and application code for a limited period of time.
 +
+*Pros:*
+This can significantly decrease spawn time (by as much as 90%). And, when Ruby Enterprise
+Edition is used, <<reducing_memory_usage,memory usage can be reduced by 33% on average>>.
++
+*Cons:*
+Some Ruby on Rails applications and libraries are not compatible with smart spawning.
+If that's the case for your application, then you should use 'conservative' as
+spawning method.
+
+conservative::
+This spawning method is similar to the one used in Mongrel Cluster. It does not perform
+any code caching at all.
++
+*Pros:*
+Conservative spawning is guaranteed to be compatible with all applications and libraries.
++
+*Cons:*
+Much slower than smart spawning. Every spawn action will be equally slow, though no slower than
+the startup time of a single server in Mongrel Cluster. Conservative spawning will also
+render <<reducing_memory_usage,Ruby Enterprise Edition's memory reduction technology>> useless.
+
+This option may occur once, in the global server configuration or in a virtual host
+configuration block. The default value is 'smart'.
+
+=== RailsMaxPoolSize <integer> ===
+The maximum number of Ruby on Rails application instances that may
+be simultaneously active. A larger number results in higher memory usage,
+but improved ability to handle concurrent HTTP clients.
+
 The optimal value depends on your system's hardware and the server's average
 load. You should experiment with different values. But generally speaking,
 the value should be at least equal to the number of CPUs (or CPU cores) that
 you have. If your system has 2 GB of RAM, then we recommend a value of '30'.
 If your system is a Virtual Private Server (VPS) and has about 256 MB RAM, and
 is also running other services such as MySQL, then we recommend a value of '2'.
-+
+
 If you find that your server is unable to handle the load on your Rails websites
 (i.e. running out of memory) then you should lower this value. (Though if your
 sites are really that popular, then you should strongly consider upgrading your
 hardware or getting more servers.)
-+
+
 This option may only occur once, in the global server configuration.
 The default value is '20'.
-+
+
 TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
 Edition>>. This allows you to reduce your memory usage by about 33%. And it's
 not hard to install.
 
-RailsPoolIdleTime <integer>::
-	The maximum number of seconds that a Ruby on Rails application instance
-	may be idle. That is, if an application instance hasn't done anything after
-	the given number of seconds, then it will be shutdown in order to conserve
-	memory.
-+
+=== RailsPoolIdleTime <integer> ===
+The maximum number of seconds that a Ruby on Rails application instance
+may be idle. That is, if an application instance hasn't done anything after
+the given number of seconds, then it will be shutdown in order to conserve
+memory.
+
 Decreasing this value means that Rails applications will have to be spawned
 more often. Since spawning is a relatively slow operation, some visitors may
 notice a small delay when they visit your Rails site. However, it will also
 free up resources used by Rails applications more quickly.
-+
+
 The optimal value depends on the average time that a visitor spends on a single
 Rails web page. We recommend a value of `2 * x`, where `x` is the average
 number of seconds that a visitor spends on a single Rails web page. But your
 mileage may vary.
-+
+
 This option may only occur once, in the global server configuration.
 The default value is '120'.
 
 [[RailsUserSwitching]]
-RailsUserSwitching <on|off>::
-	Whether to enable <<user_switching,user switching support>>.
-+
+=== RailsUserSwitching <on|off> ===
+Whether to enable <<user_switching,user switching support>>.
+
 This option may only occur once, in the global server configuration.
 The default value is 'on'.
 
 [[RailsDefaultUser]]
-RailsDefaultUser <username>::
-	Passenger enables <<user_switching,user switching support>> by default.
-	This configuration option allows one to specify which user Rails
-	applications must run as, if user switching fails or is disabled.
-+
+=== RailsDefaultUser <username> ===
+Passenger enables <<user_switching,user switching support>> by default.
+This configuration option allows one to specify which user Rails
+applications must run as, if user switching fails or is disabled.
+
 This option may only occur once, in the global server configuration.
 The default value is 'nobody'.
 
