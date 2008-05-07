@@ -23,7 +23,7 @@ shared_examples_for "a spawner that supports lowering of privileges" do
 	end
 	
 	after :each do
-		teardown_rails_stub
+		@stub.destroy
 	end
 	
 	it "lowers its privileges to the owner of environment.rb" do

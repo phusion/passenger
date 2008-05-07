@@ -20,30 +20,42 @@ describe SpawnManager do
 		@manager = SpawnManager.new
 		@stub = setup_rails_stub('foobar')
 		@stub.use_vendor_rails('minimal')
+		@server = @manager
+		@server.start
 	end
 	
 	after :each do
 		@manager.cleanup
-		teardown_rails_stub
+		@stub.destroy
 	end
 	
-	describe "AbstractServer-like behavior" do
-		before :each do
-			@server = @manager
-			@server.start
-		end
-		
-		it_should_behave_like "AbstractServer"
+	it_should_behave_like "AbstractServer"
+	
+	def spawn_arbitrary_application
+		@manager.spawn_application(@stub.app_root)
+	end
+end
+
+describe SpawnManager do
+	include TestHelper
+	
+	before :each do
+		@manager = SpawnManager.new
+		@stub = setup_rails_stub('foobar')
+		@stub.use_vendor_rails('minimal')
 	end
 	
-	it_should_behave_like "a minimal spawner"
+	after :each do
+		@manager.cleanup
+		@stub.destroy
+	end
 	
-	it "doesn't crash on spawning when running asynchronously" do
+	it "can spawn when the server's not running" do
 		app = @manager.spawn_application(@stub.app_root)
 		app.close
 	end
 	
-	it "doesn't crash on spawning when running synchronously" do
+	it "can spawn when the server's running synchronously" do
 		a, b = UNIXSocket.pair
 		pid = fork do
 			begin
@@ -84,22 +96,19 @@ describe SpawnManager do
 		spawners = @manager.instance_eval { @spawners }
 		spawners.should be_empty
 	end
-	
-	def spawn_arbitrary_application
-		@manager.spawn_application(@stub.app_root)
-	end
 end
 
 describe SpawnManager do
 	include TestHelper
 	
+	it_should_behave_like "a minimal spawner"
 	it_should_behave_like "handling errors in application initialization"
 	it_should_behave_like "handling errors in framework initialization"
 	
-	def spawn_application(app_root)
+	def spawn_stub_application(stub)
 		spawner = SpawnManager.new
 		begin
-			return spawner.spawn_application(app_root)
+			return spawner.spawn_application(stub.app_root)
 		ensure
 			spawner.cleanup
 		end
@@ -116,7 +125,7 @@ describe SpawnManager do
 		begin
 			File.write(@stub.environment_rb, "RAILS_GEM_VERSION = '1.9.827'")
 			@stub.dont_use_vendor_rails
-			return spawn_application(@stub.app_root)
+			return spawn_stub_application(@stub)
 		ensure
 			Application.instance_eval do
 				alias detect_framework_version orig_detect_framework_version

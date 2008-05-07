@@ -16,7 +16,7 @@ include PlatformInfo
 # TODO: test custom page caching directory
 
 shared_examples_for "MyCook(tm) beta" do
-	it "is be possible to fetch static assets" do
+	it "is possible to fetch static assets" do
 		get('/images/rails.png').should == public_file('images/rails.png')
 	end
 	
@@ -144,6 +144,12 @@ describe "mod_passenger running in Apache 2" do
 	before :all do
 		check_hosts_configuration
 		@apache2 = Apache2Controller.new
+		if Process.uid == 0
+			@apache2.set(
+				:www_user => CONFIG['normal_user_1'],
+				:www_group => Etc.getgrgid(Etc.getpwnam(CONFIG['normal_user_1']).gid).name
+			)
+		end
 	end
 	
 	after :all do
@@ -244,7 +250,7 @@ describe "mod_passenger running in Apache 2" do
 			@error_page_signature = /<meta name="generator" content="Phusion Passenger">/
 		end
 		
-		it "should display an error page if the Rails application requires a nonexistant Rails version" do
+		it "displays an error page if the Rails application requires a nonexistant Rails version" do
 			use_rails_stub('foobar', "#{@webdir}/app-with-nonexistant-rails-version") do |stub|
 				File.write(stub.environment_rb) do |content|
 					content.sub(/^RAILS_GEM_VERSION = .*$/, "RAILS_GEM_VERSION = '1.9.1234'")
@@ -253,7 +259,7 @@ describe "mod_passenger running in Apache 2" do
 			end
 		end
 		
-		it "should display an error page if the Rails application crashes during startup" do
+		it "displays an error page if the Rails application crashes during startup" do
 			use_rails_stub('foobar', "#{@webdir}/app-that-crashes-during-startup") do |stub|
 				File.prepend(stub.environment_rb, "raise 'app crash'")
 				result = get("/app-that-crashes-during-startup/public")
@@ -262,7 +268,7 @@ describe "mod_passenger running in Apache 2" do
 			end
 		end
 		
-		it "should display an error page if the Rails application's vendor'ed Rails crashes" do
+		it "displays an error page if the Rails application's vendor'ed Rails crashes" do
 			use_rails_stub('foobar', "#{@webdir}/app-with-crashing-vendor-rails") do |stub|
 				stub.use_vendor_rails('minimal')
 				File.append("#{stub.app_root}/vendor/rails/railties/lib/initializer.rb",

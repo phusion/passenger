@@ -11,7 +11,7 @@ shared_examples_for "handling errors in application initialization" do
 	it "raises an AppInitError if the spawned app raises a standard exception during startup" do
 		File.prepend(@stub.environment_rb, "raise 'This is a dummy exception.'\n")
 		begin
-			spawn_application(@stub.app_root)
+			spawn_stub_application(@stub)
 			violated "Spawning the application should have raised an InitializationError."
 		rescue AppInitError => e
 			e.child_exception.message.should == "This is a dummy exception."
@@ -26,7 +26,7 @@ shared_examples_for "handling errors in application initialization" do
 			raise MyError, "This is a custom exception."
 		})
 		begin
-			spawn_application(@stub.app_root)
+			spawn_stub_application(@stub)
 			violated "Spawning the application should have raised an InitializationError."
 		rescue AppInitError => e
 			e.child_exception.message.should == "This is a custom exception. (MyError)"
@@ -36,7 +36,7 @@ shared_examples_for "handling errors in application initialization" do
 	it "raises an AppInitError if the spawned app calls exit() during startup" do
 		File.prepend(@stub.environment_rb, "exit\n")
 		begin
-			spawn_application(@stub.app_root)
+			spawn_stub_application(@stub)
 			violated "Spawning the application should have raised an InitializationError."
 		rescue AppInitError => e
 			e.child_exception.should be_nil

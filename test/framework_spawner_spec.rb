@@ -29,7 +29,7 @@ describe FrameworkSpawner do
 	
 	after :each do
 		@spawner.stop
-		teardown_rails_stub
+		@stub.destroy
 	end
 	
 	describe "situations in which Rails is loaded via the gem" do
@@ -37,7 +37,6 @@ describe FrameworkSpawner do
 			false
 		end
 		
-		it_should_behave_like "a minimal spawner"
 		it_should_behave_like "a spawn server"
 	end
 	
@@ -46,7 +45,6 @@ describe FrameworkSpawner do
 			true
 		end
 		
-		it_should_behave_like "a minimal spawner"
 		it_should_behave_like "a spawn server"
 	end
 	
@@ -58,20 +56,43 @@ end
 describe FrameworkSpawner do
 	include TestHelper
 	
-	it_should_behave_like "handling errors in application initialization"
-	it_should_behave_like "handling errors in framework initialization"
+	before :each do
+		ENV['RAILS_ENV'] = 'production'
+	end
 	
-	def spawn_application(app_root)
-		version = Application.detect_framework_version(app_root)
+	describe "situations in which Rails is loaded via the gem" do
+		def use_vendor_rails?
+			false
+		end
+		
+		it_should_behave_like "a minimal spawner"
+		it_should_behave_like "handling errors in application initialization"
+		it_should_behave_like "handling errors in framework initialization"
+	end
+	
+	describe "situations in which Rails is loaded via vendor folder" do
+		def use_vendor_rails?
+			true
+		end
+		
+		it_should_behave_like "a minimal spawner"
+		it_should_behave_like "handling errors in framework initialization"
+	end
+	
+	def spawn_stub_application(stub)
+		if use_vendor_rails?
+			stub.use_vendor_rails('minimal')
+		end
+		version = Application.detect_framework_version(stub.app_root)
 		if version == :vendor
-			options = { :vendor => "#{@stub.app_root}/vendor/rails" }
+			options = { :vendor => "#{stub.app_root}/vendor/rails" }
 		else
 			options = { :version => version }
 		end
 		spawner = FrameworkSpawner.new(options)
 		spawner.start
 		begin
-			return spawner.spawn_application(app_root)
+			return spawner.spawn_application(stub.app_root)
 		ensure
 			spawner.stop
 		end
@@ -87,30 +108,33 @@ describe FrameworkSpawner do
 	end
 end
 
-if Process.euid == ApplicationSpawner::ROOT_UID
-	describe "FrameworkSpawner privilege lowering support" do
-		include TestHelper
-		
-		it_should_behave_like "a spawner that supports lowering of privileges"
-		
-		def spawn_stub_application(options = {})
-			options = {
-				:lower_privilege => true,
-				:lowest_user => CONFIG['lowest_user']
-			}.merge(options)
-			@stub.use_vendor_rails('minimal')
-			@spawner = FrameworkSpawner.new(:vendor =>
-				"#{@stub.app_root}/vendor/rails")
-			@spawner.start
-			begin
-				app = @spawner.spawn_application(@stub.app_root,
-					options[:lower_privilege],
-					options[:lowest_user])
-				yield app
-			ensure
-				app.close if app
-				@spawner.stop
-			end
+Process.euid == ApplicationSpawner::ROOT_UID &&
+describe("FrameworkSpawner privilege lowering support") do
+	include TestHelper
+	
+	before :each do
+		ENV['RAILS_ENV'] = 'production'
+	end
+	
+	it_should_behave_like "a spawner that supports lowering of privileges"
+	
+	def spawn_stub_application(options = {})
+		options = {
+			:lower_privilege => true,
+			:lowest_user => CONFIG['lowest_user']
+		}.merge(options)
+		@stub.use_vendor_rails('minimal')
+		@spawner = FrameworkSpawner.new(:vendor =>
+			"#{@stub.app_root}/vendor/rails")
+		@spawner.start
+		begin
+			app = @spawner.spawn_application(@stub.app_root,
+				options[:lower_privilege],
+				options[:lowest_user])
+			yield app
+		ensure
+			app.close if app
+			@spawner.stop
 		end
 	end
 end

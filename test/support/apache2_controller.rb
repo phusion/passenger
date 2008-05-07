@@ -43,9 +43,13 @@ class Apache2Controller
 	def start
 		if running?
 			stop
+		else
+			File.unlink("#{@server_root}/httpd.pid") rescue nil
 		end
 		
-		FileUtils.rm_rf(@server_root)
+		if File.exist?(@server_root)
+			FileUtils.rm_r(@server_root)
+		end
 		FileUtils.mkdir_p(@server_root)
 		write_config_file
 		FileUtils.cp("#{STUB_DIR}/mime.types", @server_root)
@@ -89,10 +93,15 @@ class Apache2Controller
 	
 	def stop
 		pid_file = "#{@server_root}/httpd.pid"
-		begin
-			pid = File.read(pid_file).strip.to_i
-			Process.kill('SIGTERM', pid)
-		rescue
+		if File.exist?(pid_file)
+			begin
+				pid = File.read(pid_file).strip.to_i
+				Process.kill('SIGTERM', pid)
+			rescue Errno::ESRCH
+				# Looks like a stale pid file.
+				FileUtils.rm_r(@server_root)
+				return
+			end
 		end
 		begin
 			# Wait until the PID file is removed.
@@ -117,7 +126,9 @@ class Apache2Controller
 		rescue Timeout::Error
 			raise "Unable to stop Apache."
 		end
-		FileUtils.rm_rf(@server_root)
+		if File.exist?(@server_root)
+			FileUtils.rm_r(@server_root)
+		end
 	end
 	
 	def add_vhost(domain, document_root)
@@ -129,7 +140,19 @@ class Apache2Controller
 	end
 	
 	def running?
-		return File.exist?("#{@server_root}/httpd.pid")
+		if File.exist?("#{@server_root}/httpd.pid")
+			pid = File.read("#{@server_root}/httpd.pid").strip
+			begin
+				Process.kill(0, pid.to_i)
+				return true
+			rescue Errno::ESRCH
+				return false
+			rescue SystemCallError
+				return true
+			end
+		else
+			return false
+		end
 	end
 
 private
