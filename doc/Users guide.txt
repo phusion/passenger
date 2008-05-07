@@ -286,7 +286,7 @@ RailsAllowModRewrite <on|off>::
 	If enabled, Passenger will not override mod_rewrite rules. Please read
 	<<conflicting_apache_modules,Conflicting Apache modules>> for details.
 +
-This option may occur in the global server configuration or in a virtual host
+This option may occur once, in the global server configuration or in a virtual host
 configuration block. The default value is 'off'.
 
 RailsRuby <filename>::
@@ -299,13 +299,8 @@ The default is 'ruby'.
 RailsEnv <string>::
 	This option allows one to specify the default `RAILS_ENV` value.
 +
-This option may only occur once, in the global server configuration.
-The default is 'production'.
-+
-TIP: Even though it is not possible to specify a different RailsEnv
-per virtual host in the Apache configuration file, one can set the
-Rails environment by editing `RAILS_ENV=...` in the application's
-'config/environment.rb'.
+This option may occur once, in the global server configuration or in a virtual host
+configuration block. The default value is 'production'.
 
 RailsMaxPoolSize <integer>::
 	The maximum number of Ruby on Rails application instances that may
