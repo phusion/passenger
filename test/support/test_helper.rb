@@ -16,7 +16,8 @@ module TestHelper
 		end
 		
 		def use_vendor_rails(name)
-			FileUtils.cp_r("stub/vendor_rails/#{name}", "#{@app_root}/vendor/rails")
+			FileUtils.mkdir_p("#{@app_root}/vendor/rails")
+			FileUtils.cp_r("stub/vendor_rails/#{name}/.", "#{@app_root}/vendor/rails")
 		end
 		
 		def dont_use_vendor_rails
