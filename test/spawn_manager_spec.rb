@@ -29,10 +29,25 @@ describe SpawnManager do
 		@stub.destroy
 	end
 	
-	it_should_behave_like "AbstractServer"
+	describe "smart spawning" do
+		before :each do
+			@spawn_method = "smart"
+		end
+		
+		it_should_behave_like "AbstractServer"
+	end
+	
+	describe "conservative spawning" do
+		before :each do
+			@spawn_method = "conservative"
+		end
+		
+		it_should_behave_like "AbstractServer"
+	end
 	
 	def spawn_arbitrary_application
-		@manager.spawn_application(@stub.app_root)
+		@manager.spawn_application(@stub.app_root, true, "nobody",
+			"production", @spawn_method)
 	end
 end
 
@@ -62,7 +77,8 @@ describe SpawnManager do
 				a.close
 				sleep(1) # Give @manager the chance to start.
 				channel = MessageChannel.new(b)
-				channel.write("spawn_application", @stub.app_root, "true", "nobody", "production")
+				channel.write("spawn_application", @stub.app_root, "true",
+					"nobody", "production", "smart")
 				channel.read
 				pid, listen_socket = channel.read
 				channel.recv_io.close
@@ -101,14 +117,30 @@ end
 describe SpawnManager do
 	include TestHelper
 	
-	it_should_behave_like "a minimal spawner"
+	before :each do
+		@spawn_method = "smart"
+	end
+	
+	describe "smart spawning" do
+		it_should_behave_like "a minimal spawner"
+	end
+	
+	describe "conservative spawning" do
+		before :each do
+			@spawn_method = "conservative"
+		end
+		
+		it_should_behave_like "a minimal spawner"
+	end
+	
 	it_should_behave_like "handling errors in application initialization"
 	it_should_behave_like "handling errors in framework initialization"
 	
 	def spawn_stub_application(stub)
 		spawner = SpawnManager.new
 		begin
-			return spawner.spawn_application(stub.app_root)
+			return spawner.spawn_application(stub.app_root, true,
+				"nobody", "production", @spawn_method)
 		ensure
 			spawner.cleanup
 		end

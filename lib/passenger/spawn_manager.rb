@@ -64,11 +64,16 @@ class SpawnManager < AbstractServer
 	# See ApplicationSpawner.new for an explanation of the +lower_privilege+,
 	# +lowest_user+ and +environment+ parameters.
 	#
-	# SpawnManager will internally cache the code of applications, in order to
-	# speed up future spawning attempts. This implies that, if you've
-	# changed the application's code, you must do one of these things:
+	# The +spawn_method+ argument may be one of "smart" or "conservative".
+	# When "smart" is specified (the default), SpawnManager will internally cache the
+	# code of applications, in order to speed up future spawning attempts. This implies
+	# that, if you've changed the application's code, you must do one of these things:
 	# - Restart this SpawnManager by calling AbstractServer#stop, then AbstractServer#start.
 	# - Reload the application by calling reload with the correct app_root argument.
+	# Caching however can be incompatible with some applications.
+	#
+	# The "conservative" spawning method does not involve any caching at all.
+	# Spawning will be slower, but is guaranteed to be compatible with all applications.
 	#
 	# Raises:
 	# - ArgumentError: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
@@ -77,24 +82,33 @@ class SpawnManager < AbstractServer
 	# - AbstractServer::ServerError: One of the server processes exited unexpectedly.
 	# - FrameworkInitError: The Ruby on Rails framework that the application requires could not be loaded.
 	# - AppInitError: The application raised an exception or called exit() during startup.
-	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody", environment = "production")
-		framework_version = Application.detect_framework_version(app_root)
-		if framework_version == :vendor
-			vendor_path = normalize_path("#{app_root}/vendor/rails")
-			key = "vendor:#{vendor_path}"
-			create_spawner = proc do
-				FrameworkSpawner.new(:vendor => vendor_path)
+	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody",
+	                      environment = "production", spawn_method = "smart")
+		if spawn_method == "smart"
+			framework_version = Application.detect_framework_version(app_root)
+			if framework_version == :vendor
+				vendor_path = normalize_path("#{app_root}/vendor/rails")
+				key = "vendor:#{vendor_path}"
+				create_spawner = proc do
+					FrameworkSpawner.new(:vendor => vendor_path)
+				end
+			elsif framework_version.nil?
+				app_root = normalize_path(app_root)
+				key = "app:#{app_root}"
+				create_spawner = proc do
+					ApplicationSpawner.new(app_root, lower_privilege, lowest_user, environment)
+				end
+			else
+				key = "version:#{framework_version}"
+				create_spawner = proc do
+					FrameworkSpawner.new(:version => framework_version)
+				end
 			end
-		elsif framework_version.nil?
+		else
 			app_root = normalize_path(app_root)
 			key = "app:#{app_root}"
 			create_spawner = proc do
 				ApplicationSpawner.new(app_root, lower_privilege, lowest_user, environment)
-			end
-		else
-			key = "version:#{framework_version}"
-			create_spawner = proc do
-				FrameworkSpawner.new(:version => framework_version)
 			end
 		end
 		
@@ -111,8 +125,10 @@ class SpawnManager < AbstractServer
 				if spawner.is_a?(FrameworkSpawner)
 					return spawner.spawn_application(app_root, lower_privilege,
 						lowest_user, environment)
-				else
+				elsif spawn_method == "smart"
 					return spawner.spawn_application
+				else
+					return spawner.spawn_application!
 				end
 			rescue AbstractServer::ServerError
 				spawner.stop
@@ -176,11 +192,12 @@ class SpawnManager < AbstractServer
 	end
 
 private
-	def handle_spawn_application(app_root, lower_privilege, lowest_user, environment)
+	def handle_spawn_application(app_root, lower_privilege, lowest_user, environment, spawn_method)
 		lower_privilege = lower_privilege == "true"
 		app = nil
 		begin
-			app = spawn_application(app_root, lower_privilege, lowest_user, environment)
+			app = spawn_application(app_root, lower_privilege, lowest_user,
+				environment, spawn_method)
 		rescue ArgumentError => e
 			send_error_page(client, 'invalid_app_root', :error => e, :app_root => app_root)
 		rescue AbstractServer::ServerError => e

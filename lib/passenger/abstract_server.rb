@@ -173,7 +173,7 @@ class AbstractServer
 		@parent_socket.close
 		@parent_channel = nil
 		
-		# Wait at most 5 seconds for server to exit. If it doesn't do that,
+		# Wait at most 3 seconds for server to exit. If it doesn't do that,
 		# we kill it. If that doesn't work either, we kill it forcefully with
 		# SIGKILL.
 		begin

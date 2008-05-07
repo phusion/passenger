@@ -147,7 +147,7 @@ private:
 		bool failed = false;
 		
 		try {
-			session = server.pool.get(args[1], args[2] == "true", args[3], args[4]);
+			session = server.pool.get(args[1], args[2] == "true", args[3], args[4], args[5]);
 			sessions[lastSessionID] = session;
 			lastSessionID++;
 		} catch (const SpawnException &e) {
@@ -236,7 +236,7 @@ private:
 				
 				P_TRACE(3, "Client " << this << ": received message: " <<
 					toString(args));
-				if (args[0] == "get" && args.size() == 5) {
+				if (args[0] == "get" && args.size() == 6) {
 					processGet(args);
 				} else if (args[0] == "close" && args.size() == 2) {
 					processClose(args);

@@ -237,6 +237,7 @@ private:
 	 * @param lowerPrivilege Whether to lower the application's privileges.
 	 * @param lowestUser The user to fallback to if lowering privilege fails.
 	 * @param environment The RAILS_ENV environment that should be used.
+	 * @param spawnMethod The spawn method to use.
 	 * @return An Application smart pointer, representing the spawned application.
 	 * @throws SpawnException Something went wrong.
 	 */
@@ -244,7 +245,8 @@ private:
 		const string &appRoot,
 		bool lowerPrivilege,
 		const string &lowestUser,
-		const string &environment
+		const string &environment,
+		const string &spawnMethod
 	) {
 		vector<string> args;
 		int ownerPipe;
@@ -255,6 +257,7 @@ private:
 				(lowerPrivilege) ? "true" : "false",
 				lowestUser.c_str(),
 				environment.c_str(),
+				spawnMethod.c_str(),
 				NULL);
 		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not write 'spawn_application' "
@@ -320,7 +323,7 @@ private:
 	ApplicationPtr
 	handleSpawnException(const SpawnException &e, const string &appRoot,
 	                     bool lowerPrivilege, const string &lowestUser,
-	                     const string &environment) {
+	                     const string &environment, const string &spawnMethod) {
 		bool restarted;
 		try {
 			P_DEBUG("Spawn server died. Attempting to restart it...");
@@ -335,7 +338,8 @@ private:
 			restarted = false;
 		}
 		if (restarted) {
-			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser, environment);
+			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser,
+				environment, spawnMethod);
 		} else {
 			throw SpawnException("The spawn server died unexpectedly, and restarting it failed.");
 		}
@@ -470,6 +474,8 @@ public:
 	 * @param lowerPrivilege Whether to lower the application's privileges.
 	 * @param lowestUser The user to fallback to if lowering privilege fails.
  	 * @param environment The RAILS_ENV environment that should be used. May not be empty.
+ 	 * @param spawnMethod The spawn method to use. Either "smart" or "conservative".
+ 	 *                    See the Ruby class SpawnManager for details.
 	 * @return A smart pointer to an Application object, which represents the application
 	 *         instance that has been spawned. Use this object to communicate with the
 	 *         spawned application.
@@ -479,17 +485,19 @@ public:
 		const string &appRoot,
 		bool lowerPrivilege = true,
 		const string &lowestUser = "nobody",
-		const string &environment = "production"
+		const string &environment = "production",
+		const string &spawnMethod = "smart"
 	) {
 		mutex::scoped_lock l(lock);
 		try {
-			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser, environment);
+			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser,
+				environment, spawnMethod);
 		} catch (const SpawnException &e) {
 			if (e.hasErrorPage()) {
 				throw;
 			} else {
 				return handleSpawnException(e, appRoot, lowerPrivilege,
-					lowestUser, environment);
+					lowestUser, environment, spawnMethod);
 			}
 		}
 	}

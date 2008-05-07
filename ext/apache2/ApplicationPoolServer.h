@@ -260,7 +260,8 @@ private:
 			const string &appRoot,
 			bool lowerPrivilege = true,
 			const string &lowestUser = "nobody",
-			const string &environment = "production"
+			const string &environment = "production",
+			const string &spawnMethod = "smart"
 		) {
 			MessageChannel channel(data->server);
 			vector<string> args;
@@ -271,6 +272,7 @@ private:
 					(lowerPrivilege) ? "true" : "false",
 					lowestUser.c_str(),
 					environment.c_str(),
+					spawnMethod.c_str(),
 					NULL);
 			} catch (const SystemException &) {
 				throw IOException("The ApplicationPool server exited unexpectedly.");

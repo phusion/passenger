@@ -180,7 +180,7 @@ class ApplicationSpawner < AbstractServer
 			end
 		end
 		b.close
-		Process.waitpid(pid)
+		Process.waitpid(pid) rescue nil
 		
 		channel = MessageChannel.new(a)
 		unmarshal_and_raise_errors(channel)
