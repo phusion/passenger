@@ -48,18 +48,18 @@
 			std::set<std::string> base_uris;
 			Threeway autoDetect;
 			Threeway allowModRewrite;
-		};
-		
-		/**
-		 * Server-wide configuration information.
-		 */
-		struct ServerConfig {
-			/** The filename of the Ruby interpreter to use. */
-			const char *ruby;
 			
 			/** The environment (i.e. value for RAILS_ENV) under which the
 			 * Rails application should operate. */
 			const char *env;
+		};
+		
+		/**
+		 * Server-wide (global, not per-virtual host) configuration information.
+		 */
+		struct ServerConfig {
+			/** The filename of the Ruby interpreter to use. */
+			const char *ruby;
 			
 			/** The Passenger root folder. */
 			const char *root;

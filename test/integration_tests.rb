@@ -206,25 +206,40 @@ describe "mod_passenger running in Apache 2" do
 		before :all do
 			@stub = setup_rails_stub('mycook')
 			rails_dir = File.expand_path(@stub.app_root) + "/public"
-			@apache2.add_vhost('passenger.test', rails_dir)
+			@apache2.add_vhost('mycook.passenger.test', rails_dir)
 			@apache2.add_vhost('norails.passenger.test', rails_dir) do |vhost|
 				vhost << "RailsAutoDetect off"
+			end
+			
+			@stub2 = setup_rails_stub('foobar', 'tmp.stub2')
+			rails_dir = File.expand_path(@stub2.app_root) + "/public"
+			@apache2.add_vhost('passenger.test', rails_dir) do |vhost|
+				vhost << "RailsEnv development"
 			end
 			@apache2.start
 		end
 		
 		after :all do
 			@stub.destroy
+			@stub2.destroy
 		end
 		
-		it "should ignore the Rails application if RailsAutoDetect is off" do
+		it "ignores the Rails application if RailsAutoDetect is off" do
 			@server = "http://norails.passenger.test:#{@apache2.port}"
 			get('/').should_not =~ /MyCook/
 		end
 		
 		it "setting RailsAutoDetect for one virtual host should not interfere with others" do
-			@server = "http://passenger.test:#{@apache2.port}"
+			@server = "http://mycook.passenger.test:#{@apache2.port}"
 			get('/').should =~ /MyCook/
+		end
+		
+		it "RailsEnv is per-virtual host" do
+			@server = "http://mycook.passenger.test:#{@apache2.port}"
+			get('/welcome/rails_env').should == "production"
+			
+			@server = "http://passenger.test:#{@apache2.port}"
+			get('/foo/rails_env').should == "development"
 		end
 	end
 	

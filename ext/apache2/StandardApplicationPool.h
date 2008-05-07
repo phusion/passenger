@@ -269,8 +269,13 @@ private:
 	}
 	
 	pair<AppContainerPtr, AppContainerList *>
-	spawnOrUseExisting(mutex::scoped_lock &l, const string &appRoot,
-	                   bool lowerPrivilege, const string &lowestUser) {
+	spawnOrUseExisting(
+		mutex::scoped_lock &l,
+		const string &appRoot,
+		bool lowerPrivilege,
+		const string &lowestUser,
+		const string &environment
+	) {
 		AppContainerPtr container;
 		AppContainerList *list;
 		
@@ -312,7 +317,7 @@ private:
 				} else {
 					container = ptr(new AppContainer());
 					container->app = spawnManager.spawn(appRoot,
-						lowerPrivilege, lowestUser);
+						lowerPrivilege, lowestUser, environment);
 					container->sessions = 0;
 					list->push_back(container);
 					container->iterator = list->end();
@@ -337,7 +342,8 @@ private:
 					count--;
 				}
 				container = ptr(new AppContainer());
-				container->app = spawnManager.spawn(appRoot, lowerPrivilege, lowestUser);
+				container->app = spawnManager.spawn(appRoot, lowerPrivilege, lowestUser,
+					environment);
 				container->sessions = 0;
 				it = apps.find(appRoot);
 				if (it == apps.end()) {
@@ -400,12 +406,11 @@ public:
 	 */
 	StandardApplicationPool(const string &spawnServerCommand,
 	             const string &logFile = "",
-	             const string &environment = "production",
 	             const string &rubyCommand = "ruby",
 	             const string &user = "")
 	        :
 		#ifndef PASSENGER_USE_DUMMY_SPAWN_MANAGER
-		spawnManager(spawnServerCommand, logFile, environment, rubyCommand, user),
+		spawnManager(spawnServerCommand, logFile, rubyCommand, user),
 		#endif
 		data(new SharedData()),
 		lock(data->lock),
@@ -441,8 +446,12 @@ public:
 		delete cleanerThread;
 	}
 	
-	virtual Application::SessionPtr
-	get(const string &appRoot, bool lowerPrivilege = true, const string &lowestUser = "nobody") {
+	virtual Application::SessionPtr get(
+		const string &appRoot,
+		bool lowerPrivilege = true,
+		const string &lowestUser = "nobody",
+		const string &environment = "production"
+	) {
 		unsigned int attempt;
 		const unsigned int MAX_ATTEMPTS = 5;
 		
@@ -452,7 +461,7 @@ public:
 			
 			mutex::scoped_lock l(lock);
 			pair<AppContainerPtr, AppContainerList *> p(
-				spawnOrUseExisting(l, appRoot, lowerPrivilege, lowestUser)
+				spawnOrUseExisting(l, appRoot, lowerPrivilege, lowestUser, environment)
 			);
 			AppContainerPtr &container(p.first);
 			AppContainerList &list(*p.second);

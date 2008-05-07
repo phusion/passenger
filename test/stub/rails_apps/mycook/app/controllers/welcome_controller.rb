@@ -21,6 +21,10 @@ class WelcomeController < ApplicationController
 		render :text => !!defined?(Passenger::SpawnManager)
 	end
 	
+	def rails_env
+		render :text => RAILS_ENV
+	end
+	
 	def terminate
 		exit!
 	end

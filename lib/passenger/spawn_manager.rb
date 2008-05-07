@@ -61,8 +61,8 @@ class SpawnManager < AbstractServer
 	# Spawn a RoR application When successful, an Application object will be
 	# returned, which represents the spawned RoR application.
 	#
-	# See ApplicationSpawner.new for an explanation of the +lower_privilege+
-	# and +lowest_user+ parameters.
+	# See ApplicationSpawner.new for an explanation of the +lower_privilege+,
+	# +lowest_user+ and +environment+ parameters.
 	#
 	# SpawnManager will internally cache the code of applications, in order to
 	# speed up future spawning attempts. This implies that, if you've
@@ -77,7 +77,7 @@ class SpawnManager < AbstractServer
 	# - AbstractServer::ServerError: One of the server processes exited unexpectedly.
 	# - FrameworkInitError: The Ruby on Rails framework that the application requires could not be loaded.
 	# - AppInitError: The application raised an exception or called exit() during startup.
-	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody")
+	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody", environment = "production")
 		framework_version = Application.detect_framework_version(app_root)
 		if framework_version == :vendor
 			vendor_path = normalize_path("#{app_root}/vendor/rails")
@@ -89,7 +89,7 @@ class SpawnManager < AbstractServer
 			app_root = normalize_path(app_root)
 			key = "app:#{app_root}"
 			create_spawner = proc do
-				ApplicationSpawner.new(app_root, lower_privilege, lowest_user)
+				ApplicationSpawner.new(app_root, lower_privilege, lowest_user, environment)
 			end
 		else
 			key = "version:#{framework_version}"
@@ -110,7 +110,7 @@ class SpawnManager < AbstractServer
 			begin
 				if spawner.is_a?(FrameworkSpawner)
 					return spawner.spawn_application(app_root, lower_privilege,
-						lowest_user)
+						lowest_user, environment)
 				else
 					return spawner.spawn_application
 				end
@@ -176,11 +176,11 @@ class SpawnManager < AbstractServer
 	end
 
 private
-	def handle_spawn_application(app_root, lower_privilege, lowest_user)
+	def handle_spawn_application(app_root, lower_privilege, lowest_user, environment)
 		lower_privilege = lower_privilege == "true"
 		app = nil
 		begin
-			app = spawn_application(app_root, lower_privilege, lowest_user)
+			app = spawn_application(app_root, lower_privilege, lowest_user, environment)
 		rescue ArgumentError => e
 			send_error_page(client, 'invalid_app_root', :error => e, :app_root => app_root)
 		rescue AbstractServer::ServerError => e

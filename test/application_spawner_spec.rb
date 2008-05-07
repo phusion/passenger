@@ -9,13 +9,10 @@ require 'spawner_error_handling_spec'
 
 include Passenger
 
-# TODO: write unit test which checks whether setting ENV['RAILS_ENV'] in environment.rb is respected (issue #6)
-
 describe ApplicationSpawner do
 	include TestHelper
 	
 	before :each do
-		ENV['RAILS_ENV'] = 'production'
 		@stub = setup_rails_stub('foobar')
 		@spawner = ApplicationSpawner.new(@stub.app_root)
 		@spawner.start
@@ -42,7 +39,6 @@ describe ApplicationSpawner do
 		it_should_behave_like "handling errors in application initialization"
 		
 		def spawn_stub_application(stub)
-			ENV['RAILS_ENV'] = 'production'
 			@spawner = ApplicationSpawner.new(stub.app_root)
 			begin
 				@spawner.start
@@ -58,7 +54,6 @@ describe ApplicationSpawner do
 		it_should_behave_like "handling errors in application initialization"
 	
 		def spawn_stub_application(stub)
-			ENV['RAILS_ENV'] = 'production'
 			@spawner = ApplicationSpawner.new(stub.app_root)
 			return @spawner.spawn_application!
 		end
@@ -73,7 +68,6 @@ describe("ApplicationSpawner privilege lowering support") do
 		it_should_behave_like "a spawner that supports lowering of privileges"
 	
 		def spawn_stub_application(options = {})
-			ENV['RAILS_ENV'] = 'production'
 			options = {
 				:lower_privilege => true,
 				:lowest_user => CONFIG['lowest_user']
@@ -96,7 +90,6 @@ describe("ApplicationSpawner privilege lowering support") do
 		it_should_behave_like "a spawner that supports lowering of privileges"
 	
 		def spawn_stub_application(options = {})
-			ENV['RAILS_ENV'] = 'production'
 			options = {
 				:lower_privilege => true,
 				:lowest_user => CONFIG['lowest_user']

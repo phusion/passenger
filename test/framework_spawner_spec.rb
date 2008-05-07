@@ -14,7 +14,6 @@ describe FrameworkSpawner do
 	include TestHelper
 	
 	before :each do
-		ENV['RAILS_ENV'] = 'production'
 		@stub = setup_rails_stub('foobar')
 		if use_vendor_rails?
 			@stub.use_vendor_rails('minimal')
@@ -55,10 +54,6 @@ end
 
 describe FrameworkSpawner do
 	include TestHelper
-	
-	before :each do
-		ENV['RAILS_ENV'] = 'production'
-	end
 	
 	describe "situations in which Rails is loaded via the gem" do
 		def use_vendor_rails?
@@ -111,10 +106,6 @@ end
 Process.euid == ApplicationSpawner::ROOT_UID &&
 describe("FrameworkSpawner privilege lowering support") do
 	include TestHelper
-	
-	before :each do
-		ENV['RAILS_ENV'] = 'production'
-	end
 	
 	it_should_behave_like "a spawner that supports lowering of privileges"
 	

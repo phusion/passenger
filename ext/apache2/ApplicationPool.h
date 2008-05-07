@@ -105,6 +105,7 @@ public:
 	 *             directory, but does not have to be an absolute path.
 	 * @param lowerPrivilege Whether to lower the application's privileges.
 	 * @param lowestUser The user to fallback to if lowering privilege fails.
+	 * @param environment The RAILS_ENV environment that should be used. May not be empty.
 	 * @return A session object.
 	 * @throw SpawnException An attempt was made to spawn a new application instance, but that attempt failed.
 	 * @throw IOException Something else went wrong.
@@ -114,7 +115,8 @@ public:
 	 *       <tt>get("/home/../home/foo")</tt>, then ApplicationPool will think
 	 *       they're 2 different applications, and thus will spawn 2 application instances.
 	 */
-	virtual Application::SessionPtr get(const string &appRoot, bool lowerPrivilege = true, const string &lowestUser = "nobody") = 0;
+	virtual Application::SessionPtr get(const string &appRoot, bool lowerPrivilege = true,
+		const string &lowestUser = "nobody", const string &environment = "production") = 0;
 	
 	/**
 	 * Clear all application instances that are currently in the pool.

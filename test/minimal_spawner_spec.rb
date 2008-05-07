@@ -23,8 +23,7 @@ shared_examples_for "a minimal spawner" do
 	
 	it "respects ENV['RAILS_ENV']= in environment.rb" do
 		use_rails_stub('foobar') do |stub|
-			ENV['RAILS_ENV'] = 'development'
-			File.prepend(stub.environment_rb, "ENV['RAILS_ENV'] = 'production'\n")
+			File.prepend(stub.environment_rb, "ENV['RAILS_ENV'] = 'development'\n")
 			File.append(stub.environment_rb, %q{
 				File.open('environment.txt', 'w') do |f|
 					f.write(RAILS_ENV)
@@ -32,7 +31,7 @@ shared_examples_for "a minimal spawner" do
 			})
 			spawn_stub_application(stub).close
 			environment = File.read("#{stub.app_root}/environment.txt")
-			environment.should == "production"
+			environment.should == "development"
 		end
 	end
 end

@@ -256,8 +256,12 @@ private:
 			return atoi(args[0].c_str());
 		}
 		
-		virtual Application::SessionPtr get(const string &appRoot, bool lowerPrivilege = true,
-		           const string &lowestUser = "nobody") {
+		virtual Application::SessionPtr get(
+			const string &appRoot,
+			bool lowerPrivilege = true,
+			const string &lowestUser = "nobody",
+			const string &environment = "production"
+		) {
 			MessageChannel channel(data->server);
 			vector<string> args;
 			int reader, writer;
@@ -265,7 +269,9 @@ private:
 			try {
 				channel.write("get", appRoot.c_str(),
 					(lowerPrivilege) ? "true" : "false",
-					lowestUser.c_str(), NULL);
+					lowestUser.c_str(),
+					environment.c_str(),
+					NULL);
 			} catch (const SystemException &) {
 				throw IOException("The ApplicationPool server exited unexpectedly.");
 			}
@@ -301,7 +307,6 @@ private:
 	string m_serverExecutable;
 	string m_spawnServerCommand;
 	string m_logFile;
-	string m_environment;
 	string m_rubyCommand;
 	string m_user;
 	
@@ -395,7 +400,6 @@ private:
 				m_serverExecutable.c_str(),
 				m_spawnServerCommand.c_str(),
 				m_logFile.c_str(),
-				m_environment.c_str(),
 				m_rubyCommand.c_str(),
 				m_user.c_str(),
 				NULL);
@@ -428,9 +432,6 @@ public:
 	 *            specified, no log file will be used, and the spawn server
 	 *            will use the same standard output/error channels as the
 	 *            current process.
-	 * @param environment The RAILS_ENV environment that all RoR applications
-	 *            should use. If an empty string is specified, the current value
-	 *            of the RAILS_ENV environment variable will be used.
 	 * @param rubyCommand The Ruby interpreter's command.
 	 * @param user The user that the spawn manager should run as. This
 	 *             parameter only has effect if the current process is
@@ -444,13 +445,11 @@ public:
 	ApplicationPoolServer(const string &serverExecutable,
 	             const string &spawnServerCommand,
 	             const string &logFile = "",
-	             const string &environment = "production",
 	             const string &rubyCommand = "ruby",
 	             const string &user = "")
 	: m_serverExecutable(serverExecutable),
 	  m_spawnServerCommand(spawnServerCommand),
 	  m_logFile(logFile),
-	  m_environment(environment),
 	  m_rubyCommand(rubyCommand),
 	  m_user(user) {
 		serverSocket = -1;

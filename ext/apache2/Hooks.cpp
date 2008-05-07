@@ -315,11 +315,10 @@ public:
 		passenger_config_merge_all_servers(pconf, s);
 		
 		ServerConfig *config = getServerConfig(s);
-		const char *ruby, *environment, *user;
+		const char *ruby, *user;
 		string applicationPoolServerExe, spawnServer;
 		
 		ruby = (config->ruby != NULL) ? config->ruby : DEFAULT_RUBY_COMMAND;
-		environment = (config->env != NULL) ? config->env : DEFAULT_RAILS_ENV;
 		if (config->userSwitching) {
 			user = "";
 		} else if (config->defaultUser != NULL) {
@@ -355,7 +354,7 @@ public:
 		applicationPoolServer = ptr(
 			new ApplicationPoolServer(
 				applicationPoolServerExe, spawnServer, "",
-				environment, ruby, user)
+				ruby, user)
 		);
 	}
 	
@@ -413,6 +412,7 @@ public:
 			try {
 				const char *defaultUser;
 				ServerConfig *sconfig;
+				const char *environment;
 				
 				sconfig = getServerConfig(r->server);
 				if (sconfig->defaultUser != NULL) {
@@ -420,8 +420,13 @@ public:
 				} else {
 					defaultUser = "nobody";
 				}
+				if (config->env == NULL) {
+					environment = DEFAULT_RAILS_ENV;
+				} else {
+					environment = config->env;
+				}
 				session = applicationPool->get(canonicalizePath(railsDir + "/.."),
-					true, defaultUser);
+					true, defaultUser, environment);
 			} catch (const SpawnException &e) {
 				if (e.hasErrorPage()) {
 					ap_set_content_type(r, "text/html; charset=utf-8");

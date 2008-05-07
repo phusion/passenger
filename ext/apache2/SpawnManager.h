@@ -83,7 +83,6 @@ private:
 
 	string spawnServerCommand;
 	string logFile;
-	string environment;
 	string rubyCommand;
 	string user;
 	
@@ -155,9 +154,6 @@ private:
 				fclose(logFileHandle);
 			}
 			dup2(STDERR_FILENO, STDOUT_FILENO);
-			if (!environment.empty()) {
-				setenv("RAILS_ENV", environment.c_str(), true);
-			}
 			dup2(fds[1], SPAWN_SERVER_INPUT_FD);
 			
 			// Close all unnecessary file descriptors
@@ -240,10 +236,16 @@ private:
 	 * @param appRoot The application root of the application to spawn.
 	 * @param lowerPrivilege Whether to lower the application's privileges.
 	 * @param lowestUser The user to fallback to if lowering privilege fails.
+	 * @param environment The RAILS_ENV environment that should be used.
 	 * @return An Application smart pointer, representing the spawned application.
 	 * @throws SpawnException Something went wrong.
 	 */
-	ApplicationPtr sendSpawnCommand(const string &appRoot, bool lowerPrivilege, const string &lowestUser) {
+	ApplicationPtr sendSpawnCommand(
+		const string &appRoot,
+		bool lowerPrivilege,
+		const string &lowestUser,
+		const string &environment
+	) {
 		vector<string> args;
 		int ownerPipe;
 		
@@ -252,6 +254,7 @@ private:
 				appRoot.c_str(),
 				(lowerPrivilege) ? "true" : "false",
 				lowestUser.c_str(),
+				environment.c_str(),
 				NULL);
 		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not write 'spawn_application' "
@@ -316,7 +319,8 @@ private:
 	
 	ApplicationPtr
 	handleSpawnException(const SpawnException &e, const string &appRoot,
-	                     bool lowerPrivilege, const string &lowestUser) {
+	                     bool lowerPrivilege, const string &lowestUser,
+	                     const string &environment) {
 		bool restarted;
 		try {
 			P_DEBUG("Spawn server died. Attempting to restart it...");
@@ -331,7 +335,7 @@ private:
 			restarted = false;
 		}
 		if (restarted) {
-			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser);
+			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser, environment);
 		} else {
 			throw SpawnException("The spawn server died unexpectedly, and restarting it failed.");
 		}
@@ -396,9 +400,6 @@ public:
 	 *            specified, no log file will be used, and the spawn server
 	 *            will use the same standard output/error channels as the
 	 *            current process.
-	 * @param environment The RAILS_ENV environment that all RoR applications
-	 *            should use. If an empty string is specified, the current value
-	 *            of the RAILS_ENV environment variable will be used.
 	 * @param rubyCommand The Ruby interpreter's command.
 	 * @param user The user that the spawn manager should run as. This
 	 *             parameter only has effect if the current process is
@@ -410,12 +411,10 @@ public:
 	 */
 	SpawnManager(const string &spawnServerCommand,
 	             const string &logFile = "",
-	             const string &environment = "production",
 	             const string &rubyCommand = "ruby",
 	             const string &user = "") {
 		this->spawnServerCommand = spawnServerCommand;
 		this->logFile = logFile;
-		this->environment = environment;
 		this->rubyCommand = rubyCommand;
 		this->user = user;
 		pid = 0;
@@ -470,20 +469,27 @@ public:
 	 *             but the path does not have to be absolute.
 	 * @param lowerPrivilege Whether to lower the application's privileges.
 	 * @param lowestUser The user to fallback to if lowering privilege fails.
+ 	 * @param environment The RAILS_ENV environment that should be used. May not be empty.
 	 * @return A smart pointer to an Application object, which represents the application
 	 *         instance that has been spawned. Use this object to communicate with the
 	 *         spawned application.
 	 * @throws SpawnException Something went wrong.
 	 */
-	ApplicationPtr spawn(const string &appRoot, bool lowerPrivilege = true, const string &lowestUser = "nobody") {
+	ApplicationPtr spawn(
+		const string &appRoot,
+		bool lowerPrivilege = true,
+		const string &lowestUser = "nobody",
+		const string &environment = "production"
+	) {
 		mutex::scoped_lock l(lock);
 		try {
-			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser);
+			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser, environment);
 		} catch (const SpawnException &e) {
 			if (e.hasErrorPage()) {
 				throw;
 			} else {
-				return handleSpawnException(e, appRoot, lowerPrivilege, lowestUser);
+				return handleSpawnException(e, appRoot, lowerPrivilege,
+					lowestUser, environment);
 			}
 		}
 	}

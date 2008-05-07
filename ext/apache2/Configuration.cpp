@@ -56,6 +56,7 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	DirConfig *config = create_dir_config_struct(p);
 	config->autoDetect = DirConfig::UNSET;
 	config->allowModRewrite = DirConfig::UNSET;
+	config->env = NULL;
 	return config;
 }
 
@@ -72,6 +73,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	
 	config->autoDetect = (add->autoDetect == DirConfig::UNSET) ? base->autoDetect : add->autoDetect;
 	config->allowModRewrite = (add->allowModRewrite == DirConfig::UNSET) ? base->allowModRewrite : add->allowModRewrite;
+	config->env = (add->env == NULL) ? base->env : add->env;
 	return config;
 }
 
@@ -79,7 +81,6 @@ void *
 passenger_config_create_server(apr_pool_t *p, server_rec *s) {
 	ServerConfig *config = create_server_config_struct(p);
 	config->ruby = NULL;
-	config->env = NULL;
 	config->root = NULL;
 	config->maxPoolSize = DEFAULT_MAX_POOL_SIZE;
 	config->maxPoolSizeSpecified = false;
@@ -98,7 +99,6 @@ passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
 	ServerConfig *add = (ServerConfig *) addv;
 	
 	config->ruby = (add->ruby == NULL) ? base->ruby : add->ruby;
-	config->env = (add->env == NULL) ? base->env : add->env;
 	config->root = (add->root == NULL) ? base->root : add->root;
 	config->maxPoolSize = (add->maxPoolSizeSpecified) ? base->maxPoolSize : add->maxPoolSize;
 	config->maxPoolSizeSpecified = base->maxPoolSizeSpecified || add->maxPoolSizeSpecified;
@@ -118,7 +118,6 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 	for (s = main_server; s != NULL; s = s->next) {
 		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
 		final->ruby = (final->ruby != NULL) ? final->ruby : config->ruby;
-		final->env = (final->env != NULL) ? final->env : config->env;
 		final->root = (final->root != NULL) ? final->root : config->root;
 		final->maxPoolSize = (final->maxPoolSizeSpecified) ? final->maxPoolSize : config->maxPoolSize;
 		final->maxPoolSizeSpecified = final->maxPoolSizeSpecified || config->maxPoolSizeSpecified;
@@ -173,8 +172,7 @@ cmd_rails_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
 
 static const char *
 cmd_rails_env(cmd_parms *cmd, void *pcfg, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
+	DirConfig *config = (DirConfig *) pcfg;
 	config->env = arg;
 	return NULL;
 }

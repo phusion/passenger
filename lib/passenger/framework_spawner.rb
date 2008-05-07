@@ -128,8 +128,8 @@ class FrameworkSpawner < AbstractServer
 	# When successful, an Application object will be returned, which represents
 	# the spawned RoR application.
 	#
-	# See ApplicationSpawner.new for an explanation of the +lower_privilege+
-	# and +lowest_user+ parameters.
+	# See ApplicationSpawner.new for an explanation of the +lower_privilege+,
+	# +lowest_user+ and +environment+ parameters.
 	#
 	# FrameworkSpawner will internally cache the code of applications, in order to
 	# speed up future spawning attempts. This implies that, if you've changed
@@ -143,12 +143,12 @@ class FrameworkSpawner < AbstractServer
 	# - AppInitError: The application raised an exception or called exit() during startup.
 	# - ApplicationSpawner::Error: The ApplicationSpawner server exited unexpectedly.
 	# - FrameworkSpawner::Error: The FrameworkSpawner server exited unexpectedly.
-	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody")
+	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody", environment = "production")
 		app_root = normalize_path(app_root)
 		assert_valid_app_root(app_root)
 		exception_to_propagate = nil
 		begin
-			server.write("spawn_application", app_root, lower_privilege, lowest_user)
+			server.write("spawn_application", app_root, lower_privilege, lowest_user, environment)
 			result = server.read
 			if result.nil?
 				raise IOError, "Connection closed"
@@ -270,13 +270,15 @@ private
 		Object.send(:remove_const, :RAILS_ROOT)
 	end
 
-	def handle_spawn_application(app_root, lower_privilege, lowest_user)
+	def handle_spawn_application(app_root, lower_privilege, lowest_user, environment)
 		lower_privilege = lower_privilege == "true"
 		@spawners_lock.synchronize do
 			spawner = @spawners[app_root]
 			if spawner.nil?
 				begin
-					spawner = ApplicationSpawner.new(app_root, lower_privilege, lowest_user)
+					spawner = ApplicationSpawner.new(app_root,
+						lower_privilege, lowest_user,
+						environment)
 					spawner.start
 				rescue ArgumentError, AppInitError, ApplicationSpawner::Error => e
 					client.write('exception')

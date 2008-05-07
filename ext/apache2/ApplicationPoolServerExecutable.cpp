@@ -76,10 +76,9 @@ public:
 	Server(int serverSocket,
 	       const string &spawnServerCommand,
 	       const string &logFile,
-	       const string &environment,
 	       const string &rubyCommand,
 	       const string &user)
-		: pool(spawnServerCommand, logFile, environment, rubyCommand, user) {
+		: pool(spawnServerCommand, logFile, rubyCommand, user) {
 		this->serverSocket = serverSocket;
 	}
 	
@@ -148,7 +147,7 @@ private:
 		bool failed = false;
 		
 		try {
-			session = server.pool.get(args[1], args[2] == "true", args[3]);
+			session = server.pool.get(args[1], args[2] == "true", args[3], args[4]);
 			sessions[lastSessionID] = session;
 			lastSessionID++;
 		} catch (const SpawnException &e) {
@@ -237,7 +236,7 @@ private:
 				
 				P_TRACE(3, "Client " << this << ": received message: " <<
 					toString(args));
-				if (args[0] == "get" && args.size() == 4) {
+				if (args[0] == "get" && args.size() == 5) {
 					processGet(args);
 				} else if (args[0] == "close" && args.size() == 2) {
 					processClose(args);
@@ -374,7 +373,7 @@ Server::start() {
 int
 main(int argc, char *argv[]) {
 	try {
-		Server server(SERVER_SOCKET_FD, argv[1], argv[2], argv[3], argv[4], argv[5]);
+		Server server(SERVER_SOCKET_FD, argv[1], argv[2], argv[3], argv[4]);
 		return server.start();
 	} catch (const exception &e) {
 		fprintf(stderr, "*** An unexpected error occured in the Passenger "

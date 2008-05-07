@@ -102,7 +102,9 @@ class ApplicationSpawner < AbstractServer
 	# If +lowest_user+ doesn't exist either, or if switching user failed
 	# (because the current process does not have the privilege to do so),
 	# then ApplicationSpawner will continue without reporting an error.
-	def initialize(app_root, lower_privilege = true, lowest_user = "nobody")
+	#
+	# The +environment+ argument allows one to specify the RAILS_ENV environment to use.
+	def initialize(app_root, lower_privilege = true, lowest_user = "nobody", environment = "production")
 		super()
 		begin
 			@app_root = normalize_path(app_root)
@@ -113,6 +115,7 @@ class ApplicationSpawner < AbstractServer
 		end
 		@lower_privilege = lower_privilege
 		@lowest_user = lowest_user
+		@environment = environment
 		self.time = Time.now
 		assert_valid_app_root(@app_root)
 		define_message_handler(:spawn_application, :handle_spawn_application)
@@ -144,6 +147,9 @@ class ApplicationSpawner < AbstractServer
 	# server isn't started. This allows one to spawn a RoR application without preloading
 	# any source files.
 	#
+	# This method may only be called if no Rails framework has been loaded in the current
+	# Ruby VM.
+	#
 	# Raises:
 	# - AppInitError: The Ruby on Rails application raised an exception
 	#   or called exit() during startup.
@@ -157,6 +163,7 @@ class ApplicationSpawner < AbstractServer
 					a.close
 					channel = MessageChannel.new(b)
 					success = report_app_init_status(channel) do
+						ENV['RAILS_ENV'] = @environment
 						Dir.chdir(@app_root)
 						lower_privilege! if @lower_privilege
 						require 'config/environment'
@@ -221,6 +228,11 @@ protected
 	def initialize_server # :nodoc:
 		report_app_init_status(client) do
 			$0 = "Passenger ApplicationSpawner: #{@app_root}"
+			ENV['RAILS_ENV'] = @environment
+			if defined?(RAILS_ENV)
+				Object.send(:remove_const, :RAILS_ENV)
+				Object.const_set(:RAILS_ENV, ENV['RAILS_ENV'])
+			end
 			Dir.chdir(@app_root)
 			lower_privilege! if @lower_privilege
 			preload_application
