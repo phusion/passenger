@@ -262,9 +262,13 @@ private:
 			vector<string> args;
 			int reader, writer;
 			
-			channel.write("get", appRoot.c_str(),
-				(lowerPrivilege) ? "true" : "false",
-				lowestUser.c_str(), NULL);
+			try {
+				channel.write("get", appRoot.c_str(),
+					(lowerPrivilege) ? "true" : "false",
+					lowestUser.c_str(), NULL);
+			} catch (const SystemException &) {
+				throw IOException("The ApplicationPool server exited unexpectedly.");
+			}
 			if (!channel.read(args)) {
 				throw IOException("The ApplicationPool server unexpectedly closed the connection.");
 			}
@@ -489,14 +493,22 @@ public:
 	 * @throws IOException Something went wrong.
 	 */
 	ApplicationPoolPtr connect() {
-		MessageChannel channel(serverSocket);
-		int clientConnection;
+		try {
+			MessageChannel channel(serverSocket);
+			int clientConnection;
 		
-		// Write some random data to wake up the server.
-		channel.writeRaw("x", 1);
+			// Write some random data to wake up the server.
+			channel.writeRaw("x", 1);
 		
-		clientConnection = channel.readFileDescriptor();
-		return ptr(new Client(clientConnection));
+			clientConnection = channel.readFileDescriptor();
+			return ptr(new Client(clientConnection));
+		} catch (const SystemException &e) {
+			throw SystemException("Could not connect to the ApplicationPool server", e.code());
+		} catch (const IOException &e) {
+			string message("Could not connect to the ApplicationPool server: ");
+			message.append(e.what());
+			throw IOException(message);
+		}
 	}
 	
 	/**
