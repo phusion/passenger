@@ -82,12 +82,14 @@ describe ApplicationSpawner do
 	end
 end
 
-if Process.euid == ApplicationSpawner::ROOT_UID
-	describe "ApplicationSpawner privilege lowering support" do
-		include TestHelper
-		
+
+Process.euid == ApplicationSpawner::ROOT_UID &&
+describe("ApplicationSpawner privilege lowering support") do
+	include TestHelper
+	
+	describe "regular spawning" do
 		it_should_behave_like "a spawner that supports lowering of privileges"
-		
+	
 		def spawn_stub_application(options = {})
 			options = {
 				:lower_privilege => true,
@@ -103,6 +105,26 @@ if Process.euid == ApplicationSpawner::ROOT_UID
 			ensure
 				app.close if app
 				@spawner.stop
+			end
+		end
+	end
+	
+	describe "conservative spawning" do
+		it_should_behave_like "a spawner that supports lowering of privileges"
+	
+		def spawn_stub_application(options = {})
+			options = {
+				:lower_privilege => true,
+				:lowest_user => CONFIG['lowest_user']
+			}.merge(options)
+			@spawner = ApplicationSpawner.new(@stub.app_root,
+				options[:lower_privilege],
+				options[:lowest_user])
+			begin
+				app = @spawner.spawn_application!
+				yield app
+			ensure
+				app.close if app
 			end
 		end
 	end
