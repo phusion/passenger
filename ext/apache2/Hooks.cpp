@@ -410,9 +410,8 @@ public:
 			
 			P_DEBUG("Processing HTTP request: " << r->uri);
 			try {
-				const char *defaultUser;
+				const char *defaultUser, *environment, *spawnMethod;
 				ServerConfig *sconfig;
-				const char *environment;
 				
 				sconfig = getServerConfig(r->server);
 				if (sconfig->defaultUser != NULL) {
@@ -425,8 +424,13 @@ public:
 				} else {
 					environment = config->env;
 				}
+				if (config->spawnMethod == DirConfig::SM_CONSERVATIVE) {
+					spawnMethod = "conservative";
+				} else {
+					spawnMethod = "smart";
+				}
 				session = applicationPool->get(canonicalizePath(railsDir + "/.."),
-					true, defaultUser, environment);
+					true, defaultUser, environment, spawnMethod);
 			} catch (const SpawnException &e) {
 				if (e.hasErrorPage()) {
 					ap_set_content_type(r, "text/html; charset=utf-8");

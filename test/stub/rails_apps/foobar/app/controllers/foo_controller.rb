@@ -6,4 +6,8 @@ class FooController < ActionController::Base
 	def rails_env
 		render :text => RAILS_ENV
 	end
+	
+	def backtrace
+		render :text => caller.join("\n")
+	end
 end

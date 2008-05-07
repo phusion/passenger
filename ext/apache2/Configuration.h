@@ -38,7 +38,7 @@
 	namespace Passenger {
 	
 		using namespace std;
-
+		
 		/**
 		 * Per-directory configuration information.
 		 */
@@ -52,6 +52,10 @@
 			/** The environment (i.e. value for RAILS_ENV) under which the
 			 * Rails application should operate. */
 			const char *env;
+			
+			/** The spawn method to use. */
+			enum SpawnMethod { SM_UNSET, SM_SMART, SM_CONSERVATIVE };
+			SpawnMethod spawnMethod;
 		};
 		
 		/**

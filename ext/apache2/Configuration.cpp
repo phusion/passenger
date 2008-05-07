@@ -57,6 +57,7 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->autoDetect = DirConfig::UNSET;
 	config->allowModRewrite = DirConfig::UNSET;
 	config->env = NULL;
+	config->spawnMethod = DirConfig::SM_UNSET;
 	return config;
 }
 
@@ -74,6 +75,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->autoDetect = (add->autoDetect == DirConfig::UNSET) ? base->autoDetect : add->autoDetect;
 	config->allowModRewrite = (add->allowModRewrite == DirConfig::UNSET) ? base->allowModRewrite : add->allowModRewrite;
 	config->env = (add->env == NULL) ? base->env : add->env;
+	config->spawnMethod = (add->spawnMethod == DirConfig::SM_UNSET) ? base->spawnMethod : add->spawnMethod;
 	return config;
 }
 
@@ -178,6 +180,19 @@ cmd_rails_env(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
+cmd_rails_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	if (strcmp(arg, "smart") == 0) {
+		config->spawnMethod = DirConfig::SM_SMART;
+	} else if (strcmp(arg, "conservative") == 0) {
+		config->spawnMethod = DirConfig::SM_CONSERVATIVE;
+	} else {
+		return "RailsSpawnMethod may only be 'smart' or 'conservative'.";
+	}
+	return NULL;
+}
+
+static const char *
 cmd_rails_max_pool_size(cmd_parms *cmd, void *pcfg, const char *arg) {
 	ServerConfig *config = (ServerConfig *) ap_get_module_config(
 		cmd->server->module_config, &passenger_module);
@@ -276,6 +291,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The environment under which a Rails app must run."),
+	AP_INIT_TAKE1("RailsSpawnMethod",
+		(Take1Func) cmd_rails_spawn_method,
+		NULL,
+		RSRC_CONF,
+		"The spawn method to use."),
 	AP_INIT_TAKE1("RailsMaxPoolSize",
 		(Take1Func) cmd_rails_max_pool_size,
 		NULL,

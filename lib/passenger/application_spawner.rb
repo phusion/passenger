@@ -167,6 +167,7 @@ class ApplicationSpawner < AbstractServer
 						Dir.chdir(@app_root)
 						lower_privilege! if @lower_privilege
 						require 'config/environment'
+						require 'dispatcher'
 					end
 					if success
 						start_request_handler(channel)

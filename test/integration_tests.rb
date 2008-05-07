@@ -215,6 +215,7 @@ describe "mod_passenger running in Apache 2" do
 			rails_dir = File.expand_path(@stub2.app_root) + "/public"
 			@apache2.add_vhost('passenger.test', rails_dir) do |vhost|
 				vhost << "RailsEnv development"
+				vhost << "RailsSpawnMethod conservative"
 			end
 			@apache2.start
 		end
@@ -240,6 +241,16 @@ describe "mod_passenger running in Apache 2" do
 			
 			@server = "http://passenger.test:#{@apache2.port}"
 			get('/foo/rails_env').should == "development"
+		end
+		
+		it "supports conservative spawning" do
+			@server = "http://passenger.test:#{@apache2.port}"
+			get('/foo/backtrace').should_not =~ /framework_spawner/
+		end
+		
+		it "RailsSpawnMethod spawning is per-virtual host" do
+			@server = "http://mycook.passenger.test:#{@apache2.port}"
+			get('/welcome/backtrace').should =~ /framework_spawner/
 		end
 	end
 	

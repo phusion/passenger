@@ -25,6 +25,10 @@ class WelcomeController < ApplicationController
 		render :text => RAILS_ENV
 	end
 	
+	def backtrace
+		render :text => caller.join("\n")
+	end
+	
 	def terminate
 		exit!
 	end
