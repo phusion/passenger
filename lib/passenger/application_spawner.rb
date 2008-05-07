@@ -255,6 +255,9 @@ private
 				alias_method :load_environment, :load_environment_with_passenger
 			end
 		end
+		if File.exist?('config/preinitializer.rb')
+			require 'config/preinitializer'
+		end
 		require 'config/environment'
 		if ActionController::Base.page_cache_directory.blank?
 			ActionController::Base.page_cache_directory = "#{RAILS_ROOT}/public"
