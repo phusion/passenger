@@ -152,7 +152,7 @@ class ApplicationSpawner < AbstractServer
 		# Double fork to prevent zombie processes.
 		a, b = UNIXSocket.pair
 		pid = safe_fork(self.class.to_s) do
-			pid = safe_fork('application') do
+			safe_fork('application') do
 				begin
 					a.close
 					channel = MessageChannel.new(b)
@@ -164,7 +164,7 @@ class ApplicationSpawner < AbstractServer
 					if success
 						start_request_handler(channel)
 					end
-				rescue SignalException => signal
+				rescue SignalException => e
 					if e.message != RequestHandler::HARD_TERMINATION_SIGNAL &&
 					   e.message != RequestHandler::SOFT_TERMINATION_SIGNAL
 						raise
@@ -362,10 +362,10 @@ private
 	def handle_spawn_application
 		# Double fork to prevent zombie processes.
 		pid = safe_fork(self.class.to_s) do
-			pid = safe_fork('application') do
+			safe_fork('application') do
 				begin
 					start_request_handler(client)
-				rescue SignalException => signal
+				rescue SignalException => e
 					if e.message != RequestHandler::HARD_TERMINATION_SIGNAL &&
 					   e.message != RequestHandler::SOFT_TERMINATION_SIGNAL
 						raise

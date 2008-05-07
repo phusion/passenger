@@ -111,6 +111,13 @@ class AbstractServer
 				STDERR.sync = true
 				@parent_socket.close
 				NativeSupport.close_all_file_descriptors([0, 1, 2, @child_socket.fileno])
+				
+				# At this point, RubyGems might have open file handles for which
+				# the associated file descriptors have just been closed. This can
+				# result in mysterious 'EBADFD' errors. So we force RubyGems to
+				# clear all open file handles.
+				Gem.clear_paths
+				
 				start_synchronously(@child_socket)
 			rescue Interrupt
 				# Do nothing.
