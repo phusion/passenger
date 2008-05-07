@@ -1,42 +1,44 @@
 require 'support/config'
+require 'support/test_helper'
 require 'passenger/application_spawner'
+
 require 'minimal_spawner_spec'
 require 'spawn_server_spec'
 require 'spawner_privilege_lowering_spec'
 require 'spawner_error_handling_spec'
+
 include Passenger
 
 # TODO: write unit test which checks whether setting ENV['RAILS_ENV'] in environment.rb is respected (issue #6)
 
 describe ApplicationSpawner do
-	before :all do
-		ENV['RAILS_ENV'] = 'production'
-		@test_app = "stub/railsapp"
-		Dir["#{@test_app}/log/*"].each do |file|
-			File.chmod(0666, file) rescue nil
-		end
-		File.chmod(0777, "#{@test_app}/log") rescue nil
-	end
-	
+	include TestHelper
+
 	before :each do
-		@spawner = ApplicationSpawner.new(@test_app)
+		ENV['RAILS_ENV'] = 'production'
+		@stub = setup_rails_stub('foobar')
+		@app_root = @stub.app_root
+		@spawner = ApplicationSpawner.new(@app_root)
 		@spawner.start
 		@server = @spawner
 	end
 	
 	after :each do
 		@spawner.stop
+		teardown_rails_stub
 	end
 	
 	it_should_behave_like "a minimal spawner"
 	it_should_behave_like "a spawn server"
 	
-	def spawn_application
+	def spawn_arbitrary_application
 		@spawner.spawn_application
 	end
 end
 
 describe ApplicationSpawner do
+	include TestHelper
+	
 	it_should_behave_like "handling errors in application initialization"
 	
 	def spawn_application(app_root)
@@ -52,19 +54,16 @@ end
 
 if Process.euid == ApplicationSpawner::ROOT_UID
 	describe "ApplicationSpawner privilege lowering support" do
-		before :all do
-			@test_app = "stub/railsapp"
-			ENV['RAILS_ENV'] = 'production'
-		end
-	
+		include TestHelper
+		
 		it_should_behave_like "a spawner that supports lowering of privileges"
 		
-		def spawn_app(options = {})
+		def spawn_stub_application(options = {})
 			options = {
 				:lower_privilege => true,
 				:lowest_user => CONFIG['lowest_user']
 			}.merge(options)
-			@spawner = ApplicationSpawner.new(@test_app,
+			@spawner = ApplicationSpawner.new(@stub.app_root,
 				options[:lower_privilege],
 				options[:lowest_user])
 			@spawner.start
@@ -72,7 +71,7 @@ if Process.euid == ApplicationSpawner::ROOT_UID
 				app = @spawner.spawn_application
 				yield app
 			ensure
-				app.close
+				app.close if app
 				@spawner.stop
 			end
 		end

@@ -1,7 +1,9 @@
 require 'support/config'
+require 'support/test_helper'
 require 'passenger/spawn_manager'
 require 'passenger/message_channel'
 require 'passenger/utils'
+
 require 'abstract_server_spec'
 require 'minimal_spawner_spec'
 require 'spawner_privilege_lowering_spec'
@@ -12,12 +14,17 @@ include Passenger::Utils
 # TODO: test whether SpawnManager restarts FrameworkSpawner if it crashed
 
 describe SpawnManager do
+	include TestHelper
+	
 	before :each do
 		@manager = SpawnManager.new
+		@stub = setup_rails_stub('foobar')
+		@stub.use_vendor_rails('minimal')
 	end
 	
 	after :each do
 		@manager.cleanup
+		teardown_rails_stub
 	end
 	
 	describe "AbstractServer-like behavior" do
@@ -31,19 +38,19 @@ describe SpawnManager do
 	
 	it_should_behave_like "a minimal spawner"
 	
-	it "should not crash on spawning when running asynchronously" do
-		app = @manager.spawn_application('stub/railsapp')
+	it "doesn't crash on spawning when running asynchronously" do
+		app = @manager.spawn_application(@stub.app_root)
 		app.close
 	end
 	
-	it "should not crash on spawning when running synchronously" do
+	it "doesn't crash on spawning when running synchronously" do
 		a, b = UNIXSocket.pair
 		pid = fork do
 			begin
 				a.close
 				sleep(1) # Give @manager the chance to start.
 				channel = MessageChannel.new(b)
-				channel.write("spawn_application", "stub/minimal-railsapp", "true", "nobody")
+				channel.write("spawn_application", @stub.app_root, "true", "nobody")
 				channel.read
 				pid, listen_socket = channel.read
 				channel.recv_io.close
@@ -60,23 +67,32 @@ describe SpawnManager do
 		Process.waitpid(pid) rescue nil
 	end
 	
-	it "should not crash upon spawning an application that doesn't specify its Rails version" do
-		@manager.spawn_application('stub/railsapp-without-version-spec').close
+	it "doesn't crash upon spawning an application that doesn't specify its Rails version" do
+		File.write(@stub.environment_rb) do |content|
+			content.sub(/^RAILS_GEM_VERSION = .*$/, '')
+		end
+		@stub.dont_use_vendor_rails
+		@manager.spawn_application(@stub.app_root).close
 	end
 	
-	it "should properly reload applications that do not specify a Rails version" do
-		@manager.spawn_application('stub/railsapp-without-version-spec').close
-		@manager.reload('stub/railsapp-without-version-spec')
+	it "properly reloads applications that do not specify a Rails version" do
+		File.write(@stub.environment_rb) do |content|
+			content.sub(/^RAILS_GEM_VERSION = .*$/, '')
+		end
+		@stub.dont_use_vendor_rails
+		@manager.reload(@stub.app_root)
 		spawners = @manager.instance_eval { @spawners }
 		spawners.should be_empty
 	end
 	
-	def spawn_application
-		@manager.spawn_application('stub/minimal-railsapp')
+	def spawn_arbitrary_application
+		@manager.spawn_application(@stub.app_root)
 	end
 end
 
 describe SpawnManager do
+	include TestHelper
+	
 	it_should_behave_like "handling errors in application initialization"
 	it_should_behave_like "handling errors in framework initialization"
 	
@@ -90,6 +106,7 @@ describe SpawnManager do
 	end
 	
 	def load_nonexistant_framework
+		# Prevent detect_framework_version from raising VersionNotFound
 		Application.instance_eval do
 			alias orig_detect_framework_version detect_framework_version
 			def detect_framework_version(app_root)
@@ -97,7 +114,9 @@ describe SpawnManager do
 			end
 		end
 		begin
-			return spawn_application('stub/broken-railsapp4')
+			File.write(@stub.environment_rb, "RAILS_GEM_VERSION = '1.9.827'")
+			@stub.dont_use_vendor_rails
+			return spawn_application(@stub.app_root)
 		ensure
 			Application.instance_eval do
 				alias detect_framework_version orig_detect_framework_version

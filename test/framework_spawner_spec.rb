@@ -1,5 +1,7 @@
 require 'support/config'
+require 'support/test_helper'
 require 'passenger/framework_spawner'
+
 require 'minimal_spawner_spec'
 require 'spawn_server_spec'
 require 'spawner_privilege_lowering_spec'
@@ -9,45 +11,60 @@ include Passenger
 # TODO: test whether FrameworkSpawner restarts ApplicationSpawner if it crashed
 
 describe FrameworkSpawner do
-	before :all do
-		ENV['RAILS_ENV'] = 'production'
-		@test_app = "stub/minimal-railsapp"
-		Dir["#{@test_app}/log/*"].each do |file|
-			File.chmod(0666, file) rescue nil
-		end
-		File.chmod(0777, "#{@test_app}/log") rescue nil
-	end
+	include TestHelper
 	
 	before :each do
-		@spawner = FrameworkSpawner.new(:vendor => "#{@test_app}/vendor/rails")
+		ENV['RAILS_ENV'] = 'production'
+		@stub = setup_rails_stub('foobar')
+		if use_vendor_rails?
+			@stub.use_vendor_rails('minimal')
+			@spawner = FrameworkSpawner.new(:vendor => "#{@stub.app_root}/vendor/rails")
+		else
+			version = Application.detect_framework_version(@stub.app_root)
+			@spawner = FrameworkSpawner.new(:version => version)
+		end
 		@spawner.start
 		@server = @spawner
 	end
 	
 	after :each do
 		@spawner.stop
+		teardown_rails_stub
 	end
 	
-	it_should_behave_like "a minimal spawner"
-	it_should_behave_like "a spawn server"
+	describe "situations in which Rails is loaded via the gem" do
+		def use_vendor_rails?
+			false
+		end
+		
+		it_should_behave_like "a minimal spawner"
+		it_should_behave_like "a spawn server"
+	end if false
 	
-	it "should support vendor Rails" do
-		# Already being tested by all the other tests.
+	describe "situations in which Rails is loaded via vendor folder" do
+		def use_vendor_rails?
+			true
+		end
+		
+		it_should_behave_like "a minimal spawner"
+		it_should_behave_like "a spawn server"
 	end
 	
-	def spawn_application
-		@spawner.spawn_application(@test_app)
+	def spawn_arbitrary_application
+		@spawner.spawn_application(@stub.app_root)
 	end
 end
 
 describe FrameworkSpawner do
+	include TestHelper
+	
 	it_should_behave_like "handling errors in application initialization"
 	it_should_behave_like "handling errors in framework initialization"
 	
 	def spawn_application(app_root)
 		version = Application.detect_framework_version(app_root)
 		if version == :vendor
-			options = { :vendor => "#{@app_root}/vendor/rails" }
+			options = { :vendor => "#{@stub.app_root}/vendor/rails" }
 		else
 			options = { :version => version }
 		end
@@ -72,28 +89,26 @@ end
 
 if Process.euid == ApplicationSpawner::ROOT_UID
 	describe "FrameworkSpawner privilege lowering support" do
-		before :all do
-			@test_app = "stub/minimal-railsapp"
-			ENV['RAILS_ENV'] = 'production'
-		end
-	
+		include TestHelper
+		
 		it_should_behave_like "a spawner that supports lowering of privileges"
 		
-		def spawn_app(options = {})
+		def spawn_stub_application(options = {})
 			options = {
 				:lower_privilege => true,
 				:lowest_user => CONFIG['lowest_user']
 			}.merge(options)
+			@stub.use_vendor_rails('minimal')
 			@spawner = FrameworkSpawner.new(:vendor =>
-				'stub/minimal-railsapp/vendor/rails')
+				"#{@stub.app_root}/vendor/rails")
 			@spawner.start
 			begin
-				app = @spawner.spawn_application(@test_app,
+				app = @spawner.spawn_application(@stub.app_root,
 					options[:lower_privilege],
 					options[:lowest_user])
 				yield app
 			ensure
-				app.close
+				app.close if app
 				@spawner.stop
 			end
 		end

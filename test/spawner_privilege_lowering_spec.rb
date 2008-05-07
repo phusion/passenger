@@ -1,72 +1,90 @@
 require 'support/config'
 require 'etc'
+require 'yaml'
 
 shared_examples_for "a spawner that supports lowering of privileges" do
-	before :all do
-		@environment_rb = "#{@test_app}/config/environment.rb"
+	before :each do
+		@stub = setup_rails_stub('foobar')
+		@environment_rb = @stub.environment_rb
 		@original_uid = File.stat(@environment_rb).uid
-		system("chmod -R o+rx #{@test_app}")
-		system("chmod o+rx . ..")
+		File.append(@environment_rb, %q{
+			require 'yaml'
+			info = {
+				:username => `whoami`.strip,
+				:user_id  => `id -u`.strip.to_i,
+				:group_id => `id -g`.strip.to_i,
+				:groups   => `groups "#{`whoami`.strip}"`.strip
+			}
+			File.open("#{RAILS_ROOT}/dump.yml", 'w') do |f|
+				YAML::dump(info, f)
+			end
+		})
 	end
 	
-	after :all do
-		File.chown(@original_uid, nil, @environment_rb)
+	after :each do
+		teardown_rails_stub
 	end
 	
-	it "should lower its privileges to the owner of environment.rb" do
+	it "lowers its privileges to the owner of environment.rb" do
 		File.chown(uid_for('normal_user_1'), nil, @environment_rb)
-		spawn_app do |app|
-			user_of_process(app.pid).should == CONFIG['normal_user_1']
+		spawn_stub_application do |app|
+			read_dumped_info[:username].should == CONFIG['normal_user_1']
 		end
 	end
 	
-	it "should switch the group as well after lowering privileges" do
+	it "switches the group to environment.rb's owner's primary group, after lowering privileges" do
 		File.chown(uid_for('normal_user_1'), nil, @environment_rb)
-		spawn_app do |app|
+		spawn_stub_application do |app|
 			expected_gid = Etc.getpwnam(CONFIG['normal_user_1']).gid
-			expected_group = Etc.getgrgid(expected_gid).name
-			group_of_process(app.pid).should == expected_group
-			# TODO: check supplementary group list
+			read_dumped_info[:group_id].should == expected_gid
 		end
 	end
 	
-	it "should lower its privileges to 'lowest_user' if environment.rb is owned by root" do
+	it "switches supplementary groups to environment.rb's owner's default supplementary groups" do
+		File.chown(uid_for('normal_user_1'), nil, @environment_rb)
+		spawn_stub_application do |app|
+			default_groups = `groups "#{CONFIG['normal_user_1']}"`.strip
+			read_dumped_info[:groups].should == default_groups
+		end
+	end
+	
+	it "lowers its privileges to 'lowest_user' if environment.rb is owned by root" do
 		File.chown(ApplicationSpawner::ROOT_UID, nil, @environment_rb)
-		spawn_app do |app|
-			user_of_process(app.pid).should == CONFIG['lowest_user']
+		spawn_stub_application do |app|
+			read_dumped_info[:username].should == CONFIG['lowest_user']
 		end
 	end
 	
-	it "should lower its privileges to 'lowest_user' if environment.rb is owned by a nonexistant user" do
+	it "lowers its privileges to 'lowest_user' if environment.rb is owned by a nonexistant user" do
 		File.chown(CONFIG['nonexistant_uid'], nil, @environment_rb)
-		spawn_app do |app|
-			user_of_process(app.pid).should == CONFIG['lowest_user']
+		spawn_stub_application do |app|
+			read_dumped_info[:username].should == CONFIG['lowest_user']
 		end
 	end
 	
-	it "should not switch user if environment.rb is owned by a nonexistant user, and 'lowest_user' doesn't exist either" do
+	it "doesn't switch user if environment.rb is owned by a nonexistant user, and 'lowest_user' doesn't exist either" do
 		File.chown(CONFIG['nonexistant_uid'], nil, @environment_rb)
-		spawn_app(:lowest_user => CONFIG['nonexistant_user']) do |app|
-			user_of_process(app.pid).should == user_of_process(Process.pid)
+		spawn_stub_application(:lowest_user => CONFIG['nonexistant_user']) do |app|
+			read_dumped_info[:username].should == my_username
 		end
 	end
 	
-	it "should not switch user if 'lower_privilege' is set to false" do
+	it "doesn't switch user if 'lower_privilege' is set to false" do
 		File.chown(uid_for('normal_user_2'), nil, @environment_rb)
-		spawn_app(:lower_privilege => false) do |app|
-			user_of_process(app.pid).should == user_of_process(Process.pid)
+		spawn_stub_application(:lower_privilege => false) do |app|
+			read_dumped_info[:username].should == my_username
 		end
+	end
+	
+	def read_dumped_info
+		return YAML.load_file("#{@stub.app_root}/dump.yml")
+	end
+	
+	def my_username
+		return `whoami`.strip
 	end
 	
 	def uid_for(name)
 		return Etc.getpwnam(CONFIG[name]).uid
-	end
-	
-	def user_of_process(pid)
-		return `ps -p #{pid} -o user`.split("\n")[1].to_s.strip
-	end
-	
-	def group_of_process(pid)
-		return `ps -p #{pid} -o rgroup`.split("\n")[1].to_s.strip
 	end
 end
