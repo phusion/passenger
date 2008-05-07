@@ -14,40 +14,70 @@ include Passenger
 describe ApplicationSpawner do
 	include TestHelper
 
-	before :each do
-		ENV['RAILS_ENV'] = 'production'
-		@stub = setup_rails_stub('foobar')
-		@app_root = @stub.app_root
-		@spawner = ApplicationSpawner.new(@app_root)
-		@spawner.start
-		@server = @spawner
+	describe "regular spawning" do
+		before :each do
+			ENV['RAILS_ENV'] = 'production'
+			@stub = setup_rails_stub('foobar')
+			@spawner = ApplicationSpawner.new(@stub.app_root)
+			@spawner.start
+			@server = @spawner
+		end
+	
+		after :each do
+			@spawner.stop
+			@stub.destroy
+		end
+	
+		it_should_behave_like "a minimal spawner"
+		it_should_behave_like "a spawn server"
+	
+		def spawn_arbitrary_application
+			@spawner.spawn_application
+		end
 	end
 	
-	after :each do
-		@spawner.stop
-		teardown_rails_stub
-	end
-	
-	it_should_behave_like "a minimal spawner"
-	it_should_behave_like "a spawn server"
-	
-	def spawn_arbitrary_application
-		@spawner.spawn_application
+	describe "conservative spawning" do
+		before :each do
+			ENV['RAILS_ENV'] = 'production'
+			@stub = setup_rails_stub('foobar')
+			@spawner = ApplicationSpawner.new(@stub.app_root)
+		end
+		
+		after :each do
+			@stub.destroy
+		end
+		
+		it_should_behave_like "a minimal spawner"
+		
+		def spawn_arbitrary_application
+			@spawner.spawn_application!
+		end
 	end
 end
 
 describe ApplicationSpawner do
 	include TestHelper
 	
-	it_should_behave_like "handling errors in application initialization"
+	describe "regular spawning" do
+		it_should_behave_like "handling errors in application initialization"
 	
-	def spawn_application(app_root)
-		@spawner = ApplicationSpawner.new(app_root)
-		begin
-			@spawner.start
-			return @spawner.spawn_application
-		ensure
-			@spawner.stop rescue nil
+		def spawn_application(app_root)
+			@spawner = ApplicationSpawner.new(app_root)
+			begin
+				@spawner.start
+				return @spawner.spawn_application
+			ensure
+				@spawner.stop rescue nil
+			end
+		end
+	end
+	
+	describe "conservative spawning" do
+		it_should_behave_like "handling errors in application initialization"
+	
+		def spawn_application(app_root)
+			@spawner = ApplicationSpawner.new(app_root)
+			return @spawner.spawn_application!
 		end
 	end
 end
