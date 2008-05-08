@@ -1,8 +1,5 @@
 require 'support/config'
 require 'support/test_helper'
-require 'passenger/spawn_manager'
-require 'passenger/message_channel'
-require 'passenger/utils'
 
 require 'abstract_server_spec'
 require 'minimal_spawner_spec'

@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 $LOAD_PATH << "#{File.dirname(__FILE__)}/../../lib"
 require 'passenger/message_channel'
+require 'passenger/utils'
 
 include Passenger
 channel = MessageChannel.new(IO.new(3))

@@ -1,6 +1,5 @@
 require 'support/config'
 require 'support/test_helper'
-require 'passenger/application'
 include Passenger
 
 describe Application do
