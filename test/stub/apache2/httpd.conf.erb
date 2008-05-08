@@ -40,6 +40,14 @@ TypesConfig "<%= @server_root %>/mime.types"
 	MaxClients           50
 	MaxRequestsPerChild  50
 </IfModule>
+<IfModule mpm_worker_module>
+	StartServers          1
+	MaxClients            3
+	MinSpareThreads       2
+	MaxSpareThreads       4
+	ThreadsPerChild       3
+	MaxRequestsPerChild  50
+</IfModule>
 
 <Directory />
 	AllowOverride all
