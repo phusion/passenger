@@ -85,6 +85,7 @@ class SpawnManager < AbstractServer
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody",
 	                      environment = "production", spawn_method = "smart")
 		if spawn_method == "smart"
+			spawner_must_be_started = true
 			framework_version = Application.detect_framework_version(app_root)
 			if framework_version == :vendor
 				vendor_path = normalize_path("#{app_root}/vendor/rails")
@@ -110,6 +111,7 @@ class SpawnManager < AbstractServer
 			create_spawner = proc do
 				ApplicationSpawner.new(app_root, lower_privilege, lowest_user, environment)
 			end
+			spawner_must_be_started = false
 		end
 		
 		spawner = nil
@@ -117,7 +119,9 @@ class SpawnManager < AbstractServer
 			spawner = @spawners[key]
 			if !spawner
 				spawner = create_spawner.call
-				spawner.start
+				if spawner_must_be_started
+					spawner.start
+				end
 				@spawners[key] = spawner
 			end
 			spawner.time = Time.now
@@ -125,13 +129,15 @@ class SpawnManager < AbstractServer
 				if spawner.is_a?(FrameworkSpawner)
 					return spawner.spawn_application(app_root, lower_privilege,
 						lowest_user, environment)
-				elsif spawn_method == "smart"
+				elsif spawner.started?
 					return spawner.spawn_application
 				else
 					return spawner.spawn_application!
 				end
 			rescue AbstractServer::ServerError
-				spawner.stop
+				if spawner.started?
+					spawner.stop
+				end
 				@spawners.delete(key)
 				raise
 			end
@@ -164,7 +170,9 @@ class SpawnManager < AbstractServer
 				key = "app:#{app_root}"
 				spawner = @spawners[key]
 				if spawner
-					spawner.stop
+					if spawner.started?
+						spawner.stop
+					end
 					@spawners.delete(key)
 				end
 			end
@@ -185,7 +193,9 @@ class SpawnManager < AbstractServer
 		@cleaner_thread.join
 		@lock.synchronize do
 			@spawners.each_value do |spawner|
-				spawner.stop
+				if spawner.started?
+					spawner.stop
+				end
 			end
 			@spawners.clear
 		end
@@ -254,7 +264,9 @@ private
 							max_idle_time = APP_SPAWNER_MAX_IDLE_TIME
 						end
 						if current_time - spawner.time > max_idle_time
-							spawner.stop
+							if spawner.started?
+								spawner.stop
+							end
 							@spawners.delete(key)
 						end
 					end

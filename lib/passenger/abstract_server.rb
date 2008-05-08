@@ -99,7 +99,7 @@ class AbstractServer
 	#
 	# Derived classes may raise additional exceptions.
 	def start
-		if !@parent_channel.nil?
+		if started?
 			raise ServerAlreadyStarted, "Server is already started"
 		end
 	
@@ -166,7 +166,7 @@ class AbstractServer
 	# When calling this method, the server must already be started. If not, a
 	# ServerNotStarted will be raised.
 	def stop
-		if @parent_channel.nil?
+		if !started?
 			raise ServerNotStarted, "Server is not started"
 		end
 		
@@ -191,6 +191,11 @@ class AbstractServer
 				Process.waitpid(@pid, Process::WNOHANG) rescue nil
 			end
 		end
+	end
+	
+	# Return whether the server has been started.
+	def started?
+		return !@parent_channel.nil?
 	end
 	
 	# Return the PID of the started server. This is only valid if start() has been called.
@@ -238,7 +243,7 @@ protected
 	# This method may only be called in the parent process, and not
 	# in the started server process.
 	def server
-		if @parent_channel.nil?
+		if !started?
 			raise ServerNotStarted, "Server hasn't been started yet. Please call start() first."
 		end
 		return @parent_channel
