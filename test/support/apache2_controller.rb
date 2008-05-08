@@ -29,6 +29,7 @@ class Apache2Controller
 		set(options) if options
 		@port = 64506
 		@vhosts = []
+		@extra = []
 		@server_root = File.expand_path('tmp.apache2')
 		@passenger_root = File.expand_path(File.dirname(__FILE__) + "/../..")
 		@mod_passenger = File.expand_path(File.dirname(__FILE__) + "/../../ext/apache2/mod_passenger.so")
@@ -153,6 +154,10 @@ class Apache2Controller
 		else
 			return false
 		end
+	end
+	
+	def <<(line)
+		@extra << line
 	end
 
 private

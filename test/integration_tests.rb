@@ -160,6 +160,7 @@ describe "mod_passenger running in Apache 2" do
 		before :all do
 			@server = "http://passenger.test:#{@apache2.port}"
 			@stub = setup_rails_stub('mycook')
+			@apache2 << "RailsMaxPoolSize 1"
 			@apache2.add_vhost("passenger.test", File.expand_path("#{@stub.app_root}/public"))
 			@apache2.start
 		end
@@ -169,6 +170,25 @@ describe "mod_passenger running in Apache 2" do
 		end
 		
 		it_should_behave_like "MyCook(tm) beta"
+		
+		it "doesn't block Rails while an upload is in progress" do
+			get('/') # Force spawning so that the timeout is enough.
+			
+			socket = TCPSocket.new('passenger.test', @apache2.port)
+			socket.write("POST / HTTP/1.1\r\n")
+			socket.write("Host: passenger.test\r\n")
+			
+			upload_data = File.read("../upload.txt")
+			size_of_first_half = upload_data.size / 2
+			size_of_second_half = upload_data.size - size_of_first_half
+			
+			socket.write(upload_data[0..size_of_first_half])
+			socket.flush
+			
+			Timeout.timeout(10) do
+				get('/').should =~ /Welcome to MyCook/
+			end
+		end
 	end
 	
 	describe ": MyCook(tm) beta running in a sub-URI" do

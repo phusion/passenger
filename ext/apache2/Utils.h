@@ -19,9 +19,17 @@
 #define _PASSENGER_UTILS_H_
 
 #include <boost/shared_ptr.hpp>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <string>
 #include <vector>
+#include <utility>
 #include <sstream>
+#include <cstdio>
+#include <climits>
+#include <cstdlib>
+#include <errno.h>
+#include "Exceptions.h"
 
 namespace Passenger {
 
@@ -53,6 +61,8 @@ ptr(T *pointer) {
 
 /**
  * Used internally by toString(). Do not use directly.
+ *
+ * @internal
  */
 template<typename T>
 struct AnythingToString {
@@ -65,6 +75,8 @@ struct AnythingToString {
 
 /**
  * Used internally by toString(). Do not use directly.
+ *
+ * @internal
  */
 template<>
 struct AnythingToString< vector<string> > {
@@ -162,6 +174,52 @@ string canonicalizePath(const string &path);
  * @ingroup Support
  */
 bool verifyRailsDir(const string &dir);
+
+/**
+ * Represents a temporary file. The associated file is automatically
+ * deleted upon object destruction.
+ *
+ * @ingroup Support
+ */
+class TempFile {
+public:
+	/** The filename. */
+	string filename;
+	/** The file handle. */
+	FILE *handle;
+	
+	/**
+	 * Create an empty, temporary file, and open it for writing.
+	 *
+	 * @throws SystemException Something went wrong.
+	 */
+	TempFile() {
+		char *temp_dir;
+		char templ[PATH_MAX];
+		int fd;
+		
+		temp_dir = getenv("TMP");
+		if (temp_dir == NULL || *temp_dir == '\0') {
+			temp_dir = "/tmp";
+		}
+		
+		snprintf(templ, sizeof(templ), "%s/passenger.XXXXXX", temp_dir);
+		templ[sizeof(templ) - 1] = '\0';
+		fd = mkstemp(templ);
+		if (fd == -1) {
+			throw SystemException("Cannot create a temporary file", errno);
+		}
+		fchmod(fd, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+		
+		filename.assign(templ);
+		handle = fdopen(fd, "w+");
+	}
+	
+	~TempFile() {
+		fclose(handle);
+		unlink(filename.c_str());
+	}
+};
 
 } // namespace Passenger
 

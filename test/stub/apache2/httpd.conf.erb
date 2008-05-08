@@ -31,6 +31,9 @@ LoadModule passenger_module "<%= @mod_passenger %>"
 PassengerRoot "<%= @passenger_root %>"
 RailsRuby "<%= RUBY %>"
 RailsEnv production
+<% for line in @extra %>
+	<%= line %>
+<% end %>
 
 TypesConfig "<%= @server_root %>/mime.types"
 <IfModule mpm_prefork_module>

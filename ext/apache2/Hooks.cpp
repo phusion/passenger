@@ -32,6 +32,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <exception>
+#include <cstdio>
 #include <unistd.h>
 
 #include "Hooks.h"
@@ -293,20 +294,37 @@ private:
 		return APR_SUCCESS;
 	}
 	
-	apr_status_t sendRequestBody(request_rec *r, Application::SessionPtr &session) {
-		if (ap_should_client_block(r)) {
-			char buf[1024 * 32];
-			apr_off_t len;
-			
-			while ((len = ap_get_client_block(r, buf, sizeof(buf))) > 0) {
-				session->sendBodyBlock(buf, len);
-			}
-			if (len == -1) {
-				return HTTP_INTERNAL_SERVER_ERROR;
-			}
+	shared_ptr<TempFile> receiveRequestBody(request_rec *r) {
+		shared_ptr<TempFile> tempFile(new TempFile());
+		char buf[1024 * 32];
+		apr_off_t len;
+		
+		while ((len = ap_get_client_block(r, buf, sizeof(buf))) > 0) {
+			size_t written = 0;
+			do {
+				size_t ret = fwrite(buf, 1, len - written, tempFile->handle);
+				if (ret == 0) {
+					throw IOException("An error occured while writing "
+						"HTTP upload data to a temporary file.");
+				}
+				written += ret;
+			} while (written < len);
 		}
-		session->closeWriter();
-		return APR_SUCCESS;
+		if (len == -1) {
+			throw IOException("An error occurred while receiving HTTP upload data.");
+		}
+		return tempFile;
+	}
+	
+	void sendRequestBody(request_rec *r, Application::SessionPtr &session, shared_ptr<TempFile> &uploadData) {
+		rewind(uploadData->handle);
+		while (!feof(uploadData->handle)) {
+			char buf[1024 * 32];
+			size_t size;
+			
+			size = fread(buf, 1, sizeof(buf), uploadData->handle);
+			session->sendBodyBlock(buf, size);
+		}
 	}
 
 public:
@@ -407,6 +425,11 @@ public:
 			apr_bucket_brigade *bb;
 			apr_bucket *b;
 			Application::SessionPtr session;
+			shared_ptr<TempFile> uploadData;
+			
+			if (ap_should_client_block(r)) {
+				uploadData = receiveRequestBody(r);
+			}
 			
 			P_DEBUG("Processing HTTP request: " << r->uri);
 			try {
@@ -443,7 +466,11 @@ public:
 				}
 			}
 			sendHeaders(r, session, railsBaseURI);
-			sendRequestBody(r, session);
+			if (uploadData != NULL) {
+				sendRequestBody(r, session, uploadData);
+				uploadData.reset();
+			}
+			session->closeWriter();
 			
 			apr_file_t *readerPipe = NULL;
 			int reader = session->getReader();
