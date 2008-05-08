@@ -36,20 +36,18 @@ RailsEnv production
 <% end %>
 
 TypesConfig "<%= @server_root %>/mime.types"
+StartServers          1
+ServerLimit          50
+MaxRequestsPerChild  50
+MaxClients           50
 <IfModule mpm_prefork_module>
-	StartServers          1
 	MinSpareServers       1
-	MaxSpareServers       3
-	MaxClients           50
-	MaxRequestsPerChild  50
+	MaxSpareServers       1
 </IfModule>
 <IfModule mpm_worker_module>
-	StartServers          1
-	MaxClients            3
-	MinSpareThreads       2
-	MaxSpareThreads       4
-	ThreadsPerChild       3
-	MaxRequestsPerChild  50
+	MinSpareThreads       1
+	MaxSpareThreads       1
+	ThreadsPerChild       2
 </IfModule>
 
 <Directory />
