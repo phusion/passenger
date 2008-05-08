@@ -16,8 +16,7 @@
 
 require 'socket'
 require 'timeout'
-require 'passenger/message_channel'
-require 'passenger/utils'
+require 'passenger/passenger'
 module Passenger
 
 # An abstract base class for a server, with the following properties:

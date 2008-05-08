@@ -20,19 +20,9 @@ require 'etc'
 require 'thread'
 require 'fastthread'
 require 'timeout'
-require File.expand_path("#{File.dirname(__FILE__)}/../../ext/passenger/native_support.so")
+require 'passenger/passenger'
 
 module Passenger
-
-class UnknownError < StandardError
-	attr_accessor :real_class_name
-	
-	def initialize(message, class_name, backtrace)
-		super("#{message} (#{class_name})")
-		set_backtrace(backtrace)
-		@real_class_name = class_name
-	end
-end
 
 # Utility functions.
 module Utils

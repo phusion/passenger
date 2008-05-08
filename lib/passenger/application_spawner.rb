@@ -17,10 +17,7 @@
 require 'rubygems'
 require 'socket'
 require 'etc'
-require 'passenger/abstract_server'
-require 'passenger/application'
-require 'passenger/utils'
-require 'passenger/request_handler'
+require 'passenger/passenger'
 
 begin
 	# Preload MySQL if possible. We want to preload it and we need
@@ -35,30 +32,6 @@ rescue LoadError
 end
 
 module Passenger
-
-# An abstract base class for AppInitError and FrameworkInitError. This represents
-# the failure when initializing something.
-class InitializationError < StandardError
-	# The exception that caused initialization to fail. This may be nil.
-	attr_accessor :child_exception
-
-	# Create a new InitializationError. +message+ is the error message,
-	# and +child_exception+ is the exception that caused initialization
-	# to fail.
-	def initialize(message, child_exception = nil)
-		super(message)
-		@child_exception = child_exception
-	end
-end
-
-# Raised when ApplicationSpawner, FrameworkSpawner or SpawnManager was unable
-# spawn a Ruby on Rails application, because the application either threw an
-# exception or called exit.
-#
-# If the +child_exception+ attribute is nil, then it means that the application
-# called exit.
-class AppInitError < InitializationError
-end
 
 # This class is capable of spawns instances of a single Ruby on Rails application.
 # It does so by preloading as much of the application's code as possible, then creating

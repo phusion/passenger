@@ -17,27 +17,8 @@
 require 'rubygems'
 require 'socket'
 require 'pathname'
-require 'passenger/abstract_server'
-require 'passenger/application_spawner'
-require 'passenger/utils'
+require 'passenger/passenger'
 module Passenger
-
-# Raised when FrameworkSpawner or SpawnManager was unable to load a version of
-# the Ruby on Rails framework. The +child_exception+ attribute is guaranteed
-# non-nil.
-class FrameworkInitError < InitializationError
-	attr_reader :vendor
-	attr_reader :version
-	
-	def initialize(message, child_exception, options)
-		super(message, child_exception)
-		if options[:vendor]
-			@vendor = options[:vendor]
-		else
-			@version = options[:version]
-		end
-	end
-end
 
 # This class is capable of spawning Ruby on Rails application instances
 # quickly. This is done by preloading the Ruby on Rails framework into memory,

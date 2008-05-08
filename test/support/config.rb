@@ -1,5 +1,7 @@
 $LOAD_PATH << File.expand_path("#{File.dirname(__FILE__)}/../../lib")
 require 'yaml'
+require 'passenger/passenger'
+
 begin
 	CONFIG = YAML::load_file('config.yml')
 rescue Errno::ENOENT

@@ -16,9 +16,7 @@
 
 require 'socket'
 require 'base64'
-require 'passenger/message_channel'
-require 'passenger/cgi_fixed'
-require 'passenger/utils'
+require 'passenger/passenger'
 module Passenger
 
 # The request handler's job is to process incoming HTTP requests using the

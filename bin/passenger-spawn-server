@@ -17,8 +17,7 @@
 
 require 'pathname'
 $LOAD_PATH.unshift(File.expand_path("#{File.dirname(__FILE__)}/../lib"))
-require 'passenger/spawn_manager'
-require 'passenger/utils'
+require 'passenger/passenger'
 
 begin
 	STDOUT.sync = true
@@ -27,6 +26,7 @@ begin
 	if GC.respond_to?(:copy_on_write_friendly=)
 		GC.copy_on_write_friendly = true
 	end
+	
 	spawn_manager = Passenger::SpawnManager.new
 	input = IO.new(Passenger::SpawnManager::DEFAULT_INPUT_FD)
 	spawn_manager.start_synchronously(input)

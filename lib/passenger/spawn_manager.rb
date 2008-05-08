@@ -14,13 +14,7 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-require 'passenger/abstract_server'
-require 'passenger/framework_spawner'
-require 'passenger/application'
-require 'passenger/message_channel'
-require 'passenger/html_template'
-require 'passenger/utils'
-require 'passenger/platform_info'
+require 'passenger/passenger'
 module Passenger
 
 # This class is capable of spawning Ruby on Rails application instances.
@@ -84,6 +78,9 @@ class SpawnManager < AbstractServer
 	# - AppInitError: The application raised an exception or called exit() during startup.
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody",
 	                      environment = "production", spawn_method = "smart")
+		if GC.copy_on_write_friendly?
+			Passenger.load_all_classes!
+		end
 		if spawn_method == "smart"
 			framework_version = Application.detect_framework_version(app_root)
 			if framework_version == :vendor
