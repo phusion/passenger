@@ -15,11 +15,8 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 require 'rubygems'
-require 'pathname'
-require 'etc'
 require 'thread'
 require 'fastthread'
-require 'timeout'
 require 'passenger/passenger'
 
 module Passenger
@@ -34,6 +31,7 @@ protected
 	# Raises SystemCallError if something went wrong. Raises ArgumentError
 	# if +path+ is nil.
 	def normalize_path(path)
+		require 'pathname' unless defined?(Pathname)
 		raise ArgumentError, "The 'path' argument may not be nil" if path.nil?
 		return Pathname.new(path).realpath.to_s
 	rescue Errno::ENOENT => e
@@ -64,6 +62,7 @@ protected
 	# Assert that +username+ is a valid username. Raises
 	# ArgumentError if that is not the case.
 	def assert_valid_username(username)
+		require 'etc' unless defined?(Etc)
 		# If username does not exist then getpwnam() will raise an ArgumentError.
 		username && Etc.getpwnam(username)
 	end
@@ -71,6 +70,7 @@ protected
 	# Assert that +groupname+ is a valid group name. Raises
 	# ArgumentError if that is not the case.
 	def assert_valid_groupname(groupname)
+		require 'etc' unless defined?(Etc)
 		# If groupname does not exist then getgrnam() will raise an ArgumentError.
 		groupname && Etc.getgrnam(groupname)
 	end
@@ -173,6 +173,7 @@ class ConditionVariable
 	# amount of time. Returns true if this condition was signaled, false if a
 	# timeout occurred.
 	def timed_wait(mutex, secs)
+		require 'timeout' unless defined?(Timeout)
 		if secs > 0
 			Timeout.timeout(secs) do
 				wait(mutex)
@@ -188,6 +189,7 @@ class ConditionVariable
 	# This is like ConditionVariable.wait(), but allows one to wait a maximum
 	# amount of time. Raises Timeout::Error if the timeout has elapsed.
 	def timed_wait!(mutex, secs)
+		require 'timeout' unless defined?(Timeout)
 		if secs > 0
 			Timeout.timeout(secs) do
 				wait(mutex)
