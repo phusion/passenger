@@ -221,7 +221,7 @@ private:
 		addHeader(headers, "REQUEST_URI",     originalURI(r));
 		addHeader(headers, "QUERY_STRING",    r->args ? r->args : "");
 		if (strcmp(baseURI, "/") != 0) {
-			addHeader(headers, "SCRIPT_NAME",     baseURI);
+			addHeader(headers, "SCRIPT_NAME", baseURI);
 		}
 		addHeader(headers, "HTTPS",           lookupEnv(r, "HTTPS"));
 		addHeader(headers, "CONTENT_TYPE",    lookupHeader(r, "Content-type"));
@@ -304,14 +304,18 @@ private:
 			do {
 				size_t ret = fwrite(buf, 1, len - written, tempFile->handle);
 				if (ret == 0) {
-					throw IOException("An error occured while writing "
-						"HTTP upload data to a temporary file.");
+					throw SystemException("An error occured while writing "
+						"HTTP upload data to a temporary file",
+						errno);
 				}
 				written += ret;
 			} while (written < len);
 		}
 		if (len == -1) {
 			throw IOException("An error occurred while receiving HTTP upload data.");
+		}
+		if (ftell(tempFile->handle) != atol(lookupHeader(r, "Content-Length"))) {
+			throw IOException("The HTTP client sent incomplete upload data.");
 		}
 		return tempFile;
 	}
@@ -452,6 +456,7 @@ public:
 				} else {
 					spawnMethod = "smart";
 				}
+				
 				session = applicationPool->get(canonicalizePath(railsDir + "/.."),
 					true, defaultUser, environment, spawnMethod);
 			} catch (const SpawnException &e) {

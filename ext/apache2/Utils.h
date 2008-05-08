@@ -183,17 +183,20 @@ bool verifyRailsDir(const string &dir);
  */
 class TempFile {
 public:
-	/** The filename. */
+	/** The filename. If this temp file is anonymous, then the filename is an empty string. */
 	string filename;
 	/** The file handle. */
 	FILE *handle;
 	
 	/**
-	 * Create an empty, temporary file, and open it for writing.
+	 * Create an empty, temporary file, and open it for reading and writing.
 	 *
+	 * @param anonymous Set to true if this temp file should be unlinked
+	 *        immediately. Anonymous temp files are useful if one just wants
+	 *        a big not-in-memory buffer to work with.
 	 * @throws SystemException Something went wrong.
 	 */
-	TempFile() {
+	TempFile(bool anonymous = true) {
 		char *temp_dir;
 		char templ[PATH_MAX];
 		int fd;
@@ -209,15 +212,20 @@ public:
 		if (fd == -1) {
 			throw SystemException("Cannot create a temporary file", errno);
 		}
-		fchmod(fd, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-		
-		filename.assign(templ);
+		if (anonymous) {
+			fchmod(fd, 0000);
+			unlink(templ);
+		} else {
+			filename.assign(templ);
+		}
 		handle = fdopen(fd, "w+");
 	}
 	
 	~TempFile() {
 		fclose(handle);
-		unlink(filename.c_str());
+		if (!filename.empty()) {
+			unlink(filename.c_str());
+		}
 	}
 };
 

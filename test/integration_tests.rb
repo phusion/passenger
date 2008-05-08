@@ -172,21 +172,50 @@ describe "mod_passenger running in Apache 2" do
 		it_should_behave_like "MyCook(tm) beta"
 		
 		it "doesn't block Rails while an upload is in progress" do
-			get('/') # Force spawning so that the timeout is enough.
+			get('/') # Force spawning so that the timeout below is enough.
 			
 			socket = TCPSocket.new('passenger.test', @apache2.port)
-			socket.write("POST / HTTP/1.1\r\n")
-			socket.write("Host: passenger.test\r\n")
+			begin
+				socket.write("POST / HTTP/1.1\r\n")
+				socket.write("Host: passenger.test\r\n")
 			
-			upload_data = File.read("../upload.txt")
+				upload_data = File.read("stub/upload_data.txt")
+				size_of_first_half = upload_data.size / 2
+			
+				socket.write(upload_data[0..size_of_first_half])
+				socket.flush
+				
+				Timeout.timeout(10) do
+					get('/').should =~ /Welcome to MyCook/
+				end
+			ensure
+				socket.close rescue nil
+			end
+		end
+		
+		it "doesn't block Rails while a large number of uploads are in progress" do
+			get('/') # Force spawning so that the timeout below is enough.
+			sockets = []
+			
+			upload_data = File.read("stub/upload_data.txt")
 			size_of_first_half = upload_data.size / 2
-			size_of_second_half = upload_data.size - size_of_first_half
 			
-			socket.write(upload_data[0..size_of_first_half])
-			socket.flush
-			
-			Timeout.timeout(10) do
-				get('/').should =~ /Welcome to MyCook/
+			begin
+				10.times do |i|
+					socket = TCPSocket.new('passenger.test', @apache2.port)
+					sockets << socket
+					socket.write("POST / HTTP/1.1\r\n")
+					socket.write("Host: passenger.test\r\n")
+					socket.write(upload_data[0..size_of_first_half])
+					socket.flush
+				end
+				Timeout.timeout(10) do
+					get('/').should =~ /Welcome to MyCook/
+				end
+			ensure
+				sockets.each do |socket|
+					socket.close rescue nil
+				end
 			end
 		end
 	end

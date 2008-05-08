@@ -1,0 +1,60 @@
+User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9b3pre) Gecko/2008020507 Firefox/3.0b3pre
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Connection: close
+Content-Type: multipart/form-data; boundary=---------------------------43028995121136755241639299235
+Content-Length: 1625
+
+-----------------------------43028995121136755241639299235
+Content-Disposition: form-data; name="uploaded_data"; filename="application.php"
+Content-Type: application/x-php
+
+<?php
+class ApplicationController extends AbstractApplicationController {
+	protected $User, $CalendarEntry, $Event;
+	protected $current_user;
+	
+	public function __construct() {
+		parent::__construct();
+		$this->CalendarEntry = ActiveRecordRegistry::get_prototype_instance('CalendarEntry');
+		$this->User = ActiveRecordRegistry::get_prototype_instance('User');
+		$this->Event = ActiveRecordRegistry::get_prototype_instance('Event');
+		$this->before_filter(array('prepare_session', 'fetch_logged_in_user',
+			'no_layout_for_ajax_requests'));
+	}
+	
+	protected function prepare_session() {
+		session_start();
+	}
+	
+	protected function fetch_logged_in_user() {
+		if(!empty($_SESSION['user_id'])) {
+			$this->current_user = $this->User->find_by_id($_SESSION['user_id']);
+			$this->variables->current_user = $this->current_user;
+		}
+	}
+	
+	protected function reject_anonymous_user() {
+		if (!isset($this->current_user) || is_null($this->current_user)) {
+			$this->redirect_to("/users/login");
+			return false;
+		}
+	}
+	
+	protected function no_layout_for_ajax_requests() {
+		if ($this->is_ajax()) {
+			$this->layout = null;
+		}
+	}
+	
+	/*
+	 * Checks whether the current request is an Ajax request.
+	 */
+	protected function is_ajax() {
+		// Header sent by Prototype.
+		return isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+			preg_match('/XMLHttpRequest/i', $_SERVER['HTTP_X_REQUESTED_WITH']);
+	}
+}
+?>
+
+-----------------------------43028995121136755241639299235--
