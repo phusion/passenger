@@ -40,7 +40,7 @@ using namespace std;
 using namespace boost;
 
 /**
- * Represents a single Ruby on Rails application instance.
+ * Represents a single Ruby on Rails or Rack application instance.
  *
  * @ingroup Support
  */
@@ -51,12 +51,12 @@ public:
 	typedef shared_ptr<Session> SessionPtr;
 	
 	/**
-	 * Represents the life time of a single request/response pair of a Ruby on Rails
-	 * application.
+	 * Represents the life time of a single request/response pair of a
+	 * Ruby on Rails or Rack application.
 	 *
-	 * Session is used to forward a single HTTP request to a Ruby on Rails application.
-	 * A Session has two communication channels: one for reading data from
-	 * the RoR application, and one for writing data to the RoR application.
+	 * Session is used to forward a single HTTP request to a Ruby on Rails/Rack
+	 * application. A Session has two communication channels: one for reading data
+	 * from the application, and one for writing data to the application.
 	 *
 	 * In general, a session object is to be used in the following manner:
 	 *
@@ -76,7 +76,7 @@ public:
 		virtual ~Session() {}
 		
 		/**
-		 * Send HTTP request headers to the RoR application. The HTTP headers must be
+		 * Send HTTP request headers to the application. The HTTP headers must be
 		 * converted into CGI headers, and then encoded into a string that matches this grammar:
 		 *
 		   @verbatim
@@ -121,7 +121,7 @@ public:
 		}
 		
 		/**
-		 * Send a chunk of HTTP request body data to the RoR application.
+		 * Send a chunk of HTTP request body data to the application.
 		 * You can call this method as many times as is required to transfer
 		 * the entire HTTP request body.
 		 *
@@ -243,9 +243,9 @@ public:
 	/**
 	 * Construct a new Application object.
 	 *
-	 * @param theAppRoot The application root of a RoR application, i.e. the folder that
-	 *             contains 'app/', 'public/', 'config/', etc. This must be a valid directory,
-	 *             but the path does not have to be absolute.
+	 * @param theAppRoot The application root of an application. In case of a Rails application,
+	 *             this is the folder that contains 'app/', 'public/', 'config/', etc.
+	 *             This must be a valid directory, but the path does not have to be absolute.
 	 * @param pid The process ID of this application instance.
 	 * @param listenSocketName The name of the listener socket of this application instance.
 	 * @param usingAbstractNamespace Whether <tt>listenSocketName</tt> refers to a Unix
@@ -275,7 +275,7 @@ public:
 	}
 	
 	/**
-	 * Returns the application root for this RoR application. See the constructor
+	 * Returns the application root for this application. See the constructor
 	 * for information about the application root.
 	 */
 	string getAppRoot() const {
@@ -324,7 +324,9 @@ public:
 	 *
 	 * Note that a RoR application instance can only process one
 	 * request at the same time, and thus only one session at the same time.
-	 * You <b>must</b> close a session when you no longer need if. You you
+	 * It's unspecified whether Rack applications can handle multiple simultanous sessions.
+	 *
+	 * You <b>must</b> close a session when you no longer need if. If you
 	 * call connect() without having properly closed a previous session,
 	 * you might cause a deadlock because the application instance may be
 	 * waiting for you to close the previous session.
