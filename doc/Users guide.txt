@@ -362,6 +362,23 @@ command line:
 touch /webapps/rackapp/tmp/restart.txt
 -------------------------------------------
 
+=== Tip: Rackup specification for Merb ===
+
+Here's an example 'config.ru' for Merb applications:
+
+------------------------------------------------------
+require 'rubygems'
+require 'merb-core'
+
+Merb::Config.setup(:merb_root   => ".",
+                   :environment => ENV['RACK_ENV'])
+Merb.environment = Merb::Config[:environment]
+Merb.root = Merb::Config[:merb_root]
+Merb::BootLoader.run
+
+run Merb::Rack::Application.new
+------------------------------------------------------
+
 
 == Configuring Passenger ==
 
