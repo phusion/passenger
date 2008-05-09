@@ -152,6 +152,14 @@ cmd_passenger_root(cmd_parms *cmd, void *pcfg, const char *arg) {
 	return NULL;
 }
 
+static const char *
+cmd_passenger_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
+	ServerConfig *config = (ServerConfig *) ap_get_module_config(
+		cmd->server->module_config, &passenger_module);
+	config->ruby = arg;
+	return NULL;
+}
+
 
 /*************************************************
  * Rails-specific settings
@@ -175,14 +183,6 @@ static const char *
 cmd_rails_allow_mod_rewrite(cmd_parms *cmd, void *pcfg, int arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->allowModRewrite = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
-	return NULL;
-}
-
-static const char *
-cmd_rails_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	config->ruby = arg;
 	return NULL;
 }
 
@@ -304,6 +304,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The Passenger root folder."),
+	AP_INIT_TAKE1("PassengerRuby",
+		(Take1Func) cmd_passenger_ruby,
+		NULL,
+		RSRC_CONF,
+		"The Ruby interpreter to use."),
 
 	// Rails-specific settings.
 	AP_INIT_TAKE1("RailsBaseURI",
@@ -321,11 +326,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Whether custom mod_rewrite rules should be allowed."),
-	AP_INIT_TAKE1("RailsRuby",
-		(Take1Func) cmd_rails_ruby,
-		NULL,
-		RSRC_CONF,
-		"The Ruby interpreter to use."),
 	AP_INIT_TAKE1("RailsEnv",
 		(Take1Func) cmd_rails_env,
 		NULL,
@@ -368,6 +368,13 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The environment under which a Rack app must run."),
+	
+	// Backwards compatibility options.
+	AP_INIT_TAKE1("RailsRuby",
+		(Take1Func) cmd_passenger_ruby,
+		NULL,
+		RSRC_CONF,
+		"Obsolete option."),
 	
 	// Obsolete options.
 	AP_INIT_TAKE1("RailsSpawnServer",

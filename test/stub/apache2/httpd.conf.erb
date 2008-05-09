@@ -29,8 +29,9 @@ Listen 127.0.0.1:<%= @port %>
 LoadModule passenger_module "<%= @mod_passenger %>"
 
 PassengerRoot "<%= @passenger_root %>"
-RailsRuby "<%= RUBY %>"
+PassengerRuby "<%= RUBY %>"
 RailsEnv production
+RackEnv production
 <% for line in @extra %>
 	<%= line %>
 <% end %>
