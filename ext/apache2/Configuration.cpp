@@ -25,8 +25,8 @@ using namespace Passenger;
 
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
-#define DEFAULT_MAX_POOL_SIZE 20
-#define DEFAULT_POOL_IDLE_TIME 120
+#define DEFAULT_MAX_POOL_SIZE 6
+#define DEFAULT_POOL_IDLE_TIME 300
 
 
 template<typename T> static apr_status_t
@@ -161,6 +161,44 @@ cmd_passenger_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
+cmd_passenger_max_pool_size(cmd_parms *cmd, void *pcfg, const char *arg) {
+	ServerConfig *config = (ServerConfig *) ap_get_module_config(
+		cmd->server->module_config, &passenger_module);
+	char *end;
+	long int result;
+	
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		return "Invalid number specified for PassengerMaxPoolSize.";
+	} else if (result <= 0) {
+		return "Value for PassengerMaxPoolSize must be greater than 0.";
+	} else {
+		config->maxPoolSize = (unsigned int) result;
+		config->maxPoolSizeSpecified = true;
+		return NULL;
+	}
+}
+
+static const char *
+cmd_passenger_pool_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
+	ServerConfig *config = (ServerConfig *) ap_get_module_config(
+		cmd->server->module_config, &passenger_module);
+	char *end;
+	long int result;
+	
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		return "Invalid number specified for PassengerPoolIdleTime.";
+	} else if (result <= 0) {
+		return "Value for PassengerPoolIdleTime must be greater than 0.";
+	} else {
+		config->poolIdleTime = (unsigned int) result;
+		config->poolIdleTimeSpecified = true;
+		return NULL;
+	}
+}
+
+static const char *
 cmd_passenger_user_switching(cmd_parms *cmd, void *pcfg, int arg) {
 	ServerConfig *config = (ServerConfig *) ap_get_module_config(
 		cmd->server->module_config, &passenger_module);
@@ -223,44 +261,6 @@ cmd_rails_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
 	return NULL;
 }
 
-static const char *
-cmd_rails_max_pool_size(cmd_parms *cmd, void *pcfg, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	char *end;
-	long int result;
-	
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		return "Invalid number specified for RailsMaxPoolSize.";
-	} else if (result <= 0) {
-		return "Value for RailsMaxPoolSize must be greater than 0.";
-	} else {
-		config->maxPoolSize = (unsigned int) result;
-		config->maxPoolSizeSpecified = true;
-		return NULL;
-	}
-}
-
-static const char *
-cmd_rails_pool_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	char *end;
-	long int result;
-	
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		return "Invalid number specified for RailsPoolIdleTime.";
-	} else if (result <= 0) {
-		return "Value for RailsPoolIdleTime must be greater than 0.";
-	} else {
-		config->poolIdleTime = (unsigned int) result;
-		config->poolIdleTimeSpecified = true;
-		return NULL;
-	}
-}
-
 
 /*************************************************
  * Rack-specific settings
@@ -309,6 +309,16 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The Ruby interpreter to use."),
+	AP_INIT_TAKE1("PassengerMaxPoolSize",
+		(Take1Func) cmd_passenger_max_pool_size,
+		NULL,
+		RSRC_CONF,
+		"The maximum number of simultaneously alive application instances."),
+	AP_INIT_TAKE1("PassengerPoolIdleTime",
+		(Take1Func) cmd_passenger_pool_idle_time,
+		NULL,
+		RSRC_CONF,
+		"The maximum number of seconds that an application may be idle before it gets terminated."),
 	AP_INIT_FLAG("PassengerUserSwitching",
 		(Take1Func) cmd_passenger_user_switching,
 		NULL,
@@ -346,16 +356,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The spawn method to use."),
-	AP_INIT_TAKE1("RailsMaxPoolSize",
-		(Take1Func) cmd_rails_max_pool_size,
-		NULL,
-		RSRC_CONF,
-		"The maximum number of simultaneously alive Rails application instances."),
-	AP_INIT_TAKE1("RailsPoolIdleTime",
-		(Take1Func) cmd_rails_pool_idle_time,
-		NULL,
-		RSRC_CONF,
-		"The maximum number of seconds that a Rails application may be idle before it gets terminated."),
 	
 	// Rack-specific settings.
 	AP_INIT_FLAG("RackAutoDetect",
@@ -372,6 +372,16 @@ const command_rec passenger_commands[] = {
 	// Backwards compatibility options.
 	AP_INIT_TAKE1("RailsRuby",
 		(Take1Func) cmd_passenger_ruby,
+		NULL,
+		RSRC_CONF,
+		"Deprecated option."),
+	AP_INIT_TAKE1("RailsMaxPoolSize",
+		(Take1Func) cmd_passenger_max_pool_size,
+		NULL,
+		RSRC_CONF,
+		"Deprecated option."),
+	AP_INIT_TAKE1("RailsPoolIdleTime",
+		(Take1Func) cmd_passenger_pool_idle_time,
 		NULL,
 		RSRC_CONF,
 		"Deprecated option."),

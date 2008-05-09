@@ -384,6 +384,49 @@ This option allows one to specify the Ruby interpreter to use.
 This option may only occur once, in the global server configuration.
 The default is 'ruby'.
 
+=== PassengerMaxPoolSize <integer> ===
+The maximum number of Ruby on Rails or Rack application instances that may
+be simultaneously active. A larger number results in higher memory usage,
+but improved ability to handle concurrent HTTP clients.
+
+The optimal value depends on your system's hardware and the server's average
+load. You should experiment with different values. But generally speaking,
+the value should be at least equal to the number of CPUs (or CPU cores) that
+you have. If your system has 2 GB of RAM, then we recommend a value of '30'.
+If your system is a Virtual Private Server (VPS) and has about 256 MB RAM, and
+is also running other services such as MySQL, then we recommend a value of '2'.
+
+If you find that your server is unable to handle the load on your Rails/Rack websites
+(i.e. running out of memory) then you should lower this value. (Though if your
+sites are really that popular, then you should strongly consider upgrading your
+hardware or getting more servers.)
+
+This option may only occur once, in the global server configuration.
+The default value is '6'.
+
+TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
+Edition>>. This allows you to reduce the memory usage of your Ruby on Rails applications
+by about 33%. And it's not hard to install.
+
+=== PassengerPoolIdleTime <integer> ===
+The maximum number of seconds that a Ruby on Rails or Rack application instance
+may be idle. That is, if an application instance hasn't done anything after
+the given number of seconds, then it will be shutdown in order to conserve
+memory.
+
+Decreasing this value means that applications will have to be spawned
+more often. Since spawning is a relatively slow operation, some visitors may
+notice a small delay when they visit your Rails/Rack website. However, it will also
+free up resources used by applications more quickly.
+
+The optimal value depends on the average time that a visitor spends on a single
+Rails/Rack web page. We recommend a value of `2 * x`, where `x` is the average
+number of seconds that a visitor spends on a single Rails/Rack web page. But your
+mileage may vary.
+
+This option may only occur once, in the global server configuration.
+The default value is '300'.
+
 [[PassengerUserSwitching]]
 === PassengerUserSwitching <on|off> ===
 Whether to enable <<user_switching,user switching support>>.
@@ -505,49 +548,6 @@ render <<reducing_memory_usage,Ruby Enterprise Edition's memory reduction techno
 
 This option may occur once, in the global server configuration or in a virtual host
 configuration block. The default value is 'smart'.
-
-==== RailsMaxPoolSize <integer> ====
-The maximum number of Ruby on Rails application instances that may
-be simultaneously active. A larger number results in higher memory usage,
-but improved ability to handle concurrent HTTP clients.
-
-The optimal value depends on your system's hardware and the server's average
-load. You should experiment with different values. But generally speaking,
-the value should be at least equal to the number of CPUs (or CPU cores) that
-you have. If your system has 2 GB of RAM, then we recommend a value of '30'.
-If your system is a Virtual Private Server (VPS) and has about 256 MB RAM, and
-is also running other services such as MySQL, then we recommend a value of '2'.
-
-If you find that your server is unable to handle the load on your Rails websites
-(i.e. running out of memory) then you should lower this value. (Though if your
-sites are really that popular, then you should strongly consider upgrading your
-hardware or getting more servers.)
-
-This option may only occur once, in the global server configuration.
-The default value is '20'.
-
-TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
-Edition>>. This allows you to reduce your memory usage by about 33%. And it's
-not hard to install.
-
-==== RailsPoolIdleTime <integer> ====
-The maximum number of seconds that a Ruby on Rails application instance
-may be idle. That is, if an application instance hasn't done anything after
-the given number of seconds, then it will be shutdown in order to conserve
-memory.
-
-Decreasing this value means that Rails applications will have to be spawned
-more often. Since spawning is a relatively slow operation, some visitors may
-notice a small delay when they visit your Rails site. However, it will also
-free up resources used by Rails applications more quickly.
-
-The optimal value depends on the average time that a visitor spends on a single
-Rails web page. We recommend a value of `2 * x`, where `x` is the average
-number of seconds that a visitor spends on a single Rails web page. But your
-mileage may vary.
-
-This option may only occur once, in the global server configuration.
-The default value is '120'.
 
 === Rack-specific options ===
 
