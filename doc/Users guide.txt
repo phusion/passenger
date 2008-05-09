@@ -362,10 +362,37 @@ command line:
 touch /webapps/rackapp/tmp/restart.txt
 -------------------------------------------
 
-=== Tip: Rackup specification for Merb ===
+=== Rackup specifications for various web frameworks ===
 
-Here's an example 'config.ru' for Merb applications:
+This subsection shows example 'config.ru' files for various web frameworks.
 
+==== Camping ====
+------------------------------------------------------
+require 'rubygems'
+require 'rack'
+app = ...some code to create a Camping application object...
+run Rack::Adapter::Camping.new(app)
+------------------------------------------------------
+
+==== Halcyon ====
+------------------------------------------------------
+require 'rubygems'
+require 'halcyon'
+$LOAD_PATH.unshift(Halcyon.root / 'lib')
+Halcyon::Runner.load_config Halcyon.root/'config'/'config.yml'
+run Halcyon::Runner.new
+------------------------------------------------------
+
+==== Mack ====
+------------------------------------------------------
+ENV["MACK_ENV"] = ENV["RACK_ENV"]
+load("Rakefile")
+require 'rubygems'
+require 'mack'
+run Mack::Utils::Server.build_app
+------------------------------------------------------
+
+==== Merb ====
 ------------------------------------------------------
 require 'rubygems'
 require 'merb-core'
@@ -377,6 +404,14 @@ Merb.root = Merb::Config[:merb_root]
 Merb::BootLoader.run
 
 run Merb::Rack::Application.new
+------------------------------------------------------
+
+==== Ramaze ====
+------------------------------------------------------
+require "start"
+Ramaze.trait[:essentials].delete Ramaze::Adapter
+Ramaze.start :force => true
+run Ramaze::Adapter::Base
 ------------------------------------------------------
 
 
