@@ -32,6 +32,7 @@ rescue LoadError
 end
 
 module Passenger
+module Railz
 
 # This class is capable of spawns instances of a single Ruby on Rails application.
 # It does so by preloading as much of the application's code as possible, then creating
@@ -305,13 +306,13 @@ private
 
 	def preload_application
 		Object.const_set(:RAILS_ROOT, @app_root)
-		if defined?(Rails::Initializer)
-			Rails::Initializer.run(:set_load_path)
+		if defined?(::Rails::Initializer)
+			::Rails::Initializer.run(:set_load_path)
 			
 			# The Rails framework is loaded at the moment.
 			# environment.rb may set ENV['RAILS_ENV']. So we re-initialize
 			# RAILS_ENV in Rails::Initializer.load_environment.
-			Rails::Initializer.class_eval do
+			::Rails::Initializer.class_eval do
 				def load_environment_with_passenger
 					if defined?(::RAILS_ENV)
 						Object.send(:remove_const, :RAILS_ENV)
@@ -376,7 +377,7 @@ private
 				::ActiveRecord::Base.establish_connection
 			end
 			
-			handler = Rails::RequestHandler.new(reader)
+			handler = RequestHandler.new(reader)
 			channel.write(Process.pid, handler.socket_name,
 				handler.using_abstract_namespace?)
 			channel.send_io(writer)
@@ -391,4 +392,5 @@ private
 	end
 end
 
+end # module Railz
 end # module Passenger

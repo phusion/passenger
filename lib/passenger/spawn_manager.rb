@@ -32,13 +32,16 @@ module Passenger
 # will preload and cache Ruby on Rails frameworks, as well as application
 # code, so subsequent spawns will be very fast.
 #
-# Internally, SpawnManager uses FrameworkSpawner to preload and cache
-# Ruby on Rails frameworks. FrameworkSpawner, in turn, uses
-# ApplicationSpawner to preload and cache application code.
+# Internally, SpawnManager uses Railz::FrameworkSpawner to preload and cache
+# Ruby on Rails frameworks. Railz::FrameworkSpawner, in turn, uses
+# Railz::ApplicationSpawner to preload and cache application code.
+#
+# In case you're wondering why the namespace is "Railz" and not "Rails":
+# it's to work around an obscure bug in ActiveSupport's Dispatcher.
 class SpawnManager < AbstractServer
 	DEFAULT_INPUT_FD = 3
 	FRAMEWORK_SPAWNER_MAX_IDLE_TIME = 30 * 60
-	APP_SPAWNER_MAX_IDLE_TIME = ::Passenger::FrameworkSpawner::APP_SPAWNER_MAX_IDLE_TIME
+	APP_SPAWNER_MAX_IDLE_TIME = Railz::FrameworkSpawner::APP_SPAWNER_MAX_IDLE_TIME
 	SPAWNER_CLEAN_INTERVAL = [FRAMEWORK_SPAWNER_MAX_IDLE_TIME,
 		APP_SPAWNER_MAX_IDLE_TIME].min + 5
 	
@@ -60,7 +63,7 @@ class SpawnManager < AbstractServer
 	# Spawn a RoR application When successful, an Application object will be
 	# returned, which represents the spawned RoR application.
 	#
-	# See ApplicationSpawner.new for an explanation of the +lower_privilege+,
+	# See Railz::ApplicationSpawner.new for an explanation of the +lower_privilege+,
 	# +lowest_user+ and +environment+ parameters.
 	#
 	# The +spawn_method+ argument may be one of "smart" or "conservative".
@@ -173,25 +176,26 @@ private
 				vendor_path = normalize_path("#{app_root}/vendor/rails")
 				key = "vendor:#{vendor_path}"
 				create_spawner = proc do
-					FrameworkSpawner.new(:vendor => vendor_path)
+					Railz::FrameworkSpawner.new(:vendor => vendor_path)
 				end
 			elsif framework_version.nil?
 				app_root = normalize_path(app_root)
 				key = "app:#{app_root}"
 				create_spawner = proc do
-					ApplicationSpawner.new(app_root, lower_privilege, lowest_user, environment)
+					Railz::ApplicationSpawner.new(app_root, lower_privilege,
+						lowest_user, environment)
 				end
 			else
 				key = "version:#{framework_version}"
 				create_spawner = proc do
-					FrameworkSpawner.new(:version => framework_version)
+					Railz::FrameworkSpawner.new(:version => framework_version)
 				end
 			end
 		else
 			app_root = normalize_path(app_root)
 			key = "app:#{app_root}"
 			create_spawner = proc do
-				ApplicationSpawner.new(app_root, lower_privilege, lowest_user, environment)
+				Railz::ApplicationSpawner.new(app_root, lower_privilege, lowest_user, environment)
 			end
 			spawner_must_be_started = false
 		end
@@ -208,7 +212,7 @@ private
 			end
 			spawner.time = Time.now
 			begin
-				if spawner.is_a?(FrameworkSpawner)
+				if spawner.is_a?(Railz::FrameworkSpawner)
 					return spawner.spawn_application(app_root, lower_privilege,
 						lowest_user, environment)
 				elsif spawner.started?
@@ -287,7 +291,7 @@ private
 					current_time = Time.now
 					@spawners.keys.each do |key|
 						spawner = @spawners[key]
-						if spawner.is_a?(FrameworkSpawner)
+						if spawner.is_a?(Railz::FrameworkSpawner)
 							max_idle_time = FRAMEWORK_SPAWNER_MAX_IDLE_TIME
 						else
 							max_idle_time = APP_SPAWNER_MAX_IDLE_TIME

@@ -30,15 +30,15 @@ module Passenger
 	autoload 'HTMLTemplate',           'passenger/html_template'
 	autoload 'MessageChannel',         'passenger/message_channel'
 	autoload 'Application',            'passenger/application'
-	autoload 'ApplicationSpawner',     'passenger/application_spawner'
-	autoload 'FrameworkSpawner',       'passenger/framework_spawner'
 	autoload 'SpawnManager',           'passenger/spawn_manager'
 	autoload 'PlatformInfo',           'passenger/platform_info'
 	autoload 'Utils',                  'passenger/utils'
 	autoload 'NativeSupport',          'passenger/native_support'
 	
-	module Rails
-		autoload 'RequestHandler', 'passenger/rails/request_handler'
+	module Railz
+		autoload 'ApplicationSpawner', 'passenger/railz/application_spawner'
+		autoload 'FrameworkSpawner',   'passenger/railz/framework_spawner'
+		autoload 'RequestHandler',     'passenger/railz/request_handler'
 	end
 	
 	module Rack
@@ -53,22 +53,22 @@ module Passenger
 		require 'cgi'
 		require 'stringio'
 		
-		AbstractServer
-		AbstractRequestHandler
-		HTMLTemplate
-		MessageChannel
-		Application
-		ApplicationSpawner
-		FrameworkSpawner
-		SpawnManager
-		PlatformInfo
-		Utils
-		NativeSupport
+		require 'passenger/utils'
+		require 'passenger/native_support'
+		require 'passenger/abstract_server'
+		require 'passenger/abstract_request_handler'
+		require 'passenger/html_template'
+		require 'passenger/message_channel'
+		require 'passenger/application'
+		require 'passenger/spawn_manager'
+		require 'passenger/platform_info'
 		
-		Rails::RequestHandler
+		require 'passenger/railz/application_spawner'
+		require 'passenger/railz/framework_spawner'
+		require 'passenger/railz/request_handler'
 		
-		Rack::ApplicationSpawner
-		Rack::RequestHandler
+		require 'passenger/rack/application_spawner'
+		require 'passenger/rack/request_handler'
 		@@all_loaded = true
 	end
 end

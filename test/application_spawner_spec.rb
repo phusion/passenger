@@ -7,6 +7,7 @@ require 'spawner_privilege_lowering_spec'
 require 'spawner_error_handling_spec'
 
 include Passenger
+include Passenger::Railz
 
 describe ApplicationSpawner do
 	include TestHelper

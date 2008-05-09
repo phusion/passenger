@@ -16,7 +16,7 @@
 
 require 'passenger/passenger'
 module Passenger
-module Rails
+module Railz
 
 # A request handler for Ruby on Rails applications.
 class RequestHandler < AbstractRequestHandler
@@ -59,5 +59,5 @@ private
 	end
 end
 
-end # module Rails
+end # module Railz
 end # module Passenger

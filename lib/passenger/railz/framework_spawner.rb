@@ -16,6 +16,7 @@
 
 require 'passenger/passenger'
 module Passenger
+module Railz
 
 # This class is capable of spawning Ruby on Rails application instances
 # quickly. This is done by preloading the Ruby on Rails framework into memory,
@@ -80,6 +81,7 @@ class FrameworkSpawner < AbstractServer
 	# - FrameworkSpawner::Error: The FrameworkSpawner server exited unexpectedly.
 	def start
 		super
+		Passenger.load_all_classes!
 		begin
 			status = server.read[0]
 			if status == 'exception'
@@ -330,4 +332,5 @@ private
 	end
 end
 
+end # module Railz
 end # module Passenger
