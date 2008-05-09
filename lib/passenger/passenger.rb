@@ -18,13 +18,6 @@ module Passenger
 	ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
 	$LOAD_PATH.unshift("#{ROOT}/ext")
 	
-	# We can't autoload the exception classes because their class names
-	# don't match their filenames, and that'll trigger bugs in
-	# ActiveSupport's Dependency autoloading code.
-	require 'passenger/exceptions'
-	# And for some reason, CGIFixed conflicts too.
-	require 'passenger/cgi_fixed'
-
 	autoload 'AbstractServer',         'passenger/abstract_server'
 	autoload 'AbstractRequestHandler', 'passenger/abstract_request_handler'
 	autoload 'HTMLTemplate',           'passenger/html_template'
@@ -39,12 +32,19 @@ module Passenger
 		autoload 'ApplicationSpawner', 'passenger/railz/application_spawner'
 		autoload 'FrameworkSpawner',   'passenger/railz/framework_spawner'
 		autoload 'RequestHandler',     'passenger/railz/request_handler'
+		autoload 'CGIFixed',           'passenger/railz/cgi_fixed'
 	end
 	
 	module Rack
 		autoload 'ApplicationSpawner', 'passenger/rack/application_spawner'
 		autoload 'RequestHandler',     'passenger/rack/request_handler'
 	end
+	
+	autoload 'VersionNotFound',     'passenger/exceptions'
+	autoload 'AppInitError',        'passenger/exceptions'
+	autoload 'InitializationError', 'passenger/exceptions'
+	autoload 'FrameworkInitError',  'passenger/exceptions'
+	autoload 'UnknownError',        'passenger/exceptions'
 	
 	@@all_loaded = false
 	
@@ -69,6 +69,8 @@ module Passenger
 		
 		require 'passenger/rack/application_spawner'
 		require 'passenger/rack/request_handler'
+		
+		require 'passenger/exceptions'
 		@@all_loaded = true
 	end
 end
