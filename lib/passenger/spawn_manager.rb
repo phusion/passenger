@@ -77,7 +77,8 @@ class SpawnManager < AbstractServer
 	# - FrameworkInitError: The Ruby on Rails framework that the application requires could not be loaded.
 	# - AppInitError: The application raised an exception or called exit() during startup.
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody",
-	                      environment = "production", spawn_method = "smart")
+	                      environment = "production", spawn_method = "smart",
+	                      type = "rack")
 		if GC.copy_on_write_friendly?
 			# If the garbage collector is copy-on-write friendly, then we'll
 			# want to preload all Passenger classes (before any spawn servers have
@@ -91,63 +92,12 @@ class SpawnManager < AbstractServer
 			Passenger.load_all_classes!
 		end
 		
-		if spawn_method == "smart"
-			spawner_must_be_started = true
-			framework_version = Application.detect_framework_version(app_root)
-			if framework_version == :vendor
-				vendor_path = normalize_path("#{app_root}/vendor/rails")
-				key = "vendor:#{vendor_path}"
-				create_spawner = proc do
-					FrameworkSpawner.new(:vendor => vendor_path)
-				end
-			elsif framework_version.nil?
-				app_root = normalize_path(app_root)
-				key = "app:#{app_root}"
-				create_spawner = proc do
-					ApplicationSpawner.new(app_root, lower_privilege, lowest_user, environment)
-				end
-			else
-				key = "version:#{framework_version}"
-				create_spawner = proc do
-					FrameworkSpawner.new(:version => framework_version)
-				end
-			end
+		if type == "rack"
+			return RackSpawner.spawn_application(app_root, lower_privilege,
+				lowest_user, environment)
 		else
-			app_root = normalize_path(app_root)
-			key = "app:#{app_root}"
-			create_spawner = proc do
-				ApplicationSpawner.new(app_root, lower_privilege, lowest_user, environment)
-			end
-			spawner_must_be_started = false
-		end
-		
-		spawner = nil
-		@lock.synchronize do
-			spawner = @spawners[key]
-			if !spawner
-				spawner = create_spawner.call
-				if spawner_must_be_started
-					spawner.start
-				end
-				@spawners[key] = spawner
-			end
-			spawner.time = Time.now
-			begin
-				if spawner.is_a?(FrameworkSpawner)
-					return spawner.spawn_application(app_root, lower_privilege,
-						lowest_user, environment)
-				elsif spawner.started?
-					return spawner.spawn_application
-				else
-					return spawner.spawn_application!
-				end
-			rescue AbstractServer::ServerError
-				if spawner.started?
-					spawner.stop
-				end
-				@spawners.delete(key)
-				raise
-			end
+			return spawn_rails_application(app_root, lower_privilege, lowest_user,
+				environment, spawn_method)
 		end
 	end
 	
@@ -209,6 +159,68 @@ class SpawnManager < AbstractServer
 	end
 
 private
+	def spawn_rails_application(app_root, lower_privilege, lowest_user,
+	                            environment, spawn_method)
+		if spawn_method == "smart"
+			spawner_must_be_started = true
+			framework_version = Application.detect_framework_version(app_root)
+			if framework_version == :vendor
+				vendor_path = normalize_path("#{app_root}/vendor/rails")
+				key = "vendor:#{vendor_path}"
+				create_spawner = proc do
+					FrameworkSpawner.new(:vendor => vendor_path)
+				end
+			elsif framework_version.nil?
+				app_root = normalize_path(app_root)
+				key = "app:#{app_root}"
+				create_spawner = proc do
+					ApplicationSpawner.new(app_root, lower_privilege, lowest_user, environment)
+				end
+			else
+				key = "version:#{framework_version}"
+				create_spawner = proc do
+					FrameworkSpawner.new(:version => framework_version)
+				end
+			end
+		else
+			app_root = normalize_path(app_root)
+			key = "app:#{app_root}"
+			create_spawner = proc do
+				ApplicationSpawner.new(app_root, lower_privilege, lowest_user, environment)
+			end
+			spawner_must_be_started = false
+		end
+		
+		spawner = nil
+		@lock.synchronize do
+			spawner = @spawners[key]
+			if !spawner
+				spawner = create_spawner.call
+				if spawner_must_be_started
+					spawner.start
+				end
+				@spawners[key] = spawner
+			end
+			spawner.time = Time.now
+			begin
+				if spawner.is_a?(FrameworkSpawner)
+					return spawner.spawn_application(app_root, lower_privilege,
+						lowest_user, environment)
+				elsif spawner.started?
+					return spawner.spawn_application
+				else
+					return spawner.spawn_application!
+				end
+			rescue AbstractServer::ServerError
+				if spawner.started?
+					spawner.stop
+				end
+				@spawners.delete(key)
+				raise
+			end
+		end
+	end
+	
 	def handle_spawn_application(app_root, lower_privilege, lowest_user, environment, spawn_method)
 		lower_privilege = lower_privilege == "true"
 		app = nil

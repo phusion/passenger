@@ -24,6 +24,7 @@ module Passenger
 	autoload 'Application',         'passenger/application'
 	autoload 'ApplicationSpawner',  'passenger/application_spawner'
 	autoload 'FrameworkSpawner',    'passenger/framework_spawner'
+	autoload 'RackSpawner',         'passenger/rack_spawner'
 	autoload 'SpawnManager',        'passenger/spawn_manager'
 	autoload 'PlatformInfo',        'passenger/platform_info'
 	autoload 'RequestHandler',      'passenger/request_handler'
