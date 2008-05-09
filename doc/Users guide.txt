@@ -281,7 +281,7 @@ $ cd /webapps/rack_example
 $ some_awesome_editor config.ru
 ...type in some source code...
 $ cat config.ru
-app = Proc.new do |env|
+app = lambda do |env|
     return [200, { "Content-Type" => "text/html" }, "hello <b>world</b>"]
 end
 run app

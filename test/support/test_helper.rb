@@ -2,7 +2,7 @@ require 'fileutils'
 
 module TestHelper
 	STUB_TEMP_DIR = 'tmp.stub'
-
+	
 	class Stub
 		attr_reader :app_root
 		
@@ -11,6 +11,27 @@ module TestHelper
 			@app_root = app_root
 		end
 		
+		def destroy
+			FileUtils.rm_rf(@app_root)
+		end
+	end
+	
+	def setup_stub(name, dir = STUB_TEMP_DIR)
+		FileUtils.rm_rf(dir)
+		FileUtils.mkdir_p(dir)
+		FileUtils.cp_r("stub/#{name}/.", dir)
+		system("chmod", "-R", "a+rw", dir)
+		return Stub.new(name, dir)
+	end
+	
+	def use_stub(name, dir = STUB_TEMP_DIR)
+		stub = setup_stub(name, dir)
+		yield stub
+	ensure
+		stub.destroy
+	end
+	
+	class RailsStub < Stub
 		def environment_rb
 			return "#{@app_root}/config/environment.rb"
 		end
@@ -23,10 +44,6 @@ module TestHelper
 		def dont_use_vendor_rails
 			FileUtils.rm_rf("#{@app_root}/vendor/rails")
 		end
-		
-		def destroy
-			FileUtils.rm_rf(@app_root)
-		end
 	end
 	
 	def setup_rails_stub(name, dir = STUB_TEMP_DIR)
@@ -35,7 +52,7 @@ module TestHelper
 		FileUtils.cp_r("stub/rails_apps/#{name}/.", dir)
 		FileUtils.mkdir_p("#{dir}/log")
 		system("chmod", "-R", "a+rw", dir)
-		return Stub.new(name, dir)
+		return RailsStub.new(name, dir)
 	end
 	
 	def teardown_rails_stub

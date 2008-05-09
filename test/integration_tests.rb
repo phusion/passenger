@@ -138,6 +138,44 @@ shared_examples_for "MyCook(tm) beta" do
 	end
 end
 
+shared_examples_for "HelloWorld Rack application" do
+	it "is possible to fetch static assets" do
+		get('/rack.jpg').should == public_file('rack.jpg')
+	end
+	
+	it "is possible to GET a regular Rack page" do
+		get('/').should =~ /hello/
+	end
+	
+	it "supports restarting via restart.txt" do
+		get('/').should =~ /hello/
+		File.write("#{@stub.app_root}/config.ru", %q{
+			app = lambda do |env|
+				[200, { "Content-Type" => "text/html" }, "changed"]
+			end
+			run app
+		})
+		File.new("#{@stub.app_root}/tmp/restart.txt", "w").close
+		get('/').should == "changed"
+		File.exist?("#{@stub.app_root}/tmp/restart.txt").should == false
+	end
+	
+	if Process.uid == 0
+		it "runs as an unprivileged user" do
+			pending do
+				File.prepend("#{@stub.app_root}/config.ru", %q{
+					File.new('foo.txt', 'w').close
+				})
+				File.new("#{@stub.app_root}/tmp/restart.txt", "w").close
+				get('/')
+				stat = File.stat("#{@stub.app_root}/foo.txt")
+				stat.uid.should_not == 0
+				stat.gid.should_not == 0
+			end
+		end
+	end
+end
+
 describe "mod_passenger running in Apache 2" do
 	include TestHelper
 	
@@ -353,6 +391,21 @@ describe "mod_passenger running in Apache 2" do
 				result.should =~ /vendor crash/
 			end
 		end
+	end
+	
+	describe "Rack support" do
+		before :all do
+			@stub = setup_stub('rack')
+			@apache2.add_vhost('passenger.test', File.expand_path(@stub.app_root) + "/public")
+			@apache2.start
+			@server = "http://passenger.test:#{@apache2.port}"
+		end
+		
+		after :all do
+			@stub.destroy
+		end
+		
+		it_should_behave_like "HelloWorld Rack application"
 	end
 	
 	##### Helper methods #####

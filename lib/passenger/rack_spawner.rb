@@ -29,6 +29,7 @@ class RackSpawner
 				a.close
 				channel = MessageChannel.new(b)
 				ENV['RACK_ENV'] = environment
+				Dir.chdir(app_root)
 				app = load_rack_app(app_root)
 				
 				reader, writer = IO.pipe
