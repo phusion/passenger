@@ -18,6 +18,7 @@ require 'passenger/passenger'
 module Passenger
 module Rack
 
+# Class for spawning Rack applications.
 class ApplicationSpawner
 	include Utils
 	
@@ -26,37 +27,30 @@ class ApplicationSpawner
 		@@instance.spawn_application(*args)
 	end
 	
+	# Spawn an instance of the given Rack application. When successful, an
+	# Application object will be returned, which represents the spawned
+	# application.
+	#
+	# Raises:
+	# - AppInitError: The Rack application raised an exception or called
+	#   exit() during startup.
+	# - SystemCallError, IOError, SocketError: Something went wrong.
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody", environment = "production")
 		a, b = UNIXSocket.pair
+		# Double fork in order to prevent zombie processes.
 		pid = safe_fork(self.class.to_s) do
 			safe_fork(self.class.to_s) do
-				$0 = "Rack: #{app_root}"
 				a.close
-				channel = MessageChannel.new(b)
-				ENV['RACK_ENV'] = environment
-				Dir.chdir(app_root)
-				app = load_rack_app(app_root)
-				
-				reader, writer = IO.pipe
-				begin
-					handler = RequestHandler.new(reader, app)
-					channel.write(Process.pid, handler.socket_name,
-						handler.using_abstract_namespace?)
-					channel.send_io(writer)
-					writer.close
-					channel.close
-					handler.main_loop
-				ensure
-					channel.close rescue nil
-					writer.close rescue nil
-					handler.cleanup rescue nil
-				end
+				run(MessageChannel.new(b), app_root, lower_privilege, lowest_user, environment)
 			end
 		end
 		b.close
 		Process.waitpid(pid) rescue nil
 		
 		channel = MessageChannel.new(a)
+		unmarshal_and_raise_errors(channel, "rack")
+		
+		# No exception was raised, so spawning succeeded.
 		pid, socket_name, using_abstract_namespace = channel.read
 		if pid.nil?
 			raise IOError, "Connection closed"
@@ -77,6 +71,34 @@ private
 		
 		def get_binding
 			return binding
+		end
+	end
+	
+	def run(channel, app_root, lower_privilege, lowest_user, environment)
+		$0 = "Rack: #{app_root}"
+		
+		ENV['RACK_ENV'] = environment
+		Dir.chdir(app_root)
+		app = nil
+		success = report_app_init_status(channel) do
+			app = load_rack_app(app_root)
+		end
+		
+		if success
+			reader, writer = IO.pipe
+			begin
+				handler = RequestHandler.new(reader, app)
+				channel.write(Process.pid, handler.socket_name,
+					handler.using_abstract_namespace?)
+				channel.send_io(writer)
+				writer.close
+				channel.close
+				handler.main_loop
+			ensure
+				channel.close rescue nil
+				writer.close rescue nil
+				handler.cleanup rescue nil
+			end
 		end
 	end
 	

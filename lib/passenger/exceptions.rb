@@ -44,17 +44,23 @@ class InitializationError < StandardError
 	end
 end
 
-# Raised when ApplicationSpawner, FrameworkSpawner or SpawnManager was unable
-# spawn a Ruby on Rails application, because the application either threw an
-# exception or called exit.
+# Raised when Rack::ApplicationSpawner, Railz::ApplicationSpawner,
+# Railz::FrameworkSpawner or SpawnManager was unable to spawn an application,
+# because the application either threw an exception or called exit.
 #
 # If the +child_exception+ attribute is nil, then it means that the application
 # called exit.
 class AppInitError < InitializationError
+	attr_accessor :app_type
+	
+	def initialize(message, child_exception = nil, app_type = "rails")
+		super(message, child_exception)
+		@app_type = app_type
+	end
 end
 
-# Raised when FrameworkSpawner or SpawnManager was unable to load a version of
-# the Ruby on Rails framework. The +child_exception+ attribute is guaranteed
+# Raised when Railz::FrameworkSpawner or Railz::SpawnManager was unable to load a
+# version of the Ruby on Rails framework. The +child_exception+ attribute is guaranteed
 # non-nil.
 class FrameworkInitError < InitializationError
 	attr_reader :vendor

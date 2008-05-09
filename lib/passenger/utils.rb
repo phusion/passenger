@@ -151,6 +151,57 @@ protected
 			end
 		end
 	end
+	
+	# Run the given block. A message will be sent through +channel+ (a
+	# MessageChannel object), telling the remote side whether the block
+	# raised an exception, called exit(), or succeeded.
+	# Returns whether the block succeeded.
+	# Exceptions are not propagated, except for SystemExit.
+	def report_app_init_status(channel)
+		begin
+			yield
+			channel.write('success')
+			return true
+		rescue StandardError, ScriptError, NoMemoryError => e
+			if ENV['TESTING_PASSENGER'] == '1'
+				print_exception(self.class.to_s, e)
+			end
+			channel.write('exception')
+			channel.write_scalar(marshal_exception(e))
+			return false
+		rescue SystemExit
+			channel.write('exit')
+			raise
+		end
+	end
+	
+	# Receive status information that was sent to +channel+ by
+	# report_app_init_status. If an error occured according to the
+	# received information, then an appropriate exception will be
+	# raised.
+	#
+	# Raises:
+	# - AppInitError
+	# - IOError, SystemCallError, SocketError
+	def unmarshal_and_raise_errors(channel, app_type = "rails")
+		args = channel.read
+		if args.nil?
+			raise EOFError, "Unexpected end-of-file detected."
+		end
+		status = args[0]
+		if status == 'exception'
+			child_exception = unmarshal_exception(channel.read_scalar)
+			#print_exception(self.class.to_s, child_exception)
+			raise AppInitError.new(
+				"Application '#{@app_root}' raised an exception: " <<
+				"#{child_exception.class} (#{child_exception.message})",
+				child_exception,
+				app_type)
+		elsif status == 'exit'
+			raise AppInitError.new("Application '#{@app_root}' exited during startup",
+				app_type)
+		end
+	end
 end
 
 end # module Passenger

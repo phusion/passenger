@@ -215,55 +215,6 @@ protected
 	end
 	
 private
-	# Run the given block. A message will be sent through _channel_, telling
-	# the remote side whether the block raised an exception, called exit(),
-	# or succeeded.
-	# Returns whether the block succeeded.
-	# Exceptions are not propagated, except for SystemExit.
-	def report_app_init_status(channel)
-		begin
-			yield
-			channel.write('success')
-			return true
-		rescue StandardError, ScriptError, NoMemoryError => e
-			if ENV['TESTING_PASSENGER'] == '1'
-				print_exception(self.class.to_s, e)
-			end
-			channel.write('exception')
-			channel.write_scalar(marshal_exception(e))
-			return false
-		rescue SystemExit
-			channel.write('exit')
-			raise
-		end
-	end
-	
-	# Receive status information that was sent to _channel_ by
-	# report_app_init_status. If an error occured according to the
-	# received information, then an appropriate exception will be
-	# raised.
-	#
-	# Raises:
-	# - AppInitError
-	# - IOError, SystemCallError, SocketError
-	def unmarshal_and_raise_errors(channel)
-		args = channel.read
-		if args.nil?
-			raise EOFError, "Unexpected end-of-file detected."
-		end
-		status = args[0]
-		if status == 'exception'
-			child_exception = unmarshal_exception(channel.read_scalar)
-			#print_exception(self.class.to_s, child_exception)
-			raise AppInitError.new(
-				"Application '#{@app_root}' raised an exception: " <<
-				"#{child_exception.class} (#{child_exception.message})",
-				child_exception)
-		elsif status == 'exit'
-			raise AppInitError.new("Application '#{@app_root}' exited during startup")
-		end
-	end
-
 	# Lower the current process's privilege to the owner of config/environment.rb.
 	# No exceptions will be raised in the event that privilege lowering fails.
 	def lower_privilege!
