@@ -30,18 +30,6 @@ class ApplicationSpawner
 		a, b = UNIXSocket.pair
 		pid = safe_fork(self.class.to_s) do
 			safe_fork(self.class.to_s) do
-				NilClass.class_eval do
-					def blank?
-						true
-					end
-				end
-				
-				String.class_eval do
-					def blank?
-						empty?
-					end
-				end
-				
 				$0 = "Rack: #{app_root}"
 				a.close
 				channel = MessageChannel.new(b)
