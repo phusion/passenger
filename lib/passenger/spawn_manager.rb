@@ -78,7 +78,7 @@ class SpawnManager < AbstractServer
 	# - AppInitError: The application raised an exception or called exit() during startup.
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody",
 	                      environment = "production", spawn_method = "smart",
-	                      type = "rack")
+	                      app_type = "rails")
 		if GC.copy_on_write_friendly?
 			# If the garbage collector is copy-on-write friendly, then we'll
 			# want to preload all Passenger classes (before any spawn servers have
@@ -92,7 +92,7 @@ class SpawnManager < AbstractServer
 			Passenger.load_all_classes!
 		end
 		
-		if type == "rack"
+		if app_type == "rack"
 			return RackSpawner.spawn_application(app_root, lower_privilege,
 				lowest_user, environment)
 		else
@@ -221,12 +221,13 @@ private
 		end
 	end
 	
-	def handle_spawn_application(app_root, lower_privilege, lowest_user, environment, spawn_method)
+	def handle_spawn_application(app_root, lower_privilege, lowest_user, environment,
+	                             spawn_method, app_type)
 		lower_privilege = lower_privilege == "true"
 		app = nil
 		begin
 			app = spawn_application(app_root, lower_privilege, lowest_user,
-				environment, spawn_method)
+				environment, spawn_method, app_type)
 		rescue ArgumentError => e
 			send_error_page(client, 'invalid_app_root', :error => e, :app_root => app_root)
 		rescue AbstractServer::ServerError => e

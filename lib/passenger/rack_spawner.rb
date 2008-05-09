@@ -25,6 +25,7 @@ class RackSpawner
 					end
 				end
 				
+				$0 = "Rack: #{app_root}"
 				a.close
 				channel = MessageChannel.new(b)
 				app = load_rack_app(app_root)

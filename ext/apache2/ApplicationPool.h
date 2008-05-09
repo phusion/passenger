@@ -108,6 +108,7 @@ public:
 	 * @param environment The RAILS_ENV environment that should be used. May not be empty.
 	 * @param spawnMethod The spawn method to use. Either "smart" or "conservative".
  	 *                    See the Ruby class SpawnManager for details.
+ 	 * @param appType The application type. Either "rails" or "rack".
 	 * @return A session object.
 	 * @throw SpawnException An attempt was made to spawn a new application instance, but that attempt failed.
 	 * @throw IOException Something else went wrong.
@@ -119,7 +120,7 @@ public:
 	 */
 	virtual Application::SessionPtr get(const string &appRoot, bool lowerPrivilege = true,
 		const string &lowestUser = "nobody", const string &environment = "production",
-		const string &spawnMethod = "smart") = 0;
+		const string &spawnMethod = "smart", const string &appType = "rails") = 0;
 	
 	/**
 	 * Clear all application instances that are currently in the pool.

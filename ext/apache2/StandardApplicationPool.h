@@ -275,7 +275,8 @@ private:
 		bool lowerPrivilege,
 		const string &lowestUser,
 		const string &environment,
-		const string &spawnMethod
+		const string &spawnMethod,
+		const string &appType
 	) {
 		AppContainerPtr container;
 		AppContainerList *list;
@@ -319,7 +320,7 @@ private:
 					container = ptr(new AppContainer());
 					container->app = spawnManager.spawn(appRoot,
 						lowerPrivilege, lowestUser, environment,
-						spawnMethod);
+						spawnMethod, appType);
 					container->sessions = 0;
 					list->push_back(container);
 					container->iterator = list->end();
@@ -345,7 +346,7 @@ private:
 				}
 				container = ptr(new AppContainer());
 				container->app = spawnManager.spawn(appRoot, lowerPrivilege, lowestUser,
-					environment, spawnMethod);
+					environment, spawnMethod, appType);
 				container->sessions = 0;
 				it = apps.find(appRoot);
 				if (it == apps.end()) {
@@ -453,7 +454,8 @@ public:
 		bool lowerPrivilege = true,
 		const string &lowestUser = "nobody",
 		const string &environment = "production",
-		const string &spawnMethod = "smart"
+		const string &spawnMethod = "smart",
+		const string &appType = "rails"
 	) {
 		unsigned int attempt;
 		const unsigned int MAX_ATTEMPTS = 5;
@@ -465,7 +467,7 @@ public:
 			mutex::scoped_lock l(lock);
 			pair<AppContainerPtr, AppContainerList *> p(
 				spawnOrUseExisting(l, appRoot, lowerPrivilege, lowestUser,
-					environment, spawnMethod)
+					environment, spawnMethod, appType)
 			);
 			AppContainerPtr &container(p.first);
 			AppContainerList &list(*p.second);

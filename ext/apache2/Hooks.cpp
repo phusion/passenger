@@ -584,7 +584,8 @@ public:
 				
 				session = applicationPool->get(
 					canonicalizePath(mapper.getPublicDirectory() + "/.."),
-					true, defaultUser, environment, spawnMethod);
+					true, defaultUser, environment, spawnMethod,
+					mapper.getApplicationTypeString());
 			} catch (const SpawnException &e) {
 				if (e.hasErrorPage()) {
 					ap_set_content_type(r, "text/html; charset=utf-8");
