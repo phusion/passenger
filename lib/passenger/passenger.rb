@@ -17,16 +17,21 @@
 module Passenger
 	ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
 	$LOAD_PATH.unshift("#{ROOT}/ext")
+	
+	# We can't autoload the exception classes because their class names
+	# don't match their filenames, and that'll trigger bugs in
+	# ActiveSupport's Dependency autoloading code.
+	require 'passenger/exceptions'
+	# And for some reason, CGIFixed conflicts too.
+	require 'passenger/cgi_fixed'
 
 	autoload 'AbstractServer',         'passenger/abstract_server'
 	autoload 'AbstractRequestHandler', 'passenger/abstract_request_handler'
 	autoload 'HTMLTemplate',           'passenger/html_template'
 	autoload 'MessageChannel',         'passenger/message_channel'
-	autoload 'CGIFixed',               'passenger/cgi_fixed'
 	autoload 'Application',            'passenger/application'
 	autoload 'ApplicationSpawner',     'passenger/application_spawner'
 	autoload 'FrameworkSpawner',       'passenger/framework_spawner'
-	autoload 'RackSpawner',            'passenger/rack_spawner'
 	autoload 'SpawnManager',           'passenger/spawn_manager'
 	autoload 'PlatformInfo',           'passenger/platform_info'
 	autoload 'Utils',                  'passenger/utils'
@@ -41,21 +46,17 @@ module Passenger
 		autoload 'RequestHandler',     'passenger/rack/request_handler'
 	end
 	
-	autoload 'VersionNotFound',        'passenger/exceptions'
-	autoload 'AppInitError',           'passenger/exceptions'
-	autoload 'InitializationError',    'passenger/exceptions'
-	autoload 'FrameworkInitError',     'passenger/exceptions'
-	autoload 'UnknownError',           'passenger/exceptions'
-
 	@@all_loaded = false
 	
 	def self.load_all_classes!
 		return if @@all_loaded
+		require 'cgi'
+		require 'stringio'
+		
 		AbstractServer
 		AbstractRequestHandler
 		HTMLTemplate
 		MessageChannel
-		CGIFixed
 		Application
 		ApplicationSpawner
 		FrameworkSpawner
@@ -68,12 +69,6 @@ module Passenger
 		
 		Rack::ApplicationSpawner
 		Rack::RequestHandler
-		
-		VersionNotFound
-		AppInitError
-		InitializationError
-		FrameworkInitError
-		UnknownError
 		@@all_loaded = true
 	end
 end

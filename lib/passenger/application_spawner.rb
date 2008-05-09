@@ -253,6 +253,7 @@ private
 		status = args[0]
 		if status == 'exception'
 			child_exception = unmarshal_exception(channel.read_scalar)
+			#print_exception(self.class.to_s, child_exception)
 			raise AppInitError.new(
 				"Application '#{@app_root}' raised an exception: " <<
 				"#{child_exception.class} (#{child_exception.message})",

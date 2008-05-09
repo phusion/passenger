@@ -121,7 +121,7 @@ class AbstractRequestHandler
 	# Create a new RequestHandler with the given owner pipe.
 	# +owner_pipe+ must be the readable part of a pipe IO object.
 	def initialize(owner_pipe)
-		if ENV['PASSENGER_NO_ABSTRACT_NAMESPACE_SOCKETS'].blank?
+		if abstract_namespace_sockets_allowed?
 			@using_abstract_namespace = create_unix_socket_on_abstract_namespace
 		else
 			@using_abstract_namespace = false
@@ -163,7 +163,9 @@ class AbstractRequestHandler
 				end
 				begin
 					headers, input = parse_request(client)
-					process_request(headers, input, client)
+					if headers
+						process_request(headers, input, client)
+					end
 				rescue IOError, SocketError, SystemCallError => e
 					print_exception("Passenger RequestHandler", e)
 				ensure
@@ -265,7 +267,6 @@ private
 		channel = MessageChannel.new(socket)
 		headers_data = channel.read_scalar(MAX_HEADER_SIZE)
 		if headers_data.nil?
-			socket.close
 			return
 		end
 		headers = Hash[*headers_data.split("\0")]
@@ -292,6 +293,11 @@ private
 			data = File.read("/dev/urandom", 64).unpack('H*')[0]
 		end
 		return data
+	end
+	
+	def abstract_namespace_sockets_allowed?
+		return !ENV['PASSENGER_NO_ABSTRACT_NAMESPACE_SOCKETS'] ||
+			ENV['PASSENGER_NO_ABSTRACT_NAMESPACE_SOCKETS'].empty?
 	end
 end
 

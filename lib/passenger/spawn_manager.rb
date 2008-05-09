@@ -17,7 +17,17 @@
 require 'passenger/passenger'
 module Passenger
 
-# This class is capable of spawning Ruby on Rails application instances.
+# The spawn manager is capable of spawning Ruby on Rails or Rack application
+# instances. It acts like a simple fascade for the rest of the spawn manager
+# system.
+#
+# *Note*: SpawnManager may only be started synchronously with
+# AbstractServer#start_synchronously. Starting asynchronously has not been
+# tested. Don't forget to call cleanup after the server's main loop has
+# finished.
+#
+# == Ruby on Rails optimizations ===
+#
 # Spawning a Ruby on Rails application is usually slow. But SpawnManager
 # will preload and cache Ruby on Rails frameworks, as well as application
 # code, so subsequent spawns will be very fast.
@@ -25,15 +35,10 @@ module Passenger
 # Internally, SpawnManager uses FrameworkSpawner to preload and cache
 # Ruby on Rails frameworks. FrameworkSpawner, in turn, uses
 # ApplicationSpawner to preload and cache application code.
-#
-# *Note*: SpawnManager may only be started synchronously with
-# AbstractServer#start_synchronously. Starting asynchronously has not been
-# tested. Don't forget to call cleanup after the server's main loop has
-# finished.
 class SpawnManager < AbstractServer
 	DEFAULT_INPUT_FD = 3
 	FRAMEWORK_SPAWNER_MAX_IDLE_TIME = 30 * 60
-	APP_SPAWNER_MAX_IDLE_TIME = FrameworkSpawner::APP_SPAWNER_MAX_IDLE_TIME
+	APP_SPAWNER_MAX_IDLE_TIME = ::Passenger::FrameworkSpawner::APP_SPAWNER_MAX_IDLE_TIME
 	SPAWNER_CLEAN_INTERVAL = [FRAMEWORK_SPAWNER_MAX_IDLE_TIME,
 		APP_SPAWNER_MAX_IDLE_TIME].min + 5
 	
