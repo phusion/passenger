@@ -41,13 +41,22 @@ split(const string &str, char sep, vector<string> &output) {
 	output.push_back(str.substr(start));
 }
 
-bool fileExists(const char *filename) {
+bool
+fileExists(const char *filename) {
 	struct stat buf;
 	
 	if (stat(filename, &buf) == 0) {
 		return S_ISREG(buf.st_mode);
 	} else {
-		return false;
+		if (errno == ENOENT) {
+			return false;
+		} else {
+			int e = errno;
+			string message("Cannot stat '");
+			message.append(filename);
+			message.append("'");
+			throw SystemException(message, e);
+		}
 	}
 }
 
@@ -120,6 +129,13 @@ bool
 verifyRailsDir(const string &dir) {
 	string temp(dir);
 	temp.append("/../config/environment.rb");
+	return fileExists(temp.c_str());
+}
+
+bool
+verifyRackDir(const string &dir) {
+	string temp(dir);
+	temp.append("/../config.ru");
 	return fileExists(temp.c_str());
 }
 

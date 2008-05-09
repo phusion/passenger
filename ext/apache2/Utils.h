@@ -130,6 +130,7 @@ void split(const string &str, char sep, vector<string> &output);
  *
  * @param filename The filename to check.
  * @return Whether the file exists.
+ * @throws SystemException Unable to check because of a system error.
  * @ingroup Support
  */
 bool fileExists(const char *filename);
@@ -171,9 +172,19 @@ string canonicalizePath(const string &path);
  * Check whether the specified directory is a valid Ruby on Rails
  * 'public' directory.
  *
+ * @throws SystemException Unable to check because of a system error.
  * @ingroup Support
  */
 bool verifyRailsDir(const string &dir);
+
+/**
+ * Check whether the specified directory is a valid Rack 'public'
+ * directory.
+ *
+ * @throws SystemException Unable to check because of a system error.
+ * @ingroup Support
+ */
+bool verifyRackDir(const string &dir);
 
 /**
  * Represents a temporary file. The associated file is automatically

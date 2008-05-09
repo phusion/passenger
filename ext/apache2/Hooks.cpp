@@ -51,6 +51,184 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 #define DEFAULT_RAILS_ENV "production"
 
 
+/**
+ * Utility class for determining URI-to-Rails/Rack directory mappings.
+ * Given a URI, it will determine whether that URI belongs to a Rails/Rack
+ * application, what the base URI of that application is, and what the
+ * associated 'public' directory is.
+ *
+ * @note This class is not thread-safe, but is reentrant.
+ * @ingroup Core
+ */
+class DirectoryMapper {
+public:
+	enum ApplicationType {
+		NONE,
+		RAILS,
+		RACK
+	};
+
+private:
+	DirConfig *config;
+	request_rec *r;
+	bool baseURIKnown;
+	const char *baseURI;
+	ApplicationType appType;
+	
+	inline bool shouldAutoDetectRails() {
+		return config->autoDetect == DirConfig::ENABLED || config->autoDetect == DirConfig::UNSET;
+	}
+	
+	inline bool shouldAutoDetectRack() {
+		return config->autoDetect == DirConfig::ENABLED || config->autoDetect == DirConfig::UNSET;
+	}
+	
+public:
+	/**
+	 * @warning Do not use this object after the destruction of <tt>r</tt> or <tt>config</tt>.
+	 */
+	DirectoryMapper(request_rec *r, DirConfig *config) {
+		this->r = r;
+		this->config = config;
+		appType = NONE;
+		baseURIKnown = false;
+		baseURI = NULL;
+	}
+	
+	/**
+	 * Determine whether the given HTTP request falls under one of the specified
+	 * RailsBaseURIs or RackBaseURIs. If yes, then the first matching base URI will
+	 * be returned.
+	 *
+	 * If Rails/Rack autodetection was enabled in the configuration, and the document
+	 * root seems to be a valid Rails/Rack 'public' folder, then this method will
+	 * return "/".
+	 *
+	 * Otherwise, NULL will be returned.
+	 *
+	 * @throws SystemException An error occured while examening the filesystem.
+	 * @warning The return value may only be used as long as <tt>config</tt>
+	 *          hasn't been destroyed.
+	 */
+	const char *getBaseURI() {
+		if (baseURIKnown) {
+			return baseURI;
+		}
+		
+		set<string>::const_iterator it;
+		const char *uri = r->uri;
+		size_t uri_len = strlen(uri);
+		
+		if (uri_len == 0 || uri[0] != '/') {
+			baseURIKnown = true;
+			return NULL;
+		}
+		
+		for (it = config->base_uris.begin(); it != config->base_uris.end(); it++) {
+			const string &base(*it);
+			if (  base == "/"
+			 || ( uri_len == base.size() && memcmp(uri, base.c_str(), uri_len) == 0 )
+			 || ( uri_len  > base.size() && memcmp(uri, base.c_str(), base.size()) == 0
+			                             && uri[base.size()] == '/' )
+			) {
+				baseURIKnown = true;
+				baseURI = base.c_str();
+				appType = RAILS;
+				return baseURI;
+			}
+		}
+		
+		if (shouldAutoDetectRails() && verifyRailsDir(ap_document_root(r))) {
+			baseURIKnown = true;
+			baseURI = "/";
+			appType = RAILS;
+			return baseURI;
+		}
+		if (shouldAutoDetectRack() && verifyRackDir(ap_document_root(r))) {
+			baseURIKnown = true;
+			baseURI = "/";
+			appType = RACK;
+			return baseURI;
+		}
+		
+		baseURIKnown = true;
+		return NULL;
+	}
+	
+	/**
+	 * Returns the filename of the 'public' directory of the Rails/Rack application
+	 * that's associated with the HTTP request.
+	 *
+	 * Returns an empty string if the document root of the HTTP request
+	 * cannot be determined, or if it isn't a valid folder.
+	 *
+	 * @throws SystemException An error occured while examening the filesystem.
+	 */
+	string getPublicDirectory() {
+		if (!baseURIKnown) {
+			getBaseURI();
+		}
+		if (baseURI == NULL) {
+			return "";
+		}
+		
+		const char *docRoot = ap_document_root(r);
+		size_t len = strlen(docRoot);
+		if (len > 0) {
+			string path;
+			if (docRoot[len - 1] == '/') {
+				path.assign(docRoot, len - 1);
+			} else {
+				path.assign(docRoot, len);
+			}
+			if (strcmp(baseURI, "/") != 0) {
+				path.append(baseURI);
+			}
+			return path;
+		} else {
+			return "";
+		}
+	}
+	
+	/**
+	 * Returns the application type that's associated with the HTTP request.
+	 *
+	 * @throws SystemException An error occured while examening the filesystem.
+	 */
+	ApplicationType getApplicationType() {
+		if (!baseURIKnown) {
+			getBaseURI();
+		}
+		return appType;
+	}
+	
+	/**
+	 * Returns the application type (as a string) that's associated
+	 * with the HTTP request.
+	 *
+	 * @throws SystemException An error occured while examening the filesystem.
+	 */
+	const char *getApplicationTypeString() {
+		if (!baseURIKnown) {
+			getBaseURI();
+		}
+		switch (appType) {
+		case NONE:
+			return NULL;
+		case RAILS:
+			return "rails";
+		case RACK:
+			return "rack";
+		};
+	}
+};
+
+
+/**
+ * Apache hook functions, wrapped in a class.
+ *
+ * @ingroup Core
+ */
 class Hooks {
 private:
 	struct Container {
@@ -74,61 +252,8 @@ private:
 	}
 	
 	/**
-	 * Determine whether the given HTTP request falls under one of the specified
-	 * RailsBaseURIs. If yes, then the first matching base URI will be returned.
-	 *
-	 * If Rails autodetection was enabled in the configuration, then this function
-	 * will return '/' if the document root seems to be a valid Rails 'public' folder.
-	 *
-	 * Otherwise, NULL will be returned.
+	 * Convert an HTTP header name to a CGI environment name.
 	 */
-	const char *determineRailsBaseURI(request_rec *r, DirConfig *config) {
-		set<string>::const_iterator it;
-		const char *uri = r->uri;
-		size_t uri_len = strlen(uri);
-		
-		if (uri_len == 0 || uri[0] != '/') {
-			return NULL;
-		}
-		
-		for (it = config->base_uris.begin(); it != config->base_uris.end(); it++) {
-			const string &base(*it);
-			if (  base == "/"
-			 || ( uri_len == base.size() && memcmp(uri, base.c_str(), uri_len) == 0 )
-			 || ( uri_len  > base.size() && memcmp(uri, base.c_str(), base.size()) == 0
-			                             && uri[base.size()] == '/' )
-			) {
-				return apr_pstrdup(r->pool, base.c_str());
-			}
-		}
-		
-		if ((config->autoDetect == DirConfig::ENABLED || config->autoDetect == DirConfig::UNSET)
-		 && verifyRailsDir(ap_document_root(r))) {
-			return "/";
-		}
-		
-		return NULL;
-	}
-	
-	string determineRailsDir(request_rec *r, const char *baseURI) {
-		const char *docRoot = ap_document_root(r);
-		size_t len = strlen(docRoot);
-		if (len > 0) {
-			string path;
-			if (docRoot[len - 1] == '/') {
-				path.assign(docRoot, len - 1);
-			} else {
-				path.assign(docRoot, len);
-			}
-			if (strcmp(baseURI, "/") != 0) {
-				path.append(baseURI);
-			}
-			return path;
-		} else {
-			return "";
-		}
-	}
-	
 	char *http2env(apr_pool_t *p, const char *name) {
 		char *env_name = apr_pstrcat(p, "HTTP_", name, NULL);
 		char *cp;
@@ -397,18 +522,18 @@ public:
 	
 	int handleRequest(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
-		const char *railsBaseURI = determineRailsBaseURI(r, config);
-		if (railsBaseURI == NULL || r->filename == NULL || fileExists(r->filename)) {
+		DirectoryMapper mapper(r, config);
+		if (mapper.getBaseURI() == NULL || r->filename == NULL || fileExists(r->filename)) {
 			return DECLINED;
 		}
 		
-		string railsDir(determineRailsDir(r, railsBaseURI));
-		if (railsDir.empty()) {
+		if (mapper.getPublicDirectory().empty()) {
 			ap_set_content_type(r, "text/html; charset=UTF-8");
 			ap_rputs("<h1>Passenger error #1</h1>\n", r);
 			ap_rputs("Cannot determine the location of the Rails application's \"public\" directory.", r);
 			return OK;
-		} else if (!verifyRailsDir(railsDir)) {
+		} // TODO: could throw exception...
+		/*
 			ap_set_content_type(r, "text/html; charset=UTF-8");
 			ap_rputs("<h1>Passenger error #2</h1>\n", r);
 			ap_rputs("Passenger thought that the Rails application's \"public\" directory is \"", r);
@@ -418,7 +543,7 @@ public:
 			ap_rputs("permissions to your Rails application's folder. Please check your ", r);
 			ap_rputs("file permissions.", r);
 			return OK;
-		}
+		} */
 		
 		int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_ERROR);
     		if (httpStatus != OK) {
@@ -457,7 +582,8 @@ public:
 					spawnMethod = "smart";
 				}
 				
-				session = applicationPool->get(canonicalizePath(railsDir + "/.."),
+				session = applicationPool->get(
+					canonicalizePath(mapper.getPublicDirectory() + "/.."),
 					true, defaultUser, environment, spawnMethod);
 			} catch (const SpawnException &e) {
 				if (e.hasErrorPage()) {
@@ -470,7 +596,7 @@ public:
 					throw;
 				}
 			}
-			sendHeaders(r, session, railsBaseURI);
+			sendHeaders(r, session, mapper.getBaseURI());
 			if (uploadData != NULL) {
 				sendRequestBody(r, session, uploadData);
 				uploadData.reset();
@@ -505,11 +631,11 @@ public:
 	int
 	mapToStorage(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
+		DirectoryMapper mapper(r, config);
 		bool forwardToRails;
-		const char *baseURI;
 		
-		baseURI = determineRailsBaseURI(r, config);
-		if (baseURI == NULL || fileExists(r->filename)) {
+		// TODO: this can throw an exception...
+		if (mapper.getBaseURI() == NULL || fileExists(r->filename)) {
 			/*
 			 * fileExists():
 			 * If the file already exists, serve it directly.
@@ -571,7 +697,7 @@ public:
 				 * interfere.
 				 */
 				return OK;
-			} else if (strcmp(r->uri, baseURI) == 0) {
+			} else if (strcmp(r->uri, mapper.getBaseURI()) == 0) {
 				/* But we ignore RailsAllowModRewrite for the base URI of
 				 * the Rails application. Otherwise, Apache will show a
 				 * directory listing. This fixes issue #11.
