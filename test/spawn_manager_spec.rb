@@ -75,7 +75,7 @@ describe SpawnManager do
 				sleep(1) # Give @manager the chance to start.
 				channel = MessageChannel.new(b)
 				channel.write("spawn_application", @stub.app_root, "true",
-					"nobody", "production", "smart")
+					"nobody", "production", "smart", "rails")
 				channel.read
 				pid, listen_socket = channel.read
 				channel.recv_io.close
