@@ -377,11 +377,28 @@ and should usually not be changed manually.
 
 This required option may only occur once, in the global server configuration.
 
+[[PassengerRuby]]
 === PassengerRuby <filename> ===
 This option allows one to specify the Ruby interpreter to use.
 
 This option may only occur once, in the global server configuration.
 The default is 'ruby'.
+
+[[PassengerUserSwitching]]
+=== PassengerUserSwitching <on|off> ===
+Whether to enable <<user_switching,user switching support>>.
+
+This option may only occur once, in the global server configuration.
+The default value is 'on'.
+
+[[PassengerDefaultUser]]
+=== PassengerDefaultUser <username> ===
+Passenger enables <<user_switching,user switching support>> by default.
+This configuration option allows one to specify which user Rails/Rack
+applications must run as, if user switching fails or is disabled.
+
+This option may only occur once, in the global server configuration.
+The default value is 'nobody'.
 
 === Ruby on Rails-specific options ===
 
@@ -532,22 +549,6 @@ mileage may vary.
 This option may only occur once, in the global server configuration.
 The default value is '120'.
 
-[[RailsUserSwitching]]
-==== RailsUserSwitching <on|off> ====
-Whether to enable <<user_switching,user switching support>>.
-
-This option may only occur once, in the global server configuration.
-The default value is 'on'.
-
-[[RailsDefaultUser]]
-==== RailsDefaultUser <username> ====
-Passenger enables <<user_switching,user switching support>> by default.
-This configuration option allows one to specify which user Rails
-applications must run as, if user switching fails or is disabled.
-
-This option may only occur once, in the global server configuration.
-The default value is 'nobody'.
-
 === Rack-specific options ===
 
 ==== RackAutoDetect <on|off> ====
@@ -599,6 +600,20 @@ Rack applications are run, very similar to `RAILS_ENV`.
 
 This option may occur once, in the global server configuration or in a virtual host
 configuration block. The default value is 'production'.
+
+=== Deprecated options ===
+
+The following options have been deprecated, but are still supported for backwards
+compatibility reasons.
+
+==== RailsRuby ====
+Deprecated in favor of <<PassengerRuby,PassengerRuby>>.
+
+==== RailsUserSwitching ====
+Deprecated in favor of <<PassengerUserSwitching,PassengerUserSwitching>>.
+
+==== RailsDefaultUser ====
+Deprecated in favor of <<PassengerDefaultUser,PassengerDefaultUser>>.
 
 
 == Troubleshooting ==
@@ -951,8 +966,9 @@ example, Joe's PHP application will be able to read Jane's PHP application's
 passwords. This is obviously undesirable on many servers.
 
 Passenger solves this problem by implementing 'user switching'. A Rails
-application is started as the owner of the file 'config/environment.rb'. So if
-'/home/webapps/foo/config/environment.rb' is owned by 'joe', then Passenger
+application is started as the owner of the file 'config/environment.rb',
+and a Rack application is started as the owner of the file 'config.ru'.
+So if '/home/webapps/foo/config/environment.rb' is owned by 'joe', then Passenger
 will launch the corresponding Rails application as 'joe' as well.
 
 This behavior is the default, and you don't need to configure anything. But
@@ -960,23 +976,27 @@ there are things that you should keep in mind:
 
 - The owner of 'environment.rb' must have read access to the Rails application's
   folder, and read/write access to the Rails application's 'logs' folder.
+  Likewise, the owner of 'config.ru' must have read access to the Rack application's
+  folder.
 - This feature is only available if Apache is started by 'root'. This is the
   case on most Apache installations.
-- Under no circumstances will Rails applications be run as 'root'. If
-  'environment.rb' is owned as root or by an unknown user, then the Rails
-  application will run as the user specified by
-  <<RailsDefaultUser,RailsDefaultUser>>.
+- Under no circumstances will applications be run as 'root'. If
+  'environment.rb'/'config.ru' is owned as root or by an unknown user, then the
+  Rails/Rack application will run as the user specified by
+  <<PassengerDefaultUser,PassengerDefaultUser>>.
 
 User switching can be disabled with the
-<<RailsUserSwitching,RailsUserSwitching>> option.
+<<PassengerUserSwitching,PassengerUserSwitching>> option.
 
 
 [[reducing_memory_usage]]
-=== Reducing memory consumption of Ruby on Rails apps by 33% ===
+=== Reducing memory consumption of Ruby on Rails applications by 33% ===
 
-Is it possible to reduce memory consumption of your Rails apps by 33% on average,
+Is it possible to reduce memory consumption of your Rails applications by 33% on average,
 by using http://www.rubyenterpriseedition.com/[Ruby Enterprise Edition].
 Please visit the website for details.
+
+Note that this feature does not apply to Rack applications.
 
 === Moving Passenger to a different directory ===
 

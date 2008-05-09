@@ -160,6 +160,23 @@ cmd_passenger_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
 	return NULL;
 }
 
+static const char *
+cmd_passenger_user_switching(cmd_parms *cmd, void *pcfg, int arg) {
+	ServerConfig *config = (ServerConfig *) ap_get_module_config(
+		cmd->server->module_config, &passenger_module);
+	config->userSwitching = arg;
+	config->userSwitchingSpecified = true;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_default_user(cmd_parms *cmd, void *dummy, const char *arg) {
+	ServerConfig *config = (ServerConfig *) ap_get_module_config(
+		cmd->server->module_config, &passenger_module);
+	config->defaultUser = arg;
+	return NULL;
+}
+
 
 /*************************************************
  * Rails-specific settings
@@ -244,23 +261,6 @@ cmd_rails_pool_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
 	}
 }
 
-static const char *
-cmd_rails_user_switching(cmd_parms *cmd, void *pcfg, int arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	config->userSwitching = arg;
-	config->userSwitchingSpecified = true;
-	return NULL;
-}
-
-static const char *
-cmd_rails_default_user(cmd_parms *cmd, void *dummy, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	config->defaultUser = arg;
-	return NULL;
-}
-
 
 /*************************************************
  * Rack-specific settings
@@ -309,6 +309,16 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The Ruby interpreter to use."),
+	AP_INIT_FLAG("PassengerUserSwitching",
+		(Take1Func) cmd_passenger_user_switching,
+		NULL,
+		RSRC_CONF,
+		"Whether to enable user switching support."),
+	AP_INIT_TAKE1("PassengerDefaultUser",
+		(Take1Func) cmd_passenger_default_user,
+		NULL,
+		RSRC_CONF,
+		"The user that Rails/Rack applications must run as when user switching fails or is disabled."),
 
 	// Rails-specific settings.
 	AP_INIT_TAKE1("RailsBaseURI",
@@ -346,16 +356,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The maximum number of seconds that a Rails application may be idle before it gets terminated."),
-	AP_INIT_FLAG("RailsUserSwitching",
-		(Take1Func) cmd_rails_user_switching,
-		NULL,
-		RSRC_CONF,
-		"Whether to enable user switching support."),
-	AP_INIT_TAKE1("RailsDefaultUser",
-		(Take1Func) cmd_rails_default_user,
-		NULL,
-		RSRC_CONF,
-		"The user that Rails applications must run as when user switching fails or is disabled."),
 	
 	// Rack-specific settings.
 	AP_INIT_FLAG("RackAutoDetect",
@@ -374,7 +374,17 @@ const command_rec passenger_commands[] = {
 		(Take1Func) cmd_passenger_ruby,
 		NULL,
 		RSRC_CONF,
-		"Obsolete option."),
+		"Deprecated option."),
+	AP_INIT_FLAG("RailsUserSwitching",
+		(Take1Func) cmd_passenger_user_switching,
+		NULL,
+		RSRC_CONF,
+		"Deprecated option."),
+	AP_INIT_TAKE1("RailsDefaultUser",
+		(Take1Func) cmd_passenger_default_user,
+		NULL,
+		RSRC_CONF,
+		"Deprecated option."),
 	
 	// Obsolete options.
 	AP_INIT_TAKE1("RailsSpawnServer",

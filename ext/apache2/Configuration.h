@@ -79,7 +79,7 @@
 			/** The Passenger root folder. */
 			const char *root;
 			
-			/** The maximum number of simultaneously alive Rails application
+			/** The maximum number of simultaneously alive application
 			 * instances. */
 			unsigned int maxPoolSize;
 			
@@ -87,7 +87,7 @@
 			 * this server config. */
 			bool maxPoolSizeSpecified;
 			
-			/** The maximum number of seconds that a Rails application may be
+			/** The maximum number of seconds that an application may be
 			 * idle before it gets terminated. */
 			unsigned int poolIdleTime;
 			
@@ -102,7 +102,7 @@
 			 * this server config. */
 			bool userSwitchingSpecified;
 
-			/** User that Rails applications must run as if user switching
+			/** The user that applications must run as if user switching
 			 * fails or is disabled. NULL means the option is not specified.
 			 */
 			const char *defaultUser;
