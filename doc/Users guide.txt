@@ -501,6 +501,7 @@ This option allows one to specify the default `RAILS_ENV` value.
 This option may occur once, in the global server configuration or in a virtual host
 configuration block. The default value is 'production'.
 
+[[RailsSpawnMethod]]
 ==== RailsSpawnMethod <string> ====
 [TIP]
 ."What spawn method should I use?"
@@ -803,6 +804,10 @@ you're experiencing post-installation problems, please look
 inside the Apache error logs. It will tell you what exactly went wrong.
 =====================================================
 
+==== My Rails application works in Mongrel, but not Passenger ====
+
+Please try setting <<RailsSpawnMethod,RailsSpawnMethod>> to 'conservative'.
+
 ==== Passenger has been compiled against the wrong Apache installation ====
 
 .Symptoms
@@ -914,6 +919,7 @@ following command to give your Rails application folder that context:
 -----------------------------------------------------------
 chcon -R -h -t httpd_sys_content_t /path/to/your/rails/app
 -----------------------------------------------------------
+
 
 [[conflicting_apache_modules]]
 === Conflicting Apache modules ===
