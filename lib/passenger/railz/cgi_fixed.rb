@@ -28,6 +28,7 @@ require 'cgi'
 require 'stringio'
 
 module Passenger
+module Railz
 
 # Modifies CGI so that we can use it.  Main thing it does is expose
 # the stdinput and stdoutput so RequestHandler can connect them to
@@ -63,4 +64,6 @@ class CGIFixed < ::CGI
 		@out
 	end
 end
+
+end # module Railz
 end # module Passenger
