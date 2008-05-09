@@ -46,16 +46,26 @@
 			enum Threeway { ENABLED, DISABLED, UNSET };
 			
 			std::set<std::string> base_uris;
+			
+			/** Whether to autodetect Rails applications. */
 			Threeway autoDetectRails;
+			
+			/** Whether to autodetect Rack applications. */
 			Threeway autoDetectRack;
+			
+			/** Whether mod_rewrite should be allowed for Rails applications. */
 			Threeway allowModRewrite;
 			
-			/** The environment (i.e. value for RAILS_ENV) under which the
-			 * Rails application should operate. */
-			const char *env;
+			/** The environment (i.e. value for RAILS_ENV) under which
+			 * Rails applications should operate. */
+			const char *railsEnv;
 			
-			/** The spawn method to use. */
+			/** The environment (i.e. value for RACK_ENV) under which
+			 * Rack applications should operate. */
+			const char *rackEnv;
+			
 			enum SpawnMethod { SM_UNSET, SM_SMART, SM_CONSERVATIVE };
+			/** The Rails spawn method to use. */
 			SpawnMethod spawnMethod;
 		};
 		

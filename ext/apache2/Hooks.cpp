@@ -48,7 +48,8 @@ using namespace Passenger;
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
 #define DEFAULT_RUBY_COMMAND "ruby"
-#define DEFAULT_RAILS_ENV "production"
+#define DEFAULT_RAILS_ENV    "production"
+#define DEFAULT_RACK_ENV     "production"
 
 
 /**
@@ -586,10 +587,18 @@ public:
 				} else {
 					defaultUser = "nobody";
 				}
-				if (config->env == NULL) {
-					environment = DEFAULT_RAILS_ENV;
+				if (mapper.getApplicationType() == DirectoryMapper::RAILS) {
+					if (config->railsEnv == NULL) {
+						environment = DEFAULT_RAILS_ENV;
+					} else {
+						environment = config->railsEnv;
+					}
 				} else {
-					environment = config->env;
+					if (config->rackEnv == NULL) {
+						environment = DEFAULT_RACK_ENV;
+					} else {
+						environment = config->rackEnv;
+					}
 				}
 				if (config->spawnMethod == DirConfig::SM_CONSERVATIVE) {
 					spawnMethod = "conservative";

@@ -57,7 +57,8 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->autoDetectRails = DirConfig::UNSET;
 	config->autoDetectRack = DirConfig::UNSET;
 	config->allowModRewrite = DirConfig::UNSET;
-	config->env = NULL;
+	config->railsEnv = NULL;
+	config->rackEnv = NULL;
 	config->spawnMethod = DirConfig::SM_UNSET;
 	return config;
 }
@@ -76,7 +77,8 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->autoDetectRails = (add->autoDetectRails == DirConfig::UNSET) ? base->autoDetectRails : add->autoDetectRails;
 	config->autoDetectRack = (add->autoDetectRack == DirConfig::UNSET) ? base->autoDetectRack : add->autoDetectRack;
 	config->allowModRewrite = (add->allowModRewrite == DirConfig::UNSET) ? base->allowModRewrite : add->allowModRewrite;
-	config->env = (add->env == NULL) ? base->env : add->env;
+	config->railsEnv = (add->railsEnv == NULL) ? base->railsEnv : add->railsEnv;
+	config->rackEnv = (add->rackEnv == NULL) ? base->rackEnv : add->rackEnv;
 	config->spawnMethod = (add->spawnMethod == DirConfig::SM_UNSET) ? base->spawnMethod : add->spawnMethod;
 	return config;
 }
@@ -187,7 +189,7 @@ cmd_rails_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_rails_env(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->env = arg;
+	config->railsEnv = arg;
 	return NULL;
 }
 
@@ -268,6 +270,13 @@ static const char *
 cmd_rack_auto_detect(cmd_parms *cmd, void *pcfg, int arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->autoDetectRack = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
+	return NULL;
+}
+
+static const char *
+cmd_rack_env(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->rackEnv = arg;
 	return NULL;
 }
 
@@ -354,6 +363,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Whether auto-detection of Rack applications should be enabled."),
+	AP_INIT_TAKE1("RackEnv",
+		(Take1Func) cmd_rack_env,
+		NULL,
+		RSRC_CONF,
+		"The environment under which a Rack app must run."),
 	
 	// Obsolete options.
 	AP_INIT_TAKE1("RailsSpawnServer",
