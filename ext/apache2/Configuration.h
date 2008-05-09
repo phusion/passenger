@@ -46,7 +46,8 @@
 			enum Threeway { ENABLED, DISABLED, UNSET };
 			
 			std::set<std::string> base_uris;
-			Threeway autoDetect;
+			Threeway autoDetectRails;
+			Threeway autoDetectRack;
 			Threeway allowModRewrite;
 			
 			/** The environment (i.e. value for RAILS_ENV) under which the

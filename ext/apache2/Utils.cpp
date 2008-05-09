@@ -55,7 +55,7 @@ fileExists(const char *filename) {
 			string message("Cannot stat '");
 			message.append(filename);
 			message.append("'");
-			throw SystemException(message, e);
+			throw FileSystemException(message, e, filename);
 		}
 	}
 }

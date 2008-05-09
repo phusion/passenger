@@ -31,13 +31,13 @@ using namespace boost;
 /**
  * A persistent pool of Applications.
  *
- * Spawning Ruby on Rails application instances is a very expensive operation.
+ * Spawning application instances, especially Ruby on Rails ones, is a very expensive operation.
  * Despite best efforts to make the operation less expensive (see SpawnManager),
  * it remains expensive compared to the cost of processing an HTTP request/response.
  * So, in order to solve this, some sort of caching/pooling mechanism will be required.
  * ApplicationPool provides this.
  *
- * Normally, one would use SpawnManager to spawn a new RoR application instance,
+ * Normally, one would use SpawnManager to spawn a new RoR/Rack application instance,
  * then use Application::connect() to create a new session with that application
  * instance, and then use the returned Session object to send the request and
  * to read the HTTP response. ApplicationPool replaces the first step with
@@ -105,7 +105,7 @@ public:
 	 *             directory, but does not have to be an absolute path.
 	 * @param lowerPrivilege Whether to lower the application's privileges.
 	 * @param lowestUser The user to fallback to if lowering privilege fails.
-	 * @param environment The RAILS_ENV environment that should be used. May not be empty.
+	 * @param environment The RAILS_ENV/RACK_ENV environment that should be used. May not be empty.
 	 * @param spawnMethod The spawn method to use. Either "smart" or "conservative".
  	 *                    See the Ruby class SpawnManager for details.
  	 * @param appType The application type. Either "rails" or "rack".

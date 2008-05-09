@@ -54,7 +54,8 @@ extern "C" {
 void *
 passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	DirConfig *config = create_dir_config_struct(p);
-	config->autoDetect = DirConfig::UNSET;
+	config->autoDetectRails = DirConfig::UNSET;
+	config->autoDetectRack = DirConfig::UNSET;
 	config->allowModRewrite = DirConfig::UNSET;
 	config->env = NULL;
 	config->spawnMethod = DirConfig::SM_UNSET;
@@ -72,7 +73,8 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 		config->base_uris.insert(*it);
 	}
 	
-	config->autoDetect = (add->autoDetect == DirConfig::UNSET) ? base->autoDetect : add->autoDetect;
+	config->autoDetectRails = (add->autoDetectRails == DirConfig::UNSET) ? base->autoDetectRails : add->autoDetectRails;
+	config->autoDetectRack = (add->autoDetectRack == DirConfig::UNSET) ? base->autoDetectRack : add->autoDetectRack;
 	config->allowModRewrite = (add->allowModRewrite == DirConfig::UNSET) ? base->allowModRewrite : add->allowModRewrite;
 	config->env = (add->env == NULL) ? base->env : add->env;
 	config->spawnMethod = (add->spawnMethod == DirConfig::SM_UNSET) ? base->spawnMethod : add->spawnMethod;
@@ -135,6 +137,11 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 	}
 }
 
+
+/*************************************************
+ * Passenger settings
+ *************************************************/
+
 static const char *
 cmd_passenger_root(cmd_parms *cmd, void *pcfg, const char *arg) {
 	ServerConfig *config = (ServerConfig *) ap_get_module_config(
@@ -142,6 +149,11 @@ cmd_passenger_root(cmd_parms *cmd, void *pcfg, const char *arg) {
 	config->root = arg;
 	return NULL;
 }
+
+
+/*************************************************
+ * Rails-specific settings
+ *************************************************/
 
 static const char *
 cmd_rails_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
@@ -153,7 +165,7 @@ cmd_rails_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_rails_auto_detect(cmd_parms *cmd, void *pcfg, int arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->autoDetect = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
+	config->autoDetectRails = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
 	return NULL;
 }
 
@@ -247,6 +259,23 @@ cmd_rails_default_user(cmd_parms *cmd, void *dummy, const char *arg) {
 	return NULL;
 }
 
+
+/*************************************************
+ * Rack-specific settings
+ *************************************************/
+
+static const char *
+cmd_rack_auto_detect(cmd_parms *cmd, void *pcfg, int arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->autoDetectRack = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
+	return NULL;
+}
+
+
+/*************************************************
+ * Obsolete settings
+ *************************************************/
+
 static const char *
 cmd_rails_spawn_server(cmd_parms *cmd, void *pcfg, const char *arg) {
 	fprintf(stderr, "WARNING: The 'RailsSpawnServer' option is obsolete. "
@@ -260,12 +289,14 @@ cmd_rails_spawn_server(cmd_parms *cmd, void *pcfg, const char *arg) {
 typedef const char * (*Take1Func)(); // Workaround for some weird C++-specific compiler error.
 
 const command_rec passenger_commands[] = {
+	// Passenger settings.
 	AP_INIT_TAKE1("PassengerRoot",
 		(Take1Func) cmd_passenger_root,
 		NULL,
 		RSRC_CONF,
 		"The Passenger root folder."),
 
+	// Rails-specific settings.
 	AP_INIT_TAKE1("RailsBaseURI",
 		(Take1Func) cmd_rails_base_uri,
 		NULL,
@@ -316,6 +347,13 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The user that Rails applications must run as when user switching fails or is disabled."),
+	
+	// Rack-specific settings.
+	AP_INIT_FLAG("RackAutoDetect",
+		(Take1Func) cmd_rack_auto_detect,
+		NULL,
+		RSRC_CONF,
+		"Whether auto-detection of Rack applications should be enabled."),
 	
 	// Obsolete options.
 	AP_INIT_TAKE1("RailsSpawnServer",

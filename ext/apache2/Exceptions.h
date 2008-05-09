@@ -100,6 +100,31 @@ public:
 };
 
 /**
+ * A filesystem error, as returned by the operating system. This may include,
+ * for example, permission errors.
+ *
+ * @ingroup Exceptions
+ */
+class FileSystemException: public SystemException {
+private:
+	string m_filename;
+public:
+	FileSystemException(const string &message, int errorCode,
+		const string &filename)
+		: SystemException(message, errorCode),
+		  m_filename(filename) {}
+	
+	virtual ~FileSystemException() throw() {}
+	
+	/**
+	 * The filename that's associated to the error.
+	 */
+	string filename() const throw() {
+		return m_filename;
+	}
+};
+
+/**
  * Represents an error that occured during an I/O operation.
  *
  * @ingroup Exceptions

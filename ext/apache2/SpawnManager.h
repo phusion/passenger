@@ -45,10 +45,10 @@ using namespace std;
 using namespace boost;
 
 /**
- * @brief Spawning of Ruby on Rails application instances.
+ * @brief Spawning of Ruby on Rails/Rack application instances.
  *
- * This class is responsible for spawning new instances of Ruby on Rails applications.
- * Use the spawn() method to do so.
+ * This class is responsible for spawning new instances of Ruby on Rails or
+ * Rack applications. Use the spawn() method to do so.
  *
  * @note This class is fully thread-safe.
  *
@@ -236,7 +236,7 @@ private:
 	 * @param appRoot The application root of the application to spawn.
 	 * @param lowerPrivilege Whether to lower the application's privileges.
 	 * @param lowestUser The user to fallback to if lowering privilege fails.
-	 * @param environment The RAILS_ENV environment that should be used.
+	 * @param environment The RAILS_ENV/RACK_ENV environment that should be used.
 	 * @param spawnMethod The spawn method to use.
 	 * @param appType The application type.
 	 * @return An Application smart pointer, representing the spawned application.
@@ -446,7 +446,7 @@ public:
 	}
 	
 	/**
-	 * Spawn a new instance of a Ruby on Rails application.
+	 * Spawn a new instance of a Ruby on Rails or Rack application.
 	 *
 	 * If the spawn server died during the spawning process, then the server
 	 * will be automatically restarted, and another spawn attempt will be made.
@@ -477,7 +477,7 @@ public:
 	 *             but the path does not have to be absolute.
 	 * @param lowerPrivilege Whether to lower the application's privileges.
 	 * @param lowestUser The user to fallback to if lowering privilege fails.
-	 * @param environment The RAILS_ENV environment that should be used. May not be empty.
+	 * @param environment The RAILS_ENV/RACK_ENV environment that should be used. May not be empty.
 	 * @param spawnMethod The spawn method to use. Either "smart" or "conservative".
 	 *                    See the Ruby class SpawnManager for details.
 	 * @param appType The application type. Either "rails" or "rack".

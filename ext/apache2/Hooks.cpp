@@ -76,11 +76,13 @@ private:
 	ApplicationType appType;
 	
 	inline bool shouldAutoDetectRails() {
-		return config->autoDetect == DirConfig::ENABLED || config->autoDetect == DirConfig::UNSET;
+		return config->autoDetectRails == DirConfig::ENABLED ||
+			config->autoDetectRails == DirConfig::UNSET;
 	}
 	
 	inline bool shouldAutoDetectRack() {
-		return config->autoDetect == DirConfig::ENABLED || config->autoDetect == DirConfig::UNSET;
+		return config->autoDetectRack == DirConfig::ENABLED ||
+			config->autoDetectRack == DirConfig::UNSET;
 	}
 	
 public:
@@ -213,12 +215,12 @@ public:
 			getBaseURI();
 		}
 		switch (appType) {
-		case NONE:
-			return NULL;
 		case RAILS:
 			return "rails";
 		case RACK:
 			return "rack";
+		default:
+			return NULL;
 		};
 	}
 };
@@ -249,6 +251,27 @@ private:
 	
 	ServerConfig *getServerConfig(server_rec *s) {
 		return (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
+	}
+	
+	void reportDocumentRootDeterminationError(request_rec *r) {
+		ap_set_content_type(r, "text/html; charset=UTF-8");
+		ap_rputs("<h1>Passenger error #1</h1>\n", r);
+		ap_rputs("Cannot determine the document root for the current request.", r);
+	}
+	
+	void reportFileSystemError(request_rec *r, const FileSystemException &e) {
+		ap_set_content_type(r, "text/html; charset=UTF-8");
+		ap_rputs("<h1>Passenger error #2</h1>\n", r);
+		ap_rputs("An error occurred while trying to access '", r);
+		ap_rputs(ap_escape_html(r->pool, e.filename().c_str()), r);
+		ap_rputs("': ", r);
+		ap_rputs(ap_escape_html(r->pool, e.what()), r);
+		if (e.code() == EPERM) {
+			ap_rputs("<p>", r);
+			ap_rputs("Apache doesn't have read permissions to that file. ", r);
+			ap_rputs("Please fix the relevant file permissions.", r);
+			ap_rputs("</p>", r);
+		}
 	}
 	
 	/**
@@ -527,23 +550,15 @@ public:
 			return DECLINED;
 		}
 		
-		if (mapper.getPublicDirectory().empty()) {
-			ap_set_content_type(r, "text/html; charset=UTF-8");
-			ap_rputs("<h1>Passenger error #1</h1>\n", r);
-			ap_rputs("Cannot determine the location of the Rails application's \"public\" directory.", r);
+		try {
+			if (mapper.getPublicDirectory().empty()) {
+				reportDocumentRootDeterminationError(r);
+				return OK;
+			}
+		} catch (const FileSystemException &e) {
+			reportFileSystemError(r, e);
 			return OK;
-		} // TODO: could throw exception...
-		/*
-			ap_set_content_type(r, "text/html; charset=UTF-8");
-			ap_rputs("<h1>Passenger error #2</h1>\n", r);
-			ap_rputs("Passenger thought that the Rails application's \"public\" directory is \"", r);
-			ap_rputs(ap_escape_html(r->pool, railsDir.c_str()), r);
-			ap_rputs("\". But upon further inspection, it doesn't seem to be a valid Rails ", r);
-			ap_rputs("\"public\" folder. It is possible that Apache doesn't have read ", r);
-			ap_rputs("permissions to your Rails application's folder. Please check your ", r);
-			ap_rputs("file permissions.", r);
-			return OK;
-		} */
+		}
 		
 		int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_ERROR);
     		if (httpStatus != OK) {
@@ -633,81 +648,86 @@ public:
 	mapToStorage(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
 		DirectoryMapper mapper(r, config);
-		bool forwardToRails;
+		bool forwardToApplication;
 		
-		// TODO: this can throw an exception...
-		if (mapper.getBaseURI() == NULL || fileExists(r->filename)) {
-			/*
-			 * fileExists():
-			 * If the file already exists, serve it directly.
-			 * This is for static assets like .css and .js files.
-			 */
-			forwardToRails = false;
-		} else if (r->method_number == M_GET) {
-			char *html_file;
-			size_t len;
+		try {
+			if (mapper.getBaseURI() == NULL || fileExists(r->filename)) {
+				/*
+				 * fileExists():
+				 * If the file already exists, serve it directly.
+				 * This is for static assets like .css and .js files.
+				 */
+				forwardToApplication = false;
+			} else if (r->method_number == M_GET) {
+				char *html_file;
+				size_t len;
+				
+				len = strlen(r->filename);
+				if (len > 0 && r->filename[len - 1] == '/') {
+					html_file = apr_pstrcat(r->pool, r->filename, "index.html", NULL);
+				} else {
+					html_file = apr_pstrcat(r->pool, r->filename, ".html", NULL);
+				}
+				if (fileExists(html_file)) {
+					/* If a .html version of the URI exists, serve it directly.
+					 * We're essentially accelerating Rails page caching.
+					 */
+					r->filename = html_file;
+					r->canonical_filename = html_file;
+					forwardToApplication = false;
+				} else {
+					forwardToApplication = true;
+				}
+			} else {
+				/*
+				 * Non-GET requests are always forwarded to the application.
+				 * This important because of REST conventions, e.g.
+				 * 'POST /foo' maps to 'FooController.create',
+				 * while 'GET /foo' maps to 'FooController.index'.
+				 * We wouldn't want our page caching support to interfere
+				 * with that.
+				 */
+				forwardToApplication = true;
+			}
 			
-			len = strlen(r->filename);
-			if (len > 0 && r->filename[len - 1] == '/') {
-				html_file = apr_pstrcat(r->pool, r->filename, "index.html", NULL);
-			} else {
-				html_file = apr_pstrcat(r->pool, r->filename, ".html", NULL);
-			}
-			if (fileExists(html_file)) {
-				/* If a .html version of the URI exists, serve it directly.
-				 * We're essentially accelerating Rails page caching.
+			if (forwardToApplication) {
+				/* Apache's default map_to_storage process does strange
+				 * things with the filename. Suppose that the DocumentRoot
+				 * is /website, on server http://test.com/. If we access
+				 * http://test.com/foo/bar, and /website/foo/bar does not
+				 * exist, then Apache will change the filename to
+				 * /website/foo instead of the expected /website/bar.
+				 * We make sure that doesn't happen.
+				 *
+				 * Incidentally, this also disables mod_rewrite. That is a
+				 * good thing because the default Rails .htaccess file
+				 * interferes with Passenger anyway (it delegates requests
+				 * to the CGI script dispatch.cgi).
 				 */
-				r->filename = html_file;
-				r->canonical_filename = html_file;
-				forwardToRails = false;
-			} else {
-				forwardToRails = true;
-			}
-		} else {
-			/*
-			 * Non-GET requests are always forwarded to Rails.
-			 * This important because of REST conventions, e.g.
-			 * 'POST /foo' maps to 'FooController.create',
-			 * while 'GET /foo' maps to 'FooController.index'.
-			 * We wouldn't want our page caching support to interfere
-			 * with that.
-			 */
-			forwardToRails = true;
-		}
-		
-		if (forwardToRails) {
-			/* Apache's default map_to_storage process does strange
-			 * things with the filename. Suppose that the DocumentRoot
-			 * is /website, on server http://test.com/. If we access
-			 * http://test.com/foo/bar, and /website/foo/bar does not
-			 * exist, then Apache will change the filename to
-			 * /website/foo instead of the expected /website/bar.
-			 * We make sure that doesn't happen.
-			 *
-			 * Incidentally, this also disables mod_rewrite. That is a
-			 * good thing because the default Rails .htaccess file
-			 * interferes with Passenger anyway (it delegates requests
-			 * to the CGI script dispatch.cgi).
-			 */
-			if (config->allowModRewrite == DirConfig::UNSET
-			 || config->allowModRewrite == DirConfig::DISABLED) {
-				/* Of course, we only do that if the config allows us
-				 * to. Some people have complex mod_rewrite rules that
-				 * they don't want to abandon. Those people will have to
-				 * make sure that the Rails app's .htaccess doesn't
-				 * interfere.
-				 */
-				return OK;
-			} else if (strcmp(r->uri, mapper.getBaseURI()) == 0) {
-				/* But we ignore RailsAllowModRewrite for the base URI of
-				 * the Rails application. Otherwise, Apache will show a
-				 * directory listing. This fixes issue #11.
-				 */
-				return OK;
+				if (config->allowModRewrite != DirConfig::ENABLED
+				 && mapper.getApplicationType() == DirectoryMapper::RAILS) {
+					/* Of course, we only do that if all of the following
+					 * are true:
+					 * - the config allows us to. Some people have complex
+					 *   mod_rewrite rules that they don't want to abandon.
+					 *   Those people will have to make sure that the Rails
+					 *   app's .htaccess doesn't interfere.
+					 * - this is a Rails application.
+					 */
+					return OK;
+				} else if (strcmp(r->uri, mapper.getBaseURI()) == 0) {
+					/* If the request URI is the application's base URI,
+					 * then we'll want to take over control. Otherwise,
+					 * Apache will show a directory listing. This fixes issue #11.
+					 */
+					return OK;
+				} else {
+					return DECLINED;
+				}
 			} else {
 				return DECLINED;
 			}
-		} else {
+		} catch (const FileSystemException &e) {
 			return DECLINED;
 		}
 	}
