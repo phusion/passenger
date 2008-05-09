@@ -2,15 +2,17 @@
 
 image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
-Passenger is an Apache module, which makes deploying Ruby on Rails applications
-on Apache a breeze. It follows the usual Ruby on Rails conventions, such as
-"Don't-Repeat-Yourself" and ease of setup.
+Passenger is an Apache module, which makes deploying Ruby and Ruby on Rails
+applications on Apache a breeze. It follows the usual Ruby on Rails conventions,
+such as "Don't-Repeat-Yourself" and ease of setup, while at the same time providing
+enough flexibility.
 
 This users guide will teach you:
 
 - How to install Passenger.
 - How to configure Passenger.
 - How to deploy a Ruby on Rails application.
+- How to deploy a link:http://rack.rubyforge.org/[Rack]-based Ruby application.
 - How to solve common problems.
 
 This guide assumes that the reader is somewhat familiar with Apache and with
@@ -155,7 +157,7 @@ Ben Hughes has written an link:http://www.railsgarden.com/2008/04/12/configurati
 == Deploying a Ruby on Rails application ==
 
 Suppose you have a Ruby on Rails application in '/webapps/mycook', and you own
-the domain 'www.mycook.com'. You can either deploy your application in the
+the domain 'www.mycook.com'. You can either deploy your application to the
 virtual host's root (i.e. the application will be accessible from the root URL,
 'http://www.mycook.com/'), or in a sub URI (i.e. the application will be
 accessible from a sub URL, such as 'http://www.mycook.com/railsapplication').
@@ -177,7 +179,7 @@ For example:
 -------------------------------------------
 Then restart Apache. The application has now been deployed.
 
-[[deploying_to_sub_uri]]
+[[deploying_rails_to_sub_uri]]
 === Deploying to a sub URI ===
 
 Suppose that you already have a virtual host:
@@ -198,7 +200,7 @@ folder to a directory in the document root. For example:
 ln -s /webapps/mycook/public /websites/phusion/rails
 -------------------------------------------
 
-Next, add a `RailsBaseURI` option to the virtual host configuration:
+Next, add a <<RailsBaseURI,RailsBaseURI>> option to the virtual host configuration:
 -------------------------------------------
 <VirtualHost *:80>
     ServerName www.phusion.nl
@@ -227,6 +229,140 @@ touch /webapps/mycook/tmp/restart.txt
 -------------------------------------------
 
 
+== Deploying a Rack-based Ruby application ==
+
+Passenger supports arbitrary Ruby web applications that follow the
+link:http://rack.rubyforge.org/[Rack] interface.
+
+Passenger assumes that Rack application directories have a certain layout.
+Suppose that you have a Rack application in '/webapps/rackapp'. Then that
+folder must contain at least two entries:
+
+- 'config.ru', a Rackup file for starting the Rack application. This file must contain
+  the complete logic for initializing the application.
+- 'public/', a folder containing public static web assets, like images and stylesheets.
+- 'tmp/', used for 'restart.txt' (our application restart mechanism). This will
+  be explained in a following subsection.
+
+So '/webapps/rackapp' must, at minimum, look like this:
+----------------------
+/webapps/rackapp
+  |
+  +-- config.ru
+  |
+  +-- public/
+  |
+  +-- tmp/
+----------------------
+
+Suppose you own the domain 'www.rackapp.com'. You can either deploy your application
+to the virtual host's root (i.e. the application will be accessible from the root URL,
+'http://www.rackapp.com/'), or in a sub URI (i.e. the application will be
+accessible from a sub URL, such as 'http://www.rackapp.com/rackapp').
+
+NOTE: The default `RACK_ENV` environment in which deployed Rack applications
+are run, is ``production''. You can change this by changing the
+<<rack_env,'RackEnv'>> configuration option.
+
+=== Tutorial/example: writing and deploying a Hello World Rack application ===
+
+First we create a Passenger-compliant Rack directory structure:
+
+-------------------------------------------
+$ mkdir /webapps/rack_example
+$ mkdir /webapps/rack_example/public
+$ mkdir /webapps/rack_example/tmp
+-------------------------------------------
+
+Next, we write a minimal "hello world" Rack application:
+
+-------------------------------------------
+$ cd /webapps/rack_example
+$ some_awesome_editor config.ru
+...type in some source code...
+$ cat config.ru
+app = Proc.new do |env|
+    return [200, { "Content-Type" => "text/html" }, "hello <b>world</b>"]
+end
+run app
+-------------------------------------------
+
+Finally, we deploy it by adding the following configuration options to
+the Apache configuration file:
+
+-------------------------------------------
+<VirtualHost *:80>
+    ServerName www.rackexample.com
+    DocumentRoot /webapps/rack_example/public
+</VirtualHost>
+-------------------------------------------
+
+And we're done! After an Apache restart, the above Rack application will be available
+under the URL 'http://www.rackexample.com/'.
+
+=== Deploying to a virtual host's root ===
+
+Add a virtual host entry to your Apache configuration file. The virtual host's
+document root must point to your Rack application's 'public' folder.
+For example:
+-------------------------------------------
+<VirtualHost *:80>
+    ServerName www.rackapp.com
+    DocumentRoot /webapps/rackapp/public
+</VirtualHost>
+-------------------------------------------
+Then restart Apache. The application has now been deployed.
+
+[[deploying_rack_to_sub_uri]]
+=== Deploying to a sub URI ===
+
+Suppose that you already have a virtual host:
+
+-------------------------------------------
+<VirtualHost *:80>
+    ServerName www.phusion.nl
+    DocumentRoot /websites/phusion
+</VirtualHost>
+-------------------------------------------
+
+And you want your Rack application to be accessible from the URL
+'http://www.phusion.nl/rack'.
+
+To do this, make a symlink from your Rack application's 'public'
+folder to a directory in the document root. For example:
+-------------------------------------------
+ln -s /webapps/rackapp/public /websites/phusion/rack
+-------------------------------------------
+
+Next, add a <<RackBaseURI,RackBaseURI>> option to the virtual host configuration:
+-------------------------------------------
+<VirtualHost *:80>
+    ServerName www.phusion.nl
+    DocumentRoot /websites/phusion
+    RackBaseURI /rack                # This line has been added.
+</VirtualHost>
+-------------------------------------------
+Then restart Apache. The application has now been deployed.
+
+=== Redeploying (restarting the Rack application) ===
+
+Deploying a new version of a Rack application is as simple as
+re-uploading the application files, and restarting the application.
+
+There are two ways to restart the application:
+
+1. By restarting Apache.
+2. By creating or modifying the file 'tmp/restart.txt' in the Rack
+   application's root folder. Passenger will automatically restart the
+   application.
+
+For example, to restart our example application, we type this in the
+command line:
+-------------------------------------------
+touch /webapps/rackapp/tmp/restart.txt
+-------------------------------------------
+
+
 == Configuring Passenger ==
 
 After installation, Passenger does not need any further configurations.
@@ -241,14 +377,15 @@ and should usually not be changed manually.
 
 This required option may only occur once, in the global server configuration.
 
-=== RailsBaseURI <uri> ===
-Used to specify that the given URI is a Rails application. See
-<<deploying_to_sub_uri,Deploying to a sub URI>> for an example.
+=== PassengerRuby <filename> ===
+This option allows one to specify the Ruby interpreter to use.
 
-This option may occur multiple times, in the global server configuration or in a
-virtual host configuration block.
+This option may only occur once, in the global server configuration.
+The default is 'ruby'.
 
-=== RailsAutoDetect <on|off> ===
+=== Ruby on Rails-specific options ===
+
+==== RailsAutoDetect <on|off> ====
 Whether Passenger should automatically detect whether a virtual host's
 document root is a Ruby on Rails application. The default is 'on'.
 
@@ -270,39 +407,41 @@ the '/webapps/mycook/public' folder, instead of the output of the Ruby on Rails
 application.
 
 It is possible to explicitly specify that the host is a Ruby on Rails
-application by using the `RailsBaseURI` configuration option:
+application by using the <<RailsBaseURI,RailsBaseURI>> configuration option:
 
 -----------------------------
 RailsAutoDetect off
 <VirtualHost *:80>
     ServerName www.mycook.com
     DocumentRoot /webapps/mycook/public
-    RailsBaseURI /
+    RailsBaseURI /           # This line has been added.
 </VirtualHost>
 -----------------------------
 
+[[RailsBaseURI]]
+==== RailsBaseURI <uri> ====
+Used to specify that the given URI is a Rails application. See
+<<deploying_rails_to_sub_uri,Deploying Rails to a sub URI>> for an example.
+
+This option may occur multiple times, in the global server configuration or in a
+virtual host configuration block.
+
 [[RailsAllowModRewrite]]
-=== RailsAllowModRewrite <on|off> ===
+==== RailsAllowModRewrite <on|off> ====
 If enabled, Passenger will not override mod_rewrite rules. Please read
 <<conflicting_apache_modules,Conflicting Apache modules>> for details.
 
 This option may occur once, in the global server configuration or in a virtual host
 configuration block. The default value is 'off'.
 
-=== RailsRuby <filename> ===
-This option allows one to specify the Ruby interpreter to use.
-
-This option may only occur once, in the global server configuration.
-The default is 'ruby'.
-
 [[rails_env]]
-=== RailsEnv <string> ===
+==== RailsEnv <string> ====
 This option allows one to specify the default `RAILS_ENV` value.
 
 This option may occur once, in the global server configuration or in a virtual host
 configuration block. The default value is 'production'.
 
-=== RailsSpawnMethod <string> ===
+==== RailsSpawnMethod <string> ====
 [TIP]
 ."What spawn method should I use?"
 =========================================================
@@ -350,7 +489,7 @@ render <<reducing_memory_usage,Ruby Enterprise Edition's memory reduction techno
 This option may occur once, in the global server configuration or in a virtual host
 configuration block. The default value is 'smart'.
 
-=== RailsMaxPoolSize <integer> ===
+==== RailsMaxPoolSize <integer> ====
 The maximum number of Ruby on Rails application instances that may
 be simultaneously active. A larger number results in higher memory usage,
 but improved ability to handle concurrent HTTP clients.
@@ -374,7 +513,7 @@ TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
 Edition>>. This allows you to reduce your memory usage by about 33%. And it's
 not hard to install.
 
-=== RailsPoolIdleTime <integer> ===
+==== RailsPoolIdleTime <integer> ====
 The maximum number of seconds that a Ruby on Rails application instance
 may be idle. That is, if an application instance hasn't done anything after
 the given number of seconds, then it will be shutdown in order to conserve
@@ -394,20 +533,72 @@ This option may only occur once, in the global server configuration.
 The default value is '120'.
 
 [[RailsUserSwitching]]
-=== RailsUserSwitching <on|off> ===
+==== RailsUserSwitching <on|off> ====
 Whether to enable <<user_switching,user switching support>>.
 
 This option may only occur once, in the global server configuration.
 The default value is 'on'.
 
 [[RailsDefaultUser]]
-=== RailsDefaultUser <username> ===
+==== RailsDefaultUser <username> ====
 Passenger enables <<user_switching,user switching support>> by default.
 This configuration option allows one to specify which user Rails
 applications must run as, if user switching fails or is disabled.
 
 This option may only occur once, in the global server configuration.
 The default value is 'nobody'.
+
+=== Rack-specific options ===
+
+==== RackAutoDetect <on|off> ====
+Whether Passenger should automatically detect whether a virtual host's
+document root is a Rack application. The default is 'on'.
+
+This option may occur in the global server configuration or in a virtual host
+configuration block.
+
+For example, consider the following configuration:
+
+-----------------------------
+RackAutoDetect off
+<VirtualHost *:80>
+    ServerName www.rackapp.com
+    DocumentRoot /webapps/my_rack_app/public
+</VirtualHost>
+-----------------------------
+
+If one goes to 'http://www.rackapp.com/', the visitor will see the contents of
+the '/webapps/my_rack_app/public' folder, instead of the output of the Rack
+application.
+
+It is possible to explicitly specify that the host is a Rack
+application by using the <<RackBaseURI,RackBaseURI>> configuration option:
+
+-----------------------------
+RackAutoDetect off
+<VirtualHost *:80>
+    ServerName www.rackapp.com
+    DocumentRoot /webapps/my_rack_app/public
+    RackBaseURI /       # This line was added
+</VirtualHost>
+-----------------------------
+
+[[RackBaseURI]]
+==== RackBaseURI <uri> ====
+Used to specify that the given URI is a Rack application. See
+<<deploying_rack_to_sub_uri,Deploying Rack to a sub URI>> for an example.
+
+This option may occur multiple times, in the global server configuration or in a
+virtual host configuration block.
+
+[[rack_env]]
+==== RackEnv <string> ====
+The given value will be accessible in Rack applications in the `RACK_ENV`
+environment variable. This allows one to define the environment in which
+Rack applications are run, very similar to `RAILS_ENV`.
+
+This option may occur once, in the global server configuration or in a virtual host
+configuration block. The default value is 'production'.
 
 
 == Troubleshooting ==
