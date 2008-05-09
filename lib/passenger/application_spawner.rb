@@ -146,8 +146,8 @@ class ApplicationSpawner < AbstractServer
 						start_request_handler(channel)
 					end
 				rescue SignalException => e
-					if e.message != RequestHandler::HARD_TERMINATION_SIGNAL &&
-					   e.message != RequestHandler::SOFT_TERMINATION_SIGNAL
+					if e.message != AbstractRequestHandler::HARD_TERMINATION_SIGNAL &&
+					   e.message != AbstractRequestHandler::SOFT_TERMINATION_SIGNAL
 						raise
 					end
 				end
@@ -352,8 +352,8 @@ private
 				begin
 					start_request_handler(client)
 				rescue SignalException => e
-					if e.message != RequestHandler::HARD_TERMINATION_SIGNAL &&
-					   e.message != RequestHandler::SOFT_TERMINATION_SIGNAL
+					if e.message != AbstractRequestHandler::HARD_TERMINATION_SIGNAL &&
+					   e.message != AbstractRequestHandler::SOFT_TERMINATION_SIGNAL
 						raise
 					end
 				end
@@ -375,7 +375,7 @@ private
 				::ActiveRecord::Base.establish_connection
 			end
 			
-			handler = RequestHandler.new(reader)
+			handler = Rails::RequestHandler.new(reader)
 			channel.write(Process.pid, handler.socket_name,
 				handler.using_abstract_namespace?)
 			channel.send_io(writer)

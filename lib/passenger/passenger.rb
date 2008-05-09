@@ -18,31 +18,41 @@ module Passenger
 	ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
 	$LOAD_PATH.unshift("#{ROOT}/ext")
 
-	autoload 'AbstractServer',      'passenger/abstract_server'
-	autoload 'HTMLTemplate',        'passenger/html_template'
-	autoload 'MessageChannel',      'passenger/message_channel'
-	autoload 'CGIFixed',            'passenger/cgi_fixed'
-	autoload 'Application',         'passenger/application'
-	autoload 'ApplicationSpawner',  'passenger/application_spawner'
-	autoload 'FrameworkSpawner',    'passenger/framework_spawner'
-	autoload 'RackSpawner',         'passenger/rack_spawner'
-	autoload 'SpawnManager',        'passenger/spawn_manager'
-	autoload 'PlatformInfo',        'passenger/platform_info'
-	autoload 'RequestHandler',      'passenger/request_handler'
-	autoload 'Utils',               'passenger/utils'
-	autoload 'NativeSupport',       'passenger/native_support'
+	autoload 'AbstractServer',         'passenger/abstract_server'
+	autoload 'AbstractRequestHandler', 'passenger/abstract_request_handler'
+	autoload 'HTMLTemplate',           'passenger/html_template'
+	autoload 'MessageChannel',         'passenger/message_channel'
+	autoload 'CGIFixed',               'passenger/cgi_fixed'
+	autoload 'Application',            'passenger/application'
+	autoload 'ApplicationSpawner',     'passenger/application_spawner'
+	autoload 'FrameworkSpawner',       'passenger/framework_spawner'
+	autoload 'RackSpawner',            'passenger/rack_spawner'
+	autoload 'SpawnManager',           'passenger/spawn_manager'
+	autoload 'PlatformInfo',           'passenger/platform_info'
+	autoload 'Utils',                  'passenger/utils'
+	autoload 'NativeSupport',          'passenger/native_support'
 	
-	autoload 'VersionNotFound',     'passenger/exceptions'
-	autoload 'AppInitError',        'passenger/exceptions'
-	autoload 'InitializationError', 'passenger/exceptions'
-	autoload 'FrameworkInitError',  'passenger/exceptions'
-	autoload 'UnknownError',        'passenger/exceptions'
+	module Rails
+		autoload 'RequestHandler', 'passenger/rails/request_handler'
+	end
+	
+	module Rack
+		autoload 'ApplicationSpawner', 'passenger/rack/application_spawner'
+		autoload 'RequestHandler',     'passenger/rack/request_handler'
+	end
+	
+	autoload 'VersionNotFound',        'passenger/exceptions'
+	autoload 'AppInitError',           'passenger/exceptions'
+	autoload 'InitializationError',    'passenger/exceptions'
+	autoload 'FrameworkInitError',     'passenger/exceptions'
+	autoload 'UnknownError',           'passenger/exceptions'
 
 	@@all_loaded = false
 	
 	def self.load_all_classes!
 		return if @@all_loaded
 		AbstractServer
+		AbstractRequestHandler
 		HTMLTemplate
 		MessageChannel
 		CGIFixed
@@ -51,9 +61,13 @@ module Passenger
 		FrameworkSpawner
 		SpawnManager
 		PlatformInfo
-		RequestHandler
 		Utils
 		NativeSupport
+		
+		Rails::RequestHandler
+		
+		Rack::ApplicationSpawner
+		Rack::RequestHandler
 		
 		VersionNotFound
 		AppInitError

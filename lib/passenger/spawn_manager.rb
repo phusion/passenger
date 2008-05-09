@@ -93,8 +93,8 @@ class SpawnManager < AbstractServer
 		end
 		
 		if app_type == "rack"
-			return RackSpawner.spawn_application(app_root, lower_privilege,
-				lowest_user, environment)
+			return Rack::ApplicationSpawner.spawn_application(app_root,
+				lower_privilege, lowest_user, environment)
 		else
 			return spawn_rails_application(app_root, lower_privilege, lowest_user,
 				environment, spawn_method)
