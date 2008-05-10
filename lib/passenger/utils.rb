@@ -20,7 +20,11 @@ require 'etc'
 require 'thread'
 require 'fastthread'
 require 'timeout'
-require File.expand_path("#{File.dirname(__FILE__)}/../../ext/passenger/native_support.so")
+begin
+	require 'passenger/native_support'
+rescue LoadError
+	require File.expand_path("#{File.dirname(__FILE__)}/../../ext/passenger/native_support.so")
+end
 
 module Passenger
 
