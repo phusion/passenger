@@ -15,10 +15,9 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-require 'pathname'
-$LOAD_PATH.unshift(File.expand_path("#{File.dirname(__FILE__)}/../lib"))
-$LOAD_PATH.unshift(File.expand_path("#{File.dirname(__FILE__)}/../ext"))
-require 'passenger/spawn_manager'
+root = File.expand_path("#{File.dirname(__FILE__)}/..")
+$LOAD_PATH.unshift("#{root}/lib", "#{root}/ext")
+DEFAULT_INPUT_FD = 3
 
 begin
 	STDOUT.sync = true
@@ -28,11 +27,22 @@ begin
 		GC.copy_on_write_friendly = true
 	end
 	
+	input = IO.new(DEFAULT_INPUT_FD)
+	# Optimization for decreasing startup time. Since Apache starts the spawn
+	# server twice during startup, we don't want to load the Passenger classes
+	# if we don't need them.
+	# So we check whether Apache immediately closes the connection. If so,
+	# we exit without loading the rest of Passenger.
+	if input.eof?
+		exit
+	end
+	
+	require 'passenger/spawn_manager'
 	spawn_manager = Passenger::SpawnManager.new
-	input = IO.new(Passenger::SpawnManager::DEFAULT_INPUT_FD)
 	spawn_manager.start_synchronously(input)
 	spawn_manager.cleanup
 rescue => e
+	require 'passenger/utils'
 	include Passenger::Utils
 	print_exception("spawn manager", e)
 	exit 10

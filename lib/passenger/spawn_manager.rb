@@ -37,7 +37,6 @@ module Passenger
 # tested. Don't forget to call cleanup after the server's main loop has
 # finished.
 class SpawnManager < AbstractServer
-	DEFAULT_INPUT_FD = 3
 	FRAMEWORK_SPAWNER_MAX_IDLE_TIME = 30 * 60
 	APP_SPAWNER_MAX_IDLE_TIME = FrameworkSpawner::APP_SPAWNER_MAX_IDLE_TIME
 	SPAWNER_CLEAN_INTERVAL = [FRAMEWORK_SPAWNER_MAX_IDLE_TIME,
