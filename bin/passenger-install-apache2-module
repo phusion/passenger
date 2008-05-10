@@ -189,7 +189,11 @@ private
 			:module_location => module_location,
 			:spawn_server_location => "#{PASSENGER_ROOT}/bin/passenger-spawn-server",
 			:ruby => RUBY
-		wait
+		if natively_packaged?
+			wait(10)
+		else
+			wait
+		end
 	end
 	
 	def show_deployment_example
@@ -227,9 +231,20 @@ private
 		puts "--------------------------------------------"
 	end
 	
-	def wait
+	def wait(timeout = nil)
 		begin
-			STDIN.readline
+			if timeout
+				require 'timeout' unless defined?(Timeout)
+				begin
+					Timeout.timeout(timeout) do
+						STDIN.readline
+					end
+				rescue Timeout::Error
+					# Do nothing.
+				end
+			else
+				STDIN.readline
+			end
 		rescue Interrupt
 			exit 2
 		end
