@@ -32,8 +32,10 @@ begin
 	# server twice during startup, we don't want to load the Passenger classes
 	# if we don't need them.
 	# So we check whether Apache immediately closes the connection. If so,
-	# we exit without loading the rest of Passenger.
-	if input.eof?
+	# we exit without loading the rest of Passenger. If Apache doesn't close
+	# the connection within 4 seconds then we continue with loading Passenger,
+	# so that loading doesn't happen during the first spawn.
+	if select([input], nil, nil, 4) && input.eof?
 		exit
 	end
 	
