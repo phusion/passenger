@@ -198,7 +198,7 @@ protected
 				app_type)
 		elsif status == 'exit'
 			raise AppInitError.new("Application '#{@app_root}' exited during startup",
-				app_type)
+				nil, app_type)
 		end
 	end
 end

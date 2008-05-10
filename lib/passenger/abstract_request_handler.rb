@@ -16,7 +16,6 @@
 
 require 'socket'
 require 'base64'
-require 'passenger/cgi_fixed'
 require 'passenger/native_support'
 module Passenger
 

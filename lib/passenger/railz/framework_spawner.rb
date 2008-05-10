@@ -85,7 +85,6 @@ class FrameworkSpawner < AbstractServer
 	# - FrameworkSpawner::Error: The FrameworkSpawner server exited unexpectedly.
 	def start
 		super
-		Passenger.load_all_classes!
 		begin
 			status = server.read[0]
 			if status == 'exception'
