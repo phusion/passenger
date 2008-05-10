@@ -393,9 +393,6 @@ public:
 	 *            specified, no log file will be used, and the spawn server
 	 *            will use the same standard output/error channels as the
 	 *            current process.
-	 * @param environment The RAILS_ENV environment that all RoR applications
-	 *            should use. If an empty string is specified, the current value
-	 *            of the RAILS_ENV environment variable will be used.
 	 * @param rubyCommand The Ruby interpreter's command.
 	 * @param user The user that the spawn manager should run as. This
 	 *             parameter only has effect if the current process is
