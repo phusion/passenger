@@ -130,7 +130,7 @@ void split(const string &str, char sep, vector<string> &output);
  *
  * @param filename The filename to check.
  * @return Whether the file exists.
- * @throws FileSystemException Unable to check because of a system error.
+ * @throws FileSystemException Unable to check because of a filesystem error.
  * @ingroup Support
  */
 bool fileExists(const char *filename);
@@ -144,6 +144,7 @@ bool fileExists(const char *filename);
  *      only absolute paths are scanned.
  * @return An absolute path to the spawn server script, or
  *         an empty string on error.
+ * @throws FileSystemException Unable to access parts of the filesystem.
  * @ingroup Support
  */
 string findSpawnServer(const char *passengerRoot = NULL);
@@ -154,6 +155,7 @@ string findSpawnServer(const char *passengerRoot = NULL);
  *
  * @param passengerRoot The Passenger root folder.
  * @return An absolute path to the executable.
+ * @throws FileSystemException Unable to access parts of the filesystem.
  * @pre passengerRoot != NULL
  * @ingroup Support
  */
@@ -181,7 +183,7 @@ bool verifyRailsDir(const string &dir);
  * Check whether the specified directory is a valid Rack 'public'
  * directory.
  *
- * @throws FileSystemException Unable to check because of a system error.
+ * @throws FileSystemException Unable to check because of a filesystem error.
  * @ingroup Support
  */
 bool verifyRackDir(const string &dir);
