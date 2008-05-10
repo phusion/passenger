@@ -4,8 +4,8 @@ require 'passenger/spawn_manager'
 
 require 'ruby/abstract_server_spec'
 require 'ruby/rails/minimal_spawner_spec'
-require 'ruby/spawner_privilege_lowering_spec'
-require 'ruby/spawner_error_handling_spec'
+require 'ruby/rails/spawner_privilege_lowering_spec'
+require 'ruby/rails/spawner_error_handling_spec'
 include Passenger
 include Passenger::Utils
 
@@ -109,6 +109,19 @@ describe SpawnManager do
 		@manager.reload(@stub.app_root)
 		spawners = @manager.instance_eval { @spawners }
 		spawners.should be_empty
+	end
+end
+
+describe SpawnManager do
+	include TestHelper
+
+	it "can spawn a Rack application" do
+		use_stub('rack') do |stub|
+			@manager = SpawnManager.new
+			app = @manager.spawn_application(stub.app_root, true,
+				"nobody", "production", "smart", "rack")
+			app.close
+		end
 	end
 end
 

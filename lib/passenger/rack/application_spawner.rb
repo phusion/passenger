@@ -88,7 +88,7 @@ private
 			if lower_privilege
 				lower_privilege('config.ru', lowest_user)
 			end
-			app = load_rack_app(app_root)
+			app = load_rack_app
 		end
 		
 		if success
@@ -109,11 +109,10 @@ private
 		end
 	end
 	
-	def load_rack_app(app_root)
-		config_file = "#{app_root}/config.ru"
+	def load_rack_app
 		context = RunnerContext.new
 		catch(:done) do
-			eval(File.read(config_file), context.get_binding, config_file)
+			eval(File.read("config.ru"), context.get_binding, "config.ru")
 		end
 		return context.result
 	end
