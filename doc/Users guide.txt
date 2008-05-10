@@ -370,8 +370,15 @@ This subsection shows example 'config.ru' files for various web frameworks.
 ------------------------------------------------------
 require 'rubygems'
 require 'rack'
-app = ...some code to create a Camping application object...
-run Rack::Adapter::Camping.new(app)
+require 'camping'
+
+##### Begin Camping application
+Camping.goes :Blog
+
+...application code here...
+##### End Camping application
+
+run Rack::Adapter::Camping.new(Blog)
 ------------------------------------------------------
 
 ==== Halcyon ====
