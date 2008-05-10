@@ -1,5 +1,6 @@
-$LOAD_PATH.unshift(File.expand_path("#{File.dirname(__FILE__)}/../../lib"))
-$LOAD_PATH.unshift(File.expand_path("#{File.dirname(__FILE__)}/../../ext"))
+root = File.expand_path("#{File.dirname(__FILE__)}/../..")
+Dir.chdir("#{root}/test")
+$LOAD_PATH.unshift("#{root}/lib", "#{root}/ext")
 require 'yaml'
 
 begin

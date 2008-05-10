@@ -249,7 +249,15 @@ subdir 'test' do
 	
 	desc "Run unit tests for the Ruby libraries"
 	task 'test:ruby' => [:native_support] do
-		sh "spec -c -f s ruby/*_spec.rb ruby/*/*_spec.rb"
+		sh "spec -c -f s ruby/*.rb ruby/*/*.rb"
+	end
+	
+	task 'test:rcov' => [:native_support] do
+		rspec = PlatformInfo.find_command('spec')
+		sh "rcov", "--exclude",
+			"lib\/spec,\/spec$,_spec\.rb$,support\/,platform_info,integration_tests",
+			rspec, "--", "-c", "-f", "s",
+			*Dir["ruby/*.rb", "ruby/*/*.rb", "integration_tests.rb"]
 	end
 	
 	desc "Run integration tests"
