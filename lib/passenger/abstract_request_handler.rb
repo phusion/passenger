@@ -16,7 +16,8 @@
 
 require 'socket'
 require 'base64'
-require 'passenger/passenger'
+require 'passenger/cgi_fixed'
+require 'passenger/native_support'
 module Passenger
 
 # The request handler is the layer which connects Apache with the underlying application's

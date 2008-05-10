@@ -14,7 +14,14 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-require 'passenger/passenger'
+require 'passenger/abstract_server'
+require 'passenger/application'
+require 'passenger/railz/framework_spawner'
+require 'passenger/railz/application_spawner'
+require 'passenger/rack/application_spawner'
+require 'passenger/html_template'
+require 'passenger/exceptions'
+require 'passenger/utils'
 module Passenger
 
 # The spawn manager is capable of spawning Ruby on Rails or Rack application
@@ -39,7 +46,6 @@ module Passenger
 # In case you're wondering why the namespace is "Railz" and not "Rails":
 # it's to work around an obscure bug in ActiveSupport's Dispatcher.
 class SpawnManager < AbstractServer
-	DEFAULT_INPUT_FD = 3
 	FRAMEWORK_SPAWNER_MAX_IDLE_TIME = 30 * 60
 	APP_SPAWNER_MAX_IDLE_TIME = Railz::FrameworkSpawner::APP_SPAWNER_MAX_IDLE_TIME
 	SPAWNER_CLEAN_INTERVAL = [FRAMEWORK_SPAWNER_MAX_IDLE_TIME,
@@ -87,19 +93,6 @@ class SpawnManager < AbstractServer
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody",
 	                      environment = "production", spawn_method = "smart",
 	                      app_type = "rails")
-		if GC.copy_on_write_friendly?
-			# If the garbage collector is copy-on-write friendly, then we'll
-			# want to preload all Passenger classes (before any spawn servers have
-			# been started), for copy-on-write semantics.
-			#
-			# On the other hand, if the garbage collector is *not* copy-on-write
-			# friendly, then we'll want to load Passenger classes after we've
-			# spawned an application. This increases perceived speed of the first spawn
-			# operation, and increases actual speed for subsequently created spawn
-			# servers (because they don't have to load classes on-demand anymore).
-			Passenger.load_all_classes!
-		end
-		
 		if app_type == "rack"
 			return Rack::ApplicationSpawner.spawn_application(app_root,
 				lower_privilege, lowest_user, environment)
@@ -271,10 +264,6 @@ private
 			client.write(app.pid, app.listen_socket_name, app.using_abstract_namespace?)
 			client.send_io(app.owner_pipe)
 			app.close
-		end
-		if !GC.copy_on_write_friendly?
-			# See the comment associated with the other load_all_classes! call.
-			Passenger.load_all_classes!
 		end
 	end
 	

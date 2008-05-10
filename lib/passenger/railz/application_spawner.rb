@@ -17,7 +17,10 @@
 require 'rubygems'
 require 'socket'
 require 'etc'
-require 'passenger/passenger'
+require 'passenger/abstract_server'
+require 'passenger/request_handler'
+require 'passenger/exceptions'
+require 'passenger/utils'
 
 begin
 	# Preload MySQL if possible. We want to preload it and we need
