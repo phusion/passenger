@@ -53,8 +53,16 @@ protected
 			@io = io
 		end
 		
+		def gets
+			@io.gets
+		end
+		
 		def read(*args)
 			@io.read(*args)
+		end
+		
+		def each(&block)
+			@io.each(&block)
 		end
 	end
 
