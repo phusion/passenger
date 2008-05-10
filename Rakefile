@@ -416,25 +416,32 @@ task :clobber => :'package:clean'
 desc "Create a fakeroot, useful for building native packages"
 task :fakeroot => [:apache2, :native_support, :doc] do
 	require 'rbconfig'
+	include Config
 	fakeroot = "pkg/fakeroot"
-	libdir = "#{fakeroot}#{Config::CONFIG['rubylibdir']}"
-	extdir = "#{fakeroot}#{Config::CONFIG['archdir']}"
-	moduledir = fakeroot + `#{APXS2} -q LIBEXECDIR`.strip
-	bindir = "#{fakeroot}#{Config::CONFIG['bindir']}"
+
+	# We don't use CONFIG['archdir'] and the like because we want
+	# the files to be installed to /usr, and the Ruby interpreter
+	# on the packaging machine might be in /usr/local.
+	libdir = "#{fakeroot}/usr/lib/ruby/#{CONFIG['ruby_version']}"
+	extdir = "#{libdir}/#{CONFIG['arch']}"
+	bindir = "#{fakeroot}/usr/bin"
 	docdir = "#{fakeroot}/usr/share/doc/passenger"
+	libexecdir = "#{fakeroot}/usr/libexec/passenger"
 	
-	sh "rm -rf #{fakeroot}"
+	sh "sudo rm -rf #{fakeroot}"
 	sh "mkdir -p #{fakeroot}"
 	
 	sh "mkdir -p #{libdir}"
 	sh "cp -R lib/passenger #{libdir}/"
-	sh "echo -n '#{PACKAGE_VERSION}' > #{libdir}/passenger/VERSION.TXT"
+
+	sh "mkdir -p #{fakeroot}/etc"
+	sh "echo -n '#{PACKAGE_VERSION}' > #{fakeroot}/etc/passenger_version.txt"
 	
 	sh "mkdir -p #{extdir}/passenger"
 	sh "cp -R ext/passenger/*.#{LIBEXT} #{extdir}/passenger/"
 	
-	sh "mkdir -p #{moduledir}"
-	sh "cp ext/apache2/mod_passenger.so #{moduledir}/"
+	sh "mkdir -p #{libexecdir}"
+	sh "cp ext/apache2/mod_passenger.so #{libexecdir}/"
 	
 	sh "mkdir -p #{bindir}"
 	sh "cp bin/* #{bindir}/"

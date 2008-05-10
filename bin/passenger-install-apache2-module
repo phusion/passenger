@@ -181,7 +181,7 @@ private
 		puts
 		line
 		if natively_packaged?
-			module_location = `#{APXS2} -q LIBEXECDIR`.strip + "/mod_passenger.so"
+			module_location = "#{PASSENGER_ROOT}/libexec/passenger/mod_passenger.so"
 		else
 			module_location = "#{PASSENGER_ROOT}/ext/apache2/mod_passenger.so"
 		end
@@ -277,7 +277,7 @@ private
 	def self.determine_version
 		if natively_packaged?
 			require 'rbconfig'
-			return File.read(Config::CONFIG['rubylibdir'] + "/passenger/VERSION.TXT")
+			return File.read("/etc/passenger_version.txt")
 		else
 			File.read("#{PASSENGER_ROOT}/Rakefile") =~ /^PACKAGE_VERSION = "(.*)"$/
 			return $1
