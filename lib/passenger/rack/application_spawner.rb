@@ -85,7 +85,7 @@ private
 		success = report_app_init_status(channel) do
 			ENV['RACK_ENV'] = environment
 			Dir.chdir(app_root)
-			if @lower_privilege
+			if lower_privilege
 				lower_privilege('config.ru', lowest_user)
 			end
 			app = load_rack_app(app_root)
