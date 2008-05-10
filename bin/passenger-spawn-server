@@ -17,7 +17,8 @@
 
 require 'pathname'
 $LOAD_PATH.unshift(File.expand_path("#{File.dirname(__FILE__)}/../lib"))
-require 'passenger/passenger'
+$LOAD_PATH.unshift(File.expand_path("#{File.dirname(__FILE__)}/../ext"))
+require 'passenger/spawn_manager'
 
 begin
 	STDOUT.sync = true

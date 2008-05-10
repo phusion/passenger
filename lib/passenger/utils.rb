@@ -17,8 +17,10 @@
 require 'rubygems'
 require 'thread'
 require 'fastthread'
-require 'passenger/passenger'
-
+require 'pathname'
+require 'etc'
+require 'passenger/exceptions'
+require 'passenger/native_support'
 module Passenger
 
 # Utility functions.
@@ -31,7 +33,6 @@ protected
 	# Raises SystemCallError if something went wrong. Raises ArgumentError
 	# if +path+ is nil.
 	def normalize_path(path)
-		require 'pathname' unless defined?(Pathname)
 		raise ArgumentError, "The 'path' argument may not be nil" if path.nil?
 		return Pathname.new(path).realpath.to_s
 	rescue Errno::ENOENT => e
@@ -62,7 +63,6 @@ protected
 	# Assert that +username+ is a valid username. Raises
 	# ArgumentError if that is not the case.
 	def assert_valid_username(username)
-		require 'etc' unless defined?(Etc)
 		# If username does not exist then getpwnam() will raise an ArgumentError.
 		username && Etc.getpwnam(username)
 	end
@@ -70,7 +70,6 @@ protected
 	# Assert that +groupname+ is a valid group name. Raises
 	# ArgumentError if that is not the case.
 	def assert_valid_groupname(groupname)
-		require 'etc' unless defined?(Etc)
 		# If groupname does not exist then getgrnam() will raise an ArgumentError.
 		groupname && Etc.getgrnam(groupname)
 	end

@@ -14,7 +14,13 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-require 'passenger/passenger'
+require 'passenger/abstract_server'
+require 'passenger/application'
+require 'passenger/framework_spawner'
+require 'passenger/application_spawner'
+require 'passenger/html_template'
+require 'passenger/exceptions'
+require 'passenger/utils'
 module Passenger
 
 # This class is capable of spawning Ruby on Rails application instances.
@@ -78,19 +84,6 @@ class SpawnManager < AbstractServer
 	# - AppInitError: The application raised an exception or called exit() during startup.
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody",
 	                      environment = "production", spawn_method = "smart")
-		if GC.copy_on_write_friendly?
-			# If the garbage collector is copy-on-write friendly, then we'll
-			# want to preload all Passenger classes (before any spawn servers have
-			# been started), for copy-on-write semantics.
-			#
-			# On the other hand, if the garbage collector is *not* copy-on-write
-			# friendly, then we'll want to load Passenger classes after we've
-			# spawned an application. This increases perceived speed of the first spawn
-			# operation, and increases actual speed for subsequently created spawn
-			# servers (because they don't have to load classes on-demand anymore).
-			Passenger.load_all_classes!
-		end
-		
 		if spawn_method == "smart"
 			spawner_must_be_started = true
 			framework_version = Application.detect_framework_version(app_root)
@@ -249,10 +242,6 @@ private
 			client.write(app.pid, app.listen_socket_name, app.using_abstract_namespace?)
 			client.send_io(app.owner_pipe)
 			app.close
-		end
-		if !GC.copy_on_write_friendly?
-			# See the comment associated with the other load_all_classes! call.
-			Passenger.load_all_classes!
 		end
 	end
 	

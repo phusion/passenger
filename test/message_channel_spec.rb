@@ -1,5 +1,6 @@
 require 'socket'
 require 'support/config'
+require 'passenger/message_channel'
 include Passenger
 
 describe MessageChannel do
