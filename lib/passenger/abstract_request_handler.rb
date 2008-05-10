@@ -299,7 +299,7 @@ private
 			File.read(rakefile) =~ /^PACKAGE_VERSION = "(.*)"$/
 			return $1
 		else
-			return File.read("#{File.dirname(__FILE__)}/VERSION.TXT")
+			return File.read("/etc/passenger_version.txt")
 		end
 	end
 	
