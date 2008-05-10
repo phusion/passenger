@@ -35,8 +35,13 @@ require 'digest/md5'
 
 
 
+
+def natively_packaged?
+	return File.expand_path(File.dirname(__FILE__)) == "/usr/bin"
+end
+
 trap("INT") { exit 1 }
-if File.exist?("#{PASSENGER_ROOT}/enterprisey.txt")
+if File.exist?("#{PASSENGER_ROOT}/enterprisey.txt") || File.exist?("/etc/passenger_enterprisey.txt")
 	puts "Congratulations, your Passenger Enterprise License has already been activated!"
 else
 	puts %{
@@ -56,7 +61,12 @@ else
 			STDERR.puts "Invalid key given. Please try again:"
 		end
 	end
-	if system("touch", "#{PASSENGER_ROOT}/enterprisey.txt")
+	if natively_packaged?
+		enterprise_file = "/etc/passenger_enterprisey.txt"
+	else
+		enterprise_file = "#{PASSENGER_ROOT}/enterprisey.txt"
+	end
+	if system("touch", enterprise_file)
 		puts "Congratulations! Your Passenger Enterprise License has been activated!"
 		puts "Please restart Apache to take full advantage of your Enterprise License."
 	else

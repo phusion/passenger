@@ -27,7 +27,7 @@ require 'passenger/platform_info'
 ##### Configuration
 
 # Don't forget to edit Configuration.h too
-PACKAGE_VERSION = "1.0.5"
+PACKAGE_VERSION = "1.0.6"
 
 include PlatformInfo
 APXS2.nil? and raise "Could not find 'apxs' or 'apxs2'."
@@ -387,6 +387,7 @@ spec = Gem::Specification.new do |s|
 		'doc/*/*/*/*',
 		'doc/*/*/*/*/*',
 		'doc/*/*/*/*/*/*',
+		'debian/*',
 		'ext/apache2/*.{cpp,h,c,TXT}',
 		'ext/boost/*.{hpp,TXT}',
 		'ext/boost/**/*.{hpp,cpp,pl,inl}',
@@ -431,6 +432,56 @@ Rake::Task['package'].prerequisites.unshift(:doc)
 Rake::Task['package:gem'].prerequisites.unshift(:doc)
 Rake::Task['package:force'].prerequisites.unshift(:doc)
 task :clobber => :'package:clean'
+
+
+##### Misc
+
+desc "Create a fakeroot, useful for building native packages"
+task :fakeroot => [:apache2, :native_support, :doc] do
+	require 'rbconfig'
+	fakeroot = "pkg/fakeroot"
+	libdir = "#{fakeroot}#{Config::CONFIG['rubylibdir']}"
+	extdir = "#{fakeroot}#{Config::CONFIG['archdir']}"
+	moduledir = fakeroot + `#{APXS2} -q LIBEXECDIR`.strip
+	bindir = "#{fakeroot}#{Config::CONFIG['bindir']}"
+	docdir = "#{fakeroot}/usr/share/doc/passenger"
+	
+	sh "rm -rf #{fakeroot}"
+	sh "mkdir -p #{fakeroot}"
+	
+	sh "mkdir -p #{libdir}"
+	sh "cp -R lib/passenger #{libdir}/"
+	sh "echo -n '#{PACKAGE_VERSION}' > #{libdir}/passenger/VERSION.TXT"
+	
+	sh "mkdir -p #{extdir}/passenger"
+	sh "cp -R ext/passenger/*.#{LIBEXT} #{extdir}/passenger/"
+	
+	sh "mkdir -p #{moduledir}"
+	sh "cp ext/apache2/mod_passenger.so #{moduledir}/"
+	
+	sh "mkdir -p #{bindir}"
+	sh "cp bin/* #{bindir}/"
+	
+	sh "mkdir -p #{docdir}"
+	sh "cp -R doc/* #{docdir}/"
+	sh "rm -f #{docdir}/{definitions.h,Doxyfile}"
+end
+
+desc "Create a Debian package"
+task 'package:debian' => :fakeroot do
+	fakeroot = "pkg/fakeroot"
+	arch = `uname -m`.strip
+	if arch =~ /^i.86$/
+		arch = "i386"
+	end
+	
+	sh "sed -i 's/Version: .*/Version: #{PACKAGE_VERSION}/' debian/control"
+	sh "cp -R debian #{fakeroot}/DEBIAN"
+	sh "sed -i 's/: any/: #{arch}/' #{fakeroot}/DEBIAN/control"
+	sh "sudo chown -R root:root #{fakeroot}"
+	sh "sudo dpkg -b #{fakeroot} pkg/passenger_#{PACKAGE_VERSION}-#{arch}.deb"
+	sh "sudo chown -R `whoami` #{fakeroot}"
+end
 
 
 ##### Misc

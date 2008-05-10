@@ -34,9 +34,6 @@ class Installer
 	
 	PASSENGER_WEBSITE = "http://www.modrails.com/"
 	PHUSION_WEBSITE = "www.phusion.nl"
-	USERS_GUIDE = "#{PASSENGER_ROOT}/doc/Users guide.html"
-	File.read("#{PASSENGER_ROOT}/Rakefile") =~ /^PACKAGE_VERSION = "(.*)"$/
-	PASSENGER_VERSION = $1
 	
 	REQUIRED_DEPENDENCIES = [
 		Dependencies::GCC,
@@ -51,6 +48,12 @@ class Installer
 	]
 	
 	def start
+		if natively_packaged?
+			show_apache2_config_snippets
+			show_deployment_example
+			exit
+		end
+		
 		Dir.chdir(PASSENGER_ROOT)
 		show_welcome_screen
 		check_dependencies || exit(1)
@@ -177,11 +180,20 @@ private
 	def show_apache2_config_snippets
 		puts
 		line
+		if natively_packaged?
+			module_location = `#{APXS2} -q LIBEXECDIR`.strip + "/mod_passenger.so"
+		else
+			module_location = "#{PASSENGER_ROOT}/ext/apache2/mod_passenger.so"
+		end
 		render_template 'apache2_config_snippets',
 			:module_location => "#{PASSENGER_ROOT}/ext/apache2/mod_passenger.so",
 			:passenger_root => PASSENGER_ROOT,
 			:ruby => RUBY
-		wait
+		if natively_packaged?
+			wait(10)
+		else
+			wait
+		end
 	end
 	
 	def show_deployment_example
@@ -219,9 +231,20 @@ private
 		puts "--------------------------------------------"
 	end
 	
-	def wait
+	def wait(timeout = nil)
 		begin
-			STDIN.readline
+			if timeout
+				require 'timeout' unless defined?(Timeout)
+				begin
+					Timeout.timeout(timeout) do
+						STDIN.readline
+					end
+				rescue Timeout::Error
+					# Do nothing.
+				end
+			else
+				STDIN.readline
+			end
 		rescue Interrupt
 			exit 2
 		end
@@ -242,6 +265,35 @@ private
 			color_puts "   Search Google."
 		end
 	end
+	
+	def natively_packaged?
+		return self.class.natively_packaged?
+	end
+	
+	def self.natively_packaged?
+		return File.expand_path(File.dirname(__FILE__)) == "/usr/bin"
+	end
+	
+	def self.determine_version
+		if natively_packaged?
+			require 'rbconfig'
+			return File.read(Config::CONFIG['rubylibdir'] + "/passenger/VERSION.TXT")
+		else
+			File.read("#{PASSENGER_ROOT}/Rakefile") =~ /^PACKAGE_VERSION = "(.*)"$/
+			return $1
+		end
+	end
+	
+	def self.determine_users_guide
+		if natively_packaged?
+			return "/usr/share/doc/passenger/Users guide.html"
+		else
+			return "#{PASSENGER_ROOT}/doc/Users guide.html"
+		end
+	end
+	
+	PASSENGER_VERSION = determine_version
+	USERS_GUIDE = determine_users_guide
 end
 
 Installer.new.start
