@@ -53,22 +53,26 @@ if it doesn't.
 
 There are two ways to install Passenger:
 
-1. By installing the Passenger gem, as instructed on the ``Install'' page
-   on the Passenger website.
-2. By downloading the source tarball from the Passenger website
+1. By installing the Passenger gem, as instructed on the
+   link:http://www.modrails.com/install.html[``Install'' page on the Passenger website].
+2. By downloading a native Linux package (e.g. Debian package) from the Passenger website.
+3. By downloading the source tarball from the Passenger website
    ('passenger-x.x.x.tar.gz').
 
-In our opinion, installing the gem is easiest.
+In our opinion, installing the gem or the native package is easiest.
 
 Passenger provides an easy-to-use installer for installing the Passenger
 Apache module ('mod_passenger').
 
-NOTE: You might have to run the installation commands in the following sections
+TIP: You might have to run the installation commands in the following sections
 as 'root'. If the installer fails because of permission errors, it will tell
 you.
 
 [[specifying_correct_apache_install]]
 ==== Specifying the correct Apache installation ====
+
+NOTE: You can skip this section if you've installed Passenger via a native Linux
+package, because no compilation is necessary.
 
 If your system has multiple Apache installations (this is likely the case on
 MacOS X), then you will need to tell the Passenger installer which one to use.
@@ -89,6 +93,9 @@ be located in the `sbin` folder instead of the `bin` folder.
 
 [[specifying_ruby_installation]]
 ==== Specifying the correct Ruby installation ====
+
+NOTE: You can skip this section if you've installed Passenger via a native Linux
+package, because no compilation is necessary.
 
 If your system has multiple Ruby installations (this is likely the case on
 MacOS X), then you will need to tell the Passenger installer which one to use.
@@ -118,6 +125,23 @@ gem install passenger-x.x.x.gem
 passenger-install-apache2-module
 ------------------------------------------------------
 Please follow the instructions given by the installer.
+
+==== Installing via a native Linux package ====
+
+Please install the native Linux package, e.g.:
+------------------------------------------------------
+gdebi passenger_x.x.x-i386.deb
+------------------------------------------------------
+
+Next, you'll need to configure Apache. Run the "installer", as it will tell you
+the correct configuration options for Apache:
+------------------------------------------------------
+passenger-install-apache2-module
+------------------------------------------------------
+
+NOTE: The installer doesn't actually install anything because it will automatically
+detect that Passenger has already been installed. The only thing the installer
+will do in this case, is showing the correct Apache configurations.
 
 ==== Installing via the source tarball ====
 
