@@ -16,6 +16,7 @@ doc/cxxapi
 doc/*.html
 test/Apache2ModuleTests
 test/config.yml
+test/coverage
 test/stub/railsapp/app/controllers/bar_controller.rb
 test/stub/*/log/*
 test/stub/apache2/*.log
