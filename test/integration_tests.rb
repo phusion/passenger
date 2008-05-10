@@ -162,16 +162,14 @@ shared_examples_for "HelloWorld Rack application" do
 	
 	if Process.uid == 0
 		it "runs as an unprivileged user" do
-			pending do
-				File.prepend("#{@stub.app_root}/config.ru", %q{
-					File.new('foo.txt', 'w').close
-				})
-				File.new("#{@stub.app_root}/tmp/restart.txt", "w").close
-				get('/')
-				stat = File.stat("#{@stub.app_root}/foo.txt")
-				stat.uid.should_not == 0
-				stat.gid.should_not == 0
-			end
+			File.prepend("#{@stub.app_root}/config.ru", %q{
+				File.new('foo.txt', 'w').close
+			})
+			File.new("#{@stub.app_root}/tmp/restart.txt", "w").close
+			get('/')
+			stat = File.stat("#{@stub.app_root}/foo.txt")
+			stat.uid.should_not == 0
+			stat.gid.should_not == 0
 		end
 	end
 end

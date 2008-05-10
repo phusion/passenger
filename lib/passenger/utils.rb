@@ -201,6 +201,46 @@ protected
 				nil, app_type)
 		end
 	end
+	
+	# Lower the current process's privilege to the owner of the given file.
+	# No exceptions will be raised in the event that privilege lowering fails.
+	def lower_privilege(filename, lowest_user = "nobody")
+		stat = File.stat(filename)
+		begin
+			if !switch_to_user(stat.uid)
+				switch_to_user(lowest_user)
+			end
+		rescue Errno::EPERM
+			# No problem if we were unable to switch user.
+		end
+	end
+
+	def switch_to_user(user)
+		begin
+			if user.is_a?(String)
+				pw = Etc.getpwnam(user)
+				username = user
+				uid = pw.uid
+				gid = pw.gid
+			else
+				pw = Etc.getpwuid(user)
+				username = pw.name
+				uid = user
+				gid = pw.gid
+			end
+		rescue
+			return false
+		end
+		if uid == 0
+			return false
+		else
+			Process.groups = Process.initgroups(username, gid)
+			Process::Sys.setgid(gid)
+			Process::Sys.setuid(uid)
+			ENV['HOME'] = pw.dir
+			return true
+		end
+	end
 end
 
 end # module Passenger

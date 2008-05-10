@@ -81,11 +81,13 @@ private
 	
 	def run(channel, app_root, lower_privilege, lowest_user, environment)
 		$0 = "Rack: #{app_root}"
-		
-		ENV['RACK_ENV'] = environment
-		Dir.chdir(app_root)
 		app = nil
 		success = report_app_init_status(channel) do
+			ENV['RACK_ENV'] = environment
+			Dir.chdir(app_root)
+			if @lower_privilege
+				lower_privilege('config.ru', lowest_user)
+			end
 			app = load_rack_app(app_root)
 		end
 		

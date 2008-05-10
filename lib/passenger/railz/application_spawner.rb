@@ -143,7 +143,9 @@ class ApplicationSpawner < AbstractServer
 					success = report_app_init_status(channel) do
 						ENV['RAILS_ENV'] = @environment
 						Dir.chdir(@app_root)
-						lower_privilege! if @lower_privilege
+						if @lower_privilege
+							lower_privilege('config/environment.rb', @lowest_user)
+						end
 						require 'config/environment'
 						require 'dispatcher'
 					end
@@ -213,52 +215,14 @@ protected
 				Object.const_set(:RAILS_ENV, ENV['RAILS_ENV'])
 			end
 			Dir.chdir(@app_root)
-			lower_privilege! if @lower_privilege
+			if @lower_privilege
+				lower_privilege('config/environment.rb', @lowest_user)
+			end
 			preload_application
 		end
 	end
 	
 private
-	# Lower the current process's privilege to the owner of config/environment.rb.
-	# No exceptions will be raised in the event that privilege lowering fails.
-	def lower_privilege!
-		stat = File.stat("config/environment.rb")
-		begin
-			if !switch_to_user(stat.uid)
-				switch_to_user(@lowest_user)
-			end
-		rescue Errno::EPERM
-			# No problem if we were unable to switch user.
-		end
-	end
-
-	def switch_to_user(user)
-		begin
-			if user.is_a?(String)
-				pw = Etc.getpwnam(user)
-				username = user
-				uid = pw.uid
-				gid = pw.gid
-			else
-				pw = Etc.getpwuid(user)
-				username = pw.name
-				uid = user
-				gid = pw.gid
-			end
-		rescue
-			return false
-		end
-		if uid == ROOT_UID
-			return false
-		else
-			Process.groups = Process.initgroups(username, gid)
-			Process::Sys.setgid(gid)
-			Process::Sys.setuid(uid)
-			ENV['HOME'] = pw.dir
-			return true
-		end
-	end
-
 	def preload_application
 		Object.const_set(:RAILS_ROOT, @app_root)
 		if defined?(::Rails::Initializer)
