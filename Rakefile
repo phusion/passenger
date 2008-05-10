@@ -27,7 +27,7 @@ require 'passenger/platform_info'
 ##### Configuration
 
 # Don't forget to edit Configuration.h too
-PACKAGE_VERSION = "1.0.6"
+PACKAGE_VERSION = "1.1.0"
 
 include PlatformInfo
 APXS2.nil? and raise "Could not find 'apxs' or 'apxs2'."
@@ -445,6 +445,7 @@ task :fakeroot => [:apache2, :native_support, :doc] do
 	moduledir = fakeroot + `#{APXS2} -q LIBEXECDIR`.strip
 	bindir = "#{fakeroot}#{Config::CONFIG['bindir']}"
 	docdir = "#{fakeroot}/usr/share/doc/passenger"
+	libexecdir = "#{fakeroot}/usr/libexec/passenger"
 	
 	sh "rm -rf #{fakeroot}"
 	sh "mkdir -p #{fakeroot}"
@@ -458,6 +459,9 @@ task :fakeroot => [:apache2, :native_support, :doc] do
 	
 	sh "mkdir -p #{moduledir}"
 	sh "cp ext/apache2/mod_passenger.so #{moduledir}/"
+	
+	sh "mkdir -p #{libexecdir}"
+	sh "cp ext/apache2/ApplicationPoolServerExecutable #{libexecdir}/"
 	
 	sh "mkdir -p #{bindir}"
 	sh "cp bin/* #{bindir}/"

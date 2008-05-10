@@ -87,12 +87,20 @@ findSpawnServer(const char *passengerRoot) {
 string
 findApplicationPoolServer(const char *passengerRoot) {
 	assert(passengerRoot != NULL);
-	string path(passengerRoot);
-	if (path.at(path.size() - 1) != '/') {
-		path.append(1, '/');
+	string root(passengerRoot);
+	if (root.at(root.size() - 1) != '/') {
+		root.append(1, '/');
 	}
+	
+	string path(root);
 	path.append("ext/apache2/ApplicationPoolServerExecutable");
-	return path;
+	if (fileExists(path.c_str())) {
+		return path;
+	} else {
+		path.assign(root);
+		path.append("libexec/passenger/ApplicationPoolServerExecutable");
+		return path;
+	}
 }
 
 string
