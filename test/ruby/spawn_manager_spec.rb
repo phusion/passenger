@@ -2,10 +2,10 @@ require 'support/config'
 require 'support/test_helper'
 require 'passenger/spawn_manager'
 
-require 'abstract_server_spec'
-require 'minimal_spawner_spec'
-require 'spawner_privilege_lowering_spec'
-require 'spawner_error_handling_spec'
+require 'ruby/abstract_server_spec'
+require 'ruby/rails/minimal_spawner_spec'
+require 'ruby/spawner_privilege_lowering_spec'
+require 'ruby/spawner_error_handling_spec'
 include Passenger
 include Passenger::Utils
 

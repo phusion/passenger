@@ -249,7 +249,7 @@ subdir 'test' do
 	
 	desc "Run unit tests for the Ruby libraries"
 	task 'test:ruby' => [:native_support] do
-		sh "spec -c -f s *_spec.rb"
+		sh "spec -c -f s ruby/*_spec.rb ruby/*/*_spec.rb"
 	end
 	
 	desc "Run integration tests"
@@ -396,6 +396,8 @@ spec = Gem::Specification.new do |s|
 		'misc/*',
 		'test/*.{rb,cpp,example}',
 		'test/support/*',
+		'test/ruby/*',
+		'test/ruby/*/*',
 		'test/stub/*',
 		'test/stub/*/*',
 		'test/stub/*/*/*',

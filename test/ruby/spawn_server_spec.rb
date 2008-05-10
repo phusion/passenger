@@ -1,5 +1,6 @@
 require 'support/config'
-require 'abstract_server_spec'
+
+require 'ruby/abstract_server_spec'
 
 shared_examples_for "a spawn server" do
 	it_should_behave_like "AbstractServer"
