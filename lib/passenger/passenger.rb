@@ -16,6 +16,7 @@
 
 module Passenger
 	ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+	$LOAD_PATH << "#{ROOT}/ext"
 
 	autoload 'AbstractServer',      'passenger/abstract_server'
 	autoload 'HTMLTemplate',        'passenger/html_template'
@@ -28,7 +29,7 @@ module Passenger
 	autoload 'PlatformInfo',        'passenger/platform_info'
 	autoload 'RequestHandler',      'passenger/request_handler'
 	autoload 'Utils',               'passenger/utils'
-	autoload 'NativeSupport',       "#{ROOT}/ext/passenger/native_support.so"
+	autoload 'NativeSupport',       'passenger/native_support'
 	
 	autoload 'VersionNotFound',     'passenger/exceptions'
 	autoload 'AppInitError',        'passenger/exceptions'

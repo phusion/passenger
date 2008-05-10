@@ -1,0 +1,17 @@
+Package: passenger
+Version: 1.1.0
+Section: net
+Priority: optional
+Architecture: any
+Essential: no
+Depends: ruby1.8 (>= 1.8.6), rubygems, apache2
+Pre-Depends: 
+Recommends: 
+Suggests: 
+Maintainer: Hongli Lai <hongli@phusion.nl>
+Conflicts: 
+Replaces: 
+Provides: 
+Installed-Size: 1741
+Description: Phusion Passenger, Ruby on Rails deployment module for Apache.
+ Phusion Passenger makes deploying Ruby on Rails applications on Apache a breeze.

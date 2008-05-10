@@ -287,7 +287,8 @@ private
 	end
 	
 	def send_error_page(channel, template_name, options = {})
-		options["enterprisey"] = File.exist?("#{File.dirname(__FILE__)}/../../enterprisey.txt")
+		options["enterprisey"] = File.exist?("#{File.dirname(__FILE__)}/../../enterprisey.txt") ||
+			File.exist?("/etc/passenger_enterprisey.txt")
 		data = HTMLTemplate.new(template_name, options).result
 		channel.write('error_page')
 		channel.write_scalar(data)

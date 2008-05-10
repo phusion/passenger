@@ -100,13 +100,6 @@ class RequestHandler
 	NINJA_PATCHING_LOCK = Mutex.new
 	@@ninja_patched_action_controller = false
 	
-	File.read("#{File.dirname(__FILE__)}/../../Rakefile") =~ /^PACKAGE_VERSION = "(.*)"$/
-	PASSENGER_VERSION = $1
-	PASSENGER_HEADER = "Phusion Passenger (mod_rails) #{PASSENGER_VERSION}"
-	if File.exist?("#{File.dirname(__FILE__)}/../../enterprisey.txt")
-		PASSENGER_HEADER << ", Enterprise Edition"
-	end
-	
 	# The name of the socket on which the request handler accepts
 	# new connections. This is either a Unix socket filename, or
 	# the name for an abstract namespace Unix socket.
@@ -326,6 +319,29 @@ private
 		end
 		return data
 	end
+	
+	def self.determine_passenger_version
+		rakefile = "#{File.dirname(__FILE__)}/../../Rakefile"
+		if File.exist?(rakefile)
+			File.read(rakefile) =~ /^PACKAGE_VERSION = "(.*)"$/
+			return $1
+		else
+			return File.read("#{File.dirname(__FILE__)}/VERSION.TXT")
+		end
+	end
+	
+	def self.determine_passenger_header
+		header = "Phusion Passenger (mod_rails) #{PASSENGER_VERSION}"
+		if File.exist?("#{File.dirname(__FILE__)}/../../enterprisey.txt") ||
+		   File.exist?("/etc/passenger_enterprisey.txt")
+			header << ", Enterprise Edition"
+		end
+		return header
+	end
+
+public
+	PASSENGER_VERSION = determine_passenger_version
+	PASSENGER_HEADER = determine_passenger_header
 end
 
 end # module Passenger
