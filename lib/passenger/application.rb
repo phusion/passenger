@@ -15,7 +15,7 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 require 'rubygems'
-require 'passenger/passenger'
+require 'passenger/exceptions'
 module Passenger
 
 # Represents a single Ruby on Rails application instance.

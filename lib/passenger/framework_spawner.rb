@@ -15,7 +15,10 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 require 'rubygems'
-require 'passenger/passenger'
+require 'passenger/abstract_server'
+require 'passenger/application_spawner'
+require 'passenger/exceptions'
+require 'passenger/utils'
 module Passenger
 
 # This class is capable of spawning Ruby on Rails application instances

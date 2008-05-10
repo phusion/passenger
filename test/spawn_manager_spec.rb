@@ -1,5 +1,6 @@
 require 'support/config'
 require 'support/test_helper'
+require 'passenger/spawn_manager'
 
 require 'abstract_server_spec'
 require 'minimal_spawner_spec'

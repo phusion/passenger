@@ -11,7 +11,9 @@ class SpawnManager
 	end
 end
 
+DEFAULT_INPUT_FD = 3
+
 manager = SpawnManager.new
-input = IO.new(Passenger::SpawnManager::DEFAULT_INPUT_FD)
+input = IO.new(DEFAULT_INPUT_FD)
 manager.start_synchronously(input)
 manager.cleanup
