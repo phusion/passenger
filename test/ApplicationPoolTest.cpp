@@ -50,11 +50,11 @@
 		// Calling ApplicationPool.get() once should return a valid Session.
 		Application::SessionPtr session(pool->get("stub/railsapp"));
 		session->sendHeaders(createRequestHeaders());
-		session->closeWriter();
+		session->shutdownWriter();
 		
-		int reader = session->getReader();
+		int reader = session->getStream();
 		string result(readAll(reader));
-		session->closeReader();
+		session->shutdownReader();
 		ensure(result.find("hello world") != string::npos);
 	}
 	
@@ -96,12 +96,12 @@
 		ensure_equals("Before the sessions were closed, both apps were in the pool", pool->getCount(), 2u);
 		
 		session->sendHeaders(createRequestHeaders());
-		string result(readAll(session->getReader()));
+		string result(readAll(session->getStream()));
 		ensure("Session 1 belongs to the correct app", result.find("hello world"));
 		session.reset();
 		
 		session2->sendHeaders(createRequestHeaders());
-		result = readAll(session2->getReader());
+		result = readAll(session2->getStream());
 		ensure("Session 2 belongs to the correct app", result.find("this is railsapp2"));
 		session2.reset();
 	}
@@ -232,11 +232,11 @@
 		pool2.reset();
 		
 		session->sendHeaders(createRequestHeaders());
-		session->closeWriter();
+		session->shutdownWriter();
 		
-		int reader = session->getReader();
+		int reader = session->getStream();
 		string result(readAll(reader));
-		session->closeReader();
+		session->shutdownReader();
 		ensure(result.find("hello world") != string::npos);
 	}
 	
@@ -319,7 +319,7 @@
 			"stub/railsapp/app/controllers/bar_controller.rb");
 		Application::SessionPtr session = pool->get("stub/railsapp");
 		session->sendHeaders(createRequestHeaders("/bar"));
-		string result = readAll(session->getReader());
+		string result = readAll(session->getStream());
 		ensure(result.find("bar 1!"));
 		session.reset();
 		
@@ -328,7 +328,7 @@
 		system("touch stub/railsapp/tmp/restart.txt");
 		session = pool->get("stub/railsapp");
 		session->sendHeaders(createRequestHeaders("/bar"));
-		result = readAll(session->getReader());
+		result = readAll(session->getStream());
 		ensure("App code has been reloaded", result.find("bar 2!"));
 		unlink("stub/railsapp/app/controllers/bar_controller.rb");
 	}

@@ -149,43 +149,41 @@ private:
 	private:
 		SharedDataPtr data;
 		int id;
-		int reader;
-		int writer;
+		int fd;
 		pid_t pid;
 	public:
-		RemoteSession(SharedDataPtr data, pid_t pid, int id, int reader, int writer) {
+		RemoteSession(SharedDataPtr data, pid_t pid, int id, int fd) {
 			this->data = data;
 			this->pid = pid;
 			this->id = id;
-			this->reader = reader;
-			this->writer = writer;
+			this->fd = fd;
 		}
 		
 		virtual ~RemoteSession() {
-			closeReader();
-			closeWriter();
+			closeStream();
 			MessageChannel(data->server).write("close", toString(id).c_str(), NULL);
 		}
 		
-		virtual int getReader() const {
-			return reader;
+		virtual int getStream() const {
+			return fd;
 		}
 		
-		virtual void closeReader() {
-			if (reader != -1) {
-				close(reader);
-				reader = -1;
+		virtual void shutdownReader() {
+			if (fd != -1) {
+				shutdown(fd, SHUT_RD);
 			}
 		}
 		
-		virtual int getWriter() const {
-			return writer;
+		virtual void shutdownWriter() {
+			if (fd != -1) {
+				shutdown(fd, SHUT_WR);
+			}
 		}
 		
-		virtual void closeWriter() {
-			if (writer != -1) {
-				close(writer);
-				writer = -1;
+		virtual void closeStream() {
+			if (fd != -1) {
+				close(fd);
+				fd = -1;
 			}
 		}
 		
@@ -266,7 +264,7 @@ private:
 		) {
 			MessageChannel channel(data->server);
 			vector<string> args;
-			int reader, writer;
+			int stream;
 			
 			try {
 				channel.write("get", appRoot.c_str(),
@@ -283,9 +281,8 @@ private:
 				throw IOException("The ApplicationPool server unexpectedly closed the connection.");
 			}
 			if (args[0] == "ok") {
-				reader = channel.readFileDescriptor();
-				writer = channel.readFileDescriptor();
-				return ptr(new RemoteSession(data, atoi(args[1]), atoi(args[2]), reader, writer));
+				stream = channel.readFileDescriptor();
+				return ptr(new RemoteSession(data, atoi(args[1]), atoi(args[2]), stream));
 			} else if (args[0] == "SpawnException") {
 				if (args[2] == "true") {
 					string errorPage;

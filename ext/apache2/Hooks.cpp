@@ -51,6 +51,13 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 #define DEFAULT_RAILS_ENV    "production"
 #define DEFAULT_RACK_ENV     "production"
 
+/**
+ * If the HTTP client sends POST data larger than this value (in bytes),
+ * then the POST data will be fully saved into a temporary file, before
+ * allocating a Ruby web application session.
+ */
+#define UPLOAD_ACCELERATION_THRESHOLD 1024 * 8
+
 
 /**
  * Utility class for determining URI-to-Rails/Rack directory mappings.
@@ -471,12 +478,26 @@ private:
 	
 	void sendRequestBody(request_rec *r, Application::SessionPtr &session, shared_ptr<TempFile> &uploadData) {
 		rewind(uploadData->handle);
+		P_DEBUG("Content-Length = " << lookupHeader(r, "Content-Length"));
 		while (!feof(uploadData->handle)) {
 			char buf[1024 * 32];
 			size_t size;
 			
 			size = fread(buf, 1, sizeof(buf), uploadData->handle);
+			
 			session->sendBodyBlock(buf, size);
+		}
+	}
+	
+	void sendRequestBody(request_rec *r, Application::SessionPtr &session) {
+		char buf[1024 * 32];
+		apr_off_t len;
+
+		while ((len = ap_get_client_block(r, buf, sizeof(buf))) > 0) {
+			session->sendBodyBlock(buf, len);
+		}
+		if (len == -1) {
+			throw IOException("An error occurred while receiving HTTP upload data.");
 		}
 	}
 
@@ -570,9 +591,12 @@ public:
 			apr_bucket_brigade *bb;
 			apr_bucket *b;
 			Application::SessionPtr session;
+			bool expectingUploadData;
 			shared_ptr<TempFile> uploadData;
 			
-			if (ap_should_client_block(r)) {
+			expectingUploadData = ap_should_client_block(r);
+			if (expectingUploadData && atol(lookupHeader(r, "Content-Length"))
+			                                 > UPLOAD_ACCELERATION_THRESHOLD) {
 				uploadData = receiveRequestBody(r);
 			}
 			
@@ -622,14 +646,18 @@ public:
 				}
 			}
 			sendHeaders(r, session, mapper.getBaseURI());
-			if (uploadData != NULL) {
-				sendRequestBody(r, session, uploadData);
-				uploadData.reset();
+			if (expectingUploadData) {
+				if (uploadData != NULL) {
+					sendRequestBody(r, session, uploadData);
+					uploadData.reset();
+				} else {
+					sendRequestBody(r, session);
+				}
 			}
-			session->closeWriter();
+			session->shutdownWriter();
 			
 			apr_file_t *readerPipe = NULL;
-			int reader = session->getReader();
+			int reader = session->getStream();
 			apr_os_pipe_put(&readerPipe, &reader, r->pool);
 
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);

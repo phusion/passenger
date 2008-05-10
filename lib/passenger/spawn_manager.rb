@@ -240,7 +240,8 @@ private
 			if (defined?(Mysql::Error) && e.child_exception.is_a?(Mysql::Error)) ||
 			   (e.child_exception.is_a?(UnknownError) && e.child_exception.real_class_name =~ /^ActiveRecord/)
 				send_error_page(client, 'database_error', :error => e,
-					:app_root => app_root)
+					:app_root => app_root, :app_name => app_name(app_type),
+					:app_type => app_type)
 			elsif e.child_exception.is_a?(LoadError) ||
 			   (e.child_exception.is_a?(UnknownError) && e.child_exception.real_class_name == "MissingSourceFile")
 				# A source file failed to load, maybe because of a
@@ -248,13 +249,14 @@ private
 				# will install probably the gem. So we clear RubyGems's
 				# cache so that it can detect new gems.
 				Gem.clear_paths
-				send_error_page(client, 'load_error', :error => e, :app_root => app_root)
+				send_error_page(client, 'load_error', :error => e, :app_root => app_root,
+					:app_name => app_name(app_type))
 			elsif e.child_exception.nil?
 				send_error_page(client, 'app_exited_during_initialization', :error => e,
-					:app_root => app_root)
+					:app_root => app_root, :app_name => app_name(app_type))
 			else
 				send_error_page(client, 'app_init_error', :error => e,
-					:app_root => app_root)
+					:app_root => app_root, :app_name => app_name(app_type))
 			end
 		rescue FrameworkInitError => e
 			send_error_page(client, 'framework_init_error', :error => e)
@@ -303,6 +305,14 @@ private
 		data = HTMLTemplate.new(template_name, options).result
 		channel.write('error_page')
 		channel.write_scalar(data)
+	end
+	
+	def app_name(app_type)
+		if app_type == "rails"
+			return "Ruby on Rails"
+		else
+			return "Ruby (Rack)"
+		end
 	end
 end
 

@@ -44,10 +44,24 @@ class RequestHandler < AbstractRequestHandler
 	end
 
 protected
+	# The real input stream is not seekable (calling _seek_ on it
+	# will raise an exception). But Merb calls _seek_ if the object
+	# responds to it. So we wrap the input stream in a proxy object
+	# that doesn't respond to _seek_.
+	class InputReader
+		def initialize(io)
+			@io = io
+		end
+		
+		def read(*args)
+			@io.read(*args)
+		end
+	end
+
 	# Overrided method.
 	def process_request(env, input, output)
 		env[RACK_VERSION]      = RACK_VERSION_VALUE
-		env[RACK_INPUT]        = input
+		env[RACK_INPUT]        = InputReader.new(input)
 		env[RACK_ERRORS]       = STDERR
 		env[RACK_MULTITHREAD]  = false
 		env[RACK_MULTIPROCESS] = true

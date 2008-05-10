@@ -1,5 +1,5 @@
-<% layout 'error_layout', :title => "Ruby on Rails application could not be started" do %>
-<h1 class="error_title">Ruby on Rails application could not be started</h1>
+<% layout 'error_layout', :title => "#{@app_name} application could not be started" do %>
+<h1 class="error_title"><%= @app_name %> application could not be started</h1>
 <div id="content">
 
 	There appears to be a database problem.
@@ -7,20 +7,27 @@
 	<li class="first">
 		<div class="container">
 		<div class="content">
-		Your <em>config/database.yml</em> may not be written correctly.
+		<% if @app_type == "rails" %>
+			Your <em>config/database.yml</em> may not be written correctly.
+		<% else %>
+			Your application's database configuration file might be written
+			incorrectly.
+		<% end %>
 		Please check it and fix any errors.
 		</div>
 		</div>
 	</li>
-	<li>
-		<div class="container">
-		<div class="content">
-		Your database schema may be out of date or nonexistant.
-		Please run <code>rake db:migrate</code> to ensure that
-		the database schema is up-to-date.
-		</div>
-		</div>
-	</li>
+	<% if @app_type == "rails" %>
+		<li>
+			<div class="container">
+			<div class="content">
+			Your database schema may be out of date or nonexistant.
+			Please run <code>rake db:migrate</code> to ensure that
+			the database schema is up-to-date.
+			</div>
+			</div>
+		</li>
+	<% end %>
 	<li class="last">
 		<div class="container">
 		<div class="content">

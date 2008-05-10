@@ -1,5 +1,5 @@
-<% layout 'error_layout', :title => "Ruby on Rails application could not be started" do %>
-<h1 class="error_title">Ruby on Rails application could not be started</h1>
+<% layout 'error_layout', :title => "#{@app_name} application could not be started" do %>
+<h1 class="error_title"><%= @app_name %> application could not be started</h1>
 <div id="content">
 
 	A source file that the application requires, is missing.

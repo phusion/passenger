@@ -1,12 +1,5 @@
-<%
-	if @error.app_type == "rails"
-		title = "Ruby on Rails application could not be started"
-	else
-		title = "Ruby (Rack) application could not be started"
-	end
-%>
-<% layout 'error_layout', :title => title do %>
-<h1 class="error_title #{e.app_type}"><%= title %></h1>
+<% layout 'error_layout', :title => "#{@app_name} application could not be started" do %>
+<h1 class="error_title"><%= @app_name %> application could not be started</h1>
 <div id="content">
 
 	These are the possible causes:
