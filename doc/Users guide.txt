@@ -305,7 +305,7 @@ $ cd /webapps/rack_example
 $ some_awesome_editor config.ru
 ...type in some source code...
 $ cat config.ru
-app = lambda do |env|
+app = proc do |env|
     return [200, { "Content-Type" => "text/html" }, "hello <b>world</b>"]
 end
 run app
@@ -399,7 +399,7 @@ require 'camping'
 ##### Begin Camping application
 Camping.goes :Blog
 
-...application code here...
+...your application code here...
 ##### End Camping application
 
 run Rack::Adapter::Camping.new(Blog)
@@ -443,6 +443,20 @@ require "start"
 Ramaze.trait[:essentials].delete Ramaze::Adapter
 Ramaze.start :force => true
 run Ramaze::Adapter::Base
+------------------------------------------------------
+
+==== Sinatra ====
+------------------------------------------------------
+require 'rubygems'
+require 'sinatra'
+Sinatra::Application.default_options.merge!(
+  :run => false,
+  :env => ENV['RACK_ENV']
+)
+
+### ...your Sinatra application code here... ###
+
+run Sinatra.application
 ------------------------------------------------------
 
 

@@ -97,6 +97,7 @@ class AbstractRequestHandler
 	# String constants which exist to relieve Ruby's garbage collector.
 	IGNORE              = 'IGNORE'              # :nodoc:
 	DEFAULT             = 'DEFAULT'             # :nodoc:
+	NULL                = "\0"                  # :nodoc:
 	CONTENT_LENGTH      = 'CONTENT_LENGTH'      # :nodoc:
 	HTTP_CONTENT_LENGTH = 'HTTP_CONTENT_LENGTH' # :nodoc:
 	X_POWERED_BY        = 'X-Powered-By'        # :nodoc:
@@ -262,9 +263,8 @@ private
 		if headers_data.nil?
 			return
 		end
-		headers = Hash[*headers_data.split("\0")]
+		headers = Hash[*headers_data.split(NULL)]
 		headers[CONTENT_LENGTH] = headers[HTTP_CONTENT_LENGTH]
-		headers_data = nil
 		return [headers, socket]
 	rescue SecurityError => e
 		STDERR.puts("*** Passenger RequestHandler: HTTP header size exceeded maximum.")
@@ -305,7 +305,7 @@ private
 	end
 	
 	def self.determine_passenger_header
-		header = "Phusion Passenger (mod_rails) #{PASSENGER_VERSION}"
+		header = "Phusion Passenger (mod_rails/mod_rack) #{PASSENGER_VERSION}"
 		if File.exist?("#{File.dirname(__FILE__)}/../../enterprisey.txt") ||
 		   File.exist?("/etc/passenger_enterprisey.txt")
 			header << ", Enterprise Edition"
