@@ -49,6 +49,7 @@ class Installer
 	
 	def start
 		if natively_packaged?
+			check_dependencies || exit(1)
 			show_apache2_config_snippets
 			show_deployment_example
 			exit
@@ -112,7 +113,11 @@ private
 			color_puts "<red>Some required software is not installed.</red>"
 			color_puts "But don't worry, this installer will tell you how to install them.\n"
 			color_puts "<b>Press Enter to continue, or Ctrl-C to abort.</b>"
-			wait
+			if natively_packaged?
+				wait(10)
+			else
+				wait
+			end
 			
 			line
 			color_puts "<banner>Installation instructions for required software</banner>"
