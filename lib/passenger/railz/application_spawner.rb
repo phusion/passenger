@@ -23,18 +23,6 @@ require 'passenger/railz/request_handler'
 require 'passenger/exceptions'
 require 'passenger/utils'
 
-begin
-	# Preload MySQL if possible. We want to preload it and we need
-	# its exception classes.
-	require 'mysql'
-rescue LoadError
-end
-begin
-	# Preload SQLite 3 if possible. Rails 2.0 apps use it by default.
-	require 'sqlite3'
-rescue LoadError
-end
-
 module Passenger
 module Railz
 

@@ -25,7 +25,6 @@
 # We also made some small local modifications.
 
 require 'cgi'
-require 'stringio'
 
 module Passenger
 module Railz

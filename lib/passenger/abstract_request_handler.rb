@@ -15,7 +15,6 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 require 'socket'
-require 'base64'
 require 'passenger/utils'
 require 'passenger/native_support'
 module Passenger
@@ -278,6 +277,7 @@ private
 	def generate_random_id(method)
 		case method
 		when :base64
+			require 'base64' unless defined?(Base64)
 			data = Base64.encode64(File.read("/dev/urandom", 64))
 			data.gsub!("\n", '')
 			data.gsub!("+", '')

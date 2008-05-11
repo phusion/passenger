@@ -18,6 +18,7 @@ require 'rubygems'
 require 'passenger/abstract_server'
 require 'passenger/railz/application_spawner'
 require 'passenger/exceptions'
+require 'passenger/constants'
 require 'passenger/utils'
 module Passenger
 module Railz
@@ -36,9 +37,6 @@ module Railz
 # *Note*: FrameworkSpawner may only be started asynchronously with AbstractServer#start.
 # Starting it synchronously with AbstractServer#start_synchronously has not been tested.
 class FrameworkSpawner < AbstractServer
-	APP_SPAWNER_MAX_IDLE_TIME = 600
-	APP_SPAWNER_CLEAN_INTERVAL = APP_SPAWNER_MAX_IDLE_TIME + 5
-
 	include Utils
 	
 	# This exception means that the FrameworkSpawner server process exited unexpectedly.

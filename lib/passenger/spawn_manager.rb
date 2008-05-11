@@ -15,12 +15,7 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 require 'passenger/abstract_server'
-require 'passenger/application'
-require 'passenger/railz/framework_spawner'
-require 'passenger/railz/application_spawner'
-require 'passenger/rack/application_spawner'
-require 'passenger/html_template'
-require 'passenger/exceptions'
+require 'passenger/constants'
 require 'passenger/utils'
 module Passenger
 
@@ -46,11 +41,6 @@ module Passenger
 # In case you're wondering why the namespace is "Railz" and not "Rails":
 # it's to work around an obscure bug in ActiveSupport's Dispatcher.
 class SpawnManager < AbstractServer
-	FRAMEWORK_SPAWNER_MAX_IDLE_TIME = 30 * 60
-	APP_SPAWNER_MAX_IDLE_TIME = Railz::FrameworkSpawner::APP_SPAWNER_MAX_IDLE_TIME
-	SPAWNER_CLEAN_INTERVAL = [FRAMEWORK_SPAWNER_MAX_IDLE_TIME,
-		APP_SPAWNER_MAX_IDLE_TIME].min + 5
-	
 	include Utils
 	
 	def initialize
@@ -64,8 +54,26 @@ class SpawnManager < AbstractServer
 		define_message_handler(:spawn_application, :handle_spawn_application)
 		define_message_handler(:reload, :handle_reload)
 		define_signal_handler('SIGHUP', :reload)
+		
+		GC.start
+		if GC.copy_on_write_friendly?
+			# Preload libraries for copy-on-write semantics.
+			require 'base64'
+			require 'passenger/application'
+			require 'passenger/railz/framework_spawner'
+			require 'passenger/railz/application_spawner'
+			require 'passenger/rack/application_spawner'
+			require 'passenger/html_template'
+			require 'passenger/platform_info'
+			require 'passenger/exceptions'
+			
+			# Commonly used libraries.
+			['mysql', 'sqlite3'].each do |lib|
+				require lib
+			end
+		end
 	end
-
+	
 	# Spawn a RoR application When successful, an Application object will be
 	# returned, which represents the spawned RoR application.
 	#
@@ -94,9 +102,17 @@ class SpawnManager < AbstractServer
 	                      environment = "production", spawn_method = "smart",
 	                      app_type = "rails")
 		if app_type == "rack"
+			if !defined?(Rack::ApplicationSpawner)
+				require 'passenger/rack/application_spawner'
+			end
 			return Rack::ApplicationSpawner.spawn_application(app_root,
 				lower_privilege, lowest_user, environment)
 		else
+			if !defined?(Railz::FrameworkSpawner)
+				require 'passenger/application'
+				require 'passenger/railz/framework_spawner'
+				require 'passenger/railz/application_spawner'
+			end
 			return spawn_rails_application(app_root, lower_privilege, lowest_user,
 				environment, spawn_method)
 		end
@@ -237,13 +253,11 @@ private
 		rescue VersionNotFound => e
 			send_error_page(client, 'version_not_found', :error => e, :app_root => app_root)
 		rescue AppInitError => e
-			if (defined?(Mysql::Error) && e.child_exception.is_a?(Mysql::Error)) ||
-			   (e.child_exception.is_a?(UnknownError) && e.child_exception.real_class_name =~ /^ActiveRecord/)
+			if database_error?(e)
 				send_error_page(client, 'database_error', :error => e,
 					:app_root => app_root, :app_name => app_name(app_type),
 					:app_type => app_type)
-			elsif e.child_exception.is_a?(LoadError) ||
-			   (e.child_exception.is_a?(UnknownError) && e.child_exception.real_class_name == "MissingSourceFile")
+			elsif load_error?(e)
 				# A source file failed to load, maybe because of a
 				# missing gem. If that's the case then the sysadmin
 				# will install probably the gem. So we clear RubyGems's
@@ -300,11 +314,30 @@ private
 	end
 	
 	def send_error_page(channel, template_name, options = {})
+		require 'passenger/html_template' unless defined?(HTMLTemplate)
+		require 'passenger/platform_info' unless defined?(PlatformInfo)
 		options["enterprisey"] = File.exist?("#{File.dirname(__FILE__)}/../../enterprisey.txt") ||
 			File.exist?("/etc/passenger_enterprisey.txt")
 		data = HTMLTemplate.new(template_name, options).result
 		channel.write('error_page')
 		channel.write_scalar(data)
+	end
+	
+	def database_error?(e)
+		return ( defined?(Mysql::Error) && e.child_exception.is_a?(Mysql::Error) ) ||
+		       ( e.child_exception.is_a?(UnknownError) &&
+		           (
+		               e.child_exception.real_class_name =~ /^ActiveRecord/ ||
+		               e.child_exception.real_class_name =~ /^Mysql::/
+		           )
+		       )
+	end
+	
+	def load_error?(e)
+		return e.child_exception.is_a?(LoadError) || (
+		           e.child_exception.is_a?(UnknownError) &&
+		           e.child_exception.real_class_name == "MissingSourceFile"
+		)
 	end
 	
 	def app_name(app_type)
