@@ -295,13 +295,13 @@ private
 		cgi = CGIFixed.new(headers, socket, ResponseSender.new(socket))
 		::Dispatcher.dispatch(cgi, ::ActionController::CgiRequest::DEFAULT_SESSION_OPTIONS,
 			cgi.stdoutput)
-		socket.close
 	rescue IOError, SocketError, SystemCallError => e
 		print_exception("Passenger RequestHandler", e)
 	rescue SecurityError => e
 		STDERR.puts("*** Passenger RequestHandler: HTTP header size exceeded maximum.")
 		STDERR.flush
 		print_exception("Passenger RequestHandler", e)
+	ensure
 		socket.close rescue nil
 	end
 	
