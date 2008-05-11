@@ -19,6 +19,7 @@
 #define _PASSENGER_APPLICATION_POOL_SERVER_H_
 
 #include <boost/shared_ptr.hpp>
+#include <boost/thread/mutex.hpp>
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -135,6 +136,8 @@ private:
 		 */
 		int server;
 		
+		mutex lock;
+		
 		~SharedData() {
 			close(server);
 		}
@@ -161,6 +164,7 @@ private:
 		
 		virtual ~RemoteSession() {
 			closeStream();
+			mutex::scoped_lock(data->lock);
 			MessageChannel(data->server).write("close", toString(id).c_str(), NULL);
 		}
 		
@@ -187,6 +191,10 @@ private:
 			}
 		}
 		
+		virtual void discardStream() {
+			fd = -1;
+		}
+		
 		virtual pid_t getPid() const {
 			return pid;
 		}
@@ -199,7 +207,10 @@ private:
 	 */
 	class Client: public ApplicationPool {
 	private:
-		SharedDataPtr data;
+		// The smart pointer only serves to keep the shared data alive.
+		// We access the shared data via a normal pointer, for performance.
+		SharedDataPtr dataSmartPointer;
+		SharedData *data;
 		
 	public:
 		/**
@@ -208,27 +219,32 @@ private:
 		 * @param sock The newly established socket connection with the ApplicationPoolServer.
 		 */
 		Client(int sock) {
-			data = ptr(new SharedData());
+			dataSmartPointer = ptr(new SharedData());
+			data = dataSmartPointer.get();
 			data->server = sock;
 		}
 		
 		virtual void clear() {
 			MessageChannel channel(data->server);
+			mutex::scoped_lock l(data->lock);
 			channel.write("clear", NULL);
 		}
 		
 		virtual void setMaxIdleTime(unsigned int seconds) {
 			MessageChannel channel(data->server);
+			mutex::scoped_lock l(data->lock);
 			channel.write("setMaxIdleTime", toString(seconds).c_str(), NULL);
 		}
 		
 		virtual void setMax(unsigned int max) {
 			MessageChannel channel(data->server);
+			mutex::scoped_lock l(data->lock);
 			channel.write("setMax", toString(max).c_str(), NULL);
 		}
 		
 		virtual unsigned int getActive() const {
 			MessageChannel channel(data->server);
+			mutex::scoped_lock l(data->lock);
 			vector<string> args;
 			
 			channel.write("getActive", NULL);
@@ -238,6 +254,7 @@ private:
 		
 		virtual unsigned int getCount() const {
 			MessageChannel channel(data->server);
+			mutex::scoped_lock l(data->lock);
 			vector<string> args;
 			
 			channel.write("getCount", NULL);
@@ -247,6 +264,7 @@ private:
 		
 		virtual pid_t getSpawnServerPid() const {
 			MessageChannel channel(data->server);
+			mutex::scoped_lock l(data->lock);
 			vector<string> args;
 			
 			channel.write("getSpawnServerPid", NULL);
@@ -263,8 +281,10 @@ private:
 			const string &appType = "rails"
 		) {
 			MessageChannel channel(data->server);
+			mutex::scoped_lock l(data->lock);
 			vector<string> args;
 			int stream;
+			bool result;
 			
 			try {
 				channel.write("get", appRoot.c_str(),
@@ -277,18 +297,27 @@ private:
 			} catch (const SystemException &) {
 				throw IOException("The ApplicationPool server exited unexpectedly.");
 			}
-			if (!channel.read(args)) {
-				throw IOException("The ApplicationPool server unexpectedly closed the connection.");
+			try {
+				result = channel.read(args);
+			} catch (const SystemException &e) {
+				throw SystemException("Could not read a message from "
+					"the ApplicationPool server", e.code());
+			}
+			if (!result) {
+				throw IOException("The ApplicationPool server unexpectedly "
+					"closed the connection.");
 			}
 			if (args[0] == "ok") {
 				stream = channel.readFileDescriptor();
-				return ptr(new RemoteSession(data, atoi(args[1]), atoi(args[2]), stream));
+				return ptr(new RemoteSession(dataSmartPointer,
+					atoi(args[1]), atoi(args[2]), stream));
 			} else if (args[0] == "SpawnException") {
 				if (args[2] == "true") {
 					string errorPage;
 					
 					if (!channel.readScalar(errorPage)) {
-						throw IOException("The ApplicationPool server unexpectedly closed the connection.");
+						throw IOException("The ApplicationPool server "
+							"unexpectedly closed the connection.");
 					}
 					throw SpawnException(args[1], errorPage);
 				} else {
@@ -297,7 +326,8 @@ private:
 			} else if (args[0] == "IOException") {
 				throw IOException(args[1]);
 			} else {
-				throw IOException("The ApplicationPool server returned an unknown message.");
+				throw IOException("The ApplicationPool server returned "
+					"an unknown message: " + toString(args));
 			}
 		}
 	};

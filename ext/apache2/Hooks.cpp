@@ -600,7 +600,6 @@ public:
 				uploadData = receiveRequestBody(r);
 			}
 			
-			P_DEBUG("Processing HTTP request: " << r->uri);
 			try {
 				const char *defaultUser, *environment, *spawnMethod;
 				ServerConfig *sconfig;
@@ -673,6 +672,10 @@ public:
 			Container *container = new Container();
 			container->session = session;
 			apr_pool_cleanup_register(r->pool, container, Container::cleanup, apr_pool_cleanup_null);
+			
+			// Apparently apr_bucket_pipe or apr_brigade closes the
+			// file descriptor for us.
+			session->discardStream();
 
 			return OK;
 		} catch (const exception &e) {

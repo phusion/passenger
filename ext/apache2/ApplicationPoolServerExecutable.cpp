@@ -225,16 +225,22 @@ private:
 	 * The entry point of the thread that handles the client connection.
 	 */
 	void threadMain(const weak_ptr<Client> self) {
-		try {
-			vector<string> args;
-			while (true) {
+		vector<string> args;
+		while (true) {
+			try {
 				if (!channel.read(args)) {
 					// Client closed connection.
 					break;
 				}
-				
-				P_TRACE(3, "Client " << this << ": received message: " <<
-					toString(args));
+			} catch (const SystemException &e) {
+				P_WARN("Exception in ApplicationPoolServer client thread during "
+					"reading of a message: " << e.what());
+				break;
+			}
+			
+			P_TRACE(4, "Client " << this << ": received message: " <<
+				toString(args));
+			try {
 				if (args[0] == "get" && args.size() == 7) {
 					processGet(args);
 				} else if (args[0] == "close" && args.size() == 2) {
@@ -255,10 +261,12 @@ private:
 					processUnknownMessage(args);
 					break;
 				}
+			} catch (const exception &e) {
+				P_WARN("Uncaught exception in ApplicationPoolServer client thread:\n"
+					<< "   message: " << toString(args) << "\n"
+					<< "   exception: " << e.what());
+				break;
 			}
-		} catch (const exception &e) {
-			P_WARN("Uncaught exception in ApplicationPoolServer client thread: " <<
-				e.what());
 		}
 		
 		mutex::scoped_lock l(server.lock);
