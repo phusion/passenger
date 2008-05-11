@@ -234,6 +234,8 @@ Next, add a <<RailsBaseURI,RailsBaseURI>> option to the virtual host configurati
 -------------------------------------------
 Then restart Apache. The application has now been deployed.
 
+TIP: It is allowed to specify <<RailsBaseURI,RailsBaseURI>> multiple times.
+
 === Redeploying (restarting the Ruby on Rails application) ===
 
 Deploying a new version of a Ruby on Rails application is as simple as
@@ -367,6 +369,8 @@ Next, add a <<RackBaseURI,RackBaseURI>> option to the virtual host configuration
 </VirtualHost>
 -------------------------------------------
 Then restart Apache. The application has now been deployed.
+
+TIP: It is allowed to specify <<RacksBaseURI,RacksBaseURI>> multiple times.
 
 === Redeploying (restarting the Rack application) ===
 
