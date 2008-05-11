@@ -59,7 +59,7 @@ class Installer
 		Dir.chdir(PASSENGER_ROOT)
 		show_welcome_screen
 		check_dependencies || exit(1)
-		check_whether_apache_uses_prefork_mpm
+		check_whether_apache_uses_compatible_mpm
 		check_write_permission_to_passenger_root || exit(1)
 		if install_apache2_module
 			show_apache2_config_snippets
@@ -131,7 +131,7 @@ private
 		end
 	end
 	
-	def check_whether_apache_uses_prefork_mpm
+	def check_whether_apache_uses_compatible_mpm
 		line
 		# 'httpd -V' output is in the form of:
 		#
@@ -151,8 +151,8 @@ private
 				mpm = nil
 			end
 		end
-		if mpm != "prefork"
-			render_template 'apache_must_be_compiled_with_prefork_mpm',
+		if mpm != "prefork" && mpm != "worker"
+			render_template 'apache_must_be_compiled_with_compatible_mpm',
 				:current_mpm => mpm
 			wait
 		end
