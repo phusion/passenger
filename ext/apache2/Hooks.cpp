@@ -245,7 +245,12 @@ private:
 		Application::SessionPtr session;
 		
 		static apr_status_t cleanup(void *p) {
-			delete (Container *) p;
+			try {
+				delete (Container *) p;
+			} catch (const exception &e) {
+				P_WARN("Unexpected exception during closing of a session: "
+					<< e.what());
+			}
 			return APR_SUCCESS;
 		}
 	};

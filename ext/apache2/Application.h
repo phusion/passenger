@@ -73,6 +73,9 @@ public:
 	 */
 	class Session {
 	public:
+		/**
+		 * Implementing classes might throw arbitrary exceptions.
+		 */
 		virtual ~Session() {}
 		
 		/**
