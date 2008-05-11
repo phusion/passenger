@@ -19,6 +19,6 @@ if ruby -e ''; then
 	fi
 else
 	echo "********* NOTE ***********"
-	echo "Please install Ruby and RubyGems. Passenger needs them."
+	echo "Ruby doesn't seem to be installed. Please install Ruby and RubyGems, because Passenger needs them."
 fi
 exit 0
