@@ -69,9 +69,13 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	DirConfig *base = (DirConfig *) basev;
 	DirConfig *add = (DirConfig *) addv;
 	
-	config->base_uris = base->base_uris;
-	for (set<string>::const_iterator it(add->base_uris.begin()); it != add->base_uris.end(); it++) {
-		config->base_uris.insert(*it);
+	config->railsBaseURIs = base->railsBaseURIs;
+	for (set<string>::const_iterator it(add->railsBaseURIs.begin()); it != add->railsBaseURIs.end(); it++) {
+		config->railsBaseURIs.insert(*it);
+	}
+	config->rackBaseURIs = base->rackBaseURIs;
+	for (set<string>::const_iterator it(add->rackBaseURIs.begin()); it != add->rackBaseURIs.end(); it++) {
+		config->rackBaseURIs.insert(*it);
 	}
 	
 	config->autoDetectRails = (add->autoDetectRails == DirConfig::UNSET) ? base->autoDetectRails : add->autoDetectRails;
@@ -223,7 +227,7 @@ cmd_passenger_default_user(cmd_parms *cmd, void *dummy, const char *arg) {
 static const char *
 cmd_rails_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->base_uris.insert(arg);
+	config->railsBaseURIs.insert(arg);
 	return NULL;
 }
 
@@ -265,6 +269,13 @@ cmd_rails_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
 /*************************************************
  * Rack-specific settings
  *************************************************/
+
+static const char *
+cmd_rack_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->rackBaseURIs.insert(arg);
+	return NULL;
+}
 
 static const char *
 cmd_rack_auto_detect(cmd_parms *cmd, void *pcfg, int arg) {
@@ -358,6 +369,11 @@ const command_rec passenger_commands[] = {
 		"The spawn method to use."),
 	
 	// Rack-specific settings.
+	AP_INIT_TAKE1("RackBaseURI",
+		(Take1Func) cmd_rack_base_uri,
+		NULL,
+		RSRC_CONF,
+		"Reserve the given URI to a Rack application."),
 	AP_INIT_FLAG("RackAutoDetect",
 		(Take1Func) cmd_rack_auto_detect,
 		NULL,

@@ -45,7 +45,8 @@
 		struct DirConfig {
 			enum Threeway { ENABLED, DISABLED, UNSET };
 			
-			std::set<std::string> base_uris;
+			std::set<std::string> railsBaseURIs;
+			std::set<std::string> rackBaseURIs;
 			
 			/** Whether to autodetect Rails applications. */
 			Threeway autoDetectRails;

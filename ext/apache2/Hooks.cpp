@@ -134,7 +134,7 @@ public:
 			return NULL;
 		}
 		
-		for (it = config->base_uris.begin(); it != config->base_uris.end(); it++) {
+		for (it = config->railsBaseURIs.begin(); it != config->railsBaseURIs.end(); it++) {
 			const string &base(*it);
 			if (  base == "/"
 			 || ( uri_len == base.size() && memcmp(uri, base.c_str(), uri_len) == 0 )
@@ -144,6 +144,20 @@ public:
 				baseURIKnown = true;
 				baseURI = base.c_str();
 				appType = RAILS;
+				return baseURI;
+			}
+		}
+		
+		for (it = config->rackBaseURIs.begin(); it != config->rackBaseURIs.end(); it++) {
+			const string &base(*it);
+			if (  base == "/"
+			 || ( uri_len == base.size() && memcmp(uri, base.c_str(), uri_len) == 0 )
+			 || ( uri_len  > base.size() && memcmp(uri, base.c_str(), base.size()) == 0
+			                             && uri[base.size()] == '/' )
+			) {
+				baseURIKnown = true;
+				baseURI = base.c_str();
+				appType = RACK;
 				return baseURI;
 			}
 		}

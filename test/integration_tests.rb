@@ -391,7 +391,7 @@ describe "mod_passenger running in Apache 2" do
 		end
 	end
 	
-	describe "Rack support" do
+	describe "Rack application running in root URI" do
 		before :all do
 			@stub = setup_stub('rack')
 			@apache2.add_vhost('passenger.test', File.expand_path(@stub.app_root) + "/public")
@@ -401,6 +401,27 @@ describe "mod_passenger running in Apache 2" do
 		
 		after :all do
 			@stub.destroy
+		end
+		
+		it_should_behave_like "HelloWorld Rack application"
+	end
+	
+	describe "Rack application running in sub-URI" do
+		before :all do
+			FileUtils.rm_rf('tmp.webdir')
+			FileUtils.mkdir_p('tmp.webdir')
+			@stub = setup_stub('rack')
+			@apache2.add_vhost('passenger.test', File.expand_path('tmp.webdir')) do |vhost|
+				FileUtils.ln_s(File.expand_path(@stub.app_root) + "/public", 'tmp.webdir/rack')
+				vhost << "RackBaseURI /rack"
+			end
+			@apache2.start
+			@server = "http://passenger.test:#{@apache2.port}/rack"
+		end
+		
+		after :all do
+			@stub.destroy
+			FileUtils.rm_rf('tmp.webdir')
 		end
 		
 		it_should_behave_like "HelloWorld Rack application"
