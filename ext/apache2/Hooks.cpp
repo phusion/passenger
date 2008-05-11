@@ -305,7 +305,6 @@ private:
 				return HTTP_INTERNAL_SERVER_ERROR;
 			}
 		}
-		session->closeWriter();
 		return APR_SUCCESS;
 	}
 
@@ -444,9 +443,10 @@ public:
 			}
 			sendHeaders(r, session, railsBaseURI);
 			sendRequestBody(r, session);
+			session->shutdownWriter();
 			
 			apr_file_t *readerPipe = NULL;
-			int reader = session->getReader();
+			int reader = session->getStream();
 			apr_os_pipe_put(&readerPipe, &reader, r->pool);
 
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);

@@ -170,10 +170,8 @@ private:
 			try {
 				channel.write("ok", toString(session->getPid()).c_str(),
 					toString(lastSessionID - 1).c_str(), NULL);
-				channel.writeFileDescriptor(session->getReader());
-				channel.writeFileDescriptor(session->getWriter());
-				session->closeReader();
-				session->closeWriter();
+				channel.writeFileDescriptor(session->getStream());
+				session->closeStream();
 			} catch (const exception &) {
 				P_TRACE(3, "Client " << this << ": something went wrong "
 					"while sending 'ok' back to the client.");

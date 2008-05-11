@@ -99,14 +99,16 @@ public:
 		 * @throws SystemException Something went wrong during writing.
 		 */
 		virtual void sendHeaders(const char *headers, unsigned int size) {
-			int writer = getWriter();
-			if (writer == -1) {
-				throw IOException("Cannot write headers to the request handler because the writer channel has already been closed.");
+			int stream = getStream();
+			if (stream == -1) {
+				throw IOException("Cannot write headers to the request handler "
+					"because the writer stream has already been closed.");
 			}
 			try {
-				MessageChannel(writer).writeScalar(headers, size);
+				MessageChannel(stream).writeScalar(headers, size);
 			} catch (const SystemException &e) {
-				throw SystemException("An error occured while writing headers to the request handler", e.code());
+				throw SystemException("An error occured while writing headers "
+					"to the request handler", e.code());
 			}
 		}
 		
@@ -134,42 +136,45 @@ public:
 		 * @throws SystemException Something went wrong during writing.
 		 */
 		virtual void sendBodyBlock(const char *block, unsigned int size) {
-			int writer = getWriter();
-			if (writer == -1) {
-				throw IOException("Cannot write request body block to the request handler because the writer channel has already been closed.");
+			int stream = getStream();
+			if (stream == -1) {
+				throw IOException("Cannot write request body block to the "
+					"request handler because the writer stream has "
+					"already been closed.");
 			}
 			try {
-				MessageChannel(writer).writeRaw(block, size);
+			/* fprintf(stderr, "Block: ");
+			fwrite(block, 1, size, stderr);
+			fprintf(stderr, "\n");
+			fflush(stderr); */
+				MessageChannel(stream).writeRaw(block, size);
 			} catch (const SystemException &e) {
-				throw SystemException("An error occured while request body to the request handler", e.code());
+				throw SystemException("An error occured while sending the "
+					"request body to the request handler", e.code());
 			}
 		}
 		
 		/**
-		 * Get the reader channel's file descriptor.
+		 * Get the I/O stream's file descriptor. This steam is full-duplex.
 		 *
-		 * @pre The reader channel has not been closed.
+		 * @pre The stream has not been fully closed.
 		 */
-		virtual int getReader() const = 0;
+		virtual int getStream() const = 0;
 		
 		/**
-		 * Close the reader channel. This method may be safely called multiple times.
+		 * Indicate that we don't want to read data anymore from the I/O stream.
 		 */
-		virtual void closeReader() = 0;
+		virtual void shutdownReader() = 0;
 		
 		/**
-		 * Get the writer channel's file descriptor. You should rarely have to
-		 * use this directly. One should only use sendHeaders() and sendBodyBlock()
-		 * whenever possible.
-		 *
-		 * @pre The writer channel has not been closed.
+		 * Indicate that we don't want to write data anymore to the I/O stream.
 		 */
-		virtual int getWriter() const = 0;
+		virtual void shutdownWriter() = 0;
 		
 		/**
-		 * Close the writer channel. This method may be safely called multiple times.
+		 * Close the I/O stream.
 		 */
-		virtual void closeWriter() = 0;
+		virtual void closeStream() = 0;
 		
 		/**
 		 * Get the process ID of the application instance that belongs to this session.
@@ -184,7 +189,6 @@ private:
 	class StandardSession: public Session {
 	protected:
 		function<void()> closeCallback;
-		bool readerClosed, writerClosed;
 		int fd;
 		pid_t pid;
 		
@@ -195,34 +199,31 @@ private:
 			this->pid = pid;
 			this->closeCallback = closeCallback;
 			this->fd = fd;
-			readerClosed = writerClosed = false;
 		}
 	
 		virtual ~StandardSession() {
-			closeReader();
-			closeWriter();
+			closeStream();
 			closeCallback();
 		}
 		
-		virtual int getReader() const {
+		virtual int getStream() const {
 			return fd;
 		}
 		
-		virtual void closeReader() {
-			readerClosed = true;
-			if (readerClosed && writerClosed && fd != -1) {
-				close(fd);
-				fd = -1;
+		virtual void shutdownReader() {
+			if (fd != -1) {
+				shutdown(fd, SHUT_RD);
 			}
 		}
 		
-		virtual int getWriter() const {
-			return fd;
+		virtual void shutdownWriter() {
+			if (fd != -1) {
+				shutdown(fd, SHUT_WR);
+			}
 		}
 		
-		virtual void closeWriter() {
-			writerClosed = true;
-			if (readerClosed && writerClosed && fd != -1) {
+		virtual void closeStream() {
+			if (fd != -1) {
 				close(fd);
 				fd = -1;
 			}

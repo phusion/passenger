@@ -51,13 +51,13 @@ using namespace boost;
  *   // Send the request headers and request body data.
  *   session->sendHeaders(...);
  *   session->sendBodyBlock(...);
- *   // Done sending data, so we close the writer channel.
- *   session->closeWriter();
+ *   // Done sending data, so we shutdown the writer stream.
+ *   session->shutdownWriter();
  *
  *   // Now read the HTTP response.
- *   string responseData = readAllDataFromSocket(session->getReader());
- *   // Done reading data, so we close the reader channel.
- *   session->closeReader();
+ *   string responseData = readAllDataFromSocket(session->getStream());
+ *   // Done reading data, so we shutdown the reader stream.
+ *   session->shutdownReader();
  *
  *   // This session has now finished, so we close the session by resetting
  *   // the smart pointer to NULL (thereby destroying the Session object).
