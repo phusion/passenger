@@ -147,7 +147,7 @@ subdir 'ext/apache2' do
 	] do
 		create_executable "ApplicationPoolServerExecutable",
 			'ApplicationPoolServerExecutable.cpp Utils.o Logging.o',
-			"-I.. #{CXXFLAGS} #{LDFLAGS} ../boost/src/libboost_thread.a -lpthread"
+			"-I.. #{CXXFLAGS} #{LDFLAGS} -DPASSENGER_DEBUG ../boost/src/libboost_thread.a -lpthread"
 	end
 	
 	desc "Install mod_passenger Apache 2 module"

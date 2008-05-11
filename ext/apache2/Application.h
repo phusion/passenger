@@ -143,10 +143,6 @@ public:
 					"already been closed.");
 			}
 			try {
-			/* fprintf(stderr, "Block: ");
-			fwrite(block, 1, size, stderr);
-			fprintf(stderr, "\n");
-			fflush(stderr); */
 				MessageChannel(stream).writeRaw(block, size);
 			} catch (const SystemException &e) {
 				throw SystemException("An error occured while sending the "
@@ -155,7 +151,9 @@ public:
 		}
 		
 		/**
-		 * Get the I/O stream's file descriptor. This steam is full-duplex.
+		 * Get the I/O stream's file descriptor. This steam is full-duplex,
+		 * and will be automatically closed upon Session's destruction,
+		 * unless discardStream() is called.
 		 *
 		 * @pre The stream has not been fully closed.
 		 */
@@ -175,6 +173,12 @@ public:
 		 * Close the I/O stream.
 		 */
 		virtual void closeStream() = 0;
+		
+		/**
+		 * Discard the I/O stream's file descriptor, so that Session won't automatically
+		 * closed it upon Session's destruction.
+		 */
+		virtual void discardStream() = 0;
 		
 		/**
 		 * Get the process ID of the application instance that belongs to this session.
@@ -227,6 +231,10 @@ private:
 				close(fd);
 				fd = -1;
 			}
+		}
+		
+		virtual void discardStream() {
+			fd = -1;
 		}
 		
 		virtual pid_t getPid() const {
