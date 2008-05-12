@@ -429,6 +429,7 @@ public:
 				}
 				session = applicationPool->get(canonicalizePath(railsDir + "/.."),
 					true, defaultUser, environment, spawnMethod);
+				P_DEBUG("Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				if (e.hasErrorPage()) {
 					ap_set_content_type(r, "text/html; charset=utf-8");
