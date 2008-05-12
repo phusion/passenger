@@ -38,7 +38,7 @@
 			if (ret == 0) {
 				break;
 			} else if (ret == -1) {
-				throw strerror(errno);
+				throw SystemException("Cannot read from socket", errno);
 			} else {
 				result.append(buf, ret);
 			}
@@ -51,10 +51,10 @@
 		Application::SessionPtr session(pool->get("stub/railsapp"));
 		session->sendHeaders(createRequestHeaders());
 		session->shutdownWriter();
-		
+
 		int reader = session->getStream();
 		string result(readAll(reader));
-		session->shutdownReader();
+		session->closeStream();
 		ensure(result.find("hello world") != string::npos);
 	}
 	
@@ -236,7 +236,7 @@
 		
 		int reader = session->getStream();
 		string result(readAll(reader));
-		session->shutdownReader();
+		session->closeStream();
 		ensure(result.find("hello world") != string::npos);
 	}
 	

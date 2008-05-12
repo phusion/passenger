@@ -21,7 +21,7 @@
 
 namespace Passenger {
 
-int _debugLevel = 2;
+int _debugLevel = 1;
 ostream *_logStream = &cerr;
 ostream *_debugStream = &cerr;
 
