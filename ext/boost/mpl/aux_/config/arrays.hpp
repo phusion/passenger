@@ -10,9 +10,9 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source: /cvsroot/boost/boost/boost/mpl/aux_/config/arrays.hpp,v $
-// $Date: 2004/09/03 15:56:55 $
-// $Revision: 1.3 $
+// $Source$
+// $Date: 2004-09-03 11:56:59 -0400 (Fri, 03 Sep 2004) $
+// $Revision: 24892 $
 
 #include <boost/mpl/aux_/config/msvc.hpp>
 #include <boost/mpl/aux_/config/workaround.hpp>

@@ -11,9 +11,9 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source: /cvsroot/boost/boost/boost/mpl/has_xxx.hpp,v $
-// $Date: 2006/11/09 01:05:31 $
-// $Revision: 1.4.6.1 $
+// $Source$
+// $Date: 2007-11-25 13:07:19 -0500 (Sun, 25 Nov 2007) $
+// $Revision: 41369 $
 
 #include <boost/mpl/bool.hpp>
 #include <boost/mpl/aux_/type_wrapper.hpp>
@@ -25,6 +25,10 @@
 #include <boost/mpl/aux_/config/workaround.hpp>
 
 #include <boost/preprocessor/cat.hpp>
+
+#if BOOST_WORKAROUND( __BORLANDC__, BOOST_TESTED_AT(0x590) )
+# include <boost/type_traits/is_class.hpp>
+#endif
 
 #if !defined(BOOST_MPL_CFG_NO_HAS_XXX)
 
@@ -180,6 +184,41 @@ struct trait \
     : BOOST_PP_CAT(trait,_impl_)<T> \
 { \
 }; \
+/**/
+
+#   elif BOOST_WORKAROUND( __BORLANDC__, BOOST_TESTED_AT(0x590) )
+
+#   define BOOST_MPL_HAS_XXX_TRAIT_NAMED_BCB_DEF(trait, trait_tester, name, default_) \
+template< typename T, bool IS_CLASS > \
+struct trait_tester \
+{ \
+    BOOST_STATIC_CONSTANT( bool,  value = false ); \
+}; \
+template< typename T > \
+struct trait_tester< T, true > \
+{ \
+    struct trait_tester_impl \
+    { \
+        template < class U > \
+        static int  resolve( boost::mpl::aux::type_wrapper<U> const volatile * \
+                           , boost::mpl::aux::type_wrapper<typename U::name >* = 0 ); \
+        static char resolve( ... ); \
+    }; \
+    typedef boost::mpl::aux::type_wrapper<T> t_; \
+    BOOST_STATIC_CONSTANT( bool, value = ( sizeof( trait_tester_impl::resolve( static_cast< t_ * >(0) ) ) == sizeof(int) ) ); \
+}; \
+template< typename T, typename fallback_ = boost::mpl::bool_<default_> > \
+struct trait           \
+{                      \
+    BOOST_STATIC_CONSTANT( bool, value = (trait_tester< T, boost::is_class< T >::value >::value) );     \
+    typedef boost::mpl::bool_< trait< T, fallback_ >::value > type; \
+};
+
+#   define BOOST_MPL_HAS_XXX_TRAIT_NAMED_DEF(trait, name, default_) \
+    BOOST_MPL_HAS_XXX_TRAIT_NAMED_BCB_DEF( trait \
+                                         , BOOST_PP_CAT(trait,_tester)      \
+                                         , name       \
+                                         , default_ ) \
 /**/
 
 #   else // other SFINAE-capable compilers

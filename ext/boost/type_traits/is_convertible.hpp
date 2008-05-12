@@ -250,6 +250,9 @@ struct is_convertible_basic_impl
 #ifdef BOOST_MSVC
 #pragma warning(push)
 #pragma warning(disable:4244)
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400)
+#pragma warning(disable:6334)
+#endif
 #endif
     BOOST_STATIC_CONSTANT(bool, value =
         sizeof( _m_check(_m_from) ) == sizeof(::boost::type_traits::yes_type)
@@ -413,4 +416,3 @@ BOOST_TT_AUX_BOOL_TRAIT_DEF2(is_convertible,From,To,(::boost::detail::is_convert
 #include <boost/type_traits/detail/bool_trait_undef.hpp>
 
 #endif // BOOST_TT_IS_CONVERTIBLE_HPP_INCLUDED
-

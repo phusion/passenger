@@ -28,6 +28,10 @@
 #  define BOOST_SA_GCC_WORKAROUND
 #endif
 
+#ifdef BOOST_HAS_STATIC_ASSERT
+#  define BOOST_STATIC_ASSERT( B ) static_assert(B, #B)
+#else
+
 namespace boost{
 
 // HP aCC cannot deal with missing names for template value parameters
@@ -111,7 +115,7 @@ template<int x> struct static_assert_test{};
    enum { BOOST_JOIN(boost_static_assert_enum_, __LINE__) \
       = sizeof(::boost::STATIC_ASSERTION_FAILURE< (bool)( B ) >) }
 #endif
-
+#endif // ndef BOOST_HAS_STATIC_ASSERT
 
 #endif // BOOST_STATIC_ASSERT_HPP
 

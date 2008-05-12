@@ -15,9 +15,9 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source: /cvsroot/boost/boost/boost/mpl/bind.hpp,v $
-// $Date: 2004/10/26 14:51:04 $
-// $Revision: 1.13 $
+// $Source$
+// $Date: 2004-10-26 10:51:08 -0400 (Tue, 26 Oct 2004) $
+// $Revision: 25875 $
 
 #if !defined(BOOST_MPL_PREPROCESSING_MODE)
 #   include <boost/mpl/bind_fwd.hpp>

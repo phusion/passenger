@@ -10,9 +10,9 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source: /cvsroot/boost/boost/boost/mpl/aux_/nttp_decl.hpp,v $
-// $Date: 2004/12/16 22:43:05 $
-// $Revision: 1.2 $
+// $Source$
+// $Date: 2004-12-16 17:43:05 -0500 (Thu, 16 Dec 2004) $
+// $Revision: 26536 $
 
 #include <boost/mpl/aux_/config/nttp.hpp>
 

@@ -14,9 +14,9 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source: /cvsroot/boost/boost/boost/mpl/aux_/full_lambda.hpp,v $
-// $Date: 2004/09/04 01:10:19 $
-// $Revision: 1.14 $
+// $Source$
+// $Date: 2004-09-03 21:10:23 -0400 (Fri, 03 Sep 2004) $
+// $Revision: 24896 $
 
 #if !defined(BOOST_MPL_PREPROCESSING_MODE)
 #   include <boost/mpl/lambda_fwd.hpp>

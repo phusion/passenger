@@ -14,9 +14,9 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source: /cvsroot/boost/boost/boost/mpl/aux_/template_arity.hpp,v $
-// $Date: 2004/09/07 12:24:48 $
-// $Revision: 1.11 $
+// $Source$
+// $Date: 2004-09-07 08:24:50 -0400 (Tue, 07 Sep 2004) $
+// $Revision: 24957 $
 
 #include <boost/mpl/aux_/config/ttp.hpp>
 #include <boost/mpl/aux_/config/lambda.hpp>

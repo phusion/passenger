@@ -35,7 +35,7 @@
 #    define BOOST_PP_CHECK_3(im) BOOST_PP_CHECK_5(BOOST_PP_CHECK_4 im)
 #    define BOOST_PP_CHECK_4(res, _) res
 #    define BOOST_PP_CHECK_5(res) res
-# else // DMC
+# else /* DMC */
 #    define BOOST_PP_CHECK_D(x, type) BOOST_PP_CHECK_OO((type x))
 #    define BOOST_PP_CHECK_OO(par) BOOST_PP_CHECK_0 ## par
 #    define BOOST_PP_CHECK_0(chk) BOOST_PP_CHECK_1(BOOST_PP_CAT(BOOST_PP_CHECK_RESULT_, chk))

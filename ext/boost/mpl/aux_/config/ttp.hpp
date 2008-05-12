@@ -10,16 +10,18 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source: /cvsroot/boost/boost/boost/mpl/aux_/config/ttp.hpp,v $
-// $Date: 2004/09/02 15:40:45 $
-// $Revision: 1.7 $
+// $Source$
+// $Date: 2007-11-25 13:07:19 -0500 (Sun, 25 Nov 2007) $
+// $Revision: 41369 $
 
 #include <boost/mpl/aux_/config/msvc.hpp>
 #include <boost/mpl/aux_/config/gcc.hpp>
 #include <boost/mpl/aux_/config/workaround.hpp>
 
 #if !defined(BOOST_MPL_CFG_NO_TEMPLATE_TEMPLATE_PARAMETERS) \
-    && defined(BOOST_NO_TEMPLATE_TEMPLATES)
+    && ( defined(BOOST_NO_TEMPLATE_TEMPLATES) \
+      || BOOST_WORKAROUND( __BORLANDC__, BOOST_TESTED_AT( 0x590) ) \
+       )
 
 #   define BOOST_MPL_CFG_NO_TEMPLATE_TEMPLATE_PARAMETERS
 

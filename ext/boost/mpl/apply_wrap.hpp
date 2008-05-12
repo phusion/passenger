@@ -14,9 +14,9 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source: /cvsroot/boost/boost/boost/mpl/apply_wrap.hpp,v $
-// $Date: 2004/09/03 15:56:55 $
-// $Revision: 1.3 $
+// $Source$
+// $Date: 2004-09-03 11:56:59 -0400 (Fri, 03 Sep 2004) $
+// $Revision: 24892 $
 
 #if !defined(BOOST_MPL_PREPROCESSING_MODE)
 #   include <boost/mpl/aux_/arity.hpp>

@@ -179,12 +179,6 @@ template<class T> void swap(weak_ptr<T> & a, weak_ptr<T> & b)
     a.swap(b);
 }
 
-// deprecated, provided for backward compatibility
-template<class T> shared_ptr<T> make_shared(weak_ptr<T> const & r)
-{
-    return r.lock();
-}
-
 } // namespace boost
 
 #ifdef BOOST_MSVC

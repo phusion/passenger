@@ -10,9 +10,9 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source: /cvsroot/boost/boost/boost/mpl/aux_/na_fwd.hpp,v $
-// $Date: 2004/11/28 01:37:30 $
-// $Revision: 1.2 $
+// $Source$
+// $Date: 2004-11-27 20:39:23 -0500 (Sat, 27 Nov 2004) $
+// $Revision: 26324 $
 
 #include <boost/mpl/aux_/adl_barrier.hpp>
 

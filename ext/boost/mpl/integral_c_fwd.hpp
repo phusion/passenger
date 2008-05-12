@@ -10,9 +10,9 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source: /cvsroot/boost/boost/boost/mpl/integral_c_fwd.hpp,v $
-// $Date: 2006/11/08 21:44:27 $
-// $Revision: 1.4.14.1 $
+// $Source$
+// $Date: 2006-11-08 16:44:30 -0500 (Wed, 08 Nov 2006) $
+// $Revision: 35926 $
 
 #include <boost/mpl/aux_/config/workaround.hpp>
 #include <boost/mpl/aux_/adl_barrier.hpp>

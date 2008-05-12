@@ -10,9 +10,9 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source: /cvsroot/boost/boost/boost/mpl/and.hpp,v $
-// $Date: 2004/09/02 15:40:41 $
-// $Revision: 1.5 $
+// $Source$
+// $Date: 2007-11-25 13:07:19 -0500 (Sun, 25 Nov 2007) $
+// $Revision: 41369 $
 
 #include <boost/mpl/aux_/config/use_preprocessed.hpp>
 
@@ -29,10 +29,12 @@
 // has to be checked in a separate condition, otherwise GCC complains 
 // about 'and' being an alternative token
 #if defined(_MSC_VER) 
+#ifndef __GCCXML__
 #if defined(and) 
 #   pragma push_macro("and")
 #   undef and
 #   define and(x)
+#endif
 #endif
 #endif
 
@@ -40,8 +42,10 @@
 #   include <boost/mpl/aux_/include_preprocessed.hpp>
 
 #if defined(_MSC_VER)
+#ifndef __GCCXML__
 #if defined(and) 
 #   pragma pop_macro("and")
+#endif
 #endif
 #endif
 

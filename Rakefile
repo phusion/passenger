@@ -88,7 +88,7 @@ subdir 'ext/boost/src' do
 		# and should be ignored. Defining NDEBUG guarantees that boost::thread() will
 		# not abort if such an error occured.
 		flags = "-O2 -fPIC -I../.. #{THREADING_FLAGS} -DNDEBUG #{MULTI_ARCH_FLAGS}"
-		compile_cxx "*.cpp", flags
+		compile_cxx "*.cpp pthread/*.cpp", flags
 		create_static_library "libboost_thread.a", "*.o"
 	end
 	
