@@ -9,6 +9,7 @@
 #include <boost/thread/exceptions.hpp>
 #include <cstring>
 #include <string>
+#include <sstream>
 
 namespace boost {
 
@@ -17,9 +18,21 @@ thread_exception::thread_exception()
 {
 }
 
+thread_exception::thread_exception(const std::string &description, int sys_err_code)
+    : m_sys_err(sys_err_code)
+{
+    std::ostringstream s;
+    s << description << ": ";
+    s << strerror(sys_err_code) << " (" << sys_err_code << ")";
+    message.assign(s.str());
+}
+
 thread_exception::thread_exception(int sys_err_code)
     : m_sys_err(sys_err_code)
 {
+    std::ostringstream s;
+    s << strerror(sys_err_code) << " (" << sys_err_code << ")";
+    message.assign(s.str());
 }
 
 thread_exception::~thread_exception() throw()
@@ -29,6 +42,15 @@ thread_exception::~thread_exception() throw()
 int thread_exception::native_error() const
 {
     return m_sys_err; 
+}
+
+const char *thread_exception::what() const throw()
+{
+    if (message.empty()) {
+        return std::exception::what();
+    } else {
+        return message.c_str();
+    }
 }
 
 lock_error::lock_error()
@@ -53,6 +75,11 @@ thread_resource_error::thread_resource_error()
 {
 }
 
+thread_resource_error::thread_resource_error(const std::string &description, int sys_err_code)
+    : thread_exception(description, sys_err_code)
+{
+}
+
 thread_resource_error::thread_resource_error(int sys_err_code)
     : thread_exception(sys_err_code)
 {
@@ -60,11 +87,6 @@ thread_resource_error::thread_resource_error(int sys_err_code)
 
 thread_resource_error::~thread_resource_error() throw()
 {
-}
-
-const char* thread_resource_error::what() const throw()
-{
-    return "boost::thread_resource_error";
 }
 
 unsupported_thread_option::unsupported_thread_option()
