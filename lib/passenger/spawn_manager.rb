@@ -21,6 +21,7 @@ require 'passenger/application_spawner'
 require 'passenger/html_template'
 require 'passenger/exceptions'
 require 'passenger/utils'
+require 'passenger/platform_info'
 module Passenger
 
 # This class is capable of spawning Ruby on Rails application instances.
