@@ -126,6 +126,10 @@ private
 				print_dependency_installation_instructions(dep)
 				puts
 			end
+			color_puts "If the aforementioned instructions didn't solve your problem, then please take"
+			color_puts "a look at the Users Guide:"
+			puts
+			color_puts "  <yellow>#{USERS_GUIDE}</yellow>"
 			return false
 		end
 	end
