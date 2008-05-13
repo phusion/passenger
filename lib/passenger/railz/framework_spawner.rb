@@ -242,16 +242,16 @@ private
 		require 'action_mailer'
 		require 'dispatcher'
 		begin
-			# Part of Rails 1.0.
-			require 'rails_version'
-		rescue LoadError
-			require 'ruby_version_check'
 			if ::Rails::VERSION::MAJOR >= 2
 				require 'active_resource'
 			else
 				require 'action_web_service'
 			end
+			require 'ruby_version_check'
 			require 'active_support/whiny_nil'
+		rescue NameError
+			# Rails < 1.1
+			require 'action_web_service'
 		end
 		Object.send(:remove_const, :RAILS_ROOT)
 	end
