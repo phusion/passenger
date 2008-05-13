@@ -254,8 +254,8 @@ touch /webapps/mycook/tmp/restart.txt
 
 Passenger is not related to Ruby on Rails migrations in any way. To run
 migrations on your deployment server, please login to your deployment server
-(e.g. with 'ssh') and type `rake db:migrate RAILS_ENV=production' in a shell
-console, just like one normally runs migrations.
+(e.g. with 'ssh') and type `rake db:migrate RAILS_ENV=production` in a shell
+console, just like one would normally run migrations.
 
 
 == Configuring Passenger ==
