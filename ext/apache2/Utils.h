@@ -189,6 +189,15 @@ bool verifyRailsDir(const string &dir);
 bool verifyRackDir(const string &dir);
 
 /**
+ * Check whether the specified directory is a valid WSGI 'public'
+ * directory.
+ *
+ * @throws FileSystemException Unable to check because of a filesystem error.
+ * @ingroup Support
+ */
+bool verifyWSGIDir(const string &dir);
+
+/**
  * Represents a temporary file. The associated file is automatically
  * deleted upon object destruction.
  *

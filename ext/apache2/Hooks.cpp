@@ -73,7 +73,8 @@ public:
 	enum ApplicationType {
 		NONE,
 		RAILS,
-		RACK
+		RACK,
+		WSGI
 	};
 
 private:
@@ -91,6 +92,12 @@ private:
 	inline bool shouldAutoDetectRack() {
 		return config->autoDetectRack == DirConfig::ENABLED ||
 			config->autoDetectRack == DirConfig::UNSET;
+	}
+	
+	inline bool shouldAutoDetectWSGI() {
+		/* return config->autoDetectWSGI == DirConfig::ENABLED ||
+			config->autoDetectWSGI == DirConfig::UNSET; */
+		return true;
 	}
 	
 public:
@@ -174,6 +181,12 @@ public:
 			appType = RACK;
 			return baseURI;
 		}
+		if (shouldAutoDetectWSGI() && verifyWSGIDir(ap_document_root(r))) {
+			baseURIKnown = true;
+			baseURI = "/";
+			appType = WSGI;
+			return baseURI;
+		}
 		
 		baseURIKnown = true;
 		return NULL;
@@ -241,6 +254,8 @@ public:
 			return "rails";
 		case RACK:
 			return "rack";
+		case WSGI:
+			return "wsgi";
 		default:
 			return NULL;
 		};

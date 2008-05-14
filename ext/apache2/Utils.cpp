@@ -147,4 +147,11 @@ verifyRackDir(const string &dir) {
 	return fileExists(temp.c_str());
 }
 
+bool
+verifyWSGIDir(const string &dir) {
+	string temp(dir);
+	temp.append("/../passenger_wsgi.py");
+	return fileExists(temp.c_str());
+}
+
 } // namespace Passenger

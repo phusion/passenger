@@ -107,6 +107,10 @@ class SpawnManager < AbstractServer
 			end
 			return Rack::ApplicationSpawner.spawn_application(app_root,
 				lower_privilege, lowest_user, environment)
+		elsif app_type == "wsgi"
+			require 'passenger/wsgi/application_spawner'
+			return WSGI::ApplicationSpawner.spawn_application(app_root,
+				lower_privilege, lowest_user, environment)
 		else
 			if !defined?(Railz::FrameworkSpawner)
 				require 'passenger/application'
