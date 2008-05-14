@@ -50,6 +50,7 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 #define DEFAULT_RUBY_COMMAND "ruby"
 #define DEFAULT_RAILS_ENV    "production"
 #define DEFAULT_RACK_ENV     "production"
+#define DEFAULT_WSGI_ENV     "production"
 
 /**
  * If the HTTP client sends POST data larger than this value (in bytes),
@@ -649,12 +650,14 @@ public:
 					} else {
 						environment = config->railsEnv;
 					}
-				} else {
+				} else if (mapper.getApplicationType() == DirectoryMapper::RACK) {
 					if (config->rackEnv == NULL) {
 						environment = DEFAULT_RACK_ENV;
 					} else {
 						environment = config->rackEnv;
 					}
+				} else {
+					environment = DEFAULT_WSGI_ENV;
 				}
 				if (config->spawnMethod == DirConfig::SM_CONSERVATIVE) {
 					spawnMethod = "conservative";

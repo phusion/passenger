@@ -174,6 +174,43 @@ shared_examples_for "HelloWorld Rack application" do
 	end
 end
 
+shared_examples_for "HelloWorld WSGI application" do
+	it "is possible to fetch static assets" do
+		pending
+	end
+	
+	it "is possible to GET a regular WSGI page" do
+		get('/').should =~ /Hello World/
+	end
+	
+	it "supports restarting via restart.txt" do
+		get('/').should =~ /Hello World/
+		
+		code = %q{
+			def application(env, start_response):
+				start_response('200 OK', [('Content-Type', 'text/html')])
+				return ["changed"]
+		}.gsub(/^\t\t\t/, '')
+		
+		File.write("#{@stub.app_root}/passenger_wsgi.py", code)
+		File.new("#{@stub.app_root}/tmp/restart.txt", "w").close
+		get('/').should == "changed"
+		File.exist?("#{@stub.app_root}/tmp/restart.txt").should == false
+	end
+	
+	if Process.uid == 0
+		it "runs as an unprivileged user" do
+			File.prepend("#{@stub.app_root}/passenger_wsgi.py",
+				"file('foo.txt', 'w').close()\n")
+			File.new("#{@stub.app_root}/tmp/restart.txt", "w").close
+			get('/')
+			stat = File.stat("#{@stub.app_root}/foo.txt")
+			stat.uid.should_not == 0
+			stat.gid.should_not == 0
+		end
+	end
+end
+
 describe "mod_passenger running in Apache 2" do
 	include TestHelper
 	
@@ -425,6 +462,21 @@ describe "mod_passenger running in Apache 2" do
 		end
 		
 		it_should_behave_like "HelloWorld Rack application"
+	end
+	
+	describe "WSGI application running in root URI" do
+		before :all do
+			@stub = setup_stub('wsgi')
+			@apache2.add_vhost('passenger.test', File.expand_path(@stub.app_root) + "/public")
+			@apache2.start
+			@server = "http://passenger.test:#{@apache2.port}"
+		end
+		
+		after :all do
+			@stub.destroy
+		end
+		
+		it_should_behave_like "HelloWorld WSGI application"
 	end
 	
 	##### Helper methods #####

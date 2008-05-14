@@ -21,7 +21,7 @@ require 'passenger/utils'
 module Passenger
 module WSGI
 
-# Class for spawning Rack applications.
+# Class for spawning WSGI applications.
 class ApplicationSpawner
 	include Utils
 	REQUEST_HANDLER = File.expand_path(File.dirname(__FILE__) + "/request_handler.py")
@@ -31,12 +31,12 @@ class ApplicationSpawner
 		@@instance.spawn_application(*args)
 	end
 	
-	# Spawn an instance of the given Rack application. When successful, an
+	# Spawn an instance of the given WSGI application. When successful, an
 	# Application object will be returned, which represents the spawned
 	# application.
 	#
 	# Raises:
-	# - AppInitError: The Rack application raised an exception or called
+	# - AppInitError: The WSGI application raised an exception or called
 	#   exit() during startup.
 	# - SystemCallError, IOError, SocketError: Something went wrong.
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody", environment = "production")
