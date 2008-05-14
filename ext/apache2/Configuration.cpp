@@ -56,6 +56,7 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	DirConfig *config = create_dir_config_struct(p);
 	config->autoDetectRails = DirConfig::UNSET;
 	config->autoDetectRack = DirConfig::UNSET;
+	config->autoDetectWSGI = DirConfig::UNSET;
 	config->allowModRewrite = DirConfig::UNSET;
 	config->railsEnv = NULL;
 	config->rackEnv = NULL;
@@ -80,6 +81,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	
 	config->autoDetectRails = (add->autoDetectRails == DirConfig::UNSET) ? base->autoDetectRails : add->autoDetectRails;
 	config->autoDetectRack = (add->autoDetectRack == DirConfig::UNSET) ? base->autoDetectRack : add->autoDetectRack;
+	config->autoDetectWSGI = (add->autoDetectWSGI == DirConfig::UNSET) ? base->autoDetectWSGI : add->autoDetectWSGI;
 	config->allowModRewrite = (add->allowModRewrite == DirConfig::UNSET) ? base->allowModRewrite : add->allowModRewrite;
 	config->railsEnv = (add->railsEnv == NULL) ? base->railsEnv : add->railsEnv;
 	config->rackEnv = (add->rackEnv == NULL) ? base->rackEnv : add->rackEnv;
@@ -293,6 +295,18 @@ cmd_rack_env(cmd_parms *cmd, void *pcfg, const char *arg) {
 
 
 /*************************************************
+ * WSGI-specific settings
+ *************************************************/
+
+static const char *
+cmd_wsgi_auto_detect(cmd_parms *cmd, void *pcfg, int arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->autoDetectWSGI = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
+	return NULL;
+}
+
+
+/*************************************************
  * Obsolete settings
  *************************************************/
 
@@ -384,6 +398,13 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The environment under which a Rack app must run."),
+	
+	// Rack-specific settings.
+	AP_INIT_FLAG("PassengerWSGIAutoDetect",
+		(Take1Func) cmd_wsgi_auto_detect,
+		NULL,
+		RSRC_CONF,
+		"Whether auto-detection of WSGI applications should be enabled."),
 	
 	// Backwards compatibility options.
 	AP_INIT_TAKE1("RailsRuby",

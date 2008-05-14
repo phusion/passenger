@@ -95,9 +95,8 @@ private:
 	}
 	
 	inline bool shouldAutoDetectWSGI() {
-		/* return config->autoDetectWSGI == DirConfig::ENABLED ||
-			config->autoDetectWSGI == DirConfig::UNSET; */
-		return true;
+		return config->autoDetectWSGI == DirConfig::ENABLED ||
+			config->autoDetectWSGI == DirConfig::UNSET;
 	}
 	
 public:
@@ -384,7 +383,7 @@ private:
 		return apr_pstrmemdup(r->pool, first, last - first);
 	}
 
-	void addHeader(apr_table_t *table, const char *name, const char *value) {
+	void inline addHeader(apr_table_t *table, const char *name, const char *value) {
 		if (name != NULL && value != NULL) {
 			apr_table_addn(table, name, value);
 		}
@@ -430,7 +429,7 @@ private:
 				addHeader(headers, http2env(r->pool, hdrs[i].key), hdrs[i].val);
 			}
 		}
-	
+		
 		// Add other environment variables.
 		const apr_array_header_t *env_arr;
 		apr_table_entry_t *env;

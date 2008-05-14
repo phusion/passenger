@@ -54,6 +54,9 @@
 			/** Whether to autodetect Rack applications. */
 			Threeway autoDetectRack;
 			
+			/** Whether to autodetect WSGI applications. */
+			Threeway autoDetectWSGI;
+			
 			/** Whether mod_rewrite should be allowed for Rails applications. */
 			Threeway allowModRewrite;
 			
