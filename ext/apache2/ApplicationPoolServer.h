@@ -330,7 +330,7 @@ private:
 				} else {
 					throw SpawnException(args[1]);
 				}
-			} else if (args[0] == "BusyExeption") {
+			} else if (args[0] == "BusyException") {
 				throw BusyException(args[1]);
 			} else if (args[0] == "IOException") {
 				throw IOException(args[1]);

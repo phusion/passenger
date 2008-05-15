@@ -93,6 +93,7 @@ private:
 	static const int DEFAULT_MAX_INSTANCES_PER_APP = 0;
 	static const int CLEANER_THREAD_STACK_SIZE = 1024 * 128;
 	static const unsigned int MAX_GET_ATTEMPTS = 10;
+	static const unsigned int GET_TIMEOUT = 5000000; // In microseconds.
 
 	friend class ApplicationPoolServer;
 	struct AppContainer;
@@ -519,9 +520,13 @@ public:
 		const string &spawnMethod = "smart"
 	) {
 		unsigned int attempt;
+		unsigned int totalSleepTime;
 		
-		attempt = 1;
+		attempt = 0;
+		totalSleepTime = 0;
 		while (true) {
+			attempt++;
+			
 			mutex::scoped_lock l(lock);
 			pair<AppContainerPtr, AppContainerList *> p(
 				spawnOrUseExisting(l, appRoot, lowerPrivilege, lowestUser,
@@ -560,21 +565,22 @@ public:
 						appInstanceCount.erase(appRoot);
 						count--;
 						active--;
-						attempt++;
 						P_ASSERT(verifyState(), Application::SessionPtr(), "State is valid.");
 					}
 				}
 			}
 			if (container == NULL) {
 				l.unlock();
-				if (attempt == MAX_GET_ATTEMPTS) {
+				if (totalSleepTime > GET_TIMEOUT) {
 					throw BusyException("Cannot satisfy get() request.");
 				}
 				{
 					mutex::scoped_lock wl(waitingLock);
 					waiting++;
 				}
-				usleep(attempt * 20000);
+				unsigned int sleepTime = attempt * 10000;
+				totalSleepTime += sleepTime;
+				usleep(sleepTime);
 				{
 					mutex::scoped_lock wl(waitingLock);
 					waiting--;

@@ -144,8 +144,11 @@ information:
 
 function get(app_root):
 	MAX_ATTEMPTS = 10
-	attempt = 1
+	TIMEOUT = 5000000      # in microseconds
+	attempt = 0
+	total_sleep_time = 0
 	while (true):
+		attempt++
 		lock.synchronize:
 			container, list = spawn_or_use_existing(app_root)
 			if (container != null):
@@ -167,19 +170,19 @@ function get(app_root):
 						app_instance_count.remove(app_root)
 						count--
 						active--
-						attempt++
 		if (container == null):
 			# Unable to spawn or connect to an application right
 			# now. Try again later, unless we've already tried too
 			# many times.
-			if (attempt == MAX_ATTEMPTS):
+			if (total_sleep_time > TIMEOUT):
 				raise exception
 			waiting_lock.synchronize:
 				waiting++
-			usleep(attempt * 2000)
+			sleep_time = attempt * 2000
+			total_sleep_time += sleep_time
+			usleep(total_sleep_time)
 			waiting_lock.synchronize:
 				waiting--
-			attempt++
 
 
 # Returns a pair of [AppContainer, list<AppContainer>] that matches the
