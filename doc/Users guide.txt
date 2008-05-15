@@ -516,6 +516,19 @@ TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
 Edition>>. This allows you to reduce the memory usage of your Ruby on Rails applications
 by about 33%. And it's not hard to install.
 
+=== RailsMaxInstancesPerApp <integer> ===
+The maximum number of application instances that may be simultaneously active
+for a single application. This helps to make sure that a single application
+will not occupy all available slots in the application pool.
+
+This value must be less than <<PassengerMaxPoolSize,PassengerMaxPoolSize>>. A value of 0
+means that there is no limit placed on the number of instances a single application
+may use, i.e. only the global limit of <<PassengerMaxPoolSize,PassengerMaxPoolSize>>
+will be enforced.
+
+This option may only occur once, in the global server configuration.
+The default value is '0'.
+
 === PassengerPoolIdleTime <integer> ===
 The maximum number of seconds that a Ruby on Rails or Rack application instance
 may be idle. That is, if an application instance hasn't done anything after
@@ -697,9 +710,6 @@ RackAutoDetect off
 ==== RackBaseURI <uri> ====
 Used to specify that the given URI is a Rack application. See
 <<deploying_rack_to_sub_uri,Deploying Rack to a sub URI>> for an example.
-
-This option may occur multiple times, in the global server configuration or in a
-virtual host configuration block.
 
 [[rack_env]]
 ==== RackEnv <string> ====

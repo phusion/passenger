@@ -69,7 +69,7 @@ using namespace boost;
  * @endcode
  *
  * Internally, ApplicationPool::get() will keep spawned applications instances in
- * memory, and reuse them if possible. It will try to keep spawning to a minimum.
+ * memory, and reuse them if possible. It wil* @throw l try to keep spawning to a minimum.
  * Furthermore, if an application instance hasn't been used for a while, it
  * will be automatically shutdown in order to save memory. Restart requests are
  * honored: if an application has the file 'restart.txt' in its 'tmp' folder,
@@ -111,6 +111,8 @@ public:
  	 * @param appType The application type. Either "rails" or "rack".
 	 * @return A session object.
 	 * @throw SpawnException An attempt was made to spawn a new application instance, but that attempt failed.
+	 * @throw BusyException The application pool is too busy right now, and cannot
+	 *       satisfy the request. One should either abort, or try again later.
 	 * @throw IOException Something else went wrong.
 	 * @note Applications are uniquely identified with the application root
 	 *       string. So although <tt>appRoot</tt> does not have to be absolute, it
@@ -158,6 +160,15 @@ public:
 	 * and thus should not be called directly.
 	 */
 	virtual unsigned int getCount() const = 0;
+	
+	/**
+	 * Set a hard limit on the number of application instances that a single application
+	 * may spawn in this ApplicationPool. The exact behavior depends on the used algorithm, 
+	 * and is not specified by these API docs.
+	 *
+	 * It is allowed to set a limit lower than the current number of spawned applications.
+	 */
+	virtual void setMaxPerApp(unsigned int max) = 0;
 	
 	/**
 	 * Get the process ID of the spawn server that is used.

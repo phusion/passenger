@@ -115,6 +115,15 @@ private:
 			sleep(1);
 		}
 	}
+	
+	void deleteStatusReportFIFO() {
+		if (!statusReportFIFO.empty()) {
+			int ret;
+			do {
+				ret = unlink(statusReportFIFO.c_str());
+			} while (ret == -1 && errno == EINTR);
+		}
+	}
 
 public:
 	Server(int serverSocket,
@@ -148,10 +157,7 @@ public:
 			clients.clear();
 		}
 		clientsCopy.clear();
-		
-		do {
-			ret = unlink(statusReportFIFO.c_str());
-		} while (ret == -1 && errno == EINTR);
+		deleteStatusReportFIFO();
 	}
 	
 	int start(); // Will be defined later, because Client depends on Server's interface.
@@ -214,6 +220,9 @@ private:
 				channel.write("SpawnException", e.what(), "false", NULL);
 			}
 			failed = true;
+		} catch (const BusyException &e) {
+			channel.write("BusyException", e.what(), NULL);
+			failed = true;
 		} catch (const IOException &e) {
 			channel.write("IOException", e.what(), NULL);
 			failed = true;
@@ -255,6 +264,10 @@ private:
 	
 	void processGetCount(const vector<string> &args) {
 		channel.write(toString(server.pool.getCount()).c_str(), NULL);
+	}
+	
+	void processSetMaxPerApp(unsigned int maxPerApp) {
+		server.pool.setMaxPerApp(maxPerApp);
 	}
 	
 	void processGetSpawnServerPid(const vector<string> &args) {
@@ -308,6 +321,8 @@ private:
 					processGetActive(args);
 				} else if (args[0] == "getCount" && args.size() == 1) {
 					processGetCount(args);
+				} else if (args[0] == "setMaxPerApp" && args.size() == 2) {
+					processSetMaxPerApp(atoi(args[1]));
 				} else if (args[0] == "getSpawnServerPid" && args.size() == 1) {
 					processGetSpawnServerPid(args);
 				} else {
@@ -315,9 +330,11 @@ private:
 					break;
 				}
 			} catch (const exception &e) {
-				P_WARN("Uncaught exception in ApplicationPoolServer client thread:\n"
-					<< "   message: " << toString(args) << "\n"
-					<< "   exception: " << e.what());
+				if (!serverDone) {
+					P_WARN("Uncaught exception in ApplicationPoolServer client thread:\n"
+						<< "   message: " << toString(args) << "\n"
+						<< "   exception: " << e.what());
+				}
 				break;
 			}
 		}
@@ -364,11 +381,7 @@ public:
 	
 	~Client() {
 		if (thr != NULL) {
-			// We don't want to wait for the client to close the connection,
-			// if we were told to shutdown.
-			if (!serverDone) {
-				thr->join();
-			}
+			thr->join();
 			delete thr;
 		}
 		close(fd);
@@ -434,6 +447,10 @@ Server::start() {
 			clients.insert(client);
 		}
 		client->start(client);
+	}
+	if (serverDone) {
+		deleteStatusReportFIFO();
+		exit(0);
 	}
 	return 0;
 }

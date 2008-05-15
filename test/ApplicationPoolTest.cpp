@@ -121,13 +121,10 @@
 	TEST_METHOD(7) {
 		// If we call get() even though the pool is already full
 		// (active == max), and the application root is already
-		// in the pool, then the pool should have tried to open
-		// a session in an already active app.
+		// in the pool, then the pool must wait until there's an
+		// inactive application.
 		pool->setMax(1);
-		Application::SessionPtr session1(pool->get("stub/railsapp"));
-		Application::SessionPtr session2(pool->get("stub/railsapp"));
-		ensure_equals("An attempt to open a session on an already busy app was made", pool->getActive(), 2u);
-		ensure_equals("No new app has been spawned", pool->getCount(), 1u);
+		// TODO: How do we test this?
 	}
 	
 	TEST_METHOD(8) {
@@ -343,6 +340,13 @@
 			usleep(100000);
 		}
 		ensure_equals("App should have been cleaned up", pool->getCount(), 0u);
+	}
+	
+	TEST_METHOD(17) {
+		// MaxPerApp must be respected.
+		pool->setMax(3);
+		pool->setMaxPerApp(1);
+		// TODO: how do we test this?
 	}
 
 #endif /* USE_TEMPLATE */

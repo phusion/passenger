@@ -90,7 +90,10 @@ class StandardApplicationPool: public ApplicationPool {
 private:
 	static const int DEFAULT_MAX_IDLE_TIME = 120;
 	static const int DEFAULT_MAX_POOL_SIZE = 20;
+	static const int DEFAULT_MAX_INSTANCES_PER_APP = 0;
 	static const int CLEANER_THREAD_STACK_SIZE = 1024 * 128;
+	static const unsigned int MAX_GET_ATTEMPTS = 10;
+	static const unsigned int GET_TIMEOUT = 5000000; // In microseconds.
 
 	friend class ApplicationPoolServer;
 	struct AppContainer;
@@ -110,14 +113,18 @@ private:
 	
 	struct SharedData {
 		mutex lock;
+		mutex waitingLock;
 		condition activeOrMaxChanged;
 		
 		ApplicationMap apps;
 		unsigned int max;
 		unsigned int count;
 		unsigned int active;
+		unsigned int waiting;
+		unsigned int maxPerApp;
 		AppContainerList inactiveApps;
 		map<string, time_t> restartFileTimes;
+		map<string, unsigned int> appInstanceCount;
 	};
 	
 	typedef shared_ptr<SharedData> SharedDataPtr;
@@ -174,13 +181,48 @@ private:
 	
 	// Shortcuts for instance variables in SharedData. Saves typing in get().
 	mutex &lock;
+	mutex &waitingLock;
 	condition &activeOrMaxChanged;
 	ApplicationMap &apps;
 	unsigned int &max;
 	unsigned int &count;
 	unsigned int &active;
+	unsigned int &waiting;
+	unsigned int &maxPerApp;
 	AppContainerList &inactiveApps;
 	map<string, time_t> &restartFileTimes;
+	map<string, unsigned int> &appInstanceCount;
+	
+	/**
+	 * Verify that all the invariants are correct.
+	 */
+	bool inline verifyState() {
+	#if PASSENGER_DEBUG
+		// Invariant for _apps_.
+		ApplicationMap::const_iterator it;
+		for (it = apps.begin(); it != apps.end(); it++) {
+			AppContainerList *list = it->second.get();
+			P_ASSERT(!list->empty(), false, "List for '" << it->first << "' is nonempty.");
+			
+			AppContainerList::const_iterator prev_lit;
+			AppContainerList::const_iterator lit;
+			prev_lit = list->begin();
+			lit = prev_lit;
+			lit++;
+			for (; lit != list->end(); lit++) {
+				if ((*prev_lit)->sessions > 0) {
+					P_ASSERT((*lit)->sessions > 0, false,
+						"List for '" << it->first <<
+						"' is sorted from nonactive to active");
+				}
+			}
+		}
+		
+		P_ASSERT(active <= count, false,
+			"active (" << active << ") < count (" << count << ")");
+	#endif
+		return true;
+	}
 	
 	bool needsRestart(const string &appRoot) {
 		string restartFile(appRoot);
@@ -247,10 +289,13 @@ private:
 					inactiveApps.erase(it);
 					it = prev;
 					
+					appInstanceCount[app->getAppRoot()]--;
+					
 					count--;
 				}
 				if (appList->empty()) {
 					apps.erase(app->getAppRoot());
+					appInstanceCount.erase(app->getAppRoot());
 					data->restartFileTimes.erase(app->getAppRoot());
 				}
 			}
@@ -301,6 +346,7 @@ private:
 					count--;
 				}
 				apps.erase(appRoot);
+				appInstanceCount.erase(appRoot);
 				spawnManager.reload(appRoot);
 				it = apps.end();
 			}
@@ -308,7 +354,7 @@ private:
 			if (it != apps.end()) {
 				list = it->second.get();
 		
-				if (list->front()->sessions == 0 || count >= max) {
+				if (list->front()->sessions == 0) {
 					container = list->front();
 					list->pop_front();
 					list->push_back(container);
@@ -318,6 +364,10 @@ private:
 						inactiveApps.erase(container->ia_iterator);
 					}
 					active++;
+				} else if (count >= max || (
+					maxPerApp != 0 && appInstanceCount[appRoot] >= maxPerApp )
+					) {
+					return make_pair(AppContainerPtr(), (AppContainerList *) 0);
 				} else {
 					container = ptr(new AppContainer());
 					container->app = spawnManager.spawn(appRoot,
@@ -327,12 +377,16 @@ private:
 					list->push_back(container);
 					container->iterator = list->end();
 					container->iterator--;
+					appInstanceCount[appRoot]++;
 					count++;
 					active++;
 					activeOrMaxChanged.notify_all();
 				}
 			} else {
-				while (active >= max) {
+				while (!(
+					active < max &&
+					(maxPerApp == 0 || appInstanceCount[appRoot] < maxPerApp)
+				)) {
 					activeOrMaxChanged.wait(l);
 				}
 				if (count == max) {
@@ -343,6 +397,9 @@ private:
 					if (list->empty()) {
 						apps.erase(container->app->getAppRoot());
 						restartFileTimes.erase(container->app->getAppRoot());
+						appInstanceCount.erase(container->app->getAppRoot());
+					} else {
+						appInstanceCount[container->app->getAppRoot()]--;
 					}
 					count--;
 				}
@@ -354,8 +411,10 @@ private:
 				if (it == apps.end()) {
 					list = new AppContainerList();
 					apps[appRoot] = ptr(list);
+					appInstanceCount[appRoot] = 1;
 				} else {
 					list = it->second.get();
+					appInstanceCount[appRoot]++;
 				}
 				list->push_back(container);
 				container->iterator = list->end();
@@ -416,19 +475,25 @@ public:
 		#endif
 		data(new SharedData()),
 		lock(data->lock),
+		waitingLock(data->waitingLock),
 		activeOrMaxChanged(data->activeOrMaxChanged),
 		apps(data->apps),
 		max(data->max),
 		count(data->count),
 		active(data->active),
+		waiting(data->waiting),
+		maxPerApp(data->maxPerApp),
 		inactiveApps(data->inactiveApps),
-		restartFileTimes(data->restartFileTimes)
+		restartFileTimes(data->restartFileTimes),
+		appInstanceCount(data->appInstanceCount)
 	{
 		detached = false;
 		done = false;
 		max = DEFAULT_MAX_POOL_SIZE;
 		count = 0;
 		active = 0;
+		waiting = 0;
+		maxPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
 		maxIdleTime = DEFAULT_MAX_IDLE_TIME;
 		cleanerThread = new thread(
 			bind(&StandardApplicationPool::cleanerThreadMainLoop, this),
@@ -457,9 +522,10 @@ public:
 		const string &appType = "rails"
 	) {
 		unsigned int attempt;
-		const unsigned int MAX_ATTEMPTS = 5;
+		unsigned int totalSleepTime;
 		
 		attempt = 0;
+		totalSleepTime = 0;
 		while (true) {
 			attempt++;
 			
@@ -471,30 +537,55 @@ public:
 			AppContainerPtr &container(p.first);
 			AppContainerList &list(*p.second);
 			
-			container->lastUsed = time(NULL);
-			container->sessions++;
-			try {
-				return container->app->connect(SessionCloseCallback(data, container));
-			} catch (const exception &e) {
-				container->sessions--;
-				if (attempt == MAX_ATTEMPTS) {
-					string message("Cannot connect to an existing application instance for '");
-					message.append(appRoot);
-					message.append("': ");
-					try {
-						const SystemException &syse = dynamic_cast<const SystemException &>(e);
-						message.append(syse.sys());
-					} catch (const bad_cast &) {
-						message.append(e.what());
+			if (container != NULL) {
+				container->lastUsed = time(NULL);
+				container->sessions++;
+			
+				P_ASSERT(verifyState(), Application::SessionPtr(),
+					"State is valid:\n" << toString(false));
+				try {
+					return container->app->connect(SessionCloseCallback(data, container));
+				} catch (const exception &e) {
+					container->sessions--;
+					if (attempt == MAX_GET_ATTEMPTS) {
+						string message("Cannot connect to an existing "
+							"application instance for '");
+						message.append(appRoot);
+						message.append("': ");
+						try {
+							const SystemException &syse = dynamic_cast<const SystemException &>(e);
+							message.append(syse.sys());
+						} catch (const bad_cast &) {
+							message.append(e.what());
+						}
+						throw IOException(message);
+					} else {
+						list.erase(container->iterator);
+						if (list.empty()) {
+							apps.erase(appRoot);
+						}
+						appInstanceCount.erase(appRoot);
+						count--;
+						active--;
+						P_ASSERT(verifyState(), Application::SessionPtr(), "State is valid.");
 					}
-					throw IOException(message);
-				} else {
-					list.erase(container->iterator);
-					if (list.empty()) {
-						apps.erase(appRoot);
-					}
-					count--;
-					active--;
+				}
+			}
+			if (container == NULL) {
+				l.unlock();
+				if (totalSleepTime > GET_TIMEOUT) {
+					throw BusyException("Cannot satisfy get() request.");
+				}
+				{
+					mutex::scoped_lock wl(waitingLock);
+					waiting++;
+				}
+				unsigned int sleepTime = attempt * 10000;
+				totalSleepTime += sleepTime;
+				usleep(sleepTime);
+				{
+					mutex::scoped_lock wl(waitingLock);
+					waiting--;
 				}
 			}
 		}
@@ -507,6 +598,7 @@ public:
 		apps.clear();
 		inactiveApps.clear();
 		restartFileTimes.clear();
+		appInstanceCount.clear();
 		count = 0;
 		active = 0;
 	}
@@ -531,6 +623,12 @@ public:
 		return count;
 	}
 	
+	virtual void setMaxPerApp(unsigned int maxPerApp) {
+		mutex::scoped_lock l(lock);
+		this->maxPerApp = maxPerApp;
+		activeOrMaxChanged.notify_all();
+	}
+	
 	virtual pid_t getSpawnServerPid() const {
 		return spawnManager.getServerPid();
 	}
@@ -539,14 +637,15 @@ public:
 	 * Returns a textual description of the internal state of
 	 * the application pool.
 	 */
-	virtual string toString() const {
-		mutex::scoped_lock l(lock);
+	virtual string toString(bool lockMutex = true) const {
+		mutex::scoped_lock l(lock, lockMutex);
 		stringstream result;
 		
 		result << "----------- General information -----------" << endl;
 		result << "max    = " << max << endl;
 		result << "count  = " << count << endl;
 		result << "active = " << active << endl;
+		result << "waiting = " << waiting << endl;
 		result << endl;
 		
 		result << "----------- Applications -----------" << endl;

@@ -265,6 +265,12 @@ private:
 			return atoi(args[0].c_str());
 		}
 		
+		virtual void setMaxPerApp(unsigned int max) {
+			MessageChannel channel(data->server);
+			mutex::scoped_lock l(data->lock);
+			channel.write("setMaxPerApp", toString(max).c_str(), NULL);
+		}
+		
 		virtual pid_t getSpawnServerPid() const {
 			MessageChannel channel(data->server);
 			mutex::scoped_lock l(data->lock);
@@ -326,6 +332,8 @@ private:
 				} else {
 					throw SpawnException(args[1]);
 				}
+			} else if (args[0] == "BusyException") {
+				throw BusyException(args[1]);
 			} else if (args[0] == "IOException") {
 				throw IOException(args[1]);
 			} else {
@@ -569,10 +577,10 @@ public:
 		try {
 			MessageChannel channel(serverSocket);
 			int clientConnection;
-		
+			
 			// Write some random data to wake up the server.
 			channel.writeRaw("x", 1);
-		
+			
 			clientConnection = channel.readFileDescriptor();
 			return ptr(new Client(clientConnection));
 		} catch (const SystemException &e) {

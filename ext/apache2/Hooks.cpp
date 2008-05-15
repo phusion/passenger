@@ -295,13 +295,14 @@ private:
 		return (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
 	}
 	
-	void reportDocumentRootDeterminationError(request_rec *r) {
+	int reportDocumentRootDeterminationError(request_rec *r) {
 		ap_set_content_type(r, "text/html; charset=UTF-8");
 		ap_rputs("<h1>Passenger error #1</h1>\n", r);
 		ap_rputs("Cannot determine the document root for the current request.", r);
+		return OK;
 	}
 	
-	void reportFileSystemError(request_rec *r, const FileSystemException &e) {
+	int reportFileSystemError(request_rec *r, const FileSystemException &e) {
 		ap_set_content_type(r, "text/html; charset=UTF-8");
 		ap_rputs("<h1>Passenger error #2</h1>\n", r);
 		ap_rputs("An error occurred while trying to access '", r);
@@ -314,6 +315,13 @@ private:
 			ap_rputs("Please fix the relevant file permissions.", r);
 			ap_rputs("</p>", r);
 		}
+		return OK;
+	}
+	
+	int reportBusyException(request_rec *r) {
+		ap_custom_response(r, HTTP_SERVICE_UNAVAILABLE,
+			"This website is too busy right now.  Please try again later.");
+		return HTTP_SERVICE_UNAVAILABLE;
 	}
 	
 	/**
@@ -591,6 +599,7 @@ public:
 			applicationPool = applicationPoolServer->connect();
 			applicationPoolServer->detach();
 			applicationPool->setMax(config->maxPoolSize);
+			applicationPool->setMaxPerApp(config->maxInstancesPerApp);
 			applicationPool->setMaxIdleTime(config->poolIdleTime);
 		} catch (const exception &e) {
 			fprintf(stderr, "*** Cannot initialize Passenger: %s\n", e.what());
@@ -608,12 +617,10 @@ public:
 		
 		try {
 			if (mapper.getPublicDirectory().empty()) {
-				reportDocumentRootDeterminationError(r);
-				return OK;
+				return reportDocumentRootDeterminationError(r);
 			}
 		} catch (const FileSystemException &e) {
-			reportFileSystemError(r, e);
-			return OK;
+			return reportFileSystemError(r, e);
 		}
 		
 		int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_ERROR);
@@ -680,6 +687,8 @@ public:
 				} else {
 					throw;
 				}
+			} catch (const BusyException &e) {
+				return reportBusyException(r);
 			}
 			sendHeaders(r, session, mapper.getBaseURI());
 			if (expectingUploadData) {
