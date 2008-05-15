@@ -176,7 +176,7 @@ end
 
 shared_examples_for "HelloWorld WSGI application" do
 	it "is possible to fetch static assets" do
-		pending
+		get('/wsgi-snake.jpg').should == public_file('wsgi-snake.jpg')
 	end
 	
 	it "is possible to GET a regular WSGI page" do
