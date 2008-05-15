@@ -26,11 +26,13 @@
 #include <boost/bind.hpp>
 
 #include <string>
+#include <sstream>
 #include <map>
 #include <list>
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <ctime>
 #include <cerrno>
@@ -531,6 +533,40 @@ public:
 	
 	virtual pid_t getSpawnServerPid() const {
 		return spawnManager.getServerPid();
+	}
+	
+	/**
+	 * Returns a textual description of the internal state of
+	 * the application pool.
+	 */
+	virtual string toString() const {
+		mutex::scoped_lock l(lock);
+		stringstream result;
+		
+		result << "----------- General information -----------" << endl;
+		result << "max    = " << max << endl;
+		result << "count  = " << count << endl;
+		result << "active = " << active << endl;
+		result << endl;
+		
+		result << "----------- Applications -----------" << endl;
+		ApplicationMap::const_iterator it;
+		for (it = apps.begin(); it != apps.end(); it++) {
+			AppContainerList *list = it->second.get();
+			AppContainerList::const_iterator lit;
+			
+			result << it->first << ": " << endl;
+			for (lit = list->begin(); lit != list->end(); lit++) {
+				AppContainer *container = lit->get();
+				char buf[128];
+				
+				snprintf(buf, sizeof(buf), "PID: %-8d  Sessions: %d",
+					container->app->getPid(), container->sessions);
+				result << "  " << buf << endl;
+			}
+			result << endl;
+		}
+		return result.str();
 	}
 };
 

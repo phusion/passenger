@@ -376,6 +376,16 @@ private:
 			ret = close(serverSocket);
 		} while (ret == -1 && errno == EINTR);
 		
+		/*
+		 * Some Apache modules fork(), but don't close file descriptors.
+		 * mod_wsgi is one such example. Because of that, closing serverSocket
+		 * won't cause the ApplicationPool server to exit. So we send it a
+		 * signal.
+		 */
+		do {
+			ret = kill(serverPid, SIGINT);
+		} while (ret == -1 && errno == EINTR);
+		
 		P_DEBUG("Waiting for existing ApplicationPoolServerExecutable to exit...");
 		begin = time(NULL);
 		while (!done && time(NULL) < begin + 5) {
@@ -414,7 +424,7 @@ private:
 		
 		pid = fork();
 		if (pid == 0) { // Child process.
-			dup2(fds[0], 3);
+			dup2(fds[0], SERVER_SOCKET_FD);
 			
 			// Close all unnecessary file descriptors
 			for (long i = sysconf(_SC_OPEN_MAX) - 1; i > SERVER_SOCKET_FD; i--) {
@@ -556,7 +566,10 @@ public:
 	 * before calling detach().
 	 */
 	void detach() {
-		close(serverSocket);
+		int ret;
+		do {
+			ret = close(serverSocket);
+		} while (ret == -1 && errno == EINTR);
 		serverSocket = -1;
 	}
 };
