@@ -22,9 +22,12 @@
 #include <boost/thread/mutex.hpp>
 
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
+#include <cstdio>
 #include <cstdlib>
+#include <limits.h>
 #include <errno.h>
 #include <unistd.h>
 #include <signal.h>
@@ -338,6 +341,7 @@ private:
 	string m_logFile;
 	string m_rubyCommand;
 	string m_user;
+	string statusReportFIFO;
 	
 	/**
 	 * The PID of the ApplicationPool server process. If no server process
@@ -374,21 +378,26 @@ private:
 			ret = close(serverSocket);
 		} while (ret == -1 && errno == EINTR);
 		
-		/*
-		 * Some Apache modules fork(), but don't close file descriptors.
-		 * mod_wsgi is one such example. Because of that, closing serverSocket
-		 * won't cause the ApplicationPool server to exit. So we send it a
-		 * signal.
-		 */
-		do {
-			ret = kill(serverPid, SIGINT);
-		} while (ret == -1 && errno == EINTR);
-		
 		P_DEBUG("Waiting for existing ApplicationPoolServerExecutable to exit...");
 		begin = time(NULL);
 		while (!done && time(NULL) < begin + 5) {
-			done = waitpid(serverPid, NULL, WNOHANG) > 0;
-			usleep(100000);
+			/*
+			 * Some Apache modules fork(), but don't close file descriptors.
+			 * mod_wsgi is one such example. Because of that, closing serverSocket
+			 * won't cause the ApplicationPool server to exit. So we send it a
+			 * signal.
+			 */
+			do {
+				ret = kill(serverPid, SIGINT);
+			} while (ret == -1 && errno == EINTR);
+			
+			do {
+				ret = waitpid(serverPid, NULL, WNOHANG);
+			} while (ret == -1 && errno == EINTR);
+			done = ret > 0 || ret == -1;
+			if (!done) {
+				usleep(100000);
+			}
 		}
 		if (done) {
 			P_DEBUG("ApplicationPoolServerExecutable exited.");
@@ -399,6 +408,10 @@ private:
 		}
 		serverSocket = -1;
 		serverPid = 0;
+		
+		if (!statusReportFIFO.empty()) {
+			unlink(statusReportFIFO.c_str());
+		}
 	}
 	
 	/**
@@ -419,6 +432,8 @@ private:
 		if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
 			throw SystemException("Cannot create a Unix socket pair", errno);
 		}
+		
+		createStatusReportFIFO();
 		
 		pid = fork();
 		if (pid == 0) { // Child process.
@@ -441,6 +456,7 @@ private:
 				m_logFile.c_str(),
 				m_rubyCommand.c_str(),
 				m_user.c_str(),
+				statusReportFIFO.c_str(),
 				NULL);
 			int e = errno;
 			fprintf(stderr, "*** Passenger ERROR: Cannot execute %s: %s (%d)\n",
@@ -455,6 +471,23 @@ private:
 			close(fds[0]);
 			serverSocket = fds[1];
 			serverPid = pid;
+		}
+	}
+	
+	void createStatusReportFIFO() {
+		char filename[PATH_MAX];
+		
+		snprintf(filename, sizeof(filename), "/tmp/passenger_status.%d.fifo",
+			getpid());
+		filename[PATH_MAX - 1] = '\0';
+		if (mkfifo(filename, S_IRUSR | S_IWUSR) == -1 && errno != EEXIST) {
+			fprintf(stderr, "*** WARNING: Could not create FIFO '%s'; "
+				"disabling Passenger ApplicationPool status reporting.\n",
+				filename);
+			fflush(stderr);
+			statusReportFIFO = "";
+		} else {
+			statusReportFIFO = filename;
 		}
 	}
 
