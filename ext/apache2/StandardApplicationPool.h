@@ -90,6 +90,7 @@ class StandardApplicationPool: public ApplicationPool {
 private:
 	static const int DEFAULT_MAX_IDLE_TIME = 120;
 	static const int DEFAULT_MAX_POOL_SIZE = 20;
+	static const int DEFAULT_MAX_INSTANCES_PER_APP = 0;
 	static const int CLEANER_THREAD_STACK_SIZE = 1024 * 128;
 
 	friend class ApplicationPoolServer;
@@ -116,8 +117,10 @@ private:
 		unsigned int max;
 		unsigned int count;
 		unsigned int active;
+		unsigned int maxPerApp;
 		AppContainerList inactiveApps;
 		map<string, time_t> restartFileTimes;
+		map<string, unsigned int> appInstanceCount;
 	};
 	
 	typedef shared_ptr<SharedData> SharedDataPtr;
@@ -179,8 +182,10 @@ private:
 	unsigned int &max;
 	unsigned int &count;
 	unsigned int &active;
+	unsigned int &maxPerApp;
 	AppContainerList &inactiveApps;
 	map<string, time_t> &restartFileTimes;
+	map<string, unsigned int> &appInstanceCount;
 	
 	bool needsRestart(const string &appRoot) {
 		string restartFile(appRoot);
@@ -247,10 +252,13 @@ private:
 					inactiveApps.erase(it);
 					it = prev;
 					
+					appInstanceCount[app->getAppRoot()]--;
+					
 					count--;
 				}
 				if (appList->empty()) {
 					apps.erase(app->getAppRoot());
+					appInstanceCount.erase(app->getAppRoot());
 					data->restartFileTimes.erase(app->getAppRoot());
 				}
 			}
@@ -300,6 +308,7 @@ private:
 					count--;
 				}
 				apps.erase(appRoot);
+				appInstanceCount.erase(appRoot);
 				spawnManager.reload(appRoot);
 				it = apps.end();
 			}
@@ -307,7 +316,8 @@ private:
 			if (it != apps.end()) {
 				list = it->second.get();
 		
-				if (list->front()->sessions == 0 || count >= max) {
+				if (list->front()->sessions == 0 || count >= max
+				 || ( maxPerApp != 0 && appInstanceCount[appRoot] >= maxPerApp )) {
 					container = list->front();
 					list->pop_front();
 					list->push_back(container);
@@ -326,12 +336,16 @@ private:
 					list->push_back(container);
 					container->iterator = list->end();
 					container->iterator--;
+					appInstanceCount[appRoot]++;
 					count++;
 					active++;
 					activeOrMaxChanged.notify_all();
 				}
 			} else {
-				while (active >= max) {
+				while (!(
+					active < max &&
+					(maxPerApp == 0 || appInstanceCount[appRoot] < maxPerApp)
+				)) {
 					activeOrMaxChanged.wait(l);
 				}
 				if (count == max) {
@@ -342,6 +356,9 @@ private:
 					if (list->empty()) {
 						apps.erase(container->app->getAppRoot());
 						restartFileTimes.erase(container->app->getAppRoot());
+						appInstanceCount.erase(container->app->getAppRoot());
+					} else {
+						appInstanceCount[container->app->getAppRoot()]--;
 					}
 					count--;
 				}
@@ -353,8 +370,10 @@ private:
 				if (it == apps.end()) {
 					list = new AppContainerList();
 					apps[appRoot] = ptr(list);
+					appInstanceCount[appRoot] = 1;
 				} else {
 					list = it->second.get();
+					appInstanceCount[appRoot]++;
 				}
 				list->push_back(container);
 				container->iterator = list->end();
@@ -420,14 +439,17 @@ public:
 		max(data->max),
 		count(data->count),
 		active(data->active),
+		maxPerApp(data->maxPerApp),
 		inactiveApps(data->inactiveApps),
-		restartFileTimes(data->restartFileTimes)
+		restartFileTimes(data->restartFileTimes),
+		appInstanceCount(data->appInstanceCount)
 	{
 		detached = false;
 		done = false;
 		max = DEFAULT_MAX_POOL_SIZE;
 		count = 0;
 		active = 0;
+		maxPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
 		maxIdleTime = DEFAULT_MAX_IDLE_TIME;
 		cleanerThread = new thread(
 			bind(&StandardApplicationPool::cleanerThreadMainLoop, this),
@@ -491,6 +513,7 @@ public:
 					if (list.empty()) {
 						apps.erase(appRoot);
 					}
+					appInstanceCount.erase(appRoot);
 					count--;
 					active--;
 				}
@@ -505,6 +528,7 @@ public:
 		apps.clear();
 		inactiveApps.clear();
 		restartFileTimes.clear();
+		appInstanceCount.clear();
 		count = 0;
 		active = 0;
 	}
@@ -527,6 +551,12 @@ public:
 	
 	virtual unsigned int getCount() const {
 		return count;
+	}
+	
+	virtual void setMaxPerApp(unsigned int maxPerApp) {
+		mutex::scoped_lock l(lock);
+		this->maxPerApp = maxPerApp;
+		activeOrMaxChanged.notify_all();
 	}
 	
 	virtual pid_t getSpawnServerPid() const {

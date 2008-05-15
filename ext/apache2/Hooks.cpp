@@ -364,6 +364,7 @@ public:
 			applicationPool = applicationPoolServer->connect();
 			applicationPoolServer->detach();
 			applicationPool->setMax(config->maxPoolSize);
+			applicationPool->setMaxPerApp(config->maxInstancesPerApp);
 			applicationPool->setMaxIdleTime(config->poolIdleTime);
 		} catch (const exception &e) {
 			fprintf(stderr, "*** Cannot initialize Passenger: %s\n", e.what());

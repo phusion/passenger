@@ -159,6 +159,15 @@ public:
 	virtual unsigned int getCount() const = 0;
 	
 	/**
+	 * Set a hard limit on the number of application instances that a single application
+	 * may spawn in this ApplicationPool. The exact behavior depends on the used algorithm, 
+	 * and is not specified by these API docs.
+	 *
+	 * It is allowed to set a limit lower than the current number of spawned applications.
+	 */
+	virtual void setMaxPerApp(unsigned int max) = 0;
+	
+	/**
 	 * Get the process ID of the spawn server that is used.
 	 *
 	 * This method exposes an implementation detail. It is used by unit tests to verify

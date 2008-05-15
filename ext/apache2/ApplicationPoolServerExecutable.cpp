@@ -256,6 +256,10 @@ private:
 		channel.write(toString(server.pool.getCount()).c_str(), NULL);
 	}
 	
+	void processSetMaxPerApp(unsigned int maxPerApp) {
+		server.pool.setMaxPerApp(maxPerApp);
+	}
+	
 	void processGetSpawnServerPid(const vector<string> &args) {
 		channel.write(toString(server.pool.getSpawnServerPid()).c_str(), NULL);
 	}
@@ -307,6 +311,8 @@ private:
 					processGetActive(args);
 				} else if (args[0] == "getCount" && args.size() == 1) {
 					processGetCount(args);
+				} else if (args[0] == "setMaxPerApp" && args.size() == 2) {
+					processSetMaxPerApp(atoi(args[1]));
 				} else if (args[0] == "getSpawnServerPid" && args.size() == 1) {
 					processGetSpawnServerPid(args);
 				} else {

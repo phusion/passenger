@@ -26,6 +26,7 @@ using namespace Passenger;
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
 #define DEFAULT_MAX_POOL_SIZE 20
+#define DEFAULT_MAX_INSTANCES_PER_APP 0
 #define DEFAULT_POOL_IDLE_TIME 120
 
 
@@ -86,6 +87,8 @@ passenger_config_create_server(apr_pool_t *p, server_rec *s) {
 	config->root = NULL;
 	config->maxPoolSize = DEFAULT_MAX_POOL_SIZE;
 	config->maxPoolSizeSpecified = false;
+	config->maxInstancesPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
+	config->maxInstancesPerAppSpecified = false;
 	config->poolIdleTime = DEFAULT_POOL_IDLE_TIME;
 	config->poolIdleTimeSpecified = false;
 	config->userSwitching = true;
@@ -104,6 +107,8 @@ passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
 	config->root = (add->root == NULL) ? base->root : add->root;
 	config->maxPoolSize = (add->maxPoolSizeSpecified) ? base->maxPoolSize : add->maxPoolSize;
 	config->maxPoolSizeSpecified = base->maxPoolSizeSpecified || add->maxPoolSizeSpecified;
+	config->maxInstancesPerApp = (add->maxInstancesPerAppSpecified) ? base->maxInstancesPerApp : add->maxInstancesPerApp;
+	config->maxInstancesPerAppSpecified = base->maxInstancesPerAppSpecified || add->maxInstancesPerAppSpecified;
 	config->poolIdleTime = (add->poolIdleTime) ? base->poolIdleTime : add->poolIdleTime;
 	config->poolIdleTimeSpecified = base->poolIdleTimeSpecified || add->poolIdleTimeSpecified;
 	config->userSwitching = (add->userSwitchingSpecified) ? add->userSwitching : base->userSwitching;
@@ -123,6 +128,8 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 		final->root = (final->root != NULL) ? final->root : config->root;
 		final->maxPoolSize = (final->maxPoolSizeSpecified) ? final->maxPoolSize : config->maxPoolSize;
 		final->maxPoolSizeSpecified = final->maxPoolSizeSpecified || config->maxPoolSizeSpecified;
+		final->maxInstancesPerApp = (final->maxInstancesPerAppSpecified) ? final->maxInstancesPerApp : config->maxInstancesPerApp;
+		final->maxInstancesPerAppSpecified = final->maxInstancesPerAppSpecified || config->maxInstancesPerAppSpecified;
 		final->poolIdleTime = (final->poolIdleTimeSpecified) ? final->poolIdleTime : config->poolIdleTime;
 		final->poolIdleTimeSpecified = final->poolIdleTimeSpecified || config->poolIdleTimeSpecified;
 		final->userSwitching = (config->userSwitchingSpecified) ? config->userSwitching : final->userSwitching;
@@ -207,6 +214,23 @@ cmd_rails_max_pool_size(cmd_parms *cmd, void *pcfg, const char *arg) {
 	} else {
 		config->maxPoolSize = (unsigned int) result;
 		config->maxPoolSizeSpecified = true;
+		return NULL;
+	}
+}
+
+static const char *
+cmd_rails_max_instances_per_app(cmd_parms *cmd, void *pcfg, const char *arg) {
+	ServerConfig *config = (ServerConfig *) ap_get_module_config(
+		cmd->server->module_config, &passenger_module);
+	char *end;
+	long int result;
+	
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		return "Invalid number specified for RailsMaxInstancesPerApp.";
+	} else {
+		config->maxInstancesPerApp = (unsigned int) result;
+		config->maxInstancesPerAppSpecified = true;
 		return NULL;
 	}
 }
@@ -301,6 +325,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The maximum number of simultaneously alive Rails application instances."),
+	AP_INIT_TAKE1("RailsMaxInstancesPerApp",
+		(Take1Func) cmd_rails_max_instances_per_app,
+		NULL,
+		RSRC_CONF,
+		"The maximum number of simultaneously alive Rails application instances a single application may occupy."),
 	AP_INIT_TAKE1("RailsPoolIdleTime",
 		(Take1Func) cmd_rails_pool_idle_time,
 		NULL,

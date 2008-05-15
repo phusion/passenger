@@ -76,6 +76,14 @@
 			 * this server config. */
 			bool maxPoolSizeSpecified;
 			
+			/** The maximum number of simultaneously alive Rails application
+			 * that a single Rails application may occupy. */
+			unsigned int maxInstancesPerApp;
+			
+			/** Whether the maxInstancesPerApp option was explicitly specified in
+			 * this server config. */
+			bool maxInstancesPerAppSpecified;
+			
 			/** The maximum number of seconds that a Rails application may be
 			 * idle before it gets terminated. */
 			unsigned int poolIdleTime;

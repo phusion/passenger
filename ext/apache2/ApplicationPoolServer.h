@@ -265,6 +265,12 @@ private:
 			return atoi(args[0].c_str());
 		}
 		
+		virtual void setMaxPerApp(unsigned int max) {
+			MessageChannel channel(data->server);
+			mutex::scoped_lock l(data->lock);
+			channel.write("setMaxPerApp", toString(max).c_str(), NULL);
+		}
+		
 		virtual pid_t getSpawnServerPid() const {
 			MessageChannel channel(data->server);
 			mutex::scoped_lock l(data->lock);
