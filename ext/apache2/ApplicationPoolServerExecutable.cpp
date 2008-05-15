@@ -38,7 +38,6 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/resource.h>
-#include <limits.h>
 #include <unistd.h>
 #include <signal.h>
 #include <string>
@@ -63,6 +62,9 @@ typedef shared_ptr<Client> ClientPtr;
 
 #define SERVER_SOCKET_FD 3
 
+/**
+ * Whether we received a signal indicating that we shut gracefully shutdown.
+ */
 static bool serverDone = false;
 
 
@@ -80,8 +82,8 @@ private:
 	mutex lock;
 	string statusReportFIFO;
 	
-	void statusReportThread() {
-		while (true) {
+	void statusReportThreadMain() {
+		while (!serverDone) {
 			struct stat buf;
 			int ret;
 			
@@ -89,18 +91,20 @@ private:
 				ret = stat(statusReportFIFO.c_str(), &buf);
 			} while (ret == -1 && errno == EINTR);
 			if (ret == -1 || !S_ISFIFO(buf.st_mode)) {
-				// Something bad happened with the status
-				// report FIFO, so we bail out.
-				return;
+				// Something bad happened with the status report
+				// FIFO, so we bail out.
+				break;
 			}
 			
 			FILE *f;
 			
-			do {
-				f = fopen(statusReportFIFO.c_str(), "w");
-			} while (f == NULL && errno == EINTR);
-			if (f == NULL) {
-				return;
+			if (!serverDone) {
+				do {
+					f = fopen(statusReportFIFO.c_str(), "w");
+				} while (f == NULL && errno == EINTR && !serverDone);
+			}
+			if (f == NULL || serverDone) {
+				break;
 			}
 			
 			string report(pool.toString());
@@ -117,23 +121,12 @@ public:
 	       const string &spawnServerCommand,
 	       const string &logFile,
 	       const string &rubyCommand,
-	       const string &user)
+	       const string &user,
+	       const string &statusReportFIFO)
 		: pool(spawnServerCommand, logFile, rubyCommand, user) {
 		
 		this->serverSocket = serverSocket;
-		
-		char filename[PATH_MAX];
-		snprintf(filename, sizeof(filename), "/tmp/passenger_status.%d.fifo",
-			getpid());
-		filename[PATH_MAX - 1] = '\0';
-		if (mkfifo(filename, S_IRUSR | S_IWUSR) == -1 && errno != EEXIST) {
-			fprintf(stderr, "*** WARNING: Could not create FIFO '%s'; "
-				"disabling Passenger ApplicationPool status reporting.\n",
-				filename);
-			fflush(stderr);
-		} else {
-			statusReportFIFO = filename;
-		}
+		this->statusReportFIFO = statusReportFIFO;
 	}
 	
 	~Server() {
@@ -291,8 +284,10 @@ private:
 					break;
 				}
 			} catch (const SystemException &e) {
-				P_WARN("Exception in ApplicationPoolServer client thread during "
-					"reading of a message: " << e.what());
+				if (!serverDone) {
+					P_WARN("Exception in ApplicationPoolServer client thread during "
+						"reading of a message: " << e.what());
+				}
 				break;
 			}
 			
@@ -369,7 +364,11 @@ public:
 	
 	~Client() {
 		if (thr != NULL) {
-			thr->join();
+			// We don't want to wait for the client to close the connection,
+			// if we were told to shutdown.
+			if (!serverDone) {
+				thr->join();
+			}
 			delete thr;
 		}
 		close(fd);
@@ -384,14 +383,14 @@ gracefulShutdown(int sig) {
 
 int
 Server::start() {
+	serverDone = false;
 	if (!statusReportFIFO.empty()) {
-		new thread(
-			bind(&Server::statusReportThread, this),
+		thread thr(
+			bind(&Server::statusReportThreadMain, this),
 			1024 * 128
 		);
 	}
-	
-	serverDone = false;
+
 	signal(SIGINT, gracefulShutdown);
 	siginterrupt(SIGINT, 1);
 	
@@ -442,7 +441,7 @@ Server::start() {
 int
 main(int argc, char *argv[]) {
 	try {
-		Server server(SERVER_SOCKET_FD, argv[1], argv[2], argv[3], argv[4]);
+		Server server(SERVER_SOCKET_FD, argv[1], argv[2], argv[3], argv[4], argv[5]);
 		return server.start();
 	} catch (const exception &e) {
 		fprintf(stderr, "*** An unexpected error occured in the Passenger "
