@@ -398,9 +398,11 @@ Server::start() {
 		
 		// The received data only serves to wake up the server socket,
 		// and is not important.
-		do {
-			ret = read(serverSocket, &x, 1);
-		} while (ret == -1 && errno == EINTR && !serverDone);
+		while (!serverDone) {
+			do {
+				ret = read(serverSocket, &x, 1);
+			} while (ret == -1 && errno == EINTR && !serverDone);
+		}
 		if (ret == 0 || serverDone) {
 			// All web server processes disconnected from this server.
 			// So we can safely quit.
@@ -409,9 +411,11 @@ Server::start() {
 		
 		// We have an incoming connect request from an
 		// ApplicationPool client.
-		do {
-			ret = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-		} while (ret == -1 && errno == EINTR && !serverDone);
+		while (!serverDone) {
+			do {
+				ret = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+			} while (ret == -1 && errno == EINTR && !serverDone);
+		}
 		if (ret == -1 || serverDone) {
 			throw SystemException("Cannot create an anonymous Unix socket", errno);
 		}
