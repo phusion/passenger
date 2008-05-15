@@ -156,7 +156,9 @@ public:
 		}
 		clientsCopy.clear();
 		
-		unlink(statusReportFIFO.c_str());
+		do {
+			ret = unlink(statusReportFIFO.c_str());
+		} while (ret == -1 && errno == EINTR);
 	}
 	
 	int start(); // Will be defined later, because Client depends on Server's interface.
@@ -398,7 +400,7 @@ Server::start() {
 		
 		// The received data only serves to wake up the server socket,
 		// and is not important.
-		while (!serverDone) {
+		if (!serverDone) {
 			do {
 				ret = read(serverSocket, &x, 1);
 			} while (ret == -1 && errno == EINTR && !serverDone);
@@ -411,7 +413,7 @@ Server::start() {
 		
 		// We have an incoming connect request from an
 		// ApplicationPool client.
-		while (!serverDone) {
+		if (!serverDone) {
 			do {
 				ret = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
 			} while (ret == -1 && errno == EINTR && !serverDone);
