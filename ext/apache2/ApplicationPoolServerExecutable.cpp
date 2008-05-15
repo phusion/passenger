@@ -115,6 +115,15 @@ private:
 			sleep(1);
 		}
 	}
+	
+	void deleteStatusReportFIFO() {
+		if (!statusReportFIFO.empty()) {
+			int ret;
+			do {
+				ret = unlink(statusReportFIFO.c_str());
+			} while (ret == -1 && errno == EINTR);
+		}
+	}
 
 public:
 	Server(int serverSocket,
@@ -148,10 +157,7 @@ public:
 			clients.clear();
 		}
 		clientsCopy.clear();
-		
-		do {
-			ret = unlink(statusReportFIFO.c_str());
-		} while (ret == -1 && errno == EINTR);
+		deleteStatusReportFIFO();
 	}
 	
 	int start(); // Will be defined later, because Client depends on Server's interface.
@@ -369,11 +375,7 @@ public:
 	
 	~Client() {
 		if (thr != NULL) {
-			// We don't want to wait for the client to close the connection,
-			// if we were told to shutdown.
-			if (!serverDone) {
-				thr->join();
-			}
+			thr->join();
 			delete thr;
 		}
 		close(fd);
@@ -439,6 +441,10 @@ Server::start() {
 			clients.insert(client);
 		}
 		client->start(client);
+	}
+	if (serverDone) {
+		deleteStatusReportFIFO();
+		exit(0);
 	}
 	return 0;
 }
