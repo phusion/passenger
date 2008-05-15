@@ -34,8 +34,13 @@
 #include <boost/bind.hpp>
 #include <boost/thread/thread.hpp>
 
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <limits.h>
+#include <unistd.h>
+#include <signal.h>
 #include <string>
 #include <vector>
 #include <set>
@@ -58,6 +63,8 @@ typedef shared_ptr<Client> ClientPtr;
 
 #define SERVER_SOCKET_FD 3
 
+static bool serverDone = false;
+
 
 /*****************************************
  * Server
@@ -71,6 +78,39 @@ private:
 	StandardApplicationPool pool;
 	set<ClientPtr> clients;
 	mutex lock;
+	string statusReportFIFO;
+	
+	void statusReportThread() {
+		while (true) {
+			struct stat buf;
+			int ret;
+			
+			do {
+				ret = stat(statusReportFIFO.c_str(), &buf);
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1 || !S_ISFIFO(buf.st_mode)) {
+				// Something bad happened with the status
+				// report FIFO, so we bail out.
+				return;
+			}
+			
+			FILE *f;
+			
+			do {
+				f = fopen(statusReportFIFO.c_str(), "w");
+			} while (f == NULL && errno == EINTR);
+			if (f == NULL) {
+				return;
+			}
+			
+			string report(pool.toString());
+			fwrite(report.c_str(), 1, report.size(), f);
+			fclose(f);
+			
+			// Prevent sending too much data at once.
+			sleep(1);
+		}
+	}
 
 public:
 	Server(int serverSocket,
@@ -79,7 +119,21 @@ public:
 	       const string &rubyCommand,
 	       const string &user)
 		: pool(spawnServerCommand, logFile, rubyCommand, user) {
+		
 		this->serverSocket = serverSocket;
+		
+		char filename[PATH_MAX];
+		snprintf(filename, sizeof(filename), "/tmp/passenger_status.%d.fifo",
+			getpid());
+		filename[PATH_MAX - 1] = '\0';
+		if (mkfifo(filename, S_IRUSR | S_IWUSR) == -1 && errno != EEXIST) {
+			fprintf(stderr, "*** WARNING: Could not create FIFO '%s'; "
+				"disabling Passenger ApplicationPool status reporting.\n",
+				filename);
+			fflush(stderr);
+		} else {
+			statusReportFIFO = filename;
+		}
 	}
 	
 	~Server() {
@@ -101,6 +155,8 @@ public:
 			clients.clear();
 		}
 		clientsCopy.clear();
+		
+		unlink(statusReportFIFO.c_str());
 	}
 	
 	int start(); // Will be defined later, because Client depends on Server's interface.
@@ -318,9 +374,25 @@ public:
 };
 
 
+static void
+gracefulShutdown(int sig) {
+	serverDone = true;
+}
+
 int
 Server::start() {
-	while (true) {
+	if (!statusReportFIFO.empty()) {
+		new thread(
+			bind(&Server::statusReportThread, this),
+			1024 * 128
+		);
+	}
+	
+	serverDone = false;
+	signal(SIGINT, gracefulShutdown);
+	siginterrupt(SIGINT, 1);
+	
+	while (!serverDone) {
 		int fds[2], ret;
 		char x;
 		
@@ -328,8 +400,8 @@ Server::start() {
 		// and is not important.
 		do {
 			ret = read(serverSocket, &x, 1);
-		} while (ret == -1 && errno == EINTR);
-		if (ret == 0) {
+		} while (ret == -1 && errno == EINTR && !serverDone);
+		if (ret == 0 || serverDone) {
 			// All web server processes disconnected from this server.
 			// So we can safely quit.
 			break;
@@ -339,31 +411,15 @@ Server::start() {
 		// ApplicationPool client.
 		do {
 			ret = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-		} while (ret == -1 && errno == EINTR);
-		if (ret == -1) {
-			int e = errno;
-			P_ERROR("Cannot create an anonymous Unix socket: " <<
-				strerror(e) << " (" << e << ") --- aborting!");
-			abort();
-			
-			// Shut up compiler warning.
-			printf("%d", e);
+		} while (ret == -1 && errno == EINTR && !serverDone);
+		if (ret == -1 || serverDone) {
+			throw SystemException("Cannot create an anonymous Unix socket", errno);
 		}
 		
-		try {
-			MessageChannel(serverSocket).writeFileDescriptor(fds[1]);
-			do {
-				ret = close(fds[1]);
-			} while (ret == -1 && errno == EINTR);
-		} catch (SystemException &e) {
-			P_ERROR("Cannot send a file descriptor: " << e.sys() <<
-				" --- aborting!");
-			abort();
-		} catch (const exception &e) {
-			P_ERROR("Cannot send a file descriptor: " << e.what() <<
-				" --- aborting!");
-			abort();
-		}
+		MessageChannel(serverSocket).writeFileDescriptor(fds[1]);
+		do {
+			ret = close(fds[1]);
+		} while (ret == -1 && errno == EINTR);
 		
 		ClientPtr client(new Client(*this, fds[0]));
 		pair<set<ClientPtr>::iterator, bool> p;
@@ -386,7 +442,6 @@ main(int argc, char *argv[]) {
 			"ApplicationPool server:\n%s\n",
 			e.what());
 		fflush(stderr);
-		abort();
 		return 1;
 	}
 }
