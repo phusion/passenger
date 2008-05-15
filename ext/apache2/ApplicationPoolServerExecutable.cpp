@@ -219,6 +219,9 @@ private:
 				channel.write("SpawnException", e.what(), "false", NULL);
 			}
 			failed = true;
+		} catch (const BusyException &e) {
+			channel.write("BusyException", e.what(), NULL);
+			failed = true;
 		} catch (const IOException &e) {
 			channel.write("IOException", e.what(), NULL);
 			failed = true;
@@ -326,9 +329,11 @@ private:
 					break;
 				}
 			} catch (const exception &e) {
-				P_WARN("Uncaught exception in ApplicationPoolServer client thread:\n"
-					<< "   message: " << toString(args) << "\n"
-					<< "   exception: " << e.what());
+				if (!serverDone) {
+					P_WARN("Uncaught exception in ApplicationPoolServer client thread:\n"
+						<< "   message: " << toString(args) << "\n"
+						<< "   exception: " << e.what());
+				}
 				break;
 			}
 		}

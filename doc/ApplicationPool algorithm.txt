@@ -101,6 +101,13 @@ information:
   Invariant:
      active <= count
 
+- waiting: integer
+  The number of get() calls that are currently waiting until a new application
+  can be spawned or an existing can be connected to.
+
+- waiting_lock: mutex
+  A mutex for the _waiting_ instance variable.
+
 - inactive_apps: list<AppContainer>
   A linked list of AppContainer objects. All application instances in this list
   are inactive.
@@ -124,8 +131,9 @@ information:
 
   Invariant:
      app_instance_count.keys == apps.keys
-     for all keys app_root in app_instance_count:
+     for all (app_root, app_count) in app_instance_count:
         app_instance_count[app_root] < count
+        app_count == apps[app_root].size()
      (sum of all values in app_instance_count) == count.
 
 
@@ -135,35 +143,52 @@ information:
 # - All wait commands are to unlock the lock during waiting.
 
 function get(app_root):
-	MAX_ATTEMPTS = 5
-	attempt = 0
+	MAX_ATTEMPTS = 10
+	attempt = 1
 	while (true):
-		attempt++
 		lock.synchronize:
 			container, list = spawn_or_use_existing(app_root)
-			container.last_used = current_time()
-			container.sessions++
-			try:
-				return container.app.connect()
-			on exception:
-				container.sessions--
-				if (attempt == MAX_ATTEMPTS):
-					propagate exception
-				else:
-					# The app instance seems to have crashed. So we remove this
-					# instance from our data structures.
-					list.remove(container.iterator)
-					if list.empty():
-						apps.remove(app_root)
-					app_instance_count.remove(app_root)
-					count--
-					active--
+			if (container != null):
+				container.last_used = current_time()
+				container.sessions++
+				try:
+					return container.app.connect()
+				on exception:
+					container.sessions--
+					if (attempt == MAX_ATTEMPTS):
+						propagate exception
+					else:
+						# The app instance seems to have crashed.
+						# So we remove this instance from our data
+						# structures.
+						list.remove(container.iterator)
+						if list.empty():
+							apps.remove(app_root)
+						app_instance_count.remove(app_root)
+						count--
+						active--
+						attempt++
+		if (container == null):
+			# Unable to spawn or connect to an application right
+			# now. Try again later, unless we've already tried too
+			# many times.
+			if (attempt == MAX_ATTEMPTS):
+				raise exception
+			waiting_lock.synchronize:
+				waiting++
+			usleep(attempt * 2000)
+			waiting_lock.synchronize:
+				waiting--
+			attempt++
 
 
 # Returns a pair of [AppContainer, list<AppContainer>] that matches the
 # given application root. If no such AppContainer exists, then it is created
 # and a new application instance is spawned. All exceptions that occur are
 # propagated.
+#
+# Returns [null, null] if no new application can be spawned and no existing
+# application can be connected to, at the moment.
 function spawn_or_use_existing(app_root):
 	list = apps[app_root]
 	
@@ -182,25 +207,24 @@ function spawn_or_use_existing(app_root):
 	
 	if list != nil:
 		# There are apps for this app root.
-		if (list.front.sessions == 0) or (count >= max) or (
-		   (max_per_app != 0) and (app_instance_count[app_root] >= max_per_app)
-		   ):
+		if (list.front.sessions == 0):
 			# There is an inactive app, so we use it.
-			#  -OR-
-			# All apps are active, and the pool is full. 
-			#  -OR-
-			# All apps are active and the number of max instances
-			# spawned for this rails application has been reached.
-			#
-			# We're not allowed to spawn a new app, so if there are
-			# no inactive apps, we try to connect to an existing one.
-			# Our connection request will be put into that app's
-			# connection queue.
 			container = list.front
 			list.move_to_back(container.iterator)
 			if container.sessions == 0:
 				inactive_apps.remove(container.ia_iterator)
 			active++
+		else if	(count >= max) or (
+			(max_per_app != 0) and (app_instance_count[app_root] >= max_per_app)
+			):
+			# All apps are active, and the pool is full. 
+			#  -OR-
+			# All apps are active and the number of max instances
+			# spawned for this application has been reached.
+			#
+			# We can't do anything, so we return null. One should
+			# try later.
+			return [null, null]
 		else:
 			# All apps are active, but the pool hasn't reached its
 			# maximum yet. So we spawn a new app.

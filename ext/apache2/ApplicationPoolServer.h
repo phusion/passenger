@@ -330,6 +330,8 @@ private:
 				} else {
 					throw SpawnException(args[1]);
 				}
+			} else if (args[0] == "BusyExeption") {
+				throw BusyException(args[1]);
 			} else if (args[0] == "IOException") {
 				throw IOException(args[1]);
 			} else {
@@ -573,10 +575,10 @@ public:
 		try {
 			MessageChannel channel(serverSocket);
 			int clientConnection;
-		
+			
 			// Write some random data to wake up the server.
 			channel.writeRaw("x", 1);
-		
+			
 			clientConnection = channel.readFileDescriptor();
 			return ptr(new Client(clientConnection));
 		} catch (const SystemException &e) {

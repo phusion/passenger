@@ -72,6 +72,12 @@ private:
 		return (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
 	}
 	
+	int reportBusyException(request_rec *r) {
+		ap_custom_response(r, HTTP_SERVICE_UNAVAILABLE,
+			"This website is too busy right now.  Please try again later.");
+		return HTTP_SERVICE_UNAVAILABLE;
+	}
+	
 	/**
 	 * Determine whether the given HTTP request falls under one of the specified
 	 * RailsBaseURIs. If yes, then the first matching base URI will be returned.
@@ -430,7 +436,7 @@ public:
 				}
 				session = applicationPool->get(canonicalizePath(railsDir + "/.."),
 					true, defaultUser, environment, spawnMethod);
-				P_DEBUG("Forwarding " << r->uri << " to PID " << session->getPid());
+				//P_DEBUG("Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				if (e.hasErrorPage()) {
 					ap_set_content_type(r, "text/html; charset=utf-8");
@@ -441,6 +447,8 @@ public:
 				} else {
 					throw;
 				}
+			} catch (const BusyException &e) {
+				return reportBusyException(r);
 			}
 			sendHeaders(r, session, railsBaseURI);
 			sendRequestBody(r, session);

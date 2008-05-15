@@ -175,6 +175,20 @@ public:
 	}
 };
 
+/**
+ * The application pool is too busy and cannot fulfill a get() request.
+ *
+ * @ingroup Exceptions
+ */
+class BusyException: public exception {
+private:
+	string msg;
+public:
+	BusyException(const string &message): msg(message) {}
+	virtual ~BusyException() throw() {}
+	virtual const char *what() const throw() { return msg.c_str(); }
+};
+
 } // namespace Passenger
 
 #endif /* _PASSENGER_EXCEPTIONS_H_ */

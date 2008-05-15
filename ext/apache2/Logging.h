@@ -73,8 +73,18 @@ void setDebugFile(const char *logFile = NULL);
 				} \
 			} \
 		} while (false)
+	
+	#define P_ASSERT(expr, result_if_failed, message) \
+		do { \
+			if (!(expr)) { \
+				P_ERROR("Assertion failed: " << message); \
+				return result_if_failed; \
+			} \
+		} while (false)
 #else
 	#define P_TRACE(level, expr) do { /* nothing */ } while (false)
+	
+	#define P_ASSERT(expr, result_if_failed, message) do { /* nothing */ } while (false)
 #endif
 
 } // namespace Passenger

@@ -268,6 +268,7 @@ public:
 			char control_data[CMSG_SPACE(sizeof(int))];
 		#endif
 		struct cmsghdr *control_header;
+		int ret;
 	
 		msg.msg_name = NULL;
 		msg.msg_namelen = 0;
@@ -294,7 +295,10 @@ public:
 			memcpy(CMSG_DATA(control_header), &fileDescriptor, sizeof(int));
 		#endif
 		
-		if (sendmsg(fd, &msg, 0) == -1) {
+		do {
+			ret = sendmsg(fd, &msg, 0);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
 			throw SystemException("Cannot send file descriptor with sendmsg()", errno);
 		}
 	}
@@ -448,6 +452,7 @@ public:
 			#define EXPECTED_CMSG_LEN CMSG_LEN(sizeof(int))
 		#endif
 		struct cmsghdr *control_header;
+		int ret;
 
 		msg.msg_name    = NULL;
 		msg.msg_namelen = 0;
@@ -462,7 +467,10 @@ public:
 		msg.msg_controllen = sizeof(control_data);
 		msg.msg_flags      = 0;
 		
-		if (recvmsg(fd, &msg, 0) == -1) {
+		do {
+			ret = recvmsg(fd, &msg, 0);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
 			throw SystemException("Cannot read file descriptor with recvmsg()", errno);
 		}
 		
