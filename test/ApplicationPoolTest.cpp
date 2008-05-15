@@ -344,5 +344,15 @@
 		}
 		ensure_equals("App should have been cleaned up", pool->getCount(), 0u);
 	}
+	
+	TEST_METHOD(17) {
+		// MaxPerApp must be respected.
+		pool->setMax(3);
+		pool->setMaxPerApp(1);
+		
+		Application::SessionPtr session1 = pool->get("stub/minimal-railsapp");
+		Application::SessionPtr session2 = pool2->get("stub/minimal-railsapp");
+		ensure_equals("Only 1 application should have been spawned", pool->getCount(), 1u);
+	}
 
 #endif /* USE_TEMPLATE */
