@@ -381,6 +381,7 @@ render <<reducing_memory_usage,Ruby Enterprise Edition's memory reduction techno
 This option may occur once, in the global server configuration or in a virtual host
 configuration block. The default value is 'smart'.
 
+[[RailsMaxPoolSize]]
 === RailsMaxPoolSize <integer> ===
 The maximum number of Ruby on Rails application instances that may
 be simultaneously active. A larger number results in higher memory usage,
@@ -423,6 +424,20 @@ mileage may vary.
 
 This option may only occur once, in the global server configuration.
 The default value is '120'.
+
+=== RailsMaxInstancesPerApp <integer> ===
+The maximum number of Ruby on Rails application instances that may
+be simultaneously active for a single application. This helps to make
+sure that a single application will not occupy all available slots in
+the application pool.
+
+This value must be less than <<RailsMaxPoolSize,RailsMaxPoolSize>>. A value of 0
+means that there is no limit placed on the number of instances a single application
+may use, i.e. only the global limit of <<RailsMaxPoolSize,RailsMaxPoolSize>>
+will be enforced.
+
+This option may only occur once, in the global server configuration.
+The default value is '0'.
 
 [[RailsUserSwitching]]
 === RailsUserSwitching <on|off> ===
