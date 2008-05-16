@@ -81,7 +81,7 @@ end
 ##### boost::thread static library
 
 subdir 'ext/boost/src' do
-	file 'libboost_thread.a' => Dir['*.cpp', 'pthread/*.cpp'] do
+	file 'libboost_thread.a' => Dir['*.cpp'] + Dir['pthread/*.cpp'] do
 		# Note: NDEBUG *must* be defined! boost::thread use assert() to check whether
 		# the pthread functions return an error. Because of the way Passenger uses
 		# processes, sometimes pthread errors will occur. These errors are harmless
