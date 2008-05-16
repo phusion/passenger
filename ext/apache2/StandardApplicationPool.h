@@ -224,6 +224,38 @@ private:
 		return true;
 	}
 	
+	template<typename LockActionType>
+	string toString(LockActionType lockAction) const {
+		unique_lock<mutex> l(lock, lockAction);
+		stringstream result;
+		
+		result << "----------- General information -----------" << endl;
+		result << "max    = " << max << endl;
+		result << "count  = " << count << endl;
+		result << "active = " << active << endl;
+		result << "waiting = " << waiting << endl;
+		result << endl;
+		
+		result << "----------- Applications -----------" << endl;
+		ApplicationMap::const_iterator it;
+		for (it = apps.begin(); it != apps.end(); it++) {
+			AppContainerList *list = it->second.get();
+			AppContainerList::const_iterator lit;
+			
+			result << it->first << ": " << endl;
+			for (lit = list->begin(); lit != list->end(); lit++) {
+				AppContainer *container = lit->get();
+				char buf[128];
+				
+				snprintf(buf, sizeof(buf), "PID: %-8d  Sessions: %d",
+					container->app->getPid(), container->sessions);
+				result << "  " << buf << endl;
+			}
+			result << endl;
+		}
+		return result.str();
+	}
+	
 	bool needsRestart(const string &appRoot) {
 		string restartFile(appRoot);
 		restartFile.append("/tmp/restart.txt");
@@ -636,34 +668,11 @@ public:
 	 * the application pool.
 	 */
 	virtual string toString(bool lockMutex = true) const {
-		mutex::scoped_lock l(lock, lockMutex);
-		stringstream result;
-		
-		result << "----------- General information -----------" << endl;
-		result << "max    = " << max << endl;
-		result << "count  = " << count << endl;
-		result << "active = " << active << endl;
-		result << "waiting = " << waiting << endl;
-		result << endl;
-		
-		result << "----------- Applications -----------" << endl;
-		ApplicationMap::const_iterator it;
-		for (it = apps.begin(); it != apps.end(); it++) {
-			AppContainerList *list = it->second.get();
-			AppContainerList::const_iterator lit;
-			
-			result << it->first << ": " << endl;
-			for (lit = list->begin(); lit != list->end(); lit++) {
-				AppContainer *container = lit->get();
-				char buf[128];
-				
-				snprintf(buf, sizeof(buf), "PID: %-8d  Sessions: %d",
-					container->app->getPid(), container->sessions);
-				result << "  " << buf << endl;
-			}
-			result << endl;
+		if (lockMutex) {
+			return toString(boost::adopt_lock);
+		} else {
+			return toString(boost::defer_lock);
 		}
-		return result.str();
 	}
 };
 
