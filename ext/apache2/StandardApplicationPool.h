@@ -567,12 +567,12 @@ public:
 	) {
 		using namespace boost::posix_time;
 		unsigned int attempt = 0;
-		ptime begin(microsec_clock::local_time());
+		ptime timeLimit(get_system_time() + millisec(GET_TIMEOUT));
+		unique_lock<mutex> l(lock);
 		
 		while (true) {
 			attempt++;
 			
-			mutex::scoped_lock l(lock);
 			pair<AppContainerPtr, AppContainerList *> p(
 				spawnOrUseExisting(l, appRoot, lowerPrivilege, lowestUser,
 					environment, spawnMethod)
@@ -584,8 +584,8 @@ public:
 				container->lastUsed = time(NULL);
 				container->sessions++;
 				
-				P_ASSERT(verifyState(), Application::SessionPtr(),
-					"State is valid:\n" << toString(false));
+				//P_ASSERT(verifyState(), Application::SessionPtr(),
+				//	"State is valid:\n" << toString(false));
 				try {
 					return container->app->connect(SessionCloseCallback(data, container));
 				} catch (const exception &e) {
@@ -611,23 +611,27 @@ public:
 						appInstanceCount.erase(appRoot);
 						count--;
 						active--;
-						P_ASSERT(verifyState(), Application::SessionPtr(),
-							"State is valid.");
+						// P_ASSERT(verifyState(), Application::SessionPtr(),
+						//	"State is valid.");
 					}
 				}
-			}
-			if (container == NULL) {
-				l.unlock();
-				if (microsec_clock::local_time() > begin + millisec(GET_TIMEOUT)) {
-					throw BusyException("Cannot satisfy get() request.");
-				}
+			} else {
 				{
-					mutex::scoped_lock wl(waitingLock);
+					lock_guard<mutex> wl(waitingLock);
 					waiting++;
 				}
-				InterruptableCalls::usleep(10000);
+				while (!(
+					active < max &&
+					(maxPerApp == 0 || appInstanceCount[appRoot] < maxPerApp)
+				)) {
+					if (!activeOrMaxChanged.timed_wait(l, timeLimit)) {
+						lock_guard<mutex> wl(waitingLock);
+						waiting--;
+						throw BusyException("Unable to fulfill get() request in time.");
+					}
+				}
 				{
-					mutex::scoped_lock wl(waitingLock);
+					lock_guard<mutex> wl(waitingLock);
 					waiting--;
 				}
 			}

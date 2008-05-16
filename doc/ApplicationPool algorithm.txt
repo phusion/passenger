@@ -105,9 +105,6 @@ information:
   The number of get() calls that are currently waiting until a new application
   can be spawned or an existing can be connected to.
 
-- waiting_lock: mutex
-  A mutex for the _waiting_ instance variable.
-
 - inactive_apps: list<AppContainer>
   A linked list of AppContainer objects. All application instances in this list
   are inactive.
@@ -144,12 +141,11 @@ information:
 
 function get(app_root):
 	MAX_ATTEMPTS = 10
-	TIMEOUT = 5000000      # in microseconds
 	attempt = 0
-	total_sleep_time = 0
-	while (true):
-		attempt++
-		lock.synchronize:
+	time_limit = now() + 5 seconds
+	lock.synchronize:
+		while (true):
+			attempt++
 			container, list = spawn_or_use_existing(app_root)
 			if (container != null):
 				container.last_used = current_time()
@@ -170,19 +166,14 @@ function get(app_root):
 						app_instance_count.remove(app_root)
 						count--
 						active--
-		if (container == null):
-			# Unable to spawn or connect to an application right
-			# now. Try again later, unless we've already tried too
-			# many times.
-			if (total_sleep_time > TIMEOUT):
-				raise exception
-			waiting_lock.synchronize:
-				waiting++
-			sleep_time = attempt * 2000
-			total_sleep_time += sleep_time
-			usleep(total_sleep_time)
-			waiting_lock.synchronize:
-				waiting--
+			else:
+				# Unable to spawn or connect to an application right
+				# now. So we wait for a chance.
+				atomically increment 'waiting'
+				wait until active < max or until 'time_limit' is reached
+				atomically decrement 'waiting'
+				if (the last wait command reached 'time_limit'):
+					throw exception
 
 
 # Returns a pair of [AppContainer, list<AppContainer>] that matches the
