@@ -376,11 +376,6 @@ public:
 		
 		return ptr(new StandardSession(pid, closeCallback, fd));
 	}
-	
-	void detach() {
-		close(ownerPipe);
-		ownerPipe = -1;
-	}
 };
 
 /** Convenient alias for Application smart pointer. */

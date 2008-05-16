@@ -339,19 +339,6 @@ private:
 		}
 	}
 	
-	void detach() {
-		detached = true;
-		
-		ApplicationMap::iterator it;
-		for (it = apps.begin(); it != apps.end(); it++) {
-			AppContainerList &list = *(it->second.get());
-			AppContainerList::iterator it2;
-			for (it2 = list.begin(); it2 != list.end(); it2++) {
-				(*it2)->app->detach();
-			}
-		}
-	}
-	
 	pair<AppContainerPtr, AppContainerList *>
 	spawnOrUseExisting(
 		mutex::scoped_lock &l,
