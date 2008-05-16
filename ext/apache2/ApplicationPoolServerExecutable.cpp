@@ -305,8 +305,11 @@ private:
 					break;
 				}
 				
+				this_thread::disable_interruption di;
+				this_thread::disable_syscall_interruption dsi;
 				P_TRACE(4, "Client " << this << ": received message: " <<
 					toString(args));
+				
 				if (args[0] == "get" && args.size() == 6) {
 					processGet(args);
 				} else if (args[0] == "close" && args.size() == 2) {
@@ -418,6 +421,9 @@ Server::start() {
 				// So we can safely quit.
 				break;
 			}
+			
+			this_thread::disable_interruption di;
+			this_thread::disable_syscall_interruption dsi;
 			
 			// We have an incoming connect request from an
 			// ApplicationPool client.

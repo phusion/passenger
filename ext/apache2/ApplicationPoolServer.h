@@ -386,7 +386,7 @@ private:
 			ret = close(serverSocket);
 		} while (ret == -1 && errno == EINTR);
 		
-		P_DEBUG("Waiting for existing ApplicationPoolServerExecutable to exit...");
+		P_TRACE(2, "Waiting for existing ApplicationPoolServerExecutable to exit...");
 		begin = time(NULL);
 		while (!done && time(NULL) < begin + 5) {
 			/*
@@ -408,7 +408,7 @@ private:
 			}
 		}
 		if (done) {
-			P_DEBUG("ApplicationPoolServerExecutable exited.");
+			P_TRACE(2, "ApplicationPoolServerExecutable exited.");
 		} else {
 			P_DEBUG("ApplicationPoolServerExecutable not exited in time. Killing it...");
 			kill(serverPid, SIGTERM);
