@@ -73,8 +73,8 @@ private:
 		}
 	};
 
-	ApplicationPoolServerPtr applicationPoolServer;
 	ApplicationPoolPtr applicationPool;
+	ApplicationPoolServerPtr applicationPoolServer;
 	
 	DirConfig *getDirConfig(request_rec *r) {
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
@@ -328,7 +328,7 @@ private:
 
 public:
 	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s) {
-		ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "Initializing Phusion Passenger...");
+		P_DEBUG("Initializing Phusion Passenger...");
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
 		passenger_config_merge_all_servers(pconf, s);
 		
@@ -610,6 +610,7 @@ destroy_hooks(void *arg) {
 	try {
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
+		P_DEBUG("Shutting down Phusion Passenger...");
 		delete hooks;
 	} catch (const thread_interrupted &) {
 		// Ignore interruptions, we're shutting down anyway.
@@ -641,6 +642,7 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 	 * hacks, and now we always initialize in the post_config hook.
 	 */
 	if (hooks != NULL) {
+		P_DEBUG("Restarting Phusion Passenger....");
 		delete hooks;
 	}
 	try {

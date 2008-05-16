@@ -241,7 +241,6 @@ private:
 	 * @param environment The RAILS_ENV environment that should be used.
 	 * @param spawnMethod The spawn method to use.
 	 * @return An Application smart pointer, representing the spawned application.
-	 * @pre System call interruption is disabled.
 	 * @throws SpawnException Something went wrong.
 	 */
 	ApplicationPtr sendSpawnCommand(
@@ -328,6 +327,9 @@ private:
 			usingAbstractNamespace, ownerPipe));
 	}
 	
+	/**
+	 * @throws boost::thread_interrupted
+	 */
 	ApplicationPtr
 	handleSpawnException(const SpawnException &e, const string &appRoot,
 	                     bool lowerPrivilege, const string &lowestUser,
@@ -335,6 +337,7 @@ private:
 		bool restarted;
 		try {
 			P_DEBUG("Spawn server died. Attempting to restart it...");
+			this_thread::disable_syscall_interruption dsi;
 			restartServer();
 			P_DEBUG("Restart seems to be successful.");
 			restarted = true;
@@ -448,8 +451,10 @@ public:
 		if (pid != 0) {
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
+			P_TRACE(2, "Shutting down spawn manager (PID " << pid << ").");
 			channel.close();
-			waitpid(pid, NULL, 0);
+			InterruptableCalls::waitpid(pid, NULL, 0);
+			P_TRACE(2, "Spawn manager exited.");
 		}
 	}
 	
@@ -492,6 +497,7 @@ public:
 	 *         instance that has been spawned. Use this object to communicate with the
 	 *         spawned application.
 	 * @throws SpawnException Something went wrong.
+	 * @throws boost::thread_interrupted
 	 */
 	ApplicationPtr spawn(
 		const string &appRoot,
@@ -500,8 +506,6 @@ public:
 		const string &environment = "production",
 		const string &spawnMethod = "smart"
 	) {
-		this_thread::disable_interruption di;
-		this_thread::disable_syscall_interruption dsi;
 		mutex::scoped_lock l(lock);
 		try {
 			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser,

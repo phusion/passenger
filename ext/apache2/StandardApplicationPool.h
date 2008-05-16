@@ -22,6 +22,8 @@
 #include <boost/weak_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
+#include <boost/date_time/microsec_time_clock.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <string>
 #include <sstream>
@@ -92,7 +94,7 @@ private:
 	static const int DEFAULT_MAX_INSTANCES_PER_APP = 0;
 	static const int CLEANER_THREAD_STACK_SIZE = 1024 * 128;
 	static const unsigned int MAX_GET_ATTEMPTS = 10;
-	static const unsigned int GET_TIMEOUT = 5000000; // In microseconds.
+	static const unsigned int GET_TIMEOUT = 5000; // In milliseconds.
 
 	friend class ApplicationPoolServer;
 	struct AppContainer;
@@ -343,6 +345,11 @@ private:
 		}
 	}
 	
+	/**
+	 * @throws boost::thread_interrupted
+	 * @throws SpawnException
+	 * @throws SystemException
+	 */
 	pair<AppContainerPtr, AppContainerList *>
 	spawnOrUseExisting(
 		mutex::scoped_lock &l,
@@ -399,9 +406,13 @@ private:
 					return make_pair(AppContainerPtr(), (AppContainerList *) 0);
 				} else {
 					container = ptr(new AppContainer());
-					container->app = spawnManager.spawn(appRoot,
-						lowerPrivilege, lowestUser, environment,
-						spawnMethod);
+					{
+						this_thread::restore_interruption ri(di);
+						this_thread::restore_syscall_interruption rsi(dsi);
+						container->app = spawnManager.spawn(appRoot,
+							lowerPrivilege, lowestUser, environment,
+							spawnMethod);
+					}
 					container->sessions = 0;
 					list->push_back(container);
 					container->iterator = list->end();
@@ -433,8 +444,12 @@ private:
 					count--;
 				}
 				container = ptr(new AppContainer());
-				container->app = spawnManager.spawn(appRoot, lowerPrivilege, lowestUser,
-					environment, spawnMethod);
+				{
+					this_thread::restore_interruption ri(di);
+					this_thread::restore_syscall_interruption rsi(dsi);
+					container->app = spawnManager.spawn(appRoot, lowerPrivilege, lowestUser,
+						environment, spawnMethod);
+				}
 				container->sessions = 0;
 				it = apps.find(appRoot);
 				if (it == apps.end()) {
@@ -550,11 +565,10 @@ public:
 		const string &environment = "production",
 		const string &spawnMethod = "smart"
 	) {
-		unsigned int attempt;
-		unsigned int totalSleepTime;
+		using namespace boost::posix_time;
+		unsigned int attempt = 0;
+		ptime begin(microsec_clock::local_time());
 		
-		attempt = 0;
-		totalSleepTime = 0;
 		while (true) {
 			attempt++;
 			
@@ -604,16 +618,14 @@ public:
 			}
 			if (container == NULL) {
 				l.unlock();
-				if (totalSleepTime > GET_TIMEOUT) {
+				if (microsec_clock::local_time() > begin + millisec(GET_TIMEOUT)) {
 					throw BusyException("Cannot satisfy get() request.");
 				}
 				{
 					mutex::scoped_lock wl(waitingLock);
 					waiting++;
 				}
-				unsigned int sleepTime = attempt * 10000;
-				totalSleepTime += sleepTime;
-				InterruptableCalls::usleep(sleepTime);
+				InterruptableCalls::usleep(10000);
 				{
 					mutex::scoped_lock wl(waitingLock);
 					waiting--;

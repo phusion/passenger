@@ -397,19 +397,53 @@ private:
 	 * @post serverSocket == -1 && serverPid == 0
 	 */
 	void shutdownServer() {
+		this_thread::disable_syscall_interruption dsi;
+		int ret;
+		
+		InterruptableCalls::close(serverSocket);
+		if (!statusReportFIFO.empty()) {
+			do {
+				ret = unlink(statusReportFIFO.c_str());
+			} while (ret == -1 && errno == EINTR);
+		}
+		
+		/*
+		 * We perform the real shutdown in a child process, i.e.
+		 * asynchronously. This is to make graceful Apache restarts
+		 * as fast as possible. We don't want to waste any time
+		 * waiting on the ApplicationPool server executable to shut
+		 * down.
+		 */
+		pid_t pid = InterruptableCalls::fork();
+		if (pid == 0) {
+			// Double fork to prevent zombies.
+			pid = InterruptableCalls::fork();
+			if (pid == 0 || pid == -1) {
+				performServerShutdown();
+			}
+			_exit(0);
+		} else if (pid == -1) {
+			performServerShutdown();
+		} else {
+			InterruptableCalls::waitpid(pid, NULL, 0);
+			serverSocket = -1;
+			serverPid = 0;
+		}
+	}
+	
+	void performServerShutdown() {
 		time_t begin;
 		bool done;
 		int ret;
 		
-		InterruptableCalls::close(serverSocket);
-		
-		P_TRACE(1, "Waiting for existing ApplicationPoolServerExecutable to exit...");
+		P_TRACE(2, "Waiting for existing ApplicationPoolServerExecutable (PID " <<
+			serverPid << ") to exit...");
 		begin = InterruptableCalls::time(NULL);
 		while (!done && InterruptableCalls::time(NULL) < begin + 5) {
 			/*
 			 * Some Apache modules fork(), but don't close file descriptors.
 			 * mod_wsgi is one such example. Because of that, closing serverSocket
-			 * won't cause the ApplicationPool server to exit. So we send it a
+			 * won't always cause the ApplicationPool server to exit. So we send it a
 			 * signal.
 			 */
 			InterruptableCalls::kill(serverPid, SIGINT);
@@ -421,19 +455,11 @@ private:
 			}
 		}
 		if (done) {
-			P_TRACE(1, "ApplicationPoolServerExecutable exited.");
+			P_TRACE(2, "ApplicationPoolServerExecutable exited.");
 		} else {
 			P_DEBUG("ApplicationPoolServerExecutable not exited in time. Killing it...");
 			InterruptableCalls::kill(serverPid, SIGTERM);
 			InterruptableCalls::waitpid(serverPid, NULL, 0);
-		}
-		serverSocket = -1;
-		serverPid = 0;
-		
-		if (!statusReportFIFO.empty()) {
-			do {
-				ret = unlink(statusReportFIFO.c_str());
-			} while (ret == -1 && errno == EINTR);
 		}
 	}
 	

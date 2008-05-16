@@ -11,6 +11,7 @@
 #include <signal.h>
 #include <cstdio>
 #include <ctime>
+#include <cassert>
 
 /**
  * Support for interruption of blocking system calls and C library calls.
@@ -23,6 +24,8 @@
  * as drop-in replacements for system calls or C library functions.
  * Thread::interrupt() and Thread::interruptAndJoin() should be used
  * for interrupting threads.
+ *
+ * By default, interruptions are caught.
  */
 
 // This is one of the things that Java is good at and C++ sucks at. Sigh...
@@ -128,14 +131,17 @@ namespace this_thread {
 	 * the calling thread.
 	 */
 	bool syscalls_interruptable();
+	
+	class restore_syscall_interruption;
 
 	/**
 	 * Create this struct on the stack to temporarily enable system
 	 * call interruption, until the object goes out of scope.
 	 */
-	struct enable_syscall_interruption {
+	class enable_syscall_interruption {
+	private:
 		bool lastValue;
-		
+	public:
 		enable_syscall_interruption() {
 			if (_syscalls_interruptable.get() == NULL) {
 				lastValue = true;
@@ -154,10 +160,14 @@ namespace this_thread {
 	/**
 	 * Create this struct on the stack to temporarily disable system
 	 * call interruption, until the object goes out of scope.
+	 * While system call interruption is disabled, the functions in
+	 * InterruptableCalls will try until the return code is not EINTR.
 	 */
-	struct disable_syscall_interruption {
+	class disable_syscall_interruption {
+	private:
+		friend class restore_syscall_interruption;
 		bool lastValue;
-		
+	public:
 		disable_syscall_interruption() {
 			if (_syscalls_interruptable.get() == NULL) {
 				lastValue = true;
@@ -169,6 +179,25 @@ namespace this_thread {
 		}
 		
 		~disable_syscall_interruption() {
+			*_syscalls_interruptable = lastValue;
+		}
+	};
+	
+	/**
+	 * Creating an object of this class on the stack will restore the
+	 * system call interruption state to what it was before.
+	 */
+	class restore_syscall_interruption {
+	private:
+		int lastValue;
+	public:
+		restore_syscall_interruption(const disable_syscall_interruption &intr) {
+			assert(_syscalls_interruptable.get() != NULL);
+			lastValue = *_syscalls_interruptable;
+			*_syscalls_interruptable = intr.lastValue;
+		}
+		
+		~restore_syscall_interruption() {
 			*_syscalls_interruptable = lastValue;
 		}
 	};

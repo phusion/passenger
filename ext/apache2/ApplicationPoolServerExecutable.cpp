@@ -211,6 +211,8 @@ private:
 			sessions[lastSessionID] = session;
 			lastSessionID++;
 		} catch (const SpawnException &e) {
+			this_thread::disable_syscall_interruption dsi;
+			
 			if (e.hasErrorPage()) {
 				P_TRACE(3, "Client " << this << ": SpawnException "
 					"occured (with error page)");
@@ -223,13 +225,16 @@ private:
 			}
 			failed = true;
 		} catch (const BusyException &e) {
+			this_thread::disable_syscall_interruption dsi;
 			channel.write("BusyException", e.what(), NULL);
 			failed = true;
 		} catch (const IOException &e) {
+			this_thread::disable_syscall_interruption dsi;
 			channel.write("IOException", e.what(), NULL);
 			failed = true;
 		}
 		if (!failed) {
+			this_thread::disable_syscall_interruption dsi;
 			try {
 				channel.write("ok", toString(session->getPid()).c_str(),
 					toString(lastSessionID - 1).c_str(), NULL);
@@ -300,13 +305,11 @@ private:
 						break;
 					}
 				} catch (const SystemException &e) {
-					P_WARN("Exception in ApplicationPoolServer client thread during "
+					P_TRACE(2, "Exception in ApplicationPoolServer client thread during "
 						"reading of a message: " << e.what());
 					break;
 				}
 				
-				this_thread::disable_interruption di;
-				this_thread::disable_syscall_interruption dsi;
 				P_TRACE(4, "Client " << this << ": received message: " <<
 					toString(args));
 				
@@ -337,7 +340,7 @@ private:
 		} catch (const boost::thread_interrupted &) {
 			P_TRACE(2, "Client thread " << this << " interrupted.");
 		} catch (const exception &e) {
-			P_WARN("Uncaught exception in ApplicationPoolServer client thread:\n"
+			P_TRACE(2, "Uncaught exception in ApplicationPoolServer client thread:\n"
 				<< "   message: " << toString(args) << "\n"
 				<< "   exception: " << e.what());
 		}
@@ -457,10 +460,7 @@ main(int argc, char *argv[]) {
 		Server server(SERVER_SOCKET_FD, argv[1], argv[2], argv[3], argv[4], argv[5]);
 		return server.start();
 	} catch (const exception &e) {
-		fprintf(stderr, "*** An unexpected error occured in the Passenger "
-			"ApplicationPool server:\n%s\n",
-			e.what());
-		fflush(stderr);
+		P_ERROR(e.what());
 		return 1;
 	}
 }

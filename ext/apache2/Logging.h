@@ -19,8 +19,10 @@
 #define _PASSENGER_LOGGING_H_
 
 #include <sys/types.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <ostream>
+#include <ctime>
 
 namespace Passenger {
 
@@ -38,9 +40,16 @@ void setDebugFile(const char *logFile = NULL);
 #define P_LOG(expr) \
 	do { \
 		if (Passenger::_logStream != 0) { \
+			time_t the_time = time(NULL); \
+			struct tm *the_tm = localtime(&the_time); \
+			char datetime_buf[60]; \
+			struct timeval tv; \
+			strftime(datetime_buf, sizeof(datetime_buf), "%x %H:%M:%S", the_tm); \
+			gettimeofday(&tv, NULL); \
 			*Passenger::_logStream << \
-				"[" << getpid() << ":" << __FILE__ << ":" << __LINE__ << "] " << \
-				expr << std::endl; \
+				"[ pid=" << getpid() << " file=" << __FILE__ << ":" << __LINE__ << \
+				" time=" << datetime_buf << ":" << (tv.tv_usec / 1000) << " ]:" << \
+				"\n  " << expr << std::endl; \
 		} \
 	} while (false)
 
@@ -67,9 +76,16 @@ void setDebugFile(const char *logFile = NULL);
 		do { \
 			if (Passenger::_debugLevel >= level) { \
 				if (Passenger::_debugStream != 0) { \
+					time_t the_time = time(NULL); \
+					struct tm *the_tm = localtime(&the_time); \
+					char datetime_buf[60]; \
+					struct timeval tv; \
+					strftime(datetime_buf, sizeof(datetime_buf), "%x %H:%M:%S", the_tm); \
+					gettimeofday(&tv, NULL); \
 					*Passenger::_debugStream << \
-						"[" << getpid() << ":" << __FILE__ << ":" << __LINE__ << "] " << \
-						expr << std::endl; \
+						"[ pid=" << getpid() << " file=" << __FILE__ << ":" << __LINE__ << \
+						" time=" << datetime_buf << ":" << (tv.tv_usec / 1000) << " ]:" << \
+						"\n  " << expr << std::endl; \
 				} \
 			} \
 		} while (false)
