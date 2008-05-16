@@ -4,6 +4,7 @@ PROGRAM_SOURCE = %q{
 	#include <boost/thread.hpp>
 	#include <boost/function.hpp>
 	#include <boost/bind.hpp>
+	#include <boost/date_time/posix_time/posix_time.hpp>
 }
 
 boost_dir = ARGV[0]
