@@ -153,27 +153,6 @@ subdir 'ext/apache2' do
 			"-I.. #{CXXFLAGS} #{LDFLAGS} -DPASSENGER_DEBUG ../boost/src/libboost_thread.a -lpthread"
 	end
 	
-	desc "Install mod_passenger Apache 2 module"
-	task 'apache2:install' => :apache2 do
-		install_dir = `#{APXS2} -q LIBEXECDIR`.strip
-		# We must remove the module before we copy it, otherwise Apache
-		# may crash. See http://tinyurl.com/2n6ws4
-		sh "rm", "-f", "#{install_dir}/mod_passenger.so"
-		sh "cp", "mod_passenger.so", install_dir
-	end
-	
-	desc "Install mod_passenger Apache 2 module and restart Apache"
-	task 'apache2:install_restart' do
-		sh "#{APACHE2CTL} stop" do end
-		unless `pidof apache2`.strip.empty?
-			sh "killall apache2" do end
-		end
-		Dir.chdir("../..") do
-			Rake::Task['apache2:install'].invoke
-		end
-		sh "#{APACHE2CTL} start"
-	end
-	
 	file 'mod_passenger.o' => ['mod_passenger.c'] do
 		compile_c 'mod_passenger.c', APACHE2::CXXFLAGS
 	end
