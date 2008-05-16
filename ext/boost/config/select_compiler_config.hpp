@@ -2,12 +2,36 @@
 
 //  (C) Copyright John Maddock 2001 - 2003. 
 //  (C) Copyright Martin Wille 2003.
-//  (C) Copyright Guillaume Melquiond 2003. 
-//  Use, modification and distribution are subject to the 
-//  Boost Software License, Version 1.0. (See accompanying file 
-//  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//  (C) Copyright Guillaume Melquiond 2003.
+//
+//  Distributed under the Boost Software License, Version 1.0.
+//  (See accompanying file LICENSE_1_0.txt or copy at
+//   http://www.boost.org/LICENSE_1_0.txt)
 
-//  See http://www.boost.org for most recent version.
+//  See http://www.boost.org/ for most recent version.
+
+
+// one identification macro for each of the
+// compilers we support:
+
+#   define BOOST_CXX_GCCXML   0
+#   define BOOST_CXX_COMO     0
+#   define BOOST_CXX_DMC      0
+#   define BOOST_CXX_INTEL    0
+#   define BOOST_CXX_GNUC     0
+#   define BOOST_CXX_KCC      0
+#   define BOOST_CXX_SGI      0
+#   define BOOST_CXX_TRU64    0
+#   define BOOST_CXX_GHS      0
+#   define BOOST_CXX_BORLAND  0
+#   define BOOST_CXX_CW       0
+#   define BOOST_CXX_SUNPRO   0
+#   define BOOST_CXX_HPACC    0
+#   define BOOST_CXX_MPW      0
+#   define BOOST_CXX_IBMCPP   0
+#   define BOOST_CXX_MSVC     0
+#   define BOOST_CXX_PGI      0
+
 
 // locate which compiler we are using and define
 // BOOST_COMPILER_CONFIG as needed: 
@@ -71,6 +95,10 @@
 #elif defined(__IBMCPP__)
 //  IBM Visual Age
 #   define BOOST_COMPILER_CONFIG "boost/config/compiler/vacpp.hpp"
+
+#elif defined(__PGI)
+//  Portland Group Inc.
+#   define BOOST_COMPILER_CONFIG "boost/config/compiler/pgi.hpp"
 
 #elif defined _MSC_VER
 //  Microsoft Visual C++

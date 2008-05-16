@@ -25,6 +25,9 @@
 #include <boost/type_traits/detail/ice_and.hpp>
 #include <boost/type_traits/detail/ice_not.hpp>
 #include <boost/type_traits/config.hpp>
+#if !BOOST_WORKAROUND(BOOST_MSVC,<=1300)
+#include <boost/type_traits/remove_cv.hpp>
+#endif
 
 #ifdef BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION
 #   include <boost/type_traits/is_reference.hpp>
@@ -56,15 +59,13 @@ template< typename T > struct helper<sp> \
 /**/
 
 TT_AUX_BOOL_TRAIT_HELPER_PARTIAL_SPEC(is_pointer_helper,T*,true)
-TT_AUX_BOOL_TRAIT_HELPER_PARTIAL_SPEC(is_pointer_helper,T* const,true)
-TT_AUX_BOOL_TRAIT_HELPER_PARTIAL_SPEC(is_pointer_helper,T* volatile,true)
-TT_AUX_BOOL_TRAIT_HELPER_PARTIAL_SPEC(is_pointer_helper,T* const volatile,true)
 
 #   undef TT_AUX_BOOL_TRAIT_HELPER_PARTIAL_SPEC
 
 template< typename T >
 struct is_pointer_impl
 {
+#if BOOST_WORKAROUND(BOOST_MSVC,<=1300)
     BOOST_STATIC_CONSTANT(bool, value =
         (::boost::type_traits::ice_and<
               ::boost::detail::is_pointer_helper<T>::value
@@ -73,6 +74,16 @@ struct is_pointer_impl
                 >::value
             >::value)
         );
+#else
+    BOOST_STATIC_CONSTANT(bool, value =
+        (::boost::type_traits::ice_and<
+        ::boost::detail::is_pointer_helper<typename remove_cv<T>::type>::value
+            , ::boost::type_traits::ice_not<
+                ::boost::is_member_pointer<T>::value
+                >::value
+            >::value)
+        );
+#endif
 };
 
 } // namespace detail

@@ -11,9 +11,9 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source: /cvsroot/boost/boost/boost/mpl/aux_/type_wrapper.hpp,v $
-// $Date: 2004/09/28 13:56:59 $
-// $Revision: 1.6 $
+// $Source$
+// $Date: 2004-09-28 09:56:59 -0400 (Tue, 28 Sep 2004) $
+// $Revision: 25453 $
 
 #include <boost/mpl/aux_/config/ctps.hpp>
 

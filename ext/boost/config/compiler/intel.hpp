@@ -1,4 +1,4 @@
-//  (C) Copyright John Maddock 2001.
+//  (C) Copyright John Maddock 2001-8.
 //  (C) Copyright Peter Dimov 2001.
 //  (C) Copyright Jens Maurer 2001.
 //  (C) Copyright David Abrahams 2002 - 2003.
@@ -99,7 +99,10 @@
 #     define BOOST_FUNCTION_SCOPE_USING_DECLARATION_BREAKS_ADL
 #  endif
 #endif
-
+#if (defined(__GNUC__) && (__GNUC__ < 4)) || defined(_WIN32)
+// GCC or VC emulation:
+#define BOOST_NO_TWO_PHASE_NAME_LOOKUP
+#endif
 //
 // Verify that we have actually got BOOST_NO_INTRINSIC_WCHAR_T
 // set correctly, if we don't do this now, we will get errors later
@@ -125,6 +128,7 @@ template<> struct assert_intrinsic_wchar_t<unsigned short> {};
 #     define BOOST_HAS_MS_INT64
 #  endif
 #  define BOOST_NO_SWPRINTF
+#  define BOOST_NO_TWO_PHASE_NAME_LOOKUP
 #elif defined(_WIN32)
 #  define BOOST_DISABLE_WIN32
 #endif
@@ -144,15 +148,15 @@ template<> struct assert_intrinsic_wchar_t<unsigned short> {};
 #endif
 //
 // last known and checked version:
-#if (BOOST_INTEL_CXX_VERSION > 910)
+#if (BOOST_INTEL_CXX_VERSION > 1010)
 #  if defined(BOOST_ASSERT_CONFIG)
 #     error "Unknown compiler version - please run the configure tests and report the results"
 #  elif defined(_MSC_VER)
-#     pragma message("Unknown compiler version - please run the configure tests and report the results")
+//
+//      We don't emit this warning any more, since we have so few
+//      defect macros set anyway (just the one).
+//
+//#     pragma message("Unknown compiler version - please run the configure tests and report the results")
 #  endif
 #endif
-
-
-
-
 

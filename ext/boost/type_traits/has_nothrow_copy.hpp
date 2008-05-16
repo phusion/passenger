@@ -30,6 +30,7 @@ struct has_nothrow_copy_imp{
 }
 
 BOOST_TT_AUX_BOOL_TRAIT_DEF1(has_nothrow_copy,T,::boost::detail::has_nothrow_copy_imp<T>::value)
+BOOST_TT_AUX_BOOL_TRAIT_DEF1(has_nothrow_copy_constructor,T,::boost::detail::has_nothrow_copy_imp<T>::value)
 
 } // namespace boost
 

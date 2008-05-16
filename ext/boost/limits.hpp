@@ -30,6 +30,8 @@
 #  define BOOST_ULLT  ::boost::ulong_long_type
 #endif
 
+#include <climits>  // for CHAR_BIT
+
 namespace std
 {
   template<>

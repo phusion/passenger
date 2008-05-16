@@ -81,14 +81,14 @@ end
 ##### boost::thread static library
 
 subdir 'ext/boost/src' do
-	file 'libboost_thread.a' => Dir['*.cpp'] do
+	file 'libboost_thread.a' => Dir['*.cpp', 'pthread/*.cpp'] do
 		# Note: NDEBUG *must* be defined! boost::thread use assert() to check whether
 		# the pthread functions return an error. Because of the way Passenger uses
 		# processes, sometimes pthread errors will occur. These errors are harmless
 		# and should be ignored. Defining NDEBUG guarantees that boost::thread() will
 		# not abort if such an error occured.
 		flags = "-O2 -fPIC -I../.. #{THREADING_FLAGS} -DNDEBUG #{MULTI_ARCH_FLAGS}"
-		compile_cxx "*.cpp", flags
+		compile_cxx "*.cpp pthread/*.cpp", flags
 		create_static_library "libboost_thread.a", "*.o"
 	end
 	
@@ -105,11 +105,11 @@ class APACHE2
 	OBJECTS = {
 		'Configuration.o' => %w(Configuration.cpp Configuration.h),
 		'Hooks.o' => %w(Hooks.cpp Hooks.h
-				Configuration.h ApplicationPool.h StandardApplicationPool.h
-				ApplicationPoolServer.h
+				Configuration.h ApplicationPool.h ApplicationPoolServer.h
 				SpawnManager.h Exceptions.h Application.h MessageChannel.h
-				Utils.h),
-		'Utils.o' => %w(Utils.cpp Utils.h),
+				System.h Utils.h),
+		'System.o'  => %w(System.cpp System.h),
+		'Utils.o'   => %w(Utils.cpp Utils.h),
 		'Logging.o' => %w(Logging.cpp Logging.h)
 	}
 end
@@ -142,11 +142,14 @@ subdir 'ext/apache2' do
 		'ApplicationPoolServerExecutable.cpp',
 		'ApplicationPool.h',
 		'StandardApplicationPool.h',
+		'MessageChannel.h',
+		'SpawnManager.h',
+		'System.o',
 		'Utils.o',
 		'Logging.o'
 	] do
 		create_executable "ApplicationPoolServerExecutable",
-			'ApplicationPoolServerExecutable.cpp Utils.o Logging.o',
+			'ApplicationPoolServerExecutable.cpp System.o Utils.o Logging.o',
 			"-I.. #{CXXFLAGS} #{LDFLAGS} -DPASSENGER_DEBUG ../boost/src/libboost_thread.a -lpthread"
 	end
 	
@@ -200,21 +203,26 @@ class TEST
 	
 	AP2_OBJECTS = {
 		'CxxTestMain.o' => %w(CxxTestMain.cpp),
-		'MessageChannelTest.o' => %w(MessageChannelTest.cpp ../ext/apache2/MessageChannel.h),
+		'MessageChannelTest.o' => %w(MessageChannelTest.cpp
+			../ext/apache2/MessageChannel.h
+			../ext/apache2/System.h),
 		'SpawnManagerTest.o' => %w(SpawnManagerTest.cpp
 			../ext/apache2/SpawnManager.h
 			../ext/apache2/Application.h
-			../ext/apache2/MessageChannel.h),
+			../ext/apache2/MessageChannel.h
+			../ext/apache2/System.h),
 		'ApplicationPoolServerTest.o' => %w(ApplicationPoolServerTest.cpp
 			../ext/apache2/ApplicationPoolServer.h
-			../ext/apache2/MessageChannel.h),
+			../ext/apache2/MessageChannel.h
+			../ext/apache2/System.h),
 		'ApplicationPoolServer_ApplicationPoolTest.o' => %w(ApplicationPoolServer_ApplicationPoolTest.cpp
 			ApplicationPoolTest.cpp
 			../ext/apache2/ApplicationPoolServer.h
 			../ext/apache2/ApplicationPool.h
 			../ext/apache2/SpawnManager.h
 			../ext/apache2/Application.h
-			../ext/apache2/MessageChannel.h),
+			../ext/apache2/MessageChannel.h
+			../ext/apache2/System.h),
 		'StandardApplicationPoolTest.o' => %w(StandardApplicationPoolTest.cpp
 			ApplicationPoolTest.cpp
 			../ext/apache2/ApplicationPool.h
@@ -259,9 +267,11 @@ subdir 'test' do
 
 	file 'Apache2ModuleTests' => TEST::AP2_OBJECTS.keys +
 	  ['../ext/boost/src/libboost_thread.a',
+	   '../ext/apache2/System.o',
 	   '../ext/apache2/Utils.o',
 	   '../ext/apache2/Logging.o'] do
 		objects = TEST::AP2_OBJECTS.keys.join(' ') <<
+			" ../ext/apache2/System.o" <<
 			" ../ext/apache2/Utils.o" <<
 			" ../ext/apache2/Logging.o"
 		create_executable "Apache2ModuleTests", objects,

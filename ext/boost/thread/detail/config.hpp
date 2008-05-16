@@ -17,8 +17,7 @@
 #  pragma warn -8066 // Unreachable code
 #endif
 
-// insist on threading support being available:
-#include <boost/config/requires_threads.hpp>
+#include "platform.hpp"
 
 // compatibility with the rest of Boost's auto-linking code:
 #if defined(BOOST_THREAD_DYN_DLL) || defined(BOOST_ALL_DYN_LINK)
@@ -31,7 +30,7 @@
 #elif defined(BOOST_THREAD_USE_DLL)   //Use dll
 #elif defined(BOOST_THREAD_USE_LIB)   //Use lib
 #else //Use default
-#   if defined(BOOST_HAS_WINTHREADS)
+#   if defined(BOOST_THREAD_PLATFORM_WIN32)
 #       if defined(BOOST_MSVC) || defined(BOOST_INTEL_WIN)
             //For compilers supporting auto-tss cleanup
             //with Boost.Threads lib, use Boost.Threads lib

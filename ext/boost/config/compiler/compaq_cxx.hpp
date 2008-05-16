@@ -5,9 +5,9 @@
 
 //  See http://www.boost.org for most recent version.
 
-//  Dec Alpha True64 C++ compiler setup:
+//  Tru64 C++ compiler setup (now HP):
 
-#define BOOST_COMPILER "Dec Alpha True64 " BOOST_STRINGIZE(__DECCXX_VER)
+#define BOOST_COMPILER "HP Tru64 C++ " BOOST_STRINGIZE(__DECCXX_VER)
 
 #include "boost/config/compiler/common_edg.hpp"
 

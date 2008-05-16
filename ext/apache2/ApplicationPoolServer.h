@@ -37,6 +37,7 @@
 #include "Application.h"
 #include "Exceptions.h"
 #include "Logging.h"
+#include "System.h"
 
 namespace Passenger {
 
@@ -142,7 +143,10 @@ private:
 		mutex lock;
 		
 		~SharedData() {
-			close(server);
+			int ret;
+			do {
+				ret = close(server);
+			} while (ret == -1 && errno == EINTR);
 		}
 	};
 	
@@ -177,19 +181,31 @@ private:
 		
 		virtual void shutdownReader() {
 			if (fd != -1) {
-				shutdown(fd, SHUT_RD);
+				int ret = InterruptableCalls::shutdown(fd, SHUT_RD);
+				if (ret == -1) {
+					throw SystemException("Cannot shutdown the writer stream",
+						errno);
+				}
 			}
 		}
 		
 		virtual void shutdownWriter() {
 			if (fd != -1) {
-				shutdown(fd, SHUT_WR);
+				int ret = InterruptableCalls::shutdown(fd, SHUT_WR);
+				if (ret == -1) {
+					throw SystemException("Cannot shutdown the writer stream",
+						errno);
+				}
 			}
 		}
 		
 		virtual void closeStream() {
 			if (fd != -1) {
-				close(fd);
+				int ret = InterruptableCalls::close(fd);
+				if (ret == -1) {
+					throw SystemException("Cannot close the session stream",
+						errno);
+				}
 				fd = -1;
 			}
 		}
@@ -272,6 +288,7 @@ private:
 		}
 		
 		virtual pid_t getSpawnServerPid() const {
+			this_thread::disable_syscall_interruption dsi;
 			MessageChannel channel(data->server);
 			mutex::scoped_lock l(data->lock);
 			vector<string> args;
@@ -288,6 +305,7 @@ private:
 			const string &environment = "production",
 			const string &spawnMethod = "smart"
 		) {
+			this_thread::disable_syscall_interruption dsi;
 			MessageChannel channel(data->server);
 			mutex::scoped_lock l(data->lock);
 			vector<string> args;
@@ -374,51 +392,74 @@ private:
 	/**
 	 * Shutdown the currently running ApplicationPool server process.
 	 *
+	 * @pre System call interruption is disabled.
 	 * @pre serverSocket != -1 && serverPid != 0
 	 * @post serverSocket == -1 && serverPid == 0
 	 */
 	void shutdownServer() {
+		this_thread::disable_syscall_interruption dsi;
+		int ret;
+		
+		InterruptableCalls::close(serverSocket);
+		if (!statusReportFIFO.empty()) {
+			do {
+				ret = unlink(statusReportFIFO.c_str());
+			} while (ret == -1 && errno == EINTR);
+		}
+		
+		/*
+		 * We perform the real shutdown in a child process, i.e.
+		 * asynchronously. This is to make graceful Apache restarts
+		 * as fast as possible. We don't want to waste any time
+		 * waiting on the ApplicationPool server executable to shut
+		 * down.
+		 */
+		pid_t pid = InterruptableCalls::fork();
+		if (pid == 0) {
+			// Double fork to prevent zombies.
+			pid = InterruptableCalls::fork();
+			if (pid == 0 || pid == -1) {
+				performServerShutdown();
+			}
+			_exit(0);
+		} else if (pid == -1) {
+			performServerShutdown();
+		} else {
+			InterruptableCalls::waitpid(pid, NULL, 0);
+			serverSocket = -1;
+			serverPid = 0;
+		}
+	}
+	
+	void performServerShutdown() {
 		time_t begin;
 		bool done;
 		int ret;
 		
-		do {
-			ret = close(serverSocket);
-		} while (ret == -1 && errno == EINTR);
-		
-		P_DEBUG("Waiting for existing ApplicationPoolServerExecutable to exit...");
-		begin = time(NULL);
-		while (!done && time(NULL) < begin + 5) {
+		P_TRACE(2, "Waiting for existing ApplicationPoolServerExecutable (PID " <<
+			serverPid << ") to exit...");
+		begin = InterruptableCalls::time(NULL);
+		while (!done && InterruptableCalls::time(NULL) < begin + 5) {
 			/*
 			 * Some Apache modules fork(), but don't close file descriptors.
 			 * mod_wsgi is one such example. Because of that, closing serverSocket
-			 * won't cause the ApplicationPool server to exit. So we send it a
+			 * won't always cause the ApplicationPool server to exit. So we send it a
 			 * signal.
 			 */
-			do {
-				ret = kill(serverPid, SIGINT);
-			} while (ret == -1 && errno == EINTR);
+			InterruptableCalls::kill(serverPid, SIGINT);
 			
-			do {
-				ret = waitpid(serverPid, NULL, WNOHANG);
-			} while (ret == -1 && errno == EINTR);
+			ret = InterruptableCalls::waitpid(serverPid, NULL, WNOHANG);
 			done = ret > 0 || ret == -1;
 			if (!done) {
-				usleep(100000);
+				InterruptableCalls::usleep(100000);
 			}
 		}
 		if (done) {
-			P_DEBUG("ApplicationPoolServerExecutable exited.");
+			P_TRACE(2, "ApplicationPoolServerExecutable exited.");
 		} else {
 			P_DEBUG("ApplicationPoolServerExecutable not exited in time. Killing it...");
-			kill(serverPid, SIGTERM);
-			waitpid(serverPid, NULL, 0);
-		}
-		serverSocket = -1;
-		serverPid = 0;
-		
-		if (!statusReportFIFO.empty()) {
-			unlink(statusReportFIFO.c_str());
+			InterruptableCalls::kill(serverPid, SIGTERM);
+			InterruptableCalls::waitpid(serverPid, NULL, 0);
 		}
 	}
 	
@@ -426,6 +467,7 @@ private:
 	 * Start an ApplicationPool server process. If there's already one running,
 	 * then the currently running one will be shutdown.
 	 *
+	 * @pre System call interruption is disabled.
 	 * @post serverSocket != -1 && serverPid != 0
 	 * @throw SystemException Something went wrong.
 	 */
@@ -437,13 +479,13 @@ private:
 			shutdownServer();
 		}
 		
-		if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
+		if (InterruptableCalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
 			throw SystemException("Cannot create a Unix socket pair", errno);
 		}
 		
 		createStatusReportFIFO();
 		
-		pid = fork();
+		pid = InterruptableCalls::fork();
 		if (pid == 0) { // Child process.
 			dup2(fds[0], SERVER_SOCKET_FD);
 			
@@ -472,11 +514,11 @@ private:
 			fflush(stderr);
 			_exit(1);
 		} else if (pid == -1) { // Error.
-			close(fds[0]);
-			close(fds[1]);
+			InterruptableCalls::close(fds[0]);
+			InterruptableCalls::close(fds[1]);
 			throw SystemException("Cannot create a new process", errno);
 		} else { // Parent process.
-			close(fds[0]);
+			InterruptableCalls::close(fds[0]);
 			serverSocket = fds[1];
 			serverPid = pid;
 		}
@@ -484,11 +526,15 @@ private:
 	
 	void createStatusReportFIFO() {
 		char filename[PATH_MAX];
+		int ret;
 		
 		snprintf(filename, sizeof(filename), "/tmp/passenger_status.%d.fifo",
 			getpid());
 		filename[PATH_MAX - 1] = '\0';
-		if (mkfifo(filename, S_IRUSR | S_IWUSR) == -1 && errno != EEXIST) {
+		do {
+			ret = mkfifo(filename, S_IRUSR | S_IWUSR);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1 && errno != EEXIST) {
 			fprintf(stderr, "*** WARNING: Could not create FIFO '%s'; "
 				"disabling Passenger ApplicationPool status reporting.\n",
 				filename);
@@ -534,11 +580,13 @@ public:
 	  m_user(user) {
 		serverSocket = -1;
 		serverPid = 0;
+		this_thread::disable_syscall_interruption dsi;
 		restartServer();
 	}
 	
 	~ApplicationPoolServer() {
 		if (serverSocket != -1) {
+			this_thread::disable_syscall_interruption dsi;
 			shutdownServer();
 		}
 	}
@@ -548,6 +596,10 @@ public:
 	 * All cache/pool data of this ApplicationPool is actually stored on
 	 * the server and shared with other clients, but that is totally
 	 * transparent to the user of the ApplicationPool object.
+	 *
+	 * @note
+	 *   All methods of the returned ApplicationPool object may throw
+	 *   SystemException, IOException or boost::thread_interrupted.
 	 *
 	 * @warning
 	 * One may only use the returned ApplicationPool object for handling
@@ -573,6 +625,7 @@ public:
 	 */
 	ApplicationPoolPtr connect() {
 		try {
+			this_thread::disable_syscall_interruption dsi;
 			MessageChannel channel(serverSocket);
 			int clientConnection;
 			

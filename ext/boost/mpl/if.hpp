@@ -10,9 +10,9 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source: /cvsroot/boost/boost/boost/mpl/if.hpp,v $
-// $Date: 2004/09/07 08:51:31 $
-// $Revision: 1.25 $
+// $Source$
+// $Date: 2004-09-07 04:53:22 -0400 (Tue, 07 Sep 2004) $
+// $Revision: 24947 $
 
 #include <boost/mpl/aux_/value_wknd.hpp>
 #include <boost/mpl/aux_/static_cast.hpp>

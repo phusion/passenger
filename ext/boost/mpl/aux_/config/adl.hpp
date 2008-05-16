@@ -10,9 +10,9 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source: /cvsroot/boost/boost/boost/mpl/aux_/config/adl.hpp,v $
-// $Date: 2004/09/16 14:08:47 $
-// $Revision: 1.1 $
+// $Source$
+// $Date: 2004-09-16 10:09:12 -0400 (Thu, 16 Sep 2004) $
+// $Revision: 25148 $
 
 #include <boost/mpl/aux_/config/msvc.hpp>
 #include <boost/mpl/aux_/config/intel.hpp>

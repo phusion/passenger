@@ -14,13 +14,11 @@
 // we don't support Borland prior to version 5.4:
 #if __BORLANDC__ < 0x540
 #  error "Compiler not supported or configured - please reconfigure"
-#elif __BORLANDC__ < 0x581
-#  pragma message( "Support for Borland compilers older than BCB2006 is deprecated in Boost 1.34" )
 #endif
 
 // last known and checked version is 0x600 (Builder X preview)
-// Or 0x582 (Borland C++ Builder 2006 Update 1):
-#if (__BORLANDC__ > 0x582) && (__BORLANDC__ != 0x600)
+// or 0x593 (CodeGear C++ Builder 2007 December 2007 update):
+#if (__BORLANDC__ > 0x593) && (__BORLANDC__ != 0x600)
 #  if defined(BOOST_ASSERT_CONFIG)
 #     error "Unknown compiler version - please run the configure tests and report the results"
 #  else
@@ -38,7 +36,6 @@
 #  define BOOST_BCB_WITH_DINKUMWARE
 #endif
 
-
 //
 // Version 5.0 and below:
 #   if __BORLANDC__ <= 0x0550
@@ -54,7 +51,6 @@
 #if (__BORLANDC__ <= 0x551)
 #  define BOOST_NO_CV_SPECIALIZATIONS
 #  define BOOST_NO_CV_VOID_SPECIALIZATIONS
-#  define BOOST_NO_LIMITS_COMPILE_TIME_CONSTANTS
 #  define BOOST_NO_DEDUCED_TYPENAME
 // workaround for missing WCHAR_MAX/WCHAR_MIN:
 #include <climits>
@@ -67,22 +63,9 @@
 #endif
 #endif
 
-// Borland C++ Builder 2006 Update 2 and below:
-#if (__BORLANDC__ <= 0x582)
-#  define BOOST_NO_SFINAE
+// Borland C++ Builder 6 and below:
+#if (__BORLANDC__ <= 0x564)
 #  define BOOST_NO_INTEGRAL_INT64_T
-#  define BOOST_NO_DEPENDENT_NESTED_DERIVATIONS
-#  define BOOST_NO_PRIVATE_IN_AGGREGATE
-#  define BOOST_NO_USING_TEMPLATE
-#  define BOOST_BCB_PARTIAL_SPECIALIZATION_BUG
-#  define BOOST_NO_TEMPLATE_TEMPLATES
-#  define BOOST_NO_USING_DECLARATION_OVERLOADS_FROM_TYPENAME_BASE
-#  define BOOST_NO_MEMBER_TEMPLATE_FRIENDS
-   // we shouldn't really need this - but too many things choke
-   // without it, this needs more investigation:
-#  define BOOST_NO_LIMITS_COMPILE_TIME_CONSTANTS
-#  define BOOST_FUNCTION_SCOPE_USING_DECLARATION_BREAKS_ADL
-#  define BOOST_NO_IS_ABSTRACT
 
 #  ifdef NDEBUG
       // fix broken <cstring> so that Boost.test works:
@@ -95,12 +78,22 @@
 #     define errno errno
 #  endif
 
+#endif
+
 //
 // new bug in 5.61:
 #if (__BORLANDC__ >= 0x561) && (__BORLANDC__ <= 0x580)
    // this seems to be needed by the command line compiler, but not the IDE:
 #  define BOOST_NO_MEMBER_FUNCTION_SPECIALIZATIONS
 #endif
+
+// Borland C++ Builder 2006 Update 2 and below:
+#if (__BORLANDC__ <= 0x582)
+#  define BOOST_NO_SFINAE
+#  define BOOST_BCB_PARTIAL_SPECIALIZATION_BUG
+#  define BOOST_NO_TEMPLATE_TEMPLATES
+
+#  define BOOST_NO_PRIVATE_IN_AGGREGATE
 
 #  ifdef _WIN32
 #     define BOOST_NO_SWPRINTF
@@ -111,6 +104,31 @@
       // _CPPUNWIND doesn't get automatically set for some reason:
 #     pragma defineonoption BOOST_CPPUNWIND -x
 #  endif
+#endif
+
+// Borland C++ Builder 2007 December 2007 Update and below:
+#if (__BORLANDC__ <= 0x593)
+#  define BOOST_NO_DEPENDENT_NESTED_DERIVATIONS
+#  define BOOST_NO_USING_TEMPLATE
+#  define BOOST_NO_USING_DECLARATION_OVERLOADS_FROM_TYPENAME_BASE
+#  define BOOST_NO_MEMBER_TEMPLATE_FRIENDS
+   // we shouldn't really need this - but too many things choke
+   // without it, this needs more investigation:
+#  define BOOST_NO_LIMITS_COMPILE_TIME_CONSTANTS
+#  define BOOST_FUNCTION_SCOPE_USING_DECLARATION_BREAKS_ADL
+#  define BOOST_NO_IS_ABSTRACT
+#  define BOOST_NO_FUNCTION_TYPE_SPECIALIZATIONS
+#  define BOOST_NO_TWO_PHASE_NAME_LOOKUP
+
+// Temporary workaround
+#define BOOST_MPL_CFG_NO_PREPROCESSED_HEADERS
+
+#endif
+
+#if __BORLANDC__ >= 0x590
+#  define BOOST_HAS_TR1_HASH
+
+#  define BOOST_HAS_MACRO_USE_FACET
 #endif
 
 //
@@ -187,4 +205,5 @@
 #endif
 
 #define BOOST_COMPILER "Borland C++ version " BOOST_STRINGIZE(__BORLANDC__)
+
 

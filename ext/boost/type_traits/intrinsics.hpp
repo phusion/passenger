@@ -85,6 +85,21 @@
 #   define BOOST_HAS_TYPE_TRAITS_INTRINSICS
 #endif
 
+#if defined(__DMC__) && (__DMC__ >= 0x848)
+// For Digital Mars C++, www.digitalmars.com
+#   define BOOST_IS_UNION(T) (__typeinfo(T) & 0x400)
+#   define BOOST_IS_POD(T) (__typeinfo(T) & 0x800)
+#   define BOOST_IS_EMPTY(T) (__typeinfo(T) & 0x1000)
+#   define BOOST_HAS_TRIVIAL_CONSTRUCTOR(T) (__typeinfo(T) & 0x10)
+#   define BOOST_HAS_TRIVIAL_COPY(T) (__typeinfo(T) & 0x20)
+#   define BOOST_HAS_TRIVIAL_ASSIGN(T) (__typeinfo(T) & 0x40)
+#   define BOOST_HAS_TRIVIAL_DESTRUCTOR(T) (__typeinfo(T) & 0x8)
+#   define BOOST_HAS_NOTHROW_CONSTRUCTOR(T) (__typeinfo(T) & 0x80)
+#   define BOOST_HAS_NOTHROW_COPY(T) (__typeinfo(T) & 0x100)
+#   define BOOST_HAS_NOTHROW_ASSIGN(T) (__typeinfo(T) & 0x200)
+#   define BOOST_HAS_VIRTUAL_DESTRUCTOR(T) (__typeinfo(T) & 0x4)
+#   define BOOST_HAS_TYPE_TRAITS_INTRINSICS
+#endif
 
 #ifndef BOOST_IS_UNION
 #   define BOOST_IS_UNION(T) false
@@ -131,6 +146,7 @@
 #endif
 
 #endif // BOOST_TT_INTRINSICS_HPP_INCLUDED
+
 
 
 
