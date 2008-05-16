@@ -21,8 +21,6 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/thread.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/condition.hpp>
 #include <boost/bind.hpp>
 
 #include <string>
@@ -42,6 +40,7 @@
 
 #include "ApplicationPool.h"
 #include "Logging.h"
+#include "System.h"
 #ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER
 	#include "DummySpawnManager.h"
 #else
@@ -289,48 +288,54 @@ private:
 	}
 	
 	void cleanerThreadMainLoop() {
-		mutex::scoped_lock l(lock);
-		while (!done) {
-			xtime xt;
-			xtime_get(&xt, TIME_UTC);
-			xt.sec += maxIdleTime + 1;
-			if (cleanerThreadSleeper.timed_wait(l, xt)) {
-				// Condition was woken up.
-				if (done) {
-					// StandardApplicationPool is being destroyed.
-					break;
-				} else {
-					continue;
+		this_thread::disable_syscall_interruption dsi;
+		unique_lock<mutex> l(lock);
+		try {
+			while (!done && !this_thread::interruption_requested()) {
+				xtime xt;
+				xtime_get(&xt, TIME_UTC);
+				xt.sec += maxIdleTime + 1;
+				if (cleanerThreadSleeper.timed_wait(l, xt)) {
+					// Condition was woken up.
+					if (done) {
+						// StandardApplicationPool is being destroyed.
+						break;
+					} else {
+						// maxIdleTime changed.
+						continue;
+					}
 				}
-			}
-			
-			time_t now = time(NULL);
-			AppContainerList::iterator it;
-			for (it = inactiveApps.begin(); it != inactiveApps.end(); it++) {
-				AppContainer &container(*it->get());
-				ApplicationPtr app(container.app);
-				AppContainerListPtr appList(apps[app->getAppRoot()]);
 				
-				if (now - container.lastUsed > (time_t) maxIdleTime) {
-					P_DEBUG("Cleaning idle app " << app->getAppRoot() <<
-						" (PID " << app->getPid() << ")");
-					appList->erase(container.iterator);
+				time_t now = InterruptableCalls::time(NULL);
+				AppContainerList::iterator it;
+				for (it = inactiveApps.begin(); it != inactiveApps.end(); it++) {
+					AppContainer &container(*it->get());
+					ApplicationPtr app(container.app);
+					AppContainerListPtr appList(apps[app->getAppRoot()]);
 					
-					AppContainerList::iterator prev = it;
-					prev--;
-					inactiveApps.erase(it);
-					it = prev;
-					
-					appInstanceCount[app->getAppRoot()]--;
-					
-					count--;
-				}
-				if (appList->empty()) {
-					apps.erase(app->getAppRoot());
-					appInstanceCount.erase(app->getAppRoot());
-					data->restartFileTimes.erase(app->getAppRoot());
+					if (now - container.lastUsed > (time_t) maxIdleTime) {
+						P_DEBUG("Cleaning idle app " << app->getAppRoot() <<
+							" (PID " << app->getPid() << ")");
+						appList->erase(container.iterator);
+						
+						AppContainerList::iterator prev = it;
+						prev--;
+						inactiveApps.erase(it);
+						it = prev;
+						
+						appInstanceCount[app->getAppRoot()]--;
+						
+						count--;
+					}
+					if (appList->empty()) {
+						apps.erase(app->getAppRoot());
+						appInstanceCount.erase(app->getAppRoot());
+						data->restartFileTimes.erase(app->getAppRoot());
+					}
 				}
 			}
+		} catch (const exception &e) {
+			P_ERROR("Uncaught exception: " << e.what());
 		}
 	}
 	
