@@ -83,6 +83,16 @@ InterruptableCalls::close(int fd) {
 	return ret;
 }
 
+int
+InterruptableCalls::socketpair(int d, int type, int protocol, int sv[2]) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::socketpair(d, type, protocol, sv)
+	);
+	return ret;
+}
+
 ssize_t
 InterruptableCalls::recvmsg(int s, struct msghdr *msg, int flags) {
 	ssize_t ret;
@@ -119,6 +129,56 @@ InterruptableCalls::fclose(FILE *fp) {
 	CHECK_INTERRUPTION(
 		ret == EOF,
 		ret = ::fclose(fp)
+	);
+	return ret;
+}
+
+time_t
+InterruptableCalls::time(time_t *t) {
+	time_t ret;
+	CHECK_INTERRUPTION(
+		ret == (time_t) -1,
+		ret = ::time(t)
+	);
+	return ret;
+}
+
+int
+InterruptableCalls::usleep(useconds_t usec) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::usleep(usec)
+	);
+	return ret;
+}
+
+pid_t
+InterruptableCalls::fork() {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::fork()
+	);
+	return ret;
+}
+
+int
+InterruptableCalls::kill(pid_t pid, int sig) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::kill(pid, sig)
+	);
+	return ret;
+}
+
+pid_t
+InterruptableCalls::waitpid(pid_t pid, int *status, int options) {
+	pid_t ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::waitpid(pid, status, options)
 	);
 	return ret;
 }

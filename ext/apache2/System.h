@@ -4,11 +4,13 @@
 #include <boost/thread.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <sys/socket.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <signal.h>
 #include <cstdio>
+#include <ctime>
 
 /**
  * Support for interruption of blocking system calls and C library calls.
@@ -94,11 +96,19 @@ namespace Passenger {
 		ssize_t write(int fd, const void *buf, size_t count);
 		int close(int fd);
 		
+		int socketpair(int d, int type, int protocol, int sv[2]);
 		ssize_t recvmsg(int s, struct msghdr *msg, int flags);
 		ssize_t sendmsg(int s, const struct msghdr *msg, int flags);
 		
 		FILE *fopen(const char *path, const char *mode);
 		int fclose(FILE *fp);
+		
+		time_t time(time_t *t);
+		int usleep(useconds_t usec);
+		
+		pid_t fork();
+		int kill(pid_t pid, int sig);
+		pid_t waitpid(pid_t pid, int *status, int options);
 	}
 
 } // namespace Passenger

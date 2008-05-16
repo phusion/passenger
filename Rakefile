@@ -142,6 +142,8 @@ subdir 'ext/apache2' do
 		'ApplicationPoolServerExecutable.cpp',
 		'ApplicationPool.h',
 		'StandardApplicationPool.h',
+		'MessageChannel.h',
+		'SpawnManager.h',
 		'System.o',
 		'Utils.o',
 		'Logging.o'

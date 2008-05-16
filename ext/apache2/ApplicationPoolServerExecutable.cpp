@@ -81,7 +81,7 @@ private:
 	
 	void statusReportThreadMain() {
 		try {
-			while (true) {
+			while (!this_thread::interruption_requested()) {
 				struct stat buf;
 				int ret;
 				
@@ -107,7 +107,7 @@ private:
 				sleep(1);
 			}
 		} catch (const boost::thread_interrupted &) {
-			P_DEBUG("Status report thread interrupted.");
+			P_TRACE(2, "Status report thread interrupted.");
 		}
 	}
 	
@@ -137,7 +137,7 @@ public:
 		this_thread::disable_syscall_interruption dsi;
 		this_thread::disable_interruption di;
 		
-		P_DEBUG("Shutting down server.");
+		P_TRACE(2, "Shutting down server.");
 		
 		InterruptableCalls::close(serverSocket);
 		
@@ -160,7 +160,7 @@ public:
 		clientsCopy.clear();
 		deleteStatusReportFIFO();
 		
-		P_DEBUG("Server shutdown complete.");
+		P_TRACE(2, "Server shutdown complete.");
 	}
 	
 	int start(); // Will be defined later, because Client depends on Server's interface.
@@ -293,7 +293,7 @@ private:
 	void threadMain(const weak_ptr<Client> self) {
 		vector<string> args;
 		try {
-			while (true) {
+			while (!this_thread::interruption_requested()) {
 				try {
 					if (!channel.read(args)) {
 						// Client closed connection.
@@ -332,7 +332,7 @@ private:
 				args.clear();
 			}
 		} catch (const boost::thread_interrupted &) {
-			P_DEBUG("Client thread " << this << " interrupted.");
+			P_TRACE(2, "Client thread " << this << " interrupted.");
 		} catch (const exception &e) {
 			P_WARN("Uncaught exception in ApplicationPoolServer client thread:\n"
 				<< "   message: " << toString(args) << "\n"
@@ -406,7 +406,7 @@ Server::start() {
 			);
 		}
 		
-		while (true) {
+		while (!this_thread::interruption_requested()) {
 			int fds[2], ret;
 			char x;
 			
@@ -440,7 +440,7 @@ Server::start() {
 			client->start(client);
 		}
 	} catch (const boost::thread_interrupted &) {
-		P_DEBUG("Main thread interrupted.");
+		P_TRACE(2, "Main thread interrupted.");
 	}
 	return 0;
 }

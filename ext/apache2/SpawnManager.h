@@ -21,7 +21,7 @@
 #include <string>
 #include <list>
 #include <boost/shared_ptr.hpp>
-#include <boost/thread/mutex.hpp>
+#include <boost/thread.hpp>
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -38,6 +38,7 @@
 #include "MessageChannel.h"
 #include "Exceptions.h"
 #include "Logging.h"
+#include "System.h"
 
 namespace Passenger {
 
@@ -105,24 +106,24 @@ private:
 			// Wait at most 5 seconds for the spawn server to exit.
 			// If that doesn't work, kill it, then wait at most 5 seconds
 			// for it to exit.
-			time_t begin = time(NULL);
+			time_t begin = InterruptableCalls::time(NULL);
 			bool done = false;
-			while (!done && time(NULL) - begin < 5) {
-				if (waitpid(pid, NULL, WNOHANG) > 0) {
+			while (!done && InterruptableCalls::time(NULL) - begin < 5) {
+				if (InterruptableCalls::waitpid(pid, NULL, WNOHANG) > 0) {
 					done = true;
 				} else {
-					usleep(100000);
+					InterruptableCalls::usleep(100000);
 				}
 			}
 			if (!done) {
 				P_TRACE(2, "Spawn server did not exit in time, killing it...");
-				kill(pid, SIGTERM);
-				begin = time(NULL);
-				while (time(NULL) - begin < 5) {
-					if (waitpid(pid, NULL, WNOHANG) > 0) {
+				InterruptableCalls::kill(pid, SIGTERM);
+				begin = InterruptableCalls::time(NULL);
+				while (InterruptableCalls::time(NULL) - begin < 5) {
+					if (InterruptableCalls::waitpid(pid, NULL, WNOHANG) > 0) {
 						break;
 					} else {
-						usleep(100000);
+						InterruptableCalls::usleep(100000);
 					}
 				}
 				P_TRACE(2, "Spawn server has exited.");
@@ -134,11 +135,11 @@ private:
 		FILE *logFileHandle = NULL;
 		
 		serverNeedsRestart = true;
-		if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
+		if (InterruptableCalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
 			throw SystemException("Cannot create a Unix socket", errno);
 		}
 		if (!logFile.empty()) {
-			logFileHandle = fopen(logFile.c_str(), "a");
+			logFileHandle = InterruptableCalls::fopen(logFile.c_str(), "a");
 			if (logFileHandle == NULL) {
 				string message("Cannot open log file '");
 				message.append(logFile);
@@ -147,7 +148,7 @@ private:
 			}
 		}
 
-		pid = fork();
+		pid = InterruptableCalls::fork();
 		if (pid == 0) {
 			if (!logFile.empty()) {
 				dup2(fileno(logFileHandle), STDERR_FILENO);
@@ -206,25 +207,25 @@ private:
 			_exit(1);
 		} else if (pid == -1) {
 			int e = errno;
-			close(fds[0]);
-			close(fds[1]);
+			InterruptableCalls::close(fds[0]);
+			InterruptableCalls::close(fds[1]);
 			if (logFileHandle != NULL) {
-				fclose(logFileHandle);
+				InterruptableCalls::fclose(logFileHandle);
 			}
 			pid = 0;
 			throw SystemException("Unable to fork a process", e);
 		} else {
-			close(fds[1]);
+			InterruptableCalls::close(fds[1]);
 			if (!logFile.empty()) {
-				fclose(logFileHandle);
+				InterruptableCalls::fclose(logFileHandle);
 			}
 			channel = MessageChannel(fds[0]);
 			serverNeedsRestart = false;
 			
 			#ifdef TESTING_SPAWN_MANAGER
 				if (nextRestartShouldFail) {
-					kill(pid, SIGTERM);
-					usleep(500000);
+					InterruptableCalls::kill(pid, SIGTERM);
+					InterruptableCalls::usleep(500000);
 				}
 			#endif
 		}
@@ -305,7 +306,7 @@ private:
 		}
 		
 		if (args.size() != 3) {
-			close(ownerPipe);
+			InterruptableCalls::close(ownerPipe);
 			throw SpawnException("The spawn server sent an invalid message.");
 		}
 		
@@ -313,8 +314,13 @@ private:
 		bool usingAbstractNamespace = args[2] == "true";
 		
 		if (!usingAbstractNamespace) {
-			chmod(args[1].c_str(), S_IRUSR | S_IWUSR);
-			chown(args[1].c_str(), getuid(), getgid());
+			int ret;
+			do {
+				ret = chmod(args[1].c_str(), S_IRUSR | S_IWUSR);
+			} while (ret == -1 && errno == EINTR);
+			do {
+				ret = chown(args[1].c_str(), getuid(), getgid());
+			} while (ret == -1 && errno == EINTR);
 		}
 		return ApplicationPtr(new Application(appRoot, pid, args[1],
 			usingAbstractNamespace, ownerPipe));
@@ -425,6 +431,8 @@ public:
 		#ifdef TESTING_SPAWN_MANAGER
 			nextRestartShouldFail = false;
 		#endif
+		this_thread::disable_interruption di;
+		this_thread::disable_syscall_interruption dsi;
 		try {
 			restartServer();
 		} catch (const IOException &e) {
@@ -436,6 +444,8 @@ public:
 	
 	~SpawnManager() throw() {
 		if (pid != 0) {
+			this_thread::disable_interruption di;
+			this_thread::disable_syscall_interruption dsi;
 			channel.close();
 			waitpid(pid, NULL, 0);
 		}
@@ -488,6 +498,8 @@ public:
 		const string &environment = "production",
 		const string &spawnMethod = "smart"
 	) {
+		this_thread::disable_interruption di;
+		this_thread::disable_syscall_interruption dsi;
 		mutex::scoped_lock l(lock);
 		try {
 			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser,
@@ -518,6 +530,8 @@ public:
 	 *         restart was attempted, but it failed.
 	 */
 	void reload(const string &appRoot) {
+		this_thread::disable_interruption di;
+		this_thread::disable_syscall_interruption dsi;
 		try {
 			return sendReloadCommand(appRoot);
 		} catch (const SystemException &e) {
