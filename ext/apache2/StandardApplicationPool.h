@@ -261,11 +261,15 @@ private:
 		
 		struct stat buf;
 		bool result;
-		if (stat(restartFile.c_str(), &buf) == 0) {
-			int ret;
+		int ret;
+		
+		do {
+			ret = stat(restartFile.c_str(), &buf);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == 0) {
 			do {
 				ret = unlink(restartFile.c_str());
-			} while (ret == -1 && errno == EAGAIN);
+			} while (ret == -1 && (errno == EINTR || errno == EAGAIN));
 			if (ret == 0 || errno == ENOENT) {
 				restartFileTimes.erase(appRoot);
 				result = true;

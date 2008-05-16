@@ -99,6 +99,7 @@ namespace Passenger {
 		int socketpair(int d, int type, int protocol, int sv[2]);
 		ssize_t recvmsg(int s, struct msghdr *msg, int flags);
 		ssize_t sendmsg(int s, const struct msghdr *msg, int flags);
+		int shutdown(int s, int how);
 		
 		FILE *fopen(const char *path, const char *mode);
 		int fclose(FILE *fp);

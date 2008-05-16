@@ -113,6 +113,16 @@ InterruptableCalls::sendmsg(int s, const struct msghdr *msg, int flags) {
 	return ret;
 }
 
+int
+InterruptableCalls::shutdown(int s, int how) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::shutdown(s, how)
+	);
+	return ret;
+}
+
 FILE *
 InterruptableCalls::fopen(const char *path, const char *mode) {
 	FILE *ret;

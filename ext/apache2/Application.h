@@ -64,8 +64,8 @@ public:
 	 *     Then send that string by calling sendHeaders().
 	 *  -# In case of a POST of PUT request, send the HTTP request body by calling
 	 *     sendBodyBlock(), possibly multiple times.
-	 *  -# Close the writer channel since you're now done sending data.
-	 *  -# The HTTP response can now be read through the reader channel (getReader()).
+	 *  -# Shutdown the writer channel since you're now done sending data.
+	 *  -# The HTTP response can now be read through the reader channel (getStream()).
 	 *  -# When the HTTP response has been read, the session must be closed.
 	 *     This is done by destroying the Session object.
 	 *
@@ -97,6 +97,7 @@ public:
 		 * @pre headers != NULL
 		 * @throws IOException The writer channel has already been closed.
 		 * @throws SystemException Something went wrong during writing.
+		 * @throws boost::thread_interrupted
 		 */
 		virtual void sendHeaders(const char *headers, unsigned int size) {
 			int stream = getStream();
@@ -117,6 +118,7 @@ public:
 		 * @param headers
 		 * @throws IOException The writer channel has already been closed.
 		 * @throws SystemException Something went wrong during writing.
+		 * @throws boost::thread_interrupted
 		 */
 		virtual void sendHeaders(const string &headers) {
 			sendHeaders(headers.c_str(), headers.size());
@@ -134,6 +136,7 @@ public:
 		 * @param size The size, in bytes, of <tt>block</tt>.
 		 * @throws IOException The writer channel has already been closed.
 		 * @throws SystemException Something went wrong during writing.
+		 * @throws boost::thread_interrupted
 		 */
 		virtual void sendBodyBlock(const char *block, unsigned int size) {
 			int stream = getStream();
@@ -161,16 +164,27 @@ public:
 		
 		/**
 		 * Indicate that we don't want to read data anymore from the I/O stream.
+		 * Calling this method after closeStream() is called will have no effect.
+		 *
+		 * @throws SystemException Something went wrong.
+		 * @throws boost::thread_interrupted
 		 */
 		virtual void shutdownReader() = 0;
 		
 		/**
 		 * Indicate that we don't want to write data anymore to the I/O stream.
+		 * Calling this method after closeStream() is called will have no effect.
+		 *
+		 * @throws SystemException Something went wrong.
+		 * @throws boost::thread_interrupted
 		 */
 		virtual void shutdownWriter() = 0;
 		
 		/**
 		 * Close the I/O stream.
+		 *
+		 * @throws SystemException Something went wrong.
+		 * @throws boost::thread_interrupted
 		 */
 		virtual void closeStream() = 0;
 		
@@ -216,19 +230,31 @@ private:
 		
 		virtual void shutdownReader() {
 			if (fd != -1) {
-				shutdown(fd, SHUT_RD);
+				int ret = InterruptableCalls::shutdown(fd, SHUT_RD);
+				if (ret == -1) {
+					throw SystemException("Cannot shutdown the writer stream",
+						errno);
+				}
 			}
 		}
 		
 		virtual void shutdownWriter() {
 			if (fd != -1) {
-				shutdown(fd, SHUT_WR);
+				int ret = InterruptableCalls::shutdown(fd, SHUT_WR);
+				if (ret == -1) {
+					throw SystemException("Cannot shutdown the writer stream",
+						errno);
+				}
 			}
 		}
 		
 		virtual void closeStream() {
 			if (fd != -1) {
-				close(fd);
+				int ret = InterruptableCalls::close(fd);
+				if (ret == -1) {
+					throw SystemException("Cannot close the session stream",
+						errno);
+				}
 				fd = -1;
 			}
 		}
@@ -274,11 +300,17 @@ public:
 	}
 	
 	virtual ~Application() {
+		int ret;
+		
 		if (ownerPipe != -1) {
-			close(ownerPipe);
+			do {
+				ret = close(ownerPipe);
+			} while (ret == -1 && errno == EINTR);
 		}
 		if (!usingAbstractNamespace) {
-			unlink(listenSocketName.c_str());
+			do {
+				ret = unlink(listenSocketName.c_str());
+			} while (ret == -1 && errno == EINTR);
 		}
 		P_TRACE(2, "Application " << this << ": destroyed.");
 	}
