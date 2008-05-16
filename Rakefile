@@ -28,6 +28,7 @@ require 'passenger/platform_info'
 
 # Don't forget to edit Configuration.h too
 PACKAGE_VERSION = "1.1.0"
+OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 
 include PlatformInfo
 APXS2.nil? and raise "Could not find 'apxs' or 'apxs2'."
@@ -37,7 +38,12 @@ APR_FLAGS.nil? and raise "Could not find Apache Portable Runtime (APR)."
 
 CXX = "g++"
 THREADING_FLAGS = "-D_REENTRANT"
-CXXFLAGS = "#{THREADING_FLAGS} -Wall -g -I/usr/local/include " << MULTI_ARCH_FLAGS
+if OPTIMIZE
+	OPTIMIZATION_FLAGS = "-O2 -DNDEBUG"
+else
+	OPTIMIZATION_FLAGS = "-g -DPASSENGER_DEBUG"
+end
+CXXFLAGS = "#{THREADING_FLAGS} #{OPTIMIZATION_FLAGS} -Wall -I/usr/local/include #{MULTI_ARCH_FLAGS}"
 LDFLAGS = ""
 
 
@@ -82,12 +88,12 @@ end
 
 subdir 'ext/boost/src' do
 	file 'libboost_thread.a' => Dir['*.cpp'] + Dir['pthread/*.cpp'] do
-		# Note: NDEBUG *must* be defined! boost::thread use assert() to check whether
+		# Note: NDEBUG *must* be defined! boost::thread uses assert() to check whether
 		# the pthread functions return an error. Because of the way Passenger uses
 		# processes, sometimes pthread errors will occur. These errors are harmless
 		# and should be ignored. Defining NDEBUG guarantees that boost::thread() will
 		# not abort if such an error occured.
-		flags = "-O2 -fPIC -I../.. #{THREADING_FLAGS} -DNDEBUG #{MULTI_ARCH_FLAGS}"
+		flags = "#{OPTIMIZATION_FLAGS} -fPIC -I../.. #{THREADING_FLAGS} -DNDEBUG #{MULTI_ARCH_FLAGS}"
 		compile_cxx "*.cpp pthread/*.cpp", flags
 		create_static_library "libboost_thread.a", "*.o"
 	end
@@ -101,7 +107,7 @@ end
 ##### Apache module
 
 class APACHE2
-	CXXFLAGS = "-I.. -fPIC -g -DPASSENGER_DEBUG #{APR_FLAGS} #{APXS2_FLAGS} #{CXXFLAGS}"
+	CXXFLAGS = "-I.. -fPIC #{OPTIMIZATION_FLAGS} #{APR_FLAGS} #{APXS2_FLAGS} #{CXXFLAGS}"
 	OBJECTS = {
 		'Configuration.o' => %w(Configuration.cpp Configuration.h),
 		'Hooks.o' => %w(Hooks.cpp Hooks.h
@@ -286,9 +292,13 @@ end
 
 subdir 'benchmark' do
 	file 'DummyRequestHandler' => ['DummyRequestHandler.cpp',
-	  '../ext/apache2/MessageChannel.h'] do
+	  '../ext/apache2/MessageChannel.h',
+	  '../ext/apache2/System.o',
+	  '../ext/boost/src/libboost_thread.a'] do
 		create_executable "DummyRequestHandler", "DummyRequestHandler.cpp",
-			"-I../ext -I../ext/apache2 #{CXXFLAGS} #{LDFLAGS}"
+			"-I../ext -I../ext/apache2 #{CXXFLAGS} #{LDFLAGS} " <<
+			"../ext/apache2/System.o " <<
+			"../ext/boost/src/libboost_thread.a -lpthread"
 	end
 	
 	task :clean do
