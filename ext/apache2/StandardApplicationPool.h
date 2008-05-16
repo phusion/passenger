@@ -352,6 +352,8 @@ private:
 		const string &environment,
 		const string &spawnMethod
 	) {
+		this_thread::disable_interruption di;
+		this_thread::disable_syscall_interruption dsi;
 		AppContainerPtr container;
 		AppContainerList *list;
 		
@@ -380,7 +382,7 @@ private:
 			
 			if (it != apps.end()) {
 				list = it->second.get();
-		
+				
 				if (list->front()->sessions == 0) {
 					container = list->front();
 					list->pop_front();
@@ -530,6 +532,7 @@ public:
 	
 	virtual ~StandardApplicationPool() {
 		if (!detached) {
+			this_thread::disable_interruption di;
 			{
 				mutex::scoped_lock l(lock);
 				done = true;
@@ -566,7 +569,7 @@ public:
 			if (container != NULL) {
 				container->lastUsed = time(NULL);
 				container->sessions++;
-			
+				
 				P_ASSERT(verifyState(), Application::SessionPtr(),
 					"State is valid:\n" << toString(false));
 				try {
@@ -579,7 +582,8 @@ public:
 						message.append(appRoot);
 						message.append("': ");
 						try {
-							const SystemException &syse = dynamic_cast<const SystemException &>(e);
+							const SystemException &syse =
+								dynamic_cast<const SystemException &>(e);
 							message.append(syse.sys());
 						} catch (const bad_cast &) {
 							message.append(e.what());
@@ -593,7 +597,8 @@ public:
 						appInstanceCount.erase(appRoot);
 						count--;
 						active--;
-						P_ASSERT(verifyState(), Application::SessionPtr(), "State is valid.");
+						P_ASSERT(verifyState(), Application::SessionPtr(),
+							"State is valid.");
 					}
 				}
 			}
@@ -608,7 +613,7 @@ public:
 				}
 				unsigned int sleepTime = attempt * 10000;
 				totalSleepTime += sleepTime;
-				usleep(sleepTime);
+				InterruptableCalls::usleep(sleepTime);
 				{
 					mutex::scoped_lock wl(waitingLock);
 					waiting--;

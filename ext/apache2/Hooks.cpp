@@ -40,6 +40,7 @@
 #include "Logging.h"
 #include "ApplicationPoolServer.h"
 #include "MessageChannel.h"
+#include "System.h"
 
 using namespace std;
 using namespace Passenger;
@@ -57,9 +58,15 @@ private:
 		
 		static apr_status_t cleanup(void *p) {
 			try {
+				this_thread::disable_interruption di;
+				this_thread::disable_syscall_interruption dsi;
 				delete (Container *) p;
+			} catch (const thread_interrupted &) {
+				P_TRACE(3, "A system call was interrupted during closing "
+					"of a session. Apache is probably restarting or "
+					"shutting down.");
 			} catch (const exception &e) {
-				P_WARN("Exception during closing of a session: " <<
+				P_TRACE(3, "Exception during closing of a session: " <<
 					e.what());
 			}
 			return APR_SUCCESS;
@@ -321,6 +328,7 @@ private:
 
 public:
 	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s) {
+		ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "Initializing Phusion Passenger...");
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
 		passenger_config_merge_all_servers(pconf, s);
 		
@@ -377,9 +385,15 @@ public:
 			applicationPool->setMax(config->maxPoolSize);
 			applicationPool->setMaxPerApp(config->maxInstancesPerApp);
 			applicationPool->setMaxIdleTime(config->poolIdleTime);
+		} catch (const thread_interrupted &) {
+			P_TRACE(3, "A system call was interrupted during initialization of "
+				"an Apache child process. Apache is probably restarting or "
+				"shutting down.");
 		} catch (const exception &e) {
-			fprintf(stderr, "*** Cannot initialize Passenger: %s\n", e.what());
-			fflush(stderr);
+			P_WARN("Cannot initialize Passenger in an Apache child process: " <<
+				e.what() <<
+				" (this warning is harmless if you're currently restarting "
+				"or shutting down Apache)\n");
 			abort();
 		}
 	}
@@ -415,6 +429,8 @@ public:
 		}
 		
 		try {
+			this_thread::disable_interruption di;
+			this_thread::disable_syscall_interruption dsi;
 			apr_bucket_brigade *bb;
 			apr_bucket *b;
 			Application::SessionPtr session;
@@ -482,6 +498,10 @@ public:
 			session->discardStream();
 
 			return OK;
+		} catch (const thread_interrupted &) {
+			P_TRACE(3, "A system call was interrupted during an HTTP request. Apache "
+				"is probably restarting or shutting down.");
+			return HTTP_INTERNAL_SERVER_ERROR;
 		} catch (const exception &e) {
 			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "*** Unexpected error in Passenger: %s", e.what());
 			return HTTP_INTERNAL_SERVER_ERROR;
@@ -587,7 +607,17 @@ static Hooks *hooks = NULL;
 
 static apr_status_t
 destroy_hooks(void *arg) {
-	delete hooks;
+	try {
+		this_thread::disable_interruption di;
+		this_thread::disable_syscall_interruption dsi;
+		delete hooks;
+	} catch (const thread_interrupted &) {
+		// Ignore interruptions, we're shutting down anyway.
+		P_TRACE(3, "A system call was interrupted during shutdown of mod_passenger.");
+	} catch (const exception &e) {
+		// Ignore other exceptions, we're shutting down anyway.
+		P_TRACE(3, "Exception during shutdown of mod_passenger: " << e.what());
+	}
 	return APR_SUCCESS;
 }
 
@@ -619,6 +649,13 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 			destroy_hooks,
 			apr_pool_cleanup_null);
 		return OK;
+	
+	} catch (thread_interrupted &) {
+		P_TRACE(2, "A system call was interrupted during mod_passenger "
+			"initialization. Apache seems to be restarting or "
+			"shutting down.");
+		return DECLINED;
+	
 	} catch (const thread_resource_error &e) {
 		struct rlimit lim;
 		string pthread_threads_max;

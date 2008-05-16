@@ -106,6 +106,7 @@ namespace Passenger {
 		
 		time_t time(time_t *t);
 		int usleep(useconds_t usec);
+		int nanosleep(const struct timespec *req, struct timespec *rem);
 		
 		pid_t fork();
 		int kill(pid_t pid, int sig);

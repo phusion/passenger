@@ -155,11 +155,29 @@ InterruptableCalls::time(time_t *t) {
 
 int
 InterruptableCalls::usleep(useconds_t usec) {
-	int ret;
-	CHECK_INTERRUPTION(
-		ret == -1,
-		ret = ::usleep(usec)
-	);
+	struct timespec spec;
+	spec.tv_sec = usec / 1000000;
+	spec.tv_nsec = usec % 1000000;
+	return InterruptableCalls::nanosleep(&spec, NULL);
+}
+
+int
+InterruptableCalls::nanosleep(const struct timespec *req, struct timespec *rem) {
+	struct timespec req2 = *req;
+	struct timespec rem2;
+	int ret, e;
+	do {
+		ret = ::nanosleep(&req2, &rem2);
+		e = errno;
+		req2 = rem2;
+	} while (ret == -1 && e == EINTR && !this_thread::syscalls_interruptable());
+	if (ret == -1 && e == EINTR && this_thread::syscalls_interruptable()) {
+		throw thread_interrupted();
+	}
+	errno = e;
+	if (ret == 0 && rem) {
+		*rem = rem2;
+	}
 	return ret;
 }
 

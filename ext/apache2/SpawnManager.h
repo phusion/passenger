@@ -96,6 +96,7 @@ private:
 	/**
 	 * Restarts the spawn server.
 	 *
+	 * @pre System call interruption is disabled.
 	 * @throws SystemException An error occured while trying to setup the spawn server.
 	 * @throws IOException The specified log file could not be opened.
 	 */
@@ -240,6 +241,7 @@ private:
 	 * @param environment The RAILS_ENV environment that should be used.
 	 * @param spawnMethod The spawn method to use.
 	 * @return An Application smart pointer, representing the spawned application.
+	 * @pre System call interruption is disabled.
 	 * @throws SpawnException Something went wrong.
 	 */
 	ApplicationPtr sendSpawnCommand(
