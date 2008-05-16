@@ -2,6 +2,7 @@
 //  boost/assert.hpp - BOOST_ASSERT(expr)
 //
 //  Copyright (c) 2001, 2002 Peter Dimov and Multi Media Ltd.
+//  Copyright (c) 2007 Peter Dimov
 //
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
@@ -34,4 +35,16 @@ void assertion_failed(char const * expr, char const * function, char const * fil
 #else
 # include <assert.h> // .h to support old libraries w/o <cassert> - effect is the same
 # define BOOST_ASSERT(expr) assert(expr)
+#endif
+
+#undef BOOST_VERIFY
+
+#if defined(BOOST_DISABLE_ASSERTS) || ( !defined(BOOST_ENABLE_ASSERT_HANDLER) && defined(NDEBUG) )
+
+# define BOOST_VERIFY(expr) ((void)(expr))
+
+#else
+
+# define BOOST_VERIFY(expr) BOOST_ASSERT(expr)
+
 #endif

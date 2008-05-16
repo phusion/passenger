@@ -1,43 +1,28 @@
 // Copyright (C) 2003, Fernando Luis Cacciola Carballal.
-// Copyright (C) 2007, Anthony Williams
-// Copyright (C) 2007, Steven Watanabe, Richard Smith
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 //
-// See http://www.boost.org/lib/optional/ for documentation.
+// See http://www.boost.org/libs/optional for documentation.
 //
 // You are welcome to contact the author at:
-// fernando.cacciola@gmail.com
+//  fernando_cacciola@hotmail.com
 //
 #ifndef BOOST_NONE_17SEP2003_HPP
 #define BOOST_NONE_17SEP2003_HPP
 
-namespace boost
-{
-  namespace detail
-  {
-    class none_helper;
-  }
+#include "boost/none_t.hpp"
 
-  inline void none(detail::none_helper);
+// NOTE: Borland users have to include this header outside any precompiled headers
+// (bcc<=5.64 cannot include instance data in a precompiled header)
+//  -- * To be verified, now that there's no unnamed namespace
 
-  namespace detail
-  {
-    class none_helper
-    {
-    private:
-      
-      none_helper( none_helper const& ) {}
-      
-      friend void boost::none(none_helper);
-    };
-  }
+namespace boost {
 
-  typedef void (*none_t)(detail::none_helper);
+none_t const none = ((none_t)0) ;
 
-  inline void none(detail::none_helper) {}
-}
+} // namespace boost
 
 #endif
+

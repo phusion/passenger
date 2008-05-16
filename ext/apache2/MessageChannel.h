@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <cstdarg>
 
+#include "System.h"
 #include "Exceptions.h"
 #include "Utils.h"
 
@@ -88,7 +89,7 @@ using namespace std;
  *    receive a message, then a file descriptor, then a scalar. If the
  *    receiving side does things in the wrong order then bad things will
  *    happen.
- * @note MessageChannel is thread-safe.
+ * @note MessageChannel is not thread-safe, but is reentrant.
  *
  * @ingroup Support
  */
@@ -118,10 +119,16 @@ public:
 	/**
 	 * Close the underlying file descriptor. If this method is called multiple
 	 * times, the file descriptor will only be closed the first time.
+	 *
+	 * @throw SystemException
+	 * @throw boost::thread_interrupted
 	 */
 	void close() {
 		if (fd != -1) {
-			::close(fd);
+			int ret = InterruptableCalls::close(fd);
+			if (ret == -1) {
+				throw SystemException("Cannot close file descriptor", errno);
+			}
 			fd = -1;
 		}
 	}
@@ -132,6 +139,7 @@ public:
 	 *
 	 * @param args The message elements.
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 * @throws boost::thread_interrupted
 	 * @pre None of the message elements may contain a NUL character (<tt>'\\0'</tt>).
 	 * @see read(), write(const char *, ...)
 	 */
@@ -162,6 +170,7 @@ public:
 	 * @param ... Other elements of the message. These *must* be strings, i.e. of type char*.
 	 *            It is also required to terminate this list with a NULL.
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 * @throws boost::thread_interrupted
 	 * @pre None of the message elements may contain a NUL character (<tt>'\\0'</tt>).
 	 * @see read(), write(const list<string> &)
 	 */
@@ -188,6 +197,7 @@ public:
 	 *
 	 * @param str The scalar message's content.
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 * @throws boost::thread_interrupted
 	 * @see readScalar(), writeScalar(const char *, unsigned int)
 	 */
 	void writeScalar(const string &str) {
@@ -201,6 +211,7 @@ public:
 	 * @param size The number of bytes in <tt>data</tt>.
 	 * @pre <tt>data != NULL</tt>
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 * @throws boost::thread_interrupted
 	 * @see readScalar(), writeScalar(const string &)
 	 */
 	void writeScalar(const char *data, unsigned int size) {
@@ -217,15 +228,14 @@ public:
 	 * @param size The number of bytes in <tt>data</tt>.
 	 * @pre <tt>data != NULL</tt>
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 * @throws boost::thread_interrupted
 	 * @see readRaw()
 	 */
 	void writeRaw(const char *data, unsigned int size) {
 		ssize_t ret;
 		unsigned int written = 0;
 		do {
-			do {
-				ret = ::write(fd, data + written, size - written);
-			} while (ret == -1 && errno == EINTR);
+			ret = InterruptableCalls::write(fd, data + written, size - written);
 			if (ret == -1) {
 				throw SystemException("write() failed", errno);
 			} else {
@@ -241,6 +251,7 @@ public:
 	 * @param data The data to send.
 	 * @pre <tt>data != NULL</tt>
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 * @throws boost::thread_interrupted
 	 */
 	void writeRaw(const string &data) {
 		writeRaw(data.c_str(), data.size());
@@ -252,6 +263,7 @@ public:
 	 *
 	 * @param fileDescriptor The file descriptor to pass.
 	 * @throws SystemException Something went wrong during file descriptor passing.
+	 * @throws boost::thread_interrupted
 	 * @pre <tt>fileDescriptor >= 0</tt>
 	 * @see readFileDescriptor()
 	 */
@@ -295,9 +307,7 @@ public:
 			memcpy(CMSG_DATA(control_header), &fileDescriptor, sizeof(int));
 		#endif
 		
-		do {
-			ret = sendmsg(fd, &msg, 0);
-		} while (ret == -1 && errno == EINTR);
+		ret = InterruptableCalls::sendmsg(fd, &msg, 0);
 		if (ret == -1) {
 			throw SystemException("Cannot send file descriptor with sendmsg()", errno);
 		}
@@ -310,6 +320,7 @@ public:
 	 * @return Whether end-of-file has been reached. If so, then the contents
 	 *         of <tt>args</tt> will be undefined.
 	 * @throws SystemException If an error occured while receiving the message.
+	 * @throws boost::thread_interrupted
 	 * @see write()
 	 */
 	bool read(vector<string> &args) {
@@ -318,9 +329,7 @@ public:
 		unsigned int alreadyRead = 0;
 		
 		do {
-			do {
-				ret = ::read(fd, (char *) &size + alreadyRead, sizeof(size) - alreadyRead);
-			} while (ret == -1 && errno == EINTR);
+			ret = InterruptableCalls::read(fd, (char *) &size + alreadyRead, sizeof(size) - alreadyRead);
 			if (ret == -1) {
 				throw SystemException("read() failed", errno);
 			} else if (ret == 0) {
@@ -335,9 +344,7 @@ public:
 		buffer.reserve(size);
 		while (buffer.size() < size) {
 			char tmp[1024 * 8];
-			do {
-				ret = ::read(fd, tmp, min(size - buffer.size(), sizeof(tmp)));
-			} while (ret == -1 && errno == EINTR);
+			ret = InterruptableCalls::read(fd, tmp, min(size - buffer.size(), sizeof(tmp)));
 			if (ret == -1) {
 				throw SystemException("read() failed", errno);
 			} else if (ret == 0) {
@@ -363,6 +370,7 @@ public:
 	 * @param output The message will be put in here.
 	 * @returns Whether end-of-file was reached during reading.
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 * @throws boost::thread_interrupted
 	 * @see writeScalar()
 	 */
 	bool readScalar(string &output) {
@@ -403,6 +411,7 @@ public:
 	 * @return Whether reading was successful or whether EOF was reached.
 	 * @pre buf != NULL
 	 * @throws SystemException Something went wrong during reading.
+	 * @throws boost::thread_interrupted
 	 * @see writeRaw()
 	 */
 	bool readRaw(void *buf, unsigned int size) {
@@ -410,9 +419,7 @@ public:
 		unsigned int alreadyRead = 0;
 		
 		while (alreadyRead < size) {
-			do {
-				ret = ::read(fd, (char *) buf + alreadyRead, size - alreadyRead);
-			} while (ret == -1 && errno == EINTR);
+			ret = InterruptableCalls::read(fd, (char *) buf + alreadyRead, size - alreadyRead);
 			if (ret == -1) {
 				throw SystemException("read() failed", errno);
 			} else if (ret == 0) {
@@ -434,6 +441,7 @@ public:
 	 *            file descriptor isn't a Unix socket.
 	 * @throws IOException Whatever was received doesn't seem to be a
 	 *            file descriptor.
+	 * @throws boost::thread_interrupted
 	 */
 	int readFileDescriptor() {
 		struct msghdr msg;
@@ -467,9 +475,7 @@ public:
 		msg.msg_controllen = sizeof(control_data);
 		msg.msg_flags      = 0;
 		
-		do {
-			ret = recvmsg(fd, &msg, 0);
-		} while (ret == -1 && errno == EINTR);
+		ret = InterruptableCalls::recvmsg(fd, &msg, 0);
 		if (ret == -1) {
 			throw SystemException("Cannot read file descriptor with recvmsg()", errno);
 		}

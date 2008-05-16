@@ -56,6 +56,7 @@
 #  define BOOST_NO_SFINAE
 #  define BOOST_NO_POINTER_TO_MEMBER_TEMPLATE_PARAMETERS
 #  define BOOST_NO_IS_ABSTRACT
+#  define BOOST_NO_FUNCTION_TYPE_SPECIALIZATIONS
 // TODO: what version is meant here? Have there really been any fixes in cl 12.01 (as e.g. shipped with eVC4)?
 #  if (_MSC_VER > 1200)
 #     define BOOST_NO_MEMBER_FUNCTION_SPECIALIZATIONS
@@ -69,17 +70,27 @@
 #  define BOOST_NO_SWPRINTF
 #endif
 
+#if defined(UNDER_CE)
+// Windows CE does not have a conforming signature for swprintf
+#  define BOOST_NO_SWPRINTF
+#endif
+
 #if _MSC_VER <= 1400  // 1400 == VC++ 8.0
 #  define BOOST_NO_MEMBER_TEMPLATE_FRIENDS
+#endif
+
+#if _MSC_VER <= 1500  // 1500 == VC++ 9.0
+#  define BOOST_NO_TWO_PHASE_NAME_LOOKUP
 #endif
 
 #ifndef _NATIVE_WCHAR_T_DEFINED
 #  define BOOST_NO_INTRINSIC_WCHAR_T
 #endif
 
-#ifdef _WIN32_WCE
+#if defined(_WIN32_WCE) || defined(UNDER_CE)
 #  define BOOST_NO_THREADEX
 #  define BOOST_NO_GETSYSTEMTIMEASFILETIME
+#  define BOOST_NO_SWPRINTF
 #endif
 
 //   
@@ -154,6 +165,8 @@
 #     define BOOST_COMPILER_VERSION 7.1
 #   elif _MSC_VER == 1400
 #     define BOOST_COMPILER_VERSION 8.0
+#   elif _MSC_VER == 1500
+#     define BOOST_COMPILER_VERSION 9.0
 #   else
 #     define BOOST_COMPILER_VERSION _MSC_VER
 #   endif
@@ -169,7 +182,7 @@
 #endif
 //
 // last known and checked version is 1400 (VC8):
-#if (_MSC_VER > 1400)
+#if (_MSC_VER > 1500)
 #  if defined(BOOST_ASSERT_CONFIG)
 #     error "Unknown compiler version - please run the configure tests and report the results"
 #  else

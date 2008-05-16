@@ -10,9 +10,9 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source: /cvsroot/boost/boost/boost/mpl/bool.hpp,v $
-// $Date: 2004/09/26 09:54:25 $
-// $Revision: 1.6 $
+// $Source$
+// $Date: 2004-09-26 05:54:25 -0400 (Sun, 26 Sep 2004) $
+// $Revision: 25411 $
 
 #include <boost/mpl/bool_fwd.hpp>
 #include <boost/mpl/integral_c_tag.hpp>

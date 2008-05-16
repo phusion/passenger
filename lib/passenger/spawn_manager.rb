@@ -280,10 +280,16 @@ private
 			send_error_page(client, 'framework_init_error', :error => e)
 		end
 		if app
-			client.write('ok')
-			client.write(app.pid, app.listen_socket_name, app.using_abstract_namespace?)
-			client.send_io(app.owner_pipe)
-			app.close
+			begin
+				client.write('ok')
+				client.write(app.pid, app.listen_socket_name, app.using_abstract_namespace?)
+				client.send_io(app.owner_pipe)
+			rescue Errno::EPIPE
+				# The Apache module may be interrupted during a spawn command,
+				# in which case it will close the connection. We ignore this error.
+			ensure
+				app.close
+			end
 		end
 	end
 	

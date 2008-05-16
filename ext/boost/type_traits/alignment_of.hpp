@@ -17,7 +17,7 @@
 
 #ifdef BOOST_MSVC
 #   pragma warning(push)
-#   pragma warning(disable: 4121) // alignment is sensitive to packing
+#   pragma warning(disable: 4121 4512) // alignment is sensitive to packing
 #endif
 #if defined(__BORLANDC__) && (__BORLANDC__ < 0x600)
 #pragma option push -Vx- -Ve-

@@ -24,7 +24,7 @@
 //  formulation
 //
 
-#include <typeinfo>
+#include "sp_typeinfo.hpp"
 
 namespace boost
 {
@@ -123,7 +123,7 @@ public:
         delete this;
     }
 
-    virtual void * get_deleter( std::type_info const & ti ) = 0;
+    virtual void * get_deleter( sp_typeinfo const & ti ) = 0;
 
     void add_ref_copy()
     {

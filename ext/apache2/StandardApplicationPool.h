@@ -21,9 +21,9 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/thread.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/condition.hpp>
 #include <boost/bind.hpp>
+#include <boost/date_time/microsec_time_clock.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <string>
 #include <sstream>
@@ -42,6 +42,7 @@
 
 #include "ApplicationPool.h"
 #include "Logging.h"
+#include "System.h"
 #ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER
 	#include "DummySpawnManager.h"
 #else
@@ -93,7 +94,7 @@ private:
 	static const int DEFAULT_MAX_INSTANCES_PER_APP = 0;
 	static const int CLEANER_THREAD_STACK_SIZE = 1024 * 128;
 	static const unsigned int MAX_GET_ATTEMPTS = 10;
-	static const unsigned int GET_TIMEOUT = 5000000; // In microseconds.
+	static const unsigned int GET_TIMEOUT = 5000; // In milliseconds.
 
 	friend class ApplicationPoolServer;
 	struct AppContainer;
@@ -224,17 +225,53 @@ private:
 		return true;
 	}
 	
+	template<typename LockActionType>
+	string toString(LockActionType lockAction) const {
+		unique_lock<mutex> l(lock, lockAction);
+		stringstream result;
+		
+		result << "----------- General information -----------" << endl;
+		result << "max    = " << max << endl;
+		result << "count  = " << count << endl;
+		result << "active = " << active << endl;
+		result << "waiting = " << waiting << endl;
+		result << endl;
+		
+		result << "----------- Applications -----------" << endl;
+		ApplicationMap::const_iterator it;
+		for (it = apps.begin(); it != apps.end(); it++) {
+			AppContainerList *list = it->second.get();
+			AppContainerList::const_iterator lit;
+			
+			result << it->first << ": " << endl;
+			for (lit = list->begin(); lit != list->end(); lit++) {
+				AppContainer *container = lit->get();
+				char buf[128];
+				
+				snprintf(buf, sizeof(buf), "PID: %-8d  Sessions: %d",
+					container->app->getPid(), container->sessions);
+				result << "  " << buf << endl;
+			}
+			result << endl;
+		}
+		return result.str();
+	}
+	
 	bool needsRestart(const string &appRoot) {
 		string restartFile(appRoot);
 		restartFile.append("/tmp/restart.txt");
 		
 		struct stat buf;
 		bool result;
-		if (stat(restartFile.c_str(), &buf) == 0) {
-			int ret;
+		int ret;
+		
+		do {
+			ret = stat(restartFile.c_str(), &buf);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == 0) {
 			do {
 				ret = unlink(restartFile.c_str());
-			} while (ret == -1 && errno == EAGAIN);
+			} while (ret == -1 && (errno == EINTR || errno == EAGAIN));
 			if (ret == 0 || errno == ENOENT) {
 				restartFileTimes.erase(appRoot);
 				result = true;
@@ -257,64 +294,62 @@ private:
 	}
 	
 	void cleanerThreadMainLoop() {
-		mutex::scoped_lock l(lock);
-		while (!done) {
-			xtime xt;
-			xtime_get(&xt, TIME_UTC);
-			xt.sec += maxIdleTime + 1;
-			if (cleanerThreadSleeper.timed_wait(l, xt)) {
-				// Condition was woken up.
-				if (done) {
-					// StandardApplicationPool is being destroyed.
-					break;
-				} else {
-					continue;
+		this_thread::disable_syscall_interruption dsi;
+		unique_lock<mutex> l(lock);
+		try {
+			while (!done && !this_thread::interruption_requested()) {
+				xtime xt;
+				xtime_get(&xt, TIME_UTC);
+				xt.sec += maxIdleTime + 1;
+				if (cleanerThreadSleeper.timed_wait(l, xt)) {
+					// Condition was woken up.
+					if (done) {
+						// StandardApplicationPool is being destroyed.
+						break;
+					} else {
+						// maxIdleTime changed.
+						continue;
+					}
 				}
-			}
-			
-			time_t now = time(NULL);
-			AppContainerList::iterator it;
-			for (it = inactiveApps.begin(); it != inactiveApps.end(); it++) {
-				AppContainer &container(*it->get());
-				ApplicationPtr app(container.app);
-				AppContainerListPtr appList(apps[app->getAppRoot()]);
 				
-				if (now - container.lastUsed > (time_t) maxIdleTime) {
-					P_DEBUG("Cleaning idle app " << app->getAppRoot() <<
-						" (PID " << app->getPid() << ")");
-					appList->erase(container.iterator);
+				time_t now = InterruptableCalls::time(NULL);
+				AppContainerList::iterator it;
+				for (it = inactiveApps.begin(); it != inactiveApps.end(); it++) {
+					AppContainer &container(*it->get());
+					ApplicationPtr app(container.app);
+					AppContainerListPtr appList(apps[app->getAppRoot()]);
 					
-					AppContainerList::iterator prev = it;
-					prev--;
-					inactiveApps.erase(it);
-					it = prev;
-					
-					appInstanceCount[app->getAppRoot()]--;
-					
-					count--;
-				}
-				if (appList->empty()) {
-					apps.erase(app->getAppRoot());
-					appInstanceCount.erase(app->getAppRoot());
-					data->restartFileTimes.erase(app->getAppRoot());
+					if (now - container.lastUsed > (time_t) maxIdleTime) {
+						P_DEBUG("Cleaning idle app " << app->getAppRoot() <<
+							" (PID " << app->getPid() << ")");
+						appList->erase(container.iterator);
+						
+						AppContainerList::iterator prev = it;
+						prev--;
+						inactiveApps.erase(it);
+						it = prev;
+						
+						appInstanceCount[app->getAppRoot()]--;
+						
+						count--;
+					}
+					if (appList->empty()) {
+						apps.erase(app->getAppRoot());
+						appInstanceCount.erase(app->getAppRoot());
+						data->restartFileTimes.erase(app->getAppRoot());
+					}
 				}
 			}
+		} catch (const exception &e) {
+			P_ERROR("Uncaught exception: " << e.what());
 		}
 	}
 	
-	void detach() {
-		detached = true;
-		
-		ApplicationMap::iterator it;
-		for (it = apps.begin(); it != apps.end(); it++) {
-			AppContainerList &list = *(it->second.get());
-			AppContainerList::iterator it2;
-			for (it2 = list.begin(); it2 != list.end(); it2++) {
-				(*it2)->app->detach();
-			}
-		}
-	}
-	
+	/**
+	 * @throws boost::thread_interrupted
+	 * @throws SpawnException
+	 * @throws SystemException
+	 */
 	pair<AppContainerPtr, AppContainerList *>
 	spawnOrUseExisting(
 		mutex::scoped_lock &l,
@@ -325,6 +360,8 @@ private:
 		const string &spawnMethod,
 		const string &appType
 	) {
+		this_thread::disable_interruption di;
+		this_thread::disable_syscall_interruption dsi;
 		AppContainerPtr container;
 		AppContainerList *list;
 		
@@ -353,7 +390,7 @@ private:
 			
 			if (it != apps.end()) {
 				list = it->second.get();
-		
+				
 				if (list->front()->sessions == 0) {
 					container = list->front();
 					list->pop_front();
@@ -370,9 +407,13 @@ private:
 					return make_pair(AppContainerPtr(), (AppContainerList *) 0);
 				} else {
 					container = ptr(new AppContainer());
-					container->app = spawnManager.spawn(appRoot,
-						lowerPrivilege, lowestUser, environment,
-						spawnMethod, appType);
+					{
+						this_thread::restore_interruption ri(di);
+						this_thread::restore_syscall_interruption rsi(dsi);
+						container->app = spawnManager.spawn(appRoot,
+							lowerPrivilege, lowestUser, environment,
+							spawnMethod, appType);
+					}
 					container->sessions = 0;
 					list->push_back(container);
 					container->iterator = list->end();
@@ -404,8 +445,12 @@ private:
 					count--;
 				}
 				container = ptr(new AppContainer());
-				container->app = spawnManager.spawn(appRoot, lowerPrivilege, lowestUser,
-					environment, spawnMethod, appType);
+				{
+					this_thread::restore_interruption ri(di);
+					this_thread::restore_syscall_interruption rsi(dsi);
+					container->app = spawnManager.spawn(appRoot, lowerPrivilege, lowestUser,
+						environment, spawnMethod, appType);
+				}
 				container->sessions = 0;
 				it = apps.find(appRoot);
 				if (it == apps.end()) {
@@ -503,6 +548,7 @@ public:
 	
 	virtual ~StandardApplicationPool() {
 		if (!detached) {
+			this_thread::disable_interruption di;
 			{
 				mutex::scoped_lock l(lock);
 				done = true;
@@ -521,15 +567,14 @@ public:
 		const string &spawnMethod = "smart",
 		const string &appType = "rails"
 	) {
-		unsigned int attempt;
-		unsigned int totalSleepTime;
+		using namespace boost::posix_time;
+		unsigned int attempt = 0;
+		ptime timeLimit(get_system_time() + millisec(GET_TIMEOUT));
+		unique_lock<mutex> l(lock);
 		
-		attempt = 0;
-		totalSleepTime = 0;
 		while (true) {
 			attempt++;
 			
-			mutex::scoped_lock l(lock);
 			pair<AppContainerPtr, AppContainerList *> p(
 				spawnOrUseExisting(l, appRoot, lowerPrivilege, lowestUser,
 					environment, spawnMethod, appType)
@@ -540,9 +585,9 @@ public:
 			if (container != NULL) {
 				container->lastUsed = time(NULL);
 				container->sessions++;
-			
-				P_ASSERT(verifyState(), Application::SessionPtr(),
-					"State is valid:\n" << toString(false));
+				
+				//P_ASSERT(verifyState(), Application::SessionPtr(),
+				//	"State is valid:\n" << toString(false));
 				try {
 					return container->app->connect(SessionCloseCallback(data, container));
 				} catch (const exception &e) {
@@ -553,7 +598,8 @@ public:
 						message.append(appRoot);
 						message.append("': ");
 						try {
-							const SystemException &syse = dynamic_cast<const SystemException &>(e);
+							const SystemException &syse =
+								dynamic_cast<const SystemException &>(e);
 							message.append(syse.sys());
 						} catch (const bad_cast &) {
 							message.append(e.what());
@@ -567,24 +613,27 @@ public:
 						appInstanceCount.erase(appRoot);
 						count--;
 						active--;
-						P_ASSERT(verifyState(), Application::SessionPtr(), "State is valid.");
+						// P_ASSERT(verifyState(), Application::SessionPtr(),
+						//	"State is valid.");
 					}
 				}
-			}
-			if (container == NULL) {
-				l.unlock();
-				if (totalSleepTime > GET_TIMEOUT) {
-					throw BusyException("Cannot satisfy get() request.");
-				}
+			} else {
 				{
-					mutex::scoped_lock wl(waitingLock);
+					lock_guard<mutex> wl(waitingLock);
 					waiting++;
 				}
-				unsigned int sleepTime = attempt * 10000;
-				totalSleepTime += sleepTime;
-				usleep(sleepTime);
+				while (!(
+					active < max &&
+					(maxPerApp == 0 || appInstanceCount[appRoot] < maxPerApp)
+				)) {
+					if (!activeOrMaxChanged.timed_wait(l, timeLimit)) {
+						lock_guard<mutex> wl(waitingLock);
+						waiting--;
+						throw BusyException("Unable to fulfill get() request in time.");
+					}
+				}
 				{
-					mutex::scoped_lock wl(waitingLock);
+					lock_guard<mutex> wl(waitingLock);
 					waiting--;
 				}
 			}
@@ -638,34 +687,11 @@ public:
 	 * the application pool.
 	 */
 	virtual string toString(bool lockMutex = true) const {
-		mutex::scoped_lock l(lock, lockMutex);
-		stringstream result;
-		
-		result << "----------- General information -----------" << endl;
-		result << "max    = " << max << endl;
-		result << "count  = " << count << endl;
-		result << "active = " << active << endl;
-		result << "waiting = " << waiting << endl;
-		result << endl;
-		
-		result << "----------- Applications -----------" << endl;
-		ApplicationMap::const_iterator it;
-		for (it = apps.begin(); it != apps.end(); it++) {
-			AppContainerList *list = it->second.get();
-			AppContainerList::const_iterator lit;
-			
-			result << it->first << ": " << endl;
-			for (lit = list->begin(); lit != list->end(); lit++) {
-				AppContainer *container = lit->get();
-				char buf[128];
-				
-				snprintf(buf, sizeof(buf), "PID: %-8d  Sessions: %d",
-					container->app->getPid(), container->sessions);
-				result << "  " << buf << endl;
-			}
-			result << endl;
+		if (lockMutex) {
+			return toString(boost::adopt_lock);
+		} else {
+			return toString(boost::defer_lock);
 		}
-		return result.str();
 	}
 };
 

@@ -1,5 +1,6 @@
 // Copyright (C) 2001-2003
 // William E. Kempf
+// Copyright (C) 2007 Anthony Williams
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying 
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -32,12 +33,22 @@ public:
     ~thread_exception() throw();
 
     int native_error() const;
-    
     virtual const char *what() const throw();
 
 private:
     int m_sys_err;
 };
+
+    class condition_error:
+        public std::exception
+    {
+    public:
+        const char* what() const throw()
+        {
+            return "Condition error";
+        }
+    };
+    
 
 class BOOST_THREAD_DECL lock_error : public thread_exception
 {

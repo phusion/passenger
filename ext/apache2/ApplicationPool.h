@@ -114,6 +114,7 @@ public:
 	 * @throw BusyException The application pool is too busy right now, and cannot
 	 *       satisfy the request. One should either abort, or try again later.
 	 * @throw IOException Something else went wrong.
+	 * @throw thread_interrupted
 	 * @note Applications are uniquely identified with the application root
 	 *       string. So although <tt>appRoot</tt> does not have to be absolute, it
 	 *       should be. If one calls <tt>get("/home/foo")</tt> and

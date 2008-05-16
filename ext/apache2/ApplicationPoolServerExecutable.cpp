@@ -49,6 +49,7 @@
 #include "StandardApplicationPool.h"
 #include "Application.h"
 #include "Logging.h"
+#include "System.h"
 #include "Exceptions.h"
 
 
@@ -61,11 +62,6 @@ class Client;
 typedef shared_ptr<Client> ClientPtr;
 
 #define SERVER_SOCKET_FD 3
-
-/**
- * Whether we received a signal indicating that we shut gracefully shutdown.
- */
-static bool serverDone = false;
 
 
 /*****************************************
@@ -81,38 +77,37 @@ private:
 	set<ClientPtr> clients;
 	mutex lock;
 	string statusReportFIFO;
+	shared_ptr<Thread> statusReportThread;
 	
 	void statusReportThreadMain() {
-		while (!serverDone) {
-			struct stat buf;
-			int ret;
-			
-			do {
-				ret = stat(statusReportFIFO.c_str(), &buf);
-			} while (ret == -1 && errno == EINTR);
-			if (ret == -1 || !S_ISFIFO(buf.st_mode)) {
-				// Something bad happened with the status report
-				// FIFO, so we bail out.
-				break;
-			}
-			
-			FILE *f;
-			
-			if (!serverDone) {
+		try {
+			while (!this_thread::interruption_requested()) {
+				struct stat buf;
+				int ret;
+				
 				do {
-					f = fopen(statusReportFIFO.c_str(), "w");
-				} while (f == NULL && errno == EINTR && !serverDone);
+					ret = stat(statusReportFIFO.c_str(), &buf);
+				} while (ret == -1 && errno == EINTR);
+				if (ret == -1 || !S_ISFIFO(buf.st_mode)) {
+					// Something bad happened with the status report
+					// FIFO, so we bail out.
+					break;
+				}
+				
+				FILE *f = InterruptableCalls::fopen(statusReportFIFO.c_str(), "w");
+				if (f == NULL) {
+					break;
+				}
+				
+				string report(pool.toString());
+				fwrite(report.c_str(), 1, report.size(), f);
+				InterruptableCalls::fclose(f);
+				
+				// Prevent sending too much data at once.
+				sleep(1);
 			}
-			if (f == NULL || serverDone) {
-				break;
-			}
-			
-			string report(pool.toString());
-			fwrite(report.c_str(), 1, report.size(), f);
-			fclose(f);
-			
-			// Prevent sending too much data at once.
-			sleep(1);
+		} catch (const boost::thread_interrupted &) {
+			P_TRACE(2, "Status report thread interrupted.");
 		}
 	}
 	
@@ -139,10 +134,16 @@ public:
 	}
 	
 	~Server() {
-		int ret;
-		do {
-			ret = close(serverSocket);
-		} while (ret == -1 && errno == EINTR);
+		this_thread::disable_syscall_interruption dsi;
+		this_thread::disable_interruption di;
+		
+		P_TRACE(2, "Shutting down server.");
+		
+		InterruptableCalls::close(serverSocket);
+		
+		if (statusReportThread != NULL) {
+			statusReportThread->interruptAndJoin();
+		}
 		
 		// Wait for all clients to disconnect.
 		set<ClientPtr> clientsCopy;
@@ -158,6 +159,8 @@ public:
 		}
 		clientsCopy.clear();
 		deleteStatusReportFIFO();
+		
+		P_TRACE(2, "Server shutdown complete.");
 	}
 	
 	int start(); // Will be defined later, because Client depends on Server's interface.
@@ -187,7 +190,7 @@ private:
 	MessageChannel channel;
 	
 	/** The thread which handles the client connection. */
-	thread *thr;
+	Thread *thr;
 	
 	/**
 	 * Maps session ID to sessions created by ApplicationPool::get(). Session IDs
@@ -209,6 +212,8 @@ private:
 			sessions[lastSessionID] = session;
 			lastSessionID++;
 		} catch (const SpawnException &e) {
+			this_thread::disable_syscall_interruption dsi;
+			
 			if (e.hasErrorPage()) {
 				P_TRACE(3, "Client " << this << ": SpawnException "
 					"occured (with error page)");
@@ -221,13 +226,16 @@ private:
 			}
 			failed = true;
 		} catch (const BusyException &e) {
+			this_thread::disable_syscall_interruption dsi;
 			channel.write("BusyException", e.what(), NULL);
 			failed = true;
 		} catch (const IOException &e) {
+			this_thread::disable_syscall_interruption dsi;
 			channel.write("IOException", e.what(), NULL);
 			failed = true;
 		}
 		if (!failed) {
+			this_thread::disable_syscall_interruption dsi;
 			try {
 				channel.write("ok", toString(session->getPid()).c_str(),
 					toString(lastSessionID - 1).c_str(), NULL);
@@ -290,23 +298,22 @@ private:
 	 */
 	void threadMain(const weak_ptr<Client> self) {
 		vector<string> args;
-		while (true) {
-			try {
-				if (!channel.read(args)) {
-					// Client closed connection.
+		try {
+			while (!this_thread::interruption_requested()) {
+				try {
+					if (!channel.read(args)) {
+						// Client closed connection.
+						break;
+					}
+				} catch (const SystemException &e) {
+					P_TRACE(2, "Exception in ApplicationPoolServer client thread during "
+						"reading of a message: " << e.what());
 					break;
 				}
-			} catch (const SystemException &e) {
-				if (!serverDone) {
-					P_WARN("Exception in ApplicationPoolServer client thread during "
-						"reading of a message: " << e.what());
-				}
-				break;
-			}
-			
-			P_TRACE(4, "Client " << this << ": received message: " <<
-				toString(args));
-			try {
+
+				P_TRACE(4, "Client " << this << ": received message: " <<
+					toString(args));
+				
 				if (args[0] == "get" && args.size() == 7) {
 					processGet(args);
 				} else if (args[0] == "close" && args.size() == 2) {
@@ -329,14 +336,14 @@ private:
 					processUnknownMessage(args);
 					break;
 				}
-			} catch (const exception &e) {
-				if (!serverDone) {
-					P_WARN("Uncaught exception in ApplicationPoolServer client thread:\n"
-						<< "   message: " << toString(args) << "\n"
-						<< "   exception: " << e.what());
-				}
-				break;
+				args.clear();
 			}
+		} catch (const boost::thread_interrupted &) {
+			P_TRACE(2, "Client thread " << this << " interrupted.");
+		} catch (const exception &e) {
+			P_TRACE(2, "Uncaught exception in ApplicationPoolServer client thread:\n"
+				<< "   message: " << toString(args) << "\n"
+				<< "   exception: " << e.what());
 		}
 		
 		mutex::scoped_lock l(server.lock);
@@ -373,84 +380,77 @@ public:
 	 *        connection.
 	 */
 	void start(const weak_ptr<Client> self) {
-		thr = new thread(
+		thr = new Thread(
 			bind(&Client::threadMain, this, self),
 			CLIENT_THREAD_STACK_SIZE
 		);
 	}
 	
 	~Client() {
-		if (thr != NULL) {
-			thr->join();
+		this_thread::disable_syscall_interruption dsi;
+		this_thread::disable_interruption di;
+		
+		if (thr != NULL && thr->get_id() != this_thread::get_id()) {
+			thr->interruptAndJoin();
 			delete thr;
 		}
-		close(fd);
+		InterruptableCalls::close(fd);
 	}
 };
 
 
-static void
-gracefulShutdown(int sig) {
-	serverDone = true;
-}
-
 int
 Server::start() {
-	serverDone = false;
-	if (!statusReportFIFO.empty()) {
-		thread thr(
-			bind(&Server::statusReportThreadMain, this),
-			1024 * 128
-		);
-	}
-
-	signal(SIGINT, gracefulShutdown);
-	siginterrupt(SIGINT, 1);
+	setupSyscallInterruptionSupport();
 	
-	while (!serverDone) {
-		int fds[2], ret;
-		char x;
-		
-		// The received data only serves to wake up the server socket,
-		// and is not important.
-		if (!serverDone) {
-			do {
-				ret = read(serverSocket, &x, 1);
-			} while (ret == -1 && errno == EINTR && !serverDone);
-		}
-		if (ret == 0 || serverDone) {
-			// All web server processes disconnected from this server.
-			// So we can safely quit.
-			break;
+	try {
+		if (!statusReportFIFO.empty()) {
+			statusReportThread = ptr(
+				new Thread(
+					bind(&Server::statusReportThreadMain, this),
+					1024 * 128
+				)
+			);
 		}
 		
-		// We have an incoming connect request from an
-		// ApplicationPool client.
-		if (!serverDone) {
+		while (!this_thread::interruption_requested()) {
+			int fds[2], ret;
+			char x;
+			
+			// The received data only serves to wake up the server socket,
+			// and is not important.
+			ret = InterruptableCalls::read(serverSocket, &x, 1);
+			if (ret == 0) {
+				// All web server processes disconnected from this server.
+				// So we can safely quit.
+				break;
+			}
+			
+			this_thread::disable_interruption di;
+			this_thread::disable_syscall_interruption dsi;
+			
+			// We have an incoming connect request from an
+			// ApplicationPool client.
 			do {
 				ret = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-			} while (ret == -1 && errno == EINTR && !serverDone);
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1) {
+				throw SystemException("Cannot create an anonymous Unix socket", errno);
+			}
+			
+			MessageChannel(serverSocket).writeFileDescriptor(fds[1]);
+			InterruptableCalls::close(fds[1]);
+			
+			ClientPtr client(new Client(*this, fds[0]));
+			pair<set<ClientPtr>::iterator, bool> p;
+			{
+				mutex::scoped_lock l(lock);
+				clients.insert(client);
+			}
+			client->start(client);
 		}
-		if (ret == -1 || serverDone) {
-			throw SystemException("Cannot create an anonymous Unix socket", errno);
-		}
-		
-		MessageChannel(serverSocket).writeFileDescriptor(fds[1]);
-		do {
-			ret = close(fds[1]);
-		} while (ret == -1 && errno == EINTR);
-		
-		ClientPtr client(new Client(*this, fds[0]));
-		pair<set<ClientPtr>::iterator, bool> p;
-		{
-			mutex::scoped_lock l(lock);
-			clients.insert(client);
-		}
-		client->start(client);
-	}
-	if (serverDone) {
-		deleteStatusReportFIFO();
-		exit(0);
+	} catch (const boost::thread_interrupted &) {
+		P_TRACE(2, "Main thread interrupted.");
 	}
 	return 0;
 }
@@ -461,10 +461,7 @@ main(int argc, char *argv[]) {
 		Server server(SERVER_SOCKET_FD, argv[1], argv[2], argv[3], argv[4], argv[5]);
 		return server.start();
 	} catch (const exception &e) {
-		fprintf(stderr, "*** An unexpected error occured in the Passenger "
-			"ApplicationPool server:\n%s\n",
-			e.what());
-		fflush(stderr);
+		P_ERROR(e.what());
 		return 1;
 	}
 }

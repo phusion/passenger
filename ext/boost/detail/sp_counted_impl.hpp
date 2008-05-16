@@ -35,7 +35,6 @@
 #include <memory>           // std::allocator
 #endif
 
-#include <typeinfo>         // std::type_info in get_deleter
 #include <cstddef>          // std::size_t
 
 namespace boost
@@ -79,7 +78,7 @@ public:
         boost::checked_delete( px_ );
     }
 
-    virtual void * get_deleter( std::type_info const & )
+    virtual void * get_deleter( detail::sp_typeinfo const & )
     {
         return 0;
     }
@@ -145,9 +144,9 @@ public:
         del( ptr );
     }
 
-    virtual void * get_deleter( std::type_info const & ti )
+    virtual void * get_deleter( detail::sp_typeinfo const & ti )
     {
-        return ti == typeid(D)? &del: 0;
+        return ti == BOOST_SP_TYPEID(D)? &reinterpret_cast<char&>( del ): 0;
     }
 
 #if defined(BOOST_SP_USE_STD_ALLOCATOR)
@@ -215,9 +214,9 @@ public:
         a2.deallocate( this, 1 );
     }
 
-    virtual void * get_deleter( std::type_info const & ti )
+    virtual void * get_deleter( detail::sp_typeinfo const & ti )
     {
-        return ti == typeid( D )? &d_: 0;
+        return ti == BOOST_SP_TYPEID( D )? &reinterpret_cast<char&>( d_ ): 0;
     }
 };
 

@@ -30,6 +30,20 @@
 #endif
 #include <boost/function_equal.hpp>
 
+#if defined(BOOST_MSVC)
+#   pragma warning( push )
+#   pragma warning( disable : 4793 ) // complaint about native code generation
+#   pragma warning( disable : 4127 ) // "conditional expression is constant"
+#endif       
+
+// Define BOOST_FUNCTION_STD_NS to the namespace that contains type_info.
+#ifdef BOOST_NO_EXCEPTION_STD_NAMESPACE
+// Embedded VC++ does not have type_info in namespace std
+#  define BOOST_FUNCTION_STD_NS
+#else
+#  define BOOST_FUNCTION_STD_NS std
+#endif
+
 // Borrowed from Boost.Python library: determines the cases where we
 // need to use std::type_info::name to compare instead of operator==.
 # if (defined(__GNUC__) && __GNUC__ >= 3) \
@@ -59,7 +73,7 @@ namespace boost { namespace python { namespace objects {
 
 #if defined (BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION)                    \
  || defined(BOOST_BCB_PARTIAL_SPECIALIZATION_BUG)                         \
- || !(BOOST_STRICT_CONFIG || !defined(__SUNPRO_CC) || __SUNPRO_CC > 0x540)
+ || !(defined(BOOST_STRICT_CONFIG) || !defined(__SUNPRO_CC) || __SUNPRO_CC > 0x540)
 #  define BOOST_FUNCTION_NO_FUNCTION_TYPE_SYNTAX
 #endif
 
@@ -198,8 +212,8 @@ namespace boost {
       struct reference_manager
       {
         static inline void
-        get(const function_buffer& in_buffer, function_buffer& out_buffer, 
-            functor_manager_operation_type op)
+        manage(const function_buffer& in_buffer, function_buffer& out_buffer, 
+               functor_manager_operation_type op)
         {
           switch (op) {
           case clone_functor_tag: 
@@ -215,8 +229,8 @@ namespace boost {
               // DPG TBD: Since we're only storing a pointer, it's
               // possible that the user could ask for a base class or
               // derived class. Is that okay?
-              const std::type_info& check_type = 
-                *static_cast<const std::type_info*>(out_buffer.const_obj_ptr);
+              const BOOST_FUNCTION_STD_NS::type_info& check_type = 
+                *static_cast<const BOOST_FUNCTION_STD_NS::type_info*>(out_buffer.const_obj_ptr);
               if (BOOST_FUNCTION_COMPARE_TYPE_ID(check_type, typeid(F)))
                 out_buffer.obj_ptr = in_buffer.obj_ptr;
               else
@@ -265,8 +279,8 @@ namespace boost {
           else if (op == destroy_functor_tag)
             out_buffer.func_ptr = 0;
           else /* op == check_functor_type_tag */ {
-            const std::type_info& check_type = 
-              *static_cast<const std::type_info*>(out_buffer.const_obj_ptr);
+            const BOOST_FUNCTION_STD_NS::type_info& check_type = 
+              *static_cast<const BOOST_FUNCTION_STD_NS::type_info*>(out_buffer.const_obj_ptr);
             if (BOOST_FUNCTION_COMPARE_TYPE_ID(check_type, typeid(Functor)))
               out_buffer.obj_ptr = &in_buffer.func_ptr;
             else
@@ -287,8 +301,8 @@ namespace boost {
             // Some compilers (Borland, vc6, ...) are unhappy with ~functor_type.
             reinterpret_cast<functor_type*>(&out_buffer.data)->~Functor();
           } else /* op == check_functor_type_tag */ {
-            const std::type_info& check_type = 
-              *static_cast<const std::type_info*>(out_buffer.const_obj_ptr);
+            const BOOST_FUNCTION_STD_NS::type_info& check_type = 
+              *static_cast<const BOOST_FUNCTION_STD_NS::type_info*>(out_buffer.const_obj_ptr);
             if (BOOST_FUNCTION_COMPARE_TYPE_ID(check_type, typeid(Functor)))
               out_buffer.obj_ptr = &in_buffer.data;
             else
@@ -348,8 +362,8 @@ namespace boost {
 #  endif // BOOST_NO_STD_ALLOCATOR
             out_buffer.obj_ptr = 0;
           } else /* op == check_functor_type_tag */ {
-            const std::type_info& check_type = 
-              *static_cast<const std::type_info*>(out_buffer.const_obj_ptr);
+            const BOOST_FUNCTION_STD_NS::type_info& check_type = 
+              *static_cast<const BOOST_FUNCTION_STD_NS::type_info*>(out_buffer.const_obj_ptr);
             if (BOOST_FUNCTION_COMPARE_TYPE_ID(check_type, typeid(Functor)))
               out_buffer.obj_ptr = in_buffer.obj_ptr;
             else
@@ -366,6 +380,15 @@ namespace boost {
         {
           manager(in_buffer, out_buffer, op,
                   mpl::bool_<(function_allows_small_object_optimization<functor_type>::value)>());
+        }
+
+        // For member pointers, we treat them as function objects with
+        // the small-object optimization always enabled.
+        static inline void
+        manager(const function_buffer& in_buffer, function_buffer& out_buffer, 
+                functor_manager_operation_type op, member_ptr_tag)
+        {
+          manager(in_buffer, out_buffer, op, mpl::true_());
         }
 
       public:
@@ -456,7 +479,6 @@ namespace boost {
        */
       struct vtable_base
       {
-        vtable_base() : manager(0) { }
         void (*manager)(const function_buffer& in_buffer, 
                         function_buffer& out_buffer, 
                         functor_manager_operation_type op);
@@ -480,13 +502,13 @@ public:
 
   /** Retrieve the type of the stored function object, or typeid(void)
       if this is empty. */
-  const std::type_info& target_type() const
+  const BOOST_FUNCTION_STD_NS::type_info& target_type() const
   {
     if (!vtable) return typeid(void);
 
     detail::function::function_buffer type;
     vtable->manager(functor, type, detail::function::get_functor_type_tag);
-    return *static_cast<const std::type_info*>(type.const_obj_ptr);
+    return *static_cast<const BOOST_FUNCTION_STD_NS::type_info*>(type.const_obj_ptr);
   }
 
   template<typename Functor>
@@ -558,7 +580,7 @@ public:
 #endif
 
 public: // should be protected, but GCC 2.95.3 will fail to allow access
-  detail::function::vtable_base* vtable;
+  const detail::function::vtable_base* vtable;
   mutable detail::function::function_buffer functor;
 };
 
@@ -732,5 +754,9 @@ namespace detail {
 
 #undef BOOST_FUNCTION_ENABLE_IF_NOT_INTEGRAL
 #undef BOOST_FUNCTION_COMPARE_TYPE_ID
+
+#if defined(BOOST_MSVC)
+#   pragma warning( pop )
+#endif       
 
 #endif // BOOST_FUNCTION_BASE_HEADER
