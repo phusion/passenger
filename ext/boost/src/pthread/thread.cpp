@@ -239,6 +239,10 @@ namespace boost
     {
         thread_info.swap(x.thread_info);
     }
+    
+    pthread_t thread::native_handle() const {
+        return thread_info->thread_handle;
+    }
 
 
     bool thread::operator==(const thread& other) const

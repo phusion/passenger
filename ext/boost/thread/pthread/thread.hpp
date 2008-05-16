@@ -166,6 +166,8 @@ namespace boost
 
         typedef detail::thread_id id;
         
+        pthread_t native_handle() const;
+        
         id get_id() const;
 
         bool joinable() const;
