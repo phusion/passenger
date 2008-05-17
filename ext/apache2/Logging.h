@@ -48,7 +48,7 @@ void setDebugFile(const char *logFile = NULL);
 			gettimeofday(&tv, NULL); \
 			*Passenger::_logStream << \
 				"[ pid=" << getpid() << " file=" << __FILE__ << ":" << __LINE__ << \
-				" time=" << datetime_buf << ":" << (tv.tv_usec / 1000) << " ]:" << \
+				" time=" << datetime_buf << "." << (tv.tv_usec / 1000) << " ]:" << \
 				"\n  " << expr << std::endl; \
 		} \
 	} while (false)
@@ -84,7 +84,7 @@ void setDebugFile(const char *logFile = NULL);
 					gettimeofday(&tv, NULL); \
 					*Passenger::_debugStream << \
 						"[ pid=" << getpid() << " file=" << __FILE__ << ":" << __LINE__ << \
-						" time=" << datetime_buf << ":" << (tv.tv_usec / 1000) << " ]:" << \
+						" time=" << datetime_buf << "." << (tv.tv_usec / 1000) << " ]:" << \
 						"\n  " << expr << std::endl; \
 				} \
 			} \

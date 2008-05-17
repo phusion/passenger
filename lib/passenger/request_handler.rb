@@ -88,7 +88,7 @@ class RequestHandler
 	HARD_TERMINATION_SIGNAL = "SIGTERM"
 	# Signal which will cause the Rails application to exit as soon as it's done processing a request.
 	SOFT_TERMINATION_SIGNAL = "SIGUSR1"
-	BACKLOG_SIZE = 50
+	BACKLOG_SIZE    = 50
 	MAX_HEADER_SIZE = 128 * 1024
 	
 	# String constants which exist to relieve Ruby's garbage collector.
