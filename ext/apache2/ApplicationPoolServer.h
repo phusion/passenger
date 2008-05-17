@@ -399,6 +399,8 @@ private:
 	void shutdownServer() {
 		this_thread::disable_syscall_interruption dsi;
 		int ret;
+		time_t begin;
+		bool done = false;
 		
 		InterruptableCalls::close(serverSocket);
 		if (!statusReportFIFO.empty()) {
@@ -406,35 +408,6 @@ private:
 				ret = unlink(statusReportFIFO.c_str());
 			} while (ret == -1 && errno == EINTR);
 		}
-		
-		/*
-		 * We perform the real shutdown in a child process, i.e.
-		 * asynchronously. This is to make graceful Apache restarts
-		 * as fast as possible. We don't want to waste any time
-		 * waiting on the ApplicationPool server executable to shut
-		 * down.
-		 */
-		pid_t pid = InterruptableCalls::fork();
-		if (pid == 0) {
-			// Double fork to prevent zombies.
-			pid = InterruptableCalls::fork();
-			if (pid == 0 || pid == -1) {
-				performServerShutdown();
-			}
-			_exit(0);
-		} else if (pid == -1) {
-			performServerShutdown();
-		} else {
-			InterruptableCalls::waitpid(pid, NULL, 0);
-			serverSocket = -1;
-			serverPid = 0;
-		}
-	}
-	
-	void performServerShutdown() {
-		time_t begin;
-		bool done = false;
-		int ret;
 		
 		P_TRACE(2, "Waiting for existing ApplicationPoolServerExecutable (PID " <<
 			serverPid << ") to exit...");
@@ -461,6 +434,9 @@ private:
 			InterruptableCalls::kill(serverPid, SIGTERM);
 			InterruptableCalls::waitpid(serverPid, NULL, 0);
 		}
+		
+		serverSocket = -1;
+		serverPid = 0;
 	}
 	
 	/**
