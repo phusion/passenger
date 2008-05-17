@@ -411,6 +411,10 @@ private:
 						}
 					}
 					container = *smallest;
+					list->erase(smallest);
+					list->push_back(container);
+					container->iterator = list->end();
+					container->iterator--;
 				} else {
 					container = ptr(new AppContainer());
 					{
