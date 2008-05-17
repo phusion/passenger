@@ -309,8 +309,23 @@ subdir 'benchmark' do
 			"../ext/boost/src/libboost_thread.a -lpthread"
 	end
 	
+	file 'ApplicationPool' => ['ApplicationPool.cpp',
+	  '../ext/apache2/StandardApplicationPool.h',
+	  '../ext/apache2/ApplicationPoolServerExecutable',
+	  '../ext/apache2/System.o',
+	  '../ext/apache2/Logging.o',
+	  '../ext/apache2/Utils.o',
+	  '../ext/boost/src/libboost_thread.a',
+	  :native_support] do
+		create_executable "ApplicationPool", "ApplicationPool.cpp",
+			"-I../ext -I../ext/apache2 #{CXXFLAGS} #{LDFLAGS} " <<
+			"../ext/apache2/System.o ../ext/apache2/Logging.o " <<
+			"../ext/apache2/Utils.o " <<
+			"../ext/boost/src/libboost_thread.a -lpthread"
+	end
+	
 	task :clean do
-		sh "rm -f DummyRequestHandler"
+		sh "rm -f DummyRequestHandler ApplicationPool"
 	end
 end
 
