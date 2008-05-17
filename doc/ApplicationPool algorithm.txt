@@ -101,10 +101,6 @@ information:
   Invariant:
      active <= count
 
-- waiting: integer
-  The number of get() calls that are currently waiting until a new application
-  can be spawned or an existing can be connected to.
-
 - inactive_apps: list<AppContainer>
   A linked list of AppContainer objects. All application instances in this list
   are inactive.
@@ -147,42 +143,30 @@ function get(app_root):
 		while (true):
 			attempt++
 			container, list = spawn_or_use_existing(app_root)
-			if (container != null):
-				container.last_used = current_time()
-				container.sessions++
-				try:
-					return container.app.connect()
-				on exception:
-					container.sessions--
-					if (attempt == MAX_ATTEMPTS):
-						propagate exception
-					else:
-						# The app instance seems to have crashed.
-						# So we remove this instance from our data
-						# structures.
-						list.remove(container.iterator)
-						if list.empty():
-							apps.remove(app_root)
+			container.last_used = current_time()
+			container.sessions++
+			try:
+				return container.app.connect()
+			on exception:
+				container.sessions--
+				if (attempt == MAX_ATTEMPTS):
+					propagate exception
+				else:
+					# The app instance seems to have crashed.
+					# So we remove this instance from our data
+					# structures.
+					list.remove(container.iterator)
+					if list.empty():
+						apps.remove(app_root)
 						app_instance_count.remove(app_root)
-						count--
-						active--
-			else:
-				# Unable to spawn or connect to an application right
-				# now. So we wait for a chance.
-				atomically increment 'waiting'
-				wait until active < max or until 'time_limit' is reached
-				atomically decrement 'waiting'
-				if (the last wait command reached 'time_limit'):
-					throw exception
+					count--
+					active--
 
 
 # Returns a pair of [AppContainer, list<AppContainer>] that matches the
 # given application root. If no such AppContainer exists, then it is created
 # and a new application instance is spawned. All exceptions that occur are
 # propagated.
-#
-# Returns [null, null] if no new application can be spawned and no existing
-# application can be connected to, at the moment.
 function spawn_or_use_existing(app_root):
 	list = apps[app_root]
 	
@@ -205,8 +189,7 @@ function spawn_or_use_existing(app_root):
 			# There is an inactive app, so we use it.
 			container = list.front
 			list.move_to_back(container.iterator)
-			if container.sessions == 0:
-				inactive_apps.remove(container.ia_iterator)
+			inactive_apps.remove(container.ia_iterator)
 			active++
 		else if	(count >= max) or (
 			(max_per_app != 0) and (app_instance_count[app_root] >= max_per_app)
@@ -216,16 +199,17 @@ function spawn_or_use_existing(app_root):
 			# All apps are active and the number of max instances
 			# spawned for this application has been reached.
 			#
-			# We can't do anything, so we return null. One should
-			# try later.
-			return [null, null]
+			# We're not allowed to spawn a new application instance.
+			# So we connect to an already active application. This connection
+			# will be put into that application's queue.
+			container = a container in _list_ with the smallest _session_ value
 		else:
 			# All apps are active, but the pool hasn't reached its
 			# maximum yet. So we spawn a new app.
 			container = new AppContainer
 			# TODO: we should add some kind of timeout check for spawning.
 			container.app = spawn(app_root)
-			container.sessions = 0;
+			container.sessions = 0
 			iterator = list.add_to_back(container)
 			container.iterator = iterator
 			app_instance_count[app_root]++
@@ -288,7 +272,7 @@ function session_has_been_closed(container):
 			if container.sessions == 0:
 				list.move_to_front(container.iterator)
 				container.ia_iterator = inactive_apps.add_to_back(container.app)
-			active--
+				active--
 
 
 function needs_restart(app_root):
@@ -322,7 +306,7 @@ thread cleaner:
 			if thread has been signalled to quit:
 				done = true
 				break
-		
+			
 			now = current_time()
 			for all container in inactive_apps:
 				app = container.app

@@ -114,14 +114,12 @@ private:
 	
 	struct SharedData {
 		mutex lock;
-		mutex waitingLock;
 		condition activeOrMaxChanged;
 		
 		ApplicationMap apps;
 		unsigned int max;
 		unsigned int count;
 		unsigned int active;
-		unsigned int waiting;
 		unsigned int maxPerApp;
 		AppContainerList inactiveApps;
 		map<string, time_t> restartFileTimes;
@@ -161,9 +159,9 @@ private:
 					data->inactiveApps.push_back(container);
 					container->ia_iterator = data->inactiveApps.end();
 					container->ia_iterator--;
+					data->active--;
+					data->activeOrMaxChanged.notify_all();
 				}
-				data->active--;
-				data->activeOrMaxChanged.notify_all();
 			}
 		}
 	};
@@ -182,13 +180,11 @@ private:
 	
 	// Shortcuts for instance variables in SharedData. Saves typing in get().
 	mutex &lock;
-	mutex &waitingLock;
 	condition &activeOrMaxChanged;
 	ApplicationMap &apps;
 	unsigned int &max;
 	unsigned int &count;
 	unsigned int &active;
-	unsigned int &waiting;
 	unsigned int &maxPerApp;
 	AppContainerList &inactiveApps;
 	map<string, time_t> &restartFileTimes;
@@ -221,6 +217,8 @@ private:
 		
 		P_ASSERT(active <= count, false,
 			"active (" << active << ") < count (" << count << ")");
+		P_ASSERT(inactiveApps.size() == count - active, false,
+			"inactive_apps.size() == count - active");
 	#endif
 		return true;
 	}
@@ -231,10 +229,10 @@ private:
 		stringstream result;
 		
 		result << "----------- General information -----------" << endl;
-		result << "max    = " << max << endl;
-		result << "count  = " << count << endl;
-		result << "active = " << active << endl;
-		result << "waiting = " << waiting << endl;
+		result << "max      = " << max << endl;
+		result << "count    = " << count << endl;
+		result << "active   = " << active << endl;
+		result << "inactive = " << inactiveApps.size() << endl;
 		result << endl;
 		
 		result << "----------- Applications -----------" << endl;
@@ -385,6 +383,7 @@ private:
 				appInstanceCount.erase(appRoot);
 				spawnManager.reload(appRoot);
 				it = apps.end();
+				activeOrMaxChanged.notify_all();
 			}
 			
 			if (it != apps.end()) {
@@ -396,14 +395,21 @@ private:
 					list->push_back(container);
 					container->iterator = list->end();
 					container->iterator--;
-					if (container->sessions == 0) {
-						inactiveApps.erase(container->ia_iterator);
-					}
+					inactiveApps.erase(container->ia_iterator);
 					active++;
+					activeOrMaxChanged.notify_all();
 				} else if (count >= max || (
 					maxPerApp != 0 && appInstanceCount[appRoot] >= maxPerApp )
 					) {
-					return make_pair(AppContainerPtr(), (AppContainerList *) 0);
+					AppContainerList::iterator it(list->begin());
+					AppContainerList::iterator smallest(list->begin());
+					it++;
+					for (; it != list->end(); it++) {
+						if ((*it)->sessions < (*smallest)->sessions) {
+							smallest = it;
+						}
+					}
+					container = *smallest;
 				} else {
 					container = ptr(new AppContainer());
 					{
@@ -519,13 +525,11 @@ public:
 		#endif
 		data(new SharedData()),
 		lock(data->lock),
-		waitingLock(data->waitingLock),
 		activeOrMaxChanged(data->activeOrMaxChanged),
 		apps(data->apps),
 		max(data->max),
 		count(data->count),
 		active(data->active),
-		waiting(data->waiting),
 		maxPerApp(data->maxPerApp),
 		inactiveApps(data->inactiveApps),
 		restartFileTimes(data->restartFileTimes),
@@ -536,7 +540,6 @@ public:
 		max = DEFAULT_MAX_POOL_SIZE;
 		count = 0;
 		active = 0;
-		waiting = 0;
 		maxPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
 		maxIdleTime = DEFAULT_MAX_IDLE_TIME;
 		cleanerThread = new thread(
@@ -579,60 +582,40 @@ public:
 			);
 			AppContainerPtr &container(p.first);
 			AppContainerList &list(*p.second);
+
+			container->lastUsed = time(NULL);
+			container->sessions++;
 			
-			if (container != NULL) {
-				container->lastUsed = time(NULL);
-				container->sessions++;
-				
-				//P_ASSERT(verifyState(), Application::SessionPtr(),
-				//	"State is valid:\n" << toString(false));
-				try {
-					return container->app->connect(SessionCloseCallback(data, container));
-				} catch (const exception &e) {
-					container->sessions--;
-					if (attempt == MAX_GET_ATTEMPTS) {
-						string message("Cannot connect to an existing "
-							"application instance for '");
-						message.append(appRoot);
-						message.append("': ");
-						try {
-							const SystemException &syse =
-								dynamic_cast<const SystemException &>(e);
-							message.append(syse.sys());
-						} catch (const bad_cast &) {
-							message.append(e.what());
-						}
-						throw IOException(message);
-					} else {
-						list.erase(container->iterator);
-						if (list.empty()) {
-							apps.erase(appRoot);
-						}
+			P_ASSERT(verifyState(), Application::SessionPtr(),
+				"State is valid:\n" << toString(false));
+			try {
+				return container->app->connect(SessionCloseCallback(data, container));
+			} catch (const exception &e) {
+				container->sessions--;
+				if (attempt == MAX_GET_ATTEMPTS) {
+					string message("Cannot connect to an existing "
+						"application instance for '");
+					message.append(appRoot);
+					message.append("': ");
+					try {
+						const SystemException &syse =
+							dynamic_cast<const SystemException &>(e);
+						message.append(syse.sys());
+					} catch (const bad_cast &) {
+						message.append(e.what());
+					}
+					throw IOException(message);
+				} else {
+					list.erase(container->iterator);
+					if (list.empty()) {
+						apps.erase(appRoot);
 						appInstanceCount.erase(appRoot);
-						count--;
-						active--;
-						// P_ASSERT(verifyState(), Application::SessionPtr(),
-						//	"State is valid.");
 					}
-				}
-			} else {
-				{
-					lock_guard<mutex> wl(waitingLock);
-					waiting++;
-				}
-				while (!(
-					active < max &&
-					(maxPerApp == 0 || appInstanceCount[appRoot] < maxPerApp)
-				)) {
-					if (!activeOrMaxChanged.timed_wait(l, timeLimit)) {
-						lock_guard<mutex> wl(waitingLock);
-						waiting--;
-						throw BusyException("Unable to fulfill get() request in time.");
-					}
-				}
-				{
-					lock_guard<mutex> wl(waitingLock);
-					waiting--;
+					count--;
+					active--;
+					activeOrMaxChanged.notify_all();
+					P_ASSERT(verifyState(), Application::SessionPtr(),
+						"State is valid.");
 				}
 			}
 		}
