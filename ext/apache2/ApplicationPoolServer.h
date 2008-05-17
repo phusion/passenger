@@ -435,7 +435,7 @@ private:
 	
 	void performServerShutdown() {
 		time_t begin;
-		bool done;
+		bool done = false;
 		int ret;
 		
 		P_TRACE(2, "Waiting for existing ApplicationPoolServerExecutable (PID " <<
