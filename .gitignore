@@ -25,4 +25,5 @@ test/stub/mycook/log
 test/stub/zsfa/mycook
 test/stub/zsfa/foo
 benchmark/DummyRequestHandler
+benchmark/ApplicationPool
 pkg
