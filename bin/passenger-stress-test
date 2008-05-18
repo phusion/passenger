@@ -13,6 +13,44 @@ include Passenger
 include Passenger::Utils
 include PlatformInfo
 
+# A thread or a process, depending on the Ruby VM implementation.
+class Subprocess
+	attr_accessor :channel
+	
+	def initialize(name, &block)
+		if RUBY_PLATFORM == "java"
+			a, b = UNIXSocket.pair
+			@thread = Thread.new do
+				block.call(true, MessageChannel.new(b))
+			end
+			@channel = MessageChannel.new(a)
+			@thread_channel = b
+		else
+			a, b = UNIXSocket.pair
+			@pid = safe_fork(name) do
+				a.close
+				$0 = name
+				Process.setsid
+				block.call(false, MessageChannel.new(b))
+			end
+			b.close
+			@channel = MessageChannel.new(a)
+		end
+	end
+	
+	def stop
+		if RUBY_PLATFORM == "java"
+			@thread.terminate
+			@channel.close
+			@thread_channel.close
+		else
+			Process.kill('SIGKILL', @pid) rescue nil
+			Process.waitpid(@pid) rescue nil
+			@channel.close
+		end
+	end
+end
+
 class StressTester
 	def start
 		@options = parse_options
@@ -105,30 +143,25 @@ class StressTester
 
 	def run_crawlers
 		@started = false
-		@processes = []
+		@crawlers = []
 		
 		# Start crawler processes.
 		GC.start if GC.copy_on_write_friendly?
 		@options[:concurrency].times do |i|
-			STDOUT.write("Starting crawler #{i + 1} of #{@options[:concurrency]}...\r")
+			STDOUT.write("Starting crawler #{i + 1} of #{@options[:concurrency]}...\n")
 			STDOUT.flush
-			a, b = UNIXSocket.pair
-			pid = safe_fork("crawler #{i + 1}") do
-				a.close
-				$0 = "Passenger Crawler #{i + 1}"
-				Process.setsid
-				if @options[:nice]
+			process = Subprocess.new("crawler #{i + 1}") do |is_thread, channel|
+				if !is_thread && @options[:nice]
 					system("renice 1 #{Process.pid} >/dev/null 2>/dev/null")
 				end
 				while true
-					crawl!(i + 1, MessageChannel.new(b))
+					crawl!(i + 1, channel)
 				end
 			end
-			b.close
-			@processes << {
+			@crawlers << {
 				:id => i + 1,
-				:channel => MessageChannel.new(a),
-				:pid => pid,
+				:process => process,
+				:channel => process.channel,
 				:mutex => Mutex.new,
 				:current_uri => nil,
 				:crawled => 0
@@ -136,19 +169,22 @@ class StressTester
 		end
 		
 		puts
-		sleep 1
+		if RUBY_PLATFORM != "java"
+			# 'sleep' b0rks when running in JRuby?
+			sleep 1
+		end
 		begin
 			$0 = "Passenger Crawler: control process"
-			io_to_process = {}
+			io_to_crawler = {}
 			ios = []
-			@processes.each do |process|
-				io_to_process[process[:channel].io] = process
-				ios << process[:channel].io
+			@crawlers.each do |crawler|
+				io_to_crawler[crawler[:channel].io] = crawler
+				ios << crawler[:channel].io
 			end
 			
-			# Tell each crawler process to start crawling.
-			@processes.each do |process|
-				process[:channel].write("start")
+			# Tell each crawler to start crawling.
+			@crawlers.each do |crawler|
+				crawler[:channel].write("start")
 			end
 			
 			# Show progress periodically.
@@ -158,19 +194,18 @@ class StressTester
 			apache_restarter = Thread.new(&method(:restart_apache))
 			@next_app_restart = Time.now + @options[:app_restart_interval] * 60
 			app_restarter = Thread.new(&method(:restart_app))
+			
 			while true
-				note_progress(ios, io_to_process)
+				note_progress(ios, io_to_crawler)
 			end
 		rescue Interrupt
 			trap('SIGINT') {}
 			puts "Shutting down..."
 			@done = true
-			@processes.each do |process|
-				STDOUT.write("Stopping crawler #{process[:id]} of #{@options[:concurrency]}...\r")
+			@crawlers.each do |crawler|
+				STDOUT.write("Stopping crawler #{crawler[:id]} of #{@options[:concurrency]}...\r")
 				STDOUT.flush
-				Process.kill('SIGKILL', process[:pid]) rescue nil
-				Process.waitpid(process[:pid]) rescue nil
-				process[:channel].close
+				crawler[:process].stop
 			end
 			progress_reporter.join if progress_reporter
 			apache_restarter.join if apache_restarter
@@ -179,13 +214,13 @@ class StressTester
 		end
 	end
 	
-	def note_progress(ios, io_to_process)
+	def note_progress(ios, io_to_crawler)
 		select(ios)[0].each do |io|
-			process = io_to_process[io]
-			uri = process[:channel].read[0]
-			process[:mutex].synchronize do
-				process[:current_uri] = uri
-				process[:crawled] += 1
+			crawler = io_to_crawler[io]
+			uri = crawler[:channel].read[0]
+			crawler[:mutex].synchronize do
+				crawler[:current_uri] = uri
+				crawler[:crawled] += 1
 			end
 		end
 	end
@@ -194,12 +229,12 @@ class StressTester
 		while !@done
 			output = "\n" * @terminal_height
 			output << "### Running for #{duration(Time.now.to_i - @start_time.to_i)}\n"
-			@processes.each do |process|
-				process[:mutex].synchronize do
+			@crawlers.each do |crawler|
+				crawler[:mutex].synchronize do
 					line = sprintf("Crawler %-2d: %-3d -> %s",
-						process[:id],
-						process[:crawled],
-						process[:current_uri])
+						crawler[:id],
+						crawler[:crawled],
+						crawler[:current_uri])
 					output << sprintf("%-#{@terminal_width}s\n", line)
 				end
 			end
@@ -264,10 +299,19 @@ class StressTester
 				end
 				channel.write(uri, referer, response)
 			rescue
-				Process.kill('SIGKILL', Process.pid)
+				if RUBY_PLATFORM == "java"
+					Thread.current.terminate
+				else
+					Process.kill('SIGKILL', Process.pid)
+				end
 			end
 		end
 		crawler = Hawler.new(@options[:host], progress_reporter)
+		if RUBY_PLATFORM == "java"
+			trap('SIGINT') do
+				raise Interrupt, "Interrupted"
+			end
+		end
 		crawler.recurse = true
 		crawler.depth = @options[:depth]
 		crawler.start
