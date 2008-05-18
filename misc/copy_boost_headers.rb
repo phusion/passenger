@@ -43,6 +43,7 @@ while !done
 	done = missing_headers.empty?
 end
 
+sh "cp    #{boost_dir}/boost/detail/{limits,endian}.hpp boost/detail/"
 sh "cp -R #{boost_dir}/boost/config/* boost/config/"
 sh "cp -R #{boost_dir}/boost/detail/sp_counted_* boost/detail/"
 sh "cp -R #{boost_dir}/boost/detail/atomic_count* boost/detail/"
