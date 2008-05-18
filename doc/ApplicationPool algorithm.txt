@@ -203,6 +203,7 @@ function spawn_or_use_existing(app_root):
 			# So we connect to an already active application. This connection
 			# will be put into that application's queue.
 			container = a container in _list_ with the smallest _session_ value
+			list.move_to_back(container.iterator)
 		else:
 			# All apps are active, but the pool hasn't reached its
 			# maximum yet. So we spawn a new app.

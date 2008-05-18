@@ -234,7 +234,13 @@ protected
 		if uid == 0
 			return false
 		else
-			Process.groups = Process.initgroups(username, gid)
+			# Some systems are broken. initgroups can fail because of
+			# all kinds of stupid reasons. So we ignore any errors
+			# raised by initgroups.
+			begin
+				Process.groups = Process.initgroups(username, gid)
+			rescue
+			end
 			Process::Sys.setgid(gid)
 			Process::Sys.setuid(uid)
 			ENV['HOME'] = pw.dir
