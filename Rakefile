@@ -382,7 +382,7 @@ spec = Gem::Specification.new do |s|
 	s.author = "Phusion - http://www.phusion.nl/"
 	s.email = "info@phusion.nl"
 	s.requirements << "fastthread" << "Apache 2 with development headers"
-	s.require_path = "lib"
+	s.require_path = ["lib", "ext"]
 	s.add_dependency 'rake', '>= 0.8.1'
 	s.add_dependency 'fastthread', '>= 1.0.1'
 	s.extensions << 'ext/passenger/extconf.rb'
