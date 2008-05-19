@@ -190,13 +190,15 @@ private
 		puts
 		line
 		if natively_packaged?
-			module_location = "#{PASSENGER_ROOT}/libexec/passenger/mod_passenger.so"
+			module_location = "#{PASSENGER_ROOT}/lib/passenger/mod_passenger.so"
+			spawn_server_location = "#{PASSENGER_ROOT}/lib/passenger/passenger-spawn-server"
 		else
 			module_location = "#{PASSENGER_ROOT}/ext/apache2/mod_passenger.so"
+			spawn_server_location = "#{PASSENGER_ROOT}/bin/passenger-spawn-server"
 		end
 		render_template 'apache2_config_snippets',
 			:module_location => module_location,
-			:spawn_server_location => "#{PASSENGER_ROOT}/bin/passenger-spawn-server",
+			:spawn_server_location => spawn_server_location,
 			:ruby => RUBY
 		if natively_packaged?
 			wait(10)

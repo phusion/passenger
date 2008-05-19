@@ -426,7 +426,7 @@ task :fakeroot => [:apache2, :native_support, :doc] do
 	extdir = "#{libdir}/#{CONFIG['arch']}"
 	bindir = "#{fakeroot}/usr/bin"
 	docdir = "#{fakeroot}/usr/share/doc/passenger"
-	libexecdir = "#{fakeroot}/usr/libexec/passenger"
+	libexecdir = "#{fakeroot}/usr/lib/passenger"
 	
 	sh "rm -rf #{fakeroot}"
 	sh "mkdir -p #{fakeroot}"
@@ -440,15 +440,16 @@ task :fakeroot => [:apache2, :native_support, :doc] do
 	sh "mkdir -p #{extdir}/passenger"
 	sh "cp -R ext/passenger/*.#{LIBEXT} #{extdir}/passenger/"
 	
-	sh "mkdir -p #{libexecdir}"
-	sh "cp ext/apache2/mod_passenger.so #{libexecdir}/"
-	
 	sh "mkdir -p #{bindir}"
 	sh "cp bin/* #{bindir}/"
 	
+	sh "mkdir -p #{libexecdir}"
+	sh "cp ext/apache2/mod_passenger.so #{libexecdir}/"
+	sh "mv #{fakeroot}/usr/bin/passenger-spawn-server #{libexecdir}/"
+	
 	sh "mkdir -p #{docdir}"
 	sh "cp -R doc/* #{docdir}/"
-	sh "rm -f #{docdir}/{definitions.h,Doxyfile}"
+	sh "rm", "-rf", *Dir["#{docdir}/{definitions.h,Doxyfile,template}"]
 end
 
 desc "Create a Debian package"
