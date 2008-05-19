@@ -478,6 +478,7 @@ private:
 					m_serverExecutable.c_str(),
 				#endif
 				m_serverExecutable.c_str(),
+				toString(Passenger::getLogLevel()).c_str(),
 				m_spawnServerCommand.c_str(),
 				m_logFile.c_str(),
 				m_rubyCommand.c_str(),
