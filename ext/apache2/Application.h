@@ -296,7 +296,7 @@ public:
 		this->listenSocketName = listenSocketName;
 		this->usingAbstractNamespace = usingAbstractNamespace;
 		this->ownerPipe = ownerPipe;
-		P_TRACE(2, "Application " << this << ": created.");
+		P_TRACE(3, "Application " << this << ": created.");
 	}
 	
 	virtual ~Application() {
@@ -312,7 +312,7 @@ public:
 				ret = unlink(listenSocketName.c_str());
 			} while (ret == -1 && errno == EINTR);
 		}
-		P_TRACE(2, "Application " << this << ": destroyed.");
+		P_TRACE(3, "Application " << this << ": destroyed.");
 	}
 	
 	/**

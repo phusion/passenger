@@ -272,6 +272,23 @@ and should usually not be changed manually.
 
 This required option may only occur once, in the global server configuration.
 
+=== PassengerLogLevel <integer> ===
+This option allows one to specify how much information Passenger should write
+to the Apache error log file. A higher log level value means that more information
+will be logged.
+
+Possible values are:
+
+- '0': Show only errors and warnings.
+- '1': Show the most important debugging information. This might be useful for
+       system administrators who are trying to figure out the cause of a
+       problem.
+- '2': Show more debugging information. This is typically only useful for developers.
+- '3': Show even more debugging information.
+
+This option may only occur once, in the global server configuration.
+The default is '0'.
+
 === RailsBaseURI <uri> ===
 Used to specify that the given URI is a Rails application. See
 <<deploying_to_sub_uri,Deploying to a sub URI>> for an example.

@@ -25,6 +25,7 @@ using namespace Passenger;
 
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
+#define DEFAULT_LOG_LEVEL 0
 #define DEFAULT_MAX_POOL_SIZE 20
 #define DEFAULT_MAX_INSTANCES_PER_APP 0
 #define DEFAULT_POOL_IDLE_TIME 120
@@ -85,6 +86,7 @@ passenger_config_create_server(apr_pool_t *p, server_rec *s) {
 	ServerConfig *config = create_server_config_struct(p);
 	config->ruby = NULL;
 	config->root = NULL;
+	config->logLevel = DEFAULT_LOG_LEVEL;
 	config->maxPoolSize = DEFAULT_MAX_POOL_SIZE;
 	config->maxPoolSizeSpecified = false;
 	config->maxInstancesPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
@@ -105,6 +107,7 @@ passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
 	
 	config->ruby = (add->ruby == NULL) ? base->ruby : add->ruby;
 	config->root = (add->root == NULL) ? base->root : add->root;
+	config->logLevel = (add->logLevel) ? base->logLevel : add->logLevel;
 	config->maxPoolSize = (add->maxPoolSizeSpecified) ? base->maxPoolSize : add->maxPoolSize;
 	config->maxPoolSizeSpecified = base->maxPoolSizeSpecified || add->maxPoolSizeSpecified;
 	config->maxInstancesPerApp = (add->maxInstancesPerAppSpecified) ? base->maxInstancesPerApp : add->maxInstancesPerApp;
@@ -126,6 +129,7 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
 		final->ruby = (final->ruby != NULL) ? final->ruby : config->ruby;
 		final->root = (final->root != NULL) ? final->root : config->root;
+		final->logLevel = (final->logLevel != 0) ? final->logLevel : config->logLevel;
 		final->maxPoolSize = (final->maxPoolSizeSpecified) ? final->maxPoolSize : config->maxPoolSize;
 		final->maxPoolSizeSpecified = final->maxPoolSizeSpecified || config->maxPoolSizeSpecified;
 		final->maxInstancesPerApp = (final->maxInstancesPerAppSpecified) ? final->maxInstancesPerApp : config->maxInstancesPerApp;
@@ -148,6 +152,24 @@ cmd_passenger_root(cmd_parms *cmd, void *pcfg, const char *arg) {
 		cmd->server->module_config, &passenger_module);
 	config->root = arg;
 	return NULL;
+}
+
+static const char *
+cmd_passenger_log_level(cmd_parms *cmd, void *pcfg, const char *arg) {
+	ServerConfig *config = (ServerConfig *) ap_get_module_config(
+		cmd->server->module_config, &passenger_module);
+	char *end;
+	long int result;
+	
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		return "Invalid number specified for PassengerLogLevel.";
+	} else if (result < 0 || result > 9) {
+		return "Value for PassengerLogLevel must be between 0 and 9.";
+	} else {
+		config->logLevel = (unsigned int) result;
+		return NULL;
+	}
 }
 
 static const char *
@@ -289,6 +311,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The Passenger root folder."),
+	AP_INIT_TAKE1("PassengerLogLevel",
+		(Take1Func) cmd_passenger_log_level,
+		NULL,
+		RSRC_CONF,
+		"Passenger log verbosity."),
 
 	AP_INIT_TAKE1("RailsBaseURI",
 		(Take1Func) cmd_rails_base_uri,
