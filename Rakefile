@@ -463,9 +463,9 @@ task :fakeroot => [:apache2, :native_support, :doc] do
 	extdir = "#{libdir}/#{CONFIG['arch']}"
 	bindir = "#{fakeroot}/usr/bin"
 	docdir = "#{fakeroot}/usr/share/doc/passenger"
-	libexecdir = "#{fakeroot}/usr/libexec/passenger"
+	libexecdir = "#{fakeroot}/usr/lib/passenger"
 	
-	sh "sudo rm -rf #{fakeroot}"
+	sh "rm -rf #{fakeroot}"
 	sh "mkdir -p #{fakeroot}"
 	
 	sh "mkdir -p #{libdir}"
@@ -477,22 +477,28 @@ task :fakeroot => [:apache2, :native_support, :doc] do
 	sh "mkdir -p #{extdir}/passenger"
 	sh "cp -R ext/passenger/*.#{LIBEXT} #{extdir}/passenger/"
 	
-	sh "mkdir -p #{libexecdir}"
-	sh "cp ext/apache2/mod_passenger.so #{libexecdir}/"
-	
-	sh "mkdir -p #{libexecdir}"
-	sh "cp ext/apache2/ApplicationPoolServerExecutable #{libexecdir}/"
-	
 	sh "mkdir -p #{bindir}"
 	sh "cp bin/* #{bindir}/"
 	
+	sh "mkdir -p #{libexecdir}"
+	sh "cp ext/apache2/mod_passenger.so #{libexecdir}/"
+	sh "mv #{fakeroot}/usr/bin/passenger-spawn-server #{libexecdir}/"
+	sh "cp ext/apache2/ApplicationPoolServerExecutable #{libexecdir}/"
+	
 	sh "mkdir -p #{docdir}"
 	sh "cp -R doc/* #{docdir}/"
-	sh "rm -f #{docdir}/{definitions.h,Doxyfile}"
+	sh "rm", "-rf", *Dir["#{docdir}/{definitions.h,Doxyfile,template}"]
 end
 
 desc "Create a Debian package"
 task 'package:debian' => :fakeroot do
+	if Process.euid != 0
+		STDERR.puts
+		STDERR.puts "*** ERROR: the 'package:debian' task must be run as root."
+		STDERR.puts
+		exit 1
+	end
+
 	fakeroot = "pkg/fakeroot"
 	arch = `uname -m`.strip
 	if arch =~ /^i.86$/
@@ -502,9 +508,8 @@ task 'package:debian' => :fakeroot do
 	sh "sed -i 's/Version: .*/Version: #{PACKAGE_VERSION}/' debian/control"
 	sh "cp -R debian #{fakeroot}/DEBIAN"
 	sh "sed -i 's/: any/: #{arch}/' #{fakeroot}/DEBIAN/control"
-	sh "sudo chown -R root:root #{fakeroot}"
-	sh "sudo dpkg -b #{fakeroot} pkg/passenger_#{PACKAGE_VERSION}-#{arch}.deb"
-	sh "sudo chown -R `whoami` #{fakeroot}"
+	sh "chown -R root:root #{fakeroot}"
+	sh "dpkg -b #{fakeroot} pkg/passenger_#{PACKAGE_VERSION}-#{arch}.deb"
 end
 
 
