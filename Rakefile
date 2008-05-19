@@ -390,7 +390,7 @@ spec = Gem::Specification.new do |s|
 	s.author = "Phusion - http://www.phusion.nl/"
 	s.email = "info@phusion.nl"
 	s.requirements << "fastthread" << "Apache 2 with development headers"
-	s.require_path = "lib"
+	s.require_path = ["lib", "ext"]
 	s.add_dependency 'rake', '>= 0.8.1'
 	s.add_dependency 'fastthread', '>= 1.0.1'
 	s.extensions << 'ext/passenger/extconf.rb'
@@ -412,7 +412,7 @@ spec = Gem::Specification.new do |s|
 		'debian/*',
 		'ext/apache2/*.{cpp,h,c,TXT}',
 		'ext/boost/*.{hpp,TXT}',
-		'ext/boost/**/*.{hpp,cpp,pl,inl}',
+		'ext/boost/**/*.{hpp,cpp,pl,inl,ipp}',
 		'ext/passenger/*.{c,rb}',
 		'benchmark/*.{cpp,rb}',
 		'misc/*',

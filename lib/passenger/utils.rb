@@ -16,11 +16,16 @@
 
 require 'rubygems'
 require 'thread'
-require 'fastthread'
+if RUBY_PLATFORM != "java" && (RUBY_VERSION < "1.8.6" || (RUBY_VERSION == "1.8.6" && RUBY_PATCHLEVEL < 110))
+	require 'fastthread'
+end
 require 'pathname'
 require 'etc'
 require 'passenger/exceptions'
-require 'passenger/native_support'
+if RUBY_PLATFORM != "java"
+	require 'passenger/native_support'
+end
+
 module Passenger
 
 # Utility functions.
