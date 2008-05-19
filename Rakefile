@@ -404,7 +404,7 @@ spec = Gem::Specification.new do |s|
 		'debian/*',
 		'ext/apache2/*.{cpp,h,c,TXT}',
 		'ext/boost/*.{hpp,TXT}',
-		'ext/boost/**/*.{hpp,cpp,pl,inl}',
+		'ext/boost/**/*.{hpp,cpp,pl,inl,ipp}',
 		'ext/passenger/*.{c,rb}',
 		'benchmark/*.{cpp,rb}',
 		'misc/*',
