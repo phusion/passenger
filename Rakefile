@@ -428,7 +428,7 @@ task :fakeroot => [:apache2, :native_support, :doc] do
 	docdir = "#{fakeroot}/usr/share/doc/passenger"
 	libexecdir = "#{fakeroot}/usr/libexec/passenger"
 	
-	sh "sudo rm -rf #{fakeroot}"
+	sh "rm -rf #{fakeroot}"
 	sh "mkdir -p #{fakeroot}"
 	
 	sh "mkdir -p #{libdir}"
@@ -453,6 +453,13 @@ end
 
 desc "Create a Debian package"
 task 'package:debian' => :fakeroot do
+	if Process.euid != 0
+		STDERR.puts
+		STDERR.puts "*** ERROR: the 'package:debian' task must be run as root."
+		STDERR.puts
+		exit 1
+	end
+
 	fakeroot = "pkg/fakeroot"
 	arch = `uname -m`.strip
 	if arch =~ /^i.86$/
@@ -462,9 +469,8 @@ task 'package:debian' => :fakeroot do
 	sh "sed -i 's/Version: .*/Version: #{PACKAGE_VERSION}/' debian/control"
 	sh "cp -R debian #{fakeroot}/DEBIAN"
 	sh "sed -i 's/: any/: #{arch}/' #{fakeroot}/DEBIAN/control"
-	sh "sudo chown -R root:root #{fakeroot}"
-	sh "sudo dpkg -b #{fakeroot} pkg/passenger_#{PACKAGE_VERSION}-#{arch}.deb"
-	sh "sudo chown -R `whoami` #{fakeroot}"
+	sh "chown -R root:root #{fakeroot}"
+	sh "dpkg -b #{fakeroot} pkg/passenger_#{PACKAGE_VERSION}-#{arch}.deb"
 end
 
 
