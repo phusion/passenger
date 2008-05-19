@@ -552,11 +552,13 @@ private:
 
 public:
 	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s) {
+		passenger_config_merge_all_servers(pconf, s);
+		ServerConfig *config = getServerConfig(s);
+		Passenger::setLogLevel(config->logLevel);
+		
 		P_DEBUG("Initializing Phusion Passenger...");
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
-		passenger_config_merge_all_servers(pconf, s);
 		
-		ServerConfig *config = getServerConfig(s);
 		const char *ruby, *user;
 		string applicationPoolServerExe, spawnServer;
 		
@@ -692,7 +694,7 @@ public:
 					canonicalizePath(mapper.getPublicDirectory() + "/.."),
 					true, defaultUser, environment, spawnMethod,
 					mapper.getApplicationTypeString());
-				P_DEBUG("Forwarding " << r->uri << " to PID " << session->getPid());
+				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				if (e.hasErrorPage()) {
 					ap_set_content_type(r, "text/html; charset=utf-8");
@@ -899,10 +901,9 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 			apr_pool_cleanup_null);
 		return OK;
 	
-	} catch (thread_interrupted &) {
+	} catch (const thread_interrupted &) {
 		P_TRACE(2, "A system call was interrupted during mod_passenger "
-			"initialization. Apache seems to be restarting or "
-			"shutting down.");
+			"initialization. Apache might be restarting or shutting down.");
 		return DECLINED;
 	
 	} catch (const thread_resource_error &e) {

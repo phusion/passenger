@@ -485,6 +485,23 @@ and should usually not be changed manually.
 
 This required option may only occur once, in the global server configuration.
 
+=== PassengerLogLevel <integer> ===
+This option allows one to specify how much information Passenger should write
+to the Apache error log file. A higher log level value means that more information
+will be logged.
+
+Possible values are:
+
+- '0': Show only errors and warnings.
+- '1': Show the most important debugging information. This might be useful for
+       system administrators who are trying to figure out the cause of a
+       problem.
+- '2': Show more debugging information. This is typically only useful for developers.
+- '3': Show even more debugging information.
+
+This option may only occur once, in the global server configuration.
+The default is '0'.
+
 [[PassengerRuby]]
 === PassengerRuby <filename> ===
 This option allows one to specify the Ruby interpreter to use.
@@ -492,7 +509,25 @@ This option allows one to specify the Ruby interpreter to use.
 This option may only occur once, in the global server configuration.
 The default is 'ruby'.
 
-=== PassengerMaxPoolSize <integer> ===
+[[PassengerUserSwitching]]
+=== PassengerUserSwitching <on|off> ===
+Whether to enable <<user_switching,user switching support>>.
+
+This option may only occur once, in the global server configuration.
+The default value is 'on'.
+
+[[PassengerDefaultUser]]
+=== PassengerDefaultUser <username> ===
+Passenger enables <<user_switching,user switching support>> by default.
+This configuration option allows one to specify which user Rails/Rack
+applications must run as, if user switching fails or is disabled.
+
+This option may only occur once, in the global server configuration.
+The default value is 'nobody'.
+
+=== Resource control and optimization options ===
+
+==== PassengerMaxPoolSize <integer> ====
 The maximum number of Ruby on Rails or Rack application instances that may
 be simultaneously active. A larger number results in higher memory usage,
 but improved ability to handle concurrent HTTP clients.
@@ -516,7 +551,7 @@ TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
 Edition>>. This allows you to reduce the memory usage of your Ruby on Rails applications
 by about 33%. And it's not hard to install.
 
-=== RailsMaxInstancesPerApp <integer> ===
+==== PassengerMaxInstancesPerApp <integer> ====
 The maximum number of application instances that may be simultaneously active
 for a single application. This helps to make sure that a single application
 will not occupy all available slots in the application pool.
@@ -529,7 +564,7 @@ will be enforced.
 This option may only occur once, in the global server configuration.
 The default value is '0'.
 
-=== PassengerPoolIdleTime <integer> ===
+==== PassengerPoolIdleTime <integer> ====
 The maximum number of seconds that a Ruby on Rails or Rack application instance
 may be idle. That is, if an application instance hasn't done anything after
 the given number of seconds, then it will be shutdown in order to conserve
@@ -547,22 +582,6 @@ mileage may vary.
 
 This option may only occur once, in the global server configuration.
 The default value is '300'.
-
-[[PassengerUserSwitching]]
-=== PassengerUserSwitching <on|off> ===
-Whether to enable <<user_switching,user switching support>>.
-
-This option may only occur once, in the global server configuration.
-The default value is 'on'.
-
-[[PassengerDefaultUser]]
-=== PassengerDefaultUser <username> ===
-Passenger enables <<user_switching,user switching support>> by default.
-This configuration option allows one to specify which user Rails/Rack
-applications must run as, if user switching fails or is disabled.
-
-This option may only occur once, in the global server configuration.
-The default value is 'nobody'.
 
 === Ruby on Rails-specific options ===
 

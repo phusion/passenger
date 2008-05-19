@@ -83,6 +83,9 @@
 			/** The Passenger root folder. */
 			const char *root;
 			
+			/** The log verbosity. */
+			unsigned int logLevel;
+			
 			/** The maximum number of simultaneously alive application
 			 * instances. */
 			unsigned int maxPoolSize;

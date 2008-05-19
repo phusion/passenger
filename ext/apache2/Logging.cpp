@@ -21,9 +21,14 @@
 
 namespace Passenger {
 
-int _debugLevel = 1;
+unsigned int _logLevel = 0;
 ostream *_logStream = &cerr;
 ostream *_debugStream = &cerr;
+
+void
+setLogLevel(unsigned int value) {
+	_logLevel = value;
+}
 
 void
 setDebugFile(const char *logFile) {

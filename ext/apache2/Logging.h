@@ -28,10 +28,11 @@ namespace Passenger {
 
 using namespace std;
 
-extern int _debugLevel;
+extern unsigned int _logLevel;
 extern ostream *_logStream;
 extern ostream *_debugStream;
 
+void setLogLevel(unsigned int value);
 void setDebugFile(const char *logFile = NULL);
 
 /**
@@ -74,7 +75,7 @@ void setDebugFile(const char *logFile = NULL);
 #ifdef PASSENGER_DEBUG
 	#define P_TRACE(level, expr) \
 		do { \
-			if (Passenger::_debugLevel >= level) { \
+			if (Passenger::_logLevel >= level) { \
 				if (Passenger::_debugStream != 0) { \
 					time_t the_time = time(NULL); \
 					struct tm *the_tm = localtime(&the_time); \
