@@ -63,11 +63,20 @@ fileExists(const char *filename) {
 string
 findSpawnServer(const char *passengerRoot) {
 	if (passengerRoot != NULL) {
-		string path(passengerRoot);
-		if (path.at(path.size() - 1) != '/') {
-			path.append(1, '/');
+		string root(passengerRoot);
+		if (root.at(root.size() - 1) != '/') {
+			root.append(1, '/');
 		}
+		
+		string path(root);
 		path.append("bin/passenger-spawn-server");
+		if (fileExists(path.c_str())) {
+			return path;
+		} else {
+			path.assign(root);
+			path.append("lib/passenger/passenger-spawn-server");
+			return path;
+		}
 		return path;
 	} else {
 		const char *path = getenv("PATH");
@@ -104,7 +113,7 @@ findApplicationPoolServer(const char *passengerRoot) {
 		return path;
 	} else {
 		path.assign(root);
-		path.append("libexec/passenger/ApplicationPoolServerExecutable");
+		path.append("lib/passenger/ApplicationPoolServerExecutable");
 		return path;
 	}
 }
