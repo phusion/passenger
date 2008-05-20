@@ -17,6 +17,7 @@
 require 'rubygems'
 require 'socket'
 require 'etc'
+require 'passenger/application'
 require 'passenger/abstract_server'
 require 'passenger/request_handler'
 require 'passenger/exceptions'
