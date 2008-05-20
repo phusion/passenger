@@ -32,6 +32,7 @@ extern unsigned int _logLevel;
 extern ostream *_logStream;
 extern ostream *_debugStream;
 
+unsigned int getLogLevel();
 void setLogLevel(unsigned int value);
 void setDebugFile(const char *logFile = NULL);
 

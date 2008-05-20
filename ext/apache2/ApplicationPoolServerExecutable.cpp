@@ -122,6 +122,7 @@ private:
 
 public:
 	Server(int serverSocket,
+	       const unsigned int logLevel,
 	       const string &spawnServerCommand,
 	       const string &logFile,
 	       const string &rubyCommand,
@@ -129,6 +130,7 @@ public:
 	       const string &statusReportFIFO)
 		: pool(spawnServerCommand, logFile, rubyCommand, user) {
 		
+		Passenger::setLogLevel(logLevel);
 		this->serverSocket = serverSocket;
 		this->statusReportFIFO = statusReportFIFO;
 	}
@@ -458,7 +460,8 @@ Server::start() {
 int
 main(int argc, char *argv[]) {
 	try {
-		Server server(SERVER_SOCKET_FD, argv[1], argv[2], argv[3], argv[4], argv[5]);
+		Server server(SERVER_SOCKET_FD, atoi(argv[1]),
+			argv[2], argv[3], argv[4], argv[5], argv[6]);
 		return server.start();
 	} catch (const exception &e) {
 		P_ERROR(e.what());

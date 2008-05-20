@@ -25,6 +25,11 @@ unsigned int _logLevel = 0;
 ostream *_logStream = &cerr;
 ostream *_debugStream = &cerr;
 
+unsigned int
+getLogLevel() {
+	return _logLevel;
+}
+
 void
 setLogLevel(unsigned int value) {
 	_logLevel = value;
