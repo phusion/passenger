@@ -210,7 +210,7 @@ protected
 	# Lower the current process's privilege to the owner of the given file.
 	# No exceptions will be raised in the event that privilege lowering fails.
 	def lower_privilege(filename, lowest_user = "nobody")
-		stat = File.stat(filename)
+		stat = File.lstat(filename)
 		begin
 			if !switch_to_user(stat.uid)
 				switch_to_user(lowest_user)
