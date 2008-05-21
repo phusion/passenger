@@ -70,7 +70,7 @@ subdir 'ext/passenger' do
 	task :native_support => ["native_support.#{LIBEXT}"]
 	
 	file 'Makefile' => 'extconf.rb' do
-		sh "ruby extconf.rb"
+		sh "#{RUBY} extconf.rb"
 	end
 	
 	file "native_support.#{LIBEXT}" => ['Makefile', 'native_support.c'] do
