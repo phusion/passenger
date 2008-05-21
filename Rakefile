@@ -401,6 +401,7 @@ spec = Gem::Specification.new do |s|
 		'LICENSE',
 		'INSTALL',
 		'lib/**/*.rb',
+		'lib/**/*.py',
 		'lib/passenger/templates/*',
 		'bin/*',
 		'doc/*',
