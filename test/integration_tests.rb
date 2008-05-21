@@ -175,6 +175,10 @@ shared_examples_for "HelloWorld Rack application" do
 end
 
 shared_examples_for "HelloWorld WSGI application" do
+	after :each do
+		File.unlink("#{@stub.app_root}/passenger_wsgi.pyc") rescue nil
+	end
+	
 	it "is possible to fetch static assets" do
 		get('/wsgi-snake.jpg').should == public_file('wsgi-snake.jpg')
 	end
