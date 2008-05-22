@@ -423,6 +423,7 @@ TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
 Edition>>. This allows you to reduce your memory usage by about 33%. And it's
 not hard to install.
 
+[[RailsPoolIdleTime]]
 === RailsPoolIdleTime <integer> ===
 The maximum number of seconds that a Ruby on Rails application instance
 may be idle. That is, if an application instance hasn't done anything after
