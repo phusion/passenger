@@ -4,7 +4,7 @@
 
 The tests need the following software installed:
 
-* All the usual Passenger dependencies.
+* All the usual Phusion Passenger dependencies.
 * Ruby on Rails >= 2.0.1
 * rspec >= 1.1.2
 * mime-types >= 1.15
@@ -18,7 +18,7 @@ The following software is optional:
 * The font "Bitstream Vera Sans", used in the class diagrams. See http://www.gnome.org/fonts
 * AsciiDoc >= 8.2.5, for converting various doc/*.txt documents to HTML
 
-== Compiling Passenger
+== Compiling Phusion Passenger
 
 Run the following command to compile everything:
 
@@ -32,7 +32,7 @@ The most important directories are:
 [ ext/passenger ]
   Native extensions for Ruby, used by the spawn server.
 [ ext/apache2 ]
-  The Passenger Apache 2 module (mod_passenger).
+  The Phusion Passenger Apache 2 module (mod_passenger).
 [ bin ]
   Executables.
 [ doc ]
