@@ -226,6 +226,9 @@ private
 		end
 	end
 
+	# Reset signal handlers to their default handler, and install some
+	# special handlers for a few signals. The previous signal handlers
+	# will be put back by calling revert_signal_handlers.
 	def reset_signal_handlers
 		Signal.list.each_key do |signal|
 			begin
@@ -237,7 +240,10 @@ private
 				# Signal cannot be trapped; ignore it.
 			end
 		end
-		prev_handler = trap('HUP', IGNORE)
+		trap('HUP', IGNORE)
+		trap('ABRT') do
+			raise SignalException, "SIGABRT"
+		end
 	end
 	
 	def revert_signal_handlers

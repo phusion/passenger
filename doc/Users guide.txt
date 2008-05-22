@@ -564,6 +564,7 @@ will be enforced.
 This option may only occur once, in the global server configuration.
 The default value is '0'.
 
+[[PassengerPoolIdleTime]]
 ==== PassengerPoolIdleTime <integer> ====
 The maximum number of seconds that a Ruby on Rails or Rack application instance
 may be idle. That is, if an application instance hasn't done anything after
@@ -1098,7 +1099,142 @@ file, or add rewrite rules to negate its effects.
 VirtualDocumentRoot is not compatible with Phusion Passenger at the moment.
 
 
-== Tips and notes ==
+== Analysis and system maintenance tools ==
+
+Passenger provides a set of tools, which are useful for system analysis, maintenance
+and troubleshooting.
+
+
+=== Inspecting memory usage ===
+
+Process inspection tools such as `ps` and `top` are useful, but they
+link:http://groups.google.com/group/phusion-passenger/msg/1fd1c233456d3180[rarely show the correct memory usage].
+The real memory usage is usually lower than what `ps` and `top` report.
+
+There are many technical reasons why this is so, but an explanation is beyond
+the scope of this Users Guide. We kindly refer the interested reader to
+operating systems literature about 'virtual memory' and 'copy-on-write'.
+
+The tool `passenger-memory-stats` allows one to easily analyze Passenger's
+and Apache's real memory usage. For example:
+
+-------------------------------------------------------
+[bash@localhost root]# passenger-memory-stats
+------------- Apache processes --------------.
+PID    PPID  Threads  VMSize   Private  Name
+---------------------------------------------.
+5947   1     9        90.6 MB  0.5 MB   /usr/sbin/apache2 -k start
+5948   5947  1        18.9 MB  0.7 MB   /usr/sbin/fcgi-pm -k start
+6029   5947  1        42.7 MB  0.5 MB   /usr/sbin/apache2 -k start
+6030   5947  1        42.7 MB  0.5 MB   /usr/sbin/apache2 -k start
+6031   5947  1        42.5 MB  0.3 MB   /usr/sbin/apache2 -k start
+6033   5947  1        42.5 MB  0.4 MB   /usr/sbin/apache2 -k start
+6034   5947  1        50.5 MB  0.4 MB   /usr/sbin/apache2 -k start
+23482  5947  1        82.6 MB  0.4 MB   /usr/sbin/apache2 -k start
+### Processes: 8
+### Total private dirty RSS: 3.50 MB
+
+--------- Passenger processes ---------.
+PID    Threads  VMSize   Private  Name
+---------------------------------------.
+6026   1        10.9 MB  4.7 MB   Passenger spawn server
+23481  1        26.7 MB  3.0 MB   Passenger FrameworkSpawner: 2.0.2
+23791  1        26.8 MB  2.9 MB   Passenger ApplicationSpawner: /var/www/projects/app1-foobar
+23793  1        26.9 MB  17.1 MB  Rails: /var/www/projects/app1-foobar
+### Processes: 4
+### Total private dirty RSS: 27.76 M
+-------------------------------------------------------
+
+The 'Private' or 'private dirty RSS' field shows the *real* memory usage of processes. Here,
+we see that all the Apache worker processes only take less than 1 MB memory each.
+This is a lot less than the 50 MB-ish memory usage as shown in the 'VMSize' column
+(which is what a lot of people think is the real memory usage, but is actually not).
+
+NOTE: This tool only works on Linux. Unfortunately other operating systems don't
+provide facilities for determining processes' private dirty RSS.
+
+
+=== Inspecting Passenger's internal status ===
+
+One can inspect Passenger's internal status with the tool `passenger-status`.
+This tool must typically be run as root. For example:
+
+--------------------------------------------------
+[bash@localhost root]# passenger-status
+----------- General information -----------
+max      = 6
+count    = 1
+active   = 0
+inactive = 1
+
+----------- Applications -----------
+/var/www/projects/app1-foobar: 
+  PID: 9617      Sessions: 0
+--------------------------------------------------
+
+The 'general information' section shows the following information:
+
+max:: The maximum number of application instances that Passenger will spawn. This
+equals the value given for <<PassengerMaxPoolSize,PassengerMaxPoolSize>>.
+count:: The number of application instances that are currently alive. This value
+is always less than or equal to 'max'.
+active:: The number of application instances that are currently processing
+requests. This value is always less than or equal to 'count'.
+inactive:: The number of application instances that are currently *not* processing
+requests, i.e. are idle. Idle application instances will be shutdown after a while,
+as can be specified with <<PassengerPoolIdleTime,PassengerPoolIdleTime>>. The value of 'inactive'
+equals `count - active`.
+
+The 'applications' section shows each application instance, which directory it belongs
+to. The 'sessions' field shows how many HTTP client are currently being processed by
+that application instance.
+
+Since Passenger uses fair load balancing by default, the number of sessions for the
+application instances should be fairly close to each other. For example, this is fairly
+normal:
+--------------------------------
+  PID: 4281      Sessions: 2
+  PID: 4268      Sessions: 0
+  PID: 4265      Sessions: 1
+  PID: 4275      Sessions: 1
+--------------------------------
+
+But if you see a "spike", i.e. an application instance has an unusually high number of
+sessions compared to the others, then there might be a problem:
+--------------------------------
+  PID: 4281      Sessions: 2
+  PID: 17468     Sessions: 8     <---- "spike"
+  PID: 4265      Sessions: 1
+  PID: 4275      Sessions: 1
+--------------------------------
+
+Possible reasons why spikes can occur:
+
+. Your application is busy processing a request that takes a very long time.
+. Your application is frozen, i.e. has stopped responding. See
+  <<debugging_frozen,Debugging frozen applications>> for tips.
+
+
+[[debugging_frozen]]
+=== Debugging frozen applications ===
+
+If one of your application instances is frozen (stopped responding), then you
+can figure out where it is frozen by killing it with 'SIGABRT'. This will cause the
+application to raise an exception, with a backtrace.
+
+The exception (with full backtrace information) is normally logged into the Apache
+error log. But if your application or if its web framework has its own exception logging
+routines, then exceptions might be logged into the application's log files instead.
+This is the case with Ruby on Rails. So if you kill a Ruby on Rails application with
+'SIGABRT', please check the application's 'production.log' first (assuming that you're
+running it in a 'production' environment). If you don't see a backtrace there, check
+the Apache error log.
+
+NOTE: It is safe to kill application instances, even in live environments. Passenger
+will restart killed application instances, as if nothing bad happened.
+
+
+== Tips ==
 
 [[user_switching]]
 === User switching (security) ===
