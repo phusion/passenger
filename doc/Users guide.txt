@@ -1,15 +1,15 @@
-= Passenger users guide =
+= Phusion Passenger users guide =
 
 image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
-Passenger is an Apache module, which makes deploying Ruby on Rails applications
-on Apache a breeze. It follows the usual Ruby on Rails conventions, such as
-"Don't-Repeat-Yourself" and ease of setup.
+Phusion Passenger is an Apache module, which makes deploying Ruby on Rails
+applications on Apache a breeze. It follows the usual Ruby on Rails conventions,
+such as "Don't-Repeat-Yourself" and ease of setup.
 
 This users guide will teach you:
 
-- How to install Passenger.
-- How to configure Passenger.
+- How to install Phusion Passenger.
+- How to configure Phusion Passenger.
 - How to deploy a Ruby on Rails application.
 - How to solve common problems.
 
@@ -19,10 +19,10 @@ using the commandline.
 
 == Supported operating systems ==
 
-Passenger works on any POSIX-compliant operating system. In other words:
-practically any operating system on earth, except Microsoft Windows.
+Phusion Passenger works on any POSIX-compliant operating system. In other
+words: practically any operating system on earth, except Microsoft Windows.
 
-Passenger has been tested on:
+Phusion Passenger has been tested on:
 
 - Ubuntu Linux 6.06 (x86)
 - Ubuntu Linux 7.10 (x86)
@@ -36,27 +36,29 @@ Passenger has been tested on:
 - MacOS X Tiger (x86)
 - MacOS X Leopard (x86)
 
-Other operating systems have not been tested, but Passenger will probably work
-fine on them. Please
+Other operating systems have not been tested, but Phusion Passenger will probably
+work fine on them. Please
 link:http://code.google.com/p/phusion-passenger/issues/list[report a bug]
 or
 link:http://groups.google.com/group/phusion-passenger[join our discussion list]
 if it doesn't.
 
 
-== Installing Passenger ==
+== Installing Phusion Passenger ==
 
 === Generic installation instructions ===
 
 [[install_passenger]]
 ==== Overview of download and installation methods ====
 
-There are two ways to install Passenger:
+There are two ways to install Phusion Passenger:
 
-1. By installing the Passenger gem, as instructed on the
-   link:http://www.modrails.com/install.html[``Install'' page on the Passenger website].
-2. By downloading a native Linux package (e.g. Debian package) from the Passenger website.
-3. By downloading the source tarball from the Passenger website
+1. By installing the Phusion Passenger gem, as instructed on the
+   link:http://www.modrails.com/install.html[``Install'' page on the Phusion
+   Passenger website].
+2. By downloading a native Linux package (e.g. Debian package) from the
+   Phusion Passenger website.
+3. By downloading the source tarball from the Phusion Passenger website
    ('passenger-x.x.x.tar.gz').
 
 In our opinion, installing the gem or the native package is easiest.
@@ -71,17 +73,18 @@ you.
 [[specifying_correct_apache_install]]
 ==== Specifying the correct Apache installation ====
 
-NOTE: You can skip this section if you've installed Passenger via a native Linux
-package, because no compilation is necessary.
+NOTE: You can skip this section if you've installed Phusion Passenger via a
+native Linux package, because no compilation is necessary.
 
 If your system has multiple Apache installations (this is likely the case on
-MacOS X), then you will need to tell the Passenger installer which one to use.
-If you only have one Apache installation (the case on most Linux systems), then
-you can skip this section because Passenger will automatically detect it.
+MacOS X), then you will need to tell the Phusion Passenger installer which one
+to use. If you only have one Apache installation (the case on most Linux
+systems), then you can skip this section because Phusion Passenger will
+automatically detect it.
 
 Every Apache installation has its own `apxs` program. You will need to tell
-Passenger the location of this program, by specifying the `APXS2` environment
-variable. Suppose that you want to use the Apache installation in
+Phusion Passenger the location of this program, by specifying the `APXS2`
+environment variable. Suppose that you want to use the Apache installation in
 '/opt/apache2'. Then, assuming that the corresponding `apxs` program is located
 '/opt/apache2/bin/apxs', type:
 ----------------------------------
@@ -94,13 +97,13 @@ be located in the `sbin` folder instead of the `bin` folder.
 [[specifying_ruby_installation]]
 ==== Specifying the correct Ruby installation ====
 
-NOTE: You can skip this section if you've installed Passenger via a native Linux
-package, because no compilation is necessary.
+NOTE: You can skip this section if you've installed Phusion Passenger via a
+native Linux package, because no compilation is necessary.
 
 If your system has multiple Ruby installations (this is likely the case on
-MacOS X), then you will need to tell the Passenger installer which one to use.
-If you only have one Ruby installation (the case on most Linux systems), then
-you can skip this section because Passenger will automatically detect it.
+MacOS X), then you will need to tell the Phusion Passenger installer which one
+to use. If you only have one Ruby installation (the case on most Linux systems),
+then you can skip this section because Phusion Passenger will automatically detect it.
 
 To specify the Ruby installation, prepend your Ruby installation's `bin`
 directory to the `PATH` environment variable. For example, if you have the
@@ -118,7 +121,7 @@ export PATH=/opt/myruby/bin:$PATH
 
 ==== Installing via the gem ====
 
-Please install the gem and then run the Passenger installer, by typing the
+Please install the gem and then run the Phusion Passenger installer, by typing the
 following commands:
 ------------------------------------------------------
 gem install passenger-x.x.x.gem
@@ -145,7 +148,7 @@ will do in this case, is showing the correct Apache configurations.
 
 ==== Installing via the source tarball ====
 
-Extract the tarball to whatever location you prefer. The Passenger files
+Extract the tarball to whatever location you prefer. The Phusion Passenger files
 are to reside in that location permanently. For example, if you would like
 Passenger to reside in `/opt/passenger-x.x.x`:
 ------------------------------------------------------
@@ -173,7 +176,7 @@ on installing Phusion Passenger on OS X].
 
 ==== Ubuntu Linux ====
 
-Ben Hughes has written an link:http://www.railsgarden.com/2008/04/12/configurating-passenger-mod_rails-on-slicehost-with-ubuntu-710/[article on installing Passenger on Ubuntu].
+Ben Hughes has written an link:http://www.railsgarden.com/2008/04/12/configurating-passenger-mod_rails-on-slicehost-with-ubuntu-710/[article on installing Phusion Passenger on Ubuntu].
 
 
 == Deploying a Ruby on Rails application ==
@@ -241,8 +244,8 @@ There are two ways to restart the application:
 
 1. By restarting Apache.
 2. By creating or modifying the file 'tmp/restart.txt' in the Rails
-   application's root folder. Passenger will automatically restart the
-   application.
+   application's root folder. Phusion Passenger will automatically
+   restart the application.
 
 For example, to restart our example MyCook application, we type this in the
 command line:
@@ -252,30 +255,30 @@ touch /webapps/mycook/tmp/restart.txt
 
 === Migrations ===
 
-Passenger is not related to Ruby on Rails migrations in any way. To run
-migrations on your deployment server, please login to your deployment server
-(e.g. with 'ssh') and type `rake db:migrate RAILS_ENV=production` in a shell
-console, just like one would normally run migrations.
+Phusion Passenger is not related to Ruby on Rails migrations in any way. To
+run migrations on your deployment server, please login to your deployment
+server (e.g. with 'ssh') and type `rake db:migrate RAILS_ENV=production` in
+a shell console, just like one would normally run migrations.
 
 
-== Configuring Passenger ==
+== Configuring Phusion Passenger ==
 
-After installation, Passenger does not need any further configurations.
+After installation, Phusion Passenger does not need any further configurations.
 Nevertheless, the system administrator may be interested in changing
-Passenger's behavior. Passenger's Apache module supports the following
-configuration options:
+Phusion Passenger's behavior. Phusion Passenger's Apache module supports the
+following configuration options:
 
 === PassengerRoot <directory> ===
-The location to the Passenger root directory. This configuration option is
-essential to Passenger. The correct value is given by the installer,
+The location to the Phusion Passenger root directory. This configuration option
+is essential to Phusion Passenger. The correct value is given by the installer,
 and should usually not be changed manually.
 
 This required option may only occur once, in the global server configuration.
 
 === PassengerLogLevel <integer> ===
-This option allows one to specify how much information Passenger should write
-to the Apache error log file. A higher log level value means that more information
-will be logged.
+This option allows one to specify how much information Phusion Passenger should
+write to the Apache error log file. A higher log level value means that more
+information will be logged.
 
 Possible values are:
 
@@ -297,7 +300,7 @@ This option may occur multiple times, in the global server configuration or in a
 virtual host configuration block.
 
 === RailsAutoDetect <on|off> ===
-Whether Passenger should automatically detect whether a virtual host's
+Whether Phusion Passenger should automatically detect whether a virtual host's
 document root is a Ruby on Rails application. The default is 'on'.
 
 This option may occur in the global server configuration or in a virtual host
@@ -331,7 +334,7 @@ RailsAutoDetect off
 
 [[RailsAllowModRewrite]]
 === RailsAllowModRewrite <on|off> ===
-If enabled, Passenger will not override mod_rewrite rules. Please read
+If enabled, Phusion Passenger will not override mod_rewrite rules. Please read
 <<conflicting_apache_modules,Conflicting Apache modules>> for details.
 
 This option may occur once, in the global server configuration or in a virtual host
@@ -358,21 +361,21 @@ This subsection attempts to describe spawn methods, but it's okay if you don't (
 understand it, as it's mostly a technical detail. You can basically follow this rule of thumb:
 
 ************************************************
-If your application works on Mongrel, but not on Passenger, then set `RailsSpawnMethod`
-to 'conservative'. Otherwise, leave it at 'smart' (the default).
+If your application works on Mongrel, but not on Phusion Passenger, then set
+`RailsSpawnMethod` to 'conservative'. Otherwise, leave it at 'smart' (the default).
 ************************************************
 
 However, we do recommend you to try to understand it. The 'smart' spawn method brings
 many benefits.
 =========================================================
 
-Internally, Passenger spawns multiple Ruby on Rails processes in order to handle requests.
-But there are multiple ways with which processes can be spawned, each having its own set of
-pros and cons. Supported spawn methods are:
+Internally, Phusion Passenger spawns multiple Ruby on Rails processes in order to handle
+requests. But there are multiple ways with which processes can be spawned, each having
+its own set of pros and cons. Supported spawn methods are:
 
 smart::
-When this spawn method is used, Passenger will attempt to cache Ruby on Rails framework
-code and application code for a limited period of time.
+When this spawn method is used, Phusion Passenger will attempt to cache Ruby on Rails
+framework code and application code for a limited period of time.
 +
 *Pros:*
 This can significantly decrease spawn time (by as much as 90%). And, when Ruby Enterprise
@@ -466,9 +469,9 @@ The default value is 'on'.
 
 [[RailsDefaultUser]]
 === RailsDefaultUser <username> ===
-Passenger enables <<user_switching,user switching support>> by default.
-This configuration option allows one to specify which user Rails
-applications must run as, if user switching fails or is disabled.
+Phusion Passenger enables <<user_switching,user switching support>>
+by default. This configuration option allows one to specify which user
+Rails applications must run as, if user switching fails or is disabled.
 
 This option may only occur once, in the global server configuration.
 The default value is 'nobody'.
@@ -504,10 +507,10 @@ See also link:http://code.google.com/p/phusion-passenger/issues/detail?id=12[thi
 
 .Symptoms
 *******************************************************************************
-Installing Passenger fails because of one of the following errors:
+Installing Phusion Passenger fails because of one of the following errors:
 
-- The Passenger installer tells you that the Ruby development headers aren't
-  installed.
+- The Phusion Passenger installer tells you that the Ruby development headers
+  aren't installed.
 - The error message ``'no such file to load -- mkmf''' occurs.
 - The error message ``'ruby.h: No such file or directory''' occurs.
 *******************************************************************************
