@@ -514,10 +514,10 @@ private:
 			ret = mkfifo(filename, S_IRUSR | S_IWUSR);
 		} while (ret == -1 && errno == EINTR);
 		if (ret == -1 && errno != EEXIST) {
-			fprintf(stderr, "*** WARNING: Could not create FIFO '%s'; "
-				"disabling Passenger ApplicationPool status reporting.\n",
-				filename);
-			fflush(stderr);
+			int e = errno;
+			P_WARN("*** WARNING: Could not create FIFO '" << filename <<
+				"': " << strerror(e) << " (" << e << ")" << endl <<
+				"Disabling Passenger ApplicationPool status reporting.");
 			statusReportFIFO = "";
 		} else {
 			statusReportFIFO = filename;
