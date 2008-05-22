@@ -1326,7 +1326,9 @@ Attribution-Share Alike 3.0 Unported License].
 
 image:images/by_sa.png[link="http://creativecommons.org/licenses/by-sa/3.0/"]
 
-Passenger is brought to you by Phusion.
+Passenger is brought to you by link:http://www.phusion.nl/[Phusion].
 
 image:images/phusion_banner.png[link="http://www.phusion.nl/"]
+
+Phusion Passenger is a trademark of Hongli Lai & Ninh Bui.
 
