@@ -515,7 +515,7 @@ Installing Phusion Passenger fails because of one of the following errors:
 - The error message ``'ruby.h: No such file or directory''' occurs.
 *******************************************************************************
 
-Passenger makes use of a native extension, so the Ruby development headers
+Phusion Passenger makes use of a native extension, so the Ruby development headers
 must be installed. On most Linux systems, Ruby and the Ruby development headers
 are contained in separate packages, so having Ruby installed does not
 automatically imply having the development headers installed.
@@ -549,15 +549,15 @@ Other operating systems::
 	If that fails, please install Ruby from source.
 
 NOTE: If you've installed a new Ruby version (i.e. your system now contains
-multiple Ruby installations), then you will need to tell Passenger which Ruby
-installation you want to use. Please read
+multiple Ruby installations), then you will need to tell Phusion Passenger
+which Ruby installation you want to use. Please read
 <<specifying_ruby_installation,Specifying the correct Ruby installation>>.
 
 ==== Apache development headers aren't installed ====
 
 .Symptoms
 *******************************************************************************
-Installing Passenger fails because of one of the following errors:
+Installing Phusion Passenger fails because of one of the following errors:
 
 - The installer says that the Apache development headers aren't installed.
 - The error message ``'httpd.h: No such file or directory''' occurs.
@@ -604,7 +604,7 @@ Other operating systems::
 
 .Symptoms
 *******************************************************************************
-Installing Passenger fails because one of the following errors:
+Installing Phusion Passenger fails because one of the following errors:
 
 - The installer tells you that APR development headers aren't installed.
 - The error message ``'apr_pools.h: No such file or directory''' occurs.
@@ -642,16 +642,16 @@ Other operating systems::
 	installed. Please reinstall Apache to get back the APR headers.
 
 
-==== Passenger is using the wrong Apache during installation ====
+==== Phusion Passenger is using the wrong Apache during installation ====
 
 Please <<specifying_correct_apache_install,Specifying the correct Apache
-installation>>, and re-run the Passenger installer.
+installation>>, and re-run the Phusion Passenger installer.
 
 
-==== Passenger is using the wrong Ruby during installation ====
+==== Phusion Passenger is using the wrong Ruby during installation ====
 
 Please <<specifying_ruby_installation,Specifying the correct Ruby
-installation>>, and re-run the Passenger installer.
+installation>>, and re-run the Phusion Passenger installer.
 
 
 === Problems after installation ===
@@ -664,7 +664,7 @@ you're experiencing post-installation problems, please look
 inside the Apache error logs. It will tell you what exactly went wrong.
 =====================================================
 
-==== Passenger has been compiled against the wrong Apache installation ====
+==== Phusion Passenger has been compiled against the wrong Apache installation ====
 
 .Symptoms
 *******************************************************************************
@@ -676,7 +676,8 @@ This problem is most likely to occur on MacOS X. Most OS X users have multiple
 Apache installations on their system.
 
 To solve this problem, please <<specifying_correct_apache_install,specify the
-correct Apache installation>>, and <<install_passenger,reinstall Passenger>>.
+correct Apache installation>>, and <<install_passenger,reinstall Phusion
+Passenger>>.
 
 ==== I get a "304 Forbidden" error ====
 
@@ -714,11 +715,11 @@ then this problem is most likely caused by the fact that you're running Apache
 with SELinux. On Fedora, CentOS and RedHat Enterprise Linux, Apache is locked
 down by SELinux policies.
 
-To solve this problem, you must set some permissions on the Passenger files and
-folders, so that Apache can access them.
+To solve this problem, you must set some permissions on the Phusion Passenger files
+and folders, so that Apache can access them.
 
-- If you've installed Passenger via a gem, then run this command to determine
-  Passenger's root folder:
+- If you've installed Phusion Passenger via a gem, then run this command to determine
+  Phusion Passenger's root folder:
 +
 ------------------------------------------------------------------
 passenger-config --root
@@ -733,7 +734,7 @@ chcon -R -h -t httpd_sys_content_t /path-to-passenger-root
 where '/path-to-passenger-root' should be replaced with whatever
 `passenger-config --root` printed.
 
-- If you've installed Passenger via the source tarball, then run the following
+- If you've installed Phusion Passenger via the source tarball, then run the following
   command:
 +
 ------------------------------------------------------------------
@@ -757,10 +758,10 @@ Please read <<user_switching,User switching (security)>> for details.
 
 There are a couple things that you should be aware of:
 
-- By default, Passenger runs Rails applications in 'production' mode, so please
-  be sure to check 'production.log' instead of 'development.log'. See
+- By default, Phusion Passenger runs Rails applications in 'production' mode,
+  so please be sure to check 'production.log' instead of 'development.log'. See
   <<RailsEnv,RailsEnv>> for configuration.
-- By default, Passenger runs Rails applications as the owner of 'environment.rb'.
+- By default, Phusion Passenger runs Rails applications as the owner of 'environment.rb'.
   So the log file can only be written to if that user has write permission to the
   log file. Please 'chmod' or 'chown' your log file accordingly.
 +
@@ -781,24 +782,24 @@ chcon -R -h -t httpd_sys_content_t /path/to/your/rails/app
 
 ==== mod_rewrite and mod_alias ====
 
-Passenger conflicts with 'mod_rewrite' and 'mod_alias'. Those modules may be
+Phusion Passenger conflicts with 'mod_rewrite' and 'mod_alias'. Those modules may be
 installed and loaded together with 'mod_passenger', and they will work fine
 outside virtual hosts that contain a Rails application, but we recommend you
 not to use their features inside virtual hosts that contain a Rails
 application.
 
-By default, Passenger will override mod_rewrite rules on Rails hosts. This is
-because the default .htaccess, as provided by Ruby on Rails, redirects all
+By default, Phusion Passenger will override mod_rewrite rules on Rails hosts.
+This is because the default .htaccess, as provided by Ruby on Rails, redirects all
 requests to `dispatch.cgi' using mod_rewrite. This is a CGI application which
 loads the entire Ruby on Rails framework for every request, and thus is very
 slow. If we do not override mod_rewrite, then Ruby on Rails apps will be slow
-on Passenger by default -- but we want a good out-of-the-box experience.
+on Phusion Passenger by default -- but we want a good out-of-the-box experience.
 
 Furthermore, the primary reason why people use mod_rewrite with Rails
-applications, is to accelerate page caching. Passenger supports page caching
-out-of-the-box, without mod_rewrite.
+applications, is to accelerate page caching. Phusion Passenger supports page
+caching out-of-the-box, without mod_rewrite.
 
-It is not fully understood how mod_alias conflicts with Passenger, but we
+It is not fully understood how mod_alias conflicts with Phusion Passenger, but we
 recommend you not to use it on Rails virtual hosts. mod_alias rules can result
 in surprising problems.
 
@@ -818,8 +819,8 @@ VirtualDocumentRoot is not compatible with Phusion Passenger at the moment.
 
 == Analysis and system maintenance tools ==
 
-Passenger provides a set of tools, which are useful for system analysis, maintenance
-and troubleshooting.
+Phusion Passenger provides a set of tools, which are useful for system analysis,
+maintenance and troubleshooting.
 
 
 === Inspecting memory usage ===
@@ -832,7 +833,7 @@ There are many technical reasons why this is so, but an explanation is beyond
 the scope of this Users Guide. We kindly refer the interested reader to
 operating systems literature about 'virtual memory' and 'copy-on-write'.
 
-The tool `passenger-memory-stats` allows one to easily analyze Passenger's
+The tool `passenger-memory-stats` allows one to easily analyze Phusion Passenger's
 and Apache's real memory usage. For example:
 
 -------------------------------------------------------
@@ -871,9 +872,9 @@ NOTE: This tool only works on Linux. Unfortunately other operating systems don't
 provide facilities for determining processes' private dirty RSS.
 
 
-=== Inspecting Passenger's internal status ===
+=== Inspecting Phusion Passenger's internal status ===
 
-One can inspect Passenger's internal status with the tool `passenger-status`.
+One can inspect Phusion Passenger's internal status with the tool `passenger-status`.
 This tool must typically be run as root. For example:
 
 --------------------------------------------------
@@ -891,7 +892,7 @@ inactive = 1
 
 The 'general information' section shows the following information:
 
-max:: The maximum number of application instances that Passenger will spawn. This
+max:: The maximum number of application instances that Phusion Passenger will spawn. This
 equals the value given for <<RailsMaxPoolSize,RailsMaxPoolSize>>.
 count:: The number of application instances that are currently alive. This value
 is always less than or equal to 'max'.
@@ -906,7 +907,7 @@ The 'applications' section shows each application instance, which directory it b
 to. The 'sessions' field shows how many HTTP client are currently being processed by
 that application instance.
 
-Since Passenger uses fair load balancing by default, the number of sessions for the
+Since Phusion Passenger uses fair load balancing by default, the number of sessions for the
 application instances should be fairly close to each other. For example, this is fairly
 normal:
 --------------------------------
@@ -947,7 +948,7 @@ This is the case with Ruby on Rails. So if you kill a Ruby on Rails application 
 running it in a 'production' environment). If you don't see a backtrace there, check
 the Apache error log.
 
-NOTE: It is safe to kill application instances, even in live environments. Passenger
+NOTE: It is safe to kill application instances, even in live environments. Phusion Passenger
 will restart killed application instances, as if nothing bad happened.
 
 
@@ -989,15 +990,15 @@ Is it possible to reduce memory consumption of your Rails apps by 33% on average
 by using http://www.rubyenterpriseedition.com/[Ruby Enterprise Edition].
 Please visit the website for details.
 
-=== Moving Passenger to a different directory ===
+=== Moving Phusion Passenger to a different directory ===
 
-It is possible to relocate the Passenger files to a different directory. It
+It is possible to relocate the Phusion Passenger files to a different directory. It
 involves two steps:
 
 1. Moving the directory.
 2. Updating the ``PassengerRoot'' configuration option in Apache.
 
-For example, if Passenger is located in '/opt/passenger/', and you'd like to
+For example, if Phusion Passenger is located in '/opt/passenger/', and you'd like to
 move it to '/usr/local/passenger/', then do this:
 
 1. Run the following command:
@@ -1022,11 +1023,11 @@ gem install rails -v X.X.X
 where 'X.X.X' is the version number of Ruby on Rails.
 
 All of these versions will exist in parallel, and will not conflict with each
-other. Passenger will automatically make use of the correct version.
+other. Phusion Passenger will automatically make use of the correct version.
 
 === X-Sendfile support ===
 
-Passenger does not provide X-Sendfile support by itself. Please install
+Phusion Passenger does not provide X-Sendfile support by itself. Please install
 link:http://tn123.ath.cx/mod_xsendfile/[mod_xsendfile] for X-Sendfile support.
 
 
@@ -1038,7 +1039,7 @@ Attribution-Share Alike 3.0 Unported License].
 
 image:images/by_sa.png[link="http://creativecommons.org/licenses/by-sa/3.0/"]
 
-Passenger is brought to you by link:http://www.phusion.nl/[Phusion].
+Phusion Passenger is brought to you by link:http://www.phusion.nl/[Phusion].
 
 image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
