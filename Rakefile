@@ -410,6 +410,7 @@ spec = Gem::Specification.new do |s|
 		'doc/*/*/*/*',
 		'doc/*/*/*/*/*',
 		'doc/*/*/*/*/*/*',
+		'man/*',
 		'debian/*',
 		'ext/apache2/*.{cpp,h,c,TXT}',
 		'ext/boost/*.{hpp,TXT}',
