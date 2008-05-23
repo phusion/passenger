@@ -1,0 +1,27 @@
+.TH "passenger-memory-stats" "1" "1.1.0" "Phusion" "User Commands"
+.SH "NAME"
+.LP 
+passenger\-memory\-stats \- reports a snapshot of the Passenger memory statistcs
+.SH "SYNTAX"
+.LP 
+\fBpassenger\-memory\-stats\fR
+.SH "DESCRIPTION"
+.LP 
+\fBpassenger\-memory\-stats\fR allows you to easily analyze the real memory usage of Passenger and Apache.
+.LP 
+Process inspection tools such as \fIps\fR and \fItop\fR are useful, but they rarely show the correct memory usage. The real memory usage is usually lower than what \fIps\fR and \fItop\fR report.
+.LP 
+There are many technical reasons why this is so, but an explanation is beyond the scope of this page. We refer the interested reader to operating systems literature about virtual memory and copy\-on\-write.
+.LP 
+When you run this tool the Private or private dirty RSS field shows the real memory usage of processes.
+.SH "SEE ALSO"
+.LP 
+passenger\-status(8), ps (1), top (1), 
+.LP 
+User guide at http://www.modrails.com/documentation.html
+
+.SH "AUTHOR"
+.LP 
+Passenger was written by the team at Phusion (http://www.phusion.nl)
+.LP 
+This manual page was written by Neil Wilson <neil@brightbox.co.uk> for the Ubuntu project (but may be used by others).

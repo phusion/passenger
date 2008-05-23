@@ -1,0 +1,41 @@
+.TH "passenger-stress-test" "1" "1.1.0" "Phusion" "User Commands"
+.SH "NAME"
+.LP 
+passenger\-stress\-test \- stress tests a Passenger powered website.
+.SH "SYNTAX"
+.LP 
+\fBpassenger\-stress\-test\fR <\fIhostname\fR> <\fIapp_roo\fRt> [\fIoptions\fR]
+.SH "DESCRIPTION"
+.LP 
+Stress test the given (Passenger\-powered) website by
+.LP 
+\- crawling it with multiple concurrently running crawlers.
+.LP   
+\- gracefully restarting Apache at random times
+.LP 
+\- restarting the target (Passenger\-powered) application at random times
+.SH "OPTIONS"
+.LP 
+.TP 
+\fB\-c, \-\-concurrency\fR <\fInumber\fR>
+Number of crawlers to start (default = 20)
+.TP 
+\fB\-p, \-\-apache\-restart\-interval\fR <\fIinterval\fR>
+Gracefully restart Apache after <\fIinterval\fR> minutes (default = 1440)
+.TP 
+\fB\-a, \-\-app\-restart\-interval\fR <\fIinterval\fR>
+Restart the application after <\fIinterval\fR> minutes (default = 55)
+.TP 
+\fB\-h, \-\-help\fR
+Output help information and exit.
+
+.SH "SEE ALSO"
+.LP 
+passenger\-config (1), passenger\-memory\-stats (1)
+.LP 
+User guide at http://www.modrails.com/documentation.html
+.SH "AUTHOR"
+.LP 
+Passenger was written by the team at Phusion (http://www.phusion.nl)
+.LP 
+This manual page was written by Neil Wilson <neil@brightbox.co.uk> for the Ubuntu project (but may be used by others).
