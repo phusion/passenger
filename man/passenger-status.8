@@ -1,18 +1,18 @@
-.TH "passenger-status" "8" "1.1.0" "Phusion" "Adminstration Commands"
+.TH "passenger-status" "8" "1.1.0" "Phusion Passenger" "Adminstration Commands"
 .SH "NAME"
 .LP 
-passenger\-status \- inspect Passenger's internal status
+passenger\-status \- inspect Phusion Passenger's internal status
 .SH "SYNTAX"
 .LP 
 \fBpassenger\-status\fR [\fIpid\fR]
 .SH "DESCRIPTION"
 .LP 
-\fBpassenger\-status\fR looks at the current status of a Passenger installation. It will locate Passenger automatically if it is running and will give you a list of instances if there is more than one Passenger running. You can then select the instance by specifying the relevant PID on the command line.
+\fBpassenger\-status\fR looks at the current status of a Phusion Passenger installation. It will locate Phusion Passenger automatically if it is running and will give you a list of instances if there is more than one Phusion Passenger instance running. You can then select the instance by specifying the relevant PID on the command line.
 .LP 
 The \fIgeneral information\fR section shows the following details:
 .TP 
 max
-The maximum number of application instances that Passenger will spawn. This equals the value given for \fIRailsMaxPoolSize\fR in the configuration.
+The maximum number of application instances that Phusion Passenger will spawn. This equals the value given for \fIRailsMaxPoolSize\fR in the configuration.
 .TP 
 count
 The number of application instances that are currently alive. This value is always less than or equal to \fImax\fR.
@@ -28,16 +28,16 @@ The \fIapplications\fR section shows each application instance, which directory 
 .LP 
 .TP 
 \fBpid\fR
-The process ID of the Passenger instance you want to look at
-
-
+The process ID of the Phusion Passenger instance you want to look at
 .SH "SEE ALSO"
 .LP 
-passenger\-memory\-stats (1), ps (1), top (1)
+passenger\-memory\-stats(1), ps(1), top(1)
 .LP 
-User guide at http://www.modrails.com/documentation.html
+Users guide at http://www.modrails.com/documentation.html
 .SH "AUTHOR"
 .LP 
-Passenger was written by the team at Phusion (http://www.phusion.nl)
+Phusion Passenger is written by Phusion (http://www.phusion.nl)
 .LP 
-This manual page was written by Neil Wilson <neil@brightbox.co.uk> for the Ubuntu project (but may be used by others).
+"Phusion" and "Phusion Passenger" are trademarks of Hongli Lai & Ninh Bui.
+.LP 
+This manual page was written by Neil Wilson <neil@brightbox.co.uk> for the Ubuntu project (but may be used by others). 
