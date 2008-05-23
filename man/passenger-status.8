@@ -12,7 +12,7 @@ passenger\-status \- inspect Phusion Passenger's internal status
 The \fIgeneral information\fR section shows the following details:
 .TP 
 max
-The maximum number of application instances that Phusion Passenger will spawn. This equals the value given for \fIRailsMaxPoolSize\fR in the configuration.
+The maximum number of application instances that Phusion Passenger will spawn. This equals the value given for \fIPassengerMaxPoolSize\fR in the configuration.
 .TP 
 count
 The number of application instances that are currently alive. This value is always less than or equal to \fImax\fR.
@@ -21,7 +21,7 @@ active
 The number of application instances that are currently processing requests. This value is always less than or equal to \fIcount\fR.
 .TP  
 inactive
-The number of application instances that are currently not processing requests, i.e. are idle. Idle application instances will be shutdown after a while, as can be specified with \fIRailsPoolIdleTime\fR in the configuration. The value of \fIinactive\fR equals \fIcount\fR \- \fIactive\fR.
+The number of application instances that are currently not processing requests, i.e. are idle. Idle application instances will be shutdown after a while, as can be specified with \fIPassengerPoolIdleTime\fR in the configuration. The value of \fIinactive\fR equals \fIcount\fR \- \fIactive\fR.
 .LP 
 The \fIapplications\fR section shows each application instance, which directory it belongs to. The \fIsessions\fR field shows how many HTTP client are currently being processed by that application instance.
 .SH "OPTIONS"
