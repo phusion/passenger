@@ -46,7 +46,6 @@ namespace boost
             do {
                 ret = pthread_mutex_destroy(&m);
             } while (ret == EINTR);
-            BOOST_VERIFY(!ret);
         }
         
         void lock()
