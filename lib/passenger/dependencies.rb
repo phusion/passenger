@@ -287,6 +287,23 @@ module Dependencies # :nodoc: all
 		end
 		dep.install_instructions = "Please install RubyGems first, then run <b>gem install fastthread</b>"
 	end
+
+	Rack = Dependency.new do |dep|
+		dep.name = "rack"
+		dep.define_checker do |result|
+			begin
+				begin
+					require 'rubygems'
+				rescue LoadError
+				end
+				require 'rack'
+				result.found
+			rescue LoadError
+				result.not_found
+			end
+		end
+		dep.install_instructions = "Please install RubyGems first, then run <b>gem install rack</b>"
+	end
 end
 
 end # module Passenger

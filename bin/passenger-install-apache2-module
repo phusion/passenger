@@ -47,7 +47,8 @@ class Installer
 		Dependencies::Apache2,
 		Dependencies::Apache2_DevHeaders,
 		Dependencies::APR_DevHeaders,
-		Dependencies::FastThread
+		Dependencies::FastThread,
+		Dependencies::Rack
 	]
 	
 	def start
