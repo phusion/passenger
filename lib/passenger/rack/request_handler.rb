@@ -28,7 +28,8 @@ class RequestHandler < AbstractRequestHandler
 	RACK_MULTITHREAD   = "rack.multithread"    # :nodoc:
 	RACK_MULTIPROCESS  = "rack.multiprocess"   # :nodoc:
 	RACK_RUN_ONCE      = "rack.run_once"       # :nodoc:
-	RACK_URL_SCHEME    = "rack.url_scheme"     # :nodoc:
+	RACK_URL_SCHEME	   = "rack.url_scheme"     # :nodoc:
+	SCRIPT_NAME        = "SCRIPT_NAME"         # :nodoc:
 	HTTPS          = "HTTPS"  # :nodoc:
 	HTTPS_DOWNCASE = "https"  # :nodoc:
 	HTTP           = "http"   # :nodoc:
@@ -74,12 +75,12 @@ protected
 		env[RACK_MULTITHREAD]  = false
 		env[RACK_MULTIPROCESS] = true
 		env[RACK_RUN_ONCE]     = false
+		env[SCRIPT_NAME]     ||= ''
 		if env[HTTPS] == YES || env[HTTPS] == ON || env[HTTPS] == ONE
 			env[RACK_URL_SCHEME] = HTTPS_DOWNCASE
 		else
 			env[RACK_URL_SCHEME] = HTTP
 		end
-    env["SCRIPT_NAME"]   ||= ''
 		
 		status, headers, body = @app.call(env)
 		begin

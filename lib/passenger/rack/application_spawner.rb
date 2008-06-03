@@ -99,8 +99,8 @@ private
 	end
 
 	def load_rack_app
-    rackup_code = File.read("config.ru")
-    eval("Rack::Builder.new {( #{rackup_code}\n )}.to_app", TOPLEVEL_BINDING, "config.ru")
+		rackup_code = File.read("config.ru")
+		eval("Rack::Builder.new {( #{rackup_code}\n )}.to_app", TOPLEVEL_BINDING, "config.ru")
 	end
 end
 
