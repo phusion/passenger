@@ -79,6 +79,7 @@ protected
 		else
 			env[RACK_URL_SCHEME] = HTTP
 		end
+    env["SCRIPT_NAME"]   ||= ''
 		
 		status, headers, body = @app.call(env)
 		begin
