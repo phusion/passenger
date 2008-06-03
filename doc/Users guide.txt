@@ -419,6 +419,8 @@ Camping.goes :Blog
 run Rack::Adapter::Camping.new(Blog)
 ------------------------------------------------------
 
+For Camping versions 2.0 and up, using `run Blog` as the final line will do.
+
 ==== Halcyon ====
 ------------------------------------------------------
 require 'rubygems'
