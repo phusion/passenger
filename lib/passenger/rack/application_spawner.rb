@@ -14,6 +14,7 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+require 'rack'
 require 'socket'
 require 'passenger/application'
 require 'passenger/message_channel'
@@ -66,18 +67,6 @@ class ApplicationSpawner
 	end
 
 private
-	class RunnerContext
-		attr_reader :result
-		
-		def run(app)
-			@result = app
-			throw :done
-		end
-		
-		def get_binding
-			return binding
-		end
-	end
 	
 	def run(channel, app_root, lower_privilege, lowest_user, environment)
 		$0 = "Rack: #{app_root}"
@@ -110,11 +99,7 @@ private
 	end
 	
 	def load_rack_app
-		context = RunnerContext.new
-		catch(:done) do
-			eval(File.read("config.ru"), context.get_binding, "config.ru")
-		end
-		return context.result
+		::Rack::Builder.new { eval(File.read("config.ru")) }.to_app
 	end
 end
 
