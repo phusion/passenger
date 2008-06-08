@@ -276,6 +276,10 @@ run migrations on your deployment server, please login to your deployment
 server (e.g. with 'ssh') and type `rake db:migrate RAILS_ENV=production` in
 a shell console, just like one would normally run migrations.
 
+=== Capistrano integration ===
+
+See <<capistrano,Capistrano recipe>>.
+
 
 == Deploying a Rack-based Ruby application ==
 
@@ -1306,6 +1310,63 @@ by using http://www.rubyenterpriseedition.com/[Ruby Enterprise Edition].
 Please visit the website for details.
 
 Note that this feature does not apply to Rack applications.
+
+[[capistrano]]
+=== Capistrano recipe ===
+
+Phusion Passenger can be combined with link:http://capify.org/[Capistrano].
+The following Capistrano recipe demonstrates Phusion Passenger support.
+It assumes that you're using Git as version control system.
+
+--------------------------------------------------
+set :application, "myapp"
+set :domain,      "example.com"
+set :repository,  "ssh://#{domain}/path-to-your-git-repo/#{application}.git"
+set :use_sudo,    false
+set :deploy_to,   "/path-to-your-web-app-directory/#{application}"
+set :scm,         "git"
+
+role :app, domain
+role :web, domain
+role :db,  domain, :primary => true
+
+namespace :deploy do
+  desc "Restart Application"
+  task :restart, :roles => :app do
+    run "touch #{current_path}/tmp/restart.txt"
+  end
+end
+--------------------------------------------------
+
+[NOTE]
+==========================================================================
+You may notice that for each deploy, a new spawner server is
+created (it'll show up in `passenger-memory-stats`). Indeed, Capistrano will deploy
+to a path ending with '/current' (ie : '/var/www/yourapp/current'), so that you don't
+have to care about revisions in your virtual host configuration. This '/current' directory
+is a symlink to the current revision deployed ('/path_to_app/releases/date_of_the_release').
+Therefore, when deploying a new version, the symlink will change, and Phusion Passenger
+will think it's a new application, thereby creating a new spawner server:
+
+--------------------------------------------------
+1001   30291   [...]   Passenger ApplicationSpawner: /var/www/my_app/releases/20080509104413
+1001   31371   [...]   Passenger ApplicationSpawner: /var/www/my_app/releases/20080509104632
+--------------------------------------------------
+
+Don't worry about this. The (old) spawner server will terminate itself after its default
+timeout (10 minutes), so you will not run out of memory.
+
+If you really want to release the spawner server's memory immediately, then you add a command
+to your Capistrano script to terminate the Passenger spawn server after each deploy. That
+command is as follows:
+
+--------------------------------------------------
+kill $( passenger-memory-stats | grep 'Passenger spawn server' | awk '{ print $1 }' )
+--------------------------------------------------
+
+Killing the spawn server is completely safe, because Phusion Passenger will restart the
+spawn server if it has been terminated.
+==========================================================================
 
 === Moving Phusion Passenger to a different directory ===
 
