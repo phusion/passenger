@@ -1356,7 +1356,7 @@ will think it's a new application, thereby creating a new spawner server:
 Don't worry about this. The (old) spawner server will terminate itself after its default
 timeout (10 minutes), so you will not run out of memory.
 
-If you really want to release the spawner server's memory immediately, then you add a command
+If you really want to release the spawner server's memory immediately, then you can add a command
 to your Capistrano script to terminate the Passenger spawn server after each deploy. That
 command is as follows:
 
