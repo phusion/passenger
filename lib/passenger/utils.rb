@@ -81,6 +81,19 @@ protected
 		groupname && Etc.getgrnam(groupname)
 	end
 	
+	def close_all_io_objects_for_fds(file_descriptors_to_close)
+		ObjectSpace.each_object do |o|
+			if o.is_a?(IO)
+				begin
+					if o.closed? && file_descriptors_to_close.include?(o.fileno)
+						o.close
+					end
+				rescue
+				end
+			end
+		end
+	end
+	
 	def marshal_exception(exception)
 		data = {
 			:message => exception.message,
