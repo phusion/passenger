@@ -4,7 +4,7 @@ require 'passenger/rack/application_spawner'
 
 include Passenger
 
-describe Rack::ApplicationSpawner do
+describe Passenger::Rack::ApplicationSpawner do
 	include TestHelper
 	
 	before :each do
@@ -37,7 +37,7 @@ describe Rack::ApplicationSpawner do
 	end if Process.euid == 0
 	
 	def spawn(*args)
-		Rack::ApplicationSpawner.spawn_application(*args)
+		Passenger::Rack::ApplicationSpawner.spawn_application(*args)
 	end
 end
 
