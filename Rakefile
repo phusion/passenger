@@ -406,6 +406,7 @@ spec = Gem::Specification.new do |s|
 		'lib/passenger/templates/*',
 		'bin/*',
 		'doc/*',
+		'doc/*.html',
 		'doc/*/*',
 		'doc/*/*/*',
 		'doc/*/*/*/*',
