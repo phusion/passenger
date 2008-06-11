@@ -175,7 +175,11 @@ private
 				total += $2.to_i
 			end
 		end
-		return total
+		if total == 0
+			return nil
+		else
+			return total
+		end
 	rescue Errno::EACCES, Errno::ENOENT
 		return nil
 	end
