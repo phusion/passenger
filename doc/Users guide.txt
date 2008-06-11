@@ -403,9 +403,9 @@ You can deploy multiple Rack applications under a virtual host, by specifying
 ---------------------------------
 <VirtualHost *:80>
     ....
-    RacksBaseURI /app1
-    RacksBaseURI /app2
-    RacksBaseURI /app3
+    RackBaseURI /app1
+    RackBaseURI /app2
+    RackBaseURI /app3
 </VirtualHost>
 ---------------------------------
 ======================================
