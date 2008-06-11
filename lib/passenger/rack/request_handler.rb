@@ -30,6 +30,7 @@ class RequestHandler < AbstractRequestHandler
 	RACK_RUN_ONCE      = "rack.run_once"       # :nodoc:
 	RACK_URL_SCHEME	   = "rack.url_scheme"     # :nodoc:
 	SCRIPT_NAME        = "SCRIPT_NAME"         # :nodoc:
+	PATH_INFO          = "PATH_INFO"           # :nodoc:
 	HTTPS          = "HTTPS"  # :nodoc:
 	HTTPS_DOWNCASE = "https"  # :nodoc:
 	HTTP           = "http"   # :nodoc:
@@ -76,6 +77,7 @@ protected
 		env[RACK_MULTIPROCESS] = true
 		env[RACK_RUN_ONCE]     = false
 		env[SCRIPT_NAME]     ||= ''
+		env[PATH_INFO].sub!(/^#{Regexp.escape(env[SCRIPT_NAME])}/, "")
 		if env[HTTPS] == YES || env[HTTPS] == ON || env[HTTPS] == ONE
 			env[RACK_URL_SCHEME] = HTTPS_DOWNCASE
 		else
