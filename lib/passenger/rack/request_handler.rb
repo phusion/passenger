@@ -64,11 +64,11 @@ protected
 		
 		status, headers, body = @app.call(env)
 		begin
-			output.write("Status: #{status}\r\n")
+			output.write("Status: #{status}#{CRLF}")
 			headers[X_POWERED_BY] = PASSENGER_HEADER
 			headers.each do |k, vs|
 				vs.each do |v|
-					output.write("#{k}: #{v}\r\n")
+					output.write("#{k}: #{v}#{CRLF}")
 				end
 			end
 			output.write(CRLF)
