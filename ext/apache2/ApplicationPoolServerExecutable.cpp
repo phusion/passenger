@@ -77,7 +77,7 @@ private:
 	int serverSocket;
 	StandardApplicationPool pool;
 	set<ClientPtr> clients;
-	mutex lock;
+	boost::mutex lock;
 	string statusReportFIFO;
 	shared_ptr<Thread> statusReportThread;
 	
@@ -157,7 +157,7 @@ public:
 			 * the reference counts, and then we release all references outside the critical
 			 * section.
 			 */
-			mutex::scoped_lock l(lock);
+			boost::mutex::scoped_lock l(lock);
 			clientsCopy = clients;
 			clients.clear();
 		}
@@ -350,7 +350,7 @@ private:
 				<< "   exception: " << e.what());
 		}
 		
-		mutex::scoped_lock l(server.lock);
+		boost::mutex::scoped_lock l(server.lock);
 		ClientPtr myself(self.lock());
 		if (myself != NULL) {
 			server.clients.erase(myself);
@@ -448,7 +448,7 @@ Server::start() {
 			ClientPtr client(new Client(*this, fds[0]));
 			pair<set<ClientPtr>::iterator, bool> p;
 			{
-				mutex::scoped_lock l(lock);
+				boost::mutex::scoped_lock l(lock);
 				clients.insert(client);
 			}
 			client->start(client);

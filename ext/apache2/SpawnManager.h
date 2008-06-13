@@ -89,7 +89,7 @@ private:
 	string rubyCommand;
 	string user;
 	
-	mutex lock;
+	boost::mutex lock;
 	
 	MessageChannel channel;
 	pid_t pid;
@@ -514,7 +514,7 @@ public:
 		const string &spawnMethod = "smart",
 		const string &appType = "rails"
 	) {
-		mutex::scoped_lock l(lock);
+		boost::mutex::scoped_lock l(lock);
 		try {
 			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser,
 				environment, spawnMethod, appType);
