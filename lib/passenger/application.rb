@@ -20,7 +20,7 @@ require 'rubygems'
 require 'passenger/exceptions'
 module Passenger
 
-# Represents a single Ruby on Rails application instance.
+# Represents a single application instance.
 class Application
 	# The root directory of this application, i.e. the directory that contains
 	# 'app/', 'public/', etc.
@@ -100,7 +100,7 @@ class Application
 	# processes that have connections to this application instance, then it will
 	# shutdown as soon as possible.
 	#
-	# See also RequestHandler#owner_pipe.
+	# See also AbstractRequestHandler#owner_pipe.
 	def close
 		@owner_pipe.close rescue nil
 	end

@@ -29,7 +29,7 @@ require 'passenger/utils'
 module Passenger
 module Railz
 
-# This class is capable of spawns instances of a single Ruby on Rails application.
+# This class is capable of spawning instances of a single Ruby on Rails application.
 # It does so by preloading as much of the application's code as possible, then creating
 # instances of the application using what is already preloaded. This makes it spawning
 # application instances very fast, except for the first spawn.
