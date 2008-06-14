@@ -1,2 +1,4 @@
-Please read the file 'doc/Users guide.html' for installation instructions,
-configuration instructions and troubleshooting tips.
+Please read the file README for installation instructions.
+
+If you're having trouble installing Phusion Passenger, please
+read the file 'doc/Users guide.html'.
