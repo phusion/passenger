@@ -439,7 +439,9 @@ spec = Gem::Specification.new do |s|
 		'passenger-install-apache2-module',
 		'passenger-config',
 		'passenger-memory-stats',
-		'passenger-make-enterprisey'
+		'passenger-make-enterprisey',
+		'passenger-status',
+		'passenger-stress-test'
 	]
 	s.has_rdoc = true
 	s.extra_rdoc_files = ['README']
