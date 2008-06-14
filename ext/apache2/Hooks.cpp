@@ -914,7 +914,14 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 		
 		lim.rlim_cur = 0;
 		lim.rlim_max = 0;
-		getrlimit(RLIMIT_NPROC, &lim);
+
+       /* Solaris does not define the RLIMIT_NPROC limit. Setting it to infinity... */
+#ifdef RLIMIT_NPROC
+        getrlimit(RLIMIT_NPROC, &lim);
+#else
+        lim.rlim_cur = lim.rlim_max = RLIM_INFINITY; 
+#endif
+
 		#ifdef PTHREAD_THREADS_MAX
 			pthread_threads_max = toString(PTHREAD_THREADS_MAX);
 		#else

@@ -44,7 +44,7 @@ else
 	OPTIMIZATION_FLAGS = "-g -DPASSENGER_DEBUG"
 end
 CXXFLAGS = "#{THREADING_FLAGS} #{OPTIMIZATION_FLAGS} -Wall -I/usr/local/include #{MULTI_ARCH_FLAGS}"
-LDFLAGS = ""
+LDFLAGS = "#{MULTI_ARCH_LDFLAGS}"
 
 
 #### Default tasks

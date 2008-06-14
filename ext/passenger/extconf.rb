@@ -17,4 +17,12 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 require 'mkmf'
 $LIBS=""
-create_makefile('native_support')
+
+if RUBY_PLATFORM =~ /solaris/
+  have_library('xnet')
+  $CFLAGS << " -D_XPG4_2"
+end
+
+with_cflags($CFLAGS) do
+  create_makefile('native_support')
+end

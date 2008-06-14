@@ -142,7 +142,7 @@ private:
 		 */
 		int server;
 		
-		mutex lock;
+		boost::mutex lock;
 		
 		~SharedData() {
 			int ret;
@@ -173,7 +173,7 @@ private:
 		
 		virtual ~RemoteSession() {
 			closeStream();
-			mutex::scoped_lock(data->lock);
+			boost::mutex::scoped_lock(data->lock);
 			MessageChannel(data->server).write("close", toString(id).c_str(), NULL);
 		}
 		
@@ -247,25 +247,25 @@ private:
 		
 		virtual void clear() {
 			MessageChannel channel(data->server);
-			mutex::scoped_lock l(data->lock);
+			boost::mutex::scoped_lock l(data->lock);
 			channel.write("clear", NULL);
 		}
 		
 		virtual void setMaxIdleTime(unsigned int seconds) {
 			MessageChannel channel(data->server);
-			mutex::scoped_lock l(data->lock);
+			boost::mutex::scoped_lock l(data->lock);
 			channel.write("setMaxIdleTime", toString(seconds).c_str(), NULL);
 		}
 		
 		virtual void setMax(unsigned int max) {
 			MessageChannel channel(data->server);
-			mutex::scoped_lock l(data->lock);
+			boost::mutex::scoped_lock l(data->lock);
 			channel.write("setMax", toString(max).c_str(), NULL);
 		}
 		
 		virtual unsigned int getActive() const {
 			MessageChannel channel(data->server);
-			mutex::scoped_lock l(data->lock);
+			boost::mutex::scoped_lock l(data->lock);
 			vector<string> args;
 			
 			channel.write("getActive", NULL);
@@ -275,7 +275,7 @@ private:
 		
 		virtual unsigned int getCount() const {
 			MessageChannel channel(data->server);
-			mutex::scoped_lock l(data->lock);
+			boost::mutex::scoped_lock l(data->lock);
 			vector<string> args;
 			
 			channel.write("getCount", NULL);
@@ -285,14 +285,14 @@ private:
 		
 		virtual void setMaxPerApp(unsigned int max) {
 			MessageChannel channel(data->server);
-			mutex::scoped_lock l(data->lock);
+			boost::mutex::scoped_lock l(data->lock);
 			channel.write("setMaxPerApp", toString(max).c_str(), NULL);
 		}
 		
 		virtual pid_t getSpawnServerPid() const {
 			this_thread::disable_syscall_interruption dsi;
 			MessageChannel channel(data->server);
-			mutex::scoped_lock l(data->lock);
+			boost::mutex::scoped_lock l(data->lock);
 			vector<string> args;
 			
 			channel.write("getSpawnServerPid", NULL);
@@ -310,7 +310,7 @@ private:
 		) {
 			this_thread::disable_syscall_interruption dsi;
 			MessageChannel channel(data->server);
-			mutex::scoped_lock l(data->lock);
+			boost::mutex::scoped_lock l(data->lock);
 			vector<string> args;
 			int stream;
 			bool result;
