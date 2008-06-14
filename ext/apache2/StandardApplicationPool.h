@@ -319,7 +319,8 @@ private:
 					ApplicationPtr app(container.app);
 					AppContainerListPtr appList(apps[app->getAppRoot()]);
 					
-					if (now - container.lastUsed > (time_t) maxIdleTime) {
+					if (maxIdleTime > 0 &&  
+						(now - container.lastUsed > (time_t) maxIdleTime)) {
 						P_DEBUG("Cleaning idle app " << app->getAppRoot() <<
 							" (PID " << app->getPid() << ")");
 						appList->erase(container.iterator);
