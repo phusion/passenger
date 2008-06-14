@@ -109,6 +109,7 @@ private:
 	
 	struct Domain {
 		AppContainerList instances;
+		unsigned int size;
 	};
 	
 	struct AppContainer {
@@ -202,14 +203,22 @@ private:
 	 */
 	bool inline verifyState() {
 	#if PASSENGER_DEBUG
-		// Invariant for _domains_.
+		// Invariants for _domains_.
 		DomainMap::const_iterator it;
+		unsigned int totalSize = 0;
 		for (it = domains.begin(); it != domains.end(); it++) {
+			const string &appRoot = it->first;
 			Domain *domain = it->second.get();
 			AppContainerList *instances = &domain->instances;
 			
+			P_ASSERT(domain->size <= count, false,
+				"domains['" << appRoot << "'].size <= count");
+			totalSize += domain->size;
+			
+			// Invariants for Domain.
+			
 			P_ASSERT(!instances->empty(), false,
-				"domains['" << it->first << "'].instances is nonempty.");
+				"domains['" << appRoot << "'].instances is nonempty.");
 			
 			AppContainerList::const_iterator prev_lit;
 			AppContainerList::const_iterator lit;
@@ -219,11 +228,12 @@ private:
 			for (; lit != instances->end(); lit++) {
 				if ((*prev_lit)->sessions > 0) {
 					P_ASSERT((*lit)->sessions > 0, false,
-						"domains['" << it->first << "'].instances "
+						"domains['" << appRoot << "'].instances "
 						"is sorted from nonactive to active");
 				}
 			}
 		}
+		P_ASSERT(totalSize == count, false, "(sum of all d.size in domains) == count");
 		
 		P_ASSERT(active <= count, false,
 			"active (" << active << ") < count (" << count << ")");
@@ -326,7 +336,8 @@ private:
 				for (it = inactiveApps.begin(); it != inactiveApps.end(); it++) {
 					AppContainer &container(*it->get());
 					ApplicationPtr app(container.app);
-					AppContainerList *instances = &domains[app->getAppRoot()]->instances;
+					Domain *domain = domains[app->getAppRoot()].get();
+					AppContainerList *instances = &domain->instances;
 					
 					if (now - container.lastUsed > (time_t) maxIdleTime) {
 						P_DEBUG("Cleaning idle app " << app->getAppRoot() <<
@@ -338,13 +349,12 @@ private:
 						inactiveApps.erase(it);
 						it = prev;
 						
-						appInstanceCount[app->getAppRoot()]--;
+						domain->size--;
 						
 						count--;
 					}
 					if (instances->empty()) {
 						domains.erase(app->getAppRoot());
-						appInstanceCount.erase(app->getAppRoot());
 						data->restartFileTimes.erase(app->getAppRoot());
 					}
 				}
@@ -393,7 +403,6 @@ private:
 					count--;
 				}
 				domains.erase(appRoot);
-				appInstanceCount.erase(appRoot);
 				spawnManager.reload(appRoot);
 				it = domains.end();
 				activeOrMaxChanged.notify_all();
@@ -413,7 +422,7 @@ private:
 					active++;
 					activeOrMaxChanged.notify_all();
 				} else if (count >= max || (
-					maxPerApp != 0 && appInstanceCount[appRoot] >= maxPerApp )
+					maxPerApp != 0 && domain->size >= maxPerApp )
 					) {
 					AppContainerList::iterator it(instances->begin());
 					AppContainerList::iterator smallest(instances->begin());
@@ -441,7 +450,7 @@ private:
 					instances->push_back(container);
 					container->iterator = instances->end();
 					container->iterator--;
-					appInstanceCount[appRoot]++;
+					domain->size++;
 					count++;
 					active++;
 					activeOrMaxChanged.notify_all();
@@ -449,7 +458,7 @@ private:
 			} else {
 				while (!(
 					active < max &&
-					(maxPerApp == 0 || appInstanceCount[appRoot] < maxPerApp)
+					(maxPerApp == 0 || domain->size < maxPerApp)
 				)) {
 					activeOrMaxChanged.wait(l);
 				}
@@ -462,9 +471,8 @@ private:
 					if (instances->empty()) {
 						domains.erase(container->app->getAppRoot());
 						restartFileTimes.erase(container->app->getAppRoot());
-						appInstanceCount.erase(container->app->getAppRoot());
 					} else {
-						appInstanceCount[container->app->getAppRoot()]--;
+						domain->size--;
 					}
 					count--;
 				}
@@ -479,11 +487,11 @@ private:
 				it = domains.find(appRoot);
 				if (it == domains.end()) {
 					domain = new Domain();
+					domain->size = 1;
 					domains[appRoot] = ptr(domain);
-					appInstanceCount[appRoot] = 1;
 				} else {
 					domain = it->second.get();
-					appInstanceCount[appRoot]++;
+					domain->size++;
 				}
 				instances = &domain->instances;
 				instances->push_back(container);
@@ -631,7 +639,6 @@ public:
 					instances.erase(container->iterator);
 					if (instances.empty()) {
 						domains.erase(appRoot);
-						appInstanceCount.erase(appRoot);
 					}
 					count--;
 					active--;

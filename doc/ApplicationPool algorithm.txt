@@ -60,6 +60,8 @@ explicitly define some special types:
            if containers[i].app is active:
               containers[i + 1].app is active
 
+  * size (unsigned integer): The number of items in _instances_.
+
 - AppContainer
   A compound type (class) which contains an application instance, as well as
   iterators for various linked lists. These iterators make it possible to
@@ -100,6 +102,11 @@ information:
   Maps an application root to its Domain object. This map contains all
   application instances in the pool.
   
+  Invariant:
+     for all values d in domains:
+        d.size <= count
+     (sum of all d.size in domains) == count
+  
 - max: integer
   The maximum number of AppContainer objects that may exist in the pool.
 
@@ -134,16 +141,6 @@ information:
   Invariant:
      for all keys app_root in restart_times:
         domains.has_key(app_root)
-
-- app_instance_count: map[string => unsigned int]
-  Maps an application root to the number of spawned applications.
-
-  Invariant:
-     app_instance_count.keys == domains.keys
-     for all (app_root, app_count) in app_instance_count:
-        app_instance_count[app_root] < count
-        app_count == domains[app_root].instances.size()
-     (sum of all values in app_instance_count) == count.
 
 
 == Class relations
@@ -191,7 +188,6 @@ function get(app_root):
 					instances.remove(container.iterator)
 					if instances.empty():
 						domains.remove(app_root)
-						app_instance_count.remove(app_root)
 					count--
 					active--
 
@@ -211,7 +207,6 @@ function spawn_or_use_existing(app_root):
 			domain.instances.remove(container.iterator)
 			count--
 		domains.remove(app_root)
-		app_instance_count.remove(app_root)
 		list = nil
 		Tell spawn server to reload code for app_root.
 	
@@ -226,7 +221,7 @@ function spawn_or_use_existing(app_root):
 			inactive_apps.remove(container.ia_iterator)
 			active++
 		else if	(count >= max) or (
-			(max_per_app != 0) and (app_instance_count[app_root] >= max_per_app)
+			(max_per_app != 0) and (domain.size >= max_per_app)
 			):
 			# All apps are active, and the pool is full. 
 			#  -OR-
@@ -247,14 +242,14 @@ function spawn_or_use_existing(app_root):
 			container.sessions = 0
 			iterator = instances.add_to_back(container)
 			container.iterator = iterator
-			app_instance_count[app_root]++
+			domain.size++
 			count++
 			active++
 	else:
 		# There are no apps for this app root.
 		wait until
 		  (active < max) and
-		  (max_per_app == 0 or app_instance_count[app_root] < max_per_app)
+		  (max_per_app == 0 or domain.size < max_per_app)
 		if count == max:
 			# Here we are in a though situation. There are several
 			# apps which are inactive, and none of them have
@@ -274,9 +269,8 @@ function spawn_or_use_existing(app_root):
 			if instances.empty():
 				domains.remove(container.app.app_root)
 				restart_file_times.remove(container.app.app_root)
-				app_instance_count.remove(container.app.app_root)
 			else:
-				app_instance_count[container.app.app_root]--
+				domain.size--
 			count--
 		container = new AppContainer
 		# TODO: we should add some kind of timeout check for spawning.
@@ -285,10 +279,10 @@ function spawn_or_use_existing(app_root):
 		domain = domains[app_root]
 		if domain == nil:
 			domain = new Domain
+			domain.size = 1
 			domains[app_root] = domain
-			app_instance_count[app_root] = 1
 		else:
-			app_instance_count[app_root]++
+			domain.size++
 		iterator = domain.instances.add_to_back(container)
 		container.iterator = iterator
 		count++
@@ -346,14 +340,14 @@ thread cleaner:
 			now = current_time()
 			for all container in inactive_apps:
 				app = container.app
-				instances = domains[app.app_root].instances
+				domain = domains[app.app_root]
+				instances = domain.instances
 				if now - container.last_used > MAX_IDLE_TIME:
 					instances.remove(container.iterator)
 					inactive_apps.remove(container.iterator)
-					app_instance_count[app.app_root]--
+					domain.size--
 					count--
 				if instances.empty():
 					domains.remove(app.app_root)
-					app_instance_count.remove(app.app_root)
 					restart_file_times.remove(app.app_root)
 
