@@ -190,7 +190,7 @@ function get(app_root):
 					instances = domain.instances
 					instances.remove(container.iterator)
 					if instances.empty():
-						apps.remove(app_root)
+						domains.remove(app_root)
 						app_instance_count.remove(app_root)
 					count--
 					active--
@@ -346,13 +346,13 @@ thread cleaner:
 			now = current_time()
 			for all container in inactive_apps:
 				app = container.app
-				domain = domains[app.app_root]
+				instances = domains[app.app_root].instances
 				if now - container.last_used > MAX_IDLE_TIME:
-					app_list.remove(container.iterator)
+					instances.remove(container.iterator)
 					inactive_apps.remove(container.iterator)
 					app_instance_count[app.app_root]--
 					count--
-				if domain.instances.empty():
+				if instances.empty():
 					domains.remove(app.app_root)
 					app_instance_count.remove(app.app_root)
 					restart_file_times.remove(app.app_root)
