@@ -602,7 +602,7 @@ The default value is '0'.
 The maximum number of seconds that a Ruby on Rails or Rack application instance
 may be idle. That is, if an application instance hasn't done anything after
 the given number of seconds, then it will be shutdown in order to conserve
-memory.
+memory. 
 
 Decreasing this value means that applications will have to be spawned
 more often. Since spawning is a relatively slow operation, some visitors may
@@ -613,6 +613,12 @@ The optimal value depends on the average time that a visitor spends on a single
 Rails/Rack web page. We recommend a value of `2 * x`, where `x` is the average
 number of seconds that a visitor spends on a single Rails/Rack web page. But your
 mileage may vary.
+
+When this value is set to 0, application instances will not be shutdown unless 
+it's really needed, i.e. passenger is out of workers for a given application and 
+one of the given inactive app instance needs to make place for another app instance,
+effectively removing the spawn delay.
+This option value is only recommended if you are a son of RAM.
 
 This option may only occur once, in the global server configuration.
 The default value is '300'.
@@ -1216,8 +1222,8 @@ active:: The number of application instances that are currently processing
 requests. This value is always less than or equal to 'count'.
 inactive:: The number of application instances that are currently *not* processing
 requests, i.e. are idle. Idle application instances will be shutdown after a while,
-as can be specified with <<PassengerPoolIdleTime,PassengerPoolIdleTime>>. The value of 'inactive'
-equals `count - active`.
+as can be specified with <<PassengerPoolIdleTime,PassengerPoolIdleTime>> unless this
+value is set to 0. The value of 'inactive' equals `count - active`.
 
 The 'applications' section shows each application instance, which directory it belongs
 to. The 'sessions' field shows how many HTTP client are currently being processed by
