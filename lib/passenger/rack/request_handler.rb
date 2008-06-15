@@ -49,7 +49,7 @@ protected
 	# Overrided method.
 	def process_request(env, input, output)
 		env[RACK_VERSION]      = RACK_VERSION_VALUE
-		env[RACK_INPUT]        = patch_input!(input)
+		env[RACK_INPUT]        = input
 		env[RACK_ERRORS]       = STDERR
 		env[RACK_MULTITHREAD]  = false
 		env[RACK_MULTIPROCESS] = true
@@ -79,16 +79,6 @@ protected
 			body.close if body.respond_to?(:close)
 		end
 	end
-	
-	# The real input stream is not seekable (calling _seek_ on it
-	# will raise an exception). But Merb calls _seek_ if the object
-	# responds to it. So we simply undefine _seek_.
-	def patch_input!(input)
-	  input.instance_eval do
-	    undef seek if respond_to?(:seek)
-	    self
-    end
-  end
 end
 
 end # module Rack
