@@ -118,6 +118,13 @@ private
 			flags = `#{APXS2} -q CFLAGS`.strip << " -I" << `#{APXS2} -q INCLUDEDIR`
 			flags.strip!
 			flags.gsub!(/-O\d? /, '')
+
+			# Remove flags not supported by GCC
+			if RUBY_PLATFORM =~ /solaris/ # TODO: Add support for people using SunStudio
+				# The big problem is Coolstack apxs includes a bunch of solaris -x directives.
+				flags = flags.split.reject {|f| f =~ /^\-x/}.join(' ')
+			end
+
 			return flags
 		end
 	end
