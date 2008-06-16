@@ -19,10 +19,10 @@ require 'mkmf'
 $LIBS=""
 
 if RUBY_PLATFORM =~ /solaris/
-  have_library('xnet')
-  $CFLAGS << " -D_XPG4_2"
+	have_library('xnet')
+	$CFLAGS << " -D_XPG4_2"
 end
 
 with_cflags($CFLAGS) do
-  create_makefile('native_support')
+	create_makefile('native_support')
 end

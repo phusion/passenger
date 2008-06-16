@@ -174,7 +174,7 @@ private
 			end
 			return architectures.join(' ')
 		elsif RUBY_PLATFORM =~ /solaris/
-		  '-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -DBOOST_HAS_STDINT_H'
+			'-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -DBOOST_HAS_STDINT_H'
 		else
 			return ""
 		end
@@ -182,9 +182,9 @@ private
 	
 	def self.determine_multi_arch_ldflags
 	  if RUBY_PLATFORM =~ /solaris/
-	    '-lxnet -lrt -lsocket -lnsl'
+			'-lxnet -lrt -lsocket -lnsl'
 	  else
-	    ''
+			''
 	  end
 	end
 	
