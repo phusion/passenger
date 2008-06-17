@@ -328,6 +328,7 @@ function needs_restart(app_root):
 
 # The following thread will be responsible for cleaning up idle application
 # instances, i.e. instances that haven't been used for a while.
+# This can be disabled per app when setting it's maxIdleTime to 0.
 thread cleaner:
 	lock.synchronize:
 		done = false
@@ -342,7 +343,10 @@ thread cleaner:
 				app = container.app
 				domain = domains[app.app_root]
 				instances = domain.instances
-				if now - container.last_used > MAX_IDLE_TIME:
+				# If MAX_IDLE_TIME is 0 we don't clean up the instance,
+				# giving us the option to persist the app container
+				# forever unless it's killed by another app.
+				if (MAX_IDLE_TIME > 0) and (now - container.last_used > MAX_IDLE_TIME):
 					instances.remove(container.iterator)
 					inactive_apps.remove(container.iterator)
 					domain.size--

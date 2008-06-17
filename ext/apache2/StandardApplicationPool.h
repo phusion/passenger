@@ -339,7 +339,8 @@ private:
 					Domain *domain = domains[app->getAppRoot()].get();
 					AppContainerList *instances = &domain->instances;
 					
-					if (now - container.lastUsed > (time_t) maxIdleTime) {
+					if (maxIdleTime > 0 &&  
+					   (now - container.lastUsed > (time_t) maxIdleTime)) {
 						P_DEBUG("Cleaning idle app " << app->getAppRoot() <<
 							" (PID " << app->getPid() << ")");
 						instances->erase(container.iterator);
