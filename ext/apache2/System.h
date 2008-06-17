@@ -33,7 +33,7 @@
 #include <cassert>
 
 /**
- * Support for interruption of blocking system calls and C library calls.
+ * Support for interruption of blocking system calls and C library calls
  *
  * This file provides a framework for writing multithreading code that can
  * be interrupted, even when blocked on system calls or C library calls.
@@ -41,10 +41,34 @@
  * One must first call Passenger::setupSysCallInterruptionSupport().
  * Then one may use the functions in Passenger::InterruptableCalls
  * as drop-in replacements for system calls or C library functions.
+ * These functions throw boost::thread_interrupted upon interruption.
  * Thread::interrupt() and Thread::interruptAndJoin() should be used
  * for interrupting threads.
  *
- * By default, interruptions are caught.
+ * System call interruption is disabled by default. In other words: the
+ * replacement functions in this file don't throw boost::thread_interrupted.
+ * You can enable or disable system call interruption in the current scope
+ * by creating instances of boost::this_thread::enable_syscall_interruption
+ * and similar objects. This is similar to Boost thread interruption.
+ *
+ * <h2>Implementation</h2>
+ * Under the hood, system calls are interrupted by sending a signal to the
+ * current process, or to a specific thread. Sending a signal will cause
+ * system calls to return with an EINTR error.
+ *
+ * Any signal will do, but of course, one should only send a signal whose
+ * signal handler doesn't do undesirable things (such as aborting the entire
+ * program). That's why it's generally recommended that you only use
+ * Passenger::INTERRUPTION_SIGNAL to interrupt system calls, because
+ * Passenger::setupSyscallInterruptionSupport() installs an "nice" signal
+ * handler for that signal (though you should of course use
+ * Passenger::Thread::interrupt() instead of sending signals whenever
+ * possible).
+ *
+ * Note that sending a signal once may not interrupt the thread, because
+ * the thread may not be calling a system call at the time the signal was
+ * received. So one must keep sending signals periodically until the
+ * thread has quit.
  */
 
 // This is one of the things that Java is good at and C++ sucks at. Sigh...
@@ -109,9 +133,9 @@ namespace Passenger {
 	
 	/**
 	 * System call and C library call wrappers with interruption support.
-	 * These functions are interruption points, i.e. they throw boost::thread_interrupted
-	 * whenever the calling thread is interrupted by Thread::interrupt() or
-	 * Thread::interruptAndJoin().
+	 * These functions are interruption points, i.e. they throw
+	 * boost::thread_interrupted whenever the calling thread is interrupted
+	 * by Thread::interrupt() or Thread::interruptAndJoin().
 	 */
 	namespace InterruptableCalls {
 		ssize_t read(int fd, void *buf, size_t count);
