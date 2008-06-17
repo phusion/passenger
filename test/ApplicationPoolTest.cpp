@@ -348,5 +348,7 @@
 		pool->setMaxPerApp(1);
 		// TODO: how do we test this?
 	}
+	
+	// TODO: test maxIdleTime == 0
 
 #endif /* USE_TEMPLATE */
