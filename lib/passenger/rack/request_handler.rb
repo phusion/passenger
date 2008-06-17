@@ -30,6 +30,7 @@ class RequestHandler < AbstractRequestHandler
 	RACK_RUN_ONCE      = "rack.run_once"       # :nodoc:
 	RACK_URL_SCHEME	   = "rack.url_scheme"     # :nodoc:
 	SCRIPT_NAME        = "SCRIPT_NAME"         # :nodoc:
+	PATH_INFO          = "PATH_INFO"           # :nodoc:
 	HTTPS          = "HTTPS"  # :nodoc:
 	HTTPS_DOWNCASE = "https"  # :nodoc:
 	HTTP           = "http"   # :nodoc:
@@ -45,37 +46,16 @@ class RequestHandler < AbstractRequestHandler
 	end
 
 protected
-	# The real input stream is not seekable (calling _seek_ on it
-	# will raise an exception). But Merb calls _seek_ if the object
-	# responds to it. So we wrap the input stream in a proxy object
-	# that doesn't respond to _seek_.
-	class InputReader
-		def initialize(io)
-			@io = io
-		end
-		
-		def gets
-			@io.gets
-		end
-		
-		def read(*args)
-			@io.read(*args)
-		end
-		
-		def each(&block)
-			@io.each(&block)
-		end
-	end
-
 	# Overrided method.
 	def process_request(env, input, output)
 		env[RACK_VERSION]      = RACK_VERSION_VALUE
-		env[RACK_INPUT]        = InputReader.new(input)
+		env[RACK_INPUT]        = input
 		env[RACK_ERRORS]       = STDERR
 		env[RACK_MULTITHREAD]  = false
 		env[RACK_MULTIPROCESS] = true
 		env[RACK_RUN_ONCE]     = false
 		env[SCRIPT_NAME]     ||= ''
+		env[PATH_INFO].sub!(/^#{Regexp.escape(env[SCRIPT_NAME])}/, "")
 		if env[HTTPS] == YES || env[HTTPS] == ON || env[HTTPS] == ONE
 			env[RACK_URL_SCHEME] = HTTPS_DOWNCASE
 		else
@@ -84,11 +64,11 @@ protected
 		
 		status, headers, body = @app.call(env)
 		begin
-			output.write("Status: #{status}\r\n")
+			output.write("Status: #{status}#{CRLF}")
 			headers[X_POWERED_BY] = PASSENGER_HEADER
 			headers.each do |k, vs|
 				vs.each do |v|
-					output.write("#{k}: #{v}\r\n")
+					output.write("#{k}: #{v}#{CRLF}")
 				end
 			end
 			output.write(CRLF)

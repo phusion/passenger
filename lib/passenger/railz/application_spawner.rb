@@ -29,7 +29,7 @@ require 'passenger/utils'
 module Passenger
 module Railz
 
-# This class is capable of spawns instances of a single Ruby on Rails application.
+# This class is capable of spawning instances of a single Ruby on Rails application.
 # It does so by preloading as much of the application's code as possible, then creating
 # instances of the application using what is already preloaded. This makes it spawning
 # application instances very fast, except for the first spawn.
@@ -224,10 +224,21 @@ private
 			# RAILS_ENV in Rails::Initializer.load_environment.
 			::Rails::Initializer.class_eval do
 				def load_environment_with_passenger
+					using_default_log_path =
+						configuration.log_path ==
+						configuration.send(:default_log_path)
+					
 					if defined?(::RAILS_ENV)
 						Object.send(:remove_const, :RAILS_ENV)
 					end
 					Object.const_set(:RAILS_ENV, (ENV['RAILS_ENV'] || 'development').dup)
+					
+					if using_default_log_path
+						# We've changed the environment, so open the
+						# correct log file.
+						configuration.log_path = configuration.send(:default_log_path)
+					end
+					
 					load_environment_without_passenger
 				end
 				

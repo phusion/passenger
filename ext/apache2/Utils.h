@@ -30,6 +30,7 @@
 #include <cstdio>
 #include <climits>
 #include <cstdlib>
+#include <cstring>
 #include <errno.h>
 #include "Exceptions.h"
 

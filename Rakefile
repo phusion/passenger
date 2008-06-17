@@ -27,7 +27,7 @@ require 'passenger/platform_info'
 ##### Configuration
 
 # Don't forget to edit Configuration.h too
-PACKAGE_VERSION = "1.9.0"
+PACKAGE_VERSION = "1.9.1"
 OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 
 include PlatformInfo
@@ -88,13 +88,13 @@ end
 
 subdir 'ext/boost/src' do
 	file 'libboost_thread.a' => Dir['*.cpp'] + Dir['pthread/*.cpp'] do
-		# Note: NDEBUG *must* be defined! boost::thread uses assert() to check whether
-		# the pthread functions return an error. Because of the way Passenger uses
-		# processes, sometimes pthread errors will occur. These errors are harmless
-		# and should be ignored. Defining NDEBUG guarantees that boost::thread() will
-		# not abort if such an error occured.
 		flags = "#{OPTIMIZATION_FLAGS} -fPIC -I../.. #{THREADING_FLAGS} -DNDEBUG #{MULTI_ARCH_FLAGS}"
-		compile_cxx "*.cpp pthread/*.cpp", flags
+		compile_cxx "*.cpp", flags
+		# NOTE: 'compile_cxx "pthread/*.cpp", flags' doesn't work on some systems,
+		# so we do this instead.
+		Dir['pthread/*.cpp'].each do |file|
+			compile_cxx file, flags
+		end
 		create_static_library "libboost_thread.a", "*.o"
 	end
 	
@@ -406,7 +406,13 @@ spec = Gem::Specification.new do |s|
 		'lib/passenger/templates/*',
 		'bin/*',
 		'doc/*',
-		'doc/*.html',
+		
+		# If you're running 'rake package' for the first time, then these
+		# files don't exist yet, and so won't be matched by the above glob.
+		# So we add these filenames manually.
+		'doc/Users guide.html',
+		'doc/Security of user switching support.html',
+		
 		'doc/*/*',
 		'doc/*/*/*',
 		'doc/*/*/*/*',
@@ -439,7 +445,9 @@ spec = Gem::Specification.new do |s|
 		'passenger-install-apache2-module',
 		'passenger-config',
 		'passenger-memory-stats',
-		'passenger-make-enterprisey'
+		'passenger-make-enterprisey',
+		'passenger-status',
+		'passenger-stress-test'
 	]
 	s.has_rdoc = true
 	s.extra_rdoc_files = ['README']

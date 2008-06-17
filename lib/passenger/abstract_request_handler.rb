@@ -257,7 +257,19 @@ private
 	def accept_connection
 		ios = select([@socket, @owner_pipe])[0]
 		if ios.include?(@socket)
-			return @socket.accept
+			client = @socket.accept
+			
+			# The real input stream is not seekable (calling _seek_
+			# or _rewind_ on it will raise an exception). But some
+			# frameworks (e.g. Merb) call _rewind_ if the object
+			# responds to it. So we simply undefine _seek_ and
+			# _rewind_.
+			client.instance_eval do
+				undef seek if respond_to?(:seek)
+				undef rewind if respond_to?(:rewind)
+			end
+			
+			return client
 		else
 			# The other end of the pipe has been closed.
 			# So we know all owning processes have quit.
@@ -265,6 +277,12 @@ private
 		end
 	end
 	
+	# Read the next request from the given socket, and return
+	# a pair [headers, input_stream]. _headers_ is a Hash containing
+	# the request headers, while _input_stream_ is an IO object for
+	# reading HTTP POST data.
+	#
+	# Returns nil if end-of-stream was encountered.
 	def parse_request(socket)
 		channel = MessageChannel.new(socket)
 		headers_data = channel.read_scalar(MAX_HEADER_SIZE)
