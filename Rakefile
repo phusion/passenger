@@ -27,7 +27,7 @@ require 'passenger/platform_info'
 ##### Configuration
 
 # Don't forget to edit Configuration.h too
-PACKAGE_VERSION = "1.9.0"
+PACKAGE_VERSION = "1.9.1"
 OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 
 include PlatformInfo
@@ -406,7 +406,13 @@ spec = Gem::Specification.new do |s|
 		'lib/passenger/templates/*',
 		'bin/*',
 		'doc/*',
-		'doc/*.html',
+		
+		# If you're running 'rake package' for the first time, then these
+		# files don't exist yet, and so won't be matched by the above glob.
+		# So we add these filenames manually.
+		'doc/Users guide.html',
+		'doc/Security of user switching support.html',
+		
 		'doc/*/*',
 		'doc/*/*/*',
 		'doc/*/*/*/*',
