@@ -118,6 +118,13 @@ private
 			flags = `#{APXS2} -q CFLAGS`.strip << " -I" << `#{APXS2} -q INCLUDEDIR`
 			flags.strip!
 			flags.gsub!(/-O\d? /, '')
+
+			# Remove flags not supported by GCC
+			if RUBY_PLATFORM =~ /solaris/ # TODO: Add support for people using SunStudio
+				# The big problem is Coolstack apxs includes a bunch of solaris -x directives.
+				flags = flags.split.reject {|f| f =~ /^\-x/}.join(' ')
+			end
+
 			return flags
 		end
 	end
@@ -167,7 +174,7 @@ private
 			end
 			return architectures.join(' ')
 		elsif RUBY_PLATFORM =~ /solaris/
-		  '-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -DBOOST_HAS_STDINT_H'
+			'-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -DBOOST_HAS_STDINT_H'
 		else
 			return ""
 		end
@@ -175,9 +182,9 @@ private
 	
 	def self.determine_multi_arch_ldflags
 	  if RUBY_PLATFORM =~ /solaris/
-	    '-lxnet -lrt -lsocket -lnsl'
+			'-lxnet -lrt -lsocket -lnsl'
 	  else
-	    ''
+			''
 	  end
 	end
 	
