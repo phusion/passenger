@@ -46,7 +46,6 @@ end
 CXXFLAGS = "#{THREADING_FLAGS} #{OPTIMIZATION_FLAGS} -Wall -I/usr/local/include #{MULTI_ARCH_FLAGS}"
 LDFLAGS = "#{MULTI_ARCH_LDFLAGS}"
 
-
 #### Default tasks
 
 desc "Build everything"
@@ -333,17 +332,30 @@ end
 ##### Documentation
 
 subdir 'doc' do
-	ASCIIDOC = "asciidoc -a toc -a numbered -a toclevels=3 -a icons"
+  ASCIIDOC = 'asciidoc'
+	ASCIIDOC_FLAGS = "-a toc -a numbered -a toclevels=3 -a icons"
 	ASCII_DOCS = ['Security of user switching support', 'Users guide',
 		'Architectural overview']
 
-	desc "Generate all documentation"
-	task :doc => [:rdoc, :doxygen] + ASCII_DOCS.map{ |x| "#{x}.html" }
+	DOXYGEN = 'doxygen'
 	
+	desc "Generate all documentation"
+	task :doc => [:rdoc]
+	
+	if PlatformInfo.find_command(DOXYGEN)
+		task :doc => :doxygen
+	end
+
+	task :doc => ASCII_DOCS.map{ |x| "#{x}.html" }
+
 	ASCII_DOCS.each do |name|
 		file "#{name}.html" => ["#{name}.txt"] do
-			sh "#{ASCIIDOC} '#{name}.txt'"
-		end
+			if PlatformInfo.find_command(ASCIIDOC)
+		  	sh "#{ASCIIDOC} #{ASCIIDOC_FLAGS} '#{name}.txt'"
+			else
+				sh "echo 'asciidoc required to build docs' > '#{name}.html'"
+			end
+	  end
 	end
 	
 	task :clobber => [:'doxygen:clobber'] do
