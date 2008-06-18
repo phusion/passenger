@@ -39,6 +39,7 @@ list<thread_registration *> _registered_threads;
 
 // Register main thread.
 static register_thread_with_backtrace main_thread_registration("Main thread");
+static trace_point main_thread_entry_point("main thread entry point", "", 0);
 
 boost::mutex &
 _get_backtrace_mutex() {
@@ -70,9 +71,13 @@ _format_backtrace(list<trace_point *> *backtrace_list) {
 	list<trace_point *>::const_reverse_iterator it;
 	
 	for (it = backtrace_list->rbegin(); it != backtrace_list->rend(); it++) {
-		result << "     in '" << (*it)->function << "' "
-			"(" << (*it)->source << ":" << (*it)->line << ")" <<
-			endl;
+		trace_point *p = *it;
+		
+		result << "     in '" << p->function << "'";
+		if (!p->source.empty()) {
+			result << " (" << p->source << ":" << p->line << ")";
+		}
+		result << endl;
 	}
 	return result.str();
 }

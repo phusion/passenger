@@ -138,12 +138,30 @@ public:
 					return "     (no backtrace: thread hasn't been started yet)";
 				}
 			} else {
-			
 				boost::mutex::scoped_lock l2(*data->registration->backtrace_mutex);
 				return _format_backtrace(data->registration->backtrace);
 			}
 		#else
 			return "    (backtrace support disabled during compile time)";
+		#endif
+	}
+	
+	static std::string all_backtraces() throw() {
+		#ifdef OXT_BACKTRACE_IS_ENABLED
+			boost::mutex::scoped_lock l(_thread_registration_mutex);
+			list<thread_registration *>::const_iterator it;
+			std::stringstream result;
+			
+			for (it = _registered_threads.begin(); it != _registered_threads.end(); it++) {
+				thread_registration *r = *it;
+				result << "Thread '" << r->name << "':" << endl;
+				
+				boost::mutex::scoped_lock l(*r->backtrace_mutex);
+				result << _format_backtrace(r->backtrace) << endl;
+			}
+			return result.str();
+		#else
+			return "(backtrace support disabled during compile time)";
 		#endif
 	}
 	
