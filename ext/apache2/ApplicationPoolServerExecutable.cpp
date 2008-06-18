@@ -381,12 +381,19 @@ private:
 			}
 		} catch (const boost::thread_interrupted &) {
 			P_TRACE(2, "Client thread " << this << " interrupted.");
+		} catch (const tracable_exception &e) {
+			P_TRACE(2, "Uncaught exception in ApplicationPoolServer client thread:\n"
+				<< "   message: " << toString(args) << "\n"
+				<< "   exception: " << e.what() << "\n"
+				<< "   backtrace:\n" << e.backtrace());
 		} catch (const exception &e) {
 			P_TRACE(2, "Uncaught exception in ApplicationPoolServer client thread:\n"
 				<< "   message: " << toString(args) << "\n"
-				<< "   exception: " << e.what());
+				<< "   exception: " << e.what() << "\n"
+				<< "   backtrace: not available");
 		} catch (...) {
 			P_TRACE(2, "Uncaught unknown exception in ApplicationPool client thread.");
+			throw;
 		}
 		
 		UPDATE_TRACE_POINT();
@@ -517,9 +524,15 @@ main(int argc, char *argv[]) {
 		Server server(SERVER_SOCKET_FD, atoi(argv[1]),
 			argv[2], argv[3], argv[4], argv[5], argv[6]);
 		return server.start();
+	} catch (const tracable_exception &e) {
+		P_ERROR(e.what() << "\n" << e.backtrace());
+		return 1;
 	} catch (const exception &e) {
 		P_ERROR(e.what());
 		return 1;
+	} catch (...) {
+		P_ERROR("Unknown exception thrown in main thread.");
+		throw;
 	}
 }
 

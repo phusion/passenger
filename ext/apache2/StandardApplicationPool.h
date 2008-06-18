@@ -567,6 +567,7 @@ public:
 		restartFileTimes(data->restartFileTimes),
 		appInstanceCount(data->appInstanceCount)
 	{
+		TRACE_POINT();
 		detached = false;
 		done = false;
 		max = DEFAULT_MAX_POOL_SIZE;

@@ -743,13 +743,26 @@ public:
 			session->discardStream();
 
 			return OK;
-		} catch (const thread_interrupted &) {
+			
+		} catch (const thread_interrupted &e) {
 			P_TRACE(3, "A system call was interrupted during an HTTP request. Apache "
-				"is probably restarting or shutting down.");
+				"is probably restarting or shutting down. Backtrace:\n" <<
+				e.backtrace());
 			return HTTP_INTERNAL_SERVER_ERROR;
+			
+		} catch (const tracable_exception &e) {
+			P_TRACE(3, "Unexpected error in mod_passenger: " <<
+				e.what() << "\n" << "  Backtrace:" << e.backtrace());
+			return HTTP_INTERNAL_SERVER_ERROR;
+		
 		} catch (const exception &e) {
-			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "*** Unexpected error in Passenger: %s", e.what());
+			P_TRACE(3, "Unexpected error in mod_passenger: " <<
+				e.what() << "\n" << "  Backtrace: not available");
 			return HTTP_INTERNAL_SERVER_ERROR;
+		
+		} catch (...) {
+			P_TRACE(3, "An unexpected, unknown error occured in mod_passenger.");
+			throw;
 		}
 	}
 	
@@ -902,9 +915,10 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 			apr_pool_cleanup_null);
 		return OK;
 	
-	} catch (const thread_interrupted &) {
+	} catch (const thread_interrupted &e) {
 		P_TRACE(2, "A system call was interrupted during mod_passenger "
-			"initialization. Apache might be restarting or shutting down.");
+			"initialization. Apache might be restarting or shutting "
+			"down. Backtrace:\n" << e.backtrace());
 		return DECLINED;
 	
 	} catch (const thread_resource_error &e) {
