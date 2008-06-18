@@ -29,8 +29,14 @@
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include "system_calls.hpp"
 #include "backtrace.hpp"
+#ifdef OXT_BACKTRACE_IS_ENABLED
+	#include <sstream>
+#endif
 
 namespace oxt {
+
+extern boost::mutex _next_thread_number_mutex;
+extern unsigned int _next_thread_number;
 
 /**
  * Enhanced thread class with support for:
@@ -39,6 +45,24 @@ namespace oxt {
  * - backtraces.
  */
 class thread: public boost::thread {
+private:
+	std::string m_name;
+
+	template<typename Callable>
+	static void register_thread(oxt::thread *self, Callable func, std::string name) {
+		if (name.empty()) {
+			boost::mutex::scoped_lock l(_next_thread_number_mutex);
+			std::stringstream str;
+			
+			str << "Thread #" << _next_thread_number;
+			_next_thread_number++;
+			name = str.str();
+		}
+		self->m_name = name;
+		register_thread_with_backtrace r(name);
+		func();
+	}
+	
 public:
 	/**
 	 * Create a new thread.
@@ -47,6 +71,8 @@ public:
 	 *     main function. This object must be copyable. <tt>func</tt> is
 	 *     copied into storage managed internally by the thread library,
 	 *     and that copy is invoked on a newly-created thread of execution.
+	 * @param name A name for this thread. If an empty string is given, then
+	 *     a name will be automatically chosen.
 	 * @param stack_size The stack size, in bytes, that the thread should
 	 *     have. If 0 is specified, the operating system's default stack
 	 *     size is used.
@@ -55,8 +81,15 @@ public:
 	 *     creation of the thread.
 	 */
 	template<typename Callable>
-	explicit thread(Callable func, unsigned int stack_size = 0)
-		: boost::thread(func, stack_size) {}
+	explicit thread(Callable func, const std::string &name = "", unsigned int stack_size = 0)
+		: boost::thread(register_thread(this, func, name), stack_size) {}
+	
+	/**
+	 * Return this thread's name. The name was set during construction.
+	 */
+	std::string name() const throw() {
+		return m_name;
+	}
 	
 	/**
 	 * Interrupt the thread. This method behaves just like

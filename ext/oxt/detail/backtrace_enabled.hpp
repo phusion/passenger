@@ -24,6 +24,8 @@
  */
 
 // Actual implementation for backtrace.hpp.
+#define OXT_BACKTRACE_IS_ENABLED
+
 #include <boost/thread/mutex.hpp>
 #include <exception>
 #include <string>
