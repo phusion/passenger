@@ -22,42 +22,31 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "backtrace.h"
+#ifndef _OXT_MACROS_HPP_
+#define _OXT_MACROS_HPP_
 
-#if !(defined(NDEBUG) || defined(OXT_DISABLE_BACKTRACES))
+/**
+ * Specialized macros.
+ *
+ * These macros provide more specialized features which are not needed
+ * so often by application programmers.
+ */
 
-namespace oxt {
-
-static thread_specific_ptr<boost::mutex> backtraceMutex;
-static thread_specific_ptr< list<TracePoint *> > currentBacktrace;
-boost::mutex _threadRegistrationMutex;
-list<ThreadRegistration *> _registeredThreads;
-
-boost::mutex &
-_getBacktraceMutex() {
-	boost::mutex *result;
+#if defined(__GNUC__) && (__GNUC__ > 2)
+	/**
+	 * Indicate that the given expression is likely to be true.
+	 * This allows the CPU to better perform branch prediction.
+	 */
+	#define OXT_LIKELY(expr) __builtin_expect((expr), 1)
 	
-	result = backtraceMutex.get();
-	if (UNLIKELY(result == NULL)) {
-		result = new boost::mutex();
-		backtraceMutex.reset(result);
-	}
-	return *result;
-}
-
-list<TracePoint *> *
-_getCurrentBacktrace() {
-	list<TracePoint *> *result;
-	
-	result = currentBacktrace.get();
-	if (UNLIKELY(result == NULL)) {
-		result = new list<TracePoint *>();
-		currentBacktrace.reset(result);
-	}
-	return result;
-}
-
-} // namespace Passenger
-
+	/**
+	 * Indicate that the given expression is likely to be false.
+	 * This allows the CPU to better perform branch prediction.
+	 */
+	#define OXT_UNLIKELY(expr) __builtin_expect((expr), 0)
+#else
+	#define OXT_LIKELY(expr) expr
+	#define OXT_UNLIKELY(expr) expr
 #endif
 
+#endif /* _OXT_MACROS_HPP_ */

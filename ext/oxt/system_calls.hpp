@@ -22,8 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef _PASSENGER_SYSTEM_H_
-#define _PASSENGER_SYSTEM_H_
+#ifndef _OXT_SYSTEM_CALLS_HPP_
+#define _OXT_SYSTEM_CALLS_HPP_
 
 #include <boost/thread.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
@@ -253,5 +253,5 @@ namespace this_thread {
 } // namespace this_thread
 } // namespace boost
 
-#endif /* _PASSENGER_SYSTEM_H_ */
+#endif /* _OXT_SYSTEM_CALLS_HPP_ */
 
