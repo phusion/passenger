@@ -39,7 +39,7 @@ APR_FLAGS.nil? and raise "Could not find Apache Portable Runtime (APR)."
 CXX = "g++"
 THREADING_FLAGS = "-D_REENTRANT"
 if OPTIMIZE
-	OPTIMIZATION_FLAGS = "-O2 -DNDEBUG"
+	OPTIMIZATION_FLAGS = "-O2"
 else
 	OPTIMIZATION_FLAGS = "-g -DPASSENGER_DEBUG"
 end
@@ -104,6 +104,21 @@ subdir 'ext/boost/src' do
 end
 
 
+##### OXT static library
+
+subdir 'ext/oxt' do
+	file 'liboxt.a' => Dir['*.cpp'] + Dir['*.hpp'] + Dir['detail/*.hpp'] do
+		flags = "#{OPTIMIZATION_FLAGS} -Wall -fPIC -I.. #{THREADING_FLAGS} #{MULTI_ARCH_FLAGS}"
+		compile_cxx "*.cpp", flags
+		create_static_library "liboxt.a", "*.o"
+	end
+	
+	task :clean do
+		sh "rm -f liboxt.a *.o"
+	end
+end
+
+
 ##### Apache module
 
 class APACHE2
@@ -129,6 +144,7 @@ subdir 'ext/apache2' do
 	
 	file 'mod_passenger.so' => [
 		'../boost/src/libboost_thread.a',
+		'../oxt/liboxt.a',
 		'mod_passenger.o'
 	] + APACHE2::OBJECTS.keys do
 		# apxs totally sucks. We couldn't get it working correctly
@@ -138,7 +154,10 @@ subdir 'ext/apache2' do
 		#
 		# Oh, and libtool sucks too. Do we even need it anymore in 2008?
 		linkflags = "#{LDFLAGS} #{MULTI_ARCH_FLAGS}"
-		linkflags << " -lstdc++ -lpthread ../boost/src/libboost_thread.a #{APR_LIBS}"
+		linkflags << " -lstdc++ -lpthread " <<
+			"../boost/src/libboost_thread.a " <<
+			"../oxt/liboxt.a " <<
+			APR_LIBS
 		create_shared_library 'mod_passenger.so',
 			APACHE2::OBJECTS.keys.join(' ') << ' mod_passenger.o',
 			linkflags
@@ -146,6 +165,7 @@ subdir 'ext/apache2' do
 	
 	file 'ApplicationPoolServerExecutable' => [
 		'../boost/src/libboost_thread.a',
+		'../oxt/liboxt.a',
 		'ApplicationPoolServerExecutable.cpp',
 		'ApplicationPool.h',
 		'StandardApplicationPool.h',
@@ -158,7 +178,10 @@ subdir 'ext/apache2' do
 	] do
 		create_executable "ApplicationPoolServerExecutable",
 			'ApplicationPoolServerExecutable.cpp System.o Backtrace.o Utils.o Logging.o',
-			"-I.. #{CXXFLAGS} #{LDFLAGS} -DPASSENGER_DEBUG ../boost/src/libboost_thread.a -lpthread"
+			"-I.. #{CXXFLAGS} #{LDFLAGS} " <<
+			"../boost/src/libboost_thread.a " <<
+			"../oxt/liboxt.a " <<
+			"-lpthread"
 	end
 	
 	file 'mod_passenger.o' => ['mod_passenger.c'] do
@@ -266,6 +289,7 @@ subdir 'test' do
 
 	file 'Apache2ModuleTests' => TEST::AP2_OBJECTS.keys +
 	  ['../ext/boost/src/libboost_thread.a',
+	   '../ext/oxt/liboxt.a',
 	   '../ext/apache2/System.o',
 	   '../ext/apache2/Backtrace.o',
 	   '../ext/apache2/Utils.o',
@@ -277,7 +301,9 @@ subdir 'test' do
 			" ../ext/apache2/Logging.o"
 		create_executable "Apache2ModuleTests", objects,
 			"#{LDFLAGS} #{APR_LIBS} #{MULTI_ARCH_FLAGS} " <<
-			"../ext/boost/src/libboost_thread.a -lpthread"
+			"../ext/boost/src/libboost_thread.a " <<
+			"../ext/oxt/liboxt.a " <<
+			"-lpthread"
 	end
 	
 	TEST::AP2_OBJECTS.each_pair do |target, sources|
@@ -311,12 +337,15 @@ subdir 'benchmark' do
 	  '../ext/apache2/MessageChannel.h',
 	  '../ext/apache2/System.o',
 	  '../ext/apache2/Backtrace.o',
-	  '../ext/boost/src/libboost_thread.a'] do
+	  '../ext/boost/src/libboost_thread.a',
+	  '../ext/oxt/liboxt.a'] do
 		create_executable "DummyRequestHandler", "DummyRequestHandler.cpp",
 			"-I../ext -I../ext/apache2 #{CXXFLAGS} #{LDFLAGS} " <<
 			"../ext/apache2/System.o " <<
 			"../ext/apache2/Backtrace.o " <<
-			"../ext/boost/src/libboost_thread.a -lpthread"
+			"../ext/boost/src/libboost_thread.a " <<
+			"../ext/oxt/liboxt.a " <<
+			"-lpthread"
 	end
 	
 	file 'ApplicationPool' => ['ApplicationPool.cpp',
@@ -327,6 +356,7 @@ subdir 'benchmark' do
 	  '../ext/apache2/Logging.o',
 	  '../ext/apache2/Utils.o',
 	  '../ext/boost/src/libboost_thread.a',
+	  '../ext/oxt/liboxt.a',
 	  :native_support] do
 		create_executable "ApplicationPool", "ApplicationPool.cpp",
 			"-I../ext -I../ext/apache2 #{CXXFLAGS} #{LDFLAGS} " <<
@@ -334,7 +364,9 @@ subdir 'benchmark' do
 			"../ext/apache2/Backtrace.o " <<
 			"../ext/apache2/Logging.o " <<
 			"../ext/apache2/Utils.o " <<
-			"../ext/boost/src/libboost_thread.a -lpthread"
+			"../ext/boost/src/libboost_thread.a " <<
+			"../ext/oxt/liboxt.a " <<
+			"-lpthread"
 	end
 	
 	task :clean do
@@ -436,6 +468,9 @@ spec = Gem::Specification.new do |s|
 		'ext/apache2/*.{cpp,h,c,TXT}',
 		'ext/boost/*.{hpp,TXT}',
 		'ext/boost/**/*.{hpp,cpp,pl,inl,ipp}',
+		'ext/oxt/*.hpp',
+		'ext/oxt/*.cpp',
+		'ext/oxt/detail/*.hpp',
 		'ext/passenger/*.{c,rb}',
 		'benchmark/*.{cpp,rb}',
 		'misc/*',
@@ -568,6 +603,7 @@ task :sloccount do
 			"lib/passenger/*",
 			"lib/rake/{cplusplus,extensions}.rb",
 			"ext/apache2",
+			"ext/oxt",
 			"ext/passenger/*.c",
 			"test/*.{cpp,rb}",
 			"test/support/*.rb",
