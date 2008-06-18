@@ -50,16 +50,18 @@ class thread: public boost::thread {
 private:
 	struct thread_data {
 		std::string name;
-		thread_registration *registration;
-		boost::mutex registration_lock;
-		bool done;
+		#ifdef OXT_BACKTRACE_IS_ENABLED
+			thread_registration *registration;
+			boost::mutex registration_lock;
+			bool done;
+		#endif
 	};
 	
 	typedef boost::shared_ptr<thread_data> thread_data_ptr;
 	
 	thread_data_ptr data;
 
-	void initialize_data(const string &thread_name) {
+	void initialize_data(const std::string &thread_name) {
 		data = thread_data_ptr(new thread_data());
 		if (thread_name.empty()) {
 			boost::mutex::scoped_lock l(_next_thread_number_mutex);
@@ -71,20 +73,26 @@ private:
 		} else {
 			data->name = thread_name;
 		}
-		data->registration = NULL;
-		data->done = false;
+		#ifdef OXT_BACKTRACE_IS_ENABLED
+			data->registration = NULL;
+			data->done = false;
+		#endif
 	}
 	
 	static void thread_main(boost::function<void ()> func, thread_data_ptr data) {
-		register_thread_with_backtrace r(data->name);
-		data->registration = r.registration;
+		#ifdef OXT_BACKTRACE_IS_ENABLED
+			register_thread_with_backtrace r(data->name);
+			data->registration = r.registration;
+		#endif
 		
 		TRACE_POINT_WITH_NAME("oxt::thread entry point");
 		func();
 		
-		boost::mutex::scoped_lock l(data->registration_lock);
-		data->registration = NULL;
-		data->done = true;
+		#ifdef OXT_BACKTRACE_IS_ENABLED
+			boost::mutex::scoped_lock l(data->registration_lock);
+			data->registration = NULL;
+			data->done = true;
+		#endif
 	}
 	
 public:
@@ -121,17 +129,22 @@ public:
 	 * Return this thread's backtrace.
 	 */
 	std::string backtrace() const throw() {
-		boost::mutex::scoped_lock l(data->registration_lock);
-		if (data->registration == NULL) {
-			if (data->done) {
-				return "     (no backtrace: thread has quit)";
+		#ifdef OXT_BACKTRACE_IS_ENABLED
+			boost::mutex::scoped_lock l(data->registration_lock);
+			if (data->registration == NULL) {
+				if (data->done) {
+					return "     (no backtrace: thread has quit)";
+				} else {
+					return "     (no backtrace: thread hasn't been started yet)";
+				}
 			} else {
-				return "     (no backtrace: thread hasn't been started yet)";
+			
+				boost::mutex::scoped_lock l2(*data->registration->backtrace_mutex);
+				return _format_backtrace(data->registration->backtrace);
 			}
-		} else {
-			boost::mutex::scoped_lock l2(*data->registration->backtrace_mutex);
-			return _format_backtrace(data->registration->backtrace);
-		}
+		#else
+			return "    (backtrace support disabled during compile time)";
+		#endif
 	}
 	
 	/**

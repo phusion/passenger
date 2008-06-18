@@ -43,6 +43,7 @@ public:
 };
 
 #define TRACE_POINT() do { /* nothing */ } while (false)
+#define TRACE_POINT_WITH_NAME(name) do { /* nothing */ } while (false)
 #define UPDATE_TRACE_POINT() do { /* nothing */ } while (false)
 
 } // namespace oxt
