@@ -25,7 +25,7 @@
 #ifndef _OXT_SYSTEM_CALLS_HPP_
 #define _OXT_SYSTEM_CALLS_HPP_
 
-#include <boost/thread.hpp>
+#include <boost/thread/tss.hpp>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/socket.h>

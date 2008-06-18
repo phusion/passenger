@@ -23,6 +23,7 @@
  * THE SOFTWARE.
  */
 #include "system_calls.hpp"
+#include <boost/thread.hpp>
 #include <cerrno>
 
 using namespace boost;
