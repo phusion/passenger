@@ -39,11 +39,11 @@ APR_FLAGS.nil? and raise "Could not find Apache Portable Runtime (APR)."
 CXX = "g++"
 THREADING_FLAGS = "-D_REENTRANT"
 if OPTIMIZE
-	OPTIMIZATION_FLAGS = "-O2"
+	OPTIMIZATION_FLAGS = "-O2 -DBOOST_DISABLE_ASSERTS"
 else
-	OPTIMIZATION_FLAGS = "-g -DPASSENGER_DEBUG"
+	OPTIMIZATION_FLAGS = "-g -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS"
 end
-CXXFLAGS = "#{THREADING_FLAGS} #{OPTIMIZATION_FLAGS} -Wall -I/usr/local/include #{MULTI_ARCH_FLAGS}"
+CXXFLAGS = "#{OPTIMIZATION_FLAGS} #{THREADING_FLAGS} #{MULTI_ARCH_FLAGS} -Wall -I/usr/local/include"
 LDFLAGS = ""
 
 
@@ -84,38 +84,33 @@ subdir 'ext/passenger' do
 end
 
 
-##### boost::thread static library
+##### boost::thread and OXT static library
 
-subdir 'ext/boost/src' do
-	file 'libboost_thread.a' => Dir['*.cpp'] + Dir['pthread/*.cpp'] do
-		flags = "#{OPTIMIZATION_FLAGS} -fPIC -I../.. #{THREADING_FLAGS} -DNDEBUG #{MULTI_ARCH_FLAGS}"
+file 'ext/libboost_oxt.a' =>
+	Dir['ext/boost/src/*.cpp'] +
+	Dir['ext/boost/src/pthread/*.cpp'] +
+	Dir['ext/oxt/*.cpp'] +
+	Dir['ext/oxt/*.hpp'] +
+	Dir['ext/oxt/detail/*.hpp'] do
+	Dir.chdir('ext/boost/src') do
+		puts "### In ext/boost/src:"
+		flags = "-I../.. -fPIC #{OPTIMIZATION_FLAGS} #{THREADING_FLAGS} #{MULTI_ARCH_FLAGS}"
 		compile_cxx "*.cpp", flags
 		# NOTE: 'compile_cxx "pthread/*.cpp", flags' doesn't work on some systems,
 		# so we do this instead.
 		Dir['pthread/*.cpp'].each do |file|
 			compile_cxx file, flags
 		end
-		create_static_library "libboost_thread.a", "*.o"
 	end
-	
-	task :clean do
-		sh "rm -f libboost_thread.a *.o"
+	Dir.chdir('ext/oxt') do
+		puts "### In ext/oxt:"
+		compile_cxx "*.cpp", "-I.. -fPIC #{CXXFLAGS}"
 	end
+	create_static_library "ext/libboost_oxt.a", "ext/boost/src/*.o ext/oxt/*.o"
 end
 
-
-##### OXT static library
-
-subdir 'ext/oxt' do
-	file 'liboxt.a' => Dir['*.cpp'] + Dir['*.hpp'] + Dir['detail/*.hpp'] do
-		flags = "#{OPTIMIZATION_FLAGS} -Wall -fPIC -I.. #{THREADING_FLAGS} #{MULTI_ARCH_FLAGS}"
-		compile_cxx "*.cpp", flags
-		create_static_library "liboxt.a", "*.o"
-	end
-	
-	task :clean do
-		sh "rm -f liboxt.a *.o"
-	end
+task :clean do
+	sh "rm -f ext/libboost_oxt.a ext/boost/src/*.o ext/oxt/*.o"
 end
 
 
@@ -141,8 +136,7 @@ subdir 'ext/apache2' do
 	task :apache2 => ['mod_passenger.so', 'ApplicationPoolServerExecutable', :native_support]
 	
 	file 'mod_passenger.so' => [
-		'../boost/src/libboost_thread.a',
-		'../oxt/liboxt.a',
+		'../libboost_oxt.a',
 		'mod_passenger.o'
 	] + APACHE2::OBJECTS.keys do
 		# apxs totally sucks. We couldn't get it working correctly
@@ -153,8 +147,7 @@ subdir 'ext/apache2' do
 		# Oh, and libtool sucks too. Do we even need it anymore in 2008?
 		linkflags = "#{LDFLAGS} #{MULTI_ARCH_FLAGS}"
 		linkflags << " -lstdc++ -lpthread " <<
-			"../boost/src/libboost_thread.a " <<
-			"../oxt/liboxt.a " <<
+			"../libboost_oxt.a " <<
 			APR_LIBS
 		create_shared_library 'mod_passenger.so',
 			APACHE2::OBJECTS.keys.join(' ') << ' mod_passenger.o',
@@ -162,8 +155,7 @@ subdir 'ext/apache2' do
 	end
 	
 	file 'ApplicationPoolServerExecutable' => [
-		'../boost/src/libboost_thread.a',
-		'../oxt/liboxt.a',
+		'../libboost_oxt.a',
 		'ApplicationPoolServerExecutable.cpp',
 		'ApplicationPool.h',
 		'StandardApplicationPool.h',
@@ -175,8 +167,7 @@ subdir 'ext/apache2' do
 		create_executable "ApplicationPoolServerExecutable",
 			'ApplicationPoolServerExecutable.cpp Utils.o Logging.o',
 			"-I.. #{CXXFLAGS} #{LDFLAGS} " <<
-			"../boost/src/libboost_thread.a " <<
-			"../oxt/liboxt.a " <<
+			"../libboost_oxt.a " <<
 			"-lpthread"
 	end
 	
@@ -276,8 +267,7 @@ subdir 'test' do
 	end
 
 	file 'Apache2ModuleTests' => TEST::AP2_OBJECTS.keys +
-	  ['../ext/boost/src/libboost_thread.a',
-	   '../ext/oxt/liboxt.a',
+	  ['../ext/libboost_oxt.a',
 	   '../ext/apache2/Utils.o',
 	   '../ext/apache2/Logging.o'] do
 		objects = TEST::AP2_OBJECTS.keys.join(' ') <<
@@ -285,8 +275,7 @@ subdir 'test' do
 			" ../ext/apache2/Logging.o"
 		create_executable "Apache2ModuleTests", objects,
 			"#{LDFLAGS} #{APR_LIBS} #{MULTI_ARCH_FLAGS} " <<
-			"../ext/boost/src/libboost_thread.a " <<
-			"../ext/oxt/liboxt.a " <<
+			"../ext/libboost_oxt.a " <<
 			"-lpthread"
 	end
 	
@@ -319,12 +308,10 @@ end
 subdir 'benchmark' do
 	file 'DummyRequestHandler' => ['DummyRequestHandler.cpp',
 	  '../ext/apache2/MessageChannel.h',
-	  '../ext/boost/src/libboost_thread.a',
-	  '../ext/oxt/liboxt.a'] do
+	  '../ext/libboost_oxt.a'] do
 		create_executable "DummyRequestHandler", "DummyRequestHandler.cpp",
 			"-I../ext -I../ext/apache2 #{CXXFLAGS} #{LDFLAGS} " <<
-			"../ext/boost/src/libboost_thread.a " <<
-			"../ext/oxt/liboxt.a " <<
+			"../ext/libboost_oxt.a " <<
 			"-lpthread"
 	end
 	
@@ -333,15 +320,13 @@ subdir 'benchmark' do
 	  '../ext/apache2/ApplicationPoolServerExecutable',
 	  '../ext/apache2/Logging.o',
 	  '../ext/apache2/Utils.o',
-	  '../ext/boost/src/libboost_thread.a',
-	  '../ext/oxt/liboxt.a',
+	  '../ext/libboost_oxt.a',
 	  :native_support] do
 		create_executable "ApplicationPool", "ApplicationPool.cpp",
 			"-I../ext -I../ext/apache2 #{CXXFLAGS} #{LDFLAGS} " <<
 			"../ext/apache2/Logging.o " <<
 			"../ext/apache2/Utils.o " <<
-			"../ext/boost/src/libboost_thread.a " <<
-			"../ext/oxt/liboxt.a " <<
+			"../ext/libboost_oxt.a " <<
 			"-lpthread"
 	end
 	
