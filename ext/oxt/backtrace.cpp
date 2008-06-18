@@ -67,9 +67,9 @@ _get_current_backtrace() {
 string
 _format_backtrace(list<trace_point *> *backtrace_list) {
 	stringstream result;
-	list<trace_point *>::const_iterator it;
+	list<trace_point *>::const_reverse_iterator it;
 	
-	for (it = backtrace_list->begin(); it != backtrace_list->end(); it++) {
+	for (it = backtrace_list->rbegin(); it != backtrace_list->rend(); it++) {
 		result << "     in '" << (*it)->function << "' "
 			"(" << (*it)->source << ":" << (*it)->line << ")" <<
 			endl;

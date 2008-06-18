@@ -38,7 +38,7 @@
 namespace oxt {
 
 extern boost::mutex _next_thread_number_mutex;
-extern unsigned int _next_thread_number;thread_registration *registration;
+extern unsigned int _next_thread_number;
 
 /**
  * Enhanced thread class with support for:
@@ -59,24 +59,9 @@ private:
 	
 	thread_data_ptr data;
 
-	template<typename Callable>
-	static void register_thread(Callable func, thread_data_ptr data) {
-		register_thread_with_backtrace r(name);
-		data->registration = r.registration;
-		
-		TRACE_POINT();
-		func();
-		
-		boost::mutex::scoped_lock l(data->registration_lock);
-		data->registration = NULL;
-		data->done = true;
-	}
-	
-	template<typename Callable, typename AnotherCallable>
-	AnotherCallable create_thread_function(Callable func, const std::string &name) {
+	void initialize_data(const string &thread_name) {
 		data = thread_data_ptr(new thread_data());
-		
-		if (name.empty()) {
+		if (thread_name.empty()) {
 			boost::mutex::scoped_lock l(_next_thread_number_mutex);
 			std::stringstream str;
 			
@@ -84,12 +69,22 @@ private:
 			_next_thread_number++;
 			data->name = str.str();
 		} else {
-			data->name = name;
+			data->name = thread_name;
 		}
-		
 		data->registration = NULL;
 		data->done = false;
-		return boost::bind(register_thread, func, data);
+	}
+	
+	static void thread_main(boost::function<void ()> func, thread_data_ptr data) {
+		register_thread_with_backtrace r(data->name);
+		data->registration = r.registration;
+		
+		TRACE_POINT_WITH_NAME("oxt::thread entry point");
+		func();
+		
+		boost::mutex::scoped_lock l(data->registration_lock);
+		data->registration = NULL;
+		data->done = true;
 	}
 	
 public:
@@ -109,12 +104,11 @@ public:
 	 * @throws boost::thread_resource_error Something went wrong during
 	 *     creation of the thread.
 	 */
-	template<typename Callable>
-	explicit thread(Callable func, const std::string &name = "", unsigned int stack_size = 0)
-	       : boost::thread(
-	             create_thread_function(func, name),
-	             stack_size
-	         ) { }
+	explicit thread(boost::function<void ()> func, const std::string &name = "", unsigned int stack_size = 0) {
+		initialize_data(name);
+		set_thread_main_function(boost::bind(thread_main, func, data));
+		start_thread(stack_size);
+	}
 	
 	/**
 	 * Return this thread's name. The name was set during construction.
@@ -154,7 +148,7 @@ public:
 	void interrupt() {
 		int ret;
 		
-		thread::interrupt();
+		boost::thread::interrupt();
 		do {
 			ret = pthread_kill(native_handle(),
 				INTERRUPTION_SIGNAL);

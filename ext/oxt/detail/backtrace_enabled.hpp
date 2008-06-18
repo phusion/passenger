@@ -120,6 +120,7 @@ public:
 };
 
 #define TRACE_POINT() oxt::trace_point __p(__PRETTY_FUNCTION__, __FILE__, __LINE__)
+#define TRACE_POINT_WITH_NAME(name) oxt::trace_point __p(name, __FILE__, __LINE__)
 #define UPDATE_TRACE_POINT() __p.update(__FILE__, __LINE__)
 
 /**

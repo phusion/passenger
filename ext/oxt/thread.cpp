@@ -25,6 +25,8 @@
 
 #include "thread.hpp"
 
-boost::mutex _next_thread_number_mutex;
-unsigned int _next_thread_number = 0;
+namespace oxt {
+	boost::mutex _next_thread_number_mutex;
+	unsigned int _next_thread_number = 0;
+}
 
