@@ -37,7 +37,6 @@
  * backtraces.
  *
  * <h2>Basic usage</h2>
- *
  * Backtrace points must be specified manually in the
  * code using TRACE_POINT(). The TracableException class allows one to
  * obtain the backtrace at the moment the exception object was created.
@@ -111,10 +110,11 @@
  * 111       }
  * 112   }
  * @endcode
+ *
+ * <h2>Compilation options</h2>
+ * Define OXT_DISABLE_BACKTRACES to disable backtrace support. The backtrace
+ * functions as provided by this header will become empty stubs.
  */
-
-#include <exception>
-#include <string>
 
 #if defined(NDEBUG) || defined(OXT_DISABLE_BACKTRACES)
 	#include "detail/backtrace_disabled.hpp"

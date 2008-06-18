@@ -28,6 +28,7 @@
 #include <boost/thread.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include "system_calls.hpp"
+#include "backtrace.hpp"
 
 namespace oxt {
 

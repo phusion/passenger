@@ -32,16 +32,22 @@
  * so often by application programmers.
  */
 
-#if defined(__GNUC__) && (__GNUC__ > 2)
+#if (defined(__GNUC__) && (__GNUC__ > 2) && !defined(OXT_DEBUG)) || defined(IN_DOXYGEN)
 	/**
 	 * Indicate that the given expression is likely to be true.
 	 * This allows the CPU to better perform branch prediction.
+	 *
+	 * Defining OXT_DEBUG will cause this macro to become an
+	 * empty stub.
 	 */
 	#define OXT_LIKELY(expr) __builtin_expect((expr), 1)
 	
 	/**
 	 * Indicate that the given expression is likely to be false.
 	 * This allows the CPU to better perform branch prediction.
+	 *
+	 * Defining OXT_DEBUG will cause this macro to become an
+	 * empty stub.
 	 */
 	#define OXT_UNLIKELY(expr) __builtin_expect((expr), 0)
 #else

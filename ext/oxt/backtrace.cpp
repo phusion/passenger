@@ -22,42 +22,45 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "backtrace.h"
-
 #if !(defined(NDEBUG) || defined(OXT_DISABLE_BACKTRACES))
+
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/tss.hpp>
+#include "backtrace.hpp"
+#include "macros.hpp"
 
 namespace oxt {
 
-static thread_specific_ptr<boost::mutex> backtraceMutex;
-static thread_specific_ptr< list<TracePoint *> > currentBacktrace;
-boost::mutex _threadRegistrationMutex;
-list<ThreadRegistration *> _registeredThreads;
+static thread_specific_ptr<boost::mutex> backtrace_mutex;
+static thread_specific_ptr< list<trace_point *> > current_backtrace;
+boost::mutex _thread_registration_mutex;
+list<thread_registration *> _registered_threads;
 
 boost::mutex &
-_getBacktraceMutex() {
+_get_backtrace_mutex() {
 	boost::mutex *result;
 	
-	result = backtraceMutex.get();
-	if (UNLIKELY(result == NULL)) {
+	result = backtrace_mutex.get();
+	if (OXT_UNLIKELY(result == NULL)) {
 		result = new boost::mutex();
-		backtraceMutex.reset(result);
+		backtrace_mutex.reset(result);
 	}
 	return *result;
 }
 
-list<TracePoint *> *
-_getCurrentBacktrace() {
-	list<TracePoint *> *result;
+list<trace_point *> *
+_get_current_backtrace() {
+	list<trace_point *> *result;
 	
-	result = currentBacktrace.get();
-	if (UNLIKELY(result == NULL)) {
-		result = new list<TracePoint *>();
-		currentBacktrace.reset(result);
+	result = current_backtrace.get();
+	if (OXT_UNLIKELY(result == NULL)) {
+		result = new list<trace_point *>();
+		current_backtrace.reset(result);
 	}
 	return result;
 }
 
-} // namespace Passenger
+} // namespace oxt
 
 #endif
 
