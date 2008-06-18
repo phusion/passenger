@@ -60,6 +60,7 @@ private:
 		}
 		self->m_name = name;
 		register_thread_with_backtrace r(name);
+		TRACE_POINT();
 		func();
 	}
 	

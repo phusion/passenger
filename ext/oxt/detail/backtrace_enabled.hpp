@@ -29,7 +29,6 @@
 #include <boost/thread/mutex.hpp>
 #include <exception>
 #include <string>
-#include <sstream>
 #include <list>
 
 namespace oxt {
@@ -40,33 +39,24 @@ class trace_point;
 class tracable_exception;
 class thread_registration;
 
-boost::mutex &_get_backtrace_mutex();
-list<trace_point *> *_get_current_backtrace();
 extern boost::mutex _thread_registration_mutex;
 extern list<thread_registration *> _registered_threads;
+
+boost::mutex &_get_backtrace_mutex();
+list<trace_point *> *_get_current_backtrace();
+string _format_backtrace(list<trace_point *> *backtrace_list);
 
 /**
  * A single point in a backtrace. Implementation detail - do not use directly!
  *
  * @internal
  */
-class trace_point {
-private:
-	friend class tracable_exception;
-
+struct trace_point {
 	string function;
 	string source;
 	unsigned int line;
 	bool detached;
 
-	/**
-	 * Tell this trace_point not to remove itself from the backtrace list
-	 * upon destruction.
-	 */
-	void detach() {
-		detached = true;
-	}
-public:
 	trace_point(const string &function, const string &source, unsigned int line) {
 		this->function = function;
 		this->source = source;
@@ -81,6 +71,14 @@ public:
 			boost::mutex::scoped_lock l(_get_backtrace_mutex());
 			_get_current_backtrace()->pop_back();
 		}
+	}
+
+	/**
+	 * Tell this trace_point not to remove itself from the backtrace list
+	 * upon destruction.
+	 */
+	void detach() {
+		detached = true;
 	}
 
 	void update(const string &source, unsigned int line) {
@@ -111,15 +109,13 @@ public:
 	}
 	
 	virtual string backtrace() const throw() {
-		stringstream result;
+		list<trace_point *> backtrace_list;
 		list<trace_point>::const_iterator it;
 		
 		for (it = backtrace_copy.begin(); it != backtrace_copy.end(); it++) {
-			result << "     in '" << it->function << "' "
-				"(" << it->source << ":" << it->line << ")" <<
-				endl;
+			backtrace_list.push_back(const_cast<trace_point *>(&(*it)));
 		}
-		return result.str();
+		return _format_backtrace(&backtrace_list);
 	}
 };
 

@@ -26,6 +26,7 @@
 
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/tss.hpp>
+#include <sstream>
 #include "backtrace.hpp"
 #include "macros.hpp"
 
@@ -35,6 +36,9 @@ static thread_specific_ptr<boost::mutex> backtrace_mutex;
 static thread_specific_ptr< list<trace_point *> > current_backtrace;
 boost::mutex _thread_registration_mutex;
 list<thread_registration *> _registered_threads;
+
+// Register main thread.
+static register_thread_with_backtrace main_thread_registration("Main thread");
 
 boost::mutex &
 _get_backtrace_mutex() {
@@ -58,6 +62,19 @@ _get_current_backtrace() {
 		current_backtrace.reset(result);
 	}
 	return result;
+}
+
+string
+_format_backtrace(list<trace_point *> *backtrace_list) {
+	stringstream result;
+	list<trace_point *>::const_iterator it;
+	
+	for (it = backtrace_list->begin(); it != backtrace_list->end(); it++) {
+		result << "     in '" << (*it)->function << "' "
+			"(" << (*it)->source << ":" << (*it)->line << ")" <<
+			endl;
+	}
+	return result.str();
 }
 
 } // namespace oxt
