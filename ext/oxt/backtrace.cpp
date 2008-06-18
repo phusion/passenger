@@ -66,7 +66,7 @@ _get_current_backtrace() {
 }
 
 string
-_format_backtrace(list<trace_point *> *backtrace_list) {
+_format_backtrace(const list<trace_point *> *backtrace_list) {
 	stringstream result;
 	list<trace_point *>::const_reverse_iterator it;
 	

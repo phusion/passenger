@@ -24,6 +24,7 @@
  */
 
 // Actual implementation for backtrace.hpp.
+
 #define OXT_BACKTRACE_IS_ENABLED
 
 #include <boost/thread/mutex.hpp>
@@ -44,7 +45,7 @@ extern list<thread_registration *> _registered_threads;
 
 boost::mutex &_get_backtrace_mutex();
 list<trace_point *> *_get_current_backtrace();
-string _format_backtrace(list<trace_point *> *backtrace_list);
+string _format_backtrace(const list<trace_point *> *backtrace_list);
 
 /**
  * A single point in a backtrace. Implementation detail - do not use directly!
@@ -55,67 +56,29 @@ struct trace_point {
 	string function;
 	string source;
 	unsigned int line;
-	bool detached;
+	bool m_detached;
 
-	trace_point(const string &function, const string &source, unsigned int line) {
+	trace_point(const string &function, const string &source, unsigned int line, bool detached = false) {
 		this->function = function;
 		this->source = source;
 		this->line = line;
-		detached = false;
-		boost::mutex::scoped_lock l(_get_backtrace_mutex());
-		_get_current_backtrace()->push_back(this);
+		m_detached = detached;
+		if (!detached) {
+			boost::mutex::scoped_lock l(_get_backtrace_mutex());
+			_get_current_backtrace()->push_back(this);
+		}
 	}
 
 	~trace_point() {
-		if (!detached) {
+		if (!m_detached) {
 			boost::mutex::scoped_lock l(_get_backtrace_mutex());
 			_get_current_backtrace()->pop_back();
 		}
 	}
 
-	/**
-	 * Tell this trace_point not to remove itself from the backtrace list
-	 * upon destruction.
-	 */
-	void detach() {
-		detached = true;
-	}
-
 	void update(const string &source, unsigned int line) {
 		this->source = source;
 		this->line = line;
-	}
-};
-
-/**
- * Exception class with backtrace support.
- */
-class tracable_exception: public exception {
-private:
-	list<trace_point> backtrace_copy;
-	
-	void copy_backtrace() {
-		boost::mutex::scoped_lock l(_get_backtrace_mutex());
-		list<trace_point *>::const_iterator it;
-		list<trace_point *> *bt = _get_current_backtrace();
-		for (it = bt->begin(); it != bt->end(); it++) {
-			backtrace_copy.push_back(**it);
-			(*it)->detach();
-		}
-	}
-public:
-	tracable_exception() {
-		copy_backtrace();
-	}
-	
-	virtual string backtrace() const throw() {
-		list<trace_point *> backtrace_list;
-		list<trace_point>::const_iterator it;
-		
-		for (it = backtrace_copy.begin(); it != backtrace_copy.end(); it++) {
-			backtrace_list.push_back(const_cast<trace_point *>(&(*it)));
-		}
-		return _format_backtrace(&backtrace_list);
 	}
 };
 

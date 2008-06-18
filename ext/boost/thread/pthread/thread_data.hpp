@@ -10,12 +10,13 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/optional.hpp>
+#include <oxt/tracable_exception.hpp>
 #include <pthread.h>
 #include "condition_variable_fwd.hpp"
 
 namespace boost
 {
-    class thread_interrupted
+    class thread_interrupted: public oxt::tracable_exception
     {};
 
     namespace detail
