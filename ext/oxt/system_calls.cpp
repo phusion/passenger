@@ -22,45 +22,31 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "system_calls.h"
-
-/*************************************
- * boost::this_thread
- *************************************/
+#include "system_calls.hpp"
+#include <cerrno>
 
 using namespace boost;
-
-thread_specific_ptr<bool> this_thread::_syscalls_interruptable;
-
-
-bool
-this_thread::syscalls_interruptable() {
-	return _syscalls_interruptable.get() == NULL || *_syscalls_interruptable;
-}
+using namespace oxt;
 
 
 /*************************************
- * Passenger
+ * oxt
  *************************************/
 
-using namespace Passenger;
-
-static bool interrupted = false;
-
 static void
-interruptionSignalHandler(int sig) {
-	interrupted = true;
+interruption_signal_handler(int sig) {
+	// Do nothing.
 }
 
 void
-Passenger::setupSyscallInterruptionSupport() {
-	signal(INTERRUPTION_SIGNAL, interruptionSignalHandler);
+oxt::setup_syscall_interruption_support() {
+	signal(INTERRUPTION_SIGNAL, interruption_signal_handler);
 	siginterrupt(INTERRUPTION_SIGNAL, 1);
 }
 
 
 /*************************************
- * Passenger::InterruptableCalls
+ * Passenger::syscalls
  *************************************/
 
 #define CHECK_INTERRUPTION(error_expression, code) \
@@ -78,7 +64,7 @@ Passenger::setupSyscallInterruptionSupport() {
 	} while (false)
 
 ssize_t
-InterruptableCalls::read(int fd, void *buf, size_t count) {
+syscalls::read(int fd, void *buf, size_t count) {
 	ssize_t ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
@@ -88,7 +74,7 @@ InterruptableCalls::read(int fd, void *buf, size_t count) {
 }
 
 ssize_t
-InterruptableCalls::write(int fd, const void *buf, size_t count) {
+syscalls::write(int fd, const void *buf, size_t count) {
 	ssize_t ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
@@ -98,7 +84,7 @@ InterruptableCalls::write(int fd, const void *buf, size_t count) {
 }
 
 int
-InterruptableCalls::close(int fd) {
+syscalls::close(int fd) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
@@ -108,7 +94,7 @@ InterruptableCalls::close(int fd) {
 }
 
 int
-InterruptableCalls::socketpair(int d, int type, int protocol, int sv[2]) {
+syscalls::socketpair(int d, int type, int protocol, int sv[2]) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
@@ -118,7 +104,7 @@ InterruptableCalls::socketpair(int d, int type, int protocol, int sv[2]) {
 }
 
 ssize_t
-InterruptableCalls::recvmsg(int s, struct msghdr *msg, int flags) {
+syscalls::recvmsg(int s, struct msghdr *msg, int flags) {
 	ssize_t ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
@@ -128,7 +114,7 @@ InterruptableCalls::recvmsg(int s, struct msghdr *msg, int flags) {
 }
 
 ssize_t
-InterruptableCalls::sendmsg(int s, const struct msghdr *msg, int flags) {
+syscalls::sendmsg(int s, const struct msghdr *msg, int flags) {
 	ssize_t ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
@@ -138,7 +124,7 @@ InterruptableCalls::sendmsg(int s, const struct msghdr *msg, int flags) {
 }
 
 int
-InterruptableCalls::shutdown(int s, int how) {
+syscalls::shutdown(int s, int how) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
@@ -148,7 +134,7 @@ InterruptableCalls::shutdown(int s, int how) {
 }
 
 FILE *
-InterruptableCalls::fopen(const char *path, const char *mode) {
+syscalls::fopen(const char *path, const char *mode) {
 	FILE *ret;
 	CHECK_INTERRUPTION(
 		ret == NULL,
@@ -158,7 +144,7 @@ InterruptableCalls::fopen(const char *path, const char *mode) {
 }
 
 int
-InterruptableCalls::fclose(FILE *fp) {
+syscalls::fclose(FILE *fp) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == EOF,
@@ -168,7 +154,7 @@ InterruptableCalls::fclose(FILE *fp) {
 }
 
 time_t
-InterruptableCalls::time(time_t *t) {
+syscalls::time(time_t *t) {
 	time_t ret;
 	CHECK_INTERRUPTION(
 		ret == (time_t) -1,
@@ -178,15 +164,15 @@ InterruptableCalls::time(time_t *t) {
 }
 
 int
-InterruptableCalls::usleep(useconds_t usec) {
+syscalls::usleep(useconds_t usec) {
 	struct timespec spec;
 	spec.tv_sec = usec / 1000000;
 	spec.tv_nsec = usec % 1000000;
-	return InterruptableCalls::nanosleep(&spec, NULL);
+	return syscalls::nanosleep(&spec, NULL);
 }
 
 int
-InterruptableCalls::nanosleep(const struct timespec *req, struct timespec *rem) {
+syscalls::nanosleep(const struct timespec *req, struct timespec *rem) {
 	struct timespec req2 = *req;
 	struct timespec rem2;
 	int ret, e;
@@ -206,7 +192,7 @@ InterruptableCalls::nanosleep(const struct timespec *req, struct timespec *rem) 
 }
 
 pid_t
-InterruptableCalls::fork() {
+syscalls::fork() {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
@@ -216,7 +202,7 @@ InterruptableCalls::fork() {
 }
 
 int
-InterruptableCalls::kill(pid_t pid, int sig) {
+syscalls::kill(pid_t pid, int sig) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
@@ -226,12 +212,25 @@ InterruptableCalls::kill(pid_t pid, int sig) {
 }
 
 pid_t
-InterruptableCalls::waitpid(pid_t pid, int *status, int options) {
+syscalls::waitpid(pid_t pid, int *status, int options) {
 	pid_t ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
 		ret = ::waitpid(pid, status, options)
 	);
 	return ret;
+}
+
+
+/*************************************
+ * boost::this_thread
+ *************************************/
+
+thread_specific_ptr<bool> this_thread::_syscalls_interruptable;
+
+
+bool
+this_thread::syscalls_interruptable() {
+	return _syscalls_interruptable.get() == NULL || *_syscalls_interruptable;
 }
 
