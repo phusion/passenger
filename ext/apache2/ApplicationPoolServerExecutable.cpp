@@ -38,6 +38,7 @@
 
 #include <oxt/system_calls.hpp>
 #include <oxt/thread.hpp>
+#include <oxt/backtrace.hpp>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -86,11 +87,13 @@ private:
 	shared_ptr<oxt::thread> statusReportThread;
 	
 	void statusReportThreadMain() {
+		TRACE_POINT();
 		try {
 			while (!this_thread::interruption_requested()) {
 				struct stat buf;
 				int ret;
 				
+				UPDATE_TRACE_POINT();
 				do {
 					ret = stat(statusReportFIFO.c_str(), &buf);
 				} while (ret == -1 && errno == EINTR);
@@ -100,16 +103,23 @@ private:
 					break;
 				}
 				
+				UPDATE_TRACE_POINT();
 				FILE *f = syscalls::fopen(statusReportFIFO.c_str(), "w");
 				if (f == NULL) {
 					break;
 				}
 				
+				UPDATE_TRACE_POINT();
 				string report(pool.toString());
+				report.append("\n\n");
+				report.append("----------- Backtraces -----------\n");
+				report.append(oxt::thread::all_backtraces());
+				
 				fwrite(report.c_str(), 1, report.size(), f);
 				syscalls::fclose(f);
 				
 				// Prevent sending too much data at once.
+				UPDATE_TRACE_POINT();
 				sleep(1);
 			}
 		} catch (const boost::thread_interrupted &) {
@@ -118,6 +128,7 @@ private:
 	}
 	
 	void deleteStatusReportFIFO() {
+		TRACE_POINT();
 		if (!statusReportFIFO.empty()) {
 			int ret;
 			do {
@@ -142,6 +153,7 @@ public:
 	}
 	
 	~Server() {
+		TRACE_POINT();
 		this_thread::disable_syscall_interruption dsi;
 		this_thread::disable_interruption di;
 		
@@ -150,10 +162,12 @@ public:
 		syscalls::close(serverSocket);
 		
 		if (statusReportThread != NULL) {
+			UPDATE_TRACE_POINT();
 			statusReportThread->interrupt_and_join();
 		}
 		
 		// Wait for all clients to disconnect.
+		UPDATE_TRACE_POINT();
 		set<ClientPtr> clientsCopy;
 		{
 			/* If we clear _clients_ directly, then it may result in a deadlock.
@@ -211,6 +225,7 @@ private:
 	int lastSessionID;
 	
 	void processGet(const vector<string> &args) {
+		TRACE_POINT();
 		Application::SessionPtr session;
 		bool failed = false;
 		
@@ -220,6 +235,7 @@ private:
 			sessions[lastSessionID] = session;
 			lastSessionID++;
 		} catch (const SpawnException &e) {
+			UPDATE_TRACE_POINT();
 			this_thread::disable_syscall_interruption dsi;
 			
 			if (e.hasErrorPage()) {
@@ -234,22 +250,27 @@ private:
 			}
 			failed = true;
 		} catch (const BusyException &e) {
+			UPDATE_TRACE_POINT();
 			this_thread::disable_syscall_interruption dsi;
 			channel.write("BusyException", e.what(), NULL);
 			failed = true;
 		} catch (const IOException &e) {
+			UPDATE_TRACE_POINT();
 			this_thread::disable_syscall_interruption dsi;
 			channel.write("IOException", e.what(), NULL);
 			failed = true;
 		}
+		UPDATE_TRACE_POINT();
 		if (!failed) {
 			this_thread::disable_syscall_interruption dsi;
 			try {
+				UPDATE_TRACE_POINT();
 				channel.write("ok", toString(session->getPid()).c_str(),
 					toString(lastSessionID - 1).c_str(), NULL);
 				channel.writeFileDescriptor(session->getStream());
 				session->closeStream();
 			} catch (const exception &) {
+				UPDATE_TRACE_POINT();
 				P_TRACE(3, "Client " << this << ": something went wrong "
 					"while sending 'ok' back to the client.");
 				sessions.erase(lastSessionID - 1);
@@ -259,38 +280,47 @@ private:
 	}
 	
 	void processClose(const vector<string> &args) {
+		TRACE_POINT();
 		sessions.erase(atoi(args[1]));
 	}
 	
 	void processClear(const vector<string> &args) {
+		TRACE_POINT();
 		server.pool.clear();
 	}
 	
 	void processSetMaxIdleTime(const vector<string> &args) {
+		TRACE_POINT();
 		server.pool.setMaxIdleTime(atoi(args[1]));
 	}
 	
 	void processSetMax(const vector<string> &args) {
+		TRACE_POINT();
 		server.pool.setMax(atoi(args[1]));
 	}
 	
 	void processGetActive(const vector<string> &args) {
+		TRACE_POINT();
 		channel.write(toString(server.pool.getActive()).c_str(), NULL);
 	}
 	
 	void processGetCount(const vector<string> &args) {
+		TRACE_POINT();
 		channel.write(toString(server.pool.getCount()).c_str(), NULL);
 	}
 	
 	void processSetMaxPerApp(unsigned int maxPerApp) {
+		TRACE_POINT();
 		server.pool.setMaxPerApp(maxPerApp);
 	}
 	
 	void processGetSpawnServerPid(const vector<string> &args) {
+		TRACE_POINT();
 		channel.write(toString(server.pool.getSpawnServerPid()).c_str(), NULL);
 	}
 	
 	void processUnknownMessage(const vector<string> &args) {
+		TRACE_POINT();
 		string name;
 		if (args.empty()) {
 			name = "(null)";
@@ -305,9 +335,11 @@ private:
 	 * The entry point of the thread that handles the client connection.
 	 */
 	void threadMain(const weak_ptr<Client> self) {
+		TRACE_POINT();
 		vector<string> args;
 		try {
 			while (!this_thread::interruption_requested()) {
+				UPDATE_TRACE_POINT();
 				try {
 					if (!channel.read(args)) {
 						// Client closed connection.
@@ -322,6 +354,7 @@ private:
 				P_TRACE(4, "Client " << this << ": received message: " <<
 					toString(args));
 				
+				UPDATE_TRACE_POINT();
 				if (args[0] == "get" && args.size() == 7) {
 					processGet(args);
 				} else if (args[0] == "close" && args.size() == 2) {
@@ -352,8 +385,11 @@ private:
 			P_TRACE(2, "Uncaught exception in ApplicationPoolServer client thread:\n"
 				<< "   message: " << toString(args) << "\n"
 				<< "   exception: " << e.what());
+		} catch (...) {
+			P_TRACE(2, "Uncaught unknown exception in ApplicationPool client thread.");
 		}
 		
+		UPDATE_TRACE_POINT();
 		mutex::scoped_lock l(server.lock);
 		ClientPtr myself(self.lock());
 		if (myself != NULL) {
@@ -397,6 +433,7 @@ public:
 	}
 	
 	~Client() {
+		TRACE_POINT();
 		this_thread::disable_syscall_interruption dsi;
 		this_thread::disable_interruption di;
 		
@@ -411,6 +448,7 @@ public:
 
 int
 Server::start() {
+	TRACE_POINT();
 	setup_syscall_interruption_support();
 	
 	try {
@@ -430,6 +468,7 @@ Server::start() {
 			
 			// The received data only serves to wake up the server socket,
 			// and is not important.
+			UPDATE_TRACE_POINT();
 			ret = syscalls::read(serverSocket, &x, 1);
 			if (ret == 0) {
 				// All web server processes disconnected from this server.
@@ -442,22 +481,28 @@ Server::start() {
 			
 			// We have an incoming connect request from an
 			// ApplicationPool client.
+			UPDATE_TRACE_POINT();
 			do {
 				ret = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
 			} while (ret == -1 && errno == EINTR);
 			if (ret == -1) {
+				UPDATE_TRACE_POINT();
 				throw SystemException("Cannot create an anonymous Unix socket", errno);
 			}
 			
+			UPDATE_TRACE_POINT();
 			MessageChannel(serverSocket).writeFileDescriptor(fds[1]);
 			syscalls::close(fds[1]);
 			
+			UPDATE_TRACE_POINT();
 			ClientPtr client(new Client(*this, fds[0]));
 			pair<set<ClientPtr>::iterator, bool> p;
 			{
+				UPDATE_TRACE_POINT();
 				mutex::scoped_lock l(lock);
 				clients.insert(client);
 			}
+			UPDATE_TRACE_POINT();
 			client->start(client);
 		}
 	} catch (const boost::thread_interrupted &) {

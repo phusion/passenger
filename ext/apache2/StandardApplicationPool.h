@@ -28,6 +28,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <oxt/system_calls.hpp>
+#include <oxt/backtrace.hpp>
 
 #include <string>
 #include <sstream>
@@ -600,6 +601,7 @@ public:
 		const string &spawnMethod = "smart",
 		const string &appType = "rails"
 	) {
+		TRACE_POINT();
 		using namespace boost::posix_time;
 		unsigned int attempt = 0;
 		ptime timeLimit(get_system_time() + millisec(GET_TIMEOUT));
