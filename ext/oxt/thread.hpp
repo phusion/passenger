@@ -26,6 +26,8 @@
 #define _OXT_THREAD_HPP_
 
 #include <boost/thread.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/bind.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include "system_calls.hpp"
 #include "backtrace.hpp"
@@ -36,7 +38,7 @@
 namespace oxt {
 
 extern boost::mutex _next_thread_number_mutex;
-extern unsigned int _next_thread_number;
+extern unsigned int _next_thread_number;thread_registration *registration;
 
 /**
  * Enhanced thread class with support for:
@@ -46,22 +48,48 @@ extern unsigned int _next_thread_number;
  */
 class thread: public boost::thread {
 private:
-	std::string m_name;
+	struct thread_data {
+		std::string name;
+		thread_registration *registration;
+		boost::mutex registration_lock;
+		bool done;
+	};
+	
+	typedef boost::shared_ptr<thread_data> thread_data_ptr;
+	
+	thread_data_ptr data;
 
 	template<typename Callable>
-	static void register_thread(oxt::thread *self, Callable func, std::string name) {
+	static void register_thread(Callable func, thread_data_ptr data) {
+		register_thread_with_backtrace r(name);
+		data->registration = r.registration;
+		
+		TRACE_POINT();
+		func();
+		
+		boost::mutex::scoped_lock l(data->registration_lock);
+		data->registration = NULL;
+		data->done = true;
+	}
+	
+	template<typename Callable, typename AnotherCallable>
+	AnotherCallable create_thread_function(Callable func, const std::string &name) {
+		data = thread_data_ptr(new thread_data());
+		
 		if (name.empty()) {
 			boost::mutex::scoped_lock l(_next_thread_number_mutex);
 			std::stringstream str;
 			
 			str << "Thread #" << _next_thread_number;
 			_next_thread_number++;
-			name = str.str();
+			data->name = str.str();
+		} else {
+			data->name = name;
 		}
-		self->m_name = name;
-		register_thread_with_backtrace r(name);
-		TRACE_POINT();
-		func();
+		
+		data->registration = NULL;
+		data->done = false;
+		return boost::bind(register_thread, func, data);
 	}
 	
 public:
@@ -83,13 +111,33 @@ public:
 	 */
 	template<typename Callable>
 	explicit thread(Callable func, const std::string &name = "", unsigned int stack_size = 0)
-		: boost::thread(register_thread(this, func, name), stack_size) {}
+	       : boost::thread(
+	             create_thread_function(func, name),
+	             stack_size
+	         ) { }
 	
 	/**
 	 * Return this thread's name. The name was set during construction.
 	 */
 	std::string name() const throw() {
-		return m_name;
+		return data->name;
+	}
+	
+	/**
+	 * Return this thread's backtrace.
+	 */
+	std::string backtrace() const throw() {
+		boost::mutex::scoped_lock l(data->registration_lock);
+		if (data->registration == NULL) {
+			if (data->done) {
+				return "     (no backtrace: thread has quit)";
+			} else {
+				return "     (no backtrace: thread hasn't been started yet)";
+			}
+		} else {
+			boost::mutex::scoped_lock l2(*data->registration->backtrace_mutex);
+			return _format_backtrace(data->registration->backtrace);
+		}
 	}
 	
 	/**

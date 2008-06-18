@@ -127,22 +127,21 @@ public:
  */
 struct thread_registration {
 	string name;
-	boost::mutex *backtraceMutex;
+	boost::mutex *backtrace_mutex;
 	list<trace_point *> *backtrace;
 };
 
 /**
  * @internal
  */
-class register_thread_with_backtrace {
-private:
+struct register_thread_with_backtrace {
 	thread_registration *registration;
 	list<thread_registration *>::iterator it;
-public:
+	
 	register_thread_with_backtrace(const string &name) {
 		registration = new thread_registration();
 		registration->name = name;
-		registration->backtraceMutex = &_get_backtrace_mutex();
+		registration->backtrace_mutex = &_get_backtrace_mutex();
 		registration->backtrace = _get_current_backtrace();
 		
 		boost::mutex::scoped_lock l(_thread_registration_mutex);
