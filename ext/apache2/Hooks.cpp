@@ -43,7 +43,6 @@
 #include "Logging.h"
 #include "ApplicationPoolServer.h"
 #include "MessageChannel.h"
-#include "System.h"
 
 using namespace std;
 using namespace Passenger;

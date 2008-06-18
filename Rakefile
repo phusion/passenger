@@ -128,9 +128,7 @@ class APACHE2
 		'Hooks.o' => %w(Hooks.cpp Hooks.h
 				Configuration.h ApplicationPool.h ApplicationPoolServer.h
 				SpawnManager.h Exceptions.h Application.h MessageChannel.h
-				System.h Backtrace.h Utils.h),
-		'System.o'  => %w(System.cpp System.h),
-		'Backtrace.o'  => %w(Backtrace.cpp Backtrace.h),
+				Utils.h),
 		'Utils.o'   => %w(Utils.cpp Utils.h),
 		'Logging.o' => %w(Logging.cpp Logging.h)
 	}
@@ -171,13 +169,11 @@ subdir 'ext/apache2' do
 		'StandardApplicationPool.h',
 		'MessageChannel.h',
 		'SpawnManager.h',
-		'System.o',
-		'Backtrace.o',
 		'Utils.o',
 		'Logging.o'
 	] do
 		create_executable "ApplicationPoolServerExecutable",
-			'ApplicationPoolServerExecutable.cpp System.o Backtrace.o Utils.o Logging.o',
+			'ApplicationPoolServerExecutable.cpp Utils.o Logging.o',
 			"-I.. #{CXXFLAGS} #{LDFLAGS} " <<
 			"../boost/src/libboost_thread.a " <<
 			"../oxt/liboxt.a " <<
@@ -214,29 +210,21 @@ class TEST
 	AP2_OBJECTS = {
 		'CxxTestMain.o' => %w(CxxTestMain.cpp),
 		'MessageChannelTest.o' => %w(MessageChannelTest.cpp
-			../ext/apache2/MessageChannel.h
-			../ext/apache2/System.h
-			../ext/apache2/Backtrace.h),
+			../ext/apache2/MessageChannel.h),
 		'SpawnManagerTest.o' => %w(SpawnManagerTest.cpp
 			../ext/apache2/SpawnManager.h
 			../ext/apache2/Application.h
-			../ext/apache2/MessageChannel.h
-			../ext/apache2/System.h
-			../ext/apache2/Backtrace.h),
+			../ext/apache2/MessageChannel.h),
 		'ApplicationPoolServerTest.o' => %w(ApplicationPoolServerTest.cpp
 			../ext/apache2/ApplicationPoolServer.h
-			../ext/apache2/MessageChannel.h
-			../ext/apache2/System.h
-			../ext/apache2/Backtrace.h),
+			../ext/apache2/MessageChannel.h),
 		'ApplicationPoolServer_ApplicationPoolTest.o' => %w(ApplicationPoolServer_ApplicationPoolTest.cpp
 			ApplicationPoolTest.cpp
 			../ext/apache2/ApplicationPoolServer.h
 			../ext/apache2/ApplicationPool.h
 			../ext/apache2/SpawnManager.h
 			../ext/apache2/Application.h
-			../ext/apache2/MessageChannel.h
-			../ext/apache2/System.h
-			../ext/apache2/Backtrace.h),
+			../ext/apache2/MessageChannel.h),
 		'StandardApplicationPoolTest.o' => %w(StandardApplicationPoolTest.cpp
 			ApplicationPoolTest.cpp
 			../ext/apache2/ApplicationPool.h
@@ -290,13 +278,9 @@ subdir 'test' do
 	file 'Apache2ModuleTests' => TEST::AP2_OBJECTS.keys +
 	  ['../ext/boost/src/libboost_thread.a',
 	   '../ext/oxt/liboxt.a',
-	   '../ext/apache2/System.o',
-	   '../ext/apache2/Backtrace.o',
 	   '../ext/apache2/Utils.o',
 	   '../ext/apache2/Logging.o'] do
 		objects = TEST::AP2_OBJECTS.keys.join(' ') <<
-			" ../ext/apache2/System.o" <<
-			" ../ext/apache2/Backtrace.o" <<
 			" ../ext/apache2/Utils.o" <<
 			" ../ext/apache2/Logging.o"
 		create_executable "Apache2ModuleTests", objects,
@@ -335,14 +319,10 @@ end
 subdir 'benchmark' do
 	file 'DummyRequestHandler' => ['DummyRequestHandler.cpp',
 	  '../ext/apache2/MessageChannel.h',
-	  '../ext/apache2/System.o',
-	  '../ext/apache2/Backtrace.o',
 	  '../ext/boost/src/libboost_thread.a',
 	  '../ext/oxt/liboxt.a'] do
 		create_executable "DummyRequestHandler", "DummyRequestHandler.cpp",
 			"-I../ext -I../ext/apache2 #{CXXFLAGS} #{LDFLAGS} " <<
-			"../ext/apache2/System.o " <<
-			"../ext/apache2/Backtrace.o " <<
 			"../ext/boost/src/libboost_thread.a " <<
 			"../ext/oxt/liboxt.a " <<
 			"-lpthread"
@@ -351,8 +331,6 @@ subdir 'benchmark' do
 	file 'ApplicationPool' => ['ApplicationPool.cpp',
 	  '../ext/apache2/StandardApplicationPool.h',
 	  '../ext/apache2/ApplicationPoolServerExecutable',
-	  '../ext/apache2/System.o',
-	  '../ext/apache2/Backtrace.o',
 	  '../ext/apache2/Logging.o',
 	  '../ext/apache2/Utils.o',
 	  '../ext/boost/src/libboost_thread.a',
@@ -360,8 +338,6 @@ subdir 'benchmark' do
 	  :native_support] do
 		create_executable "ApplicationPool", "ApplicationPool.cpp",
 			"-I../ext -I../ext/apache2 #{CXXFLAGS} #{LDFLAGS} " <<
-			"../ext/apache2/System.o " <<
-			"../ext/apache2/Backtrace.o " <<
 			"../ext/apache2/Logging.o " <<
 			"../ext/apache2/Utils.o " <<
 			"../ext/boost/src/libboost_thread.a " <<

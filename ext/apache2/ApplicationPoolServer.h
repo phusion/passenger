@@ -22,6 +22,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
+#include <oxt/system_calls.hpp>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -39,12 +40,12 @@
 #include "Application.h"
 #include "Exceptions.h"
 #include "Logging.h"
-#include "System.h"
 
 namespace Passenger {
 
 using namespace std;
 using namespace boost;
+using namespace oxt;
 
 
 /**
@@ -183,7 +184,7 @@ private:
 		
 		virtual void shutdownReader() {
 			if (fd != -1) {
-				int ret = InterruptableCalls::shutdown(fd, SHUT_RD);
+				int ret = syscalls::shutdown(fd, SHUT_RD);
 				if (ret == -1) {
 					throw SystemException("Cannot shutdown the writer stream",
 						errno);
@@ -193,7 +194,7 @@ private:
 		
 		virtual void shutdownWriter() {
 			if (fd != -1) {
-				int ret = InterruptableCalls::shutdown(fd, SHUT_WR);
+				int ret = syscalls::shutdown(fd, SHUT_WR);
 				if (ret == -1) {
 					throw SystemException("Cannot shutdown the writer stream",
 						errno);
@@ -203,7 +204,7 @@ private:
 		
 		virtual void closeStream() {
 			if (fd != -1) {
-				int ret = InterruptableCalls::close(fd);
+				int ret = syscalls::close(fd);
 				if (ret == -1) {
 					throw SystemException("Cannot close the session stream",
 						errno);
@@ -406,7 +407,7 @@ private:
 		time_t begin;
 		bool done = false;
 		
-		InterruptableCalls::close(serverSocket);
+		syscalls::close(serverSocket);
 		if (!statusReportFIFO.empty()) {
 			do {
 				ret = unlink(statusReportFIFO.c_str());
@@ -415,28 +416,28 @@ private:
 		
 		P_TRACE(2, "Waiting for existing ApplicationPoolServerExecutable (PID " <<
 			serverPid << ") to exit...");
-		begin = InterruptableCalls::time(NULL);
-		while (!done && InterruptableCalls::time(NULL) < begin + 5) {
+		begin = syscalls::time(NULL);
+		while (!done && syscalls::time(NULL) < begin + 5) {
 			/*
 			 * Some Apache modules fork(), but don't close file descriptors.
 			 * mod_wsgi is one such example. Because of that, closing serverSocket
 			 * won't always cause the ApplicationPool server to exit. So we send it a
 			 * signal.
 			 */
-			InterruptableCalls::kill(serverPid, SIGINT);
+			syscalls::kill(serverPid, SIGINT);
 			
-			ret = InterruptableCalls::waitpid(serverPid, NULL, WNOHANG);
+			ret = syscalls::waitpid(serverPid, NULL, WNOHANG);
 			done = ret > 0 || ret == -1;
 			if (!done) {
-				InterruptableCalls::usleep(100000);
+				syscalls::usleep(100000);
 			}
 		}
 		if (done) {
 			P_TRACE(2, "ApplicationPoolServerExecutable exited.");
 		} else {
 			P_DEBUG("ApplicationPoolServerExecutable not exited in time. Killing it...");
-			InterruptableCalls::kill(serverPid, SIGTERM);
-			InterruptableCalls::waitpid(serverPid, NULL, 0);
+			syscalls::kill(serverPid, SIGTERM);
+			syscalls::waitpid(serverPid, NULL, 0);
 		}
 		
 		serverSocket = -1;
@@ -459,13 +460,13 @@ private:
 			shutdownServer();
 		}
 		
-		if (InterruptableCalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
+		if (syscalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
 			throw SystemException("Cannot create a Unix socket pair", errno);
 		}
 		
 		createStatusReportFIFO();
 		
-		pid = InterruptableCalls::fork();
+		pid = syscalls::fork();
 		if (pid == 0) { // Child process.
 			dup2(fds[0], SERVER_SOCKET_FD);
 			
@@ -495,11 +496,11 @@ private:
 			fflush(stderr);
 			_exit(1);
 		} else if (pid == -1) { // Error.
-			InterruptableCalls::close(fds[0]);
-			InterruptableCalls::close(fds[1]);
+			syscalls::close(fds[0]);
+			syscalls::close(fds[1]);
 			throw SystemException("Cannot create a new process", errno);
 		} else { // Parent process.
-			InterruptableCalls::close(fds[0]);
+			syscalls::close(fds[0]);
 			serverSocket = fds[1];
 			serverPid = pid;
 		}

@@ -36,6 +36,9 @@
 #include <boost/bind.hpp>
 #include <boost/thread/thread.hpp>
 
+#include <oxt/system_calls.hpp>
+#include <oxt/thread.hpp>
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -43,6 +46,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string>
+#include <sstream>
 #include <vector>
 #include <set>
 #include <map>
@@ -51,12 +55,12 @@
 #include "StandardApplicationPool.h"
 #include "Application.h"
 #include "Logging.h"
-#include "System.h"
 #include "Exceptions.h"
 
 
 using namespace boost;
 using namespace std;
+using namespace oxt;
 using namespace Passenger;
 
 class Server;
@@ -79,7 +83,7 @@ private:
 	set<ClientPtr> clients;
 	mutex lock;
 	string statusReportFIFO;
-	shared_ptr<Thread> statusReportThread;
+	shared_ptr<oxt::thread> statusReportThread;
 	
 	void statusReportThreadMain() {
 		try {
@@ -96,14 +100,14 @@ private:
 					break;
 				}
 				
-				FILE *f = InterruptableCalls::fopen(statusReportFIFO.c_str(), "w");
+				FILE *f = syscalls::fopen(statusReportFIFO.c_str(), "w");
 				if (f == NULL) {
 					break;
 				}
 				
 				string report(pool.toString());
 				fwrite(report.c_str(), 1, report.size(), f);
-				InterruptableCalls::fclose(f);
+				syscalls::fclose(f);
 				
 				// Prevent sending too much data at once.
 				sleep(1);
@@ -143,10 +147,10 @@ public:
 		
 		P_TRACE(2, "Shutting down server.");
 		
-		InterruptableCalls::close(serverSocket);
+		syscalls::close(serverSocket);
 		
 		if (statusReportThread != NULL) {
-			statusReportThread->interruptAndJoin();
+			statusReportThread->interrupt_and_join();
 		}
 		
 		// Wait for all clients to disconnect.
@@ -194,7 +198,7 @@ private:
 	MessageChannel channel;
 	
 	/** The thread which handles the client connection. */
-	Thread *thr;
+	oxt::thread *thr;
 	
 	/**
 	 * Maps session ID to sessions created by ApplicationPool::get(). Session IDs
@@ -384,9 +388,11 @@ public:
 	 *        connection.
 	 */
 	void start(const weak_ptr<Client> self) {
-		thr = new Thread(
+		stringstream name;
+		name << "Client " << fd;
+		thr = new oxt::thread(
 			bind(&Client::threadMain, this, self),
-			CLIENT_THREAD_STACK_SIZE
+			name.str(), CLIENT_THREAD_STACK_SIZE
 		);
 	}
 	
@@ -395,23 +401,24 @@ public:
 		this_thread::disable_interruption di;
 		
 		if (thr != NULL && thr->get_id() != this_thread::get_id()) {
-			thr->interruptAndJoin();
+			thr->interrupt_and_join();
 			delete thr;
 		}
-		InterruptableCalls::close(fd);
+		syscalls::close(fd);
 	}
 };
 
 
 int
 Server::start() {
-	setupSyscallInterruptionSupport();
+	setup_syscall_interruption_support();
 	
 	try {
 		if (!statusReportFIFO.empty()) {
 			statusReportThread = ptr(
-				new Thread(
+				new oxt::thread(
 					bind(&Server::statusReportThreadMain, this),
+					"Status report thread",
 					1024 * 128
 				)
 			);
@@ -423,7 +430,7 @@ Server::start() {
 			
 			// The received data only serves to wake up the server socket,
 			// and is not important.
-			ret = InterruptableCalls::read(serverSocket, &x, 1);
+			ret = syscalls::read(serverSocket, &x, 1);
 			if (ret == 0) {
 				// All web server processes disconnected from this server.
 				// So we can safely quit.
@@ -443,7 +450,7 @@ Server::start() {
 			}
 			
 			MessageChannel(serverSocket).writeFileDescriptor(fds[1]);
-			InterruptableCalls::close(fds[1]);
+			syscalls::close(fds[1]);
 			
 			ClientPtr client(new Client(*this, fds[0]));
 			pair<set<ClientPtr>::iterator, bool> p;

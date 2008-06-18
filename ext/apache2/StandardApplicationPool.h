@@ -27,6 +27,8 @@
 #include <boost/date_time/microsec_time_clock.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
+#include <oxt/system_calls.hpp>
+
 #include <string>
 #include <sstream>
 #include <map>
@@ -44,7 +46,6 @@
 
 #include "ApplicationPool.h"
 #include "Logging.h"
-#include "System.h"
 #ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER
 	#include "DummySpawnManager.h"
 #else
@@ -55,6 +56,7 @@ namespace Passenger {
 
 using namespace std;
 using namespace boost;
+using namespace oxt;
 
 class ApplicationPoolServer;
 
@@ -180,7 +182,7 @@ private:
 		SpawnManager spawnManager;
 	#endif
 	SharedDataPtr data;
-	thread *cleanerThread;
+	boost::thread *cleanerThread;
 	bool detached;
 	bool done;
 	unsigned int maxIdleTime;
@@ -331,7 +333,7 @@ private:
 					}
 				}
 				
-				time_t now = InterruptableCalls::time(NULL);
+				time_t now = syscalls::time(NULL);
 				AppContainerList::iterator it;
 				for (it = inactiveApps.begin(); it != inactiveApps.end(); it++) {
 					AppContainer &container(*it->get());
@@ -571,7 +573,7 @@ public:
 		active = 0;
 		maxPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
 		maxIdleTime = DEFAULT_MAX_IDLE_TIME;
-		cleanerThread = new thread(
+		cleanerThread = new boost::thread(
 			bind(&StandardApplicationPool::cleanerThreadMainLoop, this),
 			CLEANER_THREAD_STACK_SIZE
 		);

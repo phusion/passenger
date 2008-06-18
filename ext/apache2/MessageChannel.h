@@ -20,6 +20,8 @@
 #ifndef _PASSENGER_MESSAGE_CHANNEL_H_
 #define _PASSENGER_MESSAGE_CHANNEL_H_
 
+#include <oxt/system_calls.hpp>
+
 #include <algorithm>
 #include <string>
 #include <list>
@@ -32,13 +34,13 @@
 #include <unistd.h>
 #include <cstdarg>
 
-#include "System.h"
 #include "Exceptions.h"
 #include "Utils.h"
 
 namespace Passenger {
 
 using namespace std;
+using namespace oxt;
 
 /**
  * Convenience class for I/O operations on file descriptors.
@@ -127,7 +129,7 @@ public:
 	 */
 	void close() {
 		if (fd != -1) {
-			int ret = InterruptableCalls::close(fd);
+			int ret = syscalls::close(fd);
 			if (ret == -1) {
 				throw SystemException("Cannot close file descriptor", errno);
 			}
@@ -237,7 +239,7 @@ public:
 		ssize_t ret;
 		unsigned int written = 0;
 		do {
-			ret = InterruptableCalls::write(fd, data + written, size - written);
+			ret = syscalls::write(fd, data + written, size - written);
 			if (ret == -1) {
 				throw SystemException("write() failed", errno);
 			} else {
@@ -309,7 +311,7 @@ public:
 			memcpy(CMSG_DATA(control_header), &fileDescriptor, sizeof(int));
 		#endif
 		
-		ret = InterruptableCalls::sendmsg(fd, &msg, 0);
+		ret = syscalls::sendmsg(fd, &msg, 0);
 		if (ret == -1) {
 			throw SystemException("Cannot send file descriptor with sendmsg()", errno);
 		}
@@ -331,7 +333,7 @@ public:
 		unsigned int alreadyRead = 0;
 		
 		do {
-			ret = InterruptableCalls::read(fd, (char *) &size + alreadyRead, sizeof(size) - alreadyRead);
+			ret = syscalls::read(fd, (char *) &size + alreadyRead, sizeof(size) - alreadyRead);
 			if (ret == -1) {
 				throw SystemException("read() failed", errno);
 			} else if (ret == 0) {
@@ -346,7 +348,7 @@ public:
 		buffer.reserve(size);
 		while (buffer.size() < size) {
 			char tmp[1024 * 8];
-			ret = InterruptableCalls::read(fd, tmp, min(size - buffer.size(), sizeof(tmp)));
+			ret = syscalls::read(fd, tmp, min(size - buffer.size(), sizeof(tmp)));
 			if (ret == -1) {
 				throw SystemException("read() failed", errno);
 			} else if (ret == 0) {
@@ -421,7 +423,7 @@ public:
 		unsigned int alreadyRead = 0;
 		
 		while (alreadyRead < size) {
-			ret = InterruptableCalls::read(fd, (char *) buf + alreadyRead, size - alreadyRead);
+			ret = syscalls::read(fd, (char *) buf + alreadyRead, size - alreadyRead);
 			if (ret == -1) {
 				throw SystemException("read() failed", errno);
 			} else if (ret == 0) {
@@ -477,7 +479,7 @@ public:
 		msg.msg_controllen = sizeof(control_data);
 		msg.msg_flags      = 0;
 		
-		ret = InterruptableCalls::recvmsg(fd, &msg, 0);
+		ret = syscalls::recvmsg(fd, &msg, 0);
 		if (ret == -1) {
 			throw SystemException("Cannot read file descriptor with recvmsg()", errno);
 		}

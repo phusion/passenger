@@ -22,6 +22,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
+#include <oxt/system_calls.hpp>
 #include <string>
 
 #include <sys/types.h>
@@ -235,7 +236,7 @@ private:
 		
 		virtual void shutdownReader() {
 			if (fd != -1) {
-				int ret = InterruptableCalls::shutdown(fd, SHUT_RD);
+				int ret = syscalls::shutdown(fd, SHUT_RD);
 				if (ret == -1) {
 					throw SystemException("Cannot shutdown the writer stream",
 						errno);
@@ -245,7 +246,7 @@ private:
 		
 		virtual void shutdownWriter() {
 			if (fd != -1) {
-				int ret = InterruptableCalls::shutdown(fd, SHUT_WR);
+				int ret = syscalls::shutdown(fd, SHUT_WR);
 				if (ret == -1) {
 					throw SystemException("Cannot shutdown the writer stream",
 						errno);
@@ -255,7 +256,7 @@ private:
 		
 		virtual void closeStream() {
 			if (fd != -1) {
-				int ret = InterruptableCalls::close(fd);
+				int ret = syscalls::close(fd);
 				if (ret == -1) {
 					throw SystemException("Cannot close the session stream",
 						errno);

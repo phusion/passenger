@@ -31,7 +31,7 @@ namespace oxt {
 struct trace_point;
 
 /**
- * Exception class with backtrace support.
+ * Exception class with backtrace support. See backtrace.hpp for details.
  */
 class tracable_exception: public std::exception {
 private:

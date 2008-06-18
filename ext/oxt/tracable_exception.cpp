@@ -44,7 +44,6 @@ tracable_exception::tracable_exception() {
 			(*it)->source,
 			(*it)->line,
 			true);
-		*p = **it;
 		backtrace_copy.push_back(p);
 	}
 }

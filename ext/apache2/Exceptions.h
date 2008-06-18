@@ -20,10 +20,9 @@
 #ifndef _PASSENGER_EXCEPTIONS_H_
 #define _PASSENGER_EXCEPTIONS_H_
 
-#include <exception>
+#include <oxt/tracable_exception.hpp>
 #include <string>
 #include <sstream>
-#include "Backtrace.h"
 
 /**
  * @defgroup Exceptions Exceptions
@@ -41,7 +40,7 @@ using namespace std;
  *
  * @ingroup Exceptions
  */
-class SystemException: public TracableException {
+class SystemException: public oxt::tracable_exception {
 private:
 	string briefMessage;
 	string systemMessage;
@@ -136,7 +135,7 @@ public:
  *
  * @ingroup Exceptions
  */
-class IOException: public TracableException {
+class IOException: public oxt::tracable_exception {
 private:
 	string msg;
 public:
@@ -157,7 +156,7 @@ public:
 /**
  * Thrown when an invalid configuration is given.
  */
-class ConfigurationException: public TracableException {
+class ConfigurationException: public oxt::tracable_exception {
 private:
 	string msg;
 public:
@@ -171,7 +170,7 @@ public:
  * instance. The exception may contain an error page, which is a user-friendly
  * HTML page with details about the error.
  */
-class SpawnException: public TracableException {
+class SpawnException: public oxt::tracable_exception {
 private:
 	string msg;
 	bool m_hasErrorPage;
@@ -212,7 +211,7 @@ public:
  *
  * @ingroup Exceptions
  */
-class BusyException: public TracableException {
+class BusyException: public oxt::tracable_exception {
 private:
 	string msg;
 public:
