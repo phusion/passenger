@@ -71,19 +71,25 @@ struct trace_point {
 	const char *source;
 	unsigned int line;
 	bool m_detached;
-
-	trace_point(const char *function, const char *source, unsigned int line, bool detached = false) {
+	
+	trace_point(const char *function, const char *source, unsigned int line) {
 		this->function = function;
 		this->source = source;
 		this->line = line;
-		m_detached = detached;
-		if (OXT_LIKELY(!detached)) {
-			spin_lock *lock = _get_backtrace_lock();
-			if (OXT_LIKELY(lock != NULL)) {
-				spin_lock::scoped_lock l(*lock);
-				_get_current_backtrace()->push_back(this);
-			}
+		m_detached = false;
+		
+		spin_lock *lock = _get_backtrace_lock();
+		if (OXT_LIKELY(lock != NULL)) {
+			spin_lock::scoped_lock l(*lock);
+			_get_current_backtrace()->push_back(this);
 		}
+	}
+	
+	trace_point(const char *function, const char *source, unsigned int line, bool detached) {
+		this->function = function;
+		this->source = source;
+		this->line = line;
+		m_detached = true;
 	}
 
 	~trace_point() {
