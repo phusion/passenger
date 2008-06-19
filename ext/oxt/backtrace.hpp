@@ -34,7 +34,8 @@
  * This makes it very hard to debug problems on production servers.
  *
  * This file provides a portable way of specifying and obtaining
- * backtraces.
+ * backtraces. Via oxt::thread::all_backtraces(), it is even possible
+ * to obtain the backtraces of all running threads.
  *
  * <h2>Basic usage</h2>
  * Backtrace points must be specified manually in the

@@ -25,7 +25,7 @@
 #ifndef _OXT_SPIN_LOCK_HPP_
 #define _OXT_SPIN_LOCK_HPP_
 
-#if defined(__GNUC__) && defined(__i386__)
+#if (defined(__GNUC__) && defined(__i386__)) || defined(IN_DOXYGEN)
 	#include "detail/spin_lock_gcc_x86.hpp"
 #else
 	#include "detail/spin_lock_portable.hpp"

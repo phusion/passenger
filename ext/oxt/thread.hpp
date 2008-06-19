@@ -133,7 +133,7 @@ public:
 	}
 	
 	/**
-	 * Return this thread's backtrace.
+	 * Return the current backtrace of the thread of execution, as a string.
 	 */
 	std::string backtrace() const throw() {
 		#ifdef OXT_BACKTRACE_IS_ENABLED
@@ -153,6 +153,10 @@ public:
 		#endif
 	}
 	
+	/**
+	 * Return the backtraces of all oxt::thread threads, as well as that of the
+	 * main thread, in a nicely formatted string.
+	 */
 	static std::string all_backtraces() throw() {
 		#ifdef OXT_BACKTRACE_IS_ENABLED
 			boost::mutex::scoped_lock l(_thread_registration_mutex);
