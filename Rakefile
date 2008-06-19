@@ -53,6 +53,7 @@ desc "Build everything"
 task :default => [
 	:native_support,
 	:apache2,
+	'test/oxt/oxt_test_main',
 	'test/Apache2ModuleTests',
 	'benchmark/DummyRequestHandler'
 ]
@@ -195,9 +196,9 @@ end
 ##### Unit tests
 
 class TEST
-	CXXFLAGS = ::CXXFLAGS + " -Isupport -DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL "
-	AP2_FLAGS = "-I../ext/apache2 -I../ext #{APR_FLAGS}"
-	
+	CXXFLAGS = "#{::CXXFLAGS} -DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL "
+
+	AP2_FLAGS = "-I../ext/apache2 -I../ext -Isupport #{APR_FLAGS}"
 	AP2_OBJECTS = {
 		'CxxTestMain.o' => %w(CxxTestMain.cpp),
 		'MessageChannelTest.o' => %w(MessageChannelTest.cpp
@@ -224,11 +225,22 @@ class TEST
 			../ext/apache2/Application.h),
 		'UtilsTest.o' => %w(UtilsTest.cpp ../ext/apache2/Utils.h)
 	}
+	
+	OXT_FLAGS = "-I../../ext -I../support"
+	OXT_OBJECTS = {
+		'oxt_test_main.o' => %w(oxt_test_main.cpp),
+		'backtrace_test.o' => %w(backtrace_test.cpp)
+	}
 end
 
 subdir 'test' do
 	desc "Run all unit tests (but not integration tests)"
-	task :test => [:'test:apache2', :'test:ruby', :'test:integration']
+	task :test => [:'test:oxt', :'test:apache2', :'test:ruby', :'test:integration']
+	
+	desc "Run unit tests for the OXT library"
+	task 'test:oxt' => 'oxt/oxt_test_main' do
+		sh "./oxt/oxt_test_main"
+	end
 	
 	desc "Run unit tests for the Apache 2 module"
 	task 'test:apache2' => [
@@ -265,6 +277,26 @@ subdir 'test' do
 	task 'test:integration' => [:apache2, :native_support] do
 		sh "spec -c -f s integration_tests.rb"
 	end
+	
+	file 'oxt/oxt_test_main' => TEST::OXT_OBJECTS.keys.map{ |x| "oxt/#{x}" } +
+	  ['../ext/libboost_oxt.a'] do
+		Dir.chdir('oxt') do
+			objects = TEST::OXT_OBJECTS.keys.join(' ')
+			create_executable "oxt_test_main", objects,
+				"#{LDFLAGS} #{MULTI_ARCH_FLAGS} " <<
+				"../../ext/libboost_oxt.a " <<
+				"-lpthread"
+		end
+	end
+	
+	TEST::OXT_OBJECTS.each_pair do |target, sources|
+		file "oxt/#{target}" => sources.map{ |x| "oxt/#{x}" } do
+			Dir.chdir('oxt') do
+				puts "### In test/oxt:"
+				compile_cxx sources[0], "#{TEST::OXT_FLAGS} #{TEST::CXXFLAGS}"
+			end
+		end
+	end
 
 	file 'Apache2ModuleTests' => TEST::AP2_OBJECTS.keys +
 	  ['../ext/libboost_oxt.a',
@@ -298,7 +330,7 @@ subdir 'test' do
 	end
 	
 	task :clean do
-		sh "rm -f Apache2ModuleTests *.o"
+		sh "rm -f oxt/oxt_test_main oxt/*.o Apache2ModuleTests *.o"
 	end
 end
 
@@ -437,6 +469,7 @@ spec = Gem::Specification.new do |s|
 		'misc/*',
 		'test/*.{rb,cpp,example}',
 		'test/support/*',
+		'test/oxt/*.cpp',
 		'test/ruby/*',
 		'test/ruby/*/*',
 		'test/stub/*',
