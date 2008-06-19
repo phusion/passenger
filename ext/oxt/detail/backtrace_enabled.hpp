@@ -31,6 +31,7 @@
 #include <exception>
 #include <string>
 #include <list>
+#include "../macros.hpp"
 
 namespace oxt {
 
@@ -53,30 +54,30 @@ string _format_backtrace(const list<trace_point *> *backtrace_list);
  * @internal
  */
 struct trace_point {
-	string function;
-	string source;
+	const char *function;
+	const char *source;
 	unsigned int line;
 	bool m_detached;
 
-	trace_point(const string &function, const string &source, unsigned int line, bool detached = false) {
+	trace_point(const char *function, const char *source, unsigned int line, bool detached = false) {
 		this->function = function;
 		this->source = source;
 		this->line = line;
 		m_detached = detached;
-		if (!detached) {
+		if (OXT_LIKELY(!detached)) {
 			boost::mutex::scoped_lock l(_get_backtrace_mutex());
 			_get_current_backtrace()->push_back(this);
 		}
 	}
 
 	~trace_point() {
-		if (!m_detached) {
+		if (OXT_LIKELY(!m_detached)) {
 			boost::mutex::scoped_lock l(_get_backtrace_mutex());
 			_get_current_backtrace()->pop_back();
 		}
 	}
 
-	void update(const string &source, unsigned int line) {
+	void update(const char *source, unsigned int line) {
 		this->source = source;
 		this->line = line;
 	}

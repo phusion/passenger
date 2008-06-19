@@ -28,7 +28,6 @@
 #include <boost/thread/tss.hpp>
 #include <sstream>
 #include "backtrace.hpp"
-#include "macros.hpp"
 
 namespace oxt {
 
@@ -39,7 +38,7 @@ list<thread_registration *> _registered_threads;
 
 // Register main thread.
 static register_thread_with_backtrace main_thread_registration("Main thread");
-static trace_point main_thread_entry_point("main thread entry point", "", 0);
+static trace_point main_thread_entry_point("main thread entry point", NULL, 0);
 
 boost::mutex &
 _get_backtrace_mutex() {
@@ -74,7 +73,7 @@ _format_backtrace(const list<trace_point *> *backtrace_list) {
 		trace_point *p = *it;
 		
 		result << "     in '" << p->function << "'";
-		if (!p->source.empty()) {
+		if (p->source != NULL) {
 			result << " (" << p->source << ":" << p->line << ")";
 		}
 		result << endl;
