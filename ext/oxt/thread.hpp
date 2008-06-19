@@ -145,7 +145,7 @@ public:
 					return "     (no backtrace: thread hasn't been started yet)";
 				}
 			} else {
-				boost::mutex::scoped_lock l2(*data->registration->backtrace_mutex);
+				spin_lock::scoped_lock l2(*data->registration->backtrace_lock);
 				return _format_backtrace(data->registration->backtrace);
 			}
 		#else
@@ -163,7 +163,7 @@ public:
 				thread_registration *r = *it;
 				result << "Thread '" << r->name << "':" << endl;
 				
-				boost::mutex::scoped_lock l(*r->backtrace_mutex);
+				spin_lock::scoped_lock l(*r->backtrace_lock);
 				result << _format_backtrace(r->backtrace) << endl;
 			}
 			return result.str();

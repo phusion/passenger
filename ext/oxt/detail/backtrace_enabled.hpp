@@ -32,6 +32,7 @@
 #include <string>
 #include <list>
 #include <vector>
+#include "../spin_lock.hpp"
 #include "../macros.hpp"
 
 namespace oxt {
@@ -47,7 +48,7 @@ extern list<thread_registration *> _registered_threads;
 
 void                 _init_backtrace_tls();
 void                 _finalize_backtrace_tls();
-boost::mutex        *_get_backtrace_mutex();
+spin_lock           *_get_backtrace_lock();
 vector<trace_point *> *_get_current_backtrace();
 string               _format_backtrace(const list<trace_point *> *backtrace_list);
 string               _format_backtrace(const vector<trace_point *> *backtrace_list);
@@ -69,9 +70,9 @@ struct trace_point {
 		this->line = line;
 		m_detached = detached;
 		if (OXT_LIKELY(!detached)) {
-			boost::mutex *the_mutex = _get_backtrace_mutex();
-			if (OXT_LIKELY(the_mutex != NULL)) {
-				boost::mutex::scoped_lock l(*the_mutex);
+			spin_lock *lock = _get_backtrace_lock();
+			if (OXT_LIKELY(lock != NULL)) {
+				spin_lock::scoped_lock l(*lock);
 				_get_current_backtrace()->push_back(this);
 			}
 		}
@@ -79,9 +80,9 @@ struct trace_point {
 
 	~trace_point() {
 		if (OXT_LIKELY(!m_detached)) {
-			boost::mutex *the_mutex = _get_backtrace_mutex();
-			if (OXT_LIKELY(the_mutex != NULL)) {
-				boost::mutex::scoped_lock l(*the_mutex);
+			spin_lock *lock = _get_backtrace_lock();
+			if (OXT_LIKELY(lock != NULL)) {
+				spin_lock::scoped_lock l(*lock);
 				_get_current_backtrace()->pop_back();
 			}
 		}
@@ -102,7 +103,7 @@ struct trace_point {
  */
 struct thread_registration {
 	string name;
-	boost::mutex *backtrace_mutex;
+	spin_lock *backtrace_lock;
 	vector<trace_point *> *backtrace;
 };
 
@@ -116,7 +117,7 @@ struct register_thread_with_backtrace {
 	register_thread_with_backtrace(const string &name) {
 		registration = new thread_registration();
 		registration->name = name;
-		registration->backtrace_mutex = _get_backtrace_mutex();
+		registration->backtrace_lock = _get_backtrace_lock();
 		registration->backtrace = _get_current_backtrace();
 		
 		boost::mutex::scoped_lock l(_thread_registration_mutex);

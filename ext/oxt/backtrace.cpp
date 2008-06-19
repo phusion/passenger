@@ -65,25 +65,25 @@ static trace_point main_thread_entry_point("main thread entry point", NULL, 0);
 #endif
 
 #ifdef GCC_IS_3_3_OR_HIGHER
-	static __thread boost::mutex *backtrace_mutex = NULL;
+	static __thread spin_lock *backtrace_lock = NULL;
 	static __thread vector<trace_point *> *current_backtrace = NULL;
 	
 	void
 	_init_backtrace_tls() {
-		backtrace_mutex = new boost::mutex();
+		backtrace_lock = new spin_lock();
 		current_backtrace = new vector<trace_point *>();
 		current_backtrace->reserve(50);
 	}
 	
 	void
 	_finalize_backtrace_tls() {
-		delete backtrace_mutex;
+		delete backtrace_lock;
 		delete current_backtrace;
 	}
 	
-	boost::mutex *
-	_get_backtrace_mutex() {
-		return backtrace_mutex;
+	spin_lock *
+	_get_backtrace_lock() {
+		return backtrace_lock;
 	}
 	
 	vector<trace_point *> *
