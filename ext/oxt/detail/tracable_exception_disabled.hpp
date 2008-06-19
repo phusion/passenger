@@ -33,8 +33,6 @@ namespace oxt {
 
 class tracable_exception: public std::exception {
 public:
-	tracable_exception();
-	
 	virtual std::string backtrace() const throw() {
 		return "     (backtrace support disabled during compile time)\n";
 	}

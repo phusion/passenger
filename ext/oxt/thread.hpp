@@ -81,17 +81,23 @@ private:
 	
 	static void thread_main(boost::function<void ()> func, thread_data_ptr data) {
 		#ifdef OXT_BACKTRACE_IS_ENABLED
+			_init_backtrace_tls();
 			register_thread_with_backtrace r(data->name);
 			data->registration = r.registration;
 		#endif
 		
-		TRACE_POINT_WITH_NAME("oxt::thread entry point");
-		func();
+		{
+			TRACE_POINT_WITH_NAME("oxt::thread entry point");
+			func();
+		}
 		
 		#ifdef OXT_BACKTRACE_IS_ENABLED
-			boost::mutex::scoped_lock l(data->registration_lock);
-			data->registration = NULL;
-			data->done = true;
+			{
+				boost::mutex::scoped_lock l(data->registration_lock);
+				data->registration = NULL;
+				data->done = true;
+			}
+			_finalize_backtrace_tls();
 		#endif
 	}
 	
@@ -114,6 +120,7 @@ public:
 	 */
 	explicit thread(boost::function<void ()> func, const std::string &name = "", unsigned int stack_size = 0) {
 		initialize_data(name);
+		
 		set_thread_main_function(boost::bind(thread_main, func, data));
 		start_thread(stack_size);
 	}

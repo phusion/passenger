@@ -31,17 +31,6 @@
 
 namespace oxt {
 
-class tracable_exception: public std::exception {
-public:
-	virtual std::string backtrace() const throw() {
-		return "     (backtrace support disabled during compile time)\n";
-	}
-	
-	virtual const char *what() const throw() {
-		return "oxt::tracable_exception";
-	}
-};
-
 #define TRACE_POINT() do { /* nothing */ } while (false)
 #define TRACE_POINT_WITH_NAME(name) do { /* nothing */ } while (false)
 #define UPDATE_TRACE_POINT() do { /* nothing */ } while (false)

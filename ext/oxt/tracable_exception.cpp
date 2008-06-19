@@ -28,23 +28,27 @@
 #ifdef OXT_BACKTRACE_IS_ENABLED
 
 #include <boost/thread/mutex.hpp>
+#include "macros.hpp"
 
 namespace oxt {
 
 using namespace std;
 
 tracable_exception::tracable_exception() {
-	boost::mutex::scoped_lock l(_get_backtrace_mutex());
-	list<trace_point *> *bt = _get_current_backtrace();
-	list<trace_point *>::const_iterator it;
-	
-	for (it = bt->begin(); it != bt->end(); it++) {
-		trace_point *p = new trace_point(
-			(*it)->function,
-			(*it)->source,
-			(*it)->line,
-			true);
-		backtrace_copy.push_back(p);
+	boost::mutex *the_mutex = _get_backtrace_mutex();
+	if (OXT_LIKELY(the_mutex != NULL)) {
+		boost::mutex::scoped_lock l(*the_mutex);
+		list<trace_point *> *bt = _get_current_backtrace();
+		list<trace_point *>::const_iterator it;
+		
+		for (it = bt->begin(); it != bt->end(); it++) {
+			trace_point *p = new trace_point(
+				(*it)->function,
+				(*it)->source,
+				(*it)->line,
+				true);
+			backtrace_copy.push_back(p);
+		}
 	}
 }
 

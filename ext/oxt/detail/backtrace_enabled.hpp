@@ -44,9 +44,11 @@ class thread_registration;
 extern boost::mutex _thread_registration_mutex;
 extern list<thread_registration *> _registered_threads;
 
-boost::mutex &_get_backtrace_mutex();
+void                 _init_backtrace_tls();
+void                 _finalize_backtrace_tls();
+boost::mutex        *_get_backtrace_mutex();
 list<trace_point *> *_get_current_backtrace();
-string _format_backtrace(const list<trace_point *> *backtrace_list);
+string               _format_backtrace(const list<trace_point *> *backtrace_list);
 
 /**
  * A single point in a backtrace. Implementation detail - do not use directly!
@@ -65,15 +67,21 @@ struct trace_point {
 		this->line = line;
 		m_detached = detached;
 		if (OXT_LIKELY(!detached)) {
-			boost::mutex::scoped_lock l(_get_backtrace_mutex());
-			_get_current_backtrace()->push_back(this);
+			boost::mutex *the_mutex = _get_backtrace_mutex();
+			if (OXT_LIKELY(the_mutex != NULL)) {
+				boost::mutex::scoped_lock l(*the_mutex);
+				_get_current_backtrace()->push_back(this);
+			}
 		}
 	}
 
 	~trace_point() {
 		if (OXT_LIKELY(!m_detached)) {
-			boost::mutex::scoped_lock l(_get_backtrace_mutex());
-			_get_current_backtrace()->pop_back();
+			boost::mutex *the_mutex = _get_backtrace_mutex();
+			if (OXT_LIKELY(the_mutex != NULL)) {
+				boost::mutex::scoped_lock l(*the_mutex);
+				_get_current_backtrace()->pop_back();
+			}
 		}
 	}
 
@@ -106,7 +114,7 @@ struct register_thread_with_backtrace {
 	register_thread_with_backtrace(const string &name) {
 		registration = new thread_registration();
 		registration->name = name;
-		registration->backtrace_mutex = &_get_backtrace_mutex();
+		registration->backtrace_mutex = _get_backtrace_mutex();
 		registration->backtrace = _get_current_backtrace();
 		
 		boost::mutex::scoped_lock l(_thread_registration_mutex);
