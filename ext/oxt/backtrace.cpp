@@ -49,10 +49,22 @@ static init_main_thread_tls imtl;
 static register_thread_with_backtrace main_thread_registration("Main thread");
 static trace_point main_thread_entry_point("main thread entry point", NULL, 0);
 
-// boost::thread_specific_storage is pretty expensive. So we use the __thread
-// keyword whenever possible - that's almost free.
+/*
+ * boost::thread_specific_storage is pretty expensive. So we use the __thread
+ * keyword whenever possible - that's almost free.
+ * GCC supports the __thread keyword on x86 since version 3.3. Not sure
+ * about other architectures.
+ */
 
-#if 1
+#if defined(__GNUC__) && (                       \
+   __GNUC__ > 3 || (                             \
+       __GNUC__ == 3 && __GNUC_MINOR__ >= 3      \
+   )                                             \
+)
+	#define GCC_IS_3_3_OR_HIGHER
+#endif
+
+#ifdef GCC_IS_3_3_OR_HIGHER
 	static __thread boost::mutex *backtrace_mutex = NULL;
 	static __thread list<trace_point *> *current_backtrace = NULL;
 	
