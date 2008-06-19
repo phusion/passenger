@@ -28,6 +28,7 @@
 #define OXT_BACKTRACE_IS_ENABLED
 
 #include <boost/thread/mutex.hpp>
+#include <boost/current_function.hpp>
 #include <exception>
 #include <string>
 #include <list>
@@ -54,8 +55,15 @@ string               _format_backtrace(const list<trace_point *> *backtrace_list
 string               _format_backtrace(const vector<trace_point *> *backtrace_list);
 
 /**
- * A single point in a backtrace. Implementation detail - do not use directly!
+ * A single point in a backtrace. Creating this object will cause it
+ * to push itself to the thread's backtrace list. This backtrace list
+ * is stored in a thread local storage, and so is unique for each
+ * thread. Upon destruction, the object will pop itself from the thread's
+ * backtrace list.
  *
+ * Except if you set the 'detached' argument to true.
+ *
+ * Implementation detail - do not use directly!
  * @internal
  */
 struct trace_point {
@@ -94,7 +102,7 @@ struct trace_point {
 	}
 };
 
-#define TRACE_POINT() oxt::trace_point __p(__PRETTY_FUNCTION__, __FILE__, __LINE__)
+#define TRACE_POINT() oxt::trace_point __p(BOOST_CURRENT_FUNCTION, __FILE__, __LINE__)
 #define TRACE_POINT_WITH_NAME(name) oxt::trace_point __p(name, __FILE__, __LINE__)
 #define UPDATE_TRACE_POINT() __p.update(__FILE__, __LINE__)
 
