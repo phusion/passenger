@@ -66,12 +66,13 @@ static trace_point main_thread_entry_point("main thread entry point", NULL, 0);
 
 #ifdef GCC_IS_3_3_OR_HIGHER
 	static __thread boost::mutex *backtrace_mutex = NULL;
-	static __thread list<trace_point *> *current_backtrace = NULL;
+	static __thread vector<trace_point *> *current_backtrace = NULL;
 	
 	void
 	_init_backtrace_tls() {
 		backtrace_mutex = new boost::mutex();
-		current_backtrace = new list<trace_point *>();
+		current_backtrace = new vector<trace_point *>();
+		current_backtrace->reserve(50);
 	}
 	
 	void
@@ -85,7 +86,7 @@ static trace_point main_thread_entry_point("main thread entry point", NULL, 0);
 		return backtrace_mutex;
 	}
 	
-	list<trace_point *> *
+	vector<trace_point *> *
 	_get_current_backtrace() {
 		return current_backtrace;
 	}
@@ -126,17 +127,17 @@ static trace_point main_thread_entry_point("main thread entry point", NULL, 0);
 	}
 #endif
 
-string
-_format_backtrace(const list<trace_point *> *backtrace_list) {
+template<typename Iterable, typename ReverseIterator> static string
+format_backtrace(Iterable backtrace_list) {
 	if (backtrace_list->empty()) {
 		return "     (empty)";
 	} else {
 		stringstream result;
-		list<trace_point *>::const_reverse_iterator it;
+		ReverseIterator it;
 		
 		for (it = backtrace_list->rbegin(); it != backtrace_list->rend(); it++) {
 			trace_point *p = *it;
-		
+			
 			result << "     in '" << p->function << "'";
 			if (p->source != NULL) {
 				result << " (" << p->source << ":" << p->line << ")";
@@ -145,6 +146,22 @@ _format_backtrace(const list<trace_point *> *backtrace_list) {
 		}
 		return result.str();
 	}
+}
+
+string
+_format_backtrace(const list<trace_point *> *backtrace_list) {
+	return format_backtrace<
+		const list<trace_point *> *,
+		list<trace_point *>::const_reverse_iterator
+	>(backtrace_list);
+}
+
+string
+_format_backtrace(const vector<trace_point *> *backtrace_list) {
+	return format_backtrace<
+		const vector<trace_point *> *,
+		vector<trace_point *>::const_reverse_iterator
+	>(backtrace_list);
 }
 
 } // namespace oxt

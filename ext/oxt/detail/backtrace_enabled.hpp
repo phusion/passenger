@@ -31,6 +31,7 @@
 #include <exception>
 #include <string>
 #include <list>
+#include <vector>
 #include "../macros.hpp"
 
 namespace oxt {
@@ -47,8 +48,9 @@ extern list<thread_registration *> _registered_threads;
 void                 _init_backtrace_tls();
 void                 _finalize_backtrace_tls();
 boost::mutex        *_get_backtrace_mutex();
-list<trace_point *> *_get_current_backtrace();
+vector<trace_point *> *_get_current_backtrace();
 string               _format_backtrace(const list<trace_point *> *backtrace_list);
+string               _format_backtrace(const vector<trace_point *> *backtrace_list);
 
 /**
  * A single point in a backtrace. Implementation detail - do not use directly!
@@ -101,7 +103,7 @@ struct trace_point {
 struct thread_registration {
 	string name;
 	boost::mutex *backtrace_mutex;
-	list<trace_point *> *backtrace;
+	vector<trace_point *> *backtrace;
 };
 
 /**
