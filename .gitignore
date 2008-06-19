@@ -10,7 +10,7 @@ ext/apache2/*.slo
 ext/apache2/.libs
 ext/apache2/ApplicationPoolServerExecutable
 ext/passenger/Makefile
-ext/boost/src/*.a
+ext/*.a
 doc/rdoc
 doc/cxxapi
 doc/*.html
