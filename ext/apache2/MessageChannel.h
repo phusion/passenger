@@ -508,6 +508,7 @@ public:
 	 * @throws SystemException Cannot set the timeout.
 	 */
 	void setReadTimeout(unsigned int msec) {
+		// See the comment for setWriteTimeout().
 		struct timeval tv;
 		int ret;
 		
@@ -531,6 +532,10 @@ public:
 	 * @throws SystemException Cannot set the timeout.
 	 */
 	void setWriteTimeout(unsigned int msec) {
+		// People say that SO_RCVTIMEO/SO_SNDTIMEO are unreliable and
+		// not well-implemented on all platforms.
+		// http://www.developerweb.net/forum/archive/index.php/t-3439.html
+		// That's why we use APR's timeout facilities as well (see Hooks.cpp).
 		struct timeval tv;
 		int ret;
 		

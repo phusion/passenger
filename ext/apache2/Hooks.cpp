@@ -726,6 +726,7 @@ public:
 			apr_file_t *readerPipe = NULL;
 			int reader = session->getStream();
 			apr_os_pipe_put(&readerPipe, &reader, r->pool);
+			apr_file_pipe_timeout_set(readerPipe, r->server->timeout);
 
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
 			b = apr_bucket_pipe_create(readerPipe, r->connection->bucket_alloc);
