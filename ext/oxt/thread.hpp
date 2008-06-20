@@ -86,19 +86,29 @@ private:
 			data->registration = r.registration;
 		#endif
 		
-		{
-			TRACE_POINT_WITH_NAME("oxt::thread entry point");
-			func();
-		}
-		
 		#ifdef OXT_BACKTRACE_IS_ENABLED
-			{
-				boost::mutex::scoped_lock l(data->registration_lock);
-				data->registration = NULL;
-				data->done = true;
-			}
-			_finalize_backtrace_tls();
+			// Put finalization code in a struct destructor,
+			// for exception safety.
+			struct finalization_routines {
+				thread_data_ptr &data;
+				
+				finalization_routines(thread_data_ptr &data_)
+					: data(data_) {}
+				
+				~finalization_routines() {
+					{
+						boost::mutex::scoped_lock l(data->registration_lock);
+						data->registration = NULL;
+						data->done = true;
+					}
+					_finalize_backtrace_tls();
+				}
+			};
+			finalization_routines f(data);
 		#endif
+		
+		TRACE_POINT_WITH_NAME("oxt::thread entry point");
+		func();
 	}
 	
 public:
