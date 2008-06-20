@@ -121,6 +121,8 @@ namespace oxt {
 		int socketpair(int d, int type, int protocol, int sv[2]);
 		ssize_t recvmsg(int s, struct msghdr *msg, int flags);
 		ssize_t sendmsg(int s, const struct msghdr *msg, int flags);
+		int setsockopt(int s, int level, int optname, const void *optval,
+			socklen_t optlen);
 		int shutdown(int s, int how);
 		
 		FILE *fopen(const char *path, const char *mode);

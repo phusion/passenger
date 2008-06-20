@@ -184,6 +184,14 @@ private:
 			return fd;
 		}
 		
+		virtual void setReaderTimeout(unsigned int msec) {
+			MessageChannel(fd).setReadTimeout(msec);
+		}
+		
+		virtual void setWriterTimeout(unsigned int msec) {
+			MessageChannel(fd).setWriteTimeout(msec);
+		}
+		
 		virtual void shutdownReader() {
 			if (fd != -1) {
 				int ret = syscalls::shutdown(fd, SHUT_RD);

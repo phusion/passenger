@@ -125,6 +125,16 @@ syscalls::sendmsg(int s, const struct msghdr *msg, int flags) {
 }
 
 int
+syscalls::setsockopt(int s, int level, int optname, const void *optval, socklen_t optlen) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::setsockopt(s, level, optname, optval, optlen)
+	);
+	return ret;
+}
+
+int
 syscalls::shutdown(int s, int how) {
 	int ret;
 	CHECK_INTERRUPTION(

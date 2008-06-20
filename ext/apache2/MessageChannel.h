@@ -496,6 +496,52 @@ public:
 			return *((int *) CMSG_DATA(control_header));
 		#endif
 	}
+	
+	/**
+	 * Set the timeout value for reading data from this channel.
+	 * If no data can be read within the timeout period, then a
+	 * SystemException will be thrown by one of the read methods,
+	 * with error code EAGAIN or EWOULDBLOCK.
+	 *
+	 * @param msec The timeout, in milliseconds. If 0 is given,
+	 *             there will be no timeout.
+	 * @throws SystemException Cannot set the timeout.
+	 */
+	void setReadTimeout(unsigned int msec) {
+		struct timeval tv;
+		int ret;
+		
+		tv.tv_sec = msec / 1000;
+		tv.tv_usec = msec % 1000 * 1000;
+		ret = syscalls::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO,
+			&tv, sizeof(tv));
+		if (ret == -1) {
+			throw SystemException("Cannot set read timeout for socket", errno);
+		}
+	}
+	
+	/**
+	 * Set the timeout value for writing data to this channel.
+	 * If no data can be written within the timeout period, then a
+	 * SystemException will be thrown, with error code EAGAIN or
+	 * EWOULDBLOCK.
+	 *
+	 * @param msec The timeout, in milliseconds. If 0 is given,
+	 *             there will be no timeout.
+	 * @throws SystemException Cannot set the timeout.
+	 */
+	void setWriteTimeout(unsigned int msec) {
+		struct timeval tv;
+		int ret;
+		
+		tv.tv_sec = msec / 1000;
+		tv.tv_usec = msec % 1000 * 1000;
+		ret = syscalls::setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO,
+			&tv, sizeof(tv));
+		if (ret == -1) {
+			throw SystemException("Cannot set read timeout for socket", errno);
+		}
+	}
 };
 
 } // namespace Passenger

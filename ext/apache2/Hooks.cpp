@@ -709,6 +709,9 @@ public:
 			} catch (const BusyException &e) {
 				return reportBusyException(r);
 			}
+			
+			session->setReaderTimeout(r->server->timeout / 1000);
+			session->setWriterTimeout(r->server->timeout / 1000);
 			sendHeaders(r, session, mapper.getBaseURI());
 			if (expectingUploadData) {
 				if (uploadData != NULL) {

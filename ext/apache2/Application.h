@@ -174,6 +174,28 @@ public:
 		virtual int getStream() const = 0;
 		
 		/**
+		 * Set the timeout value for reading data from the I/O stream.
+		 * If no data can be read within the timeout period, then the
+		 * read call will fail with error EAGAIN or EWOULDBLOCK.
+		 *
+		 * @param msec The timeout, in milliseconds. If 0 is given,
+		 *             there will be no timeout.
+		 * @throws SystemException Cannot set the timeout.
+		 */
+		virtual void setReaderTimeout(unsigned int msec) = 0;
+		
+		/**
+		 * Set the timeout value for writing data from the I/O stream.
+		 * If no data can be written within the timeout period, then the
+		 * write call will fail with error EAGAIN or EWOULDBLOCK.
+		 *
+		 * @param msec The timeout, in milliseconds. If 0 is given,
+		 *             there will be no timeout.
+		 * @throws SystemException Cannot set the timeout.
+		 */
+		virtual void setWriterTimeout(unsigned int msec) = 0;
+		
+		/**
 		 * Indicate that we don't want to read data anymore from the I/O stream.
 		 * Calling this method after closeStream() is called will have no effect.
 		 *
@@ -238,6 +260,14 @@ private:
 		
 		virtual int getStream() const {
 			return fd;
+		}
+		
+		virtual void setReaderTimeout(unsigned int msec) {
+			MessageChannel(fd).setReadTimeout(msec);
+		}
+		
+		virtual void setWriterTimeout(unsigned int msec) {
+			MessageChannel(fd).setWriteTimeout(msec);
 		}
 		
 		virtual void shutdownReader() {
