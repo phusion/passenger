@@ -25,6 +25,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <oxt/system_calls.hpp>
+#include <oxt/backtrace.hpp>
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -104,7 +105,9 @@ private:
 	 * @throws IOException The specified log file could not be opened.
 	 */
 	void restartServer() {
+		TRACE_POINT();
 		if (pid != 0) {
+			UPDATE_TRACE_POINT();
 			channel.close();
 			
 			// Wait at most 5 seconds for the spawn server to exit.
@@ -119,7 +122,9 @@ private:
 					syscalls::usleep(100000);
 				}
 			}
+			UPDATE_TRACE_POINT();
 			if (!done) {
+				UPDATE_TRACE_POINT();
 				P_TRACE(2, "Spawn server did not exit in time, killing it...");
 				syscalls::kill(pid, SIGTERM);
 				begin = syscalls::time(NULL);
@@ -152,6 +157,7 @@ private:
 			}
 		}
 
+		UPDATE_TRACE_POINT();
 		pid = syscalls::fork();
 		if (pid == 0) {
 			if (!logFile.empty()) {
@@ -255,6 +261,7 @@ private:
 		const string &spawnMethod,
 		const string &appType
 	) {
+		TRACE_POINT();
 		vector<string> args;
 		int ownerPipe;
 		
@@ -341,6 +348,7 @@ private:
 	                     bool lowerPrivilege, const string &lowestUser,
 	                     const string &environment, const string &spawnMethod,
 	                     const string &appType) {
+		TRACE_POINT();
 		bool restarted;
 		try {
 			P_DEBUG("Spawn server died. Attempting to restart it...");
@@ -370,6 +378,7 @@ private:
 	 * @throws SystemException Something went wrong.
 	 */
 	void sendReloadCommand(const string &appRoot) {
+		TRACE_POINT();
 		try {
 			channel.write("reload", appRoot.c_str(), NULL);
 		} catch (const SystemException &e) {
@@ -379,6 +388,7 @@ private:
 	}
 	
 	void handleReloadException(const SystemException &e, const string &appRoot) {
+		TRACE_POINT();
 		bool restarted;
 		try {
 			P_DEBUG("Spawn server died. Attempting to restart it...");
@@ -435,6 +445,7 @@ public:
 	             const string &logFile = "",
 	             const string &rubyCommand = "ruby",
 	             const string &user = "") {
+		TRACE_POINT();
 		this->spawnServerCommand = spawnServerCommand;
 		this->logFile = logFile;
 		this->rubyCommand = rubyCommand;
@@ -455,7 +466,9 @@ public:
 	}
 	
 	~SpawnManager() throw() {
+		TRACE_POINT();
 		if (pid != 0) {
+			UPDATE_TRACE_POINT();
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
 			P_TRACE(2, "Shutting down spawn manager (PID " << pid << ").");
@@ -515,6 +528,7 @@ public:
 		const string &spawnMethod = "smart",
 		const string &appType = "rails"
 	) {
+		TRACE_POINT();
 		mutex::scoped_lock l(lock);
 		try {
 			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser,
@@ -545,6 +559,7 @@ public:
 	 *         restart was attempted, but it failed.
 	 */
 	void reload(const string &appRoot) {
+		TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		try {

@@ -23,6 +23,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 #include <oxt/system_calls.hpp>
+#include <oxt/backtrace.hpp>
 #include <string>
 
 #include <sys/types.h>
@@ -106,6 +107,7 @@ public:
 		 * @throws boost::thread_interrupted
 		 */
 		virtual void sendHeaders(const char *headers, unsigned int size) {
+			TRACE_POINT();
 			int stream = getStream();
 			if (stream == -1) {
 				throw IOException("Cannot write headers to the request handler "
@@ -113,9 +115,10 @@ public:
 			}
 			try {
 				MessageChannel(stream).writeScalar(headers, size);
-			} catch (const SystemException &e) {
-				throw SystemException("An error occured while writing headers "
-					"to the request handler", e.code());
+			} catch (SystemException &e) {
+				e.setBriefMessage("An error occured while writing headers "
+					"to the request handler");
+				throw;
 			}
 		}
 		
@@ -145,6 +148,7 @@ public:
 		 * @throws boost::thread_interrupted
 		 */
 		virtual void sendBodyBlock(const char *block, unsigned int size) {
+			TRACE_POINT();
 			int stream = getStream();
 			if (stream == -1) {
 				throw IOException("Cannot write request body block to the "
@@ -153,9 +157,10 @@ public:
 			}
 			try {
 				MessageChannel(stream).writeRaw(block, size);
-			} catch (const SystemException &e) {
-				throw SystemException("An error occured while sending the "
-					"request body to the request handler", e.code());
+			} catch (SystemException &e) {
+				e.setBriefMessage("An error occured while sending the "
+					"request body to the request handler");
+				throw;
 			}
 		}
 		
@@ -226,6 +231,7 @@ private:
 		}
 	
 		virtual ~StandardSession() {
+			TRACE_POINT();
 			closeStream();
 			closeCallback();
 		}
@@ -235,6 +241,7 @@ private:
 		}
 		
 		virtual void shutdownReader() {
+			TRACE_POINT();
 			if (fd != -1) {
 				int ret = syscalls::shutdown(fd, SHUT_RD);
 				if (ret == -1) {
@@ -245,6 +252,7 @@ private:
 		}
 		
 		virtual void shutdownWriter() {
+			TRACE_POINT();
 			if (fd != -1) {
 				int ret = syscalls::shutdown(fd, SHUT_WR);
 				if (ret == -1) {
@@ -255,6 +263,7 @@ private:
 		}
 		
 		virtual void closeStream() {
+			TRACE_POINT();
 			if (fd != -1) {
 				int ret = syscalls::close(fd);
 				if (ret == -1) {
@@ -306,6 +315,7 @@ public:
 	}
 	
 	virtual ~Application() {
+		TRACE_POINT();
 		int ret;
 		
 		if (ownerPipe != -1) {
@@ -385,6 +395,7 @@ public:
 	 * @throws IOException Something went wrong during the connection process.
 	 */
 	SessionPtr connect(const function<void()> &closeCallback) const {
+		TRACE_POINT();
 		int fd, ret;
 		
 		do {
