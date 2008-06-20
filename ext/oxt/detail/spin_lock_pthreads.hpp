@@ -28,22 +28,19 @@
 #include <errno.h>
 #include "../macros.hpp"
 
+/*
+ * Implementation of a spin lock using POSIX pthread spin locks.
+ *
+ * See spin_lock_gcc_x86.hpp for API documentation.
+ */
+
 namespace oxt {
 
-/**
- * A spin lock. It's more efficient than a mutex for locking very small
- * critical sections with few contentions, but less efficient otherwise.
- *
- * The interface is similar to that of boost::mutex.
- */
 class spin_lock {
 private:
 	pthread_spinlock_t spin;
 
 public:
-	/**
-	 * Instantiate this class to lock a spin lock within a scope.
-	 */
 	class scoped_lock: boost::noncopyable {
 	private:
 		spin_lock &l;

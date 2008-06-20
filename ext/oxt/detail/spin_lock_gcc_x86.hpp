@@ -57,6 +57,10 @@ public:
 
 	spin_lock(): exclusion(0) { }
 	
+	/**
+	 * Lock this spin lock.
+	 * @throws boost::thread_resource_error Something went wrong.
+	 */
 	void lock() {
 		while (__sync_lock_test_and_set(&exclusion, 1)) {
 			// Do nothing. This GCC builtin instruction
@@ -64,6 +68,10 @@ public:
 		}
 	}
 
+	/**
+	 * Unlock this spin lock.
+	 * @throws boost::thread_resource_error Something went wrong.
+	 */
 	void unlock() {
 		__sync_synchronize(); // Memory barrier.
 		exclusion = 0;

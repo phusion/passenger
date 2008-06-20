@@ -23,8 +23,12 @@
  * THE SOFTWARE.
  */
 
-// Portable implementation of a spin lock.
-// This is actually just a mutex...
+/*
+ * Portable implementation of a spin lock.
+ * This is actually just a mutex...
+ *
+ * See spin_lock_gcc_x86.hpp for API documentation.
+ */
 
 #include <boost/thread/mutex.hpp>
 
