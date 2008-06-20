@@ -26,6 +26,7 @@
 #include <boost/noncopyable.hpp>
 #include <pthread.h>
 #include <errno.h>
+#include "../macros.hpp"
 
 namespace oxt {
 
@@ -78,8 +79,8 @@ public:
 		int ret;
 		do {
 			ret = pthread_spin_lock(&spin);
-		} while (ret == EINTR);
-		if (ret != 0) {
+		} while (OXT_UNLIKELY(ret == EINTR));
+		if (OXT_UNLIKELY(ret != 0)) {
 			throw boost::thread_resource_error("Cannot lock spin lock", ret);
 		}
 	}
@@ -88,8 +89,8 @@ public:
 		int ret;
 		do {
 			ret = pthread_spin_unlock(&spin);
-		} while (ret == EINTR);
-		if (ret != 0) {
+		} while (OXT_UNLIKELY(ret == EINTR));
+		if (OXT_UNLIKELY(ret != 0)) {
 			throw boost::thread_resource_error("Cannot unlock spin lock", ret);
 		}
 	}
