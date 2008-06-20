@@ -91,8 +91,8 @@ static trace_point main_thread_entry_point("main thread entry point", NULL, 0);
 		return current_backtrace;
 	}
 #else
-	static thread_specific_ptr<boost::mutex> backtrace_mutex;
-	static thread_specific_ptr< list<trace_point *> > current_backtrace;
+	static thread_specific_ptr<spin_lock> backtrace_lock;
+	static thread_specific_ptr< vector<trace_point *> > current_backtrace;
 	
 	void _init_backtrace_tls() {
 		// Not implemented.
@@ -102,25 +102,25 @@ static trace_point main_thread_entry_point("main thread entry point", NULL, 0);
 		// Not implemented.
 	}
 
-	boost::mutex *
-	_get_backtrace_mutex() {
-		boost::mutex *result;
+	spin_lock *
+	_get_backtrace_lock() {
+		spin_lock *result;
 	
-		result = backtrace_mutex.get();
+		result = backtrace_lock.get();
 		if (OXT_UNLIKELY(result == NULL)) {
-			result = new boost::mutex();
-			backtrace_mutex.reset(result);
+			result = new spin_lock();
+			backtrace_lock.reset(result);
 		}
 		return result;
 	}
 
-	list<trace_point *> *
+	vector<trace_point *> *
 	_get_current_backtrace() {
-		list<trace_point *> *result;
+		vector<trace_point *> *result;
 	
 		result = current_backtrace.get();
 		if (OXT_UNLIKELY(result == NULL)) {
-			result = new list<trace_point *>();
+			result = new vector<trace_point *>();
 			current_backtrace.reset(result);
 		}
 		return result;
