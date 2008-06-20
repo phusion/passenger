@@ -27,6 +27,8 @@
 
 #if (defined(__GNUC__) && defined(__i386__)) || defined(IN_DOXYGEN)
 	#include "detail/spin_lock_gcc_x86.hpp"
+#elif !defined(WIN32)
+	#include "detail/spin_lock_pthreads.hpp"
 #else
 	#include "detail/spin_lock_portable.hpp"
 #endif
