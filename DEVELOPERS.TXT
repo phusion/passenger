@@ -5,7 +5,7 @@
 The tests need the following software installed:
 
 * All the usual Phusion Passenger dependencies.
-* Ruby on Rails >= 2.0.1
+* Ruby on Rails 2.0.1 (*exactly* 2.0.1)
 * rspec >= 1.1.2
 * mime-types >= 1.15
 
