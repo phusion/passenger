@@ -37,7 +37,8 @@ HTTPD.nil? and raise "Could not find the Apache web server binary."
 APR_FLAGS.nil? and raise "Could not find Apache Portable Runtime (APR)."
 
 CXX = "g++"
-THREADING_FLAGS = "-D_REENTRANT"
+# _GLIBCPP__PTHREADS is for fixing Boost compilation on OpenBSD.
+THREADING_FLAGS = "-D_REENTRANT -D_GLIBCPP__PTHREADS"
 if OPTIMIZE
 	OPTIMIZATION_FLAGS = "-O2 -DBOOST_DISABLE_ASSERTS"
 else

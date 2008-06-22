@@ -24,6 +24,11 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#ifdef __OpenBSD__
+	// OpenBSD needs this for 'struct iovec'. Apparently it isn't
+	// always included by unistd.h and sys/types.h.
+	#include <sys/uio.h>
+#endif
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 

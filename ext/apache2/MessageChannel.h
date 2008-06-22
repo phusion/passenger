@@ -33,6 +33,11 @@
 #include <errno.h>
 #include <unistd.h>
 #include <cstdarg>
+#ifdef __OpenBSD__
+	// OpenBSD needs this for 'struct iovec'. Apparently it isn't
+	// always included by unistd.h and sys/types.h.
+	#include <sys/uio.h>
+#endif
 
 #include "Exceptions.h"
 #include "Utils.h"
@@ -101,6 +106,11 @@ class MessageChannel {
 private:
 	const static char DELIMITER = '\0';
 	int fd;
+	
+	#ifdef __OpenBSD__
+		typedef u_int32_t uint32_t;
+		typedef u_int16_t uint16_t;
+	#endif
 
 public:
 	/**

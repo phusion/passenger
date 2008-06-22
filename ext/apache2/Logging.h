@@ -48,7 +48,7 @@ void setDebugFile(const char *logFile = NULL);
 			struct tm *the_tm = localtime(&the_time); \
 			char datetime_buf[60]; \
 			struct timeval tv; \
-			strftime(datetime_buf, sizeof(datetime_buf), "%x %H:%M:%S", the_tm); \
+			strftime(datetime_buf, sizeof(datetime_buf), "%F %H:%M:%S", the_tm); \
 			gettimeofday(&tv, NULL); \
 			*Passenger::_logStream << \
 				"[ pid=" << getpid() << " file=" << __FILE__ << ":" << __LINE__ << \
@@ -84,7 +84,7 @@ void setDebugFile(const char *logFile = NULL);
 					struct tm *the_tm = localtime(&the_time); \
 					char datetime_buf[60]; \
 					struct timeval tv; \
-					strftime(datetime_buf, sizeof(datetime_buf), "%x %H:%M:%S", the_tm); \
+					strftime(datetime_buf, sizeof(datetime_buf), "%F %H:%M:%S", the_tm); \
 					gettimeofday(&tv, NULL); \
 					*Passenger::_debugStream << \
 						"[ pid=" << getpid() << " file=" << __FILE__ << ":" << __LINE__ << \

@@ -17,18 +17,6 @@
  *  with this program; if not, write to the Free Software Foundation, Inc.,
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-#include <ap_config.h>
-#include <httpd.h>
-#include <http_config.h>
-#include <http_core.h>
-#include <http_request.h>
-#include <http_protocol.h>
-#include <http_log.h>
-#include <util_script.h>
-#include <apr_pools.h>
-#include <apr_strings.h>
-#include <apr_lib.h>
-
 #include <boost/thread.hpp>
 
 #include <sys/time.h>
@@ -43,6 +31,20 @@
 #include "Logging.h"
 #include "ApplicationPoolServer.h"
 #include "MessageChannel.h"
+
+// The Apache/APR headers *must* come after the Boost headers, otherwise
+// compilation will fail on OpenBSD.
+#include <ap_config.h>
+#include <httpd.h>
+#include <http_config.h>
+#include <http_core.h>
+#include <http_request.h>
+#include <http_protocol.h>
+#include <http_log.h>
+#include <util_script.h>
+#include <apr_pools.h>
+#include <apr_strings.h>
+#include <apr_lib.h>
 
 using namespace std;
 using namespace Passenger;
