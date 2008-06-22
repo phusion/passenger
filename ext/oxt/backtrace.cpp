@@ -64,7 +64,9 @@ static trace_point main_thread_entry_point("main thread entry point", NULL, 0);
 	#define GCC_IS_3_3_OR_HIGHER
 #endif
 
-#ifdef GCC_IS_3_3_OR_HIGHER
+// FreeBSD 5 supports the __thread keyword, but doesn't initialize such
+// variables to the correct default value.
+#if defined(GCC_IS_3_3_OR_HIGHER) && !defined(__FreeBSD__)
 	static __thread spin_lock *backtrace_lock = NULL;
 	static __thread vector<trace_point *> *current_backtrace = NULL;
 	
