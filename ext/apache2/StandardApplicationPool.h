@@ -249,9 +249,9 @@ private:
 				char buf[128];
 				
 				snprintf(buf, sizeof(buf),
-						 "PID: %-8lu  Sessions: %d",
-				         (unsigned long) container->app->getPid(),
-						 container->sessions);
+						"PID: %-8lu  Sessions: %d",
+						(unsigned long) container->app->getPid(),
+						container->sessions);
 				result << "  " << buf << endl;
 			}
 			result << endl;
