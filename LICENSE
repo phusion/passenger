@@ -1,15 +1,16 @@
-Passenger is licensed under the GNU General Public License (GPL) version 2, and
-*only* version 2 (i.e. not version 3 or any later versions).
+Phusion Passenger is licensed under the GNU General Public License (GPL)
+version 2, and *only* version 2 (i.e. not version 3 or any later versions).
 
 In addition to the GNU General Public License v2 licensing terms, we explicitly
-grand you the permission to run any application on top of Passenger, regardless
-of the application's own licensing terms. The application will not be bound to
-the terms of the GPL in any way. That is, the GPL only applies to Passenger
-itself, and not to applications that are run through Passenger.
+grand you the permission to run any application on top of Phusion Passenger,
+regardless of the application's own licensing terms. The application will not
+be bound to the terms of the GPL in any way. That is, the GPL only applies to
+Phusion Passenger itself, and not to applications that are run through Phusion
+Passenger.
 
-We also explicitly allow Apache to load the Passenger Apache module, without
-Apache or any other loaded modules needing to be released under the terms of
-the GPL.
+We also explicitly allow Apache to load the Phusion Passenger Apache module,
+without Apache or any other loaded modules needing to be released under the
+terms of the GPL.
 
 ----------------------------------------------------------------------
 
