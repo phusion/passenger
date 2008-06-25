@@ -91,7 +91,7 @@ private:
 	string rubyCommand;
 	string user;
 	
-	mutex lock;
+	boost::mutex lock;
 	
 	MessageChannel channel;
 	pid_t pid;
@@ -529,7 +529,7 @@ public:
 		const string &appType = "rails"
 	) {
 		TRACE_POINT();
-		mutex::scoped_lock l(lock);
+		boost::mutex::scoped_lock l(lock);
 		try {
 			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser,
 				environment, spawnMethod, appType);

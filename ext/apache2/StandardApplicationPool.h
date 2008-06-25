@@ -124,7 +124,7 @@ private:
 	};
 	
 	struct SharedData {
-		mutex lock;
+		boost::mutex lock;
 		condition activeOrMaxChanged;
 		
 		DomainMap domains;
@@ -150,7 +150,7 @@ private:
 		}
 		
 		void operator()() {
-			mutex::scoped_lock l(data->lock);
+			boost::mutex::scoped_lock l(data->lock);
 			AppContainerPtr container(this->container.lock());
 			
 			if (container == NULL) {
@@ -190,7 +190,7 @@ private:
 	condition cleanerThreadSleeper;
 	
 	// Shortcuts for instance variables in SharedData. Saves typing in get().
-	mutex &lock;
+	boost::mutex &lock;
 	condition &activeOrMaxChanged;
 	DomainMap &domains;
 	unsigned int &max;
@@ -248,7 +248,7 @@ private:
 	
 	template<typename LockActionType>
 	string toString(LockActionType lockAction) const {
-		unique_lock<mutex> l(lock, lockAction);
+		unique_lock<boost::mutex> l(lock, lockAction);
 		stringstream result;
 		
 		result << "----------- General information -----------" << endl;
@@ -270,8 +270,10 @@ private:
 				AppContainer *container = lit->get();
 				char buf[128];
 				
-				snprintf(buf, sizeof(buf), "PID: %-8d  Sessions: %d",
-					container->app->getPid(), container->sessions);
+				snprintf(buf, sizeof(buf),
+						"PID: %-8lu  Sessions: %d",
+						(unsigned long) container->app->getPid(),
+						container->sessions);
 				result << "  " << buf << endl;
 			}
 			result << endl;
@@ -317,7 +319,7 @@ private:
 	
 	void cleanerThreadMainLoop() {
 		this_thread::disable_syscall_interruption dsi;
-		unique_lock<mutex> l(lock);
+		unique_lock<boost::mutex> l(lock);
 		try {
 			while (!done && !this_thread::interruption_requested()) {
 				xtime xt;
@@ -375,7 +377,7 @@ private:
 	 */
 	pair<AppContainerPtr, Domain *>
 	spawnOrUseExisting(
-		mutex::scoped_lock &l,
+		boost::mutex::scoped_lock &l,
 		const string &appRoot,
 		bool lowerPrivilege,
 		const string &lowestUser,
@@ -585,7 +587,7 @@ public:
 		if (!detached) {
 			this_thread::disable_interruption di;
 			{
-				mutex::scoped_lock l(lock);
+				boost::mutex::scoped_lock l(lock);
 				done = true;
 				cleanerThreadSleeper.notify_one();
 			}
@@ -606,7 +608,7 @@ public:
 		using namespace boost::posix_time;
 		unsigned int attempt = 0;
 		ptime timeLimit(get_system_time() + millisec(GET_TIMEOUT));
-		unique_lock<mutex> l(lock);
+		unique_lock<boost::mutex> l(lock);
 		
 		while (true) {
 			attempt++;
@@ -659,7 +661,7 @@ public:
 	}
 	
 	virtual void clear() {
-		mutex::scoped_lock l(lock);
+		boost::mutex::scoped_lock l(lock);
 		domains.clear();
 		inactiveApps.clear();
 		restartFileTimes.clear();
@@ -670,13 +672,13 @@ public:
 	}
 	
 	virtual void setMaxIdleTime(unsigned int seconds) {
-		mutex::scoped_lock l(lock);
+		boost::mutex::scoped_lock l(lock);
 		maxIdleTime = seconds;
 		cleanerThreadSleeper.notify_one();
 	}
 	
 	virtual void setMax(unsigned int max) {
-		mutex::scoped_lock l(lock);
+		boost::mutex::scoped_lock l(lock);
 		this->max = max;
 		activeOrMaxChanged.notify_all();
 	}
@@ -690,7 +692,7 @@ public:
 	}
 	
 	virtual void setMaxPerApp(unsigned int maxPerApp) {
-		mutex::scoped_lock l(lock);
+		boost::mutex::scoped_lock l(lock);
 		this->maxPerApp = maxPerApp;
 		activeOrMaxChanged.notify_all();
 	}
