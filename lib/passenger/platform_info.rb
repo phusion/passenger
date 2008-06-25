@@ -174,7 +174,7 @@ private
 			end
 			return architectures.join(' ')
 		elsif RUBY_PLATFORM =~ /solaris/
-			'-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -DBOOST_HAS_STDINT_H'
+			'-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -DBOOST_HAS_STDINT_H -D__SOLARIS__'
 		else
 			return ""
 		end

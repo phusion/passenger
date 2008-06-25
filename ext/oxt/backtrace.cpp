@@ -66,7 +66,9 @@ static trace_point main_thread_entry_point("main thread entry point", NULL, 0);
 
 // FreeBSD 5 supports the __thread keyword, but doesn't initialize such
 // variables to the correct default value.
-#if defined(GCC_IS_3_3_OR_HIGHER) && !defined(__FreeBSD__)
+// Solaris does support __thread, but often it's not compiled into default GCC 
+// packages (not to mention it's not available for Sparc). Playing it safe...
+#if defined(GCC_IS_3_3_OR_HIGHER) && !defined(__FreeBSD__) && !defined(__SOLARIS__)
 	static __thread spin_lock *backtrace_lock = NULL;
 	static __thread vector<trace_point *> *current_backtrace = NULL;
 	
