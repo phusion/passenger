@@ -22,6 +22,8 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
+#include <oxt/system_calls.hpp>
+#include <oxt/backtrace.hpp>
 #include <string>
 
 #include <sys/types.h>
@@ -105,6 +107,7 @@ public:
 		 * @throws boost::thread_interrupted
 		 */
 		virtual void sendHeaders(const char *headers, unsigned int size) {
+			TRACE_POINT();
 			int stream = getStream();
 			if (stream == -1) {
 				throw IOException("Cannot write headers to the request handler "
@@ -112,9 +115,10 @@ public:
 			}
 			try {
 				MessageChannel(stream).writeScalar(headers, size);
-			} catch (const SystemException &e) {
-				throw SystemException("An error occured while writing headers "
-					"to the request handler", e.code());
+			} catch (SystemException &e) {
+				e.setBriefMessage("An error occured while writing headers "
+					"to the request handler");
+				throw;
 			}
 		}
 		
@@ -144,6 +148,7 @@ public:
 		 * @throws boost::thread_interrupted
 		 */
 		virtual void sendBodyBlock(const char *block, unsigned int size) {
+			TRACE_POINT();
 			int stream = getStream();
 			if (stream == -1) {
 				throw IOException("Cannot write request body block to the "
@@ -152,9 +157,10 @@ public:
 			}
 			try {
 				MessageChannel(stream).writeRaw(block, size);
-			} catch (const SystemException &e) {
-				throw SystemException("An error occured while sending the "
-					"request body to the request handler", e.code());
+			} catch (SystemException &e) {
+				e.setBriefMessage("An error occured while sending the "
+					"request body to the request handler");
+				throw;
 			}
 		}
 		
@@ -166,6 +172,28 @@ public:
 		 * @pre The stream has not been fully closed.
 		 */
 		virtual int getStream() const = 0;
+		
+		/**
+		 * Set the timeout value for reading data from the I/O stream.
+		 * If no data can be read within the timeout period, then the
+		 * read call will fail with error EAGAIN or EWOULDBLOCK.
+		 *
+		 * @param msec The timeout, in milliseconds. If 0 is given,
+		 *             there will be no timeout.
+		 * @throws SystemException Cannot set the timeout.
+		 */
+		virtual void setReaderTimeout(unsigned int msec) = 0;
+		
+		/**
+		 * Set the timeout value for writing data from the I/O stream.
+		 * If no data can be written within the timeout period, then the
+		 * write call will fail with error EAGAIN or EWOULDBLOCK.
+		 *
+		 * @param msec The timeout, in milliseconds. If 0 is given,
+		 *             there will be no timeout.
+		 * @throws SystemException Cannot set the timeout.
+		 */
+		virtual void setWriterTimeout(unsigned int msec) = 0;
 		
 		/**
 		 * Indicate that we don't want to read data anymore from the I/O stream.
@@ -225,6 +253,7 @@ private:
 		}
 	
 		virtual ~StandardSession() {
+			TRACE_POINT();
 			closeStream();
 			closeCallback();
 		}
@@ -233,9 +262,18 @@ private:
 			return fd;
 		}
 		
+		virtual void setReaderTimeout(unsigned int msec) {
+			MessageChannel(fd).setReadTimeout(msec);
+		}
+		
+		virtual void setWriterTimeout(unsigned int msec) {
+			MessageChannel(fd).setWriteTimeout(msec);
+		}
+		
 		virtual void shutdownReader() {
+			TRACE_POINT();
 			if (fd != -1) {
-				int ret = InterruptableCalls::shutdown(fd, SHUT_RD);
+				int ret = syscalls::shutdown(fd, SHUT_RD);
 				if (ret == -1) {
 					throw SystemException("Cannot shutdown the writer stream",
 						errno);
@@ -244,8 +282,9 @@ private:
 		}
 		
 		virtual void shutdownWriter() {
+			TRACE_POINT();
 			if (fd != -1) {
-				int ret = InterruptableCalls::shutdown(fd, SHUT_WR);
+				int ret = syscalls::shutdown(fd, SHUT_WR);
 				if (ret == -1) {
 					throw SystemException("Cannot shutdown the writer stream",
 						errno);
@@ -254,8 +293,9 @@ private:
 		}
 		
 		virtual void closeStream() {
+			TRACE_POINT();
 			if (fd != -1) {
-				int ret = InterruptableCalls::close(fd);
+				int ret = syscalls::close(fd);
 				if (ret == -1) {
 					throw SystemException("Cannot close the session stream",
 						errno);
@@ -305,6 +345,7 @@ public:
 	}
 	
 	virtual ~Application() {
+		TRACE_POINT();
 		int ret;
 		
 		if (ownerPipe != -1) {
@@ -384,6 +425,7 @@ public:
 	 * @throws IOException Something went wrong during the connection process.
 	 */
 	SessionPtr connect(const function<void()> &closeCallback) const {
+		TRACE_POINT();
 		int fd, ret;
 		
 		do {

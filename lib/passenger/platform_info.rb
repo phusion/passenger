@@ -118,6 +118,13 @@ private
 			flags = `#{APXS2} -q CFLAGS`.strip << " -I" << `#{APXS2} -q INCLUDEDIR`
 			flags.strip!
 			flags.gsub!(/-O\d? /, '')
+
+			# Remove flags not supported by GCC
+			if RUBY_PLATFORM =~ /solaris/ # TODO: Add support for people using SunStudio
+				# The big problem is Coolstack apxs includes a bunch of solaris -x directives.
+				flags = flags.split.reject {|f| f =~ /^\-x/}.join(' ')
+			end
+
 			return flags
 		end
 	end
@@ -166,9 +173,19 @@ private
 				architectures << "-arch #{$1}"
 			end
 			return architectures.join(' ')
+		elsif RUBY_PLATFORM =~ /solaris/
+			'-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -DBOOST_HAS_STDINT_H'
 		else
 			return ""
 		end
+	end
+	
+	def self.determine_multi_arch_ldflags
+	  if RUBY_PLATFORM =~ /solaris/
+			'-lxnet -lrt -lsocket -lnsl'
+	  else
+			''
+	  end
 	end
 	
 	def self.determine_library_extension
@@ -256,6 +273,10 @@ public
 	
 	# The C compiler flags that are necessary for building binaries in the same architecture(s) as Apache.
 	MULTI_ARCH_FLAGS = determine_multi_arch_flags
+	
+	# Sometimes you also need to link in libs explicitly
+	MULTI_ARCH_LDFLAGS = determine_multi_arch_ldflags
+	
 	# The current platform's shared library extension ('so' on most Unices).
 	LIBEXT = determine_library_extension
 	# An identifier for the current Linux distribution. nil if the operating system is not Linux.

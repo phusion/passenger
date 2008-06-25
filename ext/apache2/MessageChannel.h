@@ -20,6 +20,8 @@
 #ifndef _PASSENGER_MESSAGE_CHANNEL_H_
 #define _PASSENGER_MESSAGE_CHANNEL_H_
 
+#include <oxt/system_calls.hpp>
+
 #include <algorithm>
 #include <string>
 #include <list>
@@ -31,14 +33,19 @@
 #include <errno.h>
 #include <unistd.h>
 #include <cstdarg>
+#ifdef __OpenBSD__
+	// OpenBSD needs this for 'struct iovec'. Apparently it isn't
+	// always included by unistd.h and sys/types.h.
+	#include <sys/uio.h>
+#endif
 
-#include "System.h"
 #include "Exceptions.h"
 #include "Utils.h"
 
 namespace Passenger {
 
 using namespace std;
+using namespace oxt;
 
 /**
  * Convenience class for I/O operations on file descriptors.
@@ -99,6 +106,11 @@ class MessageChannel {
 private:
 	const static char DELIMITER = '\0';
 	int fd;
+	
+	#ifdef __OpenBSD__
+		typedef u_int32_t uint32_t;
+		typedef u_int16_t uint16_t;
+	#endif
 
 public:
 	/**
@@ -127,7 +139,7 @@ public:
 	 */
 	void close() {
 		if (fd != -1) {
-			int ret = InterruptableCalls::close(fd);
+			int ret = syscalls::close(fd);
 			if (ret == -1) {
 				throw SystemException("Cannot close file descriptor", errno);
 			}
@@ -237,7 +249,7 @@ public:
 		ssize_t ret;
 		unsigned int written = 0;
 		do {
-			ret = InterruptableCalls::write(fd, data + written, size - written);
+			ret = syscalls::write(fd, data + written, size - written);
 			if (ret == -1) {
 				throw SystemException("write() failed", errno);
 			} else {
@@ -309,7 +321,7 @@ public:
 			memcpy(CMSG_DATA(control_header), &fileDescriptor, sizeof(int));
 		#endif
 		
-		ret = InterruptableCalls::sendmsg(fd, &msg, 0);
+		ret = syscalls::sendmsg(fd, &msg, 0);
 		if (ret == -1) {
 			throw SystemException("Cannot send file descriptor with sendmsg()", errno);
 		}
@@ -331,7 +343,7 @@ public:
 		unsigned int alreadyRead = 0;
 		
 		do {
-			ret = InterruptableCalls::read(fd, (char *) &size + alreadyRead, sizeof(size) - alreadyRead);
+			ret = syscalls::read(fd, (char *) &size + alreadyRead, sizeof(size) - alreadyRead);
 			if (ret == -1) {
 				throw SystemException("read() failed", errno);
 			} else if (ret == 0) {
@@ -346,7 +358,7 @@ public:
 		buffer.reserve(size);
 		while (buffer.size() < size) {
 			char tmp[1024 * 8];
-			ret = InterruptableCalls::read(fd, tmp, min(size - buffer.size(), sizeof(tmp)));
+			ret = syscalls::read(fd, tmp, min(size - buffer.size(), sizeof(tmp)));
 			if (ret == -1) {
 				throw SystemException("read() failed", errno);
 			} else if (ret == 0) {
@@ -421,7 +433,7 @@ public:
 		unsigned int alreadyRead = 0;
 		
 		while (alreadyRead < size) {
-			ret = InterruptableCalls::read(fd, (char *) buf + alreadyRead, size - alreadyRead);
+			ret = syscalls::read(fd, (char *) buf + alreadyRead, size - alreadyRead);
 			if (ret == -1) {
 				throw SystemException("read() failed", errno);
 			} else if (ret == 0) {
@@ -477,7 +489,7 @@ public:
 		msg.msg_controllen = sizeof(control_data);
 		msg.msg_flags      = 0;
 		
-		ret = InterruptableCalls::recvmsg(fd, &msg, 0);
+		ret = syscalls::recvmsg(fd, &msg, 0);
 		if (ret == -1) {
 			throw SystemException("Cannot read file descriptor with recvmsg()", errno);
 		}
@@ -493,6 +505,57 @@ public:
 		#else
 			return *((int *) CMSG_DATA(control_header));
 		#endif
+	}
+	
+	/**
+	 * Set the timeout value for reading data from this channel.
+	 * If no data can be read within the timeout period, then a
+	 * SystemException will be thrown by one of the read methods,
+	 * with error code EAGAIN or EWOULDBLOCK.
+	 *
+	 * @param msec The timeout, in milliseconds. If 0 is given,
+	 *             there will be no timeout.
+	 * @throws SystemException Cannot set the timeout.
+	 */
+	void setReadTimeout(unsigned int msec) {
+		// See the comment for setWriteTimeout().
+		struct timeval tv;
+		int ret;
+		
+		tv.tv_sec = msec / 1000;
+		tv.tv_usec = msec % 1000 * 1000;
+		ret = syscalls::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO,
+			&tv, sizeof(tv));
+		if (ret == -1) {
+			throw SystemException("Cannot set read timeout for socket", errno);
+		}
+	}
+	
+	/**
+	 * Set the timeout value for writing data to this channel.
+	 * If no data can be written within the timeout period, then a
+	 * SystemException will be thrown, with error code EAGAIN or
+	 * EWOULDBLOCK.
+	 *
+	 * @param msec The timeout, in milliseconds. If 0 is given,
+	 *             there will be no timeout.
+	 * @throws SystemException Cannot set the timeout.
+	 */
+	void setWriteTimeout(unsigned int msec) {
+		// People say that SO_RCVTIMEO/SO_SNDTIMEO are unreliable and
+		// not well-implemented on all platforms.
+		// http://www.developerweb.net/forum/archive/index.php/t-3439.html
+		// That's why we use APR's timeout facilities as well (see Hooks.cpp).
+		struct timeval tv;
+		int ret;
+		
+		tv.tv_sec = msec / 1000;
+		tv.tv_usec = msec % 1000 * 1000;
+		ret = syscalls::setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO,
+			&tv, sizeof(tv));
+		if (ret == -1) {
+			throw SystemException("Cannot set read timeout for socket", errno);
+		}
 	}
 };
 

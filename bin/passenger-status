@@ -20,6 +20,12 @@
 $LOAD_PATH << File.expand_path(File.dirname(__FILE__) + "/../lib")
 $LOAD_PATH << File.expand_path(File.dirname(__FILE__) + "/../ext")
 
+# ANSI color codes
+RESET   = "\e[0m"
+BOLD    = "\e[1m"
+YELLOW  = "\e[33m"
+BLUE_BG = "\e[44m"
+
 class StatusFifo
 	attr_accessor :filename
 	attr_accessor :pid
@@ -60,7 +66,11 @@ end
 
 def show_status(status_fifo)
 	begin
-		puts File.read(status_fifo.filename)
+		text = File.read(status_fifo.filename)
+		# Colorize output
+		text.gsub!(/^(----)(.*)$/, YELLOW + BLUE_BG + BOLD + '\1\2' + RESET)
+		text.gsub!(/^( +in '.*? )(.*?)\(/, '\1' + BOLD + '\2' + RESET + '(')
+		puts text
 	rescue => e
 		STDERR.puts "*** ERROR: Cannot query status for Passenger instance #{status_fifo.pid}:"
 		STDERR.puts e.to_s

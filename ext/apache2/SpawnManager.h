@@ -24,6 +24,8 @@
 #include <list>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
+#include <oxt/system_calls.hpp>
+#include <oxt/backtrace.hpp>
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -40,12 +42,12 @@
 #include "MessageChannel.h"
 #include "Exceptions.h"
 #include "Logging.h"
-#include "System.h"
 
 namespace Passenger {
 
 using namespace std;
 using namespace boost;
+using namespace oxt;
 
 /**
  * @brief Spawning of Ruby on Rails/Rack application instances.
@@ -89,7 +91,7 @@ private:
 	string rubyCommand;
 	string user;
 	
-	mutex lock;
+	boost::mutex lock;
 	
 	MessageChannel channel;
 	pid_t pid;
@@ -103,30 +105,34 @@ private:
 	 * @throws IOException The specified log file could not be opened.
 	 */
 	void restartServer() {
+		TRACE_POINT();
 		if (pid != 0) {
+			UPDATE_TRACE_POINT();
 			channel.close();
 			
 			// Wait at most 5 seconds for the spawn server to exit.
 			// If that doesn't work, kill it, then wait at most 5 seconds
 			// for it to exit.
-			time_t begin = InterruptableCalls::time(NULL);
+			time_t begin = syscalls::time(NULL);
 			bool done = false;
-			while (!done && InterruptableCalls::time(NULL) - begin < 5) {
-				if (InterruptableCalls::waitpid(pid, NULL, WNOHANG) > 0) {
+			while (!done && syscalls::time(NULL) - begin < 5) {
+				if (syscalls::waitpid(pid, NULL, WNOHANG) > 0) {
 					done = true;
 				} else {
-					InterruptableCalls::usleep(100000);
+					syscalls::usleep(100000);
 				}
 			}
+			UPDATE_TRACE_POINT();
 			if (!done) {
+				UPDATE_TRACE_POINT();
 				P_TRACE(2, "Spawn server did not exit in time, killing it...");
-				InterruptableCalls::kill(pid, SIGTERM);
-				begin = InterruptableCalls::time(NULL);
-				while (InterruptableCalls::time(NULL) - begin < 5) {
-					if (InterruptableCalls::waitpid(pid, NULL, WNOHANG) > 0) {
+				syscalls::kill(pid, SIGTERM);
+				begin = syscalls::time(NULL);
+				while (syscalls::time(NULL) - begin < 5) {
+					if (syscalls::waitpid(pid, NULL, WNOHANG) > 0) {
 						break;
 					} else {
-						InterruptableCalls::usleep(100000);
+						syscalls::usleep(100000);
 					}
 				}
 				P_TRACE(2, "Spawn server has exited.");
@@ -138,11 +144,11 @@ private:
 		FILE *logFileHandle = NULL;
 		
 		serverNeedsRestart = true;
-		if (InterruptableCalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
+		if (syscalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
 			throw SystemException("Cannot create a Unix socket", errno);
 		}
 		if (!logFile.empty()) {
-			logFileHandle = InterruptableCalls::fopen(logFile.c_str(), "a");
+			logFileHandle = syscalls::fopen(logFile.c_str(), "a");
 			if (logFileHandle == NULL) {
 				string message("Cannot open log file '");
 				message.append(logFile);
@@ -151,7 +157,8 @@ private:
 			}
 		}
 
-		pid = InterruptableCalls::fork();
+		UPDATE_TRACE_POINT();
+		pid = syscalls::fork();
 		if (pid == 0) {
 			if (!logFile.empty()) {
 				dup2(fileno(logFileHandle), STDERR_FILENO);
@@ -210,25 +217,25 @@ private:
 			_exit(1);
 		} else if (pid == -1) {
 			int e = errno;
-			InterruptableCalls::close(fds[0]);
-			InterruptableCalls::close(fds[1]);
+			syscalls::close(fds[0]);
+			syscalls::close(fds[1]);
 			if (logFileHandle != NULL) {
-				InterruptableCalls::fclose(logFileHandle);
+				syscalls::fclose(logFileHandle);
 			}
 			pid = 0;
 			throw SystemException("Unable to fork a process", e);
 		} else {
-			InterruptableCalls::close(fds[1]);
+			syscalls::close(fds[1]);
 			if (!logFile.empty()) {
-				InterruptableCalls::fclose(logFileHandle);
+				syscalls::fclose(logFileHandle);
 			}
 			channel = MessageChannel(fds[0]);
 			serverNeedsRestart = false;
 			
 			#ifdef TESTING_SPAWN_MANAGER
 				if (nextRestartShouldFail) {
-					InterruptableCalls::kill(pid, SIGTERM);
-					InterruptableCalls::usleep(500000);
+					syscalls::kill(pid, SIGTERM);
+					syscalls::usleep(500000);
 				}
 			#endif
 		}
@@ -254,6 +261,7 @@ private:
 		const string &spawnMethod,
 		const string &appType
 	) {
+		TRACE_POINT();
 		vector<string> args;
 		int ownerPipe;
 		
@@ -312,7 +320,7 @@ private:
 		}
 		
 		if (args.size() != 3) {
-			InterruptableCalls::close(ownerPipe);
+			syscalls::close(ownerPipe);
 			throw SpawnException("The spawn server sent an invalid message.");
 		}
 		
@@ -340,6 +348,7 @@ private:
 	                     bool lowerPrivilege, const string &lowestUser,
 	                     const string &environment, const string &spawnMethod,
 	                     const string &appType) {
+		TRACE_POINT();
 		bool restarted;
 		try {
 			P_DEBUG("Spawn server died. Attempting to restart it...");
@@ -369,6 +378,7 @@ private:
 	 * @throws SystemException Something went wrong.
 	 */
 	void sendReloadCommand(const string &appRoot) {
+		TRACE_POINT();
 		try {
 			channel.write("reload", appRoot.c_str(), NULL);
 		} catch (const SystemException &e) {
@@ -378,6 +388,7 @@ private:
 	}
 	
 	void handleReloadException(const SystemException &e, const string &appRoot) {
+		TRACE_POINT();
 		bool restarted;
 		try {
 			P_DEBUG("Spawn server died. Attempting to restart it...");
@@ -434,6 +445,7 @@ public:
 	             const string &logFile = "",
 	             const string &rubyCommand = "ruby",
 	             const string &user = "") {
+		TRACE_POINT();
 		this->spawnServerCommand = spawnServerCommand;
 		this->logFile = logFile;
 		this->rubyCommand = rubyCommand;
@@ -454,12 +466,14 @@ public:
 	}
 	
 	~SpawnManager() throw() {
+		TRACE_POINT();
 		if (pid != 0) {
+			UPDATE_TRACE_POINT();
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
 			P_TRACE(2, "Shutting down spawn manager (PID " << pid << ").");
 			channel.close();
-			InterruptableCalls::waitpid(pid, NULL, 0);
+			syscalls::waitpid(pid, NULL, 0);
 			P_TRACE(2, "Spawn manager exited.");
 		}
 	}
@@ -514,7 +528,8 @@ public:
 		const string &spawnMethod = "smart",
 		const string &appType = "rails"
 	) {
-		mutex::scoped_lock l(lock);
+		TRACE_POINT();
+		boost::mutex::scoped_lock l(lock);
 		try {
 			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser,
 				environment, spawnMethod, appType);
@@ -544,6 +559,7 @@ public:
 	 *         restart was attempted, but it failed.
 	 */
 	void reload(const string &appRoot) {
+		TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		try {

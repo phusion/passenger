@@ -10,13 +10,15 @@ ext/apache2/*.slo
 ext/apache2/.libs
 ext/apache2/ApplicationPoolServerExecutable
 ext/passenger/Makefile
-ext/boost/src/*.a
+ext/*.a
 doc/rdoc
 doc/cxxapi
 doc/*.html
+test/test.log
 test/Apache2ModuleTests
 test/config.yml
 test/coverage
+test/oxt/oxt_test_main
 test/stub/railsapp/app/controllers/bar_controller.rb
 test/stub/*/log/*
 test/stub/apache2/*.log

@@ -25,13 +25,14 @@ class RequestHandler:
 					done = True
 					break
 				try:
-					env, input_stream = self.parse_request(client)
-					self.process_request(env, input_stream, client)
-				except KeyboardInterrupt:
-					done = True
-				except Exception, e:
-					traceback.print_tb(sys.exc_info()[2])
-					sys.stderr.write(str(e.__class__) + ": " + e.message + "\n")
+					try:
+						env, input_stream = self.parse_request(client)
+						self.process_request(env, input_stream, client)
+					except KeyboardInterrupt:
+						done = True
+					except Exception, e:
+						traceback.print_tb(sys.exc_info()[2])
+						sys.stderr.write(str(e.__class__) + ": " + e.message + "\n")
 				finally:
 					try:
 						client.close()

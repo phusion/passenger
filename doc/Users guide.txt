@@ -614,6 +614,13 @@ Rails/Rack web page. We recommend a value of `2 * x`, where `x` is the average
 number of seconds that a visitor spends on a single Rails/Rack web page. But your
 mileage may vary.
 
+When this value is set to '0', application instances will not be shutdown unless 
+it's really necessary, i.e. when Phusion Passenger is out of worker processes
+for a given application and one of the inactive application instances needs to
+make place for another application instance. Setting the value to 0 is
+recommended if you're on a non-shared host that's only running a few
+applications, each which must be available at all times.
+
 This option may only occur once, in the global server configuration.
 The default value is '300'.
 
@@ -1210,7 +1217,7 @@ count    = 1
 active   = 0
 inactive = 1
 
------------ Applications -----------
+----------- Domains -----------
 /var/www/projects/app1-foobar: 
   PID: 9617      Sessions: 0
 --------------------------------------------------
@@ -1225,12 +1232,13 @@ active:: The number of application instances that are currently processing
 requests. This value is always less than or equal to 'count'.
 inactive:: The number of application instances that are currently *not* processing
 requests, i.e. are idle. Idle application instances will be shutdown after a while,
-as can be specified with <<PassengerPoolIdleTime,PassengerPoolIdleTime>>. The value of 'inactive'
-equals `count - active`.
+as can be specified with <<PassengerPoolIdleTime,PassengerPoolIdleTime>> (unless this
+value is set to 0, in which case application instances are never shut down via idle
+time). The value of 'inactive' equals `count - active`.
 
-The 'applications' section shows each application instance, which directory it belongs
-to. The 'sessions' field shows how many HTTP client are currently being processed by
-that application instance.
+The 'domains' section shows, for each application directory, information about running
+application instances. The 'sessions' field shows how many HTTP client are currently
+in the queue of that application instance, waiting to be processed.
 
 Since Phusion Passenger uses fair load balancing by default, the number of sessions for the
 application instances should be fairly close to each other. For example, this is fairly

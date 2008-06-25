@@ -20,7 +20,7 @@
 #ifndef _PASSENGER_EXCEPTIONS_H_
 #define _PASSENGER_EXCEPTIONS_H_
 
-#include <exception>
+#include <oxt/tracable_exception.hpp>
 #include <string>
 #include <sstream>
 
@@ -40,7 +40,7 @@ using namespace std;
  *
  * @ingroup Exceptions
  */
-class SystemException: public exception {
+class SystemException: public oxt::tracable_exception {
 private:
 	string briefMessage;
 	string systemMessage;
@@ -50,23 +50,22 @@ public:
 	/**
 	 * Create a new SystemException.
 	 *
-	 * @param message A message describing the error.
+	 * @param briefMessage A brief message describing the error.
 	 * @param errorCode The error code, i.e. the value of errno right after the error occured.
 	 * @note A system description of the error will be appended to the given message.
-	 *    For example, if <tt>errorCode</tt> is <tt>EBADF</tt>, and <tt>message</tt>
+	 *    For example, if <tt>errorCode</tt> is <tt>EBADF</tt>, and <tt>briefMessage</tt>
 	 *    is <em>"Something happened"</em>, then what() will return <em>"Something happened: Bad
 	 *    file descriptor (10)"</em> (if 10 is the number for EBADF).
 	 * @post code() == errorCode
-	 * @post brief() == message
+	 * @post brief() == briefMessage
 	 */
-	SystemException(const string &message, int errorCode) {
+	SystemException(const string &briefMessage, int errorCode) {
 		stringstream str;
 		
-		briefMessage = message;
 		str << strerror(errorCode) << " (" << errorCode << ")";
 		systemMessage = str.str();
 		
-		fullMessage = briefMessage + ": " + systemMessage;
+		setBriefMessage(briefMessage);
 		m_code = errorCode;
 	}
 	
@@ -74,6 +73,11 @@ public:
 	
 	virtual const char *what() const throw() {
 		return fullMessage.c_str();
+	}
+	
+	void setBriefMessage(const string &message) {
+		briefMessage = message;
+		fullMessage = briefMessage + ": " + systemMessage;
 	}
 	
 	/**
@@ -131,7 +135,7 @@ public:
  *
  * @ingroup Exceptions
  */
-class IOException: public exception {
+class IOException: public oxt::tracable_exception {
 private:
 	string msg;
 public:
@@ -152,7 +156,7 @@ public:
 /**
  * Thrown when an invalid configuration is given.
  */
-class ConfigurationException: public exception {
+class ConfigurationException: public oxt::tracable_exception {
 private:
 	string msg;
 public:
@@ -166,7 +170,7 @@ public:
  * instance. The exception may contain an error page, which is a user-friendly
  * HTML page with details about the error.
  */
-class SpawnException: public exception {
+class SpawnException: public oxt::tracable_exception {
 private:
 	string msg;
 	bool m_hasErrorPage;
@@ -207,7 +211,7 @@ public:
  *
  * @ingroup Exceptions
  */
-class BusyException: public exception {
+class BusyException: public oxt::tracable_exception {
 private:
 	string msg;
 public:

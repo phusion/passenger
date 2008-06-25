@@ -27,6 +27,9 @@
 #include <boost/date_time/microsec_time_clock.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
+#include <oxt/system_calls.hpp>
+#include <oxt/backtrace.hpp>
+
 #include <string>
 #include <sstream>
 #include <map>
@@ -44,7 +47,6 @@
 
 #include "ApplicationPool.h"
 #include "Logging.h"
-#include "System.h"
 #ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER
 	#include "DummySpawnManager.h"
 #else
@@ -55,6 +57,7 @@ namespace Passenger {
 
 using namespace std;
 using namespace boost;
+using namespace oxt;
 
 class ApplicationPoolServer;
 
@@ -99,12 +102,18 @@ private:
 	static const unsigned int GET_TIMEOUT = 5000; // In milliseconds.
 
 	friend class ApplicationPoolServer;
+	struct Domain;
 	struct AppContainer;
 	
+	typedef shared_ptr<Domain> DomainPtr;
 	typedef shared_ptr<AppContainer> AppContainerPtr;
 	typedef list<AppContainerPtr> AppContainerList;
-	typedef shared_ptr<AppContainerList> AppContainerListPtr;
-	typedef map<string, AppContainerListPtr> ApplicationMap;
+	typedef map<string, DomainPtr> DomainMap;
+	
+	struct Domain {
+		AppContainerList instances;
+		unsigned int size;
+	};
 	
 	struct AppContainer {
 		ApplicationPtr app;
@@ -115,10 +124,10 @@ private:
 	};
 	
 	struct SharedData {
-		mutex lock;
+		boost::mutex lock;
 		condition activeOrMaxChanged;
 		
-		ApplicationMap apps;
+		DomainMap domains;
 		unsigned int max;
 		unsigned int count;
 		unsigned int active;
@@ -141,23 +150,23 @@ private:
 		}
 		
 		void operator()() {
-			mutex::scoped_lock l(data->lock);
+			boost::mutex::scoped_lock l(data->lock);
 			AppContainerPtr container(this->container.lock());
 			
 			if (container == NULL) {
 				return;
 			}
 			
-			ApplicationMap::iterator it;
-			it = data->apps.find(container->app->getAppRoot());
-			if (it != data->apps.end()) {
-				AppContainerListPtr list(it->second);
+			DomainMap::iterator it;
+			it = data->domains.find(container->app->getAppRoot());
+			if (it != data->domains.end()) {
+				AppContainerList *instances = &it->second->instances;
 				container->lastUsed = time(NULL);
 				container->sessions--;
 				if (container->sessions == 0) {
-					list->erase(container->iterator);
-					list->push_front(container);
-					container->iterator = list->begin();
+					instances->erase(container->iterator);
+					instances->push_front(container);
+					container->iterator = instances->begin();
 					data->inactiveApps.push_back(container);
 					container->ia_iterator = data->inactiveApps.end();
 					container->ia_iterator--;
@@ -174,16 +183,16 @@ private:
 		SpawnManager spawnManager;
 	#endif
 	SharedDataPtr data;
-	thread *cleanerThread;
+	boost::thread *cleanerThread;
 	bool detached;
 	bool done;
 	unsigned int maxIdleTime;
 	condition cleanerThreadSleeper;
 	
 	// Shortcuts for instance variables in SharedData. Saves typing in get().
-	mutex &lock;
+	boost::mutex &lock;
 	condition &activeOrMaxChanged;
-	ApplicationMap &apps;
+	DomainMap &domains;
 	unsigned int &max;
 	unsigned int &count;
 	unsigned int &active;
@@ -197,25 +206,37 @@ private:
 	 */
 	bool inline verifyState() {
 	#if PASSENGER_DEBUG
-		// Invariant for _apps_.
-		ApplicationMap::const_iterator it;
-		for (it = apps.begin(); it != apps.end(); it++) {
-			AppContainerList *list = it->second.get();
-			P_ASSERT(!list->empty(), false, "List for '" << it->first << "' is nonempty.");
+		// Invariants for _domains_.
+		DomainMap::const_iterator it;
+		unsigned int totalSize = 0;
+		for (it = domains.begin(); it != domains.end(); it++) {
+			const string &appRoot = it->first;
+			Domain *domain = it->second.get();
+			AppContainerList *instances = &domain->instances;
+			
+			P_ASSERT(domain->size <= count, false,
+				"domains['" << appRoot << "'].size <= count");
+			totalSize += domain->size;
+			
+			// Invariants for Domain.
+			
+			P_ASSERT(!instances->empty(), false,
+				"domains['" << appRoot << "'].instances is nonempty.");
 			
 			AppContainerList::const_iterator prev_lit;
 			AppContainerList::const_iterator lit;
-			prev_lit = list->begin();
+			prev_lit = instances->begin();
 			lit = prev_lit;
 			lit++;
-			for (; lit != list->end(); lit++) {
+			for (; lit != instances->end(); lit++) {
 				if ((*prev_lit)->sessions > 0) {
 					P_ASSERT((*lit)->sessions > 0, false,
-						"List for '" << it->first <<
-						"' is sorted from nonactive to active");
+						"domains['" << appRoot << "'].instances "
+						"is sorted from nonactive to active");
 				}
 			}
 		}
+		P_ASSERT(totalSize == count, false, "(sum of all d.size in domains) == count");
 		
 		P_ASSERT(active <= count, false,
 			"active (" << active << ") < count (" << count << ")");
@@ -227,7 +248,7 @@ private:
 	
 	template<typename LockActionType>
 	string toString(LockActionType lockAction) const {
-		unique_lock<mutex> l(lock, lockAction);
+		unique_lock<boost::mutex> l(lock, lockAction);
 		stringstream result;
 		
 		result << "----------- General information -----------" << endl;
@@ -237,19 +258,22 @@ private:
 		result << "inactive = " << inactiveApps.size() << endl;
 		result << endl;
 		
-		result << "----------- Applications -----------" << endl;
-		ApplicationMap::const_iterator it;
-		for (it = apps.begin(); it != apps.end(); it++) {
-			AppContainerList *list = it->second.get();
+		result << "----------- Domains -----------" << endl;
+		DomainMap::const_iterator it;
+		for (it = domains.begin(); it != domains.end(); it++) {
+			Domain *domain = it->second.get();
+			AppContainerList *instances = &domain->instances;
 			AppContainerList::const_iterator lit;
 			
 			result << it->first << ": " << endl;
-			for (lit = list->begin(); lit != list->end(); lit++) {
+			for (lit = instances->begin(); lit != instances->end(); lit++) {
 				AppContainer *container = lit->get();
 				char buf[128];
 				
-				snprintf(buf, sizeof(buf), "PID: %-8d  Sessions: %d",
-					container->app->getPid(), container->sessions);
+				snprintf(buf, sizeof(buf),
+						"PID: %-8lu  Sessions: %d",
+						(unsigned long) container->app->getPid(),
+						container->sessions);
 				result << "  " << buf << endl;
 			}
 			result << endl;
@@ -295,7 +319,7 @@ private:
 	
 	void cleanerThreadMainLoop() {
 		this_thread::disable_syscall_interruption dsi;
-		unique_lock<mutex> l(lock);
+		unique_lock<boost::mutex> l(lock);
 		try {
 			while (!done && !this_thread::interruption_requested()) {
 				xtime xt;
@@ -312,30 +336,31 @@ private:
 					}
 				}
 				
-				time_t now = InterruptableCalls::time(NULL);
+				time_t now = syscalls::time(NULL);
 				AppContainerList::iterator it;
 				for (it = inactiveApps.begin(); it != inactiveApps.end(); it++) {
 					AppContainer &container(*it->get());
 					ApplicationPtr app(container.app);
-					AppContainerListPtr appList(apps[app->getAppRoot()]);
+					Domain *domain = domains[app->getAppRoot()].get();
+					AppContainerList *instances = &domain->instances;
 					
-					if (now - container.lastUsed > (time_t) maxIdleTime) {
+					if (maxIdleTime > 0 &&  
+					   (now - container.lastUsed > (time_t) maxIdleTime)) {
 						P_DEBUG("Cleaning idle app " << app->getAppRoot() <<
 							" (PID " << app->getPid() << ")");
-						appList->erase(container.iterator);
+						instances->erase(container.iterator);
 						
 						AppContainerList::iterator prev = it;
 						prev--;
 						inactiveApps.erase(it);
 						it = prev;
 						
-						appInstanceCount[app->getAppRoot()]--;
+						domain->size--;
 						
 						count--;
 					}
-					if (appList->empty()) {
-						apps.erase(app->getAppRoot());
-						appInstanceCount.erase(app->getAppRoot());
+					if (instances->empty()) {
+						domains.erase(app->getAppRoot());
 						data->restartFileTimes.erase(app->getAppRoot());
 					}
 				}
@@ -350,9 +375,9 @@ private:
 	 * @throws SpawnException
 	 * @throws SystemException
 	 */
-	pair<AppContainerPtr, AppContainerList *>
+	pair<AppContainerPtr, Domain *>
 	spawnOrUseExisting(
-		mutex::scoped_lock &l,
+		boost::mutex::scoped_lock &l,
 		const string &appRoot,
 		bool lowerPrivilege,
 		const string &lowestUser,
@@ -363,15 +388,16 @@ private:
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		AppContainerPtr container;
-		AppContainerList *list;
+		Domain *domain;
+		AppContainerList *instances;
 		
 		try {
-			ApplicationMap::iterator it(apps.find(appRoot));
+			DomainMap::iterator it(domains.find(appRoot));
 			
-			if (it != apps.end() && needsRestart(appRoot)) {
+			if (it != domains.end() && needsRestart(appRoot)) {
 				AppContainerList::iterator it2;
-				list = it->second.get();
-				for (it2 = list->begin(); it2 != list->end(); it2++) {
+				instances = &it->second->instances;
+				for (it2 = instances->begin(); it2 != instances->end(); it2++) {
 					container = *it2;
 					if (container->sessions == 0) {
 						inactiveApps.erase(container->ia_iterator);
@@ -379,43 +405,43 @@ private:
 						active--;
 					}
 					it2--;
-					list->erase(container->iterator);
+					instances->erase(container->iterator);
 					count--;
 				}
-				apps.erase(appRoot);
-				appInstanceCount.erase(appRoot);
+				domains.erase(appRoot);
 				spawnManager.reload(appRoot);
-				it = apps.end();
+				it = domains.end();
 				activeOrMaxChanged.notify_all();
 			}
 			
-			if (it != apps.end()) {
-				list = it->second.get();
+			if (it != domains.end()) {
+				domain = it->second.get();
+				instances = &domain->instances;
 				
-				if (list->front()->sessions == 0) {
-					container = list->front();
-					list->pop_front();
-					list->push_back(container);
-					container->iterator = list->end();
+				if (instances->front()->sessions == 0) {
+					container = instances->front();
+					instances->pop_front();
+					instances->push_back(container);
+					container->iterator = instances->end();
 					container->iterator--;
 					inactiveApps.erase(container->ia_iterator);
 					active++;
 					activeOrMaxChanged.notify_all();
 				} else if (count >= max || (
-					maxPerApp != 0 && appInstanceCount[appRoot] >= maxPerApp )
+					maxPerApp != 0 && domain->size >= maxPerApp )
 					) {
-					AppContainerList::iterator it(list->begin());
-					AppContainerList::iterator smallest(list->begin());
+					AppContainerList::iterator it(instances->begin());
+					AppContainerList::iterator smallest(instances->begin());
 					it++;
-					for (; it != list->end(); it++) {
+					for (; it != instances->end(); it++) {
 						if ((*it)->sessions < (*smallest)->sessions) {
 							smallest = it;
 						}
 					}
 					container = *smallest;
-					list->erase(smallest);
-					list->push_back(container);
-					container->iterator = list->end();
+					instances->erase(smallest);
+					instances->push_back(container);
+					container->iterator = instances->end();
 					container->iterator--;
 				} else {
 					container = ptr(new AppContainer());
@@ -427,10 +453,10 @@ private:
 							spawnMethod, appType);
 					}
 					container->sessions = 0;
-					list->push_back(container);
-					container->iterator = list->end();
+					instances->push_back(container);
+					container->iterator = instances->end();
 					container->iterator--;
-					appInstanceCount[appRoot]++;
+					domain->size++;
 					count++;
 					active++;
 					activeOrMaxChanged.notify_all();
@@ -438,21 +464,21 @@ private:
 			} else {
 				while (!(
 					active < max &&
-					(maxPerApp == 0 || appInstanceCount[appRoot] < maxPerApp)
+					(maxPerApp == 0 || domain->size < maxPerApp)
 				)) {
 					activeOrMaxChanged.wait(l);
 				}
 				if (count == max) {
 					container = inactiveApps.front();
 					inactiveApps.pop_front();
-					list = apps[container->app->getAppRoot()].get();
-					list->erase(container->iterator);
-					if (list->empty()) {
-						apps.erase(container->app->getAppRoot());
+					domain = domains[container->app->getAppRoot()].get();
+					instances = &domain->instances;
+					instances->erase(container->iterator);
+					if (instances->empty()) {
+						domains.erase(container->app->getAppRoot());
 						restartFileTimes.erase(container->app->getAppRoot());
-						appInstanceCount.erase(container->app->getAppRoot());
 					} else {
-						appInstanceCount[container->app->getAppRoot()]--;
+						domain->size--;
 					}
 					count--;
 				}
@@ -464,17 +490,18 @@ private:
 						environment, spawnMethod, appType);
 				}
 				container->sessions = 0;
-				it = apps.find(appRoot);
-				if (it == apps.end()) {
-					list = new AppContainerList();
-					apps[appRoot] = ptr(list);
-					appInstanceCount[appRoot] = 1;
+				it = domains.find(appRoot);
+				if (it == domains.end()) {
+					domain = new Domain();
+					domain->size = 1;
+					domains[appRoot] = ptr(domain);
 				} else {
-					list = it->second.get();
-					appInstanceCount[appRoot]++;
+					domain = it->second.get();
+					domain->size++;
 				}
-				list->push_back(container);
-				container->iterator = list->end();
+				instances = &domain->instances;
+				instances->push_back(container);
+				container->iterator = instances->end();
 				container->iterator--;
 				count++;
 				active++;
@@ -498,7 +525,7 @@ private:
 			throw SpawnException(message);
 		}
 		
-		return make_pair(container, list);
+		return make_pair(container, domain);
 	}
 	
 public:
@@ -533,7 +560,7 @@ public:
 		data(new SharedData()),
 		lock(data->lock),
 		activeOrMaxChanged(data->activeOrMaxChanged),
-		apps(data->apps),
+		domains(data->domains),
 		max(data->max),
 		count(data->count),
 		active(data->active),
@@ -542,6 +569,7 @@ public:
 		restartFileTimes(data->restartFileTimes),
 		appInstanceCount(data->appInstanceCount)
 	{
+		TRACE_POINT();
 		detached = false;
 		done = false;
 		max = DEFAULT_MAX_POOL_SIZE;
@@ -549,7 +577,7 @@ public:
 		active = 0;
 		maxPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
 		maxIdleTime = DEFAULT_MAX_IDLE_TIME;
-		cleanerThread = new thread(
+		cleanerThread = new boost::thread(
 			bind(&StandardApplicationPool::cleanerThreadMainLoop, this),
 			CLEANER_THREAD_STACK_SIZE
 		);
@@ -559,7 +587,7 @@ public:
 		if (!detached) {
 			this_thread::disable_interruption di;
 			{
-				mutex::scoped_lock l(lock);
+				boost::mutex::scoped_lock l(lock);
 				done = true;
 				cleanerThreadSleeper.notify_one();
 			}
@@ -576,20 +604,21 @@ public:
 		const string &spawnMethod = "smart",
 		const string &appType = "rails"
 	) {
+		TRACE_POINT();
 		using namespace boost::posix_time;
 		unsigned int attempt = 0;
 		ptime timeLimit(get_system_time() + millisec(GET_TIMEOUT));
-		unique_lock<mutex> l(lock);
+		unique_lock<boost::mutex> l(lock);
 		
 		while (true) {
 			attempt++;
 			
-			pair<AppContainerPtr, AppContainerList *> p(
+			pair<AppContainerPtr, Domain *> p(
 				spawnOrUseExisting(l, appRoot, lowerPrivilege, lowestUser,
 					environment, spawnMethod, appType)
 			);
-			AppContainerPtr &container(p.first);
-			AppContainerList &list(*p.second);
+			AppContainerPtr &container = p.first;
+			Domain *domain = p.second;
 
 			container->lastUsed = time(NULL);
 			container->sessions++;
@@ -614,10 +643,10 @@ public:
 					}
 					throw IOException(message);
 				} else {
-					list.erase(container->iterator);
-					if (list.empty()) {
-						apps.erase(appRoot);
-						appInstanceCount.erase(appRoot);
+					AppContainerList &instances(domain->instances);
+					instances.erase(container->iterator);
+					if (instances.empty()) {
+						domains.erase(appRoot);
 					}
 					count--;
 					active--;
@@ -632,23 +661,24 @@ public:
 	}
 	
 	virtual void clear() {
-		mutex::scoped_lock l(lock);
-		apps.clear();
+		boost::mutex::scoped_lock l(lock);
+		domains.clear();
 		inactiveApps.clear();
 		restartFileTimes.clear();
 		appInstanceCount.clear();
 		count = 0;
 		active = 0;
+		activeOrMaxChanged.notify_all();
 	}
 	
 	virtual void setMaxIdleTime(unsigned int seconds) {
-		mutex::scoped_lock l(lock);
+		boost::mutex::scoped_lock l(lock);
 		maxIdleTime = seconds;
 		cleanerThreadSleeper.notify_one();
 	}
 	
 	virtual void setMax(unsigned int max) {
-		mutex::scoped_lock l(lock);
+		boost::mutex::scoped_lock l(lock);
 		this->max = max;
 		activeOrMaxChanged.notify_all();
 	}
@@ -662,7 +692,7 @@ public:
 	}
 	
 	virtual void setMaxPerApp(unsigned int maxPerApp) {
-		mutex::scoped_lock l(lock);
+		boost::mutex::scoped_lock l(lock);
 		this->maxPerApp = maxPerApp;
 		activeOrMaxChanged.notify_all();
 	}
