@@ -27,7 +27,7 @@ require 'passenger/platform_info'
 ##### Configuration
 
 # Don't forget to edit Configuration.h too
-PACKAGE_VERSION = "1.9.0"
+PACKAGE_VERSION = "1.9.1"
 OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 
 include PlatformInfo
@@ -45,7 +45,6 @@ else
 end
 CXXFLAGS = "#{THREADING_FLAGS} #{OPTIMIZATION_FLAGS} -Wall -I/usr/local/include #{MULTI_ARCH_FLAGS}"
 LDFLAGS = "#{MULTI_ARCH_LDFLAGS}"
-
 
 #### Default tasks
 
@@ -333,17 +332,30 @@ end
 ##### Documentation
 
 subdir 'doc' do
-	ASCIIDOC = "asciidoc -a toc -a numbered -a toclevels=3 -a icons"
+  ASCIIDOC = 'asciidoc'
+	ASCIIDOC_FLAGS = "-a toc -a numbered -a toclevels=3 -a icons"
 	ASCII_DOCS = ['Security of user switching support', 'Users guide',
 		'Architectural overview']
 
-	desc "Generate all documentation"
-	task :doc => [:rdoc, :doxygen] + ASCII_DOCS.map{ |x| "#{x}.html" }
+	DOXYGEN = 'doxygen'
 	
+	desc "Generate all documentation"
+	task :doc => [:rdoc]
+	
+	if PlatformInfo.find_command(DOXYGEN)
+		task :doc => :doxygen
+	end
+
+	task :doc => ASCII_DOCS.map{ |x| "#{x}.html" }
+
 	ASCII_DOCS.each do |name|
 		file "#{name}.html" => ["#{name}.txt"] do
-			sh "#{ASCIIDOC} '#{name}.txt'"
-		end
+			if PlatformInfo.find_command(ASCIIDOC)
+		  	sh "#{ASCIIDOC} #{ASCIIDOC_FLAGS} '#{name}.txt'"
+			else
+				sh "echo 'asciidoc required to build docs' > '#{name}.html'"
+			end
+	  end
 	end
 	
 	task :clobber => [:'doxygen:clobber'] do
@@ -406,7 +418,13 @@ spec = Gem::Specification.new do |s|
 		'lib/passenger/templates/*',
 		'bin/*',
 		'doc/*',
-		'doc/*.html',
+		
+		# If you're running 'rake package' for the first time, then these
+		# files don't exist yet, and so won't be matched by the above glob.
+		# So we add these filenames manually.
+		'doc/Users guide.html',
+		'doc/Security of user switching support.html',
+		
 		'doc/*/*',
 		'doc/*/*/*',
 		'doc/*/*/*/*',
@@ -439,7 +457,9 @@ spec = Gem::Specification.new do |s|
 		'passenger-install-apache2-module',
 		'passenger-config',
 		'passenger-memory-stats',
-		'passenger-make-enterprisey'
+		'passenger-make-enterprisey',
+		'passenger-status',
+		'passenger-stress-test'
 	]
 	s.has_rdoc = true
 	s.extra_rdoc_files = ['README']

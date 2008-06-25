@@ -657,7 +657,10 @@ RailsAutoDetect off
 Used to specify that the given URI is a Rails application. See
 <<deploying_rails_to_sub_uri,Deploying Rails to a sub URI>> for an example.
 
-This option may occur multiple times, in the global server configuration or in a
+It is allowed to specify this option multiple times. Do this to deploy multiple
+Rails applications in different sub-URIs under the same virtual host.
+
+This option may occur in the global server configuration or in a
 virtual host configuration block.
 
 [[RailsAllowModRewrite]]
@@ -763,6 +766,12 @@ RackAutoDetect off
 ==== RackBaseURI <uri> ====
 Used to specify that the given URI is a Rack application. See
 <<deploying_rack_to_sub_uri,Deploying Rack to a sub URI>> for an example.
+
+It is allowed to specify this option multiple times. Do this to deploy multiple
+Rack applications in different sub-URIs under the same virtual host.
+
+This option may occur in the global server configuration or in a
+virtual host configuration block.
 
 [[rack_env]]
 ==== RackEnv <string> ====
@@ -1407,6 +1416,12 @@ other. Phusion Passenger will automatically make use of the correct version.
 
 Phusion Passenger does not provide X-Sendfile support by itself. Please install
 link:http://tn123.ath.cx/mod_xsendfile/[mod_xsendfile] for X-Sendfile support.
+
+=== Upload progress ===
+
+Phusion Passenger does not provide upload progress support by itself. Please
+try drogus's link:http://github.com/drogus/apache-upload-progress-module/tree/master[
+Apache upload progress module] instead.
 
 
 == Appendix A: About this document ==

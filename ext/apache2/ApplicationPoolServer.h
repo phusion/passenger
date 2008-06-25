@@ -509,8 +509,8 @@ private:
 		char filename[PATH_MAX];
 		int ret;
 		
-		snprintf(filename, sizeof(filename), "/tmp/passenger_status.%d.fifo",
-			getpid());
+		snprintf(filename, sizeof(filename), "/tmp/passenger_status.%lu.fifo",
+				(unsigned long) getpid());
 		filename[PATH_MAX - 1] = '\0';
 		do {
 			ret = mkfifo(filename, S_IRUSR | S_IWUSR);

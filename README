@@ -5,6 +5,8 @@ to http://www.modrails.com/ for general information.
 
 == Installation
 
+=== Regular installation
+
 Run the following script as root:
 
  ./bin/passenger-install-apache2-module
@@ -15,8 +17,21 @@ For troubleshooting, configuration and tips, please read the Users Guide:
 
  doc/Users guide.html
 
-This file is included in the source tarball, may also be viewed online on our
-website.
+This file is included in the source tarball, and may also be viewed online on
+our website.
+
+=== Installing via a gem
+
+You may also first generate a .gem file, and then install that.
+First, make sure that you have the following software installed:
+- Doxygen: http://www.stack.nl/~dimitri/doxygen/
+- Asciidoc: http://www.methods.co.nz/asciidoc/
+
+Next, run:
+
+ rake package
+
+The gem will be available under the 'pkg' folder.
 
 == Legal
 
