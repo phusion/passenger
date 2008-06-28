@@ -215,7 +215,8 @@ private:
 			AppContainerList *instances = &domain->instances;
 			
 			P_ASSERT(domain->size <= count, false,
-				"domains['" << appRoot << "'].size <= count");
+				"domains['" << appRoot << "'].size (" << domain->size <<
+				") <= count (" << count << ")");
 			totalSize += domain->size;
 			
 			// Invariants for Domain.
@@ -629,6 +630,7 @@ public:
 				return container->app->connect(SessionCloseCallback(data, container));
 			} catch (const exception &e) {
 				container->sessions--;
+				domain->size--;
 				if (attempt == MAX_GET_ATTEMPTS) {
 					string message("Cannot connect to an existing "
 						"application instance for '");
@@ -652,7 +654,7 @@ public:
 					active--;
 					activeOrMaxChanged.notify_all();
 					P_ASSERT(verifyState(), Application::SessionPtr(),
-						"State is valid.");
+						"State is valid: " << toString(false));
 				}
 			}
 		}

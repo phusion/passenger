@@ -178,6 +178,7 @@ function get(app_root):
 				return container.app.connect()
 			on exception:
 				container.sessions--
+				domain.size--
 				if (attempt == MAX_ATTEMPTS):
 					propagate exception
 				else:
