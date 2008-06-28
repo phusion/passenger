@@ -54,9 +54,12 @@ static initialize_backtrace_support_for_this_thread main_thread_initialization("
 
 // FreeBSD 5 supports the __thread keyword, but doesn't initialize such
 // variables to the correct default value.
+// GCC on OpenBSD supports __thread, but any access to such a variable
+// results in a segfault.
 // Solaris does support __thread, but often it's not compiled into default GCC 
 // packages (not to mention it's not available for Sparc). Playing it safe...
-#if defined(GCC_IS_3_3_OR_HIGHER) && !defined(__FreeBSD__) && !defined(__SOLARIS__)
+#if defined(GCC_IS_3_3_OR_HIGHER) && !defined(__FreeBSD__) && \
+   !defined(__SOLARIS__) && !defined(__OpenBSD__)
 	static __thread spin_lock *backtrace_lock = NULL;
 	static __thread vector<trace_point *> *current_backtrace = NULL;
 	
