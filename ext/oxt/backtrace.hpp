@@ -37,10 +37,19 @@
  * backtraces. Via oxt::thread::all_backtraces(), it is even possible
  * to obtain the backtraces of all running threads.
  *
+ * <h2>Initialization</h2>
+ * Every thread that is to contain backtrace information <b>must</b> be
+ * initialized. Initialization is done by instantiating an
+ * initialize_backtrace_support_for_this_thread object. This includes the main
+ * thread as well.
+ *
+ * If you use oxt::thread, then initialization will be automatically done for
+ * you for that partciular thread.
+ *
  * <h2>Basic usage</h2>
- * Backtrace points must be specified manually in the
- * code using TRACE_POINT(). The TracableException class allows one to
- * obtain the backtrace at the moment the exception object was created.
+ * Backtrace points must be specified manually in the code using TRACE_POINT().
+ * The TracableException class allows one to obtain the backtrace at the moment
+ * the exception object was created.
  *
  * For example:
  * @code

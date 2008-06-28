@@ -34,20 +34,8 @@ namespace oxt {
 boost::mutex _thread_registration_mutex;
 list<thread_registration *> _registered_threads;
 
-struct init_main_thread_tls {
-	init_main_thread_tls() {
-		_init_backtrace_tls();
-	}
-	
-	~init_main_thread_tls() {
-		_finalize_backtrace_tls();
-	}
-};
-
 // Register main thread.
-static init_main_thread_tls imtl;
-static register_thread_with_backtrace main_thread_registration("Main thread");
-static trace_point main_thread_entry_point("main thread entry point", NULL, 0);
+static initialize_backtrace_support_for_this_thread main_thread_initialization("Main thread");
 
 /*
  * boost::thread_specific_storage is pretty expensive. So we use the __thread

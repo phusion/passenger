@@ -124,11 +124,12 @@ struct thread_registration {
 /**
  * @internal
  */
-struct register_thread_with_backtrace {
+struct initialize_backtrace_support_for_this_thread {
 	thread_registration *registration;
 	list<thread_registration *>::iterator it;
 	
-	register_thread_with_backtrace(const string &name) {
+	initialize_backtrace_support_for_this_thread(const string &name) {
+		_init_backtrace_tls();
 		registration = new thread_registration();
 		registration->name = name;
 		registration->backtrace_lock = _get_backtrace_lock();
@@ -140,10 +141,13 @@ struct register_thread_with_backtrace {
 		it--;
 	}
 	
-	~register_thread_with_backtrace() {
-		boost::mutex::scoped_lock l(_thread_registration_mutex);
-		_registered_threads.erase(it);
-		delete registration;
+	~initialize_backtrace_support_for_this_thread() {
+		{
+			boost::mutex::scoped_lock l(_thread_registration_mutex);
+			_registered_threads.erase(it);
+			delete registration;
+		}
+		_finalize_backtrace_tls();
 	}
 };
 
