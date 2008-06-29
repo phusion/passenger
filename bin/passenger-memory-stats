@@ -104,6 +104,14 @@ class MemoryStats
 	end
 	
 	def start
+		if PlatformInfo::HTTPD.nil?
+			STDERR.puts "*** ERROR: The Apache executable cannot be found."
+			STDERR.puts "Please set the APXS2 environment variable to your 'apxs2' " <<
+				"executable's filename, or set the HTTPD environment variable " <<
+				"to your 'httpd' or 'apache2' executable's filename."
+			exit 1
+		end
+		
 		apache_processes = list_processes(:exe => PlatformInfo::HTTPD)
 		print_process_list("Apache processes", apache_processes)
 		
