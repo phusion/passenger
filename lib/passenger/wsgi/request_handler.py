@@ -2,6 +2,8 @@
 import socket, os, random, sys, struct, select, imp
 import exceptions, traceback
 
+from socket import _fileobject
+
 class RequestHandler:
 	def __init__(self, socket_file, server, owner_pipe, app):
 		self.socket_file = socket_file
@@ -71,16 +73,30 @@ class RequestHandler:
 		return (env, client)
 	
 	def process_request(self, env, input_stream, output_stream):
-		env['wsgi.input']        = input_stream
-		env['wsgi.errors']       = sys.stderr
-		env['wsgi.version']      = (1, 0)
-		env['wsgi.multithread']  = False
+		# The WSGI speculation says that the input paramter object passed needs to
+		# implement a few file-like methods. This is the reason why we "wrap" the socket._socket
+		# into the _fileobject to solve this.
+		#
+		# Otherwise, the POST data won't be correctly retrieved by Django.
+		#
+		# See: http://www.python.org/dev/peps/pep-0333/#input-and-error-streams
+		env['wsgi.input']		 = _fileobject(input_stream,'r',512)
+		env['wsgi.errors']		 = sys.stderr
+		env['wsgi.version']		 = (1, 0)
+		env['wsgi.multithread']	 = False
 		env['wsgi.multiprocess'] = True
-		env['wsgi.run_once']     = True
+		env['wsgi.run_once']	 = True
 		if env.get('HTTPS','off') in ('on', '1'):
 			env['wsgi.url_scheme'] = 'https'
 		else:
 			env['wsgi.url_scheme'] = 'http'
+			
+
+		# The following environment variables are required by WSCI PEP #333 
+		# see: http://www.python.org/dev/peps/pep-0333/#environ-variables
+		if 'HTTP_CONTENT_LENGTH' in env:
+			env['CONTENT_LENGTH'] = env.get('HTTP_CONTENT_LENGTH')
+			
 		
 		headers_set = []
 		headers_sent = []
