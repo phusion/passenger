@@ -86,7 +86,12 @@ class FrameworkSpawner < AbstractServer
 	def start
 		super
 		begin
-			status = server.read[0]
+			result = server.read
+			if result.nil?
+				raise Error, "The framework spawner server exited unexpectedly."
+			else
+				status = result[0]
+			end
 			if status == 'exception'
 				child_exception = unmarshal_exception(server.read_scalar)
 				stop
