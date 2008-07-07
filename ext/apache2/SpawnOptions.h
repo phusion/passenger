@@ -84,6 +84,26 @@ struct SpawnOptions {
 	string appType;
 	
 	/**
+	 * The idle timeout, in seconds, of Rails framework spawners.
+	 * Set to 0 to use the default idle time.
+	 *
+	 * For more details about Rails framework spawners, please
+	 * read the documentation on the Railz::FrameworkSpawner
+	 * Ruby class.
+	 */
+	unsigned int frameworkSpawnerTimeout;
+	
+	/**
+	 * The idle timeout, in seconds, of Rails application spawners.
+	 * Set to 0 to use the default idle time.
+	 *
+	 * For more details about Rails application spawners, please
+	 * read the documentation on the Railz::ApplicationSpawner
+	 * Ruby class.
+	 */
+	unsigned int appSpawnerTimeout;
+	
+	/**
 	 * Creates a new SpawnOptions object with the default values filled in.
 	 * One must still set appRoot manually, after having used this constructor.
 	 */
@@ -93,6 +113,8 @@ struct SpawnOptions {
 		environment = "production";
 		spawnMethod = "smart";
 		appType = "rails";
+		frameworkSpawnerTimeout = 0;
+		appSpawnerTimeout = 0;
 	}
 	
 	/**
@@ -103,13 +125,17 @@ struct SpawnOptions {
 		const string &lowestUser = "nobody",
 		const string &environment = "production",
 		const string &spawnMethod = "smart",
-		const string &appType = "rails") {
+		const string &appType = "rails",
+		unsigned int frameworkSpawnerTimeout = 0,
+		unsigned int appSpawnerTimeout = 0) {
 		this->appRoot = appRoot;
 		this->lowerPrivilege = lowerPrivilege;
 		this->lowestUser = lowestUser;
 		this->environment = environment;
 		this->spawnMethod = spawnMethod;
 		this->appType = appType;
+		this->frameworkSpawnerTimeout = frameworkSpawnerTimeout;
+		this->appSpawnerTimeout = appSpawnerTimeout;
 	}
 };
 

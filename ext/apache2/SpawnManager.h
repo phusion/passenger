@@ -262,6 +262,8 @@ private:
 				spawnOptions.environment.c_str(),
 				spawnOptions.spawnMethod.c_str(),
 				spawnOptions.appType.c_str(),
+				toString(spawnOptions.frameworkSpawnerTimeout).c_str(),
+				toString(spawnOptions.appSpawnerTimeout).c_str(),
 				NULL);
 		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not write 'spawn_application' "

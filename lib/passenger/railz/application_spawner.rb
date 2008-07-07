@@ -57,7 +57,7 @@ class ApplicationSpawner < AbstractServer
 	# +app_root+ is the root directory of this application, i.e. the directory
 	# that contains 'app/', 'public/', etc. If given an invalid directory,
 	# or a directory that doesn't appear to be a Rails application root directory,
-	# then an ArgumentError will be raised.
+	# then an InvalidPath will be raised.
 	#
 	# If +lower_privilege+ is true, then ApplicationSpawner will attempt to
 	# switch to the user who owns the application's <tt>config/environment.rb</tt>,
@@ -76,8 +76,8 @@ class ApplicationSpawner < AbstractServer
 		begin
 			@app_root = normalize_path(app_root)
 		rescue SystemCallError => e
-			raise ArgumentError, e.message
-		rescue ArgumentError
+			raise InvalidPath, e.message
+		rescue InvalidPath
 			raise
 		end
 		@lower_privilege = lower_privilege

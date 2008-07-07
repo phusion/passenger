@@ -6,7 +6,8 @@ require 'passenger/spawn_manager'
 include Passenger
 class SpawnManager
 	def handle_spawn_application(app_root, lower_privilege, lowest_user, environment,
-				spawn_method, app_type)
+				spawn_method, app_type, framework_spawner_timeout,
+				app_spawner_timeout)
 		client.write('ok')
 		client.write(1234, "/tmp/nonexistant.socket", false)
 		client.send_io(STDERR)

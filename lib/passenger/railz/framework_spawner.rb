@@ -64,6 +64,9 @@ class FrameworkSpawner < AbstractServer
 		end
 		@version = options[:version]
 		@vendor = options[:vendor]
+		if options[:app_spawner_timeout] && options[:app_spawner_timeout] > 0
+			@app_spawner_timeout = options[:app_spawner_timeout]
+		end
 		if !@version && !@vendor
 			raise ArgumentError, "Either the 'version' or the 'vendor' option must specified"
 		elsif @version && @vendor
@@ -125,7 +128,7 @@ class FrameworkSpawner < AbstractServer
 	#
 	# Raises:
 	# - AbstractServer::ServerNotStarted: The FrameworkSpawner server hasn't already been started.
-	# - ArgumentError: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
+	# - InvalidAppRoot: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
 	# - AppInitError: The application raised an exception or called exit() during startup.
 	# - ApplicationSpawner::Error: The ApplicationSpawner server exited unexpectedly.
 	# - FrameworkSpawner::Error: The FrameworkSpawner server exited unexpectedly.
@@ -270,6 +273,9 @@ private
 					spawner = ApplicationSpawner.new(app_root,
 						lower_privilege, lowest_user,
 						environment)
+					if @app_spawner_timeout
+						spawner.max_idle_time = @app_spawner_timeout
+					end
 					spawner.start
 				rescue ArgumentError, AppInitError, ApplicationSpawner::Error => e
 					client.write('exception')

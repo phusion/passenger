@@ -65,6 +65,8 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->railsEnv = NULL;
 	config->rackEnv = NULL;
 	config->spawnMethod = DirConfig::SM_UNSET;
+	config->frameworkSpawnerTimeout = -1;
+	config->appSpawnerTimeout = -1;
 	return config;
 }
 
@@ -90,6 +92,8 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->railsEnv = (add->railsEnv == NULL) ? base->railsEnv : add->railsEnv;
 	config->rackEnv = (add->rackEnv == NULL) ? base->rackEnv : add->rackEnv;
 	config->spawnMethod = (add->spawnMethod == DirConfig::SM_UNSET) ? base->spawnMethod : add->spawnMethod;
+	config->frameworkSpawnerTimeout = (add->frameworkSpawnerTimeout == -1) ? base->frameworkSpawnerTimeout : add->frameworkSpawnerTimeout;
+	config->appSpawnerTimeout = (add->appSpawnerTimeout == -1) ? base->appSpawnerTimeout : add->appSpawnerTimeout;
 	return config;
 }
 
@@ -315,6 +319,40 @@ cmd_rails_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
 	return NULL;
 }
 
+static const char *
+cmd_rails_framework_spawner_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	char *end;
+	long int result;
+	
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		return "Invalid number specified for RailsFrameworkSpawnerIdleTime.";
+	} else if (result < 0) {
+		return "Value for RailsFrameworkSpawnerIdleTime must be at least 0.";
+	} else {
+		config->frameworkSpawnerTimeout = result;
+		return NULL;
+	}
+}
+
+static const char *
+cmd_rails_app_spawner_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	char *end;
+	long int result;
+	
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		return "Invalid number specified for RailsAppSpawnerIdleTime.";
+	} else if (result < 0) {
+		return "Value for RailsAppSpawnerIdleTime must be at least 0.";
+	} else {
+		config->appSpawnerTimeout = result;
+		return NULL;
+	}
+}
+
 
 /*************************************************
  * Rack-specific settings
@@ -439,6 +477,16 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The spawn method to use."),
+	AP_INIT_TAKE1("RailsFrameworkSpawnerIdleTime",
+		(Take1Func) cmd_rails_framework_spawner_idle_time,
+		NULL,
+		RSRC_CONF,
+		"The maximum number of seconds that an application spawner may be idle before it is shutdown."),
+	AP_INIT_TAKE1("RailsAppSpawnerIdleTime",
+		(Take1Func) cmd_rails_app_spawner_idle_time,
+		NULL,
+		RSRC_CONF,
+		"The maximum number of seconds that an application spawner may be idle before it is shutdown."),
 	
 	// Rack-specific settings.
 	AP_INIT_TAKE1("RackBaseURI",
@@ -457,7 +505,7 @@ const command_rec passenger_commands[] = {
 		RSRC_CONF,
 		"The environment under which a Rack app must run."),
 	
-	// Rack-specific settings.
+	// WSGI-specific settings.
 	AP_INIT_FLAG("PassengerWSGIAutoDetect",
 		(Take1Func) cmd_wsgi_auto_detect,
 		NULL,

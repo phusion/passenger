@@ -38,32 +38,33 @@ protected
 	# and it correctly respects symbolic links.
 	#
 	# Raises SystemCallError if something went wrong. Raises ArgumentError
-	# if +path+ is nil.
+	# if +path+ is nil. Raises InvalidPath if +path+ does not appear
+	# to be a valid path.
 	def normalize_path(path)
 		raise ArgumentError, "The 'path' argument may not be nil" if path.nil?
 		return Pathname.new(path).realpath.to_s
 	rescue Errno::ENOENT => e
-		raise ArgumentError, e.message
+		raise InvalidAPath, e.message
 	end
 	
 	# Assert that +app_root+ is a valid Ruby on Rails application root.
-	# Raises ArgumentError if that is not the case.
+	# Raises InvalidPath if that is not the case.
 	def assert_valid_app_root(app_root)
 		assert_valid_directory(app_root)
 		assert_valid_file("#{app_root}/config/environment.rb")
 	end
 	
-	# Assert that +path+ is a directory. Raises +ArgumentError+ if it isn't.
+	# Assert that +path+ is a directory. Raises +InvalidPath+ if it isn't.
 	def assert_valid_directory(path)
 		if !File.directory?(path)
-			raise ArgumentError, "'#{path}' is not a valid directory."
+			raise InvalidPath, "'#{path}' is not a valid directory."
 		end
 	end
 	
-	# Assert that +path+ is a file. Raises +ArgumentError+ if it isn't.
+	# Assert that +path+ is a file. Raises +InvalidPath+ if it isn't.
 	def assert_valid_file(path)
 		if !File.file?(path)
-			raise ArgumentError, "'#{path}' is not a valid file."
+			raise InvalidPath, "'#{path}' is not a valid file."
 		end
 	end
 	
