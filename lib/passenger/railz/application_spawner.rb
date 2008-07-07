@@ -51,8 +51,6 @@ class ApplicationSpawner < AbstractServer
 	# The group ID of the root user.
 	ROOT_GID = 0
 	
-	# An attribute, used internally. This should not be used outside Passenger.
-	attr_accessor :time
 	# The application root of this spawner.
 	attr_reader :app_root
 
@@ -85,7 +83,7 @@ class ApplicationSpawner < AbstractServer
 		@lower_privilege = lower_privilege
 		@lowest_user = lowest_user
 		@environment = environment
-		self.time = Time.now
+		self.max_idle_time = APP_SPAWNER_MAX_IDLE_TIME
 		assert_valid_app_root(@app_root)
 		define_message_handler(:spawn_application, :handle_spawn_application)
 	end

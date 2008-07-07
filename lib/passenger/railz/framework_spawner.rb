@@ -45,9 +45,6 @@ class FrameworkSpawner < AbstractServer
 	class Error < AbstractServer::ServerError
 	end
 	
-	# An attribute, used internally. This should not be used outside Passenger.
-	attr_accessor :time
-
 	# Creates a new instance of FrameworkSpawner.
 	#
 	# Valid options:
@@ -74,6 +71,7 @@ class FrameworkSpawner < AbstractServer
 		end
 		
 		super()
+		self.max_idle_time = FRAMEWORK_SPAWNER_MAX_IDLE_TIME
 		define_message_handler(:spawn_application, :handle_spawn_application)
 		define_message_handler(:reload, :handle_reload)
 	end
@@ -287,7 +285,6 @@ private
 				end
 				@spawners[app_root] = spawner
 			end
-			spawner.time = Time.now
 			begin
 				app = spawner.spawn_application
 			rescue ApplicationSpawner::Error => e
@@ -324,7 +321,7 @@ private
 	# The main loop for the spawners cleaner thread.
 	# This thread checks the spawners list every APP_SPAWNER_CLEAN_INTERVAL seconds,
 	# and stops application spawners that have been idle for more than
-	# APP_SPAWNER_MAX_IDLE_TIME seconds.
+	# spawner.max_idle_time seconds.
 	def spawners_cleaner_main_loop
 		@spawners_lock.synchronize do
 			while true
@@ -334,7 +331,7 @@ private
 					current_time = Time.now
 					@spawners.keys.each do |key|
 						spawner = @spawners[key]
-						if current_time - spawner.time > APP_SPAWNER_MAX_IDLE_TIME
+						if current_time - spawner.last_activity_time > spawner.max_idle_time
 							spawner.stop
 							@spawners.delete(key)
 						end

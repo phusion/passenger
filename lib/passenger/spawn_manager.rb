@@ -225,7 +225,6 @@ private
 				end
 				@spawners[key] = spawner
 			end
-			spawner.time = Time.now
 			begin
 				if spawner.is_a?(Railz::FrameworkSpawner)
 					return spawner.spawn_application(app_root, lower_privilege,
@@ -308,12 +307,7 @@ private
 					current_time = Time.now
 					@spawners.keys.each do |key|
 						spawner = @spawners[key]
-						if spawner.is_a?(Railz::FrameworkSpawner)
-							max_idle_time = FRAMEWORK_SPAWNER_MAX_IDLE_TIME
-						else
-							max_idle_time = APP_SPAWNER_MAX_IDLE_TIME
-						end
-						if current_time - spawner.time > max_idle_time
+						if current_time - spawner.last_activity_time > spawner.max_idle_time
 							if spawner.started?
 								spawner.stop
 							end
