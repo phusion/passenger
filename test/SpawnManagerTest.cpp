@@ -19,7 +19,7 @@ namespace tut {
 
 	TEST_METHOD(1) {
 		// Spawning an application should return a valid Application object.
-		ApplicationPtr app(manager.spawn("."));
+		ApplicationPtr app(manager.spawn(SpawnOptions(".")));
 		ensure_equals("The Application object's PID is the same as the one specified by the stub",
 			app->getPid(), 1234);
 	}
@@ -32,7 +32,7 @@ namespace tut {
 		// Give the spawn server the time to properly terminate.
 		usleep(500000);
 		
-		ApplicationPtr app(manager.spawn("."));
+		ApplicationPtr app(manager.spawn(SpawnOptions(".")));
 		ensure_equals("The Application object's PID is the same as the one specified by the stub",
 			app->getPid(), 1234);
 		
@@ -54,7 +54,7 @@ namespace tut {
 		
 			try {
 				manager.nextRestartShouldFail = true;
-				ApplicationPtr app(manager.spawn("."));
+				ApplicationPtr app(manager.spawn(SpawnOptions(".")));
 				fail("SpawnManager did not throw a SpawnException");
 			} catch (const SpawnException &e) {
 				// Success.

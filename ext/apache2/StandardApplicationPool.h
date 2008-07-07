@@ -377,17 +377,10 @@ private:
 	 * @throws SystemException
 	 */
 	pair<AppContainerPtr, Domain *>
-	spawnOrUseExisting(
-		boost::mutex::scoped_lock &l,
-		const string &appRoot,
-		bool lowerPrivilege,
-		const string &lowestUser,
-		const string &environment,
-		const string &spawnMethod,
-		const string &appType
-	) {
+	spawnOrUseExisting(boost::mutex::scoped_lock &l, const SpawnOptions &spawnOptions) {
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
+		const string &appRoot(spawnOptions.appRoot);
 		AppContainerPtr container;
 		Domain *domain;
 		AppContainerList *instances;
@@ -449,9 +442,7 @@ private:
 					{
 						this_thread::restore_interruption ri(di);
 						this_thread::restore_syscall_interruption rsi(dsi);
-						container->app = spawnManager.spawn(appRoot,
-							lowerPrivilege, lowestUser, environment,
-							spawnMethod, appType);
+						container->app = spawnManager.spawn(spawnOptions);
 					}
 					container->sessions = 0;
 					instances->push_back(container);
@@ -487,8 +478,7 @@ private:
 				{
 					this_thread::restore_interruption ri(di);
 					this_thread::restore_syscall_interruption rsi(dsi);
-					container->app = spawnManager.spawn(appRoot, lowerPrivilege, lowestUser,
-						environment, spawnMethod, appType);
+					container->app = spawnManager.spawn(spawnOptions);
 				}
 				container->sessions = 0;
 				it = domains.find(appRoot);
@@ -597,14 +587,7 @@ public:
 		delete cleanerThread;
 	}
 	
-	virtual Application::SessionPtr get(
-		const string &appRoot,
-		bool lowerPrivilege = true,
-		const string &lowestUser = "nobody",
-		const string &environment = "production",
-		const string &spawnMethod = "smart",
-		const string &appType = "rails"
-	) {
+	virtual Application::SessionPtr get(const SpawnOptions &spawnOptions) {
 		TRACE_POINT();
 		using namespace boost::posix_time;
 		unsigned int attempt = 0;
@@ -615,8 +598,7 @@ public:
 			attempt++;
 			
 			pair<AppContainerPtr, Domain *> p(
-				spawnOrUseExisting(l, appRoot, lowerPrivilege, lowestUser,
-					environment, spawnMethod, appType)
+				spawnOrUseExisting(l, spawnOptions)
 			);
 			AppContainerPtr &container = p.first;
 			Domain *domain = p.second;
@@ -634,7 +616,7 @@ public:
 				if (attempt == MAX_GET_ATTEMPTS) {
 					string message("Cannot connect to an existing "
 						"application instance for '");
-					message.append(appRoot);
+					message.append(spawnOptions.appRoot);
 					message.append("': ");
 					try {
 						const SystemException &syse =
@@ -648,7 +630,7 @@ public:
 					AppContainerList &instances(domain->instances);
 					instances.erase(container->iterator);
 					if (instances.empty()) {
-						domains.erase(appRoot);
+						domains.erase(spawnOptions.appRoot);
 					}
 					count--;
 					active--;

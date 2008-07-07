@@ -230,8 +230,9 @@ private:
 		bool failed = false;
 		
 		try {
-			session = server.pool.get(args[1], args[2] == "true", args[3],
-				args[4], args[5], args[6]);
+			session = server.pool.get(SpawnOptions(
+				args[1], args[2] == "true", args[3],
+				args[4], args[5], args[6]));
 			sessions[lastSessionID] = session;
 			lastSessionID++;
 		} catch (const SpawnException &e) {

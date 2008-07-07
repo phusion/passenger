@@ -693,10 +693,10 @@ public:
 					spawnMethod = "smart";
 				}
 				
-				session = applicationPool->get(
+				session = applicationPool->get(SpawnOptions(
 					canonicalizePath(mapper.getPublicDirectory() + "/.."),
 					true, defaultUser, environment, spawnMethod,
-					mapper.getApplicationTypeString());
+					mapper.getApplicationTypeString()));
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				if (e.hasErrorPage()) {
