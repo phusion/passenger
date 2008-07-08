@@ -7,6 +7,8 @@ distribution.
 This package version manages the dependencies for you and will install
 a fully working Apache2 setup with the module in place and activated.
 
-All you need do is add your virtual host to your setup, and reload Apache2. See the examples and the User Guide for more information.
+All you need do is add your virtual host to your setup, and reload
+Apache2. See the User Guide (passenger/Users guide.html or
+passenger/Users guide.txt.gz) for more information.
 
 Neil Wilson <neil@brightbox.co.uk> Fri 16 May 2008

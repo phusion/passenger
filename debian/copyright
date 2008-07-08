@@ -15,7 +15,7 @@ License:
 
     Passenger is licensed under the GNU General Public License (GPL)
     version 2, and *only* version 2 (i.e. not version 3 or any later
-    versions).
+    versions).  See `/usr/share/common-licenses/GPL-2'.
 
     In addition to the GNU General Public License v2 licensing terms,
     we explicitly grand you the permission to run any application on
@@ -29,5 +29,5 @@ License:
     under the terms of the GPL.
 
 The Debian packaging is (C) 2008 Neil Wilson, Brightbox Systems
-<neil@brightbox.co.uk> and is licensed under the GPL, see
-`/usr/share/common-licenses/GPL'.
+<neil@brightbox.co.uk> and is licensed under the GPL.
+See `/usr/share/common-licenses/GPL'.
