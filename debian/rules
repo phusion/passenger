@@ -1,0 +1,68 @@
+#!/usr/bin/make -f
+  
+#export DH_VERBOSE=1
+SHELL	= /bin/bash
+
+tmp	= debian/tmp
+libdir18 = $(shell ruby1.8 -r rbconfig -e 'print Config::CONFIG["rubylibdir"]')
+archdir18 = $(shell ruby1.8 -r rbconfig -e 'print Config::CONFIG["archdir"]')
+apache2moduledir = $(shell apxs2 -q LIBEXECDIR)
+pkgdir = pkg/fakeroot
+bindir = ${pkgdir}/usr/bin
+sbindir = ${pkgdir}/usr/sbin
+moddir = ${pkgdir}${apache2moduledir}
+modsavailabledir = ${pkgdir}/etc/apache2/mods-available
+passengermodule = ${pkgdir}/usr/lib/passenger/mod_passenger.so
+
+clean: clean1
+clean1:
+	dh_testdir
+	dh_clean
+	-rake clean
+	-rake clobber
+	-$(RM) build-stamp
+
+build: build-stamp
+build-stamp: 
+	rake apache2
+	rake doc
+	touch build-stamp
+
+install: build-stamp
+	dh_testroot
+	dh_testdir
+	rake fakeroot
+	#Runaround now!
+	mkdir -p ${moddir}
+	mv ${passengermodule} ${moddir}
+	mkdir -p ${modsavailabledir}
+	install -m644 debian/passenger.{load,conf} ${modsavailabledir}
+	#Remove generic installer
+	rm ${bindir}/passenger-install-apache2-module
+	#Move passenger-status to admin directory
+	mkdir -p ${sbindir}
+	mv ${bindir}/passenger-status ${sbindir}
+	mv ${bindir}/passenger-make-enterprisey ${sbindir}
+	mv ${bindir}/passenger-memory-stats ${sbindir}
+
+binary-arch: install
+	dh_installdocs
+	dh_installchangelogs
+	dh_installman 
+	dh_install --sourcedir=${pkgdir} 
+	dh_strip
+	dh_compress 
+	dh_fixperms 
+	dh_installdeb 
+	dh_shlibdeps 
+	dh_gencontrol
+	dh_md5sums 
+	dh_builddeb
+
+binary-indep: 
+	#Nothing to do
+
+
+binary: binary-indep binary-arch
+
+.PHONY: clean binary binary-arch binary-indep checkroot install

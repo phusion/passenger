@@ -1,0 +1,12 @@
+Passenger module for Apache2
+AKA mod_rails
+
+This is passenger (mod_rails), Debian packaged for the Ubuntu Linux
+distribution.
+
+This package version manages the dependencies for you and will install
+a fully working Apache2 setup with the module in place and activated.
+
+All you need do is add your virtual host to your setup, and reload Apache2. See the examples and the User Guide for more information.
+
+Neil Wilson <neil@brightbox.co.uk> Fri 16 May 2008
