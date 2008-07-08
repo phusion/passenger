@@ -7,7 +7,7 @@ XS-Vcs-git: git://github.com/FooBarWidget/passenger.git
 Build-Depends: apache2-prefork-dev, apache2-mpm-prefork, libapr1-dev,
  libgems-ruby1.8, debhelper (>= 5), ruby1.8-dev, doxygen, asciidoc (>= 8.2),
  graphviz, rake
-Standards-Version: 3.7.3
+Standards-Version: 3.8.0
 Homepage: http://www.modrails.com/
 
 Package: libapache2-mod-passenger

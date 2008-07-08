@@ -1,5 +1,6 @@
 passenger (2.0.1-0ubuntu1) intrepid; urgency=low
 
+  * Public release: closes LP: #246719
   * debian/copyright: add additional references to GPL
   * debian/README.debian: add path references to User guide
   * debian/watch: strip unnecessary comments
