@@ -1,0 +1,25 @@
+<% layout 'error_layout', :title => "Ruby on Rails version '#{@error.gem_version_spec}' not found" do %>
+<h1 class="error_title">Ruby on Rails version '<%=h @error.gem_version_spec %>' not found</h1>
+<div id="content">
+
+	<% if @error.gem_version_spec =~ /^\d/ %>
+		
+		The application <tt class="filename"><%=h @app_root %></tt> requires
+		Ruby on Rails version <b><%=h @error.gem_version_spec %></b>,
+		which is not installed. Please install it with the following command:
+		<pre class="commands">sudo gem install rails --version <%=h @error.gem_version_spec %></pre>
+		
+	<% else %>
+		
+		The application <tt class="filename"><%=h @app_root %></tt> requires
+		a Ruby on Rails version that matches the version specification
+		"<%=h @error.gem_version_spec %>", but there is no such Ruby on Rails
+		version installed. Please install it with the following command:
+		<div class="commands">
+			<%= PlatformInfo::GEM %> install rails --version <em>some_version_number</em>
+		</div>
+		
+	<% end %>
+
+</div>
+<% end %>

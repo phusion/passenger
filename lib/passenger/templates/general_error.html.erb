@@ -1,0 +1,22 @@
+<% layout 'error_layout', :title => "Internal server error" do %>
+<h1 class="error_title">Internal server error</h1>
+<div id="content">
+	
+	Passenger encountered the following error:
+	
+	<p>
+		<%=h @error.message %>
+	</p>
+	
+	<dl>
+	<dt>Exception class:</dt>
+	<dd><%=h @error.class %></dd>
+	
+	<dt>Backtrace:</dt>
+	<dd>
+		<%= backtrace_html_for(@error) %>
+	</dd>
+	</dl>
+
+</div>
+<% end %>

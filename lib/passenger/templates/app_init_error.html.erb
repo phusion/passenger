@@ -1,0 +1,64 @@
+<% layout 'error_layout', :title => "#{@app_name} application could not be started" do %>
+<h1 class="error_title"><%= @app_name %> application could not be started</h1>
+<div id="content">
+
+	These are the possible causes:
+	<ul>
+	<li class="first">
+		<div class="container">
+		<div class="content">
+		There may be a syntax error in the application's code. Please
+		check for such errors and fix them.
+		</div>
+		</div>
+	</li>
+	<li>
+		<div class="container">
+		<div class="content">
+		A required library may not installed. Please install all libraries
+		that this application requires.
+		</div>
+		</div>
+	</li>
+	<li>
+		<div class="container">
+		<div class="content">
+		The application may not be properly configured. Please check whether all
+		configuration files are written correctly, fix any incorrect
+		configurations, and restart this application.
+		</div>
+		</div>
+	</li>
+	<li class="last">
+		<div class="container">
+		<div class="content">
+		A service that the application relies on (such as the database server
+		or the Ferret search engine server) may not have been started. Please start
+		that service.
+		</div>
+		</div>
+	</li>
+	</ul>
+	Further information about the error may have been written to the
+	application's log file. Please check it in order to analyse the problem.
+	
+	<dl>
+	<dt>Error message:</dt>
+	<dd><%=h @error.child_exception.message %></dd>
+	
+	<dt>Exception class:</dt>
+	<dd><%=h @error.child_exception.class %></dd>
+	
+	<dt>Application root:</dt>
+	<dd>
+		<tt class="filename"><%=h @app_root %></tt>
+	</dd>
+	
+	<dt>Backtrace:</dt>
+	<dd>
+		<%= backtrace_html_for(@error.child_exception) %>
+	</dd>
+	</dl>
+
+</div>
+<% end %>

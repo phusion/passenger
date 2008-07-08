@@ -1,0 +1,655 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://web.resource.org/cc/"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="710"
+   height="620"
+   id="svg2221"
+   sodipodi:version="0.32"
+   inkscape:version="0.45.1"
+   sodipodi:docbase="/home/hongli/Projects/mod_rails/doc/images"
+   sodipodi:docname="spawn_server_architecture.svg"
+   inkscape:output_extension="org.inkscape.output.svg.inkscape"
+   version="1.0"
+   inkscape:export-filename="/home/hongli/Projects/mod_rails/doc/images/spawn_server_architecture.png"
+   inkscape:export-xdpi="75"
+   inkscape:export-ydpi="75">
+  <defs
+     id="defs2223">
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Mend"
+       style="overflow:visible">
+      <path
+         id="path3383"
+         d="M 0,0 L 5,-5 L -12.5,0 L 5,5 L 0,0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt;marker-start:none"
+         transform="matrix(-0.4,0,0,-0.4,-4,0)" />
+    </marker>
+    <filter
+       inkscape:collect="always"
+       x="-0.082779072"
+       width="1.1655581"
+       y="-0.26366666"
+       height="1.5273333"
+       id="filter3525">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="6.6568168"
+         id="feGaussianBlur3527" />
+    </filter>
+    <filter
+       inkscape:collect="always"
+       x="-0.092173912"
+       width="1.1843477"
+       y="-0.32896551"
+       height="1.657931"
+       id="filter3712">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="7.95"
+         id="feGaussianBlur3714" />
+    </filter>
+    <filter
+       inkscape:collect="always"
+       x="-0.09589655"
+       width="1.1917931"
+       y="-0.18365094"
+       height="1.3673019"
+       id="filter3736">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="8.11125"
+         id="feGaussianBlur3738" />
+    </filter>
+    <filter
+       inkscape:collect="always"
+       x="-0.10273296"
+       width="1.2054659"
+       y="-0.16289188"
+       height="1.3257838"
+       id="filter3914">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="7.5337496"
+         id="feGaussianBlur3916" />
+    </filter>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     gridtolerance="10000"
+     guidetolerance="10"
+     objecttolerance="10"
+     inkscape:pageopacity="1"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.5"
+     inkscape:cx="479.58579"
+     inkscape:cy="360.50411"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     inkscape:window-width="1280"
+     inkscape:window-height="702"
+     inkscape:window-x="0"
+     inkscape:window-y="72"
+     width="710px"
+     height="620px" />
+  <metadata
+     id="metadata2226">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-21,-18.065673)">
+    <rect
+       ry="20"
+       rx="20"
+       y="170.96146"
+       x="83.119843"
+       height="111"
+       width="175.99998"
+       id="rect3920"
+       style="opacity:0.69499972;fill:#000000;fill-opacity:1;stroke:none;stroke-width:3.99999976;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;filter:url(#filter3914)"
+       transform="matrix(1.0472346,0,0,1.0472346,362.21935,-21.403918)" />
+    <rect
+       ry="20"
+       rx="20"
+       y="170.96146"
+       x="83.119843"
+       height="111"
+       width="175.99998"
+       id="rect3918"
+       style="opacity:0.69499972;fill:#000000;fill-opacity:1;stroke:none;stroke-width:3.99999976;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;filter:url(#filter3914)"
+       transform="matrix(1.0472346,0,0,1.0472346,171.30052,-24.232345)" />
+    <rect
+       ry="20"
+       rx="20"
+       y="170.96146"
+       x="83.119843"
+       height="111"
+       width="175.99998"
+       id="rect3786"
+       style="opacity:0.69499972;fill:#000000;fill-opacity:1;stroke:none;stroke-width:3.99999976;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;filter:url(#filter3914)"
+       transform="matrix(1.0472346,0,0,1.0472346,-21.825625,-23.025037)" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:3;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 347,92.36218 L 347,155.36218"
+       id="path3361" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:3;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 153,157.36218 L 153,122.36218 L 542,122.36218 L 542,163.36218"
+       id="path3363" />
+    <g
+       id="g3529"
+       transform="translate(-97.7222,-78.29651)">
+      <rect
+         transform="matrix(0.9504893,0,0,0.9504893,23.279218,5.1572528)"
+         style="opacity:0.76999996;fill:#000000;fill-opacity:1;stroke:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;filter:url(#filter3525)"
+         id="rect3523"
+         width="193"
+         height="60.593021"
+         x="349"
+         y="124.36218"
+         rx="22.44186"
+         ry="22.44186" />
+      <g
+         transform="translate(41,31)"
+         id="g3516">
+        <rect
+           style="opacity:1;fill:#baf94d;fill-opacity:1;stroke:#8adf27;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+           id="rect3514"
+           width="172"
+           height="54"
+           x="317"
+           y="87.362183"
+           rx="20"
+           ry="20" />
+        <text
+           xml:space="preserve"
+           style="font-size:19.99363899px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+           x="335.47308"
+           y="121.29496"
+           id="text2170"><tspan
+             sodipodi:role="line"
+             id="tspan2172"
+             x="335.47308"
+             y="121.29496">Spawn server</tspan></text>
+      </g>
+    </g>
+    <g
+       id="g3231"
+       transform="translate(-30,-20)">
+      <rect
+         ry="20"
+         rx="20"
+         y="172.36218"
+         x="92.999977"
+         height="111"
+         width="175.99998"
+         id="rect2237"
+         style="opacity:1;fill:#a8e6ff;fill-opacity:1;stroke:#16a0e2;stroke-width:3.99999976;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+      <text
+         sodipodi:linespacing="110%"
+         id="text3208"
+         y="197.96495"
+         x="182.53461"
+         style="font-size:16.74194145px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:110.00000238%;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+         xml:space="preserve"><tspan
+           y="197.96495"
+           x="182.53461"
+           id="tspan3210"
+           sodipodi:role="line">Frame<tspan
+   id="tspan3216"
+   style="font-size:16.74194145px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:110.00000238%;writing-mode:lr-tb;text-anchor:middle;font-family:Bitstream Vera Sans">work</tspan></tspan><tspan
+           style="font-size:16.74194145px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:110.00000238%;writing-mode:lr-tb;text-anchor:middle;font-family:Bitstream Vera Sans"
+           id="tspan3212"
+           y="216.38109"
+           x="182.53461"
+           sodipodi:role="line">spawner server</tspan></text>
+      <g
+         transform="translate(-30,11)"
+         id="g3226">
+        <rect
+           style="opacity:1;fill:#d8f4ff;fill-opacity:1;stroke:#5fbfe9;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+           id="rect3224"
+           width="118"
+           height="39"
+           x="151"
+           y="218.36218"
+           rx="20"
+           ry="20" />
+        <text
+           xml:space="preserve"
+           style="font-size:16.16865349px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+           x="169.59087"
+           y="243.52939"
+           id="text3220"><tspan
+             sodipodi:role="line"
+             id="tspan3222"
+             x="169.59087"
+             y="243.52939">Rails 1.2.1</tspan></text>
+      </g>
+    </g>
+    <g
+       id="g3242"
+       transform="translate(164.00003,-20.5)">
+      <rect
+         ry="20"
+         rx="20"
+         y="172.36218"
+         x="92.999977"
+         height="111"
+         width="175.99998"
+         id="rect3244"
+         style="opacity:1;fill:#a8e6ff;fill-opacity:1;stroke:#16a0e2;stroke-width:3.99999976;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+      <text
+         sodipodi:linespacing="110%"
+         id="text3246"
+         y="197.96495"
+         x="182.53461"
+         style="font-size:16.74194145px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:110.00000238%;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+         xml:space="preserve"><tspan
+           y="197.96495"
+           x="182.53461"
+           id="tspan3248"
+           sodipodi:role="line">Frame<tspan
+   id="tspan3250"
+   style="font-size:16.74194145px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:110.00000238%;writing-mode:lr-tb;text-anchor:middle;font-family:Bitstream Vera Sans">work</tspan></tspan><tspan
+           style="font-size:16.74194145px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:110.00000238%;writing-mode:lr-tb;text-anchor:middle;font-family:Bitstream Vera Sans"
+           id="tspan3252"
+           y="216.38109"
+           x="182.53461"
+           sodipodi:role="line">spawner server</tspan></text>
+      <g
+         transform="translate(-30,11)"
+         id="g3254">
+        <rect
+           style="opacity:1;fill:#d8f4ff;fill-opacity:1;stroke:#5fbfe9;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+           id="rect3256"
+           width="118"
+           height="39"
+           x="151"
+           y="218.36218"
+           rx="20"
+           ry="20" />
+        <text
+           xml:space="preserve"
+           style="font-size:16.16865349px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+           x="167.59087"
+           y="243.52939"
+           id="text3258"><tspan
+             sodipodi:role="line"
+             id="tspan3260"
+             x="167.59087"
+             y="243.52939">Rails 1.2.6</tspan></text>
+      </g>
+    </g>
+    <g
+       id="g3262"
+       transform="translate(357.00003,-19.5)">
+      <rect
+         ry="20"
+         rx="20"
+         y="172.36218"
+         x="92.999977"
+         height="111"
+         width="175.99998"
+         id="rect3264"
+         style="opacity:1;fill:#a8e6ff;fill-opacity:1;stroke:#16a0e2;stroke-width:3.99999976;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+      <text
+         sodipodi:linespacing="110%"
+         id="text3266"
+         y="197.96495"
+         x="182.53461"
+         style="font-size:16.74194145px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:110.00000238%;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+         xml:space="preserve"><tspan
+           y="197.96495"
+           x="182.53461"
+           id="tspan3268"
+           sodipodi:role="line">Frame<tspan
+   id="tspan3270"
+   style="font-size:16.74194145px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:110.00000238%;writing-mode:lr-tb;text-anchor:middle;font-family:Bitstream Vera Sans">work</tspan></tspan><tspan
+           style="font-size:16.74194145px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:110.00000238%;writing-mode:lr-tb;text-anchor:middle;font-family:Bitstream Vera Sans"
+           id="tspan3272"
+           y="216.38109"
+           x="182.53461"
+           sodipodi:role="line">spawner server</tspan></text>
+      <g
+         transform="translate(-30,11)"
+         id="g3274">
+        <rect
+           style="opacity:1;fill:#d8f4ff;fill-opacity:1;stroke:#5fbfe9;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+           id="rect3276"
+           width="118"
+           height="39"
+           x="151"
+           y="218.36218"
+           rx="20"
+           ry="20" />
+        <text
+           xml:space="preserve"
+           style="font-size:16.16865349px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+           x="168.59087"
+           y="243.52939"
+           id="text3278"><tspan
+             sodipodi:role="line"
+             id="tspan3280"
+             x="168.59087"
+             y="243.52939">Rails 2.0.0</tspan></text>
+      </g>
+    </g>
+    <g
+       id="g3744"
+       transform="translate(-8,-10)">
+      <rect
+         transform="matrix(1.0308114,0,0,1.0308114,-1.8024677,-5.7811198)"
+         ry="20"
+         rx="20"
+         y="382.36218"
+         x="58.5"
+         height="106"
+         width="203"
+         id="rect3724"
+         style="opacity:0.7;fill:#000000;fill-opacity:1;stroke:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;filter:url(#filter3736)" />
+      <g
+         id="g3726">
+        <rect
+           style="fill:#f3a8ff;fill-opacity:1;stroke:#c75cf1;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+           id="rect3282"
+           width="203"
+           height="106"
+           x="55"
+           y="381.36218"
+           rx="20"
+           ry="20" />
+        <text
+           xml:space="preserve"
+           style="font-size:17.20755196px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:110.00000238%;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+           x="155.86142"
+           y="408.3187"
+           id="text3284"
+           sodipodi:linespacing="110%"><tspan
+             sodipodi:role="line"
+             id="tspan3286"
+             x="155.86142"
+             y="408.3187">Applicatio<tspan
+   style="font-size:17.20755196px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:110.00000238%;writing-mode:lr-tb;text-anchor:middle;font-family:Bitstream Vera Sans"
+   id="tspan3290">n</tspan></tspan><tspan
+             sodipodi:role="line"
+             x="155.86142"
+             y="427.247"
+             id="tspan3288"
+             style="font-size:17.20755196px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:110.00000238%;writing-mode:lr-tb;text-anchor:middle;font-family:Bitstream Vera Sans">spawner server</tspan></text>
+        <rect
+           style="fill:#f9cdff;fill-opacity:1;stroke:#da7cfc;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+           id="rect3296"
+           width="144"
+           height="37"
+           x="85"
+           y="438.36218"
+           rx="20"
+           ry="20" />
+        <text
+           xml:space="preserve"
+           style="font-size:14.84923458px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+           x="105"
+           y="460.52695"
+           id="text3292"><tspan
+             sodipodi:role="line"
+             id="tspan3294"
+             x="105"
+             y="460.52695">/webapps/foo</tspan></text>
+      </g>
+    </g>
+    <g
+       id="g3756"
+       transform="translate(-8,-10)">
+      <rect
+         transform="matrix(1.0308114,0,0,1.0308114,221.07018,-6.414118)"
+         ry="20"
+         rx="20"
+         y="382.36218"
+         x="58.5"
+         height="106"
+         width="203"
+         id="rect3740"
+         style="opacity:0.7;fill:#000000;fill-opacity:1;stroke:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;filter:url(#filter3736)" />
+      <g
+         transform="translate(194.5,68)"
+         id="g3308">
+        <rect
+           style="opacity:1;fill:#f3a8ff;fill-opacity:1;stroke:#c75cf1;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+           id="rect3310"
+           width="203"
+           height="106"
+           x="85"
+           y="314.36218"
+           rx="20"
+           ry="20" />
+        <text
+           xml:space="preserve"
+           style="font-size:17.20755196px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:110.00000238%;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+           x="185.86142"
+           y="341.3187"
+           id="text3312"
+           sodipodi:linespacing="110%"><tspan
+             sodipodi:role="line"
+             id="tspan3314"
+             x="185.86142"
+             y="341.3187">Applicatio<tspan
+   style="font-size:17.20755196px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:110.00000238%;writing-mode:lr-tb;text-anchor:middle;font-family:Bitstream Vera Sans"
+   id="tspan3316">n</tspan></tspan><tspan
+             sodipodi:role="line"
+             x="185.86142"
+             y="360.247"
+             id="tspan3318"
+             style="font-size:17.20755196px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:110.00000238%;writing-mode:lr-tb;text-anchor:middle;font-family:Bitstream Vera Sans">spawner server</tspan></text>
+        <rect
+           style="opacity:1;fill:#f9cdff;fill-opacity:1;stroke:#da7cfc;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+           id="rect3320"
+           width="144"
+           height="37"
+           x="116"
+           y="371.36218"
+           rx="20"
+           ry="20" />
+        <text
+           xml:space="preserve"
+           style="font-size:14.84923458px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+           x="138"
+           y="394.52695"
+           id="text3322"><tspan
+             sodipodi:role="line"
+             id="tspan3324"
+             x="138"
+             y="394.52695">/webapps/bar</tspan></text>
+      </g>
+    </g>
+    <g
+       id="g3768"
+       transform="translate(-8,-10)">
+      <rect
+         transform="matrix(1.0308114,0,0,1.0308114,445.07018,-6.414118)"
+         ry="20"
+         rx="20"
+         y="382.36218"
+         x="58.5"
+         height="106"
+         width="203"
+         id="rect3742"
+         style="opacity:0.7;fill:#000000;fill-opacity:1;stroke:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;filter:url(#filter3736)" />
+      <g
+         transform="translate(419.5,67)"
+         id="g3326">
+        <rect
+           style="opacity:1;fill:#f3a8ff;fill-opacity:1;stroke:#c75cf1;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+           id="rect3328"
+           width="203"
+           height="106"
+           x="85"
+           y="314.36218"
+           rx="20"
+           ry="20" />
+        <text
+           xml:space="preserve"
+           style="font-size:17.20755196px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:110.00000238%;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+           x="185.86142"
+           y="341.3187"
+           id="text3330"
+           sodipodi:linespacing="110%"><tspan
+             sodipodi:role="line"
+             id="tspan3332"
+             x="185.86142"
+             y="341.3187">Applicatio<tspan
+   style="font-size:17.20755196px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:110.00000238%;writing-mode:lr-tb;text-anchor:middle;font-family:Bitstream Vera Sans"
+   id="tspan3334">n</tspan></tspan><tspan
+             sodipodi:role="line"
+             x="185.86142"
+             y="360.247"
+             id="tspan3336"
+             style="font-size:17.20755196px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:110.00000238%;writing-mode:lr-tb;text-anchor:middle;font-family:Bitstream Vera Sans">spawner server</tspan></text>
+        <rect
+           style="opacity:1;fill:#f9cdff;fill-opacity:1;stroke:#da7cfc;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+           id="rect3338"
+           width="144"
+           height="37"
+           x="117"
+           y="371.36218"
+           rx="20"
+           ry="20" />
+        <text
+           xml:space="preserve"
+           style="font-size:14.84923458px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+           x="130"
+           y="394.52695"
+           id="text3340"><tspan
+             sodipodi:role="line"
+             id="tspan3342"
+             x="130"
+             y="394.52695">/webapps/blaat</tspan></text>
+      </g>
+    </g>
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:3;stroke-linecap:butt;stroke-linejoin:miter;marker-start:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 150,264.99884 L 150,369.95207"
+       id="path3365" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:3;stroke-linecap:butt;stroke-linejoin:miter;marker-start:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 150.76777,340.39339 L 609.76777,340.39339 L 609.76777,369.49878"
+       id="path3367" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:3;stroke-linecap:butt;stroke-linejoin:miter;marker-start:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 377.60661,340.9446 L 377.60661,370.95575"
+       id="path3369" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:3;stroke-linecap:butt;stroke-linejoin:miter;marker-start:none;marker-end:url(#Arrow1Mend);stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 347,264.97852 L 347,291.49585"
+       id="path3569" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:3;stroke-linecap:butt;stroke-linejoin:miter;marker-start:none;marker-end:url(#Arrow1Mend);stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 543,265.97852 L 543,292.49585"
+       id="path3571" />
+    <text
+       xml:space="preserve"
+       style="font-size:12px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       x="334.5"
+       y="305.86218"
+       id="text3573"><tspan
+         sodipodi:role="line"
+         id="tspan3575"
+         x="334.5"
+         y="305.86218"
+         style="font-size:22px;font-weight:bold">...</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:12px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       x="530.44238"
+       y="306.4408"
+       id="text3577"><tspan
+         sodipodi:role="line"
+         id="tspan3579"
+         x="530.44238"
+         y="306.4408"
+         style="font-size:22px;font-weight:bold">...</tspan></text>
+    <g
+       id="g3613"
+       transform="translate(-17.474874,7.32233)">
+      <g
+         id="g3716">
+        <rect
+           transform="matrix(1.0241546,0,0,1.0241546,-5.910628,-15.269618)"
+           ry="20"
+           rx="20"
+           y="549.36218"
+           x="120.5"
+           height="58"
+           width="207"
+           id="rect3626"
+           style="opacity:0.725;fill:#000000;fill-opacity:1;stroke:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;filter:url(#filter3712)" />
+        <g
+           transform="translate(-8,-18)"
+           id="g3620">
+          <rect
+             ry="20"
+             rx="20"
+             y="559.36218"
+             x="123"
+             height="58"
+             width="207"
+             id="rect3607"
+             style="opacity:1;fill:#dfff78;fill-opacity:1;stroke:#a0f100;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+          <text
+             id="text3609"
+             y="583.99884"
+             x="226.97289"
+             style="font-size:15.47034645px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+             xml:space="preserve"><tspan
+               y="583.99884"
+               x="226.97289"
+               id="tspan3611"
+               sodipodi:role="line"
+               style="text-align:center;text-anchor:middle">Application instance</tspan><tspan
+               y="603.33677"
+               x="226.97288"
+               sodipodi:role="line"
+               id="tspan3618"
+               style="text-align:center;text-anchor:middle">(/webapps/foo)</tspan></text>
+        </g>
+      </g>
+    </g>
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:3;stroke-linecap:butt;stroke-linejoin:miter;marker-end:url(#Arrow1Mend);stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 187,479.30153 L 187,543.25102"
+       id="path3780" />
+    <text
+       xml:space="preserve"
+       style="font-size:14.74678135px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       x="201.85112"
+       y="517.90051"
+       id="text3782"><tspan
+         sodipodi:role="line"
+         id="tspan3784"
+         x="201.85112"
+         y="517.90051">spawns</tspan></text>
+  </g>
+</svg>

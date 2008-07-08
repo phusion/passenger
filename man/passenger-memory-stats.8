@@ -1,0 +1,33 @@
+.TH "passenger-memory-stats" "1" "2.0" "Phusion Passenger" "Administration Commands"
+.SH "NAME"
+.LP 
+passenger\-memory\-stats \- reports a snapshot of the Apache and Phusion Passenger memory statistcs
+.SH "SYNOPSIS"
+.LP 
+\fBpassenger\-memory\-stats\fR
+.SH "DESCRIPTION"
+.LP 
+\fBpassenger\-memory\-stats\fR allows you to easily analyze the real memory usage of Phusion Passenger and Apache.
+.LP 
+Process inspection tools such as \fIps\fR and \fItop\fR are useful, but they rarely show the correct memory usage. The real memory usage is usually lower than what \fIps\fR and \fItop\fR report.
+.LP 
+There are many technical reasons why this is so, but an explanation is beyond the scope of this page. We refer the interested reader to operating systems literature about virtual memory and copy\-on\-write.
+.LP 
+When you run this tool the \fIPrivate\fR or \fIprivate dirty RSS\fR field shows the real memory usage of processes.
+.SH "ENVIRONMENT VARIABLES"
+.LP 
+.TP 
+\fBHTTPD\fR
+The full filename to the Apache executable. By default, Passenger will attempt to autodetect the Apache executable. If autodetection fails for whatever reason, then Apache processes will not be shown in the memory statistics. In that case, you may manually specify the location to the Apache executable using this environment variable.
+.SH "SEE ALSO"
+.LP 
+passenger\-status(8), ps(1), top(1), 
+.LP 
+User guide at http://www.modrails.com/documentation.html
+.SH "AUTHOR"
+.LP 
+Phusion Passenger is written by Phusion (http://www.phusion.nl)
+.LP 
+"Phusion" and "Phusion Passenger" are trademarks of Hongli Lai & Ninh Bui.
+.LP 
+This manual page was written by Neil Wilson <neil@brightbox.co.uk> for the Ubuntu project (but may be used by others). 

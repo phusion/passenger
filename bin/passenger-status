@@ -1,0 +1,96 @@
+#!/usr/bin/env ruby
+#  Phusion Passenger - http://www.modrails.com/
+#  Copyright (C) 2008  Phusion
+#
+#  Phusion Passenger is a trademark of Hongli Lai & Ninh Bui.
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; version 2 of the License.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License along
+#  with this program; if not, write to the Free Software Foundation, Inc.,
+#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+$LOAD_PATH << File.expand_path(File.dirname(__FILE__) + "/../lib")
+$LOAD_PATH << File.expand_path(File.dirname(__FILE__) + "/../ext")
+
+class StatusFifo
+	attr_accessor :filename
+	attr_accessor :pid
+	
+	def initialize(filename, pid)
+		@filename = filename
+		@pid = pid
+	end
+end
+
+# Returns an array of all status FIFO files that are alive,
+# and attempt to remove stale status FIFO files.
+def list_and_clean_status_fifos
+	result = []
+	Dir["/tmp/passenger_status.*.fifo"].each do |filename|
+		filename =~ /(\d+).fifo$/
+		pid = $1.to_i
+		if process_is_alive?(pid)
+			result << StatusFifo.new(filename, pid)
+		else
+			puts "*** NOTICE: Removing stale status FIFO file #{filename}"
+			File.unlink(filename) rescue nil
+		end
+	end
+	return result
+end
+
+def process_is_alive?(pid)
+	begin
+		Process.kill(0, pid)
+		return true
+	rescue Errno::ESRCH
+		return false
+	rescue SystemCallError => e
+		return true
+	end
+end
+
+def show_status(status_fifo)
+	begin
+		puts File.read(status_fifo.filename)
+	rescue => e
+		STDERR.puts "*** ERROR: Cannot query status for Passenger instance #{status_fifo.pid}:"
+		STDERR.puts e.to_s
+		exit 2
+	end
+end
+
+def start
+	if ARGV.empty?
+		status_fifos = list_and_clean_status_fifos
+		if status_fifos.size == 0
+			STDERR.puts("ERROR: Phusion Passenger doesn't seem to be running.")
+			exit 2
+		elsif status_fifos.size == 1
+			show_status(status_fifos[0])
+		else
+			puts "It appears that multiple Passenger instances are running. Please select a"
+			puts "specific one by running:"
+			puts
+			puts "  passenger-status <PID>"
+			puts
+			puts "The following Passenger instances are running:"
+			status_fifos.each do |status_fifo|
+				puts "  PID: #{status_fifo.pid}"
+			end
+			exit 1
+		end
+	else
+		show_status(StatusFifo.new("/tmp/passenger_status.#{ARGV[0]}.fifo", ARGV[0].to_i))
+	end
+end
+
+start

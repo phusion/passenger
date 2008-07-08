@@ -1,0 +1,66 @@
+<% layout 'error_layout', :title => "#{@app_name} application could not be started" do %>
+<h1 class="error_title"><%= @app_name %> application could not be started</h1>
+<div id="content">
+
+	There appears to be a database problem.
+	<ul>
+	<li class="first">
+		<div class="container">
+		<div class="content">
+		<% if @app_type == "rails" %>
+			Your <em>config/database.yml</em> may not be written correctly.
+		<% else %>
+			Your application's database configuration file might be written
+			incorrectly.
+		<% end %>
+		Please check it and fix any errors.
+		</div>
+		</div>
+	</li>
+	<% if @app_type == "rails" %>
+		<li>
+			<div class="container">
+			<div class="content">
+			Your database schema may be out of date or nonexistant.
+			Please run <code>rake db:migrate</code> to ensure that
+			the database schema is up-to-date.
+			</div>
+			</div>
+		</li>
+	<% end %>
+	<li class="last">
+		<div class="container">
+		<div class="content">
+		The database server may not be running. Please check whether it's
+		running, and start it if it isn't.
+		</div>
+		</div>
+	</li>
+	</ul>
+	
+	<dl>
+	<dt>Error message:</dt>
+	<dd><%=h @error.child_exception.message %></dd>
+	
+	<dt>Exception class:</dt>
+	<dd>
+		<% if @error.child_exception.respond_to?(:real_class_name) %>
+			<%=h @error.child_exception.real_class_name %>
+		<% else %>
+			<%=h @error.child_exception.class %>
+		<% end %>
+	</dd>
+	
+	<dt>Application root:</dt>
+	<dd>
+		<tt class="filename"><%=h @app_root %></tt>
+	</dd>
+	
+	<dt>Backtrace:</dt>
+	<dd>
+		<%= backtrace_html_for(@error.child_exception) %>
+	</dd>
+	</dl>
+
+</div>
+<% end %>

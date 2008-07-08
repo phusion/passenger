@@ -1,0 +1,43 @@
+.TH "passenger-status" "8" "2.0" "Phusion Passenger" "Adminstration Commands"
+.SH "NAME"
+.LP 
+passenger\-status \- inspect Phusion Passenger's internal status
+.SH "SYNOPSIS"
+.LP 
+\fBpassenger\-status\fR [\fIpid\fR]
+.SH "DESCRIPTION"
+.LP 
+\fBpassenger\-status\fR looks at the current status of a Phusion Passenger installation. It will locate Phusion Passenger automatically if it is running and will give you a list of instances if there is more than one Phusion Passenger instance running. You can then select the instance by specifying the relevant PID on the command line.
+.LP 
+The \fIgeneral information\fR section shows the following details:
+.TP 
+max
+The maximum number of application instances that Phusion Passenger will spawn. This equals the value given for \fIPassengerMaxPoolSize\fR in the configuration.
+.TP 
+count
+The number of application instances that are currently alive. This value is always less than or equal to \fImax\fR.
+.TP 
+active
+The number of application instances that are currently processing requests. This value is always less than or equal to \fIcount\fR.
+.TP  
+inactive
+The number of application instances that are currently not processing requests, i.e. are idle. Idle application instances will be shutdown after a while, as can be specified with \fIPassengerPoolIdleTime\fR in the configuration. The value of \fIinactive\fR equals \fIcount\fR \- \fIactive\fR.
+.LP 
+The \fIapplications\fR section shows each application instance, which directory it belongs to. The \fIsessions\fR field shows how many HTTP client are currently being processed by that application instance.
+.SH "OPTIONS"
+.LP 
+.TP 
+\fBpid\fR
+The process ID of the Phusion Passenger instance you want to look at
+.SH "SEE ALSO"
+.LP 
+passenger\-memory\-stats(8), ps(1), top(1)
+.LP 
+User guide at http://www.modrails.com/documentation.html
+.SH "AUTHOR"
+.LP 
+Phusion Passenger is written by Phusion (http://www.phusion.nl)
+.LP 
+"Phusion" and "Phusion Passenger" are trademarks of Hongli Lai & Ninh Bui.
+.LP 
+This manual page was written by Neil Wilson <neil@brightbox.co.uk> for the Ubuntu project (but may be used by others). 

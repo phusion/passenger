@@ -1,0 +1,494 @@
+User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9b3pre) Gecko/2008020507 Firefox/3.0b3pre
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Connection: close
+Content-Type: multipart/form-data; boundary=---------------------------26241117115281305981065436208
+Content-Length: 16817
+
+-----------------------------26241117115281305981065436208
+Content-Disposition: form-data; name="uploaded_data"; filename="calendar_entries_controller.php"
+Content-Type: application/x-php
+
+<?php
+class CalendarEntriesController extends ApplicationController {
+	public function __construct() {
+		parent::__construct();
+		$this->before_filter(array('reject_anonymous_user'),
+			array('only' => array('new_calendar_entry', 'create', 'edit', 'update', 'destroy',
+					'update_time', 'participate', 'unparticipate'))
+		);
+		$this->before_filter('set_section');
+	}
+	
+	public function index() {
+		$this->redirect_to("/calendar_entries/show_by_week");
+	}
+	
+	public function new_calendar_entry() {
+	}
+	
+	public function create() {
+		if (!isset($this->params['calendar_entry'])) {
+			return;
+		}
+
+		$this->variables->calendar_entry = $calendar_entry = new CalendarEntry();
+		$calendar_entry->user_id = $this->current_user->id;
+		$calendar_entry->assign($this->params['calendar_entry']);
+		if($calendar_entry->is_valid()) {
+			$calendar_entry->convert_to_database_types();
+			$calendar_entry->save();
+			if (isset($this->params['attending']) && $this->params['attending'] == 'yes') {
+				$event = new Event();
+				$event->calendar_entry_id = $calendar_entry->id;
+				$event->user_id = $this->current_user->id;
+				$event->date = $calendar_entry->starting_date;
+				$event->save();
+			}
+			$this->redirect_to("/calendar_entries");
+		} else {
+			$this->render(array('action' => 'new_calendar_entry'));
+		}
+	}
+	
+	public function show_by_week() {
+		if (!isset($this->params['year']) || !isset($this->params['week'])) {
+			$year = strftime("%Y");
+			$week = strftime("%V");
+		} else {
+			$year = (int)$this->params['year'];
+			$week = (int)$this->params['week'];
+		}
+		if ($week < 0 || $week > 52) {
+			die("Invalid date.");
+		}
+		$personal = (isset($this->params['personal']) && $this->params['personal']) ? true : false;
+		$start_date = strtotime("+" . ($week - 1) . " weeks", mktime(0, 0, 0, 1, 1, $year));
+		
+		$CalendarEntry = $this->CalendarEntry;
+		if ($personal && !is_null($this->current_user)) {
+			$conditions = array('DATE(ending_date) >= ? AND DATE(starting_date) < ? AND user_id = ?',
+				strftime("%Y-%m-%d", $start_date),
+				strftime("%Y-%m-%d", $start_date + 7 * 60 * 60 * 24),
+				$this->current_user->id
+			);
+		} else {
+			$conditions = array('DATE(ending_date) >= ? AND DATE(starting_date) < ?',
+				strftime("%Y-%m-%d", $start_date),
+				strftime("%Y-%m-%d", $start_date + 7 * 60 * 60 * 24)
+			);
+		}
+		if (is_null($this->current_user)) {
+			$conditions[0] .= ' AND public';
+		} else {
+			$conditions[0] .= ' AND (public OR user_id = ?)';
+			$conditions[] = $this->current_user->id;
+		}
+		$calendar_entries = $CalendarEntry->find('all',
+			array('conditions' => $conditions,
+				'order' => 'starting_date ASC'
+			)
+		);
+		$this->variables->today = $start_date;
+		$this->variables->year = $year;
+		$this->variables->week = $week;
+		$this->variables->calendar_entries = $calendar_entries;
+		
+		if ($week == 52) {
+			$next_week = 1;
+			$next_week_url = "/calendar_entries/show_by_week?year=" . ($year + 1) . "&week=1";
+		} else {
+			$next_week = $week + 1;
+			$next_week_url = "/calendar_entries/show_by_week?year=$year&week=" . $next_week;
+		}
+		if ($week == 1) {
+			$last_week = 52;
+			$last_week_url = "/calendar_entries/show_by_week?year=" . ($year - 1) . "&week=52";
+		} else {
+			$last_week = $week - 1;
+			$last_week_url = "/calendar_entries/show_by_week?year=$year&week=" . $last_week;
+		}
+		$next_week_url .= "&personal=$personal";
+		$last_week_url .= "&personal=$personal";
+		$args = strftime("year=%Y&month=%m&day=%e&personal=$personal", $start_date);
+		$day_view_url = "/calendar_entries/show_by_date?$args";
+		$personal_or_shared_calendar = $personal ? "View shared calendar" : "View personal calendar";
+		$personal_or_shared_calendar_url = "/calendar_entries/show_by_week?year=$year&week=$week&personal=" . (!$personal);
+		$this->variables->week_start = $start_date;
+		$this->variables->next_week = $next_week;
+		$this->variables->next_week_url = $next_week_url;
+		$this->variables->last_week = $last_week;
+		$this->variables->last_week_url = $last_week_url;
+		$this->variables->day_view_url = $day_view_url;
+		$this->variables->personal = $personal;
+		$this->variables->personal_or_shared_calendar = $personal_or_shared_calendar;
+		$this->variables->personal_or_shared_calendar_url = $personal_or_shared_calendar_url;
+	}
+	
+	public function show_by_date() {
+		$year  = (int)$this->params['year'];
+		$month = (int)$this->params['month'];
+		$day   = (int)$this->params['day'];
+		$personal = (isset($this->params['personal']) && $this->params['personal']) ? true : false;
+		
+		if(checkdate($month, $day, $year)) {
+			$date = mktime(0, 0, 0, $month, $day, $year);
+			
+			$CalendarEntry = $this->CalendarEntry;
+			if ($personal && !is_null($this->current_user)) {
+				$conditions = array(
+					'? BETWEEN DATE(starting_date) AND DATE(ending_date) AND user_id = ?',
+					strftime("%Y-%m-%d", $date),
+					$this->current_user->id
+				);
+			} else {
+				$conditions = array(
+					'? BETWEEN DATE(starting_date) AND DATE(ending_date)',
+					strftime("%Y-%m-%d", $date)
+				);
+			}
+			if (is_null($this->current_user)) {
+				$conditions[0] .= ' AND public';
+			} else {
+				$conditions[0] .= ' AND (public OR user_id = ?)';
+				$conditions[] = $this->current_user->id;
+			}
+			$this->variables->calendar_entries = $CalendarEntry->find('all',
+				array('conditions' => $conditions,
+					'order' => 'starting_date ASC'
+				)
+			);
+			$this->variables->date = $date;
+			
+			$prev_timestamp = $date - 60 * 60 * 24;
+			$prev_date = getdate($prev_timestamp);
+			$this->variables->prev_timestamp = $prev_timestamp;
+			$this->variables->prev_url = sprintf('/calendar_entries/show_by_date?year=%d&month=%d&day=%d&personal=%s',
+				$prev_date['year'], $prev_date['mon'], $prev_date['mday'], $personal);
+			
+			$next_timestamp = $date + 60 * 60 * 24;
+			$next_date = getdate($next_timestamp);
+			$this->variables->next_timestamp = $next_timestamp;
+			$this->variables->next_url = sprintf('/calendar_entries/show_by_date?year=%d&month=%d&day=%d&personal=%s',
+				$next_date['year'], $next_date['mon'], $next_date['mday'], $personal);
+			
+			$year = strftime("%Y", $date);
+			$week = strftime("%V", $date);
+			$week_view_url = "/calendar_entries/show_by_week?year=$year&week=$week&personal=$personal";
+			$this->variables->year = $year;
+			$this->variables->week = $week;
+			$this->variables->week_view_url = $week_view_url;
+			
+			$personal_or_shared_calendar = $personal ? "View shared calendar" : "View personal calendar";
+			$personal_or_shared_calendar_url = "/calendar_entries/show_by_date?year=$year&month=$month&day=$day&personal=" . (!$personal);
+			$this->variables->personal = $personal;
+			$this->variables->personal_or_shared_calendar = $personal_or_shared_calendar;
+			$this->variables->personal_or_shared_calendar_url = $personal_or_shared_calendar_url;
+		} else {
+			die("Invalid date");
+		}
+	}
+	
+	public function show() {
+		$id = (int)$this->params['id'];
+		$CalendarEntry = $this->CalendarEntry;
+		$calendar_entry = $CalendarEntry->find_by_id($id);
+		if (!$calendar_entry->may_be_viewed_by($this->current_user)) {
+			die("You have no permission to view this page.");
+		}
+		$this->variables->calendar_entry = $calendar_entry;
+		if (!is_null($calendar_entry)) {
+			$this->variables->participants = $calendar_entry->get_participants();
+		}
+	}
+	
+	public function edit() {
+		$id = (int)$this->params['id'];
+		$CalendarEntry = $this->CalendarEntry;
+		$calendar_entry = $CalendarEntry->find_by_id($id);
+		if (is_null($calendar_entry)) {
+			die("Calendar entry #" . htmlspecialchars($id) . " not found!");
+		}
+		if ($calendar_entry->user_id != $this->current_user->id) {
+			die("You are not allowed to edit this calendar entry.");
+		}
+		$calendar_entry->convert_from_database_types();
+		if ($calendar_entry->has_started()) {
+			die("Cannot edit an event that has already started.");
+		}
+		$this->variables->calendar_entry = $calendar_entry;
+	}
+	
+	public function update() {
+		if (!isset($this->params['calendar_entry'])) {
+			return;
+		}
+		$id = (int)$this->params['id'];
+		$CalendarEntry = $this->CalendarEntry;
+		$calendar_entry = $CalendarEntry->find_by_id($id);
+		if (is_null($calendar_entry)) {
+			die("Calendar entry #" . htmlspecialchars($id) . " not found!");
+		}
+		if ($calendar_entry->user_id != $this->current_user->id) {
+			die("You are not allowed to edit this calendar entry.");
+		}
+		if ($calendar_entry->has_started()) {
+			die("Cannot edit an event that has already started.");
+		}
+		$calendar_entry->assign($this->params['calendar_entry']);
+		if (!isset($this->params['calendar_entry']['public'])) {
+			$calendar_entry->public = false;
+		}
+		if ($calendar_entry->is_valid()) {
+			$calendar_entry->convert_to_database_types();
+			$calendar_entry->save();
+			$this->redirect_to('/calendar_entries');
+		} else {
+			$this->variables->calendar_entry = $calendar_entry;
+			$this->render(array('action' => 'edit'));
+		}
+	}
+	
+	public function update_time() {
+		$id = (int)$this->params['id'];
+		$CalendarEntry = $this->CalendarEntry;
+		$calendar_entry = $CalendarEntry->find_by_id($id);
+		if (is_null($calendar_entry)) {
+			die("Calendar entry #" . htmlspecialchars($id) . " not found!");
+		}
+		if ($calendar_entry->user_id != $this->current_user->id) {
+			die("You are not allowed to edit this calendar entry.");
+		}
+		if ($calendar_entry->has_started()) {
+			die("Cannot edit an event that has already started.");
+		}
+		$calendar_entry->convert_from_database_types();
+		if ($this->params['type'] == 'start') {
+			$calendar_entry->starting_time['hour'] = $this->params['value'];
+		} else {
+			$calendar_entry->ending_time['hour'] = $this->params['value'];
+		}
+		if ($calendar_entry->is_valid()) {
+			$calendar_entry->convert_to_database_types();
+			$calendar_entry->save();
+			require_once($_ENV['PHOTON_ROOT'] . "/app/helpers/application_helper.php");
+			if ($this->params['type'] == 'start') {
+				echo 'ok ' . human_datetime($calendar_entry->starting_date);
+			} else {
+				echo 'ok ' . human_datetime($calendar_entry->ending_date);
+			}
+			exit;
+		} else {
+			$this->variables->calendar_entry = $calendar_entry;
+			echo 'error';
+		}
+	}
+	
+	public function update_date() {
+		$id = (int)$this->params['id'];
+		$CalendarEntry = $this->CalendarEntry;
+		$calendar_entry = $CalendarEntry->find_by_id($id);
+		if (is_null($calendar_entry)) {
+			die("Calendar entry #" . htmlspecialchars($id) . " not found!");
+		}
+		if ($calendar_entry->user_id != $this->current_user->id) {
+			die("You are not allowed to edit this calendar entry.");
+		}
+		if ($calendar_entry->has_started()) {
+			die("Cannot edit an event that has already started.");
+		}
+		$calendar_entry->convert_from_database_types();
+		if ($this->params['type'] == 'start') {
+			$calendar_entry->starting_date = $this->params['value'];
+		} else {
+			$calendar_entry->ending_date = $this->params['value'];
+		}
+		if ($calendar_entry->is_valid()) {
+			$calendar_entry->convert_to_database_types();
+			$calendar_entry->save();
+			require_once($_ENV['PHOTON_ROOT'] . "/app/helpers/application_helper.php");
+			if ($this->params['type'] == 'start') {
+				echo 'ok ' . strftime("%B %e, %Y", $calendar_entry->starting_date);
+			} else {
+				echo 'ok ' . strftime("%B %e, %Y", $calendar_entry->ending_date);
+			}
+			exit;
+		} else {
+			$this->variables->calendar_entry = $calendar_entry;
+			echo 'error';
+		}
+	}
+	
+	public function destroy() {
+		$id = (int)$this->params['id'];
+		$CalendarEntry = $this->CalendarEntry;
+		$calendar_entry = $CalendarEntry->find_by_id($id);
+		if (is_null($calendar_entry)) {
+			die("Calendar entry #" . htmlspecialchars($id) . " not found!");
+		}
+		if ($calendar_entry->user_id != $this->current_user->id) {
+			die("You are not allowed to delete this calendar entry.");
+		}
+		if ($calendar_entry->has_started()) {
+			die("Cannot delete an event that has already started.");
+		}
+		$calendar_entry->delete();
+		$this->redirect_to('/calendar_entries');
+	}
+	
+	public function participate() {
+		$id = (int)$this->params['id'];
+		$day = (int)$this->params['day'];
+		$CalendarEntry = $this->CalendarEntry;
+		$calendar_entry = $CalendarEntry->find_by_id($id);
+		if (is_null($calendar_entry)) {
+			die("Calendar entry #" . htmlspecialchars($id) . " not found!");
+		}
+		if ($calendar_entry->has_started()) {
+			die("Cannot participate in an event that has already started.");
+		}
+		if (!$calendar_entry->may_be_viewed_by($this->current_user)) {
+			die("You have no permission to view this page.");
+		}
+		if (!$calendar_entry->is_attended_by($this->current_user, $day)) {
+			$event = new Event();
+			$event->user_id = $this->current_user->id;
+			$event->calendar_entry_id = $id;
+			$event->date = $day;
+			$event->save();
+		}
+		$this->redirect_to("/calendar_entries/show/$id");
+	}
+	
+	public function unparticipate() {
+		$id = (int)$this->params['id'];
+		$CalendarEntry = $this->CalendarEntry;
+		$calendar_entry = $CalendarEntry->find_by_id($id);
+		if (is_null($calendar_entry)) {
+			die("Calendar entry #" . htmlspecialchars($id) . " not found!");
+		}
+		if ($calendar_entry->has_started()) {
+			die("Cannot participate in an event that has already started.");
+		}
+		if (!$calendar_entry->may_be_viewed_by($this->current_user)) {
+			die("You have no permission to view this page.");
+		}
+		if (isset($this->params['day'])) {
+			$day = (int)$this->params['day'];
+			if ($calendar_entry->is_attended_by($this->current_user, $day)) {
+				$event = $this->Event->find('first', array(
+					'conditions' => array('user_id' => $this->current_user->id,
+						'calendar_entry_id' => $id,
+						'date' => $day)
+				));
+				if (!is_null($event)) {
+					$event->delete();
+				}
+			}
+		} else {
+			$events = $this->Event->find('all', array(
+				'conditions' => array('user_id' => $this->current_user->id,
+					'calendar_entry_id' => $id)
+			));
+			foreach ($events as $event) {
+				$event->delete();
+			}
+		}
+		$this->redirect_to("/calendar_entries/show/$id");
+	}
+	
+	protected function set_section() {
+		$this->variables->section = 'events';
+	}
+	
+	public function export_xml() {
+		$calendar_entries = $this->CalendarEntry->find('all',
+			array(
+				'conditions' => array('ending_date > NOW() AND public'),
+				'order' => 'starting_date DESC',
+				'limit' => 10
+			)
+		);
+		
+		header("Content-Type: application/xml");
+		$xml = new XMLWriter();
+		$xml->openMemory();
+		$xml->startDocument("1.0", "UTF-8");
+		$xml->startElement('CALENDARFEED');
+			$xml->startElement('FEEDDESCRIPTION');
+				$xml->startElement('FEEDTITLE');
+					$xml->startAttribute('UPDATE');
+						$xml->text($calendar_entries[0]->xml_starting_time() . " " .
+							$calendar_entries[0]->xml_starting_date());
+					$xml->endAttribute();
+					$xml->text('iVent Beta: Upcoming Public Events');
+				$xml->endElement();
+				$xml->startElement('TAGLINE');
+					$xml->text('Calendaring Made Easy');
+				$xml->endElement();
+				$xml->startElement('FEEDOWNER');
+					$xml->text('Hongli Lai and Ninh Bui');
+				$xml->endElement();
+				$xml->startElement('URL');
+					$xml->text('http://www.ivent.beta/exportxml.php');
+				$xml->endElement();
+			$xml->endElement();
+			
+			foreach ($calendar_entries as $event) {
+				$xml->startElement('EVENT');
+					$xml->startElement('EVENTTITLE');
+						$xml->text($event->title);
+					$xml->endElement();
+					if ($event->description !== "") {
+						$xml->startElement('EVENTDESCRIPTION');
+							$xml->text($event->description);
+						$xml->endElement();
+					}
+					$xml->startElement('LOCATION');
+						$xml->text($event->location);
+					$xml->endElement();
+					$xml->startElement('EVENTOWNER');
+						$xml->text($event->get_owner()->username);
+					$xml->endElement();
+					$xml->startElement('DATEINFO');
+						$xml->startElement('STARTDATE');
+							$xml->text($event->xml_starting_date());
+						$xml->endElement();
+						$xml->startElement('STARTTIME');
+							$xml->text($event->xml_starting_time());
+						$xml->endElement();
+						$xml->startElement('ENDDATE');
+							$xml->text($event->xml_ending_date());
+						$xml->endElement();
+						$xml->startElement('ENDTIME');
+							$xml->text($event->xml_ending_time());
+						$xml->endElement();
+					$xml->endElement();
+					
+					$attendees = $event->get_participants();
+					if (!empty($attendees)) {
+						$xml->startElement('ATTENDEES');
+						foreach($attendees as $attendee) {
+							$xml->startElement('ATTENDEE');
+								$xml->text($attendee->username);
+							$xml->endElement();
+						}
+						$xml->endElement();
+					}
+					/*
+					$xml->startElement('');
+						$xml->text();
+					$xml->endElement();
+					*/
+				$xml->endElement();
+			}
+		$xml->endElement();
+		$xml->endDocument();
+		echo $xml->flush();
+		exit;
+	}
+}
+
+?>
+
+-----------------------------26241117115281305981065436208--
+

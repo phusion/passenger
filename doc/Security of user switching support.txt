@@ -1,0 +1,197 @@
+Security of user switching support in Passenger
+===============================================
+
+Problem description
+-------------------
+TIP: It is strongly recommended that you first read our
+link:Architectural%20overview.html[Architectural Overview].
+
+A straightforward implementation of Passenger will spawn Rails applications in
+the same user context as Apache itself. On server machines which host multiple
+websites for multiple users, this may not be desired. All Rails applications
+spawned by Passenger will be able to read and write to all directories that the
+web server can. So for example, Joe's Rails applications could read Jane's
+Rails application's 'database.yml' or delete her application files. This is
+also a problem that typically plagues PHP web hosts.
+
+There are multiple ways to solve this problem. The goal of this document is to
+inform the reader about the solutions have we have analyzed, so that
+Passenger's security may be peer reviewed.
+
+
+Analysis of possible solutions
+------------------------------
+It seems that the only way to solve this problem on Unix, is to run each Rails
+application server as its owner's user and group. Passenger can make use of
+one of the following methods to implement this:
+
+ 1. Apache (and thus Passenger) must already be running as root.
+ 2. Using Apache's suEXEC.
+ 3. A setuid root wrapper application must exist, to allow non-root processes
+    to obtain root privileges (or at least, the privilege to switch user).
+ 4. For each user $X that Passenger will need to switch to, there must exist
+    a setuid $X wrapper application.
+ 5. Using 'su'.
+ 6. Using 'sudo'.
+
+Let us take a look at each method in detail.
+
+[[apache_root]]
+Apache must already be running as root
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+First, let us take a look at the typical Apache setup, in which Apache is bound
+to port 80, and uses the prefork MPM. Binding to any port lower than 1024
+requires root privileges, so Apache is typically run as root. This poses an
+unacceptable security risk, so Apache's prefork MPM will, upon receiving an
+HTTP request, spawn a child process with the privileges of a normal user,
+typically 'www-data' or 'nobody'.
+See http://httpd.apache.org/docs/2.2/mod/prefork.html[the documentation for the
+prefork MPM] - in particular the ``User'' and ``Group'' directives - for details.
+The process which is responsible for spawning child processes (also called the
+control process) is run as root. This is also true for
+http://httpd.apache.org/docs/2.2/mod/worker.html[the worker MPM].
+
+Since Passenger has access to the control process, in the typical Apache setup,
+Passenger can already launch Rails applications as a different user. But now we
+have to ask this question:
+
+=================================
+If Apache is not running as root, are there still any Passenger users who
+want to run Rails applications as different users?
+=================================
+
+If the answer is yes, then we cannot use this method.
+
+The advantage of this method is that setting up Apache to run as root is
+incredibly easy, and requires no new framework to be written. However, testing
+this method in automated unit tests will require running the unit test suit as
+root.
+
+Using Apache's suEXEC
+~~~~~~~~~~~~~~~~~~~~~
+Apache's http://httpd.apache.org/docs/2.0/suexec.html[suEXEC] allows one to
+run CGI processes as different users. But it seems that suEXEC can only be
+used for CGI, and is not a general-purpose mechanism. The
+http://alain.knaff.lu/howto/PhpSuexec/[PHP-suEXEC] software allows one to run
+PHP applications via suEXEC, but it requires patching suEXEC. If Passenger is
+to use suEXEC, then it is likely that we'll have to patch suEXEC. The suEXEC
+website strongly discourages patching.
+
+Using a setuid root wrapper application
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If we use this method, we must be extremely careful. It must not be possible
+for arbitrary processes to gain root privileges. We want Passenger, and only
+Passenger, to be able to gain root privileges.
+
+There are multiple ways to implement this security. The first one is to use
+a password file, which only Apache and the wrapper can read, through
+the use of proper file permissions. The password file must never be world
+readable or writable.
+
+It works as follows:
+
+1. Passenger runs the wrapper.
+2. Passenger passes the content of the password file to the wrapper, via
+   an anonymous pipe (or some other anonymous channel, that no other
+   processes can access).
+3. The wrapper checks whether the passed content is the same as what is in
+   the password file. If it is, then it is proven that whatever application
+   ran the wrapper has read access to the password file, and thus is authorized
+   to use the wrapper.
+
+An obvious problem that arises is: how does the wrapper locate its own password
+file? We obviously do not want to be able to specify the password filename as
+an argument to the wrapper: that would defeat the point of the password file.
+The solution is that the filename is to be hardcoded into the binary during
+compile time.
+
+Another way to implement security is to use a whitelist of users that are
+allowed to use the wrapper. The wrapper can then check whether the calling
+process's user is in the whitelist.
+
+Writing a wrapper is not too hard. Furthermore, unit tests do not have to be
+run as root, in contrast to the run-Apache-as-root method.
+
+[[setuid_root]]
+Using a setuid $X wrapper application
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A setuid $X wrapper will work in a fashion similar to the setuid root wrapper,
+i.e. it will use a password file for authorization.
+
+Passenger does not spawn Rails applications itself, but does so via the spawn
+server. This spawn server is also responsible for preloading the Rails
+framework and the Rails application code, in order to speed up the spawning
+of Rails applications. See the design document of the spawn server for details.
+The spawn server never calls `exec()`: doing so will make preloading useless.
+If Passenger is to use a setuid $X wrapper, then it must start the spawn
+server via the wrapper. The spawn server itself cannot use the wrapper.
+
+However, doing so will make preloading less efficient. Passenger will be forced
+to run a spawn server for each user. The different spawn servers do not share
+memory with each other, so a lot of memory is wasted compared to the other
+methods.
+
+Implementing this will also take more work. One has to create a different
+wrapper for each user, and to install it.
+
+Using 'su'
+~~~~~~~~~~
+The standard Unix 'su' tool asks for the root password. It's a bad idea for
+Apache to know the root password, so using 'su' is not a viable alternative.
+
+Using 'sudo'
+~~~~~~~~~~~~
+It might be possible to use the 'sudo' utility. sudo can be configured in
+such a way that the user Apache runs as can use sudo without having to enter a
+password.
+
+However, Passenger uses an anonymous communication channel (an unnamed Unix
+socket) to communicate with the spawn server. sudo seems to close all file
+descriptors before executing an application, so Passenger will have to
+communicate with the spawn server via a non-anonymous channel, such as a named
+Unix socket. Because other processes can access this channel, it can introduce
+potential security problems. Note that passing information via program arguments
+is not secure: it is possible to view that information with tools like 'ps',
+or (on Linux) by reading the file `/proc/$PID/cmdline`.
+
+So it seems 'sudo' is not a viable alternative.
+
+Common security issues
+~~~~~~~~~~~~~~~~~~~~~~
+Whatever method Passenger will use, the following security principles must be
+honored:
+
+ - Rails applications must never be run as root.
+
+It might also be worthy to look into suEXEC's security model for inspiration.
+
+Also, the following questions remain:
+
+ - Is there a need for a user whitelist/blacklist? That is, is there a need for
+   the ability to restrict the set of users that Passenger can switch to?
+
+
+Chosen solution
+---------------
+Running Apache as root and writing a setuid root wrapper are the main
+contestants. The former is preferred, because it's easier to implement.
+
+We have had some conversations with people on the IRC channel #rubyonrails.
+Among those people, nobody has ever run Apache as non-root. Because of this
+we have chosen to implement the <<apache_root,Running Apache as root>>
+solution, until a significant number of users request us to implement the
+<<setuid_root,setuid root wrapper>> solution.
+
+Please read link:rdoc/index.html[the Ruby API documentation] -- in particular
+that of the 'ApplicationSpawner' class -- for implementation details. But to
+make a long story short: it will switch to the owner of the file
+'config/environment.rb'. User whitelisting/blacklisting is currently not
+implemented. We rely on the system administrator to set the correct owner
+on that file.
+
+We have also not implemented suEXEC's security model. suEXEC's model is quite
+paranoid, and although paranoia is good to a certain extend, it can be in the
+way of usability while proving little extra security. We are not entirely
+convinced that implementing suEXEC's full security model will provide
+significant benefits, but if you have good reasons to think otherwise, please
+feel free to discuss it with us.

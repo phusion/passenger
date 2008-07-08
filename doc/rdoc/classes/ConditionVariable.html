@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Class: ConditionVariable</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href=".././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Class</span><br />ConditionVariable</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../files/lib/passenger/utils_rb.html">lib/passenger/utils.rb</a>
+        </td>
+      </tr>
+    <tr>
+      <td>Parent:</td>
+      <td>
+Object
+     </td>
+   </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000001">timed_wait</a></li>
+  <li><a href="#M000002">timed_wait!</a></li>
+  </ul>
+
+
+
+
+
+
+<div class="sectiontitle">Public Instance methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000001"></a><b>timed_wait</b>(mutex, secs)
+  </div>
+  <div class="description">
+  <p>
+This is like ConditionVariable.wait(), but allows one to wait a maximum
+amount of time. Returns true if this condition was signaled, false if a
+timeout occurred.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000001_source')" id="l_M000001_source">show source</a> ]</p>
+  <div id="M000001_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/passenger/utils.rb, line 291</span>
+291:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">timed_wait</span>(<span class="ruby-identifier">mutex</span>, <span class="ruby-identifier">secs</span>)
+292:                 <span class="ruby-identifier">require</span> <span class="ruby-value str">'timeout'</span> <span class="ruby-keyword kw">unless</span> <span class="ruby-keyword kw">defined?</span>(<span class="ruby-constant">Timeout</span>)
+293:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">secs</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>
+294:                         <span class="ruby-constant">Timeout</span>.<span class="ruby-identifier">timeout</span>(<span class="ruby-identifier">secs</span>) <span class="ruby-keyword kw">do</span>
+295:                                 <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>)
+296:                         <span class="ruby-keyword kw">end</span>
+297:                 <span class="ruby-keyword kw">else</span>
+298:                         <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>)
+299:                 <span class="ruby-keyword kw">end</span>
+300:                 <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">true</span>
+301:         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Timeout</span><span class="ruby-operator">::</span><span class="ruby-constant">Error</span>
+302:                 <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">false</span>
+303:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000002"></a><b>timed_wait!</b>(mutex, secs)
+  </div>
+  <div class="description">
+  <p>
+This is like ConditionVariable.wait(), but allows one to wait a maximum
+amount of time. Raises Timeout::Error if the timeout has elapsed.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000002_source')" id="l_M000002_source">show source</a> ]</p>
+  <div id="M000002_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/passenger/utils.rb, line 307</span>
+307:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">timed_wait!</span>(<span class="ruby-identifier">mutex</span>, <span class="ruby-identifier">secs</span>)
+308:                 <span class="ruby-identifier">require</span> <span class="ruby-value str">'timeout'</span> <span class="ruby-keyword kw">unless</span> <span class="ruby-keyword kw">defined?</span>(<span class="ruby-constant">Timeout</span>)
+309:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">secs</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>
+310:                         <span class="ruby-constant">Timeout</span>.<span class="ruby-identifier">timeout</span>(<span class="ruby-identifier">secs</span>) <span class="ruby-keyword kw">do</span>
+311:                                 <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>)
+312:                         <span class="ruby-keyword kw">end</span>
+313:                 <span class="ruby-keyword kw">else</span>
+314:                         <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>)
+315:                 <span class="ruby-keyword kw">end</span>
+316:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

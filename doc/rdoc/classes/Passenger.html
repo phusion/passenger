@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Module: Passenger</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href=".././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Module</span><br />Passenger</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../files/lib/passenger/abstract_server_rb.html">lib/passenger/abstract_server.rb</a>
+<a href="../files/lib/passenger/message_channel_rb.html">lib/passenger/message_channel.rb</a>
+<a href="../files/lib/passenger/dependencies_rb.html">lib/passenger/dependencies.rb</a>
+<a href="../files/lib/passenger/console_text_template_rb.html">lib/passenger/console_text_template.rb</a>
+<a href="../files/lib/passenger/spawn_manager_rb.html">lib/passenger/spawn_manager.rb</a>
+<a href="../files/lib/passenger/application_rb.html">lib/passenger/application.rb</a>
+<a href="../files/lib/passenger/exceptions_rb.html">lib/passenger/exceptions.rb</a>
+<a href="../files/lib/passenger/html_template_rb.html">lib/passenger/html_template.rb</a>
+<a href="../files/lib/passenger/constants_rb.html">lib/passenger/constants.rb</a>
+<a href="../files/lib/passenger/utils_rb.html">lib/passenger/utils.rb</a>
+<a href="../files/lib/passenger/abstract_request_handler_rb.html">lib/passenger/abstract_request_handler.rb</a>
+<a href="../files/ext/passenger/native_support_c.html">ext/passenger/native_support.c</a>
+        </td>
+      </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+
+
+
+
+
+
+  <div class="sectiontitle">Classes and Modules</div>
+  Module <a href="Passenger/NativeSupport.html" class="link">Passenger::NativeSupport</a><br />
+Module <a href="Passenger/Utils.html" class="link">Passenger::Utils</a><br />
+Class <a href="Passenger/AbstractRequestHandler.html" class="link">Passenger::AbstractRequestHandler</a><br />
+Class <a href="Passenger/AbstractServer.html" class="link">Passenger::AbstractServer</a><br />
+Class <a href="Passenger/AppInitError.html" class="link">Passenger::AppInitError</a><br />
+Class <a href="Passenger/Application.html" class="link">Passenger::Application</a><br />
+Class <a href="Passenger/ConsoleTextTemplate.html" class="link">Passenger::ConsoleTextTemplate</a><br />
+Class <a href="Passenger/FrameworkInitError.html" class="link">Passenger::FrameworkInitError</a><br />
+Class <a href="Passenger/HTMLTemplate.html" class="link">Passenger::HTMLTemplate</a><br />
+Class <a href="Passenger/InitializationError.html" class="link">Passenger::InitializationError</a><br />
+Class <a href="Passenger/MessageChannel.html" class="link">Passenger::MessageChannel</a><br />
+Class <a href="Passenger/SpawnManager.html" class="link">Passenger::SpawnManager</a><br />
+Class <a href="Passenger/UnknownError.html" class="link">Passenger::UnknownError</a><br />
+Class <a href="Passenger/VersionNotFound.html" class="link">Passenger::VersionNotFound</a><br />
+
+
+  <div class="sectiontitle">Constants</div>
+  <table border='0' cellpadding='5'>
+  <tr valign='top'>
+    <td class="attr-name">FRAMEWORK_SPAWNER_MAX_IDLE_TIME</td>
+    <td>=</td>
+    <td class="attr-value">30 * 60</td>
+  </tr>
+  <tr valign='top'>
+    <td class="attr-name">APP_SPAWNER_MAX_IDLE_TIME</td>
+    <td>=</td>
+    <td class="attr-value">10 * 60</td>
+  </tr>
+  <tr valign='top'>
+    <td class="attr-name">SPAWNER_CLEAN_INTERVAL</td>
+    <td>=</td>
+    <td class="attr-value">[                 FRAMEWORK_SPAWNER_MAX_IDLE_TIME,                 APP_SPAWNER_MAX_IDLE_TIME</td>
+  </tr>
+  <tr valign='top'>
+    <td class="attr-name">APP_SPAWNER_CLEAN_INTERVAL</td>
+    <td>=</td>
+    <td class="attr-value">APP_SPAWNER_MAX_IDLE_TIME + 5</td>
+  </tr>
+  </table>
+
+
+</div>
+
+  </div>
+
+    </body>
+</html>

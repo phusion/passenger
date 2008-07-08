@@ -1,0 +1,78 @@
+ServerRoot "<%= @server_root %>"
+Listen 127.0.0.1:<%= @port %>
+
+<% if @www_user %>
+	User <%= @www_user %>
+<% end %>
+<% if @www_group %>
+	Group <%= @www_group %>
+<% end %>
+
+<% if !has_builtin_module?('mod_log_config.c') %>
+	LoadModule log_config_module "<%= modules_dir %>/mod_log_config.so"
+<% end %>
+<% if !has_builtin_module?('mod_mime.c') && has_module?('mod_unique_id.so') %>
+	LoadModule unique_id_module "<%= modules_dir %>/mod_unique_id.so"
+<% end %>
+<% if !has_builtin_module?('mod_mime.c') %>
+	LoadModule mime_module "<%= modules_dir %>/mod_mime.so"
+<% end %>
+<% if !has_builtin_module?('mod_dir.c') %>
+	LoadModule dir_module "<%= modules_dir %>/mod_dir.so"
+<% end %>
+<% if !has_builtin_module?('mod_alias.c') %>
+	LoadModule alias_module "<%= modules_dir %>/mod_alias.so"
+<% end %>
+<% if !has_builtin_module?('mod_rewrite.c') && has_module?('mod_rewrite.so') %>
+	LoadModule rewrite_module "<%= modules_dir %>/mod_rewrite.so"
+<% end %>
+LoadModule passenger_module "<%= @mod_passenger %>"
+
+PassengerRoot "<%= @passenger_root %>"
+PassengerRuby "<%= RUBY %>"
+RailsEnv production
+RackEnv production
+<% for line in @extra %>
+	<%= line %>
+<% end %>
+
+TypesConfig "<%= @server_root %>/mime.types"
+StartServers          1
+ServerLimit          50
+MaxRequestsPerChild  50
+MaxClients           50
+<IfModule mpm_prefork_module>
+	MinSpareServers       1
+	MaxSpareServers       1
+</IfModule>
+<IfModule mpm_worker_module>
+	MinSpareThreads       1
+	MaxSpareThreads       1
+	ThreadsPerChild       2
+</IfModule>
+
+<Directory />
+	AllowOverride all
+</Directory>
+
+ServerAdmin admin@passenger.test
+ServerName passenger.test
+DocumentRoot "<%= @server_root %>"
+
+LockFile  <%= @server_root %>/httpd.lock
+PidFile   <%= @server_root %>/httpd.pid
+ErrorLog  <%= @server_root %>/errors.log
+CustomLog <%= @server_root %>/access.log combined
+
+<% if !vhosts.empty? %>
+	NameVirtualHost *:<%= @port %>
+<% end %>
+<% for vhost in vhosts %>
+	<VirtualHost *:<%= @port %>>
+		ServerName <%= vhost.domain %>
+		DocumentRoot "<%= vhost.document_root %>"
+		<% for line in vhost.additional_configs %>
+			<%= line %>
+		<% end %>
+	</VirtualHost>
+<% end %>
