@@ -42,6 +42,21 @@
 #include <winbase.h>
 #endif
 
+#ifdef __SOLARIS9__
+// Solaris 9 only has putenv, not setenv.
+static int setenv(const char *name, const char *value, int override) {
+    int ret;
+    char *s = (char*)malloc(strlen(name) + strlen(value) + 2);
+    s[0] = 0;
+    strcpy(s, name);
+    strcpy(s, "=");
+    strcpy(s, value);
+    ret = putenv(s);
+    free(s);
+    return ret;
+}
+#endif
+
 #define DEFINE_TEST_GROUP(name) \
 	using namespace tut; \
 	typedef test_group<name> factory; \
