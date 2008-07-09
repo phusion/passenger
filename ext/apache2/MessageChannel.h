@@ -38,6 +38,13 @@
 	// always included by unistd.h and sys/types.h.
 	#include <sys/uio.h>
 #endif
+#ifdef __SOLARIS9__
+	// These macros are missing from sys/socket.h on Solaris 9.
+	#define CMSG_SPACE(l)	\
+		((unsigned int)_CMSG_HDR_ALIGN(sizeof (struct cmsghdr) + (l)))
+	#define CMSG_LEN(l)	\
+		((unsigned int)_CMSG_DATA_ALIGN(sizeof (struct cmsghdr)) + (l))
+#endif
 
 #include "Exceptions.h"
 #include "Utils.h"
