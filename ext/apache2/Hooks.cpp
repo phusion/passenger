@@ -628,6 +628,7 @@ public:
 	}
 	
 	int handleRequest(request_rec *r) {
+		TRACE_POINT();
 		DirConfig *config = getDirConfig(r);
 		DirectoryMapper mapper(r, config);
 		if (mapper.getBaseURI() == NULL || r->filename == NULL || fileExists(r->filename)) {
@@ -662,6 +663,7 @@ public:
 				uploadData = receiveRequestBody(r);
 			}
 			
+			UPDATE_TRACE_POINT();
 			try {
 				const char *defaultUser, *environment, *spawnMethod;
 				unsigned int appSpawnerTimeout, frameworkSpawnerTimeout;
@@ -724,6 +726,7 @@ public:
 				return reportBusyException(r);
 			}
 			
+			UPDATE_TRACE_POINT();
 			session->setReaderTimeout(r->server->timeout / 1000);
 			session->setWriterTimeout(r->server->timeout / 1000);
 			sendHeaders(r, session, mapper.getBaseURI());
@@ -737,6 +740,7 @@ public:
 			}
 			session->shutdownWriter();
 			
+			UPDATE_TRACE_POINT();
 			apr_file_t *readerPipe = NULL;
 			int reader = session->getStream();
 			apr_os_pipe_put(&readerPipe, &reader, r->pool);
@@ -769,17 +773,17 @@ public:
 			return HTTP_INTERNAL_SERVER_ERROR;
 			
 		} catch (const tracable_exception &e) {
-			P_TRACE(3, "Unexpected error in mod_passenger: " <<
-				e.what() << "\n" << "  Backtrace:" << e.backtrace());
+			P_ERROR("Unexpected error in mod_passenger: " <<
+				e.what() << "\n" << "  Backtrace:\n" << e.backtrace());
 			return HTTP_INTERNAL_SERVER_ERROR;
 		
 		} catch (const exception &e) {
-			P_TRACE(3, "Unexpected error in mod_passenger: " <<
+			P_ERROR("Unexpected error in mod_passenger: " <<
 				e.what() << "\n" << "  Backtrace: not available");
 			return HTTP_INTERNAL_SERVER_ERROR;
 		
 		} catch (...) {
-			P_TRACE(3, "An unexpected, unknown error occured in mod_passenger.");
+			P_ERROR("An unexpected, unknown error occured in mod_passenger.");
 			throw;
 		}
 	}
