@@ -174,7 +174,10 @@ private
 			end
 			return architectures.join(' ')
 		elsif RUBY_PLATFORM =~ /solaris/
-			'-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -DBOOST_HAS_STDINT_H -D__SOLARIS__'
+			flags = '-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -D__SOLARIS__'
+			flags << ' -DBOOST_HAS_STDINT_H' unless RUBY_PLATFORM =~ /solaris2.9/
+			flags << ' -D__SOLARIS9__ -DBOOST__STDC_CONSTANT_MACROS_DEFINED' if RUBY_PLATFORM =~ /solaris2.9/
+			return flags
 		else
 			return ""
 		end
