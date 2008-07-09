@@ -121,6 +121,7 @@ class APACHE2
 	CXXFLAGS = "-I.. -fPIC #{OPTIMIZATION_FLAGS} #{APR_FLAGS} #{APXS2_FLAGS} #{CXXFLAGS}"
 	OBJECTS = {
 		'Configuration.o' => %w(Configuration.cpp Configuration.h),
+		'Bucket.o' => %w(Bucket.cpp Bucket.h),
 		'Hooks.o' => %w(Hooks.cpp Hooks.h
 				Configuration.h ApplicationPool.h ApplicationPoolServer.h
 				SpawnManager.h Exceptions.h Application.h MessageChannel.h
