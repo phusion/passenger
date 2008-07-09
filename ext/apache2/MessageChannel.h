@@ -38,13 +38,6 @@
 	// always included by unistd.h and sys/types.h.
 	#include <sys/uio.h>
 #endif
-#ifdef __SOLARIS9__
-	// These macros are missing from sys/socket.h on Solaris 9.
-	#define CMSG_SPACE(l)	\
-		((unsigned int)_CMSG_HDR_ALIGN(sizeof (struct cmsghdr) + (l)))
-	#define CMSG_LEN(l)	\
-		((unsigned int)_CMSG_DATA_ALIGN(sizeof (struct cmsghdr)) + (l))
-#endif
 
 #include "Exceptions.h"
 #include "Utils.h"
@@ -292,7 +285,7 @@ public:
 		struct msghdr msg;
 		struct iovec vec;
 		char dummy[1];
-		#ifdef __APPLE__
+		#if defined(__APPLE__) || defined(__SOLARIS9__)
 			struct {
 				struct cmsghdr header;
 				int fd;
@@ -320,7 +313,7 @@ public:
 		control_header = CMSG_FIRSTHDR(&msg);
 		control_header->cmsg_level = SOL_SOCKET;
 		control_header->cmsg_type  = SCM_RIGHTS;
-		#ifdef __APPLE__
+		#if defined(__APPLE__) || defined(__SOLARIS9__)
 			control_header->cmsg_len = sizeof(control_data);
 			control_data.fd = fileDescriptor;
 		#else
@@ -468,7 +461,7 @@ public:
 		struct msghdr msg;
 		struct iovec vec;
 		char dummy[1];
-		#ifdef __APPLE__
+		#if defined(__APPLE__) || defined(__SOLARIS9__)
 			// File descriptor passing macros (CMSG_*) seem to be broken
 			// on 64-bit MacOS X. This structure works around the problem.
 			struct {
@@ -507,7 +500,7 @@ public:
 		 || control_header->cmsg_type  != SCM_RIGHTS) {
 			throw IOException("No valid file descriptor received.");
 		}
-		#ifdef __APPLE__
+		#if defined(__APPLE__) || defined(__SOLARIS9__)
 			return control_data.fd;
 		#else
 			return *((int *) CMSG_DATA(control_header));

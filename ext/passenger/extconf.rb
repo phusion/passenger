@@ -21,6 +21,9 @@ $LIBS=""
 if RUBY_PLATFORM =~ /solaris/
 	have_library('xnet')
 	$CFLAGS << " -D_XPG4_2"
+	if RUBY_PLATFORM =~ /solaris2.9/
+		$CFLAGS << " -D__SOLARIS9__"
+	end
 end
 
 with_cflags($CFLAGS) do
