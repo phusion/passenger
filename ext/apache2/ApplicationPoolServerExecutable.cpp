@@ -446,8 +446,10 @@ public:
 		this_thread::disable_syscall_interruption dsi;
 		this_thread::disable_interruption di;
 		
-		if (thr != NULL && thr->get_id() != this_thread::get_id()) {
-			thr->interrupt_and_join();
+		if (thr != NULL) {
+			if (thr->get_id() != this_thread::get_id()) {
+				thr->interrupt_and_join();
+			}
 			delete thr;
 		}
 		syscalls::close(fd);
