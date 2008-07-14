@@ -38,6 +38,7 @@
 #include <unistd.h>
 
 #include "Hooks.h"
+#include "Bucket.h"
 #include "Configuration.h"
 #include "Utils.h"
 #include "Logging.h"
@@ -726,7 +727,7 @@ public:
 			apr_os_pipe_put(&readerPipe, &reader, r->pool);
 
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
-			b = apr_bucket_pipe_create(readerPipe, r->connection->bucket_alloc);
+			b = passenger_bucket_create(readerPipe, r->connection->bucket_alloc);
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 
 			b = apr_bucket_eos_create(r->connection->bucket_alloc);
@@ -739,10 +740,6 @@ public:
 			container->session = session;
 			apr_pool_cleanup_register(r->pool, container, Container::cleanup, apr_pool_cleanup_null);
 			
-			// Apparently apr_bucket_pipe or apr_brigade closes the
-			// file descriptor for us.
-			session->discardStream();
-
 			return OK;
 		} catch (const thread_interrupted &) {
 			P_TRACE(3, "A system call was interrupted during an HTTP request. Apache "

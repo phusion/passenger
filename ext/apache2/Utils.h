@@ -222,7 +222,7 @@ public:
 	 * @throws SystemException Something went wrong.
 	 */
 	TempFile(bool anonymous = true) {
-		char *temp_dir;
+		const char *temp_dir;
 		char templ[PATH_MAX];
 		int fd;
 		

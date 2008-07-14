@@ -1,3 +1,9 @@
+passenger (2.0.2-0ubuntu1~bbox1) hardy; urgency=low
+
+  * New upstream version
+
+ -- Neil Wilson <neil@brightbox.co.uk>  Mon, 14 Jul 2008 11:01:04 +0100
+
 passenger (2.0.1-0ubuntu1) intrepid; urgency=low
 
   * Public release: closes LP: #246719
