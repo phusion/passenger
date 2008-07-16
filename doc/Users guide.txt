@@ -288,7 +288,7 @@ link:http://rack.rubyforge.org/[Rack] interface.
 
 Phusion Passenger assumes that Rack application directories have a certain layout.
 Suppose that you have a Rack application in '/webapps/rackapp'. Then that
-folder must contain at least two entries:
+folder must contain at least three entries:
 
 - 'config.ru', a Rackup file for starting the Rack application. This file must contain
   the complete logic for initializing the application.
