@@ -22,6 +22,7 @@ require 'etc'
 require 'passenger/application'
 require 'passenger/abstract_server'
 require 'passenger/application'
+require 'passenger/constants'
 require 'passenger/railz/request_handler'
 require 'passenger/exceptions'
 require 'passenger/utils'
@@ -135,6 +136,7 @@ class ApplicationSpawner < AbstractServer
 						if @lower_privilege
 							lower_privilege('config/environment.rb', @lowest_user)
 						end
+						remove_phusion_passenger_namespace
 						require 'config/environment'
 						require 'dispatcher'
 					end
@@ -207,6 +209,7 @@ protected
 			if @lower_privilege
 				lower_privilege('config/environment.rb', @lowest_user)
 			end
+			remove_phusion_passenger_namespace
 			preload_application
 		end
 	end

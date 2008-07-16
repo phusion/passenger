@@ -143,7 +143,11 @@ class FrameworkSpawner < AbstractServer
 				raise IOError, "Connection closed"
 			end
 			if result[0] == 'exception'
-				raise unmarshal_exception(server.read_scalar)
+				e = unmarshal_exception(server.read_scalar)
+				if e.respond_to?(:child_exception) && e.child_exception
+					#print_exception(self.class.to_s, e.child_exception)
+				end
+				raise e
 			else
 				pid, listen_socket_name, using_abstract_namespace = server.read
 				if pid.nil?
@@ -209,6 +213,7 @@ protected
 		end
 		begin
 			preload_rails
+			remove_phusion_passenger_namespace
 		rescue StandardError, ScriptError, NoMemoryError => e
 			client.write('exception')
 			client.write_scalar(marshal_exception(e))

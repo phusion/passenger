@@ -146,6 +146,13 @@ class AbstractRequestHandler
 	
 	# Enter the request handler's main loop.
 	def main_loop
+		if defined?(::Passenger::AbstractRequestHandler)
+			# Some applications have a model named 'Passenger'.
+			# So we temporarily remove it from the global namespace
+			# and restore it later.
+			phusion_passenger_namespace = ::Passenger
+			Object.send(:remove_const, :Passenger)
+		end
 		reset_signal_handlers
 		begin
 			done = false
@@ -180,6 +187,10 @@ class AbstractRequestHandler
 			end
 		ensure
 			revert_signal_handlers
+			if phusion_passenger_namespace
+				Object.send(:remove_const, :Passenger) rescue nil
+				Object.const_set(:Passenger, phusion_passenger_namespace)
+			end
 		end
 	end
 

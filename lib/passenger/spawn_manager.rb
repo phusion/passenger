@@ -19,6 +19,12 @@
 require 'passenger/abstract_server'
 require 'passenger/constants'
 require 'passenger/utils'
+
+# Define a constant with a name that's unlikely to clash with anything the
+# application defines, so that they can detect whether they're running under
+# Phusion Passenger.
+IN_PHUSION_PASSENGER = true
+
 module Passenger
 
 # The spawn manager is capable of spawning Ruby on Rails or Rack application
