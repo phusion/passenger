@@ -84,6 +84,7 @@ private
 			exec(REQUEST_HANDLER, socket_file, server.fileno.to_s,
 				reader.fileno.to_s)
 		rescue
+			server.close
 			File.unlink(socket_file)
 			raise
 		end
