@@ -33,7 +33,16 @@
 	#define OXT_NO_PTHREAD_SPINLOCKS
 #endif
 
-#if ((__GNUC__ >= 4) && defined(__i386__)) || defined(IN_DOXYGEN)
+#ifndef GCC_VERSION
+	#define GCC_VERSION (__GNUC__ * 10000 \
+	                     + __GNUC_MINOR__ * 100 \
+	                     + __GNUC_PATCH_LEVEL__)
+#endif
+
+#if (GCC_VERSION > 40100 && defined(__i386__)) || defined(IN_DOXYGEN)
+	// GCC 4.0 doesn't support __sync instructions while GCC 4.2
+	// does. I'm not sure whether support for it started in 4.1 or
+	// 4.2, so the above version check may have to be changed later.
 	#include "detail/spin_lock_gcc_x86.hpp"
 #elif !defined(WIN32) && !defined(OXT_NO_PTHREAD_SPINLOCKS)
 	#include "detail/spin_lock_pthreads.hpp"
