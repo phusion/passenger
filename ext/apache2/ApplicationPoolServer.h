@@ -313,6 +313,8 @@ private:
 		
 		virtual Application::SessionPtr get(const SpawnOptions &spawnOptions) {
 			this_thread::disable_syscall_interruption dsi;
+			TRACE_POINT();
+			
 			MessageChannel channel(data->server);
 			boost::mutex::scoped_lock l(data->lock);
 			vector<string> args;
@@ -331,23 +333,29 @@ private:
 					toString(spawnOptions.appSpawnerTimeout).c_str(),
 					NULL);
 			} catch (const SystemException &) {
+				UPDATE_TRACE_POINT();
 				throw IOException("The ApplicationPool server exited unexpectedly.");
 			}
 			try {
+				UPDATE_TRACE_POINT();
 				result = channel.read(args);
 			} catch (const SystemException &e) {
+				UPDATE_TRACE_POINT();
 				throw SystemException("Could not read a message from "
 					"the ApplicationPool server", e.code());
 			}
 			if (!result) {
+				UPDATE_TRACE_POINT();
 				throw IOException("The ApplicationPool server unexpectedly "
 					"closed the connection.");
 			}
 			if (args[0] == "ok") {
+				UPDATE_TRACE_POINT();
 				stream = channel.readFileDescriptor();
 				return ptr(new RemoteSession(dataSmartPointer,
 					atoi(args[1]), atoi(args[2]), stream));
 			} else if (args[0] == "SpawnException") {
+				UPDATE_TRACE_POINT();
 				if (args[2] == "true") {
 					string errorPage;
 					
@@ -360,10 +368,13 @@ private:
 					throw SpawnException(args[1]);
 				}
 			} else if (args[0] == "BusyException") {
+				UPDATE_TRACE_POINT();
 				throw BusyException(args[1]);
 			} else if (args[0] == "IOException") {
+				UPDATE_TRACE_POINT();
 				throw IOException(args[1]);
 			} else {
+				UPDATE_TRACE_POINT();
 				throw IOException("The ApplicationPool server returned "
 					"an unknown message: " + toString(args));
 			}
