@@ -22,6 +22,7 @@ require 'etc'
 require 'passenger/application'
 require 'passenger/abstract_server'
 require 'passenger/application'
+require 'passenger/constants'
 require 'passenger/railz/request_handler'
 require 'passenger/exceptions'
 require 'passenger/utils'
@@ -51,15 +52,13 @@ class ApplicationSpawner < AbstractServer
 	# The group ID of the root user.
 	ROOT_GID = 0
 	
-	# An attribute, used internally. This should not be used outside Passenger.
-	attr_accessor :time
 	# The application root of this spawner.
 	attr_reader :app_root
 
 	# +app_root+ is the root directory of this application, i.e. the directory
 	# that contains 'app/', 'public/', etc. If given an invalid directory,
 	# or a directory that doesn't appear to be a Rails application root directory,
-	# then an ArgumentError will be raised.
+	# then an InvalidPath will be raised.
 	#
 	# If +lower_privilege+ is true, then ApplicationSpawner will attempt to
 	# switch to the user who owns the application's <tt>config/environment.rb</tt>,
@@ -78,14 +77,14 @@ class ApplicationSpawner < AbstractServer
 		begin
 			@app_root = normalize_path(app_root)
 		rescue SystemCallError => e
-			raise ArgumentError, e.message
-		rescue ArgumentError
+			raise InvalidPath, e.message
+		rescue InvalidPath
 			raise
 		end
 		@lower_privilege = lower_privilege
 		@lowest_user = lowest_user
 		@environment = environment
-		self.time = Time.now
+		self.max_idle_time = APP_SPAWNER_MAX_IDLE_TIME
 		assert_valid_app_root(@app_root)
 		define_message_handler(:spawn_application, :handle_spawn_application)
 	end
@@ -137,6 +136,7 @@ class ApplicationSpawner < AbstractServer
 						if @lower_privilege
 							lower_privilege('config/environment.rb', @lowest_user)
 						end
+						remove_phusion_passenger_namespace
 						require 'config/environment'
 						require 'dispatcher'
 					end
@@ -209,6 +209,7 @@ protected
 			if @lower_privilege
 				lower_privilege('config/environment.rb', @lowest_user)
 			end
+			remove_phusion_passenger_namespace
 			preload_application
 		end
 	end

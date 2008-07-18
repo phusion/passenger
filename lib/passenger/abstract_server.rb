@@ -88,11 +88,18 @@ class AbstractServer
 	class ServerError < StandardError
 	end
 	
+	# The last time when this AbstractServer had processed a message.
+	attr_accessor :last_activity_time
+	
+	# An attribute, used internally. This should not be used outside Passenger.
+	attr_accessor :max_idle_time
+	
 	def initialize
 		@done = false
 		@message_handlers = {}
 		@signal_handlers = {}
 		@orig_signal_handlers = {}
+		@last_activity_time = Time.now
 	end
 	
 	# Start the server. This method does not block since the server runs
@@ -311,6 +318,7 @@ private
 		while !@done
 			begin
 				name, *args = channel.read
+				@last_activity_time = Time.now
 				if name.nil?
 					@done = true
 				elsif @message_handlers.has_key?(name)

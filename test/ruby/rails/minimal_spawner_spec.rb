@@ -34,4 +34,30 @@ shared_examples_for "a minimal spawner" do
 			environment.should == "development"
 		end
 	end
+	
+	it "does not conflict with models in the application that are named 'Passenger'" do
+		use_rails_stub('foobar') do |stub|
+			File.open("#{stub.app_root}/app/models/passenger.rb", 'w') do |f|
+				f.write(%q{
+					class Passenger
+						def name
+							return "Gourry Gabriev"
+						end
+					end
+				})
+			end
+			File.append(stub.environment_rb, %q{
+				# We explicitly call 'require' here because we might be
+				# using a stub Rails framework (that doesn't support automatic
+				# loading of model source files).
+				require 'app/models/passenger'
+				File.open('passenger.txt', 'w') do |f|
+					f.write(Passenger.new.name)
+				end
+			})
+			spawn_stub_application(stub).close
+			passenger_name = File.read("#{stub.app_root}/passenger.txt")
+			passenger_name.should == 'Gourry Gabriev'
+		end
+	end
 end

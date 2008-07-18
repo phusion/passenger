@@ -31,7 +31,7 @@
  */
 
 /** Module version number. */
-#define PASSENGER_VERSION "2.0.1"
+#define PASSENGER_VERSION "2.0.2"
 
 #ifdef __cplusplus
 	#include <set>
@@ -73,6 +73,12 @@
 			enum SpawnMethod { SM_UNSET, SM_SMART, SM_CONSERVATIVE };
 			/** The Rails spawn method to use. */
 			SpawnMethod spawnMethod;
+			
+			/** The idle timeout, in seconds, of Rails framework spawners. */
+			long frameworkSpawnerTimeout;
+			
+			/** The idle timeout, in seconds, of Rails application spawners. */
+			long appSpawnerTimeout;
 		};
 		
 		/**

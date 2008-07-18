@@ -52,12 +52,17 @@ static initialize_backtrace_support_for_this_thread main_thread_initialization("
 	#define GCC_IS_3_3_OR_HIGHER
 #endif
 
-// FreeBSD 5 supports the __thread keyword, but doesn't initialize such
-// variables to the correct default value.
-// GCC on OpenBSD supports __thread, but any access to such a variable
-// results in a segfault.
-// Solaris does support __thread, but often it's not compiled into default GCC 
-// packages (not to mention it's not available for Sparc). Playing it safe...
+/*
+ * FreeBSD 5 supports the __thread keyword, and everything works fine in
+ * micro-tests, but in mod_passenger the thread-local variables are initialized
+ * to unaligned addresses for some weird reason, thereby causing bus errors.
+ *
+ * GCC on OpenBSD supports __thread, but any access to such a variable
+ * results in a segfault.
+ *
+ * Solaris does support __thread, but often it's not compiled into default GCC 
+ * packages (not to mention it's not available for Sparc). Playing it safe...
+ */
 #if defined(GCC_IS_3_3_OR_HIGHER) && !defined(__FreeBSD__) && \
    !defined(__SOLARIS__) && !defined(__OpenBSD__)
 	static __thread spin_lock *backtrace_lock = NULL;

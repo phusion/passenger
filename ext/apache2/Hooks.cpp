@@ -26,6 +26,7 @@
 #include <unistd.h>
 
 #include "Hooks.h"
+#include "Bucket.h"
 #include "Configuration.h"
 #include "Utils.h"
 #include "Logging.h"
@@ -628,6 +629,7 @@ public:
 	}
 	
 	int handleRequest(request_rec *r) {
+		TRACE_POINT();
 		DirConfig *config = getDirConfig(r);
 		DirectoryMapper mapper(r, config);
 		if (mapper.getBaseURI() == NULL || r->filename == NULL || fileExists(r->filename)) {
@@ -662,8 +664,10 @@ public:
 				uploadData = receiveRequestBody(r);
 			}
 			
+			UPDATE_TRACE_POINT();
 			try {
 				const char *defaultUser, *environment, *spawnMethod;
+				unsigned int appSpawnerTimeout, frameworkSpawnerTimeout;
 				ServerConfig *sconfig;
 				
 				sconfig = getServerConfig(r->server);
@@ -692,11 +696,22 @@ public:
 				} else {
 					spawnMethod = "smart";
 				}
+				if (config->frameworkSpawnerTimeout < 0) {
+					frameworkSpawnerTimeout = 0;
+				} else {
+					frameworkSpawnerTimeout = config->frameworkSpawnerTimeout;
+				}
+				if (config->appSpawnerTimeout < 0) {
+					appSpawnerTimeout = 0;
+				} else {
+					appSpawnerTimeout = config->appSpawnerTimeout;
+				}
 				
-				session = applicationPool->get(
+				session = applicationPool->get(SpawnOptions(
 					canonicalizePath(mapper.getPublicDirectory() + "/.."),
 					true, defaultUser, environment, spawnMethod,
-					mapper.getApplicationTypeString());
+					mapper.getApplicationTypeString(),
+					appSpawnerTimeout, frameworkSpawnerTimeout));
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				if (e.hasErrorPage()) {
@@ -712,6 +727,7 @@ public:
 				return reportBusyException(r);
 			}
 			
+			UPDATE_TRACE_POINT();
 			session->setReaderTimeout(r->server->timeout / 1000);
 			session->setWriterTimeout(r->server->timeout / 1000);
 			sendHeaders(r, session, mapper.getBaseURI());
@@ -725,13 +741,14 @@ public:
 			}
 			session->shutdownWriter();
 			
+			UPDATE_TRACE_POINT();
 			apr_file_t *readerPipe = NULL;
 			int reader = session->getStream();
 			apr_os_pipe_put(&readerPipe, &reader, r->pool);
 			apr_file_pipe_timeout_set(readerPipe, r->server->timeout);
 
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
-			b = apr_bucket_pipe_create(readerPipe, r->connection->bucket_alloc);
+			b = passenger_bucket_create(readerPipe, r->connection->bucket_alloc);
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 
 			b = apr_bucket_eos_create(r->connection->bucket_alloc);
@@ -744,10 +761,6 @@ public:
 			container->session = session;
 			apr_pool_cleanup_register(r->pool, container, Container::cleanup, apr_pool_cleanup_null);
 			
-			// Apparently apr_bucket_pipe or apr_brigade closes the
-			// file descriptor for us.
-			session->discardStream();
-
 			return OK;
 			
 		} catch (const thread_interrupted &e) {
@@ -757,17 +770,17 @@ public:
 			return HTTP_INTERNAL_SERVER_ERROR;
 			
 		} catch (const tracable_exception &e) {
-			P_TRACE(3, "Unexpected error in mod_passenger: " <<
-				e.what() << "\n" << "  Backtrace:" << e.backtrace());
+			P_ERROR("Unexpected error in mod_passenger: " <<
+				e.what() << "\n" << "  Backtrace:\n" << e.backtrace());
 			return HTTP_INTERNAL_SERVER_ERROR;
 		
 		} catch (const exception &e) {
-			P_TRACE(3, "Unexpected error in mod_passenger: " <<
+			P_ERROR("Unexpected error in mod_passenger: " <<
 				e.what() << "\n" << "  Backtrace: not available");
 			return HTTP_INTERNAL_SERVER_ERROR;
 		
 		} catch (...) {
-			P_TRACE(3, "An unexpected, unknown error occured in mod_passenger.");
+			P_ERROR("An unexpected, unknown error occured in mod_passenger.");
 			throw;
 		}
 	}

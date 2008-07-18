@@ -88,4 +88,7 @@ class UnknownError < StandardError
 	end
 end
 
+class InvalidPath < StandardError
+end
+
 end # module Passenger

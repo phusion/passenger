@@ -311,14 +311,7 @@ private:
 			return atoi(args[0].c_str());
 		}
 		
-		virtual Application::SessionPtr get(
-			const string &appRoot,
-			bool lowerPrivilege = true,
-			const string &lowestUser = "nobody",
-			const string &environment = "production",
-			const string &spawnMethod = "smart",
-			const string &appType = "rails"
-		) {
+		virtual Application::SessionPtr get(const SpawnOptions &spawnOptions) {
 			this_thread::disable_syscall_interruption dsi;
 			MessageChannel channel(data->server);
 			boost::mutex::scoped_lock l(data->lock);
@@ -327,12 +320,15 @@ private:
 			bool result;
 			
 			try {
-				channel.write("get", appRoot.c_str(),
-					(lowerPrivilege) ? "true" : "false",
-					lowestUser.c_str(),
-					environment.c_str(),
-					spawnMethod.c_str(),
-					appType.c_str(),
+				channel.write("get",
+					spawnOptions.appRoot.c_str(),
+					(spawnOptions.lowerPrivilege) ? "true" : "false",
+					spawnOptions.lowestUser.c_str(),
+					spawnOptions.environment.c_str(),
+					spawnOptions.spawnMethod.c_str(),
+					spawnOptions.appType.c_str(),
+					toString(spawnOptions.frameworkSpawnerTimeout).c_str(),
+					toString(spawnOptions.appSpawnerTimeout).c_str(),
 					NULL);
 			} catch (const SystemException &) {
 				throw IOException("The ApplicationPool server exited unexpectedly.");

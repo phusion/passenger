@@ -39,6 +39,7 @@
 #include <signal.h>
 
 #include "Application.h"
+#include "SpawnOptions.h"
 #include "MessageChannel.h"
 #include "Exceptions.h"
 #include "Logging.h"
@@ -244,35 +245,25 @@ private:
 	/**
 	 * Send the spawn command to the spawn server.
 	 *
-	 * @param appRoot The application root of the application to spawn.
-	 * @param lowerPrivilege Whether to lower the application's privileges.
-	 * @param lowestUser The user to fallback to if lowering privilege fails.
-	 * @param environment The RAILS_ENV/RACK_ENV environment that should be used.
-	 * @param spawnMethod The spawn method to use.
-	 * @param appType The application type.
+	 * @param spawnOptions The spawn options to use.
 	 * @return An Application smart pointer, representing the spawned application.
 	 * @throws SpawnException Something went wrong.
 	 */
-	ApplicationPtr sendSpawnCommand(
-		const string &appRoot,
-		bool lowerPrivilege,
-		const string &lowestUser,
-		const string &environment,
-		const string &spawnMethod,
-		const string &appType
-	) {
+	ApplicationPtr sendSpawnCommand(const SpawnOptions &spawnOptions) {
 		TRACE_POINT();
 		vector<string> args;
 		int ownerPipe;
 		
 		try {
 			channel.write("spawn_application",
-				appRoot.c_str(),
-				(lowerPrivilege) ? "true" : "false",
-				lowestUser.c_str(),
-				environment.c_str(),
-				spawnMethod.c_str(),
-				appType.c_str(),
+				spawnOptions.appRoot.c_str(),
+				(spawnOptions.lowerPrivilege) ? "true" : "false",
+				spawnOptions.lowestUser.c_str(),
+				spawnOptions.environment.c_str(),
+				spawnOptions.spawnMethod.c_str(),
+				spawnOptions.appType.c_str(),
+				toString(spawnOptions.frameworkSpawnerTimeout).c_str(),
+				toString(spawnOptions.appSpawnerTimeout).c_str(),
 				NULL);
 		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not write 'spawn_application' "
@@ -336,18 +327,15 @@ private:
 				ret = chown(args[1].c_str(), getuid(), getgid());
 			} while (ret == -1 && errno == EINTR);
 		}
-		return ApplicationPtr(new Application(appRoot, pid, args[1],
-			usingAbstractNamespace, ownerPipe));
+		return ApplicationPtr(new Application(spawnOptions.appRoot,
+			pid, args[1], usingAbstractNamespace, ownerPipe));
 	}
 	
 	/**
 	 * @throws boost::thread_interrupted
 	 */
 	ApplicationPtr
-	handleSpawnException(const SpawnException &e, const string &appRoot,
-	                     bool lowerPrivilege, const string &lowestUser,
-	                     const string &environment, const string &spawnMethod,
-	                     const string &appType) {
+	handleSpawnException(const SpawnException &e, const SpawnOptions &spawnOptions) {
 		TRACE_POINT();
 		bool restarted;
 		try {
@@ -364,8 +352,7 @@ private:
 			restarted = false;
 		}
 		if (restarted) {
-			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser,
-				environment, spawnMethod, appType);
+			return sendSpawnCommand(spawnOptions);
 		} else {
 			throw SpawnException("The spawn server died unexpectedly, and restarting it failed.");
 		}
@@ -479,66 +466,32 @@ public:
 	}
 	
 	/**
-	 * Spawn a new instance of a Ruby on Rails or Rack application.
+	 * Spawn a new instance of an application. Spawning details are to be passed
+	 * via the <tt>spawnOptions</tt> parameter.
 	 *
 	 * If the spawn server died during the spawning process, then the server
 	 * will be automatically restarted, and another spawn attempt will be made.
 	 * If restarting the server fails, or if the second spawn attempt fails,
 	 * then an exception will be thrown.
 	 *
-	 * If <tt>lowerPrivilege</tt> is true, then it will be attempt to
-	 * switch the spawned application instance to the user who owns the
-	 * application's <tt>config/environment.rb</tt>, and to the default
-	 * group of that user.
-	 *
-	 * If that user doesn't exist on the system, or if that user is root,
-	 * then it will be attempted to switch to the username given by
-	 * <tt>lowestUser</tt> (and to the default group of that user).
-	 * If <tt>lowestUser</tt> doesn't exist either, or if switching user failed
-	 * (because the spawn server process does not have the privilege to do so),
-	 * then the application will be spawned anyway, without reporting an error.
-	 *
-	 * It goes without saying that lowering privilege is only possible if
-	 * the spawn server is running as root (and thus, by induction, that
-	 * Passenger and Apache's control process are also running as root).
-	 * Note that if Apache is listening on port 80, then its control process must
-	 * be running as root. See "doc/Security of user switching.txt" for
-	 * a detailed explanation.
-	 *
-	 * @param appRoot The application root of a RoR application, i.e. the folder that
-	 *             contains 'app/', 'public/', 'config/', etc. This must be a valid directory,
-	 *             but the path does not have to be absolute.
-	 * @param lowerPrivilege Whether to lower the application's privileges.
-	 * @param lowestUser The user to fallback to if lowering privilege fails.
-	 * @param environment The RAILS_ENV/RACK_ENV environment that should be used. May not be empty.
-	 * @param spawnMethod The spawn method to use. Either "smart" or "conservative".
-	 *                    See the Ruby class SpawnManager for details.
-	 * @param appType The application type. Either "rails" or "rack".
+	 * @param spawnOptions An object containing the details for this spawn operation,
+	 *                     such as which application to spawn. See SpawnOptions for details.
 	 * @return A smart pointer to an Application object, which represents the application
 	 *         instance that has been spawned. Use this object to communicate with the
 	 *         spawned application.
 	 * @throws SpawnException Something went wrong.
 	 * @throws boost::thread_interrupted
 	 */
-	ApplicationPtr spawn(
-		const string &appRoot,
-		bool lowerPrivilege = true,
-		const string &lowestUser = "nobody",
-		const string &environment = "production",
-		const string &spawnMethod = "smart",
-		const string &appType = "rails"
-	) {
+	ApplicationPtr spawn(const SpawnOptions &spawnOptions) {
 		TRACE_POINT();
 		boost::mutex::scoped_lock l(lock);
 		try {
-			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser,
-				environment, spawnMethod, appType);
+			return sendSpawnCommand(spawnOptions);
 		} catch (const SpawnException &e) {
 			if (e.hasErrorPage()) {
 				throw;
 			} else {
-				return handleSpawnException(e, appRoot, lowerPrivilege,
-					lowestUser, environment, spawnMethod, appType);
+				return handleSpawnException(e, spawnOptions);
 			}
 		}
 	}

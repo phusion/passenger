@@ -285,7 +285,7 @@ public:
 		struct msghdr msg;
 		struct iovec vec;
 		char dummy[1];
-		#ifdef __APPLE__
+		#if defined(__APPLE__) || defined(__SOLARIS9__)
 			struct {
 				struct cmsghdr header;
 				int fd;
@@ -313,7 +313,7 @@ public:
 		control_header = CMSG_FIRSTHDR(&msg);
 		control_header->cmsg_level = SOL_SOCKET;
 		control_header->cmsg_type  = SCM_RIGHTS;
-		#ifdef __APPLE__
+		#if defined(__APPLE__) || defined(__SOLARIS9__)
 			control_header->cmsg_len = sizeof(control_data);
 			control_data.fd = fileDescriptor;
 		#else
@@ -461,7 +461,7 @@ public:
 		struct msghdr msg;
 		struct iovec vec;
 		char dummy[1];
-		#ifdef __APPLE__
+		#if defined(__APPLE__) || defined(__SOLARIS9__)
 			// File descriptor passing macros (CMSG_*) seem to be broken
 			// on 64-bit MacOS X. This structure works around the problem.
 			struct {
@@ -500,7 +500,7 @@ public:
 		 || control_header->cmsg_type  != SCM_RIGHTS) {
 			throw IOException("No valid file descriptor received.");
 		}
-		#ifdef __APPLE__
+		#if defined(__APPLE__) || defined(__SOLARIS9__)
 			return control_data.fd;
 		#else
 			return *((int *) CMSG_DATA(control_header));
@@ -526,9 +526,13 @@ public:
 		tv.tv_usec = msec % 1000 * 1000;
 		ret = syscalls::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO,
 			&tv, sizeof(tv));
+		#ifndef __SOLARIS__
+		// SO_RCVTIMEO is unimplemented and retuns an error on Solaris
+		// 9 and 10 SPARC.  Seems to work okay without it.
 		if (ret == -1) {
 			throw SystemException("Cannot set read timeout for socket", errno);
 		}
+		#endif
 	}
 	
 	/**
@@ -553,9 +557,13 @@ public:
 		tv.tv_usec = msec % 1000 * 1000;
 		ret = syscalls::setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO,
 			&tv, sizeof(tv));
+		#ifndef __SOLARIS__
+		// SO_SNDTIMEO is unimplemented and returns an error on Solaris
+		// 9 and 10 SPARC.  Seems to work okay without it.
 		if (ret == -1) {
 			throw SystemException("Cannot set read timeout for socket", errno);
 		}
+		#endif
 	}
 };
 

@@ -230,8 +230,10 @@ private:
 		bool failed = false;
 		
 		try {
-			session = server.pool.get(args[1], args[2] == "true", args[3],
-				args[4], args[5], args[6]);
+			session = server.pool.get(SpawnOptions(
+				args[1], args[2] == "true", args[3],
+				args[4], args[5], args[6],
+				atoi(args[7]), atoi(args[8])));
 			sessions[lastSessionID] = session;
 			lastSessionID++;
 		} catch (const SpawnException &e) {
@@ -355,7 +357,7 @@ private:
 					toString(args));
 				
 				UPDATE_TRACE_POINT();
-				if (args[0] == "get" && args.size() == 7) {
+				if (args[0] == "get" && args.size() == 9) {
 					processGet(args);
 				} else if (args[0] == "close" && args.size() == 2) {
 					processClose(args);
@@ -444,8 +446,10 @@ public:
 		this_thread::disable_syscall_interruption dsi;
 		this_thread::disable_interruption di;
 		
-		if (thr != NULL && thr->get_id() != this_thread::get_id()) {
-			thr->interrupt_and_join();
+		if (thr != NULL) {
+			if (thr->get_id() != this_thread::get_id()) {
+				thr->interrupt_and_join();
+			}
 			delete thr;
 		}
 		syscalls::close(fd);

@@ -18,7 +18,7 @@ class WelcomeController < ApplicationController
 	end
 	
 	def in_passenger
-		render :text => !!defined?(Passenger::SpawnManager)
+		render :text => !!defined?(IN_PHUSION_PASSENGER)
 	end
 	
 	def rails_env
@@ -27,6 +27,10 @@ class WelcomeController < ApplicationController
 	
 	def backtrace
 		render :text => caller.join("\n")
+	end
+	
+	def passenger_name
+		render :text => Passenger.new.name
 	end
 	
 	def terminate

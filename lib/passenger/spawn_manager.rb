@@ -19,6 +19,12 @@
 require 'passenger/abstract_server'
 require 'passenger/constants'
 require 'passenger/utils'
+
+# Define a constant with a name that's unlikely to clash with anything the
+# application defines, so that they can detect whether they're running under
+# Phusion Passenger.
+IN_PHUSION_PASSENGER = true
+
 module Passenger
 
 # The spawn manager is capable of spawning Ruby on Rails or Rack application
@@ -93,8 +99,13 @@ class SpawnManager < AbstractServer
 	# The "conservative" spawning method does not involve any caching at all.
 	# Spawning will be slower, but is guaranteed to be compatible with all applications.
 	#
+	# The +framework_spawner_timeout+ and +app_spawner_timeout+ options allow you to specify
+	# the maximum idle timeout, in seconds, of the framework spawner servers and application
+	# spawner servers that will be started under the hood. These options are only used
+	# if app_type equals "rails".
+	#
 	# Raises:
-	# - ArgumentError: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
+	# - InvalidPath: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
 	# - VersionNotFound: The Ruby on Rails framework version that the given application requires
 	#   is not installed.
 	# - AbstractServer::ServerError: One of the server processes exited unexpectedly.
@@ -102,7 +113,8 @@ class SpawnManager < AbstractServer
 	# - AppInitError: The application raised an exception or called exit() during startup.
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody",
 	                      environment = "production", spawn_method = "smart",
-	                      app_type = "rails")
+	                      app_type = "rails", framework_spawner_timeout = 0,
+	                      app_spawner_timeout = 0)
 		if app_type == "rack"
 			if !defined?(Rack::ApplicationSpawner)
 				require 'passenger/rack/application_spawner'
@@ -120,7 +132,8 @@ class SpawnManager < AbstractServer
 				require 'passenger/railz/application_spawner'
 			end
 			return spawn_rails_application(app_root, lower_privilege, lowest_user,
-				environment, spawn_method)
+				environment, spawn_method, framework_spawner_timeout,
+				app_spawner_timeout)
 		end
 	end
 	
@@ -141,7 +154,7 @@ class SpawnManager < AbstractServer
 		if app_root
 			begin
 				app_root = normalize_path(app_root)
-			rescue ArgumentError
+			rescue InvalidPath
 			end
 		end
 		@lock.synchronize do
@@ -183,7 +196,8 @@ class SpawnManager < AbstractServer
 
 private
 	def spawn_rails_application(app_root, lower_privilege, lowest_user,
-	                            environment, spawn_method)
+	                            environment, spawn_method, framework_spawner_timeout,
+	                            app_spawner_timeout)
 		if spawn_method == "smart"
 			spawner_must_be_started = true
 			framework_version = Application.detect_framework_version(app_root)
@@ -191,8 +205,10 @@ private
 				vendor_path = normalize_path("#{app_root}/vendor/rails")
 				key = "vendor:#{vendor_path}"
 				create_spawner = proc do
-					Railz::FrameworkSpawner.new(:vendor => vendor_path)
+					Railz::FrameworkSpawner.new(:vendor => vendor_path,
+						:app_spawner_timeout => app_spawner_timeout)
 				end
+				spawner_timeout = framework_spawner_timeout
 			elsif framework_version.nil?
 				app_root = normalize_path(app_root)
 				key = "app:#{app_root}"
@@ -200,11 +216,14 @@ private
 					Railz::ApplicationSpawner.new(app_root, lower_privilege,
 						lowest_user, environment)
 				end
+				spawner_timeout = app_spawner_timeout
 			else
 				key = "version:#{framework_version}"
 				create_spawner = proc do
-					Railz::FrameworkSpawner.new(:version => framework_version)
+					Railz::FrameworkSpawner.new(:version => framework_version,
+						:app_spawner_timeout => app_spawner_timeout)
 				end
+				spawner_timeout = framework_spawner_timeout
 			end
 		else
 			app_root = normalize_path(app_root)
@@ -212,6 +231,7 @@ private
 			create_spawner = proc do
 				Railz::ApplicationSpawner.new(app_root, lower_privilege, lowest_user, environment)
 			end
+			spawner_timeout = app_spawner_timeout
 			spawner_must_be_started = false
 		end
 		
@@ -220,12 +240,14 @@ private
 			spawner = @spawners[key]
 			if !spawner
 				spawner = create_spawner.call
+				if spawner_timeout > 0
+					spawner.max_idle_time = spawner_timeout
+				end
 				if spawner_must_be_started
 					spawner.start
 				end
 				@spawners[key] = spawner
 			end
-			spawner.time = Time.now
 			begin
 				if spawner.is_a?(Railz::FrameworkSpawner)
 					return spawner.spawn_application(app_root, lower_privilege,
@@ -246,13 +268,16 @@ private
 	end
 	
 	def handle_spawn_application(app_root, lower_privilege, lowest_user, environment,
-	                             spawn_method, app_type)
+	                             spawn_method, app_type, framework_spawner_timeout,
+	                             app_spawner_timeout)
 		lower_privilege = lower_privilege == "true"
 		app = nil
 		begin
 			app = spawn_application(app_root, lower_privilege, lowest_user,
-				environment, spawn_method, app_type)
-		rescue ArgumentError => e
+				environment, spawn_method, app_type,
+				framework_spawner_timeout.to_i,
+				app_spawner_timeout.to_i)
+		rescue InvalidPath => e
 			send_error_page(client, 'invalid_app_root', :error => e, :app_root => app_root)
 		rescue AbstractServer::ServerError => e
 			send_error_page(client, 'general_error', :error => e)
@@ -308,12 +333,7 @@ private
 					current_time = Time.now
 					@spawners.keys.each do |key|
 						spawner = @spawners[key]
-						if spawner.is_a?(Railz::FrameworkSpawner)
-							max_idle_time = FRAMEWORK_SPAWNER_MAX_IDLE_TIME
-						else
-							max_idle_time = APP_SPAWNER_MAX_IDLE_TIME
-						end
-						if current_time - spawner.time > max_idle_time
+						if current_time - spawner.last_activity_time > spawner.max_idle_time
 							if spawner.started?
 								spawner.stop
 							end

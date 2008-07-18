@@ -45,9 +45,6 @@ class FrameworkSpawner < AbstractServer
 	class Error < AbstractServer::ServerError
 	end
 	
-	# An attribute, used internally. This should not be used outside Passenger.
-	attr_accessor :time
-
 	# Creates a new instance of FrameworkSpawner.
 	#
 	# Valid options:
@@ -67,6 +64,9 @@ class FrameworkSpawner < AbstractServer
 		end
 		@version = options[:version]
 		@vendor = options[:vendor]
+		if options[:app_spawner_timeout] && options[:app_spawner_timeout] > 0
+			@app_spawner_timeout = options[:app_spawner_timeout]
+		end
 		if !@version && !@vendor
 			raise ArgumentError, "Either the 'version' or the 'vendor' option must specified"
 		elsif @version && @vendor
@@ -74,6 +74,7 @@ class FrameworkSpawner < AbstractServer
 		end
 		
 		super()
+		self.max_idle_time = FRAMEWORK_SPAWNER_MAX_IDLE_TIME
 		define_message_handler(:spawn_application, :handle_spawn_application)
 		define_message_handler(:reload, :handle_reload)
 	end
@@ -86,7 +87,12 @@ class FrameworkSpawner < AbstractServer
 	def start
 		super
 		begin
-			status = server.read[0]
+			result = server.read
+			if result.nil?
+				raise Error, "The framework spawner server exited unexpectedly."
+			else
+				status = result[0]
+			end
 			if status == 'exception'
 				child_exception = unmarshal_exception(server.read_scalar)
 				stop
@@ -122,7 +128,7 @@ class FrameworkSpawner < AbstractServer
 	#
 	# Raises:
 	# - AbstractServer::ServerNotStarted: The FrameworkSpawner server hasn't already been started.
-	# - ArgumentError: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
+	# - InvalidAppRoot: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
 	# - AppInitError: The application raised an exception or called exit() during startup.
 	# - ApplicationSpawner::Error: The ApplicationSpawner server exited unexpectedly.
 	# - FrameworkSpawner::Error: The FrameworkSpawner server exited unexpectedly.
@@ -137,7 +143,11 @@ class FrameworkSpawner < AbstractServer
 				raise IOError, "Connection closed"
 			end
 			if result[0] == 'exception'
-				raise unmarshal_exception(server.read_scalar)
+				e = unmarshal_exception(server.read_scalar)
+				if e.respond_to?(:child_exception) && e.child_exception
+					#print_exception(self.class.to_s, e.child_exception)
+				end
+				raise e
 			else
 				pid, listen_socket_name, using_abstract_namespace = server.read
 				if pid.nil?
@@ -203,6 +213,7 @@ protected
 		end
 		begin
 			preload_rails
+			remove_phusion_passenger_namespace
 		rescue StandardError, ScriptError, NoMemoryError => e
 			client.write('exception')
 			client.write_scalar(marshal_exception(e))
@@ -267,6 +278,9 @@ private
 					spawner = ApplicationSpawner.new(app_root,
 						lower_privilege, lowest_user,
 						environment)
+					if @app_spawner_timeout
+						spawner.max_idle_time = @app_spawner_timeout
+					end
 					spawner.start
 				rescue ArgumentError, AppInitError, ApplicationSpawner::Error => e
 					client.write('exception')
@@ -282,7 +296,6 @@ private
 				end
 				@spawners[app_root] = spawner
 			end
-			spawner.time = Time.now
 			begin
 				app = spawner.spawn_application
 			rescue ApplicationSpawner::Error => e
@@ -319,7 +332,7 @@ private
 	# The main loop for the spawners cleaner thread.
 	# This thread checks the spawners list every APP_SPAWNER_CLEAN_INTERVAL seconds,
 	# and stops application spawners that have been idle for more than
-	# APP_SPAWNER_MAX_IDLE_TIME seconds.
+	# spawner.max_idle_time seconds.
 	def spawners_cleaner_main_loop
 		@spawners_lock.synchronize do
 			while true
@@ -329,7 +342,7 @@ private
 					current_time = Time.now
 					@spawners.keys.each do |key|
 						spawner = @spawners[key]
-						if current_time - spawner.time > APP_SPAWNER_MAX_IDLE_TIME
+						if current_time - spawner.last_activity_time > spawner.max_idle_time
 							spawner.stop
 							@spawners.delete(key)
 						end
