@@ -141,14 +141,22 @@ class RequestHandler:
 			if hasattr(result, 'close'):
 				result.close()
 
+def import_error_handler(environ, start_response):
+	write = start_response('500 Import Error', [('Content-type', 'text/plain')])
+	write("An error occurred importing your passenger_wsgi.py")
+	raise KeyboardInterrupt # oh WEIRD.
+
 if __name__ == "__main__":
 	socket_file = sys.argv[1]
 	server = socket.fromfd(int(sys.argv[2]), socket.AF_UNIX, socket.SOCK_STREAM)
 	owner_pipe = int(sys.argv[3])
 	
-	app_module = imp.load_source('passenger_wsgi', 'passenger_wsgi.py')
-	
-	handler = RequestHandler(socket_file, server, owner_pipe, app_module.application)
+	try:
+		app_module = imp.load_source('passenger_wsgi', 'passenger_wsgi.py')
+		handler = RequestHandler(socket_file, server, owner_pipe, app_module.application)
+	except:
+		handler = RequestHandler(socket_file, server, owner_pipe, import_error_handler)
+
 	try:
 		handler.main_loop()
 	finally:
