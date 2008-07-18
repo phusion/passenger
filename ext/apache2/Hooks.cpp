@@ -518,7 +518,7 @@ private:
 						errno);
 				}
 				written += ret;
-			} while (written < len);
+			} while (written < (size_t) len);
 		}
 		if (len == -1) {
 			throw IOException("An error occurred while receiving HTTP upload data.");
