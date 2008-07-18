@@ -124,7 +124,8 @@ shared_examples_for "MyCook(tm) beta" do
 		get('/').should =~ /Welcome to MyCook/
 	end
 	
-	it "does not conflict with Phusion Passenger is there's a model named 'Passenger'" do
+	it "does not conflict with Phusion Passenger if there's a model named 'Passenger'" do
+		Dir.mkdir("#{@stub.app_root}/app/models") rescue nil
 		File.open("#{@stub.app_root}/app/models/passenger.rb", 'w') do |f|
 			f.write(%q{
 				class Passenger
@@ -135,6 +136,7 @@ shared_examples_for "MyCook(tm) beta" do
 			})
 		end
 		begin
+			system "touch '#{@stub.app_root}/tmp/restart.txt'"
 			get('/welcome/passenger_name').should == 'Gourry Gabriev'
 		ensure
 			File.unlink("#{@stub.app_root}/app/models/passenger.rb") rescue nil

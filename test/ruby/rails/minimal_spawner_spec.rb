@@ -37,6 +37,7 @@ shared_examples_for "a minimal spawner" do
 	
 	it "does not conflict with models in the application that are named 'Passenger'" do
 		use_rails_stub('foobar') do |stub|
+			Dir.mkdir("#{stub.app_root}/app/models")
 			File.open("#{stub.app_root}/app/models/passenger.rb", 'w') do |f|
 				f.write(%q{
 					class Passenger
