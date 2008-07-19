@@ -262,7 +262,12 @@ private
 			require 'dispatcher'
 		end
 		require_dependency 'application'
-		if GC.copy_on_write_friendly?
+		
+		# - No point in preloading the application sources if the garbage collector
+		#   isn't copy-on-write friendly.
+		# - Rails >= 2.2 already preloads application sources by default, so no need
+		#   to do that again.
+		if GC.copy_on_write_friendly? && !::Rails::Initializer.respond_to?(:load_application_classes)
 			Dir.glob('app/{models,controllers,helpers}/*.rb').each do |file|
 				require_dependency normalize_path(file)
 			end
