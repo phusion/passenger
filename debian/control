@@ -5,15 +5,15 @@ Maintainer: Ubuntu MOTU Developers <ubuntu-motu@lists.ubuntu.com>
 XSBC-Original-Maintainer: Neil Wilson <neil@brightbox.co.uk>
 XS-Vcs-git: git://github.com/FooBarWidget/passenger.git
 Build-Depends: apache2-prefork-dev, apache2-mpm-prefork, libapr1-dev,
- libgems-ruby1.8, debhelper (>= 5), ruby1.8-dev, doxygen, asciidoc (>= 8.2),
+ rubygems1.8, debhelper (>= 5), ruby1.8-dev, doxygen, asciidoc (>= 8.2),
  graphviz, rake
 Standards-Version: 3.8.0
 Homepage: http://www.modrails.com/
 
 Package: libapache2-mod-passenger
 Architecture: any
-Depends: ${shlibs:Depends}, apache2-mpm-prefork, ruby, ruby1.8, libgems-ruby1.8
-Suggests: python
+Depends: ${shlibs:Depends}, apache2-mpm-prefork, ruby, ruby1.8, rubygems1.8
+Suggests: python, rails
 Description: Rails and Rack support for Apache2
  Phusion Passenger — a.k.a. mod_rails — makes deployment of
  applications built on the revolutionary Ruby on Rails web framework
