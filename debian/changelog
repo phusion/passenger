@@ -1,9 +1,9 @@
-passenger (2.0.2-0ubuntu1~bbox1) intrepid; urgency=low
-  
+passenger (2.0.2-0ubuntu1~bbox2) intrepid; urgency=low
+
   * New upstream release
   * debian/control: libgems-ruby1.8 -> rubygems1.8
 
- -- Neil Wilson <neil@brightbox.co.uk>  Mon, 14 Jul 2008 11:08:54 +0100
+ -- Neil Wilson <neil@brightbox.co.uk>  Sun, 20 Jul 2008 21:24:42 +0100
 
 passenger (2.0.1-0ubuntu1) intrepid; urgency=low
 
