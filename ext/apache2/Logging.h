@@ -24,6 +24,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <ostream>
+#include <sstream>
 #include <ctime>
 
 namespace Passenger {
@@ -39,23 +40,37 @@ void setLogLevel(unsigned int value);
 void setDebugFile(const char *logFile = NULL);
 
 /**
- * Write the given expression to the log stream.
+ * Write the given expression to the given stream.
+ *
+ * @param expr The expression to write.
+ * @param stream A pointer to an object that accepts the '<<' operator.
  */
-#define P_LOG(expr) \
+#define P_LOG_TO(expr, stream) \
 	do { \
-		if (Passenger::_logStream != 0) { \
-			time_t the_time = time(NULL); \
-			struct tm *the_tm = localtime(&the_time); \
-			char datetime_buf[60]; \
-			struct timeval tv; \
+		if (stream != 0) { \
+			time_t the_time;			\
+			struct tm *the_tm;			\
+			char datetime_buf[60];			\
+			struct timeval tv;			\
+			std::stringstream sstream;              \
+								\
+			the_time = time(NULL);			\
+			the_tm = localtime(&the_time);		\
 			strftime(datetime_buf, sizeof(datetime_buf), "%F %H:%M:%S", the_tm); \
 			gettimeofday(&tv, NULL); \
-			*Passenger::_logStream << \
+			sstream << \
 				"[ pid=" << getpid() << " file=" << __FILE__ << ":" << __LINE__ << \
 				" time=" << datetime_buf << "." << (tv.tv_usec / 1000) << " ]:" << \
-				"\n  " << expr << std::endl; \
+				"\n  " << expr << std::endl;	\
+			*stream << sstream.str();		\
+			stream->flush();			\
 		} \
 	} while (false)
+
+/**
+ * Write the given expression to the log stream.
+ */
+#define P_LOG(expr) P_LOG_TO(expr, Passenger::_logStream)
 
 /**
  * Write the given expression, which represents a warning,
@@ -79,18 +94,7 @@ void setDebugFile(const char *logFile = NULL);
 	#define P_TRACE(level, expr) \
 		do { \
 			if (Passenger::_logLevel >= level) { \
-				if (Passenger::_debugStream != 0) { \
-					time_t the_time = time(NULL); \
-					struct tm *the_tm = localtime(&the_time); \
-					char datetime_buf[60]; \
-					struct timeval tv; \
-					strftime(datetime_buf, sizeof(datetime_buf), "%F %H:%M:%S", the_tm); \
-					gettimeofday(&tv, NULL); \
-					*Passenger::_debugStream << \
-						"[ pid=" << getpid() << " file=" << __FILE__ << ":" << __LINE__ << \
-						" time=" << datetime_buf << "." << (tv.tv_usec / 1000) << " ]:" << \
-						"\n  " << expr << std::endl; \
-				} \
+				P_LOG_TO(expr, Passenger::_debugStream); \
 			} \
 		} while (false)
 	
