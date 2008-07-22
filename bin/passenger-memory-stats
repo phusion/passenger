@@ -117,7 +117,7 @@ class MemoryStats
 		
 		puts
 		passenger_processes = list_processes(:match =>
-			/(^Passenger |^Rails:|^Rack:|ApplicationPoolServerExecutable)/)
+			/((^| )Passenger |(^| )Rails:|(^| )Rack:|ApplicationPoolServerExecutable)/)
 		print_process_list("Passenger processes", passenger_processes, :show_ppid => false)
 		
 		if RUBY_PLATFORM !~ /linux/
@@ -144,9 +144,19 @@ class MemoryStats
 	def list_processes(options)
 		if options[:exe]
 			name = options[:exe].sub(/.*\/(.*)/, '\1')
-			ps = "ps -C '#{name}'"
+			if RUBY_PLATFORM =~ /linux/
+				ps = "ps -C '#{name}'"
+			else
+				ps = "ps -A"
+				options[:match] = Regexp.new(Regexp.escape(name))
+			end
 		elsif options[:name]
-			ps = "ps -C '#{options[:name]}'"
+			if RUBY_PLATFORM =~ /linux/
+				ps = "ps -C '#{options[:name]}'"
+			else
+				ps = "ps -A"
+				options[:match] = Regexp.new(" #{Regexp.escape(options[:name])}")
+			end
 		elsif options[:match]
 			ps = "ps -A"
 		else
