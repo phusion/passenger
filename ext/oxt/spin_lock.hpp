@@ -25,11 +25,12 @@
 #ifndef _OXT_SPIN_LOCK_HPP_
 #define _OXT_SPIN_LOCK_HPP_
 
-// At the time of writing (June 22, 2008), these operating systems don't
+// At the time of writing (July 22, 2008), these operating systems don't
 // support pthread spin locks:
 // - OpenBSD 4.3
 // - Solaris 9
-#if defined(__OpenBSD__) || defined(__SOLARIS9__)
+// - MacOS X
+#if defined(__OpenBSD__) || defined(__SOLARIS9__) || defined(__APPLE__)
 	#define OXT_NO_PTHREAD_SPINLOCKS
 #endif
 
