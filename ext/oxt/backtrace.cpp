@@ -62,9 +62,11 @@ static initialize_backtrace_support_for_this_thread main_thread_initialization("
  *
  * Solaris does support __thread, but often it's not compiled into default GCC 
  * packages (not to mention it's not available for Sparc). Playing it safe...
+ *
+ * MacOS X doesn't support __thread at all.
  */
 #if defined(GCC_IS_3_3_OR_HIGHER) && !defined(__FreeBSD__) && \
-   !defined(__SOLARIS__) && !defined(__OpenBSD__)
+   !defined(__SOLARIS__) && !defined(__OpenBSD__) && !defined(__APPLE__)
 	static __thread spin_lock *backtrace_lock = NULL;
 	static __thread vector<trace_point *> *current_backtrace = NULL;
 	
