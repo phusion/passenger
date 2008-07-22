@@ -110,10 +110,11 @@ private:
 				}
 				
 				UPDATE_TRACE_POINT();
-				string report(pool.toString());
-				report.append("\n\n");
+				string report;
 				report.append("----------- Backtraces -----------\n");
 				report.append(oxt::thread::all_backtraces());
+				report.append("\n\n");
+				report.append(pool.toString());
 				
 				fwrite(report.c_str(), 1, report.size(), f);
 				syscalls::fclose(f);
