@@ -210,7 +210,7 @@ private:
 				// This argument is ignored by the spawn server. This works on some
 				// systems, such as Ubuntu Linux.
 				"                                                             ",
-				NULL);
+				(char *) NULL);
 			int e = errno;
 			fprintf(stderr, "*** Passenger ERROR: Could not start the spawn server: %s: %s (%d)\n",
 				rubyCommand.c_str(), strerror(e), e);

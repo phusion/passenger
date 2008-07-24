@@ -508,7 +508,7 @@ private:
 				m_rubyCommand.c_str(),
 				m_user.c_str(),
 				statusReportFIFO.c_str(),
-				NULL);
+				(char *) 0);
 			int e = errno;
 			fprintf(stderr, "*** Passenger ERROR: Cannot execute %s: %s (%d)\n",
 				m_serverExecutable.c_str(), strerror(e), e);
