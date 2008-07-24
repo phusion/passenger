@@ -351,12 +351,19 @@ class ConditionVariable
 end
 
 class IO
+	# ApplicationSpawner/FrameworkSpawner might temporarily undefine
+	# the 'Passenger' module in order to avoid namespace collissions
+	# with the spawned application. So we save the NativeSupport
+	# module in a constant so that we can access it whether
+	# our 'Passenger' module is defined or not.
+	NATIVE_SUPPORT = Passenger::NativeSupport
+
 	# Send an IO object (i.e. a file descriptor) over this IO channel.
 	# This only works if this IO channel is a Unix socket.
 	#
 	# Raises SystemCallError if something went wrong.
 	def send_io(io)
-		Passenger::NativeSupport.send_fd(self.fileno, io.fileno)
+		NATIVE_SUPPORT.send_fd(self.fileno, io.fileno)
 	end
 	
 	# Receive an IO object (i.e. a file descriptor) from this IO channel.
@@ -364,7 +371,23 @@ class IO
 	#
 	# Raises SystemCallError if something went wrong.
 	def recv_io
-		return IO.new(Passenger::NativeSupport.recv_fd(self.fileno))
+		return IO.new(NATIVE_SUPPORT.recv_fd(self.fileno))
+	end
+end
+
+# Ruby's implementation of UNIXSocket#recv_io and UNIXSocket#send_io
+# are broken on 64-bit FreeBSD 7. So we override them with our own
+# implementation.
+if RUBY_PLATFORM =~ /freebsd/
+	require 'socket'
+	UNIXSocket.class_eval do
+		def recv_io
+			super
+		end
+
+		def send_io(io)
+			super
+		end
 	end
 end
 
@@ -377,4 +400,3 @@ module GC
 		end
 	end
 end
-
