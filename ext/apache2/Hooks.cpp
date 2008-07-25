@@ -629,8 +629,12 @@ public:
 	}
 	
 	int handleRequest(request_rec *r) {
-		TRACE_POINT();
 		DirConfig *config = getDirConfig(r);
+		if (config->enabled == DirConfig::DISABLED) {
+			return DECLINED;
+		}
+		
+		TRACE_POINT();
 		DirectoryMapper mapper(r, config);
 		if (mapper.getBaseURI() == NULL || r->filename == NULL || fileExists(r->filename)) {
 			return DECLINED;
@@ -788,6 +792,10 @@ public:
 	int
 	mapToStorage(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
+		if (config->enabled == DirConfig::DISABLED) {
+			return DECLINED;
+		}
+		
 		DirectoryMapper mapper(r, config);
 		bool forwardToApplication;
 		

@@ -47,6 +47,8 @@
 		struct DirConfig {
 			enum Threeway { ENABLED, DISABLED, UNSET };
 			
+			Threeway enabled;
+			
 			std::set<std::string> railsBaseURIs;
 			std::set<std::string> rackBaseURIs;
 			

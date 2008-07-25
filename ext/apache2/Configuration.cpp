@@ -58,6 +58,7 @@ extern "C" {
 void *
 passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	DirConfig *config = create_dir_config_struct(p);
+	config->enabled = DirConfig::UNSET;
 	config->autoDetectRails = DirConfig::UNSET;
 	config->autoDetectRack = DirConfig::UNSET;
 	config->autoDetectWSGI = DirConfig::UNSET;
@@ -75,6 +76,8 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	DirConfig *config = create_dir_config_struct(p);
 	DirConfig *base = (DirConfig *) basev;
 	DirConfig *add = (DirConfig *) addv;
+	
+	config->enabled = (add->enabled == DirConfig::UNSET) ? base->enabled : add->enabled;
 	
 	config->railsBaseURIs = base->railsBaseURIs;
 	for (set<string>::const_iterator it(add->railsBaseURIs.begin()); it != add->railsBaseURIs.end(); it++) {
@@ -273,6 +276,13 @@ cmd_passenger_default_user(cmd_parms *cmd, void *dummy, const char *arg) {
 	return NULL;
 }
 
+static const char *
+cmd_passenger_disable(cmd_parms *cmd, void *pcfg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->enabled = DirConfig::DISABLED;
+	return NULL;
+}
+
 
 /*************************************************
  * Rails-specific settings
@@ -406,7 +416,9 @@ cmd_rails_spawn_server(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 
-typedef const char * (*Take1Func)(); // Workaround for some weird C++-specific compiler error.
+// Workaround for some weird C++-specific compiler error.
+typedef const char * (*Take0Func)();
+typedef const char * (*Take1Func)();
 
 const command_rec passenger_commands[] = {
 	// Passenger settings.
@@ -450,6 +462,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The user that Rails/Rack applications must run as when user switching fails or is disabled."),
+	AP_INIT_NO_ARGS("PassengerDisable",
+		(Take0Func) cmd_passenger_disable,
+		NULL,
+		OR_ALL,
+		"Completely disable Phusion Passenger."),
 
 	// Rails-specific settings.
 	AP_INIT_TAKE1("RailsBaseURI",
