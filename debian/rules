@@ -14,8 +14,7 @@ moddir = ${pkgdir}${apache2moduledir}
 modsavailabledir = ${pkgdir}/etc/apache2/mods-available
 passengermodule = ${pkgdir}/usr/lib/passenger/mod_passenger.so
 
-clean: clean1
-clean1:
+clean:
 	dh_testdir
 	dh_clean
 	-rake clean

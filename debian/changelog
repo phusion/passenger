@@ -1,92 +1,11 @@
-passenger (2.0.2-0ubuntu1~bbox2) intrepid; urgency=low
+passenger (2.0.2-0ubuntu1~bbox3) intrepid; urgency=low
 
-  * New upstream release
+  * New upstream release: closes LP: #246719
+  * debian/control: Move from 'prefork' to 'worker' apache module
   * debian/control: libgems-ruby1.8 -> rubygems1.8
-
- -- Neil Wilson <neil@brightbox.co.uk>  Sun, 20 Jul 2008 21:24:42 +0100
-
-passenger (2.0.1-0ubuntu1) intrepid; urgency=low
-
-  * Public release: closes LP: #246719
   * debian/copyright: add additional references to GPL
   * debian/README.debian: add path references to User guide
   * debian/watch: strip unnecessary comments
+  * debian/control: Add 'python' to suggested list of dependencies - support WSGI apps.
 
- -- Neil Wilson <neil@brightbox.co.uk>  Tue, 08 Jul 2008 21:30:16 +0100
-
-passenger (2.0.1-0ubuntu1~bbox1) hardy; urgency=low
-
-  * New upstream release
-
- -- Neil Wilson <neil@brightbox.co.uk>  Tue, 24 Jun 2008 19:25:01 +0100
-
-passenger (1.9.1~2008061601-0ubuntu1~bbox1) hardy; urgency=low
-
-  * Bump version to 1.9.1 
-
- -- Neil Wilson <neil@brightbox.co.uk>  Mon, 16 Jun 2008 20:14:15 +0100
-
-passenger (1.9.0~2008061601-0ubuntu1~bbox1) hardy; urgency=low
-
-  * 2.0 RC2 upstream release 
-
- -- Neil Wilson <neil@brightbox.co.uk>  Mon, 16 Jun 2008 17:04:37 +0100
-
-passenger (1.9.0~2008060902-0ubuntu1~bbox1) hardy; urgency=low
-
-  * Added new man pages 
-
- -- Neil Wilson <neil@brightbox.co.uk>  Mon, 09 Jun 2008 21:22:00 +0100
-
-passenger (1.9.0~2008060901-0ubuntu1~bbox1) hardy; urgency=low
-
-  * Upstream 2.0 release candidate
-
- -- Neil Wilson <neil@brightbox.co.uk>  Mon, 09 Jun 2008 16:49:57 +0100
-
-passenger (1.1.0~2008060401-0ubuntu1~bbox1) hardy; urgency=low
-
-  * Update to lastest version - includes Rack adapters
-  * Update test binary patch to work with latest revision
-  * Add 'python' to suggested list of dependencies - support WSGI apps.
-
- -- Neil Wilson <neil@brightbox.co.uk>  Wed, 04 Jun 2008 12:00:53 +0100
-
-passenger (1.1.0~2008052601-0ubuntu1~ppa1) hardy; urgency=low
-
-  * Update to latest upstream
-  * Manpages now in upstream
-  * Move administration commands to sbin 
-
- -- Neil Wilson <neil@brightbox.co.uk>  Mon, 26 May 2008 12:07:46 +0100
-
-passenger (1.1.0~2008052301-0ubuntu1~ppa1) hardy; urgency=low
-
-  * Update to latest revision in git.
-
- -- Neil Wilson <neil@brightbox.co.uk>  Fri, 23 May 2008 08:19:29 +0100
-
-passenger (1.1.0~2008052101-0ubuntu1~ppa2) hardy; urgency=low
-
-  * Add manual pages for binaries
-  * Remove generic installer from package 
-
- -- Neil Wilson <neil@brightbox.co.uk>  Wed, 21 May 2008 13:00:14 +0100
-
-passenger (1.1.0~2008052101-0ubuntu1~ppa1) hardy; urgency=low
-
-  * Update to latest trunk
-
- -- Neil Wilson <neil@brightbox.co.uk>  Wed, 21 May 2008 10:05:43 +0100
-
-passenger (1.1.0~2008052001-0ubuntu1~ppa2) hardy; urgency=low
-
-  * Update binary build rules to work with PPA. 
-
- -- Neil Wilson <neil@brightbox.co.uk>  Tue, 20 May 2008 11:10:36 +0100
-
-passenger (1.1.0~2008052001-0ubuntu1~ppa1) hardy; urgency=low
-
-  * Pre-release
-
- -- Neil Wilson <neil@brightbox.co.uk>  Tue, 20 May 2008 10:44:05 +0100
+ -- Neil Wilson <neil@brightbox.co.uk>  Tue, 29 Jul 2008 12:14:49 +0100
