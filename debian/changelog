@@ -1,6 +1,12 @@
+passenger (2.0.2-0ubuntu1) intrepid; urgency=low
+
+  * Initial release: closes LP: #246719
+
+ -- Neil Wilson <neil@brightbox.co.uk>  Tue, 29 Jul 2008 12:55:11 +0100
+
 passenger (2.0.2-0ubuntu1~bbox3) intrepid; urgency=low
 
-  * New upstream release: closes LP: #246719
+  * New upstream release
   * debian/control: Move from 'prefork' to 'worker' apache module
   * debian/control: libgems-ruby1.8 -> rubygems1.8
   * debian/copyright: add additional references to GPL
@@ -8,4 +14,4 @@ passenger (2.0.2-0ubuntu1~bbox3) intrepid; urgency=low
   * debian/watch: strip unnecessary comments
   * debian/control: Add 'Suggest:python' -  support WSGI apps.
 
- -- Neil Wilson <neil@brightbox.co.uk>  Tue, 29 Jul 2008 12:14:49 +0100
+ -- Neil Wilson <neil@brightbox.co.uk>  Tue, 29 Jul 2008 12:39:40 +0100
