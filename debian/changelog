@@ -6,6 +6,6 @@ passenger (2.0.2-0ubuntu1~bbox3) intrepid; urgency=low
   * debian/copyright: add additional references to GPL
   * debian/README.debian: add path references to User guide
   * debian/watch: strip unnecessary comments
-  * debian/control: Add 'python' to suggested list of dependencies - support WSGI apps.
+  * debian/control: Add 'Suggest:python' -  support WSGI apps.
 
  -- Neil Wilson <neil@brightbox.co.uk>  Tue, 29 Jul 2008 12:14:49 +0100
