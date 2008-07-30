@@ -63,6 +63,18 @@ describe AbstractServerCollection do
 		server.should_not be_started
 	end
 	
+	specify "#clear deletes everything" do
+		@collection.lookup_or_add('foo') do
+			AbstractServer.new
+		end
+		@collection.lookup_or_add('bar') do
+			AbstractServer.new
+		end
+		@collection.clear
+		@collection.should_not have_key('foo')
+		@collection.should_not have_key('bar')
+	end
+	
 	specify "#cleanup deletes everything" do
 		@collection.lookup_or_add('foo') do
 			AbstractServer.new

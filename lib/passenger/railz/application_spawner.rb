@@ -84,7 +84,7 @@ class ApplicationSpawner < AbstractServer
 		@lower_privilege = lower_privilege
 		@lowest_user = lowest_user
 		@environment = environment
-		self.max_idle_time = APP_SPAWNER_MAX_IDLE_TIME
+		self.max_idle_time = DEFAULT_APP_SPAWNER_MAX_IDLE_TIME
 		assert_valid_app_root(@app_root)
 		define_message_handler(:spawn_application, :handle_spawn_application)
 	end

@@ -18,6 +18,7 @@
 
 require 'rubygems'
 require 'passenger/abstract_server'
+require 'passenger/abstract_server_collection'
 require 'passenger/railz/application_spawner'
 require 'passenger/exceptions'
 require 'passenger/constants'
@@ -74,7 +75,7 @@ class FrameworkSpawner < AbstractServer
 		end
 		
 		super()
-		self.max_idle_time = FRAMEWORK_SPAWNER_MAX_IDLE_TIME
+		self.max_idle_time = DEFAULT_FRAMEWORK_SPAWNER_MAX_IDLE_TIME
 		define_message_handler(:spawn_application, :handle_spawn_application)
 		define_message_handler(:reload, :handle_reload)
 	end
@@ -201,16 +202,7 @@ protected
 	# Overrided method.
 	def initialize_server # :nodoc:
 		$0 = "Passenger FrameworkSpawner: #{@version || @vendor}"
-		@spawners = {}
-		@spawners_lock = Mutex.new
-		@spawners_cond = ConditionVariable.new
-		@spawners_cleaner = Thread.new do
-			begin
-				spawners_cleaner_main_loop
-			rescue Exception => e
-				print_exception(self.class.to_s, e)
-			end
-		end
+		@spawners = AbstractServerCollection.new
 		begin
 			preload_rails
 			remove_phusion_passenger_namespace
@@ -224,13 +216,7 @@ protected
 	
 	# Overrided method.
 	def finalize_server # :nodoc:
-		@spawners_lock.synchronize do
-			@spawners_cond.signal
-		end
-		@spawners_cleaner.join
-		@spawners.each_value do |spawner|
-			spawner.stop
-		end
+		@spawners.cleanup
 	end
 
 private
@@ -271,84 +257,49 @@ private
 
 	def handle_spawn_application(app_root, lower_privilege, lowest_user, environment)
 		lower_privilege = lower_privilege == "true"
-		@spawners_lock.synchronize do
-			spawner = @spawners[app_root]
-			if spawner.nil?
-				begin
-					spawner = ApplicationSpawner.new(app_root,
+		begin
+			spawner = @spawners.lookup_or_add(app_root) do
+				spawner = ApplicationSpawner.new(app_root,
 						lower_privilege, lowest_user,
 						environment)
-					if @app_spawner_timeout
-						spawner.max_idle_time = @app_spawner_timeout
-					end
-					spawner.start
-				rescue ArgumentError, AppInitError, ApplicationSpawner::Error => e
-					client.write('exception')
-					client.write_scalar(marshal_exception(e))
-					if e.child_exception.is_a?(LoadError)
-						# A source file failed to load, maybe because of a
-						# missing gem. If that's the case then the sysadmin
-						# will install probably the gem. So we clear RubyGems's
-						# cache so that it can detect new gems.
-						Gem.clear_paths
-					end
-					return
+				if @app_spawner_timeout
+					spawner.max_idle_time = @app_spawner_timeout
 				end
-				@spawners[app_root] = spawner
+				spawner.start
+				spawner
 			end
-			begin
-				app = spawner.spawn_application
-			rescue ApplicationSpawner::Error => e
-				spawner.stop
-				@spawners.delete(app_root)
-				client.write('exception')
-				client.write_scalar(marshal_exception(e))
-				return
+		rescue ArgumentError, AppInitError, ApplicationSpawner::Error => e
+			client.write('exception')
+			client.write_scalar(marshal_exception(e))
+			if e.child_exception.is_a?(LoadError)
+				# A source file failed to load, maybe because of a
+				# missing gem. If that's the case then the sysadmin
+				# will install probably the gem. So we clear RubyGems's
+				# cache so that it can detect new gems.
+				Gem.clear_paths
 			end
-			client.write('success')
-			client.write(app.pid, app.listen_socket_name, app.using_abstract_namespace?)
-			client.send_io(app.owner_pipe)
-			app.close
+			return
 		end
+		begin
+			app = spawner.spawn_application
+		rescue ApplicationSpawner::Error => e
+			spawner.stop
+			@spawners.delete(app_root)
+			client.write('exception')
+			client.write_scalar(marshal_exception(e))
+			return
+		end
+		client.write('success')
+		client.write(app.pid, app.listen_socket_name, app.using_abstract_namespace?)
+		client.send_io(app.owner_pipe)
+		app.close
 	end
 	
 	def handle_reload(app_root = nil)
-		@spawners_lock.synchronize do
-			if app_root.nil?
-				@spawners.each_value do |spawner|
-					spawner.stop
-				end
-				@spawners.clear
-			else
-				spawner = @spawners[app_root]
-				if spawner
-					spawner.stop
-					@spawners.delete(app_root)
-				end
-			end
-		end
-	end
-	
-	# The main loop for the spawners cleaner thread.
-	# This thread checks the spawners list every APP_SPAWNER_CLEAN_INTERVAL seconds,
-	# and stops application spawners that have been idle for more than
-	# spawner.max_idle_time seconds.
-	def spawners_cleaner_main_loop
-		@spawners_lock.synchronize do
-			while true
-				if @spawners_cond.timed_wait(@spawners_lock, APP_SPAWNER_CLEAN_INTERVAL)
-					break
-				else
-					current_time = Time.now
-					@spawners.keys.each do |key|
-						spawner = @spawners[key]
-						if current_time - spawner.last_activity_time > spawner.max_idle_time
-							spawner.stop
-							@spawners.delete(key)
-						end
-					end
-				end
-			end
+		if app_root
+			@spawners.delete(app_root)
+		else
+			@spawners.clear
 		end
 	end
 end

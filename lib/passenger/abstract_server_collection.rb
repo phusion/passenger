@@ -36,6 +36,8 @@ class AbstractServerCollection
 	attr_accessor :max_cleaning_interval
 	attr_reader :cleaning_interval
 	
+	include Utils
+	
 	def initialize
 		@collection = {}
 		@lock = Mutex.new
@@ -45,8 +47,12 @@ class AbstractServerCollection
 		@max_cleaning_interval = 30 * 60
 		@cleaning_interval = 2000000000
 		@cleaner_thread = Thread.new do
-			@lock.synchronize do
-				cleaner_thread_main
+			begin
+				@lock.synchronize do
+					cleaner_thread_main
+				end
+			rescue Exception => e
+				print_exception(self.class.to_s, e)
 			end
 		end
 	end
@@ -65,6 +71,9 @@ class AbstractServerCollection
 	#   with this. Changing the value outside this block is not guaranteed to have any
 	#   effect on the idle cleaning interval.
 	#   A max_idle_time value of nil or 0 means the AbstractServer will never be idle cleaned.
+	#
+	# If the block raises an exception, then the collection will not be modified,
+	# and the exception will be propagated.
 	def lookup_or_add(key)
 		raise ArgumentError, "cleanup() has already been called." if @done
 		@lock.synchronize do
@@ -73,6 +82,9 @@ class AbstractServerCollection
 				return server
 			else
 				server = yield
+				if !server.respond_to?(:start)
+					raise TypeError, "The block didn't return a valid AbstractServer object."
+				end
 				@collection[key] = server
 				optimize_cleaning_interval
 				@cond.signal
@@ -118,11 +130,33 @@ class AbstractServerCollection
 	# atomic operation. The block may not call any other methods on this
 	# AbstractServerCollection object.
 	def each
+		each_pair do |key, server|
+			yield server
+		end
+	end
+	
+	# Iterate over all keys and associated AbstractServer objects. The entire
+	# iteration is a single atomic operation. The block may not call any other
+	# methods on this AbstractServerCollection object.
+	def each_pair
 		raise ArgumentError, "cleanup() has already been called." if @done
 		@lock.synchronize do
-			@collection.each_value do |server|
-				yield server
+			@collection.each_pair do |key, server|
+				yield(key, server)
 			end
+		end
+	end
+	
+	# Delete all AbstractServers from the collection. Each AbstractServer will be
+	# stopped, if necessary.
+	def clear
+		@lock.synchronize do
+			@collection.each_value do |server|
+				if server.started?
+					server.stop
+				end
+			end
+			@collection.clear
 		end
 	end
 	
@@ -141,14 +175,7 @@ class AbstractServerCollection
 			@cond.signal
 		end
 		@cleaner_thread.join
-		@lock.synchronize do
-			@collection.each_value do |server|
-				if server.started?
-					server.stop
-				end
-			end
-			@collection.clear
-		end
+		clear
 	end
 
 private

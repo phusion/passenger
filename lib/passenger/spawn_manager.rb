@@ -161,9 +161,20 @@ class SpawnManager < AbstractServer
 		if app_root
 			# Delete associated ApplicationSpawner.
 			@spawners.delete("app:#{app_root}")
+		else
+			# Delete all ApplicationSpawners.
+			keys_to_delete = []
+			@spawners.each_pair do |key, spawner|
+				if spawner.is_a?(Railz::ApplicationSpawner)
+					keys_to_delete << key
+				end
+			end
+			keys_to_delete.each do |key|
+				@spawners.delete(key)
+			end
 		end
 		@spawners.each do |spawner|
-			# Reload FrameworkSpawners.
+			# Reload all FrameworkSpawners.
 			if spawner.respond_to?(:reload)
 				spawner.reload(app_root)
 			end
