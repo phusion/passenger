@@ -12,7 +12,7 @@ Standards-Version: 3.8.0
 
 Package: libapache2-mod-passenger
 Architecture: any
-Depends: ${shlibs:Depends}, apache2-mpm-worker, ruby, ruby1.8, rubygems1.8
+Depends: ${shlibs:Depends}, apache2-mpm-worker, ruby1.8, rubygems1.8
 Suggests: python, rails
 Description: Rails and Rack support for Apache2
  Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes
