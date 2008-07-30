@@ -29,7 +29,10 @@ class RequestHandler:
 				try:
 					try:
 						env, input_stream = self.parse_request(client)
-						self.process_request(env, input_stream, client)
+						if env:
+							self.process_request(env, input_stream, client)
+						else:
+							done = True
 					except KeyboardInterrupt:
 						done = True
 					except Exception, e:
@@ -54,12 +57,16 @@ class RequestHandler:
 		buf = ''
 		while len(buf) < 4:
 			tmp = client.recv(4 - len(buf))
+			if len(tmp) == 0:
+				return (None, None)
 			buf += tmp
 		header_size = struct.unpack('>I', buf)[0]
 		
 		buf = ''
 		while len(buf) < header_size:
 			tmp = client.recv(header_size - len(buf))
+			if len(tmp) == 0:
+				return (None, None)
 			buf += tmp
 		
 		headers = buf.split("\0")
