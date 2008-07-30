@@ -17,6 +17,7 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 require 'passenger/abstract_server'
+require 'passenger/abstract_server_collection'
 require 'passenger/constants'
 require 'passenger/utils'
 
@@ -36,6 +37,8 @@ module Passenger
 # tested. Don't forget to call cleanup after the server's main loop has
 # finished.
 #
+# *Note*: SpawnManager is reentrant, but not guaranteed to be thread-safe.
+#
 # == Ruby on Rails optimizations ===
 #
 # Spawning a Ruby on Rails application is usually slow. But SpawnManager
@@ -53,16 +56,14 @@ class SpawnManager < AbstractServer
 	
 	def initialize
 		super()
-		@spawners = {}
-		@lock = Mutex.new
-		@cond = ConditionVariable.new
-		@cleaner_thread = Thread.new do
-			cleaner_thread_main
-		end
+		@spawners = AbstractServerCollection.new
 		define_message_handler(:spawn_application, :handle_spawn_application)
 		define_message_handler(:reload, :handle_reload)
 		define_signal_handler('SIGHUP', :reload)
 		
+		# Start garbage collector in order to free up some existing
+		# heap slots. This prevents the heap from growing unnecessarily
+		# during the startup phase.
 		GC.start
 		if GC.copy_on_write_friendly?
 			# Preload libraries for copy-on-write semantics.
@@ -157,41 +158,21 @@ class SpawnManager < AbstractServer
 			rescue InvalidPath
 			end
 		end
-		@lock.synchronize do
-			if app_root
-				# Delete associated ApplicationSpawner.
-				key = "app:#{app_root}"
-				spawner = @spawners[key]
-				if spawner
-					if spawner.started?
-						spawner.stop
-					end
-					@spawners.delete(key)
-				end
-			end
-			@spawners.each_value do |spawner|
-				# Reload FrameworkSpawners.
-				if spawner.respond_to?(:reload)
-					spawner.reload(app_root)
-				end
+		if app_root
+			# Delete associated ApplicationSpawner.
+			@spawners.delete("app:#{app_root}")
+		end
+		@spawners.each do |spawner|
+			# Reload FrameworkSpawners.
+			if spawner.respond_to?(:reload)
+				spawner.reload(app_root)
 			end
 		end
 	end
 	
 	# Cleanup resources. Should be called when this SpawnManager is no longer needed.
 	def cleanup
-		@lock.synchronize do
-			@cond.signal
-		end
-		@cleaner_thread.join
-		@lock.synchronize do
-			@spawners.each_value do |spawner|
-				if spawner.started?
-					spawner.stop
-				end
-			end
-			@spawners.clear
-		end
+		@spawners.cleanup
 	end
 
 private
@@ -235,35 +216,28 @@ private
 			spawner_must_be_started = false
 		end
 		
-		spawner = nil
-		@lock.synchronize do
-			spawner = @spawners[key]
-			if !spawner
-				spawner = create_spawner.call
-				if spawner_timeout > 0
-					spawner.max_idle_time = spawner_timeout
-				end
-				if spawner_must_be_started
-					spawner.start
-				end
-				@spawners[key] = spawner
+		spawner = @spawners.lookup_or_add(key) do
+			spawner = create_spawner.call
+			if spawner_timeout > 0
+				spawner.max_idle_time = spawner_timeout
 			end
-			begin
-				if spawner.is_a?(Railz::FrameworkSpawner)
-					return spawner.spawn_application(app_root, lower_privilege,
-						lowest_user, environment)
-				elsif spawner.started?
-					return spawner.spawn_application
-				else
-					return spawner.spawn_application!
-				end
-			rescue AbstractServer::ServerError
-				if spawner.started?
-					spawner.stop
-				end
-				@spawners.delete(key)
-				raise
+			if spawner_must_be_started
+				spawner.start
 			end
+			spawner
+		end
+		begin
+			if spawner.is_a?(Railz::FrameworkSpawner)
+				return spawner.spawn_application(app_root, lower_privilege,
+					lowest_user, environment)
+			elsif spawner.started?
+				return spawner.spawn_application
+			else
+				return spawner.spawn_application!
+			end
+		rescue AbstractServer::ServerError
+			@spawners.delete(key)
+			raise
 		end
 	end
 	
@@ -322,27 +296,6 @@ private
 	
 	def handle_reload(app_root)
 		reload(app_root)
-	end
-	
-	def cleaner_thread_main
-		@lock.synchronize do
-			while true
-				if @cond.timed_wait(@lock, SPAWNER_CLEAN_INTERVAL)
-					break
-				else
-					current_time = Time.now
-					@spawners.keys.each do |key|
-						spawner = @spawners[key]
-						if current_time - spawner.last_activity_time > spawner.max_idle_time
-							if spawner.started?
-								spawner.stop
-							end
-							@spawners.delete(key)
-						end
-					end
-				end
-			end
-		end
 	end
 	
 	def send_error_page(channel, template_name, options = {})
