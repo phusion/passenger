@@ -372,6 +372,8 @@ private:
 	}
 	
 	/**
+	 * Spawn a new application instance, or use an existing one that's in the pool.
+	 *
 	 * @throws boost::thread_interrupted
 	 * @throws SpawnException
 	 * @throws SystemException
@@ -591,7 +593,9 @@ public:
 		TRACE_POINT();
 		using namespace boost::posix_time;
 		unsigned int attempt = 0;
-		ptime timeLimit(get_system_time() + millisec(GET_TIMEOUT));
+		// TODO: We should probably add a timeout to the following
+		// lock. This way we can fail gracefully if the server's under
+		// rediculous load. Though I'm not sure how much it really helps.
 		unique_lock<boost::mutex> l(lock);
 		
 		while (true) {
