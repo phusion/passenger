@@ -50,7 +50,7 @@ class AbstractServerCollection
 			end
 		end
 	end
-		
+	
 	# Lookup and returns an AbstractServer with the given key.
 	#
 	# If there is no AbstractSerer associated with the given key, then the given
@@ -76,14 +76,22 @@ class AbstractServerCollection
 				@collection[key] = server
 				optimize_cleaning_interval
 				@cond.signal
+				return server
 			end
 		end
 	end
 	
-	# Check whether there's an AbstractServer object associated with the given key.
+	# Checks whether there's an AbstractServer object associated with the given key.
 	def has_key?(key)
 		@lock.synchronize do
 			return @collection.has_key?(key)
+		end
+	end
+	
+	# Checks whether the collection is empty.
+	def empty?
+		@lock.synchronize do
+			return @collection.empty?
 		end
 	end
 	
@@ -102,6 +110,18 @@ class AbstractServerCollection
 				@collection.delete(key)
 				optimize_cleaning_interval
 				@cond.signal
+			end
+		end
+	end
+	
+	# Iterate over all AbstractServer objects. The entire iteration is a single
+	# atomic operation. The block may not call any other methods on this
+	# AbstractServerCollection object.
+	def each
+		raise ArgumentError, "cleanup() has already been called." if @done
+		@lock.synchronize do
+			@collection.each_value do |server|
+				yield server
 			end
 		end
 	end

@@ -30,6 +30,21 @@ describe AbstractServerCollection do
 		end
 	end
 	
+	specify "#lookup_or_add returns the found server" do
+		server = AbstractServer.new
+		@collection.lookup_or_add('foo') { server }
+		result = @collection.lookup_or_add('foo') { AbstractServer.new }
+		result.should == server
+	end
+	
+	specify "#lookup_or_add returns the value of the block if server is not already in the collection" do
+		server = AbstractServer.new
+		result = @collection.lookup_or_add('foo') do
+			server
+		end
+		result.should == server
+	end
+	
 	specify "#delete deletes the server with the given key" do
 		@collection.lookup_or_add('foo') do
 			AbstractServer.new
