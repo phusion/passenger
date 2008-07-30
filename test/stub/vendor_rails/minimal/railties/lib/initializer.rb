@@ -29,6 +29,7 @@ module Rails
 			if defined?(RAILS_ROOT)
 				$LOAD_PATH << "#{RAILS_ROOT}/app/controllers"
 			end
+			$LOAD_PATH << "#{RAILS_FRAMEWORK_ROOT}/railties/lib"
 		end
 	
 	protected
