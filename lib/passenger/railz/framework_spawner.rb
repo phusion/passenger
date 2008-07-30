@@ -257,37 +257,40 @@ private
 
 	def handle_spawn_application(app_root, lower_privilege, lowest_user, environment)
 		lower_privilege = lower_privilege == "true"
-		begin
-			spawner = @spawners.lookup_or_add(app_root) do
-				spawner = ApplicationSpawner.new(app_root,
-						lower_privilege, lowest_user,
-						environment)
-				if @app_spawner_timeout
-					spawner.max_idle_time = @app_spawner_timeout
+		app = nil
+		@spawners.synchronize do
+			begin
+				spawner = @spawners.lookup_or_add(app_root) do
+					spawner = ApplicationSpawner.new(app_root,
+							lower_privilege, lowest_user,
+							environment)
+					if @app_spawner_timeout
+						spawner.max_idle_time = @app_spawner_timeout
+					end
+					spawner.start
+					spawner
 				end
-				spawner.start
-				spawner
+			rescue ArgumentError, AppInitError, ApplicationSpawner::Error => e
+				client.write('exception')
+				client.write_scalar(marshal_exception(e))
+				if e.child_exception.is_a?(LoadError)
+					# A source file failed to load, maybe because of a
+					# missing gem. If that's the case then the sysadmin
+					# will install probably the gem. So we clear RubyGems's
+					# cache so that it can detect new gems.
+					Gem.clear_paths
+				end
+				return
 			end
-		rescue ArgumentError, AppInitError, ApplicationSpawner::Error => e
-			client.write('exception')
-			client.write_scalar(marshal_exception(e))
-			if e.child_exception.is_a?(LoadError)
-				# A source file failed to load, maybe because of a
-				# missing gem. If that's the case then the sysadmin
-				# will install probably the gem. So we clear RubyGems's
-				# cache so that it can detect new gems.
-				Gem.clear_paths
+			begin
+				app = spawner.spawn_application
+			rescue ApplicationSpawner::Error => e
+				spawner.stop
+				@spawners.delete(app_root)
+				client.write('exception')
+				client.write_scalar(marshal_exception(e))
+				return
 			end
-			return
-		end
-		begin
-			app = spawner.spawn_application
-		rescue ApplicationSpawner::Error => e
-			spawner.stop
-			@spawners.delete(app_root)
-			client.write('exception')
-			client.write_scalar(marshal_exception(e))
-			return
 		end
 		client.write('success')
 		client.write(app.pid, app.listen_socket_name, app.using_abstract_namespace?)
@@ -296,10 +299,12 @@ private
 	end
 	
 	def handle_reload(app_root = nil)
-		if app_root
-			@spawners.delete(app_root)
-		else
-			@spawners.clear
+		@spawners.synchronize do
+			if app_root
+				@spawners.delete(app_root)
+			else
+				@spawners.clear
+			end
 		end
 	end
 end

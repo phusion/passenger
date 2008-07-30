@@ -15,76 +15,94 @@ describe AbstractServerCollection do
 	end
 	
 	specify "#lookup_or_add adds the server returned by its block" do
-		@collection.lookup_or_add('foo') do
-			AbstractServer.new
+		@collection.synchronize do
+			@collection.lookup_or_add('foo') do
+				AbstractServer.new
+			end
+			@collection.should have_key('foo')
 		end
-		@collection.should have_key('foo')
 	end
 	
 	specify "#lookup_or_add does not execute the block if the key exists" do
-		@collection.lookup_or_add('foo') do
-			AbstractServer.new
-		end
-		@collection.lookup_or_add('foo') do
-			violated
+		@collection.synchronize do
+			@collection.lookup_or_add('foo') do
+				AbstractServer.new
+			end
+			@collection.lookup_or_add('foo') do
+				violated
+			end
 		end
 	end
 	
 	specify "#lookup_or_add returns the found server" do
-		server = AbstractServer.new
-		@collection.lookup_or_add('foo') { server }
-		result = @collection.lookup_or_add('foo') { AbstractServer.new }
-		result.should == server
+		@collection.synchronize do
+			server = AbstractServer.new
+			@collection.lookup_or_add('foo') { server }
+			result = @collection.lookup_or_add('foo') { AbstractServer.new }
+			result.should == server
+		end
 	end
 	
 	specify "#lookup_or_add returns the value of the block if server is not already in the collection" do
-		server = AbstractServer.new
-		result = @collection.lookup_or_add('foo') do
-			server
+		@collection.synchronize do
+			server = AbstractServer.new
+			result = @collection.lookup_or_add('foo') do
+				server
+			end
+			result.should == server
 		end
-		result.should == server
 	end
 	
 	specify "#delete deletes the server with the given key" do
-		@collection.lookup_or_add('foo') do
-			AbstractServer.new
+		@collection.synchronize do
+			@collection.lookup_or_add('foo') do
+				AbstractServer.new
+			end
+			@collection.delete('foo')
+			@collection.should_not have_key('foo')
 		end
-		@collection.delete('foo')
-		@collection.should_not have_key('foo')
 	end
 	
 	specify "#delete stop the server if it's started" do
-		server = AbstractServer.new
-		@collection.lookup_or_add('foo') do
-			server.start
-			server
+		@collection.synchronize do
+			server = AbstractServer.new
+			@collection.lookup_or_add('foo') do
+				server.start
+				server
+			end
+			@collection.delete('foo')
+			server.should_not be_started
 		end
-		@collection.delete('foo')
-		server.should_not be_started
 	end
 	
 	specify "#clear deletes everything" do
-		@collection.lookup_or_add('foo') do
-			AbstractServer.new
+		@collection.synchronize do
+			@collection.lookup_or_add('foo') do
+				AbstractServer.new
+			end
+			@collection.lookup_or_add('bar') do
+				AbstractServer.new
+			end
+			@collection.clear
+			@collection.should_not have_key('foo')
+			@collection.should_not have_key('bar')
 		end
-		@collection.lookup_or_add('bar') do
-			AbstractServer.new
-		end
-		@collection.clear
-		@collection.should_not have_key('foo')
-		@collection.should_not have_key('bar')
 	end
 	
 	specify "#cleanup deletes everything" do
-		@collection.lookup_or_add('foo') do
-			AbstractServer.new
-		end
-		@collection.lookup_or_add('bar') do
-			AbstractServer.new
+		@collection.synchronize do
+			@collection.lookup_or_add('foo') do
+				AbstractServer.new
+			end
+			@collection.lookup_or_add('bar') do
+				AbstractServer.new
+			end
 		end
 		@collection.cleanup
-		@collection.should_not have_key('foo')
-		@collection.should_not have_key('bar')
+		@collection.synchronize do
+			@collection.should_not have_key('foo')
+			@collection.should_not have_key('bar')
+		end
 	end
 	
 	specify "#cleanup stops all servers" do
@@ -94,9 +112,11 @@ describe AbstractServerCollection do
 			server.start
 			servers << server
 		end
-		@collection.lookup_or_add('foo') { servers[0] }
-		@collection.lookup_or_add('bar') { servers[1] }
-		@collection.lookup_or_add('baz') { servers[2] }
+		@collection.synchronize do
+			@collection.lookup_or_add('foo') { servers[0] }
+			@collection.lookup_or_add('bar') { servers[1] }
+			@collection.lookup_or_add('baz') { servers[2] }
+		end
 		@collection.cleanup
 		servers.each do |server|
 			server.should_not be_started
@@ -109,20 +129,28 @@ describe AbstractServerCollection do
 		bar = AbstractServer.new
 		bar.max_idle_time = 2
 		
-		@collection.min_cleaning_interval = 0.02
-		@collection.max_cleaning_interval = 0.02
-		@collection.lookup_or_add('foo') { foo }
-		@collection.lookup_or_add('bar') { bar }
+		@collection.synchronize do
+			@collection.min_cleaning_interval = 0.02
+			@collection.max_cleaning_interval = 0.02
+			@collection.lookup_or_add('foo') { foo }
+			@collection.lookup_or_add('bar') { bar }
+		end
 		sleep 0.15
-		@collection.should_not have_key('foo')
-		@collection.should have_key('bar')
+		@collection.synchronize do
+			@collection.should_not have_key('foo')
+			@collection.should have_key('bar')
+		end
 	end
 	
 	specify "servers with max_idle_time of 0 are never cleaned up" do
 		@collection.min_cleaning_interval = 0.01
 		@collection.max_cleaning_interval = 0.01
-		@collection.lookup_or_add('foo') { AbstractServer.new }
+		@collection.synchronize do
+			@collection.lookup_or_add('foo') { AbstractServer.new }
+		end
 		sleep 0.15
-		@collection.should have_key('foo')
+		@collection.synchronize do
+			@collection.should have_key('foo')
+		end
 	end
 end

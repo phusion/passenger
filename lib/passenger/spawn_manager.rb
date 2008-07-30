@@ -37,8 +37,6 @@ module Passenger
 # tested. Don't forget to call cleanup after the server's main loop has
 # finished.
 #
-# *Note*: SpawnManager is reentrant, but not guaranteed to be thread-safe.
-#
 # == Ruby on Rails optimizations ===
 #
 # Spawning a Ruby on Rails application is usually slow. But SpawnManager
@@ -158,25 +156,27 @@ class SpawnManager < AbstractServer
 			rescue InvalidPath
 			end
 		end
-		if app_root
-			# Delete associated ApplicationSpawner.
-			@spawners.delete("app:#{app_root}")
-		else
-			# Delete all ApplicationSpawners.
-			keys_to_delete = []
-			@spawners.each_pair do |key, spawner|
-				if spawner.is_a?(Railz::ApplicationSpawner)
-					keys_to_delete << key
+		@spawners.synchronize do
+			if app_root
+				# Delete associated ApplicationSpawner.
+				@spawners.delete("app:#{app_root}")
+			else
+				# Delete all ApplicationSpawners.
+				keys_to_delete = []
+				@spawners.each_pair do |key, spawner|
+					if spawner.is_a?(Railz::ApplicationSpawner)
+						keys_to_delete << key
+					end
+				end
+				keys_to_delete.each do |key|
+					@spawners.delete(key)
 				end
 			end
-			keys_to_delete.each do |key|
-				@spawners.delete(key)
-			end
-		end
-		@spawners.each do |spawner|
-			# Reload all FrameworkSpawners.
-			if spawner.respond_to?(:reload)
-				spawner.reload(app_root)
+			@spawners.each do |spawner|
+				# Reload all FrameworkSpawners.
+				if spawner.respond_to?(:reload)
+					spawner.reload(app_root)
+				end
 			end
 		end
 	end
@@ -219,28 +219,30 @@ private
 			spawner_must_be_started = false
 		end
 		
-		spawner = @spawners.lookup_or_add(key) do
-			spawner = create_spawner.call
-			if spawner_timeout > 0
-				spawner.max_idle_time = spawner_timeout
+		@spawners.synchronize do
+			spawner = @spawners.lookup_or_add(key) do
+				spawner = create_spawner.call
+				if spawner_timeout > 0
+					spawner.max_idle_time = spawner_timeout
+				end
+				if spawner_must_be_started
+					spawner.start
+				end
+				spawner
 			end
-			if spawner_must_be_started
-				spawner.start
+			begin
+				if spawner.is_a?(Railz::FrameworkSpawner)
+					return spawner.spawn_application(app_root, lower_privilege,
+						lowest_user, environment)
+				elsif spawner.started?
+					return spawner.spawn_application
+				else
+					return spawner.spawn_application!
+				end
+			rescue AbstractServer::ServerError
+				@spawners.delete(key)
+				raise
 			end
-			spawner
-		end
-		begin
-			if spawner.is_a?(Railz::FrameworkSpawner)
-				return spawner.spawn_application(app_root, lower_privilege,
-					lowest_user, environment)
-			elsif spawner.started?
-				return spawner.spawn_application
-			else
-				return spawner.spawn_application!
-			end
-		rescue AbstractServer::ServerError
-			@spawners.delete(key)
-			raise
 		end
 	end
 	

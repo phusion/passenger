@@ -109,7 +109,9 @@ describe SpawnManager do
 		@stub.dont_use_vendor_rails
 		@manager.reload(@stub.app_root)
 		spawners = @manager.instance_eval { @spawners }
-		spawners.should be_empty
+		spawners.synchronize do
+			spawners.should be_empty
+		end
 	end
 end
 

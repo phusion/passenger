@@ -30,7 +30,7 @@ module Passenger
 # and Railz::ApplicationSpawner objects, while Railz::FrameworkSpawner maintains a
 # collection of Railz::ApplicationSpawner objects.
 #
-# This class is thread-safe.
+# This class is thread-safe as long as the specified thread-safety rules are followed.
 class AbstractServerCollection
 	attr_accessor :min_cleaning_interval
 	attr_accessor :max_cleaning_interval
@@ -41,6 +41,7 @@ class AbstractServerCollection
 	def initialize
 		@collection = {}
 		@lock = Mutex.new
+		@cleanup_lock = Mutex.new
 		@cond = ConditionVariable.new
 		@done = false
 		@min_cleaning_interval = 20
@@ -57,107 +58,111 @@ class AbstractServerCollection
 		end
 	end
 	
+	# Acquire the lock for this AbstractServerCollection object, and run
+	# the code within the block. The entire block will be a single atomic
+	# operation.
+	def synchronize
+		@lock.synchronize do
+			yield
+		end
+	end
+	
 	# Lookup and returns an AbstractServer with the given key.
 	#
 	# If there is no AbstractSerer associated with the given key, then the given
 	# block will be called. That block must return an AbstractServer object. Then,
 	# that object will be stored in the collection, and returned.
 	#
-	# The block must adhere to the following rules:
-	# - The block must not call any other methods on this AbstractServerCollection
-	#   instance.
-	# - It must set the 'max_idle_time' attribute on the AbstractServer.
-	#   AbstractServerCollection's idle cleaning interval will be adapted to accomodate
-	#   with this. Changing the value outside this block is not guaranteed to have any
-	#   effect on the idle cleaning interval.
-	#   A max_idle_time value of nil or 0 means the AbstractServer will never be idle cleaned.
+	# The block must set the 'max_idle_time' attribute on the AbstractServer.
+	# AbstractServerCollection's idle cleaning interval will be adapted to accomodate
+	# with this. Changing the value outside this block is not guaranteed to have any
+	# effect on the idle cleaning interval.
+	# A max_idle_time value of nil or 0 means the AbstractServer will never be idle cleaned.
 	#
 	# If the block raises an exception, then the collection will not be modified,
 	# and the exception will be propagated.
+	#
+	# Precondition: this method must be called within a #synchronize block.
 	def lookup_or_add(key)
 		raise ArgumentError, "cleanup() has already been called." if @done
-		@lock.synchronize do
-			server = @collection[key]
-			if server
-				return server
-			else
-				server = yield
-				if !server.respond_to?(:start)
-					raise TypeError, "The block didn't return a valid AbstractServer object."
-				end
-				@collection[key] = server
-				optimize_cleaning_interval
-				@cond.signal
-				return server
+		server = @collection[key]
+		if server
+			return server
+		else
+			server = yield
+			if !server.respond_to?(:start)
+				raise TypeError, "The block didn't return a valid AbstractServer object."
 			end
+			@collection[key] = server
+			optimize_cleaning_interval
+			@cond.signal
+			return server
 		end
 	end
 	
 	# Checks whether there's an AbstractServer object associated with the given key.
+	#
+	# Precondition: this method must be called within a #synchronize block.
 	def has_key?(key)
-		@lock.synchronize do
-			return @collection.has_key?(key)
-		end
+		return @collection.has_key?(key)
 	end
 	
 	# Checks whether the collection is empty.
+	#
+	# Precondition: this method must be called within a #synchronize block.
 	def empty?
-		@lock.synchronize do
-			return @collection.empty?
-		end
+		return @collection.empty?
 	end
 	
 	# Deletes from the collection the AbstractServer that's associated with the
 	# given key. If no such AbstractServer exists, nothing will happen.
 	#
 	# If the AbstractServer is started, then it will be stopped before deletion.
+	#
+	# Precondition: this method must be called within a #synchronize block.
 	def delete(key)
 		raise ArgumentError, "cleanup() has already been called." if @done
-		@lock.synchronize do
-			server = @collection[key]
-			if server
-				if server.started?
-					server.stop
-				end
-				@collection.delete(key)
-				optimize_cleaning_interval
-				@cond.signal
+		server = @collection[key]
+		if server
+			if server.started?
+				server.stop
 			end
+			@collection.delete(key)
+			optimize_cleaning_interval
+			@cond.signal
 		end
 	end
 	
-	# Iterate over all AbstractServer objects. The entire iteration is a single
-	# atomic operation. The block may not call any other methods on this
-	# AbstractServerCollection object.
+	# Iterate over all AbstractServer objects.
+	#
+	# Precondition: this method must be called within a #synchronize block.
 	def each
 		each_pair do |key, server|
 			yield server
 		end
 	end
 	
-	# Iterate over all keys and associated AbstractServer objects. The entire
-	# iteration is a single atomic operation. The block may not call any other
-	# methods on this AbstractServerCollection object.
+	# Iterate over all keys and associated AbstractServer objects.
+	#
+	# Precondition: this method must be called within a #synchronize block.
 	def each_pair
 		raise ArgumentError, "cleanup() has already been called." if @done
-		@lock.synchronize do
-			@collection.each_pair do |key, server|
-				yield(key, server)
-			end
+		@collection.each_pair do |key, server|
+			yield(key, server)
 		end
 	end
 	
 	# Delete all AbstractServers from the collection. Each AbstractServer will be
 	# stopped, if necessary.
+	#
+	# Precondition: this method must be called within a #synchronize block.
 	def clear
-		@lock.synchronize do
-			@collection.each_value do |server|
-				if server.started?
-					server.stop
-				end
+		@collection.each_value do |server|
+			if server.started?
+				server.stop
 			end
-			@collection.clear
 		end
+		@collection.clear
 	end
 	
 	# Cleanup all resources used by this AbstractServerCollection. All AbstractServers
@@ -167,15 +172,17 @@ class AbstractServerCollection
 	# After calling this method, this AbstractServerCollection object will become
 	# unusable.
 	#
-	# This method is NOT thread-safe.
+	# Precondition: this method must *NOT* be called within a #synchronize block.
 	def cleanup
-		return if @done
-		@lock.synchronize do
-			@done = true
-			@cond.signal
+		@cleanup_lock.synchronize do
+			return if @done
+			@lock.synchronize do
+				@done = true
+				@cond.signal
+			end
+			@cleaner_thread.join
+			clear
 		end
-		@cleaner_thread.join
-		clear
 	end
 
 private
