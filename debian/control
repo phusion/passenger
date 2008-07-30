@@ -15,6 +15,6 @@ Architecture: any
 Depends: ${shlibs:Depends}, apache2-mpm-worker, ruby1.8, rubygems1.8
 Suggests: python, rails
 Description: Rails and Rack support for Apache2
- Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes
+ Phusion Passenger — a.k.a. mod_rails or mod_rack — makes
  deployment of Ruby web applications, such as those built on the
  revolutionary Ruby on Rails web framework, a breeze.
