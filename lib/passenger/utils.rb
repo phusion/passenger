@@ -18,7 +18,7 @@
 
 require 'rubygems'
 require 'thread'
-if RUBY_PLATFORM != "java" && (RUBY_VERSION < "1.8.6" || (RUBY_VERSION == "1.8.6" && RUBY_PATCHLEVEL < 110))
+if RUBY_PLATFORM != "java" && RUBY_VERSION < "1.8.7"
 	require 'fastthread'
 end
 require 'pathname'
