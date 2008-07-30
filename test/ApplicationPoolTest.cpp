@@ -45,6 +45,20 @@
 		}
 		return result;
 	}
+	
+	static Application::SessionPtr spawnRackApp(ApplicationPoolPtr pool, const char *appRoot) {
+		SpawnOptions options;
+		options.appRoot = appRoot;
+		options.appType = "rack";
+		return pool->get(options);
+	}
+	
+	static Application::SessionPtr spawnWsgiApp(ApplicationPoolPtr pool, const char *appRoot) {
+		SpawnOptions options;
+		options.appRoot = appRoot;
+		options.appType = "wsgi";
+		return pool->get(options);
+	}
 
 	TEST_METHOD(1) {
 		// Calling ApplicationPool.get() once should return a valid Session.
@@ -162,7 +176,7 @@
 		}
 		
 		void operator()() {
-			m_session = pool->get("stub/minimal-railsapp");
+			m_session = spawnWsgiApp(pool, "stub/wsgi");
 			m_done = true;
 		}
 	};
@@ -173,8 +187,8 @@
 		// in the pool, then the pool will wait until enough sessions
 		// have been closed.
 		pool->setMax(2);
-		Application::SessionPtr session1(pool->get("stub/railsapp"));
-		Application::SessionPtr session2(pool2->get("stub/railsapp"));
+		Application::SessionPtr session1(spawnRackApp(pool, "stub/rack"));
+		Application::SessionPtr session2(spawnRackApp(pool2, "stub/rack"));
 		Application::SessionPtr session3;
 		bool done;
 		
@@ -333,7 +347,7 @@
 	TEST_METHOD(16) {
 		// The cleaner thread should clean idle applications without crashing.
 		pool->setMaxIdleTime(1);
-		pool->get("stub/minimal-railsapp");
+		spawnRackApp(pool, "stub/rack");
 		
 		time_t begin = time(NULL);
 		while (pool->getCount() == 1u && time(NULL) - begin < 10) {
