@@ -64,6 +64,11 @@ class AbstractServerCollection
 	def synchronize
 		@lock.synchronize do
 			yield
+			if @changed
+				optimize_cleaning_interval
+				@cond.signal
+				@changed = false
+			end
 		end
 	end
 	
@@ -94,8 +99,7 @@ class AbstractServerCollection
 				raise TypeError, "The block didn't return a valid AbstractServer object."
 			end
 			@collection[key] = server
-			optimize_cleaning_interval
-			@cond.signal
+			@changed = true
 			return server
 		end
 	end
@@ -128,8 +132,7 @@ class AbstractServerCollection
 				server.stop
 			end
 			@collection.delete(key)
-			optimize_cleaning_interval
-			@cond.signal
+			@changed = true
 		end
 	end
 	
