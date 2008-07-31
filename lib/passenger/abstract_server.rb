@@ -91,7 +91,10 @@ class AbstractServer
 	# The last time when this AbstractServer had processed a message.
 	attr_accessor :last_activity_time
 	
-	# An attribute, used internally. This should not be used outside Passenger.
+	# The maximum time that this AbstractServer may be idle. Used by
+	# AbstractServerCollection to determine when this object should
+	# be cleaned up. nil or 0 indicate that this object should never
+	# be idle cleaned.
 	attr_accessor :max_idle_time
 	
 	def initialize
