@@ -325,6 +325,17 @@ class ConditionVariable
 	def timed_wait(mutex, secs)
 		require 'timeout' unless defined?(Timeout)
 		if secs > 0
+			if secs > 100000000
+				# NOTE: If one calls timeout() on FreeBSD 5 with an
+				# argument of more than 100000000, then Ruby will become
+				# stuck in an infite loop, blocking all threads. It seems
+				# that Ruby uses select() to implement sleeping.
+				# I think that a value of more than 100000000 overflows
+				# select()'s data structures, causing it to behave incorrectly.
+				# So we just make sure we can't sleep more than 100000000
+				# seconds.
+				secs = 100000000
+			end
 			Timeout.timeout(secs) do
 				wait(mutex)
 			end
@@ -341,6 +352,10 @@ class ConditionVariable
 	def timed_wait!(mutex, secs)
 		require 'timeout' unless defined?(Timeout)
 		if secs > 0
+			if secs > 100000000
+				# See the note for timed_wait().
+				secs = 100000000
+			end
 			Timeout.timeout(secs) do
 				wait(mutex)
 			end
