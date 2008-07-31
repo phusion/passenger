@@ -46,7 +46,7 @@ class AbstractServerCollection
 		@done = false
 		@min_cleaning_interval = 20
 		@max_cleaning_interval = 30 * 60
-		@cleaning_interval = 2000000000
+		@cleaning_interval = 60 * 60
 		@cleaner_thread = Thread.new do
 			begin
 				@lock.synchronize do
@@ -214,7 +214,7 @@ private
 	end
 	
 	def optimize_cleaning_interval
-		smallest_max_idle_time = 2000000000
+		smallest_max_idle_time = 60 * 60
 		@collection.each_value do |server|
 			if server.max_idle_time && server.max_idle_time != 0 && \
 			   server.max_idle_time < smallest_max_idle_time
