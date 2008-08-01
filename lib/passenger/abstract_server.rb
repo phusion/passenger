@@ -97,6 +97,10 @@ class AbstractServer
 	# be idle cleaned.
 	attr_accessor :max_idle_time
 	
+	# Used by AbstractServerCollection to remember when this AbstractServer
+	# should be idle cleaned.
+	attr_accessor :next_cleaning_time
+	
 	def initialize
 		@done = false
 		@message_handlers = {}

@@ -130,12 +130,10 @@ describe AbstractServerCollection do
 		bar.max_idle_time = 2
 		
 		@collection.synchronize do
-			@collection.min_cleaning_interval = 0.02
-			@collection.max_cleaning_interval = 0.02
 			@collection.lookup_or_add('foo') { foo }
 			@collection.lookup_or_add('bar') { bar }
 		end
-		sleep 0.15
+		sleep 0.3
 		@collection.synchronize do
 			@collection.should_not have_key('foo')
 			@collection.should have_key('bar')
@@ -143,14 +141,91 @@ describe AbstractServerCollection do
 	end
 	
 	specify "servers with max_idle_time of 0 are never cleaned up" do
-		@collection.min_cleaning_interval = 0.01
-		@collection.max_cleaning_interval = 0.01
 		@collection.synchronize do
 			@collection.lookup_or_add('foo') { AbstractServer.new }
 		end
-		sleep 0.15
+		original_cleaning_time = @collection.next_cleaning_time
+		@collection.check_idle_servers!
+		
+		# Wait until the cleaner thread has run.
+		while original_cleaning_time == @collection.next_cleaning_time
+			sleep 0.01
+		end
+		
 		@collection.synchronize do
 			@collection.should have_key('foo')
 		end
+	end
+	
+	specify "upon adding a new server to an empty collection, the next cleaning will " <<
+	        "be scheduled at that server's next cleaning time" do
+		server = AbstractServer.new
+		server.max_idle_time = 10
+		@collection.synchronize do
+			@collection.lookup_or_add('foo') { server }
+		end
+		@collection.next_cleaning_time.should == server.next_cleaning_time
+	end
+	
+	specify "upon adding a new server to a nonempty collection, and that server's next cleaning " <<
+	        "time is not the smallest of all servers' cleaning times, then the next cleaning schedule " <<
+	        "will not change" do
+		server1 = AbstractServer.new
+		server1.max_idle_time = 10
+		@collection.synchronize do
+			@collection.lookup_or_add('foo') { server1 }
+		end
+		
+		server2 = AbstractServer.new
+		server2.max_idle_time = 11
+		@collection.synchronize do
+			@collection.lookup_or_add('bar') { server2 }
+		end
+		
+		@collection.next_cleaning_time.should == server1.next_cleaning_time
+	end
+	
+	specify "upon deleting server from a nonempty collection, and the deleted server's next cleaning " <<
+	        "time IS the smallest of all servers' cleaning times, then the next cleaning schedule " <<
+	        "will be changed to the smallest cleaning time of all servers" do
+		server1 = AbstractServer.new
+		server1.max_idle_time = 10
+		@collection.synchronize do
+			@collection.lookup_or_add('foo') { server1 }
+		end
+		
+		server2 = AbstractServer.new
+		server2.max_idle_time = 11
+		@collection.synchronize do
+			@collection.lookup_or_add('bar') { server2 }
+		end
+		
+		@collection.synchronize do
+			@collection.delete('foo')
+		end
+		
+		@collection.next_cleaning_time.should == server2.next_cleaning_time
+	end
+	
+	specify "upon deleting server from a nonempty collection, and the deleted server's next cleaning " <<
+	        "time IS NOT the smallest of all servers' cleaning times, then the next cleaning schedule " <<
+	        "will not change" do
+		server1 = AbstractServer.new
+		server1.max_idle_time = 10
+		@collection.synchronize do
+			@collection.lookup_or_add('foo') { server1 }
+		end
+		
+		server2 = AbstractServer.new
+		server2.max_idle_time = 11
+		@collection.synchronize do
+			@collection.lookup_or_add('bar') { server2 }
+		end
+		
+		@collection.synchronize do
+			@collection.delete('bar')
+		end
+		
+		@collection.next_cleaning_time.should == server1.next_cleaning_time
 	end
 end

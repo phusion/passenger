@@ -32,9 +32,7 @@ module Passenger
 #
 # This class is thread-safe as long as the specified thread-safety rules are followed.
 class AbstractServerCollection
-	attr_accessor :min_cleaning_interval
-	attr_accessor :max_cleaning_interval
-	attr_reader :cleaning_interval
+	attr_reader :next_cleaning_time
 	
 	include Utils
 	
@@ -44,9 +42,19 @@ class AbstractServerCollection
 		@cleanup_lock = Mutex.new
 		@cond = ConditionVariable.new
 		@done = false
-		@min_cleaning_interval = 20
-		@max_cleaning_interval = 30 * 60
-		@cleaning_interval = 60 * 60
+		
+		# The next time the cleaner thread should check for idle servers.
+		# The value may be nil, in which case the value will be calculated
+		# at the end of the #synchronized block.
+		#
+		# Invariant:
+		#    if value is not nil:
+		#       There exists an s in @collection with s.next_cleaning_time == value.
+		#       for all s in @collection:
+		#          s.next_cleaning_time <= value
+		@next_cleaning_time = Time.now + 60 * 60
+		@next_cleaning_time_changed = false
+		
 		@cleaner_thread = Thread.new do
 			begin
 				@lock.synchronize do
@@ -64,10 +72,22 @@ class AbstractServerCollection
 	def synchronize
 		@lock.synchronize do
 			yield
-			if @changed
-				optimize_cleaning_interval
+			if @next_cleaning_time.nil?
+				@collection.each_value do |server|
+					if @next_cleaning_time.nil? ||
+					   server.next_cleaning_time < @next_cleaning_time
+						@next_cleaning_time = server.next_cleaning_time
+					end
+				end
+				if @next_cleaning_time.nil?
+					# There are no servers in the collection with an idle timeout.
+					@next_cleaning_time = Time.now + 60 * 60
+				end
+				@next_cleaning_time_changed = true
+			end
+			if @next_cleaning_time_changed
+				@next_cleaning_time_changed = false
 				@cond.signal
-				@changed = false
 			end
 		end
 	end
@@ -92,14 +112,21 @@ class AbstractServerCollection
 		raise ArgumentError, "cleanup() has already been called." if @done
 		server = @collection[key]
 		if server
+			register_activity(server)
 			return server
 		else
 			server = yield
 			if !server.respond_to?(:start)
 				raise TypeError, "The block didn't return a valid AbstractServer object."
 			end
+			if server.max_idle_time && server.max_idle_time != 0
+				server.next_cleaning_time = Time.now + server.max_idle_time
+				if @next_cleaning_time && server.next_cleaning_time < @next_cleaning_time
+					@next_cleaning_time = server.next_cleaning_time
+					@next_cleaning_time_changed = true
+				end
+			end
 			@collection[key] = server
-			@changed = true
 			return server
 		end
 	end
@@ -132,7 +159,38 @@ class AbstractServerCollection
 				server.stop
 			end
 			@collection.delete(key)
-			@changed = true
+			if server.next_cleaning_time == @next_cleaning_time
+				@next_cleaning_time = nil
+			end
+		end
+	end
+	
+	# Notify this AbstractServerCollection that +server+ has performed an activity.
+	# This AbstractServerCollection will update the idle information associated with +server+
+	# accordingly.
+	#
+	# lookup_or_add already automatically updates idle information, so you only need to
+	# call this method if the time at which the server has performed an activity is
+	# not close to the time at which lookup_or_add had been called.
+	#
+	# Precondition: this method must be called within a #synchronize block.
+	def register_activity(server)
+		if server.max_idle_time && server.max_idle_time != 0
+			if server.next_cleaning_time == @next_cleaning_time
+				@next_cleaning_time = nil
+			end
+			server.next_cleaning_time = Time.now + server.max_idle_time
+		end
+	end
+	
+	# Tell the cleaner thread to check the collection as soon as possible, instead
+	# of sleeping until the next scheduled cleaning time.
+	#
+	# Precondition: this method must NOT be called within a #synchronize block.
+	def check_idle_servers!
+		@lock.synchronize do
+			@next_cleaning_time = Time.now - 60 * 60
+			@cond.signal
 		end
 	end
 	
@@ -166,6 +224,7 @@ class AbstractServerCollection
 			end
 		end
 		@collection.clear
+		@next_cleaning_time = nil
 	end
 	
 	# Cleanup all resources used by this AbstractServerCollection. All AbstractServers
@@ -191,18 +250,29 @@ class AbstractServerCollection
 private
 	def cleaner_thread_main
 		while !@done
-			if @cond.timed_wait(@lock, @cleaning_interval)
+			current_time = Time.now
+			# We add a 0.2 seconds delay to the sleep time because system
+			# timers are not entirely accurate.
+			sleep_time = (@next_cleaning_time - current_time).to_f + 0.2
+			if sleep_time > 0 && @cond.timed_wait(@lock, sleep_time)
 				next
 			else
-				current_time = Time.now
 				keys_to_delete = nil
+				@next_cleaning_time = nil
 				@collection.each_pair do |key, server|
-					if server.max_idle_time && server.max_idle_time != 0 && \
-					   current_time - server.last_activity_time > server.max_idle_time
-						keys_to_delete ||= []
-						keys_to_delete << key
-						if server.started?
-							server.stop
+					if server.max_idle_time && server.max_idle_time != 0
+						# Cleanup this server if its idle timeout has expired.
+						if server.next_cleaning_time <= current_time
+							keys_to_delete ||= []
+							keys_to_delete << key
+							if server.started?
+								server.stop
+							end
+						# If not, then calculate the next cleaning time because
+						# we're iterating the collection anyway.
+						elsif @next_cleaning_time.nil? ||
+						      server.next_cleaning_time < @next_cleaning_time
+							@next_cleaning_time = server.next_cleaning_time
 						end
 					end
 				end
@@ -210,38 +280,12 @@ private
 					keys_to_delete.each do |key|
 						@collection.delete(key)
 					end
-					optimize_cleaning_interval
+				end
+				if @next_cleaning_time.nil?
+					# There are no servers in the collection with an idle timeout.
+					@next_cleaning_time = Time.now + 60 * 60
 				end
 			end
-		end
-	end
-	
-	def optimize_cleaning_interval
-		smallest_max_idle_time = 60 * 60
-		@collection.each_value do |server|
-			if server.max_idle_time && server.max_idle_time != 0 && \
-			   server.max_idle_time < smallest_max_idle_time
-				smallest_max_idle_time = server.max_idle_time
-			end
-		end
-		
-		# We add an extra 2 seconds because @cond.timed_wait()'s timer
-		# may not be entirely accurate.
-		@cleaning_interval = smallest_max_idle_time + 2
-		if @cleaning_interval < @min_cleaning_interval
-			# We don't want to waste CPU by checking too often, so
-			# we put a lower bound on the cleaning interval.
-			@cleaning_interval = @min_cleaning_interval
-		elsif @cleaning_interval > @max_cleaning_interval
-			# Suppose we have two AbstractServers, one with max_idle_time
-			# of 59 minutes and the other with 60 minutes. If we cleaned up
-			# the first one then we'd have to wait another 59 minutes before
-			# cleaning up the second. That's obviously not desirable.
-			#
-			# There's probably a smarter way optimize the cleaning interval,
-			# but for now, we just make sure the cleaning interval is never
-			# larger than the given upper bound.
-			@cleaning_interval = @max_cleaning_interval
 		end
 	end
 end
