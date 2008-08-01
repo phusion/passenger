@@ -27,6 +27,7 @@ $LOAD_PATH.unshift("#{PASSENGER_ROOT}/ext")
 # the start (i.e. not via 'su' or 'sudo').
 ENV["PATH"] += ":/usr/sbin:/sbin:/usr/local/sbin"
 
+require 'optparse'
 require 'passenger/platform_info'
 require 'passenger/dependencies'
 require 'passenger/console_text_template'
@@ -51,7 +52,8 @@ class Installer
 		Dependencies::Rack
 	]
 	
-	def start
+	def start(automatic = false)
+		@auto = automatic
 		if natively_packaged?
 			check_dependencies || exit(1)
 			show_apache2_config_snippets
@@ -245,6 +247,7 @@ private
 	end
 	
 	def wait(timeout = nil)
+		return if @auto
 		begin
 			if timeout
 				require 'timeout' unless defined?(Timeout)
@@ -309,4 +312,25 @@ private
 	USERS_GUIDE = determine_users_guide
 end
 
-Installer.new.start
+options = {}
+parser = OptionParser.new do |opts|
+	opts.banner = "Usage: passenger-install-apache2-module [options]"
+	opts.separator ""
+	
+	opts.separator "Options:"
+	opts.on("-a", "--auto", String, "Automatically build the Apache module,\n" <<
+	        "#{' ' * 37}without interactively asking for user\n" <<
+	        "#{' ' * 37}input.") do
+		options[:auto] = true
+	end
+end
+begin
+	parser.parse!
+rescue OptionParser::ParseError => e
+	puts e
+	puts
+	puts "Please see '--help' for valid options."
+	exit 1
+end
+
+Installer.new.start(options[:auto])
