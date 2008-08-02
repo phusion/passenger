@@ -118,7 +118,19 @@ class AbstractRequestHandler
 	#
 	# See also using_abstract_namespace?
 	attr_reader :socket_name
-
+	
+	# The maximum number of requests that this AbstractRequestHandler may
+	# process. After this number of requests, the main loop will exit.
+	attr_accessor :max_requests
+	
+	# The number of times the main loop has iterated so far. Mostly useful
+	# for unit test assertions.
+	attr_reader :iterations
+	
+	# Number of requests processed so far. This includes requests that raised
+	# exceptions.
+	attr_reader :processed_requests
+	
 	# Create a new RequestHandler with the given owner pipe.
 	# +owner_pipe+ must be the readable part of a pipe IO object.
 	def initialize(owner_pipe)
@@ -132,11 +144,24 @@ class AbstractRequestHandler
 		end
 		@owner_pipe = owner_pipe
 		@previous_signal_handlers = {}
+		@main_loop_thread_lock = Mutex.new
+		@main_loop_thread_cond = ConditionVariable.new
+		@iterations = 0
+		@processed_requests = 0
 	end
 	
 	# Clean up temporary stuff created by the request handler.
-	# This method should be called after the main loop has exited.
+	#
+	# If the main loop was started by #main_loop, then this method may only
+	# be called after the main loop has exited.
+	#
+	# If the main loop was started by #start_main_loop_thread, then this method
+	# may be called at any time, and it will stop the main loop thread.
 	def cleanup
+		if @main_loop_thread
+			@main_loop_thread.raise(Interrupt.new("Cleaning up"))
+			@main_loop_thread.join
+		end
 		@socket.close rescue nil
 		@owner_pipe.close rescue nil
 		if !using_abstract_namespace?
@@ -147,6 +172,11 @@ class AbstractRequestHandler
 	# Returns whether socket_name refers to an abstract namespace Unix socket.
 	def using_abstract_namespace?
 		return @using_abstract_namespace
+	end
+	
+	# Check whether the main loop's currently running.
+	def main_loop_running?
+		return @main_loop_running
 	end
 	
 	# Enter the request handler's main loop.
@@ -161,14 +191,22 @@ class AbstractRequestHandler
 		reset_signal_handlers
 		begin
 			done = false
+			
+			@main_loop_thread_lock.synchronize do
+				@main_loop_running = true
+				@main_loop_thread_cond.broadcast
+			end
+			soft_terminal_signal_handler = lambda do
+				done = true
+			end
+			
 			while !done
+				@iterations += 1
 				client = accept_connection
 				if client.nil?
 					break
 				end
-				trap SOFT_TERMINATION_SIGNAL do
-					done = true
-				end
+				trap(SOFT_TERMINATION_SIGNAL, &soft_terminal_signal_handler)
 				begin
 					headers, input = parse_request(client)
 					if headers
@@ -179,7 +217,11 @@ class AbstractRequestHandler
 				ensure
 					client.close rescue nil
 				end
-				trap SOFT_TERMINATION_SIGNAL, DEFAULT
+				@processed_requests += 1
+				trap(SOFT_TERMINATION_SIGNAL, DEFAULT)
+				if @max_requests && @processed_requests >= @max_requests
+					break
+				end
 			end
 		rescue EOFError
 			# Exit main loop.
@@ -195,6 +237,22 @@ class AbstractRequestHandler
 			if phusion_passenger_namespace
 				Object.send(:remove_const, :Passenger) rescue nil
 				Object.const_set(:Passenger, phusion_passenger_namespace)
+			end
+			@main_loop_thread_lock.synchronize do
+				@main_loop_running = false
+				@main_loop_thread_cond.broadcast
+			end
+		end
+	end
+	
+	# Start the main loop in a new thread. This thread will be stopped by #cleanup.
+	def start_main_loop_thread
+		@main_loop_thread = Thread.new do
+			main_loop
+		end
+		@main_loop_thread_lock.synchronize do
+			while !@main_loop_running
+				@main_loop_thread_cond.wait(@main_loop_thread_lock)
 			end
 		end
 	end
