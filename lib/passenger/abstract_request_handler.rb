@@ -58,10 +58,15 @@ module Passenger
 # Because only the web server communicates directly with a request handler,
 # we want the request handler to exit if the web server has also exited.
 # This is implemented by using a so-called _owner pipe_. The writable part
-# of the pipe will be owned by the web server. AbstractRequestHandler will
-# continuously check whether the other side of the pipe has been closed. If
-# so, then it knows that the web server has exited, and so the request handler
-# will exit as well. This works even if the web server gets killed by SIGKILL.
+# of the pipe will be passed to the web server* via a Unix socket, and the web
+# server will own that part of the pipe, while AbstractRequestHandler owns
+# the readable part of the pipe. AbstractRequestHandler will continuously
+# check whether the other side of the pipe has been closed. If so, then it
+# knows that the web server has exited, and so the request handler will exit
+# as well. This works even if the web server gets killed by SIGKILL.
+#
+# * It might also be passed to the ApplicationPoolServerExecutable, if the web
+#   server's using ApplicationPoolServer instead of StandardApplicationPool.
 #
 #
 # == Request format
