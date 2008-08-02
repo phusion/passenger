@@ -4,8 +4,6 @@
 SHELL	= /bin/bash
 
 tmp	= debian/tmp
-libdir18 = $(shell ruby1.8 -r rbconfig -e 'print Config::CONFIG["rubylibdir"]')
-archdir18 = $(shell ruby1.8 -r rbconfig -e 'print Config::CONFIG["archdir"]')
 apache2moduledir = $(shell apxs2 -q LIBEXECDIR)
 pkgdir = pkg/fakeroot
 bindir = ${pkgdir}/usr/bin
