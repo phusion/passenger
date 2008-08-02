@@ -322,16 +322,11 @@ private:
 			bool result;
 			
 			try {
-				channel.write("get",
-					spawnOptions.appRoot.c_str(),
-					(spawnOptions.lowerPrivilege) ? "true" : "false",
-					spawnOptions.lowestUser.c_str(),
-					spawnOptions.environment.c_str(),
-					spawnOptions.spawnMethod.c_str(),
-					spawnOptions.appType.c_str(),
-					toString(spawnOptions.frameworkSpawnerTimeout).c_str(),
-					toString(spawnOptions.appSpawnerTimeout).c_str(),
-					NULL);
+				vector<string> args;
+				
+				args.push_back("get");
+				spawnOptions.toVector(args);
+				channel.write(args);
 			} catch (const SystemException &) {
 				UPDATE_TRACE_POINT();
 				throw IOException("The ApplicationPool server exited unexpectedly.");

@@ -151,14 +151,18 @@ public:
 	 * Send an array message, which consists of the given elements, over the underlying
 	 * file descriptor.
 	 *
-	 * @param args The message elements.
+	 * @param args An object which contains the message elements. This object must
+	 *             support STL-style iteration, and each iterator must have an
+	 *             std::string as value. Use the StringArrayType and
+	 *             StringArrayConstIteratorType template parameters to specify the exact type names.
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
 	 * @throws boost::thread_interrupted
 	 * @pre None of the message elements may contain a NUL character (<tt>'\\0'</tt>).
 	 * @see read(), write(const char *, ...)
 	 */
-	void write(const list<string> &args) {
-		list<string>::const_iterator it;
+	template<typename StringArrayType, typename StringArrayConstIteratorType>
+	void write(const StringArrayType &args) {
+		StringArrayConstIteratorType it;
 		string data;
 		uint16_t dataSize = 0;
 
@@ -174,6 +178,34 @@ public:
 		}
 		
 		writeRaw(data);
+	}
+	
+	/**
+	 * Send an array message, which consists of the given elements, over the underlying
+	 * file descriptor.
+	 *
+	 * @param args The message elements.
+	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 * @throws boost::thread_interrupted
+	 * @pre None of the message elements may contain a NUL character (<tt>'\\0'</tt>).
+	 * @see read(), write(const char *, ...)
+	 */
+	void write(const list<string> &args) {
+		write<list<string>, list<string>::const_iterator>(args);
+	}
+	
+	/**
+	 * Send an array message, which consists of the given elements, over the underlying
+	 * file descriptor.
+	 *
+	 * @param args The message elements.
+	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 * @throws boost::thread_interrupted
+	 * @pre None of the message elements may contain a NUL character (<tt>'\\0'</tt>).
+	 * @see read(), write(const char *, ...)
+	 */
+	void write(const vector<string> &args) {
+		write<vector<string>, vector<string>::const_iterator>(args);
 	}
 	
 	/**

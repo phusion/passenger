@@ -10,6 +10,7 @@ namespace tut {
 
 	DEFINE_TEST_GROUP(SpawnOptionsTest);
 
+	// Test the SpawnOptions constructors and toVector().
 	TEST_METHOD(1) {
 		SpawnOptions options;
 		options.appRoot     = "/foo";

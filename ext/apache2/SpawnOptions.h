@@ -21,6 +21,7 @@
 #define _PASSENGER_SPAWN_OPTIONS_H_
 
 #include <string>
+#include "Utils.h"
 
 namespace Passenger {
 
@@ -104,38 +105,117 @@ struct SpawnOptions {
 	unsigned int appSpawnerTimeout;
 	
 	/**
+	 * The maximum number of requests that the spawned application may process
+	 * before exiting. A value of 0 means unlimited.
+	 */
+	unsigned int maxRequests;
+	
+	/**
 	 * Creates a new SpawnOptions object with the default values filled in.
 	 * One must still set appRoot manually, after having used this constructor.
 	 */
 	SpawnOptions() {
 		lowerPrivilege = true;
-		lowestUser = "nobody";
-		environment = "production";
-		spawnMethod = "smart";
-		appType = "rails";
+		lowestUser     = "nobody";
+		environment    = "production";
+		spawnMethod    = "smart";
+		appType        = "rails";
 		frameworkSpawnerTimeout = 0;
-		appSpawnerTimeout = 0;
+		appSpawnerTimeout       = 0;
+		maxRequests    = 0;
 	}
 	
 	/**
 	 * Creates a new SpawnOptions object with the given values.
 	 */
 	SpawnOptions(const string &appRoot,
-		bool lowerPrivilege = true,
-		const string &lowestUser = "nobody",
+		bool lowerPrivilege       = true,
+		const string &lowestUser  = "nobody",
 		const string &environment = "production",
 		const string &spawnMethod = "smart",
-		const string &appType = "rails",
+		const string &appType     = "rails",
 		unsigned int frameworkSpawnerTimeout = 0,
-		unsigned int appSpawnerTimeout = 0) {
-		this->appRoot = appRoot;
+		unsigned int appSpawnerTimeout       = 0,
+		unsigned int maxRequests  = 0) {
+		this->appRoot        = appRoot;
 		this->lowerPrivilege = lowerPrivilege;
-		this->lowestUser = lowestUser;
-		this->environment = environment;
-		this->spawnMethod = spawnMethod;
-		this->appType = appType;
+		this->lowestUser     = lowestUser;
+		this->environment    = environment;
+		this->spawnMethod    = spawnMethod;
+		this->appType        = appType;
 		this->frameworkSpawnerTimeout = frameworkSpawnerTimeout;
-		this->appSpawnerTimeout = appSpawnerTimeout;
+		this->appSpawnerTimeout       = appSpawnerTimeout;
+		this->maxRequests    = 0;
+	}
+	
+	/**
+	 * Creates a new SpawnOptions object from the given string vector.
+	 * This vector contains information that's written to by toVector().
+	 *
+	 * For example:
+	 * @code
+	 *   SpawnOptions options(...);
+	 *   vector<string> vec;
+	 *
+	 *   vec.push_back("my");
+	 *   vec.push_back("data");
+	 *   options.toVector(vec);  // SpawnOptions information will start at index 2.
+	 *
+	 *   SpawnOptions copy(vec, 2);
+	 * @endcode
+	 *
+	 * @param vec The vector containing spawn options information.
+	 * @param startIndex The index in vec at which the information starts.
+	 */
+	SpawnOptions(const vector<string> &vec, unsigned int startIndex = 0) {
+		appRoot        = vec[startIndex + 1];
+		lowerPrivilege = vec[startIndex + 3] == "true";
+		lowestUser     = vec[startIndex + 5];
+		environment    = vec[startIndex + 7];
+		spawnMethod    = vec[startIndex + 9];
+		appType        = vec[startIndex + 11];
+		frameworkSpawnerTimeout = atoi(vec[startIndex + 13]);
+		appSpawnerTimeout       = atoi(vec[startIndex + 15]);
+		maxRequests    = atoi(vec[startIndex + 17]);
+	}
+	
+	/**
+	 * Append the information in this SpawnOptions object to the given
+	 * string vector. The resulting array could, for example, be used
+	 * as a message to be sent to the spawn server.
+	 */
+	void toVector(vector<string> &vec) const {
+		if (vec.capacity() < vec.size() + 9) {
+			vec.reserve(vec.size() + 9);
+		}
+		appendKeyValue (vec, "app_root",        appRoot);
+		appendKeyValue (vec, "lower_privilege", lowerPrivilege ? "true" : "false");
+		appendKeyValue (vec, "lowest_user",     lowestUser);
+		appendKeyValue (vec, "environment",     environment);
+		appendKeyValue (vec, "spawn_method",    spawnMethod);
+		appendKeyValue (vec, "app_type",        appType);
+		appendKeyValue2(vec, "framework_spawner_timeout", frameworkSpawnerTimeout);
+		appendKeyValue2(vec, "app_spawner_timeout",       appSpawnerTimeout);
+		appendKeyValue2(vec, "max_requests",    0);
+	}
+
+private:
+	static inline void
+	appendKeyValue(vector<string> &vec, const char *key, const string &value) {
+		vec.push_back(key);
+		vec.push_back(const_cast<string &>(value));
+	}
+	
+	static inline void
+	appendKeyValue(vector<string> &vec, const char *key, const char *value) {
+		vec.push_back(key);
+		vec.push_back(value);
+	}
+	
+	static inline void
+	appendKeyValue2(vector<string> &vec, const char *key, unsigned int value) {
+		vec.push_back(key);
+		vec.push_back(toString(value));
 	}
 };
 

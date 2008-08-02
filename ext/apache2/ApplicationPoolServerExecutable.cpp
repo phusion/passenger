@@ -231,10 +231,8 @@ private:
 		bool failed = false;
 		
 		try {
-			session = server.pool.get(SpawnOptions(
-				args[1], args[2] == "true", args[3],
-				args[4], args[5], args[6],
-				atoi(args[7]), atoi(args[8])));
+			SpawnOptions options(args, 1);
+			session = server.pool.get(options);
 			sessions[lastSessionID] = session;
 			lastSessionID++;
 		} catch (const SpawnException &e) {
@@ -358,7 +356,7 @@ private:
 					toString(args));
 				
 				UPDATE_TRACE_POINT();
-				if (args[0] == "get" && args.size() == 9) {
+				if (args[0] == "get") {
 					processGet(args);
 				} else if (args[0] == "close" && args.size() == 2) {
 					processClose(args);
