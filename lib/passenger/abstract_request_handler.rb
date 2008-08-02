@@ -121,6 +121,9 @@ class AbstractRequestHandler
 	
 	# The maximum number of requests that this AbstractRequestHandler may
 	# process. After this number of requests, the main loop will exit.
+	#
+	# The default value is nil, which means that there is no limit on the
+	# number of requests that may be processed.
 	attr_accessor :max_requests
 	
 	# The number of times the main loop has iterated so far. Mostly useful
