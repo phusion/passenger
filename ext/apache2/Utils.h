@@ -119,6 +119,12 @@ toString(T something) {
 int atoi(const string &s);
 
 /**
+ * Converts the given string to a long integer.
+ * @ingroup Support
+ */
+long atol(const string &s);
+
+/**
  * Split the given string using the given separator.
  *
  * @param str The string to split.

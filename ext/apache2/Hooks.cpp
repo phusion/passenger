@@ -671,7 +671,6 @@ public:
 			UPDATE_TRACE_POINT();
 			try {
 				const char *defaultUser, *environment, *spawnMethod;
-				unsigned int appSpawnerTimeout, frameworkSpawnerTimeout;
 				ServerConfig *sconfig;
 				
 				sconfig = getServerConfig(r->server);
@@ -700,22 +699,13 @@ public:
 				} else {
 					spawnMethod = "smart";
 				}
-				if (config->frameworkSpawnerTimeout < 0) {
-					frameworkSpawnerTimeout = 0;
-				} else {
-					frameworkSpawnerTimeout = config->frameworkSpawnerTimeout;
-				}
-				if (config->appSpawnerTimeout < 0) {
-					appSpawnerTimeout = 0;
-				} else {
-					appSpawnerTimeout = config->appSpawnerTimeout;
-				}
 				
 				session = applicationPool->get(SpawnOptions(
 					canonicalizePath(mapper.getPublicDirectory() + "/.."),
 					true, defaultUser, environment, spawnMethod,
 					mapper.getApplicationTypeString(),
-					appSpawnerTimeout, frameworkSpawnerTimeout));
+					config->appSpawnerTimeout,
+					config->frameworkSpawnerTimeout));
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				if (e.hasErrorPage()) {

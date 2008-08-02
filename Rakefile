@@ -163,6 +163,7 @@ subdir 'ext/apache2' do
 		'StandardApplicationPool.h',
 		'MessageChannel.h',
 		'SpawnManager.h',
+		'SpawnOptions.h',
 		'Utils.o',
 		'Logging.o'
 	] do

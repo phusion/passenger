@@ -31,6 +31,11 @@ atoi(const string &s) {
 	return ::atoi(s.c_str());
 }
 
+long
+atol(const string &s) {
+	return ::atol(s.c_str());
+}
+
 void
 split(const string &str, char sep, vector<string> &output) {
 	string::size_type start, pos;

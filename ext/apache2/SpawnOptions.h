@@ -86,29 +86,31 @@ struct SpawnOptions {
 	
 	/**
 	 * The idle timeout, in seconds, of Rails framework spawners.
-	 * Set to 0 to use the default idle time.
+	 * A timeout of 0 means that the framework spawner should never idle timeout. A timeout
+	 * of -1 means that the default timeout value should be used.
 	 *
 	 * For more details about Rails framework spawners, please
 	 * read the documentation on the Railz::FrameworkSpawner
 	 * Ruby class.
 	 */
-	unsigned int frameworkSpawnerTimeout;
+	long frameworkSpawnerTimeout;
 	
 	/**
 	 * The idle timeout, in seconds, of Rails application spawners.
-	 * Set to 0 to use the default idle time.
+	 * A timeout of 0 means that the application spawner should never idle timeout. A timeout
+	 * of -1 means that the default timeout value should be used.
 	 *
 	 * For more details about Rails application spawners, please
 	 * read the documentation on the Railz::ApplicationSpawner
 	 * Ruby class.
 	 */
-	unsigned int appSpawnerTimeout;
+	long appSpawnerTimeout;
 	
 	/**
 	 * The maximum number of requests that the spawned application may process
 	 * before exiting. A value of 0 means unlimited.
 	 */
-	unsigned int maxRequests;
+	unsigned long maxRequests;
 	
 	/**
 	 * Creates a new SpawnOptions object with the default values filled in.
@@ -120,8 +122,8 @@ struct SpawnOptions {
 		environment    = "production";
 		spawnMethod    = "smart";
 		appType        = "rails";
-		frameworkSpawnerTimeout = 0;
-		appSpawnerTimeout       = 0;
+		frameworkSpawnerTimeout = -1;
+		appSpawnerTimeout       = -1;
 		maxRequests    = 0;
 	}
 	
@@ -134,9 +136,9 @@ struct SpawnOptions {
 		const string &environment = "production",
 		const string &spawnMethod = "smart",
 		const string &appType     = "rails",
-		unsigned int frameworkSpawnerTimeout = 0,
-		unsigned int appSpawnerTimeout       = 0,
-		unsigned int maxRequests  = 0) {
+		long frameworkSpawnerTimeout = -1,
+		long appSpawnerTimeout       = -1,
+		unsigned long maxRequests    = 0) {
 		this->appRoot        = appRoot;
 		this->lowerPrivilege = lowerPrivilege;
 		this->lowestUser     = lowestUser;
@@ -174,9 +176,9 @@ struct SpawnOptions {
 		environment    = vec[startIndex + 7];
 		spawnMethod    = vec[startIndex + 9];
 		appType        = vec[startIndex + 11];
-		frameworkSpawnerTimeout = atoi(vec[startIndex + 13]);
-		appSpawnerTimeout       = atoi(vec[startIndex + 15]);
-		maxRequests    = atoi(vec[startIndex + 17]);
+		frameworkSpawnerTimeout = atol(vec[startIndex + 13]);
+		appSpawnerTimeout       = atol(vec[startIndex + 15]);
+		maxRequests    = atol(vec[startIndex + 17]);
 	}
 	
 	/**
@@ -196,7 +198,7 @@ struct SpawnOptions {
 		appendKeyValue (vec, "app_type",        appType);
 		appendKeyValue2(vec, "framework_spawner_timeout", frameworkSpawnerTimeout);
 		appendKeyValue2(vec, "app_spawner_timeout",       appSpawnerTimeout);
-		appendKeyValue2(vec, "max_requests",    0);
+		appendKeyValue3(vec, "max_requests",    0);
 	}
 
 private:
@@ -213,7 +215,13 @@ private:
 	}
 	
 	static inline void
-	appendKeyValue2(vector<string> &vec, const char *key, unsigned int value) {
+	appendKeyValue2(vector<string> &vec, const char *key, long value) {
+		vec.push_back(key);
+		vec.push_back(toString(value));
+	}
+	
+	static inline void
+	appendKeyValue3(vector<string> &vec, const char *key, unsigned long value) {
 		vec.push_back(key);
 		vec.push_back(toString(value));
 	}
