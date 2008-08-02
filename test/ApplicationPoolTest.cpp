@@ -364,6 +364,39 @@
 		// TODO: how do we test this?
 	}
 	
+	TEST_METHOD(18) {
+		// Application instance is shutdown after 'maxRequests' requests.
+		SpawnOptions options("stub/railsapp");
+		int reader;
+		pid_t originalPid;
+		Application::SessionPtr session;
+		
+		options.maxRequests = 4;
+		pool->setMax(1);
+		session = pool->get(options);
+		originalPid = session->getPid();
+		session.reset();
+		
+		for (unsigned int i = 0; i < 4; i++) {
+			session = pool->get(options);
+			session->sendHeaders(createRequestHeaders());
+			session->shutdownWriter();
+			reader = session->getStream();
+			readAll(reader);
+			// Must explicitly call reset() here because we
+			// want to close the session right now.
+			session.reset();
+			// In case of ApplicationPoolServer, we sleep here
+			// for a little while to force a context switch to
+			// the server, so that the session close event may
+			// be processed.
+			usleep(100000);
+		}
+		
+		session = pool->get(options);
+		ensure(session->getPid() != originalPid);
+	}
+	
 	// TODO: test maxIdleTime == 0
 
 #endif /* USE_TEMPLATE */

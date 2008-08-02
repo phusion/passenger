@@ -5,11 +5,10 @@
 
 For efficiency reasons, Passenger keeps a pool spawned Rails/Ruby applications.
 Please read the C++ API documentation for the ApplicationPool class for a full
-introduction. This document describes an algorithm for managing the pool.
+introduction. This document describes an algorithm for managing the pool, in a
+high-level way.
 
 The algorithm should strive to keep spawning to a minimum.
-
-TODO: check whether the algorithm has thrashing behavior.
 
 
 == Definitions
@@ -61,6 +60,11 @@ explicitly define some special types:
               containers[i + 1].app is active
 
   * size (unsigned integer): The number of items in _instances_.
+  
+  * max_requests (unsigned integer): The maximum number of requests that each
+    application instance in this domain may process. After having processed this
+    many requests, the application instance will be shut down.
+    A value of 0 indicates that there is no maximum.
 
 - AppContainer
   A compound type (class) which contains an application instance, as well as
@@ -84,6 +88,16 @@ explicitly define some special types:
   * ia_iterator - The iterator for this AppContainer in the linked list
     inactive_apps. This iterator is only valid if this AppContainer really is
     in that list.
+
+- SpawnOptions
+  A structure containing additional information, used by the application instance
+  spawning process.
+  
+  A SpawnOptions has the following members:
+  * max_requests (unsigned integer) - The maximum number of requests that the
+    application instance may process. After having processed this many requests,
+    the application instance will be shut down. A value of 0 indicates that there
+    is no maximum.
 
 === Special functions
 
@@ -168,14 +182,18 @@ Here's an UML diagram in ASCII art:
 # Thread-safetiness notes:
 # - All wait commands are to unlock the lock during waiting.
 
-function get(app_root):
+# Connect to an existing application instance or to a newly spawned application instance.
+# 'app_root' specifies the application root folder of the application. 'options' is an
+# object of type 'SpawnOptions', which contains additional information which may be
+# relevant for spawning.
+function get(app_root, options):
 	MAX_ATTEMPTS = 10
 	attempt = 0
 	time_limit = now() + 5 seconds
 	lock.synchronize:
 		while (true):
 			attempt++
-			container, domain = spawn_or_use_existing(app_root)
+			container, domain = spawn_or_use_existing(app_root, options)
 			container.last_used = current_time()
 			container.sessions++
 			try:
@@ -199,7 +217,7 @@ function get(app_root):
 # Returns a pair of [AppContainer, Domain] that matches the given application
 # root. If no such AppContainer exists, then it is created and a new
 # application instance is spawned. All exceptions that occur are propagated.
-function spawn_or_use_existing(app_root):
+function spawn_or_use_existing(app_root, options):
 	domain = domains[app_root]
 	
 	if (domain != nil) and (needs_restart(app_root)):
@@ -284,6 +302,7 @@ function spawn_or_use_existing(app_root):
 		if domain == nil:
 			domain = new Domain
 			domain.size = 1
+			domain.max_requests = options.max_requests
 			domains[app_root] = domain
 		else:
 			domain.size++
@@ -301,13 +320,26 @@ function session_has_been_closed(container):
 	lock.synchronize:
 		domain = domains[container.app.app_root]
 		if domain != nil:
-			container.last_used = current_time()
-			container.sessions--
+			instances = domain.instances
 			container.processed++
-			if container.sessions == 0:
-				domain.instances.move_to_front(container.iterator)
-				container.ia_iterator = inactive_apps.add_to_back(container.app)
+			
+			if (domain.max_requests) > 0 and (container.processed >= domain.max_requests):
+				# The application instance has processed its maximum allowed
+				# number of requests, so we shut it down.
+				instances.remove(container.iterator)
+				domain.size--
+				if instances.empty():
+					domains.remove(app_root)
+				count--
 				active--
+			else:
+				container.last_used = current_time()
+				container.sessions--
+				container.processed++
+				if container.sessions == 0:
+					instances.move_to_front(container.iterator)
+					container.ia_iterator = inactive_apps.add_to_back(container.app)
+					active--
 
 
 function needs_restart(app_root):

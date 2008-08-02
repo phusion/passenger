@@ -113,6 +113,7 @@ private:
 	struct Domain {
 		AppContainerList instances;
 		unsigned int size;
+		unsigned long maxRequests;
 	};
 	
 	struct AppContainer {
@@ -192,19 +193,32 @@ private:
 			DomainMap::iterator it;
 			it = data->domains.find(container->app->getAppRoot());
 			if (it != data->domains.end()) {
-				AppContainerList *instances = &it->second->instances;
-				container->lastUsed = time(NULL);
-				container->sessions--;
+				Domain *domain = it->second.get();
+				AppContainerList *instances = &domain->instances;
+				
 				container->processed++;
-				if (container->sessions == 0) {
+				if (domain->maxRequests > 0 && container->processed >= domain->maxRequests) {
 					instances->erase(container->iterator);
-					instances->push_front(container);
-					container->iterator = instances->begin();
-					data->inactiveApps.push_back(container);
-					container->ia_iterator = data->inactiveApps.end();
-					container->ia_iterator--;
+					domain->size--;
+					if (instances->empty()) {
+						data->domains.erase(container->app->getAppRoot());
+					}
+					data->count--;
 					data->active--;
 					data->activeOrMaxChanged.notify_all();
+				} else {
+					container->lastUsed = time(NULL);
+					container->sessions--;
+					if (container->sessions == 0) {
+						instances->erase(container->iterator);
+						instances->push_front(container);
+						container->iterator = instances->begin();
+						data->inactiveApps.push_back(container);
+						container->ia_iterator = data->inactiveApps.end();
+						container->ia_iterator--;
+						data->active--;
+						data->activeOrMaxChanged.notify_all();
+					}
 				}
 			}
 		}
@@ -522,6 +536,7 @@ private:
 				if (it == domains.end()) {
 					domain = new Domain();
 					domain->size = 1;
+					domain->maxRequests = spawnOptions.maxRequests;
 					domains[appRoot] = ptr(domain);
 				} else {
 					domain = it->second.get();
