@@ -65,7 +65,7 @@ class FrameworkSpawner < AbstractServer
 		end
 		@version = options[:version]
 		@vendor = options[:vendor]
-		if options[:app_spawner_timeout] && options[:app_spawner_timeout] > 0
+		if options[:app_spawner_timeout] && options[:app_spawner_timeout] != -1
 			@app_spawner_timeout = options[:app_spawner_timeout]
 		end
 		if !@version && !@vendor

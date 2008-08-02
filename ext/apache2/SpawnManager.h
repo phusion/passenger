@@ -255,16 +255,9 @@ private:
 		int ownerPipe;
 		
 		try {
-			channel.write("spawn_application",
-				spawnOptions.appRoot.c_str(),
-				(spawnOptions.lowerPrivilege) ? "true" : "false",
-				spawnOptions.lowestUser.c_str(),
-				spawnOptions.environment.c_str(),
-				spawnOptions.spawnMethod.c_str(),
-				spawnOptions.appType.c_str(),
-				toString(spawnOptions.frameworkSpawnerTimeout).c_str(),
-				toString(spawnOptions.appSpawnerTimeout).c_str(),
-				NULL);
+			args.push_back("spawn_application");
+			spawnOptions.toVector(args);
+			channel.write(args);
 		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not write 'spawn_application' "
 				"command to the spawn server: ") + e.sys());

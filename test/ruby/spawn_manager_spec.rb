@@ -64,7 +64,7 @@ describe SpawnManager do
 	end
 	
 	it "can spawn when the server's not running" do
-		app = @manager.spawn_application(@stub.app_root)
+		app = @manager.spawn_application("app_root" => @stub.app_root)
 		app.close
 	end
 	
@@ -75,9 +75,7 @@ describe SpawnManager do
 				a.close
 				sleep(1) # Give @manager the chance to start.
 				channel = MessageChannel.new(b)
-				channel.write("spawn_application", @stub.app_root, "true",
-					"nobody", "production", "smart", "rails",
-					10, 10)
+				channel.write("spawn_application", "app_root", @stub.app_root)
 				channel.read
 				pid, listen_socket = channel.read
 				channel.recv_io.close
@@ -99,7 +97,7 @@ describe SpawnManager do
 			content.sub(/^RAILS_GEM_VERSION = .*$/, '')
 		end
 		@stub.dont_use_vendor_rails
-		@manager.spawn_application(@stub.app_root).close
+		@manager.spawn_application("app_root" => @stub.app_root).close
 	end
 	
 	it "properly reloads applications that do not specify a Rails version" do
@@ -121,8 +119,9 @@ describe SpawnManager do
 	it "can spawn a Rack application" do
 		use_stub('rack') do |stub|
 			@manager = SpawnManager.new
-			app = @manager.spawn_application(stub.app_root, true,
-				"nobody", "production", "smart", "rack")
+			app = @manager.spawn_application(
+				"app_root" => stub.app_root,
+				"app_type" => "rack")
 			app.close
 		end
 	end
@@ -153,8 +152,9 @@ describe SpawnManager do
 	def spawn_stub_application(stub)
 		spawner = SpawnManager.new
 		begin
-			return spawner.spawn_application(stub.app_root, true,
-				"nobody", "production", @spawn_method)
+			return spawner.spawn_application(
+				"app_root" => stub.app_root,
+				"spawn_method" => @spawn_method)
 		ensure
 			spawner.cleanup
 		end

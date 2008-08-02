@@ -24,6 +24,7 @@
 		ADD_HEADER("REQUEST_URI", uri);
 		ADD_HEADER("REQUEST_METHOD", "GET");
 		ADD_HEADER("REMOTE_ADDR", "localhost");
+		ADD_HEADER("PATH_INFO", uri);
 		return headers;
 	}
 	
@@ -75,7 +76,7 @@
 	TEST_METHOD(2) {
 		// Verify that the pool spawns a new app, and that
 		// after the session is closed, the app is kept around.
-		Application::SessionPtr session(pool->get("stub/railsapp"));
+		Application::SessionPtr session(spawnRackApp(pool, "stub/rack"));
 		ensure_equals("Before the session was closed, the app was busy", pool->getActive(), 1u);
 		ensure_equals("Before the session was closed, the app was in the pool", pool->getCount(), 1u);
 		session.reset();
@@ -87,17 +88,17 @@
 		// If we call get() with an application root, then we close the session,
 		// and then we call get() again with the same application root,
 		// then the pool should not have spawned more than 1 app in total.
-		Application::SessionPtr session(pool->get("stub/railsapp"));
+		Application::SessionPtr session(spawnRackApp(pool, "stub/rack"));
 		session.reset();
-		session = pool->get("stub/railsapp");
+		session = spawnRackApp(pool, "stub/rack");
 		ensure_equals(pool->getCount(), 1u);
 	}
 	
 	TEST_METHOD(4) {
 		// If we call get() with an application root, then we call get() again before closing
 		// the session, then the pool should have spawned 2 apps in total.
-		Application::SessionPtr session(pool->get("stub/railsapp"));
-		Application::SessionPtr session2(pool2->get("stub/railsapp"));
+		Application::SessionPtr session(spawnRackApp(pool, "stub/rack"));
+		Application::SessionPtr session2(spawnRackApp(pool, "stub/rack"));
 		ensure_equals(pool->getCount(), 2u);
 	}
 	
