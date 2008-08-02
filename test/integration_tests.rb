@@ -395,7 +395,7 @@ describe "mod_passenger running in Apache 2" do
 		
 		it "RailsSpawnMethod spawning is per-virtual host" do
 			@server = "http://mycook.passenger.test:#{@apache2.port}"
-			get('/welcome/backtrace').should =~ /framework_spawner/
+			get('/welcome/backtrace').should =~ /application_spawner/
 		end
 	end
 	

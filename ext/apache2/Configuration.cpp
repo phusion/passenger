@@ -343,10 +343,12 @@ cmd_rails_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	if (strcmp(arg, "smart") == 0) {
 		config->spawnMethod = DirConfig::SM_SMART;
+	} else if (strcmp(arg, "smart-lv2") == 0) {
+		config->spawnMethod = DirConfig::SM_SMART_LV2;
 	} else if (strcmp(arg, "conservative") == 0) {
 		config->spawnMethod = DirConfig::SM_CONSERVATIVE;
 	} else {
-		return "RailsSpawnMethod may only be 'smart' or 'conservative'.";
+		return "RailsSpawnMethod may only be 'smart', 'smart-lv2' or 'conservative'.";
 	}
 	return NULL;
 }

@@ -95,16 +95,22 @@ class SpawnManager < AbstractServer
 	#   What kind of application is being spawned. Either "rails" (default), "rack" or "wsgi".
 	# 
 	# [:spawn_method]
-	#   May be one of "smart" or "conservative". When "smart" is specified (the default),
-	#   SpawnManager will internally cache the code of applications, in order to speed up
-	#   future spawning attempts. This implies that, if you've changed the application's
+	#   May be one of "smart", "smart-lv2" or "conservative". When "smart" is specified
+	#   (the default), SpawnManager will internally cache the code of Rails applications, in
+	#   order to speed up future spawning attempts. This implies that, if you've changed
+	#   the application's
 	#   code, you must do one of these things:
 	#   - Restart this SpawnManager by calling AbstractServer#stop, then AbstractServer#start.
 	#   - Reload the application by calling reload with the correct app_root argument.
-	#   Caching however can be incompatible with some applications.
 	#   
-	#   The "conservative" spawning method does not involve any caching at all.
-	#   Spawning will be slower, but is guaranteed to be compatible with all applications.
+	#   "smart" caches the Rails framework code in a framework spawner server, and application
+	#   code in an application spawner server. Sometimes it is desirable to skip the
+	#   framework spawning and going directly for the application spawner instead. The
+	#   "smart-lv2" method allows you to do that.
+	#   
+	#   Caching however can be incompatible with some applications. The "conservative"
+	#   spawning method does not involve any caching at all. Spawning will be slower,
+	#   but is guaranteed to be compatible with all applications.
 	# 
 	# [:framework_spawner_timeout and :app_spawner_timeout]
 	#   These options allow you to specify the maximum idle timeout, in seconds, of the
@@ -220,9 +226,11 @@ private
 		spawn_method = options["spawn_method"]
 		app_root     = options["app_root"]
 		
-		if spawn_method.nil? || spawn_method == "" || spawn_method == "smart"
+		if [nil, "", "smart", "smart-lv2"].include?(spawn_method)
 			spawner_must_be_started = true
-			framework_version = Application.detect_framework_version(app_root)
+			if spawn_method != "smart-lv2"
+				framework_version = Application.detect_framework_version(app_root)
+			end
 			if framework_version.nil? || framework_version == :vendor
 				app_root = normalize_path(app_root)
 				key = "app:#{app_root}"

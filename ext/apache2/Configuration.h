@@ -49,7 +49,7 @@
 		 */
 		struct DirConfig {
 			enum Threeway { ENABLED, DISABLED, UNSET };
-			enum SpawnMethod { SM_UNSET, SM_SMART, SM_CONSERVATIVE };
+			enum SpawnMethod { SM_UNSET, SM_SMART, SM_SMART_LV2, SM_CONSERVATIVE };
 			
 			Threeway enabled;
 			
@@ -120,10 +120,13 @@
 			}
 			
 			const char *getSpawnMethodString() {
-				if (spawnMethod == SM_CONSERVATIVE) {
-					return "conservative";
-				} else {
+				switch (spawnMethod) {
+				case SM_SMART:
 					return "smart";
+				case SM_SMART_LV2:
+					return "smart-lv2";
+				default:
+					return "conservative";
 				}
 			}
 			

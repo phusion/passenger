@@ -138,6 +138,14 @@ describe SpawnManager do
 		it_should_behave_like "a minimal spawner"
 	end
 	
+	describe "smart-lv2 spawning" do
+		before :each do
+			@spawn_method = "smart-lv2"
+		end
+		
+		it_should_behave_like "a minimal spawner"
+	end
+	
 	describe "conservative spawning" do
 		before :each do
 			@spawn_method = "conservative"
