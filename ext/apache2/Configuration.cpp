@@ -486,7 +486,7 @@ const command_rec passenger_commands[] = {
 	AP_INIT_TAKE1("PassengerMaxRequests", // TODO: document this
 		(Take1Func) cmd_passenger_max_requests,
 		NULL,
-		OR_LIMIT,
+		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
 		"The user that Rails/Rack applications must run as when user switching fails or is disabled."),
 	AP_INIT_NO_ARGS("PassengerDisable", // TODO: document this
 		(Take0Func) cmd_passenger_disable,
