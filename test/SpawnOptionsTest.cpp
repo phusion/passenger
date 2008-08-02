@@ -25,5 +25,13 @@ namespace tut {
 		
 		SpawnOptions copy(args, 2);
 		ensure_equals(options.appRoot, copy.appRoot);
+		ensure_equals(options.lowerPrivilege, copy.lowerPrivilege);
+		ensure_equals(options.lowestUser, copy.lowestUser);
+		ensure_equals(options.environment, copy.environment);
+		ensure_equals(options.spawnMethod, copy.spawnMethod);
+		ensure_equals(options.appType, copy.appType);
+		ensure_equals(options.frameworkSpawnerTimeout, copy.frameworkSpawnerTimeout);
+		ensure_equals(options.appSpawnerTimeout, copy.appSpawnerTimeout);
+		ensure_equals(options.maxRequests, copy.maxRequests);
 	}
 }

@@ -198,7 +198,7 @@ struct SpawnOptions {
 		appendKeyValue (vec, "app_type",        appType);
 		appendKeyValue2(vec, "framework_spawner_timeout", frameworkSpawnerTimeout);
 		appendKeyValue2(vec, "app_spawner_timeout",       appSpawnerTimeout);
-		appendKeyValue3(vec, "max_requests",    0);
+		appendKeyValue3(vec, "max_requests",    maxRequests);
 	}
 
 private:
