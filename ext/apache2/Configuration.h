@@ -43,9 +43,13 @@
 		
 		/**
 		 * Per-directory configuration information.
+		 *
+		 * Use the getter methods to query information, because those will return
+		 * the default value if the value is not specified.
 		 */
 		struct DirConfig {
 			enum Threeway { ENABLED, DISABLED, UNSET };
+			enum SpawnMethod { SM_UNSET, SM_SMART, SM_CONSERVATIVE };
 			
 			Threeway enabled;
 			
@@ -72,19 +76,53 @@
 			 * Rack applications should operate. */
 			const char *rackEnv;
 			
-			enum SpawnMethod { SM_UNSET, SM_SMART, SM_CONSERVATIVE };
 			/** The Rails spawn method to use. */
 			SpawnMethod spawnMethod;
 			
-			/** The idle timeout, in seconds, of Rails framework spawners. */
+			/**
+			 * The idle timeout, in seconds, of Rails framework spawners.
+			 * May also be 0 (which indicates that the framework spawner should
+			 * never idle timeout) or -1 (which means that the value is not specified).
+			 */
 			long frameworkSpawnerTimeout;
 			
-			/** The idle timeout, in seconds, of Rails application spawners. */
+			/**
+			 * The idle timeout, in seconds, of Rails application spawners.
+			 * May also be 0 (which indicates that the application spawner should
+			 * never idle timeout) or -1 (which means that the value is not specified).
+			 */
 			long appSpawnerTimeout;
+			
+			const char *getRailsEnv() const {
+				if (railsEnv != NULL) {
+					return railsEnv;
+				} else {
+					return "production";
+				}
+			}
+			
+			const char *getRackEnv() const {
+				if (rackEnv != NULL) {
+					return rackEnv;
+				} else {
+					return "production";
+				}
+			}
+			
+			const char *getSpawnMethodString() {
+				if (spawnMethod == SM_CONSERVATIVE) {
+					return "conservative";
+				} else {
+					return "smart";
+				}
+			}
 		};
 		
 		/**
 		 * Server-wide (global, not per-virtual host) configuration information.
+		 *
+		 * Use the getter methods to query information, because those will return
+		 * the default value if the value is not specified.
 		 */
 		struct ServerConfig {
 			/** The filename of the Ruby interpreter to use. */
@@ -131,6 +169,14 @@
 			 * fails or is disabled. NULL means the option is not specified.
 			 */
 			const char *defaultUser;
+			
+			const char *getDefaultUser() const {
+				if (defaultUser != NULL) {
+					return defaultUser;
+				} else {
+					return "nobody";
+				}
+			}
 		};
 	}
 

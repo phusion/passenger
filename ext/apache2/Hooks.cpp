@@ -53,8 +53,6 @@ using namespace Passenger;
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
 #define DEFAULT_RUBY_COMMAND "ruby"
-#define DEFAULT_RAILS_ENV    "production"
-#define DEFAULT_RACK_ENV     "production"
 #define DEFAULT_WSGI_ENV     "production"
 
 /**
@@ -66,10 +64,10 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
 
 /**
- * Utility class for determining URI-to-Rails/Rack directory mappings.
- * Given a URI, it will determine whether that URI belongs to a Rails/Rack
- * application, what the base URI of that application is, and what the
- * associated 'public' directory is.
+ * Utility class for determining URI-to-application directory mappings.
+ * Given a URI, it will determine whether that URI belongs to a Phusion
+ * Passenger-handled application, what the base URI of that application is,
+ * and what the associated 'public' directory is.
  *
  * @note This class is not thread-safe, but is reentrant.
  * @ingroup Core
@@ -264,6 +262,20 @@ public:
 		default:
 			return NULL;
 		};
+	}
+	
+	/**
+	 * Returns the environment under which the application should be spawned.
+	 */
+	const char *getEnvironment() {
+		switch (getApplicationType()) {
+		case RAILS:
+			return config->getRailsEnv();
+		case RACK:
+			return config->getRackEnv();
+		default:
+			return DEFAULT_WSGI_ENV;
+		}
 	}
 };
 
@@ -670,39 +682,16 @@ public:
 			
 			UPDATE_TRACE_POINT();
 			try {
-				const char *defaultUser, *environment, *spawnMethod;
+				const char*environment, *spawnMethod;
 				ServerConfig *sconfig;
 				
 				sconfig = getServerConfig(r->server);
-				if (sconfig->defaultUser != NULL) {
-					defaultUser = sconfig->defaultUser;
-				} else {
-					defaultUser = "nobody";
-				}
-				if (mapper.getApplicationType() == DirectoryMapper::RAILS) {
-					if (config->railsEnv == NULL) {
-						environment = DEFAULT_RAILS_ENV;
-					} else {
-						environment = config->railsEnv;
-					}
-				} else if (mapper.getApplicationType() == DirectoryMapper::RACK) {
-					if (config->rackEnv == NULL) {
-						environment = DEFAULT_RACK_ENV;
-					} else {
-						environment = config->rackEnv;
-					}
-				} else {
-					environment = DEFAULT_WSGI_ENV;
-				}
-				if (config->spawnMethod == DirConfig::SM_CONSERVATIVE) {
-					spawnMethod = "conservative";
-				} else {
-					spawnMethod = "smart";
-				}
-				
 				session = applicationPool->get(SpawnOptions(
 					canonicalizePath(mapper.getPublicDirectory() + "/.."),
-					true, defaultUser, environment, spawnMethod,
+					true,
+					sconfig->getDefaultUser(),
+					mapper.getEnvironment(),
+					config->getSpawnMethodString(),
 					mapper.getApplicationTypeString(),
 					config->appSpawnerTimeout,
 					config->frameworkSpawnerTimeout));
