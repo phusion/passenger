@@ -651,7 +651,18 @@ public:
 				return container->app->connect(SessionCloseCallback(data, container));
 			} catch (const exception &e) {
 				container->sessions--;
+				
+				AppContainerList &instances(domain->instances);
+				instances.erase(container->iterator);
 				domain->size--;
+				if (instances.empty()) {
+					domains.erase(spawnOptions.appRoot);
+				}
+				count--;
+				active--;
+				activeOrMaxChanged.notify_all();
+				P_ASSERT(verifyState(), Application::SessionPtr(),
+					"State is valid: " << toString(false));
 				if (attempt == MAX_GET_ATTEMPTS) {
 					string message("Cannot connect to an existing "
 						"application instance for '");
@@ -665,17 +676,6 @@ public:
 						message.append(e.what());
 					}
 					throw IOException(message);
-				} else {
-					AppContainerList &instances(domain->instances);
-					instances.erase(container->iterator);
-					if (instances.empty()) {
-						domains.erase(spawnOptions.appRoot);
-					}
-					count--;
-					active--;
-					activeOrMaxChanged.notify_all();
-					P_ASSERT(verifyState(), Application::SessionPtr(),
-						"State is valid: " << toString(false));
 				}
 			}
 		}

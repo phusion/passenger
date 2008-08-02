@@ -181,20 +181,19 @@ function get(app_root):
 			try:
 				return container.app.connect()
 			on exception:
+				# The app instance seems to have crashed.
+				# So we remove this instance from our data
+				# structures.
 				container.sessions--
+				instances = domain.instances
+				instances.remove(container.iterator)
 				domain.size--
+				if instances.empty():
+					domains.remove(app_root)
+				count--
+				active--
 				if (attempt == MAX_ATTEMPTS):
 					propagate exception
-				else:
-					# The app instance seems to have crashed.
-					# So we remove this instance from our data
-					# structures.
-					instances = domain.instances
-					instances.remove(container.iterator)
-					if instances.empty():
-						domains.remove(app_root)
-					count--
-					active--
 
 
 # Returns a pair of [AppContainer, Domain] that matches the given application
