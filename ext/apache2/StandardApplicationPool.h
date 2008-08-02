@@ -117,10 +117,39 @@ private:
 	
 	struct AppContainer {
 		ApplicationPtr app;
+		time_t startTime;
 		time_t lastUsed;
 		unsigned int sessions;
+		unsigned int processed;
 		AppContainerList::iterator iterator;
 		AppContainerList::iterator ia_iterator;
+		
+		AppContainer() {
+			startTime = time(NULL);
+			processed = 0;
+		}
+		
+		/**
+		 * Returns the uptime of this AppContainer so far, as a string.
+		 */
+		string uptime() const {
+			time_t seconds = time(NULL) - startTime;
+			stringstream result;
+			
+			if (seconds >= 60) {
+				time_t minutes = seconds / 60;
+				if (minutes >= 60) {
+					time_t hours = minutes / 60;
+					minutes = minutes % 60;
+					result << hours << "h ";
+				}
+				
+				seconds = seconds % 60;
+				result << minutes << "m ";
+			}
+			result << seconds << "s";
+			return result.str();
+		}
 	};
 	
 	struct SharedData {
@@ -139,6 +168,9 @@ private:
 	
 	typedef shared_ptr<SharedData> SharedDataPtr;
 	
+	/**
+	 * Function object which will be called when a session has been closed.
+	 */
 	struct SessionCloseCallback {
 		SharedDataPtr data;
 		weak_ptr<AppContainer> container;
@@ -163,6 +195,7 @@ private:
 				AppContainerList *instances = &it->second->instances;
 				container->lastUsed = time(NULL);
 				container->sessions--;
+				container->processed++;
 				if (container->sessions == 0) {
 					instances->erase(container->iterator);
 					instances->push_front(container);
@@ -272,9 +305,11 @@ private:
 				char buf[128];
 				
 				snprintf(buf, sizeof(buf),
-						"PID: %-8lu  Sessions: %d",
+						"PID: %-5lu   Sessions: %-2u   Processed: %-5u   Uptime: %s",
 						(unsigned long) container->app->getPid(),
-						container->sessions);
+						container->sessions,
+						container->processed,
+						container->uptime().c_str());
 				result << "  " << buf << endl;
 			}
 			result << endl;

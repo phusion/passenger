@@ -69,6 +69,10 @@ explicitly define some special types:
   
   An AppContainer has the following members:
   * app - An Application object, representing an application instance.
+  * start_time (time) - The time at which this application instance was
+    started. It's set to the current time by AppContainer's constructor.
+  * processed_requests (integer) - The number of requests processed by this
+    application instance so far.
   * last_used (time) - The last time a session for this application instance
     was opened or closed.
   * sessions (integer) - The number of open sessions for this application
@@ -300,6 +304,7 @@ function session_has_been_closed(container):
 		if domain != nil:
 			container.last_used = current_time()
 			container.sessions--
+			container.processed++
 			if container.sessions == 0:
 				domain.instances.move_to_front(container.iterator)
 				container.ia_iterator = inactive_apps.add_to_back(container.app)
