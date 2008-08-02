@@ -147,7 +147,7 @@ struct SpawnOptions {
 		this->appType        = appType;
 		this->frameworkSpawnerTimeout = frameworkSpawnerTimeout;
 		this->appSpawnerTimeout       = appSpawnerTimeout;
-		this->maxRequests    = 0;
+		this->maxRequests    = maxRequests;
 	}
 	
 	/**

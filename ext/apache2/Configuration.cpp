@@ -99,7 +99,8 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->spawnMethod = (add->spawnMethod == DirConfig::SM_UNSET) ? base->spawnMethod : add->spawnMethod;
 	config->frameworkSpawnerTimeout = (add->frameworkSpawnerTimeout == -1) ? base->frameworkSpawnerTimeout : add->frameworkSpawnerTimeout;
 	config->appSpawnerTimeout = (add->appSpawnerTimeout == -1) ? base->appSpawnerTimeout : add->appSpawnerTimeout;
-	config->maxRequests = (!add->maxRequestsSpecified) ? base->maxRequests : add->maxRequests;
+	config->maxRequests = (add->maxRequestsSpecified) ? add->maxRequests : base->maxRequests;
+	config->maxRequestsSpecified = base->maxRequestsSpecified || add->maxRequestsSpecified;
 	return config;
 }
 
