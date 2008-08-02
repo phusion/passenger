@@ -682,7 +682,6 @@ public:
 			
 			UPDATE_TRACE_POINT();
 			try {
-				const char*environment, *spawnMethod;
 				ServerConfig *sconfig;
 				
 				sconfig = getServerConfig(r->server);
@@ -694,7 +693,8 @@ public:
 					config->getSpawnMethodString(),
 					mapper.getApplicationTypeString(),
 					config->appSpawnerTimeout,
-					config->frameworkSpawnerTimeout));
+					config->frameworkSpawnerTimeout,
+					config->getMaxRequests()));
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				if (e.hasErrorPage()) {

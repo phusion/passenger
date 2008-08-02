@@ -93,6 +93,16 @@
 			 */
 			long appSpawnerTimeout;
 			
+			/**
+			 * The maximum number of requests that the spawned application may process
+			 * before exiting. A value of 0 means unlimited.
+			 */
+			unsigned long maxRequests;
+			
+			/** Indicates whether the maxRequests option was explicitly specified
+			 * in the directory configuration. */
+			bool maxRequestsSpecified;
+			
 			const char *getRailsEnv() const {
 				if (railsEnv != NULL) {
 					return railsEnv;
@@ -114,6 +124,14 @@
 					return "conservative";
 				} else {
 					return "smart";
+				}
+			}
+			
+			unsigned long getMaxRequests() {
+				if (maxRequestsSpecified) {
+					return maxRequests;
+				} else {
+					return 0;
 				}
 			}
 		};

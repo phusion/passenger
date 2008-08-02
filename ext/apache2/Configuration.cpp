@@ -68,6 +68,8 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->spawnMethod = DirConfig::SM_UNSET;
 	config->frameworkSpawnerTimeout = -1;
 	config->appSpawnerTimeout = -1;
+	config->maxRequests = 0;
+	config->maxRequestsSpecified = false;
 	return config;
 }
 
@@ -97,6 +99,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->spawnMethod = (add->spawnMethod == DirConfig::SM_UNSET) ? base->spawnMethod : add->spawnMethod;
 	config->frameworkSpawnerTimeout = (add->frameworkSpawnerTimeout == -1) ? base->frameworkSpawnerTimeout : add->frameworkSpawnerTimeout;
 	config->appSpawnerTimeout = (add->appSpawnerTimeout == -1) ? base->appSpawnerTimeout : add->appSpawnerTimeout;
+	config->maxRequests = (!add->maxRequestsSpecified) ? base->maxRequests : add->maxRequests;
 	return config;
 }
 
@@ -274,6 +277,24 @@ cmd_passenger_default_user(cmd_parms *cmd, void *dummy, const char *arg) {
 		cmd->server->module_config, &passenger_module);
 	config->defaultUser = arg;
 	return NULL;
+}
+
+static const char *
+cmd_passenger_max_requests(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	char *end;
+	long int result;
+	
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		return "Invalid number specified for PassengerMaxRequests.";
+	} else if (result < 0) {
+		return "Value for PassengerMaxRequests must be greater than or equal to 0.";
+	} else {
+		config->maxRequests = (unsigned long) result;
+		config->maxRequestsSpecified = true;
+		return NULL;
+	}
 }
 
 static const char *
@@ -462,7 +483,12 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The user that Rails/Rack applications must run as when user switching fails or is disabled."),
-	AP_INIT_NO_ARGS("PassengerDisable",
+	AP_INIT_TAKE1("PassengerMaxRequests", // TODO: document this
+		(Take1Func) cmd_passenger_max_requests,
+		NULL,
+		OR_LIMIT,
+		"The user that Rails/Rack applications must run as when user switching fails or is disabled."),
+	AP_INIT_NO_ARGS("PassengerDisable", // TODO: document this
 		(Take0Func) cmd_passenger_disable,
 		NULL,
 		OR_ALL,
@@ -494,12 +520,12 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The spawn method to use."),
-	AP_INIT_TAKE1("RailsFrameworkSpawnerIdleTime",
+	AP_INIT_TAKE1("RailsFrameworkSpawnerIdleTime", // TODO: document this
 		(Take1Func) cmd_rails_framework_spawner_idle_time,
 		NULL,
 		RSRC_CONF,
 		"The maximum number of seconds that an application spawner may be idle before it is shutdown."),
-	AP_INIT_TAKE1("RailsAppSpawnerIdleTime",
+	AP_INIT_TAKE1("RailsAppSpawnerIdleTime", // TODO: document this
 		(Take1Func) cmd_rails_app_spawner_idle_time,
 		NULL,
 		RSRC_CONF,
