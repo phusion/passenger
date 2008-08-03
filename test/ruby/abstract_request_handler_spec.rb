@@ -43,28 +43,6 @@ describe AbstractRequestHandler do
 		@request_handler.processed_requests.should == 0
 	end
 	
-	it "exits after processing 'max_requests' requests" do
-		def @request_handler.accept_connection
-			return "foo"
-		end
-		def @request_handler.parse_request(client)
-			return "bar", "baz"
-		end
-		
-		@request_handler.max_requests = 10
-		@request_handler.start_main_loop_thread
-		begin
-			Timeout.timeout(5) do
-				wait_until do
-					!@request_handler.main_loop_running?
-				end
-			end
-			@request_handler.processed_requests.should == 10
-		rescue Timeout::Error
-			violated
-		end
-	end
-	
 	def wait_until
 		while !yield
 			sleep 0.01

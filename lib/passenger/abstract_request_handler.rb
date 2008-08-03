@@ -119,13 +119,6 @@ class AbstractRequestHandler
 	# See also using_abstract_namespace?
 	attr_reader :socket_name
 	
-	# The maximum number of requests that this AbstractRequestHandler may
-	# process. After this number of requests, the main loop will exit.
-	#
-	# The default value is nil, which means that there is no limit on the
-	# number of requests that may be processed.
-	attr_accessor :max_requests
-	
 	# The number of times the main loop has iterated so far. Mostly useful
 	# for unit test assertions.
 	attr_reader :iterations
@@ -219,9 +212,6 @@ class AbstractRequestHandler
 					client.close rescue nil
 				end
 				@processed_requests += 1
-				if @max_requests && @processed_requests >= @max_requests
-					break
-				end
 			end
 		rescue EOFError
 			# Exit main loop.
