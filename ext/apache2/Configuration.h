@@ -154,7 +154,7 @@
 				if (memoryLimitSpecified) {
 					return memoryLimit;
 				} else {
-					return 0;
+					return 200;
 				}
 			}
 		};
