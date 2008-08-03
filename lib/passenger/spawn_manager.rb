@@ -95,8 +95,8 @@ class SpawnManager < AbstractServer
 	#   What kind of application is being spawned. Either "rails" (default), "rack" or "wsgi".
 	# 
 	# [:spawn_method]
-	#   May be one of "smart", "smart-lv2" or "conservative". When "smart" is specified
-	#   (the default), SpawnManager will internally cache the code of Rails applications, in
+	#   May be one of "smart", "smart-lv2" or "conservative". When "smart" is specified,
+	#   SpawnManager will internally cache the code of Rails applications, in
 	#   order to speed up future spawning attempts. This implies that, if you've changed
 	#   the application's
 	#   code, you must do one of these things:
@@ -111,6 +111,8 @@ class SpawnManager < AbstractServer
 	#   Caching however can be incompatible with some applications. The "conservative"
 	#   spawning method does not involve any caching at all. Spawning will be slower,
 	#   but is guaranteed to be compatible with all applications.
+	#   
+	#   The default spawn method is "smart-lv2".
 	# 
 	# [:framework_spawner_timeout and :app_spawner_timeout]
 	#   These options allow you to specify the maximum idle timeout, in seconds, of the
@@ -136,7 +138,7 @@ class SpawnManager < AbstractServer
 			"lowest_user"     => "nobody",
 			"environment"     => "production",
 			"app_type"        => "rails",
-			"spawn_method"    => "smart",
+			"spawn_method"    => "smart-lv2",
 			"framework_spawner_timeout" => -1,
 			"app_spawner_timeout"       => -1
 		}.merge(options)

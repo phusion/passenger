@@ -125,8 +125,10 @@
 					return "smart";
 				case SM_SMART_LV2:
 					return "smart-lv2";
-				default:
+				case SM_CONSERVATIVE:
 					return "conservative";
+				default:
+					return "smart-lv2";
 				}
 			}
 			
