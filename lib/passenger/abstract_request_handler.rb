@@ -193,23 +193,21 @@ class AbstractRequestHandler
 		end
 		reset_signal_handlers
 		begin
-			done = false
-			
+			@graceful_termination_pipe = IO.pipe
 			@main_loop_thread_lock.synchronize do
 				@main_loop_running = true
 				@main_loop_thread_cond.broadcast
 			end
-			soft_terminal_signal_handler = lambda do
-				done = true
+			trap(SOFT_TERMINATION_SIGNAL) do
+				@graceful_termination_pipe[1].close rescue nil
 			end
 			
-			while !done
+			while true
 				@iterations += 1
 				client = accept_connection
 				if client.nil?
 					break
 				end
-				trap(SOFT_TERMINATION_SIGNAL, &soft_terminal_signal_handler)
 				begin
 					headers, input = parse_request(client)
 					if headers
@@ -221,7 +219,6 @@ class AbstractRequestHandler
 					client.close rescue nil
 				end
 				@processed_requests += 1
-				trap(SOFT_TERMINATION_SIGNAL, DEFAULT)
 				if @max_requests && @processed_requests >= @max_requests
 					break
 				end
@@ -236,6 +233,8 @@ class AbstractRequestHandler
 				raise
 			end
 		ensure
+			@graceful_termination_pipe[0].close rescue nil
+			@graceful_termination_pipe[1].close rescue nil
 			revert_signal_handlers
 			if phusion_passenger_namespace
 				Object.send(:remove_const, :Passenger) rescue nil
@@ -332,7 +331,7 @@ private
 	end
 	
 	def accept_connection
-		ios = select([@socket, @owner_pipe])[0]
+		ios = select([@socket, @owner_pipe, @graceful_termination_pipe[0]]).first
 		if ios.include?(@socket)
 			client = @socket.accept
 			
@@ -348,8 +347,10 @@ private
 			
 			return client
 		else
-			# The other end of the pipe has been closed.
-			# So we know all owning processes have quit.
+			# The other end of the owner pipe has been closed, or the
+			# graceful termination pipe has been closed. This is our
+			# call to gracefully terminate (after having processed all
+			# incoming requests).
 			return nil
 		end
 	end
