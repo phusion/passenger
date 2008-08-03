@@ -694,7 +694,8 @@ public:
 					mapper.getApplicationTypeString(),
 					config->appSpawnerTimeout,
 					config->frameworkSpawnerTimeout,
-					config->getMaxRequests()));
+					config->getMaxRequests(),
+					config->getMemoryLimit()));
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				if (e.hasErrorPage()) {

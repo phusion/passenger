@@ -88,13 +88,13 @@ class SpawnManager < AbstractServer
 	#
 	# Other options are:
 	#
-	# [:lower_privilege, :lowest_user and :environment]
+	# ['lower_privilege', 'lowest_user' and 'environment']
 	#   See Railz::ApplicationSpawner.new for an explanation of these options.
 	# 
-	# [:app_type]
+	# ['app_type']
 	#   What kind of application is being spawned. Either "rails" (default), "rack" or "wsgi".
 	# 
-	# [:spawn_method]
+	# ['spawn_method']
 	#   May be one of "smart", "smart-lv2" or "conservative". When "smart" is specified,
 	#   SpawnManager will internally cache the code of Rails applications, in
 	#   order to speed up future spawning attempts. This implies that, if you've changed
@@ -114,13 +114,18 @@ class SpawnManager < AbstractServer
 	#   
 	#   The default spawn method is "smart-lv2".
 	# 
-	# [:framework_spawner_timeout and :app_spawner_timeout]
+	# ['framework_spawner_timeout' and 'app_spawner_timeout']
 	#   These options allow you to specify the maximum idle timeout, in seconds, of the
 	#   framework spawner servers and application spawner servers that will be started under
 	#   the hood. These options are only used if +app_type+ equals "rails".
 	#   
 	#   A timeout of 0 means that the spawner server should never idle timeout. A timeout of
 	#   -1 means that the default timeout value should be used. The default value is -1.
+	#
+	# ['memory_limit']
+	#   The maximum amount of memory that the application instance may use. If the limit has
+	#   been reached, the application instance will exit gracefully.
+	#   The default value is 0, which means that there is no limit.
 	#
 	# <b>Exceptions:</b>
 	# - InvalidPath: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
@@ -140,7 +145,8 @@ class SpawnManager < AbstractServer
 			"app_type"        => "rails",
 			"spawn_method"    => "smart-lv2",
 			"framework_spawner_timeout" => -1,
-			"app_spawner_timeout"       => -1
+			"app_spawner_timeout"       => -1,
+			"memory_limit"    => 0
 		}.merge(options)
 		
 		if options["app_type"] == "rails"
@@ -155,10 +161,7 @@ class SpawnManager < AbstractServer
 				require 'passenger/rack/application_spawner'
 			end
 			return Rack::ApplicationSpawner.spawn_application(
-				options["app_root"],
-				options["lower_privilege"],
-				options["lowest_user"],
-				options["environment"]
+				options["app_root"], options
 			)
 		elsif options["app_type"] == "wsgi"
 			require 'passenger/wsgi/application_spawner'
@@ -237,18 +240,13 @@ private
 				app_root = normalize_path(app_root)
 				key = "app:#{app_root}"
 				create_spawner = proc do
-					Railz::ApplicationSpawner.new(app_root,
-						options["lower_privilege"],
-						options["lowest_user"],
-						options["environment"])
+					Railz::ApplicationSpawner.new(app_root, options)
 				end
 				spawner_timeout = options["app_spawner_timeout"]
 			else
 				key = "version:#{framework_version}"
 				create_spawner = proc do
-					Railz::FrameworkSpawner.new(
-						:version => framework_version,
-						:app_spawner_timeout => options["app_spawner_timeout"])
+					Railz::FrameworkSpawner.new(:version => framework_version)
 				end
 				spawner_timeout = options["framework_spawner_timeout"]
 			end
@@ -256,10 +254,7 @@ private
 			app_root = normalize_path(app_root)
 			key = "app:#{app_root}"
 			create_spawner = proc do
-				Railz::ApplicationSpawner.new(app_root,
-					options["lower_privilege"],
-					options["lowest_user"],
-					options["environment"])
+				Railz::ApplicationSpawner.new(app_root, options)
 			end
 			spawner_timeout = options["app_spawner_timeout"]
 			spawner_must_be_started = false
@@ -278,10 +273,7 @@ private
 			end
 			begin
 				if spawner.is_a?(Railz::FrameworkSpawner)
-					return spawner.spawn_application(app_root,
-						options["lower_privilege"],
-						options["lowest_user"],
-						options["environment"])
+					return spawner.spawn_application(app_root, options)
 				elsif spawner.started?
 					return spawner.spawn_application
 				else
@@ -299,6 +291,7 @@ private
 		options["lower_privilege"]           = options["lower_privilege"] == "true"
 		options["framework_spawner_timeout"] = options["framework_spawner_timeout"].to_i
 		options["app_spawner_timeout"]       = options["app_spawner_timeout"].to_i
+		options["memory_limit"]              = options["memory_limit"].to_i
 		
 		app = nil
 		app_root = options["app_root"]

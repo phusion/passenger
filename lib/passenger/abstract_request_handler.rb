@@ -119,6 +119,14 @@ class AbstractRequestHandler
 	# See also using_abstract_namespace?
 	attr_reader :socket_name
 	
+	# Specifies the maximum allowed memory usage, in MB. If after having processed
+	# a request AbstractRequestHandler detects that memory usage has risen above
+	# this limit, then it will gracefully exit (that is, exit after having processed
+	# all pending requests).
+	#
+	# A value of 0 (the default) indicates that there's no limit.
+	attr_accessor :memory_limit
+	
 	# The number of times the main loop has iterated so far. Mostly useful
 	# for unit test assertions.
 	attr_reader :iterations
@@ -129,7 +137,10 @@ class AbstractRequestHandler
 	
 	# Create a new RequestHandler with the given owner pipe.
 	# +owner_pipe+ must be the readable part of a pipe IO object.
-	def initialize(owner_pipe)
+	#
+	# Additionally, the following options may be given:
+	# - memory_limit: Used to set the +memory_limit+ attribute.
+	def initialize(owner_pipe, options = {})
 		if abstract_namespace_sockets_allowed?
 			@using_abstract_namespace = create_unix_socket_on_abstract_namespace
 		else
@@ -142,6 +153,7 @@ class AbstractRequestHandler
 		@previous_signal_handlers = {}
 		@main_loop_thread_lock = Mutex.new
 		@main_loop_thread_cond = ConditionVariable.new
+		@memory_limit = options["memory_limit"] || 0
 		@iterations = 0
 		@processed_requests = 0
 	end
@@ -212,6 +224,9 @@ class AbstractRequestHandler
 					client.close rescue nil
 				end
 				@processed_requests += 1
+				if @memory_limit > 0 && get_memory_usage > @memory_limit
+					@graceful_termination_pipe[1].close rescue nil
+				end
 			end
 		rescue EOFError
 			# Exit main loop.

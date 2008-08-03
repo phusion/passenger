@@ -40,8 +40,8 @@ class RequestHandler < AbstractRequestHandler
 	CRLF           = "\r\n"   # :nodoc:
 
 	# +app+ is the Rack application object.
-	def initialize(owner_pipe, app)
-		super(owner_pipe)
+	def initialize(owner_pipe, app, options = {})
+		super(owner_pipe, options)
 		@app = app
 	end
 

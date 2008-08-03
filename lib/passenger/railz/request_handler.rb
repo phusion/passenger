@@ -24,8 +24,8 @@ class RequestHandler < AbstractRequestHandler
 	NINJA_PATCHING_LOCK = Mutex.new
 	@@ninja_patched_action_controller = false
 	
-	def initialize(owner_pipe)
-		super(owner_pipe)
+	def initialize(owner_pipe, options = {})
+		super(owner_pipe, options)
 		NINJA_PATCHING_LOCK.synchronize do
 			ninja_patch_action_controller
 		end

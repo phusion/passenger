@@ -113,6 +113,12 @@ struct SpawnOptions {
 	unsigned long maxRequests;
 	
 	/**
+	 * The maximum amount of memory (in MB) the spawned application may use.
+	 * A value of 0 means unlimited.
+	 */
+	unsigned long memoryLimit;
+	
+	/**
 	 * Creates a new SpawnOptions object with the default values filled in.
 	 * One must still set appRoot manually, after having used this constructor.
 	 */
@@ -125,6 +131,7 @@ struct SpawnOptions {
 		frameworkSpawnerTimeout = -1;
 		appSpawnerTimeout       = -1;
 		maxRequests    = 0;
+		memoryLimit    = 0;
 	}
 	
 	/**
@@ -138,7 +145,8 @@ struct SpawnOptions {
 		const string &appType     = "rails",
 		long frameworkSpawnerTimeout = -1,
 		long appSpawnerTimeout       = -1,
-		unsigned long maxRequests    = 0) {
+		unsigned long maxRequests    = 0,
+		unsigned long memoryLimit    = 0) {
 		this->appRoot        = appRoot;
 		this->lowerPrivilege = lowerPrivilege;
 		this->lowestUser     = lowestUser;
@@ -148,6 +156,7 @@ struct SpawnOptions {
 		this->frameworkSpawnerTimeout = frameworkSpawnerTimeout;
 		this->appSpawnerTimeout       = appSpawnerTimeout;
 		this->maxRequests    = maxRequests;
+		this->memoryLimit    = memoryLimit;
 	}
 	
 	/**
@@ -179,6 +188,7 @@ struct SpawnOptions {
 		frameworkSpawnerTimeout = atol(vec[startIndex + 13]);
 		appSpawnerTimeout       = atol(vec[startIndex + 15]);
 		maxRequests    = atol(vec[startIndex + 17]);
+		memoryLimit    = atol(vec[startIndex + 19]);
 	}
 	
 	/**
@@ -199,6 +209,7 @@ struct SpawnOptions {
 		appendKeyValue2(vec, "framework_spawner_timeout", frameworkSpawnerTimeout);
 		appendKeyValue2(vec, "app_spawner_timeout",       appSpawnerTimeout);
 		appendKeyValue3(vec, "max_requests",    maxRequests);
+		appendKeyValue3(vec, "memory_limit",    memoryLimit);
 	}
 
 private:

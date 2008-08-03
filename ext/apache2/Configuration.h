@@ -103,6 +103,16 @@
 			 * in the directory configuration. */
 			bool maxRequestsSpecified;
 			
+			/**
+			 * The maximum amount of memory (in MB) the spawned application may use.
+			 * A value of 0 means unlimited.
+			 */
+			unsigned long memoryLimit;
+			
+			/** Indicates whether the memoryLimit option was explicitly specified
+			 * in the directory configuration. */
+			bool memoryLimitSpecified;
+			
 			const char *getRailsEnv() const {
 				if (railsEnv != NULL) {
 					return railsEnv;
@@ -135,6 +145,14 @@
 			unsigned long getMaxRequests() {
 				if (maxRequestsSpecified) {
 					return maxRequests;
+				} else {
+					return 0;
+				}
+			}
+			
+			unsigned long getMemoryLimit() {
+				if (memoryLimitSpecified) {
+					return memoryLimit;
 				} else {
 					return 0;
 				}

@@ -70,6 +70,8 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->appSpawnerTimeout = -1;
 	config->maxRequests = 0;
 	config->maxRequestsSpecified = false;
+	config->memoryLimit = 0;
+	config->memoryLimitSpecified = false;
 	return config;
 }
 
@@ -101,6 +103,8 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->appSpawnerTimeout = (add->appSpawnerTimeout == -1) ? base->appSpawnerTimeout : add->appSpawnerTimeout;
 	config->maxRequests = (add->maxRequestsSpecified) ? add->maxRequests : base->maxRequests;
 	config->maxRequestsSpecified = base->maxRequestsSpecified || add->maxRequestsSpecified;
+	config->memoryLimit = (add->memoryLimitSpecified) ? add->memoryLimit : base->memoryLimit;
+	config->memoryLimitSpecified = base->memoryLimitSpecified || add->memoryLimitSpecified;
 	return config;
 }
 
@@ -299,6 +303,24 @@ cmd_passenger_max_requests(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
+cmd_passenger_memory_limit(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	char *end;
+	long int result;
+	
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		return "Invalid number specified for PassengerMemoryLimit.";
+	} else if (result < 0) {
+		return "Value for PassengerMemoryLimit must be greater than or equal to 0.";
+	} else {
+		config->memoryLimit = (unsigned long) result;
+		config->memoryLimitSpecified = true;
+		return NULL;
+	}
+}
+
+static const char *
 cmd_passenger_disable(cmd_parms *cmd, void *pcfg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->enabled = DirConfig::DISABLED;
@@ -490,7 +512,12 @@ const command_rec passenger_commands[] = {
 		(Take1Func) cmd_passenger_max_requests,
 		NULL,
 		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
-		"The user that Rails/Rack applications must run as when user switching fails or is disabled."),
+		"The maximum number of requests that an application instance may process."),
+	AP_INIT_TAKE1("PassengerMemoryLimit", // TODO: document this
+		(Take1Func) cmd_passenger_memory_limit,
+		NULL,
+		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
+		"The maximum amount of memory in MB that an application instance may use."),
 	AP_INIT_NO_ARGS("PassengerDisable", // TODO: document this
 		(Take0Func) cmd_passenger_disable,
 		NULL,

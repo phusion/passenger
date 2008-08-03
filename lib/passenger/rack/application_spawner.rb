@@ -41,13 +41,19 @@ class ApplicationSpawner
 	# - AppInitError: The Rack application raised an exception or called
 	#   exit() during startup.
 	# - SystemCallError, IOError, SocketError: Something went wrong.
-	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody", environment = "production")
+	def spawn_application(app_root, options = {})
+		options = {
+			"lower_privilege" => true,
+			"lowest_user"     => "nobody",
+			"environment"     => "production"
+		}.merge(options)
+		
 		a, b = UNIXSocket.pair
 		# Double fork in order to prevent zombie processes.
 		pid = safe_fork(self.class.to_s) do
 			safe_fork(self.class.to_s) do
 				a.close
-				run(MessageChannel.new(b), app_root, lower_privilege, lowest_user, environment)
+				run(MessageChannel.new(b), app_root, options)
 			end
 		end
 		b.close
@@ -68,14 +74,14 @@ class ApplicationSpawner
 
 private
 	
-	def run(channel, app_root, lower_privilege, lowest_user, environment)
+	def run(channel, app_root, options)
 		$0 = "Rack: #{app_root}"
 		app = nil
 		success = report_app_init_status(channel) do
-			ENV['RACK_ENV'] = environment
+			ENV['RACK_ENV'] = options["environment"]
 			Dir.chdir(app_root)
-			if lower_privilege
-				lower_privilege('config.ru', lowest_user)
+			if options["lower_privilege"]
+				lower_privilege('config.ru', options["lowest_user"])
 			end
 			remove_phusion_passenger_namespace
 			app = load_rack_app
@@ -84,7 +90,7 @@ private
 		if success
 			reader, writer = IO.pipe
 			begin
-				handler = RequestHandler.new(reader, app)
+				handler = RequestHandler.new(reader, app, options)
 				channel.write(Process.pid, handler.socket_name,
 					handler.using_abstract_namespace?)
 				channel.send_io(writer)

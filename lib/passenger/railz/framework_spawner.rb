@@ -48,13 +48,15 @@ class FrameworkSpawner < AbstractServer
 	
 	# Creates a new instance of FrameworkSpawner.
 	#
-	# Valid options:
+	# Valid options are:
 	# - <tt>:version</tt>: The Ruby on Rails version to use. It is not checked whether
 	#   this version is actually installed.
 	# - <tt>:vendor</tt>: The directory to the vendor Rails framework to use. This is
 	#   usually something like "/webapps/foo/vendor/rails".
 	#
 	# It is not allowed to specify both +version+ and +vendor+.
+	#
+	# All other options will be passed on to ApplicationSpawner and RequestHandler.
 	#
 	# Note that the specified Rails framework will be loaded during the entire life time
 	# of the FrameworkSpawner server. If you wish to reload the Rails framework's code,
@@ -64,10 +66,7 @@ class FrameworkSpawner < AbstractServer
 			raise ArgumentError, "The 'options' argument not seem to be an options hash"
 		end
 		@version = options[:version]
-		@vendor = options[:vendor]
-		if options[:app_spawner_timeout] && options[:app_spawner_timeout] != -1
-			@app_spawner_timeout = options[:app_spawner_timeout]
-		end
+		@vendor  = options[:vendor]
 		if !@version && !@vendor
 			raise ArgumentError, "Either the 'version' or the 'vendor' option must specified"
 		elsif @version && @vendor
@@ -118,8 +117,23 @@ class FrameworkSpawner < AbstractServer
 	# When successful, an Application object will be returned, which represents
 	# the spawned RoR application.
 	#
-	# See ApplicationSpawner.new for an explanation of the +lower_privilege+,
-	# +lowest_user+ and +environment+ parameters.
+	# The following options are allowed:
+	# - +lower_privilege+ and +lowest_user+:
+	#   If +lower_privilege+ is true, then ApplicationSpawner will attempt to
+	#   switch to the user who owns the application's <tt>config/environment.rb</tt>,
+	#   and to the default group of that user.
+	#
+	#   If that user doesn't exist on the system, or if that user is root,
+	#   then ApplicationSpawner will attempt to switch to the username given by
+	#   +lowest_user+ (and to the default group of that user).
+	#   If +lowest_user+ doesn't exist either, or if switching user failed
+	#   (because the current process does not have the privilege to do so),
+	#   then ApplicationSpawner will continue without reporting an error.
+	#
+	# - +environment+:
+	#   Allows one to specify the RAILS_ENV environment to use.
+	#
+	# All other options will be passed on to ApplicationSpawner and RequestHandler.
 	#
 	# FrameworkSpawner will internally cache the code of applications, in order to
 	# speed up future spawning attempts. This implies that, if you've changed
@@ -133,12 +147,19 @@ class FrameworkSpawner < AbstractServer
 	# - AppInitError: The application raised an exception or called exit() during startup.
 	# - ApplicationSpawner::Error: The ApplicationSpawner server exited unexpectedly.
 	# - FrameworkSpawner::Error: The FrameworkSpawner server exited unexpectedly.
-	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody", environment = "production")
+	def spawn_application(app_root, options = {})
 		app_root = normalize_path(app_root)
 		assert_valid_app_root(app_root)
+		options = {
+			"lower_privilege" => true,
+			"lowest_user"     => "nobody",
+			"environment"     => "production"
+		}.merge(options)
+		options["app_root"] = app_root
+		
 		exception_to_propagate = nil
 		begin
-			server.write("spawn_application", app_root, lower_privilege, lowest_user, environment)
+			server.write("spawn_application", *options.to_a.flatten)
 			result = server.read
 			if result.nil?
 				raise IOError, "Connection closed"
@@ -255,17 +276,20 @@ private
 		Object.send(:remove_const, :RAILS_ROOT)
 	end
 
-	def handle_spawn_application(app_root, lower_privilege, lowest_user, environment)
-		lower_privilege = lower_privilege == "true"
+	def handle_spawn_application(*options)
+		options = Hash[*options]
+		options["lower_privilege"]     = options["lower_privilege"] == "true"
+		options["app_spawner_timeout"] = options["app_spawner_timeout"].to_i
+		options["memory_limit"]        = options["memory_limit"].to_i
+		
 		app = nil
+		app_root = options["app_root"]
 		@spawners.synchronize do
 			begin
 				spawner = @spawners.lookup_or_add(app_root) do
-					spawner = ApplicationSpawner.new(app_root,
-							lower_privilege, lowest_user,
-							environment)
-					if @app_spawner_timeout
-						spawner.max_idle_time = @app_spawner_timeout
+					spawner = ApplicationSpawner.new(app_root, options)
+					if options["app_spawner_timeout"] && options["app_spawner_timeout"] != -1
+						spawner.max_idle_time = options["app_spawner_timeout"]
 					end
 					spawner.start
 					spawner

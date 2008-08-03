@@ -60,19 +60,24 @@ class ApplicationSpawner < AbstractServer
 	# or a directory that doesn't appear to be a Rails application root directory,
 	# then an InvalidPath will be raised.
 	#
-	# If +lower_privilege+ is true, then ApplicationSpawner will attempt to
-	# switch to the user who owns the application's <tt>config/environment.rb</tt>,
-	# and to the default group of that user.
+	# Additional options are:
+	# - +lower_privilege+ and +lowest_user+:
+	#   If +lower_privilege+ is true, then ApplicationSpawner will attempt to
+	#   switch to the user who owns the application's <tt>config/environment.rb</tt>,
+	#   and to the default group of that user.
 	#
-	# If that user doesn't exist on the system, or if that user is root,
-	# then ApplicationSpawner will attempt to switch to the username given by
-	# +lowest_user+ (and to the default group of that user).
-	# If +lowest_user+ doesn't exist either, or if switching user failed
-	# (because the current process does not have the privilege to do so),
-	# then ApplicationSpawner will continue without reporting an error.
+	#   If that user doesn't exist on the system, or if that user is root,
+	#   then ApplicationSpawner will attempt to switch to the username given by
+	#   +lowest_user+ (and to the default group of that user).
+	#   If +lowest_user+ doesn't exist either, or if switching user failed
+	#   (because the current process does not have the privilege to do so),
+	#   then ApplicationSpawner will continue without reporting an error.
 	#
-	# The +environment+ argument allows one to specify the RAILS_ENV environment to use.
-	def initialize(app_root, lower_privilege = true, lowest_user = "nobody", environment = "production")
+	# - +environment+:
+	#   Allows one to specify the RAILS_ENV environment to use.
+	#
+	# All other options will be passed on to RequestHandler.
+	def initialize(app_root, options = {})
 		super()
 		begin
 			@app_root = normalize_path(app_root)
@@ -81,9 +86,14 @@ class ApplicationSpawner < AbstractServer
 		rescue InvalidPath
 			raise
 		end
-		@lower_privilege = lower_privilege
-		@lowest_user = lowest_user
-		@environment = environment
+		@options = {
+			"lower_privilege" => true,
+			"lowest_user"     => "nobody",
+			"environment"     => "production"
+		}.merge(options)
+		@lower_privilege = @options["lower_privilege"]
+		@lowest_user     = @options["lowest_user"]
+		@environment     = @options["environment"]
 		self.max_idle_time = DEFAULT_APP_SPAWNER_MAX_IDLE_TIME
 		assert_valid_app_root(@app_root)
 		define_message_handler(:spawn_application, :handle_spawn_application)
@@ -304,7 +314,7 @@ private
 				::ActiveRecord::Base.establish_connection
 			end
 			
-			handler = RequestHandler.new(reader)
+			handler = RequestHandler.new(reader, @options)
 			channel.write(Process.pid, handler.socket_name,
 				handler.using_abstract_namespace?)
 			channel.send_io(writer)
