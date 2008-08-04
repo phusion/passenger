@@ -505,10 +505,7 @@ private:
 					activeOrMaxChanged.notify_all();
 				}
 			} else {
-				while (!(
-					active < max &&
-					(maxPerApp == 0 || domain->size < maxPerApp)
-				)) {
+				while (!(active < max)) {
 					activeOrMaxChanged.wait(l);
 				}
 				if (count == max) {

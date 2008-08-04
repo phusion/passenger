@@ -269,9 +269,7 @@ function spawn_or_use_existing(app_root, options):
 			active++
 	else:
 		# There are no apps for this app root.
-		wait until
-		  (active < max) and
-		  (max_per_app == 0 or domain.size < max_per_app)
+		wait until (active < max)
 		if count == max:
 			# Here we are in a though situation. There are several
 			# apps which are inactive, and none of them have
