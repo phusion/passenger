@@ -32,12 +32,25 @@
 #include <cstdlib>
 #include <cstring>
 #include <errno.h>
+#include <unistd.h>
 #include "Exceptions.h"
 
 namespace Passenger {
 
 using namespace std;
 using namespace boost;
+
+/** Enumeration which indicates what kind of file a file is. */
+typedef enum {
+	/** The file doesn't exist. */
+	FT_NONEXISTANT,
+	/** A regular file or a symlink to a regular file. */
+	FT_REGULAR,
+	/** A directory. */
+	FT_DIRECTORY,
+	/** Something else, e.g. a pipe or a socket. */
+	FT_OTHER
+} FileType;
 
 /**
  * Convenience shortcut for creating a <tt>shared_ptr</tt>.
@@ -143,6 +156,16 @@ void split(const string &str, char sep, vector<string> &output);
  * @ingroup Support
  */
 bool fileExists(const char *filename);
+
+/**
+ * Check whether 'filename' exists and what kind of file it is.
+ *
+ * @param filename The filename to check.
+ * @return The file type.
+ * @throws FileSystemException Unable to check because of a filesystem error.
+ * @ingroup Support
+ */
+FileType getFileType(const char *filename);
 
 /**
  * Find the location of the Passenger spawn server script.

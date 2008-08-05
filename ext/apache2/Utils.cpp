@@ -19,7 +19,6 @@
  */
 
 #include <cassert>
-#include <unistd.h>
 #include "Utils.h"
 
 #define SPAWN_SERVER_SCRIPT_NAME "passenger-spawn-server"
@@ -50,13 +49,24 @@ split(const string &str, char sep, vector<string> &output) {
 
 bool
 fileExists(const char *filename) {
+	return getFileType(filename) == FT_REGULAR;
+}
+
+FileType
+getFileType(const char *filename) {
 	struct stat buf;
 	
 	if (stat(filename, &buf) == 0) {
-		return S_ISREG(buf.st_mode);
+		if (S_ISREG(buf.st_mode)) {
+			return FT_REGULAR;
+		} else if (S_ISDIR(buf.st_mode)) {
+			return FT_DIRECTORY;
+		} else {
+			return FT_OTHER;
+		}
 	} else {
 		if (errno == ENOENT) {
-			return false;
+			return FT_NONEXISTANT;
 		} else {
 			int e = errno;
 			string message("Cannot stat '");
