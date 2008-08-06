@@ -126,7 +126,7 @@ public:
 	 *
 	 * Otherwise, NULL will be returned.
 	 *
-	 * @throws SystemException An error occured while examening the filesystem.
+	 * @throws FileSystemException An error occured while examening the filesystem.
 	 * @warning The return value may only be used as long as <tt>config</tt>
 	 *          hasn't been destroyed.
 	 */
@@ -202,7 +202,7 @@ public:
 	 * Returns an empty string if the document root of the HTTP request
 	 * cannot be determined, or if it isn't a valid folder.
 	 *
-	 * @throws SystemException An error occured while examening the filesystem.
+	 * @throws FileSystemException An error occured while examening the filesystem.
 	 */
 	string getPublicDirectory() {
 		if (!baseURIKnown) {
@@ -233,7 +233,7 @@ public:
 	/**
 	 * Returns the application type that's associated with the HTTP request.
 	 *
-	 * @throws SystemException An error occured while examening the filesystem.
+	 * @throws FileSystemException An error occured while examening the filesystem.
 	 */
 	ApplicationType getApplicationType() {
 		if (!baseURIKnown) {
@@ -246,7 +246,7 @@ public:
 	 * Returns the application type (as a string) that's associated
 	 * with the HTTP request.
 	 *
-	 * @throws SystemException An error occured while examening the filesystem.
+	 * @throws FileSystemException An error occured while examening the filesystem.
 	 */
 	const char *getApplicationTypeString() {
 		if (!baseURIKnown) {
@@ -266,6 +266,8 @@ public:
 	
 	/**
 	 * Returns the environment under which the application should be spawned.
+	 *
+	 * @throws FileSystemException An error occured while examening the filesystem.
 	 */
 	const char *getEnvironment() {
 		switch (getApplicationType()) {
@@ -306,9 +308,33 @@ private:
 			return APR_SUCCESS;
 		}
 	};
+	
+	struct RequestNote {
+		DirectoryMapper mapper;
+		DirConfig *config;
+		bool forwardToBackend;
+		const char *handlerBeforeModRewrite;
+		char *filenameBeforeModRewrite;
+		apr_filetype_e oldFileType;
+		const char *handlerBeforeModAutoIndex;
+		
+		RequestNote(const DirectoryMapper &m)
+			: mapper(m) {
+			forwardToBackend = false;
+			filenameBeforeModRewrite = NULL;
+		}
+		
+		static apr_status_t cleanup(void *p) {
+			delete (RequestNote *) p;
+			return APR_SUCCESS;
+		}
+	};
+	
+	enum Threeway { YES, NO, UNKNOWN };
 
 	ApplicationPoolPtr applicationPool;
 	ApplicationPoolServerPtr applicationPoolServer;
+	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex;
 	
 	DirConfig *getDirConfig(request_rec *r) {
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
@@ -316,6 +342,39 @@ private:
 	
 	ServerConfig *getServerConfig(server_rec *s) {
 		return (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
+	}
+	
+	bool hasModRewrite() {
+		if (m_hasModRewrite == UNKNOWN) {
+			if (ap_find_linked_module("mod_rewrite.c")) {
+				m_hasModRewrite = YES;
+			} else {
+				m_hasModRewrite = NO;
+			}
+		}
+		return m_hasModRewrite == YES;
+	}
+	
+	bool hasModDir() {
+		if (m_hasModDir == UNKNOWN) {
+			if (ap_find_linked_module("mod_dir.c")) {
+				m_hasModDir = YES;
+			} else {
+				m_hasModDir = NO;
+			}
+		}
+		return m_hasModDir == YES;
+	}
+	
+	bool hasModAutoIndex() {
+		if (m_hasModAutoIndex == UNKNOWN) {
+			if (ap_find_linked_module("mod_autoindex.c")) {
+				m_hasModAutoIndex = YES;
+			} else {
+				m_hasModAutoIndex = NO;
+			}
+		}
+		return m_hasModAutoIndex == YES;
 	}
 	
 	int reportDocumentRootDeterminationError(request_rec *r) {
@@ -389,32 +448,6 @@ private:
 		return lookupName(r->subprocess_env, name);
 	}
 	
-	// This code is a duplicate of what's in util_script.c.  We can't use
-	// r->unparsed_uri because it gets changed if there was a redirect.
-	char *originalURI(request_rec *r) {
-		char *first, *last;
-
-		if (r->the_request == NULL) {
-			return (char *) apr_pcalloc(r->pool, 1);
-		}
-		
-		first = r->the_request;	// use the request-line
-		
-		while (*first && !apr_isspace(*first)) {
-			++first;		// skip over the method
-		}
-		while (apr_isspace(*first)) {
-			++first;		//   and the space(s)
-		}
-		
-		last = first;
-		while (*last && !apr_isspace(*last)) {
-			++last;			// end at next whitespace
-		}
-		
-		return apr_pstrmemdup(r->pool, first, last - first);
-	}
-
 	void inline addHeader(apr_table_t *table, const char *name, const char *value) {
 		if (name != NULL && value != NULL) {
 			apr_table_addn(table, name, value);
@@ -439,7 +472,7 @@ private:
 		addHeader(headers, "REMOTE_PORT",     apr_psprintf(r->pool, "%d", r->connection->remote_addr->port));
 		addHeader(headers, "REMOTE_USER",     r->user);
 		addHeader(headers, "REQUEST_METHOD",  r->method);
-		addHeader(headers, "REQUEST_URI",     originalURI(r));
+		addHeader(headers, "REQUEST_URI",     r->uri);
 		addHeader(headers, "QUERY_STRING",    r->args ? r->args : "");
 		if (strcmp(baseURI, "/") != 0) {
 			addHeader(headers, "SCRIPT_NAME", baseURI);
@@ -571,6 +604,9 @@ public:
 		passenger_config_merge_all_servers(pconf, s);
 		ServerConfig *config = getServerConfig(s);
 		Passenger::setLogLevel(config->logLevel);
+		m_hasModRewrite = UNKNOWN;
+		m_hasModDir = UNKNOWN;
+		m_hasModAutoIndex = UNKNOWN;
 		
 		P_DEBUG("Initializing Phusion Passenger...");
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
@@ -640,17 +676,286 @@ public:
 		}
 	}
 	
-	int handleRequest(request_rec *r) {
+	/**
+	 * This is the hook method for the map_to_storage hook. Apache's final map_to_storage hook
+	 * method (defined in core.c) will do the following:
+	 *
+	 * If r->filename doesn't exist, then it will change the filename to the
+	 * following form:
+	 *    
+	 *     A/B
+	 *    
+	 * A is top-most directory that exists. B is the first filename piece that
+	 * normally follows A. For example, suppose that a website's DocumentRoot
+	 * is /website, on server http://test.com/. Suppose that there's also a
+	 * directory /website/images.
+	 * 
+	 * If we access:                    then r->filename will be:
+	 * http://test.com/foo/bar          /website/foo
+	 * http://test.com/foo/bar/baz      /website/foo
+	 * http://test.com/images/foo/bar   /website/images/foo
+	 *
+	 * We obviously don't want this to happen because it'll interfere with our page
+	 * cache file search code. So here we save the original value of r->filename so
+	 * that we can use it later.
+	 */
+	int saveOriginalFilename(request_rec *r) {
+		apr_table_set(r->notes, "Phusion Passenger: original filename", r->filename);
+		return DECLINED;
+	}
+	
+	/**
+	 * This hook method will be called immediately after the map_to_storage hook.
+	 * In here, we'll determine whether the URI will be served statically by Apache
+	 * (in case of static assets or in case there's a page cache file available) or
+	 * whether it should be forwarded to the backend application.
+	 *
+	 * The strategy is as follows:
+	 *
+	 * We check whether Phusion Passenger is enabled for this URI (A).
+	 * If so, then we check whether the following situations are true:
+	 * (B) There is a backend application defined for this URI.
+	 * (C) r->filename already exists.
+	 * (D) There is a page cache file for the URI.
+	 *
+	 * - If A is not true, or if B is not true, or if C is true, then won't do anything.
+	 *   Passenger will be disabled during the rest of this request.
+	 * - If D is true, then we first transform r->filename to the page cache file's
+	 *   filename, and then we let Apache serve it statically.
+	 * - If D is not true, then we forward the request to the backend application.
+	 *
+	 * Note that forwarding the request will be done in handleRequest(), not here.
+	 * We simple store the decision in a structure, which will be queried later.
+	 */
+	int prepareRequest(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
 		if (config->enabled == DirConfig::DISABLED) {
+			// (A) is not true.
+			return DECLINED;
+		}
+		
+		// (A) is true.
+		DirectoryMapper mapper(r, config);
+		try {
+			if (mapper.getBaseURI() == NULL) {
+				// (B) is not true.
+				return DECLINED;
+			}
+		} catch (const FileSystemException &e) {
+			/* DirectoryMapper tried to examine the filesystem in order
+			 * to autodetect the application type (e.g. by checking whether
+			 * environment.rb exists. But something went wrong, probably
+			 * because of a permission problem. This almost definitely
+			 * means that the user is trying to deploy an application, but
+			 * set the wrong permissions. So we prevent core.c from running.
+			 * Later, in the handler hook, we inform the user about this
+			 * problem so that he can either disable Phusion Passenger's
+			 * autodetection routines, or fix the permissions.
+			 */
+			// TODO: notify the user...
+			return DECLINED;
+		}
+		
+		/* Save some information for the hook methods that are called later.
+		 * The existance of this note indicates that the URI belongs to a Phusion
+		 * Passenger-served application.
+		 */
+		RequestNote *note = new RequestNote(mapper);
+		note->config = config;
+		apr_pool_userdata_set(note, "Phusion Passenger", RequestNote::cleanup, r->pool);
+		
+		try {
+			// (B) is true.
+			const char *filename = apr_table_get(r->notes, "Phusion Passenger: original filename");
+			if (filename == NULL) {
+				return DECLINED;
+			}
+			
+			FileType fileType = getFileType(filename);
+			if (fileType == FT_REGULAR) {
+				// (C) is true.
+				return DECLINED;
+			}
+			
+			// (C) is not true. Check whether (D) is true.
+			char *pageCacheFile;
+			/* Only GET requests may hit the page cache. This is
+			 * important because of REST conventions, e.g.
+			 * 'POST /foo' maps to 'FooController#create',
+			 * while 'GET /foo' maps to 'FooController#index'.
+			 * We wouldn't want our page caching support to interfere
+			 * with that.
+			 */
+			if (r->method_number == M_GET) {
+				if (fileType == FT_DIRECTORY) {
+					size_t len;
+					
+					len = strlen(filename);
+					if (len > 0 && filename[len - 1] == '/') {
+						pageCacheFile = apr_pstrcat(r->pool, filename,
+							"index.html", NULL);
+					} else {
+						pageCacheFile = apr_pstrcat(r->pool, filename,
+							"/index.html", NULL);
+					}
+				} else {
+					pageCacheFile = apr_pstrcat(r->pool, filename,
+						".html", NULL);
+				}
+				if (!fileExists(pageCacheFile)) {
+					pageCacheFile = NULL;
+				}
+			} else {
+				pageCacheFile = NULL;
+			}
+			if (pageCacheFile != NULL) {
+				// (D) is true.
+				int status;
+				
+				r->filename = pageCacheFile;
+				r->canonical_filename = pageCacheFile;
+				ap_set_content_type(r, "text/html");
+				if ((status = ap_directory_walk(r)) != 0) {
+					return status;
+				}
+				if ((status = ap_file_walk(r)) != 0) {
+					return status;
+				}
+				return DECLINED;
+			} else {
+				// (D) is not true.
+				note->forwardToBackend = true;
+				return DECLINED;
+			}
+		} catch (const FileSystemException &e) {
+			/* Something went wrong while accessing the directory in which
+			 * r->filename lives. We already know that this URI belongs to
+			 * a backend application, so this error probably means that the
+			 * user set the wrong permissions for his 'public' folder. We
+			 * let core.c do its job so that it can display an error message.
+			 */
+			return DECLINED;
+		}
+	}
+	
+	/**
+	 * The default .htaccess provided by on Rails on Rails (that is, before version 2.1.0)
+	 * has the following mod_rewrite rules in it:
+	 *
+	 *   RewriteEngine on
+	 *   RewriteRule ^$ index.html [QSA]
+	 *   RewriteRule ^([^.]+)$ $1.html [QSA]
+	 *   RewriteCond %{REQUEST_FILENAME} !-f
+	 *   RewriteRule ^(.*)$ dispatch.cgi [QSA,L]
+	 *
+	 * As a result, all requests that do not map to a filename will be redirected to
+	 * dispatch.cgi (or dispatch.fcgi, if the user so specified). We don't want that
+	 * to happen, so before mod_rewrite applies its rules, we save the current state.
+	 * After mod_rewrite has applied its rules, undoRedirectionToDispatchCgi() will
+	 * check whether mod_rewrite attempted to perform an internal redirection to
+	 * dispatch.(f)cgi. If so, then it will revert the state to the way it was before
+	 * mod_rewrite took place.
+	 */
+	int saveStateBeforeRewriteRules(request_rec *r) {
+		RequestNote *note = 0;
+		apr_pool_userdata_get((void **) &note, "Phusion Passenger", r->pool);
+		if (note != 0 && hasModRewrite()) {
+			note->handlerBeforeModRewrite = r->handler;
+			note->filenameBeforeModRewrite = r->filename;
+		}
+		return DECLINED;
+	}
+
+	int undoRedirectionToDispatchCgi(request_rec *r) {
+		RequestNote *note = 0;
+		apr_pool_userdata_get((void **) &note, "Phusion Passenger", r->pool);
+		if (note == 0 || !hasModRewrite()) {
+			return DECLINED;
+		}
+		
+		if (r->handler != NULL && strcmp(r->handler, "redirect-handler") == 0) {
+			// Check whether r->filename looks like "redirect:.../dispatch.(f)cgi"
+			size_t len = strlen(r->filename);
+			// 22 == strlen("redirect:/dispatch.cgi")
+			if (len >= 22 && memcmp(r->filename, "redirect:", 9) == 0
+			 && (memcmp(r->filename + len - 13, "/dispatch.cgi", 13) == 0
+			  || memcmp(r->filename + len - 14, "/dispatch.fcgi", 14) == 0)) {
+				if (note->filenameBeforeModRewrite != NULL) {
+					r->filename = note->filenameBeforeModRewrite;
+					r->canonical_filename = note->filenameBeforeModRewrite;
+					r->handler = note->handlerBeforeModRewrite;
+				}
+			}
+		}
+		return DECLINED;
+	}
+	
+	/**
+	 * mod_dir does the following:
+	 * If r->filename is a directory, and the URI doesn't end with a slash,
+	 * then it will redirect the browser to an URI with a slash. For example,
+	 * if you go to http://foo.com/images, then it will redirect you to
+	 * http://foo.com/images/.
+	 *
+	 * This behavior is undesired. Suppose that there is an ImagesController,
+	 * and there's also a 'public/images' folder used for storing page cache
+	 * files. Then we don't want mod_dir to perform the redirection.
+	 *
+	 * So in startBlockingModDir(), we temporarily change some fields in the
+	 * request structure in order to block mod_dir. In endBlockingModDir() we
+	 * revert those fields to their old value.
+	 */
+	int startBlockingModDir(request_rec *r) {
+		RequestNote *note = 0;
+		apr_pool_userdata_get((void **) &note, "Phusion Passenger", r->pool);
+		if (note != 0 && hasModDir()) {
+			note->oldFileType = r->finfo.filetype;
+			r->finfo.filetype = APR_NOFILE;
+		}
+		return DECLINED;
+	}
+	
+	int endBlockingModDir(request_rec *r) {
+		RequestNote *note = 0;
+		apr_pool_userdata_get((void **) &note, "Phusion Passenger", r->pool);
+		if (note != 0 && hasModDir()) {
+			r->finfo.filetype = note->oldFileType;
+		}
+		return DECLINED;
+	}
+	
+	int startBlockingModAutoIndex(request_rec *r) {
+		RequestNote *note = 0;
+		apr_pool_userdata_get((void **) &note, "Phusion Passenger", r->pool);
+		if (note != 0 && hasModAutoIndex()) {
+			note->handlerBeforeModAutoIndex = r->handler;
+			r->handler = "";
+		}
+		return DECLINED;
+	}
+	
+	int endBlockingModAutoIndex(request_rec *r) {
+		RequestNote *note = 0;
+		apr_pool_userdata_get((void **) &note, "Phusion Passenger", r->pool);
+		if (note != 0 && hasModAutoIndex()) {
+			r->handler = note->handlerBeforeModAutoIndex;
+		}
+		return DECLINED;
+	}
+	
+	int handleRequest(request_rec *r) {
+		RequestNote *note = 0;
+		apr_pool_userdata_get((void **) &note, "Phusion Passenger", r->pool);
+		if (note == 0 || !note->forwardToBackend) {
+			return DECLINED;
+		} else if (r->handler != NULL && strcmp(r->handler, "redirect-handler") == 0) {
+			// mod_rewrite is at work.
 			return DECLINED;
 		}
 		
 		TRACE_POINT();
-		DirectoryMapper mapper(r, config);
-		if (mapper.getBaseURI() == NULL || r->filename == NULL || fileExists(r->filename)) {
-			return DECLINED;
-		}
+		DirConfig *config = note->config;
+		DirectoryMapper &mapper(note->mapper);
 		
 		try {
 			if (mapper.getPublicDirectory().empty()) {
@@ -766,98 +1071,6 @@ public:
 		} catch (...) {
 			P_ERROR("An unexpected, unknown error occured in mod_passenger.");
 			throw;
-		}
-	}
-	
-	int
-	mapToStorage(request_rec *r) {
-		DirConfig *config = getDirConfig(r);
-		if (config->enabled == DirConfig::DISABLED) {
-			return DECLINED;
-		}
-		
-		DirectoryMapper mapper(r, config);
-		bool forwardToApplication;
-		
-		try {
-			if (mapper.getBaseURI() == NULL || fileExists(r->filename)) {
-				/*
-				 * fileExists():
-				 * If the file already exists, serve it directly.
-				 * This is for static assets like .css and .js files.
-				 */
-				forwardToApplication = false;
-			} else if (r->method_number == M_GET) {
-				char *html_file;
-				size_t len;
-				
-				len = strlen(r->filename);
-				if (len > 0 && r->filename[len - 1] == '/') {
-					html_file = apr_pstrcat(r->pool, r->filename, "index.html", NULL);
-				} else {
-					html_file = apr_pstrcat(r->pool, r->filename, ".html", NULL);
-				}
-				if (fileExists(html_file)) {
-					/* If a .html version of the URI exists, serve it directly.
-					 * We're essentially accelerating Rails page caching.
-					 */
-					r->filename = html_file;
-					r->canonical_filename = html_file;
-					forwardToApplication = false;
-				} else {
-					forwardToApplication = true;
-				}
-			} else {
-				/*
-				 * Non-GET requests are always forwarded to the application.
-				 * This important because of REST conventions, e.g.
-				 * 'POST /foo' maps to 'FooController.create',
-				 * while 'GET /foo' maps to 'FooController.index'.
-				 * We wouldn't want our page caching support to interfere
-				 * with that.
-				 */
-				forwardToApplication = true;
-			}
-			
-			if (forwardToApplication) {
-				/* Apache's default map_to_storage process does strange
-				 * things with the filename. Suppose that the DocumentRoot
-				 * is /website, on server http://test.com/. If we access
-				 * http://test.com/foo/bar, and /website/foo/bar does not
-				 * exist, then Apache will change the filename to
-				 * /website/foo instead of the expected /website/bar.
-				 * We make sure that doesn't happen.
-				 *
-				 * Incidentally, this also disables mod_rewrite. That is a
-				 * good thing because the default Rails .htaccess file
-				 * interferes with Passenger anyway (it delegates requests
-				 * to the CGI script dispatch.cgi).
-				 */
-				if (config->allowModRewrite != DirConfig::ENABLED
-				 && mapper.getApplicationType() == DirectoryMapper::RAILS) {
-					/* Of course, we only do that if all of the following
-					 * are true:
-					 * - the config allows us to. Some people have complex
-					 *   mod_rewrite rules that they don't want to abandon.
-					 *   Those people will have to make sure that the Rails
-					 *   app's .htaccess doesn't interfere.
-					 * - this is a Rails application.
-					 */
-					return OK;
-				} else if (strcmp(r->uri, mapper.getBaseURI()) == 0) {
-					/* If the request URI is the application's base URI,
-					 * then we'll want to take over control. Otherwise,
-					 * Apache will show a directory listing. This fixes issue #11.
-					 */
-					return OK;
-				} else {
-					return DECLINED;
-				}
-			} else {
-				return DECLINED;
-			}
-		} catch (const FileSystemException &e) {
-			return DECLINED;
 		}
 	}
 };
@@ -989,32 +1202,108 @@ init_child(apr_pool_t *pchild, server_rec *s) {
 }
 
 static int
-handle_request(request_rec *r) {
-	if (hooks != NULL) {
-		return hooks->handleRequest(r);
+save_original_filename(request_rec *r) {
+	if (OXT_LIKELY(hooks != NULL)) {
+		return hooks->saveOriginalFilename(r);
 	} else {
 		return DECLINED;
 	}
 }
 
 static int
-map_to_storage(request_rec *r) {
-	if (hooks != NULL) {
-		return hooks->mapToStorage(r);
+prepare_request(request_rec *r) {
+	if (OXT_LIKELY(hooks != NULL)) {
+		return hooks->prepareRequest(r);
 	} else {
 		return DECLINED;
 	}
 }
+
+static int
+save_state_before_rewrite_rules(request_rec *r) {
+	if (OXT_LIKELY(hooks != NULL)) {
+		return hooks->saveStateBeforeRewriteRules(r);
+	} else {
+		return DECLINED;
+	}
+}
+
+static int
+undo_redirection_to_dispatch_cgi(request_rec *r) {
+	if (OXT_LIKELY(hooks != NULL)) {
+		return hooks->undoRedirectionToDispatchCgi(r);
+	} else {
+		return DECLINED;
+	}
+}
+
+static int
+start_blocking_mod_dir(request_rec *r) {
+	if (OXT_LIKELY(hooks != NULL)) {
+		return hooks->startBlockingModDir(r);
+	} else {
+		return DECLINED;
+	}
+}
+
+static int
+end_blocking_mod_dir(request_rec *r) {
+	if (OXT_LIKELY(hooks != NULL)) {
+		return hooks->endBlockingModDir(r);
+	} else {
+		return DECLINED;
+	}
+}
+
+static int
+start_blocking_mod_autoindex(request_rec *r) {
+	if (OXT_LIKELY(hooks != NULL)) {
+		return hooks->startBlockingModAutoIndex(r);
+	} else {
+		return DECLINED;
+	}
+}
+
+static int
+end_blocking_mod_autoindex(request_rec *r) {
+	if (OXT_LIKELY(hooks != NULL)) {
+		return hooks->endBlockingModAutoIndex(r);
+	} else {
+		return DECLINED;
+	}
+}
+
+static int
+handle_request(request_rec *r) {
+	if (OXT_LIKELY(hooks != NULL)) {
+		return hooks->handleRequest(r);
+	} else {
+		return DECLINED;
+	}
+}
+
 
 /**
  * Apache hook registration function.
  */
 void
 passenger_register_hooks(apr_pool_t *p) {
+	static const char * const rewrite_module[] = { "mod_rewrite.c", NULL };
+	static const char * const dir_module[] = { "mod_dir.c", NULL };
+	static const char * const autoindex_module[] = { "mod_autoindex.c", NULL };
+
 	ap_hook_post_config(init_module, NULL, NULL, APR_HOOK_MIDDLE);
 	ap_hook_child_init(init_child, NULL, NULL, APR_HOOK_MIDDLE);
-	ap_hook_map_to_storage(map_to_storage, NULL, NULL, APR_HOOK_FIRST);
-	ap_hook_handler(handle_request, NULL, NULL, APR_HOOK_MIDDLE);
+	
+	ap_hook_map_to_storage(save_original_filename, NULL, NULL, APR_HOOK_LAST);
+	ap_hook_fixups(prepare_request, NULL, rewrite_module, APR_HOOK_FIRST);
+	ap_hook_fixups(save_state_before_rewrite_rules, NULL, rewrite_module, APR_HOOK_LAST);
+	ap_hook_fixups(undo_redirection_to_dispatch_cgi, rewrite_module, NULL, APR_HOOK_FIRST);
+	ap_hook_fixups(start_blocking_mod_dir, NULL, dir_module, APR_HOOK_MIDDLE);
+	ap_hook_fixups(end_blocking_mod_dir, dir_module, NULL, APR_HOOK_MIDDLE);
+	ap_hook_handler(start_blocking_mod_autoindex, NULL, autoindex_module, APR_HOOK_LAST);
+	ap_hook_handler(end_blocking_mod_autoindex, autoindex_module, NULL, APR_HOOK_FIRST);
+	ap_hook_handler(handle_request, NULL, NULL, APR_HOOK_LAST);
 }
 
 /**
