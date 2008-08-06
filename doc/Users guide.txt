@@ -682,8 +682,13 @@ configuration block. The default value is 'off'.
 ==== RailsEnv <string> ====
 This option allows one to specify the default `RAILS_ENV` value.
 
-This option may occur once, in the global server configuration or in a virtual host
-configuration block. The default value is 'production'.
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once. The default value is 'production'.
 
 [[RailsSpawnMethod]]
 ==== RailsSpawnMethod <string> ====
@@ -786,8 +791,13 @@ The given value will be accessible in Rack applications in the `RACK_ENV`
 environment variable. This allows one to define the environment in which
 Rack applications are run, very similar to `RAILS_ENV`.
 
-This option may occur once, in the global server configuration or in a virtual host
-configuration block. The default value is 'production'.
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once. The default value is 'production'.
 
 === Deprecated options ===
 
