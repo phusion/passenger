@@ -126,7 +126,9 @@ public:
 	 *
 	 * Otherwise, NULL will be returned.
 	 *
-	 * @throws FileSystemException An error occured while examening the filesystem.
+	 * @throws FileSystemException This method might also examine the filesystem in
+	 *            order to detect the application's type. During that process, a
+	 *            FileSystemException might be thrown.
 	 * @warning The return value may only be used as long as <tt>config</tt>
 	 *          hasn't been destroyed.
 	 */
@@ -309,7 +311,16 @@ private:
 		}
 	};
 	
-	struct RequestNote {
+	struct AprDestructable {
+		virtual ~AprDestructable() { }
+		
+		static apr_status_t cleanup(void *p) {
+			delete (AprDestructable *) p;
+			return APR_SUCCESS;
+		}
+	};
+	
+	struct RequestNote: public AprDestructable {
 		DirectoryMapper mapper;
 		DirConfig *config;
 		bool forwardToBackend;
@@ -323,10 +334,31 @@ private:
 			forwardToBackend = false;
 			filenameBeforeModRewrite = NULL;
 		}
+	};
+	
+	struct ErrorReport: public AprDestructable {
+		virtual int report(request_rec *r) = 0;
+	};
+	
+	struct ReportFileSystemError: public ErrorReport {
+		FileSystemException e;
 		
-		static apr_status_t cleanup(void *p) {
-			delete (RequestNote *) p;
-			return APR_SUCCESS;
+		ReportFileSystemError(const FileSystemException &ex): e(ex) { }
+		
+		int report(request_rec *r) {
+			ap_set_content_type(r, "text/html; charset=UTF-8");
+			ap_rputs("<h1>Passenger error #2</h1>\n", r);
+			ap_rputs("An error occurred while trying to access '", r);
+			ap_rputs(ap_escape_html(r->pool, e.filename().c_str()), r);
+			ap_rputs("': ", r);
+			ap_rputs(ap_escape_html(r->pool, e.what()), r);
+			if (e.code() == EPERM) {
+				ap_rputs("<p>", r);
+				ap_rputs("Apache doesn't have read permissions to that file. ", r);
+				ap_rputs("Please fix the relevant file permissions.", r);
+				ap_rputs("</p>", r);
+			}
+			return OK;
 		}
 	};
 	
@@ -381,22 +413,6 @@ private:
 		ap_set_content_type(r, "text/html; charset=UTF-8");
 		ap_rputs("<h1>Passenger error #1</h1>\n", r);
 		ap_rputs("Cannot determine the document root for the current request.", r);
-		return OK;
-	}
-	
-	int reportFileSystemError(request_rec *r, const FileSystemException &e) {
-		ap_set_content_type(r, "text/html; charset=UTF-8");
-		ap_rputs("<h1>Passenger error #2</h1>\n", r);
-		ap_rputs("An error occurred while trying to access '", r);
-		ap_rputs(ap_escape_html(r->pool, e.filename().c_str()), r);
-		ap_rputs("': ", r);
-		ap_rputs(ap_escape_html(r->pool, e.what()), r);
-		if (e.code() == EPERM) {
-			ap_rputs("<p>", r);
-			ap_rputs("Apache doesn't have read permissions to that file. ", r);
-			ap_rputs("Please fix the relevant file permissions.", r);
-			ap_rputs("</p>", r);
-		}
 		return OK;
 	}
 	
@@ -745,14 +761,17 @@ public:
 			/* DirectoryMapper tried to examine the filesystem in order
 			 * to autodetect the application type (e.g. by checking whether
 			 * environment.rb exists. But something went wrong, probably
-			 * because of a permission problem. This almost definitely
+			 * because of a permission problem. This usually
 			 * means that the user is trying to deploy an application, but
-			 * set the wrong permissions. So we prevent core.c from running.
+			 * set the wrong permissions on the relevant folders.
 			 * Later, in the handler hook, we inform the user about this
 			 * problem so that he can either disable Phusion Passenger's
 			 * autodetection routines, or fix the permissions.
 			 */
-			// TODO: notify the user...
+			apr_pool_userdata_set(new ReportFileSystemError(e),
+				"Phusion Passenger: error report",
+				ReportFileSystemError::cleanup,
+				r->pool);
 			return DECLINED;
 		}
 		
@@ -955,6 +974,12 @@ public:
 	}
 	
 	int handleRequest(request_rec *r) {
+		ErrorReport *e = 0;
+		apr_pool_userdata_get((void **) &e, "Phusion Passenger: error report", r->pool);
+		if (e != 0) {
+			return e->report(r);
+		}
+		
 		RequestNote *note = 0;
 		apr_pool_userdata_get((void **) &note, "Phusion Passenger", r->pool);
 		if (note == 0 || !note->forwardToBackend) {
@@ -968,12 +993,8 @@ public:
 		DirConfig *config = note->config;
 		DirectoryMapper &mapper(note->mapper);
 		
-		try {
-			if (mapper.getPublicDirectory().empty()) {
-				return reportDocumentRootDeterminationError(r);
-			}
-		} catch (const FileSystemException &e) {
-			return reportFileSystemError(r, e);
+		if (mapper.getPublicDirectory().empty()) {
+			return reportDocumentRootDeterminationError(r);
 		}
 		
 		int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_ERROR);
@@ -998,11 +1019,11 @@ public:
 			
 			UPDATE_TRACE_POINT();
 			try {
-				ServerConfig *sconfig;
+				ServerConfig *sconfig = getServerConfig(r->server);
+				string appRoot(canonicalizePath(mapper.getPublicDirectory() + "/.."));
 				
-				sconfig = getServerConfig(r->server);
 				session = applicationPool->get(SpawnOptions(
-					canonicalizePath(mapper.getPublicDirectory() + "/.."),
+					appRoot,
 					true,
 					sconfig->getDefaultUser(),
 					mapper.getEnvironment(),
@@ -1023,6 +1044,13 @@ public:
 				} else {
 					throw;
 				}
+			} catch (const FileSystemException &e) {
+				/* The application root cannot be determined. This could
+				 * happen if, for example, the user specified 'RailsBaseURI /foo'
+				 * while there is no filesystem entry called "foo" in the virtual
+				 * host's document root.
+				 */
+				return ReportFileSystemError(e).report(r);
 			} catch (const BusyException &e) {
 				return reportBusyException(r);
 			}

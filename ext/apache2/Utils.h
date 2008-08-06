@@ -196,8 +196,8 @@ string findApplicationPoolServer(const char *passengerRoot);
 /**
  * Returns a canonical version of the specified path. All symbolic links
  * and relative path elements are resolved.
- * Returns an empty string if something went wrong.
  *
+ * @throws FileSystemException Something went wrong.
  * @ingroup Support
  */
 string canonicalizePath(const string &path);

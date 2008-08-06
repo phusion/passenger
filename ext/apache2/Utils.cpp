@@ -143,7 +143,13 @@ canonicalizePath(const string &path) {
 		// rationale.
 		char *tmp = realpath(path.c_str(), NULL);
 		if (tmp == NULL) {
-			return "";
+			int e = errno;
+			string message;
+			
+			message = "Cannot resolve the path '";
+			message.append(path);
+			message.append("'");
+			throw FileSystemException(message, e, path);
 		} else {
 			string result(tmp);
 			free(tmp);
@@ -152,7 +158,13 @@ canonicalizePath(const string &path) {
 	#else
 		char tmp[PATH_MAX];
 		if (realpath(path.c_str(), tmp) == NULL) {
-			return "";
+			int e = errno;
+			string message;
+			
+			message = "Cannot resolve the path '";
+			message.append(path);
+			message.append("'");
+			throw FileSystemException(message, e, path);
 		} else {
 			return tmp;
 		}
