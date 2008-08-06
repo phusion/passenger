@@ -924,6 +924,17 @@ public:
 		return DECLINED;
 	}
 	
+	/**
+	 * mod_autoindex will try to display a directory index for URIs that map to a directory.
+	 * This is undesired because of page caching semantics. Suppose that a Rails application
+	 * has an ImagesController which has page caching enabled, and thus also a 'public/images'
+	 * directory. When the visitor visits /images we'll want the request to be forwarded to
+	 * the Rails application, instead of displaying a directory index.
+	 *
+	 * So in this hook method, we temporarily change some fields in the request structure
+	 * in order to block mod_autoindex. In endBlockingModAutoIndex(), we restore the request
+	 * structure to its former state.
+	 */
 	int startBlockingModAutoIndex(request_rec *r) {
 		RequestNote *note = 0;
 		apr_pool_userdata_get((void **) &note, "Phusion Passenger", r->pool);
