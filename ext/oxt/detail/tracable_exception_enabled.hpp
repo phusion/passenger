@@ -38,6 +38,7 @@ private:
 	std::list<trace_point *> backtrace_copy;
 public:
 	tracable_exception();
+	tracable_exception(const tracable_exception &other);
 	virtual ~tracable_exception() throw();
 	virtual std::string backtrace() const throw();
 	virtual const char *what() const throw();

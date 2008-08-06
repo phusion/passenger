@@ -52,6 +52,18 @@ tracable_exception::tracable_exception() {
 	}
 }
 
+tracable_exception::tracable_exception(const tracable_exception &other) {
+	list<trace_point *>::const_iterator it;
+	for (it = other.backtrace_copy.begin(); it != other.backtrace_copy.end(); it++) {
+		trace_point *p = new trace_point(
+			(*it)->function,
+			(*it)->source,
+			(*it)->line,
+			true);
+		backtrace_copy.push_back(p);
+	}
+}
+
 tracable_exception::~tracable_exception() throw() {
 	list<trace_point *>::iterator it;
 	for (it = backtrace_copy.begin(); it != backtrace_copy.end(); it++) {
