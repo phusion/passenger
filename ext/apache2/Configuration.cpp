@@ -334,9 +334,13 @@ cmd_passenger_high_performance(cmd_parms *cmd, void *pcfg, int arg) {
 }
 
 static const char *
-cmd_passenger_disable(cmd_parms *cmd, void *pcfg) {
+cmd_passenger_enabled(cmd_parms *cmd, void *pcfg, int arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->enabled = DirConfig::DISABLED;
+	if (arg) {
+		config->enabled = DirConfig::ENABLED;
+	} else {
+		config->enabled = DirConfig::DISABLED;
+	}
 	return NULL;
 }
 
@@ -536,11 +540,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		ACCESS_CONF | RSRC_CONF,
 		"Enable or disable Passenger's high performance mode."),
-	AP_INIT_NO_ARGS("PassengerDisable", // TODO: document this
-		(Take0Func) cmd_passenger_disable,
+	AP_INIT_FLAG("PassengerEnabled", // TODO: document this
+		(Take1Func) cmd_passenger_enabled,
 		NULL,
 		OR_ALL,
-		"Completely disable Phusion Passenger."),
+		"Enable or disable Phusion Passenger."),
 
 	// Rails-specific settings.
 	AP_INIT_TAKE1("RailsBaseURI",
