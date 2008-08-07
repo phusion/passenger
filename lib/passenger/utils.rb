@@ -23,6 +23,7 @@ if RUBY_PLATFORM != "java" && RUBY_VERSION < "1.8.7"
 end
 require 'pathname'
 require 'etc'
+require 'tempfile'
 require 'passenger/exceptions'
 if RUBY_PLATFORM != "java"
 	require 'passenger/native_support'
@@ -183,7 +184,25 @@ protected
 	# Exceptions are not propagated, except for SystemExit.
 	def report_app_init_status(channel)
 		begin
-			yield
+			old_global_stderr = $stderr
+			old_stderr = STDERR
+			stderr_output = ""
+			tempfile = Tempfile.new('passenger-stderr')
+			tempfile.unlink
+			Object.send(:remove_const, 'STDERR') rescue nil
+			Object.const_set('STDERR', tempfile)
+			begin
+				yield
+			ensure
+				Object.send(:remove_const, 'STDERR') rescue nil
+				Object.const_set('STDERR', old_stderr)
+				$stderr = old_global_stderr
+				if tempfile
+					tempfile.rewind
+					stderr_output = tempfile.read
+					tempfile.close rescue nil
+				end
+			end
 			channel.write('success')
 			return true
 		rescue StandardError, ScriptError, NoMemoryError => e
@@ -192,9 +211,12 @@ protected
 			end
 			channel.write('exception')
 			channel.write_scalar(marshal_exception(e))
+			channel.write_scalar(stderr_output)
 			return false
-		rescue SystemExit
+		rescue SystemExit => e
 			channel.write('exit')
+			channel.write_scalar(marshal_exception(e))
+			channel.write_scalar(stderr_output)
 			raise
 		end
 	end
@@ -215,15 +237,19 @@ protected
 		status = args[0]
 		if status == 'exception'
 			child_exception = unmarshal_exception(channel.read_scalar)
+			stderr = channel.read_scalar
 			#print_exception(self.class.to_s, child_exception)
 			raise AppInitError.new(
 				"Application '#{@app_root}' raised an exception: " <<
 				"#{child_exception.class} (#{child_exception.message})",
 				child_exception,
-				app_type)
+				app_type,
+				stderr.empty? ? nil : stderr)
 		elsif status == 'exit'
+			child_exception = unmarshal_exception(channel.read_scalar)
+			stderr = channel.read_scalar
 			raise AppInitError.new("Application '#{@app_root}' exited during startup",
-				nil, app_type)
+				child_exception, app_type, stderr.empty? ? nil : stderr)
 		end
 	end
 	

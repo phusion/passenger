@@ -39,7 +39,7 @@ shared_examples_for "handling errors in application initialization" do
 			spawn_stub_application(@stub)
 			violated "Spawning the application should have raised an InitializationError."
 		rescue AppInitError => e
-			e.child_exception.should be_nil
+			e.child_exception.class.should == SystemExit
 		end
 	end
 end

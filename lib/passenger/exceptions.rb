@@ -50,14 +50,18 @@ end
 # Railz::FrameworkSpawner or SpawnManager was unable to spawn an application,
 # because the application either threw an exception or called exit.
 #
-# If the +child_exception+ attribute is nil, then it means that the application
-# called exit.
+# If the application called exit, then +child_exception+ is an instance of
+# +SystemExit+.
 class AppInitError < InitializationError
+	# The application type, e.g. "rails" or "rack".
 	attr_accessor :app_type
+	# Any messages printed to stderr before the failure. May be nil.
+	attr_accessor :stderr
 	
-	def initialize(message, child_exception = nil, app_type = "rails")
+	def initialize(message, child_exception = nil, app_type = "rails", stderr = nil)
 		super(message, child_exception)
 		@app_type = app_type
+		@stderr = stderr
 	end
 end
 
