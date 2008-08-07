@@ -113,6 +113,12 @@
 			 * in the directory configuration. */
 			bool memoryLimitSpecified;
 			
+			Threeway highPerformance;
+			
+			bool isEnabled() const {
+				return enabled != DISABLED;
+			}
+			
 			const char *getRailsEnv() const {
 				if (railsEnv != NULL) {
 					return railsEnv;
@@ -156,6 +162,10 @@
 				} else {
 					return 200;
 				}
+			}
+			
+			bool highPerformanceMode() const {
+				return highPerformance == ENABLED;
 			}
 		};
 		

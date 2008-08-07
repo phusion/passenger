@@ -72,6 +72,7 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->maxRequestsSpecified = false;
 	config->memoryLimit = 0;
 	config->memoryLimitSpecified = false;
+	config->highPerformance = DirConfig::UNSET;
 	return config;
 }
 
@@ -105,6 +106,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->maxRequestsSpecified = base->maxRequestsSpecified || add->maxRequestsSpecified;
 	config->memoryLimit = (add->memoryLimitSpecified) ? add->memoryLimit : base->memoryLimit;
 	config->memoryLimitSpecified = base->memoryLimitSpecified || add->memoryLimitSpecified;
+	config->highPerformance = (add->highPerformance == DirConfig::UNSET) ? base->highPerformance : add->highPerformance;
 	return config;
 }
 
@@ -321,6 +323,17 @@ cmd_passenger_memory_limit(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
+cmd_passenger_high_performance(cmd_parms *cmd, void *pcfg, int arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	if (arg) {
+		config->highPerformance = DirConfig::ENABLED;
+	} else {
+		config->highPerformance = DirConfig::DISABLED;
+	}
+	return NULL;
+}
+
+static const char *
 cmd_passenger_disable(cmd_parms *cmd, void *pcfg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->enabled = DirConfig::DISABLED;
@@ -518,6 +531,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
 		"The maximum amount of memory in MB that an application instance may use."),
+	AP_INIT_FLAG("PassengerHighPerformance", // TODO: document this
+		(Take1Func) cmd_passenger_high_performance,
+		NULL,
+		ACCESS_CONF | RSRC_CONF,
+		"Enable or disable Passenger's high performance mode."),
 	AP_INIT_NO_ARGS("PassengerDisable", // TODO: document this
 		(Take0Func) cmd_passenger_disable,
 		NULL,
