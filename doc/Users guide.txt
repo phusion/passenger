@@ -628,34 +628,79 @@ The default value is '300'.
 ==== PassengerMaxRequests <integer> ====
 The maximum number of requests an application instance will process. After
 serving that many requests, the application instance will be shut down and
-Phusion Passenger will restart it.
+Phusion Passenger will restart it. A value of 0 means that there is no maximum:
+an application instance will thus be shut down when its idle timeout has been
+reached.
 
-This option may occur in the global server configuration, in a virtual host
-configuration block and in `<Directory>` or `<Location>` directives. The
-default value is '0', which means the maximum number of requests is unlimited.
+This option is useful if your application is leaking memory. By shutting
+it down after a certain number of requests, all of its memory is guaranteed
+to be freed by the operating system.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Limits` is on.
+
+In each place, it may be specified at most once. The default value is '0'.
+
+[CAUTION]
+=====================================================
+The <<PassengerMaxRequests,PassengerMaxRequests>> directive should be considered
+as workarounds for misbehaving applications. It is advised that you fix the
+problem in your application rather than relying on these directives as a
+measure to avoid memory leaks.
+=====================================================
 
 [[PassengerMemoryLimit]]
 ==== PassengerMemoryLimit <integer> ====
-The maximum amount of memory an application instance may use, in megabytes.
+The maximum amount of memory that an application instance may use, in megabytes.
 Once an application instance has surpassed its memory limit, it will process
 all the requests currently present in its queue and then shut down.
+A value of 0 means that there is no maximum: the application's memory usage
+will not be checked.
 
-This option may occur in the global server configuration, in a virtual host
-configuration block and in `<Directory>` or `<Location>` directives. The
-default value is '200'. A value of '0' indicates the maximum memory usage is
-unlimited.
+This option is useful if your application is leaking memory. By shutting
+it down, all of its memory is guaranteed to be freed by the operating system.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Limits` is on.
+
+In each place, it may be specified at most once. The default value is '200'.
+
+[NOTE]
+.A word about permissions
+=====================================================
+The <<PassengerMemoryLimit,PassengerMemoryLimit>> directive requires that the
+user that the application is running as (see <<PassengerUserSwitching,PassengerUserSwitching>>)
+to have access to the `/proc` file system, or to be able to inspect its status
+with `ps` (which on Linux and FreeBSD systems basically means the same thing, since `ps`
+reads process information from `/proc`). Therefore, on servers running with
+tight permissions on `/proc`, this directive may not work. If you wish to use
+this directive and your `/proc` permissions are too tight, then please consider
+untightening the permissions.
+=====================================================
 
 [TIP]
+.FreeBSD and `/proc`
 =====================================================
-The <<PassengerMemoryLimit,PassengerMemoryLimit>> directive requires the
-user running the application (see <<PassengerUserSwitching,PassengerUserSwitching>>)
-to have access to the `/proc` file system or to be able to inspect its status
-with `ps` (which in Linux systems basically means the same thing, since `ps`
-reads process information from `/proc`). Therefore, in servers running with
-tight permissions on that file system, this directive may not work.
+On many FreeBSD systems, `/proc` is not mounted by default. `/proc` *must* be
+mounted in order for <<PassengerMemoryLimit,PassengerMemoryLimit>> to work.
+
+It is also advised that you mount `/proc` with the `linprocfs` filesystem type
+instead of the regular FreeBSD `proc` filesystem type. The `linprocfs` filesystem
+type allows Phusion Passenger to read memory information from `/proc` directly,
+which is very fast. If you mount `/proc` with a different filesystem type, then
+Phusion Passenger must resort to querying memory information from the `ps` command,
+which is a lot slower.
 =====================================================
 
-[TIP]
+[CAUTION]
 =====================================================
 The <<PassengerMaxRequests,PassengerMaxRequests>> and
 <<PassengerMemoryLimit,PassengerMemoryLimit>> directives should be considered
@@ -707,8 +752,12 @@ Used to specify that the given URI is a Rails application. See
 It is allowed to specify this option multiple times. Do this to deploy multiple
 Rails applications in different sub-URIs under the same virtual host.
 
-This option may occur in the global server configuration or in a
-virtual host configuration block.
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
 
 [[RailsAllowModRewrite]]
 ==== RailsAllowModRewrite <on|off> ====
@@ -726,6 +775,7 @@ This option may occur in the following places:
 
  * In the global server configuration.
  * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
  * In '.htaccess', if `AllowOverride Options` is on.
 
 In each place, it may be specified at most once. The default value is 'production'.
@@ -740,11 +790,11 @@ understand it, as it's mostly a technical detail. You can basically follow this 
 
 ************************************************
 If your application works on Mongrel, but not on Phusion Passenger, then set
-`RailsSpawnMethod` to 'conservative'. Otherwise, leave it at 'smart' (the default).
+`RailsSpawnMethod` to 'conservative'. Otherwise, leave it at 'smart-lv2' (the default).
 ************************************************
 
-However, we do recommend you to try to understand it. The 'smart' spawn method brings
-many benefits.
+However, we do recommend you to try to understand it. The 'smart' and 'smart-lv2' spawn
+methods bring many benefits.
 =========================================================
 
 Internally, Phusion Passenger spawns multiple Ruby on Rails processes in order to handle
@@ -774,7 +824,8 @@ instances of the same application.
 the 'smart' method, and still performs some caching.
 +
 *Cons:* It is slower than smart spawning if you have many applications which
-use the same framework version.
+use the same framework version. It is therefore advised that share hosts use the
+'smart' method instead.
 
 conservative::
 This spawning method is similar to the one used in Mongrel Cluster. It does not perform
@@ -789,7 +840,7 @@ the startup time of a single server in Mongrel Cluster. Conservative spawning wi
 render <<reducing_memory_usage,Ruby Enterprise Edition's memory reduction technology>> useless.
 
 This option may occur once, in the global server configuration or in a virtual host
-configuration block. The default value is 'smart'.
+configuration block. The default value is 'smart-lv2'.
 
 === Rack-specific options ===
 
@@ -834,8 +885,12 @@ Used to specify that the given URI is a Rack application. See
 It is allowed to specify this option multiple times. Do this to deploy multiple
 Rack applications in different sub-URIs under the same virtual host.
 
-This option may occur in the global server configuration or in a
-virtual host configuration block.
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
 
 [[rack_env]]
 ==== RackEnv <string> ====
@@ -847,6 +902,7 @@ This option may occur in the following places:
 
  * In the global server configuration.
  * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
  * In '.htaccess', if `AllowOverride Options` is on.
 
 In each place, it may be specified at most once. The default value is 'production'.
@@ -1303,8 +1359,9 @@ application instances:
 
 Sessions:: Shows how many HTTP client are currently in the queue of that application
 Instance, waiting to be processed.
-Processed:: Indicates how many requests the instance has served (see the
-<<PassengerMaxRequests,PassengerMaxRequests>> configuration directive).
+Processed:: Indicates how many requests the instance has served until now. *Tip:* it's
+possible to limit this number with the <<PassengerMaxRequests,PassengerMaxRequests>>
+configuration directive.
 Uptime:: Shows for how long the application instance has been running.
 
 Since Phusion Passenger uses fair load balancing by default, the number of sessions for the

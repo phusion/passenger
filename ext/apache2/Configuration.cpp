@@ -525,12 +525,12 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The user that Rails/Rack applications must run as when user switching fails or is disabled."),
-	AP_INIT_TAKE1("PassengerMaxRequests", // TODO: document this
+	AP_INIT_TAKE1("PassengerMaxRequests",
 		(Take1Func) cmd_passenger_max_requests,
 		NULL,
 		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
 		"The maximum number of requests that an application instance may process."),
-	AP_INIT_TAKE1("PassengerMemoryLimit", // TODO: document this
+	AP_INIT_TAKE1("PassengerMemoryLimit",
 		(Take1Func) cmd_passenger_memory_limit,
 		NULL,
 		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
@@ -565,7 +565,7 @@ const command_rec passenger_commands[] = {
 	AP_INIT_TAKE1("RailsEnv",
 		(Take1Func) cmd_rails_env,
 		NULL,
-		RSRC_CONF,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The environment under which a Rails app must run."),
 	AP_INIT_TAKE1("RailsSpawnMethod",
 		(Take1Func) cmd_rails_spawn_method,
@@ -597,7 +597,7 @@ const command_rec passenger_commands[] = {
 	AP_INIT_TAKE1("RackEnv",
 		(Take1Func) cmd_rack_env,
 		NULL,
-		RSRC_CONF,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The environment under which a Rack app must run."),
 	
 	// WSGI-specific settings.
