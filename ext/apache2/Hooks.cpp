@@ -309,6 +309,7 @@ private:
 				r->filename = pageCacheFile;
 				r->canonical_filename = pageCacheFile;
 				if (!coreModuleWillBeRun) {
+					r->finfo.filetype = APR_NOFILE;
 					ap_set_content_type(r, "text/html");
 					ap_directory_walk(r);
 					ap_file_walk(r);
