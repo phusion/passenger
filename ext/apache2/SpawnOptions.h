@@ -197,8 +197,8 @@ struct SpawnOptions {
 	 * as a message to be sent to the spawn server.
 	 */
 	void toVector(vector<string> &vec) const {
-		if (vec.capacity() < vec.size() + 9) {
-			vec.reserve(vec.size() + 9);
+		if (vec.capacity() < vec.size() + 10) {
+			vec.reserve(vec.size() + 10);
 		}
 		appendKeyValue (vec, "app_root",        appRoot);
 		appendKeyValue (vec, "lower_privilege", lowerPrivilege ? "true" : "false");

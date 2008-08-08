@@ -576,7 +576,7 @@ const command_rec passenger_commands[] = {
 		(Take1Func) cmd_rails_framework_spawner_idle_time,
 		NULL,
 		RSRC_CONF,
-		"The maximum number of seconds that an application spawner may be idle before it is shutdown."),
+		"The maximum number of seconds that a framework spawner may be idle before it is shutdown."),
 	AP_INIT_TAKE1("RailsAppSpawnerIdleTime", // TODO: document this
 		(Take1Func) cmd_rails_app_spawner_idle_time,
 		NULL,

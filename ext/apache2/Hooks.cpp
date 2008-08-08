@@ -394,8 +394,8 @@ private:
 					mapper.getEnvironment(),
 					config->getSpawnMethodString(),
 					mapper.getApplicationTypeString(),
-					config->appSpawnerTimeout,
 					config->frameworkSpawnerTimeout,
+					config->appSpawnerTimeout,
 					config->getMaxRequests(),
 					config->getMemoryLimit()));
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
