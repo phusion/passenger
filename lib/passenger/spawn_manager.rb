@@ -187,13 +187,7 @@ private
 		if spawn_method == "smart"
 			spawner_must_be_started = true
 			framework_version = Application.detect_framework_version(app_root)
-			if framework_version == :vendor
-				vendor_path = normalize_path("#{app_root}/vendor/rails")
-				key = "vendor:#{vendor_path}"
-				create_spawner = proc do
-					Railz::FrameworkSpawner.new(:vendor => vendor_path)
-				end
-			elsif framework_version.nil?
+			if framework_version.nil? || framework_version == :vendor
 				app_root = normalize_path(app_root)
 				key = "app:#{app_root}"
 				create_spawner = proc do
