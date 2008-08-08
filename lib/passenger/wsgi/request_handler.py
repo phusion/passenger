@@ -2,6 +2,8 @@
 import socket, os, random, sys, struct, select, imp
 import exceptions, traceback
 
+from socket import _fileobject
+
 class RequestHandler:
 	def __init__(self, socket_file, server, owner_pipe, app):
 		self.socket_file = socket_file
@@ -25,13 +27,17 @@ class RequestHandler:
 					done = True
 					break
 				try:
-					env, input_stream = self.parse_request(client)
-					self.process_request(env, input_stream, client)
-				except KeyboardInterrupt:
-					done = True
-				except Exception, e:
-					traceback.print_tb(sys.exc_info()[2])
-					sys.stderr.write(str(e.__class__) + ": " + e.message + "\n")
+					try:
+						env, input_stream = self.parse_request(client)
+						if env:
+							self.process_request(env, input_stream, client)
+						else:
+							done = True
+					except KeyboardInterrupt:
+						done = True
+					except Exception, e:
+						traceback.print_tb(sys.exc_info()[2])
+						sys.stderr.write(str(e.__class__) + ": " + e.message + "\n")
 				finally:
 					try:
 						client.close()
@@ -51,12 +57,16 @@ class RequestHandler:
 		buf = ''
 		while len(buf) < 4:
 			tmp = client.recv(4 - len(buf))
+			if len(tmp) == 0:
+				return (None, None)
 			buf += tmp
 		header_size = struct.unpack('>I', buf)[0]
 		
 		buf = ''
 		while len(buf) < header_size:
 			tmp = client.recv(header_size - len(buf))
+			if len(tmp) == 0:
+				return (None, None)
 			buf += tmp
 		
 		headers = buf.split("\0")
@@ -70,16 +80,30 @@ class RequestHandler:
 		return (env, client)
 	
 	def process_request(self, env, input_stream, output_stream):
-		env['wsgi.input']        = input_stream
-		env['wsgi.errors']       = sys.stderr
-		env['wsgi.version']      = (1, 0)
-		env['wsgi.multithread']  = False
+		# The WSGI speculation says that the input paramter object passed needs to
+		# implement a few file-like methods. This is the reason why we "wrap" the socket._socket
+		# into the _fileobject to solve this.
+		#
+		# Otherwise, the POST data won't be correctly retrieved by Django.
+		#
+		# See: http://www.python.org/dev/peps/pep-0333/#input-and-error-streams
+		env['wsgi.input']		 = _fileobject(input_stream,'r',512)
+		env['wsgi.errors']		 = sys.stderr
+		env['wsgi.version']		 = (1, 0)
+		env['wsgi.multithread']	 = False
 		env['wsgi.multiprocess'] = True
-		env['wsgi.run_once']     = True
+		env['wsgi.run_once']	 = True
 		if env.get('HTTPS','off') in ('on', '1'):
 			env['wsgi.url_scheme'] = 'https'
 		else:
 			env['wsgi.url_scheme'] = 'http'
+			
+
+		# The following environment variables are required by WSCI PEP #333 
+		# see: http://www.python.org/dev/peps/pep-0333/#environ-variables
+		if 'HTTP_CONTENT_LENGTH' in env:
+			env['CONTENT_LENGTH'] = env.get('HTTP_CONTENT_LENGTH')
+			
 		
 		headers_set = []
 		headers_sent = []
@@ -124,14 +148,22 @@ class RequestHandler:
 			if hasattr(result, 'close'):
 				result.close()
 
+def import_error_handler(environ, start_response):
+	write = start_response('500 Import Error', [('Content-type', 'text/plain')])
+	write("An error occurred importing your passenger_wsgi.py")
+	raise KeyboardInterrupt # oh WEIRD.
+
 if __name__ == "__main__":
 	socket_file = sys.argv[1]
 	server = socket.fromfd(int(sys.argv[2]), socket.AF_UNIX, socket.SOCK_STREAM)
 	owner_pipe = int(sys.argv[3])
 	
-	app_module = imp.load_source('passenger_wsgi', 'passenger_wsgi.py')
-	
-	handler = RequestHandler(socket_file, server, owner_pipe, app_module.application)
+	try:
+		app_module = imp.load_source('passenger_wsgi', 'passenger_wsgi.py')
+		handler = RequestHandler(socket_file, server, owner_pipe, app_module.application)
+	except:
+		handler = RequestHandler(socket_file, server, owner_pipe, import_error_handler)
+
 	try:
 		handler.main_loop()
 	finally:
