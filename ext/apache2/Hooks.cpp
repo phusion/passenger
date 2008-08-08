@@ -292,7 +292,7 @@ private:
 							"index.html", NULL);
 					} else {
 						pageCacheFile = apr_pstrcat(r->pool, filename,
-							"/index.html", NULL);
+							".html", NULL);
 					}
 				} else {
 					pageCacheFile = apr_pstrcat(r->pool, filename,
