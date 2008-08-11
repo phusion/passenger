@@ -53,7 +53,7 @@ class Table
 			end
 		end
 		
-		format_string = max_column_widths.map{ |i| "%-#{i}s" }.join("  ")
+		format_string = max_column_widths.map{ |i| "%#{-i}s" }.join("  ")
 		header = sprintf(format_string, *@column_names).rstrip << "\n"
 		if title
 			free_space = header.size - title.size - 2
@@ -83,11 +83,16 @@ class MemoryStats
 		attr_accessor :ppid
 		attr_accessor :threads
 		attr_accessor :vm_size              # in KB
+		attr_accessor :rss                  # in KB
 		attr_accessor :name
 		attr_accessor :private_dirty_rss    # in KB
 		
 		def vm_size_in_mb
 			return sprintf("%.1f MB", vm_size / 1024.0)
+		end
+
+		def rss_in_mb
+			return sprintf("%.1f MB", rss / 1024.0)
 		end
 		
 		def private_dirty_rss_in_mb
@@ -99,7 +104,7 @@ class MemoryStats
 		end
 		
 		def to_a
-			return [pid, ppid, threads, vm_size_in_mb, private_dirty_rss_in_mb, name]
+			return [pid, ppid, threads, vm_size_in_mb, private_dirty_rss_in_mb, rss_in_mb, name]
 		end
 	end
 	
@@ -146,19 +151,25 @@ class MemoryStats
 		end
 		
 		processes = []
-		list = `#{ps} -o pid,ppid,nlwp,vsz,command`.split("\n")
+		list = `#{ps} -w -o pid,ppid,nlwp,vsz,rss,command`.split("\n")
 		list.shift
 		list.each do |line|
 			line.gsub!(/^ */, '')
 			line.gsub!(/ *$/, '')
 			
 			p = Process.new
-			p.pid, p.ppid, p.threads, p.vm_size, p.name = line.split(/ +/, 5)
+			p.pid, p.ppid, p.threads, p.vm_size, p.rss, p.name = line.split(/ +/, 6)
+			p.name.sub!(/\Aruby: /, '')
+			p.name.sub!(/ \(ruby\)\Z/, '')
 			if p.name !~ /^ps/ && (!options[:match] || p.name.match(options[:match]))
-				[:pid, :ppid, :threads, :vm_size].each do |attr|
+				# Convert some values to integer.
+				[:pid, :ppid, :threads, :vm_size, :rss].each do |attr|
 					p.send("#{attr}=", p.send(attr).to_i)
 				end
-				p.private_dirty_rss = determine_private_dirty_rss(p.pid)
+
+				if platform_provides_private_dirty_rss_information?
+					p.private_dirty_rss = determine_private_dirty_rss(p.pid)
+				end
 				processes << p
 			end
 		end
@@ -166,6 +177,10 @@ class MemoryStats
 	end
 
 private
+	def platform_provides_private_dirty_rss_information?
+		return RUBY_PLATFORM =~ /linux/
+	end
+
 	# Returns the private dirty RSS for the given process, in KB.
 	def determine_private_dirty_rss(pid)
 		total = 0
@@ -185,28 +200,35 @@ private
 	end
 	
 	def print_process_list(title, processes, options = {})
-		table = Table.new(%w{PID PPID Threads VMSize Private Name})
+		table = Table.new(%w{PID PPID Threads VMSize Private Resident Name})
 		table.add_rows(processes)
 		if options.has_key?(:show_ppid) && !options[:show_ppid]
 			table.remove_column('PPID')
 		end
+		if platform_provides_private_dirty_rss_information?
+			table.remove_column('Resident')
+		else
+			table.remove_column('Private')
+		end
 		puts table.to_s(title)
 		
-		total_private_dirty_rss = 0
-		some_private_dirty_rss_cannot_be_determined = false
-		processes.each do |p|
-			if p.private_dirty_rss.is_a?(Numeric)
-				total_private_dirty_rss += p.private_dirty_rss
-			else
-				some_private_dirty_rss_cannot_be_determined = true
+		if platform_provides_private_dirty_rss_information?
+			total_private_dirty_rss = 0
+			some_private_dirty_rss_cannot_be_determined = false
+			processes.each do |p|
+				if p.private_dirty_rss.is_a?(Numeric)
+					total_private_dirty_rss += p.private_dirty_rss
+				else
+					some_private_dirty_rss_cannot_be_determined = true
+				end
 			end
-		end
-		puts   "### Processes: #{processes.size}"
-		printf "### Total private dirty RSS: %.2f MB", total_private_dirty_rss / 1024.0
-		if some_private_dirty_rss_cannot_be_determined
-			puts " (?)"
-		else
-			puts
+			puts   "### Processes: #{processes.size}"
+			printf "### Total private dirty RSS: %.2f MB", total_private_dirty_rss / 1024.0
+			if some_private_dirty_rss_cannot_be_determined
+				puts " (?)"
+			else
+				puts
+			end
 		end
 	end
 end
