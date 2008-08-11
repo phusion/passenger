@@ -1,6 +1,5 @@
-passenger (2.0.2-0ubuntu1) intrepid; urgency=low
+passenger (2.0.3-0ubuntu1) intrepid; urgency=low
 
   * Initial release: closes LP: #246719
 
- -- Neil Wilson <neil@brightbox.co.uk>  Wed, 30 Jul 2008 03:37:32 +0100
-
+ -- Neil Wilson <neil@brightbox.co.uk>  Mon, 11 Aug 2008 12:35:16 +0100
