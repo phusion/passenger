@@ -169,7 +169,11 @@ class MemoryStats
 		end
 		
 		processes = []
-		list = `#{ps} -w -o pid,ppid,nlwp,vsz,rss,command`.split("\n")
+		if RUBY_PLATFORM =~ /solaris/
+			list = `#{ps} -o pid,ppid,nlwp,vsz,rss,comm`.split("\n")
+		else
+			list = `#{ps} -w -o pid,ppid,nlwp,vsz,rss,command`.split("\n")
+		end
 		list.shift
 		list.each do |line|
 			line.gsub!(/^ */, '')
