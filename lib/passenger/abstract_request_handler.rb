@@ -203,9 +203,8 @@ class AbstractRequestHandler
 				@main_loop_running = true
 				@main_loop_thread_cond.broadcast
 			end
-			trap(SOFT_TERMINATION_SIGNAL) do
-				@graceful_termination_pipe[1].close rescue nil
-			end
+			
+			install_useful_signal_handlers
 			
 			while true
 				@iterations += 1
@@ -324,8 +323,40 @@ private
 			end
 		end
 		trap('HUP', IGNORE)
+	end
+	
+	def install_useful_signal_handlers
+		trap(SOFT_TERMINATION_SIGNAL) do
+			@graceful_termination_pipe[1].close rescue nil
+		end
 		trap('ABRT') do
 			raise SignalException, "SIGABRT"
+		end
+		trap('QUIT') do
+			if Kernel.respond_to?(:caller_for_all_threadss)
+				output = "========== Process #{Process.pid}: backtrace dump ==========\n"
+				caller_for_all_threads.each_pair do |thread, stack|
+					output << ("-" * 60) << "\n"
+					output << "# Thread: #{thread.inspect}, "
+					if thread == Thread.main
+						output << "[main thread], "
+					else
+						output << "[current thread], "
+					end
+					output << "alive = #{thread.alive?}\n"
+					output << ("-" * 60) << "\n"
+					output << "    " << stack.join("\n    ")
+					output << "\n\n"
+				end
+			else
+				output = "========== Process #{Process.pid}: backtrace dump ==========\n"
+				output << ("-" * 60) << "\n"
+				output << "# Current thread: #{Thread.current.inspect}\n"
+				output << ("-" * 60) << "\n"
+				output << "    " << caller.join("\n    ")
+			end
+			STDERR.puts(output)
+			STDERR.flush
 		end
 	end
 	
