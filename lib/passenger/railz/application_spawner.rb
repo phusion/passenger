@@ -285,20 +285,16 @@ private
 	end
 
 	def handle_spawn_application
-		# Double fork to prevent zombie processes.
-		pid = safe_fork(self.class.to_s) do
-			safe_fork('application') do
-				begin
-					start_request_handler(client)
-				rescue SignalException => e
-					if e.message != AbstractRequestHandler::HARD_TERMINATION_SIGNAL &&
-					   e.message != AbstractRequestHandler::SOFT_TERMINATION_SIGNAL
-						raise
-					end
+		safe_fork('application', true) do
+			begin
+				start_request_handler(client)
+			rescue SignalException => e
+				if e.message != AbstractRequestHandler::HARD_TERMINATION_SIGNAL &&
+				   e.message != AbstractRequestHandler::SOFT_TERMINATION_SIGNAL
+					raise
 				end
 			end
 		end
-		Process.waitpid(pid)
 	end
 	
 	# Initialize the request handler and enter its main loop.

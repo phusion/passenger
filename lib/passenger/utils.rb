@@ -164,15 +164,36 @@ protected
 	# Fork a new process and run the given block inside the child process, just like
 	# fork(). Unlike fork(), this method is safe, i.e. there's no way for the child
 	# process to escape the block. Any uncaught exceptions in the child process will
-	# be printed to standard output, citing _current_location_ as the source.
-	def safe_fork(current_location)
-		return fork do
+	# be printed to standard output, citing +current_location+ as the source.
+	# Futhermore, the child process will exit by calling Kernel#exit!, thereby
+	# bypassing any at_exit or ensure blocks.
+	#
+	# If +double_fork+ is true, then the child process will fork and immediately exit.
+	# This technique can be used to avoid zombie processes, at the expense of not
+	# being able to waitpid() the second child.
+	def safe_fork(current_location = self.class, double_fork = false)
+		pid = fork
+		if pid.nil?
 			begin
-				yield
+				if double_fork
+					pid2 = fork
+					if pid2.nil?
+						yield
+					end
+				else
+					yield
+				end
 			rescue Exception => e
-				print_exception(current_location, e)
+				print_exception(current_location.to_s, e)
 			ensure
 				exit!
+			end
+		else
+			if double_fork
+				Process.waitpid(pid)
+				return pid
+			else
+				return pid
 			end
 		end
 	end

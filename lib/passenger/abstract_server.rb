@@ -123,7 +123,8 @@ class AbstractServer
 	
 		@parent_socket, @child_socket = UNIXSocket.pair
 		before_fork
-		@pid = fork do
+		@pid = fork
+		if @pid.nil?
 			begin
 				STDOUT.sync = true
 				STDERR.sync = true

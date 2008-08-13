@@ -333,7 +333,7 @@ private
 			raise SignalException, "SIGABRT"
 		end
 		trap('QUIT') do
-			if Kernel.respond_to?(:caller_for_all_threadss)
+			if Kernel.respond_to?(:caller_for_all_threads)
 				output = "========== Process #{Process.pid}: backtrace dump ==========\n"
 				caller_for_all_threads.each_pair do |thread, stack|
 					output << ("-" * 60) << "\n"
