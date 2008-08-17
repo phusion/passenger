@@ -28,6 +28,6 @@ License:
     without Apache or any other loaded modules needing to be released
     under the terms of the GPL.
 
-The Debian packaging is (C) 2008 Neil Wilson, Brightbox Systems
-<neil@brightbox.co.uk> and is licensed under the GPL.
-See `/usr/share/common-licenses/GPL'.
+Packaging:
+    (C) 2008 Neil Wilson, Brightbox Systems <neil@brightbox.co.uk>
+    Licensed under GPL-2. See `/usr/share/common-licenses/GPL-2'.

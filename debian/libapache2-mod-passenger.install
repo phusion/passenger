@@ -1,4 +1,4 @@
-/usr/sbin
-/usr/bin
-/usr/lib
-/etc
+usr/bin
+usr/lib
+etc
+../passenger.{conf,load} etc/apache2/mods-available

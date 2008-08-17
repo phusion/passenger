@@ -1,67 +1,40 @@
 #!/usr/bin/make -f
-  
-#export DH_VERBOSE=1
-SHELL	= /bin/bash
 
-tmp	= debian/tmp
-apache2moduledir = $(shell apxs2 -q LIBEXECDIR)
-pkgdir = pkg/fakeroot
-bindir = ${pkgdir}/usr/bin
-sbindir = ${pkgdir}/usr/sbin
-moddir = ${pkgdir}${apache2moduledir}
-modsavailabledir = ${pkgdir}/etc/apache2/mods-available
-passengermodule = ${pkgdir}/usr/lib/passenger/mod_passenger.so
+export DH_VERBOSE=1
+include /usr/share/cdbs/1/rules/debhelper.mk
+include /usr/share/cdbs/1/rules/simple-patchsys.mk
 
-clean:
-	dh_testdir
-	dh_clean
-	-rake clean
-	-rake clobber
-	-$(RM) build-stamp
+DEB_DH_INSTALL_SOURCEDIR := $(DEB_DESTDIR)
+DEB_INSTALL_DOCS_passenger-doc += DEVELOPERS.TXT $(DEB_DESTDIR)/usr/share/doc/passenger/
+DEB_INSTALL_MANPAGES_libapache2-mod-passenger += man/*
 
-build: build-stamp
-build-stamp: 
-	rake apache2
-	rake doc
-	touch build-stamp
+RUBY18 = /usr/bin/ruby1.8
+RUBY19 = /usr/bin/ruby1.9
+bindir = usr/bin
+sbindir = usr/sbin
+builddir = pkg/fakeroot
+moddir = /usr/lib/apache2/modules/
+#moddir = $(shell apx2 -q LIBEXECDIR)
+modsavailabledir = etc/apache2/mods-available
+passengermodule = usr/lib/passenger/mod_passenger.so
+admintools = passenger-memory-stats passenger-make-enterprisey passenger-status
 
-install: build-stamp
-	dh_testroot
-	dh_testdir
+clean::
+	rake clean
+	rake clobber
+
+build/libapache2-mod-passenger build/passenger-doc::
 	rake fakeroot
-	#Runaround now!
-	mkdir -p ${moddir}
-	mv ${passengermodule} ${moddir}
-	mkdir -p ${modsavailabledir}
-	install -m644 debian/passenger.{load,conf} ${modsavailabledir}
-	#Remove generic installer
-	rm ${bindir}/passenger-install-apache2-module
-	#Move passenger-status to admin directory
-	mkdir -p ${sbindir}
-	mv ${bindir}/passenger-status ${sbindir}
-	mv ${bindir}/passenger-make-enterprisey ${sbindir}
-	mv ${bindir}/passenger-memory-stats ${sbindir}
+	mv $(builddir) $(DEB_DESTDIR)
 
-binary-arch: install
-	dh_installdocs
-	dh_installchangelogs
-	dh_installman 
-	dh_install --sourcedir=${pkgdir} 
-	dh_strip
-	dh_compress 
-	dh_fixperms 
-	dh_installdeb 
-	dh_shlibdeps 
-	dh_gencontrol
-	dh_md5sums 
-	dh_builddeb
-
-binary-indep: 
-	#Nothing to do
-
-binary: binary-indep binary-arch
+binary-install/libapache2-mod-passenger::
+	mkdir -p $(CURDIR)/debian/$(cdbs_curpkg)/$(moddir)
+	mv $(CURDIR)/debian/$(cdbs_curpkg)/$(passengermodule) $(CURDIR)/debian/$(cdbs_curpkg)/$(moddir)
+	rm $(CURDIR)/debian/$(cdbs_curpkg)/$(bindir)/passenger-install-apache2-module
+	mkdir -p $(CURDIR)/debian/$(cdbs_curpkg)/$(sbindir)
+	for admintool in $(admintools); do \
+	    mv $(CURDIR)/debian/$(cdbs_curpkg)/$(bindir)/$$admintool $(CURDIR)/debian/$(cdbs_curpkg)/$(sbindir); \
+	    done;
 
 get-orig-source:
 	uscan --verbose --force-download
-
-.PHONY: clean binary binary-arch binary-indep checkroot install get-orig-source

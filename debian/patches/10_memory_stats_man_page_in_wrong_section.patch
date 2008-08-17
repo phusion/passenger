@@ -1,0 +1,9 @@
+diff -Nur -x '*.orig' -x '*~' passenger/man/passenger-memory-stats.8 passenger.new/man/passenger-memory-stats.8
+--- passenger/man/passenger-memory-stats.8	2008-06-14 06:54:47.000000000 +0100
++++ passenger.new/man/passenger-memory-stats.8	2008-08-17 22:29:39.000000000 +0100
+@@ -1,4 +1,4 @@
+-.TH "passenger-memory-stats" "1" "2.0" "Phusion Passenger" "Administration Commands"
++.TH "passenger-memory-stats" "8" "2.0" "Phusion Passenger" "Administration Commands"
+ .SH "NAME"
+ .LP 
+ passenger\-memory\-stats \- reports a snapshot of the Apache and Phusion Passenger memory statistcs

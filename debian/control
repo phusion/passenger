@@ -3,12 +3,13 @@ Section: web
 Priority: optional
 Maintainer: Ubuntu MOTU Developers <ubuntu-motu@lists.ubuntu.com>
 XSBC-Original-Maintainer: Neil Wilson <neil@brightbox.co.uk>
-XS-Vcs-git: git://github.com/NeilW/deb-passenger/tree/master
-Homepage: http://www.modrails.com/
 Build-Depends: apache2-threaded-dev, apache2-mpm-worker, libapr1-dev,
- rubygems (>= 1.2), debhelper (>= 5), ruby-dev, doxygen, asciidoc (>= 8.2),
- graphviz, rake
+ rubygems (>= 1.2), debhelper (>= 5.0.44), ruby-dev, doxygen,
+ asciidoc (>= 8.2), graphviz, rake, cdbs
 Standards-Version: 3.8.0
+Homepage: http://www.modrails.com/
+XS-Vcs-git: git://github.com/NeilW/deb-passenger/tree/master
+XS-Vcs-browser: http://github.com/NeilW/deb-rubygems/tree/master
 
 Package: libapache2-mod-passenger
 Architecture: any
@@ -18,3 +19,15 @@ Description: Rails and Rack support for Apache2
  Phusion Passenger — a.k.a. mod_rails or mod_rack — makes
  deployment of Ruby web applications, such as those built on the
  revolutionary Ruby on Rails web framework, a breeze.
+
+Package: passenger-doc
+Section: doc
+Architecture: all
+Suggests: www-browse
+Description: Rails and Rac support for Apache2 - Documentation
+ Phusion Passenger — a.k.a. mod_rails or mod_rack — makes
+ deployment of Ruby web applications, such as those built on the
+ revolutionary Ruby on Rails web framework, a breeze.
+ .
+ This package provides the documentation for Phusion Passenger.
+
