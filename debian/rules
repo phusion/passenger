@@ -8,13 +8,10 @@ DEB_DH_INSTALL_SOURCEDIR := $(DEB_DESTDIR)
 DEB_INSTALL_DOCS_passenger-doc += DEVELOPERS.TXT $(DEB_DESTDIR)/usr/share/doc/passenger/
 DEB_INSTALL_MANPAGES_libapache2-mod-passenger += man/*
 
-RUBY18 = /usr/bin/ruby1.8
-RUBY19 = /usr/bin/ruby1.9
 bindir = usr/bin
 sbindir = usr/sbin
 builddir = pkg/fakeroot
-moddir = /usr/lib/apache2/modules/
-#moddir = $(shell apx2 -q LIBEXECDIR)
+moddir = $(shell apx2 -q LIBEXECDIR)
 modsavailabledir = etc/apache2/mods-available
 passengermodule = usr/lib/passenger/mod_passenger.so
 admintools = passenger-memory-stats passenger-make-enterprisey passenger-status
