@@ -14,7 +14,7 @@ XS-Vcs-browser: http://github.com/NeilW/deb-rubygems/tree/master
 Package: libapache2-mod-passenger
 Architecture: any
 Depends: ${shlibs:Depends}, apache2-mpm-worker, ruby, rubygems (>= 1.2)
-Suggests: python, rails
+Suggests: python, rails, passenger-doc
 Description: Rails and Rack support for Apache2
  Phusion Passenger — a.k.a. mod_rails or mod_rack — makes
  deployment of Ruby web applications, such as those built on the
