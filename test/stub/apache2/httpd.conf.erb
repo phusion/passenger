@@ -71,6 +71,7 @@ CustomLog <%= @server_root %>/access.log combined
 	<VirtualHost *:<%= @port %>>
 		ServerName <%= vhost.domain %>
 		DocumentRoot "<%= vhost.document_root %>"
+		AllowEncodedSlashes On
 		<% for line in vhost.additional_configs %>
 			<%= line %>
 		<% end %>

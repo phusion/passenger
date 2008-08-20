@@ -36,4 +36,12 @@ class WelcomeController < ApplicationController
 	def terminate
 		exit!
 	end
+
+	def show_id
+		render :text => params[:id]
+	end
+
+	def request_uri
+		render :text => request.request_uri
+	end
 end

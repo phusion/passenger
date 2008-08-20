@@ -80,7 +80,15 @@ shared_examples_for "MyCook(tm) beta" do
 		response = get_response('/welcome/headers_test')
 		response["X-Foo"].should == "Bar"
 	end
-	
+
+	it "supports %2f in URIs" do
+		get('/welcome/show_id/foo%2fbar').should == 'foo/bar'
+	end
+
+	it "has AbstractRequest which returns a request_uri without hostname, with query_string" do
+		get('/welcome/request_uri?foo=bar%20escaped').should =~ %r{/welcome/request_uri\?foo=bar%20escaped}
+	end
+
 	it "supports restarting via restart.txt" do
 		begin
 			controller = "#{@stub.app_root}/app/controllers/test_controller.rb"
