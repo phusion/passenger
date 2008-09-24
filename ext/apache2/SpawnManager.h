@@ -212,7 +212,9 @@ private:
 				"                                                             ",
 				(char *) NULL);
 			int e = errno;
-			fprintf(stderr, "*** Passenger ERROR: Could not start the spawn server: %s: %s (%d)\n",
+			fprintf(stderr, "*** Passenger ERROR (%s:%d):\n"
+				"Could not start the spawn server: %s: %s (%d)\n",
+				__FILE__, __LINE__,
 				rubyCommand.c_str(), strerror(e), e);
 			fflush(stderr);
 			_exit(1);

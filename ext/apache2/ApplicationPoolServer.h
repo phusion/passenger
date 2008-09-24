@@ -505,7 +505,9 @@ private:
 				statusReportFIFO.c_str(),
 				(char *) 0);
 			int e = errno;
-			fprintf(stderr, "*** Passenger ERROR: Cannot execute %s: %s (%d)\n",
+			fprintf(stderr, "*** Passenger ERROR (%s:%d):\n"
+				"Cannot execute %s: %s (%d)\n",
+				__FILE__, __LINE__,
 				m_serverExecutable.c_str(), strerror(e), e);
 			fflush(stderr);
 			_exit(1);
