@@ -49,7 +49,10 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 	*len = APR_BUCKET_BUFF_SIZE;
 	buf = (char *) apr_bucket_alloc(*len, bucket->list); // TODO: check for failure?
 
-	ret = apr_file_read(pipe, buf, len);
+	do {
+		ret = apr_file_read(pipe, buf, len);
+	} while (APR_STATUS_IS_EAGAIN(ret));
+
 	if (block == APR_NONBLOCK_READ) {
 		apr_file_pipe_timeout_set(pipe, timeout);
 	}
