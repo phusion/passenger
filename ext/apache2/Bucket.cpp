@@ -37,13 +37,8 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 	apr_file_t *pipe;
 	char *buf;
 	apr_status_t ret;
-	apr_interval_time_t timeout;
 
 	pipe = (apr_file_t *) bucket->data;
-	if (block == APR_NONBLOCK_READ) {
-		apr_file_pipe_timeout_get(pipe, &timeout);
-		apr_file_pipe_timeout_set(pipe, 0);
-	}
 
 	*str = NULL;
 	*len = APR_BUCKET_BUFF_SIZE;
@@ -52,10 +47,6 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 	do {
 		ret = apr_file_read(pipe, buf, len);
 	} while (APR_STATUS_IS_EAGAIN(ret));
-
-	if (block == APR_NONBLOCK_READ) {
-		apr_file_pipe_timeout_set(pipe, timeout);
-	}
 
 	if (ret != APR_SUCCESS && ret != APR_EOF) {
 		// ... we might want to set an error flag here ...
