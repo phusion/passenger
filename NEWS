@@ -1,0 +1,24 @@
+== Version 2.1.0
+
+- New configuration option: PassengerMemoryLimit <MB>
+  If a Rails application's memory usage grows past the specified
+  amount, then it will be terminated.
+- PassengerPoolIdleTime 0, thanks redmar
+- C++ backtraces
+- more aggressive I/O timeout enforcement
+- Solaris support, thanks to Alex Osborne and Jacob Harris and alex.kiernan
+- applications may now have a model named 'Passenger'
+- frameworkspawner will not be used when rails app uses vendored rails.
+- an '--auto' option to passenger-install-apache2-module
+- PassengerMaxRequests
+- passenger-status now displays additional useful information, namely the
+  number of requests processed so far by an app instance, and its current
+  uptime
+- smart-lv2 spawn method
+- improved module compatibility + high performance mode
+- PassengerEnabled
+- SIGQUIT will show backtrace of current thread
+- Solaris support for passenger-memory-stats
+- %2F (escaped forward slash) in URL is now supported. AllowEncodedSlashes
+  must be turned on. Thanks adam.hooper.
+- Error pages now return HTTP 500 errors.
