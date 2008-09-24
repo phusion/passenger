@@ -700,10 +700,9 @@ public:
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				if (e.hasErrorPage()) {
+					r->status = 500;
 					ap_set_content_type(r, "text/html; charset=utf-8");
 					ap_rputs(e.getErrorPage().c_str(), r);
-					// Unfortunately we can't return a 500 Internal Server
-					// Error. Apache's HTTP error handler would kick in.
 					return OK;
 				} else {
 					throw;
