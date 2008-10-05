@@ -51,7 +51,8 @@ class AbstractServerCollection
 		#    if value is not nil:
 		#       There exists an s in @collection with s.next_cleaning_time == value.
 		#       for all s in @collection:
-		#          s.next_cleaning_time <= value
+		#          if eligable_for_cleanup?(s):
+		#             s.next_cleaning_time <= value
 		@next_cleaning_time = Time.now + 60 * 60
 		@next_cleaning_time_changed = false
 		
@@ -75,7 +76,9 @@ class AbstractServerCollection
 			if @next_cleaning_time.nil?
 				@collection.each_value do |server|
 					if @next_cleaning_time.nil? ||
-					   server.next_cleaning_time < @next_cleaning_time
+					   (eligable_for_cleanup?(server) &&
+					    server.next_cleaning_time < @next_cleaning_time
+					   )
 						@next_cleaning_time = server.next_cleaning_time
 					end
 				end
@@ -119,7 +122,7 @@ class AbstractServerCollection
 			if !server.respond_to?(:start)
 				raise TypeError, "The block didn't return a valid AbstractServer object."
 			end
-			if server.max_idle_time && server.max_idle_time != 0
+			if eligable_for_cleanup?(server)
 				server.next_cleaning_time = Time.now + server.max_idle_time
 				if @next_cleaning_time && server.next_cleaning_time < @next_cleaning_time
 					@next_cleaning_time = server.next_cleaning_time
@@ -175,7 +178,7 @@ class AbstractServerCollection
 	#
 	# Precondition: this method must be called within a #synchronize block.
 	def register_activity(server)
-		if server.max_idle_time && server.max_idle_time != 0
+		if eligable_for_cleanup?(server)
 			if server.next_cleaning_time == @next_cleaning_time
 				@next_cleaning_time = nil
 			end
@@ -260,7 +263,7 @@ private
 				keys_to_delete = nil
 				@next_cleaning_time = nil
 				@collection.each_pair do |key, server|
-					if server.max_idle_time && server.max_idle_time != 0
+					if eligable_for_cleanup?(server)
 						# Cleanup this server if its idle timeout has expired.
 						if server.next_cleaning_time <= current_time
 							keys_to_delete ||= []
@@ -287,6 +290,11 @@ private
 				end
 			end
 		end
+	end
+	
+	# Checks whether the given server is eligible for being idle cleaned.
+	def eligable_for_cleanup?(server)
+		return server.max_idle_time && server.max_idle_time != 0
 	end
 end
 
