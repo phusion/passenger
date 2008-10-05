@@ -266,6 +266,7 @@ private:
 		}
 		
 		try {
+			UPDATE_TRACE_POINT();
 			// Read status.
 			if (!channel.read(args)) {
 				throw SpawnException("The spawn server has exited unexpectedly.");
@@ -293,6 +294,7 @@ private:
 			throw SpawnException(string("Could not read from the spawn server: ") + e.sys());
 		}
 		
+		UPDATE_TRACE_POINT();
 		try {
 			ownerPipe = channel.readFileDescriptor();
 		} catch (const SystemException &e) {
@@ -306,6 +308,7 @@ private:
 		}
 		
 		if (args.size() != 3) {
+			UPDATE_TRACE_POINT();
 			syscalls::close(ownerPipe);
 			throw SpawnException("The spawn server sent an invalid message.");
 		}
@@ -313,6 +316,7 @@ private:
 		pid_t pid = atoi(args[0]);
 		bool usingAbstractNamespace = args[2] == "true";
 		
+		UPDATE_TRACE_POINT();
 		if (!usingAbstractNamespace) {
 			int ret;
 			do {
