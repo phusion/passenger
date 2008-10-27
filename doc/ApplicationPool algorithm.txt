@@ -160,6 +160,11 @@ information:
      for all keys app_root in restart_times:
         domains.has_key(app_root)
 
+- waiting_on_global_queue: integer
+  If global queuing mode is enabled, then when get() is waiting for a backend
+  process to become idle, this variable will be incremented. When get() is done
+  waiting, this variable will be decremented.
+
 
 == Class relations
 
@@ -248,13 +253,22 @@ function spawn_or_use_existing(app_root, options):
 			# All apps are active, and the pool is full. 
 			#  -OR-
 			# All apps are active and the number of max instances
-			# spawned for this application has been reached.
+			# spawned for this application domain has been reached.
 			#
 			# We're not allowed to spawn a new application instance.
-			# So we connect to an already active application. This connection
-			# will be put into that application's queue.
-			container = a container in _instances_ with the smallest _session_ value
-			instances.move_to_back(container.iterator)
+			if use_global_queue:
+				# So we wait until _active_ has changed, then
+				# we restart this function and try again.
+				waiting_on_global_queue++
+				wait until _active_ has changed
+				waiting_on_global_queue--
+				goto beginning of function
+			else:
+				# So we connect to an already active application.
+				# This connection will be put into that
+				# application's private queue.
+				container = a container in _instances_ with the smallest _session_ value
+				instances.move_to_back(container.iterator)
 		else:
 			# All apps are active, but the pool hasn't reached its
 			# maximum yet. So we spawn a new app.
@@ -270,6 +284,10 @@ function spawn_or_use_existing(app_root, options):
 	else:
 		# There are no apps for this app root.
 		wait until (active < max)
+		# FIXME: there's a possible concurrency issue here. After
+		# waiting and having reacquired the lock, the state might have
+		# been completely changed, and there may now exist an instance
+		# of this application domain.
 		if count == max:
 			# Here we are in a though situation. There are several
 			# apps which are inactive, and none of them have

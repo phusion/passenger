@@ -397,6 +397,40 @@
 		ensure(session->getPid() != originalPid);
 	}
 	
+	struct SpawnRackAppFunction {
+		ApplicationPoolPtr pool;
+		bool *done;
+		
+		void operator()() {
+			spawnRackApp(pool, "stub/rack");
+			*done = true;
+		}
+	};
+	
+	TEST_METHOD(19) {
+		// If global queueing mode is enabled, then get() waits until
+		// there's at least one idle backend process for this application
+		// domain.
+		pool->setUseGlobalQueue(true);
+		pool->setMax(1);
+		Application::SessionPtr session = spawnRackApp(pool, "stub/rack");
+		
+		bool done = false;
+		SpawnRackAppFunction func;
+		func.pool = pool2;
+		func.done = &done;
+		boost::thread thr(func);
+		usleep(100000);
+		
+		// Previous session hasn't been closed yet, so pool should still
+		// be waiting.
+		ensure(!done);
+		
+		// Close the previous session. The thread should now finish.
+		session.reset();
+		thr.join();
+	}
+	
 	// TODO: test maxIdleTime == 0
 
 #endif /* USE_TEMPLATE */

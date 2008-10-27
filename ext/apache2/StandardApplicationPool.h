@@ -233,7 +233,9 @@ private:
 	boost::thread *cleanerThread;
 	bool detached;
 	bool done;
+	bool useGlobalQueue;
 	unsigned int maxIdleTime;
+	unsigned int waitingOnGlobalQueue;
 	condition cleanerThreadSleeper;
 	
 	// Shortcuts for instance variables in SharedData. Saves typing in get().
@@ -304,6 +306,8 @@ private:
 		result << "count    = " << count << endl;
 		result << "active   = " << active << endl;
 		result << "inactive = " << inactiveApps.size() << endl;
+		result << "Using global queue: " << (useGlobalQueue ? "yes" : "no") << endl;
+		result << "Waiting on global queue: " << waitingOnGlobalQueue << endl;
 		result << endl;
 		
 		result << "----------- Domains -----------" << endl;
@@ -429,6 +433,8 @@ private:
 	 */
 	pair<AppContainerPtr, Domain *>
 	spawnOrUseExisting(boost::mutex::scoped_lock &l, const SpawnOptions &spawnOptions) {
+		beginning_of_function:
+		
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		const string &appRoot(spawnOptions.appRoot);
@@ -475,19 +481,26 @@ private:
 				} else if (count >= max || (
 					maxPerApp != 0 && domain->size >= maxPerApp )
 					) {
-					AppContainerList::iterator it(instances->begin());
-					AppContainerList::iterator smallest(instances->begin());
-					it++;
-					for (; it != instances->end(); it++) {
-						if ((*it)->sessions < (*smallest)->sessions) {
-							smallest = it;
+					if (useGlobalQueue) {
+						waitingOnGlobalQueue++;
+						activeOrMaxChanged.wait(l);
+						waitingOnGlobalQueue--;
+						goto beginning_of_function;
+					} else {
+						AppContainerList::iterator it(instances->begin());
+						AppContainerList::iterator smallest(instances->begin());
+						it++;
+						for (; it != instances->end(); it++) {
+							if ((*it)->sessions < (*smallest)->sessions) {
+								smallest = it;
+							}
 						}
+						container = *smallest;
+						instances->erase(smallest);
+						instances->push_back(container);
+						container->iterator = instances->end();
+						container->iterator--;
 					}
-					container = *smallest;
-					instances->erase(smallest);
-					instances->push_back(container);
-					container->iterator = instances->end();
-					container->iterator--;
 				} else {
 					container = ptr(new AppContainer());
 					{
@@ -615,6 +628,8 @@ public:
 		max = DEFAULT_MAX_POOL_SIZE;
 		count = 0;
 		active = 0;
+		useGlobalQueue = false;
+		waitingOnGlobalQueue = 0;
 		maxPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
 		maxIdleTime = DEFAULT_MAX_IDLE_TIME;
 		cleanerThread = new boost::thread(
@@ -730,6 +745,10 @@ public:
 		boost::mutex::scoped_lock l(lock);
 		this->maxPerApp = maxPerApp;
 		activeOrMaxChanged.notify_all();
+	}
+	
+	virtual void setUseGlobalQueue(bool value) {
+		this->useGlobalQueue = value;
 	}
 	
 	virtual pid_t getSpawnServerPid() const {
