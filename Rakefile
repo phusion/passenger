@@ -370,7 +370,7 @@ subdir 'doc' do
 	end
 end
 
-Rake::RDocTask.new do |rd|
+Rake::RDocTask.new(:clobber_rdoc => "rdoc:clobber", :rerdoc => "rdoc:force") do |rd|
 	rd.main = "README"
 	rd.rdoc_dir = "doc/rdoc"
 	rd.rdoc_files.include("README", "DEVELOPERS.TXT",
