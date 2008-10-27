@@ -289,6 +289,12 @@ private:
 			channel.write("setMaxPerApp", toString(max).c_str(), NULL);
 		}
 		
+		virtual void setUseGlobalQueue(bool value) {
+			MessageChannel channel(data->server);
+			boost::mutex::scoped_lock l(data->lock);
+			channel.write("setUseGlobalQueue", value ? "true" : "false", NULL);
+		}
+		
 		virtual pid_t getSpawnServerPid() const {
 			this_thread::disable_syscall_interruption dsi;
 			MessageChannel channel(data->server);

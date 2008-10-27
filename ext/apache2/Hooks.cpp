@@ -614,6 +614,7 @@ public:
 			applicationPool->setMax(config->maxPoolSize);
 			applicationPool->setMaxPerApp(config->maxInstancesPerApp);
 			applicationPool->setMaxIdleTime(config->poolIdleTime);
+			applicationPool->setUseGlobalQueue(config->getUseGlobalQueue());
 		} catch (const thread_interrupted &) {
 			P_TRACE(3, "A system call was interrupted during initialization of "
 				"an Apache child process. Apache is probably restarting or "
