@@ -228,4 +228,19 @@ describe AbstractServerCollection do
 		
 		@collection.next_cleaning_time.should == server1.next_cleaning_time
 	end
+	
+	specify "bug check" do
+		block = lambda do
+			@collection.synchronize do
+				@collection.clear
+				@collection.lookup_or_add('foo') do
+					s = AbstractServer.new
+					s.max_idle_time = 0.05
+					s
+				end
+				@collection.lookup_or_add('bar') { AbstractServer.new }
+			end
+		end
+		block.should_not raise_error
+	end
 end
