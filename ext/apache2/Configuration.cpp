@@ -324,24 +324,6 @@ cmd_passenger_max_requests(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
-cmd_passenger_memory_limit(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	char *end;
-	long int result;
-	
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		return "Invalid number specified for PassengerMemoryLimit.";
-	} else if (result < 0) {
-		return "Value for PassengerMemoryLimit must be greater than or equal to 0.";
-	} else {
-		config->memoryLimit = (unsigned long) result;
-		config->memoryLimitSpecified = true;
-		return NULL;
-	}
-}
-
-static const char *
 cmd_passenger_high_performance(cmd_parms *cmd, void *pcfg, int arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	if (arg) {
@@ -554,11 +536,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
 		"The maximum number of requests that an application instance may process."),
-	AP_INIT_TAKE1("PassengerMemoryLimit",
-		(Take1Func) cmd_passenger_memory_limit,
-		NULL,
-		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
-		"The maximum amount of memory in MB that an application instance may use."),
 	AP_INIT_FLAG("PassengerHighPerformance", // TODO: document this
 		(Take1Func) cmd_passenger_high_performance,
 		NULL,
