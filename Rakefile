@@ -24,6 +24,8 @@ require 'rake/extensions'
 require 'rake/cplusplus'
 require 'passenger/platform_info'
 
+verbose true
+
 ##### Configuration
 
 # Don't forget to edit Configuration.h too
