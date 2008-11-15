@@ -860,6 +860,7 @@ destroy_hooks(void *arg) {
 		this_thread::disable_syscall_interruption dsi;
 		P_DEBUG("Shutting down Phusion Passenger...");
 		delete hooks;
+		hooks = NULL;
 	} catch (const thread_interrupted &) {
 		// Ignore interruptions, we're shutting down anyway.
 		P_TRACE(3, "A system call was interrupted during shutdown of mod_passenger.");
@@ -892,6 +893,7 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 	if (hooks != NULL) {
 		P_DEBUG("Restarting Phusion Passenger....");
 		delete hooks;
+		hooks = NULL;
 	}
 	try {
 		hooks = new Hooks(pconf, plog, ptemp, s);
