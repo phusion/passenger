@@ -85,15 +85,13 @@ protected
 		groupname && Etc.getgrnam(groupname)
 	end
 	
-	def close_all_io_objects_for_fds(file_descriptors_to_close)
-		ObjectSpace.each_object do |o|
-			if o.is_a?(IO)
-				begin
-					if o.closed? && file_descriptors_to_close.include?(o.fileno)
-						o.close
-					end
-				rescue
+	def close_all_io_objects_for_fds(file_descriptors_to_leave_open)
+		ObjectSpace.each_object(IO) do |io|
+			begin
+				if !file_descriptors_to_leave_open.include?(io.fileno) && !io.closed?
+					io.close
 				end
+			rescue
 			end
 		end
 	end

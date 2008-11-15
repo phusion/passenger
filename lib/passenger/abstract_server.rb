@@ -134,12 +134,12 @@ class AbstractServer
 				# on a white list of file descriptors. That proved to be way too fragile:
 				# too many file descriptors are being left open even though they shouldn't
 				# be. So now we close file descriptors based on a black list.
-				file_descriptors_to_close = [0, 1, 2, @child_socket.fileno]
-				NativeSupport.close_all_file_descriptors(file_descriptors_to_close)
+				file_descriptors_to_leave_open = [0, 1, 2, @child_socket.fileno]
+				NativeSupport.close_all_file_descriptors(file_descriptors_to_leave_open)
 				# In addition to closing the file descriptors, one must also close
 				# the associated IO objects. This is to prevent IO.close from
 				# double-closing already closed file descriptors.
-				close_all_io_objects_for_fds(Set.new(file_descriptors_to_close))
+				close_all_io_objects_for_fds(file_descriptors_to_leave_open)
 				
 				# At this point, RubyGems might have open file handles for which
 				# the associated file descriptors have just been closed. This can
