@@ -4,6 +4,7 @@ test*.rb
 
 *.o
 *.so
+*.pyc
 ext/apache2/*.la
 ext/apache2/*.lo
 ext/apache2/*.slo
