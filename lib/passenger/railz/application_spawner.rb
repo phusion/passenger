@@ -19,6 +19,7 @@
 require 'rubygems'
 require 'socket'
 require 'etc'
+require 'fcntl'
 require 'passenger/application'
 require 'passenger/abstract_server'
 require 'passenger/application'
@@ -298,6 +299,7 @@ private
 				::ActiveRecord::Base.establish_connection
 			end
 			
+			reader.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
 			handler = RequestHandler.new(reader)
 			channel.write(Process.pid, handler.socket_name,
 				handler.using_abstract_namespace?)
