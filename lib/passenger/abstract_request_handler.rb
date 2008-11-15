@@ -17,6 +17,7 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 require 'socket'
+require 'fcntl'
 require 'passenger/utils'
 require 'passenger/native_support'
 module Passenger
@@ -149,6 +150,7 @@ class AbstractRequestHandler
 		if !@using_abstract_namespace
 			create_unix_socket_on_filesystem
 		end
+		@socket.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
 		@owner_pipe = owner_pipe
 		@previous_signal_handlers = {}
 		@main_loop_thread_lock = Mutex.new
@@ -199,6 +201,9 @@ class AbstractRequestHandler
 		reset_signal_handlers
 		begin
 			@graceful_termination_pipe = IO.pipe
+			@graceful_termination_pipe[0].fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+			@graceful_termination_pipe[1].fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+			
 			@main_loop_thread_lock.synchronize do
 				@main_loop_running = true
 				@main_loop_thread_cond.broadcast
@@ -370,6 +375,7 @@ private
 		ios = select([@socket, @owner_pipe, @graceful_termination_pipe[0]]).first
 		if ios.include?(@socket)
 			client = @socket.accept
+			client.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
 			
 			# The real input stream is not seekable (calling _seek_
 			# or _rewind_ on it will raise an exception). But some
