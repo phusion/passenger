@@ -157,6 +157,42 @@ private
 			return [flags, libs]
 		end
 	end
+
+	def self.find_apu_config
+		if env_defined?('APU_CONFIG')
+			apr_config = ENV['APU_CONFIG']
+		elsif RUBY_PLATFORM =~ /darwin/ && HTTPD == "/usr/sbin/httpd"
+			# If we're on MacOS X, and we're compiling against the
+			# default provided Apache, then we'll want to query the
+			# correct 'apu-1-config' command. However, that command
+			# is not in $PATH by default. Instead, it lives in
+			# /Developer/SDKs/MacOSX*sdk/usr/bin.
+			sdk_dir = Dir["/Developer/SDKs/MacOSX*sdk"].sort.last
+			if sdk_dir
+				apu_config = "#{sdk_dir}/usr/bin/apu-1-config"
+				if !File.executable?(apu_config)
+					apu_config = nil
+				end
+			end
+		else
+			apu_config = find_command('apu-1-config')
+			if apu_config.nil?
+				apu_config = find_command('apu-config')
+			end
+		end
+		return apu_config
+	end
+	
+	def self.determine_apu_info
+		if APU_CONFIG.nil?
+			return nil
+		else
+			flags = `#{APU_CONFIG} --includes`.strip
+			libs = `#{APU_CONFIG} --link-ld`.strip
+			flags.gsub!(/-O\d? /, '')
+			return [flags, libs]
+		end
+	end
 	
 	def self.determine_multi_arch_flags
 		if RUBY_PLATFORM =~ /darwin/ && !HTTPD.nil?
@@ -248,12 +284,15 @@ public
 	HTTPD = find_httpd
 	# The absolute path to the 'apr-config' or 'apr-1-config' executable.
 	APR_CONFIG = find_apr_config
+	APU_CONFIG = find_apu_config
 	
 	# The C compiler flags that are necessary to compile an Apache module.
 	APXS2_FLAGS = determine_apxs2_flags
 	# The C compiler flags that are necessary for programs that use APR.
 	APR_FLAGS, APR_LIBS = determine_apr_info
-	
+	# The C compiler flags that are necessary for programs that use APR-Util.
+	APU_FLAGS, APU_LIBS = determine_apu_info
+
 	# The C compiler flags that are necessary for building binaries in the same architecture(s) as Apache.
 	MULTI_ARCH_FLAGS = determine_multi_arch_flags
 	# The current platform's shared library extension ('so' on most Unices).
