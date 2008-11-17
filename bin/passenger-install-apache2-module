@@ -48,6 +48,7 @@ class Installer
 		Dependencies::Apache2,
 		Dependencies::Apache2_DevHeaders,
 		Dependencies::APR_DevHeaders,
+		Dependencies::APU_DevHeaders,
 		Dependencies::FastThread,
 		Dependencies::Rack
 	]
