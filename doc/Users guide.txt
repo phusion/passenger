@@ -738,7 +738,7 @@ In each place, it may be specified at most once. The default value is '0'.
 [CAUTION]
 =====================================================
 The <<PassengerMaxRequests,PassengerMaxRequests>> directive should be considered
-as workarounds for misbehaving applications. It is advised that you fix the
+as a workaround for misbehaving applications. It is advised that you fix the
 problem in your application rather than relying on these directives as a
 measure to avoid memory leaks.
 =====================================================
