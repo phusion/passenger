@@ -743,62 +743,6 @@ problem in your application rather than relying on these directives as a
 measure to avoid memory leaks.
 =====================================================
 
-[[PassengerMemoryLimit]]
-==== PassengerMemoryLimit <integer> ====
-The maximum amount of memory that an application instance may use, in megabytes.
-Once an application instance has surpassed its memory limit, it will process
-all the requests currently present in its queue and then shut down.
-A value of 0 means that there is no maximum: the application's memory usage
-will not be checked.
-
-This option is useful if your application is leaking memory. By shutting
-it down, all of its memory is guaranteed to be freed by the operating system.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Limits` is on.
-
-In each place, it may be specified at most once. The default value is '200'.
-
-[NOTE]
-.A word about permissions
-=====================================================
-The <<PassengerMemoryLimit,PassengerMemoryLimit>> directive requires that the
-user that the application is running as (see <<PassengerUserSwitching,PassengerUserSwitching>>)
-to have access to the `/proc` file system, or to be able to inspect its status
-with `ps` (which on Linux and FreeBSD systems basically means the same thing, since `ps`
-reads process information from `/proc`). Therefore, on servers running with
-tight permissions on `/proc`, this directive may not work. If you wish to use
-this directive and your `/proc` permissions are too tight, then please consider
-untightening the permissions.
-=====================================================
-
-[TIP]
-.FreeBSD and `/proc`
-=====================================================
-On many FreeBSD systems, `/proc` is not mounted by default. `/proc` *must* be
-mounted in order for <<PassengerMemoryLimit,PassengerMemoryLimit>> to work.
-
-It is also advised that you mount `/proc` with the `linprocfs` filesystem type
-instead of the regular FreeBSD `proc` filesystem type. The `linprocfs` filesystem
-type allows Phusion Passenger to read memory information from `/proc` directly,
-which is very fast. If you mount `/proc` with a different filesystem type, then
-Phusion Passenger must resort to querying memory information from the `ps` command,
-which is a lot slower.
-=====================================================
-
-[CAUTION]
-=====================================================
-The <<PassengerMaxRequests,PassengerMaxRequests>> and
-<<PassengerMemoryLimit,PassengerMemoryLimit>> directives should be considered
-as workarounds for misbehaving applications. It is advised that you fix the
-problem in your application rather than relying on these directives as a
-measure to avoid memory leaks.
-=====================================================
-
 === Ruby on Rails-specific options ===
 
 ==== RailsAutoDetect <on|off> ====

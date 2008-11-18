@@ -228,9 +228,6 @@ class AbstractRequestHandler
 					client.close rescue nil
 				end
 				@processed_requests += 1
-				if @memory_limit > 0 && get_memory_usage > @memory_limit
-					@graceful_termination_pipe[1].close rescue nil
-				end
 			end
 		rescue EOFError
 			# Exit main loop.
