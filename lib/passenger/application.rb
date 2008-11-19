@@ -55,7 +55,8 @@ class Application
 			return nil
 		end
 		
-		found_version = Gem.cache.search('rails', gem_version_spec).map do |x|
+		search_results = Gem.cache.search(Gem::Dependency.new('rails', gem_version_spec), true)
+		found_version = search_results.map do |x|
 			x.version.version
 		end.sort.last
 		if found_version.nil?
