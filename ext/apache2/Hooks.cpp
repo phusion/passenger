@@ -685,6 +685,8 @@ public:
 		const char *ruby, *user;
 		string applicationPoolServerExe, spawnServer;
 		
+		createPassengerTempDir();
+		
 		ruby = (config->ruby != NULL) ? config->ruby : DEFAULT_RUBY_COMMAND;
 		if (config->userSwitching) {
 			user = "";
@@ -723,6 +725,10 @@ public:
 				applicationPoolServerExe, spawnServer, "",
 				ruby, user)
 		);
+	}
+	
+	~Hooks() {
+		removeDirTree(getPassengerTempDir().c_str());
 	}
 	
 	void initChild(apr_pool_t *pchild, server_rec *s) {

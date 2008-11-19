@@ -40,8 +40,8 @@ end
 # and attempt to remove stale status FIFO files.
 def list_and_clean_status_fifos
 	result = []
-	Dir["/tmp/passenger_status.*.fifo"].each do |filename|
-		filename =~ /(\d+).fifo$/
+	Dir["/tmp/passenger.*/status.fifo"].each do |filename|
+		filename =~ /passenger.(\d+)/
 		pid = $1.to_i
 		if process_is_alive?(pid)
 			result << StatusFifo.new(filename, pid)
@@ -99,7 +99,7 @@ def start
 			exit 1
 		end
 	else
-		show_status(StatusFifo.new("/tmp/passenger_status.#{ARGV[0]}.fifo", ARGV[0].to_i))
+		show_status(StatusFifo.new("/tmp/passenger.#{ARGV[0]}/status.fifo", ARGV[0].to_i))
 	end
 end
 

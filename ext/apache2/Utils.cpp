@@ -171,6 +171,86 @@ canonicalizePath(const string &path) {
 	#endif
 }
 
+const char *
+getTempDir() {
+	const char *temp_dir = getenv("TMP");
+	if (temp_dir == NULL || *temp_dir == '\0') {
+		temp_dir = "/tmp";
+	}
+	return temp_dir;
+}
+
+string
+getPassengerTempDir(bool bypassCache) {
+	if (bypassCache) {
+		goto calculateResult;
+	} else {
+		const char *tmp = getenv("PHUSION_PASSENGER_TMP");
+		if (tmp != NULL && *tmp != '\0') {
+			return tmp;
+		} else {
+			goto calculateResult;
+		}
+	}
+
+	calculateResult:
+	const char *temp_dir = getTempDir();
+	char buffer[PATH_MAX];
+	
+	snprintf(buffer, sizeof(buffer), "%s/passenger.%d", temp_dir, getpid());
+	buffer[sizeof(buffer) - 1] = '\0';
+	setenv("PHUSION_PASSENGER_TMP", buffer, 1);
+	return buffer;
+}
+
+void
+createPassengerTempDir() {
+	makeDirTree(getPassengerTempDir().c_str(), "u=rwxs,g=wxs,o=wxs");
+}
+
+void
+makeDirTree(const char *path, const char *mode) {
+	char command[PATH_MAX + 10];
+	snprintf(command, sizeof(command), "mkdir -p -m \"%s\" \"%s\"", mode, path);
+	command[sizeof(command) - 1] = '\0';
+	
+	int result;
+	do {
+		result = system(command);
+	} while (result == -1 && errno == EINTR);
+	if (result != 0) {
+		char message[1024];
+		int e = errno;
+		
+		snprintf(message, sizeof(message) - 1, "Cannot create directory '%s'", path);
+		message[sizeof(message) - 1] = '\0';
+		if (result == -1) {
+			throw SystemException(message, e);
+		} else {
+			throw IOException(message);
+		}
+	}
+}
+
+void
+removeDirTree(const char *path) {
+	char command[PATH_MAX + 10];
+	snprintf(command, sizeof(command), "rm -rf \"%s\"", path);
+	command[sizeof(command) - 1] = '\0';
+	
+	int result;
+	do {
+		result = system(command);
+	} while (result == -1 && errno == EINTR);
+	if (result == -1) {
+		char message[1024];
+		
+		snprintf(message, sizeof(message) - 1, "Cannot create directory '%s'", path);
+		message[sizeof(message) - 1] = '\0';
+		throw IOException(message);
+	}
+}
+
 bool
 verifyRailsDir(const string &dir) {
 	string temp(dir);

@@ -299,7 +299,7 @@ private
 		done = false
 		while !done
 			begin
-				@socket_name = "/tmp/passenger.#{generate_random_id(:base64)}"
+				@socket_name = "#{passenger_tmpdir}/passenger_backend.#{generate_random_id(:base64)}"
 				@socket_name = @socket_name.slice(0, NativeSupport::UNIX_PATH_MAX - 1)
 				@socket = UNIXServer.new(@socket_name)
 				File.chmod(0600, @socket_name)
@@ -433,8 +433,8 @@ private
 	end
 	
 	def abstract_namespace_sockets_allowed?
-		return !ENV['PASSENGER_NO_ABSTRACT_NAMESPACE_SOCKETS'] ||
-			ENV['PASSENGER_NO_ABSTRACT_NAMESPACE_SOCKETS'].empty?
+		value = ENV['PASSENGER_NO_ABSTRACT_NAMESPACE_SOCKETS']
+		return value.nil? || value.empty?
 	end
 
 	def self.determine_passenger_version

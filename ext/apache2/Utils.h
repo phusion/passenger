@@ -203,6 +203,60 @@ string findApplicationPoolServer(const char *passengerRoot);
 string canonicalizePath(const string &path);
 
 /**
+ * Return the path name for the directory in which temporary files are
+ * to be stored.
+ *
+ * @ensure result != NULL
+ * @ingroup Support
+ */
+const char *getTempDir();
+
+/**
+ * Return the path name for the directory in which Phusion Passenger-specific
+ * temporary files are to be stored. This directory is unique for this instance
+ * of the web server in which Phusion Passenger is running.
+ *
+ * The result will be cached into the PHUSION_PASSENGER_TMP environment variable,
+ * which will be used for future calls to this function. To bypass this cache,
+ * set 'bypassCache' to true.
+ *
+ * @ensure !result.empty()
+ * @ingroup Support
+ */
+string getPassengerTempDir(bool bypassCache = false);
+
+/* Create a temp folder for storing Phusion Passenger-specific temp files,
+ * such as temporarily buffered uploads, sockets for backend processes, etc.
+ * This call also sets the PHUSION_PASSENGER_TMP environment variable, which
+ * allows backend processes to find this temp folder.
+ *
+ * Does nothing if this folder already exists.
+ *
+ * @throws IOException Something went wrong.
+ * @throws SystemException Something went wrong.
+ */
+void createPassengerTempDir();
+
+/**
+ * Create the directory at the given path, creating intermediate directories
+ * if necessary. The created directories' permissions are as specified by the
+ * 'mode' parameter.
+ *
+ * If 'path' already exists, then nothing will happen.
+ *
+ * @throws IOException Something went wrong.
+ * @throws SystemException Something went wrong.
+ */
+void makeDirTree(const char *path, const char *mode = "u=rwx,g=,o=");
+
+/**
+ * Remove an entire directory tree recursively.
+ *
+ * @throws SystemException Something went wrong.
+ */
+void removeDirTree(const char *path);
+
+/**
  * Check whether the specified directory is a valid Ruby on Rails
  * 'public' directory.
  *
@@ -250,21 +304,18 @@ public:
 	 *        a big not-in-memory buffer to work with.
 	 * @throws SystemException Something went wrong.
 	 */
-	TempFile(bool anonymous = true) {
-		const char *temp_dir;
+	TempFile(const char *identifier = "temp", bool anonymous = true) {
 		char templ[PATH_MAX];
 		int fd;
 		
-		temp_dir = getenv("TMP");
-		if (temp_dir == NULL || *temp_dir == '\0') {
-			temp_dir = "/tmp";
-		}
-		
-		snprintf(templ, sizeof(templ), "%s/passenger.XXXXXX", temp_dir);
+		snprintf(templ, sizeof(templ), "%s/%s.XXXXXX", getPassengerTempDir().c_str(), identifier);
 		templ[sizeof(templ) - 1] = '\0';
 		fd = mkstemp(templ);
 		if (fd == -1) {
-			throw SystemException("Cannot create a temporary file", errno);
+			char message[1024];
+			snprintf(message, sizeof(message), "Cannot create a temporary file '%s'", templ);
+			message[sizeof(message) - 1] = '\0';
+			throw SystemException(message, errno);
 		}
 		if (anonymous) {
 			fchmod(fd, 0000);

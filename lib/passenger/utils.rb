@@ -346,6 +346,20 @@ protected
 			end
 		end
 	end
+	
+	# Returns the directory in which to store Phusion Passenger-specific
+	# temporary files. If +create+ is true, then this method creates the
+	# directory if it doesn't exist.
+	def passenger_tmpdir(create = true)
+		dir = ENV['PHUSION_PASSENGER_TMP']
+		if dir.nil? || dir.empty?
+			dir = Dir.tmpdir
+		end
+		if create && !File.exist?(dir)
+			system("mkdir", "-p", "-m", "u=rwxs,g=wxs,o=wxs", dir)
+		end
+		return dir
+	end
 end
 
 end # module Passenger

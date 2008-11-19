@@ -533,8 +533,10 @@ private:
 		char filename[PATH_MAX];
 		int ret;
 		
-		snprintf(filename, sizeof(filename), "/tmp/passenger_status.%lu.fifo",
-				(unsigned long) getpid());
+		createPassengerTempDir();
+		
+		snprintf(filename, sizeof(filename), "%s/status.fifo",
+				getPassengerTempDir().c_str());
 		filename[PATH_MAX - 1] = '\0';
 		do {
 			ret = mkfifo(filename, S_IRUSR | S_IWUSR);
