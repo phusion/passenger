@@ -188,7 +188,7 @@ protected
 			end
 		else
 			if double_fork
-				Process.waitpid(pid)
+				Process.waitpid(pid) rescue nil
 				return pid
 			else
 				return pid

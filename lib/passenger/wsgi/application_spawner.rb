@@ -41,12 +41,14 @@ class ApplicationSpawner
 	# - SystemCallError, IOError, SocketError: Something went wrong.
 	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody", environment = "production")
 		a, b = UNIXSocket.pair
-		# Double fork in order to prevent zombie processes.
-		pid = safe_fork(self.class.to_s) do
-			safe_fork(self.class.to_s) do
-				a.close
-				run(MessageChannel.new(b), app_root, lower_privilege, lowest_user, environment)
-			end
+		pid = safe_fork(self.class.to_s, true) do
+			a.close
+			
+			file_descriptors_to_leave_open = [0, 1, 2, b.fileno]
+			NativeSupport.close_all_file_descriptors(file_descriptors_to_leave_open)
+			close_all_io_objects_for_fds(file_descriptors_to_leave_open)
+			
+			run(MessageChannel.new(b), app_root, lower_privilege, lowest_user, environment)
 		end
 		b.close
 		Process.waitpid(pid) rescue nil

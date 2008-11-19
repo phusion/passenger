@@ -134,31 +134,33 @@ class ApplicationSpawner < AbstractServer
 	#   or called exit() during startup.
 	# - SystemCallError, IOError, SocketError: Something went wrong.
 	def spawn_application!
-		# Double fork to prevent zombie processes.
 		a, b = UNIXSocket.pair
-		pid = safe_fork(self.class.to_s) do
-			safe_fork('application') do
-				begin
-					a.close
-					channel = MessageChannel.new(b)
-					success = report_app_init_status(channel) do
-						ENV['RAILS_ENV'] = @environment
-						Dir.chdir(@app_root)
-						if @lower_privilege
-							lower_privilege('config/environment.rb', @lowest_user)
-						end
-						remove_phusion_passenger_namespace
-						require 'config/environment'
-						require 'dispatcher'
+		pid = safe_fork('application', true) do
+			begin
+				a.close
+				
+				file_descriptors_to_leave_open = [0, 1, 2, b.fileno]
+				NativeSupport.close_all_file_descriptors(file_descriptors_to_leave_open)
+				close_all_io_objects_for_fds(file_descriptors_to_leave_open)
+				
+				channel = MessageChannel.new(b)
+				success = report_app_init_status(channel) do
+					ENV['RAILS_ENV'] = @environment
+					Dir.chdir(@app_root)
+					if @lower_privilege
+						lower_privilege('config/environment.rb', @lowest_user)
 					end
-					if success
-						start_request_handler(channel)
-					end
-				rescue SignalException => e
-					if e.message != AbstractRequestHandler::HARD_TERMINATION_SIGNAL &&
-					   e.message != AbstractRequestHandler::SOFT_TERMINATION_SIGNAL
-						raise
-					end
+					remove_phusion_passenger_namespace
+					require 'config/environment'
+					require 'dispatcher'
+				end
+				if success
+					start_request_handler(channel)
+				end
+			rescue SignalException => e
+				if e.message != AbstractRequestHandler::HARD_TERMINATION_SIGNAL &&
+				   e.message != AbstractRequestHandler::SOFT_TERMINATION_SIGNAL
+					raise
 				end
 			end
 		end
