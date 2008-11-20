@@ -19,6 +19,7 @@
 
 $LOAD_PATH << File.expand_path(File.dirname(__FILE__) + "/../lib")
 $LOAD_PATH << File.expand_path(File.dirname(__FILE__) + "/../ext")
+require 'passenger/message_channel'
 
 # ANSI color codes
 RESET   = "\e[0m"
@@ -64,13 +65,23 @@ def process_is_alive?(pid)
 	end
 end
 
-def show_status(status_fifo)
+def show_status(status_fifo, format = :text)
 	begin
-		text = File.read(status_fifo.filename)
-		# Colorize output
-		text.gsub!(/^(----)(.*)$/, YELLOW + BLUE_BG + BOLD + '\1\2' + RESET)
-		text.gsub!(/^( +in '.*? )(.*?)\(/, '\1' + BOLD + '\2' + RESET + '(')
-		puts text
+		text = nil
+		xml = nil
+		File.open(status_fifo.filename, 'r') do |f|
+			channel = Passenger::MessageChannel.new(f)
+			text = channel.read_scalar
+			xml = channel.read_scalar
+		end
+		if format == :text
+			# Colorize output
+			text.gsub!(/^(----)(.*)$/, YELLOW + BLUE_BG + BOLD + '\1\2' + RESET)
+			text.gsub!(/^( +in '.*? )(.*?)\(/, '\1' + BOLD + '\2' + RESET + '(')
+			puts text
+		else
+			puts xml
+		end
 	rescue => e
 		STDERR.puts "*** ERROR: Cannot query status for Passenger instance #{status_fifo.pid}:"
 		STDERR.puts e.to_s

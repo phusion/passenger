@@ -223,4 +223,16 @@ namespace tut {
 		removeDirTree("utils_test.tmp");
 		ensure_equals(size, 0u);
 	}
+	
+	/***** Test escapeForXml() *****/
+	
+	TEST_METHOD(25) {
+		ensure_equals(escapeForXml(""), "");
+		ensure_equals(escapeForXml("hello world"), "hello world");
+		ensure_equals(escapeForXml("./hello_world/foo.txt"), "./hello_world/foo.txt");
+		ensure_equals(escapeForXml("hello<world"), "hello&#60;world");
+		ensure_equals(escapeForXml("hello\xFFworld"), "hello&#255;world");
+		ensure_equals(escapeForXml("hello\xFF\xCCworld"), "hello&#255;&#204;world");
+		ensure_equals(escapeForXml("hello\xFFworld\xCC"), "hello&#255;world&#204;");
+	}
 }

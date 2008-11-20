@@ -110,18 +110,21 @@ private:
 				}
 				
 				UPDATE_TRACE_POINT();
+				MessageChannel channel(fileno(f));
 				string report;
 				report.append("----------- Backtraces -----------\n");
 				report.append(oxt::thread::all_backtraces());
 				report.append("\n\n");
 				report.append(pool.toString());
 				
-				fwrite(report.c_str(), 1, report.size(), f);
-				syscalls::fclose(f);
-				
-				// Prevent sending too much data at once.
 				UPDATE_TRACE_POINT();
-				sleep(1);
+				try {
+					channel.writeScalar(report);
+					channel.writeScalar(pool.toXml());
+				} catch (...) {
+					// Ignore write errors.
+				}
+				syscalls::fclose(f);
 			}
 		} catch (const boost::thread_interrupted &) {
 			P_TRACE(2, "Status report thread interrupted.");

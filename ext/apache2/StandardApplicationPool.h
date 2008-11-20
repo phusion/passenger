@@ -766,6 +766,48 @@ public:
 			return toString(boost::defer_lock);
 		}
 	}
+	
+	/**
+	 * Returns an XML description of the internal state of the
+	 * application pool.
+	 */
+	virtual string toXml() const {
+		unique_lock<boost::mutex> l(lock);
+		stringstream result;
+		DomainMap::const_iterator it;
+		
+		result << "<?xml version=\"1.0\" encoding=\"iso8859-1\" ?>\n";
+		result << "<info>";
+		
+		result << "<domains>";
+		for (it = domains.begin(); it != domains.end(); it++) {
+			Domain *domain = it->second.get();
+			AppContainerList *instances = &domain->instances;
+			AppContainerList::const_iterator lit;
+			
+			result << "<domain>";
+			result << "<name>" << escapeForXml(it->first) << "</name>";
+			
+			result << "<instances>";
+			for (lit = instances->begin(); lit != instances->end(); lit++) {
+				AppContainer *container = lit->get();
+				
+				result << "<instance>";
+				result << "<pid>" << container->app->getPid() << "</pid>";
+				result << "<sessions>" << container->sessions << "</sessions>";
+				result << "<processed>" << container->processed << "</processed>";
+				result << "<uptime>" << container->uptime() << "</uptime>";
+				result << "</instance>";
+			}
+			result << "</instances>";
+			
+			result << "</domain>";
+		}
+		result << "</domains>";
+		
+		result << "</info>";
+		return result.str();
+	}
 };
 
 } // namespace Passenger

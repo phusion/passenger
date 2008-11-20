@@ -685,6 +685,15 @@ public:
 		const char *ruby, *user;
 		string applicationPoolServerExe, spawnServer;
 		
+		/*
+		 * As described in the comment in init_module, upon (re)starting
+		 * Apache, the Hooks constructor is called twice. We unset
+		 * PHUSION_PASSENGER_TMP before calling createPassengerTmpDir()
+		 * because we want the temp directory's name to contain the PID
+		 * of the process in which the Hooks constructor was called for
+		 * the second time.
+		 */
+		unsetenv("PHUSION_PASSENGER_TMP");
 		createPassengerTempDir();
 		
 		ruby = (config->ruby != NULL) ? config->ruby : DEFAULT_RUBY_COMMAND;

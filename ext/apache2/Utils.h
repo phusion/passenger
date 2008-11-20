@@ -203,6 +203,14 @@ string findApplicationPoolServer(const char *passengerRoot);
 string canonicalizePath(const string &path);
 
 /**
+ * Escape the given raw string into an XML value.
+ *
+ * @throws std::bad_alloc Something went wrong.
+ * @ingroup Support
+ */
+string escapeForXml(const string &input);
+
+/**
  * Return the path name for the directory in which temporary files are
  * to be stored.
  *
