@@ -188,11 +188,11 @@ private
 		color_puts '<banner>Compiling and installing Apache 2 module...</banner>'
 		puts "cd #{PASSENGER_ROOT}"
 		puts "rake clean apache2"
-        if ENV['TRACE']
-          return system("rake", "--trace", "clean", "apache2")
-        else
-          return system("rake", "clean", "apache2")
-        end
+		if ENV['TRACE']
+			return system("rake", "--trace", "clean", "apache2")
+		else
+			return system("rake", "clean", "apache2")
+		end
 	end
 	
 	def show_apache2_config_snippets
