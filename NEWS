@@ -14,7 +14,6 @@
 - passenger-status now displays additional useful information, namely the
   number of requests processed so far by an app instance, and its current
   uptime
-- smart-lv2 spawn method
 - improved module compatibility + high performance mode
 - PassengerEnabled
 - SIGQUIT will show backtrace of current thread
