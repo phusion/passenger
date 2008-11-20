@@ -20,22 +20,15 @@
 $LOAD_PATH << File.expand_path(File.dirname(__FILE__) + "/../lib")
 $LOAD_PATH << File.expand_path(File.dirname(__FILE__) + "/../ext")
 require 'passenger/message_channel'
+require 'passenger/admin_tools/control_process'
+
+include Passenger::AdminTools
 
 # ANSI color codes
 RESET   = "\e[0m"
 BOLD    = "\e[1m"
 YELLOW  = "\e[33m"
 BLUE_BG = "\e[44m"
-
-class StatusFifo
-	attr_accessor :filename
-	attr_accessor :pid
-	
-	def initialize(filename, pid)
-		@filename = filename
-		@pid = pid
-	end
-end
 
 # Returns an array of all status FIFO files that are alive,
 # and attempt to remove stale status FIFO files.
@@ -65,38 +58,28 @@ def process_is_alive?(pid)
 	end
 end
 
-def show_status(status_fifo, format = :text)
+def show_status(control_process, format = :text)
 	begin
-		text = nil
-		xml = nil
-		File.open(status_fifo.filename, 'r') do |f|
-			channel = Passenger::MessageChannel.new(f)
-			text = channel.read_scalar
-			xml = channel.read_scalar
-		end
-		if format == :text
-			# Colorize output
-			text.gsub!(/^(----)(.*)$/, YELLOW + BLUE_BG + BOLD + '\1\2' + RESET)
-			text.gsub!(/^( +in '.*? )(.*?)\(/, '\1' + BOLD + '\2' + RESET + '(')
-			puts text
-		else
-			puts xml
-		end
-	rescue => e
-		STDERR.puts "*** ERROR: Cannot query status for Passenger instance #{status_fifo.pid}:"
+		text = control_process.status
+	rescue SystemCallError => e
+		STDERR.puts "*** ERROR: Cannot query status for Passenger instance #{control_process.pid}:"
 		STDERR.puts e.to_s
 		exit 2
 	end
+	# Colorize output
+	text.gsub!(/^(----)(.*)$/, YELLOW + BLUE_BG + BOLD + '\1\2' + RESET)
+	text.gsub!(/^( +in '.*? )(.*?)\(/, '\1' + BOLD + '\2' + RESET + '(')
+	puts text
 end
 
 def start
 	if ARGV.empty?
-		status_fifos = list_and_clean_status_fifos
-		if status_fifos.size == 0
+		control_processes = ControlProcess.list
+		if control_processes.empty?
 			STDERR.puts("ERROR: Phusion Passenger doesn't seem to be running.")
 			exit 2
-		elsif status_fifos.size == 1
-			show_status(status_fifos[0])
+		elsif control_processes.size == 1
+			show_status(control_processes.first)
 		else
 			puts "It appears that multiple Passenger instances are running. Please select a"
 			puts "specific one by running:"
@@ -104,13 +87,13 @@ def start
 			puts "  passenger-status <PID>"
 			puts
 			puts "The following Passenger instances are running:"
-			status_fifos.each do |status_fifo|
-				puts "  PID: #{status_fifo.pid}"
+			control_processes.each do |control|
+				puts "  PID: #{control.pid}"
 			end
 			exit 1
 		end
 	else
-		show_status(StatusFifo.new("/tmp/passenger.#{ARGV[0]}/status.fifo", ARGV[0].to_i))
+		show_status(ControlProcess.new(ARGV[0].to_i))
 	end
 end
 
