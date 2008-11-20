@@ -518,10 +518,10 @@ private:
 					activeOrMaxChanged.notify_all();
 				}
 			} else {
-				while (!(active < max)) {
+				if (active >= max) {
 					activeOrMaxChanged.wait(l);
-				}
-				if (count == max) {
+					goto beginning_of_function;
+				} else if (count == max) {
 					container = inactiveApps.front();
 					inactiveApps.pop_front();
 					domain = domains[container->app->getAppRoot()].get();

@@ -282,13 +282,15 @@ function spawn_or_use_existing(app_root, options):
 			count++
 			active++
 	else:
-		# There are no apps for this app root.
-		wait until (active < max)
-		# FIXME: there's a possible concurrency issue here. After
-		# waiting and having reacquired the lock, the state might have
-		# been completely changed, and there may now exist an instance
-		# of this application domain.
-		if count == max:
+		# There are no apps for this app root. Wait until there's at
+		# least 1 idle instance, or until there's an empty slot in the
+		# pool, then restart this function. Restarting is necessary,
+		# because after waiting and reacquiring the lack, some other
+		# thread might already have spawned instances for this app root.
+		if (active >= max):
+			wait until _active_ has changed
+			goto beginning of functions
+		elsif count == max:
 			# Here we are in a though situation. There are several
 			# apps which are inactive, and none of them have
 			# application root _app_root_, so we must kill one of
