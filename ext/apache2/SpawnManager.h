@@ -314,10 +314,9 @@ private:
 		}
 		
 		pid_t pid = atoi(args[0]);
-		bool usingAbstractNamespace = args[2] == "true";
 		
 		UPDATE_TRACE_POINT();
-		if (!usingAbstractNamespace) {
+		if (args[2] == "unix") {
 			int ret;
 			do {
 				ret = chmod(args[1].c_str(), S_IRUSR | S_IWUSR);
@@ -327,7 +326,7 @@ private:
 			} while (ret == -1 && errno == EINTR);
 		}
 		return ApplicationPtr(new Application(spawnOptions.appRoot,
-			pid, args[1], usingAbstractNamespace, ownerPipe));
+			pid, args[1], args[2], ownerPipe));
 	}
 	
 	/**

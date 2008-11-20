@@ -39,21 +39,6 @@ module Passenger
 # administrator maintenance overhead. These decisions are documented
 # in this section.
 #
-# === Abstract namespace Unix sockets
-#
-# AbstractRequestHandler listens on a Unix socket for incoming requests. If possible,
-# AbstractRequestHandler will try to create a Unix socket on the _abstract namespace_,
-# instead of on the filesystem. If the RoR application crashes (segfault),
-# or if it gets killed by SIGKILL, or if the system loses power, then there
-# will be no stale socket files left on the filesystem.
-# Unfortunately, abstract namespace Unix sockets are only supported by Linux.
-# On systems that do not support abstract namespace Unix sockets,
-# AbstractRequestHandler will automatically fallback to using regular Unix socket files.
-#
-# It is possible to force AbstractRequestHandler to use regular Unix socket files by
-# setting the environment variable PASSENGER_NO_ABSTRACT_NAMESPACE_SOCKETS
-# to 1.
-#
 # === Owner pipes
 #
 # Because only the web server communicates directly with a request handler,
@@ -111,14 +96,15 @@ class AbstractRequestHandler
 	X_POWERED_BY        = 'X-Powered-By'        # :nodoc:
 	
 	# The name of the socket on which the request handler accepts
-	# new connections. This is either a Unix socket filename, or
-	# the name for an abstract namespace Unix socket.
+	# new connections. At this moment, this value is always the filename
+	# of a Unix domain socket.
 	#
-	# If +socket_name+ refers to an abstract namespace Unix socket,
-	# then the name does _not_ contain a leading null byte.
-	#
-	# See also using_abstract_namespace?
+	# See also #socket_type.
 	attr_reader :socket_name
+	
+	# The type of socket that #socket_name refers to. At the moment, the
+	# value is always 'unix', which indicates a Unix domain socket.
+	attr_reader :socket_type
 	
 	# Specifies the maximum allowed memory usage, in MB. If after having processed
 	# a request AbstractRequestHandler detects that memory usage has risen above
@@ -142,14 +128,8 @@ class AbstractRequestHandler
 	# Additionally, the following options may be given:
 	# - memory_limit: Used to set the +memory_limit+ attribute.
 	def initialize(owner_pipe, options = {})
-		if abstract_namespace_sockets_allowed?
-			@using_abstract_namespace = create_unix_socket_on_abstract_namespace
-		else
-			@using_abstract_namespace = false
-		end
-		if !@using_abstract_namespace
-			create_unix_socket_on_filesystem
-		end
+		@socket_type = 'unix'
+		create_unix_socket_on_filesystem
 		@socket.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
 		@owner_pipe = owner_pipe
 		@previous_signal_handlers = {}
@@ -174,14 +154,7 @@ class AbstractRequestHandler
 		end
 		@socket.close rescue nil
 		@owner_pipe.close rescue nil
-		if !using_abstract_namespace?
-			File.unlink(@socket_name) rescue nil
-		end
-	end
-	
-	# Returns whether socket_name refers to an abstract namespace Unix socket.
-	def using_abstract_namespace?
-		return @using_abstract_namespace
+		File.unlink(@socket_name) rescue nil
 	end
 	
 	# Check whether the main loop's currently running.
@@ -268,33 +241,6 @@ class AbstractRequestHandler
 private
 	include Utils
 
-	def create_unix_socket_on_abstract_namespace
-		while true
-			begin
-				# I have no idea why, but using base64-encoded IDs
-				# don't pass the unit tests. I couldn't find the cause
-				# of the problem. The system supports base64-encoded
-				# names for abstract namespace unix sockets just fine.
-				@socket_name = generate_random_id(:hex)
-				@socket_name = @socket_name.slice(0, NativeSupport::UNIX_PATH_MAX - 2)
-				fd = NativeSupport.create_unix_socket("\x00#{socket_name}", BACKLOG_SIZE)
-				@socket = IO.new(fd)
-				@socket.instance_eval do
-					def accept
-						fd = NativeSupport.accept(fileno)
-						return IO.new(fd)
-					end
-				end
-				return true
-			rescue Errno::EADDRINUSE
-				# Do nothing, try again with another name.
-			rescue Errno::ENOENT
-				# Abstract namespace sockets not supported on this system.
-				return false
-			end
-		end
-	end
-	
 	def create_unix_socket_on_filesystem
 		done = false
 		while !done
@@ -432,11 +378,6 @@ private
 		return data
 	end
 	
-	def abstract_namespace_sockets_allowed?
-		value = ENV['PASSENGER_NO_ABSTRACT_NAMESPACE_SOCKETS']
-		return value.nil? || value.empty?
-	end
-
 	def self.determine_passenger_version
 		rakefile = "#{File.dirname(__FILE__)}/../../Rakefile"
 		if File.exist?(rakefile)

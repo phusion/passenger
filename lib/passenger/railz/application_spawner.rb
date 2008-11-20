@@ -108,13 +108,13 @@ class ApplicationSpawner < AbstractServer
 	# - ApplicationSpawner::Error: The ApplicationSpawner server exited unexpectedly.
 	def spawn_application
 		server.write("spawn_application")
-		pid, socket_name, using_abstract_namespace = server.read
+		pid, socket_name, socket_type = server.read
 		if pid.nil?
 			raise IOError, "Connection closed"
 		end
 		owner_pipe = server.recv_io
 		return Application.new(@app_root, pid, socket_name,
-			using_abstract_namespace == "true", owner_pipe)
+			socket_type, owner_pipe)
 	rescue SystemCallError, IOError, SocketError => e
 		raise Error, "The application spawner server exited unexpectedly"
 	end
@@ -171,13 +171,13 @@ class ApplicationSpawner < AbstractServer
 		unmarshal_and_raise_errors(channel)
 		
 		# No exception was raised, so spawning succeeded.
-		pid, socket_name, using_abstract_namespace = channel.read
+		pid, socket_name, socket_type = channel.read
 		if pid.nil?
 			raise IOError, "Connection closed"
 		end
 		owner_pipe = channel.recv_io
 		return Application.new(@app_root, pid, socket_name,
-			using_abstract_namespace == "true", owner_pipe)
+			socket_type, owner_pipe)
 	end
 	
 	# Overrided from AbstractServer#start.
@@ -316,7 +316,7 @@ private
 			reader.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
 			handler = RequestHandler.new(reader, @options)
 			channel.write(Process.pid, handler.socket_name,
-				handler.using_abstract_namespace?)
+				handler.socket_type)
 			channel.send_io(writer)
 			writer.close
 			channel.close

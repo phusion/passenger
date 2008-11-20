@@ -65,13 +65,13 @@ class ApplicationSpawner
 		unmarshal_and_raise_errors(channel, "rack")
 		
 		# No exception was raised, so spawning succeeded.
-		pid, socket_name, using_abstract_namespace = channel.read
+		pid, socket_name, socket_type = channel.read
 		if pid.nil?
 			raise IOError, "Connection closed"
 		end
 		owner_pipe = channel.recv_io
 		return Application.new(@app_root, pid, socket_name,
-			using_abstract_namespace == "true", owner_pipe)
+			socket_type, owner_pipe)
 	end
 
 private
@@ -94,7 +94,7 @@ private
 			begin
 				handler = RequestHandler.new(reader, app, options)
 				channel.write(Process.pid, handler.socket_name,
-					handler.using_abstract_namespace?)
+					handler.socket_type)
 				channel.send_io(writer)
 				writer.close
 				channel.close

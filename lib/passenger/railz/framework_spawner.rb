@@ -171,13 +171,13 @@ class FrameworkSpawner < AbstractServer
 				end
 				raise e
 			else
-				pid, listen_socket_name, using_abstract_namespace = server.read
+				pid, listen_socket_name, socket_type = server.read
 				if pid.nil?
 					raise IOError, "Connection closed"
 				end
 				owner_pipe = server.recv_io
 				return Application.new(app_root, pid, listen_socket_name,
-					using_abstract_namespace == "true", owner_pipe)
+					socket_type, owner_pipe)
 			end
 		rescue SystemCallError, IOError, SocketError => e
 			raise Error, "The framework spawner server exited unexpectedly"
@@ -317,7 +317,7 @@ private
 			end
 		end
 		client.write('success')
-		client.write(app.pid, app.listen_socket_name, app.using_abstract_namespace?)
+		client.write(app.pid, app.listen_socket_name, app.listen_socket_type)
 		client.send_io(app.owner_pipe)
 		app.close
 	end

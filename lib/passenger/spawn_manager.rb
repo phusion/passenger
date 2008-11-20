@@ -330,7 +330,8 @@ private
 		if app
 			begin
 				client.write('ok')
-				client.write(app.pid, app.listen_socket_name, app.using_abstract_namespace?)
+				client.write(app.pid, app.listen_socket_name,
+					app.listen_socket_type)
 				client.send_io(app.owner_pipe)
 			rescue Errno::EPIPE
 				# The Apache module may be interrupted during a spawn command,

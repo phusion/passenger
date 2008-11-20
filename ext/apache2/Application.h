@@ -316,7 +316,7 @@ private:
 	string appRoot;
 	pid_t pid;
 	string listenSocketName;
-	bool usingAbstractNamespace;
+	string listenSocketType;
 	int ownerPipe;
 
 public:
@@ -328,18 +328,17 @@ public:
 	 *             This must be a valid directory, but the path does not have to be absolute.
 	 * @param pid The process ID of this application instance.
 	 * @param listenSocketName The name of the listener socket of this application instance.
-	 * @param usingAbstractNamespace Whether <tt>listenSocketName</tt> refers to a Unix
-	 *        socket on the abstract namespace. Note that listenSocketName must not
-	 *        contain the leading null byte, even if it's an abstract namespace socket.
+	 * @param listenSocketType The type of the listener socket, e.g. "unix" for Unix
+	 *                         domain sockets.
 	 * @param ownerPipe The owner pipe of this application instance.
 	 * @post getAppRoot() == theAppRoot && getPid() == pid
 	 */
 	Application(const string &theAppRoot, pid_t pid, const string &listenSocketName,
-	            bool usingAbstractNamespace, int ownerPipe) {
+	            const string &listenSocketType, int ownerPipe) {
 		appRoot = theAppRoot;
 		this->pid = pid;
 		this->listenSocketName = listenSocketName;
-		this->usingAbstractNamespace = usingAbstractNamespace;
+		this->listenSocketType = listenSocketType;
 		this->ownerPipe = ownerPipe;
 		P_TRACE(3, "Application " << this << ": created.");
 	}
@@ -353,7 +352,7 @@ public:
 				ret = close(ownerPipe);
 			} while (ret == -1 && errno == EINTR);
 		}
-		if (!usingAbstractNamespace) {
+		if (listenSocketType == "unix") {
 			do {
 				ret = unlink(listenSocketName.c_str());
 			} while (ret == -1 && errno == EINTR);
@@ -425,6 +424,10 @@ public:
 	 * @throws IOException Something went wrong during the connection process.
 	 */
 	SessionPtr connect(const function<void()> &closeCallback) const {
+		if (listenSocketType != "unix") {
+			throw "TODO: implement support for socket types other than 'unix'";
+		}
+		
 		TRACE_POINT();
 		int fd, ret;
 		
@@ -437,12 +440,7 @@ public:
 		
 		struct sockaddr_un addr;
 		addr.sun_family = AF_UNIX;
-		if (usingAbstractNamespace) {
-			strncpy(addr.sun_path + 1, listenSocketName.c_str(), sizeof(addr.sun_path) - 1);
-			addr.sun_path[0] = '\0';
-		} else {
-			strncpy(addr.sun_path, listenSocketName.c_str(), sizeof(addr.sun_path));
-		}
+		strncpy(addr.sun_path, listenSocketName.c_str(), sizeof(addr.sun_path));
 		addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
 		do {
 			ret = ::connect(fd, (const sockaddr *) &addr, sizeof(addr));
