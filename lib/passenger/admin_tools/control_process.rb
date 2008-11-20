@@ -7,6 +7,11 @@ module Passenger
 module AdminTools
 
 class ControlProcess
+	class Instance
+		attr_accessor :pid, :socket_name, :socket_type, :sessions, :uptime
+		INT_PROPERTIES = [:pid, :sessions]
+	end
+
 	attr_accessor :path
 	attr_accessor :pid
 	
@@ -56,7 +61,7 @@ class ControlProcess
 		return @domains
 	end
 	
-	def backends
+	def instances
 		return domains.map do |domain|
 			domain[:instances]
 		end.flatten
@@ -80,11 +85,17 @@ private
 				:instances => instances
 			}
 			domain.elements.each("instances/instance") do |instance|
-				i = {
-					:pid => instance.elements["pid"].text.to_i,
-					:sessions => instance.elements["sessions"].text.to_i,
-					:uptime => instance.elements["uptime"].text
-				}
+				i = Instance.new
+				instance.elements.each do |element|
+					if i.respond_to?("#{element.name}=")
+						if Instance::INT_PROPERTIES.include?(element.name.to_sym)
+							value = element.text.to_i
+						else
+							value = element.text
+						end
+						i.send("#{element.name}=", value)
+					end
+				end
 				instances << i
 			end
 			@domains << d
