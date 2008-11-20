@@ -311,7 +311,8 @@ public
 	APXS2_FLAGS = determine_apxs2_flags
 	# The C compiler flags that are necessary for programs that use APR.
 	APR_FLAGS, APR_LIBS = determine_apr_info
-    APU_FLAGS, APU_LIBS = determine_apu_info
+	# The C compiler flags that are necessary for programs that use APR-Util.
+	APU_FLAGS, APU_LIBS = determine_apu_info
 
 	# The C compiler flags that are necessary for building binaries in the same architecture(s) as Apache.
 	MULTI_ARCH_FLAGS = determine_multi_arch_flags

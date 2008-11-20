@@ -121,7 +121,7 @@ end
 ##### Apache module
 
 class APACHE2
-    CXXFLAGS = "-I.. -fPIC #{OPTIMIZATION_FLAGS} #{APR_FLAGS} #{APU_FLAGS} #{APXS2_FLAGS} #{CXXFLAGS}"
+	CXXFLAGS = "-I.. -fPIC #{OPTIMIZATION_FLAGS} #{APR_FLAGS} #{APU_FLAGS} #{APXS2_FLAGS} #{CXXFLAGS}"
 	OBJECTS = {
 		'Configuration.o' => %w(Configuration.cpp Configuration.h),
 		'Bucket.o' => %w(Bucket.cpp Bucket.h),
@@ -203,7 +203,7 @@ end
 class TEST
 	CXXFLAGS = "#{::CXXFLAGS} -DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL "
 
-    AP2_FLAGS = "-I../ext/apache2 -I../ext -Isupport #{APR_FLAGS} #{APU_FLAGS}"
+	AP2_FLAGS = "-I../ext/apache2 -I../ext -Isupport #{APR_FLAGS} #{APU_FLAGS}"
 	AP2_OBJECTS = {
 		'CxxTestMain.o' => %w(CxxTestMain.cpp),
 		'MessageChannelTest.o' => %w(MessageChannelTest.cpp
