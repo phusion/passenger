@@ -2,8 +2,6 @@ require 'support/config'
 require 'support/test_helper'
 require 'passenger/rack/application_spawner'
 
-include Passenger
-
 describe Passenger::Rack::ApplicationSpawner do
 	include TestHelper
 	
