@@ -1,5 +1,6 @@
 require 'rexml/document'
 require 'passenger/admin_tools'
+require 'passenger/message_channel'
 
 module Passenger
 module AdminTools
