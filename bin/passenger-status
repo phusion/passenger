@@ -29,34 +29,6 @@ BOLD    = "\e[1m"
 YELLOW  = "\e[33m"
 BLUE_BG = "\e[44m"
 
-# Returns an array of all status FIFO files that are alive,
-# and attempt to remove stale status FIFO files.
-def list_and_clean_status_fifos
-	result = []
-	Dir["/tmp/passenger.*/status.fifo"].each do |filename|
-		filename =~ /passenger.(\d+)/
-		pid = $1.to_i
-		if process_is_alive?(pid)
-			result << StatusFifo.new(filename, pid)
-		else
-			puts "*** NOTICE: Removing stale status FIFO file #{filename}"
-			File.unlink(filename) rescue nil
-		end
-	end
-	return result
-end
-
-def process_is_alive?(pid)
-	begin
-		Process.kill(0, pid)
-		return true
-	rescue Errno::ESRCH
-		return false
-	rescue SystemCallError => e
-		return true
-	end
-end
-
 def show_status(control_process, format = :text)
 	begin
 		text = control_process.status
