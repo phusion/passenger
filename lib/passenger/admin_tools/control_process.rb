@@ -1,4 +1,5 @@
 require 'rexml/document'
+require 'fileutils'
 require 'passenger/admin_tools'
 require 'passenger/message_channel'
 
@@ -9,7 +10,7 @@ class ControlProcess
 	attr_accessor :path
 	attr_accessor :pid
 	
-	def self.list
+	def self.list(clean_stale = true)
 		results = []
 		Dir["/tmp/passenger.*"].each do |dir|
 			dir =~ /passenger.(\d+)\Z/
@@ -18,7 +19,11 @@ class ControlProcess
 			begin
 				results << ControlProcess.new(pid, dir)
 			rescue ArgumentError
-				# Do nothing.
+				# Stale Passenger temp folder. Clean it up if instructed.
+				if clean_stale
+					puts "*** Cleaning stale folder #{dir}"
+					FileUtils.rm_rf(dir)
+				end
 			end
 		end
 		return results
