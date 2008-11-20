@@ -30,7 +30,10 @@ class RequestHandler:
 					try:
 						env, input_stream = self.parse_request(client)
 						if env:
-							self.process_request(env, input_stream, client)
+							if env['REQUEST_METHOD'] == 'ping':
+								self.process_ping(env, input_stream, client)
+							else:
+								self.process_request(env, input_stream, client)
 						else:
 							done = True
 					except KeyboardInterrupt:
@@ -147,6 +150,9 @@ class RequestHandler:
 		finally:
 			if hasattr(result, 'close'):
 				result.close()
+	
+	def process_ping(self, env, input_stream, output_stream):
+		output_stream.send("pong")
 
 def import_error_handler(environ, start_response):
 	write = start_response('500 Import Error', [('Content-type', 'text/plain')])

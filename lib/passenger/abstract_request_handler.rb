@@ -18,6 +18,7 @@
 
 require 'socket'
 require 'fcntl'
+require 'passenger/message_channel'
 require 'passenger/utils'
 require 'passenger/native_support'
 module Passenger
@@ -94,6 +95,8 @@ class AbstractRequestHandler
 	CONTENT_LENGTH      = 'CONTENT_LENGTH'      # :nodoc:
 	HTTP_CONTENT_LENGTH = 'HTTP_CONTENT_LENGTH' # :nodoc:
 	X_POWERED_BY        = 'X-Powered-By'        # :nodoc:
+	REQUEST_METHOD      = 'REQUEST_METHOD'      # :nodoc:
+	PING                = 'ping'                # :nodoc:
 	
 	# The name of the socket on which the request handler accepts
 	# new connections. At this moment, this value is always the filename
@@ -193,7 +196,11 @@ class AbstractRequestHandler
 				begin
 					headers, input = parse_request(client)
 					if headers
-						process_request(headers, input, client)
+						if headers[REQUEST_METHOD] == PING
+							process_ping(headers, input, client)
+						else
+							process_request(headers, input, client)
+						end
 					end
 				rescue IOError, SocketError, SystemCallError => e
 					print_exception("Passenger RequestHandler", e)
@@ -359,6 +366,10 @@ private
 		STDERR.puts("*** Passenger RequestHandler: HTTP header size exceeded maximum.")
 		STDERR.flush
 		print_exception("Passenger RequestHandler", e)
+	end
+	
+	def process_ping(env, input, output)
+		output.write("pong")
 	end
 	
 	# Generate a long, cryptographically secure random ID string, which

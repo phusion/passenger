@@ -56,6 +56,18 @@ describe AbstractRequestHandler do
 		Dir["abstract_request_handler_spec.tmp/*"].should_not be_empty
 	end
 	
+	it "accepts pings" do
+		@request_handler.start_main_loop_thread
+		client = UNIXSocket.new(@request_handler.socket_name)
+		begin
+			channel = MessageChannel.new(client)
+			channel.write_scalar("REQUEST_METHOD\0ping\0")
+			client.read.should == "pong"
+		ensure
+			client.close
+		end
+	end
+	
 	def wait_until
 		while !yield
 			sleep 0.01
