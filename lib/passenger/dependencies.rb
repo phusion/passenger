@@ -251,7 +251,11 @@ module Dependencies # :nodoc: all
 	APR_DevHeaders = Dependency.new do |dep|
 		dep.name = "Apache Portable Runtime (APR) development headers"
 		dep.define_checker do |result|
-			result.found(APR_CONFIG)
+			if APR_CONFIG.nil?
+				result.not_found
+			else
+				result.found(APR_CONFIG)
+			end
 		end
 		if RUBY_PLATFORM =~ /linux/
 			case LINUX_DISTRO
@@ -274,7 +278,11 @@ module Dependencies # :nodoc: all
 	APU_DevHeaders = Dependency.new do |dep|
 		dep.name = "Apache Portable Runtime Utility (APR) development headers"
 		dep.define_checker do |result|
-			result.found(APU_CONFIG)
+			if APU_CONFIG.nil?
+				result.not_found
+			else
+				result.found(APU_CONFIG)
+			end
 		end
 		dep.website = "http://httpd.apache.org/"
 		dep.website_comments = "APR Utility is an integrated part of Apache."
