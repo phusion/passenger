@@ -95,6 +95,26 @@ syscalls::close(int fd) {
 }
 
 int
+syscalls::connect(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::connect(sockfd, serv_addr, addrlen);
+	);
+	return ret;
+}
+
+int
+syscalls::socket(int domain, int type, int protocol) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::socket(domain, type, protocol)
+	);
+	return ret;
+}
+
+int
 syscalls::socketpair(int d, int type, int protocol, int sv[2]) {
 	int ret;
 	CHECK_INTERRUPTION(

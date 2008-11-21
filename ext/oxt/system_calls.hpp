@@ -118,6 +118,8 @@ namespace oxt {
 		ssize_t write(int fd, const void *buf, size_t count);
 		int close(int fd);
 		
+		int connect(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
+		int socket(int domain, int type, int protocol);
 		int socketpair(int d, int type, int protocol, int sv[2]);
 		ssize_t recvmsg(int s, struct msghdr *msg, int flags);
 		ssize_t sendmsg(int s, const struct msghdr *msg, int flags);
