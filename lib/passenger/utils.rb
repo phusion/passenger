@@ -23,6 +23,7 @@ if RUBY_PLATFORM != "java" && RUBY_VERSION < "1.8.7"
 end
 require 'pathname'
 require 'etc'
+require 'fcntl'
 require 'tempfile'
 require 'passenger/exceptions'
 if RUBY_PLATFORM != "java"
@@ -425,27 +426,64 @@ class ConditionVariable
 end
 
 class IO
-	# ApplicationSpawner/FrameworkSpawner might temporarily undefine
-	# the 'Passenger' module in order to avoid namespace collissions
-	# with the spawned application. So we save the NativeSupport
-	# module in a constant so that we can access it whether
-	# our 'Passenger' module is defined or not.
-	NATIVE_SUPPORT = Passenger::NativeSupport
+	if defined?(Passenger::NativeSupport)
+		# ApplicationSpawner/FrameworkSpawner might temporarily undefine
+		# the 'Passenger' module in order to avoid namespace collissions
+		# with the spawned application. So we save the NativeSupport
+		# module in a constant so that we can access it whether
+		# our 'Passenger' module is defined or not.
+		NATIVE_SUPPORT = Passenger::NativeSupport
 
-	# Send an IO object (i.e. a file descriptor) over this IO channel.
-	# This only works if this IO channel is a Unix socket.
-	#
-	# Raises SystemCallError if something went wrong.
-	def send_io(io)
-		NATIVE_SUPPORT.send_fd(self.fileno, io.fileno)
+		# Send an IO object (i.e. a file descriptor) over this IO channel.
+		# This only works if this IO channel is a Unix socket.
+		#
+		# Raises SystemCallError if something went wrong.
+		def send_io(io)
+			NATIVE_SUPPORT.send_fd(self.fileno, io.fileno)
+		end
+	
+		# Receive an IO object (i.e. a file descriptor) from this IO channel.
+		# This only works if this IO channel is a Unix socket.
+		#
+		# Raises SystemCallError if something went wrong.
+		def recv_io
+			return IO.new(NATIVE_SUPPORT.recv_fd(self.fileno))
+		end
 	end
 	
-	# Receive an IO object (i.e. a file descriptor) from this IO channel.
-	# This only works if this IO channel is a Unix socket.
-	#
-	# Raises SystemCallError if something went wrong.
-	def recv_io
-		return IO.new(NATIVE_SUPPORT.recv_fd(self.fileno))
+	def close_on_exec!
+		if defined?(Fcntl::F_SETFD)
+			fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+		end
+	end
+end
+
+module Signal
+	# Like Signal.list, but only returns signals that we can actually trap.
+	def self.list_trappable
+		ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "mri"
+		case ruby_engine
+		when "mri"
+			if RUBY_VERSION >= '1.9.0'
+				return Signal.list
+			else
+				result = Signal.list
+				result.delete("ALRM")
+				return result
+			end
+		when "jruby"
+			result = Signal.list
+			result.delete("QUIT")
+			result.delete("ILL")
+			result.delete("FPE")
+			result.delete("KILL")
+			result.delete("SEGV")
+			result.delete("STOP")
+			result.delete("USR1")
+			return result
+		else
+			return Signal.list
+		end
 	end
 end
 

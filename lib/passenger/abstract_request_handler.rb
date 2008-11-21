@@ -20,7 +20,6 @@ require 'socket'
 require 'fcntl'
 require 'passenger/message_channel'
 require 'passenger/utils'
-require 'passenger/native_support'
 module Passenger
 
 # The request handler is the layer which connects Apache with the underlying application's
@@ -82,9 +81,9 @@ module Passenger
 # and sends it to the request handler.
 class AbstractRequestHandler
 	# Signal which will cause the Rails application to exit immediately.
-	HARD_TERMINATION_SIGNAL = "SIGTERM"
+	HARD_TERMINATION_SIGNAL = "TERM"
 	# Signal which will cause the Rails application to exit as soon as it's done processing a request.
-	SOFT_TERMINATION_SIGNAL = "SIGUSR1"
+	SOFT_TERMINATION_SIGNAL = "USR1"
 	BACKLOG_SIZE    = 50
 	MAX_HEADER_SIZE = 128 * 1024
 	
@@ -133,7 +132,7 @@ class AbstractRequestHandler
 	def initialize(owner_pipe, options = {})
 		@socket_type = 'unix'
 		create_unix_socket_on_filesystem
-		@socket.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+		@socket.close_on_exec!
 		@owner_pipe = owner_pipe
 		@previous_signal_handlers = {}
 		@main_loop_thread_lock = Mutex.new
@@ -177,8 +176,8 @@ class AbstractRequestHandler
 		reset_signal_handlers
 		begin
 			@graceful_termination_pipe = IO.pipe
-			@graceful_termination_pipe[0].fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
-			@graceful_termination_pipe[1].fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+			@graceful_termination_pipe[0].close_on_exec!
+			@graceful_termination_pipe[1].close_on_exec!
 			
 			@main_loop_thread_lock.synchronize do
 				@main_loop_running = true
@@ -252,8 +251,13 @@ private
 		done = false
 		while !done
 			begin
+				if defined?(NativeSupport)
+					unix_path_max = NativeSupport::UNIX_PATH_MAX
+				else
+					unix_path_max = 100
+				end
 				@socket_name = "#{passenger_tmpdir}/passenger_backend.#{generate_random_id(:base64)}"
-				@socket_name = @socket_name.slice(0, NativeSupport::UNIX_PATH_MAX - 1)
+				@socket_name = @socket_name.slice(0, unix_path_max - 1)
 				@socket = UNIXServer.new(@socket_name)
 				File.chmod(0600, @socket_name)
 				done = true
@@ -267,7 +271,7 @@ private
 	# special handlers for a few signals. The previous signal handlers
 	# will be put back by calling revert_signal_handlers.
 	def reset_signal_handlers
-		Signal.list.each_key do |signal|
+		Signal.list_trappable.each_key do |signal|
 			begin
 				prev_handler = trap(signal, DEFAULT)
 				if prev_handler != DEFAULT
@@ -281,12 +285,16 @@ private
 	end
 	
 	def install_useful_signal_handlers
+		trappable_signals = Signal.list_trappable
+		
 		trap(SOFT_TERMINATION_SIGNAL) do
 			@graceful_termination_pipe[1].close rescue nil
-		end
+		end if trappable_signals.has_key?(SOFT_TERMINATION_SIGNAL)
+		
 		trap('ABRT') do
 			raise SignalException, "SIGABRT"
-		end
+		end if trappable_signals.has_key?('ABRT')
+		
 		trap('QUIT') do
 			if Kernel.respond_to?(:caller_for_all_threads)
 				output = "========== Process #{Process.pid}: backtrace dump ==========\n"
@@ -325,7 +333,7 @@ private
 		ios = select([@socket, @owner_pipe, @graceful_termination_pipe[0]]).first
 		if ios.include?(@socket)
 			client = @socket.accept
-			client.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+			client.close_on_exec!
 			
 			# The real input stream is not seekable (calling _seek_
 			# or _rewind_ on it will raise an exception). But some

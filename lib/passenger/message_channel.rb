@@ -140,6 +140,7 @@ class MessageChannel
 			end
 			buffer = ''
 			while buffer.size < size
+				temp = '' # JRuby doesn't clear the buffer. TODO: remove this when JRuby has been fixed.
 				buffer << @io.readpartial(size - buffer.size, temp)
 			end
 			return buffer
