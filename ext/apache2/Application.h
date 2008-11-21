@@ -450,6 +450,9 @@ public:
 			string message("Cannot connect to Unix socket '");
 			message.append(listenSocketName);
 			message.append("' on the abstract namespace");
+			do {
+				ret = close(fd);
+			} while (ret == -1 && errno == EINTR);
 			throw SystemException(message, e);
 		}
 		
