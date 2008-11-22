@@ -21,7 +21,6 @@ require 'set'
 require 'timeout'
 require 'passenger/message_channel'
 require 'passenger/utils'
-require 'passenger/native_support'
 module Passenger
 
 # An abstract base class for a server, with the following properties:
@@ -293,7 +292,7 @@ private
 	# Reset all signal handlers to default. This is called in the child process,
 	# before entering the main loop.
 	def reset_signal_handlers
-		Signal.list.each_key do |signal|
+		Signal.list_trappable.each_key do |signal|
 			begin
 				@orig_signal_handlers[signal] = trap(signal, 'DEFAULT')
 			rescue ArgumentError

@@ -320,7 +320,7 @@ private
 			end
 			STDERR.puts(output)
 			STDERR.flush
-		end
+		end if trappable_signals.has_key?('QUIT')
 	end
 	
 	def revert_signal_handlers
