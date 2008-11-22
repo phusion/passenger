@@ -12,6 +12,10 @@ namespace tut {
 			pool = ptr(new StandardApplicationPool("../bin/passenger-spawn-server"));
 			pool2 = pool;
 		}
+		
+		ApplicationPoolPtr newPoolConnection() {
+			return pool;
+		}
 	};
 
 	DEFINE_TEST_GROUP(StandardApplicationPoolTest);

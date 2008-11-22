@@ -358,10 +358,22 @@
 	}
 	
 	TEST_METHOD(17) {
-		// MaxPerApp must be respected.
+		// MaxPerApp is respected.
 		pool->setMax(3);
 		pool->setMaxPerApp(1);
-		// TODO: how do we test this?
+		
+		// We connect to stub/rack while it already has an instance with
+		// 1 request in its queue. Assert that the pool doesn't spawn
+		// another instance.
+		Application::SessionPtr session1 = spawnRackApp(pool, "stub/rack");
+		Application::SessionPtr session2 = spawnRackApp(pool2, "stub/rack");
+		ensure_equals(pool->getCount(), 1u);
+		
+		// We connect to stub/wsgi. Assert that the pool spawns a new
+		// instance for this app.
+		ApplicationPoolPtr pool3(newPoolConnection());
+		Application::SessionPtr session3 = spawnWsgiApp(pool3, "stub/wsgi");
+		ensure_equals(pool->getCount(), 2u);
 	}
 	
 	TEST_METHOD(18) {
@@ -438,7 +450,5 @@
 		session.reset();
 		thr.join();
 	}
-	
-	// TODO: test maxIdleTime == 0
 
 #endif /* USE_TEMPLATE */
