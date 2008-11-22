@@ -357,7 +357,7 @@ protected
 			dir = Dir.tmpdir
 		end
 		if create && !File.exist?(dir)
-			system("mkdir", "-p", "-m", "u=rwxs,g=wxs,o=wxs", dir)
+			system("mkdir", "-p", "-m", "u=rwxs,g=wx,o=wx", dir)
 		end
 		return dir
 	end

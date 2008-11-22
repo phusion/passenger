@@ -244,7 +244,7 @@ getPassengerTempDir(bool bypassCache) {
 
 void
 createPassengerTempDir() {
-	makeDirTree(getPassengerTempDir().c_str(), "u=rwxs,g=wxs,o=wxs");
+	makeDirTree(getPassengerTempDir().c_str(), "u=rwxs,g=wx,o=wx");
 }
 
 void
