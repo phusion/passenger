@@ -547,8 +547,12 @@ The default is 'ruby'.
 === PassengerUseGlobalQueue <on|off> ===
 Turns the use of global queuing on or off.
 
-This option may only occur once, in the global server configuration. The
-default is 'off'.
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+
+In each place, it may be specified at most once. The default value is 'off'.
 
 'This feature is sponsored by http://www.37signals.com/[37signals].'
 
