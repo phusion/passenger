@@ -274,7 +274,11 @@ private
 		if !defined?(Dispatcher)
 			require 'dispatcher'
 		end
-		require_dependency 'application'
+		if File.exist?('app/controllers/application_controller.rb')
+			require_dependency 'application_controller'
+		else
+			require_dependency 'application'
+		end
 		
 		# - No point in preloading the application sources if the garbage collector
 		#   isn't copy-on-write friendly.

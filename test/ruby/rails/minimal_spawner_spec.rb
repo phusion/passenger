@@ -63,4 +63,12 @@ shared_examples_for "a minimal spawner" do
 			passenger_name.should == 'Gourry Gabriev'
 		end
 	end
+	
+	it "loads application_controller.rb instead of application.rb, if the former exists" do
+		use_rails_stub('foobar') do |stub|
+			File.rename("#{stub.app_root}/app/controllers/application.rb",
+				"#{stub.app_root}/app/controllers/application_controller.rb")
+			lambda { spawn_stub_application(stub).close }.should_not raise_error
+		end
+	end
 end
