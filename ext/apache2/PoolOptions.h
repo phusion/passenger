@@ -159,7 +159,7 @@ struct PoolOptions {
 		long appSpawnerTimeout       = -1,
 		unsigned long maxRequests    = 0,
 		unsigned long memoryLimit    = 0,
-		bool useGlobalQueue = false) {
+		bool useGlobalQueue          = false) {
 		this->appRoot        = appRoot;
 		this->lowerPrivilege = lowerPrivilege;
 		this->lowestUser     = lowestUser;
