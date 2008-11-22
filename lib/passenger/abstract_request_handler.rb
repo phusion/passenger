@@ -81,9 +81,9 @@ module Passenger
 # and sends it to the request handler.
 class AbstractRequestHandler
 	# Signal which will cause the Rails application to exit immediately.
-	HARD_TERMINATION_SIGNAL = "TERM"
+	HARD_TERMINATION_SIGNAL = "SIGTERM"
 	# Signal which will cause the Rails application to exit as soon as it's done processing a request.
-	SOFT_TERMINATION_SIGNAL = "USR1"
+	SOFT_TERMINATION_SIGNAL = "SIGUSR1"
 	BACKLOG_SIZE    = 50
 	MAX_HEADER_SIZE = 128 * 1024
 	
@@ -289,7 +289,7 @@ private
 		
 		trap(SOFT_TERMINATION_SIGNAL) do
 			@graceful_termination_pipe[1].close rescue nil
-		end if trappable_signals.has_key?(SOFT_TERMINATION_SIGNAL)
+		end if trappable_signals.has_key?(SOFT_TERMINATION_SIGNAL.sub(/^SIG/, ''))
 		
 		trap('ABRT') do
 			raise SignalException, "SIGABRT"
