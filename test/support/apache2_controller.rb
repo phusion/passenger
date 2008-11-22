@@ -2,6 +2,43 @@ require 'erb'
 require 'fileutils'
 require 'passenger/platform_info'
 
+# A class for starting, stopping and restarting Apache, and for manipulating
+# its configuration file. This is used by the integration tests.
+#
+# Before a test begins, the test instructs Apache2Controller to create an Apache
+# configuration folder, which contains an Apache configuration file and other
+# configuration resources that Apache needs. The Apache configuration file is
+# created from a template (see Apache2Controller::STUB_DIR).
+# The test can define configuration customizations. For example, it can tell
+# Apache2Controller to add configuration options, virtual host definitions, etc.
+#
+# After the configuration folder has been created, Apache2Controller will start
+# Apache. After Apache has been started, the test will be run. Apache2Controller
+# will stop Apache after the test is done.
+#
+# Apache2Controller ensures that starting, stopping and restarting are not prone
+# to race conditions. For example, it ensures that when #start returns, Apache
+# really is listening on its server socket instead of still initializing.
+#
+# == Usage
+#
+# Suppose that you want to test a hypothetical "AlwaysPrintHelloWorld"
+# Apache configuration option. Then you can write the following test:
+#
+#   apache = Apache2Controller.new
+#   
+#   # Add a configuration option to the configuration file.
+#   apache << "AlwaysPrintHelloWorld on"
+#   
+#   # Write configuration file and start Apache with that configuration file.
+#   apache.start
+#   
+#   begin
+#       response_body = http_get("http://localhost:#{apache.port}/some/url")
+#       response_body.should == "hello world!"
+#   ensure
+#       apache.stop
+#   end
 class Apache2Controller
 	include PlatformInfo
 	STUB_DIR = File.expand_path(File.dirname(__FILE__) + "/../stub/apache2")
@@ -41,6 +78,11 @@ class Apache2Controller
 		end
 	end
 	
+	# Create an Apache configuration folder and start Apache on that
+	# configuration folder. This method does not return until Apache
+	# has done initializing.
+	#
+	# If Apache is already started, this this method will stop Apache first.
 	def start
 		if running?
 			stop
@@ -92,6 +134,10 @@ class Apache2Controller
 		end
 	end
 	
+	# Stop Apache and delete its configuration folder. This method waits
+	# until Apache is done with its shutdown procedure.
+	#
+	# This method does nothing if Apache is already stopped.
 	def stop
 		pid_file = "#{@server_root}/httpd.pid"
 		if File.exist?(pid_file)
@@ -132,6 +178,8 @@ class Apache2Controller
 		end
 	end
 	
+	# Define a virtual host configuration block for the Apache configuration
+	# file.
 	def add_vhost(domain, document_root)
 		vhost = VHost.new(domain, document_root)
 		if block_given?
@@ -140,6 +188,7 @@ class Apache2Controller
 		vhosts << vhost
 	end
 	
+	# Checks whether this Apache instance is running.
 	def running?
 		if File.exist?("#{@server_root}/httpd.pid")
 			pid = File.read("#{@server_root}/httpd.pid").strip
@@ -156,6 +205,7 @@ class Apache2Controller
 		end
 	end
 	
+	# Defines a configuration snippet to be added to the Apache configuration file.
 	def <<(line)
 		@extra << line
 	end
