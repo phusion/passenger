@@ -28,9 +28,8 @@ namespace Passenger {
 using namespace std;
 
 /**
- * Objects of this class contain important information for spawning operations,
- * such as which application is to be spawned. It is used by various methods,
- * such as ApplicationPool::get() and SpawnManager::spawn().
+ * This struct encapsulates information for ApplicationPool::get() and for
+ * SpawnManager::spawn(), such as which application is to be spawned.
  *
  * <h2>Notes on privilege lowering support</h2>
  *
@@ -53,7 +52,7 @@ using namespace std;
  * be running as root. See "doc/Security of user switching.txt" for
  * a detailed explanation.
  */
-struct SpawnOptions {
+struct PoolOptions {
 	/**
 	 * The root directory of the application to spawn. In case of a Ruby on Rails
 	 * application, this is the folder that contains 'app/', 'public/', 'config/',
@@ -119,10 +118,22 @@ struct SpawnOptions {
 	unsigned long memoryLimit;
 	
 	/**
-	 * Creates a new SpawnOptions object with the default values filled in.
+	 * Whether to use a global queue instead of a per-backend process
+	 * queue. This option is only used by ApplicationPool::get().
+	 *
+	 * If enabled, when all backend processes are active, get() will
+	 * wait until there's at least one backend process that's idle, instead
+	 * of queuing the request into a random process's private queue.
+	 * This is especially useful if a website has one or more long-running
+	 * requests.
+	 */
+	bool useGlobalQueue;
+	
+	/**
+	 * Creates a new PoolOptions object with the default values filled in.
 	 * One must still set appRoot manually, after having used this constructor.
 	 */
-	SpawnOptions() {
+	PoolOptions() {
 		lowerPrivilege = true;
 		lowestUser     = "nobody";
 		environment    = "production";
@@ -132,12 +143,13 @@ struct SpawnOptions {
 		appSpawnerTimeout       = -1;
 		maxRequests    = 0;
 		memoryLimit    = 0;
+		useGlobalQueue = false;
 	}
 	
 	/**
-	 * Creates a new SpawnOptions object with the given values.
+	 * Creates a new PoolOptions object with the given values.
 	 */
-	SpawnOptions(const string &appRoot,
+	PoolOptions(const string &appRoot,
 		bool lowerPrivilege       = true,
 		const string &lowestUser  = "nobody",
 		const string &environment = "production",
@@ -146,7 +158,8 @@ struct SpawnOptions {
 		long frameworkSpawnerTimeout = -1,
 		long appSpawnerTimeout       = -1,
 		unsigned long maxRequests    = 0,
-		unsigned long memoryLimit    = 0) {
+		unsigned long memoryLimit    = 0,
+		bool useGlobalQueue = false) {
 		this->appRoot        = appRoot;
 		this->lowerPrivilege = lowerPrivilege;
 		this->lowestUser     = lowestUser;
@@ -157,28 +170,29 @@ struct SpawnOptions {
 		this->appSpawnerTimeout       = appSpawnerTimeout;
 		this->maxRequests    = maxRequests;
 		this->memoryLimit    = memoryLimit;
+		this->useGlobalQueue = useGlobalQueue;
 	}
 	
 	/**
-	 * Creates a new SpawnOptions object from the given string vector.
+	 * Creates a new PoolOptions object from the given string vector.
 	 * This vector contains information that's written to by toVector().
 	 *
 	 * For example:
 	 * @code
-	 *   SpawnOptions options(...);
+	 *   PoolOptions options(...);
 	 *   vector<string> vec;
 	 *
 	 *   vec.push_back("my");
 	 *   vec.push_back("data");
-	 *   options.toVector(vec);  // SpawnOptions information will start at index 2.
+	 *   options.toVector(vec);  // PoolOptions information will start at index 2.
 	 *
-	 *   SpawnOptions copy(vec, 2);
+	 *   PoolOptions copy(vec, 2);
 	 * @endcode
 	 *
 	 * @param vec The vector containing spawn options information.
 	 * @param startIndex The index in vec at which the information starts.
 	 */
-	SpawnOptions(const vector<string> &vec, unsigned int startIndex = 0) {
+	PoolOptions(const vector<string> &vec, unsigned int startIndex = 0) {
 		appRoot        = vec[startIndex + 1];
 		lowerPrivilege = vec[startIndex + 3] == "true";
 		lowestUser     = vec[startIndex + 5];
@@ -189,10 +203,11 @@ struct SpawnOptions {
 		appSpawnerTimeout       = atol(vec[startIndex + 15]);
 		maxRequests    = atol(vec[startIndex + 17]);
 		memoryLimit    = atol(vec[startIndex + 19]);
+		useGlobalQueue = vec[startIndex + 21] == "true";
 	}
 	
 	/**
-	 * Append the information in this SpawnOptions object to the given
+	 * Append the information in this PoolOptions object to the given
 	 * string vector. The resulting array could, for example, be used
 	 * as a message to be sent to the spawn server.
 	 */
@@ -210,6 +225,7 @@ struct SpawnOptions {
 		appendKeyValue2(vec, "app_spawner_timeout",       appSpawnerTimeout);
 		appendKeyValue3(vec, "max_requests",    maxRequests);
 		appendKeyValue3(vec, "memory_limit",    memoryLimit);
+		appendKeyValue (vec, "use_global_queue", useGlobalQueue ? "true" : "false");
 	}
 
 private:

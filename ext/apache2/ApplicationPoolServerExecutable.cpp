@@ -234,7 +234,7 @@ private:
 		bool failed = false;
 		
 		try {
-			SpawnOptions options(args, 1);
+			PoolOptions options(args, 1);
 			session = server.pool.get(options);
 			sessions[lastSessionID] = session;
 			lastSessionID++;
@@ -318,11 +318,6 @@ private:
 		server.pool.setMaxPerApp(maxPerApp);
 	}
 	
-	void processSetUseGlobalQueue(bool value) {
-		TRACE_POINT();
-		server.pool.setUseGlobalQueue(value);
-	}
-	
 	void processGetSpawnServerPid(const vector<string> &args) {
 		TRACE_POINT();
 		channel.write(toString(server.pool.getSpawnServerPid()).c_str(), NULL);
@@ -380,8 +375,6 @@ private:
 					processGetCount(args);
 				} else if (args[0] == "setMaxPerApp" && args.size() == 2) {
 					processSetMaxPerApp(atoi(args[1]));
-				} else if (args[0] == "setUseGlobalQueue" && args.size() == 2) {
-					processSetUseGlobalQueue(args[1] == "true");
 				} else if (args[0] == "getSpawnServerPid" && args.size() == 1) {
 					processGetSpawnServerPid(args);
 				} else {

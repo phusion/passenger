@@ -39,7 +39,7 @@
 #include <signal.h>
 
 #include "Application.h"
-#include "SpawnOptions.h"
+#include "PoolOptions.h"
 #include "MessageChannel.h"
 #include "Exceptions.h"
 #include "Logging.h"
@@ -247,18 +247,18 @@ private:
 	/**
 	 * Send the spawn command to the spawn server.
 	 *
-	 * @param spawnOptions The spawn options to use.
+	 * @param PoolOptions The spawn options to use.
 	 * @return An Application smart pointer, representing the spawned application.
 	 * @throws SpawnException Something went wrong.
 	 */
-	ApplicationPtr sendSpawnCommand(const SpawnOptions &spawnOptions) {
+	ApplicationPtr sendSpawnCommand(const PoolOptions &PoolOptions) {
 		TRACE_POINT();
 		vector<string> args;
 		int ownerPipe;
 		
 		try {
 			args.push_back("spawn_application");
-			spawnOptions.toVector(args);
+			PoolOptions.toVector(args);
 			channel.write(args);
 		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not write 'spawn_application' "
@@ -325,7 +325,7 @@ private:
 				ret = chown(args[1].c_str(), getuid(), getgid());
 			} while (ret == -1 && errno == EINTR);
 		}
-		return ApplicationPtr(new Application(spawnOptions.appRoot,
+		return ApplicationPtr(new Application(PoolOptions.appRoot,
 			pid, args[1], args[2], ownerPipe));
 	}
 	
@@ -333,7 +333,7 @@ private:
 	 * @throws boost::thread_interrupted
 	 */
 	ApplicationPtr
-	handleSpawnException(const SpawnException &e, const SpawnOptions &spawnOptions) {
+	handleSpawnException(const SpawnException &e, const PoolOptions &PoolOptions) {
 		TRACE_POINT();
 		bool restarted;
 		try {
@@ -350,7 +350,7 @@ private:
 			restarted = false;
 		}
 		if (restarted) {
-			return sendSpawnCommand(spawnOptions);
+			return sendSpawnCommand(PoolOptions);
 		} else {
 			throw SpawnException("The spawn server died unexpectedly, and restarting it failed.");
 		}
@@ -465,31 +465,31 @@ public:
 	
 	/**
 	 * Spawn a new instance of an application. Spawning details are to be passed
-	 * via the <tt>spawnOptions</tt> parameter.
+	 * via the <tt>PoolOptions</tt> parameter.
 	 *
 	 * If the spawn server died during the spawning process, then the server
 	 * will be automatically restarted, and another spawn attempt will be made.
 	 * If restarting the server fails, or if the second spawn attempt fails,
 	 * then an exception will be thrown.
 	 *
-	 * @param spawnOptions An object containing the details for this spawn operation,
-	 *                     such as which application to spawn. See SpawnOptions for details.
+	 * @param PoolOptions An object containing the details for this spawn operation,
+	 *                     such as which application to spawn. See PoolOptions for details.
 	 * @return A smart pointer to an Application object, which represents the application
 	 *         instance that has been spawned. Use this object to communicate with the
 	 *         spawned application.
 	 * @throws SpawnException Something went wrong.
 	 * @throws boost::thread_interrupted
 	 */
-	ApplicationPtr spawn(const SpawnOptions &spawnOptions) {
+	ApplicationPtr spawn(const PoolOptions &PoolOptions) {
 		TRACE_POINT();
 		boost::mutex::scoped_lock l(lock);
 		try {
-			return sendSpawnCommand(spawnOptions);
+			return sendSpawnCommand(PoolOptions);
 		} catch (const SpawnException &e) {
 			if (e.hasErrorPage()) {
 				throw;
 			} else {
-				return handleSpawnException(e, spawnOptions);
+				return handleSpawnException(e, PoolOptions);
 			}
 		}
 	}

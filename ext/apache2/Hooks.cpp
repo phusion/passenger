@@ -387,7 +387,7 @@ private:
 				ServerConfig *sconfig = getServerConfig(r->server);
 				string appRoot(canonicalizePath(mapper.getPublicDirectory() + "/.."));
 				
-				session = applicationPool->get(SpawnOptions(
+				session = applicationPool->get(PoolOptions(
 					appRoot,
 					true,
 					sconfig->getDefaultUser(),
@@ -397,7 +397,8 @@ private:
 					config->frameworkSpawnerTimeout,
 					config->appSpawnerTimeout,
 					config->getMaxRequests(),
-					config->getMemoryLimit()));
+					config->getMemoryLimit(),
+					config->usingGlobalQueue()));
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				r->status = 500;
@@ -749,7 +750,6 @@ public:
 			applicationPool->setMax(config->maxPoolSize);
 			applicationPool->setMaxPerApp(config->maxInstancesPerApp);
 			applicationPool->setMaxIdleTime(config->poolIdleTime);
-			applicationPool->setUseGlobalQueue(config->getUseGlobalQueue());
 		} catch (const thread_interrupted &) {
 			P_TRACE(3, "A system call was interrupted during initialization of "
 				"an Apache child process. Apache is probably restarting or "

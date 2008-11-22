@@ -128,7 +128,7 @@ class APACHE2
 		'Hooks.o' => %w(Hooks.cpp Hooks.h
 				Configuration.h ApplicationPool.h ApplicationPoolServer.h
 				SpawnManager.h Exceptions.h Application.h MessageChannel.h
-				SpawnOptions.h Utils.h DirectoryMapper.h),
+				PoolOptions.h Utils.h DirectoryMapper.h),
 		'Utils.o'   => %w(Utils.cpp Utils.h),
 		'Logging.o' => %w(Logging.cpp Logging.h)
 	}
@@ -166,7 +166,7 @@ subdir 'ext/apache2' do
 		'StandardApplicationPool.h',
 		'MessageChannel.h',
 		'SpawnManager.h',
-		'SpawnOptions.h',
+		'PoolOptions.h',
 		'Utils.o',
 		'Logging.o'
 	] do
@@ -210,19 +210,19 @@ class TEST
 			../ext/apache2/MessageChannel.h),
 		'SpawnManagerTest.o' => %w(SpawnManagerTest.cpp
 			../ext/apache2/SpawnManager.h
-			../ext/apache2/SpawnOptions.h
+			../ext/apache2/PoolOptions.h
 			../ext/apache2/Application.h
 			../ext/apache2/MessageChannel.h),
 		'ApplicationPoolServerTest.o' => %w(ApplicationPoolServerTest.cpp
 			../ext/apache2/ApplicationPoolServer.h
-			../ext/apache2/SpawnOptions.h
+			../ext/apache2/PoolOptions.h
 			../ext/apache2/MessageChannel.h),
 		'ApplicationPoolServer_ApplicationPoolTest.o' => %w(ApplicationPoolServer_ApplicationPoolTest.cpp
 			ApplicationPoolTest.cpp
 			../ext/apache2/ApplicationPoolServer.h
 			../ext/apache2/ApplicationPool.h
 			../ext/apache2/SpawnManager.h
-			../ext/apache2/SpawnOptions.h
+			../ext/apache2/PoolOptions.h
 			../ext/apache2/Application.h
 			../ext/apache2/MessageChannel.h),
 		'StandardApplicationPoolTest.o' => %w(StandardApplicationPoolTest.cpp
@@ -230,9 +230,9 @@ class TEST
 			../ext/apache2/ApplicationPool.h
 			../ext/apache2/StandardApplicationPool.h
 			../ext/apache2/SpawnManager.h
-			../ext/apache2/SpawnOptions.h
+			../ext/apache2/PoolOptions.h
 			../ext/apache2/Application.h),
-		'SpawnOptionsTest.o' => %w(SpawnOptionsTest.cpp ../ext/apache2/SpawnOptions.h),
+		'PoolOptionsTest.o' => %w(PoolOptionsTest.cpp ../ext/apache2/PoolOptions.h),
 		'UtilsTest.o' => %w(UtilsTest.cpp ../ext/apache2/Utils.h)
 	}
 	

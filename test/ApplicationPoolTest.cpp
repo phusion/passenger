@@ -48,14 +48,14 @@
 	}
 	
 	static Application::SessionPtr spawnRackApp(ApplicationPoolPtr pool, const char *appRoot) {
-		SpawnOptions options;
+		PoolOptions options;
 		options.appRoot = appRoot;
 		options.appType = "rack";
 		return pool->get(options);
 	}
 	
 	static Application::SessionPtr spawnWsgiApp(ApplicationPoolPtr pool, const char *appRoot) {
-		SpawnOptions options;
+		PoolOptions options;
 		options.appRoot = appRoot;
 		options.appType = "wsgi";
 		return pool->get(options);
@@ -366,7 +366,7 @@
 	
 	TEST_METHOD(18) {
 		// Application instance is shutdown after 'maxRequests' requests.
-		SpawnOptions options("stub/railsapp");
+		PoolOptions options("stub/railsapp");
 		int reader;
 		pid_t originalPid;
 		Application::SessionPtr session;
@@ -402,7 +402,11 @@
 		bool *done;
 		
 		void operator()() {
-			spawnRackApp(pool, "stub/rack");
+			PoolOptions options;
+			options.appRoot = "stub/rack";
+			options.appType = "rack";
+			options.useGlobalQueue = true;
+			pool->get(options);
 			*done = true;
 		}
 	};
@@ -411,9 +415,13 @@
 		// If global queueing mode is enabled, then get() waits until
 		// there's at least one idle backend process for this application
 		// domain.
-		pool->setUseGlobalQueue(true);
 		pool->setMax(1);
-		Application::SessionPtr session = spawnRackApp(pool, "stub/rack");
+		
+		PoolOptions options;
+		options.appRoot = "stub/rack";
+		options.appType = "rack";
+		options.useGlobalQueue = true;
+		Application::SessionPtr session = pool->get(options);
 		
 		bool done = false;
 		SpawnRackAppFunction func;

@@ -1,18 +1,18 @@
 #include "tut.h"
-#include "SpawnOptions.h"
+#include "PoolOptions.h"
 
 using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct SpawnOptionsTest {
+	struct PoolOptionsTest {
 	};
 
-	DEFINE_TEST_GROUP(SpawnOptionsTest);
+	DEFINE_TEST_GROUP(PoolOptionsTest);
 
-	// Test the SpawnOptions constructors and toVector().
+	// Test the PoolOptions constructors and toVector().
 	TEST_METHOD(1) {
-		SpawnOptions options;
+		PoolOptions options;
 		options.appRoot     = "/foo";
 		options.frameworkSpawnerTimeout = 123;
 		options.appSpawnerTimeout       = 456;
@@ -23,7 +23,7 @@ namespace tut {
 		args.push_back("def");
 		options.toVector(args);
 		
-		SpawnOptions copy(args, 2);
+		PoolOptions copy(args, 2);
 		ensure_equals(options.appRoot, copy.appRoot);
 		ensure_equals(options.lowerPrivilege, copy.lowerPrivilege);
 		ensure_equals(options.lowestUser, copy.lowestUser);

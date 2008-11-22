@@ -357,9 +357,13 @@ describe "mod_passenger running in Apache 2" do
 	
 	describe "configuration options" do
 		before :all do
+			@apache2 << "PassengerMaxPoolSize 3"
+			
 			@stub = setup_rails_stub('mycook')
 			rails_dir = File.expand_path(@stub.app_root) + "/public"
+			
 			@apache2.add_vhost('mycook.passenger.test', rails_dir)
+			
 			@apache2.add_vhost('norails.passenger.test', rails_dir) do |vhost|
 				vhost << "RailsAutoDetect off"
 			end
@@ -369,6 +373,7 @@ describe "mod_passenger running in Apache 2" do
 			@apache2.add_vhost('passenger.test', rails_dir) do |vhost|
 				vhost << "RailsEnv development"
 				vhost << "RailsSpawnMethod conservative"
+				vhost << "PassengerUseGlobalQueue on"
 			end
 			@apache2.start
 		end
@@ -383,12 +388,12 @@ describe "mod_passenger running in Apache 2" do
 			get('/').should_not =~ /MyCook/
 		end
 		
-		it "setting RailsAutoDetect for one virtual host should not interfere with others" do
+		specify "setting RailsAutoDetect for one virtual host should not interfere with others" do
 			@server = "http://mycook.passenger.test:#{@apache2.port}"
 			get('/').should =~ /MyCook/
 		end
 		
-		it "RailsEnv is per-virtual host" do
+		specify "RailsEnv is per-virtual host" do
 			@server = "http://mycook.passenger.test:#{@apache2.port}"
 			get('/welcome/rails_env').should == "production"
 			
@@ -401,9 +406,144 @@ describe "mod_passenger running in Apache 2" do
 			get('/foo/backtrace').should_not =~ /framework_spawner/
 		end
 		
-		it "RailsSpawnMethod spawning is per-virtual host" do
+		specify "RailsSpawnMethod spawning is per-virtual host" do
 			@server = "http://mycook.passenger.test:#{@apache2.port}"
 			get('/welcome/backtrace').should =~ /application_spawner/
+		end
+		
+		describe "PassengerUseGlobalQueue" do
+			after :each do
+				# Restart Apache to reset the application pool's state.
+				@apache2.start
+			end
+			
+			it "is off by default" do
+				@server = "http://mycook.passenger.test:#{@apache2.port}"
+				
+				# Spawn the application.
+				get('/')
+				
+				threads = []
+				# Reserve all application pool slots.
+				3.times do |i|
+					thread = Thread.new do
+						File.unlink("#{@stub.app_root}/#{i}.txt") rescue nil
+						get("/welcome/sleep_until_exists?name=#{i}.txt")
+					end
+					threads << thread
+				end
+				
+				# Wait until all application instances are waiting
+				# for the quit file.
+				while !File.exist?("#{@stub.app_root}/waiting_0.txt") ||
+				      !File.exist?("#{@stub.app_root}/waiting_1.txt") ||
+				      !File.exist?("#{@stub.app_root}/waiting_2.txt")
+					sleep 0.1
+				end
+				
+				# While all slots are reserved, make two more requests.
+				first_request_done = false
+				second_request_done = false
+				thread = Thread.new do
+					get("/")
+					first_request_done = true
+				end
+				threads << thread
+				thread = Thread.new do
+					get("/")
+					second_request_done = true
+				end
+				threads << thread
+				
+				# These requests should both block.
+				sleep 0.5
+				first_request_done.should be_false
+				second_request_done.should be_false
+				
+				# One of the requests should still be blocked
+				# if one application instance frees up.
+				File.open("#{@stub.app_root}/2.txt", 'w')
+				begin
+					Timeout.timeout(5) do
+						while !first_request_done && !second_request_done
+							sleep 0.1
+						end
+					end
+				rescue Timeout::Error
+				end
+				(first_request_done || second_request_done).should be_true
+				
+				File.open("#{@stub.app_root}/0.txt", 'w')
+				File.open("#{@stub.app_root}/1.txt", 'w')
+				File.open("#{@stub.app_root}/2.txt", 'w')
+				threads.each do |thread|
+					thread.join
+				end
+			end
+			
+			it "works and is per-virtual host" do
+				@server = "http://passenger.test:#{@apache2.port}"
+				
+				# Spawn the application.
+				get('/')
+				
+				threads = []
+				# Reserve all application pool slots.
+				3.times do |i|
+					thread = Thread.new do
+						File.unlink("#{@stub2.app_root}/#{i}.txt") rescue nil
+						get("/foo/sleep_until_exists?name=#{i}.txt")
+					end
+					threads << thread
+				end
+				
+				# Wait until all application instances are waiting
+				# for the quit file.
+				while !File.exist?("#{@stub2.app_root}/waiting_0.txt") ||
+				      !File.exist?("#{@stub2.app_root}/waiting_1.txt") ||
+				      !File.exist?("#{@stub2.app_root}/waiting_2.txt")
+					sleep 0.1
+				end
+				
+				# While all slots are reserved, make two more requests.
+				first_request_done = false
+				second_request_done = false
+				thread = Thread.new do
+					get("/")
+					first_request_done = true
+				end
+				threads << thread
+				thread = Thread.new do
+					get("/")
+					second_request_done = true
+				end
+				threads << thread
+				
+				# These requests should both block.
+				sleep 0.5
+				first_request_done.should be_false
+				second_request_done.should be_false
+				
+				# Both requests should be processed if one application instance frees up.
+				File.open("#{@stub2.app_root}/2.txt", 'w')
+				begin
+					Timeout.timeout(5) do
+						while !first_request_done || !second_request_done
+							sleep 0.1
+						end
+					end
+				rescue Timeout::Error
+				end
+				first_request_done.should be_true
+				second_request_done.should be_true
+				
+				File.open("#{@stub2.app_root}/0.txt", 'w')
+				File.open("#{@stub2.app_root}/1.txt", 'w')
+				File.open("#{@stub2.app_root}/2.txt", 'w')
+				threads.each do |thread|
+					thread.join
+				end
+			end
 		end
 	end
 	

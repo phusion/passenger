@@ -233,7 +233,6 @@ private:
 	boost::thread *cleanerThread;
 	bool detached;
 	bool done;
-	bool useGlobalQueue;
 	unsigned int maxIdleTime;
 	unsigned int waitingOnGlobalQueue;
 	condition cleanerThreadSleeper;
@@ -306,7 +305,6 @@ private:
 		result << "count    = " << count << endl;
 		result << "active   = " << active << endl;
 		result << "inactive = " << inactiveApps.size() << endl;
-		result << "Using global queue: " << (useGlobalQueue ? "yes" : "no") << endl;
 		result << "Waiting on global queue: " << waitingOnGlobalQueue << endl;
 		result << endl;
 		
@@ -432,12 +430,12 @@ private:
 	 * @throws SystemException
 	 */
 	pair<AppContainerPtr, Domain *>
-	spawnOrUseExisting(boost::mutex::scoped_lock &l, const SpawnOptions &spawnOptions) {
+	spawnOrUseExisting(boost::mutex::scoped_lock &l, const PoolOptions &options) {
 		beginning_of_function:
 		
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
-		const string &appRoot(spawnOptions.appRoot);
+		const string &appRoot(options.appRoot);
 		AppContainerPtr container;
 		Domain *domain;
 		AppContainerList *instances;
@@ -481,7 +479,7 @@ private:
 				} else if (count >= max || (
 					maxPerApp != 0 && domain->size >= maxPerApp )
 					) {
-					if (useGlobalQueue) {
+					if (options.useGlobalQueue) {
 						waitingOnGlobalQueue++;
 						activeOrMaxChanged.wait(l);
 						waitingOnGlobalQueue--;
@@ -506,7 +504,7 @@ private:
 					{
 						this_thread::restore_interruption ri(di);
 						this_thread::restore_syscall_interruption rsi(dsi);
-						container->app = spawnManager.spawn(spawnOptions);
+						container->app = spawnManager.spawn(options);
 					}
 					container->sessions = 0;
 					instances->push_back(container);
@@ -539,14 +537,14 @@ private:
 				{
 					this_thread::restore_interruption ri(di);
 					this_thread::restore_syscall_interruption rsi(dsi);
-					container->app = spawnManager.spawn(spawnOptions);
+					container->app = spawnManager.spawn(options);
 				}
 				container->sessions = 0;
 				it = domains.find(appRoot);
 				if (it == domains.end()) {
 					domain = new Domain();
 					domain->size = 1;
-					domain->maxRequests = spawnOptions.maxRequests;
+					domain->maxRequests = options.maxRequests;
 					domains[appRoot] = ptr(domain);
 				} else {
 					domain = it->second.get();
@@ -628,7 +626,6 @@ public:
 		max = DEFAULT_MAX_POOL_SIZE;
 		count = 0;
 		active = 0;
-		useGlobalQueue = false;
 		waitingOnGlobalQueue = 0;
 		maxPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
 		maxIdleTime = DEFAULT_MAX_IDLE_TIME;
@@ -651,7 +648,7 @@ public:
 		delete cleanerThread;
 	}
 	
-	virtual Application::SessionPtr get(const SpawnOptions &spawnOptions) {
+	virtual Application::SessionPtr get(const PoolOptions &options) {
 		TRACE_POINT();
 		using namespace boost::posix_time;
 		unsigned int attempt = 0;
@@ -664,7 +661,7 @@ public:
 			attempt++;
 			
 			pair<AppContainerPtr, Domain *> p(
-				spawnOrUseExisting(l, spawnOptions)
+				spawnOrUseExisting(l, options)
 			);
 			AppContainerPtr &container = p.first;
 			Domain *domain = p.second;
@@ -683,7 +680,7 @@ public:
 				instances.erase(container->iterator);
 				domain->size--;
 				if (instances.empty()) {
-					domains.erase(spawnOptions.appRoot);
+					domains.erase(options.appRoot);
 				}
 				count--;
 				active--;
@@ -693,7 +690,7 @@ public:
 				if (attempt == MAX_GET_ATTEMPTS) {
 					string message("Cannot connect to an existing "
 						"application instance for '");
-					message.append(spawnOptions.appRoot);
+					message.append(options.appRoot);
 					message.append("': ");
 					try {
 						const SystemException &syse =
@@ -745,10 +742,6 @@ public:
 		boost::mutex::scoped_lock l(lock);
 		this->maxPerApp = maxPerApp;
 		activeOrMaxChanged.notify_all();
-	}
-	
-	virtual void setUseGlobalQueue(bool value) {
-		this->useGlobalQueue = value;
 	}
 	
 	virtual pid_t getSpawnServerPid() const {

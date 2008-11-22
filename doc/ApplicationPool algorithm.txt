@@ -89,15 +89,18 @@ explicitly define some special types:
     inactive_apps. This iterator is only valid if this AppContainer really is
     in that list.
 
-- SpawnOptions
-  A structure containing additional information, used by the application instance
-  spawning process.
+- PoolOptions
+  A structure containing additional information used by the spawn manager's
+  spawning process, as well as by the get() function.
   
-  A SpawnOptions has the following members:
+  A PoolOptions has the following members:
   * max_requests (unsigned integer) - The maximum number of requests that the
     application instance may process. After having processed this many requests,
     the application instance will be shut down. A value of 0 indicates that there
     is no maximum.
+  * use_global_queue (boolean) - Whether to use a global queue for all
+    application instances, or a queue that's private to the application instance.
+    The users guide explains this feature in more detail.
 
 === Special functions
 
@@ -189,7 +192,7 @@ Here's an UML diagram in ASCII art:
 
 # Connect to an existing application instance or to a newly spawned application instance.
 # 'app_root' specifies the application root folder of the application. 'options' is an
-# object of type 'SpawnOptions', which contains additional information which may be
+# object of type 'PoolOptions', which contains additional information which may be
 # relevant for spawning.
 function get(app_root, options):
 	MAX_ATTEMPTS = 10
@@ -256,7 +259,7 @@ function spawn_or_use_existing(app_root, options):
 			# spawned for this application domain has been reached.
 			#
 			# We're not allowed to spawn a new application instance.
-			if use_global_queue:
+			if options.use_global_queue:
 				# So we wait until _active_ has changed, then
 				# we restart this function and try again.
 				waiting_on_global_queue++

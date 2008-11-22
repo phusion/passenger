@@ -24,7 +24,7 @@
 #include <sys/types.h>
 
 #include "Application.h"
-#include "SpawnOptions.h"
+#include "PoolOptions.h"
 
 namespace Passenger {
 
@@ -92,17 +92,17 @@ public:
 	virtual ~ApplicationPool() {};
 	
 	/**
-	 * Open a new session with the application specified by <tt>spawnOptions.appRoot</tt>.
+	 * Open a new session with the application specified by <tt>PoolOptions.appRoot</tt>.
 	 * See the class description for ApplicationPool, as well as Application::connect(),
 	 * on how to use the returned session object.
 	 *
 	 * Internally, this method may either spawn a new application instance, or use
 	 * an existing one.
 	 *
-	 * @param spawnOptions An object containing information on which application to open
+	 * @param options An object containing information on which application to open
 	 *             a session with, as well as spawning details. Spawning details will be used
 	 *             if the pool decides that spawning a new application instance is necessary.
-	 *             See SpawnManager and SpawnOptions for details.
+	 *             See SpawnManager and PoolOptions for details.
 	 * @return A session object.
 	 * @throw SpawnException An attempt was made to spawn a new application instance, but that attempt failed.
 	 * @throw BusyException The application pool is too busy right now, and cannot
@@ -115,13 +115,13 @@ public:
 	 *       <tt>get("/home/../home/foo")</tt>, then ApplicationPool will think
 	 *       they're 2 different applications, and thus will spawn 2 application instances.
 	 */
-	virtual Application::SessionPtr get(const SpawnOptions &spawnOptions) = 0;
+	virtual Application::SessionPtr get(const PoolOptions &options) = 0;
 	
 	/**
 	 * Convenience shortcut for calling get() with default spawn options.
 	 */
 	virtual Application::SessionPtr get(const string &appRoot) {
-		return get(SpawnOptions(appRoot));
+		return get(PoolOptions(appRoot));
 	}
 	
 	/**
@@ -169,18 +169,6 @@ public:
 	 * It is allowed to set a limit lower than the current number of spawned applications.
 	 */
 	virtual void setMaxPerApp(unsigned int max) = 0;
-	
-	/**
-	 * Sets whether to use a global queue instead of a per-backend process
-	 * queue. If enabled, when all backend processes are active, get() will
-	 * wait until there's at least one backend process that's idle, instead
-	 * of queuing the request into a random process's private queue.
-	 * This is especially useful if a website has one or more long-running
-	 * requests.
-	 *
-	 * Defaults to false.
-	 */
-	virtual void setUseGlobalQueue(bool value) = 0;
 	
 	/**
 	 * Get the process ID of the spawn server that is used.

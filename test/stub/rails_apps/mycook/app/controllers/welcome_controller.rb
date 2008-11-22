@@ -44,4 +44,12 @@ class WelcomeController < ApplicationController
 	def request_uri
 		render :text => request.request_uri
 	end
+	
+	def sleep_until_exists
+		File.open("#{RAILS_ROOT}/waiting_#{params[:name]}", 'w')
+		while !File.exist?("#{RAILS_ROOT}/#{params[:name]}")
+			sleep 0.1
+		end
+		render :nothing => true
+	end
 end

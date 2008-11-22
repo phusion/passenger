@@ -73,6 +73,7 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->memoryLimit = 0;
 	config->memoryLimitSpecified = false;
 	config->highPerformance = DirConfig::UNSET;
+	config->useGlobalQueue = DirConfig::UNSET;
 	return config;
 }
 
@@ -107,6 +108,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->memoryLimit = (add->memoryLimitSpecified) ? add->memoryLimit : base->memoryLimit;
 	config->memoryLimitSpecified = base->memoryLimitSpecified || add->memoryLimitSpecified;
 	config->highPerformance = (add->highPerformance == DirConfig::UNSET) ? base->highPerformance : add->highPerformance;
+	config->useGlobalQueue = (add->useGlobalQueue == DirConfig::UNSET) ? base->useGlobalQueue : add->useGlobalQueue;
 	return config;
 }
 
@@ -122,8 +124,6 @@ passenger_config_create_server(apr_pool_t *p, server_rec *s) {
 	config->maxInstancesPerAppSpecified = false;
 	config->poolIdleTime = DEFAULT_POOL_IDLE_TIME;
 	config->poolIdleTimeSpecified = false;
-	config->useGlobalQueue = false;
-	config->useGlobalQueueSpecified = false;
 	config->userSwitching = true;
 	config->userSwitchingSpecified = false;
 	config->defaultUser = NULL;
@@ -145,8 +145,6 @@ passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
 	config->maxInstancesPerAppSpecified = base->maxInstancesPerAppSpecified || add->maxInstancesPerAppSpecified;
 	config->poolIdleTime = (add->poolIdleTime) ? base->poolIdleTime : add->poolIdleTime;
 	config->poolIdleTimeSpecified = base->poolIdleTimeSpecified || add->poolIdleTimeSpecified;
-	config->useGlobalQueue = (add->useGlobalQueue) ? base->useGlobalQueue : add->useGlobalQueue;
-	config->useGlobalQueueSpecified = base->useGlobalQueueSpecified || add->useGlobalQueueSpecified;
 	config->userSwitching = (add->userSwitchingSpecified) ? add->userSwitching : base->userSwitching;
 	config->userSwitchingSpecified = base->userSwitchingSpecified || add->userSwitchingSpecified;
 	config->defaultUser = (add->defaultUser == NULL) ? base->defaultUser : add->defaultUser;
@@ -169,8 +167,6 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 		final->maxInstancesPerAppSpecified = final->maxInstancesPerAppSpecified || config->maxInstancesPerAppSpecified;
 		final->poolIdleTime = (final->poolIdleTimeSpecified) ? final->poolIdleTime : config->poolIdleTime;
 		final->poolIdleTimeSpecified = final->poolIdleTimeSpecified || config->poolIdleTimeSpecified;
-		final->useGlobalQueue = (final->useGlobalQueue) ? final->useGlobalQueue : config->useGlobalQueue;
-		final->useGlobalQueueSpecified = final->useGlobalQueueSpecified || config->useGlobalQueueSpecified;
 		final->userSwitching = (config->userSwitchingSpecified) ? config->userSwitching : final->userSwitching;
 		final->userSwitchingSpecified = final->userSwitchingSpecified || config->userSwitchingSpecified;
 		final->defaultUser = (final->defaultUser != NULL) ? final->defaultUser : config->defaultUser;
@@ -277,14 +273,12 @@ cmd_passenger_pool_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
 
 static const char *
 cmd_passenger_use_global_queue(cmd_parms *cmd, void *pcfg, int arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
+	DirConfig *config = (DirConfig *) pcfg;
 	if (arg) {
-		config->useGlobalQueue = true;
+		config->useGlobalQueue = DirConfig::ENABLED;
 	} else {
-		config->useGlobalQueue = false;
+		config->useGlobalQueue = DirConfig::DISABLED;
 	}
-	config->useGlobalQueueSpecified = true;
 	return NULL;
 }
 
@@ -519,7 +513,7 @@ const command_rec passenger_commands[] = {
 	AP_INIT_FLAG("PassengerUseGlobalQueue",
 		(Take1Func) cmd_passenger_use_global_queue,
 		NULL,
-		ACCESS_CONF | RSRC_CONF,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Enable or disable Passenger's global queuing mode mode."),
 	AP_INIT_FLAG("PassengerUserSwitching",
 		(Take1Func) cmd_passenger_user_switching,
