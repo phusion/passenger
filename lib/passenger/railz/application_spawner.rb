@@ -261,7 +261,11 @@ private
 		if !defined?(Dispatcher)
 			require 'dispatcher'
 		end
-		require_dependency 'application'
+		if File.exist?('app/controllers/application_controller.rb')
+			require_dependency 'application_controller'
+		else
+			require_dependency 'application'
+		end
 		if GC.copy_on_write_friendly?
 			Dir.glob('app/{models,controllers,helpers}/*.rb').each do |file|
 				require_dependency normalize_path(file)
