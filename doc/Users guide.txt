@@ -542,6 +542,7 @@ This option allows one to specify the Ruby interpreter to use.
 This option may only occur once, in the global server configuration.
 The default is 'ruby'.
 
+[[PassengerUseGlobalQueue]]
 === PassengerUseGlobalQueue <on|off> ===
 Turns the use of global queuing on or off.
 
@@ -550,7 +551,7 @@ default is 'off'.
 
 'This feature is sponsored by http://www.37signals.com/[37signals].'
 
-==== What does this option do?
+.What does this option do?
 
 Recall that Phusion Passenger spawns multiple backend processes (e.g. multiple
 Ruby on Rails processes), each which processes HTTP requests serially. One of
@@ -571,7 +572,7 @@ all the backend processes are still busy, then Phusion Passenger will wait until
 at least one backend process is done, and will then forward the request to that
 process.
 
-==== When to turn on global queuing?
+.When to turn on global queuing?
 
 You should turn on global queuing if one of your web applications may have
 long-running requests.
@@ -786,7 +787,7 @@ Internally, Phusion Passenger spawns multiple Ruby on Rails processes in order t
 requests. But there are multiple ways with which processes can be spawned, each having
 its own set of pros and cons. Supported spawn methods are:
 
-smart::
+'smart'::
 When this spawn method is used, Phusion Passenger will attempt to cache Ruby on Rails
 framework code and application code for a limited period of time.
 +
@@ -799,12 +800,13 @@ Some Ruby on Rails applications and libraries are not compatible with smart spaw
 If that's the case for your application, then you should use 'conservative' as
 spawning method.
 
-conservative::
+'conservative'::
 This spawning method is similar to the one used in Mongrel Cluster. It does not perform
 any code caching at all.
 +
 *Pros:*
-Conservative spawning is guaranteed to be compatible with all applications and libraries.
+Conservative spawning is guaranteed to be compatible with all Rails applications
+and libraries.
 +
 *Cons:*
 Much slower than smart spawning. Every spawn action will be equally slow, though no slower than
@@ -1341,6 +1343,8 @@ sessions compared to the others, then there might be a problem:
 Possible reasons why spikes can occur:
 
 . Your application is busy processing a request that takes a very long time.
+  If this is the case, then you might want to turn
+  <<PassengerUseGlobalQueue,global queuing>> on.
 . Your application is frozen, i.e. has stopped responding. See
   <<debugging_frozen,Debugging frozen applications>> for tips.
 
