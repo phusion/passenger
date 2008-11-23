@@ -42,11 +42,7 @@ class ApplicationSpawner
 	#   exit() during startup.
 	# - SystemCallError, IOError, SocketError: Something went wrong.
 	def spawn_application(app_root, options = {})
-		options = {
-			"lower_privilege" => true,
-			"lowest_user"     => "nobody",
-			"environment"     => "production"
-		}.merge(options)
+		options = sanitize_spawn_options(options)
 		
 		a, b = UNIXSocket.pair
 		pid = safe_fork(self.class.to_s, true) do

@@ -87,11 +87,7 @@ class ApplicationSpawner < AbstractServer
 		rescue InvalidPath
 			raise
 		end
-		@options = {
-			"lower_privilege" => true,
-			"lowest_user"     => "nobody",
-			"environment"     => "production"
-		}.merge(options)
+		@options = sanitize_spawn_options(options)
 		@lower_privilege = @options["lower_privilege"]
 		@lowest_user     = @options["lowest_user"]
 		@environment     = @options["environment"]

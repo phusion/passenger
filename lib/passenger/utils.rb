@@ -348,6 +348,23 @@ protected
 		end
 	end
 	
+	def sanitize_spawn_options(options)
+		defaults = {
+			"lower_privilege" => true,
+			"lowest_user"     => "nobody",
+			"environment"     => "production",
+			"app_type"        => "rails",
+			"spawn_method"    => "smart-lv2",
+			"framework_spawner_timeout" => -1,
+			"app_spawner_timeout"       => -1
+		}
+		options = defaults.merge(options)
+		options["lower_privilege"]           = options["lower_privilege"] == "true"
+		options["framework_spawner_timeout"] = options["framework_spawner_timeout"].to_i
+		options["app_spawner_timeout"]       = options["app_spawner_timeout"].to_i
+		return options
+	end
+	
 	# Returns the directory in which to store Phusion Passenger-specific
 	# temporary files. If +create+ is true, then this method creates the
 	# directory if it doesn't exist.

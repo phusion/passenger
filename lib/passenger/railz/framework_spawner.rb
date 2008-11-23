@@ -150,11 +150,7 @@ class FrameworkSpawner < AbstractServer
 	def spawn_application(app_root, options = {})
 		app_root = normalize_path(app_root)
 		assert_valid_app_root(app_root)
-		options = {
-			"lower_privilege" => true,
-			"lowest_user"     => "nobody",
-			"environment"     => "production"
-		}.merge(options)
+		options = sanitize_spawn_options(options)
 		options["app_root"] = app_root
 		
 		exception_to_propagate = nil

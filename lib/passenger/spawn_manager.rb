@@ -122,11 +122,6 @@ class SpawnManager < AbstractServer
 	#   A timeout of 0 means that the spawner server should never idle timeout. A timeout of
 	#   -1 means that the default timeout value should be used. The default value is -1.
 	#
-	# ['memory_limit']
-	#   The maximum amount of memory that the application instance may use. If the limit has
-	#   been reached, the application instance will exit gracefully.
-	#   The default value is 0, which means that there is no limit.
-	#
 	# <b>Exceptions:</b>
 	# - InvalidPath: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
 	# - VersionNotFound: The Ruby on Rails framework version that the given application requires
@@ -138,16 +133,7 @@ class SpawnManager < AbstractServer
 		if !options["app_root"]
 			raise ArgumentError, "The 'app_root' option must be given."
 		end
-		options = {
-			"lower_privilege" => true,
-			"lowest_user"     => "nobody",
-			"environment"     => "production",
-			"app_type"        => "rails",
-			"spawn_method"    => "smart-lv2",
-			"framework_spawner_timeout" => -1,
-			"app_spawner_timeout"       => -1,
-			"memory_limit"    => 0
-		}.merge(options)
+		options = sanitize_spawn_options(options)
 		
 		if options["app_type"] == "rails"
 			if !defined?(Railz::FrameworkSpawner)
@@ -287,12 +273,7 @@ private
 	end
 	
 	def handle_spawn_application(*options)
-		options = Hash[*options]
-		options["lower_privilege"]           = options["lower_privilege"] == "true"
-		options["framework_spawner_timeout"] = options["framework_spawner_timeout"].to_i
-		options["app_spawner_timeout"]       = options["app_spawner_timeout"].to_i
-		options["memory_limit"]              = options["memory_limit"].to_i
-		
+		options = sanitize_spawn_options(Hash[*options])
 		app = nil
 		app_root = options["app_root"]
 		app_type = options["app_type"]
