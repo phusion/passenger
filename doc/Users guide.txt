@@ -687,10 +687,9 @@ The default value is '0'.
 
 [[PassengerPoolIdleTime]]
 ==== PassengerPoolIdleTime <integer> ====
-The maximum number of seconds that a Ruby on Rails or Rack application instance
-may be idle. That is, if an application instance hasn't done anything after
-the given number of seconds, then it will be shutdown in order to conserve
-memory.
+The maximum number of seconds that an application instance may be idle. That is,
+if an application instance hasn't received any traffic after the given number of
+seconds, then it will be shutdown in order to conserve memory.
 
 Decreasing this value means that applications will have to be spawned
 more often. Since spawning is a relatively slow operation, some visitors may
