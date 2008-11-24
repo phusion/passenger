@@ -8,7 +8,6 @@
 - more aggressive I/O timeout enforcement
 - Solaris support, thanks to Alex Osborne and Jacob Harris and alex.kiernan
 - applications may now have a model named 'Passenger'
-- frameworkspawner will not be used when rails app uses vendored rails.
 - an '--auto' option to passenger-install-apache2-module
 - PassengerMaxRequests
 - passenger-status now displays additional useful information, namely the
@@ -21,3 +20,4 @@
 - %2F (escaped forward slash) in URL is now supported. AllowEncodedSlashes
   must be turned on. Thanks adam.hooper.
 - Error pages now return HTTP 500 errors.
+- PassengerUseGlobalQueue is now per-virtual host.
