@@ -17,17 +17,30 @@ namespace Passenger {
  *    ScgiRequestParser parser;
  *    char buf[1024 * 16];
  *    ssize_t size;
+ *    unsigned in bytesAccepted;
  *    
  *    do {
  *        size = read(fd, buf, sizeof(buf));
- *    } while (parser.feed(buf, size) == size);
+ *        bytesAccepted = parser.feed(buf, size);
+ *    } while (parser.acceptingInput());
  *    // Parser is done when its return value isn't equal to the input size.
  *    
- *    // Check whether an error occured.
+ *    // Check whether a parse error occured.
  *    if (parser.getState() == ScgiRequestParser::ERROR) {
  *        bailOut();
  *    } else {
- *        doSomething(parser.getHeader());
+ *        // All good! Do something with the SCGI header that the parser parsed.
+ *        processHeader(parser.getHeader());
+ *        
+ *        // If the last buffer passed to the parser also contains body data,
+ *        // then the body data starts at 'buf + bytesAccepted'.
+ *        if (bytesAccepted < size) {
+ *            processBody(buf + bytesAccepted);
+ *        }
+ *        while (!end_of_file(fd)) {
+ *            ... read(...) ...
+ *            processBody(...);
+ *        }
  *    }
  * @endcode
  *
@@ -210,6 +223,8 @@ public:
 	 * Lookup is case-sensitive.
 	 *
 	 * Returns the empty string if there is no such header.
+	 *
+	 * @pre getState() == DONE
 	 */
 	string getHeader(const string &name) const {
 		map<string, string>::const_iterator it(headers.find(name));
@@ -223,6 +238,8 @@ public:
 	/**
 	 * Checks whether there is a header with the given name.
 	 * Lookup is case-sensitive.
+	 *
+	 * @pre getState() == DONE
 	 */
 	bool hasHeader(const string &name) const {
 		return headers.find(name) != headers.end();
@@ -233,6 +250,14 @@ public:
 	 */
 	State getState() const {
 		return state;
+	}
+	
+	/**
+	 * Checks whether this parser is still capable of accepting input (that
+	 * is, that this parser is not in a final state).
+	 */
+	bool acceptingInput() const {
+		return state != DONE && state != ERROR;
 	}
 };
 
