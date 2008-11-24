@@ -204,7 +204,7 @@ end
 class TEST
 	CXXFLAGS = "#{::CXXFLAGS} -DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL "
 
-	AP2_FLAGS = "-I../ext/apache2 -I../ext -Isupport #{APR_FLAGS} #{APU_FLAGS}"
+	AP2_FLAGS = "-I../ext/apache2 -I../ext/nginx -I../ext -Isupport #{APR_FLAGS} #{APU_FLAGS}"
 	AP2_OBJECTS = {
 		'CxxTestMain.o' => %w(CxxTestMain.cpp),
 		'MessageChannelTest.o' => %w(MessageChannelTest.cpp
@@ -234,6 +234,8 @@ class TEST
 			../ext/apache2/PoolOptions.h
 			../ext/apache2/Application.h),
 		'PoolOptionsTest.o' => %w(PoolOptionsTest.cpp ../ext/apache2/PoolOptions.h),
+		'ScgiRequestParserTest.o' => %w(ScgiRequestParserTest.cpp
+			../ext/nginx/ScgiRequestParser.h),
 		'UtilsTest.o' => %w(UtilsTest.cpp ../ext/apache2/Utils.h)
 	}
 	
