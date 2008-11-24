@@ -648,6 +648,10 @@ public:
 		delete cleanerThread;
 	}
 	
+	virtual Application::SessionPtr get(const string &appRoot) {
+		return ApplicationPool::get(appRoot);
+	}
+	
 	virtual Application::SessionPtr get(const PoolOptions &options) {
 		TRACE_POINT();
 		using namespace boost::posix_time;
@@ -802,6 +806,8 @@ public:
 		return result.str();
 	}
 };
+
+typedef shared_ptr<StandardApplicationPool> StandardApplicationPoolPtr;
 
 } // namespace Passenger
 
