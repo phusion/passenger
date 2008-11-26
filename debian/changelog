@@ -1,3 +1,10 @@
+passenger (2.0.3-0ubuntu1~bbox3) hardy; urgency=low
+
+  * Change rubygems depends to suggests
+  * Fix typo in control that led to mod_passenger.so being put in /
+
+ -- John Leach <john@brightbox.co.uk>  Wed, 26 Nov 2008 14:02:29 +0000
+
 passenger (2.0.3-0ubuntu1~bbox2) intrepid; urgency=low
 
   * Initial release: closes LP: #246719
