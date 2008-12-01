@@ -160,7 +160,7 @@ private
 
 	def self.find_apu_config
 		if env_defined?('APU_CONFIG')
-			apr_config = ENV['APU_CONFIG']
+			apu_config = ENV['APU_CONFIG']
 		elsif RUBY_PLATFORM =~ /darwin/ && HTTPD == "/usr/sbin/httpd"
 			# If we're on MacOS X, and we're compiling against the
 			# default provided Apache, then we'll want to query the
