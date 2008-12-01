@@ -517,7 +517,7 @@ private:
 						errno);
 				}
 				written += ret;
-			} while (written < len);
+			} while (written < (size_t) len);
 		}
 		if (len == -1) {
 			throw IOException("An error occurred while receiving HTTP upload data.");
@@ -614,6 +614,7 @@ public:
 			applicationPool->setMax(config->maxPoolSize);
 			applicationPool->setMaxPerApp(config->maxInstancesPerApp);
 			applicationPool->setMaxIdleTime(config->poolIdleTime);
+			applicationPool->setUseGlobalQueue(config->getUseGlobalQueue());
 		} catch (const thread_interrupted &) {
 			P_TRACE(3, "A system call was interrupted during initialization of "
 				"an Apache child process. Apache is probably restarting or "
@@ -700,10 +701,9 @@ public:
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				if (e.hasErrorPage()) {
+					r->status = 500;
 					ap_set_content_type(r, "text/html; charset=utf-8");
 					ap_rputs(e.getErrorPage().c_str(), r);
-					// Unfortunately we can't return a 500 Internal Server
-					// Error. Apache's HTTP error handler would kick in.
 					return OK;
 				} else {
 					throw;
@@ -860,6 +860,7 @@ destroy_hooks(void *arg) {
 		this_thread::disable_syscall_interruption dsi;
 		P_DEBUG("Shutting down Phusion Passenger...");
 		delete hooks;
+		hooks = NULL;
 	} catch (const thread_interrupted &) {
 		// Ignore interruptions, we're shutting down anyway.
 		P_TRACE(3, "A system call was interrupted during shutdown of mod_passenger.");
@@ -892,6 +893,7 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 	if (hooks != NULL) {
 		P_DEBUG("Restarting Phusion Passenger....");
 		delete hooks;
+		hooks = NULL;
 	}
 	try {
 		hooks = new Hooks(pconf, plog, ptemp, s);

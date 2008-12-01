@@ -105,6 +105,8 @@ passenger_config_create_server(apr_pool_t *p, server_rec *s) {
 	config->maxInstancesPerAppSpecified = false;
 	config->poolIdleTime = DEFAULT_POOL_IDLE_TIME;
 	config->poolIdleTimeSpecified = false;
+	config->useGlobalQueue = false;
+	config->useGlobalQueueSpecified = false;
 	config->userSwitching = true;
 	config->userSwitchingSpecified = false;
 	config->defaultUser = NULL;
@@ -126,6 +128,8 @@ passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
 	config->maxInstancesPerAppSpecified = base->maxInstancesPerAppSpecified || add->maxInstancesPerAppSpecified;
 	config->poolIdleTime = (add->poolIdleTime) ? base->poolIdleTime : add->poolIdleTime;
 	config->poolIdleTimeSpecified = base->poolIdleTimeSpecified || add->poolIdleTimeSpecified;
+	config->useGlobalQueue = (add->useGlobalQueue) ? base->useGlobalQueue : add->useGlobalQueue;
+	config->useGlobalQueueSpecified = base->useGlobalQueueSpecified || add->useGlobalQueueSpecified;
 	config->userSwitching = (add->userSwitchingSpecified) ? add->userSwitching : base->userSwitching;
 	config->userSwitchingSpecified = base->userSwitchingSpecified || add->userSwitchingSpecified;
 	config->defaultUser = (add->defaultUser == NULL) ? base->defaultUser : add->defaultUser;
@@ -148,6 +152,8 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 		final->maxInstancesPerAppSpecified = final->maxInstancesPerAppSpecified || config->maxInstancesPerAppSpecified;
 		final->poolIdleTime = (final->poolIdleTimeSpecified) ? final->poolIdleTime : config->poolIdleTime;
 		final->poolIdleTimeSpecified = final->poolIdleTimeSpecified || config->poolIdleTimeSpecified;
+		final->useGlobalQueue = (final->useGlobalQueue) ? final->useGlobalQueue : config->useGlobalQueue;
+		final->useGlobalQueueSpecified = final->useGlobalQueueSpecified || config->useGlobalQueueSpecified;
 		final->userSwitching = (config->userSwitchingSpecified) ? config->userSwitching : final->userSwitching;
 		final->userSwitchingSpecified = final->userSwitchingSpecified || config->userSwitchingSpecified;
 		final->defaultUser = (final->defaultUser != NULL) ? final->defaultUser : config->defaultUser;
@@ -250,6 +256,19 @@ cmd_passenger_pool_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
 		config->poolIdleTimeSpecified = true;
 		return NULL;
 	}
+}
+
+static const char *
+cmd_passenger_use_global_queue(cmd_parms *cmd, void *pcfg, int arg) {
+	ServerConfig *config = (ServerConfig *) ap_get_module_config(
+		cmd->server->module_config, &passenger_module);
+	if (arg) {
+		config->useGlobalQueue = true;
+	} else {
+		config->useGlobalQueue = false;
+	}
+	config->useGlobalQueueSpecified = true;
+	return NULL;
 }
 
 static const char *
@@ -402,6 +421,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The maximum number of seconds that an application may be idle before it gets terminated."),
+	AP_INIT_FLAG("PassengerUseGlobalQueue",
+		(Take1Func) cmd_passenger_use_global_queue,
+		NULL,
+		ACCESS_CONF | RSRC_CONF,
+		"Enable or disable Passenger's global queuing mode mode."),
 	AP_INIT_FLAG("PassengerUserSwitching",
 		(Take1Func) cmd_passenger_user_switching,
 		NULL,

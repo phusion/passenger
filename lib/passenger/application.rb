@@ -55,7 +55,8 @@ class Application
 			return nil
 		end
 		
-		found_version = Gem.cache.search('rails', gem_version_spec).map do |x|
+		search_results = Gem.cache.search(Gem::Dependency.new('rails', gem_version_spec), true)
+		found_version = search_results.map do |x|
 			x.version.version
 		end.sort.last
 		if found_version.nil?
@@ -63,7 +64,8 @@ class Application
 			# date because the Rails version may have been installed now.
 			# So we reload the RubyGems cache and try again.
 			Gem.clear_paths
-			found_version = Gem.cache.search('rails', gem_version_spec).map do |x|
+			search_results = Gem.cache.search(Gem::Dependency.new('rails', gem_version_spec), true)
+			found_version = search_results.map do |x|
 				x.version.version
 			end.sort.last
 		end

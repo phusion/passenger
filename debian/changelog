@@ -1,3 +1,9 @@
+passenger (2.0.4-1bbox1) hardy; urgency=low
+
+  * New upstream version, 2.0.4
+
+ -- John Leach <john@brightbox.co.uk>  Mon, 01 Dec 2008 23:00:11 +0000
+
 passenger (2.0.3-1bbox4) hardy; urgency=low
 
   * Tweaked build-depends for Ruby 1.8

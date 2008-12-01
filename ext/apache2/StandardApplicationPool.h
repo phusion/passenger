@@ -177,7 +177,9 @@ private:
 	thread *cleanerThread;
 	bool detached;
 	bool done;
+	bool useGlobalQueue;
 	unsigned int maxIdleTime;
+	unsigned int waitingOnGlobalQueue;
 	condition cleanerThreadSleeper;
 	
 	// Shortcuts for instance variables in SharedData. Saves typing in get().
@@ -235,6 +237,8 @@ private:
 		result << "count    = " << count << endl;
 		result << "active   = " << active << endl;
 		result << "inactive = " << inactiveApps.size() << endl;
+		result << "Using global queue: " << (useGlobalQueue ? "yes" : "no") << endl;
+		result << "Waiting on global queue: " << waitingOnGlobalQueue << endl;
 		result << endl;
 		
 		result << "----------- Applications -----------" << endl;
@@ -360,6 +364,8 @@ private:
 		const string &spawnMethod,
 		const string &appType
 	) {
+		beginning_of_function:
+		
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		AppContainerPtr container;
@@ -404,19 +410,26 @@ private:
 				} else if (count >= max || (
 					maxPerApp != 0 && appInstanceCount[appRoot] >= maxPerApp )
 					) {
-					AppContainerList::iterator it(list->begin());
-					AppContainerList::iterator smallest(list->begin());
-					it++;
-					for (; it != list->end(); it++) {
-						if ((*it)->sessions < (*smallest)->sessions) {
-							smallest = it;
+					if (useGlobalQueue) {
+						waitingOnGlobalQueue++;
+						activeOrMaxChanged.wait(l);
+						waitingOnGlobalQueue--;
+						goto beginning_of_function;
+					} else {
+						AppContainerList::iterator it(list->begin());
+						AppContainerList::iterator smallest(list->begin());
+						it++;
+						for (; it != list->end(); it++) {
+							if ((*it)->sessions < (*smallest)->sessions) {
+								smallest = it;
+							}
 						}
+						container = *smallest;
+						list->erase(smallest);
+						list->push_back(container);
+						container->iterator = list->end();
+						container->iterator--;
 					}
-					container = *smallest;
-					list->erase(smallest);
-					list->push_back(container);
-					container->iterator = list->end();
-					container->iterator--;
 				} else {
 					container = ptr(new AppContainer());
 					{
@@ -547,6 +560,8 @@ public:
 		max = DEFAULT_MAX_POOL_SIZE;
 		count = 0;
 		active = 0;
+		useGlobalQueue = false;
+		waitingOnGlobalQueue = 0;
 		maxPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
 		maxIdleTime = DEFAULT_MAX_IDLE_TIME;
 		cleanerThread = new thread(
@@ -665,6 +680,10 @@ public:
 		mutex::scoped_lock l(lock);
 		this->maxPerApp = maxPerApp;
 		activeOrMaxChanged.notify_all();
+	}
+	
+	virtual void setUseGlobalQueue(bool value) {
+		this->useGlobalQueue = value;
 	}
 	
 	virtual pid_t getSpawnServerPid() const {

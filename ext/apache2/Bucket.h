@@ -26,6 +26,8 @@
  * file descriptor management code.
  *
  * passenger_bucket is like apr_bucket_pipe, but never closes the pipe's file descriptor.
+ * It also ignores the APR_NONBLOCK_READ because that's known to cause strange
+ * I/O problems.
  */
 
 #include "apr_buckets.h"
