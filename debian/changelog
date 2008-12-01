@@ -1,3 +1,9 @@
+passenger (2.0.3-1bbox4) hardy; urgency=low
+
+  * Tweaked build-depends for Ruby 1.8
+
+ -- John Leach <john@brightbox.co.uk>  Wed, 26 Nov 2008 17:41:07 +0000
+
 passenger (2.0.3-0ubuntu1~bbox3) hardy; urgency=low
 
   * Change rubygems depends to suggests
