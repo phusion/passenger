@@ -24,10 +24,12 @@ require 'rake/extensions'
 require 'rake/cplusplus'
 require 'passenger/platform_info'
 
+verbose true
+
 ##### Configuration
 
 # Don't forget to edit Configuration.h too
-PACKAGE_VERSION = "2.0.3"
+PACKAGE_VERSION = "2.0.4"
 OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 
 include PlatformInfo
@@ -35,6 +37,7 @@ APXS2.nil? and raise "Could not find 'apxs' or 'apxs2'."
 APACHE2CTL.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
 HTTPD.nil? and raise "Could not find the Apache web server binary."
 APR_FLAGS.nil? and raise "Could not find Apache Portable Runtime (APR)."
+APU_FLAGS.nil? and raise "Could not find Apache Portable Runtime Utility (APU)."
 
 CXX = "g++"
 THREADING_FLAGS = "-D_REENTRANT"
@@ -107,7 +110,7 @@ end
 ##### Apache module
 
 class APACHE2
-	CXXFLAGS = "-I.. -fPIC #{OPTIMIZATION_FLAGS} #{APR_FLAGS} #{APXS2_FLAGS} #{CXXFLAGS}"
+	CXXFLAGS = "-I.. -fPIC #{OPTIMIZATION_FLAGS} #{APR_FLAGS} #{APU_FLAGS} #{APXS2_FLAGS} #{::CXXFLAGS}"
 	OBJECTS = {
 		'Configuration.o' => %w(Configuration.cpp Configuration.h),
 		'Bucket.o' => %w(Bucket.cpp Bucket.h),
@@ -184,8 +187,8 @@ end
 ##### Unit tests
 
 class TEST
-	CXXFLAGS = ::CXXFLAGS + " -Isupport -DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL "
-	AP2_FLAGS = "-I../ext/apache2 -I../ext #{APR_FLAGS}"
+	CXXFLAGS = "#{::CXXFLAGS} -Isupport -DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL "
+	AP2_FLAGS = "-I../ext/apache2 -I../ext #{APR_FLAGS} #{APU_FLAGS}"
 	
 	AP2_OBJECTS = {
 		'CxxTestMain.o' => %w(CxxTestMain.cpp),
@@ -368,7 +371,7 @@ subdir 'doc' do
 	end
 end
 
-Rake::RDocTask.new do |rd|
+Rake::RDocTask.new(:clobber_rdoc => "rdoc:clobber", :rerdoc => "rdoc:force") do |rd|
 	rd.main = "README"
 	rd.rdoc_dir = "doc/rdoc"
 	rd.rdoc_files.include("README", "DEVELOPERS.TXT",

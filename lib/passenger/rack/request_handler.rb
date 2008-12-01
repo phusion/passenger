@@ -72,8 +72,10 @@ protected
 				end
 			end
 			output.write(CRLF)
-			body.each do |s|
-				output.write(s)
+			if body
+				body.each do |s|
+					output.write(s)
+				end
 			end
 		ensure
 			body.close if body.respond_to?(:close)

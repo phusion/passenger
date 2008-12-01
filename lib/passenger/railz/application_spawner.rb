@@ -19,6 +19,7 @@
 require 'rubygems'
 require 'socket'
 require 'etc'
+require 'fcntl'
 require 'passenger/application'
 require 'passenger/abstract_server'
 require 'passenger/application'
@@ -260,7 +261,11 @@ private
 		if !defined?(Dispatcher)
 			require 'dispatcher'
 		end
-		require_dependency 'application'
+		if File.exist?('app/controllers/application_controller.rb')
+			require_dependency 'application_controller'
+		else
+			require_dependency 'application'
+		end
 		if GC.copy_on_write_friendly?
 			Dir.glob('app/{models,controllers,helpers}/*.rb').each do |file|
 				require_dependency normalize_path(file)
@@ -298,6 +303,7 @@ private
 				::ActiveRecord::Base.establish_connection
 			end
 			
+			reader.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
 			handler = RequestHandler.new(reader)
 			channel.write(Process.pid, handler.socket_name,
 				handler.using_abstract_namespace?)

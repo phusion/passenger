@@ -282,6 +282,10 @@ private:
 		server.pool.setMaxPerApp(maxPerApp);
 	}
 	
+	void processSetUseGlobalQueue(bool value) {
+		server.pool.setUseGlobalQueue(value);
+	}
+	
 	void processGetSpawnServerPid(const vector<string> &args) {
 		channel.write(toString(server.pool.getSpawnServerPid()).c_str(), NULL);
 	}
@@ -334,6 +338,8 @@ private:
 					processGetCount(args);
 				} else if (args[0] == "setMaxPerApp" && args.size() == 2) {
 					processSetMaxPerApp(atoi(args[1]));
+				} else if (args[0] == "setUseGlobalQueue" && args.size() == 2) {
+					processSetUseGlobalQueue(args[1] == "true");
 				} else if (args[0] == "getSpawnServerPid" && args.size() == 1) {
 					processGetSpawnServerPid(args);
 				} else {

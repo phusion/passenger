@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Class: IO</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href=".././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Class</span><br />IO</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../files/lib/passenger/utils_rb.html">lib/passenger/utils.rb</a>
+        </td>
+      </tr>
+    <tr>
+      <td>Parent:</td>
+      <td>
+Object
+     </td>
+   </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000004">recv_io</a></li>
+  <li><a href="#M000003">send_io</a></li>
+  </ul>
+
+
+
+
+
+
+<div class="sectiontitle">Public Instance methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000004"></a><b>recv_io</b>()
+  </div>
+  <div class="description">
+  <p>
+Receive an <a href="IO.html">IO</a> object (i.e. a file descriptor) from
+this <a href="IO.html">IO</a> channel. This only works if this <a
+href="IO.html">IO</a> channel is a Unix socket.
+</p>
+<p>
+Raises SystemCallError if something went wrong.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000004_source')" id="l_M000004_source">show source</a> ]</p>
+  <div id="M000004_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/passenger/utils.rb, line 330</span>
+330:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">recv_io</span>
+331:                 <span class="ruby-keyword kw">return</span> <span class="ruby-constant">IO</span>.<span class="ruby-identifier">new</span>(<span class="ruby-constant">Passenger</span><span class="ruby-operator">::</span><span class="ruby-constant">NativeSupport</span>.<span class="ruby-identifier">recv_fd</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">fileno</span>))
+332:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000003"></a><b>send_io</b>(io)
+  </div>
+  <div class="description">
+  <p>
+Send an <a href="IO.html">IO</a> object (i.e. a file descriptor) over this
+<a href="IO.html">IO</a> channel. This only works if this <a
+href="IO.html">IO</a> channel is a Unix socket.
+</p>
+<p>
+Raises SystemCallError if something went wrong.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000003_source')" id="l_M000003_source">show source</a> ]</p>
+  <div id="M000003_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/passenger/utils.rb, line 322</span>
+322:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">send_io</span>(<span class="ruby-identifier">io</span>)
+323:                 <span class="ruby-constant">Passenger</span><span class="ruby-operator">::</span><span class="ruby-constant">NativeSupport</span>.<span class="ruby-identifier">send_fd</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">fileno</span>, <span class="ruby-identifier">io</span>.<span class="ruby-identifier">fileno</span>)
+324:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

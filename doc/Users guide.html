@@ -1040,12 +1040,15 @@ run Ramaze::Adapter::Base</tt></pre>
 <div class="content">
 <pre><tt>require 'rubygems'
 require 'sinatra'
-Sinatra::Application.default_options.merge!(
-  :run =&gt; false,
-  :env =&gt; ENV['RACK_ENV']
-)
 
-### ...your Sinatra application code here... ###
+root_dir = File.dirname(__FILE__)
+
+Sinatra::Application.default_options.merge!(
+  :views    =&gt; File.join(root_dir, 'views'),
+  :app_file =&gt; File.join(root_dir, 'app.rb'),
+  :run =&gt; false,
+  :env =&gt; ENV['RACK_ENV'].to_sym
+)
 
 run Sinatra.application</tt></pre>
 </div></div>
@@ -1096,18 +1099,95 @@ The default is <em>0</em>.</p></div>
 <div class="para"><p>This option allows one to specify the Ruby interpreter to use.</p></div>
 <div class="para"><p>This option may only occur once, in the global server configuration.
 The default is <em>ruby</em>.</p></div>
-<h3 id="PassengerUserSwitching">5.4. PassengerUserSwitching &lt;on|off&gt;</h3><div style="clear:left"></div>
+<h3 id="PassengerUseGlobalQueue">5.4. PassengerUseGlobalQueue &lt;on|off&gt;</h3><div style="clear:left"></div>
+<div class="para"><p>Turns the use of global queuing on or off.</p></div>
+<div class="para"><p>This option may only occur once, in the global server configuration. The
+default is <em>off</em>.</p></div>
+<div class="para"><p><em>This feature is sponsored by <a href="http://www.37signals.com/">37signals</a>.</em></p></div>
+<div class="para"><div class="title">What does this option do?</div><p>Recall that Phusion Passenger spawns multiple backend processes (e.g. multiple
+Ruby on Rails processes), each which processes HTTP requests serially. One of
+Phusion Passenger's jobs is to forward HTTP requests to a suitable backend
+process. A backend process may take an arbitrary amount of time to process a
+specific HTTP request. If the websites are (temporarily) under high load, and
+the backend processes cannot process the requests fast enough, then some
+requests may have to be queued.</p></div>
+<div class="para"><p>If global queuing is turned off, then Phusion Passenger will use <em>fair load
+balancing</em>. This means that each backend process will have its own private
+queue. Phusion Passenger will forward an HTTP request to the backend process
+that has the least amount of requests in its queue.</p></div>
+<div class="para"><p>If global queuing is turned on, then Phusion Passenger will use a global queue
+that's shared between all backend processes. If an HTTP request comes in, and
+all the backend processes are still busy, then Phusion Passenger will wait until
+at least one backend process is done, and will then forward the request to that
+process.</p></div>
+<div class="para"><div class="title">When to turn on global queuing?</div><p>You should turn on global queuing if one of your web applications may have
+long-running requests.</p></div>
+<div class="para"><p>For example suppose that:</p></div>
+<div class="ilist"><ul>
+<li>
+<p>
+global queuing is turned off.
+</p>
+</li>
+<li>
+<p>
+we're currently in a state where all backend processes have 3 requests in
+  their queue, except for a single backend process, which has 1 request in its
+  queue.
+</p>
+</li>
+</ul></div>
+<div class="para"><p>The situation looks like this:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>Backend process A:  [*     ]  (1 request in queue)
+Backend process B:  [***   ]  (3 requests in queue)
+Backend process C:  [***   ]  (3 requests in queue)
+Backend process D:  [***   ]  (3 requests in queue)</tt></pre>
+</div></div>
+<div class="para"><p>Each process is currently serving short-running requests.</p></div>
+<div class="para"><p>Phusion Passenger will forward the next request to backend process A. A will
+now have 2 items in its queue. We'll mark this new request with an X:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>Backend process A:  [*X    ]  (2 request in queue)
+Backend process B:  [***   ]  (3 requests in queue)
+Backend process C:  [***   ]  (3 requests in queue)
+Backend process D:  [***   ]  (3 requests in queue)</tt></pre>
+</div></div>
+<div class="para"><p>Assuming that B, C and D still aren't done with their current request, the next
+HTTP request - let's call this Y - will be forwarded to backend process A as
+well, because it has the least number of items in its queue:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>Backend process A:  [*XY   ]  (3 requests in queue)
+Backend process B:  [***   ]  (3 requests in queue)
+Backend process C:  [***   ]  (3 requests in queue)
+Backend process D:  [***   ]  (3 requests in queue)</tt></pre>
+</div></div>
+<div class="para"><p>But if request X happens to be a long-running request that needs 60 seconds to
+complete, then we'll have a problem. Y won't be processed for at least 60
+seconds. It would have been a better idea if Y was forward to processes B, C or
+D instead, because they only have short-living requests in their queues.</p></div>
+<div class="para"><p>This problem will be avoided entirely if you turn global queuing on. With global
+queuing, all backend processes will share the same queue. The first backend
+process that becomes available will take from the queue, and so this
+&#8220;queuing-behind-long-running-request&#8221; problem will never occur.</p></div>
+<div class="para"><p>Turning global queuing off will yield a minor performance improvement (about 5%,
+depending on how fast/slow your web application is), which is why it's off by
+default.</p></div>
+<h3 id="PassengerUserSwitching">5.5. PassengerUserSwitching &lt;on|off&gt;</h3><div style="clear:left"></div>
 <div class="para"><p>Whether to enable <a href="#user_switching">user switching support</a>.</p></div>
 <div class="para"><p>This option may only occur once, in the global server configuration.
 The default value is <em>on</em>.</p></div>
-<h3 id="PassengerDefaultUser">5.5. PassengerDefaultUser &lt;username&gt;</h3><div style="clear:left"></div>
+<h3 id="PassengerDefaultUser">5.6. PassengerDefaultUser &lt;username&gt;</h3><div style="clear:left"></div>
 <div class="para"><p>Passenger enables <a href="#user_switching">user switching support</a> by default.
 This configuration option allows one to specify which user Rails/Rack
 applications must run as, if user switching fails or is disabled.</p></div>
 <div class="para"><p>This option may only occur once, in the global server configuration.
 The default value is <em>nobody</em>.</p></div>
-<h3 id="_resource_control_and_optimization_options">5.6. Resource control and optimization options</h3><div style="clear:left"></div>
-<h4 id="_passengermaxpoolsize_lt_integer_gt">5.6.1. PassengerMaxPoolSize &lt;integer&gt;</h4>
+<h3 id="_resource_control_and_optimization_options">5.7. Resource control and optimization options</h3><div style="clear:left"></div>
+<h4 id="_passengermaxpoolsize_lt_integer_gt">5.7.1. PassengerMaxPoolSize &lt;integer&gt;</h4>
 <div class="para"><p>The maximum number of Ruby on Rails or Rack application instances that may
 be simultaneously active. A larger number results in higher memory usage,
 but improved ability to handle concurrent HTTP clients.</p></div>
@@ -1132,7 +1212,7 @@ The default value is <em>6</em>.</p></div>
 by about 33%. And it's not hard to install.</td>
 </tr></table>
 </div>
-<h4 id="_passengermaxinstancesperapp_lt_integer_gt">5.6.2. PassengerMaxInstancesPerApp &lt;integer&gt;</h4>
+<h4 id="_passengermaxinstancesperapp_lt_integer_gt">5.7.2. PassengerMaxInstancesPerApp &lt;integer&gt;</h4>
 <div class="para"><p>The maximum number of application instances that may be simultaneously active
 for a single application. This helps to make sure that a single application
 will not occupy all available slots in the application pool.</p></div>
@@ -1142,11 +1222,10 @@ may use, i.e. only the global limit of <a href="#PassengerMaxPoolSize">Passenger
 will be enforced.</p></div>
 <div class="para"><p>This option may only occur once, in the global server configuration.
 The default value is <em>0</em>.</p></div>
-<h4 id="PassengerPoolIdleTime">5.6.3. PassengerPoolIdleTime &lt;integer&gt;</h4>
-<div class="para"><p>The maximum number of seconds that a Ruby on Rails or Rack application instance
-may be idle. That is, if an application instance hasn't done anything after
-the given number of seconds, then it will be shutdown in order to conserve
-memory.</p></div>
+<h4 id="PassengerPoolIdleTime">5.7.3. PassengerPoolIdleTime &lt;integer&gt;</h4>
+<div class="para"><p>The maximum number of seconds that an application instance may be idle. That is,
+if an application instance hasn't received any traffic after the given number of
+seconds, then it will be shutdown in order to conserve memory.</p></div>
 <div class="para"><p>Decreasing this value means that applications will have to be spawned
 more often. Since spawning is a relatively slow operation, some visitors may
 notice a small delay when they visit your Rails/Rack website. However, it will also
@@ -1157,8 +1236,8 @@ number of seconds that a visitor spends on a single Rails/Rack web page. But you
 mileage may vary.</p></div>
 <div class="para"><p>This option may only occur once, in the global server configuration.
 The default value is <em>300</em>.</p></div>
-<h3 id="_ruby_on_rails_specific_options">5.7. Ruby on Rails-specific options</h3><div style="clear:left"></div>
-<h4 id="_railsautodetect_lt_on_off_gt">5.7.1. RailsAutoDetect &lt;on|off&gt;</h4>
+<h3 id="_ruby_on_rails_specific_options">5.8. Ruby on Rails-specific options</h3><div style="clear:left"></div>
+<h4 id="_railsautodetect_lt_on_off_gt">5.8.1. RailsAutoDetect &lt;on|off&gt;</h4>
 <div class="para"><p>Whether Phusion Passenger should automatically detect whether a virtual host's
 document root is a Ruby on Rails application. The default is <em>on</em>.</p></div>
 <div class="para"><p>This option may occur in the global server configuration or in a virtual host
@@ -1186,23 +1265,23 @@ application by using the <a href="#RailsBaseURI">RailsBaseURI</a> configuration 
     RailsBaseURI /           # This line has been added.
 &lt;/VirtualHost&gt;</tt></pre>
 </div></div>
-<h4 id="RailsBaseURI">5.7.2. RailsBaseURI &lt;uri&gt;</h4>
+<h4 id="RailsBaseURI">5.8.2. RailsBaseURI &lt;uri&gt;</h4>
 <div class="para"><p>Used to specify that the given URI is a Rails application. See
 <a href="#deploying_rails_to_sub_uri">Deploying Rails to a sub URI</a> for an example.</p></div>
 <div class="para"><p>It is allowed to specify this option multiple times. Do this to deploy multiple
 Rails applications in different sub-URIs under the same virtual host.</p></div>
 <div class="para"><p>This option may occur in the global server configuration or in a
 virtual host configuration block.</p></div>
-<h4 id="RailsAllowModRewrite">5.7.3. RailsAllowModRewrite &lt;on|off&gt;</h4>
+<h4 id="RailsAllowModRewrite">5.8.3. RailsAllowModRewrite &lt;on|off&gt;</h4>
 <div class="para"><p>If enabled, Phusion Passenger will not override mod_rewrite rules. Please read
 <a href="#conflicting_apache_modules">Conflicting Apache modules</a> for details.</p></div>
 <div class="para"><p>This option may occur once, in the global server configuration or in a virtual host
 configuration block. The default value is <em>off</em>.</p></div>
-<h4 id="rails_env">5.7.4. RailsEnv &lt;string&gt;</h4>
+<h4 id="rails_env">5.8.4. RailsEnv &lt;string&gt;</h4>
 <div class="para"><p>This option allows one to specify the default <tt>RAILS_ENV</tt> value.</p></div>
 <div class="para"><p>This option may occur once, in the global server configuration or in a virtual host
 configuration block. The default value is <em>production</em>.</p></div>
-<h4 id="RailsSpawnMethod">5.7.5. RailsSpawnMethod &lt;string&gt;</h4>
+<h4 id="RailsSpawnMethod">5.8.5. RailsSpawnMethod &lt;string&gt;</h4>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -1227,7 +1306,7 @@ requests. But there are multiple ways with which processes can be spawned, each 
 its own set of pros and cons. Supported spawn methods are:</p></div>
 <div class="vlist"><dl>
 <dt>
-smart
+<em>smart</em>
 </dt>
 <dd>
 <p>
@@ -1243,7 +1322,7 @@ If that's the case for your application, then you should use <em>conservative</e
 spawning method.</p></div>
 </dd>
 <dt>
-conservative
+<em>conservative</em>
 </dt>
 <dd>
 <p>
@@ -1251,7 +1330,8 @@ This spawning method is similar to the one used in Mongrel Cluster. It does not 
 any code caching at all.
 </p>
 <div class="para"><p><strong>Pros:</strong>
-Conservative spawning is guaranteed to be compatible with all applications and libraries.</p></div>
+Conservative spawning is guaranteed to be compatible with all Rails applications
+and libraries.</p></div>
 <div class="para"><p><strong>Cons:</strong>
 Much slower than smart spawning. Every spawn action will be equally slow, though no slower than
 the startup time of a single server in Mongrel Cluster. Conservative spawning will also
@@ -1260,8 +1340,8 @@ render <a href="#reducing_memory_usage">Ruby Enterprise Edition's memory reducti
 </dl></div>
 <div class="para"><p>This option may occur once, in the global server configuration or in a virtual host
 configuration block. The default value is <em>smart</em>.</p></div>
-<h3 id="_rack_specific_options">5.8. Rack-specific options</h3><div style="clear:left"></div>
-<h4 id="_rackautodetect_lt_on_off_gt">5.8.1. RackAutoDetect &lt;on|off&gt;</h4>
+<h3 id="_rack_specific_options">5.9. Rack-specific options</h3><div style="clear:left"></div>
+<h4 id="_rackautodetect_lt_on_off_gt">5.9.1. RackAutoDetect &lt;on|off&gt;</h4>
 <div class="para"><p>Whether Phusion Passenger should automatically detect whether a virtual host's
 document root is a Rack application. The default is <em>on</em>.</p></div>
 <div class="para"><p>This option may occur in the global server configuration or in a virtual host
@@ -1289,27 +1369,27 @@ application by using the <a href="#RackBaseURI">RackBaseURI</a> configuration op
     RackBaseURI /       # This line was added
 &lt;/VirtualHost&gt;</tt></pre>
 </div></div>
-<h4 id="RackBaseURI">5.8.2. RackBaseURI &lt;uri&gt;</h4>
+<h4 id="RackBaseURI">5.9.2. RackBaseURI &lt;uri&gt;</h4>
 <div class="para"><p>Used to specify that the given URI is a Rack application. See
 <a href="#deploying_rack_to_sub_uri">Deploying Rack to a sub URI</a> for an example.</p></div>
 <div class="para"><p>It is allowed to specify this option multiple times. Do this to deploy multiple
 Rack applications in different sub-URIs under the same virtual host.</p></div>
 <div class="para"><p>This option may occur in the global server configuration or in a
 virtual host configuration block.</p></div>
-<h4 id="rack_env">5.8.3. RackEnv &lt;string&gt;</h4>
+<h4 id="rack_env">5.9.3. RackEnv &lt;string&gt;</h4>
 <div class="para"><p>The given value will be accessible in Rack applications in the <tt>RACK_ENV</tt>
 environment variable. This allows one to define the environment in which
 Rack applications are run, very similar to <tt>RAILS_ENV</tt>.</p></div>
 <div class="para"><p>This option may occur once, in the global server configuration or in a virtual host
 configuration block. The default value is <em>production</em>.</p></div>
-<h3 id="_deprecated_options">5.9. Deprecated options</h3><div style="clear:left"></div>
+<h3 id="_deprecated_options">5.10. Deprecated options</h3><div style="clear:left"></div>
 <div class="para"><p>The following options have been deprecated, but are still supported for backwards
 compatibility reasons.</p></div>
-<h4 id="_railsruby">5.9.1. RailsRuby</h4>
+<h4 id="_railsruby">5.10.1. RailsRuby</h4>
 <div class="para"><p>Deprecated in favor of <a href="#PassengerRuby">PassengerRuby</a>.</p></div>
-<h4 id="_railsuserswitching">5.9.2. RailsUserSwitching</h4>
+<h4 id="_railsuserswitching">5.10.2. RailsUserSwitching</h4>
 <div class="para"><p>Deprecated in favor of <a href="#PassengerUserSwitching">PassengerUserSwitching</a>.</p></div>
-<h4 id="_railsdefaultuser">5.9.3. RailsDefaultUser</h4>
+<h4 id="_railsdefaultuser">5.10.3. RailsDefaultUser</h4>
 <div class="para"><p>Deprecated in favor of <a href="#PassengerDefaultUser">PassengerDefaultUser</a>.</p></div>
 </div>
 <h2 id="_troubleshooting">6. Troubleshooting</h2>
@@ -1890,6 +1970,8 @@ sessions compared to the others, then there might be a problem:</p></div>
 <li>
 <p>
 Your application is busy processing a request that takes a very long time.
+  If this is the case, then you might want to turn
+  <a href="#PassengerUseGlobalQueue">global queuing</a> on.
 </p>
 </li>
 <li>
@@ -2097,7 +2179,7 @@ Attribution-Share Alike 3.0 Unported License</a>.</p></div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2008-08-09 14:31:11 CEST
+Last updated 2008-12-01 14:21:18 CEST
 </div>
 </div>
 </body>

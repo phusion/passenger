@@ -174,6 +174,18 @@ public:
 	virtual void setMaxPerApp(unsigned int max) = 0;
 	
 	/**
+	 * Sets whether to use a global queue instead of a per-backend process
+	 * queue. If enabled, when all backend processes are active, get() will
+	 * wait until there's at least one backend process that's idle, instead
+	 * of queuing the request into a random process's private queue.
+	 * This is especially useful if a website has one or more long-running
+	 * requests.
+	 *
+	 * Defaults to false.
+	 */
+	virtual void setUseGlobalQueue(bool value) = 0;
+	
+	/**
 	 * Get the process ID of the spawn server that is used.
 	 *
 	 * This method exposes an implementation detail. It is used by unit tests to verify

@@ -17,6 +17,7 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 require 'socket'
+require 'fcntl'
 require 'passenger/utils'
 require 'passenger/native_support'
 module Passenger
@@ -125,6 +126,7 @@ class AbstractRequestHandler
 		if !@using_abstract_namespace
 			create_unix_socket_on_filesystem
 		end
+		@socket.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
 		@owner_pipe = owner_pipe
 		@previous_signal_handlers = {}
 	end
@@ -258,6 +260,7 @@ private
 		ios = select([@socket, @owner_pipe])[0]
 		if ios.include?(@socket)
 			client = @socket.accept
+			client.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
 			
 			# The real input stream is not seekable (calling _seek_
 			# or _rewind_ on it will raise an exception). But some
