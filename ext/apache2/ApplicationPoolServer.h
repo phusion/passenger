@@ -511,7 +511,7 @@ private:
 			
 			int flags = fcntl(serverSocket, F_GETFD);
 			if (flags != -1) {
-				fcntl(serverSocket, F_SETFD, flags | O_CLOEXEC);
+				fcntl(serverSocket, F_SETFD, flags | FD_CLOEXEC);
 			}
 			
 			serverPid = pid;
