@@ -35,6 +35,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <signal.h>
+#include <fcntl.h>
 
 #include "MessageChannel.h"
 #include "ApplicationPool.h"
@@ -518,6 +519,12 @@ private:
 		} else { // Parent process.
 			syscalls::close(fds[0]);
 			serverSocket = fds[1];
+			
+			int flags = fcntl(serverSocket, F_GETFD);
+			if (flags != -1) {
+				fcntl(serverSocket, F_SETFD, flags | O_CLOEXEC);
+			}
+			
 			serverPid = pid;
 		}
 	}

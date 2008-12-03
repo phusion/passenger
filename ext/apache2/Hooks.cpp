@@ -144,8 +144,8 @@ private:
 	
 	enum Threeway { YES, NO, UNKNOWN };
 
-	ApplicationPoolPtr applicationPool;
 	ApplicationPoolServerPtr applicationPoolServer;
+	thread_specific_ptr<ApplicationPoolPtr> threadSpecificApplicationPool;
 	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex;
 	
 	inline DirConfig *getDirConfig(request_rec *r) {
@@ -160,6 +160,21 @@ private:
 		RequestNote *note = 0;
 		apr_pool_userdata_get((void **) &note, "Phusion Passenger", r->pool);
 		return note;
+	}
+	
+	/**
+	 * When using the worker MPM and global queuing, deadlocks can occur, for
+	 * the same reason described in ApplicationPoolServer::connect(). This
+	 * method allows us to avoid this deadlock by making sure that each
+	 * thread gets its own connection to the application pool server.
+	 */
+	ApplicationPoolPtr getApplicationPool() {
+		ApplicationPoolPtr *pool_ptr = threadSpecificApplicationPool.get();
+		if (pool_ptr == NULL) {
+			pool_ptr = new ApplicationPoolPtr(applicationPoolServer->connect());
+			threadSpecificApplicationPool.reset(pool_ptr);
+		}
+		return *pool_ptr;
 	}
 	
 	bool hasModRewrite() {
@@ -387,7 +402,7 @@ private:
 				ServerConfig *sconfig = getServerConfig(r->server);
 				string appRoot(canonicalizePath(mapper.getPublicDirectory() + "/.."));
 				
-				session = applicationPool->get(PoolOptions(
+				session = getApplicationPool()->get(PoolOptions(
 					appRoot,
 					true,
 					sconfig->getDefaultUser(),
@@ -735,32 +750,15 @@ public:
 				applicationPoolServerExe, spawnServer, "",
 				ruby, user)
 		);
+		
+		ApplicationPoolPtr pool(applicationPoolServer->connect());
+		pool->setMax(config->maxPoolSize);
+		pool->setMaxPerApp(config->maxInstancesPerApp);
+		pool->setMaxIdleTime(config->poolIdleTime);
 	}
 	
 	~Hooks() {
 		removeDirTree(getPassengerTempDir().c_str());
-	}
-	
-	void initChild(apr_pool_t *pchild, server_rec *s) {
-		ServerConfig *config = getServerConfig(s);
-		
-		try {
-			applicationPool = applicationPoolServer->connect();
-			applicationPoolServer->detach();
-			applicationPool->setMax(config->maxPoolSize);
-			applicationPool->setMaxPerApp(config->maxInstancesPerApp);
-			applicationPool->setMaxIdleTime(config->poolIdleTime);
-		} catch (const thread_interrupted &) {
-			P_TRACE(3, "A system call was interrupted during initialization of "
-				"an Apache child process. Apache is probably restarting or "
-				"shutting down.");
-		} catch (const exception &e) {
-			P_WARN("Cannot initialize Passenger in an Apache child process: " <<
-				e.what() <<
-				" (this warning is harmless if you're currently restarting "
-				"or shutting down Apache)\n");
-			abort();
-		}
 	}
 	
 	int prepareRequestWhenInHighPerformanceMode(request_rec *r) {
@@ -1079,13 +1077,6 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 	}
 }
 
-static void
-init_child(apr_pool_t *pchild, server_rec *s) {
-	if (hooks != NULL) {
-		return hooks->initChild(pchild, s);
-	}
-}
-
 #define DEFINE_REQUEST_HOOK(c_name, cpp_name)        \
 	static int c_name(request_rec *r) {          \
 		if (OXT_LIKELY(hooks != NULL)) {     \
@@ -1118,7 +1109,6 @@ passenger_register_hooks(apr_pool_t *p) {
 	static const char * const autoindex_module[] = { "mod_autoindex.c", NULL };
 
 	ap_hook_post_config(init_module, NULL, NULL, APR_HOOK_MIDDLE);
-	ap_hook_child_init(init_child, NULL, NULL, APR_HOOK_MIDDLE);
 	
 	ap_hook_map_to_storage(prepare_request_when_in_high_performance_mode, NULL, NULL, APR_HOOK_FIRST);
 	ap_hook_map_to_storage(save_original_filename, NULL, NULL, APR_HOOK_LAST);
