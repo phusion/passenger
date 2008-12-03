@@ -23,6 +23,7 @@ require 'fcntl'
 require 'passenger/application'
 require 'passenger/abstract_server'
 require 'passenger/application'
+require 'passenger/rack/request_handler'
 require 'passenger/railz/request_handler'
 require 'passenger/exceptions'
 require 'passenger/utils'
@@ -304,7 +305,14 @@ private
 			end
 			
 			reader.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
-			handler = RequestHandler.new(reader)
+			
+			if Rails::VERSION::STRING >= '2.3.0'
+				rack_app = ::ActionController::Dispatcher.new
+				handler = Rack::RequestHandler.new(reader, rack_app)
+			else
+				handler = RequestHandler.new(reader)
+			end
+			
 			channel.write(Process.pid, handler.socket_name,
 				handler.using_abstract_namespace?)
 			channel.send_io(writer)
