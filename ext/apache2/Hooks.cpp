@@ -294,8 +294,8 @@ private:
 		}
 	};
 
-	ApplicationPoolPtr applicationPool;
 	ApplicationPoolServerPtr applicationPoolServer;
+	thread_specific_ptr<ApplicationPoolPtr> threadSpecificApplicationPool;
 	
 	DirConfig *getDirConfig(request_rec *r) {
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
@@ -303,6 +303,21 @@ private:
 	
 	ServerConfig *getServerConfig(server_rec *s) {
 		return (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
+	}
+	
+	/**
+	 * When using the worker MPM and global queuing, deadlocks can occur, for
+	 * the same reason described in ApplicationPoolServer::connect(). This
+	 * method allows us to avoid this deadlock by making sure that each
+	 * thread gets its own connection to the application pool server.
+	 */
+	ApplicationPoolPtr getApplicationPool() {
+		ApplicationPoolPtr *pool_ptr = threadSpecificApplicationPool.get();
+		if (pool_ptr == NULL) {
+			pool_ptr = new ApplicationPoolPtr(applicationPoolServer->connect());
+			threadSpecificApplicationPool.reset(pool_ptr);
+		}
+		return *pool_ptr;
 	}
 	
 	int reportDocumentRootDeterminationError(request_rec *r) {
@@ -603,29 +618,12 @@ public:
 				applicationPoolServerExe, spawnServer, "",
 				ruby, user)
 		);
-	}
-	
-	void initChild(apr_pool_t *pchild, server_rec *s) {
-		ServerConfig *config = getServerConfig(s);
 		
-		try {
-			applicationPool = applicationPoolServer->connect();
-			applicationPoolServer->detach();
-			applicationPool->setMax(config->maxPoolSize);
-			applicationPool->setMaxPerApp(config->maxInstancesPerApp);
-			applicationPool->setMaxIdleTime(config->poolIdleTime);
-			applicationPool->setUseGlobalQueue(config->getUseGlobalQueue());
-		} catch (const thread_interrupted &) {
-			P_TRACE(3, "A system call was interrupted during initialization of "
-				"an Apache child process. Apache is probably restarting or "
-				"shutting down.");
-		} catch (const exception &e) {
-			P_WARN("Cannot initialize Passenger in an Apache child process: " <<
-				e.what() <<
-				" (this warning is harmless if you're currently restarting "
-				"or shutting down Apache)\n");
-			abort();
-		}
+		ApplicationPoolPtr pool(applicationPoolServer->connect());
+		pool->setMax(config->maxPoolSize);
+		pool->setMaxPerApp(config->maxInstancesPerApp);
+		pool->setMaxIdleTime(config->poolIdleTime);
+		pool->setUseGlobalQueue(config->getUseGlobalQueue());
 	}
 	
 	int handleRequest(request_rec *r) {
@@ -694,7 +692,7 @@ public:
 					spawnMethod = "smart";
 				}
 				
-				session = applicationPool->get(
+				session = getApplicationPool()->get(
 					canonicalizePath(mapper.getPublicDirectory() + "/.."),
 					true, defaultUser, environment, spawnMethod,
 					mapper.getApplicationTypeString());
@@ -953,13 +951,6 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 	}
 }
 
-static void
-init_child(apr_pool_t *pchild, server_rec *s) {
-	if (hooks != NULL) {
-		return hooks->initChild(pchild, s);
-	}
-}
-
 static int
 handle_request(request_rec *r) {
 	if (hooks != NULL) {
@@ -984,7 +975,6 @@ map_to_storage(request_rec *r) {
 void
 passenger_register_hooks(apr_pool_t *p) {
 	ap_hook_post_config(init_module, NULL, NULL, APR_HOOK_MIDDLE);
-	ap_hook_child_init(init_child, NULL, NULL, APR_HOOK_MIDDLE);
 	ap_hook_map_to_storage(map_to_storage, NULL, NULL, APR_HOOK_FIRST);
 	ap_hook_handler(handle_request, NULL, NULL, APR_HOOK_MIDDLE);
 }
