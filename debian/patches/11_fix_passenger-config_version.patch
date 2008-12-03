@@ -1,0 +1,12 @@
+--- passenger-2.0.4/bin/passenger-config	2008-05-26 19:08:18.000000000 -0400
++++ passenger/bin/passenger-config	2008-12-03 09:37:47.000000000 -0500
+@@ -32,8 +32,7 @@
+ when "--root"
+ 	puts PASSENGER_ROOT
+ when "--version"
+-	File.read("#{PASSENGER_ROOT}/Rakefile") =~ /^PACKAGE_VERSION = "(.*)"/
+-	puts $1
++	puts File.read("/etc/passenger_version.txt")
+ else
+ 	help
+ 	exit 1

@@ -1,3 +1,11 @@
+passenger (2.0.4-1bbox2) hardy; urgency=medium
+
+  * Added 11_fix_passenger-config_version.patch to fix bug in passenger-config
+    (Thanks to Rich Drummond)
+  * Changed depends to allow apache2-mpm-prefork instead of apache2-mpm-worker
+
+ -- John Leach <john@brightbox.co.uk>  Wed, 03 Dec 2008 18:14:46 +0000
+
 passenger (2.0.4-1bbox1) hardy; urgency=low
 
   * New upstream version, 2.0.4
