@@ -65,20 +65,20 @@ shared_examples_for "a spawner that supports lowering of privileges" do
 	
 	it "doesn't switch user if environment.rb is owned by a nonexistant user, and 'lowest_user' doesn't exist either" do
 		File.chown(CONFIG['nonexistant_uid'], nil, @environment_rb)
-		spawn_stub_application(:lowest_user => CONFIG['nonexistant_user']) do |app|
+		spawn_stub_application("lowest_user" => CONFIG['nonexistant_user']) do |app|
 			read_dumped_info[:username].should == my_username
 		end
 	end
 	
 	it "doesn't switch user if 'lower_privilege' is set to false" do
 		File.chown(uid_for('normal_user_2'), nil, @environment_rb)
-		spawn_stub_application(:lower_privilege => false) do |app|
+		spawn_stub_application("lower_privilege" => false) do |app|
 			read_dumped_info[:username].should == my_username
 		end
 	end
 	
 	it "sets $HOME to the user's home directory, after privilege lowering" do
-		spawn_stub_application(:lowest_user => CONFIG['normal_user_1']) do |app|
+		spawn_stub_application("lowest_user" => CONFIG['normal_user_1']) do |app|
 			read_dumped_info[:home].should == Etc.getpwnam(CONFIG['normal_user_1']).dir
 		end
 	end

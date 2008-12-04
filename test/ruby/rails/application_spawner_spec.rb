@@ -70,12 +70,10 @@ describe("ApplicationSpawner privilege lowering support") do
 	
 		def spawn_stub_application(options = {})
 			options = {
-				:lower_privilege => true,
-				:lowest_user => CONFIG['lowest_user']
+				"lower_privilege" => true,
+				"lowest_user" => CONFIG['lowest_user']
 			}.merge(options)
-			@spawner = ApplicationSpawner.new(@stub.app_root,
-				options[:lower_privilege],
-				options[:lowest_user])
+			@spawner = ApplicationSpawner.new(@stub.app_root, options)
 			@spawner.start
 			begin
 				app = @spawner.spawn_application
@@ -92,12 +90,10 @@ describe("ApplicationSpawner privilege lowering support") do
 	
 		def spawn_stub_application(options = {})
 			options = {
-				:lower_privilege => true,
-				:lowest_user => CONFIG['lowest_user']
+				"lower_privilege" => true,
+				"lowest_user" => CONFIG['lowest_user']
 			}.merge(options)
-			@spawner = ApplicationSpawner.new(@stub.app_root,
-				options[:lower_privilege],
-				options[:lowest_user])
+			@spawner = ApplicationSpawner.new(@stub.app_root, options)
 			begin
 				app = @spawner.spawn_application!
 				yield app

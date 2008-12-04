@@ -112,17 +112,15 @@ describe("FrameworkSpawner privilege lowering support") do
 	
 	def spawn_stub_application(options = {})
 		options = {
-			:lower_privilege => true,
-			:lowest_user => CONFIG['lowest_user']
+			"lower_privilege" => true,
+			"lowest_user" => CONFIG['lowest_user']
 		}.merge(options)
 		@stub.use_vendor_rails('minimal')
 		@spawner = FrameworkSpawner.new(:vendor =>
 			"#{@stub.app_root}/vendor/rails")
 		@spawner.start
 		begin
-			app = @spawner.spawn_application(@stub.app_root,
-				options[:lower_privilege],
-				options[:lowest_user])
+			app = @spawner.spawn_application(@stub.app_root, options)
 			yield app
 		ensure
 			app.close if app
