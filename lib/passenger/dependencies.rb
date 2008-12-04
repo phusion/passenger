@@ -185,15 +185,21 @@ module Dependencies # :nodoc: all
 	Rake = Dependency.new do |dep|
 		dep.name = "Rake"
 		dep.define_checker do |result|
-			rake = PlatformInfo.find_command("rake")
-			if rake.nil?
-				result.not_found
-			else
+			bindir = File.dirname(PlatformInfo::RUBY)
+			rake = File.join(bindir, "rake")
+			if File.executable?(rake)
 				result.found(rake)
+			else
+				rake = PlatformInfo.find_command("rake")
+				if rake.nil?
+					result.not_found
+				else
+					result.found(rake)
+				end
 			end
 		end
 		dep.website = "http://rake.rubyforge.org/"
-		dep.install_instructions = "Please install RubyGems first, then run <b>gem install rake</b>"
+		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM} install rake</b>"
 	end
 	
 	Apache2 = Dependency.new do |dep|
@@ -302,7 +308,7 @@ module Dependencies # :nodoc: all
 				result.not_found
 			end
 		end
-		dep.install_instructions = "Please install RubyGems first, then run <b>gem install fastthread</b>"
+		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM} install fastthread</b>"
 	end
 
 	Rack = Dependency.new do |dep|
@@ -319,7 +325,7 @@ module Dependencies # :nodoc: all
 				result.not_found
 			end
 		end
-		dep.install_instructions = "Please install RubyGems first, then run <b>gem install rack</b>"
+		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM} install rack</b>"
 	end
 end
 
