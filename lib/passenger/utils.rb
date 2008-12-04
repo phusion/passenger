@@ -359,7 +359,7 @@ protected
 			"app_spawner_timeout"       => -1
 		}
 		options = defaults.merge(options)
-		options["lower_privilege"]           = options["lower_privilege"] == "true"
+		options["lower_privilege"]           = options["lower_privilege"].to_s == "true"
 		options["framework_spawner_timeout"] = options["framework_spawner_timeout"].to_i
 		options["app_spawner_timeout"]       = options["app_spawner_timeout"].to_i
 		return options
