@@ -289,7 +289,7 @@ public
 	end
 
 	# The absolute path to the current Ruby interpreter.
-	RUBY = Config::CONFIG['bindir'] + '/' + Config::CONFIG['RUBY_INSTALL_NAME']
+	RUBY = Config::CONFIG['bindir'] + '/' + Config::CONFIG['RUBY_INSTALL_NAME'] + Config::CONFIG['EXEEXT']
 	# The correct 'gem' command for this Ruby interpreter.
 	GEM = determine_gem_command
 	
