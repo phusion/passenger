@@ -49,8 +49,18 @@ interruptionSignalHandler(int sig) {
 
 void
 Passenger::setupSyscallInterruptionSupport() {
-	signal(INTERRUPTION_SIGNAL, interruptionSignalHandler);
-	siginterrupt(INTERRUPTION_SIGNAL, 1);
+	struct sigaction action;
+	int ret;
+	
+	action.sa_handler = interruptionSignalHandler;
+	action.sa_flags   = 0;
+	sigemptyset(&action.sa_mask);
+	do {
+		ret = sigaction(INTERRUPTION_SIGNAL, &action, NULL);
+	} while (ret == -1 && errno == EINTR);
+	do {
+		ret = siginterrupt(INTERRUPTION_SIGNAL, 1);
+	} while (ret == -1 && errno == EINTR);
 }
 
 

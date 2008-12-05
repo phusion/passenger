@@ -449,11 +449,9 @@ private:
 					activeOrMaxChanged.notify_all();
 				}
 			} else {
-				while (!(
-					active < max &&
-					(maxPerApp == 0 || appInstanceCount[appRoot] < maxPerApp)
-				)) {
+				if (active >= max) {
 					activeOrMaxChanged.wait(l);
+					goto beginning_of_function;
 				}
 				if (count == max) {
 					container = inactiveApps.front();
@@ -654,6 +652,7 @@ public:
 		appInstanceCount.clear();
 		count = 0;
 		active = 0;
+		activeOrMaxChanged.notify_all();
 	}
 	
 	virtual void setMaxIdleTime(unsigned int seconds) {
