@@ -1,3 +1,9 @@
+passenger (2.0.5-0bbox1) hardy; urgency=low
+
+  * New Upstream Version, 2.0.5
+
+ -- John Leach <john@brightbox.co.uk>  Fri, 05 Dec 2008 14:22:41 +0000
+
 passenger (2.0.4-1bbox2) hardy; urgency=medium
 
   * Added 11_fix_passenger-config_version.patch to fix bug in passenger-config
