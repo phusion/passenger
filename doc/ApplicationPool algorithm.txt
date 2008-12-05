@@ -292,7 +292,7 @@ function spawn_or_use_existing(app_root, options):
 		# thread might already have spawned instances for this app root.
 		if (active >= max):
 			wait until _active_ has changed
-			goto beginning of functions
+			goto beginning of function
 		elsif count == max:
 			# Here we are in a though situation. There are several
 			# apps which are inactive, and none of them have
