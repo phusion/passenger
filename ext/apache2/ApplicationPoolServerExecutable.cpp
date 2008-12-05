@@ -415,6 +415,13 @@ int
 Server::start() {
 	setupSyscallInterruptionSupport();
 	
+	// Ignore SIGPIPE.
+	struct sigaction action;
+	action.sa_handler = SIG_IGN;
+	action.sa_flags   = 0;
+	sigemptyset(&action.sa_mask);
+	sigaction(SIGPIPE, &action, NULL);
+	
 	try {
 		if (!statusReportFIFO.empty()) {
 			statusReportThread = ptr(
