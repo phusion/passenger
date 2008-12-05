@@ -239,7 +239,8 @@ class TEST
 	OXT_FLAGS = "-I../../ext -I../support"
 	OXT_OBJECTS = {
 		'oxt_test_main.o' => %w(oxt_test_main.cpp),
-		'backtrace_test.o' => %w(backtrace_test.cpp)
+		'backtrace_test.o' => %w(backtrace_test.cpp),
+		'syscall_interruption_test.o' => %w(syscall_interruption_test.cpp)
 	}
 end
 

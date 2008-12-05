@@ -41,8 +41,18 @@ interruption_signal_handler(int sig) {
 
 void
 oxt::setup_syscall_interruption_support() {
-	signal(INTERRUPTION_SIGNAL, interruption_signal_handler);
-	siginterrupt(INTERRUPTION_SIGNAL, 1);
+	struct sigaction action;
+	int ret;
+	
+	action.sa_handler = interruption_signal_handler;
+	action.sa_flags   = 0;
+	sigemptyset(&action.sa_mask);
+	do {
+		ret = sigaction(INTERRUPTION_SIGNAL, &action, NULL);
+	} while (ret == -1 && errno == EINTR);
+	do {
+		ret = siginterrupt(INTERRUPTION_SIGNAL, 1);
+	} while (ret == -1 && errno == EINTR);
 }
 
 
