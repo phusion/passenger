@@ -1,8 +1,5 @@
 == Version 2.1.0
 
-- New configuration option: PassengerMemoryLimit <MB>
-  If a Rails application's memory usage grows past the specified
-  amount, then it will be terminated.
 - PassengerPoolIdleTime 0, thanks redmar
 - C++ backtraces
 - more aggressive I/O timeout enforcement
