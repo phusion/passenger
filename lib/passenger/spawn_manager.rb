@@ -76,7 +76,7 @@ class SpawnManager < AbstractServer
 			
 			# Commonly used libraries.
 			['mysql', 'sqlite3'].each do |lib|
-				require lib
+				require lib rescue nil
 			end
 		end
 	end
