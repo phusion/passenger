@@ -23,6 +23,7 @@
 #include <oxt/tracable_exception.hpp>
 #include <string>
 #include <sstream>
+#include <cstring>
 
 /**
  * @defgroup Exceptions Exceptions
