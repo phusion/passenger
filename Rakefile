@@ -29,7 +29,7 @@ verbose true
 ##### Configuration
 
 # Don't forget to edit Configuration.h too
-PACKAGE_VERSION = "2.0.5"
+PACKAGE_VERSION = "2.0.6"
 OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 
 include PlatformInfo

@@ -26,6 +26,9 @@
 #include <errno.h>
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#ifndef RARRAY_LEN
+	#define RARRAY_LEN(ary) RARRAY(ary)->len
+#endif
 
 static VALUE mPassenger;
 static VALUE mNativeSupport;
