@@ -23,6 +23,7 @@
 #include <exception>
 #include <string>
 #include <sstream>
+#include <cstring>
 
 /**
  * @defgroup Exceptions Exceptions
