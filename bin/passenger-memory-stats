@@ -169,10 +169,16 @@ class MemoryStats
 		end
 		
 		processes = []
-		if RUBY_PLATFORM =~ /solaris/
+		case RUBY_PLATFORM
+		when /solaris/
 			list = `#{ps} -o pid,ppid,nlwp,vsz,rss,comm`.split("\n")
+			threads_known = true
+		when /darwin/
+			list = `#{ps} -w -o pid,ppid,vsz,rss,command`.split("\n")
+			threads_known = false
 		else
 			list = `#{ps} -w -o pid,ppid,nlwp,vsz,rss,command`.split("\n")
+			threads_known = true
 		end
 		list.shift
 		list.each do |line|
@@ -180,14 +186,20 @@ class MemoryStats
 			line.gsub!(/ *$/, '')
 			
 			p = Process.new
-			p.pid, p.ppid, p.threads, p.vm_size, p.rss, p.name = line.split(/ +/, 6)
+			if threads_known
+				p.pid, p.ppid, p.threads, p.vm_size, p.rss, p.name = line.split(/ +/, 6)
+			else
+				p.pid, p.ppid, p.vm_size, p.rss, p.name = line.split(/ +/, 6)
+				p.threads = "?"
+			end
 			p.name.sub!(/\Aruby: /, '')
 			p.name.sub!(/ \(ruby\)\Z/, '')
 			if p.name !~ /^ps/ && (!options[:match] || p.name.match(options[:match]))
 				# Convert some values to integer.
-				[:pid, :ppid, :threads, :vm_size, :rss].each do |attr|
+				[:pid, :ppid, :vm_size, :rss].each do |attr|
 					p.send("#{attr}=", p.send(attr).to_i)
 				end
+				p.threads = p.threads.to_i if threads_known
 
 				if platform_provides_private_dirty_rss_information?
 					p.private_dirty_rss = determine_private_dirty_rss(p.pid)
