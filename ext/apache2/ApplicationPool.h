@@ -92,6 +92,19 @@ public:
 	virtual ~ApplicationPool() {};
 	
 	/**
+	 * Checks whether this ApplicationPool object is still connected to the
+	 * ApplicationPool server.
+	 *
+	 * If that's not the case, then one should reconnect to the ApplicationPool server.
+	 *
+	 * This method is only meaningful for instances of type ApplicationPoolServer::Client.
+	 * The default implementation always returns true.
+	 */
+	virtual bool connected() const {
+		return true;
+	}
+	
+	/**
 	 * Open a new session with the application specified by <tt>PoolOptions.appRoot</tt>.
 	 * See the class description for ApplicationPool, as well as Application::connect(),
 	 * on how to use the returned session object.

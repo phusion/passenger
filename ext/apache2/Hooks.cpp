@@ -163,16 +163,25 @@ private:
 	}
 	
 	/**
+	 * Returns a usable ApplicationPool object.
+	 *
 	 * When using the worker MPM and global queuing, deadlocks can occur, for
 	 * the same reason described in ApplicationPoolServer::connect(). This
 	 * method allows us to avoid this deadlock by making sure that each
 	 * thread gets its own connection to the application pool server.
+	 *
+	 * It also checks whether the currently cached ApplicationPool object
+	 * is disconnected (which can happen if an error previously occured).
+	 * If so, it will reconnect to the ApplicationPool server.
 	 */
 	ApplicationPoolPtr getApplicationPool() {
 		ApplicationPoolPtr *pool_ptr = threadSpecificApplicationPool.get();
 		if (pool_ptr == NULL) {
 			pool_ptr = new ApplicationPoolPtr(applicationPoolServer->connect());
 			threadSpecificApplicationPool.reset(pool_ptr);
+		} else if (!(*pool_ptr)->connected()) {
+			P_DEBUG("Reconnecting to ApplicationPool server");
+			*pool_ptr = applicationPoolServer->connect();
 		}
 		return *pool_ptr;
 	}

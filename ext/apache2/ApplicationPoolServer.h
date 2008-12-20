@@ -142,17 +142,31 @@ private:
 		/**
 		 * The socket connection to the ApplicationPool server, as was
 		 * established by ApplicationPoolServer::connect().
+		 *
+		 * The value may be -1, which indicates that the connection has
+		 * been closed.
 		 */
 		int server;
 		
-		boost::mutex lock;
+		mutable boost::mutex lock;
 		
 		~SharedData() {
+			TRACE_POINT();
+			if (server != -1) {
+				disconnect();
+			}
+		}
+		
+		/**
+		 * Disconnect from the ApplicationPool server.
+		 */
+		void disconnect() {
 			TRACE_POINT();
 			int ret;
 			do {
 				ret = close(server);
 			} while (ret == -1 && errno == EINTR);
+			server = -1;
 		}
 	};
 	
@@ -257,22 +271,42 @@ private:
 			data->server = sock;
 		}
 		
+		virtual bool connected() const {
+			boost::mutex::scoped_lock(data->lock);
+			return data->server != -1;
+		}
+		
 		virtual void clear() {
 			MessageChannel channel(data->server);
 			boost::mutex::scoped_lock l(data->lock);
-			channel.write("clear", NULL);
+			try {
+				channel.write("clear", NULL);
+			} catch (...) {
+				data->disconnect();
+				throw;
+			}
 		}
 		
 		virtual void setMaxIdleTime(unsigned int seconds) {
 			MessageChannel channel(data->server);
 			boost::mutex::scoped_lock l(data->lock);
-			channel.write("setMaxIdleTime", toString(seconds).c_str(), NULL);
+			try {
+				channel.write("setMaxIdleTime", toString(seconds).c_str(), NULL);
+			} catch (...) {
+				data->disconnect();
+				throw;
+			}
 		}
 		
 		virtual void setMax(unsigned int max) {
 			MessageChannel channel(data->server);
 			boost::mutex::scoped_lock l(data->lock);
-			channel.write("setMax", toString(max).c_str(), NULL);
+			try {
+				channel.write("setMax", toString(max).c_str(), NULL);
+			} catch (...) {
+				data->disconnect();
+				throw;
+			}
 		}
 		
 		virtual unsigned int getActive() const {
@@ -280,9 +314,14 @@ private:
 			boost::mutex::scoped_lock l(data->lock);
 			vector<string> args;
 			
-			channel.write("getActive", NULL);
-			channel.read(args);
-			return atoi(args[0].c_str());
+			try {
+				channel.write("getActive", NULL);
+				channel.read(args);
+				return atoi(args[0].c_str());
+			} catch (...) {
+				data->disconnect();
+				throw;
+			}
 		}
 		
 		virtual unsigned int getCount() const {
@@ -290,15 +329,25 @@ private:
 			boost::mutex::scoped_lock l(data->lock);
 			vector<string> args;
 			
-			channel.write("getCount", NULL);
-			channel.read(args);
-			return atoi(args[0].c_str());
+			try {
+				channel.write("getCount", NULL);
+				channel.read(args);
+				return atoi(args[0].c_str());
+			} catch (...) {
+				data->disconnect();
+				throw;
+			}
 		}
 		
 		virtual void setMaxPerApp(unsigned int max) {
 			MessageChannel channel(data->server);
 			boost::mutex::scoped_lock l(data->lock);
-			channel.write("setMaxPerApp", toString(max).c_str(), NULL);
+			try {
+				channel.write("setMaxPerApp", toString(max).c_str(), NULL);
+			} catch (...) {
+				data->disconnect();
+				throw;
+			}
 		}
 		
 		virtual pid_t getSpawnServerPid() const {
@@ -307,9 +356,14 @@ private:
 			boost::mutex::scoped_lock l(data->lock);
 			vector<string> args;
 			
-			channel.write("getSpawnServerPid", NULL);
-			channel.read(args);
-			return atoi(args[0].c_str());
+			try {
+				channel.write("getSpawnServerPid", NULL);
+				channel.read(args);
+				return atoi(args[0].c_str());
+			} catch (...) {
+				data->disconnect();
+				throw;
+			}
 		}
 		
 		virtual Application::SessionPtr get(const PoolOptions &options) {
@@ -328,26 +382,38 @@ private:
 				args.push_back("get");
 				options.toVector(args);
 				channel.write(args);
-			} catch (const SystemException &) {
+			} catch (const SystemException &e) {
 				UPDATE_TRACE_POINT();
-				throw IOException("The ApplicationPool server exited unexpectedly.");
+				data->disconnect();
+				
+				string message("Could not send data to the ApplicationPool server: ");
+				message.append(e.brief());
+				throw SystemException(message, e.code());
 			}
 			try {
 				UPDATE_TRACE_POINT();
 				result = channel.read(args);
 			} catch (const SystemException &e) {
 				UPDATE_TRACE_POINT();
+				data->disconnect();
 				throw SystemException("Could not read a message from "
 					"the ApplicationPool server", e.code());
 			}
 			if (!result) {
 				UPDATE_TRACE_POINT();
+				data->disconnect();
 				throw IOException("The ApplicationPool server unexpectedly "
 					"closed the connection.");
 			}
 			if (args[0] == "ok") {
 				UPDATE_TRACE_POINT();
-				stream = channel.readFileDescriptor();
+				try {
+					stream = channel.readFileDescriptor();
+				} catch (...) {
+					UPDATE_TRACE_POINT();
+					data->disconnect();
+					throw;
+				}
 				return ptr(new RemoteSession(dataSmartPointer,
 					atoi(args[1]), atoi(args[2]), stream));
 			} else if (args[0] == "SpawnException") {
@@ -355,7 +421,13 @@ private:
 				if (args[2] == "true") {
 					string errorPage;
 					
-					if (!channel.readScalar(errorPage)) {
+					try {
+						result = channel.readScalar(errorPage);
+					} catch (...) {
+						data->disconnect();
+						throw;
+					}
+					if (!result) {
 						throw IOException("The ApplicationPool server "
 							"unexpectedly closed the connection.");
 					}
@@ -368,9 +440,11 @@ private:
 				throw BusyException(args[1]);
 			} else if (args[0] == "IOException") {
 				UPDATE_TRACE_POINT();
+				data->disconnect();
 				throw IOException(args[1]);
 			} else {
 				UPDATE_TRACE_POINT();
+				data->disconnect();
 				throw IOException("The ApplicationPool server returned "
 					"an unknown message: " + toString(args));
 			}
