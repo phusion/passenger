@@ -433,6 +433,7 @@ private:
 	spawnOrUseExisting(boost::mutex::scoped_lock &l, const PoolOptions &options) {
 		beginning_of_function:
 		
+		TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		const string &appRoot(options.appRoot);
@@ -480,6 +481,7 @@ private:
 					maxPerApp != 0 && domain->size >= maxPerApp )
 					) {
 					if (options.useGlobalQueue) {
+						UPDATE_TRACE_POINT();
 						waitingOnGlobalQueue++;
 						activeOrMaxChanged.wait(l);
 						waitingOnGlobalQueue--;
@@ -517,6 +519,7 @@ private:
 				}
 			} else {
 				if (active >= max) {
+					UPDATE_TRACE_POINT();
 					activeOrMaxChanged.wait(l);
 					goto beginning_of_function;
 				} else if (count == max) {
@@ -533,6 +536,8 @@ private:
 					}
 					count--;
 				}
+				
+				UPDATE_TRACE_POINT();
 				container = ptr(new AppContainer());
 				{
 					this_thread::restore_interruption ri(di);
@@ -676,6 +681,7 @@ public:
 			P_ASSERT(verifyState(), Application::SessionPtr(),
 				"State is valid:\n" << toString(false));
 			try {
+				UPDATE_TRACE_POINT();
 				return container->app->connect(SessionCloseCallback(data, container));
 			} catch (const exception &e) {
 				container->sessions--;
