@@ -449,7 +449,7 @@ public:
 			int e = errno;
 			string message("Cannot connect to Unix socket '");
 			message.append(listenSocketName);
-			message.append("' on the abstract namespace");
+			message.append("'");
 			do {
 				ret = close(fd);
 			} while (ret == -1 && errno == EINTR);
