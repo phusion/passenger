@@ -475,13 +475,22 @@ private:
 			container->session = session;
 			apr_pool_cleanup_register(r->pool, container, Container::cleanup, apr_pool_cleanup_null);
 			
-			int result = ap_scan_script_header_err_brigade(r, bb, NULL);
+			// I know the size because I read util_script.c's source. :-(
+			char backendData[MAX_STRING_LEN];
+			int result = ap_scan_script_header_err_brigade(r, bb, backendData);
 			if (result == OK) {
 				// The API documentation for ap_scan_script_err_brigade() says it
 				// returns HTTP_OK on success, it actually returns OK.
 				ap_pass_brigade(r->output_filters, bb);
 				return OK;
+			} else if (backendData[0] == '\0') {
+				P_ERROR("Backend process " << session->getPid() <<
+					" did not return a valid HTTP response. It returned no data.");
+				return HTTP_INTERNAL_SERVER_ERROR;
 			} else {
+				P_ERROR("Backend process " << session->getPid() <<
+					" did not return a valid HTTP response. It returned: [" <<
+					backendData << "]");
 				return HTTP_INTERNAL_SERVER_ERROR;
 			}
 			
