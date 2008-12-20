@@ -471,14 +471,19 @@ private:
 			b = apr_bucket_eos_create(r->connection->bucket_alloc);
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 
-			ap_scan_script_header_err_brigade(r, bb, NULL);
-			ap_pass_brigade(r->output_filters, bb);
-			
 			Container *container = new Container();
 			container->session = session;
 			apr_pool_cleanup_register(r->pool, container, Container::cleanup, apr_pool_cleanup_null);
 			
-			return OK;
+			int result = ap_scan_script_header_err_brigade(r, bb, NULL);
+			if (result == OK) {
+				// The API documentation for ap_scan_script_err_brigade() says it
+				// returns HTTP_OK on success, it actually returns OK.
+				ap_pass_brigade(r->output_filters, bb);
+				return OK;
+			} else {
+				return HTTP_INTERNAL_SERVER_ERROR;
+			}
 			
 		} catch (const thread_interrupted &e) {
 			P_TRACE(3, "A system call was interrupted during an HTTP request. Apache "
