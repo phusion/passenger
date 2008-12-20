@@ -204,6 +204,8 @@ class AbstractRequestHandler
 				rescue IOError, SocketError, SystemCallError => e
 					print_exception("Passenger RequestHandler", e)
 				ensure
+					# 'input' is the same as 'client' so we don't
+					# need to close that.
 					client.close rescue nil
 				end
 				@processed_requests += 1
@@ -259,6 +261,7 @@ private
 				@socket_name = "#{passenger_tmpdir}/passenger_backend.#{generate_random_id(:base64)}"
 				@socket_name = @socket_name.slice(0, unix_path_max - 1)
 				@socket = UNIXServer.new(@socket_name)
+				@socket.listen(BACKLOG_SIZE)
 				File.chmod(0600, @socket_name)
 				done = true
 			rescue Errno::EADDRINUSE
