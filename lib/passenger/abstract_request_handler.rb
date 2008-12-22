@@ -130,8 +130,11 @@ class AbstractRequestHandler
 	# Additionally, the following options may be given:
 	# - memory_limit: Used to set the +memory_limit+ attribute.
 	def initialize(owner_pipe, options = {})
-		@socket_type = 'unix'
-		create_unix_socket_on_filesystem
+		if should_use_unix_sockets?
+			create_unix_socket_on_filesystem
+		else
+			create_tcp_socket
+		end
 		@socket.close_on_exec!
 		@owner_pipe = owner_pipe
 		@previous_signal_handlers = {}
@@ -248,6 +251,10 @@ class AbstractRequestHandler
 
 private
 	include Utils
+	
+	def should_use_unix_sockets?
+		return true
+	end
 
 	def create_unix_socket_on_filesystem
 		done = false
@@ -262,12 +269,20 @@ private
 				@socket_name = @socket_name.slice(0, unix_path_max - 1)
 				@socket = UNIXServer.new(@socket_name)
 				@socket.listen(BACKLOG_SIZE)
+				@socket_type = "unix"
 				File.chmod(0600, @socket_name)
 				done = true
 			rescue Errno::EADDRINUSE
 				# Do nothing, try again with another name.
 			end
 		end
+	end
+	
+	def create_tcp_socket
+		@socket = TCPServer.new('localhost', 0)
+		@socket.listen(BACKLOG_SIZE)
+		@socket_name = "localhost:#{@socket.addr[1]}"
+		@socket_type = "tcp"
 	end
 
 	# Reset signal handlers to their default handler, and install some

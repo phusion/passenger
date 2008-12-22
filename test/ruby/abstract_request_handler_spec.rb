@@ -52,13 +52,20 @@ describe AbstractRequestHandler do
 		@request_handler.processed_requests.should == 0
 	end
 	
-	it "creates a socket file in the Phusion Passenger temp folder" do
-		Dir["abstract_request_handler_spec.tmp/*"].should_not be_empty
+	it "creates a socket file in the Phusion Passenger temp folder, unless when using TCP sockets" do
+		if @request_handler.socket_type == "unix"
+			Dir["abstract_request_handler_spec.tmp/*"].should_not be_empty
+		end
 	end
 	
 	it "accepts pings" do
 		@request_handler.start_main_loop_thread
-		client = UNIXSocket.new(@request_handler.socket_name)
+		if @request_handler.socket_type == "unix"
+			client = UNIXSocket.new(@request_handler.socket_name)
+		else
+			addr, port = @request_handler.socket_name.split(/:/)
+			client = TCPSocket.new(addr, port.to_i)
+		end
 		begin
 			channel = MessageChannel.new(client)
 			channel.write_scalar("REQUEST_METHOD\0ping\0")

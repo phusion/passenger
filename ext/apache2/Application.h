@@ -25,10 +25,12 @@
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
 #include <string>
+#include <vector>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <netdb.h>
 #include <unistd.h>
 #include <errno.h>
 #include <ctime>
@@ -37,6 +39,7 @@
 #include "MessageChannel.h"
 #include "Exceptions.h"
 #include "Logging.h"
+#include "Utils.h"
 
 namespace Passenger {
 
@@ -318,6 +321,86 @@ private:
 	string listenSocketName;
 	string listenSocketType;
 	int ownerPipe;
+	
+	SessionPtr connectToUnixServer(const function<void()> &closeCallback) const {
+		TRACE_POINT();
+		int fd, ret;
+		
+		do {
+			fd = socket(PF_UNIX, SOCK_STREAM, 0);
+		} while (fd == -1 && errno == EINTR);
+		if (fd == -1) {
+			throw SystemException("Cannot create a new unconnected Unix socket", errno);
+		}
+		
+		struct sockaddr_un addr;
+		addr.sun_family = AF_UNIX;
+		strncpy(addr.sun_path, listenSocketName.c_str(), sizeof(addr.sun_path));
+		addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
+		do {
+			ret = ::connect(fd, (const sockaddr *) &addr, sizeof(addr));
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
+			int e = errno;
+			string message("Cannot connect to Unix socket '");
+			message.append(listenSocketName);
+			message.append("'");
+			do {
+				ret = close(fd);
+			} while (ret == -1 && errno == EINTR);
+			throw SystemException(message, e);
+		}
+		
+		return ptr(new StandardSession(pid, closeCallback, fd));
+	}
+	
+	SessionPtr connectToTcpServer(const function<void()> &closeCallback) const {
+		TRACE_POINT();
+		int fd, ret;
+		vector<string> args;
+		
+		split(listenSocketName, ':', args);
+		if (args.size() != 2 || atoi(args[1]) == 0) {
+			throw IOException("Invalid TCP/IP address '" + listenSocketName + "'");
+		}
+		
+		struct addrinfo hints, *res;
+		
+		memset(&hints, 0, sizeof(hints));
+		hints.ai_family = PF_INET;
+		hints.ai_socktype = SOCK_STREAM;
+		ret = getaddrinfo(args[0].c_str(), args[1].c_str(), &hints, &res);
+		if (ret != 0) {
+			int e = errno;
+			throw IOException("Cannot resolve address '" + listenSocketName +
+				"': " + gai_strerror(e));
+		}
+		
+		do {
+			fd = socket(PF_INET, SOCK_STREAM, 0);
+		} while (fd == -1 && errno == EINTR);
+		if (fd == -1) {
+			freeaddrinfo(res);
+			throw SystemException("Cannot create a new unconnected TCP socket", errno);
+		}
+		
+		do {
+			ret = ::connect(fd, res->ai_addr, res->ai_addrlen);
+		} while (ret == -1 && errno == EINTR);
+		freeaddrinfo(res);
+		if (ret == -1) {
+			int e = errno;
+			string message("Cannot connect to TCP server '");
+			message.append(listenSocketName);
+			message.append("'");
+			do {
+				ret = close(fd);
+			} while (ret == -1 && errno == EINTR);
+			throw SystemException(message, e);
+		}
+		
+		return ptr(new StandardSession(pid, closeCallback, fd));
+	}
 
 public:
 	/**
@@ -424,39 +507,14 @@ public:
 	 * @throws IOException Something went wrong during the connection process.
 	 */
 	SessionPtr connect(const function<void()> &closeCallback) const {
-		if (listenSocketType != "unix") {
-			throw "TODO: implement support for socket types other than 'unix'";
-		}
-		
 		TRACE_POINT();
-		int fd, ret;
-		
-		do {
-			fd = socket(PF_UNIX, SOCK_STREAM, 0);
-		} while (fd == -1 && errno == EINTR);
-		if (fd == -1) {
-			throw SystemException("Cannot create a new unconnected Unix socket", errno);
+		if (listenSocketType == "unix") {
+			return connectToUnixServer(closeCallback);
+		} else if (listenSocketType == "tcp") {
+			return connectToTcpServer(closeCallback);
+		} else {
+			throw IOException("Unsupported socket type '" + listenSocketType + "'");
 		}
-		
-		struct sockaddr_un addr;
-		addr.sun_family = AF_UNIX;
-		strncpy(addr.sun_path, listenSocketName.c_str(), sizeof(addr.sun_path));
-		addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
-		do {
-			ret = ::connect(fd, (const sockaddr *) &addr, sizeof(addr));
-		} while (ret == -1 && errno == EINTR);
-		if (ret == -1) {
-			int e = errno;
-			string message("Cannot connect to Unix socket '");
-			message.append(listenSocketName);
-			message.append("'");
-			do {
-				ret = close(fd);
-			} while (ret == -1 && errno == EINTR);
-			throw SystemException(message, e);
-		}
-		
-		return ptr(new StandardSession(pid, closeCallback, fd));
 	}
 };
 
