@@ -253,7 +253,12 @@ private
 	include Utils
 	
 	def should_use_unix_sockets?
-		return true
+		# There seems to be a bug in MacOS X w.r.t. Unix sockets.
+		# When the Unix socket subsystem is under high stress, a
+		# recv()/read() on a Unix socket can return 0 even when EOF is
+		# not reached. We work around this by using TCP sockets on
+		# MacOS X.
+		return RUBY_PLATFORM !~ /darwin/
 	end
 
 	def create_unix_socket_on_filesystem

@@ -163,6 +163,7 @@ subdir 'ext/apache2' do
 		'../libboost_oxt.a',
 		'ApplicationPoolServerExecutable.cpp',
 		'ApplicationPool.h',
+		'Application.h',
 		'StandardApplicationPool.h',
 		'MessageChannel.h',
 		'SpawnManager.h',
