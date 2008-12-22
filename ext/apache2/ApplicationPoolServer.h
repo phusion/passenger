@@ -407,6 +407,9 @@ private:
 			}
 			if (args[0] == "ok") {
 				UPDATE_TRACE_POINT();
+				pid_t pid = (pid_t) atol(args[1]);
+				int sessionID = atoi(args[2]);
+				
 				try {
 					stream = channel.readFileDescriptor();
 				} catch (...) {
@@ -414,8 +417,9 @@ private:
 					data->disconnect();
 					throw;
 				}
+				
 				return ptr(new RemoteSession(dataSmartPointer,
-					atoi(args[1]), atoi(args[2]), stream));
+					pid, sessionID, stream));
 			} else if (args[0] == "SpawnException") {
 				UPDATE_TRACE_POINT();
 				if (args[2] == "true") {
