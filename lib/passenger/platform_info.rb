@@ -38,12 +38,7 @@ private
 	end
 	
 	def self.determine_command(command)
-		correct_exe = File.dirname(RUBY) + "/#{command}"
-		if File.executable?(correct_exe)
-			return correct_exe
-		else
-			return command
-		end
+		File.dirname(RUBY) + "/#{command}"
 	end
 
 	def self.find_apxs2
