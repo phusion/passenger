@@ -279,9 +279,11 @@ private
 	end
 	
 	def create_tcp_socket
-		@socket = TCPServer.new('localhost', 0)
+		# We use "127.0.0.1" as address in order to force
+		# TCPv4 instead of TCPv6.
+		@socket = TCPServer.new('127.0.0.1', 0)
 		@socket.listen(BACKLOG_SIZE)
-		@socket_name = "localhost:#{@socket.addr[1]}"
+		@socket_name = "127.0.0.1:#{@socket.addr[1]}"
 		@socket_type = "tcp"
 	end
 
