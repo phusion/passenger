@@ -190,11 +190,11 @@ private
 		color_puts '<banner>Compiling and installing Apache 2 module...</banner>'
 		puts "cd #{PASSENGER_ROOT}"
 		if ENV['TRACE']
-			puts "#{RUBY} -S rake --trace clean apache2"
-			return system(RUBY, "-S", "rake", "--trace", "clean", "apache2")
+			puts "#{RUBY} -S #{RAKE} --trace clean apache2"
+			return system(RUBY, "-S", RAKE, "--trace", "clean", "apache2")
 		else
-			puts "#{RUBY} -S rake clean apache2"
-			return system(RUBY, "-S", "rake", "clean", "apache2")
+			puts "#{RUBY} -S #{RAKE} clean apache2"
+			return system(RUBY, "-S", RAKE, "clean", "apache2")
 		end
 	end
 	
