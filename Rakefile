@@ -236,6 +236,8 @@ class TEST
 		'PoolOptionsTest.o' => %w(PoolOptionsTest.cpp ../ext/apache2/PoolOptions.h),
 		'ScgiRequestParserTest.o' => %w(ScgiRequestParserTest.cpp
 			../ext/nginx/ScgiRequestParser.h),
+		'HttpStatusExtractorTest.o' => %w(HttpStatusExtractorTest.cpp
+			../ext/nginx/HttpStatusExtractor.h),
 		'UtilsTest.o' => %w(UtilsTest.cpp ../ext/apache2/Utils.h)
 	}
 	
