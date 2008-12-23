@@ -200,7 +200,7 @@ private:
 	
 	void initializePool(unsigned int maxPoolSize) {
 		pool = ptr(new StandardApplicationPool(
-			"/home/hongli/Projects/commercial_passenger/bin/passenger-spawn-server",
+			"/home/hongli/Projects/mod_rails/bin/passenger-spawn-server",
 			"",
 			"/opt/r8ee/bin/ruby"
 		));
