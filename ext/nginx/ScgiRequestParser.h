@@ -30,7 +30,7 @@ namespace Passenger {
  *        bailOut();
  *    } else {
  *        // All good! Do something with the SCGI header that the parser parsed.
- *        processHeader(parser.getHeader());
+ *        processHeader(parser.getHeaderData());
  *        
  *        // If the last buffer passed to the parser also contains body data,
  *        // then the body data starts at 'buf + bytesAccepted'.

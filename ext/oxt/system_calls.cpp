@@ -105,11 +105,41 @@ syscalls::close(int fd) {
 }
 
 int
+syscalls::accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::accept(sockfd, addr, addrlen)
+	);
+	return ret;
+}
+
+int
+syscalls::bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::bind(sockfd, addr, addrlen)
+	);
+	return ret;
+}
+
+int
 syscalls::connect(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
 		ret = ::connect(sockfd, serv_addr, addrlen);
+	);
+	return ret;
+}
+
+int
+syscalls::listen(int sockfd, int backlog) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::listen(sockfd, backlog)
 	);
 	return ret;
 }
@@ -190,6 +220,16 @@ syscalls::fclose(FILE *fp) {
 	CHECK_INTERRUPTION(
 		ret == EOF,
 		ret = ::fclose(fp)
+	);
+	return ret;
+}
+
+int
+syscalls::unlink(const char *pathname) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::unlink(pathname)
 	);
 	return ret;
 }
