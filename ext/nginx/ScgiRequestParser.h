@@ -76,6 +76,9 @@ private:
 		return byte >= '0' && byte <= '9';
 	}
 	
+	/**
+	 * Parse the given header data into key-value pairs.
+	 */
 	bool parseHeaderData(const string &data, map<string, string> &output) {
 		bool isName = true;
 		string key, value;
@@ -103,16 +106,25 @@ private:
 		return isName && key.empty() && value.empty();
 	}
 	
+	/**
+	 * Process the given data, which contains header data and possibly
+	 * some body data as well.
+	 */
 	unsigned int readHeaderData(const char *data, unsigned int size) {
 		unsigned int bytesToRead;
 		
+		// Calculate how many bytes of header data is left to be read.
+		// Do not read past the header data.
 		if (size < headerSize - headerBuffer.size()) {
 			bytesToRead = size;
 		} else {
 			bytesToRead = headerSize - headerBuffer.size();
 		}
+		// Append the newly received header data to the header data buffer.
 		headerBuffer.append(data, bytesToRead);
+		
 		if (headerBuffer.size() == headerSize) {
+			// We've received all header data. Now attempt to parse this.
 			if (bytesToRead < size) {
 				if (data[bytesToRead] == ',') {
 					if (parseHeaderData(headerBuffer, headers)) {
@@ -133,9 +145,9 @@ private:
 					state = ERROR;
 				}
 				return bytesToRead;
-				
 			}
 		} else {
+			// Not all header data has been received yet.
 			return bytesToRead;
 		}
 	}
@@ -170,20 +182,27 @@ public:
 		
 		switch (state) {
 		case READING_LENGTH_STRING:
+			// Keep processing length string data...
 			for (i = 0; i < size; i++) {
 				char byte = data[i];
 				
 				if (lengthStringBufferSize == sizeof(lengthStringBuffer) - 1) {
+					// ...and abort if the length string is too long.
 					state = ERROR;
 					return i;
 				} else if (!isDigit(byte)) {
 					if (byte == ':') {
+						// ...until the end of the length string has been reached.
 						state = READING_HEADER_DATA;
 						lengthStringBuffer[lengthStringBufferSize] = '\0';
 						headerSize = atol(lengthStringBuffer);
 						headerBuffer.reserve(headerSize);
+						fprintf(stderr, "expected header size = %lu\n", headerSize);
+						// From here on, process the rest of the data that we've
+						// received, as header data.
 						return readHeaderData(data + i + 1, size - i - 1) + i + 1;
 					} else {
+						// ...until we encounter a parse error.
 						state = ERROR;
 						return i;
 					}

@@ -99,8 +99,13 @@ private:
 			size = syscalls::read(fd, buf, sizeof(buf));
 			accepted = parser.feed(buf, size);
 		} while (parser.acceptingInput());
-		
-		return parser.hasHeader("DOCUMENT_ROOT");
+
+		if (parser.getState() == ScgiRequestParser::ERROR) {
+			P_ERROR("Invalid SCGI header received.");
+			return false;
+		} else {
+			return parser.hasHeader("DOCUMENT_ROOT");
+		}
 	}
 	
 	void forwardResponse(Application::SessionPtr &session, FileDescriptor &clientFd) {
