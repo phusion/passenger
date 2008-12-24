@@ -315,7 +315,9 @@ ngx_module_t  ngx_http_passenger_module = {
 
 
 static ngx_str_t  ngx_http_scgi_hide_headers[] = {
-    ngx_string("Status"),
+    /* NOTE: Do not hide the "Status" header; some broken HTTP clients
+     * expect this header. See http://tinyurl.com/87rezm
+     */
     ngx_string("X-Accel-Expires"),
     ngx_string("X-Accel-Redirect"),
     ngx_string("X-Accel-Limit-Rate"),
