@@ -29,6 +29,20 @@
 #include "ContentHandler.h"
 #include "Configuration.h"
 
+
+#define NGX_HTTP_SCGI_PARSE_NO_HEADER  20
+
+
+static ngx_int_t ngx_http_scgi_reinit_request(ngx_http_request_t *r);
+static ngx_int_t ngx_http_scgi_process_status_line(ngx_http_request_t *r);
+static ngx_int_t ngx_http_scgi_parse_status_line(ngx_http_request_t *r,
+    ngx_http_scgi_ctx_t *p);
+static ngx_int_t ngx_http_scgi_process_header(ngx_http_request_t *r);
+static void ngx_http_scgi_abort_request(ngx_http_request_t *r);
+static void ngx_http_scgi_finalize_request(ngx_http_request_t *r,
+    ngx_int_t rc);
+
+
 static ngx_int_t
 ngx_http_scgi_create_request(ngx_http_request_t *r)
 {
