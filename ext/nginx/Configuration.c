@@ -1,3 +1,30 @@
+/*
+ * Copyright (C) Igor Sysoev
+ * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
+ * Copyright (C) 2008 Phusion
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
+
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
@@ -6,6 +33,490 @@
 
 static ngx_str_t  passenger_schema_string = ngx_string("passenger://");
 
+static ngx_str_t  ngx_http_scgi_hide_headers[] = {
+    /* NOTE: Do not hide the "Status" header; some broken HTTP clients
+     * expect this header. See http://tinyurl.com/87rezm
+     */
+    ngx_string("X-Accel-Expires"),
+    ngx_string("X-Accel-Redirect"),
+    ngx_string("X-Accel-Limit-Rate"),
+    ngx_string("X-Accel-Buffer"),
+    ngx_null_string
+};
+
+
+void *
+ngx_http_scgi_create_loc_conf(ngx_conf_t *cf)
+{
+    ngx_http_scgi_loc_conf_t  *conf;
+
+    conf = ngx_pcalloc(cf->pool, sizeof(ngx_http_scgi_loc_conf_t));
+    if (conf == NULL) {
+        return NGX_CONF_ERROR;
+    }
+
+    /*
+     * set by ngx_pcalloc():
+     *
+     *     conf->upstream.bufs.num = 0;
+     *     conf->upstream.next_upstream = 0;
+     *     conf->upstream.temp_path = NULL;
+     *     conf->upstream.hide_headers_hash = { NULL, 0 };
+     *     conf->upstream.hide_headers = NULL;
+     *     conf->upstream.pass_headers = NULL;
+     *     conf->upstream.schema = { 0, NULL };
+     *     conf->upstream.uri = { 0, NULL };
+     *     conf->upstream.location = NULL;
+     *     conf->upstream.store_lengths = NULL;
+     *     conf->upstream.store_values = NULL;
+     *
+     *     conf->index.len = 0;
+     *     conf->index.data = NULL;
+     */
+
+    conf->enabled = NGX_CONF_UNSET;
+
+    conf->upstream.store = NGX_CONF_UNSET;
+    conf->upstream.store_access = NGX_CONF_UNSET_UINT;
+    conf->upstream.buffering = NGX_CONF_UNSET;
+    conf->upstream.ignore_client_abort = NGX_CONF_UNSET;
+
+    conf->upstream.connect_timeout = NGX_CONF_UNSET_MSEC;
+    conf->upstream.send_timeout = NGX_CONF_UNSET_MSEC;
+    conf->upstream.read_timeout = NGX_CONF_UNSET_MSEC;
+
+    conf->upstream.send_lowat = NGX_CONF_UNSET_SIZE;
+    conf->upstream.buffer_size = NGX_CONF_UNSET_SIZE;
+
+    conf->upstream.busy_buffers_size_conf = NGX_CONF_UNSET_SIZE;
+    conf->upstream.max_temp_file_size_conf = NGX_CONF_UNSET_SIZE;
+    conf->upstream.temp_file_write_size_conf = NGX_CONF_UNSET_SIZE;
+
+    conf->upstream.pass_request_headers = NGX_CONF_UNSET;
+    conf->upstream.pass_request_body = NGX_CONF_UNSET;
+
+    conf->upstream.intercept_errors = NGX_CONF_UNSET;
+
+    /* "scgi_cyclic_temp_file" is disabled */
+    conf->upstream.cyclic_temp_file = 0;
+
+    return conf;
+}
+
+char *
+ngx_http_scgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
+{
+    ngx_http_scgi_loc_conf_t *prev = parent;
+    ngx_http_scgi_loc_conf_t *conf = child;
+
+    u_char                       *p;
+    size_t                        size;
+    uintptr_t                    *code;
+    ngx_str_t                    *header;
+    ngx_uint_t                    i, j;
+    ngx_array_t                   hide_headers;
+    ngx_keyval_t                 *src;
+    ngx_hash_key_t               *hk;
+    ngx_hash_init_t               hash;
+    ngx_http_script_compile_t     sc;
+    ngx_http_script_copy_code_t  *copy;
+
+    ngx_conf_merge_value(conf->enabled, prev->enabled, 0);
+
+    if (conf->upstream.store != 0) {
+        ngx_conf_merge_value(conf->upstream.store,
+                                  prev->upstream.store, 0);
+
+        if (conf->upstream.store_lengths == NULL) {
+            conf->upstream.store_lengths = prev->upstream.store_lengths;
+            conf->upstream.store_values = prev->upstream.store_values;
+        }
+    }
+
+    ngx_conf_merge_uint_value(conf->upstream.store_access,
+                              prev->upstream.store_access, 0600);
+
+    ngx_conf_merge_value(conf->upstream.buffering,
+                              prev->upstream.buffering, 1);
+
+    ngx_conf_merge_value(conf->upstream.ignore_client_abort,
+                              prev->upstream.ignore_client_abort, 0);
+
+    ngx_conf_merge_msec_value(conf->upstream.connect_timeout,
+                              prev->upstream.connect_timeout, 60000);
+
+    ngx_conf_merge_msec_value(conf->upstream.send_timeout,
+                              prev->upstream.send_timeout, 60000);
+
+    ngx_conf_merge_msec_value(conf->upstream.read_timeout,
+                              prev->upstream.read_timeout, 60000);
+
+    ngx_conf_merge_size_value(conf->upstream.send_lowat,
+                              prev->upstream.send_lowat, 0);
+
+    ngx_conf_merge_size_value(conf->upstream.buffer_size,
+                              prev->upstream.buffer_size,
+                              (size_t) ngx_pagesize);
+
+
+    ngx_conf_merge_bufs_value(conf->upstream.bufs, prev->upstream.bufs,
+                              8, ngx_pagesize);
+
+    if (conf->upstream.bufs.num < 2) {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                           "there must be at least 2 \"scgi_buffers\"");
+        return NGX_CONF_ERROR;
+    }
+
+
+    size = conf->upstream.buffer_size;
+    if (size < conf->upstream.bufs.size) {
+        size = conf->upstream.bufs.size;
+    }
+
+
+    ngx_conf_merge_size_value(conf->upstream.busy_buffers_size_conf,
+                              prev->upstream.busy_buffers_size_conf,
+                              NGX_CONF_UNSET_SIZE);
+
+    if (conf->upstream.busy_buffers_size_conf == NGX_CONF_UNSET_SIZE) {
+        conf->upstream.busy_buffers_size = 2 * size;
+    } else {
+        conf->upstream.busy_buffers_size =
+                                         conf->upstream.busy_buffers_size_conf;
+    }
+
+    if (conf->upstream.busy_buffers_size < size) {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+             "\"scgi_busy_buffers_size\" must be equal or bigger than "
+             "maximum of the value of \"scgi_buffer_size\" and "
+             "one of the \"scgi_buffers\"");
+
+        return NGX_CONF_ERROR;
+    }
+
+    if (conf->upstream.busy_buffers_size
+        > (conf->upstream.bufs.num - 1) * conf->upstream.bufs.size)
+    {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+             "\"scgi_busy_buffers_size\" must be less than "
+             "the size of all \"scgi_buffers\" minus one buffer");
+
+        return NGX_CONF_ERROR;
+    }
+
+
+    ngx_conf_merge_size_value(conf->upstream.temp_file_write_size_conf,
+                              prev->upstream.temp_file_write_size_conf,
+                              NGX_CONF_UNSET_SIZE);
+
+    if (conf->upstream.temp_file_write_size_conf == NGX_CONF_UNSET_SIZE) {
+        conf->upstream.temp_file_write_size = 2 * size;
+    } else {
+        conf->upstream.temp_file_write_size =
+                                      conf->upstream.temp_file_write_size_conf;
+    }
+
+    if (conf->upstream.temp_file_write_size < size) {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+             "\"scgi_temp_file_write_size\" must be equal or bigger than "
+             "maximum of the value of \"scgi_buffer_size\" and "
+             "one of the \"scgi_buffers\"");
+
+        return NGX_CONF_ERROR;
+    }
+
+
+    ngx_conf_merge_size_value(conf->upstream.max_temp_file_size_conf,
+                              prev->upstream.max_temp_file_size_conf,
+                              NGX_CONF_UNSET_SIZE);
+
+    if (conf->upstream.max_temp_file_size_conf == NGX_CONF_UNSET_SIZE) {
+        conf->upstream.max_temp_file_size = 1024 * 1024 * 1024;
+    } else {
+        conf->upstream.max_temp_file_size =
+                                        conf->upstream.max_temp_file_size_conf;
+    }
+
+    if (conf->upstream.max_temp_file_size != 0
+        && conf->upstream.max_temp_file_size < size)
+    {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+             "\"scgi_max_temp_file_size\" must be equal to zero to disable "
+             "the temporary files usage or must be equal or bigger than "
+             "maximum of the value of \"scgi_buffer_size\" and "
+             "one of the \"scgi_buffers\"");
+
+        return NGX_CONF_ERROR;
+    }
+
+
+    ngx_conf_merge_bitmask_value(conf->upstream.next_upstream,
+                              prev->upstream.next_upstream,
+                              (NGX_CONF_BITMASK_SET
+                               |NGX_HTTP_UPSTREAM_FT_ERROR
+                               |NGX_HTTP_UPSTREAM_FT_TIMEOUT));
+
+    if (conf->upstream.next_upstream & NGX_HTTP_UPSTREAM_FT_OFF) {
+        conf->upstream.next_upstream = NGX_CONF_BITMASK_SET
+                                       |NGX_HTTP_UPSTREAM_FT_OFF;
+    }
+
+    ngx_conf_merge_path_value(conf->upstream.temp_path,
+                              prev->upstream.temp_path,
+                              NGX_HTTP_SCGI_TEMP_PATH, 1, 2, 0,
+                              ngx_garbage_collector_temp_handler, cf);
+
+    ngx_conf_merge_value(conf->upstream.pass_request_headers,
+                              prev->upstream.pass_request_headers, 1);
+    ngx_conf_merge_value(conf->upstream.pass_request_body,
+                              prev->upstream.pass_request_body, 1);
+
+    ngx_conf_merge_value(conf->upstream.intercept_errors,
+                              prev->upstream.intercept_errors, 0);
+
+
+
+    ngx_conf_merge_str_value(conf->index, prev->index, "");
+
+    if (conf->upstream.hide_headers == NULL
+        && conf->upstream.pass_headers == NULL)
+    {
+        conf->upstream.hide_headers = prev->upstream.hide_headers;
+        conf->upstream.pass_headers = prev->upstream.pass_headers;
+        conf->upstream.hide_headers_hash = prev->upstream.hide_headers_hash;
+
+        if (conf->upstream.hide_headers_hash.buckets) {
+            goto peers;
+        }
+
+    } else {
+        if (conf->upstream.hide_headers == NULL) {
+            conf->upstream.hide_headers = prev->upstream.hide_headers;
+        }
+
+        if (conf->upstream.pass_headers == NULL) {
+            conf->upstream.pass_headers = prev->upstream.pass_headers;
+        }
+    }
+
+    if (ngx_array_init(&hide_headers, cf->temp_pool, 4, sizeof(ngx_hash_key_t))
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+
+    for (header = ngx_http_scgi_hide_headers; header->len; header++) {
+        hk = ngx_array_push(&hide_headers);
+        if (hk == NULL) {
+            return NGX_CONF_ERROR;
+        }
+
+        hk->key = *header;
+        hk->key_hash = ngx_hash_key_lc(header->data, header->len);
+        hk->value = (void *) 1;
+    }
+
+    if (conf->upstream.hide_headers) {
+
+        header = conf->upstream.hide_headers->elts;
+
+        for (i = 0; i < conf->upstream.hide_headers->nelts; i++) {
+
+            hk = hide_headers.elts;
+
+            for (j = 0; j < hide_headers.nelts; j++) {
+                if (ngx_strcasecmp(header[i].data, hk[j].key.data) == 0) {
+                    goto exist;
+                }
+            }
+
+            hk = ngx_array_push(&hide_headers);
+            if (hk == NULL) {
+                return NGX_CONF_ERROR;
+            }
+
+            hk->key = header[i];
+            hk->key_hash = ngx_hash_key_lc(header[i].data, header[i].len);
+            hk->value = (void *) 1;
+
+        exist:
+
+            continue;
+        }
+    }
+
+    if (conf->upstream.pass_headers) {
+
+        hk = hide_headers.elts;
+        header = conf->upstream.pass_headers->elts;
+
+        for (i = 0; i < conf->upstream.pass_headers->nelts; i++) {
+
+            for (j = 0; j < hide_headers.nelts; j++) {
+
+                if (hk[j].key.data == NULL) {
+                    continue;
+                }
+
+                if (ngx_strcasecmp(header[i].data, hk[j].key.data) == 0) {
+                    hk[j].key.data = NULL;
+                    break;
+                }
+            }
+        }
+    }
+
+    hash.hash = &conf->upstream.hide_headers_hash;
+    hash.key = ngx_hash_key_lc;
+    hash.max_size = 512;
+    hash.bucket_size = ngx_align(64, ngx_cacheline_size);
+    hash.name = "scgi_hide_headers_hash";
+    hash.pool = cf->pool;
+    hash.temp_pool = NULL;
+
+    if (ngx_hash_init(&hash, hide_headers.elts, hide_headers.nelts) != NGX_OK) {
+        return NGX_CONF_ERROR;
+    }
+
+peers:
+
+    if (conf->upstream.upstream == NULL) {
+        conf->upstream.upstream = prev->upstream.upstream;
+        conf->upstream.schema = prev->upstream.schema;
+    }
+
+    if (conf->vars_source == NULL) {
+        conf->flushes = prev->flushes;
+        conf->vars_len = prev->vars_len;
+        conf->vars = prev->vars;
+        conf->vars_source = prev->vars_source;
+
+        if (conf->vars_source == NULL) {
+            return NGX_CONF_OK;
+        }
+    }
+
+    conf->vars_len = ngx_array_create(cf->pool, 64, 1);
+    if (conf->vars_len == NULL) {
+        return NGX_CONF_ERROR;
+    }
+
+    conf->vars = ngx_array_create(cf->pool, 512, 1);
+    if (conf->vars == NULL) {
+        return NGX_CONF_ERROR;
+    }
+
+    src = conf->vars_source->elts;
+    for (i = 0; i < conf->vars_source->nelts; i++) {
+
+        if (ngx_http_script_variables_count(&src[i].value) == 0) {
+            copy = ngx_array_push_n(conf->vars_len,
+                                    sizeof(ngx_http_script_copy_code_t));
+            if (copy == NULL) {
+                return NGX_CONF_ERROR;
+            }
+
+            copy->code = (ngx_http_script_code_pt)
+                                                  ngx_http_script_copy_len_code;
+            copy->len = src[i].key.len;
+
+
+            copy = ngx_array_push_n(conf->vars_len,
+                                    sizeof(ngx_http_script_copy_code_t));
+            if (copy == NULL) {
+                return NGX_CONF_ERROR;
+            }
+
+            copy->code = (ngx_http_script_code_pt)
+                                                 ngx_http_script_copy_len_code;
+            copy->len = src[i].value.len;
+
+
+            size = (sizeof(ngx_http_script_copy_code_t)
+                       + src[i].key.len + src[i].value.len
+                       + sizeof(uintptr_t) - 1)
+                    & ~(sizeof(uintptr_t) - 1);
+
+            copy = ngx_array_push_n(conf->vars, size);
+            if (copy == NULL) {
+                return NGX_CONF_ERROR;
+            }
+
+            copy->code = ngx_http_script_copy_code;
+            copy->len = src[i].key.len + src[i].value.len;
+
+            p = (u_char *) copy + sizeof(ngx_http_script_copy_code_t);
+
+            p = ngx_cpymem(p, src[i].key.data, src[i].key.len);
+            ngx_memcpy(p, src[i].value.data, src[i].value.len);
+
+        } else {
+            copy = ngx_array_push_n(conf->vars_len,
+                                    sizeof(ngx_http_script_copy_code_t));
+            if (copy == NULL) {
+                return NGX_CONF_ERROR;
+            }
+
+            copy->code = (ngx_http_script_code_pt)
+                                                 ngx_http_script_copy_len_code;
+            copy->len = src[i].key.len;
+
+
+            size = (sizeof(ngx_http_script_copy_code_t)
+                    + src[i].key.len + sizeof(uintptr_t) - 1)
+                    & ~(sizeof(uintptr_t) - 1);
+
+            copy = ngx_array_push_n(conf->vars, size);
+            if (copy == NULL) {
+                return NGX_CONF_ERROR;
+            }
+
+            copy->code = ngx_http_script_copy_code;
+            copy->len = src[i].key.len;
+
+            p = (u_char *) copy + sizeof(ngx_http_script_copy_code_t);
+            ngx_memcpy(p, src[i].key.data, src[i].key.len);
+
+
+            ngx_memzero(&sc, sizeof(ngx_http_script_compile_t));
+
+            sc.cf = cf;
+            sc.source = &src[i].value;
+            sc.flushes = &conf->flushes;
+            sc.lengths = &conf->vars_len;
+            sc.values = &conf->vars;
+
+            if (ngx_http_script_compile(&sc) != NGX_OK) {
+                return NGX_CONF_ERROR;
+            }
+        }
+
+        code = ngx_array_push_n(conf->vars_len, sizeof(uintptr_t));
+        if (code == NULL) {
+            return NGX_CONF_ERROR;
+        }
+
+        *code = (uintptr_t) NULL;
+
+
+        code = ngx_array_push_n(conf->vars, sizeof(uintptr_t));
+        if (code == NULL) {
+            return NGX_CONF_ERROR;
+        }
+
+        *code = (uintptr_t) NULL;
+    }
+
+    code = ngx_array_push_n(conf->vars_len, sizeof(uintptr_t));
+    if (code == NULL) {
+        return NGX_CONF_ERROR;
+    }
+
+    *code = (uintptr_t) NULL;
+
+    return NGX_CONF_OK;
+}
 
 static char *
 ngx_http_scgi_lowat_check(ngx_conf_t *cf, void *post, void *data)

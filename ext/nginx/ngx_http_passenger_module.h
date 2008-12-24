@@ -25,27 +25,12 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _PASSENGER_NGINX_CONFIGURATION_H_
-#define _PASSENGER_NGINX_CONFIGURATION_H_
+#ifndef _PASSENGER_NGINX_MODULE_H_
+#define _PASSENGER_NGINX_MODULE_H_
 
-#include <ngx_config.h>
+#include <ngx_core.h>
 
-typedef struct {
-    ngx_flag_t                     enabled;
-    ngx_http_upstream_conf_t       upstream;
+extern ngx_module_t ngx_http_passenger_module;
 
-    ngx_str_t                      index;
-
-    ngx_array_t                   *flushes;
-    ngx_array_t                   *vars_len;
-    ngx_array_t                   *vars;
-    ngx_array_t                   *vars_source;
-} ngx_http_scgi_loc_conf_t;
-
-extern const ngx_command_t ngx_http_passenger_commands[];
-
-void *ngx_http_scgi_create_loc_conf(ngx_conf_t *cf);
-char *ngx_http_scgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
-
-#endif /* _PASSENGER_NGINX_CONFIGURATION_H_ */
+#endif /* _PASSENGER_NGINX_MODULE_H_ */
 

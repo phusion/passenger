@@ -25,27 +25,36 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _PASSENGER_NGINX_CONFIGURATION_H_
-#define _PASSENGER_NGINX_CONFIGURATION_H_
+#ifndef _PASSENGER_NGINX_CONTENT_HANDLER_H_
+#define _PASSENGER_NGINX_CONTENT_HANDLER_H_
 
-#include <ngx_config.h>
+#include <ngx_core.h>
+#include <ngx_http.h>
+
 
 typedef struct {
-    ngx_flag_t                     enabled;
-    ngx_http_upstream_conf_t       upstream;
+    ngx_uint_t                     status;
+    ngx_uint_t                     status_count;
+    u_char                        *status_start;
+    u_char                        *status_end;
+} ngx_http_scgi_ctx_t;
 
-    ngx_str_t                      index;
 
-    ngx_array_t                   *flushes;
-    ngx_array_t                   *vars_len;
-    ngx_array_t                   *vars;
-    ngx_array_t                   *vars_source;
-} ngx_http_scgi_loc_conf_t;
+#define NGX_HTTP_SCGI_PARSE_NO_HEADER  20
 
-extern const ngx_command_t ngx_http_passenger_commands[];
 
-void *ngx_http_scgi_create_loc_conf(ngx_conf_t *cf);
-char *ngx_http_scgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
+ngx_int_t ngx_http_passenger_handler(ngx_http_request_t *r);
 
-#endif /* _PASSENGER_NGINX_CONFIGURATION_H_ */
+
+static ngx_int_t ngx_http_scgi_create_request(ngx_http_request_t *r);
+static ngx_int_t ngx_http_scgi_reinit_request(ngx_http_request_t *r);
+static ngx_int_t ngx_http_scgi_process_status_line(ngx_http_request_t *r);
+static ngx_int_t ngx_http_scgi_parse_status_line(ngx_http_request_t *r,
+    ngx_http_scgi_ctx_t *p);
+static ngx_int_t ngx_http_scgi_process_header(ngx_http_request_t *r);
+static void ngx_http_scgi_abort_request(ngx_http_request_t *r);
+static void ngx_http_scgi_finalize_request(ngx_http_request_t *r,
+    ngx_int_t rc);
+
+#endif /* _PASSENGER_NGINX_CONTENT_HANDLER_H_ */
 
