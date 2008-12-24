@@ -5,6 +5,7 @@
 #include <cstring>
 #include <unistd.h>
 #include <errno.h>
+#include <signal.h>
 
 #include <set>
 
@@ -53,6 +54,10 @@ private:
 	shared_ptr<SharedData> data;
 	
 public:
+	FileDescriptor() {
+		// Do nothing.
+	}
+	
 	FileDescriptor(int fd) {
 		data = ptr(new SharedData(fd));
 	}
@@ -71,6 +76,7 @@ private:
 	oxt::thread *thr;
 	
 	FileDescriptor acceptConnection() {
+		TRACE_POINT();
 		struct sockaddr_un addr;
 		socklen_t addrlen = sizeof(addr);
 		int fd = syscalls::accept(serverSocket,
@@ -84,6 +90,7 @@ private:
 	}
 	
 	bool readAndParseResponseHeaders(FileDescriptor &fd, ScgiRequestParser &parser) {
+		TRACE_POINT();
 		char buf[1024 * 16];
 		ssize_t size;
 		unsigned int accepted;
@@ -97,6 +104,7 @@ private:
 	}
 	
 	void forwardResponse(Application::SessionPtr &session, FileDescriptor &clientFd) {
+		TRACE_POINT();
 		HttpStatusExtractor ex;
 		int stream = session->getStream();
 		int eof = false;
@@ -108,6 +116,7 @@ private:
 		 * extract the HTTP status line from it.
 		 */
 		while (!eof) {
+			UPDATE_TRACE_POINT();
 			size = syscalls::read(stream, buf, sizeof(buf));
 			if (size <= 0) {
 				eof = true;
@@ -117,62 +126,84 @@ private:
 				 * loop and continue with forwarding the rest
 				 * of the response data.
 				 */
+				UPDATE_TRACE_POINT();
 				string statusLine("HTTP/1.1 ");
 				statusLine.append(ex.getStatusLine());
+				UPDATE_TRACE_POINT();
 				output.writeRaw(statusLine.c_str(), statusLine.size());
+				UPDATE_TRACE_POINT();
 				output.writeRaw(ex.getBuffer().c_str(), ex.getBuffer().size());
 				break;
 			}
 		}
+		
+		UPDATE_TRACE_POINT();
 		while (!eof) {
+			UPDATE_TRACE_POINT();
 			size = syscalls::read(stream, buf, sizeof(buf));
 			if (size <= 0) {
 				eof = true;
 			} else {
+				UPDATE_TRACE_POINT();
 				output.writeRaw(buf, size);
 			}
 		}
 	}
 	
 	void handleRequest(FileDescriptor &clientFd) {
+		TRACE_POINT();
 		ScgiRequestParser parser;
 		if (!readAndParseResponseHeaders(clientFd, parser)) {
 			return;
 		}
 		
-		PoolOptions options(canonicalizePath(parser.getHeader("DOCUMENT_ROOT") + "/.."));
-		Application::SessionPtr session(pool->get(options));
+		try {
+			PoolOptions options(canonicalizePath(parser.getHeader("DOCUMENT_ROOT") + "/.."));
+			Application::SessionPtr session(pool->get(options));
 		
-		session->sendHeaders(parser.getHeaderData().c_str(),
-			parser.getHeaderData().size());
-		session->shutdownWriter();
-		forwardResponse(session, clientFd);
+			UPDATE_TRACE_POINT();
+			session->sendHeaders(parser.getHeaderData().c_str(),
+				parser.getHeaderData().size());
+			session->shutdownWriter();
+			forwardResponse(session, clientFd);
+		} catch (const boost::thread_interrupted &) {
+			throw;
+		} catch (const tracable_exception &e) {
+			P_ERROR("Uncaught exception in PassengerServer client thread:\n"
+				<< "   exception: " << e.what() << "\n"
+				<< "   backtrace:\n" << e.backtrace());
+		} catch (const exception &e) {
+			P_ERROR("Uncaught exception in PassengerServer client thread:\n"
+				<< "   exception: " << e.what() << "\n"
+				<< "   backtrace: not available");
+		} catch (...) {
+			P_ERROR("Uncaught unknown exception in PassengerServer client thread.");
+		}
 	}
 	
 	void threadMain() {
-		while (true) {
-			try {
-				FileDescriptor fd = acceptConnection();
+		TRACE_POINT();
+		try {
+			while (true) {
+				UPDATE_TRACE_POINT();
+				FileDescriptor fd(acceptConnection());
 				handleRequest(fd);
-			} catch (const boost::thread_interrupted &) {
-				P_TRACE(2, "Client thread " << this << " interrupted.");
-				break;
-			} catch (const tracable_exception &e) {
-				P_TRACE(2, "Uncaught exception in PassengerServer client thread:\n"
-					<< "   message: " << toString(args) << "\n"
-					<< "   exception: " << e.what() << "\n"
-					<< "   backtrace:\n" << e.backtrace());
-				abort();
-			} catch (const exception &e) {
-				P_TRACE(2, "Uncaught exception in PassengerServer client thread:\n"
-					<< "   message: " << toString(args) << "\n"
-					<< "   exception: " << e.what() << "\n"
-					<< "   backtrace: not available");
-				abort();
-			} catch (...) {
-				P_TRACE(2, "Uncaught unknown exception in PassengerServer client thread.");
-				throw;
 			}
+		} catch (const boost::thread_interrupted &) {
+			P_TRACE(2, "Client thread " << this << " interrupted.");
+		} catch (const tracable_exception &e) {
+			P_ERROR("Uncaught exception in PassengerServer client thread:\n"
+				<< "   exception: " << e.what() << "\n"
+				<< "   backtrace:\n" << e.backtrace());
+			abort();
+		} catch (const exception &e) {
+			P_ERROR("Uncaught exception in PassengerServer client thread:\n"
+				<< "   exception: " << e.what() << "\n"
+				<< "   backtrace: not available");
+			abort();
+		} catch (...) {
+			P_ERROR("Uncaught unknown exception in PassengerServer client thread.");
+			throw;
 		}
 	}
 	
@@ -257,6 +288,14 @@ public:
 	Server(unsigned int maxPoolSize) {
 		numberOfThreads = maxPoolSize * 4;
 		setup_syscall_interruption_support();
+		
+		// Ignore SIGPIPE.
+		struct sigaction action;
+		action.sa_handler = SIG_IGN;
+		action.sa_flags   = 0;
+		sigemptyset(&action.sa_mask);
+		sigaction(SIGPIPE, &action, NULL);
+		
 		initializePool(maxPoolSize);
 		startListening();
 	}
@@ -266,6 +305,7 @@ public:
 	}
 	
 	void start() {
+		TRACE_POINT();
 		startClientHandlerThreads();
 		while (true) {
 			sleep(1);
@@ -276,6 +316,7 @@ public:
 int
 main() {
 	try {
+		TRACE_POINT();
 		Server(6).start();
 		return 0;
 	} catch (const tracable_exception &e) {
