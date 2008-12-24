@@ -55,7 +55,9 @@ protected
 		env[RACK_MULTIPROCESS] = true
 		env[RACK_RUN_ONCE]     = false
 		env[SCRIPT_NAME]     ||= ''
-		env[PATH_INFO].sub!(/^#{Regexp.escape(env[SCRIPT_NAME])}/, "")
+		if ENV.has_key?(PATH_INFO)
+			env[PATH_INFO].sub!(/^#{Regexp.escape(env[SCRIPT_NAME])}/, "")
+		end
 		if env[HTTPS] == YES || env[HTTPS] == ON || env[HTTPS] == ONE
 			env[RACK_URL_SCHEME] = HTTPS_DOWNCASE
 		else
