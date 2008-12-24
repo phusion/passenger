@@ -193,6 +193,7 @@ static ngx_int_t
 ngx_http_scgi_create_request(ngx_http_request_t *r)
 {
     u_char                        ch;
+    u_char                        buf[sizeof("4294967296")];
     size_t                        len, size, key_len, val_len;
     ngx_uint_t                    i, n;
     ngx_buf_t                    *b;
@@ -206,7 +207,10 @@ ngx_http_scgi_create_request(ngx_http_request_t *r)
     ngx_http_script_len_code_pt   lcode;
 
     /* len of the Content-Length header */
-    len = sizeof("CONTENT_LENGTH") + sizeof("4294967296");
+    ngx_memzero(buf, sizeof(buf));
+    ngx_snprintf(buf, sizeof(buf), "%ui", r->headers_in.content_length_n);
+    /* +1 for trailing null */
+    len = sizeof("CONTENT_LENGTH") + ngx_strlen(buf) + 1;
 
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
 
