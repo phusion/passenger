@@ -194,7 +194,7 @@ ngx_http_scgi_create_request(ngx_http_request_t *r)
 {
     u_char                        ch;
     u_char                        buf[sizeof("4294967296")];
-    size_t                        len, size, key_len, val_len;
+    size_t                        len, size, key_len, val_len, content_length;
     ngx_uint_t                    i, n;
     ngx_buf_t                    *b;
     ngx_chain_t                  *cl, *body;
@@ -208,7 +208,12 @@ ngx_http_scgi_create_request(ngx_http_request_t *r)
 
     /* len of the Content-Length header */
     ngx_memzero(buf, sizeof(buf));
-    ngx_snprintf(buf, sizeof(buf), "%ui", r->headers_in.content_length_n);
+    if (r->headers_in.content_length_n < 0) {
+        content_length = 0;
+    } else {
+        content_length = r->headers_in.content_length_n;
+    }
+    ngx_snprintf(buf, sizeof(buf), "%ui", content_length);
     /* +1 for trailing null */
     len = sizeof("CONTENT_LENGTH") + ngx_strlen(buf) + 1;
 
@@ -291,8 +296,7 @@ ngx_http_scgi_create_request(ngx_http_request_t *r)
     b->last = ngx_copy(b->last, "CONTENT_LENGTH",
                        sizeof("CONTENT_LENGTH"));
 
-    b->last = ngx_snprintf(b->last, 10, "%ui",
-                           r->headers_in.content_length_n);
+    b->last = ngx_snprintf(b->last, 10, "%ui", content_length);
     *b->last++ = (u_char) 0;
 
     if (slcf->vars_len) {

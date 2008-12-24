@@ -1,4 +1,4 @@
-// g++ -Wall -I.. -I../apache2 Server.cpp -o server ../libboost_oxt.a ../apache2/Utils.o ../apache2/Logging.o -lpthread
+// g++ -Wall -I.. -I../apache2 Server.cpp -o server ../libboost_oxt.a ../apache2/Utils.o ../apache2/Logging.o -lpthread -g
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -89,7 +89,7 @@ private:
 		}
 	}
 	
-	bool readAndParseResponseHeaders(FileDescriptor &fd, ScgiRequestParser &parser) {
+	bool readAndParseRequestHeaders(FileDescriptor &fd, ScgiRequestParser &parser, string &requestBody) {
 		TRACE_POINT();
 		char buf[1024 * 16];
 		ssize_t size;
@@ -97,14 +97,62 @@ private:
 		
 		do {
 			size = syscalls::read(fd, buf, sizeof(buf));
-			accepted = parser.feed(buf, size);
+			if (size == -1) {
+				throw SystemException("Cannot read request header", errno);
+			} else {
+				accepted = parser.feed(buf, size);
+			}
 		} while (parser.acceptingInput());
 
 		if (parser.getState() == ScgiRequestParser::ERROR) {
 			P_ERROR("Invalid SCGI header received.");
 			return false;
+		} else if (!parser.hasHeader("DOCUMENT_ROOT")) {
+			P_ERROR("DOCUMENT_ROOT header is missing.");
+			return false;
 		} else {
-			return parser.hasHeader("DOCUMENT_ROOT");
+			requestBody.assign(buf + accepted, size - accepted);
+			return true;
+		}
+	}
+	
+	void sendRequestBody(Application::SessionPtr &session,
+	                     FileDescriptor &clientFd,
+	                     const string &partialRequestBody,
+	                     unsigned long contentLength) {
+		TRACE_POINT();
+		char buf[1024 * 16];
+		ssize_t size;
+		size_t bytesToRead;
+		unsigned long bytesForwarded = 0;
+		
+		if (partialRequestBody.size() > 0) {
+			UPDATE_TRACE_POINT();
+			session->sendBodyBlock(partialRequestBody.c_str(),
+				partialRequestBody.size());
+			bytesForwarded = partialRequestBody.size();
+		}
+		
+		bool done = bytesForwarded == contentLength;
+		while (!done) {
+			UPDATE_TRACE_POINT();
+			
+			bytesToRead = contentLength - bytesForwarded;
+			if (bytesToRead > sizeof(buf)) {
+				bytesToRead = sizeof(buf);
+			}
+			size = syscalls::read(clientFd, buf, bytesToRead);
+			
+			if (size == 0) {
+				done = true;
+			} else if (size == -1) {
+				throw SystemException("Cannot read request body", errno);
+			} else {
+				UPDATE_TRACE_POINT();
+				session->sendBodyBlock(buf, size);
+				bytesForwarded += size;
+				done = bytesForwarded == contentLength;
+			}
 		}
 	}
 	
@@ -123,8 +171,10 @@ private:
 		while (!eof) {
 			UPDATE_TRACE_POINT();
 			size = syscalls::read(stream, buf, sizeof(buf));
-			if (size <= 0) {
+			if (size == 0) {
 				eof = true;
+			} else if (size == -1) {
+				throw SystemException("Cannot read response from backend process", errno);
 			} else if (ex.feed(buf, size)) {
 				/* We now have an HTTP status line. Send back
 				 * a proper HTTP response, then exit this while
@@ -146,8 +196,10 @@ private:
 		while (!eof) {
 			UPDATE_TRACE_POINT();
 			size = syscalls::read(stream, buf, sizeof(buf));
-			if (size <= 0) {
+			if (size == 0) {
 				eof = true;
+			} else if (size == -1) {
+				throw SystemException("Cannot read response from backend process", errno);
 			} else {
 				UPDATE_TRACE_POINT();
 				output.writeRaw(buf, size);
@@ -158,17 +210,27 @@ private:
 	void handleRequest(FileDescriptor &clientFd) {
 		TRACE_POINT();
 		ScgiRequestParser parser;
-		if (!readAndParseResponseHeaders(clientFd, parser)) {
+		string partialRequestBody;
+		unsigned long contentLength;
+		
+		if (!readAndParseRequestHeaders(clientFd, parser, partialRequestBody)) {
 			return;
 		}
 		
 		try {
 			PoolOptions options(canonicalizePath(parser.getHeader("DOCUMENT_ROOT") + "/.."));
 			Application::SessionPtr session(pool->get(options));
-		
+			
 			UPDATE_TRACE_POINT();
 			session->sendHeaders(parser.getHeaderData().c_str(),
 				parser.getHeaderData().size());
+			
+			contentLength = atol(parser.getHeader("CONTENT_LENGTH"));
+			sendRequestBody(session,
+				clientFd,
+				partialRequestBody,
+				contentLength);
+			
 			session->shutdownWriter();
 			forwardResponse(session, clientFd);
 		} catch (const boost::thread_interrupted &) {
