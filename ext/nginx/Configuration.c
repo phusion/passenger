@@ -118,6 +118,7 @@ ngx_http_passenger_create_loc_conf(ngx_conf_t *cf)
     DEFINE_VAR_TO_PASS("REQUEST_METHOD",  "$request_method");
     DEFINE_VAR_TO_PASS("CONTENT_TYPE",    "$content_type");
     DEFINE_VAR_TO_PASS("REQUEST_URI",     "$request_uri");
+    DEFINE_VAR_TO_PASS("PATH_INFO",       "$document_uri");
     DEFINE_VAR_TO_PASS("DOCUMENT_URI",    "$document_uri");
     DEFINE_VAR_TO_PASS("DOCUMENT_ROOT",   "$document_root");
     DEFINE_VAR_TO_PASS("SERVER_PROTOCOL", "$server_protocol");
