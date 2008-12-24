@@ -33,6 +33,7 @@
 
 
 typedef struct {
+    ngx_flag_t                     enabled;
     ngx_http_upstream_conf_t       upstream;
 
     ngx_str_t                      index;
@@ -67,13 +68,14 @@ static void ngx_http_scgi_finalize_request(ngx_http_request_t *r,
     ngx_int_t rc);
 
 static ngx_int_t ngx_http_scgi_add_variables(ngx_conf_t *cf);
+static ngx_int_t ngx_http_passenger_init(ngx_conf_t *cf);
 static void *ngx_http_scgi_create_loc_conf(ngx_conf_t *cf);
 static char *ngx_http_scgi_merge_loc_conf(ngx_conf_t *cf,
     void *parent, void *child);
 static ngx_int_t ngx_http_scgi_script_name_variable(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data);
 
-static char *ngx_http_scgi_pass(ngx_conf_t *cf, ngx_command_t *cmd,
+static char *ngx_http_passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 static char *ngx_http_scgi_store(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
@@ -109,9 +111,9 @@ static ngx_conf_bitmask_t  ngx_http_scgi_next_upstream_masks[] = {
 
 static ngx_command_t  ngx_http_scgi_commands[] = {
 
-    { ngx_string("scgi_pass"),
-      NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF|NGX_CONF_TAKE1,
-      ngx_http_scgi_pass,
+    { ngx_string("passenger_enabled"),
+      NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF|NGX_CONF_FLAG,
+      ngx_http_passenger_enabled,
       NGX_HTTP_LOC_CONF_OFFSET,
       0,
       NULL },
@@ -283,7 +285,7 @@ static ngx_command_t  ngx_http_scgi_commands[] = {
 
 static ngx_http_module_t  ngx_http_passenger_module_ctx = {
     ngx_http_scgi_add_variables,        /* preconfiguration */
-    NULL,                               /* postconfiguration */
+    ngx_http_passenger_init,            /* postconfiguration */
 
     NULL,                               /* create main configuration */
     NULL,                               /* init main configuration */
@@ -321,13 +323,17 @@ static ngx_str_t  ngx_http_scgi_hide_headers[] = {
     ngx_null_string
 };
 
+static ngx_str_t  passenger_schema_string = ngx_string("passenger://");
+
 
 static ngx_int_t
-ngx_http_scgi_handler(ngx_http_request_t *r)
+ngx_http_passenger_handler(ngx_http_request_t *r)
 {
     ngx_int_t                  rc;
     ngx_http_upstream_t       *u;
     ngx_http_scgi_loc_conf_t  *slcf;
+    ngx_str_t path;
+    size_t    root;
 
     if (r->subrequest_in_memory) {
         ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
@@ -338,6 +344,18 @@ ngx_http_scgi_handler(ngx_http_request_t *r)
 
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
 
+    if (!slcf->enabled) {
+        return NGX_DECLINED;
+    }
+    
+    if (ngx_http_map_uri_to_path(r, &path, &root, 0) != NULL) {
+        struct stat buf;
+        
+        if (stat((const char *) path.data, &buf) == 0 && S_ISREG(buf.st_mode)) {
+            return NGX_DECLINED;
+        }
+    }
+    
     u = ngx_pcalloc(r->pool, sizeof(ngx_http_upstream_t));
     if (u == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
@@ -1044,6 +1062,25 @@ ngx_http_scgi_add_variables(ngx_conf_t *cf)
 }
 
 
+static ngx_int_t
+ngx_http_passenger_init(ngx_conf_t *cf)
+{
+    ngx_http_handler_pt        *h;
+    ngx_http_core_main_conf_t  *cmcf;
+
+    cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
+
+    h = ngx_array_push(&cmcf->phases[NGX_HTTP_CONTENT_PHASE].handlers);
+    if (h == NULL) {
+        return NGX_ERROR;
+    }
+
+    *h = ngx_http_passenger_handler;
+    
+    return NGX_OK;
+}
+
+
 static void *
 ngx_http_scgi_create_loc_conf(ngx_conf_t *cf)
 {
@@ -1072,6 +1109,8 @@ ngx_http_scgi_create_loc_conf(ngx_conf_t *cf)
      *     conf->index.len = 0;
      *     conf->index.data = NULL;
      */
+
+    conf->enabled = NGX_CONF_UNSET;
 
     conf->upstream.store = NGX_CONF_UNSET;
     conf->upstream.store_access = NGX_CONF_UNSET_UINT;
@@ -1118,6 +1157,8 @@ ngx_http_scgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_hash_init_t               hash;
     ngx_http_script_compile_t     sc;
     ngx_http_script_copy_code_t  *copy;
+
+    ngx_conf_merge_value(conf->enabled, prev->enabled, 0);
 
     if (conf->upstream.store != 0) {
         ngx_conf_merge_value(conf->upstream.store,
@@ -1560,41 +1601,41 @@ ngx_http_scgi_script_name_variable(ngx_http_request_t *r,
 
 
 static char *
-ngx_http_scgi_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ngx_http_passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_http_scgi_loc_conf_t *lcf = conf;
 
     ngx_url_t                    u;
-    ngx_str_t                   *value;
     ngx_http_core_loc_conf_t    *clcf;
-
-    if (lcf->upstream.schema.len) {
-        return "is duplicate";
-    }
+    ngx_str_t                   *value;
 
     value = cf->args->elts;
+    if (ngx_strcasecmp(value[1].data, (u_char *) "on") == 0) {
+        if (lcf->upstream.schema.len) {
+            return "is duplicate";
+        }
 
-    ngx_memzero(&u, sizeof(ngx_url_t));
+        lcf->enabled = 1;
 
-    u.url = value[1];
-    u.no_resolve = 1;
+        ngx_memzero(&u, sizeof(ngx_url_t));
+        u.url.data = (u_char *) "unix:/tmp/passenger_scgi.sock";
+        u.url.len  = sizeof("unix:/tmp/passenger_scgi.sock") - 1;
+        u.no_resolve = 1;
 
-    lcf->upstream.upstream = ngx_http_upstream_add(cf, &u, 0);
-    if (lcf->upstream.upstream == NULL) {
-        return NGX_CONF_ERROR;
-    }
+        lcf->upstream.upstream = ngx_http_upstream_add(cf, &u, 0);
+        if (lcf->upstream.upstream == NULL) {
+            return NGX_CONF_ERROR;
+        }
 
-    lcf->upstream.schema.len = sizeof("scgi://") - 1;
-    lcf->upstream.schema.data = (u_char *) "scgi://";
+        lcf->upstream.schema = passenger_schema_string;
 
-    clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
+        clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
 
-    clcf->handler = ngx_http_scgi_handler;
-
-//    lcf->upstream.location = clcf->name;
-
-    if (clcf->name.data[clcf->name.len - 1] == '/') {
-        clcf->auto_redirect = 1;
+        if (clcf->name.data[clcf->name.len - 1] == '/') {
+            clcf->auto_redirect = 1;
+        }
+    } else {
+        lcf->enabled = 0;
     }
 
     return NGX_CONF_OK;
