@@ -47,6 +47,8 @@ ngx_http_passenger_post_config_init(ngx_conf_t *cf)
 
     cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
 
+    /* Register ngx_http_passenger_handler as a default content handler. */
+
     h = ngx_array_push(&cmcf->phases[NGX_HTTP_CONTENT_PHASE].handlers);
     if (h == NULL) {
         return NGX_ERROR;
@@ -61,8 +63,8 @@ static ngx_int_t
 ngx_http_scgi_script_name_variable(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
 {
-    u_char                       *p;
-    ngx_http_scgi_loc_conf_t  *slcf;
+    u_char                         *p;
+    ngx_http_passenger_loc_conf_t  *slcf;
 
     if (r->uri.len) {
         v->valid = 1;
@@ -101,7 +103,7 @@ ngx_http_scgi_script_name_variable(ngx_http_request_t *r,
 }
 
 static ngx_int_t
-ngx_http_scgi_add_variables(ngx_conf_t *cf)
+ngx_http_passenger_add_variables(ngx_conf_t *cf)
 {
     ngx_http_variable_t  *var;
 
@@ -118,7 +120,7 @@ ngx_http_scgi_add_variables(ngx_conf_t *cf)
 
 
 static ngx_http_module_t  ngx_http_passenger_module_ctx = {
-    ngx_http_scgi_add_variables,         /* preconfiguration */
+    ngx_http_passenger_add_variables,    /* preconfiguration */
     ngx_http_passenger_post_config_init, /* postconfiguration */
 
     NULL,                                /* create main configuration */
@@ -127,8 +129,8 @@ static ngx_http_module_t  ngx_http_passenger_module_ctx = {
     NULL,                                /* create server configuration */
     NULL,                                /* merge server configuration */
 
-    ngx_http_scgi_create_loc_conf,       /* create location configuration */
-    ngx_http_scgi_merge_loc_conf         /* merge location configuration */
+    ngx_http_passenger_create_loc_conf,  /* create location configuration */
+    ngx_http_passenger_merge_loc_conf    /* merge location configuration */
 };
 
 
@@ -136,13 +138,13 @@ ngx_module_t  ngx_http_passenger_module = {
     NGX_MODULE_V1,
     &ngx_http_passenger_module_ctx,                  /* module context */
     (ngx_command_t *) ngx_http_passenger_commands,   /* module directives */
-    NGX_HTTP_MODULE,                    /* module type */
-    NULL,                               /* init master */
-    NULL,                               /* init module */
-    NULL,                               /* init process */
-    NULL,                               /* init thread */
-    NULL,                               /* exit thread */
-    NULL,                               /* exit process */
-    NULL,                               /* exit master */
+    NGX_HTTP_MODULE,                                 /* module type */
+    NULL,                                            /* init master */
+    NULL,                                            /* init module */
+    NULL,                                            /* init process */
+    NULL,                                            /* init thread */
+    NULL,                                            /* exit thread */
+    NULL,                                            /* exit process */
+    NULL,                                            /* exit master */
     NGX_MODULE_V1_PADDING
 };

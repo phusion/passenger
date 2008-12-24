@@ -46,19 +46,19 @@ static void ngx_http_scgi_finalize_request(ngx_http_request_t *r,
 static ngx_int_t
 ngx_http_scgi_create_request(ngx_http_request_t *r)
 {
-    u_char                        ch;
-    u_char                        buf[sizeof("4294967296")];
-    size_t                        len, size, key_len, val_len, content_length;
-    ngx_uint_t                    i, n;
-    ngx_buf_t                    *b;
-    ngx_chain_t                  *cl, *body;
-    ngx_list_part_t              *part;
-    ngx_table_elt_t              *header;
-    ngx_http_scgi_ctx_t          *s;
-    ngx_http_script_code_pt       code;
-    ngx_http_script_engine_t      e, le;
-    ngx_http_scgi_loc_conf_t     *slcf;
-    ngx_http_script_len_code_pt   lcode;
+    u_char                         ch;
+    u_char                         buf[sizeof("4294967296")];
+    size_t                         len, size, key_len, val_len, content_length;
+    ngx_uint_t                     i, n;
+    ngx_buf_t                     *b;
+    ngx_chain_t                   *cl, *body;
+    ngx_list_part_t               *part;
+    ngx_table_elt_t               *header;
+    ngx_http_scgi_ctx_t           *s;
+    ngx_http_script_code_pt        code;
+    ngx_http_script_engine_t       e, le;
+    ngx_http_passenger_loc_conf_t *slcf;
+    ngx_http_script_len_code_pt    lcode;
 
     /* len of the Content-Length header */
     ngx_memzero(buf, sizeof(buf));
@@ -701,11 +701,11 @@ ngx_http_scgi_finalize_request(ngx_http_request_t *r, ngx_int_t rc)
 ngx_int_t
 ngx_http_passenger_handler(ngx_http_request_t *r)
 {
-    ngx_int_t                  rc;
-    ngx_http_upstream_t       *u;
-    ngx_http_scgi_loc_conf_t  *slcf;
-    ngx_str_t path;
-    size_t    root;
+    ngx_int_t                      rc;
+    ngx_http_upstream_t           *u;
+    ngx_http_passenger_loc_conf_t *slcf;
+    ngx_str_t                      path;
+    size_t                         root;
 
     if (r->subrequest_in_memory) {
         ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,

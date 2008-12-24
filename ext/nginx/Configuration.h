@@ -40,12 +40,12 @@ typedef struct {
     ngx_array_t                   *vars_len;
     ngx_array_t                   *vars;
     ngx_array_t                   *vars_source;
-} ngx_http_scgi_loc_conf_t;
+} ngx_http_passenger_loc_conf_t;
 
 extern const ngx_command_t ngx_http_passenger_commands[];
 
-void *ngx_http_scgi_create_loc_conf(ngx_conf_t *cf);
-char *ngx_http_scgi_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
+void *ngx_http_passenger_create_loc_conf(ngx_conf_t *cf);
+char *ngx_http_passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
 
 #endif /* _PASSENGER_NGINX_CONFIGURATION_H_ */
 
