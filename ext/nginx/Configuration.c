@@ -49,6 +49,7 @@ void *
 ngx_http_passenger_create_loc_conf(ngx_conf_t *cf)
 {
     ngx_http_passenger_loc_conf_t  *conf;
+    ngx_keyval_t                   *kv;
 
     conf = ngx_pcalloc(cf->pool, sizeof(ngx_http_passenger_loc_conf_t));
     if (conf == NULL) {
@@ -99,6 +100,33 @@ ngx_http_passenger_create_loc_conf(ngx_conf_t *cf)
 
     /* "scgi_cyclic_temp_file" is disabled */
     conf->upstream.cyclic_temp_file = 0;
+    
+    #define DEFINE_VAR_TO_PASS(header_name, var_name) \
+        kv = ngx_array_push(conf->vars_source);       \
+        kv->key.data = (u_char *) header_name;        \
+        kv->key.len  = strlen(header_name) + 1;       \
+        kv->value.data = (u_char *) var_name;         \
+        kv->value.len  = strlen(var_name) + 1
+    
+    conf->vars_source = ngx_array_create(cf->pool, 4, sizeof(ngx_keyval_t));
+    if (conf->vars_source == NULL) {
+        return NGX_CONF_ERROR;
+    }
+    
+    DEFINE_VAR_TO_PASS("SCGI",            "1");
+    DEFINE_VAR_TO_PASS("QUERY_STRING",    "$query_string");
+    DEFINE_VAR_TO_PASS("REQUEST_METHOD",  "$request_method");
+    DEFINE_VAR_TO_PASS("CONTENT_TYPE",    "$content_type");
+    DEFINE_VAR_TO_PASS("REQUEST_URI",     "$request_uri");
+    DEFINE_VAR_TO_PASS("DOCUMENT_URI",    "$document_uri");
+    DEFINE_VAR_TO_PASS("DOCUMENT_ROOT",   "$document_root");
+    DEFINE_VAR_TO_PASS("SERVER_PROTOCOL", "$server_protocol");
+    DEFINE_VAR_TO_PASS("SERVER_SOFTWARE", "nginx/$nginx_version");
+    DEFINE_VAR_TO_PASS("REMOTE_ADDR",     "$remote_addr");
+    DEFINE_VAR_TO_PASS("REMOTE_PORT",     "$remote_port");
+    DEFINE_VAR_TO_PASS("SERVER_ADDR",     "$server_addr");
+    DEFINE_VAR_TO_PASS("SERVER_PORT",     "$server_port");
+    DEFINE_VAR_TO_PASS("SERVER_NAME",     "$server_name");
 
     return conf;
 }
