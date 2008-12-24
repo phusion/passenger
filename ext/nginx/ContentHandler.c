@@ -33,18 +33,17 @@
 #define NGX_HTTP_SCGI_PARSE_NO_HEADER  20
 
 
-static ngx_int_t ngx_http_scgi_reinit_request(ngx_http_request_t *r);
-static ngx_int_t ngx_http_scgi_process_status_line(ngx_http_request_t *r);
-static ngx_int_t ngx_http_scgi_parse_status_line(ngx_http_request_t *r,
+static ngx_int_t reinit_request(ngx_http_request_t *r);
+static ngx_int_t process_status_line(ngx_http_request_t *r);
+static ngx_int_t parse_status_line(ngx_http_request_t *r,
     ngx_http_scgi_ctx_t *p);
-static ngx_int_t ngx_http_scgi_process_header(ngx_http_request_t *r);
-static void ngx_http_scgi_abort_request(ngx_http_request_t *r);
-static void ngx_http_scgi_finalize_request(ngx_http_request_t *r,
-    ngx_int_t rc);
+static ngx_int_t process_header(ngx_http_request_t *r);
+static void abort_request(ngx_http_request_t *r);
+static void finalize_request(ngx_http_request_t *r, ngx_int_t rc);
 
 
 static ngx_int_t
-ngx_http_scgi_create_request(ngx_http_request_t *r)
+create_request(ngx_http_request_t *r)
 {
     u_char                         ch;
     u_char                         buf[sizeof("4294967296")];
@@ -265,7 +264,7 @@ ngx_http_scgi_create_request(ngx_http_request_t *r)
 
 
 static ngx_int_t
-ngx_http_scgi_reinit_request(ngx_http_request_t *r)
+reinit_request(ngx_http_request_t *r)
 {
     ngx_http_scgi_ctx_t  *s;
 
@@ -280,14 +279,14 @@ ngx_http_scgi_reinit_request(ngx_http_request_t *r)
     s->status_start = NULL;
     s->status_end = NULL;
 
-    r->upstream->process_header = ngx_http_scgi_process_status_line;
+    r->upstream->process_header = process_status_line;
 
     return NGX_OK;
 }
 
 
 static ngx_int_t
-ngx_http_scgi_process_status_line(ngx_http_request_t *r)
+process_status_line(ngx_http_request_t *r)
 {
     ngx_int_t             rc;
     ngx_http_upstream_t  *u;
@@ -299,7 +298,7 @@ ngx_http_scgi_process_status_line(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    rc = ngx_http_scgi_parse_status_line(r, s);
+    rc = parse_status_line(r, s);
 
     if (rc == NGX_AGAIN) {
         return rc;
@@ -341,14 +340,14 @@ ngx_http_scgi_process_status_line(ngx_http_request_t *r)
                    "http scgi status %ui \"%V\"",
                    u->headers_in.status_n, &u->headers_in.status_line);
 
-    u->process_header = ngx_http_scgi_process_header;
+    u->process_header = process_header;
 
-    return ngx_http_scgi_process_header(r);
+    return process_header(r);
 }
 
 
 static ngx_int_t
-ngx_http_scgi_parse_status_line(ngx_http_request_t *r, ngx_http_scgi_ctx_t *s)
+parse_status_line(ngx_http_request_t *r, ngx_http_scgi_ctx_t *s)
 {
     u_char                ch;
     u_char               *pos;
@@ -555,7 +554,7 @@ done:
 
 
 static ngx_int_t
-ngx_http_scgi_process_header(ngx_http_request_t *r)
+process_header(ngx_http_request_t *r)
 {
     ngx_int_t                       rc;
     ngx_uint_t                      i;
@@ -679,22 +678,18 @@ ngx_http_scgi_process_header(ngx_http_request_t *r)
 
 
 static void
-ngx_http_scgi_abort_request(ngx_http_request_t *r)
+abort_request(ngx_http_request_t *r)
 {
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                   "abort http scgi request");
-
-    return;
+                   "abort Passenger request");
 }
 
 
 static void
-ngx_http_scgi_finalize_request(ngx_http_request_t *r, ngx_int_t rc)
+finalize_request(ngx_http_request_t *r, ngx_int_t rc)
 {
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                   "finalize http scgi request");
-
-    return;
+                   "finalize Passenger request");
 }
 
 
@@ -743,11 +738,11 @@ ngx_http_passenger_handler(ngx_http_request_t *r)
 
     u->conf = &slcf->upstream;
 
-    u->create_request = ngx_http_scgi_create_request;
-    u->reinit_request = ngx_http_scgi_reinit_request;
-    u->process_header = ngx_http_scgi_process_status_line;
-    u->abort_request = ngx_http_scgi_abort_request;
-    u->finalize_request = ngx_http_scgi_finalize_request;
+    u->create_request   = create_request;
+    u->reinit_request   = reinit_request;
+    u->process_header   = process_status_line;
+    u->abort_request    = abort_request;
+    u->finalize_request = finalize_request;
 
     u->buffering = 1;
 
