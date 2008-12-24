@@ -197,7 +197,6 @@ public:
 						lengthStringBuffer[lengthStringBufferSize] = '\0';
 						headerSize = atol(lengthStringBuffer);
 						headerBuffer.reserve(headerSize);
-						fprintf(stderr, "expected header size = %lu\n", headerSize);
 						// From here on, process the rest of the data that we've
 						// received, as header data.
 						return readHeaderData(data + i + 1, size - i - 1) + i + 1;
