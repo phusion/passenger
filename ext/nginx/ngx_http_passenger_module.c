@@ -52,7 +52,7 @@ static ngx_str_t  ngx_http_scgi_script_name = ngx_string("scgi_script_name");
 static pid_t      helper_server_pid;
 static int        helper_server_admin_pipe;
 static u_char     helper_server_password_data[HELPER_SERVER_PASSWORD_SIZE];
-ngx_str_t         ngx_http_passenger_helper_server_password;
+ngx_str_t         passenger_helper_server_password;
 
 
 static ngx_int_t
@@ -67,7 +67,7 @@ register_content_handler(ngx_conf_t *cf)
     if (h == NULL) {
         return NGX_ERROR;
     }
-    *h = ngx_http_passenger_handler;
+    *h = passenger_content_handler;
     
     return NGX_OK;
 }
@@ -86,7 +86,7 @@ ignore_sigpipe()
 static ngx_int_t
 start_helper_server(ngx_cycle_t *cycle)
 {
-    passenger_main_conf_t *main_conf = &ngx_http_passenger_main_conf;
+    passenger_main_conf_t *main_conf = &passenger_main_conf;
     u_char                 helper_server_filename[NGX_MAX_PATH];
     int                    p[2], e;
     pid_t                  pid;
@@ -111,8 +111,8 @@ start_helper_server(ngx_cycle_t *cycle)
     
     /* TODO: writer proper password generation code */
     ngx_memzero(helper_server_password_data, HELPER_SERVER_PASSWORD_SIZE);
-    ngx_http_passenger_helper_server_password.data = helper_server_password_data;
-    ngx_http_passenger_helper_server_password.len  = HELPER_SERVER_PASSWORD_SIZE;
+    passenger_helper_server_password.data = helper_server_password_data;
+    passenger_helper_server_password.len  = HELPER_SERVER_PASSWORD_SIZE;
     
     pid = fork();
     switch (pid) {
@@ -236,8 +236,8 @@ static ngx_int_t
 ngx_http_scgi_script_name_variable(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data)
 {
-    u_char                         *p;
-    ngx_http_passenger_loc_conf_t  *slcf;
+    u_char                *p;
+    passenger_loc_conf_t  *slcf;
 
     if (r->uri.len) {
         v->valid = 1;
@@ -296,7 +296,7 @@ pre_config_init(ngx_conf_t *cf)
 {
     ngx_int_t ret;
     
-    ngx_memzero(&ngx_http_passenger_main_conf, sizeof(passenger_main_conf_t));
+    ngx_memzero(&passenger_main_conf, sizeof(passenger_main_conf_t));
     
     ret = add_variables(cf);
     if (ret != NGX_OK) {
@@ -307,32 +307,32 @@ pre_config_init(ngx_conf_t *cf)
 }
 
 
-static ngx_http_module_t  ngx_http_passenger_module_ctx = {
+static ngx_http_module_t passenger_module_ctx = {
     pre_config_init,                     /* preconfiguration */
     register_content_handler,            /* postconfiguration */
 
-    ngx_http_passenger_create_main_conf, /* create main configuration */
-    ngx_http_passenger_init_main_conf,   /* init main configuration */
+    passenger_create_main_conf,          /* create main configuration */
+    passenger_init_main_conf,            /* init main configuration */
 
     NULL,                                /* create server configuration */
     NULL,                                /* merge server configuration */
 
-    ngx_http_passenger_create_loc_conf,  /* create location configuration */
-    ngx_http_passenger_merge_loc_conf    /* merge location configuration */
+    passenger_create_loc_conf,           /* create location configuration */
+    passenger_merge_loc_conf             /* merge location configuration */
 };
 
 
-ngx_module_t  ngx_http_passenger_module = {
+ngx_module_t ngx_http_passenger_module = {
     NGX_MODULE_V1,
-    &ngx_http_passenger_module_ctx,                  /* module context */
-    (ngx_command_t *) ngx_http_passenger_commands,   /* module directives */
-    NGX_HTTP_MODULE,                                 /* module type */
-    NULL,                                            /* init master */
-    start_helper_server,                             /* init module */
-    NULL,                                            /* init process */
-    NULL,                                            /* init thread */
-    NULL,                                            /* exit thread */
-    NULL,                                            /* exit process */
-    shutdown_helper_server,                          /* exit master */
+    &passenger_module_ctx,                  /* module context */
+    (ngx_command_t *) passenger_commands,   /* module directives */
+    NGX_HTTP_MODULE,                        /* module type */
+    NULL,                                   /* init master */
+    start_helper_server,                    /* init module */
+    NULL,                                   /* init process */
+    NULL,                                   /* init thread */
+    NULL,                                   /* exit thread */
+    NULL,                                   /* exit process */
+    shutdown_helper_server,                 /* exit master */
     NGX_MODULE_V1_PADDING
 };

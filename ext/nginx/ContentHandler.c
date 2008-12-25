@@ -56,7 +56,7 @@ create_request(ngx_http_request_t *r)
     ngx_http_scgi_ctx_t           *s;
     ngx_http_script_code_pt        code;
     ngx_http_script_engine_t       e, le;
-    ngx_http_passenger_loc_conf_t *slcf;
+    passenger_loc_conf_t          *slcf;
     ngx_http_script_len_code_pt    lcode;
 
     /* len of the Content-Length header */
@@ -694,11 +694,11 @@ finalize_request(ngx_http_request_t *r, ngx_int_t rc)
 
 
 ngx_int_t
-ngx_http_passenger_handler(ngx_http_request_t *r)
+passenger_content_handler(ngx_http_request_t *r)
 {
     ngx_int_t                      rc;
     ngx_http_upstream_t           *u;
-    ngx_http_passenger_loc_conf_t *slcf;
+    passenger_loc_conf_t          *slcf;
     ngx_str_t                      path;
     size_t                         root;
 

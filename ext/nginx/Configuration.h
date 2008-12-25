@@ -41,7 +41,7 @@ typedef struct {
     ngx_array_t                   *vars_len;
     ngx_array_t                   *vars;
     ngx_array_t                   *vars_source;
-} ngx_http_passenger_loc_conf_t;
+} passenger_loc_conf_t;
 
 typedef struct {
     ngx_str_t   root_dir;
@@ -49,13 +49,13 @@ typedef struct {
     ngx_uint_t  max_pool_size;
 } passenger_main_conf_t;
 
-extern const ngx_command_t   ngx_http_passenger_commands[];
-extern passenger_main_conf_t ngx_http_passenger_main_conf;
+extern const ngx_command_t   passenger_commands[];
+extern passenger_main_conf_t passenger_main_conf;
 
-void *ngx_http_passenger_create_main_conf(ngx_conf_t *cf);
-char *ngx_http_passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer);
-void *ngx_http_passenger_create_loc_conf(ngx_conf_t *cf);
-char *ngx_http_passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
+void *passenger_create_main_conf(ngx_conf_t *cf);
+char *passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer);
+void *passenger_create_loc_conf(ngx_conf_t *cf);
+char *passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
 
 #endif /* _PASSENGER_NGINX_CONFIGURATION_H_ */
 

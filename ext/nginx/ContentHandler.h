@@ -40,7 +40,7 @@ typedef struct {
 } ngx_http_scgi_ctx_t;
 
 
-ngx_int_t ngx_http_passenger_handler(ngx_http_request_t *r);
+ngx_int_t passenger_content_handler(ngx_http_request_t *r);
 
 
 #endif /* _PASSENGER_NGINX_CONTENT_HANDLER_H_ */

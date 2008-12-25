@@ -31,7 +31,7 @@
 #include <ngx_core.h>
 
 extern ngx_module_t ngx_http_passenger_module;
-extern ngx_str_t    ngx_http_passenger_helper_server_password;
+extern ngx_str_t    passenger_helper_server_password;
 
 #endif /* _PASSENGER_NGINX_MODULE_H_ */
 
