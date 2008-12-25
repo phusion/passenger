@@ -14,7 +14,7 @@ namespace tut {
 		
 		ApplicationPoolServerTest() {
 			server = ptr(new ApplicationPoolServer(
-				"../ext/apache2/ApplicationPoolServerExecutable",
+				"./ApplicationPoolServerExecutable",
 				"stub/spawn_server.rb"));
 		}
 		

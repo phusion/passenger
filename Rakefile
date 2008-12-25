@@ -18,6 +18,7 @@
 
 $LOAD_PATH.unshift("#{File.dirname(__FILE__)}/lib")
 require 'rubygems'
+require 'pathname'
 require 'rake/rdoctask'
 require 'rake/gempackagetask'
 require 'rake/extensions'
@@ -33,11 +34,6 @@ PACKAGE_VERSION = "2.1.0"
 OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 
 include PlatformInfo
-APXS2.nil? and raise "Could not find 'apxs' or 'apxs2'."
-APACHE2CTL.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
-HTTPD.nil? and raise "Could not find the Apache web server binary."
-APR_FLAGS.nil? and raise "Could not find Apache Portable Runtime (APR)."
-APU_FLAGS.nil? and raise "Could not find Apache Portable Runtime Utility (APU)."
 
 CXX = "g++"
 # _GLIBCPP__PTHREADS is for fixing Boost compilation on OpenBSD.
@@ -47,8 +43,9 @@ if OPTIMIZE
 else
 	OPTIMIZATION_FLAGS = "-g -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS"
 end
-CXXFLAGS = "#{OPTIMIZATION_FLAGS} #{THREADING_FLAGS} #{MULTI_ARCH_FLAGS} -Wall -I/usr/local/include"
-LDFLAGS = "#{MULTI_ARCH_LDFLAGS}"
+CXXFLAGS = "#{OPTIMIZATION_FLAGS} #{THREADING_FLAGS} -Wall -I/usr/local/include"
+LDFLAGS = ""
+
 
 #### Default tasks
 
@@ -56,9 +53,9 @@ desc "Build everything"
 task :default => [
 	:native_support,
 	:apache2,
+	:nginx,
 	'test/oxt/oxt_test_main',
-	'test/Apache2ModuleTests',
-	'benchmark/DummyRequestHandler'
+	'test/CxxTests'
 ]
 
 desc "Remove compiled files"
@@ -88,300 +85,417 @@ subdir 'ext/passenger' do
 end
 
 
-##### boost::thread and OXT static library
+##### Boost and OXT static library
 
-file 'ext/libboost_oxt.a' =>
-	Dir['ext/boost/src/*.cpp'] +
-	Dir['ext/boost/src/pthread/*.cpp'] +
-	Dir['ext/oxt/*.cpp'] +
-	Dir['ext/oxt/*.hpp'] +
-	Dir['ext/oxt/detail/*.hpp'] do
-	Dir.chdir('ext/boost/src') do
-		puts "### In ext/boost/src:"
-		flags = "-I../.. -fPIC #{OPTIMIZATION_FLAGS} #{THREADING_FLAGS} #{MULTI_ARCH_FLAGS}"
-		compile_cxx "*.cpp", flags
-		# NOTE: 'compile_cxx "pthread/*.cpp", flags' doesn't work on some systems,
-		# so we do this instead.
-		Dir['pthread/*.cpp'].each do |file|
-			compile_cxx file, flags
+def define_libboost_oxt_task(output_dir, extra_compiler_flags = nil)
+	output_file = "#{output_dir}/libboost_oxt.a"
+	objects_output_dir = "#{output_dir}/libboost_oxt"
+	objects_output_path = Pathname.new(objects_output_dir).expand_path
+	ext_path = Pathname.new("ext").expand_path
+	
+	file(output_file =>
+		Dir['ext/boost/src/*.cpp'] +
+		Dir['ext/boost/src/pthread/*.cpp'] +
+		Dir['ext/oxt/*.cpp'] +
+		Dir['ext/oxt/*.hpp'] +
+		Dir['ext/oxt/detail/*.hpp']
+	) do
+		sh "mkdir -p #{objects_output_dir}/boost #{objects_output_dir}/oxt"
+		
+		Dir.chdir("#{objects_output_dir}/boost") do
+			puts "### In #{objects_output_dir}/boost:"
+			current_dir = Pathname.new(".").expand_path
+			ext_dir = ext_path.relative_path_from(current_dir)
+			flags = "-I#{ext_dir} #{CXXFLAGS} #{extra_compiler_flags}"
+			
+			# Compling "pthread/*.cpp" doesn't work on some systems,
+			# so we compile each cpp file invidually instead.
+			Dir["#{ext_dir}/boost/src/pthread/*.cpp"].each do |file|
+				compile_cxx(file, flags)
+			end
+			puts
+		end
+		
+		Dir.chdir("#{objects_output_dir}/oxt") do
+			puts "### In #{objects_output_dir}/oxt:"
+			current_dir = Pathname.new(".").expand_path
+			ext_dir = ext_path.relative_path_from(current_dir)
+			flags = "-I#{ext_dir} #{CXXFLAGS} #{extra_compiler_flags}"
+			compile_cxx("#{ext_dir}/oxt/*.cpp", flags)
+			puts
+		end
+		
+		create_static_library(output_file,
+			"#{objects_output_dir}/boost/*.o " <<
+			"#{objects_output_dir}/oxt/*.o")
+	end
+	
+	task :clean do
+		sh "rm -rf #{output_file} #{objects_output_dir}"
+	end
+	
+	return output_file
+end
+
+
+##### Static library for Passenger source files that are shared between
+##### the Apache module and the Nginx helper server.
+
+def define_common_library_task(output_dir, extra_compiler_flags = nil,
+                               with_application_pool_server_exe = false,
+                               boost_oxt_library = nil,
+                               extra_compiler_flags_for_server_exe = nil,
+                               extra_linker_flags = nil)
+	static_library = "#{output_dir}/libpassenger_common.a"
+	objects_output_dir = "#{output_dir}/libpassenger_common"
+	objects_output_path = Pathname.new(objects_output_dir).expand_path
+	ext_path = Pathname.new("ext").expand_path
+	targets = [static_library]
+	
+	file(static_library => [
+		'ext/common/Utils.h',
+		'ext/common/Utils.cpp',
+		'ext/common/Logging.h',
+		'ext/common/Logging.cpp'
+	]) do
+		sh "mkdir -p #{objects_output_dir}"
+		
+		Dir.chdir(objects_output_dir) do
+			puts "### In #{objects_output_dir}:"
+			current_dir = Pathname.new(".").expand_path
+			ext_dir = ext_path.relative_path_from(current_dir)
+			flags = "-I#{ext_dir} -I#{ext_dir}/common #{CXXFLAGS} #{extra_compiler_flags}"
+			
+			compile_cxx("#{ext_dir}/common/Utils.cpp", flags)
+			compile_cxx("#{ext_dir}/common/Logging.cpp", flags)
+			
+			puts
+		end
+		
+		create_static_library(static_library, "#{objects_output_dir}/*.o")
+	end
+	
+	if with_application_pool_server_exe
+		exe_file = "#{output_dir}/ApplicationPoolServerExecutable"
+		targets << exe_file
+		
+		file(exe_file => [
+			'ext/common/ApplicationPoolServerExecutable.cpp',
+			'ext/common/ApplicationPool.h',
+			'ext/common/Application.h',
+			'ext/common/StandardApplicationPool.h',
+			'ext/common/MessageChannel.h',
+			'ext/common/SpawnManager.h',
+			'ext/common/PoolOptions.h',
+			boost_oxt_library,
+			static_library
+		]) do
+			create_executable(exe_file,
+				"ext/common/ApplicationPoolServerExecutable.cpp",
+				"-Iext -Iext/common #{CXXFLAGS} " <<
+				"#{extra_compiler_flags_for_server_exe} " <<
+				"#{LDFLAGS} #{extra_linker_flags} " <<
+				"#{extra_compiler_flags} " <<
+				"#{static_library} " <<
+				"#{boost_oxt_library} " <<
+				"#{extra_linker_flags} " <<
+				"-lpthread"
+			)
 		end
 	end
-	Dir.chdir('ext/oxt') do
-		puts "### In ext/oxt:"
-		compile_cxx "*.cpp", "-I.. -fPIC #{CXXFLAGS}"
-	end
-	create_static_library "ext/libboost_oxt.a", "ext/boost/src/*.o ext/oxt/*.o"
-end
-
-task :clean do
-	sh "rm -f ext/libboost_oxt.a ext/boost/src/*.o ext/oxt/*.o"
-end
-
-
-##### Apache module
-
-class APACHE2
-	CXXFLAGS = "-I.. -fPIC #{OPTIMIZATION_FLAGS} #{APR_FLAGS} #{APU_FLAGS} #{APXS2_FLAGS} #{CXXFLAGS}"
-	OBJECTS = {
-		'Configuration.o' => %w(Configuration.cpp Configuration.h),
-		'Bucket.o' => %w(Bucket.cpp Bucket.h),
-		'Hooks.o' => %w(Hooks.cpp Hooks.h
-				Configuration.h ApplicationPool.h ApplicationPoolServer.h
-				SpawnManager.h Exceptions.h Application.h MessageChannel.h
-				PoolOptions.h Utils.h DirectoryMapper.h),
-		'Utils.o'   => %w(Utils.cpp Utils.h),
-		'Logging.o' => %w(Logging.cpp Logging.h)
-	}
-end
-
-subdir 'ext/apache2' do
-	apxs_objects = APACHE2::OBJECTS.keys.join(',')
-
-	desc "Build mod_passenger Apache 2 module"
-	task :apache2 => ['mod_passenger.so', 'ApplicationPoolServerExecutable', :native_support]
 	
-	file 'mod_passenger.so' => [
-		'../libboost_oxt.a',
-		'mod_passenger.o'
-	] + APACHE2::OBJECTS.keys do
+	task :clean do
+		sh "rm -rf #{targets.join(' ')}"
+	end
+	
+	return targets
+end
+
+
+##### Apache 2 module
+
+	APACHE2_CXXFLAGS = "-Iext -Iext/common -fPIC #{APR_FLAGS} #{APU_FLAGS} #{APXS2_FLAGS} #{::CXXFLAGS}"
+	APACHE2_INPUT_FILES = {
+		'ext/apache2/Configuration.o' => %w(
+			ext/apache2/Configuration.cpp
+			ext/apache2/Configuration.h),
+		'ext/apache2/Bucket.o' => %w(
+			ext/apache2/Bucket.cpp
+			ext/apache2/Bucket.h),
+		'ext/apache2/Hooks.o' => %w(
+			ext/apache2/Hooks.cpp
+			ext/apache2/Hooks.h
+			ext/apache2/Configuration.h
+			ext/apache2/Bucket.h
+			ext/apache2/DirectoryMapper.h
+			ext/common/ApplicationPool.h
+			ext/common/ApplicationPoolServer.h
+			ext/common/SpawnManager.h
+			ext/common/Exceptions.h
+			ext/common/Application.h
+			ext/common/MessageChannel.h
+			ext/common/PoolOptions.h
+			ext/common/Utils.h)
+	}
+	APACHE2_OBJECTS = APACHE2_INPUT_FILES.keys
+	
+	# NOTE: APACHE2_BOOST_OXT_LIBRARY is a task name, while APACHE2_COMMON_LIBRARY
+	# is an array of task names.
+	APACHE2_BOOST_OXT_LIBRARY = define_libboost_oxt_task("ext/apache2",
+		"#{MULTI_ARCH_FLAGS} -fPIC")
+	APACHE2_COMMON_LIBRARY    = define_common_library_task("ext/apache2",
+		"#{MULTI_ARCH_FLAGS} -fPIC",
+		true, APACHE2_BOOST_OXT_LIBRARY, MULTI_ARCH_FLAGS,
+		MULTI_ARCH_LDFLAGS)
+	
+	
+	desc "Build Apache 2 module"
+	task :apache2 => ['ext/apache2/mod_passenger.so', :native_support]
+	
+	mod_passenger_dependencies = [APACHE2_COMMON_LIBRARY,
+		APACHE2_BOOST_OXT_LIBRARY,
+		'ext/apache2/mod_passenger.o',
+		APACHE2_OBJECTS].flatten
+	file 'ext/apache2/mod_passenger.so' => mod_passenger_dependencies do
+		APXS2.nil?      and raise "Could not find 'apxs' or 'apxs2'."
+		APACHE2CTL.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
+		HTTPD.nil?      and raise "Could not find the Apache web server binary."
+		APR_FLAGS.nil?  and raise "Could not find Apache Portable Runtime (APR)."
+		APU_FLAGS.nil?  and raise "Could not find Apache Portable Runtime Utility (APU)."
+		
 		# apxs totally sucks. We couldn't get it working correctly
 		# on MacOS X (it had various problems with building universal
 		# binaries), so we decided to ditch it and build/install the
 		# Apache module ourselves.
 		#
 		# Oh, and libtool sucks too. Do we even need it anymore in 2008?
-		linkflags = "#{LDFLAGS} #{MULTI_ARCH_FLAGS}"
-		linkflags << " -lstdc++ -lpthread " <<
-			"../libboost_oxt.a " <<
-			APR_LIBS
-		create_shared_library 'mod_passenger.so',
-			APACHE2::OBJECTS.keys.join(' ') << ' mod_passenger.o',
+		
+		linkflags = "#{LDFLAGS} #{MULTI_ARCH_LDFLAGS} #{MULTI_ARCH_FLAGS}"
+		linkflags << " -lstdc++ -lpthread "
+		linkflags << "#{APACHE2_BOOST_OXT_LIBRARY} "
+		linkflags << "#{APACHE2_COMMON_LIBRARY[0]} "
+		linkflags << APR_LIBS
+		create_shared_library 'ext/apache2/mod_passenger.so',
+			APACHE2_OBJECTS.join(' ') <<
+			' ext/apache2/mod_passenger.o',
 			linkflags
 	end
+
+	file 'ext/apache2/mod_passenger.o' => ['ext/apache2/mod_passenger.c'] do
+		compile_c('ext/apache2/mod_passenger.c',
+			APACHE2_CXXFLAGS +
+			" -o ext/apache2/mod_passenger.o")
+	end
+
+	APACHE2_INPUT_FILES.each_pair do |target, sources|
+		file(target => sources) do
+			object_basename = File.basename(target)
+			compile_cxx(sources[0],
+				APACHE2_CXXFLAGS +
+				" -o ext/apache2/#{object_basename}")
+		end
+	end
+
+	task :clean => 'apache2:clean'
+
+	desc "Remove generated files for the Apache 2 module"
+	task 'apache2:clean' do
+		files = [APACHE2_OBJECTS, %w(ext/apache2/mod_passenger.o
+			ext/apache2/mod_passenger.so)]
+		sh("rm", "-rf", *files.flatten)
+	end
+
+
+##### Nginx helper server
+
+	# NOTE: NGINX_BOOST_OXT_LIBRARY is a task name, while NGINX_COMMON_LIBRARY
+	# is an array of task names.
+	NGINX_BOOST_OXT_LIBRARY = define_libboost_oxt_task("ext/nginx")
+	NGINX_COMMON_LIBRARY    = define_common_library_task("ext/nginx")
 	
-	file 'ApplicationPoolServerExecutable' => [
-		'../libboost_oxt.a',
-		'ApplicationPoolServerExecutable.cpp',
-		'ApplicationPool.h',
-		'Application.h',
-		'StandardApplicationPool.h',
-		'MessageChannel.h',
-		'SpawnManager.h',
-		'PoolOptions.h',
-		'Utils.o',
-		'Logging.o'
-	] do
-		create_executable "ApplicationPoolServerExecutable",
-			'ApplicationPoolServerExecutable.cpp Utils.o Logging.o',
-			"-I.. #{CXXFLAGS} #{LDFLAGS} " <<
-			"../libboost_oxt.a " <<
+	desc "Build Nginx helper server"
+	task :nginx => ['ext/nginx/HelperServer', :native_support]
+	
+	helper_server_dependencies = [
+		NGINX_BOOST_OXT_LIBRARY,
+		NGINX_COMMON_LIBRARY[0],
+		'ext/nginx/HelperServer.cpp',
+		'ext/nginx/ScgiRequestParser.h',
+		'ext/nginx/HttpStatusExtractor.h'
+		]
+	file 'ext/nginx/HelperServer' => helper_server_dependencies do
+		create_executable "ext/nginx/HelperServer",
+			'ext/nginx/HelperServer.cpp',
+			"-Iext -Iext/common #{CXXFLAGS} #{LDFLAGS} " <<
+			"#{NGINX_BOOST_OXT_LIBRARY} " <<
+			"#{NGINX_COMMON_LIBRARY[0]} " <<
 			"-lpthread"
 	end
 	
-	file 'mod_passenger.o' => ['mod_passenger.c'] do
-		compile_c 'mod_passenger.c', APACHE2::CXXFLAGS
-	end
+	task :clean => 'nginx:clean'
 	
-	APACHE2::OBJECTS.each_pair do |target, sources|
-		file target => sources do
-			compile_cxx sources[0], APACHE2::CXXFLAGS
-		end
+	desc "Remove Nginx helper server"
+	task 'nginx:clean' do
+		sh("rm", "-rf", "ext/nginx/HelperServer")
 	end
-	
-	task :clean => :'apache2:clean'
-	
-	desc "Remove generated files for mod_passenger Apache 2 module"
-	task 'apache2:clean' do
-		files = [APACHE2::OBJECTS.keys, %w(mod_passenger.o mod_passenger.so
-			ApplicationPoolServerExecutable)]
-		sh("rm", "-rf", *files.flatten)
-	end
-end
 
 
 ##### Unit tests
 
-class TEST
-	CXXFLAGS = "#{::CXXFLAGS} -DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL "
-
-	AP2_FLAGS = "-I../ext/apache2 -I../ext/nginx -I../ext -Isupport #{APR_FLAGS} #{APU_FLAGS}"
-	AP2_OBJECTS = {
-		'CxxTestMain.o' => %w(CxxTestMain.cpp),
-		'MessageChannelTest.o' => %w(MessageChannelTest.cpp
-			../ext/apache2/MessageChannel.h),
-		'SpawnManagerTest.o' => %w(SpawnManagerTest.cpp
-			../ext/apache2/SpawnManager.h
-			../ext/apache2/PoolOptions.h
-			../ext/apache2/Application.h
-			../ext/apache2/MessageChannel.h),
-		'ApplicationPoolServerTest.o' => %w(ApplicationPoolServerTest.cpp
-			../ext/apache2/ApplicationPoolServer.h
-			../ext/apache2/PoolOptions.h
-			../ext/apache2/MessageChannel.h),
-		'ApplicationPoolServer_ApplicationPoolTest.o' => %w(ApplicationPoolServer_ApplicationPoolTest.cpp
-			ApplicationPoolTest.cpp
-			../ext/apache2/ApplicationPoolServer.h
-			../ext/apache2/ApplicationPool.h
-			../ext/apache2/SpawnManager.h
-			../ext/apache2/PoolOptions.h
-			../ext/apache2/Application.h
-			../ext/apache2/MessageChannel.h),
-		'StandardApplicationPoolTest.o' => %w(StandardApplicationPoolTest.cpp
-			ApplicationPoolTest.cpp
-			../ext/apache2/ApplicationPool.h
-			../ext/apache2/StandardApplicationPool.h
-			../ext/apache2/SpawnManager.h
-			../ext/apache2/PoolOptions.h
-			../ext/apache2/Application.h),
-		'PoolOptionsTest.o' => %w(PoolOptionsTest.cpp ../ext/apache2/PoolOptions.h),
-		'ScgiRequestParserTest.o' => %w(ScgiRequestParserTest.cpp
-			../ext/nginx/ScgiRequestParser.h),
-		'HttpStatusExtractorTest.o' => %w(HttpStatusExtractorTest.cpp
-			../ext/nginx/HttpStatusExtractor.h),
-		'UtilsTest.o' => %w(UtilsTest.cpp ../ext/apache2/Utils.h)
-	}
+	TEST_FLAGS = "#{CXXFLAGS} -DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL "
 	
-	OXT_FLAGS = "-I../../ext -I../support"
-	OXT_OBJECTS = {
+	TEST_OXT_FLAGS = "-I../../ext -I../support #{TEST_FLAGS}"
+	TEST_OXT_OBJECTS = {
 		'oxt_test_main.o' => %w(oxt_test_main.cpp),
 		'backtrace_test.o' => %w(backtrace_test.cpp),
 		'syscall_interruption_test.o' => %w(syscall_interruption_test.cpp)
 	}
-end
+	
+	TEST_CXX_FLAGS = "-Iext -Iext/common -Iext/nginx -Itest/support " <<
+		"#{APR_FLAGS} #{APU_FLAGS} #{TEST_FLAGS}"
+	TEST_CXX_OBJECTS = {
+		'test/CxxTestMain.o' => %w(
+			test/CxxTestMain.cpp),
+		'test/MessageChannelTest.o' => %w(
+			test/MessageChannelTest.cpp
+			ext/common/MessageChannel.h),
+		'test/SpawnManagerTest.o' => %w(
+			test/SpawnManagerTest.cpp
+			ext/common/SpawnManager.h
+			ext/common/PoolOptions.h
+			ext/common/Application.h
+			ext/common/MessageChannel.h),
+		'test/ApplicationPoolServerTest.o' => %w(
+			test/ApplicationPoolServerTest.cpp
+			ext/common/ApplicationPoolServer.h
+			ext/common/PoolOptions.h
+			ext/common/MessageChannel.h),
+		'test/ApplicationPoolServer_ApplicationPoolTest.o' => %w(
+			test/ApplicationPoolServer_ApplicationPoolTest.cpp
+			test/ApplicationPoolTest.cpp
+			ext/common/ApplicationPoolServer.h
+			ext/common/ApplicationPool.h
+			ext/common/SpawnManager.h
+			ext/common/PoolOptions.h
+			ext/common/Application.h
+			ext/common/MessageChannel.h),
+		'test/StandardApplicationPoolTest.o' => %w(
+			test/StandardApplicationPoolTest.cpp
+			test/ApplicationPoolTest.cpp
+			ext/common/ApplicationPool.h
+			ext/common/StandardApplicationPool.h
+			ext/common/SpawnManager.h
+			ext/common/PoolOptions.h
+			ext/common/Application.h),
+		'test/PoolOptionsTest.o' => %w(
+			test/PoolOptionsTest.cpp
+			ext/common/PoolOptions.h),
+		'test/ScgiRequestParserTest.o' => %w(
+			test/ScgiRequestParserTest.cpp
+			ext/nginx/ScgiRequestParser.h),
+		'test/HttpStatusExtractorTest.o' => %w(
+			test/HttpStatusExtractorTest.cpp
+			ext/nginx/HttpStatusExtractor.h),
+		'test/UtilsTest.o' => %w(
+			test/UtilsTest.cpp
+			ext/common/Utils.h)
+	}
+	
+	TEST_BOOST_OXT_LIBRARY = define_libboost_oxt_task("test")
+	TEST_COMMON_LIBRARY    = define_common_library_task("test",
+		nil, true, TEST_BOOST_OXT_LIBRARY)
 
-subdir 'test' do
-	desc "Run all unit tests (but not integration tests)"
-	task :test => [:'test:oxt', :'test:apache2', :'test:ruby', :'test:integration']
+	desc "Run all unit tests"
+	task :test => ['test:oxt', 'test:cxx', 'test:ruby', 'test:integration']
 	
 	desc "Run unit tests for the OXT library"
-	task 'test:oxt' => 'oxt/oxt_test_main' do
-		sh "./oxt/oxt_test_main"
+	task 'test:oxt' => 'test/oxt/oxt_test_main' do
+		sh "cd test && ./oxt/oxt_test_main"
 	end
 	
-	desc "Run unit tests for the Apache 2 module"
-	task 'test:apache2' => [
-		'Apache2ModuleTests',
-		'../ext/apache2/ApplicationPoolServerExecutable',
-		:native_support
-	] do
-		sh "./Apache2ModuleTests"
-	end
-	
-	desc "Run unit tests for the Apache 2 module in Valgrind"
-	task 'test:valgrind' => [
-		'Apache2ModuleTests',
-		'../ext/apache2/ApplicationPoolServerExecutable',
-		:native_support
-	] do
-		sh "valgrind #{ENV['ARGS']} ./Apache2ModuleTests"
+	desc "Run unit tests for the Apache 2 and Nginx C++ components"
+	task 'test:cxx' => ['test/CxxTests', :native_support] do
+		sh "cd test && ./CxxTests"
 	end
 	
 	desc "Run unit tests for the Ruby libraries"
-	task 'test:ruby' => [:native_support] do
-		sh "spec -c -f s ruby/*.rb ruby/*/*.rb"
+	task 'test:ruby' => :native_support do
+		sh "cd test && spec -c -f s ruby/*.rb ruby/*/*.rb"
 	end
 	
-	task 'test:rcov' => [:native_support] do
+	desc "Run coverage tests for the Ruby libraries"
+	task 'test:rcov' => :native_support do
 		rspec = PlatformInfo.find_command('spec')
-		sh "rcov", "--exclude",
-			"lib\/spec,\/spec$,_spec\.rb$,support\/,platform_info,integration_tests",
-			rspec, "--", "-c", "-f", "s",
-			*Dir["ruby/*.rb", "ruby/*/*.rb", "integration_tests.rb"]
+		Dir.chdir("test") do
+			sh "rcov", "--exclude",
+				"lib\/spec,\/spec$,_spec\.rb$,support\/,platform_info,integration_tests",
+				rspec, "--", "-c", "-f", "s",
+				*Dir["ruby/*.rb", "ruby/*/*.rb", "integration_tests.rb"]
+		end
 	end
 	
 	desc "Run integration tests"
 	task 'test:integration' => [:apache2, :native_support] do
-		sh "spec -c -f s integration_tests.rb"
+		sh "cd test && spec -c -f s integration_tests.rb"
 	end
 	
-	file 'oxt/oxt_test_main' => TEST::OXT_OBJECTS.keys.map{ |x| "oxt/#{x}" } +
-	  ['../ext/libboost_oxt.a'] do
-		Dir.chdir('oxt') do
-			objects = TEST::OXT_OBJECTS.keys.join(' ')
+	oxt_test_main_dependencies = TEST_OXT_OBJECTS.keys.map do |object|
+		"test/oxt/#{object}"
+	end
+	oxt_test_main_dependencies << TEST_BOOST_OXT_LIBRARY
+	file 'test/oxt/oxt_test_main' => oxt_test_main_dependencies do
+		Dir.chdir('test/oxt') do
+			objects = TEST_OXT_OBJECTS.keys.join(' ')
 			create_executable "oxt_test_main", objects,
-				"#{LDFLAGS} #{MULTI_ARCH_FLAGS} " <<
-				"../../ext/libboost_oxt.a " <<
+				"#{LDFLAGS} " <<
+				"../libboost_oxt.a " <<
 				"-lpthread"
 		end
 	end
 	
-	TEST::OXT_OBJECTS.each_pair do |target, sources|
-		file "oxt/#{target}" => sources.map{ |x| "oxt/#{x}" } do
-			Dir.chdir('oxt') do
+	TEST_OXT_OBJECTS.each_pair do |target, sources|
+		file "test/oxt/#{target}" => sources.map{ |x| "test/oxt/#{x}" } do
+			Dir.chdir('test/oxt') do
 				puts "### In test/oxt:"
-				compile_cxx sources[0], "#{TEST::OXT_FLAGS} #{TEST::CXXFLAGS}"
+				compile_cxx sources[0], TEST_OXT_FLAGS
 			end
 		end
 	end
 
-	file 'Apache2ModuleTests' => TEST::AP2_OBJECTS.keys +
-	  ['../ext/libboost_oxt.a',
-	   '../ext/apache2/Utils.o',
-	   '../ext/apache2/Logging.o'] do
-		objects = TEST::AP2_OBJECTS.keys.join(' ') <<
-			" ../ext/apache2/Utils.o" <<
-			" ../ext/apache2/Logging.o"
-		create_executable "Apache2ModuleTests", objects,
-			"#{LDFLAGS} #{APR_LIBS} #{MULTI_ARCH_FLAGS} " <<
-			"../ext/libboost_oxt.a " <<
+	cxx_tests_dependencies = [TEST_CXX_OBJECTS.keys,
+		TEST_BOOST_OXT_LIBRARY, TEST_COMMON_LIBRARY]
+	file 'test/CxxTests' => cxx_tests_dependencies.flatten do
+		objects = TEST_CXX_OBJECTS.keys.join(' ')
+		create_executable "test/CxxTests", objects,
+			"#{LDFLAGS} #{APR_LIBS} " <<
+			"#{TEST_BOOST_OXT_LIBRARY} " <<
+			"#{TEST_COMMON_LIBRARY[0]} " <<
 			"-lpthread"
 	end
 	
-	TEST::AP2_OBJECTS.each_pair do |target, sources|
-		file target => sources do
-			compile_cxx sources[0], "#{TEST::AP2_FLAGS} #{TEST::CXXFLAGS}"
+	TEST_CXX_OBJECTS.each_pair do |target, sources|
+		file(target => sources) do
+			compile_cxx sources[0], "-o #{target} #{TEST_CXX_FLAGS}"
 		end
 	end
 	
 	desc "Run the restart integration test infinitely, and abort if/when it fails"
 	task 'test:restart' => [:apache2, :native_support] do
-		color_code_start = "\e[33m\e[44m\e[1m"
-		color_code_end = "\e[0m"
-		i = 1
-		while true do
-			puts "#{color_code_start}Test run #{i} (press Ctrl-C multiple times to abort)#{color_code_end}"
-			sh "spec -c -f s integration_tests.rb -e 'mod_passenger running in Apache 2 : MyCook(tm) beta running on root URI should support restarting via restart.txt'"
-			i += 1
+		Dir.chdir("test") do
+			color_code_start = "\e[33m\e[44m\e[1m"
+			color_code_end = "\e[0m"
+			i = 1
+			while true do
+				puts "#{color_code_start}Test run #{i} (press Ctrl-C multiple times to abort)#{color_code_end}"
+				sh "spec -c -f s integration_tests.rb -e 'mod_passenger running in Apache 2 : MyCook(tm) beta running on root URI should support restarting via restart.txt'"
+				i += 1
+			end
 		end
 	end
 	
 	task :clean do
-		sh "rm -f oxt/oxt_test_main oxt/*.o Apache2ModuleTests *.o"
+		sh("rm -rf test/oxt/oxt_test_main test/oxt/*.o test/CxxTests test/*.o")
 	end
-end
-
-
-##### Benchmarks
-
-subdir 'benchmark' do
-	file 'DummyRequestHandler' => ['DummyRequestHandler.cpp',
-	  '../ext/apache2/MessageChannel.h',
-	  '../ext/libboost_oxt.a'] do
-		create_executable "DummyRequestHandler", "DummyRequestHandler.cpp",
-			"-I../ext -I../ext/apache2 #{CXXFLAGS} #{LDFLAGS} " <<
-			"../ext/libboost_oxt.a " <<
-			"-lpthread"
-	end
-	
-	file 'ApplicationPool' => ['ApplicationPool.cpp',
-	  '../ext/apache2/StandardApplicationPool.h',
-	  '../ext/apache2/ApplicationPoolServerExecutable',
-	  '../ext/apache2/Logging.o',
-	  '../ext/apache2/Utils.o',
-	  '../ext/libboost_oxt.a',
-	  :native_support] do
-		create_executable "ApplicationPool", "ApplicationPool.cpp",
-			"-I../ext -I../ext/apache2 #{CXXFLAGS} #{LDFLAGS} " <<
-			"../ext/apache2/Logging.o " <<
-			"../ext/apache2/Utils.o " <<
-			"../ext/libboost_oxt.a " <<
-			"-lpthread"
-	end
-	
-	task :clean do
-		sh "rm -f DummyRequestHandler ApplicationPool"
-	end
-end
 
 
 ##### Documentation
@@ -489,6 +603,7 @@ spec = Gem::Specification.new do |s|
 		'man/*',
 		'debian/*',
 		'ext/apache2/*.{cpp,h,c,TXT}',
+		'ext/nginx/*.{c,cpp,h}',
 		'ext/boost/*.{hpp,TXT}',
 		'ext/boost/**/*.{hpp,cpp,pl,inl,ipp}',
 		'ext/oxt/*.hpp',
@@ -627,15 +742,13 @@ task :sloccount do
 			"lib/passenger/*",
 			"lib/rake/{cplusplus,extensions}.rb",
 			"ext/apache2",
+			"ext/nginx",
 			"ext/oxt",
 			"ext/passenger/*.c",
-			"test/*.{cpp,rb}",
-			"test/support/*.rb",
-			"test/stub/*.rb",
+			"test/**/*.{cpp,rb}",
 			"benchmark/*.{cpp,rb}"
 		]
 	ensure
 		system "rm -rf #{tmpdir}"
 	end
 end
-
