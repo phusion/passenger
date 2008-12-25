@@ -27,36 +27,181 @@
 
 #include <ngx_config.h>
 #include <ngx_core.h>
-#include <ngx_http.h>
 #include <nginx.h>
+
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include "ngx_http_passenger_module.h"
 #include "Configuration.h"
 #include "ContentHandler.h"
 
 
-static ngx_str_t  ngx_http_scgi_script_name =
-    ngx_string("scgi_script_name");
+#define HELPER_SERVER_MAX_SHUTDOWN_TIME 5
+#define HELPER_SERVER_PASSWORD_SIZE     64
+
+
+static ngx_str_t  ngx_http_scgi_script_name = ngx_string("scgi_script_name");
+static pid_t      helper_server_pid;
+static int        helper_server_admin_pipe;
+static u_char     helper_server_password_data[HELPER_SERVER_PASSWORD_SIZE];
+ngx_str_t         ngx_http_passenger_helper_server_password;
 
 
 static ngx_int_t
-ngx_http_passenger_post_config_init(ngx_conf_t *cf)
+register_content_handler(ngx_conf_t *cf)
 {
     ngx_http_handler_pt        *h;
     ngx_http_core_main_conf_t  *cmcf;
 
     cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
 
-    /* Register ngx_http_passenger_handler as a default content handler. */
-
     h = ngx_array_push(&cmcf->phases[NGX_HTTP_CONTENT_PHASE].handlers);
     if (h == NULL) {
         return NGX_ERROR;
     }
-
     *h = ngx_http_passenger_handler;
     
     return NGX_OK;
+}
+
+static ngx_int_t
+start_helper_server(ngx_cycle_t *cycle)
+{
+    int     p[2];
+    pid_t   pid;
+    long    i;
+    ssize_t ret;
+    
+    if (pipe(p) == -1) {
+        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                      "could not start the Passenger helper server: pipe() failed");
+        return NGX_ERROR;
+    }
+    
+    /* TODO: writer proper password generation code */
+    ngx_memzero(helper_server_password_data, HELPER_SERVER_PASSWORD_SIZE);
+    ngx_http_passenger_helper_server_password.data = helper_server_password_data;
+    ngx_http_passenger_helper_server_password.len  = HELPER_SERVER_PASSWORD_SIZE;
+    
+    pid = fork();
+    switch (pid) {
+    case 0:
+        /* Child process. */
+        close(p[1]);
+        
+        /* Nginx redirects stderr to the error log file. Make sure that
+         * stdout is redirected to the error log file as well.
+         */
+        dup2(2, 1);
+        
+        /* Close all file descriptors except stdin, stdout, stderr and
+         * the reader part of the pipe we just created. 
+         */
+        if (dup2(p[0], 3) == -1) {
+            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                          "could not start the Passenger helper server: "
+                          "dup2() failed");
+        }
+        for (i = sysconf(_SC_OPEN_MAX) - 1; i > 3; i--) {
+            close(i);
+        }
+        
+        execlp("/home/hongli/Projects/mod_rails/ext/nginx/server",
+               "PassengerHelperServer",
+               "/home/hongli/Projects/mod_rails",            /* Passenger root dir. */
+               "/opt/r8ee/bin/ruby",                         /* Ruby interpreter. */
+               "3",                                          /* Admin pipe. */
+               "4",                                          /* Max pool size. */
+               NULL);
+        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                      "could not start the Passenger helper server: "
+                      "exec() failed");
+        _exit(1);
+        
+    case -1:
+        /* Error */
+        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                      "could not start the Passenger helper server: "
+                      "fork() failed");
+        close(p[0]);
+        close(p[1]);
+        return NGX_ERROR;
+        
+    default:
+        /* Parent process. */
+        close(p[0]);
+        
+        i = 0;
+        do {
+            ret = write(p[1], helper_server_password_data,
+                        HELPER_SERVER_PASSWORD_SIZE - i);
+            if (ret == -1) {
+                ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                              "could not send password to the Passenger helper server: "
+                              "write() failed");
+                close(p[1]);
+                kill(pid, SIGTERM);
+                waitpid(pid, NULL, 0);
+                return NGX_ERROR;
+            } else {
+                i += ret;
+            }
+        } while (i < HELPER_SERVER_PASSWORD_SIZE);
+        
+        helper_server_pid        = pid;
+        helper_server_admin_pipe = p[1];
+        break;
+    }
+    
+    return NGX_OK;
+}
+
+static void
+shutdown_helper_server(ngx_cycle_t *cycle)
+{
+    time_t begin_time;
+    int    helper_server_exited;
+    
+    /* We write one byte to the admin pipe, doesn't matter what the byte is.
+     * The helper server will detect this as an exit command.
+     */
+    write(helper_server_admin_pipe, "x", 1);
+    close(helper_server_admin_pipe);
+    
+    /* Wait at most HELPER_SERVER_MAX_SHUTDOWN_TIME seconds for the helper
+     * server to exit.
+     */
+    begin_time = time(NULL);
+    helper_server_exited = 0;
+    ngx_log_debug1(NGX_LOG_DEBUG_HTTP, cycle->log, 0,
+                   "Waiting for Passenger helper server (PID %l) to exit...",
+                   (long) helper_server_pid);
+    while (!helper_server_exited && time(NULL) - begin_time < HELPER_SERVER_MAX_SHUTDOWN_TIME) {
+        pid_t ret;
+        
+        ret = waitpid(helper_server_pid, NULL, WNOHANG);
+        if (ret > 0 || (ret == -1 && errno == ECHILD)) {
+            helper_server_exited = 1;
+        } else {
+            usleep(100000);
+        }
+    }
+    
+    /* Kill helper server if it did not exit in time. */
+    if (!helper_server_exited) {
+        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, cycle->log, 0,
+                       "Passenger helper server did not exit in time. "
+                       "Killing it...");
+        kill(helper_server_pid, SIGTERM);
+        waitpid(helper_server_pid, NULL, 0);
+    }
+    
+    ngx_log_debug0(NGX_LOG_DEBUG_HTTP, cycle->log, 0,
+                   "Passenger helper server exited.");
 }
 
 static ngx_int_t
@@ -121,7 +266,7 @@ ngx_http_passenger_add_variables(ngx_conf_t *cf)
 
 static ngx_http_module_t  ngx_http_passenger_module_ctx = {
     ngx_http_passenger_add_variables,    /* preconfiguration */
-    ngx_http_passenger_post_config_init, /* postconfiguration */
+    register_content_handler,            /* postconfiguration */
 
     NULL,                                /* create main configuration */
     NULL,                                /* init main configuration */
@@ -140,11 +285,11 @@ ngx_module_t  ngx_http_passenger_module = {
     (ngx_command_t *) ngx_http_passenger_commands,   /* module directives */
     NGX_HTTP_MODULE,                                 /* module type */
     NULL,                                            /* init master */
-    NULL,                                            /* init module */
+    start_helper_server,                             /* init module */
     NULL,                                            /* init process */
     NULL,                                            /* init thread */
     NULL,                                            /* exit thread */
     NULL,                                            /* exit process */
-    NULL,                                            /* exit master */
+    shutdown_helper_server,                          /* exit master */
     NGX_MODULE_V1_PADDING
 };

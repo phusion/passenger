@@ -29,6 +29,7 @@
 #define _PASSENGER_NGINX_CONFIGURATION_H_
 
 #include <ngx_config.h>
+#include <ngx_http.h>
 
 typedef struct {
     ngx_flag_t                     enabled;
