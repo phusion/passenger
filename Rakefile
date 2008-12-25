@@ -605,6 +605,7 @@ spec = Gem::Specification.new do |s|
 		'ext/common/*.{cpp,h}',
 		'ext/apache2/*.{cpp,h,c,TXT}',
 		'ext/nginx/*.{c,cpp,h}',
+		'ext/nginx/config',
 		'ext/boost/*.{hpp,TXT}',
 		'ext/boost/**/*.{hpp,cpp,pl,inl,ipp}',
 		'ext/oxt/*.hpp',
