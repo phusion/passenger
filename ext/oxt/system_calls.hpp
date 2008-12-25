@@ -90,7 +90,7 @@
 // This is one of the things that Java is good at and C++ sucks at. Sigh...
 
 namespace oxt {
-	static const int INTERRUPTION_SIGNAL = SIGINT;
+	static const int INTERRUPTION_SIGNAL = SIGUSR2;
 	
 	/**
 	 * Setup system call interruption support.
