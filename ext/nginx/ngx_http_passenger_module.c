@@ -88,6 +88,7 @@ start_helper_server(ngx_cycle_t *cycle)
 {
     passenger_main_conf_t *main_conf = &passenger_main_conf;
     u_char                 helper_server_filename[NGX_MAX_PATH];
+    u_char                 max_pool_size_string[10];
     int                    p[2], e;
     pid_t                  pid;
     long                   i;
@@ -100,6 +101,12 @@ start_helper_server(ngx_cycle_t *cycle)
                      main_conf->root_dir.data) == NULL) {
         ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
                       "could not create Passenger HelperServer filename string");
+        return NGX_ERROR;
+    }
+    if (ngx_snprintf(max_pool_size_string, sizeof(max_pool_size_string), "%d",
+                     (int) main_conf->max_pool_size) == NULL) {
+        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                      "could not create Passenger max_pool_size string");
         return NGX_ERROR;
     }
     
@@ -142,7 +149,7 @@ start_helper_server(ngx_cycle_t *cycle)
                main_conf->root_dir.data,            /* Passenger root dir. */
                main_conf->ruby.data,                /* Ruby interpreter. */
                "3",                                 /* Admin pipe. */
-               "4",                                 /* Max pool size. */
+               max_pool_size_string,                /* Max pool size. */
                NULL);
         e = errno;
         fprintf(stderr, "*** Could not start the Passenger helper server (%s): "
