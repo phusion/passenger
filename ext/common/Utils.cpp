@@ -284,7 +284,7 @@ removeDirTree(const char *path) {
 	if (result == -1) {
 		char message[1024];
 		
-		snprintf(message, sizeof(message) - 1, "Cannot create directory '%s'", path);
+		snprintf(message, sizeof(message) - 1, "Cannot remove directory '%s'", path);
 		message[sizeof(message) - 1] = '\0';
 		throw IOException(message);
 	}

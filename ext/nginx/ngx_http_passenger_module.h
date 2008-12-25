@@ -31,7 +31,9 @@
 #include <ngx_core.h>
 
 extern ngx_module_t ngx_http_passenger_module;
+extern const char   passenger_temp_dir[NGX_MAX_PATH];
 extern ngx_str_t    passenger_helper_server_password;
+extern const char   passenger_helper_server_socket[NGX_MAX_PATH];
 
 #endif /* _PASSENGER_NGINX_MODULE_H_ */
 

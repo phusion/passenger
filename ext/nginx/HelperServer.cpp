@@ -326,7 +326,7 @@ private:
 	
 	void startListening() {
 		this_thread::disable_syscall_interruption dsi;
-		const char socketName[] = "/tmp/passenger_scgi.sock";
+		string socketName = getPassengerTempDir() + "/helper_server.sock";
 		struct sockaddr_un addr;
 		int ret;
 		
@@ -336,9 +336,8 @@ private:
 		}
 		
 		addr.sun_family = AF_UNIX;
-		strncpy(addr.sun_path, socketName, sizeof(addr.sun_path));
+		strncpy(addr.sun_path, socketName.c_str(), sizeof(addr.sun_path));
 		addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
-		syscalls::unlink(socketName);
 		
 		ret = syscalls::bind(serverSocket, (const struct sockaddr *) &addr, sizeof(addr));
 		if (ret == -1) {
@@ -376,6 +375,7 @@ public:
 		this->password  = password;
 		this->adminPipe = adminPipe;
 		numberOfThreads = maxPoolSize * 4;
+		createPassengerTempDir();
 		initializePool(rootDir, ruby, maxPoolSize);
 		startListening();
 	}

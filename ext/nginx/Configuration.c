@@ -28,6 +28,8 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
+
+#include "ngx_http_passenger_module.h"
 #include "Configuration.h"
 
 
@@ -634,8 +636,8 @@ passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         lcf->enabled = 1;
 
         ngx_memzero(&u, sizeof(ngx_url_t));
-        u.url.data = (u_char *) "unix:/tmp/passenger_scgi.sock";
-        u.url.len  = sizeof("unix:/tmp/passenger_scgi.sock") - 1;
+        u.url.data = (u_char *) passenger_helper_server_socket;
+        u.url.len  = strlen(passenger_helper_server_socket);
         u.no_resolve = 1;
 
         lcf->upstream.upstream = ngx_http_upstream_add(cf, &u, 0);

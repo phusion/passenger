@@ -52,7 +52,9 @@ static ngx_str_t  ngx_http_scgi_script_name = ngx_string("scgi_script_name");
 static pid_t      helper_server_pid;
 static int        helper_server_admin_pipe;
 static u_char     helper_server_password_data[HELPER_SERVER_PASSWORD_SIZE];
+const char        passenger_temp_dir[NGX_MAX_PATH];
 ngx_str_t         passenger_helper_server_password;
+const char        passenger_helper_server_socket[NGX_MAX_PATH];
 
 
 static ngx_int_t
@@ -75,12 +77,12 @@ register_content_handler(ngx_conf_t *cf)
 static void
 ignore_sigpipe()
 {
-	struct sigaction action;
-	
-	action.sa_handler = SIG_IGN;
-	action.sa_flags   = 0;
-	sigemptyset(&action.sa_mask);
-	sigaction(SIGPIPE, &action, NULL);
+    struct sigaction action;
+    
+    action.sa_handler = SIG_IGN;
+    action.sa_flags   = 0;
+    sigemptyset(&action.sa_mask);
+    sigaction(SIGPIPE, &action, NULL);
 }
 
 static ngx_int_t
@@ -94,8 +96,16 @@ start_helper_server(ngx_cycle_t *cycle)
     long                   i;
     ssize_t                ret;
     
+    /* Ignore SIGPIPE now so that, if the helper server fails to start,
+     * nginx doesn't get killed by the default SIGPIPE handler upon
+     * writing the password to the helper server.
+     */
     ignore_sigpipe();
     
+    
+    /* Build strings that we need later. */
+    
+    ngx_memzero(helper_server_filename, sizeof(helper_server_filename));
     if (ngx_snprintf(helper_server_filename, sizeof(helper_server_filename),
                      "%s/ext/nginx/HelperServer",
                      main_conf->root_dir.data) == NULL) {
@@ -103,6 +113,8 @@ start_helper_server(ngx_cycle_t *cycle)
                       "could not create Passenger HelperServer filename string");
         return NGX_ERROR;
     }
+    
+    ngx_memzero(max_pool_size_string, sizeof(max_pool_size_string));
     if (ngx_snprintf(max_pool_size_string, sizeof(max_pool_size_string), "%d",
                      (int) main_conf->max_pool_size) == NULL) {
         ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
@@ -110,16 +122,19 @@ start_helper_server(ngx_cycle_t *cycle)
         return NGX_ERROR;
     }
     
+    /* TODO: writer proper password generation code */
+    ngx_memzero(helper_server_password_data, HELPER_SERVER_PASSWORD_SIZE);
+    passenger_helper_server_password.data = helper_server_password_data;
+    passenger_helper_server_password.len  = HELPER_SERVER_PASSWORD_SIZE;
+    
+    
+    /*  Now spawn the helper server. */
+    
     if (pipe(p) == -1) {
         ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
                       "could not start the Passenger helper server: pipe() failed");
         return NGX_ERROR;
     }
-    
-    /* TODO: writer proper password generation code */
-    ngx_memzero(helper_server_password_data, HELPER_SERVER_PASSWORD_SIZE);
-    passenger_helper_server_password.data = helper_server_password_data;
-    passenger_helper_server_password.len  = HELPER_SERVER_PASSWORD_SIZE;
     
     pid = fork();
     switch (pid) {
@@ -170,6 +185,7 @@ start_helper_server(ngx_cycle_t *cycle)
         /* Parent process. */
         close(p[0]);
         
+        /* Pass our auto-generated password to the helper server. */
         i = 0;
         do {
             ret = write(p[1], helper_server_password_data,
@@ -200,6 +216,7 @@ shutdown_helper_server(ngx_cycle_t *cycle)
 {
     time_t begin_time;
     int    helper_server_exited;
+    u_char command[NGX_MAX_PATH + 10];
     
     /* We write one byte to the admin pipe, doesn't matter what the byte is.
      * The helper server will detect this as an exit command.
@@ -237,6 +254,22 @@ shutdown_helper_server(ngx_cycle_t *cycle)
     
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, cycle->log, 0,
                    "Passenger helper server exited.");
+
+    
+    /* Remove Passenger temp dir. */
+    ngx_memzero(command, sizeof(command));
+    if (ngx_snprintf(command, sizeof(command), "rm -rf \"%s\"",
+                     passenger_temp_dir) != NULL) {
+    //if (ngx_snprintf(command, sizeof(command), "xterm") != NULL) {
+        ngx_log_debug1(NGX_LOG_DEBUG_HTTP, cycle->log, 0,
+                       "Removing Passenger temp folder with command: %s",
+                       command);
+        if (system((const char *) command) != 0) {
+            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                          "Could not remove Passenger temp folder '%s'",
+                          passenger_temp_dir);
+        }
+    }
 }
 
 static ngx_int_t
@@ -301,13 +334,42 @@ add_variables(ngx_conf_t *cf)
 static ngx_int_t
 pre_config_init(ngx_conf_t *cf)
 {
-    ngx_int_t ret;
+    ngx_int_t   ret;
+    const char *system_temp_dir;
     
     ngx_memzero(&passenger_main_conf, sizeof(passenger_main_conf_t));
     
     ret = add_variables(cf);
     if (ret != NGX_OK) {
         return ret;
+    }
+    
+    /* Setup Passenger temp folder. */
+    
+    system_temp_dir = getenv("TMP");
+    if (!system_temp_dir || !*system_temp_dir) {
+        system_temp_dir = "/tmp";
+    }
+    
+    ngx_memzero(&passenger_temp_dir, sizeof(passenger_temp_dir));
+    if (ngx_snprintf((u_char *) passenger_temp_dir, sizeof(passenger_temp_dir),
+                     "%s/passenger.%d", system_temp_dir, getpid()) == NULL) {
+        ngx_log_error(NGX_LOG_ALERT, cf->log, ngx_errno,
+                      "could not create Passenger temp dir string");
+        return NGX_ERROR;
+    }
+    setenv("PHUSION_PASSENGER_TMP", passenger_temp_dir, 1);
+
+    
+    /* Build helper server socket filename string. */
+    
+    if (ngx_snprintf((u_char *) passenger_helper_server_socket, NGX_MAX_PATH,
+                     "unix:%s/helper_server.sock",
+                     passenger_temp_dir) == NULL) {
+        ngx_log_error(NGX_LOG_ALERT, cf->log, ngx_errno,
+                      "could not create Passenger helper server "
+                      "socket filename string");
+        return NGX_ERROR;
     }
     
     return NGX_OK;

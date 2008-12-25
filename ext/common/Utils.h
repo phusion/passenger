@@ -235,8 +235,11 @@ string getPassengerTempDir(bool bypassCache = false);
 
 /* Create a temp folder for storing Phusion Passenger-specific temp files,
  * such as temporarily buffered uploads, sockets for backend processes, etc.
- * This call also sets the PHUSION_PASSENGER_TMP environment variable, which
+ * This method also sets the PHUSION_PASSENGER_TMP environment variable, which
  * allows backend processes to find this temp folder.
+ *
+ * This method follows the same rules as getPassengerTempDir() for determining
+ * the temp folder.
  *
  * Does nothing if this folder already exists.
  *
