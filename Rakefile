@@ -501,7 +501,7 @@ end
 ##### Documentation
 
 subdir 'doc' do
-  ASCIIDOC = 'asciidoc'
+	ASCIIDOC = 'asciidoc'
 	ASCIIDOC_FLAGS = "-a toc -a numbered -a toclevels=3 -a icons"
 	ASCII_DOCS = ['Security of user switching support', 'Users guide',
 		'Architectural overview']
@@ -602,6 +602,7 @@ spec = Gem::Specification.new do |s|
 		'doc/*/*/*/*/*/*',
 		'man/*',
 		'debian/*',
+		'ext/common/*.{cpp,h}',
 		'ext/apache2/*.{cpp,h,c,TXT}',
 		'ext/nginx/*.{c,cpp,h}',
 		'ext/boost/*.{hpp,TXT}',
