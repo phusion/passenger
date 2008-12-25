@@ -32,8 +32,12 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <signal.h>
+#include <string.h>
+#include <errno.h>
 
 #include "ngx_http_passenger_module.h"
 #include "Configuration.h"
@@ -68,13 +72,36 @@ register_content_handler(ngx_conf_t *cf)
     return NGX_OK;
 }
 
+static void
+ignore_sigpipe()
+{
+	struct sigaction action;
+	
+	action.sa_handler = SIG_IGN;
+	action.sa_flags   = 0;
+	sigemptyset(&action.sa_mask);
+	sigaction(SIGPIPE, &action, NULL);
+}
+
 static ngx_int_t
 start_helper_server(ngx_cycle_t *cycle)
 {
-    int     p[2];
-    pid_t   pid;
-    long    i;
-    ssize_t ret;
+    passenger_main_conf_t *main_conf = &ngx_http_passenger_main_conf;
+    u_char                 helper_server_filename[NGX_MAX_PATH];
+    int                    p[2], e;
+    pid_t                  pid;
+    long                   i;
+    ssize_t                ret;
+    
+    ignore_sigpipe();
+    
+    if (ngx_snprintf(helper_server_filename, sizeof(helper_server_filename),
+                     "%s/ext/nginx/HelperServer",
+                     main_conf->root_dir.data) == NULL) {
+        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                      "could not create Passenger HelperServer filename string");
+        return NGX_ERROR;
+    }
     
     if (pipe(p) == -1) {
         ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
@@ -110,16 +137,17 @@ start_helper_server(ngx_cycle_t *cycle)
             close(i);
         }
         
-        execlp("/home/hongli/Projects/mod_rails/ext/nginx/server",
+        execlp((const char *) helper_server_filename,
                "PassengerHelperServer",
-               "/home/hongli/Projects/mod_rails",            /* Passenger root dir. */
-               "/opt/r8ee/bin/ruby",                         /* Ruby interpreter. */
-               "3",                                          /* Admin pipe. */
-               "4",                                          /* Max pool size. */
+               main_conf->root_dir.data,            /* Passenger root dir. */
+               main_conf->ruby.data,                /* Ruby interpreter. */
+               "3",                                 /* Admin pipe. */
+               "4",                                 /* Max pool size. */
                NULL);
-        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                      "could not start the Passenger helper server: "
-                      "exec() failed");
+        e = errno;
+        fprintf(stderr, "*** Could not start the Passenger helper server (%s): "
+                "exec() failed: %s (%d)\n",
+                (const char *) helper_server_filename, strerror(e), e);
         _exit(1);
         
     case -1:
@@ -248,7 +276,7 @@ ngx_http_scgi_script_name_variable(ngx_http_request_t *r,
 }
 
 static ngx_int_t
-ngx_http_passenger_add_variables(ngx_conf_t *cf)
+add_variables(ngx_conf_t *cf)
 {
     ngx_http_variable_t  *var;
 
@@ -263,13 +291,28 @@ ngx_http_passenger_add_variables(ngx_conf_t *cf)
     return NGX_OK;
 }
 
+static ngx_int_t
+pre_config_init(ngx_conf_t *cf)
+{
+    ngx_int_t ret;
+    
+    ngx_memzero(&ngx_http_passenger_main_conf, sizeof(passenger_main_conf_t));
+    
+    ret = add_variables(cf);
+    if (ret != NGX_OK) {
+        return ret;
+    }
+    
+    return NGX_OK;
+}
+
 
 static ngx_http_module_t  ngx_http_passenger_module_ctx = {
-    ngx_http_passenger_add_variables,    /* preconfiguration */
+    pre_config_init,                     /* preconfiguration */
     register_content_handler,            /* postconfiguration */
 
-    NULL,                                /* create main configuration */
-    NULL,                                /* init main configuration */
+    ngx_http_passenger_create_main_conf, /* create main configuration */
+    ngx_http_passenger_init_main_conf,   /* init main configuration */
 
     NULL,                                /* create server configuration */
     NULL,                                /* merge server configuration */

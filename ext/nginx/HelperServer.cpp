@@ -1,4 +1,3 @@
-// g++ -DPASSENGER_DEBUG -Wall -I.. -I../apache2 Server.cpp -o server ../libboost_oxt.a ../apache2/Utils.o ../apache2/Logging.o -lpthread -g
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -398,7 +397,6 @@ public:
 		char buf;
 		
 		startClientHandlerThreads();
-		P_TRACE(2, "Entering main loop.");
 		try {
 			syscalls::read(adminPipe, &buf, 1);
 		} catch (const boost::thread_interrupted &) {
@@ -432,16 +430,19 @@ int
 main(int argc, char *argv[]) {
 	TRACE_POINT();
 	try {
+		setup_syscall_interruption_support();
+		setLogLevel(2);
+		ignoreSigpipe();
+		P_DEBUG("Passenger helper server started on PID " << getpid());
+		
 		string password;
 		string rootDir  = argv[1];
 		string ruby     = argv[2];
 		int adminPipe   = atoi(argv[3]);
 		int maxPoolSize = atoi(argv[4]);
 		
-		setup_syscall_interruption_support();
-		setLogLevel(2);
-		ignoreSigpipe();
 		password = receivePassword(adminPipe);
+		P_TRACE(2, "Password received.");
 		Server(password, rootDir, ruby, adminPipe, maxPoolSize).start();
 	} catch (const tracable_exception &e) {
 		P_ERROR(e.what() << "\n" << e.backtrace());

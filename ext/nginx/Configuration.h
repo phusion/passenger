@@ -43,8 +43,17 @@ typedef struct {
     ngx_array_t                   *vars_source;
 } ngx_http_passenger_loc_conf_t;
 
-extern const ngx_command_t ngx_http_passenger_commands[];
+typedef struct {
+    ngx_str_t   root_dir;
+    ngx_str_t   ruby;
+    ngx_uint_t  max_pool_size;
+} passenger_main_conf_t;
 
+extern const ngx_command_t   ngx_http_passenger_commands[];
+extern passenger_main_conf_t ngx_http_passenger_main_conf;
+
+void *ngx_http_passenger_create_main_conf(ngx_conf_t *cf);
+char *ngx_http_passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer);
 void *ngx_http_passenger_create_loc_conf(ngx_conf_t *cf);
 char *ngx_http_passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
 
