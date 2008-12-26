@@ -205,7 +205,7 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 	end
 	
 	task :clean do
-		sh "rm -rf #{targets.join(' ')}"
+		sh "rm -rf #{targets.join(' ')} #{objects_output_dir}"
 	end
 	
 	return targets
