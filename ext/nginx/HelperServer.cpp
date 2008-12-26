@@ -232,6 +232,27 @@ private:
 		}
 	}
 	
+	void handleSpawnException(FileDescriptor &fd, const SpawnException &e) {
+		MessageChannel channel(fd);
+		channel.writeRaw("HTTP/1.1 500 Internal Server Error\x0D\x0A");
+		channel.writeRaw("Status: 500 Internal Server Error\x0D\x0A");
+		channel.writeRaw("Connection: close\x0D\x0A");
+		channel.writeRaw("Content-Type: text/html; charset=utf-8\x0D\x0A");
+		
+		if (e.hasErrorPage()) {
+			channel.writeRaw("Content-Length: " +
+				toString(e.getErrorPage().size()) +
+				"\x0D\x0A");
+			channel.writeRaw("\x0D\x0A");
+			channel.writeRaw(e.getErrorPage());
+		} else {
+			channel.writeRaw("Content-Length: " +
+				toString(strlen(e.what())) + "\x0D\x0A");
+			channel.writeRaw("\x0D\x0A");
+			channel.writeRaw(e.what());
+		}
+	}
+	
 	bool handleRequest(FileDescriptor &clientFd) {
 		TRACE_POINT();
 		ScgiRequestParser parser;
@@ -249,22 +270,28 @@ private:
 		try {
 			PoolOptions options(canonicalizePath(
 				parser.getHeader("DOCUMENT_ROOT") + "/.."));
+			options.environment    = parser.getHeader("PASSENGER_ENVIRONMENT");
 			options.useGlobalQueue = parser.getHeader("PASSENGER_USE_GLOBAL_QUEUE") == "true";
-			Application::SessionPtr session(pool->get(options));
 			
-			UPDATE_TRACE_POINT();
-			session->sendHeaders(parser.getHeaderData().c_str(),
-				parser.getHeaderData().size());
+			try {
+				Application::SessionPtr session(pool->get(options));
 			
-			contentLength = atol(
-				parser.getHeader("CONTENT_LENGTH").c_str());
-			sendRequestBody(session,
-				clientFd,
-				partialRequestBody,
-				contentLength);
+				UPDATE_TRACE_POINT();
+				session->sendHeaders(parser.getHeaderData().c_str(),
+					parser.getHeaderData().size());
 			
-			session->shutdownWriter();
-			forwardResponse(session, clientFd);
+				contentLength = atol(
+					parser.getHeader("CONTENT_LENGTH").c_str());
+				sendRequestBody(session,
+					clientFd,
+					partialRequestBody,
+					contentLength);
+			
+				session->shutdownWriter();
+				forwardResponse(session, clientFd);
+			} catch (const SpawnException &e) {
+				handleSpawnException(clientFd, e);
+			}
 			return false;
 		} catch (const boost::thread_interrupted &) {
 			throw;

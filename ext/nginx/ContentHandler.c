@@ -25,6 +25,7 @@
  * SUCH DAMAGE.
  */
 
+#include <nginx.h>
 #include "ngx_http_passenger_module.h"
 #include "ContentHandler.h"
 #include "Configuration.h"
@@ -89,6 +90,7 @@ create_request(ngx_http_request_t *r)
     } else {
         len += sizeof("PASSENGER_USE_GLOBAL_QUEUE") + sizeof("false");
     }
+    len += sizeof("PASSENGER_ENVIRONMENT") + slcf->environment.len + 1;
 
     /* Lengths of various CGI variables. */
     if (slcf->vars_len) {
@@ -182,6 +184,11 @@ create_request(ngx_http_request_t *r)
     } else {
         b->last = ngx_copy(b->last, "false", sizeof("false"));
     }
+    
+    b->last = ngx_copy(b->last, "PASSENGER_ENVIRONMENT",
+                       sizeof("PASSENGER_ENVIRONMENT"));
+    b->last = ngx_copy(b->last, slcf->environment.data,
+                       slcf->environment.len + 1);
 
 
     if (slcf->vars_len) {
@@ -658,7 +665,7 @@ process_header(ngx_http_request_t *r)
 
             /*
              * if no "Server" and "Date" in header line,
-             * then add the special empty headers
+             * then add the default headers
              */
 
             if (r->upstream->headers_in.server == NULL) {
@@ -672,8 +679,8 @@ process_header(ngx_http_request_t *r)
 
                 h->key.len = sizeof("Server") - 1;
                 h->key.data = (u_char *) "Server";
-                h->value.len = 0;
-                h->value.data = NULL;
+                h->value.data = (u_char *) (NGINX_VER " + Phusion Passenger (mod_rails/mod_rack)");
+                h->value.len = ngx_strlen(h->value.data);
                 h->lowcase_key = (u_char *) "server";
             }
 
