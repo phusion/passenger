@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <cstring>
 #include <unistd.h>
@@ -411,6 +412,11 @@ private:
 			message.append("'");
 			throw SystemException(message, e);
 		}
+		
+		chmod(socketName.c_str(), S_ISVTX |
+			S_IRUSR | S_IWUSR | S_IXUSR |
+			S_IRGRP | S_IWGRP | S_IXGRP |
+			S_IROTH | S_IWOTH | S_IXOTH);
 	}
 	
 	void startClientHandlerThreads() {
