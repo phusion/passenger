@@ -446,7 +446,7 @@ receivePassword(int adminPipe) {
 	char buf[HELPER_SERVER_PASSWORD_SIZE];
 	
 	if (!channel.readRaw(buf, HELPER_SERVER_PASSWORD_SIZE)) {
-		P_ERROR("Could not read password from the admin pipe.");
+		throw IOException("Could not read password from the admin pipe.");
 	}
 	return string(buf, HELPER_SERVER_PASSWORD_SIZE);
 }
