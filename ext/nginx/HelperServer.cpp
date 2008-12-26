@@ -76,6 +76,8 @@ class Client {
 private:
 	static const int CLIENT_THREAD_STACK_SIZE = 1024 * 128;
 	
+	/** The client number for this Client object, assigned by Server. */
+	unsigned int number;
 	StandardApplicationPoolPtr pool;
 	string password;
 	int serverSocket;
@@ -308,13 +310,16 @@ private:
 	}
 	
 public:
-	Client(StandardApplicationPoolPtr &pool, const string &password, int serverSocket) {
+	Client(unsigned int number, StandardApplicationPoolPtr &pool,
+	       const string &password, int serverSocket) {
+		this->number = number;
 		this->pool = pool;
 		this->password = password;
 		this->serverSocket = serverSocket;
 		thr = new oxt::thread(
 			bind(&Client::threadMain, this),
-			"Thread", CLIENT_THREAD_STACK_SIZE
+			"Client thread " + toString(number),
+			CLIENT_THREAD_STACK_SIZE
 		);
 	}
 	
@@ -390,7 +395,8 @@ private:
 	
 	void startClientHandlerThreads() {
 		for (unsigned int i = 0; i < numberOfThreads; i++) {
-			ClientPtr client(new Client(pool, password, serverSocket));
+			ClientPtr client(new Client(i + 1, pool, password,
+				serverSocket));
 			clients.insert(client);
 		}
 	}
