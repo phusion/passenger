@@ -137,6 +137,8 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->use_global_queue = NGX_CONF_UNSET;
     conf->environment.data = NULL;
     conf->environment.len = 0;
+    conf->spawn_method.data = NULL;
+    conf->spawn_method.len = 0;
 
     conf->upstream.store = NGX_CONF_UNSET;
     conf->upstream.store_access = NGX_CONF_UNSET_UINT;
@@ -214,6 +216,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->enabled, prev->enabled, 0);
     ngx_conf_merge_value(conf->use_global_queue, prev->use_global_queue, 0);
     ngx_conf_merge_str_value(conf->environment, prev->environment, "production");
+    ngx_conf_merge_str_value(conf->spawn_method, prev->spawn_method, "smart-lv2");
 
 
     if (conf->upstream.store != 0) {
@@ -850,6 +853,13 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, environment),
+      NULL },
+
+    { ngx_string("rails_spawn_method"),
+      NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, spawn_method),
       NULL },
 
     { ngx_string("scgi_index"),

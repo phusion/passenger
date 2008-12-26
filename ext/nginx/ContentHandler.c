@@ -43,6 +43,12 @@ static void abort_request(ngx_http_request_t *r);
 static void finalize_request(ngx_http_request_t *r, ngx_int_t rc);
 
 
+static void
+uint_to_str(ngx_uint_t i, u_char *str, ngx_uint_t size) {
+    ngx_memzero(str, size);
+    ngx_snprintf(str, size, "%ui", i);
+}
+
 static ngx_int_t
 create_request(ngx_http_request_t *r)
 {
@@ -58,9 +64,11 @@ create_request(ngx_http_request_t *r)
     ngx_http_script_code_pt        code;
     ngx_http_script_engine_t       e, le;
     passenger_loc_conf_t          *slcf;
+    passenger_main_conf_t         *main_conf;
     ngx_http_script_len_code_pt    lcode;
     
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
+    main_conf = &passenger_main_conf;
     s = ngx_pcalloc(r->pool, sizeof(ngx_http_scgi_ctx_t));
     if (s == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
@@ -73,13 +81,12 @@ create_request(ngx_http_request_t *r)
      **************************************************/
     
     /* Length of the Content-Length header. */
-    ngx_memzero(buf, sizeof(buf));
     if (r->headers_in.content_length_n < 0) {
         content_length = 0;
     } else {
         content_length = r->headers_in.content_length_n;
     }
-    ngx_snprintf(buf, sizeof(buf), "%ui", content_length);
+    uint_to_str(content_length, buf, sizeof(buf));
     /* +1 for trailing null */
     len = sizeof("CONTENT_LENGTH") + ngx_strlen(buf) + 1;
     
@@ -91,6 +98,7 @@ create_request(ngx_http_request_t *r)
         len += sizeof("PASSENGER_USE_GLOBAL_QUEUE") + sizeof("false");
     }
     len += sizeof("PASSENGER_ENVIRONMENT") + slcf->environment.len + 1;
+    len += sizeof("PASSENGER_SPAWN_METHOD") + slcf->spawn_method.len + 1;
 
     /* Lengths of various CGI variables. */
     if (slcf->vars_len) {
@@ -189,6 +197,11 @@ create_request(ngx_http_request_t *r)
                        sizeof("PASSENGER_ENVIRONMENT"));
     b->last = ngx_copy(b->last, slcf->environment.data,
                        slcf->environment.len + 1);
+
+    b->last = ngx_copy(b->last, "PASSENGER_SPAWN_METHOD",
+                       sizeof("PASSENGER_SPAWN_METHOD"));
+    b->last = ngx_copy(b->last, slcf->spawn_method.data,
+                       slcf->spawn_method.len + 1);
 
 
     if (slcf->vars_len) {

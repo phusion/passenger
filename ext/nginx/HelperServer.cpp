@@ -270,8 +270,9 @@ private:
 		try {
 			PoolOptions options(canonicalizePath(
 				parser.getHeader("DOCUMENT_ROOT") + "/.."));
-			options.environment    = parser.getHeader("PASSENGER_ENVIRONMENT");
 			options.useGlobalQueue = parser.getHeader("PASSENGER_USE_GLOBAL_QUEUE") == "true";
+			options.environment    = parser.getHeader("PASSENGER_ENVIRONMENT");
+			options.spawnMethod    = parser.getHeader("PASSENGER_SPAWN_METHOD");
 			
 			try {
 				Application::SessionPtr session(pool->get(options));

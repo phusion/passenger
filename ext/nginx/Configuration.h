@@ -44,6 +44,7 @@ typedef struct {
     
     ngx_flag_t use_global_queue;
     ngx_str_t  environment;
+    ngx_str_t  spawn_method;
 } passenger_loc_conf_t;
 
 typedef struct {
