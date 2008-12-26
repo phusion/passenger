@@ -95,6 +95,7 @@ start_helper_server(ngx_cycle_t *cycle)
     pid_t                  pid;
     long                   i;
     ssize_t                ret;
+    FILE                  *f;
     
     /* Ignore SIGPIPE now so that, if the helper server fails to start,
      * nginx doesn't get killed by the default SIGPIPE handler upon
@@ -122,8 +123,25 @@ start_helper_server(ngx_cycle_t *cycle)
         return NGX_ERROR;
     }
     
-    /* TODO: writer proper password generation code */
+    /* Generate random password for the helper server. */
+    
+    f = fopen("/dev/urandom", "r");
+    if (f == NULL) {
+        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                      "could not generate a random password for the "
+                      "Passenger helper server: cannot open /dev/urandom");
+        return NGX_ERROR;
+    }
     ngx_memzero(helper_server_password_data, HELPER_SERVER_PASSWORD_SIZE);
+    if (fread(helper_server_password_data, 1, HELPER_SERVER_PASSWORD_SIZE, f)
+              != HELPER_SERVER_PASSWORD_SIZE) {
+        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                      "could not generate a random password for the "
+                      "Passenger helper server: cannot read sufficient "
+                      "data from /dev/urandom");
+        return NGX_ERROR;
+    }
+    fclose(f);
     passenger_helper_server_password.data = helper_server_password_data;
     passenger_helper_server_password.len  = HELPER_SERVER_PASSWORD_SIZE;
     
