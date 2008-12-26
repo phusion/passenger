@@ -98,18 +98,20 @@ private:
 		TRACE_POINT();
 		char buf[1024 * 16];
 		ssize_t size;
-		unsigned int accepted;
+		unsigned int accepted = 0;
 		
 		do {
 			size = syscalls::read(fd, buf, sizeof(buf));
 			if (size == -1) {
 				throw SystemException("Cannot read request header", errno);
+			} else if (size == 0) {
+				break;
 			} else {
 				accepted = parser.feed(buf, size);
 			}
 		} while (parser.acceptingInput());
 
-		if (parser.getState() == ScgiRequestParser::ERROR) {
+		if (parser.getState() != ScgiRequestParser::DONE) {
 			P_ERROR("Invalid SCGI header received.");
 			return false;
 		} else if (!parser.hasHeader("DOCUMENT_ROOT")) {
@@ -212,14 +214,14 @@ private:
 		}
 	}
 	
-	void handleRequest(FileDescriptor &clientFd) {
+	bool handleRequest(FileDescriptor &clientFd) {
 		TRACE_POINT();
 		ScgiRequestParser parser;
 		string partialRequestBody;
 		unsigned long contentLength;
 		
 		if (!readAndParseRequestHeaders(clientFd, parser, partialRequestBody)) {
-			return;
+			return true;
 		}
 		
 		// TODO: check password
@@ -240,18 +242,22 @@ private:
 			
 			session->shutdownWriter();
 			forwardResponse(session, clientFd);
+			return false;
 		} catch (const boost::thread_interrupted &) {
 			throw;
 		} catch (const tracable_exception &e) {
 			P_ERROR("Uncaught exception in PassengerServer client thread:\n"
 				<< "   exception: " << e.what() << "\n"
 				<< "   backtrace:\n" << e.backtrace());
+			return true;
 		} catch (const exception &e) {
 			P_ERROR("Uncaught exception in PassengerServer client thread:\n"
 				<< "   exception: " << e.what() << "\n"
 				<< "   backtrace: not available");
+			return true;
 		} catch (...) {
 			P_ERROR("Uncaught unknown exception in PassengerServer client thread.");
+			return true;
 		}
 	}
 	
