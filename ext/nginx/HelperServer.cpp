@@ -249,6 +249,7 @@ private:
 		try {
 			PoolOptions options(canonicalizePath(
 				parser.getHeader("DOCUMENT_ROOT") + "/.."));
+			options.useGlobalQueue = parser.getHeader("PASSENGER_USE_GLOBAL_QUEUE") == "true";
 			Application::SessionPtr session(pool->get(options));
 			
 			UPDATE_TRACE_POINT();

@@ -41,6 +41,8 @@ typedef struct {
     ngx_array_t                   *vars_len;
     ngx_array_t                   *vars;
     ngx_array_t                   *vars_source;
+    
+    ngx_flag_t use_global_queue;
 } passenger_loc_conf_t;
 
 typedef struct {

@@ -59,11 +59,19 @@ create_request(ngx_http_request_t *r)
     passenger_loc_conf_t          *slcf;
     ngx_http_script_len_code_pt    lcode;
     
+    slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
+    s = ngx_pcalloc(r->pool, sizeof(ngx_http_scgi_ctx_t));
+    if (s == NULL) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    ngx_http_set_ctx(r, s, ngx_http_passenger_module);
+    
+    
     /**************************************************
      * Determine the request header length.
      **************************************************/
     
-    /* len of the Content-Length header */
+    /* Length of the Content-Length header. */
     ngx_memzero(buf, sizeof(buf));
     if (r->headers_in.content_length_n < 0) {
         content_length = 0;
@@ -73,17 +81,16 @@ create_request(ngx_http_request_t *r)
     ngx_snprintf(buf, sizeof(buf), "%ui", content_length);
     /* +1 for trailing null */
     len = sizeof("CONTENT_LENGTH") + ngx_strlen(buf) + 1;
-
-    slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
-
-    s = ngx_pcalloc(r->pool, sizeof(ngx_http_scgi_ctx_t));
-    if (s == NULL) {
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    
+    
+    /* Lengths of Passenger application pool options. */
+    if (slcf->use_global_queue) {
+        len += sizeof("PASSENGER_USE_GLOBAL_QUEUE") + sizeof("true");
+    } else {
+        len += sizeof("PASSENGER_USE_GLOBAL_QUEUE") + sizeof("false");
     }
 
-    ngx_http_set_ctx(r, s, ngx_http_passenger_module);
-
-
+    /* Lengths of various CGI variables. */
     if (slcf->vars_len) {
         ngx_memzero(&le, sizeof(ngx_http_script_engine_t));
 
@@ -107,6 +114,7 @@ create_request(ngx_http_request_t *r)
         }
     }
 
+    /* Lengths of HTTP headers. */
     if (slcf->upstream.pass_request_headers) {
 
         part = &r->headers_in.headers.part;
@@ -134,7 +142,6 @@ create_request(ngx_http_request_t *r)
      * Build the request header data.
      **************************************************/
     
-    
     size = passenger_helper_server_password.len +
         /* netstring length + ":" + trailing "," */
         /* note: 10 == sizeof("4294967296") - 1 */
@@ -152,18 +159,30 @@ create_request(ngx_http_request_t *r)
 
     cl->buf = b;
     
+    /* Build SCGI header netstring length part. */
     b->last = ngx_copy(b->last, passenger_helper_server_password.data,
                        passenger_helper_server_password.len);
 
     b->last = ngx_snprintf(b->last, 10, "%ui", len);
     *b->last++ = (u_char) ':';
 
-    /* the content-length must always be sent, even if 0 */
+    /* Build CONTENT_LENGTH header. This must always be sent, even if 0. */
     b->last = ngx_copy(b->last, "CONTENT_LENGTH",
                        sizeof("CONTENT_LENGTH"));
 
     b->last = ngx_snprintf(b->last, 10, "%ui", content_length);
     *b->last++ = (u_char) 0;
+
+
+    /* Build Passenger application pool option headers. */
+    b->last = ngx_copy(b->last, "PASSENGER_USE_GLOBAL_QUEUE",
+                       sizeof("PASSENGER_USE_GLOBAL_QUEUE"));
+    if (slcf->use_global_queue) {
+        b->last = ngx_copy(b->last, "true", sizeof("true"));
+    } else {
+        b->last = ngx_copy(b->last, "false", sizeof("false"));
+    }
+
 
     if (slcf->vars_len) {
         ngx_memzero(&e, sizeof(ngx_http_script_engine_t));

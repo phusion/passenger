@@ -149,6 +149,8 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     /* "scgi_cyclic_temp_file" is disabled */
     conf->upstream.cyclic_temp_file = 0;
     
+    conf->use_global_queue = NGX_CONF_UNSET;
+    
     #define DEFINE_VAR_TO_PASS(header_name, var_name) \
         kv = ngx_array_push(conf->vars_source);       \
         kv->key.data = (u_char *) header_name;        \
@@ -199,6 +201,8 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_script_copy_code_t  *copy;
 
     ngx_conf_merge_value(conf->enabled, prev->enabled, 0);
+    ngx_conf_merge_value(conf->use_global_queue, prev->use_global_queue, 0);
+
 
     if (conf->upstream.store != 0) {
         ngx_conf_merge_value(conf->upstream.store,
@@ -654,7 +658,8 @@ passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
         clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
 
-        if (clcf->name.data[clcf->name.len - 1] == '/') {
+        if (clcf->name.data != NULL
+         && clcf->name.data[clcf->name.len - 1] == '/') {
             clcf->auto_redirect = 1;
         }
     } else {
@@ -773,7 +778,7 @@ static ngx_conf_bitmask_t  ngx_http_scgi_next_upstream_masks[] = {
 const ngx_command_t passenger_commands[] = {
 
     { ngx_string("passenger_enabled"),
-      NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF|NGX_CONF_FLAG,
+      NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
       passenger_enabled,
       NGX_HTTP_LOC_CONF_OFFSET,
       0,
@@ -805,6 +810,13 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_num_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, max_pool_size),
+      NULL },
+    
+    { ngx_string("passenger_use_global_queue"),
+      NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+      ngx_conf_set_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, use_global_queue),
       NULL },
 
     { ngx_string("scgi_index"),
