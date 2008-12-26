@@ -61,6 +61,8 @@ passenger_create_main_conf(ngx_conf_t *cf)
     
     conf->log_level     = (ngx_uint_t) NGX_CONF_UNSET;
     conf->max_pool_size = (ngx_uint_t) NGX_CONF_UNSET;
+    conf->max_instances_per_app = (ngx_uint_t) NGX_CONF_UNSET;
+    conf->pool_idle_time = (ngx_uint_t) NGX_CONF_UNSET;
     
     return conf;
 }
@@ -88,6 +90,14 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     
     if (conf->max_pool_size == (ngx_uint_t) NGX_CONF_UNSET) {
         conf->max_pool_size = 6;
+    }
+    
+    if (conf->max_instances_per_app == (ngx_uint_t) NGX_CONF_UNSET) {
+        conf->max_instances_per_app = 0;
+    }
+    
+    if (conf->pool_idle_time == (ngx_uint_t) NGX_CONF_UNSET) {
+        conf->pool_idle_time = 300;
     }
     
     return NGX_CONF_OK;
@@ -807,18 +817,32 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_main_conf_t, log_level),
       NULL },
 
+    { ngx_string("passenger_use_global_queue"),
+      NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+      ngx_conf_set_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, use_global_queue),
+      NULL },
+
     { ngx_string("passenger_max_pool_size"),
       NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_num_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, max_pool_size),
       NULL },
-    
-    { ngx_string("passenger_use_global_queue"),
-      NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
-      ngx_conf_set_flag_slot,
-      NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(passenger_loc_conf_t, use_global_queue),
+
+    { ngx_string("passenger_max_instances_per_app"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_num_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, max_instances_per_app),
+      NULL },
+
+    { ngx_string("passenger_pool_idle_time"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_num_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, pool_idle_time),
       NULL },
 
     { ngx_string("rails_env"),

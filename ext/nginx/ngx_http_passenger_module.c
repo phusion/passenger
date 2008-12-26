@@ -90,8 +90,10 @@ start_helper_server(ngx_cycle_t *cycle)
 {
     passenger_main_conf_t *main_conf = &passenger_main_conf;
     u_char                 helper_server_filename[NGX_MAX_PATH];
-    u_char                 max_pool_size_string[10];
     u_char                 log_level_string[10];
+    u_char                 max_pool_size_string[10];
+    u_char                 max_instances_per_app_string[10];
+    u_char                 pool_idle_time_string[10];
     int                    p[2], e;
     pid_t                  pid;
     long                   i;
@@ -114,11 +116,19 @@ start_helper_server(ngx_cycle_t *cycle)
     
     ngx_memzero(log_level_string, sizeof(log_level_string));
     ngx_snprintf(log_level_string, sizeof(log_level_string), "%d",
-                     (int) main_conf->log_level);
+                 (int) main_conf->log_level);
     
     ngx_memzero(max_pool_size_string, sizeof(max_pool_size_string));
     ngx_snprintf(max_pool_size_string, sizeof(max_pool_size_string), "%d",
-                     (int) main_conf->max_pool_size);
+                 (int) main_conf->max_pool_size);
+    
+    ngx_memzero(max_instances_per_app_string, sizeof(max_instances_per_app_string));
+    ngx_snprintf(max_instances_per_app_string, sizeof(max_instances_per_app_string), "%d",
+                 (int) main_conf->max_instances_per_app);
+    
+    ngx_memzero(pool_idle_time_string, sizeof(pool_idle_time_string));
+    ngx_snprintf(pool_idle_time_string, sizeof(pool_idle_time_string), "%d",
+                 (int) main_conf->pool_idle_time);
     
     /* Generate random password for the helper server. */
     
@@ -176,11 +186,13 @@ start_helper_server(ngx_cycle_t *cycle)
         
         execlp((const char *) helper_server_filename,
                "PassengerNginxHelperServer",
-               main_conf->root_dir.data,            /* Passenger root dir. */
-               main_conf->ruby.data,                /* Ruby interpreter. */
-               "3",                                 /* Admin pipe. */
-               log_level_string,                    /* Log level. */
-               max_pool_size_string,                /* Max pool size. */
+               main_conf->root_dir.data,
+               main_conf->ruby.data,
+               "3",  /* Admin pipe file descriptor number. */
+               log_level_string,
+               max_pool_size_string,
+               max_instances_per_app_string,
+               pool_idle_time_string,
                NULL);
         e = errno;
         fprintf(stderr, "*** Could not start the Passenger helper server (%s): "

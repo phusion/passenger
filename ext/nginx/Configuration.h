@@ -51,6 +51,8 @@ typedef struct {
     ngx_str_t   ruby;
     ngx_uint_t  log_level;
     ngx_uint_t  max_pool_size;
+    ngx_uint_t  max_instances_per_app;
+    ngx_uint_t  pool_idle_time;
 } passenger_main_conf_t;
 
 extern const ngx_command_t   passenger_commands[];

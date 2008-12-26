@@ -374,15 +374,6 @@ private:
 	set<ClientPtr> clients;
 	StandardApplicationPoolPtr pool;
 	
-	void initializePool(const string &rootDir, const string &ruby,
-	                    unsigned int maxPoolSize) {
-		pool = ptr(new StandardApplicationPool(
-			rootDir + "/bin/passenger-spawn-server",
-			"", ruby
-		));
-		pool->setMax(maxPoolSize);
-	}
-	
 	void startListening() {
 		this_thread::disable_syscall_interruption dsi;
 		string socketName = getPassengerTempDir() + "/helper_server.sock";
@@ -431,12 +422,22 @@ private:
 
 public:
 	Server(const string &password, const string &rootDir, const string &ruby,
-	       int adminPipe, unsigned int maxPoolSize) {
+	       int adminPipe, unsigned int maxPoolSize,
+	       unsigned int maxInstancesPerApp,
+	       unsigned int poolIdleTime) {
 		this->password  = password;
 		this->adminPipe = adminPipe;
 		numberOfThreads = maxPoolSize * 4;
 		createPassengerTempDir();
-		initializePool(rootDir, ruby, maxPoolSize);
+		
+		pool = ptr(new StandardApplicationPool(
+			rootDir + "/bin/passenger-spawn-server",
+			"", ruby
+		));
+		pool->setMax(maxPoolSize);
+		pool->setMaxPerApp(maxInstancesPerApp);
+		pool->setMaxIdleTime(poolIdleTime);
+		
 		startListening();
 	}
 	
@@ -501,6 +502,8 @@ main(int argc, char *argv[]) {
 		int adminPipe   = atoi(argv[3]);
 		int logLevel    = atoi(argv[4]);
 		int maxPoolSize = atoi(argv[5]);
+		int maxInstancesPerApp = atoi(argv[6]);
+		int poolIdleTime       = atoi(argv[7]);
 		
 		setLogLevel(logLevel);
 		P_DEBUG("Passenger helper server started on PID " << getpid());
@@ -508,7 +511,8 @@ main(int argc, char *argv[]) {
 		password = receivePassword(adminPipe);
 		P_TRACE(2, "Password received.");
 		
-		Server(password, rootDir, ruby, adminPipe, maxPoolSize).start();
+		Server(password, rootDir, ruby, adminPipe, maxPoolSize,
+			maxInstancesPerApp, poolIdleTime).start();
 	} catch (const tracable_exception &e) {
 		P_ERROR(e.what() << "\n" << e.backtrace());
 		return 1;
