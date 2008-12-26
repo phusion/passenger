@@ -91,6 +91,7 @@ start_helper_server(ngx_cycle_t *cycle)
     passenger_main_conf_t *main_conf = &passenger_main_conf;
     u_char                 helper_server_filename[NGX_MAX_PATH];
     u_char                 max_pool_size_string[10];
+    u_char                 log_level_string[10];
     int                    p[2], e;
     pid_t                  pid;
     long                   i;
@@ -107,21 +108,17 @@ start_helper_server(ngx_cycle_t *cycle)
     /* Build strings that we need later. */
     
     ngx_memzero(helper_server_filename, sizeof(helper_server_filename));
-    if (ngx_snprintf(helper_server_filename, sizeof(helper_server_filename),
+    ngx_snprintf(helper_server_filename, sizeof(helper_server_filename),
                      "%s/ext/nginx/HelperServer",
-                     main_conf->root_dir.data) == NULL) {
-        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                      "could not create Passenger HelperServer filename string");
-        return NGX_ERROR;
-    }
+                     main_conf->root_dir.data);
+    
+    ngx_memzero(log_level_string, sizeof(log_level_string));
+    ngx_snprintf(log_level_string, sizeof(log_level_string), "%d",
+                     (int) main_conf->log_level);
     
     ngx_memzero(max_pool_size_string, sizeof(max_pool_size_string));
-    if (ngx_snprintf(max_pool_size_string, sizeof(max_pool_size_string), "%d",
-                     (int) main_conf->max_pool_size) == NULL) {
-        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                      "could not create Passenger max_pool_size string");
-        return NGX_ERROR;
-    }
+    ngx_snprintf(max_pool_size_string, sizeof(max_pool_size_string), "%d",
+                     (int) main_conf->max_pool_size);
     
     /* Generate random password for the helper server. */
     
@@ -182,6 +179,7 @@ start_helper_server(ngx_cycle_t *cycle)
                main_conf->root_dir.data,            /* Passenger root dir. */
                main_conf->ruby.data,                /* Ruby interpreter. */
                "3",                                 /* Admin pipe. */
+               log_level_string,                    /* Log level. */
                max_pool_size_string,                /* Max pool size. */
                NULL);
         e = errno;

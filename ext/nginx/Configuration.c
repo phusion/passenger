@@ -59,6 +59,7 @@ passenger_create_main_conf(ngx_conf_t *cf)
         return NGX_CONF_ERROR;
     }
     
+    conf->log_level     = (ngx_uint_t) NGX_CONF_UNSET;
     conf->max_pool_size = (ngx_uint_t) NGX_CONF_UNSET;
     
     return conf;
@@ -79,6 +80,10 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     if (conf->ruby.len == 0) {
         conf->ruby.data = (u_char *) "ruby";
         conf->ruby.len  = sizeof("ruby") - 1;
+    }
+    
+    if (conf->log_level == (ngx_uint_t) NGX_CONF_UNSET) {
+        conf->log_level = 0;
     }
     
     if (conf->max_pool_size == (ngx_uint_t) NGX_CONF_UNSET) {
@@ -786,6 +791,13 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, ruby),
+      NULL },
+
+    { ngx_string("passenger_log_level"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_num_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, log_level),
       NULL },
 
     { ngx_string("passenger_max_pool_size"),

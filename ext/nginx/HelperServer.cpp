@@ -459,18 +459,21 @@ main(int argc, char *argv[]) {
 	TRACE_POINT();
 	try {
 		setup_syscall_interruption_support();
-		setLogLevel(2);
 		ignoreSigpipe();
-		P_DEBUG("Passenger helper server started on PID " << getpid());
 		
 		string password;
 		string rootDir  = argv[1];
 		string ruby     = argv[2];
 		int adminPipe   = atoi(argv[3]);
-		int maxPoolSize = atoi(argv[4]);
+		int logLevel    = atoi(argv[4]);
+		int maxPoolSize = atoi(argv[5]);
+		
+		setLogLevel(logLevel);
+		P_DEBUG("Passenger helper server started on PID " << getpid());
 		
 		password = receivePassword(adminPipe);
 		P_TRACE(2, "Password received.");
+		
 		Server(password, rootDir, ruby, adminPipe, maxPoolSize).start();
 	} catch (const tracable_exception &e) {
 		P_ERROR(e.what() << "\n" << e.backtrace());

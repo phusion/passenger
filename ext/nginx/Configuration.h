@@ -46,6 +46,7 @@ typedef struct {
 typedef struct {
     ngx_str_t   root_dir;
     ngx_str_t   ruby;
+    ngx_uint_t  log_level;
     ngx_uint_t  max_pool_size;
 } passenger_main_conf_t;
 
