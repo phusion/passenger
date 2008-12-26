@@ -322,7 +322,8 @@ end
 		'ext/nginx/HelperServer.cpp',
 		'ext/nginx/ScgiRequestParser.h',
 		'ext/nginx/HttpStatusExtractor.h',
-		'ext/common/StaticString.h'
+		'ext/common/StaticString.h',
+		'ext/common/StandardApplicationPool.h'
 		]
 	file 'ext/nginx/HelperServer' => helper_server_dependencies do
 		create_executable "ext/nginx/HelperServer",
