@@ -20,6 +20,13 @@
 $LOAD_PATH.unshift("#{File.dirname(__FILE__)}/../lib")
 require 'passenger/platform_info'
 
+# ANSI color codes
+RESET   = "\e[0m"
+BOLD    = "\e[1m"
+WHITE   = "\e[37m"
+YELLOW  = "\e[33m"
+BLUE_BG = "\e[44m"
+
 # Container for tabular data.
 class Table
 	def initialize(column_names)
@@ -64,14 +71,22 @@ class Table
 				left_bar_size = free_space / 2
 				right_bar_size = free_space - left_bar_size
 			end
-			result = "#{"-" * left_bar_size} #{title} #{"-" * right_bar_size}\n"
-			result << header
+			result = "#{BLUE_BG}#{BOLD}#{YELLOW}"
+			result << "#{"-" * left_bar_size} #{title} #{"-" * right_bar_size}\n"
+			if !@rows.empty?
+				result << WHITE
+				result << header
+			end
 		else
 			result = header.dup
 		end
-		result << ("-" * header.size) << "\n"
-		@rows.each do |row|
-			result << sprintf(format_string, *row).rstrip << "\n"
+		if @rows.empty?
+			result << RESET
+		else
+			result << ("-" * header.size) << "#{RESET}\n"
+			@rows.each do |row|
+				result << sprintf(format_string, *row).rstrip << "\n"
+			end
 		end
 		result
 	end
