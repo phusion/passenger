@@ -58,7 +58,11 @@ create_request(ngx_http_request_t *r)
     ngx_http_script_engine_t       e, le;
     passenger_loc_conf_t          *slcf;
     ngx_http_script_len_code_pt    lcode;
-
+    
+    /**************************************************
+     * Determine the request header length.
+     **************************************************/
+    
     /* len of the Content-Length header */
     ngx_memzero(buf, sizeof(buf));
     if (r->headers_in.content_length_n < 0) {
@@ -126,9 +130,15 @@ create_request(ngx_http_request_t *r)
     }
 
 
-    /* netstring length + ":" + trailing "," */
-    /* note: 10 == sizeof("4294967296") - 1 */
-    size = len + 10 + 1 + 1;
+    /**************************************************
+     * Build the request header data.
+     **************************************************/
+    
+    
+    size = passenger_helper_server_password.len +
+        /* netstring length + ":" + trailing "," */
+        /* note: 10 == sizeof("4294967296") - 1 */
+        len + 10 + 1 + 1;
 
     b = ngx_create_temp_buf(r->pool, size);
     if (b == NULL) {
@@ -141,6 +151,9 @@ create_request(ngx_http_request_t *r)
     }
 
     cl->buf = b;
+    
+    b->last = ngx_copy(b->last, passenger_helper_server_password.data,
+                       passenger_helper_server_password.len);
 
     b->last = ngx_snprintf(b->last, 10, "%ui", len);
     *b->last++ = (u_char) ':';

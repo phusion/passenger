@@ -94,6 +94,21 @@ private:
 		}
 	}
 	
+	bool readAndCheckPassword(FileDescriptor &fd) {
+		TRACE_POINT();
+		MessageChannel channel(fd);
+		char buf[HELPER_SERVER_PASSWORD_SIZE];
+		
+		if (channel.readRaw(buf, sizeof(buf))) {
+			const char *password_data;
+			
+			password_data = const_cast<const string &>(password).c_str();
+			return memcmp(password_data, buf, sizeof(buf)) == 0;
+		} else {
+			return false;
+		}
+	}
+	
 	bool readAndParseRequestHeaders(FileDescriptor &fd, ScgiRequestParser &parser, string &requestBody) {
 		TRACE_POINT();
 		char buf[1024 * 16];
@@ -220,11 +235,13 @@ private:
 		string partialRequestBody;
 		unsigned long contentLength;
 		
+		if (!readAndCheckPassword(clientFd)) {
+			P_ERROR("Client did not send a correct password.");
+			return true;
+		}
 		if (!readAndParseRequestHeaders(clientFd, parser, partialRequestBody)) {
 			return true;
 		}
-		
-		// TODO: check password
 		
 		try {
 			PoolOptions options(canonicalizePath(
