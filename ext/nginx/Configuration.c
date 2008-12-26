@@ -33,8 +33,6 @@
 #include "Configuration.h"
 
 
-static ngx_str_t  passenger_schema_string = ngx_string("passenger://");
-
 static ngx_str_t  ngx_http_scgi_hide_headers[] = {
     /* NOTE: Do not hide the "Status" header; some broken HTTP clients
      * expect this header. See http://tinyurl.com/87rezm
@@ -479,7 +477,9 @@ peers:
 
     if (conf->upstream.upstream == NULL) {
         conf->upstream.upstream = prev->upstream.upstream;
-        conf->upstream.schema = prev->upstream.schema;
+        #if NGINX_VERSION_NUM < 7000
+            conf->upstream.schema = prev->upstream.schema;
+        #endif
     }
 
     if (conf->vars_source == NULL) {
@@ -653,9 +653,11 @@ passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     value = cf->args->elts;
     if (ngx_strcasecmp(value[1].data, (u_char *) "on") == 0) {
-        if (lcf->upstream.schema.len) {
-            return "is duplicate";
-        }
+        #if NGINX_VERSION_NUM < 7000
+            if (lcf->upstream.schema.len) {
+                return "is duplicate";
+            }
+        #endif
 
         lcf->enabled = 1;
 
@@ -669,7 +671,9 @@ passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             return NGX_CONF_ERROR;
         }
 
-        lcf->upstream.schema = passenger_schema_string;
+        #if NGINX_VERSION_NUM < 7000
+            lcf->upstream.schema = passenger_schema_string;
+        #endif
 
         clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
 

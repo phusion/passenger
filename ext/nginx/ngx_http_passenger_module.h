@@ -30,8 +30,18 @@
 
 #include <ngx_core.h>
 
+/**
+ * The Nginx version number as an integer.
+ * For example, on nginx 1.7.30 this value is 1007030.
+ */
+#define NGINX_VERSION_NUM \
+    (1000000 * PASSENGER_NGINX_MAJOR_VERSION + \
+     1000   * PASSENGER_NGINX_MINOR_VERSION + \
+     PASSENGER_NGINX_MICRO_VERSION)
+
 extern ngx_module_t ngx_http_passenger_module;
 extern const char   passenger_temp_dir[NGX_MAX_PATH];
+extern ngx_str_t    passenger_schema_string;
 extern ngx_str_t    passenger_helper_server_password;
 extern const char   passenger_helper_server_socket[NGX_MAX_PATH];
 

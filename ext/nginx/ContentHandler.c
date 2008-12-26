@@ -618,7 +618,11 @@ process_header(ngx_http_request_t *r)
 
     for ( ;;  ) {
 
-        rc = ngx_http_parse_header_line(r, &r->upstream->buffer);
+        #if NGINX_VERSION_NUM >= 7000
+            rc = ngx_http_parse_header_line(r, &r->upstream->buffer, 1);
+        #else
+            rc = ngx_http_parse_header_line(r, &r->upstream->buffer);
+        #endif
 
         if (rc == NGX_OK) {
 
@@ -779,6 +783,10 @@ passenger_content_handler(ngx_http_request_t *r)
     if (u == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
+    
+#if NGINX_VERSION_NUM >= 7000
+    u->schema = passenger_schema_string;
+#endif
 
     u->peer.log = r->connection->log;
     u->peer.log_error = NGX_ERROR_ERR;

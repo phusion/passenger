@@ -53,6 +53,7 @@ static pid_t      helper_server_pid;
 static int        helper_server_admin_pipe;
 static u_char     helper_server_password_data[HELPER_SERVER_PASSWORD_SIZE];
 const char        passenger_temp_dir[NGX_MAX_PATH];
+ngx_str_t         passenger_schema_string;
 ngx_str_t         passenger_helper_server_password;
 const char        passenger_helper_server_socket[NGX_MAX_PATH];
 
@@ -366,6 +367,9 @@ pre_config_init(ngx_conf_t *cf)
     const char *system_temp_dir;
     
     ngx_memzero(&passenger_main_conf, sizeof(passenger_main_conf_t));
+    
+    passenger_schema_string.data = (u_char *) "passenger://";
+    passenger_schema_string.len  = sizeof("passenger://") - 1;
     
     ret = add_variables(cf);
     if (ret != NGX_OK) {
