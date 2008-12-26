@@ -136,8 +136,12 @@ class MemoryStats
 		print_process_list("Apache processes", apache_processes)
 		
 		puts
+		nginx_processes = list_processes(:exe => "nginx")
+		print_process_list("Nginx processes", nginx_processes)
+		
+		puts
 		passenger_processes = list_processes(:match =>
-			/((^| )Passenger |(^| )Rails:|(^| )Rack:|ApplicationPoolServerExecutable)/)
+			/((^| )Passenger |(^| )Rails:|(^| )Rack:|ApplicationPoolServerExecutable|PassengerNginxHelperServer)/)
 		print_process_list("Passenger processes", passenger_processes, :show_ppid => false)
 		
 		if RUBY_PLATFORM !~ /linux/

@@ -175,7 +175,7 @@ start_helper_server(ngx_cycle_t *cycle)
         }
         
         execlp((const char *) helper_server_filename,
-               "PassengerHelperServer",
+               "PassengerNginxHelperServer",
                main_conf->root_dir.data,            /* Passenger root dir. */
                main_conf->ruby.data,                /* Ruby interpreter. */
                "3",                                 /* Admin pipe. */
