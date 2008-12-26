@@ -19,6 +19,7 @@
 #include "HttpStatusExtractor.h"
 
 #include "StandardApplicationPool.h"
+#include "ApplicationPoolStatusReporter.h"
 #include "Application.h"
 #include "PoolOptions.h"
 #include "Exceptions.h"
@@ -422,6 +423,8 @@ public:
 		char buf;
 		
 		startClientHandlerThreads();
+		ApplicationPoolStatusReporter reporter(pool);
+		
 		try {
 			syscalls::read(adminPipe, &buf, 1);
 		} catch (const boost::thread_interrupted &) {

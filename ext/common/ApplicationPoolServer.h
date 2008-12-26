@@ -463,7 +463,6 @@ private:
 	string m_logFile;
 	string m_rubyCommand;
 	string m_user;
-	string statusReportFIFO;
 	
 	/**
 	 * The PID of the ApplicationPool server process. If no server process
@@ -500,11 +499,6 @@ private:
 		bool done = false;
 		
 		syscalls::close(serverSocket);
-		if (!statusReportFIFO.empty()) {
-			do {
-				ret = unlink(statusReportFIFO.c_str());
-			} while (ret == -1 && errno == EINTR);
-		}
 		
 		P_TRACE(2, "Waiting for existing ApplicationPoolServerExecutable (PID " <<
 			serverPid << ") to exit...");
@@ -557,8 +551,6 @@ private:
 			throw SystemException("Cannot create a Unix socket pair", errno);
 		}
 		
-		createStatusReportFIFO();
-		
 		pid = syscalls::fork();
 		if (pid == 0) { // Child process.
 			dup2(fds[0], SERVER_SOCKET_FD);
@@ -581,7 +573,6 @@ private:
 				m_logFile.c_str(),
 				m_rubyCommand.c_str(),
 				m_user.c_str(),
-				statusReportFIFO.c_str(),
 				(char *) 0);
 			int e = errno;
 			fprintf(stderr, "*** Passenger ERROR (%s:%d):\n"
@@ -604,30 +595,6 @@ private:
 			}
 			
 			serverPid = pid;
-		}
-	}
-	
-	void createStatusReportFIFO() {
-		TRACE_POINT();
-		char filename[PATH_MAX];
-		int ret;
-		
-		createPassengerTempDir();
-		
-		snprintf(filename, sizeof(filename), "%s/status.fifo",
-				getPassengerTempDir().c_str());
-		filename[PATH_MAX - 1] = '\0';
-		do {
-			ret = mkfifo(filename, S_IRUSR | S_IWUSR);
-		} while (ret == -1 && errno == EINTR);
-		if (ret == -1 && errno != EEXIST) {
-			int e = errno;
-			P_WARN("*** WARNING: Could not create FIFO '" << filename <<
-				"': " << strerror(e) << " (" << e << ")" << endl <<
-				"Disabling Passenger ApplicationPool status reporting.");
-			statusReportFIFO = "";
-		} else {
-			statusReportFIFO = filename;
 		}
 	}
 

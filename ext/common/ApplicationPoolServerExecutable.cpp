@@ -54,6 +54,7 @@
 
 #include "MessageChannel.h"
 #include "StandardApplicationPool.h"
+#include "ApplicationPoolStatusReporter.h"
 #include "Application.h"
 #include "Logging.h"
 #include "Exceptions.h"
@@ -80,66 +81,9 @@ private:
 	friend class Client;
 
 	int serverSocket;
-	StandardApplicationPool pool;
+	StandardApplicationPoolPtr pool;
 	set<ClientPtr> clients;
 	boost::mutex lock;
-	string statusReportFIFO;
-	shared_ptr<oxt::thread> statusReportThread;
-	
-	void statusReportThreadMain() {
-		TRACE_POINT();
-		try {
-			while (!this_thread::interruption_requested()) {
-				struct stat buf;
-				int ret;
-				
-				UPDATE_TRACE_POINT();
-				do {
-					ret = stat(statusReportFIFO.c_str(), &buf);
-				} while (ret == -1 && errno == EINTR);
-				if (ret == -1 || !S_ISFIFO(buf.st_mode)) {
-					// Something bad happened with the status report
-					// FIFO, so we bail out.
-					break;
-				}
-				
-				UPDATE_TRACE_POINT();
-				FILE *f = syscalls::fopen(statusReportFIFO.c_str(), "w");
-				if (f == NULL) {
-					break;
-				}
-				
-				UPDATE_TRACE_POINT();
-				MessageChannel channel(fileno(f));
-				string report;
-				report.append("----------- Backtraces -----------\n");
-				report.append(oxt::thread::all_backtraces());
-				report.append("\n\n");
-				report.append(pool.toString());
-				
-				UPDATE_TRACE_POINT();
-				try {
-					channel.writeScalar(report);
-					channel.writeScalar(pool.toXml());
-				} catch (...) {
-					// Ignore write errors.
-				}
-				syscalls::fclose(f);
-			}
-		} catch (const boost::thread_interrupted &) {
-			P_TRACE(2, "Status report thread interrupted.");
-		}
-	}
-	
-	void deleteStatusReportFIFO() {
-		TRACE_POINT();
-		if (!statusReportFIFO.empty()) {
-			int ret;
-			do {
-				ret = unlink(statusReportFIFO.c_str());
-			} while (ret == -1 && errno == EINTR);
-		}
-	}
 
 public:
 	Server(int serverSocket,
@@ -147,13 +91,12 @@ public:
 	       const string &spawnServerCommand,
 	       const string &logFile,
 	       const string &rubyCommand,
-	       const string &user,
-	       const string &statusReportFIFO)
-		: pool(spawnServerCommand, logFile, rubyCommand, user) {
-		
+	       const string &user)
+	{
+		pool = ptr(new StandardApplicationPool(spawnServerCommand,
+			logFile, rubyCommand, user));
 		Passenger::setLogLevel(logLevel);
 		this->serverSocket = serverSocket;
-		this->statusReportFIFO = statusReportFIFO;
 	}
 	
 	~Server() {
@@ -164,11 +107,6 @@ public:
 		P_TRACE(2, "Shutting down server.");
 		
 		syscalls::close(serverSocket);
-		
-		if (statusReportThread != NULL) {
-			UPDATE_TRACE_POINT();
-			statusReportThread->interrupt_and_join();
-		}
 		
 		// Wait for all clients to disconnect.
 		UPDATE_TRACE_POINT();
@@ -184,7 +122,6 @@ public:
 			clients.clear();
 		}
 		clientsCopy.clear();
-		deleteStatusReportFIFO();
 		
 		P_TRACE(2, "Server shutdown complete.");
 	}
@@ -235,7 +172,7 @@ private:
 		
 		try {
 			PoolOptions options(args, 1);
-			session = server.pool.get(options);
+			session = server.pool->get(options);
 			sessions[lastSessionID] = session;
 			lastSessionID++;
 		} catch (const SpawnException &e) {
@@ -290,37 +227,37 @@ private:
 	
 	void processClear(const vector<string> &args) {
 		TRACE_POINT();
-		server.pool.clear();
+		server.pool->clear();
 	}
 	
 	void processSetMaxIdleTime(const vector<string> &args) {
 		TRACE_POINT();
-		server.pool.setMaxIdleTime(atoi(args[1]));
+		server.pool->setMaxIdleTime(atoi(args[1]));
 	}
 	
 	void processSetMax(const vector<string> &args) {
 		TRACE_POINT();
-		server.pool.setMax(atoi(args[1]));
+		server.pool->setMax(atoi(args[1]));
 	}
 	
 	void processGetActive(const vector<string> &args) {
 		TRACE_POINT();
-		channel.write(toString(server.pool.getActive()).c_str(), NULL);
+		channel.write(toString(server.pool->getActive()).c_str(), NULL);
 	}
 	
 	void processGetCount(const vector<string> &args) {
 		TRACE_POINT();
-		channel.write(toString(server.pool.getCount()).c_str(), NULL);
+		channel.write(toString(server.pool->getCount()).c_str(), NULL);
 	}
 	
 	void processSetMaxPerApp(unsigned int maxPerApp) {
 		TRACE_POINT();
-		server.pool.setMaxPerApp(maxPerApp);
+		server.pool->setMaxPerApp(maxPerApp);
 	}
 	
 	void processGetSpawnServerPid(const vector<string> &args) {
 		TRACE_POINT();
-		channel.write(toString(server.pool.getSpawnServerPid()).c_str(), NULL);
+		channel.write(toString(server.pool->getSpawnServerPid()).c_str(), NULL);
 	}
 	
 	void processUnknownMessage(const vector<string> &args) {
@@ -472,15 +409,7 @@ Server::start() {
 	sigaction(SIGPIPE, &action, NULL);
 	
 	try {
-		if (!statusReportFIFO.empty()) {
-			statusReportThread = ptr(
-				new oxt::thread(
-					bind(&Server::statusReportThreadMain, this),
-					"Status report thread",
-					1024 * 128
-				)
-			);
-		}
+		ApplicationPoolStatusReporter reporter(pool);
 		
 		while (!this_thread::interruption_requested()) {
 			int fds[2], ret;
@@ -535,7 +464,7 @@ int
 main(int argc, char *argv[]) {
 	try {
 		Server server(SERVER_SOCKET_FD, atoi(argv[1]),
-			argv[2], argv[3], argv[4], argv[5], argv[6]);
+			argv[2], argv[3], argv[4], argv[5]);
 		return server.start();
 	} catch (const tracable_exception &e) {
 		P_ERROR(e.what() << "\n" << e.backtrace());
