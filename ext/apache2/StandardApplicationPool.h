@@ -227,9 +227,7 @@ private:
 		return true;
 	}
 	
-	template<typename LockActionType>
-	string toString(LockActionType lockAction) const {
-		unique_lock<mutex> l(lock, lockAction);
+	string toStringWithoutLock() const {
 		stringstream result;
 		
 		result << "----------- General information -----------" << endl;
@@ -695,9 +693,10 @@ public:
 	 */
 	virtual string toString(bool lockMutex = true) const {
 		if (lockMutex) {
-			return toString(boost::adopt_lock);
+			unique_lock<boost::mutex> l(lock);
+			return toStringWithoutLock();
 		} else {
-			return toString(boost::defer_lock);
+			return toStringWithoutLock();
 		}
 	}
 };
