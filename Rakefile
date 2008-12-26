@@ -321,7 +321,8 @@ end
 		NGINX_COMMON_LIBRARY[0],
 		'ext/nginx/HelperServer.cpp',
 		'ext/nginx/ScgiRequestParser.h',
-		'ext/nginx/HttpStatusExtractor.h'
+		'ext/nginx/HttpStatusExtractor.h',
+		'ext/common/StaticString.h'
 		]
 	file 'ext/nginx/HelperServer' => helper_server_dependencies do
 		create_executable "ext/nginx/HelperServer",
@@ -390,9 +391,13 @@ end
 		'test/PoolOptionsTest.o' => %w(
 			test/PoolOptionsTest.cpp
 			ext/common/PoolOptions.h),
+		'test/StaticString.o' => %w(
+			test/StaticStringTest.cpp
+			ext/common/StaticString.h),
 		'test/ScgiRequestParserTest.o' => %w(
 			test/ScgiRequestParserTest.cpp
-			ext/nginx/ScgiRequestParser.h),
+			ext/nginx/ScgiRequestParser.h
+			ext/common/StaticString.h),
 		'test/HttpStatusExtractorTest.o' => %w(
 			test/HttpStatusExtractorTest.cpp
 			ext/nginx/HttpStatusExtractor.h),

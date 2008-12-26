@@ -31,6 +31,7 @@ namespace tut {
 		ensure_equals("It parsed the header data.",
 			parser.getHeaderData(),
 			string("hello\0world\0", 12));
+		ensure(parser.getHeader("hello") == "world");
 	}
 	
 	TEST_METHOD(3) {
@@ -44,6 +45,7 @@ namespace tut {
 		ensure_equals("It parsed the header data.",
 			parser.getHeaderData(),
 			string("hello\0world\0", 12));
+		ensure(parser.getHeader("hello") == "world");
 	}
 	
 	TEST_METHOD(4) {
@@ -57,6 +59,8 @@ namespace tut {
 		ensure_equals("It parsed the header data.",
 			parser.getHeaderData(),
 			string("hello\0world\0SCGI\0001\0", 19));
+		ensure(parser.getHeader("hello") == "world");
+		ensure(parser.getHeader("SCGI") == "1");
 	}
 	
 	TEST_METHOD(5) {
@@ -70,6 +74,8 @@ namespace tut {
 		ensure_equals("It parsed the header data.",
 			parser.getHeaderData(),
 			string("hello\0world\0SCGI\0001\0", 19));
+		ensure(parser.getHeader("hello") == "world");
+		ensure(parser.getHeader("SCGI") == "1");
 	}
 	
 	/***** Test parsing a complete SCGI request in multiple passes. *****/
@@ -86,6 +92,8 @@ namespace tut {
 		ensure_equals("It parsed the header data.",
 			parser.getHeaderData(),
 			string("hello\0world\0foo\0bar\0", 20));
+		ensure(parser.getHeader("hello") == "world");
+		ensure(parser.getHeader("foo") == "bar");
 	}
 	
 	TEST_METHOD(9) {
@@ -104,6 +112,8 @@ namespace tut {
 		ensure_equals("It parsed the header data.",
 			parser.getHeaderData(),
 			string("hello\0world\0foo\0bar\0", 20));
+		ensure(parser.getHeader("hello") == "world");
+		ensure(parser.getHeader("foo") == "bar");
 	}
 	
 	TEST_METHOD(10) {
@@ -119,6 +129,8 @@ namespace tut {
 		ensure_equals("It parsed the header data.",
 			parser.getHeaderData(),
 			string("hello\0world\0foo\0bar\0", 20));
+		ensure(parser.getHeader("hello") == "world");
+		ensure(parser.getHeader("foo") == "bar");
 	}
 	
 	TEST_METHOD(11) {
@@ -132,6 +144,8 @@ namespace tut {
 		ensure_equals("It parsed the header data.",
 			parser.getHeaderData(),
 			string("hello\0world\0foo\0bar\0", 20));
+		ensure(parser.getHeader("hello") == "world");
+		ensure(parser.getHeader("foo") == "bar");
 	}
 	
 	TEST_METHOD(12) {
@@ -145,6 +159,8 @@ namespace tut {
 		ensure_equals("It parsed the header data.",
 			parser.getHeaderData(),
 			string("hello\0world\0foo\0bar\0", 20));
+		ensure(parser.getHeader("hello") == "world");
+		ensure(parser.getHeader("foo") == "bar");
 	}
 	
 	/***** Test parsing invalid SCGI requests in one pass. *****/

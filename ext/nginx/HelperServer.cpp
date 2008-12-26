@@ -227,14 +227,16 @@ private:
 		// TODO: check password
 		
 		try {
-			PoolOptions options(canonicalizePath(parser.getHeader("DOCUMENT_ROOT") + "/.."));
+			PoolOptions options(canonicalizePath(
+				parser.getHeader("DOCUMENT_ROOT") + "/.."));
 			Application::SessionPtr session(pool->get(options));
 			
 			UPDATE_TRACE_POINT();
 			session->sendHeaders(parser.getHeaderData().c_str(),
 				parser.getHeaderData().size());
 			
-			contentLength = atol(parser.getHeader("CONTENT_LENGTH"));
+			contentLength = atol(
+				parser.getHeader("CONTENT_LENGTH").c_str());
 			sendRequestBody(session,
 				clientFd,
 				partialRequestBody,

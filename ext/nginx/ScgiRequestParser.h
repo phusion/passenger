@@ -1,6 +1,8 @@
 #include <string>
 #include <map>
 
+#include "StaticString.h"
+
 using namespace std;
 
 namespace Passenger {
@@ -70,7 +72,7 @@ private:
 	unsigned int lengthStringBufferSize;
 	unsigned long headerSize;
 	string headerBuffer;
-	map<string, string> headers;
+	map<StaticString, StaticString> headers;
 	
 	static inline bool isDigit(char byte) {
 		return byte >= '0' && byte <= '9';
@@ -79,31 +81,39 @@ private:
 	/**
 	 * Parse the given header data into key-value pairs.
 	 */
-	bool parseHeaderData(const string &data, map<string, string> &output) {
-		bool isName = true;
-		string key, value;
+	bool parseHeaderData(const string &data, map<StaticString, StaticString> &output) {
+		bool isName = true; // Whether we're currently expecting a name or a value.
+		const char *startOfString, *current, *end;
+		StaticString key, value;
 		
-		for (unsigned int i = 0; i < data.size(); i++) {
-			char byte = data[i];
-			
-			if (isName) {
-				if (byte == '\0') {
-					isName = false;
-				} else {
-					key.append(1, byte);
-				}
-			} else {
-				if (byte == '\0') {
-					isName = true;
-					output[key] = value;
-					key.clear();
-					value.clear();
-				} else {
-					value.append(1, byte);
-				}
+		if (data.size() == 0) {
+			return true;
+		}
+		
+		startOfString = data.c_str();
+		end           = data.c_str() + data.size();
+		
+		if (*(end - 1) != '\0') {
+			return false;
+		}
+		
+		for (current = data.c_str(); current != end; current++) {
+			if (isName && *current == '\0') {
+				key = StaticString(startOfString, current - startOfString);
+				startOfString = current + 1;
+				isName = false;
+			} else if (!isName && *current == '\0') {
+				value = StaticString(startOfString, current - startOfString);
+				startOfString = current + 1;
+				isName = true;
+				
+				output[key] = value;
+				key   = StaticString();
+				value = StaticString();
 			}
 		}
-		return isName && key.empty() && value.empty();
+		
+		return isName;
 	}
 	
 	/**
@@ -244,8 +254,8 @@ public:
 	 *
 	 * @pre getState() == DONE
 	 */
-	string getHeader(const string &name) const {
-		map<string, string>::const_iterator it(headers.find(name));
+	StaticString getHeader(const StaticString &name) const {
+		map<StaticString, StaticString>::const_iterator it(headers.find(name));
 		if (it == headers.end()) {
 			return "";
 		} else {
@@ -259,7 +269,7 @@ public:
 	 *
 	 * @pre getState() == DONE
 	 */
-	bool hasHeader(const string &name) const {
+	bool hasHeader(const StaticString &name) const {
 		return headers.find(name) != headers.end();
 	}
 	
