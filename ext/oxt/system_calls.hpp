@@ -47,11 +47,13 @@
  * for system calls or C library functions. These functions throw
  * boost::thread_interrupted upon interruption.
  *
- * System call interruption is disabled by default. In other words: the
- * replacement functions in this file don't throw boost::thread_interrupted.
- * You can enable or disable system call interruption in the current scope
- * by creating instances of boost::this_thread::enable_syscall_interruption
- * and similar objects. This is similar to Boost thread interruption.
+ * Once setup_syscall_interruption_support() has been called, system call
+ * interruption is enabled by default. You can enable or disable system call
+ * interruption in the current scope by creating instances of
+ * boost::this_thread::enable_syscall_interruption or
+ * boost::this_thread::disable_syscall_interruption, respectively. When system
+ * call interruption is disabled, the oxt::syscall wrapper functions will
+ * ignore interruption requests. This is similar to Boost thread interruption.
  *
  * <h2>How to interrupt</h2>
  * Generally, oxt::thread::interrupt() and oxt::thread::interrupt_and_join()
