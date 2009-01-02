@@ -84,6 +84,12 @@ private:
 	int serverSocket;
 	oxt::thread *thr;
 	
+	/**
+	 * Attempts to accept a connection made by the client.
+	 *
+	 * @return The file descriptor corresponding to the accepted connection.
+	 * @throws SystemException Could not accept new connection.
+	 */
 	FileDescriptor acceptConnection() {
 		TRACE_POINT();
 		struct sockaddr_un addr;
@@ -98,6 +104,19 @@ private:
 		}
 	}
 	
+	/**
+	 * Reads and checks the password of a client message channel identified by the given file descriptor.
+	 * The HelperServer makes extensive use of Unix Sockets that would normally allow other processes to
+	 * connect to it as well. In our case, we just want to limit this to Nginx and it is for this reason
+	 * that we've secured communication channels between this server and its clients with passwords.
+	 * This method indicates whether or not the password of this client channel matches the one known to
+	 * the server.
+	 * 
+	 * @param fd The file descriptor identifying the client message channel.
+	 * @return True if the password of the client channel indicated by the given file descriptor
+	 *   matches the password known to the server. False will be returned if either the
+	 *   passwords don't match or EOF has been encountered.
+	 */
 	bool readAndCheckPassword(FileDescriptor &fd) {
 		TRACE_POINT();
 		MessageChannel channel(fd);
@@ -113,6 +132,18 @@ private:
 		}
 	}
 	
+	/**
+	 * Reads and parses the request headers from the given file descriptor with the given SCGI request parser
+	 * and if succesful, assigns the remainder of the request (i.e. non SCGI header data) to the given 
+	 * requestBody.
+	 *
+	 * @param fd The file descriptor to read and parse from.
+	 * @param parser The ScgiRequestParser to use for parsing the SCGI headers.
+	 * @param requestBody The requestBody that was extracted as a result from parsing the SCGI headers.
+	 * @return True if the request was succesfully read and parsed. False if an invalid SCGI header was
+	 *   received by the parser or if the header information was invalid.
+	 * @throws SystemException Request header could not be read.
+	 */
 	bool readAndParseRequestHeaders(FileDescriptor &fd, ScgiRequestParser &parser, string &requestBody) {
 		TRACE_POINT();
 		char buf[1024 * 16];
