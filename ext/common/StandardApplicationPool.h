@@ -332,12 +332,21 @@ private:
 	}
 	
 	bool needsRestart(const string &appRoot) {
-		string restartFile(appRoot);
-		restartFile.append("/tmp/restart.txt");
-		
 		struct stat buf;
 		bool result;
 		int ret;
+
+		string alwaysRestartFile(appRoot);
+		alwaysRestartFile.append("/tmp/always_restart.txt");
+		do {
+			ret = stat(alwaysRestartFile.c_str(), &buf);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == 0) {
+			return true;
+		}
+
+		string restartFile(appRoot);
+		restartFile.append("/tmp/restart.txt");
 		
 		do {
 			ret = stat(restartFile.c_str(), &buf);

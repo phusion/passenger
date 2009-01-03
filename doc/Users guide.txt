@@ -1601,6 +1601,24 @@ Phusion Passenger does not provide upload progress support by itself. Please
 try drogus's link:http://github.com/drogus/apache-upload-progress-module/tree/master[
 Apache upload progress module] instead.
 
+=== Making the application restart after each request ===
+
+In some situations it might be desirable to restart the web application after
+each request, for example when developing a non-Rails application that doesn't
+support code reloading, or when developing a web framework.
+
+To achieve this, simply create the file 'tmp/always_restart.txt' in your
+application's root folder. Unlike 'restart.txt', Phusion Passenger does not
+delete this file. If both files are present ('restart.txt' and 'always_restart.txt'),
+then Phusion Passenger will still restart the application, but won't delete
+'restart.txt'.
+
+NOTE: If you're just developing a Rails application then you probably don't need
+this feature. If you set 'RailsEnv development' in your Apache configuration,
+then Rails will automatically reload your application code after each request.
+'always_restart.txt' is only useful if you're working on Ruby on Rails itself,
+or when you're not developing a Rails application and your web framework
+does not support code reloading.
 
 == Appendix A: About this document ==
 

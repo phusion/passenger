@@ -18,3 +18,4 @@
   must be turned on. Thanks adam.hooper.
 - Error pages now return HTTP 500 errors.
 - PassengerUseGlobalQueue is now per-virtual host.
+- always_restart.txt

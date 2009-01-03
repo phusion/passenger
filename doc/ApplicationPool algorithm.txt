@@ -364,6 +364,11 @@ function session_has_been_closed(container):
 
 
 function needs_restart(app_root):
+	always_restart_file = "$app_root/tmp/always_restart.txt"
+	s = stat(always_restart_file)
+	if s != null:
+		return true
+	
 	restart_file = "$app_root/tmp/restart.txt"
 	s = stat(restart_file)
 	if s != null:
