@@ -46,10 +46,23 @@ private:
 	struct SharedData {
 		int fd;
 		
+		/**
+		 * Constructor to assign this file descriptor's handle.
+		 */
 		SharedData(int fd) {
 			this->fd = fd;
 		}
 		
+		/**
+		 * Attempts to close this file descriptor. When created on the stack,
+		 * this destructor will automatically be invoked as a result of C++
+		 * semantics when exiting the scope this object was created in. This
+		 * ensures that stack created objects with destructors like these will
+		 * de-allocate their resources upon leaving their corresponding scope.
+		 * This pattern is also known Resource Acquisition Is Initialization (RAII).
+		 *
+		 * @throws SystemException File descriptor could not be closed.
+		 */
 		~SharedData() {
 			if (syscalls::close(fd) == -1) {
 				throw SystemException("Cannot close file descriptor", errno);
@@ -57,6 +70,7 @@ private:
 		}
 	};
 	
+	/* Shared pointer for reference counting on this file descriptor */
 	shared_ptr<SharedData> data;
 	
 public:
@@ -64,26 +78,60 @@ public:
 		// Do nothing.
 	}
 	
+	/**
+	 * Creates a new FileDescriptor instance with the given fd as a handle.
+	 */
 	FileDescriptor(int fd) {
 		data = ptr(new SharedData(fd));
 	}
 	
+	/**
+	 * Overloads the integer cast operator so that it will return the file
+	 * descriptor handle as an integer.
+	 *
+	 * @return This file descriptor's handle as an integer.
+	 */
 	operator int () const {
 		return data->fd;
 	}
 };
 
+/**
+ * A representation of a Client from the Server's point of view. This class
+ * contains the methods used to communicate from a server to a connected
+ * client, i.e. it is a client handler.
+ * These Client instances will communicate concurrently with the server through
+ * threads. Considering the overhead of these threads, i.e. setup and teardown
+ * costs and the volatility of client requests, these client instances will be
+ * pooled. It is for this reason that the State design pattern has been applied:
+ * this class can be considered as a skeleton implemention whose state --e.g.
+ * client file descriptor-- needs to be provided in order to function properly.
+ */
 class Client {
 private:
 	static const int CLIENT_THREAD_STACK_SIZE = 1024 * 128;
 	
 	/** The client number for this Client object, assigned by Server. */
 	unsigned int number;
+	
+	/** The application pool to which this Client object belongs to. */
 	StandardApplicationPoolPtr pool;
+	
+	/* This clients password. */
 	string password;
+	
+	/* The server socket file descriptor. */
 	int serverSocket;
+	
+	/* This client thread. */
 	oxt::thread *thr;
 	
+	/**
+	 * Attempts to accept a connection made by the client.
+	 *
+	 * @return The file descriptor corresponding to the accepted connection.
+	 * @throws SystemException Could not accept new connection.
+	 */
 	FileDescriptor acceptConnection() {
 		TRACE_POINT();
 		struct sockaddr_un addr;
@@ -98,6 +146,19 @@ private:
 		}
 	}
 	
+	/**
+	 * Reads and checks the password of a client message channel identified by the given file descriptor.
+	 * The HelperServer makes extensive use of Unix Sockets that would normally allow other processes to
+	 * connect to it as well. In our case, we just want to limit this to Nginx and it is for this reason
+	 * that we've secured communication channels between this server and its clients with passwords.
+	 * This method indicates whether or not the password of this client channel matches the one known to
+	 * the server.
+	 * 
+	 * @param fd The file descriptor identifying the client message channel.
+	 * @return True if the password of the client channel indicated by the given file descriptor
+	 *   matches the password known to the server. False will be returned if either the
+	 *   passwords don't match or EOF has been encountered.
+	 */
 	bool readAndCheckPassword(FileDescriptor &fd) {
 		TRACE_POINT();
 		MessageChannel channel(fd);
@@ -113,6 +174,18 @@ private:
 		}
 	}
 	
+	/**
+	 * Reads and parses the request headers from the given file descriptor with the given SCGI request parser
+	 * and if succesful, assigns the remainder of the request (i.e. non SCGI header data) to the given 
+	 * requestBody.
+	 *
+	 * @param fd The file descriptor to read and parse from.
+	 * @param parser The ScgiRequestParser to use for parsing the SCGI headers.
+	 * @param requestBody The requestBody that was extracted as a result from parsing the SCGI headers.
+	 * @return True if the request was succesfully read and parsed. False if an invalid SCGI header was
+	 *   received by the parser or if the header information was invalid.
+	 * @throws SystemException Request header could not be read.
+	 */
 	bool readAndParseRequestHeaders(FileDescriptor &fd, ScgiRequestParser &parser, string &requestBody) {
 		TRACE_POINT();
 		char buf[1024 * 16];
@@ -142,6 +215,21 @@ private:
 		}
 	}
 	
+	/**
+	 * Sends a request body to this client. The <tt>partialRequestBody</tt> will first be
+	 * sent to the specified <tt>session</tt>, but if the specified <tt>contentLength</tt>
+	 * is larger than the size of the <tt>partialRequestBody</tt>, then this method will
+	 * attempt to read the remaining bytes from the specified <tt>clientFd</tt> and send it
+	 * to the <tt>session</tt> as well until <tt>contentLength</tt> bytes have been sent in
+	 * total.
+	 *
+	 * @param session The Ruby on Rails application instance.
+	 * @param clientFd The client file descriptor to send the request body to.
+	 * @param partialRequestBody The partial request body to send to this client.
+	 * @param contentLength The content length of the request body in bytes.
+	 * @throws SystemException Request body could not be read from the specified
+	 *   <tt>clientFd</tt>.
+	 */
 	void sendRequestBody(Application::SessionPtr &session,
 	                     FileDescriptor &clientFd,
 	                     const string &partialRequestBody,
