@@ -105,7 +105,7 @@ public:
  * costs and the volatility of client requests, these client instances will be
  * pooled. It is for this reason that the State design pattern has been applied:
  * this class can be considered as a skeleton implemention whose state --e.g.
- * client file descriptor-- needs to be provided in order to properly function.
+ * client file descriptor-- needs to be provided in order to function properly.
  */
 class Client {
 private:
@@ -216,12 +216,19 @@ private:
 	}
 	
 	/**
-	 * Sends a request body to this client.
-	 * TODO: Finish documenting me.
-	 * @param session
-	 * @param clientFd
-	 * @param partialRequestBody
-	 * @param contentLength
+	 * Sends a request body to this client. The <tt>partialRequestBody</tt> will first be
+	 * sent to the specified <tt>session</tt>, but if the specified <tt>contentLength</tt>
+	 * is larger than the size of the <tt>partialRequestBody</tt>, then this method will
+	 * attempt to read the remaining bytes from the specified <tt>clientFd</tt> and send it
+	 * to the <tt>session</tt> as well until <tt>contentLength</tt> bytes have been sent in
+	 * total.
+	 *
+	 * @param session The Ruby on Rails application instance.
+	 * @param clientFd The client file descriptor to send the request body to.
+	 * @param partialRequestBody The partial request body to send to this client.
+	 * @param contentLength The content length of the request body in bytes.
+	 * @throws SystemException Request body could not be read from the specified
+	 *   <tt>clientFd</tt>.
 	 */
 	void sendRequestBody(Application::SessionPtr &session,
 	                     FileDescriptor &clientFd,
