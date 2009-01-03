@@ -100,6 +100,12 @@ public:
  * A representation of a Client from the Server's point of view. This class
  * contains the methods used to communicate from a server to a connected
  * client, i.e. it is a client handler.
+ * These Client instances will communicate concurrently with the server through
+ * threads. Considering the overhead of these threads, i.e. setup and teardown
+ * costs and the volatility of client requests, these client instances will be
+ * pooled. It is for this reason that the State design pattern has been applied:
+ * this class can be considered as a skeleton implemention whose state --e.g.
+ * client file descriptor-- needs to be provided in order to properly function.
  */
 class Client {
 private:
@@ -107,6 +113,8 @@ private:
 	
 	/** The client number for this Client object, assigned by Server. */
 	unsigned int number;
+	
+	/** The application pool to which this Client object belongs to. */
 	StandardApplicationPoolPtr pool;
 	
 	/* This clients password. */
@@ -114,6 +122,8 @@ private:
 	
 	/* The server socket file descriptor. */
 	int serverSocket;
+	
+	/* This client thread. */
 	oxt::thread *thr;
 	
 	/**
