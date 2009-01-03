@@ -46,10 +46,23 @@ private:
 	struct SharedData {
 		int fd;
 		
+		/**
+		 * Constructor to assign this file descriptor's handle.
+		 */
 		SharedData(int fd) {
 			this->fd = fd;
 		}
 		
+		/**
+		 * Attempts to close this file descriptor. When created on the stack,
+		 * this destructor will automatically be invoked as a result of C++
+		 * semantics when exiting the scope this object was created in. This
+		 * ensures that stack created objects with destructors like these will
+		 * de-allocate their resources upon leaving their corresponding scope.
+		 * This pattern is also known Resource Acquisition Is Initialization (RAII).
+		 *
+		 * @throws SystemException File descriptor could not be closed.
+		 */
 		~SharedData() {
 			if (syscalls::close(fd) == -1) {
 				throw SystemException("Cannot close file descriptor", errno);
@@ -57,6 +70,7 @@ private:
 		}
 	};
 	
+	/* Shared pointer for reference counting on this file descriptor */
 	shared_ptr<SharedData> data;
 	
 public:
@@ -64,15 +78,29 @@ public:
 		// Do nothing.
 	}
 	
+	/**
+	 * Creates a new FileDescriptor instance with the given fd as a handle.
+	 */
 	FileDescriptor(int fd) {
 		data = ptr(new SharedData(fd));
 	}
 	
+	/**
+	 * Overloads the integer cast operator so that it will return the file
+	 * descriptor handle as an integer.
+	 *
+	 * @return This file descriptor's handle as an integer.
+	 */
 	operator int () const {
 		return data->fd;
 	}
 };
 
+/**
+ * A representation of a Client from the Server's point of view. This class
+ * contains the methods used to communicate from a server to a connected
+ * client, i.e. it is a client handler.
+ */
 class Client {
 private:
 	static const int CLIENT_THREAD_STACK_SIZE = 1024 * 128;
@@ -80,7 +108,11 @@ private:
 	/** The client number for this Client object, assigned by Server. */
 	unsigned int number;
 	StandardApplicationPoolPtr pool;
+	
+	/* This clients password. */
 	string password;
+	
+	/* The server socket file descriptor. */
 	int serverSocket;
 	oxt::thread *thr;
 	
@@ -173,6 +205,14 @@ private:
 		}
 	}
 	
+	/**
+	 * Sends a request body to this client.
+	 * TODO: Finish documenting me.
+	 * @param session
+	 * @param clientFd
+	 * @param partialRequestBody
+	 * @param contentLength
+	 */
 	void sendRequestBody(Application::SessionPtr &session,
 	                     FileDescriptor &clientFd,
 	                     const string &partialRequestBody,
