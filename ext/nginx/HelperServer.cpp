@@ -361,6 +361,13 @@ private:
 		}
 	}
 	
+	/**
+	 * Handles an SCGI request from a client whose identity is derived by the given <tt>clientFd</tt>.
+	 *
+	 * @param clientFd The file descriptor identifying the client to handle the request from.
+	 * @return True if an error occurred while trying to handle the request of the client. False if
+	 *   the request was succesfully processed.
+	 */
 	bool handleRequest(FileDescriptor &clientFd) {
 		TRACE_POINT();
 		ScgiRequestParser parser;
@@ -420,6 +427,13 @@ private:
 		}
 	}
 	
+	/**
+	 * This client's main thread, responsible for accepting connections made by a client
+	 * to the server and to handle its request.
+	 *
+	 * @see acceptConnection(void)
+	 * @see handleRequest(FileDescriptor)
+	 */
 	void threadMain() {
 		TRACE_POINT();
 		try {
@@ -447,6 +461,16 @@ private:
 	}
 	
 public:
+	/**
+	 * Constructs a client handler for the server with the given arguments and runs
+	 * it in its own thread.
+	 *
+	 * @param number The id assigned by the server to identify this client by.
+	 * @param pool The application pool where this client belongs to.
+	 * @param password The password that is required to connect to this client handler.
+	 *   This value is determined and assigned by the server.
+	 * @param serverSocket The server socket to accept this clients connection from.
+	 */
 	Client(unsigned int number, StandardApplicationPoolPtr &pool,
 	       const string &password, int serverSocket) {
 		this->number = number;
@@ -460,6 +484,9 @@ public:
 		);
 	}
 	
+	/**
+	 * Destroys this client and its thread.
+	 */
 	~Client() {
 		TRACE_POINT();
 		this_thread::disable_syscall_interruption dsi;
