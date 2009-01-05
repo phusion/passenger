@@ -109,6 +109,7 @@ public:
  */
 class Client {
 private:
+	/** The client thread stack size in bytes. */
 	static const int CLIENT_THREAD_STACK_SIZE = 1024 * 128;
 	
 	/** The client number for this Client object, assigned by Server. */
@@ -270,6 +271,14 @@ private:
 		}
 	}
 	
+	/**
+	 * Forwards an HTTP response from the given (Rails) <tt>session</tt> to the
+	 * given <tt>clientFd</tt>.
+	 * 
+	 * @param session The Ruby on Rails session to read the response from.
+	 * @param clientFd The client file descriptor to write the response to.
+	 * @throws SystemException Response could not be read from backend (Rails) process.
+	 */
 	void forwardResponse(Application::SessionPtr &session, FileDescriptor &clientFd) {
 		TRACE_POINT();
 		HttpStatusExtractor ex;
@@ -321,6 +330,16 @@ private:
 		}
 	}
 	
+	/**
+	 * Handles a spawn related exception by writing an appropriate HTTP error response (500)
+	 * for the given spawn exception <tt>e</ee> to given file descriptor <tt>fd</tt>'s message
+	 * channel.
+	 *
+	 * @param fd The file descriptor identifying the message channel to write the given
+	 *   spawn exception <tt>e</tt> to.
+	 * @param e The spawn exception to be written to the given <tt>fd</tt>'s message
+	 *   channel.
+	 */
 	void handleSpawnException(FileDescriptor &fd, const SpawnException &e) {
 		MessageChannel channel(fd);
 		channel.writeRaw("HTTP/1.1 500 Internal Server Error\x0D\x0A");
