@@ -652,7 +652,10 @@ public:
 
 /**
  * Ignores the SIGPIPE signal that in general is raised when a computer program attempts
- * to write to a pipe without a processes connected to the other end.
+ * to write to a pipe without a processes connected to the other end. This is used to
+ * prevent Nginx from getting killed by the default signal handler when it attempts to
+ * write the server password to the HelperServer in the situation that the HelperServer
+ * failed to start.
  */
 static void
 ignoreSigpipe() {
