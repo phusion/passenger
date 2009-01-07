@@ -104,8 +104,9 @@ public:
  * threads. Considering the overhead of these threads, i.e. setup and teardown
  * costs and the volatility of client requests, these client instances will be
  * pooled. It is for this reason that the State design pattern has been applied:
- * this class can be considered as a skeleton implemention whose state --e.g.
- * client file descriptor-- needs to be provided in order to function properly.
+ * this class can be considered as being a skeleton implemention whose state
+ * --e.g. the client file descriptor-- needs to be provided in order to function
+ * properly.
  */
 class Client {
 private:
@@ -499,6 +500,11 @@ public:
 
 typedef shared_ptr<Client> ClientPtr;
 
+/**
+ * A representation of the Server responsible for handling Client instances.
+ *
+ * @see Client
+ */
 class Server {
 private:
 	static const unsigned int BACKLOG_SIZE = 50;
@@ -510,6 +516,14 @@ private:
 	set<ClientPtr> clients;
 	StandardApplicationPoolPtr pool;
 	
+	/**
+	 * Starts listening for client connections from this server's <tt>serverSocket</tt>.
+	 * This server will first attempt to create an unconnected Unix socket on which it will
+	 * attempt to bind on. Once it is bound, it will start listening for incoming client
+	 * activity.
+	 *
+	 * @throws SystemException Could not create unconnected Unix socket or bind on Unix socket.
+	 */
 	void startListening() {
 		this_thread::disable_syscall_interruption dsi;
 		string socketName = getPassengerTempDir() + "/helper_server.sock";
@@ -553,6 +567,12 @@ private:
 			S_IROTH | S_IWOTH | S_IXOTH);
 	}
 	
+	/**
+	 * Starts the client handler threads that are responsible for handling the communication
+	 * between the client and this Server.
+	 *
+	 * @see Client
+	 */
 	void startClientHandlerThreads() {
 		for (unsigned int i = 0; i < numberOfThreads; i++) {
 			ClientPtr client(new Client(i + 1, pool, password,
@@ -562,6 +582,22 @@ private:
 	}
 
 public:
+	/**
+	 * Creates a server instance based on the given parameters, which starts to listen
+	 * for clients.
+	 *
+	 * @param password The password this server uses for its clients.
+	 * @param rootDir The Passenger root folder.
+	 * @param ruby The filename of the Ruby interpreter to use.
+	 * @param adminPipe The pipe that is used to receive this Server's password and to see if Nginx
+	 *   has been closed.
+	 * @param maxPoolSize The maximum number of simultaneously alive application instances.
+	 * @param maxInstancesPerApp The maximum number of simultaneously alive Rails instances that
+	 *   a single Rails application may occupy.
+	 * @param poolIdleTime The maximum number of seconds that an application may be idle before
+	 *   it gets terminated.
+	 * @see ServerConfig
+	 */
 	Server(const string &password, const string &rootDir, const string &ruby,
 	       int adminPipe, unsigned int maxPoolSize,
 	       unsigned int maxInstancesPerApp,
@@ -594,6 +630,11 @@ public:
 		syscalls::close(adminPipe);
 	}
 	
+	/**
+	 * Starts this server by starting the client handlers threads.
+	 *
+	 * @see startCientHandlerThreads
+	 */
 	void start() {
 		TRACE_POINT();
 		char buf;
@@ -609,6 +650,10 @@ public:
 	}
 };
 
+/**
+ * Ignores the SIGPIPE signal that in general is raised when a computer program attempts
+ * to write to a pipe without a processes connected to the other end.
+ */
 static void
 ignoreSigpipe() {
 	struct sigaction action;
@@ -618,6 +663,16 @@ ignoreSigpipe() {
 	sigaction(SIGPIPE, &action, NULL);
 }
 
+/**
+ * Extracts and returns the password from the given <tt>adminPipe</tt>. This password is
+ * used to determine which processes may connect with this server's Unix socket, as unix
+ * sockets would normally allow any process to connect to it. In this case, we strictly
+ * want Nginx to be able to connect to it, and it is for this reason that we maintain a
+ * password system.
+ *
+ * @param adminPipe The pipe used to read the password for this server from.
+ * @return The password for this server.
+ */
 static string
 receivePassword(int adminPipe) {
 	TRACE_POINT();
@@ -630,6 +685,13 @@ receivePassword(int adminPipe) {
 	return string(buf, HELPER_SERVER_PASSWORD_SIZE);
 }
 
+/**
+ * Initializes and starts the helper server that is responsible for handling communication
+ * between Nginx and the backend Rails processes.
+ *
+ * @see Server
+ * @see Client
+ */
 int
 main(int argc, char *argv[]) {
 	TRACE_POINT();
