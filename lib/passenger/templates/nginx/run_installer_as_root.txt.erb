@@ -1,0 +1,8 @@
+<red>Permission problems</red>
+
+This installer must be able to write to the following directory:
+
+  <b><%= @dir %></b>
+
+But it can't do that, because you're running the installer as <b><%= `whoami`.strip %></b>.
+Please re-run this installer as <b>root</b>.

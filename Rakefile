@@ -593,6 +593,7 @@ spec = Gem::Specification.new do |s|
 		'lib/**/*.rb',
 		'lib/**/*.py',
 		'lib/passenger/templates/*',
+		'lib/passenger/templates/nginx/*',
 		'bin/*',
 		'doc/*',
 		

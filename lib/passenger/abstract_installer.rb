@@ -80,9 +80,6 @@ private
 			end
 			result.strip!
 			done = yield(result)
-			if !done
-				color_puts "<red>'#{result}' is not a valid answer.</red>"
-			end
 		end
 		return result
 	rescue Interrupt
