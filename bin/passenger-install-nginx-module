@@ -39,7 +39,7 @@ class Installer < Passenger::AbstractInstaller
 			Dependencies::Ruby_DevHeaders,
 			Dependencies::Ruby_OpenSSL,
 			Dependencies::RubyGems,
-			#Dependencies::Rake,
+			Dependencies::Rake,
 			Dependencies::FastThread,
 			Dependencies::Rack
 		]
