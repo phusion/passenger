@@ -1,0 +1,335 @@
+#!/usr/bin/env ruby
+#  Phusion Passenger - http://www.modrails.com/
+#  Copyright (C) 2009  Phusion
+#
+#  Phusion Passenger is a trademark of Hongli Lai & Ninh Bui.
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; version 2 of the License.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License along
+#  with this program; if not, write to the Free Software Foundation, Inc.,
+#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) << "/..")
+$LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
+$LOAD_PATH.unshift("#{PASSENGER_ROOT}/ext")
+
+require 'optparse'
+require 'passenger/platform_info'
+require 'passenger/dependencies'
+require 'passenger/console_text_template'
+include PlatformInfo
+
+class Installer
+	include Passenger
+	
+	PASSENGER_WEBSITE = "http://www.modrails.com/"
+	PHUSION_WEBSITE = "www.phusion.nl"
+	
+	REQUIRED_DEPENDENCIES = [
+		Dependencies::GCC,
+		Dependencies::Ruby_DevHeaders,
+		Dependencies::Ruby_OpenSSL,
+		Dependencies::RubyGems,
+		Dependencies::Rake,
+		Dependencies::FastThread,
+		Dependencies::Rack
+	]
+	
+	def start(automatic = false)
+		@auto = automatic
+		
+		Dir.chdir(PASSENGER_ROOT)
+		show_welcome_screen
+		check_dependencies || exit(1)
+		
+		check_write_permission_to_passenger_root || exit(1)
+		if should_we_download_and_install_nginx_automatically?
+			nginx_dir = download_and_extract_nginx
+			nginx_prefix = ask_for_nginx_install_prefix
+			extra_nginx_configure_flags = nil
+		else
+			nginx_dir = ask_for_nginx_source_dir
+			nginx_prefix = ask_for_nginx_install_prefix
+			extra_nginx_configure_flags = ask_for_extra_nginx_configure_flags(nginx_prefix)
+		end
+		nginx_config_already_exists_before_installing = nginx_config_exists?(nginx_prefix)
+		if install_nginx(nginx_dir, extra_nginx_configure_flags)
+			if nginx_config_already_exists_before_installing
+				show_passenger_config_snippets
+			else
+				insert_passenger_config_snippets
+			end
+			show_deployment_example
+		else
+			show_possible_solutions_for_compilation_and_installation_problems
+			exit(1)
+		end
+	ensure
+		reset_terminal_colors
+	end
+
+private
+	def reset_terminal_colors
+		STDOUT.write("\e[0m")
+		STDOUT.flush
+	end
+	
+	def show_welcome_screen
+		render_template 'welcome', :version => PASSENGER_VERSION
+		wait
+	end
+
+	def check_dependencies
+		missing_dependencies = []
+		color_puts "<banner>Checking for required software...</banner>"
+		puts
+		REQUIRED_DEPENDENCIES.each do |dep|
+			color_print " * #{dep.name}... "
+			result = dep.check
+			if result.found?
+				if result.found_at
+					color_puts "<green>found at #{result.found_at}</green>"
+				else
+					color_puts "<green>found</green>"
+				end
+			else
+				color_puts "<red>not found</red>"
+				missing_dependencies << dep
+			end
+		end
+		
+		if missing_dependencies.empty?
+			return true
+		else
+			puts
+			color_puts "<red>Some required software is not installed.</red>"
+			color_puts "But don't worry, this installer will tell you how to install them.\n"
+			color_puts "<b>Press Enter to continue, or Ctrl-C to abort.</b>"
+			if natively_packaged?
+				wait(10)
+			else
+				wait
+			end
+			
+			line
+			color_puts "<banner>Installation instructions for required software</banner>"
+			puts
+			missing_dependencies.each do |dep|
+				print_dependency_installation_instructions(dep)
+				puts
+			end
+			color_puts "If the aforementioned instructions didn't solve your problem, then please take"
+			color_puts "a look at the Users Guide:"
+			puts
+			color_puts "  <yellow>#{USERS_GUIDE}</yellow>"
+			return false
+		end
+	end
+	
+	def check_whether_apache_uses_compatible_mpm
+		line
+		# 'httpd -V' output is in the form of:
+		#
+		# Server MPM:      Prefork     # <--- this line is not always available!
+		# ...
+		# Server compiled with....
+		#  -D APACHE_MPM_DIR="server/mpm/prefork"
+		output = `#{HTTPD} -V`
+		output =~ /^Server MPM: +(.*)$/
+		if $1
+			mpm = $1.downcase
+		else
+			output =~ /APACHE_MPM_DIR="server\/mpm\/(.*)"/
+			if $1
+				mpm = $1.downcase
+			else
+				mpm = nil
+			end
+		end
+		if mpm != "prefork" && mpm != "worker"
+			render_template 'apache_must_be_compiled_with_compatible_mpm',
+				:current_mpm => mpm
+			wait
+		end
+	end
+	
+	def check_write_permission_to_passenger_root
+		File.new("__test__.txt", "w").close
+		return true
+	rescue
+		puts
+		line
+		if Process.uid == 0
+			render_template 'no_write_permission_to_passenger_root'
+		else
+			render_template 'run_installer_as_root'
+		end
+		return false
+	ensure
+		File.unlink("__test__.txt") rescue nil
+	end
+	
+	def install_apache2_module
+		puts
+		line
+		color_puts '<banner>Compiling and installing Apache 2 module...</banner>'
+		puts "cd #{PASSENGER_ROOT}"
+		if ENV['TRACE']
+			puts "#{RUBY} -S #{RAKE} --trace clean apache2"
+			return system(RUBY, "-S", RAKE, "--trace", "clean", "apache2")
+		else
+			puts "#{RUBY} -S #{RAKE} clean apache2"
+			return system(RUBY, "-S", RAKE, "clean", "apache2")
+		end
+	end
+	
+	def show_apache2_config_snippets
+		puts
+		line
+		if natively_packaged?
+			module_location = "#{PASSENGER_ROOT}/lib/passenger/mod_passenger.so"
+		else
+			module_location = "#{PASSENGER_ROOT}/ext/apache2/mod_passenger.so"
+		end
+		render_template 'apache2_config_snippets',
+			:module_location => module_location,
+			:passenger_root => PASSENGER_ROOT,
+			:ruby => RUBY
+		if natively_packaged?
+			wait(10)
+		else
+			wait
+		end
+	end
+	
+	def show_deployment_example
+		puts
+		line
+		render_template 'deployment_example',
+			:users_guide => USERS_GUIDE,
+			:phusion_website => PHUSION_WEBSITE,
+			:passenger_website => PASSENGER_WEBSITE
+	end
+	
+	def show_possible_solutions_for_compilation_and_installation_problems
+		puts
+		line
+		render_template 'possible_solutions_for_compilation_and_installation_problems',
+			:users_guide => USERS_GUIDE,
+			:passenger_website => PASSENGER_WEBSITE
+	end
+
+private
+	def color_print(text)
+		STDOUT.write(ConsoleTextTemplate.new(:text => text).result)
+		STDOUT.flush
+	end
+	
+	def color_puts(text)
+		color_print("#{text}\n")
+	end
+	
+	def render_template(name, options = {})
+		puts ConsoleTextTemplate.new({ :file => name }, options).result
+	end
+	
+	def line
+		puts "--------------------------------------------"
+	end
+	
+	def wait(timeout = nil)
+		return if @auto
+		begin
+			if timeout
+				require 'timeout' unless defined?(Timeout)
+				begin
+					Timeout.timeout(timeout) do
+						STDIN.readline
+					end
+				rescue Timeout::Error
+					# Do nothing.
+				end
+			else
+				STDIN.readline
+			end
+		rescue Interrupt
+			exit 2
+		end
+	end
+	
+	def print_dependency_installation_instructions(dep)
+		color_puts " * To install <yellow>#{dep.name}</yellow>:"
+		if !dep.install_command.nil?
+			color_puts "   Please run <b>#{dep.install_command}</b> as root."
+		elsif !dep.install_instructions.nil?
+			color_puts "   " << dep.install_instructions
+		elsif !dep.website.nil?
+			color_puts "   Please download it from <b>#{dep.website}</b>"
+			if !dep.website_comments.nil?
+				color_puts "   (#{dep.website_comments})"
+			end
+		else
+			color_puts "   Search Google."
+		end
+	end
+	
+	def natively_packaged?
+		return self.class.natively_packaged?
+	end
+	
+	def self.natively_packaged?
+		return File.expand_path(File.dirname(__FILE__)) == "/usr/bin"
+	end
+	
+	def self.determine_version
+		if natively_packaged?
+			require 'rbconfig'
+			return File.read("/etc/passenger_version.txt")
+		else
+			File.read("#{PASSENGER_ROOT}/Rakefile") =~ /^PACKAGE_VERSION = "(.*)"$/
+			return $1
+		end
+	end
+	
+	def self.determine_users_guide
+		if natively_packaged?
+			return "/usr/share/doc/passenger/Users guide.html"
+		else
+			return "#{PASSENGER_ROOT}/doc/Users guide.html"
+		end
+	end
+	
+	PASSENGER_VERSION = determine_version
+	USERS_GUIDE = determine_users_guide
+end
+
+options = {}
+parser = OptionParser.new do |opts|
+	opts.banner = "Usage: passenger-install-nginx-module [options]"
+	opts.separator ""
+	
+	opts.separator "Options:"
+	#opts.on("-a", "--auto", String, "Automatically build the Apache module,\n" <<
+	#        "#{' ' * 37}without interactively asking for user\n" <<
+	#        "#{' ' * 37}input.") do
+	#	options[:auto] = true
+	end
+end
+begin
+	parser.parse!
+rescue OptionParser::ParseError => e
+	puts e
+	puts
+	puts "Please see '--help' for valid options."
+	exit 1
+end
+
+Installer.new.start(options[:auto])
