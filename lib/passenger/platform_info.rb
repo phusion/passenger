@@ -37,8 +37,16 @@ private
 		return !ENV[name].nil? && !ENV[name].empty?
 	end
 	
-	def self.determine_command(command)
-		File.dirname(RUBY) + "/#{command}"
+	def self.locate_ruby_executable(name)
+		if RUBY_PLATFORM =~ /darwin/ &&
+		   RUBY =~ %r(\A/System/Library/Frameworks/Ruby.framework/Versions/.*?/usr/bin/ruby\Z)
+			# On OS X we must look for Ruby binaries in /usr/bin.
+			# RubyGems puts executables (e.g. 'rake') in there, not in
+			# /System/Libraries/(...)/bin.
+			return "/usr/bin/#{name}"
+		else
+			return File.dirname(RUBY) + "/#{name}"
+		end
 	end
 
 	def self.find_apxs2
@@ -285,8 +293,8 @@ public
 	# The absolute path to the current Ruby interpreter.
 	RUBY = Config::CONFIG['bindir'] + '/' + Config::CONFIG['RUBY_INSTALL_NAME'] + Config::CONFIG['EXEEXT']
 	# The correct 'gem' and 'rake' commands for this Ruby interpreter.
-	GEM = determine_command('gem')
-	RAKE = determine_command('rake')
+	GEM = locate_ruby_executable('gem')
+	RAKE = locate_ruby_executable('rake')
 	
 	# The absolute path to the 'apxs' or 'apxs2' executable.
 	APXS2 = find_apxs2
