@@ -22,6 +22,7 @@ $LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
 $LOAD_PATH.unshift("#{PASSENGER_ROOT}/ext")
 
 require 'optparse'
+require 'fileutils'
 require 'passenger/platform_info'
 require 'passenger/dependencies'
 require 'passenger/abstract_installer'
@@ -30,15 +31,19 @@ include PlatformInfo
 class Installer < Passenger::AbstractInstaller
 	include Passenger
 	
-	REQUIRED_DEPENDENCIES = [
-		Dependencies::GCC,
-		Dependencies::Ruby_DevHeaders,
-		Dependencies::Ruby_OpenSSL,
-		Dependencies::RubyGems,
-		Dependencies::Rake,
-		Dependencies::FastThread,
-		Dependencies::Rack
-	]
+	NGINX_VERSION = "0.6.34"
+	
+	def dependencies
+		return [
+			Dependencies::GCC,
+			Dependencies::Ruby_DevHeaders,
+			Dependencies::Ruby_OpenSSL,
+			Dependencies::RubyGems,
+			#Dependencies::Rake,
+			Dependencies::FastThread,
+			Dependencies::Rack
+		]
+	end
 	
 	def install!
 		Dir.chdir(PASSENGER_ROOT)
@@ -46,8 +51,13 @@ class Installer < Passenger::AbstractInstaller
 		check_dependencies || exit(1)
 		
 		check_write_permission_to_passenger_root || exit(1)
+		
 		if should_we_download_and_install_nginx_automatically?
 			nginx_dir = download_and_extract_nginx
+			if nginx_dir.nil?
+				show_possible_solutions_for_download_and_extraction_problems
+				exit(1)
+			end
 			nginx_prefix = ask_for_nginx_install_prefix
 			extra_nginx_configure_flags = nil
 		else
@@ -93,10 +103,54 @@ private
 		File.unlink("__test__.txt") rescue nil
 	end
 	
+	def should_we_download_and_install_nginx_automatically?
+		render_template 'nginx/query_download_and_install',
+			:nginx_version => NGINX_VERSION
+		puts
+		choice = prompt("Enter your choice (1 or 2) or press Ctrl-C to abort") do |input|
+			input == "1" || input == "2"
+		end
+		return choice == "1"
+	end
+	
+	def download_and_extract_nginx
+		basename = "nginx-#{NGINX_VERSION}.tar.gz"
+		url = "http://sysoev.ru/nginx/#{basename}"
+		File.unlink("/tmp/#{basename}") rescue nil
+		FileUtils.rm_rf("/tmp/nginx-#{NGINX_VERSION}")
+		
+		if PlatformInfo.find_command("wget")
+			downloaded = sh("wget", "-O", "/tmp/#{basename}", url)
+		else
+			downloaded = sh("curl", url, "-o", "/tmp/#{basename}")
+		end
+		
+		if downloaded
+			Dir.chdir("/tmp") do
+				if sh("tar", "xzvf", basename)
+					return "/tmp/nginx-#{NGINX_VERSION}"
+				else
+					return nil
+				end
+			end
+		else
+			return nil
+		end
+	rescue Interrupt
+		exit 2
+	end
+	
+	def show_possible_solutions_for_download_and_extraction_problems
+		line
+		puts
+		render_template "nginx/possible_solutions_for_download_and_extraction_problems"
+		puts
+	end
+	
 	def show_deployment_example
 		puts
 		line
-		render_template 'deployment_example',
+		render_template 'nginx/deployment_example',
 			:users_guide => USERS_GUIDE,
 			:phusion_website => PHUSION_WEBSITE,
 			:passenger_website => PASSENGER_WEBSITE

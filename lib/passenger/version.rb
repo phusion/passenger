@@ -17,5 +17,11 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 module Passenger
+	LIBDIR = File.expand_path(File.dirname(__FILE__))
+	
 	VERSION_STRING = '2.1.0'
+	
+	def self.natively_packaged?
+		return !File.exist?("#{LIBDIR}/../../Rakefile")
+	end
 end

@@ -26,7 +26,13 @@ module Passenger
 class AbstractInstaller
 	PASSENGER_WEBSITE = "http://www.modrails.com/"
 	PHUSION_WEBSITE = "www.phusion.nl"
-	USERS_GUIDE = "TODO"
+	USERS_GUIDE = begin
+		if Passenger.natively_packaged?
+			"/usr/share/doc/passenger/Users guide.html"
+		else
+			File.expand_path("#{LIBDIR}/../../doc/Users guide.html")
+		end
+	end
 
 	def initialize(options = {})
 		options.each_pair do |key, value|
@@ -63,6 +69,26 @@ private
 		puts "--------------------------------------------"
 	end
 	
+	def prompt(message)
+		done = false
+		while !done
+			color_print "#{message}: "
+			begin
+				result = STDIN.readline
+			rescue EOFError
+				exit 2
+			end
+			result.strip!
+			done = yield(result)
+			if !done
+				color_puts "<red>'#{result}' is not a valid answer.</red>"
+			end
+		end
+		return result
+	rescue Interrupt
+		exit 2
+	end
+	
 	def wait(timeout = nil)
 		return if @auto
 		begin
@@ -83,11 +109,27 @@ private
 		end
 	end
 	
+	def sh(*args)
+		puts "# #{args.join(' ')}"
+		result = system(*args)
+		if result
+			return true
+		elsif $?.signaled? && $?.termsig == Signal.list["INT"]
+			raise Interrupt
+		else
+			return false
+		end
+	end
+	
+	def dependencies
+		return []
+	end
+	
 	def check_dependencies
 		missing_dependencies = []
 		color_puts "<banner>Checking for required software...</banner>"
 		puts
-		REQUIRED_DEPENDENCIES.each do |dep|
+		dependencies.each do |dep|
 			color_print " * #{dep.name}... "
 			result = dep.check
 			if result.found?
@@ -109,7 +151,7 @@ private
 			color_puts "<red>Some required software is not installed.</red>"
 			color_puts "But don't worry, this installer will tell you how to install them.\n"
 			color_puts "<b>Press Enter to continue, or Ctrl-C to abort.</b>"
-			if natively_packaged?
+			if Passenger.natively_packaged?
 				wait(10)
 			else
 				wait
