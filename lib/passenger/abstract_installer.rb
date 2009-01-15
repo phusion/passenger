@@ -79,7 +79,7 @@ private
 				exit 2
 			end
 			result.strip!
-			done = yield(result)
+			done = !block_given? || yield(result)
 		end
 		return result
 	rescue Interrupt

@@ -53,21 +53,21 @@ class Installer < Passenger::AbstractInstaller
 		check_write_permission_to_passenger_root || exit(1)
 		
 		if should_we_download_and_install_nginx_automatically?
-			nginx_dir = download_and_extract_nginx
-			if nginx_dir.nil?
+			nginx_source_dir = download_and_extract_nginx
+			if nginx_source_dir.nil?
 				show_possible_solutions_for_download_and_extraction_problems
 				exit(1)
 			end
 			nginx_prefix = ask_for_nginx_install_prefix
 			extra_nginx_configure_flags = nil
 		else
-			nginx_dir = ask_for_nginx_source_dir
+			nginx_source_dir = ask_for_nginx_source_dir
 			nginx_prefix = ask_for_nginx_install_prefix
 			extra_nginx_configure_flags = ask_for_extra_nginx_configure_flags(nginx_prefix)
 		end
 		check_whether_we_can_write_to(nginx_prefix) || exit(1)
 		nginx_config_already_exists_before_installing = nginx_config_exists?(nginx_prefix)
-		if install_nginx(nginx_dir, extra_nginx_configure_flags)
+		if install_nginx(nginx_source_dir, nginx_prefix, extra_nginx_configure_flags)
 			if nginx_config_already_exists_before_installing
 				show_passenger_config_snippets
 			else
@@ -150,6 +150,7 @@ private
 	end
 	
 	def show_possible_solutions_for_download_and_extraction_problems
+		puts
 		line
 		puts
 		render_template "nginx/possible_solutions_for_download_and_extraction_problems"
@@ -157,7 +158,9 @@ private
 	end
 	
 	def ask_for_nginx_install_prefix
+		puts
 		line
+		puts
 		color_puts "<banner>Where do you want to install Nginx to?</banner>"
 		puts
 		return prompt("Please specify a prefix directory") do |input|
@@ -168,6 +171,57 @@ private
 				false
 			end
 		end
+	end
+	
+	def ask_for_nginx_source_dir
+		puts
+		line
+		puts
+		color_puts "<banner>Where is your Nginx source code located?</banner>"
+		puts
+		return prompt("Please specify the directory") do |input|
+			if input =~ %r(/)
+				if File.exist?("#{input}/src/core/nginx.c")
+					true
+				else
+					color_puts "<red>'#{input}' does not look like an Nginx source directory.</red>"
+					false
+				end
+			else
+				color_puts "<red>Please specify an absolute path.</red>"
+				false
+			end
+		end
+	end
+	
+	def ask_for_extra_nginx_configure_flags(prefix)
+		done = false
+		while !done
+			puts
+			line
+			puts
+			render_template 'nginx/ask_for_extra_configure_flags',
+				:command => build_nginx_configure_command(prefix)
+			puts
+			extra_args = prompt "Extra arguments to pass to configure script"
+			
+			puts
+			line
+			puts
+			render_template 'nginx/confirm_extra_configure_flags',
+				:command => build_nginx_configure_command(prefix, extra_args)
+			puts
+			answer = prompt("Is this what you want? (yes/no) [default=yes]") do |input|
+				if input.empty? || input == "yes" || input == "no"
+					true
+				else
+					color_puts "<red>Please enter 'yes' or 'no'.</red>"
+					false
+				end
+			end
+			done = answer.empty? || answer == "yes"
+		end
+		return extra_args
 	end
 	
 	def check_whether_we_can_write_to(dir)
@@ -187,6 +241,25 @@ private
 		File.unlink("#{dir}/__test__.txt") rescue nil
 	end
 	
+	def nginx_config_exists?(prefix)
+		return File.exist?("#{prefix}/conf/nginx.conf") ||
+		       File.exist?("#{prefix}/etc/nginx.conf")
+	end
+	
+	def install_nginx(source_dir, prefix, extra_configure_flags)
+		Dir.chdir(source_dir) do
+			if !sh(build_nginx_configure_command(prefix, extra_configure_flags)) ||
+			   !sh("make")
+			   !sh("make install")
+				return false
+			end
+		end
+		if !sh("rake nginx")
+			return false
+		end
+		return true
+	end
+	
 	def show_deployment_example
 		puts
 		line
@@ -202,6 +275,10 @@ private
 		render_template 'possible_solutions_for_compilation_and_installation_problems',
 			:users_guide => USERS_GUIDE,
 			:passenger_website => PASSENGER_WEBSITE
+	end
+	
+	def build_nginx_configure_command(prefix, extra_configure_flags = nil)
+		return "./configure --prefix='#{prefix}' #{extra_configure_flags}".strip
 	end
 end
 
