@@ -41,7 +41,8 @@ class Installer < Passenger::AbstractInstaller
 			Dependencies::RubyGems,
 			Dependencies::Rake,
 			Dependencies::FastThread,
-			Dependencies::Rack
+			Dependencies::Rack,
+			#Dependencies::PCRE
 		]
 	end
 	
@@ -92,8 +93,7 @@ private
 		File.new("__test__.txt", "w").close
 		return true
 	rescue
-		puts
-		line
+		new_screen
 		if Process.uid == 0
 			render_template 'no_write_permission_to_passenger_root'
 		else
@@ -105,6 +105,7 @@ private
 	end
 	
 	def should_we_download_and_install_nginx_automatically?
+		new_screen
 		render_template 'nginx/query_download_and_install',
 			:nginx_version => NGINX_VERSION
 		puts
@@ -123,6 +124,9 @@ private
 	end
 	
 	def download_and_extract_nginx
+		new_screen
+		color_puts "<banner>Downloading Nginx...</banner>"
+		
 		basename = "nginx-#{NGINX_VERSION}.tar.gz"
 		url = "http://sysoev.ru/nginx/#{basename}"
 		File.unlink("/tmp/#{basename}") rescue nil
@@ -136,6 +140,7 @@ private
 		
 		if downloaded
 			Dir.chdir("/tmp") do
+				color_puts "<banner>Extracting Nginx source tarball...</banner>"
 				if sh("tar", "xzvf", basename)
 					return "/tmp/nginx-#{NGINX_VERSION}"
 				else
@@ -150,17 +155,13 @@ private
 	end
 	
 	def show_possible_solutions_for_download_and_extraction_problems
-		puts
-		line
-		puts
+		new_screen
 		render_template "nginx/possible_solutions_for_download_and_extraction_problems"
 		puts
 	end
 	
 	def ask_for_nginx_install_prefix
-		puts
-		line
-		puts
+		new_screen
 		color_puts "<banner>Where do you want to install Nginx to?</banner>"
 		puts
 		return prompt("Please specify a prefix directory") do |input|
@@ -174,9 +175,7 @@ private
 	end
 	
 	def ask_for_nginx_source_dir
-		puts
-		line
-		puts
+		new_screen
 		color_puts "<banner>Where is your Nginx source code located?</banner>"
 		puts
 		return prompt("Please specify the directory") do |input|
@@ -197,17 +196,13 @@ private
 	def ask_for_extra_nginx_configure_flags(prefix)
 		done = false
 		while !done
-			puts
-			line
-			puts
+			new_screen
 			render_template 'nginx/ask_for_extra_configure_flags',
 				:command => build_nginx_configure_command(prefix)
 			puts
 			extra_args = prompt "Extra arguments to pass to configure script"
 			
-			puts
-			line
-			puts
+			new_screen
 			render_template 'nginx/confirm_extra_configure_flags',
 				:command => build_nginx_configure_command(prefix, extra_args)
 			puts
@@ -229,8 +224,7 @@ private
 		File.new("#{dir}/__test__.txt", "w").close
 		return true
 	rescue
-		puts
-		line
+		new_screen
 		if Process.uid == 0
 			render_template 'nginx/cannot_write_to_dir', :dir => dir
 		else
@@ -248,21 +242,32 @@ private
 	
 	def install_nginx(source_dir, prefix, extra_configure_flags)
 		Dir.chdir(source_dir) do
+			new_screen
+			color_puts "<banner>Compiling and installing Nginx...</banner>"
 			if !sh(build_nginx_configure_command(prefix, extra_configure_flags)) ||
-			   !sh("make")
+			   !sh("make") ||
 			   !sh("make install")
 				return false
 			end
 		end
+		color_puts "<banner>Compiling Passenger support files...</banner>"
 		if !sh("rake nginx")
 			return false
 		end
 		return true
 	end
 	
+	def show_passenger_config_snippets
+		new_screen
+		render_template 'nginx/config_snippets',
+			:passenger_root => PASSENGER_ROOT,
+			:ruby => RUBY
+		wait
+	end
+	
 	def show_deployment_example
-		puts
 		line
+		puts
 		render_template 'nginx/deployment_example',
 			:users_guide => USERS_GUIDE,
 			:phusion_website => PHUSION_WEBSITE,
@@ -270,15 +275,15 @@ private
 	end
 	
 	def show_possible_solutions_for_compilation_and_installation_problems
-		puts
 		line
-		render_template 'possible_solutions_for_compilation_and_installation_problems',
+		puts
+		render_template 'nginx/possible_solutions_for_compilation_and_installation_problems',
 			:users_guide => USERS_GUIDE,
 			:passenger_website => PASSENGER_WEBSITE
 	end
 	
 	def build_nginx_configure_command(prefix, extra_configure_flags = nil)
-		return "./configure --prefix='#{prefix}' #{extra_configure_flags}".strip
+		return "./configure --prefix='#{prefix}' --add-module='#{PASSENGER_ROOT}/ext/nginx' #{extra_configure_flags}".strip
 	end
 end
 

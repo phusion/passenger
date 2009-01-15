@@ -1,0 +1,16 @@
+<banner>Nginx with Passenger support was successfully installed.</banner>
+
+Please edit your Nginx configuration file, and add the <b>passenger_root</b> and
+<b>passenger_ruby</b> configuration options to the <b>'http'</b> block, like this:
+
+  <b>http {
+      ...
+      passenger_root <%= @passenger_root %>;
+      passenger_ruby <%= @ruby %>;
+      ...
+  }</b>
+
+After you (re)start Nginx, you are ready to deploy any number of Ruby on Rails
+applications on Nginx.
+
+<b>Press ENTER to continue.</b>

@@ -65,6 +65,12 @@ private
 		puts ConsoleTextTemplate.new({ :file => name }, options).result
 	end
 	
+	def new_screen
+		puts
+		line
+		puts
+	end
+	
 	def line
 		puts "--------------------------------------------"
 	end
@@ -123,6 +129,7 @@ private
 	end
 	
 	def check_dependencies
+		new_screen
 		missing_dependencies = []
 		color_puts "<banner>Checking for required software...</banner>"
 		puts
@@ -155,6 +162,7 @@ private
 			end
 			
 			line
+			puts
 			color_puts "<banner>Installation instructions for required software</banner>"
 			puts
 			missing_dependencies.each do |dep|
