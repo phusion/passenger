@@ -109,18 +109,27 @@ private
 		render_template 'nginx/query_download_and_install',
 			:nginx_version => NGINX_VERSION
 		puts
-		choice = prompt("Enter your choice (1 or 2) or press Ctrl-C to abort") do |input|
-			if input == "1" || input == "2"
-				true
-			elsif input.empty?
-				color_puts "<red>No choice has been given.</red>"
-				false
-			else
-				color_puts "<red>'#{input}' is not a valid choice.</red>"
-				false
+		
+		if @auto_download
+			color_puts "<b>=> Proceeding with choice 1.</b>"
+			return true
+		elsif @nginx_source_dir
+			color_puts "<b>=> Proceeding with choice 2.</b>"
+			return false
+		else
+			choice = prompt("Enter your choice (1 or 2) or press Ctrl-C to abort") do |input|
+				if input == "1" || input == "2"
+					true
+				elsif input.empty?
+					color_puts "<red>No choice has been given.</red>"
+					false
+				else
+					color_puts "<red>'#{input}' is not a valid choice.</red>"
+					false
+				end
 			end
+			return choice == "1"
 		end
-		return choice == "1"
 	end
 	
 	def download_and_extract_nginx
@@ -164,35 +173,45 @@ private
 		new_screen
 		color_puts "<banner>Where do you want to install Nginx to?</banner>"
 		puts
-		prefix = prompt("Please specify a prefix directory [/opt/nginx]") do |input|
-			if input.empty? || input =~ %r(/)
-				true
-			else
-				color_puts "<red>Please specify an absolute path.</red>"
-				false
+		if @prefix
+			color_puts "<b>=> #{@prefix}</b>"
+			return @prefix
+		else
+			prefix = prompt("Please specify a prefix directory [/opt/nginx]") do |input|
+				if input.empty? || input =~ %r(/)
+					true
+				else
+					color_puts "<red>Please specify an absolute path.</red>"
+					false
+				end
 			end
+			if prefix.empty?
+				prefix = "/opt/nginx"
+			end
+			return prefix
 		end
-		if prefix.empty?
-			prefix = "/opt/nginx"
-		end
-		return prefix
 	end
 	
 	def ask_for_nginx_source_dir
 		new_screen
 		color_puts "<banner>Where is your Nginx source code located?</banner>"
 		puts
-		return prompt("Please specify the directory") do |input|
-			if input =~ %r(/)
-				if File.exist?("#{input}/src/core/nginx.c")
-					true
+		if @nginx_source_dir
+			color_puts "<b>=> #{@nginx_source_dir}</b>"
+			return @nginx_source_dir
+		else
+			return prompt("Please specify the directory") do |input|
+				if input =~ %r(/)
+					if File.exist?("#{input}/src/core/nginx.c")
+						true
+					else
+						color_puts "<red>'#{input}' does not look like an Nginx source directory.</red>"
+						false
+					end
 				else
-					color_puts "<red>'#{input}' does not look like an Nginx source directory.</red>"
+					color_puts "<red>Please specify an absolute path.</red>"
 					false
 				end
-			else
-				color_puts "<red>Please specify an absolute path.</red>"
-				false
 			end
 		end
 	end
@@ -204,21 +223,32 @@ private
 			render_template 'nginx/ask_for_extra_configure_flags',
 				:command => build_nginx_configure_command(prefix)
 			puts
-			extra_args = prompt "Extra arguments to pass to configure script"
-			
-			new_screen
-			render_template 'nginx/confirm_extra_configure_flags',
-				:command => build_nginx_configure_command(prefix, extra_args)
-			puts
-			answer = prompt("Is this what you want? (yes/no) [default=yes]") do |input|
-				if input.empty? || input == "yes" || input == "no"
-					true
+			if @extra_configure_flags
+				if @extra_configure_flags == "none"
+					extra_args = ""
+					color_puts "<b>=> No extra configure flags.</b>"
 				else
-					color_puts "<red>Please enter 'yes' or 'no'.</red>"
-					false
+					extra_args = @extra_configure_flags
+					color_puts "<b>=> #{extra_args}</b>"
 				end
+				return extra_args
+			else
+				extra_args = prompt "Extra arguments to pass to configure script"
+			
+				new_screen
+				render_template 'nginx/confirm_extra_configure_flags',
+					:command => build_nginx_configure_command(prefix, extra_args)
+				puts
+				answer = prompt("Is this what you want? (yes/no) [default=yes]") do |input|
+					if input.empty? || input == "yes" || input == "no"
+						true
+					else
+						color_puts "<red>Please enter 'yes' or 'no'.</red>"
+						false
+					end
+				end
+				done = answer.empty? || answer == "yes"
 			end
-			done = answer.empty? || answer == "yes"
 		end
 		return extra_args
 	end
@@ -325,11 +355,36 @@ parser = OptionParser.new do |opts|
 	opts.separator ""
 	
 	opts.separator "Options:"
-	#opts.on("-a", "--auto", String, "Automatically build the Apache module,\n" <<
-	#        "#{' ' * 37}without interactively asking for user\n" <<
-	#        "#{' ' * 37}input.") do
-	#	options[:auto] = true
-	#end
+	opts.on("--auto", "Automatically confirm 'Press ENTER to\n" <<
+	        "#{' ' * 37}continue' prompts.") do
+		options[:auto] = true
+	end
+	opts.on("--prefix=DIR", String, "Use the given Nginx install prefix instead\n" <<
+	        "#{' ' * 37}of asking for it interactively.") do |dir|
+		options[:prefix] = dir
+	end
+	opts.on("--auto-download", "Download and install Nginx automatically,\n" <<
+	        "#{' ' * 37}instead of asking interactively whether to\n" <<
+	        "#{' ' * 37}download+install or to use an existing\n" <<
+	        "#{' ' * 37}Nginx source directory.") do
+		options[:auto_download] = true
+	end
+	opts.on("--nginx-source-dir=DIR", String, "Compile and install Nginx using the given\n" <<
+	        "#{' ' * 37}Nginx source directory, instead of\n" <<
+	        "#{' ' * 37}interactively asking to download+install\n" <<
+	        "#{' ' * 37}or to use an existing Nginx source\n" <<
+	        "#{' ' * 37}directory. Conflicts with --auto-download.") do |dir|
+		options[:nginx_source_dir] = dir
+	end
+	opts.on("--extra-configure-flags=STRING", String, "Pass these extra flags to Nginx's\n" <<
+	        "#{' ' * 37}'configure' script, instead of asking for\n" <<
+	        "#{' ' * 37}it interactively. Only applicable if\n" <<
+	        "#{' ' * 37}--nginx-source-dir is given. Specify\n" <<
+	        "#{' ' * 37}'none' if you do not want to pass\n" <<
+	        "#{' ' * 37}additional flags but do not want this\n" <<
+	        "#{' ' * 37}installer to ask interactively either.") do |flags|
+		options[:extra_configure_flags] = flags
+	end
 end
 begin
 	parser.parse!
@@ -337,6 +392,11 @@ rescue OptionParser::ParseError => e
 	puts e
 	puts
 	puts "Please see '--help' for valid options."
+	exit 1
+end
+
+if options[:auto_download] && options[:nginx_source_dir]
+	STDERR.puts "You cannot specify both --auto-download and --nginx-source-dir."
 	exit 1
 end
 
