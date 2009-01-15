@@ -321,6 +321,36 @@ module Dependencies # :nodoc: all
 		end
 		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM} install rack</b>"
 	end
+	
+	PCRE_Dev = Dependency.new do |dep|
+		dep.name = "PCRE development headers"
+		dep.define_checker do |result|
+			begin
+				File.open('/tmp/passenger-check.c', 'w') do |f|
+					f.puts("#include <pcre.h>")
+				end
+				Dir.chdir('/tmp') do
+					if system("(gcc -c passenger-check.c) >/dev/null 2>/dev/null")
+						result.found
+					else
+						result.not_found
+					end
+				end
+			ensure
+				File.unlink('/tmp/passenger-check.c') rescue nil
+				File.unlink('/tmp/passenger-check.o') rescue nil
+			end
+		end
+		if RUBY_PLATFORM =~ /linux/
+			case LINUX_DISTRO
+			when :ubuntu, :debian
+				dep.install_command = "apt-get install libpcre3-dev"
+			when :rhel, :fedora, :centos
+				dep.install_command = "yum install pcre-devel"
+			end
+		end
+		dep.website = "http://www.pcre.org"
+	end
 end
 
 end # module Passenger

@@ -42,7 +42,7 @@ class Installer < Passenger::AbstractInstaller
 			Dependencies::Rake,
 			Dependencies::FastThread,
 			Dependencies::Rack,
-			#Dependencies::PCRE
+			Dependencies::PCRE_Dev
 		]
 	end
 	
@@ -70,9 +70,9 @@ class Installer < Passenger::AbstractInstaller
 		nginx_config_already_exists_before_installing = nginx_config_exists?(nginx_prefix)
 		if install_nginx(nginx_source_dir, nginx_prefix, extra_nginx_configure_flags)
 			if nginx_config_already_exists_before_installing
-				show_passenger_config_snippets
+				show_passenger_config_snippets(nginx_prefix)
 			else
-				insert_passenger_config_snippets
+				insert_passenger_config_snippets(nginx_prefix)
 			end
 			show_deployment_example
 		else
@@ -164,14 +164,18 @@ private
 		new_screen
 		color_puts "<banner>Where do you want to install Nginx to?</banner>"
 		puts
-		return prompt("Please specify a prefix directory") do |input|
-			if input =~ %r(/)
+		prefix = prompt("Please specify a prefix directory [/opt/nginx]") do |input|
+			if input.empty? || input =~ %r(/)
 				true
 			else
 				color_puts "<red>Please specify an absolute path.</red>"
 				false
 			end
 		end
+		if prefix.empty?
+			prefix = "/opt/nginx"
+		end
+		return prefix
 	end
 	
 	def ask_for_nginx_source_dir
@@ -236,8 +240,7 @@ private
 	end
 	
 	def nginx_config_exists?(prefix)
-		return File.exist?("#{prefix}/conf/nginx.conf") ||
-		       File.exist?("#{prefix}/etc/nginx.conf")
+		return !!locate_nginx_config_file(prefix)
 	end
 	
 	def install_nginx(source_dir, prefix, extra_configure_flags)
@@ -257,9 +260,10 @@ private
 		return true
 	end
 	
-	def show_passenger_config_snippets
+	def show_passenger_config_snippets(prefix)
 		new_screen
 		render_template 'nginx/config_snippets',
+			:config_file => locate_nginx_config_file(prefix),
 			:passenger_root => PASSENGER_ROOT,
 			:ruby => RUBY
 		wait
@@ -280,6 +284,34 @@ private
 		render_template 'nginx/possible_solutions_for_compilation_and_installation_problems',
 			:users_guide => USERS_GUIDE,
 			:passenger_website => PASSENGER_WEBSITE
+	end
+	
+	def locate_nginx_config_file(prefix)
+		["#{prefix}/conf/nginx.conf", "#{prefix}/etc/nginx.conf"].each do |filename|
+			if File.exist?(filename)
+				return filename
+			end
+		end
+		return nil
+	end
+	
+	def insert_passenger_config_snippets(prefix)
+		config_file = locate_nginx_config_file(prefix)
+		contents = File.read(config_file)
+		contents.sub!(/^http \{/,
+			"http {\n" <<
+			"    passenger_root #{PASSENGER_ROOT};\n" <<
+			"    passenger_ruby #{RUBY};\n")
+		File.open(config_file, 'w') do |f|
+			f.write(contents)
+		end
+		
+		new_screen
+		render_template 'nginx/config_snippets_inserted',
+			:config_file => config_file,
+			:passenger_root => PASSENGER_ROOT,
+			:ruby => RUBY
+		wait
 	end
 	
 	def build_nginx_configure_command(prefix, extra_configure_flags = nil)
