@@ -41,8 +41,7 @@ class Installer < Passenger::AbstractInstaller
 			Dependencies::RubyGems,
 			Dependencies::Rake,
 			Dependencies::FastThread,
-			Dependencies::Rack,
-			Dependencies::PCRE_Dev
+			Dependencies::Rack
 		]
 	end
 	
@@ -53,7 +52,13 @@ class Installer < Passenger::AbstractInstaller
 		
 		check_write_permission_to_passenger_root || exit(1)
 		
-		if should_we_download_and_install_nginx_automatically?
+		download_and_install = should_we_download_and_install_nginx_automatically?
+		if pcre_is_installed?
+			@pcre_source_dir = nil
+		else
+			@pcre_source_dir = download_and_extract_pcre
+		end
+		if download_and_install
 			nginx_source_dir = download_and_extract_nginx
 			if nginx_source_dir.nil?
 				show_possible_solutions_for_download_and_extraction_problems
@@ -132,6 +137,38 @@ private
 		end
 	end
 	
+	def download_and_extract_pcre
+		new_screen
+		color_puts "<banner>PCRE (required by Nginx) not installed, downloading it...</banner>"
+		
+		basename = "pcre-7.8.tar.gz"
+		dirname = "pcre-7.8"
+		url = "ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/#{basename}"
+		File.unlink("/tmp/#{basename}") rescue nil
+		FileUtils.rm_rf("/tmp/#{dirname}")
+		
+		if download(url, "/tmp/#{basename}")
+			Dir.chdir("/tmp") do
+				color_puts "<banner>Extracting PCRE source tarball...</banner>"
+				if sh("tarr", "xzvf", basename)
+					return "/tmp/#{dirname}"
+				else
+					new_screen
+					render_template "nginx/pcre_could_not_be_extracted"
+					wait
+					return nil
+				end
+			end
+		else
+			new_screen
+			render_template "nginx/pcre_could_not_be_downloaded"
+			wait
+			return nil
+		end
+	rescue Interrupt
+		exit 2
+	end
+	
 	def download_and_extract_nginx
 		new_screen
 		color_puts "<banner>Downloading Nginx...</banner>"
@@ -141,13 +178,7 @@ private
 		File.unlink("/tmp/#{basename}") rescue nil
 		FileUtils.rm_rf("/tmp/nginx-#{NGINX_VERSION}")
 		
-		if PlatformInfo.find_command("wget")
-			downloaded = sh("wget", "-O", "/tmp/#{basename}", url)
-		else
-			downloaded = sh("curl", url, "-o", "/tmp/#{basename}")
-		end
-		
-		if downloaded
+		if download(url, "/tmp/#{basename}")
 			Dir.chdir("/tmp") do
 				color_puts "<banner>Extracting Nginx source tarball...</banner>"
 				if sh("tar", "xzvf", basename)
@@ -345,7 +376,40 @@ private
 	end
 	
 	def build_nginx_configure_command(prefix, extra_configure_flags = nil)
-		return "./configure --prefix='#{prefix}' --add-module='#{PASSENGER_ROOT}/ext/nginx' #{extra_configure_flags}".strip
+		command = "./configure --prefix='#{prefix}' "
+		if @pcre_source_dir
+			command << "--with-pcre='#{@pcre_source_dir}' "
+		else
+			command << "--without-http_rewrite_module "
+		end
+		command << "--add-module='#{PASSENGER_ROOT}/ext/nginx' #{extra_configure_flags}"
+		command.strip!
+		return command
+	end
+	
+	def pcre_is_installed?
+		if @pcre_is_installed.nil?
+			@pcre_is_installed = begin
+				File.open('/tmp/passenger-check.c', 'w') do |f|
+					f.puts("#include <pcre.h>")
+				end
+				Dir.chdir('/tmp') do
+					system("(gcc -c passenger-check.c) >/dev/null 2>/dev/null")
+				end
+			ensure
+				File.unlink('/tmp/passenger-check.c') rescue nil
+				File.unlink('/tmp/passenger-check.o') rescue nil
+			end
+		end
+		return @pcre_is_installed
+	end
+	
+	def download(url, output)
+		if PlatformInfo.find_command("wget")
+			return sh("wget", "-O", output, url)
+		else
+			return sh("curl", url, "-o", output)
+		end
 	end
 end
 
