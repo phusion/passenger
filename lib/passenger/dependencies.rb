@@ -276,7 +276,7 @@ module Dependencies # :nodoc: all
 	end
 
 	APU_DevHeaders = Dependency.new do |dep|
-		dep.name = "Apache Portable Runtime Utility (APR) development headers"
+		dep.name = "Apache Portable Runtime Utility (APU) development headers"
 		dep.define_checker do |result|
 			if APU_CONFIG.nil?
 				result.not_found
