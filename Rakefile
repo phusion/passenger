@@ -36,10 +36,8 @@ include PlatformInfo
 APXS2.nil? and raise "Could not find 'apxs' or 'apxs2'."
 APACHE2CTL.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
 HTTPD.nil? and raise "Could not find the Apache web server binary."
-if PlatformInfo.apr_config_needed?
-	APR_FLAGS.nil? and raise "Could not find Apache Portable Runtime (APR)."
-	APU_FLAGS.nil? and raise "Could not find Apache Portable Runtime Utility (APU)."
-end
+APR_FLAGS.nil? and raise "Could not find Apache Portable Runtime (APR)."
+APU_FLAGS.nil? and raise "Could not find Apache Portable Runtime Utility (APU)."
 
 CXX = "g++"
 THREADING_FLAGS = "-D_REENTRANT"
