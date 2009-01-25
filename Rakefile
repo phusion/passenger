@@ -155,7 +155,7 @@ subdir 'ext/apache2' do
 		linkflags = "#{LDFLAGS} #{MULTI_ARCH_FLAGS}"
 		linkflags << " -lstdc++ -lpthread " <<
 			"../libboost_oxt.a " <<
-			APR_LIBS
+			APR_LIBS.to_s
 		create_shared_library 'mod_passenger.so',
 			APACHE2::OBJECTS.keys.join(' ') << ' mod_passenger.o',
 			linkflags
