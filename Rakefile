@@ -643,6 +643,7 @@ spec = Gem::Specification.new do |s|
 	s.executables = [
 		'passenger-spawn-server',
 		'passenger-install-apache2-module',
+		'passenger-install-nginx-module',
 		'passenger-config',
 		'passenger-memory-stats',
 		'passenger-make-enterprisey',
