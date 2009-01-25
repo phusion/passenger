@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2009 Phusion
+ * Do not redistribute.
+ */
+
 #include <string>
 #include <map>
 

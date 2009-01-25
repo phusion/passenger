@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2009 Phusion
+ * Do not redistribute.
+ */
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
