@@ -48,10 +48,10 @@ class Installer < Passenger::AbstractInstaller
 			Dependencies::FastThread,
 			Dependencies::Rack
 		]
-		if PlatformInfo.apr_config_needed?
+		#if PlatformInfo.apr_config_needed?
 			result << Dependencies::APR_DevHeaders
 			result << Dependencies::APU_DevHeaders
-		end
+		#end
 		return result
 	end
 	
