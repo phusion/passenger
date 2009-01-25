@@ -17,7 +17,6 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 require 'rbconfig'
-require 'tempfile'
 
 # Wow, I can't believe in how many ways one can build Apache in OS
 # X! We have to resort to all sorts of tricks to make Passenger build
@@ -158,7 +157,7 @@ private
 	end
 	
 	def self.determine_apr_info
-		if !apr_config_needed? || APR_CONFIG.nil?
+		if APR_CONFIG.nil?
 			return nil
 		else
 			flags = `#{APR_CONFIG} --cppflags --includes`.strip
@@ -194,7 +193,7 @@ private
 	end
 	
 	def self.determine_apu_info
-		if !apr_config_needed? || APU_CONFIG.nil?
+		if APU_CONFIG.nil?
 			return nil
 		else
 			flags = `#{APU_CONFIG} --includes`.strip
@@ -290,28 +289,6 @@ public
 		end
 		return nil
 	end
-	
-	# Returns whether it is necessary to use information outputted by
-	# 'apr-config' and 'apu-config' in order to compile an Apache module.
-	# When Apache is installed with --with-included-apr, the APR/APU
-	# headers are placed into the same directory as the Apache headers,
-	# and so 'apr-config' and 'apu-config' won't be necessary in that case.
-	def self.apr_config_needed?
-		if @@apr_config_needed.nil?
-			filename = File.join(Dir.tmpdir, "passenger-platform-check-#{Process.pid}.c")
-			File.open(filename, "w") do |f|
-				f.puts("#include <apr.h>")
-			end
-			begin
-				@@apr_config_needed = !system("(gcc #{APXS2_FLAGS} -c '#{filename}' -o '#{filename}.o') >/dev/null 2>/dev/null")
-			ensure
-				File.unlink(filename) rescue nil
-				File.unlink("#{filename}.o") rescue nil
-			end
-		end
-		return @@apr_config_needed
-	end
-	@@apr_config_needed = nil
 
 	# The absolute path to the current Ruby interpreter.
 	RUBY = Config::CONFIG['bindir'] + '/' + Config::CONFIG['RUBY_INSTALL_NAME'] + Config::CONFIG['EXEEXT']
