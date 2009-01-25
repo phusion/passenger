@@ -261,8 +261,10 @@ end
 		APXS2.nil?      and raise "Could not find 'apxs' or 'apxs2'."
 		APACHE2CTL.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
 		HTTPD.nil?      and raise "Could not find the Apache web server binary."
-		APR_FLAGS.nil?  and raise "Could not find Apache Portable Runtime (APR)."
-		APU_FLAGS.nil?  and raise "Could not find Apache Portable Runtime Utility (APU)."
+		if PlatformInfo.apr_config_needed?
+			APR_FLAGS.nil?  and raise "Could not find Apache Portable Runtime (APR)."
+			APU_FLAGS.nil?  and raise "Could not find Apache Portable Runtime Utility (APU)."
+		end
 		
 		# apxs totally sucks. We couldn't get it working correctly
 		# on MacOS X (it had various problems with building universal
@@ -275,7 +277,7 @@ end
 		linkflags << " -lstdc++ -lpthread "
 		linkflags << "#{APACHE2_BOOST_OXT_LIBRARY} "
 		linkflags << "#{APACHE2_COMMON_LIBRARY[0]} "
-		linkflags << APR_LIBS
+		linkflags << APR_LIBS.to_s
 		create_shared_library 'ext/apache2/mod_passenger.so',
 			APACHE2_OBJECTS.join(' ') <<
 			' ext/apache2/mod_passenger.o',
