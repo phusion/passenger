@@ -30,34 +30,33 @@ ENV["PATH"] += ":/usr/sbin:/sbin:/usr/local/sbin"
 require 'optparse'
 require 'passenger/platform_info'
 require 'passenger/dependencies'
-require 'passenger/console_text_template'
+require 'passenger/abstract_installer'
 include PlatformInfo
 
-class Installer
+class Installer < Passenger::AbstractInstaller
 	include Passenger
 	
-	PASSENGER_WEBSITE = "http://www.modrails.com/"
-	PHUSION_WEBSITE = "www.phusion.nl"
-	
-	REQUIRED_DEPENDENCIES = [
-		Dependencies::GCC,
-		Dependencies::Ruby_DevHeaders,
-		Dependencies::Ruby_OpenSSL,
-		Dependencies::RubyGems,
-		Dependencies::Rake,
-		Dependencies::Apache2,
-		Dependencies::Apache2_DevHeaders,
-		Dependencies::FastThread,
-		Dependencies::Rack
-	]
-	if PlatformInfo.apr_config_needed?
-		REQUIRED_DEPENDENCIES << Dependencies::APR_DevHeaders
-		REQUIRED_DEPENDENCIES << Dependencies::APU_DevHeaders
+	def dependencies
+		result = [
+			Dependencies::GCC,
+			Dependencies::Ruby_DevHeaders,
+			Dependencies::Ruby_OpenSSL,
+			Dependencies::RubyGems,
+			Dependencies::Rake,
+			Dependencies::Apache2,
+			Dependencies::Apache2_DevHeaders,
+			Dependencies::FastThread,
+			Dependencies::Rack
+		]
+		if PlatformInfo.apr_config_needed?
+			result << Dependencies::APR_DevHeaders
+			result << Dependencies::APU_DevHeaders
+		end
+		return result
 	end
 	
-	def start(automatic = false)
-		@auto = automatic
-		if natively_packaged?
+	def install!
+		if Passenger.natively_packaged?
 			check_dependencies || exit(1)
 			show_apache2_config_snippets
 			show_deployment_example
@@ -76,71 +75,12 @@ class Installer
 			show_possible_solutions_for_compilation_and_installation_problems
 			exit(1)
 		end
-	ensure
-		reset_terminal_colors
 	end
 
 private
-	def init_terminal_colors
-		STDOUT.write("\e[0m\e[37m\e[40m")
-		STDOUT.flush
-	end
-	
-	def reset_terminal_colors
-		STDOUT.write("\e[0m")
-		STDOUT.flush
-	end
-	
 	def show_welcome_screen
-		render_template 'welcome', :version => PASSENGER_VERSION
+		render_template 'welcome', :version => Passenger::VERSION_STRING
 		wait
-	end
-
-	def check_dependencies
-		missing_dependencies = []
-		color_puts "<banner>Checking for required software...</banner>"
-		puts
-		REQUIRED_DEPENDENCIES.each do |dep|
-			color_print " * #{dep.name}... "
-			result = dep.check
-			if result.found?
-				if result.found_at
-					color_puts "<green>found at #{result.found_at}</green>"
-				else
-					color_puts "<green>found</green>"
-				end
-			else
-				color_puts "<red>not found</red>"
-				missing_dependencies << dep
-			end
-		end
-		
-		if missing_dependencies.empty?
-			return true
-		else
-			puts
-			color_puts "<red>Some required software is not installed.</red>"
-			color_puts "But don't worry, this installer will tell you how to install them.\n"
-			color_puts "<b>Press Enter to continue, or Ctrl-C to abort.</b>"
-			if natively_packaged?
-				wait(10)
-			else
-				wait
-			end
-			
-			line
-			color_puts "<banner>Installation instructions for required software</banner>"
-			puts
-			missing_dependencies.each do |dep|
-				print_dependency_installation_instructions(dep)
-				puts
-			end
-			color_puts "If the aforementioned instructions didn't solve your problem, then please take"
-			color_puts "a look at the Users Guide:"
-			puts
-			color_puts "  <yellow>#{USERS_GUIDE}</yellow>"
-			return false
-		end
 	end
 	
 	def check_whether_apache_uses_compatible_mpm
@@ -193,17 +133,17 @@ private
 		puts "cd #{PASSENGER_ROOT}"
 		if ENV['TRACE']
 			puts "#{RUBY} -S #{RAKE} --trace clean apache2"
-			return system(RUBY, "-S", RAKE, "--trace", "clean", "apache2")
+			return sh(RUBY, "-S", RAKE, "--trace", "clean", "apache2")
 		else
 			puts "#{RUBY} -S #{RAKE} clean apache2"
-			return system(RUBY, "-S", RAKE, "clean", "apache2")
+			return sh(RUBY, "-S", RAKE, "clean", "apache2")
 		end
 	end
 	
 	def show_apache2_config_snippets
 		puts
 		line
-		if natively_packaged?
+		if Passenger.natively_packaged?
 			module_location = "#{PASSENGER_ROOT}/lib/passenger/mod_passenger.so"
 		else
 			module_location = "#{PASSENGER_ROOT}/ext/apache2/mod_passenger.so"
@@ -212,7 +152,7 @@ private
 			:module_location => module_location,
 			:passenger_root => PASSENGER_ROOT,
 			:ruby => RUBY
-		if natively_packaged?
+		if Passenger.natively_packaged?
 			wait(10)
 		else
 			wait
@@ -235,89 +175,6 @@ private
 			:users_guide => USERS_GUIDE,
 			:passenger_website => PASSENGER_WEBSITE
 	end
-
-private
-	def color_print(text)
-		STDOUT.write(ConsoleTextTemplate.new(:text => text).result)
-		STDOUT.flush
-	end
-	
-	def color_puts(text)
-		color_print("#{text}\n")
-	end
-	
-	def render_template(name, options = {})
-		puts ConsoleTextTemplate.new({ :file => name }, options).result
-	end
-	
-	def line
-		puts "--------------------------------------------"
-	end
-	
-	def wait(timeout = nil)
-		return if @auto
-		begin
-			if timeout
-				require 'timeout' unless defined?(Timeout)
-				begin
-					Timeout.timeout(timeout) do
-						STDIN.readline
-					end
-				rescue Timeout::Error
-					# Do nothing.
-				end
-			else
-				STDIN.readline
-			end
-		rescue Interrupt
-			exit 2
-		end
-	end
-	
-	def print_dependency_installation_instructions(dep)
-		color_puts " * To install <yellow>#{dep.name}</yellow>:"
-		if !dep.install_command.nil?
-			color_puts "   Please run <b>#{dep.install_command}</b> as root."
-		elsif !dep.install_instructions.nil?
-			color_puts "   " << dep.install_instructions
-		elsif !dep.website.nil?
-			color_puts "   Please download it from <b>#{dep.website}</b>"
-			if !dep.website_comments.nil?
-				color_puts "   (#{dep.website_comments})"
-			end
-		else
-			color_puts "   Search Google."
-		end
-	end
-	
-	def natively_packaged?
-		return self.class.natively_packaged?
-	end
-	
-	def self.natively_packaged?
-		return File.expand_path(File.dirname(__FILE__)) == "/usr/bin"
-	end
-	
-	def self.determine_version
-		if natively_packaged?
-			require 'rbconfig'
-			return File.read("/etc/passenger_version.txt")
-		else
-			File.read("#{PASSENGER_ROOT}/Rakefile") =~ /^PACKAGE_VERSION = "(.*)"$/
-			return $1
-		end
-	end
-	
-	def self.determine_users_guide
-		if natively_packaged?
-			return "/usr/share/doc/passenger/Users guide.html"
-		else
-			return "#{PASSENGER_ROOT}/doc/Users guide.html"
-		end
-	end
-	
-	PASSENGER_VERSION = determine_version
-	USERS_GUIDE = determine_users_guide
 end
 
 options = {}
@@ -341,4 +198,4 @@ rescue OptionParser::ParseError => e
 	exit 1
 end
 
-Installer.new.start(options[:auto])
+Installer.new(options).start

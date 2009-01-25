@@ -69,8 +69,6 @@ class Installer < Passenger::AbstractInstaller
 			show_possible_solutions_for_compilation_and_installation_problems
 			exit(1)
 		end
-	ensure
-		reset_terminal_colors
 	end
 
 private
