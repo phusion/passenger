@@ -46,11 +46,13 @@ class Installer
 		Dependencies::Rake,
 		Dependencies::Apache2,
 		Dependencies::Apache2_DevHeaders,
-		Dependencies::APR_DevHeaders,
-		Dependencies::APU_DevHeaders,
 		Dependencies::FastThread,
 		Dependencies::Rack
 	]
+	if PlatformInfo.apr_config_needed?
+		REQUIRED_DEPENDENCIES << Dependencies::APR_DevHeaders
+		REQUIRED_DEPENDENCIES << Dependencies::APU_DevHeaders
+	end
 	
 	def start
 		if natively_packaged?
