@@ -35,6 +35,7 @@
 #include <cstdarg>
 #include <unistd.h>
 #include <errno.h>
+#include <grp.h>
 #include <pwd.h>
 #include <signal.h>
 
@@ -176,6 +177,14 @@ private:
 			if (!user.empty()) {
 				struct passwd *entry = getpwnam(user.c_str());
 				if (entry != NULL) {
+					if (initgroups(user.c_str(), entry->pw_gid) != 0) {
+						int e = errno;
+						fprintf(stderr, "*** Passenger: cannot set supplementary "
+							"groups for user %s: %s (%d)\n",
+							user.c_str(),
+							strerror(e),
+							e);
+					}
 					if (setgid(entry->pw_gid) != 0) {
 						int e = errno;
 						fprintf(stderr, "*** Passenger: cannot run spawn "
