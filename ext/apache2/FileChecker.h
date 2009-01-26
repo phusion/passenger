@@ -11,6 +11,21 @@ namespace Passenger {
 using namespace std;
 using namespace oxt;
 
+/**
+ * Utility class for checking for file changes. Example:
+ *
+ * @code
+ * FileChecker checker("foo.txt");
+ * checker.changed();   // false
+ * writeToFile("foo.txt");
+ * checker.changed();   // true
+ * checker.changed();   // false
+ * @endcode
+ *
+ * FileChecker uses stat() to retrieve file information. FileChecker also
+ * supports throttling in order to limit the number of stat() calls. This
+ * can improve performance on systems where disk I/O is a problem.
+ */
 class FileChecker {
 private:
 	string filename;
@@ -44,6 +59,14 @@ private:
 	}
 	
 public:
+	/**
+	 * Create a FileChecker object.
+	 *
+	 * @param filename The filename to check for.
+	 * @param throttleRate When set to a non-zero value, throttling will be
+	 *                     enabled. stat() will be called at most once per
+	 *                     throttleRate seconds.
+	 */
 	FileChecker(const string &filename, unsigned int throttleRate = 0) {
 		this->filename = filename;
 		lastMtime = 0;
@@ -53,6 +76,10 @@ public:
 		checkChanged();
 	}
 	
+	/**
+	 * Checks whether the file's timestamp has changed or has been created
+	 * or removed since the last call to changed().
+	 */
 	bool changed() {
 		if (throttleRate > 0) {
 			time_t currentTime;
