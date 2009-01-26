@@ -234,6 +234,7 @@ class TEST
 			../ext/apache2/PoolOptions.h
 			../ext/apache2/Application.h),
 		'PoolOptionsTest.o' => %w(PoolOptionsTest.cpp ../ext/apache2/PoolOptions.h),
+		'FileCheckerTest.o' => %w(FileCheckerTest.cpp ../ext/apache2/FileChecker.h),
 		'UtilsTest.o' => %w(UtilsTest.cpp ../ext/apache2/Utils.h)
 	}
 	
