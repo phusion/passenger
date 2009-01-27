@@ -47,6 +47,7 @@
 
 #include "ApplicationPool.h"
 #include "Logging.h"
+#include "FileChecker.h"
 #ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER
 	#include "DummySpawnManager.h"
 #else
@@ -114,6 +115,11 @@ private:
 		AppContainerList instances;
 		unsigned int size;
 		unsigned long maxRequests;
+		FileChecker restartFileChecker;
+		
+		Domain(const string &appRoot)
+			: restartFileChecker(string(appRoot + "/tmp/restart.txt"))
+			{ }
 	};
 	
 	struct AppContainer {
@@ -163,7 +169,6 @@ private:
 		unsigned int active;
 		unsigned int maxPerApp;
 		AppContainerList inactiveApps;
-		map<string, time_t> restartFileTimes;
 		map<string, unsigned int> appInstanceCount;
 	};
 	
@@ -246,7 +251,6 @@ private:
 	unsigned int &active;
 	unsigned int &maxPerApp;
 	AppContainerList &inactiveApps;
-	map<string, time_t> &restartFileTimes;
 	map<string, unsigned int> &appInstanceCount;
 	
 	/**
@@ -331,9 +335,8 @@ private:
 		return result.str();
 	}
 	
-	bool needsRestart(const string &appRoot) {
+	bool needsRestart(const string &appRoot, Domain *domain) {
 		struct stat buf;
-		bool result;
 		int ret;
 
 		string alwaysRestartFile(appRoot);
@@ -341,39 +344,8 @@ private:
 		do {
 			ret = stat(alwaysRestartFile.c_str(), &buf);
 		} while (ret == -1 && errno == EINTR);
-		if (ret == 0) {
-			return true;
-		}
-
-		string restartFile(appRoot);
-		restartFile.append("/tmp/restart.txt");
 		
-		do {
-			ret = stat(restartFile.c_str(), &buf);
-		} while (ret == -1 && errno == EINTR);
-		if (ret == 0) {
-			do {
-				ret = unlink(restartFile.c_str());
-			} while (ret == -1 && (errno == EINTR || errno == EAGAIN));
-			if (ret == 0 || errno == ENOENT) {
-				restartFileTimes.erase(appRoot);
-				result = true;
-			} else {
-				map<string, time_t>::const_iterator it;
-				
-				it = restartFileTimes.find(appRoot);
-				if (it == restartFileTimes.end()) {
-					result = true;
-				} else {
-					result = buf.st_mtime != restartFileTimes[appRoot];
-				}
-				restartFileTimes[appRoot] = buf.st_mtime;
-			}
-		} else {
-			restartFileTimes.erase(appRoot);
-			result = false;
-		}
-		return result;
+		return ret == 0 || domain->restartFileChecker.changed();
 	}
 	
 	void cleanerThreadMainLoop() {
@@ -420,7 +392,6 @@ private:
 					}
 					if (instances->empty()) {
 						domains.erase(app->getAppRoot());
-						data->restartFileTimes.erase(app->getAppRoot());
 					}
 				}
 			}
@@ -451,7 +422,7 @@ private:
 		try {
 			DomainMap::iterator it(domains.find(appRoot));
 			
-			if (it != domains.end() && needsRestart(appRoot)) {
+			if (it != domains.end() && needsRestart(appRoot, it->second.get())) {
 				AppContainerList::iterator it2;
 				instances = &it->second->instances;
 				for (it2 = instances->begin(); it2 != instances->end(); it2++) {
@@ -537,7 +508,6 @@ private:
 					instances->erase(container->iterator);
 					if (instances->empty()) {
 						domains.erase(container->app->getAppRoot());
-						restartFileTimes.erase(container->app->getAppRoot());
 					} else {
 						domain->size--;
 					}
@@ -554,7 +524,7 @@ private:
 				container->sessions = 0;
 				it = domains.find(appRoot);
 				if (it == domains.end()) {
-					domain = new Domain();
+					domain = new Domain(appRoot);
 					domain->size = 1;
 					domain->maxRequests = options.maxRequests;
 					domains[appRoot] = ptr(domain);
@@ -629,7 +599,6 @@ public:
 		active(data->active),
 		maxPerApp(data->maxPerApp),
 		inactiveApps(data->inactiveApps),
-		restartFileTimes(data->restartFileTimes),
 		appInstanceCount(data->appInstanceCount)
 	{
 		TRACE_POINT();
@@ -728,7 +697,6 @@ public:
 		boost::mutex::scoped_lock l(lock);
 		domains.clear();
 		inactiveApps.clear();
-		restartFileTimes.clear();
 		appInstanceCount.clear();
 		count = 0;
 		active = 0;

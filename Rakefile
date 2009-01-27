@@ -128,7 +128,7 @@ class APACHE2
 		'Hooks.o' => %w(Hooks.cpp Hooks.h
 				Configuration.h ApplicationPool.h ApplicationPoolServer.h
 				SpawnManager.h Exceptions.h Application.h MessageChannel.h
-				PoolOptions.h Utils.h DirectoryMapper.h),
+				PoolOptions.h Utils.h DirectoryMapper.h FileChecker.h),
 		'Utils.o'   => %w(Utils.cpp Utils.h),
 		'Logging.o' => %w(Logging.cpp Logging.h)
 	}
@@ -165,6 +165,7 @@ subdir 'ext/apache2' do
 		'ApplicationPool.h',
 		'Application.h',
 		'StandardApplicationPool.h',
+		'FileChecker.h',
 		'MessageChannel.h',
 		'SpawnManager.h',
 		'PoolOptions.h',
@@ -232,8 +233,10 @@ class TEST
 			../ext/apache2/StandardApplicationPool.h
 			../ext/apache2/SpawnManager.h
 			../ext/apache2/PoolOptions.h
-			../ext/apache2/Application.h),
+			../ext/apache2/Application.h
+			../ext/apache2/FileChecker.h),
 		'PoolOptionsTest.o' => %w(PoolOptionsTest.cpp ../ext/apache2/PoolOptions.h),
+		'FileCheckerTest.o' => %w(FileCheckerTest.cpp ../ext/apache2/FileChecker.h),
 		'UtilsTest.o' => %w(UtilsTest.cpp ../ext/apache2/Utils.h)
 	}
 	
