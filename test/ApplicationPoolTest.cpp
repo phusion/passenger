@@ -4,7 +4,9 @@
 #include <cstring>
 #include <cstdlib>
 #include <cerrno>
+#include <sys/types.h>
 #include <signal.h>
+#include <utime.h>
 
 /**
  * This file is used as a template to test the different ApplicationPool implementations.
@@ -253,8 +255,8 @@
 	}
 	
 	TEST_METHOD(12) {
-		// If tmp/restart.txt is present, then the applications under app_root
-		// should be restarted.
+		// If tmp/restart.txt didn't exist but has now been created,
+		// then the applications under app_root should be restarted.
 		struct stat buf;
 		Application::SessionPtr session1 = pool->get("stub/railsapp");
 		Application::SessionPtr session2 = pool2->get("stub/railsapp");
@@ -267,62 +269,46 @@
 		ensure_equals("No apps are active", pool->getActive(), 0u);
 		ensure_equals("Both apps are killed, and a new one was spawned",
 			pool->getCount(), 1u);
-		ensure("Restart file has been deleted",
-			stat("stub/railsapp/tmp/restart.txt", &buf) == -1
-			&& errno == ENOENT);
+		try {
+			ensure("Restart file still exists",
+				stat("stub/railsapp/tmp/restart.txt", &buf) == 0);
+			unlink("stub/railsapp/tmp/restart.txt");
+		} catch (...) {
+			unlink("stub/railsapp/tmp/restart.txt");
+			throw;
+		}
 	}
 	
 	TEST_METHOD(13) {
-		// If tmp/restart.txt is present, but cannot be deleted, then
-		// the applications under app_root should still be restarted.
-		// However, a subsequent get() should not result in a restart.
-		pid_t old_pid, pid;
-		struct stat buf;
-		Application::SessionPtr session1 = pool->get("stub/railsapp");
-		Application::SessionPtr session2 = pool2->get("stub/railsapp");
-		session1.reset();
-		session2.reset();
+		// If tmp/restart.txt was present, and its timestamp changed
+		// since the last check, then the applications under app_root
+		// should still be restarted. However, a subsequent get()
+		// should not result in a restart.
+		pid_t old_pid;
 		
 		system("mkdir -p stub/railsapp/tmp/restart.txt");
-		
-		old_pid = pool->get("stub/railsapp")->getPid();
 		try {
-			ensure("Restart file has not been deleted",
-				stat("stub/railsapp/tmp/restart.txt", &buf) == 0);
-			system("rmdir stub/railsapp/tmp/restart.txt");
+			Application::SessionPtr session = pool->get("stub/railsapp");
+			old_pid = session->getPid();
+			session.reset();
+			
+			struct utimbuf buf;
+			buf.actime = time(NULL) - 10;
+			buf.modtime = time(NULL) - 10;
+			utime("stub/railsapp/tmp/restart.txt", &buf);
+			
+			session = pool->get("stub/railsapp");
+			ensure("The app was restarted", session->getPid() != old_pid);
+			old_pid = session->getPid();
+			session.reset();
+			
+			session = pool->get("stub/railsapp");
+			ensure_equals("The app was not restarted",
+				old_pid, session->getPid());
 		} catch (...) {
 			system("rmdir stub/railsapp/tmp/restart.txt");
 			throw;
 		}
-		
-		pid = pool->get("stub/railsapp")->getPid();
-		ensure_equals("The app was not restarted", pid, old_pid);
-		unlink("stub/railsapp/tmp/restart.txt");
-	}
-	
-	TEST_METHOD(14) {
-		// If tmp/restart.txt is present, but cannot be deleted, then
-		// the applications under app_root should still be restarted.
-		// A subsequent get() should only restart if we've changed
-		// restart.txt's mtime.
-		pid_t old_pid;
-		Application::SessionPtr session1 = pool->get("stub/railsapp");
-		Application::SessionPtr session2 = pool2->get("stub/railsapp");
-		session1.reset();
-		session2.reset();
-		
-		setenv("nextRestartTxtDeletionShouldFail", "1", 1);
-		system("touch stub/railsapp/tmp/restart.txt");
-		old_pid = pool->get("stub/railsapp")->getPid();
-		ensure_equals(pool->getActive(), 0u);
-		ensure_equals(pool->getCount(), 1u);
-
-		sleep(1); // Allow the next mtime to be different.
-		system("touch stub/railsapp/tmp/restart.txt");
-		ensure("The app is restarted, and the last app instance was not reused",
-			pool2->get("stub/railsapp")->getPid() != old_pid);
-		
-		unlink("stub/railsapp/tmp/restart.txt");
 	}
 	
 	TEST_METHOD(15) {
@@ -338,11 +324,18 @@
 		system("cp -f stub/railsapp/app/controllers/bar_controller_2.rb "
 			"stub/railsapp/app/controllers/bar_controller.rb");
 		system("touch stub/railsapp/tmp/restart.txt");
-		session = pool->get("stub/railsapp");
-		session->sendHeaders(createRequestHeaders("/bar"));
-		result = readAll(session->getStream());
-		ensure("App code has been reloaded", result.find("bar 2!") != string::npos);
+		try {
+			session = pool->get("stub/railsapp");
+			session->sendHeaders(createRequestHeaders("/bar"));
+			result = readAll(session->getStream());
+			ensure("App code has been reloaded", result.find("bar 2!") != string::npos);
+		} catch (...) {
+			unlink("stub/railsapp/app/controllers/bar_controller.rb");
+			unlink("touch stub/railsapp/tmp/restart.txt");
+			throw;
+		}
 		unlink("stub/railsapp/app/controllers/bar_controller.rb");
+		unlink("touch stub/railsapp/tmp/restart.txt");
 	}
 	
 	TEST_METHOD(16) {
