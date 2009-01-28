@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2009 Phusion
+ * Do not redistribute.
+ */
 #ifndef _PASSENGER_STATIC_STRING_H_
 #define _PASSENGER_STATIC_STRING_H_
 
