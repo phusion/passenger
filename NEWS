@@ -3,7 +3,8 @@
 - PassengerPoolIdleTime 0, thanks redmar
 - C++ backtraces
 - more aggressive I/O timeout enforcement
-- Solaris support, thanks to Alex Osborne and Jacob Harris and alex.kiernan
+- Solaris and Sparc support, thanks to Alex Osborne, Jacob Harris,
+  alex.kiernan and Alex Tomlins.
 - applications may now have a model named 'Passenger'
 - an '--auto' option to passenger-install-apache2-module
 - PassengerMaxRequests
