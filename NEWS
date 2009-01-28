@@ -19,3 +19,5 @@
 - Error pages now return HTTP 500 errors.
 - PassengerUseGlobalQueue is now per-virtual host.
 - always_restart.txt
+- Close the session before mod_xsendfile kicks in, so that the backend
+  process is released while mod_xsendfile is working.

@@ -19,18 +19,34 @@
  */
 #include "Bucket.h"
 
+using namespace Passenger;
+
+static void bucket_destroy(void *data);
 static apr_status_t bucket_read(apr_bucket *a, const char **str, apr_size_t *len, apr_read_type_e block);
 
 static const apr_bucket_type_t apr_bucket_type_passenger_pipe = {
 	"PASSENGER_PIPE",
 	5,
 	apr_bucket_type_t::APR_BUCKET_DATA, 
-	apr_bucket_destroy_noop,
+	bucket_destroy,
 	bucket_read,
 	apr_bucket_setaside_notimpl,
 	apr_bucket_split_notimpl,
 	apr_bucket_copy_notimpl
 };
+
+struct BucketData {
+	Application::SessionPtr session;
+	apr_file_t *pipe;
+};
+
+static void
+bucket_destroy(void *data) {
+	BucketData *bucket_data = (BucketData *) data;
+	if (data != NULL) {
+		delete bucket_data;
+	}
+}
 
 static apr_status_t
 bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type_e block) {
@@ -38,7 +54,8 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 	char *buf;
 	apr_status_t ret;
 
-	pipe = (apr_file_t *) bucket->data;
+	BucketData *data = (BucketData *) bucket->data;
+	pipe = data->pipe;
 
 	*str = NULL;
 	*len = APR_BUCKET_BUFF_SIZE;
@@ -50,6 +67,8 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 
 	if (ret != APR_SUCCESS && ret != APR_EOF) {
 		// ... we might want to set an error flag here ...
+		delete data;
+		bucket->data = NULL;
 		apr_bucket_free(buf);
 		return ret;
 	}
@@ -59,13 +78,22 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 	 */
 	if (*len > 0) {
 		apr_bucket_heap *h;
+		
+		*str = buf;
+		bucket->data = NULL;
+		
 		/* Change the current bucket to refer to what we read */
 		bucket = apr_bucket_heap_make(bucket, buf, *len, apr_bucket_free);
 		h = (apr_bucket_heap *) bucket->data;
 		h->alloc_len = APR_BUCKET_BUFF_SIZE; /* note the real buffer size */
-		*str = buf;
-		APR_BUCKET_INSERT_AFTER(bucket, passenger_bucket_create(pipe, bucket->list));
+		APR_BUCKET_INSERT_AFTER(bucket, passenger_bucket_create(
+			data->session, pipe, bucket->list));
+		
+		delete data;
 	} else {
+		delete data;
+		bucket->data = NULL;
+		
 		apr_bucket_free(buf);
 		bucket = apr_bucket_immortal_make(bucket, "", 0);
 		*str = (const char *) bucket->data;
@@ -76,23 +104,27 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 	return APR_SUCCESS;
 }
 
-apr_bucket *
-passenger_bucket_make(apr_bucket *bucket, apr_file_t *pipe) {
+static apr_bucket *
+passenger_bucket_make(apr_bucket *bucket, Application::SessionPtr session, apr_file_t *pipe) {
+	BucketData *data = new BucketData();
+	data->session  = session;
+	data->pipe     = pipe;
+	
 	bucket->type   = &apr_bucket_type_passenger_pipe;
 	bucket->length = (apr_size_t)(-1);
 	bucket->start  = -1;
-	bucket->data   = pipe;
+	bucket->data   = data;
 	return bucket;
 }
 
 apr_bucket *
-passenger_bucket_create(apr_file_t *pipe, apr_bucket_alloc_t *list) {
+passenger_bucket_create(Application::SessionPtr session, apr_file_t *pipe, apr_bucket_alloc_t *list) {
 	apr_bucket *bucket;
 	
 	bucket = (apr_bucket *) apr_bucket_alloc(sizeof(*bucket), list);
 	APR_BUCKET_INIT(bucket);
 	bucket->free = apr_bucket_free;
 	bucket->list = list;
-	return passenger_bucket_make(bucket, pipe);
+	return passenger_bucket_make(bucket, session, pipe);
 }
 
