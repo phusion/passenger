@@ -611,14 +611,21 @@ private:
 		TRACE_POINT();
 		char filename[PATH_MAX];
 		int ret;
+		mode_t permissions;
 		
 		createPassengerTempDir();
+		
+		if (m_user.empty()) {
+			permissions = S_IRUSR | S_IWUSR;
+		} else {
+			permissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
+		}
 		
 		snprintf(filename, sizeof(filename), "%s/status.fifo",
 				getPassengerTempDir().c_str());
 		filename[PATH_MAX - 1] = '\0';
 		do {
-			ret = mkfifo(filename, S_IRUSR | S_IWUSR);
+			ret = mkfifo(filename, permissions);
 		} while (ret == -1 && errno == EINTR);
 		if (ret == -1 && errno != EEXIST) {
 			int e = errno;
@@ -628,6 +635,12 @@ private:
 			statusReportFIFO = "";
 		} else {
 			statusReportFIFO = filename;
+			
+			// It seems that the permissions passed to mkfifo()
+			// aren't respected, so here we chmod the file.
+			do {
+				ret = chmod(filename, permissions);
+			} while (ret == -1 && errno == EINTR);
 		}
 	}
 

@@ -46,6 +46,8 @@
 #include <sys/resource.h>
 #include <unistd.h>
 #include <signal.h>
+#include <errno.h>
+#include <pwd.h>
 #include <string>
 #include <sstream>
 #include <vector>
@@ -85,6 +87,7 @@ private:
 	boost::mutex lock;
 	string statusReportFIFO;
 	shared_ptr<oxt::thread> statusReportThread;
+	string user;
 	
 	void statusReportThreadMain() {
 		TRACE_POINT();
@@ -106,6 +109,10 @@ private:
 				UPDATE_TRACE_POINT();
 				FILE *f = syscalls::fopen(statusReportFIFO.c_str(), "w");
 				if (f == NULL) {
+					int e = errno;
+					P_ERROR("Cannot open status report FIFO " <<
+						statusReportFIFO << ": " <<
+						strerror(e) << " (" << e << ")");
 					break;
 				}
 				
@@ -140,6 +147,40 @@ private:
 			} while (ret == -1 && errno == EINTR);
 		}
 	}
+	
+	/**
+	 * Lowers this process's privilege to that of <em>username</em>.
+	 */
+	void lowerPrivilege(const string &username) {
+		struct passwd *entry = getpwnam(username.c_str());
+		if (entry != NULL) {
+			if (initgroups(username.c_str(), entry->pw_gid) != 0) {
+				int e = errno;
+				P_WARN("WARNING: Unable to lower ApplicationPoolServerExecutable's "
+					"privilege to that of user '" << username <<
+					"': cannot set supplementary groups for this "
+					"user: " << strerror(e) << " (" << e << ")");
+			}
+			if (setgid(entry->pw_gid) != 0) {
+				int e = errno;
+				P_WARN("WARNING: Unable to lower ApplicationPoolServerExecutable's "
+					"privilege to that of user '" << username <<
+					"': cannot set group ID: " << strerror(e) <<
+					" (" << e << ")");
+			}
+			if (setuid(entry->pw_uid) != 0) {
+				int e = errno;
+				P_WARN("WARNING: Unable to lower ApplicationPoolServerExecutable's "
+					"privilege to that of user '" << username <<
+					"': cannot set user ID: " << strerror(e) <<
+					" (" << e << ")");
+			}
+		} else {
+			P_WARN("WARNING: Unable to lower ApplicationPoolServerExecutable's "
+				"privilege to that of user '" << username <<
+				"': user does not exist.");
+		}
+	}
 
 public:
 	Server(int serverSocket,
@@ -154,6 +195,7 @@ public:
 		Passenger::setLogLevel(logLevel);
 		this->serverSocket = serverSocket;
 		this->statusReportFIFO = statusReportFIFO;
+		this->user = user;
 	}
 	
 	~Server() {
@@ -480,6 +522,10 @@ Server::start() {
 					1024 * 128
 				)
 			);
+		}
+		
+		if (!user.empty()) {
+			lowerPrivilege(user);
 		}
 		
 		while (!this_thread::interruption_requested()) {
