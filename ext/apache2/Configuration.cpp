@@ -127,6 +127,7 @@ passenger_config_create_server(apr_pool_t *p, server_rec *s) {
 	config->userSwitching = true;
 	config->userSwitchingSpecified = false;
 	config->defaultUser = NULL;
+	config->tempDir = NULL;
 	return config;
 }
 
@@ -148,6 +149,7 @@ passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
 	config->userSwitching = (add->userSwitchingSpecified) ? add->userSwitching : base->userSwitching;
 	config->userSwitchingSpecified = base->userSwitchingSpecified || add->userSwitchingSpecified;
 	config->defaultUser = (add->defaultUser == NULL) ? base->defaultUser : add->defaultUser;
+	config->tempDir = (add->tempDir == NULL) ? base->tempDir : add->tempDir;
 	return config;
 }
 
@@ -170,6 +172,7 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 		final->userSwitching = (config->userSwitchingSpecified) ? config->userSwitching : final->userSwitching;
 		final->userSwitchingSpecified = final->userSwitchingSpecified || config->userSwitchingSpecified;
 		final->defaultUser = (final->defaultUser != NULL) ? final->defaultUser : config->defaultUser;
+		final->tempDir = (final->tempDir != NULL) ? final->tempDir : config->tempDir;
 	}
 	for (s = main_server; s != NULL; s = s->next) {
 		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
@@ -296,6 +299,14 @@ cmd_passenger_default_user(cmd_parms *cmd, void *dummy, const char *arg) {
 	ServerConfig *config = (ServerConfig *) ap_get_module_config(
 		cmd->server->module_config, &passenger_module);
 	config->defaultUser = arg;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_temp_dir(cmd_parms *cmd, void *dummy, const char *arg) {
+	ServerConfig *config = (ServerConfig *) ap_get_module_config(
+		cmd->server->module_config, &passenger_module);
+	config->tempDir = arg;
 	return NULL;
 }
 
@@ -525,6 +536,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The user that Rails/Rack applications must run as when user switching fails or is disabled."),
+	AP_INIT_TAKE1("PassengerTempDir",
+		(Take1Func) cmd_passenger_temp_dir,
+		NULL,
+		RSRC_CONF,
+		"The temp directory that Passenger should use."),
 	AP_INIT_TAKE1("PassengerMaxRequests",
 		(Take1Func) cmd_passenger_max_requests,
 		NULL,

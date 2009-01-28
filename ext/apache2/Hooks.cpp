@@ -702,6 +702,11 @@ public:
 		const char *ruby, *user;
 		string applicationPoolServerExe, spawnServer;
 		
+		if (config->tempDir != NULL) {
+			setenv("TMPDIR", config->tempDir, 1);
+		} else {
+			unsetenv("TMPDIR");
+		}
 		/*
 		 * As described in the comment in init_module, upon (re)starting
 		 * Apache, the Hooks constructor is called twice. We unset
