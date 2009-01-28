@@ -93,6 +93,7 @@ shared_examples_for "MyCook(tm) beta" do
 		begin
 			controller = "#{@stub.app_root}/app/controllers/test_controller.rb"
 			restart_file = "#{@stub.app_root}/tmp/restart.txt"
+			now = Time.now
 			
 			File.open(controller, 'w') do |f|
 				f.write %q{
@@ -104,9 +105,10 @@ shared_examples_for "MyCook(tm) beta" do
 					end
 				}
 			end
-			File.open(restart_file, 'w') do end
+			File.open(restart_file, 'w').close
+			File.utime(now - 10, now - 10, restart_file)
 			get('/test').should == "foo"
-		
+			
 			File.open(controller, 'w') do |f|
 				f.write %q{
 					class TestController < ApplicationController
@@ -118,7 +120,7 @@ shared_examples_for "MyCook(tm) beta" do
 				}
 			end
 
-			File.open(restart_file, 'w') do end
+			File.utime(now - 5, now - 5, restart_file)
 			get('/test').should == 'bar'
 		ensure
 			File.unlink(controller) rescue nil
@@ -184,7 +186,6 @@ shared_examples_for "HelloWorld Rack application" do
 		})
 		File.new("#{@stub.app_root}/tmp/restart.txt", "w").close
 		get('/').should == "changed"
-		File.exist?("#{@stub.app_root}/tmp/restart.txt").should == false
 	end
 	
 	if Process.uid == 0
@@ -226,7 +227,6 @@ shared_examples_for "HelloWorld WSGI application" do
 		File.write("#{@stub.app_root}/passenger_wsgi.py", code)
 		File.new("#{@stub.app_root}/tmp/restart.txt", "w").close
 		get('/').should == "changed"
-		File.exist?("#{@stub.app_root}/tmp/restart.txt").should == false
 	end
 	
 	if Process.uid == 0

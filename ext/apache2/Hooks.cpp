@@ -71,26 +71,6 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
  */
 class Hooks {
 private:
-	struct Container {
-		Application::SessionPtr session;
-		
-		static apr_status_t cleanup(void *p) {
-			try {
-				this_thread::disable_interruption di;
-				this_thread::disable_syscall_interruption dsi;
-				delete (Container *) p;
-			} catch (const thread_interrupted &) {
-				P_TRACE(3, "A system call was interrupted during closing "
-					"of a session. Apache is probably restarting or "
-					"shutting down.");
-			} catch (const exception &e) {
-				P_TRACE(3, "Exception during closing of a session: " <<
-					e.what());
-			}
-			return APR_SUCCESS;
-		}
-	};
-	
 	struct AprDestructable {
 		virtual ~AprDestructable() { }
 		
@@ -461,20 +441,18 @@ private:
 			UPDATE_TRACE_POINT();
 			apr_file_t *readerPipe = NULL;
 			int reader = session->getStream();
+			pid_t backendPid = session->getPid();
 			apr_os_pipe_put(&readerPipe, &reader, r->pool);
 			apr_file_pipe_timeout_set(readerPipe, r->server->timeout);
 
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
-			b = passenger_bucket_create(readerPipe, r->connection->bucket_alloc);
+			b = passenger_bucket_create(session, readerPipe, r->connection->bucket_alloc);
+			session.reset();
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 
 			b = apr_bucket_eos_create(r->connection->bucket_alloc);
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 
-			Container *container = new Container();
-			container->session = session;
-			apr_pool_cleanup_register(r->pool, container, Container::cleanup, apr_pool_cleanup_null);
-			
 			// I know the size because I read util_script.c's source. :-(
 			char backendData[MAX_STRING_LEN];
 			int result = ap_scan_script_header_err_brigade(r, bb, backendData);
@@ -484,11 +462,11 @@ private:
 				ap_pass_brigade(r->output_filters, bb);
 				return OK;
 			} else if (backendData[0] == '\0') {
-				P_ERROR("Backend process " << session->getPid() <<
+				P_ERROR("Backend process " << backendPid <<
 					" did not return a valid HTTP response. It returned no data.");
 				return HTTP_INTERNAL_SERVER_ERROR;
 			} else {
-				P_ERROR("Backend process " << session->getPid() <<
+				P_ERROR("Backend process " << backendPid <<
 					" did not return a valid HTTP response. It returned: [" <<
 					backendData << "]");
 				return HTTP_INTERNAL_SERVER_ERROR;

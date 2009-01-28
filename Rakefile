@@ -188,6 +188,7 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 			'ext/common/MessageChannel.h',
 			'ext/common/SpawnManager.h',
 			'ext/common/PoolOptions.h',
+			'ext/common/FileChecker.h',
 			boost_oxt_library,
 			static_library
 		]) do
@@ -236,6 +237,7 @@ end
 			ext/common/Application.h
 			ext/common/MessageChannel.h
 			ext/common/PoolOptions.h
+			ext/common/FileChecker.h
 			ext/common/Utils.h)
 	}
 	APACHE2_OBJECTS = APACHE2_INPUT_FILES.keys
@@ -261,10 +263,8 @@ end
 		APXS2.nil?      and raise "Could not find 'apxs' or 'apxs2'."
 		APACHE2CTL.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
 		HTTPD.nil?      and raise "Could not find the Apache web server binary."
-		if PlatformInfo.apr_config_needed?
-			APR_FLAGS.nil?  and raise "Could not find Apache Portable Runtime (APR)."
-			APU_FLAGS.nil?  and raise "Could not find Apache Portable Runtime Utility (APU)."
-		end
+		APR_FLAGS.nil?  and raise "Could not find Apache Portable Runtime (APR)."
+		APU_FLAGS.nil?  and raise "Could not find Apache Portable Runtime Utility (APU)."
 		
 		# apxs totally sucks. We couldn't get it working correctly
 		# on MacOS X (it had various problems with building universal
@@ -391,6 +391,7 @@ end
 			ext/common/StandardApplicationPool.h
 			ext/common/SpawnManager.h
 			ext/common/PoolOptions.h
+			ext/common/FileChecker.h
 			ext/common/Application.h),
 		'test/PoolOptionsTest.o' => %w(
 			test/PoolOptionsTest.cpp
@@ -405,6 +406,9 @@ end
 		'test/HttpStatusExtractorTest.o' => %w(
 			test/HttpStatusExtractorTest.cpp
 			ext/nginx/HttpStatusExtractor.h),
+		'test/FileCheckerTest.o' => %w(
+			test/FileCheckerTest.cpp
+			ext/common/FileChecker.h),
 		'test/UtilsTest.o' => %w(
 			test/UtilsTest.cpp
 			ext/common/Utils.h)

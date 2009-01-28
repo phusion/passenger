@@ -3,7 +3,8 @@
 - PassengerPoolIdleTime 0, thanks redmar
 - C++ backtraces
 - more aggressive I/O timeout enforcement
-- Solaris support, thanks to Alex Osborne and Jacob Harris and alex.kiernan
+- Solaris and Sparc support, thanks to Alex Osborne, Jacob Harris,
+  alex.kiernan and Alex Tomlins.
 - applications may now have a model named 'Passenger'
 - an '--auto' option to passenger-install-apache2-module
 - PassengerMaxRequests
@@ -19,3 +20,5 @@
 - Error pages now return HTTP 500 errors.
 - PassengerUseGlobalQueue is now per-virtual host.
 - always_restart.txt
+- Close the session before mod_xsendfile kicks in, so that the backend
+  process is released while mod_xsendfile is working.
