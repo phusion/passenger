@@ -18,6 +18,8 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) << "/..")
+$LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
+require 'passenger/version'
 
 def help
 	puts "Tool for showing Passenger configuration information."
@@ -32,8 +34,7 @@ case ARGV[0]
 when "--root"
 	puts PASSENGER_ROOT
 when "--version"
-	File.read("#{PASSENGER_ROOT}/Rakefile") =~ /^PACKAGE_VERSION = "(.*)"/
-	puts $1
+	puts Passenger::VERSION_STRING
 else
 	help
 	exit 1
