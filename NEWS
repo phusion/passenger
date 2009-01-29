@@ -23,3 +23,5 @@
 - Close the session before mod_xsendfile kicks in, so that the backend
   process is released while mod_xsendfile is working.
 - Configurable temp dir.
+- Better error messages, more error checking, and other small things
+  which makes your live easier.
