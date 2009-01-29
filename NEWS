@@ -4,7 +4,7 @@
 - C++ backtraces
 - more aggressive I/O timeout enforcement
 - Solaris and Sparc support, thanks to Alex Osborne, Jacob Harris,
-  alex.kiernan and Alex Tomlins.
+  alex.kiernan, Alex Tomlins and J Aaron Farr.
 - applications may now have a model named 'Passenger'
 - an '--auto' option to passenger-install-apache2-module
 - PassengerMaxRequests

@@ -125,6 +125,7 @@ private
 			if RUBY_PLATFORM =~ /solaris/ # TODO: Add support for people using SunStudio
 				# The big problem is Coolstack apxs includes a bunch of solaris -x directives.
 				flags = flags.split.reject {|f| f =~ /^\-x/}.join(' ')
+				flags = flags.split.reject {|f| f =~ /^\-Xa/}.join(' ')
 			end
 
 			return flags
@@ -163,6 +164,10 @@ private
 			flags = `#{APR_CONFIG} --cppflags --includes`.strip
 			libs = `#{APR_CONFIG} --link-ld`.strip
 			flags.gsub!(/-O\d? /, '')
+			if RUBY_PLATFORM =~ /solaris/
+				# Remove flags not supported by GCC
+				flags = flags.split(/ +/).reject{ |f| f =~ /^\-mt/ }.join(' ')
+			end
 			return [flags, libs]
 		end
 	end
