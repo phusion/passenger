@@ -289,7 +289,6 @@ shutdown_helper_server(ngx_cycle_t *cycle)
     ngx_memzero(command, sizeof(command));
     if (ngx_snprintf(command, sizeof(command), "rm -rf \"%s\"",
                      passenger_temp_dir) != NULL) {
-    //if (ngx_snprintf(command, sizeof(command), "xterm") != NULL) {
         ngx_log_debug1(NGX_LOG_DEBUG_HTTP, cycle->log, 0,
                        "Removing Passenger temp folder with command: %s",
                        command);
