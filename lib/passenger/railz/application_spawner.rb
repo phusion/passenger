@@ -148,7 +148,12 @@ class ApplicationSpawner < AbstractServer
 						lower_privilege('config/environment.rb', @lowest_user)
 					end
 					remove_phusion_passenger_namespace
-					require 'config/environment'
+
+					# require Rails' environment, using the same path as the original rails dispatcher,
+					# which normally does: require File.dirname(__FILE__) + "/../config/environment"
+					# thus avoiding the possibility of including the same file twice.
+					require 'public/../config/environment'
+
 					require 'dispatcher'
 				end
 				if success
