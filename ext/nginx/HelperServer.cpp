@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
+#include <pwd.h>
 
 #include <set>
 #include <vector>
@@ -124,13 +125,20 @@ private:
 	/** The application pool to which this Client object belongs to. */
 	StandardApplicationPoolPtr pool;
 	
-	/* This clients password. */
+	/** This client's password. */
 	string password;
 	
-	/* The server socket file descriptor. */
+	/** Whether privilege lowering should be used. */
+	bool lowerPrivilege;
+	
+	/** The user that spawned processes should run as, if initial attempt
+	 * at privilege lowering failed. */
+	string lowestUser;
+	
+	/** The server socket file descriptor. */
 	int serverSocket;
 	
-	/* This client thread. */
+	/** This client's thread. */
 	oxt::thread *thr;
 	
 	/**
@@ -394,6 +402,8 @@ private:
 			options.useGlobalQueue = parser.getHeader("PASSENGER_USE_GLOBAL_QUEUE") == "true";
 			options.environment    = parser.getHeader("PASSENGER_ENVIRONMENT");
 			options.spawnMethod    = parser.getHeader("PASSENGER_SPAWN_METHOD");
+			options.lowerPrivilege = lowerPrivilege;
+			options.lowestUser     = lowestUser;
 			
 			try {
 				Application::SessionPtr session(pool->get(options));
@@ -475,13 +485,19 @@ public:
 	 * @param pool The application pool where this client belongs to.
 	 * @param password The password that is required to connect to this client handler.
 	 *   This value is determined and assigned by the server.
+	 * @param lowerPrivilege Whether privilege lowering should be used.
+	 * @param lowestUser The user that spawned processes should run as, if
+	 *   initial attempt at privilege lowering failed.
 	 * @param serverSocket The server socket to accept this clients connection from.
 	 */
 	Client(unsigned int number, StandardApplicationPoolPtr &pool,
-	       const string &password, int serverSocket) {
+	       const string &password, bool lowerPrivilege,
+	       const string &lowestUser, int serverSocket) {
 		this->number = number;
 		this->pool = pool;
 		this->password = password;
+		this->lowerPrivilege = lowerPrivilege;
+		this->lowestUser = lowestUser;
 		this->serverSocket = serverSocket;
 		thr = new oxt::thread(
 			bind(&Client::threadMain, this),
@@ -517,6 +533,8 @@ private:
 	string password;
 	int adminPipe;
 	int serverSocket;
+	bool userSwitching;
+	string defaultUser;
 	unsigned int numberOfThreads;
 	set<ClientPtr> clients;
 	StandardApplicationPoolPtr pool;
@@ -566,10 +584,12 @@ private:
 			throw SystemException(message, e);
 		}
 		
-		chmod(socketName.c_str(), S_ISVTX |
-			S_IRUSR | S_IWUSR | S_IXUSR |
-			S_IRGRP | S_IWGRP | S_IXGRP |
-			S_IROTH | S_IWOTH | S_IXOTH);
+		do {
+			ret = chmod(socketName.c_str(), S_ISVTX |
+				S_IRUSR | S_IWUSR | S_IXUSR |
+				S_IRGRP | S_IWGRP | S_IXGRP |
+				S_IROTH | S_IWOTH | S_IXOTH);
+		} while (ret == -1 && errno == EINTR);
 	}
 	
 	/**
@@ -581,8 +601,42 @@ private:
 	void startClientHandlerThreads() {
 		for (unsigned int i = 0; i < numberOfThreads; i++) {
 			ClientPtr client(new Client(i + 1, pool, password,
-				serverSocket));
+				userSwitching, defaultUser, serverSocket));
 			clients.insert(client);
+		}
+	}
+	
+	/**
+	 * Lowers this process's privilege to that of <em>username</em>.
+	 */
+	void lowerPrivilege(const string &username) {
+		struct passwd *entry = getpwnam(username.c_str());
+		if (entry != NULL) {
+			if (initgroups(username.c_str(), entry->pw_gid) != 0) {
+				int e = errno;
+				P_WARN("WARNING: Unable to lower Passenger HelperServer's "
+					"privilege to that of user '" << username <<
+					"': cannot set supplementary groups for this "
+					"user: " << strerror(e) << " (" << e << ")");
+			}
+			if (setgid(entry->pw_gid) != 0) {
+				int e = errno;
+				P_WARN("WARNING: Unable to lower Passenger HelperServer's "
+					"privilege to that of user '" << username <<
+					"': cannot set group ID: " << strerror(e) <<
+					" (" << e << ")");
+			}
+			if (setuid(entry->pw_uid) != 0) {
+				int e = errno;
+				P_WARN("WARNING: Unable to lower Passenger HelperServer's "
+					"privilege to that of user '" << username <<
+					"': cannot set user ID: " << strerror(e) <<
+					" (" << e << ")");
+			}
+		} else {
+			P_WARN("WARNING: Unable to lower Passenger HelperServer's "
+				"privilege to that of user '" << username <<
+				"': user does not exist.");
 		}
 	}
 
@@ -601,16 +655,29 @@ public:
 	 *   a single Rails application may occupy.
 	 * @param poolIdleTime The maximum number of seconds that an application may be idle before
 	 *   it gets terminated.
-	 * @see ServerConfig
+	 * @param userSwitching Whether user switching should be used.
+	 * @param defaultUser If user switching is turned on, then this is the
+	 *   username that a process should lower its privilege to if the
+	 *   initial attempt at user switching fails. If user switching is off,
+	 *   then this is the username that HelperServer and all spawned
+	 *   processes should run as.
 	 */
 	Server(const string &password, const string &rootDir, const string &ruby,
 	       int adminPipe, unsigned int maxPoolSize,
-	       unsigned int maxInstancesPerApp,
-	       unsigned int poolIdleTime) {
-		this->password  = password;
-		this->adminPipe = adminPipe;
-		numberOfThreads = maxPoolSize * 4;
+	       unsigned int maxInstancesPerApp, unsigned int poolIdleTime,
+	       bool userSwitching, const string &defaultUser) {
+		this->password      = password;
+		this->adminPipe     = adminPipe;
+		this->userSwitching = userSwitching;
+		this->defaultUser   = defaultUser;
+		numberOfThreads     = maxPoolSize * 4;
 		createPassengerTempDir();
+		
+		startListening();
+		
+		if (!userSwitching) {
+			lowerPrivilege(defaultUser);
+		}
 		
 		pool = ptr(new StandardApplicationPool(
 			rootDir + "/bin/passenger-spawn-server",
@@ -619,8 +686,6 @@ public:
 		pool->setMax(maxPoolSize);
 		pool->setMaxPerApp(maxInstancesPerApp);
 		pool->setMaxIdleTime(poolIdleTime);
-		
-		startListening();
 	}
 	
 	~Server() {
@@ -715,6 +780,8 @@ main(int argc, char *argv[]) {
 		int maxPoolSize = atoi(argv[5]);
 		int maxInstancesPerApp = atoi(argv[6]);
 		int poolIdleTime       = atoi(argv[7]);
+		bool userSwitching = strcmp(argv[8], "1") == 0;
+		string defaultUser = argv[9];
 		
 		setLogLevel(logLevel);
 		P_DEBUG("Passenger helper server started on PID " << getpid());
@@ -723,7 +790,8 @@ main(int argc, char *argv[]) {
 		P_TRACE(2, "Password received.");
 		
 		Server(password, rootDir, ruby, adminPipe, maxPoolSize,
-			maxInstancesPerApp, poolIdleTime).start();
+			maxInstancesPerApp, poolIdleTime, userSwitching,
+			defaultUser).start();
 	} catch (const tracable_exception &e) {
 		P_ERROR(e.what() << "\n" << e.backtrace());
 		return 1;

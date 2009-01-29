@@ -95,6 +95,7 @@ start_helper_server(ngx_cycle_t *cycle)
     u_char                 max_pool_size_string[10];
     u_char                 max_instances_per_app_string[10];
     u_char                 pool_idle_time_string[10];
+    u_char                 user_switching_string[2];
     int                    p[2], e;
     pid_t                  pid;
     long                   i;
@@ -130,6 +131,10 @@ start_helper_server(ngx_cycle_t *cycle)
     ngx_memzero(pool_idle_time_string, sizeof(pool_idle_time_string));
     ngx_snprintf(pool_idle_time_string, sizeof(pool_idle_time_string), "%d",
                  (int) main_conf->pool_idle_time);
+    
+    ngx_memzero(user_switching_string, sizeof(user_switching_string));
+    ngx_snprintf(user_switching_string, 1, "%d",
+                 (int) main_conf->user_switching);
     
     /* Generate random password for the helper server. */
     
@@ -194,6 +199,8 @@ start_helper_server(ngx_cycle_t *cycle)
                max_pool_size_string,
                max_instances_per_app_string,
                pool_idle_time_string,
+               user_switching_string,
+               main_conf->default_user.data,
                NULL);
         e = errno;
         fprintf(stderr, "*** Could not start the Passenger helper server (%s): "

@@ -61,6 +61,9 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->max_pool_size = (ngx_uint_t) NGX_CONF_UNSET;
     conf->max_instances_per_app = (ngx_uint_t) NGX_CONF_UNSET;
     conf->pool_idle_time = (ngx_uint_t) NGX_CONF_UNSET;
+    conf->user_switching = NGX_CONF_UNSET;
+    conf->default_user.data = NULL;
+    conf->default_user.len  = 0;
     
     return conf;
 }
@@ -96,6 +99,15 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     
     if (conf->pool_idle_time == (ngx_uint_t) NGX_CONF_UNSET) {
         conf->pool_idle_time = 300;
+    }
+    
+    if (conf->user_switching == NGX_CONF_UNSET) {
+        conf->user_switching = 1;
+    }
+    
+    if (conf->default_user.len == 0) {
+        conf->default_user.len  = sizeof("nobody") - 1;
+        conf->default_user.data = (u_char *) "nobody";
     }
     
     return NGX_CONF_OK;
@@ -850,6 +862,20 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_num_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, pool_idle_time),
+      NULL },
+
+    { ngx_string("passenger_user_switching"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_flag_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, user_switching),
+      NULL },
+
+    { ngx_string("passenger_default_user"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, default_user),
       NULL },
 
     { ngx_string("rails_env"),
