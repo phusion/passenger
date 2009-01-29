@@ -228,6 +228,11 @@
 			 */
 			const char *defaultUser;
 			
+			/** The temp directory that Passenger should use. NULL
+			 * means unspecified.
+			 */
+			const char *tempDir;
+			
 			const char *getDefaultUser() const {
 				if (defaultUser != NULL) {
 					return defaultUser;

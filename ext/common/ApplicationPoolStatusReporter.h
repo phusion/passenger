@@ -66,6 +66,10 @@ private:
 				UPDATE_TRACE_POINT();
 				FILE *f = syscalls::fopen(filename, "w");
 				if (f == NULL) {
+					int e = errno;
+					P_ERROR("Cannot open status report FIFO " <<
+						filename << ": " <<
+						strerror(e) << " (" << e << ")");
 					break;
 				}
 				
@@ -96,11 +100,14 @@ public:
 	 * Creates a new ApplicationPoolStatusReporter.
 	 *
 	 * @param pool The application pool to monitor.
+	 * @param permissions The permissions with which the FIFO should
+	 *        be created.
 	 * @throws SystemError An error occurred while creating the FIFO.
 	 * @throws boost::thread_resource_error Something went wrong during
 	 *     creation of the thread.
 	 */
-	ApplicationPoolStatusReporter(StandardApplicationPoolPtr &pool) {
+	ApplicationPoolStatusReporter(StandardApplicationPoolPtr &pool,
+	                              mode_t permissions = S_IRUSR | S_IWUSR) {
 		int ret;
 		
 		this->pool = pool;
@@ -111,7 +118,7 @@ public:
 		filename[PATH_MAX - 1] = '\0';
 		
 		do {
-			ret = mkfifo(filename, S_IRUSR | S_IWUSR);
+			ret = mkfifo(filename, permissions);
 		} while (ret == -1 && errno == EINTR);
 		if (ret == -1 && errno != EEXIST) {
 			int e = errno;
@@ -120,6 +127,12 @@ public:
 			message.append("'");
 			throw SystemException(message, e);
 		}
+		
+		// It seems that the permissions passed to mkfifo()
+		// aren't respected, so here we chmod the file.
+		do {
+			ret = chmod(filename, permissions);
+		} while (ret == -1 && errno == EINTR);
 		
 		thr = new oxt::thread(
 			bind(&ApplicationPoolStatusReporter::threadMain, this),

@@ -208,6 +208,20 @@ public:
 };
 
 /**
+ * A generic runtime exception.
+ *
+ * @ingroup Exceptions
+ */
+class RuntimeException: public oxt::tracable_exception {
+private:
+	string msg;
+public:
+	RuntimeException(const string &message): msg(message) {}
+	virtual ~RuntimeException() throw() {}
+	virtual const char *what() const throw() { return msg.c_str(); }
+};
+
+/**
  * The application pool is too busy and cannot fulfill a get() request.
  *
  * @ingroup Exceptions

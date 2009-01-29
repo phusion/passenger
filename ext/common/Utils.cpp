@@ -212,7 +212,7 @@ escapeForXml(const string &input) {
 
 const char *
 getTempDir() {
-	const char *temp_dir = getenv("TMP");
+	const char *temp_dir = getenv("TMPDIR");
 	if (temp_dir == NULL || *temp_dir == '\0') {
 		temp_dir = "/tmp";
 	}

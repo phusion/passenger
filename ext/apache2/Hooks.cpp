@@ -637,21 +637,38 @@ private:
 	}
 	
 	shared_ptr<TempFile> receiveRequestBody(request_rec *r) {
+		TRACE_POINT();
 		shared_ptr<TempFile> tempFile(new TempFile());
 		char buf[1024 * 32];
 		apr_off_t len;
+		size_t total_written = 0;
 		
 		while ((len = ap_get_client_block(r, buf, sizeof(buf))) > 0) {
 			size_t written = 0;
 			do {
 				size_t ret = fwrite(buf, 1, len - written, tempFile->handle);
-				if (ret == 0) {
-					throw SystemException("An error occured while writing "
-						"HTTP upload data to a temporary file",
-						errno);
+				if (ret <= 0 || fflush(tempFile->handle) == EOF) {
+					int e = errno;
+					string message("An error occured while "
+						"buffering HTTP upload data to "
+						"a temporary file in ");
+					message.append(getTempDir());
+					if (e == ENOSPC) {
+						message.append(". Please make sure "
+							"that this directory has "
+							"enough disk space for "
+							"buffering file uploads, "
+							"or set the 'PassengerTempDir' "
+							"directive to a directory "
+							"that has enough disk space.");
+						throw RuntimeException(message);
+					} else {
+						throw SystemException(message, e);
+					}
 				}
 				written += ret;
 			} while (written < (size_t) len);
+			total_written += written;
 		}
 		if (len == -1) {
 			throw IOException("An error occurred while receiving HTTP upload data.");
@@ -663,8 +680,9 @@ private:
 	}
 	
 	void sendRequestBody(request_rec *r, Application::SessionPtr &session, shared_ptr<TempFile> &uploadData) {
+		TRACE_POINT();
 		rewind(uploadData->handle);
-		P_DEBUG("Content-Length = " << lookupHeader(r, "Content-Length"));
+		P_DEBUG("File upload: Content-Length = " << lookupHeader(r, "Content-Length"));
 		while (!feof(uploadData->handle)) {
 			char buf[1024 * 32];
 			size_t size;
@@ -702,6 +720,11 @@ public:
 		const char *ruby, *user;
 		string applicationPoolServerExe, spawnServer;
 		
+		if (config->tempDir != NULL) {
+			setenv("TMPDIR", config->tempDir, 1);
+		} else {
+			unsetenv("TMPDIR");
+		}
 		/*
 		 * As described in the comment in init_module, upon (re)starting
 		 * Apache, the Hooks constructor is called twice. We unset
