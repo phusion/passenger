@@ -131,7 +131,8 @@ class APACHE2
 				PoolOptions.h Utils.h DirectoryMapper.h FileChecker.h),
 		'Utils.o'   => %w(Utils.cpp Utils.h),
 		'Logging.o' => %w(Logging.cpp Logging.h),
-		'SystemTime.o' => %w(SystemTime.c SystemTime.h)
+		'SystemTime.o' => %w(SystemTime.c SystemTime.h),
+		'CachedFileStat.o' => %w(CachedFileStat.c CachedFileStat.h)
 	}
 end
 
@@ -172,11 +173,12 @@ subdir 'ext/apache2' do
 		'PoolOptions.h',
 		'Utils.o',
 		'Logging.o',
-		'SystemTime.o'
+		'SystemTime.o',
+		'CachedFileStat.o'
 	] do
 		create_executable "ApplicationPoolServerExecutable",
 			'ApplicationPoolServerExecutable.cpp Utils.o Logging.o ' <<
-			'SystemTime.o',
+			'SystemTime.o CachedFileStat.o',
 			"-I.. #{CXXFLAGS} #{LDFLAGS} " <<
 			"../libboost_oxt.a " <<
 			"-lpthread"
@@ -243,6 +245,9 @@ class TEST
 		'SystemTimeTest.o' => %w(SystemTimeTest.cpp
 			../ext/apache2/SystemTime.h
 			../ext/apache2/SystemTime.c),
+		'CachedFileStatTest.o' => %w(CachedFileStatTest.cpp
+			../ext/apache2/CachedFileStat.h
+			../ext/apache2/CachedFileStat.c),
 		'UtilsTest.o' => %w(UtilsTest.cpp ../ext/apache2/Utils.h)
 	}
 	
@@ -323,11 +328,13 @@ subdir 'test' do
 	  ['../ext/libboost_oxt.a',
 	   '../ext/apache2/Utils.o',
 	   '../ext/apache2/Logging.o',
-	   '../ext/apache2/SystemTime.o'] do
+	   '../ext/apache2/SystemTime.o',
+	   '../ext/apache2/CachedFileStat.o'] do
 		objects = TEST::AP2_OBJECTS.keys.join(' ') <<
 			" ../ext/apache2/Utils.o" <<
 			" ../ext/apache2/Logging.o" <<
-			" ../ext/apache2/SystemTime.o"
+			" ../ext/apache2/SystemTime.o " <<
+			" ../ext/apache2/CachedFileStat.o"
 		create_executable "Apache2ModuleTests", objects,
 			"#{LDFLAGS} #{APR_LIBS} #{MULTI_ARCH_FLAGS} " <<
 			"../ext/libboost_oxt.a " <<
