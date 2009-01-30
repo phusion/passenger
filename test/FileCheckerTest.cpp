@@ -1,5 +1,6 @@
 #include "tut.h"
 #include "FileChecker.h"
+#include "SystemTime.h"
 #include <stdio.h>
 #include <utime.h>
 
@@ -13,6 +14,7 @@ namespace tut {
 		
 		~FileCheckerTest() {
 			unlink("test.txt");
+			passenger_system_time_release_forced_value();
 		}
 	};
 	
@@ -58,14 +60,20 @@ namespace tut {
 		ensure("Second check: unchanged", !checker.changed());
 	}
 	
-	/* TEST_METHOD(5) {
+	TEST_METHOD(5) {
 		// Throttling works.
-		FileChecker checker("test.txt", 1);
+		passenger_system_time_force_value(5);
+		
+		FileChecker checker("test.txt", 3);
 		checker.changed();
 		touch("test.txt");
 		ensure(!checker.changed());
-		sleep(2);
+		
+		passenger_system_time_force_value(6);
+		ensure(!checker.changed());
+		
+		passenger_system_time_force_value(8);
 		ensure(checker.changed());
 		ensure(!checker.changed());
-	} */
+	}
 }

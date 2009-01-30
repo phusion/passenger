@@ -157,7 +157,9 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 		'ext/common/Utils.h',
 		'ext/common/Utils.cpp',
 		'ext/common/Logging.h',
-		'ext/common/Logging.cpp'
+		'ext/common/Logging.cpp',
+		'ext/common/SystemTime.h',
+		'ext/common/SystemTime.c'
 	]) do
 		sh "mkdir -p #{objects_output_dir}"
 		
@@ -169,6 +171,7 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 			
 			compile_cxx("#{ext_dir}/common/Utils.cpp", flags)
 			compile_cxx("#{ext_dir}/common/Logging.cpp", flags)
+			compile_cxx("#{ext_dir}/common/SystemTime.c", flags)
 			
 			puts
 		end
@@ -237,7 +240,6 @@ end
 			ext/common/Application.h
 			ext/common/MessageChannel.h
 			ext/common/PoolOptions.h
-			ext/common/FileChecker.h
 			ext/common/Utils.h)
 	}
 	APACHE2_OBJECTS = APACHE2_INPUT_FILES.keys
@@ -409,6 +411,10 @@ end
 		'test/FileCheckerTest.o' => %w(
 			test/FileCheckerTest.cpp
 			ext/common/FileChecker.h),
+		'test/SystemTimeTest.o' => %w(
+			test/SystemTimeTest.cpp
+			ext/common/SystemTime.h
+			ext/common/SystemTime.c),
 		'test/UtilsTest.o' => %w(
 			test/UtilsTest.cpp
 			ext/common/Utils.h)

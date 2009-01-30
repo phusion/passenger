@@ -17,13 +17,13 @@ namespace tut {
 		
 		UtilsTest() {
 			oldPath = getenv("PATH");
-			unsetenv("TMP");
+			unsetenv("TMPDIR");
 			unsetenv("PHUSION_PASSENGER_TMP");
 		}
 		
 		~UtilsTest() {
 			setenv("PATH", oldPath.c_str(), 1);
-			unsetenv("TMP");
+			unsetenv("TMPDIR");
 			unsetenv("PHUSION_PASSENGER_TMP");
 		}
 	};
@@ -126,19 +126,19 @@ namespace tut {
 	/***** Test getTempDir() *****/
 	
 	TEST_METHOD(11) {
-		// It returns "/tmp" if the TMP environment is NULL.
+		// It returns "/tmp" if the TMPDIR environment is NULL.
 		ensure_equals(string(getTempDir()), "/tmp");
 	}
 	
 	TEST_METHOD(12) {
-		// It returns "/tmp" if the TMP environment is an empty string.
-		setenv("TMP", "", 1);
+		// It returns "/tmp" if the TMPDIR environment is an empty string.
+		setenv("TMPDIR", "", 1);
 		ensure_equals(string(getTempDir()), "/tmp");
 	}
 	
 	TEST_METHOD(13) {
-		// It returns the value of the TMP environment if it is not NULL and not empty.
-		setenv("TMP", "/foo", 1);
+		// It returns the value of the TMPDIR environment if it is not NULL and not empty.
+		setenv("TMPDIR", "/foo", 1);
 		ensure_equals(string(getTempDir()), "/foo");
 	}
 	
