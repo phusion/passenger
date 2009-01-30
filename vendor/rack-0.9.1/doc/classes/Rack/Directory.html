@@ -1,0 +1,493 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>Class: Rack::Directory</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Script-Type" content="text/javascript" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+  <script type="text/javascript">
+  // <![CDATA[
+
+  function popupCode( url ) {
+    window.open(url, "Code", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=150,width=400")
+  }
+
+  function toggleCode( id ) {
+    if ( document.getElementById )
+      elem = document.getElementById( id );
+    else if ( document.all )
+      elem = eval( "document.all." + id );
+    else
+      return false;
+
+    elemStyle = elem.style;
+    
+    if ( elemStyle.display != "block" ) {
+      elemStyle.display = "block"
+    } else {
+      elemStyle.display = "none"
+    }
+
+    return true;
+  }
+  
+  // Make codeblocks hidden by default
+  document.writeln( "<style type=\"text/css\">div.method-source-code { display: none }</style>" )
+  
+  // ]]>
+  </script>
+
+</head>
+<body>
+
+
+
+    <div id="classHeader">
+        <table class="header-table">
+        <tr class="top-aligned-row">
+          <td><strong>Class</strong></td>
+          <td class="class-name-in-header">Rack::Directory</td>
+        </tr>
+        <tr class="top-aligned-row">
+            <td><strong>In:</strong></td>
+            <td>
+                <a href="../../files/lib/rack/directory_rb.html">
+                lib/rack/directory.rb
+                </a>
+        <br />
+            </td>
+        </tr>
+
+        <tr class="top-aligned-row">
+            <td><strong>Parent:</strong></td>
+            <td>
+                Object
+            </td>
+        </tr>
+        </table>
+    </div>
+  <!-- banner header -->
+
+  <div id="bodyContent">
+
+
+
+  <div id="contextContent">
+
+    <div id="description">
+      <p>
+<a href="Directory.html">Rack::Directory</a> serves entries below the
+<tt>root</tt> given, according to the path info of the <a
+href="../Rack.html">Rack</a> request. If a directory is found, the
+file&#8216;s contents will be presented in an html based index. If a file
+is found, the env will be passed to the specified <tt>app</tt>.
+</p>
+<p>
+If <tt>app</tt> is not specified, a <a href="File.html">Rack::File</a> of
+the same <tt>root</tt> will be used.
+</p>
+
+    </div>
+
+
+   </div>
+
+    <div id="method-list">
+      <h3 class="section-bar">Methods</h3>
+
+      <div class="name-list">
+      <a href="#M000137">_call</a>&nbsp;&nbsp;
+      <a href="#M000136">call</a>&nbsp;&nbsp;
+      <a href="#M000138">check_forbidden</a>&nbsp;&nbsp;
+      <a href="#M000143">each</a>&nbsp;&nbsp;
+      <a href="#M000142">entity_not_found</a>&nbsp;&nbsp;
+      <a href="#M000144">filesize_format</a>&nbsp;&nbsp;
+      <a href="#M000139">list_directory</a>&nbsp;&nbsp;
+      <a href="#M000141">list_path</a>&nbsp;&nbsp;
+      <a href="#M000135">new</a>&nbsp;&nbsp;
+      <a href="#M000140">stat</a>&nbsp;&nbsp;
+      </div>
+    </div>
+
+  </div>
+
+
+    <!-- if includes -->
+
+    <div id="section">
+
+
+    <div id="constants-list">
+      <h3 class="section-bar">Constants</h3>
+
+      <div class="name-list">
+        <table summary="Constants">
+        <tr class="top-aligned-row context-row">
+          <td class="context-item-name">DIR_FILE</td>
+          <td>=</td>
+          <td class="context-item-value">&quot;&lt;tr&gt;&lt;td class='name'&gt;&lt;a href='%s'&gt;%s&lt;/a&gt;&lt;/td&gt;&lt;td class='size'&gt;%s&lt;/td&gt;&lt;td class='type'&gt;%s&lt;/td&gt;&lt;td class='mtime'&gt;%s&lt;/td&gt;&lt;/tr&gt;&quot;</td>
+        </tr>
+        <tr class="top-aligned-row context-row">
+          <td class="context-item-name">DIR_PAGE</td>
+          <td>=</td>
+          <td class="context-item-value">&lt;&lt;-PAGE &lt;html&gt;&lt;head&gt;   &lt;title&gt;%s&lt;/title&gt;   &lt;meta http-equiv=&quot;content-type&quot; content=&quot;text/html; charset=utf-8&quot; /&gt;   &lt;style type='text/css'&gt; table { width:100%%; } .name { text-align:left; } .size, .mtime { text-align:right; } .type { width:11em; } .mtime { width:15em; }   &lt;/style&gt; &lt;/head&gt;&lt;body&gt; &lt;h1&gt;%s&lt;/h1&gt; &lt;hr /&gt; &lt;table&gt;   &lt;tr&gt;     &lt;th class='name'&gt;Name&lt;/th&gt;     &lt;th class='size'&gt;Size&lt;/th&gt;     &lt;th class='type'&gt;Type&lt;/th&gt;     &lt;th class='mtime'&gt;Last Modified&lt;/th&gt;   &lt;/tr&gt; %s &lt;/table&gt; &lt;hr /&gt; &lt;/body&gt;&lt;/html&gt;     PAGE</td>
+        </tr>
+        <tr class="top-aligned-row context-row">
+          <td class="context-item-name">F</td>
+          <td>=</td>
+          <td class="context-item-value">::File</td>
+        </tr>
+        <tr class="top-aligned-row context-row">
+          <td class="context-item-name">FILESIZE_FORMAT</td>
+          <td>=</td>
+          <td class="context-item-value">[       ['%.1fT', 1 &lt;&lt; 40],       ['%.1fG', 1 &lt;&lt; 30],       ['%.1fM', 1 &lt;&lt; 20],       ['%.1fK', 1 &lt;&lt; 10],     ]</td>
+          <td width="3em">&nbsp;</td>
+          <td class="context-item-desc">
+Stolen from Ramaze
+
+</td>
+        </tr>
+        </table>
+      </div>
+    </div>
+
+
+
+    <div id="attribute-list">
+      <h3 class="section-bar">Attributes</h3>
+
+      <div class="name-list">
+        <table>
+        <tr class="top-aligned-row context-row">
+          <td class="context-item-name">files</td>
+          <td class="context-item-value">&nbsp;[R]&nbsp;</td>
+          <td class="context-item-desc"></td>
+        </tr>
+        <tr class="top-aligned-row context-row">
+          <td class="context-item-name">path</td>
+          <td class="context-item-value">&nbsp;[RW]&nbsp;</td>
+          <td class="context-item-desc"></td>
+        </tr>
+        <tr class="top-aligned-row context-row">
+          <td class="context-item-name">root</td>
+          <td class="context-item-value">&nbsp;[RW]&nbsp;</td>
+          <td class="context-item-desc"></td>
+        </tr>
+        </table>
+      </div>
+    </div>
+      
+
+
+    <!-- if method_list -->
+    <div id="methods">
+      <h3 class="section-bar">Public Class methods</h3>
+
+      <div id="method-M000135" class="method-detail">
+        <a name="M000135"></a>
+
+        <div class="method-heading">
+          <a href="#M000135" class="method-signature">
+          <span class="method-name">new</span><span class="method-args">(root, app=nil)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000135-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000135-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/directory.rb, line 45</span>
+45:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">root</span>, <span class="ruby-identifier">app</span>=<span class="ruby-keyword kw">nil</span>)
+46:       <span class="ruby-ivar">@root</span> = <span class="ruby-constant">F</span>.<span class="ruby-identifier">expand_path</span>(<span class="ruby-identifier">root</span>)
+47:       <span class="ruby-ivar">@app</span> = <span class="ruby-identifier">app</span> <span class="ruby-operator">||</span> <span class="ruby-constant">Rack</span><span class="ruby-operator">::</span><span class="ruby-constant">File</span>.<span class="ruby-identifier">new</span>(<span class="ruby-ivar">@root</span>)
+48:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="section-bar">Public Instance methods</h3>
+
+      <div id="method-M000137" class="method-detail">
+        <a name="M000137"></a>
+
+        <div class="method-heading">
+          <a href="#M000137" class="method-signature">
+          <span class="method-name">_call</span><span class="method-args">(env)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000137-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000137-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/directory.rb, line 56</span>
+56:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">_call</span>(<span class="ruby-identifier">env</span>)
+57:       <span class="ruby-ivar">@env</span> = <span class="ruby-identifier">env</span>
+58:       <span class="ruby-ivar">@script_name</span> = <span class="ruby-identifier">env</span>[<span class="ruby-value str">'SCRIPT_NAME'</span>]
+59:       <span class="ruby-ivar">@path_info</span> = <span class="ruby-constant">Utils</span>.<span class="ruby-identifier">unescape</span>(<span class="ruby-identifier">env</span>[<span class="ruby-value str">'PATH_INFO'</span>])
+60: 
+61:       <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">forbidden</span> = <span class="ruby-identifier">check_forbidden</span>
+62:         <span class="ruby-identifier">forbidden</span>
+63:       <span class="ruby-keyword kw">else</span>
+64:         <span class="ruby-ivar">@path</span> = <span class="ruby-constant">F</span>.<span class="ruby-identifier">join</span>(<span class="ruby-ivar">@root</span>, <span class="ruby-ivar">@path_info</span>)
+65:         <span class="ruby-identifier">list_path</span>
+66:       <span class="ruby-keyword kw">end</span>
+67:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000136" class="method-detail">
+        <a name="M000136"></a>
+
+        <div class="method-heading">
+          <a href="#M000136" class="method-signature">
+          <span class="method-name">call</span><span class="method-args">(env)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000136-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000136-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/directory.rb, line 50</span>
+50:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">call</span>(<span class="ruby-identifier">env</span>)
+51:       <span class="ruby-identifier">dup</span>.<span class="ruby-identifier">_call</span>(<span class="ruby-identifier">env</span>)
+52:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000138" class="method-detail">
+        <a name="M000138"></a>
+
+        <div class="method-heading">
+          <a href="#M000138" class="method-signature">
+          <span class="method-name">check_forbidden</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000138-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000138-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/directory.rb, line 69</span>
+69:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">check_forbidden</span>
+70:       <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">unless</span> <span class="ruby-ivar">@path_info</span>.<span class="ruby-identifier">include?</span> <span class="ruby-value str">&quot;..&quot;</span>
+71: 
+72:       <span class="ruby-identifier">body</span> = <span class="ruby-value str">&quot;Forbidden\n&quot;</span>
+73:       <span class="ruby-identifier">size</span> = <span class="ruby-identifier">body</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">:bytesize</span>) <span class="ruby-operator">?</span> <span class="ruby-identifier">body</span>.<span class="ruby-identifier">bytesize</span> <span class="ruby-operator">:</span> <span class="ruby-identifier">body</span>.<span class="ruby-identifier">size</span>
+74:       <span class="ruby-keyword kw">return</span> [<span class="ruby-value">403</span>, {<span class="ruby-value str">&quot;Content-Type&quot;</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">&quot;text/plain&quot;</span>,<span class="ruby-value str">&quot;Content-Length&quot;</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">size</span>.<span class="ruby-identifier">to_s</span>}, [<span class="ruby-identifier">body</span>]]
+75:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000143" class="method-detail">
+        <a name="M000143"></a>
+
+        <div class="method-heading">
+          <a href="#M000143" class="method-signature">
+          <span class="method-name">each</span><span class="method-args">() {|l| ...}</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000143-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000143-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/rack/directory.rb, line 127</span>
+127:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">each</span>
+128:       <span class="ruby-identifier">show_path</span> = <span class="ruby-ivar">@path</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-node">/^#{@root}/</span>,<span class="ruby-value str">''</span>)
+129:       <span class="ruby-identifier">files</span> = <span class="ruby-ivar">@files</span>.<span class="ruby-identifier">map</span>{<span class="ruby-operator">|</span><span class="ruby-identifier">f</span><span class="ruby-operator">|</span> <span class="ruby-constant">DIR_FILE</span> <span class="ruby-operator">%</span> <span class="ruby-identifier">f</span> }<span class="ruby-operator">*</span><span class="ruby-value str">&quot;\n&quot;</span>
+130:       <span class="ruby-identifier">page</span>  = <span class="ruby-constant">DIR_PAGE</span> <span class="ruby-operator">%</span> [ <span class="ruby-identifier">show_path</span>, <span class="ruby-identifier">show_path</span> , <span class="ruby-identifier">files</span> ]
+131:       <span class="ruby-identifier">page</span>.<span class="ruby-identifier">each_line</span>{<span class="ruby-operator">|</span><span class="ruby-identifier">l</span><span class="ruby-operator">|</span> <span class="ruby-keyword kw">yield</span> <span class="ruby-identifier">l</span> }
+132:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000142" class="method-detail">
+        <a name="M000142"></a>
+
+        <div class="method-heading">
+          <a href="#M000142" class="method-signature">
+          <span class="method-name">entity_not_found</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000142-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000142-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/rack/directory.rb, line 121</span>
+121:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">entity_not_found</span>
+122:       <span class="ruby-identifier">body</span> = <span class="ruby-node">&quot;Entity not found: #{@path_info}\n&quot;</span>
+123:       <span class="ruby-identifier">size</span> = <span class="ruby-identifier">body</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">:bytesize</span>) <span class="ruby-operator">?</span> <span class="ruby-identifier">body</span>.<span class="ruby-identifier">bytesize</span> <span class="ruby-operator">:</span> <span class="ruby-identifier">body</span>.<span class="ruby-identifier">size</span>
+124:       <span class="ruby-keyword kw">return</span> [<span class="ruby-value">404</span>, {<span class="ruby-value str">&quot;Content-Type&quot;</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">&quot;text/plain&quot;</span>, <span class="ruby-value str">&quot;Content-Length&quot;</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">size</span>.<span class="ruby-identifier">to_s</span>}, [<span class="ruby-identifier">body</span>]]
+125:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000144" class="method-detail">
+        <a name="M000144"></a>
+
+        <div class="method-heading">
+          <a href="#M000144" class="method-signature">
+          <span class="method-name">filesize_format</span><span class="method-args">(int)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000144-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000144-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/rack/directory.rb, line 143</span>
+143:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">filesize_format</span>(<span class="ruby-identifier">int</span>)
+144:       <span class="ruby-constant">FILESIZE_FORMAT</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">format</span>, <span class="ruby-identifier">size</span><span class="ruby-operator">|</span>
+145:         <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">format</span> <span class="ruby-operator">%</span> (<span class="ruby-identifier">int</span>.<span class="ruby-identifier">to_f</span> <span class="ruby-operator">/</span> <span class="ruby-identifier">size</span>) <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">int</span> <span class="ruby-operator">&gt;=</span> <span class="ruby-identifier">size</span>
+146:       <span class="ruby-keyword kw">end</span>
+147: 
+148:       <span class="ruby-identifier">int</span>.<span class="ruby-identifier">to_s</span> <span class="ruby-operator">+</span> <span class="ruby-value str">'B'</span>
+149:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000139" class="method-detail">
+        <a name="M000139"></a>
+
+        <div class="method-heading">
+          <a href="#M000139" class="method-signature">
+          <span class="method-name">list_directory</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000139-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000139-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/directory.rb, line 77</span>
+77:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">list_directory</span>
+78:       <span class="ruby-ivar">@files</span> = [[<span class="ruby-value str">'../'</span>,<span class="ruby-value str">'Parent Directory'</span>,<span class="ruby-value str">''</span>,<span class="ruby-value str">''</span>,<span class="ruby-value str">''</span>]]
+79:       <span class="ruby-identifier">glob</span> = <span class="ruby-constant">F</span>.<span class="ruby-identifier">join</span>(<span class="ruby-ivar">@path</span>, <span class="ruby-value str">'*'</span>)
+80: 
+81:       <span class="ruby-constant">Dir</span>[<span class="ruby-identifier">glob</span>].<span class="ruby-identifier">sort</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">node</span><span class="ruby-operator">|</span>
+82:         <span class="ruby-identifier">stat</span> = <span class="ruby-identifier">stat</span>(<span class="ruby-identifier">node</span>)
+83:         <span class="ruby-keyword kw">next</span>  <span class="ruby-keyword kw">unless</span> <span class="ruby-identifier">stat</span>
+84:         <span class="ruby-identifier">basename</span> = <span class="ruby-constant">F</span>.<span class="ruby-identifier">basename</span>(<span class="ruby-identifier">node</span>)
+85:         <span class="ruby-identifier">ext</span> = <span class="ruby-constant">F</span>.<span class="ruby-identifier">extname</span>(<span class="ruby-identifier">node</span>)
+86: 
+87:         <span class="ruby-identifier">url</span> = <span class="ruby-constant">F</span>.<span class="ruby-identifier">join</span>(<span class="ruby-ivar">@script_name</span>, <span class="ruby-ivar">@path_info</span>, <span class="ruby-identifier">basename</span>)
+88:         <span class="ruby-identifier">size</span> = <span class="ruby-identifier">stat</span>.<span class="ruby-identifier">size</span>
+89:         <span class="ruby-identifier">type</span> = <span class="ruby-identifier">stat</span>.<span class="ruby-identifier">directory?</span> <span class="ruby-value">? </span><span class="ruby-value str">'directory'</span> <span class="ruby-operator">:</span> <span class="ruby-constant">Mime</span>.<span class="ruby-identifier">mime_type</span>(<span class="ruby-identifier">ext</span>)
+90:         <span class="ruby-identifier">size</span> = <span class="ruby-identifier">stat</span>.<span class="ruby-identifier">directory?</span> <span class="ruby-value">? </span><span class="ruby-value str">'-'</span> <span class="ruby-operator">:</span> <span class="ruby-identifier">filesize_format</span>(<span class="ruby-identifier">size</span>)
+91:         <span class="ruby-identifier">mtime</span> = <span class="ruby-identifier">stat</span>.<span class="ruby-identifier">mtime</span>.<span class="ruby-identifier">httpdate</span>
+92: 
+93:         <span class="ruby-ivar">@files</span> <span class="ruby-operator">&lt;&lt;</span> [ <span class="ruby-identifier">url</span>, <span class="ruby-identifier">basename</span>, <span class="ruby-identifier">size</span>, <span class="ruby-identifier">type</span>, <span class="ruby-identifier">mtime</span> ]
+94:       <span class="ruby-keyword kw">end</span>
+95: 
+96:       <span class="ruby-keyword kw">return</span> [ <span class="ruby-value">200</span>, {<span class="ruby-value str">'Content-Type'</span>=<span class="ruby-operator">&gt;</span><span class="ruby-value str">'text/html; charset=utf-8'</span>}, <span class="ruby-keyword kw">self</span> ]
+97:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000141" class="method-detail">
+        <a name="M000141"></a>
+
+        <div class="method-heading">
+          <a href="#M000141" class="method-signature">
+          <span class="method-name">list_path</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+TODO: add correct response if not readable, not sure if 404 is the best
+</p>
+<pre>
+      option
+</pre>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000141-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000141-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/rack/directory.rb, line 107</span>
+107:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">list_path</span>
+108:       <span class="ruby-ivar">@stat</span> = <span class="ruby-constant">F</span>.<span class="ruby-identifier">stat</span>(<span class="ruby-ivar">@path</span>)
+109: 
+110:       <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@stat</span>.<span class="ruby-identifier">readable?</span>
+111:         <span class="ruby-keyword kw">return</span> <span class="ruby-ivar">@app</span>.<span class="ruby-identifier">call</span>(<span class="ruby-ivar">@env</span>) <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@stat</span>.<span class="ruby-identifier">file?</span>
+112:         <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">list_directory</span> <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@stat</span>.<span class="ruby-identifier">directory?</span>
+113:       <span class="ruby-keyword kw">else</span>
+114:         <span class="ruby-identifier">raise</span> <span class="ruby-constant">Errno</span><span class="ruby-operator">::</span><span class="ruby-constant">ENOENT</span>, <span class="ruby-value str">'No such file or directory'</span>
+115:       <span class="ruby-keyword kw">end</span>
+116: 
+117:     <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Errno</span><span class="ruby-operator">::</span><span class="ruby-constant">ENOENT</span>, <span class="ruby-constant">Errno</span><span class="ruby-operator">::</span><span class="ruby-constant">ELOOP</span>
+118:       <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">entity_not_found</span>
+119:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000140" class="method-detail">
+        <a name="M000140"></a>
+
+        <div class="method-heading">
+          <a href="#M000140" class="method-signature">
+          <span class="method-name">stat</span><span class="method-args">(node, max = 10)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000140-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000140-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/rack/directory.rb, line 99</span>
+ 99:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">stat</span>(<span class="ruby-identifier">node</span>, <span class="ruby-identifier">max</span> = <span class="ruby-value">10</span>)
+100:       <span class="ruby-constant">F</span>.<span class="ruby-identifier">stat</span>(<span class="ruby-identifier">node</span>)
+101:     <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Errno</span><span class="ruby-operator">::</span><span class="ruby-constant">ENOENT</span>, <span class="ruby-constant">Errno</span><span class="ruby-operator">::</span><span class="ruby-constant">ELOOP</span>
+102:       <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">nil</span>
+103:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+
+    </div>
+
+
+  </div>
+
+
+<div id="validator-badges">
+  <p><small><a href="http://validator.w3.org/check/referer">[Validate]</a></small></p>
+</div>
+
+</body>
+</html>

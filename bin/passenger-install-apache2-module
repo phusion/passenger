@@ -49,8 +49,7 @@ class Installer
 		Dependencies::Apache2_DevHeaders,
 		Dependencies::APR_DevHeaders,
 		Dependencies::APU_DevHeaders,
-		Dependencies::FastThread,
-		Dependencies::Rack
+		Dependencies::FastThread
 	]
 	
 	def start(automatic = false)

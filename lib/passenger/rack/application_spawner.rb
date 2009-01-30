@@ -14,13 +14,16 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+$LOAD_PATH.unshift(File.expand_path(File.dirname(__FILE__) + "/../../../vendor/rack-0.9.1/lib"))
 require 'rack'
+
 require 'socket'
 require 'passenger/application'
 require 'passenger/message_channel'
 require 'passenger/abstract_request_handler'
 require 'passenger/utils'
 require 'passenger/rack/request_handler'
+
 module Passenger
 module Rack
 

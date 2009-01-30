@@ -1,0 +1,1126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>Class: Rack::Request</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Script-Type" content="text/javascript" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+  <script type="text/javascript">
+  // <![CDATA[
+
+  function popupCode( url ) {
+    window.open(url, "Code", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=150,width=400")
+  }
+
+  function toggleCode( id ) {
+    if ( document.getElementById )
+      elem = document.getElementById( id );
+    else if ( document.all )
+      elem = eval( "document.all." + id );
+    else
+      return false;
+
+    elemStyle = elem.style;
+    
+    if ( elemStyle.display != "block" ) {
+      elemStyle.display = "block"
+    } else {
+      elemStyle.display = "none"
+    }
+
+    return true;
+  }
+  
+  // Make codeblocks hidden by default
+  document.writeln( "<style type=\"text/css\">div.method-source-code { display: none }</style>" )
+  
+  // ]]>
+  </script>
+
+</head>
+<body>
+
+
+
+    <div id="classHeader">
+        <table class="header-table">
+        <tr class="top-aligned-row">
+          <td><strong>Class</strong></td>
+          <td class="class-name-in-header">Rack::Request</td>
+        </tr>
+        <tr class="top-aligned-row">
+            <td><strong>In:</strong></td>
+            <td>
+                <a href="../../files/lib/rack/request_rb.html">
+                lib/rack/request.rb
+                </a>
+        <br />
+            </td>
+        </tr>
+
+        <tr class="top-aligned-row">
+            <td><strong>Parent:</strong></td>
+            <td>
+                Object
+            </td>
+        </tr>
+        </table>
+    </div>
+  <!-- banner header -->
+
+  <div id="bodyContent">
+
+
+
+  <div id="contextContent">
+
+    <div id="description">
+      <p>
+<a href="Request.html">Rack::Request</a> provides a convenient interface to
+a <a href="../Rack.html">Rack</a> environment. It is stateless, the
+environment <tt>env</tt> passed to the constructor will be directly
+modified.
+</p>
+<pre>
+  req = Rack::Request.new(env)
+  req.post?
+  req.params[&quot;data&quot;]
+</pre>
+
+    </div>
+
+
+   </div>
+
+    <div id="method-list">
+      <h3 class="section-bar">Methods</h3>
+
+      <div class="name-list">
+      <a href="#M000176">GET</a>&nbsp;&nbsp;
+      <a href="#M000177">POST</a>&nbsp;&nbsp;
+      <a href="#M000179">[]</a>&nbsp;&nbsp;
+      <a href="#M000180">[]=</a>&nbsp;&nbsp;
+      <a href="#M000188">accept_encoding</a>&nbsp;&nbsp;
+      <a href="#M000155">body</a>&nbsp;&nbsp;
+      <a href="#M000166">content_charset</a>&nbsp;&nbsp;
+      <a href="#M000162">content_length</a>&nbsp;&nbsp;
+      <a href="#M000163">content_type</a>&nbsp;&nbsp;
+      <a href="#M000184">cookies</a>&nbsp;&nbsp;
+      <a href="#M000173">delete?</a>&nbsp;&nbsp;
+      <a href="#M000175">form_data?</a>&nbsp;&nbsp;
+      <a href="#M000187">fullpath</a>&nbsp;&nbsp;
+      <a href="#M000170">get?</a>&nbsp;&nbsp;
+      <a href="#M000174">head?</a>&nbsp;&nbsp;
+      <a href="#M000167">host</a>&nbsp;&nbsp;
+      <a href="#M000189">ip</a>&nbsp;&nbsp;
+      <a href="#M000164">media_type</a>&nbsp;&nbsp;
+      <a href="#M000165">media_type_params</a>&nbsp;&nbsp;
+      <a href="#M000154">new</a>&nbsp;&nbsp;
+      <a href="#M000178">params</a>&nbsp;&nbsp;
+      <a href="#M000158">path_info</a>&nbsp;&nbsp;
+      <a href="#M000169">path_info=</a>&nbsp;&nbsp;
+      <a href="#M000159">port</a>&nbsp;&nbsp;
+      <a href="#M000171">post?</a>&nbsp;&nbsp;
+      <a href="#M000172">put?</a>&nbsp;&nbsp;
+      <a href="#M000161">query_string</a>&nbsp;&nbsp;
+      <a href="#M000182">referer</a>&nbsp;&nbsp;
+      <a href="#M000183">referrer</a>&nbsp;&nbsp;
+      <a href="#M000160">request_method</a>&nbsp;&nbsp;
+      <a href="#M000156">scheme</a>&nbsp;&nbsp;
+      <a href="#M000157">script_name</a>&nbsp;&nbsp;
+      <a href="#M000168">script_name=</a>&nbsp;&nbsp;
+      <a href="#M000186">url</a>&nbsp;&nbsp;
+      <a href="#M000181">values_at</a>&nbsp;&nbsp;
+      <a href="#M000185">xhr?</a>&nbsp;&nbsp;
+      </div>
+    </div>
+
+  </div>
+
+
+    <!-- if includes -->
+
+    <div id="section">
+
+
+    <div id="constants-list">
+      <h3 class="section-bar">Constants</h3>
+
+      <div class="name-list">
+        <table summary="Constants">
+        <tr class="top-aligned-row context-row">
+          <td class="context-item-name">FORM_DATA_MEDIA_TYPES</td>
+          <td>=</td>
+          <td class="context-item-value">[       nil,       'application/x-www-form-urlencoded',       'multipart/form-data'</td>
+          <td width="3em">&nbsp;</td>
+          <td class="context-item-desc">
+The set of form-data media-types. Requests that do not indicate one of the
+media types presents in this list will not be eligible for form-data /
+param parsing.
+
+</td>
+        </tr>
+        </table>
+      </div>
+    </div>
+
+
+
+    <div id="attribute-list">
+      <h3 class="section-bar">Attributes</h3>
+
+      <div class="name-list">
+        <table>
+        <tr class="top-aligned-row context-row">
+          <td class="context-item-name">env</td>
+          <td class="context-item-value">&nbsp;[R]&nbsp;</td>
+          <td class="context-item-desc">
+The environment of the request.
+
+</td>
+        </tr>
+        </table>
+      </div>
+    </div>
+      
+
+
+    <!-- if method_list -->
+    <div id="methods">
+      <h3 class="section-bar">Public Class methods</h3>
+
+      <div id="method-M000154" class="method-detail">
+        <a name="M000154"></a>
+
+        <div class="method-heading">
+          <a href="#M000154" class="method-signature">
+          <span class="method-name">new</span><span class="method-args">(env)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000154-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000154-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 16</span>
+16:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">env</span>)
+17:       <span class="ruby-ivar">@env</span> = <span class="ruby-identifier">env</span>
+18:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="section-bar">Public Instance methods</h3>
+
+      <div id="method-M000176" class="method-detail">
+        <a name="M000176"></a>
+
+        <div class="method-heading">
+          <a href="#M000176" class="method-signature">
+          <span class="method-name">GET</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Returns the data recieved in the query string.
+</p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000176-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000176-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/rack/request.rb, line 93</span>
+ 93:     <span class="ruby-keyword kw">def</span> <span class="ruby-constant">GET</span>
+ 94:       <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.request.query_string&quot;</span>] <span class="ruby-operator">==</span> <span class="ruby-identifier">query_string</span>
+ 95:         <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.request.query_hash&quot;</span>]
+ 96:       <span class="ruby-keyword kw">else</span>
+ 97:         <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.request.query_string&quot;</span>] = <span class="ruby-identifier">query_string</span>
+ 98:         <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.request.query_hash&quot;</span>]   =
+ 99:           <span class="ruby-constant">Utils</span>.<span class="ruby-identifier">parse_query</span>(<span class="ruby-identifier">query_string</span>)
+100:       <span class="ruby-keyword kw">end</span>
+101:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000177" class="method-detail">
+        <a name="M000177"></a>
+
+        <div class="method-heading">
+          <a href="#M000177" class="method-signature">
+          <span class="method-name">POST</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Returns the data recieved in the request <a
+href="Request.html#M000155">body</a>.
+</p>
+<p>
+This method support both application/x-www-form-urlencoded and
+multipart/form-data.
+</p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000177-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000177-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/rack/request.rb, line 107</span>
+107:     <span class="ruby-keyword kw">def</span> <span class="ruby-constant">POST</span>
+108:       <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.request.form_input&quot;</span>].<span class="ruby-identifier">eql?</span> <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.input&quot;</span>]
+109:         <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.request.form_hash&quot;</span>]
+110:       <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">form_data?</span>
+111:         <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.request.form_input&quot;</span>] = <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.input&quot;</span>]
+112:         <span class="ruby-keyword kw">unless</span> <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.request.form_hash&quot;</span>] =
+113:             <span class="ruby-constant">Utils</span><span class="ruby-operator">::</span><span class="ruby-constant">Multipart</span>.<span class="ruby-identifier">parse_multipart</span>(<span class="ruby-identifier">env</span>)
+114:           <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.request.form_vars&quot;</span>] = <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.input&quot;</span>].<span class="ruby-identifier">read</span>
+115:           <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.request.form_hash&quot;</span>] = <span class="ruby-constant">Utils</span>.<span class="ruby-identifier">parse_query</span>(<span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.request.form_vars&quot;</span>])
+116:           <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.input&quot;</span>].<span class="ruby-identifier">rewind</span> <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.input&quot;</span>].<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">:rewind</span>)
+117:         <span class="ruby-keyword kw">end</span>
+118:         <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.request.form_hash&quot;</span>]
+119:       <span class="ruby-keyword kw">else</span>
+120:         {}
+121:       <span class="ruby-keyword kw">end</span>
+122:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000179" class="method-detail">
+        <a name="M000179"></a>
+
+        <div class="method-heading">
+          <a href="#M000179" class="method-signature">
+          <span class="method-name">[]</span><span class="method-args">(key)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+shortcut for request.params[key]
+</p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000179-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000179-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/rack/request.rb, line 132</span>
+132:     <span class="ruby-keyword kw">def</span> <span class="ruby-operator">[]</span>(<span class="ruby-identifier">key</span>)
+133:       <span class="ruby-identifier">params</span>[<span class="ruby-identifier">key</span>.<span class="ruby-identifier">to_s</span>]
+134:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000180" class="method-detail">
+        <a name="M000180"></a>
+
+        <div class="method-heading">
+          <a href="#M000180" class="method-signature">
+          <span class="method-name">[]=</span><span class="method-args">(key, value)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+shortcut for request.params[key] = value
+</p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000180-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000180-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/rack/request.rb, line 137</span>
+137:     <span class="ruby-keyword kw">def</span> <span class="ruby-operator">[]=</span>(<span class="ruby-identifier">key</span>, <span class="ruby-identifier">value</span>)
+138:       <span class="ruby-identifier">params</span>[<span class="ruby-identifier">key</span>.<span class="ruby-identifier">to_s</span>] = <span class="ruby-identifier">value</span>
+139:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000188" class="method-detail">
+        <a name="M000188"></a>
+
+        <div class="method-heading">
+          <a href="#M000188" class="method-signature">
+          <span class="method-name">accept_encoding</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000188-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000188-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/rack/request.rb, line 198</span>
+198:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">accept_encoding</span>
+199:       <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;HTTP_ACCEPT_ENCODING&quot;</span>].<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">split</span>(<span class="ruby-regexp re">/,\s*/</span>).<span class="ruby-identifier">map</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">part</span><span class="ruby-operator">|</span>
+200:         <span class="ruby-identifier">m</span> = <span class="ruby-regexp re">/^([^\s,]+?)(?:;\s*q=(\d+(?:\.\d+)?))?$/</span>.<span class="ruby-identifier">match</span>(<span class="ruby-identifier">part</span>) <span class="ruby-comment cmt"># From WEBrick</span>
+201: 
+202:         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">m</span>
+203:           [<span class="ruby-identifier">m</span>[<span class="ruby-value">1</span>], (<span class="ruby-identifier">m</span>[<span class="ruby-value">2</span>] <span class="ruby-operator">||</span> <span class="ruby-value">1.0</span>).<span class="ruby-identifier">to_f</span>]
+204:         <span class="ruby-keyword kw">else</span>
+205:           <span class="ruby-identifier">raise</span> <span class="ruby-node">&quot;Invalid value for Accept-Encoding: #{part.inspect}&quot;</span>
+206:         <span class="ruby-keyword kw">end</span>
+207:       <span class="ruby-keyword kw">end</span>
+208:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000155" class="method-detail">
+        <a name="M000155"></a>
+
+        <div class="method-heading">
+          <a href="#M000155" class="method-signature">
+          <span class="method-name">body</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000155-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000155-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 20</span>
+20:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">body</span>;            <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.input&quot;</span>]                       <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000166" class="method-detail">
+        <a name="M000166"></a>
+
+        <div class="method-heading">
+          <a href="#M000166" class="method-signature">
+          <span class="method-name">content_charset</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+The character set of the request <a href="Request.html#M000155">body</a> if
+a &quot;charset&quot; media type parameter was given, or nil if no
+&quot;charset&quot; was specified. Note that, per RFC2616, text/* media
+types that specify no explicit charset are to be considered ISO-8859-1.
+</p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000166-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000166-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 56</span>
+56:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">content_charset</span>
+57:       <span class="ruby-identifier">media_type_params</span>[<span class="ruby-value str">'charset'</span>]
+58:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000162" class="method-detail">
+        <a name="M000162"></a>
+
+        <div class="method-heading">
+          <a href="#M000162" class="method-signature">
+          <span class="method-name">content_length</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000162-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000162-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 27</span>
+27:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">content_length</span>;  <span class="ruby-ivar">@env</span>[<span class="ruby-value str">'CONTENT_LENGTH'</span>]                   <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000163" class="method-detail">
+        <a name="M000163"></a>
+
+        <div class="method-heading">
+          <a href="#M000163" class="method-signature">
+          <span class="method-name">content_type</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000163-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000163-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 28</span>
+28:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">content_type</span>;    <span class="ruby-ivar">@env</span>[<span class="ruby-value str">'CONTENT_TYPE'</span>]                     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000184" class="method-detail">
+        <a name="M000184"></a>
+
+        <div class="method-heading">
+          <a href="#M000184" class="method-signature">
+          <span class="method-name">cookies</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000184-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000184-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/rack/request.rb, line 153</span>
+153:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">cookies</span>
+154:       <span class="ruby-keyword kw">return</span> {}  <span class="ruby-keyword kw">unless</span> <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;HTTP_COOKIE&quot;</span>]
+155: 
+156:       <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.request.cookie_string&quot;</span>] <span class="ruby-operator">==</span> <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;HTTP_COOKIE&quot;</span>]
+157:         <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.request.cookie_hash&quot;</span>]
+158:       <span class="ruby-keyword kw">else</span>
+159:         <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.request.cookie_string&quot;</span>] = <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;HTTP_COOKIE&quot;</span>]
+160:         <span class="ruby-comment cmt"># According to RFC 2109:</span>
+161:         <span class="ruby-comment cmt">#   If multiple cookies satisfy the criteria above, they are ordered in</span>
+162:         <span class="ruby-comment cmt">#   the Cookie header such that those with more specific Path attributes</span>
+163:         <span class="ruby-comment cmt">#   precede those with less specific.  Ordering with respect to other</span>
+164:         <span class="ruby-comment cmt">#   attributes (e.g., Domain) is unspecified.</span>
+165:         <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.request.cookie_hash&quot;</span>] =
+166:           <span class="ruby-constant">Utils</span>.<span class="ruby-identifier">parse_query</span>(<span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.request.cookie_string&quot;</span>], <span class="ruby-value str">';,'</span>).<span class="ruby-identifier">inject</span>({}) {<span class="ruby-operator">|</span><span class="ruby-identifier">h</span>,(<span class="ruby-identifier">k</span>,<span class="ruby-identifier">v</span>)<span class="ruby-operator">|</span>
+167:             <span class="ruby-identifier">h</span>[<span class="ruby-identifier">k</span>] = <span class="ruby-constant">Array</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">v</span> <span class="ruby-value">? </span><span class="ruby-identifier">v</span>.<span class="ruby-identifier">first</span> <span class="ruby-operator">:</span> <span class="ruby-identifier">v</span>
+168:             <span class="ruby-identifier">h</span>
+169:           }
+170:       <span class="ruby-keyword kw">end</span>
+171:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000173" class="method-detail">
+        <a name="M000173"></a>
+
+        <div class="method-heading">
+          <a href="#M000173" class="method-signature">
+          <span class="method-name">delete?</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000173-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000173-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 71</span>
+71:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">delete?</span>;         <span class="ruby-identifier">request_method</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;DELETE&quot;</span>               <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000175" class="method-detail">
+        <a name="M000175"></a>
+
+        <div class="method-heading">
+          <a href="#M000175" class="method-signature">
+          <span class="method-name">form_data?</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Determine whether the request <a href="Request.html#M000155">body</a>
+contains form-data by checking the request <a
+href="Request.html#M000164">media_type</a> against registered form-data
+media-types: &quot;application/x-www-form-urlencoded&quot; and
+&quot;multipart/form-data&quot;. The list of form-data media types can be
+modified through the <tt>FORM_DATA_MEDIA_TYPES</tt> array.
+</p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000175-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000175-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 88</span>
+88:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">form_data?</span>
+89:       <span class="ruby-constant">FORM_DATA_MEDIA_TYPES</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">media_type</span>)
+90:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000187" class="method-detail">
+        <a name="M000187"></a>
+
+        <div class="method-heading">
+          <a href="#M000187" class="method-signature">
+          <span class="method-name">fullpath</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000187-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000187-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/rack/request.rb, line 192</span>
+192:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">fullpath</span>
+193:       <span class="ruby-identifier">path</span> = <span class="ruby-identifier">script_name</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">path_info</span>
+194:       <span class="ruby-identifier">path</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-value str">&quot;?&quot;</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">query_string</span>  <span class="ruby-keyword kw">unless</span> <span class="ruby-identifier">query_string</span>.<span class="ruby-identifier">empty?</span>
+195:       <span class="ruby-identifier">path</span>
+196:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000170" class="method-detail">
+        <a name="M000170"></a>
+
+        <div class="method-heading">
+          <a href="#M000170" class="method-signature">
+          <span class="method-name">get?</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000170-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000170-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 68</span>
+68:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">get?</span>;            <span class="ruby-identifier">request_method</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;GET&quot;</span>                  <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000174" class="method-detail">
+        <a name="M000174"></a>
+
+        <div class="method-heading">
+          <a href="#M000174" class="method-signature">
+          <span class="method-name">head?</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000174-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000174-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 72</span>
+72:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">head?</span>;           <span class="ruby-identifier">request_method</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;HEAD&quot;</span>                 <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000167" class="method-detail">
+        <a name="M000167"></a>
+
+        <div class="method-heading">
+          <a href="#M000167" class="method-signature">
+          <span class="method-name">host</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000167-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000167-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 60</span>
+60:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">host</span>
+61:       <span class="ruby-comment cmt"># Remove port number.</span>
+62:       (<span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;HTTP_HOST&quot;</span>] <span class="ruby-operator">||</span> <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;SERVER_NAME&quot;</span>]).<span class="ruby-identifier">gsub</span>(<span class="ruby-regexp re">/:\d+\z/</span>, <span class="ruby-value str">''</span>)
+63:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000189" class="method-detail">
+        <a name="M000189"></a>
+
+        <div class="method-heading">
+          <a href="#M000189" class="method-signature">
+          <span class="method-name">ip</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000189-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000189-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/rack/request.rb, line 210</span>
+210:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">ip</span>
+211:       <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">addr</span> = <span class="ruby-ivar">@env</span>[<span class="ruby-value str">'HTTP_X_FORWARDED_FOR'</span>]
+212:         <span class="ruby-identifier">addr</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">','</span>).<span class="ruby-identifier">last</span>.<span class="ruby-identifier">strip</span>
+213:       <span class="ruby-keyword kw">else</span>
+214:         <span class="ruby-ivar">@env</span>[<span class="ruby-value str">'REMOTE_ADDR'</span>]
+215:       <span class="ruby-keyword kw">end</span>
+216:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000164" class="method-detail">
+        <a name="M000164"></a>
+
+        <div class="method-heading">
+          <a href="#M000164" class="method-signature">
+          <span class="method-name">media_type</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+The media type (type/subtype) portion of the CONTENT_TYPE header without
+any media type parameters. e.g., when CONTENT_TYPE is
+&quot;text/plain;charset=utf-8&quot;, the media-type is
+&quot;text/plain&quot;.
+</p>
+<p>
+For more information on the use of media types in HTTP, see: <a
+href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.7">www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.7</a>
+</p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000164-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000164-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 36</span>
+36:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">media_type</span>
+37:       <span class="ruby-identifier">content_type</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">content_type</span>.<span class="ruby-identifier">split</span>(<span class="ruby-regexp re">/\s*[;,]\s*/</span>, <span class="ruby-value">2</span>)[<span class="ruby-value">0</span>].<span class="ruby-identifier">downcase</span>
+38:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000165" class="method-detail">
+        <a name="M000165"></a>
+
+        <div class="method-heading">
+          <a href="#M000165" class="method-signature">
+          <span class="method-name">media_type_params</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+The media type parameters provided in CONTENT_TYPE as a Hash, or an empty
+Hash if no CONTENT_TYPE or media-type parameters were provided. e.g., when
+the CONTENT_TYPE is &quot;text/plain;charset=utf-8&quot;, this method
+responds with the following Hash:
+</p>
+<pre>
+  { 'charset' =&gt; 'utf-8' }
+</pre>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000165-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000165-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 45</span>
+45:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">media_type_params</span>
+46:       <span class="ruby-keyword kw">return</span> {} <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">content_type</span>.<span class="ruby-identifier">nil?</span>
+47:       <span class="ruby-identifier">content_type</span>.<span class="ruby-identifier">split</span>(<span class="ruby-regexp re">/\s*[;,]\s*/</span>)[<span class="ruby-value">1</span><span class="ruby-operator">..</span><span class="ruby-value">-1</span>].
+48:         <span class="ruby-identifier">collect</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">s</span><span class="ruby-operator">|</span> <span class="ruby-identifier">s</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">'='</span>, <span class="ruby-value">2</span>) }.
+49:         <span class="ruby-identifier">inject</span>({}) { <span class="ruby-operator">|</span><span class="ruby-identifier">hash</span>,(<span class="ruby-identifier">k</span>,<span class="ruby-identifier">v</span>)<span class="ruby-operator">|</span> <span class="ruby-identifier">hash</span>[<span class="ruby-identifier">k</span>.<span class="ruby-identifier">downcase</span>] = <span class="ruby-identifier">v</span> ; <span class="ruby-identifier">hash</span> }
+50:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000178" class="method-detail">
+        <a name="M000178"></a>
+
+        <div class="method-heading">
+          <a href="#M000178" class="method-signature">
+          <span class="method-name">params</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+The union of <a href="Request.html#M000176">GET</a> and <a
+href="Request.html#M000177">POST</a> data.
+</p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000178-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000178-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/rack/request.rb, line 125</span>
+125:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">params</span>
+126:       <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">put?</span> <span class="ruby-value">? </span><span class="ruby-keyword kw">self</span>.<span class="ruby-constant">GET</span> <span class="ruby-operator">:</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-constant">GET</span>.<span class="ruby-identifier">update</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-constant">POST</span>)
+127:     <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">EOFError</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">e</span>
+128:       <span class="ruby-keyword kw">self</span>.<span class="ruby-constant">GET</span>
+129:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000158" class="method-detail">
+        <a name="M000158"></a>
+
+        <div class="method-heading">
+          <a href="#M000158" class="method-signature">
+          <span class="method-name">path_info</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000158-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000158-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 23</span>
+23:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">path_info</span>;       <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;PATH_INFO&quot;</span>].<span class="ruby-identifier">to_s</span>                   <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000169" class="method-detail">
+        <a name="M000169"></a>
+
+        <div class="method-heading">
+          <a href="#M000169" class="method-signature">
+          <span class="method-name">path_info=</span><span class="method-args">(s)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000169-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000169-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 66</span>
+66:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">path_info=</span>(<span class="ruby-identifier">s</span>);   <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;PATH_INFO&quot;</span>] = <span class="ruby-identifier">s</span>.<span class="ruby-identifier">to_s</span>               <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000159" class="method-detail">
+        <a name="M000159"></a>
+
+        <div class="method-heading">
+          <a href="#M000159" class="method-signature">
+          <span class="method-name">port</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000159-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000159-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 24</span>
+24:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">port</span>;            <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;SERVER_PORT&quot;</span>].<span class="ruby-identifier">to_i</span>                 <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000171" class="method-detail">
+        <a name="M000171"></a>
+
+        <div class="method-heading">
+          <a href="#M000171" class="method-signature">
+          <span class="method-name">post?</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000171-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000171-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 69</span>
+69:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">post?</span>;           <span class="ruby-identifier">request_method</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;POST&quot;</span>                 <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000172" class="method-detail">
+        <a name="M000172"></a>
+
+        <div class="method-heading">
+          <a href="#M000172" class="method-signature">
+          <span class="method-name">put?</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000172-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000172-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 70</span>
+70:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">put?</span>;            <span class="ruby-identifier">request_method</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;PUT&quot;</span>                  <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000161" class="method-detail">
+        <a name="M000161"></a>
+
+        <div class="method-heading">
+          <a href="#M000161" class="method-signature">
+          <span class="method-name">query_string</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000161-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000161-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 26</span>
+26:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">query_string</span>;    <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;QUERY_STRING&quot;</span>].<span class="ruby-identifier">to_s</span>                <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000182" class="method-detail">
+        <a name="M000182"></a>
+
+        <div class="method-heading">
+          <a href="#M000182" class="method-signature">
+          <span class="method-name">referer</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+the <a href="Request.html#M000182">referer</a> of the client or
+&#8217;/&#8217;
+</p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000182-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000182-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/rack/request.rb, line 147</span>
+147:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">referer</span>
+148:       <span class="ruby-ivar">@env</span>[<span class="ruby-value str">'HTTP_REFERER'</span>] <span class="ruby-operator">||</span> <span class="ruby-value str">'/'</span>
+149:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000183" class="method-detail">
+        <a name="M000183"></a>
+
+        <div class="method-heading">
+          <span class="method-name">referrer</span><span class="method-args">()</span>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Alias for <a href="Request.html#M000182">referer</a>
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000160" class="method-detail">
+        <a name="M000160"></a>
+
+        <div class="method-heading">
+          <a href="#M000160" class="method-signature">
+          <span class="method-name">request_method</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000160-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000160-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 25</span>
+25:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">request_method</span>;  <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;REQUEST_METHOD&quot;</span>]                   <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000156" class="method-detail">
+        <a name="M000156"></a>
+
+        <div class="method-heading">
+          <a href="#M000156" class="method-signature">
+          <span class="method-name">scheme</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000156-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000156-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 21</span>
+21:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">scheme</span>;          <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;rack.url_scheme&quot;</span>]                  <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000157" class="method-detail">
+        <a name="M000157"></a>
+
+        <div class="method-heading">
+          <a href="#M000157" class="method-signature">
+          <span class="method-name">script_name</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000157-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000157-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 22</span>
+22:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">script_name</span>;     <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;SCRIPT_NAME&quot;</span>].<span class="ruby-identifier">to_s</span>                 <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000168" class="method-detail">
+        <a name="M000168"></a>
+
+        <div class="method-heading">
+          <a href="#M000168" class="method-signature">
+          <span class="method-name">script_name=</span><span class="method-args">(s)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000168-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000168-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/rack/request.rb, line 65</span>
+65:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">script_name=</span>(<span class="ruby-identifier">s</span>); <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;SCRIPT_NAME&quot;</span>] = <span class="ruby-identifier">s</span>.<span class="ruby-identifier">to_s</span>             <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000186" class="method-detail">
+        <a name="M000186"></a>
+
+        <div class="method-heading">
+          <a href="#M000186" class="method-signature">
+          <span class="method-name">url</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Tries to return a remake of the original request URL as a string.
+</p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000186-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000186-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/rack/request.rb, line 178</span>
+178:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">url</span>
+179:       <span class="ruby-identifier">url</span> = <span class="ruby-identifier">scheme</span> <span class="ruby-operator">+</span> <span class="ruby-value str">&quot;://&quot;</span>
+180:       <span class="ruby-identifier">url</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">host</span>
+181: 
+182:       <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">scheme</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;https&quot;</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">port</span> <span class="ruby-operator">!=</span> <span class="ruby-value">443</span> <span class="ruby-operator">||</span>
+183:           <span class="ruby-identifier">scheme</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;http&quot;</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">port</span> <span class="ruby-operator">!=</span> <span class="ruby-value">80</span>
+184:         <span class="ruby-identifier">url</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;:#{port}&quot;</span>
+185:       <span class="ruby-keyword kw">end</span>
+186: 
+187:       <span class="ruby-identifier">url</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">fullpath</span>
+188: 
+189:       <span class="ruby-identifier">url</span>
+190:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000181" class="method-detail">
+        <a name="M000181"></a>
+
+        <div class="method-heading">
+          <a href="#M000181" class="method-signature">
+          <span class="method-name">values_at</span><span class="method-args">(*keys)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+like Hash#values_at
+</p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000181-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000181-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/rack/request.rb, line 142</span>
+142:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">values_at</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">keys</span>)
+143:       <span class="ruby-identifier">keys</span>.<span class="ruby-identifier">map</span>{<span class="ruby-operator">|</span><span class="ruby-identifier">key</span><span class="ruby-operator">|</span> <span class="ruby-identifier">params</span>[<span class="ruby-identifier">key</span>] }
+144:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000185" class="method-detail">
+        <a name="M000185"></a>
+
+        <div class="method-heading">
+          <a href="#M000185" class="method-signature">
+          <span class="method-name">xhr?</span><span class="method-args">()</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000185-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000185-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/rack/request.rb, line 173</span>
+173:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">xhr?</span>
+174:       <span class="ruby-ivar">@env</span>[<span class="ruby-value str">&quot;HTTP_X_REQUESTED_WITH&quot;</span>] <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;XMLHttpRequest&quot;</span>
+175:     <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+
+    </div>
+
+
+  </div>
+
+
+<div id="validator-badges">
+  <p><small><a href="http://validator.w3.org/check/referer">[Validate]</a></small></p>
+</div>
+
+</body>
+</html>
