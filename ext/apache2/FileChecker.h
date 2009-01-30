@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (C) 2008  Phusion
+ *  Copyright (C) 2009  Phusion
  *
  *  Phusion Passenger is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -17,13 +17,17 @@
  *  with this program; if not, write to the Free Software Foundation, Inc.,
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+#ifndef _PASSENGER_FILE_CHECKER_H_
+#define _PASSENGER_FILE_CHECKER_H_
+
 #include <string>
 
+#include <oxt/system_calls.hpp>
+
 #include <sys/stat.h>
-#include <time.h>
 #include <errno.h>
 
-#include <oxt/system_calls.hpp>
+#include "SystemTime.h"
 
 namespace Passenger {
 
@@ -73,7 +77,7 @@ private:
 	}
 	
 	bool expired(time_t begin, unsigned int interval, time_t &currentTime) const {
-		currentTime = syscalls::time(NULL);
+		currentTime = SystemTime::get();
 		return (unsigned int) (currentTime - begin) >= interval;
 	}
 	
@@ -98,6 +102,9 @@ public:
 	/**
 	 * Checks whether the file's timestamp has changed or has been created
 	 * or removed since the last call to changed().
+	 *
+	 * @throws SystemException Something went wrong.
+	 * @throws boost::thread_interrupted
 	 */
 	bool changed() {
 		if (throttleRate > 0) {
@@ -115,3 +122,5 @@ public:
 };
 
 } // namespace Passenger
+
+#endif /* _PASSENGER_FILE_CHECKER_H_ */
