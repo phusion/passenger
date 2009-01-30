@@ -159,6 +159,12 @@ private:
 		}
 	};
 	
+	/**
+	 * A data structure which contains data that's shared between a
+	 * StandardApplicationPool and a SessionCloseCallback object.
+	 * This is because the StandardApplicationPool's life time could be
+	 * different from a SessionCloseCallback's.
+	 */
 	struct SharedData {
 		boost::mutex lock;
 		condition activeOrMaxChanged;
@@ -578,7 +584,6 @@ public:
 	 *             running as root. If the empty string is given, or if
 	 *             the <tt>user</tt> is not a valid username, then
 	 *             the spawn manager will be run as the current user.
-	 * @param rubyCommand The Ruby interpreter's command.
 	 * @throws SystemException An error occured while trying to setup the spawn server.
 	 * @throws IOException The specified log file could not be opened.
 	 */
