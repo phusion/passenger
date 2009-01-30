@@ -632,7 +632,7 @@ spec = Gem::Specification.new do |s|
 		'doc/*/*/*/*/*/*',
 		'man/*',
 		'debian/*',
-		'ext/common/*.{cpp,h}',
+		'ext/common/*.{cpp,c,h}',
 		'ext/apache2/*.{cpp,h,c,TXT}',
 		'ext/nginx/*.{c,cpp,h}',
 		'ext/nginx/config',
