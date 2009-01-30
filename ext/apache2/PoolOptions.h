@@ -137,6 +137,12 @@ struct PoolOptions {
 	unsigned long statThrottleRate;
 	
 	/**
+	 * The directory which contains restart.txt and always_restart.txt.
+	 * An empty string means that the default directory should be used.
+	 */
+	string restartDir;
+	
+	/**
 	 * Creates a new PoolOptions object with the default values filled in.
 	 * One must still set appRoot manually, after having used this constructor.
 	 */
@@ -168,7 +174,8 @@ struct PoolOptions {
 		unsigned long maxRequests    = 0,
 		unsigned long memoryLimit    = 0,
 		bool useGlobalQueue          = false,
-		unsigned long statThrottleRate = 0) {
+		unsigned long statThrottleRate = 0,
+		const string &restartDir  = "") {
 		this->appRoot        = appRoot;
 		this->lowerPrivilege = lowerPrivilege;
 		this->lowestUser     = lowestUser;
@@ -181,6 +188,7 @@ struct PoolOptions {
 		this->memoryLimit    = memoryLimit;
 		this->useGlobalQueue = useGlobalQueue;
 		this->statThrottleRate        = statThrottleRate;
+		this->restartDir     = restartDir;
 	}
 	
 	/**
@@ -215,6 +223,7 @@ struct PoolOptions {
 		memoryLimit    = atol(vec[startIndex + 19]);
 		useGlobalQueue = vec[startIndex + 21] == "true";
 		statThrottleRate = atol(vec[startIndex + 23]);
+		restartDir     = vec[startIndex + 25];
 	}
 	
 	/**
@@ -238,6 +247,7 @@ struct PoolOptions {
 		appendKeyValue3(vec, "memory_limit",    memoryLimit);
 		appendKeyValue (vec, "use_global_queue", useGlobalQueue ? "true" : "false");
 		appendKeyValue3(vec, "stat_throttle_rate", statThrottleRate);
+		appendKeyValue (vec, "restart_dir",     restartDir);
 	}
 
 private:

@@ -29,3 +29,5 @@
   depend on rack == 0.4.0.
 - stat() calls on restart.txt (and always_restart.txt) can now be throttled.
   Configure with PassengerStatThrottleRate. Improves performance on NFS.
+- The directory in which Passenger looks for (always_)restart.txt is now
+  configurable through PassengerRestartDir.

@@ -119,11 +119,11 @@ private:
 		CachedFileStat alwaysRestartFileStatter;
 		FileChecker restartFileChecker;
 		
-		Domain(const string &appRoot)
-			: restartFileChecker(appRoot + "/tmp/restart.txt")
+		Domain(const string &restartDir)
+			: restartFileChecker(restartDir + "/restart.txt")
 		{
-			string alwaysRestartFile(appRoot);
-			alwaysRestartFile.append("/tmp/always_restart.txt");
+			string alwaysRestartFile(restartDir);
+			alwaysRestartFile.append("/always_restart.txt");
 			cached_file_stat_init(&alwaysRestartFileStatter,
 				alwaysRestartFile.c_str());
 		}
@@ -534,7 +534,11 @@ private:
 				container->sessions = 0;
 				it = domains.find(appRoot);
 				if (it == domains.end()) {
-					domain = new Domain(appRoot);
+					domain = new Domain(
+						options.restartDir.empty()
+						    ? appRoot + "/tmp"
+						    : options.restartDir
+					);
 					domain->size = 1;
 					domain->maxRequests = options.maxRequests;
 					domains[appRoot] = ptr(domain);

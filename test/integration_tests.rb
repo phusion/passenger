@@ -374,6 +374,7 @@ describe "mod_passenger running in Apache 2" do
 				vhost << "RailsEnv development"
 				vhost << "RailsSpawnMethod conservative"
 				vhost << "PassengerUseGlobalQueue on"
+				vhost << "PassengerRestartDir #{rails_dir}"
 			end
 			@apache2.start
 		end
@@ -409,6 +410,44 @@ describe "mod_passenger running in Apache 2" do
 		specify "RailsSpawnMethod spawning is per-virtual host" do
 			@server = "http://mycook.passenger.test:#{@apache2.port}"
 			get('/welcome/backtrace').should =~ /application_spawner/
+		end
+		
+		it "looks for restart.txt in the directory specified by PassengerRestartDir" do
+			@server = "http://passenger.test:#{@apache2.port}"
+			controller = "#{@stub2.app_root}/app/controllers/bar_controller.rb"
+			restart_file = "#{@stub2.app_root}/public/restart.txt"
+			begin
+				File.open(controller, 'w') do |f|
+					f.write(%Q{
+						class BarController < ApplicationController
+							def index
+								render :text => 'hello world'
+							end
+						end
+					})
+				end
+				
+				File.open(restart_file, 'w').close
+				get('/bar').should == "hello world"
+				
+				File.open(controller, 'w') do |f|
+					f.write(%Q{
+						class BarController < ApplicationController
+							def index
+								render :text => 'oh hai'
+							end
+						end
+					})
+				end
+				
+				now = Time.now
+				File.open(restart_file, 'w').close
+				File.utime(now - 10, now - 10, restart_file)
+				get('/bar').should == "oh hai"
+			ensure
+				File.unlink(controller) rescue nil
+				File.unlink(restart_file) rescue nil
+			end
 		end
 		
 		describe "PassengerUseGlobalQueue" do

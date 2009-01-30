@@ -128,6 +128,12 @@
 			 * explicitly specified in the directory configuration. */
 			bool statThrottleRateSpecified;
 			
+			/** The directory in which Passenger should look for
+			 * restart.txt. NULL means that the default directory
+			 * should be used.
+			 */
+			const char *restartDir;
+			
 			bool isEnabled() const {
 				return enabled != DISABLED;
 			}
@@ -190,6 +196,14 @@
 					return statThrottleRate;
 				} else {
 					return 0;
+				}
+			}
+			
+			const char *getRestartDir() const {
+				if (restartDir != NULL) {
+					return restartDir;
+				} else {
+					return "";
 				}
 			}
 		};
