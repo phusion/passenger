@@ -17,7 +17,7 @@ class ControlProcess
 	
 	def self.list(clean_stale = true)
 		results = []
-		Dir["/tmp/passenger.*"].each do |dir|
+		Dir["#{AdminTools.tmpdir}/passenger.*"].each do |dir|
 			dir =~ /passenger.(\d+)\Z/
 			next if !$1
 			pid = $1.to_i
@@ -42,7 +42,7 @@ class ControlProcess
 		if path
 			@path = path
 		else
-			@path = "/tmp/passenger.#{pid}"
+			@path = "#{AdminTools.tmpdir}/passenger.#{pid}"
 		end
 	end
 	
