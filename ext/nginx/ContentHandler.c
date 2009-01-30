@@ -43,11 +43,64 @@ static void abort_request(ngx_http_request_t *r);
 static void finalize_request(ngx_http_request_t *r, ngx_int_t rc);
 
 
+typedef enum {
+    AP_RAILS,
+    AP_RACK,
+    AP_WSGI,
+    AP_NONE
+} app_type_t;
+
+/**
+ * This structure is like an ngx_http_upstream_t, but contains additional
+ * information which is populated upon creating a passenger_upstream_t,
+ * but used later.
+ */
+typedef struct {
+    ngx_http_upstream_t ngx_upstream;
+    app_type_t          app_type;
+} passenger_upstream_t;
+
+
 static void
 uint_to_str(ngx_uint_t i, u_char *str, ngx_uint_t size) {
     ngx_memzero(str, size);
     ngx_snprintf(str, size, "%ui", i);
 }
+
+static int
+file_exists(const u_char *filename) {
+    struct stat buf;
+    return stat((const char *) filename, &buf) == 0 && S_ISREG(buf.st_mode);
+}
+
+static app_type_t
+detect_application_type(const u_char *docroot) {
+    u_char filename[NGX_MAX_PATH];
+    
+    ngx_memzero(filename, sizeof(filename));
+    ngx_snprintf(filename, sizeof(filename), "%s/%s",
+                 docroot, "../config/environment.rb");
+    if (file_exists(filename)) {
+        return AP_RAILS;
+    }
+    
+    ngx_memzero(filename, sizeof(filename));
+    ngx_snprintf(filename, sizeof(filename), "%s/%s",
+                 docroot, "../config.ru");
+    if (file_exists(filename)) {
+        return AP_RACK;
+    }
+    
+    ngx_memzero(filename, sizeof(filename));
+    ngx_snprintf(filename, sizeof(filename), "%s/%s",
+                 docroot, "../config/passenger_wsgi.py");
+    if (file_exists(filename)) {
+        return AP_WSGI;
+    }
+    
+    return AP_NONE;
+}
+
 
 static ngx_int_t
 create_request(ngx_http_request_t *r)
@@ -55,6 +108,8 @@ create_request(ngx_http_request_t *r)
     u_char                         ch;
     u_char                         buf[sizeof("4294967296")];
     size_t                         len, size, key_len, val_len, content_length;
+    const u_char                  *app_type_string;
+    size_t                         app_type_string_len;
     ngx_uint_t                     i, n;
     ngx_buf_t                     *b;
     ngx_chain_t                   *cl, *body;
@@ -74,6 +129,25 @@ create_request(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
     ngx_http_set_ctx(r, s, ngx_http_passenger_module);
+    
+    switch (((passenger_upstream_t *) r->upstream)->app_type) {
+    case AP_RAILS:
+        app_type_string = (const u_char *) "rails";
+        app_type_string_len = sizeof("rails");
+        break;
+    case AP_RACK:
+        app_type_string = (const u_char *) "rack";
+        app_type_string_len = sizeof("rack");
+        break;
+    case AP_WSGI:
+        app_type_string = (const u_char *) "wsgi";
+        app_type_string_len = sizeof("wsgi");
+        break;
+    default:
+        app_type_string = (const u_char *) "rails";
+        app_type_string_len = sizeof("rails");
+        break;
+    }
     
     
     /**************************************************
@@ -99,6 +173,7 @@ create_request(ngx_http_request_t *r)
     }
     len += sizeof("PASSENGER_ENVIRONMENT") + slcf->environment.len + 1;
     len += sizeof("PASSENGER_SPAWN_METHOD") + slcf->spawn_method.len + 1;
+    len += sizeof("PASSENGER_APP_TYPE") + app_type_string_len;
 
     /* Lengths of various CGI variables. */
     if (slcf->vars_len) {
@@ -202,6 +277,10 @@ create_request(ngx_http_request_t *r)
                        sizeof("PASSENGER_SPAWN_METHOD"));
     b->last = ngx_copy(b->last, slcf->spawn_method.data,
                        slcf->spawn_method.len + 1);
+
+    b->last = ngx_copy(b->last, "PASSENGER_APP_TYPE",
+                       sizeof("PASSENGER_APP_TYPE"));
+    b->last = ngx_copy(b->last, app_type_string, app_type_string_len);
 
 
     if (slcf->vars_len) {
@@ -757,6 +836,7 @@ passenger_content_handler(ngx_http_request_t *r)
     passenger_loc_conf_t          *slcf;
     ngx_str_t                      path;
     size_t                         root;
+    app_type_t                     app_type;
 
     if (r->subrequest_in_memory) {
         ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
@@ -771,18 +851,27 @@ passenger_content_handler(ngx_http_request_t *r)
         return NGX_DECLINED;
     }
     
-    if (ngx_http_map_uri_to_path(r, &path, &root, 0) != NULL) {
-        struct stat buf;
-        
-        if (stat((const char *) path.data, &buf) == 0 && S_ISREG(buf.st_mode)) {
-            return NGX_DECLINED;
-        }
+    if (ngx_http_map_uri_to_path(r, &path, &root, 0) != NULL
+     && file_exists(path.data)) {
+        return NGX_DECLINED;
+    }
+    /* Cut the path string off at the end of the root component,
+     * because for detecting the application type we're only interested
+     * in the root path.
+     */
+    path.data[root] = (u_char) '\0';
+    
+    app_type = detect_application_type(path.data);
+    if (app_type == AP_NONE) {
+        return NGX_DECLINED;
     }
     
-    u = ngx_pcalloc(r->pool, sizeof(ngx_http_upstream_t));
+    u = ngx_pcalloc(r->pool, sizeof(passenger_upstream_t));
     if (u == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
+    
+    ((passenger_upstream_t *) u)->app_type = app_type;
     
 #if NGINX_VERSION_NUM >= 7000
     u->schema = passenger_schema_string;

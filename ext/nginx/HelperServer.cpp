@@ -404,6 +404,7 @@ private:
 			options.spawnMethod    = parser.getHeader("PASSENGER_SPAWN_METHOD");
 			options.lowerPrivilege = lowerPrivilege;
 			options.lowestUser     = lowestUser;
+			options.appType        = parser.getHeader("PASSENGER_APP_TYPE");
 			
 			try {
 				Application::SessionPtr session(pool->get(options));
