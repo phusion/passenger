@@ -159,7 +159,9 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 		'ext/common/Logging.h',
 		'ext/common/Logging.cpp',
 		'ext/common/SystemTime.h',
-		'ext/common/SystemTime.c'
+		'ext/common/SystemTime.c',
+		'ext/common/CachedFileStat.h',
+		'ext/common/CachedFileStat.c'
 	]) do
 		sh "mkdir -p #{objects_output_dir}"
 		
@@ -172,6 +174,7 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 			compile_cxx("#{ext_dir}/common/Utils.cpp", flags)
 			compile_cxx("#{ext_dir}/common/Logging.cpp", flags)
 			compile_cxx("#{ext_dir}/common/SystemTime.c", flags)
+			compile_cxx("#{ext_dir}/common/CachedFileStat.c", flags)
 			
 			puts
 		end
@@ -192,6 +195,8 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 			'ext/common/SpawnManager.h',
 			'ext/common/PoolOptions.h',
 			'ext/common/FileChecker.h',
+			'ext/common/SystemTime.h',
+			'ext/common/CachedFileStat.h',
 			boost_oxt_library,
 			static_library
 		]) do
@@ -415,6 +420,10 @@ end
 			test/SystemTimeTest.cpp
 			ext/common/SystemTime.h
 			ext/common/SystemTime.c),
+		'test/CachedFileStatTest.o' => %w(
+			test/CachedFileStatTest.cpp
+			ext/common/CachedFileStat.h
+			ext/common/CachedFileStat.c),
 		'test/UtilsTest.o' => %w(
 			test/UtilsTest.cpp
 			ext/common/Utils.h)
