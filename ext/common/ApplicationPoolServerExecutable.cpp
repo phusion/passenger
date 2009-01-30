@@ -89,11 +89,40 @@ private:
 	string user;
 
 	/**
-	 * Lowers this process's privilege to that of <em>username</em>.
+	 * Lowers this process's privilege to that of <em>username</em>,
+	 * and sets stricter permissions for the Phusion Passenger temp
+	 * directory.
 	 */
 	void lowerPrivilege(const string &username) {
-		struct passwd *entry = getpwnam(username.c_str());
+		struct passwd *entry;
+		int ret, e;
+		
+		entry = getpwnam(username.c_str());
 		if (entry != NULL) {
+			do {
+				ret = chown(getPassengerTempDir().c_str(),
+					entry->pw_uid, entry->pw_gid);
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1) {
+				e = errno;
+				P_WARN("WARNING: Unable to change owner for directory '" <<
+					getPassengerTempDir() << "' to '" << username <<
+					"': " << strerror(e) << " (" << e << ")");
+			} else {
+				do {
+					ret = chmod(getPassengerTempDir().c_str(),
+						S_IRUSR | S_IWUSR | S_IXUSR);
+				} while (ret == -1 && errno == EINTR);
+				if (ret == -1) {
+					e = errno;
+					P_WARN("WARNING: Unable to change "
+						"permissions for directory " <<
+						getPassengerTempDir() << ": " <<
+						strerror(e) <<
+						" (" << e << ")");
+				}
+			}
+			
 			if (initgroups(username.c_str(), entry->pw_gid) != 0) {
 				int e = errno;
 				P_WARN("WARNING: Unable to lower ApplicationPoolServerExecutable's "

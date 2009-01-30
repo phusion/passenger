@@ -45,8 +45,7 @@ class Installer < Passenger::AbstractInstaller
 			Dependencies::Rake,
 			Dependencies::Apache2,
 			Dependencies::Apache2_DevHeaders,
-			Dependencies::FastThread,
-			Dependencies::Rack
+			Dependencies::FastThread
 		]
 		#if PlatformInfo.apr_config_needed?
 			result << Dependencies::APR_DevHeaders

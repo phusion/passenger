@@ -25,3 +25,5 @@
 - Configurable temp dir.
 - Better error messages, more error checking, and other small things
   which makes your live easier.
+- Rack is now vendored in order to work around broken applications that
+  depend on rack == 0.4.0.

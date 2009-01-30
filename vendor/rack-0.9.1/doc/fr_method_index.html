@@ -1,0 +1,236 @@
+
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<!--
+
+    Methods
+
+  -->
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>Methods</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <link rel="stylesheet" href="rdoc-style.css" type="text/css" />
+  <base target="docwin" />
+</head>
+<body>
+<div id="index">
+  <h1 class="section-bar">Methods</h1>
+  <div id="index-entries">
+    <a href="classes/Rack/CommonLogger.html#M000196"><< (Rack::CommonLogger)</a><br />
+    <a href="classes/Rack/Cascade.html#M000202"><< (Rack::Cascade)</a><br />
+    <a href="classes/Rack/MockResponse.html#M000070">=~ (Rack::MockResponse)</a><br />
+    <a href="classes/Rack/Request.html#M000176">GET (Rack::Request)</a><br />
+    <a href="classes/Rack/Request.html#M000177">POST (Rack::Request)</a><br />
+    <a href="classes/Rack/MockResponse.html#M000069">[] (Rack::MockResponse)</a><br />
+    <a href="classes/Rack/Request.html#M000179">[] (Rack::Request)</a><br />
+    <a href="classes/Rack/Utils/HeaderHash.html#M000035">[] (Rack::Utils::HeaderHash)</a><br />
+    <a href="classes/Rack/Response.html#M000089">[] (Rack::Response)</a><br />
+    <a href="classes/Rack/Utils/HeaderHash.html#M000036">[]= (Rack::Utils::HeaderHash)</a><br />
+    <a href="classes/Rack/Response.html#M000090">[]= (Rack::Response)</a><br />
+    <a href="classes/Rack/Request.html#M000180">[]= (Rack::Request)</a><br />
+    <a href="classes/Rack/CommonLogger.html#M000194">_call (Rack::CommonLogger)</a><br />
+    <a href="classes/Rack/File.html#M000206">_call (Rack::File)</a><br />
+    <a href="classes/Rack/Directory.html#M000137">_call (Rack::Directory)</a><br />
+    <a href="classes/Rack/Request.html#M000188">accept_encoding (Rack::Request)</a><br />
+    <a href="classes/Rack/Cascade.html#M000200">add (Rack::Cascade)</a><br />
+    <a href="classes/Rack/Auth/OpenID.html#M000019">add_extension (Rack::Auth::OpenID)</a><br />
+    <a href="classes/Rack/Builder.html#M000126">app (Rack::Builder)</a><br />
+    <a href="classes/Rack/Auth/Basic/Request.html#M000012">basic? (Rack::Auth::Basic::Request)</a><br />
+    <a href="classes/Rack/Request.html#M000155">body (Rack::Request)</a><br />
+    <a href="classes/Rack/Utils.html#M000025">build_query (Rack::Utils)</a><br />
+    <a href="classes/Rack/ShowStatus.html#M000084">call (Rack::ShowStatus)</a><br />
+    <a href="classes/Rack/ConditionalGet.html#M000191">call (Rack::ConditionalGet)</a><br />
+    <a href="classes/Rack/CommonLogger.html#M000193">call (Rack::CommonLogger)</a><br />
+    <a href="classes/Rack/Auth/Basic.html#M000011">call (Rack::Auth::Basic)</a><br />
+    <a href="classes/Rack/Head.html#M000073">call (Rack::Head)</a><br />
+    <a href="classes/Rack/Session/Cookie.html#M000009">call (Rack::Session::Cookie)</a><br />
+    <a href="classes/Rack/ContentLength.html#M000081">call (Rack::ContentLength)</a><br />
+    <a href="classes/Rack/Forwarder.html#M000075">call (Rack::Forwarder)</a><br />
+    <a href="classes/Rack/ShowExceptions.html#M000086">call (Rack::ShowExceptions)</a><br />
+    <a href="classes/Rack/Cascade.html#M000199">call (Rack::Cascade)</a><br />
+    <a href="classes/Rack/Auth/OpenID.html#M000016">call (Rack::Auth::OpenID)</a><br />
+    <a href="classes/Rack/URLMap.html#M000077">call (Rack::URLMap)</a><br />
+    <a href="classes/Rack/Adapter/Camping.html#M000006">call (Rack::Adapter::Camping)</a><br />
+    <a href="classes/Rack.html#M000004">call (Rack)</a><br />
+    <a href="classes/Rack/Directory.html#M000136">call (Rack::Directory)</a><br />
+    <a href="classes/Rack/Builder.html#M000131">call (Rack::Builder)</a><br />
+    <a href="classes/Rack/Deflater.html#M000151">call (Rack::Deflater)</a><br />
+    <a href="classes/Rack/Recursive.html#M000148">call (Rack::Recursive)</a><br />
+    <a href="classes/Rack/Static.html#M000146">call (Rack::Static)</a><br />
+    <a href="classes/Rack/File.html#M000205">call (Rack::File)</a><br />
+    <a href="classes/Rack/Reloader.html#M000133">call (Rack::Reloader)</a><br />
+    <a href="classes/Rack/MethodOverride.html#M000079">call (Rack::MethodOverride)</a><br />
+    <a href="classes/L2.html#M000001">call (L2)</a><br />
+    <a href="classes/Rack/Auth/OpenID.html#M000017">check (Rack::Auth::OpenID)</a><br />
+    <a href="classes/Rack/Directory.html#M000138">check_forbidden (Rack::Directory)</a><br />
+    <a href="classes/Rack/Response/Helpers.html#M000103">client_error? (Rack::Response::Helpers)</a><br />
+    <a href="classes/Rack/CommonLogger.html#M000195">close (Rack::CommonLogger)</a><br />
+    <a href="classes/Rack/Response.html#M000097">close (Rack::Response)</a><br />
+    <a href="classes/Rack/Request.html#M000166">content_charset (Rack::Request)</a><br />
+    <a href="classes/Rack/Request.html#M000162">content_length (Rack::Request)</a><br />
+    <a href="classes/Rack/Response/Helpers.html#M000112">content_length (Rack::Response::Helpers)</a><br />
+    <a href="classes/Rack/Response/Helpers.html#M000111">content_type (Rack::Response::Helpers)</a><br />
+    <a href="classes/Rack/Request.html#M000163">content_type (Rack::Request)</a><br />
+    <a href="classes/Rack/Utils/Context.html#M000031">context (Rack::Utils::Context)</a><br />
+    <a href="classes/Rack/Request.html#M000184">cookies (Rack::Request)</a><br />
+    <a href="classes/Rack/Auth/Basic/Request.html#M000013">credentials (Rack::Auth::Basic::Request)</a><br />
+    <a href="classes/Rack/Deflater.html#M000153">deflate (Rack::Deflater)</a><br />
+    <a href="classes/Rack/MockRequest.html#M000118">delete (Rack::MockRequest)</a><br />
+    <a href="classes/Rack/Utils/HeaderHash.html#M000037">delete (Rack::Utils::HeaderHash)</a><br />
+    <a href="classes/Rack/Request.html#M000173">delete? (Rack::Request)</a><br />
+    <a href="classes/Rack/Response.html#M000092">delete_cookie (Rack::Response)</a><br />
+    <a href="classes/Rack/Response.html#M000095">each (Rack::Response)</a><br />
+    <a href="classes/Rack/CommonLogger.html#M000197">each (Rack::CommonLogger)</a><br />
+    <a href="classes/Rack/Directory.html#M000143">each (Rack::Directory)</a><br />
+    <a href="classes/Rack/File.html#M000210">each (Rack::File)</a><br />
+    <a href="classes/Rack/Response/Helpers.html#M000109">empty? (Rack::Response::Helpers)</a><br />
+    <a href="classes/Rack/Response.html#M000098">empty? (Rack::Response)</a><br />
+    <a href="classes/Rack/Directory.html#M000142">entity_not_found (Rack::Directory)</a><br />
+    <a href="classes/Rack/MockRequest.html#M000120">env_for (Rack::MockRequest)</a><br />
+    <a href="classes/Rack/Utils.html#M000022">escape (Rack::Utils)</a><br />
+    <a href="classes/Rack/Utils.html#M000026">escape_html (Rack::Utils)</a><br />
+    <a href="classes/Rack/Auth/OpenID.html#M000020">extension_namespaces (Rack::Auth::OpenID)</a><br />
+    <a href="classes/Rack/Directory.html#M000144">filesize_format (Rack::Directory)</a><br />
+    <a href="classes/Rack/Auth/OpenID.html#M000018">finish (Rack::Auth::OpenID)</a><br />
+    <a href="classes/Rack/Response.html#M000093">finish (Rack::Response)</a><br />
+    <a href="classes/Rack/MockRequest/FatalWarner.html#M000123">flush (Rack::MockRequest::FatalWarner)</a><br />
+    <a href="classes/Rack/File.html#M000207">forbidden (Rack::File)</a><br />
+    <a href="classes/Rack/Response/Helpers.html#M000106">forbidden? (Rack::Response::Helpers)</a><br />
+    <a href="classes/Rack/Request.html#M000175">form_data? (Rack::Request)</a><br />
+    <a href="classes/Rack/Request.html#M000187">fullpath (Rack::Request)</a><br />
+    <a href="classes/Rack/MockRequest.html#M000115">get (Rack::MockRequest)</a><br />
+    <a href="classes/Rack/Handler.html#M000044">get (Rack::Handler)</a><br />
+    <a href="classes/Rack/Request.html#M000170">get? (Rack::Request)</a><br />
+    <a href="classes/Rack/Deflater.html#M000152">gzip (Rack::Deflater)</a><br />
+    <a href="classes/Rack/Utils/HeaderHash.html#M000039">has_key? (Rack::Utils::HeaderHash)</a><br />
+    <a href="classes/Rack/Request.html#M000174">head? (Rack::Request)</a><br />
+    <a href="classes/Rack/Request.html#M000167">host (Rack::Request)</a><br />
+    <a href="classes/Rack/Recursive.html#M000149">include (Rack::Recursive)</a><br />
+    <a href="classes/Rack/Cascade.html#M000201">include? (Rack::Cascade)</a><br />
+    <a href="classes/Rack/Response/Helpers.html#M000110">include? (Rack::Response::Helpers)</a><br />
+    <a href="classes/Rack/Utils/HeaderHash.html#M000038">include? (Rack::Utils::HeaderHash)</a><br />
+    <a href="classes/Rack/Response/Helpers.html#M000100">informational? (Rack::Response::Helpers)</a><br />
+    <a href="classes/Rack/Utils/Context.html#M000030">inspect (Rack::Utils::Context)</a><br />
+    <a href="classes/Rack/Response/Helpers.html#M000099">invalid? (Rack::Response::Helpers)</a><br />
+    <a href="classes/Rack/Request.html#M000189">ip (Rack::Request)</a><br />
+    <a href="classes/Rack/Utils/HeaderHash.html#M000041">key? (Rack::Utils::HeaderHash)</a><br />
+    <a href="classes/Rack/Directory.html#M000139">list_directory (Rack::Directory)</a><br />
+    <a href="classes/Rack/Directory.html#M000141">list_path (Rack::Directory)</a><br />
+    <a href="classes/Rack/Response/Helpers.html#M000113">location (Rack::Response::Helpers)</a><br />
+    <a href="classes/Rack/Builder.html#M000129">map (Rack::Builder)</a><br />
+    <a href="classes/Rack/MockResponse.html#M000071">match (Rack::MockResponse)</a><br />
+    <a href="classes/Rack/Request.html#M000164">media_type (Rack::Request)</a><br />
+    <a href="classes/Rack/Request.html#M000165">media_type_params (Rack::Request)</a><br />
+    <a href="classes/Rack/Utils/HeaderHash.html#M000040">member? (Rack::Utils::HeaderHash)</a><br />
+    <a href="classes/Rack/Utils/HeaderHash.html#M000043">merge (Rack::Utils::HeaderHash)</a><br />
+    <a href="classes/Rack/Utils/HeaderHash.html#M000042">merge! (Rack::Utils::HeaderHash)</a><br />
+    <a href="classes/Rack/Mime.html#M000021">mime_type (Rack::Mime)</a><br />
+    <a href="classes/Rack/MockResponse.html#M000068">new (Rack::MockResponse)</a><br />
+    <a href="classes/Rack/Reloader.html#M000132">new (Rack::Reloader)</a><br />
+    <a href="classes/Rack/Lint.html#M000082">new (Rack::Lint)</a><br />
+    <a href="classes/Rack/ShowExceptions.html#M000085">new (Rack::ShowExceptions)</a><br />
+    <a href="classes/Rack/MockRequest.html#M000114">new (Rack::MockRequest)</a><br />
+    <a href="classes/Rack/Utils/HeaderHash.html#M000033">new (Rack::Utils::HeaderHash)</a><br />
+    <a href="classes/Rack/Utils/Context.html#M000029">new (Rack::Utils::Context)</a><br />
+    <a href="classes/Rack/Request.html#M000154">new (Rack::Request)</a><br />
+    <a href="classes/Rack/ContentLength.html#M000080">new (Rack::ContentLength)</a><br />
+    <a href="classes/Rack/File.html#M000204">new (Rack::File)</a><br />
+    <a href="classes/Rack/ForwardRequest.html#M000203">new (Rack::ForwardRequest)</a><br />
+    <a href="classes/Rack/Response.html#M000088">new (Rack::Response)</a><br />
+    <a href="classes/Rack/Adapter/Camping.html#M000005">new (Rack::Adapter::Camping)</a><br />
+    <a href="classes/Rack/Handler/Mongrel.html#M000066">new (Rack::Handler::Mongrel)</a><br />
+    <a href="classes/Rack/Session/Memcache.html#M000007">new (Rack::Session::Memcache)</a><br />
+    <a href="classes/Rack/Builder.html#M000125">new (Rack::Builder)</a><br />
+    <a href="classes/Rack/Session/Cookie.html#M000008">new (Rack::Session::Cookie)</a><br />
+    <a href="classes/Rack/Cascade.html#M000198">new (Rack::Cascade)</a><br />
+    <a href="classes/Rack/Session/Pool.html#M000010">new (Rack::Session::Pool)</a><br />
+    <a href="classes/Rack/Deflater.html#M000150">new (Rack::Deflater)</a><br />
+    <a href="classes/Rack/Auth/OpenID.html#M000015">new (Rack::Auth::OpenID)</a><br />
+    <a href="classes/Rack/Head.html#M000072">new (Rack::Head)</a><br />
+    <a href="classes/Rack/CommonLogger.html#M000192">new (Rack::CommonLogger)</a><br />
+    <a href="classes/Rack/Forwarder.html#M000074">new (Rack::Forwarder)</a><br />
+    <a href="classes/Rack/ConditionalGet.html#M000190">new (Rack::ConditionalGet)</a><br />
+    <a href="classes/Rack/Directory.html#M000135">new (Rack::Directory)</a><br />
+    <a href="classes/Rack/ShowStatus.html#M000083">new (Rack::ShowStatus)</a><br />
+    <a href="classes/Rack/URLMap.html#M000076">new (Rack::URLMap)</a><br />
+    <a href="classes/Rack/MethodOverride.html#M000078">new (Rack::MethodOverride)</a><br />
+    <a href="classes/Rack/Recursive.html#M000147">new (Rack::Recursive)</a><br />
+    <a href="classes/Rack/Static.html#M000145">new (Rack::Static)</a><br />
+    <a href="classes/Rack/Handler/SCGI.html#M000056">new (Rack::Handler::SCGI)</a><br />
+    <a href="classes/Rack/Handler/WEBrick.html#M000063">new (Rack::Handler::WEBrick)</a><br />
+    <a href="classes/Rack/File.html#M000209">not_found (Rack::File)</a><br />
+    <a href="classes/Rack/Response/Helpers.html#M000107">not_found? (Rack::Response::Helpers)</a><br />
+    <a href="classes/Rack/Response/Helpers.html#M000105">ok? (Rack::Response::Helpers)</a><br />
+    <a href="classes/Rack/Request.html#M000178">params (Rack::Request)</a><br />
+    <a href="classes/Rack/Utils/Multipart.html#M000028">parse_multipart (Rack::Utils::Multipart)</a><br />
+    <a href="classes/Rack/Utils.html#M000024">parse_query (Rack::Utils)</a><br />
+    <a href="classes/Rack/Request.html#M000158">path_info (Rack::Request)</a><br />
+    <a href="classes/Rack/Request.html#M000169">path_info= (Rack::Request)</a><br />
+    <a href="classes/Rack/Request.html#M000159">port (Rack::Request)</a><br />
+    <a href="classes/Rack/MockRequest.html#M000116">post (Rack::MockRequest)</a><br />
+    <a href="classes/Rack/Request.html#M000171">post? (Rack::Request)</a><br />
+    <a href="classes/Rack/ShowExceptions.html#M000087">pretty (Rack::ShowExceptions)</a><br />
+    <a href="classes/Rack/Utils/Context.html#M000032">pretty_print (Rack::Utils::Context)</a><br />
+    <a href="classes/Rack/Handler/Mongrel.html#M000067">process (Rack::Handler::Mongrel)</a><br />
+    <a href="classes/Rack/Handler/SCGI.html#M000057">process_request (Rack::Handler::SCGI)</a><br />
+    <a href="classes/Rack/MockRequest.html#M000117">put (Rack::MockRequest)</a><br />
+    <a href="classes/Rack/Request.html#M000172">put? (Rack::Request)</a><br />
+    <a href="classes/Rack/MockRequest/FatalWarner.html#M000121">puts (Rack::MockRequest::FatalWarner)</a><br />
+    <a href="classes/Rack/Request.html#M000161">query_string (Rack::Request)</a><br />
+    <a href="classes/Rack/Response/Helpers.html#M000108">redirect? (Rack::Response::Helpers)</a><br />
+    <a href="classes/Rack/Response/Helpers.html#M000102">redirection? (Rack::Response::Helpers)</a><br />
+    <a href="classes/Rack/Request.html#M000182">referer (Rack::Request)</a><br />
+    <a href="classes/Rack/Request.html#M000183">referrer (Rack::Request)</a><br />
+    <a href="classes/Rack/Handler.html#M000045">register (Rack::Handler)</a><br />
+    <a href="classes/Rack.html#M000003">release (Rack)</a><br />
+    <a href="classes/Rack/Reloader.html#M000134">reload! (Rack::Reloader)</a><br />
+    <a href="classes/Rack/MockRequest.html#M000119">request (Rack::MockRequest)</a><br />
+    <a href="classes/Rack/Request.html#M000160">request_method (Rack::Request)</a><br />
+    <a href="classes/Rack/Handler/CGI.html#M000051">run (Rack::Handler::CGI)</a><br />
+    <a href="classes/Rack/Builder.html#M000128">run (Rack::Builder)</a><br />
+    <a href="classes/Rack/Handler/Mongrel.html#M000065">run (Rack::Handler::Mongrel)</a><br />
+    <a href="classes/Rack/Handler/FastCGI.html#M000046">run (Rack::Handler::FastCGI)</a><br />
+    <a href="classes/Rack/Handler/WEBrick.html#M000062">run (Rack::Handler::WEBrick)</a><br />
+    <a href="classes/Rack/Handler/LSWS.html#M000058">run (Rack::Handler::LSWS)</a><br />
+    <a href="classes/Rack/Handler/Thin.html#M000050">run (Rack::Handler::Thin)</a><br />
+    <a href="classes/Rack/Handler/SCGI.html#M000055">run (Rack::Handler::SCGI)</a><br />
+    <a href="classes/Rack/Request.html#M000156">scheme (Rack::Request)</a><br />
+    <a href="classes/Rack/Request.html#M000157">script_name (Rack::Request)</a><br />
+    <a href="classes/Rack/Request.html#M000168">script_name= (Rack::Request)</a><br />
+    <a href="classes/Rack/Utils.html#M000027">select_best_encoding (Rack::Utils)</a><br />
+    <a href="classes/Rack/Handler/LSWS.html#M000061">send_body (Rack::Handler::LSWS)</a><br />
+    <a href="classes/Rack/Handler/FastCGI.html#M000049">send_body (Rack::Handler::FastCGI)</a><br />
+    <a href="classes/Rack/Handler/CGI.html#M000054">send_body (Rack::Handler::CGI)</a><br />
+    <a href="classes/Rack/Handler/FastCGI.html#M000048">send_headers (Rack::Handler::FastCGI)</a><br />
+    <a href="classes/Rack/Handler/CGI.html#M000053">send_headers (Rack::Handler::CGI)</a><br />
+    <a href="classes/Rack/Handler/LSWS.html#M000060">send_headers (Rack::Handler::LSWS)</a><br />
+    <a href="classes/Rack/Handler/FastCGI.html#M000047">serve (Rack::Handler::FastCGI)</a><br />
+    <a href="classes/Rack/Handler/LSWS.html#M000059">serve (Rack::Handler::LSWS)</a><br />
+    <a href="classes/Rack/Handler/CGI.html#M000052">serve (Rack::Handler::CGI)</a><br />
+    <a href="classes/Rack/Response/Helpers.html#M000104">server_error? (Rack::Response::Helpers)</a><br />
+    <a href="classes/Rack/Handler/WEBrick.html#M000064">service (Rack::Handler::WEBrick)</a><br />
+    <a href="classes/Rack/File.html#M000208">serving (Rack::File)</a><br />
+    <a href="classes/Rack/Response.html#M000091">set_cookie (Rack::Response)</a><br />
+    <a href="classes/Rack/Directory.html#M000140">stat (Rack::Directory)</a><br />
+    <a href="classes/Rack/MockRequest/FatalWarner.html#M000124">string (Rack::MockRequest::FatalWarner)</a><br />
+    <a href="classes/Rack/Response/Helpers.html#M000101">successful? (Rack::Response::Helpers)</a><br />
+    <a href="classes/Rack/Response.html#M000094">to_a (Rack::Response)</a><br />
+    <a href="classes/Rack/Builder.html#M000130">to_app (Rack::Builder)</a><br />
+    <a href="classes/Rack/Utils/HeaderHash.html#M000034">to_hash (Rack::Utils::HeaderHash)</a><br />
+    <a href="classes/Rack/Utils.html#M000023">unescape (Rack::Utils)</a><br />
+    <a href="classes/Rack/Request.html#M000186">url (Rack::Request)</a><br />
+    <a href="classes/Rack/Builder.html#M000127">use (Rack::Builder)</a><br />
+    <a href="classes/Rack/Auth/Basic/Request.html#M000014">username (Rack::Auth::Basic::Request)</a><br />
+    <a href="classes/Rack/Request.html#M000181">values_at (Rack::Request)</a><br />
+    <a href="classes/Rack.html#M000002">version (Rack)</a><br />
+    <a href="classes/Rack/MockRequest/FatalWarner.html#M000122">write (Rack::MockRequest::FatalWarner)</a><br />
+    <a href="classes/Rack/Response.html#M000096">write (Rack::Response)</a><br />
+    <a href="classes/Rack/Request.html#M000185">xhr? (Rack::Request)</a><br />
+  </div>
+</div>
+</body>
+</html>
