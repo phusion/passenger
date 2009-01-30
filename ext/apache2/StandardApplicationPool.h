@@ -48,6 +48,7 @@
 #include "ApplicationPool.h"
 #include "Logging.h"
 #include "FileChecker.h"
+#include "CachedFileStat.h"
 #ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER
 	#include "DummySpawnManager.h"
 #else
@@ -115,11 +116,21 @@ private:
 		AppContainerList instances;
 		unsigned int size;
 		unsigned long maxRequests;
+		CachedFileStat alwaysRestartFileStatter;
 		FileChecker restartFileChecker;
 		
 		Domain(const string &appRoot)
-			: restartFileChecker(string(appRoot + "/tmp/restart.txt"))
-			{ }
+			: restartFileChecker(appRoot + "/tmp/restart.txt")
+		{
+			string alwaysRestartFile(appRoot);
+			alwaysRestartFile.append("/tmp/always_restart.txt");
+			cached_file_stat_init(&alwaysRestartFileStatter,
+				alwaysRestartFile.c_str());
+		}
+		
+		~Domain() {
+			cached_file_stat_deinit(&alwaysRestartFileStatter);
+		}
 	};
 	
 	struct AppContainer {
@@ -341,17 +352,10 @@ private:
 		return result.str();
 	}
 	
-	bool needsRestart(const string &appRoot, Domain *domain) {
-		struct stat buf;
-		int ret;
-
-		string alwaysRestartFile(appRoot);
-		alwaysRestartFile.append("/tmp/always_restart.txt");
-		do {
-			ret = stat(alwaysRestartFile.c_str(), &buf);
-		} while (ret == -1 && errno == EINTR);
-		
-		return ret == 0 || domain->restartFileChecker.changed();
+	bool needsRestart(const string &appRoot, Domain *domain, const PoolOptions &options) {
+		return cached_file_stat_refresh(&domain->alwaysRestartFileStatter,
+		                                options.statThrottleRate) == 0
+		    || domain->restartFileChecker.changed(options.statThrottleRate);
 	}
 	
 	void cleanerThreadMainLoop() {
@@ -428,7 +432,7 @@ private:
 		try {
 			DomainMap::iterator it(domains.find(appRoot));
 			
-			if (it != domains.end() && needsRestart(appRoot, it->second.get())) {
+			if (it != domains.end() && needsRestart(appRoot, it->second.get(), options)) {
 				AppContainerList::iterator it2;
 				instances = &it->second->instances;
 				for (it2 = instances->begin(); it2 != instances->end(); it2++) {

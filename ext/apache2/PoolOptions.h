@@ -130,6 +130,13 @@ struct PoolOptions {
 	bool useGlobalQueue;
 	
 	/**
+	 * A throttling rate for file stats. When set to a non-zero value N,
+	 * restart.txt and other files which are usually stat()ted on every
+	 * ApplicationPool::get() call will be stat()ed at most every N seconds.
+	 */
+	unsigned long statThrottleRate;
+	
+	/**
 	 * Creates a new PoolOptions object with the default values filled in.
 	 * One must still set appRoot manually, after having used this constructor.
 	 */
@@ -144,6 +151,7 @@ struct PoolOptions {
 		maxRequests    = 0;
 		memoryLimit    = 0;
 		useGlobalQueue = false;
+		statThrottleRate        = 0;
 	}
 	
 	/**
@@ -159,7 +167,8 @@ struct PoolOptions {
 		long appSpawnerTimeout       = -1,
 		unsigned long maxRequests    = 0,
 		unsigned long memoryLimit    = 0,
-		bool useGlobalQueue          = false) {
+		bool useGlobalQueue          = false,
+		unsigned long statThrottleRate = 0) {
 		this->appRoot        = appRoot;
 		this->lowerPrivilege = lowerPrivilege;
 		this->lowestUser     = lowestUser;
@@ -171,6 +180,7 @@ struct PoolOptions {
 		this->maxRequests    = maxRequests;
 		this->memoryLimit    = memoryLimit;
 		this->useGlobalQueue = useGlobalQueue;
+		this->statThrottleRate        = statThrottleRate;
 	}
 	
 	/**
@@ -204,6 +214,7 @@ struct PoolOptions {
 		maxRequests    = atol(vec[startIndex + 17]);
 		memoryLimit    = atol(vec[startIndex + 19]);
 		useGlobalQueue = vec[startIndex + 21] == "true";
+		statThrottleRate = atol(vec[startIndex + 23]);
 	}
 	
 	/**
@@ -226,6 +237,7 @@ struct PoolOptions {
 		appendKeyValue3(vec, "max_requests",    maxRequests);
 		appendKeyValue3(vec, "memory_limit",    memoryLimit);
 		appendKeyValue (vec, "use_global_queue", useGlobalQueue ? "true" : "false");
+		appendKeyValue3(vec, "stat_throttle_rate", statThrottleRate);
 	}
 
 private:

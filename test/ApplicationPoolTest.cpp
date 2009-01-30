@@ -496,7 +496,7 @@
 	}
 	
 	TEST_METHOD(22) {
-		// Test whether always_restart really results in code reload.
+		// Test whether tmp/always_restart.txt really results in code reload.
 		try {
 			system("cp -f stub/railsapp/app/controllers/bar_controller_1.rb "
 				"stub/railsapp/app/controllers/bar_controller.rb");
@@ -512,7 +512,7 @@
 			session = pool->get("stub/railsapp");
 			session->sendHeaders(createRequestHeaders("/bar"));
 			result = readAll(session->getStream());
-			ensure("App code has been reloaded", result.find("bar 2!") != string::npos);
+			ensure("App code has been reloaded (1)", result.find("bar 2!") != string::npos);
 			session.reset();
 
 			system("cp -f stub/railsapp/app/controllers/bar_controller_1.rb "
@@ -520,7 +520,7 @@
 			session = pool->get("stub/railsapp");
 			session->sendHeaders(createRequestHeaders("/bar"));
 			result = readAll(session->getStream());
-			ensure("App code has been reloaded", result.find("bar 1!") != string::npos);
+			ensure("App code has been reloaded (2)", result.find("bar 1!") != string::npos);
 			session.reset();
 		
 			unlink("stub/railsapp/app/controllers/bar_controller.rb");

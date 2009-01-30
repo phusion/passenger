@@ -402,7 +402,8 @@ private:
 					config->appSpawnerTimeout,
 					config->getMaxRequests(),
 					config->getMemoryLimit(),
-					config->usingGlobalQueue()));
+					config->usingGlobalQueue(),
+					config->getStatThrottleRate()));
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				r->status = 500;
