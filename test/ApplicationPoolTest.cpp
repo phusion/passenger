@@ -582,9 +582,10 @@
 		// It should look for restart.txt in the directory given by
 		// the restartDir option, if available.
 		struct stat buf;
+		char path[1024];
 		PoolOptions options("stub/rack");
 		options.appType = "rack";
-		options.restartDir = "stub/rack";
+		options.restartDir = string(getcwd(path, sizeof(path))) + "/stub/rack";
 		
 		Application::SessionPtr session1 = pool->get(options);
 		Application::SessionPtr session2 = pool2->get(options);
@@ -601,6 +602,31 @@
 			pool->getCount(), 1u);
 		ensure("Restart file still exists",
 			stat("stub/rack/restart.txt", &buf) == 0);
+	}
+	
+	TEST_METHOD(25) {
+		// restartDir may also be a directory relative to the
+		// application root.
+		struct stat buf;
+		PoolOptions options("stub/rack");
+		options.appType = "rack";
+		options.restartDir = "public";
+		
+		Application::SessionPtr session1 = pool->get(options);
+		Application::SessionPtr session2 = pool2->get(options);
+		session1.reset();
+		session2.reset();
+		
+		TempFile tempfile("stub/rack/public/restart.txt");
+		system("touch stub/rack/public/restart.txt");
+		
+		pool->get(options);
+		
+		ensure_equals("No apps are active", pool->getActive(), 0u);
+		ensure_equals("Both apps are killed, and a new one was spawned",
+			pool->getCount(), 1u);
+		ensure("Restart file still exists",
+			stat("stub/rack/public/restart.txt", &buf) == 0);
 	}
 	
 	/*************************************/
