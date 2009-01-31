@@ -77,6 +77,7 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->statThrottleRate = 0;
 	config->statThrottleRateSpecified = false;
 	config->restartDir = NULL;
+	/*************************************/
 	return config;
 }
 
@@ -115,6 +116,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->statThrottleRate = (add->statThrottleRateSpecified) ? add->statThrottleRate : base->statThrottleRate;
 	config->statThrottleRateSpecified = base->statThrottleRateSpecified || add->statThrottleRateSpecified;
 	config->restartDir = (add->restartDir == NULL) ? base->restartDir : add->restartDir;
+	/*************************************/
 	return config;
 }
 

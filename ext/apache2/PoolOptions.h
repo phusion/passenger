@@ -175,7 +175,8 @@ struct PoolOptions {
 		unsigned long memoryLimit    = 0,
 		bool useGlobalQueue          = false,
 		unsigned long statThrottleRate = 0,
-		const string &restartDir  = "") {
+		const string &restartDir  = ""
+	) {
 		this->appRoot        = appRoot;
 		this->lowerPrivilege = lowerPrivilege;
 		this->lowestUser     = lowestUser;

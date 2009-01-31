@@ -603,4 +603,6 @@
 			stat("stub/rack/restart.txt", &buf) == 0);
 	}
 	
+	/*************************************/
+	
 #endif /* USE_TEMPLATE */

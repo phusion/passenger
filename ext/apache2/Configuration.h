@@ -134,6 +134,8 @@
 			 */
 			const char *restartDir;
 			
+			/*************************************/
+			
 			bool isEnabled() const {
 				return enabled != DISABLED;
 			}
@@ -206,6 +208,8 @@
 					return "";
 				}
 			}
+			
+			/*************************************/
 		};
 		
 		/**
