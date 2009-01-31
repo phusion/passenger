@@ -127,6 +127,7 @@ private:
 	ApplicationPoolServerPtr applicationPoolServer;
 	thread_specific_ptr<ApplicationPoolPtr> threadSpecificApplicationPool;
 	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex;
+	CachedMultiFileStat *mstat;
 	
 	inline DirConfig *getDirConfig(request_rec *r) {
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
@@ -237,7 +238,7 @@ private:
 	 * @return Whether the Passenger handler hook method should be run.
 	 */
 	bool prepareRequest(request_rec *r, DirConfig *config, const char *filename, bool coreModuleWillBeRun = false) {
-		DirectoryMapper mapper(r, config);
+		DirectoryMapper mapper(r, config, mstat, config->getStatThrottleRate());
 		try {
 			if (mapper.getBaseURI() == NULL) {
 				// (B) is not true.
@@ -730,6 +731,7 @@ public:
 		m_hasModRewrite = UNKNOWN;
 		m_hasModDir = UNKNOWN;
 		m_hasModAutoIndex = UNKNOWN;
+		mstat = cached_multi_file_stat_new(1024);
 		
 		P_DEBUG("Initializing Phusion Passenger...");
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
@@ -799,6 +801,7 @@ public:
 	}
 	
 	~Hooks() {
+		cached_multi_file_stat_free(mstat);
 		removeDirTree(getPassengerTempDir().c_str());
 	}
 	

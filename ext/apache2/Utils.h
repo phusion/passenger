@@ -35,6 +35,8 @@
 #include <unistd.h>
 #include "Exceptions.h"
 
+typedef struct CachedMultiFileStat CachedMultiFileStat;
+
 namespace Passenger {
 
 using namespace std;
@@ -151,21 +153,27 @@ void split(const string &str, char sep, vector<string> &output);
  * Check whether the specified file exists.
  *
  * @param filename The filename to check.
+ * @param mstat A CachedMultiFileStat object, if you want to use cached statting.
+ * @param throttleRate A throttle rate for mstat. Only applicable if mstat is not NULL.
  * @return Whether the file exists.
  * @throws FileSystemException Unable to check because of a filesystem error.
  * @ingroup Support
  */
-bool fileExists(const char *filename);
+bool fileExists(const char *filename, CachedMultiFileStat *mstat = 0,
+                unsigned int throttleRate = 0);
 
 /**
  * Check whether 'filename' exists and what kind of file it is.
  *
  * @param filename The filename to check.
+ * @param mstat A CachedMultiFileStat object, if you want to use cached statting.
+ * @param throttleRate A throttle rate for mstat. Only applicable if mstat is not NULL.
  * @return The file type.
  * @throws FileSystemException Unable to check because of a filesystem error.
  * @ingroup Support
  */
-FileType getFileType(const char *filename);
+FileType getFileType(const char *filename, CachedMultiFileStat *mstat = 0,
+                     unsigned int throttleRate = 0);
 
 /**
  * Find the location of the Passenger spawn server script.
@@ -268,28 +276,37 @@ void removeDirTree(const char *path);
  * Check whether the specified directory is a valid Ruby on Rails
  * 'public' directory.
  *
+ * @param mstat A CachedMultiFileStat object, if you want to use cached statting.
+ * @param throttleRate A throttle rate for mstat. Only applicable if mstat is not NULL.
  * @throws FileSystemException Unable to check because of a system error.
  * @ingroup Support
  */
-bool verifyRailsDir(const string &dir);
+bool verifyRailsDir(const string &dir, CachedMultiFileStat *mstat = 0,
+                    unsigned int throttleRate = 0);
 
 /**
  * Check whether the specified directory is a valid Rack 'public'
  * directory.
  *
+ * @param mstat A CachedMultiFileStat object, if you want to use cached statting.
+ * @param throttleRate A throttle rate for mstat. Only applicable if mstat is not NULL.
  * @throws FileSystemException Unable to check because of a filesystem error.
  * @ingroup Support
  */
-bool verifyRackDir(const string &dir);
+bool verifyRackDir(const string &dir, CachedMultiFileStat *mstat = 0,
+                   unsigned int throttleRate = 0);
 
 /**
  * Check whether the specified directory is a valid WSGI 'public'
  * directory.
  *
+ * @param mstat A CachedMultiFileStat object, if you want to use cached statting.
+ * @param throttleRate A throttle rate for mstat. Only applicable if mstat is not NULL.
  * @throws FileSystemException Unable to check because of a filesystem error.
  * @ingroup Support
  */
-bool verifyWSGIDir(const string &dir);
+bool verifyWSGIDir(const string &dir, CachedMultiFileStat *mstat = 0,
+                   unsigned int throttleRate = 0);
 
 /**
  * Represents a temporary file. The associated file is automatically
