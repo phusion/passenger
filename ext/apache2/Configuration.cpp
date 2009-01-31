@@ -74,6 +74,10 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->memoryLimitSpecified = false;
 	config->highPerformance = DirConfig::UNSET;
 	config->useGlobalQueue = DirConfig::UNSET;
+	config->statThrottleRate = 0;
+	config->statThrottleRateSpecified = false;
+	config->restartDir = NULL;
+	/*************************************/
 	return config;
 }
 
@@ -109,6 +113,10 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->memoryLimitSpecified = base->memoryLimitSpecified || add->memoryLimitSpecified;
 	config->highPerformance = (add->highPerformance == DirConfig::UNSET) ? base->highPerformance : add->highPerformance;
 	config->useGlobalQueue = (add->useGlobalQueue == DirConfig::UNSET) ? base->useGlobalQueue : add->useGlobalQueue;
+	config->statThrottleRate = (add->statThrottleRateSpecified) ? add->statThrottleRate : base->statThrottleRate;
+	config->statThrottleRateSpecified = base->statThrottleRateSpecified || add->statThrottleRateSpecified;
+	config->restartDir = (add->restartDir == NULL) ? base->restartDir : add->restartDir;
+	/*************************************/
 	return config;
 }
 
@@ -350,6 +358,31 @@ cmd_passenger_enabled(cmd_parms *cmd, void *pcfg, int arg) {
 	return NULL;
 }
 
+static const char *
+cmd_passenger_stat_throttle_rate(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	char *end;
+	long int result;
+	
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		return "Invalid number specified for PassengerStatThrottleRate.";
+	} else if (result < 0) {
+		return "Value for PassengerStatThrottleRate must be greater than or equal to 0.";
+	} else {
+		config->statThrottleRate = (unsigned long) result;
+		config->statThrottleRateSpecified = true;
+		return NULL;
+	}
+}
+
+static const char *
+cmd_passenger_restart_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->restartDir = arg;
+	return NULL;
+}
+
 
 /*************************************************
  * Rails-specific settings
@@ -556,6 +589,16 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_ALL,
 		"Enable or disable Phusion Passenger."),
+	AP_INIT_TAKE1("PassengerStatThrottleRate",
+		(Take1Func) cmd_passenger_stat_throttle_rate,
+		NULL,
+		OR_ALL,
+		"Limit the number of stat calls to once per given seconds."),
+	AP_INIT_TAKE1("PassengerRestartDir",
+		(Take1Func) cmd_passenger_restart_dir,
+		NULL,
+		OR_ALL,
+		"The directory in which Passenger should look for restart.txt."),
 
 	// Rails-specific settings.
 	AP_INIT_TAKE1("RailsBaseURI",

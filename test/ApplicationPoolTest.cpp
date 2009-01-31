@@ -14,6 +14,18 @@
  */
 #ifdef USE_TEMPLATE
 
+	struct TempFile {
+		const char *filename;
+		
+		TempFile(const char *filename) {
+			this->filename = filename;
+		}
+		
+		~TempFile() {
+			unlink(filename);
+		}
+	};
+	
 	static string createRequestHeaders(const char *uri = "/foo/new") {
 		string headers;
 		#define ADD_HEADER(name, value) \
@@ -496,7 +508,7 @@
 	}
 	
 	TEST_METHOD(22) {
-		// Test whether always_restart really results in code reload.
+		// Test whether tmp/always_restart.txt really results in code reload.
 		try {
 			system("cp -f stub/railsapp/app/controllers/bar_controller_1.rb "
 				"stub/railsapp/app/controllers/bar_controller.rb");
@@ -512,7 +524,7 @@
 			session = pool->get("stub/railsapp");
 			session->sendHeaders(createRequestHeaders("/bar"));
 			result = readAll(session->getStream());
-			ensure("App code has been reloaded", result.find("bar 2!") != string::npos);
+			ensure("App code has been reloaded (1)", result.find("bar 2!") != string::npos);
 			session.reset();
 
 			system("cp -f stub/railsapp/app/controllers/bar_controller_1.rb "
@@ -520,7 +532,7 @@
 			session = pool->get("stub/railsapp");
 			session->sendHeaders(createRequestHeaders("/bar"));
 			result = readAll(session->getStream());
-			ensure("App code has been reloaded", result.find("bar 1!") != string::npos);
+			ensure("App code has been reloaded (2)", result.find("bar 1!") != string::npos);
 			session.reset();
 		
 			unlink("stub/railsapp/app/controllers/bar_controller.rb");
@@ -565,5 +577,58 @@
 			throw;
 		}
 	}
+	
+	TEST_METHOD(24) {
+		// It should look for restart.txt in the directory given by
+		// the restartDir option, if available.
+		struct stat buf;
+		char path[1024];
+		PoolOptions options("stub/rack");
+		options.appType = "rack";
+		options.restartDir = string(getcwd(path, sizeof(path))) + "/stub/rack";
+		
+		Application::SessionPtr session1 = pool->get(options);
+		Application::SessionPtr session2 = pool2->get(options);
+		session1.reset();
+		session2.reset();
+		
+		TempFile tempfile("stub/rack/restart.txt");
+		system("touch stub/rack/restart.txt");
+		
+		pool->get(options);
+		
+		ensure_equals("No apps are active", pool->getActive(), 0u);
+		ensure_equals("Both apps are killed, and a new one was spawned",
+			pool->getCount(), 1u);
+		ensure("Restart file still exists",
+			stat("stub/rack/restart.txt", &buf) == 0);
+	}
+	
+	TEST_METHOD(25) {
+		// restartDir may also be a directory relative to the
+		// application root.
+		struct stat buf;
+		PoolOptions options("stub/rack");
+		options.appType = "rack";
+		options.restartDir = "public";
+		
+		Application::SessionPtr session1 = pool->get(options);
+		Application::SessionPtr session2 = pool2->get(options);
+		session1.reset();
+		session2.reset();
+		
+		TempFile tempfile("stub/rack/public/restart.txt");
+		system("touch stub/rack/public/restart.txt");
+		
+		pool->get(options);
+		
+		ensure_equals("No apps are active", pool->getActive(), 0u);
+		ensure_equals("Both apps are killed, and a new one was spawned",
+			pool->getCount(), 1u);
+		ensure("Restart file still exists",
+			stat("stub/rack/public/restart.txt", &buf) == 0);
+	}
+	
+	/*************************************/
 	
 #endif /* USE_TEMPLATE */

@@ -64,16 +64,16 @@ namespace tut {
 		// Throttling works.
 		passenger_system_time_force_value(5);
 		
-		FileChecker checker("test.txt", 3);
-		checker.changed();
+		FileChecker checker("test.txt");
+		checker.changed(3);
 		touch("test.txt");
-		ensure(!checker.changed());
+		ensure(!checker.changed(3));
 		
 		passenger_system_time_force_value(6);
-		ensure(!checker.changed());
+		ensure(!checker.changed(3));
 		
 		passenger_system_time_force_value(8);
-		ensure(checker.changed());
-		ensure(!checker.changed());
+		ensure(checker.changed(3));
+		ensure(!checker.changed(3));
 	}
 }

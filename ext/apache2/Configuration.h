@@ -118,6 +118,24 @@
 			/** Whether global queuing should be used. */
 			Threeway useGlobalQueue;
 			
+			/**
+			 * Throttle the number of stat() calls on files like
+			 * restart.txt to the once per given number of seconds.
+			 */
+			unsigned long statThrottleRate;
+			
+			/** Indicates whether the statThrottleRate option was
+			 * explicitly specified in the directory configuration. */
+			bool statThrottleRateSpecified;
+			
+			/** The directory in which Passenger should look for
+			 * restart.txt. NULL means that the default directory
+			 * should be used.
+			 */
+			const char *restartDir;
+			
+			/*************************************/
+			
 			bool isEnabled() const {
 				return enabled != DISABLED;
 			}
@@ -174,6 +192,24 @@
 			bool usingGlobalQueue() const {
 				return useGlobalQueue == ENABLED;
 			}
+			
+			unsigned long getStatThrottleRate() const {
+				if (statThrottleRateSpecified) {
+					return statThrottleRate;
+				} else {
+					return 0;
+				}
+			}
+			
+			const char *getRestartDir() const {
+				if (restartDir != NULL) {
+					return restartDir;
+				} else {
+					return "";
+				}
+			}
+			
+			/*************************************/
 		};
 		
 		/**

@@ -9,17 +9,23 @@ using namespace std;
 namespace tut {
 	struct CachedFileStatTest {
 		CachedFileStat *stat;
+		CachedMultiFileStat *mstat;
 		
 		CachedFileStatTest() {
 			stat = (CachedFileStat *) NULL;
+			mstat = (CachedMultiFileStat *) NULL;
 		}
 		
 		~CachedFileStatTest() {
 			if (stat != NULL) {
 				cached_file_stat_free(stat);
 			}
+			cached_multi_file_stat_free(mstat);
 			passenger_system_time_release_forced_value();
 			unlink("test.txt");
+			unlink("test2.txt");
+			unlink("test3.txt");
+			unlink("test4.txt");
 		}
 	};
 	
@@ -36,6 +42,8 @@ namespace tut {
 	}
 	
 	DEFINE_TEST_GROUP(CachedFileStatTest);
+	
+	/************ Tests for CachedFileStat ************/
 	
 	TEST_METHOD(1) {
 		// cached_file_stat_new() does not stat the file immediately.
@@ -121,5 +129,128 @@ namespace tut {
 		ensure_equals("Cached value was used",
 			stat->info.st_mtime,
 			(time_t) 1000);
+	}
+	
+	
+	/************ Tests for CachedMultiFileStat ************/
+	
+	TEST_METHOD(10) {
+		// Statting an existing file works.
+		struct stat buf;
+		
+		touch("test.txt");
+		mstat = cached_multi_file_stat_new(1);
+		ensure_equals(
+			cached_multi_file_stat_perform(mstat, "test.txt", &buf, 0),
+			0);
+		ensure_equals((long) buf.st_size, (long) 2);
+	}
+	
+	TEST_METHOD(11) {
+		// Statting a nonexistant file works.
+		struct stat buf;
+		
+		mstat = cached_multi_file_stat_new(1);
+		ensure_equals(
+			cached_multi_file_stat_perform(mstat, "test.txt", &buf, 0),
+			-1);
+	}
+	
+	TEST_METHOD(12) {
+		// Throttling works.
+		struct stat buf;
+		
+		mstat = cached_multi_file_stat_new(2);
+		passenger_system_time_force_value(5);
+		
+		// Touch and stat test.txt. The next stat should return
+		// the old info.
+		
+		touch("test.txt", 10);
+		ensure_equals(
+			cached_multi_file_stat_perform(mstat, "test.txt", &buf, 1),
+			0);
+		ensure_equals(buf.st_mtime, (time_t) 10);
+		
+		touch("test.txt", 20);
+		ensure_equals(
+			cached_multi_file_stat_perform(mstat, "test.txt", &buf, 1),
+			0);
+		ensure_equals(buf.st_mtime, (time_t) 10);
+		
+		// Touch and stat test2.txt. The next stat should return
+		// the old info.
+		
+		touch("test2.txt", 30);
+		ensure_equals(
+			cached_multi_file_stat_perform(mstat, "test2.txt", &buf, 1),
+			0);
+		ensure_equals(buf.st_mtime, (time_t) 30);
+		
+		touch("test2.txt", 40);
+		ensure_equals(
+			cached_multi_file_stat_perform(mstat, "test2.txt", &buf, 1),
+			0);
+		ensure_equals(buf.st_mtime, (time_t) 30);
+		
+		// Forward timer, then stat both files again. The most recent
+		// information should be returned.
+		
+		passenger_system_time_force_value(6);
+		ensure_equals(
+			cached_multi_file_stat_perform(mstat, "test.txt", &buf, 1),
+			0);
+		ensure_equals(buf.st_mtime, (time_t) 20);
+		ensure_equals(
+			cached_multi_file_stat_perform(mstat, "test2.txt", &buf, 1),
+			0);
+		ensure_equals(buf.st_mtime, (time_t) 40);
+	}
+	
+	TEST_METHOD(13) {
+		// Cache limiting works.
+		struct stat buf;
+		
+		mstat = cached_multi_file_stat_new(3);
+		passenger_system_time_force_value(5);
+		
+		// Create and stat test.txt, test2.txt and test3.txt.
+		
+		touch("test.txt", 1000);
+		ensure_equals(
+			cached_multi_file_stat_perform(mstat, "test.txt", &buf, 1),
+			0);
+		ensure_equals(buf.st_mtime, (time_t) 1000);
+		
+		touch("test2.txt", 1001);
+		ensure_equals(
+			cached_multi_file_stat_perform(mstat, "test2.txt", &buf, 1),
+			0);
+		ensure_equals(buf.st_mtime, (time_t) 1001);
+		
+		touch("test3.txt", 1003);
+		ensure_equals(
+			cached_multi_file_stat_perform(mstat, "test3.txt", &buf, 1),
+			0);
+		ensure_equals(buf.st_mtime, (time_t) 1003);
+		
+		// Stat test2.txt, then create and stat test4.txt, then touch test.txt.
+		// test.txt should have been removed from the cache, and thus
+		// upon statting it again its new timestamp should be returned.
+		
+		ensure_equals(
+			cached_multi_file_stat_perform(mstat, "test2.txt", &buf, 1),
+			0);
+		
+		touch("test4.txt", 1004);
+		ensure_equals(
+			cached_multi_file_stat_perform(mstat, "test4.txt", &buf, 1),
+			0);
+		
+		touch("test.txt", 3000);
+		ensure_equals(
+			cached_multi_file_stat_perform(mstat, "test.txt", &buf, 1),
+			0);
+		ensure_equals(buf.st_mtime, (time_t) 3000);
 	}
 }

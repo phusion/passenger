@@ -27,6 +27,7 @@
 #include <sys/stat.h>
 #include <errno.h>
 
+#include "CachedFileStat.h"
 #include "SystemTime.h"
 
 namespace Passenger {
@@ -51,73 +52,58 @@ using namespace oxt;
  */
 class FileChecker {
 private:
-	string filename;
+	CachedFileStat cstat;
 	time_t lastMtime;
 	time_t lastCtime;
-	unsigned int throttleRate;
-	time_t lastCheckTime;
-	
-	bool checkChanged() {
-		struct stat buf;
-		int ret;
-		bool result;
-		
-		do {
-			ret = stat(filename.c_str(), &buf);
-		} while (ret == -1 && errno == EINTR);
-		
-		if (ret == -1) {
-			buf.st_mtime = 0;
-			buf.st_ctime = 0;
-		}
-		result = lastMtime != buf.st_mtime || lastCtime != buf.st_ctime;
-		lastMtime = buf.st_mtime;
-		lastCtime = buf.st_ctime;
-		return result;
-	}
-	
-	bool expired(time_t begin, unsigned int interval, time_t &currentTime) const {
-		currentTime = SystemTime::get();
-		return (unsigned int) (currentTime - begin) >= interval;
-	}
 	
 public:
 	/**
 	 * Create a FileChecker object.
 	 *
 	 * @param filename The filename to check for.
-	 * @param throttleRate When set to a non-zero value, throttling will be
-	 *                     enabled. stat() will be called at most once per
-	 *                     throttleRate seconds.
 	 */
-	FileChecker(const string &filename, unsigned int throttleRate = 0) {
-		this->filename = filename;
+	FileChecker(const string &filename) {
+		cached_file_stat_init(&cstat, filename.c_str());
 		lastMtime = 0;
 		lastCtime = 0;
-		this->throttleRate = throttleRate;
-		lastCheckTime = 0;
-		checkChanged();
+		changed();
+	}
+	
+	~FileChecker() {
+		cached_file_stat_deinit(&cstat);
 	}
 	
 	/**
 	 * Checks whether the file's timestamp has changed or has been created
 	 * or removed since the last call to changed().
 	 *
+	 * @param throttleRate When set to a non-zero value, throttling will be
+	 *                     enabled. stat() will be called at most once per
+	 *                     throttleRate seconds.
 	 * @throws SystemException Something went wrong.
 	 * @throws boost::thread_interrupted
 	 */
-	bool changed() {
-		if (throttleRate > 0) {
-			time_t currentTime;
-			if (expired(lastCheckTime, throttleRate, currentTime)) {
-				lastCheckTime = currentTime;
-				return checkChanged();
-			} else {
-				return false;
-			}
+	bool changed(unsigned int throttleRate = 0) {
+		int ret;
+		time_t ctime, mtime;
+		bool result;
+		
+		do {
+			ret = cached_file_stat_refresh(&cstat,
+				throttleRate);
+		} while (ret == -1 && errno == EINTR);
+		
+		if (ret == -1) {
+			ctime = 0;
+			mtime = 0;
 		} else {
-			return checkChanged();
+			ctime = cstat.info.st_ctime;
+			mtime = cstat.info.st_mtime;
 		}
+		result = lastMtime != mtime || lastCtime != ctime;
+		lastMtime = mtime;
+		lastCtime = ctime;
+		return result;
 	}
 };
 

@@ -19,6 +19,7 @@
  */
 
 #include <cassert>
+#include "CachedFileStat.h"
 #include "Utils.h"
 
 #define SPAWN_SERVER_SCRIPT_NAME "passenger-spawn-server"
@@ -48,15 +49,21 @@ split(const string &str, char sep, vector<string> &output) {
 }
 
 bool
-fileExists(const char *filename) {
-	return getFileType(filename) == FT_REGULAR;
+fileExists(const char *filename, CachedMultiFileStat *mstat, unsigned int throttleRate) {
+	return getFileType(filename, mstat, throttleRate) == FT_REGULAR;
 }
 
 FileType
-getFileType(const char *filename) {
+getFileType(const char *filename, CachedMultiFileStat *mstat, unsigned int throttleRate) {
 	struct stat buf;
+	int ret;
 	
-	if (stat(filename, &buf) == 0) {
+	if (mstat != NULL) {
+		ret = cached_multi_file_stat_perform(mstat, filename, &buf, throttleRate);
+	} else {
+		ret = stat(filename, &buf);
+	}
+	if (ret == 0) {
 		if (S_ISREG(buf.st_mode)) {
 			return FT_REGULAR;
 		} else if (S_ISDIR(buf.st_mode)) {
@@ -291,24 +298,24 @@ removeDirTree(const char *path) {
 }
 
 bool
-verifyRailsDir(const string &dir) {
+verifyRailsDir(const string &dir, CachedMultiFileStat *mstat, unsigned int throttleRate) {
 	string temp(dir);
 	temp.append("/../config/environment.rb");
-	return fileExists(temp.c_str());
+	return fileExists(temp.c_str(), mstat, throttleRate);
 }
 
 bool
-verifyRackDir(const string &dir) {
+verifyRackDir(const string &dir, CachedMultiFileStat *mstat, unsigned int throttleRate) {
 	string temp(dir);
 	temp.append("/../config.ru");
-	return fileExists(temp.c_str());
+	return fileExists(temp.c_str(), mstat, throttleRate);
 }
 
 bool
-verifyWSGIDir(const string &dir) {
+verifyWSGIDir(const string &dir, CachedMultiFileStat *mstat, unsigned int throttleRate) {
 	string temp(dir);
 	temp.append("/../passenger_wsgi.py");
-	return fileExists(temp.c_str());
+	return fileExists(temp.c_str(), mstat, throttleRate);
 }
 
 } // namespace Passenger

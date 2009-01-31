@@ -48,6 +48,7 @@
 #include "ApplicationPool.h"
 #include "Logging.h"
 #include "FileChecker.h"
+#include "CachedFileStat.h"
 #ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER
 	#include "DummySpawnManager.h"
 #else
@@ -115,11 +116,32 @@ private:
 		AppContainerList instances;
 		unsigned int size;
 		unsigned long maxRequests;
+		CachedFileStat alwaysRestartFileStatter;
 		FileChecker restartFileChecker;
 		
-		Domain(const string &appRoot)
-			: restartFileChecker(string(appRoot + "/tmp/restart.txt"))
-			{ }
+		Domain(const PoolOptions &options)
+			: restartFileChecker(determineRestartDir(options) + "/restart.txt")
+		{
+			string alwaysRestartFile(determineRestartDir(options));
+			alwaysRestartFile.append("/always_restart.txt");
+			cached_file_stat_init(&alwaysRestartFileStatter,
+				alwaysRestartFile.c_str());
+		}
+		
+		~Domain() {
+			cached_file_stat_deinit(&alwaysRestartFileStatter);
+		}
+	
+	private:
+		static string determineRestartDir(const PoolOptions &options) {
+			if (options.restartDir.empty()) {
+				return options.appRoot + "/tmp";
+			} else if (options.restartDir[0] == '/') {
+				return options.restartDir;
+			} else {
+				return options.appRoot + "/" + options.restartDir;
+			}
+		}
 	};
 	
 	struct AppContainer {
@@ -159,6 +181,12 @@ private:
 		}
 	};
 	
+	/**
+	 * A data structure which contains data that's shared between a
+	 * StandardApplicationPool and a SessionCloseCallback object.
+	 * This is because the StandardApplicationPool's life time could be
+	 * different from a SessionCloseCallback's.
+	 */
 	struct SharedData {
 		boost::mutex lock;
 		condition activeOrMaxChanged;
@@ -335,17 +363,10 @@ private:
 		return result.str();
 	}
 	
-	bool needsRestart(const string &appRoot, Domain *domain) {
-		struct stat buf;
-		int ret;
-
-		string alwaysRestartFile(appRoot);
-		alwaysRestartFile.append("/tmp/always_restart.txt");
-		do {
-			ret = stat(alwaysRestartFile.c_str(), &buf);
-		} while (ret == -1 && errno == EINTR);
-		
-		return ret == 0 || domain->restartFileChecker.changed();
+	bool needsRestart(const string &appRoot, Domain *domain, const PoolOptions &options) {
+		return cached_file_stat_refresh(&domain->alwaysRestartFileStatter,
+		                                options.statThrottleRate) == 0
+		    || domain->restartFileChecker.changed(options.statThrottleRate);
 	}
 	
 	void cleanerThreadMainLoop() {
@@ -422,7 +443,7 @@ private:
 		try {
 			DomainMap::iterator it(domains.find(appRoot));
 			
-			if (it != domains.end() && needsRestart(appRoot, it->second.get())) {
+			if (it != domains.end() && needsRestart(appRoot, it->second.get(), options)) {
 				AppContainerList::iterator it2;
 				instances = &it->second->instances;
 				for (it2 = instances->begin(); it2 != instances->end(); it2++) {
@@ -524,7 +545,7 @@ private:
 				container->sessions = 0;
 				it = domains.find(appRoot);
 				if (it == domains.end()) {
-					domain = new Domain(appRoot);
+					domain = new Domain(options);
 					domain->size = 1;
 					domain->maxRequests = options.maxRequests;
 					domains[appRoot] = ptr(domain);
@@ -578,7 +599,6 @@ public:
 	 *             running as root. If the empty string is given, or if
 	 *             the <tt>user</tt> is not a valid username, then
 	 *             the spawn manager will be run as the current user.
-	 * @param rubyCommand The Ruby interpreter's command.
 	 * @throws SystemException An error occured while trying to setup the spawn server.
 	 * @throws IOException The specified log file could not be opened.
 	 */

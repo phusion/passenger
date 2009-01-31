@@ -127,6 +127,7 @@ private:
 	ApplicationPoolServerPtr applicationPoolServer;
 	thread_specific_ptr<ApplicationPoolPtr> threadSpecificApplicationPool;
 	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex;
+	CachedMultiFileStat *mstat;
 	
 	inline DirConfig *getDirConfig(request_rec *r) {
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
@@ -237,7 +238,7 @@ private:
 	 * @return Whether the Passenger handler hook method should be run.
 	 */
 	bool prepareRequest(request_rec *r, DirConfig *config, const char *filename, bool coreModuleWillBeRun = false) {
-		DirectoryMapper mapper(r, config);
+		DirectoryMapper mapper(r, config, mstat, config->getStatThrottleRate());
 		try {
 			if (mapper.getBaseURI() == NULL) {
 				// (B) is not true.
@@ -402,7 +403,10 @@ private:
 					config->appSpawnerTimeout,
 					config->getMaxRequests(),
 					config->getMemoryLimit(),
-					config->usingGlobalQueue()));
+					config->usingGlobalQueue(),
+					config->getStatThrottleRate(),
+					config->getRestartDir()
+				));
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				r->status = 500;
@@ -458,17 +462,31 @@ private:
 			int result = ap_scan_script_header_err_brigade(r, bb, backendData);
 			if (result == OK) {
 				// The API documentation for ap_scan_script_err_brigade() says it
-				// returns HTTP_OK on success, it actually returns OK.
+				// returns HTTP_OK on success, but it actually returns OK.
+				
+				// Manually set the Status header because
+				// ap_scan_script_header_err_brigade() filters it
+				// out. Some broken HTTP clients depend on the
+				// Status header for retrieving the HTTP status.
+				if (!r->status_line && *r->status_line == '\0') {
+					r->status_line = apr_psprintf(r->pool,
+						"%d Unknown Status",
+						r->status);
+				}
+				apr_table_setn(r->headers_out, "Status", r->status_line);
+				
 				ap_pass_brigade(r->output_filters, bb);
 				return OK;
 			} else if (backendData[0] == '\0') {
 				P_ERROR("Backend process " << backendPid <<
 					" did not return a valid HTTP response. It returned no data.");
+				apr_table_setn(r->err_headers_out, "Status", "500 Internal Server Error");
 				return HTTP_INTERNAL_SERVER_ERROR;
 			} else {
 				P_ERROR("Backend process " << backendPid <<
 					" did not return a valid HTTP response. It returned: [" <<
 					backendData << "]");
+				apr_table_setn(r->err_headers_out, "Status", "500 Internal Server Error");
 				return HTTP_INTERNAL_SERVER_ERROR;
 			}
 			
@@ -713,6 +731,7 @@ public:
 		m_hasModRewrite = UNKNOWN;
 		m_hasModDir = UNKNOWN;
 		m_hasModAutoIndex = UNKNOWN;
+		mstat = cached_multi_file_stat_new(1024);
 		
 		P_DEBUG("Initializing Phusion Passenger...");
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
@@ -782,6 +801,7 @@ public:
 	}
 	
 	~Hooks() {
+		cached_multi_file_stat_free(mstat);
 		removeDirTree(getPassengerTempDir().c_str());
 	}
 	

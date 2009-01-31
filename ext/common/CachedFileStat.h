@@ -30,11 +30,10 @@
 #endif
 
 /**
- * CachedFileStat allows one to stat() files at a throttled rate, in order
+ * CachedFileStat allows one to stat() a file at a throttled rate, in order
  * to minimize stress on the filesystem. It does this by caching the old stat
  * data for a specified amount of time.
  */
-
 typedef struct {
 	/** The cached stat info. */
 	struct stat info;
@@ -85,6 +84,27 @@ void cached_file_stat_free(CachedFileStat *stat);
  *         will be populated with an appropriate error code.
  */
 int cached_file_stat_refresh(CachedFileStat *stat, unsigned int throttle_rate);
+
+
+/**
+ * CachedMultiFileStat allows one to stat() files at a throttled rate, in order
+ * to minimize stress on the filesystem. It does this by caching the old stat
+ * data for a specified amount of time.
+ *
+ * Unlike CachedFileStat, which can only stat() one specific file per
+ * CachedFileStat object, CachedMultiFileStat can stat() any file. The
+ * number of cached stat() information is limited by the given cache size.
+ *
+ * This class is fully thread-safe.
+ */
+typedef struct CachedMultiFileStat CachedMultiFileStat;
+
+CachedMultiFileStat *cached_multi_file_stat_new(unsigned int max_size);
+void cached_multi_file_stat_free(CachedMultiFileStat *mstat);
+int  cached_multi_file_stat_perform(CachedMultiFileStat *mstat,
+                                    const char *filename,
+                                    struct stat *buf,
+                                    unsigned int throttle_rate);
 
 #ifdef __cplusplus
 	}

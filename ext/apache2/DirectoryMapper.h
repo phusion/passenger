@@ -24,6 +24,7 @@
 #include <set>
 #include <cstring>
 
+#include "CachedFileStat.h"
 #include "Configuration.h"
 #include "Utils.h"
 
@@ -57,6 +58,8 @@ public:
 private:
 	DirConfig *config;
 	request_rec *r;
+	CachedMultiFileStat *mstat;
+	unsigned int throttleRate;
 	bool baseURIKnown;
 	const char *baseURI;
 	ApplicationType appType;
@@ -78,11 +81,19 @@ private:
 	
 public:
 	/**
-	 * @warning Do not use this object after the destruction of <tt>r</tt> or <tt>config</tt>.
+	 * Create a new DirectoryMapper object.
+	 *
+	 * @param mstat A CachedMultiFileStat object used for statting files.
+	 * @param throttleRate A throttling rate for mstat.
+	 * @warning Do not use this object after the destruction of <tt>r</tt>,
+	 *          <tt>config</tt> or <tt>mstat</tt>.
 	 */
-	DirectoryMapper(request_rec *r, DirConfig *config) {
+	DirectoryMapper(request_rec *r, DirConfig *config,
+	                CachedMultiFileStat *mstat, unsigned int throttleRate) {
 		this->r = r;
 		this->config = config;
+		this->mstat = mstat;
+		this->throttleRate = throttleRate;
 		appType = NONE;
 		baseURIKnown = false;
 		baseURI = NULL;
@@ -147,19 +158,22 @@ public:
 			}
 		}
 		
-		if (shouldAutoDetectRails() && verifyRailsDir(ap_document_root(r))) {
+		if (shouldAutoDetectRails()
+		 && verifyRailsDir(ap_document_root(r), mstat, throttleRate)) {
 			baseURIKnown = true;
 			baseURI = "/";
 			appType = RAILS;
 			return baseURI;
 		}
-		if (shouldAutoDetectRack() && verifyRackDir(ap_document_root(r))) {
+		if (shouldAutoDetectRack()
+		 && verifyRackDir(ap_document_root(r), mstat, throttleRate)) {
 			baseURIKnown = true;
 			baseURI = "/";
 			appType = RACK;
 			return baseURI;
 		}
-		if (shouldAutoDetectWSGI() && verifyWSGIDir(ap_document_root(r))) {
+		if (shouldAutoDetectWSGI()
+		 && verifyWSGIDir(ap_document_root(r), mstat, throttleRate)) {
 			baseURIKnown = true;
 			baseURI = "/";
 			appType = WSGI;
