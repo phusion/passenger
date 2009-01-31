@@ -132,7 +132,7 @@ class APACHE2
 		'Utils.o'   => %w(Utils.cpp Utils.h),
 		'Logging.o' => %w(Logging.cpp Logging.h),
 		'SystemTime.o' => %w(SystemTime.c SystemTime.h),
-		'CachedFileStat.o' => %w(CachedFileStat.c CachedFileStat.h)
+		'CachedFileStat.o' => %w(CachedFileStat.cpp CachedFileStat.h)
 	}
 end
 
@@ -247,7 +247,7 @@ class TEST
 			../ext/apache2/SystemTime.c),
 		'CachedFileStatTest.o' => %w(CachedFileStatTest.cpp
 			../ext/apache2/CachedFileStat.h
-			../ext/apache2/CachedFileStat.c),
+			../ext/apache2/CachedFileStat.cpp),
 		'UtilsTest.o' => %w(UtilsTest.cpp ../ext/apache2/Utils.h)
 	}
 	
