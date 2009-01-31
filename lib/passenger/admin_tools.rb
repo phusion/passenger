@@ -2,11 +2,12 @@ module Passenger
 
 module AdminTools
 	def self.tmpdir
-		if ENV["TMPDIR"] && !ENV["TMPDIR"].empty?
-			return ENV["TMPDIR"]
-		else
-			return "/tmp"
+		["PASSENGER_TMPDIR", "TMPDIR"].each do |name|
+			if ENV.has_key?(name) && !ENV[name].empty?
+				return ENV[name]
+			end
 		end
+		return "/tmp"
 	end
 	
 	def self.process_is_alive?(pid)
