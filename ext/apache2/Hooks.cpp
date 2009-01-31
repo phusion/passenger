@@ -461,17 +461,31 @@ private:
 			int result = ap_scan_script_header_err_brigade(r, bb, backendData);
 			if (result == OK) {
 				// The API documentation for ap_scan_script_err_brigade() says it
-				// returns HTTP_OK on success, it actually returns OK.
+				// returns HTTP_OK on success, but it actually returns OK.
+				
+				// Manually set the Status header because
+				// ap_scan_script_header_err_brigade() filters it
+				// out. Some broken HTTP clients depend on the
+				// Status header for retrieving the HTTP status.
+				if (!r->status_line && *r->status_line == '\0') {
+					r->status_line = apr_psprintf(r->pool,
+						"%d Unknown Status",
+						r->status);
+				}
+				apr_table_setn(r->headers_out, "Status", r->status_line);
+				
 				ap_pass_brigade(r->output_filters, bb);
 				return OK;
 			} else if (backendData[0] == '\0') {
 				P_ERROR("Backend process " << backendPid <<
 					" did not return a valid HTTP response. It returned no data.");
+				apr_table_setn(r->err_headers_out, "Status", "500 Internal Server Error");
 				return HTTP_INTERNAL_SERVER_ERROR;
 			} else {
 				P_ERROR("Backend process " << backendPid <<
 					" did not return a valid HTTP response. It returned: [" <<
 					backendData << "]");
+				apr_table_setn(r->err_headers_out, "Status", "500 Internal Server Error");
 				return HTTP_INTERNAL_SERVER_ERROR;
 			}
 			
