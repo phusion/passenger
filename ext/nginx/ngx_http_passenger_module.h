@@ -29,6 +29,7 @@
 #define _PASSENGER_NGINX_MODULE_H_
 
 #include <ngx_core.h>
+#include "../common/CachedFileStat.h"
 
 /**
  * The Nginx version number as an integer.
@@ -61,6 +62,11 @@ extern ngx_str_t    passenger_helper_server_password;
  * The filename of the Unix socket on which the helper server is listening.
  */
 extern const char   passenger_helper_server_socket[NGX_MAX_PATH];
+
+/**
+ * A CachedMultiFileStat object used for caching stat() calls.
+ */
+extern CachedMultiFileStat *passenger_stat_cache;
 
 #endif /* _PASSENGER_NGINX_MODULE_H_ */
 

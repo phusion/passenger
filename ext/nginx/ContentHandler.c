@@ -68,9 +68,13 @@ uint_to_str(ngx_uint_t i, u_char *str, ngx_uint_t size) {
 }
 
 static int
-file_exists(const u_char *filename) {
+file_exists(const u_char *filename, unsigned int throttle_rate) {
     struct stat buf;
-    return stat((const char *) filename, &buf) == 0 && S_ISREG(buf.st_mode);
+    return cached_multi_file_stat_perform(passenger_stat_cache,
+                                          (const char *) filename,
+                                          &buf,
+                                          throttle_rate) == 0
+        && S_ISREG(buf.st_mode);
 }
 
 static app_type_t
@@ -80,21 +84,21 @@ detect_application_type(const u_char *docroot) {
     ngx_memzero(filename, sizeof(filename));
     ngx_snprintf(filename, sizeof(filename), "%s/%s",
                  docroot, "../config/environment.rb");
-    if (file_exists(filename)) {
+    if (file_exists(filename, 1)) {
         return AP_RAILS;
     }
     
     ngx_memzero(filename, sizeof(filename));
     ngx_snprintf(filename, sizeof(filename), "%s/%s",
                  docroot, "../config.ru");
-    if (file_exists(filename)) {
+    if (file_exists(filename, 1)) {
         return AP_RACK;
     }
     
     ngx_memzero(filename, sizeof(filename));
     ngx_snprintf(filename, sizeof(filename), "%s/%s",
                  docroot, "../config/passenger_wsgi.py");
-    if (file_exists(filename)) {
+    if (file_exists(filename, 1)) {
         return AP_WSGI;
     }
     
@@ -852,7 +856,7 @@ passenger_content_handler(ngx_http_request_t *r)
     }
     
     if (ngx_http_map_uri_to_path(r, &path, &root, 0) != NULL
-     && file_exists(path.data)) {
+     && file_exists(path.data, 0)) {
         return NGX_DECLINED;
     }
     /* Cut the path string off at the end of the root component,
