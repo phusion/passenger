@@ -26,6 +26,10 @@ if [ $ngx_found = yes ]; then
         ${ngx_addon_dir}/Configuration.h \
         ${ngx_addon_dir}/ContentHandler.h \
         ${ngx_addon_dir}/ngx_http_passenger_module.h"
+    CORE_LIBS="$CORE_LIBS  \
+        ${ngx_addon_dir}/libpassenger_common.a \
+        ${ngx_addon_dir}/libboost_oxt.a \
+        -lstdc++"
 else
     cat << END
 $0: error: unable to configure the ngx_http_passenger_module.
@@ -38,7 +42,7 @@ fi
 # XXX TODO (must be configurable via --with-<option>)
 
 # Path where to store temporary files used for buffering
-NGX_HTTP_SCGI_TEMP_PATH=$NGX_PREFIX/wsgi_temp
+NGX_HTTP_PASSENGER_TEMP_PATH=$NGX_PREFIX/wsgi_temp
 
-have=NGX_HTTP_SCGI_TEMP_PATH value="\"$NGX_HTTP_SCGI_TEMP_PATH\""
+have=NGX_HTTP_PASSENGER_TEMP_PATH value="\"$NGX_HTTP_PASSENGER_TEMP_PATH\""
 . auto/define

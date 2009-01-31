@@ -37,6 +37,8 @@ class Installer < Passenger::AbstractInstaller
 		
 		check_write_permission_to_passenger_root || exit(1)
 		
+		compile_passenger_support_files
+		
 		download_and_install = should_we_download_and_install_nginx_automatically?
 		if pcre_is_installed?
 			@pcre_source_dir = nil
@@ -90,6 +92,14 @@ private
 		return false
 	ensure
 		File.unlink("__test__.txt") rescue nil
+	end
+	
+	def compile_passenger_support_files
+		new_screen
+		color_puts "<banner>Compiling Passenger support files...</banner>"
+		if !sh("rake nginx")
+			return false
+		end
 	end
 	
 	def should_we_download_and_install_nginx_automatically?
@@ -296,10 +306,6 @@ private
 			   !sh("make install")
 				return false
 			end
-		end
-		color_puts "<banner>Compiling Passenger support files...</banner>"
-		if !sh("rake nginx")
-			return false
 		end
 		return true
 	end

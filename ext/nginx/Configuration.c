@@ -370,7 +370,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_path_value(conf->upstream.temp_path,
                               prev->upstream.temp_path,
-                              NGX_HTTP_SCGI_TEMP_PATH, 1, 2, 0,
+                              NGX_HTTP_PASSENGER_TEMP_PATH, 1, 2, 0,
                               ngx_garbage_collector_temp_handler, cf);
 
     ngx_conf_merge_value(conf->upstream.pass_request_headers,
