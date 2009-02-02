@@ -547,6 +547,33 @@ This option allows one to specify the Ruby interpreter to use.
 This option may only occur once, in the global server configuration.
 The default is 'ruby'.
 
+[[PassengerAppRoot]]
+=== PassengerAppRoot <path/to/root> ===
+By default, Phusion Passenger assumes that the application's root directory
+is the parent directory of the 'public' directory. This option allows one to
+specify the application's root independently from the DocumentRoot, which
+is useful if the 'public' directory lives in a non-standard place.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Limits` is on.
+
+In each place, it may be specified at most once.
+
+Example:
+
+-----------------------------
+<VirtualHost test.host>
+    DocumentRoot /var/rails/zena/sites/example.com/public
+    PassengerAppRoot /var/rails/zena   # <-- normally Phusion Passenger would
+                                       #     have assumed that the application
+                                       #     root is "/var/rails/zena/sites/example.com"
+</VirtualHost>
+-----------------------------
+
 [[PassengerUseGlobalQueue]]
 === PassengerUseGlobalQueue <on|off> ===
 Turns the use of global queuing on or off.

@@ -24,6 +24,8 @@
 #include <httpd.h>
 #include <http_config.h>
 
+#include "Utils.h"
+
 /**
  * @defgroup Configuration Apache module configuration
  * @ingroup Core
@@ -71,6 +73,13 @@
 			/** The environment (i.e. value for RAILS_ENV) under which
 			 * Rails applications should operate. */
 			const char *railsEnv;
+			
+			/** The path to the application's root (for example: RAILS_ROOT
+			 * for Rails applications, directory containing 'config.ru'
+			 * for Rack applications). If this value is NULL, the default
+			 * autodetected path will be used.
+			 */
+			const char *appRoot;
 			
 			/** The environment (i.e. value for RACK_ENV) under which
 			 * Rack applications should operate. */
@@ -138,6 +147,14 @@
 			
 			bool isEnabled() const {
 				return enabled != DISABLED;
+			}
+			
+			string getAppRoot(const char *documentRoot) const {
+				if (appRoot == NULL) {
+					return string(documentRoot).append("/..");
+				} else {
+					return appRoot;
+				}
 			}
 			
 			const char *getRailsEnv() const {
