@@ -159,21 +159,21 @@ public:
 		}
 		
 		if (shouldAutoDetectRails()
-		 && verifyRailsDir(ap_document_root(r), mstat, throttleRate)) {
+		 && verifyRailsDir(canonicalizePath(config->getAppRoot(ap_document_root(r))), mstat, throttleRate)) {
 			baseURIKnown = true;
 			baseURI = "/";
 			appType = RAILS;
 			return baseURI;
 		}
 		if (shouldAutoDetectRack()
-		 && verifyRackDir(ap_document_root(r), mstat, throttleRate)) {
+		 && verifyRackDir(canonicalizePath(config->getAppRoot(ap_document_root(r))), mstat, throttleRate)) {
 			baseURIKnown = true;
 			baseURI = "/";
 			appType = RACK;
 			return baseURI;
 		}
 		if (shouldAutoDetectWSGI()
-		 && verifyWSGIDir(ap_document_root(r), mstat, throttleRate)) {
+		 && verifyWSGIDir(canonicalizePath(config->getAppRoot(ap_document_root(r))), mstat, throttleRate)) {
 			baseURIKnown = true;
 			baseURI = "/";
 			appType = WSGI;

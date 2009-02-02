@@ -143,6 +143,13 @@
 				return enabled != DISABLED;
 			}
 			
+			string getAppRoot(const string &doc_root) {	
+				if (appRoot == NULL)
+					return string(doc_root).append("/..");
+				else
+					return string(appRoot);
+			}
+			
 			const char *getRailsEnv() const {
 				if (railsEnv != NULL) {
 					return railsEnv;

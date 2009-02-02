@@ -553,9 +553,6 @@ This option allows one to specify the application's root independently from the 
 is useful if your 'public' directory lives in a non-standard place. For most users, this option
 can be ignored and the application's root will be calculated relatively to the DocumentRoot.
 
-Warning: you *must* use <<RailsBaseURI,RailsBaseURI>> or <<RackBaseURI,RackBaseURI>> configuration option
-because RailsAutoDetect/RackAutoDetect will not work.
-
 Example:
 
 -----------------------------
@@ -564,7 +561,6 @@ Example:
     ErrorLog  "/var/rails/zena/sites/example.com/log/apache2-error.log"
     CustomLog "/var/rails/zena/sites/example.com/log/apache2-access.log" common
     AppRoot "/var/rails/zena"
-    RailsBaseURI /
     RailsEnv production
 </VirtualHost>
 -----------------------------

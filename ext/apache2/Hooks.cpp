@@ -405,10 +405,10 @@ private:
 			try {
 				ServerConfig *sconfig = getServerConfig(r->server);
 				string appRoot;
-					if (config->appRoot == NULL)
-						appRoot = canonicalizePath(mapper.getPublicDirectory() + "/..");
-					else
-						appRoot = canonicalizePath(config->appRoot);
+				if (config->appRoot == NULL)
+					appRoot = canonicalizePath(mapper.getPublicDirectory() + "/..");
+				else
+					appRoot = canonicalizePath(config->appRoot);
 				
 				
 				session = getApplicationPool()->get(PoolOptions(
