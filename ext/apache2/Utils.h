@@ -274,7 +274,7 @@ void removeDirTree(const char *path);
 
 /**
  * Check whether the specified directory is a valid Ruby on Rails
- * 'public' directory.
+ * application root directory.
  *
  * @param mstat A CachedMultiFileStat object, if you want to use cached statting.
  * @param throttleRate A throttle rate for mstat. Only applicable if mstat is not NULL.
@@ -285,8 +285,8 @@ bool verifyRailsDir(const string &dir, CachedMultiFileStat *mstat = 0,
                     unsigned int throttleRate = 0);
 
 /**
- * Check whether the specified directory is a valid Rack 'public'
- * directory.
+ * Check whether the specified directory is a valid Rack application
+ * root directory.
  *
  * @param mstat A CachedMultiFileStat object, if you want to use cached statting.
  * @param throttleRate A throttle rate for mstat. Only applicable if mstat is not NULL.
@@ -297,8 +297,8 @@ bool verifyRackDir(const string &dir, CachedMultiFileStat *mstat = 0,
                    unsigned int throttleRate = 0);
 
 /**
- * Check whether the specified directory is a valid WSGI 'public'
- * directory.
+ * Check whether the specified directory is a valid WSGI application
+ * root directory.
  *
  * @param mstat A CachedMultiFileStat object, if you want to use cached statting.
  * @param throttleRate A throttle rate for mstat. Only applicable if mstat is not NULL.

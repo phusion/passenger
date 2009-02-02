@@ -408,7 +408,9 @@ private:
 			UPDATE_TRACE_POINT();
 			try {
 				ServerConfig *sconfig = getServerConfig(r->server);
-				string appRoot(canonicalizePath(config->getAppRoot(mapper.getPublicDirectory())));
+				string appRoot(canonicalizePath(
+					config->getAppRoot(mapper.getPublicDirectory().c_str())
+				));
 				
 				session = getApplicationPool()->get(PoolOptions(
 					appRoot,
