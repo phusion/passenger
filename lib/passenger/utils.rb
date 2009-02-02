@@ -98,28 +98,26 @@ protected
 	end
 	
 	def marshal_exception(exception)
-		temporarily_restore_phusion_passenger_namespace do
-			data = {
-				:message => exception.message,
-				:class => exception.class.to_s,
-				:backtrace => exception.backtrace
-			}
-			if exception.is_a?(InitializationError)
-				data[:is_initialization_error] = true
-				if exception.child_exception
-					data[:child_exception] = marshal_exception(exception.child_exception)
-				end
-			else
-				begin
-					data[:exception] = Marshal.dump(exception)
-				rescue ArgumentError, TypeError
-					e = UnknownError.new(exception.message, exception.class.to_s,
-								exception.backtrace)
-					data[:exception] = Marshal.dump(e)
-				end
+		data = {
+			:message => exception.message,
+			:class => exception.class.to_s,
+			:backtrace => exception.backtrace
+		}
+		if exception.is_a?(InitializationError)
+			data[:is_initialization_error] = true
+			if exception.child_exception
+				data[:child_exception] = marshal_exception(exception.child_exception)
 			end
-			return Marshal.dump(data)
+		else
+			begin
+				data[:exception] = Marshal.dump(exception)
+			rescue ArgumentError, TypeError
+				e = UnknownError.new(exception.message, exception.class.to_s,
+							exception.backtrace)
+				data[:exception] = Marshal.dump(e)
+			end
 		end
+		return Marshal.dump(data)
 	end
 	
 	def unmarshal_exception(data)
@@ -316,35 +314,6 @@ protected
 			Process::Sys.setuid(uid)
 			ENV['HOME'] = pw.dir
 			return true
-		end
-	end
-	
-	# Some applications have a model named 'Passenger'.
-	# This method removes the Passenger module from the
-	# global namespace.
-	def remove_phusion_passenger_namespace
-		if defined?(::Passenger) && ::Passenger == GENUINE_PHUSION_PASSENGER_NAMESPACE
-			Object.send(:remove_const, :Passenger)
-		end
-	end
-	
-	# The current 'Passenger' namespace might be reserved by an application.
-	# This method temporarily restores the 'Passenger' namespace to that of
-	# Phusion Passenger's, runs the block, then restores the 'Passenger'
-	# namespace back to what it was before.
-	def temporarily_restore_phusion_passenger_namespace
-		if defined?(::Passenger)
-			old_passenger_namespace = ::Passenger
-			Object.send(:remove_const, :Passenger)
-		end
-		Object.const_set(:Passenger, GENUINE_PHUSION_PASSENGER_NAMESPACE)
-		begin
-			yield
-		ensure
-			Object.send(:remove_const, :Passenger)
-			if old_passenger_namespace
-				Object.const_set(:Passenger, old_passenger_namespace)
-			end
 		end
 	end
 	

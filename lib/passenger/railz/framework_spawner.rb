@@ -222,7 +222,6 @@ protected
 		@spawners = AbstractServerCollection.new
 		begin
 			preload_rails
-			remove_phusion_passenger_namespace
 		rescue StandardError, ScriptError, NoMemoryError => e
 			client.write('exception')
 			client.write_scalar(marshal_exception(e))

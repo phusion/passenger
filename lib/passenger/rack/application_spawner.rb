@@ -84,7 +84,6 @@ private
 			if options["lower_privilege"]
 				lower_privilege('config.ru', options["lowest_user"])
 			end
-			remove_phusion_passenger_namespace
 			app = load_rack_app
 		end
 		
