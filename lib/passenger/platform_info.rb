@@ -228,11 +228,11 @@ private
 	end
 	
 	def self.determine_multi_arch_ldflags
-	  if RUBY_PLATFORM =~ /solaris/
-			'-lxnet -lrt -lsocket -lnsl'
-	  else
-			''
-	  end
+		if RUBY_PLATFORM =~ /solaris/
+			return '-lxnet -lrt -lsocket -lnsl'
+		else
+			return ''
+		end
 	end
 	
 	def self.determine_library_extension
