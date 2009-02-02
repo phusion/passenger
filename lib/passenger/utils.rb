@@ -18,7 +18,7 @@
 
 require 'rubygems'
 require 'thread'
-if RUBY_PLATFORM != "java" && RUBY_VERSION < "1.8.7"
+if (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby") && RUBY_VERSION < "1.8.7"
 	require 'fastthread'
 end
 require 'pathname'
@@ -26,7 +26,7 @@ require 'etc'
 require 'fcntl'
 require 'tempfile'
 require 'passenger/exceptions'
-if RUBY_PLATFORM != "java"
+if !defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby"
 	require 'passenger/native_support'
 end
 

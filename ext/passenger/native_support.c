@@ -34,6 +34,12 @@
 #ifndef RARRAY_LEN
 	#define RARRAY_LEN(ary) RARRAY(ary)->len
 #endif
+#ifndef RSTRING_PTR
+	#define RSTRING_PTR(str) RSTRING(str)->ptr
+#endif
+#ifndef RSTRING_LEN
+	#define RSTRING_LEN(str) RSTRING(str)->len
+#endif
 
 static VALUE mPassenger;
 static VALUE mNativeSupport;
@@ -178,7 +184,8 @@ create_unix_socket(VALUE self, VALUE filename, VALUE backlog) {
 	char *filename_str;
 	long filename_length;
 	
-	filename_str = rb_str2cstr(filename, &filename_length);
+	filename_str = RSTRING_PTR(filename);
+	filename_length = RSTRING_LEN(filename);
 	
 	fd = socket(PF_UNIX, SOCK_STREAM, 0);
 	if (fd == -1) {
