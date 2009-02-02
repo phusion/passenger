@@ -270,7 +270,7 @@ describe "mod_passenger running in Apache 2" do
 			@server = "http://passenger.test:#{@apache2.port}"
 			@stub = setup_rails_stub('mycook')
 			@apache2 << "RailsMaxPoolSize 1"
-			@apache2.add_vhost("passenger.test", File.expand_path("#{@stub.app_root}/public"))
+			@apache2.set_vhost("passenger.test", File.expand_path("#{@stub.app_root}/public"))
 			@apache2.start
 		end
 		
@@ -337,7 +337,7 @@ describe "mod_passenger running in Apache 2" do
 			FileUtils.cp_r('stub/zsfa/.', 'tmp.webdir')
 			FileUtils.ln_sf(File.expand_path(@stub.app_root) + "/public", 'tmp.webdir/mycook')
 			
-			@apache2.add_vhost('passenger.test', File.expand_path('tmp.webdir')) do |vhost|
+			@apache2.set_vhost('passenger.test', File.expand_path('tmp.webdir')) do |vhost|
 				vhost << "RailsBaseURI /mycook"
 			end
 			@apache2.start
@@ -367,15 +367,15 @@ describe "mod_passenger running in Apache 2" do
 			@stub = setup_rails_stub('mycook')
 			rails_dir = File.expand_path(@stub.app_root) + "/public"
 			
-			@apache2.add_vhost('mycook.passenger.test', rails_dir)
+			@apache2.set_vhost('mycook.passenger.test', rails_dir)
 			
-			@apache2.add_vhost('norails.passenger.test', rails_dir) do |vhost|
+			@apache2.set_vhost('norails.passenger.test', rails_dir) do |vhost|
 				vhost << "RailsAutoDetect off"
 			end
 			
 			@stub2 = setup_rails_stub('foobar', 'tmp.stub2')
 			rails_dir = File.expand_path(@stub2.app_root) + "/public"
-			@apache2.add_vhost('passenger.test', rails_dir) do |vhost|
+			@apache2.set_vhost('passenger.test', rails_dir) do |vhost|
 				vhost << "RailsEnv development"
 				vhost << "RailsSpawnMethod conservative"
 				vhost << "PassengerUseGlobalQueue on"
@@ -589,6 +589,39 @@ describe "mod_passenger running in Apache 2" do
 				end
 			end
 		end
+		
+		describe "PassengerAppRoot" do	    
+			before :all do
+				@stub3 = setup_rails_stub('mycook', 'tmp.stub3')
+				doc_root = File.expand_path(@stub3.app_root) + "/sites/some.site/public"
+				@apache2.set_vhost('passenger.test', doc_root) do |vhost|
+					vhost << "PassengerAppRoot #{File.expand_path(@stub3.app_root).inspect}"
+				end
+				@apache2.start
+			end
+
+			after :all do
+				@stub3.destroy
+			end
+
+			it "supports page caching on non-index URIs" do
+				@server = "http://passenger.test:#{@apache2.port}"
+				get('/welcome/cached.html').should =~ %r{This is the cached version of some.site/public/welcome/cached}
+			end
+
+			it "supports page caching on index URIs" do
+				@server = "http://passenger.test:#{@apache2.port}"
+				get('/uploads.html').should =~ %r{This is the cached version of some.site/public/uploads}
+			end
+
+			it "works as a rails application" do
+				@server = "http://passenger.test:#{@apache2.port}"
+				result = get('/welcome/parameters_test?hello=world&recipe[name]=Green+Bananas')
+				result.should =~ %r{<hello>world</hello>}
+				result.should =~ %r{<recipe>}
+				result.should =~ %r{<name>Green Bananas</name>}
+			end
+		end
 	end
 	
 	describe "error handling" do
@@ -596,7 +629,7 @@ describe "mod_passenger running in Apache 2" do
 			FileUtils.rm_rf('tmp.webdir')
 			FileUtils.mkdir_p('tmp.webdir')
 			@webdir = File.expand_path('tmp.webdir')
-			@apache2.add_vhost('passenger.test', @webdir) do |vhost|
+			@apache2.set_vhost('passenger.test', @webdir) do |vhost|
 				vhost << "RailsBaseURI /app-with-nonexistant-rails-version/public"
 				vhost << "RailsBaseURI /app-that-crashes-during-startup/public"
 				vhost << "RailsBaseURI /app-with-crashing-vendor-rails/public"
@@ -646,7 +679,7 @@ describe "mod_passenger running in Apache 2" do
 	describe "Rack application running in root URI" do
 		before :all do
 			@stub = setup_stub('rack')
-			@apache2.add_vhost('passenger.test', File.expand_path(@stub.app_root) + "/public")
+			@apache2.set_vhost('passenger.test', File.expand_path(@stub.app_root) + "/public")
 			@apache2.start
 			@server = "http://passenger.test:#{@apache2.port}"
 		end
@@ -663,7 +696,7 @@ describe "mod_passenger running in Apache 2" do
 			FileUtils.rm_rf('tmp.webdir')
 			FileUtils.mkdir_p('tmp.webdir')
 			@stub = setup_stub('rack')
-			@apache2.add_vhost('passenger.test', File.expand_path('tmp.webdir')) do |vhost|
+			@apache2.set_vhost('passenger.test', File.expand_path('tmp.webdir')) do |vhost|
 				FileUtils.ln_s(File.expand_path(@stub.app_root) + "/public", 'tmp.webdir/rack')
 				vhost << "RackBaseURI /rack"
 			end
@@ -682,7 +715,7 @@ describe "mod_passenger running in Apache 2" do
 	describe "WSGI application running in root URI" do
 		before :all do
 			@stub = setup_stub('wsgi')
-			@apache2.add_vhost('passenger.test', File.expand_path(@stub.app_root) + "/public")
+			@apache2.set_vhost('passenger.test', File.expand_path(@stub.app_root) + "/public")
 			@apache2.start
 			@server = "http://passenger.test:#{@apache2.port}"
 		end

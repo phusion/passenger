@@ -300,21 +300,21 @@ removeDirTree(const char *path) {
 bool
 verifyRailsDir(const string &dir, CachedMultiFileStat *mstat, unsigned int throttleRate) {
 	string temp(dir);
-	temp.append("/../config/environment.rb");
+	temp.append("/config/environment.rb");
 	return fileExists(temp.c_str(), mstat, throttleRate);
 }
 
 bool
 verifyRackDir(const string &dir, CachedMultiFileStat *mstat, unsigned int throttleRate) {
 	string temp(dir);
-	temp.append("/../config.ru");
+	temp.append("/config.ru");
 	return fileExists(temp.c_str(), mstat, throttleRate);
 }
 
 bool
 verifyWSGIDir(const string &dir, CachedMultiFileStat *mstat, unsigned int throttleRate) {
 	string temp(dir);
-	temp.append("/../passenger_wsgi.py");
+	temp.append("/passenger_wsgi.py");
 	return fileExists(temp.c_str(), mstat, throttleRate);
 }
 

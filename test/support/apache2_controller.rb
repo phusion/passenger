@@ -180,11 +180,12 @@ class Apache2Controller
 	
 	# Define a virtual host configuration block for the Apache configuration
 	# file.
-	def add_vhost(domain, document_root)
+	def set_vhost(domain, document_root)
 		vhost = VHost.new(domain, document_root)
 		if block_given?
 			yield vhost
 		end
+		vhosts.reject! {|host| host.domain == domain}
 		vhosts << vhost
 	end
 	

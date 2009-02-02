@@ -547,6 +547,24 @@ This option allows one to specify the Ruby interpreter to use.
 This option may only occur once, in the global server configuration.
 The default is 'ruby'.
 
+[[PassengerAppRoot]]
+=== PassengerAppRoot <path/to/root> ===
+This option allows one to specify the application's root independently from the DocumentRoot. This
+is useful if your 'public' directory lives in a non-standard place. For most users, this option
+can be ignored and the application's root will be calculated relatively to the DocumentRoot.
+
+Example:
+
+-----------------------------
+<VirtualHost test.host>
+    DocumentRoot "/var/rails/zena/sites/example.com/public"
+    ErrorLog  "/var/rails/zena/sites/example.com/log/apache2-error.log"
+    CustomLog "/var/rails/zena/sites/example.com/log/apache2-access.log" common
+    AppRoot "/var/rails/zena"
+    RailsEnv production
+</VirtualHost>
+-----------------------------
+
 [[PassengerUseGlobalQueue]]
 === PassengerUseGlobalQueue <on|off> ===
 Turns the use of global queuing on or off.
