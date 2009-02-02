@@ -385,6 +385,13 @@ cmd_passenger_restart_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
 	return NULL;
 }
 
+static const char *
+cmd_passenger_app_root(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->appRoot = arg;
+	return NULL;
+}
+
 
 /*************************************************
  * Rails-specific settings
@@ -415,13 +422,6 @@ static const char *
 cmd_rails_env(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->railsEnv = arg;
-	return NULL;
-}
-
-static const char *
-cmd_app_root(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->appRoot = arg;
 	return NULL;
 }
 
@@ -608,6 +608,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_ALL,
 		"The directory in which Passenger should look for restart.txt."),
+	AP_INIT_TAKE1("PassengerAppRoot",
+		(Take1Func) cmd_passenger_app_root,
+		NULL,
+		OR_ALL,
+		"The application's root directory."),
 
 	// Rails-specific settings.
 	AP_INIT_TAKE1("RailsBaseURI",
@@ -630,11 +635,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The environment under which a Rails app must run."),
-	AP_INIT_TAKE1("PassengerAppRoot",
-		(Take1Func) cmd_app_root,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"The application's root."),
 	AP_INIT_TAKE1("RailsSpawnMethod",
 		(Take1Func) cmd_rails_spawn_method,
 		NULL,
