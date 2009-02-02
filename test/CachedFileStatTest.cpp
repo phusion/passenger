@@ -94,6 +94,7 @@ namespace tut {
 		// an error.
 		stat = cached_file_stat_new("test.txt");
 		ensure_equals(cached_file_stat_refresh(stat, 1), -1);
+		ensure_equals("It sets errno appropriately", errno, ENOENT);
 	}
 	
 	TEST_METHOD(6) {
@@ -106,9 +107,11 @@ namespace tut {
 			-1);
 		ensure_equals("It sets errno appropriately", errno, ENOENT);
 		
+		errno = EEXIST;
 		ensure_equals("2nd refresh failed",
 			cached_file_stat_refresh(stat, 1),
 			-1);
+		ensure_equals("It sets errno appropriately", errno, ENOENT);
 		ensure_equals("Cached value was used",
 			stat->info.st_mtime,
 			(time_t) 0);

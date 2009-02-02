@@ -50,7 +50,8 @@ cached_file_stat_new(const char *filename) {
 int
 cached_file_stat_init(CachedFileStat *stat, const char *filename) {
 	memset(&stat->info, 0, sizeof(struct stat));
-	stat->result = -1;
+	stat->last_result = -1;
+	stat->last_errno = 0;
 	stat->filename = strdup(filename);
 	if (stat->filename == NULL) {
 		return 0;
@@ -100,7 +101,8 @@ cached_file_stat_refresh(CachedFileStat *cstat, unsigned int throttle_rate) {
 	if (ret == -1) {
 		return -1;
 	} else if (ret == 0) {
-		return cstat->result;
+		errno = cstat->last_errno;
+		return cstat->last_result;
 	} else {
 		ret = stat(cstat->filename, &cstat->info);
 		if (ret == -1 && errno == EINTR) {
@@ -111,7 +113,8 @@ cached_file_stat_refresh(CachedFileStat *cstat, unsigned int throttle_rate) {
 			 */
 			return -1;
 		} else {
-			cstat->result = ret;
+			cstat->last_result = ret;
+			cstat->last_errno = errno;
 			cstat->last_time = current_time;
 			return ret;
 		}
