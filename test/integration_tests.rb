@@ -589,6 +589,40 @@ describe "mod_passenger running in Apache 2" do
 				end
 			end
 		end
+		
+		describe "PassengerAppRoot" do	    
+			before :all do
+				@stub3 = setup_rails_stub('mycook', 'tmp.stub3')
+				doc_root = File.expand_path(@stub3.app_root) + "/sites/some.site/public"
+				@apache2.add_vhost('root.passenger.test', doc_root) do |vhost|
+					vhost << "PassengerAppRoot #{File.expand_path(@stub3.app_root).inspect}"
+					vhost << "RailsBaseURI /"
+				end
+				@apache2.start
+			end
+
+			after :all do
+				@stub3.destroy
+			end
+
+			it "supports page caching on non-index URIs" do
+				@server = "http://root.passenger.test:#{@apache2.port}"
+				get('/welcome/cached.html').should =~ %r{This is the cached version of some.site/public/welcome/cached}
+			end
+
+			it "supports page caching on index URIs" do
+				@server = "http://root.passenger.test:#{@apache2.port}"
+				get('/uploads.html').should =~ %r{This is the cached version of some.site/public/uploads}
+			end
+
+			it "works as a rails application" do
+				@server = "http://root.passenger.test:#{@apache2.port}"
+				result = get('/welcome/parameters_test?hello=world&recipe[name]=Green+Bananas')
+				result.should =~ %r{<hello>world</hello>}
+				result.should =~ %r{<recipe>}
+				result.should =~ %r{<name>Green Bananas</name>}
+			end
+		end
 	end
 	
 	describe "error handling" do
@@ -742,6 +776,7 @@ describe "mod_passenger running in Apache 2" do
 				"Please add these to your /etc/hosts:\n\n" <<
 				"  127.0.0.1 passenger.test\n" <<
 				"  127.0.0.1 mycook.passenger.test\n" <<
+				"  127.0.0.1 root.passenger.test\n" <<
 				"  127.0.0.1 zsfa.passenger.test\n" <<
 				"  127.0.0.1 norails.passenger.test\n"
 			if RUBY_PLATFORM =~ /darwin/

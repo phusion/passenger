@@ -404,7 +404,12 @@ private:
 			UPDATE_TRACE_POINT();
 			try {
 				ServerConfig *sconfig = getServerConfig(r->server);
-				string appRoot(canonicalizePath(mapper.getPublicDirectory() + "/.."));
+				string appRoot;
+					if (config->appRoot == NULL)
+						appRoot = canonicalizePath(mapper.getPublicDirectory() + "/..");
+					else
+						appRoot = canonicalizePath(config->appRoot);
+				
 				
 				session = getApplicationPool()->get(PoolOptions(
 					appRoot,
