@@ -118,6 +118,9 @@ private:
 				ap_rputs("Please fix the relevant file permissions.", r);
 				ap_rputs("</p>", r);
 			}
+			P_ERROR("A filesystem exception occured.\n" <<
+				"  Message: " << e.what() << "\n" <<
+				"  Backtrace:\n" << e.backtrace());
 			return OK;
 		}
 	};
@@ -138,9 +141,15 @@ private:
 	}
 	
 	inline RequestNote *getRequestNote(request_rec *r) {
-		RequestNote *note = 0;
-		apr_pool_userdata_get((void **) &note, "Phusion Passenger", r->pool);
-		return note;
+		// The union is needed in order to be compliant with
+		// C99/C++'s strict aliasing rules. http://tinyurl.com/g5hgh
+		union {
+			RequestNote *note;
+			void *pointer;
+		} u;
+		u.note = 0;
+		apr_pool_userdata_get(&u.pointer, "Phusion Passenger", r->pool);
+		return u.note;
 	}
 	
 	/**
@@ -238,6 +247,7 @@ private:
 	 * @return Whether the Passenger handler hook method should be run.
 	 */
 	bool prepareRequest(request_rec *r, DirConfig *config, const char *filename, bool coreModuleWillBeRun = false) {
+		TRACE_POINT();
 		DirectoryMapper mapper(r, config, mstat, config->getStatThrottleRate());
 		try {
 			if (mapper.getBaseURI() == NULL) {
@@ -345,10 +355,18 @@ private:
 		/* Check whether an error occured in prepareRequest() that should be reported
 		 * to the browser.
 		 */
-		ErrorReport *e = 0;
-		apr_pool_userdata_get((void **) &e, "Phusion Passenger: error report", r->pool);
-		if (e != 0) {
-			return e->report(r);
+		
+		// The union is needed in order to be compliant with
+		// C99/C++'s strict aliasing rules. http://tinyurl.com/g5hgh
+		union {
+			ErrorReport *errorReport;
+			void *pointer;
+		} u;
+		
+		u.errorReport = 0;
+		apr_pool_userdata_get(&u.pointer, "Phusion Passenger: error report", r->pool);
+		if (u.errorReport != 0) {
+			return u.errorReport->report(r);
 		}
 		
 		RequestNote *note = getRequestNote(r);

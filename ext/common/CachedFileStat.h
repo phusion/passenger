@@ -38,7 +38,9 @@ typedef struct {
 	/** The cached stat info. */
 	struct stat info;
 	/** The last return value of stat(). */
-	int result;
+	int last_result;
+	/** The errno set by the last stat() call. */
+	int last_errno;
 	/** The filename of the file to stat. */
 	char *filename;
 	/** The last time a stat() was performed. */

@@ -68,13 +68,13 @@ protected
 		begin
 			output.write("Status: #{status}#{CRLF}")
 			headers[X_POWERED_BY] = PASSENGER_HEADER
-			headers.each do |k, vs|
-				vs.each do |v|
-					output.write("#{k}: #{v}#{CRLF}")
-				end
+			headers.each_pair do |k, v|
+				output.write("#{k}: #{v}#{CRLF}")
 			end
 			output.write(CRLF)
-			if body
+			if body.is_a?(String)
+				output.write(body)
+			elsif body
 				body.each do |s|
 					output.write(s)
 				end
