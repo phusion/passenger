@@ -24,6 +24,8 @@
 #include <set>
 #include <cstring>
 
+#include <oxt/backtrace.hpp>
+
 #include "CachedFileStat.h"
 #include "Configuration.h"
 #include "Utils.h"
@@ -36,6 +38,7 @@
 namespace Passenger {
 
 using namespace std;
+using namespace oxt;
 
 /**
  * Utility class for determining URI-to-application directory mappings.
@@ -117,6 +120,7 @@ public:
 	 *          hasn't been destroyed.
 	 */
 	const char *getBaseURI() {
+		TRACE_POINT();
 		if (baseURIKnown) {
 			return baseURI;
 		}
@@ -130,6 +134,7 @@ public:
 			return NULL;
 		}
 		
+		UPDATE_TRACE_POINT();
 		for (it = config->railsBaseURIs.begin(); it != config->railsBaseURIs.end(); it++) {
 			const string &base(*it);
 			if (  base == "/"
@@ -144,6 +149,7 @@ public:
 			}
 		}
 		
+		UPDATE_TRACE_POINT();
 		for (it = config->rackBaseURIs.begin(); it != config->rackBaseURIs.end(); it++) {
 			const string &base(*it);
 			if (  base == "/"
@@ -158,6 +164,7 @@ public:
 			}
 		}
 		
+		UPDATE_TRACE_POINT();
 		if (shouldAutoDetectRails()
 		 && verifyRailsDir(ap_document_root(r), mstat, throttleRate)) {
 			baseURIKnown = true;
@@ -165,6 +172,8 @@ public:
 			appType = RAILS;
 			return baseURI;
 		}
+		
+		UPDATE_TRACE_POINT();
 		if (shouldAutoDetectRack()
 		 && verifyRackDir(ap_document_root(r), mstat, throttleRate)) {
 			baseURIKnown = true;
@@ -172,6 +181,8 @@ public:
 			appType = RACK;
 			return baseURI;
 		}
+		
+		UPDATE_TRACE_POINT();
 		if (shouldAutoDetectWSGI()
 		 && verifyWSGIDir(ap_document_root(r), mstat, throttleRate)) {
 			baseURIKnown = true;

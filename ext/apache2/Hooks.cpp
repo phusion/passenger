@@ -118,6 +118,9 @@ private:
 				ap_rputs("Please fix the relevant file permissions.", r);
 				ap_rputs("</p>", r);
 			}
+			P_ERROR("A filesystem exception occured.\n" <<
+				"  Message: " << e.what() << "\n" <<
+				"  Backtrace:\n" << e.backtrace());
 			return OK;
 		}
 	};
@@ -244,6 +247,7 @@ private:
 	 * @return Whether the Passenger handler hook method should be run.
 	 */
 	bool prepareRequest(request_rec *r, DirConfig *config, const char *filename, bool coreModuleWillBeRun = false) {
+		TRACE_POINT();
 		DirectoryMapper mapper(r, config, mstat, config->getStatThrottleRate());
 		try {
 			if (mapper.getBaseURI() == NULL) {
