@@ -19,8 +19,8 @@
 require 'socket'
 require 'set'
 require 'timeout'
-require 'passenger/message_channel'
-require 'passenger/utils'
+require 'phusion_passenger/message_channel'
+require 'phusion_passenger/utils'
 module PhusionPassenger
 
 # An abstract base class for a server, with the following properties:

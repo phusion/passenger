@@ -1,6 +1,6 @@
 require 'support/config'
 require 'support/test_helper'
-require 'passenger/spawn_manager'
+require 'phusion_passenger/spawn_manager'
 
 require 'ruby/abstract_server_spec'
 require 'ruby/rails/minimal_spawner_spec'

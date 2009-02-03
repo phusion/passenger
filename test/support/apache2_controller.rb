@@ -1,6 +1,6 @@
 require 'erb'
 require 'fileutils'
-require 'passenger/platform_info'
+require 'phusion_passenger/platform_info'
 
 # A class for starting, stopping and restarting Apache, and for manipulating
 # its configuration file. This is used by the integration tests.

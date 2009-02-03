@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 $LOAD_PATH << "#{File.dirname(__FILE__)}/../../lib"
-require 'passenger/message_channel'
+require 'phusion_passenger/message_channel'
 
 include PhusionPassenger
 reader = MessageChannel.new(STDIN)

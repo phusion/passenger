@@ -1,8 +1,8 @@
 #!/usr/bin/env ruby
 $LOAD_PATH << "#{File.dirname(__FILE__)}/../../lib"
 $LOAD_PATH << "#{File.dirname(__FILE__)}/../../ext"
-require 'passenger/message_channel'
-require 'passenger/utils'
+require 'phusion_passenger/message_channel'
+require 'phusion_passenger/utils'
 
 include PhusionPassenger
 channel = MessageChannel.new(IO.new(3))

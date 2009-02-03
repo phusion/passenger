@@ -28,9 +28,9 @@ $LOAD_PATH.unshift("#{PASSENGER_ROOT}/ext")
 ENV["PATH"] += ":/usr/sbin:/sbin:/usr/local/sbin"
 
 require 'optparse'
-require 'passenger/platform_info'
-require 'passenger/dependencies'
-require 'passenger/console_text_template'
+require 'phusion_passenger/platform_info'
+require 'phusion_passenger/dependencies'
+require 'phusion_passenger/console_text_template'
 include PlatformInfo
 
 class Installer

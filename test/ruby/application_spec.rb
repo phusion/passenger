@@ -1,6 +1,6 @@
 require 'support/config'
 require 'support/test_helper'
-require 'passenger/application'
+require 'phusion_passenger/application'
 include PhusionPassenger
 
 describe Application do

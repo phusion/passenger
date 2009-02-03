@@ -14,8 +14,8 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-require 'passenger/abstract_request_handler'
-require 'passenger/railz/cgi_fixed'
+require 'phusion_passenger/abstract_request_handler'
+require 'phusion_passenger/railz/cgi_fixed'
 module PhusionPassenger
 module Railz
 

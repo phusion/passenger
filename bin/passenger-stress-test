@@ -23,9 +23,9 @@ require 'rubygems'
 require 'optparse'
 require 'socket'
 require 'thread'
-require 'passenger/platform_info'
-require 'passenger/message_channel'
-require 'passenger/utils'
+require 'phusion_passenger/platform_info'
+require 'phusion_passenger/message_channel'
+require 'phusion_passenger/utils'
 
 include PhusionPassenger
 include PhusionPassenger::Utils

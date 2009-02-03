@@ -19,7 +19,7 @@
 
 $LOAD_PATH << File.expand_path(File.dirname(__FILE__) + "/../lib")
 $LOAD_PATH << File.expand_path(File.dirname(__FILE__) + "/../ext")
-require 'passenger/admin_tools/control_process'
+require 'phusion_passenger/admin_tools/control_process'
 
 include PhusionPassenger::AdminTools
 

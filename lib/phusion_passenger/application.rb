@@ -17,7 +17,7 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 require 'rubygems'
-require 'passenger/exceptions'
+require 'phusion_passenger/exceptions'
 module PhusionPassenger
 
 # Represents a single application instance.

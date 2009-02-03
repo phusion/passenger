@@ -27,9 +27,9 @@ Run the following command to compile everything:
 == Directory structure
 
 The most important directories are:
-[ lib/passenger ]
+[ lib/phusion_passenger ]
   The source code for the spawn server, which is written in Ruby.
-[ ext/passenger ]
+[ ext/phusion_passenger ]
   Native extensions for Ruby, used by the spawn server.
 [ ext/apache2 ]
   The Phusion Passenger Apache 2 module (mod_passenger).
@@ -48,7 +48,13 @@ Less important directories:
 [ lib/rake ]
   Rake tasks.
 [ ext/boost ]
-  A vendor copy of the Boost C++ library (www.boost.org).
+  A stripped-down and customized version of the Boost C++ library
+  (www.boost.org).
+[ ext/oxt ]
+  The "OS eXtensions for boosT" library, which provides various important
+  functionality necessary for writing robust server software. It provides
+  things like support for interruptable system calls and portable backtraces
+  for C++. Boost was modified to make use of the functionality provided by OXT.
 [ benchmark ]
   Benchmark tools.
 [ misc ]

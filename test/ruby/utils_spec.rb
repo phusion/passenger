@@ -1,7 +1,7 @@
 require 'support/config'
 
 require 'tempfile'
-require 'passenger/utils'
+require 'phusion_passenger/utils'
 
 include PhusionPassenger
 

@@ -17,12 +17,12 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 require 'rubygems'
-require 'passenger/abstract_server'
-require 'passenger/abstract_server_collection'
-require 'passenger/railz/application_spawner'
-require 'passenger/exceptions'
-require 'passenger/constants'
-require 'passenger/utils'
+require 'phusion_passenger/abstract_server'
+require 'phusion_passenger/abstract_server_collection'
+require 'phusion_passenger/railz/application_spawner'
+require 'phusion_passenger/exceptions'
+require 'phusion_passenger/constants'
+require 'phusion_passenger/utils'
 module PhusionPassenger
 module Railz
 

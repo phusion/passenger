@@ -1,7 +1,7 @@
 require 'support/config'
 require 'support/test_helper'
-require 'passenger/wsgi/application_spawner'
-require 'passenger/utils'
+require 'phusion_passenger/wsgi/application_spawner'
+require 'phusion_passenger/utils'
 require 'fileutils'
 require 'tempfile'
 

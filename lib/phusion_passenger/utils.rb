@@ -25,9 +25,9 @@ require 'pathname'
 require 'etc'
 require 'fcntl'
 require 'tempfile'
-require 'passenger/exceptions'
+require 'phusion_passenger/exceptions'
 if !defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby"
-	require 'passenger/native_support'
+	require 'phusion_passenger/native_support'
 end
 
 module PhusionPassenger

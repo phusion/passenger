@@ -1,6 +1,6 @@
 require 'socket'
 require 'support/config'
-require 'passenger/message_channel'
+require 'phusion_passenger/message_channel'
 include PhusionPassenger
 
 describe MessageChannel do

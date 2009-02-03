@@ -1,6 +1,6 @@
 require 'support/config'
 require 'support/test_helper'
-require 'passenger/abstract_request_handler'
+require 'phusion_passenger/abstract_request_handler'
 
 require 'fileutils'
 

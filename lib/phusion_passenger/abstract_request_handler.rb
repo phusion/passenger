@@ -18,8 +18,8 @@
 
 require 'socket'
 require 'fcntl'
-require 'passenger/message_channel'
-require 'passenger/utils'
+require 'phusion_passenger/message_channel'
+require 'phusion_passenger/utils'
 module PhusionPassenger
 
 # The request handler is the layer which connects Apache with the underlying application's
