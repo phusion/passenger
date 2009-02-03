@@ -166,7 +166,7 @@ public:
 		
 		UPDATE_TRACE_POINT();
 		if (shouldAutoDetectRails()
-		 && verifyRailsDir(canonicalizePath(config->getAppRoot(ap_document_root(r))), mstat, throttleRate)) {
+		 && verifyRailsDir(config->getAppRoot(ap_document_root(r)), mstat, throttleRate)) {
 			baseURIKnown = true;
 			baseURI = "/";
 			appType = RAILS;
@@ -175,7 +175,7 @@ public:
 		
 		UPDATE_TRACE_POINT();
 		if (shouldAutoDetectRack()
-		 && verifyRackDir(canonicalizePath(config->getAppRoot(ap_document_root(r))), mstat, throttleRate)) {
+		 && verifyRackDir(config->getAppRoot(ap_document_root(r)), mstat, throttleRate)) {
 			baseURIKnown = true;
 			baseURI = "/";
 			appType = RACK;
@@ -184,7 +184,7 @@ public:
 		
 		UPDATE_TRACE_POINT();
 		if (shouldAutoDetectWSGI()
-		 && verifyWSGIDir(canonicalizePath(config->getAppRoot(ap_document_root(r))), mstat, throttleRate)) {
+		 && verifyWSGIDir(config->getAppRoot(ap_document_root(r)), mstat, throttleRate)) {
 			baseURIKnown = true;
 			baseURI = "/";
 			appType = WSGI;

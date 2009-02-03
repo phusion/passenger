@@ -17,27 +17,12 @@
  *  with this program; if not, write to the Free Software Foundation, Inc.,
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-#include "SystemTime.h"
 
-static int has_forced_value = 0;
-static time_t forced_value = 0;
+#include <time.h>
 
-time_t
-passenger_system_time_get() {
-	if (has_forced_value) {
-		return forced_value;
-	} else {
-		return time(NULL);
+namespace Passenger {
+	namespace SystemTimeData {
+		bool hasForcedValue = false;
+		time_t forcedValue = 0;
 	}
-}
-
-void
-passenger_system_time_force_value(time_t value) {
-	has_forced_value = 1;
-	forced_value = value;
-}
-
-void
-passenger_system_time_release_forced_value() {
-	has_forced_value = 0;
 }

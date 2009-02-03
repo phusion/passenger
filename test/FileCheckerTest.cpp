@@ -14,7 +14,7 @@ namespace tut {
 		
 		~FileCheckerTest() {
 			unlink("test.txt");
-			passenger_system_time_release_forced_value();
+			SystemTime::release();
 		}
 	};
 	
@@ -62,17 +62,17 @@ namespace tut {
 	
 	TEST_METHOD(5) {
 		// Throttling works.
-		passenger_system_time_force_value(5);
+		SystemTime::force(5);
 		
 		FileChecker checker("test.txt");
 		checker.changed(3);
 		touch("test.txt");
 		ensure(!checker.changed(3));
 		
-		passenger_system_time_force_value(6);
+		SystemTime::force(6);
 		ensure(!checker.changed(3));
 		
-		passenger_system_time_force_value(8);
+		SystemTime::force(8);
 		ensure(checker.changed(3));
 		ensure(!checker.changed(3));
 	}

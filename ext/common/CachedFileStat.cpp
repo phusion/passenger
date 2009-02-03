@@ -31,6 +31,7 @@
 
 using namespace std;
 using namespace boost;
+using namespace Passenger;
 
 
 CachedFileStat *
@@ -84,11 +85,22 @@ cached_file_stat_free(CachedFileStat *stat) {
  */
 static int
 expired(time_t begin, unsigned int interval, time_t *current_time) {
-	*current_time = passenger_system_time_get();
-	if (*current_time == (time_t) - 1) {
+	try {
+		*current_time = SystemTime::get();
+		if (*current_time == (time_t) - 1) {
+			return -1;
+		} else {
+			return (unsigned int) (*current_time - begin) >= interval;
+		}
+	} catch (const SystemException &e) {
+		errno = e.code();
 		return -1;
-	} else {
-		return (unsigned int) (*current_time - begin) >= interval;
+	} catch (const boost::thread_interrupted &) {
+		errno = EINTR;
+		return -1;
+	} catch (...) {
+		errno = EFAULT;
+		return -1;
 	}
 }
 

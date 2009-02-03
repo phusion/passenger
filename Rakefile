@@ -159,7 +159,7 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 		'ext/common/Logging.h',
 		'ext/common/Logging.cpp',
 		'ext/common/SystemTime.h',
-		'ext/common/SystemTime.c',
+		'ext/common/SystemTime.cpp',
 		'ext/common/CachedFileStat.h',
 		'ext/common/CachedFileStat.cpp'
 	]) do
@@ -173,7 +173,7 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 			
 			compile_cxx("#{ext_dir}/common/Utils.cpp", flags)
 			compile_cxx("#{ext_dir}/common/Logging.cpp", flags)
-			compile_cxx("#{ext_dir}/common/SystemTime.c", flags)
+			compile_cxx("#{ext_dir}/common/SystemTime.cpp", flags)
 			compile_cxx("#{ext_dir}/common/CachedFileStat.cpp", flags)
 			
 			puts
@@ -419,7 +419,7 @@ end
 		'test/SystemTimeTest.o' => %w(
 			test/SystemTimeTest.cpp
 			ext/common/SystemTime.h
-			ext/common/SystemTime.c),
+			ext/common/SystemTime.cpp),
 		'test/CachedFileStatTest.o' => %w(
 			test/CachedFileStatTest.cpp
 			ext/common/CachedFileStat.h
