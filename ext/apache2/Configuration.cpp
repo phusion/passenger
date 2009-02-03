@@ -23,7 +23,7 @@
 #include "Configuration.h"
 #include "Utils.h"
 
-using namespace PhusionPassenger;
+using namespace Passenger;
 
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 

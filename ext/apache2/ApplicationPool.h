@@ -26,7 +26,7 @@
 #include "Application.h"
 #include "PoolOptions.h"
 
-namespace PhusionPassenger {
+namespace Passenger {
 
 using namespace std;
 using namespace boost;
@@ -194,6 +194,6 @@ public:
 
 typedef shared_ptr<ApplicationPool> ApplicationPoolPtr;
 
-}; // namespace PhusionPassenger
+}; // namespace Passenger
 
 #endif /* _PASSENGER_APPLICATION_POOL_H_ */

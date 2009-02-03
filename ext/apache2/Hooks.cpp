@@ -49,7 +49,7 @@
 #include <apr_lib.h>
 
 using namespace std;
-using namespace PhusionPassenger;
+using namespace Passenger;
 
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
@@ -747,7 +747,7 @@ public:
 	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s) {
 		passenger_config_merge_all_servers(pconf, s);
 		ServerConfig *config = getServerConfig(s);
-		PhusionPassenger::setLogLevel(config->logLevel);
+		Passenger::setLogLevel(config->logLevel);
 		m_hasModRewrite = UNKNOWN;
 		m_hasModDir = UNKNOWN;
 		m_hasModAutoIndex = UNKNOWN;

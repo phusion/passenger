@@ -21,7 +21,7 @@
 #include <fstream>
 #include "Logging.h"
 
-namespace PhusionPassenger {
+namespace Passenger {
 
 unsigned int _logLevel = 0;
 ostream *_logStream = &cerr;
@@ -56,5 +56,5 @@ setDebugFile(const char *logFile) {
 	#endif
 }
 
-} // namespace PhusionPassenger
+} // namespace Passenger
 

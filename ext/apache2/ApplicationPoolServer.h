@@ -43,7 +43,7 @@
 #include "Exceptions.h"
 #include "Logging.h"
 
-namespace PhusionPassenger {
+namespace Passenger {
 
 using namespace std;
 using namespace boost;
@@ -576,7 +576,7 @@ private:
 					m_serverExecutable.c_str(),
 				#endif
 				m_serverExecutable.c_str(),
-				toString(PhusionPassenger::getLogLevel()).c_str(),
+				toString(Passenger::getLogLevel()).c_str(),
 				m_spawnServerCommand.c_str(),
 				m_logFile.c_str(),
 				m_rubyCommand.c_str(),
@@ -772,6 +772,6 @@ public:
 
 typedef shared_ptr<ApplicationPoolServer> ApplicationPoolServerPtr;
 
-} // namespace PhusionPassenger
+} // namespace Passenger
 
 #endif /* _PASSENGER_APPLICATION_POOL_SERVER_H_ */

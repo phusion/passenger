@@ -37,7 +37,7 @@
 #include <apr_buckets.h>
 #include "Application.h"
 
-apr_bucket *passenger_bucket_create(PhusionPassenger::Application::SessionPtr session,
+apr_bucket *passenger_bucket_create(Passenger::Application::SessionPtr session,
                                     apr_file_t *pipe,
                                     apr_bucket_alloc_t *list);
 

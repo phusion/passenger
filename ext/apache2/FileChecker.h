@@ -30,7 +30,7 @@
 #include "CachedFileStat.h"
 #include "SystemTime.h"
 
-namespace PhusionPassenger {
+namespace Passenger {
 
 using namespace std;
 using namespace oxt;
@@ -107,6 +107,6 @@ public:
 	}
 };
 
-} // namespace PhusionPassenger
+} // namespace Passenger
 
 #endif /* _PASSENGER_FILE_CHECKER_H_ */

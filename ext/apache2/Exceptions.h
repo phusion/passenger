@@ -29,7 +29,7 @@
  * @defgroup Exceptions Exceptions
  */
 
-namespace PhusionPassenger {
+namespace Passenger {
 
 using namespace std;
 
@@ -235,6 +235,6 @@ public:
 	virtual const char *what() const throw() { return msg.c_str(); }
 };
 
-} // namespace PhusionPassenger
+} // namespace Passenger
 
 #endif /* _PASSENGER_EXCEPTIONS_H_ */

@@ -55,7 +55,7 @@
 	#include "SpawnManager.h"
 #endif
 
-namespace PhusionPassenger {
+namespace Passenger {
 
 using namespace std;
 using namespace boost;
@@ -811,7 +811,7 @@ public:
 
 typedef shared_ptr<StandardApplicationPool> StandardApplicationPoolPtr;
 
-} // namespace PhusionPassenger
+} // namespace Passenger
 
 #endif /* _PASSENGER_STANDARD_APPLICATION_POOL_H_ */
 
