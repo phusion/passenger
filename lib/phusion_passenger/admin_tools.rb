@@ -1,4 +1,4 @@
-module Passenger
+module PhusionPassenger
 
 module AdminTools
 	def self.tmpdir
@@ -22,4 +22,4 @@ module AdminTools
 	end
 end # module AdminTools
 
-end # module Passenger
+end # module PhusionPassenger

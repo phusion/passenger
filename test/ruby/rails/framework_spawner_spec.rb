@@ -1,13 +1,13 @@
 require 'support/config'
 require 'support/test_helper'
-require 'passenger/railz/framework_spawner'
+require 'phusion_passenger/railz/framework_spawner'
 
 require 'ruby/rails/minimal_spawner_spec'
 require 'ruby/spawn_server_spec'
 require 'ruby/rails/spawner_privilege_lowering_spec'
 require 'ruby/rails/spawner_error_handling_spec'
-include Passenger
-include Passenger::Railz
+include PhusionPassenger
+include PhusionPassenger::Railz
 
 # TODO: test whether FrameworkSpawner restarts ApplicationSpawner if it crashed
 

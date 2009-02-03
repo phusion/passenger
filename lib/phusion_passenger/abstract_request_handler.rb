@@ -18,9 +18,9 @@
 
 require 'socket'
 require 'fcntl'
-require 'passenger/message_channel'
-require 'passenger/utils'
-module Passenger
+require 'phusion_passenger/message_channel'
+require 'phusion_passenger/utils'
+module PhusionPassenger
 
 # The request handler is the layer which connects Apache with the underlying application's
 # request dispatcher (i.e. either Rails's Dispatcher class or Rack).
@@ -169,13 +169,6 @@ class AbstractRequestHandler
 	
 	# Enter the request handler's main loop.
 	def main_loop
-		if defined?(::Passenger::AbstractRequestHandler)
-			# Some applications have a model named 'Passenger'.
-			# So we temporarily remove it from the global namespace
-			# and restore it later.
-			phusion_passenger_namespace = ::Passenger
-			Object.send(:remove_const, :Passenger)
-		end
 		reset_signal_handlers
 		begin
 			@graceful_termination_pipe = IO.pipe
@@ -226,10 +219,6 @@ class AbstractRequestHandler
 			@graceful_termination_pipe[0].close rescue nil
 			@graceful_termination_pipe[1].close rescue nil
 			revert_signal_handlers
-			if phusion_passenger_namespace
-				Object.send(:remove_const, :Passenger) rescue nil
-				Object.const_set(:Passenger, phusion_passenger_namespace)
-			end
 			@main_loop_thread_lock.synchronize do
 				@main_loop_running = false
 				@main_loop_thread_cond.broadcast
@@ -446,4 +435,4 @@ public
 	PASSENGER_HEADER = determine_passenger_header
 end
 
-end # module Passenger
+end # module PhusionPassenger

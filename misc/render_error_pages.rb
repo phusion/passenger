@@ -19,7 +19,7 @@ $LOAD_PATH << "#{File.dirname(__FILE__)}/../lib"
 require 'passenger/html_template'
 require 'passenger/spawn_manager'
 require 'passenger/platform_info'
-include Passenger
+include PhusionPassenger
 
 if !defined?(Mysql::Error)
 	module Mysql

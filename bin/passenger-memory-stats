@@ -18,7 +18,7 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 $LOAD_PATH.unshift("#{File.dirname(__FILE__)}/../lib")
-require 'passenger/platform_info'
+require 'phusion_passenger/platform_info'
 
 # ANSI color codes
 RESET   = "\e[0m"

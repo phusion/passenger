@@ -14,39 +14,32 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-$LOAD_PATH.unshift(File.expand_path(File.dirname(__FILE__) + "/../../../vendor/rack-0.9.1/lib"))
-require 'rack'
-
 require 'socket'
-require 'passenger/application'
-require 'passenger/message_channel'
-require 'passenger/abstract_request_handler'
-require 'passenger/utils'
-require 'passenger/rack/request_handler'
+require 'phusion_passenger/application'
+require 'phusion_passenger/message_channel'
+require 'phusion_passenger/utils'
+module PhusionPassenger
+module WSGI
 
-module Passenger
-module Rack
-
-# Class for spawning Rack applications.
+# Class for spawning WSGI applications.
 class ApplicationSpawner
 	include Utils
+	REQUEST_HANDLER = File.expand_path(File.dirname(__FILE__) + "/request_handler.py")
 	
 	def self.spawn_application(*args)
 		@@instance ||= ApplicationSpawner.new
 		@@instance.spawn_application(*args)
 	end
 	
-	# Spawn an instance of the given Rack application. When successful, an
+	# Spawn an instance of the given WSGI application. When successful, an
 	# Application object will be returned, which represents the spawned
 	# application.
 	#
 	# Raises:
-	# - AppInitError: The Rack application raised an exception or called
+	# - AppInitError: The WSGI application raised an exception or called
 	#   exit() during startup.
 	# - SystemCallError, IOError, SocketError: Something went wrong.
-	def spawn_application(app_root, options = {})
-		options = sanitize_spawn_options(options)
-		
+	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody", environment = "production")
 		a, b = UNIXSocket.pair
 		pid = safe_fork(self.class.to_s, true) do
 			a.close
@@ -55,15 +48,12 @@ class ApplicationSpawner
 			NativeSupport.close_all_file_descriptors(file_descriptors_to_leave_open)
 			close_all_io_objects_for_fds(file_descriptors_to_leave_open)
 			
-			run(MessageChannel.new(b), app_root, options)
+			run(MessageChannel.new(b), app_root, lower_privilege, lowest_user, environment)
 		end
 		b.close
 		Process.waitpid(pid) rescue nil
 		
 		channel = MessageChannel.new(a)
-		unmarshal_and_raise_errors(channel, "rack")
-		
-		# No exception was raised, so spawning succeeded.
 		pid, socket_name, socket_type = channel.read
 		if pid.nil?
 			raise IOError, "Connection closed"
@@ -74,43 +64,34 @@ class ApplicationSpawner
 	end
 
 private
-	
-	def run(channel, app_root, options)
-		$0 = "Rack: #{app_root}"
-		app = nil
-		success = report_app_init_status(channel) do
-			ENV['RACK_ENV'] = options["environment"]
-			Dir.chdir(app_root)
-			if options["lower_privilege"]
-				lower_privilege('config.ru', options["lowest_user"])
-			end
-			remove_phusion_passenger_namespace
-			app = load_rack_app
+	def run(channel, app_root, lower_privilege, lowest_user, environment)
+		$0 = "WSGI: #{app_root}"
+		ENV['WSGI_ENV'] = environment
+		Dir.chdir(app_root)
+		if lower_privilege
+			lower_privilege('passenger_wsgi.py', lowest_user)
 		end
 		
-		if success
+		socket_file = "#{passenger_tmpdir}/passenger_wsgi.#{Process.pid}.#{rand 10000000}"
+		server = UNIXServer.new(socket_file)
+		begin
 			reader, writer = IO.pipe
-			begin
-				handler = RequestHandler.new(reader, app, options)
-				channel.write(Process.pid, handler.socket_name,
-					handler.socket_type)
-				channel.send_io(writer)
-				writer.close
-				channel.close
-				handler.main_loop
-			ensure
-				channel.close rescue nil
-				writer.close rescue nil
-				handler.cleanup rescue nil
-			end
+			channel.write(Process.pid, socket_file, "unix")
+			channel.send_io(writer)
+			writer.close
+			channel.close
+			
+			NativeSupport.close_all_file_descriptors([0, 1, 2, server.fileno,
+				reader.fileno])
+			exec(REQUEST_HANDLER, socket_file, server.fileno.to_s,
+				reader.fileno.to_s)
+		rescue
+			server.close
+			File.unlink(socket_file)
+			raise
 		end
-	end
-
-	def load_rack_app
-		rackup_code = File.read("config.ru")
-		eval("Rack::Builder.new {( #{rackup_code}\n )}.to_app", TOPLEVEL_BINDING, "config.ru")
 	end
 end
 
-end # module Rack
-end # module Passenger
+end # module WSGI
+end # module PhusionPassenger

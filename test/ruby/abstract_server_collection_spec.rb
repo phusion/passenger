@@ -1,9 +1,9 @@
 require 'support/config'
 require 'support/test_helper'
-require 'passenger/abstract_server'
-require 'passenger/abstract_server_collection'
+require 'phusion_passenger/abstract_server'
+require 'phusion_passenger/abstract_server_collection'
 
-include Passenger
+include PhusionPassenger
 
 describe AbstractServerCollection do
 	before :each do

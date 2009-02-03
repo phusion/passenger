@@ -1,13 +1,13 @@
 require 'support/config'
 require 'support/test_helper'
-require 'passenger/wsgi/application_spawner'
-require 'passenger/utils'
+require 'phusion_passenger/wsgi/application_spawner'
+require 'phusion_passenger/utils'
 require 'fileutils'
 require 'tempfile'
 
-describe Passenger::WSGI::ApplicationSpawner do
+describe PhusionPassenger::WSGI::ApplicationSpawner do
 	include TestHelper
-	include Passenger::Utils
+	include PhusionPassenger::Utils
 	
 	before :each do
 		ENV['PHUSION_PASSENGER_TMP'] = "#{Dir.tmpdir}/wsgi_test.tmp"
@@ -41,7 +41,7 @@ describe Passenger::WSGI::ApplicationSpawner do
 	end
 	
 	def spawn(*args)
-		Passenger::WSGI::ApplicationSpawner.spawn_application(*args)
+		PhusionPassenger::WSGI::ApplicationSpawner.spawn_application(*args)
 	end
 end
 

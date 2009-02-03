@@ -16,9 +16,9 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-require 'passenger/utils'
+require 'phusion_passenger/utils'
 
-module Passenger
+module PhusionPassenger
 
 # This class maintains a collection of AbstractServer objects. One can add new
 # AbstractServer objects, or look up existing ones via a key.
@@ -298,4 +298,4 @@ private
 	end
 end
 
-end # module Passenger
+end # module PhusionPassenger

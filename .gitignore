@@ -13,7 +13,8 @@ ext/apache2/*.slo
 ext/apache2/.libs
 ext/apache2/ApplicationPoolServerExecutable
 ext/nginx/HelperServer
-ext/passenger/Makefile
+ext/phusion_passenger/Makefile
+ext/*.a
 doc/rdoc
 doc/cxxapi
 doc/*.html

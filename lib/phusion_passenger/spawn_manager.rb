@@ -16,17 +16,17 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-require 'passenger/abstract_server'
-require 'passenger/abstract_server_collection'
-require 'passenger/constants'
-require 'passenger/utils'
+require 'phusion_passenger/abstract_server'
+require 'phusion_passenger/abstract_server_collection'
+require 'phusion_passenger/constants'
+require 'phusion_passenger/utils'
 
 # Define a constant with a name that's unlikely to clash with anything the
 # application defines, so that they can detect whether they're running under
 # Phusion Passenger.
 IN_PHUSION_PASSENGER = true
 
-module Passenger
+module PhusionPassenger
 
 # The spawn manager is capable of spawning Ruby on Rails or Rack application
 # instances. It acts like a simple fascade for the rest of the spawn manager
@@ -66,13 +66,13 @@ class SpawnManager < AbstractServer
 		if GC.copy_on_write_friendly?
 			# Preload libraries for copy-on-write semantics.
 			require 'base64'
-			require 'passenger/application'
-			require 'passenger/railz/framework_spawner'
-			require 'passenger/railz/application_spawner'
-			require 'passenger/rack/application_spawner'
-			require 'passenger/html_template'
-			require 'passenger/platform_info'
-			require 'passenger/exceptions'
+			require 'phusion_passenger/application'
+			require 'phusion_passenger/railz/framework_spawner'
+			require 'phusion_passenger/railz/application_spawner'
+			require 'phusion_passenger/rack/application_spawner'
+			require 'phusion_passenger/html_template'
+			require 'phusion_passenger/platform_info'
+			require 'phusion_passenger/exceptions'
 			
 			# Commonly used libraries.
 			['mysql', 'sqlite3'].each do |lib|
@@ -141,20 +141,20 @@ class SpawnManager < AbstractServer
 		
 		if options["app_type"] == "rails"
 			if !defined?(Railz::FrameworkSpawner)
-				require 'passenger/application'
-				require 'passenger/railz/framework_spawner'
-				require 'passenger/railz/application_spawner'
+				require 'phusion_passenger/application'
+				require 'phusion_passenger/railz/framework_spawner'
+				require 'phusion_passenger/railz/application_spawner'
 			end
 			return spawn_rails_application(options)
 		elsif options["app_type"] == "rack"
 			if !defined?(Rack::ApplicationSpawner)
-				require 'passenger/rack/application_spawner'
+				require 'phusion_passenger/rack/application_spawner'
 			end
 			return Rack::ApplicationSpawner.spawn_application(
 				options["app_root"], options
 			)
 		elsif options["app_type"] == "wsgi"
-			require 'passenger/wsgi/application_spawner'
+			require 'phusion_passenger/wsgi/application_spawner'
 			return WSGI::ApplicationSpawner.spawn_application(
 				options["app_root"],
 				options["lower_privilege"],
@@ -332,8 +332,8 @@ private
 	end
 	
 	def send_error_page(channel, template_name, options = {})
-		require 'passenger/html_template' unless defined?(HTMLTemplate)
-		require 'passenger/platform_info' unless defined?(PlatformInfo)
+		require 'phusion_passenger/html_template' unless defined?(HTMLTemplate)
+		require 'phusion_passenger/platform_info' unless defined?(PlatformInfo)
 		options["enterprisey"] = File.exist?("#{File.dirname(__FILE__)}/../../enterprisey.txt") ||
 			File.exist?("/etc/passenger_enterprisey.txt")
 		data = HTMLTemplate.new(template_name, options).result
@@ -367,4 +367,4 @@ private
 	end
 end
 
-end # module Passenger
+end # module PhusionPassenger

@@ -14,8 +14,8 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-require 'passenger/abstract_request_handler'
-module Passenger
+require 'phusion_passenger/abstract_request_handler'
+module PhusionPassenger
 module Rack
 
 # A request handler for Rack applications.
@@ -86,4 +86,4 @@ protected
 end
 
 end # module Rack
-end # module Passenger
+end # module PhusionPassenger

@@ -20,16 +20,16 @@ require 'rubygems'
 require 'socket'
 require 'etc'
 require 'fcntl'
-require 'passenger/application'
-require 'passenger/abstract_server'
-require 'passenger/application'
-require 'passenger/constants'
-require 'passenger/railz/request_handler'
-require 'passenger/rack/request_handler'
-require 'passenger/exceptions'
-require 'passenger/utils'
+require 'phusion_passenger/application'
+require 'phusion_passenger/abstract_server'
+require 'phusion_passenger/application'
+require 'phusion_passenger/constants'
+require 'phusion_passenger/railz/request_handler'
+require 'phusion_passenger/rack/request_handler'
+require 'phusion_passenger/exceptions'
+require 'phusion_passenger/utils'
 
-module Passenger
+module PhusionPassenger
 module Railz
 
 # This class is capable of spawning instances of a single Ruby on Rails application.
@@ -113,7 +113,7 @@ class ApplicationSpawner < AbstractServer
 		return Application.new(@app_root, pid, socket_name,
 			socket_type, owner_pipe)
 	rescue SystemCallError, IOError, SocketError => e
-		raise Error, "The application spawner server exited unexpectedly"
+		raise Error, "The application spawner server exited unexpectedly: #{e}"
 	end
 	
 	# Spawn an instance of the RoR application. When successful, an Application object
@@ -147,7 +147,6 @@ class ApplicationSpawner < AbstractServer
 					if @lower_privilege
 						lower_privilege('config/environment.rb', @lowest_user)
 					end
-					remove_phusion_passenger_namespace
 
 					# require Rails' environment, using the same path as the original rails dispatcher,
 					# which normally does: require File.dirname(__FILE__) + "/../config/environment"
@@ -192,9 +191,9 @@ class ApplicationSpawner < AbstractServer
 		super
 		begin
 			unmarshal_and_raise_errors(server)
-		rescue IOError, SystemCallError, SocketError
+		rescue IOError, SystemCallError, SocketError => e
 			stop
-			raise Error, "The application spawner server exited unexpectedly"
+			raise Error, "The application spawner server exited unexpectedly: #{e}"
 		rescue
 			stop
 			raise
@@ -224,7 +223,6 @@ protected
 			if @lower_privilege
 				lower_privilege('config/environment.rb', @lowest_user)
 			end
-			remove_phusion_passenger_namespace
 			preload_application
 		end
 	end
@@ -343,4 +341,4 @@ private
 end
 
 end # module Railz
-end # module Passenger
+end # module PhusionPassenger

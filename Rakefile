@@ -23,8 +23,8 @@ require 'rake/rdoctask'
 require 'rake/gempackagetask'
 require 'rake/extensions'
 require 'rake/cplusplus'
-require 'passenger/platform_info'
-require 'passenger/version'
+require 'phusion_passenger/platform_info'
+require 'phusion_passenger/version'
 
 verbose true
 
@@ -68,7 +68,7 @@ task :clobber
 
 ##### Ruby C extension
 
-subdir 'ext/passenger' do
+subdir 'ext/phusion_passenger' do
 	task :native_support => ["native_support.#{LIBEXT}"]
 	
 	file 'Makefile' => 'extconf.rb' do
@@ -580,7 +580,10 @@ Rake::RDocTask.new(:clobber_rdoc => "rdoc:clobber", :rerdoc => "rdoc:force") do 
 	rd.main = "README"
 	rd.rdoc_dir = "doc/rdoc"
 	rd.rdoc_files.include("README", "DEVELOPERS.TXT",
-		"lib/passenger/*.rb", "lib/rake/extensions.rb", "ext/passenger/*.c")
+		"lib/phusion_passenger/*.rb",
+		"lib/phusion_passenger/*/*.rb",
+		"lib/rake/extensions.rb",
+		"ext/phusion_passenger/*.c")
 	rd.template = "./doc/template/horo"
 	rd.title = "Passenger Ruby API"
 	rd.options << "-S" << "-N" << "-p" << "-H"
@@ -599,10 +602,10 @@ spec = Gem::Specification.new do |s|
 	s.author = "Phusion - http://www.phusion.nl/"
 	s.email = "info@phusion.nl"
 	s.requirements << "fastthread" << "Apache 2 with development headers"
-	s.require_path = ["lib", "ext"]
+	s.require_paths = ["lib", "ext"]
 	s.add_dependency 'rake', '>= 0.8.1'
 	s.add_dependency 'fastthread', '>= 1.0.1'
-	s.extensions << 'ext/passenger/extconf.rb'
+	s.extensions << 'ext/phusion_passenger/extconf.rb'
 	s.files = FileList[
 		'Rakefile',
 		'README',
@@ -612,9 +615,9 @@ spec = Gem::Specification.new do |s|
 		'NEWS',
 		'lib/**/*.rb',
 		'lib/**/*.py',
-		'lib/passenger/templates/*',
-		'lib/passenger/templates/apache2/*',
-		'lib/passenger/templates/nginx/*',
+		'lib/phusion_passenger/templates/*',
+		'lib/phusion_passenger/templates/apache2/*',
+		'lib/phusion_passenger/templates/nginx/*',
 		'bin/*',
 		'doc/*',
 		
@@ -640,7 +643,7 @@ spec = Gem::Specification.new do |s|
 		'ext/oxt/*.hpp',
 		'ext/oxt/*.cpp',
 		'ext/oxt/detail/*.hpp',
-		'ext/passenger/*.{c,rb}',
+		'ext/phusion_passenger/*.{c,rb}',
 		'benchmark/*.{cpp,rb}',
 		'misc/*',
 		'vendor/**/*',
@@ -704,20 +707,20 @@ task :fakeroot => [:apache2, :native_support, :doc] do
 	libdir = "#{fakeroot}/usr/lib/ruby/#{CONFIG['ruby_version']}"
 	extdir = "#{libdir}/#{CONFIG['arch']}"
 	bindir = "#{fakeroot}/usr/bin"
-	docdir = "#{fakeroot}/usr/share/doc/passenger"
-	libexecdir = "#{fakeroot}/usr/lib/passenger"
+	docdir = "#{fakeroot}/usr/share/doc/phusion_passenger"
+	libexecdir = "#{fakeroot}/usr/lib/phusion_passenger"
 	
 	sh "rm -rf #{fakeroot}"
 	sh "mkdir -p #{fakeroot}"
 	
 	sh "mkdir -p #{libdir}"
-	sh "cp -R lib/passenger #{libdir}/"
+	sh "cp -R lib/phusion_passenger #{libdir}/"
 
 	sh "mkdir -p #{fakeroot}/etc"
 	sh "echo -n '#{PACKAGE_VERSION}' > #{fakeroot}/etc/passenger_version.txt"
 	
-	sh "mkdir -p #{extdir}/passenger"
-	sh "cp -R ext/passenger/*.#{LIBEXT} #{extdir}/passenger/"
+	sh "mkdir -p #{extdir}/phusion_passenger"
+	sh "cp -R ext/phusion_passenger/*.#{LIBEXT} #{extdir}/phusion_passenger/"
 	
 	sh "mkdir -p #{bindir}"
 	sh "cp bin/* #{bindir}/"
@@ -742,9 +745,14 @@ task 'package:debian' => :fakeroot do
 	end
 
 	fakeroot = "pkg/fakeroot"
-	arch = `uname -m`.strip
-	if arch =~ /^i.86$/
-		arch = "i386"
+	raw_arch = `uname -m`.strip
+	arch = case raw_arch
+	when /^i\.86$/
+		"i386"
+	when /^x86_64/
+		"amd64"
+	else
+		raw_arch
 	end
 	
 	sh "sed -i 's/Version: .*/Version: #{PACKAGE_VERSION}/' debian/control"
@@ -772,12 +780,12 @@ task :sloccount do
 		end
 		sh "sloccount", *Dir[
 			"#{tmpdir}/*",
-			"lib/passenger/*",
+			"lib/phusion_passenger/*",
 			"lib/rake/{cplusplus,extensions}.rb",
 			"ext/apache2",
 			"ext/nginx",
 			"ext/oxt",
-			"ext/passenger/*.c",
+			"ext/phusion_passenger/*.c",
 			"test/**/*.{cpp,rb}",
 			"benchmark/*.{cpp,rb}"
 		]

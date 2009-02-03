@@ -8,7 +8,7 @@ require 'support/config'
 require 'support/test_helper'
 require 'support/multipart'
 require 'support/apache2_controller'
-require 'passenger/platform_info'
+require 'phusion_passenger/platform_info'
 
 include PlatformInfo
 

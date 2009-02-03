@@ -19,9 +19,9 @@
 require 'socket'
 require 'set'
 require 'timeout'
-require 'passenger/message_channel'
-require 'passenger/utils'
-module Passenger
+require 'phusion_passenger/message_channel'
+require 'phusion_passenger/utils'
+module PhusionPassenger
 
 # An abstract base class for a server, with the following properties:
 #
@@ -42,7 +42,7 @@ module Passenger
 #
 # Here's an example on using AbstractServer:
 #
-#  class MyServer < Passenger::AbstractServer
+#  class MyServer < PhusionPassenger::AbstractServer
 #     def initialize
 #        super()
 #        define_message_handler(:hello, :handle_hello)
@@ -346,4 +346,4 @@ private
 	end
 end
 
-end # module Passenger
+end # module PhusionPassenger

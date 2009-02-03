@@ -16,8 +16,8 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-require 'passenger/platform_info'
-module Passenger
+require 'phusion_passenger/platform_info'
+module PhusionPassenger
 
 # Represents a dependency software that Passenger requires. It's used by the
 # installer to check whether all dependencies are available. A Dependency object
@@ -323,4 +323,4 @@ module Dependencies # :nodoc: all
 	end
 end
 
-end # module Passenger
+end # module PhusionPassenger

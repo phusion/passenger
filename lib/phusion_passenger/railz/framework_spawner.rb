@@ -17,13 +17,13 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 require 'rubygems'
-require 'passenger/abstract_server'
-require 'passenger/abstract_server_collection'
-require 'passenger/railz/application_spawner'
-require 'passenger/exceptions'
-require 'passenger/constants'
-require 'passenger/utils'
-module Passenger
+require 'phusion_passenger/abstract_server'
+require 'phusion_passenger/abstract_server_collection'
+require 'phusion_passenger/railz/application_spawner'
+require 'phusion_passenger/exceptions'
+require 'phusion_passenger/constants'
+require 'phusion_passenger/utils'
+module PhusionPassenger
 module Railz
 
 # This class is capable of spawning Ruby on Rails application instances
@@ -222,7 +222,6 @@ protected
 		@spawners = AbstractServerCollection.new
 		begin
 			preload_rails
-			remove_phusion_passenger_namespace
 		rescue StandardError, ScriptError, NoMemoryError => e
 			client.write('exception')
 			client.write_scalar(marshal_exception(e))
@@ -330,4 +329,4 @@ private
 end
 
 end # module Railz
-end # module Passenger
+end # module PhusionPassenger

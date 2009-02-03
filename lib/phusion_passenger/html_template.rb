@@ -18,7 +18,7 @@
 
 require 'erb'
 
-module Passenger
+module PhusionPassenger
 
 # A convenience utility class for rendering our error pages.
 class HTMLTemplate
@@ -101,4 +101,4 @@ private
 	end
 end
 
-end # module Passenger
+end # module PhusionPassenger

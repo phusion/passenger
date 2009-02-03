@@ -17,7 +17,7 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 require 'erb'
-module Passenger
+module PhusionPassenger
 
 class ConsoleTextTemplate
 	TEMPLATE_DIR = "#{File.dirname(__FILE__)}/templates"
@@ -58,4 +58,4 @@ private
 	end
 end
 
-end # module Passenger
+end # module PhusionPassenger

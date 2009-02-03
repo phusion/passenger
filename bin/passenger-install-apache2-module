@@ -28,13 +28,13 @@ $LOAD_PATH.unshift("#{PASSENGER_ROOT}/ext")
 ENV["PATH"] += ":/usr/sbin:/sbin:/usr/local/sbin"
 
 require 'optparse'
-require 'passenger/platform_info'
-require 'passenger/dependencies'
-require 'passenger/abstract_installer'
+require 'phusion_passenger/platform_info'
+require 'phusion_passenger/dependencies'
+require 'phusion_passenger/abstract_installer'
 include PlatformInfo
 
-class Installer < Passenger::AbstractInstaller
-	include Passenger
+class Installer < PhusionPassenger::AbstractInstaller
+	include PhusionPassenger
 	
 	def dependencies
 		result = [

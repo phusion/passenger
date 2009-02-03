@@ -1,9 +1,9 @@
 #!/usr/bin/env ruby
 $LOAD_PATH << "#{File.dirname(__FILE__)}/../../lib"
 $LOAD_PATH << "#{File.dirname(__FILE__)}/../../ext"
-require 'passenger/spawn_manager'
+require 'phusion_passenger/spawn_manager'
 
-include Passenger
+include PhusionPassenger
 class SpawnManager
 	def handle_spawn_application(*options)
 		client.write('ok')
