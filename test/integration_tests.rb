@@ -622,6 +622,8 @@ describe "mod_passenger running in Apache 2" do
 				result.should =~ %r{<name>Green Bananas</name>}
 			end
 		end
+		
+		####################################
 	end
 	
 	describe "error handling" do
