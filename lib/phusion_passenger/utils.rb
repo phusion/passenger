@@ -367,26 +367,34 @@ class ConditionVariable
 	# amount of time. Returns true if this condition was signaled, false if a
 	# timeout occurred.
 	def timed_wait(mutex, secs)
-		require 'timeout' unless defined?(Timeout)
-		if secs > 0
-			if secs > 100000000
-				# NOTE: If one calls timeout() on FreeBSD 5 with an
-				# argument of more than 100000000, then Ruby will become
-				# stuck in an infite loop, blocking all threads. It seems
-				# that Ruby uses select() to implement sleeping.
-				# I think that a value of more than 100000000 overflows
-				# select()'s data structures, causing it to behave incorrectly.
-				# So we just make sure we can't sleep more than 100000000
-				# seconds.
-				secs = 100000000
-			end
-			Timeout.timeout(secs) do
-				wait(mutex)
+		if secs > 100000000
+			# NOTE: If one calls timeout() on FreeBSD 5 with an
+			# argument of more than 100000000, then MRI will become
+			# stuck in an infite loop, blocking all threads. It seems
+			# that MRI uses select() to implement sleeping.
+			# I think that a value of more than 100000000 overflows
+			# select()'s data structures, causing it to behave incorrectly.
+			# So we just make sure we can't sleep more than 100000000
+			# seconds.
+			secs = 100000000
+		end
+		if defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby"
+			if secs > 0
+				return wait(mutex, secs)
+			else
+				return wait(mutex)
 			end
 		else
-			wait(mutex)
+			require 'timeout' unless defined?(Timeout)
+			if secs > 0
+				Timeout.timeout(secs) do
+					wait(mutex)
+				end
+			else
+				wait(mutex)
+			end
+			return true
 		end
-		return true
 	rescue Timeout::Error
 		return false
 	end
@@ -395,17 +403,28 @@ class ConditionVariable
 	# amount of time. Raises Timeout::Error if the timeout has elapsed.
 	def timed_wait!(mutex, secs)
 		require 'timeout' unless defined?(Timeout)
-		if secs > 0
-			if secs > 100000000
-				# See the note for timed_wait().
-				secs = 100000000
-			end
-			Timeout.timeout(secs) do
+		if secs > 100000000
+			# See the corresponding note for timed_wait().
+			secs = 100000000
+		end
+		if defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby"
+			if secs > 0
+				if !wait(mutex, secs)
+					raise Timeout::Error, "Timeout"
+				end
+			else
 				wait(mutex)
 			end
 		else
-			wait(mutex)
+			if secs > 0
+				Timeout.timeout(secs) do
+					wait(mutex)
+				end
+			else
+				wait(mutex)
+			end
 		end
+		return nil
 	end
 end
 
