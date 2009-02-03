@@ -401,7 +401,7 @@ end
 ##### Documentation
 
 subdir 'doc' do
-  ASCIIDOC = 'asciidoc'
+	ASCIIDOC = 'asciidoc'
 	ASCIIDOC_FLAGS = "-a toc -a numbered -a toclevels=3 -a icons"
 	ASCII_DOCS = ['Security of user switching support', 'Users guide',
 		'Architectural overview']
@@ -420,11 +420,11 @@ subdir 'doc' do
 	ASCII_DOCS.each do |name|
 		file "#{name}.html" => ["#{name}.txt"] do
 			if PlatformInfo.find_command(ASCIIDOC)
-		  	sh "#{ASCIIDOC} #{ASCIIDOC_FLAGS} '#{name}.txt'"
+		  		sh "#{ASCIIDOC} #{ASCIIDOC_FLAGS} '#{name}.txt'"
 			else
 				sh "echo 'asciidoc required to build docs' > '#{name}.html'"
 			end
-	  end
+		end
 	end
 	
 	task :clobber => [:'doxygen:clobber'] do
