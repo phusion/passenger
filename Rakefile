@@ -106,7 +106,9 @@ file 'ext/libboost_oxt.a' =>
 	end
 	Dir.chdir('ext/oxt') do
 		puts "### In ext/oxt:"
-		compile_cxx "*.cpp", "-I.. #{PlatformInfo.apache2_module_cflags} #{CXXFLAGS}"
+		Dir['*.cpp'].each do |file|
+			compile_cxx file, "-I.. #{PlatformInfo.apache2_module_cflags} #{CXXFLAGS}"
+		end
 	end
 	create_static_library "ext/libboost_oxt.a", "ext/boost/src/*.o ext/oxt/*.o"
 end

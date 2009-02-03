@@ -257,7 +257,7 @@ public
 	
 	
 	# The C compiler flags that are necessary to compile an Apache module.
-	def self.apache2_module_cflags(with_apr_flags = false)
+	def self.apache2_module_cflags(with_apr_flags = true)
 		flags = ["-fPIC"]
 		if with_apr_flags
 			flags << apr_flags
