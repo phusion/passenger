@@ -131,7 +131,7 @@ class APACHE2
 				PoolOptions.h Utils.h DirectoryMapper.h FileChecker.h),
 		'Utils.o'   => %w(Utils.cpp Utils.h),
 		'Logging.o' => %w(Logging.cpp Logging.h),
-		'SystemTime.o' => %w(SystemTime.c SystemTime.h),
+		'SystemTime.o' => %w(SystemTime.cpp SystemTime.h),
 		'CachedFileStat.o' => %w(CachedFileStat.cpp CachedFileStat.h)
 	}
 end
@@ -244,7 +244,7 @@ class TEST
 		'FileCheckerTest.o' => %w(FileCheckerTest.cpp ../ext/apache2/FileChecker.h),
 		'SystemTimeTest.o' => %w(SystemTimeTest.cpp
 			../ext/apache2/SystemTime.h
-			../ext/apache2/SystemTime.c),
+			../ext/apache2/SystemTime.cpp),
 		'CachedFileStatTest.o' => %w(CachedFileStatTest.cpp
 			../ext/apache2/CachedFileStat.h
 			../ext/apache2/CachedFileStat.cpp),

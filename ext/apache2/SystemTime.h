@@ -20,84 +20,66 @@
 #ifndef _PASSENGER_SYSTEM_TIME_H_
 #define _PASSENGER_SYSTEM_TIME_H_
 
-#include <time.h>
+#include <boost/thread.hpp>
+#include <oxt/system_calls.hpp>
+#include "Exceptions.h"
 
-#ifdef __cplusplus
-	extern "C" {
-#endif
+namespace Passenger {
 
-/**
- * This file provides a function for obtaining the system time, similar to
- * time(). Unlike time(), it is possible to force a certain time to be
- * returned, which is useful for testing code that depends on the system time.
- */
+using namespace oxt;
 
-/**
- * Returns the time since the Epoch, measured in seconds. Or, if a time was
- * forced, then the forced time is returned instead.
- *
- * On error, <tt>(time_t) -1</tt> is returned, and <tt>errno</tt> is set
- * appropriately.
- */
-time_t passenger_system_time_get();
+namespace SystemTimeData {
+	extern bool hasForcedValue;
+	extern time_t forcedValue;
+}
 
 /**
- * Force passenger_system_time_get() to return the given value.
+ * This class allows one to obtain the system time, similar to time(). Unlike
+ * time(), it is possible to force a certain time to be returned, which is
+ * useful for testing code that depends on the system time.
  */
-void passenger_system_time_force_value(time_t value);
-
-/**
- * Release the previously forced value, so that passenger_system_time_get()
- * returns the system time once again.
- */
-void passenger_system_time_release_forced_value();
-
-#ifdef __cplusplus
-	}
-#endif
-
-#ifdef __cplusplus
-	#include <boost/thread.hpp>
-	#include <oxt/system_calls.hpp>
-	#include "Exceptions.h"
-	
-	namespace Passenger {
-	
-	using namespace boost;
-	
-	class SystemTime {
-	public:
-		/**
-		 * A C++ wrapper around passenger_system_time_get(). It
-		 * throws a SystemException if an error occurred, and respects
-		 * boost::this_thread::syscalls_interruptable().
-		 *
-		 * @throws SystemException
-		 * @throws boost::thread_interrupted
-		 */
-		static time_t get() {
-			int e;
-			time_t ret;
-			
-			do {
-				ret = passenger_system_time_get();
-				e = errno;
-			} while (ret == (time_t) -1 && e == EINTR
-				&& !this_thread::syscalls_interruptable());
-			if (ret == (time_t) -1 && e == EINTR && this_thread::syscalls_interruptable()) {
-				throw boost::thread_interrupted();
+class SystemTime {
+public:
+	/**
+	 * Returns the time since the Epoch, measured in seconds. Or, if a time
+	 * was forced, then the forced time is returned instead.
+	 *
+	 * On error, <tt>(time_t) -1</tt> is returned, and <tt>errno</tt> is set
+	 * appropriately.
+	 *
+	 * @throws SystemException Something went wrong while retrieving the time.
+	 * @throws boost::thread_interrupted
+	 */
+	static time_t get() {
+		if (SystemTimeData::hasForcedValue) {
+			return SystemTimeData::forcedValue;
+		} else {
+			time_t ret = syscalls::time(NULL);
+			if (ret == -1) {
+				throw SystemException("Unable to retrieve the system time",
+					errno);
 			}
-			errno = e;
-			
-			if (ret == (time_t) -1) {
-				throw SystemException("Unable to retrieve the system time", e);
-			}
-			
 			return ret;
 		}
-	};
-	
-	} // namespace Passenger
-#endif
+	}
+
+	/**
+	 * Force get() to return the given value.
+	 */
+	static void force(time_t value) {
+		SystemTimeData::hasForcedValue = true;
+		SystemTimeData::forcedValue = value;
+	}
+
+	/**
+	 * Release the previously forced value, so that get()
+	 * returns the system time once again.
+	 */
+	static void release() {
+		SystemTimeData::hasForcedValue = false;
+	}
+};
+
+} // namespace Passenger
 
 #endif /* _PASSENGER_SYSTEM_TIME_H_ */

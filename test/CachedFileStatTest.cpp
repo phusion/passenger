@@ -5,6 +5,7 @@
 #include <utime.h>
 
 using namespace std;
+using namespace Passenger;
 
 namespace tut {
 	struct CachedFileStatTest {
@@ -20,8 +21,10 @@ namespace tut {
 			if (stat != NULL) {
 				cached_file_stat_free(stat);
 			}
-			cached_multi_file_stat_free(mstat);
-			passenger_system_time_release_forced_value();
+			if (mstat != NULL) {
+				cached_multi_file_stat_free(mstat);
+			}
+			SystemTime::release();
 			unlink("test.txt");
 			unlink("test2.txt");
 			unlink("test3.txt");
@@ -65,7 +68,7 @@ namespace tut {
 	TEST_METHOD(3) {
 		// cached_file_stat_refresh() does not re-stat the file
 		// until the cache has expired.
-		passenger_system_time_force_value(5);
+		SystemTime::force(5);
 		stat = cached_file_stat_new("test.txt");
 		touch("test.txt", 1);
 		ensure_equals("1st refresh succceeded",
@@ -80,7 +83,7 @@ namespace tut {
 			stat->info.st_mtime,
 			(time_t) 1);
 		
-		passenger_system_time_force_value(6);
+		SystemTime::force(6);
 		ensure_equals("3rd refresh succceeded",
 			cached_file_stat_refresh(stat, 1),
 			0);
@@ -100,7 +103,7 @@ namespace tut {
 	TEST_METHOD(6) {
 		// cached_file_stat_refresh() on a nonexistant file does not
 		// re-stat the file until the cache has expired.
-		passenger_system_time_force_value(5);
+		SystemTime::force(5);
 		stat = cached_file_stat_new("test.txt");
 		ensure_equals("1st refresh failed",
 			cached_file_stat_refresh(stat, 1),
@@ -117,7 +120,7 @@ namespace tut {
 			(time_t) 0);
 		
 		touch("test.txt", 1000);
-		passenger_system_time_force_value(6);
+		SystemTime::force(6);
 		ensure_equals("3rd refresh succeeded",
 			cached_file_stat_refresh(stat, 1),
 			0);
@@ -164,7 +167,7 @@ namespace tut {
 		struct stat buf;
 		
 		mstat = cached_multi_file_stat_new(2);
-		passenger_system_time_force_value(5);
+		SystemTime::force(5);
 		
 		// Touch and stat test.txt. The next stat should return
 		// the old info.
@@ -199,7 +202,7 @@ namespace tut {
 		// Forward timer, then stat both files again. The most recent
 		// information should be returned.
 		
-		passenger_system_time_force_value(6);
+		SystemTime::force(6);
 		ensure_equals(
 			cached_multi_file_stat_perform(mstat, "test.txt", &buf, 1),
 			0);
@@ -215,7 +218,7 @@ namespace tut {
 		struct stat buf;
 		
 		mstat = cached_multi_file_stat_new(3);
-		passenger_system_time_force_value(5);
+		SystemTime::force(5);
 		
 		// Create and stat test.txt, test2.txt and test3.txt.
 		
