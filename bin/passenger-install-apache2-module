@@ -34,7 +34,7 @@ require 'passenger/console_text_template'
 include PlatformInfo
 
 class Installer
-	include Passenger
+	include PhusionPassenger
 	
 	PASSENGER_WEBSITE = "http://www.modrails.com/"
 	PHUSION_WEBSITE = "www.phusion.nl"

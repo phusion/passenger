@@ -41,7 +41,7 @@
 #include "Logging.h"
 #include "Utils.h"
 
-namespace Passenger {
+namespace PhusionPassenger {
 
 using namespace std;
 using namespace boost;
@@ -521,6 +521,6 @@ public:
 /** Convenient alias for Application smart pointer. */
 typedef shared_ptr<Application> ApplicationPtr;
 
-} // namespace Passenger
+} // namespace PhusionPassenger
 
 #endif /* _PASSENGER_APPLICATION_H_ */

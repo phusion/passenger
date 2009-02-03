@@ -18,7 +18,7 @@
 
 require 'passenger/utils'
 
-module Passenger
+module PhusionPassenger
 
 # This class maintains a collection of AbstractServer objects. One can add new
 # AbstractServer objects, or look up existing ones via a key.
@@ -298,4 +298,4 @@ private
 	end
 end
 
-end # module Passenger
+end # module PhusionPassenger

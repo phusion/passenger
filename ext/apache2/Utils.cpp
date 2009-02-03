@@ -24,7 +24,7 @@
 
 #define SPAWN_SERVER_SCRIPT_NAME "passenger-spawn-server"
 
-namespace Passenger {
+namespace PhusionPassenger {
 
 int
 atoi(const string &s) {
@@ -318,4 +318,4 @@ verifyWSGIDir(const string &dir, CachedMultiFileStat *mstat, unsigned int thrott
 	return fileExists(temp.c_str(), mstat, throttleRate);
 }
 
-} // namespace Passenger
+} // namespace PhusionPassenger

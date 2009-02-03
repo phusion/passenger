@@ -26,7 +26,7 @@ require 'passenger/utils'
 # Phusion Passenger.
 IN_PHUSION_PASSENGER = true
 
-module Passenger
+module PhusionPassenger
 
 # The spawn manager is capable of spawning Ruby on Rails or Rack application
 # instances. It acts like a simple fascade for the rest of the spawn manager
@@ -367,4 +367,4 @@ private
 	end
 end
 
-end # module Passenger
+end # module PhusionPassenger

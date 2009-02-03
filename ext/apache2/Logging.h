@@ -27,7 +27,7 @@
 #include <sstream>
 #include <ctime>
 
-namespace Passenger {
+namespace PhusionPassenger {
 
 using namespace std;
 
@@ -70,7 +70,7 @@ void setDebugFile(const char *logFile = NULL);
 /**
  * Write the given expression to the log stream.
  */
-#define P_LOG(expr) P_LOG_TO(expr, Passenger::_logStream)
+#define P_LOG(expr) P_LOG_TO(expr, PhusionPassenger::_logStream)
 
 /**
  * Write the given expression, which represents a warning,
@@ -93,8 +93,8 @@ void setDebugFile(const char *logFile = NULL);
 #ifdef PASSENGER_DEBUG
 	#define P_TRACE(level, expr) \
 		do { \
-			if (Passenger::_logLevel >= level) { \
-				P_LOG_TO(expr, Passenger::_debugStream); \
+			if (PhusionPassenger::_logLevel >= level) { \
+				P_LOG_TO(expr, PhusionPassenger::_debugStream); \
 			} \
 		} while (false)
 	
@@ -111,7 +111,7 @@ void setDebugFile(const char *logFile = NULL);
 	#define P_ASSERT(expr, result_if_failed, message) do { /* nothing */ } while (false)
 #endif
 
-} // namespace Passenger
+} // namespace PhusionPassenger
 
 #endif /* _PASSENGER_LOGGING_H_ */
 

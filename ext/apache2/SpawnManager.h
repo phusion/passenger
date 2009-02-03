@@ -45,7 +45,7 @@
 #include "Exceptions.h"
 #include "Logging.h"
 
-namespace Passenger {
+namespace PhusionPassenger {
 
 using namespace std;
 using namespace boost;
@@ -541,6 +541,6 @@ public:
 /** Convenient alias for SpawnManager smart pointer. */
 typedef shared_ptr<SpawnManager> SpawnManagerPtr;
 
-} // namespace Passenger
+} // namespace PhusionPassenger
 
 #endif /* _PASSENGER_SPAWN_MANAGER_H_ */

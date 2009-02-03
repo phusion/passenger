@@ -6,8 +6,8 @@ require 'ruby/abstract_server_spec'
 require 'ruby/rails/minimal_spawner_spec'
 require 'ruby/rails/spawner_privilege_lowering_spec'
 require 'ruby/rails/spawner_error_handling_spec'
-include Passenger
-include Passenger::Utils
+include PhusionPassenger
+include PhusionPassenger::Utils
 
 # TODO: test whether SpawnManager restarts FrameworkSpawner if it crashed
 

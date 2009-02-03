@@ -7,8 +7,8 @@ require 'ruby/spawn_server_spec'
 require 'ruby/rails/spawner_privilege_lowering_spec'
 require 'ruby/rails/spawner_error_handling_spec'
 
-include Passenger
-include Passenger::Railz
+include PhusionPassenger
+include PhusionPassenger::Railz
 
 describe ApplicationSpawner do
 	include TestHelper

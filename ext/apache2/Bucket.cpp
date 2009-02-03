@@ -19,7 +19,7 @@
  */
 #include "Bucket.h"
 
-using namespace Passenger;
+using namespace PhusionPassenger;
 
 static void bucket_destroy(void *data);
 static apr_status_t bucket_read(apr_bucket *a, const char **str, apr_size_t *len, apr_read_type_e block);

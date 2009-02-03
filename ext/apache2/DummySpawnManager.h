@@ -34,7 +34,7 @@
 #include "Application.h"
 #include "Exceptions.h"
 
-namespace Passenger {
+namespace PhusionPassenger {
 
 using namespace std;
 
@@ -98,6 +98,6 @@ public:
 	}
 };
 
-} // namespace Passenger
+} // namespace PhusionPassenger
 
 #endif /* _PASSENGER_DUMMY_SPAWN_MANAGER_H_ */

@@ -39,7 +39,7 @@
 	#include <set>
 	#include <string>
 
-	namespace Passenger {
+	namespace PhusionPassenger {
 	
 		using namespace std;
 		

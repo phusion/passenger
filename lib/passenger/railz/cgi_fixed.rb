@@ -26,7 +26,7 @@
 
 require 'cgi'
 
-module Passenger
+module PhusionPassenger
 module Railz
 
 # Modifies CGI so that we can use it.  Main thing it does is expose
@@ -65,4 +65,4 @@ class CGIFixed < ::CGI
 end
 
 end # module Railz
-end # module Passenger
+end # module PhusionPassenger

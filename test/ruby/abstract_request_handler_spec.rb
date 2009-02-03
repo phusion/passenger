@@ -4,7 +4,7 @@ require 'passenger/abstract_request_handler'
 
 require 'fileutils'
 
-include Passenger
+include PhusionPassenger
 
 describe AbstractRequestHandler do
 	before :each do

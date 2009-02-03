@@ -29,7 +29,7 @@ require 'passenger/rack/request_handler'
 require 'passenger/exceptions'
 require 'passenger/utils'
 
-module Passenger
+module PhusionPassenger
 module Railz
 
 # This class is capable of spawning instances of a single Ruby on Rails application.
@@ -113,7 +113,7 @@ class ApplicationSpawner < AbstractServer
 		return Application.new(@app_root, pid, socket_name,
 			socket_type, owner_pipe)
 	rescue SystemCallError, IOError, SocketError => e
-		raise Error, "The application spawner server exited unexpectedly"
+		raise Error, "The application spawner server exited unexpectedly: #{e}"
 	end
 	
 	# Spawn an instance of the RoR application. When successful, an Application object
@@ -191,9 +191,9 @@ class ApplicationSpawner < AbstractServer
 		super
 		begin
 			unmarshal_and_raise_errors(server)
-		rescue IOError, SystemCallError, SocketError
+		rescue IOError, SystemCallError, SocketError => e
 			stop
-			raise Error, "The application spawner server exited unexpectedly"
+			raise Error, "The application spawner server exited unexpectedly: #{e}"
 		rescue
 			stop
 			raise
@@ -341,4 +341,4 @@ private
 end
 
 end # module Railz
-end # module Passenger
+end # module PhusionPassenger

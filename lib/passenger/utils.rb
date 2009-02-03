@@ -30,12 +30,12 @@ if !defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby"
 	require 'passenger/native_support'
 end
 
-module Passenger
+module PhusionPassenger
 
 # Utility functions.
 module Utils
 protected
-	GENUINE_PHUSION_PASSENGER_NAMESPACE = Passenger
+	GENUINE_PHUSION_PASSENGER_NAMESPACE = PhusionPassenger
 
 	# Return the absolute version of +path+. This path is guaranteed to
 	# to be "normal", i.e. it doesn't contain stuff like ".." or "/",
@@ -349,7 +349,7 @@ protected
 	end
 end
 
-end # module Passenger
+end # module PhusionPassenger
 
 class Exception
 	def backtrace_string(current_location = nil)
@@ -412,13 +412,13 @@ class ConditionVariable
 end
 
 class IO
-	if defined?(Passenger::NativeSupport)
+	if defined?(PhusionPassenger::NativeSupport)
 		# ApplicationSpawner/FrameworkSpawner might temporarily undefine
 		# the 'Passenger' module in order to avoid namespace collissions
 		# with the spawned application. So we save the NativeSupport
 		# module in a constant so that we can access it whether
 		# our 'Passenger' module is defined or not.
-		NATIVE_SUPPORT = Passenger::NativeSupport
+		NATIVE_SUPPORT = PhusionPassenger::NativeSupport
 
 		# Send an IO object (i.e. a file descriptor) over this IO channel.
 		# This only works if this IO channel is a Unix socket.

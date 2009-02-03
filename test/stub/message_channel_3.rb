@@ -4,7 +4,7 @@ $LOAD_PATH << "#{File.dirname(__FILE__)}/../../ext"
 require 'passenger/message_channel'
 require 'passenger/utils'
 
-include Passenger
+include PhusionPassenger
 channel = MessageChannel.new(IO.new(3))
 channel.write(*channel.read)
 channel.write_scalar(channel.read_scalar)

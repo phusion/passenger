@@ -268,7 +268,7 @@ Init_native_support() {
 	struct sockaddr_un addr;
 	
 	/* */
-	mPassenger = rb_define_module("Passenger"); // Do not remove the above comment. We want the Passenger module's rdoc to be empty.
+	mPassenger = rb_define_module("PhusionPassenger"); // Do not remove the above comment. We want the Passenger module's rdoc to be empty.
 	
 	/*
 	 * Utility functions for accessing system functionality.

@@ -24,7 +24,7 @@ require 'passenger/abstract_request_handler'
 require 'passenger/utils'
 require 'passenger/rack/request_handler'
 
-module Passenger
+module PhusionPassenger
 module Rack
 
 # Class for spawning Rack applications.
@@ -112,4 +112,4 @@ private
 end
 
 end # module Rack
-end # module Passenger
+end # module PhusionPassenger

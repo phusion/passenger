@@ -15,7 +15,7 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 require 'passenger/abstract_request_handler'
-module Passenger
+module PhusionPassenger
 module Rack
 
 # A request handler for Rack applications.
@@ -84,4 +84,4 @@ protected
 end
 
 end # module Rack
-end # module Passenger
+end # module PhusionPassenger

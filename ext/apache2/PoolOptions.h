@@ -23,7 +23,7 @@
 #include <string>
 #include "Utils.h"
 
-namespace Passenger {
+namespace PhusionPassenger {
 
 using namespace std;
 
@@ -277,7 +277,7 @@ private:
 	}
 };
 
-} // namespace Passenger
+} // namespace PhusionPassenger
 
 #endif /* _PASSENGER_SPAWN_OPTIONS_H_ */
 

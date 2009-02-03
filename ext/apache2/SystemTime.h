@@ -61,7 +61,7 @@ void passenger_system_time_release_forced_value();
 	#include <oxt/system_calls.hpp>
 	#include "Exceptions.h"
 	
-	namespace Passenger {
+	namespace PhusionPassenger {
 	
 	using namespace boost;
 	
@@ -97,7 +97,7 @@ void passenger_system_time_release_forced_value();
 		}
 	};
 	
-	} // namespace Passenger
+	} // namespace PhusionPassenger
 #endif
 
 #endif /* _PASSENGER_SYSTEM_TIME_H_ */

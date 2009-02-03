@@ -42,7 +42,7 @@
 #include "Exceptions.h"
 #include "Utils.h"
 
-namespace Passenger {
+namespace PhusionPassenger {
 
 using namespace std;
 using namespace oxt;
@@ -599,6 +599,6 @@ public:
 	}
 };
 
-} // namespace Passenger
+} // namespace PhusionPassenger
 
 #endif /* _PASSENGER_MESSAGE_CHANNEL_H_ */

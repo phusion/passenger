@@ -1,7 +1,7 @@
 require 'socket'
 require 'support/config'
 require 'passenger/message_channel'
-include Passenger
+include PhusionPassenger
 
 describe MessageChannel do
 	describe "scenarios with a single channel" do

@@ -23,7 +23,7 @@ require 'passenger/railz/application_spawner'
 require 'passenger/exceptions'
 require 'passenger/constants'
 require 'passenger/utils'
-module Passenger
+module PhusionPassenger
 module Railz
 
 # This class is capable of spawning Ruby on Rails application instances
@@ -329,4 +329,4 @@ private
 end
 
 end # module Railz
-end # module Passenger
+end # module PhusionPassenger

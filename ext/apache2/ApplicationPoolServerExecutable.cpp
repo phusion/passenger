@@ -64,7 +64,7 @@
 using namespace boost;
 using namespace std;
 using namespace oxt;
-using namespace Passenger;
+using namespace PhusionPassenger;
 
 class Server;
 class Client;
@@ -221,7 +221,7 @@ public:
 	       const string &statusReportFIFO)
 		: pool(spawnServerCommand, logFile, rubyCommand, user) {
 		
-		Passenger::setLogLevel(logLevel);
+		PhusionPassenger::setLogLevel(logLevel);
 		this->serverSocket = serverSocket;
 		this->statusReportFIFO = statusReportFIFO;
 		this->user = user;

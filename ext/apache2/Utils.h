@@ -37,7 +37,7 @@
 
 typedef struct CachedMultiFileStat CachedMultiFileStat;
 
-namespace Passenger {
+namespace PhusionPassenger {
 
 using namespace std;
 using namespace boost;
@@ -359,7 +359,7 @@ public:
 	}
 };
 
-} // namespace Passenger
+} // namespace PhusionPassenger
 
 #endif /* _PASSENGER_UTILS_H_ */
 

@@ -18,7 +18,7 @@
 
 require 'rubygems'
 require 'passenger/exceptions'
-module Passenger
+module PhusionPassenger
 
 # Represents a single application instance.
 class Application
@@ -105,4 +105,4 @@ class Application
 	end
 end
 
-end # module Passenger
+end # module PhusionPassenger

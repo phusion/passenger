@@ -16,7 +16,7 @@
 
 require 'passenger/abstract_request_handler'
 require 'passenger/railz/cgi_fixed'
-module Passenger
+module PhusionPassenger
 module Railz
 
 # A request handler for Ruby on Rails applications.
@@ -58,4 +58,4 @@ private
 end
 
 end # module Railz
-end # module Passenger
+end # module PhusionPassenger

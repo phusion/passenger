@@ -42,12 +42,12 @@ begin
 	end
 	
 	require 'passenger/spawn_manager'
-	spawn_manager = Passenger::SpawnManager.new
+	spawn_manager = PhusionPassenger::SpawnManager.new
 	spawn_manager.start_synchronously(input)
 	spawn_manager.cleanup
 rescue => e
 	require 'passenger/utils'
-	include Passenger::Utils
+	include PhusionPassenger::Utils
 	print_exception("spawn manager", e)
 	exit 10
 end

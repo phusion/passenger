@@ -16,7 +16,7 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-module Passenger
+module PhusionPassenger
 
 # Indicates that there is no Ruby on Rails version installed that satisfies
 # a given Ruby on Rails Gem version specification.
@@ -95,4 +95,4 @@ end
 class InvalidPath < StandardError
 end
 
-end # module Passenger
+end # module PhusionPassenger

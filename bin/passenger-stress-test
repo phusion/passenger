@@ -27,8 +27,8 @@ require 'passenger/platform_info'
 require 'passenger/message_channel'
 require 'passenger/utils'
 
-include Passenger
-include Passenger::Utils
+include PhusionPassenger
+include PhusionPassenger::Utils
 include PlatformInfo
 
 # A thread or a process, depending on the Ruby VM implementation.

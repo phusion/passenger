@@ -18,7 +18,7 @@ require 'socket'
 require 'passenger/application'
 require 'passenger/message_channel'
 require 'passenger/utils'
-module Passenger
+module PhusionPassenger
 module WSGI
 
 # Class for spawning WSGI applications.
@@ -94,4 +94,4 @@ private
 end
 
 end # module WSGI
-end # module Passenger
+end # module PhusionPassenger

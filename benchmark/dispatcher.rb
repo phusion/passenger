@@ -24,7 +24,7 @@ def start(iterations)
 	milestone = 1 if milestone == 0
 	result = Benchmark.measure do
 		iterations.times do |i|
-			cgi = Passenger::Railz::CGIFixed.new(headers, output, output)
+			cgi = PhusionPassenger::Railz::CGIFixed.new(headers, output, output)
 			::Dispatcher.dispatch(cgi,
 				::ActionController::CgiRequest::DEFAULT_SESSION_OPTIONS,
 				cgi.stdoutput)

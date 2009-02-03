@@ -35,7 +35,7 @@
 #include <httpd.h>
 #include <http_core.h>
 
-namespace Passenger {
+namespace PhusionPassenger {
 
 using namespace std;
 using namespace oxt;
@@ -281,7 +281,7 @@ public:
 	}
 };
 
-} // namespace Passenger
+} // namespace PhusionPassenger
 
 #endif /* _PASSENGER_DIRECTORY_MAPPER_H_ */
 

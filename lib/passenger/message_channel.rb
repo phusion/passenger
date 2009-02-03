@@ -16,7 +16,7 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-module Passenger
+module PhusionPassenger
 
 # This class provides convenience methods for:
 # - sending and receiving raw data over an IO channel.
@@ -220,4 +220,4 @@ private
 	end
 end
 
-end # module Passenger
+end # module PhusionPassenger

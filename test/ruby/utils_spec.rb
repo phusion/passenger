@@ -3,7 +3,7 @@ require 'support/config'
 require 'tempfile'
 require 'passenger/utils'
 
-include Passenger
+include PhusionPassenger
 
 describe Utils do
 	include Utils

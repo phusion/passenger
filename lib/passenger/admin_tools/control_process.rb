@@ -3,7 +3,7 @@ require 'fileutils'
 require 'passenger/admin_tools'
 require 'passenger/message_channel'
 
-module Passenger
+module PhusionPassenger
 module AdminTools
 
 class ControlProcess
@@ -104,4 +104,4 @@ private
 end
 
 end # module AdminTools
-end # module Passenger
+end # module PhusionPassenger
