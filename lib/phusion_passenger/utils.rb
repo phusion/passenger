@@ -35,8 +35,6 @@ module PhusionPassenger
 # Utility functions.
 module Utils
 protected
-	GENUINE_PHUSION_PASSENGER_NAMESPACE = PhusionPassenger
-
 	# Return the absolute version of +path+. This path is guaranteed to
 	# to be "normal", i.e. it doesn't contain stuff like ".." or "/",
 	# and it correctly respects symbolic links.
@@ -413,19 +411,12 @@ end
 
 class IO
 	if defined?(PhusionPassenger::NativeSupport)
-		# ApplicationSpawner/FrameworkSpawner might temporarily undefine
-		# the 'Passenger' module in order to avoid namespace collissions
-		# with the spawned application. So we save the NativeSupport
-		# module in a constant so that we can access it whether
-		# our 'Passenger' module is defined or not.
-		NATIVE_SUPPORT = PhusionPassenger::NativeSupport
-
 		# Send an IO object (i.e. a file descriptor) over this IO channel.
 		# This only works if this IO channel is a Unix socket.
 		#
 		# Raises SystemCallError if something went wrong.
 		def send_io(io)
-			NATIVE_SUPPORT.send_fd(self.fileno, io.fileno)
+			PhusionPassenger::NativeSupport.send_fd(self.fileno, io.fileno)
 		end
 	
 		# Receive an IO object (i.e. a file descriptor) from this IO channel.
@@ -433,7 +424,7 @@ class IO
 		#
 		# Raises SystemCallError if something went wrong.
 		def recv_io
-			return IO.new(NATIVE_SUPPORT.recv_fd(self.fileno))
+			return IO.new(PhusionPassenger::NativeSupport.recv_fd(self.fileno))
 		end
 	end
 	
