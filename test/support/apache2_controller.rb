@@ -40,7 +40,6 @@ require 'phusion_passenger/platform_info'
 #       apache.stop
 #   end
 class Apache2Controller
-	include PlatformInfo
 	STUB_DIR = File.expand_path(File.dirname(__FILE__) + "/../stub/apache2")
 	
 	class VHost
@@ -97,7 +96,7 @@ class Apache2Controller
 		write_config_file
 		FileUtils.cp("#{STUB_DIR}/mime.types", @server_root)
 		
-		if !system(HTTPD, "-f", "#{@server_root}/httpd.conf", "-k", "start")
+		if !system(PlatformInfo.httpd, "-f", "#{@server_root}/httpd.conf", "-k", "start")
 			raise "Could not start an Apache server."
 		end
 		
@@ -129,7 +128,7 @@ class Apache2Controller
 	
 	def graceful_restart
 		write_config_file
-		if !system(HTTPD, "-f", "#{@server_root}/httpd.conf", "-k", "graceful")
+		if !system(PlatformInfo.httpd, "-f", "#{@server_root}/httpd.conf", "-k", "graceful")
 			raise "Cannot restart Apache."
 		end
 	end
@@ -224,11 +223,11 @@ private
 	end
 	
 	def modules_dir
-		@@modules_dir ||= `#{APXS2} -q LIBEXECDIR`.strip
+		@@modules_dir ||= `#{PlatformInfo.apxs2} -q LIBEXECDIR`.strip
 	end
 	
 	def builtin_modules
-		@@builtin_modules ||= `#{HTTPD} -l`.split("\n").grep(/\.c$/).map do |line|
+		@@builtin_modules ||= `#{PlatformInfo.httpd} -l`.split("\n").grep(/\.c$/).map do |line|
 			line.strip
 		end
 	end

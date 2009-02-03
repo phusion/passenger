@@ -32,14 +32,12 @@ verbose true
 PACKAGE_VERSION = "2.1.0"
 OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 
-include PlatformInfo
-APXS2.nil? and raise "Could not find 'apxs' or 'apxs2'."
-APACHE2CTL.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
-HTTPD.nil? and raise "Could not find the Apache web server binary."
-APR_FLAGS.nil? and raise "Could not find Apache Portable Runtime (APR)."
-APU_FLAGS.nil? and raise "Could not find Apache Portable Runtime Utility (APU)."
+PlatformInfo.apxs2.nil? and raise "Could not find 'apxs' or 'apxs2'."
+PlatformInfo.apache2ctl.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
+PlatformInfo.httpd.nil? and raise "Could not find the Apache web server binary."
 
 CXX = "g++"
+LIBEXT = PlatformInfo.library_extension
 # _GLIBCPP__PTHREADS is for fixing Boost compilation on OpenBSD.
 THREADING_FLAGS = "-D_REENTRANT -D_GLIBCPP__PTHREADS"
 if OPTIMIZE
@@ -47,8 +45,8 @@ if OPTIMIZE
 else
 	OPTIMIZATION_FLAGS = "-g -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS"
 end
-CXXFLAGS = "#{OPTIMIZATION_FLAGS} #{THREADING_FLAGS} #{MULTI_ARCH_FLAGS} -Wall -I/usr/local/include"
-LDFLAGS = "#{MULTI_ARCH_LDFLAGS}"
+CXXFLAGS = "#{OPTIMIZATION_FLAGS} #{THREADING_FLAGS} -Wall -I/usr/local/include"
+LDFLAGS = ""
 
 #### Default tasks
 
@@ -98,7 +96,7 @@ file 'ext/libboost_oxt.a' =>
 	Dir['ext/oxt/detail/*.hpp'] do
 	Dir.chdir('ext/boost/src') do
 		puts "### In ext/boost/src:"
-		flags = "-I../.. -fPIC #{OPTIMIZATION_FLAGS} #{THREADING_FLAGS} #{MULTI_ARCH_FLAGS}"
+		flags = "-I../.. #{PlatformInfo.apache2_module_cflags} #{CXXFLAGS}"
 		compile_cxx "*.cpp", flags
 		# NOTE: 'compile_cxx "pthread/*.cpp", flags' doesn't work on some systems,
 		# so we do this instead.
@@ -108,7 +106,7 @@ file 'ext/libboost_oxt.a' =>
 	end
 	Dir.chdir('ext/oxt') do
 		puts "### In ext/oxt:"
-		compile_cxx "*.cpp", "-I.. -fPIC #{CXXFLAGS}"
+		compile_cxx "*.cpp", "-I.. #{PlatformInfo.apache2_module_cflags} #{CXXFLAGS}"
 	end
 	create_static_library "ext/libboost_oxt.a", "ext/boost/src/*.o ext/oxt/*.o"
 end
@@ -121,7 +119,7 @@ end
 ##### Apache module
 
 class APACHE2
-	CXXFLAGS = "-I.. -fPIC #{OPTIMIZATION_FLAGS} #{APR_FLAGS} #{APU_FLAGS} #{APXS2_FLAGS} #{CXXFLAGS}"
+	CXXFLAGS = "-I.. #{PlatformInfo.apache2_module_cflags} #{CXXFLAGS}"
 	OBJECTS = {
 		'Configuration.o' => %w(Configuration.cpp Configuration.h),
 		'Bucket.o' => %w(Bucket.cpp Bucket.h),
@@ -152,10 +150,10 @@ subdir 'ext/apache2' do
 		# Apache module ourselves.
 		#
 		# Oh, and libtool sucks too. Do we even need it anymore in 2008?
-		linkflags = "#{LDFLAGS} #{MULTI_ARCH_FLAGS}"
+		linkflags = "#{LDFLAGS} #{PlatformInfo.apache2_module_cflags}"
 		linkflags << " -lstdc++ -lpthread " <<
 			"../libboost_oxt.a " <<
-			APR_LIBS.to_s
+			PlatformInfo.apache2_module_ldflags
 		create_shared_library 'mod_passenger.so',
 			APACHE2::OBJECTS.keys.join(' ') << ' mod_passenger.o',
 			linkflags
@@ -210,7 +208,7 @@ end
 class TEST
 	CXXFLAGS = "#{::CXXFLAGS} -DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL "
 
-	AP2_FLAGS = "-I../ext/apache2 -I../ext -Isupport #{APR_FLAGS} #{APU_FLAGS}"
+	AP2_FLAGS = "-I../ext/apache2 -I../ext -Isupport #{PlatformInfo.apr_flags} #{PlatformInfo.apu_flags}"
 	AP2_OBJECTS = {
 		'CxxTestMain.o' => %w(CxxTestMain.cpp),
 		'MessageChannelTest.o' => %w(MessageChannelTest.cpp
@@ -309,7 +307,7 @@ subdir 'test' do
 		Dir.chdir('oxt') do
 			objects = TEST::OXT_OBJECTS.keys.join(' ')
 			create_executable "oxt_test_main", objects,
-				"#{LDFLAGS} #{MULTI_ARCH_FLAGS} " <<
+				"#{LDFLAGS} " <<
 				"../../ext/libboost_oxt.a " <<
 				"-lpthread"
 		end
@@ -336,7 +334,7 @@ subdir 'test' do
 			" ../ext/apache2/SystemTime.o " <<
 			" ../ext/apache2/CachedFileStat.o"
 		create_executable "Apache2ModuleTests", objects,
-			"#{LDFLAGS} #{APR_LIBS} #{MULTI_ARCH_FLAGS} " <<
+			"#{LDFLAGS} #{PlatformInfo.apache2_module_ldflags} " <<
 			"../ext/libboost_oxt.a " <<
 			"-lpthread"
 	end
@@ -361,39 +359,6 @@ subdir 'test' do
 	
 	task :clean do
 		sh "rm -f oxt/oxt_test_main oxt/*.o Apache2ModuleTests *.o"
-	end
-end
-
-
-##### Benchmarks
-
-subdir 'benchmark' do
-	file 'DummyRequestHandler' => ['DummyRequestHandler.cpp',
-	  '../ext/apache2/MessageChannel.h',
-	  '../ext/libboost_oxt.a'] do
-		create_executable "DummyRequestHandler", "DummyRequestHandler.cpp",
-			"-I../ext -I../ext/apache2 #{CXXFLAGS} #{LDFLAGS} " <<
-			"../ext/libboost_oxt.a " <<
-			"-lpthread"
-	end
-	
-	file 'ApplicationPool' => ['ApplicationPool.cpp',
-	  '../ext/apache2/StandardApplicationPool.h',
-	  '../ext/apache2/ApplicationPoolServerExecutable',
-	  '../ext/apache2/Logging.o',
-	  '../ext/apache2/Utils.o',
-	  '../ext/libboost_oxt.a',
-	  :native_support] do
-		create_executable "ApplicationPool", "ApplicationPool.cpp",
-			"-I../ext -I../ext/apache2 #{CXXFLAGS} #{LDFLAGS} " <<
-			"../ext/apache2/Logging.o " <<
-			"../ext/apache2/Utils.o " <<
-			"../ext/libboost_oxt.a " <<
-			"-lpthread"
-	end
-	
-	task :clean do
-		sh "rm -f DummyRequestHandler ApplicationPool"
 	end
 end
 

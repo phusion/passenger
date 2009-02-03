@@ -10,8 +10,6 @@ require 'support/multipart'
 require 'support/apache2_controller'
 require 'phusion_passenger/platform_info'
 
-include PlatformInfo
-
 # TODO: test the 'RailsUserSwitching' and 'RailsDefaultUser' option.
 # TODO: test custom page caching directory
 

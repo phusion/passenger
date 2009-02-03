@@ -90,8 +90,6 @@ end
 # Namespace which contains the different dependencies that Passenger may require.
 # See Dependency for more information.
 module Dependencies # :nodoc: all
-	include PlatformInfo
-	
 	GCC = Dependency.new do |dep|
 		dep.name = "GNU C++ compiler"
 		dep.define_checker do |result|
@@ -103,7 +101,7 @@ module Dependencies # :nodoc: all
 			end
 		end
 		if RUBY_PLATFORM =~ /linux/
-			case LINUX_DISTRO
+			case PlatformInfo.linux_distro
 			when :ubuntu, :debian
 				dep.install_command = "apt-get install build-essential"
 			when :rhel, :fedora, :centos
@@ -129,7 +127,7 @@ module Dependencies # :nodoc: all
 			end
 		end
 		if RUBY_PLATFORM =~ /linux/
-			case LINUX_DISTRO
+			case PlatformInfo.linux_distro
 			when :ubuntu, :debian
 				dep.install_command = "apt-get install ruby1.8-dev"
 			when :rhel, :fedora, :centos
@@ -155,7 +153,7 @@ module Dependencies # :nodoc: all
 			end
 		end
 		if RUBY_PLATFORM =~ /linux/
-			case LINUX_DISTRO
+			case PlatformInfo.linux_distro
 			when :ubuntu, :debian
 				dep.install_command = "apt-get install libopenssl-ruby"
 			end
@@ -199,14 +197,14 @@ module Dependencies # :nodoc: all
 	Apache2 = Dependency.new do |dep|
 		dep.name = "Apache 2"
 		dep.define_checker do |result|
-			if HTTPD.nil?
+			if PlatformInfo.httpd.nil?
 				result.not_found
 			else
-				result.found(HTTPD)
+				result.found(PlatformInfo.httpd)
 			end
 		end
 		if RUBY_PLATFORM =~ /linux/
-			case LINUX_DISTRO
+			case PlatformInfo.linux_distro
 			when :ubuntu, :debian
 				dep.install_command = "apt-get install apache2-mpm-prefork"
 			when :rhel, :fedora, :centos
@@ -224,14 +222,14 @@ module Dependencies # :nodoc: all
 	Apache2_DevHeaders = Dependency.new do |dep|
 		dep.name = "Apache 2 development headers"
 		dep.define_checker do |result|
-			if APXS2.nil?
+			if PlatformInfo.apxs2.nil?
 				result.not_found
 			else
-				result.found(APXS2)
+				result.found(PlatformInfo.apxs2)
 			end
 		end
 		if RUBY_PLATFORM =~ /linux/
-			case LINUX_DISTRO
+			case PlatformInfo.linux_distro
 			when :ubuntu, :debian
 				dep.install_command = "apt-get install apache2-prefork-dev"
 				dep.provides = [Apache2]
@@ -251,14 +249,14 @@ module Dependencies # :nodoc: all
 	APR_DevHeaders = Dependency.new do |dep|
 		dep.name = "Apache Portable Runtime (APR) development headers"
 		dep.define_checker do |result|
-			if APR_CONFIG.nil?
+			if PlatformInfo.apr_config.nil?
 				result.not_found
 			else
-				result.found(APR_CONFIG)
+				result.found(PlatformInfo.apr_config)
 			end
 		end
 		if RUBY_PLATFORM =~ /linux/
-			case LINUX_DISTRO
+			case PlatformInfo.linux_distro
 			when :ubuntu, :debian
 				dep.install_command = "apt-get install libapr1-dev"
 			when :rhel, :fedora, :centos
@@ -278,10 +276,10 @@ module Dependencies # :nodoc: all
 	APU_DevHeaders = Dependency.new do |dep|
 		dep.name = "Apache Portable Runtime Utility (APU) development headers"
 		dep.define_checker do |result|
-			if APU_CONFIG.nil?
+			if PlatformInfo.apu_config.nil?
 				result.not_found
 			else
-				result.found(APU_CONFIG)
+				result.found(PlatformInfo.apu_config)
 			end
 		end
 		dep.website = "http://httpd.apache.org/"
