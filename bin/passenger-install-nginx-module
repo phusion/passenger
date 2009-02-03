@@ -8,13 +8,13 @@ $LOAD_PATH.unshift("#{PASSENGER_ROOT}/ext")
 
 require 'optparse'
 require 'fileutils'
-require 'passenger/platform_info'
-require 'passenger/dependencies'
-require 'passenger/abstract_installer'
+require 'phusion_passenger/platform_info'
+require 'phusion_passenger/dependencies'
+require 'phusion_passenger/abstract_installer'
 include PlatformInfo
 
-class Installer < Passenger::AbstractInstaller
-	include Passenger
+class Installer < PhusionPassenger::AbstractInstaller
+	include PhusionPassenger
 	
 	NGINX_VERSION = "0.6.34"
 	
@@ -37,7 +37,7 @@ class Installer < Passenger::AbstractInstaller
 		
 		check_write_permission_to_passenger_root || exit(1)
 		
-		compile_passenger_support_files
+		compile_passenger_support_files || exit(1)
 		
 		download_and_install = should_we_download_and_install_nginx_automatically?
 		if pcre_is_installed?
@@ -97,9 +97,7 @@ private
 	def compile_passenger_support_files
 		new_screen
 		color_puts "<banner>Compiling Passenger support files...</banner>"
-		if !sh("rake nginx")
-			return false
-		end
+		return sh("rake nginx")
 	end
 	
 	def should_we_download_and_install_nginx_automatically?

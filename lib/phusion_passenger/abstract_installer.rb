@@ -16,10 +16,10 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-require 'passenger/console_text_template'
-require 'passenger/version'
+require 'phusion_passenger/console_text_template'
+require 'phusion_passenger/version'
 
-module Passenger
+module PhusionPassenger
 
 # Abstract base class for installers. Used by passenger-install-apache2-module
 # and passenger-install-nginx-module.
@@ -27,8 +27,8 @@ class AbstractInstaller
 	PASSENGER_WEBSITE = "http://www.modrails.com/"
 	PHUSION_WEBSITE = "www.phusion.nl"
 	USERS_GUIDE = begin
-		if Passenger.natively_packaged?
-			"/usr/share/doc/passenger/Users guide.html"
+		if PhusionPassenger.natively_packaged?
+			"/usr/share/doc/phusion_passenger/Users guide.html"
 		else
 			File.expand_path("#{LIBDIR}/../../doc/Users guide.html")
 		end
@@ -194,4 +194,4 @@ private
 	end
 end
 
-end # module Passenger
+end # module PhusionPassenger
