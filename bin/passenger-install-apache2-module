@@ -47,10 +47,17 @@ class Installer < PhusionPassenger::AbstractInstaller
 			Dependencies::Apache2_DevHeaders,
 			Dependencies::FastThread
 		]
-		#if PlatformInfo.apr_config_needed?
+		# Some broken servers don't have apr-config or apu-config installed.
+		# Nevertheless, it is possible to compile Apache modules if Apache
+		# was configured with --included-apr. So here we check whether
+		# apr-config and apu-config are available. If they're not available,
+		# then we only register them as required dependency if no Apache
+		# module can be compiled without their presence.
+		if (PlatformInfo.apr_config && PlatformInfo.apu_config) ||
+		   PlatformInfo.apr_config_needed_for_building_apache_modules?
 			result << Dependencies::APR_DevHeaders
 			result << Dependencies::APU_DevHeaders
-		#end
+		end
 		return result
 	end
 	
@@ -89,7 +96,7 @@ private
 		# ...
 		# Server compiled with....
 		#  -D APACHE_MPM_DIR="server/mpm/prefork"
-		output = `#{HTTPD} -V`
+		output = `#{PlatformInfo.httpd} -V`
 		output =~ /^Server MPM: +(.*)$/
 		if $1
 			mpm = $1.downcase

@@ -35,8 +35,6 @@ module PhusionPassenger
 # Utility functions.
 module Utils
 protected
-	GENUINE_PHUSION_PASSENGER_NAMESPACE = PhusionPassenger
-
 	# Return the absolute version of +path+. This path is guaranteed to
 	# to be "normal", i.e. it doesn't contain stuff like ".." or "/",
 	# and it correctly respects symbolic links.
@@ -369,26 +367,34 @@ class ConditionVariable
 	# amount of time. Returns true if this condition was signaled, false if a
 	# timeout occurred.
 	def timed_wait(mutex, secs)
-		require 'timeout' unless defined?(Timeout)
-		if secs > 0
-			if secs > 100000000
-				# NOTE: If one calls timeout() on FreeBSD 5 with an
-				# argument of more than 100000000, then Ruby will become
-				# stuck in an infite loop, blocking all threads. It seems
-				# that Ruby uses select() to implement sleeping.
-				# I think that a value of more than 100000000 overflows
-				# select()'s data structures, causing it to behave incorrectly.
-				# So we just make sure we can't sleep more than 100000000
-				# seconds.
-				secs = 100000000
-			end
-			Timeout.timeout(secs) do
-				wait(mutex)
+		if secs > 100000000
+			# NOTE: If one calls timeout() on FreeBSD 5 with an
+			# argument of more than 100000000, then MRI will become
+			# stuck in an infite loop, blocking all threads. It seems
+			# that MRI uses select() to implement sleeping.
+			# I think that a value of more than 100000000 overflows
+			# select()'s data structures, causing it to behave incorrectly.
+			# So we just make sure we can't sleep more than 100000000
+			# seconds.
+			secs = 100000000
+		end
+		if defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby"
+			if secs > 0
+				return wait(mutex, secs)
+			else
+				return wait(mutex)
 			end
 		else
-			wait(mutex)
+			require 'timeout' unless defined?(Timeout)
+			if secs > 0
+				Timeout.timeout(secs) do
+					wait(mutex)
+				end
+			else
+				wait(mutex)
+			end
+			return true
 		end
-		return true
 	rescue Timeout::Error
 		return false
 	end
@@ -397,35 +403,39 @@ class ConditionVariable
 	# amount of time. Raises Timeout::Error if the timeout has elapsed.
 	def timed_wait!(mutex, secs)
 		require 'timeout' unless defined?(Timeout)
-		if secs > 0
-			if secs > 100000000
-				# See the note for timed_wait().
-				secs = 100000000
-			end
-			Timeout.timeout(secs) do
+		if secs > 100000000
+			# See the corresponding note for timed_wait().
+			secs = 100000000
+		end
+		if defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby"
+			if secs > 0
+				if !wait(mutex, secs)
+					raise Timeout::Error, "Timeout"
+				end
+			else
 				wait(mutex)
 			end
 		else
-			wait(mutex)
+			if secs > 0
+				Timeout.timeout(secs) do
+					wait(mutex)
+				end
+			else
+				wait(mutex)
+			end
 		end
+		return nil
 	end
 end
 
 class IO
 	if defined?(PhusionPassenger::NativeSupport)
-		# ApplicationSpawner/FrameworkSpawner might temporarily undefine
-		# the 'Passenger' module in order to avoid namespace collissions
-		# with the spawned application. So we save the NativeSupport
-		# module in a constant so that we can access it whether
-		# our 'Passenger' module is defined or not.
-		NATIVE_SUPPORT = PhusionPassenger::NativeSupport
-
 		# Send an IO object (i.e. a file descriptor) over this IO channel.
 		# This only works if this IO channel is a Unix socket.
 		#
 		# Raises SystemCallError if something went wrong.
 		def send_io(io)
-			NATIVE_SUPPORT.send_fd(self.fileno, io.fileno)
+			PhusionPassenger::NativeSupport.send_fd(self.fileno, io.fileno)
 		end
 	
 		# Receive an IO object (i.e. a file descriptor) from this IO channel.
@@ -433,7 +443,7 @@ class IO
 		#
 		# Raises SystemCallError if something went wrong.
 		def recv_io
-			return IO.new(NATIVE_SUPPORT.recv_fd(self.fileno))
+			return IO.new(PhusionPassenger::NativeSupport.recv_fd(self.fileno))
 		end
 	end
 	

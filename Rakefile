@@ -37,6 +37,7 @@ OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 include PlatformInfo
 
 CXX = "g++"
+LIBEXT = PlatformInfo.library_extension
 # _GLIBCPP__PTHREADS is for fixing Boost compilation on OpenBSD.
 THREADING_FLAGS = "-D_REENTRANT -D_GLIBCPP__PTHREADS"
 if OPTIMIZE
@@ -107,7 +108,7 @@ def define_libboost_oxt_task(output_dir, extra_compiler_flags = nil)
 			puts "### In #{objects_output_dir}/boost:"
 			current_dir = Pathname.new(".").expand_path
 			ext_dir = ext_path.relative_path_from(current_dir)
-			flags = "-I#{ext_dir} #{CXXFLAGS} #{extra_compiler_flags}"
+			flags = "-I#{ext_dir} #{extra_compiler_flags} #{CXXFLAGS}"
 			
 			# Compling "pthread/*.cpp" doesn't work on some systems,
 			# so we compile each cpp file invidually instead.
@@ -121,8 +122,10 @@ def define_libboost_oxt_task(output_dir, extra_compiler_flags = nil)
 			puts "### In #{objects_output_dir}/oxt:"
 			current_dir = Pathname.new(".").expand_path
 			ext_dir = ext_path.relative_path_from(current_dir)
-			flags = "-I#{ext_dir} #{CXXFLAGS} #{extra_compiler_flags}"
-			compile_cxx("#{ext_dir}/oxt/*.cpp", flags)
+			flags = "-I#{ext_dir} #{extra_compiler_flags} #{CXXFLAGS}"
+			Dir["#{ext_dir}/oxt/*.cpp"].each do |file|
+				compile_cxx(file, flags)
+			end
 			puts
 		end
 		
@@ -169,7 +172,7 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 			puts "### In #{objects_output_dir}:"
 			current_dir = Pathname.new(".").expand_path
 			ext_dir = ext_path.relative_path_from(current_dir)
-			flags = "-I#{ext_dir} -I#{ext_dir}/common #{CXXFLAGS} #{extra_compiler_flags}"
+			flags = "-I#{ext_dir} -I#{ext_dir}/common #{extra_compiler_flags} #{CXXFLAGS}"
 			
 			compile_cxx("#{ext_dir}/common/Utils.cpp", flags)
 			compile_cxx("#{ext_dir}/common/Logging.cpp", flags)
@@ -202,13 +205,13 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 		]) do
 			create_executable(exe_file,
 				"ext/common/ApplicationPoolServerExecutable.cpp",
-				"-Iext -Iext/common #{CXXFLAGS} " <<
+				"-Iext -Iext/common " <<
 				"#{extra_compiler_flags_for_server_exe} " <<
-				"#{LDFLAGS} #{extra_linker_flags} " <<
 				"#{extra_compiler_flags} " <<
+				"#{CXXFLAGS} " <<
 				"#{static_library} " <<
 				"#{boost_oxt_library} " <<
-				"#{extra_linker_flags} " <<
+				"#{extra_linker_flags} #{LDFLAGS} " <<
 				"-lpthread"
 			)
 		end
@@ -224,7 +227,7 @@ end
 
 ##### Apache 2 module
 
-	APACHE2_CXXFLAGS = "-Iext -Iext/common -fPIC #{APR_FLAGS} #{APU_FLAGS} #{APXS2_FLAGS} #{::CXXFLAGS}"
+	APACHE2_CXXFLAGS = "-Iext -Iext/common #{PlatformInfo.apache2_module_cflags} #{CXXFLAGS}"
 	APACHE2_INPUT_FILES = {
 		'ext/apache2/Configuration.o' => %w(
 			ext/apache2/Configuration.cpp
@@ -252,11 +255,11 @@ end
 	# NOTE: APACHE2_BOOST_OXT_LIBRARY is a task name, while APACHE2_COMMON_LIBRARY
 	# is an array of task names.
 	APACHE2_BOOST_OXT_LIBRARY = define_libboost_oxt_task("ext/apache2",
-		"#{MULTI_ARCH_FLAGS} -fPIC")
+		PlatformInfo.apache2_module_cflags)
 	APACHE2_COMMON_LIBRARY    = define_common_library_task("ext/apache2",
-		"#{MULTI_ARCH_FLAGS} -fPIC",
-		true, APACHE2_BOOST_OXT_LIBRARY, MULTI_ARCH_FLAGS,
-		MULTI_ARCH_LDFLAGS)
+		PlatformInfo.apache2_module_cflags,
+		true, APACHE2_BOOST_OXT_LIBRARY, nil,
+		PlatformInfo.apache2_module_ldflags)
 	
 	
 	desc "Build Apache 2 module"
@@ -267,11 +270,9 @@ end
 		'ext/apache2/mod_passenger.o',
 		APACHE2_OBJECTS].flatten
 	file 'ext/apache2/mod_passenger.so' => mod_passenger_dependencies do
-		APXS2.nil?      and raise "Could not find 'apxs' or 'apxs2'."
-		APACHE2CTL.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
-		HTTPD.nil?      and raise "Could not find the Apache web server binary."
-		APR_FLAGS.nil?  and raise "Could not find Apache Portable Runtime (APR)."
-		APU_FLAGS.nil?  and raise "Could not find Apache Portable Runtime Utility (APU)."
+		PlatformInfo.apxs2.nil?      and raise "Could not find 'apxs' or 'apxs2'."
+		PlatformInfo.apache2ctl.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
+		PlatformInfo.httpd.nil?      and raise "Could not find the Apache web server binary."
 		
 		# apxs totally sucks. We couldn't get it working correctly
 		# on MacOS X (it had various problems with building universal
@@ -280,11 +281,12 @@ end
 		#
 		# Oh, and libtool sucks too. Do we even need it anymore in 2008?
 		
-		linkflags = "#{LDFLAGS} #{MULTI_ARCH_LDFLAGS} #{MULTI_ARCH_FLAGS}"
-		linkflags << " -lstdc++ -lpthread "
+		linkflags = "#{PlatformInfo.apache2_module_cflags} "
+		linkflags << "#{PlatformInfo.apache2_module_ldflags} "
+		linkflags << "#{LDFLAGS} "
+		linkflags << "-lstdc++ -lpthread "
 		linkflags << "#{APACHE2_BOOST_OXT_LIBRARY} "
 		linkflags << "#{APACHE2_COMMON_LIBRARY[0]} "
-		linkflags << APR_LIBS.to_s
 		create_shared_library 'ext/apache2/mod_passenger.so',
 			APACHE2_OBJECTS.join(' ') <<
 			' ext/apache2/mod_passenger.o',
@@ -364,7 +366,7 @@ end
 	}
 	
 	TEST_CXX_FLAGS = "-Iext -Iext/common -Iext/nginx -Itest/support " <<
-		"#{APR_FLAGS} #{APU_FLAGS} #{TEST_FLAGS}"
+		"#{PlatformInfo.apr_flags} #{PlatformInfo.apu_flags} #{TEST_FLAGS}"
 	TEST_CXX_OBJECTS = {
 		'test/CxxTestMain.o' => %w(
 			test/CxxTestMain.cpp),
@@ -495,7 +497,8 @@ end
 	file 'test/CxxTests' => cxx_tests_dependencies.flatten do
 		objects = TEST_CXX_OBJECTS.keys.join(' ')
 		create_executable "test/CxxTests", objects,
-			"#{LDFLAGS} #{APR_LIBS} " <<
+			"#{PlatformInfo.apr_libs} " <<
+			"#{PlatformInfo.apu_libs} #{LDFLAGS}" <<
 			"#{TEST_BOOST_OXT_LIBRARY} " <<
 			"#{TEST_COMMON_LIBRARY[0]} " <<
 			"-lpthread"
@@ -548,11 +551,11 @@ subdir 'doc' do
 	ASCII_DOCS.each do |name|
 		file "#{name}.html" => ["#{name}.txt"] do
 			if PlatformInfo.find_command(ASCIIDOC)
-		  	sh "#{ASCIIDOC} #{ASCIIDOC_FLAGS} '#{name}.txt'"
+		  		sh "#{ASCIIDOC} #{ASCIIDOC_FLAGS} '#{name}.txt'"
 			else
 				sh "echo 'asciidoc required to build docs' > '#{name}.html'"
 			end
-	  end
+		end
 	end
 	
 	task :clobber => [:'doxygen:clobber'] do

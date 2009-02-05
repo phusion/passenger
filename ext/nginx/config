@@ -30,7 +30,7 @@ NGX_ADDON_DEPS="$NGX_ADDON_DEPS \
 CORE_LIBS="$CORE_LIBS  \
     ${ngx_addon_dir}/libpassenger_common.a \
     ${ngx_addon_dir}/libboost_oxt.a \
-    -lstdc++"
+    -lstdc++ -lpthread"
 
 # Path where to store temporary files used for buffering
 NGX_HTTP_PASSENGER_TEMP_PATH=$NGX_PREFIX/wsgi_temp
