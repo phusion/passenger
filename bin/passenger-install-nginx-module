@@ -141,7 +141,7 @@ private
 		if download(url, "/tmp/#{basename}")
 			Dir.chdir("/tmp") do
 				color_puts "<banner>Extracting PCRE source tarball...</banner>"
-				if sh("tarr", "xzvf", basename)
+				if sh("tar", "xzvf", basename)
 					return "/tmp/#{dirname}"
 				else
 					new_screen
