@@ -52,18 +52,21 @@ private
 		metaclass = class << self; self; end
 		metaclass.send(:alias_method, "_unmemoized_#{method}", method)
 		variable_name = "@@memoized_#{method}".sub(/\?/, '')
+		check_variable_name = "@@has_memoized_#{method}".sub(/\?/, '')
+		eval("#{variable_name} = nil")
+		eval("#{check_variable_name} = false")
 		source = %Q{
-		   def self.#{method}(*args)                               # def self.httpd(*args)
-		      if args.empty?                                       #    if args.empty?
-		         if !class_variable_defined?("#{variable_name}")   #       if !class_variable_defined?("@@memoized_httpd")
-		            class_variable_set("#{variable_name}",         #          class_variable_set("@@memoized_httpd",
-		               _unmemoized_#{method}.freeze)               #             _unmemoized_httpd.freeze)
-		         end                                               #       end
-		         return #{variable_name}                           #       return @@memoized_httpd
-		      else                                                 #    else
-		         return _unmemoized_#{method}(*args)               #       return _unmemoized_httpd(*args)
-		      end                                                  #    end
-		   end                                                     # end
+		   def self.#{method}(*args)                                # def self.httpd(*args)
+		      if args.empty?                                        #    if args.empty?
+		         if !#{check_variable_name}                         #       if !@@has_memoized_httpd
+		            #{variable_name} = _unmemoized_#{method}.freeze #          @@memoized_httpd = _unmemoized_httpd.freeze
+		            #{check_variable_name} = true                   #          @@has_memoized_httpd = true
+		         end                                                #       end
+		         return #{variable_name}                            #       return @@memoized_httpd
+		      else                                                  #    else
+		         return _unmemoized_#{method}(*args)                #       return _unmemoized_httpd(*args)
+		      end                                                   #    end
+		   end                                                      # end
 		}
 		class_eval(source)
 	end
