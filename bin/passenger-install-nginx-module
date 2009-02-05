@@ -97,7 +97,7 @@ private
 	def compile_passenger_support_files
 		new_screen
 		color_puts "<banner>Compiling Passenger support files...</banner>"
-		return sh("rake nginx")
+		return sh(RAKE, "clean", "nginx")
 	end
 	
 	def should_we_download_and_install_nginx_automatically?
