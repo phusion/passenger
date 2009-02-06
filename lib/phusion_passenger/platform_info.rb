@@ -280,9 +280,9 @@ public
 	# when invoking the linker.
 	def self.portability_ldflags
 		if RUBY_PLATFORM =~ /solaris/
-			return '-lxnet -lrt -lsocket -lnsl'
+			return '-lxnet -lrt -lsocket -lnsl -lpthread'
 		else
-			return ''
+			return '-lpthread'
 		end
 	end
 	memoize :portability_ldflags

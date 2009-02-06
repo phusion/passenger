@@ -45,7 +45,7 @@ else
 	OPTIMIZATION_FLAGS = "-g -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS"
 end
 CXXFLAGS = "-Wall #{OPTIMIZATION_FLAGS}"
-LDFLAGS = ""
+EXTRA_LDFLAGS = ""
 
 #### Default tasks
 
@@ -151,10 +151,9 @@ subdir 'ext/apache2' do
 		# Apache module ourselves.
 		#
 		# Oh, and libtool sucks too. Do we even need it anymore in 2008?
-		linkflags = "#{LDFLAGS} #{PlatformInfo.apache2_module_cflags}"
-		linkflags << " -lstdc++ -lpthread " <<
-			"../libboost_oxt.a " <<
-			PlatformInfo.apache2_module_ldflags
+		linkflags = "../libboost_oxt.a "
+		linkflags << "#{PlatformInfo.apache2_module_cflags} "
+		linkflags << "#{PlatformInfo.apache2_module_ldflags} #{EXTRA_LDFLAGS} -lstdc++"
 		create_shared_library 'mod_passenger.so',
 			APACHE2::OBJECTS.keys.join(' ') << ' mod_passenger.o',
 			linkflags
@@ -179,9 +178,8 @@ subdir 'ext/apache2' do
 			'ApplicationPoolServerExecutable.cpp Utils.o Logging.o ' <<
 			'SystemTime.o CachedFileStat.o',
 			"-I.. #{CXXFLAGS} #{PlatformInfo.portability_cflags} " <<
-			"#{LDFLAGS} #{PlatformInfo.portability_ldflags}" <<
 			"../libboost_oxt.a " <<
-			"-lpthread"
+			"#{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
 	end
 	
 	file 'mod_passenger.o' => ['mod_passenger.c'] do
@@ -309,9 +307,8 @@ subdir 'test' do
 		Dir.chdir('oxt') do
 			objects = TEST::OXT_OBJECTS.keys.join(' ')
 			create_executable "oxt_test_main", objects,
-				"#{LDFLAGS} #{PlatformInfo.portability_ldflags} " <<
 				"../../ext/libboost_oxt.a " <<
-				"-lpthread"
+				"#{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
 		end
 	end
 	
@@ -336,7 +333,7 @@ subdir 'test' do
 			" ../ext/apache2/SystemTime.o " <<
 			" ../ext/apache2/CachedFileStat.o"
 		create_executable "Apache2ModuleTests", objects,
-			"#{LDFLAGS} #{PlatformInfo.apache2_module_ldflags} " <<
+			"#{PlatformInfo.apache2_module_ldflags} #{EXTRA_LDFLAGS} " <<
 			"../ext/libboost_oxt.a " <<
 			"-lpthread"
 	end
