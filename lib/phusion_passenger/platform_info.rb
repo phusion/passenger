@@ -259,7 +259,36 @@ public
 	################ Compiler and linker flags ################
 	
 	
+	# Compiler flags that should be used for compiling every C/C++ program,
+	# for portability reasons. These flags should be specified as last
+	# when invoking the compiler.
+	def self.portability_cflags
+		# _GLIBCPP__PTHREADS is for fixing Boost compilation on OpenBSD.
+		flags = ["-D_REENTRANT -D_GLIBCPP__PTHREADS -I/usr/local/include"]
+		if RUBY_PLATFORM =~ /solaris/
+			flags << '-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -D__SOLARIS__'
+			flags << '-DBOOST_HAS_STDINT_H' unless RUBY_PLATFORM =~ /solaris2.9/
+			flags << '-D__SOLARIS9__ -DBOOST__STDC_CONSTANT_MACROS_DEFINED' if RUBY_PLATFORM =~ /solaris2.9/
+			flags << '-mcpu=ultrasparc' if RUBY_PLATFORM =~ /sparc/
+		end
+		return flags.compact.join(" ").strip
+	end
+	memoize :portability_cflags
+	
+	# Linker flags that should be used for linking every C/C++ program,
+	# for portability reasons. These flags should be specified as last
+	# when invoking the linker.
+	def self.portability_ldflags
+		if RUBY_PLATFORM =~ /solaris/
+			return '-lxnet -lrt -lsocket -lnsl'
+		else
+			return ''
+		end
+	end
+	memoize :portability_ldflags
+	
 	# The C compiler flags that are necessary to compile an Apache module.
+	# Includes portability_cflags.
 	def self.apache2_module_cflags(with_apr_flags = true)
 		flags = ["-fPIC"]
 		if with_apr_flags
@@ -282,32 +311,24 @@ public
 			apxs2_flags.strip!
 			flags << apxs2_flags
 		end
-		if !httpd.nil?
-			if RUBY_PLATFORM =~ /darwin/
-				# Add possible universal binary flags.
-				architectures = []
-				`file "#{httpd}"`.split("\n").grep(/for architecture/).each do |line|
-					line =~ /for architecture (.*?)\)/
-					architectures << "-arch #{$1}"
-				end
-				flags << architectures.join(' ')
-			elsif RUBY_PLATFORM =~ /solaris/
-				flags << '-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -D__SOLARIS__'
-				flags << '-DBOOST_HAS_STDINT_H' unless RUBY_PLATFORM =~ /solaris2.9/
-				flags << '-D__SOLARIS9__ -DBOOST__STDC_CONSTANT_MACROS_DEFINED' if RUBY_PLATFORM =~ /solaris2.9/
-				flags << '-mcpu=ultrasparc' if RUBY_PLATFORM =~ /sparc/
+		if !httpd.nil? && RUBY_PLATFORM =~ /darwin/
+			# Add possible universal binary flags.
+			architectures = []
+			`file "#{httpd}"`.split("\n").grep(/for architecture/).each do |line|
+				line =~ /for architecture (.*?)\)/
+				architectures << "-arch #{$1}"
 			end
+			flags << architectures.join(' ')
 		end
+		flags << portability_cflags
 		return flags.compact.join(' ').strip
 	end
 	memoize :apache2_module_cflags
 	
 	# Linker flags that are necessary for linking an Apache module.
+	# Includes portability_ldflags
 	def self.apache2_module_ldflags
-		flags = "-fPIC #{apr_libs} #{apu_libs}"
-		if RUBY_PLATFORM =~ /solaris/
-			flags << ' -lxnet -lrt -lsocket -lnsl'
-		end
+		flags = "-fPIC #{apr_libs} #{apu_libs} #{portability_ldflags}"
 		flags.strip!
 		return flags
 	end

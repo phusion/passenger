@@ -39,13 +39,12 @@ PlatformInfo.httpd.nil? and raise "Could not find the Apache web server binary."
 CXX = "g++"
 LIBEXT = PlatformInfo.library_extension
 # _GLIBCPP__PTHREADS is for fixing Boost compilation on OpenBSD.
-THREADING_FLAGS = "-D_REENTRANT -D_GLIBCPP__PTHREADS"
 if OPTIMIZE
 	OPTIMIZATION_FLAGS = "-O2 -DBOOST_DISABLE_ASSERTS"
 else
 	OPTIMIZATION_FLAGS = "-g -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS"
 end
-CXXFLAGS = "#{OPTIMIZATION_FLAGS} #{THREADING_FLAGS} -Wall -I/usr/local/include"
+CXXFLAGS = "-Wall #{OPTIMIZATION_FLAGS}"
 LDFLAGS = ""
 
 #### Default tasks
@@ -96,7 +95,7 @@ file 'ext/libboost_oxt.a' =>
 	Dir['ext/oxt/detail/*.hpp'] do
 	Dir.chdir('ext/boost/src') do
 		puts "### In ext/boost/src:"
-		flags = "-I../.. #{PlatformInfo.apache2_module_cflags} #{CXXFLAGS}"
+		flags = "-I../.. #{CXXFLAGS} #{PlatformInfo.apache2_module_cflags}"
 		compile_cxx "*.cpp", flags
 		# NOTE: 'compile_cxx "pthread/*.cpp", flags' doesn't work on some systems,
 		# so we do this instead.
@@ -107,7 +106,7 @@ file 'ext/libboost_oxt.a' =>
 	Dir.chdir('ext/oxt') do
 		puts "### In ext/oxt:"
 		Dir['*.cpp'].each do |file|
-			compile_cxx file, "-I.. #{PlatformInfo.apache2_module_cflags} #{CXXFLAGS}"
+			compile_cxx file, "-I.. #{CXXFLAGS} #{PlatformInfo.apache2_module_cflags}"
 		end
 	end
 	create_static_library "ext/libboost_oxt.a", "ext/boost/src/*.o ext/oxt/*.o"
@@ -121,7 +120,7 @@ end
 ##### Apache module
 
 class APACHE2
-	CXXFLAGS = "-I.. #{PlatformInfo.apache2_module_cflags} #{CXXFLAGS}"
+	CXXFLAGS = "-I.. #{CXXFLAGS} #{PlatformInfo.apache2_module_cflags}"
 	OBJECTS = {
 		'Configuration.o' => %w(Configuration.cpp Configuration.h),
 		'Bucket.o' => %w(Bucket.cpp Bucket.h),
@@ -179,7 +178,8 @@ subdir 'ext/apache2' do
 		create_executable "ApplicationPoolServerExecutable",
 			'ApplicationPoolServerExecutable.cpp Utils.o Logging.o ' <<
 			'SystemTime.o CachedFileStat.o',
-			"-I.. #{CXXFLAGS} #{LDFLAGS} " <<
+			"-I.. #{CXXFLAGS} #{PlatformInfo.portability_cflags} " <<
+			"#{LDFLAGS} #{PlatformInfo.portability_ldflags}" <<
 			"../libboost_oxt.a " <<
 			"-lpthread"
 	end
@@ -208,7 +208,7 @@ end
 ##### Unit tests
 
 class TEST
-	CXXFLAGS = "#{::CXXFLAGS} -DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL "
+	CXXFLAGS = "#{::CXXFLAGS} -DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL #{PlatformInfo.portability_cflags}"
 
 	AP2_FLAGS = "-I../ext/apache2 -I../ext -Isupport #{PlatformInfo.apr_flags} #{PlatformInfo.apu_flags}"
 	AP2_OBJECTS = {
@@ -309,7 +309,7 @@ subdir 'test' do
 		Dir.chdir('oxt') do
 			objects = TEST::OXT_OBJECTS.keys.join(' ')
 			create_executable "oxt_test_main", objects,
-				"#{LDFLAGS} " <<
+				"#{LDFLAGS} #{PlatformInfo.portability_ldflags} " <<
 				"../../ext/libboost_oxt.a " <<
 				"-lpthread"
 		end
