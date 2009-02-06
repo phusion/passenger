@@ -29,12 +29,10 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
 #include <unistd.h>
 #include <cstdarg>
-#include <inttypes.h>
 #ifdef __OpenBSD__
 	// OpenBSD needs this for 'struct iovec'. Apparently it isn't
 	// always included by unistd.h and sys/types.h.
