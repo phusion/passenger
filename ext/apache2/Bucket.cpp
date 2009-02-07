@@ -59,6 +59,27 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 
 	*str = NULL;
 	*len = APR_BUCKET_BUFF_SIZE;
+	
+	if (block == APR_NONBLOCK_READ) {
+		/*
+		 * The bucket brigade that Hooks::handleRequest() passes using
+		 * ap_pass_brigade() is always passed through ap_content_length_filter,
+		 * which is a filter which attempts to read all data from the
+		 * bucket brigade and computes the Content-Length header from
+		 * that. We don't want this to happen; because suppose that the
+		 * Rails application sends back 1 GB of data, then
+		 * ap_content_length_filter will buffer this entire 1 GB of data
+		 * in memory before passing it to the HTTP client.
+		 *
+		 * ap_content_length_filter aborts and passes the bucket brigade
+		 * down the filter chain when it encounters an APR_EAGAIN, except
+		 * for the first read. So by returning APR_EAGAIN on every
+		 * non-blocking read request, we can prevent ap_content_length_filter
+		 * from buffering all data.
+		 */
+		return APR_EAGAIN;
+	}
+	
 	buf = (char *) apr_bucket_alloc(*len, bucket->list); // TODO: check for failure?
 
 	do {
@@ -88,7 +109,6 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 		h->alloc_len = APR_BUCKET_BUFF_SIZE; /* note the real buffer size */
 		APR_BUCKET_INSERT_AFTER(bucket, passenger_bucket_create(
 			data->session, pipe, bucket->list));
-		
 		delete data;
 	} else {
 		delete data;
