@@ -487,7 +487,7 @@ end
 	
 	desc "Run integration tests"
 	task 'test:integration' => [:apache2, :native_support] do
-		sh "cd test && spec -c -f s integration_tests.rb"
+		sh "cd test && spec -c -f s integration_tests/apache2_tests.rb"
 	end
 	
 	oxt_test_main_dependencies = TEST_OXT_OBJECTS.keys.map do |object|

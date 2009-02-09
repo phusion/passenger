@@ -1,6 +1,13 @@
 require 'fileutils'
+require 'resolv'
+require 'net/http'
+require 'uri'
+require 'support/multipart'
 
+# Module containing helper methods, to be included in unit tests.
 module TestHelper
+	######## Stub helpers ########
+	
 	STUB_TEMP_DIR = 'tmp.stub'
 	
 	class Stub
@@ -64,6 +71,63 @@ module TestHelper
 		yield stub
 	ensure
 		stub.destroy
+	end
+	
+	
+	######## HTTP helpers ########
+	
+	def get(uri)
+		start_web_server_if_necessary
+		return Net::HTTP.get(URI.parse("#{@server}#{uri}"))
+	end
+	
+	def get_response(uri)
+		start_web_server_if_necessary
+		return Net::HTTP.get_response(URI.parse("#{@server}#{uri}"))
+	end
+	
+	def post(uri, params = {})
+		start_web_server_if_necessary
+		url = URI.parse("#{@server}#{uri}")
+		if params.values.any? { |x| x.respond_to?(:read) }
+			mp = Multipart::MultipartPost.new
+			query, headers = mp.prepare_query(params)
+			Net::HTTP.start(url.host, url.port) do |http|
+				return http.post(url.path, query, headers).body
+			end
+		else
+			return Net::HTTP.post_form(url, params).body
+		end
+	end
+	
+	def public_file(name)
+		return File.read("#{@stub.app_root}/public/#{name}")
+	end
+	
+	def check_hosts_configuration
+		begin
+			ok = Resolv.getaddress("passenger.test") == "127.0.0.1"
+		rescue Resolv::ResolvError
+			ok = false
+		end
+		if !ok
+			message = "To run the integration test, you must update " <<
+				"your hosts file.\n" <<
+				"Please add these to your /etc/hosts:\n\n" <<
+				"  127.0.0.1 passenger.test\n" <<
+				"  127.0.0.1 mycook.passenger.test\n" <<
+				"  127.0.0.1 zsfa.passenger.test\n" <<
+				"  127.0.0.1 norails.passenger.test\n"
+			if RUBY_PLATFORM =~ /darwin/
+				message << "\n\nThen run:\n\n" <<
+					"  lookupd -flushcache      (OS X Tiger)\n\n" <<
+					"-OR-\n\n" <<
+					"  dscacheutil -flushcache  (OS X Leopard)"
+			end
+			STDERR.puts "---------------------------"
+			STDERR.puts message
+			exit!
+		end
 	end
 end
 
