@@ -21,6 +21,10 @@ module TestHelper
 		def destroy
 			FileUtils.rm_rf(@app_root)
 		end
+		
+		def public_file(name)
+			return File.read("#{@app_root}/public/#{name}")
+		end
 	end
 	
 	def setup_stub(name, dir = STUB_TEMP_DIR)
@@ -31,6 +35,7 @@ module TestHelper
 		return Stub.new(name, dir)
 	end
 	
+	# Setup a stub, yield the given block, then destroy the stub.
 	def use_stub(name, dir = STUB_TEMP_DIR)
 		stub = setup_stub(name, dir)
 		yield stub
@@ -75,18 +80,29 @@ module TestHelper
 	
 	
 	######## HTTP helpers ########
+	# Before using these methods, one must set the '@server' instance variable
+	# and implement the start_web_server_if_necessary method.
 	
 	def get(uri)
+		if @server.nil?
+			raise "You must set the '@server' instance variable before get() can be used. For example, @server = 'http://mydomain.test/'"
+		end
 		start_web_server_if_necessary
 		return Net::HTTP.get(URI.parse("#{@server}#{uri}"))
 	end
 	
 	def get_response(uri)
+		if @server.nil?
+			raise "You must set the '@server' instance variable before get() can be used. For example, @server = 'http://mydomain.test/'"
+		end
 		start_web_server_if_necessary
 		return Net::HTTP.get_response(URI.parse("#{@server}#{uri}"))
 	end
 	
 	def post(uri, params = {})
+		if @server.nil?
+			raise "You must set the '@server' instance variable before get() can be used. For example, @server = 'http://mydomain.test/'"
+		end
 		start_web_server_if_necessary
 		url = URI.parse("#{@server}#{uri}")
 		if params.values.any? { |x| x.respond_to?(:read) }
@@ -98,10 +114,6 @@ module TestHelper
 		else
 			return Net::HTTP.post_form(url, params).body
 		end
-	end
-	
-	def public_file(name)
-		return File.read("#{@stub.app_root}/public/#{name}")
 	end
 	
 	def check_hosts_configuration

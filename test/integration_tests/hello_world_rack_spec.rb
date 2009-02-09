@@ -1,6 +1,6 @@
 shared_examples_for "HelloWorld Rack application" do
 	it "is possible to fetch static assets" do
-		get('/rack.jpg').should == public_file('rack.jpg')
+		get('/rack.jpg').should == @stub.public_file('rack.jpg')
 	end
 	
 	it "is possible to GET a regular Rack page" do

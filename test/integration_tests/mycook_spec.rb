@@ -1,6 +1,6 @@
 shared_examples_for "MyCook(tm) beta" do
 	it "is possible to fetch static assets" do
-		get('/images/rails.png').should == public_file('images/rails.png')
+		get('/images/rails.png').should == @stub.public_file('images/rails.png')
 	end
 	
 	it "supports page caching on non-index URIs" do
