@@ -38,15 +38,19 @@ include PlatformInfo
 
 CXX = "g++"
 LIBEXT = PlatformInfo.library_extension
-# _GLIBCPP__PTHREADS is for fixing Boost compilation on OpenBSD.
-THREADING_FLAGS = "-D_REENTRANT -D_GLIBCPP__PTHREADS"
 if OPTIMIZE
 	OPTIMIZATION_FLAGS = "-O2 -DBOOST_DISABLE_ASSERTS"
 else
 	OPTIMIZATION_FLAGS = "-g -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS"
 end
-CXXFLAGS = "#{OPTIMIZATION_FLAGS} #{THREADING_FLAGS} -Wall -I/usr/local/include"
-LDFLAGS = ""
+
+# Extra compiler flags that should always be passed to the C/C++ compiler.
+# Should be included last in the command string.
+EXTRA_CXXFLAGS = "-Wall #{OPTIMIZATION_FLAGS}"
+
+# Extra linker flags that should always be passed to the linker.
+# Should be included last in the command string.
+EXTRA_LDFLAGS  = ""
 
 
 #### Default tasks
@@ -108,7 +112,7 @@ def define_libboost_oxt_task(output_dir, extra_compiler_flags = nil)
 			puts "### In #{objects_output_dir}/boost:"
 			current_dir = Pathname.new(".").expand_path
 			ext_dir = ext_path.relative_path_from(current_dir)
-			flags = "-I#{ext_dir} #{extra_compiler_flags} #{CXXFLAGS}"
+			flags = "-I#{ext_dir} #{extra_compiler_flags} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 			
 			# Compling "pthread/*.cpp" doesn't work on some systems,
 			# so we compile each cpp file invidually instead.
@@ -122,7 +126,7 @@ def define_libboost_oxt_task(output_dir, extra_compiler_flags = nil)
 			puts "### In #{objects_output_dir}/oxt:"
 			current_dir = Pathname.new(".").expand_path
 			ext_dir = ext_path.relative_path_from(current_dir)
-			flags = "-I#{ext_dir} #{extra_compiler_flags} #{CXXFLAGS}"
+			flags = "-I#{ext_dir} #{extra_compiler_flags} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 			Dir["#{ext_dir}/oxt/*.cpp"].each do |file|
 				compile_cxx(file, flags)
 			end
@@ -172,7 +176,8 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 			puts "### In #{objects_output_dir}:"
 			current_dir = Pathname.new(".").expand_path
 			ext_dir = ext_path.relative_path_from(current_dir)
-			flags = "-I#{ext_dir} -I#{ext_dir}/common #{extra_compiler_flags} #{CXXFLAGS}"
+			flags =  "-I#{ext_dir} -I#{ext_dir}/common #{extra_compiler_flags} "
+			flags << "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 			
 			compile_cxx("#{ext_dir}/common/Utils.cpp", flags)
 			compile_cxx("#{ext_dir}/common/Logging.cpp", flags)
@@ -208,11 +213,13 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 				"-Iext -Iext/common " <<
 				"#{extra_compiler_flags_for_server_exe} " <<
 				"#{extra_compiler_flags} " <<
-				"#{CXXFLAGS} " <<
+				"#{PlatformInfo.portability_cflags} " <<
+				"#{EXTRA_CXXFLAGS} " <<
 				"#{static_library} " <<
 				"#{boost_oxt_library} " <<
-				"#{extra_linker_flags} #{LDFLAGS} " <<
-				"-lpthread"
+				"#{extra_linker_flags} " <<
+				"#{PlatformInfo.portability_ldflags} " <<
+				EXTRA_LDFLAGS
 			)
 		end
 	end
@@ -227,7 +234,8 @@ end
 
 ##### Apache 2 module
 
-	APACHE2_CXXFLAGS = "-Iext -Iext/common #{PlatformInfo.apache2_module_cflags} #{CXXFLAGS}"
+	APACHE2_CXXFLAGS = "-Iext -Iext/common #{PlatformInfo.apache2_module_cflags} " <<
+		"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 	APACHE2_INPUT_FILES = {
 		'ext/apache2/Configuration.o' => %w(
 			ext/apache2/Configuration.cpp
@@ -281,16 +289,21 @@ end
 		#
 		# Oh, and libtool sucks too. Do we even need it anymore in 2008?
 		
-		linkflags = "#{PlatformInfo.apache2_module_cflags} "
-		linkflags << "#{PlatformInfo.apache2_module_ldflags} "
-		linkflags << "#{LDFLAGS} "
-		linkflags << "-lstdc++ -lpthread "
-		linkflags << "#{APACHE2_BOOST_OXT_LIBRARY} "
-		linkflags << "#{APACHE2_COMMON_LIBRARY[0]} "
-		create_shared_library 'ext/apache2/mod_passenger.so',
-			APACHE2_OBJECTS.join(' ') <<
-			' ext/apache2/mod_passenger.o',
-			linkflags
+		sources = APACHE2_OBJECTS.join(' ')
+		sources << ' ext/apache2/mod_passenger.o'
+		
+		linkflags =
+			"#{PlatformInfo.apache2_module_cflags} " <<
+			"#{PlatformInfo.portability_cflags} " <<
+			"#{EXTRA_CXXFLAGS} " <<
+			"#{APACHE2_COMMON_LIBRARY[0]} " <<
+			"#{APACHE2_BOOST_OXT_LIBRARY} " <<
+			"#{PlatformInfo.apache2_module_ldflags} " <<
+			"#{PlatformInfo.portability_ldflags} " <<
+			"#{EXTRA_LDFLAGS} "
+		
+		create_shared_library('ext/apache2/mod_passenger.so',
+			sources, linkflags)
 	end
 
 	file 'ext/apache2/mod_passenger.o' => ['ext/apache2/mod_passenger.c'] do
@@ -340,10 +353,13 @@ end
 	file 'ext/nginx/HelperServer' => helper_server_dependencies do
 		create_executable "ext/nginx/HelperServer",
 			'ext/nginx/HelperServer.cpp',
-			"-Iext -Iext/common #{CXXFLAGS} #{LDFLAGS} " <<
-			"#{NGINX_BOOST_OXT_LIBRARY} " <<
+			"-Iext -Iext/common " <<
+			"#{PlatformInfo.portability_cflags} " <<
+			"#{EXTRA_CXXFLAGS}  " <<
 			"#{NGINX_COMMON_LIBRARY[0]} " <<
-			"-lpthread"
+			"#{NGINX_BOOST_OXT_LIBRARY} " <<
+			"#{PlatformInfo.portability_ldflags} " <<
+			"#{EXTRA_LDFLAGS}"
 	end
 	
 	task :clean => 'nginx:clean'
@@ -356,17 +372,26 @@ end
 
 ##### Unit tests
 
-	TEST_FLAGS = "#{CXXFLAGS} -DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL "
+	TEST_BOOST_OXT_LIBRARY = define_libboost_oxt_task("test")
+	TEST_COMMON_LIBRARY    = define_common_library_task("test",
+		nil, true, TEST_BOOST_OXT_LIBRARY)
 	
-	TEST_OXT_FLAGS = "-I../../ext -I../support #{TEST_FLAGS}"
+	TEST_COMMON_CFLAGS = "-DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL " <<
+		"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
+	
+	TEST_OXT_CFLAGS = "-I../../ext -I../support #{TEST_COMMON_CFLAGS}"
+	TEST_OXT_LDFLAGS = "#{TEST_BOOST_OXT_LIBRARY} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
 	TEST_OXT_OBJECTS = {
 		'oxt_test_main.o' => %w(oxt_test_main.cpp),
 		'backtrace_test.o' => %w(backtrace_test.cpp),
 		'syscall_interruption_test.o' => %w(syscall_interruption_test.cpp)
 	}
 	
-	TEST_CXX_FLAGS = "-Iext -Iext/common -Iext/nginx -Itest/support " <<
-		"#{PlatformInfo.apr_flags} #{PlatformInfo.apu_flags} #{TEST_FLAGS}"
+	TEST_CXX_CFLAGS = "-Iext -Iext/common -Iext/nginx -Itest/support " <<
+		"#{PlatformInfo.apr_flags} #{PlatformInfo.apu_flags} #{TEST_COMMON_CFLAGS}"
+	TEST_CXX_LDFLAGS = "#{PlatformInfo.apr_libs} #{PlatformInfo.apu_libs} " <<
+		"#{TEST_COMMON_LIBRARY[0]} #{TEST_BOOST_OXT_LIBRARY} " <<
+		"#{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
 	TEST_CXX_OBJECTS = {
 		'test/CxxTestMain.o' => %w(
 			test/CxxTestMain.cpp),
@@ -430,10 +455,6 @@ end
 			test/UtilsTest.cpp
 			ext/common/Utils.h)
 	}
-	
-	TEST_BOOST_OXT_LIBRARY = define_libboost_oxt_task("test")
-	TEST_COMMON_LIBRARY    = define_common_library_task("test",
-		nil, true, TEST_BOOST_OXT_LIBRARY)
 
 	desc "Run all unit tests"
 	task :test => ['test:oxt', 'test:cxx', 'test:ruby', 'test:integration']
@@ -476,10 +497,7 @@ end
 	file 'test/oxt/oxt_test_main' => oxt_test_main_dependencies do
 		Dir.chdir('test/oxt') do
 			objects = TEST_OXT_OBJECTS.keys.join(' ')
-			create_executable "oxt_test_main", objects,
-				"#{LDFLAGS} " <<
-				"../libboost_oxt.a " <<
-				"-lpthread"
+			create_executable("oxt_test_main", objects, TEST_BOOST_OXT_LDFLAGS)
 		end
 	end
 	
@@ -487,7 +505,7 @@ end
 		file "test/oxt/#{target}" => sources.map{ |x| "test/oxt/#{x}" } do
 			Dir.chdir('test/oxt') do
 				puts "### In test/oxt:"
-				compile_cxx sources[0], TEST_OXT_FLAGS
+				compile_cxx sources[0], TEST_OXT_CFLAGS
 			end
 		end
 	end
@@ -496,17 +514,12 @@ end
 		TEST_BOOST_OXT_LIBRARY, TEST_COMMON_LIBRARY]
 	file 'test/CxxTests' => cxx_tests_dependencies.flatten do
 		objects = TEST_CXX_OBJECTS.keys.join(' ')
-		create_executable "test/CxxTests", objects,
-			"#{PlatformInfo.apr_libs} " <<
-			"#{PlatformInfo.apu_libs} #{LDFLAGS}" <<
-			"#{TEST_BOOST_OXT_LIBRARY} " <<
-			"#{TEST_COMMON_LIBRARY[0]} " <<
-			"-lpthread"
+		create_executable("test/CxxTests", objects, TEST_CXX_LDFLAGS)
 	end
 	
 	TEST_CXX_OBJECTS.each_pair do |target, sources|
 		file(target => sources) do
-			compile_cxx sources[0], "-o #{target} #{TEST_CXX_FLAGS}"
+			compile_cxx sources[0], "-o #{target} #{TEST_CXX_CFLAGS}"
 		end
 	end
 	

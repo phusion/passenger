@@ -243,7 +243,8 @@ getPassengerTempDir(bool bypassCache) {
 	const char *temp_dir = getTempDir();
 	char buffer[PATH_MAX];
 	
-	snprintf(buffer, sizeof(buffer), "%s/passenger.%d", temp_dir, getpid());
+	snprintf(buffer, sizeof(buffer), "%s/passenger.%lu",
+		temp_dir, (unsigned long) getpid());
 	buffer[sizeof(buffer) - 1] = '\0';
 	setenv("PHUSION_PASSENGER_TMP", buffer, 1);
 	return buffer;
