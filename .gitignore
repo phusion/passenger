@@ -1,6 +1,6 @@
 references
 scgi_demo
-test*.rb
+/test*.rb
 
 *.o
 *.so
