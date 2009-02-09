@@ -32,3 +32,5 @@
 - The directory in which Passenger looks for (always_)restart.txt is now
   configurable through PassengerRestartDir.
 - PassengerAppRoot
+- Does not keep the backend process busy when mod_xsendfile is working.
+- Now works correctly with backends that stream data to the browser.
