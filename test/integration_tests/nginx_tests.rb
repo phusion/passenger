@@ -44,7 +44,6 @@ describe "Phusion Passenger for Nginx" do
 				server[:server_name] = "passenger.test"
 				server[:root]        = File.expand_path("#{@stub.app_root}/public")
 			end
-			@nginx.stop
 			@nginx.start
 		end
 		
@@ -72,7 +71,6 @@ describe "Phusion Passenger for Nginx" do
 				    }
 				}
 			end
-			@nginx.stop
 			@nginx.start
 		end
 		
@@ -97,7 +95,8 @@ describe "Phusion Passenger for Nginx" do
 	##### Helper methods #####
 	
 	def start_web_server_if_necessary
-		@nginx.start
-	rescue DaemonController::AlreadyStarted
+		if !@nginx.running?
+			@nginx.start
+		end
 	end
 end

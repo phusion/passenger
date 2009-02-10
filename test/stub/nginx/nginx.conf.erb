@@ -8,7 +8,7 @@ events {
 }
 
 http {
-    include            <%= NGINX_STUB_DIR %>/mime.types;
+    include            <%= TEMPLATE_DIR %>/mime.types;
     default_type       application/octet-stream;
     sendfile           on;
     keepalive_timeout  65;

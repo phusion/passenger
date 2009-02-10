@@ -11,7 +11,7 @@ end
 
 class NginxController
 	PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) + "/../..")
-	NGINX_STUB_DIR = File.expand_path(File.dirname(__FILE__) + "/../stub/nginx")
+	TEMPLATE_DIR = File.expand_path(File.dirname(__FILE__) + "/../stub/nginx")
 	PORT = 64507
 	
 	def initialize(root_dir)
@@ -35,7 +35,14 @@ class NginxController
 		@servers = []
 	end
 	
+	def set(options)
+		options.each_pair do |key, value|
+			instance_variable_set("@#{key}", value)
+		end
+	end
+	
 	def start
+		@controller.stop
 		@controller.start
 	end
 	
@@ -80,7 +87,7 @@ private
 	end
 
 	def write_nginx_config_files
-		template = ERB.new(File.read("#{NGINX_STUB_DIR}/nginx.conf.erb"))
+		template = ERB.new(File.read("#{TEMPLATE_DIR}/nginx.conf.erb"))
 		File.write(@config_file, template.result(get_binding))
 	end
 	
