@@ -149,6 +149,7 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->environment.len = 0;
     conf->spawn_method.data = NULL;
     conf->spawn_method.len = 0;
+    conf->base_uris = NGX_CONF_UNSET_PTR;
 
     conf->upstream.store = NGX_CONF_UNSET;
     conf->upstream.store_access = NGX_CONF_UNSET_UINT;
@@ -193,7 +194,6 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     DEFINE_VAR_TO_PASS("REQUEST_URI",     "$request_uri");
     DEFINE_VAR_TO_PASS("PATH_INFO",       "$document_uri");
     DEFINE_VAR_TO_PASS("DOCUMENT_URI",    "$document_uri");
-    DEFINE_VAR_TO_PASS("DOCUMENT_ROOT",   "$document_root");
     DEFINE_VAR_TO_PASS("SERVER_PROTOCOL", "$server_protocol");
     DEFINE_VAR_TO_PASS("SERVER_SOFTWARE", "nginx/$nginx_version");
     DEFINE_VAR_TO_PASS("REMOTE_ADDR",     "$remote_addr");
@@ -217,6 +217,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_str_t                    *header;
     ngx_uint_t                    i, j;
     ngx_array_t                   hide_headers;
+    ngx_str_t                    *prev_base_uris, *base_uri;
     ngx_keyval_t                 *src;
     ngx_hash_key_t               *hk;
     ngx_hash_init_t               hash;
@@ -227,6 +228,24 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->use_global_queue, prev->use_global_queue, 0);
     ngx_conf_merge_str_value(conf->environment, prev->environment, "production");
     ngx_conf_merge_str_value(conf->spawn_method, prev->spawn_method, "smart-lv2");
+    
+    if (prev->base_uris != NGX_CONF_UNSET_PTR) {
+        if (conf->base_uris == NGX_CONF_UNSET_PTR) {
+            conf->base_uris = ngx_array_create(cf->pool, 4, sizeof(ngx_str_t));
+            if (conf->base_uris == NULL) {
+                return NGX_CONF_ERROR;
+            }
+        }
+        
+        prev_base_uris = (ngx_str_t *) prev->base_uris->elts;
+        for (i = 0; i < prev->base_uris->nelts; i++) {
+            base_uri = (ngx_str_t *) ngx_array_push(conf->base_uris);
+            if (base_uri == NULL) {
+                return NGX_CONF_ERROR;
+            }
+            *base_uri = prev_base_uris[i];
+        }
+    }
 
 
     if (conf->upstream.store != 0) {
@@ -864,6 +883,13 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_main_conf_t, pool_idle_time),
       NULL },
 
+    { ngx_string("passenger_base_uri"),
+      NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_array_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, base_uris),
+      NULL },
+
     { ngx_string("passenger_user_switching"),
       NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_flag_slot,
@@ -879,14 +905,14 @@ const ngx_command_t passenger_commands[] = {
       NULL },
 
     { ngx_string("rails_env"),
-      NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+      NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, environment),
       NULL },
 
     { ngx_string("rails_spawn_method"),
-      NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+      NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, spawn_method),

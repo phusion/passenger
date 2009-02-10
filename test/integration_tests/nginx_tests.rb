@@ -65,11 +65,7 @@ describe "Phusion Passenger for Nginx" do
 			@nginx.add_server do |server|
 				server[:server_name] = "passenger.test"
 				server[:root]        = File.expand_path("tmp.webdir")
-				server << %Q{
-				    location /mycook {
-				        root #{server[:root]}/mycook;
-				    }
-				}
+				server[:passenger_base_uri] = "/mycook"
 			end
 			@nginx.start
 		end

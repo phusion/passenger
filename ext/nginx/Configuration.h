@@ -42,9 +42,10 @@ typedef struct {
     ngx_array_t                   *vars;
     ngx_array_t                   *vars_source;
     
-    ngx_flag_t use_global_queue;
-    ngx_str_t  environment;
-    ngx_str_t  spawn_method;
+    ngx_flag_t   use_global_queue;
+    ngx_str_t    environment;
+    ngx_str_t    spawn_method;
+    ngx_array_t *base_uris;
 } passenger_loc_conf_t;
 
 typedef struct {
