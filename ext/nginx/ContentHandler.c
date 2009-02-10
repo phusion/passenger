@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2008 Phusion
+ * Copyright (C) 2008, 2009 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include <nginx.h>
 #include "ngx_http_passenger_module.h"
 #include "ContentHandler.h"
+#include "StaticContentHandler.h"
 #include "Configuration.h"
 
 
@@ -103,6 +104,50 @@ detect_application_type(const u_char *docroot) {
     }
     
     return AP_NONE;
+}
+
+/**
+ * Maps the URI for the given request to a page cache file, if possible.
+ *
+ * @return Whether the URI has been successfully mapped to a page cache file.
+ * @param r The corresponding request.
+ * @param filename The filename that the URI normally maps to.
+ * @param filename_len The length of the <tt>filename</tt> string.
+ * @param root The size of the root path in <tt>filename</tt>.
+ * @param page_cache_file If mapping was successful, then the page cache
+ *                        file's filename will be stored in here.
+ *                        <tt>page_cache_file.data</tt> must already point to
+ *                        a buffer, and <tt>page_cache_file.len</tt> must be set
+ *                        to the size of this buffer, including terminating NUL.
+ */
+static int
+map_uri_to_page_cache_file(ngx_http_request_t *r, u_char *filename,
+                           size_t filename_len, size_t root,
+                           ngx_str_t *page_cache_file)
+{
+    u_char *end;
+    size_t  len;
+    
+    if (r->method != NGX_HTTP_GET && r->method != NGX_HTTP_HEAD) {
+        return 0;
+    }
+    
+    if (filename_len > page_cache_file->len - sizeof(".html")) {
+        len = NGX_MAX_PATH - sizeof(".html");
+    } else {
+        len = filename_len;
+    }
+    end = ngx_copy(page_cache_file->data, filename, filename_len);
+    end = ngx_copy(end, ".html", sizeof(".html"));
+    
+    fprintf(stderr, "check: %s\n", (const char *) page_cache_file->data);
+    fflush(stderr);
+    if (file_exists(page_cache_file->data, 0)) {
+        page_cache_file->len = end - page_cache_file->data;
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 
@@ -835,12 +880,15 @@ finalize_request(ngx_http_request_t *r, ngx_int_t rc)
 ngx_int_t
 passenger_content_handler(ngx_http_request_t *r)
 {
-    ngx_int_t                      rc;
-    ngx_http_upstream_t           *u;
-    passenger_loc_conf_t          *slcf;
-    ngx_str_t                      path;
-    size_t                         root;
-    app_type_t                     app_type;
+    ngx_int_t              rc;
+    ngx_http_upstream_t   *u;
+    passenger_loc_conf_t  *slcf;
+    ngx_str_t              path;
+    u_char                *path_last;
+    size_t                 root;
+    app_type_t             app_type;
+    u_char                 page_cache_file_str[NGX_MAX_PATH + 1];
+    ngx_str_t              page_cache_file;
 
     if (r->subrequest_in_memory) {
         ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
@@ -851,14 +899,30 @@ passenger_content_handler(ngx_http_request_t *r)
 
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
 
+    /* Let the next content handler take care of this request if Phusion
+     * Passenger is disabled for this URL.
+     */
     if (!slcf->enabled) {
         return NGX_DECLINED;
     }
     
-    if (ngx_http_map_uri_to_path(r, &path, &root, 0) != NULL
-     && file_exists(path.data, 0)) {
+    /* Let the next content handler take care of this request if this URL
+     * maps to an existing file.
+     */
+    path_last = ngx_http_map_uri_to_path(r, &path, &root, 0);
+    if (path_last != NULL && file_exists(path.data, 0)) {
         return NGX_DECLINED;
     }
+    
+    /* If there's a corresponding page cache file for this URL, then serve that
+     * file instead.
+     */
+    page_cache_file.data = page_cache_file_str;
+    page_cache_file.len  = sizeof(page_cache_file_str);
+    if (map_uri_to_page_cache_file(r, path.data, path_last - path.data, root, &page_cache_file)) {
+        return passenger_static_content_handler(r, &page_cache_file);
+    }
+    
     /* Cut the path string off at the end of the root component,
      * because for detecting the application type we're only interested
      * in the root path.

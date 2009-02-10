@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2008, 2009 Phusion
+ * Copyright (C) 2008 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,23 +25,13 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _PASSENGER_NGINX_CONTENT_HANDLER_H_
-#define _PASSENGER_NGINX_CONTENT_HANDLER_H_
+#ifndef _PASSENGER_NGINX_STATIC_CONTENT_HANDLER_H_
+#define _PASSENGER_NGINX_STATIC_CONTENT_HANDLER_H_
 
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+ngx_int_t passenger_static_content_handler(ngx_http_request_t *r,
+                                           ngx_str_t *filename);
 
-typedef struct {
-    ngx_uint_t                     status;
-    ngx_uint_t                     status_count;
-    u_char                        *status_start;
-    u_char                        *status_end;
-} ngx_http_scgi_ctx_t;
-
-
-ngx_int_t passenger_content_handler(ngx_http_request_t *r);
-
-
-#endif /* _PASSENGER_NGINX_CONTENT_HANDLER_H_ */
-
+#endif /* _PASSENGER_NGINX_STATIC_CONTENT_HANDLER_H_ */
