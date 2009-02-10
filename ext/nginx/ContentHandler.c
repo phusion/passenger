@@ -139,8 +139,6 @@ map_uri_to_page_cache_file(ngx_http_request_t *r, const u_char *filename,
     end = ngx_copy(page_cache_file->data, filename, filename_len);
     end = ngx_copy(end, ".html", sizeof(".html"));
     
-    fprintf(stderr, "check: %s\n", (const char *) page_cache_file->data);
-    fflush(stderr);
     if (file_exists(page_cache_file->data, 0)) {
         page_cache_file->len = end - page_cache_file->data;
         return 1;
