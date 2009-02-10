@@ -53,13 +53,12 @@ typedef enum {
 
 /**
  * This structure is like an ngx_http_upstream_t, but contains additional
- * information which is populated upon creating a passenger_upstream_t,
- * but used later.
+ * information about this request, which are to be reused later.
  */
 typedef struct {
     ngx_http_upstream_t ngx_upstream;
     app_type_t          app_type;
-} passenger_upstream_t;
+} passenger_request_t;
 
 
 static void
@@ -121,7 +120,7 @@ detect_application_type(const u_char *docroot) {
  *                        to the size of this buffer, including terminating NUL.
  */
 static int
-map_uri_to_page_cache_file(ngx_http_request_t *r, u_char *filename,
+map_uri_to_page_cache_file(ngx_http_request_t *r, const u_char *filename,
                            size_t filename_len, size_t root,
                            ngx_str_t *page_cache_file)
 {
@@ -170,6 +169,7 @@ create_request(ngx_http_request_t *r)
     passenger_loc_conf_t          *slcf;
     passenger_main_conf_t         *main_conf;
     ngx_http_script_len_code_pt    lcode;
+    passenger_request_t           *passenger_request;
     
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
     main_conf = &passenger_main_conf;
@@ -179,7 +179,8 @@ create_request(ngx_http_request_t *r)
     }
     ngx_http_set_ctx(r, s, ngx_http_passenger_module);
     
-    switch (((passenger_upstream_t *) r->upstream)->app_type) {
+    passenger_request = (passenger_request_t *) r->upstream;
+    switch (passenger_request->app_type) {
     case AP_RAILS:
         app_type_string = (const u_char *) "rails";
         app_type_string_len = sizeof("rails");
@@ -212,6 +213,8 @@ create_request(ngx_http_request_t *r)
     uint_to_str(content_length, buf, sizeof(buf));
     /* +1 for trailing null */
     len = sizeof("CONTENT_LENGTH") + ngx_strlen(buf) + 1;
+    
+    /* len += sizeof("RAILS_RELATIVE_URL_ROOT") + passenger_upstream->root_path.len + 1; */
     
     
     /* Lengths of Passenger application pool options. */
@@ -306,6 +309,9 @@ create_request(ngx_http_request_t *r)
 
     b->last = ngx_snprintf(b->last, 10, "%ui", content_length);
     *b->last++ = (u_char) 0;
+    
+    /* b->last = ngx_copy(b->last, "RAILS_RELATIVE_URL_ROOT",
+                       sizeof("RAILS_RELATIVE_URL_ROOT")); */
 
 
     /* Build Passenger application pool option headers. */
@@ -889,6 +895,7 @@ passenger_content_handler(ngx_http_request_t *r)
     app_type_t             app_type;
     u_char                 page_cache_file_str[NGX_MAX_PATH + 1];
     ngx_str_t              page_cache_file;
+    passenger_request_t   *passenger_request;
 
     if (r->subrequest_in_memory) {
         ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
@@ -934,12 +941,13 @@ passenger_content_handler(ngx_http_request_t *r)
         return NGX_DECLINED;
     }
     
-    u = ngx_pcalloc(r->pool, sizeof(passenger_upstream_t));
+    u = ngx_pcalloc(r->pool, sizeof(passenger_request_t));
     if (u == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
     
-    ((passenger_upstream_t *) u)->app_type = app_type;
+    passenger_request = (passenger_request_t *) u;
+    passenger_request->app_type = app_type;
     
 #if NGINX_VERSION_NUM >= 7000
     u->schema = passenger_schema_string;
