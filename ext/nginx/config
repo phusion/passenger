@@ -1,11 +1,3 @@
-nginx_version=`grep 'NGINX_VERSION ' src/core/nginx.h | awk '{ print $3 }' | sed 's/"//g'`
-nginx_major_version=`echo "$nginx_version" | cut -d . -f 1`
-nginx_minor_version=`echo "$nginx_version" | cut -d . -f 2`
-nginx_micro_version=`echo "$nginx_version" | cut -d . -f 3`
-CFLAGS="$CFLAGS -DPASSENGER_NGINX_MAJOR_VERSION=\"$nginx_major_version\""
-CFLAGS="$CFLAGS -DPASSENGER_NGINX_MINOR_VERSION=\"$nginx_minor_version\""
-CFLAGS="$CFLAGS -DPASSENGER_NGINX_MICRO_VERSION=\"$nginx_micro_version\""
-
 if ! test -f "$ngx_addon_dir/libpassenger_common.a" || \
    ! test -f "$ngx_addon_dir/libboost_oxt.a"; then
     echo "*** The Phusion Passenger support files are not yet compiled. Compiling them for you... ***"
@@ -32,8 +24,16 @@ CORE_LIBS="$CORE_LIBS  \
     ${ngx_addon_dir}/libboost_oxt.a \
     -lstdc++ -lpthread"
 
-# Path where to store temporary files used for buffering
-NGX_HTTP_PASSENGER_TEMP_PATH=$NGX_PREFIX/wsgi_temp
+nginx_version=`grep 'NGINX_VERSION ' src/core/nginx.h | awk '{ print $3 }' | sed 's/"//g'`
 
-have=NGX_HTTP_PASSENGER_TEMP_PATH value="\"$NGX_HTTP_PASSENGER_TEMP_PATH\""
+nginx_major_version=`echo "$nginx_version" | cut -d . -f 1`
+have=PASSENGER_NGINX_MAJOR_VERSION value="$nginx_major_version"
+. auto/define
+
+nginx_minor_version=`echo "$nginx_version" | cut -d . -f 2`
+have=PASSENGER_NGINX_MINOR_VERSION value="$nginx_minor_version"
+. auto/define
+
+nginx_micro_version=`echo "$nginx_version" | cut -d . -f 3`
+have=PASSENGER_NGINX_MICRO_VERSION value="$nginx_micro_version"
 . auto/define
