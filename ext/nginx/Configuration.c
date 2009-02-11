@@ -391,6 +391,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                               prev->upstream.temp_path,
                               passenger_temp_dir, 1, 2, 0,
                               ngx_garbage_collector_temp_handler, cf);
+    conf->upstream.temp_path->name.len = ngx_strlen(conf->upstream.temp_path->name.data);
 
     ngx_conf_merge_value(conf->upstream.pass_request_headers,
                               prev->upstream.pass_request_headers, 1);
