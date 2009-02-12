@@ -133,6 +133,11 @@ class MemoryStats
 		end
 		
 		apache_processes = list_processes(:exe => PlatformInfo.httpd)
+		if apache_processes.empty?
+			# On some Linux distros, the Apache worker processes
+			# are called "httpd.worker"
+			apache_processes = list_processes(:exe => "#{PlatformInfo.httpd}.worker")
+		end
 		print_process_list("Apache processes", apache_processes)
 		
 		puts

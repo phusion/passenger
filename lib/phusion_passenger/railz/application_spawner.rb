@@ -24,6 +24,7 @@ require 'phusion_passenger/application'
 require 'phusion_passenger/abstract_server'
 require 'phusion_passenger/application'
 require 'phusion_passenger/constants'
+require 'phusion_passenger/events'
 require 'phusion_passenger/railz/request_handler'
 require 'phusion_passenger/rack/request_handler'
 require 'phusion_passenger/exceptions'
@@ -156,7 +157,7 @@ class ApplicationSpawner < AbstractServer
 					require 'dispatcher'
 				end
 				if success
-					start_request_handler(channel)
+					start_request_handler(channel, false)
 				end
 			rescue SignalException => e
 				if e.message != AbstractRequestHandler::HARD_TERMINATION_SIGNAL &&
@@ -294,7 +295,7 @@ private
 	def handle_spawn_application
 		safe_fork('application', true) do
 			begin
-				start_request_handler(client)
+				start_request_handler(client, true)
 			rescue SignalException => e
 				if e.message != AbstractRequestHandler::HARD_TERMINATION_SIGNAL &&
 				   e.message != AbstractRequestHandler::SOFT_TERMINATION_SIGNAL
@@ -306,7 +307,10 @@ private
 	
 	# Initialize the request handler and enter its main loop.
 	# Spawn information will be sent back via _channel_.
-	def start_request_handler(channel)
+	# The _forked_ argument indicates whether a new process was forked off
+	# after loading environment.rb (i.e. whether smart spawning is being
+	# used).
+	def start_request_handler(channel, forked)
 		$0 = "Rails: #{@app_root}"
 		reader, writer = IO.pipe
 		begin
@@ -331,11 +335,14 @@ private
 			channel.send_io(writer)
 			writer.close
 			channel.close
+			
+			PhusionPassenger.call_event(:starting_worker_process, forked)
 			handler.main_loop
 		ensure
 			channel.close rescue nil
 			writer.close rescue nil
 			handler.cleanup rescue nil
+			PhusionPassenger.call_event(:stopping_worker_process)
 		end
 	end
 end
