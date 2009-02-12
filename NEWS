@@ -34,3 +34,6 @@
 - PassengerAppRoot
 - Does not keep the backend process busy when mod_xsendfile is working.
 - Now works correctly with backends that stream data to the browser.
+- PhusionPassenger.on_event with :starting_worker_process and
+  :stopping_worker_process. Useful hooks for closing file descriptors when
+  in smart spawning mode.
