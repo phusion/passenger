@@ -59,6 +59,16 @@ const char        passenger_helper_server_socket[NGX_MAX_PATH];
 CachedMultiFileStat *passenger_stat_cache;
 
 
+/*
+    HISTORIC NOTE:
+    We used to register passenger_content_handler as a default content handler,
+    instead of setting ngx_http_core_loc_conf_t->handler. However, if
+    ngx_http_read_client_request_body (and thus passenger_content_handler)
+    returns NGX_AGAIN, then Nginx will pass the not-fully-receive file upload
+    data to the upstream handler even though it shouldn't. Is this an Nginx
+    bug? In any case, setting ngx_http_core_loc_conf_t->handler fixed the
+    problem.
+    
 static ngx_int_t
 register_content_handler(ngx_conf_t *cf)
 {
@@ -75,6 +85,7 @@ register_content_handler(ngx_conf_t *cf)
     
     return NGX_OK;
 }
+*/
 
 static void
 ignore_sigpipe()
@@ -419,7 +430,7 @@ pre_config_init(ngx_conf_t *cf)
 
 static ngx_http_module_t passenger_module_ctx = {
     pre_config_init,                     /* preconfiguration */
-    register_content_handler,            /* postconfiguration */
+    /* register_content_handler */ NULL, /* postconfiguration */
 
     passenger_create_main_conf,          /* create main configuration */
     passenger_init_main_conf,            /* init main configuration */

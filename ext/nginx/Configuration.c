@@ -31,6 +31,7 @@
 
 #include "ngx_http_passenger_module.h"
 #include "Configuration.h"
+#include "ContentHandler.h"
 
 
 static ngx_str_t  ngx_http_scgi_hide_headers[] = {
@@ -708,6 +709,7 @@ passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         #endif
 
         clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
+        clcf->handler = passenger_content_handler;
 
         if (clcf->name.data != NULL
          && clcf->name.data[clcf->name.len - 1] == '/') {
