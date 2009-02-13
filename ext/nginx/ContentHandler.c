@@ -44,30 +44,6 @@ static void abort_request(ngx_http_request_t *r);
 static void finalize_request(ngx_http_request_t *r, ngx_int_t rc);
 
 
-typedef enum {
-    AP_RAILS,
-    AP_RACK,
-    AP_WSGI,
-    AP_NONE
-} app_type_t;
-
-/**
- * This structure is like an ngx_http_upstream_t, but contains additional
- * information about this request, which are to be reused later.
- */
-typedef struct {
-    ngx_http_upstream_t ngx_upstream;
-    
-    /** The backend application's 'public' directory. */
-    ngx_str_t           public_dir;
-    
-    ngx_str_t           base_uri;
-    
-    /** The backend application's type. */
-    app_type_t          app_type;
-} passenger_request_t;
-
-
 static void
 uint_to_str(ngx_uint_t i, u_char *str, ngx_uint_t size) {
     ngx_memzero(str, size);
@@ -84,7 +60,7 @@ file_exists(const u_char *filename, unsigned int throttle_rate) {
         && S_ISREG(buf.st_mode);
 }
 
-static app_type_t
+static passenger_app_type_t
 detect_application_type(const ngx_str_t *public_dir) {
     u_char filename[NGX_MAX_PATH];
     
@@ -207,14 +183,17 @@ create_request(ngx_http_request_t *r)
     ngx_http_script_engine_t       e, le;
     passenger_loc_conf_t          *slcf;
     passenger_main_conf_t         *main_conf;
+    passenger_context_t           *context;
     ngx_http_script_len_code_pt    lcode;
-    passenger_request_t           *passenger_request;
     
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
     main_conf = &passenger_main_conf;
+    context = ngx_http_get_module_ctx(r, ngx_http_passenger_module);
+    if (context == NULL) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
     
-    passenger_request = (passenger_request_t *) r->upstream;
-    switch (passenger_request->app_type) {
+    switch (context->app_type) {
     case AP_RAILS:
         app_type_string = (const u_char *) "rails";
         app_type_string_len = sizeof("rails");
@@ -249,10 +228,10 @@ create_request(ngx_http_request_t *r)
     len = sizeof("CONTENT_LENGTH") + ngx_strlen(buf) + 1;
     
     /* DOCUMENT_ROOT and base URI */
-    len += sizeof("DOCUMENT_ROOT") + passenger_request->public_dir.len + 1;
-    if (passenger_request->base_uri.len > 0) {
+    len += sizeof("DOCUMENT_ROOT") + context->public_dir.len + 1;
+    if (context->base_uri.len > 0) {
         len += sizeof("RAILS_RELATIVE_URL_ROOT") +
-               passenger_request->base_uri.len + 1;
+               context->base_uri.len + 1;
     }
     
     
@@ -351,13 +330,13 @@ create_request(ngx_http_request_t *r)
     
     /* Build DOCUMENT_ROOT and base URI. */
     b->last = ngx_copy(b->last, "DOCUMENT_ROOT", sizeof("DOCUMENT_ROOT"));
-    b->last = ngx_copy(b->last, passenger_request->public_dir.data,
-                       passenger_request->public_dir.len + 1);
-    if (passenger_request->base_uri.len > 0) {
+    b->last = ngx_copy(b->last, context->public_dir.data,
+                       context->public_dir.len + 1);
+    if (context->base_uri.len > 0) {
         b->last = ngx_copy(b->last, "RAILS_RELATIVE_URL_ROOT",
                            sizeof("RAILS_RELATIVE_URL_ROOT"));
-        b->last = ngx_copy(b->last, passenger_request->base_uri.data,
-                           passenger_request->base_uri.len + 1);
+        b->last = ngx_copy(b->last, context->base_uri.data,
+                           context->base_uri.len + 1);
     }
     
 
@@ -942,7 +921,6 @@ passenger_content_handler(ngx_http_request_t *r)
     u_char                 page_cache_file_str[NGX_MAX_PATH + 1];
     ngx_str_t              page_cache_file;
     passenger_context_t   *context;
-    passenger_request_t   *passenger_request;
 
     if (r->subrequest_in_memory) {
         ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
@@ -992,33 +970,32 @@ passenger_content_handler(ngx_http_request_t *r)
     path.len = root;
     
     
-    u = ngx_pcalloc(r->pool, sizeof(passenger_request_t));
+    u = ngx_pcalloc(r->pool, sizeof(ngx_http_upstream_t));
     if (u == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
-    passenger_request = (passenger_request_t *) u;
     
     
     if (find_base_uri(r, slcf, &base_uri)) {
         len = path.len + base_uri.len + 1;
-        passenger_request->public_dir.data = ngx_palloc(r->pool,
+        context->public_dir.data = ngx_palloc(r->pool,
                                                         sizeof(u_char) * len);
-        end = ngx_copy(passenger_request->public_dir.data, path.data, path.len);
+        end = ngx_copy(context->public_dir.data, path.data, path.len);
         end = ngx_copy(end, base_uri.data, base_uri.len);
         *end = '\0';
-        passenger_request->public_dir.len = len - 1;
-        passenger_request->base_uri = base_uri;
+        context->public_dir.len = len - 1;
+        context->base_uri = base_uri;
     } else {
         len = sizeof(u_char *) * (path.len + 1);
-        passenger_request->public_dir.data = ngx_palloc(r->pool, len);
-        end = ngx_copy(passenger_request->public_dir.data, path.data,
+        context->public_dir.data = ngx_palloc(r->pool, len);
+        end = ngx_copy(context->public_dir.data, path.data,
                        path.len);
         *end = '\0';
-        passenger_request->public_dir.len  = path.len;
+        context->public_dir.len  = path.len;
     }
     
-    passenger_request->app_type = detect_application_type(&passenger_request->public_dir);
-    if (passenger_request->app_type == AP_NONE) {
+    context->app_type = detect_application_type(&context->public_dir);
+    if (context->app_type == AP_NONE) {
         return NGX_DECLINED;
     }
     
