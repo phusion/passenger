@@ -32,16 +32,14 @@
 #include <ngx_http.h>
 
 typedef struct {
-    ngx_flag_t                     enabled;
-    ngx_http_upstream_conf_t       upstream;
-
-    ngx_str_t                      index;
-
-    ngx_array_t                   *flushes;
-    ngx_array_t                   *vars_len;
-    ngx_array_t                   *vars;
-    ngx_array_t                   *vars_source;
+    ngx_http_upstream_conf_t upstream;
+    ngx_str_t    index;
+    ngx_array_t *flushes;
+    ngx_array_t *vars_len;
+    ngx_array_t *vars;
+    ngx_array_t *vars_source;
     
+    ngx_flag_t   enabled;
     ngx_flag_t   use_global_queue;
     ngx_str_t    environment;
     ngx_str_t    spawn_method;
