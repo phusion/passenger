@@ -34,7 +34,7 @@
 #include "ContentHandler.h"
 
 
-static ngx_str_t  ngx_http_scgi_hide_headers[] = {
+static ngx_str_t headers_to_hide[] = {
     /* NOTE: Do not hide the "Status" header; some broken HTTP clients
      * expect this header. See http://tinyurl.com/87rezm
      */
@@ -173,7 +173,6 @@ passenger_create_loc_conf(ngx_conf_t *cf)
 
     conf->upstream.intercept_errors = NGX_CONF_UNSET;
 
-    /* "scgi_cyclic_temp_file" is disabled */
     conf->upstream.cyclic_temp_file = 0;
     
     #define DEFINE_VAR_TO_PASS(header_name, var_name) \
@@ -433,7 +432,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
-    for (header = ngx_http_scgi_hide_headers; header->len; header++) {
+    for (header = headers_to_hide; header->len; header++) {
         hk = ngx_array_push(&hide_headers);
         if (hk == NULL) {
             return NGX_CONF_ERROR;
@@ -498,7 +497,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     hash.key = ngx_hash_key_lc;
     hash.max_size = 512;
     hash.bucket_size = ngx_align(64, ngx_cacheline_size);
-    hash.name = "scgi_hide_headers_hash";
+    hash.name = "passenger_hide_headers_hash";
     hash.pool = cf->pool;
     hash.temp_pool = NULL;
 
@@ -648,34 +647,6 @@ peers:
 }
 
 static char *
-ngx_http_scgi_lowat_check(ngx_conf_t *cf, void *post, void *data)
-{
-#if (NGX_FREEBSD)
-    ssize_t *np = data;
-
-    if ((u_long) *np >= ngx_freebsd_net_inet_tcp_sendspace) {
-        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                           "\"scgi_send_lowat\" must be less than %d "
-                           "(sysctl net.inet.tcp.sendspace)",
-                           ngx_freebsd_net_inet_tcp_sendspace);
-
-        return NGX_CONF_ERROR;
-    }
-
-#elif !(NGX_HAVE_SO_SNDLOWAT)
-    ssize_t *np = data;
-
-    ngx_conf_log_error(NGX_LOG_WARN, cf, 0,
-                       "\"scgi_send_lowat\" is not supported, ignored");
-
-    *np = 0;
-
-#endif
-
-    return NGX_CONF_OK;
-}
-
-static char *
 passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     passenger_loc_conf_t        *lcf = conf;
@@ -718,6 +689,35 @@ passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     } else {
         lcf->enabled = 0;
     }
+
+    return NGX_CONF_OK;
+}
+
+#if 0
+static char *
+ngx_http_scgi_lowat_check(ngx_conf_t *cf, void *post, void *data)
+{
+#if (NGX_FREEBSD)
+    ssize_t *np = data;
+
+    if ((u_long) *np >= ngx_freebsd_net_inet_tcp_sendspace) {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                           "\"scgi_send_lowat\" must be less than %d "
+                           "(sysctl net.inet.tcp.sendspace)",
+                           ngx_freebsd_net_inet_tcp_sendspace);
+
+        return NGX_CONF_ERROR;
+    }
+
+#elif !(NGX_HAVE_SO_SNDLOWAT)
+    ssize_t *np = data;
+
+    ngx_conf_log_error(NGX_LOG_WARN, cf, 0,
+                       "\"scgi_send_lowat\" is not supported, ignored");
+
+    *np = 0;
+
+#endif
 
     return NGX_CONF_OK;
 }
@@ -817,16 +817,7 @@ ngx_scgi_set_keyval_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 static ngx_conf_post_t  ngx_http_scgi_lowat_post =
     { ngx_http_scgi_lowat_check };
 
-static ngx_conf_bitmask_t  ngx_http_scgi_next_upstream_masks[] = {
-    { ngx_string("error"), NGX_HTTP_UPSTREAM_FT_ERROR },
-    { ngx_string("timeout"), NGX_HTTP_UPSTREAM_FT_TIMEOUT },
-    { ngx_string("invalid_header"), NGX_HTTP_UPSTREAM_FT_INVALID_HEADER },
-    { ngx_string("http_500"), NGX_HTTP_UPSTREAM_FT_HTTP_500 },
-    { ngx_string("http_503"), NGX_HTTP_UPSTREAM_FT_HTTP_503 },
-    { ngx_string("http_404"), NGX_HTTP_UPSTREAM_FT_HTTP_404 },
-    { ngx_string("off"), NGX_HTTP_UPSTREAM_FT_OFF },
-    { ngx_null_string, 0 }
-};
+#endif /* 0 */
 
 const ngx_command_t passenger_commands[] = {
 
@@ -920,6 +911,8 @@ const ngx_command_t passenger_commands[] = {
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, spawn_method),
       NULL },
+
+/*
 
     { ngx_string("scgi_index"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
@@ -1040,13 +1033,6 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_loc_conf_t, upstream.temp_file_write_size_conf),
       NULL },
 
-    { ngx_string("scgi_next_upstream"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
-      ngx_conf_set_bitmask_slot,
-      NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(passenger_loc_conf_t, upstream.next_upstream),
-      &ngx_http_scgi_next_upstream_masks },
-
     { ngx_string("scgi_var"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE2,
       ngx_scgi_set_keyval_slot,
@@ -1067,6 +1053,8 @@ const ngx_command_t passenger_commands[] = {
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, upstream.hide_headers),
       NULL },
+
+*/
 
       ngx_null_command
 };
