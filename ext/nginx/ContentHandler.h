@@ -33,11 +33,11 @@
 
 
 typedef struct {
-    ngx_uint_t                     status;
-    ngx_uint_t                     status_count;
-    u_char                        *status_start;
-    u_char                        *status_end;
-} ngx_http_scgi_ctx_t;
+    ngx_uint_t  status;
+    ngx_uint_t  status_count;
+    u_char     *status_start;
+    u_char     *status_end;
+} passenger_context_t;
 
 
 ngx_int_t passenger_content_handler(ngx_http_request_t *r);

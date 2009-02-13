@@ -38,7 +38,7 @@
 static ngx_int_t reinit_request(ngx_http_request_t *r);
 static ngx_int_t process_status_line(ngx_http_request_t *r);
 static ngx_int_t parse_status_line(ngx_http_request_t *r,
-    ngx_http_scgi_ctx_t *p);
+    passenger_context_t *context);
 static ngx_int_t process_header(ngx_http_request_t *r);
 static void abort_request(ngx_http_request_t *r);
 static void finalize_request(ngx_http_request_t *r, ngx_int_t rc);
@@ -203,7 +203,6 @@ create_request(ngx_http_request_t *r)
     ngx_chain_t                   *cl, *body;
     ngx_list_part_t               *part;
     ngx_table_elt_t               *header;
-    ngx_http_scgi_ctx_t           *s;
     ngx_http_script_code_pt        code;
     ngx_http_script_engine_t       e, le;
     passenger_loc_conf_t          *slcf;
@@ -213,11 +212,6 @@ create_request(ngx_http_request_t *r)
     
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
     main_conf = &passenger_main_conf;
-    s = ngx_pcalloc(r->pool, sizeof(ngx_http_scgi_ctx_t));
-    if (s == NULL) {
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-    ngx_http_set_ctx(r, s, ngx_http_passenger_module);
     
     passenger_request = (passenger_request_t *) r->upstream;
     switch (passenger_request->app_type) {
@@ -505,18 +499,18 @@ create_request(ngx_http_request_t *r)
 static ngx_int_t
 reinit_request(ngx_http_request_t *r)
 {
-    ngx_http_scgi_ctx_t  *s;
+    passenger_context_t  *context;
 
-    s = ngx_http_get_module_ctx(r, ngx_http_passenger_module);
+    context = ngx_http_get_module_ctx(r, ngx_http_passenger_module);
 
-    if (s == NULL) {
+    if (context == NULL) {
         return NGX_OK;
     }
 
-    s->status = 0;
-    s->status_count = 0;
-    s->status_start = NULL;
-    s->status_end = NULL;
+    context->status = 0;
+    context->status_count = 0;
+    context->status_start = NULL;
+    context->status_end = NULL;
 
     r->upstream->process_header = process_status_line;
 
@@ -529,15 +523,15 @@ process_status_line(ngx_http_request_t *r)
 {
     ngx_int_t             rc;
     ngx_http_upstream_t  *u;
-    ngx_http_scgi_ctx_t  *s;
+    passenger_context_t  *context;
 
-    s = ngx_http_get_module_ctx(r, ngx_http_passenger_module);
+    context = ngx_http_get_module_ctx(r, ngx_http_passenger_module);
 
-    if (s == NULL) {
+    if (context == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    rc = parse_status_line(r, s);
+    rc = parse_status_line(r, context);
 
     if (rc == NGX_AGAIN) {
         return rc;
@@ -562,17 +556,17 @@ process_status_line(ngx_http_request_t *r)
         return NGX_OK;
     }
 
-    u->headers_in.status_n = s->status;
-    u->state->status = s->status;
+    u->headers_in.status_n = context->status;
+    u->state->status = context->status;
 
-    u->headers_in.status_line.len = s->status_end - s->status_start;
+    u->headers_in.status_line.len = context->status_end - context->status_start;
     u->headers_in.status_line.data = ngx_palloc(r->pool,
                                                 u->headers_in.status_line.len);
     if (u->headers_in.status_line.data == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    ngx_memcpy(u->headers_in.status_line.data, s->status_start,
+    ngx_memcpy(u->headers_in.status_line.data, context->status_start,
                u->headers_in.status_line.len);
 
     ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
@@ -586,7 +580,7 @@ process_status_line(ngx_http_request_t *r)
 
 
 static ngx_int_t
-parse_status_line(ngx_http_request_t *r, ngx_http_scgi_ctx_t *s)
+parse_status_line(ngx_http_request_t *r, passenger_context_t *context)
 {
     u_char                ch;
     u_char               *pos;
@@ -721,11 +715,11 @@ parse_status_line(ngx_http_request_t *r, ngx_http_scgi_ctx_t *s)
                 return NGX_HTTP_SCGI_PARSE_NO_HEADER;
             }
 
-            s->status = s->status * 10 + ch - '0';
+            context->status = context->status * 10 + ch - '0';
 
-            if (++s->status_count == 3) {
+            if (++context->status_count == 3) {
                 state = sw_space_after_status;
-                s->status_start = pos - 2;
+                context->status_start = pos - 2;
             }
 
             break;
@@ -763,7 +757,7 @@ parse_status_line(ngx_http_request_t *r, ngx_http_scgi_ctx_t *s)
 
         /* end of status line */
         case sw_almost_done:
-            s->status_end = pos - 1;
+            context->status_end = pos - 1;
             switch (ch) {
             case LF:
                 goto done;
@@ -782,8 +776,8 @@ done:
 
     u->buffer.pos = pos + 1;
 
-    if (s->status_end == NULL) {
-        s->status_end = pos;
+    if (context->status_end == NULL) {
+        context->status_end = pos;
     }
 
     r->state = sw_start;
@@ -947,6 +941,7 @@ passenger_content_handler(ngx_http_request_t *r)
     size_t                 root, len;
     u_char                 page_cache_file_str[NGX_MAX_PATH + 1];
     ngx_str_t              page_cache_file;
+    passenger_context_t   *context;
     passenger_request_t   *passenger_request;
 
     if (r->subrequest_in_memory) {
@@ -981,6 +976,12 @@ passenger_content_handler(ngx_http_request_t *r)
     if (map_uri_to_page_cache_file(r, path.data, path_last - path.data, root, &page_cache_file)) {
         return passenger_static_content_handler(r, &page_cache_file);
     }
+    
+    context = ngx_pcalloc(r->pool, sizeof(passenger_context_t));
+    if (context == NULL) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    ngx_http_set_ctx(r, context, ngx_http_passenger_module);
     
     /* Cut the path string off at the end of the root component, because from
      * this point on we're only interested in the root path, not the filename.
