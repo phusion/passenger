@@ -24,7 +24,7 @@
 
 PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) << "/..")
 $LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
-require 'passenger/version'
+require 'passenger/constants'
 
 def help
 	puts "Tool for showing Passenger configuration information."

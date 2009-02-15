@@ -90,7 +90,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 
 private
 	def show_welcome_screen
-		render_template 'apache2/welcome', :version => PhusionPassenger::VERSION_STRING
+		render_template 'apache2/welcome', :version => VERSION_STRING
 		wait
 	end
 	

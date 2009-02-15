@@ -24,7 +24,7 @@ require 'rake/gempackagetask'
 require 'rake/extensions'
 require 'rake/cplusplus'
 require 'phusion_passenger/platform_info'
-require 'phusion_passenger/version'
+require 'phusion_passenger/constants'
 
 verbose true
 

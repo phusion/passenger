@@ -21,8 +21,9 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'phusion_passenger/constants'
+require 'phusion_passenger/packaging'
 require 'phusion_passenger/console_text_template'
-require 'phusion_passenger/version'
 
 module PhusionPassenger
 
@@ -31,13 +32,7 @@ module PhusionPassenger
 class AbstractInstaller
 	PASSENGER_WEBSITE = "http://www.modrails.com/"
 	PHUSION_WEBSITE = "www.phusion.nl"
-	USERS_GUIDE = begin
-		if PhusionPassenger.natively_packaged?
-			"/usr/share/doc/phusion_passenger/Users guide.html"
-		else
-			File.expand_path("#{LIBDIR}/../../doc/Users guide.html")
-		end
-	end
+	USERS_GUIDE = "#{DOCDIR}/Users guide.html"
 
 	def initialize(options = {})
 		options.each_pair do |key, value|

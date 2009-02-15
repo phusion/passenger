@@ -25,6 +25,7 @@ require 'socket'
 require 'fcntl'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/utils'
+require 'phusion_passenger/constants'
 module PhusionPassenger
 
 # The request handler is the layer which connects Apache with the underlying application's
@@ -416,18 +417,8 @@ private
 		return data
 	end
 	
-	def self.determine_passenger_version
-		rakefile = "#{File.dirname(__FILE__)}/../../Rakefile"
-		if File.exist?(rakefile)
-			File.read(rakefile) =~ /^PACKAGE_VERSION = "(.*)"$/
-			return $1
-		else
-			return File.read("/etc/passenger_version.txt")
-		end
-	end
-	
 	def self.determine_passenger_header
-		header = "Phusion Passenger (mod_rails/mod_rack) #{PASSENGER_VERSION}"
+		header = "Phusion Passenger (mod_rails/mod_rack) #{VERSION_STRING}"
 		if File.exist?("#{File.dirname(__FILE__)}/../../enterprisey.txt") ||
 		   File.exist?("/etc/passenger_enterprisey.txt")
 			header << ", Enterprise Edition"
@@ -436,7 +427,6 @@ private
 	end
 
 public
-	PASSENGER_VERSION = determine_passenger_version
 	PASSENGER_HEADER = determine_passenger_header
 end
 
