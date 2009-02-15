@@ -16,7 +16,7 @@ include PlatformInfo
 class Installer < PhusionPassenger::AbstractInstaller
 	include PhusionPassenger
 	
-	NGINX_VERSION = "0.6.34"
+	NGINX_VERSION = "0.6.35"
 	
 	def dependencies
 		return [
@@ -36,8 +36,6 @@ class Installer < PhusionPassenger::AbstractInstaller
 		check_dependencies || exit(1)
 		
 		check_write_permission_to_passenger_root || exit(1)
-		
-		compile_passenger_support_files || exit(1)
 		
 		download_and_install = should_we_download_and_install_nginx_automatically?
 		if pcre_is_installed?
@@ -60,6 +58,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 		end
 		check_whether_we_can_write_to(nginx_prefix) || exit(1)
 		nginx_config_already_exists_before_installing = nginx_config_exists?(nginx_prefix)
+		compile_passenger_support_files || exit(1)
 		if install_nginx(nginx_source_dir, nginx_prefix, extra_nginx_configure_flags)
 			if nginx_config_already_exists_before_installing
 				show_passenger_config_snippets(nginx_prefix)
