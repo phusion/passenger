@@ -118,8 +118,6 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
         if (!clcf->alias && clcf->root_lengths == NULL && r->args.len == 0) {
             location = filename->data + clcf->root.len;
 
-            *last = '/';
-
         } else {
             if (r->args.len) {
                 len += r->args.len + 1;
