@@ -593,7 +593,7 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_ALL,
 		"Enable or disable Passenger's high performance mode."),
-	AP_INIT_FLAG("PassengerEnabled", // TODO: document this
+	AP_INIT_FLAG("PassengerEnabled",
 		(Take1Func) cmd_passenger_enabled,
 		NULL,
 		OR_ALL,

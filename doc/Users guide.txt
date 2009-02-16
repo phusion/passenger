@@ -755,6 +755,37 @@ then you can enable high performance mode for a certain URL only. For example:
 This enables high performance mode for
 http://www.foo.com/chatroom/ajax_update_poll only.
 
+=== PassengerEnabled <on|off> ===
+You can set this option to 'off' to completely disable Phusion Passenger for
+a certain location. This is useful if, for example, you want to integrate a PHP
+application into the same virtual host as a Rails application.
+
+Suppose that you have a Rails application in '/apps/foo'. Suppose that you've
+dropped Wordpress -- a blogging application written in PHP -- in
+'/apps/foo/public/wordpress'. You can then configure Phusion Passenger as
+follows:
+
+------------------------------------
+<VirtualHost *:80>
+    ServerName www.foo.com
+    DocumentRoot /apps/foo/public
+    <Location /wordpress>
+        PassengerEnabled off
+    </Location>
+</VirtualHost>
+------------------------------------
+
+This way, Phusion Passenger will not interfere with Wordpress.
+
+'PassengerEnabled' may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess'.
+
+In each place, it may be specified at most once. The default value is 'on'.
+
 
 === Resource control and optimization options ===
 
