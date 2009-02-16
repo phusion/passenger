@@ -560,7 +560,7 @@ This option may occur in the following places:
  * In the global server configuration.
  * In a virtual host configuration block.
  * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Limits` is on.
+ * In '.htaccess', if `AllowOverride Options` is on.
 
 In each place, it may be specified at most once.
 

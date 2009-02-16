@@ -611,7 +611,7 @@ const command_rec passenger_commands[] = {
 	AP_INIT_TAKE1("PassengerAppRoot",
 		(Take1Func) cmd_passenger_app_root,
 		NULL,
-		OR_ALL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The application's root directory."),
 
 	// Rails-specific settings.
