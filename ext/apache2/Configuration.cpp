@@ -606,7 +606,7 @@ const command_rec passenger_commands[] = {
 	AP_INIT_TAKE1("PassengerRestartDir",
 		(Take1Func) cmd_passenger_restart_dir,
 		NULL,
-		OR_ALL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The directory in which Passenger should look for restart.txt."),
 	AP_INIT_TAKE1("PassengerAppRoot",
 		(Take1Func) cmd_passenger_app_root,
