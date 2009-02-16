@@ -601,7 +601,7 @@ const command_rec passenger_commands[] = {
 	AP_INIT_TAKE1("PassengerStatThrottleRate",
 		(Take1Func) cmd_passenger_stat_throttle_rate,
 		NULL,
-		OR_ALL,
+		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
 		"Limit the number of stat calls to once per given seconds."),
 	AP_INIT_TAKE1("PassengerRestartDir",
 		(Take1Func) cmd_passenger_restart_dir,
