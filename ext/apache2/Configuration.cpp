@@ -588,10 +588,10 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
 		"The maximum number of requests that an application instance may process."),
-	AP_INIT_FLAG("PassengerHighPerformance", // TODO: document this
+	AP_INIT_FLAG("PassengerHighPerformance",
 		(Take1Func) cmd_passenger_high_performance,
 		NULL,
-		ACCESS_CONF | RSRC_CONF,
+		OR_ALL,
 		"Enable or disable Passenger's high performance mode."),
 	AP_INIT_FLAG("PassengerEnabled", // TODO: document this
 		(Take1Func) cmd_passenger_enabled,

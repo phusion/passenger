@@ -684,6 +684,78 @@ applications must run as, if user switching fails or is disabled.
 This option may only occur once, in the global server configuration.
 The default value is 'nobody'.
 
+[[PassengerHighPerformance]]
+=== PassengerHighPerformance <on|off> ===
+By default, Phusion Passenger is compatible with mod_rewrite and most other
+Apache modules. However, a lot of effort is required in order to be compatible.
+If you turn 'PassengerHighPerformance' to 'on', then Phusion Passenger will be
+a little faster, in return for reduced compatibility with other Apache modules.
+
+In places where 'PassengerHighPerformance' is turned on, mod_rewrite rules will
+likely not work. mod_autoindex (the module which displays a directory index)
+will also not work. Other Apache modules may or may not work, depending on what
+they exactly do. We recommend you to find out how other modules behave in high
+performance mode via testing.
+
+This option is *not* an all-or-nothing global option: you can enable high
+performance mode for certain virtual hosts or certain URLs only.
+The 'PassengerHighPerformance' option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess'.
+
+In each place, it may be specified at most once. The default value is 'off',
+so high performance mode is disabled by default, and you have to explicitly
+enable it.
+
+.When to enable high performance mode?
+
+If you do not use mod_rewrite or other Apache modules then it might make
+sense to enable high performance mode.
+
+It's likely that some of your applications depend on mod_rewrite or other
+Apache modules, while some do not. In that case you can enable high performance
+for only those applications that don't use other Apache modules. For example:
+
+------------------------------------
+<VirtualHost *:80>
+    ServerName www.foo.com
+    DocumentRoot /apps/foo/public
+    .... mod_rewrite rules or options for other Apache modules here ...
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName www.bar.com
+    DocumentRoot /apps/bar/public
+    PassengerHighPerformance on
+</VirtualHost>
+------------------------------------
+
+In the above example, high performance mode is only enabled for www.bar.com.
+It is disabled for everything else.
+
+If your application generally depends on mod_rewrite or other Apache modules,
+but a certain URL that's accessed often doesn't depend on those other modules,
+then you can enable high performance mode for a certain URL only. For example:
+
+------------------------------------
+<VirtualHost *:80>
+    ServerName www.foo.com
+    DocumentRoot /apps/foo/public
+    .... mod_rewrite rules or options for other Apache modules here ...
+    
+    <Location /chatroom/ajax_update_poll>
+        PassengerHighPerformance on
+    </Location>
+</VirtualHost>
+------------------------------------
+
+This enables high performance mode for
+http://www.foo.com/chatroom/ajax_update_poll only.
+
+
 === Resource control and optimization options ===
 
 ==== PassengerMaxPoolSize <integer> ====
