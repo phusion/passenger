@@ -28,6 +28,7 @@ Phusion Passenger has been tested on:
 
 - Ubuntu Linux 6.06 (x86)
 - Ubuntu Linux 7.10 (x86)
+- Ubuntu Linux 8.04 (x86)
 - Debian Sarge (x86)
 - Debian Etch (x86)
 - Debian Lenny/Sid (x86)
@@ -827,14 +828,6 @@ This option may occur in the following places:
  * In a `<Directory>` or `<Location>` block.
  * In '.htaccess', if `AllowOverride Options` is on.
 
-[[RailsAllowModRewrite]]
-==== RailsAllowModRewrite <on|off> ====
-If enabled, Phusion Passenger will not override mod_rewrite rules. Please read
-<<conflicting_apache_modules,Conflicting Apache modules>> for details.
-
-This option may occur once, in the global server configuration or in a virtual host
-configuration block. The default value is 'off'.
-
 [[rails_env]]
 ==== RailsEnv <string> ====
 This option allows one to specify the default `RAILS_ENV` value.
@@ -989,6 +982,9 @@ Deprecated in favor of <<PassengerUserSwitching,PassengerUserSwitching>>.
 
 ==== RailsDefaultUser ====
 Deprecated in favor of <<PassengerDefaultUser,PassengerDefaultUser>>.
+
+==== RailsAllowModRewrite ====
+This option doesn't do anything anymore in recent versions of Phusion Passenger.
 
 
 == Troubleshooting ==
@@ -1298,34 +1294,6 @@ chcon -R -h -t httpd_sys_content_t /path/to/your/rails/app
 
 [[conflicting_apache_modules]]
 === Conflicting Apache modules ===
-
-==== mod_rewrite and mod_alias ====
-
-Phusion Passenger conflicts with 'mod_rewrite' and 'mod_alias'. Those modules may be
-installed and loaded together with 'mod_passenger', and they will work fine
-outside virtual hosts that contain a Rails application, but we recommend you
-not to use their features inside virtual hosts that contain a Rails
-application.
-
-By default, Phusion Passenger will override mod_rewrite rules on Rails hosts.
-This is because the default .htaccess, as provided by Ruby on Rails, redirects all
-requests to `dispatch.cgi' using mod_rewrite. This is a CGI application which
-loads the entire Ruby on Rails framework for every request, and thus is very
-slow. If we do not override mod_rewrite, then Ruby on Rails apps will be slow
-on Phusion Passenger by default -- but we want a good out-of-the-box experience.
-
-Furthermore, the primary reason why people use mod_rewrite with Rails
-applications, is to accelerate page caching. Phusion Passenger supports page
-caching out-of-the-box, without mod_rewrite.
-
-It is not fully understood how mod_alias conflicts with Phusion Passenger, but we
-recommend you not to use it on Rails virtual hosts. mod_alias rules can result
-in surprising problems.
-
-If you really want to use mod_rewrite on Rails virtual hosts, then please set
-the <<RailsAllowModRewrite,RailsAllowModRewrite>> configuration option. But
-please note that you will have to delete Rails applications' default .htaccess
-file, or add rewrite rules to negate its effects.
 
 ==== mod_userdir ====
 
