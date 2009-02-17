@@ -786,6 +786,18 @@ This way, Phusion Passenger will not interfere with Wordpress.
 
 In each place, it may be specified at most once. The default value is 'on'.
 
+=== PassengerTempDir <directory> ===
+Specifies the directory that Phusion Passenger should use for storing temporary
+files. This includes things such as Unix socket files, buffered file uploads,
+etc.
+
+This option may be specified once, in the global server configuration. The
+default temp directory that Phusion Passenger uses is '/tmp'.
+
+This option is especially useful if Apache is not allowed to write to /tmp
+(which is the case on some systems with strict SELinux policies) or if the
+partition that /tmp lives on doesn't have enough disk space.
+
 
 === Resource control and optimization options ===
 
