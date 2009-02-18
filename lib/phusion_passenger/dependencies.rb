@@ -90,6 +90,12 @@ end
 # Namespace which contains the different dependencies that Passenger may require.
 # See Dependency for more information.
 module Dependencies # :nodoc: all
+	# Returns whether fastthread is a required dependency for the current
+	# Ruby interpreter.
+	def self.fastthread_required?
+		return (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby") && RUBY_VERSION < "1.8.7"
+	end
+
 	GCC = Dependency.new do |dep|
 		dep.name = "GNU C++ compiler"
 		dep.define_checker do |result|

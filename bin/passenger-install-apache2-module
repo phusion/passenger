@@ -46,9 +46,11 @@ class Installer
 		Dependencies::RubyGems,
 		Dependencies::Rake,
 		Dependencies::Apache2,
-		Dependencies::Apache2_DevHeaders,
-		Dependencies::FastThread
+		Dependencies::Apache2_DevHeaders
 	]
+	if Dependencies.fastthread_required?
+		REQUIRED_DEPENDENCIES << Dependencies::FastThread
+	end
 	# Some broken servers don't have apr-config or apu-config installed.
 	# Nevertheless, it is possible to compile Apache modules if Apache
 	# was configured with --included-apr. So here we check whether
