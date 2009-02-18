@@ -798,6 +798,64 @@ This option is especially useful if Apache is not allowed to write to /tmp
 (which is the case on some systems with strict SELinux policies) or if the
 partition that /tmp lives on doesn't have enough disk space.
 
+=== PassengerRestartDir <directory> ===
+As described in the deployment chapters of this document, Phusion Passenger
+checks the file 'tmp/restart.txt' in the applications'
+<<application_root,root directory>> for restarting applications. Sometimes it
+may be desirable for Phusion Passenger to look in a different directory instead,
+for example for security reasons (see below). This option allows you to
+customize the directory in which 'restart.txt' is searched for.
+
+You may specify 'PassengerRestartDir' in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverrides Options` is enabled.
+
+In each place, it may be specified at most once.
+
+You can either set it to an absolute directory, or to a directory relative to
+the <<application_root,application root>>. Examples:
+
+-----------------------------------
+<VirtualHost *:80>
+    ServerName www.foo.com
+    # Phusion Passenger will check for /apps/foo/public/tmp/restart.txt
+    DocumentRoot /apps/foo/public
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName www.bar.com
+    DocumentRoot /apps/bar/public
+    # An absolute filename is given; Phusion Passenger will
+    # check for /restart_files/bar/restart.txt
+    PassengerRestartDir /restart_files/bar
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName www.baz.com
+    DocumentRoot /apps/baz/public
+    # A relative filename is given; Phusion Passenger will
+    # check for /apps/baz/restart_files/restart.txt
+    #
+    # Note that this directory is relative to the APPLICATION ROOT, *not*
+    # the value of DocumentRoot!
+    PassengerRestartDir restart_files
+</VirtualHost>
+-----------------------------------
+
+.What are the security reasons for wanting to customize PassengerRestartDir?
+Touching restart.txt will cause Phusion Passenger to restart the application.
+So anybody who can touch restart.txt can effectively cause a Denial-of-Service
+attack by touching restart.txt over and over. If your web server or one of your
+web applications has the permission to touch restart.txt, and one of them has a
+security flaw which allows an attacker to touch restart.txt, then that will
+allow the attacker to cause a Denial-of-Service.
+
+You can prevent this from happening by pointing PassengerRestartDir to a
+directory that's readable by Apache, but only writable by administrators.
+
 
 === Resource control and optimization options ===
 
@@ -1744,3 +1802,66 @@ image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
 Phusion Passenger is a trademark of Hongli Lai & Ninh Bui.
 
+== Appendix B: Terminology ==
+
+[[application_root]]
+=== Application root ===
+The root directory of an application that's served by Phusion Passenger.
+
+In case of Ruby on Rails applications, this is the directory that contains
+'Rakefile', 'app/', 'config/', 'public/', etc. In other words, the directory
+pointed to by `RAILS_ROOT`. For example, take the following directory structure:
+
+-----------------------------------------
+/apps/foo/       <------ This is the Rails application's application root!
+   |
+   +- app/
+   |   |
+   |   +- controllers/
+   |   |
+   |   +- models/
+   |   |
+   |   +- views/
+   |
+   +- config/
+   |   |
+   |   +- environment.rb
+   |   |
+   |   +- ...
+   |
+   +- public/
+   |   |
+   |   +- ...
+   |
+   +- ...
+-----------------------------------------
+
+In case of Rack applications, this is the directory that contains 'config.ru'.
+For example, take the following directory structure:
+
+-----------------------------------------
+/apps/bar/      <----- This is the Rack application's application root!
+   |
+   +- public/
+   |    |
+   |    +- ...
+   |
+   +- config.ru
+   |
+   +- ...
+-----------------------------------------
+
+In case of Python (WSGI) applications, this is the directory that contains
+'passenger_wsgi.py'. For example, take the following directory structure:
+
+-----------------------------------------
+/apps/baz/      <----- This is the WSGI application's application root!
+   |
+   +- public/
+   |    |
+   |    +- ...
+   |
+   +- passenger_wsgi.py
+   |
+   +- ...
+-----------------------------------------
