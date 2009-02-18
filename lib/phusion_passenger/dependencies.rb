@@ -53,11 +53,11 @@ class Dependency # :nodoc: all
 
 private
 	class Result
-		def found(filename_or_boolean = nil)
-			if filename_or_boolean.nil?
+		def found(*args)
+			if args.empty?
 				@found = true
 			else
-				@found = filename_or_boolean
+				@found = args.first
 			end
 		end
 		
@@ -121,7 +121,8 @@ module Dependencies # :nodoc: all
 			require 'rbconfig'
 			begin
 				require 'mkmf'
-				result.found(File.exist?(Config::CONFIG['archdir'] + "/ruby.h"))
+				header_dir = Config::CONFIG['rubyhdrdir'] || Config::CONFIG['archdir']
+				result.found(File.exist?("#{header_dir}/ruby.h"))
 			rescue LoadError
 				result.not_found
 			end
