@@ -52,6 +52,9 @@ class Installer < PhusionPassenger::AbstractInstaller
 			Dependencies::Apache2_DevHeaders,
 			Dependencies::FastThread
 		]
+		if Dependencies.fastthread_required?
+			result << Dependencies::FastThread
+		end
 		# Some broken servers don't have apr-config or apu-config installed.
 		# Nevertheless, it is possible to compile Apache modules if Apache
 		# was configured with --included-apr. So here we check whether

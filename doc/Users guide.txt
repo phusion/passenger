@@ -28,6 +28,7 @@ Phusion Passenger has been tested on:
 
 - Ubuntu Linux 6.06 (x86)
 - Ubuntu Linux 7.10 (x86)
+- Ubuntu Linux 8.04 (x86)
 - Debian Sarge (x86)
 - Debian Etch (x86)
 - Debian Lenny/Sid (x86)
@@ -559,7 +560,7 @@ This option may occur in the following places:
  * In the global server configuration.
  * In a virtual host configuration block.
  * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Limits` is on.
+ * In '.htaccess', if `AllowOverride Options` is on.
 
 In each place, it may be specified at most once.
 
@@ -682,6 +683,109 @@ applications must run as, if user switching fails or is disabled.
 
 This option may only occur once, in the global server configuration.
 The default value is 'nobody'.
+
+[[PassengerHighPerformance]]
+=== PassengerHighPerformance <on|off> ===
+By default, Phusion Passenger is compatible with mod_rewrite and most other
+Apache modules. However, a lot of effort is required in order to be compatible.
+If you turn 'PassengerHighPerformance' to 'on', then Phusion Passenger will be
+a little faster, in return for reduced compatibility with other Apache modules.
+
+In places where 'PassengerHighPerformance' is turned on, mod_rewrite rules will
+likely not work. mod_autoindex (the module which displays a directory index)
+will also not work. Other Apache modules may or may not work, depending on what
+they exactly do. We recommend you to find out how other modules behave in high
+performance mode via testing.
+
+This option is *not* an all-or-nothing global option: you can enable high
+performance mode for certain virtual hosts or certain URLs only.
+The 'PassengerHighPerformance' option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess'.
+
+In each place, it may be specified at most once. The default value is 'off',
+so high performance mode is disabled by default, and you have to explicitly
+enable it.
+
+.When to enable high performance mode?
+
+If you do not use mod_rewrite or other Apache modules then it might make
+sense to enable high performance mode.
+
+It's likely that some of your applications depend on mod_rewrite or other
+Apache modules, while some do not. In that case you can enable high performance
+for only those applications that don't use other Apache modules. For example:
+
+------------------------------------
+<VirtualHost *:80>
+    ServerName www.foo.com
+    DocumentRoot /apps/foo/public
+    .... mod_rewrite rules or options for other Apache modules here ...
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName www.bar.com
+    DocumentRoot /apps/bar/public
+    PassengerHighPerformance on
+</VirtualHost>
+------------------------------------
+
+In the above example, high performance mode is only enabled for www.bar.com.
+It is disabled for everything else.
+
+If your application generally depends on mod_rewrite or other Apache modules,
+but a certain URL that's accessed often doesn't depend on those other modules,
+then you can enable high performance mode for a certain URL only. For example:
+
+------------------------------------
+<VirtualHost *:80>
+    ServerName www.foo.com
+    DocumentRoot /apps/foo/public
+    .... mod_rewrite rules or options for other Apache modules here ...
+    
+    <Location /chatroom/ajax_update_poll>
+        PassengerHighPerformance on
+    </Location>
+</VirtualHost>
+------------------------------------
+
+This enables high performance mode for
+http://www.foo.com/chatroom/ajax_update_poll only.
+
+=== PassengerEnabled <on|off> ===
+You can set this option to 'off' to completely disable Phusion Passenger for
+a certain location. This is useful if, for example, you want to integrate a PHP
+application into the same virtual host as a Rails application.
+
+Suppose that you have a Rails application in '/apps/foo'. Suppose that you've
+dropped Wordpress -- a blogging application written in PHP -- in
+'/apps/foo/public/wordpress'. You can then configure Phusion Passenger as
+follows:
+
+------------------------------------
+<VirtualHost *:80>
+    ServerName www.foo.com
+    DocumentRoot /apps/foo/public
+    <Location /wordpress>
+        PassengerEnabled off
+    </Location>
+</VirtualHost>
+------------------------------------
+
+This way, Phusion Passenger will not interfere with Wordpress.
+
+'PassengerEnabled' may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess'.
+
+In each place, it may be specified at most once. The default value is 'on'.
+
 
 === Resource control and optimization options ===
 
@@ -826,14 +930,6 @@ This option may occur in the following places:
  * In a virtual host configuration block.
  * In a `<Directory>` or `<Location>` block.
  * In '.htaccess', if `AllowOverride Options` is on.
-
-[[RailsAllowModRewrite]]
-==== RailsAllowModRewrite <on|off> ====
-If enabled, Phusion Passenger will not override mod_rewrite rules. Please read
-<<conflicting_apache_modules,Conflicting Apache modules>> for details.
-
-This option may occur once, in the global server configuration or in a virtual host
-configuration block. The default value is 'off'.
 
 [[rails_env]]
 ==== RailsEnv <string> ====
@@ -989,6 +1085,9 @@ Deprecated in favor of <<PassengerUserSwitching,PassengerUserSwitching>>.
 
 ==== RailsDefaultUser ====
 Deprecated in favor of <<PassengerDefaultUser,PassengerDefaultUser>>.
+
+==== RailsAllowModRewrite ====
+This option doesn't do anything anymore in recent versions of Phusion Passenger.
 
 
 == Troubleshooting ==
@@ -1298,34 +1397,6 @@ chcon -R -h -t httpd_sys_content_t /path/to/your/rails/app
 
 [[conflicting_apache_modules]]
 === Conflicting Apache modules ===
-
-==== mod_rewrite and mod_alias ====
-
-Phusion Passenger conflicts with 'mod_rewrite' and 'mod_alias'. Those modules may be
-installed and loaded together with 'mod_passenger', and they will work fine
-outside virtual hosts that contain a Rails application, but we recommend you
-not to use their features inside virtual hosts that contain a Rails
-application.
-
-By default, Phusion Passenger will override mod_rewrite rules on Rails hosts.
-This is because the default .htaccess, as provided by Ruby on Rails, redirects all
-requests to `dispatch.cgi' using mod_rewrite. This is a CGI application which
-loads the entire Ruby on Rails framework for every request, and thus is very
-slow. If we do not override mod_rewrite, then Ruby on Rails apps will be slow
-on Phusion Passenger by default -- but we want a good out-of-the-box experience.
-
-Furthermore, the primary reason why people use mod_rewrite with Rails
-applications, is to accelerate page caching. Phusion Passenger supports page
-caching out-of-the-box, without mod_rewrite.
-
-It is not fully understood how mod_alias conflicts with Phusion Passenger, but we
-recommend you not to use it on Rails virtual hosts. mod_alias rules can result
-in surprising problems.
-
-If you really want to use mod_rewrite on Rails virtual hosts, then please set
-the <<RailsAllowModRewrite,RailsAllowModRewrite>> configuration option. But
-please note that you will have to delete Rails applications' default .htaccess
-file, or add rewrite rules to negate its effects.
 
 ==== mod_userdir ====
 
