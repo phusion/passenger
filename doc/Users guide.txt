@@ -1103,7 +1103,7 @@ and uses the application spawner directly. This means the framework code is not
 cached between multiple applications, although it is still cached within
 instances of the same application. Please read
 <<spawning_methods_explained,Spawning methods explained>> for a more detailed
-explanation of what conservative spawning exactly does.
+explanation of what smart-lv2 spawning exactly does.
 +
 *Pros:* It is compatible with a larger number of applications when compared to
 the 'smart' method, and still performs some caching.
@@ -1116,7 +1116,7 @@ use the same framework version. It is therefore advised that shared hosts use th
 This spawning method is similar to the one used in Mongrel Cluster. It does not
 perform any code caching at all. Please read
 <<spawning_methods_explained,Spawning methods explained>> for a more detailed
-explanation of what smart spawning exactly does.
+explanation of what conservative spawning exactly does.
 +
 *Pros:*
 Conservative spawning is guaranteed to be compatible with all Rails applications
