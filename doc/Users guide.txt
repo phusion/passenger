@@ -1685,7 +1685,7 @@ will restart killed application instances, as if nothing bad happened.
 [[user_switching]]
 === User switching (security) ===
 
-There is a problem that plagues most PHP web host, namely the fact that all PHP
+There is a problem that plagues most PHP web hosts, namely the fact that all PHP
 applications are run in the same user context as the web server. So for
 example, Joe's PHP application will be able to read Jane's PHP application's
 passwords. This is obviously undesirable on many servers.
