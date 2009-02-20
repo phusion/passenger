@@ -1964,6 +1964,10 @@ While conservative spawning works well, it's not as efficient as it could be
 because each worker process has its own private copy of the Rails application
 as well as the Rails framework. This wastes memory as well as startup time.
 
+image:images/conservative_spawning.png[Worker processes and conservative spawning] +
+'Figure: Worker processes and conservative spawning. Each worker process has its
+own private copy of the application code and Rails framework code.'
+
 It is possible to make the different worker processes share the memory occupied
 by application and Rails framework code, by utilizing so-called
 copy-on-write semantics of the virtual memory system on modern operating
@@ -1985,6 +1989,11 @@ the Ruby interpreter is copy-on-write friendly (that is, if you're running Ruby
 Enterprise Edition) then all created worker processes will share as much common
 memory as possible. That is, they will all share the same application and Rails
 framework code.
+
+image:images/smart-lv2.png[] +
+'Figure: Worker processes and the smart-lv2 spawn method. All worker processes,
+as well as the ApplicationSpawner, share the same application code and Rails
+framework code.'
 
 The 'smart' spawn method goes even further, by caching the Rails framework in
 another process called the 'FrameworkSpawner server'. This process only loads
@@ -2200,5 +2209,5 @@ of 'active_record/base.rb' located in 'RAILS_ROOT/lib/patches', and
 'RAILS_ROOT/lib/patches' comes first in the Ruby load path. When conservative
 spawning is used, the patched version of 'base.rb' is properly loaded. When
 'smart' (not 'smart-lv2') spawning is used, the original 'base.rb' is used
-because it was already loaded, so a subsequent 'require "active_record/base"'
+because it was already loaded, so a subsequent `require "active_record/base"`
 has no effect.
