@@ -369,7 +369,7 @@ public
 			f.puts("#include <apr.h>")
 		end
 		begin
-			return system("(gcc #{apache2_module_cflags(false)} -c '#{filename}' -o '#{filename}.o') >/dev/null 2>/dev/null")
+			return !system("(gcc #{apache2_module_cflags(false)} -c '#{filename}' -o '#{filename}.o') >/dev/null 2>/dev/null")
 		ensure
 			File.unlink(filename) rescue nil
 			File.unlink("#{filename}.o") rescue nil
