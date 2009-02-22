@@ -1743,30 +1743,40 @@ role :web, domain
 role :db,  domain, :primary => true
 
 namespace :deploy do
+  task :start, :roles => :app do
+    run "touch #{current_release}/tmp/restart.txt"
+  end
+  
+  task :stop, :roles => :app do
+    # Do nothing.
+  end
+  
   desc "Restart Application"
   task :restart, :roles => :app do
-    run "touch #{current_path}/tmp/restart.txt"
+    run "touch #{current_release}/tmp/restart.txt"
+  end
+  
+  task :shutdown_old_worker_processes, :roles => :app do
   end
 end
 --------------------------------------------------
 
-[NOTE]
-==========================================================================
-You may notice that for each deploy, a new spawner server is
+You may notice that after each deploy, a new spawner server is
 created (it'll show up in `passenger-memory-stats`). Indeed, Capistrano will deploy
-to a path ending with '/current' (ie : '/var/www/yourapp/current'), so that you don't
+to a path ending with '/current' (ie : '/u/apps/yourapp/current'), so that you don't
 have to care about revisions in your virtual host configuration. This '/current' directory
 is a symlink to the current revision deployed ('/path_to_app/releases/date_of_the_release').
-Therefore, when deploying a new version, the symlink will change, and Phusion Passenger
-will think it's a new application, thereby creating a new spawner server:
+Phusion Passenger recognizes applications by their full canonical path, so after
+deploying a new version, Phusion Passenger will think that the new version is
+a totally different application, thereby creating a new spawner server:
 
 --------------------------------------------------
-1001   30291   [...]   Passenger ApplicationSpawner: /var/www/my_app/releases/20080509104413
-1001   31371   [...]   Passenger ApplicationSpawner: /var/www/my_app/releases/20080509104632
+1001   30291   [...]   Passenger ApplicationSpawner: /u/apps/my_app/releases/20080509104413
+1001   31371   [...]   Passenger ApplicationSpawner: /u/apps/my_app/releases/20080509104632
 --------------------------------------------------
 
-Don't worry about this. The (old) spawner server will terminate itself after its default
-timeout (10 minutes), so you will not run out of memory.
+Don't worry about this. The (old) spawner server will terminate itself after its
+timeout period (10 minutes by default), so you will not run out of memory.
 
 If you really want to release the spawner server's memory immediately, then you can add a command
 to your Capistrano script to terminate the Passenger spawn server after each deploy. That
@@ -1778,7 +1788,7 @@ kill $( passenger-memory-stats | grep 'Passenger spawn server' | awk '{ print $1
 
 Killing the spawn server is completely safe, because Phusion Passenger will restart the
 spawn server if it has been terminated.
-==========================================================================
+
 
 === Moving Phusion Passenger to a different directory ===
 
