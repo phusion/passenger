@@ -1755,9 +1755,6 @@ namespace :deploy do
   task :restart, :roles => :app do
     run "touch #{current_release}/tmp/restart.txt"
   end
-  
-  task :shutdown_old_worker_processes, :roles => :app do
-  end
 end
 --------------------------------------------------
 
