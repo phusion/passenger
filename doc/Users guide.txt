@@ -1985,8 +1985,9 @@ server will create a worker new process
 that reuses the already loaded Rails application/framework. Creating a worker
 process through an already running ApplicationSpawner server is very fast, about
 10 times faster than loading the Rails application/framework from scratch. If
-the Ruby interpreter is copy-on-write friendly (that is, if you're running Ruby
-Enterprise Edition) then all created worker processes will share as much common
+the Ruby interpreter is copy-on-write friendly (that is, if you're running
+<<reducing_memory_usage,Ruby Enterprise Edition>>) then all created worker
+processes will share as much common
 memory as possible. That is, they will all share the same application and Rails
 framework code.
 
@@ -2023,14 +2024,30 @@ Notes:
 Suppose that Phusion Passenger needs a new worker process for an application
 that uses Rails 2.2.1.
 
-- If the 'smart-lv2' spawning method is used, and an ApplicationSpawner server for this application is already running, then worker process creation time is about 10 times faster than conservative spawning. This worker process will also share application and Rails framework code memory with the ApplicationSpawner server and the worker processes that had been spawned by this ApplicationSpawner server.
-- If the 'smart' spawning method is used, and a FrameworkSpawner server for Rails 2.2.1 is already running, but no ApplicationSpawner server for this application is running, then worker process creation time is about 2 times faster than conservative spawning. If there is an ApplicationSpawner server for this application running, then worker process creation time is about 10 times faster. This worker process will also share application and Rails framework code memory with the ApplicationSpawner and FrameworkSpawner servers.
+- If the 'smart-lv2' spawning method is used, and an ApplicationSpawner server
+  for this application is already running, then worker process creation time is
+  about 10 times faster than conservative spawning. This worker process will also
+  share application and Rails framework code memory with the ApplicationSpawner
+  server and the worker processes that had been spawned by this ApplicationSpawner
+  server.
+- If the 'smart' spawning method is used, and a FrameworkSpawner server for
+  Rails 2.2.1 is already running, but no ApplicationSpawner server for this
+  application is running, then worker process creation time is about 2 times
+  faster than conservative spawning. If there is an ApplicationSpawner server
+  for this application running, then worker process creation time is about 10
+  times faster. This worker process will also share application and Rails
+  framework code memory with the ApplicationSpawner and FrameworkSpawner
+  servers.
 
-You could compare ApplicationSpawner and FrameworkSpawner servers with stem cells, that have the ability to quickly change into more specific cells (worker process).
+You could compare ApplicationSpawner and FrameworkSpawner servers with stem
+cells, that have the ability to quickly change into more specific cells (worker
+process).
 
-In practice, the smart spawning methods could mean a memory saving of about 33%, assuming that your Ruby interpreter is copy-on-write friendly.
+In practice, the smart spawning methods could mean a memory saving of about 33%,
+assuming that your Ruby interpreter is <<reducing_memory_usage,copy-on-write friendly>>.
 
-Of course, smart spawning is not without gotchas. But if you understand the gotchas you can easily reap the benefits of smart spawning.
+Of course, smart spawning is not without gotchas. But if you understand the
+gotchas you can easily reap the benefits of smart spawning.
 
 === Smart spawning gotcha #1: unintential file descriptor sharing ===
 
