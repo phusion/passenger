@@ -732,9 +732,6 @@ task :fakeroot => [:apache2, :native_support, :doc] do
 	sh "mkdir -p #{libdir}"
 	sh "cp -R lib/phusion_passenger #{libdir}/"
 
-	sh "mkdir -p #{fakeroot}/etc"
-	sh "echo -n '#{PACKAGE_VERSION}' > #{fakeroot}/etc/passenger_version.txt"
-	
 	sh "mkdir -p #{extdir}/phusion_passenger"
 	sh "cp -R ext/phusion_passenger/*.#{LIBEXT} #{extdir}/phusion_passenger/"
 	
