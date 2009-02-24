@@ -227,8 +227,9 @@ create_request(ngx_http_request_t *r)
     /* +1 for trailing null */
     len = sizeof("CONTENT_LENGTH") + ngx_strlen(buf) + 1;
     
-    /* DOCUMENT_ROOT and base URI */
+    /* DOCUMENT_ROOT, PATH_INFO and base URI */
     len += sizeof("DOCUMENT_ROOT") + context->public_dir.len + 1;
+    len += sizeof("PATH_INFO") + context->public_dir.len + 1;
     if (context->base_uri.len > 0) {
         len += sizeof("RAILS_RELATIVE_URL_ROOT") +
                context->base_uri.len + 1;
@@ -332,6 +333,11 @@ create_request(ngx_http_request_t *r)
     b->last = ngx_copy(b->last, "DOCUMENT_ROOT", sizeof("DOCUMENT_ROOT"));
     b->last = ngx_copy(b->last, context->public_dir.data,
                        context->public_dir.len + 1);
+    
+    b->last = ngx_copy(b->last, "PATH_INFO", sizeof("PATH_INFO"));
+    b->last = ngx_copy(b->last, context->public_dir.data,
+                       context->public_dir.len + 1);
+    
     if (context->base_uri.len > 0) {
         b->last = ngx_copy(b->last, "RAILS_RELATIVE_URL_ROOT",
                            sizeof("RAILS_RELATIVE_URL_ROOT"));
