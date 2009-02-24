@@ -190,7 +190,6 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     DEFINE_VAR_TO_PASS("SCGI",            "1");
     DEFINE_VAR_TO_PASS("QUERY_STRING",    "$query_string");
     DEFINE_VAR_TO_PASS("REQUEST_METHOD",  "$request_method");
-    DEFINE_VAR_TO_PASS("CONTENT_TYPE",    "$content_type");
     DEFINE_VAR_TO_PASS("REQUEST_URI",     "$request_uri");
     DEFINE_VAR_TO_PASS("SERVER_PROTOCOL", "$server_protocol");
     DEFINE_VAR_TO_PASS("SERVER_SOFTWARE", "nginx/$nginx_version");

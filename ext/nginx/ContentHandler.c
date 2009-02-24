@@ -235,6 +235,12 @@ create_request(ngx_http_request_t *r)
                context->base_uri.len + 1;
     }
     
+    /* Various other HTTP headers. */
+    if (r->headers_in.content_type != NULL
+     && r->headers_in.content_type->value.len > 0) {
+        len += sizeof("CONTENT_TYPE") + r->headers_in.content_type->value.len + 1;
+    }
+    
     
     /* Lengths of Passenger application pool options. */
     if (slcf->use_global_queue) {
@@ -343,6 +349,14 @@ create_request(ngx_http_request_t *r)
                            sizeof("RAILS_RELATIVE_URL_ROOT"));
         b->last = ngx_copy(b->last, context->base_uri.data,
                            context->base_uri.len + 1);
+    }
+    
+    /* Various other HTTP headers. */
+    if (r->headers_in.content_type != NULL
+     && r->headers_in.content_type->value.len > 0) {
+        b->last = ngx_copy(b->last, "CONTENT_TYPE", sizeof("CONTENT_TYPE"));
+        b->last = ngx_copy(b->last, r->headers_in.content_type->value.data,
+                           r->headers_in.content_type->value.len + 1);
     }
     
 
