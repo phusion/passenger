@@ -499,14 +499,12 @@ require 'sinatra'
 
 root_dir = File.dirname(__FILE__)
 
-Sinatra::Application.default_options.merge!(
-  :views    => File.join(root_dir, 'views'),
-  :app_file => File.join(root_dir, 'app.rb'),
-  :run => false,
-  :env => ENV['RACK_ENV'].to_sym
-)
+set :environment, ENV['RACK_ENV'].to_sym
+set :root,        root_dir
+set :app_file,    File.join(root_dir, 'app.rb')
+disable :run
 
-run Sinatra.application
+run Sinatra::Application
 ------------------------------------------------------
 
 
