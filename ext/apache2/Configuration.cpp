@@ -17,11 +17,15 @@
  *  with this program; if not, write to the Free Software Foundation, Inc.,
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-#include <apr_strings.h>
 #include <algorithm>
 #include <cstdlib>
 #include "Configuration.h"
 #include "Utils.h"
+
+/* The APR headers must come after the Passenger headers. See Hooks.cpp
+ * to learn why.
+ */
+#include <apr_strings.h>
 
 using namespace Passenger;
 
