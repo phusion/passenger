@@ -769,6 +769,7 @@ follows:
     DocumentRoot /apps/foo/public
     <Location /wordpress>
         PassengerEnabled off
+        AllowOverride all      # <-- Makes Wordpress's .htaccess file work.
     </Location>
 </VirtualHost>
 ------------------------------------

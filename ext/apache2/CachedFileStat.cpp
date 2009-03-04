@@ -87,7 +87,7 @@ static int
 expired(time_t begin, unsigned int interval, time_t *current_time) {
 	try {
 		*current_time = SystemTime::get();
-		if (*current_time == (time_t) - 1) {
+		if (*current_time == (time_t) -1) {
 			return -1;
 		} else {
 			return (unsigned int) (*current_time - begin) >= interval;
