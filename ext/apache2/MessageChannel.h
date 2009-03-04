@@ -38,6 +38,12 @@
 	// always included by unistd.h and sys/types.h.
 	#include <sys/uio.h>
 #endif
+#if !APR_HAVE_IOVEC
+	// We don't want apr_want.h to redefine 'struct iovec'.
+	// http://tinyurl.com/b6aatw
+	#undef APR_HAVE_IOVEC
+	#define APR_HAVE_IOVEC 1
+#endif
 
 #include "Exceptions.h"
 #include "Utils.h"
