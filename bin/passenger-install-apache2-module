@@ -212,7 +212,7 @@ private
 		puts
 		line
 		if natively_packaged?
-			module_location = "#{PASSENGER_ROOT}/lib/passenger/mod_passenger.so"
+			module_location = "#{PASSENGER_ROOT}/lib/phusion_passenger/mod_passenger.so"
 		else
 			module_location = "#{PASSENGER_ROOT}/ext/apache2/mod_passenger.so"
 		end
@@ -318,7 +318,7 @@ private
 	
 	def self.determine_users_guide
 		if natively_packaged?
-			return "/usr/share/doc/passenger/Users guide.html"
+			return "/usr/share/doc/phusion_passenger/Users guide.html"
 		else
 			return "#{PASSENGER_ROOT}/doc/Users guide.html"
 		end
