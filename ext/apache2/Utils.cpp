@@ -137,7 +137,7 @@ findApplicationPoolServer(const char *passengerRoot) {
 		return path;
 	} else {
 		path.assign(root);
-		path.append("lib/passenger/ApplicationPoolServerExecutable");
+		path.append("lib/phusion_passenger/ApplicationPoolServerExecutable");
 		return path;
 	}
 }
