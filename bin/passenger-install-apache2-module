@@ -158,7 +158,7 @@ private
 		puts
 		line
 		if PhusionPassenger.natively_packaged?
-			module_location = "#{PASSENGER_ROOT}/lib/passenger/mod_passenger.so"
+			module_location = "#{PASSENGER_ROOT}/lib/phusion_passenger/mod_passenger.so"
 		else
 			module_location = "#{PASSENGER_ROOT}/ext/apache2/mod_passenger.so"
 		end

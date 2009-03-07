@@ -39,8 +39,13 @@
 #include "MessageChannel.h"
 #include "DirectoryMapper.h"
 
-// The Apache/APR headers *must* come after the Boost headers, otherwise
-// compilation will fail on OpenBSD.
+/* The Apache/APR headers *must* come after the Boost headers, otherwise
+ * compilation will fail on OpenBSD.
+ *
+ * apr_want.h *must* come after MessageChannel.h, otherwise compilation will
+ * fail on platforms on which apr_want.h tries to redefine 'struct iovec'.
+ * http://tinyurl.com/b6aatw
+ */
 #include <ap_config.h>
 #include <httpd.h>
 #include <http_config.h>

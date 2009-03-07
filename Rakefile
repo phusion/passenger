@@ -760,7 +760,7 @@ task 'package:debian' => :fakeroot do
 	fakeroot = "pkg/fakeroot"
 	raw_arch = `uname -m`.strip
 	arch = case raw_arch
-	when /^i\.86$/
+	when /^i.86$/
 		"i386"
 	when /^x86_64/
 		"amd64"

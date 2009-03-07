@@ -103,7 +103,7 @@ findSpawnServer(const char *passengerRoot) {
 			return path;
 		} else {
 			path.assign(root);
-			path.append("lib/passenger/passenger-spawn-server");
+			path.append("lib/phusion_passenger/passenger-spawn-server");
 			return path;
 		}
 		return path;
@@ -142,7 +142,7 @@ findApplicationPoolServer(const char *passengerRoot) {
 		return path;
 	} else {
 		path.assign(root);
-		path.append("lib/passenger/ApplicationPoolServerExecutable");
+		path.append("lib/phusion_passenger/ApplicationPoolServerExecutable");
 		return path;
 	}
 }

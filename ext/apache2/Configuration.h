@@ -25,11 +25,19 @@
 #ifndef _PASSENGER_CONFIGURATION_H_
 #define _PASSENGER_CONFIGURATION_H_
 
+#include "Utils.h"
+#include "MessageChannel.h"
+
+/* The APR headers must come after the Passenger headers. See Hooks.cpp
+ * to learn why.
+ *
+ * MessageChannel.h must be included -- even though we don't actually use
+ * MessageChannel.h in here, it's necessary to make sure that apr_want.h
+ * doesn't b0rk on 'struct iovec'.
+ */
 #include <apr_pools.h>
 #include <httpd.h>
 #include <http_config.h>
-
-#include "Utils.h"
 
 /**
  * @defgroup Configuration Apache module configuration
@@ -38,7 +46,7 @@
  */
 
 /** Module version number. */
-#define PASSENGER_VERSION "2.1.0"
+#define PASSENGER_VERSION "2.1.1"
 
 #ifdef __cplusplus
 	#include <set>

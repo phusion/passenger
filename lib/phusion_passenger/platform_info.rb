@@ -91,6 +91,19 @@ private
 			return File.dirname(RUBY) + "/#{name}"
 		end
 	end
+	
+	# Look in the directory +dir+ and check whether there's an executable
+	# whose base name is equal to one of the elements in +possible_names+.
+	# If so, returns the full filename. If not, returns nil.
+	def self.select_executable(dir, *possible_names)
+		possible_names.each do |name|
+			filename = "#{dir}/#{name}"
+			if File.file?(filename) && File.executable?(filename)
+				return filename
+			end
+		end
+		return nil
+	end
 
 	def self.find_apache2_executable(*possible_names)
 		[apache2_bindir, apache2_sbindir].each do |bindir|
@@ -212,7 +225,15 @@ public
 			return ENV['APR_CONFIG']
 		else
 			filename = `#{apxs2} -q APR_CONFIG 2>/dev/null`.strip
-			if File.exist?(filename)
+			if filename.empty?
+				apr_bindir = `#{apxs2} -q APR_BINDIR 2>/dev/null`.strip
+				if apr_bindir.empty?
+					return nil
+				else
+					return select_executable(apr_bindir,
+						"apr-1-config", "apr-config")
+				end
+			elsif File.exist?(filename)
 				return filename
 			else
 				return nil
@@ -227,7 +248,15 @@ public
 			return ENV['APU_CONFIG']
 		else
 			filename = `#{apxs2} -q APU_CONFIG 2>/dev/null`.strip
-			if File.exist?(filename)
+			if filename.empty?
+				apu_bindir = `#{apxs2} -q APU_BINDIR 2>/dev/null`.strip
+				if apu_bindir.empty?
+					return nil
+				else
+					return select_executable(apu_bindir,
+						"apu-1-config", "apu-config")
+				end
+			elsif File.exist?(filename)
 				return filename
 			else
 				return nil
@@ -373,7 +402,7 @@ public
 			f.puts("#include <apr.h>")
 		end
 		begin
-			return system("(gcc #{apache2_module_cflags(false)} -c '#{filename}' -o '#{filename}.o') >/dev/null 2>/dev/null")
+			return !system("(gcc #{apache2_module_cflags(false)} -c '#{filename}' -o '#{filename}.o') >/dev/null 2>/dev/null")
 		ensure
 			File.unlink(filename) rescue nil
 			File.unlink("#{filename}.o") rescue nil

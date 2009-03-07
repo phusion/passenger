@@ -22,11 +22,15 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#include <apr_strings.h>
 #include <algorithm>
 #include <cstdlib>
 #include "Configuration.h"
 #include "Utils.h"
+
+/* The APR headers must come after the Passenger headers. See Hooks.cpp
+ * to learn why.
+ */
+#include <apr_strings.h>
 
 using namespace Passenger;
 
@@ -280,8 +284,8 @@ cmd_passenger_pool_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
 	result = strtol(arg, &end, 10);
 	if (*end != '\0') {
 		return "Invalid number specified for PassengerPoolIdleTime.";
-	} else if (result <= 0) {
-		return "Value for PassengerPoolIdleTime must be greater than 0.";
+	} else if (result < 0) {
+		return "Value for PassengerPoolIdleTime must be greater than or equal to 0.";
 	} else {
 		config->poolIdleTime = (unsigned int) result;
 		config->poolIdleTimeSpecified = true;
