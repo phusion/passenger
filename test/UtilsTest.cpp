@@ -149,7 +149,7 @@ namespace tut {
 		// It returns "(tempdir)/passenger.(pid)"
 		char dir[128];
 		
-		snprintf(dir, sizeof(dir), "/tmp/passenger.%d", getpid());
+		snprintf(dir, sizeof(dir), "/tmp/passenger.%lu", (unsigned long) getpid());
 		ensure_equals(getPassengerTempDir(), dir);
 	}
 	
@@ -157,7 +157,7 @@ namespace tut {
 		// It caches the result into the PHUSION_PASSENGER_TMP environment variable.
 		char dir[128];
 		
-		snprintf(dir, sizeof(dir), "/tmp/passenger.%d", getpid());
+		snprintf(dir, sizeof(dir), "/tmp/passenger.%lu", (unsigned long) getpid());
 		getPassengerTempDir();
 		ensure_equals(getenv("PHUSION_PASSENGER_TMP"), string(dir));
 	}
@@ -173,7 +173,7 @@ namespace tut {
 		char dir[128];
 		
 		setenv("PHUSION_PASSENGER_TMP", "/foo", 1);
-		snprintf(dir, sizeof(dir), "/tmp/passenger.%d", getpid());
+		snprintf(dir, sizeof(dir), "/tmp/passenger.%lu", (unsigned long) getpid());
 		ensure_equals(getPassengerTempDir(true), dir);
 	}
 	
