@@ -134,9 +134,14 @@ Please follow the instructions given by the installer.
 
 ==== Installing via a native Linux package ====
 
+Neil Wilson from Brightbox has kindly provided an Ubuntu Hardy package for Phusion Passenger. The package is available from the link:http://apt.brightbox.net[Brightbox repository].
+
 Please install the native Linux package, e.g.:
 ------------------------------------------------------
-gdebi passenger_x.x.x-i386.deb
+sudo sh -c 'echo "deb http://apt.brightbox.net hardy main" > /etc/apt/sources.list.d/brightbox.list'
+sudo sh -c 'wget -q -O - http://apt.brightbox.net/release.asc | apt-key add -'
+sudo apt-get update
+sudo apt-get install libapache2-mod-passenger
 ------------------------------------------------------
 
 Next, you'll need to configure Apache. Run the "installer", as it will tell you
