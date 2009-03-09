@@ -62,15 +62,12 @@ public:
 	 *
 	 * @param filename The filename to check for.
 	 */
-	FileChecker(const string &filename) {
-		cached_file_stat_init(&cstat, filename.c_str());
+	FileChecker(const string &filename)
+		: cstat(filename)
+	{
 		lastMtime = 0;
 		lastCtime = 0;
 		changed();
-	}
-	
-	~FileChecker() {
-		cached_file_stat_deinit(&cstat);
 	}
 	
 	/**
@@ -89,8 +86,7 @@ public:
 		bool result;
 		
 		do {
-			ret = cached_file_stat_refresh(&cstat,
-				throttleRate);
+			ret = cstat.refresh(throttleRate);
 		} while (ret == -1 && errno == EINTR);
 		
 		if (ret == -1) {
