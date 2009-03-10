@@ -1,0 +1,59 @@
+= Phusion Passenger users guide, Nginx version =
+
+image:images/phusion_banner.png[link="http://www.phusion.nl/"]
+
+Phusion Passenger is an Nginx module, which makes deploying Ruby and Ruby on
+Rails applications on Nginx a breeze. It follows the usual Ruby on Rails
+conventions, such as "Don't-Repeat-Yourself" and ease of setup, while at the
+same time providing enough flexibility.
+
+This users guide will teach you:
+
+- How to install Nginx with Phusion Passenger support.
+- How to configure Phusion Passenger.
+- How to deploy a Ruby on Rails application.
+- How to deploy a link:http://rack.rubyforge.org/[Rack]-based Ruby application.
+- How to solve common problems.
+
+This guide assumes that the reader is somewhat familiar with Nginx and with
+using the commandline.
+
+
+== Supported operating systems ==
+
+Phusion Passenger works on any POSIX-compliant operating system. In other
+words: practically any operating system on earth, except Microsoft Windows.
+
+Phusion Passenger for Nginx has been tested on:
+
+- Ubuntu Linux 8.04 (x86)
+- Gentoo Linux (AMD64)
+- MacOS X Leopard (x86)
+
+Other operating systems have not been tested, but Phusion Passenger will probably
+work fine on them. Please
+link:http://code.google.com/p/phusion-passenger/issues/list[report a bug]
+or
+link:http://groups.google.com/group/phusion-passenger[join our discussion list]
+if it doesn't.
+
+
+== Installing Phusion Passenger ==
+
+[[install_passenger]]
+=== Overview of download and installation methods ===
+
+There are several ways to install Phusion Passenger:
+
+1. By installing the Phusion Passenger gem, as instructed on the
+   link:http://www.modrails.com/install.html[``Install'' page on the Phusion
+   Passenger website].
+2. By downloading the source tarball from the Phusion Passenger website
+   ('passenger-x.x.x.tar.gz').
+
+Phusion Passenger provides an easy-to-use installer for installing the Phusion
+Passenger Nginx module.
+
+TIP: You might have to run the installation commands in the following sections
+as 'root'. If the installer fails because of permission errors, it will tell
+you.

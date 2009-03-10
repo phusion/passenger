@@ -69,6 +69,10 @@ class Installer < PhusionPassenger::AbstractInstaller
 		return result
 	end
 	
+	def users_guide
+		return "#{DOCDIR}/Users guide Apache.html"
+	end
+	
 	def install!
 		if PhusionPassenger.natively_packaged?
 			check_dependencies || exit(1)
@@ -177,7 +181,7 @@ private
 		puts
 		line
 		render_template 'apache2/deployment_example',
-			:users_guide => USERS_GUIDE,
+			:users_guide => users_guide,
 			:phusion_website => PHUSION_WEBSITE,
 			:passenger_website => PASSENGER_WEBSITE
 	end
@@ -185,7 +189,7 @@ private
 	def show_possible_solutions_for_compilation_and_installation_problems
 		new_screen
 		render_template 'apache2/possible_solutions_for_compilation_and_installation_problems',
-			:users_guide => USERS_GUIDE,
+			:users_guide => users_guide,
 			:passenger_website => PASSENGER_WEBSITE
 	end
 end

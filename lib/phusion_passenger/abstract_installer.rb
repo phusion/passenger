@@ -32,7 +32,6 @@ module PhusionPassenger
 class AbstractInstaller
 	PASSENGER_WEBSITE = "http://www.modrails.com/"
 	PHUSION_WEBSITE = "www.phusion.nl"
-	USERS_GUIDE = "#{DOCDIR}/Users guide.html"
 
 	def initialize(options = {})
 		options.each_pair do |key, value|
@@ -172,7 +171,7 @@ private
 			color_puts "If the aforementioned instructions didn't solve your problem, then please take"
 			color_puts "a look at the Users Guide:"
 			puts
-			color_puts "  <yellow>#{USERS_GUIDE}</yellow>"
+			color_puts "  <yellow>#{users_guide}</yellow>"
 			return false
 		end
 	end

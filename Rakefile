@@ -548,7 +548,7 @@ subdir 'doc' do
 	ASCIIDOC = 'asciidoc'
 	ASCIIDOC_FLAGS = "-a toc -a numbered -a toclevels=3 -a icons"
 	ASCII_DOCS = ['Security of user switching support', 'Users guide',
-		'Architectural overview']
+		'Users guide Nginx', 'Architectural overview']
 
 	DOXYGEN = 'doxygen'
 	
@@ -640,7 +640,8 @@ spec = Gem::Specification.new do |s|
 		# If you're running 'rake package' for the first time, then these
 		# files don't exist yet, and so won't be matched by the above glob.
 		# So we add these filenames manually.
-		'doc/Users guide.html',
+		'doc/Users guide Apache.html',
+		'doc/Users guide Nginx.html',
 		'doc/Security of user switching support.html',
 		
 		'doc/*/*',
