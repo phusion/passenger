@@ -1,6 +1,6 @@
 #!/bin/sh
 if ruby -e ''; then
-	if ! ruby -rpassenger/native_support -e '' 2>/dev/null; then
+	if ! ruby -rphusion_passenger/native_support -e '' 2>/dev/null; then
 		export RUBYLIB=/usr/lib/ruby/1.8
 	fi
 	passenger-install-apache2-module
