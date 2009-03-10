@@ -103,12 +103,15 @@ be located in the `sbin` folder instead of the `bin` folder.
 NOTE: You can skip this section if you've installed Phusion Passenger via a
 native Linux package, because no compilation is necessary.
 
-If your system has multiple Ruby installations (this is likely the case on
-MacOS X), then you will need to tell the Phusion Passenger installer which one
-to use. If you only have one Ruby installation (the case on most Linux systems),
-then you can skip this section because Phusion Passenger will automatically detect it.
+If your system has multiple Ruby installations -- which is likely the case on
+MacOS X, or if you've also installed
+link:http://www.rubyenterpriseedition.com[Ruby Enterprise Edition] -- then you
+will need to tell the operating system which Ruby installation to use, prior to
+running the Phusion Passenger installer. If you only have one Ruby installation
+(the case on most Linux systems), then you can skip this section because Phusion
+Passenger will automatically detect it.
 
-To specify the Ruby installation, prepend your Ruby installation's `bin`
+To specify a Ruby installation, prepend your Ruby installation's `bin`
 directory to the `PATH` environment variable. For example, if you have the
 following Ruby installations:
 
@@ -151,8 +154,8 @@ installer will do in this case, is showing the correct Apache configurations.
 
 ==== Installing via the source tarball ====
 
-Extract the tarball to whatever location you prefer. The Phusion Passenger files
-are to reside in that location permanently. For example, if you would like
+Extract the tarball to whatever location you prefer. *The Phusion Passenger files
+are to reside in that location permanently.* For example, if you would like
 Phusion Passenger to reside in `/opt/passenger-x.x.x`:
 ------------------------------------------------------
 cd /opt
