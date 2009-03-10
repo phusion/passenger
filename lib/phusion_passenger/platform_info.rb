@@ -218,6 +218,8 @@ public
 	def self.apr_config
 		if env_defined?('APR_CONFIG')
 			return ENV['APR_CONFIG']
+		elsif apxs2.nil?
+			return nil
 		else
 			filename = `#{apxs2} -q APR_CONFIG 2>/dev/null`.strip
 			if filename.empty?
@@ -241,6 +243,8 @@ public
 	def self.apu_config
 		if env_defined?('APU_CONFIG')
 			return ENV['APU_CONFIG']
+		elsif apxs2.nil?
+			return nil
 		else
 			filename = `#{apxs2} -q APU_CONFIG 2>/dev/null`.strip
 			if filename.empty?
