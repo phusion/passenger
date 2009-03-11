@@ -1,3 +1,9 @@
+passenger (2.1.1.20090309-0bbox1) hardy; urgency=low
+
+  * New upstream version
+
+ -- John Leach <john@brightbox.co.uk>  Wed, 11 Mar 2009 00:05:15 +0000
+
 passenger (2.0.6-0bbox2) hardy; urgency=low
 
   * Fixed depends to allow apache2-mpm-prefork instead of apache2-mpm-worker
