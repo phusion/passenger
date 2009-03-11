@@ -28,7 +28,7 @@ RewriteEngine On
 #   RewriteBase /myrailsapp
 
 RewriteRule ^$ index.html [QSA]
-RewriteRule ^([^.]+)$ $1.html [QSA]
+#RewriteRule ^([^.]+)$ $1.html [QSA]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^(.*)$ dispatch.cgi [QSA,L]
 </IfModule>

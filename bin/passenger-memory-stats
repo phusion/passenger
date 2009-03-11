@@ -18,7 +18,14 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 $LOAD_PATH.unshift("#{File.dirname(__FILE__)}/../lib")
-require 'passenger/platform_info'
+require 'phusion_passenger/platform_info'
+
+# ANSI color codes
+RESET   = "\e[0m"
+BOLD    = "\e[1m"
+WHITE   = "\e[37m"
+YELLOW  = "\e[33m"
+BLUE_BG = "\e[44m"
 
 # Container for tabular data.
 class Table
@@ -64,14 +71,22 @@ class Table
 				left_bar_size = free_space / 2
 				right_bar_size = free_space - left_bar_size
 			end
-			result = "#{"-" * left_bar_size} #{title} #{"-" * right_bar_size}\n"
-			result << header
+			result = "#{BLUE_BG}#{BOLD}#{YELLOW}"
+			result << "#{"-" * left_bar_size} #{title} #{"-" * right_bar_size}\n"
+			if !@rows.empty?
+				result << WHITE
+				result << header
+			end
 		else
 			result = header.dup
 		end
-		result << ("-" * header.size) << "\n"
-		@rows.each do |row|
-			result << sprintf(format_string, *row).rstrip << "\n"
+		if @rows.empty?
+			result << RESET
+		else
+			result << ("-" * header.size) << "#{RESET}\n"
+			@rows.each do |row|
+				result << sprintf(format_string, *row).rstrip << "\n"
+			end
 		end
 		result
 	end
@@ -109,12 +124,25 @@ class MemoryStats
 	end
 	
 	def start
-		apache_processes = list_processes(:exe => PlatformInfo::HTTPD)
+		if PlatformInfo.httpd.nil?
+			STDERR.puts "*** ERROR: The Apache executable cannot be found."
+			STDERR.puts "Please set the APXS2 environment variable to your 'apxs2' " <<
+				"executable's filename, or set the HTTPD environment variable " <<
+				"to your 'httpd' or 'apache2' executable's filename."
+			exit 1
+		end
+		
+		apache_processes = list_processes(:exe => PlatformInfo.httpd)
+		if apache_processes.empty?
+			# On some Linux distros, the Apache worker processes
+			# are called "httpd.worker"
+			apache_processes = list_processes(:exe => "#{PlatformInfo.httpd}.worker")
+		end
 		print_process_list("Apache processes", apache_processes)
 		
 		puts
 		passenger_processes = list_processes(:match =>
-			/(^Passenger |^Rails:|^Rack:|ApplicationPoolServerExecutable)/)
+			/((^| )Passenger |(^| )Rails:|(^| )Rack:|ApplicationPoolServerExecutable)/)
 		print_process_list("Passenger processes", passenger_processes, :show_ppid => false)
 		
 		if RUBY_PLATFORM !~ /linux/
@@ -141,9 +169,19 @@ class MemoryStats
 	def list_processes(options)
 		if options[:exe]
 			name = options[:exe].sub(/.*\/(.*)/, '\1')
-			ps = "ps -C '#{name}'"
+			if RUBY_PLATFORM =~ /linux/
+				ps = "ps -C '#{name}'"
+			else
+				ps = "ps -A"
+				options[:match] = Regexp.new(Regexp.escape(name))
+			end
 		elsif options[:name]
-			ps = "ps -C '#{options[:name]}'"
+			if RUBY_PLATFORM =~ /linux/
+				ps = "ps -C '#{options[:name]}'"
+			else
+				ps = "ps -A"
+				options[:match] = Regexp.new(" #{Regexp.escape(options[:name])}")
+			end
 		elsif options[:match]
 			ps = "ps -A"
 		else
@@ -151,21 +189,37 @@ class MemoryStats
 		end
 		
 		processes = []
-		list = `#{ps} -w -o pid,ppid,nlwp,vsz,rss,command`.split("\n")
+		case RUBY_PLATFORM
+		when /solaris/
+			list = `#{ps} -o pid,ppid,nlwp,vsz,rss,comm`.split("\n")
+			threads_known = true
+		when /darwin/
+			list = `#{ps} -w -o pid,ppid,vsz,rss,command`.split("\n")
+			threads_known = false
+		else
+			list = `#{ps} -w -o pid,ppid,nlwp,vsz,rss,command`.split("\n")
+			threads_known = true
+		end
 		list.shift
 		list.each do |line|
 			line.gsub!(/^ */, '')
 			line.gsub!(/ *$/, '')
 			
 			p = Process.new
-			p.pid, p.ppid, p.threads, p.vm_size, p.rss, p.name = line.split(/ +/, 6)
+			if threads_known
+				p.pid, p.ppid, p.threads, p.vm_size, p.rss, p.name = line.split(/ +/, 6)
+			else
+				p.pid, p.ppid, p.vm_size, p.rss, p.name = line.split(/ +/, 6)
+				p.threads = "?"
+			end
 			p.name.sub!(/\Aruby: /, '')
 			p.name.sub!(/ \(ruby\)\Z/, '')
 			if p.name !~ /^ps/ && (!options[:match] || p.name.match(options[:match]))
 				# Convert some values to integer.
-				[:pid, :ppid, :threads, :vm_size, :rss].each do |attr|
+				[:pid, :ppid, :vm_size, :rss].each do |attr|
 					p.send("#{attr}=", p.send(attr).to_i)
 				end
+				p.threads = p.threads.to_i if threads_known
 
 				if platform_provides_private_dirty_rss_information?
 					p.private_dirty_rss = determine_private_dirty_rss(p.pid)

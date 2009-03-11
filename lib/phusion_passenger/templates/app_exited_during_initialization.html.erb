@@ -1,0 +1,38 @@
+<% layout 'error_layout', :title => "#{@app_name} application could not be started" do %>
+<h1 class="error_title"><%= @app_name %> application could not be started</h1>
+<div id="content">
+
+	The application has exited during startup (i.e. during the evaluation of
+	<tt>config/environment.rb</tt>).
+	<% if @error.stderr %>
+		The error message can be found below. To solve this problem, please
+		follow any instructions in the error message.
+	<% else %>
+		The error message may have been written to the web server's log file.
+		Please check the <b>web server's</b> log file (i.e. <em>not</em> the
+		(Rails) application's log file) to find out why the application
+		exited.
+		
+		<p>If that doesn't help, then please use the backtrace below to debug
+		the problem.</p>
+	<% end %>
+	
+	<dl>
+	<% if @error.stderr %>
+		<dt>Error message:</dt>
+		<dd><%=h @error.stderr %></dd>
+	<% end %>
+	
+	<dt>Application root:</dt>
+	<dd>
+		<tt class="filename"><%=h @app_root %></tt>
+	</dd>
+	
+	<dt>Backtrace:</dt>
+	<dd>
+		<%= backtrace_html_for(@error.child_exception) %>
+	</dd>
+	</dl>
+
+</div>
+<% end %>

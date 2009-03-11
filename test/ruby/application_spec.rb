@@ -1,7 +1,7 @@
 require 'support/config'
 require 'support/test_helper'
-require 'passenger/application'
-include Passenger
+require 'phusion_passenger/application'
+include PhusionPassenger
 
 describe Application do
 	include TestHelper
@@ -38,6 +38,6 @@ describe Application do
 			content.sub(/^RAILS_GEM_VERSION = .*$/, "RAILS_GEM_VERSION = '1.9.1972'")
 		end
 		detector = lambda { Application.detect_framework_version(@stub.app_root) }
-		detector.should raise_error(::Passenger::VersionNotFound)
+		detector.should raise_error(::PhusionPassenger::VersionNotFound)
 	end
 end

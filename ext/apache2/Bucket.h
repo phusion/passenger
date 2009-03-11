@@ -21,18 +21,25 @@
 #define _PASSENGER_BUCKET_H_
 
 /**
- * apr_bucket_pipe closes a pipe's file descriptor when it has reached end-of-stream,
- * but not when an error has occurred. That behavior conflicts with Phusion Passenger's
- * file descriptor management code.
+ * apr_bucket_pipe closes a pipe's file descriptor when it has reached
+ * end-of-stream, but not when an error has occurred. This behavior is
+ * undesirable because it can easily cause file descriptor leaks.
  *
- * passenger_bucket is like apr_bucket_pipe, but never closes the pipe's file descriptor.
- * It also ignores the APR_NONBLOCK_READ because that's known to cause strange
- * I/O problems.
+ * passenger_bucket is like apr_bucket_pipe, but it also holds a reference to
+ * a Session. When a read error has occured or when end-of-stream has been
+ * reached, the Session will be dereferenced, so that the underlying file
+ * descriptor is closed.
+ *
+ * passenger_bucket also ignores the APR_NONBLOCK_READ flag because that's
+ * known to cause strange I/O problems.
  */
 
-#include "apr_buckets.h"
+#include <apr_buckets.h>
+#include "Application.h"
 
-apr_bucket *passenger_bucket_create(apr_file_t *pipe, apr_bucket_alloc_t *list);
+apr_bucket *passenger_bucket_create(Passenger::Application::SessionPtr session,
+                                    apr_file_t *pipe,
+                                    apr_bucket_alloc_t *list);
 
 #endif /* _PASSENGER_BUCKET_H_ */
 

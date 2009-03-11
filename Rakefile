@@ -22,33 +22,30 @@ require 'rake/rdoctask'
 require 'rake/gempackagetask'
 require 'rake/extensions'
 require 'rake/cplusplus'
-require 'passenger/platform_info'
+require 'phusion_passenger/platform_info'
 
 verbose true
 
 ##### Configuration
 
 # Don't forget to edit Configuration.h too
-PACKAGE_VERSION = "2.0.6"
+PACKAGE_VERSION = "2.1.1"
 OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 
-include PlatformInfo
-APXS2.nil? and raise "Could not find 'apxs' or 'apxs2'."
-APACHE2CTL.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
-HTTPD.nil? and raise "Could not find the Apache web server binary."
-APR_FLAGS.nil? and raise "Could not find Apache Portable Runtime (APR)."
-APU_FLAGS.nil? and raise "Could not find Apache Portable Runtime Utility (APU)."
+PlatformInfo.apxs2.nil? and raise "Could not find 'apxs' or 'apxs2'."
+PlatformInfo.apache2ctl.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
+PlatformInfo.httpd.nil? and raise "Could not find the Apache web server binary."
 
 CXX = "g++"
-THREADING_FLAGS = "-D_REENTRANT"
+LIBEXT = PlatformInfo.library_extension
+# _GLIBCPP__PTHREADS is for fixing Boost compilation on OpenBSD.
 if OPTIMIZE
-	OPTIMIZATION_FLAGS = "-O2 -DNDEBUG"
+	OPTIMIZATION_FLAGS = "-O2 -DBOOST_DISABLE_ASSERTS"
 else
-	OPTIMIZATION_FLAGS = "-g -DPASSENGER_DEBUG"
+	OPTIMIZATION_FLAGS = "-g -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS"
 end
-CXXFLAGS = "#{THREADING_FLAGS} #{OPTIMIZATION_FLAGS} -Wall -I/usr/local/include #{MULTI_ARCH_FLAGS}"
-LDFLAGS = ""
-
+CXXFLAGS = "-Wall #{OPTIMIZATION_FLAGS}"
+EXTRA_LDFLAGS = ""
 
 #### Default tasks
 
@@ -56,6 +53,7 @@ desc "Build everything"
 task :default => [
 	:native_support,
 	:apache2,
+	'test/oxt/oxt_test_main',
 	'test/Apache2ModuleTests',
 	'benchmark/DummyRequestHandler'
 ]
@@ -69,7 +67,7 @@ task :clobber
 
 ##### Ruby C extension
 
-subdir 'ext/passenger' do
+subdir 'ext/phusion_passenger' do
 	task :native_support => ["native_support.#{LIBEXT}"]
 	
 	file 'Makefile' => 'extconf.rb' do
@@ -87,40 +85,53 @@ subdir 'ext/passenger' do
 end
 
 
-##### boost::thread static library
+##### boost::thread and OXT static library
 
-subdir 'ext/boost/src' do
-	file 'libboost_thread.a' => Dir['*.cpp'] + Dir['pthread/*.cpp'] do
-		flags = "#{OPTIMIZATION_FLAGS} -fPIC -I../.. #{THREADING_FLAGS} -DNDEBUG #{MULTI_ARCH_FLAGS}"
+file 'ext/libboost_oxt.a' =>
+	Dir['ext/boost/src/*.cpp'] +
+	Dir['ext/boost/src/pthread/*.cpp'] +
+	Dir['ext/oxt/*.cpp'] +
+	Dir['ext/oxt/*.hpp'] +
+	Dir['ext/oxt/detail/*.hpp'] do
+	Dir.chdir('ext/boost/src') do
+		puts "### In ext/boost/src:"
+		flags = "-I../.. #{CXXFLAGS} #{PlatformInfo.apache2_module_cflags}"
 		compile_cxx "*.cpp", flags
 		# NOTE: 'compile_cxx "pthread/*.cpp", flags' doesn't work on some systems,
 		# so we do this instead.
 		Dir['pthread/*.cpp'].each do |file|
 			compile_cxx file, flags
 		end
-		create_static_library "libboost_thread.a", "*.o"
 	end
-	
-	task :clean do
-		sh "rm -f libboost_thread.a *.o"
+	Dir.chdir('ext/oxt') do
+		puts "### In ext/oxt:"
+		Dir['*.cpp'].each do |file|
+			compile_cxx file, "-I.. #{CXXFLAGS} #{PlatformInfo.apache2_module_cflags}"
+		end
 	end
+	create_static_library "ext/libboost_oxt.a", "ext/boost/src/*.o ext/oxt/*.o"
+end
+
+task :clean do
+	sh "rm -f ext/libboost_oxt.a ext/boost/src/*.o ext/oxt/*.o"
 end
 
 
 ##### Apache module
 
 class APACHE2
-	CXXFLAGS = "-I.. -fPIC #{OPTIMIZATION_FLAGS} #{APR_FLAGS} #{APU_FLAGS} #{APXS2_FLAGS} #{::CXXFLAGS}"
+	CXXFLAGS = "-I.. #{CXXFLAGS} #{PlatformInfo.apache2_module_cflags}"
 	OBJECTS = {
 		'Configuration.o' => %w(Configuration.cpp Configuration.h),
 		'Bucket.o' => %w(Bucket.cpp Bucket.h),
 		'Hooks.o' => %w(Hooks.cpp Hooks.h
 				Configuration.h ApplicationPool.h ApplicationPoolServer.h
 				SpawnManager.h Exceptions.h Application.h MessageChannel.h
-				System.h Utils.h),
-		'System.o'  => %w(System.cpp System.h),
+				PoolOptions.h Utils.h DirectoryMapper.h FileChecker.h),
 		'Utils.o'   => %w(Utils.cpp Utils.h),
-		'Logging.o' => %w(Logging.cpp Logging.h)
+		'Logging.o' => %w(Logging.cpp Logging.h),
+		'SystemTime.o' => %w(SystemTime.cpp SystemTime.h),
+		'CachedFileStat.o' => %w(CachedFileStat.cpp CachedFileStat.h)
 	}
 end
 
@@ -131,7 +142,7 @@ subdir 'ext/apache2' do
 	task :apache2 => ['mod_passenger.so', 'ApplicationPoolServerExecutable', :native_support]
 	
 	file 'mod_passenger.so' => [
-		'../boost/src/libboost_thread.a',
+		'../libboost_oxt.a',
 		'mod_passenger.o'
 	] + APACHE2::OBJECTS.keys do
 		# apxs totally sucks. We couldn't get it working correctly
@@ -140,27 +151,35 @@ subdir 'ext/apache2' do
 		# Apache module ourselves.
 		#
 		# Oh, and libtool sucks too. Do we even need it anymore in 2008?
-		linkflags = "#{LDFLAGS} #{MULTI_ARCH_FLAGS}"
-		linkflags << " -lstdc++ -lpthread ../boost/src/libboost_thread.a #{APR_LIBS}"
+		linkflags = "../libboost_oxt.a "
+		linkflags << "#{PlatformInfo.apache2_module_cflags} "
+		linkflags << "#{PlatformInfo.apache2_module_ldflags} #{EXTRA_LDFLAGS} -lstdc++"
 		create_shared_library 'mod_passenger.so',
 			APACHE2::OBJECTS.keys.join(' ') << ' mod_passenger.o',
 			linkflags
 	end
 	
 	file 'ApplicationPoolServerExecutable' => [
-		'../boost/src/libboost_thread.a',
+		'../libboost_oxt.a',
 		'ApplicationPoolServerExecutable.cpp',
 		'ApplicationPool.h',
+		'Application.h',
 		'StandardApplicationPool.h',
+		'FileChecker.h',
 		'MessageChannel.h',
 		'SpawnManager.h',
-		'System.o',
+		'PoolOptions.h',
 		'Utils.o',
-		'Logging.o'
+		'Logging.o',
+		'SystemTime.o',
+		'CachedFileStat.o'
 	] do
 		create_executable "ApplicationPoolServerExecutable",
-			'ApplicationPoolServerExecutable.cpp System.o Utils.o Logging.o',
-			"-I.. #{CXXFLAGS} #{LDFLAGS} -DPASSENGER_DEBUG ../boost/src/libboost_thread.a -lpthread"
+			'ApplicationPoolServerExecutable.cpp Utils.o Logging.o ' <<
+			'SystemTime.o CachedFileStat.o',
+			"-I.. #{CXXFLAGS} #{PlatformInfo.portability_cflags} " <<
+			"../libboost_oxt.a " <<
+			"#{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
 	end
 	
 	file 'mod_passenger.o' => ['mod_passenger.c'] do
@@ -187,44 +206,65 @@ end
 ##### Unit tests
 
 class TEST
-	CXXFLAGS = "#{::CXXFLAGS} -Isupport -DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL "
-	AP2_FLAGS = "-I../ext/apache2 -I../ext #{APR_FLAGS} #{APU_FLAGS}"
-	
+	CXXFLAGS = "#{::CXXFLAGS} -DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL #{PlatformInfo.portability_cflags}"
+
+	AP2_FLAGS = "-I../ext/apache2 -I../ext -Isupport #{PlatformInfo.apr_flags} #{PlatformInfo.apu_flags}"
 	AP2_OBJECTS = {
 		'CxxTestMain.o' => %w(CxxTestMain.cpp),
 		'MessageChannelTest.o' => %w(MessageChannelTest.cpp
-			../ext/apache2/MessageChannel.h
-			../ext/apache2/System.h),
+			../ext/apache2/MessageChannel.h),
 		'SpawnManagerTest.o' => %w(SpawnManagerTest.cpp
 			../ext/apache2/SpawnManager.h
+			../ext/apache2/PoolOptions.h
 			../ext/apache2/Application.h
-			../ext/apache2/MessageChannel.h
-			../ext/apache2/System.h),
+			../ext/apache2/MessageChannel.h),
 		'ApplicationPoolServerTest.o' => %w(ApplicationPoolServerTest.cpp
 			../ext/apache2/ApplicationPoolServer.h
-			../ext/apache2/MessageChannel.h
-			../ext/apache2/System.h),
+			../ext/apache2/PoolOptions.h
+			../ext/apache2/MessageChannel.h),
 		'ApplicationPoolServer_ApplicationPoolTest.o' => %w(ApplicationPoolServer_ApplicationPoolTest.cpp
 			ApplicationPoolTest.cpp
 			../ext/apache2/ApplicationPoolServer.h
 			../ext/apache2/ApplicationPool.h
 			../ext/apache2/SpawnManager.h
+			../ext/apache2/PoolOptions.h
 			../ext/apache2/Application.h
-			../ext/apache2/MessageChannel.h
-			../ext/apache2/System.h),
+			../ext/apache2/MessageChannel.h),
 		'StandardApplicationPoolTest.o' => %w(StandardApplicationPoolTest.cpp
 			ApplicationPoolTest.cpp
 			../ext/apache2/ApplicationPool.h
 			../ext/apache2/StandardApplicationPool.h
 			../ext/apache2/SpawnManager.h
-			../ext/apache2/Application.h),
+			../ext/apache2/PoolOptions.h
+			../ext/apache2/Application.h
+			../ext/apache2/FileChecker.h),
+		'PoolOptionsTest.o' => %w(PoolOptionsTest.cpp ../ext/apache2/PoolOptions.h),
+		'FileCheckerTest.o' => %w(FileCheckerTest.cpp ../ext/apache2/FileChecker.h),
+		'SystemTimeTest.o' => %w(SystemTimeTest.cpp
+			../ext/apache2/SystemTime.h
+			../ext/apache2/SystemTime.cpp),
+		'CachedFileStatTest.o' => %w(CachedFileStatTest.cpp
+			../ext/apache2/CachedFileStat.h
+			../ext/apache2/CachedFileStat.cpp),
 		'UtilsTest.o' => %w(UtilsTest.cpp ../ext/apache2/Utils.h)
+	}
+	
+	OXT_FLAGS = "-I../../ext -I../support"
+	OXT_OBJECTS = {
+		'oxt_test_main.o' => %w(oxt_test_main.cpp),
+		'backtrace_test.o' => %w(backtrace_test.cpp),
+		'syscall_interruption_test.o' => %w(syscall_interruption_test.cpp)
 	}
 end
 
 subdir 'test' do
 	desc "Run all unit tests (but not integration tests)"
-	task :test => [:'test:apache2', :'test:ruby', :'test:integration']
+	task :test => [:'test:oxt', :'test:apache2', :'test:ruby', :'test:integration']
+	
+	desc "Run unit tests for the OXT library"
+	task 'test:oxt' => 'oxt/oxt_test_main' do
+		sh "./oxt/oxt_test_main"
+	end
 	
 	desc "Run unit tests for the Apache 2 module"
 	task 'test:apache2' => [
@@ -261,19 +301,41 @@ subdir 'test' do
 	task 'test:integration' => [:apache2, :native_support] do
 		sh "spec -c -f s integration_tests.rb"
 	end
+	
+	file 'oxt/oxt_test_main' => TEST::OXT_OBJECTS.keys.map{ |x| "oxt/#{x}" } +
+	  ['../ext/libboost_oxt.a'] do
+		Dir.chdir('oxt') do
+			objects = TEST::OXT_OBJECTS.keys.join(' ')
+			create_executable "oxt_test_main", objects,
+				"../../ext/libboost_oxt.a " <<
+				"#{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
+		end
+	end
+	
+	TEST::OXT_OBJECTS.each_pair do |target, sources|
+		file "oxt/#{target}" => sources.map{ |x| "oxt/#{x}" } do
+			Dir.chdir('oxt') do
+				puts "### In test/oxt:"
+				compile_cxx sources[0], "#{TEST::OXT_FLAGS} #{TEST::CXXFLAGS}"
+			end
+		end
+	end
 
 	file 'Apache2ModuleTests' => TEST::AP2_OBJECTS.keys +
-	  ['../ext/boost/src/libboost_thread.a',
-	   '../ext/apache2/System.o',
+	  ['../ext/libboost_oxt.a',
 	   '../ext/apache2/Utils.o',
-	   '../ext/apache2/Logging.o'] do
+	   '../ext/apache2/Logging.o',
+	   '../ext/apache2/SystemTime.o',
+	   '../ext/apache2/CachedFileStat.o'] do
 		objects = TEST::AP2_OBJECTS.keys.join(' ') <<
-			" ../ext/apache2/System.o" <<
 			" ../ext/apache2/Utils.o" <<
-			" ../ext/apache2/Logging.o"
+			" ../ext/apache2/Logging.o" <<
+			" ../ext/apache2/SystemTime.o " <<
+			" ../ext/apache2/CachedFileStat.o"
 		create_executable "Apache2ModuleTests", objects,
-			"#{LDFLAGS} #{APR_LIBS} #{MULTI_ARCH_FLAGS} " <<
-			"../ext/boost/src/libboost_thread.a -lpthread"
+			"#{PlatformInfo.apache2_module_ldflags} #{EXTRA_LDFLAGS} " <<
+			"../ext/libboost_oxt.a " <<
+			"-lpthread"
 	end
 	
 	TEST::AP2_OBJECTS.each_pair do |target, sources|
@@ -295,41 +357,7 @@ subdir 'test' do
 	end
 	
 	task :clean do
-		sh "rm -f Apache2ModuleTests *.o"
-	end
-end
-
-
-##### Benchmarks
-
-subdir 'benchmark' do
-	file 'DummyRequestHandler' => ['DummyRequestHandler.cpp',
-	  '../ext/apache2/MessageChannel.h',
-	  '../ext/apache2/System.o',
-	  '../ext/boost/src/libboost_thread.a'] do
-		create_executable "DummyRequestHandler", "DummyRequestHandler.cpp",
-			"-I../ext -I../ext/apache2 #{CXXFLAGS} #{LDFLAGS} " <<
-			"../ext/apache2/System.o " <<
-			"../ext/boost/src/libboost_thread.a -lpthread"
-	end
-	
-	file 'ApplicationPool' => ['ApplicationPool.cpp',
-	  '../ext/apache2/StandardApplicationPool.h',
-	  '../ext/apache2/ApplicationPoolServerExecutable',
-	  '../ext/apache2/System.o',
-	  '../ext/apache2/Logging.o',
-	  '../ext/apache2/Utils.o',
-	  '../ext/boost/src/libboost_thread.a',
-	  :native_support] do
-		create_executable "ApplicationPool", "ApplicationPool.cpp",
-			"-I../ext -I../ext/apache2 #{CXXFLAGS} #{LDFLAGS} " <<
-			"../ext/apache2/System.o ../ext/apache2/Logging.o " <<
-			"../ext/apache2/Utils.o " <<
-			"../ext/boost/src/libboost_thread.a -lpthread"
-	end
-	
-	task :clean do
-		sh "rm -f DummyRequestHandler ApplicationPool"
+		sh "rm -f oxt/oxt_test_main oxt/*.o Apache2ModuleTests *.o"
 	end
 end
 
@@ -337,16 +365,29 @@ end
 ##### Documentation
 
 subdir 'doc' do
-	ASCIIDOC = "asciidoc -a toc -a numbered -a toclevels=3 -a icons"
+	ASCIIDOC = 'asciidoc'
+	ASCIIDOC_FLAGS = "-a toc -a numbered -a toclevels=3 -a icons"
 	ASCII_DOCS = ['Security of user switching support', 'Users guide',
 		'Architectural overview']
 
-	desc "Generate all documentation"
-	task :doc => [:rdoc, :doxygen] + ASCII_DOCS.map{ |x| "#{x}.html" }
+	DOXYGEN = 'doxygen'
 	
+	desc "Generate all documentation"
+	task :doc => [:rdoc]
+	
+	if PlatformInfo.find_command(DOXYGEN)
+		task :doc => :doxygen
+	end
+
+	task :doc => ASCII_DOCS.map{ |x| "#{x}.html" }
+
 	ASCII_DOCS.each do |name|
 		file "#{name}.html" => ["#{name}.txt"] do
-			sh "#{ASCIIDOC} '#{name}.txt'"
+			if PlatformInfo.find_command(ASCIIDOC)
+		  		sh "#{ASCIIDOC} #{ASCIIDOC_FLAGS} '#{name}.txt'"
+			else
+				sh "echo 'asciidoc required to build docs' > '#{name}.html'"
+			end
 		end
 	end
 	
@@ -375,7 +416,10 @@ Rake::RDocTask.new(:clobber_rdoc => "rdoc:clobber", :rerdoc => "rdoc:force") do 
 	rd.main = "README"
 	rd.rdoc_dir = "doc/rdoc"
 	rd.rdoc_files.include("README", "DEVELOPERS.TXT",
-		"lib/passenger/*.rb", "lib/rake/extensions.rb", "ext/passenger/*.c")
+		"lib/phusion_passenger/*.rb",
+		"lib/phusion_passenger/*/*.rb",
+		"lib/rake/extensions.rb",
+		"ext/phusion_passenger/*.c")
 	rd.template = "./doc/template/horo"
 	rd.title = "Passenger Ruby API"
 	rd.options << "-S" << "-N" << "-p" << "-H"
@@ -394,20 +438,20 @@ spec = Gem::Specification.new do |s|
 	s.author = "Phusion - http://www.phusion.nl/"
 	s.email = "info@phusion.nl"
 	s.requirements << "fastthread" << "Apache 2 with development headers"
-	s.require_path = ["lib", "ext"]
+	s.require_paths = ["lib", "ext"]
 	s.add_dependency 'rake', '>= 0.8.1'
 	s.add_dependency 'fastthread', '>= 1.0.1'
-	s.add_dependency 'rack', '>= 0.1.0'
-	s.extensions << 'ext/passenger/extconf.rb'
+	s.extensions << 'ext/phusion_passenger/extconf.rb'
 	s.files = FileList[
 		'Rakefile',
 		'README',
 		'DEVELOPERS.TXT',
 		'LICENSE',
 		'INSTALL',
+		'NEWS',
 		'lib/**/*.rb',
 		'lib/**/*.py',
-		'lib/passenger/templates/*',
+		'lib/phusion_passenger/templates/*',
 		'bin/*',
 		'doc/*',
 		
@@ -427,11 +471,16 @@ spec = Gem::Specification.new do |s|
 		'ext/apache2/*.{cpp,h,c,TXT}',
 		'ext/boost/*.{hpp,TXT}',
 		'ext/boost/**/*.{hpp,cpp,pl,inl,ipp}',
-		'ext/passenger/*.{c,rb}',
+		'ext/oxt/*.hpp',
+		'ext/oxt/*.cpp',
+		'ext/oxt/detail/*.hpp',
+		'ext/phusion_passenger/*.{c,rb}',
 		'benchmark/*.{cpp,rb}',
 		'misc/*',
+		'vendor/**/*',
 		'test/*.{rb,cpp,example}',
 		'test/support/*',
+		'test/oxt/*.cpp',
 		'test/ruby/*',
 		'test/ruby/*/*',
 		'test/stub/*',
@@ -488,20 +537,20 @@ task :fakeroot => [:apache2, :native_support, :doc] do
 	libdir = "#{fakeroot}/usr/lib/ruby/#{CONFIG['ruby_version']}"
 	extdir = "#{libdir}/#{CONFIG['arch']}"
 	bindir = "#{fakeroot}/usr/bin"
-	docdir = "#{fakeroot}/usr/share/doc/passenger"
-	libexecdir = "#{fakeroot}/usr/lib/passenger"
+	docdir = "#{fakeroot}/usr/share/doc/phusion_passenger"
+	libexecdir = "#{fakeroot}/usr/lib/phusion_passenger"
 	
 	sh "rm -rf #{fakeroot}"
 	sh "mkdir -p #{fakeroot}"
 	
 	sh "mkdir -p #{libdir}"
-	sh "cp -R lib/passenger #{libdir}/"
+	sh "cp -R lib/phusion_passenger #{libdir}/"
 
 	sh "mkdir -p #{fakeroot}/etc"
 	sh "echo -n '#{PACKAGE_VERSION}' > #{fakeroot}/etc/passenger_version.txt"
 	
-	sh "mkdir -p #{extdir}/passenger"
-	sh "cp -R ext/passenger/*.#{LIBEXT} #{extdir}/passenger/"
+	sh "mkdir -p #{extdir}/phusion_passenger"
+	sh "cp -R ext/phusion_passenger/*.#{LIBEXT} #{extdir}/phusion_passenger/"
 	
 	sh "mkdir -p #{bindir}"
 	sh "cp bin/* #{bindir}/"
@@ -526,9 +575,14 @@ task 'package:debian' => :fakeroot do
 	end
 
 	fakeroot = "pkg/fakeroot"
-	arch = `uname -m`.strip
-	if arch =~ /^i.86$/
-		arch = "i386"
+	raw_arch = `uname -m`.strip
+	arch = case raw_arch
+	when /^i.86$/
+		"i386"
+	when /^x86_64/
+		"amd64"
+	else
+		raw_arch
 	end
 	
 	sh "sed -i 's/Version: .*/Version: #{PACKAGE_VERSION}/' debian/control"
@@ -556,10 +610,11 @@ task :sloccount do
 		end
 		sh "sloccount", *Dir[
 			"#{tmpdir}/*",
-			"lib/passenger/*",
+			"lib/phusion_passenger/*",
 			"lib/rake/{cplusplus,extensions}.rb",
 			"ext/apache2",
-			"ext/passenger/*.c",
+			"ext/oxt",
+			"ext/phusion_passenger/*.c",
 			"test/*.{cpp,rb}",
 			"test/support/*.rb",
 			"test/stub/*.rb",

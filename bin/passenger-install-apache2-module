@@ -27,13 +27,14 @@ $LOAD_PATH.unshift("#{PASSENGER_ROOT}/ext")
 # the start (i.e. not via 'su' or 'sudo').
 ENV["PATH"] += ":/usr/sbin:/sbin:/usr/local/sbin"
 
-require 'passenger/platform_info'
-require 'passenger/dependencies'
-require 'passenger/console_text_template'
+require 'optparse'
+require 'phusion_passenger/platform_info'
+require 'phusion_passenger/dependencies'
+require 'phusion_passenger/console_text_template'
 include PlatformInfo
 
 class Installer
-	include Passenger
+	include PhusionPassenger
 	
 	PASSENGER_WEBSITE = "http://www.modrails.com/"
 	PHUSION_WEBSITE = "www.phusion.nl"
@@ -45,14 +46,25 @@ class Installer
 		Dependencies::RubyGems,
 		Dependencies::Rake,
 		Dependencies::Apache2,
-		Dependencies::Apache2_DevHeaders,
-		Dependencies::APR_DevHeaders,
-		Dependencies::APU_DevHeaders,
-		Dependencies::FastThread,
-		Dependencies::Rack
+		Dependencies::Apache2_DevHeaders
 	]
+	if Dependencies.fastthread_required?
+		REQUIRED_DEPENDENCIES << Dependencies::FastThread
+	end
+	# Some broken servers don't have apr-config or apu-config installed.
+	# Nevertheless, it is possible to compile Apache modules if Apache
+	# was configured with --included-apr. So here we check whether
+	# apr-config and apu-config are available. If they're not available,
+	# then we only register them as required dependency if no Apache
+	# module can be compiled without their presence.
+	if (PlatformInfo.apr_config && PlatformInfo.apu_config) ||
+	   PlatformInfo.apr_config_needed_for_building_apache_modules?
+		REQUIRED_DEPENDENCIES << Dependencies::APR_DevHeaders
+		REQUIRED_DEPENDENCIES << Dependencies::APU_DevHeaders
+	end
 	
-	def start
+	def start(automatic = false)
+		@auto = automatic
 		if natively_packaged?
 			check_dependencies || exit(1)
 			show_apache2_config_snippets
@@ -147,7 +159,7 @@ private
 		# ...
 		# Server compiled with....
 		#  -D APACHE_MPM_DIR="server/mpm/prefork"
-		output = `#{HTTPD} -V`
+		output = `#{PlatformInfo.httpd} -V`
 		output =~ /^Server MPM: +(.*)$/
 		if $1
 			mpm = $1.downcase
@@ -188,11 +200,11 @@ private
 		color_puts '<banner>Compiling and installing Apache 2 module...</banner>'
 		puts "cd #{PASSENGER_ROOT}"
 		if ENV['TRACE']
-			puts "#{RUBY} -S rake --trace clean apache2"
-			return system(RUBY, "-S", "rake", "--trace", "clean", "apache2")
+			puts "#{RUBY} -S #{RAKE} --trace clean apache2"
+			return system(RUBY, "-S", RAKE, "--trace", "clean", "apache2")
 		else
-			puts "#{RUBY} -S rake clean apache2"
-			return system(RUBY, "-S", "rake", "clean", "apache2")
+			puts "#{RUBY} -S #{RAKE} clean apache2"
+			return system(RUBY, "-S", RAKE, "clean", "apache2")
 		end
 	end
 	
@@ -200,7 +212,7 @@ private
 		puts
 		line
 		if natively_packaged?
-			module_location = "#{PASSENGER_ROOT}/lib/passenger/mod_passenger.so"
+			module_location = "#{PASSENGER_ROOT}/lib/phusion_passenger/mod_passenger.so"
 		else
 			module_location = "#{PASSENGER_ROOT}/ext/apache2/mod_passenger.so"
 		end
@@ -251,6 +263,7 @@ private
 	end
 	
 	def wait(timeout = nil)
+		return if @auto
 		begin
 			if timeout
 				require 'timeout' unless defined?(Timeout)
@@ -305,7 +318,7 @@ private
 	
 	def self.determine_users_guide
 		if natively_packaged?
-			return "/usr/share/doc/passenger/Users guide.html"
+			return "/usr/share/doc/phusion_passenger/Users guide.html"
 		else
 			return "#{PASSENGER_ROOT}/doc/Users guide.html"
 		end
@@ -315,4 +328,25 @@ private
 	USERS_GUIDE = determine_users_guide
 end
 
-Installer.new.start
+options = {}
+parser = OptionParser.new do |opts|
+	opts.banner = "Usage: passenger-install-apache2-module [options]"
+	opts.separator ""
+	
+	opts.separator "Options:"
+	opts.on("-a", "--auto", String, "Automatically build the Apache module,\n" <<
+	        "#{' ' * 37}without interactively asking for user\n" <<
+	        "#{' ' * 37}input.") do
+		options[:auto] = true
+	end
+end
+begin
+	parser.parse!
+rescue OptionParser::ParseError => e
+	puts e
+	puts
+	puts "Please see '--help' for valid options."
+	exit 1
+end
+
+Installer.new.start(options[:auto])

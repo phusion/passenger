@@ -17,18 +17,6 @@
  *  with this program; if not, write to the Free Software Foundation, Inc.,
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-#include <ap_config.h>
-#include <httpd.h>
-#include <http_config.h>
-#include <http_core.h>
-#include <http_request.h>
-#include <http_protocol.h>
-#include <http_log.h>
-#include <util_script.h>
-#include <apr_pools.h>
-#include <apr_strings.h>
-#include <apr_lib.h>
-
 #include <boost/thread.hpp>
 
 #include <sys/time.h>
@@ -44,17 +32,34 @@
 #include "Logging.h"
 #include "ApplicationPoolServer.h"
 #include "MessageChannel.h"
-#include "System.h"
+#include "DirectoryMapper.h"
+
+/* The Apache/APR headers *must* come after the Boost headers, otherwise
+ * compilation will fail on OpenBSD.
+ *
+ * apr_want.h *must* come after MessageChannel.h, otherwise compilation will
+ * fail on platforms on which apr_want.h tries to redefine 'struct iovec'.
+ * http://tinyurl.com/b6aatw
+ */
+#include <ap_config.h>
+#include <httpd.h>
+#include <http_config.h>
+#include <http_core.h>
+#include <http_request.h>
+#include <http_protocol.h>
+#include <http_log.h>
+#include <util_script.h>
+#include <apr_pools.h>
+#include <apr_strings.h>
+#include <apr_lib.h>
 
 using namespace std;
 using namespace Passenger;
 
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
+
 #define DEFAULT_RUBY_COMMAND "ruby"
-#define DEFAULT_RAILS_ENV    "production"
-#define DEFAULT_RACK_ENV     "production"
-#define DEFAULT_WSGI_ENV     "production"
 
 /**
  * If the HTTP client sends POST data larger than this value (in bytes),
@@ -65,259 +70,148 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
 
 /**
- * Utility class for determining URI-to-Rails/Rack directory mappings.
- * Given a URI, it will determine whether that URI belongs to a Rails/Rack
- * application, what the base URI of that application is, and what the
- * associated 'public' directory is.
- *
- * @note This class is not thread-safe, but is reentrant.
- * @ingroup Core
- */
-class DirectoryMapper {
-public:
-	enum ApplicationType {
-		NONE,
-		RAILS,
-		RACK,
-		WSGI
-	};
-
-private:
-	DirConfig *config;
-	request_rec *r;
-	bool baseURIKnown;
-	const char *baseURI;
-	ApplicationType appType;
-	
-	inline bool shouldAutoDetectRails() {
-		return config->autoDetectRails == DirConfig::ENABLED ||
-			config->autoDetectRails == DirConfig::UNSET;
-	}
-	
-	inline bool shouldAutoDetectRack() {
-		return config->autoDetectRack == DirConfig::ENABLED ||
-			config->autoDetectRack == DirConfig::UNSET;
-	}
-	
-	inline bool shouldAutoDetectWSGI() {
-		return config->autoDetectWSGI == DirConfig::ENABLED ||
-			config->autoDetectWSGI == DirConfig::UNSET;
-	}
-	
-public:
-	/**
-	 * @warning Do not use this object after the destruction of <tt>r</tt> or <tt>config</tt>.
-	 */
-	DirectoryMapper(request_rec *r, DirConfig *config) {
-		this->r = r;
-		this->config = config;
-		appType = NONE;
-		baseURIKnown = false;
-		baseURI = NULL;
-	}
-	
-	/**
-	 * Determine whether the given HTTP request falls under one of the specified
-	 * RailsBaseURIs or RackBaseURIs. If yes, then the first matching base URI will
-	 * be returned.
-	 *
-	 * If Rails/Rack autodetection was enabled in the configuration, and the document
-	 * root seems to be a valid Rails/Rack 'public' folder, then this method will
-	 * return "/".
-	 *
-	 * Otherwise, NULL will be returned.
-	 *
-	 * @throws SystemException An error occured while examening the filesystem.
-	 * @warning The return value may only be used as long as <tt>config</tt>
-	 *          hasn't been destroyed.
-	 */
-	const char *getBaseURI() {
-		if (baseURIKnown) {
-			return baseURI;
-		}
-		
-		set<string>::const_iterator it;
-		const char *uri = r->uri;
-		size_t uri_len = strlen(uri);
-		
-		if (uri_len == 0 || uri[0] != '/') {
-			baseURIKnown = true;
-			return NULL;
-		}
-		
-		for (it = config->railsBaseURIs.begin(); it != config->railsBaseURIs.end(); it++) {
-			const string &base(*it);
-			if (  base == "/"
-			 || ( uri_len == base.size() && memcmp(uri, base.c_str(), uri_len) == 0 )
-			 || ( uri_len  > base.size() && memcmp(uri, base.c_str(), base.size()) == 0
-			                             && uri[base.size()] == '/' )
-			) {
-				baseURIKnown = true;
-				baseURI = base.c_str();
-				appType = RAILS;
-				return baseURI;
-			}
-		}
-		
-		for (it = config->rackBaseURIs.begin(); it != config->rackBaseURIs.end(); it++) {
-			const string &base(*it);
-			if (  base == "/"
-			 || ( uri_len == base.size() && memcmp(uri, base.c_str(), uri_len) == 0 )
-			 || ( uri_len  > base.size() && memcmp(uri, base.c_str(), base.size()) == 0
-			                             && uri[base.size()] == '/' )
-			) {
-				baseURIKnown = true;
-				baseURI = base.c_str();
-				appType = RACK;
-				return baseURI;
-			}
-		}
-		
-		if (shouldAutoDetectRails() && verifyRailsDir(ap_document_root(r))) {
-			baseURIKnown = true;
-			baseURI = "/";
-			appType = RAILS;
-			return baseURI;
-		}
-		if (shouldAutoDetectRack() && verifyRackDir(ap_document_root(r))) {
-			baseURIKnown = true;
-			baseURI = "/";
-			appType = RACK;
-			return baseURI;
-		}
-		if (shouldAutoDetectWSGI() && verifyWSGIDir(ap_document_root(r))) {
-			baseURIKnown = true;
-			baseURI = "/";
-			appType = WSGI;
-			return baseURI;
-		}
-		
-		baseURIKnown = true;
-		return NULL;
-	}
-	
-	/**
-	 * Returns the filename of the 'public' directory of the Rails/Rack application
-	 * that's associated with the HTTP request.
-	 *
-	 * Returns an empty string if the document root of the HTTP request
-	 * cannot be determined, or if it isn't a valid folder.
-	 *
-	 * @throws SystemException An error occured while examening the filesystem.
-	 */
-	string getPublicDirectory() {
-		if (!baseURIKnown) {
-			getBaseURI();
-		}
-		if (baseURI == NULL) {
-			return "";
-		}
-		
-		const char *docRoot = ap_document_root(r);
-		size_t len = strlen(docRoot);
-		if (len > 0) {
-			string path;
-			if (docRoot[len - 1] == '/') {
-				path.assign(docRoot, len - 1);
-			} else {
-				path.assign(docRoot, len);
-			}
-			if (strcmp(baseURI, "/") != 0) {
-				path.append(baseURI);
-			}
-			return path;
-		} else {
-			return "";
-		}
-	}
-	
-	/**
-	 * Returns the application type that's associated with the HTTP request.
-	 *
-	 * @throws SystemException An error occured while examening the filesystem.
-	 */
-	ApplicationType getApplicationType() {
-		if (!baseURIKnown) {
-			getBaseURI();
-		}
-		return appType;
-	}
-	
-	/**
-	 * Returns the application type (as a string) that's associated
-	 * with the HTTP request.
-	 *
-	 * @throws SystemException An error occured while examening the filesystem.
-	 */
-	const char *getApplicationTypeString() {
-		if (!baseURIKnown) {
-			getBaseURI();
-		}
-		switch (appType) {
-		case RAILS:
-			return "rails";
-		case RACK:
-			return "rack";
-		case WSGI:
-			return "wsgi";
-		default:
-			return NULL;
-		};
-	}
-};
-
-
-/**
  * Apache hook functions, wrapped in a class.
  *
  * @ingroup Core
  */
 class Hooks {
 private:
-	struct Container {
-		Application::SessionPtr session;
+	struct AprDestructable {
+		virtual ~AprDestructable() { }
 		
 		static apr_status_t cleanup(void *p) {
-			try {
-				this_thread::disable_interruption di;
-				this_thread::disable_syscall_interruption dsi;
-				delete (Container *) p;
-			} catch (const thread_interrupted &) {
-				P_TRACE(3, "A system call was interrupted during closing "
-					"of a session. Apache is probably restarting or "
-					"shutting down.");
-			} catch (const exception &e) {
-				P_TRACE(3, "Exception during closing of a session: " <<
-					e.what());
-			}
+			delete (AprDestructable *) p;
 			return APR_SUCCESS;
 		}
 	};
+	
+	struct RequestNote: public AprDestructable {
+		DirectoryMapper mapper;
+		DirConfig *config;
+		bool forwardToBackend;
+		const char *handlerBeforeModRewrite;
+		char *filenameBeforeModRewrite;
+		apr_filetype_e oldFileType;
+		const char *handlerBeforeModAutoIndex;
+		
+		RequestNote(const DirectoryMapper &m)
+			: mapper(m) {
+			forwardToBackend = false;
+			filenameBeforeModRewrite = NULL;
+		}
+	};
+	
+	struct ErrorReport: public AprDestructable {
+		virtual int report(request_rec *r) = 0;
+	};
+	
+	struct ReportFileSystemError: public ErrorReport {
+		FileSystemException e;
+		
+		ReportFileSystemError(const FileSystemException &ex): e(ex) { }
+		
+		int report(request_rec *r) {
+			ap_set_content_type(r, "text/html; charset=UTF-8");
+			ap_rputs("<h1>Passenger error #2</h1>\n", r);
+			ap_rputs("An error occurred while trying to access '", r);
+			ap_rputs(ap_escape_html(r->pool, e.filename().c_str()), r);
+			ap_rputs("': ", r);
+			ap_rputs(ap_escape_html(r->pool, e.what()), r);
+			if (e.code() == EPERM) {
+				ap_rputs("<p>", r);
+				ap_rputs("Apache doesn't have read permissions to that file. ", r);
+				ap_rputs("Please fix the relevant file permissions.", r);
+				ap_rputs("</p>", r);
+			}
+			P_ERROR("A filesystem exception occured.\n" <<
+				"  Message: " << e.what() << "\n" <<
+				"  Backtrace:\n" << e.backtrace());
+			return OK;
+		}
+	};
+	
+	enum Threeway { YES, NO, UNKNOWN };
 
 	ApplicationPoolServerPtr applicationPoolServer;
 	thread_specific_ptr<ApplicationPoolPtr> threadSpecificApplicationPool;
+	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex;
+	CachedMultiFileStat *mstat;
 	
-	DirConfig *getDirConfig(request_rec *r) {
+	inline DirConfig *getDirConfig(request_rec *r) {
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
 	}
 	
-	ServerConfig *getServerConfig(server_rec *s) {
+	inline ServerConfig *getServerConfig(server_rec *s) {
 		return (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
 	}
 	
+	inline RequestNote *getRequestNote(request_rec *r) {
+		// The union is needed in order to be compliant with
+		// C99/C++'s strict aliasing rules. http://tinyurl.com/g5hgh
+		union {
+			RequestNote *note;
+			void *pointer;
+		} u;
+		u.note = 0;
+		apr_pool_userdata_get(&u.pointer, "Phusion Passenger", r->pool);
+		return u.note;
+	}
+	
 	/**
+	 * Returns a usable ApplicationPool object.
+	 *
 	 * When using the worker MPM and global queuing, deadlocks can occur, for
 	 * the same reason described in ApplicationPoolServer::connect(). This
 	 * method allows us to avoid this deadlock by making sure that each
 	 * thread gets its own connection to the application pool server.
+	 *
+	 * It also checks whether the currently cached ApplicationPool object
+	 * is disconnected (which can happen if an error previously occured).
+	 * If so, it will reconnect to the ApplicationPool server.
 	 */
 	ApplicationPoolPtr getApplicationPool() {
 		ApplicationPoolPtr *pool_ptr = threadSpecificApplicationPool.get();
 		if (pool_ptr == NULL) {
 			pool_ptr = new ApplicationPoolPtr(applicationPoolServer->connect());
 			threadSpecificApplicationPool.reset(pool_ptr);
+		} else if (!(*pool_ptr)->connected()) {
+			P_DEBUG("Reconnecting to ApplicationPool server");
+			*pool_ptr = applicationPoolServer->connect();
 		}
 		return *pool_ptr;
+	}
+	
+	bool hasModRewrite() {
+		if (m_hasModRewrite == UNKNOWN) {
+			if (ap_find_linked_module("mod_rewrite.c")) {
+				m_hasModRewrite = YES;
+			} else {
+				m_hasModRewrite = NO;
+			}
+		}
+		return m_hasModRewrite == YES;
+	}
+	
+	bool hasModDir() {
+		if (m_hasModDir == UNKNOWN) {
+			if (ap_find_linked_module("mod_dir.c")) {
+				m_hasModDir = YES;
+			} else {
+				m_hasModDir = NO;
+			}
+		}
+		return m_hasModDir == YES;
+	}
+	
+	bool hasModAutoIndex() {
+		if (m_hasModAutoIndex == UNKNOWN) {
+			if (ap_find_linked_module("mod_autoindex.c")) {
+				m_hasModAutoIndex = YES;
+			} else {
+				m_hasModAutoIndex = NO;
+			}
+		}
+		return m_hasModAutoIndex == YES;
 	}
 	
 	int reportDocumentRootDeterminationError(request_rec *r) {
@@ -327,26 +221,320 @@ private:
 		return OK;
 	}
 	
-	int reportFileSystemError(request_rec *r, const FileSystemException &e) {
-		ap_set_content_type(r, "text/html; charset=UTF-8");
-		ap_rputs("<h1>Passenger error #2</h1>\n", r);
-		ap_rputs("An error occurred while trying to access '", r);
-		ap_rputs(ap_escape_html(r->pool, e.filename().c_str()), r);
-		ap_rputs("': ", r);
-		ap_rputs(ap_escape_html(r->pool, e.what()), r);
-		if (e.code() == EPERM) {
-			ap_rputs("<p>", r);
-			ap_rputs("Apache doesn't have read permissions to that file. ", r);
-			ap_rputs("Please fix the relevant file permissions.", r);
-			ap_rputs("</p>", r);
-		}
-		return OK;
-	}
-	
 	int reportBusyException(request_rec *r) {
 		ap_custom_response(r, HTTP_SERVICE_UNAVAILABLE,
 			"This website is too busy right now.  Please try again later.");
 		return HTTP_SERVICE_UNAVAILABLE;
+	}
+	
+	/**
+	 * Gather some information about the request and do some preparations. In this method,
+	 * it will be determined whether the request URI should be served statically by Apache
+	 * (in case of static assets or in case there's a page cache file available) or
+	 * whether it should be forwarded to the backend application.
+	 *
+	 * The strategy is as follows:
+	 *
+	 * We check whether Phusion Passenger is enabled for this URI (A).
+	 * If so, then we check whether the following situations are true:
+	 * (B) There is a backend application defined for this URI.
+	 * (C) r->filename already exists.
+	 * (D) There is a page cache file for the URI.
+	 *
+	 * - If A is not true, or if B is not true, or if C is true, then won't do anything.
+	 *   Passenger will be disabled during the rest of this request.
+	 * - If D is true, then we first transform r->filename to the page cache file's
+	 *   filename, and then we let Apache serve it statically.
+	 * - If D is not true, then we forward the request to the backend application.
+	 *
+	 * @pre The (A) condition must be true.
+	 * @param coreModuleWillBeRun Whether the core.c map_to_storage hook might be called after this.
+	 * @return Whether the Passenger handler hook method should be run.
+	 */
+	bool prepareRequest(request_rec *r, DirConfig *config, const char *filename, bool coreModuleWillBeRun = false) {
+		TRACE_POINT();
+		DirectoryMapper mapper(r, config, mstat, config->getStatThrottleRate());
+		try {
+			if (mapper.getBaseURI() == NULL) {
+				// (B) is not true.
+				return false;
+			}
+		} catch (const FileSystemException &e) {
+			/* DirectoryMapper tried to examine the filesystem in order
+			 * to autodetect the application type (e.g. by checking whether
+			 * environment.rb exists. But something went wrong, probably
+			 * because of a permission problem. This usually
+			 * means that the user is trying to deploy an application, but
+			 * set the wrong permissions on the relevant folders.
+			 * Later, in the handler hook, we inform the user about this
+			 * problem so that he can either disable Phusion Passenger's
+			 * autodetection routines, or fix the permissions.
+			 */
+			apr_pool_userdata_set(new ReportFileSystemError(e),
+				"Phusion Passenger: error report",
+				ReportFileSystemError::cleanup,
+				r->pool);
+			return true;
+		}
+		
+		/* Save some information for the hook methods that are called later.
+		 * The existance of this note indicates that the URI belongs to a Phusion
+		 * Passenger-served application.
+		 */
+		RequestNote *note = new RequestNote(mapper);
+		note->config = config;
+		apr_pool_userdata_set(note, "Phusion Passenger", RequestNote::cleanup, r->pool);
+		
+		try {
+			// (B) is true.
+			FileType fileType = getFileType(filename);
+			if (fileType == FT_REGULAR) {
+				// (C) is true.
+				return false;
+			}
+			
+			// (C) is not true. Check whether (D) is true.
+			char *pageCacheFile;
+			/* Only GET requests may hit the page cache. This is
+			 * important because of REST conventions, e.g.
+			 * 'POST /foo' maps to 'FooController#create',
+			 * while 'GET /foo' maps to 'FooController#index'.
+			 * We wouldn't want our page caching support to interfere
+			 * with that.
+			 */
+			if (r->method_number == M_GET) {
+				if (fileType == FT_DIRECTORY) {
+					size_t len;
+					
+					len = strlen(filename);
+					if (len > 0 && filename[len - 1] == '/') {
+						pageCacheFile = apr_pstrcat(r->pool, filename,
+							"index.html", NULL);
+					} else {
+						pageCacheFile = apr_pstrcat(r->pool, filename,
+							".html", NULL);
+					}
+				} else {
+					pageCacheFile = apr_pstrcat(r->pool, filename,
+						".html", NULL);
+				}
+				if (!fileExists(pageCacheFile)) {
+					pageCacheFile = NULL;
+				}
+			} else {
+				pageCacheFile = NULL;
+			}
+			if (pageCacheFile != NULL) {
+				// (D) is true.
+				r->filename = pageCacheFile;
+				r->canonical_filename = pageCacheFile;
+				if (!coreModuleWillBeRun) {
+					r->finfo.filetype = APR_NOFILE;
+					ap_set_content_type(r, "text/html");
+					ap_directory_walk(r);
+					ap_file_walk(r);
+				}
+				return false;
+			} else {
+				// (D) is not true.
+				note->forwardToBackend = true;
+				return true;
+			}
+		} catch (const FileSystemException &e) {
+			/* Something went wrong while accessing the directory in which
+			 * r->filename lives. We already know that this URI belongs to
+			 * a backend application, so this error probably means that the
+			 * user set the wrong permissions for his 'public' folder. We
+			 * don't let the handler hook run so that Apache can decide how
+			 * to display the error.
+			 */
+			return false;
+		}
+	}
+	
+	/**
+	 * Most of the high-level logic for forwarding a request to a backend application
+	 * is contained in this method.
+	 */
+	int handleRequest(request_rec *r) {
+		/* Check whether an error occured in prepareRequest() that should be reported
+		 * to the browser.
+		 */
+		
+		// The union is needed in order to be compliant with
+		// C99/C++'s strict aliasing rules. http://tinyurl.com/g5hgh
+		union {
+			ErrorReport *errorReport;
+			void *pointer;
+		} u;
+		
+		u.errorReport = 0;
+		apr_pool_userdata_get(&u.pointer, "Phusion Passenger: error report", r->pool);
+		if (u.errorReport != 0) {
+			return u.errorReport->report(r);
+		}
+		
+		RequestNote *note = getRequestNote(r);
+		if (note == 0 || !note->forwardToBackend) {
+			return DECLINED;
+		} else if (r->handler != NULL && strcmp(r->handler, "redirect-handler") == 0) {
+			// mod_rewrite is at work.
+			return DECLINED;
+		}
+		
+		TRACE_POINT();
+		DirConfig *config = note->config;
+		DirectoryMapper &mapper(note->mapper);
+		
+		if (mapper.getPublicDirectory().empty()) {
+			return reportDocumentRootDeterminationError(r);
+		}
+		
+		int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_ERROR);
+    		if (httpStatus != OK) {
+			return httpStatus;
+		}
+		
+		try {
+			this_thread::disable_interruption di;
+			this_thread::disable_syscall_interruption dsi;
+			apr_bucket_brigade *bb;
+			apr_bucket *b;
+			Application::SessionPtr session;
+			bool expectingUploadData;
+			shared_ptr<TempFile> uploadData;
+			
+			expectingUploadData = ap_should_client_block(r);
+			if (expectingUploadData && atol(lookupHeader(r, "Content-Length"))
+			                                 > UPLOAD_ACCELERATION_THRESHOLD) {
+				uploadData = receiveRequestBody(r);
+			}
+			
+			UPDATE_TRACE_POINT();
+			try {
+				ServerConfig *sconfig = getServerConfig(r->server);
+				string appRoot(canonicalizePath(
+					config->getAppRoot(mapper.getPublicDirectory().c_str())
+				));
+				
+				session = getApplicationPool()->get(PoolOptions(
+					appRoot,
+					true,
+					sconfig->getDefaultUser(),
+					mapper.getEnvironment(),
+					config->getSpawnMethodString(),
+					mapper.getApplicationTypeString(),
+					config->frameworkSpawnerTimeout,
+					config->appSpawnerTimeout,
+					config->getMaxRequests(),
+					config->getMemoryLimit(),
+					config->usingGlobalQueue(),
+					config->getStatThrottleRate(),
+					config->getRestartDir()
+				));
+				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
+			} catch (const SpawnException &e) {
+				r->status = 500;
+				if (e.hasErrorPage()) {
+					ap_set_content_type(r, "text/html; charset=utf-8");
+					ap_rputs(e.getErrorPage().c_str(), r);
+					return OK;
+				} else {
+					throw;
+				}
+			} catch (const FileSystemException &e) {
+				/* The application root cannot be determined. This could
+				 * happen if, for example, the user specified 'RailsBaseURI /foo'
+				 * while there is no filesystem entry called "foo" in the virtual
+				 * host's document root.
+				 */
+				return ReportFileSystemError(e).report(r);
+			} catch (const BusyException &e) {
+				return reportBusyException(r);
+			}
+			
+			UPDATE_TRACE_POINT();
+			session->setReaderTimeout(r->server->timeout / 1000);
+			session->setWriterTimeout(r->server->timeout / 1000);
+			sendHeaders(r, session, mapper.getBaseURI());
+			if (expectingUploadData) {
+				if (uploadData != NULL) {
+					sendRequestBody(r, session, uploadData);
+					uploadData.reset();
+				} else {
+					sendRequestBody(r, session);
+				}
+			}
+			session->shutdownWriter();
+			
+			UPDATE_TRACE_POINT();
+			apr_file_t *readerPipe = NULL;
+			int reader = session->getStream();
+			pid_t backendPid = session->getPid();
+			apr_os_pipe_put(&readerPipe, &reader, r->pool);
+			apr_file_pipe_timeout_set(readerPipe, r->server->timeout);
+
+			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
+			b = passenger_bucket_create(session, readerPipe, r->connection->bucket_alloc);
+			session.reset();
+			APR_BRIGADE_INSERT_TAIL(bb, b);
+
+			b = apr_bucket_eos_create(r->connection->bucket_alloc);
+			APR_BRIGADE_INSERT_TAIL(bb, b);
+
+			// I know the size because I read util_script.c's source. :-(
+			char backendData[MAX_STRING_LEN];
+			int result = ap_scan_script_header_err_brigade(r, bb, backendData);
+			if (result == OK) {
+				// The API documentation for ap_scan_script_err_brigade() says it
+				// returns HTTP_OK on success, but it actually returns OK.
+				
+				// Manually set the Status header because
+				// ap_scan_script_header_err_brigade() filters it
+				// out. Some broken HTTP clients depend on the
+				// Status header for retrieving the HTTP status.
+				if (!r->status_line && *r->status_line == '\0') {
+					r->status_line = apr_psprintf(r->pool,
+						"%d Unknown Status",
+						r->status);
+				}
+				apr_table_setn(r->headers_out, "Status", r->status_line);
+				
+				ap_pass_brigade(r->output_filters, bb);
+				return OK;
+			} else if (backendData[0] == '\0') {
+				P_ERROR("Backend process " << backendPid <<
+					" did not return a valid HTTP response. It returned no data.");
+				apr_table_setn(r->err_headers_out, "Status", "500 Internal Server Error");
+				return HTTP_INTERNAL_SERVER_ERROR;
+			} else {
+				P_ERROR("Backend process " << backendPid <<
+					" did not return a valid HTTP response. It returned: [" <<
+					backendData << "]");
+				apr_table_setn(r->err_headers_out, "Status", "500 Internal Server Error");
+				return HTTP_INTERNAL_SERVER_ERROR;
+			}
+			
+		} catch (const thread_interrupted &e) {
+			P_TRACE(3, "A system call was interrupted during an HTTP request. Apache "
+				"is probably restarting or shutting down. Backtrace:\n" <<
+				e.backtrace());
+			return HTTP_INTERNAL_SERVER_ERROR;
+			
+		} catch (const tracable_exception &e) {
+			P_ERROR("Unexpected error in mod_passenger: " <<
+				e.what() << "\n" << "  Backtrace:\n" << e.backtrace());
+			return HTTP_INTERNAL_SERVER_ERROR;
+		
+		} catch (const exception &e) {
+			P_ERROR("Unexpected error in mod_passenger: " <<
+				e.what() << "\n" << "  Backtrace: not available");
+			return HTTP_INTERNAL_SERVER_ERROR;
+		
+		} catch (...) {
+			P_ERROR("An unexpected, unknown error occured in mod_passenger.");
+			throw;
+		}
 	}
 	
 	/**
@@ -391,32 +579,6 @@ private:
 		return lookupName(r->subprocess_env, name);
 	}
 	
-	// This code is a duplicate of what's in util_script.c.  We can't use
-	// r->unparsed_uri because it gets changed if there was a redirect.
-	char *originalURI(request_rec *r) {
-		char *first, *last;
-
-		if (r->the_request == NULL) {
-			return (char *) apr_pcalloc(r->pool, 1);
-		}
-		
-		first = r->the_request;	// use the request-line
-		
-		while (*first && !apr_isspace(*first)) {
-			++first;		// skip over the method
-		}
-		while (apr_isspace(*first)) {
-			++first;		//   and the space(s)
-		}
-		
-		last = first;
-		while (*last && !apr_isspace(*last)) {
-			++last;			// end at next whitespace
-		}
-		
-		return apr_pstrmemdup(r->pool, first, last - first);
-	}
-
 	void inline addHeader(apr_table_t *table, const char *name, const char *value) {
 		if (name != NULL && value != NULL) {
 			apr_table_addn(table, name, value);
@@ -441,7 +603,7 @@ private:
 		addHeader(headers, "REMOTE_PORT",     apr_psprintf(r->pool, "%d", r->connection->remote_addr->port));
 		addHeader(headers, "REMOTE_USER",     r->user);
 		addHeader(headers, "REQUEST_METHOD",  r->method);
-		addHeader(headers, "REQUEST_URI",     originalURI(r));
+		addHeader(headers, "REQUEST_URI",     r->unparsed_uri);
 		addHeader(headers, "QUERY_STRING",    r->args ? r->args : "");
 		if (strcmp(baseURI, "/") != 0) {
 			addHeader(headers, "SCRIPT_NAME", baseURI);
@@ -518,21 +680,38 @@ private:
 	}
 	
 	shared_ptr<TempFile> receiveRequestBody(request_rec *r) {
+		TRACE_POINT();
 		shared_ptr<TempFile> tempFile(new TempFile());
 		char buf[1024 * 32];
 		apr_off_t len;
+		size_t total_written = 0;
 		
 		while ((len = ap_get_client_block(r, buf, sizeof(buf))) > 0) {
 			size_t written = 0;
 			do {
 				size_t ret = fwrite(buf, 1, len - written, tempFile->handle);
-				if (ret == 0) {
-					throw SystemException("An error occured while writing "
-						"HTTP upload data to a temporary file",
-						errno);
+				if (ret <= 0 || fflush(tempFile->handle) == EOF) {
+					int e = errno;
+					string message("An error occured while "
+						"buffering HTTP upload data to "
+						"a temporary file in ");
+					message.append(getTempDir());
+					if (e == ENOSPC) {
+						message.append(". Please make sure "
+							"that this directory has "
+							"enough disk space for "
+							"buffering file uploads, "
+							"or set the 'PassengerTempDir' "
+							"directive to a directory "
+							"that has enough disk space.");
+						throw RuntimeException(message);
+					} else {
+						throw SystemException(message, e);
+					}
 				}
 				written += ret;
 			} while (written < (size_t) len);
+			total_written += written;
 		}
 		if (len == -1) {
 			throw IOException("An error occurred while receiving HTTP upload data.");
@@ -544,8 +723,9 @@ private:
 	}
 	
 	void sendRequestBody(request_rec *r, Application::SessionPtr &session, shared_ptr<TempFile> &uploadData) {
+		TRACE_POINT();
 		rewind(uploadData->handle);
-		P_DEBUG("Content-Length = " << lookupHeader(r, "Content-Length"));
+		P_DEBUG("File upload: Content-Length = " << lookupHeader(r, "Content-Length"));
 		while (!feof(uploadData->handle)) {
 			char buf[1024 * 32];
 			size_t size;
@@ -573,12 +753,32 @@ public:
 		passenger_config_merge_all_servers(pconf, s);
 		ServerConfig *config = getServerConfig(s);
 		Passenger::setLogLevel(config->logLevel);
+		m_hasModRewrite = UNKNOWN;
+		m_hasModDir = UNKNOWN;
+		m_hasModAutoIndex = UNKNOWN;
+		mstat = cached_multi_file_stat_new(1024);
 		
 		P_DEBUG("Initializing Phusion Passenger...");
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
 		
 		const char *ruby, *user;
 		string applicationPoolServerExe, spawnServer;
+		
+		if (config->tempDir != NULL) {
+			setenv("TMPDIR", config->tempDir, 1);
+		} else {
+			unsetenv("TMPDIR");
+		}
+		/*
+		 * As described in the comment in init_module, upon (re)starting
+		 * Apache, the Hooks constructor is called twice. We unset
+		 * PHUSION_PASSENGER_TMP before calling createPassengerTmpDir()
+		 * because we want the temp directory's name to contain the PID
+		 * of the process in which the Hooks constructor was called for
+		 * the second time.
+		 */
+		unsetenv("PHUSION_PASSENGER_TMP");
+		createPassengerTempDir();
 		
 		ruby = (config->ruby != NULL) ? config->ruby : DEFAULT_RUBY_COMMAND;
 		if (config->userSwitching) {
@@ -623,217 +823,204 @@ public:
 		pool->setMax(config->maxPoolSize);
 		pool->setMaxPerApp(config->maxInstancesPerApp);
 		pool->setMaxIdleTime(config->poolIdleTime);
-		pool->setUseGlobalQueue(config->getUseGlobalQueue());
 	}
 	
-	int handleRequest(request_rec *r) {
-		DirConfig *config = getDirConfig(r);
-		DirectoryMapper mapper(r, config);
-		if (mapper.getBaseURI() == NULL || r->filename == NULL || fileExists(r->filename)) {
-			return DECLINED;
-		}
-		
-		try {
-			if (mapper.getPublicDirectory().empty()) {
-				return reportDocumentRootDeterminationError(r);
-			}
-		} catch (const FileSystemException &e) {
-			return reportFileSystemError(r, e);
-		}
-		
-		int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_ERROR);
-    		if (httpStatus != OK) {
-			return httpStatus;
-		}
-		
-		try {
-			this_thread::disable_interruption di;
-			this_thread::disable_syscall_interruption dsi;
-			apr_bucket_brigade *bb;
-			apr_bucket *b;
-			Application::SessionPtr session;
-			bool expectingUploadData;
-			shared_ptr<TempFile> uploadData;
-			
-			expectingUploadData = ap_should_client_block(r);
-			if (expectingUploadData && atol(lookupHeader(r, "Content-Length"))
-			                                 > UPLOAD_ACCELERATION_THRESHOLD) {
-				uploadData = receiveRequestBody(r);
-			}
-			
-			try {
-				const char *defaultUser, *environment, *spawnMethod;
-				ServerConfig *sconfig;
-				
-				sconfig = getServerConfig(r->server);
-				if (sconfig->defaultUser != NULL) {
-					defaultUser = sconfig->defaultUser;
-				} else {
-					defaultUser = "nobody";
-				}
-				if (mapper.getApplicationType() == DirectoryMapper::RAILS) {
-					if (config->railsEnv == NULL) {
-						environment = DEFAULT_RAILS_ENV;
-					} else {
-						environment = config->railsEnv;
-					}
-				} else if (mapper.getApplicationType() == DirectoryMapper::RACK) {
-					if (config->rackEnv == NULL) {
-						environment = DEFAULT_RACK_ENV;
-					} else {
-						environment = config->rackEnv;
-					}
-				} else {
-					environment = DEFAULT_WSGI_ENV;
-				}
-				if (config->spawnMethod == DirConfig::SM_CONSERVATIVE) {
-					spawnMethod = "conservative";
-				} else {
-					spawnMethod = "smart";
-				}
-				
-				session = getApplicationPool()->get(
-					canonicalizePath(mapper.getPublicDirectory() + "/.."),
-					true, defaultUser, environment, spawnMethod,
-					mapper.getApplicationTypeString());
-				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
-			} catch (const SpawnException &e) {
-				if (e.hasErrorPage()) {
-					r->status = 500;
-					ap_set_content_type(r, "text/html; charset=utf-8");
-					ap_rputs(e.getErrorPage().c_str(), r);
-					return OK;
-				} else {
-					throw;
-				}
-			} catch (const BusyException &e) {
-				return reportBusyException(r);
-			}
-			sendHeaders(r, session, mapper.getBaseURI());
-			if (expectingUploadData) {
-				if (uploadData != NULL) {
-					sendRequestBody(r, session, uploadData);
-					uploadData.reset();
-				} else {
-					sendRequestBody(r, session);
-				}
-			}
-			session->shutdownWriter();
-			
-			apr_file_t *readerPipe = NULL;
-			int reader = session->getStream();
-			apr_os_pipe_put(&readerPipe, &reader, r->pool);
-
-			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
-			b = passenger_bucket_create(readerPipe, r->connection->bucket_alloc);
-			APR_BRIGADE_INSERT_TAIL(bb, b);
-
-			b = apr_bucket_eos_create(r->connection->bucket_alloc);
-			APR_BRIGADE_INSERT_TAIL(bb, b);
-
-			ap_scan_script_header_err_brigade(r, bb, NULL);
-			ap_pass_brigade(r->output_filters, bb);
-			
-			Container *container = new Container();
-			container->session = session;
-			apr_pool_cleanup_register(r->pool, container, Container::cleanup, apr_pool_cleanup_null);
-			
-			return OK;
-		} catch (const thread_interrupted &) {
-			P_TRACE(3, "A system call was interrupted during an HTTP request. Apache "
-				"is probably restarting or shutting down.");
-			return HTTP_INTERNAL_SERVER_ERROR;
-		} catch (const exception &e) {
-			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "*** Unexpected error in Passenger: %s", e.what());
-			return HTTP_INTERNAL_SERVER_ERROR;
-		}
+	~Hooks() {
+		cached_multi_file_stat_free(mstat);
+		removeDirTree(getPassengerTempDir().c_str());
 	}
 	
-	int
-	mapToStorage(request_rec *r) {
+	int prepareRequestWhenInHighPerformanceMode(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
-		DirectoryMapper mapper(r, config);
-		bool forwardToApplication;
-		
-		try {
-			if (mapper.getBaseURI() == NULL || fileExists(r->filename)) {
-				/*
-				 * fileExists():
-				 * If the file already exists, serve it directly.
-				 * This is for static assets like .css and .js files.
-				 */
-				forwardToApplication = false;
-			} else if (r->method_number == M_GET) {
-				char *html_file;
-				size_t len;
-				
-				len = strlen(r->filename);
-				if (len > 0 && r->filename[len - 1] == '/') {
-					html_file = apr_pstrcat(r->pool, r->filename, "index.html", NULL);
-				} else {
-					html_file = apr_pstrcat(r->pool, r->filename, ".html", NULL);
-				}
-				if (fileExists(html_file)) {
-					/* If a .html version of the URI exists, serve it directly.
-					 * We're essentially accelerating Rails page caching.
-					 */
-					r->filename = html_file;
-					r->canonical_filename = html_file;
-					forwardToApplication = false;
-				} else {
-					forwardToApplication = true;
-				}
-			} else {
-				/*
-				 * Non-GET requests are always forwarded to the application.
-				 * This important because of REST conventions, e.g.
-				 * 'POST /foo' maps to 'FooController.create',
-				 * while 'GET /foo' maps to 'FooController.index'.
-				 * We wouldn't want our page caching support to interfere
-				 * with that.
-				 */
-				forwardToApplication = true;
-			}
-			
-			if (forwardToApplication) {
-				/* Apache's default map_to_storage process does strange
-				 * things with the filename. Suppose that the DocumentRoot
-				 * is /website, on server http://test.com/. If we access
-				 * http://test.com/foo/bar, and /website/foo/bar does not
-				 * exist, then Apache will change the filename to
-				 * /website/foo instead of the expected /website/bar.
-				 * We make sure that doesn't happen.
-				 *
-				 * Incidentally, this also disables mod_rewrite. That is a
-				 * good thing because the default Rails .htaccess file
-				 * interferes with Passenger anyway (it delegates requests
-				 * to the CGI script dispatch.cgi).
-				 */
-				if (config->allowModRewrite != DirConfig::ENABLED
-				 && mapper.getApplicationType() == DirectoryMapper::RAILS) {
-					/* Of course, we only do that if all of the following
-					 * are true:
-					 * - the config allows us to. Some people have complex
-					 *   mod_rewrite rules that they don't want to abandon.
-					 *   Those people will have to make sure that the Rails
-					 *   app's .htaccess doesn't interfere.
-					 * - this is a Rails application.
-					 */
-					return OK;
-				} else if (strcmp(r->uri, mapper.getBaseURI()) == 0) {
-					/* If the request URI is the application's base URI,
-					 * then we'll want to take over control. Otherwise,
-					 * Apache will show a directory listing. This fixes issue #11.
-					 */
-					return OK;
-				} else {
-					return DECLINED;
-				}
+		if (config->isEnabled() && config->highPerformanceMode()) {
+			if (prepareRequest(r, config, r->filename, true)) {
+				return OK;
 			} else {
 				return DECLINED;
 			}
-		} catch (const FileSystemException &e) {
+		} else {
 			return DECLINED;
+		}
+	}
+	
+	/**
+	 * This is the hook method for the map_to_storage hook. Apache's final map_to_storage hook
+	 * method (defined in core.c) will do the following:
+	 *
+	 * If r->filename doesn't exist, then it will change the filename to the
+	 * following form:
+	 *    
+	 *     A/B
+	 *    
+	 * A is top-most directory that exists. B is the first filename piece that
+	 * normally follows A. For example, suppose that a website's DocumentRoot
+	 * is /website, on server http://test.com/. Suppose that there's also a
+	 * directory /website/images.
+	 * 
+	 * If we access:                    then r->filename will be:
+	 * http://test.com/foo/bar          /website/foo
+	 * http://test.com/foo/bar/baz      /website/foo
+	 * http://test.com/images/foo/bar   /website/images/foo
+	 *
+	 * We obviously don't want this to happen because it'll interfere with our page
+	 * cache file search code. So here we save the original value of r->filename so
+	 * that we can use it later.
+	 */
+	int saveOriginalFilename(request_rec *r) {
+		apr_table_set(r->notes, "Phusion Passenger: original filename", r->filename);
+		return DECLINED;
+	}
+	
+	int prepareRequestWhenNotInHighPerformanceMode(request_rec *r) {
+		DirConfig *config = getDirConfig(r);
+		if (config->isEnabled()) {
+			if (config->highPerformanceMode()) {
+				/* Preparations have already been done in the map_to_storage hook.
+				 * Prevent other modules' fixups hooks from being run.
+				 */
+				return OK;
+			} else {
+				// core.c's map_to_storage hook will transform the filename, as
+				// described by saveOriginalFilename(). Here we restore the
+				// original filename.
+				const char *filename = apr_table_get(r->notes, "Phusion Passenger: original filename");
+				if (filename == NULL) {
+					return DECLINED;
+				} else {
+					prepareRequest(r, config, filename);
+					return DECLINED;
+				}
+			}
+		} else {
+			return DECLINED;
+		}
+	}
+	
+	/**
+	 * The default .htaccess provided by on Rails on Rails (that is, before version 2.1.0)
+	 * has the following mod_rewrite rules in it:
+	 *
+	 *   RewriteEngine on
+	 *   RewriteRule ^$ index.html [QSA]
+	 *   RewriteRule ^([^.]+)$ $1.html [QSA]
+	 *   RewriteCond %{REQUEST_FILENAME} !-f
+	 *   RewriteRule ^(.*)$ dispatch.cgi [QSA,L]
+	 *
+	 * As a result, all requests that do not map to a filename will be redirected to
+	 * dispatch.cgi (or dispatch.fcgi, if the user so specified). We don't want that
+	 * to happen, so before mod_rewrite applies its rules, we save the current state.
+	 * After mod_rewrite has applied its rules, undoRedirectionToDispatchCgi() will
+	 * check whether mod_rewrite attempted to perform an internal redirection to
+	 * dispatch.(f)cgi. If so, then it will revert the state to the way it was before
+	 * mod_rewrite took place.
+	 */
+	int saveStateBeforeRewriteRules(request_rec *r) {
+		RequestNote *note = getRequestNote(r);
+		if (note != 0 && hasModRewrite()) {
+			note->handlerBeforeModRewrite = r->handler;
+			note->filenameBeforeModRewrite = r->filename;
+		}
+		return DECLINED;
+	}
+
+	int undoRedirectionToDispatchCgi(request_rec *r) {
+		RequestNote *note = getRequestNote(r);
+		if (note == 0 || !hasModRewrite()) {
+			return DECLINED;
+		}
+		
+		if (r->handler != NULL && strcmp(r->handler, "redirect-handler") == 0) {
+			// Check whether r->filename looks like "redirect:.../dispatch.(f)cgi"
+			size_t len = strlen(r->filename);
+			// 22 == strlen("redirect:/dispatch.cgi")
+			if (len >= 22 && memcmp(r->filename, "redirect:", 9) == 0
+			 && (memcmp(r->filename + len - 13, "/dispatch.cgi", 13) == 0
+			  || memcmp(r->filename + len - 14, "/dispatch.fcgi", 14) == 0)) {
+				if (note->filenameBeforeModRewrite != NULL) {
+					r->filename = note->filenameBeforeModRewrite;
+					r->canonical_filename = note->filenameBeforeModRewrite;
+					r->handler = note->handlerBeforeModRewrite;
+				}
+			}
+		}
+		return DECLINED;
+	}
+	
+	/**
+	 * mod_dir does the following:
+	 * If r->filename is a directory, and the URI doesn't end with a slash,
+	 * then it will redirect the browser to an URI with a slash. For example,
+	 * if you go to http://foo.com/images, then it will redirect you to
+	 * http://foo.com/images/.
+	 *
+	 * This behavior is undesired. Suppose that there is an ImagesController,
+	 * and there's also a 'public/images' folder used for storing page cache
+	 * files. Then we don't want mod_dir to perform the redirection.
+	 *
+	 * So in startBlockingModDir(), we temporarily change some fields in the
+	 * request structure in order to block mod_dir. In endBlockingModDir() we
+	 * revert those fields to their old value.
+	 */
+	int startBlockingModDir(request_rec *r) {
+		RequestNote *note = getRequestNote(r);
+		if (note != 0 && hasModDir()) {
+			note->oldFileType = r->finfo.filetype;
+			r->finfo.filetype = APR_NOFILE;
+		}
+		return DECLINED;
+	}
+	
+	int endBlockingModDir(request_rec *r) {
+		RequestNote *note = getRequestNote(r);
+		if (note != 0 && hasModDir()) {
+			r->finfo.filetype = note->oldFileType;
+		}
+		return DECLINED;
+	}
+	
+	/**
+	 * mod_autoindex will try to display a directory index for URIs that map to a directory.
+	 * This is undesired because of page caching semantics. Suppose that a Rails application
+	 * has an ImagesController which has page caching enabled, and thus also a 'public/images'
+	 * directory. When the visitor visits /images we'll want the request to be forwarded to
+	 * the Rails application, instead of displaying a directory index.
+	 *
+	 * So in this hook method, we temporarily change some fields in the request structure
+	 * in order to block mod_autoindex. In endBlockingModAutoIndex(), we restore the request
+	 * structure to its former state.
+	 */
+	int startBlockingModAutoIndex(request_rec *r) {
+		RequestNote *note = getRequestNote(r);
+		if (note != 0 && hasModAutoIndex()) {
+			note->handlerBeforeModAutoIndex = r->handler;
+			r->handler = "";
+		}
+		return DECLINED;
+	}
+	
+	int endBlockingModAutoIndex(request_rec *r) {
+		RequestNote *note = getRequestNote(r);
+		if (note != 0 && hasModAutoIndex()) {
+			r->handler = note->handlerBeforeModAutoIndex;
+		}
+		return DECLINED;
+	}
+	
+	int handleRequestWhenInHighPerformanceMode(request_rec *r) {
+		DirConfig *config = getDirConfig(r);
+		if (config->highPerformanceMode()) {
+			return handleRequest(r);
+		} else {
+			return DECLINED;
+		}
+	}
+	
+	int handleRequestWhenNotInHighPerformanceMode(request_rec *r) {
+		DirConfig *config = getDirConfig(r);
+		if (config->highPerformanceMode()) {
+			return DECLINED;
+		} else {
+			return handleRequest(r);
 		}
 	}
 };
@@ -900,9 +1087,10 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 			apr_pool_cleanup_null);
 		return OK;
 	
-	} catch (const thread_interrupted &) {
+	} catch (const thread_interrupted &e) {
 		P_TRACE(2, "A system call was interrupted during mod_passenger "
-			"initialization. Apache might be restarting or shutting down.");
+			"initialization. Apache might be restarting or shutting "
+			"down. Backtrace:\n" << e.backtrace());
 		return DECLINED;
 	
 	} catch (const thread_resource_error &e) {
@@ -911,7 +1099,14 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 		
 		lim.rlim_cur = 0;
 		lim.rlim_max = 0;
+
+		/* Solaris does not define the RLIMIT_NPROC limit. Setting it to infinity... */
+#ifdef RLIMIT_NPROC
 		getrlimit(RLIMIT_NPROC, &lim);
+#else
+		lim.rlim_cur = lim.rlim_max = RLIM_INFINITY; 
+#endif
+
 		#ifdef PTHREAD_THREADS_MAX
 			pthread_threads_max = toString(PTHREAD_THREADS_MAX);
 		#else
@@ -951,32 +1146,52 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 	}
 }
 
-static int
-handle_request(request_rec *r) {
-	if (hooks != NULL) {
-		return hooks->handleRequest(r);
-	} else {
-		return DECLINED;
+#define DEFINE_REQUEST_HOOK(c_name, cpp_name)        \
+	static int c_name(request_rec *r) {          \
+		if (OXT_LIKELY(hooks != NULL)) {     \
+			return hooks->cpp_name(r);   \
+		} else {                             \
+			return DECLINED;             \
+		}                                    \
 	}
-}
 
-static int
-map_to_storage(request_rec *r) {
-	if (hooks != NULL) {
-		return hooks->mapToStorage(r);
-	} else {
-		return DECLINED;
-	}
-}
+DEFINE_REQUEST_HOOK(prepare_request_when_in_high_performance_mode, prepareRequestWhenInHighPerformanceMode)
+DEFINE_REQUEST_HOOK(save_original_filename, saveOriginalFilename)
+DEFINE_REQUEST_HOOK(prepare_request_when_not_in_high_performance_mode, prepareRequestWhenNotInHighPerformanceMode)
+DEFINE_REQUEST_HOOK(save_state_before_rewrite_rules, saveStateBeforeRewriteRules)
+DEFINE_REQUEST_HOOK(undo_redirection_to_dispatch_cgi, undoRedirectionToDispatchCgi)
+DEFINE_REQUEST_HOOK(start_blocking_mod_dir, startBlockingModDir)
+DEFINE_REQUEST_HOOK(end_blocking_mod_dir, endBlockingModDir)
+DEFINE_REQUEST_HOOK(start_blocking_mod_autoindex, startBlockingModAutoIndex)
+DEFINE_REQUEST_HOOK(end_blocking_mod_autoindex, endBlockingModAutoIndex)
+DEFINE_REQUEST_HOOK(handle_request_when_in_high_performance_mode, handleRequestWhenInHighPerformanceMode)
+DEFINE_REQUEST_HOOK(handle_request_when_not_in_high_performance_mode, handleRequestWhenNotInHighPerformanceMode)
+
 
 /**
  * Apache hook registration function.
  */
 void
 passenger_register_hooks(apr_pool_t *p) {
+	static const char * const rewrite_module[] = { "mod_rewrite.c", NULL };
+	static const char * const dir_module[] = { "mod_dir.c", NULL };
+	static const char * const autoindex_module[] = { "mod_autoindex.c", NULL };
+
 	ap_hook_post_config(init_module, NULL, NULL, APR_HOOK_MIDDLE);
-	ap_hook_map_to_storage(map_to_storage, NULL, NULL, APR_HOOK_FIRST);
-	ap_hook_handler(handle_request, NULL, NULL, APR_HOOK_MIDDLE);
+	
+	ap_hook_map_to_storage(prepare_request_when_in_high_performance_mode, NULL, NULL, APR_HOOK_FIRST);
+	ap_hook_map_to_storage(save_original_filename, NULL, NULL, APR_HOOK_LAST);
+	
+	ap_hook_fixups(prepare_request_when_not_in_high_performance_mode, NULL, rewrite_module, APR_HOOK_FIRST);
+	ap_hook_fixups(save_state_before_rewrite_rules, NULL, rewrite_module, APR_HOOK_LAST);
+	ap_hook_fixups(undo_redirection_to_dispatch_cgi, rewrite_module, NULL, APR_HOOK_FIRST);
+	ap_hook_fixups(start_blocking_mod_dir, NULL, dir_module, APR_HOOK_MIDDLE);
+	ap_hook_fixups(end_blocking_mod_dir, dir_module, NULL, APR_HOOK_MIDDLE);
+	
+	ap_hook_handler(handle_request_when_in_high_performance_mode, NULL, NULL, APR_HOOK_FIRST);
+	ap_hook_handler(start_blocking_mod_autoindex, NULL, autoindex_module, APR_HOOK_LAST);
+	ap_hook_handler(end_blocking_mod_autoindex, autoindex_module, NULL, APR_HOOK_FIRST);
+	ap_hook_handler(handle_request_when_not_in_high_performance_mode, NULL, NULL, APR_HOOK_LAST);
 }
 
 /**

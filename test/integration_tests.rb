@@ -8,9 +8,7 @@ require 'support/config'
 require 'support/test_helper'
 require 'support/multipart'
 require 'support/apache2_controller'
-require 'passenger/platform_info'
-
-include PlatformInfo
+require 'phusion_passenger/platform_info'
 
 # TODO: test the 'RailsUserSwitching' and 'RailsDefaultUser' option.
 # TODO: test custom page caching directory
@@ -80,11 +78,20 @@ shared_examples_for "MyCook(tm) beta" do
 		response = get_response('/welcome/headers_test')
 		response["X-Foo"].should == "Bar"
 	end
-	
+
+	it "supports %2f in URIs" do
+		get('/welcome/show_id/foo%2fbar').should == 'foo/bar'
+	end
+
+	it "has AbstractRequest which returns a request_uri without hostname, with query_string" do
+		get('/welcome/request_uri?foo=bar%20escaped').should =~ %r{/welcome/request_uri\?foo=bar%20escaped}
+	end
+
 	it "supports restarting via restart.txt" do
 		begin
 			controller = "#{@stub.app_root}/app/controllers/test_controller.rb"
 			restart_file = "#{@stub.app_root}/tmp/restart.txt"
+			now = Time.now
 			
 			File.open(controller, 'w') do |f|
 				f.write %q{
@@ -96,9 +103,10 @@ shared_examples_for "MyCook(tm) beta" do
 					end
 				}
 			end
-			File.open(restart_file, 'w') do end
+			File.open(restart_file, 'w').close
+			File.utime(now - 10, now - 10, restart_file)
 			get('/test').should == "foo"
-		
+			
 			File.open(controller, 'w') do |f|
 				f.write %q{
 					class TestController < ApplicationController
@@ -110,7 +118,7 @@ shared_examples_for "MyCook(tm) beta" do
 				}
 			end
 
-			File.open(restart_file, 'w') do end
+			File.utime(now - 5, now - 5, restart_file)
 			get('/test').should == 'bar'
 		ensure
 			File.unlink(controller) rescue nil
@@ -122,6 +130,30 @@ shared_examples_for "MyCook(tm) beta" do
 		post('/welcome/terminate')
 		sleep(0.25) # Give the app the time to terminate itself.
 		get('/').should =~ /Welcome to MyCook/
+	end
+	
+	it "does not conflict with Phusion Passenger if there's a model named 'Passenger'" do
+		Dir.mkdir("#{@stub.app_root}/app/models") rescue nil
+		File.open("#{@stub.app_root}/app/models/passenger.rb", 'w') do |f|
+			f.write(%q{
+				class Passenger
+					def name
+						return "Gourry Gabriev"
+					end
+				end
+			})
+		end
+		begin
+			system "touch '#{@stub.app_root}/tmp/restart.txt'"
+			get('/welcome/passenger_name').should == 'Gourry Gabriev'
+		ensure
+			File.unlink("#{@stub.app_root}/app/models/passenger.rb") rescue nil
+		end
+	end
+	
+	it "sets the 'Status' header" do
+		response = get_response('/nonexistant')
+		response["Status"].should == "404 Not Found"
 	end
 	
 	if Process.uid == 0
@@ -157,7 +189,6 @@ shared_examples_for "HelloWorld Rack application" do
 		})
 		File.new("#{@stub.app_root}/tmp/restart.txt", "w").close
 		get('/').should == "changed"
-		File.exist?("#{@stub.app_root}/tmp/restart.txt").should == false
 	end
 	
 	if Process.uid == 0
@@ -199,7 +230,6 @@ shared_examples_for "HelloWorld WSGI application" do
 		File.write("#{@stub.app_root}/passenger_wsgi.py", code)
 		File.new("#{@stub.app_root}/tmp/restart.txt", "w").close
 		get('/').should == "changed"
-		File.exist?("#{@stub.app_root}/tmp/restart.txt").should == false
 	end
 	
 	if Process.uid == 0
@@ -238,7 +268,7 @@ describe "mod_passenger running in Apache 2" do
 			@server = "http://passenger.test:#{@apache2.port}"
 			@stub = setup_rails_stub('mycook')
 			@apache2 << "RailsMaxPoolSize 1"
-			@apache2.add_vhost("passenger.test", File.expand_path("#{@stub.app_root}/public"))
+			@apache2.set_vhost("passenger.test", File.expand_path("#{@stub.app_root}/public"))
 			@apache2.start
 		end
 		
@@ -305,7 +335,7 @@ describe "mod_passenger running in Apache 2" do
 			FileUtils.cp_r('stub/zsfa/.', 'tmp.webdir')
 			FileUtils.ln_sf(File.expand_path(@stub.app_root) + "/public", 'tmp.webdir/mycook')
 			
-			@apache2.add_vhost('passenger.test', File.expand_path('tmp.webdir')) do |vhost|
+			@apache2.set_vhost('passenger.test', File.expand_path('tmp.webdir')) do |vhost|
 				vhost << "RailsBaseURI /mycook"
 			end
 			@apache2.start
@@ -330,18 +360,24 @@ describe "mod_passenger running in Apache 2" do
 	
 	describe "configuration options" do
 		before :all do
+			@apache2 << "PassengerMaxPoolSize 3"
+			
 			@stub = setup_rails_stub('mycook')
 			rails_dir = File.expand_path(@stub.app_root) + "/public"
-			@apache2.add_vhost('mycook.passenger.test', rails_dir)
-			@apache2.add_vhost('norails.passenger.test', rails_dir) do |vhost|
+			
+			@apache2.set_vhost('mycook.passenger.test', rails_dir)
+			
+			@apache2.set_vhost('norails.passenger.test', rails_dir) do |vhost|
 				vhost << "RailsAutoDetect off"
 			end
 			
 			@stub2 = setup_rails_stub('foobar', 'tmp.stub2')
 			rails_dir = File.expand_path(@stub2.app_root) + "/public"
-			@apache2.add_vhost('passenger.test', rails_dir) do |vhost|
+			@apache2.set_vhost('passenger.test', rails_dir) do |vhost|
 				vhost << "RailsEnv development"
 				vhost << "RailsSpawnMethod conservative"
+				vhost << "PassengerUseGlobalQueue on"
+				vhost << "PassengerRestartDir #{rails_dir}"
 			end
 			@apache2.start
 		end
@@ -356,12 +392,12 @@ describe "mod_passenger running in Apache 2" do
 			get('/').should_not =~ /MyCook/
 		end
 		
-		it "setting RailsAutoDetect for one virtual host should not interfere with others" do
+		specify "setting RailsAutoDetect for one virtual host should not interfere with others" do
 			@server = "http://mycook.passenger.test:#{@apache2.port}"
 			get('/').should =~ /MyCook/
 		end
 		
-		it "RailsEnv is per-virtual host" do
+		specify "RailsEnv is per-virtual host" do
 			@server = "http://mycook.passenger.test:#{@apache2.port}"
 			get('/welcome/rails_env').should == "production"
 			
@@ -374,10 +410,218 @@ describe "mod_passenger running in Apache 2" do
 			get('/foo/backtrace').should_not =~ /framework_spawner/
 		end
 		
-		it "RailsSpawnMethod spawning is per-virtual host" do
+		specify "RailsSpawnMethod spawning is per-virtual host" do
 			@server = "http://mycook.passenger.test:#{@apache2.port}"
-			get('/welcome/backtrace').should =~ /framework_spawner/
+			get('/welcome/backtrace').should =~ /application_spawner/
 		end
+		
+		it "looks for restart.txt in the directory specified by PassengerRestartDir" do
+			@server = "http://passenger.test:#{@apache2.port}"
+			controller = "#{@stub2.app_root}/app/controllers/bar_controller.rb"
+			restart_file = "#{@stub2.app_root}/public/restart.txt"
+			begin
+				File.open(controller, 'w') do |f|
+					f.write(%Q{
+						class BarController < ApplicationController
+							def index
+								render :text => 'hello world'
+							end
+						end
+					})
+				end
+				
+				File.open(restart_file, 'w').close
+				get('/bar').should == "hello world"
+				
+				File.open(controller, 'w') do |f|
+					f.write(%Q{
+						class BarController < ApplicationController
+							def index
+								render :text => 'oh hai'
+							end
+						end
+					})
+				end
+				
+				now = Time.now
+				File.open(restart_file, 'w').close
+				File.utime(now - 10, now - 10, restart_file)
+				get('/bar').should == "oh hai"
+			ensure
+				File.unlink(controller) rescue nil
+				File.unlink(restart_file) rescue nil
+			end
+		end
+		
+		describe "PassengerUseGlobalQueue" do
+			after :each do
+				# Restart Apache to reset the application pool's state.
+				@apache2.start
+			end
+			
+			it "is off by default" do
+				@server = "http://mycook.passenger.test:#{@apache2.port}"
+				
+				# Spawn the application.
+				get('/')
+				
+				threads = []
+				# Reserve all application pool slots.
+				3.times do |i|
+					thread = Thread.new do
+						File.unlink("#{@stub.app_root}/#{i}.txt") rescue nil
+						get("/welcome/sleep_until_exists?name=#{i}.txt")
+					end
+					threads << thread
+				end
+				
+				# Wait until all application instances are waiting
+				# for the quit file.
+				while !File.exist?("#{@stub.app_root}/waiting_0.txt") ||
+				      !File.exist?("#{@stub.app_root}/waiting_1.txt") ||
+				      !File.exist?("#{@stub.app_root}/waiting_2.txt")
+					sleep 0.1
+				end
+				
+				# While all slots are reserved, make two more requests.
+				first_request_done = false
+				second_request_done = false
+				thread = Thread.new do
+					get("/")
+					first_request_done = true
+				end
+				threads << thread
+				thread = Thread.new do
+					get("/")
+					second_request_done = true
+				end
+				threads << thread
+				
+				# These requests should both block.
+				sleep 0.5
+				first_request_done.should be_false
+				second_request_done.should be_false
+				
+				# One of the requests should still be blocked
+				# if one application instance frees up.
+				File.open("#{@stub.app_root}/2.txt", 'w')
+				begin
+					Timeout.timeout(5) do
+						while !first_request_done && !second_request_done
+							sleep 0.1
+						end
+					end
+				rescue Timeout::Error
+				end
+				(first_request_done || second_request_done).should be_true
+				
+				File.open("#{@stub.app_root}/0.txt", 'w')
+				File.open("#{@stub.app_root}/1.txt", 'w')
+				File.open("#{@stub.app_root}/2.txt", 'w')
+				threads.each do |thread|
+					thread.join
+				end
+			end
+			
+			it "works and is per-virtual host" do
+				@server = "http://passenger.test:#{@apache2.port}"
+				
+				# Spawn the application.
+				get('/')
+				
+				threads = []
+				# Reserve all application pool slots.
+				3.times do |i|
+					thread = Thread.new do
+						File.unlink("#{@stub2.app_root}/#{i}.txt") rescue nil
+						get("/foo/sleep_until_exists?name=#{i}.txt")
+					end
+					threads << thread
+				end
+				
+				# Wait until all application instances are waiting
+				# for the quit file.
+				while !File.exist?("#{@stub2.app_root}/waiting_0.txt") ||
+				      !File.exist?("#{@stub2.app_root}/waiting_1.txt") ||
+				      !File.exist?("#{@stub2.app_root}/waiting_2.txt")
+					sleep 0.1
+				end
+				
+				# While all slots are reserved, make two more requests.
+				first_request_done = false
+				second_request_done = false
+				thread = Thread.new do
+					get("/")
+					first_request_done = true
+				end
+				threads << thread
+				thread = Thread.new do
+					get("/")
+					second_request_done = true
+				end
+				threads << thread
+				
+				# These requests should both block.
+				sleep 0.5
+				first_request_done.should be_false
+				second_request_done.should be_false
+				
+				# Both requests should be processed if one application instance frees up.
+				File.open("#{@stub2.app_root}/2.txt", 'w')
+				begin
+					Timeout.timeout(5) do
+						while !first_request_done || !second_request_done
+							sleep 0.1
+						end
+					end
+				rescue Timeout::Error
+				end
+				first_request_done.should be_true
+				second_request_done.should be_true
+				
+				File.open("#{@stub2.app_root}/0.txt", 'w')
+				File.open("#{@stub2.app_root}/1.txt", 'w')
+				File.open("#{@stub2.app_root}/2.txt", 'w')
+				threads.each do |thread|
+					thread.join
+				end
+			end
+		end
+		
+		describe "PassengerAppRoot" do	    
+			before :all do
+				@stub3 = setup_rails_stub('mycook', 'tmp.stub3')
+				doc_root = File.expand_path(@stub3.app_root) + "/sites/some.site/public"
+				@apache2.set_vhost('passenger.test', doc_root) do |vhost|
+					vhost << "PassengerAppRoot #{File.expand_path(@stub3.app_root).inspect}"
+				end
+				@apache2.start
+			end
+
+			after :all do
+				@stub3.destroy
+			end
+
+			it "supports page caching on non-index URIs" do
+				@server = "http://passenger.test:#{@apache2.port}"
+				get('/welcome/cached.html').should =~ %r{This is the cached version of some.site/public/welcome/cached}
+			end
+
+			it "supports page caching on index URIs" do
+				@server = "http://passenger.test:#{@apache2.port}"
+				get('/uploads.html').should =~ %r{This is the cached version of some.site/public/uploads}
+			end
+
+			it "works as a rails application" do
+				@server = "http://passenger.test:#{@apache2.port}"
+				result = get('/welcome/parameters_test?hello=world&recipe[name]=Green+Bananas')
+				result.should =~ %r{<hello>world</hello>}
+				result.should =~ %r{<recipe>}
+				result.should =~ %r{<name>Green Bananas</name>}
+			end
+		end
+		
+		####################################
 	end
 	
 	describe "error handling" do
@@ -385,7 +629,7 @@ describe "mod_passenger running in Apache 2" do
 			FileUtils.rm_rf('tmp.webdir')
 			FileUtils.mkdir_p('tmp.webdir')
 			@webdir = File.expand_path('tmp.webdir')
-			@apache2.add_vhost('passenger.test', @webdir) do |vhost|
+			@apache2.set_vhost('passenger.test', @webdir) do |vhost|
 				vhost << "RailsBaseURI /app-with-nonexistant-rails-version/public"
 				vhost << "RailsBaseURI /app-that-crashes-during-startup/public"
 				vhost << "RailsBaseURI /app-with-crashing-vendor-rails/public"
@@ -435,7 +679,7 @@ describe "mod_passenger running in Apache 2" do
 	describe "Rack application running in root URI" do
 		before :all do
 			@stub = setup_stub('rack')
-			@apache2.add_vhost('passenger.test', File.expand_path(@stub.app_root) + "/public")
+			@apache2.set_vhost('passenger.test', File.expand_path(@stub.app_root) + "/public")
 			@apache2.start
 			@server = "http://passenger.test:#{@apache2.port}"
 		end
@@ -452,7 +696,7 @@ describe "mod_passenger running in Apache 2" do
 			FileUtils.rm_rf('tmp.webdir')
 			FileUtils.mkdir_p('tmp.webdir')
 			@stub = setup_stub('rack')
-			@apache2.add_vhost('passenger.test', File.expand_path('tmp.webdir')) do |vhost|
+			@apache2.set_vhost('passenger.test', File.expand_path('tmp.webdir')) do |vhost|
 				FileUtils.ln_s(File.expand_path(@stub.app_root) + "/public", 'tmp.webdir/rack')
 				vhost << "RackBaseURI /rack"
 			end
@@ -471,7 +715,7 @@ describe "mod_passenger running in Apache 2" do
 	describe "WSGI application running in root URI" do
 		before :all do
 			@stub = setup_stub('wsgi')
-			@apache2.add_vhost('passenger.test', File.expand_path(@stub.app_root) + "/public")
+			@apache2.set_vhost('passenger.test', File.expand_path(@stub.app_root) + "/public")
 			@apache2.start
 			@server = "http://passenger.test:#{@apache2.port}"
 		end

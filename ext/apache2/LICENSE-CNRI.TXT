@@ -2,6 +2,21 @@ A few functions in ext/apache2/Hooks.cpp are based on the source code of
 mod_scgi version 1.9. Its license is included in this file.
 Please note that these licensing terms *only* encompass those few
 functions, and not Passenger as a whole.
+
+The functions which are based on mod_scgi's code are as follows:
+- Hooks::prepareRequest(). Although our version looks nothing like the
+  original, the idea of checking for the file's existance from the
+  map_to_storage/fixups hook is inspired by mod_scgi's code.
+- Hooks::handleRequest(). Although our version looks nothing like the original,
+  the idea of passing the backend process's socket file descriptor up to the
+  bucket brigade chain is inspired by mod_scgi's code.
+- Hooks::http2env(), Hooks::lookupName(), Hooks::lookupHeader(),
+  Hooks::lookupEnv(), Hooks::addHeader(): Copied from mod_scgi's functions that
+  are named similarly. Slightly modified to make the coding style consistent
+  with the rest of Phusion Passenger.
+- Hooks::sendHeaders(): Based for the most part on mod_scgi's send_headers()
+  function.
+
 ------------------------------------------------------------------------
 CNRI OPEN SOURCE LICENSE AGREEMENT
 

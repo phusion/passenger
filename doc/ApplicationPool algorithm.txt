@@ -3,16 +3,26 @@
 
 == Introduction
 
-For efficiency reasons, Passenger keeps a pool spawned Rails applications.
+For efficiency reasons, Passenger keeps a pool spawned Rails/Ruby applications.
 Please read the C++ API documentation for the ApplicationPool class for a full
-introduction. This document describes an algorithm for managing the pool.
+introduction. This document describes an algorithm for managing the pool, in a
+high-level way.
 
 The algorithm should strive to keep spawning to a minimum.
 
-TODO: check whether the algorithm has thrashing behavior.
-
 
 == Definitions
+
+=== Vocabulary
+
+- "Application root":
+  The toplevel directory in which an application is contained. For Rails
+  application, this is the same as RAILS_ROOT, i.e. the directory that contains
+  "app/", "public/", etc. For a Rack application, this is the directory that
+  contains "config.ru".
+
+- "Active application instance":
+  An application instance that has more than 0 active sessions.
 
 === Types
 
@@ -35,13 +45,44 @@ explicitly define some special types:
     Moves the specified element to the front of the list. _iterator_ is an
     iterator, as described earlier.
   
+- Domain
+  A compound type (class) which contains information about an application root,
+  such as the application instances that have been spawned for this application
+  root.
+  
+  A Domain has the following members:
+  * instances (list<AppContainer>) - a list of AppContainer objects.
+    
+    Invariant:
+        containers is non-empty.
+        for all 0 <= i < containers.size() - 1:
+           if containers[i].app is active:
+              containers[i + 1].app is active
+
+  * size (unsigned integer): The number of items in _instances_.
+  
+  * max_requests (unsigned integer): The maximum number of requests that each
+    application instance in this domain may process. After having processed this
+    many requests, the application instance will be shut down.
+    A value of 0 indicates that there is no maximum.
+  
+  * restart_file_checker
+    An object which monitors the restart.txt file, which belongs to this
+    application root, for changes. This object has the method changed(),
+    which rteurns whether restart.txt's timestamp has changed since the last
+    check.
+
 - AppContainer
-  A compound type which contains an application instance, as well as iterators
-  for various linked lists. These iterators make it possible to perform actions
-  on the linked list in O(1) time.
+  A compound type (class) which contains an application instance, as well as
+  iterators for various linked lists. These iterators make it possible to
+  perform actions on the linked list in O(1) time.
   
   An AppContainer has the following members:
   * app - An Application object, representing an application instance.
+  * start_time (time) - The time at which this application instance was
+    started. It's set to the current time by AppContainer's constructor.
+  * processed_requests (integer) - The number of requests processed by this
+    application instance so far.
   * last_used (time) - The last time a session for this application instance
     was opened or closed.
   * sessions (integer) - The number of open sessions for this application
@@ -49,10 +90,23 @@ explicitly define some special types:
     Invariant:
        (sessions == 0) == (This AppContainer is in inactive_apps.)
   * iterator - The iterator for this AppContainer in the linked list
-    apps[app.app_root]
+    domains[app.app_root].instances
   * ia_iterator - The iterator for this AppContainer in the linked list
     inactive_apps. This iterator is only valid if this AppContainer really is
     in that list.
+
+- PoolOptions
+  A structure containing additional information used by the spawn manager's
+  spawning process, as well as by the get() function.
+  
+  A PoolOptions has the following members:
+  * max_requests (unsigned integer) - The maximum number of requests that the
+    application instance may process. After having processed this many requests,
+    the application instance will be shut down. A value of 0 indicates that there
+    is no maximum.
+  * use_global_queue (boolean) - Whether to use a global queue for all
+    application instances, or a queue that's private to the application instance.
+    The users guide explains this feature in more detail.
 
 === Special functions
 
@@ -71,33 +125,29 @@ information:
   is non-recursive, i.e. if a thread locks a mutex that it has already locked,
   then it will result in a deadlock.
 
-- apps: map[string => list<AppContainer>]
-  Maps an application root to a list of AppContainers. Thus, this map contains
-  all application instances that are in the pool.
+- domains: map[string => Domain]
+  Maps an application root to its Domain object. This map contains all
+  application instances in the pool.
   
   Invariant:
-     for all values v in app:
-        v is nonempty.
-        for all 0 <= i < v.size() - 1:
-           if v[i].app is active:
-              v[i + 1].app is active
+     for all values d in domains:
+        d.size <= count
+     (sum of all d.size in domains) == count
   
-  An active application is one that has more than 0 active sessions.
-
 - max: integer
-  The maximum number of AppContainer objects that may exist in 'apps'.
+  The maximum number of AppContainer objects that may exist in the pool.
 
 - max_per_app: integer
-  The maximum number of concurrent AppContainer objects a single 
-  application may spawn.
+  The maximum number of AppContainer objects that may be simultaneously alive
+  for a single Domain.
 
 - count: integer
-  The current number of AppContainer objects in 'apps'.
+  The current number of AppContainer objects in the pool.
   Since 'max' can be set dynamically during the life time of an application
   pool, 'count > max' is possible.
 
 - active: integer
-  The number of application instances in 'apps' that are active.
+  The number of application instances in the pool that are active.
   Invariant:
      active <= count
 
@@ -108,31 +158,29 @@ information:
   Invariant:
      inactive_apps.size() == count - active
      for all c in inactive_apps:
-        c is in apps.
+        c can be found in _domains_.
         c.sessions == 0
-
-- restart_file_times: map[string => time]
-  Maps an application root to the last known modification time of
-  'restart.txt'.
-  
-  Invariant:
-     for all keys app_root in restart_times:
-        apps.has_key(app_root)
 
 - waiting_on_global_queue: integer
   If global queuing mode is enabled, then when get() is waiting for a backend
   process to become idle, this variable will be incremented. When get() is done
   waiting, this variable will be decremented.
 
-- app_instance_count: map[string => unsigned int]
-  Maps an application root to the number of spawned applications.
 
-  Invariant:
-     app_instance_count.keys == apps.keys
-     for all (app_root, app_count) in app_instance_count:
-        app_instance_count[app_root] < count
-        app_count == apps[app_root].size()
-     (sum of all values in app_instance_count) == count.
+== Class relations
+
+Here's an UML diagram in ASCII art:
+
+[AppContainer] 1..* -------+
+                           |
+                           |
+                           
+                           1
+[ApplicationPool]       [Domain]
+       1                  0..*
+
+       |                   |
+       +-------------------+
 
 
 == Algorithm in pseudo code
@@ -140,64 +188,68 @@ information:
 # Thread-safetiness notes:
 # - All wait commands are to unlock the lock during waiting.
 
-function get(app_root):
+# Connect to an existing application instance or to a newly spawned application instance.
+# 'app_root' specifies the application root folder of the application. 'options' is an
+# object of type 'PoolOptions', which contains additional information which may be
+# relevant for spawning.
+function get(app_root, options):
 	MAX_ATTEMPTS = 10
 	attempt = 0
 	time_limit = now() + 5 seconds
 	lock.synchronize:
 		while (true):
 			attempt++
-			container, list = spawn_or_use_existing(app_root)
+			container, domain = spawn_or_use_existing(app_root, options)
 			container.last_used = current_time()
 			container.sessions++
 			try:
 				return container.app.connect()
 			on exception:
+				# The app instance seems to have crashed.
+				# So we remove this instance from our data
+				# structures.
 				container.sessions--
+				instances = domain.instances
+				instances.remove(container.iterator)
+				domain.size--
+				if instances.empty():
+					domains.remove(app_root)
+				count--
+				active--
 				if (attempt == MAX_ATTEMPTS):
 					propagate exception
-				else:
-					# The app instance seems to have crashed.
-					# So we remove this instance from our data
-					# structures.
-					list.remove(container.iterator)
-					if list.empty():
-						apps.remove(app_root)
-						app_instance_count.remove(app_root)
-					count--
-					active--
 
 
-# Returns a pair of [AppContainer, list<AppContainer>] that matches the
-# given application root. If no such AppContainer exists, then it is created
-# and a new application instance is spawned. All exceptions that occur are
-# propagated.
-function spawn_or_use_existing(app_root):
-	list = apps[app_root]
+# Returns a pair of [AppContainer, Domain] that matches the given application
+# root. If no such AppContainer exists, then it is created and a new
+# application instance is spawned. All exceptions that occur are propagated.
+function spawn_or_use_existing(app_root, options):
+	domain = domains[app_root]
 	
-	if (list != nil) and (needs_restart(app_root)):
-		for all container in list:
+	if (domain != nil) and (needs_restart(app_root, domain)):
+		for all container in domain.instances:
 			if container.sessions == 0:
 				inactive_apps.remove(container.ia_iterator)
 			else:
 				active--
-			list.remove(container.iterator)
+			domain.instances.remove(container.iterator)
 			count--
-		apps.remove(app_root)
-		app_instance_count.remove(app_root)
+		domains.remove(app_root)
 		list = nil
 		Tell spawn server to reload code for app_root.
 	
-	if list != nil:
+	if domain != nil:
 		# There are apps for this app root.
-		if (list.front.sessions == 0):
+		instances = domain.instances
+		
+		if (instances.front.sessions == 0):
 			# There is an inactive app, so we use it.
-			container = list.front
-			list.move_to_back(container.iterator)
+			container = instances.front
+			instances.move_to_back(container.iterator)
 			inactive_apps.remove(container.ia_iterator)
 			active++
 		else if	(count >= max) or (
-			(max_per_app != 0) and (app_instance_count[app_root] >= max_per_app)
+			(max_per_app != 0) and (domain.size >= max_per_app)
 			):
 			# All apps are active, and the pool is full. 
 			#  -OR-
@@ -205,7 +257,7 @@ function spawn_or_use_existing(app_root):
 			# spawned for this application domain has been reached.
 			#
 			# We're not allowed to spawn a new application instance.
-			if use_global_queue:
+			if options.use_global_queue:
 				# So we wait until _active_ has changed, then
 				# we restart this function and try again.
 				waiting_on_global_queue++
@@ -216,8 +268,8 @@ function spawn_or_use_existing(app_root):
 				# So we connect to an already active application.
 				# This connection will be put into that
 				# application's private queue.
-				container = a container in _list_ with the smallest _session_ value
-				list.move_to_back(container.iterator)
+				container = a container in _instances_ with the smallest _session_ value
+				instances.move_to_back(container.iterator)
 		else:
 			# All apps are active, but the pool hasn't reached its
 			# maximum yet. So we spawn a new app.
@@ -225,9 +277,9 @@ function spawn_or_use_existing(app_root):
 			# TODO: we should add some kind of timeout check for spawning.
 			container.app = spawn(app_root)
 			container.sessions = 0
-			iterator = list.add_to_back(container)
+			iterator = instances.add_to_back(container)
 			container.iterator = iterator
-			app_instance_count[app_root]++
+			domain.size++
 			count++
 			active++
 	else:
@@ -239,11 +291,7 @@ function spawn_or_use_existing(app_root):
 		if (active >= max):
 			wait until _active_ has changed
 			goto beginning of function
-		# FIXME: there's a possible concurrency issue here. After
-		# waiting and having reacquired the lock, the state might have
-		# been completely changed, and there may now exist an instance
-		# of this application domain.
-		if count == max:
+		elsif count == max:
 			# Here we are in a though situation. There are several
 			# apps which are inactive, and none of them have
 			# application root _app_root_, so we must kill one of
@@ -256,31 +304,33 @@ function spawn_or_use_existing(app_root):
 			# killed. But for now, we kill a random application
 			# instance.
 			container = inactive_apps.pop_front
-			list = apps[container.app.app_root]
-			list.remove(container.iterator)
-			if list.empty():
-				apps.remove(container.app.app_root)
-				restart_file_times.remove(container.app.app_root)
-				app_instance_count.remove(container.app.app_root)
+			domain = domains[container.app.app_root]
+			instances = domain.instances
+			instances.remove(container.iterator)
+			if instances.empty():
+				domains.remove(container.app.app_root)
 			else:
-				app_instance_count[container.app.app_root]--
+				domain.size--
 			count--
 		container = new AppContainer
 		# TODO: we should add some kind of timeout check for spawning.
 		container.app = spawn(app_root)
 		container.sessions = 0
-		list = apps[app_root]
-		if list == nil:
-			list = new list
-			apps[app_root] = list
-			app_instance_count[app_root] = 1
+		domain = domains[app_root]
+		if domain == nil:
+			domain = new Domain
+			initialize domain.instances
+			initialize domain.restart_file_checker with "$app_root/tmp/restart.txt"
+			domain.size = 1
+			domain.max_requests = options.max_requests
+			domains[app_root] = domain
 		else:
-			app_instance_count[app_root]++
-		iterator = list.add_to_back(container)
+			domain.size++
+		iterator = domain.instances.add_to_back(container)
 		container.iterator = iterator
 		count++
 		active++
-	return [container, list]
+	return [container, domain]
 
 
 # The following function is to be called when a session has been closed.
@@ -288,39 +338,39 @@ function spawn_or_use_existing(app_root):
 # session has been closed.
 function session_has_been_closed(container):
 	lock.synchronize:
-		list = apps[container.app.app_root]
-		if list != nil:
-			container.last_used = current_time()
-			container.sessions--
-			if container.sessions == 0:
-				list.move_to_front(container.iterator)
-				container.ia_iterator = inactive_apps.add_to_back(container.app)
+		domain = domains[container.app.app_root]
+		if domain != nil:
+			instances = domain.instances
+			container.processed++
+			
+			if (domain.max_requests) > 0 and (container.processed >= domain.max_requests):
+				# The application instance has processed its maximum allowed
+				# number of requests, so we shut it down.
+				instances.remove(container.iterator)
+				domain.size--
+				if instances.empty():
+					domains.remove(app_root)
+				count--
 				active--
-
-
-function needs_restart(app_root):
-	restart_file = "$app_root/tmp/restart.txt"
-	s = stat(restart_file)
-	if s != null:
-		delete_file(restart_file)
-		if (deletion was successful) or (file was already deleted):
-			restart_file_times.remove(app_root)
-			result = true
-		else:
-			last_restart_file_time = restart_file_times[app_root]
-			if last_restart_time == null:
-				result = true
 			else:
-				result = s.mtime != last_restart_file_time
-			restart_file_times[app_root] = s.mtime
-	else:
-		restart_file_times.remove(app_root)
-		result = false
-	return result
+				container.last_used = current_time()
+				container.sessions--
+				container.processed++
+				if container.sessions == 0:
+					instances.move_to_front(container.iterator)
+					container.ia_iterator = inactive_apps.add_to_back(container.app)
+					active--
+
+
+function needs_restart(app_root, domain):
+	always_restart_file = "$app_root/tmp/always_restart.txt"
+	return (file_exists(always_restart_file)) or
+	       (domain.restart_file_checker.changed())
 
 
 # The following thread will be responsible for cleaning up idle application
 # instances, i.e. instances that haven't been used for a while.
+# This can be disabled per app when setting it's maxIdleTime to 0.
 thread cleaner:
 	lock.synchronize:
 		done = false
@@ -333,14 +383,16 @@ thread cleaner:
 			now = current_time()
 			for all container in inactive_apps:
 				app = container.app
-				app_list = apps[app.app_root]
-				if now - container.last_used > MAX_IDLE_TIME:
-					app_list.remove(container.iterator)
-					inactive_apps.remove(iterator for container)
-					app_instance_count[app.app_root]--
+				domain = domains[app.app_root]
+				instances = domain.instances
+				# If MAX_IDLE_TIME is 0 we don't clean up the instance,
+				# giving us the option to persist the app container
+				# forever unless it's killed by another app.
+				if (MAX_IDLE_TIME > 0) and (now - container.last_used > MAX_IDLE_TIME):
+					instances.remove(container.iterator)
+					inactive_apps.remove(container.iterator)
+					domain.size--
 					count--
-				if app_list.empty():
-					apps.remove(app.app_root)
-					app_instance_count.remove(app.app_root)
-					restart_file_times.remove(app.app_root)
+				if instances.empty():
+					domains.remove(app.app_root)
 

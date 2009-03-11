@@ -1,12 +1,11 @@
 #!/usr/bin/env ruby
 $LOAD_PATH << "#{File.dirname(__FILE__)}/../../lib"
 $LOAD_PATH << "#{File.dirname(__FILE__)}/../../ext"
-require 'passenger/spawn_manager'
+require 'phusion_passenger/spawn_manager'
 
-include Passenger
+include PhusionPassenger
 class SpawnManager
-	def handle_spawn_application(app_root, lower_privilege, lowest_user, environment,
-				spawn_method, app_type)
+	def handle_spawn_application(*options)
 		client.write('ok')
 		client.write(1234, "/tmp/nonexistant.socket", false)
 		client.send_io(STDERR)

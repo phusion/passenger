@@ -17,11 +17,15 @@
  *  with this program; if not, write to the Free Software Foundation, Inc.,
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-#include <apr_strings.h>
 #include <algorithm>
 #include <cstdlib>
 #include "Configuration.h"
 #include "Utils.h"
+
+/* The APR headers must come after the Passenger headers. See Hooks.cpp
+ * to learn why.
+ */
+#include <apr_strings.h>
 
 using namespace Passenger;
 
@@ -58,13 +62,27 @@ extern "C" {
 void *
 passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	DirConfig *config = create_dir_config_struct(p);
+	config->enabled = DirConfig::UNSET;
 	config->autoDetectRails = DirConfig::UNSET;
 	config->autoDetectRack = DirConfig::UNSET;
 	config->autoDetectWSGI = DirConfig::UNSET;
 	config->allowModRewrite = DirConfig::UNSET;
 	config->railsEnv = NULL;
+	config->appRoot = NULL;
 	config->rackEnv = NULL;
 	config->spawnMethod = DirConfig::SM_UNSET;
+	config->frameworkSpawnerTimeout = -1;
+	config->appSpawnerTimeout = -1;
+	config->maxRequests = 0;
+	config->maxRequestsSpecified = false;
+	config->memoryLimit = 0;
+	config->memoryLimitSpecified = false;
+	config->highPerformance = DirConfig::UNSET;
+	config->useGlobalQueue = DirConfig::UNSET;
+	config->statThrottleRate = 0;
+	config->statThrottleRateSpecified = false;
+	config->restartDir = NULL;
+	/*************************************/
 	return config;
 }
 
@@ -73,6 +91,8 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	DirConfig *config = create_dir_config_struct(p);
 	DirConfig *base = (DirConfig *) basev;
 	DirConfig *add = (DirConfig *) addv;
+	
+	config->enabled = (add->enabled == DirConfig::UNSET) ? base->enabled : add->enabled;
 	
 	config->railsBaseURIs = base->railsBaseURIs;
 	for (set<string>::const_iterator it(add->railsBaseURIs.begin()); it != add->railsBaseURIs.end(); it++) {
@@ -88,8 +108,21 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->autoDetectWSGI = (add->autoDetectWSGI == DirConfig::UNSET) ? base->autoDetectWSGI : add->autoDetectWSGI;
 	config->allowModRewrite = (add->allowModRewrite == DirConfig::UNSET) ? base->allowModRewrite : add->allowModRewrite;
 	config->railsEnv = (add->railsEnv == NULL) ? base->railsEnv : add->railsEnv;
+	config->appRoot = (add->appRoot == NULL) ? base->appRoot : add->appRoot;
 	config->rackEnv = (add->rackEnv == NULL) ? base->rackEnv : add->rackEnv;
 	config->spawnMethod = (add->spawnMethod == DirConfig::SM_UNSET) ? base->spawnMethod : add->spawnMethod;
+	config->frameworkSpawnerTimeout = (add->frameworkSpawnerTimeout == -1) ? base->frameworkSpawnerTimeout : add->frameworkSpawnerTimeout;
+	config->appSpawnerTimeout = (add->appSpawnerTimeout == -1) ? base->appSpawnerTimeout : add->appSpawnerTimeout;
+	config->maxRequests = (add->maxRequestsSpecified) ? add->maxRequests : base->maxRequests;
+	config->maxRequestsSpecified = base->maxRequestsSpecified || add->maxRequestsSpecified;
+	config->memoryLimit = (add->memoryLimitSpecified) ? add->memoryLimit : base->memoryLimit;
+	config->memoryLimitSpecified = base->memoryLimitSpecified || add->memoryLimitSpecified;
+	config->highPerformance = (add->highPerformance == DirConfig::UNSET) ? base->highPerformance : add->highPerformance;
+	config->useGlobalQueue = (add->useGlobalQueue == DirConfig::UNSET) ? base->useGlobalQueue : add->useGlobalQueue;
+	config->statThrottleRate = (add->statThrottleRateSpecified) ? add->statThrottleRate : base->statThrottleRate;
+	config->statThrottleRateSpecified = base->statThrottleRateSpecified || add->statThrottleRateSpecified;
+	config->restartDir = (add->restartDir == NULL) ? base->restartDir : add->restartDir;
+	/*************************************/
 	return config;
 }
 
@@ -105,11 +138,10 @@ passenger_config_create_server(apr_pool_t *p, server_rec *s) {
 	config->maxInstancesPerAppSpecified = false;
 	config->poolIdleTime = DEFAULT_POOL_IDLE_TIME;
 	config->poolIdleTimeSpecified = false;
-	config->useGlobalQueue = false;
-	config->useGlobalQueueSpecified = false;
 	config->userSwitching = true;
 	config->userSwitchingSpecified = false;
 	config->defaultUser = NULL;
+	config->tempDir = NULL;
 	return config;
 }
 
@@ -128,11 +160,10 @@ passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
 	config->maxInstancesPerAppSpecified = base->maxInstancesPerAppSpecified || add->maxInstancesPerAppSpecified;
 	config->poolIdleTime = (add->poolIdleTime) ? base->poolIdleTime : add->poolIdleTime;
 	config->poolIdleTimeSpecified = base->poolIdleTimeSpecified || add->poolIdleTimeSpecified;
-	config->useGlobalQueue = (add->useGlobalQueue) ? base->useGlobalQueue : add->useGlobalQueue;
-	config->useGlobalQueueSpecified = base->useGlobalQueueSpecified || add->useGlobalQueueSpecified;
 	config->userSwitching = (add->userSwitchingSpecified) ? add->userSwitching : base->userSwitching;
 	config->userSwitchingSpecified = base->userSwitchingSpecified || add->userSwitchingSpecified;
 	config->defaultUser = (add->defaultUser == NULL) ? base->defaultUser : add->defaultUser;
+	config->tempDir = (add->tempDir == NULL) ? base->tempDir : add->tempDir;
 	return config;
 }
 
@@ -152,11 +183,10 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 		final->maxInstancesPerAppSpecified = final->maxInstancesPerAppSpecified || config->maxInstancesPerAppSpecified;
 		final->poolIdleTime = (final->poolIdleTimeSpecified) ? final->poolIdleTime : config->poolIdleTime;
 		final->poolIdleTimeSpecified = final->poolIdleTimeSpecified || config->poolIdleTimeSpecified;
-		final->useGlobalQueue = (final->useGlobalQueue) ? final->useGlobalQueue : config->useGlobalQueue;
-		final->useGlobalQueueSpecified = final->useGlobalQueueSpecified || config->useGlobalQueueSpecified;
 		final->userSwitching = (config->userSwitchingSpecified) ? config->userSwitching : final->userSwitching;
 		final->userSwitchingSpecified = final->userSwitchingSpecified || config->userSwitchingSpecified;
 		final->defaultUser = (final->defaultUser != NULL) ? final->defaultUser : config->defaultUser;
+		final->tempDir = (final->tempDir != NULL) ? final->tempDir : config->tempDir;
 	}
 	for (s = main_server; s != NULL; s = s->next) {
 		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
@@ -249,8 +279,8 @@ cmd_passenger_pool_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
 	result = strtol(arg, &end, 10);
 	if (*end != '\0') {
 		return "Invalid number specified for PassengerPoolIdleTime.";
-	} else if (result <= 0) {
-		return "Value for PassengerPoolIdleTime must be greater than 0.";
+	} else if (result < 0) {
+		return "Value for PassengerPoolIdleTime must be greater than or equal to 0.";
 	} else {
 		config->poolIdleTime = (unsigned int) result;
 		config->poolIdleTimeSpecified = true;
@@ -260,14 +290,12 @@ cmd_passenger_pool_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
 
 static const char *
 cmd_passenger_use_global_queue(cmd_parms *cmd, void *pcfg, int arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
+	DirConfig *config = (DirConfig *) pcfg;
 	if (arg) {
-		config->useGlobalQueue = true;
+		config->useGlobalQueue = DirConfig::ENABLED;
 	} else {
-		config->useGlobalQueue = false;
+		config->useGlobalQueue = DirConfig::DISABLED;
 	}
-	config->useGlobalQueueSpecified = true;
 	return NULL;
 }
 
@@ -285,6 +313,86 @@ cmd_passenger_default_user(cmd_parms *cmd, void *dummy, const char *arg) {
 	ServerConfig *config = (ServerConfig *) ap_get_module_config(
 		cmd->server->module_config, &passenger_module);
 	config->defaultUser = arg;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_temp_dir(cmd_parms *cmd, void *dummy, const char *arg) {
+	ServerConfig *config = (ServerConfig *) ap_get_module_config(
+		cmd->server->module_config, &passenger_module);
+	config->tempDir = arg;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_max_requests(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	char *end;
+	long int result;
+	
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		return "Invalid number specified for PassengerMaxRequests.";
+	} else if (result < 0) {
+		return "Value for PassengerMaxRequests must be greater than or equal to 0.";
+	} else {
+		config->maxRequests = (unsigned long) result;
+		config->maxRequestsSpecified = true;
+		return NULL;
+	}
+}
+
+static const char *
+cmd_passenger_high_performance(cmd_parms *cmd, void *pcfg, int arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	if (arg) {
+		config->highPerformance = DirConfig::ENABLED;
+	} else {
+		config->highPerformance = DirConfig::DISABLED;
+	}
+	return NULL;
+}
+
+static const char *
+cmd_passenger_enabled(cmd_parms *cmd, void *pcfg, int arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	if (arg) {
+		config->enabled = DirConfig::ENABLED;
+	} else {
+		config->enabled = DirConfig::DISABLED;
+	}
+	return NULL;
+}
+
+static const char *
+cmd_passenger_stat_throttle_rate(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	char *end;
+	long int result;
+	
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		return "Invalid number specified for PassengerStatThrottleRate.";
+	} else if (result < 0) {
+		return "Value for PassengerStatThrottleRate must be greater than or equal to 0.";
+	} else {
+		config->statThrottleRate = (unsigned long) result;
+		config->statThrottleRateSpecified = true;
+		return NULL;
+	}
+}
+
+static const char *
+cmd_passenger_restart_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->restartDir = arg;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_app_root(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->appRoot = arg;
 	return NULL;
 }
 
@@ -326,12 +434,48 @@ cmd_rails_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	if (strcmp(arg, "smart") == 0) {
 		config->spawnMethod = DirConfig::SM_SMART;
+	} else if (strcmp(arg, "smart-lv2") == 0) {
+		config->spawnMethod = DirConfig::SM_SMART_LV2;
 	} else if (strcmp(arg, "conservative") == 0) {
 		config->spawnMethod = DirConfig::SM_CONSERVATIVE;
 	} else {
-		return "RailsSpawnMethod may only be 'smart' or 'conservative'.";
+		return "RailsSpawnMethod may only be 'smart', 'smart-lv2' or 'conservative'.";
 	}
 	return NULL;
+}
+
+static const char *
+cmd_rails_framework_spawner_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	char *end;
+	long int result;
+	
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		return "Invalid number specified for RailsFrameworkSpawnerIdleTime.";
+	} else if (result < 0) {
+		return "Value for RailsFrameworkSpawnerIdleTime must be at least 0.";
+	} else {
+		config->frameworkSpawnerTimeout = result;
+		return NULL;
+	}
+}
+
+static const char *
+cmd_rails_app_spawner_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	char *end;
+	long int result;
+	
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		return "Invalid number specified for RailsAppSpawnerIdleTime.";
+	} else if (result < 0) {
+		return "Value for RailsAppSpawnerIdleTime must be at least 0.";
+	} else {
+		config->appSpawnerTimeout = result;
+		return NULL;
+	}
 }
 
 
@@ -387,7 +531,9 @@ cmd_rails_spawn_server(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 
-typedef const char * (*Take1Func)(); // Workaround for some weird C++-specific compiler error.
+// Workaround for some weird C++-specific compiler error.
+typedef const char * (*Take0Func)();
+typedef const char * (*Take1Func)();
 
 const command_rec passenger_commands[] = {
 	// Passenger settings.
@@ -424,7 +570,7 @@ const command_rec passenger_commands[] = {
 	AP_INIT_FLAG("PassengerUseGlobalQueue",
 		(Take1Func) cmd_passenger_use_global_queue,
 		NULL,
-		ACCESS_CONF | RSRC_CONF,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Enable or disable Passenger's global queuing mode mode."),
 	AP_INIT_FLAG("PassengerUserSwitching",
 		(Take1Func) cmd_passenger_user_switching,
@@ -436,12 +582,47 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The user that Rails/Rack applications must run as when user switching fails or is disabled."),
+	AP_INIT_TAKE1("PassengerTempDir",
+		(Take1Func) cmd_passenger_temp_dir,
+		NULL,
+		RSRC_CONF,
+		"The temp directory that Passenger should use."),
+	AP_INIT_TAKE1("PassengerMaxRequests",
+		(Take1Func) cmd_passenger_max_requests,
+		NULL,
+		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
+		"The maximum number of requests that an application instance may process."),
+	AP_INIT_FLAG("PassengerHighPerformance",
+		(Take1Func) cmd_passenger_high_performance,
+		NULL,
+		OR_ALL,
+		"Enable or disable Passenger's high performance mode."),
+	AP_INIT_FLAG("PassengerEnabled",
+		(Take1Func) cmd_passenger_enabled,
+		NULL,
+		OR_ALL,
+		"Enable or disable Phusion Passenger."),
+	AP_INIT_TAKE1("PassengerStatThrottleRate",
+		(Take1Func) cmd_passenger_stat_throttle_rate,
+		NULL,
+		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
+		"Limit the number of stat calls to once per given seconds."),
+	AP_INIT_TAKE1("PassengerRestartDir",
+		(Take1Func) cmd_passenger_restart_dir,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"The directory in which Passenger should look for restart.txt."),
+	AP_INIT_TAKE1("PassengerAppRoot",
+		(Take1Func) cmd_passenger_app_root,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"The application's root directory."),
 
 	// Rails-specific settings.
 	AP_INIT_TAKE1("RailsBaseURI",
 		(Take1Func) cmd_rails_base_uri,
 		NULL,
-		RSRC_CONF,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Reserve the given URI to a Rails application."),
 	AP_INIT_FLAG("RailsAutoDetect",
 		(Take1Func) cmd_rails_auto_detect,
@@ -456,19 +637,29 @@ const command_rec passenger_commands[] = {
 	AP_INIT_TAKE1("RailsEnv",
 		(Take1Func) cmd_rails_env,
 		NULL,
-		RSRC_CONF,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The environment under which a Rails app must run."),
 	AP_INIT_TAKE1("RailsSpawnMethod",
 		(Take1Func) cmd_rails_spawn_method,
 		NULL,
 		RSRC_CONF,
 		"The spawn method to use."),
+	AP_INIT_TAKE1("RailsFrameworkSpawnerIdleTime", // TODO: document this
+		(Take1Func) cmd_rails_framework_spawner_idle_time,
+		NULL,
+		RSRC_CONF,
+		"The maximum number of seconds that a framework spawner may be idle before it is shutdown."),
+	AP_INIT_TAKE1("RailsAppSpawnerIdleTime", // TODO: document this
+		(Take1Func) cmd_rails_app_spawner_idle_time,
+		NULL,
+		RSRC_CONF,
+		"The maximum number of seconds that an application spawner may be idle before it is shutdown."),
 	
 	// Rack-specific settings.
 	AP_INIT_TAKE1("RackBaseURI",
 		(Take1Func) cmd_rack_base_uri,
 		NULL,
-		RSRC_CONF,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Reserve the given URI to a Rack application."),
 	AP_INIT_FLAG("RackAutoDetect",
 		(Take1Func) cmd_rack_auto_detect,
@@ -478,10 +669,10 @@ const command_rec passenger_commands[] = {
 	AP_INIT_TAKE1("RackEnv",
 		(Take1Func) cmd_rack_env,
 		NULL,
-		RSRC_CONF,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The environment under which a Rack app must run."),
 	
-	// Rack-specific settings.
+	// WSGI-specific settings.
 	AP_INIT_FLAG("PassengerWSGIAutoDetect",
 		(Take1Func) cmd_wsgi_auto_detect,
 		NULL,

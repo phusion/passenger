@@ -24,6 +24,7 @@
 #include <sys/types.h>
 
 #include "Application.h"
+#include "PoolOptions.h"
 
 namespace Passenger {
 
@@ -91,26 +92,30 @@ public:
 	virtual ~ApplicationPool() {};
 	
 	/**
-	 * Open a new session with the application specified by <tt>appRoot</tt>.
+	 * Checks whether this ApplicationPool object is still connected to the
+	 * ApplicationPool server.
+	 *
+	 * If that's not the case, then one should reconnect to the ApplicationPool server.
+	 *
+	 * This method is only meaningful for instances of type ApplicationPoolServer::Client.
+	 * The default implementation always returns true.
+	 */
+	virtual bool connected() const {
+		return true;
+	}
+	
+	/**
+	 * Open a new session with the application specified by <tt>PoolOptions.appRoot</tt>.
 	 * See the class description for ApplicationPool, as well as Application::connect(),
 	 * on how to use the returned session object.
 	 *
 	 * Internally, this method may either spawn a new application instance, or use
 	 * an existing one.
 	 *
-	 * If <tt>lowerPrivilege</tt> is true, then any newly spawned application
-	 * instances will have lower privileges. See SpawnManager::SpawnManager()'s
-	 * description of <tt>lowerPrivilege</tt> and <tt>lowestUser</tt> for details.
-	 *
-	 * @param appRoot The application root of a RoR application, i.e. the folder that
-	 *             contains 'app/', 'public/', 'config/', etc. This must be a valid
-	 *             directory, but does not have to be an absolute path.
-	 * @param lowerPrivilege Whether to lower the application's privileges.
-	 * @param lowestUser The user to fallback to if lowering privilege fails.
-	 * @param environment The RAILS_ENV/RACK_ENV environment that should be used. May not be empty.
-	 * @param spawnMethod The spawn method to use. Either "smart" or "conservative".
- 	 *                    See the Ruby class SpawnManager for details.
- 	 * @param appType The application type. Either "rails" or "rack".
+	 * @param options An object containing information on which application to open
+	 *             a session with, as well as spawning details. Spawning details will be used
+	 *             if the pool decides that spawning a new application instance is necessary.
+	 *             See SpawnManager and PoolOptions for details.
 	 * @return A session object.
 	 * @throw SpawnException An attempt was made to spawn a new application instance, but that attempt failed.
 	 * @throw BusyException The application pool is too busy right now, and cannot
@@ -123,9 +128,14 @@ public:
 	 *       <tt>get("/home/../home/foo")</tt>, then ApplicationPool will think
 	 *       they're 2 different applications, and thus will spawn 2 application instances.
 	 */
-	virtual Application::SessionPtr get(const string &appRoot, bool lowerPrivilege = true,
-		const string &lowestUser = "nobody", const string &environment = "production",
-		const string &spawnMethod = "smart", const string &appType = "rails") = 0;
+	virtual Application::SessionPtr get(const PoolOptions &options) = 0;
+	
+	/**
+	 * Convenience shortcut for calling get() with default spawn options.
+	 */
+	virtual Application::SessionPtr get(const string &appRoot) {
+		return get(PoolOptions(appRoot));
+	}
 	
 	/**
 	 * Clear all application instances that are currently in the pool.
@@ -172,18 +182,6 @@ public:
 	 * It is allowed to set a limit lower than the current number of spawned applications.
 	 */
 	virtual void setMaxPerApp(unsigned int max) = 0;
-	
-	/**
-	 * Sets whether to use a global queue instead of a per-backend process
-	 * queue. If enabled, when all backend processes are active, get() will
-	 * wait until there's at least one backend process that's idle, instead
-	 * of queuing the request into a random process's private queue.
-	 * This is especially useful if a website has one or more long-running
-	 * requests.
-	 *
-	 * Defaults to false.
-	 */
-	virtual void setUseGlobalQueue(bool value) = 0;
 	
 	/**
 	 * Get the process ID of the spawn server that is used.

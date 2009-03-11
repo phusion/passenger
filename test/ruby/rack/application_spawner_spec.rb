@@ -1,10 +1,8 @@
 require 'support/config'
 require 'support/test_helper'
-require 'passenger/rack/application_spawner'
+require 'phusion_passenger/rack/application_spawner'
 
-include Passenger
-
-describe Passenger::Rack::ApplicationSpawner do
+describe PhusionPassenger::Rack::ApplicationSpawner do
 	include TestHelper
 	
 	before :each do
@@ -37,7 +35,7 @@ describe Passenger::Rack::ApplicationSpawner do
 	end if Process.euid == 0
 	
 	def spawn(*args)
-		Passenger::Rack::ApplicationSpawner.spawn_application(*args)
+		PhusionPassenger::Rack::ApplicationSpawner.spawn_application(*args)
 	end
 end
 

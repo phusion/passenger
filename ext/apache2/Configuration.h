@@ -20,6 +20,16 @@
 #ifndef _PASSENGER_CONFIGURATION_H_
 #define _PASSENGER_CONFIGURATION_H_
 
+#include "Utils.h"
+#include "MessageChannel.h"
+
+/* The APR headers must come after the Passenger headers. See Hooks.cpp
+ * to learn why.
+ *
+ * MessageChannel.h must be included -- even though we don't actually use
+ * MessageChannel.h in here, it's necessary to make sure that apr_want.h
+ * doesn't b0rk on 'struct iovec'.
+ */
 #include <apr_pools.h>
 #include <httpd.h>
 #include <http_config.h>
@@ -31,7 +41,7 @@
  */
 
 /** Module version number. */
-#define PASSENGER_VERSION "2.0.6"
+#define PASSENGER_VERSION "2.1.1"
 
 #ifdef __cplusplus
 	#include <set>
@@ -43,9 +53,15 @@
 		
 		/**
 		 * Per-directory configuration information.
+		 *
+		 * Use the getter methods to query information, because those will return
+		 * the default value if the value is not specified.
 		 */
 		struct DirConfig {
 			enum Threeway { ENABLED, DISABLED, UNSET };
+			enum SpawnMethod { SM_UNSET, SM_SMART, SM_SMART_LV2, SM_CONSERVATIVE };
+			
+			Threeway enabled;
 			
 			std::set<std::string> railsBaseURIs;
 			std::set<std::string> rackBaseURIs;
@@ -66,17 +82,166 @@
 			 * Rails applications should operate. */
 			const char *railsEnv;
 			
+			/** The path to the application's root (for example: RAILS_ROOT
+			 * for Rails applications, directory containing 'config.ru'
+			 * for Rack applications). If this value is NULL, the default
+			 * autodetected path will be used.
+			 */
+			const char *appRoot;
+			
 			/** The environment (i.e. value for RACK_ENV) under which
 			 * Rack applications should operate. */
 			const char *rackEnv;
 			
-			enum SpawnMethod { SM_UNSET, SM_SMART, SM_CONSERVATIVE };
 			/** The Rails spawn method to use. */
 			SpawnMethod spawnMethod;
+			
+			/**
+			 * The idle timeout, in seconds, of Rails framework spawners.
+			 * May also be 0 (which indicates that the framework spawner should
+			 * never idle timeout) or -1 (which means that the value is not specified).
+			 */
+			long frameworkSpawnerTimeout;
+			
+			/**
+			 * The idle timeout, in seconds, of Rails application spawners.
+			 * May also be 0 (which indicates that the application spawner should
+			 * never idle timeout) or -1 (which means that the value is not specified).
+			 */
+			long appSpawnerTimeout;
+			
+			/**
+			 * The maximum number of requests that the spawned application may process
+			 * before exiting. A value of 0 means unlimited.
+			 */
+			unsigned long maxRequests;
+			
+			/** Indicates whether the maxRequests option was explicitly specified
+			 * in the directory configuration. */
+			bool maxRequestsSpecified;
+			
+			/**
+			 * The maximum amount of memory (in MB) the spawned application may use.
+			 * A value of 0 means unlimited.
+			 */
+			unsigned long memoryLimit;
+			
+			/** Indicates whether the memoryLimit option was explicitly specified
+			 * in the directory configuration. */
+			bool memoryLimitSpecified;
+			
+			Threeway highPerformance;
+			
+			/** Whether global queuing should be used. */
+			Threeway useGlobalQueue;
+			
+			/**
+			 * Throttle the number of stat() calls on files like
+			 * restart.txt to the once per given number of seconds.
+			 */
+			unsigned long statThrottleRate;
+			
+			/** Indicates whether the statThrottleRate option was
+			 * explicitly specified in the directory configuration. */
+			bool statThrottleRateSpecified;
+			
+			/** The directory in which Passenger should look for
+			 * restart.txt. NULL means that the default directory
+			 * should be used.
+			 */
+			const char *restartDir;
+			
+			/*************************************/
+			
+			bool isEnabled() const {
+				return enabled != DISABLED;
+			}
+			
+			string getAppRoot(const char *documentRoot) const {
+				if (appRoot == NULL) {
+					return string(documentRoot).append("/..");
+				} else {
+					return appRoot;
+				}
+			}
+			
+			const char *getRailsEnv() const {
+				if (railsEnv != NULL) {
+					return railsEnv;
+				} else {
+					return "production";
+				}
+			}
+			
+			const char *getRackEnv() const {
+				if (rackEnv != NULL) {
+					return rackEnv;
+				} else {
+					return "production";
+				}
+			}
+			
+			const char *getSpawnMethodString() {
+				switch (spawnMethod) {
+				case SM_SMART:
+					return "smart";
+				case SM_SMART_LV2:
+					return "smart-lv2";
+				case SM_CONSERVATIVE:
+					return "conservative";
+				default:
+					return "smart-lv2";
+				}
+			}
+			
+			unsigned long getMaxRequests() {
+				if (maxRequestsSpecified) {
+					return maxRequests;
+				} else {
+					return 0;
+				}
+			}
+			
+			unsigned long getMemoryLimit() {
+				if (memoryLimitSpecified) {
+					return memoryLimit;
+				} else {
+					return 200;
+				}
+			}
+			
+			bool highPerformanceMode() const {
+				return highPerformance == ENABLED;
+			}
+			
+			bool usingGlobalQueue() const {
+				return useGlobalQueue == ENABLED;
+			}
+			
+			unsigned long getStatThrottleRate() const {
+				if (statThrottleRateSpecified) {
+					return statThrottleRate;
+				} else {
+					return 0;
+				}
+			}
+			
+			const char *getRestartDir() const {
+				if (restartDir != NULL) {
+					return restartDir;
+				} else {
+					return "";
+				}
+			}
+			
+			/*************************************/
 		};
 		
 		/**
 		 * Server-wide (global, not per-virtual host) configuration information.
+		 *
+		 * Use the getter methods to query information, because those will return
+		 * the default value if the value is not specified.
 		 */
 		struct ServerConfig {
 			/** The filename of the Ruby interpreter to use. */
@@ -112,13 +277,6 @@
 			 * this server config. */
 			bool poolIdleTimeSpecified;
 			
-			/** Whether global queuing should be used. */
-			bool useGlobalQueue;
-			
-			/** Whether the useGlobalQueue option was explicitly specified
-			 * in this server config. */
-			bool useGlobalQueueSpecified;
-			
 			/** Whether user switching support is enabled. */
 			bool userSwitching;
 			
@@ -131,11 +289,16 @@
 			 */
 			const char *defaultUser;
 			
-			bool getUseGlobalQueue() const {
-				if (useGlobalQueueSpecified) {
-					return useGlobalQueue;
+			/** The temp directory that Passenger should use. NULL
+			 * means unspecified.
+			 */
+			const char *tempDir;
+			
+			const char *getDefaultUser() const {
+				if (defaultUser != NULL) {
+					return defaultUser;
 				} else {
-					return false;
+					return "nobody";
 				}
 			}
 		};
