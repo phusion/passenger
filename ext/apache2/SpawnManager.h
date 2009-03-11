@@ -24,6 +24,8 @@
 #include <list>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
+#include <oxt/system_calls.hpp>
+#include <oxt/backtrace.hpp>
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -33,19 +35,21 @@
 #include <cstdarg>
 #include <unistd.h>
 #include <errno.h>
+#include <grp.h>
 #include <pwd.h>
 #include <signal.h>
 
 #include "Application.h"
+#include "PoolOptions.h"
 #include "MessageChannel.h"
 #include "Exceptions.h"
 #include "Logging.h"
-#include "System.h"
 
 namespace Passenger {
 
 using namespace std;
 using namespace boost;
+using namespace oxt;
 
 /**
  * @brief Spawning of Ruby on Rails/Rack application instances.
@@ -89,7 +93,7 @@ private:
 	string rubyCommand;
 	string user;
 	
-	mutex lock;
+	boost::mutex lock;
 	
 	MessageChannel channel;
 	pid_t pid;
@@ -103,30 +107,34 @@ private:
 	 * @throws IOException The specified log file could not be opened.
 	 */
 	void restartServer() {
+		TRACE_POINT();
 		if (pid != 0) {
+			UPDATE_TRACE_POINT();
 			channel.close();
 			
 			// Wait at most 5 seconds for the spawn server to exit.
 			// If that doesn't work, kill it, then wait at most 5 seconds
 			// for it to exit.
-			time_t begin = InterruptableCalls::time(NULL);
+			time_t begin = syscalls::time(NULL);
 			bool done = false;
-			while (!done && InterruptableCalls::time(NULL) - begin < 5) {
-				if (InterruptableCalls::waitpid(pid, NULL, WNOHANG) > 0) {
+			while (!done && syscalls::time(NULL) - begin < 5) {
+				if (syscalls::waitpid(pid, NULL, WNOHANG) > 0) {
 					done = true;
 				} else {
-					InterruptableCalls::usleep(100000);
+					syscalls::usleep(100000);
 				}
 			}
+			UPDATE_TRACE_POINT();
 			if (!done) {
+				UPDATE_TRACE_POINT();
 				P_TRACE(2, "Spawn server did not exit in time, killing it...");
-				InterruptableCalls::kill(pid, SIGTERM);
-				begin = InterruptableCalls::time(NULL);
-				while (InterruptableCalls::time(NULL) - begin < 5) {
-					if (InterruptableCalls::waitpid(pid, NULL, WNOHANG) > 0) {
+				syscalls::kill(pid, SIGTERM);
+				begin = syscalls::time(NULL);
+				while (syscalls::time(NULL) - begin < 5) {
+					if (syscalls::waitpid(pid, NULL, WNOHANG) > 0) {
 						break;
 					} else {
-						InterruptableCalls::usleep(100000);
+						syscalls::usleep(100000);
 					}
 				}
 				P_TRACE(2, "Spawn server has exited.");
@@ -138,11 +146,11 @@ private:
 		FILE *logFileHandle = NULL;
 		
 		serverNeedsRestart = true;
-		if (InterruptableCalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
+		if (syscalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
 			throw SystemException("Cannot create a Unix socket", errno);
 		}
 		if (!logFile.empty()) {
-			logFileHandle = InterruptableCalls::fopen(logFile.c_str(), "a");
+			logFileHandle = syscalls::fopen(logFile.c_str(), "a");
 			if (logFileHandle == NULL) {
 				string message("Cannot open log file '");
 				message.append(logFile);
@@ -151,7 +159,8 @@ private:
 			}
 		}
 
-		pid = InterruptableCalls::fork();
+		UPDATE_TRACE_POINT();
+		pid = syscalls::fork();
 		if (pid == 0) {
 			if (!logFile.empty()) {
 				dup2(fileno(logFileHandle), STDERR_FILENO);
@@ -168,6 +177,14 @@ private:
 			if (!user.empty()) {
 				struct passwd *entry = getpwnam(user.c_str());
 				if (entry != NULL) {
+					if (initgroups(user.c_str(), entry->pw_gid) != 0) {
+						int e = errno;
+						fprintf(stderr, "*** Passenger: cannot set supplementary "
+							"groups for user %s: %s (%d)\n",
+							user.c_str(),
+							strerror(e),
+							e);
+					}
 					if (setgid(entry->pw_gid) != 0) {
 						int e = errno;
 						fprintf(stderr, "*** Passenger: cannot run spawn "
@@ -202,33 +219,35 @@ private:
 				// This argument is ignored by the spawn server. This works on some
 				// systems, such as Ubuntu Linux.
 				"                                                             ",
-				NULL);
+				(char *) NULL);
 			int e = errno;
-			fprintf(stderr, "*** Passenger ERROR: Could not start the spawn server: %s: %s (%d)\n",
+			fprintf(stderr, "*** Passenger ERROR (%s:%d):\n"
+				"Could not start the spawn server: %s: %s (%d)\n",
+				__FILE__, __LINE__,
 				rubyCommand.c_str(), strerror(e), e);
 			fflush(stderr);
 			_exit(1);
 		} else if (pid == -1) {
 			int e = errno;
-			InterruptableCalls::close(fds[0]);
-			InterruptableCalls::close(fds[1]);
+			syscalls::close(fds[0]);
+			syscalls::close(fds[1]);
 			if (logFileHandle != NULL) {
-				InterruptableCalls::fclose(logFileHandle);
+				syscalls::fclose(logFileHandle);
 			}
 			pid = 0;
 			throw SystemException("Unable to fork a process", e);
 		} else {
-			InterruptableCalls::close(fds[1]);
+			syscalls::close(fds[1]);
 			if (!logFile.empty()) {
-				InterruptableCalls::fclose(logFileHandle);
+				syscalls::fclose(logFileHandle);
 			}
 			channel = MessageChannel(fds[0]);
 			serverNeedsRestart = false;
 			
 			#ifdef TESTING_SPAWN_MANAGER
 				if (nextRestartShouldFail) {
-					InterruptableCalls::kill(pid, SIGTERM);
-					InterruptableCalls::usleep(500000);
+					syscalls::kill(pid, SIGTERM);
+					syscalls::usleep(500000);
 				}
 			#endif
 		}
@@ -237,41 +256,26 @@ private:
 	/**
 	 * Send the spawn command to the spawn server.
 	 *
-	 * @param appRoot The application root of the application to spawn.
-	 * @param lowerPrivilege Whether to lower the application's privileges.
-	 * @param lowestUser The user to fallback to if lowering privilege fails.
-	 * @param environment The RAILS_ENV/RACK_ENV environment that should be used.
-	 * @param spawnMethod The spawn method to use.
-	 * @param appType The application type.
+	 * @param PoolOptions The spawn options to use.
 	 * @return An Application smart pointer, representing the spawned application.
 	 * @throws SpawnException Something went wrong.
 	 */
-	ApplicationPtr sendSpawnCommand(
-		const string &appRoot,
-		bool lowerPrivilege,
-		const string &lowestUser,
-		const string &environment,
-		const string &spawnMethod,
-		const string &appType
-	) {
+	ApplicationPtr sendSpawnCommand(const PoolOptions &PoolOptions) {
+		TRACE_POINT();
 		vector<string> args;
 		int ownerPipe;
 		
 		try {
-			channel.write("spawn_application",
-				appRoot.c_str(),
-				(lowerPrivilege) ? "true" : "false",
-				lowestUser.c_str(),
-				environment.c_str(),
-				spawnMethod.c_str(),
-				appType.c_str(),
-				NULL);
+			args.push_back("spawn_application");
+			PoolOptions.toVector(args);
+			channel.write(args);
 		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not write 'spawn_application' "
 				"command to the spawn server: ") + e.sys());
 		}
 		
 		try {
+			UPDATE_TRACE_POINT();
 			// Read status.
 			if (!channel.read(args)) {
 				throw SpawnException("The spawn server has exited unexpectedly.");
@@ -299,6 +303,7 @@ private:
 			throw SpawnException(string("Could not read from the spawn server: ") + e.sys());
 		}
 		
+		UPDATE_TRACE_POINT();
 		try {
 			ownerPipe = channel.readFileDescriptor();
 		} catch (const SystemException &e) {
@@ -312,14 +317,15 @@ private:
 		}
 		
 		if (args.size() != 3) {
-			InterruptableCalls::close(ownerPipe);
+			UPDATE_TRACE_POINT();
+			syscalls::close(ownerPipe);
 			throw SpawnException("The spawn server sent an invalid message.");
 		}
 		
 		pid_t pid = atoi(args[0]);
-		bool usingAbstractNamespace = args[2] == "true";
 		
-		if (!usingAbstractNamespace) {
+		UPDATE_TRACE_POINT();
+		if (args[2] == "unix") {
 			int ret;
 			do {
 				ret = chmod(args[1].c_str(), S_IRUSR | S_IWUSR);
@@ -328,18 +334,16 @@ private:
 				ret = chown(args[1].c_str(), getuid(), getgid());
 			} while (ret == -1 && errno == EINTR);
 		}
-		return ApplicationPtr(new Application(appRoot, pid, args[1],
-			usingAbstractNamespace, ownerPipe));
+		return ApplicationPtr(new Application(PoolOptions.appRoot,
+			pid, args[1], args[2], ownerPipe));
 	}
 	
 	/**
 	 * @throws boost::thread_interrupted
 	 */
 	ApplicationPtr
-	handleSpawnException(const SpawnException &e, const string &appRoot,
-	                     bool lowerPrivilege, const string &lowestUser,
-	                     const string &environment, const string &spawnMethod,
-	                     const string &appType) {
+	handleSpawnException(const SpawnException &e, const PoolOptions &PoolOptions) {
+		TRACE_POINT();
 		bool restarted;
 		try {
 			P_DEBUG("Spawn server died. Attempting to restart it...");
@@ -355,8 +359,7 @@ private:
 			restarted = false;
 		}
 		if (restarted) {
-			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser,
-				environment, spawnMethod, appType);
+			return sendSpawnCommand(PoolOptions);
 		} else {
 			throw SpawnException("The spawn server died unexpectedly, and restarting it failed.");
 		}
@@ -369,6 +372,7 @@ private:
 	 * @throws SystemException Something went wrong.
 	 */
 	void sendReloadCommand(const string &appRoot) {
+		TRACE_POINT();
 		try {
 			channel.write("reload", appRoot.c_str(), NULL);
 		} catch (const SystemException &e) {
@@ -378,6 +382,7 @@ private:
 	}
 	
 	void handleReloadException(const SystemException &e, const string &appRoot) {
+		TRACE_POINT();
 		bool restarted;
 		try {
 			P_DEBUG("Spawn server died. Attempting to restart it...");
@@ -434,6 +439,7 @@ public:
 	             const string &logFile = "",
 	             const string &rubyCommand = "ruby",
 	             const string &user = "") {
+		TRACE_POINT();
 		this->spawnServerCommand = spawnServerCommand;
 		this->logFile = logFile;
 		this->rubyCommand = rubyCommand;
@@ -454,76 +460,45 @@ public:
 	}
 	
 	~SpawnManager() throw() {
+		TRACE_POINT();
 		if (pid != 0) {
+			UPDATE_TRACE_POINT();
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
 			P_TRACE(2, "Shutting down spawn manager (PID " << pid << ").");
 			channel.close();
-			InterruptableCalls::waitpid(pid, NULL, 0);
+			syscalls::waitpid(pid, NULL, 0);
 			P_TRACE(2, "Spawn manager exited.");
 		}
 	}
 	
 	/**
-	 * Spawn a new instance of a Ruby on Rails or Rack application.
+	 * Spawn a new instance of an application. Spawning details are to be passed
+	 * via the <tt>PoolOptions</tt> parameter.
 	 *
 	 * If the spawn server died during the spawning process, then the server
 	 * will be automatically restarted, and another spawn attempt will be made.
 	 * If restarting the server fails, or if the second spawn attempt fails,
 	 * then an exception will be thrown.
 	 *
-	 * If <tt>lowerPrivilege</tt> is true, then it will be attempt to
-	 * switch the spawned application instance to the user who owns the
-	 * application's <tt>config/environment.rb</tt>, and to the default
-	 * group of that user.
-	 *
-	 * If that user doesn't exist on the system, or if that user is root,
-	 * then it will be attempted to switch to the username given by
-	 * <tt>lowestUser</tt> (and to the default group of that user).
-	 * If <tt>lowestUser</tt> doesn't exist either, or if switching user failed
-	 * (because the spawn server process does not have the privilege to do so),
-	 * then the application will be spawned anyway, without reporting an error.
-	 *
-	 * It goes without saying that lowering privilege is only possible if
-	 * the spawn server is running as root (and thus, by induction, that
-	 * Passenger and Apache's control process are also running as root).
-	 * Note that if Apache is listening on port 80, then its control process must
-	 * be running as root. See "doc/Security of user switching.txt" for
-	 * a detailed explanation.
-	 *
-	 * @param appRoot The application root of a RoR application, i.e. the folder that
-	 *             contains 'app/', 'public/', 'config/', etc. This must be a valid directory,
-	 *             but the path does not have to be absolute.
-	 * @param lowerPrivilege Whether to lower the application's privileges.
-	 * @param lowestUser The user to fallback to if lowering privilege fails.
-	 * @param environment The RAILS_ENV/RACK_ENV environment that should be used. May not be empty.
-	 * @param spawnMethod The spawn method to use. Either "smart" or "conservative".
-	 *                    See the Ruby class SpawnManager for details.
-	 * @param appType The application type. Either "rails" or "rack".
+	 * @param PoolOptions An object containing the details for this spawn operation,
+	 *                     such as which application to spawn. See PoolOptions for details.
 	 * @return A smart pointer to an Application object, which represents the application
 	 *         instance that has been spawned. Use this object to communicate with the
 	 *         spawned application.
 	 * @throws SpawnException Something went wrong.
 	 * @throws boost::thread_interrupted
 	 */
-	ApplicationPtr spawn(
-		const string &appRoot,
-		bool lowerPrivilege = true,
-		const string &lowestUser = "nobody",
-		const string &environment = "production",
-		const string &spawnMethod = "smart",
-		const string &appType = "rails"
-	) {
-		mutex::scoped_lock l(lock);
+	ApplicationPtr spawn(const PoolOptions &PoolOptions) {
+		TRACE_POINT();
+		boost::mutex::scoped_lock l(lock);
 		try {
-			return sendSpawnCommand(appRoot, lowerPrivilege, lowestUser,
-				environment, spawnMethod, appType);
+			return sendSpawnCommand(PoolOptions);
 		} catch (const SpawnException &e) {
 			if (e.hasErrorPage()) {
 				throw;
 			} else {
-				return handleSpawnException(e, appRoot, lowerPrivilege,
-					lowestUser, environment, spawnMethod, appType);
+				return handleSpawnException(e, PoolOptions);
 			}
 		}
 	}
@@ -544,6 +519,7 @@ public:
 	 *         restart was attempted, but it failed.
 	 */
 	void reload(const string &appRoot) {
+		TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		try {

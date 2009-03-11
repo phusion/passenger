@@ -51,13 +51,13 @@
 
 # include <boost/detail/sp_counted_base_gcc_ppc.hpp>
 
-#elif defined(__GNUC__) && ( __GNUC__ * 100 + __GNUC_MINOR__ >= 401 )
-
-# include <boost/detail/sp_counted_base_sync.hpp>
-
 #elif defined(__GNUC__) && ( defined( __sparcv8 ) || defined( __sparcv9 ) )
 
 # include <boost/detail/sp_counted_base_gcc_sparc.hpp>
+
+#elif defined(__GNUC__) && ( __GNUC__ * 100 + __GNUC_MINOR__ >= 401 )
+
+# include <boost/detail/sp_counted_base_sync.hpp>
 
 #elif defined( WIN32 ) || defined( _WIN32 ) || defined( __WIN32__ )
 

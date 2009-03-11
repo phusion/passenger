@@ -134,15 +134,22 @@ namespace boost
         mutable boost::mutex thread_info_mutex;
         detail::thread_data_ptr thread_info;
 
-        void start_thread(unsigned int stack_size = 0);
-        
         explicit thread(detail::thread_data_ptr data);
 
         detail::thread_data_ptr get_thread_info() const;
         
+    protected:
+        template <class F>
+        void set_thread_main_function(F f)
+        {
+            thread_info = detail::thread_data_ptr(new thread_data<F>(f));
+        }
+        
+        void start_thread(unsigned int stack_size);
+        
     public:
         thread();
-        ~thread();
+        virtual ~thread();
 
         template <class F>
         explicit thread(F f, unsigned int stack_size = 0):
@@ -150,6 +157,7 @@ namespace boost
         {
             start_thread(stack_size);
         }
+        
         template <class F>
         thread(detail::thread_move_t<F> f, unsigned int stack_size = 0):
             thread_info(new thread_data<F>(f))

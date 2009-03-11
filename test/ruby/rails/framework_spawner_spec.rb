@@ -1,13 +1,13 @@
 require 'support/config'
 require 'support/test_helper'
-require 'passenger/railz/framework_spawner'
+require 'phusion_passenger/railz/framework_spawner'
 
 require 'ruby/rails/minimal_spawner_spec'
 require 'ruby/spawn_server_spec'
 require 'ruby/rails/spawner_privilege_lowering_spec'
 require 'ruby/rails/spawner_error_handling_spec'
-include Passenger
-include Passenger::Railz
+include PhusionPassenger
+include PhusionPassenger::Railz
 
 # TODO: test whether FrameworkSpawner restarts ApplicationSpawner if it crashed
 
@@ -112,17 +112,15 @@ describe("FrameworkSpawner privilege lowering support") do
 	
 	def spawn_stub_application(options = {})
 		options = {
-			:lower_privilege => true,
-			:lowest_user => CONFIG['lowest_user']
+			"lower_privilege" => true,
+			"lowest_user" => CONFIG['lowest_user']
 		}.merge(options)
 		@stub.use_vendor_rails('minimal')
 		@spawner = FrameworkSpawner.new(:vendor =>
 			"#{@stub.app_root}/vendor/rails")
 		@spawner.start
 		begin
-			app = @spawner.spawn_application(@stub.app_root,
-				options[:lower_privilege],
-				options[:lowest_user])
+			app = @spawner.spawn_application(@stub.app_root, options)
 			yield app
 		ensure
 			app.close if app

@@ -91,7 +91,7 @@ namespace tut {
 			close(p1[1]);
 			close(p2[0]);
 			close(p2[1]);
-			execlp("ruby", "ruby", "./stub/message_channel.rb", NULL);
+			execlp("ruby", "ruby", "./stub/message_channel.rb", (char *) 0);
 			perror("Cannot execute ruby");
 			_exit(1);
 		} else {
@@ -203,7 +203,7 @@ namespace tut {
 			close(p1[1]);
 			close(p2[0]);
 			close(p2[1]);
-			execlp("ruby", "ruby", "./stub/message_channel_2.rb", NULL);
+			execlp("ruby", "ruby", "./stub/message_channel_2.rb", (void *) 0);
 			perror("Cannot execute ruby");
 			_exit(1);
 		} else {
@@ -245,7 +245,7 @@ namespace tut {
 			dup2(fd[0], 3);
 			close(fd[0]);
 			close(fd[1]);
-			execlp("ruby", "ruby", "./stub/message_channel_3.rb", NULL);
+			execlp("ruby", "ruby", "./stub/message_channel_3.rb", (void *) 0);
 			perror("Cannot execute ruby");
 			_exit(1);
 		} else {

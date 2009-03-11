@@ -18,7 +18,7 @@ class WelcomeController < ApplicationController
 	end
 	
 	def in_passenger
-		render :text => !!defined?(Passenger::SpawnManager)
+		render :text => !!defined?(IN_PHUSION_PASSENGER)
 	end
 	
 	def rails_env
@@ -29,7 +29,27 @@ class WelcomeController < ApplicationController
 		render :text => caller.join("\n")
 	end
 	
+	def passenger_name
+		render :text => Passenger.new.name
+	end
+	
 	def terminate
 		exit!
+	end
+
+	def show_id
+		render :text => params[:id]
+	end
+
+	def request_uri
+		render :text => request.request_uri
+	end
+	
+	def sleep_until_exists
+		File.open("#{RAILS_ROOT}/waiting_#{params[:name]}", 'w')
+		while !File.exist?("#{RAILS_ROOT}/#{params[:name]}")
+			sleep 0.1
+		end
+		render :nothing => true
 	end
 end

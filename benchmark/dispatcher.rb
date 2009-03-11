@@ -2,15 +2,14 @@
 # Benchmark raw speed of the Rails dispatcher.
 PASSENGER_ROOT = File.expand_path("#{File.dirname(__FILE__)}/..")
 $LOAD_PATH << "#{PASSENGER_ROOT}/lib"
+$LOAD_PATH << "#{PASSENGER_ROOT}/ext"
 ENV["RAILS_ENV"] = "production"
 
 require 'yaml'
 require 'benchmark'
-require 'passenger/request_handler'
 require 'config/environment'
+require 'passenger/railz/cgi_fixed'
 require 'dispatcher'
-
-include Passenger
 
 class OutputChannel
 	def write(data)
@@ -25,7 +24,7 @@ def start(iterations)
 	milestone = 1 if milestone == 0
 	result = Benchmark.measure do
 		iterations.times do |i|
-			cgi = CGIFixed.new(headers, output, STDOUT)
+			cgi = PhusionPassenger::Railz::CGIFixed.new(headers, output, output)
 			::Dispatcher.dispatch(cgi,
 				::ActionController::CgiRequest::DEFAULT_SESSION_OPTIONS,
 				cgi.stdoutput)
@@ -39,8 +38,5 @@ def start(iterations)
 end
 
 puts "Benchmark started."
-t = Thread.new do
-	#start(ARGV[0] ? ARGV[0].to_i : 1000)
-end
-start(ARGV[0] ? ARGV[0].to_i : 1000)
-t.join
+start(ARGV[0] ? ARGV[0].to_i : 2000)
+

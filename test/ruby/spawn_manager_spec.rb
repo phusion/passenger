@@ -1,13 +1,13 @@
 require 'support/config'
 require 'support/test_helper'
-require 'passenger/spawn_manager'
+require 'phusion_passenger/spawn_manager'
 
 require 'ruby/abstract_server_spec'
 require 'ruby/rails/minimal_spawner_spec'
 require 'ruby/rails/spawner_privilege_lowering_spec'
 require 'ruby/rails/spawner_error_handling_spec'
-include Passenger
-include Passenger::Utils
+include PhusionPassenger
+include PhusionPassenger::Utils
 
 # TODO: test whether SpawnManager restarts FrameworkSpawner if it crashed
 
@@ -64,7 +64,7 @@ describe SpawnManager do
 	end
 	
 	it "can spawn when the server's not running" do
-		app = @manager.spawn_application(@stub.app_root)
+		app = @manager.spawn_application("app_root" => @stub.app_root)
 		app.close
 	end
 	
@@ -75,8 +75,7 @@ describe SpawnManager do
 				a.close
 				sleep(1) # Give @manager the chance to start.
 				channel = MessageChannel.new(b)
-				channel.write("spawn_application", @stub.app_root, "true",
-					"nobody", "production", "smart", "rails")
+				channel.write("spawn_application", "app_root", @stub.app_root)
 				channel.read
 				pid, listen_socket = channel.read
 				channel.recv_io.close
@@ -98,7 +97,7 @@ describe SpawnManager do
 			content.sub(/^RAILS_GEM_VERSION = .*$/, '')
 		end
 		@stub.dont_use_vendor_rails
-		@manager.spawn_application(@stub.app_root).close
+		@manager.spawn_application("app_root" => @stub.app_root).close
 	end
 	
 	it "properly reloads applications that do not specify a Rails version" do
@@ -108,7 +107,9 @@ describe SpawnManager do
 		@stub.dont_use_vendor_rails
 		@manager.reload(@stub.app_root)
 		spawners = @manager.instance_eval { @spawners }
-		spawners.should be_empty
+		spawners.synchronize do
+			spawners.should be_empty
+		end
 	end
 end
 
@@ -118,8 +119,9 @@ describe SpawnManager do
 	it "can spawn a Rack application" do
 		use_stub('rack') do |stub|
 			@manager = SpawnManager.new
-			app = @manager.spawn_application(stub.app_root, true,
-				"nobody", "production", "smart", "rack")
+			app = @manager.spawn_application(
+				"app_root" => stub.app_root,
+				"app_type" => "rack")
 			app.close
 		end
 	end
@@ -133,6 +135,14 @@ describe SpawnManager do
 	end
 	
 	describe "smart spawning" do
+		it_should_behave_like "a minimal spawner"
+	end
+	
+	describe "smart-lv2 spawning" do
+		before :each do
+			@spawn_method = "smart-lv2"
+		end
+		
 		it_should_behave_like "a minimal spawner"
 	end
 	
@@ -150,8 +160,9 @@ describe SpawnManager do
 	def spawn_stub_application(stub)
 		spawner = SpawnManager.new
 		begin
-			return spawner.spawn_application(stub.app_root, true,
-				"nobody", "production", @spawn_method)
+			return spawner.spawn_application(
+				"app_root" => stub.app_root,
+				"spawn_method" => @spawn_method)
 		ensure
 			spawner.cleanup
 		end

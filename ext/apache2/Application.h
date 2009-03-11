@@ -22,11 +22,15 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
+#include <oxt/system_calls.hpp>
+#include <oxt/backtrace.hpp>
 #include <string>
+#include <vector>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <netdb.h>
 #include <unistd.h>
 #include <errno.h>
 #include <ctime>
@@ -35,6 +39,7 @@
 #include "MessageChannel.h"
 #include "Exceptions.h"
 #include "Logging.h"
+#include "Utils.h"
 
 namespace Passenger {
 
@@ -105,6 +110,7 @@ public:
 		 * @throws boost::thread_interrupted
 		 */
 		virtual void sendHeaders(const char *headers, unsigned int size) {
+			TRACE_POINT();
 			int stream = getStream();
 			if (stream == -1) {
 				throw IOException("Cannot write headers to the request handler "
@@ -112,9 +118,10 @@ public:
 			}
 			try {
 				MessageChannel(stream).writeScalar(headers, size);
-			} catch (const SystemException &e) {
-				throw SystemException("An error occured while writing headers "
-					"to the request handler", e.code());
+			} catch (SystemException &e) {
+				e.setBriefMessage("An error occured while writing headers "
+					"to the request handler");
+				throw;
 			}
 		}
 		
@@ -144,6 +151,7 @@ public:
 		 * @throws boost::thread_interrupted
 		 */
 		virtual void sendBodyBlock(const char *block, unsigned int size) {
+			TRACE_POINT();
 			int stream = getStream();
 			if (stream == -1) {
 				throw IOException("Cannot write request body block to the "
@@ -152,9 +160,10 @@ public:
 			}
 			try {
 				MessageChannel(stream).writeRaw(block, size);
-			} catch (const SystemException &e) {
-				throw SystemException("An error occured while sending the "
-					"request body to the request handler", e.code());
+			} catch (SystemException &e) {
+				e.setBriefMessage("An error occured while sending the "
+					"request body to the request handler");
+				throw;
 			}
 		}
 		
@@ -166,6 +175,28 @@ public:
 		 * @pre The stream has not been fully closed.
 		 */
 		virtual int getStream() const = 0;
+		
+		/**
+		 * Set the timeout value for reading data from the I/O stream.
+		 * If no data can be read within the timeout period, then the
+		 * read call will fail with error EAGAIN or EWOULDBLOCK.
+		 *
+		 * @param msec The timeout, in milliseconds. If 0 is given,
+		 *             there will be no timeout.
+		 * @throws SystemException Cannot set the timeout.
+		 */
+		virtual void setReaderTimeout(unsigned int msec) = 0;
+		
+		/**
+		 * Set the timeout value for writing data from the I/O stream.
+		 * If no data can be written within the timeout period, then the
+		 * write call will fail with error EAGAIN or EWOULDBLOCK.
+		 *
+		 * @param msec The timeout, in milliseconds. If 0 is given,
+		 *             there will be no timeout.
+		 * @throws SystemException Cannot set the timeout.
+		 */
+		virtual void setWriterTimeout(unsigned int msec) = 0;
 		
 		/**
 		 * Indicate that we don't want to read data anymore from the I/O stream.
@@ -225,6 +256,7 @@ private:
 		}
 	
 		virtual ~StandardSession() {
+			TRACE_POINT();
 			closeStream();
 			closeCallback();
 		}
@@ -233,9 +265,18 @@ private:
 			return fd;
 		}
 		
+		virtual void setReaderTimeout(unsigned int msec) {
+			MessageChannel(fd).setReadTimeout(msec);
+		}
+		
+		virtual void setWriterTimeout(unsigned int msec) {
+			MessageChannel(fd).setWriteTimeout(msec);
+		}
+		
 		virtual void shutdownReader() {
+			TRACE_POINT();
 			if (fd != -1) {
-				int ret = InterruptableCalls::shutdown(fd, SHUT_RD);
+				int ret = syscalls::shutdown(fd, SHUT_RD);
 				if (ret == -1) {
 					throw SystemException("Cannot shutdown the writer stream",
 						errno);
@@ -244,8 +285,9 @@ private:
 		}
 		
 		virtual void shutdownWriter() {
+			TRACE_POINT();
 			if (fd != -1) {
-				int ret = InterruptableCalls::shutdown(fd, SHUT_WR);
+				int ret = syscalls::shutdown(fd, SHUT_WR);
 				if (ret == -1) {
 					throw SystemException("Cannot shutdown the writer stream",
 						errno);
@@ -254,8 +296,9 @@ private:
 		}
 		
 		virtual void closeStream() {
+			TRACE_POINT();
 			if (fd != -1) {
-				int ret = InterruptableCalls::close(fd);
+				int ret = syscalls::close(fd);
 				if (ret == -1) {
 					throw SystemException("Cannot close the session stream",
 						errno);
@@ -276,8 +319,88 @@ private:
 	string appRoot;
 	pid_t pid;
 	string listenSocketName;
-	bool usingAbstractNamespace;
+	string listenSocketType;
 	int ownerPipe;
+	
+	SessionPtr connectToUnixServer(const function<void()> &closeCallback) const {
+		TRACE_POINT();
+		int fd, ret;
+		
+		do {
+			fd = socket(PF_UNIX, SOCK_STREAM, 0);
+		} while (fd == -1 && errno == EINTR);
+		if (fd == -1) {
+			throw SystemException("Cannot create a new unconnected Unix socket", errno);
+		}
+		
+		struct sockaddr_un addr;
+		addr.sun_family = AF_UNIX;
+		strncpy(addr.sun_path, listenSocketName.c_str(), sizeof(addr.sun_path));
+		addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
+		do {
+			ret = ::connect(fd, (const sockaddr *) &addr, sizeof(addr));
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
+			int e = errno;
+			string message("Cannot connect to Unix socket '");
+			message.append(listenSocketName);
+			message.append("'");
+			do {
+				ret = close(fd);
+			} while (ret == -1 && errno == EINTR);
+			throw SystemException(message, e);
+		}
+		
+		return ptr(new StandardSession(pid, closeCallback, fd));
+	}
+	
+	SessionPtr connectToTcpServer(const function<void()> &closeCallback) const {
+		TRACE_POINT();
+		int fd, ret;
+		vector<string> args;
+		
+		split(listenSocketName, ':', args);
+		if (args.size() != 2 || atoi(args[1]) == 0) {
+			throw IOException("Invalid TCP/IP address '" + listenSocketName + "'");
+		}
+		
+		struct addrinfo hints, *res;
+		
+		memset(&hints, 0, sizeof(hints));
+		hints.ai_family = PF_INET;
+		hints.ai_socktype = SOCK_STREAM;
+		ret = getaddrinfo(args[0].c_str(), args[1].c_str(), &hints, &res);
+		if (ret != 0) {
+			int e = errno;
+			throw IOException("Cannot resolve address '" + listenSocketName +
+				"': " + gai_strerror(e));
+		}
+		
+		do {
+			fd = socket(PF_INET, SOCK_STREAM, 0);
+		} while (fd == -1 && errno == EINTR);
+		if (fd == -1) {
+			freeaddrinfo(res);
+			throw SystemException("Cannot create a new unconnected TCP socket", errno);
+		}
+		
+		do {
+			ret = ::connect(fd, res->ai_addr, res->ai_addrlen);
+		} while (ret == -1 && errno == EINTR);
+		freeaddrinfo(res);
+		if (ret == -1) {
+			int e = errno;
+			string message("Cannot connect to TCP server '");
+			message.append(listenSocketName);
+			message.append("'");
+			do {
+				ret = close(fd);
+			} while (ret == -1 && errno == EINTR);
+			throw SystemException(message, e);
+		}
+		
+		return ptr(new StandardSession(pid, closeCallback, fd));
+	}
 
 public:
 	/**
@@ -288,23 +411,23 @@ public:
 	 *             This must be a valid directory, but the path does not have to be absolute.
 	 * @param pid The process ID of this application instance.
 	 * @param listenSocketName The name of the listener socket of this application instance.
-	 * @param usingAbstractNamespace Whether <tt>listenSocketName</tt> refers to a Unix
-	 *        socket on the abstract namespace. Note that listenSocketName must not
-	 *        contain the leading null byte, even if it's an abstract namespace socket.
+	 * @param listenSocketType The type of the listener socket, e.g. "unix" for Unix
+	 *                         domain sockets.
 	 * @param ownerPipe The owner pipe of this application instance.
 	 * @post getAppRoot() == theAppRoot && getPid() == pid
 	 */
 	Application(const string &theAppRoot, pid_t pid, const string &listenSocketName,
-	            bool usingAbstractNamespace, int ownerPipe) {
+	            const string &listenSocketType, int ownerPipe) {
 		appRoot = theAppRoot;
 		this->pid = pid;
 		this->listenSocketName = listenSocketName;
-		this->usingAbstractNamespace = usingAbstractNamespace;
+		this->listenSocketType = listenSocketType;
 		this->ownerPipe = ownerPipe;
 		P_TRACE(3, "Application " << this << ": created.");
 	}
 	
 	virtual ~Application() {
+		TRACE_POINT();
 		int ret;
 		
 		if (ownerPipe != -1) {
@@ -312,7 +435,7 @@ public:
 				ret = close(ownerPipe);
 			} while (ret == -1 && errno == EINTR);
 		}
-		if (!usingAbstractNamespace) {
+		if (listenSocketType == "unix") {
 			do {
 				ret = unlink(listenSocketName.c_str());
 			} while (ret == -1 && errno == EINTR);
@@ -384,36 +507,14 @@ public:
 	 * @throws IOException Something went wrong during the connection process.
 	 */
 	SessionPtr connect(const function<void()> &closeCallback) const {
-		int fd, ret;
-		
-		do {
-			fd = socket(PF_UNIX, SOCK_STREAM, 0);
-		} while (fd == -1 && errno == EINTR);
-		if (fd == -1) {
-			throw SystemException("Cannot create a new unconnected Unix socket", errno);
-		}
-		
-		struct sockaddr_un addr;
-		addr.sun_family = AF_UNIX;
-		if (usingAbstractNamespace) {
-			strncpy(addr.sun_path + 1, listenSocketName.c_str(), sizeof(addr.sun_path) - 1);
-			addr.sun_path[0] = '\0';
+		TRACE_POINT();
+		if (listenSocketType == "unix") {
+			return connectToUnixServer(closeCallback);
+		} else if (listenSocketType == "tcp") {
+			return connectToTcpServer(closeCallback);
 		} else {
-			strncpy(addr.sun_path, listenSocketName.c_str(), sizeof(addr.sun_path));
+			throw IOException("Unsupported socket type '" + listenSocketType + "'");
 		}
-		addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
-		do {
-			ret = ::connect(fd, (const sockaddr *) &addr, sizeof(addr));
-		} while (ret == -1 && errno == EINTR);
-		if (ret == -1) {
-			int e = errno;
-			string message("Cannot connect to Unix socket '");
-			message.append(listenSocketName);
-			message.append("' on the abstract namespace");
-			throw SystemException(message, e);
-		}
-		
-		return ptr(new StandardSession(pid, closeCallback, fd));
 	}
 };
 

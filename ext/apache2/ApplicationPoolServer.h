@@ -22,6 +22,8 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
+#include <oxt/system_calls.hpp>
+#include <oxt/backtrace.hpp>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -40,12 +42,12 @@
 #include "Application.h"
 #include "Exceptions.h"
 #include "Logging.h"
-#include "System.h"
 
 namespace Passenger {
 
 using namespace std;
 using namespace boost;
+using namespace oxt;
 
 
 /**
@@ -140,16 +142,31 @@ private:
 		/**
 		 * The socket connection to the ApplicationPool server, as was
 		 * established by ApplicationPoolServer::connect().
+		 *
+		 * The value may be -1, which indicates that the connection has
+		 * been closed.
 		 */
 		int server;
 		
-		mutex lock;
+		mutable boost::mutex lock;
 		
 		~SharedData() {
+			TRACE_POINT();
+			if (server != -1) {
+				disconnect();
+			}
+		}
+		
+		/**
+		 * Disconnect from the ApplicationPool server.
+		 */
+		void disconnect() {
+			TRACE_POINT();
 			int ret;
 			do {
 				ret = close(server);
 			} while (ret == -1 && errno == EINTR);
+			server = -1;
 		}
 	};
 	
@@ -174,7 +191,7 @@ private:
 		
 		virtual ~RemoteSession() {
 			closeStream();
-			mutex::scoped_lock(data->lock);
+			boost::mutex::scoped_lock(data->lock);
 			MessageChannel(data->server).write("close", toString(id).c_str(), NULL);
 		}
 		
@@ -182,9 +199,17 @@ private:
 			return fd;
 		}
 		
+		virtual void setReaderTimeout(unsigned int msec) {
+			MessageChannel(fd).setReadTimeout(msec);
+		}
+		
+		virtual void setWriterTimeout(unsigned int msec) {
+			MessageChannel(fd).setWriteTimeout(msec);
+		}
+		
 		virtual void shutdownReader() {
 			if (fd != -1) {
-				int ret = InterruptableCalls::shutdown(fd, SHUT_RD);
+				int ret = syscalls::shutdown(fd, SHUT_RD);
 				if (ret == -1) {
 					throw SystemException("Cannot shutdown the writer stream",
 						errno);
@@ -194,7 +219,7 @@ private:
 		
 		virtual void shutdownWriter() {
 			if (fd != -1) {
-				int ret = InterruptableCalls::shutdown(fd, SHUT_WR);
+				int ret = syscalls::shutdown(fd, SHUT_WR);
 				if (ret == -1) {
 					throw SystemException("Cannot shutdown the writer stream",
 						errno);
@@ -204,7 +229,7 @@ private:
 		
 		virtual void closeStream() {
 			if (fd != -1) {
-				int ret = InterruptableCalls::close(fd);
+				int ret = syscalls::close(fd);
 				if (ret == -1) {
 					throw SystemException("Cannot close the session stream",
 						errno);
@@ -246,112 +271,167 @@ private:
 			data->server = sock;
 		}
 		
+		virtual bool connected() const {
+			boost::mutex::scoped_lock(data->lock);
+			return data->server != -1;
+		}
+		
 		virtual void clear() {
 			MessageChannel channel(data->server);
-			mutex::scoped_lock l(data->lock);
-			channel.write("clear", NULL);
+			boost::mutex::scoped_lock l(data->lock);
+			try {
+				channel.write("clear", NULL);
+			} catch (...) {
+				data->disconnect();
+				throw;
+			}
 		}
 		
 		virtual void setMaxIdleTime(unsigned int seconds) {
 			MessageChannel channel(data->server);
-			mutex::scoped_lock l(data->lock);
-			channel.write("setMaxIdleTime", toString(seconds).c_str(), NULL);
+			boost::mutex::scoped_lock l(data->lock);
+			try {
+				channel.write("setMaxIdleTime", toString(seconds).c_str(), NULL);
+			} catch (...) {
+				data->disconnect();
+				throw;
+			}
 		}
 		
 		virtual void setMax(unsigned int max) {
 			MessageChannel channel(data->server);
-			mutex::scoped_lock l(data->lock);
-			channel.write("setMax", toString(max).c_str(), NULL);
+			boost::mutex::scoped_lock l(data->lock);
+			try {
+				channel.write("setMax", toString(max).c_str(), NULL);
+			} catch (...) {
+				data->disconnect();
+				throw;
+			}
 		}
 		
 		virtual unsigned int getActive() const {
 			MessageChannel channel(data->server);
-			mutex::scoped_lock l(data->lock);
+			boost::mutex::scoped_lock l(data->lock);
 			vector<string> args;
 			
-			channel.write("getActive", NULL);
-			channel.read(args);
-			return atoi(args[0].c_str());
+			try {
+				channel.write("getActive", NULL);
+				channel.read(args);
+				return atoi(args[0].c_str());
+			} catch (...) {
+				data->disconnect();
+				throw;
+			}
 		}
 		
 		virtual unsigned int getCount() const {
 			MessageChannel channel(data->server);
-			mutex::scoped_lock l(data->lock);
+			boost::mutex::scoped_lock l(data->lock);
 			vector<string> args;
 			
-			channel.write("getCount", NULL);
-			channel.read(args);
-			return atoi(args[0].c_str());
+			try {
+				channel.write("getCount", NULL);
+				channel.read(args);
+				return atoi(args[0].c_str());
+			} catch (...) {
+				data->disconnect();
+				throw;
+			}
 		}
 		
 		virtual void setMaxPerApp(unsigned int max) {
 			MessageChannel channel(data->server);
-			mutex::scoped_lock l(data->lock);
-			channel.write("setMaxPerApp", toString(max).c_str(), NULL);
-		}
-		
-		virtual void setUseGlobalQueue(bool value) {
-			MessageChannel channel(data->server);
 			boost::mutex::scoped_lock l(data->lock);
-			channel.write("setUseGlobalQueue", value ? "true" : "false", NULL);
+			try {
+				channel.write("setMaxPerApp", toString(max).c_str(), NULL);
+			} catch (...) {
+				data->disconnect();
+				throw;
+			}
 		}
 		
 		virtual pid_t getSpawnServerPid() const {
 			this_thread::disable_syscall_interruption dsi;
 			MessageChannel channel(data->server);
-			mutex::scoped_lock l(data->lock);
+			boost::mutex::scoped_lock l(data->lock);
 			vector<string> args;
 			
-			channel.write("getSpawnServerPid", NULL);
-			channel.read(args);
-			return atoi(args[0].c_str());
+			try {
+				channel.write("getSpawnServerPid", NULL);
+				channel.read(args);
+				return atoi(args[0].c_str());
+			} catch (...) {
+				data->disconnect();
+				throw;
+			}
 		}
 		
-		virtual Application::SessionPtr get(
-			const string &appRoot,
-			bool lowerPrivilege = true,
-			const string &lowestUser = "nobody",
-			const string &environment = "production",
-			const string &spawnMethod = "smart",
-			const string &appType = "rails"
-		) {
+		virtual Application::SessionPtr get(const PoolOptions &options) {
 			this_thread::disable_syscall_interruption dsi;
+			TRACE_POINT();
+			
 			MessageChannel channel(data->server);
-			mutex::scoped_lock l(data->lock);
+			boost::mutex::scoped_lock l(data->lock);
 			vector<string> args;
 			int stream;
 			bool result;
 			
 			try {
-				channel.write("get", appRoot.c_str(),
-					(lowerPrivilege) ? "true" : "false",
-					lowestUser.c_str(),
-					environment.c_str(),
-					spawnMethod.c_str(),
-					appType.c_str(),
-					NULL);
-			} catch (const SystemException &) {
-				throw IOException("The ApplicationPool server exited unexpectedly.");
+				vector<string> args;
+				
+				args.push_back("get");
+				options.toVector(args);
+				channel.write(args);
+			} catch (const SystemException &e) {
+				UPDATE_TRACE_POINT();
+				data->disconnect();
+				
+				string message("Could not send data to the ApplicationPool server: ");
+				message.append(e.brief());
+				throw SystemException(message, e.code());
 			}
 			try {
+				UPDATE_TRACE_POINT();
 				result = channel.read(args);
 			} catch (const SystemException &e) {
+				UPDATE_TRACE_POINT();
+				data->disconnect();
 				throw SystemException("Could not read a message from "
 					"the ApplicationPool server", e.code());
 			}
 			if (!result) {
+				UPDATE_TRACE_POINT();
+				data->disconnect();
 				throw IOException("The ApplicationPool server unexpectedly "
 					"closed the connection.");
 			}
 			if (args[0] == "ok") {
-				stream = channel.readFileDescriptor();
+				UPDATE_TRACE_POINT();
+				pid_t pid = (pid_t) atol(args[1]);
+				int sessionID = atoi(args[2]);
+				
+				try {
+					stream = channel.readFileDescriptor();
+				} catch (...) {
+					UPDATE_TRACE_POINT();
+					data->disconnect();
+					throw;
+				}
+				
 				return ptr(new RemoteSession(dataSmartPointer,
-					atoi(args[1]), atoi(args[2]), stream));
+					pid, sessionID, stream));
 			} else if (args[0] == "SpawnException") {
+				UPDATE_TRACE_POINT();
 				if (args[2] == "true") {
 					string errorPage;
 					
-					if (!channel.readScalar(errorPage)) {
+					try {
+						result = channel.readScalar(errorPage);
+					} catch (...) {
+						data->disconnect();
+						throw;
+					}
+					if (!result) {
 						throw IOException("The ApplicationPool server "
 							"unexpectedly closed the connection.");
 					}
@@ -360,10 +440,15 @@ private:
 					throw SpawnException(args[1]);
 				}
 			} else if (args[0] == "BusyException") {
+				UPDATE_TRACE_POINT();
 				throw BusyException(args[1]);
 			} else if (args[0] == "IOException") {
+				UPDATE_TRACE_POINT();
+				data->disconnect();
 				throw IOException(args[1]);
 			} else {
+				UPDATE_TRACE_POINT();
+				data->disconnect();
 				throw IOException("The ApplicationPool server returned "
 					"an unknown message: " + toString(args));
 			}
@@ -408,12 +493,13 @@ private:
 	 * @post serverSocket == -1 && serverPid == 0
 	 */
 	void shutdownServer() {
+		TRACE_POINT();
 		this_thread::disable_syscall_interruption dsi;
 		int ret;
 		time_t begin;
 		bool done = false;
 		
-		InterruptableCalls::close(serverSocket);
+		syscalls::close(serverSocket);
 		if (!statusReportFIFO.empty()) {
 			do {
 				ret = unlink(statusReportFIFO.c_str());
@@ -422,28 +508,28 @@ private:
 		
 		P_TRACE(2, "Waiting for existing ApplicationPoolServerExecutable (PID " <<
 			serverPid << ") to exit...");
-		begin = InterruptableCalls::time(NULL);
-		while (!done && InterruptableCalls::time(NULL) < begin + 5) {
+		begin = syscalls::time(NULL);
+		while (!done && syscalls::time(NULL) < begin + 5) {
 			/*
 			 * Some Apache modules fork(), but don't close file descriptors.
 			 * mod_wsgi is one such example. Because of that, closing serverSocket
 			 * won't always cause the ApplicationPool server to exit. So we send it a
 			 * signal.
 			 */
-			InterruptableCalls::kill(serverPid, SIGINT);
+			syscalls::kill(serverPid, SIGINT);
 			
-			ret = InterruptableCalls::waitpid(serverPid, NULL, WNOHANG);
+			ret = syscalls::waitpid(serverPid, NULL, WNOHANG);
 			done = ret > 0 || ret == -1;
 			if (!done) {
-				InterruptableCalls::usleep(100000);
+				syscalls::usleep(100000);
 			}
 		}
 		if (done) {
 			P_TRACE(2, "ApplicationPoolServerExecutable exited.");
 		} else {
 			P_DEBUG("ApplicationPoolServerExecutable not exited in time. Killing it...");
-			InterruptableCalls::kill(serverPid, SIGTERM);
-			InterruptableCalls::waitpid(serverPid, NULL, 0);
+			syscalls::kill(serverPid, SIGTERM);
+			syscalls::waitpid(serverPid, NULL, 0);
 		}
 		
 		serverSocket = -1;
@@ -459,6 +545,7 @@ private:
 	 * @throw SystemException Something went wrong.
 	 */
 	void restartServer() {
+		TRACE_POINT();
 		int fds[2];
 		pid_t pid;
 		
@@ -466,13 +553,13 @@ private:
 			shutdownServer();
 		}
 		
-		if (InterruptableCalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
+		if (syscalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
 			throw SystemException("Cannot create a Unix socket pair", errno);
 		}
 		
 		createStatusReportFIFO();
 		
-		pid = InterruptableCalls::fork();
+		pid = syscalls::fork();
 		if (pid == 0) { // Child process.
 			dup2(fds[0], SERVER_SOCKET_FD);
 			
@@ -495,18 +582,20 @@ private:
 				m_rubyCommand.c_str(),
 				m_user.c_str(),
 				statusReportFIFO.c_str(),
-				NULL);
+				(char *) 0);
 			int e = errno;
-			fprintf(stderr, "*** Passenger ERROR: Cannot execute %s: %s (%d)\n",
+			fprintf(stderr, "*** Passenger ERROR (%s:%d):\n"
+				"Cannot execute %s: %s (%d)\n",
+				__FILE__, __LINE__,
 				m_serverExecutable.c_str(), strerror(e), e);
 			fflush(stderr);
 			_exit(1);
 		} else if (pid == -1) { // Error.
-			InterruptableCalls::close(fds[0]);
-			InterruptableCalls::close(fds[1]);
+			syscalls::close(fds[0]);
+			syscalls::close(fds[1]);
 			throw SystemException("Cannot create a new process", errno);
 		} else { // Parent process.
-			InterruptableCalls::close(fds[0]);
+			syscalls::close(fds[0]);
 			serverSocket = fds[1];
 			
 			int flags = fcntl(serverSocket, F_GETFD);
@@ -519,14 +608,24 @@ private:
 	}
 	
 	void createStatusReportFIFO() {
+		TRACE_POINT();
 		char filename[PATH_MAX];
 		int ret;
+		mode_t permissions;
 		
-		snprintf(filename, sizeof(filename), "/tmp/passenger_status.%d.fifo",
-			getpid());
+		createPassengerTempDir();
+		
+		if (m_user.empty()) {
+			permissions = S_IRUSR | S_IWUSR;
+		} else {
+			permissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
+		}
+		
+		snprintf(filename, sizeof(filename), "%s/status.fifo",
+				getPassengerTempDir().c_str());
 		filename[PATH_MAX - 1] = '\0';
 		do {
-			ret = mkfifo(filename, S_IRUSR | S_IWUSR);
+			ret = mkfifo(filename, permissions);
 		} while (ret == -1 && errno == EINTR);
 		if (ret == -1 && errno != EEXIST) {
 			int e = errno;
@@ -536,6 +635,12 @@ private:
 			statusReportFIFO = "";
 		} else {
 			statusReportFIFO = filename;
+			
+			// It seems that the permissions passed to mkfifo()
+			// aren't respected, so here we chmod the file.
+			do {
+				ret = chmod(filename, permissions);
+			} while (ret == -1 && errno == EINTR);
 		}
 	}
 
@@ -572,6 +677,7 @@ public:
 	  m_logFile(logFile),
 	  m_rubyCommand(rubyCommand),
 	  m_user(user) {
+		TRACE_POINT();
 		serverSocket = -1;
 		serverPid = 0;
 		this_thread::disable_syscall_interruption dsi;
@@ -579,7 +685,9 @@ public:
 	}
 	
 	~ApplicationPoolServer() {
+		TRACE_POINT();
 		if (serverSocket != -1) {
+			UPDATE_TRACE_POINT();
 			this_thread::disable_syscall_interruption dsi;
 			shutdownServer();
 		}
@@ -618,6 +726,7 @@ public:
 	 * @throws IOException Something went wrong.
 	 */
 	ApplicationPoolPtr connect() {
+		TRACE_POINT();
 		try {
 			this_thread::disable_syscall_interruption dsi;
 			MessageChannel channel(serverSocket);
@@ -652,6 +761,7 @@ public:
 	 * before calling detach().
 	 */
 	void detach() {
+		TRACE_POINT();
 		int ret;
 		do {
 			ret = close(serverSocket);
