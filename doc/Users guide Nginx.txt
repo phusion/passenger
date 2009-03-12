@@ -162,3 +162,312 @@ If you installed Phusion Passenger via a source tarball, then 'path-to-passenger
 is the directory which contains the Phusion Passenger source code. So if you
 extracted the Phusion Passenger source code to '/opt/passenger-x.x.x', then you'll
 have to specify `--add-module=/opt/passenger-x.x.x/ext/nginx`.
+
+
+== Deploying a Ruby on Rails application ==
+
+Suppose you have a Ruby on Rails application in '/webapps/mycook', and you own
+the domain 'www.mycook.com'. You can either deploy your application to the
+virtual host's root (i.e. the application will be accessible from the root URL,
+'http://www.mycook.com/'), or in a sub URI (i.e. the application will be
+accessible from a sub URL, such as 'http://www.mycook.com/railsapplication').
+
+NOTE: The default `RAILS_ENV` environment in which deployed Rails applications
+are run, is ``production''. You can change this by changing the
+<<rails_env,'RailsEnv'>> configuration option.
+
+=== Deploying to a virtual host's root ===
+
+Add a 'server' virtual host entry to your Nginx configuration file. The virtual
+host's root must point to your Ruby on Rails application's 'public' folder.
+
+Inside the 'server' block, set 'passenger_enabled on'.
+
+For example:
+-------------------------------------------
+http {
+    ...
+    
+    server {
+        listen 80;
+        server_name www.mycook.com;
+        root /webapps/mycook/public;
+        passenger_enabled on;
+    }
+    
+    ...
+}
+-------------------------------------------
+Then restart Nginx. The application has now been deployed.
+
+[[deploying_rails_to_sub_uri]]
+=== Deploying to a sub URI ===
+
+Suppose that you already have a 'server' virtual host entry:
+
+-------------------------------------------
+http {
+    ...
+    
+    server {
+        listen 80;
+        server_name www.phusion.nl;
+        root /websites/phusion;
+    }
+    
+    ...
+}
+-------------------------------------------
+
+And you want your Ruby on Rails application to be accessible from the URL
+'http://www.phusion.nl/rails'.
+
+To do this, make a symlink from your Ruby on Rails application's 'public'
+folder to a directory in the document root. For example:
+-------------------------------------------
+ln -s /webapps/mycook/public /websites/phusion/rails
+-------------------------------------------
+
+Next, set 'passenger_enabled on' and add a <<passenger_base_uri>> option to the
+'server' block:
+-------------------------------------------
+http {
+    ...
+    
+    server {
+        listen 80;
+        server_name www.phusion.nl;
+        root /websites/phusion;
+        passenger_enabled on;        # <--- These lines have
+        passenger_base_uri /rails;   # <--- been added.
+    }
+    
+    ...
+}
+-------------------------------------------
+Then restart Nginx. The application has now been deployed.
+
+[TIP]
+======================================
+You can deploy multiple Rails applications under a virtual host, by specifying
+<<passenger_base_uri,passenger_base_uri>> multiple times. For example:
+---------------------------------
+server {
+    ...
+    passenger_base_uri /app1;
+    passenger_base_uri /app2;
+    passenger_base_uri /app3;
+}
+---------------------------------
+======================================
+
+=== Redeploying (restarting the Ruby on Rails application) ===
+
+Deploying a new version of a Ruby on Rails application is as simple as
+re-uploading the application files, and restarting the application.
+
+There are two ways to restart the application:
+
+1. By restarting Nginx.
+2. By creating or modifying the file 'tmp/restart.txt' in the Rails
+   application's <<application_root,root folder>>. Phusion Passenger will
+   automatically restart the application.
+
+For example, to restart our example MyCook application, we type this in the
+command line:
+-------------------------------------------
+touch /webapps/mycook/tmp/restart.txt
+-------------------------------------------
+
+=== Migrations ===
+
+Phusion Passenger is not related to Ruby on Rails migrations in any way. To
+run migrations on your deployment server, please login to your deployment
+server (e.g. with 'ssh') and type `rake db:migrate RAILS_ENV=production` in
+a shell console, just like one would normally run migrations.
+
+=== Capistrano integration ===
+
+See <<capistrano,Capistrano recipe>>.
+
+
+== Deploying a Rack-based Ruby application ==
+
+Phusion Passenger supports arbitrary Ruby web applications that follow the
+link:http://rack.rubyforge.org/[Rack] interface.
+
+Phusion Passenger assumes that Rack application directories have a certain layout.
+Suppose that you have a Rack application in '/webapps/rackapp'. Then that
+folder must contain at least three entries:
+
+- 'config.ru', a Rackup file for starting the Rack application. This file must contain
+  the complete logic for initializing the application.
+- 'public/', a folder containing public static web assets, like images and stylesheets.
+- 'tmp/', used for 'restart.txt' (our application restart mechanism). This will
+  be explained in a following subsection.
+
+So '/webapps/rackapp' must, at minimum, look like this:
+----------------------
+/webapps/rackapp
+  |
+  +-- config.ru
+  |
+  +-- public/
+  |
+  +-- tmp/
+----------------------
+
+Suppose you own the domain 'www.rackapp.com'. You can either deploy your application
+to the virtual host's root (i.e. the application will be accessible from the root URL,
+'http://www.rackapp.com/'), or in a sub URI (i.e. the application will be
+accessible from a sub URL, such as 'http://www.rackapp.com/rackapp').
+
+NOTE: The default `RACK_ENV` environment in which deployed Rack applications
+are run, is ``production''. You can change this by changing the
+<<rack_env,rack_env>> configuration option.
+
+=== Tutorial/example: writing and deploying a Hello World Rack application ===
+
+First we create a Phusion Passenger-compliant Rack directory structure:
+
+-------------------------------------------
+$ mkdir /webapps/rack_example
+$ mkdir /webapps/rack_example/public
+$ mkdir /webapps/rack_example/tmp
+-------------------------------------------
+
+Next, we write a minimal "hello world" Rack application:
+
+-------------------------------------------
+$ cd /webapps/rack_example
+$ some_awesome_editor config.ru
+...type in some source code...
+$ cat config.ru
+app = proc do |env|
+    return [200, { "Content-Type" => "text/html" }, "hello <b>world</b>"]
+end
+run app
+-------------------------------------------
+
+Finally, we deploy it by adding the following configuration options to
+the Apache configuration file:
+
+-------------------------------------------
+http {
+    ...
+    server {
+        listen 80;
+        server_name www.rackexample.com;
+        root /webapps/rack_example/public;
+        passenger_enabled on;
+    }
+    ...
+}
+-------------------------------------------
+
+And we're done! After an Nginx restart, the above Rack application will be available
+under the URL 'http://www.rackexample.com/'.
+
+=== Deploying to a virtual host's root ===
+
+Add a 'server' virtual host entry to your Nginx configuration file. The virtual host's
+root must point to your Rack application's 'public' folder. You must also set
+'passenger_enabled on' in the 'server' block.
+
+For example:
+-------------------------------------------
+http {
+    ...
+    server {
+        listen 80;
+        server_name www.rackapp.com;
+        root /webapps/rackapp/public;
+        passenger_enabled on;
+    }
+    ...
+}
+-------------------------------------------
+Then restart Nginx. The application has now been deployed.
+
+[[deploying_rack_to_sub_uri]]
+=== Deploying to a sub URI ===
+
+Suppose that you already have a virtual host:
+
+-------------------------------------------
+http {
+    ...
+    
+    server {
+        listen 80;
+        server_name www.phusion.nl;
+        root /websites/phusion;
+        passenger_enabled on;
+    }
+    
+    ...
+}
+-------------------------------------------
+
+And you want your Rack application to be accessible from the URL
+'http://www.phusion.nl/rack'.
+
+To do this, make a symlink from your Rack application's 'public'
+folder to a directory in the document root. For example:
+-------------------------------------------
+ln -s /webapps/rackapp/public /websites/phusion/rack
+-------------------------------------------
+
+Next, set 'passenger_enabled on' and add a <<passenger_base_uri>> option to the
+'server' block:
+-------------------------------------------
+http {
+    ...
+    
+    server {
+        listen 80;
+        server_name www.phusion.nl;
+        root /websites/phusion;
+        passenger_enabled on;        # <--- These lines have
+        passenger_base_uri /rack;    # <--- been added.
+    }
+    
+    ...
+}
+-------------------------------------------
+Then restart Apache. The application has now been deployed.
+
+[TIP]
+======================================
+You can deploy multiple Rack applications under a virtual host, by specifying
+<<passenger_base_uri,passenger_base_uri>> multiple times. For example:
+---------------------------------
+server {
+    ...
+    passenger_base_uri /app1;
+    passenger_base_uri /app2;
+    passenger_base_uri /app3;
+}
+---------------------------------
+======================================
+
+=== Redeploying (restarting the Rack application) ===
+
+Deploying a new version of a Rack application is as simple as
+re-uploading the application files, and restarting the application.
+
+There are two ways to restart the application:
+
+1. By restarting Nginx.
+2. By creating or modifying the file 'tmp/restart.txt' in the Rack
+   application's <<application_root,root folder>>. Phusion Passenger will
+   automatically restart the application.
+
+For example, to restart our example application, we type this in the
+command line:
+-------------------------------------------
+touch /webapps/rackapp/tmp/restart.txt
+-------------------------------------------
+
+=== Rackup specifications for various web frameworks ===
+include::users_guide_snippets/rackup_specifications.txt[]
