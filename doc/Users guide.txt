@@ -1877,9 +1877,8 @@ support code reloading, or when developing a web framework.
 
 To achieve this, simply create the file 'tmp/always_restart.txt' in your
 application's root folder. Unlike 'restart.txt', Phusion Passenger does not
-delete this file. If both files are present ('restart.txt' and 'always_restart.txt'),
-then Phusion Passenger will still restart the application, but won't delete
-'restart.txt'.
+check for this file's timestamp: Phusion Passenger will always restart the
+application, as long as 'always_restart.txt' exists.
 
 NOTE: If you're just developing a Rails application then you probably don't need
 this feature. If you set 'RailsEnv development' in your Apache configuration,
