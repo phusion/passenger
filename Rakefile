@@ -554,8 +554,9 @@ end
 subdir 'doc' do
 	ASCIIDOC = 'asciidoc'
 	ASCIIDOC_FLAGS = "-a toc -a numbered -a toclevels=3 -a icons"
-	ASCII_DOCS = ['Security of user switching support', 'Users guide',
-		'Users guide Nginx', 'Architectural overview']
+	ASCII_DOCS = ['Security of user switching support',
+		'Users guide Apache', 'Users guide Nginx',
+		'Architectural overview']
 
 	DOXYGEN = 'doxygen'
 	
