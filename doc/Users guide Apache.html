@@ -135,22 +135,19 @@ passenger-install-apache2-module
 ------------------------------------------------------
 Please follow the instructions given by the installer.
 
+
 ==== Installing via a native Linux package ====
+
+John Leach from Brightbox has kindly provided an Ubuntu Hardy package for Phusion Passenger. The package is available from the link:http://apt.brightbox.net[Brightbox repository].
 
 Please install the native Linux package, e.g.:
 ------------------------------------------------------
-gdebi passenger_x.x.x-i386.deb
+sudo sh -c 'echo "deb http://apt.brightbox.net hardy main" > /etc/apt/sources.list.d/brightbox.list'
+sudo sh -c 'wget -q -O - http://apt.brightbox.net/release.asc | apt-key add -'
+sudo apt-get update
+sudo apt-get install libapache2-mod-passenger
 ------------------------------------------------------
 
-Next, you'll need to configure Apache. Run the "installer", as it will tell you
-the correct configuration options for Apache:
-------------------------------------------------------
-passenger-install-apache2-module
-------------------------------------------------------
-
-NOTE: The installer doesn't actually install anything because it will automatically
-detect that Phusion Passenger has already been installed. The only thing the
-installer will do in this case, is showing the correct Apache configurations.
 
 ==== Installing via the source tarball ====
 
