@@ -261,8 +261,8 @@ There are two ways to restart the application:
 
 1. By restarting Apache.
 2. By creating or modifying the file 'tmp/restart.txt' in the Rails
-   application's root folder. Phusion Passenger will automatically
-   restart the application.
+   application's <<application_root,root folder>>. Phusion Passenger will
+   automatically restart the application.
 
 For example, to restart our example MyCook application, we type this in the
 command line:
@@ -420,8 +420,8 @@ There are two ways to restart the application:
 
 1. By restarting Apache.
 2. By creating or modifying the file 'tmp/restart.txt' in the Rack
-   application's root folder. Phusion Passenger will automatically restart the
-   application.
+   application's <<application_root,root folder>>. Phusion Passenger will
+   automatically restart the application.
 
 For example, to restart our example application, we type this in the
 command line:
