@@ -504,10 +504,8 @@ end
 	end
 	oxt_test_main_dependencies << TEST_BOOST_OXT_LIBRARY
 	file 'test/oxt/oxt_test_main' => oxt_test_main_dependencies do
-		Dir.chdir('test/oxt') do
-			objects = TEST_OXT_OBJECTS.keys.join(' ')
-			create_executable("oxt_test_main", objects, TEST_BOOST_OXT_LDFLAGS)
-		end
+		objects = TEST_OXT_OBJECTS.keys.map{ |x| "test/oxt/#{x}" }.join(' ')
+		create_executable("test/oxt/oxt_test_main", objects, TEST_OXT_LDFLAGS)
 	end
 	
 	TEST_OXT_OBJECTS.each_pair do |target, sources|
