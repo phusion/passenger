@@ -192,7 +192,7 @@ public
 	
 	# The absolute path to the 'apachectl' or 'apache2ctl' binary.
 	def self.apache2ctl
-		return find_apache2_executable('apache2ctl', 'apachectl')
+		return find_apache2_executable('apache2ctl', 'apachectl2', 'apachectl')
 	end
 	memoize :apache2ctl
 	
