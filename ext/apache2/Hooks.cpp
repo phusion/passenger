@@ -30,6 +30,7 @@
 #include <cstdio>
 #include <unistd.h>
 
+#include <oxt/macros.hpp>
 #include "Hooks.h"
 #include "Bucket.h"
 #include "Configuration.h"
