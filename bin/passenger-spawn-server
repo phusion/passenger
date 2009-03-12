@@ -42,6 +42,10 @@ begin
 	end
 	
 	require 'phusion_passenger/spawn_manager'
+	require 'phusion_passenger/utils'
+	if defined?(PhusionPassenger::NativeSupport)
+		PhusionPassenger::NativeSupport.disable_stdio_buffering
+	end
 	spawn_manager = PhusionPassenger::SpawnManager.new
 	spawn_manager.start_synchronously(input)
 	spawn_manager.cleanup
