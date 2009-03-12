@@ -49,9 +49,6 @@ public:
 	 * Returns the time since the Epoch, measured in seconds. Or, if a time
 	 * was forced, then the forced time is returned instead.
 	 *
-	 * On error, <tt>(time_t) -1</tt> is returned, and <tt>errno</tt> is set
-	 * appropriately.
-	 *
 	 * @throws SystemException Something went wrong while retrieving the time.
 	 * @throws boost::thread_interrupted
 	 */

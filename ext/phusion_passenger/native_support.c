@@ -26,6 +26,7 @@
 #include <sys/types.h>
 #include <sys/un.h>
 #include <sys/socket.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -268,6 +269,19 @@ close_all_file_descriptors(VALUE self, VALUE exceptions) {
 	return Qnil;
 }
 
+/*
+ * call-seq: disable_stdio_buffering
+ *
+ * Disables any kind of buffering on the C +stdout+ and +stderr+ variables,
+ * so that +fprintf()+ on +stdout+ and +stderr+ have immediate effect.
+ */
+static VALUE
+disable_stdio_buffering() {
+	setvbuf(stdout, NULL, _IONBF, 0);
+	setvbuf(stderr, NULL, _IONBF, 0);
+	return Qnil;
+}
+
 void
 Init_native_support() {
 	struct sockaddr_un addr;
@@ -285,6 +299,7 @@ Init_native_support() {
 	rb_define_singleton_method(mNativeSupport, "create_unix_socket", create_unix_socket, 2);
 	rb_define_singleton_method(mNativeSupport, "accept", f_accept, 1);
 	rb_define_singleton_method(mNativeSupport, "close_all_file_descriptors", close_all_file_descriptors, 1);
+	rb_define_singleton_method(mNativeSupport, "disable_stdio_buffering", disable_stdio_buffering, 0);
 	
 	/* The maximum length of a Unix socket path, including terminating null. */
 	rb_define_const(mNativeSupport, "UNIX_PATH_MAX", INT2NUM(sizeof(addr.sun_path)));

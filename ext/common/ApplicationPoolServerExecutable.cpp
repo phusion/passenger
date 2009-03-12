@@ -78,6 +78,15 @@ typedef shared_ptr<Client> ClientPtr;
 
 #define SERVER_SOCKET_FD 3
 
+// The following variables contain pre-calculated data which are used by
+// Server::fatalSignalHandler(). It's not safe to allocate memory inside
+// a signal handler.
+
+/** The filename of the ApplicationPoolServerExecutable binary. */
+static string exeFile;
+static string gdbBacktraceGenerationCommand;
+static const char *gdbBacktraceGenerationCommandStr;
+
 
 /*****************************************
  * Server
@@ -153,6 +162,71 @@ private:
 			P_WARN("WARNING: Unable to lower ApplicationPoolServerExecutable's "
 				"privilege to that of user '" << username <<
 				"': user does not exist.");
+		}
+	}
+	
+	static void fatalSignalHandler(int signum) {
+		static void (* const defaultHandler)(int) = SIG_DFL;
+		static bool calledBefore = false;
+		
+		if (calledBefore) {
+			// If we're here then it means that this signal
+			// handler crashed, and we weren't even able to
+			// call write() or system()! Abort immediately:
+			defaultHandler(signum);
+		} else {
+			calledBefore = true;
+			write(STDERR_FILENO,
+				"*** ERROR: ApplicationPoolServerExecutable caught "
+				"fatal signal. Running gdb to obtain the backtrace:\n\n",
+				sizeof("*** ERROR: ApplicationPoolServerExecutable caught "
+				       "fatal signal. Running gdb to obtain the backtrace:\n\n")
+			);
+			write(STDERR_FILENO, "----------------- Begin gdb output -----------------\n",
+				sizeof("----------------- Begin gdb output -----------------\n"));
+			system(gdbBacktraceGenerationCommandStr);
+			write(STDERR_FILENO, "----------------- End gdb output -----------------\n",
+				sizeof("----------------- End gdb output -----------------\n"));
+			defaultHandler(signum);
+		}
+	}
+	
+	void setupSignalHandlers() {
+		// Ignore SIGPIPE and SIGHUP.
+		struct sigaction action;
+		action.sa_handler = SIG_IGN;
+		action.sa_flags   = 0;
+		sigemptyset(&action.sa_mask);
+		sigaction(SIGPIPE, &action, NULL);
+		sigaction(SIGHUP, &action, NULL);
+		
+		// Setup handlers for other signals.
+		FILE *f;
+		string gdbCommandFile;
+		
+		gdbCommandFile = getPassengerTempDir() + "/gdb_backtrace_command.txt";
+		f = fopen(gdbCommandFile.c_str(), "w");
+		if (f != NULL) {
+			// Write a file which contains commands for gdb to obtain
+			// the backtrace of this process.
+			fprintf(f, "attach %lu\n", (unsigned long) getpid());
+			fprintf(f, "thread apply all bt\n");
+			fclose(f);
+			chmod(gdbCommandFile.c_str(), S_IRUSR | S_IRGRP | S_IROTH);
+			
+			gdbBacktraceGenerationCommand = "gdb -n -batch -x \"";
+			gdbBacktraceGenerationCommand.append(gdbCommandFile);
+			gdbBacktraceGenerationCommand.append("\" < /dev/null");
+			gdbBacktraceGenerationCommandStr = gdbBacktraceGenerationCommand.c_str();
+			
+			// Install the signal handlers.
+			action.sa_handler = fatalSignalHandler;
+			action.sa_flags   = 0;
+			sigemptyset(&action.sa_mask);
+			sigaction(SIGSEGV, &action, NULL);
+			sigaction(SIGABRT, &action, NULL);
+			sigaction(SIGILL, &action, NULL);
+			sigaction(SIGFPE, &action, NULL);
 		}
 	}
 
@@ -467,18 +541,10 @@ public:
 	}
 };
 
-
 int
 Server::start() {
 	TRACE_POINT();
 	setup_syscall_interruption_support();
-	
-	// Ignore SIGPIPE.
-	struct sigaction action;
-	action.sa_handler = SIG_IGN;
-	action.sa_flags   = 0;
-	sigemptyset(&action.sa_mask);
-	sigaction(SIGPIPE, &action, NULL);
 	
 	try {
 		mode_t fifoPermissions;
@@ -493,6 +559,8 @@ Server::start() {
 		if (!user.empty()) {
 			lowerPrivilege(user);
 		}
+		
+		setupSignalHandlers();
 		
 		while (!this_thread::interruption_requested()) {
 			int fds[2], ret;
@@ -546,6 +614,7 @@ Server::start() {
 int
 main(int argc, char *argv[]) {
 	try {
+		exeFile = argv[0];
 		Server server(SERVER_SOCKET_FD, atoi(argv[1]),
 			argv[2], argv[3], argv[4], argv[5]);
 		return server.start();

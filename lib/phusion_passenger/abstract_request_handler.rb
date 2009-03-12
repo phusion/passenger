@@ -355,6 +355,34 @@ private
 			client = @socket.accept
 			client.close_on_exec!
 			
+			# Some people report that sometimes their Ruby (MRI)
+			# processes get stuck with 100% CPU usage. Upon further
+			# inspection with strace, it turns out that these Ruby
+			# processes are continuously calling lseek() on a socket,
+			# which of course returns ESPIPE as error. gdb reveals
+			# lseek() is called by fwrite(), which in turn is called
+			# by rb_fwrite(). The affected socket is the
+			# AbstractRequestHandler client socket.
+			#
+			# I inspected the MRI source code and didn't find
+			# anything that would explain this behavior. This makes
+			# me think that it's a glibc bug, but that's very
+			# unlikely.
+			#
+			# The rb_fwrite() implementation takes an entirely
+			# different code path if I set 'sync' to true: it will
+			# skip fwrite() and use write() instead. So here we set
+			# 'sync' to true in the hope that this will work around
+			# the problem.
+			client.sync = true
+			
+			# We monkeypatch the 'sync' method to a no-op so that
+			# sync mode can't be disabled.
+			client.instance_eval do
+				def client.sync=(value)
+				end
+			end
+			
 			# The real input stream is not seekable (calling _seek_
 			# or _rewind_ on it will raise an exception). But some
 			# frameworks (e.g. Merb) call _rewind_ if the object

@@ -121,20 +121,13 @@ private:
 		AppContainerList instances;
 		unsigned int size;
 		unsigned long maxRequests;
-		CachedFileStat alwaysRestartFileStatter;
 		FileChecker restartFileChecker;
+		CachedFileStat alwaysRestartFileStatter;
 		
 		Domain(const PoolOptions &options)
-			: restartFileChecker(determineRestartDir(options) + "/restart.txt")
+			: restartFileChecker(determineRestartDir(options) + "/restart.txt"),
+			  alwaysRestartFileStatter(determineRestartDir(options) + "/always_restart.txt")
 		{
-			string alwaysRestartFile(determineRestartDir(options));
-			alwaysRestartFile.append("/always_restart.txt");
-			cached_file_stat_init(&alwaysRestartFileStatter,
-				alwaysRestartFile.c_str());
-		}
-		
-		~Domain() {
-			cached_file_stat_deinit(&alwaysRestartFileStatter);
 		}
 	
 	private:
@@ -369,8 +362,7 @@ private:
 	}
 	
 	bool needsRestart(const string &appRoot, Domain *domain, const PoolOptions &options) {
-		return cached_file_stat_refresh(&domain->alwaysRestartFileStatter,
-		                                options.statThrottleRate) == 0
+		return domain->alwaysRestartFileStatter.refresh(options.statThrottleRate) == 0
 		    || domain->restartFileChecker.changed(options.statThrottleRate);
 	}
 	

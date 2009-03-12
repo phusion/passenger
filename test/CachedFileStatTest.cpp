@@ -19,7 +19,7 @@ namespace tut {
 		
 		~CachedFileStatTest() {
 			if (stat != NULL) {
-				cached_file_stat_free(stat);
+				delete stat;
 			}
 			if (mstat != NULL) {
 				cached_multi_file_stat_free(mstat);
@@ -51,7 +51,7 @@ namespace tut {
 	TEST_METHOD(1) {
 		// cached_file_stat_new() does not stat the file immediately.
 		touch("test.txt");
-		stat = cached_file_stat_new("test.txt");
+		stat = new CachedFileStat("test.txt");
 		ensure_equals((long) stat->info.st_size, (long) 0);
 		ensure_equals(stat->info.st_mtime, (time_t) 0);
 	}
@@ -60,8 +60,8 @@ namespace tut {
 		// cached_file_stat_refresh() on a newly created
 		// CachedFileStat works.
 		touch("test.txt");
-		stat = cached_file_stat_new("test.txt");
-		ensure_equals(cached_file_stat_refresh(stat, 1), 0);
+		stat = new CachedFileStat("test.txt");
+		ensure_equals(stat->refresh(1), 0);
 		ensure_equals((long) stat->info.st_size, (long) 2);
 	}
 	
@@ -69,15 +69,15 @@ namespace tut {
 		// cached_file_stat_refresh() does not re-stat the file
 		// until the cache has expired.
 		SystemTime::force(5);
-		stat = cached_file_stat_new("test.txt");
+		stat = new CachedFileStat("test.txt");
 		touch("test.txt", 1);
 		ensure_equals("1st refresh succceeded",
-			cached_file_stat_refresh(stat, 1),
+			stat->refresh(1),
 			0);
 		
 		touch("test.txt", 1000);
 		ensure_equals("2nd refresh succceeded",
-			cached_file_stat_refresh(stat, 1),
+			stat->refresh(1),
 			0);
 		ensure_equals("Cached value was used",
 			stat->info.st_mtime,
@@ -85,7 +85,7 @@ namespace tut {
 		
 		SystemTime::force(6);
 		ensure_equals("3rd refresh succceeded",
-			cached_file_stat_refresh(stat, 1),
+			stat->refresh(1),
 			0);
 		ensure_equals("Cache has been invalidated",
 			stat->info.st_mtime,
@@ -95,8 +95,8 @@ namespace tut {
 	TEST_METHOD(5) {
 		// cached_file_stat_refresh() on a nonexistant file returns
 		// an error.
-		stat = cached_file_stat_new("test.txt");
-		ensure_equals(cached_file_stat_refresh(stat, 1), -1);
+		stat = new CachedFileStat("test.txt");
+		ensure_equals(stat->refresh(1), -1);
 		ensure_equals("It sets errno appropriately", errno, ENOENT);
 	}
 	
@@ -104,15 +104,15 @@ namespace tut {
 		// cached_file_stat_refresh() on a nonexistant file does not
 		// re-stat the file until the cache has expired.
 		SystemTime::force(5);
-		stat = cached_file_stat_new("test.txt");
+		stat = new CachedFileStat("test.txt");
 		ensure_equals("1st refresh failed",
-			cached_file_stat_refresh(stat, 1),
+			stat->refresh(1),
 			-1);
 		ensure_equals("It sets errno appropriately", errno, ENOENT);
 		
 		errno = EEXIST;
 		ensure_equals("2nd refresh failed",
-			cached_file_stat_refresh(stat, 1),
+			stat->refresh(1),
 			-1);
 		ensure_equals("It sets errno appropriately", errno, ENOENT);
 		ensure_equals("Cached value was used",
@@ -122,7 +122,7 @@ namespace tut {
 		touch("test.txt", 1000);
 		SystemTime::force(6);
 		ensure_equals("3rd refresh succeeded",
-			cached_file_stat_refresh(stat, 1),
+			stat->refresh(1),
 			0);
 		ensure_equals("Cache has been invalidated",
 			stat->info.st_mtime,
@@ -130,7 +130,7 @@ namespace tut {
 		
 		unlink("test.txt");
 		ensure_equals("4th refresh succeeded even though file was unlinked",
-			cached_file_stat_refresh(stat, 1),
+			stat->refresh(1),
 			0);
 		ensure_equals("Cached value was used",
 			stat->info.st_mtime,
