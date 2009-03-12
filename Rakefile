@@ -39,9 +39,9 @@ include PlatformInfo
 CXX = "g++"
 LIBEXT = PlatformInfo.library_extension
 if OPTIMIZE
-	OPTIMIZATION_FLAGS = "-O2 -DBOOST_DISABLE_ASSERTS"
+	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -O2 -DBOOST_DISABLE_ASSERTS"
 else
-	OPTIMIZATION_FLAGS = "-g -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS"
+	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS"
 end
 
 # Extra compiler flags that should always be passed to the C/C++ compiler.

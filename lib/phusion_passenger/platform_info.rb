@@ -308,6 +308,8 @@ public
 			flags << '-DBOOST_HAS_STDINT_H' unless RUBY_PLATFORM =~ /solaris2.9/
 			flags << '-D__SOLARIS9__ -DBOOST__STDC_CONSTANT_MACROS_DEFINED' if RUBY_PLATFORM =~ /solaris2.9/
 			flags << '-mcpu=ultrasparc' if RUBY_PLATFORM =~ /sparc/
+		elsif RUBY_PLATFORM =~ /openbsd/
+			flags << '-DBOOST_HAS_STDINT_H'
 		end
 		return flags.compact.join(" ").strip
 	end
@@ -324,6 +326,18 @@ public
 		end
 	end
 	memoize :portability_ldflags
+	
+	# C compiler flags that should be passed in order to enable debugging information.
+	def self.debugging_cflags
+		if RUBY_PLATFORM =~ /openbsd/
+			# According to OpenBSD's pthreads man page, pthreads do not work
+			# correctly when an app is compiled with -g. It recommends using
+			# -ggdb instead.
+			return '-ggdb'
+		else
+			return '-g'
+		end
+	end
 	
 	# The C compiler flags that are necessary to compile an Apache module.
 	# Possibly includes APR and APU compiler flags.
