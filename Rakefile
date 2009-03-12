@@ -323,7 +323,7 @@ end
 
 	task :clean => 'apache2:clean'
 
-	desc "Remove generated files for the Apache 2 module"
+	# Remove generated files for the Apache 2 module
 	task 'apache2:clean' do
 		files = [APACHE2_OBJECTS, %w(ext/apache2/mod_passenger.o
 			ext/apache2/mod_passenger.so)]
@@ -364,7 +364,7 @@ end
 	
 	task :clean => 'nginx:clean'
 	
-	desc "Remove Nginx helper server"
+	# Remove Nginx helper server
 	task 'nginx:clean' do
 		sh("rm", "-rf", "ext/nginx/HelperServer")
 	end
@@ -456,7 +456,7 @@ end
 			ext/common/Utils.h)
 	}
 
-	desc "Run all unit tests"
+	desc "Run all unit tests and integration tests"
 	task :test => ['test:oxt', 'test:cxx', 'test:ruby', 'test:integration']
 	
 	desc "Run unit tests for the OXT library"
@@ -485,9 +485,18 @@ end
 		end
 	end
 	
-	desc "Run integration tests"
-	task 'test:integration' => [:apache2, :native_support] do
+	desc "Run all integration tests"
+	task 'test:integration' => ['test:integration:apache2', 'test:integration:nginx'] do
+	end
+	
+	desc "Run Apache 2 integration tests"
+	task 'test:integration:apache2' => [:apache2, :native_support] do
 		sh "cd test && spec -c -f s integration_tests/apache2_tests.rb"
+	end
+	
+	desc "Run Nginx integration tests"
+	task 'test:integration:nginx' => :nginx do
+		sh "cd test && spec -c -f s integration_tests/nginx_tests.rb"
 	end
 	
 	oxt_test_main_dependencies = TEST_OXT_OBJECTS.keys.map do |object|
@@ -523,7 +532,7 @@ end
 		end
 	end
 	
-	desc "Run the restart integration test infinitely, and abort if/when it fails"
+	desc "Run the 'restart' integration test infinitely, and abort if/when it fails"
 	task 'test:restart' => [:apache2, :native_support] do
 		Dir.chdir("test") do
 			color_code_start = "\e[33m\e[44m\e[1m"
@@ -531,7 +540,7 @@ end
 			i = 1
 			while true do
 				puts "#{color_code_start}Test run #{i} (press Ctrl-C multiple times to abort)#{color_code_end}"
-				sh "spec -c -f s integration_tests.rb -e 'mod_passenger running in Apache 2 : MyCook(tm) beta running on root URI should support restarting via restart.txt'"
+				sh "spec -c -f s integration_tests/apache2.rb -e 'mod_passenger running in Apache 2 : MyCook(tm) beta running on root URI should support restarting via restart.txt'"
 				i += 1
 			end
 		end
@@ -794,7 +803,7 @@ task :sloccount do
 		end
 		sh "sloccount", *Dir[
 			"#{tmpdir}/*",
-			"lib/phusion_passenger/*",
+			"lib/phusion_passenger",
 			"lib/rake/{cplusplus,extensions}.rb",
 			"ext/apache2",
 			"ext/nginx",
