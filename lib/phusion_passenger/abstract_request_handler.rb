@@ -349,7 +349,7 @@ private
 			client = @socket.accept
 			client.close_on_exec!
 			
-			# Some people report that sometimes their Ruby (MRI)
+			# Some people report that sometimes their Ruby (MRI/REE)
 			# processes get stuck with 100% CPU usage. Upon further
 			# inspection with strace, it turns out that these Ruby
 			# processes are continuously calling lseek() on a socket,
@@ -370,7 +370,7 @@ private
 			# the problem.
 			client.sync = true
 			
-			# We monkeypatch the 'sync' method to a no-op so that
+			# We monkeypatch the 'sync=' method to a no-op so that
 			# sync mode can't be disabled.
 			client.instance_eval do
 				def client.sync=(value)
