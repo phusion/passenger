@@ -471,3 +471,10 @@ touch /webapps/rackapp/tmp/restart.txt
 
 === Rackup specifications for various web frameworks ===
 include::users_guide_snippets/rackup_specifications.txt[]
+
+
+include::users_guide_snippets/appendix_a_about.txt[]
+
+include::users_guide_snippets/appendix_b_terminology.txt[]
+
+include::users_guide_snippets/appendix_c_spawning_methods.txt[]

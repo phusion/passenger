@@ -1,0 +1,304 @@
+[[spawning_methods_explained]]
+== Appendix C: Spawning methods explained ==
+
+At its core, Phusion Passenger is an HTTP proxy and process manager. It spawns
+Ruby on Rails/Rack/WSGI worker processes (which may also be referred to as
+'backend processes'), and forwards incoming HTTP request to one of the worker
+processes.
+
+While this may sound simple, there's not just one way to spawn worker processes.
+Let's go over the different spawning methods. For simplicity's sake, let's
+assume that we're only talking about Ruby on Rails applications.
+
+=== The most straightforward and traditional way: conservative spawning ===
+
+Phusion Passenger could create a new Ruby process, which will then load the
+Rails application along with the entire Rails framework. This process will then
+enter an request handling main loop.
+
+This is the most straightforward way to spawn worker processes. If you're
+familiar with the Mongrel application server, then this approach is exactly
+what mongrel_cluster performs: it creates N worker processes, each which loads
+a full copy of the Rails application and the Rails framework in memory. The Thin
+application server employs pretty much the same approach.
+
+Note that Phusion Passenger's version of conservative spawning differs slightly
+from mongrel_cluster. Mongrel_cluster creates entirely new Ruby processes. In
+programmers jargon, mongrel_cluster creates new Ruby processes by forking the
+current process and exec()-ing a new Ruby interpreter. Phusion Passenger on the
+other hand creates processes that reuse the already loaded Ruby interpreter. In
+programmers jargon, Phusion Passenger calls fork(), but not exec().
+
+=== The smart spawning method ===
+
+NOTE: Smart spawning is only available for Ruby on Rails applications, not for
+      Rack applications or WSGI applications.
+
+While conservative spawning works well, it's not as efficient as it could be
+because each worker process has its own private copy of the Rails application
+as well as the Rails framework. This wastes memory as well as startup time.
+
+image:images/conservative_spawning.png[Worker processes and conservative spawning] +
+'Figure: Worker processes and conservative spawning. Each worker process has its
+own private copy of the application code and Rails framework code.'
+
+It is possible to make the different worker processes share the memory occupied
+by application and Rails framework code, by utilizing so-called
+copy-on-write semantics of the virtual memory system on modern operating
+systems. As a side effect, the startup time is also reduced. This is technique
+is exploited by Phusion Passenger's 'smart' and 'smart-lv2' spawn methods.
+
+==== How it works ====
+
+When the 'smart-lv2' spawn method is being used, Phusion Passenger will first
+create a so-called 'ApplicationSpawner server' process. This process loads the
+entire Rails application along with the Rails framework, by loading
+'environment.rb'. Then, whenever Phusion Passenger needs a new worker process,
+it will instruct the ApplicationSpawner server to do so. The ApplicationSpawner
+server will create a worker new process
+that reuses the already loaded Rails application/framework. Creating a worker
+process through an already running ApplicationSpawner server is very fast, about
+10 times faster than loading the Rails application/framework from scratch. If
+the Ruby interpreter is copy-on-write friendly (that is, if you're running
+<<reducing_memory_usage,Ruby Enterprise Edition>>) then all created worker
+processes will share as much common
+memory as possible. That is, they will all share the same application and Rails
+framework code.
+
+image:images/smart-lv2.png[] +
+'Figure: Worker processes and the smart-lv2 spawn method. All worker processes,
+as well as the ApplicationSpawner, share the same application code and Rails
+framework code.'
+
+The 'smart' spawn method goes even further, by caching the Rails framework in
+another process called the 'FrameworkSpawner server'. This process only loads
+the Rails framework, not the application. When a FrameworkSpawner server is
+instructed to create a new worker process, it will create a new
+ApplicationSpawner to which the instruction will be delegated. All those
+ApplicationSpawner servers, as well as all worker processes created by those
+ApplicationSpawner servers, will share the same Rails framework code.
+
+The 'smart-lv2' method allows different worker processes that belong to the same
+application to share memory. The 'smart' method allows different worker
+processes - that happen to use the same Rails version - to share memory, even if
+they don't belong to the same application.
+
+Notes:
+
+- Vendored Rails frameworks cannot be shared by different applications, even if
+  both vendored Rails frameworks are the same version. So for efficiency reasons
+  we don't recommend vendoring Rails.
+- ApplicationSpawner and FrameworkSpawner servers have an idle timeout just
+  like worker processes. If an ApplicationSpawner/FrameworkSpawner server hasn't
+  been instructed to do anything for a while, it will be shutdown in order to
+  conserve memory. This idle timeout is configurable.
+
+==== Summary of benefits ====
+
+Suppose that Phusion Passenger needs a new worker process for an application
+that uses Rails 2.2.1.
+
+- If the 'smart-lv2' spawning method is used, and an ApplicationSpawner server
+  for this application is already running, then worker process creation time is
+  about 10 times faster than conservative spawning. This worker process will also
+  share application and Rails framework code memory with the ApplicationSpawner
+  server and the worker processes that had been spawned by this ApplicationSpawner
+  server.
+- If the 'smart' spawning method is used, and a FrameworkSpawner server for
+  Rails 2.2.1 is already running, but no ApplicationSpawner server for this
+  application is running, then worker process creation time is about 2 times
+  faster than conservative spawning. If there is an ApplicationSpawner server
+  for this application running, then worker process creation time is about 10
+  times faster. This worker process will also share application and Rails
+  framework code memory with the ApplicationSpawner and FrameworkSpawner
+  servers.
+
+You could compare ApplicationSpawner and FrameworkSpawner servers with stem
+cells, that have the ability to quickly change into more specific cells (worker
+process).
+
+In practice, the smart spawning methods could mean a memory saving of about 33%,
+assuming that your Ruby interpreter is <<reducing_memory_usage,copy-on-write friendly>>.
+
+Of course, smart spawning is not without gotchas. But if you understand the
+gotchas you can easily reap the benefits of smart spawning.
+
+=== Smart spawning gotcha #1: unintential file descriptor sharing ===
+
+Because worker processes are created by forking from an ApplicationSpawner
+server, it will share all file descriptors that are opened by the
+ApplicationSpawner server. (This is part of the semantics of the Unix
+'fork()' system call. You might want to Google it if you're not familiar with
+it.) A file descriptor is a handle which can be an opened file, an opened socket
+connection, a pipe, etc. If different worker processes write to such a file
+descriptor at the same time, then their write calls will be interleaved, which
+may potentially cause problems.
+
+The problem commonly involves socket connections that are unintentially being
+shared. You can fix it by closing and reestablishing the connection when Phusion
+Passenger is creating a new worker process. Phusion Passenger provides the API
+call `PhusionPassenger.on_event(:starting_worker_process)` to do so. So you
+could insert the following code in your 'environment.rb':
+
+[source, ruby]
+-----------------------------------------
+if defined?(PhusionPassenger)
+    PhusionPassenger.on_event(:starting_worker_process) do |forked|
+        if forked
+            # We're in smart spawning mode.
+            ... code to reestablish socket connections here ...
+        else
+            # We're in conservative spawning mode. We don't need to do anything.
+        end
+    end
+end
+-----------------------------------------
+
+Note that Phusion Passenger automatically reestablishes the connection to the
+database upon creating a new worker process, which is why you normally do not
+encounter any database issues when using smart spawning mode.
+
+==== Example 1: Memcached connection sharing (harmful) ====
+
+Suppose we have a Rails application that connects to a Memcached server in
+'environment.rb'. This causes the ApplicationSpawner to have a socket connection
+(file descriptor) to the Memcached server, as shown in the following figure:
+
+ +--------------------+
+ | ApplicationSpawner |-----------[Memcached server]
+ +--------------------+
+
+Phusion Passenger then proceeds with creating a new Rails worker process, which
+is to process incoming HTTP requests. The result will look like this:
+
+ +--------------------+
+ | ApplicationSpawner |------+----[Memcached server]
+ +--------------------+      |
+                             |
+ +--------------------+      |
+ | Worker process 1   |-----/
+ +--------------------+
+
+Since a 'fork()' makes a (virtual) complete copy of a process, all its file
+descriptors will be copied as well. What we see here is that ApplicationSpawner
+and Worker process 1 both share the same connection to Memcached.
+
+Now supposed that your site gets Slashdotted and Phusion Passenger needs to
+spawn another worker process. It does so by forking ApplicationSpawner. The
+result is now as follows:
+
+ +--------------------+
+ | ApplicationSpawner |------+----[Memcached server]
+ +--------------------+      |
+                             |
+ +--------------------+      |
+ | Worker process 1   |-----/|
+ +--------------------+      |
+                             |
+ +--------------------+      |
+ | Worker process 2   |-----/
+ +--------------------+
+
+As you can see, Worker process 1 and Worker process 2 have the same Memcache
+connection.
+
+Suppose that users Joe and Jane visit your website at the same time. Joe's
+request is handled by Worker process 1, and Jane's request is handled by Worker
+process 2. Both worker processes want to fetch something from Memcached. Suppose
+that in order to do that, both handlers need to send a "FETCH" command to Memcached.
+
+But suppose that, after worker process 1 having only sent "FE", a context switch
+occurs, and worker process 2 starts sending a "FETCH" command to Memcached as
+well. If worker process 2 succeeds in sending only one bye, 'F', then Memcached
+will receive a command which begins with "FEF", a command that it does not
+recognize. In other words: the data from both handlers get interleaved. And thus
+Memcached is forced to handle this as an error.
+
+This problem can be solved by reestablishing the connection to Memcached after forking:
+
+ +--------------------+
+ | ApplicationSpawner |------+----[Memcached server]
+ +--------------------+      |                   |
+                             |                   |
+ +--------------------+      |                   |
+ | Worker process 1   |-----/|                   |
+ +--------------------+      |                   |  <--- created this
+                             X                   |       new
+                                                 |       connection
+                             X <-- closed this   |
+ +--------------------+      |     old           |
+ | Worker process 2   |-----/      connection    |
+ +--------------------+                          |
+           |                                     |
+           +-------------------------------------+
+
+Worker process 2 now has its own, separate communication channel with Memcached.
+The code in 'environment.rb' looks like this:
+
+[source, ruby]
+-----------------------------------------
+if defined?(PhusionPassenger)
+    PhusionPassenger.on_event(:starting_worker_process) do |forked|
+        if forked
+            # We're in smart spawning mode.
+            reestablish_connection_to_memcached
+        else
+            # We're in conservative spawning mode. We don't need to do anything.
+        end
+    end
+end
+-----------------------------------------
+
+==== Example 2: Log file sharing (not harmful) ====
+
+There are also cases in which unintential file descriptor sharing is not harmful.
+One such case is log file file descriptor sharing. Even if two processes write
+to the log file at the same time, the worst thing that can happen is that the
+data in the log file is interleaved.
+
+To guarantee that the data written to the log file is never interleaved, you
+must synchronize write access via an inter-process synchronization mechanism,
+such as file locks. Reopening the log file, like you would have done in the
+Memcached example, doesn't help.
+
+=== Smart spawning gotcha #2: the need to revive threads ===
+
+Another part of the 'fork()' system call's semantics is the fact that threads
+disappear after a fork call. So if you've created any threads in environment.rb,
+then those threads will no longer be running in newly created worker process.
+You need to revive them when a new worker process is created. Use the
+`:starting_worker_process` event that Phusion Passenger provides, like this:
+
+[source, ruby]
+-----------------------------------------
+if defined?(PhusionPassenger)
+    PhusionPassenger.on_event(:starting_worker_process) do |forked|
+        if forked
+            # We're in smart spawning mode.
+            ... code to revive threads here ...
+        else
+            # We're in conservative spawning mode. We don't need to do anything.
+        end
+    end
+end
+-----------------------------------------
+
+=== Smart spawning gotcha #3: code load order ===
+
+This gotcha is only applicable to the 'smart' spawn method, not the 'smart-lv2'
+spawn method.
+
+If your application expects the Rails framework to be not loaded during the
+beginning of 'environment.rb', then it can cause problems when an
+ApplicationSpawner is created from a FrameworkSpawner, which already has the
+Rails framework loaded. The most common case is when applications try to patch
+Rails by dropping a modified file that has the same name as Rails's own file,
+in a path that comes earlier in the Ruby search path.
+
+For example, suppose that we have an application which has a patched version
+of 'active_record/base.rb' located in 'RAILS_ROOT/lib/patches', and
+'RAILS_ROOT/lib/patches' comes first in the Ruby load path. When conservative
+spawning is used, the patched version of 'base.rb' is properly loaded. When
+'smart' (not 'smart-lv2') spawning is used, the original 'base.rb' is used
+because it was already loaded, so a subsequent `require "active_record/base"`
+has no effect.
