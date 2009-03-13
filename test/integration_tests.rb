@@ -766,7 +766,10 @@ describe "mod_passenger running in Apache 2" do
 	def check_hosts_configuration
 		begin
 			ok = Resolv.getaddress("passenger.test") == "127.0.0.1"
-		rescue Resolv::ResolvError
+		rescue Resolv::ResolvError, ArgumentError
+			# There's a bug in Ruby 1.8.6-p287's resolv.rb library, which causes
+			# an ArgumentError to be raised instead of ResolvError when resolving
+			# failed.
 			ok = false
 		end
 		if !ok
