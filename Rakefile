@@ -239,7 +239,9 @@ class TEST
 			../ext/apache2/Application.h
 			../ext/apache2/FileChecker.h),
 		'PoolOptionsTest.o' => %w(PoolOptionsTest.cpp ../ext/apache2/PoolOptions.h),
-		'FileCheckerTest.o' => %w(FileCheckerTest.cpp ../ext/apache2/FileChecker.h),
+		'FileCheckerTest.o' => %w(FileCheckerTest.cpp
+			../ext/apache2/FileChecker.h
+			../ext/apache2/CachedFileStat.h),
 		'SystemTimeTest.o' => %w(SystemTimeTest.cpp
 			../ext/apache2/SystemTime.h
 			../ext/apache2/SystemTime.cpp),
