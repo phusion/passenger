@@ -232,16 +232,16 @@ private:
 		} else {
 			calledBefore = true;
 			write(STDERR_FILENO,
-				"*** ERROR: ApplicationPoolServerExecutable caught "
+				"*** ERROR: ApplicationPoolServerExecutable received a "
 				"fatal signal. Running gdb to obtain the backtrace:\n\n",
 				sizeof("*** ERROR: ApplicationPoolServerExecutable caught "
-				       "fatal signal. Running gdb to obtain the backtrace:\n\n")
+				       "fatal signal. Running gdb to obtain the backtrace:\n\n") - 1
 			);
 			write(STDERR_FILENO, "----------------- Begin gdb output -----------------\n",
-				sizeof("----------------- Begin gdb output -----------------\n"));
+				sizeof("----------------- Begin gdb output -----------------\n") - 1);
 			system(gdbBacktraceGenerationCommandStr);
 			write(STDERR_FILENO, "----------------- End gdb output -----------------\n",
-				sizeof("----------------- End gdb output -----------------\n"));
+				sizeof("----------------- End gdb output -----------------\n") - 1);
 			defaultHandler(signum);
 		}
 	}
@@ -265,7 +265,7 @@ private:
 			// Write a file which contains commands for gdb to obtain
 			// the backtrace of this process.
 			fprintf(f, "attach %lu\n", (unsigned long) getpid());
-			fprintf(f, "thread apply all bt\n");
+			fprintf(f, "thread apply all bt full\n");
 			fclose(f);
 			chmod(gdbCommandFile.c_str(), S_IRUSR | S_IRGRP | S_IROTH);
 			
