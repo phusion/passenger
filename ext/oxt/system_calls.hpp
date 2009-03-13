@@ -27,6 +27,7 @@
 
 #include <boost/thread/tss.hpp>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <pthread.h>
@@ -45,7 +46,8 @@
  * One must first call oxt::setup_syscall_interruption_support().
  * Then one may use the functions in oxt::syscalls as drop-in replacements
  * for system calls or C library functions. These functions throw
- * boost::thread_interrupted upon interruption.
+ * boost::thread_interrupted upon interruption, instead of returning an EINTR
+ * error.
  *
  * Once setup_syscall_interruption_support() has been called, system call
  * interruption is enabled by default. You can enable or disable system call
@@ -53,7 +55,9 @@
  * boost::this_thread::enable_syscall_interruption or
  * boost::this_thread::disable_syscall_interruption, respectively. When system
  * call interruption is disabled, the oxt::syscall wrapper functions will
- * ignore interruption requests. This is similar to Boost thread interruption.
+ * ignore interruption requests -- that is, they will never throw
+ * boost::thread_interrupted, nor will they return EINTR errors. This is similar
+ * to Boost thread interruption.
  *
  * <h2>How to interrupt</h2>
  * Generally, oxt::thread::interrupt() and oxt::thread::interrupt_and_join()
@@ -135,6 +139,7 @@ namespace oxt {
 		FILE *fopen(const char *path, const char *mode);
 		int fclose(FILE *fp);
 		int unlink(const char *pathname);
+		int stat(const char *path, struct stat *buf);
 		
 		time_t time(time_t *t);
 		int usleep(useconds_t usec);

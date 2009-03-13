@@ -82,7 +82,9 @@ public:
 	 * @param throttleRate When set to a non-zero value, throttling will be
 	 *                     enabled. stat() will be called at most once per
 	 *                     throttleRate seconds.
-	 * @throws SystemException Something went wrong.
+	 * @throws SystemException Something went wrong while retrieving the
+	 *         system time. stat() errors will <em>not</em> result in SystemException
+	 *         being thrown.
 	 * @throws boost::thread_interrupted
 	 */
 	bool changed(unsigned int throttleRate = 0) {
@@ -90,10 +92,7 @@ public:
 		time_t ctime, mtime;
 		bool result;
 		
-		do {
-			ret = cstat.refresh(throttleRate);
-		} while (ret == -1 && errno == EINTR);
-		
+		ret = cstat.refresh(throttleRate);
 		if (ret == -1) {
 			ctime = 0;
 			mtime = 0;

@@ -442,7 +442,8 @@ end
 			ext/nginx/HttpStatusExtractor.h),
 		'test/FileCheckerTest.o' => %w(
 			test/FileCheckerTest.cpp
-			ext/common/FileChecker.h),
+			ext/common/FileChecker.h
+			ext/common/CachedFileStat.h),
 		'test/SystemTimeTest.o' => %w(
 			test/SystemTimeTest.cpp
 			ext/common/SystemTime.h

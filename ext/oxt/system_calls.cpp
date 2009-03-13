@@ -234,6 +234,16 @@ syscalls::unlink(const char *pathname) {
 	return ret;
 }
 
+int
+syscalls::stat(const char *path, struct stat *buf) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::stat(path, buf)
+	);
+	return ret;
+}
+
 time_t
 syscalls::time(time_t *t) {
 	time_t ret;

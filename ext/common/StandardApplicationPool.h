@@ -361,6 +361,12 @@ private:
 		return result.str();
 	}
 	
+	/**
+	 * Checks whether the given application domain needs to be restarted.
+	 *
+	 * @throws SystemException Something went wrong while retrieving the system time.
+	 * @throws boost::thread_interrupted
+	 */
 	bool needsRestart(const string &appRoot, Domain *domain, const PoolOptions &options) {
 		return domain->alwaysRestartFileStatter.refresh(options.statThrottleRate) == 0
 		    || domain->restartFileChecker.changed(options.statThrottleRate);
