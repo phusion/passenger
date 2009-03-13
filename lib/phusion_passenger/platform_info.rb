@@ -88,7 +88,20 @@ private
 		if File.file?(filename) && File.executable?(filename)
 			return filename
 		else
-			return nil
+			# RubyGems might put binaries in a directory other
+			# than Ruby's bindir. Debian packaged RubyGems and
+			# DebGem packaged RubyGems are the prime examples.
+			begin
+				require 'rubygems' unless defined?(Gem)
+				filename = Gem.bindir + "/#{name}"
+				if File.file?(filename) && File.executable?(filename)
+					return filename
+				else
+					return nil
+				end
+			rescue LoadError
+				return nil
+			end
 		end
 	end
 	
@@ -157,10 +170,8 @@ private
 public
 	# The absolute path to the current Ruby interpreter.
 	RUBY = Config::CONFIG['bindir'] + '/' + Config::CONFIG['RUBY_INSTALL_NAME'] + Config::CONFIG['EXEEXT']
-	# The correct 'gem', 'rake' and 'spec' commands for this Ruby interpreter.
+	# The correct 'gem' command for this Ruby interpreter.
 	GEM = locate_ruby_executable('gem')
-	RAKE = locate_ruby_executable('rake')
-	RSPEC = locate_ruby_executable('spec')
 	
 	# Check whether the specified command is in $PATH, and return its
 	# absolute filename. Returns nil if the command is not found.
@@ -180,6 +191,22 @@ public
 	
 	################ Programs ################
 	
+	
+	# Returns the absolute path to the Rake executable that
+	# belongs to the current Ruby interpreter. Returns nil if it
+	# doesn't exist.
+	def self.rake
+		return locate_ruby_executable('rake')
+	end
+	memoize :rake
+	
+	# Returns the absolute path to the RSpec runner program that
+	# belongs to the current Ruby interpreter. Returns nil if it
+	# doesn't exist.
+	def self.rspec
+		return locate_ruby_executable('spec')
+	end
+	memoize :rspec
 	
 	# The absolute path to the 'apxs' or 'apxs2' executable, or nil if not found.
 	def self.apxs2
