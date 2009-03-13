@@ -11,9 +11,6 @@ Listen 127.0.0.1:<%= @port %>
 <% if !has_builtin_module?('mod_log_config.c') %>
 	LoadModule log_config_module "<%= modules_dir %>/mod_log_config.so"
 <% end %>
-<% if !has_builtin_module?('mod_mime.c') && has_module?('mod_unique_id.so') %>
-	LoadModule unique_id_module "<%= modules_dir %>/mod_unique_id.so"
-<% end %>
 <% if !has_builtin_module?('mod_mime.c') %>
 	LoadModule mime_module "<%= modules_dir %>/mod_mime.so"
 <% end %>

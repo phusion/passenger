@@ -288,20 +288,31 @@ subdir 'test' do
 	
 	desc "Run unit tests for the Ruby libraries"
 	task 'test:ruby' => [:native_support] do
-		sh "spec -c -f s ruby/*.rb ruby/*/*.rb"
+		if PlatformInfo::RSPEC.nil?
+			abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo::RUBY}'. Please install it."
+		else
+			ruby "#{PlatformInfo::RSPEC} -c -f s ruby/*.rb ruby/*/*.rb"
+		end
 	end
 	
 	task 'test:rcov' => [:native_support] do
-		rspec = PlatformInfo.find_command('spec')
-		sh "rcov", "--exclude",
-			"lib\/spec,\/spec$,_spec\.rb$,support\/,platform_info,integration_tests",
-			rspec, "--", "-c", "-f", "s",
-			*Dir["ruby/*.rb", "ruby/*/*.rb", "integration_tests.rb"]
+		if PlatformInfo::RSPEC.nil?
+			abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo::RUBY}'. Please install it."
+		else
+			sh "rcov", "--exclude",
+				"lib\/spec,\/spec$,_spec\.rb$,support\/,platform_info,integration_tests",
+				PlatformInfo::RSPEC, "--", "-c", "-f", "s",
+				*Dir["ruby/*.rb", "ruby/*/*.rb", "integration_tests.rb"]
+		end
 	end
 	
 	desc "Run integration tests"
 	task 'test:integration' => [:apache2, :native_support] do
-		sh "spec -c -f s integration_tests.rb"
+		if PlatformInfo::RSPEC.nil?
+			abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo::RUBY}'. Please install it."
+		else
+			ruby "#{PlatformInfo::RSPEC} -c -f s integration_tests.rb"
+		end
 	end
 	
 	file 'oxt/oxt_test_main' => TEST::OXT_OBJECTS.keys.map{ |x| "oxt/#{x}" } +
