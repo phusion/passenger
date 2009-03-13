@@ -682,13 +682,13 @@ main(int argc, char *argv[]) {
 			argv[2], argv[3], argv[4], argv[5], argv[6]);
 		return server.start();
 	} catch (const tracable_exception &e) {
-		P_ERROR(e.what() << "\n" << e.backtrace());
+		P_ERROR("*** Fatal error: " << e.what() << "\n" << e.backtrace());
 		return 1;
 	} catch (const exception &e) {
-		P_ERROR(e.what());
+		P_ERROR("*** Fatal error: " << e.what());
 		return 1;
 	} catch (...) {
-		P_ERROR("Unknown exception thrown in main thread.");
+		P_ERROR("*** Fatal error: Unknown exception thrown in main thread.");
 		throw;
 	}
 }
