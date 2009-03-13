@@ -1,7 +1,7 @@
 # kate: syntax ruby
 
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (C) 2008  Phusion
+#  Copyright (C) 2008, 2009  Phusion
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@ verbose true
 ##### Configuration
 
 # Don't forget to edit Configuration.h too
-PACKAGE_VERSION = "2.1.1"
+PACKAGE_VERSION = "2.1.2"
 OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 
 PlatformInfo.apxs2.nil? and raise "Could not find 'apxs' or 'apxs2'."
