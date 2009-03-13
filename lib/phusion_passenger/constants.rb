@@ -22,6 +22,8 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
+	# Phusion Passenger version number.
+	# Don't forget to edit Configuration.h too.
 	VERSION_STRING = '2.2.0'
 	
 	DEFAULT_FRAMEWORK_SPAWNER_MAX_IDLE_TIME = 30 * 60
