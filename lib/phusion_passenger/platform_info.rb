@@ -81,9 +81,14 @@ private
 			# On OS X we must look for Ruby binaries in /usr/bin.
 			# RubyGems puts executables (e.g. 'rake') in there, not in
 			# /System/Libraries/(...)/bin.
-			return "/usr/bin/#{name}"
+			filename = "/usr/bin/#{name}"
 		else
-			return File.dirname(RUBY) + "/#{name}"
+			filename = File.dirname(RUBY) + "/#{name}"
+		end
+		if File.file?(filename) && File.executable?(filename)
+			return filename
+		else
+			return nil
 		end
 	end
 	
@@ -152,9 +157,10 @@ private
 public
 	# The absolute path to the current Ruby interpreter.
 	RUBY = Config::CONFIG['bindir'] + '/' + Config::CONFIG['RUBY_INSTALL_NAME'] + Config::CONFIG['EXEEXT']
-	# The correct 'gem' and 'rake' commands for this Ruby interpreter.
+	# The correct 'gem', 'rake' and 'spec' commands for this Ruby interpreter.
 	GEM = locate_ruby_executable('gem')
 	RAKE = locate_ruby_executable('rake')
+	RSPEC = locate_ruby_executable('spec')
 	
 	# Check whether the specified command is in $PATH, and return its
 	# absolute filename. Returns nil if the command is not found.
