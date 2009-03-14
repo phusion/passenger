@@ -282,6 +282,8 @@ disable_stdio_buffering() {
 	return Qnil;
 }
 
+/***************************/
+
 void
 Init_native_support() {
 	struct sockaddr_un addr;
