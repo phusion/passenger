@@ -190,11 +190,10 @@ module Dependencies # :nodoc: all
 	Rake = Dependency.new do |dep|
 		dep.name = "Rake"
 		dep.define_checker do |result|
-			rake = PlatformInfo::RAKE
-			if File.executable?(rake)
-				result.found(rake)
-			else
+			if PlatformInfo.rake.nil?
 				result.not_found
+			else
+				result.found(PlatformInfo.rake)
 			end
 		end
 		dep.website = "http://rake.rubyforge.org/"

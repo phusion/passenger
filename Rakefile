@@ -1,7 +1,7 @@
 # kate: syntax ruby
 
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (C) 2008  Phusion
+#  Copyright (C) 2008, 2009  Phusion
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@ verbose true
 ##### Configuration
 
 # Don't forget to edit Configuration.h too
-PACKAGE_VERSION = "2.1.1"
+PACKAGE_VERSION = "2.1.2"
 OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 
 PlatformInfo.apxs2.nil? and raise "Could not find 'apxs' or 'apxs2'."
@@ -40,9 +40,9 @@ CXX = "g++"
 LIBEXT = PlatformInfo.library_extension
 # _GLIBCPP__PTHREADS is for fixing Boost compilation on OpenBSD.
 if OPTIMIZE
-	OPTIMIZATION_FLAGS = "-O2 -DBOOST_DISABLE_ASSERTS"
+	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -O2 -DBOOST_DISABLE_ASSERTS"
 else
-	OPTIMIZATION_FLAGS = "-g -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS"
+	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS"
 end
 CXXFLAGS = "-Wall #{OPTIMIZATION_FLAGS}"
 EXTRA_LDFLAGS = ""
@@ -286,20 +286,31 @@ subdir 'test' do
 	
 	desc "Run unit tests for the Ruby libraries"
 	task 'test:ruby' => [:native_support] do
-		sh "spec -c -f s ruby/*.rb ruby/*/*.rb"
+		if PlatformInfo.rspec.nil?
+			abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo::RUBY}'. Please install it."
+		else
+			ruby "#{PlatformInfo.rspec} -c -f s ruby/*.rb ruby/*/*.rb"
+		end
 	end
 	
 	task 'test:rcov' => [:native_support] do
-		rspec = PlatformInfo.find_command('spec')
-		sh "rcov", "--exclude",
-			"lib\/spec,\/spec$,_spec\.rb$,support\/,platform_info,integration_tests",
-			rspec, "--", "-c", "-f", "s",
-			*Dir["ruby/*.rb", "ruby/*/*.rb", "integration_tests.rb"]
+		if PlatformInfo.rspec.nil?
+			abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo::RUBY}'. Please install it."
+		else
+			sh "rcov", "--exclude",
+				"lib\/spec,\/spec$,_spec\.rb$,support\/,platform_info,integration_tests",
+				PlatformInfo.rspec, "--", "-c", "-f", "s",
+				*Dir["ruby/*.rb", "ruby/*/*.rb", "integration_tests.rb"]
+		end
 	end
 	
 	desc "Run integration tests"
 	task 'test:integration' => [:apache2, :native_support] do
-		sh "spec -c -f s integration_tests.rb"
+		if PlatformInfo.rspec.nil?
+			abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo::RUBY}'. Please install it."
+		else
+			ruby "#{PlatformInfo.rspec} -c -f s integration_tests.rb"
+		end
 	end
 	
 	file 'oxt/oxt_test_main' => TEST::OXT_OBJECTS.keys.map{ |x| "oxt/#{x}" } +

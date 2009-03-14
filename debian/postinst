@@ -1,0 +1,24 @@
+#!/bin/sh
+if ruby -e ''; then
+	if ! ruby -rphusion_passenger/native_support -e '' 2>/dev/null; then
+		export RUBYLIB=/usr/lib/ruby/1.8
+	fi
+	passenger-install-apache2-module
+	if ! ruby -rubygems -rfastthread -e '' 2>/dev/null; then
+		echo
+		echo
+		echo "****** WARNING WARNING WARNING WARNING WARNING WARNING WARNING ******"
+		echo
+		echo "Passenger requires the Ruby library 'fastthread', which does not seem to be installed. Since there's no native package for it in the Debian repository, you must install it via RubyGems:"
+		echo
+		echo "  gem install fastthread"
+		echo
+		echo "Please install fastthread, otherwise Passenger won't work."
+		echo
+		echo "****** WARNING WARNING WARNING WARNING WARNING WARNING WARNING ******"
+	fi
+else
+	echo "********* NOTE ***********"
+	echo "Ruby doesn't seem to be installed. Please install Ruby and RubyGems, because Passenger needs them."
+fi
+exit 0
