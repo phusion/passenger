@@ -17,9 +17,13 @@ int main() {
 	setenv("TESTING_PASSENGER", "1", 1);
 	try {
 		tut::runner.get().run_tests();
+		if (reporter.all_ok()) {
+			return 0;
+		} else {
+			return 1;
+		}
 	} catch (const std::exception &ex) {
 		std::cerr << "Exception raised: " << ex.what() << std::endl;
-		return 1;
+		return 2;
 	}
-	return 0;
 }
