@@ -235,6 +235,12 @@ Next, add a <<RailsBaseURI,RailsBaseURI>> option to the virtual host configurati
 -------------------------------------------
 Then restart Apache. The application has now been deployed.
 
+NOTE: If you're deploying to a sub-URI then please make sure that your view
+templates correctly handles references to sub-URI static assets! Otherwise
+you may find broken links to images, CSS files, JavaScripts, etc. Please read
+<<sub_uri_deployment_uri_fix,How to fix broken images/CSS/JavaScript URIs in sub-URI deployments>>
+for more information.
+
 [TIP]
 ======================================
 You can deploy multiple Rails applications under a virtual host, by specifying
@@ -1887,35 +1893,47 @@ then Rails will automatically reload your application code after each request.
 or when you're not developing a Rails application and your web framework
 does not support code reloading.
 
-=== How to fix your broken images/css/javascript
+[[sub_uri_deployment_uri_fix]]
+=== How to fix broken images/CSS/JavaScript URIs in sub-URI deployments
 
-Some people experience broken images when they deploy their application to a
-sub-URI (i.e. mysite.com/railsapp/). The reason for this usually is that you used a
-static uri for your image in the view. This means your img source probably looks
-something like "/images/foo.jpg". The slash that precedes location means that
-you are calling mysite.com/images/foo.jpg no matter what. The problem is that the
-image is at mysite.com/railsapp/images/foo.jpg. There are two ways to fix this.
+Some people experience broken images and other broken static assets when they
+deploy their application to a sub-URI (i.e. 'http://mysite.com/railsapp/').
+The reason for this usually is that you used a
+static URI for your image in the views. This means your 'img' source probably refers
+to something like '/images/foo.jpg'. The leading slash means that it's an absolute URI:
+you're telling the browser to always load 'http://mysite.com/images/foo.jpg' no
+matter what. The problem is that the image is actually at
+'http://mysite.com/railsapp/images/foo.jpg'. There are two ways to fix this.
 
-The first way (not recommended) is to change your sources to "images/foo.jpg". What
-this does is make the path relative to where you are. the problem is that if you
-use restful uri's your images will probably break again when you add a level to
-the uri.
+The first way (not recommended) is to change your view templates to refer to
+'images/foo.jpg'. This is a relative URI: note the lack of a leading slash). What
+this does is making the path relative to the current URI. The problem is that if you
+use restful URIs, then your images will probably break again when you add a level to
+the URI.
+For example, when you're at 'http://mysite.com/railsapp' the browser will look for
+'http://mysite.com/railsapp/images/foo.jpg'. But when you're at
+'http://mysite.com/railsapp/controller'. the browser will look for
+'http://mysite.com/railsapp/controller/images/foo.jpg'.
+So relative URIs usually don't work well with layout templates.
 
-an example id mysite.com/railsapp translates to mysite.com/railsapp/images/foo.jpg but
-mysite.com/railsapp/controller translates to mysite.com/railsapp/controller/images/...
+The second and highly recommended way is to always use Rails helper methods to
+output tags for static assets. These helper methods automatically take care
+of prepending the base URI that you've deployed the application to. For images
+there is `image_tag`, for JavaScript there is `javascript_include_tag` and for
+CSS there is `stylesheet_link_tag`. In the above example you would simply remove
+the '<img>' HTML tag and replace it with inline Ruby like this:
 
-This makes it very hard to use global layouts.
+---------------------------------------
+<%= image_tag("foo.jpg") %>
+---------------------------------------
 
-The second and highly recommended way is to always use rails helper methods. For images
-there is image_tag, for javascript there is javascript_include_tag and for css there is 
-stylesheet_link_tag. These tags are more valuable than you may think. In the above
-example you would simply remove the html and replace it with inline ruby like this:
-image_tag("foo.jpg"). This will generate the proper image tag to 
-$RAILS_ROOT/images/foo.jpg so that your images will always work no matter what
-you use as your sub-uri. There are far more benefits to these helper methods than
-just ensuring working url's. You can read about them on the rails docs site:
+This will generate the proper image tag to `$RAILS_ROOT/public/images/foo.jpg`
+so that your images will always work no matter what sub-URI you've deployed to.
 
-http://api.rubyonrails.org/classes/ActionView/Helpers/AssetTagHelper.html
+These helper methods are more valuable than you may think. For example they also
+append a timestamp to the URI to better facilitate HTTP caching. For more information,
+please refer to
+link:http://api.rubyonrails.org/classes/ActionView/Helpers/AssetTagHelper.html[the Rails API docs].
 
 
 == Appendix A: About this document ==
