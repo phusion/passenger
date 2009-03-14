@@ -1887,6 +1887,37 @@ then Rails will automatically reload your application code after each request.
 or when you're not developing a Rails application and your web framework
 does not support code reloading.
 
+=== How to fix your broken images/css/javascript
+
+Some people experience broken images when they deploy their application to a
+sub-URI (i.e. mysite.com/railsapp/). The reason for this usually is that you used a
+static uri for your image in the view. This means your img source probably looks
+something like "/images/foo.jpg". The slash that precedes location means that
+you are calling mysite.com/images/foo.jpg no matter what. The problem is that the
+image is at mysite.com/railsapp/images/foo.jpg. There are two ways to fix this.
+
+The first way (not recommended) is to change your sources to "images/foo.jpg". What
+this does is make the path relative to where you are. the problem is that if you
+use restful uri's your images will probably break again when you add a level to
+the uri.
+
+an example id mysite.com/railsapp translates to mysite.com/railsapp/images/foo.jpg but
+mysite.com/railsapp/controller translates to mysite.com/railsapp/controller/images/...
+
+This makes it very hard to use global layouts.
+
+The second and highly recommended way is to always use rails helper methods. For images
+there is image_tag, for javascript there is javascript_include_tag and for css there is 
+stylesheet_link_tag. These tags are more valuable than you may think. In the above
+example you would simply remove the html and replace it with inline ruby like this:
+image_tag("foo.jpg"). This will generate the proper image tag to 
+$RAILS_ROOT/images/foo.jpg so that your images will always work no matter what
+you use as your sub-uri. There are far more benefits to these helper methods than
+just ensuring working url's. You can read about them on the rails docs site:
+
+http://api.rubyonrails.org/classes/ActionView/Helpers/AssetTagHelper.html
+
+
 == Appendix A: About this document ==
 
 The text of this document is licensed under the
