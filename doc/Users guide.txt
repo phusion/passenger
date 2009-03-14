@@ -132,22 +132,19 @@ passenger-install-apache2-module
 ------------------------------------------------------
 Please follow the instructions given by the installer.
 
+
 ==== Installing via a native Linux package ====
+
+John Leach from Brightbox has kindly provided an Ubuntu Hardy package for Phusion Passenger. The package is available from the link:http://apt.brightbox.net[Brightbox repository].
 
 Please install the native Linux package, e.g.:
 ------------------------------------------------------
-gdebi passenger_x.x.x-i386.deb
+sudo sh -c 'echo "deb http://apt.brightbox.net hardy main" > /etc/apt/sources.list.d/brightbox.list'
+sudo sh -c 'wget -q -O - http://apt.brightbox.net/release.asc | apt-key add -'
+sudo apt-get update
+sudo apt-get install libapache2-mod-passenger
 ------------------------------------------------------
 
-Next, you'll need to configure Apache. Run the "installer", as it will tell you
-the correct configuration options for Apache:
-------------------------------------------------------
-passenger-install-apache2-module
-------------------------------------------------------
-
-NOTE: The installer doesn't actually install anything because it will automatically
-detect that Phusion Passenger has already been installed. The only thing the
-installer will do in this case, is showing the correct Apache configurations.
 
 ==== Installing via the source tarball ====
 
@@ -261,8 +258,8 @@ There are two ways to restart the application:
 
 1. By restarting Apache.
 2. By creating or modifying the file 'tmp/restart.txt' in the Rails
-   application's root folder. Phusion Passenger will automatically
-   restart the application.
+   application's <<application_root,root folder>>. Phusion Passenger will
+   automatically restart the application.
 
 For example, to restart our example MyCook application, we type this in the
 command line:
@@ -420,8 +417,8 @@ There are two ways to restart the application:
 
 1. By restarting Apache.
 2. By creating or modifying the file 'tmp/restart.txt' in the Rack
-   application's root folder. Phusion Passenger will automatically restart the
-   application.
+   application's <<application_root,root folder>>. Phusion Passenger will
+   automatically restart the application.
 
 For example, to restart our example application, we type this in the
 command line:
@@ -1880,9 +1877,8 @@ support code reloading, or when developing a web framework.
 
 To achieve this, simply create the file 'tmp/always_restart.txt' in your
 application's root folder. Unlike 'restart.txt', Phusion Passenger does not
-delete this file. If both files are present ('restart.txt' and 'always_restart.txt'),
-then Phusion Passenger will still restart the application, but won't delete
-'restart.txt'.
+check for this file's timestamp: Phusion Passenger will always restart the
+application, as long as 'always_restart.txt' exists.
 
 NOTE: If you're just developing a Rails application then you probably don't need
 this feature. If you set 'RailsEnv development' in your Apache configuration,

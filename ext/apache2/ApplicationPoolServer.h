@@ -561,6 +561,7 @@ private:
 		
 		pid = syscalls::fork();
 		if (pid == 0) { // Child process.
+			dup2(STDERR_FILENO, STDOUT_FILENO);  // Redirect stdout to the same channel as stderr.
 			dup2(fds[0], SERVER_SOCKET_FD);
 			
 			// Close all unnecessary file descriptors

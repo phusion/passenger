@@ -45,10 +45,12 @@
  * One must first call oxt::setup_syscall_interruption_support().
  * Then one may use the functions in oxt::syscalls as drop-in replacements
  * for system calls or C library functions. These functions throw
- * boost::thread_interrupted upon interruption.
+ * boost::thread_interrupted upon interruption, instead of returning an EINTR
+ * error.
  *
- * System call interruption is disabled by default. In other words: the
- * replacement functions in this file don't throw boost::thread_interrupted.
+ * System call interruption is disabled by default. As long as system call
+ * interruption is disabled, the replacement functions in oxt::syscalls will
+ * never throw boost::thread_interrupted, and they will ignore any EINTR errors.
  * You can enable or disable system call interruption in the current scope
  * by creating instances of boost::this_thread::enable_syscall_interruption
  * and similar objects. This is similar to Boost thread interruption.
