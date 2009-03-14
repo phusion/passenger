@@ -148,7 +148,6 @@ class FrameworkSpawner < AbstractServer
 	# - ApplicationSpawner::Error: The ApplicationSpawner server exited unexpectedly.
 	# - FrameworkSpawner::Error: The FrameworkSpawner server exited unexpectedly.
 	def spawn_application(app_root, options = {})
-		app_root = normalize_path(app_root)
 		assert_valid_app_root(app_root)
 		options = sanitize_spawn_options(options)
 		options["app_root"] = app_root
@@ -200,7 +199,7 @@ class FrameworkSpawner < AbstractServer
 		if app_root.nil?
 			server.write("reload")
 		else
-			server.write("reload", normalize_path(app_root))
+			server.write("reload", app_root)
 		end
 	rescue SystemCallError, IOError, SocketError
 		raise Error, "The framework spawner server exited unexpectedly"

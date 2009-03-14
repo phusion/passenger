@@ -235,4 +235,28 @@ namespace tut {
 		ensure_equals(escapeForXml("hello\xFF\xCCworld"), "hello&#255;&#204;world");
 		ensure_equals(escapeForXml("hello\xFFworld\xCC"), "hello&#255;world&#204;");
 	}
+	
+	/***** Test extractDirName() *****/
+	
+	TEST_METHOD(26) {
+		ensure_equals("Test 1", extractDirName("/usr/lib"), "/usr");
+		ensure_equals("Test 2", extractDirName("/usr/lib/"), "/usr");
+		ensure_equals("Test 3", extractDirName("/usr/"), "/");
+		ensure_equals("Test 4", extractDirName("usr"), ".");
+		ensure_equals("Test 5", extractDirName("/"), "/");
+		ensure_equals("Test 6", extractDirName("///"), "/");
+		ensure_equals("Test 7", extractDirName("."), ".");
+		ensure_equals("Test 8", extractDirName(".."), ".");
+		ensure_equals("Test 9", extractDirName("./foo"), ".");
+		ensure_equals("Test 10", extractDirName("../foo"), "..");
+	}
+	
+	/***** Test resolveSymlink() *****/
+	
+	TEST_METHOD(27) {
+		ensure_equals(resolveSymlink("stub/symlinks/file"), "stub/symlinks/foo.txt");
+		ensure_equals(resolveSymlink("stub/symlinks/file2"), "stub/symlinks/file");
+		ensure_equals(resolveSymlink("stub/symlinks/file3"), "stub/symlinks/file2");
+		ensure_equals(resolveSymlink("stub/symlinks/absolute_symlink"), "/foo/bar");
+	}
 }

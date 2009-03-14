@@ -159,7 +159,15 @@
 			
 			string getAppRoot(const char *documentRoot) const {
 				if (appRoot == NULL) {
-					return string(documentRoot).append("/..");
+					return extractDirName(documentRoot);
+				} else {
+					return appRoot;
+				}
+			}
+			
+			string getAppRoot(const string &documentRoot) const {
+				if (appRoot == NULL) {
+					return extractDirName(documentRoot);
 				} else {
 					return appRoot;
 				}

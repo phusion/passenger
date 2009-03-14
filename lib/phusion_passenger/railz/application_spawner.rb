@@ -82,13 +82,8 @@ class ApplicationSpawner < AbstractServer
 	# All other options will be passed on to RequestHandler.
 	def initialize(app_root, options = {})
 		super()
-		begin
-			@app_root = normalize_path(app_root)
-		rescue SystemCallError => e
-			raise InvalidPath, e.message
-		rescue InvalidPath
-			raise
-		end
+		@app_root = app_root
+		@canonicalized_app_root = canonicalize_path(app_root)
 		@options = sanitize_spawn_options(options)
 		@lower_privilege = @options["lower_privilege"]
 		@lowest_user     = @options["lowest_user"]
@@ -230,7 +225,7 @@ protected
 	
 private
 	def preload_application
-		Object.const_set(:RAILS_ROOT, @app_root)
+		Object.const_set(:RAILS_ROOT, @canonicalized_app_root)
 		if defined?(::Rails::Initializer)
 			::Rails::Initializer.run(:set_load_path)
 			
@@ -287,7 +282,7 @@ private
 		#   to do that again.
 		if GC.copy_on_write_friendly? && !::Rails::Initializer.respond_to?(:load_application_classes)
 			Dir.glob('app/{models,controllers,helpers}/*.rb').each do |file|
-				require_dependency normalize_path(file)
+				require_dependency canonicalize_path(file)
 			end
 		end
 	end
