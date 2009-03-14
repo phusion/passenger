@@ -471,17 +471,26 @@ end
 	
 	desc "Run unit tests for the Ruby libraries"
 	task 'test:ruby' => :native_support do
-		sh "cd test && spec -c -f s ruby/*.rb ruby/*/*.rb"
+		if PlatformInfo.rspec.nil?
+			abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo::RUBY}'. Please install it."
+		else
+			Dir.chdir("test") do
+				ruby "#{PlatformInfo.rspec} -c -f s ruby/*.rb ruby/*/*.rb"
+			end
+		end
 	end
 	
 	desc "Run coverage tests for the Ruby libraries"
 	task 'test:rcov' => :native_support do
-		rspec = PlatformInfo.find_command('spec')
-		Dir.chdir("test") do
-			sh "rcov", "--exclude",
-				"lib\/spec,\/spec$,_spec\.rb$,support\/,platform_info,integration_tests",
-				rspec, "--", "-c", "-f", "s",
-				*Dir["ruby/*.rb", "ruby/*/*.rb", "integration_tests.rb"]
+		if PlatformInfo.rspec.nil?
+			abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo::RUBY}'. Please install it."
+		else
+			Dir.chdir("test") do
+				sh "rcov", "--exclude",
+					"lib\/spec,\/spec$,_spec\.rb$,support\/,platform_info,integration_tests",
+					PlatformInfo.rspec, "--", "-c", "-f", "s",
+					*Dir["ruby/*.rb", "ruby/*/*.rb", "integration_tests.rb"]
+			end
 		end
 	end
 	
@@ -491,12 +500,24 @@ end
 	
 	desc "Run Apache 2 integration tests"
 	task 'test:integration:apache2' => [:apache2, :native_support] do
-		sh "cd test && spec -c -f s integration_tests/apache2_tests.rb"
+		if PlatformInfo.rspec.nil?
+			abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo::RUBY}'. Please install it."
+		else
+			Dir.chdir("test") do
+				ruby "#{PlatformInfo.rspec} -c -f s integration_tests/apache2_tests.rb"
+			end
+		end
 	end
 	
 	desc "Run Nginx integration tests"
 	task 'test:integration:nginx' => :nginx do
-		sh "cd test && spec -c -f s integration_tests/nginx_tests.rb"
+		if PlatformInfo.rspec.nil?
+			abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo::RUBY}'. Please install it."
+		else
+			Dir.chdir("test") do
+				ruby "#{PlatformInfo.rspec} -c -f s integration_tests/nginx_tests.rb"
+			end
+		end
 	end
 	
 	oxt_test_main_dependencies = TEST_OXT_OBJECTS.keys.map do |object|
