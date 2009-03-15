@@ -17,6 +17,7 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 $LOAD_PATH.unshift("#{File.dirname(__FILE__)}/lib")
+$LOAD_PATH.unshift("#{File.dirname(__FILE__)}/misc")
 require 'rubygems'
 require 'rake/rdoctask'
 require 'rake/gempackagetask'
