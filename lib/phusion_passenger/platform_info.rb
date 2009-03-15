@@ -330,14 +330,16 @@ public
 	# when invoking the compiler.
 	def self.portability_cflags
 		# _GLIBCPP__PTHREADS is for fixing Boost compilation on OpenBSD.
-		flags = ["-D_REENTRANT -D_GLIBCPP__PTHREADS -I/usr/local/include"]
+		flags = ["-D_REENTRANT -I/usr/local/include"]
 		if RUBY_PLATFORM =~ /solaris/
 			flags << '-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -D__SOLARIS__'
 			flags << '-DBOOST_HAS_STDINT_H' unless RUBY_PLATFORM =~ /solaris2.9/
 			flags << '-D__SOLARIS9__ -DBOOST__STDC_CONSTANT_MACROS_DEFINED' if RUBY_PLATFORM =~ /solaris2.9/
 			flags << '-mcpu=ultrasparc' if RUBY_PLATFORM =~ /sparc/
 		elsif RUBY_PLATFORM =~ /openbsd/
-			flags << '-DBOOST_HAS_STDINT_H'
+			flags << '-DBOOST_HAS_STDINT_H -D_GLIBCPP__PTHREADS'
+		elsif RUBY_PLATFORM =~ /sparc-linux/
+			flags << '-DBOOST_SP_USE_PTHREADS'
 		end
 		return flags.compact.join(" ").strip
 	end
