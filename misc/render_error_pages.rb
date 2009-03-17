@@ -22,10 +22,11 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-$LOAD_PATH << "#{File.dirname(__FILE__)}/../lib"
-require 'passenger/html_template'
-require 'passenger/spawn_manager'
-require 'passenger/platform_info'
+$LOAD_PATH.unshift("#{File.dirname(__FILE__)}/../lib")
+$LOAD_PATH.unshift("#{File.dirname(__FILE__)}/../ext")
+require 'phusion_passenger/html_template'
+require 'phusion_passenger/spawn_manager'
+require 'phusion_passenger/platform_info'
 include PhusionPassenger
 
 if !defined?(Mysql::Error)
@@ -108,7 +109,7 @@ def start
 	render_error_page(e, 'general_error.html',
 		'general_error')
 	
-	e = StandardError.new("Some error message")
+	e = AppInitError.new("Some error message", create_dummy_exception)
 	render_error_page(e, 'app_exited.html', 'app_exited_during_initialization')
 end
 

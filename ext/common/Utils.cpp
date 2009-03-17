@@ -24,6 +24,7 @@
  */
 
 #include <cassert>
+#include <libgen.h>
 #include "CachedFileStat.h"
 #include "Utils.h"
 
@@ -181,6 +182,47 @@ canonicalizePath(const string &path) {
 			return tmp;
 		}
 	#endif
+}
+
+string
+resolveSymlink(const string &path) {
+	char buf[PATH_MAX];
+	ssize_t size;
+	
+	size = readlink(path.c_str(), buf, sizeof(buf) - 1);
+	if (size == -1) {
+		if (errno == EINVAL) {
+			return path;
+		} else {
+			int e = errno;
+			string message = "Cannot resolve possible symlink '";
+			message.append(path);
+			message.append("'");
+			throw FileSystemException(message, e, path);
+		}
+	} else {
+		buf[size] = '\0';
+		if (buf[0] == '\0') {
+			string message = "The file '";
+			message.append(path);
+			message.append("' is a symlink, and it refers to an empty filename. This is not allowed.");
+			throw FileSystemException(message, ENOENT, path);
+		} else if (buf[0] == '/') {
+			// Symlink points to an absolute path.
+			return buf;
+		} else {
+			return extractDirName(path) + "/" + buf;
+		}
+	}
+}
+
+string
+extractDirName(const string &path) {
+	char *path_copy = strdup(path.c_str());
+	char *result = dirname(path_copy);
+	string result_string(result);
+	free(path_copy);
+	return result_string;
 }
 
 string

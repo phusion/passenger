@@ -216,6 +216,29 @@ string findApplicationPoolServer(const char *passengerRoot);
 string canonicalizePath(const string &path);
 
 /**
+ * If <em>path</em> refers to a symlink, then this function resolves the
+ * symlink for 1 level. That is, if the symlink points to another symlink,
+ * then the other symlink will not be resolved. The resolved path is returned.
+ *
+ * If the symlink doesn't point to an absolute path, then this function will
+ * prepend <em>path</em>'s directory to the result.
+ *
+ * If <em>path</em> doesn't refer to a symlink then this method will return
+ * <em>path</em>.
+ *
+ * @throws FileSystemException Something went wrong.
+ * @ingroup Support
+ */
+string resolveSymlink(const string &path);
+
+/**
+ * Given a path, extracts its directory name.
+ *
+ * @ingroup Support
+ */
+string extractDirName(const string &path);
+
+/**
  * Escape the given raw string into an XML value.
  *
  * @throws std::bad_alloc Something went wrong.

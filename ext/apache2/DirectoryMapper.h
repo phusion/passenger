@@ -227,7 +227,11 @@ public:
 				path.assign(docRoot, len);
 			}
 			if (strcmp(baseURI, "/") != 0) {
+				/* Application is deployed in a sub-URI.
+				 * This is probably a symlink, so let's resolve it.
+				 */
 				path.append(baseURI);
+				path = resolveSymlink(path);
 			}
 			return path;
 		} else {

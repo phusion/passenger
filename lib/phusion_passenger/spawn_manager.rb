@@ -185,12 +185,6 @@ class SpawnManager < AbstractServer
 	#
 	# Raises AbstractServer::SpawnError if something went wrong.
 	def reload(app_root = nil)
-		if app_root
-			begin
-				app_root = normalize_path(app_root)
-			rescue InvalidPath
-			end
-		end
 		@spawners.synchronize do
 			if app_root
 				# Delete associated ApplicationSpawner.
@@ -232,7 +226,6 @@ private
 				framework_version = Application.detect_framework_version(app_root)
 			end
 			if framework_version.nil? || framework_version == :vendor
-				app_root = normalize_path(app_root)
 				key = "app:#{app_root}"
 				create_spawner = proc do
 					Railz::ApplicationSpawner.new(app_root, options)
@@ -246,7 +239,6 @@ private
 				spawner_timeout = options["framework_spawner_timeout"]
 			end
 		else
-			app_root = normalize_path(app_root)
 			key = "app:#{app_root}"
 			create_spawner = proc do
 				Railz::ApplicationSpawner.new(app_root, options)

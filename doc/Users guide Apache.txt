@@ -238,6 +238,12 @@ Next, add a <<RailsBaseURI,RailsBaseURI>> option to the virtual host configurati
 -------------------------------------------
 Then restart Apache. The application has now been deployed.
 
+NOTE: If you're deploying to a sub-URI then please make sure that your view
+templates correctly handles references to sub-URI static assets! Otherwise
+you may find broken links to images, CSS files, JavaScripts, etc. Please read
+<<sub_uri_deployment_uri_fix,How to fix broken images/CSS/JavaScript URIs in sub-URI deployments>>
+for more information.
+
 [TIP]
 ======================================
 You can deploy multiple Rails applications under a virtual host, by specifying
@@ -1814,6 +1820,48 @@ then Rails will automatically reload your application code after each request.
 'always_restart.txt' is only useful if you're working on Ruby on Rails itself,
 or when you're not developing a Rails application and your web framework
 does not support code reloading.
+
+[[sub_uri_deployment_uri_fix]]
+=== How to fix broken images/CSS/JavaScript URIs in sub-URI deployments
+
+Some people experience broken images and other broken static assets when they
+deploy their application to a sub-URI (i.e. 'http://mysite.com/railsapp/').
+The reason for this usually is that you used a
+static URI for your image in the views. This means your 'img' source probably refers
+to something like '/images/foo.jpg'. The leading slash means that it's an absolute URI:
+you're telling the browser to always load 'http://mysite.com/images/foo.jpg' no
+matter what. The problem is that the image is actually at
+'http://mysite.com/railsapp/images/foo.jpg'. There are two ways to fix this.
+
+The first way (not recommended) is to change your view templates to refer to
+'images/foo.jpg'. This is a relative URI: note the lack of a leading slash). What
+this does is making the path relative to the current URI. The problem is that if you
+use restful URIs, then your images will probably break again when you add a level to
+the URI.
+For example, when you're at 'http://mysite.com/railsapp' the browser will look for
+'http://mysite.com/railsapp/images/foo.jpg'. But when you're at
+'http://mysite.com/railsapp/controller'. the browser will look for
+'http://mysite.com/railsapp/controller/images/foo.jpg'.
+So relative URIs usually don't work well with layout templates.
+
+The second and highly recommended way is to always use Rails helper methods to
+output tags for static assets. These helper methods automatically take care
+of prepending the base URI that you've deployed the application to. For images
+there is `image_tag`, for JavaScript there is `javascript_include_tag` and for
+CSS there is `stylesheet_link_tag`. In the above example you would simply remove
+the '<img>' HTML tag and replace it with inline Ruby like this:
+
+---------------------------------------
+<%= image_tag("foo.jpg") %>
+---------------------------------------
+
+This will generate the proper image tag to `$RAILS_ROOT/public/images/foo.jpg`
+so that your images will always work no matter what sub-URI you've deployed to.
+
+These helper methods are more valuable than you may think. For example they also
+append a timestamp to the URI to better facilitate HTTP caching. For more information,
+please refer to
+link:http://api.rubyonrails.org/classes/ActionView/Helpers/AssetTagHelper.html[the Rails API docs].
 
 
 include::users_guide_snippets/appendix_a_about.txt[]

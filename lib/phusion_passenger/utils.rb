@@ -40,14 +40,14 @@ module PhusionPassenger
 # Utility functions.
 module Utils
 protected
-	# Return the absolute version of +path+. This path is guaranteed to
+	# Return the canonicalized version of +path+. This path is guaranteed to
 	# to be "normal", i.e. it doesn't contain stuff like ".." or "/",
-	# and it correctly respects symbolic links.
+	# and it fully resolves symbolic links.
 	#
 	# Raises SystemCallError if something went wrong. Raises ArgumentError
 	# if +path+ is nil. Raises InvalidPath if +path+ does not appear
 	# to be a valid path.
-	def normalize_path(path)
+	def canonicalize_path(path)
 		raise ArgumentError, "The 'path' argument may not be nil" if path.nil?
 		return Pathname.new(path).realpath.to_s
 	rescue Errno::ENOENT => e
