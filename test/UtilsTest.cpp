@@ -1,5 +1,6 @@
 #include "tut.h"
 #include "Utils.h"
+#include "support/Support.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -9,6 +10,7 @@
 
 using namespace Passenger;
 using namespace std;
+using namespace Test;
 
 namespace tut {
 	struct UtilsTest {
@@ -254,9 +256,15 @@ namespace tut {
 	/***** Test resolveSymlink() *****/
 	
 	TEST_METHOD(27) {
-		ensure_equals(resolveSymlink("stub/symlinks/file"), "stub/symlinks/foo.txt");
-		ensure_equals(resolveSymlink("stub/symlinks/file2"), "stub/symlinks/file");
-		ensure_equals(resolveSymlink("stub/symlinks/file3"), "stub/symlinks/file2");
-		ensure_equals(resolveSymlink("stub/symlinks/absolute_symlink"), "/foo/bar");
+		TempDir d("tmp.symlinks");
+		system("touch tmp.symlinks/foo.txt");
+		system("ln -s /usr/bin tmp.symlinks/absolute_symlink");
+		system("ln -s foo.txt tmp.symlinks/file");
+		system("ln -s file tmp.symlinks/file2");
+		system("ln -s file2 tmp.symlinks/file3");
+		ensure_equals(resolveSymlink("tmp.symlinks/file"), "tmp.symlinks/foo.txt");
+		ensure_equals(resolveSymlink("tmp.symlinks/file2"), "tmp.symlinks/file");
+		ensure_equals(resolveSymlink("tmp.symlinks/file3"), "tmp.symlinks/file2");
+		ensure_equals(resolveSymlink("tmp.symlinks/absolute_symlink"), "/usr/bin");
 	}
 }
