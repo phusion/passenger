@@ -491,6 +491,7 @@ spec = Gem::Specification.new do |s|
 		'ext/phusion_passenger/*.{c,rb}',
 		'benchmark/*.{cpp,rb}',
 		'misc/*',
+		'misc/*/*',
 		'vendor/**/*',
 		'test/*.{rb,cpp,example}',
 		'test/support/*',
