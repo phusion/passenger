@@ -700,6 +700,7 @@ spec = Gem::Specification.new do |s|
 		'test/oxt/*.cpp',
 		'test/ruby/*',
 		'test/ruby/*/*',
+		'test/integration_tests/*',
 		'test/stub/*',
 		'test/stub/*/*',
 		'test/stub/*/*/*',
