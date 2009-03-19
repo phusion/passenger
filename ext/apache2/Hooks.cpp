@@ -490,11 +490,12 @@ private:
 				// The API documentation for ap_scan_script_err_brigade() says it
 				// returns HTTP_OK on success, but it actually returns OK.
 				
-				// Manually set the Status header because
-				// ap_scan_script_header_err_brigade() filters it
-				// out. Some broken HTTP clients depend on the
-				// Status header for retrieving the HTTP status.
-				if (!r->status_line && *r->status_line == '\0') {
+				/* Manually set the Status header because
+				 * ap_scan_script_header_err_brigade() filters it
+				 * out. Some broken HTTP clients depend on the
+				 * Status header for retrieving the HTTP status.
+				 */
+				if (!r->status_line || *r->status_line == '\0') {
 					r->status_line = apr_psprintf(r->pool,
 						"%d Unknown Status",
 						r->status);
