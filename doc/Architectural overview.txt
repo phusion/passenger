@@ -210,11 +210,6 @@ link:cxxapi/index.html[+++the C++ API documentation+++],
 in particular the documentation about the `ApplicationPool`,
 `StandardApplicationPool` and `ApplicationPoolServer` classes.
 
-NOTE: At the moment, Passenger does not support Apache with the worker MPM
-(which uses threads instead of processes). But because the application pool is
-implemented in a modular way, supporting the worker MPM shouldn't take more
-than 10 lines of code.
-
 The application pool is responsible for spawning applications, caching
 spawned applications' handles, and cleaning up applications which have been
 idle for an extended period of time.
