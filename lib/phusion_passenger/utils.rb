@@ -484,9 +484,9 @@ module Signal
 end
 
 # Ruby's implementation of UNIXSocket#recv_io and UNIXSocket#send_io
-# are broken on 64-bit FreeBSD 7 and x86_64 OS X. So we override them
+# are broken on 64-bit FreeBSD 7 and x86_64/ppc64 OS X. So we override them
 # with our own implementation.
-if RUBY_PLATFORM =~ /freebsd/ || RUBY_PLATFORM =~ /86-darwin/
+if RUBY_PLATFORM =~ /freebsd/ || (RUBY_PLATFORM =~ /darwin/ && RUBY_PLATFORM !~ /universal/)
 	require 'socket'
 	UNIXSocket.class_eval do
 		def recv_io
