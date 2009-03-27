@@ -53,6 +53,7 @@
 #include <apr_pools.h>
 #include <apr_strings.h>
 #include <apr_lib.h>
+#include <unixd.h>
 
 using namespace std;
 using namespace Passenger;
@@ -403,7 +404,7 @@ private:
 			apr_bucket *b;
 			Application::SessionPtr session;
 			bool expectingUploadData;
-			shared_ptr<TempFile> uploadData;
+			shared_ptr<BufferedUpload> uploadData;
 			
 			expectingUploadData = ap_should_client_block(r);
 			if (expectingUploadData && atol(lookupHeader(r, "Content-Length"))
@@ -681,9 +682,9 @@ private:
 		return APR_SUCCESS;
 	}
 	
-	shared_ptr<TempFile> receiveRequestBody(request_rec *r) {
+	shared_ptr<BufferedUpload> receiveRequestBody(request_rec *r) {
 		TRACE_POINT();
-		shared_ptr<TempFile> tempFile(new TempFile());
+		shared_ptr<BufferedUpload> tempFile(new BufferedUpload());
 		char buf[1024 * 32];
 		apr_off_t len;
 		size_t total_written = 0;
@@ -697,7 +698,7 @@ private:
 					string message("An error occured while "
 						"buffering HTTP upload data to "
 						"a temporary file in ");
-					message.append(getTempDir());
+					message.append(BufferedUpload::getDir());
 					if (e == ENOSPC) {
 						message.append(". Please make sure "
 							"that this directory has "
@@ -724,10 +725,9 @@ private:
 		return tempFile;
 	}
 	
-	void sendRequestBody(request_rec *r, Application::SessionPtr &session, shared_ptr<TempFile> &uploadData) {
+	void sendRequestBody(request_rec *r, Application::SessionPtr &session, shared_ptr<BufferedUpload> &uploadData) {
 		TRACE_POINT();
 		rewind(uploadData->handle);
-		P_DEBUG("File upload: Content-Length = " << lookupHeader(r, "Content-Length"));
 		while (!feof(uploadData->handle)) {
 			char buf[1024 * 32];
 			size_t size;
@@ -766,29 +766,26 @@ public:
 		const char *ruby, *user;
 		string applicationPoolServerExe, spawnServer;
 		
-		if (config->tempDir != NULL) {
-			setenv("TMPDIR", config->tempDir, 1);
-		} else {
-			unsetenv("TMPDIR");
-		}
 		/*
 		 * As described in the comment in init_module, upon (re)starting
 		 * Apache, the Hooks constructor is called twice. We unset
-		 * PHUSION_PASSENGER_TMP before calling createPassengerTmpDir()
+		 * PASSENGER_INSTANCE_TEMP_DIR before calling createPassengerTempDir()
 		 * because we want the temp directory's name to contain the PID
 		 * of the process in which the Hooks constructor was called for
 		 * the second time.
 		 */
-		unsetenv("PHUSION_PASSENGER_TMP");
-		createPassengerTempDir();
+		unsetenv("TMPDIR");
+		unsetenv("PASSENGER_INSTANCE_TEMP_DIR");
+		createPassengerTempDir(config->getTempDir(), config->userSwitching,
+			config->getDefaultUser(), unixd_config.user_id,
+			unixd_config.group_id);
+		setenv("TMPDIR", (getPassengerTempDir() + "/var").c_str(), 1);
 		
 		ruby = (config->ruby != NULL) ? config->ruby : DEFAULT_RUBY_COMMAND;
 		if (config->userSwitching) {
 			user = "";
-		} else if (config->defaultUser != NULL) {
-			user = config->defaultUser;
 		} else {
-			user = "nobody";
+			user = config->getDefaultUser();
 		}
 		
 		if (config->root == NULL) {

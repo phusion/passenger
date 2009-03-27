@@ -6,6 +6,8 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include "Utils.h"
+
 using namespace std;
 
 namespace tut {
@@ -81,6 +83,12 @@ parseOptions(int argc, char *argv[]) {
 	}
 }
 
+struct Finalizer {
+	~Finalizer() {
+		Passenger::removeDirTree(Passenger::getPassengerTempDir());
+	}
+};
+
 int
 main(int argc, char *argv[]) {
 	apr_initialize();
@@ -92,6 +100,8 @@ main(int argc, char *argv[]) {
 	tut::runner.get().set_callback(&reporter);
 	allGroups = tut::runner.get().list_groups();
 	parseOptions(argc, argv);
+	
+	Finalizer finalizer;
 	
 	try {
 		bool all_ok = true;

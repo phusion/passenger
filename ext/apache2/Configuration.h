@@ -301,6 +301,14 @@
 					return "nobody";
 				}
 			}
+			
+			const char *getTempDir() const {
+				if (tempDir != NULL) {
+					return tempDir;
+				} else {
+					return getSystemTempDir();
+				}
+			}
 		};
 	}
 

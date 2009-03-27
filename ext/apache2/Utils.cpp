@@ -19,6 +19,7 @@
  */
 
 #include <cassert>
+#include <pwd.h>
 #include "CachedFileStat.h"
 #include "Utils.h"
 
@@ -217,8 +218,25 @@ escapeForXml(const string &input) {
 	return result;
 }
 
+void
+determineLowestUserAndGroup(const string &user, uid_t &uid, gid_t &gid) {
+	struct passwd *ent;
+	
+	ent = getpwnam(user.c_str());
+	if (ent == NULL) {
+		ent = getpwnam("nobody");
+	}
+	if (ent == NULL) {
+		uid = (uid_t) -1;
+		gid = (gid_t) -1;
+	} else {
+		uid = ent->pw_uid;
+		gid = ent->pw_gid;
+	}
+}
+
 const char *
-getTempDir() {
+getSystemTempDir() {
 	const char *temp_dir = getenv("TMPDIR");
 	if (temp_dir == NULL || *temp_dir == '\0') {
 		temp_dir = "/tmp";
@@ -227,11 +245,11 @@ getTempDir() {
 }
 
 string
-getPassengerTempDir(bool bypassCache) {
+getPassengerTempDir(bool bypassCache, const string &systemTempDir) {
 	if (bypassCache) {
 		goto calculateResult;
 	} else {
-		const char *tmp = getenv("PHUSION_PASSENGER_TMP");
+		const char *tmp = getenv("PASSENGER_INSTANCE_TEMP_DIR");
 		if (tmp != NULL && *tmp != '\0') {
 			return tmp;
 		} else {
@@ -240,25 +258,84 @@ getPassengerTempDir(bool bypassCache) {
 	}
 
 	calculateResult:
-	const char *temp_dir = getTempDir();
+	const char *temp_dir;
 	char buffer[PATH_MAX];
 	
+	if (systemTempDir.empty()) {
+		temp_dir = getSystemTempDir();
+	} else {
+		temp_dir = systemTempDir.c_str();
+	}
 	snprintf(buffer, sizeof(buffer), "%s/passenger.%lu",
 		temp_dir, (unsigned long) getpid());
 	buffer[sizeof(buffer) - 1] = '\0';
-	setenv("PHUSION_PASSENGER_TMP", buffer, 1);
+	setenv("PASSENGER_INSTANCE_TEMP_DIR", buffer, 1);
 	return buffer;
 }
 
 void
-createPassengerTempDir() {
-	makeDirTree(getPassengerTempDir().c_str(), "u=rwxs,g=wx,o=wx");
+createPassengerTempDir(const string &systemTempDir, bool userSwitching,
+                       const string &lowestUser, uid_t workerUid, gid_t workerGid) {
+	string tmpDir(getPassengerTempDir(false, systemTempDir));
+	uid_t lowestUid;
+	gid_t lowestGid;
+	
+	determineLowestUserAndGroup(lowestUser, lowestUid, lowestGid);
+	
+	makeDirTree(tmpDir, "u=wxs,g=x,o=x");
+	
+	/* It only makes sense to chown webserver_private to workerUid and workerGid the web server
+	 * is actually able to change the user of the worker processes. That is, if the web server
+	 * is running as root.
+	 */
+	if (geteuid() == 0) {
+		makeDirTree(tmpDir + "/webserver_private", "u=wxs,g=,o=", workerUid, workerGid);
+	} else {
+		makeDirTree(tmpDir + "/webserver_private", "u=wxs,g=,o=");
+	}
+	
+	/* If the web server is running as root (i.e. user switching is possible to begin with)
+	 * but user switching is off...
+	 */
+	if (geteuid() == 0 && !userSwitching) {
+		// Then the 'info' subfolder must be owned by lowestUser.
+		makeDirTree(tmpDir + "/info", "u=rwxs,g=,o=", lowestUid, lowestGid);
+	} else {
+		// Otherwise just use current user.
+		makeDirTree(tmpDir + "/info", "u=rwxs,g=,o=");
+	}
+	
+	if (geteuid() == 0) {
+		if (userSwitching) {
+			makeDirTree(tmpDir + "/backends", "u=rwxs,g=wx,o=wx");
+		} else {
+			makeDirTree(tmpDir + "/backends", "u=rwxs,g=x,o=x", lowestUid, lowestGid);
+		}
+	} else {
+		makeDirTree(tmpDir + "/backends", "u=rwxs,g=x,o=x");
+	}
+	
+	if (geteuid() == 0) {
+		if (userSwitching) {
+			makeDirTree(tmpDir + "/var", "u=wxs,g=wx,o=wx");
+		} else {
+			makeDirTree(tmpDir + "/var", "u=wxs,g=,o=", lowestUid, lowestGid);
+		}
+	} else {
+		makeDirTree(tmpDir + "/var", "u=wxs,g=,o=");
+	}
 }
 
 void
-makeDirTree(const char *path, const char *mode) {
+makeDirTree(const string &path, const char *mode, uid_t owner, gid_t group) {
 	char command[PATH_MAX + 10];
-	snprintf(command, sizeof(command), "mkdir -p -m \"%s\" \"%s\"", mode, path);
+	struct stat buf;
+	
+	if (stat(path.c_str(), &buf) == 0) {
+		return;
+	}
+	
+	snprintf(command, sizeof(command), "mkdir -p -m \"%s\" \"%s\"", mode, path.c_str());
 	command[sizeof(command) - 1] = '\0';
 	
 	int result;
@@ -269,7 +346,8 @@ makeDirTree(const char *path, const char *mode) {
 		char message[1024];
 		int e = errno;
 		
-		snprintf(message, sizeof(message) - 1, "Cannot create directory '%s'", path);
+		snprintf(message, sizeof(message) - 1, "Cannot create directory '%s'",
+			path.c_str());
 		message[sizeof(message) - 1] = '\0';
 		if (result == -1) {
 			throw SystemException(message, e);
@@ -277,24 +355,47 @@ makeDirTree(const char *path, const char *mode) {
 			throw IOException(message);
 		}
 	}
+	
+	if (owner != (uid_t) -1 && group != (gid_t) -1) {
+		do {
+			result = chown(path.c_str(), owner, group);
+		} while (result == -1 && errno == EINTR);
+		if (result != 0) {
+			char message[1024];
+			int e = errno;
+			
+			snprintf(message, sizeof(message) - 1,
+				"Cannot change the directory '%s' its UID to %lld and GID to %lld",
+				path.c_str(), (long long) owner, (long long) group);
+			message[sizeof(message) - 1] = '\0';
+			throw FileSystemException(message, e, path);
+		}
+	}
 }
 
 void
-removeDirTree(const char *path) {
-	char command[PATH_MAX + 10];
-	snprintf(command, sizeof(command), "rm -rf \"%s\"", path);
-	command[sizeof(command) - 1] = '\0';
-	
+removeDirTree(const string &path) {
+	char command[PATH_MAX + 30];
 	int result;
+	
+	snprintf(command, sizeof(command), "chmod -R u+rwx \"%s\" 2>/dev/null", path.c_str());
+	command[sizeof(command) - 1] = '\0';
+	do {
+		result = system(command);
+	} while (result == -1 && errno == EINTR);
+	
+	snprintf(command, sizeof(command), "rm -rf \"%s\"", path.c_str());
+	command[sizeof(command) - 1] = '\0';
 	do {
 		result = system(command);
 	} while (result == -1 && errno == EINTR);
 	if (result == -1) {
 		char message[1024];
+		int e = errno;
 		
-		snprintf(message, sizeof(message) - 1, "Cannot create directory '%s'", path);
+		snprintf(message, sizeof(message) - 1, "Cannot remove directory '%s'", path.c_str());
 		message[sizeof(message) - 1] = '\0';
-		throw IOException(message);
+		throw FileSystemException(message, e, path);
 	}
 }
 

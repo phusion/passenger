@@ -10,15 +10,16 @@ describe PhusionPassenger::WSGI::ApplicationSpawner do
 	include PhusionPassenger::Utils
 	
 	before :each do
-		ENV['PHUSION_PASSENGER_TMP'] = "#{Dir.tmpdir}/wsgi_test.tmp"
+		ENV['PASSENGER_INSTANCE_TEMP_DIR'] = "#{Dir.tmpdir}/wsgi_test.tmp"
 		@stub = setup_stub('wsgi')
 		File.unlink("#{@stub.app_root}/passenger_wsgi.pyc") rescue nil
 	end
 	
 	after :each do
 		@stub.destroy
-		ENV.delete('PHUSION_PASSENGER_TMP')
-		FileUtils.rm_rf("wsgi_test.tmp")
+		ENV.delete('PASSENGER_INSTANCE_TEMP_DIR')
+		FileUtils.chmod_R(0700, "#{Dir.tmpdir}/wsgi_test.tmp")
+		FileUtils.rm_rf("#{Dir.tmpdir}/wsgi_test.tmp")
 	end
 	
 	it "can spawn our stub application" do
@@ -28,7 +29,7 @@ describe PhusionPassenger::WSGI::ApplicationSpawner do
 	it "creates a socket in Phusion Passenger's temp directory" do
 		begin
 			app = spawn(@stub.app_root)
-			Dir["#{passenger_tmpdir}/passenger_wsgi.*"].should have(1).item
+			Dir["#{passenger_tmpdir}/backends/wsgi_backend.*"].should have(1).item
 		ensure
 			app.close rescue nil
 		end
@@ -37,7 +38,7 @@ describe PhusionPassenger::WSGI::ApplicationSpawner do
 	specify "the backend process deletes its socket upon termination" do
 		spawn(@stub.app_root).close
 		sleep 0.2 # Give it some time to terminate.
-		Dir["#{passenger_tmpdir}/passenger_wsgi.*"].should be_empty
+		Dir["#{passenger_tmpdir}/backends/wsgi_backend.*"].should be_empty
 	end
 	
 	def spawn(app_root)
