@@ -34,8 +34,9 @@ describe PhusionPassenger::Rack::ApplicationSpawner do
 		config_ru_owner.should == touch_txt_owner
 	end if Process.euid == 0
 	
-	def spawn(*args)
-		PhusionPassenger::Rack::ApplicationSpawner.spawn_application(*args)
+	def spawn(app_root)
+		PhusionPassenger::Rack::ApplicationSpawner.spawn_application(app_root,
+			"lowest_user" => CONFIG['lowest_user'])
 	end
 end
 

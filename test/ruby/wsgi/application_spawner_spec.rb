@@ -40,8 +40,9 @@ describe PhusionPassenger::WSGI::ApplicationSpawner do
 		Dir["#{passenger_tmpdir}/passenger_wsgi.*"].should be_empty
 	end
 	
-	def spawn(*args)
-		PhusionPassenger::WSGI::ApplicationSpawner.spawn_application(*args)
+	def spawn(app_root)
+		PhusionPassenger::WSGI::ApplicationSpawner.spawn_application(app_root,
+			true, CONFIG['lowest_user'])
 	end
 end
 
