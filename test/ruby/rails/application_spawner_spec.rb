@@ -15,7 +15,8 @@ describe ApplicationSpawner do
 	
 	before :each do
 		@stub = setup_rails_stub('foobar')
-		@spawner = ApplicationSpawner.new(@stub.app_root)
+		@spawner = ApplicationSpawner.new(@stub.app_root,
+			"lowest_user" => CONFIG['lowest_user'])
 		@spawner.start
 		@server = @spawner
 	end
@@ -48,7 +49,8 @@ describe ApplicationSpawner do
 					File.append("result.txt", "end of environment.rb\n");
 				})
 				
-				spawner = ApplicationSpawner.new(stub.app_root)
+				spawner = ApplicationSpawner.new(stub.app_root,
+					"lowest_user" => CONFIG['lowest_user'])
 				spawner.start
 				begin
 					spawner.spawn_application.close
@@ -65,7 +67,8 @@ describe ApplicationSpawner do
 		end
 		
 		def spawn_stub_application(stub)
-			@spawner = ApplicationSpawner.new(stub.app_root)
+			@spawner = ApplicationSpawner.new(stub.app_root,
+				"lowest_user" => CONFIG['lowest_user'])
 			begin
 				@spawner.start
 				return @spawner.spawn_application
@@ -98,7 +101,8 @@ describe ApplicationSpawner do
 		end
 		
 		def spawn_stub_application(stub)
-			@spawner = ApplicationSpawner.new(stub.app_root)
+			@spawner = ApplicationSpawner.new(stub.app_root,
+				"lowest_user" => CONFIG['lowest_user'])
 			return @spawner.spawn_application!
 		end
 	end

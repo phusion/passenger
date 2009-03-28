@@ -27,6 +27,7 @@ LoadModule passenger_module "<%= @mod_passenger %>"
 
 PassengerRoot "<%= @passenger_root %>"
 PassengerRuby "<%= PlatformInfo::RUBY %>"
+PassengerDefaultUser <%= CONFIG['lowest_user'] %>
 RailsEnv production
 RackEnv production
 <% for line in @extra %>

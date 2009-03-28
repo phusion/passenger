@@ -148,6 +148,8 @@ private
 			if RUBY_PLATFORM =~ /solaris/
 				# Remove flags not supported by GCC
 				flags = flags.split(/ +/).reject{ |f| f =~ /^\-mt/ }.join(' ')
+			elsif RUBY_PLATFORM =~ /aix/
+				libs << " -Wl,-G -Wl,-brtl"
 			end
 			return [flags, libs]
 		end
@@ -343,6 +345,8 @@ public
 			flags << '-mcpu=ultrasparc' if RUBY_PLATFORM =~ /sparc/
 		elsif RUBY_PLATFORM =~ /openbsd/
 			flags << '-DBOOST_HAS_STDINT_H -D_GLIBCPP__PTHREADS'
+		elsif RUBY_PLATFORM =~ /aix/
+			flags << '-DOXT_DISABLE_BACKTRACES'
 		elsif RUBY_PLATFORM =~ /sparc-linux/
 			flags << '-DBOOST_SP_USE_PTHREADS'
 		end

@@ -16,6 +16,7 @@ shared_examples_for "HelloWorld Rack application" do
 			run app
 		})
 		File.new("#{@stub.app_root}/tmp/restart.txt", "w").close
+		File.utime(2, 2, "#{@stub.app_root}/tmp/restart.txt")
 		get('/').should == "changed"
 	end
 	
@@ -25,6 +26,7 @@ shared_examples_for "HelloWorld Rack application" do
 				File.new('foo.txt', 'w').close
 			})
 			File.new("#{@stub.app_root}/tmp/restart.txt", "w").close
+			File.utime(1, 1, "#{@stub.app_root}/tmp/restart.txt")
 			get('/')
 			stat = File.stat("#{@stub.app_root}/foo.txt")
 			stat.uid.should_not == 0

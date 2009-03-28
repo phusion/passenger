@@ -124,20 +124,32 @@ public:
 	 * Creates a new ApplicationPoolStatusReporter.
 	 *
 	 * @param pool The application pool to monitor.
+	 * @param userSwitching Whether user switching is enabled. This is used
+	 *                      for determining the optimal permissions for the
+	 *                      FIFO file and the temp directory that might get
+	 *                      created.
 	 * @param permissions The permissions with which the FIFO should
-	 *        be created.
-	 * @throws SystemError An error occurred while creating the FIFO.
+	 *                    be created.
+	 * @param uid The UID of the user who should own the FIFO file, or
+	 *            -1 if the current user should be set as owner.
+	 * @param gid The GID of the user who should own the FIFO file, or
+	 *            -1 if the current group should be set as group.
+	 * @throws SystemException An error occurred while creating the FIFO.
 	 * @throws boost::thread_resource_error Something went wrong during
 	 *     creation of the thread.
 	 */
 	ApplicationPoolStatusReporter(StandardApplicationPoolPtr &pool,
-	                              mode_t permissions = S_IRUSR | S_IWUSR) {
+	                              bool userSwitching,
+	                              mode_t permissions = S_IRUSR | S_IWUSR,
+	                              uid_t uid = -1, gid_t gid = -1) {
 		int ret;
 		
 		this->pool = pool;
 		
-		createPassengerTempDir();
-		snprintf(filename, sizeof(filename) - 1, "%s/status.fifo",
+		createPassengerTempDir(getSystemTempDir(), userSwitching,
+			"nobody", geteuid(), getegid());
+		
+		snprintf(filename, sizeof(filename) - 1, "%s/info/status.fifo",
 			getPassengerTempDir().c_str());
 		filename[PATH_MAX - 1] = '\0';
 		
@@ -157,6 +169,22 @@ public:
 		do {
 			ret = chmod(filename, permissions);
 		} while (ret == -1 && errno == EINTR);
+		
+		if (uid != (uid_t) -1 && gid != (gid_t) -1) {
+			do {
+				ret = chown(filename, uid, gid);
+			} while (ret == -1 && errno == EINTR);
+			if (errno == -1) {
+				int e = errno;
+				char message[1024];
+				
+				snprintf(message, sizeof(message) - 1,
+					"Cannot set the FIFO file '%s' its owner to %lld and group to %lld",
+					filename, (long long) uid, (long long) gid);
+				message[sizeof(message) - 1] = '\0';
+				throw SystemException(message, e);
+			}
+		}
 		
 		thr = new oxt::thread(
 			bind(&ApplicationPoolStatusReporter::threadMain, this),

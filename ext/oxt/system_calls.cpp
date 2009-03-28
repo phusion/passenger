@@ -169,7 +169,11 @@ syscalls::recvmsg(int s, struct msghdr *msg, int flags) {
 	ssize_t ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
-		ret = ::recvmsg(s, msg, flags)
+		#ifdef _AIX53
+			ret = ::nrecvmsg(s, msg, flags)
+		#else
+			ret = ::recvmsg(s, msg, flags)
+		#endif
 	);
 	return ret;
 }
@@ -179,7 +183,11 @@ syscalls::sendmsg(int s, const struct msghdr *msg, int flags) {
 	ssize_t ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
-		ret = ::sendmsg(s, msg, flags)
+		#ifdef _AIX53
+			ret = ::nsendmsg(s, msg, flags)
+		#else
+			ret = ::sendmsg(s, msg, flags)
+		#endif
 	);
 	return ret;
 }

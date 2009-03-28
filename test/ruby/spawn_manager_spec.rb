@@ -44,7 +44,7 @@ describe SpawnManager do
 	end
 	
 	def spawn_arbitrary_application
-		@manager.spawn_application(@stub.app_root, true, "nobody",
+		@manager.spawn_application(@stub.app_root, true, CONFIG['lowest_user'],
 			"production", @spawn_method)
 	end
 end
@@ -64,7 +64,8 @@ describe SpawnManager do
 	end
 	
 	it "can spawn when the server's not running" do
-		app = @manager.spawn_application("app_root" => @stub.app_root)
+		app = @manager.spawn_application("app_root" => @stub.app_root,
+			"lowest_user" => CONFIG['lowest_user'])
 		app.close
 	end
 	
@@ -75,7 +76,9 @@ describe SpawnManager do
 				a.close
 				sleep(1) # Give @manager the chance to start.
 				channel = MessageChannel.new(b)
-				channel.write("spawn_application", "app_root", @stub.app_root)
+				channel.write("spawn_application",
+					"app_root", @stub.app_root,
+					"lowest_user", CONFIG['lowest_user'])
 				channel.read
 				pid, listen_socket = channel.read
 				channel.recv_io.close
@@ -97,7 +100,8 @@ describe SpawnManager do
 			content.sub(/^RAILS_GEM_VERSION = .*$/, '')
 		end
 		@stub.dont_use_vendor_rails
-		@manager.spawn_application("app_root" => @stub.app_root).close
+		@manager.spawn_application("app_root" => @stub.app_root,
+			"lowest_user" => CONFIG['lowest_user']).close
 	end
 	
 	it "properly reloads applications that do not specify a Rails version" do
@@ -119,10 +123,18 @@ describe SpawnManager do
 	it "can spawn a Rack application" do
 		use_stub('rack') do |stub|
 			@manager = SpawnManager.new
-			app = @manager.spawn_application(
-				"app_root" => stub.app_root,
-				"app_type" => "rack")
-			app.close
+			begin
+				app = @manager.spawn_application(
+					"app_root" => stub.app_root,
+					"app_type" => "rack",
+					"lowest_user" => CONFIG['lowest_user'])
+				app.close
+			rescue => e
+				puts e
+				puts e.child_exception.backtrace
+			ensure
+				@manager.cleanup
+			end
 		end
 	end
 end
@@ -162,7 +174,8 @@ describe SpawnManager do
 		begin
 			return spawner.spawn_application(
 				"app_root" => stub.app_root,
-				"spawn_method" => @spawn_method)
+				"spawn_method" => @spawn_method,
+				"lowest_user" => CONFIG['lowest_user'])
 		ensure
 			spawner.cleanup
 		end

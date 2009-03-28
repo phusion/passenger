@@ -25,7 +25,7 @@ module PhusionPassenger
 
 module AdminTools
 	def self.tmpdir
-		["PASSENGER_TMPDIR", "TMPDIR"].each do |name|
+		["PASSENGER_TEMP_DIR", "PASSENGER_TMPDIR"].each do |name|
 			if ENV.has_key?(name) && !ENV[name].empty?
 				return ENV[name]
 			end

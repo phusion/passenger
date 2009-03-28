@@ -265,7 +265,7 @@ private
 				else
 					unix_path_max = 100
 				end
-				@socket_name = "#{passenger_tmpdir}/passenger_backend.#{generate_random_id(:base64)}"
+				@socket_name = "#{passenger_tmpdir}/backends/backend.#{generate_random_id(:base64)}"
 				@socket_name = @socket_name.slice(0, unix_path_max - 1)
 				@socket = UNIXServer.new(@socket_name)
 				@socket.listen(BACKLOG_SIZE)

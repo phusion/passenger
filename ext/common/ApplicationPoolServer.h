@@ -408,7 +408,8 @@ private:
 				UPDATE_TRACE_POINT();
 				data->disconnect();
 				throw IOException("The ApplicationPool server unexpectedly "
-					"closed the connection.");
+					"closed the connection while we're reading a response "
+					"for the 'get' command.");
 			}
 			if (args[0] == "ok") {
 				UPDATE_TRACE_POINT();
@@ -438,7 +439,8 @@ private:
 					}
 					if (!result) {
 						throw IOException("The ApplicationPool server "
-							"unexpectedly closed the connection.");
+							"unexpectedly closed the connection while "
+							"we're reading the error page data.");
 					}
 					throw SpawnException(args[1], errorPage);
 				} else {

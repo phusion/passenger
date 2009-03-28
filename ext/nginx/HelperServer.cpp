@@ -539,6 +539,7 @@ private:
 	unsigned int numberOfThreads;
 	set<ClientPtr> clients;
 	StandardApplicationPoolPtr pool;
+	shared_ptr<ApplicationPoolStatusReporter> reporter;
 	
 	/**
 	 * Starts listening for client connections from this server's <tt>serverSocket</tt>.
@@ -550,7 +551,7 @@ private:
 	 */
 	void startListening() {
 		this_thread::disable_syscall_interruption dsi;
-		string socketName = getPassengerTempDir() + "/helper_server.sock";
+		string socketName = getPassengerTempDir() + "/master/helper_server.sock";
 		struct sockaddr_un addr;
 		int ret;
 		
@@ -612,34 +613,9 @@ private:
 	 */
 	void lowerPrivilege(const string &username) {
 		struct passwd *entry;
-		int ret, e;
 		
 		entry = getpwnam(username.c_str());
 		if (entry != NULL) {
-			do {
-				ret = chown(getPassengerTempDir().c_str(),
-					entry->pw_uid, entry->pw_gid);
-			} while (ret == -1 && errno == EINTR);
-			if (ret == -1) {
-				e = errno;
-				P_WARN("WARNING: Unable to change owner for directory '" <<
-					getPassengerTempDir() << "' to '" << username <<
-					"': " << strerror(e) << " (" << e << ")");
-			} else {
-				do {
-					ret = chmod(getPassengerTempDir().c_str(),
-						S_IRUSR | S_IWUSR | S_IXUSR);
-				} while (ret == -1 && errno == EINTR);
-				if (ret == -1) {
-					e = errno;
-					P_WARN("WARNING: Unable to change "
-						"permissions for directory " <<
-						getPassengerTempDir() << ": " <<
-						strerror(e) <<
-						" (" << e << ")");
-				}
-			}
-			
 			if (initgroups(username.c_str(), entry->pw_gid) != 0) {
 				int e = errno;
 				P_WARN("WARNING: Unable to lower Passenger HelperServer's "
@@ -689,18 +665,28 @@ public:
 	 *   initial attempt at user switching fails. If user switching is off,
 	 *   then this is the username that HelperServer and all spawned
 	 *   processes should run as.
+	 * @param workerUid The UID of the web server's worker processes. Used for determining
+	 *   the optimal permissions for some temp files.
+	* @param workerGid The GID of the web server's worker processes. Used for determining
+	 *   the optimal permissions for some temp files.
 	 */
 	Server(const string &password, const string &rootDir, const string &ruby,
 	       int adminPipe, unsigned int maxPoolSize,
 	       unsigned int maxInstancesPerApp, unsigned int poolIdleTime,
-	       bool userSwitching, const string &defaultUser) {
+	       bool userSwitching, const string &defaultUser, uid_t workerUid,
+	       gid_t workerGid) {
+		uid_t fifoUid;
+		gid_t fifoGid;
+		
 		this->password      = password;
 		this->adminPipe     = adminPipe;
 		this->userSwitching = userSwitching;
 		this->defaultUser   = defaultUser;
 		numberOfThreads     = maxPoolSize * 4;
-		createPassengerTempDir();
 		
+		removeDirTree(getPassengerTempDir());
+		createPassengerTempDir(getSystemTempDir(), userSwitching, defaultUser,
+			workerUid, workerGid);
 		startListening();
 		
 		if (!userSwitching) {
@@ -714,6 +700,17 @@ public:
 		pool->setMax(maxPoolSize);
 		pool->setMaxPerApp(maxInstancesPerApp);
 		pool->setMaxIdleTime(poolIdleTime);
+		
+		// Set the FIFO's owner according to whether we're running as root
+		// and whether user switching is enabled.
+		if (!userSwitching) {
+			determineLowestUserAndGroup(defaultUser, fifoUid, fifoGid);
+		} else {
+			fifoUid = (uid_t) -1;
+			fifoGid = (gid_t) -1;
+		}
+		reporter = ptr(new ApplicationPoolStatusReporter(pool, userSwitching,
+				S_IRUSR | S_IWUSR, fifoUid, fifoGid));
 	}
 	
 	~Server() {
@@ -738,7 +735,6 @@ public:
 		char buf;
 		
 		startClientHandlerThreads();
-		ApplicationPoolStatusReporter reporter(pool);
 		
 		try {
 			syscalls::read(adminPipe, &buf, 1);
@@ -810,6 +806,8 @@ main(int argc, char *argv[]) {
 		int poolIdleTime       = atoi(argv[7]);
 		bool userSwitching = strcmp(argv[8], "1") == 0;
 		string defaultUser = argv[9];
+		uid_t workerUid    = (uid_t) atoll(argv[10]);
+		gid_t workerGid    = (gid_t) atoll(argv[11]);
 		
 		setLogLevel(logLevel);
 		P_DEBUG("Passenger helper server started on PID " << getpid());
@@ -819,7 +817,7 @@ main(int argc, char *argv[]) {
 		
 		Server(password, rootDir, ruby, adminPipe, maxPoolSize,
 			maxInstancesPerApp, poolIdleTime, userSwitching,
-			defaultUser).start();
+			defaultUser, workerUid, workerGid).start();
 	} catch (const tracable_exception &e) {
 		P_ERROR(e.what() << "\n" << e.backtrace());
 		return 1;

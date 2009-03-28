@@ -102,17 +102,22 @@ static ngx_int_t
 start_helper_server(ngx_cycle_t *cycle)
 {
     passenger_main_conf_t *main_conf = &passenger_main_conf;
+    ngx_core_conf_t       *ccf;
     u_char                 helper_server_filename[NGX_MAX_PATH];
     u_char                 log_level_string[10];
     u_char                 max_pool_size_string[10];
     u_char                 max_instances_per_app_string[10];
     u_char                 pool_idle_time_string[10];
     u_char                 user_switching_string[2];
+    u_char                 worker_uid_string[15];
+    u_char                 worker_gid_string[15];
     int                    p[2], e;
     pid_t                  pid;
     long                   i;
     ssize_t                ret;
     FILE                  *f;
+    
+    ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
     
     /* Ignore SIGPIPE now so that, if the helper server fails to start,
      * nginx doesn't get killed by the default SIGPIPE handler upon
@@ -148,6 +153,14 @@ start_helper_server(ngx_cycle_t *cycle)
     ngx_snprintf(user_switching_string, 1, "%d",
                  (int) main_conf->user_switching);
     
+    ngx_memzero(worker_uid_string, sizeof(worker_uid_string));
+    ngx_snprintf(worker_uid_string, sizeof(worker_uid_string), "%lld",
+                 (long long) ccf->user);
+    
+     ngx_memzero(worker_gid_string, sizeof(worker_gid_string));
+     ngx_snprintf(worker_gid_string, sizeof(worker_gid_string), "%lld",
+                  (long long) ccf->group);
+    
     /* Generate random password for the helper server. */
     
     f = fopen("/dev/urandom", "r");
@@ -171,8 +184,7 @@ start_helper_server(ngx_cycle_t *cycle)
     passenger_helper_server_password.len  = HELPER_SERVER_PASSWORD_SIZE;
     
     
-    /*  Now spawn the helper server. */
-    
+    /* Now spawn the helper server. */
     if (pipe(p) == -1) {
         ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
                       "could not start the Passenger helper server: pipe() failed");
@@ -213,6 +225,8 @@ start_helper_server(ngx_cycle_t *cycle)
                pool_idle_time_string,
                user_switching_string,
                main_conf->default_user.data,
+               worker_uid_string,
+               worker_gid_string,
                NULL);
         e = errno;
         fprintf(stderr, "*** Could not start the Passenger helper server (%s): "
@@ -306,11 +320,18 @@ shutdown_helper_server(ngx_cycle_t *cycle)
     
     /* Remove Passenger temp dir. */
     ngx_memzero(command, sizeof(command));
+    if (ngx_snprintf(command, sizeof(command), "chmod -R u=rwx \"%s\"",
+                     passenger_temp_dir) != NULL) {
+        system((const char *) command);
+    }
+    
+    ngx_memzero(command, sizeof(command));
     if (ngx_snprintf(command, sizeof(command), "rm -rf \"%s\"",
                      passenger_temp_dir) != NULL) {
         ngx_log_debug1(NGX_LOG_DEBUG_HTTP, cycle->log, 0,
                        "Removing Passenger temp folder with command: %s",
                        command);
+        errno = 0;
         if (system((const char *) command) != 0) {
             ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
                           "Could not remove Passenger temp folder '%s'",
@@ -383,6 +404,7 @@ pre_config_init(ngx_conf_t *cf)
 {
     ngx_int_t   ret;
     const char *system_temp_dir;
+    u_char      command[NGX_MAX_PATH + 30];
     
     ngx_memzero(&passenger_main_conf, sizeof(passenger_main_conf_t));
     
@@ -398,7 +420,7 @@ pre_config_init(ngx_conf_t *cf)
     
     /* Setup Passenger temp folder. */
     
-    system_temp_dir = getenv("TMP");
+    system_temp_dir = getenv("TMPDIR");
     if (!system_temp_dir || !*system_temp_dir) {
         system_temp_dir = "/tmp";
     }
@@ -410,13 +432,23 @@ pre_config_init(ngx_conf_t *cf)
                       "could not create Passenger temp dir string");
         return NGX_ERROR;
     }
-    setenv("PHUSION_PASSENGER_TMP", passenger_temp_dir, 1);
-
+    setenv("PASSENGER_INSTANCE_TEMP_DIR", passenger_temp_dir, 1);
+    
+    /* Temporarily create this temp directory. It must exist before the configuration is loaded,
+     * because during Configuration loading Nginx's upstream module will attempt to create
+     * the directory passenger_temp_dir + "/webserver_private".
+     *
+     * passenger_temp_dir will be removed and recreated by the HelperServer, with the right
+     * permissions. So right now we don't have to pay any attention to the permissions.
+     */
+    ngx_memzero(command, sizeof(command));
+    ngx_snprintf(command, sizeof(command), "mkdir -p \"%s\"", passenger_temp_dir);
+    system((const char *) command);
     
     /* Build helper server socket filename string. */
     
     if (ngx_snprintf((u_char *) passenger_helper_server_socket, NGX_MAX_PATH,
-                     "unix:%s/helper_server.sock",
+                     "unix:%s/master/helper_server.sock",
                      passenger_temp_dir) == NULL) {
         ngx_log_error(NGX_LOG_ALERT, cf->log, ngx_errno,
                       "could not create Passenger helper server "

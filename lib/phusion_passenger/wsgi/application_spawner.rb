@@ -79,7 +79,7 @@ private
 			lower_privilege('passenger_wsgi.py', lowest_user)
 		end
 		
-		socket_file = "#{passenger_tmpdir}/passenger_wsgi.#{Process.pid}.#{rand 10000000}"
+		socket_file = "#{passenger_tmpdir}/backends/wsgi_backend.#{Process.pid}.#{rand 10000000}"
 		server = UNIXServer.new(socket_file)
 		begin
 			reader, writer = IO.pipe

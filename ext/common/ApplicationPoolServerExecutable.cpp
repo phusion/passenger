@@ -109,34 +109,9 @@ private:
 	 */
 	void lowerPrivilege(const string &username) {
 		struct passwd *entry;
-		int ret, e;
 		
 		entry = getpwnam(username.c_str());
 		if (entry != NULL) {
-			do {
-				ret = chown(getPassengerTempDir().c_str(),
-					entry->pw_uid, entry->pw_gid);
-			} while (ret == -1 && errno == EINTR);
-			if (ret == -1) {
-				e = errno;
-				P_WARN("WARNING: Unable to change owner for directory '" <<
-					getPassengerTempDir() << "' to '" << username <<
-					"': " << strerror(e) << " (" << e << ")");
-			} else {
-				do {
-					ret = chmod(getPassengerTempDir().c_str(),
-						S_IRUSR | S_IWUSR | S_IXUSR);
-				} while (ret == -1 && errno == EINTR);
-				if (ret == -1) {
-					e = errno;
-					P_WARN("WARNING: Unable to change "
-						"permissions for directory " <<
-						getPassengerTempDir() << ": " <<
-						strerror(e) <<
-						" (" << e << ")");
-				}
-			}
-			
 			if (initgroups(username.c_str(), entry->pw_gid) != 0) {
 				int e = errno;
 				P_WARN("WARNING: Unable to lower ApplicationPoolServerExecutable's "
@@ -204,7 +179,7 @@ private:
 		FILE *f;
 		string gdbCommandFile;
 		
-		gdbCommandFile = getPassengerTempDir() + "/gdb_backtrace_command.txt";
+		gdbCommandFile = getPassengerTempDir() + "/info/gdb_backtrace_command.txt";
 		f = fopen(gdbCommandFile.c_str(), "w");
 		if (f != NULL) {
 			// Write a file which contains commands for gdb to obtain
@@ -547,14 +522,19 @@ Server::start() {
 	setup_syscall_interruption_support();
 	
 	try {
-		mode_t fifoPermissions;
-		if (user.empty()) {
-			fifoPermissions = S_IRUSR | S_IWUSR;
-		} else {
-			fifoPermissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
-		}
+		uid_t fifoUid;
+		gid_t fifoGid;
 		
-		ApplicationPoolStatusReporter reporter(pool, fifoPermissions);
+		// Set the FIFO's owner according to whether we're running as root
+		// and whether user switching is enabled.
+		if (geteuid() == 0 && !user.empty()) {
+			determineLowestUserAndGroup(user, fifoUid, fifoGid);
+		} else {
+			fifoUid = (uid_t) -1;
+			fifoGid = (gid_t) -1;
+		}
+		ApplicationPoolStatusReporter reporter(pool, user.empty(),
+			S_IRUSR | S_IWUSR, fifoUid, fifoGid);
 		
 		if (!user.empty()) {
 			lowerPrivilege(user);

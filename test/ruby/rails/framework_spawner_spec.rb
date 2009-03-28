@@ -49,7 +49,8 @@ describe FrameworkSpawner do
 	end
 	
 	def spawn_arbitrary_application
-		@spawner.spawn_application(@stub.app_root)
+		@spawner.spawn_application(@stub.app_root,
+			"lowest_user" => CONFIG['lowest_user'])
 	end
 end
 
@@ -88,7 +89,8 @@ describe FrameworkSpawner do
 		spawner = FrameworkSpawner.new(options)
 		spawner.start
 		begin
-			return spawner.spawn_application(stub.app_root)
+			return spawner.spawn_application(stub.app_root,
+				"lowest_user" => CONFIG['lowest_user'])
 		ensure
 			spawner.stop
 		end
