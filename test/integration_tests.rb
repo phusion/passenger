@@ -188,6 +188,7 @@ shared_examples_for "HelloWorld Rack application" do
 			run app
 		})
 		File.new("#{@stub.app_root}/tmp/restart.txt", "w").close
+		File.utime(2, 2, "#{@stub.app_root}/tmp/restart.txt")
 		get('/').should == "changed"
 	end
 	
@@ -197,6 +198,7 @@ shared_examples_for "HelloWorld Rack application" do
 				File.new('foo.txt', 'w').close
 			})
 			File.new("#{@stub.app_root}/tmp/restart.txt", "w").close
+			File.utime(1, 1, "#{@stub.app_root}/tmp/restart.txt")
 			get('/')
 			stat = File.stat("#{@stub.app_root}/foo.txt")
 			stat.uid.should_not == 0
@@ -229,6 +231,7 @@ shared_examples_for "HelloWorld WSGI application" do
 		
 		File.write("#{@stub.app_root}/passenger_wsgi.py", code)
 		File.new("#{@stub.app_root}/tmp/restart.txt", "w").close
+		File.utime(2, 2, "#{@stub.app_root}/tmp/restart.txt")
 		get('/').should == "changed"
 	end
 	
@@ -237,6 +240,7 @@ shared_examples_for "HelloWorld WSGI application" do
 			File.prepend("#{@stub.app_root}/passenger_wsgi.py",
 				"file('foo.txt', 'w').close()\n")
 			File.new("#{@stub.app_root}/tmp/restart.txt", "w").close
+			File.utime(1, 1, "#{@stub.app_root}/tmp/restart.txt")
 			get('/')
 			stat = File.stat("#{@stub.app_root}/foo.txt")
 			stat.uid.should_not == 0

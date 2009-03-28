@@ -403,7 +403,8 @@ private:
 				UPDATE_TRACE_POINT();
 				data->disconnect();
 				throw IOException("The ApplicationPool server unexpectedly "
-					"closed the connection.");
+					"closed the connection while we're reading a response "
+					"for the 'get' command.");
 			}
 			if (args[0] == "ok") {
 				UPDATE_TRACE_POINT();
@@ -433,7 +434,8 @@ private:
 					}
 					if (!result) {
 						throw IOException("The ApplicationPool server "
-							"unexpectedly closed the connection.");
+							"unexpectedly closed the connection while "
+							"we're reading the error page data.");
 					}
 					throw SpawnException(args[1], errorPage);
 				} else {
@@ -612,17 +614,12 @@ private:
 		TRACE_POINT();
 		char filename[PATH_MAX];
 		int ret;
-		mode_t permissions;
+		mode_t permissions = S_IRUSR | S_IWUSR;
 		
-		createPassengerTempDir();
+		createPassengerTempDir(getSystemTempDir(), m_user.empty(),
+			"nobody", geteuid(), getegid());
 		
-		if (m_user.empty()) {
-			permissions = S_IRUSR | S_IWUSR;
-		} else {
-			permissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
-		}
-		
-		snprintf(filename, sizeof(filename), "%s/status.fifo",
+		snprintf(filename, sizeof(filename), "%s/info/status.fifo",
 				getPassengerTempDir().c_str());
 		filename[PATH_MAX - 1] = '\0';
 		do {
@@ -642,6 +639,24 @@ private:
 			do {
 				ret = chmod(filename, permissions);
 			} while (ret == -1 && errno == EINTR);
+			
+			// Set the FIFO's owner according to whether we're running as root
+			// and whether user switching is enabled.
+			if (geteuid() == 0 && !m_user.empty()) {
+				uid_t uid;
+				gid_t gid;
+				
+				determineLowestUserAndGroup(m_user, uid, gid);
+				do {
+					ret = chown(filename, uid, gid);
+				} while (ret == -1 && errno == EINTR);
+				if (errno == -1) {
+					int e = errno;
+					P_WARN("*** WARNING: Unable to set the FIFO file '" <<
+						filename << "' its owner and group to that of user " <<
+						m_user << ": " << strerror(e) << " (" << e << ")");
+				}
+			}
 		}
 	}
 

@@ -242,58 +242,113 @@ string extractDirName(const string &path);
 string escapeForXml(const string &input);
 
 /**
- * Return the path name for the directory in which temporary files are
- * to be stored.
+ * Given a username that's supposed to be the "lowest user" in the user switching mechanism,
+ * checks whether this username exists. If so, this users's UID and GID will be stored into
+ * the arguments of the same names. If not, <em>uid</em> and <em>gid</em> will be set to
+ * the UID and GID of the "nobody" user. If that user doesn't exist either, then <em>uid</em>
+ * and <em>gid</em> will be set to -1.
+ */
+void determineLowestUserAndGroup(const string &user, uid_t &uid, gid_t &gid);
+
+/**
+ * Return the path name for the directory in which the system stores general
+ * temporary files. This is usually "/tmp", but might be something else depending
+ * on some environment variables.
  *
  * @ensure result != NULL
  * @ingroup Support
  */
-const char *getTempDir();
+const char *getSystemTempDir();
 
 /**
  * Return the path name for the directory in which Phusion Passenger-specific
  * temporary files are to be stored. This directory is unique for this instance
  * of the web server in which Phusion Passenger is running.
  *
- * The result will be cached into the PHUSION_PASSENGER_TMP environment variable,
- * which will be used for future calls to this function. To bypass this cache,
+ * If the environment variable PASSENGER_INSTANCE_TEMP_DIR is set, then that value
+ * will be returned. If this environment variable is not set, then it will be set
+ * with the return value.
+ *
+ * To bypass the usage of the PASSENGER_INSTANCE_TEMP_DIR environment variable,
  * set 'bypassCache' to true.
  *
+ * @param bypassCache Whether PASSENGER_INSTANCE_TEMP_DIR should be bypassed.
+ * @param systemTempDir The directory under which the Phusion Passenger-specific
+ *                      temp directory should be located. If set to the empty string,
+ *                      then the return value of getSystemTempDir() will be used.
  * @ensure !result.empty()
  * @ingroup Support
  */
-string getPassengerTempDir(bool bypassCache = false);
+string getPassengerTempDir(bool bypassCache = false, const string &systemTempDir = "");
 
-/* Create a temp folder for storing Phusion Passenger-specific temp files,
- * such as temporarily buffered uploads, sockets for backend processes, etc.
- * This call also sets the PHUSION_PASSENGER_TMP environment variable, which
- * allows backend processes to find this temp folder.
+/* Create a temp directory under <em>systemTempDir</em>, for storing Phusion
+ * Passenger-specific temp files, such as temporarily buffered uploads,
+ * sockets for backend processes, etc. This call also sets the
+ * PASSENGER_INSTANCE_TEMP_DIR environment variable, which allows subprocesses
+ * to find this temp directory.
  *
- * Does nothing if this folder already exists.
+ * The created temp directory will have several subdirectories:
+ * - webserver_private - for storing the web server's buffered uploads.
+ * - info - for storing files that allow external tools to query information
+ *          about a running Phusion Passenger instance.
+ * - backends - for storing Unix sockets created by backend processes.
+ * - var - for all other kinds of temp files.
  *
+ * If a (sub)directory already exists, then it will not result in an error.
+ *
+ * The <em>userSwitching</em> and <em>lowestUser</em> arguments passed to
+ * this method are used for determining the optimal permissions for the
+ * (sub)directories. The permissions will be set as tightly as possible based
+ * on the values. The <em>workerUid</em> and <em>workerGid</em> arguments
+ * will be used for determining the owner of certain subdirectories.
+ *
+ * @note You should only call this method inside the web server's master
+ *       process. In case of Apache, this is the Apache control process,
+ *       the one that tends to run as root. This is because this function
+ *       will set directory permissions and owners/groups, which may require
+ *       root privileges.
+ *
+ * @param systemTempDir The directory under which the Phusion Passenger-specific
+ *                      temp directory should be created. You should normally
+ *                      specify the return value of getSystemTempDir().
+ * @param userSwitching Whether user switching is turned on.
+ * @param lowestUser The user that the spawn manager and the pool server will
+ *                   run as, if user switching is turned off.
+ * @param workerUid The UID that the web server's worker processes are running
+ *                  as. On Apache, this is the UID that's associated with the
+ *                  'User' directive.
+ * @param workerGid The GID that the web server's worker processes are running
+ *                  as. On Apache, this is the GID that's associated with the
+ *                  'Group' directive.
  * @throws IOException Something went wrong.
  * @throws SystemException Something went wrong.
+ * @throws FileSystemException Something went wrong.
  */
-void createPassengerTempDir();
+void createPassengerTempDir(const string &systemTempDir, bool userSwitching,
+                            const string &lowestUser,
+                            uid_t workerUid, gid_t workerGid);
 
 /**
  * Create the directory at the given path, creating intermediate directories
  * if necessary. The created directories' permissions are as specified by the
- * 'mode' parameter.
+ * 'mode' parameter. You can specify this directory's owner and group through
+ * the 'owner' and 'group' parameters. A value of -1 for 'owner' or 'group'
+ * means that the owner/group should not be changed.
  *
  * If 'path' already exists, then nothing will happen.
  *
  * @throws IOException Something went wrong.
  * @throws SystemException Something went wrong.
+ * @throws FileSystemException Something went wrong.
  */
-void makeDirTree(const char *path, const char *mode = "u=rwx,g=,o=");
+void makeDirTree(const string &path, const char *mode = "u=rwx,g=,o=", uid_t owner = -1, gid_t group = -1);
 
 /**
  * Remove an entire directory tree recursively.
  *
- * @throws SystemException Something went wrong.
+ * @throws FileSystemException Something went wrong.
  */
-void removeDirTree(const char *path);
+void removeDirTree(const string &path);
 
 /**
  * Check whether the specified directory is a valid Ruby on Rails
@@ -332,53 +387,58 @@ bool verifyWSGIDir(const string &dir, CachedMultiFileStat *mstat = 0,
                    unsigned int throttleRate = 0);
 
 /**
- * Represents a temporary file. The associated file is automatically
- * deleted upon object destruction.
+ * Represents a buffered upload file.
  *
  * @ingroup Support
  */
-class TempFile {
+class BufferedUpload {
 public:
-	/** The filename. If this temp file is anonymous, then the filename is an empty string. */
-	string filename;
 	/** The file handle. */
 	FILE *handle;
 	
 	/**
-	 * Create an empty, temporary file, and open it for reading and writing.
+	 * Create an empty upload bufer file, and open it for reading and writing.
 	 *
-	 * @param anonymous Set to true if this temp file should be unlinked
-	 *        immediately. Anonymous temp files are useful if one just wants
-	 *        a big not-in-memory buffer to work with.
 	 * @throws SystemException Something went wrong.
 	 */
-	TempFile(const char *identifier = "temp", bool anonymous = true) {
+	BufferedUpload(const char *identifier = "temp") {
 		char templ[PATH_MAX];
 		int fd;
 		
-		snprintf(templ, sizeof(templ), "%s/%s.XXXXXX", getPassengerTempDir().c_str(), identifier);
+		snprintf(templ, sizeof(templ), "%s/%s.XXXXXX", getDir().c_str(), identifier);
 		templ[sizeof(templ) - 1] = '\0';
 		fd = mkstemp(templ);
 		if (fd == -1) {
 			char message[1024];
+			int e = errno;
+			
 			snprintf(message, sizeof(message), "Cannot create a temporary file '%s'", templ);
 			message[sizeof(message) - 1] = '\0';
-			throw SystemException(message, errno);
+			throw SystemException(message, e);
 		}
-		if (anonymous) {
-			fchmod(fd, 0000);
-			unlink(templ);
-		} else {
-			filename.assign(templ);
-		}
+		
+		/* We use a POSIX trick here: the file's permissions are set to "u=,g=,o="
+		 * and the file is deleted immediately from the filesystem, while we
+		 * keep its file handle open. The result is that no other processes
+		 * will be able to access this file's contents anymore, except us.
+		 * We now have an anonymous disk-backed buffer.
+		 */
+		fchmod(fd, 0000);
+		unlink(templ);
+		
 		handle = fdopen(fd, "w+");
 	}
 	
-	~TempFile() {
+	~BufferedUpload() {
 		fclose(handle);
-		if (!filename.empty()) {
-			unlink(filename.c_str());
-		}
+	}
+	
+	/**
+	 * Returns the directory in which upload buffer files are stored.
+	 * This is a subdirectory of the directory returned by getPassengerTempDir(). 
+	 */
+	static string getDir() {
+		return getPassengerTempDir() + "/webserver_private";
 	}
 };
 

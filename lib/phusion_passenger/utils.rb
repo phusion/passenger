@@ -336,12 +336,14 @@ protected
 	# temporary files. If +create+ is true, then this method creates the
 	# directory if it doesn't exist.
 	def passenger_tmpdir(create = true)
-		dir = ENV['PHUSION_PASSENGER_TMP']
+		dir = ENV['PASSENGER_INSTANCE_TEMP_DIR']
 		if dir.nil? || dir.empty?
-			dir = Dir.tmpdir
+			dir = "#{Dir.tmpdir}/passenger.#{Process.pid}"
+			ENV['PASSENGER_INSTANCE_TEMP_DIR'] = dir
 		end
 		if create && !File.exist?(dir)
 			system("mkdir", "-p", "-m", "u=rwxs,g=wx,o=wx", dir)
+			system("mkdir", "-p", "-m", "u=rwxs,g=wx,o=wx", "#{dir}/backends")
 		end
 		return dir
 	end
