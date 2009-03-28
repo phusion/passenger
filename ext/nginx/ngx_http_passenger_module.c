@@ -111,10 +111,11 @@ start_helper_server(ngx_cycle_t *cycle)
     u_char                 user_switching_string[2];
     u_char                 worker_uid_string[15];
     u_char                 worker_gid_string[15];
-    int                    p[2], e;
+    int                    admin_pipe[2], feedback_pipe[2], e;
     pid_t                  pid;
     long                   i;
     ssize_t                ret;
+    char                   buf;
     FILE                  *f;
     
     ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
@@ -185,7 +186,14 @@ start_helper_server(ngx_cycle_t *cycle)
     
     
     /* Now spawn the helper server. */
-    if (pipe(p) == -1) {
+    if (pipe(admin_pipe) == -1) {
+        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                      "could not start the Passenger helper server: pipe() failed");
+        return NGX_ERROR;
+    }
+    if (pipe(feedback_pipe) == -1) {
+        close(admin_pipe[0]);
+        close(admin_pipe[1]);
         ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
                       "could not start the Passenger helper server: pipe() failed");
         return NGX_ERROR;
@@ -195,7 +203,8 @@ start_helper_server(ngx_cycle_t *cycle)
     switch (pid) {
     case 0:
         /* Child process. */
-        close(p[1]);
+        close(admin_pipe[1]);
+        close(feedback_pipe[0]);
         
         /* Nginx redirects stderr to the error log file. Make sure that
          * stdout is redirected to the error log file as well.
@@ -205,12 +214,17 @@ start_helper_server(ngx_cycle_t *cycle)
         /* Close all file descriptors except stdin, stdout, stderr and
          * the reader part of the pipe we just created. 
          */
-        if (dup2(p[0], 3) == -1) {
+        if (dup2(admin_pipe[0], 3) == -1) {
             ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
                           "could not start the Passenger helper server: "
                           "dup2() failed");
         }
-        for (i = sysconf(_SC_OPEN_MAX) - 1; i > 3; i--) {
+        if (dup2(feedback_pipe[1], 4) == -1) {
+            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                          "could not start the Passenger helper server: "
+                          "dup2() failed");
+        }
+        for (i = sysconf(_SC_OPEN_MAX) - 1; i > 4; i--) {
             close(i);
         }
         
@@ -219,6 +233,7 @@ start_helper_server(ngx_cycle_t *cycle)
                main_conf->root_dir.data,
                main_conf->ruby.data,
                "3",  /* Admin pipe file descriptor number. */
+               "4",  /* Feedback pipe file descriptor number. */
                log_level_string,
                max_pool_size_string,
                max_instances_per_app_string,
@@ -239,24 +254,27 @@ start_helper_server(ngx_cycle_t *cycle)
         ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
                       "could not start the Passenger helper server: "
                       "fork() failed");
-        close(p[0]);
-        close(p[1]);
+        close(admin_pipe[0]);
+        close(admin_pipe[1]);
+        close(feedback_pipe[0]);
+        close(feedback_pipe[1]);
         return NGX_ERROR;
         
     default:
         /* Parent process. */
-        close(p[0]);
+        close(admin_pipe[0]);
+        close(feedback_pipe[1]);
         
         /* Pass our auto-generated password to the helper server. */
         i = 0;
         do {
-            ret = write(p[1], helper_server_password_data,
+            ret = write(admin_pipe[1], helper_server_password_data,
                         HELPER_SERVER_PASSWORD_SIZE - i);
             if (ret == -1) {
                 ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
                               "could not send password to the Passenger helper server: "
                               "write() failed");
-                close(p[1]);
+                close(admin_pipe[1]);
                 kill(pid, SIGTERM);
                 waitpid(pid, NULL, 0);
                 return NGX_ERROR;
@@ -265,8 +283,12 @@ start_helper_server(ngx_cycle_t *cycle)
             }
         } while (i < HELPER_SERVER_PASSWORD_SIZE);
         
+        /* Wait until the HelperServer has done initializing. */
+        read(feedback_pipe[0], &buf, 1);
+        close(feedback_pipe[0]);
+                
         helper_server_pid        = pid;
-        helper_server_admin_pipe = p[1];
+        helper_server_admin_pipe = admin_pipe[1];
         break;
     }
     

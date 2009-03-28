@@ -19,6 +19,8 @@ http {
     access_log <%= @nginx_root %>/access.log main;
     
     passenger_root <%= @passenger_root %>;
+	passenger_ruby <%= PlatformInfo::RUBY %>;
+	passenger_default_user <%= CONFIG['lowest_user'] %>;
 
     <% for server in @servers %>
         server {

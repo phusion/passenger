@@ -653,7 +653,9 @@ public:
 	 * @param rootDir The Passenger root folder.
 	 * @param ruby The filename of the Ruby interpreter to use.
 	 * @param adminPipe The pipe that is used to receive this Server's password and to see if Nginx
-	 *   has been closed.
+	 *   has exited.
+	 * @param feedbackPipe The feedback pipe, used for telling the web server that we're done
+	 *   initializing.
 	 * @param maxPoolSize The maximum number of simultaneously alive application instances.
 	 * @param maxInstancesPerApp The maximum number of simultaneously alive Rails instances that
 	 *   a single Rails application may occupy.
@@ -671,7 +673,7 @@ public:
 	 *   the optimal permissions for some temp files.
 	 */
 	Server(const string &password, const string &rootDir, const string &ruby,
-	       int adminPipe, unsigned int maxPoolSize,
+	       int adminPipe, int feedbackPipe, unsigned int maxPoolSize,
 	       unsigned int maxInstancesPerApp, unsigned int poolIdleTime,
 	       bool userSwitching, const string &defaultUser, uid_t workerUid,
 	       gid_t workerGid) {
@@ -689,7 +691,7 @@ public:
 			workerUid, workerGid);
 		startListening();
 		
-		if (!userSwitching) {
+		if (!userSwitching && geteuid() == 0) {
 			lowerPrivilege(defaultUser);
 		}
 		
@@ -711,6 +713,9 @@ public:
 		}
 		reporter = ptr(new ApplicationPoolStatusReporter(pool, userSwitching,
 				S_IRUSR | S_IWUSR, fifoUid, fifoGid));
+		
+		// Tell the web server that we're done initializing.
+		syscalls::close(feedbackPipe);
 	}
 	
 	~Server() {
@@ -737,6 +742,7 @@ public:
 		startClientHandlerThreads();
 		
 		try {
+			// Wait until the web server has exited.
 			syscalls::read(adminPipe, &buf, 1);
 		} catch (const boost::thread_interrupted &) {
 			// Do nothing.
@@ -798,16 +804,17 @@ main(int argc, char *argv[]) {
 		
 		string password;
 		string rootDir  = argv[1];
-		string ruby     = argv[2];
-		int adminPipe   = atoi(argv[3]);
-		int logLevel    = atoi(argv[4]);
-		int maxPoolSize = atoi(argv[5]);
-		int maxInstancesPerApp = atoi(argv[6]);
-		int poolIdleTime       = atoi(argv[7]);
-		bool userSwitching = strcmp(argv[8], "1") == 0;
-		string defaultUser = argv[9];
-		uid_t workerUid    = (uid_t) atoll(argv[10]);
-		gid_t workerGid    = (gid_t) atoll(argv[11]);
+		string ruby      = argv[2];
+		int adminPipe    = atoi(argv[3]);
+		int feedbackPipe = atoi(argv[4]);
+		int logLevel     = atoi(argv[5]);
+		int maxPoolSize  = atoi(argv[6]);
+		int maxInstancesPerApp = atoi(argv[7]);
+		int poolIdleTime       = atoi(argv[8]);
+		bool userSwitching = strcmp(argv[9], "1") == 0;
+		string defaultUser = argv[10];
+		uid_t workerUid    = (uid_t) atoll(argv[11]);
+		gid_t workerGid    = (gid_t) atoll(argv[12]);
 		
 		setLogLevel(logLevel);
 		P_DEBUG("Passenger helper server started on PID " << getpid());
@@ -815,7 +822,7 @@ main(int argc, char *argv[]) {
 		password = receivePassword(adminPipe);
 		P_TRACE(2, "Password received.");
 		
-		Server(password, rootDir, ruby, adminPipe, maxPoolSize,
+		Server(password, rootDir, ruby, adminPipe, feedbackPipe, maxPoolSize,
 			maxInstancesPerApp, poolIdleTime, userSwitching,
 			defaultUser, workerUid, workerGid).start();
 	} catch (const tracable_exception &e) {

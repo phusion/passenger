@@ -1,4 +1,5 @@
 require 'erb'
+require 'phusion_passenger/platform_info'
 begin
 	require 'daemon_controller'
 rescue LoadError
