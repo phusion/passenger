@@ -92,6 +92,10 @@ describe ApplicationSpawner do
 				})
 				spawn_stub_application(stub).close
 				spawn_stub_application(stub).close
+				
+				# Give some time for the starting_worker_process hook to be executed.
+				sleep 0.2
+				
 				contents = File.read("#{stub.app_root}/result.txt")
 				contents.should == "end of environment.rb\n" +
 					"forked = false\n" +
