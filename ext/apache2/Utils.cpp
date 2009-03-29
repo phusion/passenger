@@ -324,9 +324,18 @@ createPassengerTempDir(const string &systemTempDir, bool userSwitching,
 	
 	determineLowestUserAndGroup(lowestUser, lowestUid, lowestGid);
 	
+	/* Create the temp directory with the current user as owner (which
+	 * is root if the web server was started as root). Only the owner
+	 * may write to this directory. Everybody else may only access the
+	 * directory. The permissions on the subdirectories will determine
+	 * whether a user may access that specific subdirectory.
+	 */
 	makeDirTree(tmpDir, "u=wxs,g=x,o=x");
 	
-	/* It only makes sense to chown webserver_private to workerUid and workerGid the web server
+	/* We want this upload buffer directory to be only accessible by the web server's
+	 * worker processs.
+	 *
+	 * It only makes sense to chown webserver_private to workerUid and workerGid if the web server
 	 * is actually able to change the user of the worker processes. That is, if the web server
 	 * is running as root.
 	 */
@@ -340,30 +349,78 @@ createPassengerTempDir(const string &systemTempDir, bool userSwitching,
 	 * but user switching is off...
 	 */
 	if (geteuid() == 0 && !userSwitching) {
-		// Then the 'info' subfolder must be owned by lowestUser.
+		/* ...then the 'info' subdirectory must be owned by lowestUser, so that only root
+		 * or lowestUser can query Phusion Passenger information.
+		 */
 		makeDirTree(tmpDir + "/info", "u=rwxs,g=,o=", lowestUid, lowestGid);
 	} else {
-		// Otherwise just use current user.
+		/* Otherwise just use the current user and the directory's owner.
+		 * This way, only the user that the web server's control process
+		 * is running as will be able to query information.
+		 */
 		makeDirTree(tmpDir + "/info", "u=rwxs,g=,o=");
 	}
 	
 	if (geteuid() == 0) {
 		if (userSwitching) {
-			makeDirTree(tmpDir + "/backends", "u=rwxs,g=wx,o=wx");
+			/* If user switching is possible and turned on, then each backend
+			 * process may be running as a different user, so the backends
+			 * subdirectory must be world-writable. However we don't want
+			 * everybody to be able to know the sockets' filenames, so
+			 * the directory is not readable, not even by its owner.
+			 */
+			makeDirTree(tmpDir + "/backends", "u=wxs,g=wx,o=wx");
 		} else {
-			makeDirTree(tmpDir + "/backends", "u=rwxs,g=x,o=x", lowestUid, lowestGid);
+			/* If user switching is off then all backend processes will be
+			 * running as lowestUser, so make lowestUser the owner of the
+			 * directory. Nobody else (except root) may access this directory.
+			 *
+			 * The directory is not readable as a security precaution:
+			 * nobody should be able to know the sockets' filenames without
+			 * having access to the application pool.
+			 */
+			makeDirTree(tmpDir + "/backends", "u=wxs,g=,o=", lowestUid, lowestGid);
 		}
 	} else {
-		makeDirTree(tmpDir + "/backends", "u=rwxs,g=x,o=x");
+		/* If user switching is not possible then all backend processes will
+		 * be running as the same user as the web server. So we'll make the
+		 * backends subdirectory only writable by this user. Nobody else
+		 * (except root) may access this subdirectory.
+		 *
+		 * The directory is not readable as a security precaution:
+		 * nobody should be able to know the sockets' filenames without having
+		 * access to the application pool.
+		 */
+		makeDirTree(tmpDir + "/backends", "u=wxs,g=,o=");
 	}
 	
 	if (geteuid() == 0) {
 		if (userSwitching) {
+			/* If user switching is possible and is on, then each backend
+			 * process may be running as a different user. So make the var
+			 * directory world-writable.
+			 *
+			 * The directory is not readable as a security precaution.
+			 */
 			makeDirTree(tmpDir + "/var", "u=wxs,g=wx,o=wx");
 		} else {
+			/* If user switching is off then all backend processes
+			 * will be running as lowestUser, so make lowestUser the
+			 * owner of the var directory. Only lowestUser may access
+			 * the directory.
+			 *
+			 * The directory is not readble as a security precaution.
+			 */
 			makeDirTree(tmpDir + "/var", "u=wxs,g=,o=", lowestUid, lowestGid);
 		}
 	} else {
+		/* If user switching is not possible then all backend processes will
+		 * be running as the same user as the web server. So we'll make the
+		 * var subdirectory only accessible by this user. Nobody else
+		 * (except root) may access this subdirectory.
+		 *
+		 * The directory is not readble as a security precaution.
+		 */
 		makeDirTree(tmpDir + "/var", "u=wxs,g=,o=");
 	}
 }

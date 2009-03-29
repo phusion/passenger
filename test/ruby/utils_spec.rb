@@ -1,6 +1,7 @@
 require 'support/config'
 
-require 'tempfile'
+require 'tmpdir'
+require 'fileutils'
 require 'phusion_passenger/utils'
 
 include PhusionPassenger
@@ -33,11 +34,16 @@ describe Utils do
 	
 	describe "#passenger_tmpdir" do
 		before :each do
+			@old_instance_temp_dir = ENV['PASSENGER_INSTANCE_TEMP_DIR']
 			ENV.delete('PASSENGER_INSTANCE_TEMP_DIR')
 		end
 		
 		after :each do
-			ENV.delete('PASSENGER_INSTANCE_TEMP_DIR')
+			if @old_instance_temp_dir
+				ENV['PASSENGER_INSTANCE_TEMP_DIR'] = @old_instance_temp_dir
+			else
+				ENV.delete('PASSENGER_INSTANCE_TEMP_DIR')
+			end
 		end
 		
 		it "returns a directory under Dir.tmpdir if ENV['PASSENGER_INSTANCE_TEMP_DIR'] is nil" do
@@ -60,7 +66,7 @@ describe Utils do
 			begin
 				File.directory?('utils_spec.tmp').should be_true
 			ensure
-				Dir.rmdir('utils_spec.tmp') rescue nil
+				FileUtils.rm_rf('utils_spec.tmp')
 			end
 		end
 	end
