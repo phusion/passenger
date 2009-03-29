@@ -269,7 +269,8 @@ string getPassengerTempDir(bool bypassCache = false, const string &systemTempDir
  * - info - for storing files that allow external tools to query information
  *          about a running Phusion Passenger instance.
  * - backends - for storing Unix sockets created by backend processes.
- * - var - for all other kinds of temp files.
+ * - var - for storing all other kinds of temp files that the backend processes
+ *         create.
  *
  * If a (sub)directory already exists, then it will not result in an error.
  *

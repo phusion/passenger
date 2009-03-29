@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <limits.h>
+#include <string.h>
 
 using namespace Passenger;
 using namespace std;
@@ -14,9 +15,15 @@ namespace tut {
 	struct UtilsTest {
 		vector<string> output;
 		string oldPath;
+		char *oldInstanceTempDir;
 		
 		UtilsTest() {
 			oldPath = getenv("PATH");
+			oldInstanceTempDir = getenv("PASSENGER_INSTANCE_TEMP_DIR");
+			if (oldInstanceTempDir != NULL) {
+				oldInstanceTempDir = strdup(oldInstanceTempDir);
+			}
+			
 			unsetenv("TMPDIR");
 			unsetenv("PASSENGER_INSTANCE_TEMP_DIR");
 		}
@@ -24,7 +31,12 @@ namespace tut {
 		~UtilsTest() {
 			setenv("PATH", oldPath.c_str(), 1);
 			unsetenv("TMPDIR");
-			unsetenv("PASSENGER_INSTANCE_TEMP_DIR");
+			if (oldInstanceTempDir == NULL) {
+				unsetenv("PASSENGER_INSTANCE_TEMP_DIR");
+			} else {
+				setenv("PASSENGER_INSTANCE_TEMP_DIR", oldInstanceTempDir, 1);
+				free(oldInstanceTempDir);
+			}
 		}
 	};
 	
@@ -189,15 +201,37 @@ namespace tut {
 	
 	/***** Test BufferedUpload *****/
 	
+	struct TemporarilySetInstanceTempDir {
+		TemporarilySetInstanceTempDir() {
+			setenv("PASSENGER_INSTANCE_TEMP_DIR", "utils_test.tmp", 1);
+			mkdir("utils_test.tmp", S_IRWXU);
+			mkdir(BufferedUpload::getDir().c_str(), S_IRWXU);
+		}
+		
+		~TemporarilySetInstanceTempDir() {
+			removeDirTree("utils_test.tmp");
+		}
+	};
+	
+	TEST_METHOD(20) {
+		// The resulting file handle is readable and writable.
+		TemporarilySetInstanceTempDir d;
+		BufferedUpload t;
+		char line[30];
+		
+		fprintf(t.handle, "hello world!");
+		fflush(t.handle);
+		fseek(t.handle, 0, SEEK_SET);
+		memset(line, 0, sizeof(line));
+		fgets(line, sizeof(line), t.handle);
+		ensure_equals(string(line), "hello world!");
+	}
+	
 	TEST_METHOD(21) {
 		// It immediately unlinks the temp file.
-		setenv("PASSENGER_INSTANCE_TEMP_DIR", "utils_test.tmp", 1);
-		mkdir("utils_test.tmp", S_IRWXU);
-		mkdir(BufferedUpload::getDir().c_str(), S_IRWXU);
+		TemporarilySetInstanceTempDir d;
 		BufferedUpload t;
-		unsigned int size = listDir(BufferedUpload::getDir().c_str()).size();
-		removeDirTree("utils_test.tmp");
-		ensure_equals(size, 0u);
+		ensure_equals(listDir(BufferedUpload::getDir().c_str()).size(), 0u);
 	}
 	
 	/***** Test escapeForXml() *****/

@@ -326,6 +326,12 @@ private:
 		
 		UPDATE_TRACE_POINT();
 		if (args[2] == "unix") {
+			/* Set tighter permissions on the spawned backend process's
+			 * Unix socket. We try to make it only readable and writable
+			 * by the process that contains the application pool, because
+			 * all attempts to connect to a backend process happens
+			 * through the application pool.
+			 */
 			int ret;
 			do {
 				ret = chmod(args[1].c_str(), S_IRUSR | S_IWUSR);
