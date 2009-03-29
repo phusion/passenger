@@ -154,7 +154,7 @@ private:
 			write(STDERR_FILENO,
 				"*** ERROR: ApplicationPoolServerExecutable received a "
 				"fatal signal. Running gdb to obtain the backtrace:\n\n",
-				sizeof("*** ERROR: ApplicationPoolServerExecutable caught "
+				sizeof("*** ERROR: ApplicationPoolServerExecutable received a "
 				       "fatal signal. Running gdb to obtain the backtrace:\n\n") - 1
 			);
 			write(STDERR_FILENO, "----------------- Begin gdb output -----------------\n",

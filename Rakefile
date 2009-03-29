@@ -726,9 +726,7 @@ spec = Gem::Specification.new do |s|
 	s.rdoc_options <<
 		"-S" << "-N" << "-p" << "-H" <<
 		'--main' << 'README' <<
-		'--template' << './doc/template/horo' <<
 		'--title' << 'Passenger Ruby API'
-	s.test_file = 'test/support/run_rspec_tests.rb'
 	s.description = "Passenger is an Apache module for Ruby on Rails support."
 end
 
