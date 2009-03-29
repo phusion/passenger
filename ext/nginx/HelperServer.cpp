@@ -677,9 +677,6 @@ public:
 	       unsigned int maxInstancesPerApp, unsigned int poolIdleTime,
 	       bool userSwitching, const string &defaultUser, uid_t workerUid,
 	       gid_t workerGid) {
-		uid_t fifoUid;
-		gid_t fifoGid;
-		
 		this->password      = password;
 		this->adminPipe     = adminPipe;
 		this->userSwitching = userSwitching;
@@ -703,16 +700,8 @@ public:
 		pool->setMaxPerApp(maxInstancesPerApp);
 		pool->setMaxIdleTime(poolIdleTime);
 		
-		// Set the FIFO's owner according to whether we're running as root
-		// and whether user switching is enabled.
-		if (!userSwitching) {
-			determineLowestUserAndGroup(defaultUser, fifoUid, fifoGid);
-		} else {
-			fifoUid = (uid_t) -1;
-			fifoGid = (gid_t) -1;
-		}
 		reporter = ptr(new ApplicationPoolStatusReporter(pool, userSwitching,
-				S_IRUSR | S_IWUSR, fifoUid, fifoGid));
+				S_IRUSR | S_IWUSR));
 		
 		// Tell the web server that we're done initializing.
 		syscalls::close(feedbackPipe);
