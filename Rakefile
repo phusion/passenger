@@ -17,6 +17,7 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 $LOAD_PATH.unshift("#{File.dirname(__FILE__)}/lib")
+$LOAD_PATH.unshift("#{File.dirname(__FILE__)}/misc")
 require 'rubygems'
 require 'rake/rdoctask'
 require 'rake/gempackagetask'
@@ -431,7 +432,7 @@ Rake::RDocTask.new(:clobber_rdoc => "rdoc:clobber", :rerdoc => "rdoc:force") do 
 	rd.rdoc_files.include("README", "DEVELOPERS.TXT",
 		"lib/phusion_passenger/*.rb",
 		"lib/phusion_passenger/*/*.rb",
-		"lib/rake/extensions.rb",
+		"misc/rake/extensions.rb",
 		"ext/phusion_passenger/*.c")
 	rd.template = "./doc/template/horo"
 	rd.title = "Passenger Ruby API"
@@ -490,6 +491,7 @@ spec = Gem::Specification.new do |s|
 		'ext/phusion_passenger/*.{c,rb}',
 		'benchmark/*.{cpp,rb}',
 		'misc/*',
+		'misc/*/*',
 		'vendor/**/*',
 		'test/*.{rb,cpp,example}',
 		'test/support/*',
