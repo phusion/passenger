@@ -134,7 +134,10 @@ module Dependencies # :nodoc: all
 				require 'mkmf'
 				header_dir = Config::CONFIG['rubyhdrdir'] || Config::CONFIG['archdir']
 				result.found(File.exist?("#{header_dir}/ruby.h"))
-			rescue LoadError
+			rescue LoadError, SystemExit
+				# On RedHat/Fedora/CentOS, if ruby-devel is not installed then
+				# mkmf.rb will print an error and call 'exit'. So here we
+				# catch SystemExit.
 				result.not_found
 			end
 		end
@@ -202,7 +205,7 @@ module Dependencies # :nodoc: all
 			end
 		end
 		dep.website = "http://rake.rubyforge.org/"
-		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM} install rake</b>"
+		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM || "gem"} install rake</b>"
 	end
 	
 	Apache2 = Dependency.new do |dep|
@@ -311,7 +314,7 @@ module Dependencies # :nodoc: all
 				result.not_found
 			end
 		end
-		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM} install fastthread</b>"
+		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM || "gem"} install fastthread</b>"
 	end
 
 	Rack = Dependency.new do |dep|
@@ -328,7 +331,7 @@ module Dependencies # :nodoc: all
 				result.not_found
 			end
 		end
-		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM} install rack</b>"
+		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM || "gem"} install rack</b>"
 	end
 end
 
