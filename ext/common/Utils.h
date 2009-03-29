@@ -298,7 +298,8 @@ string getPassengerTempDir(bool bypassCache = false, const string &systemTempDir
  *          about a running Phusion Passenger instance.
  * - backends - for storing Unix sockets created by backend processes.
  * - master - for storing files such as the Passenger HelperServer socket.
- * - var - for all other kinds of temp files.
+ * - var - for storing all other kinds of temp files that the backend processes
+ *         create.
  *
  * If a (sub)directory already exists, then it will not result in an error.
  *

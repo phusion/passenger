@@ -347,8 +347,13 @@ protected
 			ENV['PASSENGER_INSTANCE_TEMP_DIR'] = dir
 		end
 		if create && !File.exist?(dir)
-			system("mkdir", "-p", "-m", "u=rwxs,g=wx,o=wx", dir)
-			system("mkdir", "-p", "-m", "u=rwxs,g=wx,o=wx", "#{dir}/backends")
+			# This is a very minimal implementation of the function
+			# passengerCreateTempDir() in Utils.cpp. This implementation
+			# is only meant to make the unit tests pass. For production
+			# systems one should pre-create the temp directory with
+			# passengerCreateTempDir().
+			system("mkdir", "-p", "-m", "u=wxs,g=wx,o=wx", dir)
+			system("mkdir", "-p", "-m", "u=wxs,g=wx,o=wx", "#{dir}/backends")
 		end
 		return dir
 	end

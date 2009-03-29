@@ -271,6 +271,10 @@ private
 				@socket.listen(BACKLOG_SIZE)
 				@socket_type = "unix"
 				File.chmod(0600, @socket_name)
+				
+				# The SpawnManager class will set tighter permissions on the
+				# socket later on. See sendSpawnCommand in SpawnManager.h.
+				
 				done = true
 			rescue Errno::EADDRINUSE
 				# Do nothing, try again with another name.
