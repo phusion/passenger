@@ -577,6 +577,7 @@ This option may occur in the following places:
  * In an 'if' configuration scope.
 
 === Resource control and optimization options ===
+[[PassengerMaxPoolSize]]
 ==== passenger_max_pool_size <integer> ====
 The maximum number of Ruby on Rails or Rack application instances that may
 be simultaneously active. A larger number results in higher memory usage,
