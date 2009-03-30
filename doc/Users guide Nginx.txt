@@ -589,7 +589,7 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'production'.
 
-==== rails_spawn_method <string> ===
+==== rails_spawn_method <string> ====
 [TIP]
 ."What spawn method should I use?"
 =========================================================
