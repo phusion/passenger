@@ -175,7 +175,7 @@ accessible from a sub URL, such as 'http://www.mycook.com/railsapplication').
 
 NOTE: The default `RAILS_ENV` environment in which deployed Rails applications
 are run, is ``production''. You can change this by changing the
-<<rails_env,'RailsEnv'>> configuration option.
+<<RailsEnv,'RailsEnv'>> configuration option.
 
 === Deploying to a virtual host's root ===
 
@@ -229,8 +229,8 @@ folder to a directory in the document root. For example:
 ln -s /webapps/mycook/public /websites/phusion/rails
 -------------------------------------------
 
-Next, set 'passenger_enabled on' and add a <<passenger_base_uri>> option to the
-'server' block:
+Next, set 'passenger_enabled on' and add a <<PassengerBaseURI,passenger_base_uri>>
+option to the 'server' block:
 -------------------------------------------
 http {
     ...
@@ -251,7 +251,7 @@ Then restart Nginx. The application has now been deployed.
 [TIP]
 ======================================
 You can deploy multiple Rails applications under a virtual host, by specifying
-<<passenger_base_uri,passenger_base_uri>> multiple times. For example:
+<<PassengerBaseURI,passenger_base_uri>> multiple times. For example:
 ---------------------------------
 server {
     ...
@@ -326,7 +326,7 @@ accessible from a sub URL, such as 'http://www.rackapp.com/rackapp').
 
 NOTE: The default `RACK_ENV` environment in which deployed Rack applications
 are run, is ``production''. You can change this by changing the
-<<rack_env,rack_env>> configuration option.
+<<RackEnv,rack_env>> configuration option.
 
 === Tutorial/example: writing and deploying a Hello World Rack application ===
 
@@ -420,8 +420,8 @@ folder to a directory in the document root. For example:
 ln -s /webapps/rackapp/public /websites/phusion/rack
 -------------------------------------------
 
-Next, set 'passenger_enabled on' and add a <<passenger_base_uri>> option to the
-'server' block:
+Next, set 'passenger_enabled on' and add a <<PassengerBaseURI,passenger_base_uri>>
+option to the 'server' block:
 -------------------------------------------
 http {
     ...
@@ -442,7 +442,7 @@ Then restart Apache. The application has now been deployed.
 [TIP]
 ======================================
 You can deploy multiple Rack applications under a virtual host, by specifying
-<<passenger_base_uri,passenger_base_uri>> multiple times. For example:
+<<PassengerBaseURI,passenger_base_uri>> multiple times. For example:
 ---------------------------------
 server {
     ...
@@ -516,6 +516,7 @@ This option allows one to specify the Ruby interpreter to use.
 This option may only occur once, in the 'http' configuration block.
 The default is 'ruby'.
 
+[[PassengerUseGlobalQueue]]
 === passenger_use_global_queue <on|off> ===
 Turns the use of global queuing on or off.
 
@@ -537,6 +538,7 @@ Whether to enable <<user_switching,user switching support>>.
 This option may only occur once, in the 'http' configuration block.
 The default value is 'on'.
 
+[[PassengerDefaultUser]]
 === passenger_default_user <username> ===
 Phusion Passenger enables <<user_switching,user switching support>> by default.
 This configuration option allows one to specify which user Rails/Rack
@@ -557,6 +559,7 @@ Please see <<deploying_a_ror_app,Deploying a Ruby on Rails application>>
 and <<deploying_a_rack_app,Deploying a Rack-based Ruby application>>
 for examples.
 
+[[PassengerBaseURI]]
 ==== passenger_base_uri <uri> ====
 Used to specify that the given URI is an distinct application that should
 be served by Phusion Passenger. This option can be used for both Rails and
@@ -573,11 +576,83 @@ This option may occur in the following places:
  * In an 'if' configuration scope.
 
 === Resource control and optimization options ===
-==== passenger_max_pool_size
-==== passenger_max_instances_per_app
-==== passenger_pool_idle_time
+==== passenger_max_pool_size <integer> ====
+The maximum number of Ruby on Rails or Rack application instances that may
+be simultaneously active. A larger number results in higher memory usage,
+but improved ability to handle concurrent HTTP clients.
+
+The optimal value depends on your system's hardware and the server's average
+load. You should experiment with different values. But generally speaking,
+the value should be at least equal to the number of CPUs (or CPU cores) that
+you have. If your system has 2 GB of RAM, then we recommend a value of '30'.
+If your system is a Virtual Private Server (VPS) and has about 256 MB RAM, and
+is also running other services such as MySQL, then we recommend a value of '2'.
+
+If you find that your server is unable to handle the load on your Rails/Rack websites
+(i.e. running out of memory) then you should lower this value. (Though if your
+sites are really that popular, then you should strongly consider upgrading your
+hardware or getting more servers.)
+
+This option may only occur once, in the 'http' configuration bock.
+The default value is '6'.
+
+TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
+Edition>>. This allows you to reduce the memory usage of your Ruby on Rails applications
+by about 33%. And it's not hard to install.
+
+==== passenger_max_instances_per_app <integer> ====
+The maximum number of seconds that an application instance may be idle. That is,
+if an application instance hasn't received any traffic after the given number of
+seconds, then it will be shutdown in order to conserve memory.
+
+Decreasing this value means that applications will have to be spawned
+more often. Since spawning is a relatively slow operation, some visitors may
+notice a small delay when they visit your Rails/Rack website. However, it will also
+free up resources used by applications more quickly.
+
+The optimal value depends on the average time that a visitor spends on a single
+Rails/Rack web page. We recommend a value of `2 * x`, where `x` is the average
+number of seconds that a visitor spends on a single Rails/Rack web page. But your
+mileage may vary.
+
+When this value is set to '0', application instances will not be shutdown unless 
+it's really necessary, i.e. when Phusion Passenger is out of worker processes
+for a given application and one of the inactive application instances needs to
+make place for another application instance. Setting the value to 0 is
+recommended if you're on a non-shared host that's only running a few
+applications, each which must be available at all times.
+
+This option may only occur once, in the 'http' configuration block.
+The default value is '300'.
+
+[[PassengerPoolIdleTime]]
+==== passenger_pool_idle_time <integer> ====
+The maximum number of seconds that an application instance may be idle. That is,
+if an application instance hasn't received any traffic after the given number of
+seconds, then it will be shutdown in order to conserve memory.
+
+Decreasing this value means that applications will have to be spawned
+more often. Since spawning is a relatively slow operation, some visitors may
+notice a small delay when they visit your Rails/Rack website. However, it will also
+free up resources used by applications more quickly.
+
+The optimal value depends on the average time that a visitor spends on a single
+Rails/Rack web page. We recommend a value of `2 * x`, where `x` is the average
+number of seconds that a visitor spends on a single Rails/Rack web page. But your
+mileage may vary.
+
+When this value is set to '0', application instances will not be shutdown unless 
+it's really necessary, i.e. when Phusion Passenger is out of worker processes
+for a given application and one of the inactive application instances needs to
+make place for another application instance. Setting the value to 0 is
+recommended if you're on a non-shared host that's only running a few
+applications, each which must be available at all times.
+
+This option may only occur once, in the 'http' configuration block.
+The default value is '300'.
 
 === Ruby on Rails-specific options ===
+[[RailsEnv]]
 ==== rails_env <string> ====
 This option allows one to specify the default `RAILS_ENV` value.
 
@@ -616,6 +691,7 @@ This option may occur in the following places:
 In each place, it may be specified at most once. The default value is 'smart-lv2'.
 
 === Rack-specific options ===
+[[RackEnv]]
 ==== rack_env <string> ====
 This option allows one to specify the default `RACK_ENV` value.
 
@@ -626,6 +702,16 @@ This option may occur in the following places:
  * In an 'if' configuration scope.
 
 In each place, it may be specified at most once. The default value is 'production'.
+
+
+== Analysis and system maintenance tools ==
+
+include::users_guide_snippets/analysis_and_system_maintenance_tools.txt[]
+
+
+== Tips ==
+
+include::users_guide_snippets/tips.txt[]
 
 
 include::users_guide_snippets/appendix_a_about.txt[]
