@@ -448,8 +448,12 @@ following configuration options:
 
 === PassengerRoot <directory> ===
 The location to the Phusion Passenger root directory. This configuration option
-is essential to Phusion Passenger. The correct value is given by the installer,
-and should usually not be changed manually.
+is essential to Phusion Passenger, and allows Phusion Passenger to locate its own
+data files. The correct value is given by the installer.
+
+If you've moved Phusion Passenger to a different directory then you need to update
+this option as well. Please read
+<<moving_phusion_passenger,Moving Phusion Passenger to a different directory>> for more information.
 
 This required option may only occur once, in the global server configuration.
 
@@ -517,84 +521,7 @@ In each place, it may be specified at most once. The default value is 'off'.
 
 'This feature is sponsored by http://www.37signals.com/[37signals].'
 
-.What does this option do?
-
-Recall that Phusion Passenger spawns multiple backend processes (e.g. multiple
-Ruby on Rails processes), each which processes HTTP requests serially. One of
-Phusion Passenger's jobs is to forward HTTP requests to a suitable backend
-process. A backend process may take an arbitrary amount of time to process a
-specific HTTP request. If the websites are (temporarily) under high load, and
-the backend processes cannot process the requests fast enough, then some
-requests may have to be queued.
-
-If global queuing is turned off, then Phusion Passenger will use 'fair load
-balancing'. This means that each backend process will have its own private
-queue. Phusion Passenger will forward an HTTP request to the backend process
-that has the least amount of requests in its queue.
-
-If global queuing is turned on, then Phusion Passenger will use a global queue
-that's shared between all backend processes. If an HTTP request comes in, and
-all the backend processes are still busy, then Phusion Passenger will wait until
-at least one backend process is done, and will then forward the request to that
-process.
-
-.When to turn on global queuing?
-
-You should turn on global queuing if one of your web applications may have
-long-running requests.
-
-For example suppose that:
-
-- global queuing is turned off.
-- we're currently in a state where all backend processes have 3 requests in
-  their queue, except for a single backend process, which has 1 request in its
-  queue.
-
-The situation looks like this:
-
---------------------------------------------------
-Backend process A:  [*     ]  (1 request in queue)
-Backend process B:  [***   ]  (3 requests in queue)
-Backend process C:  [***   ]  (3 requests in queue)
-Backend process D:  [***   ]  (3 requests in queue)
---------------------------------------------------
-
-Each process is currently serving short-running requests.
-
-Phusion Passenger will forward the next request to backend process A. A will
-now have 2 items in its queue. We'll mark this new request with an X:
-
---------------------------------------------------
-Backend process A:  [*X    ]  (2 request in queue)
-Backend process B:  [***   ]  (3 requests in queue)
-Backend process C:  [***   ]  (3 requests in queue)
-Backend process D:  [***   ]  (3 requests in queue)
---------------------------------------------------
-
-Assuming that B, C and D still aren't done with their current request, the next
-HTTP request - let's call this Y - will be forwarded to backend process A as
-well, because it has the least number of items in its queue:
-
---------------------------------------------------
-Backend process A:  [*XY   ]  (3 requests in queue)
-Backend process B:  [***   ]  (3 requests in queue)
-Backend process C:  [***   ]  (3 requests in queue)
-Backend process D:  [***   ]  (3 requests in queue)
---------------------------------------------------
-
-But if request X happens to be a long-running request that needs 60 seconds to
-complete, then we'll have a problem. Y won't be processed for at least 60
-seconds. It would have been a better idea if Y was forward to processes B, C or
-D instead, because they only have short-living requests in their queues.
-
-This problem will be avoided entirely if you turn global queuing on. With global
-queuing, all backend processes will share the same queue. The first backend
-process that becomes available will take from the queue, and so this
-``queuing-behind-long-running-request'' problem will never occur.
-
-Turning global queuing off will yield a minor performance improvement (about 5%,
-depending on how fast/slow your web application is), which is why it's off by
-default.
+include::users_guide_snippets/global_queueing_explained.txt[]
 
 
 [[PassengerUserSwitching]]
@@ -606,7 +533,7 @@ The default value is 'on'.
 
 [[PassengerDefaultUser]]
 === PassengerDefaultUser <username> ===
-Passenger enables <<user_switching,user switching support>> by default.
+Phusion Passenger enables <<user_switching,user switching support>> by default.
 This configuration option allows one to specify which user Rails/Rack
 applications must run as, if user switching fails or is disabled.
 
@@ -1008,54 +935,7 @@ However, we do recommend you to try to understand it. The 'smart' and 'smart-lv2
 methods bring many benefits.
 =========================================================
 
-Internally, Phusion Passenger spawns multiple Ruby on Rails processes in order to handle
-requests. But there are multiple ways with which processes can be spawned, each having
-its own set of pros and cons. Supported spawn methods are:
-
-'smart'::
-When this spawn method is used, Phusion Passenger will attempt to cache Ruby on Rails
-framework code and application code for a limited period of time. Please read
-<<spawning_methods_explained,Spawning methods explained>> for a more detailed
-explanation of what smart spawning exactly does.
-+
-*Pros:*
-This can significantly decrease spawn time (by as much as 90%). And, when Ruby Enterprise
-Edition is used, <<reducing_memory_usage,memory usage can be reduced by 33% on average>>.
-+
-*Cons:*
-Some Ruby on Rails applications and libraries are not compatible with smart spawning.
-If that's the case for your application, then you should use 'conservative' as
-spawning method.
-
-'smart-lv2'::
-This spawning method is similar to 'smart' but it skips the framework spawner
-and uses the application spawner directly. This means the framework code is not
-cached between multiple applications, although it is still cached within
-instances of the same application. Please read
-<<spawning_methods_explained,Spawning methods explained>> for a more detailed
-explanation of what smart-lv2 spawning exactly does.
-+
-*Pros:* It is compatible with a larger number of applications when compared to
-the 'smart' method, and still performs some caching.
-+
-*Cons:* It is slower than smart spawning if you have many applications which
-use the same framework version. It is therefore advised that shared hosts use the
-'smart' method instead.
-
-'conservative'::
-This spawning method is similar to the one used in Mongrel Cluster. It does not
-perform any code caching at all. Please read
-<<spawning_methods_explained,Spawning methods explained>> for a more detailed
-explanation of what conservative spawning exactly does.
-+
-*Pros:*
-Conservative spawning is guaranteed to be compatible with all Rails applications
-and libraries.
-+
-*Cons:*
-Much slower than smart spawning. Every spawn action will be equally slow, though no slower than
-the startup time of a single server in Mongrel Cluster. Conservative spawning will also
-render <<reducing_memory_usage,Ruby Enterprise Edition's memory reduction technology>> useless.
+include::users_guide_snippets/rails_spawn_method.txt[]
 
 This option may occur in the following places:
 
@@ -1757,6 +1637,7 @@ Killing the spawn server is completely safe, because Phusion Passenger will rest
 spawn server if it has been terminated.
 
 
+[[moving_phusion_passenger]]
 === Moving Phusion Passenger to a different directory ===
 
 It is possible to relocate the Phusion Passenger files to a different directory. It
