@@ -501,7 +501,7 @@ private:
 	void shutdownServer() {
 		TRACE_POINT();
 		this_thread::disable_syscall_interruption dsi;
-		int ret;
+		int ret, status;
 		time_t begin;
 		bool done = false;
 		
@@ -515,21 +515,34 @@ private:
 			 * Some Apache modules fork(), but don't close file descriptors.
 			 * mod_wsgi is one such example. Because of that, closing serverSocket
 			 * won't always cause the ApplicationPool server to exit. So we send it a
+			 * signal. This must be the same as the oxt/system_calls.hpp interruption
 			 * signal.
 			 */
 			syscalls::kill(serverPid, SIGINT);
 			
-			ret = syscalls::waitpid(serverPid, NULL, WNOHANG);
+			ret = syscalls::waitpid(serverPid, &status, WNOHANG);
 			done = ret > 0 || ret == -1;
 			if (!done) {
 				syscalls::usleep(100000);
 			}
 		}
 		if (done) {
-			P_TRACE(2, "ApplicationPoolServerExecutable exited.");
+			if (ret > 0) {
+				if (WIFEXITED(status)) {
+					P_TRACE(2, "ApplicationPoolServerExecutable exited with exit status " <<
+						WEXITSTATUS(status) << ".");
+				} else if (WIFSIGNALED(status)) {
+					P_TRACE(2, "ApplicationPoolServerExecutable exited because of signal " <<
+						WTERMSIG(status) << ".");
+				} else {
+					P_TRACE(2, "ApplicationPoolServerExecutable exited for an unknown reason.");
+				}
+			} else {
+				P_TRACE(2, "ApplicationPoolServerExecutable exited.");
+			}
 		} else {
 			P_DEBUG("ApplicationPoolServerExecutable not exited in time. Killing it...");
-			syscalls::kill(serverPid, SIGTERM);
+			syscalls::kill(serverPid, SIGKILL);
 			syscalls::waitpid(serverPid, NULL, 0);
 		}
 		

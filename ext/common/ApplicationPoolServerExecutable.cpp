@@ -141,29 +141,22 @@ private:
 	}
 	
 	static void fatalSignalHandler(int signum) {
-		static void (* const defaultHandler)(int) = SIG_DFL;
-		static bool calledBefore = false;
+		char message[1024];
 		
-		if (calledBefore) {
-			// If we're here then it means that this signal
-			// handler crashed, and we weren't even able to
-			// call write() or system()! Abort immediately:
-			defaultHandler(signum);
-		} else {
-			calledBefore = true;
-			write(STDERR_FILENO,
-				"*** ERROR: ApplicationPoolServerExecutable received a "
-				"fatal signal. Running gdb to obtain the backtrace:\n\n",
-				sizeof("*** ERROR: ApplicationPoolServerExecutable received a "
-				       "fatal signal. Running gdb to obtain the backtrace:\n\n") - 1
-			);
-			write(STDERR_FILENO, "----------------- Begin gdb output -----------------\n",
-				sizeof("----------------- Begin gdb output -----------------\n") - 1);
-			system(gdbBacktraceGenerationCommandStr);
-			write(STDERR_FILENO, "----------------- End gdb output -----------------\n",
-				sizeof("----------------- End gdb output -----------------\n") - 1);
-			defaultHandler(signum);
-		}
+		snprintf(message, sizeof(message) - 1,
+			"*** ERROR: ApplicationPoolServerExecutable received fatal signal "
+			"%d. Running gdb to obtain the backtrace:\n\n",
+			signum);
+		message[sizeof(message) - 1] = '\0';
+		write(STDERR_FILENO, message, strlen(message));
+		write(STDERR_FILENO, "----------------- Begin gdb output -----------------\n",
+			sizeof("----------------- Begin gdb output -----------------\n") - 1);
+		system(gdbBacktraceGenerationCommandStr);
+		write(STDERR_FILENO, "----------------- End gdb output -----------------\n",
+			sizeof("----------------- End gdb output -----------------\n") - 1);
+		
+		// Invoke default signal handler.
+		kill(getpid(), signum);
 	}
 	
 	void setupSignalHandlers() {
@@ -196,12 +189,17 @@ private:
 			
 			// Install the signal handlers.
 			action.sa_handler = fatalSignalHandler;
-			action.sa_flags   = 0;
+			action.sa_flags   = SA_RESETHAND;
 			sigemptyset(&action.sa_mask);
-			sigaction(SIGSEGV, &action, NULL);
+			sigaction(SIGQUIT, &action, NULL);
+			sigaction(SIGILL,  &action, NULL);
 			sigaction(SIGABRT, &action, NULL);
-			sigaction(SIGILL, &action, NULL);
-			sigaction(SIGFPE, &action, NULL);
+			sigaction(SIGFPE,  &action, NULL);
+			sigaction(SIGBUS,  &action, NULL);
+			sigaction(SIGSEGV, &action, NULL);
+			sigaction(SIGALRM, &action, NULL);
+			sigaction(SIGUSR1, &action, NULL);
+			sigaction(SIGUSR2, &action, NULL);
 		}
 	}
 
@@ -218,6 +216,8 @@ public:
 		Passenger::setLogLevel(logLevel);
 		this->serverSocket = serverSocket;
 		this->user = user;
+		
+		P_TRACE(2, "ApplicationPoolServerExecutable initialized (PID " << getpid() << ")");
 	}
 	
 	~Server() {
