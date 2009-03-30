@@ -145,8 +145,8 @@ options.
 
 === Installing Phusion Passenger for Nginx manually ===
 
-You can install Phusion Passenger as a normal Nginx module. To do this, run
-Nginx's configure script with `--add-module=/path-to-passenger-root/ext/nginx`.
+You can also install Phusion Passenger the way you install any other Nginx module.
+To do this, run Nginx's configure script with `--add-module=/path-to-passenger-root/ext/nginx`.
 
 If you installed Phusion Passenger via the gem, then 'path-to-passenger-root'
 can be obtained with the command:
@@ -175,7 +175,7 @@ accessible from a sub URL, such as 'http://www.mycook.com/railsapplication').
 
 NOTE: The default `RAILS_ENV` environment in which deployed Rails applications
 are run, is ``production''. You can change this by changing the
-<<RailsEnv,'RailsEnv'>> configuration option.
+<<RailsEnv,rails_env>> configuration option.
 
 === Deploying to a virtual host's root ===
 
@@ -532,6 +532,7 @@ In each place, it may be specified at most once. The default value is 'off'.
 
 include::users_guide_snippets/global_queueing_explained.txt[]
 
+[[PassengerUserSwitching]]
 === passenger_user_switching <on|off> ===
 Whether to enable <<user_switching,user switching support>>.
 
