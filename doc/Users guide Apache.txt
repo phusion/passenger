@@ -1388,6 +1388,11 @@ VirtualDocumentRoot is not compatible with Phusion Passenger at the moment.
 
 include::users_guide_snippets/analysis_and_system_maintenance_tools.txt[]
 
+
+== Tips ==
+
+include::users_guide_snippets/tips.txt[]
+
 === X-Sendfile support ===
 
 Phusion Passenger does not provide X-Sendfile support by itself. Please install
@@ -1398,11 +1403,6 @@ link:http://tn123.ath.cx/mod_xsendfile/[mod_xsendfile] for X-Sendfile support.
 Phusion Passenger does not provide upload progress support by itself. Please
 try drogus's link:http://github.com/drogus/apache-upload-progress-module/tree/master[
 Apache upload progress module] instead.
-
-
-== Tips ==
-
-include::users_guide_snippets/tips.txt[]
 
 
 include::users_guide_snippets/appendix_a_about.txt[]
