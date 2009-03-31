@@ -30,7 +30,7 @@ verbose true
 ##### Configuration
 
 # Don't forget to edit Configuration.h too
-PACKAGE_VERSION = "2.1.2"
+PACKAGE_VERSION = "2.1.3"
 OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 
 PlatformInfo.apxs2.nil? and raise "Could not find 'apxs' or 'apxs2'."
