@@ -364,6 +364,8 @@ private:
 	 * is contained in this method.
 	 */
 	int handleRequest(request_rec *r) {
+		/********** Step 1: preparation work **********/
+		
 		/* Check whether an error occured in prepareRequest() that should be reported
 		 * to the browser.
 		 */
@@ -397,7 +399,10 @@ private:
 			return reportDocumentRootDeterminationError(r);
 		}
 		
-		int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_ERROR);
+		
+		/********** Step 2: handle HTTP upload data, if any **********/
+		
+		int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_DECHUNK);
     		if (httpStatus != OK) {
 			return httpStatus;
 		}
@@ -410,12 +415,35 @@ private:
 			Application::SessionPtr session;
 			bool expectingUploadData;
 			shared_ptr<BufferedUpload> uploadData;
+			const char *contentLength;
 			
 			expectingUploadData = ap_should_client_block(r);
-			if (expectingUploadData && atol(lookupHeader(r, "Content-Length"))
-			                                 > UPLOAD_ACCELERATION_THRESHOLD) {
-				uploadData = receiveRequestBody(r);
+			contentLength = lookupHeader(r, "Content-Length");
+			
+			// If the HTTP upload data is larger than a threshold, or if the HTTP
+			// client sent HTTP upload data using the "chunked" transfer encoding
+			// (which implies Content-Length == NULL), then buffer the upload
+			// data into a tempfile.
+			if (expectingUploadData && (
+			          contentLength == NULL ||
+			          atol(contentLength) > UPLOAD_ACCELERATION_THRESHOLD
+			     )
+			) {
+				uploadData = receiveRequestBody(r, contentLength);
 			}
+			
+			if (expectingUploadData && contentLength == NULL) {
+				// In case of "chunked" transfer encoding, we'll set the
+				// Content-Length header to the length of the received upload
+				// data. Rails requires this header for its HTTP upload data
+				// multipart parsing process.
+				apr_table_set(r->headers_in, "Content-Length",
+					toString(ftell(uploadData->handle)).c_str());
+			}
+			
+			
+			/********** Step 3: forwarding the request to a backend
+			                    process from the application pool **********/
 			
 			UPDATE_TRACE_POINT();
 			try {
@@ -472,6 +500,10 @@ private:
 				}
 			}
 			session->shutdownWriter();
+			
+			
+			/********** Step 4: forwarding the response from the backend
+			                    process back to the HTTP client **********/
 			
 			UPDATE_TRACE_POINT();
 			apr_file_t *readerPipe = NULL;
@@ -686,7 +718,16 @@ private:
 		return APR_SUCCESS;
 	}
 	
-	shared_ptr<BufferedUpload> receiveRequestBody(request_rec *r) {
+	/**
+	 * Receive the HTTP upload data and buffer it into a BufferedUpload temp file.
+	 *
+	 * @param r The request.
+	 * @param contentLength The value of the HTTP Content-Length header. This is used
+	 *                      to check whether the HTTP client has sent complete upload
+	 *                      data. NULL indicates that there is no Content-Length header,
+	 *                      i.e. that the HTTP client used chunked transfer encoding.
+	 */
+	shared_ptr<BufferedUpload> receiveRequestBody(request_rec *r, const char *contentLength) {
 		TRACE_POINT();
 		shared_ptr<BufferedUpload> tempFile(new BufferedUpload());
 		char buf[1024 * 32];
@@ -723,7 +764,8 @@ private:
 		if (len == -1) {
 			throw IOException("An error occurred while receiving HTTP upload data.");
 		}
-		if (ftell(tempFile->handle) != atol(lookupHeader(r, "Content-Length"))) {
+		
+		if (contentLength != NULL && ftell(tempFile->handle) != atol(contentLength)) {
 			throw IOException("The HTTP client sent incomplete upload data.");
 		}
 		return tempFile;

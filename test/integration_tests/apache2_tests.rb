@@ -32,6 +32,7 @@ describe "mod_passenger running in Apache 2" do
 	
 	describe ": MyCook(tm) beta running on root URI" do
 		before :all do
+			@web_server_supports_chunked_transfer_encoding = true
 			@server = "http://passenger.test:#{@apache2.port}"
 			@stub = setup_rails_stub('mycook')
 			@apache2 << "RailsMaxPoolSize 1"
@@ -96,6 +97,7 @@ describe "mod_passenger running in Apache 2" do
 	
 	describe ": MyCook(tm) beta running in a sub-URI" do
 		before :all do
+			@web_server_supports_chunked_transfer_encoding = true
 			@stub = setup_rails_stub('mycook')
 			FileUtils.rm_rf('tmp.webdir')
 			FileUtils.mkdir_p('tmp.webdir')

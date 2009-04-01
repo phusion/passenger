@@ -59,6 +59,33 @@ shared_examples_for "MyCook(tm) beta" do
 		end
 	end
 	
+	it "supports HTTP POST with 'chunked' transfer encoding" do
+		if !@web_server_supports_chunked_transfer_encoding
+			# Nginx doesn't support 'chunked' transfer encoding for uploads.
+			return pending
+		end
+		
+		uri = URI.parse(@server)
+		base_uri = uri.path.sub(%r(/$), '')
+		socket = TCPSocket.new(uri.host, uri.port)
+		begin
+			socket.write("POST #{base_uri}/uploads/single HTTP/1.1\r\n")
+			socket.write("Host: #{uri.host}\r\n")
+			socket.write("Transfer-Encoding: chunked\r\n")
+			socket.write("\r\n")
+			
+			chunk = "foo=bar!"
+			socket.write("%X\r\n%s\r\n" % [chunk.size, chunk])
+			socket.write("0\r\n")
+			socket.close_write
+			
+			lines = socket.read.split(/\r?\n/)
+			lines.last.should == "bar!"
+		ensure
+			socket.close
+		end
+	end
+	
 	it "can properly handle custom headers" do
 		response = get_response('/welcome/headers_test')
 		response["X-Foo"].should == "Bar"

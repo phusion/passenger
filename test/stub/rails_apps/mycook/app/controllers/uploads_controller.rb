@@ -8,4 +8,8 @@ class UploadsController < ApplicationController
 			"name 2 = " + params[:upload][:name2] + "\n" +
 			"data = " + params[:upload][:data].read
 	end
+	
+	def single
+		render :text => params[:foo]
+	end
 end
