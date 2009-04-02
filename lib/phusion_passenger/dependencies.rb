@@ -342,7 +342,7 @@ module Dependencies # :nodoc: all
 					f.write("#include <zlib.h>")
 				end
 				Dir.chdir('/tmp') do
-					if system("g++ -c r8ee-check.c) >/dev/null 2>/dev/null")
+					if system("(g++ -c r8ee-check.c) >/dev/null 2>/dev/null")
 						result.found
 					else
 						result.not_found
@@ -354,7 +354,7 @@ module Dependencies # :nodoc: all
 			end
 		end
 		if RUBY_PLATFORM =~ /linux/
-			case LINUX_DISTRO
+			case PlatformInfo.linux_distro
 			when :ubuntu, :debian
 				dep.install_command = "apt-get install zlib1g-dev"
 			when :rhel, :fedora, :centos
