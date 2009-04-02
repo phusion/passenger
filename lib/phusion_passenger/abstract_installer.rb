@@ -154,7 +154,7 @@ private
 			color_puts "<red>Some required software is not installed.</red>"
 			color_puts "But don't worry, this installer will tell you how to install them.\n"
 			color_puts "<b>Press Enter to continue, or Ctrl-C to abort.</b>"
-			if Passenger.natively_packaged?
+			if PhusionPassenger.natively_packaged?
 				wait(10)
 			else
 				wait
