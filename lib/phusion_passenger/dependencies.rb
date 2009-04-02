@@ -333,6 +333,36 @@ module Dependencies # :nodoc: all
 		end
 		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM || "gem"} install rack</b>"
 	end
+	
+	Zlib_Dev = Dependency.new do |dep|
+		dep.name = "Zlib development headers"
+		dep.define_checker do |result|
+			begin
+				File.open('/tmp/r8ee-check.c', 'w') do |f|
+					f.write("#include <zlib.h>")
+				end
+				Dir.chdir('/tmp') do
+					if system("g++ -c r8ee-check.c) >/dev/null 2>/dev/null")
+						result.found
+					else
+						result.not_found
+					end
+				end
+			ensure
+				File.unlink('/tmp/r8ee-check.c') rescue nil
+				File.unlink('/tmp/r8ee-check.o') rescue nil
+			end
+		end
+		if RUBY_PLATFORM =~ /linux/
+			case LINUX_DISTRO
+			when :ubuntu, :debian
+				dep.install_command = "apt-get install zlib1g-dev"
+			when :rhel, :fedora, :centos
+				dep.install_command = "yum install zlib-devel"
+			end
+		end
+		dep.website = "http://www.zlib.net/"
+	end
 end
 
 end # module PhusionPassenger

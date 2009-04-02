@@ -26,7 +26,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 			Dependencies::RubyGems,
 			Dependencies::Rake,
 			Dependencies::FastThread,
-			Dependencies::Rack
+			Dependencies::Zlib_Dev
 		]
 	end
 	
