@@ -43,7 +43,13 @@ class ControlProcess
 		Dir["#{AdminTools.tmpdir}/passenger.*"].each do |dir|
 			dir =~ /passenger.(\d+)\Z/
 			next if !$1
-			pid = $1.to_i
+			
+			if File.exist?("#{dir}/info/control_process.pid")
+				pid = File.read("#{dir}/info/control_process.pid").strip.to_i
+			else
+				pid = $1.to_i
+			end
+			
 			begin
 				results << ControlProcess.new(pid, dir)
 			rescue ArgumentError

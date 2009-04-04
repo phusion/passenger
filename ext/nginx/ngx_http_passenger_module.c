@@ -295,6 +295,36 @@ start_helper_server(ngx_cycle_t *cycle)
     return NGX_OK;
 }
 
+/**
+ * Save the Nginx master process's PID into a file under the Phusion Passenger
+ * temp directory.
+ *
+ * A bug/limitation in Nginx doesn't allow us to initialize the temp dir *after*
+ * Nginx has daemonized, so the temp dir's filename contains Nginx's PID before
+ * daemonization. Normally PhusionPassenger::AdminTools::ControlProcess (used
+ * by e.g. passenger-status) will think that the temp dir is stale because the
+ * PID in the filename doesn't exist. This PID file tells AdminTools::ControlProcess
+ * what the actual PID is.
+ */
+static ngx_int_t
+save_master_process_pid(ngx_cycle_t *cycle) {
+	u_char filename[NGX_MAX_PATH];
+	u_char *last;
+	FILE *f;
+	
+	last = ngx_snprintf(filename, sizeof(filename) - 1,
+		"%s/info/control_process.pid", passenger_temp_dir);
+	*last = (u_char) '\0';
+	
+	f = fopen((const char *) filename, "w");
+	if (f != NULL) {
+		fprintf(f, "%ld", (long) getppid());
+		fclose(f);
+	}
+	
+	return NGX_OK;
+}
+
 static void
 shutdown_helper_server(ngx_cycle_t *cycle)
 {
@@ -504,7 +534,7 @@ ngx_module_t ngx_http_passenger_module = {
     NGX_HTTP_MODULE,                        /* module type */
     NULL,                                   /* init master */
     start_helper_server,                    /* init module */
-    NULL,                                   /* init process */
+    save_master_process_pid,                /* init process */
     NULL,                                   /* init thread */
     NULL,                                   /* exit thread */
     NULL,                                   /* exit process */
