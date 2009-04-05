@@ -27,6 +27,7 @@ class ControlProcess
 				# Stale Passenger temp folder. Clean it up if instructed.
 				if clean_stale
 					puts "*** Cleaning stale folder #{dir}"
+					FileUtils.chmod_R(0700, dir) if File.exist?(dir)
 					FileUtils.rm_rf(dir)
 				end
 			end
@@ -70,7 +71,7 @@ class ControlProcess
 private
 	def reload
 		return if @status
-		File.open("#{path}/status.fifo", 'r') do |f|
+		File.open("#{path}/info/status.fifo", 'r') do |f|
 			channel = MessageChannel.new(f)
 			@status = channel.read_scalar
 			@xml = channel.read_scalar

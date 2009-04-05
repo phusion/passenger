@@ -259,12 +259,16 @@ private
 				else
 					unix_path_max = 100
 				end
-				@socket_name = "#{passenger_tmpdir}/passenger_backend.#{generate_random_id(:base64)}"
+				@socket_name = "#{passenger_tmpdir}/backends/backend.#{generate_random_id(:base64)}"
 				@socket_name = @socket_name.slice(0, unix_path_max - 1)
 				@socket = UNIXServer.new(@socket_name)
 				@socket.listen(BACKLOG_SIZE)
 				@socket_type = "unix"
 				File.chmod(0600, @socket_name)
+				
+				# The SpawnManager class will set tighter permissions on the
+				# socket later on. See sendSpawnCommand in SpawnManager.h.
+				
 				done = true
 			rescue Errno::EADDRINUSE
 				# Do nothing, try again with another name.

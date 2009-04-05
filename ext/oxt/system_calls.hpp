@@ -27,6 +27,7 @@
 
 #include <boost/thread/tss.hpp>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <pthread.h>
@@ -131,6 +132,7 @@ namespace oxt {
 		
 		FILE *fopen(const char *path, const char *mode);
 		int fclose(FILE *fp);
+		int stat(const char *path, struct stat *buf);
 		
 		time_t time(time_t *t);
 		int usleep(useconds_t usec);

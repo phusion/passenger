@@ -17,6 +17,7 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 $LOAD_PATH.unshift("#{File.dirname(__FILE__)}/lib")
+$LOAD_PATH.unshift("#{File.dirname(__FILE__)}/misc")
 require 'rubygems'
 require 'rake/rdoctask'
 require 'rake/gempackagetask'
@@ -29,7 +30,7 @@ verbose true
 ##### Configuration
 
 # Don't forget to edit Configuration.h too
-PACKAGE_VERSION = "2.1.2"
+PACKAGE_VERSION = "2.1.3"
 OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 
 PlatformInfo.apxs2.nil? and raise "Could not find 'apxs' or 'apxs2'."
@@ -239,7 +240,9 @@ class TEST
 			../ext/apache2/Application.h
 			../ext/apache2/FileChecker.h),
 		'PoolOptionsTest.o' => %w(PoolOptionsTest.cpp ../ext/apache2/PoolOptions.h),
-		'FileCheckerTest.o' => %w(FileCheckerTest.cpp ../ext/apache2/FileChecker.h),
+		'FileCheckerTest.o' => %w(FileCheckerTest.cpp
+			../ext/apache2/FileChecker.h
+			../ext/apache2/CachedFileStat.h),
 		'SystemTimeTest.o' => %w(SystemTimeTest.cpp
 			../ext/apache2/SystemTime.h
 			../ext/apache2/SystemTime.cpp),
@@ -429,7 +432,7 @@ Rake::RDocTask.new(:clobber_rdoc => "rdoc:clobber", :rerdoc => "rdoc:force") do 
 	rd.rdoc_files.include("README", "DEVELOPERS.TXT",
 		"lib/phusion_passenger/*.rb",
 		"lib/phusion_passenger/*/*.rb",
-		"lib/rake/extensions.rb",
+		"misc/rake/extensions.rb",
 		"ext/phusion_passenger/*.c")
 	rd.template = "./doc/template/horo"
 	rd.title = "Passenger Ruby API"
@@ -488,6 +491,7 @@ spec = Gem::Specification.new do |s|
 		'ext/phusion_passenger/*.{c,rb}',
 		'benchmark/*.{cpp,rb}',
 		'misc/*',
+		'misc/*/*',
 		'vendor/**/*',
 		'test/*.{rb,cpp,example}',
 		'test/support/*',
@@ -518,9 +522,7 @@ spec = Gem::Specification.new do |s|
 	s.rdoc_options <<
 		"-S" << "-N" << "-p" << "-H" <<
 		'--main' << 'README' <<
-		'--template' << './doc/template/horo' <<
 		'--title' << 'Passenger Ruby API'
-	s.test_file = 'test/support/run_rspec_tests.rb'
 	s.description = "Passenger is an Apache module for Ruby on Rails support."
 end
 

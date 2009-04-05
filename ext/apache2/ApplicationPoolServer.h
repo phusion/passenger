@@ -403,7 +403,8 @@ private:
 				UPDATE_TRACE_POINT();
 				data->disconnect();
 				throw IOException("The ApplicationPool server unexpectedly "
-					"closed the connection.");
+					"closed the connection while we're reading a response "
+					"for the 'get' command.");
 			}
 			if (args[0] == "ok") {
 				UPDATE_TRACE_POINT();
@@ -433,7 +434,8 @@ private:
 					}
 					if (!result) {
 						throw IOException("The ApplicationPool server "
-							"unexpectedly closed the connection.");
+							"unexpectedly closed the connection while "
+							"we're reading the error page data.");
 					}
 					throw SpawnException(args[1], errorPage);
 				} else {
@@ -495,7 +497,7 @@ private:
 	void shutdownServer() {
 		TRACE_POINT();
 		this_thread::disable_syscall_interruption dsi;
-		int ret;
+		int ret, status;
 		time_t begin;
 		bool done = false;
 		
@@ -514,21 +516,34 @@ private:
 			 * Some Apache modules fork(), but don't close file descriptors.
 			 * mod_wsgi is one such example. Because of that, closing serverSocket
 			 * won't always cause the ApplicationPool server to exit. So we send it a
+			 * signal. This must be the same as the oxt/system_calls.hpp interruption
 			 * signal.
 			 */
 			syscalls::kill(serverPid, SIGINT);
 			
-			ret = syscalls::waitpid(serverPid, NULL, WNOHANG);
+			ret = syscalls::waitpid(serverPid, &status, WNOHANG);
 			done = ret > 0 || ret == -1;
 			if (!done) {
 				syscalls::usleep(100000);
 			}
 		}
 		if (done) {
-			P_TRACE(2, "ApplicationPoolServerExecutable exited.");
+			if (ret > 0) {
+				if (WIFEXITED(status)) {
+					P_TRACE(2, "ApplicationPoolServerExecutable exited with exit status " <<
+						WEXITSTATUS(status) << ".");
+				} else if (WIFSIGNALED(status)) {
+					P_TRACE(2, "ApplicationPoolServerExecutable exited because of signal " <<
+						WTERMSIG(status) << ".");
+				} else {
+					P_TRACE(2, "ApplicationPoolServerExecutable exited for an unknown reason.");
+				}
+			} else {
+				P_TRACE(2, "ApplicationPoolServerExecutable exited.");
+			}
 		} else {
 			P_DEBUG("ApplicationPoolServerExecutable not exited in time. Killing it...");
-			syscalls::kill(serverPid, SIGTERM);
+			syscalls::kill(serverPid, SIGKILL);
 			syscalls::waitpid(serverPid, NULL, 0);
 		}
 		
@@ -612,17 +627,12 @@ private:
 		TRACE_POINT();
 		char filename[PATH_MAX];
 		int ret;
-		mode_t permissions;
+		mode_t permissions = S_IRUSR | S_IWUSR;
 		
-		createPassengerTempDir();
+		createPassengerTempDir(getSystemTempDir(), m_user.empty(),
+			"nobody", geteuid(), getegid());
 		
-		if (m_user.empty()) {
-			permissions = S_IRUSR | S_IWUSR;
-		} else {
-			permissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
-		}
-		
-		snprintf(filename, sizeof(filename), "%s/status.fifo",
+		snprintf(filename, sizeof(filename), "%s/info/status.fifo",
 				getPassengerTempDir().c_str());
 		filename[PATH_MAX - 1] = '\0';
 		do {
@@ -642,6 +652,24 @@ private:
 			do {
 				ret = chmod(filename, permissions);
 			} while (ret == -1 && errno == EINTR);
+			
+			// Set the FIFO's owner according to whether we're running as root
+			// and whether user switching is enabled.
+			if (geteuid() == 0 && !m_user.empty()) {
+				uid_t uid;
+				gid_t gid;
+				
+				determineLowestUserAndGroup(m_user, uid, gid);
+				do {
+					ret = chown(filename, uid, gid);
+				} while (ret == -1 && errno == EINTR);
+				if (errno == -1) {
+					int e = errno;
+					P_WARN("*** WARNING: Unable to set the FIFO file '" <<
+						filename << "' its owner and group to that of user " <<
+						m_user << ": " << strerror(e) << " (" << e << ")");
+				}
+			}
 		}
 	}
 

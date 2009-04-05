@@ -336,12 +336,19 @@ protected
 	# temporary files. If +create+ is true, then this method creates the
 	# directory if it doesn't exist.
 	def passenger_tmpdir(create = true)
-		dir = ENV['PHUSION_PASSENGER_TMP']
+		dir = ENV['PASSENGER_INSTANCE_TEMP_DIR']
 		if dir.nil? || dir.empty?
-			dir = Dir.tmpdir
+			dir = "#{Dir.tmpdir}/passenger.#{Process.pid}"
+			ENV['PASSENGER_INSTANCE_TEMP_DIR'] = dir
 		end
 		if create && !File.exist?(dir)
-			system("mkdir", "-p", "-m", "u=rwxs,g=wx,o=wx", dir)
+			# This is a very minimal implementation of the function
+			# passengerCreateTempDir() in Utils.cpp. This implementation
+			# is only meant to make the unit tests pass. For production
+			# systems one should pre-create the temp directory with
+			# passengerCreateTempDir().
+			system("mkdir", "-p", "-m", "u=wxs,g=wx,o=wx", dir)
+			system("mkdir", "-p", "-m", "u=wxs,g=wx,o=wx", "#{dir}/backends")
 		end
 		return dir
 	end
@@ -484,9 +491,9 @@ module Signal
 end
 
 # Ruby's implementation of UNIXSocket#recv_io and UNIXSocket#send_io
-# are broken on 64-bit FreeBSD 7. So we override them with our own
-# implementation.
-if RUBY_PLATFORM =~ /freebsd/
+# are broken on 64-bit FreeBSD 7 and x86_64/ppc64 OS X. So we override them
+# with our own implementation.
+if RUBY_PLATFORM =~ /freebsd/ || (RUBY_PLATFORM =~ /darwin/ && RUBY_PLATFORM !~ /universal/)
 	require 'socket'
 	UNIXSocket.class_eval do
 		def recv_io
