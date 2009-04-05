@@ -56,6 +56,10 @@ class ControlProcess
 		return results
 	end
 	
+	def self.for_pid(pid)
+		return list(false).find { |c| c.pid == pid }
+	end
+	
 	def initialize(path)
 		@path = path
 		if File.exist?("#{path}/control_process.pid")

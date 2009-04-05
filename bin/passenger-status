@@ -69,7 +69,7 @@ def start
 			exit 1
 		end
 	else
-		show_status(ControlProcess.new(ARGV[0].to_i))
+		show_status(ControlProcess.for_pid(ARGV[0].to_i))
 	end
 end
 
