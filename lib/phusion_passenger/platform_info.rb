@@ -403,13 +403,35 @@ public
 			flags << apxs2_flags
 		end
 		if !httpd.nil? && RUBY_PLATFORM =~ /darwin/
-			# Add possible universal binary flags.
-			architectures = []
-			`file "#{httpd}"`.split("\n").grep(/for architecture/).each do |line|
-				line =~ /for architecture (.*?)\)/
-				architectures << "-arch #{$1}"
+			# The default Apache install on OS X is a universal binary.
+			# Figure out which architectures it's compiled for and do the same
+			# thing for mod_passenger. We use the 'file' utility to do this.
+			#
+			# Running 'file' on the Apache executable usually outputs something
+			# like this:
+			#
+			#   /usr/sbin/httpd: Mach-O universal binary with 4 architectures
+			#   /usr/sbin/httpd (for architecture ppc7400):     Mach-O executable ppc
+			#   /usr/sbin/httpd (for architecture ppc64):       Mach-O 64-bit executable ppc64
+			#   /usr/sbin/httpd (for architecture i386):        Mach-O executable i386
+			#   /usr/sbin/httpd (for architecture x86_64):      Mach-O 64-bit executable x86_64
+			#
+			# But on some machines, it may output just:
+			#
+			#   /usr/sbin/httpd: Mach-O fat file with 4 architectures
+			#
+			# (http://code.google.com/p/phusion-passenger/issues/detail?id=236)
+			output = `file "#{httpd}"`.strip
+			if output =~ /Mach-O fat file/ && output !~ /for architecture/
+				architectures = ["-arch i386 -arch ppc -arch x86_64 -arch ppc64"]
+			else
+				architectures = []
+				output.split("\n").grep(/for architecture/).each do |line|
+					line =~ /for architecture (.*?)\)/
+					architectures << "-arch #{$1}"
+				end
 			end
-			flags << architectures.join(' ')
+			flags << architectures.compact.join(' ')
 		end
 		return flags.compact.join(' ').strip
 	end
