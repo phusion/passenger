@@ -103,28 +103,19 @@ public:
 	 * @return 0 if the stat() call succeeded or if no stat() was performed,
 	 *         -1 if something went wrong while statting the file. In the latter
 	 *         case, <tt>errno</tt> will be populated with an appropriate error code.
-	 * @throws SystemException Something went wrong while retrieving the system time.
+	 * @throws SystemException Something went wrong while retrieving the
+	 *         system time. stat() errors will <em>not</em> result in SystemException
+	 *         being thrown.
 	 * @throws boost::thread_interrupted
 	 */
 	int refresh(unsigned int throttleRate) {
 		time_t currentTime;
-		int ret;
 		
 		if (expired(last_time, throttleRate, currentTime)) {
-			ret = stat(filename.c_str(), &info);
-			if (ret == -1 && errno == EINTR) {
-				/* If the stat() call was interrupted, then don't
-				 * update any state so that the caller can call
-				 * this function again without us returning a
-				 * cached EINTR error.
-				 */
-				return -1;
-			} else {
-				last_result = ret;
-				last_errno = errno;
-				last_time = currentTime;
-				return ret;
-			}
+			last_result = syscalls::stat(filename.c_str(), &info);
+			last_errno = errno;
+			last_time = currentTime;
+			return last_result;
 		} else {
 			errno = last_errno;
 			return last_result;

@@ -1,6 +1,7 @@
 require 'support/config'
 
-require 'tempfile'
+require 'tmpdir'
+require 'fileutils'
 require 'phusion_passenger/utils'
 
 include PhusionPassenger
@@ -33,34 +34,39 @@ describe Utils do
 	
 	describe "#passenger_tmpdir" do
 		before :each do
-			ENV.delete('PHUSION_PASSENGER_TMP')
+			@old_instance_temp_dir = ENV['PASSENGER_INSTANCE_TEMP_DIR']
+			ENV.delete('PASSENGER_INSTANCE_TEMP_DIR')
 		end
 		
 		after :each do
-			ENV.delete('PHUSION_PASSENGER_TMP')
+			if @old_instance_temp_dir
+				ENV['PASSENGER_INSTANCE_TEMP_DIR'] = @old_instance_temp_dir
+			else
+				ENV.delete('PASSENGER_INSTANCE_TEMP_DIR')
+			end
 		end
 		
-		it "returns Dir.tmpdir if ENV['PHUSION_PASSENGER_TMP'] is nil" do
-			passenger_tmpdir(false).should == Dir.tmpdir
+		it "returns a directory under Dir.tmpdir if ENV['PASSENGER_INSTANCE_TEMP_DIR'] is nil" do
+			File.dirname(passenger_tmpdir(false)).should == Dir.tmpdir
 		end
 		
-		it "returns Dir.tmpdir if ENV['PHUSION_PASSENGER_TMP'] is an empty string" do
-			ENV['PHUSION_PASSENGER_TMP'] = ''
-			passenger_tmpdir(false).should == Dir.tmpdir
+		it "returns a directory under Dir.tmpdir if ENV['PASSENGER_INSTANCE_TEMP_DIR'] is an empty string" do
+			ENV['PASSENGER_INSTANCE_TEMP_DIR'] = ''
+			File.dirname(passenger_tmpdir(false)).should == Dir.tmpdir
 		end
 		
-		it "returns ENV['PHUSION_PASSENGER_TMP'] if it's set" do
-			ENV['PHUSION_PASSENGER_TMP'] = '/foo'
+		it "returns ENV['PASSENGER_INSTANCE_TEMP_DIR'] if it's set" do
+			ENV['PASSENGER_INSTANCE_TEMP_DIR'] = '/foo'
 			passenger_tmpdir(false).should == '/foo'
 		end
 		
 		it "creates the directory if it doesn't exist, if the 'create' argument is true" do
-			ENV['PHUSION_PASSENGER_TMP'] = 'utils_spec.tmp'
+			ENV['PASSENGER_INSTANCE_TEMP_DIR'] = 'utils_spec.tmp'
 			passenger_tmpdir
 			begin
 				File.directory?('utils_spec.tmp').should be_true
 			ensure
-				Dir.rmdir('utils_spec.tmp') rescue nil
+				FileUtils.rm_rf('utils_spec.tmp')
 			end
 		end
 	end

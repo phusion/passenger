@@ -8,7 +8,8 @@ include PhusionPassenger
 
 describe AbstractRequestHandler do
 	before :each do
-		ENV['PHUSION_PASSENGER_TMP'] = "abstract_request_handler_spec.tmp"
+		@old_instance_temp_dir = ENV['PASSENGER_INSTANCE_TEMP_DIR']
+		ENV['PASSENGER_INSTANCE_TEMP_DIR'] = "abstract_request_handler_spec.tmp"
 		@owner_pipe = IO.pipe
 		@request_handler = AbstractRequestHandler.new(@owner_pipe[1])
 		def @request_handler.process_request(*args)
@@ -19,7 +20,11 @@ describe AbstractRequestHandler do
 	after :each do
 		@request_handler.cleanup
 		@owner_pipe[0].close rescue nil
-		ENV.delete('PHUSION_PASSENGER_TMP')
+		if @old_instance_temp_dir
+			ENV['PASSENGER_INSTANCE_TEMP_DIR'] = @old_instance_temp_dir
+		else
+			ENV.delete('PASSENGER_INSTANCE_TEMP_DIR')
+		end
 		FileUtils.rm_rf("abstract_request_handler_spec.tmp")
 	end
 	
@@ -54,7 +59,8 @@ describe AbstractRequestHandler do
 	
 	it "creates a socket file in the Phusion Passenger temp folder, unless when using TCP sockets" do
 		if @request_handler.socket_type == "unix"
-			Dir["abstract_request_handler_spec.tmp/*"].should_not be_empty
+			File.chmod(0700, "abstract_request_handler_spec.tmp/backends")
+			Dir["abstract_request_handler_spec.tmp/backends/*"].should_not be_empty
 		end
 	end
 	

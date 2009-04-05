@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <limits.h>
+#include <string.h>
 
 using namespace Passenger;
 using namespace std;
@@ -14,17 +15,28 @@ namespace tut {
 	struct UtilsTest {
 		vector<string> output;
 		string oldPath;
+		char *oldInstanceTempDir;
 		
 		UtilsTest() {
 			oldPath = getenv("PATH");
+			oldInstanceTempDir = getenv("PASSENGER_INSTANCE_TEMP_DIR");
+			if (oldInstanceTempDir != NULL) {
+				oldInstanceTempDir = strdup(oldInstanceTempDir);
+			}
+			
 			unsetenv("TMPDIR");
-			unsetenv("PHUSION_PASSENGER_TMP");
+			unsetenv("PASSENGER_INSTANCE_TEMP_DIR");
 		}
 		
 		~UtilsTest() {
 			setenv("PATH", oldPath.c_str(), 1);
 			unsetenv("TMPDIR");
-			unsetenv("PHUSION_PASSENGER_TMP");
+			if (oldInstanceTempDir == NULL) {
+				unsetenv("PASSENGER_INSTANCE_TEMP_DIR");
+			} else {
+				setenv("PASSENGER_INSTANCE_TEMP_DIR", oldInstanceTempDir, 1);
+				free(oldInstanceTempDir);
+			}
 		}
 	};
 	
@@ -123,23 +135,23 @@ namespace tut {
 	}
 	
 	
-	/***** Test getTempDir() *****/
+	/***** Test getSystemTempDir() *****/
 	
 	TEST_METHOD(11) {
 		// It returns "/tmp" if the TMPDIR environment is NULL.
-		ensure_equals(string(getTempDir()), "/tmp");
+		ensure_equals(string(getSystemTempDir()), "/tmp");
 	}
 	
 	TEST_METHOD(12) {
 		// It returns "/tmp" if the TMPDIR environment is an empty string.
 		setenv("TMPDIR", "", 1);
-		ensure_equals(string(getTempDir()), "/tmp");
+		ensure_equals(string(getSystemTempDir()), "/tmp");
 	}
 	
 	TEST_METHOD(13) {
 		// It returns the value of the TMPDIR environment if it is not NULL and not empty.
 		setenv("TMPDIR", "/foo", 1);
-		ensure_equals(string(getTempDir()), "/foo");
+		ensure_equals(string(getSystemTempDir()), "/foo");
 	}
 	
 	
@@ -154,74 +166,72 @@ namespace tut {
 	}
 	
 	TEST_METHOD(16) {
-		// It caches the result into the PHUSION_PASSENGER_TMP environment variable.
+		// It caches the result into the PASSENGER_INSTANCE_TEMP_DIR environment variable.
 		char dir[128];
 		
 		snprintf(dir, sizeof(dir), "/tmp/passenger.%lu", (unsigned long) getpid());
 		getPassengerTempDir();
-		ensure_equals(getenv("PHUSION_PASSENGER_TMP"), string(dir));
+		ensure_equals(getenv("PASSENGER_INSTANCE_TEMP_DIR"), string(dir));
 	}
 	
 	TEST_METHOD(17) {
-		// It returns the value of the PHUSION_PASSENGER_TMP environment variable if it's not NULL and not an empty string.
-		setenv("PHUSION_PASSENGER_TMP", "/foo", 1);
+		// It returns the value of the PASSENGER_INSTANCE_TEMP_DIR environment
+		// variable if it's not NULL and not an empty string.
+		setenv("PASSENGER_INSTANCE_TEMP_DIR", "/foo", 1);
 		ensure_equals(getPassengerTempDir(), "/foo");
 	}
 	
 	TEST_METHOD(18) {
-		// It does not use query the PHUSION_PASSENGER_TMP environment variable if bypassCache is true.
+		// It does not use query the PASSENGER_INSTANCE_TEMP_DIR environment variable if bypassCache is true.
 		char dir[128];
 		
-		setenv("PHUSION_PASSENGER_TMP", "/foo", 1);
+		setenv("PASSENGER_INSTANCE_TEMP_DIR", "/foo", 1);
 		snprintf(dir, sizeof(dir), "/tmp/passenger.%lu", (unsigned long) getpid());
 		ensure_equals(getPassengerTempDir(true), dir);
 	}
 	
+	TEST_METHOD(19) {
+		// It uses the systemTempDir argument if it's not the empty string.
+		char dir[128];
+		
+		snprintf(dir, sizeof(dir), "/foo/passenger.%lu", (unsigned long) getpid());
+		ensure_equals(getPassengerTempDir(false, "/foo"), dir);
+	}
 	
-	/***** Test TempFile *****/
+	
+	/***** Test BufferedUpload *****/
+	
+	struct TemporarilySetInstanceTempDir {
+		TemporarilySetInstanceTempDir() {
+			setenv("PASSENGER_INSTANCE_TEMP_DIR", "utils_test.tmp", 1);
+			mkdir("utils_test.tmp", S_IRWXU);
+			mkdir(BufferedUpload::getDir().c_str(), S_IRWXU);
+		}
+		
+		~TemporarilySetInstanceTempDir() {
+			removeDirTree("utils_test.tmp");
+		}
+	};
 	
 	TEST_METHOD(20) {
-		// It creates a temp file inside getPassengerTempDir().
-		setenv("PHUSION_PASSENGER_TMP", "utils_test.tmp", 1);
-		mkdir("utils_test.tmp", S_IRWXU);
-		TempFile t("temp", false);
-		unsigned int size = listDir("utils_test.tmp").size();
-		removeDirTree("utils_test.tmp");
-		ensure_equals(size, 1u);
+		// The resulting file handle is readable and writable.
+		TemporarilySetInstanceTempDir d;
+		BufferedUpload t;
+		char line[30];
+		
+		fprintf(t.handle, "hello world!");
+		fflush(t.handle);
+		fseek(t.handle, 0, SEEK_SET);
+		memset(line, 0, sizeof(line));
+		fgets(line, sizeof(line), t.handle);
+		ensure_equals(string(line), "hello world!");
 	}
 	
 	TEST_METHOD(21) {
-		// It deletes the temp file upon destruction.
-		setenv("PHUSION_PASSENGER_TMP", "utils_test.tmp", 1);
-		mkdir("utils_test.tmp", S_IRWXU);
-		{
-			TempFile t("temp", false);
-		}
-		bool dirEmpty = listDir("utils_test.tmp").empty();
-		removeDirTree("utils_test.tmp");
-		ensure(dirEmpty);
-	}
-	
-	TEST_METHOD(22) {
-		// The temp file's filename is constructed using the given identifier.
-		setenv("PHUSION_PASSENGER_TMP", "utils_test.tmp", 1);
-		mkdir("utils_test.tmp", S_IRWXU);
-		TempFile t("foobar", false);
-		vector<string> files(listDir("utils_test.tmp"));
-		removeDirTree("utils_test.tmp");
-		
-		ensure(files[0].find("foobar") != string::npos);
-	}
-	
-	TEST_METHOD(23) {
-		// It immediately unlinks the temp file if 'anonymous' is true.
-		// It creates a temp file inside getPassengerTempDir().
-		setenv("PHUSION_PASSENGER_TMP", "utils_test.tmp", 1);
-		mkdir("utils_test.tmp", S_IRWXU);
-		TempFile t;
-		unsigned int size = listDir("utils_test.tmp").size();
-		removeDirTree("utils_test.tmp");
-		ensure_equals(size, 0u);
+		// It immediately unlinks the temp file.
+		TemporarilySetInstanceTempDir d;
+		BufferedUpload t;
+		ensure_equals(listDir(BufferedUpload::getDir().c_str()).size(), 0u);
 	}
 	
 	/***** Test escapeForXml() *****/

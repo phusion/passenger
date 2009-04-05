@@ -164,34 +164,9 @@ private:
 	 */
 	void lowerPrivilege(const string &username) {
 		struct passwd *entry;
-		int ret, e;
 		
 		entry = getpwnam(username.c_str());
 		if (entry != NULL) {
-			do {
-				ret = chown(getPassengerTempDir().c_str(),
-					entry->pw_uid, entry->pw_gid);
-			} while (ret == -1 && errno == EINTR);
-			if (ret == -1) {
-				e = errno;
-				P_WARN("WARNING: Unable to change owner for directory '" <<
-					getPassengerTempDir() << "' to '" << username <<
-					"': " << strerror(e) << " (" << e << ")");
-			} else {
-				do {
-					ret = chmod(getPassengerTempDir().c_str(),
-						S_IRUSR | S_IWUSR | S_IXUSR);
-				} while (ret == -1 && errno == EINTR);
-				if (ret == -1) {
-					e = errno;
-					P_WARN("WARNING: Unable to change "
-						"permissions for directory " <<
-						getPassengerTempDir() << ": " <<
-						strerror(e) <<
-						" (" << e << ")");
-				}
-			}
-			
 			if (initgroups(username.c_str(), entry->pw_gid) != 0) {
 				int e = errno;
 				P_WARN("WARNING: Unable to lower ApplicationPoolServerExecutable's "
@@ -221,29 +196,22 @@ private:
 	}
 	
 	static void fatalSignalHandler(int signum) {
-		static void (* const defaultHandler)(int) = SIG_DFL;
-		static bool calledBefore = false;
+		char message[1024];
 		
-		if (calledBefore) {
-			// If we're here then it means that this signal
-			// handler crashed, and we weren't even able to
-			// call write() or system()! Abort immediately:
-			defaultHandler(signum);
-		} else {
-			calledBefore = true;
-			write(STDERR_FILENO,
-				"*** ERROR: ApplicationPoolServerExecutable received a "
-				"fatal signal. Running gdb to obtain the backtrace:\n\n",
-				sizeof("*** ERROR: ApplicationPoolServerExecutable caught "
-				       "fatal signal. Running gdb to obtain the backtrace:\n\n") - 1
-			);
-			write(STDERR_FILENO, "----------------- Begin gdb output -----------------\n",
-				sizeof("----------------- Begin gdb output -----------------\n") - 1);
-			system(gdbBacktraceGenerationCommandStr);
-			write(STDERR_FILENO, "----------------- End gdb output -----------------\n",
-				sizeof("----------------- End gdb output -----------------\n") - 1);
-			defaultHandler(signum);
-		}
+		snprintf(message, sizeof(message) - 1,
+			"*** ERROR: ApplicationPoolServerExecutable received fatal signal "
+			"%d. Running gdb to obtain the backtrace:\n\n",
+			signum);
+		message[sizeof(message) - 1] = '\0';
+		write(STDERR_FILENO, message, strlen(message));
+		write(STDERR_FILENO, "----------------- Begin gdb output -----------------\n",
+			sizeof("----------------- Begin gdb output -----------------\n") - 1);
+		system(gdbBacktraceGenerationCommandStr);
+		write(STDERR_FILENO, "----------------- End gdb output -----------------\n",
+			sizeof("----------------- End gdb output -----------------\n") - 1);
+		
+		// Invoke default signal handler.
+		kill(getpid(), signum);
 	}
 	
 	void setupSignalHandlers() {
@@ -259,7 +227,7 @@ private:
 		FILE *f;
 		string gdbCommandFile;
 		
-		gdbCommandFile = getPassengerTempDir() + "/gdb_backtrace_command.txt";
+		gdbCommandFile = getPassengerTempDir() + "/info/gdb_backtrace_command.txt";
 		f = fopen(gdbCommandFile.c_str(), "w");
 		if (f != NULL) {
 			// Write a file which contains commands for gdb to obtain
@@ -276,12 +244,17 @@ private:
 			
 			// Install the signal handlers.
 			action.sa_handler = fatalSignalHandler;
-			action.sa_flags   = 0;
+			action.sa_flags   = SA_RESETHAND;
 			sigemptyset(&action.sa_mask);
-			sigaction(SIGSEGV, &action, NULL);
+			sigaction(SIGQUIT, &action, NULL);
+			sigaction(SIGILL,  &action, NULL);
 			sigaction(SIGABRT, &action, NULL);
-			sigaction(SIGILL, &action, NULL);
-			sigaction(SIGFPE, &action, NULL);
+			sigaction(SIGFPE,  &action, NULL);
+			sigaction(SIGBUS,  &action, NULL);
+			sigaction(SIGSEGV, &action, NULL);
+			sigaction(SIGALRM, &action, NULL);
+			sigaction(SIGUSR1, &action, NULL);
+			sigaction(SIGUSR2, &action, NULL);
 		}
 	}
 
@@ -299,6 +272,8 @@ public:
 		this->serverSocket = serverSocket;
 		this->statusReportFIFO = statusReportFIFO;
 		this->user = user;
+		
+		P_TRACE(2, "ApplicationPoolServerExecutable initialized (PID " << getpid() << ")");
 	}
 	
 	~Server() {
