@@ -41,22 +41,14 @@ class ControlProcess
 	def self.list(clean_stale = true)
 		results = []
 		Dir["#{AdminTools.tmpdir}/passenger.*"].each do |dir|
-			dir =~ /passenger.(\d+)\Z/
-			next if !$1
-			
-			if File.exist?("#{dir}/info/control_process.pid")
-				pid = File.read("#{dir}/info/control_process.pid").strip.to_i
-			else
-				pid = $1.to_i
-			end
-			
+			next if dir !~ /passenger.(\d+)\Z/
 			begin
-				results << ControlProcess.new(pid, dir)
+				results << ControlProcess.new(dir)
 			rescue ArgumentError
 				# Stale Passenger temp folder. Clean it up if instructed.
 				if clean_stale
 					puts "*** Cleaning stale folder #{dir}"
-					FileUtils.chmod_R(0700, dir) if File.exist?(dir)
+					FileUtils.chmod_R(0700, dir) rescue nil
 					FileUtils.rm_rf(dir)
 				end
 			end
@@ -64,15 +56,16 @@ class ControlProcess
 		return results
 	end
 	
-	def initialize(pid, path = nil)
-		if !AdminTools.process_is_alive?(pid)
-			raise ArgumentError, "There is no control process with PID #{pid}."
-		end
-		@pid = pid
-		if path
-			@path = path
+	def initialize(path)
+		@path = path
+		if File.exist?("#{path}/control_process.pid")
+			@pid = File.read("#{path}/control_process.pid").strip.to_i
 		else
-			@path = "#{AdminTools.tmpdir}/passenger.#{pid}"
+			path =~ /passenger.(\d+)\Z/
+			@pid = $1.to_i
+		end
+		if !AdminTools.process_is_alive?(@pid)
+			raise ArgumentError, "There is no control process with PID #{@pid}."
 		end
 	end
 	

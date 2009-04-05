@@ -30,6 +30,7 @@
 #include <nginx.h>
 
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -111,6 +112,8 @@ start_helper_server(ngx_cycle_t *cycle)
     u_char                 user_switching_string[2];
     u_char                 worker_uid_string[15];
     u_char                 worker_gid_string[15];
+    u_char                 filename[NGX_MAX_PATH];
+    u_char                *last;
     int                    admin_pipe[2], feedback_pipe[2], e;
     pid_t                  pid;
     long                   i;
@@ -286,6 +289,20 @@ start_helper_server(ngx_cycle_t *cycle)
         /* Wait until the HelperServer has done initializing. */
         read(feedback_pipe[0], &buf, 1);
         close(feedback_pipe[0]);
+        
+        /* Create the file passenger_temp_dir + "/control_process.pid"
+         * and make it writable by the worker processes. This is because
+         * save_master_process_pid is run after Nginx has lowered privileges.
+         */
+        last = ngx_snprintf(filename, sizeof(filename) - 1,
+                            "%s/control_process.pid", passenger_temp_dir);
+        *last = (u_char) '\0';
+        f = fopen((const char *) filename, "w");
+        if (f != NULL) {
+            fchmod(fileno(f), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+            fchown(fileno(f), ccf->user, ccf->group);
+            fclose(f);
+        }
                 
         helper_server_pid        = pid;
         helper_server_admin_pipe = admin_pipe[1];
@@ -313,7 +330,7 @@ save_master_process_pid(ngx_cycle_t *cycle) {
 	FILE *f;
 	
 	last = ngx_snprintf(filename, sizeof(filename) - 1,
-		"%s/info/control_process.pid", passenger_temp_dir);
+		"%s/control_process.pid", passenger_temp_dir);
 	*last = (u_char) '\0';
 	
 	f = fopen((const char *) filename, "w");
