@@ -158,12 +158,12 @@ start_helper_server(ngx_cycle_t *cycle)
                  (int) main_conf->user_switching);
     
     ngx_memzero(worker_uid_string, sizeof(worker_uid_string));
-    ngx_snprintf(worker_uid_string, sizeof(worker_uid_string), "%lld",
+    ngx_snprintf(worker_uid_string, sizeof(worker_uid_string), "%L",
                  (long long) ccf->user);
     
-     ngx_memzero(worker_gid_string, sizeof(worker_gid_string));
-     ngx_snprintf(worker_gid_string, sizeof(worker_gid_string), "%lld",
-                  (long long) ccf->group);
+    ngx_memzero(worker_gid_string, sizeof(worker_gid_string));
+    ngx_snprintf(worker_gid_string, sizeof(worker_gid_string), "%L",
+                 (long long) ccf->group);
     
     /* Generate random password for the helper server. */
     
