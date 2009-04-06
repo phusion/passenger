@@ -302,6 +302,9 @@ start_helper_server(ngx_cycle_t *cycle)
             fchmod(fileno(f), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
             fchown(fileno(f), ccf->user, ccf->group);
             fclose(f);
+        } else {
+            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                          "could not create %s", filename);
         }
                 
         helper_server_pid        = pid;
