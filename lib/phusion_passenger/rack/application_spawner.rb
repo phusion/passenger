@@ -19,6 +19,7 @@ require 'rack'
 
 require 'socket'
 require 'phusion_passenger/application'
+require 'phusion_passenger/events'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/abstract_request_handler'
 require 'phusion_passenger/utils'
@@ -96,11 +97,14 @@ private
 				channel.send_io(writer)
 				writer.close
 				channel.close
+				
+				PhusionPassenger.call_event(:starting_worker_process)
 				handler.main_loop
 			ensure
 				channel.close rescue nil
 				writer.close rescue nil
 				handler.cleanup rescue nil
+				PhusionPassenger.call_event(:stopping_worker_process)
 			end
 		end
 	end
