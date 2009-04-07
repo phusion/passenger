@@ -328,24 +328,24 @@ start_helper_server(ngx_cycle_t *cycle)
  */
 static ngx_int_t
 save_master_process_pid(ngx_cycle_t *cycle) {
-	u_char filename[NGX_MAX_PATH];
-	u_char *last;
-	FILE *f;
-	
-	last = ngx_snprintf(filename, sizeof(filename) - 1,
-		"%s/control_process.pid", passenger_temp_dir);
-	*last = (u_char) '\0';
-	
-	f = fopen((const char *) filename, "w");
-	if (f != NULL) {
-		fprintf(f, "%ld", (long) getppid());
-		fclose(f);
-	} else {
+    u_char filename[NGX_MAX_PATH];
+    u_char *last;
+    FILE *f;
+    
+    last = ngx_snprintf(filename, sizeof(filename) - 1,
+        "%s/control_process.pid", passenger_temp_dir);
+    *last = (u_char) '\0';
+    
+    f = fopen((const char *) filename, "w");
+    if (f != NULL) {
+        fprintf(f, "%ld", (long) getppid());
+        fclose(f);
+    } else {
         ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
                       "could not create %s", filename);
     }
-	
-	return NGX_OK;
+    
+    return NGX_OK;
 }
 
 static void
