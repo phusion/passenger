@@ -340,7 +340,10 @@ save_master_process_pid(ngx_cycle_t *cycle) {
 	if (f != NULL) {
 		fprintf(f, "%ld", (long) getppid());
 		fclose(f);
-	}
+	} else {
+        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                      "could not create %s", filename);
+    }
 	
 	return NGX_OK;
 }
