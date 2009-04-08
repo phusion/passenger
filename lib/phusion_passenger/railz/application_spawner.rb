@@ -270,9 +270,9 @@ private
 		if !defined?(Dispatcher)
 			require 'dispatcher'
 		end
-		if File.exist?('app/controllers/application_controller.rb')
+		begin
 			require_dependency 'application_controller'
-		else
+		rescue LoadError
 			require_dependency 'application'
 		end
 		
