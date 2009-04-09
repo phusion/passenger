@@ -34,6 +34,13 @@
 
 #define NGX_HTTP_SCGI_PARSE_NO_HEADER  20
 
+typedef enum {
+    FT_ERROR,
+    FT_FILE,
+    FT_DIRECTORY,
+    FT_OTHER
+} FileType;
+
 
 static ngx_int_t reinit_request(ngx_http_request_t *r);
 static ngx_int_t process_status_line(ngx_http_request_t *r);
@@ -50,14 +57,31 @@ uint_to_str(ngx_uint_t i, u_char *str, ngx_uint_t size) {
     ngx_snprintf(str, size, "%ui", i);
 }
 
+static FileType
+get_file_type(const u_char *filename, unsigned int throttle_rate) {
+    struct stat buf;
+    int ret;
+    
+    ret = cached_multi_file_stat_perform(passenger_stat_cache,
+                                         (const char *) filename,
+                                         &buf,
+                                         throttle_rate);
+    if (ret == 0) {
+        if (S_ISREG(buf.st_mode)) {
+            return FT_FILE;
+        } else if (S_ISDIR(buf.st_mode)) {
+            return FT_DIRECTORY;
+        } else {
+            return FT_OTHER;
+        }
+    } else {
+        return FT_ERROR;
+    }
+}
+
 static int
 file_exists(const u_char *filename, unsigned int throttle_rate) {
-    struct stat buf;
-    return cached_multi_file_stat_perform(passenger_stat_cache,
-                                          (const char *) filename,
-                                          &buf,
-                                          throttle_rate) == 0
-        && S_ISREG(buf.st_mode);
+    return get_file_type(filename, throttle_rate) == FT_FILE;
 }
 
 static passenger_app_type_t
@@ -93,6 +117,7 @@ detect_application_type(const ngx_str_t *public_dir) {
  *
  * @return Whether the URI has been successfully mapped to a page cache file.
  * @param r The corresponding request.
+ * @param public_dir The web application's 'public' directory.
  * @param filename The filename that the URI normally maps to.
  * @param filename_len The length of the <tt>filename</tt> string.
  * @param root The size of the root path in <tt>filename</tt>.
@@ -103,27 +128,58 @@ detect_application_type(const ngx_str_t *public_dir) {
  *                        to the size of this buffer, including terminating NUL.
  */
 static int
-map_uri_to_page_cache_file(ngx_http_request_t *r, const u_char *filename,
-                           size_t filename_len, size_t root,
+map_uri_to_page_cache_file(ngx_http_request_t *r, ngx_str_t *public_dir,
+                           const u_char *filename, size_t filename_len,
                            ngx_str_t *page_cache_file)
 {
     u_char *end;
-    size_t  len;
     
-    if (r->method != NGX_HTTP_GET && r->method != NGX_HTTP_HEAD) {
+    fprintf(stderr, "URI originally maps to: %s\n", (const char *) filename);
+    fflush(stderr);
+    if ((r->method != NGX_HTTP_GET && r->method != NGX_HTTP_HEAD) || filename_len == 0) {
         return 0;
     }
     
-    if (filename_len > page_cache_file->len - sizeof(".html")) {
-        len = NGX_MAX_PATH - sizeof(".html");
+    /* From this point on we know that filename is not an empty string. */
+    
+    /* Check whether filename is equal to public_dir. filename may also be equal to
+     * public_dir + "/" so check for that as well.
+     */
+    if ((public_dir->len == filename_len && memcmp(public_dir->data, filename,
+                                                   filename_len) == 0) ||
+        (public_dir->len == filename_len - 1 &&
+         filename[filename_len - 1] == '/' &&
+         memcmp(public_dir->data, filename, filename_len - 1) == 0)
+       ) {
+        /* If the URI maps to the 'public' directory (i.e. the request is the
+         * base URI) then index.html is the page cache file.
+         */
+        
+        if (filename_len + sizeof("/index.html") > page_cache_file->len) {
+            /* Page cache filename doesn't fit in the buffer. */
+            return 0;
+        }
+        
+        end = ngx_copy(page_cache_file->data, filename, filename_len);
+        if (filename[filename_len - 1] != '/') {
+            end = ngx_copy(end, "/", 1);
+        }
+        end = ngx_copy(end, "index.html", sizeof("index.html"));
+        
     } else {
-        len = filename_len;
+        /* Otherwise, the page cache file is just filename + ".html". */
+        
+        if (filename_len + sizeof(".html") > page_cache_file->len) {
+            /* Page cache filename doesn't fit in the buffer. */
+            return 0;
+        }
+        
+        end = ngx_copy(page_cache_file->data, filename, filename_len);
+        end = ngx_copy(end, ".html", sizeof(".html"));
     }
-    end = ngx_copy(page_cache_file->data, filename, filename_len);
-    end = ngx_copy(end, ".html", sizeof(".html"));
     
     if (file_exists(page_cache_file->data, 0)) {
-        page_cache_file->len = end - page_cache_file->data;
+        page_cache_file->len = end - page_cache_file->data - 1;
         return 1;
     } else {
         return 0;
@@ -937,6 +993,8 @@ passenger_content_handler(ngx_http_request_t *r)
     passenger_loc_conf_t  *slcf;
     ngx_str_t              path, base_uri;
     u_char                *path_last, *end;
+    u_char                 root_path_str[NGX_MAX_PATH + 1];
+    ngx_str_t              root_path;
     size_t                 root, len;
     u_char                 page_cache_file_str[NGX_MAX_PATH + 1];
     ngx_str_t              page_cache_file;
@@ -966,14 +1024,14 @@ passenger_content_handler(ngx_http_request_t *r)
         return NGX_DECLINED;
     }
     
-    /* If there's a corresponding page cache file for this URL, then serve that
-     * file instead.
+    /* Create a string containing the root path. This path already
+     * contains a trailing slash.
      */
-    page_cache_file.data = page_cache_file_str;
-    page_cache_file.len  = sizeof(page_cache_file_str);
-    if (map_uri_to_page_cache_file(r, path.data, path_last - path.data, root, &page_cache_file)) {
-        return passenger_static_content_handler(r, &page_cache_file);
-    }
+    end = ngx_copy(root_path_str, path.data, root);
+    *end = '\0';
+    root_path.data = root_path_str;
+    root_path.len  = root;
+    
     
     context = ngx_pcalloc(r->pool, sizeof(passenger_context_t));
     if (context == NULL) {
@@ -981,37 +1039,45 @@ passenger_content_handler(ngx_http_request_t *r)
     }
     ngx_http_set_ctx(r, context, ngx_http_passenger_module);
     
-    /* Cut the path string off at the end of the root component, because from
-     * this point on we're only interested in the root path, not the filename.
-     *
-     * This root path already contains a trailing slash.
-     */
-    path.data[root] = (u_char) '\0';
-    path.len = root;
     
-    
-    u = ngx_pcalloc(r->pool, sizeof(ngx_http_upstream_t));
-    if (u == NULL) {
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-    
-    
+    /* Find the base URI for this web application, if any. */
     if (find_base_uri(r, slcf, &base_uri)) {
-        len = path.len + base_uri.len + 1;
-        context->public_dir.data = ngx_palloc(r->pool,
-                                                        sizeof(u_char) * len);
-        end = ngx_copy(context->public_dir.data, path.data, path.len);
+        /* Store the found base URI in context->public_dir. We infer that the 'public'
+         * directory of the web application is document root + base URI.
+         */
+        len = root_path.len + base_uri.len + 1;
+        context->public_dir.data = ngx_palloc(r->pool, sizeof(u_char) * len);
+        end = ngx_copy(context->public_dir.data, root_path.data, root_path.len);
         end = ngx_copy(end, base_uri.data, base_uri.len);
         *end = '\0';
         context->public_dir.len = len - 1;
         context->base_uri = base_uri;
     } else {
-        len = sizeof(u_char *) * (path.len + 1);
+        /* No base URI directives are applicable for this request. So assume that
+         * the web application's public directory is the document root.
+         * context->base_uri is now a NULL string.
+         */
+        len = sizeof(u_char *) * (root_path.len + 1);
         context->public_dir.data = ngx_palloc(r->pool, len);
-        end = ngx_copy(context->public_dir.data, path.data,
-                       path.len);
+        end = ngx_copy(context->public_dir.data, root_path.data,
+                       root_path.len);
         *end = '\0';
-        context->public_dir.len  = path.len;
+        context->public_dir.len  = root_path.len;
+    }
+    
+    /* If there's a corresponding page cache file for this URL, then serve that
+     * file instead.
+     */
+    page_cache_file.data = page_cache_file_str;
+    page_cache_file.len  = sizeof(page_cache_file_str);
+    if (map_uri_to_page_cache_file(r, &context->public_dir, path.data,
+                                   path_last - path.data, &page_cache_file)) {
+        fprintf(stderr, "Serving page cache file: %s\n", (const char *) page_cache_file.data);
+        fflush(stderr);
+        return passenger_static_content_handler(r, &page_cache_file);
+    } else {
+        fprintf(stderr, "No page cache file found.\n");
+        fflush(stderr);
     }
     
     context->app_type = detect_application_type(&context->public_dir);
@@ -1019,6 +1085,13 @@ passenger_content_handler(ngx_http_request_t *r)
         return NGX_DECLINED;
     }
     
+    
+    /* Setup upstream stuff and prepare sending the request to the backend. */
+    
+    u = ngx_pcalloc(r->pool, sizeof(ngx_http_upstream_t));
+    if (u == NULL) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
     
 #if NGINX_VERSION_NUM >= 7000
     u->schema = passenger_schema_string;

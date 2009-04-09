@@ -3,12 +3,21 @@ shared_examples_for "MyCook(tm) beta" do
 		get('/images/rails.png').should == @stub.public_file('images/rails.png')
 	end
 	
-	it "supports page caching on non-index URIs" do
+	it "supports page caching on file URIs" do
 		get('/welcome/cached').should =~ %r{This is the cached version of /welcome/cached}
 	end
 	
-	it "supports page caching on index URIs" do
+	it "supports page caching on directory URIs" do
 		get('/uploads').should =~ %r{This is the cached version of /uploads}
+	end
+	
+	it "supports page caching on root/base URIs" do
+		begin
+			File.write("#{@stub.app_root}/public/index.html", "This is index.html.")
+			get('/').should == "This is index.html."
+		ensure
+			File.unlink("#{@stub.app_root}/public/index.html") rescue nil
+		end
 	end
 	
 	it "doesn't use page caching if the HTTP request is not GET" do
