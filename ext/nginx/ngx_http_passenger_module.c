@@ -306,7 +306,7 @@ start_helper_server(ngx_cycle_t *cycle)
             ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
                           "could not create %s", filename);
         }
-                
+        
         helper_server_pid        = pid;
         helper_server_admin_pipe = admin_pipe[1];
         break;
