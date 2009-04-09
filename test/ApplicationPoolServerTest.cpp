@@ -17,8 +17,6 @@ namespace tut {
 				"./ApplicationPoolServerExecutable",
 				"stub/spawn_server.rb"));
 		}
-		
-		
 	};
 
 	DEFINE_TEST_GROUP(ApplicationPoolServerTest);

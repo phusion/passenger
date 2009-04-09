@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 
 #include "Utils.h"
 
@@ -83,8 +84,23 @@ parseOptions(int argc, char *argv[]) {
 	}
 }
 
-struct Finalizer {
-	~Finalizer() {
+/**
+ * Creates a Phusion Passenger temp dir at the beginning, and deletes it
+ * at program exit.
+ */
+struct TempDirGuard {
+	TempDirGuard() {
+		char command[1024];
+		
+		Passenger::createPassengerTempDir(Passenger::getSystemTempDir(),
+			geteuid() == 0, "nobody", geteuid(), getgid());
+		
+		snprintf(command, sizeof(command), "chmod -R u=rwx,g=rwx,o=rwx \"%s\"",
+			Passenger::getPassengerTempDir().c_str());
+		system(command);
+	}
+	
+	~TempDirGuard() {
 		Passenger::removeDirTree(Passenger::getPassengerTempDir());
 	}
 };
@@ -101,7 +117,7 @@ main(int argc, char *argv[]) {
 	allGroups = tut::runner.get().list_groups();
 	parseOptions(argc, argv);
 	
-	Finalizer finalizer;
+	TempDirGuard tg;
 	
 	try {
 		bool all_ok = true;
