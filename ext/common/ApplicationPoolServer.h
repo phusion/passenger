@@ -518,7 +518,7 @@ private:
 			 * signal. This must be the same as the oxt/system_calls.hpp interruption
 			 * signal.
 			 */
-			syscalls::kill(serverPid, SIGINT);
+			syscalls::kill(serverPid, oxt::INTERRUPTION_SIGNAL);
 			
 			ret = syscalls::waitpid(serverPid, &status, WNOHANG);
 			done = ret > 0 || ret == -1;
