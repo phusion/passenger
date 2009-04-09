@@ -181,6 +181,11 @@ on installing Phusion Passenger on OS X].
 
 Ben Hughes has written an link:http://www.railsgarden.com/2008/04/12/configurating-passenger-mod_rails-on-slicehost-with-ubuntu-710/[article on installing Phusion Passenger on Ubuntu].
 
+==== OpenSolaris ====
+
+J. Aaron Farr has written a link:http://cubiclemuses.com/cm/articles/2009/04/09/rails-passenger-open-solaris-ec2/[guide]
+about setting up Ruby on Rails and Phusion Passenger on OpenSolaris and EC2.
+
 
 == Deploying a Ruby on Rails application ==
 
