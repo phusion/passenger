@@ -231,6 +231,12 @@ start_helper_server(ngx_cycle_t *cycle)
             close(i);
         }
         
+        /* It seems that Nginx's Perl module unsets the
+         * PASSENGER_INSTANCE_TEMP_DIR environment variable, so here
+         * we set it again.
+         */
+        setenv("PASSENGER_INSTANCE_TEMP_DIR", passenger_temp_dir, 1);
+        
         execlp((const char *) helper_server_filename,
                "PassengerNginxHelperServer",
                main_conf->root_dir.data,
