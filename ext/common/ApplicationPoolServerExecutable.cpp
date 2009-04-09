@@ -199,7 +199,6 @@ private:
 			sigaction(SIGSEGV, &action, NULL);
 			sigaction(SIGALRM, &action, NULL);
 			sigaction(SIGUSR1, &action, NULL);
-			sigaction(SIGUSR2, &action, NULL);
 		}
 	}
 
