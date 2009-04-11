@@ -134,8 +134,6 @@ map_uri_to_page_cache_file(ngx_http_request_t *r, ngx_str_t *public_dir,
 {
     u_char *end;
     
-    fprintf(stderr, "URI originally maps to: %s\n", (const char *) filename);
-    fflush(stderr);
     if ((r->method != NGX_HTTP_GET && r->method != NGX_HTTP_HEAD) || filename_len == 0) {
         return 0;
     }
@@ -1098,12 +1096,7 @@ passenger_content_handler(ngx_http_request_t *r)
     page_cache_file.len  = sizeof(page_cache_file_str);
     if (map_uri_to_page_cache_file(r, &context->public_dir, path.data,
                                    path_last - path.data, &page_cache_file)) {
-        fprintf(stderr, "Serving page cache file: %s\n", (const char *) page_cache_file.data);
-        fflush(stderr);
         return passenger_static_content_handler(r, &page_cache_file);
-    } else {
-        fprintf(stderr, "No page cache file found.\n");
-        fflush(stderr);
     }
     
     context->app_type = detect_application_type(&context->public_dir);
