@@ -210,9 +210,9 @@ find_base_uri(ngx_http_request_t *r, const passenger_loc_conf_t *loc,
             
             if ((    uri->len == base_uri->len
                   && ngx_strncmp(uri->data, base_uri->data, uri->len) == 0 )
-			 || (    uri->len >  base_uri->len
-			      && ngx_strncmp(uri->data, base_uri->data, base_uri->len) == 0
-			      && uri->data[base_uri->len] == (u_char) '/' )) {
+             || (    uri->len >  base_uri->len
+                  && ngx_strncmp(uri->data, base_uri->data, base_uri->len) == 0
+                  && uri->data[base_uri->len] == (u_char) '/' )) {
                 *found_base_uri = base_uris[i];
                 return 1;
             }
