@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2008 Phusion
+ * Copyright (C) 2008, 2009 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,6 +43,8 @@ typedef struct {
     ngx_flag_t   use_global_queue;
     ngx_str_t    environment;
     ngx_str_t    spawn_method;
+    int          framework_spawner_idle_time;
+    int          app_spawner_idle_time;
     ngx_array_t *base_uris;
 } passenger_loc_conf_t;
 

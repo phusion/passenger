@@ -692,6 +692,58 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'smart-lv2'.
 
+==== rails_framework_spawner_idle_time <integer> ====
+The FrameworkSpawner server (explained in <<spawning_methods_explained,Spawning
+methods explained>>) has an idle timeout, just like the backend processes spawned by
+Phusion Passenger do. That is, it will automatically shutdown if it hasn't done
+anything for a given period.
+
+This option allows you to set the FrameworkSpawner server's idle timeout, in
+seconds. A value of '0' means that it should never idle timeout.
+
+Setting a higher value will mean that the FrameworkSpawner server is kept around
+longer, which may slightly increase memory usage. But as long as the
+FrameworkSpawner server is running, the time to spawn a Ruby on Rails backend
+process only takes about 40% of the time that is normally needed, assuming that
+you're using the 'smart' <<RailsSpawnMethod,spawning method>>. So if your
+system has enough memory, is it recommended that you set this option to a high
+value or to '0'.
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is '1800' (30 minutes).
+
+==== rails_app_spawner_idle_time <integer> ====
+The ApplicationSpawner server (explained in <<spawning_methods_explained,Spawning
+methods explained>>) has an idle timeout, just like the backend processes spawned by
+Phusion Passenger do. That is, it will automatically shutdown if it hasn't done
+anything for a given period.
+
+This option allows you to set the ApplicationSpawner server's idle timeout, in
+seconds. A value of '0' means that it should never idle timeout.
+
+Setting a higher value will mean that the ApplicationSpawner server is kept around
+longer, which may slightly increase memory usage. But as long as the
+ApplicationSpawner server is running, the time to spawn a Ruby on Rails backend
+process only takes about 10% of the time that is normally needed, assuming that
+you're using the 'smart' or 'smart-lv2' <<RailsSpawnMethod,spawning method>>. So if your
+system has enough memory, is it recommended that you set this option to a high
+value or to '0'.
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is '600' (10 minutes).
+
 === Rack-specific options ===
 [[RackEnv]]
 ==== rack_env <string> ====

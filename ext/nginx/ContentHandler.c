@@ -230,6 +230,9 @@ create_request(ngx_http_request_t *r)
     size_t                         len, size, key_len, val_len, content_length;
     const u_char                  *app_type_string;
     size_t                         app_type_string_len;
+    u_char                         framework_spawner_idle_time_string[12];
+    u_char                         app_spawner_idle_time_string[12];
+    u_char                        *end;
     ngx_uint_t                     i, n;
     ngx_buf_t                     *b;
     ngx_chain_t                   *cl, *body;
@@ -307,6 +310,20 @@ create_request(ngx_http_request_t *r)
     len += sizeof("PASSENGER_ENVIRONMENT") + slcf->environment.len + 1;
     len += sizeof("PASSENGER_SPAWN_METHOD") + slcf->spawn_method.len + 1;
     len += sizeof("PASSENGER_APP_TYPE") + app_type_string_len;
+    
+    end = ngx_snprintf(framework_spawner_idle_time_string,
+                       sizeof(framework_spawner_idle_time_string) - 1,
+                       "%d", slcf->framework_spawner_idle_time);
+    *end = '\0';
+    len += sizeof("PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME") +
+           ngx_strlen(framework_spawner_idle_time_string) + 1;
+    
+    end = ngx_snprintf(app_spawner_idle_time_string,
+                       sizeof(app_spawner_idle_time_string) - 1,
+                       "%d", slcf->app_spawner_idle_time);
+    *end = '\0';
+    len += sizeof("PASSENGER_APP_SPAWNER_IDLE_TIME") +
+           ngx_strlen(app_spawner_idle_time_string) + 1;
 
     /* Lengths of various CGI variables. */
     if (slcf->vars_len) {
@@ -439,6 +456,15 @@ create_request(ngx_http_request_t *r)
                        sizeof("PASSENGER_APP_TYPE"));
     b->last = ngx_copy(b->last, app_type_string, app_type_string_len);
 
+    b->last = ngx_copy(b->last, "PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME",
+                       sizeof("PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME"));
+    b->last = ngx_copy(b->last, framework_spawner_idle_time_string,
+                       ngx_strlen(framework_spawner_idle_time_string) + 1);
+
+    b->last = ngx_copy(b->last, "PASSENGER_APP_SPAWNER_IDLE_TIME",
+                       sizeof("PASSENGER_APP_SPAWNER_IDLE_TIME"));
+    b->last = ngx_copy(b->last, app_spawner_idle_time_string,
+                       ngx_strlen(app_spawner_idle_time_string) + 1);
 
     if (slcf->vars_len) {
         ngx_memzero(&e, sizeof(ngx_http_script_engine_t));
