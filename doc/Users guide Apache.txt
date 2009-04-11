@@ -966,8 +966,12 @@ you're using the 'smart' <<RailsSpawnMethod,spawning method>>. So if your
 system has enough memory, is it recommended that you set this option to a high
 value or to '0'.
 
-This option may only occur in the global server configuration, and may occur at
-most once. The default value is '1800' (30 minutes).
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+
+In each place, it may be specified at most once. The default value is '1800' (30 minutes).
 
 ==== RailsAppSpawnerIdleTime <integer> ====
 The ApplicationSpawner server (explained in <<spawning_methods_explained,Spawning
@@ -986,8 +990,12 @@ you're using the 'smart' or 'smart-lv2' <<RailsSpawnMethod,spawning method>>. So
 system has enough memory, is it recommended that you set this option to a high
 value or to '0'.
 
-This option may only occur in the global server configuration, and may occur at
-most once. The default value is '600' (10 minutes).
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+
+In each place, it may be specified at most once. The default value is '600' (10 minutes).
 
 === Rack-specific options ===
 
