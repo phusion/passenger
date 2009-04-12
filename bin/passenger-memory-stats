@@ -138,6 +138,7 @@ class MemoryStats
 			end
 			print_process_list("Apache processes", apache_processes)
 		else
+			apache_processes = []
 			puts "#{BLUE_BG}#{BOLD}#{YELLOW}------------- Apache processes -------------#{RESET}\n"
 			STDERR.puts "*** WARNING: The Apache executable cannot be found."
 			STDERR.puts "Please set the APXS2 environment variable to your 'apxs2' " <<
