@@ -686,6 +686,7 @@ include::users_guide_snippets/rails_spawn_method.txt[]
 
 This option may occur in the following places:
 
+ * In the 'http' configuration block.
  * In a 'server' configuration block.
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
