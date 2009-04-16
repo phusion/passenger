@@ -370,7 +370,7 @@ createPassengerTempDir(const string &systemTempDir, bool userSwitching,
 		if (userSwitching) {
 			makeDirTree(tmpDir + "/master", "u=wxs,g=,o=", workerUid, workerGid);
 		} else {
-			makeDirTree(tmpDir + "/master", "u=wxs,g=x,o=", lowestUid, lowestGid);
+			makeDirTree(tmpDir + "/master", "u=wxs,g=x,o=x", lowestUid, lowestGid);
 		}
 	} else {
 		makeDirTree(tmpDir + "/master", "u=wxs,g=,o=");
