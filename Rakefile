@@ -824,6 +824,7 @@ task :sloccount do
 			"lib/rake/{cplusplus,extensions}.rb",
 			"ext/apache2",
 			"ext/nginx",
+			"ext/common",
 			"ext/oxt",
 			"ext/phusion_passenger/*.c",
 			"test/**/*.{cpp,rb}",
