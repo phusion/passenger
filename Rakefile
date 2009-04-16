@@ -73,22 +73,21 @@ task :clobber
 
 ##### Ruby C extension
 
-task :native_support => "ext/phusion_passenger/native_support.#{LIBEXT}"
-
-file 'ext/phusion_passenger/Makefile' => 'ext/phusion_passenger/extconf.rb' do
-	sh "cd ext/phusion_passenger && #{RUBY} extconf.rb"
-end
-
-file "ext/phusion_passenger/native_support.#{LIBEXT}" => [
-	'ext/phusion_passenger/Makefile',
-	'ext/phusion_passenger/native_support.c'
-] do
-	sh "cd ext/phusion_passenger && make"
-end
-
-task :clean do
-	sh "cd ext/phusion_passenger && make clean" if File.exist?('ext/phusion_passenger/Makefile')
-	sh "rm -f ext/phusion_passenger/Makefile"
+subdir 'ext/phusion_passenger' do
+	task :native_support => ["native_support.#{LIBEXT}"]
+	
+	file 'Makefile' => 'extconf.rb' do
+		sh "#{RUBY} extconf.rb"
+	end
+	
+	file "native_support.#{LIBEXT}" => ['Makefile', 'native_support.c'] do
+		sh "make"
+	end
+	
+	task :clean do
+		sh "make clean" if File.exist?('Makefile')
+		sh "rm -f Makefile"
+	end
 end
 
 
@@ -97,46 +96,43 @@ end
 def define_libboost_oxt_task(output_dir, extra_compiler_flags = nil)
 	output_file = "#{output_dir}/libboost_oxt.a"
 	objects_output_dir = "#{output_dir}/libboost_oxt"
+	objects_output_path = Pathname.new(objects_output_dir).expand_path
+	ext_path = Pathname.new("ext").expand_path
 	
-	file "#{objects_output_dir}/boost" do
-		sh "mkdir -p #{objects_output_dir}/boost"
-	end
-	
-	file "#{objects_output_dir}/oxt" do
-		sh "mkdir -p #{objects_output_dir}/oxt"
-	end
-	
-	# Define compilation targets for .cpp files in ext/boost/src/pthread.
-	boost_object_files = []
-	flags = "-Iext #{extra_compiler_flags} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
-	Dir['ext/boost/src/pthread/*.cpp'].each do |source_file|
-		object_name = File.basename(source_file.sub(/\.cpp$/, '.o'))
-		output_dir  = "#{objects_output_dir}/boost"
-		object_file = "#{output_dir}/#{object_name}"
-		boost_object_files << object_file
-		
-		file object_file => [output_dir, source_file] do
-			compile_cxx(source_file, "#{flags} -o #{object_file}")
-		end
-	end
-	
-	# Define compilation targets for .cpp files in ext/oxt.
-	oxt_object_files = []
-	oxt_dependency_files = Dir["ext/oxt/*.hpp"] + Dir["ext/oxt/detail/*.hpp"]
-	flags = "-Iext #{extra_compiler_flags} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
-	Dir['ext/oxt/*.cpp'].each do |source_file|
-		object_name = File.basename(source_file.sub(/\.cpp$/, '.o'))
-		output_dir  = "#{objects_output_dir}/oxt"
-		object_file = "#{output_dir}/#{object_name}"
-		oxt_object_files << object_file
-		
-		file object_file => [output_dir, source_file, *oxt_dependency_files] do
-			compile_cxx(source_file, "#{flags} -o #{object_file}")
-		end
-	end
-	
-	file(output_file => boost_object_files + oxt_object_files) do
+	file(output_file =>
+		Dir['ext/boost/src/*.cpp'] +
+		Dir['ext/boost/src/pthread/*.cpp'] +
+		Dir['ext/oxt/*.cpp'] +
+		Dir['ext/oxt/*.hpp'] +
+		Dir['ext/oxt/detail/*.hpp']
+	) do
 		sh "mkdir -p #{objects_output_dir}/boost #{objects_output_dir}/oxt"
+		
+		Dir.chdir("#{objects_output_dir}/boost") do
+			puts "### In #{objects_output_dir}/boost:"
+			current_dir = Pathname.new(".").expand_path
+			ext_dir = ext_path.relative_path_from(current_dir)
+			flags = "-I#{ext_dir} #{extra_compiler_flags} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
+			
+			# Compling "pthread/*.cpp" doesn't work on some systems,
+			# so we compile each cpp file invidually instead.
+			Dir["#{ext_dir}/boost/src/pthread/*.cpp"].each do |file|
+				compile_cxx(file, flags)
+			end
+			puts
+		end
+		
+		Dir.chdir("#{objects_output_dir}/oxt") do
+			puts "### In #{objects_output_dir}/oxt:"
+			current_dir = Pathname.new(".").expand_path
+			ext_dir = ext_path.relative_path_from(current_dir)
+			flags = "-I#{ext_dir} #{extra_compiler_flags} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
+			Dir["#{ext_dir}/oxt/*.cpp"].each do |file|
+				compile_cxx(file, flags)
+			end
+			puts
+		end
+		
 		create_static_library(output_file,
 			"#{objects_output_dir}/boost/*.o " <<
 			"#{objects_output_dir}/oxt/*.o")
@@ -160,29 +156,37 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
                                extra_linker_flags = nil)
 	static_library = "#{output_dir}/libpassenger_common.a"
 	objects_output_dir = "#{output_dir}/libpassenger_common"
+	objects_output_path = Pathname.new(objects_output_dir).expand_path
+	ext_path = Pathname.new("ext").expand_path
 	targets = [static_library]
 	
-	file objects_output_dir do
+	file(static_library => [
+		'ext/common/Utils.h',
+		'ext/common/Utils.cpp',
+		'ext/common/Logging.h',
+		'ext/common/Logging.cpp',
+		'ext/common/SystemTime.h',
+		'ext/common/SystemTime.cpp',
+		'ext/common/CachedFileStat.h',
+		'ext/common/CachedFileStat.cpp'
+	]) do
 		sh "mkdir -p #{objects_output_dir}"
-	end
-	
-	# Define compilation targets for the object files in libpassenger_common.
-	flags =  "-Iext -Iext/common #{extra_compiler_flags} "
-	flags << "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
-	common_object_files = []
-	['Utils.cpp', 'Logging.cpp', 'SystemTime.cpp', 'CachedFileStat.cpp'].each do |source_file|
-		object_name = source_file.sub(/\.cpp$/, '.o')
-		object_file = "#{objects_output_dir}/#{object_name}"
-		header_file = source_file.sub(/\.cpp$/, '.h')
-		common_object_files << object_file
 		
-		file object_file => [objects_output_dir, "ext/common/#{source_file}", "ext/common/#{header_file}"] do
-			compile_cxx("ext/common/#{source_file}", "#{flags} -o #{object_file}")
+		Dir.chdir(objects_output_dir) do
+			puts "### In #{objects_output_dir}:"
+			current_dir = Pathname.new(".").expand_path
+			ext_dir = ext_path.relative_path_from(current_dir)
+			flags =  "-I#{ext_dir} -I#{ext_dir}/common #{extra_compiler_flags} "
+			flags << "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
+			
+			compile_cxx("#{ext_dir}/common/Utils.cpp", flags)
+			compile_cxx("#{ext_dir}/common/Logging.cpp", flags)
+			compile_cxx("#{ext_dir}/common/SystemTime.cpp", flags)
+			compile_cxx("#{ext_dir}/common/CachedFileStat.cpp", flags)
+			
+			puts
 		end
-	end
-	
-	file(static_library => common_object_files) do
-		sh "mkdir -p #{objects_output_dir}"
+		
 		create_static_library(static_library, "#{objects_output_dir}/*.o")
 	end
 	
