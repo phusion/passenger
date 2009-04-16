@@ -293,7 +293,13 @@ start_helper_server(ngx_cycle_t *cycle)
         } while (i < HELPER_SERVER_PASSWORD_SIZE);
         
         /* Wait until the HelperServer has done initializing. */
-        read(feedback_pipe[0], &buf, 1);
+        do {
+            /* We must do something with read()'s return value
+             * because otherwise on some platform it might raise a
+             * compile warning.
+             */
+            ret = read(feedback_pipe[0], &buf, 1);
+        } while (ret == -1 && errno == EINTR);
         close(feedback_pipe[0]);
         
         /* Create the file passenger_temp_dir + "/control_process.pid"
@@ -305,8 +311,16 @@ start_helper_server(ngx_cycle_t *cycle)
         *last = (u_char) '\0';
         f = fopen((const char *) filename, "w");
         if (f != NULL) {
-            fchmod(fileno(f), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-            fchown(fileno(f), ccf->user, ccf->group);
+            /* We must do something with these return values because
+             * otherwise on some platforms it will cause a compiler
+             * warning.
+             */
+            do {
+                ret = fchmod(fileno(f), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+            } while (ret == -1 && errno == EINTR);
+            do {
+                ret = fchown(fileno(f), ccf->user, ccf->group);
+            } while (ret == -1 && errno == EINTR);
             fclose(f);
         } else {
             ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
@@ -358,13 +372,15 @@ static void
 shutdown_helper_server(ngx_cycle_t *cycle)
 {
     time_t begin_time;
-    int    helper_server_exited;
+    int    helper_server_exited, ret;
     u_char command[NGX_MAX_PATH + 10];
     
     /* We write one byte to the admin pipe, doesn't matter what the byte is.
      * The helper server will detect this as an exit command.
      */
-    write(helper_server_admin_pipe, "x", 1);
+    do {
+        ret = write(helper_server_admin_pipe, "x", 1);
+    } while ((ret == -1 && errno == EINTR) || ret == 0);
     close(helper_server_admin_pipe);
     
     /* Wait at most HELPER_SERVER_MAX_SHUTDOWN_TIME seconds for the helper
@@ -403,7 +419,9 @@ shutdown_helper_server(ngx_cycle_t *cycle)
     ngx_memzero(command, sizeof(command));
     if (ngx_snprintf(command, sizeof(command), "chmod -R u=rwx \"%s\"",
                      passenger_temp_dir) != NULL) {
-        system((const char *) command);
+        do {
+            ret = system((const char *) command);
+        } while (ret == -1 && errno == EINTR);
     }
     
     ngx_memzero(command, sizeof(command));
@@ -524,7 +542,9 @@ pre_config_init(ngx_conf_t *cf)
      */
     ngx_memzero(command, sizeof(command));
     ngx_snprintf(command, sizeof(command), "mkdir -p \"%s\"", passenger_temp_dir);
-    system((const char *) command);
+    do {
+        ret = system((const char *) command);
+    } while (ret == -1 && errno == EINTR);
     
     /* Build helper server socket filename string. */
     
