@@ -27,6 +27,7 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/tss.hpp>
 #include <sstream>
+#include <cstring>
 #include "backtrace.hpp"
 
 namespace oxt {
@@ -142,7 +143,13 @@ format_backtrace(Iterable backtrace_list) {
 			
 			result << "     in '" << p->function << "'";
 			if (p->source != NULL) {
-				result << " (" << p->source << ":" << p->line << ")";
+				const char *source = strrchr(p->source, '/');
+				if (source != NULL) {
+					source++;
+				} else {
+					source = p->source;
+				}
+				result << " (" << source << ":" << p->line << ")";
 			}
 			result << endl;
 		}

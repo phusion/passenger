@@ -1,0 +1,22 @@
+<banner>Deploying a Ruby on Rails application: an example</banner>
+
+Suppose you have a Ruby on Rails application in <b>/somewhere</b>. Add a <b>server</b> block
+to your Nginx configuration file, set its <b>root</b> to <b>/somewhere/public</b>, and set
+<b>'passenger_enabled on'</b>, like this:
+<b>
+   server {
+      listen 80;
+      server_name www.yourhost.com;
+      root /somewhere/public;   # <--- be sure to point to 'public'!
+      passenger_enabled on;
+   }
+</b>
+And that's it! You may also want to check the Users Guide for security and
+optimization tips and other useful information:
+
+  <yellow><%= @users_guide %></yellow>
+
+Enjoy Phusion Passenger, a product of Phusion (<b><%= @phusion_website %></b>) :-)
+<b><%= @passenger_website %></b>
+
+Phusion Passenger is a trademark of Hongli Lai & Ninh Bui.

@@ -1,0 +1,3 @@
+- Passenger no longer resolves symlink anymore, so that it works properly
+  with Capistrano deployments.
+- Chuncked transfer encoding support for uploads (Apache only).

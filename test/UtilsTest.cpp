@@ -1,5 +1,6 @@
 #include "tut.h"
 #include "Utils.h"
+#include "support/Support.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -10,6 +11,7 @@
 
 using namespace Passenger;
 using namespace std;
+using namespace Test;
 
 namespace tut {
 	struct UtilsTest {
@@ -244,5 +246,35 @@ namespace tut {
 		ensure_equals(escapeForXml("hello\xFFworld"), "hello&#255;world");
 		ensure_equals(escapeForXml("hello\xFF\xCCworld"), "hello&#255;&#204;world");
 		ensure_equals(escapeForXml("hello\xFFworld\xCC"), "hello&#255;world&#204;");
+	}
+	
+	/***** Test extractDirName() *****/
+	
+	TEST_METHOD(26) {
+		ensure_equals("Test 1", extractDirName("/usr/lib"), "/usr");
+		ensure_equals("Test 2", extractDirName("/usr/lib/"), "/usr");
+		ensure_equals("Test 3", extractDirName("/usr/"), "/");
+		ensure_equals("Test 4", extractDirName("usr"), ".");
+		ensure_equals("Test 5", extractDirName("/"), "/");
+		ensure_equals("Test 6", extractDirName("///"), "/");
+		ensure_equals("Test 7", extractDirName("."), ".");
+		ensure_equals("Test 8", extractDirName(".."), ".");
+		ensure_equals("Test 9", extractDirName("./foo"), ".");
+		ensure_equals("Test 10", extractDirName("../foo"), "..");
+	}
+	
+	/***** Test resolveSymlink() *****/
+	
+	TEST_METHOD(27) {
+		TempDir d("tmp.symlinks");
+		system("touch tmp.symlinks/foo.txt");
+		system("ln -s /usr/bin tmp.symlinks/absolute_symlink");
+		system("ln -s foo.txt tmp.symlinks/file");
+		system("ln -s file tmp.symlinks/file2");
+		system("ln -s file2 tmp.symlinks/file3");
+		ensure_equals(resolveSymlink("tmp.symlinks/file"), "tmp.symlinks/foo.txt");
+		ensure_equals(resolveSymlink("tmp.symlinks/file2"), "tmp.symlinks/file");
+		ensure_equals(resolveSymlink("tmp.symlinks/file3"), "tmp.symlinks/file2");
+		ensure_equals(resolveSymlink("tmp.symlinks/absolute_symlink"), "/usr/bin");
 	}
 }

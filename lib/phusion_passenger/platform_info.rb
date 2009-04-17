@@ -1,20 +1,25 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (C) 2008, 2009  Phusion
+#  Copyright (c) 2008, 2009 Phusion
 #
-#  Phusion Passenger is a trademark of Hongli Lai & Ninh Bui.
+#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; version 2 of the License.
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
 #
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+#  The above copyright notice and this permission notice shall be included in
+#  all copies or substantial portions of the Software.
 #
-#  You should have received a copy of the GNU General Public License along
-#  with this program; if not, write to the Free Software Foundation, Inc.,
-#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#  THE SOFTWARE.
 
 require 'rbconfig'
 
@@ -374,7 +379,7 @@ public
 	end
 	
 	# The C compiler flags that are necessary to compile an Apache module.
-	# Includes portability_cflags.
+	# Possibly includes APR and APU compiler flags.
 	def self.apache2_module_cflags(with_apr_flags = true)
 		flags = ["-fPIC"]
 		if with_apr_flags
@@ -398,23 +403,44 @@ public
 			flags << apxs2_flags
 		end
 		if !httpd.nil? && RUBY_PLATFORM =~ /darwin/
-			# Add possible universal binary flags.
-			architectures = []
-			`file "#{httpd}"`.split("\n").grep(/for architecture/).each do |line|
-				line =~ /for architecture (.*?)\)/
-				architectures << "-arch #{$1}"
+			# The default Apache install on OS X is a universal binary.
+			# Figure out which architectures it's compiled for and do the same
+			# thing for mod_passenger. We use the 'file' utility to do this.
+			#
+			# Running 'file' on the Apache executable usually outputs something
+			# like this:
+			#
+			#   /usr/sbin/httpd: Mach-O universal binary with 4 architectures
+			#   /usr/sbin/httpd (for architecture ppc7400):     Mach-O executable ppc
+			#   /usr/sbin/httpd (for architecture ppc64):       Mach-O 64-bit executable ppc64
+			#   /usr/sbin/httpd (for architecture i386):        Mach-O executable i386
+			#   /usr/sbin/httpd (for architecture x86_64):      Mach-O 64-bit executable x86_64
+			#
+			# But on some machines, it may output just:
+			#
+			#   /usr/sbin/httpd: Mach-O fat file with 4 architectures
+			#
+			# (http://code.google.com/p/phusion-passenger/issues/detail?id=236)
+			output = `file "#{httpd}"`.strip
+			if output =~ /Mach-O fat file/ && output !~ /for architecture/
+				architectures = ["-arch i386 -arch ppc -arch x86_64 -arch ppc64"]
+			else
+				architectures = []
+				output.split("\n").grep(/for architecture/).each do |line|
+					line =~ /for architecture (.*?)\)/
+					architectures << "-arch #{$1}"
+				end
 			end
-			flags << architectures.join(' ')
+			flags << architectures.compact.join(' ')
 		end
-		flags << portability_cflags
 		return flags.compact.join(' ').strip
 	end
 	memoize :apache2_module_cflags
 	
 	# Linker flags that are necessary for linking an Apache module.
-	# Includes portability_ldflags
+	# Possibly includes APR and APU linker flags.
 	def self.apache2_module_ldflags
-		flags = "-fPIC #{apr_libs} #{apu_libs} #{portability_ldflags}"
+		flags = "-fPIC #{apr_libs} #{apu_libs}"
 		flags.strip!
 		return flags
 	end

@@ -1,6 +1,13 @@
 require 'fileutils'
+require 'resolv'
+require 'net/http'
+require 'uri'
+require 'support/multipart'
 
+# Module containing helper methods, to be included in unit tests.
 module TestHelper
+	######## Stub helpers ########
+	
 	STUB_TEMP_DIR = 'tmp.stub'
 	
 	class Stub
@@ -14,6 +21,10 @@ module TestHelper
 		def destroy
 			FileUtils.rm_rf(@app_root)
 		end
+		
+		def public_file(name)
+			return File.read("#{@app_root}/public/#{name}")
+		end
 	end
 	
 	def setup_stub(name, dir = STUB_TEMP_DIR)
@@ -24,6 +35,7 @@ module TestHelper
 		return Stub.new(name, dir)
 	end
 	
+	# Setup a stub, yield the given block, then destroy the stub.
 	def use_stub(name, dir = STUB_TEMP_DIR)
 		stub = setup_stub(name, dir)
 		yield stub
@@ -64,6 +76,73 @@ module TestHelper
 		yield stub
 	ensure
 		stub.destroy
+	end
+	
+	
+	######## HTTP helpers ########
+	# Before using these methods, one must set the '@server' instance variable
+	# and implement the start_web_server_if_necessary method.
+	
+	def get(uri)
+		if @server.nil?
+			raise "You must set the '@server' instance variable before get() can be used. For example, @server = 'http://mydomain.test/'"
+		end
+		start_web_server_if_necessary
+		return Net::HTTP.get(URI.parse("#{@server}#{uri}"))
+	end
+	
+	def get_response(uri)
+		if @server.nil?
+			raise "You must set the '@server' instance variable before get() can be used. For example, @server = 'http://mydomain.test/'"
+		end
+		start_web_server_if_necessary
+		return Net::HTTP.get_response(URI.parse("#{@server}#{uri}"))
+	end
+	
+	def post(uri, params = {})
+		if @server.nil?
+			raise "You must set the '@server' instance variable before get() can be used. For example, @server = 'http://mydomain.test/'"
+		end
+		start_web_server_if_necessary
+		url = URI.parse("#{@server}#{uri}")
+		if params.values.any? { |x| x.respond_to?(:read) }
+			mp = Multipart::MultipartPost.new
+			query, headers = mp.prepare_query(params)
+			Net::HTTP.start(url.host, url.port) do |http|
+				return http.post(url.path, query, headers).body
+			end
+		else
+			return Net::HTTP.post_form(url, params).body
+		end
+	end
+	
+	def check_hosts_configuration
+		begin
+			ok = Resolv.getaddress("passenger.test") == "127.0.0.1"
+		rescue Resolv::ResolvError, ArgumentError
+			# There's a bug in Ruby 1.8.6-p287's resolv.rb library, which causes
+			# an ArgumentError to be raised instead of ResolvError when resolving
+			# failed.
+			ok = false
+		end
+		if !ok
+			message = "To run the integration test, you must update " <<
+				"your hosts file.\n" <<
+				"Please add these to your /etc/hosts:\n\n" <<
+				"  127.0.0.1 passenger.test\n" <<
+				"  127.0.0.1 mycook.passenger.test\n" <<
+				"  127.0.0.1 zsfa.passenger.test\n" <<
+				"  127.0.0.1 norails.passenger.test\n"
+			if RUBY_PLATFORM =~ /darwin/
+				message << "\n\nThen run:\n\n" <<
+					"  lookupd -flushcache      (OS X Tiger)\n\n" <<
+					"-OR-\n\n" <<
+					"  dscacheutil -flushcache  (OS X Leopard)"
+			end
+			STDERR.puts "---------------------------"
+			STDERR.puts message
+			exit!
+		end
 	end
 end
 

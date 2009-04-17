@@ -1,21 +1,26 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (C) 2008  Phusion
+ *  Copyright (c) 2008, 2009 Phusion
  *
- *  Phusion Passenger is a trademark of Hongli Lai & Ninh Bui.
+ *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; version 2 of the License.
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the "Software"), to deal
+ *  in the Software without restriction, including without limitation the rights
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions:
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  The above copyright notice and this permission notice shall be included in
+ *  all copies or substantial portions of the Software.
  *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ *  THE SOFTWARE.
  */
 #include <boost/thread.hpp>
 
@@ -359,6 +364,8 @@ private:
 	 * is contained in this method.
 	 */
 	int handleRequest(request_rec *r) {
+		/********** Step 1: preparation work **********/
+		
 		/* Check whether an error occured in prepareRequest() that should be reported
 		 * to the browser.
 		 */
@@ -392,7 +399,10 @@ private:
 			return reportDocumentRootDeterminationError(r);
 		}
 		
-		int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_ERROR);
+		
+		/********** Step 2: handle HTTP upload data, if any **********/
+		
+		int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_DECHUNK);
     		if (httpStatus != OK) {
 			return httpStatus;
 		}
@@ -405,19 +415,41 @@ private:
 			Application::SessionPtr session;
 			bool expectingUploadData;
 			shared_ptr<BufferedUpload> uploadData;
+			const char *contentLength;
 			
 			expectingUploadData = ap_should_client_block(r);
-			if (expectingUploadData && atol(lookupHeader(r, "Content-Length"))
-			                                 > UPLOAD_ACCELERATION_THRESHOLD) {
-				uploadData = receiveRequestBody(r);
+			contentLength = lookupHeader(r, "Content-Length");
+			
+			// If the HTTP upload data is larger than a threshold, or if the HTTP
+			// client sent HTTP upload data using the "chunked" transfer encoding
+			// (which implies Content-Length == NULL), then buffer the upload
+			// data into a tempfile.
+			if (expectingUploadData && (
+			          contentLength == NULL ||
+			          atol(contentLength) > UPLOAD_ACCELERATION_THRESHOLD
+			     )
+			) {
+				uploadData = receiveRequestBody(r, contentLength);
 			}
+			
+			if (expectingUploadData && contentLength == NULL) {
+				// In case of "chunked" transfer encoding, we'll set the
+				// Content-Length header to the length of the received upload
+				// data. Rails requires this header for its HTTP upload data
+				// multipart parsing process.
+				apr_table_set(r->headers_in, "Content-Length",
+					toString(ftell(uploadData->handle)).c_str());
+			}
+			
+			
+			/********** Step 3: forwarding the request to a backend
+			                    process from the application pool **********/
 			
 			UPDATE_TRACE_POINT();
 			try {
 				ServerConfig *sconfig = getServerConfig(r->server);
-				string appRoot(canonicalizePath(
-					config->getAppRoot(mapper.getPublicDirectory().c_str())
-				));
+				string publicDirectory(mapper.getPublicDirectory());
+				string appRoot(config->getAppRoot(publicDirectory.c_str()));
 				
 				session = getApplicationPool()->get(PoolOptions(
 					appRoot,
@@ -468,6 +500,10 @@ private:
 				}
 			}
 			session->shutdownWriter();
+			
+			
+			/********** Step 4: forwarding the response from the backend
+			                    process back to the HTTP client **********/
 			
 			UPDATE_TRACE_POINT();
 			apr_file_t *readerPipe = NULL;
@@ -682,7 +718,16 @@ private:
 		return APR_SUCCESS;
 	}
 	
-	shared_ptr<BufferedUpload> receiveRequestBody(request_rec *r) {
+	/**
+	 * Receive the HTTP upload data and buffer it into a BufferedUpload temp file.
+	 *
+	 * @param r The request.
+	 * @param contentLength The value of the HTTP Content-Length header. This is used
+	 *                      to check whether the HTTP client has sent complete upload
+	 *                      data. NULL indicates that there is no Content-Length header,
+	 *                      i.e. that the HTTP client used chunked transfer encoding.
+	 */
+	shared_ptr<BufferedUpload> receiveRequestBody(request_rec *r, const char *contentLength) {
 		TRACE_POINT();
 		shared_ptr<BufferedUpload> tempFile(new BufferedUpload());
 		char buf[1024 * 32];
@@ -719,7 +764,8 @@ private:
 		if (len == -1) {
 			throw IOException("An error occurred while receiving HTTP upload data.");
 		}
-		if (ftell(tempFile->handle) != atol(lookupHeader(r, "Content-Length"))) {
+		
+		if (contentLength != NULL && ftell(tempFile->handle) != atol(contentLength)) {
 			throw IOException("The HTTP client sent incomplete upload data.");
 		}
 		return tempFile;

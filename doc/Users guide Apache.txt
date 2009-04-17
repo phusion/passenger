@@ -1,0 +1,1425 @@
+= Phusion Passenger users guide =
+
+image:images/phusion_banner.png[link="http://www.phusion.nl/"]
+
+Phusion Passenger is an Apache module, which makes deploying Ruby and Ruby on
+Rails applications on Apache a breeze. It follows the usual Ruby on Rails
+conventions, such as "Don't-Repeat-Yourself" and ease of setup, while at the
+same time providing enough flexibility.
+
+This users guide will teach you:
+
+- How to install Phusion Passenger.
+- How to configure Phusion Passenger.
+- How to deploy a Ruby on Rails application.
+- How to deploy a link:http://rack.rubyforge.org/[Rack]-based Ruby application.
+- How to solve common problems.
+
+This guide assumes that the reader is somewhat familiar with Apache and with
+using the commandline.
+
+
+== Supported operating systems ==
+
+Phusion Passenger works on any POSIX-compliant operating system. In other
+words: practically any operating system on earth, except Microsoft Windows.
+
+Phusion Passenger has been tested on:
+
+- Ubuntu Linux 6.06 (x86)
+- Ubuntu Linux 7.10 (x86)
+- Ubuntu Linux 8.04 (x86)
+- Debian Sarge (x86)
+- Debian Etch (x86)
+- Debian Lenny/Sid (x86)
+- CentOS 5 (x86)
+- Red Hat Enterprise Linux 5 (x86)
+- Gentoo, March 14 2008 (AMD64)
+- FreeBSD 6.1-RELEASE (x86)
+- MacOS X Tiger (x86)
+- MacOS X Leopard (x86)
+
+Other operating systems have not been tested, but Phusion Passenger will probably
+work fine on them. Please
+link:http://code.google.com/p/phusion-passenger/issues/list[report a bug]
+or
+link:http://groups.google.com/group/phusion-passenger[join our discussion list]
+if it doesn't.
+
+
+== Installing Phusion Passenger ==
+
+=== Generic installation instructions ===
+
+[[install_passenger]]
+==== Overview of download and installation methods ====
+
+There are two ways to install Phusion Passenger:
+
+1. By installing the Phusion Passenger gem, as instructed on the
+   link:http://www.modrails.com/install.html[``Install'' page on the Phusion
+   Passenger website].
+2. By downloading a native Linux package (e.g. Debian package) from the
+   Phusion Passenger website.
+3. By downloading the source tarball from the Phusion Passenger website
+   ('passenger-x.x.x.tar.gz').
+
+In our opinion, installing the gem or the native package is easiest.
+
+Phusion Passenger provides an easy-to-use installer for installing the Phusion
+Passenger Apache module ('mod_passenger').
+
+TIP: You might have to run the installation commands in the following sections
+as 'root'. If the installer fails because of permission errors, it will tell
+you.
+
+[[specifying_correct_apache_install]]
+==== Specifying the correct Apache installation ====
+
+NOTE: You can skip this section if you've installed Phusion Passenger via a
+native Linux package, because no compilation is necessary.
+
+If your system has multiple Apache installations (this is likely the case on
+MacOS X), then you will need to tell the Phusion Passenger installer which one
+to use. If you only have one Apache installation (the case on most Linux
+systems), then you can skip this section because Phusion Passenger will
+automatically detect it.
+
+Every Apache installation has its own `apxs` program. You will need to tell
+Phusion Passenger the location of this program, by specifying the `APXS2`
+environment variable. Suppose that you want to use the Apache installation in
+'/opt/apache2'. Then, assuming that the corresponding `apxs` program is located
+'/opt/apache2/bin/apxs', type:
+----------------------------------
+export APXS2=/opt/apache2/bin/apxs
+----------------------------------
+
+NOTE: On some systems, the `apxs` program might be called `apxs2`, and it might
+be located in the `sbin` folder instead of the `bin` folder.
+
+[[specifying_ruby_installation]]
+==== Specifying the correct Ruby installation ====
+
+NOTE: You can skip this section if you've installed Phusion Passenger via a
+native Linux package, because no compilation is necessary.
+
+If your system has multiple Ruby installations -- which is likely the case on
+MacOS X, or if you've also installed
+link:http://www.rubyenterpriseedition.com[Ruby Enterprise Edition] -- then you
+will need to tell the operating system which Ruby installation to use, prior to
+running the Phusion Passenger installer. If you only have one Ruby installation
+(the case on most Linux systems), then you can skip this section because Phusion
+Passenger will automatically detect it.
+
+To specify a Ruby installation, prepend your Ruby installation's `bin`
+directory to the `PATH` environment variable. For example, if you have the
+following Ruby installations:
+
+- /usr/bin/ruby
+- /opt/myruby/bin/ruby
+
+and you want to use the latter, then type:
+
+----------------------------------
+export PATH=/opt/myruby/bin:$PATH
+----------------------------------
+
+
+==== Installing via the gem ====
+
+Please install the gem and then run the Phusion Passenger installer, by typing the
+following commands:
+------------------------------------------------------
+gem install passenger-x.x.x.gem
+passenger-install-apache2-module
+------------------------------------------------------
+Please follow the instructions given by the installer.
+
+
+==== Installing via a native Linux package ====
+
+John Leach from Brightbox has kindly provided an Ubuntu Hardy package for Phusion Passenger. The package is available from the link:http://apt.brightbox.net[Brightbox repository].
+
+Please install the native Linux package, e.g.:
+------------------------------------------------------
+sudo sh -c 'echo "deb http://apt.brightbox.net hardy main" > /etc/apt/sources.list.d/brightbox.list'
+sudo sh -c 'wget -q -O - http://apt.brightbox.net/release.asc | apt-key add -'
+sudo apt-get update
+sudo apt-get install libapache2-mod-passenger
+------------------------------------------------------
+
+
+==== Installing via the source tarball ====
+
+Extract the tarball to whatever location you prefer. *The Phusion Passenger files
+are to reside in that location permanently.* For example, if you would like
+Phusion Passenger to reside in `/opt/passenger-x.x.x`:
+------------------------------------------------------
+cd /opt
+tar xzvf ~/YourDownloadsFolder/passenger-x.x.x.tar.gz
+------------------------------------------------------
+
+Next, run the included installer:
+------------------------------------------------------
+/opt/passenger-x.x.x/bin/passenger-install-apache2-module
+------------------------------------------------------
+Please follow the instructions given by the installer.
+
+IMPORTANT: Please do not remove the 'passenger-x.x.x' folder after
+installation. Furthermore, the 'passenger-x.x.x' folder must be accessible by Apache.
+
+
+=== Operating system-specific instructions and information ===
+
+==== MacOS X ====
+
+Ben Ruebenstein has written an excellent
+link:http://benr75.com/articles/2008/04/12/setup-mod_rails-phusion-mac-os-x-leopard[tutorial
+on installing Phusion Passenger on OS X].
+
+==== Ubuntu Linux ====
+
+Ben Hughes has written an link:http://www.railsgarden.com/2008/04/12/configurating-passenger-mod_rails-on-slicehost-with-ubuntu-710/[article on installing Phusion Passenger on Ubuntu].
+
+==== OpenSolaris ====
+
+J. Aaron Farr has written a link:http://cubiclemuses.com/cm/articles/2009/04/09/rails-passenger-open-solaris-ec2/[guide]
+about setting up Ruby on Rails and Phusion Passenger on OpenSolaris and EC2.
+
+
+== Deploying a Ruby on Rails application ==
+
+Suppose you have a Ruby on Rails application in '/webapps/mycook', and you own
+the domain 'www.mycook.com'. You can either deploy your application to the
+virtual host's root (i.e. the application will be accessible from the root URL,
+'http://www.mycook.com/'), or in a sub URI (i.e. the application will be
+accessible from a sub URL, such as 'http://www.mycook.com/railsapplication').
+
+NOTE: The default `RAILS_ENV` environment in which deployed Rails applications
+are run, is ``production''. You can change this by changing the
+<<rails_env,'RailsEnv'>> configuration option.
+
+=== Deploying to a virtual host's root ===
+
+Add a virtual host entry to your Apache configuration file. The virtual host's
+document root must point to your Ruby on Rails application's 'public' folder.
+For example:
+-------------------------------------------
+<VirtualHost *:80>
+    ServerName www.mycook.com
+    DocumentRoot /webapps/mycook/public
+</VirtualHost>
+-------------------------------------------
+Then restart Apache. The application has now been deployed.
+
+[[deploying_rails_to_sub_uri]]
+=== Deploying to a sub URI ===
+
+Suppose that you already have a virtual host:
+
+-------------------------------------------
+<VirtualHost *:80>
+    ServerName www.phusion.nl
+    DocumentRoot /websites/phusion
+</VirtualHost>
+-------------------------------------------
+
+And you want your Ruby on Rails application to be accessible from the URL
+'http://www.phusion.nl/rails'.
+
+To do this, make a symlink from your Ruby on Rails application's 'public'
+folder to a directory in the document root. For example:
+-------------------------------------------
+ln -s /webapps/mycook/public /websites/phusion/rails
+-------------------------------------------
+
+Next, add a <<RailsBaseURI,RailsBaseURI>> option to the virtual host configuration:
+-------------------------------------------
+<VirtualHost *:80>
+    ServerName www.phusion.nl
+    DocumentRoot /websites/phusion
+    RailsBaseURI /rails                # This line has been added.
+</VirtualHost>
+-------------------------------------------
+Then restart Apache. The application has now been deployed.
+
+NOTE: If you're deploying to a sub-URI then please make sure that your view
+templates correctly handles references to sub-URI static assets! Otherwise
+you may find broken links to images, CSS files, JavaScripts, etc. Please read
+<<sub_uri_deployment_uri_fix,How to fix broken images/CSS/JavaScript URIs in sub-URI deployments>>
+for more information.
+
+[TIP]
+======================================
+You can deploy multiple Rails applications under a virtual host, by specifying
+<<RailsBaseURI,RailsBaseURI>> multiple times. For example:
+---------------------------------
+<VirtualHost *:80>
+    ....
+    RailsBaseURI /app1
+    RailsBaseURI /app2
+    RailsBaseURI /app3
+</VirtualHost>
+---------------------------------
+======================================
+
+=== Redeploying (restarting the Ruby on Rails application) ===
+
+Deploying a new version of a Ruby on Rails application is as simple as
+re-uploading the application files, and restarting the application.
+
+There are two ways to restart the application:
+
+1. By restarting Apache.
+2. By creating or modifying the file 'tmp/restart.txt' in the Rails
+   application's <<application_root,root folder>>. Phusion Passenger will
+   automatically restart the application.
+
+For example, to restart our example MyCook application, we type this in the
+command line:
+-------------------------------------------
+touch /webapps/mycook/tmp/restart.txt
+-------------------------------------------
+
+=== Migrations ===
+
+Phusion Passenger is not related to Ruby on Rails migrations in any way. To
+run migrations on your deployment server, please login to your deployment
+server (e.g. with 'ssh') and type `rake db:migrate RAILS_ENV=production` in
+a shell console, just like one would normally run migrations.
+
+=== Capistrano integration ===
+
+See <<capistrano,Capistrano recipe>>.
+
+
+== Deploying a Rack-based Ruby application ==
+
+Phusion Passenger supports arbitrary Ruby web applications that follow the
+link:http://rack.rubyforge.org/[Rack] interface.
+
+Phusion Passenger assumes that Rack application directories have a certain layout.
+Suppose that you have a Rack application in '/webapps/rackapp'. Then that
+folder must contain at least three entries:
+
+- 'config.ru', a Rackup file for starting the Rack application. This file must contain
+  the complete logic for initializing the application.
+- 'public/', a folder containing public static web assets, like images and stylesheets.
+- 'tmp/', used for 'restart.txt' (our application restart mechanism). This will
+  be explained in a following subsection.
+
+So '/webapps/rackapp' must, at minimum, look like this:
+----------------------
+/webapps/rackapp
+  |
+  +-- config.ru
+  |
+  +-- public/
+  |
+  +-- tmp/
+----------------------
+
+Suppose you own the domain 'www.rackapp.com'. You can either deploy your application
+to the virtual host's root (i.e. the application will be accessible from the root URL,
+'http://www.rackapp.com/'), or in a sub URI (i.e. the application will be
+accessible from a sub URL, such as 'http://www.rackapp.com/rackapp').
+
+NOTE: The default `RACK_ENV` environment in which deployed Rack applications
+are run, is ``production''. You can change this by changing the
+<<rack_env,'RackEnv'>> configuration option.
+
+=== Tutorial/example: writing and deploying a Hello World Rack application ===
+
+First we create a Phusion Passenger-compliant Rack directory structure:
+
+-------------------------------------------
+$ mkdir /webapps/rack_example
+$ mkdir /webapps/rack_example/public
+$ mkdir /webapps/rack_example/tmp
+-------------------------------------------
+
+Next, we write a minimal "hello world" Rack application:
+
+-------------------------------------------
+$ cd /webapps/rack_example
+$ some_awesome_editor config.ru
+...type in some source code...
+$ cat config.ru
+app = proc do |env|
+    return [200, { "Content-Type" => "text/html" }, "hello <b>world</b>"]
+end
+run app
+-------------------------------------------
+
+Finally, we deploy it by adding the following configuration options to
+the Apache configuration file:
+
+-------------------------------------------
+<VirtualHost *:80>
+    ServerName www.rackexample.com
+    DocumentRoot /webapps/rack_example/public
+</VirtualHost>
+-------------------------------------------
+
+And we're done! After an Apache restart, the above Rack application will be available
+under the URL 'http://www.rackexample.com/'.
+
+=== Deploying to a virtual host's root ===
+
+Add a virtual host entry to your Apache configuration file. The virtual host's
+document root must point to your Rack application's 'public' folder.
+For example:
+-------------------------------------------
+<VirtualHost *:80>
+    ServerName www.rackapp.com
+    DocumentRoot /webapps/rackapp/public
+</VirtualHost>
+-------------------------------------------
+Then restart Apache. The application has now been deployed.
+
+[[deploying_rack_to_sub_uri]]
+=== Deploying to a sub URI ===
+
+Suppose that you already have a virtual host:
+
+-------------------------------------------
+<VirtualHost *:80>
+    ServerName www.phusion.nl
+    DocumentRoot /websites/phusion
+</VirtualHost>
+-------------------------------------------
+
+And you want your Rack application to be accessible from the URL
+'http://www.phusion.nl/rack'.
+
+To do this, make a symlink from your Rack application's 'public'
+folder to a directory in the document root. For example:
+-------------------------------------------
+ln -s /webapps/rackapp/public /websites/phusion/rack
+-------------------------------------------
+
+Next, add a <<RackBaseURI,RackBaseURI>> option to the virtual host configuration:
+-------------------------------------------
+<VirtualHost *:80>
+    ServerName www.phusion.nl
+    DocumentRoot /websites/phusion
+    RackBaseURI /rack                # This line has been added.
+</VirtualHost>
+-------------------------------------------
+Then restart Apache. The application has now been deployed.
+
+[TIP]
+======================================
+You can deploy multiple Rack applications under a virtual host, by specifying
+<<RackBaseURI,RackBaseURI>> multiple times. For example:
+---------------------------------
+<VirtualHost *:80>
+    ....
+    RackBaseURI /app1
+    RackBaseURI /app2
+    RackBaseURI /app3
+</VirtualHost>
+---------------------------------
+======================================
+
+=== Redeploying (restarting the Rack application) ===
+
+Deploying a new version of a Rack application is as simple as
+re-uploading the application files, and restarting the application.
+
+There are two ways to restart the application:
+
+1. By restarting Apache.
+2. By creating or modifying the file 'tmp/restart.txt' in the Rack
+   application's <<application_root,root folder>>. Phusion Passenger will
+   automatically restart the application.
+
+For example, to restart our example application, we type this in the
+command line:
+-------------------------------------------
+touch /webapps/rackapp/tmp/restart.txt
+-------------------------------------------
+
+=== Rackup specifications for various web frameworks ===
+include::users_guide_snippets/rackup_specifications.txt[]
+
+
+== Configuring Phusion Passenger ==
+
+After installation, Phusion Passenger does not need any further configurations.
+Nevertheless, the system administrator may be interested in changing
+Phusion Passenger's behavior. Phusion Passenger's Apache module supports the
+following configuration options:
+
+=== PassengerRoot <directory> ===
+The location to the Phusion Passenger root directory. This configuration option
+is essential to Phusion Passenger, and allows Phusion Passenger to locate its own
+data files. The correct value is given by the installer.
+
+If you've moved Phusion Passenger to a different directory then you need to update
+this option as well. Please read
+<<moving_phusion_passenger,Moving Phusion Passenger to a different directory>> for more information.
+
+This required option may only occur once, in the global server configuration.
+
+=== PassengerLogLevel <integer> ===
+This option allows one to specify how much information Phusion Passenger should
+write to the Apache error log file. A higher log level value means that more
+information will be logged.
+
+Possible values are:
+
+- '0': Show only errors and warnings.
+- '1': Show the most important debugging information. This might be useful for
+       system administrators who are trying to figure out the cause of a
+       problem.
+- '2': Show more debugging information. This is typically only useful for developers.
+- '3': Show even more debugging information.
+
+This option may only occur once, in the global server configuration.
+The default is '0'.
+
+[[PassengerRuby]]
+=== PassengerRuby <filename> ===
+This option allows one to specify the Ruby interpreter to use.
+
+This option may only occur once, in the global server configuration.
+The default is 'ruby'.
+
+[[PassengerAppRoot]]
+=== PassengerAppRoot <path/to/root> ===
+By default, Phusion Passenger assumes that the application's root directory
+is the parent directory of the 'public' directory. This option allows one to
+specify the application's root independently from the DocumentRoot, which
+is useful if the 'public' directory lives in a non-standard place.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once.
+
+Example:
+
+-----------------------------
+<VirtualHost test.host>
+    DocumentRoot /var/rails/zena/sites/example.com/public
+    PassengerAppRoot /var/rails/zena   # <-- normally Phusion Passenger would
+                                       #     have assumed that the application
+                                       #     root is "/var/rails/zena/sites/example.com"
+</VirtualHost>
+-----------------------------
+
+[[PassengerUseGlobalQueue]]
+=== PassengerUseGlobalQueue <on|off> ===
+Turns the use of global queuing on or off.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+
+In each place, it may be specified at most once. The default value is 'off'.
+
+'This feature is sponsored by http://www.37signals.com/[37signals].'
+
+include::users_guide_snippets/global_queueing_explained.txt[]
+
+
+[[PassengerUserSwitching]]
+=== PassengerUserSwitching <on|off> ===
+Whether to enable <<user_switching,user switching support>>.
+
+This option may only occur once, in the global server configuration.
+The default value is 'on'.
+
+[[PassengerDefaultUser]]
+=== PassengerDefaultUser <username> ===
+Phusion Passenger enables <<user_switching,user switching support>> by default.
+This configuration option allows one to specify which user Rails/Rack
+applications must run as, if user switching fails or is disabled.
+
+This option may only occur once, in the global server configuration.
+The default value is 'nobody'.
+
+[[PassengerHighPerformance]]
+=== PassengerHighPerformance <on|off> ===
+By default, Phusion Passenger is compatible with mod_rewrite and most other
+Apache modules. However, a lot of effort is required in order to be compatible.
+If you turn 'PassengerHighPerformance' to 'on', then Phusion Passenger will be
+a little faster, in return for reduced compatibility with other Apache modules.
+
+In places where 'PassengerHighPerformance' is turned on, mod_rewrite rules will
+likely not work. mod_autoindex (the module which displays a directory index)
+will also not work. Other Apache modules may or may not work, depending on what
+they exactly do. We recommend you to find out how other modules behave in high
+performance mode via testing.
+
+This option is *not* an all-or-nothing global option: you can enable high
+performance mode for certain virtual hosts or certain URLs only.
+The 'PassengerHighPerformance' option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess'.
+
+In each place, it may be specified at most once. The default value is 'off',
+so high performance mode is disabled by default, and you have to explicitly
+enable it.
+
+.When to enable high performance mode?
+
+If you do not use mod_rewrite or other Apache modules then it might make
+sense to enable high performance mode.
+
+It's likely that some of your applications depend on mod_rewrite or other
+Apache modules, while some do not. In that case you can enable high performance
+for only those applications that don't use other Apache modules. For example:
+
+------------------------------------
+<VirtualHost *:80>
+    ServerName www.foo.com
+    DocumentRoot /apps/foo/public
+    .... mod_rewrite rules or options for other Apache modules here ...
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName www.bar.com
+    DocumentRoot /apps/bar/public
+    PassengerHighPerformance on
+</VirtualHost>
+------------------------------------
+
+In the above example, high performance mode is only enabled for www.bar.com.
+It is disabled for everything else.
+
+If your application generally depends on mod_rewrite or other Apache modules,
+but a certain URL that's accessed often doesn't depend on those other modules,
+then you can enable high performance mode for a certain URL only. For example:
+
+------------------------------------
+<VirtualHost *:80>
+    ServerName www.foo.com
+    DocumentRoot /apps/foo/public
+    .... mod_rewrite rules or options for other Apache modules here ...
+    
+    <Location /chatroom/ajax_update_poll>
+        PassengerHighPerformance on
+    </Location>
+</VirtualHost>
+------------------------------------
+
+This enables high performance mode for
+http://www.foo.com/chatroom/ajax_update_poll only.
+
+=== PassengerEnabled <on|off> ===
+You can set this option to 'off' to completely disable Phusion Passenger for
+a certain location. This is useful if, for example, you want to integrate a PHP
+application into the same virtual host as a Rails application.
+
+Suppose that you have a Rails application in '/apps/foo'. Suppose that you've
+dropped Wordpress -- a blogging application written in PHP -- in
+'/apps/foo/public/wordpress'. You can then configure Phusion Passenger as
+follows:
+
+------------------------------------
+<VirtualHost *:80>
+    ServerName www.foo.com
+    DocumentRoot /apps/foo/public
+    <Location /wordpress>
+        PassengerEnabled off
+        AllowOverride all      # <-- Makes Wordpress's .htaccess file work.
+    </Location>
+</VirtualHost>
+------------------------------------
+
+This way, Phusion Passenger will not interfere with Wordpress.
+
+'PassengerEnabled' may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess'.
+
+In each place, it may be specified at most once. The default value is 'on'.
+
+=== PassengerTempDir <directory> ===
+Specifies the directory that Phusion Passenger should use for storing temporary
+files. This includes things such as Unix socket files, buffered file uploads,
+etc.
+
+This option may be specified once, in the global server configuration. The
+default temp directory that Phusion Passenger uses is '/tmp'.
+
+This option is especially useful if Apache is not allowed to write to /tmp
+(which is the case on some systems with strict SELinux policies) or if the
+partition that /tmp lives on doesn't have enough disk space.
+
+.Command line tools
+Some Phusion Passenger command line administration tools, such as
+`passenger-status`, must know what Phusion Passenger's temp directory is
+in order to function properly. You can pass the directory through the
+`PASSENGER_TMPDIR` environment variable, or the `TMPDIR` environment variable
+(the former will be used if both are specified).
+
+For example, if you set 'PassengerTempDir' to '/my_temp_dir', then invoke
+`passenger-status` after you've set the `PASSENGER_TMPDIR` or `TMPDIR`
+environment variable, like this:
+
+----------------------------------------------------------
+export PASSENGER_TMPDIR=/my_temp-dir
+sudo -E passenger-status
+# The -E option tells 'sudo' to preserve environment variables.
+----------------------------------------------------------
+
+=== PassengerRestartDir <directory> ===
+As described in the deployment chapters of this document, Phusion Passenger
+checks the file 'tmp/restart.txt' in the applications'
+<<application_root,root directory>> for restarting applications. Sometimes it
+may be desirable for Phusion Passenger to look in a different directory instead,
+for example for security reasons (see below). This option allows you to
+customize the directory in which 'restart.txt' is searched for.
+
+You may specify 'PassengerRestartDir' in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverrides Options` is enabled.
+
+In each place, it may be specified at most once.
+
+You can either set it to an absolute directory, or to a directory relative to
+the <<application_root,application root>>. Examples:
+
+-----------------------------------
+<VirtualHost *:80>
+    ServerName www.foo.com
+    # Phusion Passenger will check for /apps/foo/public/tmp/restart.txt
+    DocumentRoot /apps/foo/public
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName www.bar.com
+    DocumentRoot /apps/bar/public
+    # An absolute filename is given; Phusion Passenger will
+    # check for /restart_files/bar/restart.txt
+    PassengerRestartDir /restart_files/bar
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName www.baz.com
+    DocumentRoot /apps/baz/public
+    # A relative filename is given; Phusion Passenger will
+    # check for /apps/baz/restart_files/restart.txt
+    #
+    # Note that this directory is relative to the APPLICATION ROOT, *not*
+    # the value of DocumentRoot!
+    PassengerRestartDir restart_files
+</VirtualHost>
+-----------------------------------
+
+.What are the security reasons for wanting to customize PassengerRestartDir?
+Touching restart.txt will cause Phusion Passenger to restart the application.
+So anybody who can touch restart.txt can effectively cause a Denial-of-Service
+attack by touching restart.txt over and over. If your web server or one of your
+web applications has the permission to touch restart.txt, and one of them has a
+security flaw which allows an attacker to touch restart.txt, then that will
+allow the attacker to cause a Denial-of-Service.
+
+You can prevent this from happening by pointing PassengerRestartDir to a
+directory that's readable by Apache, but only writable by administrators.
+
+
+=== Resource control and optimization options ===
+
+==== PassengerMaxPoolSize <integer> ====
+The maximum number of Ruby on Rails or Rack application instances that may
+be simultaneously active. A larger number results in higher memory usage,
+but improved ability to handle concurrent HTTP clients.
+
+The optimal value depends on your system's hardware and the server's average
+load. You should experiment with different values. But generally speaking,
+the value should be at least equal to the number of CPUs (or CPU cores) that
+you have. If your system has 2 GB of RAM, then we recommend a value of '30'.
+If your system is a Virtual Private Server (VPS) and has about 256 MB RAM, and
+is also running other services such as MySQL, then we recommend a value of '2'.
+
+If you find that your server is unable to handle the load on your Rails/Rack websites
+(i.e. running out of memory) then you should lower this value. (Though if your
+sites are really that popular, then you should strongly consider upgrading your
+hardware or getting more servers.)
+
+This option may only occur once, in the global server configuration.
+The default value is '6'.
+
+TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
+Edition>>. This allows you to reduce the memory usage of your Ruby on Rails applications
+by about 33%. And it's not hard to install.
+
+==== PassengerMaxInstancesPerApp <integer> ====
+The maximum number of application instances that may be simultaneously active
+for a single application. This helps to make sure that a single application
+will not occupy all available slots in the application pool.
+
+This value must be less than <<PassengerMaxPoolSize,PassengerMaxPoolSize>>. A value of 0
+means that there is no limit placed on the number of instances a single application
+may use, i.e. only the global limit of <<PassengerMaxPoolSize,PassengerMaxPoolSize>>
+will be enforced.
+
+This option may only occur once, in the global server configuration.
+The default value is '0'.
+
+[[PassengerPoolIdleTime]]
+==== PassengerPoolIdleTime <integer> ====
+The maximum number of seconds that an application instance may be idle. That is,
+if an application instance hasn't received any traffic after the given number of
+seconds, then it will be shutdown in order to conserve memory.
+
+Decreasing this value means that applications will have to be spawned
+more often. Since spawning is a relatively slow operation, some visitors may
+notice a small delay when they visit your Rails/Rack website. However, it will also
+free up resources used by applications more quickly.
+
+The optimal value depends on the average time that a visitor spends on a single
+Rails/Rack web page. We recommend a value of `2 * x`, where `x` is the average
+number of seconds that a visitor spends on a single Rails/Rack web page. But your
+mileage may vary.
+
+When this value is set to '0', application instances will not be shutdown unless 
+it's really necessary, i.e. when Phusion Passenger is out of worker processes
+for a given application and one of the inactive application instances needs to
+make place for another application instance. Setting the value to 0 is
+recommended if you're on a non-shared host that's only running a few
+applications, each which must be available at all times.
+
+This option may only occur once, in the global server configuration.
+The default value is '300'.
+
+[[PassengerMaxRequests]]
+==== PassengerMaxRequests <integer> ====
+The maximum number of requests an application instance will process. After
+serving that many requests, the application instance will be shut down and
+Phusion Passenger will restart it. A value of 0 means that there is no maximum:
+an application instance will thus be shut down when its idle timeout has been
+reached.
+
+This option is useful if your application is leaking memory. By shutting
+it down after a certain number of requests, all of its memory is guaranteed
+to be freed by the operating system.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Limits` is on.
+
+In each place, it may be specified at most once. The default value is '0'.
+
+[CAUTION]
+=====================================================
+The <<PassengerMaxRequests,PassengerMaxRequests>> directive should be considered
+as a workaround for misbehaving applications. It is advised that you fix the
+problem in your application rather than relying on these directives as a
+measure to avoid memory leaks.
+=====================================================
+
+==== PassengerStatThrottleRate <integer> ====
+By default, Phusion Passenger performs several filesystem checks (or, in
+programmers jargon, 'stat() calls') each time a request is processed:
+
+- It checks whether 'config/environment.rb', 'config.ru' or 'passenger_wsgi.py'
+  is present, in order to autodetect Rails, Rack and WSGI applications.
+- It checks whether 'restart.txt' has changed or whether 'always_restart.txt'
+  exists, in order to determine whether the application should be restarted.
+
+On some systems where disk I/O is expensive, e.g. systems where the harddisk is
+already being heavily loaded, or systems where applications are stored on NFS
+shares, these filesystem checks can incur a lot of overhead.
+
+You can decrease or almost entirely eliminate this overhead by setting
+'PassengerStatThrottleRate'. Setting this option to a value of 'x' means that
+the above list of filesystem checks will be performed at most once every 'x'
+seconds. Setting it to a value of '0' means that no throttling will take place,
+or in other words, that the above list of filesystem checks will be performed on
+every request.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Limits` is on.
+
+In each place, it may be specified at most once. The default value is '0'.
+
+
+=== Ruby on Rails-specific options ===
+
+==== RailsAutoDetect <on|off> ====
+Whether Phusion Passenger should automatically detect whether a virtual host's
+document root is a Ruby on Rails application. The default is 'on'.
+
+This option may occur in the global server configuration or in a virtual host
+configuration block.
+
+For example, consider the following configuration:
+
+-----------------------------
+RailsAutoDetect off
+<VirtualHost *:80>
+    ServerName www.mycook.com
+    DocumentRoot /webapps/mycook/public
+</VirtualHost>
+-----------------------------
+
+If one goes to 'http://www.mycook.com/', the visitor will see the contents of
+the '/webapps/mycook/public' folder, instead of the output of the Ruby on Rails
+application.
+
+It is possible to explicitly specify that the host is a Ruby on Rails
+application by using the <<RailsBaseURI,RailsBaseURI>> configuration option:
+
+-----------------------------
+RailsAutoDetect off
+<VirtualHost *:80>
+    ServerName www.mycook.com
+    DocumentRoot /webapps/mycook/public
+    RailsBaseURI /           # This line has been added.
+</VirtualHost>
+-----------------------------
+
+[[RailsBaseURI]]
+==== RailsBaseURI <uri> ====
+Used to specify that the given URI is a Rails application. See
+<<deploying_rails_to_sub_uri,Deploying Rails to a sub URI>> for an example.
+
+It is allowed to specify this option multiple times. Do this to deploy multiple
+Rails applications in different sub-URIs under the same virtual host.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+[[rails_env]]
+==== RailsEnv <string> ====
+This option allows one to specify the default `RAILS_ENV` value.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once. The default value is 'production'.
+
+[[RailsSpawnMethod]]
+==== RailsSpawnMethod <string> ====
+[TIP]
+."What spawn method should I use?"
+=========================================================
+This subsection attempts to describe spawn methods, but it's okay if you don't (want to)
+understand it, as it's mostly a technical detail. You can basically follow this rule of thumb:
+
+************************************************
+If your application works on Mongrel, but not on Phusion Passenger, then set
+`RailsSpawnMethod` to 'conservative'. Otherwise, leave it at 'smart-lv2' (the default).
+************************************************
+
+However, we do recommend you to try to understand it. The 'smart' and 'smart-lv2' spawn
+methods bring many benefits.
+=========================================================
+
+include::users_guide_snippets/rails_spawn_method.txt[]
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+
+In each place, it may be specified at most once. The default value is 'smart-lv2'.
+
+==== RailsFrameworkSpawnerIdleTime <integer> ====
+The FrameworkSpawner server (explained in <<spawning_methods_explained,Spawning
+methods explained>>) has an idle timeout, just like the backend processes spawned by
+Phusion Passenger do. That is, it will automatically shutdown if it hasn't done
+anything for a given period.
+
+This option allows you to set the FrameworkSpawner server's idle timeout, in
+seconds. A value of '0' means that it should never idle timeout.
+
+Setting a higher value will mean that the FrameworkSpawner server is kept around
+longer, which may slightly increase memory usage. But as long as the
+FrameworkSpawner server is running, the time to spawn a Ruby on Rails backend
+process only takes about 40% of the time that is normally needed, assuming that
+you're using the 'smart' <<RailsSpawnMethod,spawning method>>. So if your
+system has enough memory, is it recommended that you set this option to a high
+value or to '0'.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+
+In each place, it may be specified at most once. The default value is '1800' (30 minutes).
+
+==== RailsAppSpawnerIdleTime <integer> ====
+The ApplicationSpawner server (explained in <<spawning_methods_explained,Spawning
+methods explained>>) has an idle timeout, just like the backend processes spawned by
+Phusion Passenger do. That is, it will automatically shutdown if it hasn't done
+anything for a given period.
+
+This option allows you to set the ApplicationSpawner server's idle timeout, in
+seconds. A value of '0' means that it should never idle timeout.
+
+Setting a higher value will mean that the ApplicationSpawner server is kept around
+longer, which may slightly increase memory usage. But as long as the
+ApplicationSpawner server is running, the time to spawn a Ruby on Rails backend
+process only takes about 10% of the time that is normally needed, assuming that
+you're using the 'smart' or 'smart-lv2' <<RailsSpawnMethod,spawning method>>. So if your
+system has enough memory, is it recommended that you set this option to a high
+value or to '0'.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+
+In each place, it may be specified at most once. The default value is '600' (10 minutes).
+
+=== Rack-specific options ===
+
+==== RackAutoDetect <on|off> ====
+Whether Phusion Passenger should automatically detect whether a virtual host's
+document root is a Rack application. The default is 'on'.
+
+This option may occur in the global server configuration or in a virtual host
+configuration block.
+
+For example, consider the following configuration:
+
+-----------------------------
+RackAutoDetect off
+<VirtualHost *:80>
+    ServerName www.rackapp.com
+    DocumentRoot /webapps/my_rack_app/public
+</VirtualHost>
+-----------------------------
+
+If one goes to 'http://www.rackapp.com/', the visitor will see the contents of
+the '/webapps/my_rack_app/public' folder, instead of the output of the Rack
+application.
+
+It is possible to explicitly specify that the host is a Rack
+application by using the <<RackBaseURI,RackBaseURI>> configuration option:
+
+-----------------------------
+RackAutoDetect off
+<VirtualHost *:80>
+    ServerName www.rackapp.com
+    DocumentRoot /webapps/my_rack_app/public
+    RackBaseURI /       # This line was added
+</VirtualHost>
+-----------------------------
+
+[[RackBaseURI]]
+==== RackBaseURI <uri> ====
+Used to specify that the given URI is a Rack application. See
+<<deploying_rack_to_sub_uri,Deploying Rack to a sub URI>> for an example.
+
+It is allowed to specify this option multiple times. Do this to deploy multiple
+Rack applications in different sub-URIs under the same virtual host.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+[[rack_env]]
+==== RackEnv <string> ====
+The given value will be accessible in Rack applications in the `RACK_ENV`
+environment variable. This allows one to define the environment in which
+Rack applications are run, very similar to `RAILS_ENV`.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once. The default value is 'production'.
+
+=== Deprecated options ===
+
+The following options have been deprecated, but are still supported for backwards
+compatibility reasons.
+
+==== RailsRuby ====
+Deprecated in favor of <<PassengerRuby,PassengerRuby>>.
+
+==== RailsUserSwitching ====
+Deprecated in favor of <<PassengerUserSwitching,PassengerUserSwitching>>.
+
+==== RailsDefaultUser ====
+Deprecated in favor of <<PassengerDefaultUser,PassengerDefaultUser>>.
+
+==== RailsAllowModRewrite ====
+This option doesn't do anything anymore in recent versions of Phusion Passenger.
+
+
+== Troubleshooting ==
+
+=== Operating system-specific problems ===
+
+==== MacOS X: The installer cannot locate MAMP's Apache ====
+
+.Symptoms
+*******************************************************************************
+The installer finds Apache 2 development headers at `/Applications/MAMP/Library/bin/apxs`.
+However, Apache cannot be found. The installer also outputs the following error:
+------------------------------------
+cannot open /Applications/MAMP/Library/build/config_vars.mk:
+No such file or directory at /Applications/MAMP/Library/bin/apxs line 218.
+------------------------------------
+*******************************************************************************
+
+Your MAMP installation seems to be broken. In particular, 'config_vars.mk' is missing.
+Please read link:http://forum.mamp.info/viewtopic.php?t=1866[this forum topic] to learn how
+to fix this problem.
+
+See also link:http://code.google.com/p/phusion-passenger/issues/detail?id=12[this bug report].
+
+
+=== Problems during installation ===
+
+[[installing_ruby_dev]]
+==== Ruby development headers aren't installed ====
+
+.Symptoms
+*******************************************************************************
+Installing Phusion Passenger fails because of one of the following errors:
+
+- The Phusion Passenger installer tells you that the Ruby development headers
+  aren't installed.
+- The error message ``'no such file to load -- mkmf''' occurs.
+- The error message ``'ruby.h: No such file or directory''' occurs.
+*******************************************************************************
+
+Phusion Passenger makes use of a native extension, so the Ruby development headers
+must be installed. On most Linux systems, Ruby and the Ruby development headers
+are contained in separate packages, so having Ruby installed does not
+automatically imply having the development headers installed.
+
+Here's how you can install the development headers:
+
+Ubuntu/Debian::
+	Please type:
++
+-----------------------------------------
+sudo apt-get install ruby1.8-dev
+-----------------------------------------
+
+Fedora/CentOS/RHEL::
+	Please type:
++
+-----------------------------------------
+su -c 'yum install ruby-devel'
+-----------------------------------------
+
+FreeBSD::
+	Please install Ruby from 'ports' or with `pkg_add`. If that fails,
+	please install Ruby from source.
+
+MacOS X::
+	Please install Ruby from source.
+
+Other operating systems::
+	Please consult your operating system's native package database.
+	There should be a package containing the Ruby development headers.
+	If that fails, please install Ruby from source.
+
+NOTE: If you've installed a new Ruby version (i.e. your system now contains
+multiple Ruby installations), then you will need to tell Phusion Passenger
+which Ruby installation you want to use. Please read
+<<specifying_ruby_installation,Specifying the correct Ruby installation>>.
+
+==== Apache development headers aren't installed ====
+
+.Symptoms
+*******************************************************************************
+Installing Phusion Passenger fails because of one of the following errors:
+
+- The installer says that the Apache development headers aren't installed.
+- The error message ``'httpd.h: No such file or directory''' occurs.
++
+(Instead of 'httpd.h', the message might also be 'http_config.h' or something
+else similar to 'http_*.h'.)
+*******************************************************************************
+
+Ubuntu::
+	Please type:
++
+-----------------------------------------
+sudo apt-get install apache2-prefork-dev
+-----------------------------------------
+
+Debian::
+	Please type:
++
+-----------------------------------------
+sudo apt-get install apache2-dev
+-----------------------------------------
+
+Fedora/CentOS/RHEL::
+	Please type:
++
+--------------------------------
+su -c 'yum install httpd-devel'
+--------------------------------
+
+FreeBSD::
+	Please install Apache from 'ports' or with `pkg_add`. If that fails,
+	please install Apache from source.
+
+MacOS X::
+	Please install Apache from source.
+
+Other operating systems::
+	Please consult your operating system's native package database.
+	There should be a package containing the Apache development headers.
+	If that fails, please install Apache from source.
+
+
+==== APR development headers aren't installed ====
+
+.Symptoms
+*******************************************************************************
+Installing Phusion Passenger fails because one of the following errors:
+
+- The installer tells you that APR development headers aren't installed.
+- The error message ``'apr_pools.h: No such file or directory''' occurs.
+- The error message ``'apr_strings.h: No such file or directory''' occurs.
+*******************************************************************************
+
+Ubuntu::
+	Please type:
++
+-----------------------------------------
+sudo apt-get install libapr1-dev
+-----------------------------------------
+
+Debian::
+	Please type:
++
+-----------------------------------------
+sudo apt-get install libapr1-dev
+-----------------------------------------
+
+Fedora/CentOS/RHEL::
+	Please type:
++
+--------------------------------
+su -c 'yum install apr-devel'
+--------------------------------
+
+Other Linux distributions::
+	Please consult your distribution's package database. There should be a
+	package which provides APR development headers.
+
+Other operating systems::
+	The APR development are bundled with Apache. If the APR headers aren't,
+	then it probably means that they have been removed after Apache's been
+	installed. Please reinstall Apache to get back the APR headers.
+
+
+==== Phusion Passenger is using the wrong Apache during installation ====
+
+Please <<specifying_correct_apache_install,Specifying the correct Apache
+installation>>, and re-run the Phusion Passenger installer.
+
+
+==== Phusion Passenger is using the wrong Ruby during installation ====
+
+Please <<specifying_ruby_installation,Specifying the correct Ruby
+installation>>, and re-run the Phusion Passenger installer.
+
+
+=== Problems after installation ===
+
+[TIP]
+.The golden tip: read your Apache error logs!
+=====================================================
+'mod_passenger' will write all errors to the Apache error log. So if
+you're experiencing post-installation problems, please look
+inside the Apache error logs. It will tell you what exactly went wrong.
+=====================================================
+
+==== My Rails application works on Mongrel, but not on Phusion Passenger ====
+
+Please try setting <<RailsSpawnMethod,RailsSpawnMethod>> to 'conservative'.
+
+==== Phusion Passenger has been compiled against the wrong Apache installation ====
+
+.Symptoms
+*******************************************************************************
+Apache crashes during startup (after being daemonized). The Apache error log
+says ``'seg fault or similar nasty error detected in the parent process'''.
+*******************************************************************************
+
+This problem is most likely to occur on MacOS X. Most OS X users have multiple
+Apache installations on their system.
+
+To solve this problem, please <<specifying_correct_apache_install,specify the
+correct Apache installation>>, and <<install_passenger,reinstall Phusion
+Passenger>>.
+
+==== I get a "304 Forbidden" error ====
+
+See next subsection.
+
+==== Static assets such as images and stylesheets aren't being displayed ====
+
+Static assets are accelerated, i.e. they are served directly by Apache and do not
+go through the Rails stack. There are two reasons why Apache doesn't serve static
+assets correctly:
+
+1. Your Apache configuration is too strict, and does not allow HTTP clients to
+   access static assets. This can be achieved with an `Allow from all` directive
+   in the correct place. For example:
++
+-----------------------------------------
+<Directory "/webapps/mycook/public">
+   Options FollowSymLinks
+   AllowOverride None
+   Order allow,deny
+   Allow from all
+</Directory>
+-----------------------------------------
++
+See also link:http://groups.google.com/group/phusion-passenger/browse_thread/thread/9699a639a87f85f4/b9d71a03bf2670a5[this discussion].
+
+2. The Apache process doesn't have permission to access your Rails application's folder.
+   Please make sure that the Rails application's folder, as well as all of its parent folders,
+   have the correct permissions and/or ownerships.
+
+==== The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it ====
+
+If you are sure that the 'PassengerRoot' configuration option is set correctly,
+then this problem is most likely caused by the fact that you're running Apache
+with SELinux. On Fedora, CentOS and RedHat Enterprise Linux, Apache is locked
+down by SELinux policies.
+
+To solve this problem, you must set some permissions on the Phusion Passenger files
+and folders, so that Apache can access them.
+
+- If you've installed Phusion Passenger via a gem, then run this command to determine
+  Phusion Passenger's root folder:
++
+------------------------------------------------------------------
+passenger-config --root
+------------------------------------------------------------------
++
+Next, run the following command:
++
+------------------------------------------------------------------
+chcon -R -h -t httpd_sys_content_t /path-to-passenger-root
+------------------------------------------------------------------
++
+where '/path-to-passenger-root' should be replaced with whatever
+`passenger-config --root` printed.
+
+- If you've installed Phusion Passenger via the source tarball, then run the following
+  command:
++
+------------------------------------------------------------------
+chcon -R -h -t httpd_sys_content_t /path/to/passenger/folder
+------------------------------------------------------------------
+
+Once the permissions are fixed, restart Apache.
+
+==== The Rails application reports that it's unable to start because of a permission error ====
+
+Please check whether your Rails application's folder has the correct
+permissions. By default, Rails applications are started as the owner of the
+file 'config/environment.rb', except if the file is owned by root. If the
+file is owned by root, then the Rails application will be started as 'nobody'
+(or as the user specify by <<RailsDefaultUser,RailsDefaultUser>>, if that's
+specified).
+
+Please read <<user_switching,User switching (security)>> for details.
+
+==== My Rails application's log file is not being written to ====
+
+There are a couple things that you should be aware of:
+
+- By default, Phusion Passenger runs Rails applications in 'production' mode,
+  so please be sure to check 'production.log' instead of 'development.log'. See
+  <<RailsEnv,RailsEnv>> for configuration.
+- By default, Phusion Passenger runs Rails applications as the owner of 'environment.rb'.
+  So the log file can only be written to if that user has write permission to the
+  log file. Please 'chmod' or 'chown' your log file accordingly.
++
+See <<User_switching,User switching (security)>> for details.
+
+If you're using a RedHat-derived Linux distribution (such as Fedora or CentOS)
+then it is link:http://code.google.com/p/phusion-passenger/issues/detail?id=4[possible
+that SELinux is interfering]. RedHat's SELinux policy only allows Apache to read/write
+directories that have the 'httpd_sys_content_t' security context. Please run the
+following command to give your Rails application folder that context:
+
+-----------------------------------------------------------
+chcon -R -h -t httpd_sys_content_t /path/to/your/rails/app
+-----------------------------------------------------------
+
+
+[[conflicting_apache_modules]]
+=== Conflicting Apache modules ===
+
+==== mod_userdir ====
+
+'mod_userdir' is not compatible with Phusion Passenger at the moment.
+
+==== VirtualDocumentRoot ====
+
+VirtualDocumentRoot is not compatible with Phusion Passenger at the moment.
+
+
+== Analysis and system maintenance tools ==
+
+include::users_guide_snippets/analysis_and_system_maintenance_tools.txt[]
+
+
+== Tips ==
+
+include::users_guide_snippets/tips.txt[]
+
+=== X-Sendfile support ===
+
+Phusion Passenger does not provide X-Sendfile support by itself. Please install
+link:http://tn123.ath.cx/mod_xsendfile/[mod_xsendfile] for X-Sendfile support.
+
+=== Upload progress ===
+
+Phusion Passenger does not provide upload progress support by itself. Please
+try drogus's link:http://github.com/drogus/apache-upload-progress-module/tree/master[
+Apache upload progress module] instead.
+
+
+include::users_guide_snippets/appendix_a_about.txt[]
+
+include::users_guide_snippets/appendix_b_terminology.txt[]
+
+include::users_guide_snippets/appendix_c_spawning_methods.txt[]

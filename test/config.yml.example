@@ -23,3 +23,8 @@ nonexistant_user: xxxxxxxxxxxxxxxxxxx
 # A nonexistant user ID.
 nonexistant_uid: 9999
 
+
+# If you want to run the Nginx integration tests, then set the following
+# config option to the full path of the Nginx binary. This Nginx binary *must*
+# be compiled with Phusion Passenger support!
+# nginx: /usr/local/sbin/nginx
