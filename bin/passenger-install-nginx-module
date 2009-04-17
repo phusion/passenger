@@ -389,7 +389,7 @@ private
 		command = "./configure --prefix='#{prefix}' "
 		if @pcre_source_dir
 			command << "--with-pcre='#{@pcre_source_dir}' "
-		else
+		elsif !pcre_is_installed?
 			command << "--without-http_rewrite_module "
 		end
 		command << "--add-module='#{PASSENGER_ROOT}/ext/nginx' #{extra_configure_flags}"
