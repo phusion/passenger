@@ -1,0 +1,75 @@
+This subsection shows example 'config.ru' files for various web frameworks.
+
+==== Camping ====
+------------------------------------------------------
+require 'rubygems'
+require 'rack'
+require 'camping'
+
+##### Begin Camping application
+Camping.goes :Blog
+
+...your application code here...
+##### End Camping application
+
+run Rack::Adapter::Camping.new(Blog)
+------------------------------------------------------
+
+For Camping versions 2.0 and up, using `run Blog` as the final line will do.
+
+==== Halcyon ====
+------------------------------------------------------
+require 'rubygems'
+require 'halcyon'
+$LOAD_PATH.unshift(Halcyon.root / 'lib')
+Halcyon::Runner.load_config Halcyon.root/'config'/'config.yml'
+run Halcyon::Runner.new
+------------------------------------------------------
+
+==== Mack ====
+------------------------------------------------------
+ENV["MACK_ENV"] = ENV["RACK_ENV"]
+load("Rakefile")
+require 'rubygems'
+require 'mack'
+run Mack::Utils::Server.build_app
+------------------------------------------------------
+
+==== Merb ====
+------------------------------------------------------
+require 'rubygems'
+require 'merb-core'
+
+Merb::Config.setup(
+  :merb_root   => File.expand_path(File.dirname(__FILE__)),
+  :environment => ENV['RACK_ENV']
+)
+Merb.environment = Merb::Config[:environment]
+Merb.root = Merb::Config[:merb_root]
+Merb::BootLoader.run
+
+run Merb::Rack::Application.new
+------------------------------------------------------
+
+==== Ramaze ====
+------------------------------------------------------
+require "start"
+Ramaze.trait[:essentials].delete Ramaze::Adapter
+Ramaze.start :force => true
+run Ramaze::Adapter::Base
+------------------------------------------------------
+
+==== Sinatra ====
+------------------------------------------------------
+require 'rubygems'
+require 'sinatra'
+
+root_dir = File.dirname(__FILE__)
+
+set :environment, ENV['RACK_ENV'].to_sym
+set :root,        root_dir
+set :app_file,    File.join(root_dir, 'app.rb')
+disable :run
+
+run Sinatra::Application
+------------------------------------------------------

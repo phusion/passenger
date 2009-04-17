@@ -12,7 +12,7 @@ namespace tut {
 		
 		ApplicationPoolServer_ApplicationPoolTest() {
 			server = ptr(new ApplicationPoolServer(
-				"../ext/apache2/ApplicationPoolServerExecutable",
+				"./ApplicationPoolServerExecutable",
 				"../bin/passenger-spawn-server"));
 			pool = server->connect();
 			pool2 = server->connect();

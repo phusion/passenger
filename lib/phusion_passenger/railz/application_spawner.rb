@@ -1,20 +1,25 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (C) 2008  Phusion
+#  Copyright (c) 2008, 2009 Phusion
 #
-#  Phusion Passenger is a trademark of Hongli Lai & Ninh Bui.
+#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; version 2 of the License.
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
 #
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+#  The above copyright notice and this permission notice shall be included in
+#  all copies or substantial portions of the Software.
 #
-#  You should have received a copy of the GNU General Public License along
-#  with this program; if not, write to the Free Software Foundation, Inc.,
-#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#  THE SOFTWARE.
 
 require 'rubygems'
 require 'socket'
@@ -82,13 +87,8 @@ class ApplicationSpawner < AbstractServer
 	# All other options will be passed on to RequestHandler.
 	def initialize(app_root, options = {})
 		super()
-		begin
-			@app_root = normalize_path(app_root)
-		rescue SystemCallError => e
-			raise InvalidPath, e.message
-		rescue InvalidPath
-			raise
-		end
+		@app_root = app_root
+		@canonicalized_app_root = canonicalize_path(app_root)
 		@options = sanitize_spawn_options(options)
 		@lower_privilege = @options["lower_privilege"]
 		@lowest_user     = @options["lowest_user"]
@@ -230,7 +230,7 @@ protected
 	
 private
 	def preload_application
-		Object.const_set(:RAILS_ROOT, @app_root)
+		Object.const_set(:RAILS_ROOT, @canonicalized_app_root)
 		if defined?(::Rails::Initializer)
 			::Rails::Initializer.run(:set_load_path)
 			
@@ -275,9 +275,9 @@ private
 		if !defined?(Dispatcher)
 			require 'dispatcher'
 		end
-		if File.exist?('app/controllers/application_controller.rb')
+		begin
 			require_dependency 'application_controller'
-		else
+		rescue LoadError
 			require_dependency 'application'
 		end
 		
@@ -287,7 +287,7 @@ private
 		#   to do that again.
 		if GC.copy_on_write_friendly? && !::Rails::Initializer.respond_to?(:load_application_classes)
 			Dir.glob('app/{models,controllers,helpers}/*.rb').each do |file|
-				require_dependency normalize_path(file)
+				require_dependency canonicalize_path(file)
 			end
 		end
 	end

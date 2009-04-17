@@ -1,0 +1,20 @@
+<banner>Nginx with Passenger support was successfully installed.</banner>
+
+The Nginx configuration file (<b><%= @config_file %></b>)
+must contain the correct configuration options in order for Phusion Passenger
+to function correctly.
+
+<green>This installer has already modified the configuration file for you!</green> The
+following configuration snippet was inserted:
+
+  <b>http {
+      ...
+      passenger_root <%= @passenger_root %>;
+      passenger_ruby <%= @ruby %>;
+      ...
+  }</b>
+
+After you start Nginx, you are ready to deploy any number of Ruby on Rails
+applications on Nginx.
+
+<b>Press ENTER to continue.</b>

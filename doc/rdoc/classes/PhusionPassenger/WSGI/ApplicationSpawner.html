@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Class: PhusionPassenger::WSGI::ApplicationSpawner</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href="../../.././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Class</span><br />PhusionPassenger::WSGI::ApplicationSpawner</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../../../files/lib/phusion_passenger/wsgi/application_spawner_rb.html">lib/phusion_passenger/wsgi/application_spawner.rb</a>
+        </td>
+      </tr>
+    <tr>
+      <td>Parent:</td>
+      <td>
+Object
+     </td>
+   </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+  <div class="description"><p>
+Class for spawning <a href="../WSGI.html">WSGI</a> applications.
+</p>
+</div>
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000037">spawn_application</a></li>
+  <li><a href="#M000038">spawn_application</a></li>
+  </ul>
+
+<div class="sectiontitle">Included Modules</div>
+<ul>
+  <li><a href="../Utils.html">Utils</a></li>
+</ul>
+
+
+
+  <div class="sectiontitle">Constants</div>
+  <table border='0' cellpadding='5'>
+  <tr valign='top'>
+    <td class="attr-name">REQUEST_HANDLER</td>
+    <td>=</td>
+    <td class="attr-value">File.expand_path(File.dirname(__FILE__) + &quot;/request_handler.py&quot;)</td>
+  </tr>
+  </table>
+
+
+<div class="sectiontitle">Public Class methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000037"></a><b>spawn_application</b>(*args)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000037_source')" id="l_M000037_source">show source</a> ]</p>
+  <div id="M000037_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/wsgi/application_spawner.rb, line 36</span>
+36:         <span class="ruby-keyword kw">def</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">spawn_application</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+37:                 <span class="ruby-ivar">@@instance</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">ApplicationSpawner</span>.<span class="ruby-identifier">new</span>
+38:                 <span class="ruby-ivar">@@instance</span>.<span class="ruby-identifier">spawn_application</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+39:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="sectiontitle">Public Instance methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000038"></a><b>spawn_application</b>(app_root, lower_privilege = true, lowest_user = &quot;nobody&quot;, environment = &quot;production&quot;)
+  </div>
+  <div class="description">
+  <p>
+Spawn an instance of the given <a href="../WSGI.html">WSGI</a> application.
+When successful, an <a href="../Application.html">Application</a> object
+will be returned, which represents the spawned application.
+</p>
+<p>
+Raises:
+</p>
+<ul>
+<li><a href="../AppInitError.html">AppInitError</a>: The <a
+href="../WSGI.html">WSGI</a> application raised an exception or called
+exit() during startup.
+
+</li>
+<li>SystemCallError, IOError, SocketError: Something went wrong.
+
+</li>
+</ul>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000038_source')" id="l_M000038_source">show source</a> ]</p>
+  <div id="M000038_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/wsgi/application_spawner.rb, line 49</span>
+49:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">spawn_application</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">lower_privilege</span> = <span class="ruby-keyword kw">true</span>, <span class="ruby-identifier">lowest_user</span> = <span class="ruby-value str">&quot;nobody&quot;</span>, <span class="ruby-identifier">environment</span> = <span class="ruby-value str">&quot;production&quot;</span>)
+50:                 <span class="ruby-identifier">a</span>, <span class="ruby-identifier">b</span> = <span class="ruby-constant">UNIXSocket</span>.<span class="ruby-identifier">pair</span>
+51:                 <span class="ruby-identifier">pid</span> = <span class="ruby-identifier">safe_fork</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">to_s</span>, <span class="ruby-keyword kw">true</span>) <span class="ruby-keyword kw">do</span>
+52:                         <span class="ruby-identifier">a</span>.<span class="ruby-identifier">close</span>
+53:                         
+54:                         <span class="ruby-identifier">file_descriptors_to_leave_open</span> = [<span class="ruby-value">0</span>, <span class="ruby-value">1</span>, <span class="ruby-value">2</span>, <span class="ruby-identifier">b</span>.<span class="ruby-identifier">fileno</span>]
+55:                         <span class="ruby-constant">NativeSupport</span>.<span class="ruby-identifier">close_all_file_descriptors</span>(<span class="ruby-identifier">file_descriptors_to_leave_open</span>)
+56:                         <span class="ruby-identifier">close_all_io_objects_for_fds</span>(<span class="ruby-identifier">file_descriptors_to_leave_open</span>)
+57:                         
+58:                         <span class="ruby-identifier">run</span>(<span class="ruby-constant">MessageChannel</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">b</span>), <span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">lower_privilege</span>, <span class="ruby-identifier">lowest_user</span>, <span class="ruby-identifier">environment</span>)
+59:                 <span class="ruby-keyword kw">end</span>
+60:                 <span class="ruby-identifier">b</span>.<span class="ruby-identifier">close</span>
+61:                 <span class="ruby-constant">Process</span>.<span class="ruby-identifier">waitpid</span>(<span class="ruby-identifier">pid</span>) <span class="ruby-keyword kw">rescue</span> <span class="ruby-keyword kw">nil</span>
+62:                 
+63:                 <span class="ruby-identifier">channel</span> = <span class="ruby-constant">MessageChannel</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">a</span>)
+64:                 <span class="ruby-identifier">pid</span>, <span class="ruby-identifier">socket_name</span>, <span class="ruby-identifier">socket_type</span> = <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">read</span>
+65:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">pid</span>.<span class="ruby-identifier">nil?</span>
+66:                         <span class="ruby-identifier">raise</span> <span class="ruby-constant">IOError</span>, <span class="ruby-value str">&quot;Connection closed&quot;</span>
+67:                 <span class="ruby-keyword kw">end</span>
+68:                 <span class="ruby-identifier">owner_pipe</span> = <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">recv_io</span>
+69:                 <span class="ruby-keyword kw">return</span> <span class="ruby-constant">Application</span>.<span class="ruby-identifier">new</span>(<span class="ruby-ivar">@app_root</span>, <span class="ruby-identifier">pid</span>, <span class="ruby-identifier">socket_name</span>,
+70:                         <span class="ruby-identifier">socket_type</span>, <span class="ruby-identifier">owner_pipe</span>)
+71:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

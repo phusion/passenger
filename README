@@ -7,17 +7,24 @@ to http://www.modrails.com/ for general information.
 
 === Regular installation
 
-Run the following script as root:
+You can install either Phusion Passenger for Apache or for Nginx. Run either of
+the following programs as root:
 
  ./bin/passenger-install-apache2-module
 
+-OR-
+
+ ./bin/passenger-install-nginx-module
+
 That's it. :)
 
-For troubleshooting, configuration and tips, please read the Users Guide:
+For troubleshooting, configuration and tips, please read the corresponding
+Users Guide:
 
- doc/Users guide.html
+ doc/Users guide Apache.html
+ doc/Users guide Nginx.html
 
-This file is included in the source tarball, and may also be viewed online on
+These files are included in the source tarball, and may also be viewed online on
 our website.
 
 === Installing via a gem

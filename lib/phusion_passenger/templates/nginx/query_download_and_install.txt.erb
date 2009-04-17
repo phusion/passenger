@@ -1,0 +1,21 @@
+<banner>Automatically download and install Nginx?</banner>
+
+Nginx doesn't support loadable modules such as some other web servers do,
+so in order to install Nginx with Passenger support, it must be recompiled.
+
+Do you want this installer to download, compile and install Nginx for you?
+
+ <yellow><b>1. Yes: download, compile and install Nginx for me. (recommended)</b></yellow>
+    The easiest way to get started. A stock Nginx <%= @nginx_version %> with Passenger
+    support, but with no other additional third party modules, will be
+    installed for you to a directory of your choice.
+
+ <yellow><b>2. No: I want to customize my Nginx installation. (for advanced users)</b></yellow>
+    Choose this if you want to compile Nginx with more third party modules
+    besides Passenger, or if you need to pass additional options to Nginx's
+    'configure' script. This installer will  1) ask you for the location of
+    the Nginx source code,  2) run the 'configure' script according to your
+    instructions, and  3) run 'make install'.
+
+Whichever you choose, if you already have an existing Nginx configuration file,
+then it will be preserved.
