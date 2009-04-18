@@ -644,7 +644,9 @@ private:
 		addHeader(headers, "REQUEST_METHOD",  r->method);
 		addHeader(headers, "REQUEST_URI",     r->unparsed_uri);
 		addHeader(headers, "QUERY_STRING",    r->args ? r->args : "");
-		if (strcmp(baseURI, "/") != 0) {
+		if (strcmp(baseURI, "/") == 0) {
+			addHeader(headers, "SCRIPT_NAME", "");
+		} else {
 			addHeader(headers, "SCRIPT_NAME", baseURI);
 		}
 		addHeader(headers, "HTTPS",           lookupEnv(r, "HTTPS"));
