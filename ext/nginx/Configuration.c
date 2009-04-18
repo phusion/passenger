@@ -47,6 +47,12 @@ static ngx_str_t headers_to_hide[] = {
 
 passenger_main_conf_t passenger_main_conf;
 
+#if NGINX_VERSION_NUM >= 7000
+    static ngx_path_init_t  ngx_http_proxy_temp_path = {
+        ngx_string(NGX_HTTP_PROXY_TEMP_PATH), { 1, 2, 0 }
+    };
+#endif
+
 
 void *
 passenger_create_main_conf(ngx_conf_t *cf)
@@ -222,7 +228,9 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_hash_init_t               hash;
     ngx_http_script_compile_t     sc;
     ngx_http_script_copy_code_t  *copy;
-    u_char                       *temp_path;
+    #if NGINX_VERSION_NUM < 7000
+        u_char                       *temp_path;
+    #endif
 
     ngx_conf_merge_value(conf->enabled, prev->enabled, 0);
     ngx_conf_merge_value(conf->use_global_queue, prev->use_global_queue, 0);
@@ -393,14 +401,21 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                                        |NGX_HTTP_UPSTREAM_FT_OFF;
     }
 
-    temp_path = ngx_palloc(cf->pool, NGX_MAX_PATH);
-    ngx_memzero(temp_path, NGX_MAX_PATH);
-    ngx_snprintf(temp_path, NGX_MAX_PATH, "%s/webserver_private", passenger_temp_dir);
-    ngx_conf_merge_path_value(conf->upstream.temp_path,
-                              prev->upstream.temp_path,
-                              temp_path, 1, 2, 0,
-                              ngx_garbage_collector_temp_handler, cf);
-    conf->upstream.temp_path->name.len = ngx_strlen(conf->upstream.temp_path->name.data);
+    #if NGINX_VERSION_NUM < 7000
+        temp_path = ngx_palloc(cf->pool, NGX_MAX_PATH);
+        ngx_memzero(temp_path, NGX_MAX_PATH);
+        ngx_snprintf(temp_path, NGX_MAX_PATH, "%s/webserver_private", passenger_temp_dir);
+        ngx_conf_merge_path_value(conf->upstream.temp_path,
+                                  prev->upstream.temp_path,
+                                  temp_path, 1, 2, 0,
+                                  ngx_garbage_collector_temp_handler, cf);
+        conf->upstream.temp_path->name.len = ngx_strlen(conf->upstream.temp_path->name.data);
+    #else
+        ngx_conf_merge_path_value(cf,
+                                  &conf->upstream.temp_path,
+                                  prev->upstream.temp_path,
+                                  &ngx_http_proxy_temp_path);
+    #endif
 
     ngx_conf_merge_value(conf->upstream.pass_request_headers,
                               prev->upstream.pass_request_headers, 1);
