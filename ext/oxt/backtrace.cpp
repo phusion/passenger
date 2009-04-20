@@ -41,17 +41,13 @@ static initialize_backtrace_support_for_this_thread main_thread_initialization("
 /*
  * boost::thread_specific_storage is pretty expensive. So we use the __thread
  * keyword whenever possible - that's almost free.
- * GCC supports the __thread keyword on x86 since version 3.3. Not sure
- * about other architectures.
+ * GCC supports the __thread keyword on x86 since version 3.3, but versions earlier
+ * than 4.1.2 have bugs (http://gcc.gnu.org/ml/gcc-bugs/2006-09/msg02275.html).
  */
 
-#if defined(__GNUC__) && (                       \
-   __GNUC__ > 3 || (                             \
-       __GNUC__ == 3 && __GNUC_MINOR__ >= 3      \
-   )                                             \
-)
-	#define GCC_IS_3_3_OR_HIGHER
-#endif
+#define GCC_VERSION (__GNUC__ * 10000 \
+                               + __GNUC_MINOR__ * 100 \
+                               + __GNUC_PATCHLEVEL__)
 
 /*
  * FreeBSD 5 supports the __thread keyword, and everything works fine in
@@ -66,7 +62,7 @@ static initialize_backtrace_support_for_this_thread main_thread_initialization("
  *
  * MacOS X doesn't support __thread at all.
  */
-#if defined(GCC_IS_3_3_OR_HIGHER) && !defined(__FreeBSD__) && \
+#if GCC_VERSION >= 40102 && !defined(__FreeBSD__) && \
    !defined(__SOLARIS__) && !defined(__OpenBSD__) && !defined(__APPLE__)
 	static __thread spin_lock *backtrace_lock = NULL;
 	static __thread vector<trace_point *> *current_backtrace = NULL;
