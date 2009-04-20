@@ -1,4 +1,3 @@
 usr/bin
 usr/lib
-etc
 ../passenger.{conf,load} etc/apache2/mods-available
