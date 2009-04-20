@@ -821,7 +821,6 @@ public:
 		 * the second time.
 		 */
 		unsetenv("TMPDIR");
-		unsetenv("PASSENGER_INSTANCE_TEMP_DIR");
 		createPassengerTempDir(config->getTempDir(), config->userSwitching,
 			config->getDefaultUser(), unixd_config.user_id,
 			unixd_config.group_id);

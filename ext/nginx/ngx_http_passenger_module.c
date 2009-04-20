@@ -231,12 +231,6 @@ start_helper_server(ngx_cycle_t *cycle)
             close(i);
         }
         
-        /* It seems that Nginx's Perl module unsets the
-         * PASSENGER_INSTANCE_TEMP_DIR environment variable, so here
-         * we set it again.
-         */
-        setenv("PASSENGER_INSTANCE_TEMP_DIR", passenger_temp_dir, 1);
-        
         execlp((const char *) helper_server_filename,
                "PassengerNginxHelperServer",
                main_conf->root_dir.data,
@@ -251,6 +245,7 @@ start_helper_server(ngx_cycle_t *cycle)
                main_conf->default_user.data,
                worker_uid_string,
                worker_gid_string,
+               passenger_temp_dir,
                NULL);
         e = errno;
         fprintf(stderr, "*** Could not start the Passenger helper server (%s): "
@@ -531,7 +526,6 @@ pre_config_init(ngx_conf_t *cf)
                       "could not create Passenger temp dir string");
         return NGX_ERROR;
     }
-    setenv("PASSENGER_INSTANCE_TEMP_DIR", passenger_temp_dir, 1);
     
     /* Temporarily create this temp directory. It must exist before the configuration is loaded,
      * because during Configuration loading Nginx's upstream module will attempt to create

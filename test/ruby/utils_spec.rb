@@ -34,34 +34,30 @@ describe Utils do
 	
 	describe "#passenger_tmpdir" do
 		before :each do
-			@old_instance_temp_dir = ENV['PASSENGER_INSTANCE_TEMP_DIR']
-			ENV.delete('PASSENGER_INSTANCE_TEMP_DIR')
+			@old_passenger_tmpdir = Utils.passenger_tmpdir
+			Utils.passenger_tmpdir = nil
 		end
 		
 		after :each do
-			if @old_instance_temp_dir
-				ENV['PASSENGER_INSTANCE_TEMP_DIR'] = @old_instance_temp_dir
-			else
-				ENV.delete('PASSENGER_INSTANCE_TEMP_DIR')
-			end
+			Utils.passenger_tmpdir = @old_passenger_tmpdir
 		end
 		
-		it "returns a directory under Dir.tmpdir if ENV['PASSENGER_INSTANCE_TEMP_DIR'] is nil" do
+		it "returns a directory under Dir.tmpdir if Utils.passenger_tmpdir is nil" do
 			File.dirname(passenger_tmpdir(false)).should == Dir.tmpdir
 		end
 		
-		it "returns a directory under Dir.tmpdir if ENV['PASSENGER_INSTANCE_TEMP_DIR'] is an empty string" do
-			ENV['PASSENGER_INSTANCE_TEMP_DIR'] = ''
+		it "returns a directory under Dir.tmpdir if Utils.passenger_tmpdir is an empty string" do
+			Utils.passenger_tmpdir = ''
 			File.dirname(passenger_tmpdir(false)).should == Dir.tmpdir
 		end
 		
-		it "returns ENV['PASSENGER_INSTANCE_TEMP_DIR'] if it's set" do
-			ENV['PASSENGER_INSTANCE_TEMP_DIR'] = '/foo'
+		it "returns Utils.passenger_tmpdir if it's set" do
+			Utils.passenger_tmpdir = '/foo'
 			passenger_tmpdir(false).should == '/foo'
 		end
 		
 		it "creates the directory if it doesn't exist, if the 'create' argument is true" do
-			ENV['PASSENGER_INSTANCE_TEMP_DIR'] = 'utils_spec.tmp'
+			Utils.passenger_tmpdir = 'utils_spec.tmp'
 			passenger_tmpdir
 			begin
 				File.directory?('utils_spec.tmp').should be_true

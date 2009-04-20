@@ -594,6 +594,7 @@ private:
 				m_logFile.c_str(),
 				m_rubyCommand.c_str(),
 				m_user.c_str(),
+				getPassengerTempDir().c_str(),
 				(char *) 0);
 			int e = errno;
 			fprintf(stderr, "*** Passenger ERROR (%s:%d):\n"

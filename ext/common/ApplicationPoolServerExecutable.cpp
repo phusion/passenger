@@ -208,8 +208,11 @@ public:
 	       const string &spawnServerCommand,
 	       const string &logFile,
 	       const string &rubyCommand,
-	       const string &user)
+	       const string &user,
+	       const string &passengerTempDir)
 	{
+		setPassengerTempDir(passengerTempDir);
+		
 		pool = ptr(new StandardApplicationPool(spawnServerCommand,
 			logFile, rubyCommand, user));
 		Passenger::setLogLevel(logLevel);
@@ -595,7 +598,7 @@ main(int argc, char *argv[]) {
 	try {
 		exeFile = argv[0];
 		Server server(SERVER_SOCKET_FD, atoi(argv[1]),
-			argv[2], argv[3], argv[4], argv[5]);
+			argv[2], argv[3], argv[4], argv[5], argv[6]);
 		return server.start();
 	} catch (const tracable_exception &e) {
 		P_ERROR("*** Fatal error: " << e.what() << "\n" << e.backtrace());

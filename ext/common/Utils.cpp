@@ -33,6 +33,8 @@
 
 namespace Passenger {
 
+static string passengerTempDir;
+
 int
 atoi(const string &s) {
 	return ::atoi(s.c_str());
@@ -292,38 +294,35 @@ getSystemTempDir() {
 }
 
 string
-getPassengerTempDir(bool bypassCache, const string &systemTempDir) {
-	if (bypassCache) {
-		goto calculateResult;
+getPassengerTempDir(bool bypassCache, const string &parentDir) {
+	if (!bypassCache && !passengerTempDir.empty()) {
+		return passengerTempDir;
 	} else {
-		const char *tmp = getenv("PASSENGER_INSTANCE_TEMP_DIR");
-		if (tmp != NULL && *tmp != '\0') {
-			return tmp;
+		string theParentDir;
+		char buffer[PATH_MAX];
+		
+		if (parentDir.empty()) {
+			theParentDir = getSystemTempDir();
 		} else {
-			goto calculateResult;
+			theParentDir = parentDir;
 		}
+		snprintf(buffer, sizeof(buffer), "%s/passenger.%lu",
+			theParentDir.c_str(), (unsigned long) getpid());
+		buffer[sizeof(buffer) - 1] = '\0';
+		passengerTempDir = buffer;
+		return passengerTempDir;
 	}
-
-	calculateResult:
-	const char *temp_dir;
-	char buffer[PATH_MAX];
-	
-	if (systemTempDir.empty()) {
-		temp_dir = getSystemTempDir();
-	} else {
-		temp_dir = systemTempDir.c_str();
-	}
-	snprintf(buffer, sizeof(buffer), "%s/passenger.%lu",
-		temp_dir, (unsigned long) getpid());
-	buffer[sizeof(buffer) - 1] = '\0';
-	setenv("PASSENGER_INSTANCE_TEMP_DIR", buffer, 1);
-	return buffer;
 }
 
 void
-createPassengerTempDir(const string &systemTempDir, bool userSwitching,
+setPassengerTempDir(const string &dir) {
+	passengerTempDir = dir;
+}
+
+void
+createPassengerTempDir(const string &parentDir, bool userSwitching,
                        const string &lowestUser, uid_t workerUid, gid_t workerGid) {
-	string tmpDir(getPassengerTempDir(false, systemTempDir));
+	string tmpDir(getPassengerTempDir(false, parentDir));
 	uid_t lowestUid;
 	gid_t lowestGid;
 	

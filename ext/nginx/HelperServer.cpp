@@ -830,9 +830,12 @@ main(int argc, char *argv[]) {
 		string defaultUser = argv[10];
 		uid_t workerUid    = (uid_t) atoll(argv[11]);
 		gid_t workerGid    = (gid_t) atoll(argv[12]);
+		string passengerTempDir = argv[13];
 		
 		setLogLevel(logLevel);
 		P_DEBUG("Passenger helper server started on PID " << getpid());
+		
+		setPassengerTempDir(passengerTempDir);
 		
 		password = receivePassword(adminPipe);
 		P_TRACE(2, "Password received.");

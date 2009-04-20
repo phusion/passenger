@@ -88,19 +88,19 @@ parseOptions(int argc, char *argv[]) {
  * Creates a Phusion Passenger temp dir at the beginning, and deletes it
  * at program exit.
  */
-struct TempDirGuard {
-	TempDirGuard() {
+struct TempDirSetup {
+	TempDirSetup() {
 		char command[1024];
 		
-		Passenger::createPassengerTempDir(Passenger::getSystemTempDir(),
-			geteuid() == 0, "nobody", geteuid(), getgid());
+		Passenger::createPassengerTempDir("", geteuid() == 0,
+			"nobody", geteuid(), getgid());
 		
 		snprintf(command, sizeof(command), "chmod -R u=rwx,g=rwx,o=rwx \"%s\"",
 			Passenger::getPassengerTempDir().c_str());
 		system(command);
 	}
 	
-	~TempDirGuard() {
+	~TempDirSetup() {
 		Passenger::removeDirTree(Passenger::getPassengerTempDir());
 	}
 };
@@ -117,7 +117,7 @@ main(int argc, char *argv[]) {
 	allGroups = tut::runner.get().list_groups();
 	parseOptions(argc, argv);
 	
-	TempDirGuard tg;
+	TempDirSetup ts;
 	
 	try {
 		bool all_ok = true;
