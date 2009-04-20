@@ -34,13 +34,13 @@
 	#define OXT_NO_PTHREAD_SPINLOCKS
 #endif
 
-#ifndef GCC_VERSION
-	#define GCC_VERSION (__GNUC__ * 10000 \
+#ifndef OXT_GCC_VERSION
+	#define OXT_GCC_VERSION (__GNUC__ * 10000 \
 	                     + __GNUC_MINOR__ * 100 \
 	                     + __GNUC_PATCH_LEVEL__)
 #endif
 
-#if (GCC_VERSION > 40100 && defined(__i386__)) || defined(IN_DOXYGEN)
+#if (OXT_GCC_VERSION > 40100 && defined(__i386__)) || defined(IN_DOXYGEN)
 	// GCC 4.0 doesn't support __sync instructions while GCC 4.2
 	// does. I'm not sure whether support for it started in 4.1 or
 	// 4.2, so the above version check may have to be changed later.
