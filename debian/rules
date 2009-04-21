@@ -6,7 +6,7 @@ include /usr/share/cdbs/1/rules/simple-patchsys.mk
 
 DEB_DH_INSTALL_SOURCEDIR := $(DEB_DESTDIR)
 DEB_INSTALL_DOCS_passenger-doc += DEVELOPERS.TXT $(DEB_DESTDIR)/usr/share/doc/phusion_passenger/
-DEB_INSTALL_MANPAGES_libapache2-mod-passenger += man/*
+DEB_INSTALL_MANPAGES_passenger-common += man/*
 
 bindir = usr/bin
 sbindir = usr/sbin
@@ -20,18 +20,21 @@ clean::
 	rake clean
 	rake clobber
 
-build/libapache2-mod-passenger build/passenger-doc::
+build/passenger-common build/libapache2-mod-passenger build/passenger-doc::
 	rake fakeroot
+	rm -rf $(DEB_DESTDIR)
 	mv $(builddir) $(DEB_DESTDIR)
 
-binary-install/libapache2-mod-passenger::
-	mkdir -p $(CURDIR)/debian/$(cdbs_curpkg)/$(moddir)
-	mv $(CURDIR)/debian/$(cdbs_curpkg)/$(passengermodule) $(CURDIR)/debian/$(cdbs_curpkg)/$(moddir)
-	rm $(CURDIR)/debian/$(cdbs_curpkg)/$(bindir)/passenger-install-apache2-module
+install/passenger-common::
+	rm $(DEB_DESTDIR)/usr/bin/passenger-install-*
 	mkdir -p $(CURDIR)/debian/$(cdbs_curpkg)/$(sbindir)
 	for admintool in $(admintools); do \
-	    mv $(CURDIR)/debian/$(cdbs_curpkg)/$(bindir)/$$admintool $(CURDIR)/debian/$(cdbs_curpkg)/$(sbindir); \
-	    done;
+	    mv $(DEB_DESTDIR)/$(bindir)/$$admintool $(CURDIR)/debian/$(cdbs_curpkg)/$(sbindir); \
+	done;
+
+install/libapache2-mod-passenger::
+	mkdir -p $(CURDIR)/debian/$(cdbs_curpkg)/$(moddir)
+	mv $(DEB_DESTDIR)/$(passengermodule) $(CURDIR)/debian/$(cdbs_curpkg)/$(moddir)
 
 get-orig-source:
 	uscan --verbose --force-download

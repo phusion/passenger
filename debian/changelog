@@ -1,3 +1,10 @@
+passenger (2.2.1-1bbox1) hardy; urgency=low
+
+  * New Upstream Version, 2.2.1
+  * Split into separate packages, to allow nginx support
+
+ -- John Leach <john@brightbox.co.uk>  Mon, 20 Apr 2009 17:18:09 +0100
+
 passenger (2.2.0-1bbox1) hardy; urgency=low
 
   * New Upstream Version, 2.2
