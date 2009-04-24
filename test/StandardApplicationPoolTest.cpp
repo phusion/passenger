@@ -1,8 +1,10 @@
 #include "tut.h"
+#include "support/Support.h"
 #include "StandardApplicationPool.h"
 #include "Utils.h"
 
 using namespace Passenger;
+using namespace Test;
 
 namespace tut {
 	struct StandardApplicationPoolTest {

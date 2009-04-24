@@ -1,9 +1,11 @@
 #include "tut.h"
+#include "support/Support.h"
 #include <boost/thread.hpp>
 #include "ApplicationPoolServer.h"
 
 using namespace Passenger;
 using namespace boost;
+using namespace Test;
 
 namespace tut {
 	struct ApplicationPoolServer_ApplicationPoolTest {
