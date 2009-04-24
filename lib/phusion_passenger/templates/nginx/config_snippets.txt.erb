@@ -1,6 +1,6 @@
 <banner>Nginx with Passenger support was successfully installed.</banner>
 
-Please edit your Nginx configuration file (probably <b><%= @config_file %></b>),
+Please edit your Nginx configuration file<% if @config_file %> (probably <b><%= @config_file %></b>)<% end %>,
 and set the <b>passenger_root</b> and <b>passenger_ruby</b> configuration options in the
 <b>'http'</b> block, like this:
 
