@@ -242,6 +242,9 @@ create_request(ngx_http_request_t *r)
     passenger_main_conf_t         *main_conf;
     passenger_context_t           *context;
     ngx_http_script_len_code_pt    lcode;
+    #if (NGX_HTTP_SSL)
+        ngx_http_ssl_srv_conf_t   *ssl_conf;
+    #endif
     
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
     main_conf = &passenger_main_conf;
@@ -298,6 +301,12 @@ create_request(ngx_http_request_t *r)
         len += sizeof("CONTENT_TYPE") + r->headers_in.content_type->value.len + 1;
     }
     
+    #if (NGX_HTTP_SSL)
+        ssl_conf = ngx_http_get_module_srv_conf(r, ngx_http_ssl_module);
+        if (ssl_conf->enable) {
+            len += sizeof("HTTPS") + sizeof("on");
+        }
+    #endif
     
     /* Lengths of Passenger application pool options. */
     if (slcf->use_global_queue) {
@@ -429,6 +438,14 @@ create_request(ngx_http_request_t *r)
         b->last = ngx_copy(b->last, r->headers_in.content_type->value.data,
                            r->headers_in.content_type->value.len + 1);
     }
+    
+    #if (NGX_HTTP_SSL)
+        ssl_conf = ngx_http_get_module_srv_conf(r, ngx_http_ssl_module);
+        if (ssl_conf->enable) {
+            b->last = ngx_copy(b->last, "HTTPS", sizeof("HTTPS"));
+            b->last = ngx_copy(b->last, "on", sizeof("on"));
+        }
+    #endif
     
 
     /* Build Passenger application pool option headers. */

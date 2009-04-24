@@ -43,7 +43,7 @@ class RequestHandler < AbstractRequestHandler
 	HTTP           = "http"   # :nodoc:
 	YES            = "yes"    # :nodoc:
 	ON             = "on"     # :nodoc:
-	ONE            = "one"    # :nodoc:
+	ONE            = "1"      # :nodoc:
 	CRLF           = "\r\n"   # :nodoc:
 
 	# +app+ is the Rack application object.
