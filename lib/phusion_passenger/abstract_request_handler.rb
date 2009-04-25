@@ -382,9 +382,7 @@ private
 			
 			# We monkeypatch the 'sync=' method to a no-op so that
 			# sync mode can't be disabled.
-			client.instance_eval do
-				def client.sync=(value)
-				end
+			def client.sync=(value)
 			end
 			
 			# The real input stream is not seekable (calling _seek_
