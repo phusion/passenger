@@ -97,7 +97,7 @@ class SpawnManager < AbstractServer
 	#
 	# Other options are:
 	#
-	# ['lower_privilege', 'lowest_user' and 'environment']
+	# ['lower_privilege', 'lowest_user', 'environment' and 'environment_variables']
 	#   See Railz::ApplicationSpawner.new for an explanation of these options.
 	# 
 	# ['app_type']

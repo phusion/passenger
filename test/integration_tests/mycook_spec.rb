@@ -124,8 +124,7 @@ shared_examples_for "MyCook(tm) beta" do
 					end
 				}
 			end
-			File.open(restart_file, 'w').close
-			File.utime(now - 10, now - 10, restart_file)
+			File.touch(restart_file, now - 10)
 			get('/test').should == "foo"
 			
 			File.open(controller, 'w') do |f|
@@ -139,7 +138,7 @@ shared_examples_for "MyCook(tm) beta" do
 				}
 			end
 
-			File.utime(now - 5, now - 5, restart_file)
+			File.touch(restart_file, now - 5)
 			get('/test').should == 'bar'
 		ensure
 			File.unlink(controller) rescue nil
@@ -165,7 +164,7 @@ shared_examples_for "MyCook(tm) beta" do
 			})
 		end
 		begin
-			system "touch '#{@stub.app_root}/tmp/restart.txt'"
+			File.touch("#{@stub.app_root}/tmp/restart.txt")
 			get('/welcome/passenger_name').should == 'Gourry Gabriev'
 		ensure
 			File.unlink("#{@stub.app_root}/app/models/passenger.rb") rescue nil

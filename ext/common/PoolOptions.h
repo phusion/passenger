@@ -26,7 +26,8 @@
 #define _PASSENGER_SPAWN_OPTIONS_H_
 
 #include <string>
-#include "Utils.h"
+#include <vector>
+#include "StringListCreator.h"
 
 namespace Passenger {
 
@@ -148,6 +149,19 @@ struct PoolOptions {
 	string restartDir;
 	
 	/**
+	 * If a new backend process is started, then the getItems() method
+	 * on this object will be called, which is to return environment
+	 * variables that should be passed to the newly spawned backend process.
+	 * Odd indices in the resulting array contain keys, even indices contain
+	 * the value for the key in the previous index.
+	 *
+	 * May be set to NULL.
+	 *
+	 * @invariant environmentVariables.size() is an even number.
+	 */
+	StringListCreatorPtr environmentVariables;
+	
+	/**
 	 * Creates a new PoolOptions object with the default values filled in.
 	 * One must still set appRoot manually, after having used this constructor.
 	 */
@@ -230,16 +244,23 @@ struct PoolOptions {
 		useGlobalQueue = vec[startIndex + 21] == "true";
 		statThrottleRate = atol(vec[startIndex + 23]);
 		restartDir     = vec[startIndex + 25];
+		if (vec.size() > startIndex + 27) {
+			environmentVariables = ptr(new SimpleStringListCreator(vec[startIndex + 27]));
+		}
 	}
 	
 	/**
 	 * Append the information in this PoolOptions object to the given
 	 * string vector. The resulting array could, for example, be used
 	 * as a message to be sent to the spawn server.
+	 *
+	 * @param vec The vector to store the information in.
+	 * @param storeEnvVars Whether to store environment variable information into vec as well.
+	 * @throws Anything thrown by environmentVariables->getItems().
 	 */
-	void toVector(vector<string> &vec) const {
-		if (vec.capacity() < vec.size() + 10) {
-			vec.reserve(vec.size() + 10);
+	void toVector(vector<string> &vec, bool storeEnvVars = true) const {
+		if (vec.capacity() < vec.size() + 28) {
+			vec.reserve(vec.size() + 28);
 		}
 		appendKeyValue (vec, "app_root",        appRoot);
 		appendKeyValue (vec, "lower_privilege", lowerPrivilege ? "true" : "false");
@@ -254,6 +275,37 @@ struct PoolOptions {
 		appendKeyValue (vec, "use_global_queue", useGlobalQueue ? "true" : "false");
 		appendKeyValue3(vec, "stat_throttle_rate", statThrottleRate);
 		appendKeyValue (vec, "restart_dir",     restartDir);
+		if (storeEnvVars) {
+			vec.push_back("environment_variables");
+			vec.push_back(serializeEnvironmentVariables());
+		}
+	}
+	
+	/**
+	 * Serializes the items in environmentVariables into a string, which
+	 * can be used to create a SimpleStringListCreator object.
+	 *
+	 * @throws Anything thrown by environmentVariables->getItems().
+	 */
+	string serializeEnvironmentVariables() const {
+		vector<string>::const_iterator it, end;
+		string result;
+		
+		if (environmentVariables) {
+			result.reserve(1024);
+			
+			StringListPtr items = environmentVariables->getItems();
+			end = items->end();
+			
+			for (it = items->begin(); it != end; it++) {
+				result.append(*it);
+				result.append(1, '\0');
+				it++;
+				result.append(*it);
+				result.append(1, '\0');
+			}
+		}
+		return Base64::encode(result);
 	}
 
 private:

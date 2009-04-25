@@ -71,4 +71,23 @@ shared_examples_for "a minimal spawner" do
 			lambda { spawn_stub_application(stub).close }.should_not raise_error
 		end
 	end
+	
+	it "sets the environment variables passed in the environment_variables option" do
+		use_rails_stub('foobar') do |stub|
+			File.append(stub.environment_rb, %q{
+				File.open("env.txt", "w") do |f|
+					ENV.each_pair do |key, value|
+						f.puts("#{key} = #{value}")
+					end
+				end
+			})
+			env_vars_string = "PATH\0/usr/bin:/opt/sw/bin\0FOO\0foo bar!\0"
+			options = { "environment_variables" => [env_vars_string].pack("m") }
+			spawn_stub_application(stub, options).close
+			
+			contents = File.read("#{stub.app_root}/env.txt")
+			contents.should =~ %r(PATH = /usr/bin:/opt/sw/bin\n)
+			contents.should =~ %r(FOO = foo bar\!\n)
+		end
+	end
 end

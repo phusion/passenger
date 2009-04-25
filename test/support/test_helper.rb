@@ -169,5 +169,10 @@ File.class_eval do
 			f.write(content)
 		end
 	end
+	
+	def self.touch(filename, timestamp = nil)
+		File.open(filename, 'w').close
+		File.utime(timestamp, timestamp, filename) if timestamp
+	end
 end
 

@@ -189,6 +189,7 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 			'ext/common/MessageChannel.h',
 			'ext/common/SpawnManager.h',
 			'ext/common/PoolOptions.h',
+			'ext/common/StringListCreator.h',
 			'ext/common/FileChecker.h',
 			'ext/common/SystemTime.h',
 			'ext/common/CachedFileStat.h',
@@ -243,6 +244,7 @@ end
 			ext/common/Application.h
 			ext/common/MessageChannel.h
 			ext/common/PoolOptions.h
+			ext/common/StringListCreator.h
 			ext/common/Version.h
 			ext/common/Utils.h)
 	}
@@ -390,12 +392,14 @@ end
 			test/SpawnManagerTest.cpp
 			ext/common/SpawnManager.h
 			ext/common/PoolOptions.h
+			ext/common/StringListCreator.h
 			ext/common/Application.h
 			ext/common/MessageChannel.h),
 		'test/ApplicationPoolServerTest.o' => %w(
 			test/ApplicationPoolServerTest.cpp
 			ext/common/ApplicationPoolServer.h
 			ext/common/PoolOptions.h
+			ext/common/StringListCreator.h
 			ext/common/MessageChannel.h),
 		'test/ApplicationPoolServer_ApplicationPoolTest.o' => %w(
 			test/ApplicationPoolServer_ApplicationPoolTest.cpp
@@ -404,6 +408,7 @@ end
 			ext/common/ApplicationPool.h
 			ext/common/SpawnManager.h
 			ext/common/PoolOptions.h
+			ext/common/StringListCreator.h
 			ext/common/Application.h
 			ext/common/MessageChannel.h),
 		'test/StandardApplicationPoolTest.o' => %w(
@@ -413,11 +418,13 @@ end
 			ext/common/StandardApplicationPool.h
 			ext/common/SpawnManager.h
 			ext/common/PoolOptions.h
+			ext/common/StringListCreator.h
 			ext/common/FileChecker.h
 			ext/common/Application.h),
 		'test/PoolOptionsTest.o' => %w(
 			test/PoolOptionsTest.cpp
-			ext/common/PoolOptions.h),
+			ext/common/PoolOptions.h
+			ext/common/StringListCreator.h),
 		'test/StaticStringTest.o' => %w(
 			test/StaticStringTest.cpp
 			ext/common/StaticString.h),

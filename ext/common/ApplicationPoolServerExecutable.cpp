@@ -288,6 +288,131 @@ private:
 	/** Last used session ID. */
 	int lastSessionID;
 	
+	class ClientCommunicationError: public oxt::tracable_exception {
+	private:
+		string briefMessage;
+		string systemMessage;
+		string fullMessage;
+		int m_code;
+	public:
+		/**
+		 * Create a new ClientCommunicationError.
+		 *
+		 * @param briefMessage A brief message describing the error.
+		 * @param errorCode An optional error code, i.e. the value of errno right after the error occured, if applicable.
+		 * @note A system description of the error will be appended to the given message.
+		 *    For example, if <tt>errorCode</tt> is <tt>EBADF</tt>, and <tt>briefMessage</tt>
+		 *    is <em>"Something happened"</em>, then what() will return <em>"Something happened: Bad
+		 *    file descriptor (10)"</em> (if 10 is the number for EBADF).
+		 * @post code() == errorCode
+		 * @post brief() == briefMessage
+		 */
+		ClientCommunicationError(const string &briefMessage, int errorCode = -1) {
+			if (errorCode != -1) {
+				stringstream str;
+				
+				str << strerror(errorCode) << " (" << errorCode << ")";
+				systemMessage = str.str();
+			}
+			setBriefMessage(briefMessage);
+			m_code = errorCode;
+		}
+
+		virtual ~ClientCommunicationError() throw() {}
+
+		virtual const char *what() const throw() {
+			return fullMessage.c_str();
+		}
+
+		void setBriefMessage(const string &message) {
+			briefMessage = message;
+			if (systemMessage.empty()) {
+				fullMessage = briefMessage;
+			} else {
+				fullMessage = briefMessage + ": " + systemMessage;
+			}
+		}
+
+		/**
+		 * The value of <tt>errno</tt> at the time the error occured.
+		 */
+		int code() const throw() {
+			return m_code;
+		}
+
+		/**
+		 * Returns a brief version of the exception message. This message does
+		 * not include the system error description, and is equivalent to the
+		 * value of the <tt>message</tt> parameter as passed to the constructor.
+		 */
+		string brief() const throw() {
+			return briefMessage;
+		}
+
+		/**
+		 * Returns the system's error message. This message contains both the
+		 * content of <tt>strerror(errno)</tt> and the errno number itself.
+		 *
+		 * @post if code() == -1: result.empty()
+		 */
+		string sys() const throw() {
+			return systemMessage;
+		}
+	};
+	
+	/**
+	 * A StringListCreator which fetches its items from the client.
+	 * Used as an optimization for ApplicationPoolServer::Client.get():
+	 * environment variables are only serialized by the client process
+	 * if a new backend process is being spawned.
+	 */
+	class EnvironmentVariablesFetcher: public StringListCreator {
+	private:
+		MessageChannel &channel;
+		PoolOptions &options;
+	public:
+		EnvironmentVariablesFetcher(MessageChannel &theChannel, PoolOptions &theOptions)
+			: channel(theChannel),
+			  options(theOptions)
+		{ }
+		
+		/**
+		 * @throws ClientCommunicationError
+		 */
+		virtual const StringListPtr getItems() const {
+			string data;
+			
+			/* If an I/O error occurred while communicating with the client,
+			 * then throw a ClientCommunicationException, which will bubble
+			 * all the way up to the thread main loop, where the connection
+			 * with the client will be broken.
+			 */
+			try {
+				channel.write("getEnvironmentVariables", NULL);
+			} catch (const SystemException &e) {
+				throw ClientCommunicationError(
+					"Unable to send a 'getEnvironmentVariables' request to the client",
+					e.code());
+			}
+			try {
+				if (!channel.readScalar(data)) {
+					throw ClientCommunicationError("Unable to read a reply from the client for the 'getEnvironmentVariables' request.");
+				}
+			} catch (const SystemException &e) {
+				throw ClientCommunicationError(
+					"Unable to read a reply from the client for the 'getEnvironmentVariables' request",
+					e.code());
+			}
+			
+			if (!data.empty()) {
+				SimpleStringListCreator list(data);
+				return list.getItems();
+			} else {
+				return ptr(new StringList());
+			}
+		}
+	};
+	
 	void processGet(const vector<string> &args) {
 		TRACE_POINT();
 		Application::SessionPtr session;
@@ -295,6 +420,7 @@ private:
 		
 		try {
 			PoolOptions options(args, 1);
+			options.environmentVariables = ptr(new EnvironmentVariablesFetcher(channel, options));
 			session = server.pool->get(options);
 			sessions[lastSessionID] = session;
 			lastSessionID++;

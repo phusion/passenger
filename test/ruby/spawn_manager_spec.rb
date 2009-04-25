@@ -169,13 +169,15 @@ describe SpawnManager do
 	it_should_behave_like "handling errors in application initialization"
 	it_should_behave_like "handling errors in framework initialization"
 	
-	def spawn_stub_application(stub)
+	def spawn_stub_application(stub, extra_options = {})
 		spawner = SpawnManager.new
 		begin
-			return spawner.spawn_application(
+			options = {
 				"app_root" => stub.app_root,
 				"spawn_method" => @spawn_method,
-				"lowest_user" => CONFIG['lowest_user'])
+				"lowest_user" => CONFIG['lowest_user']
+			}.merge(extra_options)
+			return spawner.spawn_application(options)
 		ensure
 			spawner.cleanup
 		end

@@ -69,9 +69,9 @@ describe ApplicationSpawner do
 			end
 		end
 		
-		def spawn_stub_application(stub)
-			@spawner = ApplicationSpawner.new(stub.app_root,
-				"lowest_user" => CONFIG['lowest_user'])
+		def spawn_stub_application(stub, extra_options = {})
+			options = { "lowest_user" => CONFIG['lowest_user'] }.merge(extra_options)
+			@spawner = ApplicationSpawner.new(stub.app_root, options)
 			begin
 				@spawner.start
 				return @spawner.spawn_application
@@ -107,9 +107,9 @@ describe ApplicationSpawner do
 			end
 		end
 		
-		def spawn_stub_application(stub)
-			@spawner = ApplicationSpawner.new(stub.app_root,
-				"lowest_user" => CONFIG['lowest_user'])
+		def spawn_stub_application(stub, extra_options = {})
+			options = { "lowest_user" => CONFIG['lowest_user'] }.merge(extra_options)
+			@spawner = ApplicationSpawner.new(stub.app_root, options)
 			return @spawner.spawn_application!
 		end
 	end

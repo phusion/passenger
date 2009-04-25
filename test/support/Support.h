@@ -62,6 +62,36 @@ public:
 };
 
 /**
+ * Creates a temporary copy of the given directory. This copy is deleted
+ * upon object destruction.
+ */
+class TempDirCopy {
+private:
+	string dir;
+	
+	void rm_rf(const string &dir) {
+		string command("rm -rf \"");
+		command.append(dir);
+		command.append("\"");
+		system(command.c_str());
+	}
+public:
+	TempDirCopy(const string &source, const string &dest) {
+		dir = dest;
+		rm_rf(dest);
+		
+		char command[1024];
+		snprintf(command, sizeof(command), "cp -pR \"%s\" \"%s\"",
+			source.c_str(), dest.c_str());
+		system(command);
+	}
+	
+	~TempDirCopy() {
+		rm_rf(dir);
+	}
+};
+
+/**
  * Class which deletes the given file upon destruction.
  */
 class DeleteFileEventually {

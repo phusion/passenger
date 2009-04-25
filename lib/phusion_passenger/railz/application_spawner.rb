@@ -84,6 +84,11 @@ class ApplicationSpawner < AbstractServer
 	# - +environment+:
 	#   Allows one to specify the RAILS_ENV environment to use.
 	#
+	# - +environment_variables+:
+	#   Environment variables which should be passed to the spawned application.
+	#   This is NULL-seperated string of key-value pairs, encoded in base64.
+	#   The last byte in the unencoded data must be a NULL.
+	#
 	# All other options will be passed on to RequestHandler.
 	def initialize(app_root, options = {})
 		super()
@@ -93,6 +98,7 @@ class ApplicationSpawner < AbstractServer
 		@lower_privilege = @options["lower_privilege"]
 		@lowest_user     = @options["lowest_user"]
 		@environment     = @options["environment"]
+		@encoded_environment_variables = @options["environment_variables"]
 		self.max_idle_time = DEFAULT_APP_SPAWNER_MAX_IDLE_TIME
 		assert_valid_app_root(@app_root)
 		define_message_handler(:spawn_application, :handle_spawn_application)
@@ -145,6 +151,9 @@ class ApplicationSpawner < AbstractServer
 				success = report_app_init_status(channel) do
 					ENV['RAILS_ENV'] = @environment
 					Dir.chdir(@app_root)
+					if @encoded_environment_variables
+						set_passed_environment_variables
+					end
 					if @lower_privilege
 						lower_privilege('config/environment.rb', @lowest_user)
 					end
@@ -221,6 +230,9 @@ protected
 				Object.const_set(:RAILS_ENV, ENV['RAILS_ENV'])
 			end
 			Dir.chdir(@app_root)
+			if @encoded_environment_variables
+				set_passed_environment_variables
+			end
 			if @lower_privilege
 				lower_privilege('config/environment.rb', @lowest_user)
 			end
@@ -229,6 +241,17 @@ protected
 	end
 	
 private
+	def set_passed_environment_variables
+		env_vars_string = @encoded_environment_variables.unpack("m").first
+		# Prevent empty string as last item from b0rking the Hash[...] statement.
+		# See comment in Hooks.cpp (sendHeaders) for details.
+		env_vars_string << "_\0_"
+		env_vars = Hash[*env_vars_string.split("\0")]
+		env_vars.each_pair do |key, value|
+			ENV[key] = value
+		end
+	end
+	
 	def preload_application
 		Object.const_set(:RAILS_ROOT, @canonicalized_app_root)
 		if defined?(::Rails::Initializer)

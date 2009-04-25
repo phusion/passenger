@@ -138,6 +138,33 @@ private:
 		}
 	};
 	
+	/**
+	 * A StringListCreator which returns a list of environment variable
+	 * names and values, as found in r->subprocess_env.
+	 */
+	class EnvironmentVariablesStringListCreator: public StringListCreator {
+	private:
+		request_rec *r;
+	public:
+		EnvironmentVariablesStringListCreator(request_rec *r) {
+			this->r = r;
+		}
+		
+		virtual const StringListPtr getItems() const {
+			const apr_array_header_t *env_arr;
+			apr_table_entry_t *env_entries;
+			StringListPtr result = ptr(new StringList());
+			
+			env_arr = apr_table_elts(r->subprocess_env);
+			env_entries = (apr_table_entry_t *) env_arr->elts;
+			for (int i = 0; i < env_arr->nelts; ++i) {
+				result->push_back(env_entries[i].key);
+				result->push_back(env_entries[i].val);
+			}
+			return result;
+		}
+	};
+	
 	enum Threeway { YES, NO, UNKNOWN };
 
 	ApplicationPoolServerPtr applicationPoolServer;
@@ -455,10 +482,8 @@ private:
 			try {
 				ServerConfig *sconfig = getServerConfig(r->server);
 				string publicDirectory(mapper.getPublicDirectory());
-				string appRoot(config->getAppRoot(publicDirectory.c_str()));
-				
-				session = getApplicationPool()->get(PoolOptions(
-					appRoot,
+				PoolOptions options(
+					config->getAppRoot(publicDirectory.c_str()),
 					true,
 					sconfig->getDefaultUser(),
 					mapper.getEnvironment(),
@@ -471,7 +496,10 @@ private:
 					config->usingGlobalQueue(),
 					config->getStatThrottleRate(),
 					config->getRestartDir()
-				));
+				);
+				options.environmentVariables = ptr(new EnvironmentVariablesStringListCreator(r));
+				
+				session = getApplicationPool()->get(options);
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				r->status = 500;

@@ -93,6 +93,18 @@ describe "mod_passenger running in Apache 2" do
 				end
 			end
 		end
+		
+		it "supports environment variable passing through mod_env" do
+			begin
+				File.open("#{@stub.app_root}/public/.htaccess", 'w') do |f|
+					f.puts 'SetEnv FOO "Foo Bar!"'
+				end
+				File.touch("#{@stub.app_root}/tmp/restart.txt")
+				get('/welcome/environment').should =~ /FOO = Foo Bar\!/
+			ensure
+				File.unlink("#{@stub.app_root}/public/.htaccess") rescue nil
+			end
+		end
 	end
 	
 	describe ": MyCook(tm) beta running in a sub-URI" do
@@ -199,7 +211,8 @@ describe "mod_passenger running in Apache 2" do
 					})
 				end
 				
-				File.open(restart_file, 'w').close
+				now = Time.now
+				File.touch(restart_file, now - 5)
 				get('/bar').should == "hello world"
 				
 				File.open(controller, 'w') do |f|
@@ -212,9 +225,7 @@ describe "mod_passenger running in Apache 2" do
 					})
 				end
 				
-				now = Time.now
-				File.open(restart_file, 'w').close
-				File.utime(now - 10, now - 10, restart_file)
+				File.touch(restart_file, now - 10)
 				get('/bar').should == "oh hai"
 			ensure
 				File.unlink(controller) rescue nil
