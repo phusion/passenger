@@ -24,6 +24,8 @@
  */
 
 #include <string>
+#include <cstdio>
+#include <cstdlib>
 
 namespace Passenger {
 
@@ -45,6 +47,10 @@ using namespace std;
  *   an HTTP response line.
  * - Call getBuffer() to retrieve all fed data so far. This data can be sent to
  *   the HTTP client.
+ *
+ * This class will also ensure that the status line contains a status text, e.g.
+ * if the HTTP data's status value is only "200" then "OK" will be automatically
+ * appended.
  *
  * @note
  * When the API documentation for this class refers to "\r\n", we actually
@@ -82,11 +88,190 @@ private:
 		if (start_pos != string::npos) {
 			// Status line has been found. Extract it.
 			statusLine = buffer.substr(start_pos, newline_pos - start_pos);
+			addStatusTextIfNecessary();
 			return true;
 		} else {
 			// Status line is not found. Do not change default
 			// status line value.
 			return false;
+		}
+	}
+	
+	void addStatusTextIfNecessary() {
+		if (statusLine.find(' ') == string::npos) {
+			// The status line doesn't contain a status text, so add it.
+			int statusCode = atoi(statusLine.c_str());
+			switch (statusCode) {
+			case 100:
+				statusLine = "100 Continue\x0D\x0A";
+				break;
+			case 101:
+				statusLine = "101 Switching Protocols\x0D\x0A";
+				break;
+			case 102:
+				statusLine = "102 Processing\x0D\x0A";
+				break;
+			case 200:
+				statusLine = "200 OK\x0D\x0A";
+				break;
+			case 201:
+				statusLine = "201 Created\x0D\x0A";
+				break;
+			case 202:
+				statusLine = "202 Accepted\x0D\x0A";
+				break;
+			case 203:
+				statusLine = "203 Non-Authoritative Information\x0D\x0A";
+				break;
+			case 204:
+				statusLine = "204 No Content\x0D\x0A";
+				break;
+			case 205:
+				statusLine = "205 Reset Content\x0D\x0A";
+				break;
+			case 206:
+				statusLine = "206 Partial Content\x0D\x0A";
+				break;
+			case 207:
+				statusLine = "207 Multi-Status\x0D\x0A";
+				break;
+			case 300:
+				statusLine = "300 Multiple Choices\x0D\x0A";
+				break;
+			case 301:
+				statusLine = "301 Moved Permanently\x0D\x0A";
+				break;
+			case 302:
+				statusLine = "302 Found\x0D\x0A";
+				break;
+			case 303:
+				statusLine = "303 See Other\x0D\x0A";
+				break;
+			case 304:
+				statusLine = "304 Not Modified\x0D\x0A";
+				break;
+			case 305:
+				statusLine = "305 Use Proxy\x0D\x0A";
+				break;
+			case 306:
+				statusLine = "306 Switch Proxy\x0D\x0A";
+				break;
+			case 307:
+				statusLine = "307 Temporary Redirect\x0D\x0A";
+				break;
+			case 400:
+				statusLine = "400 Bad Request\x0D\x0A";
+				break;
+			case 401:
+				statusLine = "401 Unauthorized\x0D\x0A";
+				break;
+			case 402:
+				statusLine = "402 Payment Required\x0D\x0A";
+				break;
+			case 403:
+				statusLine = "403 Forbidden\x0D\x0A";
+				break;
+			case 404:
+				statusLine = "404 Not Found\x0D\x0A";
+				break;
+			case 405:
+				statusLine = "405 Method Not Allowed\x0D\x0A";
+				break;
+			case 406:
+				statusLine = "406 Not Acceptable\x0D\x0A";
+				break;
+			case 407:
+				statusLine = "407 Proxy Authentication Required\x0D\x0A";
+				break;
+			case 408:
+				statusLine = "408 Request Timeout\x0D\x0A";
+				break;
+			case 409:
+				statusLine = "409 Conflict\x0D\x0A";
+				break;
+			case 410:
+				statusLine = "410 Gone\x0D\x0A";
+				break;
+			case 411:
+				statusLine = "411 Length Required\x0D\x0A";
+				break;
+			case 412:
+				statusLine = "412 Precondition Failed\x0D\x0A";
+				break;
+			case 413:
+				statusLine = "413 Request Entity Too Large\x0D\x0A";
+				break;
+			case 414:
+				statusLine = "414 Request-URI Too Long\x0D\x0A";
+				break;
+			case 415:
+				statusLine = "415 Unsupported Media Type\x0D\x0A";
+				break;
+			case 416:
+				statusLine = "416 Requested Range Not Satisfiable\x0D\x0A";
+				break;
+			case 417:
+				statusLine = "417 Expectation Failed\x0D\x0A";
+				break;
+			case 418:
+				statusLine = "418 Not A Funny April Fools Joke\x0D\x0A";
+				break;
+			case 422:
+				statusLine = "422 Unprocessable Entity\x0D\x0A";
+				break;
+			case 423:
+				statusLine = "423 Locked\x0D\x0A";
+				break;
+			case 424:
+				statusLine = "424 Unordered Collection\x0D\x0A";
+				break;
+			case 426:
+				statusLine = "426 Upgrade Required\x0D\x0A";
+				break;
+			case 449:
+				statusLine = "449 Retry With\x0D\x0A";
+				break;
+			case 450:
+				statusLine = "450 Blocked\x0D\x0A";
+				break;
+			case 500:
+				statusLine = "500 Internal Server Error\x0D\x0A";
+				break;
+			case 501:
+				statusLine = "501 Not Implemented\x0D\x0A";
+				break;
+			case 502:
+				statusLine = "502 Bad Gateway\x0D\x0A";
+				break;
+			case 503:
+				statusLine = "503 Service Unavailable\x0D\x0A";
+				break;
+			case 504:
+				statusLine = "504 Gateway Timeout\x0D\x0A";
+				break;
+			case 505:
+				statusLine = "505 HTTP Version Not Supported\x0D\x0A";
+				break;
+			case 506:
+				statusLine = "506 Variant Also Negotiates\x0D\x0A";
+				break;
+			case 507:
+				statusLine = "507 Insufficient Storage\x0D\x0A";
+				break;
+			case 509:
+				statusLine = "509 Bandwidth Limit Exceeded\x0D\x0A";
+				break;
+			case 510:
+				statusLine = "510 Not Extended\x0D\x0A";
+				break;
+			default:
+				char temp[32];
+				snprintf(temp, sizeof(temp),
+					"%d Unknown Status Code\x0D\x0A",
+					statusCode);
+				temp[sizeof(temp) - 1] = '\0';
+				statusLine = temp;
+			}
 		}
 	}
 	
