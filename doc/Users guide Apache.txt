@@ -54,30 +54,34 @@ if it doesn't.
 [[install_passenger]]
 ==== Overview of download and installation methods ====
 
-There are two ways to install Phusion Passenger:
+There are three ways to install Phusion Passenger:
 
 1. By installing the Phusion Passenger gem, as instructed on the
    link:http://www.modrails.com/install.html[``Install'' page on the Phusion
    Passenger website].
-2. By downloading a native Linux package (e.g. Debian package) from the
-   Phusion Passenger website.
-3. By downloading the source tarball from the Phusion Passenger website
+2. By downloading the source tarball from the Phusion Passenger website
    ('passenger-x.x.x.tar.gz').
+3. By downloading a native Linux package (e.g. Debian package) from the
+   Phusion Passenger website.
 
 In our opinion, installing the gem or the native package is easiest.
 
 Phusion Passenger provides an easy-to-use installer for installing the Phusion
-Passenger Apache module ('mod_passenger').
+Passenger Apache module, in case you choose to install via the gem or the
+source tarball.
 
 TIP: You might have to run the installation commands in the following sections
 as 'root'. If the installer fails because of permission errors, it will tell
 you.
 
-[[specifying_correct_apache_install]]
-==== Specifying the correct Apache installation ====
+==== Preparation
+If you want to install Phusion Passenger via the gem or the source tarball,
+then some preparation might be required. You can skip this subsection if
+you're installing Phusion Passenger via a native Linux package, because no
+compilation is necessary.
 
-NOTE: You can skip this section if you've installed Phusion Passenger via a
-native Linux package, because no compilation is necessary.
+[[specifying_correct_apache_install]]
+===== Specifying the correct Apache installation =====
 
 If your system has multiple Apache installations (this is likely the case on
 MacOS X), then you will need to tell the Phusion Passenger installer which one
@@ -98,10 +102,7 @@ NOTE: On some systems, the `apxs` program might be called `apxs2`, and it might
 be located in the `sbin` folder instead of the `bin` folder.
 
 [[specifying_ruby_installation]]
-==== Specifying the correct Ruby installation ====
-
-NOTE: You can skip this section if you've installed Phusion Passenger via a
-native Linux package, because no compilation is necessary.
+===== Specifying the correct Ruby installation =====
 
 If your system has multiple Ruby installations -- which is likely the case on
 MacOS X, or if you've also installed
@@ -136,19 +137,6 @@ passenger-install-apache2-module
 Please follow the instructions given by the installer.
 
 
-==== Installing via a native Linux package ====
-
-John Leach from Brightbox has kindly provided an Ubuntu Hardy package for Phusion Passenger. The package is available from the link:http://apt.brightbox.net[Brightbox repository].
-
-Please install the native Linux package, e.g.:
-------------------------------------------------------
-sudo sh -c 'echo "deb http://apt.brightbox.net hardy main" > /etc/apt/sources.list.d/brightbox.list'
-sudo sh -c 'wget -q -O - http://apt.brightbox.net/release.asc | apt-key add -'
-sudo apt-get update
-sudo apt-get install libapache2-mod-passenger
-------------------------------------------------------
-
-
 ==== Installing via the source tarball ====
 
 Extract the tarball to whatever location you prefer. *The Phusion Passenger files
@@ -169,6 +157,19 @@ IMPORTANT: Please do not remove the 'passenger-x.x.x' folder after
 installation. Furthermore, the 'passenger-x.x.x' folder must be accessible by Apache.
 
 
+==== Installing via a native Linux package ====
+
+John Leach from Brightbox has kindly provided an Ubuntu Hardy package for Phusion Passenger. The package is available from the link:http://apt.brightbox.net[Brightbox repository].
+
+Please install the native Linux package, e.g.:
+------------------------------------------------------
+sudo sh -c 'echo "deb http://apt.brightbox.net hardy main" > /etc/apt/sources.list.d/brightbox.list'
+sudo sh -c 'wget -q -O - http://apt.brightbox.net/release.asc | apt-key add -'
+sudo apt-get update
+sudo apt-get install libapache2-mod-passenger
+------------------------------------------------------
+
+
 === Operating system-specific instructions and information ===
 
 ==== MacOS X ====
@@ -183,7 +184,7 @@ Ben Hughes has written an link:http://www.railsgarden.com/2008/04/12/configurati
 
 ==== OpenSolaris ====
 
-J. Aaron Farr has written a link:http://cubiclemuses.com/cm/articles/2009/04/09/rails-passenger-open-solaris-ec2/[guide]
+J Aaron Farr has written a link:http://cubiclemuses.com/cm/articles/2009/04/09/rails-passenger-open-solaris-ec2/[guide]
 about setting up Ruby on Rails and Phusion Passenger on OpenSolaris and EC2.
 
 
