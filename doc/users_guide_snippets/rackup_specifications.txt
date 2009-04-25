@@ -53,9 +53,11 @@ run Merb::Rack::Application.new
 
 ==== Ramaze ====
 ------------------------------------------------------
-require "start"
+require "rubygems"
+require "ramaze"
 Ramaze.trait[:essentials].delete Ramaze::Adapter
-Ramaze.start :force => true
+require "start"
+Ramaze.start!
 run Ramaze::Adapter::Base
 ------------------------------------------------------
 
