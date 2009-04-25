@@ -208,6 +208,10 @@ class AbstractRequestHandler
 				ensure
 					# 'input' is the same as 'client' so we don't
 					# need to close that.
+					# The 'close_write' here prevents forked child
+					# processes from unintentionally keeping the
+					# connection open.
+					client.close_write rescue nil
 					client.close rescue nil
 				end
 				@processed_requests += 1
