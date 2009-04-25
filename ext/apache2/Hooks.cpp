@@ -698,7 +698,7 @@ private:
 		 *
 		 *   "SSL_CLIENT_CERT\0\0"
 		 *
-		 * The data in the buffer will be processed by the RequestHandler class,
+		 * The data in the buffer will be processed by the AbstractRequestHandler class,
 		 * which is implemented in Ruby. But it uses Hash[*data.split("\0")] to
 		 * unserialize the data. Unfortunately String#split will not transform
 		 * the trailing "\0\0" into an empty string:
