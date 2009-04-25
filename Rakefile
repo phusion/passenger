@@ -159,7 +159,8 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 	flags =  "-Iext -Iext/common #{extra_compiler_flags} "
 	flags << "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 	common_object_files = []
-	['Utils.cpp', 'Logging.cpp', 'SystemTime.cpp', 'CachedFileStat.cpp'].each do |source_file|
+	['Utils.cpp', 'Logging.cpp', 'SystemTime.cpp', 'CachedFileStat.cpp',
+	 'Base64.cpp'].each do |source_file|
 		object_name = source_file.sub(/\.cpp$/, '.o')
 		object_file = "#{objects_output_dir}/#{object_name}"
 		header_file = source_file.sub(/\.cpp$/, '.h')
@@ -417,9 +418,13 @@ end
 		'test/PoolOptionsTest.o' => %w(
 			test/PoolOptionsTest.cpp
 			ext/common/PoolOptions.h),
-		'test/StaticString.o' => %w(
+		'test/StaticStringTest.o' => %w(
 			test/StaticStringTest.cpp
 			ext/common/StaticString.h),
+		'test/Base64Test.o' => %w(
+			test/Base64Test.cpp
+			ext/common/Base64.h
+			ext/common/Base64.cpp),
 		'test/ScgiRequestParserTest.o' => %w(
 			test/ScgiRequestParserTest.cpp
 			ext/nginx/ScgiRequestParser.h
