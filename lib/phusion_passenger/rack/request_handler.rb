@@ -21,7 +21,12 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+rack_dir = File.expand_path(File.dirname(__FILE__) + "/../../../vendor/rack-1.0.0-git/lib")
+$LOAD_PATH.unshift(rack_dir) if !$LOAD_PATH.include?(rack_dir)
+require 'rack/rewindable_input'
+
 require 'phusion_passenger/abstract_request_handler'
+
 module PhusionPassenger
 module Rack
 
@@ -29,7 +34,7 @@ module Rack
 class RequestHandler < AbstractRequestHandler
 	# Constants which exist to relieve Ruby's garbage collector.
 	RACK_VERSION       = "rack.version"        # :nodoc:
-	RACK_VERSION_VALUE = [0, 1]                # :nodoc:
+	RACK_VERSION_VALUE = [1, 0]                # :nodoc:
 	RACK_INPUT         = "rack.input"          # :nodoc:
 	RACK_ERRORS        = "rack.errors"         # :nodoc:
 	RACK_MULTITHREAD   = "rack.multithread"    # :nodoc:
@@ -57,42 +62,47 @@ class RequestHandler < AbstractRequestHandler
 protected
 	# Overrided method.
 	def process_request(env, input, output)
-		env[RACK_VERSION]      = RACK_VERSION_VALUE
-		env[RACK_INPUT]        = input
-		env[RACK_ERRORS]       = STDERR
-		env[RACK_MULTITHREAD]  = false
-		env[RACK_MULTIPROCESS] = true
-		env[RACK_RUN_ONCE]     = false
-		env[PATH_INFO]       ||= env[REQUEST_URI].split(QUESTION_MARK, 2).first
-		env[PATH_INFO].sub!(/^#{Regexp.escape(env[SCRIPT_NAME])}/, "")
-		if env[HTTPS] == YES || env[HTTPS] == ON || env[HTTPS] == ONE
-			env[RACK_URL_SCHEME] = HTTPS_DOWNCASE
-		else
-			env[RACK_URL_SCHEME] = HTTP
-		end
-		
-		status, headers, body = @app.call(env)
+		rewindable_input = ::Rack::RewindableInput.new(input)
 		begin
-			output.write("Status: #{status}#{CRLF}")
-			headers[X_POWERED_BY] = PASSENGER_HEADER
-			headers.each_pair do |key, values|
-				if values.is_a?(String)
-					values = values.split("\n")
-				end
-				values.each do |value|
-					output.write("#{key}: #{value}#{CRLF}")
-				end
+			env[RACK_VERSION]      = RACK_VERSION_VALUE
+			env[RACK_INPUT]        = rewindable_input
+			env[RACK_ERRORS]       = STDERR
+			env[RACK_MULTITHREAD]  = false
+			env[RACK_MULTIPROCESS] = true
+			env[RACK_RUN_ONCE]     = false
+			env[PATH_INFO]       ||= env[REQUEST_URI].split(QUESTION_MARK, 2).first
+			env[PATH_INFO].sub!(/^#{Regexp.escape(env[SCRIPT_NAME])}/, "")
+			if env[HTTPS] == YES || env[HTTPS] == ON || env[HTTPS] == ONE
+				env[RACK_URL_SCHEME] = HTTPS_DOWNCASE
+			else
+				env[RACK_URL_SCHEME] = HTTP
 			end
-			output.write(CRLF)
-			if body.is_a?(String)
-				output.write(body)
-			elsif body
-				body.each do |s|
-					output.write(s)
+			
+			status, headers, body = @app.call(env)
+			begin
+				output.write("Status: #{status.to_i}#{CRLF}")
+				output.write("X-Powered-By: #{PASSENGER_HEADER}#{CRLF}")
+				headers.each do |key, values|
+					if values.is_a?(String)
+						values = values.split("\n")
+					end
+					values.each do |value|
+						output.write("#{key}: #{value}#{CRLF}")
+					end
 				end
+				output.write(CRLF)
+				if body.is_a?(String)
+					output.write(body)
+				elsif body
+					body.each do |s|
+						output.write(s)
+					end
+				end
+			ensure
+				body.close if body.respond_to?(:close)
 			end
 		ensure
-			body.close if body.respond_to?(:close)
+			rewindable_input.close
 		end
 	end
 end
