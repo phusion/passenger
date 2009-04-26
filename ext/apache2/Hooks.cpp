@@ -39,6 +39,7 @@
 #include "ApplicationPoolServer.h"
 #include "MessageChannel.h"
 #include "DirectoryMapper.h"
+#include "Version.h"
 
 /* The Apache/APR headers *must* come after the Boost headers, otherwise
  * compilation will fail on OpenBSD.

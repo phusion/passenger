@@ -242,6 +242,7 @@ end
 			ext/common/Application.h
 			ext/common/MessageChannel.h
 			ext/common/PoolOptions.h
+			ext/common/Version.h
 			ext/common/Utils.h)
 	}
 	APACHE2_OBJECTS = APACHE2_INPUT_FILES.keys

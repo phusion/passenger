@@ -30,6 +30,7 @@
 #include "ContentHandler.h"
 #include "StaticContentHandler.h"
 #include "Configuration.h"
+#include "../common/Version.h"
 
 
 #define NGX_HTTP_SCGI_PARSE_NO_HEADER  20
@@ -1008,7 +1009,7 @@ process_header(ngx_http_request_t *r)
 
                 h->key.len = sizeof("Server") - 1;
                 h->key.data = (u_char *) "Server";
-                h->value.data = (u_char *) (NGINX_VER " + Phusion Passenger (mod_rails/mod_rack)");
+                h->value.data = (u_char *) (NGINX_VER " + Phusion Passenger " PASSENGER_VERSION " (mod_rails/mod_rack)");
                 h->value.len = ngx_strlen(h->value.data);
                 h->lowcase_key = (u_char *) "server";
             }
