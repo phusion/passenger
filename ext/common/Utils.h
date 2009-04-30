@@ -359,7 +359,7 @@ void createPassengerTempDir(const string &parentDir, bool userSwitching,
  * @throws SystemException Something went wrong.
  * @throws FileSystemException Something went wrong.
  */
-void makeDirTree(const string &path, const char *mode = "u=rwx,g=,o=", uid_t owner = -1, gid_t group = -1);
+void makeDirTree(const string &path, const char *mode = "u=rwx,g=,o=", uid_t owner = (uid_t) -1, gid_t group = (gid_t) -1);
 
 /**
  * Remove an entire directory tree recursively.
