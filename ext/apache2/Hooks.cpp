@@ -39,6 +39,7 @@
 #include "ApplicationPoolServer.h"
 #include "MessageChannel.h"
 #include "DirectoryMapper.h"
+#include "Version.h"
 
 /* The Apache/APR headers *must* come after the Boost headers, otherwise
  * compilation will fail on OpenBSD.
@@ -644,7 +645,9 @@ private:
 		addHeader(headers, "REQUEST_METHOD",  r->method);
 		addHeader(headers, "REQUEST_URI",     r->unparsed_uri);
 		addHeader(headers, "QUERY_STRING",    r->args ? r->args : "");
-		if (strcmp(baseURI, "/") != 0) {
+		if (strcmp(baseURI, "/") == 0) {
+			addHeader(headers, "SCRIPT_NAME", "");
+		} else {
 			addHeader(headers, "SCRIPT_NAME", baseURI);
 		}
 		addHeader(headers, "HTTPS",           lookupEnv(r, "HTTPS"));
@@ -696,7 +699,7 @@ private:
 		 *
 		 *   "SSL_CLIENT_CERT\0\0"
 		 *
-		 * The data in the buffer will be processed by the RequestHandler class,
+		 * The data in the buffer will be processed by the AbstractRequestHandler class,
 		 * which is implemented in Ruby. But it uses Hash[*data.split("\0")] to
 		 * unserialize the data. Unfortunately String#split will not transform
 		 * the trailing "\0\0" into an empty string:
@@ -821,7 +824,6 @@ public:
 		 * the second time.
 		 */
 		unsetenv("TMPDIR");
-		unsetenv("PASSENGER_INSTANCE_TEMP_DIR");
 		createPassengerTempDir(config->getTempDir(), config->userSwitching,
 			config->getDefaultUser(), unixd_config.user_id,
 			unixd_config.group_id);

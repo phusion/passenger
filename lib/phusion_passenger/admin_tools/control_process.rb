@@ -63,7 +63,12 @@ class ControlProcess
 	def initialize(path)
 		@path = path
 		if File.exist?("#{path}/control_process.pid")
-			@pid = File.read("#{path}/control_process.pid").strip.to_i
+			data = File.read("#{path}/control_process.pid").strip
+			if data.empty?
+				raise ArgumentError, "'#{path}' is not a valid control process directory."
+			else
+				@pid = data.to_i
+			end
 		else
 			path =~ /passenger.(\d+)\Z/
 			@pid = $1.to_i

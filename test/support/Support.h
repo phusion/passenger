@@ -13,6 +13,10 @@ namespace Test {
 
 using namespace std;
 
+/**
+ * Class which creates a temporary directory of the given name, and deletes
+ * it upon destruction.
+ */
 class TempDir {
 private:
 	string name;
@@ -32,6 +36,22 @@ public:
 		command.append(name);
 		command.append("\"");
 		system(command.c_str());
+	}
+};
+
+/**
+ * Class which deletes the given file upon destruction.
+ */
+class DeleteFileEventually {
+private:
+	string filename;
+public:
+	DeleteFileEventually(const string &filename) {
+		this->filename = filename;
+	}
+	
+	DeleteFileEventually() {
+		unlink(filename.c_str());
 	}
 };
 

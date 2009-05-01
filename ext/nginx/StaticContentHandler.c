@@ -47,7 +47,6 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
         return NGX_DECLINED;
     }
 
-    /* TODO: Win32 */
     if (r->zero_in_uri) {
         return NGX_DECLINED;
     }
@@ -59,7 +58,12 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
 
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
 
-    of.test_dir = 0;
+    #if NGX_VERSION_NUM < 7000
+        of.test_dir = 0;
+    #else
+        ngx_memzero(&of, sizeof(ngx_open_file_info_t));
+        of.directio = clcf->directio;
+    #endif
     of.valid = clcf->open_file_cache_valid;
     of.min_uses = clcf->open_file_cache_min_uses;
     of.errors = clcf->open_file_cache_errors;
@@ -102,6 +106,10 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
         return rc;
     }
 
+    #if NGX_VERSION_NUM >= 7000
+        r->root_tested = !r->error_page;
+    #endif
+	
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, log, 0, "http static fd: %d", of.fd);
 
     if (of.is_dir) {
@@ -123,7 +131,11 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
                 len += r->args.len + 1;
             }
 
-            location = ngx_palloc(r->pool, len);
+            #if NGX_VERSION_NUM < 7000
+                location = ngx_palloc(r->pool, len);
+            #else
+            	location = ngx_pnalloc(r->pool, len);
+            #endif
             if (location == NULL) {
                 return NGX_HTTP_INTERNAL_SERVER_ERROR;
             }
@@ -214,6 +226,9 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
     b->file->fd = of.fd;
     b->file->name = *filename;
     b->file->log = log;
+    #if NGX_VERSION_NUM >= 7000
+        b->file->directio = of.is_directio;
+    #endif
 
     out.buf = b;
     out.next = NULL;

@@ -12,20 +12,7 @@
  * This file is used as a template to test the different ApplicationPool implementations.
  * It is #included in StandardApplicationPoolTest.cpp and ApplicationServer_ApplicationPoolTest.cpp
  */
-#ifdef USE_TEMPLATE
-
-	struct TempFile {
-		const char *filename;
-		
-		TempFile(const char *filename) {
-			this->filename = filename;
-		}
-		
-		~TempFile() {
-			unlink(filename);
-		}
-	};
-	
+#ifdef USE_TEMPLATE	
 	static string createRequestHeaders(const char *uri = "/foo/new") {
 		string headers;
 		#define ADD_HEADER(name, value) \
@@ -325,29 +312,25 @@
 	
 	TEST_METHOD(15) {
 		// Test whether restarting really results in code reload.
-		system("cp -f stub/railsapp/app/controllers/bar_controller_1.rb "
+		DeleteFileEventually f1("stub/railsapp/app/controllers/bar_controller.rb");
+		DeleteFileEventually f2("stub/railsapp/tmp/restart.txt");
+		
+		system("cp -f stub/railsapp/app/controllers/bar_controller_1.txt "
 			"stub/railsapp/app/controllers/bar_controller.rb");
 		Application::SessionPtr session = pool->get("stub/railsapp");
 		session->sendHeaders(createRequestHeaders("/bar"));
 		string result = readAll(session->getStream());
 		ensure(result.find("bar 1!") != string::npos);
 		session.reset();
-
-		system("cp -f stub/railsapp/app/controllers/bar_controller_2.rb "
+		
+		system("cp -f stub/railsapp/app/controllers/bar_controller_2.txt "
 			"stub/railsapp/app/controllers/bar_controller.rb");
 		system("touch stub/railsapp/tmp/restart.txt");
-		try {
-			session = pool->get("stub/railsapp");
-			session->sendHeaders(createRequestHeaders("/bar"));
-			result = readAll(session->getStream());
-			ensure("App code has been reloaded", result.find("bar 2!") != string::npos);
-		} catch (...) {
-			unlink("stub/railsapp/app/controllers/bar_controller.rb");
-			unlink("touch stub/railsapp/tmp/restart.txt");
-			throw;
-		}
-		unlink("stub/railsapp/app/controllers/bar_controller.rb");
-		unlink("touch stub/railsapp/tmp/restart.txt");
+		
+		session = pool->get("stub/railsapp");
+		session->sendHeaders(createRequestHeaders("/bar"));
+		result = readAll(session->getStream());
+		ensure("App code has been reloaded", result.find("bar 2!") != string::npos);
 	}
 	
 	TEST_METHOD(16) {
@@ -509,39 +492,33 @@
 	
 	TEST_METHOD(22) {
 		// Test whether tmp/always_restart.txt really results in code reload.
-		try {
-			system("cp -f stub/railsapp/app/controllers/bar_controller_1.rb "
-				"stub/railsapp/app/controllers/bar_controller.rb");
-			Application::SessionPtr session = pool->get("stub/railsapp");
-			session->sendHeaders(createRequestHeaders("/bar"));
-			string result = readAll(session->getStream());
-			ensure(result.find("bar 1!") != string::npos);
-			session.reset();
-
-			system("cp -f stub/railsapp/app/controllers/bar_controller_2.rb "
-				"stub/railsapp/app/controllers/bar_controller.rb");
-			system("touch stub/railsapp/tmp/always_restart.txt");
-			session = pool->get("stub/railsapp");
-			session->sendHeaders(createRequestHeaders("/bar"));
-			result = readAll(session->getStream());
-			ensure("App code has been reloaded (1)", result.find("bar 2!") != string::npos);
-			session.reset();
-
-			system("cp -f stub/railsapp/app/controllers/bar_controller_1.rb "
-				"stub/railsapp/app/controllers/bar_controller.rb");
-			session = pool->get("stub/railsapp");
-			session->sendHeaders(createRequestHeaders("/bar"));
-			result = readAll(session->getStream());
-			ensure("App code has been reloaded (2)", result.find("bar 1!") != string::npos);
-			session.reset();
+		DeleteFileEventually f1("stub/railsapp/app/controllers/bar_controller.rb");
+		DeleteFileEventually f2("stub/railsapp/tmp/always_restart.txt");
 		
-			unlink("stub/railsapp/app/controllers/bar_controller.rb");
-			unlink("stub/railsapp/tmp/always_restart.txt");
-		} catch (...) {
-			unlink("stub/railsapp/app/controllers/bar_controller.rb");
-			unlink("stub/railsapp/tmp/always_restart.txt");
-			throw;
-		}
+		system("cp -f stub/railsapp/app/controllers/bar_controller_1.txt "
+			"stub/railsapp/app/controllers/bar_controller.rb");
+		Application::SessionPtr session = pool->get("stub/railsapp");
+		session->sendHeaders(createRequestHeaders("/bar"));
+		string result = readAll(session->getStream());
+		ensure(result.find("bar 1!") != string::npos);
+		session.reset();
+
+		system("cp -f stub/railsapp/app/controllers/bar_controller_2.txt "
+			"stub/railsapp/app/controllers/bar_controller.rb");
+		system("touch stub/railsapp/tmp/always_restart.txt");
+		session = pool->get("stub/railsapp");
+		session->sendHeaders(createRequestHeaders("/bar"));
+		result = readAll(session->getStream());
+		ensure("App code has been reloaded (1)", result.find("bar 2!") != string::npos);
+		session.reset();
+
+		system("cp -f stub/railsapp/app/controllers/bar_controller_1.txt "
+			"stub/railsapp/app/controllers/bar_controller.rb");
+		session = pool->get("stub/railsapp");
+		session->sendHeaders(createRequestHeaders("/bar"));
+		result = readAll(session->getStream());
+		ensure("App code has been reloaded (2)", result.find("bar 1!") != string::npos);
+		session.reset();
 	}
 	
 	TEST_METHOD(23) {
@@ -592,7 +569,7 @@
 		session1.reset();
 		session2.reset();
 		
-		TempFile tempfile("stub/rack/restart.txt");
+		DeleteFileEventually f("stub/rack/restart.txt");
 		system("touch stub/rack/restart.txt");
 		
 		pool->get(options);
@@ -617,7 +594,7 @@
 		session1.reset();
 		session2.reset();
 		
-		TempFile tempfile("stub/rack/public/restart.txt");
+		DeleteFileEventually f("stub/rack/public/restart.txt");
 		system("touch stub/rack/public/restart.txt");
 		
 		pool->get(options);

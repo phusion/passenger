@@ -32,6 +32,13 @@ def compile_cxx(source, flags = CXXFLAGS)
 end
 
 def create_static_library(target, sources)
+	# On OS X, 'ar cru' will sometimes fail with an obscure error:
+	#
+	#   ar: foo.a is a fat file (use libtool(1) or lipo(1) and ar(1) on it)
+	#   ar: foo.a: Inappropriate file type or format
+	#
+	# So here we delete the ar file before creating it, which bypasses this problem.
+	sh "rm -rf #{target}"
 	sh "ar cru #{target} #{sources}"
 	sh "ranlib #{target}"
 end

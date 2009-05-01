@@ -270,27 +270,37 @@ const char *getSystemTempDir();
  * temporary files are to be stored. This directory is unique for this instance
  * of the web server in which Phusion Passenger is running.
  *
- * If the environment variable PASSENGER_INSTANCE_TEMP_DIR is set, then that value
- * will be returned. If this environment variable is not set, then it will be set
- * with the return value.
+ * The calculated value will be stored in an internal variable, so that subsequent
+ * calls will return the same value. To bypass the usage of this internal variable,
+ * set <tt>bypassCache</tt> to true. In this case, the value of the internal
+ * variable will be set to the newly calculated value.
  *
- * To bypass the usage of the PASSENGER_INSTANCE_TEMP_DIR environment variable,
- * set 'bypassCache' to true.
- *
- * @param bypassCache Whether PASSENGER_INSTANCE_TEMP_DIR should be bypassed.
- * @param systemTempDir The directory under which the Phusion Passenger-specific
- *                      temp directory should be located. If set to the empty string,
- *                      then the return value of getSystemTempDir() will be used.
+ * @param bypassCache Whether the value of the internal variable should be bypassed.
+ * @param parentDir The directory under which the Phusion Passenger-specific
+ *                  temp directory should be located. If set to the empty string,
+ *                  then the return value of getSystemTempDir() will be used.
+ *                  This argument only has effect if the value of the internal
+ *                  variable is not consulted.
  * @ensure !result.empty()
  * @ingroup Support
  */
-string getPassengerTempDir(bool bypassCache = false, const string &systemTempDir = "");
+string getPassengerTempDir(bool bypassCache = false, const string &parentDir = "");
 
-/* Create a temp directory under <em>systemTempDir</em>, for storing Phusion
- * Passenger-specific temp files, such as temporarily buffered uploads,
- * sockets for backend processes, etc. This call also sets the
- * PASSENGER_INSTANCE_TEMP_DIR environment variable, which allows subprocesses
- * to find this temp directory.
+/**
+ * Force subsequent calls to <tt>getPassengerTempDir(false, ...)</tt> to return the given value.
+ * <tt>dir</tt> is not created automatically if it doesn't exist.
+ *
+ * <tt>dir</tt> may also be an empty string, in which case it will cause the next
+ * call to <tt>getPassengerTempDir()</tt> to re-calculate the temp directory's path.
+ */
+void setPassengerTempDir(const string &dir);
+
+/* Create a temporary directory for storing Phusion Passenger-specific temp files,
+ * such as temporarily buffered uploads, sockets for backend processes, etc.
+ * The directory that will be created is the one returned by
+ * <tt>getPassengerTempDir(false, parentDir)</tt>. This call stores the path to
+ * this temp directory in an internal variable, so that subsequent calls to
+ * getPassengerTempDir() will return the same path.
  *
  * The created temp directory will have several subdirectories:
  * - webserver_private - for storing the web server's buffered uploads.
@@ -315,9 +325,10 @@ string getPassengerTempDir(bool bypassCache = false, const string &systemTempDir
  *       will set directory permissions and owners/groups, which may require
  *       root privileges.
  *
- * @param systemTempDir The directory under which the Phusion Passenger-specific
- *                      temp directory should be created. You should normally
- *                      specify the return value of getSystemTempDir().
+ * @param parentDir The directory under which the Phusion Passenger-specific
+ *                  temp directory should be created. This argument may be the
+ *                  empty string, in which case getSystemTempDir() will be used
+ *                  as the parent directory.
  * @param userSwitching Whether user switching is turned on.
  * @param lowestUser The user that the spawn manager and the pool server will
  *                   run as, if user switching is turned off.
@@ -331,7 +342,7 @@ string getPassengerTempDir(bool bypassCache = false, const string &systemTempDir
  * @throws SystemException Something went wrong.
  * @throws FileSystemException Something went wrong.
  */
-void createPassengerTempDir(const string &systemTempDir, bool userSwitching,
+void createPassengerTempDir(const string &parentDir, bool userSwitching,
                             const string &lowestUser,
                             uid_t workerUid, gid_t workerGid);
 

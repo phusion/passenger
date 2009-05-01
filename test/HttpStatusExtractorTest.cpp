@@ -178,4 +178,21 @@ namespace tut {
 		ensure_equals(ex.getStatusLine(), "202 Blabla\r\n");
 		ensure_equals(ex.getBuffer(), string(data) + data2);
 	}
+	
+	TEST_METHOD(11) {
+		// If the status in the HTTP data doesn't contain a status text,
+		// then the status text is added.
+		const char data[] = "Status: 200\r\n\r\n";
+		ensure(ex.feed(data, sizeof(data) - 1));
+		ensure_equals(ex.getStatusLine(), "200 OK\r\n");
+	}
+	
+	TEST_METHOD(12) {
+		// If the status in the HTTP data doesn't contain a status text,
+		// and the status code is not recognized, then the status text
+		// "Unknown Status Code" is added.
+		const char data[] = "Status: 999\r\n\r\n";
+		ensure(ex.feed(data, sizeof(data) - 1));
+		ensure_equals(ex.getStatusLine(), "999 Unknown Status Code\r\n");
+	}
 }

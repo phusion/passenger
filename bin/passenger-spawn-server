@@ -42,15 +42,21 @@ begin
 	# we exit without loading the rest of Passenger. If Apache doesn't close
 	# the connection within 4 seconds then we continue with loading Passenger,
 	# so that loading doesn't happen during the first spawn.
-	if select([input], nil, nil, 4) && input.eof?
+	begin
+		if select([input], nil, nil, 4) && input.eof?
+			exit
+		end
+	rescue Interrupt
 		exit
 	end
 	
-	require 'phusion_passenger/spawn_manager'
 	require 'phusion_passenger/utils'
 	if defined?(PhusionPassenger::NativeSupport)
 		PhusionPassenger::NativeSupport.disable_stdio_buffering
 	end
+	PhusionPassenger::Utils.passenger_tmpdir = ARGV[0]
+	
+	require 'phusion_passenger/spawn_manager'
 	spawn_manager = PhusionPassenger::SpawnManager.new
 	spawn_manager.start_synchronously(input)
 	spawn_manager.cleanup

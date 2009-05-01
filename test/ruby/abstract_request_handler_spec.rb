@@ -8,8 +8,8 @@ include PhusionPassenger
 
 describe AbstractRequestHandler do
 	before :each do
-		@old_instance_temp_dir = ENV['PASSENGER_INSTANCE_TEMP_DIR']
-		ENV['PASSENGER_INSTANCE_TEMP_DIR'] = "abstract_request_handler_spec.tmp"
+		@old_passenger_tmpdir = Utils.passenger_tmpdir
+		Utils.passenger_tmpdir = "abstract_request_handler_spec.tmp"
 		@owner_pipe = IO.pipe
 		@request_handler = AbstractRequestHandler.new(@owner_pipe[1])
 		def @request_handler.process_request(*args)
@@ -20,11 +20,7 @@ describe AbstractRequestHandler do
 	after :each do
 		@request_handler.cleanup
 		@owner_pipe[0].close rescue nil
-		if @old_instance_temp_dir
-			ENV['PASSENGER_INSTANCE_TEMP_DIR'] = @old_instance_temp_dir
-		else
-			ENV.delete('PASSENGER_INSTANCE_TEMP_DIR')
-		end
+		Utils.passenger_tmpdir = @old_passenger_tmpdir
 		FileUtils.rm_rf("abstract_request_handler_spec.tmp")
 	end
 	

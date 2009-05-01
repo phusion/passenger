@@ -21,7 +21,8 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-$LOAD_PATH.unshift(File.expand_path(File.dirname(__FILE__) + "/../../../vendor/rack-0.9.1/lib"))
+rack_dir = File.expand_path(File.dirname(__FILE__) + "/../../../vendor/rack-1.0.0-git/lib")
+$LOAD_PATH.unshift(rack_dir) if !$LOAD_PATH.include?(rack_dir)
 require 'rack'
 
 require 'socket'
