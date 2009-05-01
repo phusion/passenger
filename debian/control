@@ -12,7 +12,7 @@ XS-Vcs-browser: http://github.com/johnl/deb-rubygems/tree/master
 
 Package: passenger-common
 Architecture: any
-Depends: ${shlibs:Depends}, ruby, librack-ruby (>= 1.0.0)
+Depends: ${shlibs:Depends}, ruby, librack-ruby1.8 (>= 1.0.0)
 Conflicts: libapache2-mod-passenger (< 2.2.1-1bbox1)
 Suggests: python, rails, passenger-doc, rubygems (>= 1.0)
 Description: Rails and Rack support for Apache2

@@ -1,3 +1,9 @@
+passenger (2.2.2-1bbox2) hardy; urgency=low
+
+  * Changed dependency from librack to librack1.8
+
+ -- John Leach <john@brightbox.co.uk>  Fri, 01 May 2009 13:05:22 +0100
+
 passenger (2.2.2-1bbox1) hardy; urgency=low
 
   * New Upstream Version, 2.2.2
