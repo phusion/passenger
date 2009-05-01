@@ -1,3 +1,10 @@
+passenger (2.2.2-1bbox1) hardy; urgency=low
+
+  * New Upstream Version, 2.2.2
+  * Updated dependency to librack 1.0.0
+
+ -- John Leach <john@brightbox.co.uk>  Fri, 01 May 2009 12:21:43 +0100
+
 passenger (2.2.1-1bbox2) hardy; urgency=low
 
   * Conflicts with older versions of libapache2-mod-passenger
