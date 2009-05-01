@@ -30,6 +30,7 @@
 #include "ContentHandler.h"
 #include "StaticContentHandler.h"
 #include "Configuration.h"
+#include "../common/Version.h"
 
 
 #define NGX_HTTP_SCGI_PARSE_NO_HEADER  20
@@ -242,6 +243,9 @@ create_request(ngx_http_request_t *r)
     passenger_main_conf_t         *main_conf;
     passenger_context_t           *context;
     ngx_http_script_len_code_pt    lcode;
+    #if (NGX_HTTP_SSL)
+        ngx_http_ssl_srv_conf_t   *ssl_conf;
+    #endif
     
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
     main_conf = &passenger_main_conf;
@@ -284,12 +288,14 @@ create_request(ngx_http_request_t *r)
     /* +1 for trailing null */
     len = sizeof("CONTENT_LENGTH") + ngx_strlen(buf) + 1;
     
-    /* DOCUMENT_ROOT, PATH_INFO and base URI */
+    /* DOCUMENT_ROOT, SCRIPT_NAME and base URI */
     len += sizeof("DOCUMENT_ROOT") + context->public_dir.len + 1;
-    len += sizeof("PATH_INFO") + context->public_dir.len + 1;
     if (context->base_uri.len > 0) {
+        len += sizeof("SCRIPT_NAME") + context->base_uri.len + 1;
         len += sizeof("RAILS_RELATIVE_URL_ROOT") +
                context->base_uri.len + 1;
+    } else {
+        len += sizeof("SCRIPT_NAME") + sizeof("");
     }
     
     /* Various other HTTP headers. */
@@ -298,6 +304,12 @@ create_request(ngx_http_request_t *r)
         len += sizeof("CONTENT_TYPE") + r->headers_in.content_type->value.len + 1;
     }
     
+    #if (NGX_HTTP_SSL)
+        ssl_conf = ngx_http_get_module_srv_conf(r, ngx_http_ssl_module);
+        if (ssl_conf->enable) {
+            len += sizeof("HTTPS") + sizeof("on");
+        }
+    #endif
     
     /* Lengths of Passenger application pool options. */
     if (slcf->use_global_queue) {
@@ -370,6 +382,33 @@ create_request(ngx_http_request_t *r)
         }
     }
 
+    /* Trailing dummy header.
+     *
+	 * If the last header value is an empty string, then the buffer
+	 * will end with "\0\0". For example, if 'SSL_CLIENT_CERT'
+	 * is the last header and it has an empty value, then the SCGI header
+	 * will end with:
+	 *
+	 *   "SSL_CLIENT_CERT\0\0"
+	 *
+	 * The data in the buffer will be processed by the AbstractRequestHandler class,
+	 * which is implemented in Ruby. But it uses Hash[*data.split("\0")] to
+	 * unserialize the data. Unfortunately String#split will not transform
+	 * the trailing "\0\0" into an empty string:
+	 *
+	 *   "SSL_CLIENT_CERT\0\0".split("\0")
+	 *   # => desired result: ["SSL_CLIENT_CERT", ""]
+	 *   # => actual result:  ["SSL_CLIENT_CERT"]
+	 *
+	 * When that happens, Hash[..] will raise an ArgumentError because
+	 * data.split("\0") does not return an array with a length that is a
+	 * multiple of 2.
+	 *
+	 * So here, we add a dummy header to prevent situations like that from
+	 * happening.
+	 */
+    len += sizeof("_") + sizeof("_");
+
 
     /**************************************************
      * Build the request header data.
@@ -406,20 +445,23 @@ create_request(ngx_http_request_t *r)
     b->last = ngx_snprintf(b->last, 10, "%ui", content_length);
     *b->last++ = (u_char) 0;
     
-    /* Build DOCUMENT_ROOT and base URI. */
+    /* Build DOCUMENT_ROOT, SCRIPT_NAME and base URI. */
     b->last = ngx_copy(b->last, "DOCUMENT_ROOT", sizeof("DOCUMENT_ROOT"));
     b->last = ngx_copy(b->last, context->public_dir.data,
                        context->public_dir.len + 1);
     
-    b->last = ngx_copy(b->last, "PATH_INFO", sizeof("PATH_INFO"));
-    b->last = ngx_copy(b->last, context->public_dir.data,
-                       context->public_dir.len + 1);
-    
     if (context->base_uri.len > 0) {
+        b->last = ngx_copy(b->last, "SCRIPT_NAME", sizeof("SCRIPT_NAME"));
+        b->last = ngx_copy(b->last, context->base_uri.data,
+                           context->base_uri.len + 1);
+        
         b->last = ngx_copy(b->last, "RAILS_RELATIVE_URL_ROOT",
                            sizeof("RAILS_RELATIVE_URL_ROOT"));
         b->last = ngx_copy(b->last, context->base_uri.data,
                            context->base_uri.len + 1);
+    } else {
+        b->last = ngx_copy(b->last, "SCRIPT_NAME", sizeof("SCRIPT_NAME"));
+        b->last = ngx_copy(b->last, "", sizeof(""));
     }
     
     /* Various other HTTP headers. */
@@ -429,6 +471,14 @@ create_request(ngx_http_request_t *r)
         b->last = ngx_copy(b->last, r->headers_in.content_type->value.data,
                            r->headers_in.content_type->value.len + 1);
     }
+    
+    #if (NGX_HTTP_SSL)
+        ssl_conf = ngx_http_get_module_srv_conf(r, ngx_http_ssl_module);
+        if (ssl_conf->enable) {
+            b->last = ngx_copy(b->last, "HTTPS", sizeof("HTTPS"));
+            b->last = ngx_copy(b->last, "on", sizeof("on"));
+        }
+    #endif
     
 
     /* Build Passenger application pool option headers. */
@@ -534,6 +584,9 @@ create_request(ngx_http_request_t *r)
             *b->last++ = (u_char) 0;
          }
     }
+    
+    /* Trailing dummy header. See earlier comment for explanation. */
+    b->last = ngx_copy(b->last, "_\0_", sizeof("_\0_"));
 
 
     *b->last++ = (u_char) ',';
@@ -956,7 +1009,7 @@ process_header(ngx_http_request_t *r)
 
                 h->key.len = sizeof("Server") - 1;
                 h->key.data = (u_char *) "Server";
-                h->value.data = (u_char *) (NGINX_VER " + Phusion Passenger (mod_rails/mod_rack)");
+                h->value.data = (u_char *) (NGINX_VER " + Phusion Passenger " PASSENGER_VERSION " (mod_rails/mod_rack)");
                 h->value.len = ngx_strlen(h->value.data);
                 h->lowcase_key = (u_char *) "server";
             }

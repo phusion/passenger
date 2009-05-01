@@ -603,29 +603,17 @@ Edition>>. This allows you to reduce the memory usage of your Ruby on Rails appl
 by about 33%. And it's not hard to install.
 
 ==== passenger_max_instances_per_app <integer> ====
-The maximum number of seconds that an application instance may be idle. That is,
-if an application instance hasn't received any traffic after the given number of
-seconds, then it will be shutdown in order to conserve memory.
+The maximum number of application instances that may be simultaneously active
+for a single application. This helps to make sure that a single application
+will not occupy all available slots in the application pool.
 
-Decreasing this value means that applications will have to be spawned
-more often. Since spawning is a relatively slow operation, some visitors may
-notice a small delay when they visit your Rails/Rack website. However, it will also
-free up resources used by applications more quickly.
-
-The optimal value depends on the average time that a visitor spends on a single
-Rails/Rack web page. We recommend a value of `2 * x`, where `x` is the average
-number of seconds that a visitor spends on a single Rails/Rack web page. But your
-mileage may vary.
-
-When this value is set to '0', application instances will not be shutdown unless 
-it's really necessary, i.e. when Phusion Passenger is out of worker processes
-for a given application and one of the inactive application instances needs to
-make place for another application instance. Setting the value to 0 is
-recommended if you're on a non-shared host that's only running a few
-applications, each which must be available at all times.
+This value must be less than <<PassengerMaxPoolSize,passenger_max_pool_size>>. A value of 0
+means that there is no limit placed on the number of instances a single application
+may use, i.e. only the global limit of <<PassengerMaxPoolSize,passenger_max_pool_size>>
+will be enforced.
 
 This option may only occur once, in the 'http' configuration block.
-The default value is '300'.
+The default value is '0'.
 
 [[PassengerPoolIdleTime]]
 ==== passenger_pool_idle_time <integer> ====

@@ -208,6 +208,10 @@ class AbstractRequestHandler
 				ensure
 					# 'input' is the same as 'client' so we don't
 					# need to close that.
+					# The 'close_write' here prevents forked child
+					# processes from unintentionally keeping the
+					# connection open.
+					client.close_write rescue nil
 					client.close rescue nil
 				end
 				@processed_requests += 1
@@ -382,9 +386,7 @@ private
 			
 			# We monkeypatch the 'sync=' method to a no-op so that
 			# sync mode can't be disabled.
-			client.instance_eval do
-				def client.sync=(value)
-				end
+			def client.sync=(value)
 			end
 			
 			# The real input stream is not seekable (calling _seek_

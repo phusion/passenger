@@ -49,8 +49,9 @@
 #define HELPER_SERVER_PASSWORD_SIZE     64
 
 
+static int        first_start = 1;
 static ngx_str_t  ngx_http_scgi_script_name = ngx_string("scgi_script_name");
-static pid_t      helper_server_pid;
+static pid_t      helper_server_pid = 0;
 static int        helper_server_admin_pipe;
 static u_char     helper_server_password_data[HELPER_SERVER_PASSWORD_SIZE];
 const char        passenger_temp_dir[NGX_MAX_PATH];
@@ -58,6 +59,8 @@ ngx_str_t         passenger_schema_string;
 ngx_str_t         passenger_helper_server_password;
 const char        passenger_helper_server_socket[NGX_MAX_PATH];
 CachedMultiFileStat *passenger_stat_cache;
+
+static void shutdown_helper_server(ngx_cycle_t *cycle);
 
 
 /*
@@ -121,14 +124,21 @@ start_helper_server(ngx_cycle_t *cycle)
     char                   buf;
     FILE                  *f;
     
+    if (helper_server_pid != 0) {
+        shutdown_helper_server(cycle);
+    }
+    
     ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
     
-    /* Ignore SIGPIPE now so that, if the helper server fails to start,
-     * nginx doesn't get killed by the default SIGPIPE handler upon
-     * writing the password to the helper server.
-     */
-    ignore_sigpipe();
-    
+    if (first_start) {
+        first_start = 0;
+        
+        /* Ignore SIGPIPE now so that, if the helper server fails to start,
+         * nginx doesn't get killed by the default SIGPIPE handler upon
+         * writing the password to the helper server.
+         */
+        ignore_sigpipe();
+    }
     
     /* Build strings that we need later. */
     
@@ -231,12 +241,6 @@ start_helper_server(ngx_cycle_t *cycle)
             close(i);
         }
         
-        /* It seems that Nginx's Perl module unsets the
-         * PASSENGER_INSTANCE_TEMP_DIR environment variable, so here
-         * we set it again.
-         */
-        setenv("PASSENGER_INSTANCE_TEMP_DIR", passenger_temp_dir, 1);
-        
         execlp((const char *) helper_server_filename,
                "PassengerNginxHelperServer",
                main_conf->root_dir.data,
@@ -251,6 +255,7 @@ start_helper_server(ngx_cycle_t *cycle)
                main_conf->default_user.data,
                worker_uid_string,
                worker_gid_string,
+               passenger_temp_dir,
                NULL);
         e = errno;
         fprintf(stderr, "*** Could not start the Passenger helper server (%s): "
@@ -407,7 +412,7 @@ shutdown_helper_server(ngx_cycle_t *cycle)
         ngx_log_debug0(NGX_LOG_DEBUG_HTTP, cycle->log, 0,
                        "Passenger helper server did not exit in time. "
                        "Killing it...");
-        kill(helper_server_pid, SIGTERM);
+        kill(helper_server_pid, SIGKILL);
         waitpid(helper_server_pid, NULL, 0);
     }
     
@@ -437,6 +442,8 @@ shutdown_helper_server(ngx_cycle_t *cycle)
                           passenger_temp_dir);
         }
     }
+    
+    helper_server_pid = 0;
 }
 
 static ngx_int_t
@@ -531,7 +538,6 @@ pre_config_init(ngx_conf_t *cf)
                       "could not create Passenger temp dir string");
         return NGX_ERROR;
     }
-    setenv("PASSENGER_INSTANCE_TEMP_DIR", passenger_temp_dir, 1);
     
     /* Temporarily create this temp directory. It must exist before the configuration is loaded,
      * because during Configuration loading Nginx's upstream module will attempt to create

@@ -217,6 +217,7 @@ private:
 			execlp(rubyCommand.c_str(),
 				rubyCommand.c_str(),
 				spawnServerCommand.c_str(),
+				getPassengerTempDir().c_str(),
 				// The spawn server changes the process names of the subservers
 				// that it starts, for better usability. However, the process name length
 				// (as shown by ps) is limited. Here, we try to expand that limit by

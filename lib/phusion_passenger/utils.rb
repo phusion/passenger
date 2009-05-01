@@ -337,14 +337,20 @@ protected
 		return options
 	end
 	
+	@@passenger_tmpdir = nil
+	
+	def passenger_tmpdir(create = true)
+		PhusionPassenger::Utils.passenger_tmpdir(create)
+	end
+	
 	# Returns the directory in which to store Phusion Passenger-specific
 	# temporary files. If +create+ is true, then this method creates the
 	# directory if it doesn't exist.
-	def passenger_tmpdir(create = true)
-		dir = ENV['PASSENGER_INSTANCE_TEMP_DIR']
+	def self.passenger_tmpdir(create = true)
+		dir = @@passenger_tmpdir
 		if dir.nil? || dir.empty?
 			dir = "#{Dir.tmpdir}/passenger.#{Process.pid}"
-			ENV['PASSENGER_INSTANCE_TEMP_DIR'] = dir
+			@@passenger_tmpdir = dir
 		end
 		if create && !File.exist?(dir)
 			# This is a very minimal implementation of the function
@@ -356,6 +362,10 @@ protected
 			system("mkdir", "-p", "-m", "u=wxs,g=wx,o=wx", "#{dir}/backends")
 		end
 		return dir
+	end
+	
+	def self.passenger_tmpdir=(dir)
+		@@passenger_tmpdir = dir
 	end
 end
 

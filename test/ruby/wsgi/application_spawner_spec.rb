@@ -10,21 +10,17 @@ describe PhusionPassenger::WSGI::ApplicationSpawner do
 	include PhusionPassenger::Utils
 	
 	before :each do
-		@old_instance_temp_dir = ENV['PASSENGER_INSTANCE_TEMP_DIR']
-		ENV['PASSENGER_INSTANCE_TEMP_DIR'] = "#{Dir.tmpdir}/wsgi_test.tmp"
+		@old_passenger_tmpdir = Utils.passenger_tmpdir
+		Utils.passenger_tmpdir = "#{Dir.tmpdir}/wsgi_test.tmp"
 		@stub = setup_stub('wsgi')
 		File.unlink("#{@stub.app_root}/passenger_wsgi.pyc") rescue nil
 	end
 	
 	after :each do
 		@stub.destroy
-		FileUtils.chmod_R(0700, ENV['PASSENGER_INSTANCE_TEMP_DIR'])
-		FileUtils.rm_rf(ENV['PASSENGER_INSTANCE_TEMP_DIR'])
-		if @old_instance_temp_dir
-			ENV['PASSENGER_INSTANCE_TEMP_DIR'] = @old_instance_temp_dir
-		else
-			ENV.delete('PASSENGER_INSTANCE_TEMP_DIR')
-		end
+		FileUtils.chmod_R(0700, Utils.passenger_tmpdir)
+		FileUtils.rm_rf(Utils.passenger_tmpdir)
+		Utils.passenger_tmpdir = @old_passenger_tmpdir
 	end
 	
 	it "can spawn our stub application" do

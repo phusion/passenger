@@ -219,7 +219,7 @@ class MemoryStats
 			if threads_known
 				p.pid, p.ppid, p.threads, p.vm_size, p.rss, p.name = line.split(/ +/, 6)
 			else
-				p.pid, p.ppid, p.vm_size, p.rss, p.name = line.split(/ +/, 6)
+				p.pid, p.ppid, p.vm_size, p.rss, p.name = line.split(/ +/, 5)
 				p.threads = "?"
 			end
 			p.name.sub!(/\Aruby: /, '')

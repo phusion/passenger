@@ -17,28 +17,19 @@ namespace tut {
 	struct UtilsTest {
 		vector<string> output;
 		string oldPath;
-		char *oldInstanceTempDir;
+		string oldPassengerTempDir;
 		
 		UtilsTest() {
 			oldPath = getenv("PATH");
-			oldInstanceTempDir = getenv("PASSENGER_INSTANCE_TEMP_DIR");
-			if (oldInstanceTempDir != NULL) {
-				oldInstanceTempDir = strdup(oldInstanceTempDir);
-			}
-			
+			oldPassengerTempDir = getPassengerTempDir();
+			setPassengerTempDir("");
 			unsetenv("TMPDIR");
-			unsetenv("PASSENGER_INSTANCE_TEMP_DIR");
 		}
 		
 		~UtilsTest() {
 			setenv("PATH", oldPath.c_str(), 1);
 			unsetenv("TMPDIR");
-			if (oldInstanceTempDir == NULL) {
-				unsetenv("PASSENGER_INSTANCE_TEMP_DIR");
-			} else {
-				setenv("PASSENGER_INSTANCE_TEMP_DIR", oldInstanceTempDir, 1);
-				free(oldInstanceTempDir);
-			}
+			setPassengerTempDir(oldPassengerTempDir);
 		}
 	};
 	
@@ -168,31 +159,29 @@ namespace tut {
 	}
 	
 	TEST_METHOD(16) {
-		// It caches the result into the PASSENGER_INSTANCE_TEMP_DIR environment variable.
-		char dir[128];
+		// It returns the cached value if it's not the empty string.
+		setPassengerTempDir("/foo");
+		ensure_equals(getPassengerTempDir(), "/foo");
 		
+		setPassengerTempDir("/bar");
+		ensure_equals(getPassengerTempDir(), "/bar");
+		
+		char dir[128];
 		snprintf(dir, sizeof(dir), "/tmp/passenger.%lu", (unsigned long) getpid());
-		getPassengerTempDir();
-		ensure_equals(getenv("PASSENGER_INSTANCE_TEMP_DIR"), string(dir));
+		setPassengerTempDir("");
+		ensure_equals(getPassengerTempDir(), dir);
 	}
 	
 	TEST_METHOD(17) {
-		// It returns the value of the PASSENGER_INSTANCE_TEMP_DIR environment
-		// variable if it's not NULL and not an empty string.
-		setenv("PASSENGER_INSTANCE_TEMP_DIR", "/foo", 1);
-		ensure_equals(getPassengerTempDir(), "/foo");
-	}
-	
-	TEST_METHOD(18) {
-		// It does not use query the PASSENGER_INSTANCE_TEMP_DIR environment variable if bypassCache is true.
+		// It does not use query the cached value if bypassCache is true.
 		char dir[128];
 		
-		setenv("PASSENGER_INSTANCE_TEMP_DIR", "/foo", 1);
+		setPassengerTempDir("/foo");
 		snprintf(dir, sizeof(dir), "/tmp/passenger.%lu", (unsigned long) getpid());
 		ensure_equals(getPassengerTempDir(true), dir);
 	}
 	
-	TEST_METHOD(19) {
+	TEST_METHOD(18) {
 		// It uses the systemTempDir argument if it's not the empty string.
 		char dir[128];
 		
@@ -205,7 +194,7 @@ namespace tut {
 	
 	struct TemporarilySetInstanceTempDir {
 		TemporarilySetInstanceTempDir() {
-			setenv("PASSENGER_INSTANCE_TEMP_DIR", "utils_test.tmp", 1);
+			setPassengerTempDir("utils_test.tmp");
 			mkdir("utils_test.tmp", S_IRWXU);
 			mkdir(BufferedUpload::getDir().c_str(), S_IRWXU);
 		}
