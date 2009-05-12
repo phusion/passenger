@@ -35,7 +35,7 @@ describe PhusionPassenger::Rack::ApplicationSpawner do
 	end if Process.euid == 0
 	
 	it "calls the starting_worker_process event after config.ru has been loaded" do
-	  File.append("#{@stub.app_root}/config.ru", %q{
+		File.append("#{@stub.app_root}/config.ru", %q{
 			PhusionPassenger.on_event(:starting_worker_process) do
 				File.append("rackresult.txt", "worker_process_started\n")
 			end
@@ -55,7 +55,7 @@ describe PhusionPassenger::Rack::ApplicationSpawner do
 	end
 	
 	it "calls the stopping_worker_process event" do
-	  File.append("#{@stub.app_root}/config.ru", %q{
+		File.append("#{@stub.app_root}/config.ru", %q{
 			PhusionPassenger.on_event(:stopping_worker_process) do
 				File.append("rackresult.txt", "worker_process_stopped\n")
 			end
