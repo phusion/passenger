@@ -7,6 +7,7 @@ scgi_demo
 *.bundle
 *.pyc
 *.a
+*.dSYM
 ext/apache2/*.la
 ext/apache2/*.lo
 ext/apache2/*.slo
