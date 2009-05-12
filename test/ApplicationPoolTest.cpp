@@ -262,20 +262,15 @@
 		session1.reset();
 		session2.reset();
 		
-		system("touch stub/railsapp/tmp/restart.txt");
+		DeleteFileEventually f("stub/railsapp/tmp/restart.txt");
+		touchFile("stub/railsapp/tmp/restart.txt");
 		pool->get("stub/railsapp");
 		
 		ensure_equals("No apps are active", pool->getActive(), 0u);
 		ensure_equals("Both apps are killed, and a new one was spawned",
 			pool->getCount(), 1u);
-		try {
-			ensure("Restart file still exists",
-				stat("stub/railsapp/tmp/restart.txt", &buf) == 0);
-			unlink("stub/railsapp/tmp/restart.txt");
-		} catch (...) {
-			unlink("stub/railsapp/tmp/restart.txt");
-			throw;
-		}
+		ensure("Restart file still exists",
+			stat("stub/railsapp/tmp/restart.txt", &buf) == 0);
 	}
 	
 	TEST_METHOD(13) {
@@ -285,29 +280,24 @@
 		// should not result in a restart.
 		pid_t old_pid;
 		
-		system("mkdir -p stub/railsapp/tmp/restart.txt");
-		try {
-			Application::SessionPtr session = pool->get("stub/railsapp");
-			old_pid = session->getPid();
-			session.reset();
-			
-			struct utimbuf buf;
-			buf.actime = time(NULL) - 10;
-			buf.modtime = time(NULL) - 10;
-			utime("stub/railsapp/tmp/restart.txt", &buf);
-			
-			session = pool->get("stub/railsapp");
-			ensure("The app was restarted", session->getPid() != old_pid);
-			old_pid = session->getPid();
-			session.reset();
-			
-			session = pool->get("stub/railsapp");
-			ensure_equals("The app was not restarted",
-				old_pid, session->getPid());
-		} catch (...) {
-			system("rmdir stub/railsapp/tmp/restart.txt");
-			throw;
-		}
+		TempDir d("stub/railsapp/tmp/restart.txt");
+		Application::SessionPtr session = pool->get("stub/railsapp");
+		old_pid = session->getPid();
+		session.reset();
+		
+		struct utimbuf buf;
+		buf.actime = time(NULL) - 10;
+		buf.modtime = time(NULL) - 10;
+		utime("stub/railsapp/tmp/restart.txt", &buf);
+		
+		session = pool->get("stub/railsapp");
+		ensure("The app was restarted", session->getPid() != old_pid);
+		old_pid = session->getPid();
+		session.reset();
+		
+		session = pool->get("stub/railsapp");
+		ensure_equals("The app was not restarted",
+			old_pid, session->getPid());
 	}
 	
 	TEST_METHOD(15) {
@@ -468,26 +458,20 @@
 		// If tmp/always_restart.txt is present and is a directory, 
 		// then the application under app_root
 		// should be always restarted.
-		try {
-			struct stat buf;
-			Application::SessionPtr session1 = pool->get("stub/railsapp");
-			Application::SessionPtr session2 = pool2->get("stub/railsapp");
-			session1.reset();
-			session2.reset();
-		
-			system("mkdir stub/railsapp/tmp/always_restart.txt");
-			pool->get("stub/railsapp");
-		
-			ensure_equals("No apps are active", pool->getActive(), 0u);
-			ensure_equals("Both apps are killed, and a new one was spawned",
-				pool->getCount(), 1u);
-			ensure("always_restart file has not been deleted",
-				stat("stub/railsapp/tmp/always_restart.txt", &buf) == 0);
-			system("rmdir stub/railsapp/tmp/always_restart.txt");
-		} catch (...) {
-			system("rmdir stub/railsapp/tmp/always_restart.txt");
-			throw;
-		}
+		struct stat buf;
+		Application::SessionPtr session1 = pool->get("stub/railsapp");
+		Application::SessionPtr session2 = pool2->get("stub/railsapp");
+		session1.reset();
+		session2.reset();
+	
+		TempDir dir("stub/railsapp/tmp/always_restart.txt");
+		pool->get("stub/railsapp");
+	
+		ensure_equals("No apps are active", pool->getActive(), 0u);
+		ensure_equals("Both apps are killed, and a new one was spawned",
+			pool->getCount(), 1u);
+		ensure("always_restart file has not been deleted",
+			stat("stub/railsapp/tmp/always_restart.txt", &buf) == 0);
 	}
 	
 	TEST_METHOD(22) {
@@ -505,7 +489,7 @@
 
 		system("cp -f stub/railsapp/app/controllers/bar_controller_2.txt "
 			"stub/railsapp/app/controllers/bar_controller.rb");
-		system("touch stub/railsapp/tmp/always_restart.txt");
+		touchFile("stub/railsapp/tmp/always_restart.txt");
 		session = pool->get("stub/railsapp");
 		session->sendHeaders(createRequestHeaders("/bar"));
 		result = readAll(session->getStream());
@@ -525,34 +509,27 @@
 		// If tmp/restart.txt and tmp/always_restart.txt are present, 
 		// the application under app_root should still be restarted and
 		// both files must be kept
-		try {
-			pid_t old_pid, pid;
-			struct stat buf;
-			Application::SessionPtr session1 = pool->get("stub/railsapp");
-			Application::SessionPtr session2 = pool2->get("stub/railsapp");
-			session1.reset();
-			session2.reset();
+		pid_t old_pid, pid;
+		struct stat buf;
+		Application::SessionPtr session1 = pool->get("stub/railsapp");
+		Application::SessionPtr session2 = pool2->get("stub/railsapp");
+		session1.reset();
+		session2.reset();
 		
-			system("touch stub/railsapp/tmp/restart.txt");
-			system("touch stub/railsapp/tmp/always_restart.txt");
+		DeleteFileEventually f1("stub/railsapp/tmp/restart.txt");
+		DeleteFileEventually f2("stub/railsapp/tmp/always_restart.txt");
+		touchFile("stub/railsapp/tmp/restart.txt");
+		touchFile("stub/railsapp/tmp/always_restart.txt");
 		
-			old_pid = pool->get("stub/railsapp")->getPid();
-			ensure("always_restart file has not been deleted",
-				stat("stub/railsapp/tmp/always_restart.txt", &buf) == 0);
+		old_pid = pool->get("stub/railsapp")->getPid();
+		ensure("always_restart file has not been deleted",
+			stat("stub/railsapp/tmp/always_restart.txt", &buf) == 0);
 
-			ensure("Restart file has not been deleted",
-				stat("stub/railsapp/tmp/restart.txt", &buf) == 0);
-		
-			pid = pool->get("stub/railsapp")->getPid();
-			ensure("The app was restarted", pid != old_pid);
-
-			unlink("stub/railsapp/tmp/restart.txt");
-			unlink("stub/railsapp/tmp/always_restart.txt");
-		} catch (...) {
-			unlink("stub/railsapp/tmp/restart.txt");
-			unlink("stub/railsapp/tmp/always_restart.txt");
-			throw;
-		}
+		ensure("Restart file has not been deleted",
+			stat("stub/railsapp/tmp/restart.txt", &buf) == 0);
+	
+		pid = pool->get("stub/railsapp")->getPid();
+		ensure("The app was restarted", pid != old_pid);
 	}
 	
 	TEST_METHOD(24) {
@@ -570,7 +547,7 @@
 		session2.reset();
 		
 		DeleteFileEventually f("stub/rack/restart.txt");
-		system("touch stub/rack/restart.txt");
+		touchFile("stub/rack/restart.txt");
 		
 		pool->get(options);
 		
@@ -595,7 +572,7 @@
 		session2.reset();
 		
 		DeleteFileEventually f("stub/rack/public/restart.txt");
-		system("touch stub/rack/public/restart.txt");
+		touchFile("stub/rack/public/restart.txt");
 		
 		pool->get(options);
 		

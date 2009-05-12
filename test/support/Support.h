@@ -6,12 +6,34 @@
 #include <iostream>
 #include <string>
 #include <exception>
+#include <cstdio>
 #include <cerrno>
 #include <cstring>
+#include <utime.h>
 
 namespace Test {
 
 using namespace std;
+
+static void
+touchFile(const char *filename, time_t timestamp = (time_t) - 1) {
+	FILE *f = fopen(filename, "a");
+	if (f != NULL) {
+		fclose(f);
+	} else {
+		int e = errno;
+		cerr << "Cannot touch file '" << filename << "': " <<
+			strerror(e) <<" (" << e << ")" << endl;
+		throw exception();
+	}
+	
+	if (timestamp != (time_t) -1) {
+		struct utimbuf times;
+		times.actime = timestamp;
+		times.modtime = timestamp;
+		utime(filename, &times);
+	}
+}
 
 /**
  * Class which creates a temporary directory of the given name, and deletes
@@ -50,7 +72,7 @@ public:
 		this->filename = filename;
 	}
 	
-	DeleteFileEventually() {
+	~DeleteFileEventually() {
 		unlink(filename.c_str());
 	}
 };
