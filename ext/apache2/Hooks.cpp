@@ -856,11 +856,9 @@ public:
 		 * of the process in which the Hooks constructor was called for
 		 * the second time.
 		 */
-		unsetenv("TMPDIR");
 		createPassengerTempDir(config->getTempDir(), config->userSwitching,
 			config->getDefaultUser(), unixd_config.user_id,
 			unixd_config.group_id);
-		setenv("TMPDIR", (getPassengerTempDir() + "/var").c_str(), 1);
 		
 		ruby = (config->ruby != NULL) ? config->ruby : DEFAULT_RUBY_COMMAND;
 		if (config->userSwitching) {

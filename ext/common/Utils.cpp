@@ -407,36 +407,6 @@ createPassengerTempDir(const string &parentDir, bool userSwitching,
 		 */
 		makeDirTree(tmpDir + "/backends", "u=wxs,g=,o=");
 	}
-	
-	if (geteuid() == 0) {
-		if (userSwitching) {
-			/* If user switching is possible and is on, then each backend
-			 * process may be running as a different user. So make the var
-			 * directory world-writable.
-			 *
-			 * The directory is not readable as a security precaution.
-			 */
-			makeDirTree(tmpDir + "/var", "u=wxs,g=wx,o=wx");
-		} else {
-			/* If user switching is off then all backend processes
-			 * will be running as lowestUser, so make lowestUser the
-			 * owner of the var directory. Only lowestUser may access
-			 * the directory.
-			 *
-			 * The directory is not readble as a security precaution.
-			 */
-			makeDirTree(tmpDir + "/var", "u=wxs,g=,o=", lowestUid, lowestGid);
-		}
-	} else {
-		/* If user switching is not possible then all backend processes will
-		 * be running as the same user as the web server. So we'll make the
-		 * var subdirectory only accessible by this user. Nobody else
-		 * (except root) may access this subdirectory.
-		 *
-		 * The directory is not readble as a security precaution.
-		 */
-		makeDirTree(tmpDir + "/var", "u=wxs,g=,o=");
-	}
 }
 
 void
