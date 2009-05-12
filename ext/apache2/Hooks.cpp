@@ -378,6 +378,9 @@ private:
 			void *pointer;
 		} u;
 		
+		/* Did an error occur in any of the previous hook methods during
+		 * this request? If so, show the error and stop here.
+		 */
 		u.errorReport = 0;
 		apr_pool_userdata_get(&u.pointer, "Phusion Passenger: error report", r->pool);
 		if (u.errorReport != 0) {
@@ -421,10 +424,11 @@ private:
 			expectingUploadData = ap_should_client_block(r);
 			contentLength = lookupHeader(r, "Content-Length");
 			
-			// If the HTTP upload data is larger than a threshold, or if the HTTP
-			// client sent HTTP upload data using the "chunked" transfer encoding
-			// (which implies Content-Length == NULL), then buffer the upload
-			// data into a tempfile.
+			/* If the HTTP upload data is larger than a threshold, or if the HTTP
+			 * client sent HTTP upload data using the "chunked" transfer encoding
+			 * (which implies Content-Length == NULL), then buffer the upload
+			 * data into a tempfile.
+			 */
 			if (expectingUploadData && (
 			          contentLength == NULL ||
 			          atol(contentLength) > UPLOAD_ACCELERATION_THRESHOLD
@@ -434,10 +438,11 @@ private:
 			}
 			
 			if (expectingUploadData && contentLength == NULL) {
-				// In case of "chunked" transfer encoding, we'll set the
-				// Content-Length header to the length of the received upload
-				// data. Rails requires this header for its HTTP upload data
-				// multipart parsing process.
+				/* In case of "chunked" transfer encoding, we'll set the
+				 * Content-Length header to the length of the received upload
+				 * data. Rails requires this header for its HTTP upload data
+				 * multipart parsing process.
+				 */
 				apr_table_set(r->headers_in, "Content-Length",
 					toString(ftell(uploadData->handle)).c_str());
 			}
