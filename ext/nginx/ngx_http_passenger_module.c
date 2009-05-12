@@ -511,6 +511,7 @@ pre_config_init(ngx_conf_t *cf)
     ngx_int_t   ret;
     const char *system_temp_dir;
     u_char      command[NGX_MAX_PATH + 30];
+    u_char     *last;
     
     ngx_memzero(&passenger_main_conf, sizeof(passenger_main_conf_t));
     
@@ -554,13 +555,16 @@ pre_config_init(ngx_conf_t *cf)
     
     /* Build helper server socket filename string. */
     
-    if (ngx_snprintf((u_char *) passenger_helper_server_socket, NGX_MAX_PATH,
-                     "unix:%s/master/helper_server.sock",
-                     passenger_temp_dir) == NULL) {
+    last = ngx_snprintf((u_char *) passenger_helper_server_socket, NGX_MAX_PATH,
+                        "unix:%s/master/helper_server.sock",
+                        passenger_temp_dir);
+    if (last == NULL) {
         ngx_log_error(NGX_LOG_ALERT, cf->log, ngx_errno,
                       "could not create Passenger helper server "
                       "socket filename string");
         return NGX_ERROR;
+    } else {
+        *last = (u_char) '\0';
     }
     
     return NGX_OK;
