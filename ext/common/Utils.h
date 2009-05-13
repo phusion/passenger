@@ -247,6 +247,13 @@ string extractDirName(const string &path);
 string escapeForXml(const string &input);
 
 /**
+ * Returns the username of the user that the current process is running as.
+ * If the user has no associated username, then the "UID xxxx" is returned,
+ * where xxxx is the current UID.
+ */
+string getProcessUsername();
+
+/**
  * Given a username that's supposed to be the "lowest user" in the user switching mechanism,
  * checks whether this username exists. If so, this users's UID and GID will be stored into
  * the arguments of the same names. If not, <em>uid</em> and <em>gid</em> will be set to
@@ -417,11 +424,11 @@ public:
 	 *
 	 * @throws SystemException Something went wrong.
 	 */
-	BufferedUpload(const char *identifier = "temp") {
+	BufferedUpload(const string &dir, const char *identifier = "temp") {
 		char templ[PATH_MAX];
 		int fd;
 		
-		snprintf(templ, sizeof(templ), "%s/%s.XXXXXX", getDir().c_str(), identifier);
+		snprintf(templ, sizeof(templ), "%s/%s.XXXXXX", dir.c_str(), identifier);
 		templ[sizeof(templ) - 1] = '\0';
 		fd = mkstemp(templ);
 		if (fd == -1) {
@@ -447,14 +454,6 @@ public:
 	
 	~BufferedUpload() {
 		fclose(handle);
-	}
-	
-	/**
-	 * Returns the directory in which upload buffer files are stored.
-	 * This is a subdirectory of the directory returned by getPassengerTempDir(). 
-	 */
-	static string getDir() {
-		return getPassengerTempDir() + "/webserver_private";
 	}
 };
 

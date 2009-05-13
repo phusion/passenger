@@ -743,10 +743,11 @@ This way, Phusion Passenger will not interfere with Wordpress.
 
 In each place, it may be specified at most once. The default value is 'on'.
 
+[[PassengerTempDir]]
 === PassengerTempDir <directory> ===
 Specifies the directory that Phusion Passenger should use for storing temporary
-files. This includes things such as Unix socket files, buffered file uploads,
-etc.
+files. This includes things such as Unix socket files, buffered file uploads
+(see also <<PassengerUploadBufferDir,PassengerUploadBufferDir>>), etc.
 
 This option may be specified once, in the global server configuration. The
 default temp directory that Phusion Passenger uses is '/tmp'.
@@ -771,6 +772,36 @@ export PASSENGER_TMPDIR=/my_temp-dir
 sudo -E passenger-status
 # The -E option tells 'sudo' to preserve environment variables.
 ----------------------------------------------------------
+
+[[PassengerUploadBufferDir]]
+=== PassengerUploadBufferDir <directory> ===
+Phusion Passenger buffers large file uploads to disk in order prevent slow file
+uploads from blocking web applications. By default, a subdirectory in the
+system's temporary files directory (or a subdirectory in the directory specified
+in <<PassengerTempDir,PassengerTempDir>>, if set) is automatically created for
+storing these buffered file uploads.
+
+This configuration directive allows you to specify a different directory for storing
+buffered file uploads. If you've specified such a directory (as opposed to using
+Phusion Passenger's default) then you *must* ensure that this directory exists.
+
+This configuration directive is also useful if you're using apache2-mpm-itk.
+The buffered file upload directory that Phusion Passenger creates by default has
+very strict permissions: it can only be accessed by the Apache worker processes.
+However, Phusion Passenger assumes that all Apache worker processes are running
+as the same user. apache2-mpm-itk breaks this assumption by running multiple
+Apache worker processes as different users. So if you're using apace2-mpm-itk,
+you should set this option to a directory that is writable by all Apache worker
+processes, such as '/tmp'.
+
+You may specify 'PassengerUploadBufferDir' in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverrides Options` is enabled.
+
+In each place, it may be specified at most once.
 
 === PassengerRestartDir <directory> ===
 As described in the deployment chapters of this document, Phusion Passenger

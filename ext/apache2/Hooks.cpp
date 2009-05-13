@@ -754,6 +754,59 @@ private:
 		return APR_SUCCESS;
 	}
 	
+	void throwUploadBufferingException(request_rec *r, int code) {
+		DirConfig *config = getDirConfig(r);
+		string message("An error occured while "
+			"buffering HTTP upload data to "
+			"a temporary file in ");
+		message.append(config->getUploadBufferDir());
+		
+		switch (code) {
+		case ENOSPC:
+			message.append(". Disk directory doesn't have enough disk space, "
+				"so please make sure that it has "
+				"enough disk space for buffering file uploads, "
+				"or set the 'PassengerUploadBufferDir' directive "
+				"to a directory that has enough disk space.");
+			throw RuntimeException(message);
+			break;
+		case EDQUOT:
+			message.append(". The current Apache worker process (which is "
+				"running as ");
+			message.append(getProcessUsername());
+			message.append(") cannot write to this directory because of "
+				"disk quota limits. Please make sure that the volume "
+				"that this directory resides on has enough disk space "
+				"quota for the Apache worker process, or set the "
+				"'PassengerUploadBufferDir' directive to a different "
+				"directory that has enough disk space quota.");
+			throw RuntimeException(message);
+			break;
+		case ENOENT:
+			message.append(". This directory doesn't exist, so please make "
+				"sure that this directory exists, or set the "
+				"'PassengerUploadBufferDir' directive to a "
+				"directory that exists and can be written to.");
+			throw RuntimeException(message);
+			break;
+		case EACCES:
+			message.append(". The current Apache worker process (which is "
+				"running as ");
+			message.append(getProcessUsername());
+			message.append(") doesn't have permissions to write to this "
+				"directory. Please change the permissions for this "
+				"directory (as well as all parent directories) so that "
+				"it is writable by the Apache worker process, or set "
+				"the 'PassengerUploadBufferDir' directive to a directory "
+				"that Apache can write to.");
+			throw RuntimeException(message);
+			break;
+		default:
+			throw SystemException(message, code);
+			break;
+		}
+	}
+	
 	/**
 	 * Receive the HTTP upload data and buffer it into a BufferedUpload temp file.
 	 *
@@ -762,10 +815,20 @@ private:
 	 *                      to check whether the HTTP client has sent complete upload
 	 *                      data. NULL indicates that there is no Content-Length header,
 	 *                      i.e. that the HTTP client used chunked transfer encoding.
+	 * @throws RuntimeException
+	 * @throws SystemException
+	 * @throw IOException
 	 */
 	shared_ptr<BufferedUpload> receiveRequestBody(request_rec *r, const char *contentLength) {
 		TRACE_POINT();
-		shared_ptr<BufferedUpload> tempFile(new BufferedUpload());
+		DirConfig *config = getDirConfig(r);
+		shared_ptr<BufferedUpload> tempFile;
+		try {
+			tempFile.reset(new BufferedUpload(config->getUploadBufferDir()));
+		} catch (const SystemException &e) {
+			throwUploadBufferingException(r, e.code());
+		}
+		
 		char buf[1024 * 32];
 		apr_off_t len;
 		size_t total_written = 0;
@@ -775,23 +838,7 @@ private:
 			do {
 				size_t ret = fwrite(buf, 1, len - written, tempFile->handle);
 				if (ret <= 0 || fflush(tempFile->handle) == EOF) {
-					int e = errno;
-					string message("An error occured while "
-						"buffering HTTP upload data to "
-						"a temporary file in ");
-					message.append(BufferedUpload::getDir());
-					if (e == ENOSPC) {
-						message.append(". Please make sure "
-							"that this directory has "
-							"enough disk space for "
-							"buffering file uploads, "
-							"or set the 'PassengerTempDir' "
-							"directive to a directory "
-							"that has enough disk space.");
-						throw RuntimeException(message);
-					} else {
-						throw SystemException(message, e);
-					}
+					throwUploadBufferingException(r, errno);
 				}
 				written += ret;
 			} while (written < (size_t) len);
