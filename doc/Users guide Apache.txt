@@ -47,7 +47,7 @@ link:http://groups.google.com/group/phusion-passenger[join our discussion list]
 if it doesn't.
 
 
-== Installing Phusion Passenger ==
+== Installing, upgrading and uninstalling Phusion Passenger ==
 
 === Generic installation instructions ===
 
@@ -208,6 +208,78 @@ Ben Hughes has written an link:http://www.railsgarden.com/2008/04/12/configurati
 
 J Aaron Farr has written a link:http://cubiclemuses.com/cm/articles/2009/04/09/rails-passenger-open-solaris-ec2/[guide]
 about setting up Ruby on Rails and Phusion Passenger on OpenSolaris and EC2.
+
+
+=== Unloading (disabling) Phusion Passenger from Apache without uninstalling it ===
+
+You can temporarily unload (disable) Phusion Passenger from Apache, without
+uninstalling the Phusion Passenger files, so that Apache behaves as if Phusion
+Passenger was never installed in the first place. This might be useful to you if,
+for example, you seem to be experiencing a problem caused by Phusion Passenger,
+but you want to make sure whether that's actually the case, without having
+to through the hassle of uninstalling Phusion Passenger completely.
+
+To unload Phusion Passenger from Apache, edit your Apache configuration file(s)
+and comment out:
+
+- all Phusion Passenger configuration directives.
+- the 'LoadModule passenger_module' directive.
+
+For example, if your configuration file looks like this...
+
+-----------------------------------
+Listen *:80
+NameVirtualHosts *:80
+....
+
+LoadModule passenger_module /somewhere/passenger-x.x.x/ext/apache2/mod_passenger.so
+
+PassengerRuby /usr/bin/ruby
+PassengerRoot /somewhere/passenger/x.x.x
+PassengerMaxPoolSize 10
+
+<VirtualHost *:80>
+    ServerName www.foo.com
+    DocumentRoot /webapps/foo/public
+    RailsBaseURI /rails
+</VirtualHost>
+-----------------------------------
+
+...then comment out the relevant directives, so that it looks like this:
+
+-----------------------------------
+Listen *:80
+NameVirtualHosts *:80
+....
+
+# LoadModule passenger_module /somewhere/passenger-x.x.x/ext/apache2/mod_passenger.so
+
+# PassengerRuby /usr/bin/ruby
+# PassengerRoot /somewhere/passenger/x.x.x
+# PassengerMaxPoolSize 10
+
+<VirtualHost *:80>
+    ServerName www.foo.com
+    DocumentRoot /webapps/foo/public
+    # RailsBaseURI /rails
+</VirtualHost>
+-----------------------------------
+
+After you've done this, save the file and restart Apache.
+
+=== Uninstalling Phusion Passenger ===
+
+To uninstall Phusion Passenger, please first remove all Phusion Passenger
+configuration directives from your Apache configuration file(s). After you've
+done this, you need to remove the Phusion Passenger files.
+
+- If you installed Phusion Passenger via a gem, then type `gem uninstall passenger`.
+  You might have to run this as root.
+- If you installed Phusion Passenger via a source tarball, then remove the directory
+  in which you placed the extracted Phusion Passenger files. This directory is the
+  same as the one pointed to the by 'PassengerRoot' configuration directive.
+- If you installed Phusion Passenger via a Debian package, then remove type
+  `sudo apt-get remove libapache2-mod-passenger`.
 
 
 == Deploying a Ruby on Rails application ==
