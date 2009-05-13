@@ -61,24 +61,46 @@ There are three ways to install Phusion Passenger:
    Passenger website].
 2. By downloading the source tarball from the Phusion Passenger website
    ('passenger-x.x.x.tar.gz').
-3. By downloading a native Linux package (e.g. Debian package) from the
-   Phusion Passenger website.
+3. By installing a native Linux package (e.g. Debian package).
 
-In our opinion, installing the gem or the native package is easiest.
+The following sections will explain each installation method. Please read the
+section for the installation method that you prefer. In our opinion, installing
+the gem or the native package is easiest.
 
 Phusion Passenger provides an easy-to-use installer for installing the Phusion
 Passenger Apache module, in case you choose to install via the gem or the
 source tarball.
 
-TIP: You might have to run the installation commands in the following sections
-as 'root'. If the installer fails because of permission errors, it will tell
-you.
-
-==== Preparation
+==== Preparation (gem and source tarball only)
 If you want to install Phusion Passenger via the gem or the source tarball,
-then some preparation might be required. You can skip this subsection if
+then some preparations might be required. You can skip this subsection if
 you're installing Phusion Passenger via a native Linux package, because no
 compilation is necessary.
+
+===== Switching to a root command prompt =====
+
+Before installing, you will probably need to switch to the `root` user first.
+When you install Phusion Passenger via a gem or a source tarball, some Phusion
+Passenger files have to be compiled, which requires write access to the
+directory in which the Phusion Passenger files are located. On Unix systems,
+the root user is the user who has write access to the entire system. So unless
+you know that your normal user account has write access to the Phusion Passenger
+directory, you should switch to root before installing Phusion Passenger.
+
+You can switch to root by typing the following command:
+
+-------------------------
+sudo -s
+-------------------------
+
+This will open a command prompt as the root user, from which you can proceed
+with installing Phusion Passenger.
+
+If your system does not have 'sudo' installed, please type the following command instead, which should do the same thing:
+
+-------------------------
+su
+-------------------------
 
 [[specifying_correct_apache_install]]
 ===== Specifying the correct Apache installation =====
