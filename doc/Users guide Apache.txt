@@ -1562,6 +1562,45 @@ application uses a non-standard page cache directory, i.e. if it doesn't cache t
 the 'public' directory. In that case you'll need to use mod_rewrite to serve such
 page cache files.
 
+=== How Phusion Passenger detects whether a virtual host is a web application ===
+After you've read the deployment instructions you might wonder how Phusion Passenger
+knows that the DocumentRoot points to a web application that Phusion Passenger is
+able to serve, and how it knows what kind of web application it is (e.g. Rails or Rack).
+
+Phusion Passenger checks whether the virtual host is a Rails application by checking
+whether the following file exists:
+
+------------------------------------------------
+dirname(DocumentRoot) + "/config/environment.rb"
+------------------------------------------------
+
+If you're not a programmer and don't understand the above pseudo-code snippet, it means
+that Phusion Passenger will:
+
+1. Extract the parent directory filename from the value of the DocumentRoot directory.
+2. Append the text "/config/environment.rb" to the result, and check whether the resulting
+   filename exists.
+
+So suppose that your document root is '/webapps/foo/public'. Phusion Passenger will check
+whether the file '/webapps/foo/config/environment.rb' exists.
+
+Note that Phusion Passenger does *not* resolve any symlinks in the document root path since
+version 2.2.0 -- in contrast to versions earlier than 2.2.0, which does resolve symlinks.
+So for example, suppose that your DocumentRoot points to '/home/www/example.com', which in
+turn is a symlink to '/webapps/example.com/public'. In versions earlier than 2.2.0, Phusion
+Passenger will check whether '/webapps/example.com/config/environment.rb' exists because it
+resolves all symlinks. Phusion Passenger 2.2.0 and later however will check for
+'/home/www/config/environment.rb'. This file of course doesn't exist, and as a result Phusion
+Passenger will not activate itself for this virtual host, and you'll most likely see an Apache
+mod_dirindex directory listing.
+
+If you're running into this problem, you can explicitly tell Phusion Passenger what the
+correct application root is through the <<PassengerAppRoot,PassengerAppRoot>> configuration directive.
+
+Autodetection of Rack applications happens through the same mechanism, exception that
+Phusion Passenger will look for 'config.ru' instead of 'config/environment.rb'.
+
+
 include::users_guide_snippets/appendix_a_about.txt[]
 
 include::users_guide_snippets/appendix_b_terminology.txt[]
