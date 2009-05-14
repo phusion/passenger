@@ -150,7 +150,7 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
                                with_application_pool_server_exe = false,
                                boost_oxt_library = nil,
                                extra_compiler_flags_for_server_exe = nil,
-                               extra_linker_flags = nil)
+                               extra_linker_flags_for_server_exe = nil)
 	static_library = "#{output_dir}/libpassenger_common.a"
 	objects_output_dir = "#{output_dir}/libpassenger_common"
 	targets = [static_library]
@@ -205,7 +205,7 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 				"#{EXTRA_CXXFLAGS} " <<
 				"#{static_library} " <<
 				"#{boost_oxt_library} " <<
-				"#{extra_linker_flags} " <<
+				"#{extra_linker_flags_for_server_exe} " <<
 				"#{PlatformInfo.portability_ldflags} " <<
 				EXTRA_LDFLAGS
 			)
@@ -256,8 +256,7 @@ end
 		PlatformInfo.apache2_module_cflags)
 	APACHE2_COMMON_LIBRARY    = define_common_library_task("ext/apache2",
 		PlatformInfo.apache2_module_cflags,
-		true, APACHE2_BOOST_OXT_LIBRARY, nil,
-		PlatformInfo.apache2_module_ldflags)
+		true, APACHE2_BOOST_OXT_LIBRARY)
 	
 	
 	desc "Build Apache 2 module"
