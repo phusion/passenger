@@ -367,6 +367,8 @@ protected
 	def self.passenger_tmpdir=(dir)
 		@@passenger_tmpdir = dir
 	end
+	
+	####################################
 end
 
 end # module PhusionPassenger

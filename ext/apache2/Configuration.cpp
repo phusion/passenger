@@ -636,6 +636,7 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS,
 		"The directory in which upload buffer files should be placed."),
+	/*****************************/
 
 	// Rails-specific settings.
 	AP_INIT_TAKE1("RailsBaseURI",

@@ -161,6 +161,8 @@ struct PoolOptions {
 	 */
 	StringListCreatorPtr environmentVariables;
 	
+	/*********************************/
+	
 	/**
 	 * Creates a new PoolOptions object with the default values filled in.
 	 * One must still set appRoot manually, after having used this constructor.

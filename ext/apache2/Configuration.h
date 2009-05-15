@@ -160,6 +160,7 @@
 			const char *uploadBufferDir;
 			
 			/*************************************/
+			/*************************************/
 			
 			bool isEnabled() const {
 				return enabled != DISABLED;
