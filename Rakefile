@@ -246,6 +246,7 @@ end
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
 			ext/common/Version.h
+			ext/common/Timer.h
 			ext/common/Utils.h)
 	}
 	APACHE2_OBJECTS = APACHE2_INPUT_FILES.keys

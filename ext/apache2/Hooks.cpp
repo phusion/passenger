@@ -39,6 +39,7 @@
 #include "ApplicationPoolServer.h"
 #include "MessageChannel.h"
 #include "DirectoryMapper.h"
+#include "Timer.h"
 #include "Version.h"
 
 /* The Apache/APR headers *must* come after the Boost headers, otherwise
@@ -547,6 +548,7 @@ private:
 			/********** Step 4: forwarding the response from the backend
 			                    process back to the HTTP client **********/
 			
+			/* Setup all the streams. */
 			UPDATE_TRACE_POINT();
 			apr_file_t *readerPipe = NULL;
 			int reader = session->getStream();
@@ -554,6 +556,7 @@ private:
 			apr_os_pipe_put(&readerPipe, &reader, r->pool);
 			apr_file_pipe_timeout_set(readerPipe, r->server->timeout);
 
+			/* Setup the bucket brigade. */
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
 			b = passenger_bucket_create(session, readerPipe, r->connection->bucket_alloc);
 			session.reset();
@@ -562,12 +565,25 @@ private:
 			b = apr_bucket_eos_create(r->connection->bucket_alloc);
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 
-			// I know the size because I read util_script.c's source. :-(
+			/* Now read the HTTP response header, parse it and fill relevant
+			 * information in our request_rec structure.
+			 */
+			
+			/* I know the required size for backendData because I read
+			 * util_script.c's source. :-(
+			 */
 			char backendData[MAX_STRING_LEN];
+			Timer timer;
 			int result = ap_scan_script_header_err_brigade(r, bb, backendData);
+			
 			if (result == OK) {
 				// The API documentation for ap_scan_script_err_brigade() says it
 				// returns HTTP_OK on success, but it actually returns OK.
+				
+				/* We were able to parse the HTTP response header sent by the
+				 * backend process! Proceed with passing the bucket brigade,
+				 * for forwarding the response body to the HTTP client.
+				 */
 				
 				/* Manually set the Status header because
 				 * ap_scan_script_header_err_brigade() filters it
@@ -584,14 +600,60 @@ private:
 				ap_pass_brigade(r->output_filters, bb);
 				return OK;
 			} else if (backendData[0] == '\0') {
-				P_ERROR("Backend process " << backendPid <<
-					" did not return a valid HTTP response. It returned no data.");
+				P_DEBUG(timer.elapsed() << " >= " << (r->server->timeout / 1000));
+				if ((long long) timer.elapsed() >= r->server->timeout / 1000) {
+					// Looks like an I/O timeout.
+					P_ERROR("No data received from " <<
+						"the backend application (process " <<
+						backendPid << ") within " <<
+						(r->server->timeout / 1000) << " msec. Either " <<
+						"the backend application is frozen, or " <<
+						"your TimeOut value of " <<
+						(r->server->timeout / 1000000) <<
+						" seconds is too low. Please check " <<
+						"whether your application is frozen, or " <<
+						"increase the value of the TimeOut " <<
+						"configuration directive.");
+				} else {
+					P_ERROR("The backend application (process " <<
+						backendPid << ") did not send a valid " <<
+						"HTTP response; instead, it sent nothing " <<
+						"at all. It is possible that it has crashed; " <<
+						"please check whether there are crashing " <<
+						"bugs in this application.");
+				}
 				apr_table_setn(r->err_headers_out, "Status", "500 Internal Server Error");
 				return HTTP_INTERNAL_SERVER_ERROR;
 			} else {
-				P_ERROR("Backend process " << backendPid <<
-					" did not return a valid HTTP response. It returned: [" <<
-					backendData << "]");
+				if ((long long) timer.elapsed() >= r->server->timeout / 1000) {
+					// Looks like an I/O timeout.
+					P_ERROR("The backend application (process " <<
+						backendPid << ") hasn't sent a valid " <<
+						"HTTP response within " <<
+						(r->server->timeout / 1000) << " msec. Either " <<
+						"the backend application froze while " <<
+						"sending a response, or " <<
+						"your TimeOut value of " <<
+						(r->server->timeout / 1000000) <<
+						" seconds is too low. Please check " <<
+						"whether the application is frozen, or " <<
+						"increase the value of the TimeOut " <<
+						"configuration directive. The application " <<
+						"has sent this data so far: [" <<
+						backendData << "]");
+				} else {
+					P_ERROR("The backend application (process " <<
+						backendPid << ") didn't send a valid " <<
+						"HTTP response. It might have crashed " <<
+						"during the middle of sending an HTTP " <<
+						"response, so please check whether there " <<
+						"are crashing problems in your application. " <<
+						"This is the data that it sent: [" <<
+						backendData << "]");
+					P_ERROR("Backend process " << backendPid <<
+						" did not return a valid HTTP response. It returned: [" <<
+						backendData << "]");
+				}
 				apr_table_setn(r->err_headers_out, "Status", "500 Internal Server Error");
 				return HTTP_INTERNAL_SERVER_ERROR;
 			}
