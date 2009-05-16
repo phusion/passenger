@@ -808,6 +808,116 @@ private:
 	}
 	
 	/**
+	 * Reads the next chunk of the request body and put it into a buffer.
+	 *
+	 * This is like ap_get_client_block(), but can actually report errors
+	 * in a sane way. ap_get_client_block() tells you that something went
+	 * wrong, but not *what* went wrong.
+	 *
+	 * @param r The current request.
+	 * @param buffer A buffer to put the read data into.
+	 * @param bufsiz The size of the buffer.
+	 * @return The number of bytes read, or 0 on EOF.
+	 * @throws RuntimeException Something non-I/O related went wrong, e.g.
+	 *                          failure to allocate memory and stuff.
+	 * @throws IOException An I/O error occurred while trying to read the
+	 *                     request body data.
+	 */
+	unsigned long readRequestBodyFromApache(request_rec *r, char *buffer, apr_size_t bufsiz) {
+		apr_status_t rv;
+		apr_bucket_brigade *bb;
+		
+		if (r->remaining < 0 || (!r->read_chunked && r->remaining == 0)) {
+			return 0;
+		}
+
+		bb = apr_brigade_create(r->pool, r->connection->bucket_alloc);
+		if (bb == NULL) {
+			r->connection->keepalive = AP_CONN_CLOSE;
+			throw RuntimeException("An error occurred while receiving HTTP upload data: "
+				"unable to create a bucket brigade. Maybe the system doesn't have "
+				"enough free memory.");
+		}
+		
+		rv = ap_get_brigade(r->input_filters, bb, AP_MODE_READBYTES,
+		                    APR_BLOCK_READ, bufsiz);
+			
+		/* We lose the failure code here.  This is why ap_get_client_block should
+		 * not be used.
+		 */
+		if (rv != APR_SUCCESS) {
+			/* if we actually fail here, we want to just return and
+			 * stop trying to read data from the client.
+			 */
+			r->connection->keepalive = AP_CONN_CLOSE;
+			apr_brigade_destroy(bb);
+			
+			char buf[150], *errorString, message[1024];
+			errorString = apr_strerror(rv, buf, sizeof(buf));
+			if (errorString != NULL) {
+				snprintf(message, sizeof(message),
+					"An error occurred while receiving HTTP upload data: %s (%d)",
+					errorString, rv);
+			} else {
+				snprintf(message, sizeof(message),
+					"An error occurred while receiving HTTP upload data: unknown error %d",
+					rv);
+			}
+			message[sizeof(message) - 1] = '\0';
+			throw RuntimeException(message);
+		}
+		
+		/* If this fails, it means that a filter is written incorrectly and that
+		 * it needs to learn how to properly handle APR_BLOCK_READ requests by
+		 * returning data when requested.
+		 */
+		if (APR_BRIGADE_EMPTY(bb)) {
+			throw RuntimeException("An error occurred while receiving HTTP upload data: "
+				"the next filter in the input filter chain has "
+				"a bug. Please contact the author who wrote this filter about "
+				"this. This problem is not caused by Phusion Passenger.");
+		}
+
+		/* Check to see if EOS in the brigade.
+		 *
+		 * If so, we have to leave a nugget for the *next* readRequestBodyFromApache()
+		 * call to return 0.
+		 */
+		if (APR_BUCKET_IS_EOS(APR_BRIGADE_LAST(bb))) {
+			if (r->read_chunked) {
+				r->remaining = -1;
+			} else {
+				r->remaining = 0;
+			}
+		}
+
+		rv = apr_brigade_flatten(bb, buffer, &bufsiz);
+		if (rv != APR_SUCCESS) {
+			apr_brigade_destroy(bb);
+			
+			char buf[150], *errorString, message[1024];
+			errorString = apr_strerror(rv, buf, sizeof(buf));
+			if (errorString != NULL) {
+				snprintf(message, sizeof(message),
+					"An error occurred while receiving HTTP upload data: %s (%d)",
+					errorString, rv);
+			} else {
+				snprintf(message, sizeof(message),
+					"An error occurred while receiving HTTP upload data: unknown error %d",
+					rv);
+			}
+			message[sizeof(message) - 1] = '\0';
+			throw IOException(message);
+		}
+		
+		/* XXX yank me? */
+		r->read_length += bufsiz;
+		
+		apr_brigade_destroy(bb);
+		return bufsiz;
+	}
+	
+	/**
 	 * Receive the HTTP upload data and buffer it into a BufferedUpload temp file.
 	 *
 	 * @param r The request.
@@ -817,7 +927,7 @@ private:
 	 *                      i.e. that the HTTP client used chunked transfer encoding.
 	 * @throws RuntimeException
 	 * @throws SystemException
-	 * @throw IOException
+	 * @throws IOException
 	 */
 	shared_ptr<BufferedUpload> receiveRequestBody(request_rec *r, const char *contentLength) {
 		TRACE_POINT();
@@ -833,7 +943,7 @@ private:
 		apr_off_t len;
 		size_t total_written = 0;
 		
-		while ((len = ap_get_client_block(r, buf, sizeof(buf))) > 0) {
+		while ((len = readRequestBodyFromApache(r, buf, sizeof(buf))) > 0) {
 			size_t written = 0;
 			do {
 				size_t ret = fwrite(buf, 1, len - written, tempFile->handle);
@@ -843,9 +953,6 @@ private:
 				written += ret;
 			} while (written < (size_t) len);
 			total_written += written;
-		}
-		if (len == -1) {
-			throw IOException("An error occurred while receiving HTTP upload data.");
 		}
 		
 		if (contentLength != NULL && ftell(tempFile->handle) != atol(contentLength)) {
@@ -871,11 +978,8 @@ private:
 		char buf[1024 * 32];
 		apr_off_t len;
 
-		while ((len = ap_get_client_block(r, buf, sizeof(buf))) > 0) {
+		while ((len = readRequestBodyFromApache(r, buf, sizeof(buf))) > 0) {
 			session->sendBodyBlock(buf, len);
-		}
-		if (len == -1) {
-			throw IOException("An error occurred while receiving HTTP upload data.");
 		}
 	}
 
