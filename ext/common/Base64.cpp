@@ -53,7 +53,7 @@ Base64::encode(const unsigned char *bytes_to_encode, unsigned int in_len) {
 	// According to Wikipedia, base64-encoded data is usually 137%
 	// + 814 bytes larger than the original. Here we reserve a little
 	// more than that to avoid memory reallocations.
-	ret.reserve(in_len * 1.37 + 1024);
+	ret.reserve((std::string::size_type) (in_len * 1.37) + 1024);
 	
 	while (in_len--) {
 		char_array_3[i++] = *(bytes_to_encode++);
@@ -100,7 +100,7 @@ Base64::decode(const unsigned char *base64_data, unsigned int in_len) {
 
 	// The decoded data should be about this large.
 	if (in_len > 814) {
-		reserved_size = (in_len - 814) / 137.0 * 100;
+		reserved_size = (unsigned int) ((in_len - 814) / 137.0) * 100;
 	} else {
 		reserved_size = in_len;
 	}
