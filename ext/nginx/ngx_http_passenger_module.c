@@ -54,6 +54,13 @@ static ngx_str_t  ngx_http_scgi_script_name = ngx_string("scgi_script_name");
 static pid_t      helper_server_pid = 0;
 static int        helper_server_admin_pipe;
 static u_char     helper_server_password_data[HELPER_SERVER_PASSWORD_SIZE];
+/** perl_module destroys the original environment variables for some reason,
+ * so when we get a SIGHUP (for restarting Nginx) $TMPDIR might not have the
+ * same value as it had during Nginx startup. We need the original $TMPDIR
+ * value for calculating the Passenger temp dir location, so here we cache
+ * the original value instead of getenv()'ing it every time.
+ */
+const char       *system_temp_dir = NULL;
 const char        passenger_temp_dir[NGX_MAX_PATH];
 ngx_str_t         passenger_schema_string;
 ngx_str_t         passenger_helper_server_password;
@@ -442,7 +449,6 @@ shutdown_helper_server(ngx_cycle_t *cycle)
                           passenger_temp_dir);
         }
     }
-    
     helper_server_pid = 0;
 }
 
@@ -509,7 +515,6 @@ static ngx_int_t
 pre_config_init(ngx_conf_t *cf)
 {
     ngx_int_t   ret;
-    const char *system_temp_dir;
     u_char      command[NGX_MAX_PATH + 30];
     u_char     *last;
     
@@ -527,9 +532,13 @@ pre_config_init(ngx_conf_t *cf)
     
     /* Setup Passenger temp folder. */
     
-    system_temp_dir = getenv("TMPDIR");
-    if (!system_temp_dir || !*system_temp_dir) {
-        system_temp_dir = "/tmp";
+    if (system_temp_dir == NULL) {
+        const char *tmp = getenv("TMPDIR");
+        if (tmp == NULL || *tmp == '\0') {
+            system_temp_dir = "/tmp";
+        } else {
+            system_temp_dir = strdup(tmp);
+        }
     }
     
     ngx_memzero(&passenger_temp_dir, sizeof(passenger_temp_dir));
