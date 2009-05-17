@@ -11,29 +11,14 @@
 #include <cstring>
 #include <utime.h>
 
+#include "Utils.h"
+
 namespace Test {
 
 using namespace std;
+using namespace Passenger;
 
-static void
-touchFile(const char *filename, time_t timestamp = (time_t) - 1) {
-	FILE *f = fopen(filename, "a");
-	if (f != NULL) {
-		fclose(f);
-	} else {
-		int e = errno;
-		cerr << "Cannot touch file '" << filename << "': " <<
-			strerror(e) <<" (" << e << ")" << endl;
-		throw exception();
-	}
-	
-	if (timestamp != (time_t) -1) {
-		struct utimbuf times;
-		times.actime = timestamp;
-		times.modtime = timestamp;
-		utime(filename, &times);
-	}
-}
+void touchFile(const char *filename, time_t timestamp = (time_t) - 1);
 
 /**
  * Class which creates a temporary directory of the given name, and deletes
@@ -54,10 +39,7 @@ public:
 	}
 	
 	~TempDir() {
-		string command("rm -rf \"");
-		command.append(name);
-		command.append("\"");
-		system(command.c_str());
+		removeDirTree(name);
 	}
 };
 
@@ -68,17 +50,10 @@ public:
 class TempDirCopy {
 private:
 	string dir;
-	
-	void rm_rf(const string &dir) {
-		string command("rm -rf \"");
-		command.append(dir);
-		command.append("\"");
-		system(command.c_str());
-	}
 public:
 	TempDirCopy(const string &source, const string &dest) {
 		dir = dest;
-		rm_rf(dest);
+		removeDirTree(dest);
 		
 		char command[1024];
 		snprintf(command, sizeof(command), "cp -pR \"%s\" \"%s\"",
@@ -87,7 +62,7 @@ public:
 	}
 	
 	~TempDirCopy() {
-		rm_rf(dir);
+		removeDirTree(dir);
 	}
 };
 

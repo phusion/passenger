@@ -384,6 +384,9 @@ end
 	TEST_CXX_OBJECTS = {
 		'test/CxxTestMain.o' => %w(
 			test/CxxTestMain.cpp),
+		'test/support/Support.o' => %w(
+			test/support/Support.cpp
+			test/support/Support.h),
 		'test/MessageChannelTest.o' => %w(
 			test/MessageChannelTest.cpp
 			ext/common/MessageChannel.h),
@@ -529,7 +532,7 @@ end
 	end
 	
 	TEST_OXT_OBJECTS.each_pair do |target, sources|
-		file "test/oxt/#{target}" => sources.map{ |x| "test/oxt/#{x}" } do
+		file "test/oxt/#{target}" => sources.map{ |x| "test/oxt/#{x}" } + ['test/support/Support.h'] do
 			Dir.chdir('test/oxt') do
 				puts "### In test/oxt:"
 				compile_cxx sources[0], TEST_OXT_CFLAGS
@@ -694,7 +697,7 @@ spec = Gem::Specification.new do |s|
 		'misc/*/*',
 		'vendor/**/*',
 		'test/*.{rb,cpp,example}',
-		'test/support/*',
+		'test/support/*.{cpp,h,rb}',
 		'test/oxt/*.cpp',
 		'test/ruby/*',
 		'test/ruby/*/*',
