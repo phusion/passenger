@@ -533,7 +533,15 @@ private:
 					sendRequestBody(r, session);
 				}
 			}
-			session->shutdownWriter();
+			try {
+				session->shutdownWriter();
+			} catch (const SystemException &e) {
+				// Ignore ENOTCONN. This error occurs for some people
+				// for unknown reasons, but it's harmless.
+				if (e.code() != ENOTCONN) {
+					throw;
+				}
+			}
 			
 			
 			/********** Step 4: forwarding the response from the backend
