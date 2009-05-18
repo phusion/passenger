@@ -59,7 +59,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 		show_welcome_screen
 		check_dependencies || exit(1)
 		
-		check_write_permission_to_passenger_root || exit(1)
+		check_whether_we_can_write_to(PASSENGER_ROOT) || exit(1)
 		
 		download_and_install = should_we_download_and_install_nginx_automatically?
 		if pcre_is_installed?
@@ -100,21 +100,6 @@ private
 	def show_welcome_screen
 		render_template 'nginx/welcome', :version => VERSION_STRING
 		wait
-	end
-	
-	def check_write_permission_to_passenger_root
-		File.new("__test__.txt", "w").close
-		return true
-	rescue
-		new_screen
-		if Process.uid == 0
-			render_template 'no_write_permission_to_passenger_root'
-		else
-			render_template 'run_installer_as_root'
-		end
-		return false
-	ensure
-		File.unlink("__test__.txt") rescue nil
 	end
 	
 	def compile_passenger_support_files
