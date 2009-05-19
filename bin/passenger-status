@@ -25,6 +25,7 @@
 $LOAD_PATH << File.expand_path(File.dirname(__FILE__) + "/../lib")
 $LOAD_PATH << File.expand_path(File.dirname(__FILE__) + "/../ext")
 require 'phusion_passenger/admin_tools/control_process'
+require 'optparse'
 
 include PhusionPassenger::AdminTools
 
@@ -32,30 +33,78 @@ include PhusionPassenger::AdminTools
 RESET   = "\e[0m"
 BOLD    = "\e[1m"
 YELLOW  = "\e[33m"
+BLACK_BG = "\e[40m"
 BLUE_BG = "\e[44m"
 
-def show_status(control_process, format = :text)
-	begin
-		text = control_process.status
-	rescue SystemCallError => e
-		STDERR.puts "*** ERROR: Cannot query status for Passenger instance #{control_process.pid}:"
-		STDERR.puts e.to_s
-		exit 2
+def show_status(control_process, options = {})
+	case options[:show]
+	when 'pool'
+		begin
+			text = control_process.status
+		rescue SystemCallError => e
+			STDERR.puts "*** ERROR: Cannot query status for Passenger instance #{control_process.pid}:"
+			STDERR.puts e.to_s
+			exit 2
+		end
+		
+		# Colorize output
+		text.gsub!(/^(----)(.*)$/, YELLOW + BLUE_BG + BOLD + '\1\2' + RESET)
+		
+		puts text
+		
+	when 'backtraces'
+		begin
+			text = control_process.backtraces
+		rescue SystemCallError => e
+			STDERR.puts "*** ERROR: Cannot query status for Passenger instance #{control_process.pid}:"
+			STDERR.puts e.to_s
+			exit 2
+		end
+		
+		# Colorize output
+		text.gsub!(/^(Thread .*:)$/, BLACK_BG + YELLOW + '\1' + RESET)
+		text.gsub!(/^( +in '.*? )(.*?)\(/, '\1' + BOLD + '\2' + RESET + '(')
+		
+		puts text
 	end
-	# Colorize output
-	text.gsub!(/^(----)(.*)$/, YELLOW + BLUE_BG + BOLD + '\1\2' + RESET)
-	text.gsub!(/^( +in '.*? )(.*?)\(/, '\1' + BOLD + '\2' + RESET + '(')
-	puts text
 end
 
 def start
+	options = { :show => 'pool' }
+	parser = OptionParser.new do |opts|
+		opts.banner = "Usage: passenger-status [options] [Phusion Passenger's PID]"
+		opts.separator ""
+		opts.separator "Tool for inspecting Phusion Passenger's internal status."
+		opts.separator ""
+
+		opts.separator "Options:"
+		opts.on("--show=pool|backtraces", String,
+		        "Whether to show the pool's contents or\n" <<
+		        "#{' ' * 37}the backtraces of all threads.") do |what|
+			if what !~ /\A(pool|backtraces)\Z/
+				STDERR.puts "Invalid argument for --show."
+				exit 1
+			else
+				options[:show] = what
+			end
+		end
+	end
+	begin
+		parser.parse!
+	rescue OptionParser::ParseError => e
+		puts e
+		puts
+		puts "Please see '--help' for valid options."
+		exit 1
+	end
+	
 	if ARGV.empty?
 		control_processes = ControlProcess.list
 		if control_processes.empty?
 			STDERR.puts("ERROR: Phusion Passenger doesn't seem to be running.")
 			exit 2
 		elsif control_processes.size == 1
-			show_status(control_processes.first)
+			show_status(control_processes.first, options)
 		else
 			puts "It appears that multiple Passenger instances are running. Please select a"
 			puts "specific one by running:"
@@ -69,7 +118,7 @@ def start
 			exit 1
 		end
 	else
-		show_status(ControlProcess.for_pid(ARGV[0].to_i))
+		show_status(ControlProcess.for_pid(ARGV[0].to_i), options)
 	end
 end
 
