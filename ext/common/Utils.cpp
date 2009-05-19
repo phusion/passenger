@@ -23,10 +23,16 @@
  *  THE SOFTWARE.
  */
 
+#include <oxt/system_calls.hpp>
+
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/un.h>
 #include <cassert>
 #include <libgen.h>
 #include <pwd.h>
 #include "CachedFileStat.h"
+#include "Exceptions.h"
 #include "Utils.h"
 
 #define SPAWN_SERVER_SCRIPT_NAME "passenger-spawn-server"
@@ -524,6 +530,119 @@ verifyWSGIDir(const string &dir, CachedMultiFileStat *mstat, unsigned int thrott
 	string temp(dir);
 	temp.append("/passenger_wsgi.py");
 	return fileExists(temp.c_str(), mstat, throttleRate);
+}
+
+int
+createUnixServer(const char *filename, unsigned int backlogSize, bool autoDelete) {
+	struct sockaddr_un addr;
+	int fd, ret;
+	
+	if (strlen(filename) > sizeof(addr.sun_path) - 1) {
+		string message = "Cannot create Unix socket '";
+		message.append(filename);
+		message.append("': filename is too long.");
+		throw RuntimeException(message);
+	}
+	
+	fd = syscalls::socket(PF_UNIX, SOCK_STREAM, 0);
+	if (fd == -1) {
+		throw SystemException("Cannot create a Unix socket file descriptor", errno);
+	}
+	
+	addr.sun_family = AF_UNIX;
+	strncpy(addr.sun_path, filename, sizeof(addr.sun_path));
+	addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
+	
+	if (autoDelete) {
+		do {
+			ret = unlink(filename);
+		} while (ret == -1 && errno == EINTR);
+	}
+	
+	try {
+		ret = syscalls::bind(fd, (const struct sockaddr *) &addr, sizeof(addr));
+	} catch (...) {
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw;
+	}
+	if (ret == -1) {
+		int e = errno;
+		string message = "Cannot bind Unix socket '";
+		message.append(filename);
+		message.append("'");
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw SystemException(message, e);
+	}
+	
+	try {
+		ret = syscalls::listen(fd, backlogSize);
+	} catch (...) {
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw;
+	}
+	if (ret == -1) {
+		int e = errno;
+		string message = "Cannot listen on Unix socket '";
+		message.append(filename);
+		message.append("'");
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw SystemException(message, e);
+	}
+	
+	return fd;
+}
+
+int
+connectToUnixServer(const char *filename) {
+	int fd, ret;
+	struct sockaddr_un addr;
+	
+	if (strlen(filename) > sizeof(addr.sun_path) - 1) {
+		string message = "Cannot connect to Unix socket '";
+		message.append(filename);
+		message.append("': filename is too long.");
+		throw RuntimeException(message);
+	}
+	
+	do {
+		fd = syscalls::socket(PF_UNIX, SOCK_STREAM, 0);
+	} while (fd == -1 && errno == EINTR);
+	if (fd == -1) {
+		throw SystemException("Cannot create a Unix socket file descriptor", errno);
+	}
+	
+	addr.sun_family = AF_UNIX;
+	strncpy(addr.sun_path, filename, sizeof(addr.sun_path));
+	addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
+	
+	try {
+		ret = syscalls::connect(fd, (const sockaddr *) &addr, sizeof(addr));
+	} catch (...) {
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw;
+	}
+	if (ret == -1) {
+		int e = errno;
+		string message("Cannot connect to Unix socket '");
+		message.append(filename);
+		message.append("'");
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw SystemException(message, e);
+	}
+	
+	return fd;
 }
 
 } // namespace Passenger

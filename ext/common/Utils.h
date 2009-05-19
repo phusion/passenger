@@ -410,6 +410,30 @@ bool verifyWSGIDir(const string &dir, CachedMultiFileStat *mstat = 0,
                    unsigned int throttleRate = 0);
 
 /**
+ * Create a new Unix server socket which is bounded to <tt>filename</tt>.
+ *
+ * @param filename The filename to bind the socket to.
+ * @param backlogSize The size of the socket's backlog.
+ * @param autoDelete Whether <tt>filename</tt> should be deleted, if it already exists.
+ * @return The file descriptor of the newly created Unix server socket.
+ * @throws RuntimeException Something went wrong.
+ * @throws SystemException Something went wrong while creating the Unix server socket.
+ * @throws boost::thread_interrupted A system call has been interrupted.
+ */
+int createUnixServer(const char *filename, unsigned int backlogSize, bool autoDelete = true);
+
+/**
+ * Connect to a Unix server socket at <tt>filename</tt>.
+ *
+ * @param filename The filename of the socket to connect to.
+ * @return The file descriptor of the connected client socket.
+ * @throws RuntimeException Something went wrong.
+ * @throws SystemException Something went wrong while connecting to the Unix server.
+ * @throws boost::thread_interrupted A system call has been interrupted.
+ */
+int connectToUnixServer(const char *filename);
+
+/**
  * Represents a buffered upload file.
  *
  * @ingroup Support

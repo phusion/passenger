@@ -33,6 +33,8 @@
 
 #include <string>
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <sys/stat.h>
 #include <cstdio>
 #include <unistd.h>
@@ -243,79 +245,23 @@ public:
 	 * @throws SystemException An error occurred while creating the server socket.
 	 * @throws boost::thread_resource_error Something went wrong during
 	 *     creation of the thread.
+	 * @throws boost::thread_interrupted A system call has been interrupted.
 	 */
 	ApplicationPoolStatusReporter(StandardApplicationPoolPtr &pool,
 	                              bool userSwitching,
 	                              mode_t permissions = S_IRUSR | S_IWUSR,
 	                              uid_t uid = -1, gid_t gid = -1) {
 		int ret;
-		struct sockaddr_un addr;
 		
 		this->pool = pool;
 		
 		createPassengerTempDir(getSystemTempDir(), userSwitching,
 			"nobody", geteuid(), getegid());
 		
-		/* Calculate the socket filename. */
 		snprintf(filename, sizeof(filename) - 1, "%s/info/status.socket",
 			getPassengerTempDir().c_str());
 		filename[PATH_MAX - 1] = '\0';
-		if (strlen(filename) > sizeof(addr.sun_path) - 1) {
-			string message = "Cannot create Unix socket '";
-			message.append(filename);
-			message.append("': filename is too long.");
-			throw RuntimeException(message);
-		}
-		
-		/* Create the socket. */
-		serverFd = syscalls::socket(AF_UNIX, SOCK_STREAM, 0);
-		if (serverFd == -1) {
-			throw SystemException("Cannot create a Unix socket handle", errno);
-		}
-		
-		addr.sun_len = strlen(filename);
-		addr.sun_family = AF_UNIX;
-		strncpy(addr.sun_path, filename, sizeof(addr.sun_path));
-		do {
-			ret = unlink(filename);
-		} while (ret == -1 && errno == EINTR);
-		try {
-			ret = syscalls::bind(serverFd, (const struct sockaddr *) &addr, sizeof(addr));
-		} catch (...) {
-			do {
-				ret = close(serverFd);
-			} while (ret == -1 && errno == EINTR);
-			throw;
-		}
-		if (ret == -1) {
-			int e = errno;
-			string message = "Cannot bind Unix socket '";
-			message.append(filename);
-			message.append("'");
-			do {
-				ret = close(serverFd);
-			} while (ret == -1 && errno == EINTR);
-			throw SystemException(message, e);
-		}
-		
-		try {
-			ret = syscalls::listen(serverFd, 10);
-		} catch (...) {
-			do {
-				ret = close(serverFd);
-			} while (ret == -1 && errno == EINTR);
-			throw;
-		}
-		if (ret == -1) {
-			int e = errno;
-			string message = "Cannot listen on Unix socket '";
-			message.append(filename);
-			message.append("'");
-			do {
-				ret = close(serverFd);
-			} while (ret == -1 && errno == EINTR);
-			throw SystemException(message, e);
-		}
+		serverFd = createUnixServer(filename, 10);
 		
 		/* Set the socket file's permissions... */
 		do {
