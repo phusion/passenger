@@ -105,6 +105,16 @@ syscalls::close(int fd) {
 }
 
 int
+syscalls::pipe(int filedes[2]) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::pipe(filedes)
+	);
+	return ret;
+}
+
+int
 syscalls::accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
 	int ret;
 	CHECK_INTERRUPTION(
@@ -218,6 +228,16 @@ syscalls::fopen(const char *path, const char *mode) {
 	CHECK_INTERRUPTION(
 		ret == NULL,
 		ret = ::fopen(path, mode)
+	);
+	return ret;
+}
+
+size_t
+syscalls::fread(void *ptr, size_t size, size_t nitems, FILE *stream) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == 0 && ferror(stream),
+		ret = ::fread(ptr, size, nitems, stream)
 	);
 	return ret;
 }

@@ -123,6 +123,7 @@ namespace oxt {
 		ssize_t read(int fd, void *buf, size_t count);
 		ssize_t write(int fd, const void *buf, size_t count);
 		int close(int fd);
+		int pipe(int filedes[2]);
 		
 		int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 		int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
@@ -137,6 +138,7 @@ namespace oxt {
 		int shutdown(int s, int how);
 		
 		FILE *fopen(const char *path, const char *mode);
+		size_t fread(void *ptr, size_t size, size_t nitems, FILE *stream);
 		int fclose(FILE *fp);
 		int unlink(const char *pathname);
 		int stat(const char *path, struct stat *buf);

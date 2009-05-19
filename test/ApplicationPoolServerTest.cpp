@@ -31,43 +31,6 @@ namespace tut {
 		// returned ApplicationPool object, should not crash.
 		server->connect();
 	}
-
-	TEST_METHOD(3) {
-		// If connect() has been called, then detach() should not crash, and the
-		// ApplicationPoolServer's destructor should not crash either.
-		pid_t pid = fork();
-		if (pid == 0) {
-			server->connect();
-			server->detach();
-			server.reset();
-			_exit(0);
-		} else {
-			int status;
-			
-			waitpid(pid, &status, 0);
-			if (status != 0) {
-				fail("Child process exited abnormally.");
-			}
-		}
-	}
-
-	TEST_METHOD(4) {
-		// If connect() has not been called, then detach() should not crash, and the
-		// ApplicationPoolServer's destructor should not crash either.
-		pid_t pid = fork();
-		if (pid == 0) {
-			server->detach();
-			server.reset();
-			_exit(0);
-		} else {
-			int status;
-			
-			waitpid(pid, &status, 0);
-			if (status != 0) {
-				fail("Child process exited abnormally.");
-			}
-		}
-	}
 	
 	/* A StringListCreator which not only returns a dummy value, but also
 	 * increments a counter each time getItems() is called. */

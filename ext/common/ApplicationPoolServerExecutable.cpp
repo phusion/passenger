@@ -46,6 +46,7 @@
 #include <oxt/backtrace.hpp>
 
 #include <sys/types.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -76,7 +77,11 @@ class Server;
 class Client;
 typedef shared_ptr<Client> ClientPtr;
 
-#define SERVER_SOCKET_FD 3
+#define OWNER_PIPE_FD 3
+#define FEEDBACK_PIPE_FD 4
+#define PASSWORD_SIZE 128
+
+static string serverPassword;
 
 // The following variables contain pre-calculated data which are used by
 // Server::fatalSignalHandler(). It's not safe to allocate memory inside
@@ -94,13 +99,43 @@ static const char *gdbBacktraceGenerationCommandStr;
 
 class Server {
 private:
+	static const int THREAD_STACK_SIZE = 1024 * 128;
+	
 	friend class Client;
 
-	int serverSocket;
+	int adminPipe;
+	int feedbackPipe;
 	StandardApplicationPoolPtr pool;
 	set<ClientPtr> clients;
 	boost::mutex lock;
 	string user;
+	string serverSocket;
+	
+	int serverFd;
+	oxt::thread *connectionAcceptionThread;
+	
+	/**
+	 * Extracts and returns the password from the given <tt>adminPipe</tt>. This password is
+	 * used to determine which processes may connect with this server's Unix socket, as unix
+	 * sockets would normally allow any process to connect to it. In this case, we strictly
+	 * want Apache to be able to connect to it, and it is for this reason that we maintain a
+	 * password system.
+	 *
+	 * @param adminPipe The pipe used to read the password for this server from.
+	 * @return The password for this server.
+	 * @throws IOException
+	 * @throws SystemException
+	 */
+	static string receivePassword(int adminPipe) {
+		TRACE_POINT();
+		MessageChannel channel(adminPipe);
+		char buf[PASSWORD_SIZE];
+		
+		if (!channel.readRaw(buf, PASSWORD_SIZE)) {
+			throw IOException("Could not read password from the owner pipe.");
+		}
+		return string(buf, PASSWORD_SIZE);
+	}
 
 	/**
 	 * Lowers this process's privilege to that of <em>username</em>,
@@ -201,23 +236,45 @@ private:
 			sigaction(SIGUSR1, &action, NULL);
 		}
 	}
+	
+	void createServerSocket() {
+		int ret;
+		
+		serverFd = createUnixServer(serverSocket.c_str(), 50);
+		do {
+			ret = chmod(serverSocket.c_str(), S_ISVTX |
+				S_IRUSR | S_IWUSR | S_IXUSR |
+				S_IRGRP | S_IWGRP | S_IXGRP |
+				S_IROTH | S_IWOTH | S_IXOTH);
+		} while (ret == -1 && errno == EINTR);
+	}
+	
+	void acceptConnections();
 
 public:
-	Server(int serverSocket,
+	Server(int adminPipe,
+	       int feedbackPipe,
 	       const unsigned int logLevel,
 	       const string &spawnServerCommand,
 	       const string &logFile,
 	       const string &rubyCommand,
 	       const string &user,
-	       const string &passengerTempDir)
+	       const string &passengerTempDir,
+	       const string &serverSocket)
 	{
 		setPassengerTempDir(passengerTempDir);
 		
 		pool = ptr(new StandardApplicationPool(spawnServerCommand,
 			logFile, rubyCommand, user));
 		Passenger::setLogLevel(logLevel);
-		this->serverSocket = serverSocket;
+		this->adminPipe = adminPipe;
+		this->feedbackPipe = feedbackPipe;
 		this->user = user;
+		this->serverSocket = serverSocket;
+		serverFd = -1;
+		connectionAcceptionThread = NULL;
+		
+		serverPassword = receivePassword(adminPipe);
 		
 		P_TRACE(2, "ApplicationPoolServerExecutable initialized (PID " << getpid() << ")");
 	}
@@ -229,7 +286,18 @@ public:
 		
 		P_TRACE(2, "Shutting down server.");
 		
-		syscalls::close(serverSocket);
+		if (feedbackPipe != -1) {
+			syscalls::close(feedbackPipe);
+		}
+		
+		// Stop accepting new connections.
+		if (connectionAcceptionThread != NULL) {
+			connectionAcceptionThread->interrupt_and_join();
+			delete connectionAcceptionThread;
+		}
+		if (serverFd != -1) {
+			syscalls::close(serverFd);
+		}
 		
 		// Wait for all clients to disconnect.
 		UPDATE_TRACE_POINT();
@@ -530,6 +598,14 @@ private:
 		TRACE_POINT();
 		vector<string> args;
 		try {
+			char password[PASSWORD_SIZE];
+			if (channel.readRaw(password, PASSWORD_SIZE) == 0) {
+				goto done;
+			}
+			if (memcmp(password, serverPassword.c_str(), PASSWORD_SIZE) != 0) {
+				throw RuntimeException("A client tried to connect with an incorrect password.");
+			}
+			
 			while (!this_thread::interruption_requested()) {
 				UPDATE_TRACE_POINT();
 				try {
@@ -588,6 +664,7 @@ private:
 			throw;
 		}
 		
+		done:
 		UPDATE_TRACE_POINT();
 		boost::mutex::scoped_lock l(server.lock);
 		ClientPtr myself(self.lock());
@@ -646,6 +723,49 @@ public:
 	}
 };
 
+void
+Server::acceptConnections() {
+	TRACE_POINT();
+	try {
+		while (!this_thread::interruption_requested()) {
+			sockaddr_un addr;
+			socklen_t len = sizeof(addr);
+			int fd;
+			
+			UPDATE_TRACE_POINT();
+			fd = syscalls::accept(serverFd, (struct sockaddr *) &addr, &len);
+			if (fd == -1) {
+				throw SystemException("Unable to accept a new client", errno);
+			}
+			
+			UPDATE_TRACE_POINT();
+			this_thread::disable_interruption di;
+			this_thread::disable_syscall_interruption dsi;
+			
+			ClientPtr client(new Client(*this, fd));
+			pair<set<ClientPtr>::iterator, bool> p;
+			{
+				UPDATE_TRACE_POINT();
+				boost::mutex::scoped_lock l(lock);
+				clients.insert(client);
+			}
+			UPDATE_TRACE_POINT();
+			client->start(client);
+		}
+	} catch (const boost::thread_interrupted &) {
+		P_TRACE(2, "Connection acception thread interrupted.");
+	} catch (const tracable_exception &e) {
+		P_ERROR("*** Fatal error: " << e.what() << "\n" << e.backtrace());
+		abort();
+	} catch (const exception &e) {
+		P_ERROR("*** Fatal error: " << e.what());
+		abort();
+	} catch (...) {
+		P_ERROR("*** Fatal error: Unknown exception thrown in connection acception thread.");
+		abort();
+	}
+}
+
 int
 Server::start() {
 	TRACE_POINT();
@@ -666,54 +786,31 @@ Server::start() {
 		ApplicationPoolStatusReporter reporter(pool, user.empty(),
 			S_IRUSR | S_IWUSR, fifoUid, fifoGid);
 		
+		createServerSocket();
+		
 		if (!user.empty()) {
 			lowerPrivilege(user);
 		}
 		
 		setupSignalHandlers();
 		
-		while (!this_thread::interruption_requested()) {
-			int fds[2], ret;
-			char x;
-			
-			// The received data only serves to wake up the server socket,
-			// and is not important.
-			UPDATE_TRACE_POINT();
-			ret = syscalls::read(serverSocket, &x, 1);
-			if (ret == 0) {
-				// All web server processes disconnected from this server.
-				// So we can safely quit.
-				break;
-			}
-			
-			this_thread::disable_interruption di;
-			this_thread::disable_syscall_interruption dsi;
-			
-			// We have an incoming connect request from an
-			// ApplicationPool client.
-			UPDATE_TRACE_POINT();
-			do {
-				ret = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-			} while (ret == -1 && errno == EINTR);
-			if (ret == -1) {
-				UPDATE_TRACE_POINT();
-				throw SystemException("Cannot create an anonymous Unix socket", errno);
-			}
-			
-			UPDATE_TRACE_POINT();
-			MessageChannel(serverSocket).writeFileDescriptor(fds[1]);
-			syscalls::close(fds[1]);
-			
-			UPDATE_TRACE_POINT();
-			ClientPtr client(new Client(*this, fds[0]));
-			pair<set<ClientPtr>::iterator, bool> p;
-			{
-				UPDATE_TRACE_POINT();
-				boost::mutex::scoped_lock l(lock);
-				clients.insert(client);
-			}
-			UPDATE_TRACE_POINT();
-			client->start(client);
+		// Start a thread for handling incoming connections.
+		connectionAcceptionThread = new oxt::thread(
+			boost::bind(&Server::acceptConnections, this),
+			"Connection acception thread",
+			THREAD_STACK_SIZE
+		);
+		
+		// Tell the owning process that we're done initializing.
+		syscalls::write(feedbackPipe, "x", 1);
+		feedbackPipe = -1;
+		
+		// Blocking read from the admin pipe. When a read succeeds, it
+		// means that the owner process exited or sent a shutdown command.
+		char buf;
+		int ret = syscalls::read(adminPipe, &buf, 1);
+		if (ret == -1 && errno != ECONNRESET) {
+			throw SystemException("Cannot read from the admin pipe", errno);
 		}
 	} catch (const boost::thread_interrupted &) {
 		P_TRACE(2, "Main thread interrupted.");
@@ -725,8 +822,9 @@ int
 main(int argc, char *argv[]) {
 	try {
 		exeFile = argv[0];
-		Server server(SERVER_SOCKET_FD, atoi(argv[1]),
-			argv[2], argv[3], argv[4], argv[5], argv[6]);
+		Server server(OWNER_PIPE_FD, FEEDBACK_PIPE_FD, atoi(argv[1]),
+			argv[2], argv[3], argv[4], argv[5], argv[6],
+			argv[7]);
 		return server.start();
 	} catch (const tracable_exception &e) {
 		P_ERROR("*** Fatal error: " << e.what() << "\n" << e.backtrace());

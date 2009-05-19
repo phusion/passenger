@@ -419,6 +419,15 @@ bool verifyWSGIDir(const string &dir, CachedFileStat *cstat = 0,
                    unsigned int throttleRate = 0);
 
 /**
+ * Generate a secure, random token of the <tt>size</tt> bytes and put
+ * the result into <tt>buf</tt>.
+ *
+ * @throws FileSystemException
+ * @throws IOException
+ */
+void generateSecureToken(void *buf, unsigned int size);
+
+/**
  * Create a new Unix server socket which is bounded to <tt>filename</tt>.
  *
  * @param filename The filename to bind the socket to.

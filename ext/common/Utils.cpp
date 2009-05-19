@@ -396,7 +396,12 @@ createPassengerTempDir(const string &parentDir, bool userSwitching,
 	
 	if (geteuid() == 0) {
 		if (userSwitching) {
-			makeDirTree(tmpDir + "/master", "u=wxs,g=,o=", workerUid, workerGid);
+			/* When Apache is installed with mpm-itk, there may be multiple
+			 * users under which worker processes are running. To ensure that
+			 * all worker processes can connect to the server socket, we make
+			 * this subdirectory world-executable.
+			 */
+			makeDirTree(tmpDir + "/master", "u=wxs,g=x,o=x", workerUid, workerGid);
 		} else {
 			makeDirTree(tmpDir + "/master", "u=wxs,g=x,o=x", lowestUid, lowestGid);
 		}
@@ -530,6 +535,26 @@ verifyWSGIDir(const string &dir, CachedFileStat *cstat, unsigned int throttleRat
 	string temp(dir);
 	temp.append("/passenger_wsgi.py");
 	return fileExists(temp.c_str(), cstat, throttleRate);
+}
+
+void
+generateSecureToken(void *buf, unsigned int size) {
+	FILE *f;
+	
+	f = syscalls::fopen("/dev/urandom", "r");
+	if (f == NULL) {
+		throw FileSystemException("Cannot open /dev/urandom",
+			errno, "/dev/urandom");
+	}
+	
+	if (syscalls::fread(buf, 1, size, f) != size) {
+		this_thread::disable_syscall_interruption dsi;
+		syscalls::fclose(f);
+		throw IOException("Cannot read sufficient data from /dev/urandom");
+	}
+	
+	this_thread::disable_syscall_interruption dsi;
+	syscalls::fclose(f);
 }
 
 int
