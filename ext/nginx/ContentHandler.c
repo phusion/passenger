@@ -1077,7 +1077,9 @@ passenger_content_handler(ngx_http_request_t *r)
     ngx_str_t              page_cache_file;
     passenger_context_t   *context;
 
-    if (r->subrequest_in_memory) {
+    if (passenger_main_conf.root_dir.len == 0) {
+        return NGX_DECLINED;
+    } else if (r->subrequest_in_memory) {
         ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
                       "ngx_http_passenger_module does not support "
                       "subrequest in memory");

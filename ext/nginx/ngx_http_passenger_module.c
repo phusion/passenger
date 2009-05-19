@@ -131,8 +131,14 @@ start_helper_server(ngx_cycle_t *cycle)
     char                   buf;
     FILE                  *f;
     
-    if (helper_server_pid != 0) {
-        shutdown_helper_server(cycle);
+    shutdown_helper_server(cycle);
+    
+    if (main_conf->root_dir.len == 0) {
+        ngx_log_error(NGX_LOG_ALERT, cycle->log, 0,
+                      "Phusion Passenger is disabled because the "
+                      "'passenger_root' option is not set. Please set "
+                      "this option if you want to enable Phusion Passenger.");
+        return NGX_OK;
     }
     
     ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
@@ -364,6 +370,10 @@ save_master_process_pid(ngx_cycle_t *cycle) {
     u_char *last;
     FILE *f;
     
+    if (passenger_main_conf.root_dir.len == 0) {
+        return NGX_OK;
+    }
+    
     last = ngx_snprintf(filename, sizeof(filename) - 1,
         "%s/control_process.pid", passenger_temp_dir);
     *last = (u_char) '\0';
@@ -386,6 +396,10 @@ shutdown_helper_server(ngx_cycle_t *cycle)
     time_t begin_time;
     int    helper_server_exited, ret;
     u_char command[NGX_MAX_PATH + 10];
+    
+    if (helper_server_pid == 0) {
+        return;
+    }
     
     /* We write one byte to the admin pipe, doesn't matter what the byte is.
      * The helper server will detect this as an exit command.
