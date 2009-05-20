@@ -561,6 +561,7 @@ private:
 			b = passenger_bucket_create(session, readerPipe, r->connection->bucket_alloc);
 			
 			try {
+				UPDATE_TRACE_POINT();
 				session.reset();
 			} catch (const SystemException &e) {
 				// Ignore ENOTCONN. This error occurs for some people
