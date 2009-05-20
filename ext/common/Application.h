@@ -283,7 +283,7 @@ private:
 			if (fd != -1) {
 				int ret = syscalls::shutdown(fd, SHUT_RD);
 				if (ret == -1) {
-					throw SystemException("Cannot shutdown the writer stream",
+					throw SystemException("Cannot shutdown the reader stream",
 						errno);
 				}
 			}
