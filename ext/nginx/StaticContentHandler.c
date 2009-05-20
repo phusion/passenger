@@ -26,6 +26,25 @@
 
 #include "StaticContentHandler.h"
 
+static void
+set_request_extension(ngx_http_request_t *r, ngx_str_t *filename) {
+    u_char *tmp;
+    
+    /* Scan filename from the right until we've found a slash or a dot. */
+    tmp = filename->data + filename->len - 1;
+    while (tmp >= filename->data && *tmp != '/' && *tmp != '.') {
+        tmp--;
+    }
+    if (tmp >= filename->data && *tmp == '.') {
+        /* We found a dot, and until now we haven't seen any slashes.
+         * So we know that this is the filename's extension.
+        */
+        tmp++;
+        r->exten.data = tmp;
+        r->exten.len  = filename->len - (tmp - filename->data);
+    }
+}
+
 ngx_int_t
 passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
 {
@@ -188,6 +207,7 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
     r->headers_out.content_length_n = of.size;
     r->headers_out.last_modified_time = of.mtime;
 
+    set_request_extension(r, filename);
     if (ngx_http_set_content_type(r) != NGX_OK) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
