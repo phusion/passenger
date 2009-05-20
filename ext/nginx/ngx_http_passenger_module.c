@@ -269,7 +269,7 @@ start_helper_server(ngx_cycle_t *cycle)
                worker_uid_string,
                worker_gid_string,
                passenger_temp_dir,
-               NULL);
+               (char *) 0);
         e = errno;
         fprintf(stderr, "*** Could not start the Passenger helper server (%s): "
                 "exec() failed: %s (%d)\n",
