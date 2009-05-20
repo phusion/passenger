@@ -559,7 +559,17 @@ private:
 			/* Setup the bucket brigade. */
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
 			b = passenger_bucket_create(session, readerPipe, r->connection->bucket_alloc);
-			session.reset();
+			
+			try {
+				session.reset();
+			} catch (const SystemException &e) {
+				// Ignore ENOTCONN. This error occurs for some people
+				// for unknown reasons, but it's harmless.
+				if (e.code() != ENOTCONN) {
+					throw;
+				}
+			}
+			
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 
 			b = apr_bucket_eos_create(r->connection->bucket_alloc);

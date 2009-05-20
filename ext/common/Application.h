@@ -304,11 +304,16 @@ private:
 			TRACE_POINT();
 			if (fd != -1) {
 				int ret = syscalls::close(fd);
-				if (ret == -1) {
-					throw SystemException("Cannot close the session stream",
-						errno);
-				}
 				fd = -1;
+				if (ret == -1) {
+					if (errno == EIO) {
+						throw SystemException("A write operation on the session stream failed",
+							errno);
+					} else {
+						throw SystemException("Cannot close the session stream",
+							errno);
+					}
+				}
 			}
 		}
 		
