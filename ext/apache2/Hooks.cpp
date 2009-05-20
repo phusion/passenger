@@ -560,18 +560,11 @@ private:
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
 			b = passenger_bucket_create(session, readerPipe, r->connection->bucket_alloc);
 			
-			try {
-				UPDATE_TRACE_POINT();
-				session.reset();
-			} catch (const SystemException &e) {
-				// Ignore ENOTCONN. This error occurs for some people
-				// for unknown reasons, but it's harmless.
-				if (e.code() != ENOTCONN) {
-					throw;
-				}
-			}
+			/* The bucket (b) still has a reference to the session, so the reset()
+			 * call here is guaranteed not to throw any exceptions.
+			 */
+			session.reset();
 			
-			UPDATE_TRACE_POINT();
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 
 			b = apr_bucket_eos_create(r->connection->bucket_alloc);
@@ -609,6 +602,7 @@ private:
 				}
 				apr_table_setn(r->headers_out, "Status", r->status_line);
 				
+				UPDATE_TRACE_POINT();
 				ap_pass_brigade(r->output_filters, bb);
 				return OK;
 			} else if (backendData[0] == '\0') {

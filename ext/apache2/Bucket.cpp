@@ -43,6 +43,22 @@ static const apr_bucket_type_t apr_bucket_type_passenger_pipe = {
 struct BucketData {
 	Application::SessionPtr session;
 	apr_file_t *pipe;
+	
+	~BucketData() {
+		/* The session here is an ApplicationPoolServer::RemoteSession.
+		 * The only reason why its destructor might fail is when sending
+		 * the 'close' command failed. We don't care about that, and we
+		 * don't want C++ exceptions to propagate onto a C stack (this
+		 * bucket is probably used by Apache's bucket brigade code, which
+		 * is written in C), so we ignore all errors in the session's
+		 * destructor.
+		 */
+		try {
+			session.reset();
+		} catch (const SystemException &e) {
+			// Do nothing.
+		}
+	}
 };
 
 static void
