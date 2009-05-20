@@ -571,6 +571,7 @@ private:
 				}
 			}
 			
+			UPDATE_TRACE_POINT();
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 
 			b = apr_bucket_eos_create(r->connection->bucket_alloc);
