@@ -159,6 +159,10 @@ private:
 			case 307:
 				statusLine = "307 Temporary Redirect\x0D\x0A";
 				break;
+			case 308:
+				// Google Gears: http://code.google.com/p/gears/wiki/ResumableHttpRequestsProposal
+				statusLine = "308 Resume Incomplete\x0D\x0A";
+				break;
 			case 400:
 				statusLine = "400 Bad Request\x0D\x0A";
 				break;
