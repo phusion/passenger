@@ -170,7 +170,7 @@ private:
 					break;
 				}
 				
-				boost::lock_guard<mutex> l(threadsLock);
+				boost::lock_guard<boost::mutex> l(threadsLock);
 				this_thread::disable_syscall_interruption dsi;
 				this_thread::disable_interruption di;
 				shared_ptr<oxt::thread> thread(new oxt::thread(
@@ -220,7 +220,7 @@ private:
 			P_ERROR("Error in status reporter client thread: " << e.what());
 		}
 		
-		boost::lock_guard<mutex> l(threadsLock);
+		boost::lock_guard<boost::mutex> l(threadsLock);
 		this_thread::disable_syscall_interruption dsi;
 		this_thread::disable_interruption di;
 		threads.erase(fd);
@@ -321,7 +321,7 @@ public:
 		/* We make a copy of the data structure here to avoid deadlocks. */
 		map< int, shared_ptr<oxt::thread> > threadsCopy;
 		{
-			boost::lock_guard<mutex> l(threadsLock);
+			boost::lock_guard<boost::mutex> l(threadsLock);
 			threadsCopy = threads;
 		}
 		map< int, shared_ptr<oxt::thread> >::iterator it;
