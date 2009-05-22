@@ -24,7 +24,7 @@
  */
 #include "Bucket.h"
 
-using namespace Passenger;
+namespace Passenger {
 
 static void bucket_destroy(void *data);
 static apr_status_t bucket_read(apr_bucket *a, const char **str, apr_size_t *len, apr_read_type_e block);
@@ -42,7 +42,8 @@ static const apr_bucket_type_t apr_bucket_type_passenger_pipe = {
 
 struct BucketData {
 	Application::SessionPtr session;
-	apr_file_t *pipe;
+	PassengerBucketStatePtr state;
+	int stream;
 	
 	~BucketData() {
 		/* The session here is an ApplicationPoolServer::RemoteSession.
@@ -71,15 +72,13 @@ bucket_destroy(void *data) {
 
 static apr_status_t
 bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type_e block) {
-	apr_file_t *pipe;
 	char *buf;
-	apr_status_t ret;
-
-	BucketData *data = (BucketData *) bucket->data;
-	pipe = data->pipe;
-
+	ssize_t ret;
+	BucketData *data;
+	
+	data = (BucketData *) bucket->data;
 	*str = NULL;
-	*len = APR_BUCKET_BUFF_SIZE;
+	*len = 0;
 	
 	if (block == APR_NONBLOCK_READ) {
 		/*
@@ -101,55 +100,72 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 		return APR_EAGAIN;
 	}
 	
-	buf = (char *) apr_bucket_alloc(*len, bucket->list); // TODO: check for failure?
-
-	do {
-		ret = apr_file_read(pipe, buf, len);
-	} while (APR_STATUS_IS_EAGAIN(ret));
-
-	if (ret != APR_SUCCESS && ret != APR_EOF) {
-		// ... we might want to set an error flag here ...
-		delete data;
-		bucket->data = NULL;
-		apr_bucket_free(buf);
-		return ret;
+	buf = (char *) apr_bucket_alloc(APR_BUCKET_BUFF_SIZE, bucket->list);
+	if (buf == NULL) {
+		return APR_ENOMEM;
 	}
-	/*
-	 * If there's more to read we have to keep the rest of the pipe
-	 * for later.
-	 */
-	if (*len > 0) {
+	
+	do {
+		ret = read(data->stream, buf, APR_BUCKET_BUFF_SIZE);
+	} while (ret == -1 && errno == EINTR);
+	
+	if (ret > 0) {
 		apr_bucket_heap *h;
 		
+		data->state->bytesRead += ret;
+		
 		*str = buf;
+		*len = ret;
 		bucket->data = NULL;
 		
-		/* Change the current bucket to refer to what we read */
+		/* Change the current bucket (which is a Passenger Bucket) into a heap bucket
+		 * that contains the data that we just read. This newly created heap bucket
+		 * will be the first in the bucket list.
+		 */
 		bucket = apr_bucket_heap_make(bucket, buf, *len, apr_bucket_free);
 		h = (apr_bucket_heap *) bucket->data;
 		h->alloc_len = APR_BUCKET_BUFF_SIZE; /* note the real buffer size */
+		
+		/* And after this newly created bucket we insert a new Passenger Bucket
+		 * which can read the next chunk from the stream.
+		 */
 		APR_BUCKET_INSERT_AFTER(bucket, passenger_bucket_create(
-			data->session, pipe, bucket->list));
+			data->session, data->state, bucket->list));
+		
+		/* The newly created Passenger Bucket has a reference to the session
+		 * object, so we can delete data here.
+		 */
 		delete data;
-	} else {
+		
+		return APR_SUCCESS;
+		
+	} else if (ret == 0) {
+		data->state->completed = true;
 		delete data;
 		bucket->data = NULL;
 		
-		apr_bucket_free(buf);
 		bucket = apr_bucket_immortal_make(bucket, "", 0);
 		*str = (const char *) bucket->data;
-		// if (rv != APR_EOF) {
-		//     ... we might want to set an error flag here ...
-		// }
+		*len = 0;
+		return APR_SUCCESS;
+		
+	} else /* ret == -1 */ {
+		int e = errno;
+		data->state->completed = true;
+		data->state->errorCode = e;
+		delete data;
+		bucket->data = NULL;
+		apr_bucket_free(buf);
+		return APR_FROM_OS_ERROR(e);
 	}
-	return APR_SUCCESS;
 }
 
 static apr_bucket *
-passenger_bucket_make(apr_bucket *bucket, Application::SessionPtr session, apr_file_t *pipe) {
+passenger_bucket_make(apr_bucket *bucket, Application::SessionPtr session, PassengerBucketStatePtr state) {
 	BucketData *data = new BucketData();
 	data->session  = session;
-	data->pipe     = pipe;
+	data->stream   = session->getStream();
+	data->state    = state;
 	
 	bucket->type   = &apr_bucket_type_passenger_pipe;
 	bucket->length = (apr_size_t)(-1);
@@ -159,13 +175,14 @@ passenger_bucket_make(apr_bucket *bucket, Application::SessionPtr session, apr_f
 }
 
 apr_bucket *
-passenger_bucket_create(Application::SessionPtr session, apr_file_t *pipe, apr_bucket_alloc_t *list) {
+passenger_bucket_create(Application::SessionPtr session, PassengerBucketStatePtr state, apr_bucket_alloc_t *list) {
 	apr_bucket *bucket;
 	
 	bucket = (apr_bucket *) apr_bucket_alloc(sizeof(*bucket), list);
 	APR_BUCKET_INIT(bucket);
 	bucket->free = apr_bucket_free;
 	bucket->list = list;
-	return passenger_bucket_make(bucket, session, pipe);
+	return passenger_bucket_make(bucket, session, state);
 }
 
+} // namespace Passenger
