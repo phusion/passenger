@@ -725,10 +725,10 @@ follows:
 <VirtualHost *:80>
     ServerName www.foo.com
     DocumentRoot /apps/foo/public
-    <Location /wordpress>
+    <Directory /apps/foo/public/wordpress>
         PassengerEnabled off
         AllowOverride all      # <-- Makes Wordpress's .htaccess file work.
-    </Location>
+    </Directory>
 </VirtualHost>
 ------------------------------------
 
