@@ -606,7 +606,6 @@ private:
 				ap_pass_brigade(r->output_filters, bb);
 				return OK;
 			} else if (backendData[0] == '\0') {
-				P_DEBUG(timer.elapsed() << " >= " << (r->server->timeout / 1000));
 				if ((long long) timer.elapsed() >= r->server->timeout / 1000) {
 					// Looks like an I/O timeout.
 					P_ERROR("No data received from " <<
@@ -655,9 +654,6 @@ private:
 						"response, so please check whether there " <<
 						"are crashing problems in your application. " <<
 						"This is the data that it sent: [" <<
-						backendData << "]");
-					P_ERROR("Backend process " << backendPid <<
-						" did not return a valid HTTP response. It returned: [" <<
 						backendData << "]");
 				}
 				apr_table_setn(r->err_headers_out, "Status", "500 Internal Server Error");
