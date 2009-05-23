@@ -457,12 +457,14 @@ private:
 				UPDATE_TRACE_POINT();
 				channel.write("ok", toString(session->getPid()).c_str(),
 					toString(lastSessionID - 1).c_str(), NULL);
-				channel.writeFileDescriptor(session->getStream());
-				session->closeStream();
-			} catch (const exception &) {
 				UPDATE_TRACE_POINT();
-				P_TRACE(3, "Client " << this << ": something went wrong "
-					"while sending 'ok' back to the client.");
+				channel.writeFileDescriptor(session->getStream());
+				UPDATE_TRACE_POINT();
+				session->closeStream();
+			} catch (const exception &e) {
+				P_TRACE(3, "Client " << this << ": could not send "
+					"'ok' back to the ApplicationPool client: " <<
+					e.what());
 				sessions.erase(lastSessionID - 1);
 				throw;
 			}
