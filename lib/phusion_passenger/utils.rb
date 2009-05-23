@@ -218,12 +218,12 @@ protected
 				Object.send(:remove_const, 'STDERR') rescue nil
 				Object.const_set('STDERR', old_stderr)
 				$stderr = old_global_stderr
-				if tempfile
-					tempfile.rewind
-					stderr_output = tempfile.read
-					tempfile.close rescue nil
-				end
+				tempfile.rewind
+				stderr_output = tempfile.read
+				tempfile.close rescue nil
 			end
+			STDERR.write(stderr_output)
+			STDERR.flush
 			channel.write('success')
 			return true
 		rescue StandardError, ScriptError, NoMemoryError => e
