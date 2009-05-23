@@ -65,8 +65,8 @@ void setDebugFile(const char *logFile = NULL);
 			gettimeofday(&tv, NULL); \
 			sstream << \
 				"[ pid=" << ((unsigned long) getpid()) <<  \
-				" file=" << __FILE__ << ":" << __LINE__ << \
-				" time=" << datetime_buf << "." << (tv.tv_usec / 1000) << " ]:" << \
+				" file=" << __FILE__ << ":" << (unsigned long) __LINE__ << \
+				" time=" << datetime_buf << "." << (unsigned long) (tv.tv_usec / 1000) << " ]:" << \
 				"\n  " << expr << std::endl;	\
 			*stream << sstream.str();		\
 			stream->flush();			\
