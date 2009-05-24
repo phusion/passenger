@@ -11,32 +11,23 @@ describe Utils do
 	
 	specify "#close_all_io_objects_for_fds closes all IO objects that are associated with the given file descriptors" do
 		filename = "#{Dir.tmpdir}/passenger_test.#{Process.pid}.txt"
-		puts "#{$$}: 1"
 		begin
 			pid = fork do
 				begin
-					puts "#{$$}: 2"
 					a, b = IO.pipe
-					puts "#{$$}: 3"
 					close_all_io_objects_for_fds([0, 1, 2])
-					puts "#{$$}: 4"
 					File.open(filename, "w") do |f|
 						f.write("#{a.closed?}, #{b.closed?}")
 					end
-					puts "#{$$}: 5"
 				rescue Exception => e
 					print_exception("utils_spec", e)
 				ensure
-					puts "#{$$}: 6"
 					exit!
 				end
 			end
-			puts "#{$$}: 6"
 			Process.waitpid(pid) rescue nil
-			puts "#{$$}: 7"
 			File.read(filename).should == "true, true"
 		ensure
-			puts "#{$$}: 8"
 			File.unlink(filename) rescue nil
 		end
 	end
