@@ -254,6 +254,8 @@ start_helper_server(ngx_cycle_t *cycle)
             close(i);
         }
         
+        setenv("SERVER_SOFTWARE", NGINX_VER, 1);
+        
         execlp((const char *) helper_server_filename,
                "PassengerNginxHelperServer",
                main_conf->root_dir.data,
