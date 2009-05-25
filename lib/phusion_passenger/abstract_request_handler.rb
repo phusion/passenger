@@ -399,6 +399,10 @@ private
 				undef rewind if respond_to?(:rewind)
 			end
 			
+			# Set encoding for Ruby 1.9 compatibility.
+			client.set_encoding(Encoding::BINARY) if client.respond_to?(:set_encoding)
+			client.binmode
+			
 			return client
 		else
 			# The other end of the owner pipe has been closed, or the
