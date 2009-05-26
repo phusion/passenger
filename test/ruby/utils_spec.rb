@@ -62,6 +62,7 @@ describe Utils do
 			begin
 				File.directory?('utils_spec.tmp').should be_true
 			ensure
+				FileUtils.chmod_R(0777, 'utils_spec.tmp')
 				FileUtils.rm_rf('utils_spec.tmp')
 			end
 		end
