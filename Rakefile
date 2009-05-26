@@ -701,19 +701,10 @@ spec = Gem::Specification.new do |s|
 		'test/*.{rb,cpp,example}',
 		'test/support/*.{cpp,h,rb}',
 		'test/oxt/*.cpp',
-		'test/ruby/*',
-		'test/ruby/*/*',
-		'test/integration_tests/*',
-		'test/stub/*',
-		'test/stub/*/*',
-		'test/stub/*/*/*',
-		'test/stub/*/*/*/*',
-		'test/stub/*/*/*/*/*',
-		'test/stub/*/*/*/*/*/*',
-		'test/stub/*/*/*/*/*/*/*'
-	] - Dir['test/stub/*/log/*'] \
-	  - Dir['test/stub/*/tmp/*/*'] \
-	  - Dir['test/stub/apache2/*.{pid,lock,log}']
+		'test/ruby/**/*',
+		'test/integration_tests/**/*',
+		'test/stub/**/*'
+	]
 	s.executables = [
 		'passenger-spawn-server',
 		'passenger-install-apache2-module',
