@@ -90,6 +90,10 @@ private
 		app = nil
 		success = report_app_init_status(channel) do
 			ENV['RACK_ENV'] = options["environment"]
+			if options["base_uri"] && options["base_uri"] != "/"
+				ENV['RACK_BASE_URI'] = options["base_uri"]
+				ENV['RAILS_RELATIVE_URL_ROOT'] = options["base_uri"]
+			end
 			Dir.chdir(app_root)
 			if options["environment_variables"]
 				set_passed_environment_variables(options["environment_variables"])

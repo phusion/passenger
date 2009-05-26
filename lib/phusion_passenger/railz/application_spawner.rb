@@ -89,6 +89,11 @@ class ApplicationSpawner < AbstractServer
 	#   This is NULL-seperated string of key-value pairs, encoded in base64.
 	#   The last byte in the unencoded data must be a NULL.
 	#
+	# - +base_uri+:
+	#   The base URI on which this application is deployed. It equals "/"
+	#   string if the application is deployed on the root URI. It must not
+	#   equal the empty string.
+	#
 	# All other options will be passed on to RequestHandler.
 	def initialize(app_root, options = {})
 		super()
@@ -99,6 +104,7 @@ class ApplicationSpawner < AbstractServer
 		@lowest_user     = @options["lowest_user"]
 		@environment     = @options["environment"]
 		@encoded_environment_variables = @options["environment_variables"]
+		@base_uri = @options["base_uri"] if @options["base_uri"] && @options["base_uri"] != "/"
 		self.max_idle_time = DEFAULT_APP_SPAWNER_MAX_IDLE_TIME
 		assert_valid_app_root(@app_root)
 		define_message_handler(:spawn_application, :handle_spawn_application)
@@ -150,6 +156,7 @@ class ApplicationSpawner < AbstractServer
 				channel = MessageChannel.new(b)
 				success = report_app_init_status(channel) do
 					ENV['RAILS_ENV'] = @environment
+					ENV['RAILS_RELATIVE_URL_ROOT'] = @base_uri
 					Dir.chdir(@app_root)
 					if @encoded_environment_variables
 						set_passed_environment_variables
@@ -225,6 +232,7 @@ protected
 		report_app_init_status(client) do
 			$0 = "Passenger ApplicationSpawner: #{@app_root}"
 			ENV['RAILS_ENV'] = @environment
+			ENV['RAILS_RELATIVE_URL_ROOT'] = @base_uri
 			if defined?(RAILS_ENV)
 				Object.send(:remove_const, :RAILS_ENV)
 				Object.const_set(:RAILS_ENV, ENV['RAILS_ENV'])

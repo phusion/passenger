@@ -161,6 +161,14 @@ struct PoolOptions {
 	 */
 	StringListCreatorPtr environmentVariables;
 	
+	/**
+	 * The base URI on which the application runs. If the application is
+	 * running on the root URI, then this value must be "/".
+	 *
+	 * @invariant baseURI != ""
+	 */
+	string baseURI;
+	
 	/*********************************/
 	
 	/**
@@ -179,6 +187,7 @@ struct PoolOptions {
 		memoryLimit    = 0;
 		useGlobalQueue = false;
 		statThrottleRate        = 0;
+		baseURI        = "/";
 	}
 	
 	/**
@@ -196,7 +205,8 @@ struct PoolOptions {
 		unsigned long memoryLimit    = 0,
 		bool useGlobalQueue          = false,
 		unsigned long statThrottleRate = 0,
-		const string &restartDir  = ""
+		const string &restartDir  = "",
+		const string &baseURI     = "/"
 	) {
 		this->appRoot        = appRoot;
 		this->lowerPrivilege = lowerPrivilege;
@@ -211,6 +221,7 @@ struct PoolOptions {
 		this->useGlobalQueue = useGlobalQueue;
 		this->statThrottleRate        = statThrottleRate;
 		this->restartDir     = restartDir;
+		this->baseURI        = baseURI;
 	}
 	
 	/**
@@ -246,8 +257,9 @@ struct PoolOptions {
 		useGlobalQueue = vec[startIndex + 21] == "true";
 		statThrottleRate = atol(vec[startIndex + 23]);
 		restartDir     = vec[startIndex + 25];
-		if (vec.size() > startIndex + 27) {
-			environmentVariables = ptr(new SimpleStringListCreator(vec[startIndex + 27]));
+		baseURI        = vec[startIndex + 27];
+		if (vec.size() > startIndex + 29) {
+			environmentVariables = ptr(new SimpleStringListCreator(vec[startIndex + 29]));
 		}
 	}
 	
@@ -261,8 +273,8 @@ struct PoolOptions {
 	 * @throws Anything thrown by environmentVariables->getItems().
 	 */
 	void toVector(vector<string> &vec, bool storeEnvVars = true) const {
-		if (vec.capacity() < vec.size() + 28) {
-			vec.reserve(vec.size() + 28);
+		if (vec.capacity() < vec.size() + 30) {
+			vec.reserve(vec.size() + 30);
 		}
 		appendKeyValue (vec, "app_root",        appRoot);
 		appendKeyValue (vec, "lower_privilege", lowerPrivilege ? "true" : "false");
@@ -277,6 +289,7 @@ struct PoolOptions {
 		appendKeyValue (vec, "use_global_queue", useGlobalQueue ? "true" : "false");
 		appendKeyValue3(vec, "stat_throttle_rate", statThrottleRate);
 		appendKeyValue (vec, "restart_dir",     restartDir);
+		appendKeyValue (vec, "base_uri",        baseURI);
 		if (storeEnvVars) {
 			vec.push_back("environment_variables");
 			vec.push_back(serializeEnvironmentVariables());

@@ -418,10 +418,11 @@ private:
 		
 		try {
 			PoolOptions options;
-			if (parser.getHeader("RAILS_RELATIVE_URL_ROOT").empty()) {
+			if (parser.getHeader("SCRIPT_NAME").empty()) {
 				options.appRoot = extractDirName(parser.getHeader("DOCUMENT_ROOT"));
 			} else {
 				options.appRoot = extractDirName(resolveSymlink(parser.getHeader("DOCUMENT_ROOT")));
+				options.baseURI = parser.getHeader("SCRIPT_NAME");
 			}
 			options.useGlobalQueue = parser.getHeader("PASSENGER_USE_GLOBAL_QUEUE") == "true";
 			options.environment    = parser.getHeader("PASSENGER_ENVIRONMENT");

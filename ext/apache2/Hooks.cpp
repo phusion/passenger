@@ -282,7 +282,7 @@ private:
 	 * (C) r->filename already exists.
 	 * (D) There is a page cache file for the URI.
 	 *
-	 * - If A is not true, or if B is not true, or if C is true, then won't do anything.
+	 * - If A is not true, or if B is not true, or if C is true, then don't do anything.
 	 *   Passenger will be disabled during the rest of this request.
 	 * - If D is true, then we first transform r->filename to the page cache file's
 	 *   filename, and then we let Apache serve it statically.
@@ -501,7 +501,8 @@ private:
 					config->getMemoryLimit(),
 					config->usingGlobalQueue(),
 					config->getStatThrottleRate(),
-					config->getRestartDir()
+					config->getRestartDir(),
+					mapper.getBaseURI()
 				);
 				options.environmentVariables = ptr(new EnvironmentVariablesStringListCreator(r));
 				
