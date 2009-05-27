@@ -481,16 +481,13 @@ end
 module Signal
 	# Like Signal.list, but only returns signals that we can actually trap.
 	def self.list_trappable
-		ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "mri"
+		ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
 		case ruby_engine
-		when "mri"
-			if RUBY_VERSION >= '1.9.0'
-				return Signal.list
-			else
-				result = Signal.list
-				result.delete("ALRM")
-				return result
-			end
+		when "ruby"
+			result = Signal.list
+			result.delete("ALRM")
+			result.delete("VTALRM")
+			return result
 		when "jruby"
 			result = Signal.list
 			result.delete("QUIT")
