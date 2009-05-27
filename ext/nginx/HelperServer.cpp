@@ -556,8 +556,6 @@ typedef shared_ptr<Client> ClientPtr;
  */
 class Server {
 private:
-	static const unsigned int BACKLOG_SIZE = 50;
-
 	string password;
 	int adminPipe;
 	int serverSocket;
@@ -574,45 +572,15 @@ private:
 	 * attempt to bind on. Once it is bound, it will start listening for incoming client
 	 * activity.
 	 *
-	 * @throws SystemException Could not create unconnected Unix socket or bind on Unix socket.
+	 * @throws SystemException Something went wrong while trying to create and bind to the Unix socket.
+	 * @throws RuntimeException Something went wrong.
 	 */
 	void startListening() {
 		this_thread::disable_syscall_interruption dsi;
 		string socketName = getPassengerTempDir() + "/master/helper_server.sock";
-		struct sockaddr_un addr;
+		serverSocket = createUnixServer(socketName.c_str());
+		
 		int ret;
-		
-		serverSocket = syscalls::socket(PF_UNIX, SOCK_STREAM, 0);
-		if (serverSocket == -1) {
-			throw SystemException("Cannot create an unconnected Unix socket", errno);
-		}
-		
-		addr.sun_family = AF_UNIX;
-		strncpy(addr.sun_path, socketName.c_str(), sizeof(addr.sun_path));
-		addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
-		
-		ret = syscalls::bind(serverSocket, (const struct sockaddr *) &addr, sizeof(addr));
-		if (ret == -1) {
-			int e = errno;
-			syscalls::close(serverSocket);
-			
-			string message("Cannot bind on Unix socket '");
-			message.append(socketName);
-			message.append("'");
-			throw SystemException(message, e);
-		}
-		
-		ret = syscalls::listen(serverSocket, BACKLOG_SIZE);
-		if (ret == -1) {
-			int e = errno;
-			syscalls::close(serverSocket);
-			
-			string message("Cannot bind on Unix socket '");
-			message.append(socketName);
-			message.append("'");
-			throw SystemException(message, e);
-		}
-		
 		do {
 			ret = chmod(socketName.c_str(), S_ISVTX |
 				S_IRUSR | S_IWUSR | S_IXUSR |

@@ -413,14 +413,15 @@ bool verifyWSGIDir(const string &dir, CachedMultiFileStat *mstat = 0,
  * Create a new Unix server socket which is bounded to <tt>filename</tt>.
  *
  * @param filename The filename to bind the socket to.
- * @param backlogSize The size of the socket's backlog.
+ * @param backlogSize The size of the socket's backlog. Specify 0 to use the
+ *                    platform's maximum allowed backlog size.
  * @param autoDelete Whether <tt>filename</tt> should be deleted, if it already exists.
  * @return The file descriptor of the newly created Unix server socket.
  * @throws RuntimeException Something went wrong.
  * @throws SystemException Something went wrong while creating the Unix server socket.
  * @throws boost::thread_interrupted A system call has been interrupted.
  */
-int createUnixServer(const char *filename, unsigned int backlogSize, bool autoDelete = true);
+int createUnixServer(const char *filename, unsigned int backlogSize = 0, bool autoDelete = true);
 
 /**
  * Connect to a Unix server socket at <tt>filename</tt>.
