@@ -23,11 +23,11 @@
 
 # Rake functions for compiling/linking C++ stuff.
 
-def compile_c(source, flags = CXXFLAGS)
-	sh "#{CXX} #{flags} -c #{source}"
+def compile_c(source, flags = "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}")
+	sh "#{CC} #{flags} -c #{source}"
 end
 
-def compile_cxx(source, flags = CXXFLAGS)
+def compile_cxx(source, flags = "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}")
 	sh "#{CXX} #{flags} -c #{source}"
 end
 
@@ -43,11 +43,11 @@ def create_static_library(target, sources)
 	sh "ranlib #{target}"
 end
 
-def create_executable(target, sources, linkflags = LDFLAGS)
+def create_executable(target, sources, linkflags = "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}")
 	sh "#{CXX} #{sources} -o #{target} #{linkflags}"
 end
 
-def create_shared_library(target, sources, flags = LDFLAGS)
+def create_shared_library(target, sources, flags = "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}")
 	if RUBY_PLATFORM =~ /darwin/
 		shlib_flag = "-flat_namespace -bundle -undefined dynamic_lookup"
 	else

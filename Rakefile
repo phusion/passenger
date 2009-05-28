@@ -36,6 +36,7 @@ OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 
 include PlatformInfo
 
+CC  = "gcc"
 CXX = "g++"
 LIBEXT = PlatformInfo.library_extension
 if OPTIMIZE
@@ -45,11 +46,11 @@ else
 end
 
 # Extra compiler flags that should always be passed to the C/C++ compiler.
-# Should be included last in the command string.
+# Should be included last in the command string, even after PlatformInfo.portability_cflags.
 EXTRA_CXXFLAGS = "-Wall #{OPTIMIZATION_FLAGS}"
 
 # Extra linker flags that should always be passed to the linker.
-# Should be included last in the command string.
+# Should be included last in the command string, even after PlatformInfo.portability_ldflags.
 EXTRA_LDFLAGS  = ""
 
 

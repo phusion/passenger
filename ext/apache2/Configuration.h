@@ -25,8 +25,10 @@
 #ifndef _PASSENGER_CONFIGURATION_H_
 #define _PASSENGER_CONFIGURATION_H_
 
-#include "Utils.h"
-#include "MessageChannel.h"
+#ifdef __cplusplus
+	#include "Utils.h"
+	#include "MessageChannel.h"
+#endif
 
 /* The APR headers must come after the Passenger headers. See Hooks.cpp
  * to learn why.
