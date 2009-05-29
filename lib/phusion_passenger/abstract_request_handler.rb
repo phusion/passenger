@@ -150,6 +150,7 @@ class AbstractRequestHandler
 		@memory_limit = options["memory_limit"] || 0
 		@iterations = 0
 		@processed_requests = 0
+		@main_loop_running = false
 	end
 	
 	# Clean up temporary stuff created by the request handler.
@@ -186,6 +187,7 @@ class AbstractRequestHandler
 			
 			@main_loop_thread_lock.synchronize do
 				@main_loop_generation += 1
+				@main_loop_running = true
 				@main_loop_thread_cond.broadcast
 			end
 			
@@ -234,6 +236,7 @@ class AbstractRequestHandler
 				@graceful_termination_pipe[0].close rescue nil
 				@graceful_termination_pipe[1].close rescue nil
 				@main_loop_generation += 1
+				@main_loop_running = false
 				@main_loop_thread_cond.broadcast
 			end
 		end
