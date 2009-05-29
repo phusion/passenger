@@ -201,9 +201,21 @@ protected
 	# Run the given block. A message will be sent through +channel+ (a
 	# MessageChannel object), telling the remote side whether the block
 	# raised an exception, called exit(), or succeeded.
-	# Returns whether the block succeeded.
-	# Exceptions are not propagated, except for SystemExit.
-	def report_app_init_status(channel)
+	#
+	# Anything written to $stderr and STDERR during execution of the block
+	# will be buffered. If <tt>write_stderr_contents_to</tt> is non-nil,
+	# then the buffered stderr data will be written to this object. In this
+	# case, <tt>write_stderr_contents_to</tt> must be an IO-like object.
+	# If <tt>write_stderr_contents_to</tt> is nil, then the stder data will
+	# be discarded.
+	# 
+	# Returns whether the block succeeded, i.e. whether it didn't raise an
+	# exception.
+	#
+	# Exceptions are not propagated, except SystemExit and a few
+	# non-StandardExeption classes such as SignalException. Of the
+	# exceptions that are propagated, only SystemExit will be reported.
+	def report_app_init_status(channel, write_stderr_contents_to = STDERR)
 		begin
 			old_global_stderr = $stderr
 			old_stderr = STDERR
@@ -221,9 +233,12 @@ protected
 				tempfile.rewind
 				stderr_output = tempfile.read
 				tempfile.close rescue nil
+				
+				if write_stderr_contents_to
+					write_stderr_contents_to.write(stderr_output)
+					write_stderr_contents_to.flush
+				end
 			end
-			STDERR.write(stderr_output)
-			STDERR.flush
 			channel.write('success')
 			return true
 		rescue StandardError, ScriptError, NoMemoryError => e
@@ -248,8 +263,11 @@ protected
 	# raised.
 	#
 	# Raises:
-	# - AppInitError
-	# - IOError, SystemCallError, SocketError
+	# - AppInitError: this class wraps the exception information
+	#   received through the channel.
+	# - IOError, SystemCallError, SocketError: these errors are
+	#   raised if an error occurred while receiving the information
+	#   through the channel.
 	def unmarshal_and_raise_errors(channel, app_type = "rails")
 		args = channel.read
 		if args.nil?
