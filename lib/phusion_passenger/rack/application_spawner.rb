@@ -72,7 +72,7 @@ class ApplicationSpawner
 		Process.waitpid(pid) rescue nil
 		
 		channel = MessageChannel.new(a)
-		unmarshal_and_raise_errors(channel, "rack")
+		unmarshal_and_raise_errors(channel, !!options["print_exceptions"], "rack")
 		
 		# No exception was raised, so spawning succeeded.
 		pid, socket_name, socket_type = channel.read

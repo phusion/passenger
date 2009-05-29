@@ -94,6 +94,10 @@ class ApplicationSpawner < AbstractServer
 	#   string if the application is deployed on the root URI. It must not
 	#   equal the empty string.
 	#
+	# - +print_exceptions+:
+	#   Whether exceptions that have occurred during application initialization
+	#   should be printed to STDERR. The default is true.
+	#
 	# All other options will be passed on to RequestHandler.
 	def initialize(app_root, options = {})
 		super()
@@ -105,6 +109,7 @@ class ApplicationSpawner < AbstractServer
 		@environment     = @options["environment"]
 		@encoded_environment_variables = @options["environment_variables"]
 		@base_uri = @options["base_uri"] if @options["base_uri"] && @options["base_uri"] != "/"
+		@print_exceptions = @options["print_exceptions"]
 		self.max_idle_time = DEFAULT_APP_SPAWNER_MAX_IDLE_TIME
 		assert_valid_app_root(@app_root)
 		define_message_handler(:spawn_application, :handle_spawn_application)
@@ -186,7 +191,7 @@ class ApplicationSpawner < AbstractServer
 		Process.waitpid(pid) rescue nil
 		
 		channel = MessageChannel.new(a)
-		unmarshal_and_raise_errors(channel)
+		unmarshal_and_raise_errors(channel, @print_exceptions)
 		
 		# No exception was raised, so spawning succeeded.
 		pid, socket_name, socket_type = channel.read
@@ -207,7 +212,7 @@ class ApplicationSpawner < AbstractServer
 	def start
 		super
 		begin
-			unmarshal_and_raise_errors(server)
+			unmarshal_and_raise_errors(server, @print_exceptions)
 		rescue IOError, SystemCallError, SocketError => e
 			stop
 			raise Error, "The application spawner server exited unexpectedly: #{e}"

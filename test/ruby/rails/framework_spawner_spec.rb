@@ -97,8 +97,8 @@ describe FrameworkSpawner do
 		end
 	end
 	
-	def load_nonexistant_framework
-		spawner = FrameworkSpawner.new(:version => "1.9.827")
+	def load_nonexistant_framework(options = {})
+		spawner = FrameworkSpawner.new(options.merge(:version => "1.9.827"))
 		begin
 			spawner.start
 		ensure

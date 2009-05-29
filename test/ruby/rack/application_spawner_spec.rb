@@ -19,7 +19,7 @@ describe PhusionPassenger::Rack::ApplicationSpawner do
 	
 	it "propagates exceptions in application startup" do
 		File.prepend("#{@stub.app_root}/config.ru", "raise StandardError, 'foo'\n")
-		spawn = lambda { spawn(@stub.app_root) }
+		spawn = lambda { spawn(@stub.app_root, "print_exceptions" => false) }
 		spawn.should raise_error(StandardError)
 	end
 	

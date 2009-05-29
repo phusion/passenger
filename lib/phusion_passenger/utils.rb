@@ -154,10 +154,10 @@ protected
 	#
 	# +current_location+ is a string which describes where the code is
 	# currently at. Usually the current class name will be enough.
-	def print_exception(current_location, exception)
+	def print_exception(current_location, exception, destination = STDERR)
 		if !exception.is_a?(SystemExit)
-			STDERR.puts(exception.backtrace_string(current_location))
-			STDERR.flush
+			destination.puts(exception.backtrace_string(current_location))
+			destination.flush if destination.respond_to?(:flush)
 		end
 	end
 	
@@ -264,13 +264,24 @@ protected
 	# received information, then an appropriate exception will be
 	# raised.
 	#
+	# If <tt>print_exception</tt> evaluates to true, then the
+	# exception message and the backtrace will also be printed.
+	# Where it is printed to depends on the type of
+	# <tt>print_exception</tt>:
+	# - If it responds to #puts, then the exception information will
+	#   be printed using this method.
+	# - If it responds to #to_str, then the exception information
+	#   will be appended to the file whose filename equals the return
+	#   value of the #to_str call.
+	# - Otherwise, it will be printed to STDERR.
+	#
 	# Raises:
 	# - AppInitError: this class wraps the exception information
 	#   received through the channel.
 	# - IOError, SystemCallError, SocketError: these errors are
 	#   raised if an error occurred while receiving the information
 	#   through the channel.
-	def unmarshal_and_raise_errors(channel, app_type = "rails")
+	def unmarshal_and_raise_errors(channel, print_exception = nil, app_type = "rails")
 		args = channel.read
 		if args.nil?
 			raise EOFError, "Unexpected end-of-file detected."
@@ -279,8 +290,7 @@ protected
 		if status == 'exception'
 			child_exception = unmarshal_exception(channel.read_scalar)
 			stderr = channel.read_scalar
-			#print_exception(self.class.to_s, child_exception)
-			raise AppInitError.new(
+			exception = AppInitError.new(
 				"Application '#{@app_root}' raised an exception: " <<
 				"#{child_exception.class} (#{child_exception.message})",
 				child_exception,
@@ -289,9 +299,25 @@ protected
 		elsif status == 'exit'
 			child_exception = unmarshal_exception(channel.read_scalar)
 			stderr = channel.read_scalar
-			raise AppInitError.new("Application '#{@app_root}' exited during startup",
+			exception = AppInitError.new("Application '#{@app_root}' exited during startup",
 				child_exception, app_type, stderr.empty? ? nil : stderr)
+		else
+			exception = nil
 		end
+		
+		if print_exception && exception
+			if print_exception.respond_to?(:puts)
+				print_exception(self.class.to_s, child_exception, print_exception)
+			elsif print_exception.respond_to?(:to_str)
+				filename = print_exception.to_str
+				File.open(filename, 'a') do |f|
+					print_exception(self.class.to_s, child_exception, f)
+				end
+			else
+				print_exception(self.class.to_s, child_exception)
+			end
+		end
+		raise exception if exception
 	end
 	
 	# Lower the current process's privilege to the owner of the given file.
@@ -340,6 +366,10 @@ protected
 		end
 	end
 	
+	def to_boolean(value)
+		return !(value.nil? || value == false || value == "false")
+	end
+	
 	def sanitize_spawn_options(options)
 		defaults = {
 			"lower_privilege" => true,
@@ -348,12 +378,15 @@ protected
 			"app_type"        => "rails",
 			"spawn_method"    => "smart-lv2",
 			"framework_spawner_timeout" => -1,
-			"app_spawner_timeout"       => -1
+			"app_spawner_timeout"       => -1,
+			"print_exceptions" => true
 		}
 		options = defaults.merge(options)
-		options["lower_privilege"]           = options["lower_privilege"].to_s == "true"
+		options["lower_privilege"]           = to_boolean(options["lower_privilege"])
 		options["framework_spawner_timeout"] = options["framework_spawner_timeout"].to_i
 		options["app_spawner_timeout"]       = options["app_spawner_timeout"].to_i
+		# Force this to be a boolean for easy use with Utils#unmarshal_and_raise_errors.
+		options["print_exceptions"]          = to_boolean(options["print_exceptions"])
 		return options
 	end
 	

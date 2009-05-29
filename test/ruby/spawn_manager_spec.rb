@@ -1,5 +1,6 @@
 require 'support/config'
 require 'support/test_helper'
+require 'phusion_passenger/application'
 require 'phusion_passenger/spawn_manager'
 
 require 'ruby/abstract_server_spec'
@@ -183,7 +184,7 @@ describe SpawnManager do
 		end
 	end
 	
-	def load_nonexistant_framework
+	def load_nonexistant_framework(extra_options = {})
 		# Prevent detect_framework_version from raising VersionNotFound
 		Application.instance_eval do
 			alias orig_detect_framework_version detect_framework_version
@@ -194,7 +195,7 @@ describe SpawnManager do
 		begin
 			File.write(@stub.environment_rb, "RAILS_GEM_VERSION = '1.9.827'")
 			@stub.dont_use_vendor_rails
-			return spawn_stub_application(@stub)
+			return spawn_stub_application(@stub, extra_options)
 		ensure
 			Application.instance_eval do
 				alias detect_framework_version orig_detect_framework_version

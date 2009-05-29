@@ -164,6 +164,53 @@ describe Utils do
 		end
 	end
 	
+	describe "#unmarshal_and_raise_errors" do
+		before :each do
+			@a, @b = IO.pipe
+			@report_channel = MessageChannel.new(@a)
+			report_app_init_status(MessageChannel.new(@b)) do
+				raise StandardError, "Something went wrong!"
+			end
+		end
+		
+		after :each do
+			@a.close rescue nil
+			@b.close rescue nil
+		end
+		
+		it "prints the exception information to the 'print_exception' argument using #puts, if 'print_exception' responds to that" do
+			buffer = StringIO.new
+			lambda { unmarshal_and_raise_errors(@report_channel, buffer) }.should raise_error(AppInitError)
+			buffer.string.should =~ /Something went wrong!/
+			buffer.string.should =~ /utils\.rb/
+			buffer.string.should =~ /utils_spec\.rb/
+		end
+		
+		it "appends the exception information to the file pointed to by 'print_exception', if 'print_exception' responds to #to_str" do
+			begin
+				lambda { unmarshal_and_raise_errors(@report_channel, "exception.txt") }.should raise_error(AppInitError)
+				data = File.read('exception.txt')
+				data.should =~ /Something went wrong!/
+				data.should =~ /utils\.rb/
+				data.should =~ /utils_spec\.rb/
+			ensure
+				File.unlink('exception.txt') rescue nil
+			end
+		end
+	end
+	
+	specify "#to_boolean works" do
+		to_boolean(nil).should be_false
+		to_boolean(false).should be_false
+		to_boolean(true).should be_true
+		to_boolean(1).should be_true
+		to_boolean(0).should be_true
+		to_boolean("").should be_true
+		to_boolean("true").should be_true
+		to_boolean("false").should be_false
+		to_boolean("bla bla").should be_true
+	end
+	
 	describe "#passenger_tmpdir" do
 		before :each do
 			@old_passenger_tmpdir = Utils.passenger_tmpdir
