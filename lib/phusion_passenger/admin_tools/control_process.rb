@@ -137,7 +137,7 @@ class ControlProcess
 	
 private
 	def connect
-		channel = MessageChannel.new(UNIXSocket.new("#{path}/info/status.socket"))
+		channel = MessageChannel.new(UNIXSocket.new("#{path}/master/pool_controller.socket"))
 		begin
 			yield channel
 		ensure

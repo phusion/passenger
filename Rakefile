@@ -187,7 +187,7 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 			'ext/common/ApplicationPool.h',
 			'ext/common/Application.h',
 			'ext/common/StandardApplicationPool.h',
-			'ext/common/ApplicationPoolStatusReporter.h',
+			'ext/common/ApplicationPoolController.h',
 			'ext/common/MessageChannel.h',
 			'ext/common/SpawnManager.h',
 			'ext/common/PoolOptions.h',
@@ -340,7 +340,8 @@ end
 		'ext/nginx/ScgiRequestParser.h',
 		'ext/nginx/HttpStatusExtractor.h',
 		'ext/common/StaticString.h',
-		'ext/common/StandardApplicationPool.h'
+		'ext/common/StandardApplicationPool.h',
+		'ext/common/ApplicationPoolController.h'
 		]
 	file 'ext/nginx/HelperServer' => helper_server_dependencies do
 		create_executable "ext/nginx/HelperServer",

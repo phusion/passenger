@@ -46,7 +46,7 @@
 #include "HttpStatusExtractor.h"
 
 #include "StandardApplicationPool.h"
-#include "ApplicationPoolStatusReporter.h"
+#include "ApplicationPoolController.h"
 #include "Application.h"
 #include "PoolOptions.h"
 #include "Exceptions.h"
@@ -585,7 +585,7 @@ private:
 	unsigned int numberOfThreads;
 	set<ClientPtr> clients;
 	StandardApplicationPoolPtr pool;
-	shared_ptr<ApplicationPoolStatusReporter> reporter;
+	shared_ptr<ApplicationPoolController> controller;
 	
 	/**
 	 * Starts listening for client connections from this server's <tt>serverSocket</tt>.
@@ -716,7 +716,7 @@ public:
 		pool->setMaxPerApp(maxInstancesPerApp);
 		pool->setMaxIdleTime(poolIdleTime);
 		
-		reporter = ptr(new ApplicationPoolStatusReporter(pool, userSwitching,
+		controller = ptr(new ApplicationPoolController(pool, userSwitching,
 				S_IRUSR | S_IWUSR));
 		
 		// Tell the web server that we're done initializing.

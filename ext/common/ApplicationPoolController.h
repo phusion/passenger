@@ -22,8 +22,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_APPLICATION_POOL_STATUS_REPORTER_H_
-#define _PASSENGER_APPLICATION_POOL_STATUS_REPORTER_H_
+#ifndef _PASSENGER_APPLICATION_POOL_CONTROLLER_H_
+#define _PASSENGER_APPLICATION_POOL_CONTROLLER_H_
 
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
@@ -53,16 +53,21 @@ using namespace oxt;
 using namespace std;
 
 /**
- * An ApplicationPoolStatusReporter allows commandline admin tools to inspect
- * the status of a StandardApplicationPool. It does so by creating a Unix socket
- * in the Passenger temp folder, which tools can connect to to query for
- * information.
+ * An ApplicationPoolController allows external processes to read information
+ * about a StandardApplicationPool and/or to manipulate it. For example, it
+ * allows command line admin tools to inspect a pool's status. It does so by
+ * creating a Unix socket in the Passenger temp folder, which tools can connect
+ * to to query for information and to manipulate the pool.
  *
- * An ApplicationPoolStatusReporter creates a background thread for handling
+ * An ApplicationPoolController creates a background thread for handling
  * connections on the socket. This thread will be automatically cleaned up upon
- * destroying the ApplicationPoolStatusReporter object.
+ * destroying the ApplicationPoolController object.
+ *
+ * <h2>Historical notes</h2>
+ * This class's functionality overlaps somewhat with ApplicationPool. The two
+ * should probably be merged some time in the future.
  */
-class ApplicationPoolStatusReporter {
+class ApplicationPoolController {
 private:
 	/**
 	 * Wrapper class around a file descriptor integer, for RAII behavior.
@@ -165,7 +170,7 @@ private:
 				FileDescriptor fd(syscalls::accept(serverFd, (struct sockaddr *) &addr, &addr_len));
 				if (fd == -1) {
 					int e = errno;
-					P_ERROR("Cannot accept new client on status reporter socket: " <<
+					P_ERROR("Cannot accept new client on pool controller socket: " <<
 						strerror(e) << " (" << e << ")");
 					break;
 				}
@@ -174,16 +179,16 @@ private:
 				this_thread::disable_syscall_interruption dsi;
 				this_thread::disable_interruption di;
 				shared_ptr<oxt::thread> thread(new oxt::thread(
-					bind(&ApplicationPoolStatusReporter::clientThreadFunction, this, fd),
-					"Status reporter client thread " + toString(fd),
+					bind(&ApplicationPoolController::clientThreadFunction, this, fd),
+					"Pool controller client thread " + toString(fd),
 					1024 * 128
 				));
 				threads[fd] = thread;
 			}
 		} catch (const boost::thread_interrupted &) {
-			P_TRACE(2, "Status reporter main thread interrupted.");
+			P_TRACE(2, "Pool controller main thread interrupted.");
 		} catch (const exception &e) {
-			P_ERROR("Error in status reporter main thread: " << e.what());
+			P_ERROR("Error in pool controller main thread: " << e.what());
 		}
 	}
 	
@@ -210,14 +215,14 @@ private:
 					UPDATE_TRACE_POINT();
 					writeScalarAndIgnoreErrors(channel, pool->toXml());
 				} else {
-					P_ERROR("Error in status reporter client thread: unknown query '" <<
+					P_ERROR("Error in pool controller client thread: unknown query '" <<
 						args[0] << "'.");
 				}
 			}
 		} catch (const boost::thread_interrupted &) {
-			P_TRACE(2, "Status reporter client thread " << fd << " interrupted.");
+			P_TRACE(2, "Pool controller client thread " << fd << " interrupted.");
 		} catch (const exception &e) {
-			P_ERROR("Error in status reporter client thread: " << e.what());
+			P_ERROR("Error in pool controller client thread: " << e.what());
 		}
 		
 		boost::lock_guard<boost::mutex> l(threadsLock);
@@ -228,7 +233,7 @@ private:
 
 public:
 	/**
-	 * Creates a new ApplicationPoolStatusReporter.
+	 * Creates a new ApplicationPoolController.
 	 *
 	 * @param pool The application pool to monitor.
 	 * @param userSwitching Whether user switching is enabled. This is used
@@ -247,10 +252,10 @@ public:
 	 *     creation of the thread.
 	 * @throws boost::thread_interrupted A system call has been interrupted.
 	 */
-	ApplicationPoolStatusReporter(StandardApplicationPoolPtr &pool,
-	                              bool userSwitching,
-	                              mode_t permissions = S_IRUSR | S_IWUSR,
-	                              uid_t uid = -1, gid_t gid = -1) {
+	ApplicationPoolController(StandardApplicationPoolPtr &pool,
+	                          bool userSwitching,
+	                          mode_t permissions = S_IRUSR | S_IWUSR,
+	                          uid_t uid = -1, gid_t gid = -1) {
 		int ret;
 		
 		this->pool = pool;
@@ -258,7 +263,7 @@ public:
 		createPassengerTempDir(getSystemTempDir(), userSwitching,
 			"nobody", geteuid(), getegid());
 		
-		snprintf(filename, sizeof(filename) - 1, "%s/info/status.socket",
+		snprintf(filename, sizeof(filename) - 1, "%s/master/pool_controller.socket",
 			getPassengerTempDir().c_str());
 		filename[PATH_MAX - 1] = '\0';
 		serverFd = createUnixServer(filename, 10);
@@ -290,8 +295,8 @@ public:
 		
 		try {
 			mainThread = new oxt::thread(
-				bind(&ApplicationPoolStatusReporter::mainThreadFunction, this),
-				"Status reporter main thread",
+				bind(&ApplicationPoolController::mainThreadFunction, this),
+				"Pool controller main thread",
 				1024 * 128
 			);
 		} catch (...) {
@@ -302,7 +307,7 @@ public:
 		}
 	}
 	
-	~ApplicationPoolStatusReporter() {
+	~ApplicationPoolController() {
 		this_thread::disable_syscall_interruption dsi;
 		this_thread::disable_interruption di;
 		int ret;
@@ -333,4 +338,4 @@ public:
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_APPLICATION_POOL_STATUS_REPORTER_H_ */
+#endif /* _PASSENGER_APPLICATION_POOL_CONTROLLER_H_ */

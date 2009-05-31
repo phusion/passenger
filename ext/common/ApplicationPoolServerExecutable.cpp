@@ -62,7 +62,7 @@
 
 #include "MessageChannel.h"
 #include "StandardApplicationPool.h"
-#include "ApplicationPoolStatusReporter.h"
+#include "ApplicationPoolController.h"
 #include "Application.h"
 #include "Logging.h"
 #include "Exceptions.h"
@@ -783,7 +783,7 @@ Server::start() {
 			fifoUid = (uid_t) -1;
 			fifoGid = (gid_t) -1;
 		}
-		ApplicationPoolStatusReporter reporter(pool, user.empty(),
+		ApplicationPoolController controller(pool, user.empty(),
 			S_IRUSR | S_IWUSR, fifoUid, fifoGid);
 		
 		createServerSocket();
