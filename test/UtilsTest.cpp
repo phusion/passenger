@@ -254,4 +254,56 @@ namespace tut {
 		ensure_equals(resolveSymlink("tmp.symlinks/file3"), "tmp.symlinks/file2");
 		ensure_equals(resolveSymlink("tmp.symlinks/absolute_symlink"), "/usr/bin");
 	}
+	
+	/***** Test generateSecureToken() *****/
+	
+	TEST_METHOD(28) {
+		char buf[10], buf2[10];
+		generateSecureToken(buf, sizeof(buf));
+		generateSecureToken(buf2, sizeof(buf2));
+		ensure(memcmp(buf, buf2, sizeof(buf)) != 0);
+	}
+	
+	/***** Test toHex() *****/
+	
+	TEST_METHOD(29) {
+		ensure_equals(toHex(""), "");
+		ensure_equals(toHex(StaticString("\x00", 1)), "00");
+		ensure_equals(toHex(StaticString("\x00\x01", 2)), "0001");
+		ensure_equals(toHex(StaticString("\x00\x01\x02", 3)), "000102");
+		ensure_equals(toHex(StaticString("\x00\x01\xF0\xAF\xFF\x98", 6)), "0001f0afff98");
+		ensure_equals(toHex("hello world!"), "68656c6c6f20776f726c6421");
+	}
+	
+	/***** Test fillInMiddle() *****/
+	
+	TEST_METHOD(30) {
+		ensure_equals(fillInMiddle(20, "server.", "123456", ".socket"), "server.123456.socket");
+		ensure_equals(fillInMiddle(25, "server.", "123456", ".socket"), "server.123456.socket");
+		ensure_equals(fillInMiddle(19, "server.", "123456", ".socket"), "server.12345.socket");
+		ensure_equals(fillInMiddle(16, "server.", "123456", ".socket"), "server.12.socket");
+		
+		ensure_equals(fillInMiddle(10, "", "1234", ""), "1234");
+		ensure_equals(fillInMiddle(4, "", "1234", ""), "1234");
+		ensure_equals(fillInMiddle(2, "", "1234", ""), "12");
+		
+		ensure_equals(fillInMiddle(20, "", "1234", ".socket"), "1234.socket");
+		ensure_equals(fillInMiddle(11, "", "1234", ".socket"), "1234.socket");
+		ensure_equals(fillInMiddle(9, "", "1234", ".socket"), "12.socket");
+		
+		try {
+			fillInMiddle(14, "server.", "123456", ".socket");
+			fail();
+		} catch (const ArgumentException &) { }
+		
+		try {
+			fillInMiddle(10, "server.", "123456", ".socket");
+			fail();
+		} catch (const ArgumentException &) { }
+		
+		try {
+			fillInMiddle(10, "server.", "", ".socket");
+			fail();
+		} catch (const ArgumentException &) { }
+	}
 }

@@ -38,6 +38,7 @@
 #include <cstring>
 #include <errno.h>
 #include <unistd.h>
+#include "StaticString.h"
 #include "Exceptions.h"
 
 namespace Passenger {
@@ -422,10 +423,41 @@ bool verifyWSGIDir(const string &dir, CachedFileStat *cstat = 0,
  * Generate a secure, random token of the <tt>size</tt> bytes and put
  * the result into <tt>buf</tt>.
  *
+ * This method is thread-safe.
+ *
  * @throws FileSystemException
  * @throws IOException
+ * @throws boost::thread_interrupted A system call has been interrupted.
  */
 void generateSecureToken(void *buf, unsigned int size);
+
+/**
+ * Given a prefix string, a middle string and a postfix string, try to build a string
+ * that looks like <tt>prefix + middle + postfix</tt>, with as many characters from
+ * <tt>midle</tt> preserved as possible.
+ *
+ * If <tt>prefix + middle + postfix</tt> does not fit in <tt>max</tt> characters,
+ * then <tt>middle</tt> will be truncated so that it fits. If <tt>max</tt> is too
+ * small to contain even 1 character from <tt>middle</tt>, then an ArgumentException
+ * will be thrown.
+ *
+ * @code
+ *   fillInMiddle(18, "server.", "1234", ".socket");    // "server.1234.socket"
+ *   fillInMiddle(16, "server.", "1234", ".socket");    // "server.12.socket"
+ *   fillInMiddle(14, "server.", "1234", ".socket");    // ArgumentException
+ * @endcode
+ *
+ * @returns The resulting string, with <tt>middle</tt> possibly truncated.
+ * @throws ArgumentException <tt>max</tt> is too small to contain even 1
+ *         character from <tt>middle</tt>.
+ * @post result.size() <= max
+ */
+string fillInMiddle(unsigned int max, const string &prefix, const string &middle, const string &postfix = "");
+
+/**
+ * Convert the given binary data to hexadecimal.
+ */
+string toHex(const StaticString &data);
 
 /**
  * Create a new Unix server socket which is bounded to <tt>filename</tt>.

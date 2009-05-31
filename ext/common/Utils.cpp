@@ -547,14 +547,42 @@ generateSecureToken(void *buf, unsigned int size) {
 			errno, "/dev/urandom");
 	}
 	
-	if (syscalls::fread(buf, 1, size, f) != size) {
-		this_thread::disable_syscall_interruption dsi;
-		syscalls::fclose(f);
+	this_thread::disable_syscall_interruption dsi;
+	size_t ret = syscalls::fread(buf, 1, size, f);
+	syscalls::fclose(f);
+	if (ret != size) {
 		throw IOException("Cannot read sufficient data from /dev/urandom");
 	}
+}
+
+string
+fillInMiddle(unsigned int max, const string &prefix, const string &middle, const string &postfix) {
+	if (max <= prefix.size() + postfix.size()) {
+		throw ArgumentException("Impossible to build string with the given size constraint.");
+	}
 	
-	this_thread::disable_syscall_interruption dsi;
-	syscalls::fclose(f);
+	unsigned int fillSize = max - (prefix.size() + postfix.size());
+	if (fillSize > middle.size()) {
+		return prefix + middle + postfix;
+	} else {
+		return prefix + middle.substr(0, fillSize) + postfix;
+	}
+}
+
+string
+toHex(const StaticString &data) {
+	static const char chars[] = {
+		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+		'a', 'b', 'c', 'd', 'e', 'f'
+	};
+	string result(data.size() * 2, '\0');
+	string::size_type i;
+	
+	for (i = 0; i < data.size(); i++) {
+		result[i * 2] = chars[(unsigned char) data.at(i) / 16];
+		result[i * 2 + 1] = chars[(unsigned char) data.at(i) % 16];
+	}
+	return result;
 }
 
 int

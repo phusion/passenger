@@ -614,10 +614,15 @@ private:
 	 * @post serverSocket != -1 && serverPid != 0
 	 * @throws SystemException Something went wrong.
 	 * @throws IOException Something went wrong.
+	 * @throws ConfigurationException The Passenger temp directory's filename
+	 *             is so long that we cannot create a Unix socket inside it.
+	 *             You should use a different, shorter, directory as the
+	 *             Passenger temp directory.
 	 */
 	void restartServer() {
 		TRACE_POINT();
 		this_thread::disable_syscall_interruption dsi;
+		char randomToken[32];
 		string socketFilename;
 		int theAdminPipe[2], feedbackPipe[2];
 		char thePassword[PASSWORD_SIZE];
@@ -629,13 +634,33 @@ private:
 		
 		createPassengerTempDir(getSystemTempDir(), m_user.empty(),
 			"nobody", geteuid(), getegid());
-		socketFilename = getPassengerTempDir() + "/master/application_pool.socket";
+		
+		generateSecureToken(randomToken, sizeof(randomToken));
+		try {
+			struct sockaddr_un addr;
+			socketFilename = fillInMiddle(sizeof(addr.sun_path) - 1,
+				getPassengerTempDir() + "/master/application_pool.",
+				toHex(StaticString(randomToken, sizeof(randomToken))) + "-" + toString(getpid()),
+				".sock");
+		} catch (const ArgumentException &) {
+			string message = "Unable to create a Unix domain socket inside "
+				"Phusion Passenger's temp directory, '";
+				message.append(getPassengerTempDir());
+				message.append("'. This is because the resulting filename "
+				"will be too long. Please set a different directory as "
+				"the Phusion Passenger temp directory using the "
+				"'PassengerTempDir' directive.");
+			throw ConfigurationException(message);
+		}
+		
 		generateSecureToken(thePassword, PASSWORD_SIZE);
 		
+		UPDATE_TRACE_POINT();
 		if (syscalls::pipe(theAdminPipe) == -1) {
 			int e = errno;
 			throw SystemException("Cannot create a pipe", e);
 		}
+		UPDATE_TRACE_POINT();
 		if (syscalls::pipe(feedbackPipe) == -1) {
 			int e = errno;
 			syscalls::close(theAdminPipe[0]);
@@ -643,6 +668,7 @@ private:
 			throw SystemException("Cannot create a pipe", e);
 		}
 		
+		UPDATE_TRACE_POINT();
 		pid = syscalls::fork();
 		if (pid == 0) { // Child process.
 			close(theAdminPipe[1]);
@@ -733,6 +759,10 @@ public:
 	 * @throws SystemException An error occured while trying to setup the spawn server
 	 *            or the server socket.
 	 * @throws IOException Something went wrong.
+	 * @throws ConfigurationException The Passenger temp directory's filename
+	 *             is so long that we cannot create a Unix socket inside it.
+	 *             You should use a different, shorter, directory as the
+	 *             Passenger temp directory.
 	 */
 	ApplicationPoolServer(const string &serverExecutable,
 	             const string &spawnServerCommand,

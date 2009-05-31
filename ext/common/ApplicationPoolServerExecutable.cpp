@@ -132,7 +132,7 @@ private:
 		char buf[PASSWORD_SIZE];
 		
 		if (!channel.readRaw(buf, PASSWORD_SIZE)) {
-			throw IOException("Could not read password from the owner pipe.");
+			throw IOException("Could not read password from the admin pipe.");
 		}
 		return string(buf, PASSWORD_SIZE);
 	}

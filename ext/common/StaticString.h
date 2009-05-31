@@ -78,6 +78,14 @@ public:
 		return len;
 	}
 	
+	char operator[](string::size_type i) const {
+		return content[i];
+	}
+	
+	char at(string::size_type i) const {
+		return content[i];
+	}
+	
 	const char *c_str() const {
 		return content;
 	}

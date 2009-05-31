@@ -226,6 +226,20 @@ public:
 };
 
 /**
+ * Indicates that a specified argument is incorrect or violates a requirement.
+ *
+ * @ingroup Exceptions
+ */
+class ArgumentException: public oxt::tracable_exception {
+private:
+	string msg;
+public:
+	ArgumentException(const string &message): msg(message) {}
+	virtual ~ArgumentException() throw() {}
+	virtual const char *what() const throw() { return msg.c_str(); }
+};
+
+/**
  * A generic runtime exception.
  *
  * @ingroup Exceptions
