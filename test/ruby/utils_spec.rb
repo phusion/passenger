@@ -120,6 +120,50 @@ describe Utils do
 		end
 	end
 	
+	specify "#safe_fork with double_fork == false reseeds the pseudo-random number generator" do
+		a, b = IO.pipe
+		begin
+			pid = safe_fork do
+				b.puts(rand)
+			end
+			Process.waitpid(pid) rescue nil
+			pid = safe_fork do
+				b.puts(rand)
+			end
+			Process.waitpid(pid) rescue nil
+			
+			first_num = a.readline
+			second_num = a.readline
+			first_num.should_not == second_num
+		ensure
+			a.close rescue nil
+			b.close rescue nil
+		end
+	end
+	
+	specify "#safe_fork with double_fork == true reseeds the pseudo-random number generator" do
+		a, b = IO.pipe
+		begin
+			# Seed the pseudo-random number generator here
+			# so that it doesn't happen in the child processes.
+			srand
+			
+			safe_fork(self.class, true) do
+				b.puts(rand)
+			end
+			safe_fork(self.class, true) do
+				b.puts(rand)
+			end
+			
+			first_num = a.readline
+			second_num = a.readline
+			first_num.should_not == second_num
+		ensure
+			a.close rescue nil
+			b.close rescue nil
+		end
+	end
+	
 	describe "#passenger_tmpdir" do
 		before :each do
 			@old_passenger_tmpdir = Utils.passenger_tmpdir

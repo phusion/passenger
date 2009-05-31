@@ -32,7 +32,7 @@ describe SpawnManager do
 			@spawn_method = "smart"
 		end
 		
-		it_should_behave_like "AbstractServer"
+		it_should_behave_like "an AbstractServer"
 	end
 	
 	describe "conservative spawning" do
@@ -40,7 +40,7 @@ describe SpawnManager do
 			@spawn_method = "conservative"
 		end
 		
-		it_should_behave_like "AbstractServer"
+		it_should_behave_like "an AbstractServer"
 	end
 	
 	def spawn_arbitrary_application

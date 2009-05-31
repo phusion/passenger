@@ -178,9 +178,11 @@ protected
 				if double_fork
 					pid2 = fork
 					if pid2.nil?
+						srand
 						yield
 					end
 				else
+					srand
 					yield
 				end
 			rescue Exception => e

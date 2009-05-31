@@ -18,6 +18,10 @@ require 'phusion_passenger/utils'
 # Calculate location of the temp dir and cache it.
 PhusionPassenger::Utils.passenger_tmpdir
 
+# Seed the pseudo-random number generator here
+# so that it doesn't happen in the child processes.
+srand
+
 Spec::Runner.configure do |config|
 	config.append_after do
 		FileUtils.chmod_R(0777, PhusionPassenger::Utils.passenger_tmpdir);

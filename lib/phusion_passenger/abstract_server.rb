@@ -124,7 +124,7 @@ class AbstractServer
 		if started?
 			raise ServerAlreadyStarted, "Server is already started"
 		end
-	
+		
 		@parent_socket, @child_socket = UNIXSocket.pair
 		before_fork
 		@pid = fork
@@ -150,6 +150,9 @@ class AbstractServer
 				# result in mysterious 'EBADFD' errors. So we force RubyGems to
 				# clear all open file handles.
 				Gem.clear_paths
+				
+				# Reseed pseudo-random number generator for security reasons.
+				srand
 				
 				start_synchronously(@child_socket)
 			rescue Interrupt
