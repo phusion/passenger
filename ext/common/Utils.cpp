@@ -541,6 +541,11 @@ void
 generateSecureToken(void *buf, unsigned int size) {
 	FILE *f;
 	
+	/* Opening /dev/urandom is sloooow on MacOS X and OpenBSD. :-(
+	 * If this turns out to be a problem we should open /dev/urandom
+	 * only once and keep it open indefinitely.
+	 */
+	
 	f = syscalls::fopen("/dev/urandom", "r");
 	if (f == NULL) {
 		throw FileSystemException("Cannot open /dev/urandom",
