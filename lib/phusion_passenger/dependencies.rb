@@ -296,6 +296,16 @@ module Dependencies # :nodoc: all
 				result.found(PlatformInfo.apu_config)
 			end
 		end
+		if RUBY_PLATFORM =~ /linux/
+			case PlatformInfo.linux_distro
+			when :ubuntu, :debian
+				dep.install_command = "apt-get install libaprutil1-dev"
+			end
+		elsif RUBY_PLATFORM =~ /darwin/
+			dep.install_instructions = "Please install Apache from MacPorts, which will " <<
+				"provide APU automatically. <b>Or</b>, if you're installing against MacOS X's " <<
+				"default provided Apache, then please install the OS X Developer SDK."
+		end
 		dep.website = "http://httpd.apache.org/"
 		dep.website_comments = "APR Utility is an integrated part of Apache."
 	end
