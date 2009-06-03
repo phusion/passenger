@@ -39,15 +39,18 @@ class Installer < PhusionPassenger::AbstractInstaller
 	NGINX_VERSION = "0.6.37"
 	
 	def dependencies
-		return [
+		result = [
 			Dependencies::GCC,
 			Dependencies::Ruby_DevHeaders,
 			Dependencies::Ruby_OpenSSL,
 			Dependencies::RubyGems,
 			Dependencies::Rake,
-			Dependencies::FastThread,
 			Dependencies::Zlib_Dev
 		]
+		if Dependencies.fastthread_required?
+			result << Dependencies::FastThread
+		end
+		return result
 	end
 	
 	def users_guide
