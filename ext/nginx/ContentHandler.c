@@ -63,10 +63,10 @@ get_file_type(const u_char *filename, unsigned int throttle_rate) {
     struct stat buf;
     int ret;
     
-    ret = cached_multi_file_stat_perform(passenger_stat_cache,
-                                         (const char *) filename,
-                                         &buf,
-                                         throttle_rate);
+    ret = cached_file_stat_perform(passenger_stat_cache,
+                                   (const char *) filename,
+                                   &buf,
+                                   throttle_rate);
     if (ret == 0) {
         if (S_ISREG(buf.st_mode)) {
             return FT_FILE;

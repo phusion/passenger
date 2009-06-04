@@ -65,7 +65,7 @@ const char        passenger_temp_dir[NGX_MAX_PATH];
 ngx_str_t         passenger_schema_string;
 ngx_str_t         passenger_helper_server_password;
 const char        passenger_helper_server_socket[NGX_MAX_PATH];
-CachedMultiFileStat *passenger_stat_cache;
+CachedFileStat   *passenger_stat_cache;
 
 static void shutdown_helper_server(ngx_cycle_t *cycle);
 
@@ -539,7 +539,7 @@ pre_config_init(ngx_conf_t *cf)
     passenger_schema_string.data = (u_char *) "passenger://";
     passenger_schema_string.len  = sizeof("passenger://") - 1;
     
-    passenger_stat_cache = cached_multi_file_stat_new(1024);
+    passenger_stat_cache = cached_file_stat_new(1024);
     
     ret = add_variables(cf);
     if (ret != NGX_OK) {

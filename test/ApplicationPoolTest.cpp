@@ -584,6 +584,16 @@
 		thr.join();
 	}
 	
+	TEST_METHOD(26) {
+		// When a previous application domain spinned down, and we touched
+		// restart.txt and try to spin up a new process for this domain,
+		// then any ApplicationSpawner/FrameworkSpawner processes should be
+		// killed first.
+		
+		// TODO: to test this we first need to be able to move
+		// ApplicationPoolServer in-process so that we can use mock objects
+	}
+	
 	/*************************************/
 	
 #endif /* USE_TEMPLATE */

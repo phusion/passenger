@@ -49,7 +49,7 @@ public:
 	 * Returns the time since the Epoch, measured in seconds. Or, if a time
 	 * was forced, then the forced time is returned instead.
 	 *
-	 * @throws SystemException Something went wrong while retrieving the time.
+	 * @throws TimeRetrievalException Something went wrong while retrieving the time.
 	 * @throws boost::thread_interrupted
 	 */
 	static time_t get() {
@@ -58,7 +58,8 @@ public:
 		} else {
 			time_t ret = syscalls::time(NULL);
 			if (ret == -1) {
-				throw SystemException("Unable to retrieve the system time",
+				throw TimeRetrievalException(
+					"Unable to retrieve the system time",
 					errno);
 			}
 			return ret;

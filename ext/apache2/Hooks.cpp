@@ -176,7 +176,7 @@ private:
 	ApplicationPoolServerPtr applicationPoolServer;
 	thread_specific_ptr<ApplicationPoolPtr> threadSpecificApplicationPool;
 	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex;
-	CachedMultiFileStat *mstat;
+	CachedFileStat cstat;
 	
 	inline DirConfig *getDirConfig(request_rec *r) {
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
@@ -294,7 +294,7 @@ private:
 	 */
 	bool prepareRequest(request_rec *r, DirConfig *config, const char *filename, bool coreModuleWillBeRun = false) {
 		TRACE_POINT();
-		DirectoryMapper mapper(r, config, mstat, config->getStatThrottleRate());
+		DirectoryMapper mapper(r, config, &cstat, config->getStatThrottleRate());
 		try {
 			if (mapper.getBaseURI() == NULL) {
 				// (B) is not true.
@@ -1063,14 +1063,14 @@ private:
 	}
 
 public:
-	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s) {
+	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
+	    : cstat(1024) {
 		passenger_config_merge_all_servers(pconf, s);
 		ServerConfig *config = getServerConfig(s);
 		Passenger::setLogLevel(config->logLevel);
 		m_hasModRewrite = UNKNOWN;
 		m_hasModDir = UNKNOWN;
 		m_hasModAutoIndex = UNKNOWN;
-		mstat = cached_multi_file_stat_new(1024);
 		
 		P_DEBUG("Initializing Phusion Passenger...");
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
@@ -1134,7 +1134,6 @@ public:
 	}
 	
 	~Hooks() {
-		cached_multi_file_stat_free(mstat);
 		removeDirTree(getPassengerTempDir().c_str());
 	}
 	

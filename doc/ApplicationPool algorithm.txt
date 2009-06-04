@@ -65,12 +65,6 @@ explicitly define some special types:
     application instance in this domain may process. After having processed this
     many requests, the application instance will be shut down.
     A value of 0 indicates that there is no maximum.
-  
-  * restart_file_checker
-    An object which monitors the restart.txt file, which belongs to this
-    application root, for changes. This object has the method changed(),
-    which rteurns whether restart.txt's timestamp has changed since the last
-    check.
 
 - AppContainer
   A compound type (class) which contains an application instance, as well as
@@ -99,7 +93,7 @@ explicitly define some special types:
   A structure containing additional information used by the spawn manager's
   spawning process, as well as by the get() function.
   
-  A PoolOptions has the following members:
+  A PoolOptions has at least the following members:
   * max_requests (unsigned integer) - The maximum number of requests that the
     application instance may process. After having processed this many requests,
     the application instance will be shut down. A value of 0 indicates that there
@@ -107,6 +101,9 @@ explicitly define some special types:
   * use_global_queue (boolean) - Whether to use a global queue for all
     application instances, or a queue that's private to the application instance.
     The users guide explains this feature in more detail.
+  * restart_dir (string) - The directory in which the algorithm should look for
+    restart.txt and always_restart.txt. The existance and modification times of
+    these files tell the algorithm whether an application should be restarted.
 
 === Special functions
 
@@ -226,17 +223,18 @@ function get(app_root, options):
 function spawn_or_use_existing(app_root, options):
 	domain = domains[app_root]
 	
-	if (domain != nil) and (needs_restart(app_root, domain)):
-		for all container in domain.instances:
-			if container.sessions == 0:
-				inactive_apps.remove(container.ia_iterator)
-			else:
-				active--
-			domain.instances.remove(container.iterator)
-			count--
-		domains.remove(app_root)
-		list = nil
+	if needs_restart(app_root, options):
+		if (domain != nil):
+			for all container in domain.instances:
+				if container.sessions == 0:
+					inactive_apps.remove(container.ia_iterator)
+				else:
+					active--
+				domain.instances.remove(container.iterator)
+				count--
+			domains.remove(app_root)
 		Tell spawn server to reload code for app_root.
+		domain = nil
 	
 	if domain != nil:
 		# There are apps for this app root.
@@ -320,7 +318,6 @@ function spawn_or_use_existing(app_root, options):
 		if domain == nil:
 			domain = new Domain
 			initialize domain.instances
-			initialize domain.restart_file_checker with "$app_root/tmp/restart.txt"
 			domain.size = 1
 			domain.max_requests = options.max_requests
 			domains[app_root] = domain
@@ -362,10 +359,17 @@ function session_has_been_closed(container):
 					active--
 
 
-function needs_restart(app_root, domain):
-	always_restart_file = "$app_root/tmp/always_restart.txt"
-	return (file_exists(always_restart_file)) or
-	       (domain.restart_file_checker.changed())
+function needs_restart(app_root, options):
+	if (options.restart_dir is not set):
+		restart_dir = app_root + "/tmp"
+	else if (options.restart_dir is an absolute path):
+		restart_dir = options.restart_dir
+	else:
+		restart_dir = app_root + "/" + options.restart_dir
+	
+	return (file_exists("$restart_dir/always_restart.txt")) or
+	       (we haven't seen "$restart_dir/restart.txt" before) or
+	       ("$restart_dir/restart.txt" changed since the last time we checked)
 
 
 # The following thread will be responsible for cleaning up idle application

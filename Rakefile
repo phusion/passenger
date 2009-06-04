@@ -192,9 +192,9 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 			'ext/common/SpawnManager.h',
 			'ext/common/PoolOptions.h',
 			'ext/common/StringListCreator.h',
-			'ext/common/FileChecker.h',
+			'ext/common/FileChangeChecker.h',
 			'ext/common/SystemTime.h',
-			'ext/common/CachedFileStat.h',
+			'ext/common/CachedFileStat.hpp',
 			boost_oxt_library,
 			static_library
 		]) do
@@ -424,7 +424,8 @@ end
 			ext/common/SpawnManager.h
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
-			ext/common/FileChecker.h
+			ext/common/FileChangeChecker.h
+			ext/common/CachedFileStat.hpp
 			ext/common/Application.h),
 		'test/PoolOptionsTest.o' => %w(
 			test/PoolOptionsTest.cpp
@@ -444,17 +445,17 @@ end
 		'test/HttpStatusExtractorTest.o' => %w(
 			test/HttpStatusExtractorTest.cpp
 			ext/nginx/HttpStatusExtractor.h),
-		'test/FileCheckerTest.o' => %w(
-			test/FileCheckerTest.cpp
-			ext/common/FileChecker.h
-			ext/common/CachedFileStat.h),
+		'test/FileChangeCheckerTest.o' => %w(
+			test/FileChangeCheckerTest.cpp
+			ext/common/FileChangeChecker.h
+			ext/common/CachedFileStat.hpp),
 		'test/SystemTimeTest.o' => %w(
 			test/SystemTimeTest.cpp
 			ext/common/SystemTime.h
 			ext/common/SystemTime.cpp),
 		'test/CachedFileStatTest.o' => %w(
 			test/CachedFileStatTest.cpp
-			ext/common/CachedFileStat.h
+			ext/common/CachedFileStat.hpp
 			ext/common/CachedFileStat.cpp),
 		'test/UtilsTest.o' => %w(
 			test/UtilsTest.cpp

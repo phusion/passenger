@@ -31,7 +31,7 @@
 #include <cassert>
 #include <libgen.h>
 #include <pwd.h>
-#include "CachedFileStat.h"
+#include "CachedFileStat.hpp"
 #include "Exceptions.h"
 #include "Utils.h"
 
@@ -64,17 +64,17 @@ split(const string &str, char sep, vector<string> &output) {
 }
 
 bool
-fileExists(const char *filename, CachedMultiFileStat *mstat, unsigned int throttleRate) {
-	return getFileType(filename, mstat, throttleRate) == FT_REGULAR;
+fileExists(const char *filename, CachedFileStat *cstat, unsigned int throttleRate) {
+	return getFileType(filename, cstat, throttleRate) == FT_REGULAR;
 }
 
 FileType
-getFileType(const char *filename, CachedMultiFileStat *mstat, unsigned int throttleRate) {
+getFileType(const char *filename, CachedFileStat *cstat, unsigned int throttleRate) {
 	struct stat buf;
 	int ret;
 	
-	if (mstat != NULL) {
-		ret = cached_multi_file_stat_perform(mstat, filename, &buf, throttleRate);
+	if (cstat != NULL) {
+		ret = cstat->stat(filename, &buf, throttleRate);
 	} else {
 		ret = stat(filename, &buf);
 	}
@@ -512,24 +512,24 @@ removeDirTree(const string &path) {
 }
 
 bool
-verifyRailsDir(const string &dir, CachedMultiFileStat *mstat, unsigned int throttleRate) {
+verifyRailsDir(const string &dir, CachedFileStat *cstat, unsigned int throttleRate) {
 	string temp(dir);
 	temp.append("/config/environment.rb");
-	return fileExists(temp.c_str(), mstat, throttleRate);
+	return fileExists(temp.c_str(), cstat, throttleRate);
 }
 
 bool
-verifyRackDir(const string &dir, CachedMultiFileStat *mstat, unsigned int throttleRate) {
+verifyRackDir(const string &dir, CachedFileStat *cstat, unsigned int throttleRate) {
 	string temp(dir);
 	temp.append("/config.ru");
-	return fileExists(temp.c_str(), mstat, throttleRate);
+	return fileExists(temp.c_str(), cstat, throttleRate);
 }
 
 bool
-verifyWSGIDir(const string &dir, CachedMultiFileStat *mstat, unsigned int throttleRate) {
+verifyWSGIDir(const string &dir, CachedFileStat *cstat, unsigned int throttleRate) {
 	string temp(dir);
 	temp.append("/passenger_wsgi.py");
-	return fileExists(temp.c_str(), mstat, throttleRate);
+	return fileExists(temp.c_str(), cstat, throttleRate);
 }
 
 int

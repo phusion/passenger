@@ -40,12 +40,12 @@
 #include <unistd.h>
 #include "Exceptions.h"
 
-typedef struct CachedMultiFileStat CachedMultiFileStat;
-
 namespace Passenger {
 
 using namespace std;
 using namespace boost;
+
+typedef struct CachedFileStat CachedFileStat;
 
 /** Enumeration which indicates what kind of file a file is. */
 typedef enum {
@@ -158,31 +158,34 @@ void split(const string &str, char sep, vector<string> &output);
  * Check whether the specified file exists.
  *
  * @param filename The filename to check.
- * @param mstat A CachedMultiFileStat object, if you want to use cached statting.
- * @param throttleRate A throttle rate for mstat. Only applicable if mstat is not NULL.
+ * @param cstat A CachedFileStat object, if you want to use cached statting.
+ * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
  * @return Whether the file exists.
  * @throws FileSystemException Unable to check because of a filesystem error.
+ * @throws TimeRetrievalException
+ * @throws boost::thread_interrupted
  * @ingroup Support
  */
-bool fileExists(const char *filename, CachedMultiFileStat *mstat = 0,
+bool fileExists(const char *filename, CachedFileStat *cstat = 0,
                 unsigned int throttleRate = 0);
 
 /**
  * Check whether 'filename' exists and what kind of file it is.
  *
  * @param filename The filename to check.
- * @param mstat A CachedMultiFileStat object, if you want to use cached statting.
- * @param throttleRate A throttle rate for mstat. Only applicable if mstat is not NULL.
+ * @param mstat A CachedFileStat object, if you want to use cached statting.
+ * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
  * @return The file type.
  * @throws FileSystemException Unable to check because of a filesystem error.
+ * @throws TimeRetrievalException
+ * @throws boost::thread_interrupted
  * @ingroup Support
  */
-FileType getFileType(const char *filename, CachedMultiFileStat *mstat = 0,
+FileType getFileType(const char *filename, CachedFileStat *cstat = 0,
                      unsigned int throttleRate = 0);
 
 /**
  * Find the location of the Passenger spawn server script.
- * If passengerRoot is given, t T
  *
  * @param passengerRoot The Passenger root folder. If NULL is given, then
  *      the spawn server is found by scanning $PATH. For security reasons,
@@ -377,36 +380,42 @@ void removeDirTree(const string &path);
  * Check whether the specified directory is a valid Ruby on Rails
  * application root directory.
  *
- * @param mstat A CachedMultiFileStat object, if you want to use cached statting.
- * @param throttleRate A throttle rate for mstat. Only applicable if mstat is not NULL.
+ * @param cstat A CachedFileStat object, if you want to use cached statting.
+ * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
  * @throws FileSystemException Unable to check because of a system error.
+ * @throws TimeRetrievalException
+ * @throws boost::thread_interrupted
  * @ingroup Support
  */
-bool verifyRailsDir(const string &dir, CachedMultiFileStat *mstat = 0,
+bool verifyRailsDir(const string &dir, CachedFileStat *cstat = 0,
                     unsigned int throttleRate = 0);
 
 /**
  * Check whether the specified directory is a valid Rack application
  * root directory.
  *
- * @param mstat A CachedMultiFileStat object, if you want to use cached statting.
- * @param throttleRate A throttle rate for mstat. Only applicable if mstat is not NULL.
+ * @param cstat A CachedFileStat object, if you want to use cached statting.
+ * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
  * @throws FileSystemException Unable to check because of a filesystem error.
+ * @throws TimeRetrievalException
+ * @throws boost::thread_interrupted
  * @ingroup Support
  */
-bool verifyRackDir(const string &dir, CachedMultiFileStat *mstat = 0,
+bool verifyRackDir(const string &dir, CachedFileStat *cstat = 0,
                    unsigned int throttleRate = 0);
 
 /**
  * Check whether the specified directory is a valid WSGI application
  * root directory.
  *
- * @param mstat A CachedMultiFileStat object, if you want to use cached statting.
- * @param throttleRate A throttle rate for mstat. Only applicable if mstat is not NULL.
+ * @param cstat A CachedFileStat object, if you want to use cached statting.
+ * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
  * @throws FileSystemException Unable to check because of a filesystem error.
+ * @throws TimeRetrievalException
+ * @throws boost::thread_interrupted
  * @ingroup Support
  */
-bool verifyWSGIDir(const string &dir, CachedMultiFileStat *mstat = 0,
+bool verifyWSGIDir(const string &dir, CachedFileStat *cstat = 0,
                    unsigned int throttleRate = 0);
 
 /**
