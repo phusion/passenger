@@ -129,7 +129,8 @@ start_helper_server(ngx_cycle_t *cycle)
     long                   i;
     ssize_t                ret;
     char                   buf;
-    FILE                  *f;
+    ngx_str_t             *log_filename;
+    FILE                  *f, *log_file;
     
     shutdown_helper_server(cycle);
     
@@ -232,10 +233,35 @@ start_helper_server(ngx_cycle_t *cycle)
         close(admin_pipe[1]);
         close(feedback_pipe[0]);
         
-        /* Nginx redirects stderr to the error log file. Make sure that
-         * stdout is redirected to the error log file as well.
+        /* At this point, stdout and stderr may still point to the console.
+         * Make sure that they're both redirected to the log file.
          */
-        dup2(2, 1);
+        log_file = NULL;
+        #if NGINX_VERSION_NUM < 7000
+            log_filename = &cycle->new_log->file->name;
+        #else
+            log_filename = &cycle->new_log.file->name;
+        #endif
+        if (log_filename->len > 0) {
+            log_file = fopen((const char *) log_filename->data, "a");
+            if (log_file == NULL) {
+                ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                              "could not open the error log file for writing");
+            }
+        }
+        if (log_file == NULL) {
+            /* If the log file cannot be opened then we redirect stdout
+             * and stderr to /dev/null, because if the user disconnects
+             * from the console on which Nginx is started, then on Linux
+             * any writes to stdout or stderr will result in an EIO error.
+             */
+            log_file = fopen("/dev/null", "w");
+        }
+        if (log_file != NULL) {
+            dup2(fileno(log_file), 1);
+            dup2(fileno(log_file), 2);
+            fclose(log_file);
+        }
         
         /* Close all file descriptors except stdin, stdout, stderr and
          * the reader part of the pipe we just created. 
