@@ -39,19 +39,19 @@ using namespace std;
 using namespace oxt;
 
 /**
- * Utility class for checking for file changes. Example:
+ * A utility class for checking for file changes. Example:
  *
  * @code
- * FileChecker checker("foo.txt");
- * checker.changed();   // false
+ * FileChangeChecker checker;
+ * checker.changed("foo.txt");   // false
  * writeToFile("foo.txt");
- * checker.changed();   // true
- * checker.changed();   // false
+ * checker.changed("foo.txt");   // true
+ * checker.changed("foo.txt");   // false
  * @endcode
  *
  * FileChecker uses stat() to retrieve file information. FileChecker also
- * supports throttling in order to limit the number of stat() calls. This
- * can improve performance on systems where disk I/O is a problem.
+ * supports throttling in order to limit the number of actual stat() calls.
+ * This can improve performance on systems where disk I/O is a problem.
  */
 class FileChangeChecker {
 private:
