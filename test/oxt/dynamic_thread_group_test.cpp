@@ -147,4 +147,8 @@ namespace tut {
 		group.interrupt_and_join_all();
 		ensure_equals(group.num_threads(), 0u);
 	}
+	
+	TEST_METHOD(5) {
+		// If the thread function crashes then it will still be correctly removed from the pool.
+	}
 }

@@ -25,27 +25,23 @@
 #ifndef _PASSENGER_APPLICATION_POOL_SERVER_H_
 #define _PASSENGER_APPLICATION_POOL_SERVER_H_
 
+#include <string>
+#include <vector>
+
 #include <boost/shared_ptr.hpp>
-#include <boost/thread/mutex.hpp>
+#include <boost/thread.hpp>
 #include <oxt/system_calls.hpp>
-#include <oxt/backtrace.hpp>
+#include <oxt/dynamic_thread_group.hpp>
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/wait.h>
-#include <cstdio>
-#include <cstdlib>
-#include <limits.h>
-#include <errno.h>
 #include <unistd.h>
-#include <signal.h>
-#include <fcntl.h>
+#include <cerrno>
 
-#include "MessageChannel.h"
-#include "ApplicationPool.h"
-#include "Application.h"
+#include "StandardApplicationPool.h"
+#include "FileDescriptor.h"
 #include "Exceptions.h"
-#include "Logging.h"
+#include "Utils.h"
 
 namespace Passenger {
 
@@ -55,799 +51,508 @@ using namespace oxt;
 
 
 /**
- * Multi-process usage support for ApplicationPool.
+ * ApplicationPoolServer exposes a StandardApplicationPool to external processes through
+ * a Unix domain server socket. This allows one to use a StandardApplicationPool in a
+ * multi-process environment. ApplicationPoolClient can be used to access a pool that's
+ * exposed via ApplicationPoolServer.
  *
- * ApplicationPoolServer implements a client/server architecture for ApplicationPool.
- * This allows one to use ApplicationPool in a multi-process environment (unlike
- * StandardApplicationPool). The cache/pool data is stored in the server. Different
- * processes can then access the pool through the server.
+ * <h2>Usage</h2>
+ * Construct an ApplicationPoolServer object and call the mainLoop() method on it.
  *
- * ApplicationPoolServer itself does not inherit ApplicationPool. Instead, it returns
- * an ApplicationPool object via the connect() call. For example:
- * @code
- *   // Create an ApplicationPoolServer.
- *   ApplicationPoolServer server(...);
- *   
- *   // Now fork a child process, like Apache's prefork MPM eventually will.
- *   pid_t pid = fork();
- *   if (pid == 0) {
- *       // Child process
- *       
- *       // Connect to the server. After connection, we have an ApplicationPool
- *       // object!
- *       ApplicationPoolPtr pool(server.connect());
+ * <h2>Concurrency model</h2>
+ * Each client is handled by a seperate thread. This is necessary because we the current
+ * algorithm for StandardApplicationPool::get() can block (in the case that the spawning
+ * limit has been exceeded or when global queuing is used and all application instances
+ * are busy). While it is possible to get around this problem without using threads, a
+ * thread-based implementation is easier to write.
  *
- *       // We don't need to connect to the server anymore, so we detach from it.
- *       // This frees up some resources, such as file descriptors.
- *       server.detach();
+ * <h2>Security model</h2>
+ * Experience has shown that it is inadequate to protect the socket file with traditional
+ * Unix filesystem permissions. The web server may consist of multiple worker processes,
+ * each running as a seperate user. We want each web server worker process to be able to
+ * connect to the ApplicationPool server. Although ACLs allow this, not every platform
+ * supports ACLs by default.
  *
- *       ApplicationPool::SessionPtr session(pool->get("/home/webapps/foo"));
- *       do_something_with(session);
- *
- *       _exit(0);
- *   } else {
- *       // Parent process
- *       waitpid(pid, NULL, 0);
- *   }
- * @endcode
- *
- * <h2>Implementation notes</h2>
- *
- * <h3>Separate server executable</h3>
- * The actual server is implemented in ApplicationPoolServerExecutable.cpp, this class is
- * just a convenience class for starting/stopping the server executable and connecting
- * to it.
- *
- * In the past, the server logic itself was implemented in this class. This implies that
- * the ApplicationPool server ran inside the Apache process. This presented us with several
- * problems:
- * - Because of the usage of threads in the ApplicationPool server, the Apache VM size would
- *   go way up. This gave people the (wrong) impression that Passenger uses a lot of memory,
- *   or that it leaks memory.
- * - Although it's not entirely confirmed, we suspect that it caused heap fragmentation as
- *   well. Apache allocates lots and lots of small objects on the heap, and ApplicationPool
- *   server isn't exactly helping. This too gave people the (wrong) impression that
- *   Passenger leaks memory.
- * - It would unnecessarily bloat the VM size of Apache worker processes.
- * - We had to resort to all kinds of tricks to make sure that fork()ing a process doesn't
- *   result in file descriptor leaks.
- * - Despite everything, there was still a small chance that file descriptor leaks would
- *   occur, and this could not be fixed. The reason for this is that the Apache control
- *   process may call fork() right after the ApplicationPool server has established a new
- *   connection with a client.
- *
- * Because of these problems, it was decided to split the ApplicationPool server to a
- * separate executable. This comes with no performance hit.
+ * Instead, we make the server socket world-writable, and depend on a username/password
+ * authentication model for security instead. Here we call a password a "secret token".
+ * TODO: finish this
  *
  * @ingroup Support
  */
 class ApplicationPoolServer {
 private:
-	/**
-	 * Contains data shared between RemoteSession and Client.
-	 * Since RemoteSession and Client have different life times, i.e. one may be
-	 * destroyed before the other, they both use a smart pointer that points to
-	 * a SharedData. This way, the SharedData object is only destroyed when
-	 * both the RemoteSession and the Client object has been destroyed.
-	 */
-	struct SharedData {
-		/**
-		 * The socket connection to the ApplicationPool server, as was
-		 * established by ApplicationPoolServer::connect().
-		 *
-		 * The value may be -1, which indicates that the connection has
-		 * been closed.
-		 */
-		int server;
-		
-		mutable boost::mutex lock;
-		
-		~SharedData() {
-			TRACE_POINT();
-			if (server != -1) {
-				disconnect();
-			}
-		}
-		
-		/**
-		 * Disconnect from the ApplicationPool server.
-		 */
-		void disconnect() {
-			TRACE_POINT();
-			int ret;
-			do {
-				ret = close(server);
-			} while (ret == -1 && errno == EINTR);
-			server = -1;
-		}
-	};
-	
-	typedef shared_ptr<SharedData> SharedDataPtr;
+	static const unsigned int CLIENT_THREAD_STACK_SIZE = 128 * 1024;
 	
 	/**
-	 * An Application::Session which works together with ApplicationPoolServer.
+	 * This exception indicates that something went wrong while comunicating with the client.
+	 * Only used within EnvironmentVariablesFetcher.
 	 */
-	class RemoteSession: public Application::Session {
+	class ClientCommunicationError: public oxt::tracable_exception {
 	private:
-		SharedDataPtr data;
-		int id;
-		int fd;
-		pid_t pid;
-	public:
-		RemoteSession(SharedDataPtr data, pid_t pid, int id, int fd) {
-			this->data = data;
-			this->pid = pid;
-			this->id = id;
-			this->fd = fd;
-		}
-		
-		virtual ~RemoteSession() {
-			closeStream();
-			boost::mutex::scoped_lock(data->lock);
-			MessageChannel(data->server).write("close", toString(id).c_str(), NULL);
-		}
-		
-		virtual int getStream() const {
-			return fd;
-		}
-		
-		virtual void setReaderTimeout(unsigned int msec) {
-			MessageChannel(fd).setReadTimeout(msec);
-		}
-		
-		virtual void setWriterTimeout(unsigned int msec) {
-			MessageChannel(fd).setWriteTimeout(msec);
-		}
-		
-		virtual void shutdownReader() {
-			if (fd != -1) {
-				int ret = syscalls::shutdown(fd, SHUT_RD);
-				if (ret == -1) {
-					throw SystemException("Cannot shutdown the reader stream",
-						errno);
-				}
-			}
-		}
-		
-		virtual void shutdownWriter() {
-			if (fd != -1) {
-				int ret = syscalls::shutdown(fd, SHUT_WR);
-				if (ret == -1) {
-					throw SystemException("Cannot shutdown the writer stream",
-						errno);
-				}
-			}
-		}
-		
-		virtual void closeStream() {
-			if (fd != -1) {
-				int ret = syscalls::close(fd);
-				fd = -1;
-				if (ret == -1) {
-					if (errno == EIO) {
-						throw SystemException("A write operation on the session stream failed",
-							errno);
-					} else {
-						throw SystemException("Cannot close the session stream",
-							errno);
-					}
-				}
-			}
-		}
-		
-		virtual void discardStream() {
-			fd = -1;
-		}
-		
-		virtual pid_t getPid() const {
-			return pid;
-		}
-	};
-	
-	/**
-	 * An ApplicationPool implementation that works together with ApplicationPoolServer.
-	 * It doesn't do much by itself, its job is mostly to forward queries/commands to
-	 * the server and returning the result. Most of the logic is in the server executable.
-	 */
-	class Client: public ApplicationPool {
-	private:
-		// The smart pointer only serves to keep the shared data alive.
-		// We access the shared data via a normal pointer, for performance.
-		SharedDataPtr dataSmartPointer;
-		SharedData *data;
-		
+		string briefMessage;
+		string systemMessage;
+		string fullMessage;
+		int m_code;
 	public:
 		/**
-		 * Create a new Client.
+		 * Create a new ClientCommunicationError.
 		 *
-		 * @param sock The newly established socket connection with the ApplicationPoolServer.
+		 * @param briefMessage A brief message describing the error.
+		 * @param errorCode An optional error code, i.e. the value of errno right after the error occured, if applicable.
+		 * @note A system description of the error will be appended to the given message.
+		 *    For example, if <tt>errorCode</tt> is <tt>EBADF</tt>, and <tt>briefMessage</tt>
+		 *    is <em>"Something happened"</em>, then what() will return <em>"Something happened: Bad
+		 *    file descriptor (10)"</em> (if 10 is the number for EBADF).
+		 * @post code() == errorCode
+		 * @post brief() == briefMessage
 		 */
-		Client(int sock) {
-			dataSmartPointer = ptr(new SharedData());
-			data = dataSmartPointer.get();
-			data->server = sock;
-		}
-		
-		virtual bool connected() const {
-			boost::mutex::scoped_lock(data->lock);
-			return data->server != -1;
-		}
-		
-		virtual void clear() {
-			MessageChannel channel(data->server);
-			boost::mutex::scoped_lock l(data->lock);
-			try {
-				channel.write("clear", NULL);
-			} catch (...) {
-				data->disconnect();
-				throw;
-			}
-		}
-		
-		virtual void setMaxIdleTime(unsigned int seconds) {
-			MessageChannel channel(data->server);
-			boost::mutex::scoped_lock l(data->lock);
-			try {
-				channel.write("setMaxIdleTime", toString(seconds).c_str(), NULL);
-			} catch (...) {
-				data->disconnect();
-				throw;
-			}
-		}
-		
-		virtual void setMax(unsigned int max) {
-			MessageChannel channel(data->server);
-			boost::mutex::scoped_lock l(data->lock);
-			try {
-				channel.write("setMax", toString(max).c_str(), NULL);
-			} catch (...) {
-				data->disconnect();
-				throw;
-			}
-		}
-		
-		virtual unsigned int getActive() const {
-			MessageChannel channel(data->server);
-			boost::mutex::scoped_lock l(data->lock);
-			vector<string> args;
-			
-			try {
-				channel.write("getActive", NULL);
-				channel.read(args);
-				return atoi(args[0].c_str());
-			} catch (...) {
-				data->disconnect();
-				throw;
-			}
-		}
-		
-		virtual unsigned int getCount() const {
-			MessageChannel channel(data->server);
-			boost::mutex::scoped_lock l(data->lock);
-			vector<string> args;
-			
-			try {
-				channel.write("getCount", NULL);
-				channel.read(args);
-				return atoi(args[0].c_str());
-			} catch (...) {
-				data->disconnect();
-				throw;
-			}
-		}
-		
-		virtual void setMaxPerApp(unsigned int max) {
-			MessageChannel channel(data->server);
-			boost::mutex::scoped_lock l(data->lock);
-			try {
-				channel.write("setMaxPerApp", toString(max).c_str(), NULL);
-			} catch (...) {
-				data->disconnect();
-				throw;
-			}
-		}
-		
-		virtual pid_t getSpawnServerPid() const {
-			this_thread::disable_syscall_interruption dsi;
-			MessageChannel channel(data->server);
-			boost::mutex::scoped_lock l(data->lock);
-			vector<string> args;
-			
-			try {
-				channel.write("getSpawnServerPid", NULL);
-				channel.read(args);
-				return atoi(args[0].c_str());
-			} catch (...) {
-				data->disconnect();
-				throw;
-			}
-		}
-		
-		virtual Application::SessionPtr get(const PoolOptions &options) {
-			this_thread::disable_syscall_interruption dsi;
-			TRACE_POINT();
-			
-			MessageChannel channel(data->server);
-			boost::mutex::scoped_lock l(data->lock);
-			vector<string> args;
-			int stream;
-			bool result;
-			bool serverMightNeedEnvironmentVariables = true;
-			
-			/* Send a 'get' request to the ApplicationPool server.
-			 * For efficiency reasons, we do not send the data for
-			 * options.environmentVariables over the wire yet until
-			 * it's necessary.
-			 */
-			try {
-				vector<string> args;
+		ClientCommunicationError(const string &briefMessage, int errorCode = -1) {
+			if (errorCode != -1) {
+				stringstream str;
 				
-				args.push_back("get");
-				options.toVector(args, false);
-				channel.write(args);
-			} catch (const SystemException &e) {
-				UPDATE_TRACE_POINT();
-				data->disconnect();
-				
-				string message("Could not send data to the ApplicationPool server: ");
-				message.append(e.brief());
-				throw SystemException(message, e.code());
+				str << strerror(errorCode) << " (" << errorCode << ")";
+				systemMessage = str.str();
 			}
-			
-			/* The first few replies from the server might be for requesting
-			 * environment variables in the pool options object, so keep handling
-			 * these requests until we receive a different reply.
-			 */
-			while (serverMightNeedEnvironmentVariables) {
-				try {
-					result = channel.read(args);
-				} catch (const SystemException &e) {
-					UPDATE_TRACE_POINT();
-					data->disconnect();
-					throw SystemException("Could not read a response from "
-						"the ApplicationPool server for the 'get' command", e.code());
-				}
-				if (!result) {
-					UPDATE_TRACE_POINT();
-					data->disconnect();
-					throw IOException("The ApplicationPool server unexpectedly "
-						"closed the connection while we're reading a response "
-						"for the 'get' command.");
-				}
-				
-				if (args[0] == "getEnvironmentVariables") {
-					try {
-						if (options.environmentVariables) {
-							UPDATE_TRACE_POINT();
-							channel.writeScalar(options.serializeEnvironmentVariables());
-						} else {
-							UPDATE_TRACE_POINT();
-							channel.writeScalar("");
-						}
-					} catch (const SystemException &e) {
-						data->disconnect();
-						throw SystemException("Could not send a response "
-							"for the 'getEnvironmentVariables' request "
-							"to the ApplicationPool server",
-							e.code());
-					}
-				} else {
-					serverMightNeedEnvironmentVariables = false;
-				}
-			}
-			
-			/* We've now received a reply other than "getEnvironmentVariables".
-			 * Handle this...
-			 */
-			if (args[0] == "ok") {
-				UPDATE_TRACE_POINT();
-				pid_t pid = (pid_t) atol(args[1]);
-				int sessionID = atoi(args[2]);
-				
-				try {
-					stream = channel.readFileDescriptor();
-				} catch (...) {
-					UPDATE_TRACE_POINT();
-					data->disconnect();
-					throw;
-				}
-				
-				return ptr(new RemoteSession(dataSmartPointer,
-					pid, sessionID, stream));
-			} else if (args[0] == "SpawnException") {
-				UPDATE_TRACE_POINT();
-				if (args[2] == "true") {
-					string errorPage;
-					
-					try {
-						result = channel.readScalar(errorPage);
-					} catch (...) {
-						data->disconnect();
-						throw;
-					}
-					if (!result) {
-						throw IOException("The ApplicationPool server "
-							"unexpectedly closed the connection while "
-							"we're reading the error page data.");
-					}
-					throw SpawnException(args[1], errorPage);
-				} else {
-					throw SpawnException(args[1]);
-				}
-			} else if (args[0] == "BusyException") {
-				UPDATE_TRACE_POINT();
-				throw BusyException(args[1]);
-			} else if (args[0] == "IOException") {
-				UPDATE_TRACE_POINT();
-				data->disconnect();
-				throw IOException(args[1]);
-			} else {
-				UPDATE_TRACE_POINT();
-				data->disconnect();
-				throw IOException("The ApplicationPool server returned "
-					"an unknown message: " + toString(args));
-			}
+			setBriefMessage(briefMessage);
+			m_code = errorCode;
 		}
-	};
-	
-	
-	static const int ADMIN_PIPE_FD = 3;
-	static const int FEEDBACK_PIPE_FD = 4;
-	static const int PASSWORD_SIZE = 128;
-	
-	string m_serverExecutable;
-	string m_spawnServerCommand;
-	string m_logFile;
-	string m_rubyCommand;
-	string m_user;
-	
-	/**
-	 * An autogenerated random password, which must be sent upon connecting
-	 * to the ApplicationPool server process. The server will deny
-	 * unauthenticated connections.
-	 *
-	 * @invariant
-	 *    if serverPid == 0:
-	 *       password.empty()
-	 */
-	string password;
-	
-	/**
-	 * The admin pipe of the ApplicationPool server process. This pipe is used
-	 * by the ApplicationPool server process to check whether the process which
-	 * executed the ApplicationPool server is still running. If a byte is sent
-	 * through this pipe, then the ApplicationPool server will treat that as
-	 * an exit command.
-	 * It is also used for sending telling the ApplicationPool server process
-	 * what the server password should be.
-	 *
-	 * @invariant
-	 *    if serverPid == 0:
-	 *       adminPipe.empty()
-	 */
-	int adminPipe;
-	
-	/**
-	 * The PID of the ApplicationPool server process. If no server process
-	 * is running, then <tt>serverPid == 0</tt>.
-	 *
-	 * @invariant
-	 *    if serverPid == 0:
-	 *       serverSocket.empty()
-	 */
-	pid_t serverPid;
-	
-	/**
-	 * The socket on which the ApplicationPool server process is listening. If no server
-	 * process is running, then <tt>serverSocket.empty()</tt>.
-	 *
-	 * @invariant
-	 *    if serverPid == 0:
-	 *       serverSocket.empty()
-	 */
-	string serverSocket;
-	
-	/**
-	 * Shutdown the currently running ApplicationPool server process.
-	 *
-	 * @pre System call interruption is disabled.
-	 * @pre serverSocket != -1 && serverPid != 0
-	 * @post serverSocket == -1 && serverPid == 0
-	 */
-	void shutdownServer() {
-		TRACE_POINT();
-		this_thread::disable_syscall_interruption dsi;
-		int ret, status;
-		time_t begin;
-		bool done = false;
-		
-		// Send a shutdown command to the ApplicationPool server by
-		// sending a random byte through the admin pipe.
-		syscalls::write(adminPipe, "x", 1);
-		syscalls::close(adminPipe);
-		
-		P_TRACE(2, "Waiting for existing ApplicationPoolServerExecutable (PID " <<
-			serverPid << ") to exit...");
-		begin = syscalls::time(NULL);
-		while (!done && syscalls::time(NULL) < begin + 5) {
-			ret = syscalls::waitpid(serverPid, &status, WNOHANG);
-			done = ret > 0 || ret == -1;
-			if (!done) {
-				syscalls::usleep(100000);
-			}
-		}
-		if (done) {
-			if (ret > 0) {
-				if (WIFEXITED(status)) {
-					P_TRACE(2, "ApplicationPoolServerExecutable exited with exit status " <<
-						WEXITSTATUS(status) << ".");
-				} else if (WIFSIGNALED(status)) {
-					P_TRACE(2, "ApplicationPoolServerExecutable exited because of signal " <<
-						WTERMSIG(status) << ".");
-				} else {
-					P_TRACE(2, "ApplicationPoolServerExecutable exited for an unknown reason.");
-				}
-			} else {
-				P_TRACE(2, "ApplicationPoolServerExecutable exited.");
-			}
-		} else {
-			P_DEBUG("ApplicationPoolServerExecutable not exited in time. Killing it...");
-			syscalls::kill(serverPid, SIGKILL);
-			syscalls::waitpid(serverPid, NULL, 0);
-		}
-		
-		do {
-			ret = unlink(serverSocket.c_str());
-		} while (ret == -1 && errno == EINTR);
-		
-		password = "";
-		adminPipe = -1;
-		serverSocket = "";
-		serverPid = 0;
-	}
-	
-	/**
-	 * Start an ApplicationPool server process. If there's already one running,
-	 * then the currently running one will be shutdown.
-	 *
-	 * @pre System call interruption is disabled.
-	 * @post serverSocket != -1 && serverPid != 0
-	 * @throws SystemException Something went wrong.
-	 * @throws IOException Something went wrong.
-	 * @throws ConfigurationException The Passenger temp directory's filename
-	 *             is so long that we cannot create a Unix socket inside it.
-	 *             You should use a different, shorter, directory as the
-	 *             Passenger temp directory.
-	 */
-	void restartServer() {
-		TRACE_POINT();
-		this_thread::disable_syscall_interruption dsi;
-		char randomToken[32];
-		string socketFilename;
-		int theAdminPipe[2], feedbackPipe[2];
-		char thePassword[PASSWORD_SIZE];
-		pid_t pid;
-		
-		if (serverPid != 0) {
-			shutdownServer();
-		}
-		
-		createPassengerTempDir(getSystemTempDir(), m_user.empty(),
-			"nobody", geteuid(), getegid());
-		
-		generateSecureToken(randomToken, sizeof(randomToken));
-		try {
-			struct sockaddr_un addr;
-			socketFilename = fillInMiddle(sizeof(addr.sun_path) - 1,
-				getPassengerTempDir() + "/master/application_pool.",
-				toHex(StaticString(randomToken, sizeof(randomToken))) + "-" + toString(getpid()),
-				".sock");
-		} catch (const ArgumentException &) {
-			string message = "Unable to create a Unix domain socket inside "
-				"Phusion Passenger's temp directory, '";
-				message.append(getPassengerTempDir());
-				message.append("'. This is because the resulting filename "
-				"will be too long. Please set a different directory as "
-				"the Phusion Passenger temp directory using the "
-				"'PassengerTempDir' directive.");
-			throw ConfigurationException(message);
-		}
-		
-		generateSecureToken(thePassword, PASSWORD_SIZE);
-		
-		UPDATE_TRACE_POINT();
-		if (syscalls::pipe(theAdminPipe) == -1) {
-			int e = errno;
-			throw SystemException("Cannot create a pipe", e);
-		}
-		UPDATE_TRACE_POINT();
-		if (syscalls::pipe(feedbackPipe) == -1) {
-			int e = errno;
-			syscalls::close(theAdminPipe[0]);
-			syscalls::close(theAdminPipe[1]);
-			throw SystemException("Cannot create a pipe", e);
-		}
-		
-		UPDATE_TRACE_POINT();
-		pid = syscalls::fork();
-		if (pid == 0) { // Child process.
-			close(theAdminPipe[1]);
-			close(feedbackPipe[0]);
-			dup2(STDERR_FILENO, STDOUT_FILENO);  // Redirect stdout to the same channel as stderr.
-			dup2(theAdminPipe[0], ADMIN_PIPE_FD);
-			dup2(feedbackPipe[1], FEEDBACK_PIPE_FD);
-			
-			// Close all unnecessary file descriptors
-			for (long i = sysconf(_SC_OPEN_MAX) - 1; i > FEEDBACK_PIPE_FD; i--) {
-				close(i);
-			}
-			
-			execlp(
-				#if 0
-					"valgrind",
-					"valgrind",
-				#else
-					m_serverExecutable.c_str(),
-				#endif
-				m_serverExecutable.c_str(),
-				toString(Passenger::getLogLevel()).c_str(),
-				m_spawnServerCommand.c_str(),
-				m_logFile.c_str(),
-				m_rubyCommand.c_str(),
-				m_user.c_str(),
-				getPassengerTempDir().c_str(),
-				socketFilename.c_str(),
-				(char *) 0);
-			int e = errno;
-			fprintf(stderr, "*** Passenger ERROR (%s:%d):\n"
-				"Cannot execute %s: %s (%d)\n",
-				__FILE__, __LINE__,
-				m_serverExecutable.c_str(), strerror(e), e);
-			fflush(stderr);
-			_exit(1);
-		} else if (pid == -1) { // Error.
-			syscalls::close(theAdminPipe[0]);
-			syscalls::close(theAdminPipe[1]);
-			syscalls::close(feedbackPipe[0]);
-			syscalls::close(feedbackPipe[1]);
-			throw SystemException("Cannot create a new process", errno);
-		} else { // Parent process.
-			syscalls::close(theAdminPipe[0]);
-			syscalls::close(feedbackPipe[1]);
-			
-			// Send the password to the ApplicationPool server process.
-			try {
-				MessageChannel(theAdminPipe[1]).writeRaw(thePassword, PASSWORD_SIZE);
-			} catch (...) {
-				syscalls::close(theAdminPipe[1]);
-				syscalls::close(feedbackPipe[0]);
-				throw;
-			}
-			
-			// Wait until the ApplicationPool server process is
-			// done initializing.
-			char buf;
-			syscalls::read(feedbackPipe[0], &buf, 1);
-			syscalls::close(feedbackPipe[0]);
-			
-			password.assign(thePassword, PASSWORD_SIZE);
-			adminPipe = theAdminPipe[1];
-			serverSocket = socketFilename;
-			serverPid = pid;
-		}
-	}
 
+		virtual ~ClientCommunicationError() throw() {}
+
+		virtual const char *what() const throw() {
+			return fullMessage.c_str();
+		}
+
+		void setBriefMessage(const string &message) {
+			briefMessage = message;
+			if (systemMessage.empty()) {
+				fullMessage = briefMessage;
+			} else {
+				fullMessage = briefMessage + ": " + systemMessage;
+			}
+		}
+
+		/**
+		 * The value of <tt>errno</tt> at the time the error occured.
+		 */
+		int code() const throw() {
+			return m_code;
+		}
+
+		/**
+		 * Returns a brief version of the exception message. This message does
+		 * not include the system error description, and is equivalent to the
+		 * value of the <tt>message</tt> parameter as passed to the constructor.
+		 */
+		string brief() const throw() {
+			return briefMessage;
+		}
+
+		/**
+		 * Returns the system's error message. This message contains both the
+		 * content of <tt>strerror(errno)</tt> and the errno number itself.
+		 *
+		 * @post if code() == -1: result.empty()
+		 */
+		string sys() const throw() {
+			return systemMessage;
+		}
+	};
+	
+	/**
+	 * A StringListCreator which fetches its items from the client.
+	 * Used as an optimization for ApplicationPoolServer::processGet():
+	 * environment variables are only serialized by the client process
+	 * if a new backend process is being spawned.
+	 */
+	class EnvironmentVariablesFetcher: public StringListCreator {
+	private:
+		MessageChannel &channel;
+		PoolOptions &options;
+	public:
+		EnvironmentVariablesFetcher(MessageChannel &theChannel, PoolOptions &theOptions)
+			: channel(theChannel),
+			  options(theOptions)
+		{ }
+		
+		/**
+		 * @throws ClientCommunicationError
+		 */
+		virtual const StringListPtr getItems() const {
+			string data;
+			
+			/* If an I/O error occurred while communicating with the client,
+			 * then throw a ClientCommunicationException, which will bubble
+			 * all the way up to the thread main loop, where the connection
+			 * with the client will be broken.
+			 */
+			try {
+				channel.write("getEnvironmentVariables", NULL);
+			} catch (const SystemException &e) {
+				throw ClientCommunicationError(
+					"Unable to send a 'getEnvironmentVariables' request to the client",
+					e.code());
+			}
+			try {
+				if (!channel.readScalar(data)) {
+					throw ClientCommunicationError("Unable to read a reply from the client for the 'getEnvironmentVariables' request.");
+				}
+			} catch (const SystemException &e) {
+				throw ClientCommunicationError(
+					"Unable to read a reply from the client for the 'getEnvironmentVariables' request",
+					e.code());
+			}
+			
+			if (!data.empty()) {
+				SimpleStringListCreator list(data);
+				return list.getItems();
+			} else {
+				return ptr(new StringList());
+			}
+		}
+	};
+	
+	/**
+	 * Each client handled by the server has an associated ClientContext,
+	 * which stores state associated with the client.
+	 */
+	struct ClientContext {
+		/** The client's socket file descriptor. */
+		FileDescriptor fd;
+		
+		/** The channel that's associated with the client's socket. */
+		MessageChannel channel;
+		
+		AuthorizationPtr theAuthorization;
+		
+		/**
+		 * Maps session ID to sessions created by ApplicationPool::get(). Session IDs
+		 * are sent back to the ApplicationPool client. This allows the ApplicationPool
+		 * client to tell us which of the multiple sessions it wants to close, later on.
+		 */
+		map<int, Application::SessionPtr> sessions;
+		
+		/** Last used session ID. */
+		int lastSessionID;
+		
+		ClientContext(FileDescriptor &theFd, AuthorizationPtr theAuthorization)
+			: fd(theFd),
+			  channel(fd),
+			  authorization(theAuthorization)
+		{
+			lastSessionID = 0;
+		}
+		
+		/** Returns a string representation for this client. */
+		string name() {
+			return toString(channel.fileno());
+		}
+	};
+	
+	/** The filename of the server socket on which this ApplicationPoolServer is listening. */
+	string socketFilename;
+	string secretToken;
+	/** The StandardApplicationPool that's being exposed through the socket. */
+	StandardApplicationPoolPtr pool;
+	
+	/** The client threads. */
+	dynamic_thread_group threadGroup;
+	/** The server socket's file descriptor.
+	 * @invariant serverFd >= 0
+	 */
+	int serverFd;
+	
+	
+	/*********************************************
+	 * Message handler methods
+	 *********************************************/
+	
+	void processGet(ClientContext &context, const vector<string> &args) {
+		TRACE_POINT();
+		Application::SessionPtr session;
+		bool failed = false;
+		
+		requireAuthorization(context, Authorization::GET);
+		
+		try {
+			PoolOptions options(args, 1);
+			options.environmentVariables = ptr(new EnvironmentVariablesFetcher(
+				context.channel, options));
+			session = pool->get(options);
+			context.sessions[context.lastSessionID] = session;
+			context.lastSessionID++;
+		} catch (const SpawnException &e) {
+			UPDATE_TRACE_POINT();
+			this_thread::disable_syscall_interruption dsi;
+			
+			if (e.hasErrorPage()) {
+				P_TRACE(3, "Client " << context.name() << ": SpawnException "
+					"occured (with error page)");
+				context.channel.write("SpawnException", e.what(), "true", NULL);
+				context.channel.writeScalar(e.getErrorPage());
+			} else {
+				P_TRACE(3, "Client " << context.name() << ": SpawnException "
+					"occured (no error page)");
+				context.channel.write("SpawnException", e.what(), "false", NULL);
+			}
+			failed = true;
+		} catch (const BusyException &e) {
+			UPDATE_TRACE_POINT();
+			this_thread::disable_syscall_interruption dsi;
+			context.channel.write("BusyException", e.what(), NULL);
+			failed = true;
+		} catch (const IOException &e) {
+			UPDATE_TRACE_POINT();
+			this_thread::disable_syscall_interruption dsi;
+			context.channel.write("IOException", e.what(), NULL);
+			failed = true;
+		}
+		UPDATE_TRACE_POINT();
+		if (!failed) {
+			this_thread::disable_syscall_interruption dsi;
+			try {
+				UPDATE_TRACE_POINT();
+				context.channel.write("ok", toString(session->getPid()).c_str(),
+					toString(context.lastSessionID - 1).c_str(), NULL);
+				UPDATE_TRACE_POINT();
+				context.channel.writeFileDescriptor(session->getStream());
+				UPDATE_TRACE_POINT();
+				session->closeStream();
+			} catch (const exception &e) {
+				P_TRACE(3, "Client " << context.name() << ": could not send "
+					"'ok' back to the ApplicationPool client: " <<
+					e.what());
+				context.sessions.erase(context.lastSessionID - 1);
+				throw;
+			}
+		}
+	}
+	
+	void processClose(ClientContext &context, const vector<string> &args) {
+		TRACE_POINT();
+		requireAuthorization(context, Authorization::GET);
+		context.sessions.erase(atoi(args[1]));
+	}
+	
+	void processClear(const vector<string> &args) {
+		TRACE_POINT();
+		requireAuthorization(context, Authorization::GET);
+		pool->clear();
+	}
+	
+	void processSetMaxIdleTime(const vector<string> &args) {
+		TRACE_POINT();
+		requireAuthorization(context, Authorization::PARAMETER_TWEAKING);
+		pool->setMaxIdleTime(atoi(args[1]));
+	}
+	
+	void processSetMax(const vector<string> &args) {
+		TRACE_POINT();
+		requireAuthorization(context, Authorization::PARAMETER_TWEAKING);
+		pool->setMax(atoi(args[1]));
+	}
+	
+	void processGetActive(ClientContext &context, const vector<string> &args) {
+		TRACE_POINT();
+		requireAuthorization(context, Authorization::INSPECT);
+		context.channel.write(toString(pool->getActive()).c_str(), NULL);
+	}
+	
+	void processGetCount(ClientContext &context, const vector<string> &args) {
+		TRACE_POINT();
+		requireAuthorization(context, Authorization::INSPECT);
+		context.channel.write(toString(pool->getCount()).c_str(), NULL);
+	}
+	
+	void processSetMaxPerApp(unsigned int maxPerApp) {
+		TRACE_POINT();
+		requireAuthorization(context, Authorization::PARAMTER_TWEAKING);
+		pool->setMaxPerApp(maxPerApp);
+	}
+	
+	void processGetSpawnServerPid(ClientContext &context, const vector<string> &args) {
+		TRACE_POINT();
+		requireAuthorization(context, Authorization::INSPECT);
+		context.channel.write(toString(pool->getSpawnServerPid()).c_str(), NULL);
+	}
+	
+	void processUnknownMessage(ClientContext &content, const vector<string> &args) {
+		TRACE_POINT();
+		string name;
+		if (args.empty()) {
+			name = "(null)";
+		} else {
+			name = args[0];
+		}
+		P_WARN("An ApplicationPool client sent an invalid command: "
+			<< name << " (" << args.size() << " elements)");
+	}
+	
+	
+	/*********************************************
+	 * Other methods
+	 *********************************************/
+	
+	/**
+	 * Create a server socket and set it up for listening.
+	 *
+	 * @throws RuntimeException
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
+	 */
+	void startListening() {
+		TRACE_POINT();
+		int ret;
+		
+		serverFd = createUnixServer(socketFilename.c_str());
+		do {
+			ret = chmod(socketFilename.c_str(),
+				S_ISVTX |
+				S_IRUSR | S_IWUSR | S_IXUSR |
+				S_IRGRP | S_IWGRP | S_IXGRP |
+				S_IROTH | S_IWOTH | S_IXOTH);
+		} while (ret == -1 && errno == EINTR);
+	}
+	
+	AuthorizationPtr authenticate(FileDescriptor &client) {
+		// TODO
+	}
+	
+	void requireAuthorization(ClientContext &context, Authorization::Capability capability) {
+		if (!context.authorization.has(capability)) {
+			throw SecurityException("TODO");
+		}
+	}
+	
+	/**
+	 * The main function for a thread which handles a client.
+	 */
+	void clientHandlingMainLoop(FileDescriptor &client) {
+		TRACE_POINT();
+		vector<string> args;
+		
+		try {
+			AuthorizationPtr authorization = authenticate(client);
+			if (authorization == NULL) {
+				return;
+			}
+			
+			ClientContext context(client, authorization);
+			
+			while (!this_thread::interruption_requested()) {
+				UPDATE_TRACE_POINT();
+				if (!channel.read(args)) {
+					// Client closed connection.
+					break;
+				}
+				
+				P_TRACE(4, "Client " << this << ": received message: " <<
+					toString(args));
+				
+				UPDATE_TRACE_POINT();
+				if (args[0] == "get") {
+					processGet(context, args);
+				} else if (args[0] == "close" && args.size() == 2) {
+					processClose(context, args);
+				} else if (args[0] == "clear" && args.size() == 1) {
+					processClear(context, args);
+				} else if (args[0] == "setMaxIdleTime" && args.size() == 2) {
+					processSetMaxIdleTime(context, args);
+				} else if (args[0] == "setMax" && args.size() == 2) {
+					processSetMax(context, args);
+				} else if (args[0] == "getActive" && args.size() == 1) {
+					processGetActive(context, args);
+				} else if (args[0] == "getCount" && args.size() == 1) {
+					processGetCount(context, args);
+				} else if (args[0] == "setMaxPerApp" && args.size() == 2) {
+					processSetMaxPerApp(context, atoi(args[1]));
+				} else if (args[0] == "getSpawnServerPid" && args.size() == 1) {
+					processGetSpawnServerPid(context, args);
+				} else {
+					processUnknownMessage(context, args);
+					break;
+				}
+				args.clear();
+			}
+		} catch (const boost::thread_interrupted &) {
+			P_TRACE(2, "Client thread " << this << " interrupted.");
+		} catch (const tracable_exception &e) {
+			P_TRACE(2, "An error occurred in an ApplicationPoolServer client thread:\n"
+				<< "   message: " << toString(args) << "\n"
+				<< "   exception: " << e.what() << "\n"
+				<< "   backtrace:\n" << e.backtrace());
+		} catch (const exception &e) {
+			P_TRACE(2, "An error occurred in an ApplicationPoolServer client thread:\n"
+				<< "   message: " << toString(args) << "\n"
+				<< "   exception: " << e.what() << "\n"
+				<< "   backtrace: not available");
+		} catch (...) {
+			P_TRACE(2, "An unknown exception occurred in an ApplicationPool client thread.");
+		}
+	}
+	
 public:
 	/**
-	 * Create a new ApplicationPoolServer object.
+	 * Creates a new ApplicationPoolServer object.
+	 * The actual server main loop is not started until you call mainLoop().
 	 *
-	 * @param serverExecutable The filename of the ApplicationPool server
-	 *            executable to use.
-	 * @param spawnServerCommand The filename of the spawn server to use.
-	 * @param logFile Specify a log file that the spawn server should use.
-	 *            Messages on its standard output and standard error channels
-	 *            will be written to this log file. If an empty string is
-	 *            specified, no log file will be used, and the spawn server
-	 *            will use the same standard output/error channels as the
-	 *            current process.
-	 * @param rubyCommand The Ruby interpreter's command.
-	 * @param user The user that the spawn manager should run as. This
-	 *             parameter only has effect if the current process is
-	 *             running as root. If the empty string is given, or if
-	 *             the <tt>user</tt> is not a valid username, then
-	 *             the spawn manager will be run as the current user.
-	 * @throws SystemException An error occured while trying to setup the spawn server
-	 *            or the server socket.
-	 * @throws IOException Something went wrong.
-	 * @throws ConfigurationException The Passenger temp directory's filename
-	 *             is so long that we cannot create a Unix socket inside it.
-	 *             You should use a different, shorter, directory as the
-	 *             Passenger temp directory.
+	 * @param socketFilename The socket filename on which this ApplicationPoolServer
+	 *                       should be listening.
+	 * @param secretToken A secret token that each client must send in order to use
+	 *                    the ApplicationPoolServer's services.
+	 * @param pool The pool to expose through the server socket.
 	 */
-	ApplicationPoolServer(const string &serverExecutable,
-	             const string &spawnServerCommand,
-	             const string &logFile = "",
-	             const string &rubyCommand = "ruby",
-	             const string &user = "")
-	: m_serverExecutable(serverExecutable),
-	  m_spawnServerCommand(spawnServerCommand),
-	  m_logFile(logFile),
-	  m_rubyCommand(rubyCommand),
-	  m_user(user) {
-		TRACE_POINT();
-		adminPipe = -1;
-		serverPid = 0;
-		this_thread::disable_syscall_interruption dsi;
-		restartServer();
+	ApplicationPoolServer(const string &socketFilename,
+	                      const string &secretToken,
+	                      StandardApplicationPoolPtr pool) {
+		this->socketFilename = socketFilename;
+		this->secretToken = secretToken;
+		this->pool = pool;
+		startListening();
 	}
 	
 	~ApplicationPoolServer() {
-		TRACE_POINT();
-		if (serverPid != 0) {
-			UPDATE_TRACE_POINT();
-			this_thread::disable_syscall_interruption dsi;
-			shutdownServer();
-		}
+		this_thread::disable_syscall_interruption dsi;
+		syscalls::close(serverFd);
+		syscalls::unlink(socketFilename.c_str());
 	}
 	
 	/**
-	 * Connects to the server and returns a usable ApplicationPool object.
-	 * All cache/pool data of this ApplicationPool is actually stored on
-	 * the server and shared with other clients, but that is totally
-	 * transparent to the user of the ApplicationPool object.
+	 * Starts the server main loop. This method will loop forever until some
+	 * other thread interrupts the calling thread, or until an exception is raised.
 	 *
-	 * @note
-	 *   All methods of the returned ApplicationPool object may throw
-	 *   SystemException, IOException or boost::thread_interrupted.
-	 *
-	 * @warning
-	 * One may only use the returned ApplicationPool object for handling
-	 * one session at a time. For example, don't do stuff like this:
-	 * @code
-	 *   ApplicationPoolPtr pool = server.connect();
-	 *   Application::SessionPtr session1 = pool->get(...);
-	 *   Application::SessionPtr session2 = pool->get(...);
-	 * @endcode
-	 * Otherwise, a deadlock can occur under certain circumstances.
-	 * @warning
-	 * Instead, one should call connect() multiple times:
-	 * @code
-	 *   ApplicationPoolPtr pool1 = server.connect();
-	 *   Application::SessionPtr session1 = pool1->get(...);
-	 *   
-	 *   ApplicationPoolPtr pool2 = server.connect();
-	 *   Application::SessionPtr session2 = pool2->get(...);
-	 * @endcode
-	 *
-	 * @throws SystemException Something went wrong.
-	 * @throws RuntimeException Something went wrong.
+	 * @throws SystemException Unable to accept a new connection. If this is a
+	 *                         non-fatal error then you may call mainLoop() again
+	 *                         to restart the server main loop.
+	 * @throws boost::thread_resource_error Unable to create a new thread.
+	 * @throws boost::thread_interrupted The calling thread has been interrupted.
 	 */
-	ApplicationPoolPtr connect() const {
+	void mainLoop() {
 		TRACE_POINT();
-		int ret, fd;
-		try {
-			fd = connectToUnixServer(serverSocket.c_str());
-			MessageChannel channel(fd);
-			channel.writeRaw(password.c_str(), password.size());
-			return ptr(new Client(fd));
-		} catch (const SystemException &e) {
-			string message = "Could not connect to the ApplicationPool server: ";
-			message.append(e.brief());
-			throw SystemException(message, e.code());
-		} catch (const RuntimeException &e) {
-			string message = "Could not connect to the ApplicationPool server: ";
-			message.append(e.what());
-			throw RuntimeException(message);
-		} catch (...) {
-			do {
-				ret = close(fd);
-			} while (ret == -1 && errno == EINTR);
-			throw;
+		while (true) {
+			this_thread::interruption_point();
+			sockaddr_un addr;
+			socklen_t len = sizeof(addr);
+			FileDescriptor fd;
+			
+			UPDATE_TRACE_POINT();
+			fd = syscalls::accept(serverFd, (struct sockaddr *) &addr, &len);
+			if (fd == -1) {
+				throw SystemException("Unable to accept a new client", errno);
+			}
+			
+			UPDATE_TRACE_POINT();
+			this_thread::disable_interruption di;
+			this_thread::disable_syscall_interruption dsi;
+			
+			function<void ()> func(boost::bind(&ApplicationPoolServer::clientHandlingMainLoop,
+				this, fd));
+			string name = "ApplicationPoolServer client thread ";
+			name.append(toString(fd));
+			threadGroup.create_thread(func, name, CLIENT_THREAD_STACK_SIZE);
 		}
 	}
 };
-
-typedef shared_ptr<ApplicationPoolServer> ApplicationPoolServerPtr;
 
 } // namespace Passenger
 

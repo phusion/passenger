@@ -1,36 +1,46 @@
 #include "tut.h"
+
+#include <boost/bind.hpp>
+
+#include "StandardApplicationPool.h"
 #include "ApplicationPoolServer.h"
+#include "ApplicationPoolClient.h"
 #include "Utils.h"
+#include <string>
 #include <cstring>
 #include <unistd.h>
 #include <errno.h>
 
 using namespace Passenger;
+using namespace boost;
+using namespace std;
 
 namespace tut {
 	struct ApplicationPoolServerTest {
-		ApplicationPoolServerPtr server;
-		ApplicationPoolPtr pool, pool2;
+		shared_ptr<StandardApplicationPool> realPool;
+		shared_ptr<ApplicationPoolServer> server;
+		shared_ptr<ApplicationPoolClient> pool, pool2;
+		shared_ptr<oxt::thread> serverThread;
 		
-		ApplicationPoolServerTest() {
-			server = ptr(new ApplicationPoolServer(
-				"./ApplicationPoolServerExecutable",
-				"stub/spawn_server.rb"));
+		~ApplicationPoolServerTest() {
+			if (serverThread != NULL) {
+				serverThread->interrupt_and_join();
+			}
+		}
+		
+		void initializePool() {
+			string socketFilename = getPassengerTempDir() + "/master/pool_server.sock";
+			realPool = ptr(new StandardApplicationPool("../bin/passenger-spawn-server"));
+			server = ptr(new ApplicationPoolServer(socketFilename, "12345", realPool));
+			pool = ptr(new ApplicationPoolClient(socketFilename, "12345"));
+			pool2 = ptr(new ApplicationPoolClient(socketFilename, "12345"));
+			serverThread = ptr(new oxt::thread(
+				boost::bind(&ApplicationPoolServer::mainLoop, server.get())
+			));
 		}
 	};
 
 	DEFINE_TEST_GROUP(ApplicationPoolServerTest);
-
-	TEST_METHOD(1) {
-		// Constructor and destructor should not crash or block indefinitely.
-		// (And yes, this test method is intended to be blank.)
-	}
-	
-	TEST_METHOD(2) {
-		// Connecting to the ApplicationPoolServer, as well as destroying the
-		// returned ApplicationPool object, should not crash.
-		server->connect();
-	}
 	
 	/* A StringListCreator which not only returns a dummy value, but also
 	 * increments a counter each time getItems() is called. */
@@ -51,14 +61,11 @@ namespace tut {
 		}
 	};
 	
-	TEST_METHOD(5) {
+	TEST_METHOD(1) {
 		// When calling get() with a PoolOptions object,
 		// options.environmentVariables->getItems() isn't called unless
 		// the pool had to spawn something.
-		ApplicationPoolServerPtr server = ptr(new ApplicationPoolServer(
-			"./ApplicationPoolServerExecutable",
-			"../bin/passenger-spawn-server"));
-		ApplicationPoolPtr pool = server->connect();
+		initializePool();
 		
 		shared_ptr<DummyStringListCreator> strList = ptr(new DummyStringListCreator());
 		PoolOptions options("stub/rack");

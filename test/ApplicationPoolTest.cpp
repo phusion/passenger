@@ -182,7 +182,7 @@
 		Application::SessionPtr session3;
 		bool done;
 		
-		shared_ptr<thread> thr = ptr(new thread(PoolWaitTestThread(pool2, session3, done)));
+		shared_ptr<boost::thread> thr = ptr(new boost::thread(PoolWaitTestThread(pool2, session3, done)));
 		usleep(500000);
 		ensure("ApplicationPool is still waiting", !done);
 		ensure_equals(pool->getActive(), 2u);

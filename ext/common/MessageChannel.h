@@ -142,19 +142,35 @@ public:
 	}
 	
 	/**
+	 * Returns the underlying file descriptor. -1 if it has already been closed.
+	 */
+	int fileno() const {
+		return fd;
+	}
+	
+	/**
+	 * Returns whether close() has been called.
+	 */
+	bool connected() const {
+		return fd != -1;
+	}
+	
+	/**
 	 * Close the underlying file descriptor. If this method is called multiple
 	 * times, the file descriptor will only be closed the first time.
 	 *
 	 * @throw SystemException
 	 * @throw boost::thread_interrupted
+	 * @post fileno() == -1
+	 * @post !connected()
 	 */
 	void close() {
 		if (fd != -1) {
 			int ret = syscalls::close(fd);
+			fd = -1;
 			if (ret == -1) {
 				throw SystemException("Cannot close file descriptor", errno);
 			}
-			fd = -1;
 		}
 	}
 

@@ -73,11 +73,11 @@ using namespace boost;
  *
  *   // We can connect to an Application multiple times. Just make sure
  *   // the previous session is closed.
- *   session = app->connect("/home/webapps/bar")
+ *   session = app->connect("/home/webapps/bar");
  * @endcode
  *
  * Internally, ApplicationPool::get() will keep spawned applications instances in
- * memory, and reuse them if possible. It wil* @throw l try to keep spawning to a minimum.
+ * memory, and reuse them if possible. It will try to keep spawning to a minimum.
  * Furthermore, if an application instance hasn't been used for a while, it
  * will be automatically shutdown in order to save memory. Restart requests are
  * honored: if an application has the file 'restart.txt' in its 'tmp' folder,
@@ -89,6 +89,10 @@ using namespace boost;
  * Note that ApplicationPool is just an interface (i.e. a pure virtual class).
  * For concrete classes, see StandardApplicationPool and ApplicationPoolServer.
  * The exact pooling algorithm depends on the implementation class.
+ *
+ * ApplicationPool is *not* guaranteed to be thread-safe. See the documentation
+ * for concrete implementations to find out whether that particular implementation
+ * is thread-safe.
  *
  * @ingroup Support
  */
@@ -122,11 +126,12 @@ public:
 	 *             if the pool decides that spawning a new application instance is necessary.
 	 *             See SpawnManager and PoolOptions for details.
 	 * @return A session object.
-	 * @throw SpawnException An attempt was made to spawn a new application instance, but that attempt failed.
-	 * @throw BusyException The application pool is too busy right now, and cannot
+	 * @throws SpawnException An attempt was made to spawn a new application instance, but that attempt failed.
+	 * @throws BusyException The application pool is too busy right now, and cannot
 	 *       satisfy the request. One should either abort, or try again later.
-	 * @throw IOException Something else went wrong.
-	 * @throw boost::thread_interrupted
+	 * @throws SystemException Something else went wrong.
+	 * @throws IOException Something else went wrong.
+	 * @throws boost::thread_interrupted
 	 * @throws Anything thrown by options.environmentVariables->getItems().
 	 * @note Applications are uniquely identified with the application root
 	 *       string. So although <tt>appRoot</tt> does not have to be absolute, it
@@ -138,6 +143,10 @@ public:
 	
 	/**
 	 * Convenience shortcut for calling get() with default spawn options.
+	 *
+	 * @throws IOException
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
 	 */
 	virtual Application::SessionPtr get(const string &appRoot) {
 		return get(PoolOptions(appRoot));
@@ -148,9 +157,24 @@ public:
 	 *
 	 * This method is used by unit tests to verify that the implementation is correct,
 	 * and thus should not be called directly.
+	 *
+	 * @throws IOException
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
 	 */
 	virtual void clear() = 0;
 	
+	/**
+	 * Set the maximum idle time for application instances. Application instances
+	 * that haven't received any requests in <tt>seconds</tt> seconds will be shut
+	 * down.
+	 *
+	 * A value of 0 means that the application instances will not idle timeout.
+	 *
+	 * @throws IOException
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
+	 */
 	virtual void setMaxIdleTime(unsigned int seconds) = 0;
 	
 	/**
@@ -159,6 +183,10 @@ public:
 	 * these API docs.
 	 *
 	 * It is allowed to set a limit lower than the current number of spawned applications.
+	 *
+	 * @throws IOException
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
 	 */
 	virtual void setMax(unsigned int max) = 0;
 	
@@ -168,6 +196,10 @@ public:
 	 * This method exposes an implementation detail of the underlying pooling algorithm.
 	 * It is used by unit tests to verify that the implementation is correct,
 	 * and thus should not be called directly.
+	 *
+	 * @throws IOException
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
 	 */
 	virtual unsigned int getActive() const = 0;
 	
@@ -177,6 +209,10 @@ public:
 	 * This method exposes an implementation detail of the underlying pooling algorithm.
 	 * It is used by unit tests to verify that the implementation is correct,
 	 * and thus should not be called directly.
+	 *
+	 * @throws IOException
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
 	 */
 	virtual unsigned int getCount() const = 0;
 	
@@ -186,6 +222,10 @@ public:
 	 * and is not specified by these API docs.
 	 *
 	 * It is allowed to set a limit lower than the current number of spawned applications.
+	 *
+	 * @throws IOException
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
 	 */
 	virtual void setMaxPerApp(unsigned int max) = 0;
 	
@@ -194,6 +234,10 @@ public:
 	 *
 	 * This method exposes an implementation detail. It is used by unit tests to verify
 	 * that the implementation is correct, and thus should not be used directly.
+	 *
+	 * @throws IOException
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
 	 */
 	virtual pid_t getSpawnServerPid() const = 0;
 };

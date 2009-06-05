@@ -54,11 +54,7 @@
 #include "Logging.h"
 #include "FileChangeChecker.h"
 #include "CachedFileStat.hpp"
-#ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER
-	#include "DummySpawnManager.h"
-#else
-	#include "SpawnManager.h"
-#endif
+#include "SpawnManager.h"
 
 namespace Passenger {
 
@@ -95,7 +91,10 @@ class ApplicationPoolServer;
  * (Of course, StandardApplicationPool <em>is</em> usable if each process creates its own
  * StandardApplicationPool object, but that would defeat the point of having a shared pool.)
  *
- * For multi-process environments, one should use ApplicationPoolServer instead.
+ * For multi-process environments, one should use ApplicationPoolServer+ApplicationPoolClient
+ * instead.
+ *
+ * StandardApplicationPool is fully thread-safe.
  *
  * @ingroup Support
  */
@@ -236,14 +235,9 @@ private:
 		}
 	};
 
-	#ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER
-		DummySpawnManager spawnManager;
-	#else
-		SpawnManager spawnManager;
-	#endif
+	AbstractSpawnManagerPtr spawnManager;
 	SharedDataPtr data;
 	boost::thread *cleanerThread;
-	bool detached;
 	bool done;
 	unsigned int maxIdleTime;
 	unsigned int waitingOnGlobalQueue;
@@ -460,7 +454,7 @@ private:
 					domains.erase(appRoot);
 				}
 				P_DEBUG("Restarting " << appRoot);
-				spawnManager.reload(appRoot);
+				spawnManager->reload(appRoot);
 				it = domains.end();
 				activeOrMaxChanged.notify_all();
 			}
@@ -507,7 +501,7 @@ private:
 					{
 						this_thread::restore_interruption ri(di);
 						this_thread::restore_syscall_interruption rsi(dsi);
-						container->app = spawnManager.spawn(options);
+						container->app = spawnManager->spawn(options);
 					}
 					container->sessions = 0;
 					instances->push_back(container);
@@ -542,7 +536,7 @@ private:
 				{
 					this_thread::restore_interruption ri(di);
 					this_thread::restore_syscall_interruption rsi(dsi);
-					container->app = spawnManager.spawn(options);
+					container->app = spawnManager->spawn(options);
 				}
 				container->sessions = 0;
 				it = domains.find(appRoot);
@@ -584,47 +578,8 @@ private:
 		return make_pair(container, domain);
 	}
 	
-public:
-	/**
-	 * Create a new StandardApplicationPool object.
-	 *
-	 * @param spawnServerCommand The filename of the spawn server to use.
-	 * @param logFile Specify a log file that the spawn server should use.
-	 *            Messages on its standard output and standard error channels
-	 *            will be written to this log file. If an empty string is
-	 *            specified, no log file will be used, and the spawn server
-	 *            will use the same standard output/error channels as the
-	 *            current process.
-	 * @param rubyCommand The Ruby interpreter's command.
-	 * @param user The user that the spawn manager should run as. This
-	 *             parameter only has effect if the current process is
-	 *             running as root. If the empty string is given, or if
-	 *             the <tt>user</tt> is not a valid username, then
-	 *             the spawn manager will be run as the current user.
-	 * @throws SystemException An error occured while trying to setup the spawn server.
-	 * @throws IOException The specified log file could not be opened.
-	 */
-	StandardApplicationPool(const string &spawnServerCommand,
-	             const string &logFile = "",
-	             const string &rubyCommand = "ruby",
-	             const string &user = "")
-	        :
-		#ifndef PASSENGER_USE_DUMMY_SPAWN_MANAGER
-		spawnManager(spawnServerCommand, logFile, rubyCommand, user),
-		#endif
-		data(new SharedData()),
-		lock(data->lock),
-		activeOrMaxChanged(data->activeOrMaxChanged),
-		domains(data->domains),
-		max(data->max),
-		count(data->count),
-		active(data->active),
-		maxPerApp(data->maxPerApp),
-		inactiveApps(data->inactiveApps),
-		appInstanceCount(data->appInstanceCount)
-	{
-		TRACE_POINT();
-		detached = false;
+	/** @throws boost::thread_resource_error */
+	void initialize() {
 		done = false;
 		max = DEFAULT_MAX_POOL_SIZE;
 		count = 0;
@@ -638,16 +593,69 @@ public:
 		);
 	}
 	
+public:
+	/**
+	 * Create a new StandardApplicationPool object, and initialize it with a
+	 * SpawnManager. The arguments here are all passed to the SpawnManager
+	 * constructor.
+	 *
+	 * @throws SystemException An error occured while trying to setup the spawn server.
+	 * @throws IOException The specified log file could not be opened.
+	 * @throws boost::thread_resource_error Cannot spawn a new thread.
+	 */
+	StandardApplicationPool(const string &spawnServerCommand,
+	             const string &logFile = "",
+	             const string &rubyCommand = "ruby",
+	             const string &user = "")
+	      : data(new SharedData()),
+		cstat(DEFAULT_MAX_POOL_SIZE),
+		lock(data->lock),
+		activeOrMaxChanged(data->activeOrMaxChanged),
+		domains(data->domains),
+		max(data->max),
+		count(data->count),
+		active(data->active),
+		maxPerApp(data->maxPerApp),
+		inactiveApps(data->inactiveApps),
+		appInstanceCount(data->appInstanceCount)
+	{
+		TRACE_POINT();
+		this->spawnManager = ptr(new SpawnManager(spawnServerCommand, logFile, rubyCommand, user));
+		initialize();
+	}
+	
+	/**
+	 * Create a new StandardApplicationPool object and initialize it with
+	 * the given spawn manager.
+	 *
+	 * @throws boost::thread_resource_error Cannot spawn a new thread.
+	 */
+	StandardApplicationPool(AbstractSpawnManagerPtr spawnManager)
+	      : data(new SharedData()),
+		cstat(DEFAULT_MAX_POOL_SIZE),
+		lock(data->lock),
+		activeOrMaxChanged(data->activeOrMaxChanged),
+		domains(data->domains),
+		max(data->max),
+		count(data->count),
+		active(data->active),
+		maxPerApp(data->maxPerApp),
+		inactiveApps(data->inactiveApps),
+		appInstanceCount(data->appInstanceCount)
+	{
+		TRACE_POINT();
+		this->spawnManager = spawnManager;
+		initialize();
+	}
+	
 	virtual ~StandardApplicationPool() {
-		if (!detached) {
-			this_thread::disable_interruption di;
-			{
-				boost::mutex::scoped_lock l(lock);
-				done = true;
-				cleanerThreadSleeper.notify_one();
-			}
-			cleanerThread->join();
+		this_thread::disable_interruption di;
+		{
+			boost::mutex::scoped_lock l(lock);
+			done = true;
+			cleanerThreadSleeper.notify_one();
 		}
+		cleanerThread->join();
 		delete cleanerThread;
 	}
 	
@@ -723,6 +731,7 @@ public:
 		count = 0;
 		active = 0;
 		activeOrMaxChanged.notify_all();
+		// TODO: clear cstat and fileChangeChecker, and reload all spawner servers.
 	}
 	
 	virtual void setMaxIdleTime(unsigned int seconds) {
@@ -752,7 +761,7 @@ public:
 	}
 	
 	virtual pid_t getSpawnServerPid() const {
-		return spawnManager.getServerPid();
+		return spawnManager->getServerPid();
 	}
 	
 	/**

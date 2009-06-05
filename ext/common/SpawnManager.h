@@ -44,8 +44,7 @@
 #include <pwd.h>
 #include <signal.h>
 
-#include "Application.h"
-#include "PoolOptions.h"
+#include "AbstractSpawnManager.h"
 #include "MessageChannel.h"
 #include "Exceptions.h"
 #include "Logging.h"
@@ -57,14 +56,8 @@ using namespace boost;
 using namespace oxt;
 
 /**
- * @brief Spawning of Ruby on Rails/Rack application instances.
+ * An AbstractSpawnManager implementation.
  *
- * This class is responsible for spawning new instances of Ruby on Rails or
- * Rack applications. Use the spawn() method to do so.
- *
- * @note This class is fully thread-safe.
- *
- * <h2>Implementation details</h2>
  * Internally, this class makes use of a spawn server, which is written in Ruby. This server
  * is automatically started when a SpawnManager instance is created, and automatically
  * shutdown when that instance is destroyed. The existance of the spawn server is almost
@@ -89,7 +82,7 @@ using namespace oxt;
  *
  * @ingroup Support
  */
-class SpawnManager {
+class SpawnManager: public AbstractSpawnManager {
 private:
 	static const int SPAWN_SERVER_INPUT_FD = 3;
 
@@ -249,13 +242,7 @@ private:
 			}
 			channel = MessageChannel(fds[0]);
 			serverNeedsRestart = false;
-			
-			#ifdef TESTING_SPAWN_MANAGER
-				if (nextRestartShouldFail) {
-					syscalls::kill(pid, SIGTERM);
-					syscalls::usleep(500000);
-				}
-			#endif
+			spawnServerStarted();
 		}
 	}
 	
@@ -425,11 +412,14 @@ private:
 		return SystemException(message + ": " + e.brief(), e.code());
 	}
 
+protected:
+	/**
+	 * A method which is called after the spawn server has started.
+	 * It doesn't do anything by default and serves as a hook for unit tests.
+	 */
+	virtual void spawnServerStarted() { }
+	
 public:
-	#ifdef TESTING_SPAWN_MANAGER
-		bool nextRestartShouldFail;
-	#endif
-
 	/**
 	 * Construct a new SpawnManager.
 	 *
@@ -459,9 +449,6 @@ public:
 		this->rubyCommand = rubyCommand;
 		this->user = user;
 		pid = 0;
-		#ifdef TESTING_SPAWN_MANAGER
-			nextRestartShouldFail = false;
-		#endif
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		try {
@@ -473,7 +460,7 @@ public:
 		}
 	}
 	
-	~SpawnManager() throw() {
+	virtual ~SpawnManager() {
 		TRACE_POINT();
 		if (pid != 0) {
 			UPDATE_TRACE_POINT();
@@ -486,25 +473,7 @@ public:
 		}
 	}
 	
-	/**
-	 * Spawn a new instance of an application. Spawning details are to be passed
-	 * via the <tt>PoolOptions</tt> parameter.
-	 *
-	 * If the spawn server died during the spawning process, then the server
-	 * will be automatically restarted, and another spawn attempt will be made.
-	 * If restarting the server fails, or if the second spawn attempt fails,
-	 * then an exception will be thrown.
-	 *
-	 * @param PoolOptions An object containing the details for this spawn operation,
-	 *                     such as which application to spawn. See PoolOptions for details.
-	 * @return A smart pointer to an Application object, which represents the application
-	 *         instance that has been spawned. Use this object to communicate with the
-	 *         spawned application.
-	 * @throws SpawnException Something went wrong.
-	 * @throws boost::thread_interrupted
-	 * @throws Anything thrown by options.environmentVariables->getItems().
-	 */
-	ApplicationPtr spawn(const PoolOptions &options) {
+	virtual ApplicationPtr spawn(const PoolOptions &options) {
 		TRACE_POINT();
 		boost::mutex::scoped_lock l(lock);
 		try {
@@ -518,22 +487,7 @@ public:
 		}
 	}
 	
-	/**
-	 * Remove the cached application instances at the given application root.
-	 *
-	 * Application code might be cached in memory. But once it a while, it will
-	 * be necessary to reload the code for an application, such as after
-	 * deploying a new version of the application. This method makes sure that
-	 * any cached application code is removed, so that the next time an
-	 * application instance is spawned, the application code will be freshly
-	 * loaded into memory.
-	 *
-	 * @throws SystemException Unable to communicate with the spawn server,
-	 *         even after a restart.
-	 * @throws SpawnException The spawn server died unexpectedly, and a
-	 *         restart was attempted, but it failed.
-	 */
-	void reload(const string &appRoot) {
+	virtual void reload(const string &appRoot) {
 		TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
@@ -544,11 +498,11 @@ public:
 		}
 	}
 	
-	/**
-	 * Get the Process ID of the spawn server. This method is used in the unit tests
-	 * and should not be used directly.
-	 */
-	pid_t getServerPid() const {
+	virtual void killSpawnServer() const {
+		kill(pid, SIGKILL);
+	}
+	
+	virtual pid_t getServerPid() const {
 		return pid;
 	}
 };

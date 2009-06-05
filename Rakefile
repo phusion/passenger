@@ -189,6 +189,7 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 			'ext/common/StandardApplicationPool.h',
 			'ext/common/ApplicationPoolController.h',
 			'ext/common/MessageChannel.h',
+			'ext/common/AbstractSpawnManager.h',
 			'ext/common/SpawnManager.h',
 			'ext/common/PoolOptions.h',
 			'ext/common/StringListCreator.h',
@@ -369,7 +370,7 @@ end
 	TEST_COMMON_LIBRARY    = define_common_library_task("test",
 		nil, true, TEST_BOOST_OXT_LIBRARY)
 	
-	TEST_COMMON_CFLAGS = "-DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL " <<
+	TEST_COMMON_CFLAGS = "-DTESTING_APPLICATION_POOL " <<
 		"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 	
 	TEST_OXT_CFLAGS = "-I../../ext -I../support #{TEST_COMMON_CFLAGS}"
@@ -398,6 +399,7 @@ end
 		'test/SpawnManagerTest.o' => %w(
 			test/SpawnManagerTest.cpp
 			ext/common/SpawnManager.h
+			ext/common/AbstractSpawnManager.h
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
 			ext/common/Application.h
@@ -413,6 +415,7 @@ end
 			test/ApplicationPoolTest.cpp
 			ext/common/ApplicationPoolServer.h
 			ext/common/ApplicationPool.h
+			ext/common/AbstractSpawnManager.h
 			ext/common/SpawnManager.h
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
@@ -423,6 +426,7 @@ end
 			test/ApplicationPoolTest.cpp
 			ext/common/ApplicationPool.h
 			ext/common/StandardApplicationPool.h
+			ext/common/AbstractSpawnManager.h
 			ext/common/SpawnManager.h
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
@@ -451,6 +455,9 @@ end
 			test/FileChangeCheckerTest.cpp
 			ext/common/FileChangeChecker.h
 			ext/common/CachedFileStat.hpp),
+		'test/FileDescriptorTest.o' => %w(
+			test/FileDescriptorTest.cpp
+			ext/common/FileDescriptor.h),
 		'test/SystemTimeTest.o' => %w(
 			test/SystemTimeTest.cpp
 			ext/common/SystemTime.h

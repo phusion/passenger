@@ -52,7 +52,8 @@ using namespace std;
 using namespace boost;
 
 /**
- * Represents a single Ruby on Rails or Rack application instance.
+ * Represents a single application instance, as spawned by SpawnManager
+ * or by ApplicationPool::get().
  *
  * @ingroup Support
  */
@@ -81,7 +82,9 @@ public:
 	 *  -# When the HTTP response has been read, the session must be closed.
 	 *     This is done by destroying the Session object.
 	 *
-	 * A usage example is shown in Application::connect(). 
+	 * A usage example is shown in Application::connect().
+	 *
+	 * Session is not guaranteed to be thread-safe.
 	 */
 	class Session {
 	public:

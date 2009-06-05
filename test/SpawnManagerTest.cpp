@@ -10,47 +10,71 @@ using namespace Passenger;
 
 namespace tut {
 	struct SpawnManagerTest {
-		SpawnManager manager;
+		SpawnManagerPtr manager;
 		
-		SpawnManagerTest(): manager("stub/spawn_server.rb") {}
+		void initialize() {
+			manager = ptr(new SpawnManager("stub/spawn_server.rb"));
+		}
 	};
 
 	DEFINE_TEST_GROUP(SpawnManagerTest);
 
 	TEST_METHOD(1) {
 		// Spawning an application should return a valid Application object.
-		ApplicationPtr app(manager.spawn(PoolOptions(".")));
-		ensure_equals("The Application object's PID is the same as the one specified by the stub",
-			app->getPid(), 1234);
+		initialize();
+		ApplicationPtr app(manager->spawn(PoolOptions(".")));
+		ensure_equals("The Application object's PID is the same as the one returned by the stub",
+			app->getPid(), (pid_t) 1234);
 	}
 	
 	TEST_METHOD(2) {
 		// If something goes wrong during spawning, the spawn manager
 		// should be restarted and another (successful) spawn should be attempted.
-		pid_t old_pid = manager.getServerPid();
-		kill(manager.getServerPid(), SIGTERM);
+		initialize();
+		pid_t old_pid = manager->getServerPid();
+		manager->killSpawnServer();
 		// Give the spawn server the time to properly terminate.
 		usleep(500000);
 		
-		ApplicationPtr app(manager.spawn(PoolOptions(".")));
+		ApplicationPtr app(manager->spawn(PoolOptions(".")));
 		ensure_equals("The Application object's PID is the same as the one specified by the stub",
 			app->getPid(), 1234);
 		
 		// The following test will fail if we're inside Valgrind, but that's normal.
-		// Killing the spawn server doesn't work.
+		// Killing the spawn server doesn't work there.
 		if (!RUNNING_ON_VALGRIND) {
-			ensure("The spawn server was restarted", manager.getServerPid() != old_pid);
+			ensure("The spawn server was restarted", manager->getServerPid() != old_pid);
 		}
 	}
 	
+	class BuggySpawnManager: public SpawnManager {
+	protected:
+		virtual void spawnServerStarted() {
+			if (nextRestartShouldFail) {
+				nextRestartShouldFail = false;
+				killSpawnServer();
+				usleep(25000);
+			}
+		}
+		
+	public:
+		bool nextRestartShouldFail;
+		
+		BuggySpawnManager(): SpawnManager("stub/spawn_server.rb") {
+			nextRestartShouldFail = false;
+		}
+	};
+	
 	TEST_METHOD(3) {
+		// If the spawn server dies after a restart, a SpawnException should be thrown.
+		
 		// This test fails in Valgrind, but that's normal.
-		// Killing the spawn server doesn't work.
+		// Killing the spawn server doesn't work there.
 		if (!RUNNING_ON_VALGRIND) {
-			// If the spawn server dies after a restart, a SpawnException should be thrown.
-			kill(manager.getServerPid(), SIGTERM);
+			BuggySpawnManager manager;
+			manager.killSpawnServer();
 			// Give the spawn server the time to properly terminate.
-			usleep(500000);
+			usleep(250000);
 			
 			try {
 				manager.nextRestartShouldFail = true;

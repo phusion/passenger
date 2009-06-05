@@ -309,4 +309,35 @@ namespace tut {
 			waitpid(pid, NULL, 0);
 		}
 	}
+	
+	TEST_METHOD(13) {
+		// Test connected(), fileno() and close().
+		int fd[2];
+		pipe(fd);
+		close(fd[1]);
+		
+		MessageChannel channel(fd[0]);
+		ensure(channel.connected());
+		ensure_equals(channel.fileno(), fd[0]);
+		
+		channel.close();
+		ensure_equals(channel.fileno(), -1);
+		ensure(!channel.connected());
+	}
+	
+	TEST_METHOD(14) {
+		// close() sets the file descriptor to -1 even if closing failed.
+		int fd[2];
+		pipe(fd);
+		close(fd[0]);
+		close(fd[1]);
+		
+		MessageChannel channel(fd[0]);
+		try {
+			channel.close();
+			fail("close() should have failed");
+		} catch (...) { }
+		ensure_equals(channel.fileno(), -1);
+		ensure(!channel.connected());
+	}
 }
