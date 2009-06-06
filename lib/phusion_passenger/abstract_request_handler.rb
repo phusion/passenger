@@ -97,8 +97,6 @@ class AbstractRequestHandler
 	IGNORE              = 'IGNORE'              # :nodoc:
 	DEFAULT             = 'DEFAULT'             # :nodoc:
 	NULL                = "\0"                  # :nodoc:
-	CONTENT_LENGTH      = 'CONTENT_LENGTH'      # :nodoc:
-	HTTP_CONTENT_LENGTH = 'HTTP_CONTENT_LENGTH' # :nodoc:
 	X_POWERED_BY        = 'X-Powered-By'        # :nodoc:
 	REQUEST_METHOD      = 'REQUEST_METHOD'      # :nodoc:
 	PING                = 'ping'                # :nodoc:
@@ -433,7 +431,6 @@ private
 			return
 		end
 		headers = Hash[*headers_data.split(NULL)]
-		headers[CONTENT_LENGTH] = headers[HTTP_CONTENT_LENGTH]
 		return [headers, socket]
 	rescue SecurityError => e
 		STDERR.puts("*** Passenger RequestHandler: HTTP header size exceeded maximum.")
