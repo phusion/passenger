@@ -24,27 +24,18 @@ using the commandline.
 Phusion Passenger works on any POSIX-compliant operating system. In other
 words: practically any operating system on earth, except Microsoft Windows.
 
-Phusion Passenger has been tested on:
+Phusion Passenger is confirmed on a large number of operating systems and Linux
+distributions, including, but not limited to, Ubuntu, Debian, CentOS/Fedora/RHEL,
+Gentoo, Mac OS X, FreeBSD and Solaris. Both 32-bit and 64-bit platforms are supported.
 
-- Ubuntu Linux 6.06 (x86)
-- Ubuntu Linux 7.10 (x86)
-- Ubuntu Linux 8.04 (x86)
-- Debian Sarge (x86)
-- Debian Etch (x86)
-- Debian Lenny/Sid (x86)
-- CentOS 5 (x86)
-- Red Hat Enterprise Linux 5 (x86)
-- Gentoo, March 14 2008 (AMD64)
-- FreeBSD 6.1-RELEASE (x86)
-- MacOS X Tiger (x86)
-- MacOS X Leopard (x86)
+The only POSIX-compliant operating system on which Phusion Passenger for Apache is
+known not to work at this time, is OpenBSD. Please use Phusion Passenger for Nginx
+instead.
 
-Other operating systems have not been tested, but Phusion Passenger will probably
-work fine on them. Please
+If Phusion Passenger does not work on your platform then please
 link:http://code.google.com/p/phusion-passenger/issues/list[report a bug]
 or
-link:http://groups.google.com/group/phusion-passenger[join our discussion list]
-if it doesn't.
+link:http://groups.google.com/group/phusion-passenger[join our discussion list].
 
 
 == Installing, upgrading and uninstalling Phusion Passenger ==
@@ -52,7 +43,7 @@ if it doesn't.
 === Generic installation instructions ===
 
 [[install_passenger]]
-==== Overview of download and installation methods ====
+==== Overview of installation methods ====
 
 There are three ways to install Phusion Passenger:
 
@@ -65,11 +56,8 @@ There are three ways to install Phusion Passenger:
 
 The following sections will explain each installation method. Please read the
 section for the installation method that you prefer. In our opinion, installing
-the gem or the native package is easiest.
-
-Phusion Passenger provides an easy-to-use installer for installing the Phusion
-Passenger Apache module, in case you choose to install via the gem or the
-source tarball.
+the gem or the native package is easiest. For these two installation methods,
+Phusion Passenger provides an easy-to-use installer.
 
 ==== Preparation (gem and source tarball only)
 If you want to install Phusion Passenger via the gem or the source tarball,
@@ -105,23 +93,46 @@ su
 [[specifying_correct_apache_install]]
 ===== Specifying the correct Apache installation =====
 
-If your system has multiple Apache installations (this is likely the case on
-MacOS X), then you will need to tell the Phusion Passenger installer which one
-to use. If you only have one Apache installation (the case on most Linux
-systems), then you can skip this section because Phusion Passenger will
-automatically detect it.
+The Phusion Passenger installer will attempt to automatically detect Apache,
+and compile Phusion Passenger against that Apache version. It does this by
+looking for the `apxs` or `apxs2` command in the PATH environment variable.
+Apxs is an integral part of any Apache installation.
 
-Every Apache installation has its own `apxs` program. You will need to tell
-Phusion Passenger the location of this program, by specifying the `APXS2`
-environment variable. Suppose that you want to use the Apache installation in
-'/opt/apache2'. Then, assuming that the corresponding `apxs` program is located
-'/opt/apache2/bin/apxs', type:
+However, some systems have multiple Apache installations. This is likely
+the case on MacOS X: the OS ships with Apache, but users tend to install
+another Apache version seperately, e.g. via MacPorts. If your system has
+multiple Apache installations, then you will need to tell the Phusion Passenger
+installer which one to use. It is very important that you specify the
+correct Apache installation, because if you load Phusion Passenger in an
+Apache installation that it wasn't compiled against, then it will likely
+crash.
+
+On yet other systems, Apache is installed in a non-standard location,
+preventing the Phusion Passenger installer from detecting Apache. This
+is most likely the case on systems on which Apache was installed by hand
+from source, i.e. as opposed to installed through the system's native
+package manager. If this is the case, then you will also have to tell
+the installer where it can find Apache.
+
+To do so, set the `APXS2` environment variable to the full path of the
+correct `apxs` or `apxs2` command. Suppose that you want to use the Apache
+installation in '/opt/apache2'. Then, assuming that the corresponding
+`apxs` program's path is '/opt/apache2/bin/apxs', type:
+
 ----------------------------------
 export APXS2=/opt/apache2/bin/apxs
 ----------------------------------
 
 NOTE: On some systems, the `apxs` program might be called `apxs2`, and it might
 be located in the `sbin` folder instead of the `bin` folder.
+
+.Environment variables and 'sudo'
+NOTE: By default, the 'sudo' command will erase any environment variables that it
+doesn't recognize, prior to executing the given command. So if you set APXS2 as a
+normal user, then run `sudo passenger-install-apache2-module` (which is the command
+for the Phusion Passenger installer), then the installer will not receive the
+environment variable value that you set. To solve this problem, please become root
+prior to setting any environment variables, as described in the previous subsection.
 
 [[specifying_ruby_installation]]
 ===== Specifying the correct Ruby installation =====
@@ -191,6 +202,17 @@ sudo apt-get update
 sudo apt-get install libapache2-mod-passenger
 ------------------------------------------------------
 
+==== What does the installer do? ====
+
+Although we call it an ``installer'', it doesn't actually install anything.
+The installer checks whether all required dependencies are installed,
+compiles Phusion Passenger for you, and tells you how to modify the Apache
+configuration file, but it doesn't copy any files around.
+
+`passenger-install-apache2-module` is actually just a user-friendly frontend
+around the command `rake apache2`, which performs the actual compilation of
+Phusion Passenger.
+
 
 === Operating system-specific instructions and information ===
 
@@ -209,6 +231,33 @@ Ben Hughes has written an link:http://www.railsgarden.com/2008/04/12/configurati
 J Aaron Farr has written a link:http://cubiclemuses.com/cm/articles/2009/04/09/rails-passenger-open-solaris-ec2/[guide]
 about setting up Ruby on Rails and Phusion Passenger on OpenSolaris and EC2.
 
+
+=== Upgrading or downgrading Phusion Passenger ===
+
+==== Via a gem or a source tarball ====
+
+To ugrade or downgrade Phusion Passenger via the gem or the source tarball, install the newer
+or older version as you normally would; that is, install the gem or unpack the tarball, and
+run `passenger-install-apache2-module`. Eventually `passenger-install-apache2-module` will tell
+you to copy & paste some settings into the Apache configuration file; something that looks along
+the lines of:
+
+-----------------------------------
+LoadModule passenger_module ...
+PassengerRoot ...
+PassengerRuby ...
+-----------------------------------
+
+Because you already have Phusion Passenger installed, you already have the same settings
+in your Apache configuration file, just with different values. Replace the old settings with
+the new ones that the installer outputs.
+
+When you're done, restart Apache.
+
+==== Via a native Linux package
+
+There are no special instructions required to upgrade or downgrade Phusion Passenger
+via a native Linux package.
 
 === Unloading (disabling) Phusion Passenger from Apache without uninstalling it ===
 
