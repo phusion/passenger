@@ -77,10 +77,10 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
 
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
 
-    #if NGX_VERSION_NUM < 7000
+    ngx_memzero(&of, sizeof(ngx_open_file_info_t));
+    #if NGINX_VERSION_NUM < 7000
         of.test_dir = 0;
     #else
-        ngx_memzero(&of, sizeof(ngx_open_file_info_t));
         of.directio = clcf->directio;
     #endif
     of.valid = clcf->open_file_cache_valid;
@@ -125,7 +125,7 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
         return rc;
     }
 
-    #if NGX_VERSION_NUM >= 7000
+    #if NGINX_VERSION_NUM >= 7000
         r->root_tested = !r->error_page;
     #endif
 	
@@ -150,7 +150,7 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
                 len += r->args.len + 1;
             }
 
-            #if NGX_VERSION_NUM < 7000
+            #if NGINX_VERSION_NUM < 7000
                 location = ngx_palloc(r->pool, len);
             #else
             	location = ngx_pnalloc(r->pool, len);
@@ -246,7 +246,7 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
     b->file->fd = of.fd;
     b->file->name = *filename;
     b->file->log = log;
-    #if NGX_VERSION_NUM >= 7000
+    #if NGINX_VERSION_NUM >= 7000
         b->file->directio = of.is_directio;
     #endif
 
