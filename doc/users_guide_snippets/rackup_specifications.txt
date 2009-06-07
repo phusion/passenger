@@ -41,7 +41,7 @@ require 'rubygems'
 require 'merb-core'
 
 Merb::Config.setup(
-  :merb_root   => File.expand_path(File.dirname(__FILE__)),
+  :merb_root   => ::File.expand_path(::File.dirname(__FILE__)),
   :environment => ENV['RACK_ENV']
 )
 Merb.environment = Merb::Config[:environment]
@@ -66,11 +66,11 @@ run Ramaze::Adapter::Base
 require 'rubygems'
 require 'sinatra'
 
-root_dir = File.dirname(__FILE__)
+root_dir = ::File.dirname(__FILE__)
 
 set :environment, ENV['RACK_ENV'].to_sym
 set :root,        root_dir
-set :app_file,    File.join(root_dir, 'app.rb')
+set :app_file,    ::File.join(root_dir, 'app.rb')
 disable :run
 
 run Sinatra::Application
