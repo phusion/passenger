@@ -49,7 +49,7 @@ using namespace oxt;
  * checker.changed("foo.txt");   // false
  * @endcode
  *
- * FileChecker uses stat() to retrieve file information. FileChecker also
+ * FileChangeChecker uses stat() to retrieve file information. It also
  * supports throttling in order to limit the number of actual stat() calls.
  * This can improve performance on systems where disk I/O is a problem.
  */
@@ -80,6 +80,8 @@ private:
 public:
 	/**
 	 * Create a FileChangeChecker object.
+	 *
+	 * @param maxSize The maximum size of the internal file list. A size of 0 means unlimited.
 	 */
 	FileChangeChecker(unsigned int maxSize = 0)
 		: cstat(maxSize)
@@ -119,9 +121,9 @@ public:
 		int ret;
 		
 		if (it == fileToEntry.end()) {
-			// Filename not in cache.
-			// If cache is full, remove the least recently used
-			// cache entry.
+			// Filename not in file list.
+			// If file list is full, remove the least recently used
+			// file list entry.
 			if (maxSize != 0 && fileToEntry.size() == maxSize) {
 				EntryList::iterator listEnd(entries.end());
 				listEnd--;
@@ -130,16 +132,16 @@ public:
 				fileToEntry.erase(filename);
 			}
 			
-			// Add to cache as most recently used.
+			// Add to file list as most recently used.
 			entry = EntryPtr(new Entry(filename));
 			entries.push_front(entry);
 			fileToEntry[filename] = entries.begin();
 			newEntry = true;
 		} else {
-			// Cache hit.
+			// Filename is in file list.
 			entry = *it->second;
 			
-			// Mark this cache item as most recently used.
+			// Mark this entry as most recently used.
 			entries.erase(it->second);
 			entries.push_front(entry);
 			fileToEntry[filename] = entries.begin();
@@ -147,7 +149,7 @@ public:
 		
 		ret = cstat.stat(filename, &buf, throttleRate);
 		if (newEntry) {
-			// The file's information isn't in the cache.
+			// The file's information isn't in the file list.
 			if (ret == -1) {
 				entry->lastMtime = 0;
 				entry->lastCtime = 0;
@@ -158,7 +160,7 @@ public:
 				return true;
 			}
 		} else {
-			// The file's information was already in the cache.
+			// The file's information was already in the file list.
 			if (ret == -1 && errno == ENOENT) {
 				result = entry->lastMtime != 0 || entry->lastCtime != 0;
 				entry->lastMtime = 0;
@@ -170,8 +172,8 @@ public:
 				entry->lastMtime = buf.st_mtime;
 				entry->lastCtime = buf.st_ctime;
 			}
+			return result;
 		}
-		return result;
 	}
 	
 	/**
@@ -181,10 +183,6 @@ public:
 	 */
 	void setMaxSize(unsigned int maxSize) {
 		boost::unique_lock<boost::mutex> l(lock);
-		// this->maxSize == 0
-		// maxSize == 3
-		// files: 10
-		// to remove: 10 - 3 = 7
 		if (maxSize != 0) {
 			int toRemove = fileToEntry.size() - maxSize;
 			for (int i = 0; i < toRemove; i++) {

@@ -613,7 +613,6 @@ public:
 		spawnManager(spawnServerCommand, logFile, rubyCommand, user),
 		#endif
 		data(new SharedData()),
-		cstat(DEFAULT_MAX_POOL_SIZE),
 		lock(data->lock),
 		activeOrMaxChanged(data->activeOrMaxChanged),
 		domains(data->domains),
@@ -735,7 +734,6 @@ public:
 	virtual void setMax(unsigned int max) {
 		boost::mutex::scoped_lock l(lock);
 		this->max = max;
-		cstat.setMaxSize(max);
 		activeOrMaxChanged.notify_all();
 	}
 	
