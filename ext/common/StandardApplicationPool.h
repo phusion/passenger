@@ -459,6 +459,7 @@ private:
 					}
 					domains.erase(appRoot);
 				}
+				P_DEBUG("Restarting " << appRoot);
 				spawnManager.reload(appRoot);
 				it = domains.end();
 				activeOrMaxChanged.notify_all();
