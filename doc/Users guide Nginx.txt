@@ -272,13 +272,18 @@ There are two ways to restart the application:
 1. By restarting Nginx.
 2. By creating or modifying the file 'tmp/restart.txt' in the Rails
    application's <<application_root,root folder>>. Phusion Passenger will
-   automatically restart the application.
+   automatically restart the application during the next request.
 
 For example, to restart our example MyCook application, we type this in the
 command line:
 -------------------------------------------
 touch /webapps/mycook/tmp/restart.txt
 -------------------------------------------
+
+Please note that, unlike earlier versions of Phusion Passenger, 'restart.txt'
+is not automatically deleted. Phusion Passenger checks whether the timestamp
+of this file has changed in order to determine whether the application should
+be restarted.
 
 === Migrations ===
 
