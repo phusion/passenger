@@ -144,6 +144,8 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 		delete data;
 		bucket->data = NULL;
 		
+		apr_bucket_free(buf);
+		
 		bucket = apr_bucket_immortal_make(bucket, "", 0);
 		*str = (const char *) bucket->data;
 		*len = 0;
