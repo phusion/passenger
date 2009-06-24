@@ -1187,7 +1187,7 @@ passenger_content_handler(ngx_http_request_t *r)
     u->abort_request    = abort_request;
     u->finalize_request = finalize_request;
 
-    u->buffering = 1;
+    u->buffering = 0;
 
     u->pipe = ngx_pcalloc(r->pool, sizeof(ngx_event_pipe_t));
     if (u->pipe == NULL) {
