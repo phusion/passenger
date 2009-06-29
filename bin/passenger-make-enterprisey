@@ -75,7 +75,7 @@ else
 	end
 	if system("touch", enterprise_file)
 		puts "Congratulations! Your Passenger Enterprise License has been activated!"
-		puts "Please restart Apache to take full advantage of your Enterprise License."
+		puts "Please restart Apache or Nginx to take full advantage of your Enterprise License."
 	else
 		STDERR.puts "Could not write to the Passenger folder. Please run this tool as root."
 		exit 1
