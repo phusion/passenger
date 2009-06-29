@@ -1,5 +1,6 @@
 require 'support/config'
 require 'support/test_helper'
+require 'phusion_passenger/application'
 require 'phusion_passenger/spawn_manager'
 
 require 'ruby/abstract_server_spec'
@@ -32,7 +33,7 @@ describe SpawnManager do
 			@spawn_method = "smart"
 		end
 		
-		it_should_behave_like "AbstractServer"
+		it_should_behave_like "an AbstractServer"
 	end
 	
 	describe "conservative spawning" do
@@ -40,7 +41,7 @@ describe SpawnManager do
 			@spawn_method = "conservative"
 		end
 		
-		it_should_behave_like "AbstractServer"
+		it_should_behave_like "an AbstractServer"
 	end
 	
 	def spawn_arbitrary_application
@@ -169,19 +170,21 @@ describe SpawnManager do
 	it_should_behave_like "handling errors in application initialization"
 	it_should_behave_like "handling errors in framework initialization"
 	
-	def spawn_stub_application(stub)
+	def spawn_stub_application(stub, extra_options = {})
 		spawner = SpawnManager.new
 		begin
-			return spawner.spawn_application(
+			options = {
 				"app_root" => stub.app_root,
 				"spawn_method" => @spawn_method,
-				"lowest_user" => CONFIG['lowest_user'])
+				"lowest_user" => CONFIG['lowest_user']
+			}.merge(extra_options)
+			return spawner.spawn_application(options)
 		ensure
 			spawner.cleanup
 		end
 	end
 	
-	def load_nonexistant_framework
+	def load_nonexistant_framework(extra_options = {})
 		# Prevent detect_framework_version from raising VersionNotFound
 		Application.instance_eval do
 			alias orig_detect_framework_version detect_framework_version
@@ -192,7 +195,7 @@ describe SpawnManager do
 		begin
 			File.write(@stub.environment_rb, "RAILS_GEM_VERSION = '1.9.827'")
 			@stub.dont_use_vendor_rails
-			return spawn_stub_application(@stub)
+			return spawn_stub_application(@stub, extra_options)
 		ensure
 			Application.instance_eval do
 				alias detect_framework_version orig_detect_framework_version

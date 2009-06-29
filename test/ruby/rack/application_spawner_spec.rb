@@ -19,7 +19,7 @@ describe PhusionPassenger::Rack::ApplicationSpawner do
 	
 	it "propagates exceptions in application startup" do
 		File.prepend("#{@stub.app_root}/config.ru", "raise StandardError, 'foo'\n")
-		spawn = lambda { spawn(@stub.app_root) }
+		spawn = lambda { spawn(@stub.app_root, "print_exceptions" => false) }
 		spawn.should raise_error(StandardError)
 	end
 	
@@ -34,8 +34,25 @@ describe PhusionPassenger::Rack::ApplicationSpawner do
 		config_ru_owner.should == touch_txt_owner
 	end if Process.euid == 0
 	
+	it "sets the environment variables passed in the environment_variables option" do
+		File.append("#{@stub.app_root}/config.ru", %q{
+			File.open("env.txt", "w") do |f|
+				ENV.each_pair do |key, value|
+					f.puts("#{key} = #{value}")
+				end
+			end
+		})
+		env_vars_string = "PATH\0/usr/bin:/opt/sw/bin\0FOO\0foo bar!\0"
+		options = { "environment_variables" => [env_vars_string].pack("m") }
+		spawn(@stub.app_root, options).close
+		
+		contents = File.read("#{@stub.app_root}/env.txt")
+		contents.should =~ %r(PATH = /usr/bin:/opt/sw/bin\n)
+		contents.should =~ %r(FOO = foo bar\!\n)
+	end
+	
 	it "calls the starting_worker_process event after config.ru has been loaded" do
-	  File.append("#{@stub.app_root}/config.ru", %q{
+		File.append("#{@stub.app_root}/config.ru", %q{
 			PhusionPassenger.on_event(:starting_worker_process) do
 				File.append("rackresult.txt", "worker_process_started\n")
 			end
@@ -55,7 +72,7 @@ describe PhusionPassenger::Rack::ApplicationSpawner do
 	end
 	
 	it "calls the stopping_worker_process event" do
-	  File.append("#{@stub.app_root}/config.ru", %q{
+		File.append("#{@stub.app_root}/config.ru", %q{
 			PhusionPassenger.on_event(:stopping_worker_process) do
 				File.append("rackresult.txt", "worker_process_stopped\n")
 			end
@@ -74,9 +91,9 @@ describe PhusionPassenger::Rack::ApplicationSpawner do
 			"worker_process_stopped\n"
 	end	
 	
-	def spawn(app_root)
-		PhusionPassenger::Rack::ApplicationSpawner.spawn_application(app_root,
-			"lowest_user" => CONFIG['lowest_user'])
+	def spawn(app_root, extra_options = {})
+		options = { "lowest_user" => CONFIG['lowest_user'] }.merge(extra_options)
+		PhusionPassenger::Rack::ApplicationSpawner.spawn_application(app_root, options)
 	end
 end
 

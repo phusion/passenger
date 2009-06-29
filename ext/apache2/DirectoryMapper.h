@@ -31,7 +31,7 @@
 
 #include <oxt/backtrace.hpp>
 
-#include "CachedFileStat.h"
+#include "CachedFileStat.hpp"
 #include "Configuration.h"
 #include "Utils.h"
 
@@ -66,7 +66,7 @@ public:
 private:
 	DirConfig *config;
 	request_rec *r;
-	CachedMultiFileStat *mstat;
+	CachedFileStat *cstat;
 	unsigned int throttleRate;
 	bool baseURIKnown;
 	const char *baseURI;
@@ -91,16 +91,16 @@ public:
 	/**
 	 * Create a new DirectoryMapper object.
 	 *
-	 * @param mstat A CachedMultiFileStat object used for statting files.
-	 * @param throttleRate A throttling rate for mstat.
+	 * @param cstat A CachedFileStat object used for statting files.
+	 * @param throttleRate A throttling rate for cstat.
 	 * @warning Do not use this object after the destruction of <tt>r</tt>,
-	 *          <tt>config</tt> or <tt>mstat</tt>.
+	 *          <tt>config</tt> or <tt>cstat</tt>.
 	 */
 	DirectoryMapper(request_rec *r, DirConfig *config,
-	                CachedMultiFileStat *mstat, unsigned int throttleRate) {
+	                CachedFileStat *cstat, unsigned int throttleRate) {
 		this->r = r;
 		this->config = config;
-		this->mstat = mstat;
+		this->cstat = cstat;
 		this->throttleRate = throttleRate;
 		appType = NONE;
 		baseURIKnown = false;
@@ -171,7 +171,7 @@ public:
 		
 		UPDATE_TRACE_POINT();
 		if (shouldAutoDetectRails()
-		 && verifyRailsDir(config->getAppRoot(ap_document_root(r)), mstat, throttleRate)) {
+		 && verifyRailsDir(config->getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
 			baseURIKnown = true;
 			baseURI = "/";
 			appType = RAILS;
@@ -180,7 +180,7 @@ public:
 		
 		UPDATE_TRACE_POINT();
 		if (shouldAutoDetectRack()
-		 && verifyRackDir(config->getAppRoot(ap_document_root(r)), mstat, throttleRate)) {
+		 && verifyRackDir(config->getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
 			baseURIKnown = true;
 			baseURI = "/";
 			appType = RACK;
@@ -189,7 +189,7 @@ public:
 		
 		UPDATE_TRACE_POINT();
 		if (shouldAutoDetectWSGI()
-		 && verifyWSGIDir(config->getAppRoot(ap_document_root(r)), mstat, throttleRate)) {
+		 && verifyWSGIDir(config->getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
 			baseURIKnown = true;
 			baseURI = "/";
 			appType = WSGI;

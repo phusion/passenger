@@ -36,6 +36,7 @@ OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 
 include PlatformInfo
 
+CC  = "gcc"
 CXX = "g++"
 LIBEXT = PlatformInfo.library_extension
 if OPTIMIZE
@@ -45,11 +46,11 @@ else
 end
 
 # Extra compiler flags that should always be passed to the C/C++ compiler.
-# Should be included last in the command string.
+# Should be included last in the command string, even after PlatformInfo.portability_cflags.
 EXTRA_CXXFLAGS = "-Wall #{OPTIMIZATION_FLAGS}"
 
 # Extra linker flags that should always be passed to the linker.
-# Should be included last in the command string.
+# Should be included last in the command string, even after PlatformInfo.portability_ldflags.
 EXTRA_LDFLAGS  = ""
 
 
@@ -150,7 +151,7 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
                                with_application_pool_server_exe = false,
                                boost_oxt_library = nil,
                                extra_compiler_flags_for_server_exe = nil,
-                               extra_linker_flags = nil)
+                               extra_linker_flags_for_server_exe = nil)
 	static_library = "#{output_dir}/libpassenger_common.a"
 	objects_output_dir = "#{output_dir}/libpassenger_common"
 	targets = [static_library]
@@ -159,7 +160,8 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 	flags =  "-Iext -Iext/common #{extra_compiler_flags} "
 	flags << "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 	common_object_files = []
-	['Utils.cpp', 'Logging.cpp', 'SystemTime.cpp', 'CachedFileStat.cpp'].each do |source_file|
+	['Utils.cpp', 'Logging.cpp', 'SystemTime.cpp', 'CachedFileStat.cpp',
+	 'Base64.cpp'].each do |source_file|
 		object_name = source_file.sub(/\.cpp$/, '.o')
 		object_file = "#{objects_output_dir}/#{object_name}"
 		header_file = source_file.sub(/\.cpp$/, '.h')
@@ -185,12 +187,14 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 			'ext/common/ApplicationPool.h',
 			'ext/common/Application.h',
 			'ext/common/StandardApplicationPool.h',
+			'ext/common/ApplicationPoolStatusReporter.h',
 			'ext/common/MessageChannel.h',
 			'ext/common/SpawnManager.h',
 			'ext/common/PoolOptions.h',
-			'ext/common/FileChecker.h',
+			'ext/common/StringListCreator.h',
+			'ext/common/FileChangeChecker.h',
 			'ext/common/SystemTime.h',
-			'ext/common/CachedFileStat.h',
+			'ext/common/CachedFileStat.hpp',
 			boost_oxt_library,
 			static_library
 		]) do
@@ -203,7 +207,7 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 				"#{EXTRA_CXXFLAGS} " <<
 				"#{static_library} " <<
 				"#{boost_oxt_library} " <<
-				"#{extra_linker_flags} " <<
+				"#{extra_linker_flags_for_server_exe} " <<
 				"#{PlatformInfo.portability_ldflags} " <<
 				EXTRA_LDFLAGS
 			)
@@ -242,7 +246,9 @@ end
 			ext/common/Application.h
 			ext/common/MessageChannel.h
 			ext/common/PoolOptions.h
+			ext/common/StringListCreator.h
 			ext/common/Version.h
+			ext/common/Timer.h
 			ext/common/Utils.h)
 	}
 	APACHE2_OBJECTS = APACHE2_INPUT_FILES.keys
@@ -253,8 +259,7 @@ end
 		PlatformInfo.apache2_module_cflags)
 	APACHE2_COMMON_LIBRARY    = define_common_library_task("ext/apache2",
 		PlatformInfo.apache2_module_cflags,
-		true, APACHE2_BOOST_OXT_LIBRARY, nil,
-		PlatformInfo.apache2_module_ldflags)
+		true, APACHE2_BOOST_OXT_LIBRARY)
 	
 	
 	desc "Build Apache 2 module"
@@ -382,6 +387,9 @@ end
 	TEST_CXX_OBJECTS = {
 		'test/CxxTestMain.o' => %w(
 			test/CxxTestMain.cpp),
+		'test/support/Support.o' => %w(
+			test/support/Support.cpp
+			test/support/Support.h),
 		'test/MessageChannelTest.o' => %w(
 			test/MessageChannelTest.cpp
 			ext/common/MessageChannel.h),
@@ -389,12 +397,14 @@ end
 			test/SpawnManagerTest.cpp
 			ext/common/SpawnManager.h
 			ext/common/PoolOptions.h
+			ext/common/StringListCreator.h
 			ext/common/Application.h
 			ext/common/MessageChannel.h),
 		'test/ApplicationPoolServerTest.o' => %w(
 			test/ApplicationPoolServerTest.cpp
 			ext/common/ApplicationPoolServer.h
 			ext/common/PoolOptions.h
+			ext/common/StringListCreator.h
 			ext/common/MessageChannel.h),
 		'test/ApplicationPoolServer_ApplicationPoolTest.o' => %w(
 			test/ApplicationPoolServer_ApplicationPoolTest.cpp
@@ -403,6 +413,7 @@ end
 			ext/common/ApplicationPool.h
 			ext/common/SpawnManager.h
 			ext/common/PoolOptions.h
+			ext/common/StringListCreator.h
 			ext/common/Application.h
 			ext/common/MessageChannel.h),
 		'test/StandardApplicationPoolTest.o' => %w(
@@ -412,14 +423,21 @@ end
 			ext/common/StandardApplicationPool.h
 			ext/common/SpawnManager.h
 			ext/common/PoolOptions.h
-			ext/common/FileChecker.h
+			ext/common/StringListCreator.h
+			ext/common/FileChangeChecker.h
+			ext/common/CachedFileStat.hpp
 			ext/common/Application.h),
 		'test/PoolOptionsTest.o' => %w(
 			test/PoolOptionsTest.cpp
-			ext/common/PoolOptions.h),
-		'test/StaticString.o' => %w(
+			ext/common/PoolOptions.h
+			ext/common/StringListCreator.h),
+		'test/StaticStringTest.o' => %w(
 			test/StaticStringTest.cpp
 			ext/common/StaticString.h),
+		'test/Base64Test.o' => %w(
+			test/Base64Test.cpp
+			ext/common/Base64.h
+			ext/common/Base64.cpp),
 		'test/ScgiRequestParserTest.o' => %w(
 			test/ScgiRequestParserTest.cpp
 			ext/nginx/ScgiRequestParser.h
@@ -427,17 +445,17 @@ end
 		'test/HttpStatusExtractorTest.o' => %w(
 			test/HttpStatusExtractorTest.cpp
 			ext/nginx/HttpStatusExtractor.h),
-		'test/FileCheckerTest.o' => %w(
-			test/FileCheckerTest.cpp
-			ext/common/FileChecker.h
-			ext/common/CachedFileStat.h),
+		'test/FileChangeCheckerTest.o' => %w(
+			test/FileChangeCheckerTest.cpp
+			ext/common/FileChangeChecker.h
+			ext/common/CachedFileStat.hpp),
 		'test/SystemTimeTest.o' => %w(
 			test/SystemTimeTest.cpp
 			ext/common/SystemTime.h
 			ext/common/SystemTime.cpp),
 		'test/CachedFileStatTest.o' => %w(
 			test/CachedFileStatTest.cpp
-			ext/common/CachedFileStat.h
+			ext/common/CachedFileStat.hpp
 			ext/common/CachedFileStat.cpp),
 		'test/UtilsTest.o' => %w(
 			test/UtilsTest.cpp
@@ -518,7 +536,7 @@ end
 	end
 	
 	TEST_OXT_OBJECTS.each_pair do |target, sources|
-		file "test/oxt/#{target}" => sources.map{ |x| "test/oxt/#{x}" } do
+		file "test/oxt/#{target}" => sources.map{ |x| "test/oxt/#{x}" } + ['test/support/Support.h'] do
 			Dir.chdir('test/oxt') do
 				puts "### In test/oxt:"
 				compile_cxx sources[0], TEST_OXT_CFLAGS
@@ -668,7 +686,7 @@ spec = Gem::Specification.new do |s|
 		'doc/*/*/*/*/*/*',
 		'man/*',
 		'debian/*',
-		'ext/common/*.{cpp,c,h}',
+		'ext/common/*.{cpp,c,h,hpp}',
 		'ext/apache2/*.{cpp,h,c,TXT}',
 		'ext/nginx/*.{c,cpp,h}',
 		'ext/nginx/config',
@@ -683,21 +701,12 @@ spec = Gem::Specification.new do |s|
 		'misc/*/*',
 		'vendor/**/*',
 		'test/*.{rb,cpp,example}',
-		'test/support/*',
+		'test/support/*.{cpp,h,rb}',
 		'test/oxt/*.cpp',
-		'test/ruby/*',
-		'test/ruby/*/*',
-		'test/integration_tests/*',
-		'test/stub/*',
-		'test/stub/*/*',
-		'test/stub/*/*/*',
-		'test/stub/*/*/*/*',
-		'test/stub/*/*/*/*/*',
-		'test/stub/*/*/*/*/*/*',
-		'test/stub/*/*/*/*/*/*/*'
-	] - Dir['test/stub/*/log/*'] \
-	  - Dir['test/stub/*/tmp/*/*'] \
-	  - Dir['test/stub/apache2/*.{pid,lock,log}']
+		'test/ruby/**/*',
+		'test/integration_tests/**/*',
+		'test/stub/**/*'
+	]
 	s.executables = [
 		'passenger-spawn-server',
 		'passenger-install-apache2-module',

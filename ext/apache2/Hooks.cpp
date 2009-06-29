@@ -39,6 +39,7 @@
 #include "ApplicationPoolServer.h"
 #include "MessageChannel.h"
 #include "DirectoryMapper.h"
+#include "Timer.h"
 #include "Version.h"
 
 /* The Apache/APR headers *must* come after the Boost headers, otherwise
@@ -138,12 +139,44 @@ private:
 		}
 	};
 	
+	/**
+	 * A StringListCreator which returns a list of environment variable
+	 * names and values, as found in r->subprocess_env.
+	 */
+	class EnvironmentVariablesStringListCreator: public StringListCreator {
+	private:
+		request_rec *r;
+	public:
+		EnvironmentVariablesStringListCreator(request_rec *r) {
+			this->r = r;
+		}
+		
+		virtual const StringListPtr getItems() const {
+			const apr_array_header_t *env_arr;
+			apr_table_entry_t *env_entries;
+			StringListPtr result = ptr(new StringList());
+			
+			// Some standard CGI headers.
+			result->push_back("SERVER_SOFTWARE");
+			result->push_back(ap_get_server_version());
+			
+			// Subprocess environment variables.
+			env_arr = apr_table_elts(r->subprocess_env);
+			env_entries = (apr_table_entry_t *) env_arr->elts;
+			for (int i = 0; i < env_arr->nelts; ++i) {
+				result->push_back(env_entries[i].key);
+				result->push_back(env_entries[i].val);
+			}
+			return result;
+		}
+	};
+	
 	enum Threeway { YES, NO, UNKNOWN };
 
 	ApplicationPoolServerPtr applicationPoolServer;
 	thread_specific_ptr<ApplicationPoolPtr> threadSpecificApplicationPool;
 	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex;
-	CachedMultiFileStat *mstat;
+	CachedFileStat cstat;
 	
 	inline DirConfig *getDirConfig(request_rec *r) {
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
@@ -249,7 +282,7 @@ private:
 	 * (C) r->filename already exists.
 	 * (D) There is a page cache file for the URI.
 	 *
-	 * - If A is not true, or if B is not true, or if C is true, then won't do anything.
+	 * - If A is not true, or if B is not true, or if C is true, then don't do anything.
 	 *   Passenger will be disabled during the rest of this request.
 	 * - If D is true, then we first transform r->filename to the page cache file's
 	 *   filename, and then we let Apache serve it statically.
@@ -261,7 +294,7 @@ private:
 	 */
 	bool prepareRequest(request_rec *r, DirConfig *config, const char *filename, bool coreModuleWillBeRun = false) {
 		TRACE_POINT();
-		DirectoryMapper mapper(r, config, mstat, config->getStatThrottleRate());
+		DirectoryMapper mapper(r, config, &cstat, config->getStatThrottleRate());
 		try {
 			if (mapper.getBaseURI() == NULL) {
 				// (B) is not true.
@@ -378,6 +411,9 @@ private:
 			void *pointer;
 		} u;
 		
+		/* Did an error occur in any of the previous hook methods during
+		 * this request? If so, show the error and stop here.
+		 */
 		u.errorReport = 0;
 		apr_pool_userdata_get(&u.pointer, "Phusion Passenger: error report", r->pool);
 		if (u.errorReport != 0) {
@@ -411,8 +447,6 @@ private:
 		try {
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
-			apr_bucket_brigade *bb;
-			apr_bucket *b;
 			Application::SessionPtr session;
 			bool expectingUploadData;
 			shared_ptr<BufferedUpload> uploadData;
@@ -421,10 +455,11 @@ private:
 			expectingUploadData = ap_should_client_block(r);
 			contentLength = lookupHeader(r, "Content-Length");
 			
-			// If the HTTP upload data is larger than a threshold, or if the HTTP
-			// client sent HTTP upload data using the "chunked" transfer encoding
-			// (which implies Content-Length == NULL), then buffer the upload
-			// data into a tempfile.
+			/* If the HTTP upload data is larger than a threshold, or if the HTTP
+			 * client sent HTTP upload data using the "chunked" transfer encoding
+			 * (which implies Content-Length == NULL), then buffer the upload
+			 * data into a tempfile.
+			 */
 			if (expectingUploadData && (
 			          contentLength == NULL ||
 			          atol(contentLength) > UPLOAD_ACCELERATION_THRESHOLD
@@ -434,10 +469,11 @@ private:
 			}
 			
 			if (expectingUploadData && contentLength == NULL) {
-				// In case of "chunked" transfer encoding, we'll set the
-				// Content-Length header to the length of the received upload
-				// data. Rails requires this header for its HTTP upload data
-				// multipart parsing process.
+				/* In case of "chunked" transfer encoding, we'll set the
+				 * Content-Length header to the length of the received upload
+				 * data. Rails requires this header for its HTTP upload data
+				 * multipart parsing process.
+				 */
 				apr_table_set(r->headers_in, "Content-Length",
 					toString(ftell(uploadData->handle)).c_str());
 			}
@@ -450,10 +486,8 @@ private:
 			try {
 				ServerConfig *sconfig = getServerConfig(r->server);
 				string publicDirectory(mapper.getPublicDirectory());
-				string appRoot(config->getAppRoot(publicDirectory.c_str()));
-				
-				session = getApplicationPool()->get(PoolOptions(
-					appRoot,
+				PoolOptions options(
+					config->getAppRoot(publicDirectory.c_str()),
 					true,
 					sconfig->getDefaultUser(),
 					mapper.getEnvironment(),
@@ -465,8 +499,12 @@ private:
 					config->getMemoryLimit(),
 					config->usingGlobalQueue(),
 					config->getStatThrottleRate(),
-					config->getRestartDir()
-				));
+					config->getRestartDir(),
+					mapper.getBaseURI()
+				);
+				options.environmentVariables = ptr(new EnvironmentVariablesStringListCreator(r));
+				
+				session = getApplicationPool()->get(options);
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				r->status = 500;
@@ -500,33 +538,61 @@ private:
 					sendRequestBody(r, session);
 				}
 			}
-			session->shutdownWriter();
+			try {
+				session->shutdownWriter();
+			} catch (const SystemException &e) {
+				// Ignore ENOTCONN. This error occurs for some people
+				// for unknown reasons, but it's harmless.
+				if (e.code() != ENOTCONN) {
+					throw;
+				}
+			}
 			
 			
 			/********** Step 4: forwarding the response from the backend
 			                    process back to the HTTP client **********/
 			
 			UPDATE_TRACE_POINT();
-			apr_file_t *readerPipe = NULL;
-			int reader = session->getStream();
-			pid_t backendPid = session->getPid();
-			apr_os_pipe_put(&readerPipe, &reader, r->pool);
-			apr_file_pipe_timeout_set(readerPipe, r->server->timeout);
-
+			apr_bucket_brigade *bb;
+			apr_bucket *b;
+			PassengerBucketStatePtr bucketState;
+			pid_t backendPid;
+			
+			/* Setup the bucket brigade. */
+			bucketState = ptr(new PassengerBucketState());
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
-			b = passenger_bucket_create(session, readerPipe, r->connection->bucket_alloc);
+			b = passenger_bucket_create(session, bucketState, r->connection->bucket_alloc);
+			
+			/* The bucket (b) still has a reference to the session, so the reset()
+			 * call here is guaranteed not to throw any exceptions.
+			 */
+			backendPid = session->getPid();
 			session.reset();
+			
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 
 			b = apr_bucket_eos_create(r->connection->bucket_alloc);
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 
-			// I know the size because I read util_script.c's source. :-(
+			/* Now read the HTTP response header, parse it and fill relevant
+			 * information in our request_rec structure.
+			 */
+			
+			/* I know the required size for backendData because I read
+			 * util_script.c's source. :-(
+			 */
 			char backendData[MAX_STRING_LEN];
+			Timer timer;
 			int result = ap_scan_script_header_err_brigade(r, bb, backendData);
+			
 			if (result == OK) {
 				// The API documentation for ap_scan_script_err_brigade() says it
 				// returns HTTP_OK on success, but it actually returns OK.
+				
+				/* We were able to parse the HTTP response header sent by the
+				 * backend process! Proceed with passing the bucket brigade,
+				 * for forwarding the response body to the HTTP client.
+				 */
 				
 				/* Manually set the Status header because
 				 * ap_scan_script_header_err_brigade() filters it
@@ -540,17 +606,73 @@ private:
 				}
 				apr_table_setn(r->headers_out, "Status", r->status_line);
 				
+				UPDATE_TRACE_POINT();
 				ap_pass_brigade(r->output_filters, bb);
+				
+				if (r->connection->aborted) {
+					P_WARN("The HTTP client closed the connection before "
+						"the response could be completely sent. As a "
+						"result, you will probably see a 'Broken Pipe' "
+						"error in this log file. Please ignore it, "
+						"this is normal.");
+				} else if (!bucketState->completed) {
+					P_WARN("Apache stopped forwarding the backend's response, "
+						"even though the HTTP client did not close the "
+						"connection. Is this an Apache bug?");
+				}
+				
 				return OK;
 			} else if (backendData[0] == '\0') {
-				P_ERROR("Backend process " << backendPid <<
-					" did not return a valid HTTP response. It returned no data.");
+				if ((long long) timer.elapsed() >= r->server->timeout / 1000) {
+					// Looks like an I/O timeout.
+					P_ERROR("No data received from " <<
+						"the backend application (process " <<
+						backendPid << ") within " <<
+						(r->server->timeout / 1000) << " msec. Either " <<
+						"the backend application is frozen, or " <<
+						"your TimeOut value of " <<
+						(r->server->timeout / 1000000) <<
+						" seconds is too low. Please check " <<
+						"whether your application is frozen, or " <<
+						"increase the value of the TimeOut " <<
+						"configuration directive.");
+				} else {
+					P_ERROR("The backend application (process " <<
+						backendPid << ") did not send a valid " <<
+						"HTTP response; instead, it sent nothing " <<
+						"at all. It is possible that it has crashed; " <<
+						"please check whether there are crashing " <<
+						"bugs in this application.");
+				}
 				apr_table_setn(r->err_headers_out, "Status", "500 Internal Server Error");
 				return HTTP_INTERNAL_SERVER_ERROR;
 			} else {
-				P_ERROR("Backend process " << backendPid <<
-					" did not return a valid HTTP response. It returned: [" <<
-					backendData << "]");
+				if ((long long) timer.elapsed() >= r->server->timeout / 1000) {
+					// Looks like an I/O timeout.
+					P_ERROR("The backend application (process " <<
+						backendPid << ") hasn't sent a valid " <<
+						"HTTP response within " <<
+						(r->server->timeout / 1000) << " msec. Either " <<
+						"the backend application froze while " <<
+						"sending a response, or " <<
+						"your TimeOut value of " <<
+						(r->server->timeout / 1000000) <<
+						" seconds is too low. Please check " <<
+						"whether the application is frozen, or " <<
+						"increase the value of the TimeOut " <<
+						"configuration directive. The application " <<
+						"has sent this data so far: [" <<
+						backendData << "]");
+				} else {
+					P_ERROR("The backend application (process " <<
+						backendPid << ") didn't send a valid " <<
+						"HTTP response. It might have crashed " <<
+						"during the middle of sending an HTTP " <<
+						"response, so please check whether there " <<
+						"are crashing problems in your application. " <<
+						"This is the data that it sent: [" <<
+						backendData << "]");
+				}
 				apr_table_setn(r->err_headers_out, "Status", "500 Internal Server Error");
 				return HTTP_INTERNAL_SERVER_ERROR;
 			}
@@ -668,16 +790,6 @@ private:
 			}
 		}
 		
-		// Add other environment variables.
-		const apr_array_header_t *env_arr;
-		apr_table_entry_t *env;
-		
-		env_arr = apr_table_elts(r->subprocess_env);
-		env = (apr_table_entry_t*) env_arr->elts;
-		for (i = 0; i < env_arr->nelts; ++i) {
-			addHeader(headers, env[i].key, env[i].val);
-		}
-		
 		// Now send the headers.
 		string buffer;
 		
@@ -721,6 +833,169 @@ private:
 		return APR_SUCCESS;
 	}
 	
+	void throwUploadBufferingException(request_rec *r, int code) {
+		DirConfig *config = getDirConfig(r);
+		string message("An error occured while "
+			"buffering HTTP upload data to "
+			"a temporary file in ");
+		message.append(config->getUploadBufferDir());
+		
+		switch (code) {
+		case ENOSPC:
+			message.append(". Disk directory doesn't have enough disk space, "
+				"so please make sure that it has "
+				"enough disk space for buffering file uploads, "
+				"or set the 'PassengerUploadBufferDir' directive "
+				"to a directory that has enough disk space.");
+			throw RuntimeException(message);
+			break;
+		case EDQUOT:
+			message.append(". The current Apache worker process (which is "
+				"running as ");
+			message.append(getProcessUsername());
+			message.append(") cannot write to this directory because of "
+				"disk quota limits. Please make sure that the volume "
+				"that this directory resides on has enough disk space "
+				"quota for the Apache worker process, or set the "
+				"'PassengerUploadBufferDir' directive to a different "
+				"directory that has enough disk space quota.");
+			throw RuntimeException(message);
+			break;
+		case ENOENT:
+			message.append(". This directory doesn't exist, so please make "
+				"sure that this directory exists, or set the "
+				"'PassengerUploadBufferDir' directive to a "
+				"directory that exists and can be written to.");
+			throw RuntimeException(message);
+			break;
+		case EACCES:
+			message.append(". The current Apache worker process (which is "
+				"running as ");
+			message.append(getProcessUsername());
+			message.append(") doesn't have permissions to write to this "
+				"directory. Please change the permissions for this "
+				"directory (as well as all parent directories) so that "
+				"it is writable by the Apache worker process, or set "
+				"the 'PassengerUploadBufferDir' directive to a directory "
+				"that Apache can write to.");
+			throw RuntimeException(message);
+			break;
+		default:
+			throw SystemException(message, code);
+			break;
+		}
+	}
+	
+	/**
+	 * Reads the next chunk of the request body and put it into a buffer.
+	 *
+	 * This is like ap_get_client_block(), but can actually report errors
+	 * in a sane way. ap_get_client_block() tells you that something went
+	 * wrong, but not *what* went wrong.
+	 *
+	 * @param r The current request.
+	 * @param buffer A buffer to put the read data into.
+	 * @param bufsiz The size of the buffer.
+	 * @return The number of bytes read, or 0 on EOF.
+	 * @throws RuntimeException Something non-I/O related went wrong, e.g.
+	 *                          failure to allocate memory and stuff.
+	 * @throws IOException An I/O error occurred while trying to read the
+	 *                     request body data.
+	 */
+	unsigned long readRequestBodyFromApache(request_rec *r, char *buffer, apr_size_t bufsiz) {
+		apr_status_t rv;
+		apr_bucket_brigade *bb;
+		
+		if (r->remaining < 0 || (!r->read_chunked && r->remaining == 0)) {
+			return 0;
+		}
+
+		bb = apr_brigade_create(r->pool, r->connection->bucket_alloc);
+		if (bb == NULL) {
+			r->connection->keepalive = AP_CONN_CLOSE;
+			throw RuntimeException("An error occurred while receiving HTTP upload data: "
+				"unable to create a bucket brigade. Maybe the system doesn't have "
+				"enough free memory.");
+		}
+		
+		rv = ap_get_brigade(r->input_filters, bb, AP_MODE_READBYTES,
+		                    APR_BLOCK_READ, bufsiz);
+			
+		/* We lose the failure code here.  This is why ap_get_client_block should
+		 * not be used.
+		 */
+		if (rv != APR_SUCCESS) {
+			/* if we actually fail here, we want to just return and
+			 * stop trying to read data from the client.
+			 */
+			r->connection->keepalive = AP_CONN_CLOSE;
+			apr_brigade_destroy(bb);
+			
+			char buf[150], *errorString, message[1024];
+			errorString = apr_strerror(rv, buf, sizeof(buf));
+			if (errorString != NULL) {
+				snprintf(message, sizeof(message),
+					"An error occurred while receiving HTTP upload data: %s (%d)",
+					errorString, rv);
+			} else {
+				snprintf(message, sizeof(message),
+					"An error occurred while receiving HTTP upload data: unknown error %d",
+					rv);
+			}
+			message[sizeof(message) - 1] = '\0';
+			throw RuntimeException(message);
+		}
+		
+		/* If this fails, it means that a filter is written incorrectly and that
+		 * it needs to learn how to properly handle APR_BLOCK_READ requests by
+		 * returning data when requested.
+		 */
+		if (APR_BRIGADE_EMPTY(bb)) {
+			throw RuntimeException("An error occurred while receiving HTTP upload data: "
+				"the next filter in the input filter chain has "
+				"a bug. Please contact the author who wrote this filter about "
+				"this. This problem is not caused by Phusion Passenger.");
+		}
+
+		/* Check to see if EOS in the brigade.
+		 *
+		 * If so, we have to leave a nugget for the *next* readRequestBodyFromApache()
+		 * call to return 0.
+		 */
+		if (APR_BUCKET_IS_EOS(APR_BRIGADE_LAST(bb))) {
+			if (r->read_chunked) {
+				r->remaining = -1;
+			} else {
+				r->remaining = 0;
+			}
+		}
+
+		rv = apr_brigade_flatten(bb, buffer, &bufsiz);
+		if (rv != APR_SUCCESS) {
+			apr_brigade_destroy(bb);
+			
+			char buf[150], *errorString, message[1024];
+			errorString = apr_strerror(rv, buf, sizeof(buf));
+			if (errorString != NULL) {
+				snprintf(message, sizeof(message),
+					"An error occurred while receiving HTTP upload data: %s (%d)",
+					errorString, rv);
+			} else {
+				snprintf(message, sizeof(message),
+					"An error occurred while receiving HTTP upload data: unknown error %d",
+					rv);
+			}
+			message[sizeof(message) - 1] = '\0';
+			throw IOException(message);
+		}
+		
+		/* XXX yank me? */
+		r->read_length += bufsiz;
+		
+		apr_brigade_destroy(bb);
+		return bufsiz;
+	}
+	
 	/**
 	 * Receive the HTTP upload data and buffer it into a BufferedUpload temp file.
 	 *
@@ -729,43 +1004,34 @@ private:
 	 *                      to check whether the HTTP client has sent complete upload
 	 *                      data. NULL indicates that there is no Content-Length header,
 	 *                      i.e. that the HTTP client used chunked transfer encoding.
+	 * @throws RuntimeException
+	 * @throws SystemException
+	 * @throws IOException
 	 */
 	shared_ptr<BufferedUpload> receiveRequestBody(request_rec *r, const char *contentLength) {
 		TRACE_POINT();
-		shared_ptr<BufferedUpload> tempFile(new BufferedUpload());
+		DirConfig *config = getDirConfig(r);
+		shared_ptr<BufferedUpload> tempFile;
+		try {
+			tempFile.reset(new BufferedUpload(config->getUploadBufferDir()));
+		} catch (const SystemException &e) {
+			throwUploadBufferingException(r, e.code());
+		}
+		
 		char buf[1024 * 32];
 		apr_off_t len;
 		size_t total_written = 0;
 		
-		while ((len = ap_get_client_block(r, buf, sizeof(buf))) > 0) {
+		while ((len = readRequestBodyFromApache(r, buf, sizeof(buf))) > 0) {
 			size_t written = 0;
 			do {
 				size_t ret = fwrite(buf, 1, len - written, tempFile->handle);
 				if (ret <= 0 || fflush(tempFile->handle) == EOF) {
-					int e = errno;
-					string message("An error occured while "
-						"buffering HTTP upload data to "
-						"a temporary file in ");
-					message.append(BufferedUpload::getDir());
-					if (e == ENOSPC) {
-						message.append(". Please make sure "
-							"that this directory has "
-							"enough disk space for "
-							"buffering file uploads, "
-							"or set the 'PassengerTempDir' "
-							"directive to a directory "
-							"that has enough disk space.");
-						throw RuntimeException(message);
-					} else {
-						throw SystemException(message, e);
-					}
+					throwUploadBufferingException(r, errno);
 				}
 				written += ret;
 			} while (written < (size_t) len);
 			total_written += written;
-		}
-		if (len == -1) {
-			throw IOException("An error occurred while receiving HTTP upload data.");
 		}
 		
 		if (contentLength != NULL && ftell(tempFile->handle) != atol(contentLength)) {
@@ -791,23 +1057,20 @@ private:
 		char buf[1024 * 32];
 		apr_off_t len;
 
-		while ((len = ap_get_client_block(r, buf, sizeof(buf))) > 0) {
+		while ((len = readRequestBodyFromApache(r, buf, sizeof(buf))) > 0) {
 			session->sendBodyBlock(buf, len);
-		}
-		if (len == -1) {
-			throw IOException("An error occurred while receiving HTTP upload data.");
 		}
 	}
 
 public:
-	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s) {
+	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
+	    : cstat(1024) {
 		passenger_config_merge_all_servers(pconf, s);
 		ServerConfig *config = getServerConfig(s);
 		Passenger::setLogLevel(config->logLevel);
 		m_hasModRewrite = UNKNOWN;
 		m_hasModDir = UNKNOWN;
 		m_hasModAutoIndex = UNKNOWN;
-		mstat = cached_multi_file_stat_new(1024);
 		
 		P_DEBUG("Initializing Phusion Passenger...");
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
@@ -823,11 +1086,9 @@ public:
 		 * of the process in which the Hooks constructor was called for
 		 * the second time.
 		 */
-		unsetenv("TMPDIR");
 		createPassengerTempDir(config->getTempDir(), config->userSwitching,
 			config->getDefaultUser(), unixd_config.user_id,
 			unixd_config.group_id);
-		setenv("TMPDIR", (getPassengerTempDir() + "/var").c_str(), 1);
 		
 		ruby = (config->ruby != NULL) ? config->ruby : DEFAULT_RUBY_COMMAND;
 		if (config->userSwitching) {
@@ -873,7 +1134,6 @@ public:
 	}
 	
 	~Hooks() {
-		cached_multi_file_stat_free(mstat);
 		removeDirTree(getPassengerTempDir().c_str());
 	}
 	

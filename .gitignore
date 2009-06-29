@@ -7,6 +7,7 @@ scgi_demo
 *.bundle
 *.pyc
 *.a
+*.dSYM
 ext/apache2/*.la
 ext/apache2/*.lo
 ext/apache2/*.slo
@@ -25,11 +26,9 @@ test/CxxTests
 test/ApplicationPoolServerExecutable
 test/oxt/oxt_test_main
 test/stub/railsapp/app/controllers/bar_controller.rb
-test/stub/*/log/*
 test/stub/apache2/*.log
 test/stub/apache2/*.pid
 test/stub/apache2/httpd.conf
-test/stub/mycook/log
 test/stub/zsfa/mycook
 test/stub/zsfa/foo
 pkg

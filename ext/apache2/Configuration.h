@@ -25,8 +25,10 @@
 #ifndef _PASSENGER_CONFIGURATION_H_
 #define _PASSENGER_CONFIGURATION_H_
 
-#include "Utils.h"
-#include "MessageChannel.h"
+#ifdef __cplusplus
+	#include "Utils.h"
+	#include "MessageChannel.h"
+#endif
 
 /* The APR headers must come after the Passenger headers. See Hooks.cpp
  * to learn why.
@@ -153,6 +155,13 @@
 			 */
 			const char *restartDir;
 			
+			/**
+			 * The directory in which Passenger should place upload buffer
+			 * files. NULL means that the default directory should be used.
+			 */
+			const char *uploadBufferDir;
+			
+			/*************************************/
 			/*************************************/
 			
 			bool isEnabled() const {
@@ -241,6 +250,14 @@
 					return restartDir;
 				} else {
 					return "";
+				}
+			}
+			
+			string getUploadBufferDir() const {
+				if (uploadBufferDir != NULL) {
+					return uploadBufferDir;
+				} else {
+					return getPassengerTempDir() + "/webserver_private";
 				}
 			}
 			

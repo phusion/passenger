@@ -570,11 +570,11 @@ public:
 		ret = syscalls::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO,
 			&tv, sizeof(tv));
 		#ifndef __SOLARIS__
-		// SO_RCVTIMEO is unimplemented and retuns an error on Solaris
-		// 9 and 10 SPARC.  Seems to work okay without it.
-		if (ret == -1) {
-			throw SystemException("Cannot set read timeout for socket", errno);
-		}
+			// SO_RCVTIMEO is unimplemented and returns an error on Solaris
+			// 9 and 10 SPARC.  Seems to work okay without it.
+			if (ret == -1) {
+				throw SystemException("Cannot set read timeout for socket", errno);
+			}
 		#endif
 	}
 	
@@ -601,11 +601,11 @@ public:
 		ret = syscalls::setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO,
 			&tv, sizeof(tv));
 		#ifndef __SOLARIS__
-		// SO_SNDTIMEO is unimplemented and returns an error on Solaris
-		// 9 and 10 SPARC.  Seems to work okay without it.
-		if (ret == -1) {
-			throw SystemException("Cannot set read timeout for socket", errno);
-		}
+			// SO_SNDTIMEO is unimplemented and returns an error on Solaris
+			// 9 and 10 SPARC.  Seems to work okay without it.
+			if (ret == -1) {
+				throw SystemException("Cannot set read timeout for socket", errno);
+			}
 		#endif
 	}
 };

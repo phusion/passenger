@@ -28,7 +28,10 @@ module Railz
 
 # A request handler for Ruby on Rails applications.
 class RequestHandler < AbstractRequestHandler
-	NINJA_PATCHING_LOCK = Mutex.new
+	CONTENT_LENGTH      = 'CONTENT_LENGTH'      # :nodoc:
+	HTTP_CONTENT_LENGTH = 'HTTP_CONTENT_LENGTH' # :nodoc:
+	
+	NINJA_PATCHING_LOCK = Mutex.new             # :nodoc:
 	@@ninja_patched_action_controller = false
 	
 	def initialize(owner_pipe, options = {})
@@ -41,6 +44,7 @@ class RequestHandler < AbstractRequestHandler
 protected
 	# Overrided method.
 	def process_request(headers, input, output)
+		headers[CONTENT_LENGTH] = headers[HTTP_CONTENT_LENGTH]
 		cgi = CGIFixed.new(headers, input, output)
 		::Dispatcher.dispatch(cgi,
 			::ActionController::CgiRequest::DEFAULT_SESSION_OPTIONS,

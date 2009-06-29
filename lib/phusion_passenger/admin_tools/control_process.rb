@@ -23,6 +23,7 @@
 
 require 'rexml/document'
 require 'fileutils'
+require 'socket'
 require 'phusion_passenger/admin_tools'
 require 'phusion_passenger/message_channel'
 
@@ -79,37 +80,30 @@ class ControlProcess
 	end
 	
 	def status
-		reload
-		return @status
+		connect do |channel|
+			channel.write("status")
+			return channel.read_scalar
+		end
+	end
+	
+	def backtraces
+		connect do |channel|
+			channel.write("backtraces")
+			return channel.read_scalar
+		end
 	end
 	
 	def xml
-		reload
-		return @xml
+		connect do |channel|
+			channel.write("status_xml")
+			return channel.read_scalar
+		end
 	end
 	
 	def domains
-		reload
-		return @domains
-	end
-	
-	def instances
-		return domains.map do |domain|
-			domain[:instances]
-		end.flatten
-	end
-	
-private
-	def reload
-		return if @status
-		File.open("#{path}/info/status.fifo", 'r') do |f|
-			channel = MessageChannel.new(f)
-			@status = channel.read_scalar
-			@xml = channel.read_scalar
-		end
-		doc = REXML::Document.new(@xml)
+		doc = REXML::Document.new(xml)
 		
-		@domains = []
+		domains = []
 		doc.elements.each("info/domains/domain") do |domain|
 			instances = []
 			d = {
@@ -130,7 +124,24 @@ private
 				end
 				instances << i
 			end
-			@domains << d
+			domains << d
+		end
+		return domains
+	end
+	
+	def instances
+		return domains.map do |domain|
+			domain[:instances]
+		end.flatten
+	end
+	
+private
+	def connect
+		channel = MessageChannel.new(UNIXSocket.new("#{path}/info/status.socket"))
+		begin
+			yield channel
+		ensure
+			channel.close
 		end
 	end
 end

@@ -9,22 +9,10 @@ using namespace oxt;
 using namespace std;
 
 namespace tut {
-	struct SyscallInterruptionTest {
-		SyscallInterruptionTest() {
-			setup_syscall_interruption_support();
-		}
-		
-		~SyscallInterruptionTest() {
-			struct sigaction action;
-			
-			action.sa_handler = SIG_DFL;
-			action.sa_flags   = 0;
-			sigemptyset(&action.sa_mask);
-			sigaction(INTERRUPTION_SIGNAL, &action, NULL);
-		}
+	struct syscall_interruption_test {
 	};
 	
-	DEFINE_TEST_GROUP(SyscallInterruptionTest);
+	DEFINE_TEST_GROUP(syscall_interruption_test);
 	
 	struct SleepFunction {
 		void operator()() {

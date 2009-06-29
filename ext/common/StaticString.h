@@ -26,6 +26,7 @@
 #define _PASSENGER_STATIC_STRING_H_
 
 #include <string>
+#include <cstring>
 
 namespace Passenger {
 

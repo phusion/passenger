@@ -63,7 +63,7 @@ describe AbstractServerCollection do
 		end
 	end
 	
-	specify "#delete stop the server if it's started" do
+	specify "#delete stops the server if it's started" do
 		@collection.synchronize do
 			server = AbstractServer.new
 			@collection.lookup_or_add('foo') do

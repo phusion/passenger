@@ -40,6 +40,14 @@ class WelcomeController < ApplicationController
 	def show_id
 		render :text => params[:id]
 	end
+	
+	def environment
+		text = ""
+		ENV.each_pair do |key, value|
+			text << "#{key} = #{value}\n"
+		end
+		render :text => text
+	end
 
 	def request_uri
 		render :text => request.request_uri

@@ -23,6 +23,9 @@ Listen 127.0.0.1:<%= @port %>
 <% if !has_builtin_module?('mod_rewrite.c') && has_module?('mod_rewrite.so') %>
 	LoadModule rewrite_module "<%= modules_dir %>/mod_rewrite.so"
 <% end %>
+<% if !has_builtin_module?('mod_env.c') %>
+	LoadModule env_module "<%= modules_dir %>/mod_env.so"
+<% end %>
 LoadModule passenger_module "<%= @mod_passenger %>"
 
 PassengerRoot "<%= @passenger_root %>"

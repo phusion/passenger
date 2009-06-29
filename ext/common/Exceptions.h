@@ -137,6 +137,19 @@ public:
 };
 
 /**
+ * Unable to retrieve the system time using <tt>time()</tt>.
+ *
+ * @ingroup Exceptions
+ */
+class TimeRetrievalException: public SystemException {
+public:
+	TimeRetrievalException(const string &message, int errorCode)
+		: SystemException(message, errorCode)
+		{}
+	virtual ~TimeRetrievalException() throw() {}
+};
+
+/**
  * Represents an error that occured during an I/O operation.
  *
  * @ingroup Exceptions

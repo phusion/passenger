@@ -49,8 +49,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 			Dependencies::RubyGems,
 			Dependencies::Rake,
 			Dependencies::Apache2,
-			Dependencies::Apache2_DevHeaders,
-			Dependencies::FastThread
+			Dependencies::Apache2_DevHeaders
 		]
 		if Dependencies.fastthread_required?
 			result << Dependencies::FastThread

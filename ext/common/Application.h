@@ -283,7 +283,7 @@ private:
 			if (fd != -1) {
 				int ret = syscalls::shutdown(fd, SHUT_RD);
 				if (ret == -1) {
-					throw SystemException("Cannot shutdown the writer stream",
+					throw SystemException("Cannot shutdown the reader stream",
 						errno);
 				}
 			}
@@ -304,11 +304,16 @@ private:
 			TRACE_POINT();
 			if (fd != -1) {
 				int ret = syscalls::close(fd);
-				if (ret == -1) {
-					throw SystemException("Cannot close the session stream",
-						errno);
-				}
 				fd = -1;
+				if (ret == -1) {
+					if (errno == EIO) {
+						throw SystemException("A write operation on the session stream failed",
+							errno);
+					} else {
+						throw SystemException("Cannot close the session stream",
+							errno);
+					}
+				}
 			}
 		}
 		
@@ -329,33 +334,7 @@ private:
 	
 	SessionPtr connectToUnixServer(const function<void()> &closeCallback) const {
 		TRACE_POINT();
-		int fd, ret;
-		
-		do {
-			fd = socket(PF_UNIX, SOCK_STREAM, 0);
-		} while (fd == -1 && errno == EINTR);
-		if (fd == -1) {
-			throw SystemException("Cannot create a new unconnected Unix socket", errno);
-		}
-		
-		struct sockaddr_un addr;
-		addr.sun_family = AF_UNIX;
-		strncpy(addr.sun_path, listenSocketName.c_str(), sizeof(addr.sun_path));
-		addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
-		do {
-			ret = ::connect(fd, (const sockaddr *) &addr, sizeof(addr));
-		} while (ret == -1 && errno == EINTR);
-		if (ret == -1) {
-			int e = errno;
-			string message("Cannot connect to Unix socket '");
-			message.append(listenSocketName);
-			message.append("'");
-			do {
-				ret = close(fd);
-			} while (ret == -1 && errno == EINTR);
-			throw SystemException(message, e);
-		}
-		
+		int fd = Passenger::connectToUnixServer(listenSocketName.c_str());
 		return ptr(new StandardSession(pid, closeCallback, fd));
 	}
 	
@@ -510,6 +489,7 @@ public:
 	 * @post this->getSessions() == old->getSessions() + 1
 	 * @throws SystemException Something went wrong during the connection process.
 	 * @throws IOException Something went wrong during the connection process.
+	 * @throws boost::thread_interrupted
 	 */
 	SessionPtr connect(const function<void()> &closeCallback) const {
 		TRACE_POINT();

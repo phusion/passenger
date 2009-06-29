@@ -40,12 +40,12 @@
 #include <unistd.h>
 #include "Exceptions.h"
 
-typedef struct CachedMultiFileStat CachedMultiFileStat;
-
 namespace Passenger {
 
 using namespace std;
 using namespace boost;
+
+typedef struct CachedFileStat CachedFileStat;
 
 /** Enumeration which indicates what kind of file a file is. */
 typedef enum {
@@ -158,31 +158,34 @@ void split(const string &str, char sep, vector<string> &output);
  * Check whether the specified file exists.
  *
  * @param filename The filename to check.
- * @param mstat A CachedMultiFileStat object, if you want to use cached statting.
- * @param throttleRate A throttle rate for mstat. Only applicable if mstat is not NULL.
+ * @param cstat A CachedFileStat object, if you want to use cached statting.
+ * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
  * @return Whether the file exists.
  * @throws FileSystemException Unable to check because of a filesystem error.
+ * @throws TimeRetrievalException
+ * @throws boost::thread_interrupted
  * @ingroup Support
  */
-bool fileExists(const char *filename, CachedMultiFileStat *mstat = 0,
+bool fileExists(const char *filename, CachedFileStat *cstat = 0,
                 unsigned int throttleRate = 0);
 
 /**
  * Check whether 'filename' exists and what kind of file it is.
  *
  * @param filename The filename to check.
- * @param mstat A CachedMultiFileStat object, if you want to use cached statting.
- * @param throttleRate A throttle rate for mstat. Only applicable if mstat is not NULL.
+ * @param mstat A CachedFileStat object, if you want to use cached statting.
+ * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
  * @return The file type.
  * @throws FileSystemException Unable to check because of a filesystem error.
+ * @throws TimeRetrievalException
+ * @throws boost::thread_interrupted
  * @ingroup Support
  */
-FileType getFileType(const char *filename, CachedMultiFileStat *mstat = 0,
+FileType getFileType(const char *filename, CachedFileStat *cstat = 0,
                      unsigned int throttleRate = 0);
 
 /**
  * Find the location of the Passenger spawn server script.
- * If passengerRoot is given, t T
  *
  * @param passengerRoot The Passenger root folder. If NULL is given, then
  *      the spawn server is found by scanning $PATH. For security reasons,
@@ -247,6 +250,13 @@ string extractDirName(const string &path);
 string escapeForXml(const string &input);
 
 /**
+ * Returns the username of the user that the current process is running as.
+ * If the user has no associated username, then the "UID xxxx" is returned,
+ * where xxxx is the current UID.
+ */
+string getProcessUsername();
+
+/**
  * Given a username that's supposed to be the "lowest user" in the user switching mechanism,
  * checks whether this username exists. If so, this users's UID and GID will be stored into
  * the arguments of the same names. If not, <em>uid</em> and <em>gid</em> will be set to
@@ -308,8 +318,6 @@ void setPassengerTempDir(const string &dir);
  *          about a running Phusion Passenger instance.
  * - backends - for storing Unix sockets created by backend processes.
  * - master - for storing files such as the Passenger HelperServer socket.
- * - var - for storing all other kinds of temp files that the backend processes
- *         create.
  *
  * If a (sub)directory already exists, then it will not result in an error.
  *
@@ -359,7 +367,7 @@ void createPassengerTempDir(const string &parentDir, bool userSwitching,
  * @throws SystemException Something went wrong.
  * @throws FileSystemException Something went wrong.
  */
-void makeDirTree(const string &path, const char *mode = "u=rwx,g=,o=", uid_t owner = -1, gid_t group = -1);
+void makeDirTree(const string &path, const char *mode = "u=rwx,g=,o=", uid_t owner = (uid_t) -1, gid_t group = (gid_t) -1);
 
 /**
  * Remove an entire directory tree recursively.
@@ -372,37 +380,68 @@ void removeDirTree(const string &path);
  * Check whether the specified directory is a valid Ruby on Rails
  * application root directory.
  *
- * @param mstat A CachedMultiFileStat object, if you want to use cached statting.
- * @param throttleRate A throttle rate for mstat. Only applicable if mstat is not NULL.
+ * @param cstat A CachedFileStat object, if you want to use cached statting.
+ * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
  * @throws FileSystemException Unable to check because of a system error.
+ * @throws TimeRetrievalException
+ * @throws boost::thread_interrupted
  * @ingroup Support
  */
-bool verifyRailsDir(const string &dir, CachedMultiFileStat *mstat = 0,
+bool verifyRailsDir(const string &dir, CachedFileStat *cstat = 0,
                     unsigned int throttleRate = 0);
 
 /**
  * Check whether the specified directory is a valid Rack application
  * root directory.
  *
- * @param mstat A CachedMultiFileStat object, if you want to use cached statting.
- * @param throttleRate A throttle rate for mstat. Only applicable if mstat is not NULL.
+ * @param cstat A CachedFileStat object, if you want to use cached statting.
+ * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
  * @throws FileSystemException Unable to check because of a filesystem error.
+ * @throws TimeRetrievalException
+ * @throws boost::thread_interrupted
  * @ingroup Support
  */
-bool verifyRackDir(const string &dir, CachedMultiFileStat *mstat = 0,
+bool verifyRackDir(const string &dir, CachedFileStat *cstat = 0,
                    unsigned int throttleRate = 0);
 
 /**
  * Check whether the specified directory is a valid WSGI application
  * root directory.
  *
- * @param mstat A CachedMultiFileStat object, if you want to use cached statting.
- * @param throttleRate A throttle rate for mstat. Only applicable if mstat is not NULL.
+ * @param cstat A CachedFileStat object, if you want to use cached statting.
+ * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
  * @throws FileSystemException Unable to check because of a filesystem error.
+ * @throws TimeRetrievalException
+ * @throws boost::thread_interrupted
  * @ingroup Support
  */
-bool verifyWSGIDir(const string &dir, CachedMultiFileStat *mstat = 0,
+bool verifyWSGIDir(const string &dir, CachedFileStat *cstat = 0,
                    unsigned int throttleRate = 0);
+
+/**
+ * Create a new Unix server socket which is bounded to <tt>filename</tt>.
+ *
+ * @param filename The filename to bind the socket to.
+ * @param backlogSize The size of the socket's backlog. Specify 0 to use the
+ *                    platform's maximum allowed backlog size.
+ * @param autoDelete Whether <tt>filename</tt> should be deleted, if it already exists.
+ * @return The file descriptor of the newly created Unix server socket.
+ * @throws RuntimeException Something went wrong.
+ * @throws SystemException Something went wrong while creating the Unix server socket.
+ * @throws boost::thread_interrupted A system call has been interrupted.
+ */
+int createUnixServer(const char *filename, unsigned int backlogSize = 0, bool autoDelete = true);
+
+/**
+ * Connect to a Unix server socket at <tt>filename</tt>.
+ *
+ * @param filename The filename of the socket to connect to.
+ * @return The file descriptor of the connected client socket.
+ * @throws RuntimeException Something went wrong.
+ * @throws SystemException Something went wrong while connecting to the Unix server.
+ * @throws boost::thread_interrupted A system call has been interrupted.
+ */
+int connectToUnixServer(const char *filename);
 
 /**
  * Represents a buffered upload file.
@@ -419,11 +458,11 @@ public:
 	 *
 	 * @throws SystemException Something went wrong.
 	 */
-	BufferedUpload(const char *identifier = "temp") {
+	BufferedUpload(const string &dir, const char *identifier = "temp") {
 		char templ[PATH_MAX];
 		int fd;
 		
-		snprintf(templ, sizeof(templ), "%s/%s.XXXXXX", getDir().c_str(), identifier);
+		snprintf(templ, sizeof(templ), "%s/%s.XXXXXX", dir.c_str(), identifier);
 		templ[sizeof(templ) - 1] = '\0';
 		fd = mkstemp(templ);
 		if (fd == -1) {
@@ -449,14 +488,6 @@ public:
 	
 	~BufferedUpload() {
 		fclose(handle);
-	}
-	
-	/**
-	 * Returns the directory in which upload buffer files are stored.
-	 * This is a subdirectory of the directory returned by getPassengerTempDir(). 
-	 */
-	static string getDir() {
-		return getPassengerTempDir() + "/webserver_private";
 	}
 };
 

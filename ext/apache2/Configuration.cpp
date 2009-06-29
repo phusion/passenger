@@ -87,6 +87,7 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->statThrottleRate = 0;
 	config->statThrottleRateSpecified = false;
 	config->restartDir = NULL;
+	config->uploadBufferDir = NULL;
 	/*************************************/
 	return config;
 }
@@ -127,6 +128,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->statThrottleRate = (add->statThrottleRateSpecified) ? add->statThrottleRate : base->statThrottleRate;
 	config->statThrottleRateSpecified = base->statThrottleRateSpecified || add->statThrottleRateSpecified;
 	config->restartDir = (add->restartDir == NULL) ? base->restartDir : add->restartDir;
+	config->uploadBufferDir = (add->uploadBufferDir == NULL) ? base->uploadBufferDir : add->uploadBufferDir;
 	/*************************************/
 	return config;
 }
@@ -401,6 +403,13 @@ cmd_passenger_app_root(cmd_parms *cmd, void *pcfg, const char *arg) {
 	return NULL;
 }
 
+static const char *
+cmd_passenger_upload_buffer_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->uploadBufferDir = arg;
+	return NULL;
+}
+
 
 /*************************************************
  * Rails-specific settings
@@ -622,6 +631,12 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The application's root directory."),
+	AP_INIT_TAKE1("PassengerUploadBufferDir",
+		(Take1Func) cmd_passenger_upload_buffer_dir,
+		NULL,
+		OR_OPTIONS,
+		"The directory in which upload buffer files should be placed."),
+	/*****************************/
 
 	// Rails-specific settings.
 	AP_INIT_TAKE1("RailsBaseURI",

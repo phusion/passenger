@@ -3,7 +3,7 @@ require 'support/config'
 require 'ruby/abstract_server_spec'
 
 shared_examples_for "a spawn server" do
-	it_should_behave_like "AbstractServer"
+	it_should_behave_like "an AbstractServer"
 	
 	it "raises an AbstractServer::ServerError if the server was killed" do
 		Process.kill('SIGABRT', @spawner.server_pid)

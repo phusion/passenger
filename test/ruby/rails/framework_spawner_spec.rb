@@ -76,7 +76,7 @@ describe FrameworkSpawner do
 		it_should_behave_like "handling errors in framework initialization"
 	end
 	
-	def spawn_stub_application(stub)
+	def spawn_stub_application(stub, extra_options = {})
 		if use_vendor_rails?
 			stub.use_vendor_rails('minimal')
 		end
@@ -86,18 +86,19 @@ describe FrameworkSpawner do
 		else
 			options = { :version => version }
 		end
+		options["lowest_user"] = CONFIG['lowest_user']
+		options = options.merge(extra_options)
 		spawner = FrameworkSpawner.new(options)
 		spawner.start
 		begin
-			return spawner.spawn_application(stub.app_root,
-				"lowest_user" => CONFIG['lowest_user'])
+			return spawner.spawn_application(stub.app_root, options)
 		ensure
 			spawner.stop
 		end
 	end
 	
-	def load_nonexistant_framework
-		spawner = FrameworkSpawner.new(:version => "1.9.827")
+	def load_nonexistant_framework(options = {})
+		spawner = FrameworkSpawner.new(options.merge(:version => "1.9.827"))
 		begin
 			spawner.start
 		ensure
