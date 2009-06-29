@@ -124,7 +124,7 @@ class AbstractServer
 		if started?
 			raise ServerAlreadyStarted, "Server is already started"
 		end
-	
+		
 		@parent_socket, @child_socket = UNIXSocket.pair
 		before_fork
 		@pid = fork
@@ -138,7 +138,12 @@ class AbstractServer
 				# on a white list of file descriptors. That proved to be way too fragile:
 				# too many file descriptors are being left open even though they shouldn't
 				# be. So now we close file descriptors based on a black list.
-				file_descriptors_to_leave_open = [0, 1, 2, @child_socket.fileno]
+				#
+				# Note that STDIN, STDOUT and STDERR may be temporarily set to
+				# different file descriptors than 0, 1 and 2, e.g. in unit tests.
+				# We don't want to close these either.
+				file_descriptors_to_leave_open = [0, 1, 2, @child_socket.fileno,
+					fileno_of(STDIN), fileno_of(STDOUT), fileno_of(STDERR)].compact.uniq
 				NativeSupport.close_all_file_descriptors(file_descriptors_to_leave_open)
 				# In addition to closing the file descriptors, one must also close
 				# the associated IO objects. This is to prevent IO.close from
@@ -150,6 +155,9 @@ class AbstractServer
 				# result in mysterious 'EBADFD' errors. So we force RubyGems to
 				# clear all open file handles.
 				Gem.clear_paths
+				
+				# Reseed pseudo-random number generator for security reasons.
+				srand
 				
 				start_synchronously(@child_socket)
 			rescue Interrupt
@@ -291,6 +299,12 @@ protected
 	# Tell the main loop to stop as soon as possible.
 	def quit_main
 		@done = true
+	end
+	
+	def fileno_of(io)
+		return io.fileno
+	rescue
+		return nil
 	end
 
 private

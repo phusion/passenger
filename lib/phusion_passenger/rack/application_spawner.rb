@@ -49,6 +49,8 @@ class ApplicationSpawner
 	# Application object will be returned, which represents the spawned
 	# application.
 	#
+	# Accepts the same options as Railz::ApplicationSpawner#initialize.
+	#
 	# Raises:
 	# - AppInitError: The Rack application raised an exception or called
 	#   exit() during startup.
@@ -70,7 +72,7 @@ class ApplicationSpawner
 		Process.waitpid(pid) rescue nil
 		
 		channel = MessageChannel.new(a)
-		unmarshal_and_raise_errors(channel, "rack")
+		unmarshal_and_raise_errors(channel, !!options["print_exceptions"], "rack")
 		
 		# No exception was raised, so spawning succeeded.
 		pid, socket_name, socket_type = channel.read
@@ -83,13 +85,19 @@ class ApplicationSpawner
 	end
 
 private
-	
 	def run(channel, app_root, options)
 		$0 = "Rack: #{app_root}"
 		app = nil
 		success = report_app_init_status(channel) do
 			ENV['RACK_ENV'] = options["environment"]
+			if options["base_uri"] && options["base_uri"] != "/"
+				ENV['RACK_BASE_URI'] = options["base_uri"]
+				ENV['RAILS_RELATIVE_URL_ROOT'] = options["base_uri"]
+			end
 			Dir.chdir(app_root)
+			if options["environment_variables"]
+				set_passed_environment_variables(options["environment_variables"])
+			end
 			if options["lower_privilege"]
 				lower_privilege('config.ru', options["lowest_user"])
 			end
@@ -114,6 +122,17 @@ private
 				handler.cleanup rescue nil
 				PhusionPassenger.call_event(:stopping_worker_process)
 			end
+		end
+	end
+	
+	def set_passed_environment_variables(encoded_environment_variables)
+		env_vars_string = encoded_environment_variables.unpack("m").first
+		# Prevent empty string as last item from b0rking the Hash[...] statement.
+		# See comment in Hooks.cpp (sendHeaders) for details.
+		env_vars_string << "_\0_"
+		env_vars = Hash[*env_vars_string.split("\0")]
+		env_vars.each_pair do |key, value|
+			ENV[key] = value
 		end
 	end
 

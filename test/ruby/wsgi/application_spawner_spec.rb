@@ -5,6 +5,8 @@ require 'phusion_passenger/utils'
 require 'fileutils'
 require 'tempfile'
 
+include PhusionPassenger
+
 describe PhusionPassenger::WSGI::ApplicationSpawner do
 	include TestHelper
 	include PhusionPassenger::Utils
@@ -39,7 +41,7 @@ describe PhusionPassenger::WSGI::ApplicationSpawner do
 	
 	specify "the backend process deletes its socket upon termination" do
 		spawn(@stub.app_root).close
-		sleep 0.2 # Give it some time to terminate.
+		sleep 0.25 # Give it some time to terminate.
 		File.chmod(0700, "#{passenger_tmpdir}/backends")
 		Dir["#{passenger_tmpdir}/backends/wsgi_backend.*"].should be_empty
 	end

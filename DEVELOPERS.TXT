@@ -34,7 +34,11 @@ The most important directories are:
 [ ext/phusion_passenger ]
   Native extensions for Ruby, used by the spawn server.
 [ ext/apache2 ]
-  The Phusion Passenger Apache 2 module (mod_passenger).
+  Apache 2-specific source code.
+[ ext/nginx ]
+  Nginx-specific source code.
+[ ext/common ]
+  Source code shared by the Apache and Nginx modules.
 [ bin ]
   Executables.
 [ doc ]
@@ -47,8 +51,6 @@ The most important directories are:
   Stub code, used in the tests.
 
 Less important directories:
-[ lib/rake ]
-  Rake tasks.
 [ ext/boost ]
   A stripped-down and customized version of the Boost C++ library
   (www.boost.org).
@@ -59,8 +61,16 @@ Less important directories:
   for C++. Boost was modified to make use of the functionality provided by OXT.
 [ benchmark ]
   Benchmark tools.
+[ debian ]
+  Debian packaging files.
+[ man ]
+  Man pages.
 [ misc ]
   Miscellaneous tools.
+[ misc/rake ]
+  Rake tasks.
+[ vendor ]
+  Various vendored libraries.
 
 == Tests
 

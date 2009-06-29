@@ -26,6 +26,9 @@ CORE_LIBS="$CORE_LIBS  \
     ${ngx_addon_dir}/libpassenger_common.a \
     ${ngx_addon_dir}/libboost_oxt.a \
     -lstdc++ -lpthread"
+if test x`uname` = xOpenBSD; then
+    CORE_LIBS="$CORE_LIBS -lm"
+fi
 
 nginx_version=`grep 'NGINX_VERSION ' src/core/nginx.h | awk '{ print $3 }' | sed 's/"//g'`
 

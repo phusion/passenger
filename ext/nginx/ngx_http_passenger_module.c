@@ -54,11 +54,18 @@ static ngx_str_t  ngx_http_scgi_script_name = ngx_string("scgi_script_name");
 static pid_t      helper_server_pid = 0;
 static int        helper_server_admin_pipe;
 static u_char     helper_server_password_data[HELPER_SERVER_PASSWORD_SIZE];
+/** perl_module destroys the original environment variables for some reason,
+ * so when we get a SIGHUP (for restarting Nginx) $TMPDIR might not have the
+ * same value as it had during Nginx startup. We need the original $TMPDIR
+ * value for calculating the Passenger temp dir location, so here we cache
+ * the original value instead of getenv()'ing it every time.
+ */
+const char       *system_temp_dir = NULL;
 const char        passenger_temp_dir[NGX_MAX_PATH];
 ngx_str_t         passenger_schema_string;
 ngx_str_t         passenger_helper_server_password;
 const char        passenger_helper_server_socket[NGX_MAX_PATH];
-CachedMultiFileStat *passenger_stat_cache;
+CachedFileStat   *passenger_stat_cache;
 
 static void shutdown_helper_server(ngx_cycle_t *cycle);
 
@@ -122,10 +129,17 @@ start_helper_server(ngx_cycle_t *cycle)
     long                   i;
     ssize_t                ret;
     char                   buf;
-    FILE                  *f;
+    ngx_str_t             *log_filename;
+    FILE                  *f, *log_file;
     
-    if (helper_server_pid != 0) {
-        shutdown_helper_server(cycle);
+    shutdown_helper_server(cycle);
+    
+    if (main_conf->root_dir.len == 0) {
+        ngx_log_error(NGX_LOG_ALERT, cycle->log, 0,
+                      "Phusion Passenger is disabled because the "
+                      "'passenger_root' option is not set. Please set "
+                      "this option if you want to enable Phusion Passenger.");
+        return NGX_OK;
     }
     
     ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
@@ -219,10 +233,35 @@ start_helper_server(ngx_cycle_t *cycle)
         close(admin_pipe[1]);
         close(feedback_pipe[0]);
         
-        /* Nginx redirects stderr to the error log file. Make sure that
-         * stdout is redirected to the error log file as well.
+        /* At this point, stdout and stderr may still point to the console.
+         * Make sure that they're both redirected to the log file.
          */
-        dup2(2, 1);
+        log_file = NULL;
+        #if NGINX_VERSION_NUM < 7000
+            log_filename = &cycle->new_log->file->name;
+        #else
+            log_filename = &cycle->new_log.file->name;
+        #endif
+        if (log_filename->len > 0) {
+            log_file = fopen((const char *) log_filename->data, "a");
+            if (log_file == NULL) {
+                ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                              "could not open the error log file for writing");
+            }
+        }
+        if (log_file == NULL) {
+            /* If the log file cannot be opened then we redirect stdout
+             * and stderr to /dev/null, because if the user disconnects
+             * from the console on which Nginx is started, then on Linux
+             * any writes to stdout or stderr will result in an EIO error.
+             */
+            log_file = fopen("/dev/null", "w");
+        }
+        if (log_file != NULL) {
+            dup2(fileno(log_file), 1);
+            dup2(fileno(log_file), 2);
+            fclose(log_file);
+        }
         
         /* Close all file descriptors except stdin, stdout, stderr and
          * the reader part of the pipe we just created. 
@@ -241,6 +280,8 @@ start_helper_server(ngx_cycle_t *cycle)
             close(i);
         }
         
+        setenv("SERVER_SOFTWARE", NGINX_VER, 1);
+        
         execlp((const char *) helper_server_filename,
                "PassengerNginxHelperServer",
                main_conf->root_dir.data,
@@ -256,7 +297,7 @@ start_helper_server(ngx_cycle_t *cycle)
                worker_uid_string,
                worker_gid_string,
                passenger_temp_dir,
-               NULL);
+               (char *) 0);
         e = errno;
         fprintf(stderr, "*** Could not start the Passenger helper server (%s): "
                 "exec() failed: %s (%d)\n",
@@ -357,6 +398,10 @@ save_master_process_pid(ngx_cycle_t *cycle) {
     u_char *last;
     FILE *f;
     
+    if (passenger_main_conf.root_dir.len == 0) {
+        return NGX_OK;
+    }
+    
     last = ngx_snprintf(filename, sizeof(filename) - 1,
         "%s/control_process.pid", passenger_temp_dir);
     *last = (u_char) '\0';
@@ -379,6 +424,10 @@ shutdown_helper_server(ngx_cycle_t *cycle)
     time_t begin_time;
     int    helper_server_exited, ret;
     u_char command[NGX_MAX_PATH + 10];
+    
+    if (helper_server_pid == 0) {
+        return;
+    }
     
     /* We write one byte to the admin pipe, doesn't matter what the byte is.
      * The helper server will detect this as an exit command.
@@ -442,7 +491,6 @@ shutdown_helper_server(ngx_cycle_t *cycle)
                           passenger_temp_dir);
         }
     }
-    
     helper_server_pid = 0;
 }
 
@@ -509,15 +557,15 @@ static ngx_int_t
 pre_config_init(ngx_conf_t *cf)
 {
     ngx_int_t   ret;
-    const char *system_temp_dir;
     u_char      command[NGX_MAX_PATH + 30];
+    u_char     *last;
     
     ngx_memzero(&passenger_main_conf, sizeof(passenger_main_conf_t));
     
     passenger_schema_string.data = (u_char *) "passenger://";
     passenger_schema_string.len  = sizeof("passenger://") - 1;
     
-    passenger_stat_cache = cached_multi_file_stat_new(1024);
+    passenger_stat_cache = cached_file_stat_new(1024);
     
     ret = add_variables(cf);
     if (ret != NGX_OK) {
@@ -526,9 +574,13 @@ pre_config_init(ngx_conf_t *cf)
     
     /* Setup Passenger temp folder. */
     
-    system_temp_dir = getenv("TMPDIR");
-    if (!system_temp_dir || !*system_temp_dir) {
-        system_temp_dir = "/tmp";
+    if (system_temp_dir == NULL) {
+        const char *tmp = getenv("TMPDIR");
+        if (tmp == NULL || *tmp == '\0') {
+            system_temp_dir = "/tmp";
+        } else {
+            system_temp_dir = strdup(tmp);
+        }
     }
     
     ngx_memzero(&passenger_temp_dir, sizeof(passenger_temp_dir));
@@ -554,13 +606,16 @@ pre_config_init(ngx_conf_t *cf)
     
     /* Build helper server socket filename string. */
     
-    if (ngx_snprintf((u_char *) passenger_helper_server_socket, NGX_MAX_PATH,
-                     "unix:%s/master/helper_server.sock",
-                     passenger_temp_dir) == NULL) {
+    last = ngx_snprintf((u_char *) passenger_helper_server_socket, NGX_MAX_PATH,
+                        "unix:%s/master/helper_server.sock",
+                        passenger_temp_dir);
+    if (last == NULL) {
         ngx_log_error(NGX_LOG_ALERT, cf->log, ngx_errno,
                       "could not create Passenger helper server "
                       "socket filename string");
         return NGX_ERROR;
+    } else {
+        *last = (u_char) '\0';
     }
     
     return NGX_OK;

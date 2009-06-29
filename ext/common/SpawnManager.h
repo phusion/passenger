@@ -265,15 +265,16 @@ private:
 	 * @param PoolOptions The spawn options to use.
 	 * @return An Application smart pointer, representing the spawned application.
 	 * @throws SpawnException Something went wrong.
+	 * @throws Anything thrown by options.environmentVariables->getItems().
 	 */
-	ApplicationPtr sendSpawnCommand(const PoolOptions &PoolOptions) {
+	ApplicationPtr sendSpawnCommand(const PoolOptions &options) {
 		TRACE_POINT();
 		vector<string> args;
 		int ownerPipe;
 		
 		try {
 			args.push_back("spawn_application");
-			PoolOptions.toVector(args);
+			options.toVector(args);
 			channel.write(args);
 		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not write 'spawn_application' "
@@ -346,15 +347,16 @@ private:
 				ret = chown(args[1].c_str(), getuid(), getgid());
 			} while (ret == -1 && errno == EINTR);
 		}
-		return ApplicationPtr(new Application(PoolOptions.appRoot,
+		return ApplicationPtr(new Application(options.appRoot,
 			pid, args[1], args[2], ownerPipe));
 	}
 	
 	/**
 	 * @throws boost::thread_interrupted
+	 * @throws Anything thrown by options.environmentVariables->getItems().
 	 */
 	ApplicationPtr
-	handleSpawnException(const SpawnException &e, const PoolOptions &PoolOptions) {
+	handleSpawnException(const SpawnException &e, const PoolOptions &options) {
 		TRACE_POINT();
 		bool restarted;
 		try {
@@ -371,7 +373,7 @@ private:
 			restarted = false;
 		}
 		if (restarted) {
-			return sendSpawnCommand(PoolOptions);
+			return sendSpawnCommand(options);
 		} else {
 			throw SpawnException("The spawn server died unexpectedly, and restarting it failed.");
 		}
@@ -500,17 +502,18 @@ public:
 	 *         spawned application.
 	 * @throws SpawnException Something went wrong.
 	 * @throws boost::thread_interrupted
+	 * @throws Anything thrown by options.environmentVariables->getItems().
 	 */
-	ApplicationPtr spawn(const PoolOptions &PoolOptions) {
+	ApplicationPtr spawn(const PoolOptions &options) {
 		TRACE_POINT();
 		boost::mutex::scoped_lock l(lock);
 		try {
-			return sendSpawnCommand(PoolOptions);
+			return sendSpawnCommand(options);
 		} catch (const SpawnException &e) {
 			if (e.hasErrorPage()) {
 				throw;
 			} else {
-				return handleSpawnException(e, PoolOptions);
+				return handleSpawnException(e, options);
 			}
 		}
 	}

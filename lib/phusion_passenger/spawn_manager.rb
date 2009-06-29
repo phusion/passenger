@@ -97,7 +97,7 @@ class SpawnManager < AbstractServer
 	#
 	# Other options are:
 	#
-	# ['lower_privilege', 'lowest_user' and 'environment']
+	# ['lower_privilege', 'lowest_user', 'environment', 'environment_variables', 'base_uri' and 'print_exceptions']
 	#   See Railz::ApplicationSpawner.new for an explanation of these options.
 	# 
 	# ['app_type']
@@ -234,7 +234,11 @@ private
 			else
 				key = "version:#{framework_version}"
 				create_spawner = proc do
-					Railz::FrameworkSpawner.new(:version => framework_version)
+					framework_options = { :version => framework_version }
+					if options.has_key?(:print_framework_loading_exceptions)
+						framework_options[:print_framework_loading_exceptions] = options[:print_framework_loading_exceptions]
+					end
+					Railz::FrameworkSpawner.new(framework_options)
 				end
 				spawner_timeout = options["framework_spawner_timeout"]
 			end

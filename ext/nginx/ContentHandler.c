@@ -63,10 +63,10 @@ get_file_type(const u_char *filename, unsigned int throttle_rate) {
     struct stat buf;
     int ret;
     
-    ret = cached_multi_file_stat_perform(passenger_stat_cache,
-                                         (const char *) filename,
-                                         &buf,
-                                         throttle_rate);
+    ret = cached_file_stat_perform(passenger_stat_cache,
+                                   (const char *) filename,
+                                   &buf,
+                                   throttle_rate);
     if (ret == 0) {
         if (S_ISREG(buf.st_mode)) {
             return FT_FILE;
@@ -105,7 +105,7 @@ detect_application_type(const ngx_str_t *public_dir) {
     
     ngx_memzero(filename, sizeof(filename));
     ngx_snprintf(filename, sizeof(filename), "%s/%s",
-                 public_dir->data, "../config/passenger_wsgi.py");
+                 public_dir->data, "../passenger_wsgi.py");
     if (file_exists(filename, 1)) {
         return AP_WSGI;
     }
@@ -1077,7 +1077,9 @@ passenger_content_handler(ngx_http_request_t *r)
     ngx_str_t              page_cache_file;
     passenger_context_t   *context;
 
-    if (r->subrequest_in_memory) {
+    if (passenger_main_conf.root_dir.len == 0) {
+        return NGX_DECLINED;
+    } else if (r->subrequest_in_memory) {
         ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
                       "ngx_http_passenger_module does not support "
                       "subrequest in memory");

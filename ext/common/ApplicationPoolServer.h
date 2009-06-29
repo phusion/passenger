@@ -216,7 +216,7 @@ private:
 			if (fd != -1) {
 				int ret = syscalls::shutdown(fd, SHUT_RD);
 				if (ret == -1) {
-					throw SystemException("Cannot shutdown the writer stream",
+					throw SystemException("Cannot shutdown the reader stream",
 						errno);
 				}
 			}
@@ -235,11 +235,16 @@ private:
 		virtual void closeStream() {
 			if (fd != -1) {
 				int ret = syscalls::close(fd);
-				if (ret == -1) {
-					throw SystemException("Cannot close the session stream",
-						errno);
-				}
 				fd = -1;
+				if (ret == -1) {
+					if (errno == EIO) {
+						throw SystemException("A write operation on the session stream failed",
+							errno);
+					} else {
+						throw SystemException("Cannot close the session stream",
+							errno);
+					}
+				}
 			}
 		}
 		
@@ -380,12 +385,18 @@ private:
 			vector<string> args;
 			int stream;
 			bool result;
+			bool serverMightNeedEnvironmentVariables = true;
 			
+			/* Send a 'get' request to the ApplicationPool server.
+			 * For efficiency reasons, we do not send the data for
+			 * options.environmentVariables over the wire yet until
+			 * it's necessary.
+			 */
 			try {
 				vector<string> args;
 				
 				args.push_back("get");
-				options.toVector(args);
+				options.toVector(args, false);
 				channel.write(args);
 			} catch (const SystemException &e) {
 				UPDATE_TRACE_POINT();
@@ -395,22 +406,52 @@ private:
 				message.append(e.brief());
 				throw SystemException(message, e.code());
 			}
-			try {
-				UPDATE_TRACE_POINT();
-				result = channel.read(args);
-			} catch (const SystemException &e) {
-				UPDATE_TRACE_POINT();
-				data->disconnect();
-				throw SystemException("Could not read a message from "
-					"the ApplicationPool server", e.code());
+			
+			/* The first few replies from the server might be for requesting
+			 * environment variables in the pool options object, so keep handling
+			 * these requests until we receive a different reply.
+			 */
+			while (serverMightNeedEnvironmentVariables) {
+				try {
+					result = channel.read(args);
+				} catch (const SystemException &e) {
+					UPDATE_TRACE_POINT();
+					data->disconnect();
+					throw SystemException("Could not read a response from "
+						"the ApplicationPool server for the 'get' command", e.code());
+				}
+				if (!result) {
+					UPDATE_TRACE_POINT();
+					data->disconnect();
+					throw IOException("The ApplicationPool server unexpectedly "
+						"closed the connection while we're reading a response "
+						"for the 'get' command.");
+				}
+				
+				if (args[0] == "getEnvironmentVariables") {
+					try {
+						if (options.environmentVariables) {
+							UPDATE_TRACE_POINT();
+							channel.writeScalar(options.serializeEnvironmentVariables());
+						} else {
+							UPDATE_TRACE_POINT();
+							channel.writeScalar("");
+						}
+					} catch (const SystemException &e) {
+						data->disconnect();
+						throw SystemException("Could not send a response "
+							"for the 'getEnvironmentVariables' request "
+							"to the ApplicationPool server",
+							e.code());
+					}
+				} else {
+					serverMightNeedEnvironmentVariables = false;
+				}
 			}
-			if (!result) {
-				UPDATE_TRACE_POINT();
-				data->disconnect();
-				throw IOException("The ApplicationPool server unexpectedly "
-					"closed the connection while we're reading a response "
-					"for the 'get' command.");
-			}
+			
+			/* We've now received a reply other than "getEnvironmentVariables".
+			 * Handle this...
+			 */
 			if (args[0] == "ok") {
 				UPDATE_TRACE_POINT();
 				pid_t pid = (pid_t) atol(args[1]);

@@ -1,3 +1,5 @@
+# -*- encoding: binary -*-
+
 require 'set'
 require 'tempfile'
 
@@ -24,16 +26,18 @@ module Rack
     end
     module_function :unescape
 
+    DEFAULT_SEP = /[&;] */n
+    
     # Stolen from Mongrel, with some small modifications:
     # Parses a query string by breaking it up at the '&'
     # and ';' characters.  You can also use this to parse
     # cookies by changing the characters used in the second
     # parameter (which defaults to '&;').
-    def parse_query(qs, d = '&;')
+    def parse_query(qs, d = nil)
       params = {}
 
-      (qs || '').split(/[#{d}] */n).each do |p|
-        k, v = unescape(p).split('=', 2)
+      (qs || '').split(d ? /[#{d}] */n : DEFAULT_SEP).each do |p|
+        k, v = p.split('=', 2).map { |x| unescape(x) }
 
         if cur = params[k]
           if cur.class == Array
@@ -50,10 +54,10 @@ module Rack
     end
     module_function :parse_query
 
-    def parse_nested_query(qs, d = '&;')
+    def parse_nested_query(qs, d = nil)
       params = {}
 
-      (qs || '').split(/[#{d}] */n).each do |p|
+      (qs || '').split(d ? /[#{d}] */n : DEFAULT_SEP).each do |p|
         k, v = unescape(p).split('=', 2)
         normalize_params(params, k, v)
       end
@@ -63,7 +67,7 @@ module Rack
     module_function :parse_nested_query
 
     def normalize_params(params, name, v = nil)
-      name =~ %r([\[\]]*([^\[\]]+)\]*)
+      name =~ %r(\A[\[\]]*([^\[\]]+)\]*)
       k = $1 || ''
       after = $' || ''
 
@@ -99,7 +103,7 @@ module Rack
         if v.class == Array
           build_query(v.map { |x| [k, x] })
         else
-          escape(k) + "=" + escape(v)
+          "#{escape(k)}=#{escape(v)}"
         end
       }.join("&")
     end
@@ -207,6 +211,7 @@ module Rack
     # header when set.
     class HeaderHash < Hash
       def initialize(hash={})
+        super()
         @names = {}
         hash.each { |k, v| self[k] = v }
       end
@@ -223,21 +228,24 @@ module Rack
       end
 
       def [](k)
-        super @names[k.downcase]
+        super(@names[k] ||= @names[k.downcase])
       end
 
       def []=(k, v)
         delete k
-        @names[k.downcase] = k
+        @names[k] = @names[k.downcase] = k
         super k, v
       end
 
       def delete(k)
-        super @names.delete(k.downcase)
+        canonical = k.downcase
+        result = super @names.delete(canonical)
+        @names.delete_if { |name,| name.downcase == canonical }
+        result
       end
 
       def include?(k)
-        @names.has_key? k.downcase
+        @names.include?(k) || @names.include?(k.downcase)
       end
 
       alias_method :has_key?, :include?
@@ -351,7 +359,7 @@ module Rack
           input = env['rack.input']
           input.rewind
 
-          boundary_size = boundary.size + EOL.size
+          boundary_size = Utils.bytesize(boundary) + EOL.size
           bufsize = 16384
 
           content_length -= boundary_size
@@ -441,6 +449,26 @@ module Rack
       end
 
       def self.build_multipart(params, first = true)
+        if first
+          unless params.is_a?(Hash)
+            raise ArgumentError, "value must be a Hash"
+          end
+
+          multipart = false
+          query = lambda { |value|
+            case value
+            when Array
+              value.each(&query)
+            when Hash
+              value.values.each(&query)
+            when UploadedFile
+              multipart = true
+            end
+          }
+          params.values.each(&query)
+          return nil unless multipart
+        end
+
         flattened_params = Hash.new
 
         params.each do |key, value|

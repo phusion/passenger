@@ -192,22 +192,10 @@ namespace tut {
 	
 	/***** Test BufferedUpload *****/
 	
-	struct TemporarilySetInstanceTempDir {
-		TemporarilySetInstanceTempDir() {
-			setPassengerTempDir("utils_test.tmp");
-			mkdir("utils_test.tmp", S_IRWXU);
-			mkdir(BufferedUpload::getDir().c_str(), S_IRWXU);
-		}
-		
-		~TemporarilySetInstanceTempDir() {
-			removeDirTree("utils_test.tmp");
-		}
-	};
-	
 	TEST_METHOD(20) {
 		// The resulting file handle is readable and writable.
-		TemporarilySetInstanceTempDir d;
-		BufferedUpload t;
+		TempDir td("utils_test.tmp");
+		BufferedUpload t("utils_test.tmp");
 		char line[30];
 		
 		fprintf(t.handle, "hello world!");
@@ -220,9 +208,9 @@ namespace tut {
 	
 	TEST_METHOD(21) {
 		// It immediately unlinks the temp file.
-		TemporarilySetInstanceTempDir d;
-		BufferedUpload t;
-		ensure_equals(listDir(BufferedUpload::getDir().c_str()).size(), 0u);
+		TempDir td("utils_test.tmp");
+		BufferedUpload t("utils_test.tmp");
+		ensure_equals(listDir("utils_test.tmp").size(), 0u);
 	}
 	
 	/***** Test escapeForXml() *****/

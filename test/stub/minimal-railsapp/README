@@ -1,3 +1,0 @@
-A dummy application that looks like a Rails application, but actually isn't.
-Its purpose is to test whether vendor/rails is properly supported, and to
-speed up the unit tests.

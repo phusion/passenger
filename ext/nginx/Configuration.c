@@ -83,10 +83,6 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     conf = &passenger_main_conf;
     *conf = *((passenger_main_conf_t *) conf_pointer);
     
-    if (conf->root_dir.len == 0) {
-        return "-- The 'passenger_root' directive must be set";
-    }
-    
     if (conf->ruby.len == 0) {
         conf->ruby.data = (u_char *) "ruby";
         conf->ruby.len  = sizeof("ruby") - 1;

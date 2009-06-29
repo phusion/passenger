@@ -122,6 +122,8 @@ public:
 	}
 };
 
+struct ClientDisconnectedException { };
+
 /**
  * A representation of a Client from the Server's point of view. This class
  * contains the methods used to communicate from a server to a connected
@@ -311,7 +313,12 @@ private:
 	 * 
 	 * @param session The Ruby on Rails session to read the response from.
 	 * @param clientFd The client file descriptor to write the response to.
-	 * @throws SystemException Response could not be read from backend (Rails) process.
+	 * @throws SystemException Something went wrong while reading the response
+	 *                         from the backend process or while writing to the
+	 *                         response back to the web server.
+	 * @throws ClientDisconnectedException The HTTP client closed the connection
+	 *                                     before we were able to send back the
+	 *                                     full response.
 	 */
 	void forwardResponse(Application::SessionPtr &session, FileDescriptor &clientFd) {
 		TRACE_POINT();
@@ -339,13 +346,21 @@ private:
 				 * of the response data.
 				 */
 				UPDATE_TRACE_POINT();
-				string statusLine("HTTP/1.1 ");
-				statusLine.append(ex.getStatusLine());
-				UPDATE_TRACE_POINT();
-				output.writeRaw(statusLine.c_str(), statusLine.size());
-				UPDATE_TRACE_POINT();
-				output.writeRaw(ex.getBuffer().c_str(), ex.getBuffer().size());
-				break;
+				try {
+					string statusLine("HTTP/1.1 ");
+					statusLine.append(ex.getStatusLine());
+					UPDATE_TRACE_POINT();
+					output.writeRaw(statusLine.c_str(), statusLine.size());
+					UPDATE_TRACE_POINT();
+					output.writeRaw(ex.getBuffer().c_str(), ex.getBuffer().size());
+					break;
+				} catch (const SystemException &e) {
+					if (e.code() == EPIPE) {
+						throw ClientDisconnectedException();
+					} else {
+						throw;
+					}
+				}
 			}
 		}
 		
@@ -359,7 +374,15 @@ private:
 				throw SystemException("Cannot read response from backend process", errno);
 			} else {
 				UPDATE_TRACE_POINT();
-				output.writeRaw(buf, size);
+				try {
+					output.writeRaw(buf, size);
+				} catch (const SystemException &e) {
+					if (e.code() == EPIPE) {
+						throw ClientDisconnectedException();
+					} else {
+						throw;
+					}
+				}
 			}
 		}
 	}
@@ -399,10 +422,8 @@ private:
 	 * Handles an SCGI request from a client whose identity is derived by the given <tt>clientFd</tt>.
 	 *
 	 * @param clientFd The file descriptor identifying the client to handle the request from.
-	 * @return True if an error occurred while trying to handle the request of the client. False if
-	 *   the request was succesfully processed.
 	 */
-	bool handleRequest(FileDescriptor &clientFd) {
+	void handleRequest(FileDescriptor &clientFd) {
 		TRACE_POINT();
 		ScgiRequestParser parser;
 		string partialRequestBody;
@@ -410,18 +431,19 @@ private:
 		
 		if (!readAndCheckPassword(clientFd)) {
 			P_ERROR("Client did not send a correct password.");
-			return true;
+			return;
 		}
 		if (!readAndParseRequestHeaders(clientFd, parser, partialRequestBody)) {
-			return true;
+			return;
 		}
 		
 		try {
 			PoolOptions options;
-			if (parser.getHeader("RAILS_RELATIVE_URL_ROOT").empty()) {
+			if (parser.getHeader("SCRIPT_NAME").empty()) {
 				options.appRoot = extractDirName(parser.getHeader("DOCUMENT_ROOT"));
 			} else {
 				options.appRoot = extractDirName(resolveSymlink(parser.getHeader("DOCUMENT_ROOT")));
+				options.baseURI = parser.getHeader("SCRIPT_NAME");
 			}
 			options.useGlobalQueue = parser.getHeader("PASSENGER_USE_GLOBAL_QUEUE") == "true";
 			options.environment    = parser.getHeader("PASSENGER_ENVIRONMENT");
@@ -450,23 +472,23 @@ private:
 				forwardResponse(session, clientFd);
 			} catch (const SpawnException &e) {
 				handleSpawnException(clientFd, e);
+			} catch (const ClientDisconnectedException &) {
+				P_WARN("Couldn't forward the HTTP response back to the HTTP client: "
+					"It seems the user clicked on the 'Stop' button in his "
+					"browser.");
 			}
-			return false;
 		} catch (const boost::thread_interrupted &) {
 			throw;
 		} catch (const tracable_exception &e) {
 			P_ERROR("Uncaught exception in PassengerServer client thread:\n"
 				<< "   exception: " << e.what() << "\n"
 				<< "   backtrace:\n" << e.backtrace());
-			return true;
 		} catch (const exception &e) {
 			P_ERROR("Uncaught exception in PassengerServer client thread:\n"
 				<< "   exception: " << e.what() << "\n"
 				<< "   backtrace: not available");
-			return true;
 		} catch (...) {
 			P_ERROR("Uncaught unknown exception in PassengerServer client thread.");
-			return true;
 		}
 	}
 	
@@ -555,8 +577,6 @@ typedef shared_ptr<Client> ClientPtr;
  */
 class Server {
 private:
-	static const unsigned int BACKLOG_SIZE = 50;
-
 	string password;
 	int adminPipe;
 	int serverSocket;
@@ -573,45 +593,15 @@ private:
 	 * attempt to bind on. Once it is bound, it will start listening for incoming client
 	 * activity.
 	 *
-	 * @throws SystemException Could not create unconnected Unix socket or bind on Unix socket.
+	 * @throws SystemException Something went wrong while trying to create and bind to the Unix socket.
+	 * @throws RuntimeException Something went wrong.
 	 */
 	void startListening() {
 		this_thread::disable_syscall_interruption dsi;
 		string socketName = getPassengerTempDir() + "/master/helper_server.sock";
-		struct sockaddr_un addr;
+		serverSocket = createUnixServer(socketName.c_str());
+		
 		int ret;
-		
-		serverSocket = syscalls::socket(PF_UNIX, SOCK_STREAM, 0);
-		if (serverSocket == -1) {
-			throw SystemException("Cannot create an unconnected Unix socket", errno);
-		}
-		
-		addr.sun_family = AF_UNIX;
-		strncpy(addr.sun_path, socketName.c_str(), sizeof(addr.sun_path));
-		addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
-		
-		ret = syscalls::bind(serverSocket, (const struct sockaddr *) &addr, sizeof(addr));
-		if (ret == -1) {
-			int e = errno;
-			syscalls::close(serverSocket);
-			
-			string message("Cannot bind on Unix socket '");
-			message.append(socketName);
-			message.append("'");
-			throw SystemException(message, e);
-		}
-		
-		ret = syscalls::listen(serverSocket, BACKLOG_SIZE);
-		if (ret == -1) {
-			int e = errno;
-			syscalls::close(serverSocket);
-			
-			string message("Cannot bind on Unix socket '");
-			message.append(socketName);
-			message.append("'");
-			throw SystemException(message, e);
-		}
-		
 		do {
 			ret = chmod(socketName.c_str(), S_ISVTX |
 				S_IRUSR | S_IWUSR | S_IXUSR |

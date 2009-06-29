@@ -52,8 +52,8 @@
 
 #include "ApplicationPool.h"
 #include "Logging.h"
-#include "FileChecker.h"
-#include "CachedFileStat.h"
+#include "FileChangeChecker.h"
+#include "CachedFileStat.hpp"
 #ifdef PASSENGER_USE_DUMMY_SPAWN_MANAGER
 	#include "DummySpawnManager.h"
 #else
@@ -121,25 +121,6 @@ private:
 		AppContainerList instances;
 		unsigned int size;
 		unsigned long maxRequests;
-		FileChecker restartFileChecker;
-		CachedFileStat alwaysRestartFileStatter;
-		
-		Domain(const PoolOptions &options)
-			: restartFileChecker(determineRestartDir(options) + "/restart.txt"),
-			  alwaysRestartFileStatter(determineRestartDir(options) + "/always_restart.txt")
-		{
-		}
-	
-	private:
-		static string determineRestartDir(const PoolOptions &options) {
-			if (options.restartDir.empty()) {
-				return options.appRoot + "/tmp";
-			} else if (options.restartDir[0] == '/') {
-				return options.restartDir;
-			} else {
-				return options.appRoot + "/" + options.restartDir;
-			}
-		}
 	};
 	
 	struct AppContainer {
@@ -267,6 +248,8 @@ private:
 	unsigned int maxIdleTime;
 	unsigned int waitingOnGlobalQueue;
 	condition cleanerThreadSleeper;
+	CachedFileStat cstat;
+	FileChangeChecker fileChangeChecker;
 	
 	// Shortcuts for instance variables in SharedData. Saves typing in get().
 	boost::mutex &lock;
@@ -364,12 +347,24 @@ private:
 	/**
 	 * Checks whether the given application domain needs to be restarted.
 	 *
-	 * @throws SystemException Something went wrong while retrieving the system time.
+	 * @throws TimeRetrievalException Something went wrong while retrieving the system time.
 	 * @throws boost::thread_interrupted
 	 */
-	bool needsRestart(const string &appRoot, Domain *domain, const PoolOptions &options) {
-		return domain->alwaysRestartFileStatter.refresh(options.statThrottleRate) == 0
-		    || domain->restartFileChecker.changed(options.statThrottleRate);
+	bool needsRestart(const string &appRoot, const PoolOptions &options) {
+		string restartDir;
+		if (options.restartDir.empty()) {
+			restartDir = appRoot + "/tmp";
+		} else if (options.restartDir[0] == '/') {
+			restartDir = options.restartDir;
+		} else {
+			restartDir = appRoot + "/" + options.restartDir;
+		}
+		
+		string alwaysRestartFile = restartDir + "/always_restart.txt";
+		string restartFile = restartDir + "/restart.txt";
+		struct stat buf;
+		return cstat.stat(alwaysRestartFile, &buf, options.statThrottleRate) == 0 ||
+		       fileChangeChecker.changed(restartFile, options.statThrottleRate);
 	}
 	
 	void cleanerThreadMainLoop() {
@@ -430,6 +425,7 @@ private:
 	 * @throws boost::thread_interrupted
 	 * @throws SpawnException
 	 * @throws SystemException
+	 * @throws TimeRetrievalException Something went wrong while retrieving the system time.
 	 */
 	pair<AppContainerPtr, Domain *>
 	spawnOrUseExisting(boost::mutex::scoped_lock &l, const PoolOptions &options) {
@@ -446,21 +442,24 @@ private:
 		try {
 			DomainMap::iterator it(domains.find(appRoot));
 			
-			if (it != domains.end() && needsRestart(appRoot, it->second.get(), options)) {
-				AppContainerList::iterator it2;
-				instances = &it->second->instances;
-				for (it2 = instances->begin(); it2 != instances->end(); it2++) {
-					container = *it2;
-					if (container->sessions == 0) {
-						inactiveApps.erase(container->ia_iterator);
-					} else {
-						active--;
+			if (needsRestart(appRoot, options)) {
+				if (it != domains.end()) {
+					AppContainerList::iterator it2;
+					instances = &it->second->instances;
+					for (it2 = instances->begin(); it2 != instances->end(); it2++) {
+						container = *it2;
+						if (container->sessions == 0) {
+							inactiveApps.erase(container->ia_iterator);
+						} else {
+							active--;
+						}
+						it2--;
+						instances->erase(container->iterator);
+						count--;
 					}
-					it2--;
-					instances->erase(container->iterator);
-					count--;
+					domains.erase(appRoot);
 				}
-				domains.erase(appRoot);
+				P_DEBUG("Restarting " << appRoot);
 				spawnManager.reload(appRoot);
 				it = domains.end();
 				activeOrMaxChanged.notify_all();
@@ -548,7 +547,7 @@ private:
 				container->sessions = 0;
 				it = domains.find(appRoot);
 				if (it == domains.end()) {
-					domain = new Domain(options);
+					domain = new Domain();
 					domain->size = 1;
 					domain->maxRequests = options.maxRequests;
 					domains[appRoot] = ptr(domain);

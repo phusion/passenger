@@ -154,10 +154,10 @@ protected
 	#
 	# +current_location+ is a string which describes where the code is
 	# currently at. Usually the current class name will be enough.
-	def print_exception(current_location, exception)
+	def print_exception(current_location, exception, destination = STDERR)
 		if !exception.is_a?(SystemExit)
-			STDERR.puts(exception.backtrace_string(current_location))
-			STDERR.flush
+			destination.puts(exception.backtrace_string(current_location))
+			destination.flush if destination.respond_to?(:flush)
 		end
 	end
 	
@@ -178,9 +178,11 @@ protected
 				if double_fork
 					pid2 = fork
 					if pid2.nil?
+						srand
 						yield
 					end
 				else
+					srand
 					yield
 				end
 			rescue Exception => e
@@ -201,9 +203,21 @@ protected
 	# Run the given block. A message will be sent through +channel+ (a
 	# MessageChannel object), telling the remote side whether the block
 	# raised an exception, called exit(), or succeeded.
-	# Returns whether the block succeeded.
-	# Exceptions are not propagated, except for SystemExit.
-	def report_app_init_status(channel)
+	#
+	# Anything written to $stderr and STDERR during execution of the block
+	# will be buffered. If <tt>write_stderr_contents_to</tt> is non-nil,
+	# then the buffered stderr data will be written to this object. In this
+	# case, <tt>write_stderr_contents_to</tt> must be an IO-like object.
+	# If <tt>write_stderr_contents_to</tt> is nil, then the stder data will
+	# be discarded.
+	# 
+	# Returns whether the block succeeded, i.e. whether it didn't raise an
+	# exception.
+	#
+	# Exceptions are not propagated, except SystemExit and a few
+	# non-StandardExeption classes such as SignalException. Of the
+	# exceptions that are propagated, only SystemExit will be reported.
+	def report_app_init_status(channel, write_stderr_contents_to = STDERR)
 		begin
 			old_global_stderr = $stderr
 			old_stderr = STDERR
@@ -218,10 +232,13 @@ protected
 				Object.send(:remove_const, 'STDERR') rescue nil
 				Object.const_set('STDERR', old_stderr)
 				$stderr = old_global_stderr
-				if tempfile
-					tempfile.rewind
-					stderr_output = tempfile.read
-					tempfile.close rescue nil
+				tempfile.rewind
+				stderr_output = tempfile.read
+				tempfile.close rescue nil
+				
+				if write_stderr_contents_to
+					write_stderr_contents_to.write(stderr_output)
+					write_stderr_contents_to.flush
 				end
 			end
 			channel.write('success')
@@ -247,10 +264,24 @@ protected
 	# received information, then an appropriate exception will be
 	# raised.
 	#
+	# If <tt>print_exception</tt> evaluates to true, then the
+	# exception message and the backtrace will also be printed.
+	# Where it is printed to depends on the type of
+	# <tt>print_exception</tt>:
+	# - If it responds to #puts, then the exception information will
+	#   be printed using this method.
+	# - If it responds to #to_str, then the exception information
+	#   will be appended to the file whose filename equals the return
+	#   value of the #to_str call.
+	# - Otherwise, it will be printed to STDERR.
+	#
 	# Raises:
-	# - AppInitError
-	# - IOError, SystemCallError, SocketError
-	def unmarshal_and_raise_errors(channel, app_type = "rails")
+	# - AppInitError: this class wraps the exception information
+	#   received through the channel.
+	# - IOError, SystemCallError, SocketError: these errors are
+	#   raised if an error occurred while receiving the information
+	#   through the channel.
+	def unmarshal_and_raise_errors(channel, print_exception = nil, app_type = "rails")
 		args = channel.read
 		if args.nil?
 			raise EOFError, "Unexpected end-of-file detected."
@@ -259,8 +290,7 @@ protected
 		if status == 'exception'
 			child_exception = unmarshal_exception(channel.read_scalar)
 			stderr = channel.read_scalar
-			#print_exception(self.class.to_s, child_exception)
-			raise AppInitError.new(
+			exception = AppInitError.new(
 				"Application '#{@app_root}' raised an exception: " <<
 				"#{child_exception.class} (#{child_exception.message})",
 				child_exception,
@@ -269,9 +299,25 @@ protected
 		elsif status == 'exit'
 			child_exception = unmarshal_exception(channel.read_scalar)
 			stderr = channel.read_scalar
-			raise AppInitError.new("Application '#{@app_root}' exited during startup",
+			exception = AppInitError.new("Application '#{@app_root}' exited during startup",
 				child_exception, app_type, stderr.empty? ? nil : stderr)
+		else
+			exception = nil
 		end
+		
+		if print_exception && exception
+			if print_exception.respond_to?(:puts)
+				print_exception(self.class.to_s, child_exception, print_exception)
+			elsif print_exception.respond_to?(:to_str)
+				filename = print_exception.to_str
+				File.open(filename, 'a') do |f|
+					print_exception(self.class.to_s, child_exception, f)
+				end
+			else
+				print_exception(self.class.to_s, child_exception)
+			end
+		end
+		raise exception if exception
 	end
 	
 	# Lower the current process's privilege to the owner of the given file.
@@ -320,6 +366,10 @@ protected
 		end
 	end
 	
+	def to_boolean(value)
+		return !(value.nil? || value == false || value == "false")
+	end
+	
 	def sanitize_spawn_options(options)
 		defaults = {
 			"lower_privilege" => true,
@@ -328,12 +378,15 @@ protected
 			"app_type"        => "rails",
 			"spawn_method"    => "smart-lv2",
 			"framework_spawner_timeout" => -1,
-			"app_spawner_timeout"       => -1
+			"app_spawner_timeout"       => -1,
+			"print_exceptions" => true
 		}
 		options = defaults.merge(options)
-		options["lower_privilege"]           = options["lower_privilege"].to_s == "true"
+		options["lower_privilege"]           = to_boolean(options["lower_privilege"])
 		options["framework_spawner_timeout"] = options["framework_spawner_timeout"].to_i
 		options["app_spawner_timeout"]       = options["app_spawner_timeout"].to_i
+		# Force this to be a boolean for easy use with Utils#unmarshal_and_raise_errors.
+		options["print_exceptions"]          = to_boolean(options["print_exceptions"])
 		return options
 	end
 	
@@ -367,6 +420,8 @@ protected
 	def self.passenger_tmpdir=(dir)
 		@@passenger_tmpdir = dir
 	end
+	
+	####################################
 end
 
 end # module PhusionPassenger
@@ -479,16 +534,13 @@ end
 module Signal
 	# Like Signal.list, but only returns signals that we can actually trap.
 	def self.list_trappable
-		ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "mri"
+		ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
 		case ruby_engine
-		when "mri"
-			if RUBY_VERSION >= '1.9.0'
-				return Signal.list
-			else
-				result = Signal.list
-				result.delete("ALRM")
-				return result
-			end
+		when "ruby"
+			result = Signal.list
+			result.delete("ALRM")
+			result.delete("VTALRM")
+			return result
 		when "jruby"
 			result = Signal.list
 			result.delete("QUIT")

@@ -17,14 +17,6 @@ module Rack
     # The environment of the request.
     attr_reader :env
 
-    def self.new(env, *args)
-      if self == Rack::Request
-        env["rack.request"] ||= super
-      else
-        super
-      end
-    end
-
     def initialize(env)
       @env = env
     end
@@ -133,7 +125,9 @@ module Rack
     # This method support both application/x-www-form-urlencoded and
     # multipart/form-data.
     def POST
-      if @env["rack.request.form_input"].eql? @env["rack.input"]
+      if @env["rack.input"].nil?
+        raise "Missing rack.input"
+      elsif @env["rack.request.form_input"].eql? @env["rack.input"]
         @env["rack.request.form_hash"]
       elsif form_data? || parseable_data?
         @env["rack.request.form_input"] = @env["rack.input"]

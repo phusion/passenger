@@ -97,8 +97,6 @@ class AbstractRequestHandler
 	IGNORE              = 'IGNORE'              # :nodoc:
 	DEFAULT             = 'DEFAULT'             # :nodoc:
 	NULL                = "\0"                  # :nodoc:
-	CONTENT_LENGTH      = 'CONTENT_LENGTH'      # :nodoc:
-	HTTP_CONTENT_LENGTH = 'HTTP_CONTENT_LENGTH' # :nodoc:
 	X_POWERED_BY        = 'X-Powered-By'        # :nodoc:
 	REQUEST_METHOD      = 'REQUEST_METHOD'      # :nodoc:
 	PING                = 'ping'                # :nodoc:
@@ -144,11 +142,13 @@ class AbstractRequestHandler
 		@socket.close_on_exec!
 		@owner_pipe = owner_pipe
 		@previous_signal_handlers = {}
+		@main_loop_generation  = 0
 		@main_loop_thread_lock = Mutex.new
 		@main_loop_thread_cond = ConditionVariable.new
 		@memory_limit = options["memory_limit"] || 0
 		@iterations = 0
 		@processed_requests = 0
+		@main_loop_running = false
 	end
 	
 	# Clean up temporary stuff created by the request handler.
@@ -160,7 +160,9 @@ class AbstractRequestHandler
 	# may be called at any time, and it will stop the main loop thread.
 	def cleanup
 		if @main_loop_thread
-			@main_loop_thread.raise(Interrupt.new("Cleaning up"))
+			@main_loop_thread_lock.synchronize do
+				@graceful_termination_pipe[1].close rescue nil
+			end
 			@main_loop_thread.join
 		end
 		@socket.close rescue nil
@@ -182,6 +184,7 @@ class AbstractRequestHandler
 			@graceful_termination_pipe[1].close_on_exec!
 			
 			@main_loop_thread_lock.synchronize do
+				@main_loop_generation += 1
 				@main_loop_running = true
 				@main_loop_thread_cond.broadcast
 			end
@@ -226,10 +229,11 @@ class AbstractRequestHandler
 				raise
 			end
 		ensure
-			@graceful_termination_pipe[0].close rescue nil
-			@graceful_termination_pipe[1].close rescue nil
 			revert_signal_handlers
 			@main_loop_thread_lock.synchronize do
+				@graceful_termination_pipe[0].close rescue nil
+				@graceful_termination_pipe[1].close rescue nil
+				@main_loop_generation += 1
 				@main_loop_running = false
 				@main_loop_thread_cond.broadcast
 			end
@@ -238,11 +242,12 @@ class AbstractRequestHandler
 	
 	# Start the main loop in a new thread. This thread will be stopped by #cleanup.
 	def start_main_loop_thread
+		current_generation = @main_loop_generation
 		@main_loop_thread = Thread.new do
 			main_loop
 		end
 		@main_loop_thread_lock.synchronize do
-			while !@main_loop_running
+			while @main_loop_generation == current_generation
 				@main_loop_thread_cond.wait(@main_loop_thread_lock)
 			end
 		end
@@ -399,6 +404,10 @@ private
 				undef rewind if respond_to?(:rewind)
 			end
 			
+			# Set encoding for Ruby 1.9 compatibility.
+			client.set_encoding(Encoding::BINARY) if client.respond_to?(:set_encoding)
+			client.binmode
+			
 			return client
 		else
 			# The other end of the owner pipe has been closed, or the
@@ -422,7 +431,6 @@ private
 			return
 		end
 		headers = Hash[*headers_data.split(NULL)]
-		headers[CONTENT_LENGTH] = headers[HTTP_CONTENT_LENGTH]
 		return [headers, socket]
 	rescue SecurityError => e
 		STDERR.puts("*** Passenger RequestHandler: HTTP header size exceeded maximum.")

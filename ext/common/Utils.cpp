@@ -23,10 +23,16 @@
  *  THE SOFTWARE.
  */
 
+#include <oxt/system_calls.hpp>
+
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/un.h>
 #include <cassert>
 #include <libgen.h>
 #include <pwd.h>
-#include "CachedFileStat.h"
+#include "CachedFileStat.hpp"
+#include "Exceptions.h"
 #include "Utils.h"
 
 #define SPAWN_SERVER_SCRIPT_NAME "passenger-spawn-server"
@@ -58,17 +64,17 @@ split(const string &str, char sep, vector<string> &output) {
 }
 
 bool
-fileExists(const char *filename, CachedMultiFileStat *mstat, unsigned int throttleRate) {
-	return getFileType(filename, mstat, throttleRate) == FT_REGULAR;
+fileExists(const char *filename, CachedFileStat *cstat, unsigned int throttleRate) {
+	return getFileType(filename, cstat, throttleRate) == FT_REGULAR;
 }
 
 FileType
-getFileType(const char *filename, CachedMultiFileStat *mstat, unsigned int throttleRate) {
+getFileType(const char *filename, CachedFileStat *cstat, unsigned int throttleRate) {
 	struct stat buf;
 	int ret;
 	
-	if (mstat != NULL) {
-		ret = cached_multi_file_stat_perform(mstat, filename, &buf, throttleRate);
+	if (cstat != NULL) {
+		ret = cstat->stat(filename, &buf, throttleRate);
 	} else {
 		ret = stat(filename, &buf);
 	}
@@ -267,6 +273,29 @@ escapeForXml(const string &input) {
 	return result;
 }
 
+string
+getProcessUsername() {
+	struct passwd pwd, *result;
+	char strings[1024];
+	int ret;
+	
+	result = (struct passwd *) NULL;
+	do {
+		ret = getpwuid_r(getuid(), &pwd, strings, sizeof(strings), &result);
+	} while (ret == -1 && errno == EINTR);
+	if (ret == -1) {
+		result = (struct passwd *) NULL;
+	}
+	
+	if (result == (struct passwd *) NULL) {
+		snprintf(strings, sizeof(strings), "UID %lld", (long long) getuid());
+		strings[sizeof(strings) - 1] = '\0';
+		return strings;
+	} else {
+		return result->pw_name;
+	}
+}
+
 void
 determineLowestUserAndGroup(const string &user, uid_t &uid, gid_t &gid) {
 	struct passwd *ent;
@@ -407,36 +436,6 @@ createPassengerTempDir(const string &parentDir, bool userSwitching,
 		 */
 		makeDirTree(tmpDir + "/backends", "u=wxs,g=,o=");
 	}
-	
-	if (geteuid() == 0) {
-		if (userSwitching) {
-			/* If user switching is possible and is on, then each backend
-			 * process may be running as a different user. So make the var
-			 * directory world-writable.
-			 *
-			 * The directory is not readable as a security precaution.
-			 */
-			makeDirTree(tmpDir + "/var", "u=wxs,g=wx,o=wx");
-		} else {
-			/* If user switching is off then all backend processes
-			 * will be running as lowestUser, so make lowestUser the
-			 * owner of the var directory. Only lowestUser may access
-			 * the directory.
-			 *
-			 * The directory is not readble as a security precaution.
-			 */
-			makeDirTree(tmpDir + "/var", "u=wxs,g=,o=", lowestUid, lowestGid);
-		}
-	} else {
-		/* If user switching is not possible then all backend processes will
-		 * be running as the same user as the web server. So we'll make the
-		 * var subdirectory only accessible by this user. Nobody else
-		 * (except root) may access this subdirectory.
-		 *
-		 * The directory is not readble as a security precaution.
-		 */
-		makeDirTree(tmpDir + "/var", "u=wxs,g=,o=");
-	}
 }
 
 void
@@ -513,24 +512,144 @@ removeDirTree(const string &path) {
 }
 
 bool
-verifyRailsDir(const string &dir, CachedMultiFileStat *mstat, unsigned int throttleRate) {
+verifyRailsDir(const string &dir, CachedFileStat *cstat, unsigned int throttleRate) {
 	string temp(dir);
 	temp.append("/config/environment.rb");
-	return fileExists(temp.c_str(), mstat, throttleRate);
+	return fileExists(temp.c_str(), cstat, throttleRate);
 }
 
 bool
-verifyRackDir(const string &dir, CachedMultiFileStat *mstat, unsigned int throttleRate) {
+verifyRackDir(const string &dir, CachedFileStat *cstat, unsigned int throttleRate) {
 	string temp(dir);
 	temp.append("/config.ru");
-	return fileExists(temp.c_str(), mstat, throttleRate);
+	return fileExists(temp.c_str(), cstat, throttleRate);
 }
 
 bool
-verifyWSGIDir(const string &dir, CachedMultiFileStat *mstat, unsigned int throttleRate) {
+verifyWSGIDir(const string &dir, CachedFileStat *cstat, unsigned int throttleRate) {
 	string temp(dir);
 	temp.append("/passenger_wsgi.py");
-	return fileExists(temp.c_str(), mstat, throttleRate);
+	return fileExists(temp.c_str(), cstat, throttleRate);
+}
+
+int
+createUnixServer(const char *filename, unsigned int backlogSize, bool autoDelete) {
+	struct sockaddr_un addr;
+	int fd, ret;
+	
+	if (strlen(filename) > sizeof(addr.sun_path) - 1) {
+		string message = "Cannot create Unix socket '";
+		message.append(filename);
+		message.append("': filename is too long.");
+		throw RuntimeException(message);
+	}
+	
+	fd = syscalls::socket(PF_UNIX, SOCK_STREAM, 0);
+	if (fd == -1) {
+		throw SystemException("Cannot create a Unix socket file descriptor", errno);
+	}
+	
+	addr.sun_family = AF_UNIX;
+	strncpy(addr.sun_path, filename, sizeof(addr.sun_path));
+	addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
+	
+	if (autoDelete) {
+		do {
+			ret = unlink(filename);
+		} while (ret == -1 && errno == EINTR);
+	}
+	
+	try {
+		ret = syscalls::bind(fd, (const struct sockaddr *) &addr, sizeof(addr));
+	} catch (...) {
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw;
+	}
+	if (ret == -1) {
+		int e = errno;
+		string message = "Cannot bind Unix socket '";
+		message.append(filename);
+		message.append("'");
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw SystemException(message, e);
+	}
+	
+	if (backlogSize == 0) {
+		#ifdef SOMAXCONN
+			backlogSize = SOMAXCONN;
+		#else
+			backlogSize = 128;
+		#endif
+	}
+	try {
+		ret = syscalls::listen(fd, backlogSize);
+	} catch (...) {
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw;
+	}
+	if (ret == -1) {
+		int e = errno;
+		string message = "Cannot listen on Unix socket '";
+		message.append(filename);
+		message.append("'");
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw SystemException(message, e);
+	}
+	
+	return fd;
+}
+
+int
+connectToUnixServer(const char *filename) {
+	int fd, ret;
+	struct sockaddr_un addr;
+	
+	if (strlen(filename) > sizeof(addr.sun_path) - 1) {
+		string message = "Cannot connect to Unix socket '";
+		message.append(filename);
+		message.append("': filename is too long.");
+		throw RuntimeException(message);
+	}
+	
+	do {
+		fd = syscalls::socket(PF_UNIX, SOCK_STREAM, 0);
+	} while (fd == -1 && errno == EINTR);
+	if (fd == -1) {
+		throw SystemException("Cannot create a Unix socket file descriptor", errno);
+	}
+	
+	addr.sun_family = AF_UNIX;
+	strncpy(addr.sun_path, filename, sizeof(addr.sun_path));
+	addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
+	
+	try {
+		ret = syscalls::connect(fd, (const sockaddr *) &addr, sizeof(addr));
+	} catch (...) {
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw;
+	}
+	if (ret == -1) {
+		int e = errno;
+		string message("Cannot connect to Unix socket '");
+		message.append(filename);
+		message.append("'");
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw SystemException(message, e);
+	}
+	
+	return fd;
 }
 
 } // namespace Passenger

@@ -64,9 +64,9 @@ extern ngx_str_t    passenger_helper_server_password;
 extern const char   passenger_helper_server_socket[NGX_MAX_PATH];
 
 /**
- * A CachedMultiFileStat object used for caching stat() calls.
+ * A CachedFileStat object used for caching stat() calls.
  */
-extern CachedMultiFileStat *passenger_stat_cache;
+extern CachedFileStat *passenger_stat_cache;
 
 #endif /* _PASSENGER_NGINX_MODULE_H_ */
 

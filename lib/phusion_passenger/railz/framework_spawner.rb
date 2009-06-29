@@ -58,6 +58,9 @@ class FrameworkSpawner < AbstractServer
 	#   this version is actually installed.
 	# - <tt>:vendor</tt>: The directory to the vendor Rails framework to use. This is
 	#   usually something like "/webapps/foo/vendor/rails".
+	# - <tt>:print_framework_loading_exceptions</tt>:
+	#   Whether exceptions that have occurred while loading the Ruby on Rails framework
+	#   should be printed to STDERR. The default is true.
 	#
 	# It is not allowed to specify both +version+ and +vendor+.
 	#
@@ -72,6 +75,11 @@ class FrameworkSpawner < AbstractServer
 		end
 		@version = options[:version]
 		@vendor  = options[:vendor]
+		if options.has_key?(:print_framework_loading_exceptions)
+			@print_framework_loading_exceptions = options[:print_framework_loading_exceptions]
+		else
+			@print_framework_loading_exceptions = true
+		end
 		if !@version && !@vendor
 			raise ArgumentError, "Either the 'version' or the 'vendor' option must specified"
 		elsif @version && @vendor
@@ -87,7 +95,7 @@ class FrameworkSpawner < AbstractServer
 	# Overrided from AbstractServer#start.
 	#
 	# May raise these additional exceptions:
-	# - FrameworkInitError: The specified Ruby on Rails framework could not be loaded.
+	# - FrameworkInitError: An error occurred while loading the specified Ruby on Rails framework.
 	# - FrameworkSpawner::Error: The FrameworkSpawner server exited unexpectedly.
 	def start
 		super
@@ -109,6 +117,9 @@ class FrameworkSpawner < AbstractServer
 						"#{child_exception.class} (#{child_exception.message})"
 				end
 				options = { :vendor => @vendor, :version => @version }
+				if @print_framework_loading_exceptions
+					print_exception(self.class.to_s, child_exception)
+				end
 				raise FrameworkInitError.new(message, child_exception, options)
 			end
 		rescue IOError, SystemCallError, SocketError
@@ -122,23 +133,7 @@ class FrameworkSpawner < AbstractServer
 	# When successful, an Application object will be returned, which represents
 	# the spawned RoR application.
 	#
-	# The following options are allowed:
-	# - +lower_privilege+ and +lowest_user+:
-	#   If +lower_privilege+ is true, then ApplicationSpawner will attempt to
-	#   switch to the user who owns the application's <tt>config/environment.rb</tt>,
-	#   and to the default group of that user.
-	#
-	#   If that user doesn't exist on the system, or if that user is root,
-	#   then ApplicationSpawner will attempt to switch to the username given by
-	#   +lowest_user+ (and to the default group of that user).
-	#   If +lowest_user+ doesn't exist either, or if switching user failed
-	#   (because the current process does not have the privilege to do so),
-	#   then ApplicationSpawner will continue without reporting an error.
-	#
-	# - +environment+:
-	#   Allows one to specify the RAILS_ENV environment to use.
-	#
-	# All other options will be passed on to ApplicationSpawner and RequestHandler.
+	# All options accepted by ApplicationSpawner.new and RequestHandler.new are accepted.
 	#
 	# FrameworkSpawner will internally cache the code of applications, in order to
 	# speed up future spawning attempts. This implies that, if you've changed
@@ -148,7 +143,7 @@ class FrameworkSpawner < AbstractServer
 	#
 	# Raises:
 	# - AbstractServer::ServerNotStarted: The FrameworkSpawner server hasn't already been started.
-	# - InvalidAppRoot: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
+	# - InvalidPath: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
 	# - AppInitError: The application raised an exception or called exit() during startup.
 	# - ApplicationSpawner::Error: The ApplicationSpawner server exited unexpectedly.
 	# - FrameworkSpawner::Error: The FrameworkSpawner server exited unexpectedly.
@@ -156,8 +151,12 @@ class FrameworkSpawner < AbstractServer
 		assert_valid_app_root(app_root)
 		options = sanitize_spawn_options(options)
 		options["app_root"] = app_root
+		# No need for the ApplicationSpawner to print exceptions. All
+		# exceptions raised by the ApplicationSpawner are sent back here,
+		# so we just need to decide here whether we want to print it.
+		print_exceptions = options["print_exceptions"]
+		options["print_exceptions"] = false
 		
-		exception_to_propagate = nil
 		begin
 			server.write("spawn_application", *options.to_a.flatten)
 			result = server.read
@@ -166,8 +165,10 @@ class FrameworkSpawner < AbstractServer
 			end
 			if result[0] == 'exception'
 				e = unmarshal_exception(server.read_scalar)
-				if e.respond_to?(:child_exception) && e.child_exception
-					#print_exception(self.class.to_s, e.child_exception)
+				if print_exceptions && e.respond_to?(:child_exception) && e.child_exception
+					print_exception(self.class.to_s, e.child_exception)
+				elsif print_exceptions
+					print_exception(self.class.to_s, e)
 				end
 				raise e
 			else
@@ -276,10 +277,7 @@ private
 	end
 
 	def handle_spawn_application(*options)
-		options = Hash[*options]
-		options["lower_privilege"]     = options["lower_privilege"] == "true"
-		options["app_spawner_timeout"] = options["app_spawner_timeout"].to_i
-		options["memory_limit"]        = options["memory_limit"].to_i
+		options = sanitize_spawn_options(Hash[*options])
 		
 		app = nil
 		app_root = options["app_root"]
@@ -293,10 +291,10 @@ private
 					spawner.start
 					spawner
 				end
-			rescue ArgumentError, AppInitError, ApplicationSpawner::Error => e
+			rescue InvalidPath, AppInitError, ApplicationSpawner::Error => e
 				client.write('exception')
 				client.write_scalar(marshal_exception(e))
-				if e.child_exception.is_a?(LoadError)
+				if e.respond_to?(:child_exception) && e.child_exception.is_a?(LoadError)
 					# A source file failed to load, maybe because of a
 					# missing gem. If that's the case then the sysadmin
 					# will install probably the gem. So we clear RubyGems's
