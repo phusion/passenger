@@ -38,12 +38,13 @@
 #include <unistd.h>
 #include <cerrno>
 
-#include "StandardApplicationPool.h"
+#include "ApplicationPool/Pool.h"
 #include "FileDescriptor.h"
 #include "Exceptions.h"
 #include "Utils.h"
 
 namespace Passenger {
+namespace ApplicationPool {
 
 using namespace std;
 using namespace boost;
@@ -74,12 +75,12 @@ using namespace oxt;
  * supports ACLs by default.
  *
  * Instead, we make the server socket world-writable, and depend on a username/password
- * authentication model for security instead. Here we call a password a "secret token".
- * TODO: finish this
+ * authentication model for security instead. When creating Server you must also supply
+ * an accounts database. Each account has a username, password, and a set of rights.
  *
  * @ingroup Support
  */
-class ApplicationPoolServer {
+class Server {
 private:
 	static const unsigned int CLIENT_THREAD_STACK_SIZE = 128 * 1024;
 	
@@ -223,7 +224,8 @@ private:
 		/** The channel that's associated with the client's socket. */
 		MessageChannel channel;
 		
-		AuthorizationPtr theAuthorization;
+		/** The account with which the client has authenticated. */
+		AccountPtr account;
 		
 		/**
 		 * Maps session ID to sessions created by ApplicationPool::get(). Session IDs
@@ -235,10 +237,10 @@ private:
 		/** Last used session ID. */
 		int lastSessionID;
 		
-		ClientContext(FileDescriptor &theFd, AuthorizationPtr theAuthorization)
+		ClientContext(FileDescriptor &theFd, AccountPtr theAccount)
 			: fd(theFd),
 			  channel(fd),
-			  authorization(theAuthorization)
+			  account(theAccount)
 		{
 			lastSessionID = 0;
 		}
@@ -251,9 +253,10 @@ private:
 	
 	/** The filename of the server socket on which this ApplicationPoolServer is listening. */
 	string socketFilename;
-	string secretToken;
+	/** An accounts database, used for authenticating clients. */
+	AccountsDatabasePtr accountsDatabase;
 	/** The StandardApplicationPool that's being exposed through the socket. */
-	StandardApplicationPoolPtr pool;
+	PoolPtr pool;
 	
 	/** The client threads. */
 	dynamic_thread_group threadGroup;
@@ -272,7 +275,7 @@ private:
 		Application::SessionPtr session;
 		bool failed = false;
 		
-		requireAuthorization(context, Authorization::GET);
+		requireRights(context, Account::GET);
 		
 		try {
 			PoolOptions options(args, 1);
@@ -330,49 +333,49 @@ private:
 	
 	void processClose(ClientContext &context, const vector<string> &args) {
 		TRACE_POINT();
-		requireAuthorization(context, Authorization::GET);
+		requireRights(context, Account::GET);
 		context.sessions.erase(atoi(args[1]));
 	}
 	
 	void processClear(const vector<string> &args) {
 		TRACE_POINT();
-		requireAuthorization(context, Authorization::GET);
+		requireRights(context, Account::CLEAR);
 		pool->clear();
 	}
 	
 	void processSetMaxIdleTime(const vector<string> &args) {
 		TRACE_POINT();
-		requireAuthorization(context, Authorization::PARAMETER_TWEAKING);
+		requireRights(context, Account::SET_PARAMETERS);
 		pool->setMaxIdleTime(atoi(args[1]));
 	}
 	
 	void processSetMax(const vector<string> &args) {
 		TRACE_POINT();
-		requireAuthorization(context, Authorization::PARAMETER_TWEAKING);
+		requireRights(context, Account::PARAMETER_TWEAKING);
 		pool->setMax(atoi(args[1]));
 	}
 	
 	void processGetActive(ClientContext &context, const vector<string> &args) {
 		TRACE_POINT();
-		requireAuthorization(context, Authorization::INSPECT);
+		requireRights(context, Account::GET_PARAMETERS);
 		context.channel.write(toString(pool->getActive()).c_str(), NULL);
 	}
 	
 	void processGetCount(ClientContext &context, const vector<string> &args) {
 		TRACE_POINT();
-		requireAuthorization(context, Authorization::INSPECT);
+		requireRights(context, Account::GET_PARAMETERS);
 		context.channel.write(toString(pool->getCount()).c_str(), NULL);
 	}
 	
 	void processSetMaxPerApp(unsigned int maxPerApp) {
 		TRACE_POINT();
-		requireAuthorization(context, Authorization::PARAMTER_TWEAKING);
+		requireRights(context, Account::SET_PARAMETERS);
 		pool->setMaxPerApp(maxPerApp);
 	}
 	
 	void processGetSpawnServerPid(ClientContext &context, const vector<string> &args) {
 		TRACE_POINT();
-		requireAuthorization(context, Authorization::INSPECT);
+		requireRights(context, Account::GET_PARAMETERS);
 		context.channel.write(toString(pool->getSpawnServerPid()).c_str(), NULL);
 	}
 	
@@ -414,12 +417,12 @@ private:
 		} while (ret == -1 && errno == EINTR);
 	}
 	
-	AuthorizationPtr authenticate(FileDescriptor &client) {
+	AccountPtr authenticate(FileDescriptor &client) {
 		// TODO
 	}
 	
-	void requireAuthorization(ClientContext &context, Authorization::Capability capability) {
-		if (!context.authorization.has(capability)) {
+	void requireRights(ClientContext &context, Account::Rights rights) {
+		if (!context.account->hasRights(rights)) {
 			throw SecurityException("TODO");
 		}
 	}
@@ -432,12 +435,12 @@ private:
 		vector<string> args;
 		
 		try {
-			AuthorizationPtr authorization = authenticate(client);
-			if (authorization == NULL) {
+			AccountPtr account(authenticate(client));
+			if (account == NULL) {
 				return;
 			}
 			
-			ClientContext context(client, authorization);
+			ClientContext context(client, account);
 			
 			while (!this_thread::interruption_requested()) {
 				UPDATE_TRACE_POINT();
@@ -498,20 +501,20 @@ public:
 	 *
 	 * @param socketFilename The socket filename on which this ApplicationPoolServer
 	 *                       should be listening.
-	 * @param secretToken A secret token that each client must send in order to use
-	 *                    the ApplicationPoolServer's services.
+	 * @param accountsDatabase An accounts database for this server, used for
+	 *                         authenticating clients.
 	 * @param pool The pool to expose through the server socket.
 	 */
-	ApplicationPoolServer(const string &socketFilename,
-	                      const string &secretToken,
-	                      StandardApplicationPoolPtr pool) {
-		this->socketFilename = socketFilename;
-		this->secretToken = secretToken;
+	Server(const string &socketFilename,
+	       AccountsDatabasePtr accountsDatabase,
+	       PoolPtr pool) {
+		this->socketFilename   = socketFilename;
+		this->accountsDatabase = accountsDatabase;
 		this->pool = pool;
 		startListening();
 	}
 	
-	~ApplicationPoolServer() {
+	~Server() {
 		this_thread::disable_syscall_interruption dsi;
 		syscalls::close(serverFd);
 		syscalls::unlink(socketFilename.c_str());
@@ -554,6 +557,7 @@ public:
 	}
 };
 
+} // namespace ApplicationPool
 } // namespace Passenger
 
 #endif /* _PASSENGER_APPLICATION_POOL_SERVER_H_ */

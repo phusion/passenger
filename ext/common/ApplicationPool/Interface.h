@@ -22,16 +22,17 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_APPLICATION_POOL_H_
-#define _PASSENGER_APPLICATION_POOL_H_
+#ifndef _PASSENGER_APPLICATION_POOL_INTERFACE_H_
+#define _PASSENGER_APPLICATION_POOL_INTERFACE_H_
 
 #include <boost/shared_ptr.hpp>
 #include <sys/types.h>
 
-#include "Application.h"
-#include "PoolOptions.h"
+#include "../Application.h"
+#include "../PoolOptions.h"
 
 namespace Passenger {
+namespace ApplicationPool {
 
 using namespace std;
 using namespace boost;
@@ -96,9 +97,9 @@ using namespace boost;
  *
  * @ingroup Support
  */
-class ApplicationPool {
+class Interface {
 public:
-	virtual ~ApplicationPool() {};
+	virtual ~Interface() {};
 	
 	/**
 	 * Checks whether this ApplicationPool object is still connected to the
@@ -242,8 +243,9 @@ public:
 	virtual pid_t getSpawnServerPid() const = 0;
 };
 
-typedef shared_ptr<ApplicationPool> ApplicationPoolPtr;
+typedef shared_ptr<Interface> Ptr;
 
-}; // namespace Passenger
+} // namespace ApplicationPool
+} // namespace Passenger
 
-#endif /* _PASSENGER_APPLICATION_POOL_H_ */
+#endif /* _PASSENGER_APPLICATION_POOL_INTERFACE_H_ */

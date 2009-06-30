@@ -32,12 +32,14 @@
 #include <boost/thread.hpp>
 #include <oxt/system_calls.hpp>
 
-#include "ApplicationPool.h"
-#include "Application.h"
-#include "MessageChannel.h"
-#include "Utils.h"
+#include "Interface.h"
+#include "../Application.h"
+#include "../Exceptions.h"
+#include "../MessageChannel.h"
+#include "../Utils.h"
 
 namespace Passenger {
+namespace ApplicationPool {
 
 using namespace std;
 using namespace oxt;
@@ -52,7 +54,7 @@ using namespace boost;
  * just like an ApplicationPool. It is *not* thread-safe; each thread should
  * create a seperate ApplicationPoolClient object instead.
  */
-class ApplicationPoolClient: public ApplicationPool {
+class Client: public ApplicationPool::Interface {
 private:
 	/**
 	 * Contains data shared between RemoteSession and ApplicationPoolClient.
@@ -175,7 +177,7 @@ private:
 	/** @invariant data != NULL */
 	SharedDataPtr data;
 	
-	void authenticate(const string &secretToken) {
+	void authenticate(const string &username, const string &password) {
 		// TODO
 		/* MessageChannel &channel(data->channel);
 		vector<string> args;
@@ -198,15 +200,16 @@ public:
 	 * ApplicationPool server.
 	 *
 	 * @param socketFilename The filename of the server socket to connect to.
-	 * @param secretToken The secret token for this server.
+	 * @param username The username to use for authenticating with the server.
+	 * @param password The password to use for authentication with the server.
 	 * @throws SystemException
 	 * @throws RuntimeException
 	 * @throws boost::thread_interrupted
 	 */
-	ApplicationPoolClient(const string &socketFilename, const string &secretToken) {
+	Client(const string &socketFilename, const string &username, const string &password) {
 		int fd = connectToUnixServer(socketFilename.c_str());
 		data = ptr(new SharedData(fd));
-		authenticate(secretToken);
+		authenticate(username, password);
 	}
 	
 	virtual bool connected() const {
@@ -459,9 +462,10 @@ public:
 	}
 };
 
-typedef shared_ptr<ApplicationPoolClient> ApplicationPoolClientPtr;
+typedef shared_ptr<Client> ClientPtr;
 
 
+} // namespace ApplicationPool
 } // namespace Passenger
 
 #endif /* _PASSENGER_APPLICATION_POOL_CLIENT_H_ */

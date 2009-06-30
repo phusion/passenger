@@ -22,8 +22,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_STANDARD_APPLICATION_POOL_H_
-#define _PASSENGER_STANDARD_APPLICATION_POOL_H_
+#ifndef _PASSENGER_APPLICATION_POOL_POOL_H_
+#define _PASSENGER_APPLICATION_POOL_POOL_H_
 
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
@@ -50,19 +50,21 @@
 	#include <cstdlib>
 #endif
 
-#include "ApplicationPool.h"
-#include "Logging.h"
-#include "FileChangeChecker.h"
-#include "CachedFileStat.hpp"
-#include "SpawnManager.h"
+#include "Interface.h"
+#include "../Logging.h"
+#include "../FileChangeChecker.h"
+#include "../CachedFileStat.hpp"
+#include "../SpawnManager.h"
 
 namespace Passenger {
+namespace ApplicationPool {
 
 using namespace std;
 using namespace boost;
 using namespace oxt;
 
-class ApplicationPoolServer;
+// Forward declaration for ApplicationPool::Server.
+class Server;
 
 /****************************************************************
  *
@@ -72,9 +74,9 @@ class ApplicationPoolServer;
  ****************************************************************/
 
 /**
- * A standard implementation of ApplicationPool for single-process environments.
+ * A standard implementation of ApplicationPool::Interface for single-process environments.
  *
- * The environment may or may not be multithreaded - StandardApplicationPool is completely
+ * The environment may or may not be multithreaded - ApplicationPool::Pool is completely
  * thread-safe. Apache with the threading MPM is an example of a multithreaded single-process
  * environment.
  *
@@ -98,7 +100,7 @@ class ApplicationPoolServer;
  *
  * @ingroup Support
  */
-class StandardApplicationPool: public ApplicationPool {
+class Pool: public ApplicationPool::Interface {
 private:
 	static const int DEFAULT_MAX_IDLE_TIME = 120;
 	static const int DEFAULT_MAX_POOL_SIZE = 20;
@@ -107,7 +109,7 @@ private:
 	static const unsigned int MAX_GET_ATTEMPTS = 10;
 	static const unsigned int GET_TIMEOUT = 5000; // In milliseconds.
 
-	friend class ApplicationPoolServer;
+	friend class ApplicationPool::Server;
 	struct Domain;
 	struct AppContainer;
 	
@@ -603,11 +605,11 @@ public:
 	 * @throws IOException The specified log file could not be opened.
 	 * @throws boost::thread_resource_error Cannot spawn a new thread.
 	 */
-	StandardApplicationPool(const string &spawnServerCommand,
-	             const string &logFile = "",
-	             const string &rubyCommand = "ruby",
-	             const string &user = "")
-	      : data(new SharedData()),
+	Pool(const string &spawnServerCommand,
+	     const string &logFile = "",
+	     const string &rubyCommand = "ruby",
+	     const string &user = "")
+	   : data(new SharedData()),
 		cstat(DEFAULT_MAX_POOL_SIZE),
 		lock(data->lock),
 		activeOrMaxChanged(data->activeOrMaxChanged),
@@ -630,25 +632,25 @@ public:
 	 *
 	 * @throws boost::thread_resource_error Cannot spawn a new thread.
 	 */
-	StandardApplicationPool(AbstractSpawnManagerPtr spawnManager)
-	      : data(new SharedData()),
-		cstat(DEFAULT_MAX_POOL_SIZE),
-		lock(data->lock),
-		activeOrMaxChanged(data->activeOrMaxChanged),
-		domains(data->domains),
-		max(data->max),
-		count(data->count),
-		active(data->active),
-		maxPerApp(data->maxPerApp),
-		inactiveApps(data->inactiveApps),
-		appInstanceCount(data->appInstanceCount)
+	Pool(AbstractSpawnManagerPtr spawnManager)
+	   : data(new SharedData()),
+	     cstat(DEFAULT_MAX_POOL_SIZE),
+	     lock(data->lock),
+	     activeOrMaxChanged(data->activeOrMaxChanged),
+	     domains(data->domains),
+	     max(data->max),
+	     count(data->count),
+	     active(data->active),
+	     maxPerApp(data->maxPerApp),
+	     inactiveApps(data->inactiveApps),
+	     appInstanceCount(data->appInstanceCount)
 	{
 		TRACE_POINT();
 		this->spawnManager = spawnManager;
 		initialize();
 	}
 	
-	virtual ~StandardApplicationPool() {
+	virtual ~Pool() {
 		this_thread::disable_interruption di;
 		{
 			boost::mutex::scoped_lock l(lock);
@@ -820,9 +822,10 @@ public:
 	}
 };
 
-typedef shared_ptr<StandardApplicationPool> StandardApplicationPoolPtr;
+typedef shared_ptr<Pool> PoolPtr;
 
+} // namespace ApplicationPool
 } // namespace Passenger
 
-#endif /* _PASSENGER_STANDARD_APPLICATION_POOL_H_ */
+#endif /* _PASSENGER_APPLICATION_POOL_POOL_H_ */
 
