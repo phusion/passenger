@@ -264,9 +264,12 @@ syscalls::time(time_t *t) {
 
 int
 syscalls::usleep(useconds_t usec) {
+	// We use syscalls::nanosleep() here to reuse the code that sleeps
+	// for the remaining amount of time, if a signal was received but
+	// system call interruption is disabled.
 	struct timespec spec;
 	spec.tv_sec = usec / 1000000;
-	spec.tv_nsec = usec % 1000000;
+	spec.tv_nsec = usec % 1000000 * 1000;
 	return syscalls::nanosleep(&spec, NULL);
 }
 
