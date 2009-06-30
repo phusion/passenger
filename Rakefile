@@ -491,7 +491,12 @@ end
 	
 	desc "Run unit tests for the Apache 2 and Nginx C++ components"
 	task 'test:cxx' => ['test/CxxTests', :native_support] do
-		sh "cd test && ./CxxTests"
+	        if ENV['GROUPS'].to_s.empty?
+		        sh "cd test && ./CxxTests"
+	        else
+	                args = ENV['GROUPS'].split(",").map{ |name| "-g #{name}" }
+	                sh "cd test && ./CxxTests #{args.join(' ')}"
+                end
 	end
 	
 	desc "Run unit tests for the Ruby libraries"

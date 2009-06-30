@@ -70,11 +70,11 @@ private:
 	Rights rights;
 
 public:
-	Account(const string &username, const string &passwordOrHash, bool hashGiven) {
+	Account(const string &username, const string &passwordOrHash, bool hashGiven, Rights rights = ALL) {
 		this->username       = username;
 		this->passwordOrHash = passwordOrHash;
 		this->hashGiven      = hashGiven;
-		rights               = NONE;
+		this->rights         = rights;
 	}
 	
 	bool checkPassword(const StaticString &plainTextPassword) const {
