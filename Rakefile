@@ -183,10 +183,13 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 		targets << exe_file
 		
 		file(exe_file => [
-			'ext/common/ApplicationPoolServerExecutable.cpp',
-			'ext/common/ApplicationPool.h',
 			'ext/common/Application.h',
-			'ext/common/StandardApplicationPool.h',
+			'ext/common/ApplicationPoolServerExecutable.cpp',
+			'ext/common/ApplicationPool/Interface.h',
+			'ext/common/ApplicationPool/Server.h',
+			'ext/common/ApplicationPool/Account.h',
+			'ext/common/ApplicationPool/AccountsDatabase.h',
+			'ext/common/ApplicationPool/Pool.h',
 			'ext/common/ApplicationPoolController.h',
 			'ext/common/MessageChannel.h',
 			'ext/common/AbstractSpawnManager.h',
@@ -368,7 +371,7 @@ end
 
 	TEST_BOOST_OXT_LIBRARY = define_libboost_oxt_task("test")
 	TEST_COMMON_LIBRARY    = define_common_library_task("test",
-		nil, true, TEST_BOOST_OXT_LIBRARY)
+		nil, false, TEST_BOOST_OXT_LIBRARY)
 	
 	TEST_COMMON_CFLAGS = "-DTESTING_APPLICATION_POOL " <<
 		"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
@@ -404,28 +407,35 @@ end
 			ext/common/StringListCreator.h
 			ext/common/Application.h
 			ext/common/MessageChannel.h),
-		'test/ApplicationPoolServerTest.o' => %w(
-			test/ApplicationPoolServerTest.cpp
-			ext/common/ApplicationPoolServer.h
+		'test/ApplicationPool_ServerTest.o' => %w(
+			test/ApplicationPool_ServerTest.cpp
+			ext/common/ApplicationPool/Interface.h
+			ext/common/ApplicationPool/Account.h
+			ext/common/ApplicationPool/AccountsDatabase.h
+			ext/common/ApplicationPool/Server.h
+			ext/common/ApplicationPool/Pool.h
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
 			ext/common/MessageChannel.h),
-		'test/ApplicationPoolServer_ApplicationPoolTest.o' => %w(
-			test/ApplicationPoolServer_ApplicationPoolTest.cpp
-			test/ApplicationPoolTest.cpp
-			ext/common/ApplicationPoolServer.h
-			ext/common/ApplicationPool.h
+		'test/ApplicationPool_Server_PoolTest.o' => %w(
+			test/ApplicationPool_Server_PoolTest.cpp
+			test/ApplicationPool_PoolTestCases.cpp
+			ext/common/ApplicationPool/Interface.h
+			ext/common/ApplicationPool/Account.h
+			ext/common/ApplicationPool/AccountsDatabase.h
+			ext/common/ApplicationPool/Server.h
+			ext/common/ApplicationPool/Pool.h
 			ext/common/AbstractSpawnManager.h
 			ext/common/SpawnManager.h
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
 			ext/common/Application.h
 			ext/common/MessageChannel.h),
-		'test/StandardApplicationPoolTest.o' => %w(
-			test/StandardApplicationPoolTest.cpp
-			test/ApplicationPoolTest.cpp
-			ext/common/ApplicationPool.h
-			ext/common/StandardApplicationPool.h
+		'test/ApplicationPool_PoolTest.o' => %w(
+			test/ApplicationPool_PoolTest.cpp
+			test/ApplicationPool_PoolTestCases.cpp
+			ext/common/ApplicationPool/Interface.h
+			ext/common/ApplicationPool/Pool.h
 			ext/common/AbstractSpawnManager.h
 			ext/common/SpawnManager.h
 			ext/common/PoolOptions.h

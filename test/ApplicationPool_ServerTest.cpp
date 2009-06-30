@@ -2,9 +2,9 @@
 
 #include <boost/bind.hpp>
 
-#include "StandardApplicationPool.h"
-#include "ApplicationPoolServer.h"
-#include "ApplicationPoolClient.h"
+#include "ApplicationPool/Pool.h"
+#include "ApplicationPool/Server.h"
+#include "ApplicationPool/Client.h"
 #include "Utils.h"
 #include <string>
 #include <cstring>
@@ -16,13 +16,14 @@ using namespace boost;
 using namespace std;
 
 namespace tut {
-	struct ApplicationPoolServerTest {
-		shared_ptr<StandardApplicationPool> realPool;
-		shared_ptr<ApplicationPoolServer> server;
-		shared_ptr<ApplicationPoolClient> pool, pool2;
+	struct ApplicationPool_ServerTest {
+		ApplicationPool::AccountsDatabasePtr accountsDatabase;
+		shared_ptr<ApplicationPool::Pool> realPool;
+		shared_ptr<ApplicationPool::Server> server;
+		shared_ptr<ApplicationPool::Client> pool, pool2;
 		shared_ptr<oxt::thread> serverThread;
 		
-		~ApplicationPoolServerTest() {
+		~ApplicationPool_ServerTest() {
 			if (serverThread != NULL) {
 				serverThread->interrupt_and_join();
 			}
@@ -30,17 +31,20 @@ namespace tut {
 		
 		void initializePool() {
 			string socketFilename = getPassengerTempDir() + "/master/pool_server.sock";
-			realPool = ptr(new StandardApplicationPool("../bin/passenger-spawn-server"));
-			server = ptr(new ApplicationPoolServer(socketFilename, "12345", realPool));
-			pool = ptr(new ApplicationPoolClient(socketFilename, "12345"));
-			pool2 = ptr(new ApplicationPoolClient(socketFilename, "12345"));
+			accountsDatabase = ptr(new ApplicationPool::AccountsDatabase());
+			accountsDatabase->add("test", "12345", false);
+			
+			realPool = ptr(new ApplicationPool::Pool("../bin/passenger-spawn-server"));
+			server   = ptr(new ApplicationPool::Server(socketFilename, accountsDatabase, realPool));
+			pool     = ptr(new ApplicationPool::Client(socketFilename, "test", "12345"));
+			pool2    = ptr(new ApplicationPool::Client(socketFilename, "test", "12345"));
 			serverThread = ptr(new oxt::thread(
-				boost::bind(&ApplicationPoolServer::mainLoop, server.get())
+				boost::bind(&ApplicationPool::Server::mainLoop, server.get())
 			));
 		}
 	};
 
-	DEFINE_TEST_GROUP(ApplicationPoolServerTest);
+	DEFINE_TEST_GROUP(ApplicationPool_ServerTest);
 	
 	/* A StringListCreator which not only returns a dummy value, but also
 	 * increments a counter each time getItems() is called. */

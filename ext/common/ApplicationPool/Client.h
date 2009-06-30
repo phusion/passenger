@@ -207,6 +207,7 @@ public:
 	 * @throws boost::thread_interrupted
 	 */
 	Client(const string &socketFilename, const string &username, const string &password) {
+		// TODO: is it secure for password to be a string?
 		int fd = connectToUnixServer(socketFilename.c_str());
 		data = ptr(new SharedData(fd));
 		authenticate(username, password);

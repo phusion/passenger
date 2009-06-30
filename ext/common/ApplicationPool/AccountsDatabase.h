@@ -51,8 +51,8 @@ public:
 	}
 	
 	AccountPtr authenticate(const string &username, const StaticString &plainTextPassword) {
-		map<string, AccountPtr>::iterator it = entries.find(username);
-		if (it == entries.end()) {
+		map<string, AccountPtr>::iterator it = accounts.find(username);
+		if (it == accounts.end()) {
 			return AccountPtr();
 		} else {
 			AccountPtr account(it->second);

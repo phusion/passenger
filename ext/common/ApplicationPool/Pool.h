@@ -590,7 +590,7 @@ private:
 		maxPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
 		maxIdleTime = DEFAULT_MAX_IDLE_TIME;
 		cleanerThread = new boost::thread(
-			bind(&StandardApplicationPool::cleanerThreadMainLoop, this),
+			bind(&Pool::cleanerThreadMainLoop, this),
 			CLEANER_THREAD_STACK_SIZE
 		);
 	}
@@ -662,7 +662,7 @@ public:
 	}
 	
 	virtual Application::SessionPtr get(const string &appRoot) {
-		return ApplicationPool::get(appRoot);
+		return ApplicationPool::Interface::get(appRoot);
 	}
 	
 	virtual Application::SessionPtr get(const PoolOptions &options) {

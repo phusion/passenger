@@ -9,8 +9,8 @@
 #include <utime.h>
 
 /**
- * This file is used as a template to test the different ApplicationPool implementations.
- * It is #included in StandardApplicationPoolTest.cpp and ApplicationServer_ApplicationPoolTest.cpp
+ * This file is used as a template to test the different ApplicationPool::Interface implementations.
+ * It is #included in ApplicationPool_PoolTest.cpp and ApplicationPool_Server_PoolTest.cpp
  */
 #ifdef USE_TEMPLATE
 	/** Create some stub request headers. */
@@ -31,14 +31,14 @@
 		return headers;
 	}
 	
-	static Application::SessionPtr spawnRackApp(ApplicationPoolPtr pool, const char *appRoot) {
+	static Application::SessionPtr spawnRackApp(ApplicationPool::Ptr pool, const char *appRoot) {
 		PoolOptions options;
 		options.appRoot = appRoot;
 		options.appType = "rack";
 		return pool->get(options);
 	}
 	
-	static Application::SessionPtr spawnWsgiApp(ApplicationPoolPtr pool, const char *appRoot) {
+	static Application::SessionPtr spawnWsgiApp(ApplicationPool::Ptr pool, const char *appRoot) {
 		PoolOptions options;
 		options.appRoot = appRoot;
 		options.appType = "wsgi";
@@ -153,11 +153,11 @@
 	}
 	
 	struct PoolWaitTestThread {
-		ApplicationPoolPtr pool;
+		ApplicationPool::Ptr pool;
 		Application::SessionPtr &m_session;
 		bool &m_done;
 		
-		PoolWaitTestThread(const ApplicationPoolPtr &pool,
+		PoolWaitTestThread(const ApplicationPool::Ptr &pool,
 			Application::SessionPtr &session,
 			bool &done)
 		: m_session(session), m_done(done) {
@@ -503,7 +503,7 @@
 		// We connect to stub/wsgi. Assert that the pool spawns a new
 		// instance for this app.
 		TempDirCopy c("stub/wsgi", "wsgiapp.tmp");
-		ApplicationPoolPtr pool3(newPoolConnection());
+		ApplicationPool::Ptr pool3(newPoolConnection());
 		Application::SessionPtr session3 = spawnWsgiApp(pool3, "wsgiapp.tmp");
 		ensure_equals(pool->getCount(), 2u);
 	}
@@ -543,7 +543,7 @@
 	}
 	
 	struct SpawnRackAppFunction {
-		ApplicationPoolPtr pool;
+		ApplicationPool::Ptr pool;
 		bool *done;
 		
 		void operator()() {

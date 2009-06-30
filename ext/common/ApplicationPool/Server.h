@@ -38,10 +38,12 @@
 #include <unistd.h>
 #include <cerrno>
 
-#include "ApplicationPool/Pool.h"
-#include "FileDescriptor.h"
-#include "Exceptions.h"
-#include "Utils.h"
+#include "Pool.h"
+#include "Account.h"
+#include "AccountsDatabase.h"
+#include "../FileDescriptor.h"
+#include "../Exceptions.h"
+#include "../Utils.h"
 
 namespace Passenger {
 namespace ApplicationPool {
@@ -222,7 +224,7 @@ private:
 		FileDescriptor fd;
 		
 		/** The channel that's associated with the client's socket. */
-		MessageChannel channel;
+		MessageChannel &channel;
 		
 		/** The account with which the client has authenticated. */
 		AccountPtr account;
@@ -237,9 +239,8 @@ private:
 		/** Last used session ID. */
 		int lastSessionID;
 		
-		ClientContext(FileDescriptor &theFd, AccountPtr theAccount)
-			: fd(theFd),
-			  channel(fd),
+		ClientContext(MessageChannel &theChannel, AccountPtr theAccount)
+			: channel(theChannel),
 			  account(theAccount)
 		{
 			lastSessionID = 0;
@@ -337,21 +338,21 @@ private:
 		context.sessions.erase(atoi(args[1]));
 	}
 	
-	void processClear(const vector<string> &args) {
+	void processClear(ClientContext &context, const vector<string> &args) {
 		TRACE_POINT();
 		requireRights(context, Account::CLEAR);
 		pool->clear();
 	}
 	
-	void processSetMaxIdleTime(const vector<string> &args) {
+	void processSetMaxIdleTime(ClientContext &context, const vector<string> &args) {
 		TRACE_POINT();
 		requireRights(context, Account::SET_PARAMETERS);
 		pool->setMaxIdleTime(atoi(args[1]));
 	}
 	
-	void processSetMax(const vector<string> &args) {
+	void processSetMax(ClientContext &context, const vector<string> &args) {
 		TRACE_POINT();
-		requireRights(context, Account::PARAMETER_TWEAKING);
+		requireRights(context, Account::SET_PARAMETERS);
 		pool->setMax(atoi(args[1]));
 	}
 	
@@ -367,7 +368,7 @@ private:
 		context.channel.write(toString(pool->getCount()).c_str(), NULL);
 	}
 	
-	void processSetMaxPerApp(unsigned int maxPerApp) {
+	void processSetMaxPerApp(ClientContext &context, unsigned int maxPerApp) {
 		TRACE_POINT();
 		requireRights(context, Account::SET_PARAMETERS);
 		pool->setMaxPerApp(maxPerApp);
@@ -419,11 +420,13 @@ private:
 	
 	AccountPtr authenticate(FileDescriptor &client) {
 		// TODO
+		return AccountPtr(new Account("test", "1234", false));
 	}
 	
 	void requireRights(ClientContext &context, Account::Rights rights) {
 		if (!context.account->hasRights(rights)) {
-			throw SecurityException("TODO");
+			// TODO
+			throw RuntimeException("TODO");
 		}
 	}
 	
@@ -440,7 +443,8 @@ private:
 				return;
 			}
 			
-			ClientContext context(client, account);
+			MessageChannel channel(client);
+			ClientContext context(channel, account);
 			
 			while (!this_thread::interruption_requested()) {
 				UPDATE_TRACE_POINT();
@@ -548,7 +552,7 @@ public:
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
 			
-			function<void ()> func(boost::bind(&ApplicationPoolServer::clientHandlingMainLoop,
+			function<void ()> func(boost::bind(&Server::clientHandlingMainLoop,
 				this, fd));
 			string name = "ApplicationPoolServer client thread ";
 			name.append(toString(fd));
