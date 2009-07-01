@@ -34,8 +34,10 @@ namespace tut {
 			serverThread = ptr(new oxt::thread(
 				boost::bind(&ApplicationPool::Server::mainLoop, server.get())
 			));
-			pool     = ptr(new ApplicationPool::Client(socketFilename, "test", "12345"));
-			pool2    = ptr(new ApplicationPool::Client(socketFilename, "test", "12345"));
+			pool     = ptr(new ApplicationPool::Client());
+			pool2    = ptr(new ApplicationPool::Client());
+			pool->connect(socketFilename, "test", "12345");
+			pool2->connect(socketFilename, "test", "12345");
 		}
 		
 		~ApplicationPool_Server_PoolTest() {
@@ -45,7 +47,9 @@ namespace tut {
 		}
 		
 		ApplicationPool::Ptr newPoolConnection() {
-			return ptr(new ApplicationPool::Client(socketFilename, "test", "12345"));
+			shared_ptr<ApplicationPool::Client> p = ptr(new ApplicationPool::Client());
+			p->connect(socketFilename, "test", "12345");
+			return p;
 		}
 	};
 	

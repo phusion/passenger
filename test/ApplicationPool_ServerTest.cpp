@@ -19,6 +19,7 @@ using namespace std;
 
 namespace tut {
 	struct ApplicationPool_ServerTest {
+		string socketFilename;
 		AccountsDatabasePtr accountsDatabase;
 		AccountPtr clientAccount;
 		shared_ptr<Pool> realPool;
@@ -33,7 +34,7 @@ namespace tut {
 		}
 		
 		void initializePool() {
-			string socketFilename = getPassengerTempDir() + "/master/pool_server.sock";
+			socketFilename = getPassengerTempDir() + "/master/pool_server.sock";
 			accountsDatabase = ptr(new AccountsDatabase());
 			clientAccount = accountsDatabase->add("test", "12345", false);
 			
@@ -42,8 +43,10 @@ namespace tut {
 			serverThread = ptr(new oxt::thread(
 				boost::bind(&Server::mainLoop, server.get())
 			));
-			pool     = ptr(new Client(socketFilename, "test", "12345"));
-			pool2    = ptr(new Client(socketFilename, "test", "12345"));
+			pool     = ptr(new Client());
+			pool2    = ptr(new Client());
+			pool->connect(socketFilename, "test", "12345");
+			pool2->connect(socketFilename, "test", "12345");
 		}
 		
 		Application::SessionPtr spawnRackApp() {
@@ -51,28 +54,59 @@ namespace tut {
 			options.appType = "rack";
 			return pool->get(options);
 		}
+		
+		
+		/* A StringListCreator which not only returns a dummy value, but also
+		 * increments a counter each time getItems() is called. */
+		class DummyStringListCreator: public StringListCreator {
+		public:
+			mutable int counter;
+
+			DummyStringListCreator() {
+				counter = 0;
+			}
+
+			virtual const StringListPtr getItems() const {
+				StringListPtr result = ptr(new StringList());
+				counter++;
+				result->push_back("hello");
+				result->push_back("world");
+				return result;
+			}
+		};
+		
+		class SlowClient: public Client {
+		private:
+			unsigned int timeToSendUsername;
+			unsigned int timeToSendPassword;
+			
+		protected:
+			virtual void sendUsername(MessageChannel &channel, const string &username) {
+				if (timeToSendUsername > 0) {
+					usleep(timeToSendUsername * 1000);
+				}
+				channel.writeScalar(username);
+			}
+
+			virtual void sendPassword(MessageChannel &channel, const StaticString &userSuppliedPassword) {
+				if (timeToSendPassword > 0) {
+					usleep(timeToSendPassword * 1000);
+				}
+				channel.writeScalar(userSuppliedPassword.c_str(), userSuppliedPassword.size());
+			}
+			
+		public:
+			SlowClient(unsigned int timeToSendUsername,
+			           unsigned int timeToSendPassword)
+			         : Client()
+			{
+				this->timeToSendUsername = timeToSendUsername;
+				this->timeToSendPassword = timeToSendPassword;
+			}
+		};
 	};
 
 	DEFINE_TEST_GROUP(ApplicationPool_ServerTest);
-	
-	/* A StringListCreator which not only returns a dummy value, but also
-	 * increments a counter each time getItems() is called. */
-	class DummyStringListCreator: public StringListCreator {
-	public:
-		mutable int counter;
-		
-		DummyStringListCreator() {
-			counter = 0;
-		}
-		
-		virtual const StringListPtr getItems() const {
-			StringListPtr result = ptr(new StringList());
-			counter++;
-			result->push_back("hello");
-			result->push_back("world");
-			return result;
-		}
-	};
 	
 	TEST_METHOD(1) {
 		// When calling get() with a PoolOptions object,
@@ -95,6 +129,104 @@ namespace tut {
 	}
 	
 	TEST_METHOD(2) {
+		// It supports hashed passwords.
+		initializePool();
+		accountsDatabase->add("hashed_user", Account::createHash("67890"), true);
+		Client().connect(socketFilename, "hashed_user", "67890"); // Should not throw exception.
+	}
+	
+	TEST_METHOD(3) {
+		// It rejects the connection if the an invalid username or password was sent.
+		initializePool();
+		accountsDatabase->add("hashed_user", Account::createHash("67890"), true);
+		
+		try {
+			Client().connect(socketFilename, "testt", "12345");
+			fail("SecurityException expected when invalid username is given");
+		} catch (const SecurityException &) {
+			// Pass.
+		}
+		try {
+			Client().connect(socketFilename, "test", "123456");
+			fail("SecurityException expected when invalid password is given for an account with plain text password");
+		} catch (const SecurityException &) {
+			// Pass.
+		}
+		try {
+			Client().connect(socketFilename, "test", "678900");
+			fail("SecurityException expected when invalid password is given for an account with hashed password");
+		} catch (const SecurityException &) {
+			// Pass.
+		}
+	}
+	
+	TEST_METHOD(4) {
+		// It disconnects the client if the client does not supply a username and
+		// password within a time limit.
+		initializePool();
+		server->setLoginTimeout(40);
+		
+		try {
+			// This client takes too much time on sending the username.
+			SlowClient(50, 0).connect(socketFilename, "test", "12345");
+			fail("IOException or SystemException expected (1).");
+		} catch (const IOException &e) {
+			// Pass.
+		} catch (const SystemException &e) {
+			// Pass.
+		}
+		
+		try {
+			// This client takes too much time on sending the password.
+			SlowClient(0, 50).connect(socketFilename, "test", "12345");
+			fail("IOException or SystemException expected (2).");
+		} catch (const IOException &e) {
+			// Pass.
+		} catch (const SystemException &e) {
+			// Pass.
+		}
+		
+		try {
+			// This client is fast enough at sending the username and
+			// password individually, but the combined time is too long.
+			SlowClient(25, 25).connect(socketFilename, "test", "12345");
+			fail("IOException or SystemException expected (3).");
+		} catch (const IOException &e) {
+			// Pass.
+		} catch (const SystemException &e) {
+			// Pass.
+		}
+	}
+	
+	TEST_METHOD(5) {
+		// It disconnects the client if it provides a username that's too large.
+		initializePool();
+		char username[1024];
+		memset(username, 'x', sizeof(username));
+		username[sizeof(username) - 1] = '\0';
+		try {
+			Client().connect(socketFilename, username, "1234");
+			fail("SecurityException expected");
+		} catch (const SecurityException &e) {
+			// Pass.
+		}
+	}
+	
+	TEST_METHOD(6) {
+		// It disconnects the client if it provides a password that's too large.
+		initializePool();
+		char password[1024];
+		memset(password, 'x', sizeof(password));
+		password[sizeof(password) - 1] = '\0';
+		try {
+			Client().connect(socketFilename, "test", password);
+			fail("SecurityException expected");
+		} catch (const SecurityException &e) {
+			// Pass.
+		}
+	}
+	
+	TEST_METHOD(10) {
 		// get() requires GET rights.
 		initializePool();
 		
@@ -110,7 +242,7 @@ namespace tut {
 		spawnRackApp(); // Should not throw SecurityException now.
 	}
 	
-	TEST_METHOD(3) {
+	TEST_METHOD(11) {
 		// clear() requires CLEAR rights.
 		initializePool();
 		
@@ -126,7 +258,7 @@ namespace tut {
 		pool->clear(); // Should not throw SecurityException now.
 	}
 	
-	TEST_METHOD(4) {
+	TEST_METHOD(12) {
 		// setMaxIdleTime() requires SET_PARAMETERS rights.
 		initializePool();
 		
@@ -142,7 +274,7 @@ namespace tut {
 		pool->setMaxIdleTime(60); // Should not throw SecurityException now.
 	}
 	
-	TEST_METHOD(5) {
+	TEST_METHOD(13) {
 		// setMax() requires SET_PARAMETERS rights.
 		initializePool();
 		
@@ -158,7 +290,7 @@ namespace tut {
 		pool->setMax(60); // Should not throw SecurityException now.
 	}
 	
-	TEST_METHOD(6) {
+	TEST_METHOD(14) {
 		// getActive() requires GET_PARAMETERS rights.
 		initializePool();
 		
@@ -174,7 +306,7 @@ namespace tut {
 		pool->getActive(); // Should not throw SecurityException now.
 	}
 	
-	TEST_METHOD(7) {
+	TEST_METHOD(15) {
 		// getCount() requires GET_PARAMETERS rights.
 		initializePool();
 		
@@ -190,7 +322,7 @@ namespace tut {
 		pool->getCount(); // Should not throw SecurityException now.
 	}
 	
-	TEST_METHOD(8) {
+	TEST_METHOD(16) {
 		// setMaxPerApp() requires SET_PARAMETERS rights.
 		initializePool();
 		
@@ -206,7 +338,7 @@ namespace tut {
 		pool->setMaxPerApp(2); // Should not throw SecurityException now.
 	}
 	
-	TEST_METHOD(9) {
+	TEST_METHOD(17) {
 		// getSpawnServerPid() requires GET_PARAMETERS rights.
 		initializePool();
 		

@@ -503,9 +503,13 @@ public:
 	 * @param maxSize The maximum number of bytes that may be read. If the
 	 *                scalar to read is larger than this, then a SecurityException
 	 *                will be thrown. Set to 0 for no size limit.
-	 * @param timeout The maximum amount of time, in milliseconds, that may be spent on
-	 *                reading the entire scalar. If the timeout expired then a
-	 *                TimeoutException will be thrown. Set to 0 to disable the timeout.
+	 * @param timeout A pointer to an integer, representing the maximum number of
+	 *                milliseconds to spend on reading the entire scalar.
+	 *                A TimeoutException will be thrown if unable to read the entire
+	 *                scalar within this time period.
+	 *                If no exception is thrown, the the amount of time spent on waiting
+	 *                will be deducted from <tt>*timeout</tt>.
+	 *                Pass NULL if you do not want to enforce any time limits.
 	 * @returns Whether end-of-file was reached during reading.
 	 * @throws SystemException An error occured while reading data from the file descriptor.
 	 * @throws SecurityException There is more data to read than allowed by maxSize.
@@ -514,18 +518,11 @@ public:
 	 * @throws boost::thread_interrupted
 	 * @see writeScalar()
 	 */
-	bool readScalar(string &output, unsigned int maxSize = 0, unsigned long long timeout = 0) {
+	bool readScalar(string &output, unsigned int maxSize = 0, unsigned long long *timeout = NULL) {
 		unsigned int size;
 		unsigned int remaining;
-		unsigned long long *timeout_p;
 		
-		if (timeout == 0) {
-			timeout_p = NULL;
-		} else {
-			timeout_p = &timeout;
-		}
-		
-		if (!readUint32(size, timeout_p)) {
+		if (!readUint32(size, timeout)) {
 			return false;
 		}
 		
@@ -544,7 +541,7 @@ public:
 			while (remaining > 0) {
 				unsigned int blockSize = min((unsigned int) sizeof(buf), remaining);
 				
-				if (!readRaw(buf, blockSize, timeout_p)) {
+				if (!readRaw(buf, blockSize, timeout)) {
 					return false;
 				}
 				output.append(buf, blockSize);

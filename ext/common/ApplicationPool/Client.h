@@ -178,6 +178,17 @@ private:
 	
 	/** @invariant data != NULL */
 	SharedDataPtr data;
+
+protected:
+	/* sendUsername() and sendPassword() exist and are virtual in order to facilitate unit testing. */
+	
+	virtual void sendUsername(MessageChannel &channel, const string &username) {
+		channel.writeScalar(username);
+	}
+	
+	virtual void sendPassword(MessageChannel &channel, const StaticString &userSuppliedPassword) {
+		channel.writeScalar(userSuppliedPassword.c_str(), userSuppliedPassword.size());
+	}
 	
 	/**
 	 * Authenticate to the server with the given username and password.
@@ -191,8 +202,8 @@ private:
 		MessageChannel &channel(data->channel);
 		vector<string> args;
 		
-		channel.writeScalar(username);
-		channel.writeScalar(userSuppliedPassword.c_str(), userSuppliedPassword.size());
+		sendUsername(channel, username);
+		sendPassword(channel, userSuppliedPassword);
 		
 		if (!channel.read(args)) {
 			throw IOException("The ApplicationPool server did not send an authentication response.");
@@ -204,7 +215,9 @@ private:
 	}
 	
 	void checkConnection() const {
-		if (!data->channel.connected()) {
+		if (data == NULL) {
+			throw RuntimeException("connect() hasn't been called on this ApplicationPool::Client instance.");
+		} else if (!data->channel.connected()) {
 			throw IOException("The connection to the ApplicationPool server is closed.");
 		}
 	}
@@ -227,8 +240,19 @@ private:
 	
 public:
 	/**
-	 * Create a new ApplicationPool::Client object and connect to the given
-	 * ApplicationPool server.
+	 * Create a new ApplicationPool::Client object. It doesn't actually connect to the server until
+	 * you call connect().
+	 */
+	Client() {
+		/* The reason why we don't connect right away is because we want to make
+		 * certain methods virtual for unit testing purposes. We can't call
+		 * virtual methods in the constructor. :-(
+		 */
+	}
+	
+	/**
+	 * Connect to the given ApplicationPool server. You may only call this method once per
+	 * instance.
 	 *
 	 * @param socketFilename The filename of the server socket to connect to.
 	 * @param username The username to use for authenticating with the server.
@@ -239,20 +263,24 @@ public:
 	 * @throws SecurityException Unable to authenticate to the server with the given username and password.
 	 * @throws boost::thread_interrupted
 	 */
-	Client(const string &socketFilename, const string &username, const StaticString &userSuppliedPassword) {
+	Client *connect(const string &socketFilename, const string &username, const StaticString &userSuppliedPassword) {
 		int fd = connectToUnixServer(socketFilename.c_str());
 		data = ptr(new SharedData(fd));
 		authenticate(username, userSuppliedPassword);
+		return this;
 	}
 	
 	virtual bool connected() const {
+		if (data == NULL) {
+			throw RuntimeException("connect() hasn't been called on this ApplicationPool::Client instance.");
+		}
 		return data->channel.connected();
 	}
 	
 	virtual void clear() {
 		TRACE_POINT();
-		MessageChannel &channel(data->channel);
 		checkConnection();
+		MessageChannel &channel(data->channel);
 		try {
 			channel.write("clear", NULL);
 			checkSecurityResponse();
@@ -268,8 +296,8 @@ public:
 	
 	virtual void setMaxIdleTime(unsigned int seconds) {
 		TRACE_POINT();
-		MessageChannel &channel(data->channel);
 		checkConnection();
+		MessageChannel &channel(data->channel);
 		try {
 			channel.write("setMaxIdleTime", toString(seconds).c_str(), NULL);
 			checkSecurityResponse();
@@ -285,8 +313,8 @@ public:
 	
 	virtual void setMax(unsigned int max) {
 		TRACE_POINT();
-		MessageChannel &channel(data->channel);
 		checkConnection();
+		MessageChannel &channel(data->channel);
 		try {
 			channel.write("setMax", toString(max).c_str(), NULL);
 			checkSecurityResponse();
@@ -302,10 +330,10 @@ public:
 	
 	virtual unsigned int getActive() const {
 		TRACE_POINT();
+		checkConnection();
 		MessageChannel &channel(data->channel);
 		vector<string> args;
 		
-		checkConnection();
 		try {
 			channel.write("getActive", NULL);
 			checkSecurityResponse();
@@ -323,10 +351,10 @@ public:
 	
 	virtual unsigned int getCount() const {
 		TRACE_POINT();
+		checkConnection();
 		MessageChannel &channel(data->channel);
 		vector<string> args;
 		
-		checkConnection();
 		try {
 			channel.write("getCount", NULL);
 			checkSecurityResponse();
@@ -344,9 +372,9 @@ public:
 	
 	virtual void setMaxPerApp(unsigned int max) {
 		TRACE_POINT();
+		checkConnection();
 		MessageChannel &channel(data->channel);
 		
-		checkConnection();
 		try {
 			channel.write("setMaxPerApp", toString(max).c_str(), NULL);
 			checkSecurityResponse();
@@ -362,10 +390,10 @@ public:
 	
 	virtual pid_t getSpawnServerPid() const {
 		TRACE_POINT();
+		checkConnection();
 		MessageChannel &channel(data->channel);
 		vector<string> args;
 		
-		checkConnection();
 		try {
 			channel.write("getSpawnServerPid", NULL);
 			checkSecurityResponse();
@@ -383,13 +411,12 @@ public:
 	
 	virtual Application::SessionPtr get(const PoolOptions &options) {
 		TRACE_POINT();
+		checkConnection();
 		MessageChannel &channel(data->channel);
 		vector<string> args;
 		int stream;
 		bool result;
 		bool serverMightNeedEnvironmentVariables = true;
-		
-		checkConnection();
 		
 		/* Send a 'get' request to the ApplicationPool server.
 		 * For efficiency reasons, we do not send the data for

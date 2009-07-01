@@ -507,38 +507,41 @@ namespace tut {
 	
 	TEST_METHOD(27) {
 		// readScalar() throws TimeoutException if no data was received within the timeout.
+		unsigned long long timeout = 30;
 		string str;
 		try {
-			reader.readScalar(str, 0, 30);
+			reader.readScalar(str, 0, &timeout);
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
-			// Pass.
+			ensure_equals("The passed time is deducted from timeout", timeout, 0u);
 		}
 	}
 	
 	TEST_METHOD(28) {
 		// readScalar() throws TimeoutException if not enough header data was received
 		// within the timeout.
+		unsigned long long timeout = 30;
 		string str;
 		writer.writeRaw("xxx", 3); // A part of a random 32-bit integer header.
 		try {
-			reader.readScalar(str, 0, 30);
+			reader.readScalar(str, 0, &timeout);
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
-			// Pass.
+			ensure_equals("The passed time is deducted from timeout", timeout, 0u);
 		}
 	}
 	
 	TEST_METHOD(29) {
 		// readScalar() throws TimeoutException if the header data was received but no
 		// body data was received within the timeout.
+		unsigned long long timeout = 30;
 		string str;
 		writer.writeUint32(1024); // Dummy header.
 		try {
-			reader.readScalar(str, 0, 30);
+			reader.readScalar(str, 0, &timeout);
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
-			// Pass.
+			ensure_equals("The passed time is deducted from timeout", timeout, 0u);
 		}
 	}
 	
@@ -552,26 +555,30 @@ namespace tut {
 		// Takes 10 seconds.
 		TempThread thr(boost::bind(&writeDataSlowly, writer.fileno(), 1000, 100));
 		
+		unsigned long long timeout = 35;
 		Timer timer;
 		try {
-			reader.readScalar(str, 0, 35);
+			reader.readScalar(str, 0, &timeout);
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
 			unsigned long long elapsed = timer.elapsed();
 			ensure("Spent at least 35 msec waiting", elapsed >= 35);
 			ensure("Spent at most 60 msec waiting", elapsed <= 60);
+			ensure_equals("The passed time is deducted from timeout", timeout, 0u);
 		}
 	}
 	
 	TEST_METHOD(31) {
 		// readScalar() returns if enough data was received within the specified timeout.
 		string str;
-		writer.writeScalar("hello world");
-		Timer timer;
-		reader.readScalar(str, 0, 30);
-		unsigned long long elapsed = timer.elapsed();
-		ensure_equals(str, "hello world");
-		ensure("Spent at most 10 msec waiting", elapsed <= 10);
+		unsigned long long timeout = 1000;
+		
+		writer.writeUint32(250);
+		TempThread thr(boost::bind(&writeDataSlowly, writer.fileno(), 250, 1000));
+		
+		reader.readScalar(str, 0, &timeout);
+		ensure("Spent at least 250 msec waiting", timeout <= 1000 - 250);
+		ensure("Spent at most 500 msec waiting", timeout >= 1000 - 500);
 	}
 	
 	TEST_METHOD(32) {

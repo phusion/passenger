@@ -260,6 +260,12 @@ private:
 	AccountsDatabasePtr accountsDatabase;
 	/** The ApplicationPool::Pool that's being exposed through the socket. */
 	PoolPtr pool;
+	/** The maximum number of milliseconds that client may spend on logging in.
+	 * Clients that take longer are disconnected.
+	 *
+	 * @invariant loginTimeout != 0
+	 */
+	unsigned long long loginTimeout;
 	
 	/** The client threads. */
 	dynamic_thread_group threadGroup;
@@ -454,10 +460,11 @@ private:
 		MessageChannel channel(client);
 		string username, password;
 		MemZeroGuard passwordGuard(password);
+		unsigned long long timeout = loginTimeout;
 		
 		try {
 			try {
-				if (!channel.readScalar(username, 50, 2000)) {
+				if (!channel.readScalar(username, 50, &timeout)) {
 					return AccountPtr();
 				}
 			} catch (const SecurityException &) {
@@ -465,7 +472,7 @@ private:
 			}
 			
 			try {
-				if (!channel.readScalar(password, 100, 200)) {
+				if (!channel.readScalar(password, 100, &timeout)) {
 					return AccountPtr();
 				}
 			} catch (const SecurityException &) {
@@ -576,6 +583,7 @@ public:
 		this->socketFilename   = socketFilename;
 		this->accountsDatabase = accountsDatabase;
 		this->pool = pool;
+		loginTimeout = 2000;
 		startListening();
 	}
 	
@@ -619,6 +627,16 @@ public:
 			name.append(toString(fd));
 			threadGroup.create_thread(func, name, CLIENT_THREAD_STACK_SIZE);
 		}
+	}
+	
+	/**
+	 * Sets the maximum number of milliseconds that clients may spend on logging in.
+	 * Clients that take longer are disconnected.
+	 *
+	 * @pre timeout != 0
+	 */
+	void setLoginTimeout(unsigned long long timeout) {
+		loginTimeout = timeout;
 	}
 };
 
