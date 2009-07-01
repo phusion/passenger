@@ -222,6 +222,16 @@ syscalls::shutdown(int s, int how) {
 	return ret;
 }
 
+int
+syscalls::select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, struct timeval *timeout) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::select(nfds, readfds, writefds, errorfds, timeout)
+	);
+	return ret;
+}
+
 FILE *
 syscalls::fopen(const char *path, const char *mode) {
 	FILE *ret;

@@ -11,6 +11,8 @@
 #include <cstring>
 #include <utime.h>
 
+#include <oxt/thread.hpp>
+
 #include "Exceptions.h"
 #include "Utils.h"
 
@@ -18,6 +20,7 @@ namespace Test {
 
 using namespace std;
 using namespace Passenger;
+using namespace oxt;
 
 /**
  * Read all data from the given file descriptor until EOF.
@@ -110,6 +113,23 @@ public:
 	
 	~DeleteFileEventually() {
 		unlink(filename.c_str());
+	}
+};
+
+/**
+ * Spawns a thread which will be interrupted and joined when this TempThread
+ * object is destroyed.
+ */
+class TempThread {
+public:
+	oxt::thread thread;
+	
+	TempThread(boost::function<void ()> func)
+		: thread(func)
+		{ }
+	
+	~TempThread() {
+		thread.interrupt_and_join();
 	}
 };
 

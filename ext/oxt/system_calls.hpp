@@ -30,6 +30,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <signal.h>
@@ -136,6 +137,9 @@ namespace oxt {
 		int setsockopt(int s, int level, int optname, const void *optval,
 			socklen_t optlen);
 		int shutdown(int s, int how);
+		
+		int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds,
+		           struct timeval *timeout);
 		
 		FILE *fopen(const char *path, const char *mode);
 		size_t fread(void *ptr, size_t size, size_t nitems, FILE *stream);

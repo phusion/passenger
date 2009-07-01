@@ -45,12 +45,13 @@
 #endif
 #if !APR_HAVE_IOVEC
 	// We don't want apr_want.h to redefine 'struct iovec'.
-	// http://tinyurl.com/b6aatw
+	// http://groups.google.com/group/phusion-passenger/browse_thread/thread/7e162f60df212e9c
 	#undef APR_HAVE_IOVEC
 	#define APR_HAVE_IOVEC 1
 #endif
 
 #include "Exceptions.h"
+#include "Timer.h"
 #include "Utils.h"
 
 namespace Passenger {
@@ -65,6 +66,7 @@ using namespace oxt;
  *  - sending and receiving raw data over a file descriptor.
  *  - sending and receiving messages over a file descriptor.
  *  - file descriptor passing over a Unix socket.
+ *  - data size limit enforcement and time constraint enforcement.
  * All of these methods use exceptions for error reporting.
  *
  * There are two kinds of messages:
@@ -110,6 +112,10 @@ using namespace oxt;
  *    receiving side does things in the wrong order then bad things will
  *    happen.
  * @note MessageChannel is not thread-safe, but is reentrant.
+ * @note Some methods throw SecurityException and TimeoutException. When these
+ *    exceptions are thrown, the channel will be left in an inconsistent state
+ *    because only parts of the data have been read. You should close the channel
+ *    after having caught these exceptions.
  *
  * @ingroup Support
  */
@@ -266,7 +272,22 @@ public:
 	}
 	
 	/**
-	 * Send a scalar message over the underlying file descriptor.
+	 * Write a 32-bit big-endian unsigned integer to the underlying file descriptor.
+	 *
+	 * @throws SystemException An error occurred while writing the data to the file descriptor.
+	 * @throws boost::thread_interrupted
+	 */
+	void writeUint32(unsigned int value) {
+		uint32_t l = htonl(value);
+		writeRaw((const char *) &l, sizeof(uint32_t));
+	}
+	
+	/**
+	 * Write a scalar message to the underlying file descriptor.
+	 *
+	 * @note Security guarantee: this method will not copy the data in memory,
+	 *       so it's safe to use this method to write passwords to the underlying
+	 *       file descriptor.
 	 *
 	 * @param str The scalar message's content.
 	 * @throws SystemException An error occured while writing the data to the file descriptor.
@@ -278,7 +299,11 @@ public:
 	}
 	
 	/**
-	 * Send a scalar message over the underlying file descriptor.
+	 * Write a scalar message to the underlying file descriptor.
+	 *
+	 * @note Security guarantee: this method will not copy the data in memory,
+	 *       so it's safe to use this method to write passwords to the underlying
+	 *       file descriptor.
 	 *
 	 * @param data The scalar message's content.
 	 * @param size The number of bytes in <tt>data</tt>.
@@ -288,14 +313,17 @@ public:
 	 * @see readScalar(), writeScalar(const string &)
 	 */
 	void writeScalar(const char *data, unsigned int size) {
-		uint32_t l = htonl(size);
-		writeRaw((const char *) &l, sizeof(uint32_t));
+		writeUint32(size);
 		writeRaw(data, size);
 	}
 	
 	/**
 	 * Send a block of data over the underlying file descriptor.
 	 * This method blocks until everything is sent.
+	 *
+	 * @note Security guarantee: this method will not copy the data in memory,
+	 *       so it's safe to use this method to write passwords to the underlying
+	 *       file descriptor.
 	 *
 	 * @param data The data to send.
 	 * @param size The number of bytes in <tt>data</tt>.
@@ -320,6 +348,10 @@ public:
 	/**
 	 * Send a block of data over the underlying file descriptor.
 	 * This method blocks until everything is sent.
+	 *
+	 * @note Security guarantee: this method will not copy the data in memory,
+	 *       so it's safe to use this method to write passwords to the underlying
+	 *       file descriptor.
 	 *
 	 * @param data The data to send.
 	 * @pre <tt>data != NULL</tt>
@@ -438,22 +470,67 @@ public:
 	}
 	
 	/**
+	 * Read a 32-bit big-endian unsigned integer from the underlying file descriptor.
+	 *
+	 * @param value Upon success, the read value will be stored in here.
+	 * @param timeout A pointer to an integer, representing the maximum number of
+	 *                milliseconds to spend on reading the entire integer.
+	 *                A TimeoutException will be thrown if the timeout expires.
+	 *                If no exception is thrown, the the amount of time spent on waiting
+	 *                will be deducted from <tt>*timeout</tt>.
+	 *                Pass NULL if you do not want to enforce any time limits.
+	 * @return True if a value was read, false if EOF was reached before all data can be
+	 *         read.
+	 * @throws SystemException An error occurred while reading data from the file descriptor.
+	 * @throws boost::thread_interrupted
+	 */
+	bool readUint32(unsigned int &value, unsigned long long *timeout = NULL) {
+		uint32_t temp;
+		
+		if (!readRaw(&temp, sizeof(uint32_t), timeout)) {
+			return false;
+		} else {
+			value = ntohl(temp);
+			return true;
+		}
+	}
+	
+	/**
 	 * Read a scalar message from the underlying file descriptor.
 	 *
 	 * @param output The message will be put in here.
+	 * @param maxSize The maximum number of bytes that may be read. If the
+	 *                scalar to read is larger than this, then a SecurityException
+	 *                will be thrown. Set to 0 for no size limit.
+	 * @param timeout The maximum amount of time, in milliseconds, that may be spent on
+	 *                reading the entire scalar. If the timeout expired then a
+	 *                TimeoutException will be thrown. Set to 0 to disable the timeout.
 	 * @returns Whether end-of-file was reached during reading.
-	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 * @throws SystemException An error occured while reading data from the file descriptor.
+	 * @throws SecurityException There is more data to read than allowed by maxSize.
+	 * @throws TimeoutException Unable to read the entire scalar within <tt>timeout</tt>
+	 *                          milliseconds.
 	 * @throws boost::thread_interrupted
 	 * @see writeScalar()
 	 */
-	bool readScalar(string &output) {
-		uint32_t size;
+	bool readScalar(string &output, unsigned int maxSize = 0, unsigned long long timeout = 0) {
+		unsigned int size;
 		unsigned int remaining;
+		unsigned long long *timeout_p;
 		
-		if (!readRaw(&size, sizeof(uint32_t))) {
+		if (timeout == 0) {
+			timeout_p = NULL;
+		} else {
+			timeout_p = &timeout;
+		}
+		
+		if (!readUint32(size, timeout_p)) {
 			return false;
 		}
-		size = ntohl(size);
+		
+		if (maxSize != 0 && size > maxSize) {
+			throw SecurityException("There is more data available than is allowed by the size limit.");
+		}
 		
 		output.clear();
 		output.reserve(size);
@@ -462,7 +539,7 @@ public:
 			char buf[1024 * 32];
 			unsigned int blockSize = min((unsigned int) sizeof(buf), remaining);
 			
-			if (!readRaw(buf, blockSize)) {
+			if (!readRaw(buf, blockSize, timeout_p)) {
 				return false;
 			}
 			output.append(buf, blockSize);
@@ -481,17 +558,30 @@ public:
 	 * @param buf The buffer to place the read data in. This buffer must be at least
 	 *            <tt>size</tt> bytes long.
 	 * @param size The number of bytes to read.
+	 * @param timeout A pointer to an integer, which specifies the maximum number of
+	 *                milliseconds that may be spent on reading the <tt>size</tt> bytes
+	 *                of data. If the timeout expired then TimeoutException will be
+	 *                thrown.
+	 *                If this function returns without throwing an exception, then the
+	 *                total number of milliseconds spent on reading will be deducted
+	 *                from <tt>timeout</tt>.
+	 *                Pass NULL if you do not want to enforce a timeout.
 	 * @return Whether reading was successful or whether EOF was reached.
 	 * @pre buf != NULL
 	 * @throws SystemException Something went wrong during reading.
+	 * @throws TimeoutException Unable to read <tt>size</tt> bytes of data within
+	 *                          <tt>timeout</tt> milliseconds.
 	 * @throws boost::thread_interrupted
 	 * @see writeRaw()
 	 */
-	bool readRaw(void *buf, unsigned int size) {
+	bool readRaw(void *buf, unsigned int size, unsigned long long *timeout = NULL) {
 		ssize_t ret;
 		unsigned int alreadyRead = 0;
 		
 		while (alreadyRead < size) {
+			if (timeout != NULL && !waitUntilReadable(timeout)) {
+				throw TimeoutException("Cannot read enough data within the specified timeout.");
+			}
 			ret = syscalls::read(fd, (char *) buf + alreadyRead, size - alreadyRead);
 			if (ret == -1) {
 				throw SystemException("read() failed", errno);
@@ -502,6 +592,44 @@ public:
 			}
 		}
 		return true;
+	}
+	
+	/**
+	 * Waits at most <tt>*timeout</tt> milliseconds for the file descriptor to become readable.
+	 * Returns true if it become readable within the timeout, false if the timeout expired.
+	 *
+	 * <tt>*timeout</tt> may be 0, in which case this method will check whether the file
+	 * descriptor is readable, and immediately returns without waiting.
+	 *
+	 * If no exception is thrown, this method deducts the number of milliseconds that has
+	 * passed from <tt>*timeout</tt>.
+	 *
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
+	 */
+	bool waitUntilReadable(unsigned long long *timeout) {
+		fd_set fds;
+		struct timeval tv;
+		int ret;
+		
+		FD_ZERO(&fds);
+		FD_SET(fd, &fds);
+		tv.tv_sec  = *timeout / 1000;
+		tv.tv_usec = *timeout % 1000 * 1000;
+		
+		Timer timer;
+		ret = syscalls::select(fd + 1, &fds, NULL, NULL, &tv);
+		if (ret == -1) {
+			throw SystemException("select() failed", errno);
+		} else {
+			unsigned long long elapsed = timer.elapsed();
+			if (elapsed > *timeout) {
+				*timeout = 0;
+			} else {
+				*timeout -= elapsed;
+			}
+			return ret != 0;
+		}
 	}
 	
 	/**

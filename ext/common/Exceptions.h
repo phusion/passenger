@@ -254,6 +254,34 @@ public:
 };
 
 /**
+ * An exception indicating that some timeout expired.
+ *
+ * @ingroup Exceptions
+ */
+class TimeoutException: public oxt::tracable_exception {
+private:
+	string msg;
+public:
+	TimeoutException(const string &message): msg(message) {}
+	virtual ~TimeoutException() throw() {}
+	virtual const char *what() const throw() { return msg.c_str(); }
+};
+
+/**
+ * Represents some kind of security error.
+ *
+ * @ingroup Exceptions
+ */
+class SecurityException: public oxt::tracable_exception {
+private:
+	string msg;
+public:
+	SecurityException(const string &message): msg(message) {}
+	virtual ~SecurityException() throw() {}
+	virtual const char *what() const throw() { return msg.c_str(); }
+};
+
+/**
  * The application pool is too busy and cannot fulfill a get() request.
  *
  * @ingroup Exceptions

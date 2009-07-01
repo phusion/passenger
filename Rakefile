@@ -398,7 +398,10 @@ end
 			test/support/Support.h),
 		'test/MessageChannelTest.o' => %w(
 			test/MessageChannelTest.cpp
-			ext/common/MessageChannel.h),
+			ext/common/MessageChannel.h
+			ext/common/Exceptions.h
+			ext/common/Timer.h
+			ext/common/Utils.h),
 		'test/SpawnManagerTest.o' => %w(
 			test/SpawnManagerTest.cpp
 			ext/common/SpawnManager.h
