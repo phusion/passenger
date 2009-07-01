@@ -50,20 +50,20 @@ using namespace boost;
 
 /**
  * Allows one to access an ApplicationPool exposed through a socket by
- * ApplicationPoolServer.
+ * ApplicationPool::Server.
  *
- * ApplicationPoolClient connects to an ApplicationPool server, and behaves
- * just like an ApplicationPool. It is *not* thread-safe; each thread should
- * create a seperate ApplicationPoolClient object instead.
+ * ApplicationPool::Client connects to an ApplicationPool server, and behaves
+ * just as specified by ApplicationPool::Interface. It is *not* thread-safe;
+ * each thread should create a seperate ApplicationPool::Client object instead.
  */
 class Client: public ApplicationPool::Interface {
 private:
 	/**
-	 * Contains data shared between RemoteSession and ApplicationPoolClient.
-	 * Since RemoteSession and ApplicationPoolClient have different life times,
+	 * Contains data shared between RemoteSession and ApplicationPool::Client.
+	 * Since RemoteSession and ApplicationPool::Client have different life times,
 	 * i.e. one may be destroyed before the other, they both use a smart pointer
 	 * that points to a SharedData. This way, the SharedData object is only
-	 * destroyed when both the RemoteSession and the ApplicationPoolClient object
+	 * destroyed when both the RemoteSession and the ApplicationPool::Client object
 	 * have been destroyed.
 	 */
 	struct SharedData {

@@ -82,21 +82,21 @@ class Server;
  *
  * This class is unusable in multi-process environments such as Apache with the prefork MPM.
  * The reasons are as follows:
- *  - StandardApplicationPool uses threads internally. Because threads disappear after a fork(),
- *    a StandardApplicationPool object will become unusable after a fork().
- *  - StandardApplicationPool stores its internal cache on the heap. Different processes
+ *  - ApplicationPool::Pool uses threads internally. Because threads disappear after a fork(),
+ *    an ApplicationPool::Pool object will become unusable after a fork().
+ *  - ApplicationPool::Pool stores its internal cache on the heap. Different processes
  *    cannot share their heaps, so they will not be able to access each others' pool cache.
- *  - StandardApplicationPool has a connection to the spawn server. If there are multiple
+ *  - ApplicationPool::Pool has a connection to the spawn server. If there are multiple
  *    processes, and they all use the spawn servers's connection at the same time without
  *    some sort of synchronization, then bad things will happen.
  *
- * (Of course, StandardApplicationPool <em>is</em> usable if each process creates its own
- * StandardApplicationPool object, but that would defeat the point of having a shared pool.)
+ * (Of course, ApplicationPool::Pool <em>is</em> usable if each process creates its own
+ * ApplicationPool::Pool object, but that would defeat the point of having a shared pool.)
  *
- * For multi-process environments, one should use ApplicationPoolServer+ApplicationPoolClient
- * instead.
+ * For multi-process environments, one should use ApplicationPool::Server +
+ * ApplicationPool::Client instead.
  *
- * StandardApplicationPool is fully thread-safe.
+ * ApplicationPool::Pool is fully thread-safe.
  *
  * @ingroup Support
  */
@@ -162,9 +162,9 @@ private:
 	};
 	
 	/**
-	 * A data structure which contains data that's shared between a
-	 * StandardApplicationPool and a SessionCloseCallback object.
-	 * This is because the StandardApplicationPool's life time could be
+	 * A data structure which contains data that's shared between an
+	 * ApplicationPool::Pool and a SessionCloseCallback object.
+	 * This is because the ApplicationPool::Pool's life time could be
 	 * different from a SessionCloseCallback's.
 	 */
 	struct SharedData {
@@ -374,7 +374,7 @@ private:
 				if (cleanerThreadSleeper.timed_wait(l, xt)) {
 					// Condition was woken up.
 					if (done) {
-						// StandardApplicationPool is being destroyed.
+						// ApplicationPool::Pool is being destroyed.
 						break;
 					} else {
 						// maxIdleTime changed.
@@ -597,7 +597,7 @@ private:
 	
 public:
 	/**
-	 * Create a new StandardApplicationPool object, and initialize it with a
+	 * Create a new ApplicationPool::Pool object, and initialize it with a
 	 * SpawnManager. The arguments here are all passed to the SpawnManager
 	 * constructor.
 	 *
@@ -627,7 +627,7 @@ public:
 	}
 	
 	/**
-	 * Create a new StandardApplicationPool object and initialize it with
+	 * Create a new ApplicationPool::Pool object and initialize it with
 	 * the given spawn manager.
 	 *
 	 * @throws boost::thread_resource_error Cannot spawn a new thread.

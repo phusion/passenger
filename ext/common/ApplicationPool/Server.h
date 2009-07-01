@@ -56,17 +56,17 @@ using namespace oxt;
 /* This source file follows the security guidelines written in Account.h. */
 
 /**
- * ApplicationPoolServer exposes a StandardApplicationPool to external processes through
- * a Unix domain server socket. This allows one to use a StandardApplicationPool in a
- * multi-process environment. ApplicationPoolClient can be used to access a pool that's
- * exposed via ApplicationPoolServer.
+ * ApplicationPool::Server exposes an ApplicationPool::Pool to external processes through
+ * a Unix domain server socket. This allows one to use an ApplicationPool::Pool in a
+ * multi-process environment. ApplicationPool::Client can be used to access a pool that's
+ * exposed via ApplicationPool::Server.
  *
  * <h2>Usage</h2>
- * Construct an ApplicationPoolServer object and call the mainLoop() method on it.
+ * Construct an ApplicationPool::Server object and call the mainLoop() method on it.
  *
  * <h2>Concurrency model</h2>
  * Each client is handled by a seperate thread. This is necessary because we the current
- * algorithm for StandardApplicationPool::get() can block (in the case that the spawning
+ * algorithm for ApplicationPool::Pool::get() can block (in the case that the spawning
  * limit has been exceeded or when global queuing is used and all application instances
  * are busy). While it is possible to get around this problem without using threads, a
  * thread-based implementation is easier to write.
@@ -166,7 +166,7 @@ private:
 	
 	/**
 	 * A StringListCreator which fetches its items from the client.
-	 * Used as an optimization for ApplicationPoolServer::processGet():
+	 * Used as an optimization for ApplicationPool::Server::processGet():
 	 * environment variables are only serialized by the client process
 	 * if a new backend process is being spawned.
 	 */
@@ -254,11 +254,11 @@ private:
 		}
 	};
 	
-	/** The filename of the server socket on which this ApplicationPoolServer is listening. */
+	/** The filename of the server socket on which this ApplicationPool::Server is listening. */
 	string socketFilename;
 	/** An accounts database, used for authenticating clients. */
 	AccountsDatabasePtr accountsDatabase;
-	/** The StandardApplicationPool that's being exposed through the socket. */
+	/** The ApplicationPool::Pool that's being exposed through the socket. */
 	PoolPtr pool;
 	
 	/** The client threads. */
@@ -549,10 +549,10 @@ private:
 	
 public:
 	/**
-	 * Creates a new ApplicationPoolServer object.
+	 * Creates a new ApplicationPool::Server object.
 	 * The actual server main loop is not started until you call mainLoop().
 	 *
-	 * @param socketFilename The socket filename on which this ApplicationPoolServer
+	 * @param socketFilename The socket filename on which this ApplicationPool::Server
 	 *                       should be listening.
 	 * @param accountsDatabase An accounts database for this server, used for
 	 *                         authenticating clients.
