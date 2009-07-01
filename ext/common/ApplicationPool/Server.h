@@ -53,6 +53,8 @@ using namespace boost;
 using namespace oxt;
 
 
+/* This source file follows the security guidelines written in Account.h. */
+
 /**
  * ApplicationPoolServer exposes a StandardApplicationPool to external processes through
  * a Unix domain server socket. This allows one to use a StandardApplicationPool in a
@@ -334,7 +336,6 @@ private:
 	
 	void processClose(ClientContext &context, const vector<string> &args) {
 		TRACE_POINT();
-		requireRights(context, Account::GET);
 		context.sessions.erase(atoi(args[1]));
 	}
 	
@@ -419,14 +420,57 @@ private:
 	}
 	
 	AccountPtr authenticate(FileDescriptor &client) {
-		// TODO
-		return AccountPtr(new Account("test", "1234", false));
+		MessageChannel channel(client);
+		string username, password;
+		MemZeroGuard passwordGuard(password);
+		
+		try {
+			try {
+				if (!channel.readScalar(username, 50, 2000)) {
+					return AccountPtr();
+				}
+			} catch (const SecurityException &) {
+				channel.write("The supplied username is too long.", NULL);
+			}
+			
+			try {
+				if (!channel.readScalar(password, 100, 200)) {
+					return AccountPtr();
+				}
+			} catch (const SecurityException &) {
+				channel.write("The supplied password is too long.", NULL);
+			}
+			
+			AccountPtr account = accountsDatabase->authenticate(username, password);
+			passwordGuard.zeroNow();
+			if (account == NULL) {
+				channel.write("Invalid username or password.", NULL);
+				return AccountPtr();
+			} else {
+				channel.write("ok", NULL);
+				return account;
+			}
+		} catch (const SystemException &) {
+			return AccountPtr();
+		} catch (const TimeoutException &) {
+			return AccountPtr();
+		}
 	}
 	
+	/**
+	 * Checks whether the client has all of the rights in <tt>rights</tt>.
+	 *
+	 * @throws SecurityException The client doesn't have one of the required rights.
+	 * @throws SystemException Something went wrong while communicating with the client.
+	 * @throws boost::thread_interrupted
+	 */
 	void requireRights(ClientContext &context, Account::Rights rights) {
 		if (!context.account->hasRights(rights)) {
-			// TODO
-			throw RuntimeException("TODO");
+			P_TRACE(2, "Security error: insufficient rights to execute this command.");
+			context.channel.write("SecurityException", "Insufficient rights to execute this command.", NULL);
+			throw SecurityException("Insufficient rights to execute this command.");
+		} else {
+			context.channel.write("Passed security", NULL);
 		}
 	}
 	
@@ -437,9 +481,12 @@ private:
 		TRACE_POINT();
 		vector<string> args;
 		
+		P_TRACE(4, "Client thread " << this << " started.");
+		
 		try {
 			AccountPtr account(authenticate(client));
 			if (account == NULL) {
+				P_TRACE(4, "Client thread " << this << " exited.");
 				return;
 			}
 			
@@ -481,15 +528,17 @@ private:
 				}
 				args.clear();
 			}
+			
+			P_TRACE(4, "Client thread " << this << " exited.");
 		} catch (const boost::thread_interrupted &) {
 			P_TRACE(2, "Client thread " << this << " interrupted.");
 		} catch (const tracable_exception &e) {
-			P_TRACE(2, "An error occurred in an ApplicationPoolServer client thread:\n"
+			P_TRACE(2, "An error occurred in an ApplicationPoolServer client thread " << this << ":\n"
 				<< "   message: " << toString(args) << "\n"
 				<< "   exception: " << e.what() << "\n"
 				<< "   backtrace:\n" << e.backtrace());
 		} catch (const exception &e) {
-			P_TRACE(2, "An error occurred in an ApplicationPoolServer client thread:\n"
+			P_TRACE(2, "An error occurred in an ApplicationPoolServer client thread " << this <<":\n"
 				<< "   message: " << toString(args) << "\n"
 				<< "   exception: " << e.what() << "\n"
 				<< "   backtrace: not available");

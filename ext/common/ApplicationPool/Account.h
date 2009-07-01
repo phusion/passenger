@@ -39,15 +39,19 @@ using namespace std;
  * SECURITY NOTES
  *
  * We want to avoid storing plain text passwords in memory, because attackers may be able
- * to scan this process's memory. So in this source file we follow these guidelines:
+ * to read this process's memory, e.g. through core dumps or debuggers. So in this source
+ * file, as well as in several others, we follow these guidelines:
  *
- * - Variables and arguments named plainTextPassword represent passwords supplied by a human,
- *   i.e. user input. These variables and arguments have the type 'StaticString' instead of
- *   'string', because we want to avoid accidentally copying the value in memory.
- * - Variables and arguments named passwordOrHash are always paired with a variable/argument
- *   named hashGiven. If hashGiven is false, then passwordOrHash represents a password that
- *   is guaranteed NOT supplied by a human, e.g. it's randomly generated. Therefore it's
- *   okay for passwordOrHash to be of type 'string'.
+ * - Variables and arguments named userSuppliedPassword represent passwords
+ *   supplied by a human, i.e. user input. These variables and arguments have the type
+ *   'StaticString' instead of 'string', because we want to avoid accidentally copying
+ *   the password values.
+ * - Variables and arguments named passwordOrHash might also represent passwords. However,
+ *   if it is a password, then it is guaranteed NOT to be supplied by a human, e.g. it's
+ *   randomly generated. Therefore it's okay for passwordOrHash to be of type 'string'.
+ * - If there is a need a copy the password for whatever reason, then it must be cleared
+ *   with ZeroMemoryGuard (Utils.h) as soon as possible. Do not use memset(), the code
+ *   for ZeroMemoryGuard explains why.
  */
 
 class Account {
@@ -77,11 +81,11 @@ public:
 		this->rights         = rights;
 	}
 	
-	bool checkPassword(const StaticString &plainTextPassword) const {
+	bool checkPasswordOrHash(const StaticString &userSuppliedPassword) const {
 		if (hashGiven) {
-			return passwordOrHash == createHash(plainTextPassword);
+			return passwordOrHash == createHash(userSuppliedPassword);
 		} else {
-			return plainTextPassword == passwordOrHash;
+			return userSuppliedPassword == passwordOrHash;
 		}
 	}
 	
@@ -89,9 +93,13 @@ public:
 		return this->rights & rights;
 	}
 	
-	static string createHash(const StaticString &plainTextPassword) {
+	void setRights(Rights rights) {
+		this->rights = rights;
+	}
+	
+	static string createHash(const StaticString &userSuppliedPassword) {
 		// TODO: use bcrypt
-		return plainTextPassword;
+		return userSuppliedPassword;
 	}
 };
 

@@ -1,4 +1,5 @@
 #include "tut.h"
+#include "support/Support.h"
 
 #include <boost/bind.hpp>
 
@@ -12,15 +13,16 @@
 #include <errno.h>
 
 using namespace Passenger;
+using namespace Passenger::ApplicationPool;
 using namespace boost;
 using namespace std;
 
 namespace tut {
 	struct ApplicationPool_ServerTest {
-		ApplicationPool::AccountsDatabasePtr accountsDatabase;
-		shared_ptr<ApplicationPool::Pool> realPool;
-		shared_ptr<ApplicationPool::Server> server;
-		shared_ptr<ApplicationPool::Client> pool, pool2;
+		AccountsDatabasePtr accountsDatabase;
+		shared_ptr<Pool> realPool;
+		shared_ptr<Server> server;
+		shared_ptr<Client> pool, pool2;
 		shared_ptr<oxt::thread> serverThread;
 		
 		~ApplicationPool_ServerTest() {
@@ -31,16 +33,28 @@ namespace tut {
 		
 		void initializePool() {
 			string socketFilename = getPassengerTempDir() + "/master/pool_server.sock";
-			accountsDatabase = ptr(new ApplicationPool::AccountsDatabase());
-			accountsDatabase->add("test", "12345", false);
+			if (accountsDatabase == NULL) {
+				initializeAccountsDatabase();
+				accountsDatabase->add("test", "12345", false);
+			}
 			
-			realPool = ptr(new ApplicationPool::Pool("../bin/passenger-spawn-server"));
-			server   = ptr(new ApplicationPool::Server(socketFilename, accountsDatabase, realPool));
-			pool     = ptr(new ApplicationPool::Client(socketFilename, "test", "12345"));
-			pool2    = ptr(new ApplicationPool::Client(socketFilename, "test", "12345"));
+			realPool = ptr(new Pool("../bin/passenger-spawn-server"));
+			server   = ptr(new Server(socketFilename, accountsDatabase, realPool));
 			serverThread = ptr(new oxt::thread(
-				boost::bind(&ApplicationPool::Server::mainLoop, server.get())
+				boost::bind(&Server::mainLoop, server.get())
 			));
+			pool     = ptr(new Client(socketFilename, "test", "12345"));
+			pool2    = ptr(new Client(socketFilename, "test", "12345"));
+		}
+		
+		void initializeAccountsDatabase() {
+			accountsDatabase = ptr(new AccountsDatabase());
+		}
+		
+		Application::SessionPtr spawnRackApp() {
+			PoolOptions options("stub/rack");
+			options.appType = "rack";
+			return pool->get(options);
 		}
 	};
 
@@ -84,5 +98,22 @@ namespace tut {
 		session1.reset();
 		ensure_equals(strList->counter, 1);
 	}
+	
+	TEST_METHOD(2) {
+		initializeAccountsDatabase();
+		AccountPtr account = accountsDatabase->add("test", "12345", false, Account::NONE);
+		initializePool();
+		
+		try {
+			spawnRackApp();
+			fail("SecurityException expected");
+		} catch (const SecurityException &e) {
+			// Pass.
+		}
+		
+		account->setRights(Account::GET);
+		spawnRackApp(); // Should not throw SecurityException now.
+	}
+	
 }
 

@@ -416,6 +416,7 @@ end
 			ext/common/ApplicationPool/Account.h
 			ext/common/ApplicationPool/AccountsDatabase.h
 			ext/common/ApplicationPool/Server.h
+			ext/common/ApplicationPool/Client.h
 			ext/common/ApplicationPool/Pool.h
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
@@ -427,6 +428,7 @@ end
 			ext/common/ApplicationPool/Account.h
 			ext/common/ApplicationPool/AccountsDatabase.h
 			ext/common/ApplicationPool/Server.h
+			ext/common/ApplicationPool/Client.h
 			ext/common/ApplicationPool/Pool.h
 			ext/common/AbstractSpawnManager.h
 			ext/common/SpawnManager.h

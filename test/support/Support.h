@@ -12,6 +12,7 @@
 #include <utime.h>
 
 #include <oxt/thread.hpp>
+#include <oxt/tracable_exception.hpp>
 
 #include "Exceptions.h"
 #include "Utils.h"
@@ -21,6 +22,16 @@ namespace Test {
 using namespace std;
 using namespace Passenger;
 using namespace oxt;
+
+#define SHOW_EXCEPTION_BACKTRACE(code)                                \
+	do {                                                          \
+		try {                                                 \
+			code                                          \
+		} catch (const tracable_exception &e) {               \
+			cerr << e.what() << "\n" << e.backtrace();    \
+			throw;                                        \
+		}                                                     \
+	} while (0)
 
 /**
  * Read all data from the given file descriptor until EOF.

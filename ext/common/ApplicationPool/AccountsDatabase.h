@@ -50,13 +50,13 @@ public:
 		return account;
 	}
 	
-	AccountPtr authenticate(const string &username, const StaticString &plainTextPassword) {
+	AccountPtr authenticate(const string &username, const StaticString &userSuppliedPassword) {
 		map<string, AccountPtr>::iterator it = accounts.find(username);
 		if (it == accounts.end()) {
 			return AccountPtr();
 		} else {
 			AccountPtr account(it->second);
-			if (account->checkPassword(plainTextPassword)) {
+			if (account->checkPasswordOrHash(userSuppliedPassword)) {
 				return account;
 			} else {
 				return AccountPtr();

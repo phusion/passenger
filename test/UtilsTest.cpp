@@ -316,4 +316,25 @@ namespace tut {
 		}
 		ensure(memcmp(buf, "\0\0llo world", sizeof(buf)) == 0);
 	}
+	
+	TEST_METHOD(32) {
+		string str("hello ");
+		{
+			MemZeroGuard g(str);
+			str.append("world");
+		}
+		ensure(memcmp(str.c_str(), "\0\0\0\0\0\0\0\0\0\0\0", 11) == 0);
+	}
+	
+	TEST_METHOD(33) {
+		string str("hello ");
+		{
+			MemZeroGuard g(str);
+			g.zeroNow();
+			ensure(memcmp(str.c_str(), "\0\0\0\0\0\0", 6) == 0);
+			str.append("world");
+			ensure(memcmp(str.c_str(), "\0\0\0\0\0\0world", 11) == 0);
+		}
+		ensure(memcmp(str.c_str(), "\0\0\0\0\0\0\0\0\0\0\0", 11) == 0);
+	}
 }

@@ -46,6 +46,8 @@ using namespace oxt;
 using namespace boost;
 
 
+/* This source file follows the security guidelines written in Account.h. */
+
 /**
  * Allows one to access an ApplicationPool exposed through a socket by
  * ApplicationPoolServer.
@@ -177,15 +179,28 @@ private:
 	/** @invariant data != NULL */
 	SharedDataPtr data;
 	
-	void authenticate(const string &username, const string &password) {
-		// TODO
-		/* MessageChannel &channel(data->channel);
+	/**
+	 * Authenticate to the server with the given username and password.
+	 *
+	 * @throws SystemException An error occurred while reading data from or sending data to the server.
+	 * @throws IOException An error occurred while reading data from or sending data to the server.
+	 * @throws SecurityException Unable to authenticate with the server.
+	 * @throws boost::thread_interrupted
+	 */
+	void authenticate(const string &username, const StaticString &userSuppliedPassword) {
+		MessageChannel &channel(data->channel);
 		vector<string> args;
 		
-		channel.writeScalar(secretToken);
+		channel.writeScalar(username);
+		channel.writeScalar(userSuppliedPassword.c_str(), userSuppliedPassword.size());
+		
 		if (!channel.read(args)) {
-			throw IOException("Unable to authenticate with the ApplicationPool server.");
-		} */
+			throw IOException("The ApplicationPool server did not send an authentication response.");
+		} else if (args.size() != 1) {
+			throw IOException("The authentication response that the ApplicationPool server sent is not valid.");
+		} else if (args[0] != "ok") {
+			throw SecurityException("The ApplicationPool server denied authentication: " + args[0]);
+		}
 	}
 	
 	void checkConnection() const {
@@ -194,23 +209,40 @@ private:
 		}
 	}
 	
+	bool checkSecurityResponse() const {
+		vector<string> args;
+		
+		if (data->channel.read(args)) {
+			if (args[0] == "SecurityException") {
+				throw SecurityException(args[1]);
+			} else if (args[0] != "Passed security") {
+				throw IOException("Invalid security response '" + args[0] + "'");
+			} else {
+				return true;
+			}
+		} else {
+			return false;
+		}
+	}
+	
 public:
 	/**
-	 * Create a new ApplicationPoolClient object and connect to the given
+	 * Create a new ApplicationPool::Client object and connect to the given
 	 * ApplicationPool server.
 	 *
 	 * @param socketFilename The filename of the server socket to connect to.
 	 * @param username The username to use for authenticating with the server.
-	 * @param password The password to use for authentication with the server.
-	 * @throws SystemException
-	 * @throws RuntimeException
+	 * @param userSuppliedPassword The password to use for authenticating with the server.
+	 * @throws SystemException Something went wrong while connecting to the server.
+	 * @throws IOException Something went wrong while connecting to the server.
+	 * @throws RuntimeException Something went wrong.
+	 * @throws SecurityException Unable to authenticate to the server with the given username and password.
 	 * @throws boost::thread_interrupted
 	 */
-	Client(const string &socketFilename, const string &username, const string &password) {
-		// TODO: is it secure for password to be a string?
+	Client(const string &socketFilename, const string &username, const StaticString &userSuppliedPassword) {
 		int fd = connectToUnixServer(socketFilename.c_str());
 		data = ptr(new SharedData(fd));
-		authenticate(username, password);
+		authenticate(username, userSuppliedPassword);
 	}
 	
 	virtual bool connected() const {
@@ -218,10 +250,15 @@ public:
 	}
 	
 	virtual void clear() {
+		TRACE_POINT();
 		MessageChannel &channel(data->channel);
 		checkConnection();
 		try {
 			channel.write("clear", NULL);
+			checkSecurityResponse();
+		} catch (const SecurityException &) {
+			// Don't disconnect.
+			throw;
 		} catch (...) {
 			this_thread::disable_syscall_interruption dsi;
 			data->disconnect();
@@ -230,10 +267,15 @@ public:
 	}
 	
 	virtual void setMaxIdleTime(unsigned int seconds) {
+		TRACE_POINT();
 		MessageChannel &channel(data->channel);
 		checkConnection();
 		try {
 			channel.write("setMaxIdleTime", toString(seconds).c_str(), NULL);
+			checkSecurityResponse();
+		} catch (const SecurityException &) {
+			// Don't disconnect.
+			throw;
 		} catch (...) {
 			this_thread::disable_syscall_interruption dsi;
 			data->disconnect();
@@ -242,10 +284,15 @@ public:
 	}
 	
 	virtual void setMax(unsigned int max) {
+		TRACE_POINT();
 		MessageChannel &channel(data->channel);
 		checkConnection();
 		try {
 			channel.write("setMax", toString(max).c_str(), NULL);
+			checkSecurityResponse();
+		} catch (const SecurityException &) {
+			// Don't disconnect.
+			throw;
 		} catch (...) {
 			this_thread::disable_syscall_interruption dsi;
 			data->disconnect();
@@ -254,14 +301,19 @@ public:
 	}
 	
 	virtual unsigned int getActive() const {
+		TRACE_POINT();
 		MessageChannel &channel(data->channel);
 		vector<string> args;
 		
 		checkConnection();
 		try {
 			channel.write("getActive", NULL);
+			checkSecurityResponse();
 			channel.read(args);
 			return atoi(args[0].c_str());
+		} catch (const SecurityException &) {
+			// Don't disconnect.
+			throw;
 		} catch (...) {
 			this_thread::disable_syscall_interruption dsi;
 			data->disconnect();
@@ -270,14 +322,19 @@ public:
 	}
 	
 	virtual unsigned int getCount() const {
+		TRACE_POINT();
 		MessageChannel &channel(data->channel);
 		vector<string> args;
 		
 		checkConnection();
 		try {
 			channel.write("getCount", NULL);
+			checkSecurityResponse();
 			channel.read(args);
 			return atoi(args[0].c_str());
+		} catch (const SecurityException &) {
+			// Don't disconnect.
+			throw;
 		} catch (...) {
 			this_thread::disable_syscall_interruption dsi;
 			data->disconnect();
@@ -286,11 +343,16 @@ public:
 	}
 	
 	virtual void setMaxPerApp(unsigned int max) {
+		TRACE_POINT();
 		MessageChannel &channel(data->channel);
 		
 		checkConnection();
 		try {
 			channel.write("setMaxPerApp", toString(max).c_str(), NULL);
+			checkSecurityResponse();
+		} catch (const SecurityException &) {
+			// Don't disconnect.
+			throw;
 		} catch (...) {
 			this_thread::disable_syscall_interruption dsi;
 			data->disconnect();
@@ -299,14 +361,19 @@ public:
 	}
 	
 	virtual pid_t getSpawnServerPid() const {
+		TRACE_POINT();
 		MessageChannel &channel(data->channel);
 		vector<string> args;
 		
 		checkConnection();
 		try {
 			channel.write("getSpawnServerPid", NULL);
+			checkSecurityResponse();
 			channel.read(args);
 			return atoi(args[0].c_str());
+		} catch (const SecurityException &) {
+			// Don't disconnect.
+			throw;
 		} catch (...) {
 			this_thread::disable_syscall_interruption dsi;
 			data->disconnect();
@@ -340,9 +407,30 @@ public:
 			UPDATE_TRACE_POINT();
 			data->disconnect();
 			
-			string message("Could not send data to the ApplicationPool server: ");
+			string message("Could not send the 'get' command to the ApplicationPool server: ");
 			message.append(e.brief());
 			throw SystemException(message, e.code());
+		} catch (...) {
+			this_thread::disable_syscall_interruption dsi;
+			UPDATE_TRACE_POINT();
+			data->disconnect();
+			throw;
+		}
+		
+		UPDATE_TRACE_POINT();
+		try {
+			checkSecurityResponse();
+		} catch (const SystemException &e) {
+			this_thread::disable_syscall_interruption dsi;
+			UPDATE_TRACE_POINT();
+			data->disconnect();
+			
+			string message("Could not read security response for the 'get' command from the ApplicationPool server: ");
+			message.append(e.brief());
+			throw SystemException(message, e.code());
+		} catch (const SecurityException &) {
+			// Don't disconnect.
+			throw;
 		} catch (...) {
 			this_thread::disable_syscall_interruption dsi;
 			UPDATE_TRACE_POINT();

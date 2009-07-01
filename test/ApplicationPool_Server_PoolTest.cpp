@@ -31,11 +31,11 @@ namespace tut {
 			
 			realPool = ptr(new ApplicationPool::Pool("../bin/passenger-spawn-server"));
 			server   = ptr(new ApplicationPool::Server(socketFilename, accountsDatabase, realPool));
-			pool     = ptr(new ApplicationPool::Client(socketFilename, "test", "12345"));
-			pool2    = ptr(new ApplicationPool::Client(socketFilename, "test", "12345"));
 			serverThread = ptr(new oxt::thread(
 				boost::bind(&ApplicationPool::Server::mainLoop, server.get())
 			));
+			pool     = ptr(new ApplicationPool::Client(socketFilename, "test", "12345"));
+			pool2    = ptr(new ApplicationPool::Client(socketFilename, "test", "12345"));
 		}
 		
 		~ApplicationPool_Server_PoolTest() {
