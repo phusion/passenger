@@ -273,6 +273,37 @@ private:
 	 * Message handler methods
 	 *********************************************/
 	
+	bool processMessage(ClientContext &context, const vector<string> &args) {
+		try {
+			if (args[0] == "get") {
+				processGet(context, args);
+			} else if (args[0] == "close" && args.size() == 2) {
+				processClose(context, args);
+			} else if (args[0] == "clear" && args.size() == 1) {
+				processClear(context, args);
+			} else if (args[0] == "setMaxIdleTime" && args.size() == 2) {
+				processSetMaxIdleTime(context, args);
+			} else if (args[0] == "setMax" && args.size() == 2) {
+				processSetMax(context, args);
+			} else if (args[0] == "getActive" && args.size() == 1) {
+				processGetActive(context, args);
+			} else if (args[0] == "getCount" && args.size() == 1) {
+				processGetCount(context, args);
+			} else if (args[0] == "setMaxPerApp" && args.size() == 2) {
+				processSetMaxPerApp(context, atoi(args[1]));
+			} else if (args[0] == "getSpawnServerPid" && args.size() == 1) {
+				processGetSpawnServerPid(context, args);
+			} else {
+				processUnknownMessage(context, args);
+				return false;
+			}
+		} catch (const SecurityException &) {
+			// Client does not have enough rights to perform a certain action.
+			// It has already been notified of this; ignore exception and move on.
+		}
+		return true;
+	}
+	
 	void processGet(ClientContext &context, const vector<string> &args) {
 		TRACE_POINT();
 		Application::SessionPtr session;
@@ -504,26 +535,7 @@ private:
 					toString(args));
 				
 				UPDATE_TRACE_POINT();
-				if (args[0] == "get") {
-					processGet(context, args);
-				} else if (args[0] == "close" && args.size() == 2) {
-					processClose(context, args);
-				} else if (args[0] == "clear" && args.size() == 1) {
-					processClear(context, args);
-				} else if (args[0] == "setMaxIdleTime" && args.size() == 2) {
-					processSetMaxIdleTime(context, args);
-				} else if (args[0] == "setMax" && args.size() == 2) {
-					processSetMax(context, args);
-				} else if (args[0] == "getActive" && args.size() == 1) {
-					processGetActive(context, args);
-				} else if (args[0] == "getCount" && args.size() == 1) {
-					processGetCount(context, args);
-				} else if (args[0] == "setMaxPerApp" && args.size() == 2) {
-					processSetMaxPerApp(context, atoi(args[1]));
-				} else if (args[0] == "getSpawnServerPid" && args.size() == 1) {
-					processGetSpawnServerPid(context, args);
-				} else {
-					processUnknownMessage(context, args);
+				if (!processMessage(context, args)) {
 					break;
 				}
 				args.clear();

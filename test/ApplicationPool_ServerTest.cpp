@@ -20,6 +20,7 @@ using namespace std;
 namespace tut {
 	struct ApplicationPool_ServerTest {
 		AccountsDatabasePtr accountsDatabase;
+		AccountPtr clientAccount;
 		shared_ptr<Pool> realPool;
 		shared_ptr<Server> server;
 		shared_ptr<Client> pool, pool2;
@@ -33,10 +34,8 @@ namespace tut {
 		
 		void initializePool() {
 			string socketFilename = getPassengerTempDir() + "/master/pool_server.sock";
-			if (accountsDatabase == NULL) {
-				initializeAccountsDatabase();
-				accountsDatabase->add("test", "12345", false);
-			}
+			accountsDatabase = ptr(new AccountsDatabase());
+			clientAccount = accountsDatabase->add("test", "12345", false);
 			
 			realPool = ptr(new Pool("../bin/passenger-spawn-server"));
 			server   = ptr(new Server(socketFilename, accountsDatabase, realPool));
@@ -45,10 +44,6 @@ namespace tut {
 			));
 			pool     = ptr(new Client(socketFilename, "test", "12345"));
 			pool2    = ptr(new Client(socketFilename, "test", "12345"));
-		}
-		
-		void initializeAccountsDatabase() {
-			accountsDatabase = ptr(new AccountsDatabase());
 		}
 		
 		Application::SessionPtr spawnRackApp() {
@@ -100,20 +95,131 @@ namespace tut {
 	}
 	
 	TEST_METHOD(2) {
-		initializeAccountsDatabase();
-		AccountPtr account = accountsDatabase->add("test", "12345", false, Account::NONE);
+		// get() requires GET rights.
 		initializePool();
 		
 		try {
+			clientAccount->setRights(Account::SET_PARAMETERS);
 			spawnRackApp();
 			fail("SecurityException expected");
 		} catch (const SecurityException &e) {
 			// Pass.
 		}
 		
-		account->setRights(Account::GET);
+		clientAccount->setRights(Account::GET);
 		spawnRackApp(); // Should not throw SecurityException now.
 	}
 	
+	TEST_METHOD(3) {
+		// clear() requires CLEAR rights.
+		initializePool();
+		
+		try {
+			clientAccount->setRights(Account::SET_PARAMETERS);
+			pool->clear();
+			fail("SecurityException expected");
+		} catch (const SecurityException &e) {
+			// Pass.
+		}
+		
+		clientAccount->setRights(Account::CLEAR);
+		pool->clear(); // Should not throw SecurityException now.
+	}
+	
+	TEST_METHOD(4) {
+		// setMaxIdleTime() requires SET_PARAMETERS rights.
+		initializePool();
+		
+		try {
+			clientAccount->setRights(Account::GET_PARAMETERS);
+			pool->setMaxIdleTime(60);
+			fail("SecurityException expected");
+		} catch (const SecurityException &e) {
+			// Pass.
+		}
+		
+		clientAccount->setRights(Account::SET_PARAMETERS);
+		pool->setMaxIdleTime(60); // Should not throw SecurityException now.
+	}
+	
+	TEST_METHOD(5) {
+		// setMax() requires SET_PARAMETERS rights.
+		initializePool();
+		
+		try {
+			clientAccount->setRights(Account::GET_PARAMETERS);
+			pool->setMax(60);
+			fail("SecurityException expected");
+		} catch (const SecurityException &e) {
+			// Pass.
+		}
+		
+		clientAccount->setRights(Account::SET_PARAMETERS);
+		pool->setMax(60); // Should not throw SecurityException now.
+	}
+	
+	TEST_METHOD(6) {
+		// getActive() requires GET_PARAMETERS rights.
+		initializePool();
+		
+		try {
+			clientAccount->setRights(Account::SET_PARAMETERS);
+			pool->getActive();
+			fail("SecurityException expected");
+		} catch (const SecurityException &e) {
+			// Pass.
+		}
+		
+		clientAccount->setRights(Account::GET_PARAMETERS);
+		pool->getActive(); // Should not throw SecurityException now.
+	}
+	
+	TEST_METHOD(7) {
+		// getCount() requires GET_PARAMETERS rights.
+		initializePool();
+		
+		try {
+			clientAccount->setRights(Account::SET_PARAMETERS);
+			pool->getCount();
+			fail("SecurityException expected");
+		} catch (const SecurityException &e) {
+			// Pass.
+		}
+		
+		clientAccount->setRights(Account::GET_PARAMETERS);
+		pool->getCount(); // Should not throw SecurityException now.
+	}
+	
+	TEST_METHOD(8) {
+		// setMaxPerApp() requires SET_PARAMETERS rights.
+		initializePool();
+		
+		try {
+			clientAccount->setRights(Account::GET_PARAMETERS);
+			pool->setMaxPerApp(2);
+			fail("SecurityException expected");
+		} catch (const SecurityException &e) {
+			// Pass.
+		}
+		
+		clientAccount->setRights(Account::SET_PARAMETERS);
+		pool->setMaxPerApp(2); // Should not throw SecurityException now.
+	}
+	
+	TEST_METHOD(9) {
+		// getSpawnServerPid() requires GET_PARAMETERS rights.
+		initializePool();
+		
+		try {
+			clientAccount->setRights(Account::SET_PARAMETERS);
+			pool->getSpawnServerPid();
+			fail("SecurityException expected");
+		} catch (const SecurityException &e) {
+			// Pass.
+		}
+		
+		clientAccount->setRights(Account::GET_PARAMETERS);
+		pool->getSpawnServerPid(); // Should not throw SecurityException now.
+	}
 }
 
