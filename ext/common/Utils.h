@@ -532,6 +532,35 @@ public:
 	}
 };
 
+/**
+ * Fills the given memory space with zeroes when an object of this class is
+ * destroyed. Useful for ensuring that buffers containing password data or
+ * other sensitive information is cleared when it goes out of scope.
+ */
+class MemZeroGuard {
+private:
+	void *data;
+	unsigned int size;
+public:
+	MemZeroGuard(void *data, unsigned int size) {
+		this->data = data;
+		this->size = size;
+	}
+	
+	~MemZeroGuard() {
+		/* We do not use memset() here because the compiler may
+		 * optimize out memset() calls. Instead, the following
+		 * code is guaranteed to zero the memory.
+		 * http://www.dwheeler.com/secure-programs/Secure-Programs-HOWTO/protect-secrets.html
+		 */
+		volatile char *p = (volatile char *) data;
+		unsigned int n = size;
+		while (n--) {
+			*p++ = 0;
+		}
+	}
+};
+
 } // namespace Passenger
 
 #endif /* _PASSENGER_UTILS_H_ */

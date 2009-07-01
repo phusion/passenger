@@ -306,4 +306,14 @@ namespace tut {
 			fail();
 		} catch (const ArgumentException &) { }
 	}
+	
+	/***** Test MemZeroGuard *****/
+	
+	TEST_METHOD(31) {
+		char buf[12] = "hello world";
+		{
+			MemZeroGuard g(buf, 2);
+		}
+		ensure(memcmp(buf, "\0\0llo world", sizeof(buf)) == 0);
+	}
 }

@@ -26,6 +26,7 @@
 #define _PASSENGER_MESSAGE_CHANNEL_H_
 
 #include <oxt/system_calls.hpp>
+#include <oxt/macros.hpp>
 
 #include <algorithm>
 #include <string>
@@ -535,15 +536,20 @@ public:
 		output.clear();
 		output.reserve(size);
 		remaining = size;
-		while (remaining > 0) {
+		if (OXT_LIKELY(remaining > 0)) {
 			char buf[1024 * 32];
-			unsigned int blockSize = min((unsigned int) sizeof(buf), remaining);
+			// Wipe the buffer when we're done; it might contain sensitive data.
+			MemZeroGuard g(buf, sizeof(buf));
 			
-			if (!readRaw(buf, blockSize, timeout_p)) {
-				return false;
+			while (remaining > 0) {
+				unsigned int blockSize = min((unsigned int) sizeof(buf), remaining);
+				
+				if (!readRaw(buf, blockSize, timeout_p)) {
+					return false;
+				}
+				output.append(buf, blockSize);
+				remaining -= blockSize;
 			}
-			output.append(buf, blockSize);
-			remaining -= blockSize;
 		}
 		return true;
 	}
