@@ -47,7 +47,9 @@ class RequestHandler < AbstractRequestHandler
 	QUESTION_MARK      = "?"                   # :nodoc:
 	QUERY_STRING       = "QUERY_STRING"        # :nodoc:
 	CONTENT_LENGTH      = "CONTENT_LENGTH"       # :nodoc:
+	CONTENT_TYPE        = "CONTENT_TYPE"         # :nodoc:
 	HTTP_CONTENT_LENGTH = "HTTP_CONTENT_LENGTH"  # :nodoc:
+	HTTP_CONTENT_TYPE = "HTTP_CONTENT_TYPE"      # :nodoc:
 	HTTPS          = "HTTPS"  # :nodoc:
 	HTTPS_DOWNCASE = "https"  # :nodoc:
 	HTTP           = "http"   # :nodoc:
@@ -76,12 +78,20 @@ protected
 			env[QUERY_STRING]    ||= ""
 			env[PATH_INFO]       ||= env[REQUEST_URI].split(QUESTION_MARK, 2).first
 			env[PATH_INFO].sub!(/^#{Regexp.escape(env[SCRIPT_NAME])}/, "")
+			
 			if env[HTTP_CONTENT_LENGTH] && env[CONTENT_LENGTH]
 				env.delete(HTTP_CONTENT_LENGTH)
 			elsif env[HTTP_CONTENT_LENGTH] && !env[CONTENT_LENGTH]
 				env[CONTENT_LENGTH] = env[HTTP_CONTENT_LENGTH]
 				env.delete(HTTP_CONTENT_LENGTH)
 			end
+			if env[HTTP_CONTENT_TYPE] && env[CONTENT_TYPE]
+				env.delete(HTTP_CONTENT_TYPE)
+			elsif env[HTTP_CONTENT_TYPE] && !env[CONTENT_TYPE]
+				env[CONTENT_TYPE] = env[HTTP_CONTENT_TYPE]
+				env.delete(HTTP_CONTENT_TYPE)
+			end
+			
 			if env[HTTPS] == YES || env[HTTPS] == ON || env[HTTPS] == ONE
 				env[RACK_URL_SCHEME] = HTTPS_DOWNCASE
 			else
