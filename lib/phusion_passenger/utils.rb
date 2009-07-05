@@ -200,16 +200,37 @@ protected
 		end
 	end
 	
+	class PseudoIO
+		def initialize(sink)
+			@sink = sink || File.open("/dev/null", "w")
+			@buffer = StringIO.new
+		end
+		
+		def done!
+			result = @buffer.string
+			@buffer = nil
+			return result
+		end
+		
+		def method_missing(*args, &block)
+			@buffer.send(*args, &block) if @buffer && args.first != :reopen
+			return @sink.send(*args, &block)
+		end
+		
+		def respond_to?(symbol, include_private = false)
+			return @sink.respond_to?(symbol, include_private)
+		end
+	end
+	
 	# Run the given block. A message will be sent through +channel+ (a
 	# MessageChannel object), telling the remote side whether the block
 	# raised an exception, called exit(), or succeeded.
 	#
-	# Anything written to $stderr and STDERR during execution of the block
-	# will be buffered. If <tt>write_stderr_contents_to</tt> is non-nil,
-	# then the buffered stderr data will be written to this object. In this
-	# case, <tt>write_stderr_contents_to</tt> must be an IO-like object.
-	# If <tt>write_stderr_contents_to</tt> is nil, then the stder data will
-	# be discarded.
+	# If _sink_ is non-nil, then every operation on $stderr/STDERR inside
+	# the block will be performed on _sink_ as well. If _sink_ is nil
+	# then all operations on $stderr/STDERR inside the block will be
+	# silently discarded, i.e. if one writes to $stderr/STDERR then nothing
+	# will be actually written to the console.
 	# 
 	# Returns whether the block succeeded, i.e. whether it didn't raise an
 	# exception.
@@ -217,30 +238,26 @@ protected
 	# Exceptions are not propagated, except SystemExit and a few
 	# non-StandardExeption classes such as SignalException. Of the
 	# exceptions that are propagated, only SystemExit will be reported.
-	def report_app_init_status(channel, write_stderr_contents_to = STDERR)
+	def report_app_init_status(channel, sink = STDERR)
 		begin
 			old_global_stderr = $stderr
 			old_stderr = STDERR
 			stderr_output = ""
-			tempfile = Tempfile.new('passenger-stderr')
-			tempfile.unlink
+			
+			pseudo_stderr = PseudoIO.new(sink)
 			Object.send(:remove_const, 'STDERR') rescue nil
-			Object.const_set('STDERR', tempfile)
+			Object.const_set('STDERR', pseudo_stderr)
+			$stderr = pseudo_stderr
+			
 			begin
 				yield
 			ensure
 				Object.send(:remove_const, 'STDERR') rescue nil
 				Object.const_set('STDERR', old_stderr)
 				$stderr = old_global_stderr
-				tempfile.rewind
-				stderr_output = tempfile.read
-				tempfile.close rescue nil
-				
-				if write_stderr_contents_to
-					write_stderr_contents_to.write(stderr_output)
-					write_stderr_contents_to.flush
-				end
+				stderr_output = pseudo_stderr.done!
 			end
+			
 			channel.write('success')
 			return true
 		rescue StandardError, ScriptError, NoMemoryError => e
