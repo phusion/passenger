@@ -15,6 +15,10 @@ Release 2.2.6
  * Some Ruby 1.9 compatibility fixes. Issue #398.
  * The installer now displays correct dependency installation instructions
    for Mandriva Linux.
+ * When autodetecting the application type, Rack is now given more priority
+   than Rails. This allows one to drop a config.ru file in a Rails directory
+   and have it detected as a Rack application instead of a Rails application.
+   Patch contributed by Sam Pohlenz: issue #338.
 
 
 Release 2.2.5

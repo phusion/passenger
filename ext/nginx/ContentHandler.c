@@ -91,18 +91,18 @@ detect_application_type(const ngx_str_t *public_dir) {
     
     ngx_memzero(filename, sizeof(filename));
     ngx_snprintf(filename, sizeof(filename), "%s/%s",
-                 public_dir->data, "../config/environment.rb");
-    if (file_exists(filename, 1)) {
-        return AP_RAILS;
-    }
-    
-    ngx_memzero(filename, sizeof(filename));
-    ngx_snprintf(filename, sizeof(filename), "%s/%s",
                  public_dir->data, "../config.ru");
     if (file_exists(filename, 1)) {
         return AP_RACK;
     }
     
+    ngx_memzero(filename, sizeof(filename));
+    ngx_snprintf(filename, sizeof(filename), "%s/%s",
+                 public_dir->data, "../config/environment.rb");
+    if (file_exists(filename, 1)) {
+        return AP_RAILS;
+    }
+        
     ngx_memzero(filename, sizeof(filename));
     ngx_snprintf(filename, sizeof(filename), "%s/%s",
                  public_dir->data, "../passenger_wsgi.py");
