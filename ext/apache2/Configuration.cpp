@@ -84,6 +84,7 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->memoryLimitSpecified = false;
 	config->highPerformance = DirConfig::UNSET;
 	config->useGlobalQueue = DirConfig::UNSET;
+    config->resolveSymlinks = DirConfig::UNSET;
 	config->statThrottleRate = 0;
 	config->statThrottleRateSpecified = false;
 	config->restartDir = NULL;
@@ -414,6 +415,12 @@ cmd_passenger_upload_buffer_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
 /*************************************************
  * Rails-specific settings
  *************************************************/
+static const char *
+cmd_rails_resolve_symlinks(cmd_parms *cmd, void *pcfg, int arg) {
+       DirConfig *config = (DirConfig *) pcfg;
+       config->resolveSymlinks = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
+       return NULL;
+}
 
 static const char *
 cmd_rails_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
@@ -636,6 +643,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS,
 		"The directory in which upload buffer files should be placed."),
+    AP_INIT_TAKE1("PassengerResolveSymlinks",
+        (Take1Func) cmd_rails_resolve_symlinks,
+        NULL,
+        RSRC_CONF,
+        "To resolve symlinks in the DocumentRoot"),
 	/*****************************/
 
 	// Rails-specific settings.

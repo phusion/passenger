@@ -134,6 +134,9 @@
 			 * in the directory configuration. */
 			bool memoryLimitSpecified;
 			
+            /** Flag created to resolve issue of symlinks on the DocumentRoot configuration */
+            bool resolveSymlinks;
+
 			Threeway highPerformance;
 			
 			/** Whether global queuing should be used. */
@@ -170,7 +173,11 @@
 			
 			string getAppRoot(const char *documentRoot) const {
 				if (appRoot == NULL) {
-					return extractDirName(documentRoot);
+                    if (resolveSymlinks == DirConfig::ENABLED) {
+                        return extractDirName(resolveSymlink(documentRoot));
+                    } else {
+    					return extractDirName(documentRoot);
+                    }
 				} else {
 					return appRoot;
 				}
@@ -178,7 +185,11 @@
 			
 			string getAppRoot(const string &documentRoot) const {
 				if (appRoot == NULL) {
-					return extractDirName(documentRoot);
+                    if (resolveSymlinks == DirConfig::ENABLED) {
+                        return extractDirName(resolveSymlink(documentRoot));
+                    } else {
+    					return extractDirName(documentRoot);
+                    }
 				} else {
 					return appRoot;
 				}

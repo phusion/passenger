@@ -70,6 +70,7 @@ private:
 	unsigned int throttleRate;
 	bool baseURIKnown;
 	const char *baseURI;
+    bool resolveSymlinks;
 	ApplicationType appType;
 	
 	inline bool shouldAutoDetectRails() {
@@ -105,6 +106,7 @@ public:
 		appType = NONE;
 		baseURIKnown = false;
 		baseURI = NULL;
+        resolveSymlinks = config->resolveSymlinks;
 	}
 	
 	/**
