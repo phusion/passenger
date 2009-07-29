@@ -135,7 +135,7 @@
 			bool memoryLimitSpecified;
 			
             /** Flag created to resolve issue of symlinks on the DocumentRoot configuration */
-            bool docRootresolveSymlink;
+            bool docRootResolveSymlink;
 
 			Threeway highPerformance;
 			
@@ -173,7 +173,7 @@
 			
 			string getAppRoot(const char *documentRoot) const {
 				if (appRoot == NULL) {
-                    if (docRootresolveSymlink == DirConfig::ENABLED) {
+                    if (docRootResolveSymlink == DirConfig::ENABLED) {
                         return extractDirName(resolveSymlink(documentRoot));
                     } else {
     					return extractDirName(documentRoot);
@@ -185,7 +185,7 @@
 			
 			string getAppRoot(const string &documentRoot) const {
 				if (appRoot == NULL) {
-                    if (docRootresolveSymlink == DirConfig::ENABLED) {
+                    if (docRootResolveSymlink == DirConfig::ENABLED) {
                         return extractDirName(resolveSymlink(documentRoot));
                     } else {
     					return extractDirName(documentRoot);
