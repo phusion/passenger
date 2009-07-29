@@ -635,6 +635,12 @@ This option allows one to specify the Ruby interpreter to use.
 This option may only occur once, in the global server configuration.
 The default is 'ruby'.
 
+[[PassengerDocumentRootSymlink]]
+=== PassengerDocumentRootSymlink <on|off> ===
+By default Phusion Passenger 2.2.0 and later doesn't load your application if the DocumentRoot
+is a symlink to the public application folder
+If you need to use with this way you can enable this configuration so passenger can understand this path schema
+
 [[PassengerAppRoot]]
 === PassengerAppRoot <path/to/root> ===
 By default, Phusion Passenger assumes that the application's root directory
@@ -1669,7 +1675,7 @@ that Phusion Passenger will:
 So suppose that your document root is '/webapps/foo/public'. Phusion Passenger will check
 whether the file '/webapps/foo/config/environment.rb' exists.
 
-Note that Phusion Passenger does *not* resolve any symlinks in the document root path since
+Note that Phusion Passenger does *not* resolve any symlinks in the document root path by default since
 version 2.2.0 -- in contrast to versions earlier than 2.2.0, which does resolve symlinks.
 So for example, suppose that your DocumentRoot points to '/home/www/example.com', which in
 turn is a symlink to '/webapps/example.com/public'. In versions earlier than 2.2.0, Phusion
@@ -1679,7 +1685,10 @@ resolves all symlinks. Phusion Passenger 2.2.0 and later however will check for
 Passenger will not activate itself for this virtual host, and you'll most likely see an Apache
 mod_dirindex directory listing.
 
-If you're running into this problem, you can explicitly tell Phusion Passenger what the
+If you need to enable this feature you can use the <<PassengerDocumentRootSymlink,PassengerDocumentRootSymlink>>
+configuration directive.
+
+Another way to solve this situation is to explicitly tell Phusion Passenger what the
 correct application root is through the <<PassengerAppRoot,PassengerAppRoot>> configuration directive.
 
 Autodetection of Rack applications happens through the same mechanism, exception that
