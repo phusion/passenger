@@ -49,7 +49,7 @@ using namespace std;
  * - Variables and arguments named passwordOrHash might also represent passwords. However,
  *   if it is a password, then it is guaranteed NOT to be supplied by a human, e.g. it's
  *   randomly generated. Therefore it's okay for passwordOrHash to be of type 'string'.
- * - If there is a need a copy the password for whatever reason, then it must be cleared
+ * - If there is a need to copy the password for whatever reason, then it must be cleared
  *   with ZeroMemoryGuard (Utils.h) as soon as possible. Do not use memset(), the code
  *   for ZeroMemoryGuard explains why.
  */

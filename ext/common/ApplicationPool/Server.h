@@ -37,6 +37,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <cerrno>
+#include <cassert>
 
 #include "Pool.h"
 #include "Account.h"
@@ -600,7 +601,6 @@ public:
 	 * @throws SystemException Unable to accept a new connection. If this is a
 	 *                         non-fatal error then you may call mainLoop() again
 	 *                         to restart the server main loop.
-	 * @throws boost::thread_resource_error Unable to create a new thread.
 	 * @throws boost::thread_interrupted The calling thread has been interrupted.
 	 */
 	void mainLoop() {
@@ -636,6 +636,7 @@ public:
 	 * @pre timeout != 0
 	 */
 	void setLoginTimeout(unsigned long long timeout) {
+		assert(timeout != 0);
 		loginTimeout = timeout;
 	}
 };
