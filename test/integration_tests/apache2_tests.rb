@@ -99,15 +99,10 @@ describe "mod_passenger running in Apache 2" do
 		end
 		
 		it "supports environment variable passing through mod_env" do
-			begin
-				File.open("#{@stub.app_root}/public/.htaccess", 'w') do |f|
-					f.puts 'SetEnv FOO "Foo Bar!"'
-				end
-				File.touch("#{@stub.app_root}/tmp/restart.txt")
-				get('/welcome/environment').should =~ /FOO = Foo Bar\!/
-			ensure
-				File.unlink("#{@stub.app_root}/public/.htaccess") rescue nil
-			end
+			File.write("#{@stub.app_root}/public/.htaccess", 'SetEnv FOO "Foo Bar!"')
+			File.touch("#{@stub.app_root}/tmp/restart.txt")
+			get('/welcome/environment').should =~ /FOO = Foo Bar\!/
+			get('/welcome/cgi_environment').should =~ /FOO = Foo Bar\!/
 		end
 	end
 	
