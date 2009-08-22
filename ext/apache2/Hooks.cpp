@@ -72,10 +72,11 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
 /**
  * If the HTTP client sends POST data larger than this value (in bytes),
- * then the POST data will be fully saved into a temporary file, before
+ * then the POST data will be fully buffered into a temporary file, before
  * allocating a Ruby web application session.
+ * File uploads smaller than this are buffered into memory instead.
  */
-#define UPLOAD_ACCELERATION_THRESHOLD 1024 * 8
+#define LARGE_UPLOAD_THRESHOLD 1024 * 8
 
 
 /**
@@ -465,7 +466,8 @@ private:
 			this_thread::disable_syscall_interruption dsi;
 			Application::SessionPtr session;
 			bool expectingUploadData;
-			shared_ptr<BufferedUpload> uploadData;
+			string uploadDataMemory;
+			shared_ptr<BufferedUpload> uploadDataFile;
 			const char *contentLength;
 			
 			expectingUploadData = ap_should_client_block(r);
@@ -474,14 +476,18 @@ private:
 			/* If the HTTP upload data is larger than a threshold, or if the HTTP
 			 * client sent HTTP upload data using the "chunked" transfer encoding
 			 * (which implies Content-Length == NULL), then buffer the upload
-			 * data into a tempfile.
+			 * data into a tempfile. Otherwise, buffer it into memory.
+			 *
+			 * We never forward the data directly to the backend process because
+			 * the HTTP client might block indefinitely until it's done uploading.
+			 * This would quickly exhaust the application pool.
 			 */
-			if (expectingUploadData && (
-			          contentLength == NULL ||
-			          atol(contentLength) > UPLOAD_ACCELERATION_THRESHOLD
-			     )
-			) {
-				uploadData = receiveRequestBody(r, contentLength);
+			if (expectingUploadData) {
+				if (contentLength == NULL || atol(contentLength) > LARGE_UPLOAD_THRESHOLD) {
+					uploadDataFile = receiveRequestBody(r, contentLength);
+				} else {
+					receiveRequestBody(r, contentLength, uploadDataMemory);
+				}
 			}
 			
 			if (expectingUploadData && contentLength == NULL) {
@@ -490,8 +496,13 @@ private:
 				 * data. Rails requires this header for its HTTP upload data
 				 * multipart parsing process.
 				 */
-				apr_table_set(r->headers_in, "Content-Length",
-					toString(ftell(uploadData->handle)).c_str());
+				if (uploadDataFile != NULL) {
+					apr_table_set(r->headers_in, "Content-Length",
+						toString(ftell(uploadDataFile->handle)).c_str());
+				} else {
+					apr_table_set(r->headers_in, "Content-Length",
+						toString(uploadDataMemory.size()).c_str());
+				}
 			}
 			
 			
@@ -547,11 +558,11 @@ private:
 			session->setWriterTimeout(r->server->timeout / 1000);
 			sendHeaders(r, session, mapper.getBaseURI());
 			if (expectingUploadData) {
-				if (uploadData != NULL) {
-					sendRequestBody(r, session, uploadData);
-					uploadData.reset();
+				if (uploadDataFile != NULL) {
+					sendRequestBody(r, session, uploadDataFile);
+					uploadDataFile.reset();
 				} else {
-					sendRequestBody(r, session);
+					sendRequestBody(r, session, uploadDataMemory);
 				}
 			}
 			try {
@@ -1066,6 +1077,39 @@ private:
 		return tempFile;
 	}
 	
+	/**
+	 * Receive the HTTP upload data and buffer it into a string.
+	 *
+	 * @param r The request.
+	 * @param contentLength The value of the HTTP Content-Length header. This is used
+	 *                      to check whether the HTTP client has sent complete upload
+	 *                      data. NULL indicates that there is no Content-Length header,
+	 *                      i.e. that the HTTP client used chunked transfer encoding.
+	 * @param string The string to buffer into.
+	 * @throws RuntimeException
+	 * @throws IOException
+	 */
+	void receiveRequestBody(request_rec *r, const char *contentLength, string &buffer) {
+		TRACE_POINT();
+		unsigned long l_contentLength = 0;
+		char buf[1024 * 32];
+		apr_off_t len;
+		
+		buffer.clear();
+		if (contentLength != NULL) {
+			l_contentLength = atol(contentLength);
+			buffer.reserve(l_contentLength);
+		}
+		
+		while ((len = readRequestBodyFromApache(r, buf, sizeof(buf))) > 0) {
+			buffer.append(buf, len);
+		}
+		
+		if (contentLength != NULL && buffer.size() != l_contentLength) {
+			throw IOException("The HTTP client sent incomplete upload data.");
+		}
+	}
+	
 	void sendRequestBody(request_rec *r, Application::SessionPtr &session, shared_ptr<BufferedUpload> &uploadData) {
 		TRACE_POINT();
 		rewind(uploadData->handle);
@@ -1079,13 +1123,8 @@ private:
 		}
 	}
 	
-	void sendRequestBody(request_rec *r, Application::SessionPtr &session) {
-		char buf[1024 * 32];
-		apr_off_t len;
-
-		while ((len = readRequestBodyFromApache(r, buf, sizeof(buf))) > 0) {
-			session->sendBodyBlock(buf, len);
-		}
+	void sendRequestBody(request_rec *r, Application::SessionPtr &session, const string &buffer) {
+		session->sendBodyBlock(buffer.c_str(), buffer.size());
 	}
 
 public:
