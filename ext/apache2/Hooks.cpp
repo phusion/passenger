@@ -295,7 +295,6 @@ private:
 	 */
 	bool prepareRequest(request_rec *r, DirConfig *config, const char *filename, bool coreModuleWillBeRun = false) {
 		TRACE_POINT();
-		P_DEBUG("prepare: " << r->uri);
 		DirectoryMapper mapper(r, config, &cstat, config->getStatThrottleRate());
 		try {
 			if (mapper.getBaseURI() == NULL) {
@@ -782,7 +781,8 @@ private:
 		addHeader(headers, "REMOTE_PORT",     apr_psprintf(r->pool, "%d", r->connection->remote_addr->port));
 		addHeader(headers, "REMOTE_USER",     r->user);
 		addHeader(headers, "REQUEST_METHOD",  r->method);
-		addHeader(headers, "REQUEST_URI",     r->unparsed_uri);
+		P_DEBUG("uri = " << r->uri << ", unparsed_uri = " << r->unparsed_uri);
+		addHeader(headers, "REQUEST_URI",     r->uri);
 		addHeader(headers, "QUERY_STRING",    r->args ? r->args : "");
 		if (strcmp(baseURI, "/") == 0) {
 			addHeader(headers, "SCRIPT_NAME", "");
