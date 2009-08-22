@@ -781,8 +781,7 @@ private:
 		addHeader(headers, "REMOTE_PORT",     apr_psprintf(r->pool, "%d", r->connection->remote_addr->port));
 		addHeader(headers, "REMOTE_USER",     r->user);
 		addHeader(headers, "REQUEST_METHOD",  r->method);
-		P_DEBUG("uri = " << r->uri << ", unparsed_uri = " << r->unparsed_uri);
-		addHeader(headers, "REQUEST_URI",     r->uri);
+		addHeader(headers, "REQUEST_URI",     r->unparsed_uri);
 		addHeader(headers, "QUERY_STRING",    r->args ? r->args : "");
 		if (strcmp(baseURI, "/") == 0) {
 			addHeader(headers, "SCRIPT_NAME", "");
