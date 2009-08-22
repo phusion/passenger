@@ -103,47 +103,38 @@ shared_examples_for "MyCook(tm) beta" do
 	it "supports %2f in URIs" do
 		get('/welcome/show_id/foo%2fbar').should == 'foo/bar'
 	end
-
-	it "has AbstractRequest which returns a request_uri without hostname, with query_string" do
+	
+	specify "Rails's request.request_uri returns no an URI without hostname but with query_string" do
 		get('/welcome/request_uri?foo=bar%20escaped').should =~ %r{/welcome/request_uri\?foo=bar%20escaped}
 	end
 
 	it "supports restarting via restart.txt" do
-		begin
-			controller = "#{@stub.app_root}/app/controllers/test_controller.rb"
-			restart_file = "#{@stub.app_root}/tmp/restart.txt"
-			now = Time.now
-			
-			File.open(controller, 'w') do |f|
-				f.write %q{
-					class TestController < ApplicationController
-						layout nil
-						def index
-							render :text => "foo"
-						end
-					end
-				}
+		controller = "#{@stub.app_root}/app/controllers/test_controller.rb"
+		restart_file = "#{@stub.app_root}/tmp/restart.txt"
+		now = Time.now
+		
+		File.write(controller, %q{
+			class TestController < ApplicationController
+				layout nil
+				def index
+					render :text => "foo"
+				end
 			end
-			File.touch(restart_file, now - 10)
-			get('/test').should == "foo"
-			
-			File.open(controller, 'w') do |f|
-				f.write %q{
-					class TestController < ApplicationController
-						layout nil
-						def index
-							render :text => "bar"
-						end
-					end
-				}
+		})
+		File.touch(restart_file, now - 10)
+		get('/test').should == "foo"
+		
+		File.write(controller, %q{
+			class TestController < ApplicationController
+				layout nil
+				def index
+					render :text => "bar"
+				end
 			end
+		})
 
-			File.touch(restart_file, now - 5)
-			get('/test').should == 'bar'
-		ensure
-			File.unlink(controller) rescue nil
-			File.unlink(restart_file) rescue nil
-		end
+		File.touch(restart_file, now - 5)
+		get('/test').should == 'bar'
 	end
 	
 	it "does not make the web server crash if the app crashes" do
@@ -154,21 +145,15 @@ shared_examples_for "MyCook(tm) beta" do
 	
 	it "does not conflict with Phusion Passenger if there's a model named 'Passenger'" do
 		Dir.mkdir("#{@stub.app_root}/app/models") rescue nil
-		File.open("#{@stub.app_root}/app/models/passenger.rb", 'w') do |f|
-			f.write(%q{
-				class Passenger
-					def name
-						return "Gourry Gabriev"
-					end
+		File.write("#{@stub.app_root}/app/models/passenger.rb", %q{
+			class Passenger
+				def name
+					return "Gourry Gabriev"
 				end
-			})
-		end
-		begin
-			File.touch("#{@stub.app_root}/tmp/restart.txt")
-			get('/welcome/passenger_name').should == 'Gourry Gabriev'
-		ensure
-			File.unlink("#{@stub.app_root}/app/models/passenger.rb") rescue nil
-		end
+			end
+		})
+		File.touch("#{@stub.app_root}/tmp/restart.txt")
+		get('/welcome/passenger_name').should == 'Gourry Gabriev'
 	end
 	
 	it "sets the 'Status' header" do

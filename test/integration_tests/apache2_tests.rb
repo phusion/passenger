@@ -34,14 +34,18 @@ describe "mod_passenger running in Apache 2" do
 		before :all do
 			@web_server_supports_chunked_transfer_encoding = true
 			@server = "http://passenger.test:#{@apache2.port}"
-			@stub = setup_rails_stub('mycook')
 			@apache2 << "RailsMaxPoolSize 1"
+			@stub = setup_rails_stub('mycook', 'tmp.mycook')
 			@apache2.set_vhost("passenger.test", File.expand_path("#{@stub.app_root}/public"))
 			@apache2.start
 		end
 		
 		after :all do
 			@stub.destroy
+		end
+		
+		before :each do
+			@stub.reset
 		end
 		
 		it_should_behave_like "MyCook(tm) beta"
@@ -143,41 +147,41 @@ describe "mod_passenger running in Apache 2" do
 		before :all do
 			@apache2 << "PassengerMaxPoolSize 3"
 			
-			@mycook_app_root = File.expand_path("tmp.mycook")
+			@mycook = setup_rails_stub('mycook', File.expand_path("tmp.mycook"))
 			@mycook_url_root = "http://1.passenger.test:#{@apache2.port}"
-			@apache2.set_vhost('1.passenger.test', "#{@mycook_app_root}/public")
-			@apache2.set_vhost('2.passenger.test', "#{@mycook_app_root}/public") do |vhost|
+			@apache2.set_vhost('1.passenger.test', "#{@mycook.app_root}/public")
+			@apache2.set_vhost('2.passenger.test', "#{@mycook.app_root}/public") do |vhost|
 				vhost << "RailsAutoDetect off"
 			end
 			
-			@foobar_app_root = File.expand_path("tmp.foobar")
+			@foobar = setup_rails_stub('foobar', File.expand_path("tmp.foobar"))
 			@foobar_url_root = "http://3.passenger.test:#{@apache2.port}"
-			@apache2.set_vhost('3.passenger.test', "#{@foobar_app_root}/public") do |vhost|
+			@apache2.set_vhost('3.passenger.test', "#{@foobar.app_root}/public") do |vhost|
 				vhost << "RailsEnv development"
 				vhost << "RailsSpawnMethod conservative"
 				vhost << "PassengerUseGlobalQueue on"
-				vhost << "PassengerRestartDir #{@foobar_app_root}/public"
+				vhost << "PassengerRestartDir #{@foobar.app_root}/public"
 			end
 			
-			@mycook2_app_root = File.expand_path("tmp.mycook2")
+			@mycook2 = setup_rails_stub('mycook', File.expand_path("tmp.mycook2"))
 			@mycook2_url_root = "http://4.passenger.test:#{@apache2.port}"
-			@apache2.set_vhost('4.passenger.test', "#{@mycook2_app_root}/sites/some.site/public") do |vhost|
-				vhost << "PassengerAppRoot #{@mycook2_app_root}"
+			@apache2.set_vhost('4.passenger.test', "#{@mycook2.app_root}/sites/some.site/public") do |vhost|
+				vhost << "PassengerAppRoot #{@mycook2.app_root}"
 			end
 			
 			@apache2.start
 		end
 		
-		before :each do
-			@mycook = setup_rails_stub('mycook', @mycook_app_root)
-			@foobar = setup_rails_stub('foobar', @foobar_app_root)
-			@mycook2 = setup_rails_stub('mycook', @mycook2_app_root)
-		end
-		
-		after :each do
+		after :all do
 			@mycook.destroy
 			@foobar.destroy
 			@mycook2.destroy
+		end
+		
+		before :each do
+			@mycook.reset
+			@foobar.reset
+			@mycook2.reset
 		end
 		
 		it "ignores the Rails application if RailsAutoDetect is off" do
@@ -397,8 +401,7 @@ describe "mod_passenger running in Apache 2" do
 		
 		specify "it resolves symlinks in the document root if PassengerResolveSymlinksInDocumentRoot is set" do
 			orig_mycook_app_root = @mycook.app_root
-			@mycook.destroy
-			@mycook = setup_rails_stub('mycook', File.expand_path("tmp.mycook.symlinktest"))
+			@mycook.move(File.expand_path('tmp.mycook.symlinktest'))
 			FileUtils.mkdir_p(orig_mycook_app_root)
 			File.symlink("#{@mycook.app_root}/public", "#{orig_mycook_app_root}/public")
 			begin
