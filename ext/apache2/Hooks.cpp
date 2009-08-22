@@ -554,8 +554,6 @@ private:
 			}
 			
 			UPDATE_TRACE_POINT();
-			session->setReaderTimeout(r->server->timeout / 1000);
-			session->setWriterTimeout(r->server->timeout / 1000);
 			sendHeaders(r, session, mapper.getBaseURI());
 			if (expectingUploadData) {
 				if (uploadDataFile != NULL) {
@@ -637,11 +635,14 @@ private:
 				ap_pass_brigade(r->output_filters, bb);
 				
 				if (r->connection->aborted) {
-					P_WARN("The HTTP client closed the connection before "
-						"the response could be completely sent. As a "
-						"result, you will probably see a 'Broken Pipe' "
+					P_WARN("Either the vistor clicked on the 'Stop' button in the "
+						"web browser, or the visitor's connection has stalled "
+						"and couldn't receive the data that Apache is sending "
+						"to it. As a result, you will probably see a 'Broken Pipe' "
 						"error in this log file. Please ignore it, "
-						"this is normal.");
+						"this is normal. You might also want to increase Apache's "
+						"TimeOut configuration option if you experience this "
+						"problem often.");
 				} else if (!bucketState->completed) {
 					P_WARN("Apache stopped forwarding the backend's response, "
 						"even though the HTTP client did not close the "
