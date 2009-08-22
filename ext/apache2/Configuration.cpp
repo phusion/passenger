@@ -645,7 +645,7 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS,
 		"The directory in which upload buffer files should be placed."),
-	AP_INIT_TAKE1("PassengerResolveSymlinksInDocumentRoot",
+	AP_INIT_FLAG("PassengerResolveSymlinksInDocumentRoot",
 		(Take1Func) cmd_passenger_resolve_symlinks_in_document_root,
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
