@@ -317,6 +317,14 @@ private:
 			 * Phusion Passenger for the rest of the request.
 			 */
 			if (e.code() == EACCES || e.code() == EPERM) {
+				// TODO: filesystem error is not always reported. need
+				// to figure out why. test case:
+				// - mkdir /foo
+				// - mkdir /foo/public
+				// - mkdir /foo/config
+				// - chmod 000 /foo/config
+				// - add vhost 'foo' with document root /foo/public
+				// - curl http://foo/
 				apr_pool_userdata_set(new ReportFileSystemError(e),
 					"Phusion Passenger: error report",
 					ReportFileSystemError::cleanup,
