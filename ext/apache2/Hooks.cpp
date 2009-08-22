@@ -120,13 +120,14 @@ private:
 		ReportFileSystemError(const FileSystemException &ex): e(ex) { }
 		
 		int report(request_rec *r) {
+			r->status = 500;
 			ap_set_content_type(r, "text/html; charset=UTF-8");
 			ap_rputs("<h1>Passenger error #2</h1>\n", r);
 			ap_rputs("An error occurred while trying to access '", r);
 			ap_rputs(ap_escape_html(r->pool, e.filename().c_str()), r);
 			ap_rputs("': ", r);
 			ap_rputs(ap_escape_html(r->pool, e.what()), r);
-			if (e.code() == EPERM) {
+			if (e.code() == EACCES || e.code() == EPERM) {
 				ap_rputs("<p>", r);
 				ap_rputs("Apache doesn't have read permissions to that file. ", r);
 				ap_rputs("Please fix the relevant file permissions.", r);
@@ -294,6 +295,7 @@ private:
 	 */
 	bool prepareRequest(request_rec *r, DirConfig *config, const char *filename, bool coreModuleWillBeRun = false) {
 		TRACE_POINT();
+		P_DEBUG("prepare: " << r->uri);
 		DirectoryMapper mapper(r, config, &cstat, config->getStatThrottleRate());
 		try {
 			if (mapper.getBaseURI() == NULL) {
@@ -310,12 +312,19 @@ private:
 			 * Later, in the handler hook, we inform the user about this
 			 * problem so that he can either disable Phusion Passenger's
 			 * autodetection routines, or fix the permissions.
+			 *
+			 * If it's not a permission problem then we'll disable
+			 * Phusion Passenger for the rest of the request.
 			 */
-			apr_pool_userdata_set(new ReportFileSystemError(e),
-				"Phusion Passenger: error report",
-				ReportFileSystemError::cleanup,
-				r->pool);
-			return true;
+			if (e.code() == EACCES || e.code() == EPERM) {
+				apr_pool_userdata_set(new ReportFileSystemError(e),
+					"Phusion Passenger: error report",
+					ReportFileSystemError::cleanup,
+					r->pool);
+				return true;
+			} else {
+				return false;
+			}
 		}
 		
 		/* Save some information for the hook methods that are called later.

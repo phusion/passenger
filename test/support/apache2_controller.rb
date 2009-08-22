@@ -178,8 +178,12 @@ class Apache2Controller
 	end
 	
 	# Define a virtual host configuration block for the Apache configuration
-	# file.
+	# file. If there was already a vhost definition with the same domain name,
+	# then it will be overwritten.
+	#
+	# The given document root will be created if it doesn't exist.
 	def set_vhost(domain, document_root)
+		FileUtils.mkdir_p(document_root)
 		vhost = VHost.new(domain, document_root)
 		if block_given?
 			yield vhost

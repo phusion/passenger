@@ -635,12 +635,6 @@ This option allows one to specify the Ruby interpreter to use.
 This option may only occur once, in the global server configuration.
 The default is 'ruby'.
 
-[[PassengerDocumentRootSymlink]]
-=== PassengerDocumentRootSymlink <on|off> ===
-By default Phusion Passenger 2.2.0 and later doesn't load your application if the DocumentRoot
-is a symlink to the public application folder
-If you need to use with this way you can enable this configuration so passenger can understand this path schema
-
 [[PassengerAppRoot]]
 === PassengerAppRoot <path/to/root> ===
 By default, Phusion Passenger assumes that the application's root directory
@@ -667,6 +661,21 @@ Example:
                                        #     root is "/var/rails/zena/sites/example.com"
 </VirtualHost>
 -----------------------------
+
+[[PassengerResolveSymlinksInDocumentRoot]]
+=== PassengerResolveSymlinksInDocumentRoot <on|off> ===
+Configures whether Phusion Passenger should resolve symlinks in the document root.
+Please refer to <<application_detection,How Phusion Passenger detects whether a
+virtual host is a web application>> for more information.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once. It is off by default.
 
 [[PassengerUseGlobalQueue]]
 === PassengerUseGlobalQueue <on|off> ===
@@ -1653,6 +1662,7 @@ application uses a non-standard page cache directory, i.e. if it doesn't cache t
 the 'public' directory. In that case you'll need to use mod_rewrite to serve such
 page cache files.
 
+[[application_detection]]
 === How Phusion Passenger detects whether a virtual host is a web application ===
 After you've read the deployment instructions you might wonder how Phusion Passenger
 knows that the DocumentRoot points to a web application that Phusion Passenger is
@@ -1675,8 +1685,9 @@ that Phusion Passenger will:
 So suppose that your document root is '/webapps/foo/public'. Phusion Passenger will check
 whether the file '/webapps/foo/config/environment.rb' exists.
 
-Note that Phusion Passenger does *not* resolve any symlinks in the document root path by default since
-version 2.2.0 -- in contrast to versions earlier than 2.2.0, which does resolve symlinks.
+Note that Phusion Passenger does *not* resolve any symlinks in the document root path by
+default since version 2.2.0 -- in contrast to versions earlier than 2.2.0, which do resolve
+symlinks.
 So for example, suppose that your DocumentRoot points to '/home/www/example.com', which in
 turn is a symlink to '/webapps/example.com/public'. In versions earlier than 2.2.0, Phusion
 Passenger will check whether '/webapps/example.com/config/environment.rb' exists because it
@@ -1685,11 +1696,12 @@ resolves all symlinks. Phusion Passenger 2.2.0 and later however will check for
 Passenger will not activate itself for this virtual host, and you'll most likely see an Apache
 mod_dirindex directory listing.
 
-If you need to enable this feature you can use the <<PassengerDocumentRootSymlink,PassengerDocumentRootSymlink>>
-configuration directive.
+If you need the old symlink-resolving behavior for whatever reason, then you can turn on
+<<PassengerResolveSymlinksInDocumentRoot,PassengerResolveSymlinksInDocumentRoot>>.
 
 Another way to solve this situation is to explicitly tell Phusion Passenger what the
-correct application root is through the <<PassengerAppRoot,PassengerAppRoot>> configuration directive.
+correct application root is through the <<PassengerAppRoot,PassengerAppRoot>> configuration
+directive.
 
 Autodetection of Rack applications happens through the same mechanism, exception that
 Phusion Passenger will look for 'config.ru' instead of 'config/environment.rb'.

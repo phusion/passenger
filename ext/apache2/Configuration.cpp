@@ -84,7 +84,7 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->memoryLimitSpecified = false;
 	config->highPerformance = DirConfig::UNSET;
 	config->useGlobalQueue = DirConfig::UNSET;
-    config->docRootResolveSymlink = DirConfig::UNSET;
+	config->resolveSymlinksInDocRoot = DirConfig::UNSET;
 	config->statThrottleRate = 0;
 	config->statThrottleRateSpecified = false;
 	config->restartDir = NULL;
@@ -130,6 +130,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->statThrottleRateSpecified = base->statThrottleRateSpecified || add->statThrottleRateSpecified;
 	config->restartDir = (add->restartDir == NULL) ? base->restartDir : add->restartDir;
 	config->uploadBufferDir = (add->uploadBufferDir == NULL) ? base->uploadBufferDir : add->uploadBufferDir;
+	config->resolveSymlinksInDocRoot = (add->resolveSymlinksInDocRoot == DirConfig::UNSET) ? base->resolveSymlinksInDocRoot : add->resolveSymlinksInDocRoot;
 	/*************************************/
 	return config;
 }
@@ -411,16 +412,17 @@ cmd_passenger_upload_buffer_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
 	return NULL;
 }
 
+static const char *
+cmd_passenger_resolve_symlinks_in_document_root(cmd_parms *cmd, void *pcfg, int arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->resolveSymlinksInDocRoot = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
+	return NULL;
+}
+
 
 /*************************************************
  * Rails-specific settings
  *************************************************/
-static const char *
-cmd_rails_documentroot_symlink(cmd_parms *cmd, void *pcfg, int arg) {
-       DirConfig *config = (DirConfig *) pcfg;
-       config->docRootResolveSymlink = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
-       return NULL;
-}
 
 static const char *
 cmd_rails_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
@@ -643,11 +645,12 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS,
 		"The directory in which upload buffer files should be placed."),
-    AP_INIT_TAKE1("PassengerDocumentRootSymlink",
-        (Take1Func) cmd_rails_documentroot_symlink,
-        NULL,
-        RSRC_CONF,
-        "To resolve symlinks in the DocumentRoot"),
+	AP_INIT_TAKE1("PassengerResolveSymlinksInDocumentRoot",
+		(Take1Func) cmd_passenger_resolve_symlinks_in_document_root,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Whether to resolve symlinks in the DocumentRoot path"),
+	
 	/*****************************/
 
 	// Rails-specific settings.

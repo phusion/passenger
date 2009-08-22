@@ -28,6 +28,7 @@
 #ifdef __cplusplus
 	#include "Utils.h"
 	#include "MessageChannel.h"
+	#include "Logging.h"
 #endif
 
 /* The APR headers must come after the Passenger headers. See Hooks.cpp
@@ -134,9 +135,13 @@
 			 * in the directory configuration. */
 			bool memoryLimitSpecified;
 			
-            /** Flag created to resolve issue of symlinks on the DocumentRoot configuration */
-            bool docRootResolveSymlink;
-
+			/** Whether symlinks in the document root path should be resolved.
+			 * The implication of this is documented in the users guide, section
+			 * "How Phusion Passenger detects whether a virtual host is a web application".
+			 */
+			Threeway resolveSymlinksInDocRoot;
+			
+			/** Whether high performance mode should be turned on. */
 			Threeway highPerformance;
 			
 			/** Whether global queuing should be used. */
@@ -173,11 +178,11 @@
 			
 			string getAppRoot(const char *documentRoot) const {
 				if (appRoot == NULL) {
-                    if (docRootResolveSymlink == DirConfig::ENABLED) {
-                        return extractDirName(resolveSymlink(documentRoot));
-                    } else {
-    					return extractDirName(documentRoot);
-                    }
+					if (resolveSymlinksInDocRoot == DirConfig::ENABLED) {
+						return extractDirName(resolveSymlink(documentRoot));
+					} else {
+						return extractDirName(documentRoot);
+					}
 				} else {
 					return appRoot;
 				}
@@ -185,11 +190,11 @@
 			
 			string getAppRoot(const string &documentRoot) const {
 				if (appRoot == NULL) {
-                    if (docRootResolveSymlink == DirConfig::ENABLED) {
-                        return extractDirName(resolveSymlink(documentRoot));
-                    } else {
-    					return extractDirName(documentRoot);
-                    }
+					if (resolveSymlinksInDocRoot == DirConfig::ENABLED) {
+						return extractDirName(resolveSymlink(documentRoot));
+					} else {
+						return extractDirName(documentRoot);
+					}
 				} else {
 					return appRoot;
 				}
