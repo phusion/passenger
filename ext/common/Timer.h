@@ -30,9 +30,9 @@
 namespace Passenger {
 
 /**
- * A Timer which one can use to check how much time has elapsed since the timer started.
- * This timer support microseconds-resolution, but the exact resolution depends on the OS
- * and the hardware.
+ * A Timer which one can use to check how much time has elapsed since the
+ * timer started. This timer support miliseconds-resolution, but the exact
+ * resolution depends on the OS and the hardware.
  *
  * @code
  * Timer timer;
