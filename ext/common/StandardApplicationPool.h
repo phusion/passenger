@@ -104,7 +104,7 @@ private:
 	static const int DEFAULT_MAX_IDLE_TIME = 120;
 	static const int DEFAULT_MAX_POOL_SIZE = 20;
 	static const int DEFAULT_MAX_INSTANCES_PER_APP = 0;
-	static const int CLEANER_THREAD_STACK_SIZE = 1024 * 128;
+	static const int CLEANER_THREAD_STACK_SIZE = 1024 * 64;
 	static const unsigned int MAX_GET_ATTEMPTS = 10;
 	static const unsigned int GET_TIMEOUT = 5000; // In milliseconds.
 
