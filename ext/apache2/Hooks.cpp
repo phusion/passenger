@@ -807,6 +807,16 @@ private:
 			}
 		}
 		
+		// Add other environment variables.
+		const apr_array_header_t *env_arr;
+		apr_table_entry_t *env;
+		
+		env_arr = apr_table_elts(r->subprocess_env);
+		env = (apr_table_entry_t*) env_arr->elts;
+		for (i = 0; i < env_arr->nelts; ++i) {
+			addHeader(headers, env[i].key, env[i].val);
+		}
+		
 		// Now send the headers.
 		string buffer;
 		
