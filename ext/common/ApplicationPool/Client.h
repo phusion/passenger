@@ -55,6 +55,21 @@ using namespace boost;
  * ApplicationPool::Client connects to an ApplicationPool server, and behaves
  * just as specified by ApplicationPool::Interface. It is *not* thread-safe;
  * each thread should create a seperate ApplicationPool::Client object instead.
+ *
+ * A single ApplicationPool::Client should not be shared among multiple threads,
+ * not even with synchronization, because it can result in deadlocks. The server
+ * handles each client connection with one server thread. Consider the following
+ * scenario:
+ * - Clients A and B share the same ApplicationPool::Client object, with
+ *   synchronization.
+ * - The pool size is 1.
+ * - Client A calls get() and obtains a session.
+ * - Client B calls get() with a different application root, and blocks, waiting
+ *   until A is done. The server thread is also blocked on the same get() command.
+ * - A is done and closes the session. This sends a 'session close' command to the
+ *   server. The server thread is however blocked on B's get() and cannot respond
+ *   to this session close command.
+ * - As a result, the system is deadlocked.
  */
 class Client: public ApplicationPool::Interface {
 private:
@@ -67,15 +82,14 @@ private:
 	 * have been destroyed.
 	 */
 	struct SharedData {
+		FileDescriptor fd;
+		
 		/**
 		 * The socket connection to the ApplicationPool server.
-		 *
-		 * The underlying file descriptor may be -1, which indicates that the
-		 * connection has been closed.
 		 */
 		MessageChannel channel;
 		
-		SharedData(int fd): channel(fd) { }
+		SharedData(FileDescriptor _fd): fd(_fd), channel(fd) { }
 		
 		~SharedData() {
 			TRACE_POINT();
@@ -195,7 +209,7 @@ protected:
 	 *
 	 * @throws SystemException An error occurred while reading data from or sending data to the server.
 	 * @throws IOException An error occurred while reading data from or sending data to the server.
-	 * @throws SecurityException Unable to authenticate with the server.
+	 * @throws SecurityException The server denied authentication.
 	 * @throws boost::thread_interrupted
 	 */
 	void authenticate(const string &username, const StaticString &userSuppliedPassword) {
@@ -257,14 +271,17 @@ public:
 	 * @param socketFilename The filename of the server socket to connect to.
 	 * @param username The username to use for authenticating with the server.
 	 * @param userSuppliedPassword The password to use for authenticating with the server.
+	 * @return this
 	 * @throws SystemException Something went wrong while connecting to the server.
 	 * @throws IOException Something went wrong while connecting to the server.
 	 * @throws RuntimeException Something went wrong.
 	 * @throws SecurityException Unable to authenticate to the server with the given username and password.
+	 *                           You may call connect() again with a different username/password.
 	 * @throws boost::thread_interrupted
+	 * @post connected()
 	 */
 	Client *connect(const string &socketFilename, const string &username, const StaticString &userSuppliedPassword) {
-		int fd = connectToUnixServer(socketFilename.c_str());
+		FileDescriptor fd = connectToUnixServer(socketFilename.c_str());
 		data = ptr(new SharedData(fd));
 		authenticate(username, userSuppliedPassword);
 		return this;
@@ -444,6 +461,7 @@ public:
 			throw;
 		}
 		
+		/* Now check the security response... */
 		UPDATE_TRACE_POINT();
 		try {
 			checkSecurityResponse();
@@ -465,9 +483,9 @@ public:
 			throw;
 		}
 		
-		/* The first few replies from the server might be for requesting
-		 * environment variables in the pool options object, so keep handling
-		 * these requests until we receive a different reply.
+		/* After the security response, the first few replies from the server might
+		 * be for requesting environment variables in the pool options object, so
+		 * keep handling these requests until we receive a different reply.
 		 */
 		while (serverMightNeedEnvironmentVariables) {
 			try {

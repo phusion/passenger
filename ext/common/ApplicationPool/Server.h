@@ -66,7 +66,7 @@ using namespace oxt;
  * Construct an ApplicationPool::Server object and call the mainLoop() method on it.
  *
  * <h2>Concurrency model</h2>
- * Each client is handled by a seperate thread. This is necessary because we the current
+ * Each client is handled by a seperate thread. This is necessary because the current
  * algorithm for ApplicationPool::Pool::get() can block (in the case that the spawning
  * limit has been exceeded or when global queuing is used and all application instances
  * are busy). While it is possible to get around this problem without using threads, a
@@ -457,6 +457,11 @@ private:
 		} while (ret == -1 && errno == EINTR);
 	}
 	
+	/**
+	 * Authenticate the given client and returns its account information.
+	 *
+	 * @return A smart pointer to an Account object, or NULL if authentication failed.
+	 */
 	AccountPtr authenticate(FileDescriptor &client) {
 		MessageChannel channel(client);
 		string username, password;
@@ -470,6 +475,7 @@ private:
 				}
 			} catch (const SecurityException &) {
 				channel.write("The supplied username is too long.", NULL);
+				return AccountPtr();
 			}
 			
 			try {
@@ -478,6 +484,7 @@ private:
 				}
 			} catch (const SecurityException &) {
 				channel.write("The supplied password is too long.", NULL);
+				return AccountPtr();
 			}
 			
 			AccountPtr account = accountsDatabase->authenticate(username, password);
@@ -497,7 +504,8 @@ private:
 	}
 	
 	/**
-	 * Checks whether the client has all of the rights in <tt>rights</tt>.
+	 * Checks whether the client has all of the rights in <tt>rights</tt>. The client
+	 * will be notified about the result of this check, by sending it a message.
 	 *
 	 * @throws SecurityException The client doesn't have one of the required rights.
 	 * @throws SystemException Something went wrong while communicating with the client.

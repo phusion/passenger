@@ -166,6 +166,13 @@ namespace tut {
 		initializePool();
 		server->setLoginTimeout(40);
 		
+		/* These can throw either an IOException or SystemException:
+		 * - An IOException is raised when connect() encounters EOF.
+		 * - But when connect() fails during the middle of a read()
+		 *   or write() (e.g. because the server disconnects before
+		 *   connect() is done writing), then SystemException is raised.
+		 */
+		
 		try {
 			// This client takes too much time on sending the username.
 			SlowClient(50, 0).connect(socketFilename, "test", "12345");
