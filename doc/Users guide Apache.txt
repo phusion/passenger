@@ -354,6 +354,14 @@ For example:
     DocumentRoot /webapps/mycook/public
 </VirtualHost>
 -------------------------------------------
+
+You may also need to tweak your file/folder permissions. Make sure that the
+following folders are readable and executable by Apache:
+
+ * this 'public' folder.
+ * the application's 'config' folder.
+ * all parent folders. That is, /webapps/mycook and /webapps must also be readable and executable by Apache.
+
 Then restart Apache. The application has now been deployed.
 
 [[deploying_rails_to_sub_uri]]
@@ -524,6 +532,14 @@ For example:
     DocumentRoot /webapps/rackapp/public
 </VirtualHost>
 -------------------------------------------
+
+You may also need to tweak your file/folder permissions. Make sure that the
+following folders are readable and executable by Apache:
+
+ * this 'public' folder.
+ * the application's 'config' folder.
+ * all parent folders. That is, /webapps/rackapp and /webapps must also be readable and executable by Apache.
+
 Then restart Apache. The application has now been deployed.
 
 [[deploying_rack_to_sub_uri]]
