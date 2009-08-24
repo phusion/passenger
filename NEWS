@@ -1,35 +1,14 @@
 Release 2.2.5
 -------------
 
- * [Nginx] Support for streaming responses (e.g. Comet or HTTP push)
-   Buffering of backend responses is now disabled. This fixes support for
-   streaming responses, something which the Apache version has supported
-   for a while now. One can generate streaming responses in Ruby on Rails
-   like this:
-
-       render :text => lambda { |response, output|
-           10_000.times do |i|
-               output.write("hello #{i}!\n")
-           end
-       }
-
- * Fixed STDERR capturing
-   While spawning an application, Phusion Passenger captures any output written
-   to STDERR so that it can show them later if the application failed to start.
-   This turns out to be much more difficult than expected, with all kinds of
-   corner cases that can mess up this feature.
-   
-   For example, if the Rails log file is not writable, then this can cause
-   Rails to crash with a bizarre and unhelpful error message whenever it tries
-   to write to STDERR:
-
-       /!\ FAILSAFE /!\  Thu Aug 20 14:58:39 +1000 2009
-       Status: 500 Internal Server Error
-       undefined method `[]' for nil:NilClass
-
-   Some applications reopen STDERR to a log file. This didn't work.
-
-   Of all of these problems have been fixed now. (Bug #332)
+ * [Apache] Small file uploads are now buffered; fixes potential DoS attack
+   Phusion Passenger buffers large file uploads to a temp file so that it
+   doesn't block applications while an upload is in progress, but it sent
+   small uploads directly to the application without buffering it. This could
+   result in a potential DoS attack: the client can send many small, incomplete
+   file uploads to the server, and this would block all application processes
+   until a timeout occurs. In order to solve this problem, Phusion Passenger
+   now buffers small file upload in memory. Bug #356.
 
  * [Apache] Added a configuration option for resolving symlinks in the document
    root path Phusion Passenger 2.2.0 and higher no longer resolve symlinks in
@@ -60,6 +39,50 @@ Release 2.2.5
 
    then this version should compile properly.
 
+ * [Nginx] Support for streaming responses (e.g. Comet or HTTP push)
+   Buffering of backend responses is now disabled. This fixes support for
+   streaming responses, something which the Apache version has supported
+   for a while now. One can generate streaming responses in Ruby on Rails
+   like this:
+
+       render :text => lambda { |response, output|
+           10_000.times do |i|
+               output.write("hello #{i}!\n")
+           end
+       }
+
+ * Fixed STDERR capturing
+   While spawning an application, Phusion Passenger captures any output written
+   to STDERR so that it can show them later if the application failed to start.
+   This turns out to be much more difficult than expected, with all kinds of
+   corner cases that can mess up this feature.
+
+   For example, if the Rails log file is not writable, then this can cause
+   Rails to crash with a bizarre and unhelpful error message whenever it tries
+   to write to STDERR:
+
+       /!\ FAILSAFE /!\  Thu Aug 20 14:58:39 +1000 2009
+       Status: 500 Internal Server Error
+       undefined method `[]' for nil:NilClass
+
+   Some applications reopen STDERR to a log file. This didn't work.
+
+   Of all of these problems have been fixed now. (Bug #332)
+
+ * Fixed some bugs in application sources preloading
+   Rails >= 2.2 already preloads the application sources, in which case Phusion
+   Passenger wasn't supposed to perform it's own preloading, but the Rails
+   >= 2.2 detection code was bugged. This has been fixed.
+
+   Rails < 2.2 doesn't preload the application sources by itself, but there
+   should be a certain order with which the sources are preloaded, otherwise
+   preloading could fail in some applications. We now enforce a specific load
+   order: first models, then controllers, then helpers.
+
+   Bug #359.
+ 
+ * The Users Guide for Apache now mentions something about correct permissions
+   for application directories.
  * Fixed compilation problems on IA-64 (bug #118). We also reduced the stack
    sizes for the threads by half, so Phusion Passenger should use even less
    virtual memory now.

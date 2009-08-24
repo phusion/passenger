@@ -885,12 +885,16 @@ task :news_as_html do
 			end
 			
 			# Auto-link to issue tracker.
-			text.gsub!(/(bug) #(\d+)/i) do
+			text.gsub!(/(bug|issue) #(\d+)/i) do
 				url = "http://code.google.com/p/phusion-passenger/issues/detail?id=#{$2}"
-				%Q(<a href="#{url}">#{$1} ##{$2}</a>)
+				%Q(<{a href="#{url}"}>#{$1} ##{$2}<{/a}>)
 			end
 			
 			text.strip!
+			text = CGI.escapeHTML(text)
+			text.gsub!(%r(&lt;\{(.*?)\}&gt;(.*?)&lt;\{/(.*?)\}&gt;)) do
+				"<#{CGI.unescapeHTML $1}>#{$2}</#{CGI.unescapeHTML $3}>"
+			end
 			text
 		end
 		
