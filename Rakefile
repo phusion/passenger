@@ -802,9 +802,6 @@ task 'package:debian' => :fakeroot do
 	sh "dpkg -b #{fakeroot} pkg/passenger_#{PACKAGE_VERSION}-#{arch}.deb"
 end
 
-
-##### Misc
-
 desc "Run 'sloccount' to see how much code Passenger has"
 task :sloccount do
 	ENV['LC_ALL'] = 'C'
