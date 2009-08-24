@@ -77,7 +77,11 @@ class Installer < PhusionPassenger::AbstractInstaller
 				exit(1)
 			end
 			nginx_prefix = ask_for_nginx_install_prefix
-			extra_nginx_configure_flags = nil
+			if @extra_configure_flags == "none"
+				extra_nginx_configure_flags = nil
+			else
+				extra_nginx_configure_flags = @extra_configure_flags
+			end
 		else
 			nginx_source_dir = ask_for_nginx_source_dir
 			nginx_prefix = ask_for_nginx_install_prefix

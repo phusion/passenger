@@ -51,6 +51,11 @@ Release 2.2.5
            end
        }
 
+ * [Nginx] Fixed the installer's --extra-configure-flags flag when combined with --auto-download
+   Arguments passed to --extra-configure-flags were not being passed to the
+   Nginx configure script when --auto-download is given. This has been
+   fixed: bug #349.
+
  * Fixed STDERR capturing
    While spawning an application, Phusion Passenger captures any output written
    to STDERR so that it can show them later if the application failed to start.
