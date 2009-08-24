@@ -1,0 +1,65 @@
+Release 2.2.5
+-------------
+
+ * [Nginx] Support for streaming responses (e.g. Comet or HTTP push)
+   Buffering of backend responses is now disabled. This fixes support for
+   streaming responses, something which the Apache version has supported
+   for a while now. One can generate streaming responses in Ruby on Rails
+   like this:
+
+       render :text => lambda { |response, output|
+           10_000.times do |i|
+               output.write("hello #{i}!\n")
+           end
+       }
+
+ * Fixed STDERR capturing
+   While spawning an application, Phusion Passenger captures any output written
+   to STDERR so that it can show them later if the application failed to start.
+   This turns out to be much more difficult than expected, with all kinds of
+   corner cases that can mess up this feature.
+   
+   For example, if the Rails log file is not writable, then this can cause
+   Rails to crash with a bizarre and unhelpful error message whenever it tries
+   to write to STDERR:
+
+       /!\ FAILSAFE /!\  Thu Aug 20 14:58:39 +1000 2009
+       Status: 500 Internal Server Error
+       undefined method `[]' for nil:NilClass
+
+   Some applications reopen STDERR to a log file. This didn't work.
+
+   Of all of these problems have been fixed now. (Bug #332)
+
+ * [Apache] Added a configuration option for resolving symlinks in the document
+   root path Phusion Passenger 2.2.0 and higher no longer resolve symlinks in
+   the document root path in order to properly support Capistrano-style
+   directory structures. The exact behavior is documented in the Users Guide,
+   section "How Phusion Passenger detects whether a virtual host is a web
+   application".
+
+   However, some people relied on the old behavior. A new configuration option,
+   PassengerResolveSymlinksInDocumentRoot, has been added to allow reverting
+   back to the old behavior.
+
+ * [Apache] mod_env variables are now also passed through CGI environment headers
+   Prior to version 2.2.3, environment variables set by mod_env are passed to
+   the application as CGI environment headers, not through Ruby's ENV variable.
+   In the last release we introduced support for setting ENV environment
+   variables with mod_env, and got rid of the code for setting CGI environment
+   headers. It turns out that some people relied on the old behavior, we so now
+   environment variables set with mod_env are set in both ENV and in the CGI
+   environment.
+   
+   Fixes bug #335.
+
+ * Fixed compilation problems on IA-64 (bug #118). We also reduced the stack
+   sizes for the threads by half, so Phusion Passenger should use even less
+   virtual memory now.
+ * Fixed a few compatibility problems with 64-bit OpenBSD.
+ * Fixed a few typos and minor bugs.
+
+
+Older releases
+--------------
+Please consult the blog posts on http://blog.phusion.nl/ for the information about older releases.
