@@ -56,6 +56,11 @@ Release 2.2.5
    Nginx configure script when --auto-download is given. This has been
    fixed: bug #349.
 
+ * [Nginx] Fixed unnecessary download of PCRE
+   The installer now checks whether PCRE is installed in /opt/local (e.g.
+   MacPorts) as well before concluding that it isn't installed and going ahead
+   with downloading PCRE.
+
  * Fixed STDERR capturing
    While spawning an application, Phusion Passenger captures any output written
    to STDERR so that it can show them later if the application failed to start.
