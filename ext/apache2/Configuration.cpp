@@ -24,6 +24,16 @@
  */
 #include <algorithm>
 #include <cstdlib>
+
+/* ap_config.h checks whether the compiler has support for C99's designated
+ * initializers, and defines AP_HAVE_DESIGNATED_INITIALIZER if it does. However,
+ * g++ does not support designated initializers, even when ap_config.h thinks
+ * it does. Here we undefine the macro to force httpd_config.h to not use
+ * designated initializers. This should fix compilation problems on some systems.
+ */
+#include <ap_config.h>
+#undef AP_HAVE_DESIGNATED_INITIALIZER
+
 #include "Configuration.h"
 #include "Utils.h"
 
@@ -554,9 +564,8 @@ cmd_rails_spawn_server(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 
-// Workaround for some weird C++-specific compiler error.
-typedef const char * (*Take0Func)();
 typedef const char * (*Take1Func)();
+typedef const char * (*FlagFunc)();
 
 const command_rec passenger_commands[] = {
 	// Passenger settings.
@@ -591,12 +600,12 @@ const command_rec passenger_commands[] = {
 		RSRC_CONF,
 		"The maximum number of seconds that an application may be idle before it gets terminated."),
 	AP_INIT_FLAG("PassengerUseGlobalQueue",
-		(Take1Func) cmd_passenger_use_global_queue,
+		(FlagFunc) cmd_passenger_use_global_queue,
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Enable or disable Passenger's global queuing mode mode."),
 	AP_INIT_FLAG("PassengerUserSwitching",
-		(Take1Func) cmd_passenger_user_switching,
+		(FlagFunc) cmd_passenger_user_switching,
 		NULL,
 		RSRC_CONF,
 		"Whether to enable user switching support."),
@@ -616,12 +625,12 @@ const command_rec passenger_commands[] = {
 		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
 		"The maximum number of requests that an application instance may process."),
 	AP_INIT_FLAG("PassengerHighPerformance",
-		(Take1Func) cmd_passenger_high_performance,
+		(FlagFunc) cmd_passenger_high_performance,
 		NULL,
 		OR_ALL,
 		"Enable or disable Passenger's high performance mode."),
 	AP_INIT_FLAG("PassengerEnabled",
-		(Take1Func) cmd_passenger_enabled,
+		(FlagFunc) cmd_passenger_enabled,
 		NULL,
 		OR_ALL,
 		"Enable or disable Phusion Passenger."),
@@ -646,7 +655,7 @@ const command_rec passenger_commands[] = {
 		OR_OPTIONS,
 		"The directory in which upload buffer files should be placed."),
 	AP_INIT_FLAG("PassengerResolveSymlinksInDocumentRoot",
-		(Take1Func) cmd_passenger_resolve_symlinks_in_document_root,
+		(FlagFunc) cmd_passenger_resolve_symlinks_in_document_root,
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Whether to resolve symlinks in the DocumentRoot path"),
@@ -660,12 +669,12 @@ const command_rec passenger_commands[] = {
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Reserve the given URI to a Rails application."),
 	AP_INIT_FLAG("RailsAutoDetect",
-		(Take1Func) cmd_rails_auto_detect,
+		(FlagFunc) cmd_rails_auto_detect,
 		NULL,
 		RSRC_CONF,
 		"Whether auto-detection of Ruby on Rails applications should be enabled."),
 	AP_INIT_FLAG("RailsAllowModRewrite",
-		(Take1Func) cmd_rails_allow_mod_rewrite,
+		(FlagFunc) cmd_rails_allow_mod_rewrite,
 		NULL,
 		RSRC_CONF,
 		"Whether custom mod_rewrite rules should be allowed."),
@@ -697,7 +706,7 @@ const command_rec passenger_commands[] = {
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Reserve the given URI to a Rack application."),
 	AP_INIT_FLAG("RackAutoDetect",
-		(Take1Func) cmd_rack_auto_detect,
+		(FlagFunc) cmd_rack_auto_detect,
 		NULL,
 		RSRC_CONF,
 		"Whether auto-detection of Rack applications should be enabled."),
@@ -709,7 +718,7 @@ const command_rec passenger_commands[] = {
 	
 	// WSGI-specific settings.
 	AP_INIT_FLAG("PassengerWSGIAutoDetect",
-		(Take1Func) cmd_wsgi_auto_detect,
+		(FlagFunc) cmd_wsgi_auto_detect,
 		NULL,
 		RSRC_CONF,
 		"Whether auto-detection of WSGI applications should be enabled."),
@@ -736,7 +745,7 @@ const command_rec passenger_commands[] = {
 		RSRC_CONF,
 		"Deprecated option."),
 	AP_INIT_FLAG("RailsUserSwitching",
-		(Take1Func) cmd_passenger_user_switching,
+		(FlagFunc) cmd_passenger_user_switching,
 		NULL,
 		RSRC_CONF,
 		"Deprecated option."),

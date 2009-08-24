@@ -53,6 +53,13 @@ Release 2.2.5
    
    Fixes bug #335.
 
+ * [Apache] Fixed compilation problems on some Linux systems with older versions of Apache
+   If you used to see compilation errors like this:
+
+       ext/apache2/Configuration.cpp:554: error: expected primary-expression before '.' token
+
+   then this version should compile properly.
+
  * Fixed compilation problems on IA-64 (bug #118). We also reduced the stack
    sizes for the threads by half, so Phusion Passenger should use even less
    virtual memory now.
