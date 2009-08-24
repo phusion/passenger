@@ -95,7 +95,7 @@ end
 
 ##### Boost and OXT static library
 
-def define_libboost_oxt_task(output_dir, extra_compiler_flags = nil)
+def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
 	output_file = "#{output_dir}/libboost_oxt.a"
 	output_dir_base = "#{output_dir}/libboost_oxt"
 	flags = "-Iext #{extra_compiler_flags} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
@@ -136,7 +136,7 @@ def define_libboost_oxt_task(output_dir, extra_compiler_flags = nil)
 			"#{output_dir_base}/oxt/*.o")
 	end
 	
-	task :clean do
+	task "#{namespace}:clean" do
 		sh "rm -rf #{output_file} #{output_dir_base}"
 	end
 	
@@ -147,7 +147,7 @@ end
 ##### Static library for Passenger source files that are shared between
 ##### the Apache module and the Nginx helper server.
 
-def define_common_library_task(output_dir, extra_compiler_flags = nil,
+def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil,
                                with_application_pool_server_exe = false,
                                boost_oxt_library = nil,
                                extra_compiler_flags_for_server_exe = nil,
@@ -214,7 +214,7 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 		end
 	end
 	
-	task :clean do
+	task "#{namespace}:clean" do
 		sh "rm -rf #{targets.join(' ')} #{objects_output_dir}"
 	end
 	
@@ -255,9 +255,9 @@ end
 	
 	# NOTE: APACHE2_BOOST_OXT_LIBRARY is a task name, while APACHE2_COMMON_LIBRARY
 	# is an array of task names.
-	APACHE2_BOOST_OXT_LIBRARY = define_libboost_oxt_task("ext/apache2",
+	APACHE2_BOOST_OXT_LIBRARY = define_libboost_oxt_task("apache2", "ext/apache2",
 		PlatformInfo.apache2_module_cflags)
-	APACHE2_COMMON_LIBRARY    = define_common_library_task("ext/apache2",
+	APACHE2_COMMON_LIBRARY    = define_common_library_task("apache2", "ext/apache2",
 		PlatformInfo.apache2_module_cflags,
 		true, APACHE2_BOOST_OXT_LIBRARY)
 	
@@ -314,8 +314,7 @@ end
 	end
 
 	task :clean => 'apache2:clean'
-
-	# Remove generated files for the Apache 2 module
+	desc "Clean all compiled Apache 2 files"
 	task 'apache2:clean' do
 		files = [APACHE2_OBJECTS, %w(ext/apache2/mod_passenger.o
 			ext/apache2/mod_passenger.so)]
@@ -327,8 +326,8 @@ end
 
 	# NOTE: NGINX_BOOST_OXT_LIBRARY is a task name, while NGINX_COMMON_LIBRARY
 	# is an array of task names.
-	NGINX_BOOST_OXT_LIBRARY = define_libboost_oxt_task("ext/nginx")
-	NGINX_COMMON_LIBRARY    = define_common_library_task("ext/nginx")
+	NGINX_BOOST_OXT_LIBRARY = define_libboost_oxt_task("nginx", "ext/nginx")
+	NGINX_COMMON_LIBRARY    = define_common_library_task("nginx", "ext/nginx")
 	
 	desc "Build Nginx helper server"
 	task :nginx => ['ext/nginx/HelperServer', :native_support]
@@ -355,8 +354,7 @@ end
 	end
 	
 	task :clean => 'nginx:clean'
-	
-	# Remove Nginx helper server
+	desc "Clean all compiled Nginx files"
 	task 'nginx:clean' do
 		sh("rm", "-rf", "ext/nginx/HelperServer")
 	end
@@ -364,8 +362,8 @@ end
 
 ##### Unit tests
 
-	TEST_BOOST_OXT_LIBRARY = define_libboost_oxt_task("test")
-	TEST_COMMON_LIBRARY    = define_common_library_task("test",
+	TEST_BOOST_OXT_LIBRARY = define_libboost_oxt_task("test", "test")
+	TEST_COMMON_LIBRARY    = define_common_library_task("test", "test",
 		nil, true, TEST_BOOST_OXT_LIBRARY)
 	
 	TEST_COMMON_CFLAGS = "-DTESTING_SPAWN_MANAGER -DTESTING_APPLICATION_POOL " <<
@@ -571,7 +569,9 @@ end
 		end
 	end
 	
-	task :clean do
+	task :clean => 'test:clean'
+	desc "Clean all compiled test files"
+	task 'test:clean' do
 		sh("rm -rf test/oxt/oxt_test_main test/oxt/*.o test/CxxTests test/*.o")
 	end
 
@@ -641,7 +641,7 @@ Rake::RDocTask.new(:clobber_rdoc => "rdoc:clobber", :rerdoc => "rdoc:force") do 
 end
 
 
-##### Gem
+##### Packaging
 
 spec = Gem::Specification.new do |s|
 	s.platform = Gem::Platform::RUBY
@@ -735,9 +735,6 @@ Rake::Task['package:gem'].prerequisites.unshift(:doc)
 Rake::Task['package:force'].prerequisites.unshift(:doc)
 task :clobber => :'package:clean'
 
-
-##### Misc
-
 desc "Create a fakeroot, useful for building native packages"
 task :fakeroot => [:apache2, :native_support, :doc] do
 	require 'rbconfig'
@@ -801,6 +798,9 @@ task 'package:debian' => :fakeroot do
 	sh "chown -R root:root #{fakeroot}"
 	sh "dpkg -b #{fakeroot} pkg/passenger_#{PACKAGE_VERSION}-#{arch}.deb"
 end
+
+
+##### Misc
 
 desc "Run 'sloccount' to see how much code Passenger has"
 task :sloccount do
