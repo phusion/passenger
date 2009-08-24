@@ -68,7 +68,16 @@ using namespace Passenger;
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
 
-#define DEFAULT_RUBY_COMMAND "ruby"
+/*
+ * This is the main source file which interfaces directly with Apache by
+ * installing hooks. The code here can look a bit convoluted, but it'll make
+ * more sense if you read:
+ * http://httpd.apache.org/docs/2.2/developer/request.html
+ *
+ * Scroll all the way down to passenger_register_hooks to get an idea of
+ * what we're hooking into and what we do in those hooks.
+ */
+
 
 /**
  * If the HTTP client sends POST data larger than this value (in bytes),
@@ -1141,7 +1150,7 @@ public:
 		P_DEBUG("Initializing Phusion Passenger...");
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
 		
-		const char *ruby, *user;
+		const char *user;
 		string applicationPoolServerExe, spawnServer;
 		
 		/*
@@ -1156,7 +1165,6 @@ public:
 			config->getDefaultUser(), unixd_config.user_id,
 			unixd_config.group_id);
 		
-		ruby = (config->ruby != NULL) ? config->ruby : DEFAULT_RUBY_COMMAND;
 		if (config->userSwitching) {
 			user = "";
 		} else {
@@ -1190,7 +1198,7 @@ public:
 		applicationPoolServer = ptr(
 			new ApplicationPoolServer(
 				applicationPoolServerExe, spawnServer, "",
-				ruby, user)
+				config->getRuby(), user)
 		);
 		
 		ApplicationPoolPtr pool(applicationPoolServer->connect());

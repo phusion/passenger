@@ -337,6 +337,14 @@
 			 */
 			const char *tempDir;
 			
+			const char *getRuby() const {
+				if (ruby != NULL) {
+					return ruby;
+				} else {
+					return "ruby";
+				}
+			}
+			
 			const char *getDefaultUser() const {
 				if (defaultUser != NULL) {
 					return defaultUser;
