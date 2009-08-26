@@ -563,7 +563,7 @@ private:
 			}
 			
 			UPDATE_TRACE_POINT();
-			sendHeaders(r, session, mapper.getBaseURI());
+			sendHeaders(r, config, session, mapper.getBaseURI());
 			if (expectingUploadData) {
 				if (uploadDataFile != NULL) {
 					sendRequestBody(r, session, uploadDataFile);
@@ -784,12 +784,13 @@ private:
 		}
 	}
 	
-	apr_status_t sendHeaders(request_rec *r, Application::SessionPtr &session, const char *baseURI) {
+	apr_status_t sendHeaders(request_rec *r, DirConfig *config, Application::SessionPtr &session, const char *baseURI) {
 		apr_table_t *headers;
 		headers = apr_table_make(r->pool, 40);
 		if (headers == NULL) {
 			return APR_ENOMEM;
 		}
+		
 		
 		// Set standard CGI variables.
 		addHeader(headers, "SERVER_SOFTWARE", ap_get_server_version());
@@ -802,17 +803,39 @@ private:
 		addHeader(headers, "REMOTE_PORT",     apr_psprintf(r->pool, "%d", r->connection->remote_addr->port));
 		addHeader(headers, "REMOTE_USER",     r->user);
 		addHeader(headers, "REQUEST_METHOD",  r->method);
-		addHeader(headers, "REQUEST_URI",     r->unparsed_uri);
 		addHeader(headers, "QUERY_STRING",    r->args ? r->args : "");
-		if (strcmp(baseURI, "/") == 0) {
-			addHeader(headers, "SCRIPT_NAME", "");
-		} else {
-			addHeader(headers, "SCRIPT_NAME", baseURI);
-		}
 		addHeader(headers, "HTTPS",           lookupEnv(r, "HTTPS"));
 		addHeader(headers, "CONTENT_TYPE",    lookupHeader(r, "Content-type"));
 		addHeader(headers, "DOCUMENT_ROOT",   ap_document_root(r));
-		addHeader(headers, "PATH_INFO",       r->parsed_uri.path);
+		
+		if (config->allowsEncodedSlashes()) {
+			/*
+			 * Apache decodes encoded slashes in r->uri, so we must use r->unparsed_uri
+			 * if we are to support encoded slashes. However mod_rewrite doesn't change
+			 * r->unparsed_uri, so the user must make a choice between mod_rewrite
+			 * support or encoded slashes support. Sucks. :-(
+			 *
+			 * http://code.google.com/p/phusion-passenger/issues/detail?id=113
+			 * http://code.google.com/p/phusion-passenger/issues/detail?id=230
+			 */
+			addHeader(headers, "REQUEST_URI", r->unparsed_uri);
+		} else {
+			const char *request_uri;
+			if (r->args != NULL) {
+				request_uri = apr_pstrcat(r->pool, r->uri, "?", r->args, NULL);
+			} else {
+				request_uri = r->uri;
+			}
+			addHeader(headers, "REQUEST_URI", request_uri);
+		}
+		
+		if (strcmp(baseURI, "/") == 0) {
+			addHeader(headers, "SCRIPT_NAME", "");
+			addHeader(headers, "PATH_INFO", r->uri);
+		} else {
+			addHeader(headers, "SCRIPT_NAME", baseURI);
+			addHeader(headers, "PATH_INFO", r->uri + strlen(baseURI));
+		}
 		
 		// Set HTTP headers.
 		const apr_array_header_t *hdrs_arr;

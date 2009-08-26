@@ -148,6 +148,13 @@
 			Threeway useGlobalQueue;
 			
 			/**
+			 * Whether encoded slashes in URLs should be supported. This however conflicts
+			 * with mod_rewrite support because of a bug/limitation in Apache, so it's one
+			 * or the other.
+			 */
+			Threeway allowEncodedSlashes;
+			
+			/**
 			 * Throttle the number of stat() calls on files like
 			 * restart.txt to the once per given number of seconds.
 			 */
@@ -251,6 +258,10 @@
 			
 			bool usingGlobalQueue() const {
 				return useGlobalQueue == ENABLED;
+			}
+			
+			bool allowsEncodedSlashes() const {
+				return allowEncodedSlashes == ENABLED;
 			}
 			
 			unsigned long getStatThrottleRate() const {

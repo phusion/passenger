@@ -12,18 +12,15 @@ shared_examples_for "MyCook(tm) beta" do
 	end
 	
 	it "supports page caching on root/base URIs" do
-		begin
-			File.write("#{@stub.app_root}/public/index.html", "This is index.html.")
-			get('/').should == "This is index.html."
-		ensure
-			File.unlink("#{@stub.app_root}/public/index.html") rescue nil
-		end
+		File.write("#{@stub.app_root}/public/index.html", "This is index.html.")
+		get('/').should == "This is index.html."
 	end
 	
 	it "doesn't use page caching if the HTTP request is not GET" do
 		post('/welcome/cached').should =~ %r{This content should never be displayed}
 	end
 	
+	# TODO: move this to module compatibility tests
 	it "isn't interfered by Rails's default .htaccess dispatcher rules" do
 		get('/welcome/in_passenger').should == 'true'
 	end
@@ -95,19 +92,11 @@ shared_examples_for "MyCook(tm) beta" do
 		end
 	end
 	
-	it "can properly handle custom headers" do
+	it "properly handles custom headers" do
 		response = get_response('/welcome/headers_test')
 		response["X-Foo"].should == "Bar"
 	end
-
-	it "supports %2f in URIs" do
-		get('/welcome/show_id/foo%2fbar').should == 'foo/bar'
-	end
 	
-	specify "Rails's request.request_uri returns no an URI without hostname but with query_string" do
-		get('/welcome/request_uri?foo=bar%20escaped').should =~ %r{/welcome/request_uri\?foo=bar%20escaped}
-	end
-
 	it "supports restarting via restart.txt" do
 		controller = "#{@stub.app_root}/app/controllers/test_controller.rb"
 		restart_file = "#{@stub.app_root}/tmp/restart.txt"
@@ -159,6 +148,33 @@ shared_examples_for "MyCook(tm) beta" do
 	it "sets the 'Status' header" do
 		response = get_response('/nonexistant')
 		response["Status"].should == "404 Not Found"
+	end
+	
+	describe "CGI environment variables compliance" do
+		specify "REQUEST_URI contains the request URI including query string" do
+			cgi_envs = get('/welcome/cgi_environment?foo=escaped%20string')
+			cgi_envs.should include("REQUEST_URI = #{@base_uri}/welcome/cgi_environment?foo=escaped%20string\n")
+		end
+		
+		specify "PATH_INFO contains the request URI without the base URI and without the query string" do
+			cgi_envs = get('/welcome/cgi_environment?foo=escaped%20string')
+			cgi_envs.should include("PATH_INFO = /welcome/cgi_environment\n")
+		end
+		
+		specify "QUERY_STRING contains the query string" do
+			cgi_envs = get('/welcome/cgi_environment?foo=escaped%20string')
+			cgi_envs.should include("QUERY_STRING = foo=escaped%20string\n")
+		end
+		
+		specify "QUERY_STRING must be present even when there's no query string" do
+			cgi_envs = get('/welcome/cgi_environment')
+			cgi_envs.should include("QUERY_STRING = \n")
+		end
+		
+		specify "SCRIPT_NAME contains the base URI, or the empty string if the app is deployed on the root URI" do
+			cgi_envs = get('/welcome/cgi_environment')
+			cgi_envs.should include("SCRIPT_NAME = #{@base_uri}\n")
+		end
 	end
 	
 	if Process.uid == 0

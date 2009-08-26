@@ -12,7 +12,7 @@ require 'integration_tests/hello_world_wsgi_spec'
 # TODO: test the 'RailsUserSwitching' and 'RailsDefaultUser' option.
 # TODO: test custom page caching directory
 
-describe "mod_passenger running in Apache 2" do
+describe "Apache 2 module" do
 	include TestHelper
 	
 	before :all do
@@ -33,6 +33,7 @@ describe "mod_passenger running in Apache 2" do
 	describe ": MyCook(tm) beta running on root URI" do
 		before :all do
 			@web_server_supports_chunked_transfer_encoding = true
+			@base_uri = ""
 			@server = "http://passenger.test:#{@apache2.port}"
 			@apache2 << "RailsMaxPoolSize 1"
 			@stub = setup_rails_stub('mycook', 'tmp.mycook')
@@ -97,18 +98,12 @@ describe "mod_passenger running in Apache 2" do
 				end
 			end
 		end
-		
-		it "supports environment variable passing through mod_env" do
-			File.write("#{@stub.app_root}/public/.htaccess", 'SetEnv FOO "Foo Bar!"')
-			File.touch("#{@stub.app_root}/tmp/restart.txt")
-			get('/welcome/environment').should =~ /FOO = Foo Bar\!/
-			get('/welcome/cgi_environment').should =~ /FOO = Foo Bar\!/
-		end
 	end
 	
 	describe ": MyCook(tm) beta running in a sub-URI" do
 		before :all do
 			@web_server_supports_chunked_transfer_encoding = true
+			@base_uri = "/mycook"
 			@stub = setup_rails_stub('mycook')
 			FileUtils.rm_rf('tmp.webdir')
 			FileUtils.mkdir_p('tmp.webdir')
@@ -128,6 +123,7 @@ describe "mod_passenger running in Apache 2" do
 		
 		before :each do
 			@server = "http://passenger.test:#{@apache2.port}/mycook"
+			@stub.reset
 		end
 		
 		it_should_behave_like "MyCook(tm) beta"
@@ -138,13 +134,65 @@ describe "mod_passenger running in Apache 2" do
 		end
 	end
 	
+	describe "compatibility with other modules" do
+		before :all do
+			@apache2 << "RailsMaxPoolSize 1"
+			
+			@mycook = setup_rails_stub('mycook', File.expand_path('tmp.mycook'))
+			@mycook_url_root = "http://1.passenger.test:#{@apache2.port}"
+			@apache2.set_vhost("1.passenger.test", "#{@mycook.app_root}/public") do |vhost|
+				vhost << "RewriteEngine on"
+				vhost << "RewriteRule ^/rewritten_welcome$ /welcome [PT,QSA,L]"
+				vhost << "RewriteRule ^/rewritten_cgi_environment$ /welcome/cgi_environment [PT,QSA,L]"
+			end
+			@apache2.start
+		end
+		
+		after :all do
+			@mycook.destroy
+		end
+		
+		before :each do
+			@mycook.reset
+			@server = @mycook_url_root
+		end
+		
+		it "supports environment variable passing through mod_env" do
+			File.write("#{@mycook.app_root}/public/.htaccess", 'SetEnv FOO "Foo Bar!"')
+			File.touch("#{@mycook.app_root}/tmp/restart.txt")  # Activate ENV changes.
+			get('/welcome/environment').should =~ /FOO = Foo Bar\!/
+			get('/welcome/cgi_environment').should =~ /FOO = Foo Bar\!/
+		end
+		
+		it "supports mod_rewrite in the virtual host block" do
+			get('/rewritten_welcome').should =~ /Welcome to MyCook/
+			cgi_envs = get('/rewritten_cgi_environment?foo=bar+baz')
+			cgi_envs.should include("REQUEST_URI = /welcome/cgi_environment?foo=bar+baz\n")
+			cgi_envs.should include("PATH_INFO = /welcome/cgi_environment\n")
+		end
+		
+		it "supports mod_rewrite in .htaccess" do
+			File.write("#{@mycook.app_root}/public/.htaccess", %Q{
+				RewriteEngine on
+				RewriteRule ^htaccess_welcome$ welcome [PT,QSA,L]
+				RewriteRule ^htaccess_cgi_environment$ welcome/cgi_environment [PT,QSA,L]
+			})
+			get('/htaccess_welcome').should =~ /Welcome to MyCook/
+			cgi_envs = get('/htaccess_cgi_environment?foo=bar+baz')
+			cgi_envs.should include("REQUEST_URI = /welcome/cgi_environment?foo=bar+baz\n")
+			cgi_envs.should include("PATH_INFO = /welcome/cgi_environment\n")
+		end
+	end
+	
 	describe "configuration options" do
 		before :all do
 			@apache2 << "PassengerMaxPoolSize 3"
 			
 			@mycook = setup_rails_stub('mycook', File.expand_path("tmp.mycook"))
 			@mycook_url_root = "http://1.passenger.test:#{@apache2.port}"
-			@apache2.set_vhost('1.passenger.test', "#{@mycook.app_root}/public")
+			@apache2.set_vhost('1.passenger.test', "#{@mycook.app_root}/public") do |vhost|
+				vhost << "AllowEncodedSlashes on"
+			end
 			@apache2.set_vhost('2.passenger.test', "#{@mycook.app_root}/public") do |vhost|
 				vhost << "RailsAutoDetect off"
 			end
@@ -405,7 +453,14 @@ describe "mod_passenger running in Apache 2" do
 				get('/').should =~ /Welcome to MyCook/
 			ensure
 				FileUtils.rm_rf(orig_mycook_app_root)
+				@mycook.move(orig_mycook_app_root)
 			end
+		end
+		
+		it "supports encoded slashes in the URL if AllowEncodedSlashes is turned on" do
+			@server = @mycook_url_root
+			File.write("#{@mycook.app_root}/public/.htaccess", "PassengerAllowEncodedSlashes on")
+			get('/welcome/show_id/foo%2fbar').should == 'foo/bar'
 		end
 		
 		####################################

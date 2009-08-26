@@ -95,6 +95,7 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->highPerformance = DirConfig::UNSET;
 	config->useGlobalQueue = DirConfig::UNSET;
 	config->resolveSymlinksInDocRoot = DirConfig::UNSET;
+	config->allowEncodedSlashes = DirConfig::UNSET;
 	config->statThrottleRate = 0;
 	config->statThrottleRateSpecified = false;
 	config->restartDir = NULL;
@@ -141,6 +142,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->restartDir = (add->restartDir == NULL) ? base->restartDir : add->restartDir;
 	config->uploadBufferDir = (add->uploadBufferDir == NULL) ? base->uploadBufferDir : add->uploadBufferDir;
 	config->resolveSymlinksInDocRoot = (add->resolveSymlinksInDocRoot == DirConfig::UNSET) ? base->resolveSymlinksInDocRoot : add->resolveSymlinksInDocRoot;
+	config->allowEncodedSlashes = (add->allowEncodedSlashes == DirConfig::UNSET) ? base->allowEncodedSlashes : add->allowEncodedSlashes;
 	/*************************************/
 	return config;
 }
@@ -429,6 +431,13 @@ cmd_passenger_resolve_symlinks_in_document_root(cmd_parms *cmd, void *pcfg, int 
 	return NULL;
 }
 
+static const char *
+cmd_passenger_allow_encoded_slashes(cmd_parms *cmd, void *pcfg, int arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->allowEncodedSlashes = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
+	return NULL;
+}
+
 
 /*************************************************
  * Rails-specific settings
@@ -437,8 +446,16 @@ cmd_passenger_resolve_symlinks_in_document_root(cmd_parms *cmd, void *pcfg, int 
 static const char *
 cmd_rails_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->railsBaseURIs.insert(arg);
-	return NULL;
+	if (strlen(arg) == 0) {
+		return "RailsBaseURI may not be set to the empty string";
+	} else if (arg[0] != '/') {
+		return "RailsBaseURI must start with a slash (/)";
+	} else if (arg[strlen(arg) - 1] == '/') {
+		return "RailsBaseURI must not end with a slash (/)";
+	} else {
+		config->railsBaseURIs.insert(arg);
+		return NULL;
+	}
 }
 
 static const char *
@@ -519,8 +536,16 @@ cmd_rails_app_spawner_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_rack_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->rackBaseURIs.insert(arg);
-	return NULL;
+	if (strlen(arg) == 0) {
+		return "RackBaseURI may not be set to the empty string";
+	} else if (arg[0] != '/') {
+		return "RackBaseURI must start with a slash (/)";
+	} else if (arg[strlen(arg) - 1] == '/') {
+		return "RackBaseURI must not end with a slash (/)";
+	} else {
+		config->rackBaseURIs.insert(arg);
+		return NULL;
+	}
 }
 
 static const char *
@@ -659,6 +684,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Whether to resolve symlinks in the DocumentRoot path"),
+	AP_INIT_FLAG("PassengerAllowEncodedSlashes",
+		(FlagFunc) cmd_passenger_allow_encoded_slashes,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Whether to support encoded slashes in the URL"),
 	
 	/*****************************/
 

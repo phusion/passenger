@@ -10,6 +10,21 @@ Release 2.2.5
    until a timeout occurs. In order to solve this problem, Phusion Passenger
    now buffers small file upload in memory. Bug #356.
 
+ * [Apache] Fixed support for mod_rewrite passthrough rules
+   mod_rewrite passthrough rules were not properly supported because of a bug
+   fix for supporting encoded slashes (%2f) in URLs. Unfortunately, due to
+   bugs/limitations in Apache, we can support either encoded slashes or
+   mod_rewrite passthrough rules, but not both; supporting one will break the
+   other.
+
+   Support for mod_rewrite passthrough rules is now enabled by default; that
+   is, support for encoded slashes is disabled by default. A new configuration
+   option, "PassengerAllowEncodedSlashes", has been added. Turning this option
+   on will enable support for encoded slashes and disable support for
+   mod_rewrite passthrough rules.
+
+   Issue #113 and issue #230.
+
  * [Apache] Added a configuration option for resolving symlinks in the document
    root path Phusion Passenger 2.2.0 and higher no longer resolve symlinks in
    the document root path in order to properly support Capistrano-style
@@ -94,6 +109,10 @@ Release 2.2.5
 
    Bug #359.
  
+ * Fixed a few bugs in WSGI compliance
+   PATH_INFO is supposed to be set to the request URI, but without the query
+   string and without the base URI. This has been fixed: bug #360.
+
  * The Users Guide for Apache now mentions something about correct permissions
    for application directories.
  * Fixed compilation problems on IA-64 (bug #118). We also reduced the stack
