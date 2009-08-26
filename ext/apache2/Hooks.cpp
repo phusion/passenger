@@ -1105,7 +1105,14 @@ private:
 		}
 		
 		if (contentLength != NULL && ftell(tempFile->handle) != atol(contentLength)) {
-			throw IOException("The HTTP client sent incomplete upload data.");
+			string message = "It looks like the browser did not finish the file upload: "
+				"it said it will upload ";
+			message.append(contentLength);
+			message.append(" bytes, but it closed the connection after sending ");
+			message.append(toString(ftell(tempFile->handle)));
+			message.append(" bytes. The user probably clicked Stop in the browser "
+				"or his Internet connection stalled.");
+			throw IOException(message);
 		}
 		return tempFile;
 	}
@@ -1139,7 +1146,14 @@ private:
 		}
 		
 		if (contentLength != NULL && buffer.size() != l_contentLength) {
-			throw IOException("The HTTP client sent incomplete upload data.");
+			string message = "It looks like the browser did not finish the file upload: "
+				"it said it will upload ";
+			message.append(contentLength);
+			message.append(" bytes, but it closed the connection after sending ");
+			message.append(toString(buffer.size()));
+			message.append(" bytes. The user probably clicked Stop in the browser "
+				"or his Internet connection stalled.");
+			throw IOException(message);
 		}
 	}
 	
