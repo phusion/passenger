@@ -69,6 +69,9 @@ Release 2.2.5
            end
        }
 
+ * [Nginx] Installer now installs Nginx 0.7.61 by default
+   Previously it installed 0.6.37 by default.
+
  * [Nginx] Fixed the installer's --extra-configure-flags flag when combined with --auto-download
    Arguments passed to --extra-configure-flags were not being passed to the
    Nginx configure script when --auto-download is given. This has been
