@@ -1298,14 +1298,19 @@ public:
 				 */
 				return OK;
 			} else {
-				// core.c's map_to_storage hook will transform the filename, as
-				// described by saveOriginalFilename(). Here we restore the
-				// original filename.
+				/* core.c's map_to_storage hook will transform the filename, as
+				 * described by saveOriginalFilename(). Here we restore the
+				 * original filename.
+				 */
 				const char *filename = apr_table_get(r->notes, "Phusion Passenger: original filename");
 				if (filename == NULL) {
 					return DECLINED;
 				} else {
 					prepareRequest(r, config, filename);
+					/* Always return declined in order to let other modules'
+					 * hooks run, regardless of what prepareRequest()'s
+					 * result is.
+					 */
 					return DECLINED;
 				}
 			}
