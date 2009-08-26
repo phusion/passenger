@@ -1190,14 +1190,6 @@ public:
 		const char *user;
 		string applicationPoolServerExe, spawnServer;
 		
-		/*
-		 * As described in the comment in init_module, upon (re)starting
-		 * Apache, the Hooks constructor is called twice. We unset
-		 * PASSENGER_INSTANCE_TEMP_DIR before calling createPassengerTempDir()
-		 * because we want the temp directory's name to contain the PID
-		 * of the process in which the Hooks constructor was called for
-		 * the second time.
-		 */
 		createPassengerTempDir(config->getTempDir(), config->userSwitching,
 			config->getDefaultUser(), unixd_config.user_id,
 			unixd_config.group_id);
@@ -1273,7 +1265,7 @@ public:
 	 * A is top-most directory that exists. B is the first filename piece that
 	 * normally follows A. For example, suppose that a website's DocumentRoot
 	 * is /website, on server http://test.com/. Suppose that there's also a
-	 * directory /website/images.
+	 * directory /website/images. No other files or directories exist in /website.
 	 * 
 	 * If we access:                    then r->filename will be:
 	 * http://test.com/foo/bar          /website/foo
