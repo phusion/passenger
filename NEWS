@@ -116,6 +116,7 @@ Release 2.2.5
    PATH_INFO is supposed to be set to the request URI, but without the query
    string and without the base URI. This has been fixed: bug #360.
 
+ * Fixed some Ruby 1.9-specific crashes caused by encoding issues. Bug #354.
  * The Users Guide for Apache now mentions something about correct permissions
    for application directories.
  * Fixed compilation problems on IA-64 (bug #118). We also reduced the stack
