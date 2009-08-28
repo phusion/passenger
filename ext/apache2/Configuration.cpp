@@ -450,7 +450,7 @@ cmd_rails_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 		return "RailsBaseURI may not be set to the empty string";
 	} else if (arg[0] != '/') {
 		return "RailsBaseURI must start with a slash (/)";
-	} else if (arg[strlen(arg) - 1] == '/') {
+	} else if (strlen(arg) > 1 && arg[strlen(arg) - 1] == '/') {
 		return "RailsBaseURI must not end with a slash (/)";
 	} else {
 		config->railsBaseURIs.insert(arg);
@@ -540,7 +540,7 @@ cmd_rack_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 		return "RackBaseURI may not be set to the empty string";
 	} else if (arg[0] != '/') {
 		return "RackBaseURI must start with a slash (/)";
-	} else if (arg[strlen(arg) - 1] == '/') {
+	} else if (strlen(arg) > 1 && arg[strlen(arg) - 1] == '/') {
 		return "RackBaseURI must not end with a slash (/)";
 	} else {
 		config->rackBaseURIs.insert(arg);
