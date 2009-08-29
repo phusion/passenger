@@ -300,7 +300,7 @@ private
 		if File.exist?('config/preinitializer.rb')
 			require 'config/preinitializer'
 		end
-		require 'config/environment'
+		require File.expand_path('config/environment')
 		if ActionController::Base.page_cache_directory.blank?
 			ActionController::Base.page_cache_directory = "#{RAILS_ROOT}/public"
 		end
@@ -387,3 +387,4 @@ end
 
 end # module Railz
 end # module PhusionPassenger
+
