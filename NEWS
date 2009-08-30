@@ -122,6 +122,7 @@ Release 2.2.5
  * Fixed compilation problems on IA-64 (bug #118). We also reduced the stack
    sizes for the threads by half, so Phusion Passenger should use even less
    virtual memory now.
+ * Fixed compilation problems on Linux systems with ARM CPU.
  * Fixed a few compatibility problems with 64-bit OpenBSD.
  * Fixed a few typos and minor bugs.
 

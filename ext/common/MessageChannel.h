@@ -328,7 +328,7 @@ public:
 		struct msghdr msg;
 		struct iovec vec;
 		char dummy[1];
-		#if defined(__APPLE__) || defined(__SOLARIS__)
+		#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
 			struct {
 				struct cmsghdr header;
 				int fd;
@@ -356,7 +356,7 @@ public:
 		control_header = CMSG_FIRSTHDR(&msg);
 		control_header->cmsg_level = SOL_SOCKET;
 		control_header->cmsg_type  = SCM_RIGHTS;
-		#if defined(__APPLE__) || defined(__SOLARIS__)
+		#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
 			control_header->cmsg_len = sizeof(control_data);
 			control_data.fd = fileDescriptor;
 		#else
@@ -504,7 +504,7 @@ public:
 		struct msghdr msg;
 		struct iovec vec;
 		char dummy[1];
-		#if defined(__APPLE__) || defined(__SOLARIS__)
+		#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
 			// File descriptor passing macros (CMSG_*) seem to be broken
 			// on 64-bit MacOS X. This structure works around the problem.
 			struct {
@@ -543,7 +543,7 @@ public:
 		 || control_header->cmsg_type  != SCM_RIGHTS) {
 			throw IOException("No valid file descriptor received.");
 		}
-		#if defined(__APPLE__) || defined(__SOLARIS__)
+		#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
 			return control_data.fd;
 		#else
 			return *((int *) CMSG_DATA(control_header));
