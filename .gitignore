@@ -20,6 +20,7 @@ doc/rdoc
 doc/cxxapi
 doc/*.html
 test/test.log
+test/apache2.log
 test/config.yml
 test/coverage
 test/CxxTests

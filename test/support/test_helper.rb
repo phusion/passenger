@@ -16,6 +16,25 @@ module TestHelper
 		def initialize(name, app_root)
 			@name = name
 			@app_root = app_root
+			FileUtils.rm_rf(app_root)
+			FileUtils.mkdir_p(app_root)
+			copy_stub_contents
+			system("chmod", "-R", "a+rw", app_root)
+		end
+		
+		def reset
+			files = Dir["#{@app_root}/*"]
+			files |= Dir["#{@app_root}/.*"]
+			files.delete("#{@app_root}/.")
+			files.delete("#{@app_root}/..")
+			FileUtils.rm_rf(files)
+			copy_stub_contents
+			system("chmod", "-R", "a+rw", app_root)
+		end
+		
+		def move(new_app_root)
+			File.rename(@app_root, new_app_root)
+			@app_root = new_app_root
 		end
 		
 		def destroy
@@ -25,13 +44,14 @@ module TestHelper
 		def public_file(name)
 			return File.read("#{@app_root}/public/#{name}")
 		end
+	
+	private
+		def copy_stub_contents
+			FileUtils.cp_r("stub/#{@name}/.", @app_root)
+		end
 	end
 	
 	def setup_stub(name, dir = STUB_TEMP_DIR)
-		FileUtils.rm_rf(dir)
-		FileUtils.mkdir_p(dir)
-		FileUtils.cp_r("stub/#{name}/.", dir)
-		system("chmod", "-R", "a+rw", dir)
 		return Stub.new(name, dir)
 	end
 	
@@ -44,6 +64,10 @@ module TestHelper
 	end
 	
 	class RailsStub < Stub
+		def initialize(name, app_root)
+			super("rails_apps/#{name}", app_root)
+		end
+		
 		def environment_rb
 			return "#{@app_root}/config/environment.rb"
 		end
@@ -56,14 +80,15 @@ module TestHelper
 		def dont_use_vendor_rails
 			FileUtils.rm_rf("#{@app_root}/vendor/rails")
 		end
+		
+	private
+		def copy_stub_contents
+			super
+			FileUtils.mkdir_p("#{@app_root}/log")
+		end
 	end
 	
 	def setup_rails_stub(name, dir = STUB_TEMP_DIR)
-		FileUtils.rm_rf(dir)
-		FileUtils.mkdir_p(dir)
-		FileUtils.cp_r("stub/rails_apps/#{name}/.", dir)
-		FileUtils.mkdir_p("#{dir}/log")
-		system("chmod", "-R", "a+rw", dir)
 		return RailsStub.new(name, dir)
 	end
 	
@@ -119,6 +144,7 @@ module TestHelper
 	def check_hosts_configuration
 		begin
 			ok = Resolv.getaddress("passenger.test") == "127.0.0.1"
+			ok = ok && Resolv.getaddress("1.passenger.test") == "127.0.0.1"
 		rescue Resolv::ResolvError, ArgumentError
 			# There's a bug in Ruby 1.8.6-p287's resolv.rb library, which causes
 			# an ArgumentError to be raised instead of ResolvError when resolving
@@ -129,10 +155,13 @@ module TestHelper
 			message = "To run the integration test, you must update " <<
 				"your hosts file.\n" <<
 				"Please add these to your /etc/hosts:\n\n" <<
-				"  127.0.0.1 passenger.test\n" <<
-				"  127.0.0.1 mycook.passenger.test\n" <<
-				"  127.0.0.1 zsfa.passenger.test\n" <<
-				"  127.0.0.1 norails.passenger.test\n"
+				"127.0.0.1 passenger.test\n" <<
+				"127.0.0.1 mycook.passenger.test\n" <<
+				"127.0.0.1 zsfa.passenger.test\n" <<
+				"127.0.0.1 norails.passenger.test\n" <<
+				"127.0.0.1 1.passenger.test 2.passenger.test 3.passenger.test\n" <<
+				"127.0.0.1 4.passenger.test 5.passenger.test 6.passenger.test\n" <<
+				"127.0.0.1 7.passenger.test 8.passenger.test 9.passenger.test\n"
 			if RUBY_PLATFORM =~ /darwin/
 				message << "\n\nThen run:\n\n" <<
 					"  lookupd -flushcache      (OS X Tiger)\n\n" <<

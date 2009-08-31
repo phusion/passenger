@@ -36,7 +36,7 @@ include PlatformInfo
 class Installer < PhusionPassenger::AbstractInstaller
 	include PhusionPassenger
 	
-	NGINX_VERSION = "0.6.37"
+	NGINX_VERSION = "0.7.61"
 	
 	def dependencies
 		result = [
@@ -77,7 +77,11 @@ class Installer < PhusionPassenger::AbstractInstaller
 				exit(1)
 			end
 			nginx_prefix = ask_for_nginx_install_prefix
-			extra_nginx_configure_flags = nil
+			if @extra_configure_flags == "none"
+				extra_nginx_configure_flags = nil
+			else
+				extra_nginx_configure_flags = @extra_configure_flags
+			end
 		else
 			nginx_source_dir = ask_for_nginx_source_dir
 			nginx_prefix = ask_for_nginx_install_prefix
@@ -392,7 +396,10 @@ private
 					f.puts("#include <pcre.h>")
 				end
 				Dir.chdir('/tmp') do
-					system("(gcc -c passenger-check.c) >/dev/null 2>/dev/null")
+					# Nginx checks for PCRE in multiple places...
+					system("(gcc -I/usr/local/include -I/usr/include/pcre " <<
+						"-I/usr/pkg/include -I/opt/local/include " <<
+						"-c passenger-check.c) >/dev/null 2>/dev/null")
 				end
 			ensure
 				File.unlink('/tmp/passenger-check.c') rescue nil

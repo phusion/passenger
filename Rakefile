@@ -95,7 +95,7 @@ end
 
 ##### Boost and OXT static library
 
-def define_libboost_oxt_task(output_dir, extra_compiler_flags = nil)
+def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
 	output_file = "#{output_dir}/libboost_oxt.a"
 	output_dir_base = "#{output_dir}/libboost_oxt"
 	flags = "-Iext #{extra_compiler_flags} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
@@ -136,7 +136,7 @@ def define_libboost_oxt_task(output_dir, extra_compiler_flags = nil)
 			"#{output_dir_base}/oxt/*.o")
 	end
 	
-	task :clean do
+	task "#{namespace}:clean" do
 		sh "rm -rf #{output_file} #{output_dir_base}"
 	end
 	
@@ -147,7 +147,7 @@ end
 ##### Static library for Passenger source files that are shared between
 ##### the Apache module and the Nginx helper server.
 
-def define_common_library_task(output_dir, extra_compiler_flags = nil,
+def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil,
                                with_application_pool_server_exe = false,
                                boost_oxt_library = nil,
                                extra_compiler_flags_for_server_exe = nil,
@@ -218,7 +218,7 @@ def define_common_library_task(output_dir, extra_compiler_flags = nil,
 		end
 	end
 	
-	task :clean do
+	task "#{namespace}:clean" do
 		sh "rm -rf #{targets.join(' ')} #{objects_output_dir}"
 	end
 	
@@ -259,9 +259,9 @@ end
 	
 	# NOTE: APACHE2_BOOST_OXT_LIBRARY is a task name, while APACHE2_COMMON_LIBRARY
 	# is an array of task names.
-	APACHE2_BOOST_OXT_LIBRARY = define_libboost_oxt_task("ext/apache2",
+	APACHE2_BOOST_OXT_LIBRARY = define_libboost_oxt_task("apache2", "ext/apache2",
 		PlatformInfo.apache2_module_cflags)
-	APACHE2_COMMON_LIBRARY    = define_common_library_task("ext/apache2",
+	APACHE2_COMMON_LIBRARY    = define_common_library_task("apache2", "ext/apache2",
 		PlatformInfo.apache2_module_cflags,
 		true, APACHE2_BOOST_OXT_LIBRARY)
 	
@@ -318,8 +318,7 @@ end
 	end
 
 	task :clean => 'apache2:clean'
-
-	# Remove generated files for the Apache 2 module
+	desc "Clean all compiled Apache 2 files"
 	task 'apache2:clean' do
 		files = [APACHE2_OBJECTS, %w(ext/apache2/mod_passenger.o
 			ext/apache2/mod_passenger.so)]
@@ -331,8 +330,8 @@ end
 
 	# NOTE: NGINX_BOOST_OXT_LIBRARY is a task name, while NGINX_COMMON_LIBRARY
 	# is an array of task names.
-	NGINX_BOOST_OXT_LIBRARY = define_libboost_oxt_task("ext/nginx")
-	NGINX_COMMON_LIBRARY    = define_common_library_task("ext/nginx")
+	NGINX_BOOST_OXT_LIBRARY = define_libboost_oxt_task("nginx", "ext/nginx")
+	NGINX_COMMON_LIBRARY    = define_common_library_task("nginx", "ext/nginx")
 	
 	desc "Build Nginx helper server"
 	task :nginx => ['ext/nginx/HelperServer', :native_support]
@@ -360,8 +359,7 @@ end
 	end
 	
 	task :clean => 'nginx:clean'
-	
-	# Remove Nginx helper server
+	desc "Clean all compiled Nginx files"
 	task 'nginx:clean' do
 		sh("rm", "-rf", "ext/nginx/HelperServer")
 	end
@@ -369,8 +367,8 @@ end
 
 ##### Unit tests
 
-	TEST_BOOST_OXT_LIBRARY = define_libboost_oxt_task("test")
-	TEST_COMMON_LIBRARY    = define_common_library_task("test",
+	TEST_BOOST_OXT_LIBRARY = define_libboost_oxt_task("test", "test")
+	TEST_COMMON_LIBRARY    = define_common_library_task("test", "test",
 		nil, false, TEST_BOOST_OXT_LIBRARY)
 	
 	TEST_COMMON_CFLAGS = "-DTESTING_APPLICATION_POOL " <<
@@ -600,7 +598,9 @@ end
 		end
 	end
 	
-	task :clean do
+	task :clean => 'test:clean'
+	desc "Clean all compiled test files"
+	task 'test:clean' do
 		sh("rm -rf test/oxt/oxt_test_main test/oxt/*.o test/CxxTests test/*.o")
 	end
 
@@ -670,7 +670,7 @@ Rake::RDocTask.new(:clobber_rdoc => "rdoc:clobber", :rerdoc => "rdoc:force") do 
 end
 
 
-##### Gem
+##### Packaging
 
 spec = Gem::Specification.new do |s|
 	s.platform = Gem::Platform::RUBY
@@ -763,9 +763,6 @@ Rake::Task['package'].prerequisites.unshift(:doc)
 Rake::Task['package:gem'].prerequisites.unshift(:doc)
 Rake::Task['package:force'].prerequisites.unshift(:doc)
 task :clobber => :'package:clean'
-
-
-##### Misc
 
 desc "Create a fakeroot, useful for building native packages"
 task :fakeroot => [:apache2, :native_support, :doc] do
@@ -862,4 +859,89 @@ task :sloccount do
 	ensure
 		system "rm -rf #{tmpdir}"
 	end
+end
+
+desc "Convert the NEWS items for the latest release to HTML"
+task :news_as_html do
+	# The text is in the following format:
+	#
+	#   Release x.x.x
+	#   -------------
+	#
+	#    * Text.
+	#    * More text.
+	# * A header.
+	#      With yet more text.
+	#   
+	#   Release y.y.y
+	#   -------------
+	#   .....
+	require 'cgi'
+	contents = File.read("NEWS")
+	
+	# We're only interested in the latest release, so extract the text for that.
+	contents =~ /\A(Release.*?)^(Release|Older releases)/m
+	
+	# Now split the text into individual items.
+	items = $1.split(/^ \*/)
+	items.shift  # Delete the 'Release x.x.x' header.
+	
+	puts "<dl>"
+	items.each do |item|
+		item.strip!
+		
+		# Does this item have a header? It does if it consists of multiple lines, and
+		# the next line is capitalized.
+		lines = item.split("\n")
+		if lines.size > 1 && lines[1].strip[0..0] == lines[1].strip[0..0].upcase
+			puts "<dt>#{lines[0]}</dt>"
+			lines.shift
+			item = lines.join("\n")
+			item.strip!
+		end
+		
+		# Split into paragraphs. Empty lines are paragraph dividers.
+		paragraphs = item.split(/^ *$/m)
+		
+		def format_paragraph(text)
+			# Get rid of newlines: convert them into spaces.
+			text.gsub!("\n", ' ')
+			while text.index('  ')
+				text.gsub!('  ', ' ')
+			end
+			
+			# Auto-link to issue tracker.
+			text.gsub!(/(bug|issue) #(\d+)/i) do
+				url = "http://code.google.com/p/phusion-passenger/issues/detail?id=#{$2}"
+				%Q(<{a href="#{url}"}>#{$1} ##{$2}<{/a}>)
+			end
+			
+			text.strip!
+			text = CGI.escapeHTML(text)
+			text.gsub!(%r(&lt;\{(.*?)\}&gt;(.*?)&lt;\{/(.*?)\}&gt;)) do
+				"<#{CGI.unescapeHTML $1}>#{$2}</#{CGI.unescapeHTML $3}>"
+			end
+			text
+		end
+		
+		if paragraphs.size > 1
+			STDOUT.write("<dd>")
+			paragraphs.each do |paragraph|
+				paragraph.gsub!(/\A\n+/, '')
+				paragraph.gsub!(/\n+\Z/, '')
+				
+				if (paragraph =~ /\A       /)
+					# Looks like a code block.
+					paragraph.gsub!(/^       /m, '')
+					puts "<pre lang=\"ruby\">#{CGI.escapeHTML(paragraph)}</pre>"
+				else
+					puts "<p>#{format_paragraph(paragraph)}</p>"
+				end
+			end
+			STDOUT.write("</dd>\n")
+		else
+			puts "<dd>#{format_paragraph(item)}</dd>"
+		end
+	end
+	puts "</dl>"
 end

@@ -139,7 +139,7 @@ struct ClientDisconnectedException { };
 class Client {
 private:
 	/** The client thread stack size in bytes. */
-	static const int CLIENT_THREAD_STACK_SIZE = 1024 * 128;
+	static const int CLIENT_THREAD_STACK_SIZE = 1024 * 64;
 	
 	/** The client number for this Client object, assigned by Server. */
 	unsigned int number;

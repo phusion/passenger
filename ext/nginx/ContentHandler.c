@@ -288,14 +288,16 @@ create_request(ngx_http_request_t *r)
     /* +1 for trailing null */
     len = sizeof("CONTENT_LENGTH") + ngx_strlen(buf) + 1;
     
-    /* DOCUMENT_ROOT, SCRIPT_NAME and base URI */
+    /* DOCUMENT_ROOT, SCRIPT_NAME, RAILS_RELATIVE_URL_ROOT and PATH_INFO. */
     len += sizeof("DOCUMENT_ROOT") + context->public_dir.len + 1;
     if (context->base_uri.len > 0) {
         len += sizeof("SCRIPT_NAME") + context->base_uri.len + 1;
         len += sizeof("RAILS_RELATIVE_URL_ROOT") +
                context->base_uri.len + 1;
+        len += sizeof("PATH_INFO") + r->uri.len - context->base_uri.len + 1;
     } else {
         len += sizeof("SCRIPT_NAME") + sizeof("");
+        len += sizeof("PATH_INFO") + r->uri.len + 1;
     }
     
     /* Various other HTTP headers. */
@@ -445,7 +447,7 @@ create_request(ngx_http_request_t *r)
     b->last = ngx_snprintf(b->last, 10, "%ui", content_length);
     *b->last++ = (u_char) 0;
     
-    /* Build DOCUMENT_ROOT, SCRIPT_NAME and base URI. */
+    /* Build DOCUMENT_ROOT, SCRIPT_NAME, RAILS_RELATIVE_URL_ROOT and PATH_INFO. */
     b->last = ngx_copy(b->last, "DOCUMENT_ROOT", sizeof("DOCUMENT_ROOT"));
     b->last = ngx_copy(b->last, context->public_dir.data,
                        context->public_dir.len + 1);
@@ -459,9 +461,18 @@ create_request(ngx_http_request_t *r)
                            sizeof("RAILS_RELATIVE_URL_ROOT"));
         b->last = ngx_copy(b->last, context->base_uri.data,
                            context->base_uri.len + 1);
+        
+        b->last = ngx_copy(b->last, "PATH_INFO", sizeof("PATH_INFO"));
+        b->last = ngx_copy(b->last, r->uri.data + context->base_uri.len,
+                           r->uri.len - context->base_uri.len);
+        b->last = ngx_copy(b->last, "", 1);
     } else {
         b->last = ngx_copy(b->last, "SCRIPT_NAME", sizeof("SCRIPT_NAME"));
         b->last = ngx_copy(b->last, "", sizeof(""));
+        
+        b->last = ngx_copy(b->last, "PATH_INFO", sizeof("PATH_INFO"));
+        b->last = ngx_copy(b->last, r->uri.data, r->uri.len);
+        b->last = ngx_copy(b->last, "", 1);
     }
     
     /* Various other HTTP headers. */
@@ -469,7 +480,8 @@ create_request(ngx_http_request_t *r)
      && r->headers_in.content_type->value.len > 0) {
         b->last = ngx_copy(b->last, "CONTENT_TYPE", sizeof("CONTENT_TYPE"));
         b->last = ngx_copy(b->last, r->headers_in.content_type->value.data,
-                           r->headers_in.content_type->value.len + 1);
+                           r->headers_in.content_type->value.len);
+        b->last = ngx_copy(b->last, "", 1);
     }
     
     #if (NGX_HTTP_SSL)

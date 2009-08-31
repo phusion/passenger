@@ -137,6 +137,8 @@ syscalls::bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
 int
 syscalls::connect(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen) {
 	int ret;
+	// FIXME: I don't think this is entirely correct.
+	// http://www.madore.org/~david/computers/connect-intr.html
 	CHECK_INTERRUPTION(
 		ret == -1,
 		ret = ::connect(sockfd, serv_addr, addrlen);

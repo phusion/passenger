@@ -334,7 +334,7 @@ public:
  */
 class Client {
 private:
-	static const int CLIENT_THREAD_STACK_SIZE = 1024 * 128;
+	static const int CLIENT_THREAD_STACK_SIZE = 1024 * 64;
 
 	/** The Server that this Client object belongs to. */
 	Server &server;
