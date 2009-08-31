@@ -36,6 +36,8 @@ Release 2.2.5
    PassengerResolveSymlinksInDocumentRoot, has been added to allow reverting
    back to the old behavior.
 
+   Patch contributed by Locaweb (http://www.locaweb.com.br/).
+
  * [Apache] mod_env variables are now also passed through CGI environment headers
    Prior to version 2.2.3, environment variables set by mod_env are passed to
    the application as CGI environment headers, not through Ruby's ENV variable.
@@ -117,6 +119,8 @@ Release 2.2.5
    string and without the base URI. This has been fixed: bug #360.
 
  * Fixed some Ruby 1.9-specific crashes caused by encoding issues. Bug #354.
+ * Fixed loading of config/environment.rb on Ruby 1.9.2, because Ruby 1.9.2
+   no longer has "." in the default load path. Patch by metaljastix, issue #368.
  * The Users Guide for Apache now mentions something about correct permissions
    for application directories.
  * Fixed compilation problems on IA-64 (bug #118). We also reduced the stack
