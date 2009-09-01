@@ -2,16 +2,16 @@ Release 2.2.5
 -------------
 
  * [Apache] Small file uploads are now buffered; fixes potential DoS attack
-   Phusion Passenger buffers large file uploads to a temp file so that it
+   Phusion Passenger buffers large file uploads to temp files so that it
    doesn't block applications while an upload is in progress, but it sent
    small uploads directly to the application without buffering it. This could
    result in a potential DoS attack: the client can send many small, incomplete
    file uploads to the server, and this would block all application processes
    until a timeout occurs. In order to solve this problem, Phusion Passenger
-   now buffers small file upload in memory. Bug #356.
+   now buffers small file uploads in memory. Bug #356.
 
  * [Apache] Fixed support for mod_rewrite passthrough rules
-   mod_rewrite passthrough rules were not properly supported because of a bug
+   Mod_rewrite passthrough rules were not properly supported because of a bug
    fix for supporting encoded slashes (%2f) in URLs. Unfortunately, due to
    bugs/limitations in Apache, we can support either encoded slashes or
    mod_rewrite passthrough rules, but not both; supporting one will break the
@@ -25,8 +25,8 @@ Release 2.2.5
 
    Issue #113 and issue #230.
 
- * [Apache] Added a configuration option for resolving symlinks in the document
-   root path Phusion Passenger 2.2.0 and higher no longer resolve symlinks in
+ * [Apache] Added a configuration option for resolving symlinks in the document root path
+   Phusion Passenger 2.2.0 and higher no longer resolves symlinks in
    the document root path in order to properly support Capistrano-style
    directory structures. The exact behavior is documented in the Users Guide,
    section "How Phusion Passenger detects whether a virtual host is a web
@@ -56,7 +56,8 @@ Release 2.2.5
 
    then this version should compile properly.
 
- * [Apache] Got rid of the code for enforcing I/O timeouts when reading from or writing to
+ * [Apache] Fixed I/O timeouts for communication with backend processes
+   Got rid of the code for enforcing I/O timeouts when reading from or writing to
    a backend process. This caused more problems than it solved.
 
  * [Nginx] Support for streaming responses (e.g. Comet or HTTP push)
