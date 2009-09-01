@@ -22,19 +22,18 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_APPLICATION_POOL_ACCOUNTS_DATABASE_H_
-#define _PASSENGER_APPLICATION_POOL_ACCOUNTS_DATABASE_H_
+#ifndef _PASSENGER_ACCOUNTS_DATABASE_H_
+#define _PASSENGER_ACCOUNTS_DATABASE_H_
 
 #include <string>
 #include <map>
 #include <boost/shared_ptr.hpp>
 #include "Account.h"
-#include "../StaticString.h"
+#include "StaticString.h"
 
 /* This source file follows the security guidelines written in Account.h. */
 
 namespace Passenger {
-namespace ApplicationPool {
 
 using namespace std;
 using namespace boost;
@@ -67,7 +66,6 @@ public:
 
 typedef shared_ptr<AccountsDatabase> AccountsDatabasePtr;
 
-} // namespace ApplicationPool
 } // namespace Passenger
 
-#endif /* _PASSENGER_APPLICATION_POOL_ACCOUNTS_DATABASE_H_ */
+#endif /* _PASSENGER_ACCOUNTS_DATABASE_H_ */

@@ -17,22 +17,25 @@ using namespace Test;
 
 namespace tut {
 	struct ApplicationPool_Server_PoolTest {
-		ApplicationPool::AccountsDatabasePtr accountsDatabase;
+		AccountsDatabasePtr accountsDatabase;
+		shared_ptr<MessageServer> messageServer;
 		shared_ptr<ApplicationPool::Pool> realPool;
-		shared_ptr<ApplicationPool::Server> server;
+		shared_ptr<ApplicationPool::Server> poolServer;
 		shared_ptr<ApplicationPool::Client> pool, pool2;
 		shared_ptr<oxt::thread> serverThread;
 		string socketFilename;
 		
 		ApplicationPool_Server_PoolTest() {
 			socketFilename = getPassengerTempDir() + "/master/pool_server.sock";
-			accountsDatabase = ptr(new ApplicationPool::AccountsDatabase());
+			accountsDatabase = ptr(new AccountsDatabase());
 			accountsDatabase->add("test", "12345", false);
 			
-			realPool = ptr(new ApplicationPool::Pool("../bin/passenger-spawn-server"));
-			server   = ptr(new ApplicationPool::Server(socketFilename, accountsDatabase, realPool));
+			messageServer = ptr(new MessageServer(socketFilename, accountsDatabase));
+			realPool      = ptr(new ApplicationPool::Pool("../bin/passenger-spawn-server"));
+			poolServer    = ptr(new ApplicationPool::Server(realPool));
+			messageServer->addHandler(poolServer);
 			serverThread = ptr(new oxt::thread(
-				boost::bind(&ApplicationPool::Server::mainLoop, server.get())
+				boost::bind(&MessageServer::mainLoop, messageServer.get())
 			));
 			pool     = ptr(new ApplicationPool::Client());
 			pool2    = ptr(new ApplicationPool::Client());

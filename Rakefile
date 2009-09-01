@@ -411,11 +411,12 @@ end
 		'test/ApplicationPool_ServerTest.o' => %w(
 			test/ApplicationPool_ServerTest.cpp
 			ext/common/ApplicationPool/Interface.h
-			ext/common/ApplicationPool/Account.h
-			ext/common/ApplicationPool/AccountsDatabase.h
 			ext/common/ApplicationPool/Server.h
 			ext/common/ApplicationPool/Client.h
 			ext/common/ApplicationPool/Pool.h
+			ext/common/Account.h
+			ext/common/AccountsDatabase.h
+			ext/common/MessageServer.h
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
 			ext/common/MessageChannel.h),
@@ -423,12 +424,13 @@ end
 			test/ApplicationPool_Server_PoolTest.cpp
 			test/ApplicationPool_PoolTestCases.cpp
 			ext/common/ApplicationPool/Interface.h
-			ext/common/ApplicationPool/Account.h
-			ext/common/ApplicationPool/AccountsDatabase.h
 			ext/common/ApplicationPool/Server.h
 			ext/common/ApplicationPool/Client.h
 			ext/common/ApplicationPool/Pool.h
 			ext/common/AbstractSpawnManager.h
+			ext/common/Account.h
+			ext/common/AccountsDatabase.h
+			ext/common/MessageServer.h
 			ext/common/SpawnManager.h
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
@@ -464,6 +466,13 @@ end
 		'test/HttpStatusExtractorTest.o' => %w(
 			test/HttpStatusExtractorTest.cpp
 			ext/nginx/HttpStatusExtractor.h),
+		'test/MessageServerTest.o' => %w(
+			test/MessageServerTest.cpp
+			ext/common/ApplicationPool/Client.h
+			ext/common/Account.h
+			ext/common/AccountsDatabase.h
+			ext/common/MessageServer.h
+			ext/common/MessageChannel.h),
 		'test/FileChangeCheckerTest.o' => %w(
 			test/FileChangeCheckerTest.cpp
 			ext/common/FileChangeChecker.h

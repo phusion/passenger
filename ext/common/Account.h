@@ -22,15 +22,14 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_APPLICATION_POOL_ACCOUNT_H_
-#define _PASSENGER_APPLICATION_POOL_ACCOUNT_H_
+#ifndef _PASSENGER_ACCOUNT_H_
+#define _PASSENGER_ACCOUNT_H_
 
 #include <string>
 #include <boost/shared_ptr.hpp>
-#include "../StaticString.h"
+#include "StaticString.h"
 
 namespace Passenger {
-namespace ApplicationPool {
 
 using namespace boost;
 using namespace std;
@@ -105,7 +104,6 @@ public:
 
 typedef shared_ptr<Account> AccountPtr;
 
-} // namespace ApplicationPool
 } // namespace Passenger
 
-#endif /* _PASSENGER_APPLICATION_POOL_ACCOUNT_H_ */
+#endif /* _PASSENGER_ACCOUNT_H_ */

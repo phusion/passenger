@@ -40,8 +40,7 @@
 #include <cassert>
 
 #include "Pool.h"
-#include "Account.h"
-#include "AccountsDatabase.h"
+#include "../MessageServer.h"
 #include "../FileDescriptor.h"
 #include "../Exceptions.h"
 #include "../Utils.h"
@@ -53,8 +52,6 @@ using namespace std;
 using namespace boost;
 using namespace oxt;
 
-
-/* This source file follows the security guidelines written in Account.h. */
 
 /**
  * ApplicationPool::Server exposes an ApplicationPool::Pool to external processes through
@@ -85,10 +82,8 @@ using namespace oxt;
  *
  * @ingroup Support
  */
-class Server {
+class Server: public MessageServer::Handler {
 private:
-	static const unsigned int CLIENT_THREAD_STACK_SIZE = 128 * 1024;
-	
 	/**
 	 * This exception indicates that something went wrong while comunicating with the client.
 	 * Only used within EnvironmentVariablesFetcher.
@@ -218,20 +213,7 @@ private:
 		}
 	};
 	
-	/**
-	 * Each client handled by the server has an associated ClientContext,
-	 * which stores state associated with the client.
-	 */
-	struct ClientContext {
-		/** The client's socket file descriptor. */
-		FileDescriptor fd;
-		
-		/** The channel that's associated with the client's socket. */
-		MessageChannel &channel;
-		
-		/** The account with which the client has authenticated. */
-		AccountPtr account;
-		
+	struct SpecificContext: public MessageServer::ClientContext {
 		/**
 		 * Maps session ID to sessions created by ApplicationPool::get(). Session IDs
 		 * are sent back to the ApplicationPool client. This allows the ApplicationPool
@@ -242,113 +224,61 @@ private:
 		/** Last used session ID. */
 		int lastSessionID;
 		
-		ClientContext(MessageChannel &theChannel, AccountPtr theAccount)
-			: channel(theChannel),
-			  account(theAccount)
-		{
+		SpecificContext() {
 			lastSessionID = 0;
-		}
-		
-		/** Returns a string representation for this client. */
-		string name() {
-			return toString(channel.fileno());
 		}
 	};
 	
-	/** The filename of the server socket on which this ApplicationPool::Server is listening. */
-	string socketFilename;
-	/** An accounts database, used for authenticating clients. */
-	AccountsDatabasePtr accountsDatabase;
+	typedef MessageServer::CommonClientContext CommonClientContext;
+	typedef shared_ptr<SpecificContext> SpecificContextPtr;
+	
+	
 	/** The ApplicationPool::Pool that's being exposed through the socket. */
 	PoolPtr pool;
-	/** The maximum number of milliseconds that client may spend on logging in.
-	 * Clients that take longer are disconnected.
-	 *
-	 * @invariant loginTimeout != 0
-	 */
-	unsigned long long loginTimeout;
-	
-	/** The client threads. */
-	dynamic_thread_group threadGroup;
-	/** The server socket's file descriptor.
-	 * @invariant serverFd >= 0
-	 */
-	int serverFd;
 	
 	
 	/*********************************************
 	 * Message handler methods
 	 *********************************************/
 	
-	bool processMessage(ClientContext &context, const vector<string> &args) {
-		try {
-			if (args[0] == "get") {
-				processGet(context, args);
-			} else if (args[0] == "close" && args.size() == 2) {
-				processClose(context, args);
-			} else if (args[0] == "clear" && args.size() == 1) {
-				processClear(context, args);
-			} else if (args[0] == "setMaxIdleTime" && args.size() == 2) {
-				processSetMaxIdleTime(context, args);
-			} else if (args[0] == "setMax" && args.size() == 2) {
-				processSetMax(context, args);
-			} else if (args[0] == "getActive" && args.size() == 1) {
-				processGetActive(context, args);
-			} else if (args[0] == "getCount" && args.size() == 1) {
-				processGetCount(context, args);
-			} else if (args[0] == "setMaxPerApp" && args.size() == 2) {
-				processSetMaxPerApp(context, atoi(args[1]));
-			} else if (args[0] == "getSpawnServerPid" && args.size() == 1) {
-				processGetSpawnServerPid(context, args);
-			} else {
-				processUnknownMessage(context, args);
-				return false;
-			}
-		} catch (const SecurityException &) {
-			// Client does not have enough rights to perform a certain action.
-			// It has already been notified of this; ignore exception and move on.
-		}
-		return true;
-	}
-	
-	void processGet(ClientContext &context, const vector<string> &args) {
+	void processGet(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		Application::SessionPtr session;
 		bool failed = false;
 		
-		requireRights(context, Account::GET);
+		commonContext.requireRights(Account::GET);
 		
 		try {
 			PoolOptions options(args, 1);
 			options.environmentVariables = ptr(new EnvironmentVariablesFetcher(
-				context.channel, options));
+				commonContext.channel, options));
 			session = pool->get(options);
-			context.sessions[context.lastSessionID] = session;
-			context.lastSessionID++;
+			specificContext->sessions[specificContext->lastSessionID] = session;
+			specificContext->lastSessionID++;
 		} catch (const SpawnException &e) {
 			UPDATE_TRACE_POINT();
 			this_thread::disable_syscall_interruption dsi;
 			
 			if (e.hasErrorPage()) {
-				P_TRACE(3, "Client " << context.name() << ": SpawnException "
+				P_TRACE(3, "Client " << commonContext.name() << ": SpawnException "
 					"occured (with error page)");
-				context.channel.write("SpawnException", e.what(), "true", NULL);
-				context.channel.writeScalar(e.getErrorPage());
+				commonContext.channel.write("SpawnException", e.what(), "true", NULL);
+				commonContext.channel.writeScalar(e.getErrorPage());
 			} else {
-				P_TRACE(3, "Client " << context.name() << ": SpawnException "
+				P_TRACE(3, "Client " << commonContext.name() << ": SpawnException "
 					"occured (no error page)");
-				context.channel.write("SpawnException", e.what(), "false", NULL);
+				commonContext.channel.write("SpawnException", e.what(), "false", NULL);
 			}
 			failed = true;
 		} catch (const BusyException &e) {
 			UPDATE_TRACE_POINT();
 			this_thread::disable_syscall_interruption dsi;
-			context.channel.write("BusyException", e.what(), NULL);
+			commonContext.channel.write("BusyException", e.what(), NULL);
 			failed = true;
 		} catch (const IOException &e) {
 			UPDATE_TRACE_POINT();
 			this_thread::disable_syscall_interruption dsi;
-			context.channel.write("IOException", e.what(), NULL);
+			commonContext.channel.write("IOException", e.what(), NULL);
 			failed = true;
 		}
 		UPDATE_TRACE_POINT();
@@ -356,70 +286,70 @@ private:
 			this_thread::disable_syscall_interruption dsi;
 			try {
 				UPDATE_TRACE_POINT();
-				context.channel.write("ok", toString(session->getPid()).c_str(),
-					toString(context.lastSessionID - 1).c_str(), NULL);
+				commonContext.channel.write("ok", toString(session->getPid()).c_str(),
+					toString(specificContext->lastSessionID - 1).c_str(), NULL);
 				UPDATE_TRACE_POINT();
-				context.channel.writeFileDescriptor(session->getStream());
+				commonContext.channel.writeFileDescriptor(session->getStream());
 				UPDATE_TRACE_POINT();
 				session->closeStream();
 			} catch (const exception &e) {
-				P_TRACE(3, "Client " << context.name() << ": could not send "
+				P_TRACE(3, "Client " << commonContext.name() << ": could not send "
 					"'ok' back to the ApplicationPool client: " <<
 					e.what());
-				context.sessions.erase(context.lastSessionID - 1);
+				specificContext->sessions.erase(specificContext->lastSessionID - 1);
 				throw;
 			}
 		}
 	}
 	
-	void processClose(ClientContext &context, const vector<string> &args) {
+	void processClose(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
 		TRACE_POINT();
-		context.sessions.erase(atoi(args[1]));
+		specificContext->sessions.erase(atoi(args[1]));
 	}
 	
-	void processClear(ClientContext &context, const vector<string> &args) {
+	void processClear(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
 		TRACE_POINT();
-		requireRights(context, Account::CLEAR);
+		commonContext.requireRights(Account::CLEAR);
 		pool->clear();
 	}
 	
-	void processSetMaxIdleTime(ClientContext &context, const vector<string> &args) {
+	void processSetMaxIdleTime(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
 		TRACE_POINT();
-		requireRights(context, Account::SET_PARAMETERS);
+		commonContext.requireRights(Account::SET_PARAMETERS);
 		pool->setMaxIdleTime(atoi(args[1]));
 	}
 	
-	void processSetMax(ClientContext &context, const vector<string> &args) {
+	void processSetMax(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
 		TRACE_POINT();
-		requireRights(context, Account::SET_PARAMETERS);
+		commonContext.requireRights(Account::SET_PARAMETERS);
 		pool->setMax(atoi(args[1]));
 	}
 	
-	void processGetActive(ClientContext &context, const vector<string> &args) {
+	void processGetActive(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
 		TRACE_POINT();
-		requireRights(context, Account::GET_PARAMETERS);
-		context.channel.write(toString(pool->getActive()).c_str(), NULL);
+		commonContext.requireRights(Account::GET_PARAMETERS);
+		commonContext.channel.write(toString(pool->getActive()).c_str(), NULL);
 	}
 	
-	void processGetCount(ClientContext &context, const vector<string> &args) {
+	void processGetCount(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
 		TRACE_POINT();
-		requireRights(context, Account::GET_PARAMETERS);
-		context.channel.write(toString(pool->getCount()).c_str(), NULL);
+		commonContext.requireRights(Account::GET_PARAMETERS);
+		commonContext.channel.write(toString(pool->getCount()).c_str(), NULL);
 	}
 	
-	void processSetMaxPerApp(ClientContext &context, unsigned int maxPerApp) {
+	void processSetMaxPerApp(CommonClientContext &commonContext, SpecificContextPtr &specificContext, unsigned int maxPerApp) {
 		TRACE_POINT();
-		requireRights(context, Account::SET_PARAMETERS);
+		commonContext.requireRights(Account::SET_PARAMETERS);
 		pool->setMaxPerApp(maxPerApp);
 	}
 	
-	void processGetSpawnServerPid(ClientContext &context, const vector<string> &args) {
+	void processGetSpawnServerPid(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
 		TRACE_POINT();
-		requireRights(context, Account::GET_PARAMETERS);
-		context.channel.write(toString(pool->getSpawnServerPid()).c_str(), NULL);
+		commonContext.requireRights(Account::GET_PARAMETERS);
+		commonContext.channel.write(toString(pool->getSpawnServerPid()).c_str(), NULL);
 	}
 	
-	void processUnknownMessage(ClientContext &content, const vector<string> &args) {
+	void processUnknownMessage(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		string name;
 		if (args.empty()) {
@@ -431,221 +361,55 @@ private:
 			<< name << " (" << args.size() << " elements)");
 	}
 	
-	
-	/*********************************************
-	 * Other methods
-	 *********************************************/
-	
-	/**
-	 * Create a server socket and set it up for listening.
-	 *
-	 * @throws RuntimeException
-	 * @throws SystemException
-	 * @throws boost::thread_interrupted
-	 */
-	void startListening() {
-		TRACE_POINT();
-		int ret;
-		
-		serverFd = createUnixServer(socketFilename.c_str());
-		do {
-			ret = chmod(socketFilename.c_str(),
-				S_ISVTX |
-				S_IRUSR | S_IWUSR | S_IXUSR |
-				S_IRGRP | S_IWGRP | S_IXGRP |
-				S_IROTH | S_IWOTH | S_IXOTH);
-		} while (ret == -1 && errno == EINTR);
-	}
-	
-	/**
-	 * Authenticate the given client and returns its account information.
-	 *
-	 * @return A smart pointer to an Account object, or NULL if authentication failed.
-	 */
-	AccountPtr authenticate(FileDescriptor &client) {
-		MessageChannel channel(client);
-		string username, password;
-		MemZeroGuard passwordGuard(password);
-		unsigned long long timeout = loginTimeout;
-		
-		try {
-			try {
-				if (!channel.readScalar(username, 50, &timeout)) {
-					return AccountPtr();
-				}
-			} catch (const SecurityException &) {
-				channel.write("The supplied username is too long.", NULL);
-				return AccountPtr();
-			}
-			
-			try {
-				if (!channel.readScalar(password, 100, &timeout)) {
-					return AccountPtr();
-				}
-			} catch (const SecurityException &) {
-				channel.write("The supplied password is too long.", NULL);
-				return AccountPtr();
-			}
-			
-			AccountPtr account = accountsDatabase->authenticate(username, password);
-			passwordGuard.zeroNow();
-			if (account == NULL) {
-				channel.write("Invalid username or password.", NULL);
-				return AccountPtr();
-			} else {
-				channel.write("ok", NULL);
-				return account;
-			}
-		} catch (const SystemException &) {
-			return AccountPtr();
-		} catch (const TimeoutException &) {
-			return AccountPtr();
-		}
-	}
-	
-	/**
-	 * Checks whether the client has all of the rights in <tt>rights</tt>. The client
-	 * will be notified about the result of this check, by sending it a message.
-	 *
-	 * @throws SecurityException The client doesn't have one of the required rights.
-	 * @throws SystemException Something went wrong while communicating with the client.
-	 * @throws boost::thread_interrupted
-	 */
-	void requireRights(ClientContext &context, Account::Rights rights) {
-		if (!context.account->hasRights(rights)) {
-			P_TRACE(2, "Security error: insufficient rights to execute this command.");
-			context.channel.write("SecurityException", "Insufficient rights to execute this command.", NULL);
-			throw SecurityException("Insufficient rights to execute this command.");
-		} else {
-			context.channel.write("Passed security", NULL);
-		}
-	}
-	
-	/**
-	 * The main function for a thread which handles a client.
-	 */
-	void clientHandlingMainLoop(FileDescriptor &client) {
-		TRACE_POINT();
-		vector<string> args;
-		
-		P_TRACE(4, "Client thread " << this << " started.");
-		
-		try {
-			AccountPtr account(authenticate(client));
-			if (account == NULL) {
-				P_TRACE(4, "Client thread " << this << " exited.");
-				return;
-			}
-			
-			MessageChannel channel(client);
-			ClientContext context(channel, account);
-			
-			while (!this_thread::interruption_requested()) {
-				UPDATE_TRACE_POINT();
-				if (!channel.read(args)) {
-					// Client closed connection.
-					break;
-				}
-				
-				P_TRACE(4, "Client " << this << ": received message: " <<
-					toString(args));
-				
-				UPDATE_TRACE_POINT();
-				if (!processMessage(context, args)) {
-					break;
-				}
-				args.clear();
-			}
-			
-			P_TRACE(4, "Client thread " << this << " exited.");
-		} catch (const boost::thread_interrupted &) {
-			P_TRACE(2, "Client thread " << this << " interrupted.");
-		} catch (const tracable_exception &e) {
-			P_TRACE(2, "An error occurred in an ApplicationPoolServer client thread " << this << ":\n"
-				<< "   message: " << toString(args) << "\n"
-				<< "   exception: " << e.what() << "\n"
-				<< "   backtrace:\n" << e.backtrace());
-		} catch (const exception &e) {
-			P_TRACE(2, "An error occurred in an ApplicationPoolServer client thread " << this <<":\n"
-				<< "   message: " << toString(args) << "\n"
-				<< "   exception: " << e.what() << "\n"
-				<< "   backtrace: not available");
-		} catch (...) {
-			P_TRACE(2, "An unknown exception occurred in an ApplicationPool client thread.");
-		}
-	}
-	
 public:
 	/**
 	 * Creates a new ApplicationPool::Server object.
 	 * The actual server main loop is not started until you call mainLoop().
 	 *
-	 * @param socketFilename The socket filename on which this ApplicationPool::Server
-	 *                       should be listening.
-	 * @param accountsDatabase An accounts database for this server, used for
-	 *                         authenticating clients.
 	 * @param pool The pool to expose through the server socket.
 	 */
-	Server(const string &socketFilename,
-	       AccountsDatabasePtr accountsDatabase,
-	       PoolPtr pool) {
-		this->socketFilename   = socketFilename;
-		this->accountsDatabase = accountsDatabase;
+	Server(PoolPtr pool) {
 		this->pool = pool;
-		loginTimeout = 2000;
-		startListening();
 	}
 	
-	~Server() {
-		this_thread::disable_syscall_interruption dsi;
-		syscalls::close(serverFd);
-		syscalls::unlink(socketFilename.c_str());
+	virtual MessageServer::ClientContextPtr newClient(CommonClientContext &commonContext) {
+		return ptr(new SpecificContext());
 	}
 	
-	/**
-	 * Starts the server main loop. This method will loop forever until some
-	 * other thread interrupts the calling thread, or until an exception is raised.
-	 *
-	 * @throws SystemException Unable to accept a new connection. If this is a
-	 *                         non-fatal error then you may call mainLoop() again
-	 *                         to restart the server main loop.
-	 * @throws boost::thread_interrupted The calling thread has been interrupted.
-	 */
-	void mainLoop() {
-		TRACE_POINT();
-		while (true) {
-			this_thread::interruption_point();
-			sockaddr_un addr;
-			socklen_t len = sizeof(addr);
-			FileDescriptor fd;
-			
-			UPDATE_TRACE_POINT();
-			fd = syscalls::accept(serverFd, (struct sockaddr *) &addr, &len);
-			if (fd == -1) {
-				throw SystemException("Unable to accept a new client", errno);
+	virtual bool processMessage(CommonClientContext &commonContext,
+	                            MessageServer::ClientContextPtr &_specificContext,
+	                            const vector<string> &args)
+	{
+		SpecificContextPtr specificContext = static_pointer_cast<SpecificContext>(_specificContext);
+		try {
+			if (args[0] == "get") {
+				processGet(commonContext, specificContext, args);
+			} else if (args[0] == "close" && args.size() == 2) {
+				processClose(commonContext, specificContext, args);
+			} else if (args[0] == "clear" && args.size() == 1) {
+				processClear(commonContext, specificContext, args);
+			} else if (args[0] == "setMaxIdleTime" && args.size() == 2) {
+				processSetMaxIdleTime(commonContext, specificContext, args);
+			} else if (args[0] == "setMax" && args.size() == 2) {
+				processSetMax(commonContext, specificContext, args);
+			} else if (args[0] == "getActive" && args.size() == 1) {
+				processGetActive(commonContext, specificContext, args);
+			} else if (args[0] == "getCount" && args.size() == 1) {
+				processGetCount(commonContext, specificContext, args);
+			} else if (args[0] == "setMaxPerApp" && args.size() == 2) {
+				processSetMaxPerApp(commonContext, specificContext, atoi(args[1]));
+			} else if (args[0] == "getSpawnServerPid" && args.size() == 1) {
+				processGetSpawnServerPid(commonContext, specificContext, args);
+			} else {
+				processUnknownMessage(commonContext, specificContext, args);
+				return false;
 			}
-			
-			UPDATE_TRACE_POINT();
-			this_thread::disable_interruption di;
-			this_thread::disable_syscall_interruption dsi;
-			
-			function<void ()> func(boost::bind(&Server::clientHandlingMainLoop,
-				this, fd));
-			string name = "ApplicationPoolServer client thread ";
-			name.append(toString(fd));
-			threadGroup.create_thread(func, name, CLIENT_THREAD_STACK_SIZE);
+		} catch (const SecurityException &) {
+			/* Client does not have enough rights to perform a certain action.
+			 * It has already been notified of this; ignore exception and move on.
+			 */
 		}
-	}
-	
-	/**
-	 * Sets the maximum number of milliseconds that clients may spend on logging in.
-	 * Clients that take longer are disconnected.
-	 *
-	 * @pre timeout != 0
-	 */
-	void setLoginTimeout(unsigned long long timeout) {
-		assert(timeout != 0);
-		loginTimeout = timeout;
+		return true;
 	}
 };
 

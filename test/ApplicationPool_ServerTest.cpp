@@ -22,8 +22,9 @@ namespace tut {
 		string socketFilename;
 		AccountsDatabasePtr accountsDatabase;
 		AccountPtr clientAccount;
+		shared_ptr<MessageServer> messageServer;
 		shared_ptr<Pool> realPool;
-		shared_ptr<Server> server;
+		shared_ptr<Server> poolServer;
 		shared_ptr<Client> pool, pool2;
 		shared_ptr<oxt::thread> serverThread;
 		
@@ -38,10 +39,12 @@ namespace tut {
 			accountsDatabase = ptr(new AccountsDatabase());
 			clientAccount = accountsDatabase->add("test", "12345", false);
 			
-			realPool = ptr(new Pool("../bin/passenger-spawn-server"));
-			server   = ptr(new Server(socketFilename, accountsDatabase, realPool));
+			messageServer = ptr(new MessageServer(socketFilename, accountsDatabase));
+			realPool      = ptr(new Pool("../bin/passenger-spawn-server"));
+			poolServer    = ptr(new Server(realPool));
+			messageServer->addHandler(poolServer);
 			serverThread = ptr(new oxt::thread(
-				boost::bind(&Server::mainLoop, server.get())
+				boost::bind(&MessageServer::mainLoop, messageServer.get())
 			));
 			pool     = ptr(new Client());
 			pool2    = ptr(new Client());
@@ -128,112 +131,7 @@ namespace tut {
 		ensure_equals(strList->counter, 1);
 	}
 	
-	TEST_METHOD(2) {
-		// It supports hashed passwords.
-		initializePool();
-		accountsDatabase->add("hashed_user", Account::createHash("67890"), true);
-		Client().connect(socketFilename, "hashed_user", "67890"); // Should not throw exception.
-	}
-	
-	TEST_METHOD(3) {
-		// It rejects the connection if the an invalid username or password was sent.
-		initializePool();
-		accountsDatabase->add("hashed_user", Account::createHash("67890"), true);
-		
-		try {
-			Client().connect(socketFilename, "testt", "12345");
-			fail("SecurityException expected when invalid username is given");
-		} catch (const SecurityException &) {
-			// Pass.
-		}
-		try {
-			Client().connect(socketFilename, "test", "123456");
-			fail("SecurityException expected when invalid password is given for an account with plain text password");
-		} catch (const SecurityException &) {
-			// Pass.
-		}
-		try {
-			Client().connect(socketFilename, "test", "678900");
-			fail("SecurityException expected when invalid password is given for an account with hashed password");
-		} catch (const SecurityException &) {
-			// Pass.
-		}
-	}
-	
-	TEST_METHOD(4) {
-		// It disconnects the client if the client does not supply a username and
-		// password within a time limit.
-		initializePool();
-		server->setLoginTimeout(40);
-		
-		/* These can throw either an IOException or SystemException:
-		 * - An IOException is raised when connect() encounters EOF.
-		 * - But when connect() fails during the middle of a read()
-		 *   or write() (e.g. because the server disconnects before
-		 *   connect() is done writing), then SystemException is raised.
-		 */
-		
-		try {
-			// This client takes too much time on sending the username.
-			SlowClient(50, 0).connect(socketFilename, "test", "12345");
-			fail("IOException or SystemException expected (1).");
-		} catch (const IOException &e) {
-			// Pass.
-		} catch (const SystemException &e) {
-			// Pass.
-		}
-		
-		try {
-			// This client takes too much time on sending the password.
-			SlowClient(0, 50).connect(socketFilename, "test", "12345");
-			fail("IOException or SystemException expected (2).");
-		} catch (const IOException &e) {
-			// Pass.
-		} catch (const SystemException &e) {
-			// Pass.
-		}
-		
-		try {
-			// This client is fast enough at sending the username and
-			// password individually, but the combined time is too long.
-			SlowClient(25, 25).connect(socketFilename, "test", "12345");
-			fail("IOException or SystemException expected (3).");
-		} catch (const IOException &e) {
-			// Pass.
-		} catch (const SystemException &e) {
-			// Pass.
-		}
-	}
-	
 	TEST_METHOD(5) {
-		// It disconnects the client if it provides a username that's too large.
-		initializePool();
-		char username[1024];
-		memset(username, 'x', sizeof(username));
-		username[sizeof(username) - 1] = '\0';
-		try {
-			Client().connect(socketFilename, username, "1234");
-			fail("SecurityException expected");
-		} catch (const SecurityException &e) {
-			// Pass.
-		}
-	}
-	
-	TEST_METHOD(6) {
-		// It disconnects the client if it provides a password that's too large.
-		initializePool();
-		char password[1024];
-		memset(password, 'x', sizeof(password));
-		password[sizeof(password) - 1] = '\0';
-		try {
-			Client().connect(socketFilename, "test", password);
-			fail("SecurityException expected");
-		} catch (const SecurityException &e) {
-			// Pass.
-		}
-	}
-	
-	TEST_METHOD(10) {
 		// get() requires GET rights.
 		initializePool();
 		
@@ -249,7 +147,7 @@ namespace tut {
 		spawnRackApp(); // Should not throw SecurityException now.
 	}
 	
-	TEST_METHOD(11) {
+	TEST_METHOD(6) {
 		// clear() requires CLEAR rights.
 		initializePool();
 		
@@ -265,7 +163,7 @@ namespace tut {
 		pool->clear(); // Should not throw SecurityException now.
 	}
 	
-	TEST_METHOD(12) {
+	TEST_METHOD(7) {
 		// setMaxIdleTime() requires SET_PARAMETERS rights.
 		initializePool();
 		
@@ -281,7 +179,7 @@ namespace tut {
 		pool->setMaxIdleTime(60); // Should not throw SecurityException now.
 	}
 	
-	TEST_METHOD(13) {
+	TEST_METHOD(8) {
 		// setMax() requires SET_PARAMETERS rights.
 		initializePool();
 		
@@ -297,7 +195,7 @@ namespace tut {
 		pool->setMax(60); // Should not throw SecurityException now.
 	}
 	
-	TEST_METHOD(14) {
+	TEST_METHOD(9) {
 		// getActive() requires GET_PARAMETERS rights.
 		initializePool();
 		
@@ -313,7 +211,7 @@ namespace tut {
 		pool->getActive(); // Should not throw SecurityException now.
 	}
 	
-	TEST_METHOD(15) {
+	TEST_METHOD(10) {
 		// getCount() requires GET_PARAMETERS rights.
 		initializePool();
 		
@@ -329,7 +227,7 @@ namespace tut {
 		pool->getCount(); // Should not throw SecurityException now.
 	}
 	
-	TEST_METHOD(16) {
+	TEST_METHOD(11) {
 		// setMaxPerApp() requires SET_PARAMETERS rights.
 		initializePool();
 		
@@ -345,7 +243,7 @@ namespace tut {
 		pool->setMaxPerApp(2); // Should not throw SecurityException now.
 	}
 	
-	TEST_METHOD(17) {
+	TEST_METHOD(12) {
 		// getSpawnServerPid() requires GET_PARAMETERS rights.
 		initializePool();
 		
