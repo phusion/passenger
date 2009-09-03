@@ -1,3 +1,4 @@
+# encoding: binary
 #  Phusion Passenger - http://www.modrails.com/
 #  Copyright (c) 2008, 2009 Phusion
 #
@@ -404,9 +405,8 @@ private
 				undef rewind if respond_to?(:rewind)
 			end
 			
-			# Set encoding for Ruby 1.9 compatibility.
-			client.set_encoding(Encoding::BINARY) if client.respond_to?(:set_encoding)
-			client.binmode
+			# There's no need to set the encoding for Ruby 1.9 because this
+			# source file is tagged with 'encoding: binary'.
 			
 			return client
 		else

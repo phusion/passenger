@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2008 Phusion
+ * Copyright (c) 2008, 2009 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,6 +34,7 @@
 #ifdef OXT_BACKTRACE_IS_ENABLED
 	#include <sstream>
 #endif
+#include <limits.h>  // for PTHREAD_STACK_MIN
 
 namespace oxt {
 
@@ -108,6 +109,15 @@ private:
 	
 public:
 	/**
+	 * The platform's minimum stack size, in bytes.
+	 */
+	#if defined(PTHREAD_STACK_MIN)
+		static const unsigned int MIN_STACK_SIZE = PTHREAD_STACK_MIN;
+	#else
+		static const unsigned int MIN_STACK_SIZE = 1024 * 128;
+	#endif
+	
+	/**
 	 * Create a new thread.
 	 *
 	 * @param func A function object which will be called as the thread's
@@ -118,7 +128,9 @@ public:
 	 *     a name will be automatically chosen.
 	 * @param stack_size The stack size, in bytes, that the thread should
 	 *     have. If 0 is specified, the operating system's default stack
-	 *     size is used.
+	 *     size is used. If non-zero is specified, and the size is smaller
+	 *     than the operating system's minimum stack size, then the operating
+	 *     system's minimum stack size will be used.
 	 * @pre func must be copyable.
 	 * @throws boost::thread_resource_error Something went wrong during
 	 *     creation of the thread.
@@ -127,6 +139,9 @@ public:
 		initialize_data(name);
 		
 		set_thread_main_function(boost::bind(thread_main, func, data));
+		if (stack_size < MIN_STACK_SIZE) {
+			stack_size = MIN_STACK_SIZE;
+		}
 		start_thread(stack_size);
 	}
 	

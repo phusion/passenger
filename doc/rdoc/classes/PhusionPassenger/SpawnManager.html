@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Class: PhusionPassenger::SpawnManager</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Class</span><br />PhusionPassenger::SpawnManager</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../../files/lib/phusion_passenger/spawn_manager_rb.html">lib/phusion_passenger/spawn_manager.rb</a>
+        </td>
+      </tr>
+    <tr>
+      <td>Parent:</td>
+      <td>
+        <a href="AbstractServer.html">
+AbstractServer
+         </a>
+     </td>
+   </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+  <div class="description"><p>
+The spawn manager is capable of spawning Ruby on Rails or <a
+href="Rack.html">Rack</a> application instances. It acts like a simple
+fascade for the rest of the spawn manager system.
+</p>
+<p>
+<b>Note</b>: <a href="SpawnManager.html">SpawnManager</a> may only be
+started synchronously with <a
+href="AbstractServer.html#M000135">AbstractServer#start_synchronously</a>.
+Starting asynchronously has not been tested. Don&#8216;t forget to call <a
+href="SpawnManager.html#M000123">cleanup</a> after the server&#8216;s main
+loop has finished.
+</p>
+<h2>Ruby on Rails optimizations</h2>
+<p>
+Spawning a Ruby on Rails application is usually slow. But <a
+href="SpawnManager.html">SpawnManager</a> will preload and cache Ruby on
+Rails frameworks, as well as application code, so subsequent spawns will be
+very fast.
+</p>
+<p>
+Internally, <a href="SpawnManager.html">SpawnManager</a> uses <a
+href="Railz/FrameworkSpawner.html">Railz::FrameworkSpawner</a> to preload
+and cache Ruby on Rails frameworks. <a
+href="Railz/FrameworkSpawner.html">Railz::FrameworkSpawner</a>, in turn,
+uses <a href="Railz/ApplicationSpawner.html">Railz::ApplicationSpawner</a>
+to preload and cache application code.
+</p>
+<p>
+In case you&#8216;re wondering why the namespace is &quot;<a
+href="Railz.html">Railz</a>&quot; and not &quot;Rails&quot;: it&#8216;s to
+work around an obscure bug in ActiveSupport&#8216;s Dispatcher.
+</p>
+</div>
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000123">cleanup</a></li>
+  <li><a href="#M000120">new</a></li>
+  <li><a href="#M000122">reload</a></li>
+  <li><a href="#M000121">spawn_application</a></li>
+  </ul>
+
+<div class="sectiontitle">Included Modules</div>
+<ul>
+  <li><a href="Utils.html">Utils</a></li>
+</ul>
+
+
+
+
+
+<div class="sectiontitle">Public Class methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000120"></a><b>new</b>()
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000120_source')" id="l_M000120_source">show source</a> ]</p>
+  <div id="M000120_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/spawn_manager.rb, line 61</span>
+61:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>
+62:                 <span class="ruby-keyword kw">super</span>()
+63:                 <span class="ruby-ivar">@spawners</span> = <span class="ruby-constant">AbstractServerCollection</span>.<span class="ruby-identifier">new</span>
+64:                 <span class="ruby-identifier">define_message_handler</span>(<span class="ruby-identifier">:spawn_application</span>, <span class="ruby-identifier">:handle_spawn_application</span>)
+65:                 <span class="ruby-identifier">define_message_handler</span>(<span class="ruby-identifier">:reload</span>, <span class="ruby-identifier">:handle_reload</span>)
+66:                 <span class="ruby-identifier">define_signal_handler</span>(<span class="ruby-value str">'SIGHUP'</span>, <span class="ruby-identifier">:reload</span>)
+67:                 
+68:                 <span class="ruby-comment cmt"># Start garbage collector in order to free up some existing</span>
+69:                 <span class="ruby-comment cmt"># heap slots. This prevents the heap from growing unnecessarily</span>
+70:                 <span class="ruby-comment cmt"># during the startup phase.</span>
+71:                 <span class="ruby-constant">GC</span>.<span class="ruby-identifier">start</span>
+72:                 <span class="ruby-keyword kw">if</span> <span class="ruby-constant">GC</span>.<span class="ruby-identifier">copy_on_write_friendly?</span>
+73:                         <span class="ruby-comment cmt"># Preload libraries for copy-on-write semantics.</span>
+74:                         <span class="ruby-identifier">require</span> <span class="ruby-value str">'base64'</span>
+75:                         <span class="ruby-identifier">require</span> <span class="ruby-value str">'phusion_passenger/application'</span>
+76:                         <span class="ruby-identifier">require</span> <span class="ruby-value str">'phusion_passenger/railz/framework_spawner'</span>
+77:                         <span class="ruby-identifier">require</span> <span class="ruby-value str">'phusion_passenger/railz/application_spawner'</span>
+78:                         <span class="ruby-identifier">require</span> <span class="ruby-value str">'phusion_passenger/rack/application_spawner'</span>
+79:                         <span class="ruby-identifier">require</span> <span class="ruby-value str">'phusion_passenger/html_template'</span>
+80:                         <span class="ruby-identifier">require</span> <span class="ruby-value str">'phusion_passenger/platform_info'</span>
+81:                         <span class="ruby-identifier">require</span> <span class="ruby-value str">'phusion_passenger/exceptions'</span>
+82:                         
+83:                         <span class="ruby-comment cmt"># Commonly used libraries.</span>
+84:                         [<span class="ruby-value str">'mysql'</span>, <span class="ruby-value str">'sqlite3'</span>].<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">lib</span><span class="ruby-operator">|</span>
+85:                                 <span class="ruby-keyword kw">begin</span>
+86:                                         <span class="ruby-identifier">require</span> <span class="ruby-identifier">lib</span>
+87:                                 <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">LoadError</span>
+88:                                         <span class="ruby-comment cmt"># Do nothing; ignore if not present.</span>
+89:                                 <span class="ruby-keyword kw">end</span>
+90:                         <span class="ruby-keyword kw">end</span>
+91:                 <span class="ruby-keyword kw">end</span>
+92:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="sectiontitle">Public Instance methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000123"></a><b>cleanup</b>()
+  </div>
+  <div class="description">
+  <p>
+Cleanup resources. Should be called when this <a
+href="SpawnManager.html">SpawnManager</a> is no longer needed.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000123_source')" id="l_M000123_source">show source</a> ]</p>
+  <div id="M000123_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/spawn_manager.rb, line 215</span>
+215:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">cleanup</span>
+216:                 <span class="ruby-ivar">@spawners</span>.<span class="ruby-identifier">cleanup</span>
+217:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000122"></a><b>reload</b>(app_root = nil)
+  </div>
+  <div class="description">
+  <p>
+Remove the cached application instances at the given application root. If
+nil is specified as application root, then all cached application instances
+will be removed, no matter the application root.
+</p>
+<p>
+<b>Long description:</b> <a href="Application.html">Application</a> code
+might be cached in memory. But once it a while, it will be necessary to <a
+href="SpawnManager.html#M000122">reload</a> the code for an application,
+such as after deploying a <a href="SpawnManager.html#M000120">new</a>
+version of the application. This method makes sure that any cached
+application code is removed, so that the next time an application instance
+is spawned, the application code will be freshly loaded into memory.
+</p>
+<p>
+Raises AbstractServer::SpawnError if something went wrong.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000122_source')" id="l_M000122_source">show source</a> ]</p>
+  <div id="M000122_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/spawn_manager.rb, line 188</span>
+188:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">reload</span>(<span class="ruby-identifier">app_root</span> = <span class="ruby-keyword kw">nil</span>)
+189:                 <span class="ruby-ivar">@spawners</span>.<span class="ruby-identifier">synchronize</span> <span class="ruby-keyword kw">do</span>
+190:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">app_root</span>
+191:                                 <span class="ruby-comment cmt"># Delete associated ApplicationSpawner.</span>
+192:                                 <span class="ruby-ivar">@spawners</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-node">&quot;app:#{app_root}&quot;</span>)
+193:                         <span class="ruby-keyword kw">else</span>
+194:                                 <span class="ruby-comment cmt"># Delete all ApplicationSpawners.</span>
+195:                                 <span class="ruby-identifier">keys_to_delete</span> = []
+196:                                 <span class="ruby-ivar">@spawners</span>.<span class="ruby-identifier">each_pair</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">key</span>, <span class="ruby-identifier">spawner</span><span class="ruby-operator">|</span>
+197:                                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">spawner</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Railz</span><span class="ruby-operator">::</span><span class="ruby-constant">ApplicationSpawner</span>)
+198:                                                 <span class="ruby-identifier">keys_to_delete</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">key</span>
+199:                                         <span class="ruby-keyword kw">end</span>
+200:                                 <span class="ruby-keyword kw">end</span>
+201:                                 <span class="ruby-identifier">keys_to_delete</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">key</span><span class="ruby-operator">|</span>
+202:                                         <span class="ruby-ivar">@spawners</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-identifier">key</span>)
+203:                                 <span class="ruby-keyword kw">end</span>
+204:                         <span class="ruby-keyword kw">end</span>
+205:                         <span class="ruby-ivar">@spawners</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">spawner</span><span class="ruby-operator">|</span>
+206:                                 <span class="ruby-comment cmt"># Reload all FrameworkSpawners.</span>
+207:                                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">spawner</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">:reload</span>)
+208:                                         <span class="ruby-identifier">spawner</span>.<span class="ruby-identifier">reload</span>(<span class="ruby-identifier">app_root</span>)
+209:                                 <span class="ruby-keyword kw">end</span>
+210:                         <span class="ruby-keyword kw">end</span>
+211:                 <span class="ruby-keyword kw">end</span>
+212:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000121"></a><b>spawn_application</b>(options)
+  </div>
+  <div class="description">
+  <p>
+Spawn an application with the given spawn options. When successful, an <a
+href="Application.html">Application</a> object will be returned, which
+represents the spawned application. At least one option must be given:
+<tt>app_root</tt>. This is the application&#8216;s root folder.
+</p>
+<p>
+Other options are:
+</p>
+<dl>
+<dt>&#8216;lower_privilege&#8217;, &#8216;lowest_user&#8217;, &#8216;environment&#8217;, &#8216;environment_variables&#8217;, &#8216;base_uri&#8217; and &#8216;print_exceptions&#8216;</dt><dd>See Railz::ApplicationSpawner.new for an explanation of these options.
+
+</dd>
+<dt>&#8216;app_type&#8216;</dt><dd>What kind of application is being spawned. Either &quot;rails&quot;
+(default), &quot;rack&quot; or &quot;wsgi&quot;.
+
+</dd>
+<dt>&#8216;spawn_method&#8216;</dt><dd>May be one of &quot;smart&quot;, &quot;smart-lv2&quot; or
+&quot;conservative&quot;. When &quot;smart&quot; is specified, <a
+href="SpawnManager.html">SpawnManager</a> will internally cache the code of
+Rails applications, in order to speed up future spawning attempts. This
+implies that, if you&#8216;ve changed the application&#8216;s code, you
+must do one of these things:
+
+<ul>
+<li>Restart this <a href="SpawnManager.html">SpawnManager</a> by calling <a
+href="AbstractServer.html#M000136">AbstractServer#stop</a>, then <a
+href="AbstractServer.html#M000134">AbstractServer#start</a>.
+
+</li>
+<li>Reload the application by calling <a
+href="SpawnManager.html#M000122">reload</a> with the correct app_root
+argument.
+
+</li>
+</ul>
+<p>
+&quot;smart&quot; caches the Rails framework code in a framework spawner
+server, and application code in an application spawner server. Sometimes it
+is desirable to skip the framework spawning and going directly for the
+application spawner instead. The &quot;smart-lv2&quot; method allows you to
+do that.
+</p>
+<p>
+Caching however can be incompatible with some applications. The
+&quot;conservative&quot; spawning method does not involve any caching at
+all. Spawning will be slower, but is guaranteed to be compatible with all
+applications.
+</p>
+<p>
+The default spawn method is &quot;smart-lv2&quot;.
+</p>
+</dd>
+<dt>&#8216;framework_spawner_timeout&#8217; and &#8216;app_spawner_timeout&#8216;</dt><dd>These options allow you to specify the maximum idle timeout, in seconds, of
+the framework spawner servers and application spawner servers that will be
+started under the hood. These options are only used if <tt>app_type</tt>
+equals &quot;rails&quot;.
+
+<p>
+A timeout of 0 means that the spawner server should never idle timeout. A
+timeout of -1 means that the default timeout value should be used. The
+default value is -1.
+</p>
+</dd>
+</dl>
+<p>
+<b>Exceptions:</b>
+</p>
+<ul>
+<li><a href="InvalidPath.html">InvalidPath</a>: <tt>app_root</tt> doesn&#8216;t
+appear to be a valid Ruby on Rails application root.
+
+</li>
+<li><a href="VersionNotFound.html">VersionNotFound</a>: The Ruby on Rails
+framework version that the given application requires is not installed.
+
+</li>
+<li><a href="AbstractServer/ServerError.html">AbstractServer::ServerError</a>:
+One of the server processes exited unexpectedly.
+
+</li>
+<li><a href="FrameworkInitError.html">FrameworkInitError</a>: The Ruby on Rails
+framework that the application requires could not be loaded.
+
+</li>
+<li><a href="AppInitError.html">AppInitError</a>: The application raised an
+exception or called exit() during startup.
+
+</li>
+</ul>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000121_source')" id="l_M000121_source">show source</a> ]</p>
+  <div id="M000121_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/spawn_manager.rb, line 142</span>
+142:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">spawn_application</span>(<span class="ruby-identifier">options</span>)
+143:                 <span class="ruby-keyword kw">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;app_root&quot;</span>]
+144:                         <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-value str">&quot;The 'app_root' option must be given.&quot;</span>
+145:                 <span class="ruby-keyword kw">end</span>
+146:                 <span class="ruby-identifier">options</span> = <span class="ruby-identifier">sanitize_spawn_options</span>(<span class="ruby-identifier">options</span>)
+147:                 
+148:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;app_type&quot;</span>] <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;rails&quot;</span>
+149:                         <span class="ruby-keyword kw">if</span> <span class="ruby-operator">!</span><span class="ruby-keyword kw">defined?</span>(<span class="ruby-constant">Railz</span><span class="ruby-operator">::</span><span class="ruby-constant">FrameworkSpawner</span>)
+150:                                 <span class="ruby-identifier">require</span> <span class="ruby-value str">'phusion_passenger/application'</span>
+151:                                 <span class="ruby-identifier">require</span> <span class="ruby-value str">'phusion_passenger/railz/framework_spawner'</span>
+152:                                 <span class="ruby-identifier">require</span> <span class="ruby-value str">'phusion_passenger/railz/application_spawner'</span>
+153:                         <span class="ruby-keyword kw">end</span>
+154:                         <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">spawn_rails_application</span>(<span class="ruby-identifier">options</span>)
+155:                 <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;app_type&quot;</span>] <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;rack&quot;</span>
+156:                         <span class="ruby-keyword kw">if</span> <span class="ruby-operator">!</span><span class="ruby-keyword kw">defined?</span>(<span class="ruby-constant">Rack</span><span class="ruby-operator">::</span><span class="ruby-constant">ApplicationSpawner</span>)
+157:                                 <span class="ruby-identifier">require</span> <span class="ruby-value str">'phusion_passenger/rack/application_spawner'</span>
+158:                         <span class="ruby-keyword kw">end</span>
+159:                         <span class="ruby-keyword kw">return</span> <span class="ruby-constant">Rack</span><span class="ruby-operator">::</span><span class="ruby-constant">ApplicationSpawner</span>.<span class="ruby-identifier">spawn_application</span>(
+160:                                 <span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;app_root&quot;</span>], <span class="ruby-identifier">options</span>
+161:                         )
+162:                 <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;app_type&quot;</span>] <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;wsgi&quot;</span>
+163:                         <span class="ruby-identifier">require</span> <span class="ruby-value str">'phusion_passenger/wsgi/application_spawner'</span>
+164:                         <span class="ruby-keyword kw">return</span> <span class="ruby-constant">WSGI</span><span class="ruby-operator">::</span><span class="ruby-constant">ApplicationSpawner</span>.<span class="ruby-identifier">spawn_application</span>(
+165:                                 <span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;app_root&quot;</span>],
+166:                                 <span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;lower_privilege&quot;</span>],
+167:                                 <span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;lowest_user&quot;</span>],
+168:                                 <span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;environment&quot;</span>]
+169:                         )
+170:                 <span class="ruby-keyword kw">else</span>
+171:                         <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-node">&quot;Unknown 'app_type' value '#{options[&quot;app_type&quot;]}'.&quot;</span>
+172:                 <span class="ruby-keyword kw">end</span>
+173:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

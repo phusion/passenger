@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Class: PhusionPassenger::AppInitError</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Class</span><br />PhusionPassenger::AppInitError</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../../files/lib/phusion_passenger/exceptions_rb.html">lib/phusion_passenger/exceptions.rb</a>
+        </td>
+      </tr>
+    <tr>
+      <td>Parent:</td>
+      <td>
+        <a href="InitializationError.html">
+InitializationError
+         </a>
+     </td>
+   </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+  <div class="description"><p>
+Raised when <a
+href="Rack/ApplicationSpawner.html">Rack::ApplicationSpawner</a>, <a
+href="Railz/ApplicationSpawner.html">Railz::ApplicationSpawner</a>, <a
+href="Railz/FrameworkSpawner.html">Railz::FrameworkSpawner</a> or <a
+href="SpawnManager.html">SpawnManager</a> was unable to spawn an
+application, because the application either threw an exception or called
+exit.
+</p>
+<p>
+If the application called exit, then <tt>child_exception</tt> is an
+instance of <tt>SystemExit</tt>.
+</p>
+</div>
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000099">new</a></li>
+  </ul>
+
+
+
+
+
+  <div class="sectiontitle">Attributes</div>
+  <table border='0' cellpadding='5'>
+  <tr valign='top'>
+    <td class='attr-rw'>
+[RW]
+    </td>
+    <td class='attr-name'>app_type</td>
+    <td class='attr-desc'>
+The application type, e.g. &quot;rails&quot; or &quot;rack&quot;.
+
+</td>
+  </tr>
+  <tr valign='top'>
+    <td class='attr-rw'>
+[RW]
+    </td>
+    <td class='attr-name'>stderr</td>
+    <td class='attr-desc'>
+Any messages printed to stderr before the failure. May be nil.
+
+</td>
+  </tr>
+  </table>
+
+<div class="sectiontitle">Public Class methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000099"></a><b>new</b>(message, child_exception = nil, app_type = &quot;rails&quot;, stderr = nil)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000099_source')" id="l_M000099_source">show source</a> ]</p>
+  <div id="M000099_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/exceptions.rb, line 66</span>
+66:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">message</span>, <span class="ruby-identifier">child_exception</span> = <span class="ruby-keyword kw">nil</span>, <span class="ruby-identifier">app_type</span> = <span class="ruby-value str">&quot;rails&quot;</span>, <span class="ruby-identifier">stderr</span> = <span class="ruby-keyword kw">nil</span>)
+67:                 <span class="ruby-keyword kw">super</span>(<span class="ruby-identifier">message</span>, <span class="ruby-identifier">child_exception</span>)
+68:                 <span class="ruby-ivar">@app_type</span> = <span class="ruby-identifier">app_type</span>
+69:                 <span class="ruby-ivar">@stderr</span> = <span class="ruby-identifier">stderr</span>
+70:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

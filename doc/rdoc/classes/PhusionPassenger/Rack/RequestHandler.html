@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Class: PhusionPassenger::Rack::RequestHandler</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href="../../.././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Class</span><br />PhusionPassenger::Rack::RequestHandler</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../../../files/lib/phusion_passenger/rack/request_handler_rb.html">lib/phusion_passenger/rack/request_handler.rb</a>
+        </td>
+      </tr>
+    <tr>
+      <td>Parent:</td>
+      <td>
+AbstractRequestHandler
+     </td>
+   </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+  <div class="description"><p>
+A request handler for <a href="../Rack.html">Rack</a> applications.
+</p>
+</div>
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000056">new</a></li>
+  <li><a href="#M000057">process_request</a></li>
+  </ul>
+
+
+
+
+
+
+<div class="sectiontitle">Public Class methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000056"></a><b>new</b>(owner_pipe, app, options = {})
+  </div>
+  <div class="description">
+  <p>
+<tt>app</tt> is the <a href="../Rack.html">Rack</a> application object.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000056_source')" id="l_M000056_source">show source</a> ]</p>
+  <div id="M000056_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/rack/request_handler.rb, line 59</span>
+59:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">owner_pipe</span>, <span class="ruby-identifier">app</span>, <span class="ruby-identifier">options</span> = {})
+60:                 <span class="ruby-keyword kw">super</span>(<span class="ruby-identifier">owner_pipe</span>, <span class="ruby-identifier">options</span>)
+61:                 <span class="ruby-ivar">@app</span> = <span class="ruby-identifier">app</span>
+62:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="sectiontitle">Protected Instance methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000057"></a><b>process_request</b>(env, input, output)
+  </div>
+  <div class="description">
+  <p>
+Overrided method.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000057_source')" id="l_M000057_source">show source</a> ]</p>
+  <div id="M000057_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/rack/request_handler.rb, line 66</span>
+ 66:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">process_request</span>(<span class="ruby-identifier">env</span>, <span class="ruby-identifier">input</span>, <span class="ruby-identifier">output</span>)
+ 67:                 <span class="ruby-identifier">rewindable_input</span> = <span class="ruby-operator">::</span><span class="ruby-constant">Rack</span><span class="ruby-operator">::</span><span class="ruby-constant">RewindableInput</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">input</span>)
+ 68:                 <span class="ruby-keyword kw">begin</span>
+ 69:                         <span class="ruby-identifier">env</span>[<span class="ruby-constant">RACK_VERSION</span>]      = <span class="ruby-constant">RACK_VERSION_VALUE</span>
+ 70:                         <span class="ruby-identifier">env</span>[<span class="ruby-constant">RACK_INPUT</span>]        = <span class="ruby-identifier">rewindable_input</span>
+ 71:                         <span class="ruby-identifier">env</span>[<span class="ruby-constant">RACK_ERRORS</span>]       = <span class="ruby-constant">STDERR</span>
+ 72:                         <span class="ruby-identifier">env</span>[<span class="ruby-constant">RACK_MULTITHREAD</span>]  = <span class="ruby-keyword kw">false</span>
+ 73:                         <span class="ruby-identifier">env</span>[<span class="ruby-constant">RACK_MULTIPROCESS</span>] = <span class="ruby-keyword kw">true</span>
+ 74:                         <span class="ruby-identifier">env</span>[<span class="ruby-constant">RACK_RUN_ONCE</span>]     = <span class="ruby-keyword kw">false</span>
+ 75:                         
+ 76:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">env</span>[<span class="ruby-constant">HTTP_CONTENT_LENGTH</span>] <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">env</span>[<span class="ruby-constant">CONTENT_LENGTH</span>]
+ 77:                                 <span class="ruby-identifier">env</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-constant">HTTP_CONTENT_LENGTH</span>)
+ 78:                         <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">env</span>[<span class="ruby-constant">HTTP_CONTENT_LENGTH</span>] <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-identifier">env</span>[<span class="ruby-constant">CONTENT_LENGTH</span>]
+ 79:                                 <span class="ruby-identifier">env</span>[<span class="ruby-constant">CONTENT_LENGTH</span>] = <span class="ruby-identifier">env</span>[<span class="ruby-constant">HTTP_CONTENT_LENGTH</span>]
+ 80:                                 <span class="ruby-identifier">env</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-constant">HTTP_CONTENT_LENGTH</span>)
+ 81:                         <span class="ruby-keyword kw">end</span>
+ 82:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">env</span>[<span class="ruby-constant">HTTP_CONTENT_TYPE</span>] <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">env</span>[<span class="ruby-constant">CONTENT_TYPE</span>]
+ 83:                                 <span class="ruby-identifier">env</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-constant">HTTP_CONTENT_TYPE</span>)
+ 84:                         <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">env</span>[<span class="ruby-constant">HTTP_CONTENT_TYPE</span>] <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-identifier">env</span>[<span class="ruby-constant">CONTENT_TYPE</span>]
+ 85:                                 <span class="ruby-identifier">env</span>[<span class="ruby-constant">CONTENT_TYPE</span>] = <span class="ruby-identifier">env</span>[<span class="ruby-constant">HTTP_CONTENT_TYPE</span>]
+ 86:                                 <span class="ruby-identifier">env</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-constant">HTTP_CONTENT_TYPE</span>)
+ 87:                         <span class="ruby-keyword kw">end</span>
+ 88:                         
+ 89:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">env</span>[<span class="ruby-constant">HTTPS</span>] <span class="ruby-operator">==</span> <span class="ruby-constant">YES</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">env</span>[<span class="ruby-constant">HTTPS</span>] <span class="ruby-operator">==</span> <span class="ruby-constant">ON</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">env</span>[<span class="ruby-constant">HTTPS</span>] <span class="ruby-operator">==</span> <span class="ruby-constant">ONE</span>
+ 90:                                 <span class="ruby-identifier">env</span>[<span class="ruby-constant">RACK_URL_SCHEME</span>] = <span class="ruby-constant">HTTPS_DOWNCASE</span>
+ 91:                         <span class="ruby-keyword kw">else</span>
+ 92:                                 <span class="ruby-identifier">env</span>[<span class="ruby-constant">RACK_URL_SCHEME</span>] = <span class="ruby-constant">HTTP</span>
+ 93:                         <span class="ruby-keyword kw">end</span>
+ 94:                         
+ 95:                         <span class="ruby-identifier">status</span>, <span class="ruby-identifier">headers</span>, <span class="ruby-identifier">body</span> = <span class="ruby-ivar">@app</span>.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">env</span>)
+ 96:                         <span class="ruby-keyword kw">begin</span>
+ 97:                                 <span class="ruby-identifier">output</span>.<span class="ruby-identifier">write</span>(<span class="ruby-node">&quot;Status: #{status.to_i}#{CRLF}&quot;</span>)
+ 98:                                 <span class="ruby-identifier">output</span>.<span class="ruby-identifier">write</span>(<span class="ruby-node">&quot;X-Powered-By: #{PASSENGER_HEADER}#{CRLF}&quot;</span>)
+ 99:                                 <span class="ruby-identifier">headers</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">key</span>, <span class="ruby-identifier">values</span><span class="ruby-operator">|</span>
+100:                                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">values</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">String</span>)
+101:                                                 <span class="ruby-identifier">values</span> = <span class="ruby-identifier">values</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">&quot;\n&quot;</span>)
+102:                                         <span class="ruby-keyword kw">end</span>
+103:                                         <span class="ruby-identifier">values</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">value</span><span class="ruby-operator">|</span>
+104:                                                 <span class="ruby-identifier">output</span>.<span class="ruby-identifier">write</span>(<span class="ruby-node">&quot;#{key}: #{value}#{CRLF}&quot;</span>)
+105:                                         <span class="ruby-keyword kw">end</span>
+106:                                 <span class="ruby-keyword kw">end</span>
+107:                                 <span class="ruby-identifier">output</span>.<span class="ruby-identifier">write</span>(<span class="ruby-constant">CRLF</span>)
+108:                                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">body</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">String</span>)
+109:                                         <span class="ruby-identifier">output</span>.<span class="ruby-identifier">write</span>(<span class="ruby-identifier">body</span>)
+110:                                 <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">body</span>
+111:                                         <span class="ruby-identifier">body</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">s</span><span class="ruby-operator">|</span>
+112:                                                 <span class="ruby-identifier">output</span>.<span class="ruby-identifier">write</span>(<span class="ruby-identifier">s</span>)
+113:                                         <span class="ruby-keyword kw">end</span>
+114:                                 <span class="ruby-keyword kw">end</span>
+115:                         <span class="ruby-keyword kw">ensure</span>
+116:                                 <span class="ruby-identifier">body</span>.<span class="ruby-identifier">close</span> <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">body</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">:close</span>)
+117:                         <span class="ruby-keyword kw">end</span>
+118:                 <span class="ruby-keyword kw">ensure</span>
+119:                         <span class="ruby-identifier">rewindable_input</span>.<span class="ruby-identifier">close</span>
+120:                 <span class="ruby-keyword kw">end</span>
+121:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

@@ -68,14 +68,24 @@ using namespace Passenger;
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
 
-#define DEFAULT_RUBY_COMMAND "ruby"
+/*
+ * This is the main source file which interfaces directly with Apache by
+ * installing hooks. The code here can look a bit convoluted, but it'll make
+ * more sense if you read:
+ * http://httpd.apache.org/docs/2.2/developer/request.html
+ *
+ * Scroll all the way down to passenger_register_hooks to get an idea of
+ * what we're hooking into and what we do in those hooks.
+ */
+
 
 /**
  * If the HTTP client sends POST data larger than this value (in bytes),
- * then the POST data will be fully saved into a temporary file, before
+ * then the POST data will be fully buffered into a temporary file, before
  * allocating a Ruby web application session.
+ * File uploads smaller than this are buffered into memory instead.
  */
-#define UPLOAD_ACCELERATION_THRESHOLD 1024 * 8
+#define LARGE_UPLOAD_THRESHOLD 1024 * 8
 
 
 /**
@@ -120,13 +130,14 @@ private:
 		ReportFileSystemError(const FileSystemException &ex): e(ex) { }
 		
 		int report(request_rec *r) {
+			r->status = 500;
 			ap_set_content_type(r, "text/html; charset=UTF-8");
 			ap_rputs("<h1>Passenger error #2</h1>\n", r);
 			ap_rputs("An error occurred while trying to access '", r);
 			ap_rputs(ap_escape_html(r->pool, e.filename().c_str()), r);
 			ap_rputs("': ", r);
 			ap_rputs(ap_escape_html(r->pool, e.what()), r);
-			if (e.code() == EPERM) {
+			if (e.code() == EACCES || e.code() == EPERM) {
 				ap_rputs("<p>", r);
 				ap_rputs("Apache doesn't have read permissions to that file. ", r);
 				ap_rputs("Please fix the relevant file permissions.", r);
@@ -310,12 +321,27 @@ private:
 			 * Later, in the handler hook, we inform the user about this
 			 * problem so that he can either disable Phusion Passenger's
 			 * autodetection routines, or fix the permissions.
+			 *
+			 * If it's not a permission problem then we'll disable
+			 * Phusion Passenger for the rest of the request.
 			 */
-			apr_pool_userdata_set(new ReportFileSystemError(e),
-				"Phusion Passenger: error report",
-				ReportFileSystemError::cleanup,
-				r->pool);
-			return true;
+			if (e.code() == EACCES || e.code() == EPERM) {
+				// TODO: filesystem error is not always reported. need
+				// to figure out why. test case:
+				// - mkdir /foo
+				// - mkdir /foo/public
+				// - mkdir /foo/config
+				// - chmod 000 /foo/config
+				// - add vhost 'foo' with document root /foo/public
+				// - curl http://foo/
+				apr_pool_userdata_set(new ReportFileSystemError(e),
+					"Phusion Passenger: error report",
+					ReportFileSystemError::cleanup,
+					r->pool);
+				return true;
+			} else {
+				return false;
+			}
 		}
 		
 		/* Save some information for the hook methods that are called later.
@@ -449,7 +475,8 @@ private:
 			this_thread::disable_syscall_interruption dsi;
 			Application::SessionPtr session;
 			bool expectingUploadData;
-			shared_ptr<BufferedUpload> uploadData;
+			string uploadDataMemory;
+			shared_ptr<BufferedUpload> uploadDataFile;
 			const char *contentLength;
 			
 			expectingUploadData = ap_should_client_block(r);
@@ -458,14 +485,18 @@ private:
 			/* If the HTTP upload data is larger than a threshold, or if the HTTP
 			 * client sent HTTP upload data using the "chunked" transfer encoding
 			 * (which implies Content-Length == NULL), then buffer the upload
-			 * data into a tempfile.
+			 * data into a tempfile. Otherwise, buffer it into memory.
+			 *
+			 * We never forward the data directly to the backend process because
+			 * the HTTP client might block indefinitely until it's done uploading.
+			 * This would quickly exhaust the application pool.
 			 */
-			if (expectingUploadData && (
-			          contentLength == NULL ||
-			          atol(contentLength) > UPLOAD_ACCELERATION_THRESHOLD
-			     )
-			) {
-				uploadData = receiveRequestBody(r, contentLength);
+			if (expectingUploadData) {
+				if (contentLength == NULL || atol(contentLength) > LARGE_UPLOAD_THRESHOLD) {
+					uploadDataFile = receiveRequestBody(r, contentLength);
+				} else {
+					receiveRequestBody(r, contentLength, uploadDataMemory);
+				}
 			}
 			
 			if (expectingUploadData && contentLength == NULL) {
@@ -474,8 +505,13 @@ private:
 				 * data. Rails requires this header for its HTTP upload data
 				 * multipart parsing process.
 				 */
-				apr_table_set(r->headers_in, "Content-Length",
-					toString(ftell(uploadData->handle)).c_str());
+				if (uploadDataFile != NULL) {
+					apr_table_set(r->headers_in, "Content-Length",
+						toString(ftell(uploadDataFile->handle)).c_str());
+				} else {
+					apr_table_set(r->headers_in, "Content-Length",
+						toString(uploadDataMemory.size()).c_str());
+				}
 			}
 			
 			
@@ -527,15 +563,13 @@ private:
 			}
 			
 			UPDATE_TRACE_POINT();
-			session->setReaderTimeout(r->server->timeout / 1000);
-			session->setWriterTimeout(r->server->timeout / 1000);
-			sendHeaders(r, session, mapper.getBaseURI());
+			sendHeaders(r, config, session, mapper.getBaseURI());
 			if (expectingUploadData) {
-				if (uploadData != NULL) {
-					sendRequestBody(r, session, uploadData);
-					uploadData.reset();
+				if (uploadDataFile != NULL) {
+					sendRequestBody(r, session, uploadDataFile);
+					uploadDataFile.reset();
 				} else {
-					sendRequestBody(r, session);
+					sendRequestBody(r, session, uploadDataMemory);
 				}
 			}
 			try {
@@ -610,11 +644,14 @@ private:
 				ap_pass_brigade(r->output_filters, bb);
 				
 				if (r->connection->aborted) {
-					P_WARN("The HTTP client closed the connection before "
-						"the response could be completely sent. As a "
-						"result, you will probably see a 'Broken Pipe' "
+					P_WARN("Either the vistor clicked on the 'Stop' button in the "
+						"web browser, or the visitor's connection has stalled "
+						"and couldn't receive the data that Apache is sending "
+						"to it. As a result, you will probably see a 'Broken Pipe' "
 						"error in this log file. Please ignore it, "
-						"this is normal.");
+						"this is normal. You might also want to increase Apache's "
+						"TimeOut configuration option if you experience this "
+						"problem often.");
 				} else if (!bucketState->completed) {
 					P_WARN("Apache stopped forwarding the backend's response, "
 						"even though the HTTP client did not close the "
@@ -747,12 +784,13 @@ private:
 		}
 	}
 	
-	apr_status_t sendHeaders(request_rec *r, Application::SessionPtr &session, const char *baseURI) {
+	apr_status_t sendHeaders(request_rec *r, DirConfig *config, Application::SessionPtr &session, const char *baseURI) {
 		apr_table_t *headers;
 		headers = apr_table_make(r->pool, 40);
 		if (headers == NULL) {
 			return APR_ENOMEM;
 		}
+		
 		
 		// Set standard CGI variables.
 		addHeader(headers, "SERVER_SOFTWARE", ap_get_server_version());
@@ -765,17 +803,39 @@ private:
 		addHeader(headers, "REMOTE_PORT",     apr_psprintf(r->pool, "%d", r->connection->remote_addr->port));
 		addHeader(headers, "REMOTE_USER",     r->user);
 		addHeader(headers, "REQUEST_METHOD",  r->method);
-		addHeader(headers, "REQUEST_URI",     r->unparsed_uri);
 		addHeader(headers, "QUERY_STRING",    r->args ? r->args : "");
-		if (strcmp(baseURI, "/") == 0) {
-			addHeader(headers, "SCRIPT_NAME", "");
-		} else {
-			addHeader(headers, "SCRIPT_NAME", baseURI);
-		}
 		addHeader(headers, "HTTPS",           lookupEnv(r, "HTTPS"));
 		addHeader(headers, "CONTENT_TYPE",    lookupHeader(r, "Content-type"));
 		addHeader(headers, "DOCUMENT_ROOT",   ap_document_root(r));
-		addHeader(headers, "PATH_INFO",       r->parsed_uri.path);
+		
+		if (config->allowsEncodedSlashes()) {
+			/*
+			 * Apache decodes encoded slashes in r->uri, so we must use r->unparsed_uri
+			 * if we are to support encoded slashes. However mod_rewrite doesn't change
+			 * r->unparsed_uri, so the user must make a choice between mod_rewrite
+			 * support or encoded slashes support. Sucks. :-(
+			 *
+			 * http://code.google.com/p/phusion-passenger/issues/detail?id=113
+			 * http://code.google.com/p/phusion-passenger/issues/detail?id=230
+			 */
+			addHeader(headers, "REQUEST_URI", r->unparsed_uri);
+		} else {
+			const char *request_uri;
+			if (r->args != NULL) {
+				request_uri = apr_pstrcat(r->pool, r->uri, "?", r->args, NULL);
+			} else {
+				request_uri = r->uri;
+			}
+			addHeader(headers, "REQUEST_URI", request_uri);
+		}
+		
+		if (strcmp(baseURI, "/") == 0) {
+			addHeader(headers, "SCRIPT_NAME", "");
+			addHeader(headers, "PATH_INFO", r->uri);
+		} else {
+			addHeader(headers, "SCRIPT_NAME", baseURI);
+			addHeader(headers, "PATH_INFO", r->uri + strlen(baseURI));
+		}
 		
 		// Set HTTP headers.
 		const apr_array_header_t *hdrs_arr;
@@ -788,6 +848,16 @@ private:
 			if (hdrs[i].key) {
 				addHeader(headers, http2env(r->pool, hdrs[i].key), hdrs[i].val);
 			}
+		}
+		
+		// Add other environment variables.
+		const apr_array_header_t *env_arr;
+		apr_table_entry_t *env;
+		
+		env_arr = apr_table_elts(r->subprocess_env);
+		env = (apr_table_entry_t*) env_arr->elts;
+		for (i = 0; i < env_arr->nelts; ++i) {
+			addHeader(headers, env[i].key, env[i].val);
 		}
 		
 		// Now send the headers.
@@ -1035,9 +1105,56 @@ private:
 		}
 		
 		if (contentLength != NULL && ftell(tempFile->handle) != atol(contentLength)) {
-			throw IOException("The HTTP client sent incomplete upload data.");
+			string message = "It looks like the browser did not finish the file upload: "
+				"it said it will upload ";
+			message.append(contentLength);
+			message.append(" bytes, but it closed the connection after sending ");
+			message.append(toString(ftell(tempFile->handle)));
+			message.append(" bytes. The user probably clicked Stop in the browser "
+				"or his Internet connection stalled.");
+			throw IOException(message);
 		}
 		return tempFile;
+	}
+	
+	/**
+	 * Receive the HTTP upload data and buffer it into a string.
+	 *
+	 * @param r The request.
+	 * @param contentLength The value of the HTTP Content-Length header. This is used
+	 *                      to check whether the HTTP client has sent complete upload
+	 *                      data. NULL indicates that there is no Content-Length header,
+	 *                      i.e. that the HTTP client used chunked transfer encoding.
+	 * @param string The string to buffer into.
+	 * @throws RuntimeException
+	 * @throws IOException
+	 */
+	void receiveRequestBody(request_rec *r, const char *contentLength, string &buffer) {
+		TRACE_POINT();
+		unsigned long l_contentLength = 0;
+		char buf[1024 * 32];
+		apr_off_t len;
+		
+		buffer.clear();
+		if (contentLength != NULL) {
+			l_contentLength = atol(contentLength);
+			buffer.reserve(l_contentLength);
+		}
+		
+		while ((len = readRequestBodyFromApache(r, buf, sizeof(buf))) > 0) {
+			buffer.append(buf, len);
+		}
+		
+		if (contentLength != NULL && buffer.size() != l_contentLength) {
+			string message = "It looks like the browser did not finish the file upload: "
+				"it said it will upload ";
+			message.append(contentLength);
+			message.append(" bytes, but it closed the connection after sending ");
+			message.append(toString(buffer.size()));
+			message.append(" bytes. The user probably clicked Stop in the browser "
+				"or his Internet connection stalled.");
+			throw IOException(message);
+		}
 	}
 	
 	void sendRequestBody(request_rec *r, Application::SessionPtr &session, shared_ptr<BufferedUpload> &uploadData) {
@@ -1053,13 +1170,8 @@ private:
 		}
 	}
 	
-	void sendRequestBody(request_rec *r, Application::SessionPtr &session) {
-		char buf[1024 * 32];
-		apr_off_t len;
-
-		while ((len = readRequestBodyFromApache(r, buf, sizeof(buf))) > 0) {
-			session->sendBodyBlock(buf, len);
-		}
+	void sendRequestBody(request_rec *r, Application::SessionPtr &session, const string &buffer) {
+		session->sendBodyBlock(buffer.c_str(), buffer.size());
 	}
 
 public:
@@ -1075,22 +1187,13 @@ public:
 		P_DEBUG("Initializing Phusion Passenger...");
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
 		
-		const char *ruby, *user;
+		const char *user;
 		string applicationPoolServerExe, spawnServer;
 		
-		/*
-		 * As described in the comment in init_module, upon (re)starting
-		 * Apache, the Hooks constructor is called twice. We unset
-		 * PASSENGER_INSTANCE_TEMP_DIR before calling createPassengerTempDir()
-		 * because we want the temp directory's name to contain the PID
-		 * of the process in which the Hooks constructor was called for
-		 * the second time.
-		 */
 		createPassengerTempDir(config->getTempDir(), config->userSwitching,
 			config->getDefaultUser(), unixd_config.user_id,
 			unixd_config.group_id);
 		
-		ruby = (config->ruby != NULL) ? config->ruby : DEFAULT_RUBY_COMMAND;
 		if (config->userSwitching) {
 			user = "";
 		} else {
@@ -1124,7 +1227,7 @@ public:
 		applicationPoolServer = ptr(
 			new ApplicationPoolServer(
 				applicationPoolServerExe, spawnServer, "",
-				ruby, user)
+				config->getRuby(), user)
 		);
 		
 		ApplicationPoolPtr pool(applicationPoolServer->connect());
@@ -1162,7 +1265,7 @@ public:
 	 * A is top-most directory that exists. B is the first filename piece that
 	 * normally follows A. For example, suppose that a website's DocumentRoot
 	 * is /website, on server http://test.com/. Suppose that there's also a
-	 * directory /website/images.
+	 * directory /website/images. No other files or directories exist in /website.
 	 * 
 	 * If we access:                    then r->filename will be:
 	 * http://test.com/foo/bar          /website/foo
@@ -1187,14 +1290,19 @@ public:
 				 */
 				return OK;
 			} else {
-				// core.c's map_to_storage hook will transform the filename, as
-				// described by saveOriginalFilename(). Here we restore the
-				// original filename.
+				/* core.c's map_to_storage hook will transform the filename, as
+				 * described by saveOriginalFilename(). Here we restore the
+				 * original filename.
+				 */
 				const char *filename = apr_table_get(r->notes, "Phusion Passenger: original filename");
 				if (filename == NULL) {
 					return DECLINED;
 				} else {
 					prepareRequest(r, config, filename);
+					/* Always return declined in order to let other modules'
+					 * hooks run, regardless of what prepareRequest()'s
+					 * result is.
+					 */
 					return DECLINED;
 				}
 			}

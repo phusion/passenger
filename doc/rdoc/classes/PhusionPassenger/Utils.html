@@ -1,0 +1,803 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Module: PhusionPassenger::Utils</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Module</span><br />PhusionPassenger::Utils</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../../files/lib/phusion_passenger/utils_rb.html">lib/phusion_passenger/utils.rb</a>
+        </td>
+      </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+  <div class="description"><p>
+Utility functions.
+</p>
+</div>
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000075">assert_valid_app_root</a></li>
+  <li><a href="#M000076">assert_valid_directory</a></li>
+  <li><a href="#M000077">assert_valid_file</a></li>
+  <li><a href="#M000079">assert_valid_groupname</a></li>
+  <li><a href="#M000078">assert_valid_username</a></li>
+  <li><a href="#M000074">canonicalize_path</a></li>
+  <li><a href="#M000080">close_all_io_objects_for_fds</a></li>
+  <li><a href="#M000087">lower_privilege</a></li>
+  <li><a href="#M000081">marshal_exception</a></li>
+  <li><a href="#M000091">passenger_tmpdir</a></li>
+  <li><a href="#M000092">passenger_tmpdir</a></li>
+  <li><a href="#M000093">passenger_tmpdir=</a></li>
+  <li><a href="#M000083">print_exception</a></li>
+  <li><a href="#M000085">report_app_init_status</a></li>
+  <li><a href="#M000084">safe_fork</a></li>
+  <li><a href="#M000090">sanitize_spawn_options</a></li>
+  <li><a href="#M000088">switch_to_user</a></li>
+  <li><a href="#M000089">to_boolean</a></li>
+  <li><a href="#M000086">unmarshal_and_raise_errors</a></li>
+  <li><a href="#M000082">unmarshal_exception</a></li>
+  </ul>
+
+
+
+  <div class="sectiontitle">Classes and Modules</div>
+  Class <a href="Utils/PseudoIO.html" class="link">PhusionPassenger::Utils::PseudoIO</a><br />
+
+
+
+
+<div class="sectiontitle">Protected Class methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000092"></a><b>passenger_tmpdir</b>(create = true)
+  </div>
+  <div class="description">
+  <p>
+Returns the directory in which to store Phusion Passenger-specific
+temporary files. If <tt>create</tt> is true, then this method creates the
+directory if it doesn&#8216;t exist.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000092_source')" id="l_M000092_source">show source</a> ]</p>
+  <div id="M000092_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 420</span>
+420:         <span class="ruby-keyword kw">def</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">passenger_tmpdir</span>(<span class="ruby-identifier">create</span> = <span class="ruby-keyword kw">true</span>)
+421:                 <span class="ruby-identifier">dir</span> = <span class="ruby-ivar">@@passenger_tmpdir</span>
+422:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">dir</span>.<span class="ruby-identifier">nil?</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">dir</span>.<span class="ruby-identifier">empty?</span>
+423:                         <span class="ruby-identifier">dir</span> = <span class="ruby-node">&quot;#{Dir.tmpdir}/passenger.#{Process.pid}&quot;</span>
+424:                         <span class="ruby-ivar">@@passenger_tmpdir</span> = <span class="ruby-identifier">dir</span>
+425:                 <span class="ruby-keyword kw">end</span>
+426:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">create</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-constant">File</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-identifier">dir</span>)
+427:                         <span class="ruby-comment cmt"># This is a very minimal implementation of the function</span>
+428:                         <span class="ruby-comment cmt"># passengerCreateTempDir() in Utils.cpp. This implementation</span>
+429:                         <span class="ruby-comment cmt"># is only meant to make the unit tests pass. For production</span>
+430:                         <span class="ruby-comment cmt"># systems one should pre-create the temp directory with</span>
+431:                         <span class="ruby-comment cmt"># passengerCreateTempDir().</span>
+432:                         <span class="ruby-identifier">system</span>(<span class="ruby-value str">&quot;mkdir&quot;</span>, <span class="ruby-value str">&quot;-p&quot;</span>, <span class="ruby-value str">&quot;-m&quot;</span>, <span class="ruby-value str">&quot;u=wxs,g=wx,o=wx&quot;</span>, <span class="ruby-identifier">dir</span>)
+433:                         <span class="ruby-identifier">system</span>(<span class="ruby-value str">&quot;mkdir&quot;</span>, <span class="ruby-value str">&quot;-p&quot;</span>, <span class="ruby-value str">&quot;-m&quot;</span>, <span class="ruby-value str">&quot;u=wxs,g=wx,o=wx&quot;</span>, <span class="ruby-node">&quot;#{dir}/backends&quot;</span>)
+434:                 <span class="ruby-keyword kw">end</span>
+435:                 <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">dir</span>
+436:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000093"></a><b>passenger_tmpdir=</b>(dir)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000093_source')" id="l_M000093_source">show source</a> ]</p>
+  <div id="M000093_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 438</span>
+438:         <span class="ruby-keyword kw">def</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">passenger_tmpdir=</span>(<span class="ruby-identifier">dir</span>)
+439:                 <span class="ruby-ivar">@@passenger_tmpdir</span> = <span class="ruby-identifier">dir</span>
+440:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="sectiontitle">Protected Instance methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000075"></a><b>assert_valid_app_root</b>(app_root)
+  </div>
+  <div class="description">
+  <p>
+Assert that <tt>app_root</tt> is a valid Ruby on Rails application root.
+Raises <a href="InvalidPath.html">InvalidPath</a> if that is not the case.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000075_source')" id="l_M000075_source">show source</a> ]</p>
+  <div id="M000075_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 60</span>
+60:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">assert_valid_app_root</span>(<span class="ruby-identifier">app_root</span>)
+61:                 <span class="ruby-identifier">assert_valid_directory</span>(<span class="ruby-identifier">app_root</span>)
+62:                 <span class="ruby-identifier">assert_valid_file</span>(<span class="ruby-node">&quot;#{app_root}/config/environment.rb&quot;</span>)
+63:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000076"></a><b>assert_valid_directory</b>(path)
+  </div>
+  <div class="description">
+  <p>
+Assert that <tt>path</tt> is a directory. Raises <tt><a
+href="InvalidPath.html">InvalidPath</a></tt> if it isn&#8216;t.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000076_source')" id="l_M000076_source">show source</a> ]</p>
+  <div id="M000076_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 66</span>
+66:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">assert_valid_directory</span>(<span class="ruby-identifier">path</span>)
+67:                 <span class="ruby-keyword kw">if</span> <span class="ruby-operator">!</span><span class="ruby-constant">File</span>.<span class="ruby-identifier">directory?</span>(<span class="ruby-identifier">path</span>)
+68:                         <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidPath</span>, <span class="ruby-node">&quot;'#{path}' is not a valid directory.&quot;</span>
+69:                 <span class="ruby-keyword kw">end</span>
+70:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000077"></a><b>assert_valid_file</b>(path)
+  </div>
+  <div class="description">
+  <p>
+Assert that <tt>path</tt> is a file. Raises <tt><a
+href="InvalidPath.html">InvalidPath</a></tt> if it isn&#8216;t.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000077_source')" id="l_M000077_source">show source</a> ]</p>
+  <div id="M000077_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 73</span>
+73:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">assert_valid_file</span>(<span class="ruby-identifier">path</span>)
+74:                 <span class="ruby-keyword kw">if</span> <span class="ruby-operator">!</span><span class="ruby-constant">File</span>.<span class="ruby-identifier">file?</span>(<span class="ruby-identifier">path</span>)
+75:                         <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidPath</span>, <span class="ruby-node">&quot;'#{path}' is not a valid file.&quot;</span>
+76:                 <span class="ruby-keyword kw">end</span>
+77:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000079"></a><b>assert_valid_groupname</b>(groupname)
+  </div>
+  <div class="description">
+  <p>
+Assert that <tt>groupname</tt> is a valid group name. Raises ArgumentError
+if that is not the case.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000079_source')" id="l_M000079_source">show source</a> ]</p>
+  <div id="M000079_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 88</span>
+88:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">assert_valid_groupname</span>(<span class="ruby-identifier">groupname</span>)
+89:                 <span class="ruby-comment cmt"># If groupname does not exist then getgrnam() will raise an ArgumentError.</span>
+90:                 <span class="ruby-identifier">groupname</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-constant">Etc</span>.<span class="ruby-identifier">getgrnam</span>(<span class="ruby-identifier">groupname</span>)
+91:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000078"></a><b>assert_valid_username</b>(username)
+  </div>
+  <div class="description">
+  <p>
+Assert that <tt>username</tt> is a valid username. Raises ArgumentError if
+that is not the case.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000078_source')" id="l_M000078_source">show source</a> ]</p>
+  <div id="M000078_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 81</span>
+81:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">assert_valid_username</span>(<span class="ruby-identifier">username</span>)
+82:                 <span class="ruby-comment cmt"># If username does not exist then getpwnam() will raise an ArgumentError.</span>
+83:                 <span class="ruby-identifier">username</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-constant">Etc</span>.<span class="ruby-identifier">getpwnam</span>(<span class="ruby-identifier">username</span>)
+84:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000074"></a><b>canonicalize_path</b>(path)
+  </div>
+  <div class="description">
+  <p>
+Return the canonicalized version of <tt>path</tt>. This path is guaranteed
+to to be &quot;normal&quot;, i.e. it doesn&#8216;t contain stuff like
+&quot;..&quot; or &quot;/&quot;, and it fully resolves symbolic links.
+</p>
+<p>
+Raises SystemCallError if something went wrong. Raises ArgumentError if
+<tt>path</tt> is nil. Raises <a href="InvalidPath.html">InvalidPath</a> if
+<tt>path</tt> does not appear to be a valid path.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000074_source')" id="l_M000074_source">show source</a> ]</p>
+  <div id="M000074_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 51</span>
+51:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">canonicalize_path</span>(<span class="ruby-identifier">path</span>)
+52:                 <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-value str">&quot;The 'path' argument may not be nil&quot;</span> <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">path</span>.<span class="ruby-identifier">nil?</span>
+53:                 <span class="ruby-keyword kw">return</span> <span class="ruby-constant">Pathname</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">path</span>).<span class="ruby-identifier">realpath</span>.<span class="ruby-identifier">to_s</span>
+54:         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Errno</span><span class="ruby-operator">::</span><span class="ruby-constant">ENOENT</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">e</span>
+55:                 <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidAPath</span>, <span class="ruby-identifier">e</span>.<span class="ruby-identifier">message</span>
+56:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000080"></a><b>close_all_io_objects_for_fds</b>(file_descriptors_to_leave_open)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000080_source')" id="l_M000080_source">show source</a> ]</p>
+  <div id="M000080_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 93</span>
+ 93:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">close_all_io_objects_for_fds</span>(<span class="ruby-identifier">file_descriptors_to_leave_open</span>)
+ 94:                 <span class="ruby-constant">ObjectSpace</span>.<span class="ruby-identifier">each_object</span>(<span class="ruby-constant">IO</span>) <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">io</span><span class="ruby-operator">|</span>
+ 95:                         <span class="ruby-keyword kw">begin</span>
+ 96:                                 <span class="ruby-keyword kw">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">file_descriptors_to_leave_open</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">io</span>.<span class="ruby-identifier">fileno</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-identifier">io</span>.<span class="ruby-identifier">closed?</span>
+ 97:                                         <span class="ruby-identifier">io</span>.<span class="ruby-identifier">close</span>
+ 98:                                 <span class="ruby-keyword kw">end</span>
+ 99:                         <span class="ruby-keyword kw">rescue</span>
+100:                         <span class="ruby-keyword kw">end</span>
+101:                 <span class="ruby-keyword kw">end</span>
+102:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000087"></a><b>lower_privilege</b>(filename, lowest_user = &quot;nobody&quot;)
+  </div>
+  <div class="description">
+  <p>
+Lower the current process&#8216;s privilege to the owner of the given file.
+No exceptions will be raised in the event that privilege lowering fails.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000087_source')" id="l_M000087_source">show source</a> ]</p>
+  <div id="M000087_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 343</span>
+343:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">lower_privilege</span>(<span class="ruby-identifier">filename</span>, <span class="ruby-identifier">lowest_user</span> = <span class="ruby-value str">&quot;nobody&quot;</span>)
+344:                 <span class="ruby-identifier">stat</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">lstat</span>(<span class="ruby-identifier">filename</span>)
+345:                 <span class="ruby-keyword kw">begin</span>
+346:                         <span class="ruby-keyword kw">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">switch_to_user</span>(<span class="ruby-identifier">stat</span>.<span class="ruby-identifier">uid</span>)
+347:                                 <span class="ruby-identifier">switch_to_user</span>(<span class="ruby-identifier">lowest_user</span>)
+348:                         <span class="ruby-keyword kw">end</span>
+349:                 <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Errno</span><span class="ruby-operator">::</span><span class="ruby-constant">EPERM</span>
+350:                         <span class="ruby-comment cmt"># No problem if we were unable to switch user.</span>
+351:                 <span class="ruby-keyword kw">end</span>
+352:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000081"></a><b>marshal_exception</b>(exception)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000081_source')" id="l_M000081_source">show source</a> ]</p>
+  <div id="M000081_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 104</span>
+104:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">marshal_exception</span>(<span class="ruby-identifier">exception</span>)
+105:                 <span class="ruby-identifier">data</span> = {
+106:                         <span class="ruby-identifier">:message</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">exception</span>.<span class="ruby-identifier">message</span>,
+107:                         <span class="ruby-identifier">:class</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">exception</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">to_s</span>,
+108:                         <span class="ruby-identifier">:backtrace</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">exception</span>.<span class="ruby-identifier">backtrace</span>
+109:                 }
+110:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">exception</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">InitializationError</span>)
+111:                         <span class="ruby-identifier">data</span>[<span class="ruby-identifier">:is_initialization_error</span>] = <span class="ruby-keyword kw">true</span>
+112:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">exception</span>.<span class="ruby-identifier">child_exception</span>
+113:                                 <span class="ruby-identifier">data</span>[<span class="ruby-identifier">:child_exception</span>] = <span class="ruby-identifier">marshal_exception</span>(<span class="ruby-identifier">exception</span>.<span class="ruby-identifier">child_exception</span>)
+114:                         <span class="ruby-keyword kw">end</span>
+115:                 <span class="ruby-keyword kw">else</span>
+116:                         <span class="ruby-keyword kw">begin</span>
+117:                                 <span class="ruby-identifier">data</span>[<span class="ruby-identifier">:exception</span>] = <span class="ruby-constant">Marshal</span>.<span class="ruby-identifier">dump</span>(<span class="ruby-identifier">exception</span>)
+118:                         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-constant">TypeError</span>
+119:                                 <span class="ruby-identifier">e</span> = <span class="ruby-constant">UnknownError</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">exception</span>.<span class="ruby-identifier">message</span>, <span class="ruby-identifier">exception</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">to_s</span>,
+120:                                                         <span class="ruby-identifier">exception</span>.<span class="ruby-identifier">backtrace</span>)
+121:                                 <span class="ruby-identifier">data</span>[<span class="ruby-identifier">:exception</span>] = <span class="ruby-constant">Marshal</span>.<span class="ruby-identifier">dump</span>(<span class="ruby-identifier">e</span>)
+122:                         <span class="ruby-keyword kw">end</span>
+123:                 <span class="ruby-keyword kw">end</span>
+124:                 <span class="ruby-keyword kw">return</span> <span class="ruby-constant">Marshal</span>.<span class="ruby-identifier">dump</span>(<span class="ruby-identifier">data</span>)
+125:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000091"></a><b>passenger_tmpdir</b>(create = true)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000091_source')" id="l_M000091_source">show source</a> ]</p>
+  <div id="M000091_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 413</span>
+413:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">passenger_tmpdir</span>(<span class="ruby-identifier">create</span> = <span class="ruby-keyword kw">true</span>)
+414:                 <span class="ruby-constant">PhusionPassenger</span><span class="ruby-operator">::</span><span class="ruby-constant">Utils</span>.<span class="ruby-identifier">passenger_tmpdir</span>(<span class="ruby-identifier">create</span>)
+415:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000083"></a><b>print_exception</b>(current_location, exception, destination = STDERR)
+  </div>
+  <div class="description">
+  <p>
+Print the given exception, including the stack trace, to STDERR.
+</p>
+<p>
+<tt>current_location</tt> is a string which describes where the code is
+currently at. Usually the current class name will be enough.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000083_source')" id="l_M000083_source">show source</a> ]</p>
+  <div id="M000083_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 158</span>
+158:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">print_exception</span>(<span class="ruby-identifier">current_location</span>, <span class="ruby-identifier">exception</span>, <span class="ruby-identifier">destination</span> = <span class="ruby-constant">STDERR</span>)
+159:                 <span class="ruby-keyword kw">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">exception</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">SystemExit</span>)
+160:                         <span class="ruby-identifier">destination</span>.<span class="ruby-identifier">puts</span>(<span class="ruby-identifier">exception</span>.<span class="ruby-identifier">backtrace_string</span>(<span class="ruby-identifier">current_location</span>))
+161:                         <span class="ruby-identifier">destination</span>.<span class="ruby-identifier">flush</span> <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">destination</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">:flush</span>)
+162:                 <span class="ruby-keyword kw">end</span>
+163:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000085"></a><b>report_app_init_status</b>(channel, sink = STDERR) {|| ...}
+  </div>
+  <div class="description">
+  <p>
+Run the given block. A message will be sent through <tt>channel</tt> (a <a
+href="MessageChannel.html">MessageChannel</a> object), telling the remote
+side whether the block raised an exception, called exit(), or succeeded.
+</p>
+<p>
+If <em>sink</em> is non-nil, then every operation on $stderr/STDERR inside
+the block will be performed on <em>sink</em> as well. If <em>sink</em> is
+nil then all operations on $stderr/STDERR inside the block will be silently
+discarded, i.e. if one writes to $stderr/STDERR then nothing will be
+actually written to the console.
+</p>
+<p>
+Returns whether the block succeeded, i.e. whether it didn&#8216;t raise an
+exception.
+</p>
+<p>
+Exceptions are not propagated, except SystemExit and a few
+non-StandardExeption classes such as SignalException. Of the exceptions
+that are propagated, only SystemExit will be reported.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000085_source')" id="l_M000085_source">show source</a> ]</p>
+  <div id="M000085_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 242</span>
+242:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">report_app_init_status</span>(<span class="ruby-identifier">channel</span>, <span class="ruby-identifier">sink</span> = <span class="ruby-constant">STDERR</span>)
+243:                 <span class="ruby-keyword kw">begin</span>
+244:                         <span class="ruby-identifier">old_global_stderr</span> = <span class="ruby-identifier">$stderr</span>
+245:                         <span class="ruby-identifier">old_stderr</span> = <span class="ruby-constant">STDERR</span>
+246:                         <span class="ruby-identifier">stderr_output</span> = <span class="ruby-value str">&quot;&quot;</span>
+247:                         
+248:                         <span class="ruby-identifier">pseudo_stderr</span> = <span class="ruby-constant">PseudoIO</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">sink</span>)
+249:                         <span class="ruby-constant">Object</span>.<span class="ruby-identifier">send</span>(<span class="ruby-identifier">:remove_const</span>, <span class="ruby-value str">'STDERR'</span>) <span class="ruby-keyword kw">rescue</span> <span class="ruby-keyword kw">nil</span>
+250:                         <span class="ruby-constant">Object</span>.<span class="ruby-identifier">const_set</span>(<span class="ruby-value str">'STDERR'</span>, <span class="ruby-identifier">pseudo_stderr</span>)
+251:                         <span class="ruby-identifier">$stderr</span> = <span class="ruby-identifier">pseudo_stderr</span>
+252:                         
+253:                         <span class="ruby-keyword kw">begin</span>
+254:                                 <span class="ruby-keyword kw">yield</span>
+255:                         <span class="ruby-keyword kw">ensure</span>
+256:                                 <span class="ruby-constant">Object</span>.<span class="ruby-identifier">send</span>(<span class="ruby-identifier">:remove_const</span>, <span class="ruby-value str">'STDERR'</span>) <span class="ruby-keyword kw">rescue</span> <span class="ruby-keyword kw">nil</span>
+257:                                 <span class="ruby-constant">Object</span>.<span class="ruby-identifier">const_set</span>(<span class="ruby-value str">'STDERR'</span>, <span class="ruby-identifier">old_stderr</span>)
+258:                                 <span class="ruby-identifier">$stderr</span> = <span class="ruby-identifier">old_global_stderr</span>
+259:                                 <span class="ruby-identifier">stderr_output</span> = <span class="ruby-identifier">pseudo_stderr</span>.<span class="ruby-identifier">done!</span>
+260:                         <span class="ruby-keyword kw">end</span>
+261:                         
+262:                         <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">write</span>(<span class="ruby-value str">'success'</span>)
+263:                         <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">true</span>
+264:                 <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">StandardError</span>, <span class="ruby-constant">ScriptError</span>, <span class="ruby-constant">NoMemoryError</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">e</span>
+265:                         <span class="ruby-keyword kw">if</span> <span class="ruby-constant">ENV</span>[<span class="ruby-value str">'TESTING_PASSENGER'</span>] <span class="ruby-operator">==</span> <span class="ruby-value str">'1'</span>
+266:                                 <span class="ruby-identifier">print_exception</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">to_s</span>, <span class="ruby-identifier">e</span>)
+267:                         <span class="ruby-keyword kw">end</span>
+268:                         <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">write</span>(<span class="ruby-value str">'exception'</span>)
+269:                         <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">write_scalar</span>(<span class="ruby-identifier">marshal_exception</span>(<span class="ruby-identifier">e</span>))
+270:                         <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">write_scalar</span>(<span class="ruby-identifier">stderr_output</span>)
+271:                         <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">false</span>
+272:                 <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">SystemExit</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">e</span>
+273:                         <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">write</span>(<span class="ruby-value str">'exit'</span>)
+274:                         <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">write_scalar</span>(<span class="ruby-identifier">marshal_exception</span>(<span class="ruby-identifier">e</span>))
+275:                         <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">write_scalar</span>(<span class="ruby-identifier">stderr_output</span>)
+276:                         <span class="ruby-identifier">raise</span>
+277:                 <span class="ruby-keyword kw">end</span>
+278:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000084"></a><b>safe_fork</b>(current_location = self.class, double_fork = false) {|| ...}
+  </div>
+  <div class="description">
+  <p>
+Fork a new process and run the given block inside the child process, just
+like fork(). Unlike fork(), this method is safe, i.e. there&#8216;s no way
+for the child process to escape the block. Any uncaught exceptions in the
+child process will be printed to standard output, citing
+<tt>current_location</tt> as the source. Futhermore, the child process will
+exit by calling Kernel#exit!, thereby bypassing any at_exit or ensure
+blocks.
+</p>
+<p>
+If <tt>double_fork</tt> is true, then the child process will fork and
+immediately exit. This technique can be used to avoid zombie processes, at
+the expense of not being able to waitpid() the second child.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000084_source')" id="l_M000084_source">show source</a> ]</p>
+  <div id="M000084_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 175</span>
+175:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">safe_fork</span>(<span class="ruby-identifier">current_location</span> = <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">class</span>, <span class="ruby-identifier">double_fork</span> = <span class="ruby-keyword kw">false</span>)
+176:                 <span class="ruby-identifier">pid</span> = <span class="ruby-identifier">fork</span>
+177:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">pid</span>.<span class="ruby-identifier">nil?</span>
+178:                         <span class="ruby-keyword kw">begin</span>
+179:                                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">double_fork</span>
+180:                                         <span class="ruby-identifier">pid2</span> = <span class="ruby-identifier">fork</span>
+181:                                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">pid2</span>.<span class="ruby-identifier">nil?</span>
+182:                                                 <span class="ruby-identifier">srand</span>
+183:                                                 <span class="ruby-keyword kw">yield</span>
+184:                                         <span class="ruby-keyword kw">end</span>
+185:                                 <span class="ruby-keyword kw">else</span>
+186:                                         <span class="ruby-identifier">srand</span>
+187:                                         <span class="ruby-keyword kw">yield</span>
+188:                                 <span class="ruby-keyword kw">end</span>
+189:                         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Exception</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">e</span>
+190:                                 <span class="ruby-identifier">print_exception</span>(<span class="ruby-identifier">current_location</span>.<span class="ruby-identifier">to_s</span>, <span class="ruby-identifier">e</span>)
+191:                         <span class="ruby-keyword kw">ensure</span>
+192:                                 <span class="ruby-identifier">exit!</span>
+193:                         <span class="ruby-keyword kw">end</span>
+194:                 <span class="ruby-keyword kw">else</span>
+195:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">double_fork</span>
+196:                                 <span class="ruby-constant">Process</span>.<span class="ruby-identifier">waitpid</span>(<span class="ruby-identifier">pid</span>) <span class="ruby-keyword kw">rescue</span> <span class="ruby-keyword kw">nil</span>
+197:                                 <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">pid</span>
+198:                         <span class="ruby-keyword kw">else</span>
+199:                                 <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">pid</span>
+200:                         <span class="ruby-keyword kw">end</span>
+201:                 <span class="ruby-keyword kw">end</span>
+202:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000090"></a><b>sanitize_spawn_options</b>(options)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000090_source')" id="l_M000090_source">show source</a> ]</p>
+  <div id="M000090_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 391</span>
+391:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">sanitize_spawn_options</span>(<span class="ruby-identifier">options</span>)
+392:                 <span class="ruby-identifier">defaults</span> = {
+393:                         <span class="ruby-value str">&quot;lower_privilege&quot;</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-keyword kw">true</span>,
+394:                         <span class="ruby-value str">&quot;lowest_user&quot;</span>     =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">&quot;nobody&quot;</span>,
+395:                         <span class="ruby-value str">&quot;environment&quot;</span>     =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">&quot;production&quot;</span>,
+396:                         <span class="ruby-value str">&quot;app_type&quot;</span>        =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">&quot;rails&quot;</span>,
+397:                         <span class="ruby-value str">&quot;spawn_method&quot;</span>    =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">&quot;smart-lv2&quot;</span>,
+398:                         <span class="ruby-value str">&quot;framework_spawner_timeout&quot;</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value">-1</span>,
+399:                         <span class="ruby-value str">&quot;app_spawner_timeout&quot;</span>       =<span class="ruby-operator">&gt;</span> <span class="ruby-value">-1</span>,
+400:                         <span class="ruby-value str">&quot;print_exceptions&quot;</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-keyword kw">true</span>
+401:                 }
+402:                 <span class="ruby-identifier">options</span> = <span class="ruby-identifier">defaults</span>.<span class="ruby-identifier">merge</span>(<span class="ruby-identifier">options</span>)
+403:                 <span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;lower_privilege&quot;</span>]           = <span class="ruby-identifier">to_boolean</span>(<span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;lower_privilege&quot;</span>])
+404:                 <span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;framework_spawner_timeout&quot;</span>] = <span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;framework_spawner_timeout&quot;</span>].<span class="ruby-identifier">to_i</span>
+405:                 <span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;app_spawner_timeout&quot;</span>]       = <span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;app_spawner_timeout&quot;</span>].<span class="ruby-identifier">to_i</span>
+406:                 <span class="ruby-comment cmt"># Force this to be a boolean for easy use with Utils#unmarshal_and_raise_errors.</span>
+407:                 <span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;print_exceptions&quot;</span>]          = <span class="ruby-identifier">to_boolean</span>(<span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;print_exceptions&quot;</span>])
+408:                 <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">options</span>
+409:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000088"></a><b>switch_to_user</b>(user)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000088_source')" id="l_M000088_source">show source</a> ]</p>
+  <div id="M000088_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 354</span>
+354:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">switch_to_user</span>(<span class="ruby-identifier">user</span>)
+355:                 <span class="ruby-keyword kw">begin</span>
+356:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">user</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">String</span>)
+357:                                 <span class="ruby-identifier">pw</span> = <span class="ruby-constant">Etc</span>.<span class="ruby-identifier">getpwnam</span>(<span class="ruby-identifier">user</span>)
+358:                                 <span class="ruby-identifier">username</span> = <span class="ruby-identifier">user</span>
+359:                                 <span class="ruby-identifier">uid</span> = <span class="ruby-identifier">pw</span>.<span class="ruby-identifier">uid</span>
+360:                                 <span class="ruby-identifier">gid</span> = <span class="ruby-identifier">pw</span>.<span class="ruby-identifier">gid</span>
+361:                         <span class="ruby-keyword kw">else</span>
+362:                                 <span class="ruby-identifier">pw</span> = <span class="ruby-constant">Etc</span>.<span class="ruby-identifier">getpwuid</span>(<span class="ruby-identifier">user</span>)
+363:                                 <span class="ruby-identifier">username</span> = <span class="ruby-identifier">pw</span>.<span class="ruby-identifier">name</span>
+364:                                 <span class="ruby-identifier">uid</span> = <span class="ruby-identifier">user</span>
+365:                                 <span class="ruby-identifier">gid</span> = <span class="ruby-identifier">pw</span>.<span class="ruby-identifier">gid</span>
+366:                         <span class="ruby-keyword kw">end</span>
+367:                 <span class="ruby-keyword kw">rescue</span>
+368:                         <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">false</span>
+369:                 <span class="ruby-keyword kw">end</span>
+370:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">uid</span> <span class="ruby-operator">==</span> <span class="ruby-value">0</span>
+371:                         <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">false</span>
+372:                 <span class="ruby-keyword kw">else</span>
+373:                         <span class="ruby-comment cmt"># Some systems are broken. initgroups can fail because of</span>
+374:                         <span class="ruby-comment cmt"># all kinds of stupid reasons. So we ignore any errors</span>
+375:                         <span class="ruby-comment cmt"># raised by initgroups.</span>
+376:                         <span class="ruby-keyword kw">begin</span>
+377:                                 <span class="ruby-constant">Process</span>.<span class="ruby-identifier">groups</span> = <span class="ruby-constant">Process</span>.<span class="ruby-identifier">initgroups</span>(<span class="ruby-identifier">username</span>, <span class="ruby-identifier">gid</span>)
+378:                         <span class="ruby-keyword kw">rescue</span>
+379:                         <span class="ruby-keyword kw">end</span>
+380:                         <span class="ruby-constant">Process</span><span class="ruby-operator">::</span><span class="ruby-constant">Sys</span>.<span class="ruby-identifier">setgid</span>(<span class="ruby-identifier">gid</span>)
+381:                         <span class="ruby-constant">Process</span><span class="ruby-operator">::</span><span class="ruby-constant">Sys</span>.<span class="ruby-identifier">setuid</span>(<span class="ruby-identifier">uid</span>)
+382:                         <span class="ruby-constant">ENV</span>[<span class="ruby-value str">'HOME'</span>] = <span class="ruby-identifier">pw</span>.<span class="ruby-identifier">dir</span>
+383:                         <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">true</span>
+384:                 <span class="ruby-keyword kw">end</span>
+385:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000089"></a><b>to_boolean</b>(value)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000089_source')" id="l_M000089_source">show source</a> ]</p>
+  <div id="M000089_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 387</span>
+387:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">to_boolean</span>(<span class="ruby-identifier">value</span>)
+388:                 <span class="ruby-keyword kw">return</span> <span class="ruby-operator">!</span>(<span class="ruby-identifier">value</span>.<span class="ruby-identifier">nil?</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">value</span> <span class="ruby-operator">==</span> <span class="ruby-keyword kw">false</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">value</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;false&quot;</span>)
+389:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000086"></a><b>unmarshal_and_raise_errors</b>(channel, print_exception = nil, app_type = &quot;rails&quot;)
+  </div>
+  <div class="description">
+  <p>
+Receive status information that was sent to <tt>channel</tt> by <a
+href="Utils.html#M000085">report_app_init_status</a>. If an error occured
+according to the received information, then an appropriate exception will
+be raised.
+</p>
+<p>
+If <tt><a href="Utils.html#M000083">print_exception</a></tt> evaluates to
+true, then the exception message and the backtrace will also be printed.
+Where it is printed to depends on the type of <tt><a
+href="Utils.html#M000083">print_exception</a></tt>:
+</p>
+<ul>
+<li>If it responds to #puts, then the exception information will be printed
+using this method.
+
+</li>
+<li>If it responds to #to_str, then the exception information will be appended
+to the file whose filename equals the return value of the #to_str call.
+
+</li>
+<li>Otherwise, it will be printed to STDERR.
+
+</li>
+</ul>
+<p>
+Raises:
+</p>
+<ul>
+<li><a href="AppInitError.html">AppInitError</a>: this class wraps the
+exception information received through the channel.
+
+</li>
+<li>IOError, SystemCallError, SocketError: these errors are raised if an error
+occurred while receiving the information through the channel.
+
+</li>
+</ul>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000086_source')" id="l_M000086_source">show source</a> ]</p>
+  <div id="M000086_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 302</span>
+302:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">unmarshal_and_raise_errors</span>(<span class="ruby-identifier">channel</span>, <span class="ruby-identifier">print_exception</span> = <span class="ruby-keyword kw">nil</span>, <span class="ruby-identifier">app_type</span> = <span class="ruby-value str">&quot;rails&quot;</span>)
+303:                 <span class="ruby-identifier">args</span> = <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">read</span>
+304:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">args</span>.<span class="ruby-identifier">nil?</span>
+305:                         <span class="ruby-identifier">raise</span> <span class="ruby-constant">EOFError</span>, <span class="ruby-value str">&quot;Unexpected end-of-file detected.&quot;</span>
+306:                 <span class="ruby-keyword kw">end</span>
+307:                 <span class="ruby-identifier">status</span> = <span class="ruby-identifier">args</span>[<span class="ruby-value">0</span>]
+308:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">status</span> <span class="ruby-operator">==</span> <span class="ruby-value str">'exception'</span>
+309:                         <span class="ruby-identifier">child_exception</span> = <span class="ruby-identifier">unmarshal_exception</span>(<span class="ruby-identifier">channel</span>.<span class="ruby-identifier">read_scalar</span>)
+310:                         <span class="ruby-identifier">stderr</span> = <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">read_scalar</span>
+311:                         <span class="ruby-identifier">exception</span> = <span class="ruby-constant">AppInitError</span>.<span class="ruby-identifier">new</span>(
+312:                                 <span class="ruby-node">&quot;Application '#{@app_root}' raised an exception: &quot;</span> <span class="ruby-operator">&lt;&lt;</span>
+313:                                 <span class="ruby-node">&quot;#{child_exception.class} (#{child_exception.message})&quot;</span>,
+314:                                 <span class="ruby-identifier">child_exception</span>,
+315:                                 <span class="ruby-identifier">app_type</span>,
+316:                                 <span class="ruby-identifier">stderr</span>.<span class="ruby-identifier">empty?</span> <span class="ruby-value">? </span><span class="ruby-keyword kw">nil</span> <span class="ruby-operator">:</span> <span class="ruby-identifier">stderr</span>)
+317:                 <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">status</span> <span class="ruby-operator">==</span> <span class="ruby-value str">'exit'</span>
+318:                         <span class="ruby-identifier">child_exception</span> = <span class="ruby-identifier">unmarshal_exception</span>(<span class="ruby-identifier">channel</span>.<span class="ruby-identifier">read_scalar</span>)
+319:                         <span class="ruby-identifier">stderr</span> = <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">read_scalar</span>
+320:                         <span class="ruby-identifier">exception</span> = <span class="ruby-constant">AppInitError</span>.<span class="ruby-identifier">new</span>(<span class="ruby-node">&quot;Application '#{@app_root}' exited during startup&quot;</span>,
+321:                                 <span class="ruby-identifier">child_exception</span>, <span class="ruby-identifier">app_type</span>, <span class="ruby-identifier">stderr</span>.<span class="ruby-identifier">empty?</span> <span class="ruby-value">? </span><span class="ruby-keyword kw">nil</span> <span class="ruby-operator">:</span> <span class="ruby-identifier">stderr</span>)
+322:                 <span class="ruby-keyword kw">else</span>
+323:                         <span class="ruby-identifier">exception</span> = <span class="ruby-keyword kw">nil</span>
+324:                 <span class="ruby-keyword kw">end</span>
+325:                 
+326:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">print_exception</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">exception</span>
+327:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">print_exception</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">:puts</span>)
+328:                                 <span class="ruby-identifier">print_exception</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">to_s</span>, <span class="ruby-identifier">child_exception</span>, <span class="ruby-identifier">print_exception</span>)
+329:                         <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">print_exception</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">:to_str</span>)
+330:                                 <span class="ruby-identifier">filename</span> = <span class="ruby-identifier">print_exception</span>.<span class="ruby-identifier">to_str</span>
+331:                                 <span class="ruby-constant">File</span>.<span class="ruby-identifier">open</span>(<span class="ruby-identifier">filename</span>, <span class="ruby-value str">'a'</span>) <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">f</span><span class="ruby-operator">|</span>
+332:                                         <span class="ruby-identifier">print_exception</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">to_s</span>, <span class="ruby-identifier">child_exception</span>, <span class="ruby-identifier">f</span>)
+333:                                 <span class="ruby-keyword kw">end</span>
+334:                         <span class="ruby-keyword kw">else</span>
+335:                                 <span class="ruby-identifier">print_exception</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">to_s</span>, <span class="ruby-identifier">child_exception</span>)
+336:                         <span class="ruby-keyword kw">end</span>
+337:                 <span class="ruby-keyword kw">end</span>
+338:                 <span class="ruby-identifier">raise</span> <span class="ruby-identifier">exception</span> <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">exception</span>
+339:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000082"></a><b>unmarshal_exception</b>(data)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000082_source')" id="l_M000082_source">show source</a> ]</p>
+  <div id="M000082_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 127</span>
+127:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">unmarshal_exception</span>(<span class="ruby-identifier">data</span>)
+128:                 <span class="ruby-identifier">hash</span> = <span class="ruby-constant">Marshal</span>.<span class="ruby-identifier">load</span>(<span class="ruby-identifier">data</span>)
+129:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">hash</span>[<span class="ruby-identifier">:is_initialization_error</span>]
+130:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">hash</span>[<span class="ruby-identifier">:child_exception</span>]
+131:                                 <span class="ruby-identifier">child_exception</span> = <span class="ruby-identifier">unmarshal_exception</span>(<span class="ruby-identifier">hash</span>[<span class="ruby-identifier">:child_exception</span>])
+132:                         <span class="ruby-keyword kw">else</span>
+133:                                 <span class="ruby-identifier">child_exception</span> = <span class="ruby-keyword kw">nil</span>
+134:                         <span class="ruby-keyword kw">end</span>
+135:                         
+136:                         <span class="ruby-keyword kw">case</span> <span class="ruby-identifier">hash</span>[<span class="ruby-identifier">:class</span>]
+137:                         <span class="ruby-keyword kw">when</span> <span class="ruby-constant">AppInitError</span>.<span class="ruby-identifier">to_s</span>
+138:                                 <span class="ruby-identifier">exception_class</span> = <span class="ruby-constant">AppInitError</span>
+139:                         <span class="ruby-keyword kw">when</span> <span class="ruby-constant">FrameworkInitError</span>.<span class="ruby-identifier">to_s</span>
+140:                                 <span class="ruby-identifier">exception_class</span> = <span class="ruby-constant">FrameworkInitError</span>
+141:                         <span class="ruby-keyword kw">else</span>
+142:                                 <span class="ruby-identifier">exception_class</span> = <span class="ruby-constant">InitializationError</span>
+143:                         <span class="ruby-keyword kw">end</span>
+144:                         <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">exception_class</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">hash</span>[<span class="ruby-identifier">:message</span>], <span class="ruby-identifier">child_exception</span>)
+145:                 <span class="ruby-keyword kw">else</span>
+146:                         <span class="ruby-keyword kw">begin</span>
+147:                                 <span class="ruby-keyword kw">return</span> <span class="ruby-constant">Marshal</span>.<span class="ruby-identifier">load</span>(<span class="ruby-identifier">hash</span>[<span class="ruby-identifier">:exception</span>])
+148:                         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-constant">TypeError</span>
+149:                                 <span class="ruby-keyword kw">return</span> <span class="ruby-constant">UnknownError</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">hash</span>[<span class="ruby-identifier">:message</span>], <span class="ruby-identifier">hash</span>[<span class="ruby-identifier">:class</span>], <span class="ruby-identifier">hash</span>[<span class="ruby-identifier">:backtrace</span>])
+150:                         <span class="ruby-keyword kw">end</span>
+151:                 <span class="ruby-keyword kw">end</span>
+152:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

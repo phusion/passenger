@@ -300,7 +300,7 @@ private
 		if File.exist?('config/preinitializer.rb')
 			require 'config/preinitializer'
 		end
-		require 'config/environment'
+		require File.expand_path('config/environment')
 		if ActionController::Base.page_cache_directory.blank?
 			ActionController::Base.page_cache_directory = "#{RAILS_ROOT}/public"
 		end
@@ -321,9 +321,11 @@ private
 		#   isn't copy-on-write friendly.
 		# - Rails >= 2.2 already preloads application sources by default, so no need
 		#   to do that again.
-		if GC.copy_on_write_friendly? && !::Rails::Initializer.respond_to?(:load_application_classes)
-			Dir.glob('app/{models,controllers,helpers}/*.rb').each do |file|
-				require_dependency canonicalize_path(file)
+		if GC.copy_on_write_friendly? && !::Rails::Initializer.method_defined?(:load_application_classes)
+			['models','controllers','helpers'].each do |section|
+				Dir.glob("app/#{section}}/*.rb").each do |file|
+					require_dependency canonicalize_path(file)
+				end
 			end
 		end
 	end
@@ -385,3 +387,4 @@ end
 
 end # module Railz
 end # module PhusionPassenger
+
