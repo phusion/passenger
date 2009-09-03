@@ -590,8 +590,33 @@
 		// then any ApplicationSpawner/FrameworkSpawner processes should be
 		// killed first.
 		
-		// TODO: to test this we first need to be able to move
-		// ApplicationPoolServer in-process so that we can use mock objects
+		// TODO: implement this. we'll have to mock some objects
+	}
+	
+	TEST_METHOD(27) {
+		// Test inspect()
+		Application::SessionPtr session1 = spawnRackApp(pool, "stub/rack");
+		string str = pool->inspect();
+		ensure("Contains 'max = '", str.find("max ") != string::npos);
+		ensure("Contains PID", str.find("PID: " + toString(session1->getPid())) != string::npos);
+	}
+	
+	TEST_METHOD(28) {
+		// Test toXml(true)
+		Application::SessionPtr session1 = spawnRackApp(pool, "stub/rack");
+		string xml = pool->toXml();
+		ensure("Contains <instance>", xml.find("<instance>") != string::npos);
+		ensure("Contains PID", xml.find("<pid>" + toString(session1->getPid()) + "</pid>") != string::npos);
+		ensure("Contains sensitive information", xml.find("includes_sensitive_information") != string::npos);
+	}
+	
+	TEST_METHOD(29) {
+		// Test toXml(false)
+		Application::SessionPtr session1 = spawnRackApp(pool, "stub/rack");
+		string xml = pool->toXml(false);
+		ensure("Contains <instance>", xml.find("<instance>") != string::npos);
+		ensure("Contains PID", xml.find("<pid>" + toString(session1->getPid()) + "</pid>") != string::npos);
+		ensure("Does not contain sensitive information", xml.find("includes_sensitive_information") == string::npos);
 	}
 	
 	/*************************************/

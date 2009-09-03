@@ -241,6 +241,21 @@ public:
 	 * @throws boost::thread_interrupted
 	 */
 	virtual pid_t getSpawnServerPid() const = 0;
+	
+	/**
+	 * Returns a human-readable description of the internal state
+	 * of the application pool.
+	 */
+	virtual string inspect() const = 0;
+	
+	/**
+	 * Returns an XML description of the internal state of the
+	 * application pool.
+	 *
+	 * @param includeSensitiveInformation Whether potentially sensitive
+	 *     information may be included in the result.
+	 */
+	virtual string toXml(bool includeSensitiveInformation = true) const = 0;
 };
 
 typedef shared_ptr<Interface> Ptr;

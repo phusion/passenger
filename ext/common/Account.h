@@ -62,8 +62,8 @@ public:
 		CLEAR                   = 1 << 1,
 		GET_PARAMETERS          = 1 << 2,
 		SET_PARAMETERS          = 1 << 3,
-		INSPECT_PUBLIC_DETAILS  = 1 << 4,
-		INSPECT_PRIVATE_DETAILS = 1 << 5,
+		INSPECT_BASIC_INFO      = 1 << 4,
+		INSPECT_SENSITIVE_INFO  = 1 << 5,
 	};
 
 private:
@@ -88,12 +88,15 @@ public:
 		}
 	}
 	
-	bool hasRights(Rights rights) const {
+	// Urgh, I can't use 'Rights' here as type because apparently bitwise
+	// ORing two enums result in an int type.
+	
+	bool hasRights(int rights) const {
 		return this->rights & rights;
 	}
 	
-	void setRights(Rights rights) {
-		this->rights = rights;
+	void setRights(int rights) {
+		this->rights = (Rights) rights;
 	}
 	
 	static string createHash(const StaticString &userSuppliedPassword) {

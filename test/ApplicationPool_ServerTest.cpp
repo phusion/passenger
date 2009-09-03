@@ -258,5 +258,45 @@ namespace tut {
 		clientAccount->setRights(Account::GET_PARAMETERS);
 		pool->getSpawnServerPid(); // Should not throw SecurityException now.
 	}
+	
+	TEST_METHOD(13) {
+		// inspect() requires INSPECT_BASIC_INFO rights.
+		initializePool();
+		
+		try {
+			clientAccount->setRights(Account::SET_PARAMETERS);
+			pool->inspect();
+			fail("SecurityException expected");
+		} catch (const SecurityException &e) {
+			// Pass.
+		}
+		
+		clientAccount->setRights(Account::INSPECT_BASIC_INFO);
+		pool->inspect(); // Should not throw SecurityException now.
+	}
+	
+	TEST_METHOD(14) {
+		// toXml() requires INSPECT_BASIC_INFO rights.
+		initializePool();
+		
+		try {
+			clientAccount->setRights(Account::SET_PARAMETERS);
+			pool->toXml();
+			fail("SecurityException expected");
+		} catch (const SecurityException &e) {
+			// Pass.
+		}
+		
+		clientAccount->setRights(Account::INSPECT_BASIC_INFO);
+		pool->toXml(); // Should not throw SecurityException now.
+	}
+	
+	TEST_METHOD(15) {
+		// toXml() only prints private information if the client has the INSPECT_SENSITIVE_INFO right.
+		initializePool();
+		clientAccount->setRights(Account::INSPECT_BASIC_INFO);
+		ensure("Does not contain private information", pool->toXml().find("includes_sensitive_information") == string::npos);
+		clientAccount->setRights(Account::INSPECT_BASIC_INFO | Account::INSPECT_SENSITIVE_INFO);
+		ensure("Contains private information", pool->toXml().find("includes_sensitive_information") != string::npos);
+	}
 }
-

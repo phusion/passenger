@@ -349,6 +349,21 @@ private:
 		commonContext.channel.write(toString(pool->getSpawnServerPid()).c_str(), NULL);
 	}
 	
+	void processInspect(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
+		TRACE_POINT();
+		commonContext.requireRights(Account::INSPECT_BASIC_INFO);
+		commonContext.channel.writeScalar(pool->inspect());
+	}
+	
+	void processToXml(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
+		TRACE_POINT();
+		commonContext.requireRights(Account::INSPECT_BASIC_INFO);
+		bool includeSensitiveInfo =
+			commonContext.account->hasRights(Account::INSPECT_SENSITIVE_INFO) &&
+			args[1] == "true";
+		commonContext.channel.writeScalar(pool->toXml(includeSensitiveInfo));
+	}
+	
 	void processUnknownMessage(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		string name;
@@ -400,6 +415,10 @@ public:
 				processSetMaxPerApp(commonContext, specificContext, atoi(args[1]));
 			} else if (args[0] == "getSpawnServerPid" && args.size() == 1) {
 				processGetSpawnServerPid(commonContext, specificContext, args);
+			} else if (args[0] == "inspect" && args.size() == 1) {
+				processInspect(commonContext, specificContext, args);
+			} else if (args[0] == "toXml" && args.size() == 2) {
+				processToXml(commonContext, specificContext, args);
 			} else {
 				processUnknownMessage(commonContext, specificContext, args);
 				return false;

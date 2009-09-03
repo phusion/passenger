@@ -425,6 +425,50 @@ public:
 		}
 	}
 	
+	virtual string inspect() const {
+		TRACE_POINT();
+		checkConnection();
+		MessageChannel &channel(data->channel);
+		string result;
+		
+		try {
+			channel.write("inspect", NULL);
+			checkSecurityResponse();
+			// TODO: in many of these methods we do not check for EOF
+			// out of laziness. Should probably be fixed in the future?
+			channel.readScalar(result);
+			return result;
+		} catch (const SecurityException &) {
+			// Don't disconnect.
+			throw;
+		} catch (...) {
+			this_thread::disable_syscall_interruption dsi;
+			data->disconnect();
+			throw;
+		}
+	}
+	
+	virtual string toXml(bool includeSensitiveInformation = true) const {
+		TRACE_POINT();
+		checkConnection();
+		MessageChannel &channel(data->channel);
+		string result;
+		
+		try {
+			channel.write("toXml", includeSensitiveInformation ? "true" : "false", NULL);
+			checkSecurityResponse();
+			channel.readScalar(result);
+			return result;
+		} catch (const SecurityException &) {
+			// Don't disconnect.
+			throw;
+		} catch (...) {
+			this_thread::disable_syscall_interruption dsi;
+			data->disconnect();
+			throw;
+		}
+	}
+	
 	virtual Application::SessionPtr get(const PoolOptions &options) {
 		TRACE_POINT();
 		checkConnection();
