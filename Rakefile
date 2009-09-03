@@ -343,8 +343,13 @@ end
 		'ext/nginx/ScgiRequestParser.h',
 		'ext/nginx/HttpStatusExtractor.h',
 		'ext/common/StaticString.h',
-		'ext/common/StandardApplicationPool.h',
-		'ext/common/ApplicationPoolController.h'
+		'ext/common/Account.h',
+		'ext/common/AccountsDatabase.h',
+		'ext/common/MessageServer.h',
+		'ext/common/FileDescriptor.h',
+		'ext/common/ThreadStatusServer.h',
+		'ext/common/ApplicationPool/Interface.h',
+		'ext/common/ApplicationPool/Pool.h'
 		]
 	file 'ext/nginx/HelperServer' => helper_server_dependencies do
 		create_executable "ext/nginx/HelperServer",

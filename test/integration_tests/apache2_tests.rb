@@ -6,6 +6,7 @@ require 'support/apache2_controller'
 require 'phusion_passenger/platform_info'
 
 require 'integration_tests/mycook_spec'
+require 'integration_tests/cgi_environment_spec'
 require 'integration_tests/hello_world_rack_spec'
 require 'integration_tests/hello_world_wsgi_spec'
 
@@ -50,6 +51,7 @@ describe "Apache 2 module" do
 		end
 		
 		it_should_behave_like "MyCook(tm) beta"
+		include_shared_example_group "CGI environment variables compliance"
 		
 		it "doesn't block Rails while an upload is in progress" do
 			get('/') # Force spawning so that the timeout below is enough.
@@ -127,6 +129,7 @@ describe "Apache 2 module" do
 		end
 		
 		it_should_behave_like "MyCook(tm) beta"
+		include_shared_example_group "CGI environment variables compliance"
 		
 		it "does not interfere with the root website" do
 			@server = "http://passenger.test:#{@apache2.port}"

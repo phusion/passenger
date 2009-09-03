@@ -45,10 +45,12 @@
 #include "ScgiRequestParser.h"
 #include "HttpStatusExtractor.h"
 
-#include "StandardApplicationPool.h"
-#include "ApplicationPoolController.h"
+#include "ApplicationPool/Pool.h"
 #include "Application.h"
 #include "PoolOptions.h"
+#include "MessageServer.h"
+#include "ThreadStatusServer.h"
+#include "FileDescriptor.h"
 #include "Exceptions.h"
 #include "Utils.h"
 
@@ -57,70 +59,6 @@ using namespace oxt;
 using namespace Passenger;
 
 #define HELPER_SERVER_PASSWORD_SIZE     64
-
-
-/**
- * Wrapper class around a file descriptor integer, for RAII behavior.
- *
- * A FileDescriptor object behaves just like an int, so that you can pass it to
- * system calls such as read(). It performs reference counting. When the last
- * copy of a FileDescriptor has been destroyed, the underlying file descriptor
- * will be automatically closed.
- */
-class FileDescriptor {
-private:
-	struct SharedData {
-		int fd;
-		
-		/**
-		 * Constructor to assign this file descriptor's handle.
-		 */
-		SharedData(int fd) {
-			this->fd = fd;
-		}
-		
-		/**
-		 * Attempts to close this file descriptor. When created on the stack,
-		 * this destructor will automatically be invoked as a result of C++
-		 * semantics when exiting the scope this object was created in. This
-		 * ensures that stack created objects with destructors like these will
-		 * de-allocate their resources upon leaving their corresponding scope.
-		 * This pattern is also known Resource Acquisition Is Initialization (RAII).
-		 *
-		 * @throws SystemException File descriptor could not be closed.
-		 */
-		~SharedData() {
-			if (syscalls::close(fd) == -1) {
-				throw SystemException("Cannot close file descriptor", errno);
-			}
-		}
-	};
-	
-	/* Shared pointer for reference counting on this file descriptor */
-	shared_ptr<SharedData> data;
-	
-public:
-	FileDescriptor() {
-		// Do nothing.
-	}
-	
-	/**
-	 * Creates a new FileDescriptor instance with the given fd as a handle.
-	 */
-	FileDescriptor(int fd) {
-		data = ptr(new SharedData(fd));
-	}
-	
-	/**
-	 * Overloads the integer cast operator so that it will return the file
-	 * descriptor handle as an integer.
-	 *
-	 * @return This file descriptor's handle as an integer.
-	 */
-	operator int () const {
-		return data->fd;
-	}
-};
 
 struct ClientDisconnectedException { };
 
@@ -145,7 +83,7 @@ private:
 	unsigned int number;
 	
 	/** The application pool to which this Client object belongs to. */
-	StandardApplicationPoolPtr pool;
+	ApplicationPool::Ptr pool;
 	
 	/** This client's password. */
 	string password;
@@ -477,6 +415,7 @@ private:
 					"It seems the user clicked on the 'Stop' button in his "
 					"browser.");
 			}
+			clientFd.close();
 		} catch (const boost::thread_interrupted &) {
 			throw;
 		} catch (const tracable_exception &e) {
@@ -539,7 +478,7 @@ public:
 	 *   initial attempt at privilege lowering failed.
 	 * @param serverSocket The server socket to accept this clients connection from.
 	 */
-	Client(unsigned int number, StandardApplicationPoolPtr &pool,
+	Client(unsigned int number, ApplicationPool::Ptr pool,
 	       const string &password, bool lowerPrivilege,
 	       const string &lowestUser, int serverSocket) {
 		this->number = number;
@@ -577,6 +516,8 @@ typedef shared_ptr<Client> ClientPtr;
  */
 class Server {
 private:
+	static const int MESSAGE_SERVER_THREAD_STACK_SIZE = 64 * 128;
+	
 	string password;
 	int adminPipe;
 	int serverSocket;
@@ -584,8 +525,10 @@ private:
 	string defaultUser;
 	unsigned int numberOfThreads;
 	set<ClientPtr> clients;
-	StandardApplicationPoolPtr pool;
-	shared_ptr<ApplicationPoolController> controller;
+	ApplicationPool::Ptr pool;
+	AccountsDatabasePtr accountsDatabase;
+	MessageServerPtr messageServer;
+	shared_ptr<oxt::thread> messageServerThread;
 	
 	/**
 	 * Starts listening for client connections from this server's <tt>serverSocket</tt>.
@@ -685,7 +628,7 @@ public:
 	 *   processes should run as.
 	 * @param workerUid The UID of the web server's worker processes. Used for determining
 	 *   the optimal permissions for some temp files.
-	* @param workerGid The GID of the web server's worker processes. Used for determining
+	 * @param workerGid The GID of the web server's worker processes. Used for determining
 	 *   the optimal permissions for some temp files.
 	 */
 	Server(const string &password, const string &rootDir, const string &ruby,
@@ -708,7 +651,7 @@ public:
 			lowerPrivilege(defaultUser);
 		}
 		
-		pool = ptr(new StandardApplicationPool(
+		pool = ptr(new ApplicationPool::Pool(
 			rootDir + "/bin/passenger-spawn-server",
 			"", ruby
 		));
@@ -716,8 +659,17 @@ public:
 		pool->setMaxPerApp(maxInstancesPerApp);
 		pool->setMaxIdleTime(poolIdleTime);
 		
-		controller = ptr(new ApplicationPoolController(pool, userSwitching,
-				S_IRUSR | S_IWUSR));
+		accountsDatabase = ptr(new AccountsDatabase());
+		accountsDatabase->add("_passenger-status", "_passenger-status", false);
+		messageServer = ptr(new MessageServer(
+			getPassengerTempDir() + "/master/pool_controller.socket",
+			accountsDatabase
+		));
+		messageServer->addHandler(ptr(new ThreadStatusServer()));
+		messageServerThread = ptr(new oxt::thread(
+			boost::bind(&MessageServer::mainLoop, messageServer.get()),
+			"MessageServer thread", MESSAGE_SERVER_THREAD_STACK_SIZE
+		));
 		
 		// Tell the web server that we're done initializing.
 		syscalls::close(feedbackPipe);
@@ -727,6 +679,8 @@ public:
 		TRACE_POINT();
 		this_thread::disable_syscall_interruption dsi;
 		this_thread::disable_interruption di;
+		
+		messageServerThread->interrupt_and_join();
 		
 		P_DEBUG("Shutting down helper server...");
 		clients.clear();

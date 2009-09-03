@@ -382,6 +382,8 @@ public:
 	}
 };
 
+typedef shared_ptr<MessageServer> MessageServerPtr;
+
 } // namespace Passenger
 
 #endif /* _PASSENGER_MESSAGE_SERVER_H_ */
