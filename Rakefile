@@ -379,6 +379,18 @@ end
 	TEST_COMMON_CFLAGS = "-DTESTING_APPLICATION_POOL " <<
 		"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 	
+	desc "Run all unit tests and integration tests"
+	task :test => ['test:oxt', 'test:cxx', 'test:ruby', 'test:integration']
+	
+	task :clean => 'test:clean'
+	desc "Clean all compiled test files"
+	task 'test:clean' do
+		sh("rm -rf test/oxt/oxt_test_main test/oxt/*.o test/CxxTests test/*.o")
+	end
+	
+	
+	### OXT tests ###
+	
 	TEST_OXT_CFLAGS = "-I../../ext -I../support #{TEST_COMMON_CFLAGS}"
 	TEST_OXT_LDFLAGS = "#{TEST_BOOST_OXT_LIBRARY} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
 	TEST_OXT_OBJECTS = {
@@ -497,14 +509,34 @@ end
 			test/UtilsTest.cpp
 			ext/common/Utils.h)
 	}
-
-	desc "Run all unit tests and integration tests"
-	task :test => ['test:oxt', 'test:cxx', 'test:ruby', 'test:integration']
 	
 	desc "Run unit tests for the OXT library"
 	task 'test:oxt' => 'test/oxt/oxt_test_main' do
 		sh "cd test && ./oxt/oxt_test_main"
 	end
+	
+	# Define task for test/oxt/oxt_test_main.
+	oxt_test_main_dependencies = TEST_OXT_OBJECTS.keys.map do |object|
+		"test/oxt/#{object}"
+	end
+	oxt_test_main_dependencies << TEST_BOOST_OXT_LIBRARY
+	file 'test/oxt/oxt_test_main' => oxt_test_main_dependencies do
+		objects = TEST_OXT_OBJECTS.keys.map{ |x| "test/oxt/#{x}" }.join(' ')
+		create_executable("test/oxt/oxt_test_main", objects, TEST_OXT_LDFLAGS)
+	end
+	
+	# Define tasks for each OXT test source file.
+	TEST_OXT_OBJECTS.each_pair do |target, sources|
+		file "test/oxt/#{target}" => sources.map{ |x| "test/oxt/#{x}" } + ['test/support/Support.h'] do
+			Dir.chdir('test/oxt') do
+				puts "### In test/oxt:"
+				compile_cxx sources[0], TEST_OXT_CFLAGS
+			end
+		end
+	end
+	
+	
+	### C++ components tests ###
 	
 	desc "Run unit tests for the Apache 2 and Nginx C++ components"
 	task 'test:cxx' => ['test/CxxTests', :native_support] do
@@ -515,6 +547,22 @@ end
 	                sh "cd test && ./CxxTests #{args.join(' ')}"
                 end
 	end
+	
+	cxx_tests_dependencies = [TEST_CXX_OBJECTS.keys,
+		TEST_BOOST_OXT_LIBRARY, TEST_COMMON_LIBRARY]
+	file 'test/CxxTests' => cxx_tests_dependencies.flatten do
+		objects = TEST_CXX_OBJECTS.keys.join(' ')
+		create_executable("test/CxxTests", objects, TEST_CXX_LDFLAGS)
+	end
+	
+	TEST_CXX_OBJECTS.each_pair do |target, sources|
+		file(target => sources) do
+			compile_cxx sources[0], "-o #{target} #{TEST_CXX_CFLAGS}"
+		end
+	end
+	
+	
+	### Ruby components tests ###
 	
 	desc "Run unit tests for the Ruby libraries"
 	task 'test:ruby' => :native_support do
@@ -540,6 +588,9 @@ end
 			end
 		end
 	end
+	
+	
+	### Integration tests ###
 	
 	desc "Run all integration tests"
 	task 'test:integration' => ['test:integration:apache2', 'test:integration:nginx'] do
@@ -567,37 +618,6 @@ end
 		end
 	end
 	
-	oxt_test_main_dependencies = TEST_OXT_OBJECTS.keys.map do |object|
-		"test/oxt/#{object}"
-	end
-	oxt_test_main_dependencies << TEST_BOOST_OXT_LIBRARY
-	file 'test/oxt/oxt_test_main' => oxt_test_main_dependencies do
-		objects = TEST_OXT_OBJECTS.keys.map{ |x| "test/oxt/#{x}" }.join(' ')
-		create_executable("test/oxt/oxt_test_main", objects, TEST_OXT_LDFLAGS)
-	end
-	
-	TEST_OXT_OBJECTS.each_pair do |target, sources|
-		file "test/oxt/#{target}" => sources.map{ |x| "test/oxt/#{x}" } + ['test/support/Support.h'] do
-			Dir.chdir('test/oxt') do
-				puts "### In test/oxt:"
-				compile_cxx sources[0], TEST_OXT_CFLAGS
-			end
-		end
-	end
-
-	cxx_tests_dependencies = [TEST_CXX_OBJECTS.keys,
-		TEST_BOOST_OXT_LIBRARY, TEST_COMMON_LIBRARY]
-	file 'test/CxxTests' => cxx_tests_dependencies.flatten do
-		objects = TEST_CXX_OBJECTS.keys.join(' ')
-		create_executable("test/CxxTests", objects, TEST_CXX_LDFLAGS)
-	end
-	
-	TEST_CXX_OBJECTS.each_pair do |target, sources|
-		file(target => sources) do
-			compile_cxx sources[0], "-o #{target} #{TEST_CXX_CFLAGS}"
-		end
-	end
-	
 	desc "Run the 'restart' integration test infinitely, and abort if/when it fails"
 	task 'test:restart' => [:apache2, :native_support] do
 		Dir.chdir("test") do
@@ -610,12 +630,6 @@ end
 				i += 1
 			end
 		end
-	end
-	
-	task :clean => 'test:clean'
-	desc "Clean all compiled test files"
-	task 'test:clean' do
-		sh("rm -rf test/oxt/oxt_test_main test/oxt/*.o test/CxxTests test/*.o")
 	end
 
 
