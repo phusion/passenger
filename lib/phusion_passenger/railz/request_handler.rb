@@ -1,3 +1,4 @@
+# encoding: binary
 #  Phusion Passenger - http://www.modrails.com/
 #  Copyright (c) 2008, 2009 Phusion
 #

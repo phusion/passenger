@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>File: DEVELOPERS.TXT</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href=".././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table border='0' cellpadding='0' cellspacing='0' width="100%" class='banner'>
+  <tr><td>
+    <table width="100%" border='0' cellpadding='0' cellspacing='0'><tr>
+      <td class="file-title" colspan="2"><span class="file-title-prefix">File</span><br />DEVELOPERS.TXT</td>
+      <td align="right">
+        <table border='0' cellspacing="0" cellpadding="2">
+          <tr>
+            <td>Path:</td>
+            <td>DEVELOPERS.TXT
+            </td>
+          </tr>
+          <tr>
+            <td>Modified:</td>
+            <td>Thu Jun 04 21:13:25 +0200 2009</td>
+          </tr>
+        </table>
+      </td></tr>
+    </table>
+  </td></tr>
+</table><br />
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+  <div class="description"><h1>Developers information</h1>
+<h2>Required software</h2>
+<p>
+The tests need the following software installed:
+</p>
+<ul>
+<li>All the usual Phusion Passenger dependencies.
+
+</li>
+<li>Ruby on Rails 2.0.1 (<b>exactly</b> 2.0.1)
+
+</li>
+<li>rspec &gt;= 1.1.2
+
+</li>
+<li>mime-types &gt;= 1.15
+
+</li>
+<li>daemon_controller (only for running the Nginx integration test). Install
+with: gem install FooBarWidget-daemon_controller -s <a
+href="http://gems.github.com">gems.github.com</a>
+
+</li>
+</ul>
+<p>
+The following software is optional:
+</p>
+<ul>
+<li>RCov, for code coverage
+
+</li>
+<li>RDoc, for generating HTML Ruby API documentation
+
+</li>
+<li>Doxygen, for generating HTML C++ API documentation
+
+</li>
+<li>dot (part of Graphviz), for generating diagrams in HTML API documentation
+
+</li>
+<li>The font &quot;Bitstream Vera Sans&quot;, used in the class diagrams. See
+<a href="http://www.gnome.org/fonts">www.gnome.org/fonts</a>
+
+</li>
+<li>AsciiDoc &gt;= 8.2.5, for converting various doc/*.txt documents to HTML
+
+</li>
+</ul>
+<h2>Compiling Phusion Passenger</h2>
+<p>
+Run the following command to compile everything:
+</p>
+<pre>
+ rake
+</pre>
+<h2>Directory structure</h2>
+<p>
+The most important directories are:
+</p>
+<dl>
+<dt> lib/phusion_passenger </dt><dd>The source code for the spawn server, which is written in Ruby.
+
+</dd>
+<dt> ext/phusion_passenger </dt><dd>Native extensions for Ruby, used by the spawn server.
+
+</dd>
+<dt> ext/apache2 </dt><dd>Apache 2-specific source code.
+
+</dd>
+<dt> ext/nginx </dt><dd>Nginx-specific source code.
+
+</dd>
+<dt> ext/common </dt><dd>Source code shared by the Apache and Nginx modules.
+
+</dd>
+<dt> bin </dt><dd>Executables.
+
+</dd>
+<dt> doc </dt><dd>Various documentation.
+
+</dd>
+<dt> test </dt><dd>Unit tests and integration tests.
+
+</dd>
+<dt> test/support </dt><dd>Support/utility code, used in the tests.
+
+</dd>
+<dt> test/stub </dt><dd>Stub code, used in the tests.
+
+</dd>
+</dl>
+<p>
+Less important directories:
+</p>
+<dl>
+<dt> ext/boost </dt><dd>A stripped-down and customized version of the Boost C++ library (<a
+href="http://www.boost.org">www.boost.org</a>).
+
+</dd>
+<dt> ext/oxt </dt><dd>The &quot;OS eXtensions for boosT&quot; library, which provides various
+important functionality necessary for writing robust server software. It
+provides things like support for interruptable system calls and portable
+backtraces for C++. Boost was modified to make use of the functionality
+provided by OXT.
+
+</dd>
+<dt> benchmark </dt><dd>Benchmark tools.
+
+</dd>
+<dt> debian </dt><dd>Debian packaging files.
+
+</dd>
+<dt> man </dt><dd>Man pages.
+
+</dd>
+<dt> misc </dt><dd>Miscellaneous tools.
+
+</dd>
+<dt> misc/rake </dt><dd>Rake tasks.
+
+</dd>
+<dt> vendor </dt><dd>Various vendored libraries.
+
+</dd>
+</dl>
+<h2>Tests</h2>
+<p>
+Run all tests:
+</p>
+<pre>
+ rake
+</pre>
+<p>
+Run just the tests for the Apache 2 module:
+</p>
+<pre>
+ rake test:apache2
+</pre>
+<p>
+Run just the unit tests for the Ruby spawn server:
+</p>
+<pre>
+ rake test:ruby
+</pre>
+<p>
+Run just the integration tests:
+</p>
+<pre>
+ rake test:integration
+</pre>
+<p>
+<b>Note</b>: some tests, such as the ones that test privilege lowering,
+require root privileges. Those will only be run if Rake is run as root.
+</p>
+<h2>Documentation</h2>
+<p>
+Various developer documents can be found in &#8216;doc/*.html&#8217;.
+</p>
+<p>
+The Ruby part&#8216;s API reference is located in &#8216;doc/rdoc/&#8217;.
+The C++ part&#8216;s API reference is located in &#8216;doc/cxxapi/&#8217;.
+</p>
+</div>
+
+
+
+
+
+
+
+
+
+</div>
+
+  </div>
+
+    </body>
+</html>

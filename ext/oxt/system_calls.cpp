@@ -127,6 +127,8 @@ syscalls::bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
 int
 syscalls::connect(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen) {
 	int ret;
+	// FIXME: I don't think this is entirely correct.
+	// http://www.madore.org/~david/computers/connect-intr.html
 	CHECK_INTERRUPTION(
 		ret == -1,
 		ret = ::connect(sockfd, serv_addr, addrlen);
@@ -264,9 +266,12 @@ syscalls::time(time_t *t) {
 
 int
 syscalls::usleep(useconds_t usec) {
+	// We use syscalls::nanosleep() here to reuse the code that sleeps
+	// for the remaining amount of time, if a signal was received but
+	// system call interruption is disabled.
 	struct timespec spec;
 	spec.tv_sec = usec / 1000000;
-	spec.tv_nsec = usec % 1000000;
+	spec.tv_nsec = usec % 1000000 * 1000;
 	return syscalls::nanosleep(&spec, NULL);
 }
 

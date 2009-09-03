@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Class: PhusionPassenger::AdminTools::ControlProcess</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href="../../.././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Class</span><br />PhusionPassenger::AdminTools::ControlProcess</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../../../files/lib/phusion_passenger/admin_tools/control_process_rb.html">lib/phusion_passenger/admin_tools/control_process.rb</a>
+        </td>
+      </tr>
+    <tr>
+      <td>Parent:</td>
+      <td>
+Object
+     </td>
+   </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000070">backtraces</a></li>
+  <li><a href="#M000072">domains</a></li>
+  <li><a href="#M000067">for_pid</a></li>
+  <li><a href="#M000073">instances</a></li>
+  <li><a href="#M000066">list</a></li>
+  <li><a href="#M000068">new</a></li>
+  <li><a href="#M000069">status</a></li>
+  <li><a href="#M000071">xml</a></li>
+  </ul>
+
+
+
+  <div class="sectiontitle">Classes and Modules</div>
+  Class <a href="ControlProcess/Instance.html" class="link">PhusionPassenger::AdminTools::ControlProcess::Instance</a><br />
+
+
+
+  <div class="sectiontitle">Attributes</div>
+  <table border='0' cellpadding='5'>
+  <tr valign='top'>
+    <td class='attr-rw'>
+[RW]
+    </td>
+    <td class='attr-name'>path</td>
+    <td class='attr-desc'></td>
+  </tr>
+  <tr valign='top'>
+    <td class='attr-rw'>
+[RW]
+    </td>
+    <td class='attr-name'>pid</td>
+    <td class='attr-desc'></td>
+  </tr>
+  </table>
+
+<div class="sectiontitle">Public Class methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000067"></a><b>for_pid</b>(pid)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000067_source')" id="l_M000067_source">show source</a> ]</p>
+  <div id="M000067_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/admin_tools/control_process.rb, line 60</span>
+60:         <span class="ruby-keyword kw">def</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">for_pid</span>(<span class="ruby-identifier">pid</span>)
+61:                 <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">list</span>(<span class="ruby-keyword kw">false</span>).<span class="ruby-identifier">find</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">c</span><span class="ruby-operator">|</span> <span class="ruby-identifier">c</span>.<span class="ruby-identifier">pid</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">pid</span> }
+62:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000066"></a><b>list</b>(clean_stale = true)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000066_source')" id="l_M000066_source">show source</a> ]</p>
+  <div id="M000066_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/admin_tools/control_process.rb, line 42</span>
+42:         <span class="ruby-keyword kw">def</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">list</span>(<span class="ruby-identifier">clean_stale</span> = <span class="ruby-keyword kw">true</span>)
+43:                 <span class="ruby-identifier">results</span> = []
+44:                 <span class="ruby-constant">Dir</span>[<span class="ruby-node">&quot;#{AdminTools.tmpdir}/passenger.*&quot;</span>].<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">dir</span><span class="ruby-operator">|</span>
+45:                         <span class="ruby-keyword kw">next</span> <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">dir</span> <span class="ruby-operator">!~</span> <span class="ruby-regexp re">/passenger.(\d+)\Z/</span>
+46:                         <span class="ruby-keyword kw">begin</span>
+47:                                 <span class="ruby-identifier">results</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-constant">ControlProcess</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">dir</span>)
+48:                         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">ArgumentError</span>
+49:                                 <span class="ruby-comment cmt"># Stale Passenger temp folder. Clean it up if instructed.</span>
+50:                                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">clean_stale</span>
+51:                                         <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;*** Cleaning stale folder #{dir}&quot;</span>
+52:                                         <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">chmod_R</span>(<span class="ruby-value">0700</span>, <span class="ruby-identifier">dir</span>) <span class="ruby-keyword kw">rescue</span> <span class="ruby-keyword kw">nil</span>
+53:                                         <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">rm_rf</span>(<span class="ruby-identifier">dir</span>)
+54:                                 <span class="ruby-keyword kw">end</span>
+55:                         <span class="ruby-keyword kw">end</span>
+56:                 <span class="ruby-keyword kw">end</span>
+57:                 <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">results</span>
+58:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000068"></a><b>new</b>(path)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000068_source')" id="l_M000068_source">show source</a> ]</p>
+  <div id="M000068_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/admin_tools/control_process.rb, line 64</span>
+64:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">path</span>)
+65:                 <span class="ruby-ivar">@path</span> = <span class="ruby-identifier">path</span>
+66:                 <span class="ruby-keyword kw">if</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-node">&quot;#{path}/control_process.pid&quot;</span>)
+67:                         <span class="ruby-identifier">data</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">read</span>(<span class="ruby-node">&quot;#{path}/control_process.pid&quot;</span>).<span class="ruby-identifier">strip</span>
+68:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">data</span>.<span class="ruby-identifier">empty?</span>
+69:                                 <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-node">&quot;'#{path}' is not a valid control process directory.&quot;</span>
+70:                         <span class="ruby-keyword kw">else</span>
+71:                                 <span class="ruby-ivar">@pid</span> = <span class="ruby-identifier">data</span>.<span class="ruby-identifier">to_i</span>
+72:                         <span class="ruby-keyword kw">end</span>
+73:                 <span class="ruby-keyword kw">else</span>
+74:                         <span class="ruby-identifier">path</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp re">/passenger.(\d+)\Z/</span>
+75:                         <span class="ruby-ivar">@pid</span> = <span class="ruby-identifier">$1</span>.<span class="ruby-identifier">to_i</span>
+76:                 <span class="ruby-keyword kw">end</span>
+77:                 <span class="ruby-keyword kw">if</span> <span class="ruby-operator">!</span><span class="ruby-constant">AdminTools</span>.<span class="ruby-identifier">process_is_alive?</span>(<span class="ruby-ivar">@pid</span>)
+78:                         <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-node">&quot;There is no control process with PID #{@pid}.&quot;</span>
+79:                 <span class="ruby-keyword kw">end</span>
+80:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="sectiontitle">Public Instance methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000070"></a><b>backtraces</b>()
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000070_source')" id="l_M000070_source">show source</a> ]</p>
+  <div id="M000070_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/admin_tools/control_process.rb, line 89</span>
+89:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">backtraces</span>
+90:                 <span class="ruby-identifier">connect</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">channel</span><span class="ruby-operator">|</span>
+91:                         <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">write</span>(<span class="ruby-value str">&quot;backtraces&quot;</span>)
+92:                         <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">read_scalar</span>
+93:                 <span class="ruby-keyword kw">end</span>
+94:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000072"></a><b>domains</b>()
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000072_source')" id="l_M000072_source">show source</a> ]</p>
+  <div id="M000072_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/admin_tools/control_process.rb, line 103</span>
+103:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">domains</span>
+104:                 <span class="ruby-identifier">doc</span> = <span class="ruby-constant">REXML</span><span class="ruby-operator">::</span><span class="ruby-constant">Document</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">xml</span>)
+105:                 
+106:                 <span class="ruby-identifier">domains</span> = []
+107:                 <span class="ruby-identifier">doc</span>.<span class="ruby-identifier">elements</span>.<span class="ruby-identifier">each</span>(<span class="ruby-value str">&quot;info/domains/domain&quot;</span>) <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">domain</span><span class="ruby-operator">|</span>
+108:                         <span class="ruby-identifier">instances</span> = []
+109:                         <span class="ruby-identifier">d</span> = {
+110:                                 <span class="ruby-identifier">:name</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">domain</span>.<span class="ruby-identifier">elements</span>[<span class="ruby-value str">&quot;name&quot;</span>].<span class="ruby-identifier">text</span>,
+111:                                 <span class="ruby-identifier">:instances</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">instances</span>
+112:                         }
+113:                         <span class="ruby-identifier">domain</span>.<span class="ruby-identifier">elements</span>.<span class="ruby-identifier">each</span>(<span class="ruby-value str">&quot;instances/instance&quot;</span>) <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">instance</span><span class="ruby-operator">|</span>
+114:                                 <span class="ruby-identifier">i</span> = <span class="ruby-constant">Instance</span>.<span class="ruby-identifier">new</span>
+115:                                 <span class="ruby-identifier">instance</span>.<span class="ruby-identifier">elements</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">element</span><span class="ruby-operator">|</span>
+116:                                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">i</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-node">&quot;#{element.name}=&quot;</span>)
+117:                                                 <span class="ruby-keyword kw">if</span> <span class="ruby-constant">Instance</span><span class="ruby-operator">::</span><span class="ruby-constant">INT_PROPERTIES</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">element</span>.<span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_sym</span>)
+118:                                                         <span class="ruby-identifier">value</span> = <span class="ruby-identifier">element</span>.<span class="ruby-identifier">text</span>.<span class="ruby-identifier">to_i</span>
+119:                                                 <span class="ruby-keyword kw">else</span>
+120:                                                         <span class="ruby-identifier">value</span> = <span class="ruby-identifier">element</span>.<span class="ruby-identifier">text</span>
+121:                                                 <span class="ruby-keyword kw">end</span>
+122:                                                 <span class="ruby-identifier">i</span>.<span class="ruby-identifier">send</span>(<span class="ruby-node">&quot;#{element.name}=&quot;</span>, <span class="ruby-identifier">value</span>)
+123:                                         <span class="ruby-keyword kw">end</span>
+124:                                 <span class="ruby-keyword kw">end</span>
+125:                                 <span class="ruby-identifier">instances</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">i</span>
+126:                         <span class="ruby-keyword kw">end</span>
+127:                         <span class="ruby-identifier">domains</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">d</span>
+128:                 <span class="ruby-keyword kw">end</span>
+129:                 <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">domains</span>
+130:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000073"></a><b>instances</b>()
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000073_source')" id="l_M000073_source">show source</a> ]</p>
+  <div id="M000073_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/admin_tools/control_process.rb, line 132</span>
+132:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">instances</span>
+133:                 <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">domains</span>.<span class="ruby-identifier">map</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">domain</span><span class="ruby-operator">|</span>
+134:                         <span class="ruby-identifier">domain</span>[<span class="ruby-identifier">:instances</span>]
+135:                 <span class="ruby-keyword kw">end</span>.<span class="ruby-identifier">flatten</span>
+136:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000069"></a><b>status</b>()
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000069_source')" id="l_M000069_source">show source</a> ]</p>
+  <div id="M000069_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/admin_tools/control_process.rb, line 82</span>
+82:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">status</span>
+83:                 <span class="ruby-identifier">connect</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">channel</span><span class="ruby-operator">|</span>
+84:                         <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">write</span>(<span class="ruby-value str">&quot;status&quot;</span>)
+85:                         <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">read_scalar</span>
+86:                 <span class="ruby-keyword kw">end</span>
+87:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000071"></a><b>xml</b>()
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000071_source')" id="l_M000071_source">show source</a> ]</p>
+  <div id="M000071_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/admin_tools/control_process.rb, line 96</span>
+ 96:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">xml</span>
+ 97:                 <span class="ruby-identifier">connect</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">channel</span><span class="ruby-operator">|</span>
+ 98:                         <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">write</span>(<span class="ruby-value str">&quot;status_xml&quot;</span>)
+ 99:                         <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">read_scalar</span>
+100:                 <span class="ruby-keyword kw">end</span>
+101:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

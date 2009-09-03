@@ -1,0 +1,137 @@
+Release 2.2.5
+-------------
+
+ * [Apache] Small file uploads are now buffered; fixes potential DoS attack
+   Phusion Passenger buffers large file uploads to temp files so that it
+   doesn't block applications while an upload is in progress, but it sent
+   small uploads directly to the application without buffering it. This could
+   result in a potential DoS attack: the client can send many small, incomplete
+   file uploads to the server, and this would block all application processes
+   until a timeout occurs. In order to solve this problem, Phusion Passenger
+   now buffers small file uploads in memory. Bug #356.
+
+ * [Apache] Fixed support for mod_rewrite passthrough rules
+   Mod_rewrite passthrough rules were not properly supported because of a bug
+   fix for supporting encoded slashes (%2f) in URLs. Unfortunately, due to
+   bugs/limitations in Apache, we can support either encoded slashes or
+   mod_rewrite passthrough rules, but not both; supporting one will break the
+   other.
+
+   Support for mod_rewrite passthrough rules is now enabled by default; that
+   is, support for encoded slashes is disabled by default. A new configuration
+   option, "PassengerAllowEncodedSlashes", has been added. Turning this option
+   on will enable support for encoded slashes and disable support for
+   mod_rewrite passthrough rules.
+
+   Issue #113 and issue #230.
+
+ * [Apache] Added a configuration option for resolving symlinks in the document root path
+   Phusion Passenger 2.2.0 and higher no longer resolves symlinks in
+   the document root path in order to properly support Capistrano-style
+   directory structures. The exact behavior is documented in the Users Guide,
+   section "How Phusion Passenger detects whether a virtual host is a web
+   application".
+
+   However, some people relied on the old behavior. A new configuration option,
+   PassengerResolveSymlinksInDocumentRoot, has been added to allow reverting
+   back to the old behavior.
+
+   Patch contributed by Locaweb (http://www.locaweb.com.br/).
+
+ * [Apache] mod_env variables are now also passed through CGI environment headers
+   Prior to version 2.2.3, environment variables set by mod_env are passed to
+   the application as CGI environment headers, not through Ruby's ENV variable.
+   In the last release we introduced support for setting ENV environment
+   variables with mod_env, and got rid of the code for setting CGI environment
+   headers. It turns out that some people relied on the old behavior, we so now
+   environment variables set with mod_env are set in both ENV and in the CGI
+   environment.
+   
+   Fixes bug #335.
+
+ * [Apache] Fixed compilation problems on some Linux systems with older versions of Apache
+   If you used to see compilation errors like this:
+
+       ext/apache2/Configuration.cpp:554: error: expected primary-expression before '.' token
+
+   then this version should compile properly.
+
+ * [Apache] Fixed I/O timeouts for communication with backend processes
+   Got rid of the code for enforcing I/O timeouts when reading from or writing to
+   a backend process. This caused more problems than it solved.
+
+ * [Nginx] Support for streaming responses (e.g. Comet or HTTP push)
+   Buffering of backend responses is now disabled. This fixes support for
+   streaming responses, something which the Apache version has supported
+   for a while now. One can generate streaming responses in Ruby on Rails
+   like this:
+
+       render :text => lambda { |response, output|
+           10_000.times do |i|
+               output.write("hello #{i}!\n")
+           end
+       }
+
+ * [Nginx] Installer now installs Nginx 0.7.61 by default
+   Previously it installed 0.6.37 by default.
+
+ * [Nginx] Fixed the installer's --extra-configure-flags flag when combined with --auto-download
+   Arguments passed to --extra-configure-flags were not being passed to the
+   Nginx configure script when --auto-download is given. This has been
+   fixed: bug #349.
+
+ * [Nginx] Fixed unnecessary download of PCRE
+   The installer now checks whether PCRE is installed in /opt/local (e.g.
+   MacPorts) as well before concluding that it isn't installed and going ahead
+   with downloading PCRE.
+
+ * Fixed STDERR capturing
+   While spawning an application, Phusion Passenger captures any output written
+   to STDERR so that it can show them later if the application failed to start.
+   This turns out to be much more difficult than expected, with all kinds of
+   corner cases that can mess up this feature.
+
+   For example, if the Rails log file is not writable, then this can cause
+   Rails to crash with a bizarre and unhelpful error message whenever it tries
+   to write to STDERR:
+
+       /!\ FAILSAFE /!\  Thu Aug 20 14:58:39 +1000 2009
+       Status: 500 Internal Server Error
+       undefined method `[]' for nil:NilClass
+
+   Some applications reopen STDERR to a log file. This didn't work.
+
+   Of all of these problems have been fixed now. (Bug #332)
+
+ * Fixed some bugs in application sources preloading
+   Rails >= 2.2 already preloads the application sources, in which case Phusion
+   Passenger wasn't supposed to perform it's own preloading, but the Rails
+   >= 2.2 detection code was bugged. This has been fixed.
+
+   Rails < 2.2 doesn't preload the application sources by itself, but there
+   should be a certain order with which the sources are preloaded, otherwise
+   preloading could fail in some applications. We now enforce a specific load
+   order: first models, then controllers, then helpers.
+
+   Bug #359.
+ 
+ * Fixed a few bugs in WSGI compliance
+   PATH_INFO is supposed to be set to the request URI, but without the query
+   string and without the base URI. This has been fixed: bug #360.
+
+ * Fixed some Ruby 1.9-specific crashes caused by encoding issues. Bug #354.
+ * Fixed loading of config/environment.rb on Ruby 1.9.2, because Ruby 1.9.2
+   no longer has "." in the default load path. Patch by metaljastix, issue #368.
+ * The Users Guide for Apache now mentions something about correct permissions
+   for application directories.
+ * Fixed compilation problems on IA-64 (bug #118). We also reduced the stack
+   sizes for the threads by half, so Phusion Passenger should use even less
+   virtual memory now.
+ * Fixed compilation problems on Linux systems with ARM CPU.
+ * Fixed a few compatibility problems with 64-bit OpenBSD.
+ * Fixed a few typos and minor bugs.
+
+
+Older releases
+--------------
+Please consult the blog posts on http://blog.phusion.nl/ for the information about older releases.

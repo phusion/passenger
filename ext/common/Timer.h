@@ -63,6 +63,8 @@ public:
 	 * restart the timer.
 	 */
 	void start() {
+		// TODO: We really use should clock_gettime() and the monotonic
+		// clock whenever possible, instead of gettimeofday()...
 		gettimeofday(&startTime, NULL);
 	}
 	

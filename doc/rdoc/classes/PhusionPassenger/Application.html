@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Class: PhusionPassenger::Application</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Class</span><br />PhusionPassenger::Application</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../../files/lib/phusion_passenger/application_rb.html">lib/phusion_passenger/application.rb</a>
+        </td>
+      </tr>
+    <tr>
+      <td>Parent:</td>
+      <td>
+Object
+     </td>
+   </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+  <div class="description"><p>
+Represents a single application instance.
+</p>
+</div>
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000119">close</a></li>
+  <li><a href="#M000117">detect_framework_version</a></li>
+  <li><a href="#M000118">new</a></li>
+  </ul>
+
+
+
+
+
+  <div class="sectiontitle">Attributes</div>
+  <table border='0' cellpadding='5'>
+  <tr valign='top'>
+    <td class='attr-rw'>
+[R]
+    </td>
+    <td class='attr-name'>app_root</td>
+    <td class='attr-desc'>
+The root directory of this application, i.e. the directory that contains
+&#8216;app/&#8217;, &#8216;public/&#8217;, etc.
+
+</td>
+  </tr>
+  <tr valign='top'>
+    <td class='attr-rw'>
+[R]
+    </td>
+    <td class='attr-name'>listen_socket_name</td>
+    <td class='attr-desc'>
+The name of the socket on which the application instance will accept <a
+href="Application.html#M000118">new</a> connections. See
+#listen_socket_type on how one should interpret this value.
+
+</td>
+  </tr>
+  <tr valign='top'>
+    <td class='attr-rw'>
+[R]
+    </td>
+    <td class='attr-name'>listen_socket_type</td>
+    <td class='attr-desc'>
+The type of socket that #listen_socket_name refers to. Currently this is
+always &#8216;unix&#8217;, which means that #listen_socket_name refers to
+the filename of a Unix domain socket.
+
+</td>
+  </tr>
+  <tr valign='top'>
+    <td class='attr-rw'>
+[R]
+    </td>
+    <td class='attr-name'>owner_pipe</td>
+    <td class='attr-desc'>
+The owner pipe of the application instance (an <a href="../IO.html">IO</a>
+object). Please see RequestHandler for a description of the owner pipe.
+
+</td>
+  </tr>
+  <tr valign='top'>
+    <td class='attr-rw'>
+[R]
+    </td>
+    <td class='attr-name'>pid</td>
+    <td class='attr-desc'>
+The process ID of this application instance.
+
+</td>
+  </tr>
+  </table>
+
+<div class="sectiontitle">Public Class methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000117"></a><b>detect_framework_version</b>(app_root)
+  </div>
+  <div class="description">
+  <ul>
+<li>Returns the Ruby on Rails version that the application requires.
+
+</li>
+<li>Returns <tt>:vendor</tt> if the application has a vendored Rails.
+
+</li>
+<li>Returns nil if the application doesn&#8216;t specify a particular version.
+
+</li>
+</ul>
+<p>
+Raises <a href="VersionNotFound.html">VersionNotFound</a> if the required
+Rails version is not installed.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000117_source')" id="l_M000117_source">show source</a> ]</p>
+  <div id="M000117_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/application.rb, line 55</span>
+55:         <span class="ruby-keyword kw">def</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">detect_framework_version</span>(<span class="ruby-identifier">app_root</span>)
+56:                 <span class="ruby-keyword kw">if</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">directory?</span>(<span class="ruby-node">&quot;#{app_root}/vendor/rails/railties&quot;</span>)
+57:                         <span class="ruby-comment cmt"># NOTE: We must check for 'rails/railties' and not just 'rails'.</span>
+58:                         <span class="ruby-comment cmt"># Typo's vendor directory contains an empty 'rails' directory.</span>
+59:                         <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">:vendor</span>
+60:                 <span class="ruby-keyword kw">end</span>
+61:                 
+62:                 <span class="ruby-identifier">environment_rb</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">read</span>(<span class="ruby-node">&quot;#{app_root}/config/environment.rb&quot;</span>)
+63:                 <span class="ruby-identifier">environment_rb</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp re">/^[^#]*RAILS_GEM_VERSION\s*=\s*[&quot;']([!~&lt;&gt;=]*\s*[\d.]+)[&quot;']/</span>
+64:                 <span class="ruby-identifier">gem_version_spec</span> = <span class="ruby-identifier">$1</span>
+65:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">gem_version_spec</span>.<span class="ruby-identifier">nil?</span>
+66:                         <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">nil</span>
+67:                 <span class="ruby-keyword kw">end</span>
+68:                 
+69:                 <span class="ruby-identifier">search_results</span> = <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">cache</span>.<span class="ruby-identifier">search</span>(<span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Dependency</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value str">'rails'</span>, <span class="ruby-identifier">gem_version_spec</span>), <span class="ruby-keyword kw">true</span>)
+70:                 <span class="ruby-identifier">found_version</span> = <span class="ruby-identifier">search_results</span>.<span class="ruby-identifier">map</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">x</span><span class="ruby-operator">|</span>
+71:                         <span class="ruby-identifier">x</span>.<span class="ruby-identifier">version</span>.<span class="ruby-identifier">version</span>
+72:                 <span class="ruby-keyword kw">end</span>.<span class="ruby-identifier">sort</span>.<span class="ruby-identifier">last</span>
+73:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">found_version</span>.<span class="ruby-identifier">nil?</span>
+74:                         <span class="ruby-comment cmt"># If this error was reported before, then the cache might be out of</span>
+75:                         <span class="ruby-comment cmt"># date because the Rails version may have been installed now.</span>
+76:                         <span class="ruby-comment cmt"># So we reload the RubyGems cache and try again.</span>
+77:                         <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">clear_paths</span>
+78:                         <span class="ruby-identifier">search_results</span> = <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">cache</span>.<span class="ruby-identifier">search</span>(<span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Dependency</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value str">'rails'</span>, <span class="ruby-identifier">gem_version_spec</span>), <span class="ruby-keyword kw">true</span>)
+79:                         <span class="ruby-identifier">found_version</span> = <span class="ruby-identifier">search_results</span>.<span class="ruby-identifier">map</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">x</span><span class="ruby-operator">|</span>
+80:                                 <span class="ruby-identifier">x</span>.<span class="ruby-identifier">version</span>.<span class="ruby-identifier">version</span>
+81:                         <span class="ruby-keyword kw">end</span>.<span class="ruby-identifier">sort</span>.<span class="ruby-identifier">last</span>
+82:                 <span class="ruby-keyword kw">end</span>
+83:                 
+84:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">found_version</span>.<span class="ruby-identifier">nil?</span>
+85:                         <span class="ruby-identifier">raise</span> <span class="ruby-constant">VersionNotFound</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value str">&quot;There is no Ruby on Rails version &quot;</span> <span class="ruby-operator">&lt;&lt;</span>
+86:                                 <span class="ruby-node">&quot;installed that matches version \&quot;#{gem_version_spec}\&quot;&quot;</span>,
+87:                                 <span class="ruby-identifier">gem_version_spec</span>)
+88:                 <span class="ruby-keyword kw">else</span>
+89:                         <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">found_version</span>
+90:                 <span class="ruby-keyword kw">end</span>
+91:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000118"></a><b>new</b>(app_root, pid, listen_socket_name, listen_socket_type, owner_pipe)
+  </div>
+  <div class="description">
+  <p>
+Creates a <a href="Application.html#M000118">new</a> instance of <a
+href="Application.html">Application</a>. The parameters correspond with the
+attributes of the same names. No exceptions will be thrown.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000118_source')" id="l_M000118_source">show source</a> ]</p>
+  <div id="M000118_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/application.rb, line 95</span>
+ 95:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">pid</span>, <span class="ruby-identifier">listen_socket_name</span>, <span class="ruby-identifier">listen_socket_type</span>, <span class="ruby-identifier">owner_pipe</span>)
+ 96:                 <span class="ruby-ivar">@app_root</span> = <span class="ruby-identifier">app_root</span>
+ 97:                 <span class="ruby-ivar">@pid</span> = <span class="ruby-identifier">pid</span>
+ 98:                 <span class="ruby-ivar">@listen_socket_name</span> = <span class="ruby-identifier">listen_socket_name</span>
+ 99:                 <span class="ruby-ivar">@listen_socket_type</span> = <span class="ruby-identifier">listen_socket_type</span>
+100:                 <span class="ruby-ivar">@owner_pipe</span> = <span class="ruby-identifier">owner_pipe</span>
+101:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="sectiontitle">Public Instance methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000119"></a><b>close</b>()
+  </div>
+  <div class="description">
+  <p>
+Close the connection with the application instance. If there are no other
+processes that have connections to this application instance, then it will
+shutdown as soon as possible.
+</p>
+<p>
+See also AbstractRequestHandler#owner_pipe.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000119_source')" id="l_M000119_source">show source</a> ]</p>
+  <div id="M000119_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/application.rb, line 108</span>
+108:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">close</span>
+109:                 <span class="ruby-ivar">@owner_pipe</span>.<span class="ruby-identifier">close</span> <span class="ruby-keyword kw">rescue</span> <span class="ruby-keyword kw">nil</span>
+110:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

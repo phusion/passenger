@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Class: PhusionPassenger::Rack::ApplicationSpawner</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href="../../.././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Class</span><br />PhusionPassenger::Rack::ApplicationSpawner</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../../../files/lib/phusion_passenger/rack/application_spawner_rb.html">lib/phusion_passenger/rack/application_spawner.rb</a>
+        </td>
+      </tr>
+    <tr>
+      <td>Parent:</td>
+      <td>
+Object
+     </td>
+   </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+  <div class="description"><p>
+Class for spawning <a href="../Rack.html">Rack</a> applications.
+</p>
+</div>
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000054">spawn_application</a></li>
+  <li><a href="#M000055">spawn_application</a></li>
+  </ul>
+
+<div class="sectiontitle">Included Modules</div>
+<ul>
+  <li><a href="../Utils.html">Utils</a></li>
+</ul>
+
+
+
+
+
+<div class="sectiontitle">Public Class methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000054"></a><b>spawn_application</b>(*args)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000054_source')" id="l_M000054_source">show source</a> ]</p>
+  <div id="M000054_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/rack/application_spawner.rb, line 43</span>
+43:         <span class="ruby-keyword kw">def</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">spawn_application</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+44:                 <span class="ruby-ivar">@@instance</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">ApplicationSpawner</span>.<span class="ruby-identifier">new</span>
+45:                 <span class="ruby-ivar">@@instance</span>.<span class="ruby-identifier">spawn_application</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+46:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="sectiontitle">Public Instance methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000055"></a><b>spawn_application</b>(app_root, options = {})
+  </div>
+  <div class="description">
+  <p>
+Spawn an instance of the given <a href="../Rack.html">Rack</a> application.
+When successful, an <a href="../Application.html">Application</a> object
+will be returned, which represents the spawned application.
+</p>
+<p>
+Accepts the same options as Railz::ApplicationSpawner#initialize.
+</p>
+<p>
+Raises:
+</p>
+<ul>
+<li><a href="../AppInitError.html">AppInitError</a>: The <a
+href="../Rack.html">Rack</a> application raised an exception or called
+exit() during startup.
+
+</li>
+<li>SystemCallError, IOError, SocketError: Something went wrong.
+
+</li>
+</ul>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000055_source')" id="l_M000055_source">show source</a> ]</p>
+  <div id="M000055_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/rack/application_spawner.rb, line 58</span>
+58:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">spawn_application</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">options</span> = {})
+59:                 <span class="ruby-identifier">options</span> = <span class="ruby-identifier">sanitize_spawn_options</span>(<span class="ruby-identifier">options</span>)
+60:                 
+61:                 <span class="ruby-identifier">a</span>, <span class="ruby-identifier">b</span> = <span class="ruby-constant">UNIXSocket</span>.<span class="ruby-identifier">pair</span>
+62:                 <span class="ruby-identifier">pid</span> = <span class="ruby-identifier">safe_fork</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">to_s</span>, <span class="ruby-keyword kw">true</span>) <span class="ruby-keyword kw">do</span>
+63:                         <span class="ruby-identifier">a</span>.<span class="ruby-identifier">close</span>
+64:                         
+65:                         <span class="ruby-identifier">file_descriptors_to_leave_open</span> = [<span class="ruby-value">0</span>, <span class="ruby-value">1</span>, <span class="ruby-value">2</span>, <span class="ruby-identifier">b</span>.<span class="ruby-identifier">fileno</span>]
+66:                         <span class="ruby-constant">NativeSupport</span>.<span class="ruby-identifier">close_all_file_descriptors</span>(<span class="ruby-identifier">file_descriptors_to_leave_open</span>)
+67:                         <span class="ruby-identifier">close_all_io_objects_for_fds</span>(<span class="ruby-identifier">file_descriptors_to_leave_open</span>)
+68:                         
+69:                         <span class="ruby-identifier">run</span>(<span class="ruby-constant">MessageChannel</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">b</span>), <span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">options</span>)
+70:                 <span class="ruby-keyword kw">end</span>
+71:                 <span class="ruby-identifier">b</span>.<span class="ruby-identifier">close</span>
+72:                 <span class="ruby-constant">Process</span>.<span class="ruby-identifier">waitpid</span>(<span class="ruby-identifier">pid</span>) <span class="ruby-keyword kw">rescue</span> <span class="ruby-keyword kw">nil</span>
+73:                 
+74:                 <span class="ruby-identifier">channel</span> = <span class="ruby-constant">MessageChannel</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">a</span>)
+75:                 <span class="ruby-identifier">unmarshal_and_raise_errors</span>(<span class="ruby-identifier">channel</span>, <span class="ruby-operator">!</span><span class="ruby-operator">!</span><span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;print_exceptions&quot;</span>], <span class="ruby-value str">&quot;rack&quot;</span>)
+76:                 
+77:                 <span class="ruby-comment cmt"># No exception was raised, so spawning succeeded.</span>
+78:                 <span class="ruby-identifier">pid</span>, <span class="ruby-identifier">socket_name</span>, <span class="ruby-identifier">socket_type</span> = <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">read</span>
+79:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">pid</span>.<span class="ruby-identifier">nil?</span>
+80:                         <span class="ruby-identifier">raise</span> <span class="ruby-constant">IOError</span>, <span class="ruby-value str">&quot;Connection closed&quot;</span>
+81:                 <span class="ruby-keyword kw">end</span>
+82:                 <span class="ruby-identifier">owner_pipe</span> = <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">recv_io</span>
+83:                 <span class="ruby-keyword kw">return</span> <span class="ruby-constant">Application</span>.<span class="ruby-identifier">new</span>(<span class="ruby-ivar">@app_root</span>, <span class="ruby-identifier">pid</span>, <span class="ruby-identifier">socket_name</span>,
+84:                         <span class="ruby-identifier">socket_type</span>, <span class="ruby-identifier">owner_pipe</span>)
+85:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

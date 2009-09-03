@@ -48,6 +48,14 @@ class WelcomeController < ApplicationController
 		end
 		render :text => text
 	end
+	
+	def cgi_environment
+		text = ""
+		request.headers.each_pair do |key, value|
+			text << "#{key} = #{value}\n"
+		end
+		render :text => text
+	end
 
 	def request_uri
 		render :text => request.request_uri

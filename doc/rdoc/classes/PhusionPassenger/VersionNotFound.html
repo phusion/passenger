@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Class: PhusionPassenger::VersionNotFound</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Class</span><br />PhusionPassenger::VersionNotFound</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../../files/lib/phusion_passenger/exceptions_rb.html">lib/phusion_passenger/exceptions.rb</a>
+        </td>
+      </tr>
+    <tr>
+      <td>Parent:</td>
+      <td>
+StandardError
+     </td>
+   </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+  <div class="description"><p>
+Indicates that there is no Ruby on Rails version installed that satisfies a
+given Ruby on Rails Gem version specification.
+</p>
+</div>
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000098">new</a></li>
+  </ul>
+
+
+
+
+
+  <div class="sectiontitle">Attributes</div>
+  <table border='0' cellpadding='5'>
+  <tr valign='top'>
+    <td class='attr-rw'>
+[R]
+    </td>
+    <td class='attr-name'>gem_version_spec</td>
+    <td class='attr-desc'></td>
+  </tr>
+  </table>
+
+<div class="sectiontitle">Public Class methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000098"></a><b>new</b>(message, gem_version_spec)
+  </div>
+  <div class="description">
+  <ul>
+<li><tt>message</tt>: The exception message.
+
+</li>
+<li><tt>gem_version_spec</tt>: The Ruby on Rails Gem version specification that
+caused this error.
+
+</li>
+</ul>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000098_source')" id="l_M000098_source">show source</a> ]</p>
+  <div id="M000098_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/exceptions.rb, line 33</span>
+33:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">message</span>, <span class="ruby-identifier">gem_version_spec</span>)
+34:                 <span class="ruby-keyword kw">super</span>(<span class="ruby-identifier">message</span>)
+35:                 <span class="ruby-ivar">@gem_version_spec</span> = <span class="ruby-identifier">gem_version_spec</span>
+36:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

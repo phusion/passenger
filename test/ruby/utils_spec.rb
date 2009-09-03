@@ -8,6 +8,59 @@ require 'phusion_passenger/utils'
 
 include PhusionPassenger
 
+shared_examples_for "a pseudo stderr created by #report_app_init_status" do
+	before :each do
+		@sink = StringIO.new
+		@temp_channel = MessageChannel.new(StringIO.new)
+	end
+	
+	after :each do
+		File.unlink("output.tmp") rescue nil
+	end
+	
+	it "redirects everything written to the pseudo STDERR/$stderr to the sink" do
+		report_app_init_status(@temp_channel, @sink) do
+			STDERR.puts "Something went wrong!"
+			$stderr.puts "Something went wrong again!"
+			raise StandardError, ":-(" if @raise_error
+		end
+		@sink.string.should =~ /Something went wrong!/
+		@sink.string.should =~ /Something went wrong again!/
+	end
+	
+	it "redirects reopen operations on the pseudo stderr to the sink" do
+		@sink.should_receive(:reopen).with("output.tmp", "w")
+		report_app_init_status(@temp_channel, @sink) do
+			STDERR.reopen("output.tmp", "w")
+			raise StandardError, ":-(" if @raise_error
+		end
+	end
+	
+	specify "after the function has finished, every operation on the old pseudo stderr object will still be redirected to the sink" do
+		pseudo_stderr = nil
+		report_app_init_status(@temp_channel, @sink) do
+			pseudo_stderr = STDERR
+			raise StandardError, ":-(" if @raise_error
+		end
+		
+		pseudo_stderr.puts "hello world"
+		@sink.string.should =~ /hello world/
+		
+		@sink.should_receive(:reopen).with("output.tmp", "w")
+		pseudo_stderr.reopen("output.tmp", "w")
+	end
+	
+	specify "after the function has finished, every output operation on the old pseudo stderr object will not be buffered" do
+		pseudo_stderr = nil
+		report_app_init_status(@temp_channel, @sink) do
+			pseudo_stderr = STDERR
+			pseudo_stderr.instance_variable_get(:@buffer).should_not be_nil
+			raise StandardError, ":-(" if @raise_error
+		end
+		pseudo_stderr.instance_variable_get(:@buffer).should be_nil
+	end
+end
+
 describe Utils do
 	include Utils
 	
@@ -76,13 +129,14 @@ describe Utils do
 			success.should be_false
 		end
 		
-		it "reports all data written to stderr" do
+		it "reports all data written to STDERR and $stderr" do
 			a, b = IO.pipe
 			begin
 				pid = safe_fork('utils_spec') do
 					a.close
-					report_app_init_status(MessageChannel.new(b)) do
+					report_app_init_status(MessageChannel.new(b), nil) do
 						STDERR.puts "Something went wrong!"
+						$stderr.puts "Something went wrong again!"
 						exit
 					end
 				end
@@ -93,6 +147,7 @@ describe Utils do
 					violated "No exception raised"
 				rescue AppInitError => e
 					e.stderr.should =~ /Something went wrong!/
+					e.stderr.should =~ /Something went wrong again!/
 				end
 			ensure
 				a.close rescue nil
@@ -100,23 +155,52 @@ describe Utils do
 			end
 		end
 		
-		it "writes all buffered stderr data to the 'write_stderr_contents_to' argument if the block failed" do
-			stderr_buffer = StringIO.new
-			report_app_init_status(MessageChannel.new(StringIO.new), stderr_buffer) do
-				STDERR.puts "Something went wrong!"
-				raise StandardError, ":-("
+		it "reports all data written to STDERR and $stderr even if it was reopened" do
+			a, b = IO.pipe
+			begin
+				pid = safe_fork('utils_spec') do
+					a.close
+					report_app_init_status(MessageChannel.new(b), nil) do
+						STDERR.puts "Something went wrong!"
+						STDERR.reopen("output.tmp", "w")
+						STDERR.puts "Something went wrong again!"
+						STDERR.flush
+						$stderr.puts "Something went wrong yet again!"
+						$stderr.flush
+						exit
+					end
+				end
+				b.close
+				
+				begin
+					unmarshal_and_raise_errors(MessageChannel.new(a))
+					violated "No exception raised"
+				rescue AppInitError => e
+					e.stderr.should =~ /Something went wrong!/
+					e.stderr.should =~ /Something went wrong again!/
+					e.stderr.should =~ /Something went wrong yet again!/
+				end
+				
+				file_contents = File.read("output.tmp")
+				file_contents.should =~ /Something went wrong again!/
+				file_contents.should =~ /Something went wrong yet again!/
+			ensure
+				a.close rescue nil
+				b.close rescue nil
+				File.unlink("output.tmp") rescue nil
 			end
-			
-			stderr_buffer.string.should =~ /Something went wrong!/
 		end
 		
-		it "writes all buffered stderr data to the 'write_stderr_contents_to' argument if the block succeeded" do
-			stderr_buffer = StringIO.new
-			report_app_init_status(MessageChannel.new(StringIO.new), stderr_buffer) do
-				STDERR.puts "Something went wrong!"
+		describe "if the block failed" do
+			before :each do
+				@raise_error = true
 			end
 			
-			stderr_buffer.string.should =~ /Something went wrong!/
+			it_should_behave_like "a pseudo stderr created by #report_app_init_status"
+		end
+		
+		describe "if the block succeeded" do
+			it_should_behave_like "a pseudo stderr created by #report_app_init_status"
 		end
 	end
 	

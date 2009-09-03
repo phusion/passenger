@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Class: ConditionVariable</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href=".././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Class</span><br />ConditionVariable</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../files/lib/phusion_passenger/utils_rb.html">lib/phusion_passenger/utils.rb</a>
+        </td>
+      </tr>
+    <tr>
+      <td>Parent:</td>
+      <td>
+Object
+     </td>
+   </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000003">timed_wait</a></li>
+  <li><a href="#M000004">timed_wait!</a></li>
+  </ul>
+
+
+
+
+
+
+<div class="sectiontitle">Public Instance methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000003"></a><b>timed_wait</b>(mutex, secs)
+  </div>
+  <div class="description">
+  <p>
+This is like ConditionVariable.wait(), but allows one to wait a maximum
+amount of time. Returns true if this condition was signaled, false if a
+timeout occurred.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000003_source')" id="l_M000003_source">show source</a> ]</p>
+  <div id="M000003_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 464</span>
+464:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">timed_wait</span>(<span class="ruby-identifier">mutex</span>, <span class="ruby-identifier">secs</span>)
+465:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">secs</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">100000000</span>
+466:                         <span class="ruby-comment cmt"># NOTE: If one calls timeout() on FreeBSD 5 with an</span>
+467:                         <span class="ruby-comment cmt"># argument of more than 100000000, then MRI will become</span>
+468:                         <span class="ruby-comment cmt"># stuck in an infite loop, blocking all threads. It seems</span>
+469:                         <span class="ruby-comment cmt"># that MRI uses select() to implement sleeping.</span>
+470:                         <span class="ruby-comment cmt"># I think that a value of more than 100000000 overflows</span>
+471:                         <span class="ruby-comment cmt"># select()'s data structures, causing it to behave incorrectly.</span>
+472:                         <span class="ruby-comment cmt"># So we just make sure we can't sleep more than 100000000</span>
+473:                         <span class="ruby-comment cmt"># seconds.</span>
+474:                         <span class="ruby-identifier">secs</span> = <span class="ruby-value">100000000</span>
+475:                 <span class="ruby-keyword kw">end</span>
+476:                 <span class="ruby-keyword kw">if</span> <span class="ruby-keyword kw">defined?</span>(<span class="ruby-constant">RUBY_ENGINE</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-constant">RUBY_ENGINE</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;jruby&quot;</span>
+477:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">secs</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>
+478:                                 <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>, <span class="ruby-identifier">secs</span>)
+479:                         <span class="ruby-keyword kw">else</span>
+480:                                 <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>)
+481:                         <span class="ruby-keyword kw">end</span>
+482:                 <span class="ruby-keyword kw">else</span>
+483:                         <span class="ruby-identifier">require</span> <span class="ruby-value str">'timeout'</span> <span class="ruby-keyword kw">unless</span> <span class="ruby-keyword kw">defined?</span>(<span class="ruby-constant">Timeout</span>)
+484:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">secs</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>
+485:                                 <span class="ruby-constant">Timeout</span>.<span class="ruby-identifier">timeout</span>(<span class="ruby-identifier">secs</span>) <span class="ruby-keyword kw">do</span>
+486:                                         <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>)
+487:                                 <span class="ruby-keyword kw">end</span>
+488:                         <span class="ruby-keyword kw">else</span>
+489:                                 <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>)
+490:                         <span class="ruby-keyword kw">end</span>
+491:                         <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">true</span>
+492:                 <span class="ruby-keyword kw">end</span>
+493:         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Timeout</span><span class="ruby-operator">::</span><span class="ruby-constant">Error</span>
+494:                 <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">false</span>
+495:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000004"></a><b>timed_wait!</b>(mutex, secs)
+  </div>
+  <div class="description">
+  <p>
+This is like ConditionVariable.wait(), but allows one to wait a maximum
+amount of time. Raises Timeout::Error if the timeout has elapsed.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000004_source')" id="l_M000004_source">show source</a> ]</p>
+  <div id="M000004_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 499</span>
+499:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">timed_wait!</span>(<span class="ruby-identifier">mutex</span>, <span class="ruby-identifier">secs</span>)
+500:                 <span class="ruby-identifier">require</span> <span class="ruby-value str">'timeout'</span> <span class="ruby-keyword kw">unless</span> <span class="ruby-keyword kw">defined?</span>(<span class="ruby-constant">Timeout</span>)
+501:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">secs</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">100000000</span>
+502:                         <span class="ruby-comment cmt"># See the corresponding note for timed_wait().</span>
+503:                         <span class="ruby-identifier">secs</span> = <span class="ruby-value">100000000</span>
+504:                 <span class="ruby-keyword kw">end</span>
+505:                 <span class="ruby-keyword kw">if</span> <span class="ruby-keyword kw">defined?</span>(<span class="ruby-constant">RUBY_ENGINE</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-constant">RUBY_ENGINE</span> <span class="ruby-operator">==</span> <span class="ruby-value str">&quot;jruby&quot;</span>
+506:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">secs</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>
+507:                                 <span class="ruby-keyword kw">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>, <span class="ruby-identifier">secs</span>)
+508:                                         <span class="ruby-identifier">raise</span> <span class="ruby-constant">Timeout</span><span class="ruby-operator">::</span><span class="ruby-constant">Error</span>, <span class="ruby-value str">&quot;Timeout&quot;</span>
+509:                                 <span class="ruby-keyword kw">end</span>
+510:                         <span class="ruby-keyword kw">else</span>
+511:                                 <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>)
+512:                         <span class="ruby-keyword kw">end</span>
+513:                 <span class="ruby-keyword kw">else</span>
+514:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">secs</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>
+515:                                 <span class="ruby-constant">Timeout</span>.<span class="ruby-identifier">timeout</span>(<span class="ruby-identifier">secs</span>) <span class="ruby-keyword kw">do</span>
+516:                                         <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>)
+517:                                 <span class="ruby-keyword kw">end</span>
+518:                         <span class="ruby-keyword kw">else</span>
+519:                                 <span class="ruby-identifier">wait</span>(<span class="ruby-identifier">mutex</span>)
+520:                         <span class="ruby-keyword kw">end</span>
+521:                 <span class="ruby-keyword kw">end</span>
+522:                 <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">nil</span>
+523:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

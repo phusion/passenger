@@ -38,10 +38,11 @@ describe "Phusion Passenger for Nginx" do
 	
 	describe "MyCook(tm) beta running a root URI" do
 		before :all do
-			@server = "http://passenger.test:#{@nginx.port}"
+			@server = "http://1.passenger.test:#{@nginx.port}"
+			@base_uri = ""
 			@stub = setup_rails_stub('mycook')
 			@nginx.add_server do |server|
-				server[:server_name] = "passenger.test"
+				server[:server_name] = "1.passenger.test"
 				server[:root]        = File.expand_path("#{@stub.app_root}/public")
 			end
 			@nginx.start
@@ -51,11 +52,16 @@ describe "Phusion Passenger for Nginx" do
 			@stub.destroy
 		end
 		
+		before :each do
+			@stub.reset
+		end
+		
 		it_should_behave_like "MyCook(tm) beta"
 	end
 	
 	describe "MyCook(tm) beta running in a sub-URI" do
 		before :all do
+			@base_uri = "/mycook"
 			@stub = setup_rails_stub('mycook')
 			FileUtils.rm_rf('tmp.webdir')
 			FileUtils.mkdir_p('tmp.webdir')
@@ -63,7 +69,7 @@ describe "Phusion Passenger for Nginx" do
 			FileUtils.ln_sf(File.expand_path(@stub.app_root) + "/public", 'tmp.webdir/mycook')
 			
 			@nginx.add_server do |server|
-				server[:server_name] = "passenger.test"
+				server[:server_name] = "1.passenger.test"
 				server[:root]        = File.expand_path("tmp.webdir")
 				server[:passenger_base_uri] = "/mycook"
 			end
@@ -76,13 +82,14 @@ describe "Phusion Passenger for Nginx" do
 		end
 		
 		before :each do
-			@server = "http://passenger.test:#{@nginx.port}/mycook"
+			@server = "http://1.passenger.test:#{@nginx.port}/mycook"
+			@stub.reset
 		end
 		
 		it_should_behave_like "MyCook(tm) beta"
 		
 		it "does not interfere with the root website" do
-			@server = "http://passenger.test:#{@nginx.port}"
+			@server = "http://1.passenger.test:#{@nginx.port}"
 			get('/').should =~ /Zed, you rock\!/
 		end
 	end

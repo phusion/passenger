@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Module: PhusionPassenger</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href=".././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Module</span><br />PhusionPassenger</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../files/lib/phusion_passenger/abstract_installer_rb.html">lib/phusion_passenger/abstract_installer.rb</a>
+<a href="../files/lib/phusion_passenger/abstract_request_handler_rb.html">lib/phusion_passenger/abstract_request_handler.rb</a>
+<a href="../files/lib/phusion_passenger/abstract_server_rb.html">lib/phusion_passenger/abstract_server.rb</a>
+<a href="../files/lib/phusion_passenger/abstract_server_collection_rb.html">lib/phusion_passenger/abstract_server_collection.rb</a>
+<a href="../files/lib/phusion_passenger/admin_tools_rb.html">lib/phusion_passenger/admin_tools.rb</a>
+<a href="../files/lib/phusion_passenger/application_rb.html">lib/phusion_passenger/application.rb</a>
+<a href="../files/lib/phusion_passenger/console_text_template_rb.html">lib/phusion_passenger/console_text_template.rb</a>
+<a href="../files/lib/phusion_passenger/constants_rb.html">lib/phusion_passenger/constants.rb</a>
+<a href="../files/lib/phusion_passenger/dependencies_rb.html">lib/phusion_passenger/dependencies.rb</a>
+<a href="../files/lib/phusion_passenger/events_rb.html">lib/phusion_passenger/events.rb</a>
+<a href="../files/lib/phusion_passenger/exceptions_rb.html">lib/phusion_passenger/exceptions.rb</a>
+<a href="../files/lib/phusion_passenger/html_template_rb.html">lib/phusion_passenger/html_template.rb</a>
+<a href="../files/lib/phusion_passenger/message_channel_rb.html">lib/phusion_passenger/message_channel.rb</a>
+<a href="../files/lib/phusion_passenger/packaging_rb.html">lib/phusion_passenger/packaging.rb</a>
+<a href="../files/lib/phusion_passenger/spawn_manager_rb.html">lib/phusion_passenger/spawn_manager.rb</a>
+<a href="../files/lib/phusion_passenger/utils_rb.html">lib/phusion_passenger/utils.rb</a>
+<a href="../files/lib/phusion_passenger/admin_tools/control_process_rb.html">lib/phusion_passenger/admin_tools/control_process.rb</a>
+<a href="../files/lib/phusion_passenger/rack/application_spawner_rb.html">lib/phusion_passenger/rack/application_spawner.rb</a>
+<a href="../files/lib/phusion_passenger/rack/request_handler_rb.html">lib/phusion_passenger/rack/request_handler.rb</a>
+<a href="../files/lib/phusion_passenger/railz/application_spawner_rb.html">lib/phusion_passenger/railz/application_spawner.rb</a>
+<a href="../files/lib/phusion_passenger/railz/cgi_fixed_rb.html">lib/phusion_passenger/railz/cgi_fixed.rb</a>
+<a href="../files/lib/phusion_passenger/railz/framework_spawner_rb.html">lib/phusion_passenger/railz/framework_spawner.rb</a>
+<a href="../files/lib/phusion_passenger/railz/request_handler_rb.html">lib/phusion_passenger/railz/request_handler.rb</a>
+<a href="../files/lib/phusion_passenger/wsgi/application_spawner_rb.html">lib/phusion_passenger/wsgi/application_spawner.rb</a>
+<a href="../files/ext/phusion_passenger/native_support_c.html">ext/phusion_passenger/native_support.c</a>
+        </td>
+      </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000035">call_event</a></li>
+  <li><a href="#M000036">natively_packaged?</a></li>
+  <li><a href="#M000034">on_event</a></li>
+  </ul>
+
+
+
+  <div class="sectiontitle">Classes and Modules</div>
+  Module <a href="PhusionPassenger/AdminTools.html" class="link">PhusionPassenger::AdminTools</a><br />
+Module <a href="PhusionPassenger/NativeSupport.html" class="link">PhusionPassenger::NativeSupport</a><br />
+Module <a href="PhusionPassenger/Rack.html" class="link">PhusionPassenger::Rack</a><br />
+Module <a href="PhusionPassenger/Railz.html" class="link">PhusionPassenger::Railz</a><br />
+Module <a href="PhusionPassenger/Utils.html" class="link">PhusionPassenger::Utils</a><br />
+Module <a href="PhusionPassenger/WSGI.html" class="link">PhusionPassenger::WSGI</a><br />
+Class <a href="PhusionPassenger/AbstractInstaller.html" class="link">PhusionPassenger::AbstractInstaller</a><br />
+Class <a href="PhusionPassenger/AbstractRequestHandler.html" class="link">PhusionPassenger::AbstractRequestHandler</a><br />
+Class <a href="PhusionPassenger/AbstractServer.html" class="link">PhusionPassenger::AbstractServer</a><br />
+Class <a href="PhusionPassenger/AbstractServerCollection.html" class="link">PhusionPassenger::AbstractServerCollection</a><br />
+Class <a href="PhusionPassenger/AppInitError.html" class="link">PhusionPassenger::AppInitError</a><br />
+Class <a href="PhusionPassenger/Application.html" class="link">PhusionPassenger::Application</a><br />
+Class <a href="PhusionPassenger/ConsoleTextTemplate.html" class="link">PhusionPassenger::ConsoleTextTemplate</a><br />
+Class <a href="PhusionPassenger/FrameworkInitError.html" class="link">PhusionPassenger::FrameworkInitError</a><br />
+Class <a href="PhusionPassenger/HTMLTemplate.html" class="link">PhusionPassenger::HTMLTemplate</a><br />
+Class <a href="PhusionPassenger/InitializationError.html" class="link">PhusionPassenger::InitializationError</a><br />
+Class <a href="PhusionPassenger/InvalidPath.html" class="link">PhusionPassenger::InvalidPath</a><br />
+Class <a href="PhusionPassenger/MessageChannel.html" class="link">PhusionPassenger::MessageChannel</a><br />
+Class <a href="PhusionPassenger/SpawnManager.html" class="link">PhusionPassenger::SpawnManager</a><br />
+Class <a href="PhusionPassenger/UnknownError.html" class="link">PhusionPassenger::UnknownError</a><br />
+Class <a href="PhusionPassenger/VersionNotFound.html" class="link">PhusionPassenger::VersionNotFound</a><br />
+
+
+  <div class="sectiontitle">Constants</div>
+  <table border='0' cellpadding='5'>
+  <tr valign='top'>
+    <td class="attr-name">VERSION_STRING</td>
+    <td>=</td>
+    <td class="attr-value">'2.2.5'</td>
+  </tr>
+  <tr valign='top'>
+    <td>&nbsp;</td>
+    <td colspan="2" class="attr-desc">
+Phusion Passenger version number. Don&#8216;t forget to edit
+ext/common/Version.h too.
+
+</td>
+  </tr>
+  <tr valign='top'>
+    <td class="attr-name">DEFAULT_FRAMEWORK_SPAWNER_MAX_IDLE_TIME</td>
+    <td>=</td>
+    <td class="attr-value">30 * 60</td>
+  </tr>
+  <tr valign='top'>
+    <td class="attr-name">DEFAULT_APP_SPAWNER_MAX_IDLE_TIME</td>
+    <td>=</td>
+    <td class="attr-value">10 * 60</td>
+  </tr>
+  <tr valign='top'>
+    <td class="attr-name">LIBDIR</td>
+    <td>=</td>
+    <td class="attr-value">File.expand_path(File.join(File.dirname(__FILE__), &quot;..&quot;))</td>
+  </tr>
+  <tr valign='top'>
+    <td class="attr-name">DOCDIR</td>
+    <td>=</td>
+    <td class="attr-value">&quot;/usr/share/doc/phusion_passenger&quot;</td>
+  </tr>
+  <tr valign='top'>
+    <td class="attr-name">DOCDIR</td>
+    <td>=</td>
+    <td class="attr-value">File.expand_path(File.join(LIBDIR, &quot;..&quot;, &quot;doc&quot;))</td>
+  </tr>
+  </table>
+
+
+<div class="sectiontitle">Public Class methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000035"></a><b>call_event</b>(name, *args)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000035_source')" id="l_M000035_source">show source</a> ]</p>
+  <div id="M000035_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/events.rb, line 32</span>
+32:         <span class="ruby-keyword kw">def</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">call_event</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+33:                 <span class="ruby-identifier">callback_list_for_event</span>(<span class="ruby-identifier">name</span>).<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">callback</span><span class="ruby-operator">|</span>
+34:                         <span class="ruby-identifier">callback</span>.<span class="ruby-identifier">call</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+35:                 <span class="ruby-keyword kw">end</span>
+36:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000036"></a><b>natively_packaged?</b>()
+  </div>
+  <div class="description">
+  <p>
+Returns whether this Phusion Passenger installation is packaged using the
+OS&#8216;s native package management system, i.e. as opposed to being
+installed from source or with RubyGems.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000036_source')" id="l_M000036_source">show source</a> ]</p>
+  <div id="M000036_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/packaging.rb, line 30</span>
+30:         <span class="ruby-keyword kw">def</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">natively_packaged?</span>
+31:                 <span class="ruby-keyword kw">return</span> <span class="ruby-operator">!</span><span class="ruby-constant">File</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-node">&quot;#{LIBDIR}/../Rakefile&quot;</span>)
+32:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000034"></a><b>on_event</b>(name, &amp;block)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000034_source')" id="l_M000034_source">show source</a> ]</p>
+  <div id="M000034_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/events.rb, line 28</span>
+28:         <span class="ruby-keyword kw">def</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">on_event</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+29:                 <span class="ruby-identifier">callback_list_for_event</span>(<span class="ruby-identifier">name</span>) <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">block</span>
+30:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

@@ -28,6 +28,7 @@
 #ifdef __cplusplus
 	#include "Utils.h"
 	#include "MessageChannel.h"
+	#include "Logging.h"
 #endif
 
 /* The APR headers must come after the Passenger headers. See Hooks.cpp
@@ -134,10 +135,24 @@
 			 * in the directory configuration. */
 			bool memoryLimitSpecified;
 			
+			/** Whether symlinks in the document root path should be resolved.
+			 * The implication of this is documented in the users guide, section
+			 * "How Phusion Passenger detects whether a virtual host is a web application".
+			 */
+			Threeway resolveSymlinksInDocRoot;
+			
+			/** Whether high performance mode should be turned on. */
 			Threeway highPerformance;
 			
 			/** Whether global queuing should be used. */
 			Threeway useGlobalQueue;
+			
+			/**
+			 * Whether encoded slashes in URLs should be supported. This however conflicts
+			 * with mod_rewrite support because of a bug/limitation in Apache, so it's one
+			 * or the other.
+			 */
+			Threeway allowEncodedSlashes;
 			
 			/**
 			 * Throttle the number of stat() calls on files like
@@ -170,7 +185,11 @@
 			
 			string getAppRoot(const char *documentRoot) const {
 				if (appRoot == NULL) {
-					return extractDirName(documentRoot);
+					if (resolveSymlinksInDocRoot == DirConfig::ENABLED) {
+						return extractDirName(resolveSymlink(documentRoot));
+					} else {
+						return extractDirName(documentRoot);
+					}
 				} else {
 					return appRoot;
 				}
@@ -178,7 +197,11 @@
 			
 			string getAppRoot(const string &documentRoot) const {
 				if (appRoot == NULL) {
-					return extractDirName(documentRoot);
+					if (resolveSymlinksInDocRoot == DirConfig::ENABLED) {
+						return extractDirName(resolveSymlink(documentRoot));
+					} else {
+						return extractDirName(documentRoot);
+					}
 				} else {
 					return appRoot;
 				}
@@ -235,6 +258,10 @@
 			
 			bool usingGlobalQueue() const {
 				return useGlobalQueue == ENABLED;
+			}
+			
+			bool allowsEncodedSlashes() const {
+				return allowEncodedSlashes == ENABLED;
 			}
 			
 			unsigned long getStatThrottleRate() const {
@@ -320,6 +347,14 @@
 			 * means unspecified.
 			 */
 			const char *tempDir;
+			
+			const char *getRuby() const {
+				if (ruby != NULL) {
+					return ruby;
+				} else {
+					return "ruby";
+				}
+			}
 			
 			const char *getDefaultUser() const {
 				if (defaultUser != NULL) {

@@ -1,0 +1,598 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Class: PhusionPassenger::AbstractServerCollection</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Class</span><br />PhusionPassenger::AbstractServerCollection</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../../files/lib/phusion_passenger/abstract_server_collection_rb.html">lib/phusion_passenger/abstract_server_collection.rb</a>
+        </td>
+      </tr>
+    <tr>
+      <td>Parent:</td>
+      <td>
+Object
+     </td>
+   </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+  <div class="description"><p>
+This class maintains a collection of <a
+href="AbstractServer.html">AbstractServer</a> objects. One can add <a
+href="AbstractServerCollection.html#M000101">new</a> <a
+href="AbstractServer.html">AbstractServer</a> objects, or look up existing
+ones via a key. <a
+href="AbstractServerCollection.html">AbstractServerCollection</a> also
+automatically takes care of cleaning up AbstractServers that have been idle
+for too long.
+</p>
+<p>
+This class exists because both <a href="SpawnManager.html">SpawnManager</a>
+and <a href="Railz/FrameworkSpawner.html">Railz::FrameworkSpawner</a> need
+this kind of functionality. <a href="SpawnManager.html">SpawnManager</a>
+maintains a collection of <a
+href="Railz/FrameworkSpawner.html">Railz::FrameworkSpawner</a> and <a
+href="Railz/ApplicationSpawner.html">Railz::ApplicationSpawner</a> objects,
+while <a href="Railz/FrameworkSpawner.html">Railz::FrameworkSpawner</a>
+maintains a collection of <a
+href="Railz/ApplicationSpawner.html">Railz::ApplicationSpawner</a> objects.
+</p>
+<p>
+This class is thread-safe as long as the specified thread-safety rules are
+followed.
+</p>
+</div>
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000108">check_idle_servers!</a></li>
+  <li><a href="#M000112">cleanup</a></li>
+  <li><a href="#M000111">clear</a></li>
+  <li><a href="#M000106">delete</a></li>
+  <li><a href="#M000109">each</a></li>
+  <li><a href="#M000110">each_pair</a></li>
+  <li><a href="#M000105">empty?</a></li>
+  <li><a href="#M000104">has_key?</a></li>
+  <li><a href="#M000103">lookup_or_add</a></li>
+  <li><a href="#M000101">new</a></li>
+  <li><a href="#M000107">register_activity</a></li>
+  <li><a href="#M000102">synchronize</a></li>
+  </ul>
+
+<div class="sectiontitle">Included Modules</div>
+<ul>
+  <li><a href="Utils.html">Utils</a></li>
+</ul>
+
+
+
+
+  <div class="sectiontitle">Attributes</div>
+  <table border='0' cellpadding='5'>
+  <tr valign='top'>
+    <td class='attr-rw'>
+[R]
+    </td>
+    <td class='attr-name'>next_cleaning_time</td>
+    <td class='attr-desc'></td>
+  </tr>
+  </table>
+
+<div class="sectiontitle">Public Class methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000101"></a><b>new</b>()
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000101_source')" id="l_M000101_source">show source</a> ]</p>
+  <div id="M000101_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 44</span>
+44:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>
+45:                 <span class="ruby-ivar">@collection</span> = {}
+46:                 <span class="ruby-ivar">@lock</span> = <span class="ruby-constant">Mutex</span>.<span class="ruby-identifier">new</span>
+47:                 <span class="ruby-ivar">@cleanup_lock</span> = <span class="ruby-constant">Mutex</span>.<span class="ruby-identifier">new</span>
+48:                 <span class="ruby-ivar">@cond</span> = <span class="ruby-constant">ConditionVariable</span>.<span class="ruby-identifier">new</span>
+49:                 <span class="ruby-ivar">@done</span> = <span class="ruby-keyword kw">false</span>
+50:                 
+51:                 <span class="ruby-comment cmt"># The next time the cleaner thread should check for idle servers.</span>
+52:                 <span class="ruby-comment cmt"># The value may be nil, in which case the value will be calculated</span>
+53:                 <span class="ruby-comment cmt"># at the end of the #synchronized block.</span>
+54:                 <span class="ruby-comment cmt">#</span>
+55:                 <span class="ruby-comment cmt"># Invariant:</span>
+56:                 <span class="ruby-comment cmt">#    if value is not nil:</span>
+57:                 <span class="ruby-comment cmt">#       There exists an s in @collection with s.next_cleaning_time == value.</span>
+58:                 <span class="ruby-comment cmt">#       for all s in @collection:</span>
+59:                 <span class="ruby-comment cmt">#          if eligable_for_cleanup?(s):</span>
+60:                 <span class="ruby-comment cmt">#             s.next_cleaning_time &lt;= value</span>
+61:                 <span class="ruby-ivar">@next_cleaning_time</span> = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span> <span class="ruby-operator">+</span> <span class="ruby-value">60</span> <span class="ruby-operator">*</span> <span class="ruby-value">60</span>
+62:                 <span class="ruby-ivar">@next_cleaning_time_changed</span> = <span class="ruby-keyword kw">false</span>
+63:                 
+64:                 <span class="ruby-ivar">@cleaner_thread</span> = <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">new</span> <span class="ruby-keyword kw">do</span>
+65:                         <span class="ruby-keyword kw">begin</span>
+66:                                 <span class="ruby-ivar">@lock</span>.<span class="ruby-identifier">synchronize</span> <span class="ruby-keyword kw">do</span>
+67:                                         <span class="ruby-identifier">cleaner_thread_main</span>
+68:                                 <span class="ruby-keyword kw">end</span>
+69:                         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Exception</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">e</span>
+70:                                 <span class="ruby-identifier">print_exception</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">to_s</span>, <span class="ruby-identifier">e</span>)
+71:                         <span class="ruby-keyword kw">end</span>
+72:                 <span class="ruby-keyword kw">end</span>
+73:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="sectiontitle">Public Instance methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000108"></a><b>check_idle_servers!</b>()
+  </div>
+  <div class="description">
+  <p>
+Tell the cleaner thread to check the collection as soon as possible,
+instead of sleeping until the next scheduled cleaning time.
+</p>
+<p>
+Precondition: this method must NOT be called within a <a
+href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000108_source')" id="l_M000108_source">show source</a> ]</p>
+  <div id="M000108_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 198</span>
+198:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">check_idle_servers!</span>
+199:                 <span class="ruby-ivar">@lock</span>.<span class="ruby-identifier">synchronize</span> <span class="ruby-keyword kw">do</span>
+200:                         <span class="ruby-ivar">@next_cleaning_time</span> = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span> <span class="ruby-operator">-</span> <span class="ruby-value">60</span> <span class="ruby-operator">*</span> <span class="ruby-value">60</span>
+201:                         <span class="ruby-ivar">@cond</span>.<span class="ruby-identifier">signal</span>
+202:                 <span class="ruby-keyword kw">end</span>
+203:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000112"></a><b>cleanup</b>()
+  </div>
+  <div class="description">
+  <p>
+Cleanup all resources used by this <a
+href="AbstractServerCollection.html">AbstractServerCollection</a>. All
+AbstractServers from the collection will be deleted. Each <a
+href="AbstractServer.html">AbstractServer</a> will be stopped, if
+necessary. The background thread which removes idle AbstractServers will be
+stopped.
+</p>
+<p>
+After calling this method, this <a
+href="AbstractServerCollection.html">AbstractServerCollection</a> object
+will become unusable.
+</p>
+<p>
+Precondition: this method must <b>NOT</b> be called within a <a
+href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000112_source')" id="l_M000112_source">show source</a> ]</p>
+  <div id="M000112_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 246</span>
+246:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">cleanup</span>
+247:                 <span class="ruby-ivar">@cleanup_lock</span>.<span class="ruby-identifier">synchronize</span> <span class="ruby-keyword kw">do</span>
+248:                         <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@done</span>
+249:                         <span class="ruby-ivar">@lock</span>.<span class="ruby-identifier">synchronize</span> <span class="ruby-keyword kw">do</span>
+250:                                 <span class="ruby-ivar">@done</span> = <span class="ruby-keyword kw">true</span>
+251:                                 <span class="ruby-ivar">@cond</span>.<span class="ruby-identifier">signal</span>
+252:                         <span class="ruby-keyword kw">end</span>
+253:                         <span class="ruby-ivar">@cleaner_thread</span>.<span class="ruby-identifier">join</span>
+254:                         <span class="ruby-identifier">clear</span>
+255:                 <span class="ruby-keyword kw">end</span>
+256:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000111"></a><b>clear</b>()
+  </div>
+  <div class="description">
+  <p>
+Delete all AbstractServers from the collection. Each <a
+href="AbstractServer.html">AbstractServer</a> will be stopped, if
+necessary.
+</p>
+<p>
+Precondition: this method must be called within a <a
+href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000111_source')" id="l_M000111_source">show source</a> ]</p>
+  <div id="M000111_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 228</span>
+228:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">clear</span>
+229:                 <span class="ruby-ivar">@collection</span>.<span class="ruby-identifier">each_value</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">server</span><span class="ruby-operator">|</span>
+230:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">server</span>.<span class="ruby-identifier">started?</span>
+231:                                 <span class="ruby-identifier">server</span>.<span class="ruby-identifier">stop</span>
+232:                         <span class="ruby-keyword kw">end</span>
+233:                 <span class="ruby-keyword kw">end</span>
+234:                 <span class="ruby-ivar">@collection</span>.<span class="ruby-identifier">clear</span>
+235:                 <span class="ruby-ivar">@next_cleaning_time</span> = <span class="ruby-keyword kw">nil</span>
+236:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000106"></a><b>delete</b>(key)
+  </div>
+  <div class="description">
+  <p>
+Deletes from the collection the <a
+href="AbstractServer.html">AbstractServer</a> that&#8216;s associated with
+the given key. If no such <a href="AbstractServer.html">AbstractServer</a>
+exists, nothing will happen.
+</p>
+<p>
+If the <a href="AbstractServer.html">AbstractServer</a> is started, then it
+will be stopped before deletion.
+</p>
+<p>
+Precondition: this method must be called within a <a
+href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000106_source')" id="l_M000106_source">show source</a> ]</p>
+  <div id="M000106_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 162</span>
+162:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">delete</span>(<span class="ruby-identifier">key</span>)
+163:                 <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-value str">&quot;cleanup() has already been called.&quot;</span> <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@done</span>
+164:                 <span class="ruby-identifier">server</span> = <span class="ruby-ivar">@collection</span>[<span class="ruby-identifier">key</span>]
+165:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">server</span>
+166:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">server</span>.<span class="ruby-identifier">started?</span>
+167:                                 <span class="ruby-identifier">server</span>.<span class="ruby-identifier">stop</span>
+168:                         <span class="ruby-keyword kw">end</span>
+169:                         <span class="ruby-ivar">@collection</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-identifier">key</span>)
+170:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">server</span>.<span class="ruby-identifier">next_cleaning_time</span> <span class="ruby-operator">==</span> <span class="ruby-ivar">@next_cleaning_time</span>
+171:                                 <span class="ruby-ivar">@next_cleaning_time</span> = <span class="ruby-keyword kw">nil</span>
+172:                         <span class="ruby-keyword kw">end</span>
+173:                 <span class="ruby-keyword kw">end</span>
+174:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000109"></a><b>each</b>() {|server| ...}
+  </div>
+  <div class="description">
+  <p>
+Iterate over all <a href="AbstractServer.html">AbstractServer</a> objects.
+</p>
+<p>
+Precondition: this method must be called within a <a
+href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000109_source')" id="l_M000109_source">show source</a> ]</p>
+  <div id="M000109_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 208</span>
+208:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">each</span>
+209:                 <span class="ruby-identifier">each_pair</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">key</span>, <span class="ruby-identifier">server</span><span class="ruby-operator">|</span>
+210:                         <span class="ruby-keyword kw">yield</span> <span class="ruby-identifier">server</span>
+211:                 <span class="ruby-keyword kw">end</span>
+212:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000110"></a><b>each_pair</b>() {|key, server| ...}
+  </div>
+  <div class="description">
+  <p>
+Iterate over all keys and associated <a
+href="AbstractServer.html">AbstractServer</a> objects.
+</p>
+<p>
+Precondition: this method must be called within a <a
+href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000110_source')" id="l_M000110_source">show source</a> ]</p>
+  <div id="M000110_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 217</span>
+217:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">each_pair</span>
+218:                 <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-value str">&quot;cleanup() has already been called.&quot;</span> <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@done</span>
+219:                 <span class="ruby-ivar">@collection</span>.<span class="ruby-identifier">each_pair</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">key</span>, <span class="ruby-identifier">server</span><span class="ruby-operator">|</span>
+220:                         <span class="ruby-keyword kw">yield</span>(<span class="ruby-identifier">key</span>, <span class="ruby-identifier">server</span>)
+221:                 <span class="ruby-keyword kw">end</span>
+222:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000105"></a><b>empty?</b>()
+  </div>
+  <div class="description">
+  <p>
+Checks whether the collection is empty.
+</p>
+<p>
+Precondition: this method must be called within a <a
+href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000105_source')" id="l_M000105_source">show source</a> ]</p>
+  <div id="M000105_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 152</span>
+152:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">empty?</span>
+153:                 <span class="ruby-keyword kw">return</span> <span class="ruby-ivar">@collection</span>.<span class="ruby-identifier">empty?</span>
+154:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000104"></a><b>has_key?</b>(key)
+  </div>
+  <div class="description">
+  <p>
+Checks whether there&#8216;s an <a
+href="AbstractServer.html">AbstractServer</a> object associated with the
+given key.
+</p>
+<p>
+Precondition: this method must be called within a <a
+href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000104_source')" id="l_M000104_source">show source</a> ]</p>
+  <div id="M000104_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 145</span>
+145:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">has_key?</span>(<span class="ruby-identifier">key</span>)
+146:                 <span class="ruby-keyword kw">return</span> <span class="ruby-ivar">@collection</span>.<span class="ruby-identifier">has_key?</span>(<span class="ruby-identifier">key</span>)
+147:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000103"></a><b>lookup_or_add</b>(key) {|| ...}
+  </div>
+  <div class="description">
+  <p>
+Lookup and returns an <a href="AbstractServer.html">AbstractServer</a> with
+the given key.
+</p>
+<p>
+If there is no AbstractSerer associated with the given key, then the given
+block will be called. That block must return an <a
+href="AbstractServer.html">AbstractServer</a> object. Then, that object
+will be stored in the collection, and returned.
+</p>
+<p>
+The block must set the &#8216;max_idle_time&#8217; attribute on the <a
+href="AbstractServer.html">AbstractServer</a>. <a
+href="AbstractServerCollection.html">AbstractServerCollection</a>&#8216;s
+idle cleaning interval will be adapted to accomodate with this. Changing
+the value outside this block is not guaranteed to have any effect on the
+idle cleaning interval. A max_idle_time value of nil or 0 means the <a
+href="AbstractServer.html">AbstractServer</a> will never be idle cleaned.
+</p>
+<p>
+If the block raises an exception, then the collection will not be modified,
+and the exception will be propagated.
+</p>
+<p>
+Precondition: this method must be called within a <a
+href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000103_source')" id="l_M000103_source">show source</a> ]</p>
+  <div id="M000103_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 119</span>
+119:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">lookup_or_add</span>(<span class="ruby-identifier">key</span>)
+120:                 <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-value str">&quot;cleanup() has already been called.&quot;</span> <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@done</span>
+121:                 <span class="ruby-identifier">server</span> = <span class="ruby-ivar">@collection</span>[<span class="ruby-identifier">key</span>]
+122:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">server</span>
+123:                         <span class="ruby-identifier">register_activity</span>(<span class="ruby-identifier">server</span>)
+124:                         <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">server</span>
+125:                 <span class="ruby-keyword kw">else</span>
+126:                         <span class="ruby-identifier">server</span> = <span class="ruby-keyword kw">yield</span>
+127:                         <span class="ruby-keyword kw">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">server</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">:start</span>)
+128:                                 <span class="ruby-identifier">raise</span> <span class="ruby-constant">TypeError</span>, <span class="ruby-value str">&quot;The block didn't return a valid AbstractServer object.&quot;</span>
+129:                         <span class="ruby-keyword kw">end</span>
+130:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">eligable_for_cleanup?</span>(<span class="ruby-identifier">server</span>)
+131:                                 <span class="ruby-identifier">server</span>.<span class="ruby-identifier">next_cleaning_time</span> = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">server</span>.<span class="ruby-identifier">max_idle_time</span>
+132:                                 <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@next_cleaning_time</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">server</span>.<span class="ruby-identifier">next_cleaning_time</span> <span class="ruby-operator">&lt;</span> <span class="ruby-ivar">@next_cleaning_time</span>
+133:                                         <span class="ruby-ivar">@next_cleaning_time</span> = <span class="ruby-identifier">server</span>.<span class="ruby-identifier">next_cleaning_time</span>
+134:                                         <span class="ruby-ivar">@next_cleaning_time_changed</span> = <span class="ruby-keyword kw">true</span>
+135:                                 <span class="ruby-keyword kw">end</span>
+136:                         <span class="ruby-keyword kw">end</span>
+137:                         <span class="ruby-ivar">@collection</span>[<span class="ruby-identifier">key</span>] = <span class="ruby-identifier">server</span>
+138:                         <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">server</span>
+139:                 <span class="ruby-keyword kw">end</span>
+140:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000107"></a><b>register_activity</b>(server)
+  </div>
+  <div class="description">
+  <p>
+Notify this <a
+href="AbstractServerCollection.html">AbstractServerCollection</a> that
+<tt>server</tt> has performed an activity. This <a
+href="AbstractServerCollection.html">AbstractServerCollection</a> will
+update the idle information associated with <tt>server</tt> accordingly.
+</p>
+<p>
+<a href="AbstractServerCollection.html#M000103">lookup_or_add</a> already
+automatically updates idle information, so you only need to call this
+method if the time at which the server has performed an activity is not
+close to the time at which <a
+href="AbstractServerCollection.html#M000103">lookup_or_add</a> had been
+called.
+</p>
+<p>
+Precondition: this method must be called within a <a
+href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000107_source')" id="l_M000107_source">show source</a> ]</p>
+  <div id="M000107_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 185</span>
+185:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">register_activity</span>(<span class="ruby-identifier">server</span>)
+186:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">eligable_for_cleanup?</span>(<span class="ruby-identifier">server</span>)
+187:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">server</span>.<span class="ruby-identifier">next_cleaning_time</span> <span class="ruby-operator">==</span> <span class="ruby-ivar">@next_cleaning_time</span>
+188:                                 <span class="ruby-ivar">@next_cleaning_time</span> = <span class="ruby-keyword kw">nil</span>
+189:                         <span class="ruby-keyword kw">end</span>
+190:                         <span class="ruby-identifier">server</span>.<span class="ruby-identifier">next_cleaning_time</span> = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">server</span>.<span class="ruby-identifier">max_idle_time</span>
+191:                 <span class="ruby-keyword kw">end</span>
+192:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000102"></a><b>synchronize</b>() {|| ...}
+  </div>
+  <div class="description">
+  <p>
+Acquire the lock for this <a
+href="AbstractServerCollection.html">AbstractServerCollection</a> object,
+and run the code within the block. The entire block will be a single atomic
+operation.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000102_source')" id="l_M000102_source">show source</a> ]</p>
+  <div id="M000102_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 78</span>
+ 78:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">synchronize</span>
+ 79:                 <span class="ruby-ivar">@lock</span>.<span class="ruby-identifier">synchronize</span> <span class="ruby-keyword kw">do</span>
+ 80:                         <span class="ruby-keyword kw">yield</span>
+ 81:                         <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@next_cleaning_time</span>.<span class="ruby-identifier">nil?</span>
+ 82:                                 <span class="ruby-ivar">@collection</span>.<span class="ruby-identifier">each_value</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">server</span><span class="ruby-operator">|</span>
+ 83:                                         <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@next_cleaning_time</span>.<span class="ruby-identifier">nil?</span> <span class="ruby-operator">||</span>
+ 84:                                            (<span class="ruby-identifier">eligable_for_cleanup?</span>(<span class="ruby-identifier">server</span>) <span class="ruby-operator">&amp;&amp;</span>
+ 85:                                             <span class="ruby-identifier">server</span>.<span class="ruby-identifier">next_cleaning_time</span> <span class="ruby-operator">&lt;</span> <span class="ruby-ivar">@next_cleaning_time</span>
+ 86:                                            )
+ 87:                                                 <span class="ruby-ivar">@next_cleaning_time</span> = <span class="ruby-identifier">server</span>.<span class="ruby-identifier">next_cleaning_time</span>
+ 88:                                         <span class="ruby-keyword kw">end</span>
+ 89:                                 <span class="ruby-keyword kw">end</span>
+ 90:                                 <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@next_cleaning_time</span>.<span class="ruby-identifier">nil?</span>
+ 91:                                         <span class="ruby-comment cmt"># There are no servers in the collection with an idle timeout.</span>
+ 92:                                         <span class="ruby-ivar">@next_cleaning_time</span> = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span> <span class="ruby-operator">+</span> <span class="ruby-value">60</span> <span class="ruby-operator">*</span> <span class="ruby-value">60</span>
+ 93:                                 <span class="ruby-keyword kw">end</span>
+ 94:                                 <span class="ruby-ivar">@next_cleaning_time_changed</span> = <span class="ruby-keyword kw">true</span>
+ 95:                         <span class="ruby-keyword kw">end</span>
+ 96:                         <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@next_cleaning_time_changed</span>
+ 97:                                 <span class="ruby-ivar">@next_cleaning_time_changed</span> = <span class="ruby-keyword kw">false</span>
+ 98:                                 <span class="ruby-ivar">@cond</span>.<span class="ruby-identifier">signal</span>
+ 99:                         <span class="ruby-keyword kw">end</span>
+100:                 <span class="ruby-keyword kw">end</span>
+101:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

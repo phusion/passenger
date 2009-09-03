@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Class: PhusionPassenger::HTMLTemplate</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Class</span><br />PhusionPassenger::HTMLTemplate</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../../files/lib/phusion_passenger/html_template_rb.html">lib/phusion_passenger/html_template.rb</a>
+        </td>
+      </tr>
+    <tr>
+      <td>Parent:</td>
+      <td>
+Object
+     </td>
+   </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+  <div class="description"><p>
+A convenience utility class for rendering our error pages.
+</p>
+</div>
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000115">[]=</a></li>
+  <li><a href="#M000114">new</a></li>
+  <li><a href="#M000116">result</a></li>
+  </ul>
+
+<div class="sectiontitle">Included Modules</div>
+<ul>
+  <li>ERB::Util</li>
+</ul>
+
+
+
+  <div class="sectiontitle">Constants</div>
+  <table border='0' cellpadding='5'>
+  <tr valign='top'>
+    <td class="attr-name">PASSENGER_FILE_PREFIX</td>
+    <td>=</td>
+    <td class="attr-value">File.dirname(__FILE__)</td>
+  </tr>
+  <tr valign='top'>
+    <td class="attr-name">TEMPLATE_DIR</td>
+    <td>=</td>
+    <td class="attr-value">&quot;#{PASSENGER_FILE_PREFIX}/templates&quot;</td>
+  </tr>
+  </table>
+
+
+<div class="sectiontitle">Public Class methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000114"></a><b>new</b>(template_name, options = {})
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000114_source')" id="l_M000114_source">show source</a> ]</p>
+  <div id="M000114_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/html_template.rb, line 33</span>
+33:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">template_name</span>, <span class="ruby-identifier">options</span> = {})
+34:                 <span class="ruby-ivar">@buffer</span> = <span class="ruby-value str">''</span>
+35:                 <span class="ruby-ivar">@template</span> = <span class="ruby-constant">ERB</span>.<span class="ruby-identifier">new</span>(<span class="ruby-constant">File</span>.<span class="ruby-identifier">read</span>(<span class="ruby-node">&quot;#{TEMPLATE_DIR}/#{template_name}.html.erb&quot;</span>),
+36:                         <span class="ruby-keyword kw">nil</span>, <span class="ruby-keyword kw">nil</span>, <span class="ruby-value str">'@buffer'</span>)
+37:                 <span class="ruby-identifier">options</span>.<span class="ruby-identifier">each_pair</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">name</span>, <span class="ruby-identifier">value</span><span class="ruby-operator">|</span>
+38:                         <span class="ruby-keyword kw">self</span>[<span class="ruby-identifier">name</span>] = <span class="ruby-identifier">value</span>
+39:                 <span class="ruby-keyword kw">end</span>
+40:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="sectiontitle">Public Instance methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000115"></a><b>[]=</b>(name, value)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000115_source')" id="l_M000115_source">show source</a> ]</p>
+  <div id="M000115_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/html_template.rb, line 42</span>
+42:         <span class="ruby-keyword kw">def</span> <span class="ruby-operator">[]=</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">value</span>)
+43:                 <span class="ruby-identifier">instance_variable_set</span>(<span class="ruby-node">&quot;@#{name}&quot;</span>.<span class="ruby-identifier">to_sym</span>, <span class="ruby-identifier">value</span>)
+44:                 <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">self</span>
+45:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000116"></a><b>result</b>()
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000116_source')" id="l_M000116_source">show source</a> ]</p>
+  <div id="M000116_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/html_template.rb, line 47</span>
+47:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">result</span>
+48:                 <span class="ruby-keyword kw">return</span> <span class="ruby-ivar">@template</span>.<span class="ruby-identifier">result</span>(<span class="ruby-identifier">binding</span>)
+49:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

@@ -354,6 +354,14 @@ For example:
     DocumentRoot /webapps/mycook/public
 </VirtualHost>
 -------------------------------------------
+
+You may also need to tweak your file/folder permissions. Make sure that the
+following folders are readable and executable by Apache:
+
+ * this 'public' folder.
+ * the application's 'config' folder.
+ * all parent folders. That is, /webapps/mycook and /webapps must also be readable and executable by Apache.
+
 Then restart Apache. The application has now been deployed.
 
 [[deploying_rails_to_sub_uri]]
@@ -524,6 +532,14 @@ For example:
     DocumentRoot /webapps/rackapp/public
 </VirtualHost>
 -------------------------------------------
+
+You may also need to tweak your file/folder permissions. Make sure that the
+following folders are readable and executable by Apache:
+
+ * this 'public' folder.
+ * the application's 'config' folder.
+ * all parent folders. That is, /webapps/rackapp and /webapps must also be readable and executable by Apache.
+
 Then restart Apache. The application has now been deployed.
 
 [[deploying_rack_to_sub_uri]]
@@ -693,77 +709,6 @@ applications must run as, if user switching fails or is disabled.
 
 This option may only occur once, in the global server configuration.
 The default value is 'nobody'.
-
-[[PassengerHighPerformance]]
-=== PassengerHighPerformance <on|off> ===
-By default, Phusion Passenger is compatible with mod_rewrite and most other
-Apache modules. However, a lot of effort is required in order to be compatible.
-If you turn 'PassengerHighPerformance' to 'on', then Phusion Passenger will be
-a little faster, in return for reduced compatibility with other Apache modules.
-
-In places where 'PassengerHighPerformance' is turned on, mod_rewrite rules will
-likely not work. mod_autoindex (the module which displays a directory index)
-will also not work. Other Apache modules may or may not work, depending on what
-they exactly do. We recommend you to find out how other modules behave in high
-performance mode via testing.
-
-This option is *not* an all-or-nothing global option: you can enable high
-performance mode for certain virtual hosts or certain URLs only.
-The 'PassengerHighPerformance' option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess'.
-
-In each place, it may be specified at most once. The default value is 'off',
-so high performance mode is disabled by default, and you have to explicitly
-enable it.
-
-.When to enable high performance mode?
-
-If you do not use mod_rewrite or other Apache modules then it might make
-sense to enable high performance mode.
-
-It's likely that some of your applications depend on mod_rewrite or other
-Apache modules, while some do not. In that case you can enable high performance
-for only those applications that don't use other Apache modules. For example:
-
-------------------------------------
-<VirtualHost *:80>
-    ServerName www.foo.com
-    DocumentRoot /apps/foo/public
-    .... mod_rewrite rules or options for other Apache modules here ...
-</VirtualHost>
-
-<VirtualHost *:80>
-    ServerName www.bar.com
-    DocumentRoot /apps/bar/public
-    PassengerHighPerformance on
-</VirtualHost>
-------------------------------------
-
-In the above example, high performance mode is only enabled for www.bar.com.
-It is disabled for everything else.
-
-If your application generally depends on mod_rewrite or other Apache modules,
-but a certain URL that's accessed often doesn't depend on those other modules,
-then you can enable high performance mode for a certain URL only. For example:
-
-------------------------------------
-<VirtualHost *:80>
-    ServerName www.foo.com
-    DocumentRoot /apps/foo/public
-    .... mod_rewrite rules or options for other Apache modules here ...
-    
-    <Location /chatroom/ajax_update_poll>
-        PassengerHighPerformance on
-    </Location>
-</VirtualHost>
-------------------------------------
-
-This enables high performance mode for
-http://www.foo.com/chatroom/ajax_update_poll only.
 
 === PassengerEnabled <on|off> ===
 You can set this option to 'off' to completely disable Phusion Passenger for
@@ -1038,6 +983,149 @@ This option may occur in the following places:
  * In '.htaccess', if `AllowOverride Limits` is on.
 
 In each place, it may be specified at most once. The default value is '0'.
+
+[[PassengerHighPerformance]]
+==== PassengerHighPerformance <on|off> ====
+By default, Phusion Passenger is compatible with mod_rewrite and most other
+Apache modules. However, a lot of effort is required in order to be compatible.
+If you turn 'PassengerHighPerformance' to 'on', then Phusion Passenger will be
+a little faster, in return for reduced compatibility with other Apache modules.
+
+In places where 'PassengerHighPerformance' is turned on, mod_rewrite rules will
+likely not work. mod_autoindex (the module which displays a directory index)
+will also not work. Other Apache modules may or may not work, depending on what
+they exactly do. We recommend you to find out how other modules behave in high
+performance mode via testing.
+
+This option is *not* an all-or-nothing global option: you can enable high
+performance mode for certain virtual hosts or certain URLs only.
+The 'PassengerHighPerformance' option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess'.
+
+In each place, it may be specified at most once. The default value is 'off',
+so high performance mode is disabled by default, and you have to explicitly
+enable it.
+
+.When to enable high performance mode?
+
+If you do not use mod_rewrite or other Apache modules then it might make
+sense to enable high performance mode.
+
+It's likely that some of your applications depend on mod_rewrite or other
+Apache modules, while some do not. In that case you can enable high performance
+for only those applications that don't use other Apache modules. For example:
+
+------------------------------------
+<VirtualHost *:80>
+    ServerName www.foo.com
+    DocumentRoot /apps/foo/public
+    .... mod_rewrite rules or options for other Apache modules here ...
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName www.bar.com
+    DocumentRoot /apps/bar/public
+    PassengerHighPerformance on
+</VirtualHost>
+------------------------------------
+
+In the above example, high performance mode is only enabled for www.bar.com.
+It is disabled for everything else.
+
+If your application generally depends on mod_rewrite or other Apache modules,
+but a certain URL that's accessed often doesn't depend on those other modules,
+then you can enable high performance mode for a certain URL only. For example:
+
+------------------------------------
+<VirtualHost *:80>
+    ServerName www.foo.com
+    DocumentRoot /apps/foo/public
+    .... mod_rewrite rules or options for other Apache modules here ...
+    
+    <Location /chatroom/ajax_update_poll>
+        PassengerHighPerformance on
+    </Location>
+</VirtualHost>
+------------------------------------
+
+This enables high performance mode for
+http://www.foo.com/chatroom/ajax_update_poll only.
+
+
+=== Compatibility options ===
+
+[[PassengerResolveSymlinksInDocumentRoot]]
+==== PassengerResolveSymlinksInDocumentRoot <on|off> ====
+Configures whether Phusion Passenger should resolve symlinks in the document root.
+Please refer to <<application_detection,How Phusion Passenger detects whether a
+virtual host is a web application>> for more information.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once. It is off by default.
+
+==== PassengerAllowEncodedSlashes <on|off> ====
+By default, Apache doesn't support URLs with encoded slashes (%2f), e.g. URLs like
+this: `/users/fujikura%2fyuu`. If you access such an URL then Apache will return a
+404 Not Found error. This can be solved by turning on PassengerAllowEncodedSlashes
+as well as Apache's
+link:http://httpd.apache.org/docs/2.0/mod/core.html#allowencodedslashes[AllowEncodedSlashes].
+
+Is it important that you turn on both AllowEncodedSlashes *and* PassengerAllowEncodedSlashes,
+otherwise this feature will not work properly.
+
+PassengerAllowEncodedSlashes may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once. It is off by default.
+
+Please note however that turning on support for encoded slashes will break support for
+mod_rewrite passthrough rules. Because of bugs/limitations in Apache, Phusion Passenger
+can support either encoded slashes or mod_rewrite passthrough rules, but not both at the
+same time. Luckily this option can be specified anywhere, so you can enable it only for
+virtual hosts or URLs that need it:
+
+----------------------------------
+<VirtualHost *:80>
+    ServerName www.example.com
+    DocumentRoot /webapps/example/public
+    AllowEncodedSlashes on
+    RewriteEngine on
+    
+    # Check for maintenance file and redirect all requests
+    RewriteCond %{DOCUMENT_ROOT}/system/maintenance.html -f
+    RewriteCond %{SCRIPT_FILENAME} !maintenance.html
+    RewriteRule ^.*$ /system/maintenance.html [L]
+    
+    # Make /about an alias for /info/about.
+    RewriteRule ^/about$ /info/about [PT,L]
+    
+    <Location ~ "^/users/">
+        # In a location block so that it doesn't interfere with the
+        # above /about mod_rewrite rule.
+        PassengerAllowEncodedSlashes on
+    </Location>
+</VirtualHost>
+----------------------------------
+
+With this, http://www.example.com/users/fujikura%2fyuu will work properly, and
+accessing http://www.example.com/about will properly display the result of
+http://www.example.com/info/about. Notice that PassengerAllowEncodedSlashes only
+interferes with passthrough rules, not with any other mod_rewrite rules. The rules for
+displaying maintenance.html will work fine even URLs starting with "/users".
 
 
 === Ruby on Rails-specific options ===
@@ -1647,6 +1735,7 @@ application uses a non-standard page cache directory, i.e. if it doesn't cache t
 the 'public' directory. In that case you'll need to use mod_rewrite to serve such
 page cache files.
 
+[[application_detection]]
 === How Phusion Passenger detects whether a virtual host is a web application ===
 After you've read the deployment instructions you might wonder how Phusion Passenger
 knows that the DocumentRoot points to a web application that Phusion Passenger is
@@ -1669,8 +1758,9 @@ that Phusion Passenger will:
 So suppose that your document root is '/webapps/foo/public'. Phusion Passenger will check
 whether the file '/webapps/foo/config/environment.rb' exists.
 
-Note that Phusion Passenger does *not* resolve any symlinks in the document root path since
-version 2.2.0 -- in contrast to versions earlier than 2.2.0, which does resolve symlinks.
+Note that Phusion Passenger does *not* resolve any symlinks in the document root path by
+default since version 2.2.0 -- in contrast to versions earlier than 2.2.0, which do resolve
+symlinks.
 So for example, suppose that your DocumentRoot points to '/home/www/example.com', which in
 turn is a symlink to '/webapps/example.com/public'. In versions earlier than 2.2.0, Phusion
 Passenger will check whether '/webapps/example.com/config/environment.rb' exists because it
@@ -1679,8 +1769,12 @@ resolves all symlinks. Phusion Passenger 2.2.0 and later however will check for
 Passenger will not activate itself for this virtual host, and you'll most likely see an Apache
 mod_dirindex directory listing.
 
-If you're running into this problem, you can explicitly tell Phusion Passenger what the
-correct application root is through the <<PassengerAppRoot,PassengerAppRoot>> configuration directive.
+If you need the old symlink-resolving behavior for whatever reason, then you can turn on
+<<PassengerResolveSymlinksInDocumentRoot,PassengerResolveSymlinksInDocumentRoot>>.
+
+Another way to solve this situation is to explicitly tell Phusion Passenger what the
+correct application root is through the <<PassengerAppRoot,PassengerAppRoot>> configuration
+directive.
 
 Autodetection of Rack applications happens through the same mechanism, exception that
 Phusion Passenger will look for 'config.ru' instead of 'config/environment.rb'.

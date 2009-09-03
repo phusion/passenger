@@ -1,0 +1,489 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Class: PhusionPassenger::MessageChannel</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Class</span><br />PhusionPassenger::MessageChannel</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../../files/lib/phusion_passenger/message_channel_rb.html">lib/phusion_passenger/message_channel.rb</a>
+        </td>
+      </tr>
+    <tr>
+      <td>Parent:</td>
+      <td>
+Object
+     </td>
+   </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+  <div class="description"><p>
+This class provides convenience methods for:
+</p>
+<ul>
+<li>sending and receiving raw data over an <a href="../IO.html">IO</a> channel.
+
+</li>
+<li>sending and receiving messages over an <a href="../IO.html">IO</a> channel.
+
+</li>
+<li>file descriptor (<a href="../IO.html">IO</a> object) passing over a Unix
+socket.
+
+</li>
+</ul>
+<p>
+All of these methods use exceptions for error reporting.
+</p>
+<p>
+There are two kinds of messages:
+</p>
+<dl>
+<dt> Array messages </dt><dd>These are just a list of strings, and the message itself has a specific
+length. The contained strings may not contain NUL characters
+(<tt>&#8217;\0&#8216;</tt>). Note that an array message must have at least
+one element.
+
+</dd>
+<dt> Scalar messages </dt><dd>These are byte strings which may contain arbitrary binary data. Scalar
+messages also have a specific length.
+
+</dd>
+</dl>
+<p>
+The protocol is designed to be low overhead, easy to implement and easy to
+parse.
+</p>
+<p>
+<a href="MessageChannel.html">MessageChannel</a> is to be wrapped around an
+<a href="../IO.html">IO</a> object. For example:
+</p>
+<pre>
+ a, b = IO.pipe
+ channel1 = MessageChannel.new(a)
+ channel2 = MessageChannel.new(b)
+
+ # Send an array message.
+ channel2.write(&quot;hello&quot;, &quot;world !!&quot;)
+ channel1.read    # =&gt; [&quot;hello&quot;, &quot;world !!&quot;]
+
+ # Send a scalar message.
+ channel2.write_scalar(&quot;some long string which can contain arbitrary binary data&quot;)
+ channel1.read_scalar
+</pre>
+<p>
+The life time of a <a href="MessageChannel.html">MessageChannel</a> is
+independent from that of the wrapped <a href="../IO.html">IO</a> object. If
+a <a href="MessageChannel.html">MessageChannel</a> object is destroyed, the
+underlying <a href="../IO.html">IO</a> object is not automatically closed.
+Call <a href="MessageChannel.html#M000156">close</a>() if you want to <a
+href="MessageChannel.html#M000156">close</a> the underlying <a
+href="../IO.html">IO</a> object.
+</p>
+<p>
+Note: Be careful with mixing the sending/receiving of array messages,
+scalar messages and <a href="../IO.html">IO</a> objects. If you send a
+collection of any of these in a specific order, then the receiving side
+must receive them in the exact some order. So suppose you first send a
+message, then an <a href="../IO.html">IO</a> object, then a scalar, then
+the receiving side must first receive a message, then an <a
+href="../IO.html">IO</a> object, then a scalar. If the receiving side does
+things in the wrong order then bad things will happen.
+</p>
+</div>
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000156">close</a></li>
+  <li><a href="#M000155">fileno</a></li>
+  <li><a href="#M000148">new</a></li>
+  <li><a href="#M000149">read</a></li>
+  <li><a href="#M000150">read_scalar</a></li>
+  <li><a href="#M000153">recv_io</a></li>
+  <li><a href="#M000154">send_io</a></li>
+  <li><a href="#M000151">write</a></li>
+  <li><a href="#M000152">write_scalar</a></li>
+  </ul>
+
+
+
+
+
+  <div class="sectiontitle">Attributes</div>
+  <table border='0' cellpadding='5'>
+  <tr valign='top'>
+    <td class='attr-rw'>
+[R]
+    </td>
+    <td class='attr-name'>io</td>
+    <td class='attr-desc'>
+The wrapped <a href="../IO.html">IO</a> object.
+
+</td>
+  </tr>
+  </table>
+
+<div class="sectiontitle">Public Class methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000148"></a><b>new</b>(io)
+  </div>
+  <div class="description">
+  <p>
+Create a <a href="MessageChannel.html#M000148">new</a> <a
+href="MessageChannel.html">MessageChannel</a> by wrapping the given <a
+href="../IO.html">IO</a> object.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000148_source')" id="l_M000148_source">show source</a> ]</p>
+  <div id="M000148_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/message_channel.rb, line 83</span>
+83:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">io</span>)
+84:                 <span class="ruby-ivar">@io</span> = <span class="ruby-identifier">io</span>
+85:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="sectiontitle">Public Instance methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000156"></a><b>close</b>()
+  </div>
+  <div class="description">
+  <p>
+Close the underlying <a href="../IO.html">IO</a> stream. Might raise
+SystemCallError or IOError when something goes wrong.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000156_source')" id="l_M000156_source">show source</a> ]</p>
+  <div id="M000156_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/message_channel.rb, line 217</span>
+217:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">close</span>
+218:                 <span class="ruby-ivar">@io</span>.<span class="ruby-identifier">close</span>
+219:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000155"></a><b>fileno</b>()
+  </div>
+  <div class="description">
+  <p>
+Return the file descriptor of the underlying <a href="../IO.html">IO</a>
+object.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000155_source')" id="l_M000155_source">show source</a> ]</p>
+  <div id="M000155_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/message_channel.rb, line 211</span>
+211:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">fileno</span>
+212:                 <span class="ruby-keyword kw">return</span> <span class="ruby-ivar">@io</span>.<span class="ruby-identifier">fileno</span>
+213:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000149"></a><b>read</b>()
+  </div>
+  <div class="description">
+  <p>
+Read an array message from the underlying file descriptor. Returns the
+array message as an array, or nil when end-of-stream has been reached.
+</p>
+<p>
+Might raise SystemCallError, IOError or SocketError when something goes
+wrong.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000149_source')" id="l_M000149_source">show source</a> ]</p>
+  <div id="M000149_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/message_channel.rb, line 93</span>
+ 93:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">read</span>
+ 94:                 <span class="ruby-identifier">buffer</span> = <span class="ruby-value str">''</span>
+ 95:                 <span class="ruby-keyword kw">while</span> <span class="ruby-identifier">buffer</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">&lt;</span> <span class="ruby-constant">HEADER_SIZE</span>
+ 96:                         <span class="ruby-identifier">buffer</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-ivar">@io</span>.<span class="ruby-identifier">readpartial</span>(<span class="ruby-constant">HEADER_SIZE</span> <span class="ruby-operator">-</span> <span class="ruby-identifier">buffer</span>.<span class="ruby-identifier">size</span>)
+ 97:                 <span class="ruby-keyword kw">end</span>
+ 98:                 
+ 99:                 <span class="ruby-identifier">chunk_size</span> = <span class="ruby-identifier">buffer</span>.<span class="ruby-identifier">unpack</span>(<span class="ruby-value str">'n'</span>)[<span class="ruby-value">0</span>]
+100:                 <span class="ruby-identifier">buffer</span> = <span class="ruby-value str">''</span>
+101:                 <span class="ruby-keyword kw">while</span> <span class="ruby-identifier">buffer</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">&lt;</span> <span class="ruby-identifier">chunk_size</span>
+102:                         <span class="ruby-identifier">buffer</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-ivar">@io</span>.<span class="ruby-identifier">readpartial</span>(<span class="ruby-identifier">chunk_size</span> <span class="ruby-operator">-</span> <span class="ruby-identifier">buffer</span>.<span class="ruby-identifier">size</span>)
+103:                 <span class="ruby-keyword kw">end</span>
+104:                 
+105:                 <span class="ruby-identifier">message</span> = []
+106:                 <span class="ruby-identifier">offset</span> = <span class="ruby-value">0</span>
+107:                 <span class="ruby-identifier">delimiter_pos</span> = <span class="ruby-identifier">buffer</span>.<span class="ruby-identifier">index</span>(<span class="ruby-constant">DELIMITER</span>, <span class="ruby-identifier">offset</span>)
+108:                 <span class="ruby-keyword kw">while</span> <span class="ruby-operator">!</span><span class="ruby-identifier">delimiter_pos</span>.<span class="ruby-identifier">nil?</span>
+109:                         <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">delimiter_pos</span> <span class="ruby-operator">==</span> <span class="ruby-value">0</span>
+110:                                 <span class="ruby-identifier">message</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-value str">&quot;&quot;</span>
+111:                         <span class="ruby-keyword kw">else</span>
+112:                                 <span class="ruby-identifier">message</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">buffer</span>[<span class="ruby-identifier">offset</span> <span class="ruby-operator">..</span> <span class="ruby-identifier">delimiter_pos</span> <span class="ruby-operator">-</span> <span class="ruby-value">1</span>]
+113:                         <span class="ruby-keyword kw">end</span>
+114:                         <span class="ruby-identifier">offset</span> = <span class="ruby-identifier">delimiter_pos</span> <span class="ruby-operator">+</span> <span class="ruby-value">1</span>
+115:                         <span class="ruby-identifier">delimiter_pos</span> = <span class="ruby-identifier">buffer</span>.<span class="ruby-identifier">index</span>(<span class="ruby-constant">DELIMITER</span>, <span class="ruby-identifier">offset</span>)
+116:                 <span class="ruby-keyword kw">end</span>
+117:                 <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">message</span>
+118:         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Errno</span><span class="ruby-operator">::</span><span class="ruby-constant">ECONNRESET</span>
+119:                 <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">nil</span>
+120:         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">EOFError</span>
+121:                 <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">nil</span>
+122:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000150"></a><b>read_scalar</b>(max_size = nil)
+  </div>
+  <div class="description">
+  <p>
+Read a scalar message from the underlying <a href="../IO.html">IO</a>
+object. Returns the <a href="MessageChannel.html#M000149">read</a> message,
+or nil on end-of-stream.
+</p>
+<p>
+Might raise SystemCallError, IOError or SocketError when something goes
+wrong.
+</p>
+<p>
+The <tt>max_size</tt> argument allows one to specify the maximum allowed
+size for the scalar message. If the received scalar message&#8216;s size is
+larger than <tt>max_size</tt>, then a SecurityError will be raised.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000150_source')" id="l_M000150_source">show source</a> ]</p>
+  <div id="M000150_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/message_channel.rb, line 133</span>
+133:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">read_scalar</span>(<span class="ruby-identifier">max_size</span> = <span class="ruby-keyword kw">nil</span>)
+134:                 <span class="ruby-identifier">buffer</span> = <span class="ruby-value str">''</span>
+135:                 <span class="ruby-identifier">temp</span> = <span class="ruby-value str">''</span>
+136:                 <span class="ruby-keyword kw">while</span> <span class="ruby-identifier">buffer</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">&lt;</span> <span class="ruby-value">4</span>
+137:                         <span class="ruby-identifier">buffer</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-ivar">@io</span>.<span class="ruby-identifier">readpartial</span>(<span class="ruby-value">4</span> <span class="ruby-operator">-</span> <span class="ruby-identifier">buffer</span>.<span class="ruby-identifier">size</span>, <span class="ruby-identifier">temp</span>)
+138:                 <span class="ruby-keyword kw">end</span>
+139:                 <span class="ruby-identifier">size</span> = <span class="ruby-identifier">buffer</span>.<span class="ruby-identifier">unpack</span>(<span class="ruby-value str">'N'</span>)[<span class="ruby-value">0</span>]
+140:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">size</span> <span class="ruby-operator">==</span> <span class="ruby-value">0</span>
+141:                         <span class="ruby-keyword kw">return</span> <span class="ruby-value str">''</span>
+142:                 <span class="ruby-keyword kw">else</span>
+143:                         <span class="ruby-keyword kw">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">max_size</span>.<span class="ruby-identifier">nil?</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">size</span> <span class="ruby-operator">&gt;</span> <span class="ruby-identifier">max_size</span>
+144:                                 <span class="ruby-identifier">raise</span> <span class="ruby-constant">SecurityError</span>, <span class="ruby-node">&quot;Scalar message size (#{size}) &quot;</span> <span class="ruby-operator">&lt;&lt;</span>
+145:                                         <span class="ruby-node">&quot;exceeds maximum allowed size (#{max_size}).&quot;</span>
+146:                         <span class="ruby-keyword kw">end</span>
+147:                         <span class="ruby-identifier">buffer</span> = <span class="ruby-value str">''</span>
+148:                         <span class="ruby-keyword kw">while</span> <span class="ruby-identifier">buffer</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">&lt;</span> <span class="ruby-identifier">size</span>
+149:                                 <span class="ruby-identifier">temp</span> = <span class="ruby-value str">''</span> <span class="ruby-comment cmt"># JRuby doesn't clear the buffer. TODO: remove this when JRuby has been fixed.</span>
+150:                                 <span class="ruby-identifier">buffer</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-ivar">@io</span>.<span class="ruby-identifier">readpartial</span>(<span class="ruby-identifier">size</span> <span class="ruby-operator">-</span> <span class="ruby-identifier">buffer</span>.<span class="ruby-identifier">size</span>, <span class="ruby-identifier">temp</span>)
+151:                         <span class="ruby-keyword kw">end</span>
+152:                         <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">buffer</span>
+153:                 <span class="ruby-keyword kw">end</span>
+154:         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Errno</span><span class="ruby-operator">::</span><span class="ruby-constant">ECONNRESET</span>
+155:                 <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">nil</span>
+156:         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">EOFError</span>
+157:                 <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">nil</span>
+158:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000153"></a><b>recv_io</b>()
+  </div>
+  <div class="description">
+  <p>
+Receive an <a href="../IO.html">IO</a> object (a file descriptor) from the
+channel. The other side must have sent an <a href="../IO.html">IO</a>
+object by calling <a href="MessageChannel.html#M000154">send_io</a>(). Note
+that this only works on Unix sockets.
+</p>
+<p>
+Might raise SystemCallError, IOError or SocketError when something goes
+wrong.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000153_source')" id="l_M000153_source">show source</a> ]</p>
+  <div id="M000153_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/message_channel.rb, line 196</span>
+196:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">recv_io</span>
+197:                 <span class="ruby-keyword kw">return</span> <span class="ruby-ivar">@io</span>.<span class="ruby-identifier">recv_io</span>
+198:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000154"></a><b>send_io</b>(io)
+  </div>
+  <div class="description">
+  <p>
+Send an <a href="../IO.html">IO</a> object (a file descriptor) over the
+channel. The other side must receive the <a href="../IO.html">IO</a> object
+by calling <a href="MessageChannel.html#M000153">recv_io</a>(). Note that
+this only works on Unix sockets.
+</p>
+<p>
+Might raise SystemCallError, IOError or SocketError when something goes
+wrong.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000154_source')" id="l_M000154_source">show source</a> ]</p>
+  <div id="M000154_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/message_channel.rb, line 206</span>
+206:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">send_io</span>(<span class="ruby-identifier">io</span>)
+207:                 <span class="ruby-ivar">@io</span>.<span class="ruby-identifier">send_io</span>(<span class="ruby-identifier">io</span>)
+208:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000151"></a><b>write</b>(name, *args)
+  </div>
+  <div class="description">
+  <p>
+Send an array message, which consists of the given elements, over the
+underlying file descriptor. <em>name</em> is the first element in the
+message, and <em>args</em> are the other elements. These arguments will
+internally be converted to strings by calling to_s().
+</p>
+<p>
+Might raise SystemCallError, IOError or SocketError when something goes
+wrong.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000151_source')" id="l_M000151_source">show source</a> ]</p>
+  <div id="M000151_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/message_channel.rb, line 167</span>
+167:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">write</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+168:                 <span class="ruby-identifier">check_argument</span>(<span class="ruby-identifier">name</span>)
+169:                 <span class="ruby-identifier">args</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">arg</span><span class="ruby-operator">|</span>
+170:                         <span class="ruby-identifier">check_argument</span>(<span class="ruby-identifier">arg</span>)
+171:                 <span class="ruby-keyword kw">end</span>
+172:                 
+173:                 <span class="ruby-identifier">message</span> = <span class="ruby-node">&quot;#{name}#{DELIMITER}&quot;</span>
+174:                 <span class="ruby-identifier">args</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">arg</span><span class="ruby-operator">|</span>
+175:                         <span class="ruby-identifier">message</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">arg</span>.<span class="ruby-identifier">to_s</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-constant">DELIMITER</span>
+176:                 <span class="ruby-keyword kw">end</span>
+177:                 <span class="ruby-ivar">@io</span>.<span class="ruby-identifier">write</span>([<span class="ruby-identifier">message</span>.<span class="ruby-identifier">size</span>].<span class="ruby-identifier">pack</span>(<span class="ruby-value str">'n'</span>) <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">message</span>)
+178:                 <span class="ruby-ivar">@io</span>.<span class="ruby-identifier">flush</span>
+179:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000152"></a><b>write_scalar</b>(data)
+  </div>
+  <div class="description">
+  <p>
+Send a scalar message over the underlying <a href="../IO.html">IO</a>
+object.
+</p>
+<p>
+Might raise SystemCallError, IOError or SocketError when something goes
+wrong.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000152_source')" id="l_M000152_source">show source</a> ]</p>
+  <div id="M000152_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/message_channel.rb, line 185</span>
+185:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">write_scalar</span>(<span class="ruby-identifier">data</span>)
+186:                 <span class="ruby-ivar">@io</span>.<span class="ruby-identifier">write</span>([<span class="ruby-identifier">data</span>.<span class="ruby-identifier">size</span>].<span class="ruby-identifier">pack</span>(<span class="ruby-value str">'N'</span>) <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">data</span>)
+187:                 <span class="ruby-ivar">@io</span>.<span class="ruby-identifier">flush</span>
+188:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

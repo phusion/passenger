@@ -1,0 +1,719 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Class: PhusionPassenger::AbstractServer</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Class</span><br />PhusionPassenger::AbstractServer</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../../files/lib/phusion_passenger/abstract_server_rb.html">lib/phusion_passenger/abstract_server.rb</a>
+        </td>
+      </tr>
+    <tr>
+      <td>Parent:</td>
+      <td>
+Object
+     </td>
+   </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+  <div class="description"><p>
+An abstract base class for a <a
+href="AbstractServer.html#M000144">server</a>, with the following
+properties:
+</p>
+<ul>
+<li>The <a href="AbstractServer.html#M000144">server</a> has exactly one <a
+href="AbstractServer.html#M000145">client</a>, and is connected to that <a
+href="AbstractServer.html#M000145">client</a> at all times. The <a
+href="AbstractServer.html#M000144">server</a> will quit when the connection
+closes.
+
+</li>
+<li>The <a href="AbstractServer.html#M000144">server</a>&#8216;s main loop may
+be run in a child process (and so is asynchronous from the main process).
+
+</li>
+<li>One can communicate with the <a
+href="AbstractServer.html#M000144">server</a> through discrete messages (as
+opposed to byte streams).
+
+</li>
+<li>The <a href="AbstractServer.html#M000144">server</a> can pass file
+descriptors (<a href="../IO.html">IO</a> objects) back to the <a
+href="AbstractServer.html#M000145">client</a>.
+
+</li>
+</ul>
+<p>
+A message is just an ordered list of strings. The first element in the
+message is the _message name_.
+</p>
+<p>
+The <a href="AbstractServer.html#M000144">server</a> will also reset all
+signal handlers (in the child process). That is, it will respond to all
+signals in the default manner. The only exception is SIGHUP, which is
+ignored. One may define additional signal handlers using <a
+href="AbstractServer.html#M000143">define_signal_handler</a>().
+</p>
+<p>
+Before an <a href="AbstractServer.html">AbstractServer</a> can be used, it
+must first be started by calling <a
+href="AbstractServer.html#M000134">start</a>(). When it is no longer
+needed, <a href="AbstractServer.html#M000136">stop</a>() should be called.
+</p>
+<p>
+Here&#8216;s an example on using <a
+href="AbstractServer.html">AbstractServer</a>:
+</p>
+<pre>
+ class MyServer &lt; PhusionPassenger::AbstractServer
+    def initialize
+       super()
+       define_message_handler(:hello, :handle_hello)
+    end
+
+    def hello(first_name, last_name)
+       send_to_server('hello', first_name, last_name)
+       reply, pointless_number = recv_from_server
+       puts &quot;The server said: #{reply}&quot;
+       puts &quot;In addition, it sent this pointless number: #{pointless_number}&quot;
+    end
+
+ private
+    def handle_hello(first_name, last_name)
+       send_to_client(&quot;Hello #{first_name} #{last_name}, how are you?&quot;, 1234)
+    end
+ end
+
+ server = MyServer.new
+ server.start
+ server.hello(&quot;Joe&quot;, &quot;Dalton&quot;)
+ server.stop
+</pre>
+</div>
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000139">before_fork</a></li>
+  <li><a href="#M000145">client</a></li>
+  <li><a href="#M000142">define_message_handler</a></li>
+  <li><a href="#M000143">define_signal_handler</a></li>
+  <li><a href="#M000147">fileno_of</a></li>
+  <li><a href="#M000141">finalize_server</a></li>
+  <li><a href="#M000140">initialize_server</a></li>
+  <li><a href="#M000133">new</a></li>
+  <li><a href="#M000146">quit_main</a></li>
+  <li><a href="#M000144">server</a></li>
+  <li><a href="#M000138">server_pid</a></li>
+  <li><a href="#M000134">start</a></li>
+  <li><a href="#M000135">start_synchronously</a></li>
+  <li><a href="#M000137">started?</a></li>
+  <li><a href="#M000136">stop</a></li>
+  </ul>
+
+<div class="sectiontitle">Included Modules</div>
+<ul>
+  <li><a href="Utils.html">Utils</a></li>
+</ul>
+
+
+  <div class="sectiontitle">Classes and Modules</div>
+  Class <a href="AbstractServer/ServerAlreadyStarted.html" class="link">PhusionPassenger::AbstractServer::ServerAlreadyStarted</a><br />
+Class <a href="AbstractServer/ServerError.html" class="link">PhusionPassenger::AbstractServer::ServerError</a><br />
+Class <a href="AbstractServer/ServerNotStarted.html" class="link">PhusionPassenger::AbstractServer::ServerNotStarted</a><br />
+Class <a href="AbstractServer/UnknownMessage.html" class="link">PhusionPassenger::AbstractServer::UnknownMessage</a><br />
+
+
+  <div class="sectiontitle">Constants</div>
+  <table border='0' cellpadding='5'>
+  <tr valign='top'>
+    <td class="attr-name">SERVER_TERMINATION_SIGNAL</td>
+    <td>=</td>
+    <td class="attr-value">&quot;SIGTERM&quot;</td>
+  </tr>
+  </table>
+
+  <div class="sectiontitle">Attributes</div>
+  <table border='0' cellpadding='5'>
+  <tr valign='top'>
+    <td class='attr-rw'>
+[RW]
+    </td>
+    <td class='attr-name'>last_activity_time</td>
+    <td class='attr-desc'>
+The last time when this <a href="AbstractServer.html">AbstractServer</a>
+had processed a message.
+
+</td>
+  </tr>
+  <tr valign='top'>
+    <td class='attr-rw'>
+[RW]
+    </td>
+    <td class='attr-name'>max_idle_time</td>
+    <td class='attr-desc'>
+The maximum time that this <a href="AbstractServer.html">AbstractServer</a>
+may be idle. Used by <a
+href="AbstractServerCollection.html">AbstractServerCollection</a> to
+determine when this object should be cleaned up. nil or 0 indicate that
+this object should never be idle cleaned.
+
+</td>
+  </tr>
+  <tr valign='top'>
+    <td class='attr-rw'>
+[RW]
+    </td>
+    <td class='attr-name'>next_cleaning_time</td>
+    <td class='attr-desc'>
+Used by <a
+href="AbstractServerCollection.html">AbstractServerCollection</a> to
+remember when this <a href="AbstractServer.html">AbstractServer</a> should
+be idle cleaned.
+
+</td>
+  </tr>
+  </table>
+
+<div class="sectiontitle">Public Class methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000133"></a><b>new</b>()
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000133_source')" id="l_M000133_source">show source</a> ]</p>
+  <div id="M000133_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 109</span>
+109:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>
+110:                 <span class="ruby-ivar">@done</span> = <span class="ruby-keyword kw">false</span>
+111:                 <span class="ruby-ivar">@message_handlers</span> = {}
+112:                 <span class="ruby-ivar">@signal_handlers</span> = {}
+113:                 <span class="ruby-ivar">@orig_signal_handlers</span> = {}
+114:                 <span class="ruby-ivar">@last_activity_time</span> = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span>
+115:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="sectiontitle">Public Instance methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000138"></a><b>server_pid</b>()
+  </div>
+  <div class="description">
+  <p>
+Return the PID of the started <a
+href="AbstractServer.html#M000144">server</a>. This is only valid if <a
+href="AbstractServer.html#M000134">start</a>() has been called.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000138_source')" id="l_M000138_source">show source</a> ]</p>
+  <div id="M000138_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 244</span>
+244:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">server_pid</span>
+245:                 <span class="ruby-keyword kw">return</span> <span class="ruby-ivar">@pid</span>
+246:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000134"></a><b>start</b>()
+  </div>
+  <div class="description">
+  <p>
+Start the <a href="AbstractServer.html#M000144">server</a>. This method
+does not block since the <a href="AbstractServer.html#M000144">server</a>
+runs asynchronously from the current process.
+</p>
+<p>
+You may only call this method if the <a
+href="AbstractServer.html#M000144">server</a> is not already started.
+Otherwise, a <a
+href="AbstractServer/ServerAlreadyStarted.html">ServerAlreadyStarted</a>
+will be raised.
+</p>
+<p>
+Derived classes may raise additional exceptions.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000134_source')" id="l_M000134_source">show source</a> ]</p>
+  <div id="M000134_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 124</span>
+124:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">start</span>
+125:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">started?</span>
+126:                         <span class="ruby-identifier">raise</span> <span class="ruby-constant">ServerAlreadyStarted</span>, <span class="ruby-value str">&quot;Server is already started&quot;</span>
+127:                 <span class="ruby-keyword kw">end</span>
+128:                 
+129:                 <span class="ruby-ivar">@parent_socket</span>, <span class="ruby-ivar">@child_socket</span> = <span class="ruby-constant">UNIXSocket</span>.<span class="ruby-identifier">pair</span>
+130:                 <span class="ruby-identifier">before_fork</span>
+131:                 <span class="ruby-ivar">@pid</span> = <span class="ruby-identifier">fork</span>
+132:                 <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@pid</span>.<span class="ruby-identifier">nil?</span>
+133:                         <span class="ruby-keyword kw">begin</span>
+134:                                 <span class="ruby-constant">STDOUT</span>.<span class="ruby-identifier">sync</span> = <span class="ruby-keyword kw">true</span>
+135:                                 <span class="ruby-constant">STDERR</span>.<span class="ruby-identifier">sync</span> = <span class="ruby-keyword kw">true</span>
+136:                                 <span class="ruby-ivar">@parent_socket</span>.<span class="ruby-identifier">close</span>
+137:                                 
+138:                                 <span class="ruby-comment cmt"># During Passenger's early days, we used to close file descriptors based</span>
+139:                                 <span class="ruby-comment cmt"># on a white list of file descriptors. That proved to be way too fragile:</span>
+140:                                 <span class="ruby-comment cmt"># too many file descriptors are being left open even though they shouldn't</span>
+141:                                 <span class="ruby-comment cmt"># be. So now we close file descriptors based on a black list.</span>
+142:                                 <span class="ruby-comment cmt">#</span>
+143:                                 <span class="ruby-comment cmt"># Note that STDIN, STDOUT and STDERR may be temporarily set to</span>
+144:                                 <span class="ruby-comment cmt"># different file descriptors than 0, 1 and 2, e.g. in unit tests.</span>
+145:                                 <span class="ruby-comment cmt"># We don't want to close these either.</span>
+146:                                 <span class="ruby-identifier">file_descriptors_to_leave_open</span> = [<span class="ruby-value">0</span>, <span class="ruby-value">1</span>, <span class="ruby-value">2</span>, <span class="ruby-ivar">@child_socket</span>.<span class="ruby-identifier">fileno</span>,
+147:                                         <span class="ruby-identifier">fileno_of</span>(<span class="ruby-constant">STDIN</span>), <span class="ruby-identifier">fileno_of</span>(<span class="ruby-constant">STDOUT</span>), <span class="ruby-identifier">fileno_of</span>(<span class="ruby-constant">STDERR</span>)].<span class="ruby-identifier">compact</span>.<span class="ruby-identifier">uniq</span>
+148:                                 <span class="ruby-constant">NativeSupport</span>.<span class="ruby-identifier">close_all_file_descriptors</span>(<span class="ruby-identifier">file_descriptors_to_leave_open</span>)
+149:                                 <span class="ruby-comment cmt"># In addition to closing the file descriptors, one must also close</span>
+150:                                 <span class="ruby-comment cmt"># the associated IO objects. This is to prevent IO.close from</span>
+151:                                 <span class="ruby-comment cmt"># double-closing already closed file descriptors.</span>
+152:                                 <span class="ruby-identifier">close_all_io_objects_for_fds</span>(<span class="ruby-identifier">file_descriptors_to_leave_open</span>)
+153:                                 
+154:                                 <span class="ruby-comment cmt"># At this point, RubyGems might have open file handles for which</span>
+155:                                 <span class="ruby-comment cmt"># the associated file descriptors have just been closed. This can</span>
+156:                                 <span class="ruby-comment cmt"># result in mysterious 'EBADFD' errors. So we force RubyGems to</span>
+157:                                 <span class="ruby-comment cmt"># clear all open file handles.</span>
+158:                                 <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">clear_paths</span>
+159:                                 
+160:                                 <span class="ruby-comment cmt"># Reseed pseudo-random number generator for security reasons.</span>
+161:                                 <span class="ruby-identifier">srand</span>
+162:                                 
+163:                                 <span class="ruby-identifier">start_synchronously</span>(<span class="ruby-ivar">@child_socket</span>)
+164:                         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Interrupt</span>
+165:                                 <span class="ruby-comment cmt"># Do nothing.</span>
+166:                         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">SignalException</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">signal</span>
+167:                                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">signal</span>.<span class="ruby-identifier">message</span> <span class="ruby-operator">==</span> <span class="ruby-constant">SERVER_TERMINATION_SIGNAL</span>
+168:                                         <span class="ruby-comment cmt"># Do nothing.</span>
+169:                                 <span class="ruby-keyword kw">else</span>
+170:                                         <span class="ruby-identifier">print_exception</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">to_s</span>, <span class="ruby-identifier">signal</span>)
+171:                                 <span class="ruby-keyword kw">end</span>
+172:                         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Exception</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">e</span>
+173:                                 <span class="ruby-identifier">print_exception</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">to_s</span>, <span class="ruby-identifier">e</span>)
+174:                         <span class="ruby-keyword kw">ensure</span>
+175:                                 <span class="ruby-identifier">exit!</span>
+176:                         <span class="ruby-keyword kw">end</span>
+177:                 <span class="ruby-keyword kw">end</span>
+178:                 <span class="ruby-ivar">@child_socket</span>.<span class="ruby-identifier">close</span>
+179:                 <span class="ruby-ivar">@parent_channel</span> = <span class="ruby-constant">MessageChannel</span>.<span class="ruby-identifier">new</span>(<span class="ruby-ivar">@parent_socket</span>)
+180:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000135"></a><b>start_synchronously</b>(socket)
+  </div>
+  <div class="description">
+  <p>
+Start the <a href="AbstractServer.html#M000144">server</a>, but in the
+current process instead of in a child process. This method blocks until the
+<a href="AbstractServer.html#M000144">server</a>&#8216;s main loop has
+ended.
+</p>
+<p>
+<em>socket</em> is the socket that the <a
+href="AbstractServer.html#M000144">server</a> should listen on. The <a
+href="AbstractServer.html#M000144">server</a> main loop will end if the
+socket has been closed.
+</p>
+<p>
+All hooks will be called, except <a
+href="AbstractServer.html#M000139">before_fork</a>().
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000135_source')" id="l_M000135_source">show source</a> ]</p>
+  <div id="M000135_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 189</span>
+189:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">start_synchronously</span>(<span class="ruby-identifier">socket</span>)
+190:                 <span class="ruby-ivar">@child_socket</span> = <span class="ruby-identifier">socket</span>
+191:                 <span class="ruby-ivar">@child_channel</span> = <span class="ruby-constant">MessageChannel</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">socket</span>)
+192:                 <span class="ruby-keyword kw">begin</span>
+193:                         <span class="ruby-identifier">reset_signal_handlers</span>
+194:                         <span class="ruby-identifier">initialize_server</span>
+195:                         <span class="ruby-keyword kw">begin</span>
+196:                                 <span class="ruby-identifier">main_loop</span>
+197:                         <span class="ruby-keyword kw">ensure</span>
+198:                                 <span class="ruby-identifier">finalize_server</span>
+199:                         <span class="ruby-keyword kw">end</span>
+200:                 <span class="ruby-keyword kw">ensure</span>
+201:                         <span class="ruby-identifier">revert_signal_handlers</span>
+202:                 <span class="ruby-keyword kw">end</span>
+203:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000137"></a><b>started?</b>()
+  </div>
+  <div class="description">
+  <p>
+Return whether the <a href="AbstractServer.html#M000144">server</a> has
+been started.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000137_source')" id="l_M000137_source">show source</a> ]</p>
+  <div id="M000137_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 239</span>
+239:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">started?</span>
+240:                 <span class="ruby-keyword kw">return</span> <span class="ruby-operator">!</span><span class="ruby-ivar">@parent_channel</span>.<span class="ruby-identifier">nil?</span>
+241:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000136"></a><b>stop</b>()
+  </div>
+  <div class="description">
+  <p>
+Stop the <a href="AbstractServer.html#M000144">server</a>. The <a
+href="AbstractServer.html#M000144">server</a> will quit as soon as
+possible. This method waits until the <a
+href="AbstractServer.html#M000144">server</a> has been stopped.
+</p>
+<p>
+When calling this method, the <a
+href="AbstractServer.html#M000144">server</a> must already be started. If
+not, a <a href="AbstractServer/ServerNotStarted.html">ServerNotStarted</a>
+will be raised.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000136_source')" id="l_M000136_source">show source</a> ]</p>
+  <div id="M000136_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 210</span>
+210:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">stop</span>
+211:                 <span class="ruby-keyword kw">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">started?</span>
+212:                         <span class="ruby-identifier">raise</span> <span class="ruby-constant">ServerNotStarted</span>, <span class="ruby-value str">&quot;Server is not started&quot;</span>
+213:                 <span class="ruby-keyword kw">end</span>
+214:                 
+215:                 <span class="ruby-ivar">@parent_socket</span>.<span class="ruby-identifier">close</span>
+216:                 <span class="ruby-ivar">@parent_channel</span> = <span class="ruby-keyword kw">nil</span>
+217:                 
+218:                 <span class="ruby-comment cmt"># Wait at most 3 seconds for server to exit. If it doesn't do that,</span>
+219:                 <span class="ruby-comment cmt"># we kill it. If that doesn't work either, we kill it forcefully with</span>
+220:                 <span class="ruby-comment cmt"># SIGKILL.</span>
+221:                 <span class="ruby-keyword kw">begin</span>
+222:                         <span class="ruby-constant">Timeout</span><span class="ruby-operator">::</span><span class="ruby-identifier">timeout</span>(<span class="ruby-value">3</span>) <span class="ruby-keyword kw">do</span>
+223:                                 <span class="ruby-constant">Process</span>.<span class="ruby-identifier">waitpid</span>(<span class="ruby-ivar">@pid</span>) <span class="ruby-keyword kw">rescue</span> <span class="ruby-keyword kw">nil</span>
+224:                         <span class="ruby-keyword kw">end</span>
+225:                 <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Timeout</span><span class="ruby-operator">::</span><span class="ruby-constant">Error</span>
+226:                         <span class="ruby-constant">Process</span>.<span class="ruby-identifier">kill</span>(<span class="ruby-constant">SERVER_TERMINATION_SIGNAL</span>, <span class="ruby-ivar">@pid</span>) <span class="ruby-keyword kw">rescue</span> <span class="ruby-keyword kw">nil</span>
+227:                         <span class="ruby-keyword kw">begin</span>
+228:                                 <span class="ruby-constant">Timeout</span><span class="ruby-operator">::</span><span class="ruby-identifier">timeout</span>(<span class="ruby-value">3</span>) <span class="ruby-keyword kw">do</span>
+229:                                         <span class="ruby-constant">Process</span>.<span class="ruby-identifier">waitpid</span>(<span class="ruby-ivar">@pid</span>) <span class="ruby-keyword kw">rescue</span> <span class="ruby-keyword kw">nil</span>
+230:                                 <span class="ruby-keyword kw">end</span>
+231:                         <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Timeout</span><span class="ruby-operator">::</span><span class="ruby-constant">Error</span>
+232:                                 <span class="ruby-constant">Process</span>.<span class="ruby-identifier">kill</span>(<span class="ruby-value str">'SIGKILL'</span>, <span class="ruby-ivar">@pid</span>) <span class="ruby-keyword kw">rescue</span> <span class="ruby-keyword kw">nil</span>
+233:                                 <span class="ruby-constant">Process</span>.<span class="ruby-identifier">waitpid</span>(<span class="ruby-ivar">@pid</span>, <span class="ruby-constant">Process</span><span class="ruby-operator">::</span><span class="ruby-constant">WNOHANG</span>) <span class="ruby-keyword kw">rescue</span> <span class="ruby-keyword kw">nil</span>
+234:                         <span class="ruby-keyword kw">end</span>
+235:                 <span class="ruby-keyword kw">end</span>
+236:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="sectiontitle">Protected Instance methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000139"></a><b>before_fork</b>()
+  </div>
+  <div class="description">
+  <p>
+A hook which is called when the <a
+href="AbstractServer.html#M000144">server</a> is being started, just before
+forking a <a href="AbstractServer.html#M000133">new</a> process. The
+default implementation does nothing, this method is supposed to be
+overrided by child classes.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000139_source')" id="l_M000139_source">show source</a> ]</p>
+  <div id="M000139_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 251</span>
+251:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">before_fork</span>
+252:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000145"></a><b>client</b>()
+  </div>
+  <div class="description">
+  <p>
+Return the communication channel with the <a
+href="AbstractServer.html#M000145">client</a> (i.e. the parent process that
+started the <a href="AbstractServer.html#M000144">server</a>). This is a <a
+href="MessageChannel.html">MessageChannel</a> object.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000145_source')" id="l_M000145_source">show source</a> ]</p>
+  <div id="M000145_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 296</span>
+296:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">client</span>
+297:                 <span class="ruby-keyword kw">return</span> <span class="ruby-ivar">@child_channel</span>
+298:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000142"></a><b>define_message_handler</b>(message_name, handler)
+  </div>
+  <div class="description">
+  <p>
+Define a handler for a message. <em>message_name</em> is the name of the
+message to handle, and <em>handler</em> is the name of a method to be
+called (this may either be a String or a Symbol).
+</p>
+<p>
+A message is just a list of strings, and so <em>handler</em> will be called
+with the message as its arguments, excluding the first element. See also
+the example in the class description.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000142_source')" id="l_M000142_source">show source</a> ]</p>
+  <div id="M000142_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 271</span>
+271:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">define_message_handler</span>(<span class="ruby-identifier">message_name</span>, <span class="ruby-identifier">handler</span>)
+272:                 <span class="ruby-ivar">@message_handlers</span>[<span class="ruby-identifier">message_name</span>.<span class="ruby-identifier">to_s</span>] = <span class="ruby-identifier">handler</span>
+273:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000143"></a><b>define_signal_handler</b>(signal, handler)
+  </div>
+  <div class="description">
+  <p>
+Define a handler for a signal.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000143_source')" id="l_M000143_source">show source</a> ]</p>
+  <div id="M000143_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 276</span>
+276:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">define_signal_handler</span>(<span class="ruby-identifier">signal</span>, <span class="ruby-identifier">handler</span>)
+277:                 <span class="ruby-ivar">@signal_handlers</span>[<span class="ruby-identifier">signal</span>.<span class="ruby-identifier">to_s</span>] = <span class="ruby-identifier">handler</span>
+278:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000147"></a><b>fileno_of</b>(io)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000147_source')" id="l_M000147_source">show source</a> ]</p>
+  <div id="M000147_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 305</span>
+305:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">fileno_of</span>(<span class="ruby-identifier">io</span>)
+306:                 <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">io</span>.<span class="ruby-identifier">fileno</span>
+307:         <span class="ruby-keyword kw">rescue</span>
+308:                 <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">nil</span>
+309:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000141"></a><b>finalize_server</b>()
+  </div>
+  <div class="description">
+  <p>
+A hook which is called when the <a
+href="AbstractServer.html#M000144">server</a> is being stopped. This is
+called in the child process, after the main loop has been left. The default
+implementation does nothing, this method is supposed to be overrided by
+child classes.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000141_source')" id="l_M000141_source">show source</a> ]</p>
+  <div id="M000141_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 263</span>
+263:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">finalize_server</span>
+264:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000140"></a><b>initialize_server</b>()
+  </div>
+  <div class="description">
+  <p>
+A hook which is called when the <a
+href="AbstractServer.html#M000144">server</a> is being started. This is
+called in the child process, before the main loop is entered. The default
+implementation does nothing, this method is supposed to be overrided by
+child classes.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000140_source')" id="l_M000140_source">show source</a> ]</p>
+  <div id="M000140_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 257</span>
+257:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize_server</span>
+258:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000146"></a><b>quit_main</b>()
+  </div>
+  <div class="description">
+  <p>
+Tell the main loop to <a href="AbstractServer.html#M000136">stop</a> as
+soon as possible.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000146_source')" id="l_M000146_source">show source</a> ]</p>
+  <div id="M000146_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 301</span>
+301:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">quit_main</span>
+302:                 <span class="ruby-ivar">@done</span> = <span class="ruby-keyword kw">true</span>
+303:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000144"></a><b>server</b>()
+  </div>
+  <div class="description">
+  <p>
+Return the communication channel with the <a
+href="AbstractServer.html#M000144">server</a>. This is a <a
+href="MessageChannel.html">MessageChannel</a> object.
+</p>
+<p>
+Raises <a href="AbstractServer/ServerNotStarted.html">ServerNotStarted</a>
+if the <a href="AbstractServer.html#M000144">server</a> hasn&#8216;t been
+started yet.
+</p>
+<p>
+This method may only be called in the parent process, and not in the
+started <a href="AbstractServer.html#M000144">server</a> process.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000144_source')" id="l_M000144_source">show source</a> ]</p>
+  <div id="M000144_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 287</span>
+287:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">server</span>
+288:                 <span class="ruby-keyword kw">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">started?</span>
+289:                         <span class="ruby-identifier">raise</span> <span class="ruby-constant">ServerNotStarted</span>, <span class="ruby-value str">&quot;Server hasn't been started yet. Please call start() first.&quot;</span>
+290:                 <span class="ruby-keyword kw">end</span>
+291:                 <span class="ruby-keyword kw">return</span> <span class="ruby-ivar">@parent_channel</span>
+292:         <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

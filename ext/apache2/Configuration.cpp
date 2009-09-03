@@ -24,6 +24,16 @@
  */
 #include <algorithm>
 #include <cstdlib>
+
+/* ap_config.h checks whether the compiler has support for C99's designated
+ * initializers, and defines AP_HAVE_DESIGNATED_INITIALIZER if it does. However,
+ * g++ does not support designated initializers, even when ap_config.h thinks
+ * it does. Here we undefine the macro to force httpd_config.h to not use
+ * designated initializers. This should fix compilation problems on some systems.
+ */
+#include <ap_config.h>
+#undef AP_HAVE_DESIGNATED_INITIALIZER
+
 #include "Configuration.h"
 #include "Utils.h"
 
@@ -84,6 +94,8 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->memoryLimitSpecified = false;
 	config->highPerformance = DirConfig::UNSET;
 	config->useGlobalQueue = DirConfig::UNSET;
+	config->resolveSymlinksInDocRoot = DirConfig::UNSET;
+	config->allowEncodedSlashes = DirConfig::UNSET;
 	config->statThrottleRate = 0;
 	config->statThrottleRateSpecified = false;
 	config->restartDir = NULL;
@@ -129,6 +141,8 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->statThrottleRateSpecified = base->statThrottleRateSpecified || add->statThrottleRateSpecified;
 	config->restartDir = (add->restartDir == NULL) ? base->restartDir : add->restartDir;
 	config->uploadBufferDir = (add->uploadBufferDir == NULL) ? base->uploadBufferDir : add->uploadBufferDir;
+	config->resolveSymlinksInDocRoot = (add->resolveSymlinksInDocRoot == DirConfig::UNSET) ? base->resolveSymlinksInDocRoot : add->resolveSymlinksInDocRoot;
+	config->allowEncodedSlashes = (add->allowEncodedSlashes == DirConfig::UNSET) ? base->allowEncodedSlashes : add->allowEncodedSlashes;
 	/*************************************/
 	return config;
 }
@@ -410,6 +424,20 @@ cmd_passenger_upload_buffer_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
 	return NULL;
 }
 
+static const char *
+cmd_passenger_resolve_symlinks_in_document_root(cmd_parms *cmd, void *pcfg, int arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->resolveSymlinksInDocRoot = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_allow_encoded_slashes(cmd_parms *cmd, void *pcfg, int arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->allowEncodedSlashes = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
+	return NULL;
+}
+
 
 /*************************************************
  * Rails-specific settings
@@ -418,8 +446,16 @@ cmd_passenger_upload_buffer_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_rails_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->railsBaseURIs.insert(arg);
-	return NULL;
+	if (strlen(arg) == 0) {
+		return "RailsBaseURI may not be set to the empty string";
+	} else if (arg[0] != '/') {
+		return "RailsBaseURI must start with a slash (/)";
+	} else if (strlen(arg) > 1 && arg[strlen(arg) - 1] == '/') {
+		return "RailsBaseURI must not end with a slash (/)";
+	} else {
+		config->railsBaseURIs.insert(arg);
+		return NULL;
+	}
 }
 
 static const char *
@@ -500,8 +536,16 @@ cmd_rails_app_spawner_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_rack_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->rackBaseURIs.insert(arg);
-	return NULL;
+	if (strlen(arg) == 0) {
+		return "RackBaseURI may not be set to the empty string";
+	} else if (arg[0] != '/') {
+		return "RackBaseURI must start with a slash (/)";
+	} else if (strlen(arg) > 1 && arg[strlen(arg) - 1] == '/') {
+		return "RackBaseURI must not end with a slash (/)";
+	} else {
+		config->rackBaseURIs.insert(arg);
+		return NULL;
+	}
 }
 
 static const char *
@@ -545,9 +589,8 @@ cmd_rails_spawn_server(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 
-// Workaround for some weird C++-specific compiler error.
-typedef const char * (*Take0Func)();
 typedef const char * (*Take1Func)();
+typedef const char * (*FlagFunc)();
 
 const command_rec passenger_commands[] = {
 	// Passenger settings.
@@ -582,12 +625,12 @@ const command_rec passenger_commands[] = {
 		RSRC_CONF,
 		"The maximum number of seconds that an application may be idle before it gets terminated."),
 	AP_INIT_FLAG("PassengerUseGlobalQueue",
-		(Take1Func) cmd_passenger_use_global_queue,
+		(FlagFunc) cmd_passenger_use_global_queue,
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Enable or disable Passenger's global queuing mode mode."),
 	AP_INIT_FLAG("PassengerUserSwitching",
-		(Take1Func) cmd_passenger_user_switching,
+		(FlagFunc) cmd_passenger_user_switching,
 		NULL,
 		RSRC_CONF,
 		"Whether to enable user switching support."),
@@ -607,12 +650,12 @@ const command_rec passenger_commands[] = {
 		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
 		"The maximum number of requests that an application instance may process."),
 	AP_INIT_FLAG("PassengerHighPerformance",
-		(Take1Func) cmd_passenger_high_performance,
+		(FlagFunc) cmd_passenger_high_performance,
 		NULL,
 		OR_ALL,
 		"Enable or disable Passenger's high performance mode."),
 	AP_INIT_FLAG("PassengerEnabled",
-		(Take1Func) cmd_passenger_enabled,
+		(FlagFunc) cmd_passenger_enabled,
 		NULL,
 		OR_ALL,
 		"Enable or disable Phusion Passenger."),
@@ -636,6 +679,17 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS,
 		"The directory in which upload buffer files should be placed."),
+	AP_INIT_FLAG("PassengerResolveSymlinksInDocumentRoot",
+		(FlagFunc) cmd_passenger_resolve_symlinks_in_document_root,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Whether to resolve symlinks in the DocumentRoot path"),
+	AP_INIT_FLAG("PassengerAllowEncodedSlashes",
+		(FlagFunc) cmd_passenger_allow_encoded_slashes,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Whether to support encoded slashes in the URL"),
+	
 	/*****************************/
 
 	// Rails-specific settings.
@@ -645,12 +699,12 @@ const command_rec passenger_commands[] = {
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Reserve the given URI to a Rails application."),
 	AP_INIT_FLAG("RailsAutoDetect",
-		(Take1Func) cmd_rails_auto_detect,
+		(FlagFunc) cmd_rails_auto_detect,
 		NULL,
 		RSRC_CONF,
 		"Whether auto-detection of Ruby on Rails applications should be enabled."),
 	AP_INIT_FLAG("RailsAllowModRewrite",
-		(Take1Func) cmd_rails_allow_mod_rewrite,
+		(FlagFunc) cmd_rails_allow_mod_rewrite,
 		NULL,
 		RSRC_CONF,
 		"Whether custom mod_rewrite rules should be allowed."),
@@ -682,7 +736,7 @@ const command_rec passenger_commands[] = {
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Reserve the given URI to a Rack application."),
 	AP_INIT_FLAG("RackAutoDetect",
-		(Take1Func) cmd_rack_auto_detect,
+		(FlagFunc) cmd_rack_auto_detect,
 		NULL,
 		RSRC_CONF,
 		"Whether auto-detection of Rack applications should be enabled."),
@@ -694,7 +748,7 @@ const command_rec passenger_commands[] = {
 	
 	// WSGI-specific settings.
 	AP_INIT_FLAG("PassengerWSGIAutoDetect",
-		(Take1Func) cmd_wsgi_auto_detect,
+		(FlagFunc) cmd_wsgi_auto_detect,
 		NULL,
 		RSRC_CONF,
 		"Whether auto-detection of WSGI applications should be enabled."),
@@ -721,7 +775,7 @@ const command_rec passenger_commands[] = {
 		RSRC_CONF,
 		"Deprecated option."),
 	AP_INIT_FLAG("RailsUserSwitching",
-		(Take1Func) cmd_passenger_user_switching,
+		(FlagFunc) cmd_passenger_user_switching,
 		NULL,
 		RSRC_CONF,
 		"Deprecated option."),

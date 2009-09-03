@@ -65,7 +65,7 @@ send_fd(VALUE self, VALUE socket_fd, VALUE fd_to_send) {
 	struct msghdr msg;
 	struct iovec vec;
 	char dummy[1];
-	#if defined(__APPLE__) || defined(__SOLARIS__)
+	#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
 		struct {
 			struct cmsghdr header;
 			int fd;
@@ -94,7 +94,7 @@ send_fd(VALUE self, VALUE socket_fd, VALUE fd_to_send) {
 	control_header->cmsg_level = SOL_SOCKET;
 	control_header->cmsg_type  = SCM_RIGHTS;
 	control_payload = NUM2INT(fd_to_send);
-	#if defined(__APPLE__) || defined(__SOLARIS__)
+	#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
 		control_header->cmsg_len = sizeof(control_data);
 		control_data.fd = control_payload;
 	#else
@@ -125,7 +125,7 @@ recv_fd(VALUE self, VALUE socket_fd) {
 	struct msghdr msg;
 	struct iovec vec;
 	char dummy[1];
-	#if defined(__APPLE__) || defined(__SOLARIS__)
+	#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
 		// File descriptor passing macros (CMSG_*) seem to be broken
 		// on 64-bit MacOS X. This structure works around the problem.
 		struct {
@@ -164,7 +164,7 @@ recv_fd(VALUE self, VALUE socket_fd) {
 		rb_sys_fail("No valid file descriptor received.");
 		return Qnil;
 	}
-	#if defined(__APPLE__) || defined(__SOLARIS__)
+	#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
 		return INT2NUM(control_data.fd);
 	#else
 		return INT2NUM(*((int *) CMSG_DATA(control_header)));

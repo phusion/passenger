@@ -336,7 +336,6 @@ public
 	# for portability reasons. These flags should be specified as last
 	# when invoking the compiler.
 	def self.portability_cflags
-		# _GLIBCPP__PTHREADS is for fixing Boost compilation on OpenBSD.
 		flags = ["-D_REENTRANT -I/usr/local/include"]
 		if RUBY_PLATFORM =~ /solaris/
 			flags << '-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -D__SOLARIS__ -D_FILE_OFFSET_BITS=64'
@@ -347,7 +346,9 @@ public
 			flags << '-DBOOST_HAS_STDINT_H -D_GLIBCPP__PTHREADS'
 		elsif RUBY_PLATFORM =~ /aix/
 			flags << '-DOXT_DISABLE_BACKTRACES'
-		elsif RUBY_PLATFORM =~ /sparc-linux/
+		elsif RUBY_PLATFORM =~ /(sparc-linux|arm-linux)/
+			# http://code.google.com/p/phusion-passenger/issues/detail?id=200
+			# http://groups.google.com/group/phusion-passenger/t/6b904a962ee28e5c
 			flags << '-DBOOST_SP_USE_PTHREADS'
 		end
 		return flags.compact.join(" ").strip
