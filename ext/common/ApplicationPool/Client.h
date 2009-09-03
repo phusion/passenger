@@ -72,7 +72,7 @@ using namespace boost;
  * - As a result, the system is deadlocked.
  */
 class Client: public ApplicationPool::Interface {
-private:
+protected:
 	/**
 	 * Contains data shared between RemoteSession and ApplicationPool::Client.
 	 * Since RemoteSession and ApplicationPool::Client have different life times,
@@ -192,8 +192,7 @@ private:
 	
 	/** @invariant data != NULL */
 	SharedDataPtr data;
-
-protected:
+	
 	/* sendUsername() and sendPassword() exist and are virtual in order to facilitate unit testing. */
 	
 	virtual void sendUsername(MessageChannel &channel, const string &username) {

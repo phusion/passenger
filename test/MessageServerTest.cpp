@@ -1,6 +1,7 @@
 #include "tut.h"
 #include "support/Support.h"
 
+#include <boost/thread.hpp>
 #include <boost/bind.hpp>
 
 #include "MessageServer.h"
@@ -21,7 +22,7 @@ namespace tut {
 		string socketFilename;
 		AccountsDatabasePtr accountsDatabase;
 		AccountPtr clientAccount;
-		shared_ptr<MessageServer> messageServer;
+		shared_ptr<MessageServer> server;
 		shared_ptr<oxt::thread> serverThread;
 		
 		MessageServerTest() {
@@ -29,9 +30,9 @@ namespace tut {
 			accountsDatabase = ptr(new AccountsDatabase());
 			clientAccount = accountsDatabase->add("test", "12345", false);
 			
-			messageServer = ptr(new MessageServer(socketFilename, accountsDatabase));
+			server = ptr(new MessageServer(socketFilename, accountsDatabase));
 			serverThread  = ptr(new oxt::thread(
-				boost::bind(&MessageServer::mainLoop, messageServer.get())
+				boost::bind(&MessageServer::mainLoop, server.get())
 			));
 		}
 		
@@ -68,6 +69,65 @@ namespace tut {
 			{
 				this->timeToSendUsername = timeToSendUsername;
 				this->timeToSendPassword = timeToSendPassword;
+			}
+		};
+		
+		class CustomClient: public Client {
+		public:
+			CustomClient *sendText(const string &text) {
+				data->channel.write(text.c_str(), NULL);
+				return this;
+			}
+		};
+		
+		class LoggingHandler: public MessageServer::Handler {
+		public:
+			struct SpecificContext: public MessageServer::ClientContext {
+				int id;
+				
+				SpecificContext(int i) {
+					id = i;
+				}
+			};
+			
+			typedef shared_ptr<SpecificContext> SpecificContextPtr;
+			
+			boost::mutex mutex;
+			int clientsAccepted;
+			string receivedData;
+			int id;
+			SpecificContextPtr latestContext;
+			
+			LoggingHandler() {
+				clientsAccepted = 0;
+			}
+			
+			virtual MessageServer::ClientContextPtr newClient(MessageServer::CommonClientContext &context) {
+				boost::lock_guard<boost::mutex> l(mutex);
+				clientsAccepted++;
+				return ptr(new SpecificContext(id));
+			}
+			
+			virtual bool processMessage(MessageServer::CommonClientContext &commonContext,
+			                            MessageServer::ClientContextPtr &handlerSpecificContext,
+			                            const vector<string> &args)
+			{
+				boost::lock_guard<boost::mutex> l(mutex);
+				latestContext = static_pointer_cast<SpecificContext>(handlerSpecificContext);
+				receivedData.append(args[0]);
+				return true;
+			}
+		};
+		
+		typedef shared_ptr<LoggingHandler> LoggingHandlerPtr;
+		
+		class ProcessMessageReturnsFalseHandler: public MessageServer::Handler {
+		public:
+			virtual bool processMessage(MessageServer::CommonClientContext &commonContext,
+			                            MessageServer::ClientContextPtr &handlerSpecificContext,
+			                            const vector<string> &args)
+			{
+				return false;
 			}
 		};
 	};
@@ -107,7 +167,7 @@ namespace tut {
 	TEST_METHOD(3) {
 		// It disconnects the client if the client does not supply a username and
 		// password within a time limit.
-		messageServer->setLoginTimeout(40);
+		server->setLoginTimeout(40);
 		
 		/* These can throw either an IOException or SystemException:
 		 * - An IOException is raised when connect() encounters EOF.
@@ -173,5 +233,92 @@ namespace tut {
 			// Pass.
 		}
 	}
+	
+	TEST_METHOD(6) {
+		// It notifies all handlers when a new client has connected.
+		LoggingHandlerPtr handler1(new LoggingHandler());
+		LoggingHandlerPtr handler2(new LoggingHandler());
+		server->addHandler(handler1);
+		server->addHandler(handler2);
+		Client().connect(socketFilename, "test", "12345");
+		Client().connect(socketFilename, "test", "12345");
+		
+		usleep(10000); // Give the threads some time to do work.
+		ensure_equals(handler1->clientsAccepted, 2);
+		ensure_equals(handler2->clientsAccepted, 2);
+	}
+	
+	TEST_METHOD(7) {
+		// It notifies all handlers when a message is sent.
+		LoggingHandlerPtr handler1(new LoggingHandler());
+		LoggingHandlerPtr handler2(new LoggingHandler());
+		server->addHandler(handler1);
+		server->addHandler(handler2);
+		
+		CustomClient c1, c2;
+		c1.connect(socketFilename, "test", "12345");
+		c1.sendText("hello");
+		c1.sendText(" ");
+		usleep(10000); // Give the thread some time to do work.
+		
+		c2.connect(socketFilename, "test", "12345");
+		c2.sendText("world");
+		usleep(10000); // Give the thread some time to do work.
+		
+		ensure_equals(handler1->receivedData, "hello world");
+		ensure_equals(handler2->receivedData, "hello world");
+	}
+	
+	TEST_METHOD(8) {
+		// It closes the connection if one of the handler's
+		// processMessage() method returns false.
+		MessageServer::HandlerPtr handler1(new LoggingHandler());
+		MessageServer::HandlerPtr handler2(new ProcessMessageReturnsFalseHandler());
+		server->addHandler(handler1);
+		server->addHandler(handler2);
+		
+		CustomClient c;
+		c.connect(socketFilename, "test", "12345");
+		c.sendText("hi");
+		usleep(10000); // Give the thread some time to do work.
+		
+		try {
+			c.sendText("hi");
+			fail("SystemException expected.");
+		} catch (const SystemException &e) {
+			ensure_equals(e.code(), EPIPE);
+		}
+	}
+	
+	TEST_METHOD(9) {
+		// The specific context as returned by the handler's newClient()
+		// method is passed to processMessage().
+		LoggingHandlerPtr handler1(new LoggingHandler());
+		LoggingHandlerPtr handler2(new LoggingHandler());
+		server->addHandler(handler1);
+		server->addHandler(handler2);
+		
+		CustomClient c1, c2;
+		
+		handler1->id = 100;
+		handler2->id = 101;
+		c1.connect(socketFilename, "test", "12345");
+		c1.sendText("hi");
+		usleep(10000); // Give the thread some time to do work.
+		ensure_equals(handler1->latestContext->id, 100);
+		ensure_equals(handler2->latestContext->id, 101);
+		
+		handler1->id = 200;
+		handler2->id = 201;
+		c2.connect(socketFilename, "test", "12345");
+		c2.sendText("hi");
+		usleep(10000); // Give the thread some time to do work.
+		ensure_equals(handler1->latestContext->id, 200);
+		ensure_equals(handler2->latestContext->id, 201);
+		
+		c1.sendText("hi");
+		usleep(10000); // Give the thread some time to do work.
+		ensure_equals(handler1->latestContext->id, 100);
+		ensure_equals(handler2->latestContext->id, 101);
+	}
 }
-
