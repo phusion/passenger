@@ -93,13 +93,15 @@ namespace tut {
 			typedef shared_ptr<SpecificContext> SpecificContextPtr;
 			
 			boost::mutex mutex;
-			int clientsAccepted;
+			volatile int clientsAccepted;
 			string receivedData;
-			int id;
+			volatile int id;
+			volatile int returnValue;
 			SpecificContextPtr latestContext;
 			
 			LoggingHandler() {
 				clientsAccepted = 0;
+				returnValue = true;
 			}
 			
 			virtual MessageServer::ClientContextPtr newClient(MessageServer::CommonClientContext &context) {
@@ -115,7 +117,7 @@ namespace tut {
 				boost::lock_guard<boost::mutex> l(mutex);
 				latestContext = static_pointer_cast<SpecificContext>(handlerSpecificContext);
 				receivedData.append(args[0]);
-				return true;
+				return returnValue;
 			}
 		};
 		
@@ -249,11 +251,15 @@ namespace tut {
 	}
 	
 	TEST_METHOD(7) {
-		// It notifies all handlers when a message is sent.
+		// It notifies all handlers when a message is sent, but stops
+		// at the first handler that returns true.
 		LoggingHandlerPtr handler1(new LoggingHandler());
 		LoggingHandlerPtr handler2(new LoggingHandler());
+		LoggingHandlerPtr handler3(new LoggingHandler());
 		server->addHandler(handler1);
 		server->addHandler(handler2);
+		server->addHandler(handler3);
+		handler1->returnValue = false;
 		
 		CustomClient c1, c2;
 		c1.connect(socketFilename, "test", "12345");
@@ -265,14 +271,31 @@ namespace tut {
 		c2.sendText("world");
 		usleep(10000); // Give the thread some time to do work.
 		
-		ensure_equals(handler1->receivedData, "hello world");
-		ensure_equals(handler2->receivedData, "hello world");
+		ensure_equals("(1)", handler1->receivedData, "hello world");
+		ensure_equals("(2)", handler2->receivedData, "hello world");
+		ensure_equals("(3)", handler3->receivedData, "");
 	}
 	
 	TEST_METHOD(8) {
-		// It closes the connection if one of the handler's
-		// processMessage() method returns false.
+		// It does not close the connection if some, but not all of the handlers'
+		// processMessage() methods return false.
 		MessageServer::HandlerPtr handler1(new LoggingHandler());
+		MessageServer::HandlerPtr handler2(new ProcessMessageReturnsFalseHandler());
+		server->addHandler(handler1);
+		server->addHandler(handler2);
+		
+		CustomClient c;
+		c.connect(socketFilename, "test", "12345");
+		c.sendText("hi");
+		usleep(10000); // Give the thread some time to do work.
+		
+		c.sendText("hi"); // Connection should still be valid.
+	}
+	
+	TEST_METHOD(9) {
+		// It closes the connection if all of the handlers'
+		// processMessage() methods return false.
+		MessageServer::HandlerPtr handler1(new ProcessMessageReturnsFalseHandler());
 		MessageServer::HandlerPtr handler2(new ProcessMessageReturnsFalseHandler());
 		server->addHandler(handler1);
 		server->addHandler(handler2);
@@ -290,13 +313,17 @@ namespace tut {
 		}
 	}
 	
-	TEST_METHOD(9) {
+	TEST_METHOD(10) {
 		// The specific context as returned by the handler's newClient()
 		// method is passed to processMessage().
 		LoggingHandlerPtr handler1(new LoggingHandler());
 		LoggingHandlerPtr handler2(new LoggingHandler());
+		LoggingHandlerPtr handler3(new LoggingHandler());
 		server->addHandler(handler1);
 		server->addHandler(handler2);
+		server->addHandler(handler3);
+		handler1->returnValue = false;
+		handler2->returnValue = false;
 		
 		CustomClient c1, c2;
 		

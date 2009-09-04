@@ -191,6 +191,12 @@ private
 			@password = '_passenger-status'
 			channel.write_scalar(@username)
 			channel.write_scalar(@password)
+			result = channel.read
+			if result.nil?
+				raise EOFError
+			elsif result[0] != "ok"
+				raise SecurityError, result[0]
+			end
 			yield channel
 		ensure
 			channel.close

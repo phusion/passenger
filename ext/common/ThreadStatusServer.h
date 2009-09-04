@@ -46,8 +46,10 @@ public:
 		if (args[0] == "backtraces") {
 			UPDATE_TRACE_POINT();
 			commonContext.channel.writeScalar(oxt::thread::all_backtraces());
+			return true;
+		} else {
+			return false;
 		}
-		return true;
 	}
 };
 

@@ -243,11 +243,23 @@ protected:
 		for (handler_iter = handlers.begin(), context_iter = handlerSpecificContexts.begin();
 		     handler_iter != handlers.end();
 		     handler_iter++, context_iter++) {
-			if (!(*handler_iter)->processMessage(commonContext, *context_iter, args)) {
-				return false;
+			if ((*handler_iter)->processMessage(commonContext, *context_iter, args)) {
+				return true;
 			}
 		}
-		return true;
+		return false;
+	}
+	
+	void processUnknownMessage(CommonClientContext &commonContext, const vector<string> &args) {
+		TRACE_POINT();
+		string name;
+		if (args.empty()) {
+			name = "(null)";
+		} else {
+			name = args[0];
+		}
+		P_TRACE(2, "A MessageServer client sent an invalid command: "
+			<< name << " (" << args.size() << " elements)");
 	}
 	
 	/**
@@ -277,16 +289,18 @@ protected:
 					break;
 				}
 				
-				P_TRACE(0, "MessageServer client " << commonContext.name() <<
+				P_TRACE(4, "MessageServer client " << commonContext.name() <<
 					": received message: " << toString(args));
 				
 				UPDATE_TRACE_POINT();
 				if (!processMessage(commonContext, handlerSpecificContexts, args)) {
+					processUnknownMessage(commonContext, args);
 					break;
 				}
 				args.clear();
 			}
 			
+			client.close();
 			P_TRACE(4, "MessageServer client thread " << (int) client << " exited.");
 		} catch (const boost::thread_interrupted &) {
 			P_TRACE(2, "MessageServer client thread " << (int) client << " interrupted.");

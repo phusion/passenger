@@ -109,7 +109,6 @@ private:
 	static const unsigned int MAX_GET_ATTEMPTS = 10;
 	static const unsigned int GET_TIMEOUT = 5000; // In milliseconds.
 
-	friend class ApplicationPool::Server;
 	struct Domain;
 	struct AppContainer;
 	

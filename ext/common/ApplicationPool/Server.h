@@ -234,7 +234,7 @@ private:
 	
 	
 	/** The ApplicationPool::Pool that's being exposed through the socket. */
-	PoolPtr pool;
+	ApplicationPool::Ptr pool;
 	
 	
 	/*********************************************
@@ -364,18 +364,6 @@ private:
 		commonContext.channel.writeScalar(pool->toXml(includeSensitiveInfo));
 	}
 	
-	void processUnknownMessage(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
-		TRACE_POINT();
-		string name;
-		if (args.empty()) {
-			name = "(null)";
-		} else {
-			name = args[0];
-		}
-		P_WARN("An ApplicationPool client sent an invalid command: "
-			<< name << " (" << args.size() << " elements)");
-	}
-	
 public:
 	/**
 	 * Creates a new ApplicationPool::Server object.
@@ -383,7 +371,7 @@ public:
 	 *
 	 * @param pool The pool to expose through the server socket.
 	 */
-	Server(PoolPtr pool) {
+	Server(ApplicationPool::Ptr pool) {
 		this->pool = pool;
 	}
 	
@@ -420,7 +408,6 @@ public:
 			} else if (args[0] == "toXml" && args.size() == 2) {
 				processToXml(commonContext, specificContext, args);
 			} else {
-				processUnknownMessage(commonContext, specificContext, args);
 				return false;
 			}
 		} catch (const SecurityException &) {

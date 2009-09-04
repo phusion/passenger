@@ -46,6 +46,7 @@
 #include "HttpStatusExtractor.h"
 
 #include "ApplicationPool/Pool.h"
+#include "ApplicationPool/Server.h"
 #include "Application.h"
 #include "PoolOptions.h"
 #include "MessageServer.h"
@@ -660,12 +661,15 @@ public:
 		pool->setMaxIdleTime(poolIdleTime);
 		
 		accountsDatabase = ptr(new AccountsDatabase());
-		accountsDatabase->add("_passenger-status", "_passenger-status", false);
+		// TODO: need a better way to store credentials
+		accountsDatabase->add("_passenger-status", "_passenger-status", false,
+			Account::INSPECT_BASIC_INFO);
 		messageServer = ptr(new MessageServer(
 			getPassengerTempDir() + "/master/pool_controller.socket",
 			accountsDatabase
 		));
 		messageServer->addHandler(ptr(new ThreadStatusServer()));
+		messageServer->addHandler(ptr(new ApplicationPool::Server(pool)));
 		messageServerThread = ptr(new oxt::thread(
 			boost::bind(&MessageServer::mainLoop, messageServer.get()),
 			"MessageServer thread", MESSAGE_SERVER_THREAD_STACK_SIZE
