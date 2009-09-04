@@ -108,7 +108,7 @@ public:
 	}
 	
 	static string createHash(const StaticString &userSuppliedPassword) {
-		// TODO: use bcrypt
+		// TODO: use bcrypt or something
 		return userSuppliedPassword;
 	}
 };

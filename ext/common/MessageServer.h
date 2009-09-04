@@ -104,6 +104,10 @@ using namespace oxt;
  * If all handlers return false, i.e. the client sent a message that no handler recognizes,
  * then MessageServer will close the connection with the client.
  *
+ * Handlers do not need to be thread-safe as long as they only operate on data in the
+ * context objects. MessageServer ensures that context objects are not shared with other
+ * threads.
+ *
  * <h2>Usage example</h2>
  * This implements a simple ping server. Every time a "ping" request is sent, the
  * server responds with "pong" along with the number of times it had already sent

@@ -362,9 +362,8 @@ private:
 public:
 	/**
 	 * Creates a new ApplicationPool::Server object.
-	 * The actual server main loop is not started until you call mainLoop().
 	 *
-	 * @param pool The pool to expose through the server socket.
+	 * @param pool The pool to expose.
 	 */
 	Server(ApplicationPool::Ptr pool) {
 		this->pool = pool;
