@@ -18,6 +18,11 @@ namespace tut {
 		ApplicationPool::Ptr newPoolConnection() {
 			return pool;
 		}
+		
+		void reinitializeWithSpawnManager(AbstractSpawnManagerPtr spawnManager) {
+			pool = ptr(new ApplicationPool::Pool(spawnManager));
+			pool2 = pool;
+		}
 	};
 
 	DEFINE_TEST_GROUP(ApplicationPool_PoolTest);

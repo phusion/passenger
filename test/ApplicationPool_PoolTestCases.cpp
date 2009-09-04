@@ -45,6 +45,25 @@
 		return pool->get(options);
 	}
 	
+	namespace {
+		class ReloadLoggingSpawnManager: public SpawnManager {
+		public:
+			vector<string> reloadLog;
+			
+			ReloadLoggingSpawnManager(const string &spawnServerCommand,
+			             const string &logFile = "",
+			             const string &rubyCommand = "ruby",
+			             const string &user = "")
+			: SpawnManager(spawnServerCommand, logFile, rubyCommand, user)
+			{ }
+			
+			virtual void reload(const string &appRoot) {
+				reloadLog.push_back(appRoot);
+				SpawnManager::reload(appRoot);
+			}
+		};
+	}
+	
 	TEST_METHOD(1) {
 		// Calling ApplicationPool.get() once should return a valid Session.
 		Application::SessionPtr session(spawnRackApp(pool, "stub/rack"));
@@ -589,8 +608,26 @@
 		// restart.txt and try to spin up a new process for this domain,
 		// then any ApplicationSpawner/FrameworkSpawner processes should be
 		// killed first.
+		Application::SessionPtr session;
+		TempDirCopy c1("stub/rack", "rackapp1.tmp");
+		TempDirCopy c2("stub/rack", "rackapp2.tmp");
+		shared_ptr<ReloadLoggingSpawnManager> spawnManager(new ReloadLoggingSpawnManager("../bin/passenger-spawn-server"));
+		reinitializeWithSpawnManager(spawnManager);
 		
-		// TODO: implement this. we'll have to mock some objects
+		pool->setMax(1);
+		session = spawnRackApp(pool, "rackapp1.tmp");
+		session.reset();
+		session = spawnRackApp(pool, "rackapp2.tmp");
+		ensure_equals("rackapp2.tmp is not reloaded because restart.txt is not touched",
+			spawnManager->reloadLog.size(), 0u);
+		session.reset();
+		
+		touchFile("rackapp1.tmp/tmp/restart.txt");
+		session = spawnRackApp(pool, "rackapp1.tmp");
+		ensure_equals("rackapp1.tmp is reloaded because restart.txt is touched (1)",
+			spawnManager->reloadLog.size(), 1u);
+		ensure_equals("rackapp1.tmp is reloaded because restart.txt is touched (2)",
+			spawnManager->reloadLog[0], "rackapp1.tmp");
 	}
 	
 	TEST_METHOD(27) {

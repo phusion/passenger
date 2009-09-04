@@ -37,10 +37,8 @@ namespace tut {
 			serverThread = ptr(new oxt::thread(
 				boost::bind(&MessageServer::mainLoop, messageServer.get())
 			));
-			pool     = ptr(new ApplicationPool::Client());
-			pool2    = ptr(new ApplicationPool::Client());
-			pool->connect(socketFilename, "test", "12345");
-			pool2->connect(socketFilename, "test", "12345");
+			pool  = newPoolConnection();
+			pool2 = newPoolConnection();
 		}
 		
 		~ApplicationPool_Server_PoolTest() {
@@ -49,8 +47,25 @@ namespace tut {
 			}
 		}
 		
-		ApplicationPool::Ptr newPoolConnection() {
-			shared_ptr<ApplicationPool::Client> p = ptr(new ApplicationPool::Client());
+		void reinitializeWithSpawnManager(AbstractSpawnManagerPtr spawnManager) {
+			if (serverThread != NULL) {
+				serverThread->interrupt_and_join();
+			}
+			
+			messageServer.reset(); // Wait until the previous instance has removed the socket.
+			messageServer = ptr(new MessageServer(socketFilename, accountsDatabase));
+			realPool      = ptr(new ApplicationPool::Pool(spawnManager));
+			poolServer    = ptr(new ApplicationPool::Server(realPool));
+			messageServer->addHandler(poolServer);
+			serverThread = ptr(new oxt::thread(
+				boost::bind(&MessageServer::mainLoop, messageServer.get())
+			));
+			pool  = newPoolConnection();
+			pool2 = newPoolConnection();
+		}
+		
+		shared_ptr<ApplicationPool::Client> newPoolConnection() {
+			shared_ptr<ApplicationPool::Client> p(new ApplicationPool::Client());
 			p->connect(socketFilename, "test", "12345");
 			return p;
 		}
