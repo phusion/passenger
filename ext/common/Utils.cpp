@@ -354,6 +354,8 @@ createPassengerTempDir(const string &parentDir, bool userSwitching,
 	string tmpDir(getPassengerTempDir(false, parentDir));
 	uid_t lowestUid;
 	gid_t lowestGid;
+	string structureVersionFile;
+	FILE *f;
 	
 	determineLowestUserAndGroup(lowestUser, lowestUid, lowestGid);
 	
@@ -364,6 +366,27 @@ createPassengerTempDir(const string &parentDir, bool userSwitching,
 	 * whether a user may access that specific subdirectory.
 	 */
 	makeDirTree(tmpDir, "u=wxs,g=x,o=x");
+	
+	/* Write structure version file. If you change the version here don't forget
+	 * to do it in lib/phusion_passenger/admin_tools/server_instance.rb too.
+	 */
+	structureVersionFile = tmpDir + "/structure_version.txt";
+	f = fopen(structureVersionFile.c_str(), "w");
+	if (f != NULL) {
+		fprintf(f, "1,0"); // major,minor
+		if (fflush(f) == EOF) {
+			int e = errno;
+			fclose(f);
+			throw FileSystemException("Cannot write to file " + structureVersionFile,
+				e, structureVersionFile);
+		} else {
+			fclose(f);
+		}
+	} else {
+		int e = errno;
+		throw FileSystemException("Cannot create file " + structureVersionFile,
+			e, structureVersionFile);
+	}
 	
 	/* We want this upload buffer directory to be only accessible by the web server's
 	 * worker processs.

@@ -36,13 +36,13 @@ YELLOW  = "\e[33m"
 BLACK_BG = "\e[40m"
 BLUE_BG = "\e[44m"
 
-def show_status(control_process, options = {})
+def show_status(server_instance, options = {})
 	case options[:show]
 	when 'pool'
 		begin
-			text = control_process.status
+			text = server_instance.status
 		rescue SystemCallError => e
-			STDERR.puts "*** ERROR: Cannot query status for Passenger instance #{control_process.pid}:"
+			STDERR.puts "*** ERROR: Cannot query status for Phusion Passenger instance #{server_instance.pid}:"
 			STDERR.puts e.to_s
 			exit 2
 		end
@@ -54,7 +54,7 @@ def show_status(control_process, options = {})
 		
 	when 'backtraces'
 		begin
-			text = control_process.backtraces
+			text = server_instance.backtraces
 		rescue SystemCallError => e
 			STDERR.puts "*** ERROR: Cannot query status for Passenger instance #{control_process.pid}:"
 			STDERR.puts e.to_s
@@ -99,12 +99,12 @@ def start
 	end
 	
 	if ARGV.empty?
-		control_processes = ControlProcess.list
-		if control_processes.empty?
+		server_instances = ServerInstance.list
+		if server_instances.empty?
 			STDERR.puts("ERROR: Phusion Passenger doesn't seem to be running.")
 			exit 2
-		elsif control_processes.size == 1
-			show_status(control_processes.first, options)
+		elsif server_instances.size == 1
+			show_status(server_instances.first, options)
 		else
 			puts "It appears that multiple Passenger instances are running. Please select a"
 			puts "specific one by running:"
@@ -112,13 +112,13 @@ def start
 			puts "  passenger-status <PID>"
 			puts
 			puts "The following Passenger instances are running:"
-			control_processes.each do |control|
-				puts "  PID: #{control.pid}"
+			server_instances.each do |instance|
+				puts "  PID: #{instance.pid}"
 			end
 			exit 1
 		end
 	else
-		show_status(ControlProcess.for_pid(ARGV[0].to_i), options)
+		show_status(ServerInstance.for_pid(ARGV[0].to_i), options)
 	end
 end
 

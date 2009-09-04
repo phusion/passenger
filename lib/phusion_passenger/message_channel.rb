@@ -93,6 +93,7 @@ class MessageChannel
 	def read
 		buffer = ''
 		while buffer.size < HEADER_SIZE
+			puts(HEADER_SIZE - buffer.size)
 			buffer << @io.readpartial(HEADER_SIZE - buffer.size)
 		end
 		

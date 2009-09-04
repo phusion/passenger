@@ -30,7 +30,23 @@ require 'phusion_passenger/message_channel'
 module PhusionPassenger
 module AdminTools
 
-class ControlProcess
+class ServerInstance
+	# Increment this number if the server instance directory structure has changed in an incompatible way.
+	DIRECTORY_STRUCTURE_MAJOR_VERSION = 1
+	# Increment this number if new features have been added to the server instance directory structure,
+	# in a backwards compatible way.
+	DIRECTORY_STRUCTURE_MINOR_VERSION = 0
+	
+	STALE_TIME_THRESHOLD = 60
+	
+	class StaleDirectoryError < StandardError
+	end
+	class CorruptedDirectoryError < StandardError
+	end
+	class UnsupportedStructureVersionError < StandardError
+	end
+	
+	# TODO: really need to do something about the terminology. it should be "backend process" or something.
 	class Instance
 		attr_accessor :pid, :socket_name, :socket_type, :sessions, :uptime
 		INT_PROPERTIES = [:pid, :sessions]
@@ -39,22 +55,24 @@ class ControlProcess
 	attr_accessor :path
 	attr_accessor :pid
 	
-	def self.list(clean_stale = true)
-		results = []
+	def self.list(clean_stale_or_corrupted = true)
+		instances = []
 		Dir["#{AdminTools.tmpdir}/passenger.*"].each do |dir|
 			next if dir !~ /passenger.(\d+)\Z/
 			begin
-				results << ControlProcess.new(dir)
-			rescue ArgumentError
-				# Stale Passenger temp folder. Clean it up if instructed.
-				if clean_stale
-					puts "*** Cleaning stale folder #{dir}"
+				instances << ServerInstance.new(dir)
+			rescue StaleDirectoryError, CorruptedDirectoryError
+				if clean_stale_or_corrupted &&
+				   File.stat(dir).ctime < current_time - STALE_TIME_THRESHOLD
+					log_cleaning_action(dir)
 					FileUtils.chmod_R(0700, dir) rescue nil
 					FileUtils.rm_rf(dir)
 				end
+			rescue UnsupportedStructureVersionError
+				# Do nothing.
 			end
 		end
-		return results
+		return instances
 	end
 	
 	def self.for_pid(pid)
@@ -62,26 +80,42 @@ class ControlProcess
 	end
 	
 	def initialize(path)
+		raise ArgumentError, "Path may not be nil." if path.nil?
 		@path = path
-		if File.exist?("#{path}/control_process.pid")
-			data = File.read("#{path}/control_process.pid").strip
-			if data.empty?
-				raise ArgumentError, "'#{path}' is not a valid control process directory."
-			else
-				@pid = data.to_i
-			end
+		
+		if File.exist?("#{path}/instance.pid")
+			data = File.read("#{path}/instance.pid").strip
+			@pid = data.to_i
 		else
 			path =~ /passenger.(\d+)\Z/
 			@pid = $1.to_i
 		end
-		if !AdminTools.process_is_alive?(@pid)
-			raise ArgumentError, "There is no control process with PID #{@pid}."
+		if @pid == 0
+			raise CorruptedDirectoryError, "Instance directory contains corrupted instance.pid file."
+		elsif !AdminTools.process_is_alive?(@pid)
+			raise StaleDirectoryError, "There is no instance with PID #{@pid}."
+		end
+		
+		if !File.exist?("#{path}/structure_version.txt")
+			raise CorruptedDirectoryError, "Directory doesn't contain a structure version specification file."
+		else
+			version_data = File.read("#{path}/structure_version.txt").strip
+			major, minor = version_data.split(",", 2)
+			if major.nil? || minor.nil? || major !~ /\A\d+\Z/ || minor !~ /\A\d+\Z/
+				raise CorruptedDirectoryError, "Directory doesn't contain a valid structure version specification file."
+			end
+			major = major.to_i
+			minor = minor.to_i
+			if major != DIRECTORY_STRUCTURE_MAJOR_VERSION || minor > DIRECTORY_STRUCTURE_MINOR_VERSION
+				raise UnsupportedStructureVersionError, "Unsupported directory structure version."
+			end
 		end
 	end
 	
 	def status
 		connect do |channel|
-			channel.write("status")
+			channel.write("inspect")
+			check_security_response(channel)
 			return channel.read_scalar
 		end
 	end
@@ -93,9 +127,10 @@ class ControlProcess
 		end
 	end
 	
-	def xml
+	def to_xml
 		connect do |channel|
-			channel.write("status_xml")
+			channel.write("toXml", true)
+			check_security_response(channel)
 			return channel.read_scalar
 		end
 	end
@@ -136,12 +171,38 @@ class ControlProcess
 	end
 	
 private
+	def self.log_cleaning_action(dir)
+		puts "*** Cleaning stale folder #{dir}"
+	end
+	
+	def self.current_time
+		Time.now
+	end
+	
+	class << self;
+		private :log_cleaning_action
+		private :current_time
+	end
+	
 	def connect
 		channel = MessageChannel.new(UNIXSocket.new("#{path}/master/pool_controller.socket"))
 		begin
+			@username = '_passenger-status'
+			@password = '_passenger-status'
+			channel.write_scalar(@username)
+			channel.write_scalar(@password)
 			yield channel
 		ensure
 			channel.close
+		end
+	end
+	
+	def check_security_response(channel)
+		result = channel.read
+		if result.nil?
+			raise EOFError
+		elsif result[0] != "Passed security"
+			raise SecurityError, result[0]
 		end
 	end
 end

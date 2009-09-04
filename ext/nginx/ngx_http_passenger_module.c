@@ -348,12 +348,12 @@ start_helper_server(ngx_cycle_t *cycle)
         } while (ret == -1 && errno == EINTR);
         close(feedback_pipe[0]);
         
-        /* Create the file passenger_temp_dir + "/control_process.pid"
+        /* Create the file passenger_temp_dir + "/instance.pid"
          * and make it writable by the worker processes. This is because
          * save_master_process_pid is run after Nginx has lowered privileges.
          */
         last = ngx_snprintf(filename, sizeof(filename) - 1,
-                            "%s/control_process.pid", passenger_temp_dir);
+                            "%s/instance.pid", passenger_temp_dir);
         *last = (u_char) '\0';
         f = fopen((const char *) filename, "w");
         if (f != NULL) {
@@ -387,9 +387,9 @@ start_helper_server(ngx_cycle_t *cycle)
  *
  * A bug/limitation in Nginx doesn't allow us to initialize the temp dir *after*
  * Nginx has daemonized, so the temp dir's filename contains Nginx's PID before
- * daemonization. Normally PhusionPassenger::AdminTools::ControlProcess (used
+ * daemonization. Normally PhusionPassenger::AdminTools::ServerInstance (used
  * by e.g. passenger-status) will think that the temp dir is stale because the
- * PID in the filename doesn't exist. This PID file tells AdminTools::ControlProcess
+ * PID in the filename doesn't exist. This PID file tells AdminTools::ServerInstance
  * what the actual PID is.
  */
 static ngx_int_t
@@ -403,7 +403,7 @@ save_master_process_pid(ngx_cycle_t *cycle) {
     }
     
     last = ngx_snprintf(filename, sizeof(filename) - 1,
-        "%s/control_process.pid", passenger_temp_dir);
+        "%s/instance.pid", passenger_temp_dir);
     *last = (u_char) '\0';
     
     f = fopen((const char *) filename, "w");

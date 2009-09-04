@@ -277,7 +277,7 @@ protected:
 					break;
 				}
 				
-				P_TRACE(4, "MessageServer client " << commonContext.name() <<
+				P_TRACE(0, "MessageServer client " << commonContext.name() <<
 					": received message: " << toString(args));
 				
 				UPDATE_TRACE_POINT();

@@ -306,8 +306,9 @@ string getPassengerTempDir(bool bypassCache = false, const string &parentDir = "
  */
 void setPassengerTempDir(const string &dir);
 
-/* Create a temporary directory for storing Phusion Passenger-specific temp files,
- * such as temporarily buffered uploads, sockets for backend processes, etc.
+/* Create a temporary directory for storing Phusion Passenger instance-specific
+ * temp files, such as temporarily buffered uploads, sockets for backend
+ * processes, etc.
  * The directory that will be created is the one returned by
  * <tt>getPassengerTempDir(false, parentDir)</tt>. This call stores the path to
  * this temp directory in an internal variable, so that subsequent calls to
