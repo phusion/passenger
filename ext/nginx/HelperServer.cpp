@@ -50,7 +50,7 @@
 #include "Application.h"
 #include "PoolOptions.h"
 #include "MessageServer.h"
-#include "ThreadStatusServer.h"
+#include "BacktracesServer.h"
 #include "FileDescriptor.h"
 #include "Exceptions.h"
 #include "Utils.h"
@@ -652,6 +652,7 @@ public:
 			lowerPrivilege(defaultUser);
 		}
 		
+		/* Setup the application pool. */
 		pool = ptr(new ApplicationPool::Pool(
 			rootDir + "/bin/passenger-spawn-server",
 			"", ruby
@@ -660,15 +661,16 @@ public:
 		pool->setMaxPerApp(maxInstancesPerApp);
 		pool->setMaxIdleTime(poolIdleTime);
 		
+		/* Setup the message server and associated handlers. */
 		accountsDatabase = ptr(new AccountsDatabase());
 		// TODO: need a better way to store credentials
 		accountsDatabase->add("_passenger-status", "_passenger-status", false,
-			Account::INSPECT_BASIC_INFO);
+			Account::INSPECT_BASIC_INFO | Account::INSPECT_BACKTRACES);
 		messageServer = ptr(new MessageServer(
 			getPassengerTempDir() + "/master/pool_controller.socket",
 			accountsDatabase
 		));
-		messageServer->addHandler(ptr(new ThreadStatusServer()));
+		messageServer->addHandler(ptr(new BacktracesServer()));
 		messageServer->addHandler(ptr(new ApplicationPool::Server(pool)));
 		messageServerThread = ptr(new oxt::thread(
 			boost::bind(&MessageServer::mainLoop, messageServer.get()),

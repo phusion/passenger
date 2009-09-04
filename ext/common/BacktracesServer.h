@@ -22,8 +22,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_THREAD_STATUS_SERVER_H_
-#define _PASSENGER_THREAD_STATUS_SERVER_H_
+#ifndef _PASSENGER_BACKTRACES_SERVER_H_
+#define _PASSENGER_BACKTRACES_SERVER_H_
 
 #include <oxt/thread.hpp>
 #include <oxt/backtrace.hpp>
@@ -36,7 +36,7 @@ using namespace std;
 /**
  * A MessageServer handler for reporting the backtraces of all running oxt::threads.
  */
-class ThreadStatusServer: public MessageServer::Handler {
+class BacktracesServer: public MessageServer::Handler {
 public:
 	virtual bool processMessage(MessageServer::CommonClientContext &commonContext,
 	                            MessageServer::ClientContextPtr &handlerSpecificContext,
@@ -45,6 +45,7 @@ public:
 		TRACE_POINT();
 		if (args[0] == "backtraces") {
 			UPDATE_TRACE_POINT();
+			commonContext.requireRights(Account::INSPECT_BACKTRACES);
 			commonContext.channel.writeScalar(oxt::thread::all_backtraces());
 			return true;
 		} else {
@@ -55,4 +56,4 @@ public:
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_THREAD_STATUS_SERVER_H_ */
+#endif /* _PASSENGER_BACKTRACES_SERVER_H_ */

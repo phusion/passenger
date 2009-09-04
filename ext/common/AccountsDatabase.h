@@ -43,7 +43,7 @@ private:
 	map<string, AccountPtr> accounts;
 	
 public:
-	AccountPtr add(const string &username, const string &passwordOrHash, bool hashGiven, Account::Rights rights = Account::ALL) {
+	AccountPtr add(const string &username, const string &passwordOrHash, bool hashGiven, int rights = Account::ALL) {
 		AccountPtr account(new Account(username, passwordOrHash, hashGiven, rights));
 		accounts[username] = account;
 		return account;

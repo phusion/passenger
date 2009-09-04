@@ -347,7 +347,7 @@ end
 		'ext/common/AccountsDatabase.h',
 		'ext/common/MessageServer.h',
 		'ext/common/FileDescriptor.h',
-		'ext/common/ThreadStatusServer.h',
+		'ext/common/BacktracesServer.h',
 		'ext/common/ApplicationPool/Interface.h',
 		'ext/common/ApplicationPool/Pool.h'
 		]

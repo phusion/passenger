@@ -56,14 +56,22 @@ using namespace std;
 class Account {
 public:
 	enum Rights {
-		ALL                     = ~0,
-		NONE                    = 0,
-		GET                     = 1 << 0,
-		CLEAR                   = 1 << 1,
-		GET_PARAMETERS          = 1 << 2,
-		SET_PARAMETERS          = 1 << 3,
-		INSPECT_BASIC_INFO      = 1 << 4,
-		INSPECT_SENSITIVE_INFO  = 1 << 5,
+		ALL                       = ~0,
+		NONE                      = 0,
+		
+		// ApplicationPool::Server rights.
+		GET                       = 1 << 0,
+		CLEAR                     = 1 << 1,
+		DETACH                    = 1 << 2,
+		GET_PARAMETERS            = 1 << 3,
+		SET_PARAMETERS            = 1 << 4,
+		INSPECT_BASIC_INFO        = 1 << 5,
+		INSPECT_SENSITIVE_INFO    = 1 << 6,
+		//INSPECT_BACKEND_ADDRESSES = 1 << 6,
+		//INSPECT_DETACH_KEYS       = 1 << 7,
+		
+		// BacktracesServer rights.
+		INSPECT_BACKTRACES        = 1 << 8
 	};
 
 private:
@@ -73,11 +81,14 @@ private:
 	Rights rights;
 
 public:
-	Account(const string &username, const string &passwordOrHash, bool hashGiven, Rights rights = ALL) {
+	// Urgh, I can't use 'Rights' here as type because apparently bitwise
+	// ORing two enums result in an int type.
+	
+	Account(const string &username, const string &passwordOrHash, bool hashGiven, int rights = ALL) {
 		this->username       = username;
 		this->passwordOrHash = passwordOrHash;
 		this->hashGiven      = hashGiven;
-		this->rights         = rights;
+		this->rights         = (Rights) rights;
 	}
 	
 	bool checkPasswordOrHash(const StaticString &userSuppliedPassword) const {
@@ -87,9 +98,6 @@ public:
 			return userSuppliedPassword == passwordOrHash;
 		}
 	}
-	
-	// Urgh, I can't use 'Rights' here as type because apparently bitwise
-	// ORing two enums result in an int type.
 	
 	bool hasRights(int rights) const {
 		return this->rights & rights;

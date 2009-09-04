@@ -123,11 +123,12 @@ class ServerInstance
 	def backtraces
 		connect do |channel|
 			channel.write("backtraces")
+			check_security_response(channel)
 			return channel.read_scalar
 		end
 	end
 	
-	def to_xml
+	def xml
 		connect do |channel|
 			channel.write("toXml", true)
 			check_security_response(channel)
