@@ -54,13 +54,14 @@ using namespace oxt;
 
 
 /**
- * ApplicationPool::Server exposes an ApplicationPool::Pool to external processes through
- * a Unix domain server socket. This allows one to use an ApplicationPool::Pool in a
- * multi-process environment. ApplicationPool::Client can be used to access a pool that's
- * exposed via ApplicationPool::Server.
+ * ApplicationPool::Server exposes an application pool to external processes through
+ * a MessageServer. This allows one to use an application pool in a multi-process
+ * environment. ApplicationPool::Client can be used to access a pool that's exposed
+ * via ApplicationPool::Server.
  *
  * <h2>Usage</h2>
- * Construct an ApplicationPool::Server object and call the mainLoop() method on it.
+ * Construct a MessageServer and register an ApplicationPool::Server object as handler,
+ * then start the MessageServer by calling mainLoop() on it.
  *
  * <h2>Concurrency model</h2>
  * Each client is handled by a seperate thread. This is necessary because the current
@@ -69,16 +70,11 @@ using namespace oxt;
  * are busy). While it is possible to get around this problem without using threads, a
  * thread-based implementation is easier to write.
  *
- * <h2>Security model</h2>
- * Experience has shown that it is inadequate to protect the socket file with traditional
- * Unix filesystem permissions. The web server may consist of multiple worker processes,
- * each running as a seperate user. We want each web server worker process to be able to
- * connect to the ApplicationPool server. Although ACLs allow this, not every platform
- * supports ACLs by default.
+ * This concurrency model is implemented in MessageServer.
  *
- * Instead, we make the server socket world-writable, and depend on a username/password
- * authentication model for security instead. When creating Server you must also supply
- * an accounts database. Each account has a username, password, and a set of rights.
+ * <h2>Authorization support</h2>
+ * The account with which the client authenticated with dictates the actions that the
+ * client may invoke on the underlying application pool object. See Account::Rights.
  *
  * @ingroup Support
  */
@@ -184,8 +180,8 @@ private:
 			
 			/* If an I/O error occurred while communicating with the client,
 			 * then throw a ClientCommunicationException, which will bubble
-			 * all the way up to the thread main loop, where the connection
-			 * with the client will be broken.
+			 * all the way up to the MessageServer client thread main loop,
+			 * where the connection with the client will be broken.
 			 */
 			try {
 				channel.write("getEnvironmentVariables", NULL);
@@ -230,10 +226,9 @@ private:
 	};
 	
 	typedef MessageServer::CommonClientContext CommonClientContext;
-	typedef shared_ptr<SpecificContext> SpecificContextPtr;
 	
 	
-	/** The ApplicationPool::Pool that's being exposed through the socket. */
+	/** The application pool that's being exposed through the socket. */
 	ApplicationPool::Ptr pool;
 	
 	
@@ -241,7 +236,7 @@ private:
 	 * Message handler methods
 	 *********************************************/
 	
-	void processGet(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
+	void processGet(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		Application::SessionPtr session;
 		bool failed = false;
@@ -302,60 +297,60 @@ private:
 		}
 	}
 	
-	void processClose(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
+	void processClose(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		specificContext->sessions.erase(atoi(args[1]));
 	}
 	
-	void processClear(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
+	void processClear(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::CLEAR);
 		pool->clear();
 	}
 	
-	void processSetMaxIdleTime(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
+	void processSetMaxIdleTime(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::SET_PARAMETERS);
 		pool->setMaxIdleTime(atoi(args[1]));
 	}
 	
-	void processSetMax(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
+	void processSetMax(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::SET_PARAMETERS);
 		pool->setMax(atoi(args[1]));
 	}
 	
-	void processGetActive(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
+	void processGetActive(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::GET_PARAMETERS);
 		commonContext.channel.write(toString(pool->getActive()).c_str(), NULL);
 	}
 	
-	void processGetCount(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
+	void processGetCount(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::GET_PARAMETERS);
 		commonContext.channel.write(toString(pool->getCount()).c_str(), NULL);
 	}
 	
-	void processSetMaxPerApp(CommonClientContext &commonContext, SpecificContextPtr &specificContext, unsigned int maxPerApp) {
+	void processSetMaxPerApp(CommonClientContext &commonContext, SpecificContext *specificContext, unsigned int maxPerApp) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::SET_PARAMETERS);
 		pool->setMaxPerApp(maxPerApp);
 	}
 	
-	void processGetSpawnServerPid(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
+	void processGetSpawnServerPid(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::GET_PARAMETERS);
 		commonContext.channel.write(toString(pool->getSpawnServerPid()).c_str(), NULL);
 	}
 	
-	void processInspect(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
+	void processInspect(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::INSPECT_BASIC_INFO);
 		commonContext.channel.writeScalar(pool->inspect());
 	}
 	
-	void processToXml(CommonClientContext &commonContext, SpecificContextPtr &specificContext, const vector<string> &args) {
+	void processToXml(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::INSPECT_BASIC_INFO);
 		bool includeSensitiveInfo =
@@ -383,7 +378,7 @@ public:
 	                            MessageServer::ClientContextPtr &_specificContext,
 	                            const vector<string> &args)
 	{
-		SpecificContextPtr specificContext = static_pointer_cast<SpecificContext>(_specificContext);
+		SpecificContext *specificContext = (SpecificContext *) _specificContext.get();
 		try {
 			if (args[0] == "get") {
 				processGet(commonContext, specificContext, args);

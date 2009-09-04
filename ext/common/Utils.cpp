@@ -30,6 +30,7 @@
 #include <sys/un.h>
 #include <cassert>
 #include <libgen.h>
+#include <fcntl.h>
 #include <pwd.h>
 #include "CachedFileStat.hpp"
 #include "Exceptions.h"
@@ -355,7 +356,7 @@ createPassengerTempDir(const string &parentDir, bool userSwitching,
 	uid_t lowestUid;
 	gid_t lowestGid;
 	string structureVersionFile;
-	FILE *f;
+	int fd, ret;
 	
 	determineLowestUserAndGroup(lowestUser, lowestUid, lowestGid);
 	
@@ -369,18 +370,33 @@ createPassengerTempDir(const string &parentDir, bool userSwitching,
 	
 	/* Write structure version file. If you change the version here don't forget
 	 * to do it in lib/phusion_passenger/admin_tools/server_instance.rb too.
+	 *
+	 * Once written, nobody may write to it; only reading is possible.
 	 */
+	static const char structureVersion[] = "1,0"; // major,minor
 	structureVersionFile = tmpDir + "/structure_version.txt";
-	f = fopen(structureVersionFile.c_str(), "w");
-	if (f != NULL) {
-		fprintf(f, "1,0"); // major,minor
-		if (fflush(f) == EOF) {
+	do {
+		fd = open(structureVersionFile.c_str(),
+			O_WRONLY | O_CREAT | O_TRUNC,
+			S_IRUSR | S_IRGRP | S_IROTH);
+	} while (fd == -1 && errno == EINTR);
+	if (fd != -1) {
+		do {
+			// Try to make it root-owned, but don't care if it fails.
+			ret = fchown(fd, 0, 0);
+		} while (ret == -1 && errno == EINTR);
+		
+		if (write(fd, structureVersion, sizeof(structureVersion) - 1) != sizeof(structureVersion) - 1) {
 			int e = errno;
-			fclose(f);
+			do {
+				ret = close(fd);
+			} while (ret == -1 && errno == EINTR);
 			throw FileSystemException("Cannot write to file " + structureVersionFile,
 				e, structureVersionFile);
 		} else {
-			fclose(f);
+			do {
+				ret = close(fd);
+			} while (ret == -1 && errno == EINTR);
 		}
 	} else {
 		int e = errno;

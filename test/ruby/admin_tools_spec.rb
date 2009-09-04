@@ -4,7 +4,7 @@ require 'support/test_helper'
 require 'fileutils'
 require 'phusion_passenger/utils'
 require 'phusion_passenger/admin_tools'
-require 'phusion_passenger/admin_tools/control_process'
+require 'phusion_passenger/admin_tools/server_instance'
 
 include PhusionPassenger
 

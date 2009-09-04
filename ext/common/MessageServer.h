@@ -58,12 +58,102 @@ using namespace oxt;
 /* This source file follows the security guidelines written in Account.h. */
 
 /**
+ * Simple pluggable request/response messaging server framework.
+ *
+ * MessageServer implements a server with the following properties:
+ * - It listens on a Unix socket. Socket creation and destruction is automatically handled.
+ *   The socket is world-writable because a username/password authentication scheme is
+ *   used to enforce security.
+ * - Multithreaded: 1 thread per client.
+ * - Designed for simple request/response cycles. That is, a client sends a request, and
+ *   the server may respond with arbitrary data. The server does not respond sporadically,
+ *   i.e. it only responds after a request.
+ * - Requests are discrete MessageChannel array messages, not byte streams.
+ * - Connections are authenticated. Connecting clients must send a username and password,
+ *   which are then checked against an accounts database. The associated account is known
+ *   throughout the entire connection life time so that it's possible to implement
+ *   authorization features.
+ *
+ * MessageServer does not process messages by itself. Instead, one registers handlers
+ * which handle message processing. This framework allows one to seperate message
+ * handling code by function, while allowing everything to listen on the same socket and
+ * to use a common request parsing and dispatching codebase.
+ *
+ * A username/password authentication scheme was chosen over a file permission scheme because
+ * experience has shown that the latter is inadequate. For example, the web server may
+ * consist of multiple worker processes, each running as a different user. Although ACLs
+ * can solve this problem as well, not every platform supports ACLs by default.
+ *
+ * <h2>Writing handlers</h2>
+ * Handlers must inherit from MessageServer::Handler. They may implement newClient()
+ * and must implement processMessage().
+ *
+ * When a new client is accepted, MessageServer will call newClient() on all handlers.
+ * This method accepts one argument: a common client context object. This context object
+ * contains client-specific information, such as its file descriptor. It cannot be
+ * extended to store more information, but it is passed to every handler anyway,
+ * hence the word "common" in its name.
+ * newClient() is supposed to return a handler-specific client context object for storing
+ * its own information, or a null pointer if it doesn't need to store anything.
+ *
+ * When a client sends a request, MessageServer iterates through all handlers and calls
+ * processMessage() on each one, passing it the common client context and the
+ * handler-specific client context. processMessage() may return either true or false;
+ * true indicates that the handler processed the message, false indicates that
+ * it did not. Iteration stops at the first handler that returns true.
+ * If all handlers return false, i.e. the client sent a message that no handler recognizes,
+ * then MessageServer will close the connection with the client.
+ *
+ * <h2>Usage example</h2>
+ * This implements a simple ping server. Every time a "ping" request is sent, the
+ * server responds with "pong" along with the number of times it had already sent
+ * pong to the same client in the past.
+ *
+ * @code
+ *   class PingHandler: public MessageServer::Handler {
+ *   public:
+ *       struct MyContext: public MessageServer::ClientContext {
+ *           int count;
+ *           
+ *           MyContext() {
+ *               count = 0;
+ *           }
+ *       };
+ *       
+ *       MessageServer::ClientContextPtr newClient(MessageServer::CommonClientContext &commonContext) {
+ *           return MessageServer::ClientContextPtr(new MyContext());
+ *       }
+ *       
+ *       bool processMessage(MessageServer::CommonClientContext &commonContext,
+ *                           MessageServer::ClientContextPtr &specificContext,
+ *                           const vector<string> &args)
+ *       {
+ *           if (args[0] == "ping") {
+ *               MyContext *myContext = (MyContext *) specificContext.get();
+ *               commonContext.channel.write("pong", toString(specificContext->count).c_str(), NULL);
+ *               specificContext->count++;
+ *               return true;
+ *           } else {
+ *               return false;
+ *           }
+ *       }
+ *   };
+ *   
+ *   ...
+ *   
+ *   MessageServer server("server.sock");
+ *   server.addHandler(MessageServer::HandlerPtr(new PingHandler()));
+ *   server.addHandler(MessageServer::HandlerPtr(new PingHandler()));
+ *   server.mainLoop();
+ * @endcode
+ *
  * @ingroup Support
  */
 class MessageServer {
 public:
 	static const unsigned int CLIENT_THREAD_STACK_SIZE = 64 * 1024;
 	
+	/** Interface for client context objects. */
 	class ClientContext {
 	public:
 		virtual ~ClientContext() { }
@@ -72,8 +162,8 @@ public:
 	typedef shared_ptr<ClientContext> ClientContextPtr;
 	
 	/**
-	 * Each client handled by the server has an associated ClientContext,
-	 * which stores client-specific state.
+	 * A common client context, containing client-specific information
+	 * used by MessageServer itself.
 	 */
 	class CommonClientContext: public ClientContext {
 	public:
@@ -116,14 +206,42 @@ public:
 		}
 	};
 	
+	/**
+	 * An abstract message handler class.
+	 *
+	 * The methods defined in this class are allowed to throw arbitrary exceptions.
+	 * Such exceptions are caught and logged, after which the connection to the
+	 * client is closed.
+	 */
 	class Handler {
 	public:
 		virtual ~Handler() { }
 		
+		/**
+		 * Called when a new client has connected to the MessageServer.
+		 *
+		 * This method is called after the client has authenticated itself.
+		 *
+		 * @param context Contains common client-specific information.
+		 * @return A client context object for storing handler-specific client
+		 *         information, or null. The default implementation returns null.
+		 */
 		virtual ClientContextPtr newClient(CommonClientContext &context) {
 			return ClientContextPtr();
 		}
 		
+		/**
+		 * Called then a client has sent a request message.
+		 *
+		 * This method is called after newClient() is called.
+		 *
+		 * @param commonContext Contains common client-specific information.
+		 * @param handlerSpecificContext The client context object as was returned
+		 *     earlier by newClient().
+		 * @param args The request message's contents.
+		 * @return Whether this handler has processed the message. Return false
+		 *         if the message is unrecognized.
+		 */
 		virtual bool processMessage(CommonClientContext &commonContext,
 		                            ClientContextPtr &handlerSpecificContext,
 		                            const vector<string> &args) = 0;
@@ -380,6 +498,11 @@ public:
 		}
 	}
 	
+	/**
+	 * Registers a new handler.
+	 * 
+	 * @pre The main loop isn't running.
+	 */
 	void addHandler(HandlerPtr handler) {
 		handlers.push_back(handler);
 	}
@@ -389,6 +512,7 @@ public:
 	 * Clients that take longer are disconnected.
 	 *
 	 * @pre timeout != 0
+	 * @pre The main loop isn't running.
 	 */
 	void setLoginTimeout(unsigned long long timeout) {
 		assert(timeout != 0);

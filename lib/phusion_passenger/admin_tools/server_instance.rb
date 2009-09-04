@@ -31,6 +31,9 @@ module PhusionPassenger
 module AdminTools
 
 class ServerInstance
+	# If you change the structure version then don't forget to change
+	# createPassengerTempDir() in ext/common/Utils.cpp too.
+	
 	# Increment this number if the server instance directory structure has changed in an incompatible way.
 	DIRECTORY_STRUCTURE_MAJOR_VERSION = 1
 	# Increment this number if new features have been added to the server instance directory structure,

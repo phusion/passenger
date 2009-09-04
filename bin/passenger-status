@@ -24,7 +24,7 @@
 
 $LOAD_PATH.unshift(File.expand_path(File.dirname(__FILE__) + "/../lib"))
 $LOAD_PATH.unshift(File.expand_path(File.dirname(__FILE__) + "/../ext"))
-require 'phusion_passenger/admin_tools/control_process'
+require 'phusion_passenger/admin_tools/server_instance'
 require 'optparse'
 
 include PhusionPassenger::AdminTools
