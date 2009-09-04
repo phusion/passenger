@@ -662,13 +662,9 @@ public:
 		pool->setMaxIdleTime(poolIdleTime);
 		
 		/* Setup the message server and associated handlers. */
-		accountsDatabase = ptr(new AccountsDatabase());
-		// TODO: need a better way to store credentials
-		accountsDatabase->add("_passenger-status", "_passenger-status", false,
-			Account::INSPECT_BASIC_INFO | Account::INSPECT_BACKTRACES);
 		messageServer = ptr(new MessageServer(
 			getPassengerTempDir() + "/master/pool_controller.socket",
-			accountsDatabase
+			AccountsDatabase::createDefault()
 		));
 		messageServer->addHandler(ptr(new BacktracesServer()));
 		messageServer->addHandler(ptr(new ApplicationPool::Server(pool)));

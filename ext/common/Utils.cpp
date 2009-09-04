@@ -33,6 +33,9 @@
 #include <fcntl.h>
 #include <pwd.h>
 #include "CachedFileStat.hpp"
+#include "FileDescriptor.h"
+#include "MessageChannel.h"
+#include "MessageServer.h"
 #include "Exceptions.h"
 #include "Utils.h"
 
@@ -41,6 +44,37 @@
 namespace Passenger {
 
 static string passengerTempDir;
+
+namespace {
+	/**
+	 * Given a filename, FileGuard will unlink the file in its destructor, unless
+	 * commit() was called. Used in file operation functions that don't want to
+	 * leave behind half-finished files after error conditions.
+	 */
+	struct FileGuard {
+		string filename;
+		bool committed;
+		
+		FileGuard(const string &filename) {
+			this->filename = filename;
+			committed = false;
+		}
+		
+		~FileGuard() {
+			if (!committed) {
+				int ret;
+				do {
+					ret = unlink(filename.c_str());
+				} while (ret == -1 && errno == EINTR);
+			}
+		}
+		
+		void commit() {
+			committed = true;
+		}
+	};
+}
+
 
 int
 atoi(const string &s) {
@@ -97,6 +131,43 @@ getFileType(const char *filename, CachedFileStat *cstat, unsigned int throttleRa
 			message.append("'");
 			throw FileSystemException(message, e, filename);
 		}
+	}
+}
+
+void
+createFile(const string &filename, const StaticString &contents, mode_t permissions, uid_t owner, gid_t group) {
+	FileDescriptor fd;
+	int ret, e;
+	
+	do {
+		fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, permissions);
+	} while (fd == -1 && errno == EINTR);
+	if (fd != -1) {
+		FileGuard guard(filename);
+		
+		if (owner != (uid_t) -1 && group != (gid_t) -1) {
+			do {
+				ret = fchown(fd, owner, group);
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1) {
+				e = errno;
+				throw FileSystemException("Cannot set ownership for " + filename,
+					e, filename);
+			}
+		}
+		
+		try {
+			MessageChannel(fd).writeRaw(contents);
+			fd.close();
+		} catch (const SystemException &e) {
+			throw FileSystemException("Cannot write to file " + filename,
+				e.code(), filename);
+		}
+		guard.commit();
+	} else {
+		e = errno;
+		throw FileSystemException("Cannot create file " + filename,
+			e, filename);
 	}
 }
 
@@ -356,7 +427,7 @@ createPassengerTempDir(const string &parentDir, bool userSwitching,
 	uid_t lowestUid;
 	gid_t lowestGid;
 	string structureVersionFile;
-	int fd, ret;
+	int ret;
 	
 	determineLowestUserAndGroup(lowestUser, lowestUid, lowestGid);
 	
@@ -373,36 +444,12 @@ createPassengerTempDir(const string &parentDir, bool userSwitching,
 	 *
 	 * Once written, nobody may write to it; only reading is possible.
 	 */
-	static const char structureVersion[] = "1,0"; // major,minor
 	structureVersionFile = tmpDir + "/structure_version.txt";
+	createFile(structureVersionFile, "1.0", S_IRUSR | S_IRGRP | S_IROTH);
 	do {
-		fd = open(structureVersionFile.c_str(),
-			O_WRONLY | O_CREAT | O_TRUNC,
-			S_IRUSR | S_IRGRP | S_IROTH);
-	} while (fd == -1 && errno == EINTR);
-	if (fd != -1) {
-		do {
-			// Try to make it root-owned, but don't care if it fails.
-			ret = fchown(fd, 0, 0);
-		} while (ret == -1 && errno == EINTR);
-		
-		if (write(fd, structureVersion, sizeof(structureVersion) - 1) != sizeof(structureVersion) - 1) {
-			int e = errno;
-			do {
-				ret = close(fd);
-			} while (ret == -1 && errno == EINTR);
-			throw FileSystemException("Cannot write to file " + structureVersionFile,
-				e, structureVersionFile);
-		} else {
-			do {
-				ret = close(fd);
-			} while (ret == -1 && errno == EINTR);
-		}
-	} else {
-		int e = errno;
-		throw FileSystemException("Cannot create file " + structureVersionFile,
-			e, structureVersionFile);
-	}
+		// Try to make it root-owned, but don't care if it fails.
+		ret = chown(structureVersionFile.c_str(), 0, 0);
+	} while (ret == -1 && errno == EINTR);
 	
 	/* We want this upload buffer directory to be only accessible by the web server's
 	 * worker processs.
@@ -422,13 +469,15 @@ createPassengerTempDir(const string &parentDir, bool userSwitching,
 	 */
 	if (geteuid() == 0 && !userSwitching) {
 		/* ...then the 'info' subdirectory must be owned by lowestUser, so that only root
-		 * or lowestUser can query Phusion Passenger information.
+		 * or lowestUser (which all backend processes are running as) can query
+		 * Phusion Passenger information.
 		 */
 		makeDirTree(tmpDir + "/info", "u=rwxs,g=,o=", lowestUid, lowestGid);
 	} else {
-		/* Otherwise just use the current user and the directory's owner.
+		/* Otherwise just use the current user as the directory's owner.
 		 * This way, only the user that the web server's control process
-		 * is running as will be able to query information.
+		 * is running as will be able to query information. We do this
+		 * because backend processes may be running as arbitrary users.
 		 */
 		makeDirTree(tmpDir + "/info", "u=rwxs,g=,o=");
 	}

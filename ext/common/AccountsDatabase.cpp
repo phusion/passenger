@@ -22,54 +22,41 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_ACCOUNTS_DATABASE_H_
-#define _PASSENGER_ACCOUNTS_DATABASE_H_
 
-#include <string>
-#include <map>
-#include <boost/shared_ptr.hpp>
-#include "Account.h"
-#include "StaticString.h"
-
-/* This source file follows the security guidelines written in Account.h. */
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include "AccountsDatabase.h"
+#include "MessageServer.h"
+#include "Utils.h"
 
 namespace Passenger {
 
-using namespace std;
-using namespace boost;
-
-class AccountsDatabase;
-typedef shared_ptr<AccountsDatabase> AccountsDatabasePtr;
-
-
-class AccountsDatabase {
-private:
-	map<string, AccountPtr> accounts;
+AccountsDatabasePtr
+AccountsDatabase::createDefault() {
+	AccountsDatabasePtr database(new AccountsDatabase());
+	string infoDir;
+	struct stat buf;
+	int ret;
 	
-public:
-	static AccountsDatabasePtr createDefault();
-	
-	AccountPtr add(const string &username, const string &passwordOrHash, bool hashGiven, int rights = Account::ALL) {
-		AccountPtr account(new Account(username, passwordOrHash, hashGiven, rights));
-		accounts[username] = account;
-		return account;
+	infoDir = getPassengerTempDir() + "/info";
+	do {
+		ret = stat(infoDir.c_str(), &buf);
+	} while (ret == -1 && errno == EINTR);
+	if (ret == -1) {
+		int e = errno;
+		throw FileSystemException("Cannot stat " + infoDir, e, infoDir);
 	}
 	
-	AccountPtr authenticate(const string &username, const StaticString &userSuppliedPassword) {
-		map<string, AccountPtr>::iterator it = accounts.find(username);
-		if (it == accounts.end()) {
-			return AccountPtr();
-		} else {
-			AccountPtr account(it->second);
-			if (account->checkPasswordOrHash(userSuppliedPassword)) {
-				return account;
-			} else {
-				return AccountPtr();
-			}
-		}
-	}
-};
+	char passengerStatusPasswordBuf[MessageServer::MAX_PASSWORD_SIZE];
+	generateSecureToken(passengerStatusPasswordBuf, sizeof(passengerStatusPasswordBuf));
+	string passengerStatusPassword(passengerStatusPasswordBuf, sizeof(passengerStatusPasswordBuf));
+	database->add("_passenger-status", passengerStatusPassword, false,
+		Account::INSPECT_BASIC_INFO | Account::INSPECT_BACKTRACES);
+	createFile(infoDir + "/passenger-status-password.txt",
+		passengerStatusPassword, S_IRUSR, buf.st_uid, buf.st_gid);
+	
+	return database;
+}
 
 } // namespace Passenger
-
-#endif /* _PASSENGER_ACCOUNTS_DATABASE_H_ */

@@ -186,6 +186,24 @@ FileType getFileType(const char *filename, CachedFileStat *cstat = 0,
                      unsigned int throttleRate = 0);
 
 /**
+ * Create the given file with the given contents, permissions and ownership.
+ * This function does not leave behind junk files: if the ownership cannot be set
+ * or if not all data can be written then then the file will be deleted.
+ *
+ * @param filename The file to create.
+ * @param contents The contents to write to the file.
+ * @param permissions The desired file permissions.
+ * @param owner The desired file owner. Specify -1 if you want to use the current
+ *              process's owner as the file owner.
+ * @param group The desired file group. Specify -1 if you want to use the current
+ *              process's group as the file group.
+ * @throws FileSystemException Something went wrong.
+ * @ingroup Support
+ */
+void createFile(const string &filename, const StaticString &contents, mode_t permissions,
+                uid_t owner = (uid_t) -1, gid_t group = (gid_t) -1);
+
+/**
  * Find the location of the Passenger spawn server script.
  *
  * @param passengerRoot The Passenger root folder. If NULL is given, then
@@ -429,6 +447,7 @@ bool verifyWSGIDir(const string &dir, CachedFileStat *cstat = 0,
  * @throws FileSystemException
  * @throws IOException
  * @throws boost::thread_interrupted A system call has been interrupted.
+ * @ingroup Support
  */
 void generateSecureToken(void *buf, unsigned int size);
 
@@ -471,6 +490,7 @@ string toHex(const StaticString &data);
  * @throws RuntimeException Something went wrong.
  * @throws SystemException Something went wrong while creating the Unix server socket.
  * @throws boost::thread_interrupted A system call has been interrupted.
+ * @ingroup Support
  */
 int createUnixServer(const char *filename, unsigned int backlogSize = 0, bool autoDelete = true);
 
@@ -482,8 +502,11 @@ int createUnixServer(const char *filename, unsigned int backlogSize = 0, bool au
  * @throws RuntimeException Something went wrong.
  * @throws SystemException Something went wrong while connecting to the Unix server.
  * @throws boost::thread_interrupted A system call has been interrupted.
+ * @ingroup Support
  */
 int connectToUnixServer(const char *filename);
+
+
 
 /**
  * Represents a buffered upload file.

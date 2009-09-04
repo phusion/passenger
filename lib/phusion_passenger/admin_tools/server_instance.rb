@@ -48,6 +48,8 @@ class ServerInstance
 	end
 	class UnsupportedStructureVersionError < StandardError
 	end
+	class RoleDeniedError < StandardError
+	end
 	
 	# TODO: really need to do something about the terminology. it should be "backend process" or something.
 	class Instance
@@ -58,14 +60,18 @@ class ServerInstance
 	attr_accessor :path
 	attr_accessor :pid
 	
-	def self.list(clean_stale_or_corrupted = true)
+	def self.list(options = {})
+		options = {
+			:clean_stale_or_corrupted => true
+		}.merge(options)
 		instances = []
+		
 		Dir["#{AdminTools.tmpdir}/passenger.*"].each do |dir|
 			next if dir !~ /passenger.(\d+)\Z/
 			begin
 				instances << ServerInstance.new(dir)
 			rescue StaleDirectoryError, CorruptedDirectoryError
-				if clean_stale_or_corrupted &&
+				if options[:clean_stale_or_corrupted] &&
 				   File.stat(dir).ctime < current_time - STALE_TIME_THRESHOLD
 					log_cleaning_action(dir)
 					FileUtils.chmod_R(0700, dir) rescue nil
@@ -78,8 +84,8 @@ class ServerInstance
 		return instances
 	end
 	
-	def self.for_pid(pid)
-		return list(false).find { |c| c.pid == pid }
+	def self.for_pid(pid, options = {})
+		return list(options).find { |c| c.pid == pid }
 	end
 	
 	def initialize(path)
@@ -103,7 +109,7 @@ class ServerInstance
 			raise CorruptedDirectoryError, "Directory doesn't contain a structure version specification file."
 		else
 			version_data = File.read("#{path}/structure_version.txt").strip
-			major, minor = version_data.split(",", 2)
+			major, minor = version_data.split(".", 2)
 			if major.nil? || minor.nil? || major !~ /\A\d+\Z/ || minor !~ /\A\d+\Z/
 				raise CorruptedDirectoryError, "Directory doesn't contain a valid structure version specification file."
 			end
@@ -115,28 +121,60 @@ class ServerInstance
 		end
 	end
 	
-	def status
-		connect do |channel|
-			channel.write("inspect")
-			check_security_response(channel)
-			return channel.read_scalar
+	# Raises:
+	# - +ArgumentError+
+	# - +RoleDeniedError+: The user that the current process is as is not authorized to utilize the given role.
+	# - +EOFError+: The server unexpectedly closed the connection during authentication.
+	# - +SecurityError+: The server denied our authentication credentials.
+	def connect(role_or_username, password = nil)
+		@channel = MessageChannel.new(UNIXSocket.new("#{path}/master/pool_controller.socket"))
+		if role_or_username.is_a?(Symbol)
+			case role_or_username
+			when :passenger_status
+				username = "_passenger-status"
+				begin
+					password = File.read("#{path}/info/passenger-status-password.txt")
+				rescue Errno::EACCES
+					raise RoleDeniedError
+				end
+			else
+				raise ArgumentError, "Supported role #{role_or_username}"
+			end
+		else
+			username = role_or_username
 		end
+		
+		begin
+			@channel.write_scalar(username)
+			@channel.write_scalar(password)
+			result = @channel.read
+			if result.nil?
+				raise EOFError
+			elsif result[0] != "ok"
+				raise SecurityError, result[0]
+			end
+			yield self
+		ensure
+			@channel.close
+		end
+	end
+	
+	def status
+		@channel.write("inspect")
+		check_security_response
+		return @channel.read_scalar
 	end
 	
 	def backtraces
-		connect do |channel|
-			channel.write("backtraces")
-			check_security_response(channel)
-			return channel.read_scalar
-		end
+		@channel.write("backtraces")
+		check_security_response
+		return @channel.read_scalar
 	end
 	
 	def xml
-		connect do |channel|
-			channel.write("toXml", true)
-			check_security_response(channel)
-			return channel.read_scalar
-		end
+		@channel.write("toXml", true)
+		check_security_response
+		return @channel.read_scalar
 	end
 	
 	def domains
@@ -188,27 +226,8 @@ private
 		private :current_time
 	end
 	
-	def connect
-		channel = MessageChannel.new(UNIXSocket.new("#{path}/master/pool_controller.socket"))
-		begin
-			@username = '_passenger-status'
-			@password = '_passenger-status'
-			channel.write_scalar(@username)
-			channel.write_scalar(@password)
-			result = channel.read
-			if result.nil?
-				raise EOFError
-			elsif result[0] != "ok"
-				raise SecurityError, result[0]
-			end
-			yield channel
-		ensure
-			channel.close
-		end
-	end
-	
-	def check_security_response(channel)
-		result = channel.read
+	def check_security_response
+		result = @channel.read
 		if result.nil?
 			raise EOFError
 		elsif result[0] != "Passed security"

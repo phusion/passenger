@@ -156,6 +156,7 @@ using namespace oxt;
 class MessageServer {
 public:
 	static const unsigned int CLIENT_THREAD_STACK_SIZE = 64 * 1024;
+	static const unsigned int MAX_PASSWORD_SIZE = 100;
 	
 	/** Interface for client context objects. */
 	class ClientContext {
@@ -323,7 +324,7 @@ protected:
 			}
 			
 			try {
-				if (!channel.readScalar(password, 100, &timeout)) {
+				if (!channel.readScalar(password, MAX_PASSWORD_SIZE, &timeout)) {
 					return AccountPtr();
 				}
 			} catch (const SecurityException &) {
@@ -454,7 +455,7 @@ public:
 	 * @throws SystemException Something went wrong while setting up the server socket.
 	 * @throws boost::thread_interrupted
 	 */
-	MessageServer(const string &socketFilename, AccountsDatabasePtr &accountsDatabase) {
+	MessageServer(const string &socketFilename, AccountsDatabasePtr accountsDatabase) {
 		this->socketFilename   = socketFilename;
 		this->accountsDatabase = accountsDatabase;
 		loginTimeout = 2000;

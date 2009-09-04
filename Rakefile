@@ -161,7 +161,7 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 	flags << "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 	common_object_files = []
 	['Utils.cpp', 'Logging.cpp', 'SystemTime.cpp', 'CachedFileStat.cpp',
-	 'Base64.cpp'].each do |source_file|
+	 'Base64.cpp', 'AccountsDatabase.cpp'].each do |source_file|
 		object_name = source_file.sub(/\.cpp$/, '.o')
 		object_file = "#{objects_output_dir}/#{object_name}"
 		header_file = source_file.sub(/\.cpp$/, '.h')

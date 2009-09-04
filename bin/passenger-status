@@ -37,36 +37,42 @@ BLACK_BG = "\e[40m"
 BLUE_BG = "\e[44m"
 
 def show_status(server_instance, options = {})
-	case options[:show]
-	when 'pool'
-		begin
-			text = server_instance.status
-		rescue SystemCallError => e
-			STDERR.puts "*** ERROR: Cannot query status for Phusion Passenger instance #{server_instance.pid}:"
-			STDERR.puts e.to_s
-			exit 2
+	server_instance.connect(:passenger_status) do
+		case options[:show]
+		when 'pool'
+			begin
+				text = server_instance.status
+			rescue SystemCallError => e
+				STDERR.puts "*** ERROR: Cannot query status for Phusion Passenger instance #{server_instance.pid}:"
+				STDERR.puts e.to_s
+				exit 2
+			end
+		
+			# Colorize output
+			text.gsub!(/^(----)(.*)$/, YELLOW + BLUE_BG + BOLD + '\1\2' + RESET)
+		
+			puts text
+		
+		when 'backtraces'
+			begin
+				text = server_instance.backtraces
+			rescue SystemCallError => e
+				STDERR.puts "*** ERROR: Cannot query status for Passenger instance #{control_process.pid}:"
+				STDERR.puts e.to_s
+				exit 2
+			end
+		
+			# Colorize output
+			text.gsub!(/^(Thread .*:)$/, BLACK_BG + YELLOW + '\1' + RESET)
+			text.gsub!(/^( +in '.*? )(.*?)\(/, '\1' + BOLD + '\2' + RESET + '(')
+		
+			puts text
 		end
-		
-		# Colorize output
-		text.gsub!(/^(----)(.*)$/, YELLOW + BLUE_BG + BOLD + '\1\2' + RESET)
-		
-		puts text
-		
-	when 'backtraces'
-		begin
-			text = server_instance.backtraces
-		rescue SystemCallError => e
-			STDERR.puts "*** ERROR: Cannot query status for Passenger instance #{control_process.pid}:"
-			STDERR.puts e.to_s
-			exit 2
-		end
-		
-		# Colorize output
-		text.gsub!(/^(Thread .*:)$/, BLACK_BG + YELLOW + '\1' + RESET)
-		text.gsub!(/^( +in '.*? )(.*?)\(/, '\1' + BOLD + '\2' + RESET + '(')
-		
-		puts text
 	end
+rescue ServerInstance::RoleDeniedError
+	STDERR.puts "*** ERROR: You are not authorized to query the status for this Phusion " <<
+		"Passenger instance. Please try again with 'sudo'."
+	exit 2
 end
 
 def start
@@ -118,7 +124,8 @@ def start
 			exit 1
 		end
 	else
-		show_status(ServerInstance.for_pid(ARGV[0].to_i), options)
+		server_instance = ServerInstance.for_pid(ARGV[0].to_i)
+		show_status(server_instance, options)
 	end
 end
 

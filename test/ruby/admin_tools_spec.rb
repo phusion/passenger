@@ -45,7 +45,7 @@ describe AdminTools::ServerInstance do
 	def create_instance_dir(dir)
 		Dir.mkdir(dir)
 		File.write("#{dir}/structure_version.txt",
-			AdminTools::ServerInstance::DIRECTORY_STRUCTURE_MAJOR_VERSION.to_s + "," +
+			AdminTools::ServerInstance::DIRECTORY_STRUCTURE_MAJOR_VERSION.to_s + "." +
 			AdminTools::ServerInstance::DIRECTORY_STRUCTURE_MINOR_VERSION.to_s)
 	end
 	
@@ -84,7 +84,7 @@ describe AdminTools::ServerInstance do
 			
 			dir = "#{passenger_tmpdir}/passenger.#{@process1.pid}"
 			create_instance_dir(dir)
-			File.write("#{dir}/structure_version.txt", "0,0")
+			File.write("#{dir}/structure_version.txt", "0.0")
 			
 			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process2.pid}")
 			
@@ -100,7 +100,7 @@ describe AdminTools::ServerInstance do
 			dir = "#{passenger_tmpdir}/passenger.#{@process1.pid}"
 			create_instance_dir(dir)
 			File.write("#{dir}/structure_version.txt",
-				AdminTools::ServerInstance::DIRECTORY_STRUCTURE_MAJOR_VERSION.to_s + "," +
+				AdminTools::ServerInstance::DIRECTORY_STRUCTURE_MAJOR_VERSION.to_s + "." +
 				"9" + AdminTools::ServerInstance::DIRECTORY_STRUCTURE_MINOR_VERSION.to_s)
 			
 			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process2.pid}")
@@ -164,7 +164,7 @@ describe AdminTools::ServerInstance do
 			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process2.pid}")
 			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process3.pid}")
 			File.write("#{passenger_tmpdir}/passenger.#{@process2.pid}/structure_version.txt", "")
-			File.write("#{passenger_tmpdir}/passenger.#{@process3.pid}/structure_version.txt", "1,x")
+			File.write("#{passenger_tmpdir}/passenger.#{@process3.pid}/structure_version.txt", "1.x")
 			
 			AdminTools::ServerInstance.should_receive(:log_cleaning_action).twice
 			instances = AdminTools::ServerInstance.list
@@ -197,7 +197,7 @@ describe AdminTools::ServerInstance do
 			File.write("#{passenger_tmpdir}/passenger.#{@process2.pid}/instance.pid", "")
 			
 			AdminTools::ServerInstance.should_not_receive(:log_cleaning_action)
-			instances = AdminTools::ServerInstance.list(false)
+			instances = AdminTools::ServerInstance.list(:clean_stale_or_corrupted => false)
 			instances.should have(1).item
 			instances[0].pid.should == @process1.pid
 			File.exist?("#{passenger_tmpdir}/passenger.#{@process2.pid}").should be_true
