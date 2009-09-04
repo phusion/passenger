@@ -1,3 +1,9 @@
+Release 2.2.6
+-------------
+
+ * Fixed a compilation problem on Solaris. Issue #369.
+
+
 Release 2.2.5
 -------------
 
