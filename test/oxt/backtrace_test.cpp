@@ -1,4 +1,5 @@
 #include "tut.h"
+#include "counter.hpp"
 #include <oxt/backtrace.hpp>
 #include <oxt/tracable_exception.hpp>
 #include <oxt/thread.hpp>
@@ -44,67 +45,27 @@ namespace tut {
 		}
 	}
 	
-	struct QuitEvent {
-		bool is_done;
-		boost::mutex mutex;
-		boost::condition_variable cond;
-		
-		QuitEvent() {
-			is_done = false;
-		}
-		
-		void wait() {
-			boost::unique_lock<boost::mutex> l(mutex);
-			while (!is_done) {
-				cond.wait(l);
-			}
-		}
-		
-		void done() {
-			is_done = true;
-			cond.notify_all();
-		}
-	};
+	static void foo(CounterPtr parent_counter, CounterPtr child_counter) {
+		TRACE_POINT();
+		child_counter->increment();    // Tell parent that we've created the trace point.
+		parent_counter->wait_until(1); // Wait until parent thread says we can exit.
+	}
 	
-	struct FooCaller {
-		QuitEvent *quit_event;
-		
-		static void foo(QuitEvent *quit_event) {
-			TRACE_POINT();
-			quit_event->wait();
-		}
-		
-		void operator()() {
-			foo(quit_event);
-		}
-	};
-	
-	struct BarCaller {
-		QuitEvent *quit_event;
-		
-		static void bar(QuitEvent *quit_event) {
-			TRACE_POINT();
-			quit_event->wait();
-		}
-		
-		void operator()() {
-			bar(quit_event);
-		}
-	};
+	static void bar(CounterPtr parent_counter, CounterPtr child_counter) {
+		TRACE_POINT();
+		child_counter->increment();    // Tell parent that we've created the trace point.
+		parent_counter->wait_until(1); // Wait until parent thread says we can exit.
+	}
 	
 	TEST_METHOD(2) {
 		// Test whether oxt::thread's backtrace support works.
-		FooCaller foo;
-		QuitEvent foo_quit;
-		foo.quit_event = &foo_quit;
+		CounterPtr parent_counter = Counter::create_ptr();
+		CounterPtr child_counter  = Counter::create_ptr();
+		oxt::thread foo_thread(boost::bind(foo, parent_counter, child_counter));
+		oxt::thread bar_thread(boost::bind(bar, parent_counter, child_counter));
 		
-		BarCaller bar;
-		QuitEvent bar_quit;
-		bar.quit_event = &bar_quit;
-		
-		oxt::thread foo_thread(foo);
-		oxt::thread bar_thread(bar);
-		usleep(20000);
+		// Wait until all threads have created trace points.
+		child_counter->wait_until(2);
 		
 		ensure("Foo thread's backtrace contains foo()",
 			foo_thread.backtrace().find("foo") != string::npos);
@@ -119,8 +80,7 @@ namespace tut {
 		ensure(all_backtraces.find("foo") != string::npos);
 		ensure(all_backtraces.find("bar") != string::npos);
 		
-		foo_quit.done();
-		bar_quit.done();
+		parent_counter->increment(); // Tell threads to quit.
 		foo_thread.join();
 		bar_thread.join();
 	}

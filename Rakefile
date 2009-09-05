@@ -395,8 +395,8 @@ end
 	TEST_OXT_LDFLAGS = "#{TEST_BOOST_OXT_LIBRARY} #{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
 	TEST_OXT_OBJECTS = {
 		'oxt_test_main.o' => %w(oxt_test_main.cpp),
-		'backtrace_test.o' => %w(backtrace_test.cpp),
-		'dynamic_thread_group_test.o' => %w(dynamic_thread_group_test.cpp),
+		'backtrace_test.o' => %w(backtrace_test.cpp counter.hpp),
+		'dynamic_thread_group_test.o' => %w(dynamic_thread_group_test.cpp counter.hpp),
 		'syscall_interruption_test.o' => %w(syscall_interruption_test.cpp)
 	}
 	

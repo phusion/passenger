@@ -1,4 +1,5 @@
 #include "tut.h"
+#include "counter.hpp"
 #include <boost/bind.hpp>
 #include <boost/thread/thread_time.hpp>
 #include <oxt/dynamic_thread_group.hpp>
@@ -15,39 +16,12 @@ namespace tut {
 	
 	DEFINE_TEST_GROUP(dynamic_thread_group_test);
 	
-	struct Counter {
-		struct timeout_expired { };
-		
-		unsigned int value;
-		boost::mutex mutex;
-		boost::condition_variable cond;
-		
-		Counter() {
-			value = 0;
-		}
-		
-		void wait_until(unsigned int wanted_value, unsigned int timeout = 1000) {
-			boost::unique_lock<boost::mutex> l(mutex);
-			while (value < wanted_value) {
-				if (!cond.timed_wait(l, get_system_time() + posix_time::milliseconds(timeout))) {
-					throw timeout_expired();
-				}
-			}
-		}
-		
-		void increment() {
-			boost::unique_lock<boost::mutex> l(mutex);
-			value++;
-			cond.notify_all();
-		}
-	};
-	
 	TEST_METHOD(1) {
 		// It has 0 threads in the beginning.
 		ensure_equals(group.num_threads(), 0u);
 	}
 	
-	static void wait_until_done(Counter *parent_counter, Counter *child_counter) {
+	static void wait_until_done(CounterPtr parent_counter, CounterPtr child_counter) {
 		// Tell parent thread that this thread has started.
 		parent_counter->increment();
 		
@@ -61,34 +35,36 @@ namespace tut {
 		// thread group upon termination.
 		
 		// Start 3 'f' threads.
-		Counter f_parent_counter, f_child_counter;
-		boost::function<void()> f(boost::bind(wait_until_done, &f_parent_counter, &f_child_counter));
+		CounterPtr f_parent_counter = Counter::create_ptr();
+		CounterPtr f_child_counter  = Counter::create_ptr();
+		boost::function<void()> f(boost::bind(wait_until_done, f_parent_counter, f_child_counter));
 		group.create_thread(f);
 		group.create_thread(f);
 		group.create_thread(f);
 		
 		// Start 1 'g' thread.
-		Counter g_parent_counter, g_child_counter;
-		boost::function<void()> g(boost::bind(wait_until_done, &g_parent_counter, &g_child_counter));
+		CounterPtr g_parent_counter = Counter::create_ptr();
+		CounterPtr g_child_counter  = Counter::create_ptr();
+		boost::function<void()> g(boost::bind(wait_until_done, g_parent_counter, g_child_counter));
 		group.create_thread(g);
 		
-		f_parent_counter.wait_until(3); // Wait until all 'f' threads have started.
-		g_parent_counter.wait_until(1); // Wait until the 'g' thread has started.
+		f_parent_counter->wait_until(3); // Wait until all 'f' threads have started.
+		g_parent_counter->wait_until(1); // Wait until the 'g' thread has started.
 		
 		ensure_equals("There are 4 threads in the group", group.num_threads(), 4u);
 		
 		// Tell all 'f' threads that they can quit now.
-		f_child_counter.increment();
-		usleep(10000);
+		f_child_counter->increment();
+		usleep(25000); // Sleep time must be large enough for Valgrind.
 		ensure_equals(group.num_threads(), 1u);
 		
 		// Tell the 'g' thread that it can quit now.
-		g_child_counter.increment();
-		usleep(10000);
+		g_child_counter->increment();
+		usleep(25000); // Sleep time must be large enough for Valgrind.
 		ensure_equals(group.num_threads(), 0u);
 	}
 	
-	static void sleep_and_set_true(Counter *counter, bool *flag) {
+	static void sleep_and_set_true(CounterPtr counter, volatile bool *flag) {
 		// Tell parent thread that this thread has started.
 		counter->increment();
 		try {
@@ -102,14 +78,15 @@ namespace tut {
 		// interrupt_and_join_all() works.
 		
 		// Create two threads.
-		Counter counter;
-		bool flag1 = false, flag2 = false;
-		boost::function<void ()> f(boost::bind(sleep_and_set_true, &counter, &flag1));
-		boost::function<void ()> g(boost::bind(sleep_and_set_true, &counter, &flag2));
+		CounterPtr counter = Counter::create_ptr();
+		volatile bool flag1 = false;
+		volatile bool flag2 = false;
+		boost::function<void ()> f(boost::bind(sleep_and_set_true, counter, &flag1));
+		boost::function<void ()> g(boost::bind(sleep_and_set_true, counter, &flag2));
 		group.create_thread(f);
 		group.create_thread(g);
 		// Wait until both threads have started.
-		counter.wait_until(2);
+		counter->wait_until(2);
 		
 		// Now interrupt and join them.
 		group.interrupt_and_join_all();
