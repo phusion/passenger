@@ -35,7 +35,7 @@ namespace oxt {
  */
 class spin_lock {
 private:
-	int exclusion;
+	volatile int exclusion;
 
 public:
 	/**
