@@ -47,12 +47,11 @@ class thread_registration;
 extern boost::mutex _thread_registration_mutex;
 extern list<thread_registration *> _registered_threads;
 
-void                 _init_backtrace_tls();
-void                 _finalize_backtrace_tls();
-spin_lock           *_get_backtrace_lock();
-vector<trace_point *> *_get_current_backtrace();
-string               _format_backtrace(const list<trace_point *> *backtrace_list);
-string               _format_backtrace(const vector<trace_point *> *backtrace_list);
+void   _init_backtrace_tls();
+void   _finalize_backtrace_tls();
+bool   _get_backtrace_list_and_its_lock(vector<trace_point *> **backtrace_list, spin_lock **lock);
+string _format_backtrace(const list<trace_point *> *backtrace_list);
+string _format_backtrace(const vector<trace_point *> *backtrace_list);
 
 /**
  * A single point in a backtrace. Creating this object will cause it
@@ -78,10 +77,11 @@ struct trace_point {
 		this->line = line;
 		m_detached = false;
 		
-		spin_lock *lock = _get_backtrace_lock();
-		if (OXT_LIKELY(lock != NULL)) {
+		vector<trace_point *> *backtrace_list;
+		spin_lock *lock;
+		if (OXT_LIKELY(_get_backtrace_list_and_its_lock(&backtrace_list, &lock))) {
 			spin_lock::scoped_lock l(*lock);
-			_get_current_backtrace()->push_back(this);
+			backtrace_list->push_back(this);
 		}
 	}
 	
@@ -94,10 +94,11 @@ struct trace_point {
 
 	~trace_point() {
 		if (OXT_LIKELY(!m_detached)) {
-			spin_lock *lock = _get_backtrace_lock();
-			if (OXT_LIKELY(lock != NULL)) {
+			vector<trace_point *> *backtrace_list;
+			spin_lock *lock;
+			if (OXT_LIKELY(_get_backtrace_list_and_its_lock(&backtrace_list, &lock))) {
 				spin_lock::scoped_lock l(*lock);
-				_get_current_backtrace()->pop_back();
+				backtrace_list->pop_back();
 			}
 		}
 	}
@@ -132,8 +133,8 @@ struct initialize_backtrace_support_for_this_thread {
 		_init_backtrace_tls();
 		registration = new thread_registration();
 		registration->name = name;
-		registration->backtrace_lock = _get_backtrace_lock();
-		registration->backtrace = _get_current_backtrace();
+		_get_backtrace_list_and_its_lock(&registration->backtrace,
+			&registration->backtrace_lock);
 		
 		boost::mutex::scoped_lock l(_thread_registration_mutex);
 		_registered_threads.push_back(registration);
