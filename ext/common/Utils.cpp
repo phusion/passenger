@@ -145,6 +145,16 @@ createFile(const string &filename, const StaticString &contents, mode_t permissi
 	if (fd != -1) {
 		FileGuard guard(filename);
 		
+		// The file permission may not be as expected because of the active
+		// umask, so fchmod() it here to ensure correct permissions.
+		do {
+			ret = fchmod(fd, permissions);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
+			throw FileSystemException("Cannot set permissions on " + filename,
+				e, filename);
+		}
+		
 		if (owner != (uid_t) -1 && group != (gid_t) -1) {
 			do {
 				ret = fchown(fd, owner, group);
