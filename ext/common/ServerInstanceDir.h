@@ -160,14 +160,9 @@ public:
 	
 private:
 	string path;
-	bool owner;
 	
-	void initialize(const string &path, bool create) {
-		this->path = path;
-		owner = create;
-		if (!create) {
-			return;
-		}
+	void initialize(const string &path) {
+		this->path  = path;
 		
 		/* Create the server instance directory. We only need to write to this
 		 * directory (= creating/removing files or subdirectories) for these
@@ -196,8 +191,10 @@ private:
 		 * Once written, nobody may write to it; only reading is possible.
 		 */
 		string structureVersionFile = path + "/structure_version.txt";
-		createFile(structureVersionFile, "1.0", /* major.minor */
-			S_IRUSR | S_IRGRP | S_IROTH);
+		if (getFileType(structureVersionFile) == FT_NONEXISTANT) {
+			createFile(structureVersionFile, "1.0", /* major.minor */
+				S_IRUSR | S_IRGRP | S_IROTH);
+		}
 	}
 	
 public:
@@ -209,16 +206,25 @@ public:
 		} else {
 			theParentDir = parentDir;
 		}
-		initialize(theParentDir + "/passenger." + toString<unsigned long long>(webServerPid),
-			true);
+		initialize(theParentDir + "/passenger." + toString<unsigned long long>(webServerPid));
 	}
 	
 	ServerInstanceDir(const string &path) {
-		initialize(path, false);
+		initialize(path);
 	}
 	
 	~ServerInstanceDir() {
-		if (owner && getNewestGeneration() == NULL) {
+		GenerationPtr newestGeneration;
+		try {
+			newestGeneration = getNewestGeneration();
+		} catch (const FileSystemException &e) {
+			if (e.code() == ENOENT) {
+				return;
+			} else {
+				throw;
+			}
+		}
+		if (newestGeneration == NULL) {
 			removeDirTree(path);
 		}
 	}

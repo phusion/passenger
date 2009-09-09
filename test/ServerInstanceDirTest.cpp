@@ -35,20 +35,19 @@ namespace tut {
 	
 	TEST_METHOD(2) {
 		// The (string) constructor creates a ServerInstanceDir object that's
-		// associated with the given directory, but doesn't create the
-		// directory.
+		// associated with the given directory, and creates the directory
+		// if it doesn't exist.
 		ServerInstanceDir dir(1234, parentDir);
 		ServerInstanceDir dir2(dir.getPath());
 		ServerInstanceDir dir3(parentDir + "/foo");
 		ensure_equals(dir2.getPath(), dir.getPath());
 		ensure_equals(dir3.getPath(), parentDir + "/foo");
-		ensure_equals(getFileType(dir3.getPath()), FT_NONEXISTANT);
+		ensure_equals(getFileType(dir3.getPath()), FT_DIRECTORY);
 	}
 	
 	TEST_METHOD(3) {
-		// A ServerInstanceDir object constructed with the (pid_t, string) constructor
-		// removes the server instance directory upon destruction, but only
-		// if there are no more generations in it.
+		// A ServerInstanceDir object removes the server instance directory
+		// upon destruction, but only if there are no more generations in it.
 		{
 			ServerInstanceDir dir(1234, parentDir);
 		}
@@ -62,13 +61,10 @@ namespace tut {
 	}
 	
 	TEST_METHOD(4) {
-		// A ServerInstanceDir object constructed with the (pid_t, string) constructor
-		// does not remove the server instance directory upon destruction.
+		// The destructor does not throw any exceptions if the server instance
+		// directory doesn't exist anymore.
 		ServerInstanceDir dir(1234, parentDir);
-		{
-			ServerInstanceDir dir2(dir.getPath());
-		}
-		ensure_equals(getFileType(dir.getPath()), FT_DIRECTORY);
+		removeDirTree(dir.getPath());
 	}
 	
 	TEST_METHOD(5) {
@@ -146,5 +142,12 @@ namespace tut {
 		dir.getGeneration(1).reset();
 		ensure_equals(getFileType(generation0->getPath()), FT_DIRECTORY);
 		ensure_equals(getFileType(generation1->getPath()), FT_DIRECTORY);
+	}
+	
+	TEST_METHOD(12) {
+		// It's possible to have two ServerInstanceDir objects constructed
+		// with the same (pid_t, string) constructor arguments.
+		ServerInstanceDir dir1(1234, parentDir);
+		ServerInstanceDir dir2(1234, parentDir);
 	}
 }
