@@ -94,6 +94,10 @@ public:
 		return content;
 	}
 	
+	string toString() const {
+		return string(content, len);
+	}
+	
 	bool equals(const StaticString &other) const {
 		return len == other.len && memcmp(content, other.content, len) == 0;
 	}

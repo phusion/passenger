@@ -491,6 +491,10 @@ end
 			ext/common/AccountsDatabase.h
 			ext/common/MessageServer.h
 			ext/common/MessageChannel.h),
+		'test/ServerInstanceDir.o' => %w(
+			test/ServerInstanceDirTest.cpp
+			ext/common/ServerInstanceDir.h
+			ext/common/Utils.h),
 		'test/FileChangeCheckerTest.o' => %w(
 			test/FileChangeCheckerTest.cpp
 			ext/common/FileChangeChecker.h

@@ -1,3 +1,4 @@
+#include <dirent.h>
 #include <unistd.h>
 #include "Support.h"
 
@@ -79,6 +80,26 @@ touchFile(const char *filename, time_t timestamp) {
 		times.modtime = timestamp;
 		utime(filename, &times);
 	}
+}
+
+vector<string>
+listDir(const string &path) {
+	vector<string> result;
+	DIR *d = opendir(path.c_str());
+	struct dirent *ent;
+	
+	if (d == NULL) {
+		int e = errno;
+		throw FileSystemException("Cannot open directory " + path,
+			e, path);
+	}
+	while ((ent = readdir(d)) != NULL) {
+		if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) {
+			continue;
+		}
+		result.push_back(ent->d_name);
+	}
+	return result;
 }
 
 } // namespace Test

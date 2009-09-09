@@ -104,14 +104,14 @@ fileExists(const char *filename, CachedFileStat *cstat, unsigned int throttleRat
 }
 
 FileType
-getFileType(const char *filename, CachedFileStat *cstat, unsigned int throttleRate) {
+getFileType(const StaticString &filename, CachedFileStat *cstat, unsigned int throttleRate) {
 	struct stat buf;
 	int ret;
 	
 	if (cstat != NULL) {
-		ret = cstat->stat(filename, &buf, throttleRate);
+		ret = cstat->stat(filename.toString(), &buf, throttleRate);
 	} else {
-		ret = stat(filename, &buf);
+		ret = stat(filename.c_str(), &buf);
 	}
 	if (ret == 0) {
 		if (S_ISREG(buf.st_mode)) {

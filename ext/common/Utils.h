@@ -182,7 +182,7 @@ bool fileExists(const char *filename, CachedFileStat *cstat = 0,
  * @throws boost::thread_interrupted
  * @ingroup Support
  */
-FileType getFileType(const char *filename, CachedFileStat *cstat = 0,
+FileType getFileType(const StaticString &filename, CachedFileStat *cstat = 0,
                      unsigned int throttleRate = 0);
 
 /**

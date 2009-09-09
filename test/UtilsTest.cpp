@@ -4,7 +4,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
-#include <dirent.h>
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
@@ -33,21 +32,6 @@ namespace tut {
 		}
 	};
 	
-	static vector<string>
-	listDir(const char *path) {
-		vector<string> result;
-		DIR *d = opendir(path);
-		struct dirent *ent;
-		
-		while ((ent = readdir(d)) != NULL) {
-			if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) {
-				continue;
-			}
-			result.push_back(ent->d_name);
-		}
-		return result;
-	}
-
 	DEFINE_TEST_GROUP(UtilsTest);
 
 	/***** Test split() *****/

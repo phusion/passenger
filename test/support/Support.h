@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <iostream>
 #include <string>
+#include <vector>
 #include <exception>
 #include <cstdio>
 #include <cerrno>
@@ -63,6 +64,11 @@ void replaceStringInFile(const char *filename, const string &toFind, const strin
  * @throws FileSystemException
  */
 void touchFile(const char *filename, time_t timestamp = (time_t) - 1);
+
+/**
+ * Returns all filenames in the given directory.
+ */
+vector<string> listDir(const string &path);
 
 /**
  * Class which creates a temporary directory of the given name, and deletes
