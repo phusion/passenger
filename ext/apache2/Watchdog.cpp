@@ -46,7 +46,7 @@ struct HelperServerFeedback {
 
 static string
 findHelperServer() {
-	return passengerRoot + "/ext/apache2/HelperServer";
+	return passengerRoot + "/ext/apache2/PassengerHelperServer";
 }
 
 static void
@@ -131,7 +131,7 @@ startHelperServer(const string &helperServerFilename, unsigned int generationNum
 		e = errno;
 		syscalls::close(fds[0]);
 		syscalls::close(fds[1]);
-		throw SystemException("Cannot create a new process", e);
+		throw SystemException("Cannot fork a new process", e);
 	} else {
 		// Parent
 		FileDescriptor helperServerFeedbackFd(fds[0]);
@@ -162,28 +162,34 @@ startHelperServer(const string &helperServerFilename, unsigned int generationNum
 			if (!helperServerFeedbackChannel.read(args)) {
 				this_thread::disable_interruption di2;
 				this_thread::disable_syscall_interruption dsi2;
+				int status;
 				
 				/* The feedback fd was closed for an unknown reason.
 				 * Did the helper server crash?
 				 */
-				ret = syscalls::waitpid(pid, NULL, WNOHANG);
+				ret = syscalls::waitpid(pid, &status, WNOHANG);
 				if (ret == 0) {
 					/* Doesn't look like it; it seems it's still running.
 					 * We can't do anything without proper feedback so kill
 					 * the helper server and throw an exception.
 					 */
 					killAndWait(pid);
-					throw RuntimeException("Unable to start the helper server: "
+					throw RuntimeException("Unable to start the Phusion Passenger helper server: "
 						"an unknown error occurred during its startup");
+				} else if (ret != -1 && WIFSIGNALED(status)) {
+					/* Looks like a crash which caused a signal. */
+					throw RuntimeException("Unable to start the Phusion Passenger helper server: "
+						"it seems to have been killed with signal " +
+						getSignalName(WTERMSIG(status)) + " during startup");
 				} else {
-					/* Seems like it. */
-					throw RuntimeException("Unable to start the helper server: "
+					/* Looks like it exited after detecting an error. */
+					throw RuntimeException("Unable to start the Phusion Passenger helper server: "
 						"it seems to have crashed during startup for an unknown reason");
 				}
 			}
 		} catch (const SystemException &ex) {
 			killAndWait(pid);
-			throw SystemException("Unable to start the helper server: "
+			throw SystemException("Unable to start the Phusion Passenger helper server: "
 				"unable to read its initialization feedback",
 				ex.code());
 		} catch (const RuntimeException &) {
@@ -201,7 +207,7 @@ startHelperServer(const string &helperServerFilename, unsigned int generationNum
 			throw SystemException(args[1], atoi(args[2]));
 		} else if (args[0] == "exec error") {
 			killAndWait(pid);
-			throw SystemException("Unable to start the helper server", atoi(args[1]));
+			throw SystemException("Unable to start the Phusion Passenger helper server", atoi(args[1]));
 		} else {
 			killAndWait(pid);
 			throw RuntimeException("The helper server sent an unknown feedback message '" + args[0] + "'");
@@ -234,6 +240,7 @@ cleanupHelperServerInBackground(ServerInstanceDirPtr &serverInstanceDir,
 		char x;
 		
 		// Wait until helper server has exited.
+		// TODO: wait a maximum amount of time, then kill the helper server.
 		syscalls::read(helperServerFeedbackFd, &x, 1);
 		
 		// Now clean up the server instance directory.
@@ -339,13 +346,19 @@ watchdogMainLoop() {
 				return;
 			}
 			
-			if (ret != -1) {
-				done = WIFEXITED(status) && WEXITSTATUS(status) == 0;
-			}
-			// If waitpid() returns -1 then the child process has somehow disappeared.
-			// Not sure what happens, but continue the loop and restart it.
-			if (!done) {
-				P_DEBUG("Helper server crashed, restarting it...");
+			if (ret == -1) {
+				P_WARN("Phusion Passenger helper server crashed or killed for "
+					"an unknown reason, restarting it...");
+			} else if (WIFEXITED(status)) {
+				if (WEXITSTATUS(status) == 0) {
+					done = true;
+				} else {
+					P_WARN("Phusion Passenger helper server crashed with exit status " <<
+						WEXITSTATUS(status) << ", restarting it...");
+				}
+			} else {
+				P_WARN("Phusion Passenger helper server crashed with signal " <<
+					getSignalName(WTERMSIG(status)) << ", restarting it...");
 			}
 		}
 	} catch (const tracable_exception &e) {
@@ -353,15 +366,26 @@ watchdogMainLoop() {
 	}
 }
 
+/**
+ * Most operating systems overcommit memory. We *know* that this watchdog process
+ * doesn't use much memory; on OS X it uses about 200 KB of private RSS. If the
+ * watchdog is killed by the system Out-Of-Memory Killer or then it's all over:
+ * the system administrator will have to restart the web server for Phusion
+ * Passenger to be usable again. So in this function we do whatever is necessary
+ * to prevent this watchdog process from becoming a candidate for the OS's
+ * Out-Of-Memory Killer.
+ */
 static void
 disableOomKiller() {
+	// Linux-only way to disable OOM killer for current process. Requires root
+	// privileges, which we should have.
 	FILE *f = fopen("/proc/self/oom_adj", "w");
 	if (f != NULL) {
 		fprintf(f, "-17");
 		fclose(f);
 	}
 }
-
+#include <pwd.h>
 int
 main(int argc, char *argv[]) {
 	logLevel      = atoi(argv[1]);
@@ -378,7 +402,8 @@ main(int argc, char *argv[]) {
 	disableOomKiller();
 	setup_syscall_interruption_support();
 	
-	oxt::thread watchdogThread(watchdogMainLoop, "Watchdog thread", 16 * 1024);
+	// Don't make the stack any smaller, getpwnam() on OS X needs a lot of stack space.
+	oxt::thread watchdogThread(watchdogMainLoop, "Watchdog thread", 64 * 1024);
 	
 	this_thread::disable_interruption di;
 	this_thread::disable_syscall_interruption dsi;

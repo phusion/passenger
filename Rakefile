@@ -225,8 +225,8 @@ end
 	
 	
 	desc "Build Apache 2 module"
-	task :apache2 => ['ext/apache2/mod_passenger.so', 'ext/apache2/Watchdog',
-		'ext/apache2/HelperServer', :native_support]
+	task :apache2 => ['ext/apache2/mod_passenger.so', 'ext/apache2/PassengerWatchdog',
+		'ext/apache2/PassengerHelperServer', :native_support]
 	
 	mod_passenger_dependencies = [APACHE2_MODULE_COMMON_LIBRARY,
 		APACHE2_MODULE_BOOST_OXT_LIBRARY,
@@ -272,8 +272,8 @@ end
 		'ext/common/ServerInstanceDir.h',
 		APACHE2_HELPER_COMMON_LIBRARY,
 		APACHE2_HELPER_BOOST_OXT_LIBRARY]
-	file 'ext/apache2/Watchdog' => apache2_watchdog_dependencies do
-		create_executable('ext/apache2/Watchdog',
+	file 'ext/apache2/PassengerWatchdog' => apache2_watchdog_dependencies do
+		create_executable('ext/apache2/PassengerWatchdog',
 			'ext/apache2/Watchdog.cpp',
 			"#{APACHE2_HELPER_CXXFLAGS} " <<
 			"#{APACHE2_HELPER_COMMON_LIBRARY} " <<
@@ -289,8 +289,8 @@ end
 		'ext/common/Timer.h',
 		APACHE2_HELPER_COMMON_LIBRARY,
 		APACHE2_HELPER_BOOST_OXT_LIBRARY]
-	file 'ext/apache2/HelperServer' => apache2_helper_server_dependencies do
-		create_executable('ext/apache2/HelperServer',
+	file 'ext/apache2/PassengerHelperServer' => apache2_helper_server_dependencies do
+		create_executable('ext/apache2/PassengerHelperServer',
 			'ext/apache2/HelperServer.cpp',
 			"#{APACHE2_HELPER_CXXFLAGS} " <<
 			"#{APACHE2_HELPER_COMMON_LIBRARY} " <<
@@ -313,8 +313,8 @@ end
 	desc "Clean all compiled Apache 2 files"
 	task 'apache2:clean' do
 		files = [APACHE2_MODULE_OBJECTS, %w(ext/apache2/mod_passenger.o
-			ext/apache2/mod_passenger.so ext/apache2/Watchdog
-			ext/apache2/HelperServer)]
+			ext/apache2/mod_passenger.so ext/apache2/PassengerWatchdog
+			ext/apache2/PassengerHelperServer)]
 		sh("rm", "-rf", *files.flatten)
 	end
 

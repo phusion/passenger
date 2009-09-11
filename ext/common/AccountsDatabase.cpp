@@ -56,7 +56,7 @@ AccountsDatabase::createDefault(const ServerInstanceDir::GenerationPtr &generati
 			passengerStatusPasswordString, S_IRUSR, defaultUid, defaultGid);
 	} else {
 		createFile(generation->getPath() + "/passenger-status-password.txt",
-			passengerStatusPasswordString, S_IRUSR);
+			passengerStatusPasswordString, S_IRUSR | S_IWUSR);
 	}
 	
 	return database;

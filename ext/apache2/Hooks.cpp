@@ -1187,19 +1187,6 @@ public:
 		P_DEBUG("Initializing Phusion Passenger...");
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
 		
-		const char *user;
-		string applicationPoolServerExe, spawnServer;
-		
-		createPassengerTempDir(config->getTempDir(), config->userSwitching,
-			config->getDefaultUser(), unixd_config.user_id,
-			unixd_config.group_id);
-		
-		if (config->userSwitching) {
-			user = "";
-		} else {
-			user = config->getDefaultUser();
-		}
-		
 		if (config->root == NULL) {
 			throw ConfigurationException("The 'PassengerRoot' configuration option "
 				"is not specified. This option is required, so please specify it. "
@@ -1207,6 +1194,7 @@ public:
 				"'passenger-install-apache2-module'.");
 		}
 		
+		/*
 		spawnServer = findSpawnServer(config->root);
 		if (!fileExists(spawnServer.c_str())) {
 			string message("The Passenger spawn server script, '");
@@ -1223,12 +1211,9 @@ public:
 				"option is specified correctly.");
 			throw FileNotFoundException(message);
 		}
+		*/
 		
-		applicationPoolServer = ptr(
-			new ApplicationPoolServer(
-				applicationPoolServerExe, spawnServer, "",
-				config->getRuby(), user)
-		);
+		
 		
 		ApplicationPoolPtr pool(applicationPoolServer->connect());
 		pool->setMax(config->maxPoolSize);

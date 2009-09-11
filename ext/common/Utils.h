@@ -469,6 +469,11 @@ string fillInMiddle(unsigned int max, const string &prefix, const string &middle
 string toHex(const StaticString &data);
 
 /**
+ * Convert a signal number to its associated name.
+ */
+string getSignalName(int sig);
+
+/**
  * Create a new Unix server socket which is bounded to <tt>filename</tt>.
  *
  * @param filename The filename to bind the socket to.

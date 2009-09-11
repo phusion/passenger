@@ -669,6 +669,40 @@ toHex(const StaticString &data) {
 	return result;
 }
 
+string
+getSignalName(int sig) {
+	switch (sig) {
+	case SIGHUP:
+		return "SIGHUP";
+	case SIGINT:
+		return "SIGINT";
+	case SIGQUIT:
+		return "SIGQUIT";
+	case SIGILL:
+		return "SIGILL";
+	case SIGTRAP:
+		return "SIGTRAP";
+	case SIGABRT:
+		return "SIGABRT";
+	case SIGFPE:
+		return "SIGFPE";
+	case SIGBUS:
+		return "SIGBUS";
+	case SIGSEGV:
+		return "SIGSEGV";
+	case SIGALRM:
+		return "SIGARLM";
+	case SIGTERM:
+		return "SIGTERM";
+	case SIGUSR1:
+		return "SIGUSR1";
+	case SIGUSR2:
+		return "SIGUSR2";
+	default:
+		return toString(sig);
+	}
+}
+
 int
 createUnixServer(const char *filename, unsigned int backlogSize, bool autoDelete) {
 	struct sockaddr_un addr;

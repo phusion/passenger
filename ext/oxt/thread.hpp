@@ -139,7 +139,7 @@ public:
 		initialize_data(name);
 		
 		set_thread_main_function(boost::bind(thread_main, func, data));
-		if (stack_size < MIN_STACK_SIZE) {
+		if (stack_size != 0 && stack_size < MIN_STACK_SIZE) {
 			stack_size = MIN_STACK_SIZE;
 		}
 		start_thread(stack_size);
