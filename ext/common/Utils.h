@@ -217,18 +217,6 @@ void createFile(const string &filename, const StaticString &contents, mode_t per
 string findSpawnServer(const char *passengerRoot = NULL);
 
 /**
- * Find the location of the Passenger ApplicationPool server
- * executable.
- *
- * @param passengerRoot The Passenger root folder.
- * @return An absolute path to the executable.
- * @throws FileSystemException Unable to access parts of the filesystem.
- * @pre passengerRoot != NULL
- * @ingroup Support
- */
-string findApplicationPoolServer(const char *passengerRoot);
-
-/**
  * Returns a canonical version of the specified path. All symbolic links
  * and relative path elements are resolved.
  *
@@ -390,7 +378,8 @@ void createPassengerTempDir(const string &parentDir, bool userSwitching,
 void makeDirTree(const string &path, const char *mode = "u=rwx,g=,o=", uid_t owner = (uid_t) -1, gid_t group = (gid_t) -1);
 
 /**
- * Remove an entire directory tree recursively.
+ * Remove an entire directory tree recursively. If the directory doesn't exist then this
+ * function does nothing.
  *
  * @throws FileSystemException Something went wrong.
  */

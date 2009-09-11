@@ -60,6 +60,7 @@ public:
 		}
 		
 		void create(bool userSwitching, const string &defaultUser, uid_t workerUid, gid_t workerGid) {
+			bool runningAsRoot = geteuid() == 0;
 			uid_t defaultUid;
 			gid_t defaultGid;
 			
@@ -72,39 +73,27 @@ public:
 			makeDirTree(path, "u=wxs,g=x,o=x");
 			
 			
-			/* We want the upload buffer directory to be only accessible by the web
-			 * server's worker processs.
-			 *
-			 * It only makes sense to chown this directory to workerUid and workerGid
-			 * if the web server is actually able to change the user of the worker
-			 * processes. That is, if the web server is running as root.
+			/* We want the upload buffer directory to be only writable by the web
+			 * server's worker processs. Other users may not have any access to this
+			 * directory.
 			 */
-			if (geteuid() == 0) {
-				makeDirTree(path + "/webserver_private", "u=wxs,g=,o=", workerUid, workerGid);
+			if (runningAsRoot) {
+				makeDirTree(path + "/buffered_uploads", "u=wxs,g=,o=", workerUid, workerGid);
 			} else {
-				makeDirTree(path + "/webserver_private", "u=wxs,g=,o=");
+				makeDirTree(path + "/buffered_uploads", "u=wxs,g=,o=");
 			}
 			
-			/* The master directory contains a socket which all Nginx worker processes
-			 * connect to, so it should only be executable by the Nginx worker processes.
-			 * We have this directory because filesystem permissions on a socket might
-			 * not be portable.
-			 */
-			if (geteuid() == 0) {
-				/* If we're running as root then we don't need write access
-				 * for this directory because we'll create the contents before
-				 * we lower our privileges.
+			if (runningAsRoot) {
+				/* If we're running as root then the directory should not be writable
+				 * by the owner, because we'll create the contents before lowering
+				 * privileges.
 				 */
-				if (userSwitching) {
-					makeDirTree(path + "/master", "u=xs,g=,o=", workerUid, workerGid);
-				} else {
-					makeDirTree(path + "/master", "u=xs,g=,o=", defaultUid, defaultGid);
-				}
+				makeDirTree(path + "/webserver_shared_resources", "u=xs,g=,o=", workerUid, workerGid);
 			} else {
-				makeDirTree(path + "/master", "u=wxs,g=,o=");
+				makeDirTree(path + "/webserver_shared_resources", "u=wxs,g=,o=");
 			}
 			
-			if (geteuid() == 0) {
+			if (runningAsRoot) {
 				if (userSwitching) {
 					/* If user switching is possible and turned on, then each backend
 					 * process may be running as a different user, so the backends
@@ -115,7 +104,7 @@ public:
 					makeDirTree(path + "/backends", "u=wxs,g=wx,o=wx");
 				} else {
 					/* If user switching is off then all backend processes will be
-					 * running as lowestUser, so make lowestUser the owner of the
+					 * running as defaultUser, so make defaultUser the owner of the
 					 * directory. Nobody else (except root) may access this directory.
 					 *
 					 * The directory is not readable as a security precaution:
@@ -154,34 +143,37 @@ public:
 		string getPath() const {
 			return path;
 		}
+		
+		void detach() {
+			owner = false;
+		}
 	};
 	
 	typedef shared_ptr<Generation> GenerationPtr;
 	
 private:
 	string path;
+	bool owner;
 	
-	void initialize(const string &path) {
+	void initialize(const string &path, bool owner) {
 		this->path  = path;
+		this->owner = owner;
 		
 		/* Create the server instance directory. We only need to write to this
-		 * directory (= creating/removing files or subdirectories) for these
-		 * reasons:
-		 * - Initial population of structure files (structure_version.txt, instance.pid).
-		 * - To create/remove a generation directory.
-		 * - To remove the entire server instance directory (after all
-		 *   generations are removed).
+		 * directory for these reasons:
+		 * 1. Initial population of structure files (structure_version.txt, instance.pid).
+		 * 2. Creating/removing a generation directory.
+		 * 3. Removing the entire server instance directory (after all
+		 *    generations are removed).
 		 *
-		 * All these things are done by the helper server, so the directory is owned
-		 * by the process the helper server is running as, and only writable by this
-		 * owner. Everybody else have read and execution rights:
-		 * - The former is necessary for allowing admin tools to query the list of
-		 *   generation directories. The permissions on the generation directory
-		 *   are used to further lock down security.
-		 * - The latter is necessary for allowing access to the generation directories
-		 *   as well as access to the structure files. The structure files must be
-		 *   world-readable because admin tools must at least be able to see which
-		 *   server instances are running, regardless of the user it was started as.
+		 * 1 and 2 are done by the helper server during initialization and before lowering
+		 * privilege. 3 is done during helper server shutdown by a cleanup process that's
+		 * running as the same user the helper server was running as before privilege
+		 * lowering.
+		 * Therefore, we make the directory only writable by the user the helper server
+		 * was running as before privilege is lowered. Everybody else has read and execute
+		 * rights though, because we want admin tools to be able to list the available
+		 * generations no matter what user they're running as.
 		 */
 		makeDirTree(path, "u=rwxs,g=rx,o=rx");
 		
@@ -198,7 +190,7 @@ private:
 	}
 	
 public:
-	ServerInstanceDir(pid_t webServerPid, const string &parentDir = "") {
+	ServerInstanceDir(pid_t webServerPid, const string &parentDir = "", bool owner = true) {
 		string theParentDir;
 		
 		if (parentDir.empty()) {
@@ -206,31 +198,38 @@ public:
 		} else {
 			theParentDir = parentDir;
 		}
-		initialize(theParentDir + "/passenger." + toString<unsigned long long>(webServerPid));
+		initialize(theParentDir + "/passenger." + toString<unsigned long long>(webServerPid), owner);
+		
 	}
 	
-	ServerInstanceDir(const string &path) {
-		initialize(path);
+	ServerInstanceDir(const string &path, bool owner = true) {
+		initialize(path, owner);
 	}
 	
 	~ServerInstanceDir() {
-		GenerationPtr newestGeneration;
-		try {
-			newestGeneration = getNewestGeneration();
-		} catch (const FileSystemException &e) {
-			if (e.code() == ENOENT) {
-				return;
-			} else {
-				throw;
+		if (owner) {
+			GenerationPtr newestGeneration;
+			try {
+				newestGeneration = getNewestGeneration();
+			} catch (const FileSystemException &e) {
+				if (e.code() == ENOENT) {
+					return;
+				} else {
+					throw;
+				}
 			}
-		}
-		if (newestGeneration == NULL) {
-			removeDirTree(path);
+			if (newestGeneration == NULL) {
+				removeDirTree(path);
+			}
 		}
 	}
 	
 	string getPath() const {
 		return path;
+	}
+	
+	void detach() {
+		owner = false;
 	}
 	
 	GenerationPtr newGeneration(bool userSwitching, const string &defaultUser, uid_t workerUid, gid_t workerGid) {
@@ -280,6 +279,8 @@ public:
 		}
 	}
 };
+
+typedef shared_ptr<ServerInstanceDir> ServerInstanceDirPtr;
 
 } // namespace Passenger
 

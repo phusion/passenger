@@ -468,6 +468,10 @@ public:
 		syscalls::unlink(socketFilename.c_str());
 	}
 	
+	string getSocketFilename() const {
+		return socketFilename;
+	}
+	
 	/**
 	 * Starts the server main loop. This method will loop forever until some
 	 * other thread interrupts the calling thread, or until an exception is raised.

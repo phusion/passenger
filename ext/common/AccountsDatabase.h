@@ -29,6 +29,7 @@
 #include <map>
 #include <boost/shared_ptr.hpp>
 #include "Account.h"
+#include "ServerInstanceDir.h"
 #include "StaticString.h"
 
 /* This source file follows the security guidelines written in Account.h. */
@@ -47,12 +48,22 @@ private:
 	map<string, AccountPtr> accounts;
 	
 public:
-	static AccountsDatabasePtr createDefault();
+	static AccountsDatabasePtr createDefault(const ServerInstanceDir::GenerationPtr &generation,
+	                                         bool userSwitching, const string &defaultUser);
 	
 	AccountPtr add(const string &username, const string &passwordOrHash, bool hashGiven, int rights = Account::ALL) {
 		AccountPtr account(new Account(username, passwordOrHash, hashGiven, rights));
 		accounts[username] = account;
 		return account;
+	}
+	
+	const AccountPtr get(const string &username) const {
+		map<string, AccountPtr>::const_iterator it(accounts.find(username));
+		if (it == accounts.end()) {
+			return AccountPtr();
+		} else {
+			return it->second;
+		}
 	}
 	
 	AccountPtr authenticate(const string &username, const StaticString &userSuppliedPassword) {

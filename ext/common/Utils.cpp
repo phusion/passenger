@@ -204,7 +204,7 @@ findSpawnServer(const char *passengerRoot) {
 		if (path == NULL) {
 			return "";
 		}
-	
+		
 		vector<string> paths;
 		split(getenv("PATH"), ':', paths);
 		for (vector<string>::const_iterator it(paths.begin()); it != paths.end(); it++) {
@@ -217,25 +217,6 @@ findSpawnServer(const char *passengerRoot) {
 			}
 		}
 		return "";
-	}
-}
-
-string
-findApplicationPoolServer(const char *passengerRoot) {
-	assert(passengerRoot != NULL);
-	string root(passengerRoot);
-	if (root.at(root.size() - 1) != '/') {
-		root.append(1, '/');
-	}
-	
-	string path(root);
-	path.append("ext/apache2/ApplicationPoolServerExecutable");
-	if (fileExists(path.c_str())) {
-		return path;
-	} else {
-		path.assign(root);
-		path.append("lib/phusion_passenger/ApplicationPoolServerExecutable");
-		return path;
 	}
 }
 

@@ -115,6 +115,16 @@ syscalls::pipe(int filedes[2]) {
 }
 
 int
+syscalls::dup2(int filedes, int filedes2) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::dup2(filedes, filedes2)
+	);
+	return ret;
+}
+
+int
 syscalls::accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
 	int ret;
 	CHECK_INTERRUPTION(
@@ -341,6 +351,16 @@ syscalls::kill(pid_t pid, int sig) {
 	CHECK_INTERRUPTION(
 		ret == -1,
 		ret = ::kill(pid, sig)
+	);
+	return ret;
+}
+
+int
+syscalls::killpg(pid_t pgrp, int sig) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::killpg(pgrp, sig)
 	);
 	return ret;
 }

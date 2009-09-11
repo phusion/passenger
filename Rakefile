@@ -96,15 +96,14 @@ end
 ##### Boost and OXT static library
 
 def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
-	output_file = "#{output_dir}/libboost_oxt.a"
-	output_dir_base = "#{output_dir}/libboost_oxt"
+	output_file = "#{output_dir}.a"
 	flags = "-Iext #{extra_compiler_flags} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 	
 	# Define compilation targets for .cpp files in ext/boost/src/pthread.
 	boost_object_files = []
 	Dir['ext/boost/src/pthread/*.cpp'].each do |source_file|
 		object_name = File.basename(source_file.sub(/\.cpp$/, '.o'))
-		boost_output_dir  = "#{output_dir_base}/boost"
+		boost_output_dir  = "#{output_dir}/boost"
 		object_file = "#{boost_output_dir}/#{object_name}"
 		boost_object_files << object_file
 		
@@ -119,7 +118,7 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
 	oxt_dependency_files = Dir["ext/oxt/*.hpp"] + Dir["ext/oxt/detail/*.hpp"]
 	Dir['ext/oxt/*.cpp'].each do |source_file|
 		object_name = File.basename(source_file.sub(/\.cpp$/, '.o'))
-		oxt_output_dir  = "#{output_dir_base}/oxt"
+		oxt_output_dir  = "#{output_dir}/oxt"
 		object_file = "#{oxt_output_dir}/#{object_name}"
 		oxt_object_files << object_file
 		
@@ -130,14 +129,14 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
 	end
 	
 	file(output_file => boost_object_files + oxt_object_files) do
-		sh "mkdir -p #{output_dir_base}/boost #{output_dir_base}/oxt"
+		sh "mkdir -p #{output_dir}/boost #{output_dir}/oxt"
 		create_static_library(output_file,
-			"#{output_dir_base}/boost/*.o " <<
-			"#{output_dir_base}/oxt/*.o")
+			"#{output_dir}/boost/*.o " <<
+			"#{output_dir}/oxt/*.o")
 	end
 	
 	task "#{namespace}:clean" do
-		sh "rm -rf #{output_file} #{output_dir_base}"
+		sh "rm -rf #{output_file} #{output_dir}"
 	end
 	
 	return output_file
@@ -147,14 +146,8 @@ end
 ##### Static library for Passenger source files that are shared between
 ##### the Apache module and the Nginx helper server.
 
-def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil,
-                               with_application_pool_server_exe = false,
-                               boost_oxt_library = nil,
-                               extra_compiler_flags_for_server_exe = nil,
-                               extra_linker_flags_for_server_exe = nil)
-	static_library = "#{output_dir}/libpassenger_common.a"
-	objects_output_dir = "#{output_dir}/libpassenger_common"
-	targets = [static_library]
+def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil)
+	static_library = "#{output_dir}.a"
 	
 	# Define compilation targets for the object files in libpassenger_common.
 	flags =  "-Iext -Iext/common #{extra_compiler_flags} "
@@ -163,74 +156,34 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 	['Utils.cpp', 'Logging.cpp', 'SystemTime.cpp', 'CachedFileStat.cpp',
 	 'Base64.cpp', 'AccountsDatabase.cpp'].each do |source_file|
 		object_name = source_file.sub(/\.cpp$/, '.o')
-		object_file = "#{objects_output_dir}/#{object_name}"
+		object_file = "#{output_dir}/#{object_name}"
 		header_file = source_file.sub(/\.cpp$/, '.h')
 		common_object_files << object_file
 		
 		file object_file => ["ext/common/#{source_file}", "ext/common/#{header_file}"] do
-			sh "mkdir -p #{objects_output_dir}" if !File.directory?(objects_output_dir)
+			sh "mkdir -p #{output_dir}" if !File.directory?(output_dir)
 			compile_cxx("ext/common/#{source_file}", "#{flags} -o #{object_file}")
 		end
 	end
 	
 	file(static_library => common_object_files) do
-		sh "mkdir -p #{objects_output_dir}"
-		create_static_library(static_library, "#{objects_output_dir}/*.o")
-	end
-	
-	if with_application_pool_server_exe
-		exe_file = "#{output_dir}/ApplicationPoolServerExecutable"
-		targets << exe_file
-		
-		file(exe_file => [
-			'ext/common/Application.h',
-			'ext/common/ApplicationPoolServerExecutable.cpp',
-			'ext/common/ApplicationPool/Interface.h',
-			'ext/common/ApplicationPool/Server.h',
-			'ext/common/ApplicationPool/Account.h',
-			'ext/common/ApplicationPool/AccountsDatabase.h',
-			'ext/common/ApplicationPool/Pool.h',
-			'ext/common/ApplicationPoolController.h',
-			'ext/common/MessageChannel.h',
-			'ext/common/AbstractSpawnManager.h',
-			'ext/common/SpawnManager.h',
-			'ext/common/PoolOptions.h',
-			'ext/common/StringListCreator.h',
-			'ext/common/FileChangeChecker.h',
-			'ext/common/SystemTime.h',
-			'ext/common/CachedFileStat.hpp',
-			boost_oxt_library,
-			static_library
-		]) do
-			create_executable(exe_file,
-				"ext/common/ApplicationPoolServerExecutable.cpp",
-				"-Iext -Iext/common " <<
-				"#{extra_compiler_flags_for_server_exe} " <<
-				"#{extra_compiler_flags} " <<
-				"#{PlatformInfo.portability_cflags} " <<
-				"#{EXTRA_CXXFLAGS} " <<
-				"#{static_library} " <<
-				"#{boost_oxt_library} " <<
-				"#{extra_linker_flags_for_server_exe} " <<
-				"#{PlatformInfo.portability_ldflags} " <<
-				EXTRA_LDFLAGS
-			)
-		end
+		sh "mkdir -p #{output_dir}"
+		create_static_library(static_library, "#{output_dir}/*.o")
 	end
 	
 	task "#{namespace}:clean" do
-		sh "rm -rf #{targets.join(' ')} #{objects_output_dir}"
+		sh "rm -rf #{static_library} #{output_dir}"
 	end
 	
-	return targets
+	return static_library
 end
 
 
 ##### Apache 2 module
 
-	APACHE2_CXXFLAGS = "-Iext -Iext/common #{PlatformInfo.apache2_module_cflags} " <<
+	APACHE2_MODULE_CXXFLAGS = "-Iext -Iext/common #{PlatformInfo.apache2_module_cflags} " <<
 		"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
-	APACHE2_INPUT_FILES = {
+	APACHE2_MODULE_INPUT_FILES = {
 		'ext/apache2/Configuration.o' => %w(
 			ext/apache2/Configuration.cpp
 			ext/apache2/Configuration.h),
@@ -255,24 +208,30 @@ end
 			ext/common/Timer.h
 			ext/common/Utils.h)
 	}
-	APACHE2_OBJECTS = APACHE2_INPUT_FILES.keys
+	APACHE2_MODULE_OBJECTS = APACHE2_MODULE_INPUT_FILES.keys
 	
-	# NOTE: APACHE2_BOOST_OXT_LIBRARY is a task name, while APACHE2_COMMON_LIBRARY
-	# is an array of task names.
-	APACHE2_BOOST_OXT_LIBRARY = define_libboost_oxt_task("apache2", "ext/apache2",
+	APACHE2_HELPER_CXXFLAGS = "-Iext -Iext/common #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
+	
+	APACHE2_MODULE_BOOST_OXT_LIBRARY = define_libboost_oxt_task("apache2",
+		"ext/apache2/module_libboost_oxt",
 		PlatformInfo.apache2_module_cflags)
-	APACHE2_COMMON_LIBRARY    = define_common_library_task("apache2", "ext/apache2",
-		PlatformInfo.apache2_module_cflags,
-		true, APACHE2_BOOST_OXT_LIBRARY)
+	APACHE2_MODULE_COMMON_LIBRARY    = define_common_library_task("apache2",
+		"ext/apache2/module_libpassenger_common",
+		PlatformInfo.apache2_module_cflags)
+	APACHE2_HELPER_BOOST_OXT_LIBRARY = define_libboost_oxt_task("apache2",
+		"ext/apache2/helper_libboost_oxt")
+	APACHE2_HELPER_COMMON_LIBRARY    = define_common_library_task("apache2",
+		"ext/apache2/helper_libpassenger_common")
 	
 	
 	desc "Build Apache 2 module"
-	task :apache2 => ['ext/apache2/mod_passenger.so', :native_support]
+	task :apache2 => ['ext/apache2/mod_passenger.so', 'ext/apache2/Watchdog',
+		'ext/apache2/HelperServer', :native_support]
 	
-	mod_passenger_dependencies = [APACHE2_COMMON_LIBRARY,
-		APACHE2_BOOST_OXT_LIBRARY,
+	mod_passenger_dependencies = [APACHE2_MODULE_COMMON_LIBRARY,
+		APACHE2_MODULE_BOOST_OXT_LIBRARY,
 		'ext/apache2/mod_passenger.o',
-		APACHE2_OBJECTS].flatten
+		APACHE2_MODULE_OBJECTS]
 	file 'ext/apache2/mod_passenger.so' => mod_passenger_dependencies do
 		PlatformInfo.apxs2.nil?      and raise "Could not find 'apxs' or 'apxs2'."
 		PlatformInfo.apache2ctl.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
@@ -285,15 +244,15 @@ end
 		#
 		# Oh, and libtool sucks too. Do we even need it anymore in 2008?
 		
-		sources = APACHE2_OBJECTS.join(' ')
+		sources = APACHE2_MODULE_OBJECTS.join(' ')
 		sources << ' ext/apache2/mod_passenger.o'
 		
 		linkflags =
 			"#{PlatformInfo.apache2_module_cflags} " <<
 			"#{PlatformInfo.portability_cflags} " <<
 			"#{EXTRA_CXXFLAGS} " <<
-			"#{APACHE2_COMMON_LIBRARY[0]} " <<
-			"#{APACHE2_BOOST_OXT_LIBRARY} " <<
+			"#{APACHE2_MODULE_COMMON_LIBRARY} " <<
+			"#{APACHE2_MODULE_BOOST_OXT_LIBRARY} " <<
 			"#{PlatformInfo.apache2_module_ldflags} " <<
 			"#{PlatformInfo.portability_ldflags} " <<
 			"#{EXTRA_LDFLAGS} "
@@ -304,15 +263,47 @@ end
 
 	file 'ext/apache2/mod_passenger.o' => ['ext/apache2/mod_passenger.c'] do
 		compile_c('ext/apache2/mod_passenger.c',
-			APACHE2_CXXFLAGS +
+			APACHE2_MODULE_CXXFLAGS +
 			" -o ext/apache2/mod_passenger.o")
 	end
+	
+	apache2_watchdog_dependencies = [
+		'ext/apache2/Watchdog.cpp',
+		'ext/common/ServerInstanceDir.h',
+		APACHE2_HELPER_COMMON_LIBRARY,
+		APACHE2_HELPER_BOOST_OXT_LIBRARY]
+	file 'ext/apache2/Watchdog' => apache2_watchdog_dependencies do
+		create_executable('ext/apache2/Watchdog',
+			'ext/apache2/Watchdog.cpp',
+			"#{APACHE2_HELPER_CXXFLAGS} " <<
+			"#{APACHE2_HELPER_COMMON_LIBRARY} " <<
+			"#{APACHE2_HELPER_BOOST_OXT_LIBRARY} " <<
+			"#{PlatformInfo.portability_ldflags} " <<
+			"#{EXTRA_LDFLAGS}")
+	end
+	
+	apache2_helper_server_dependencies = [
+		'ext/apache2/HelperServer.cpp',
+		'ext/common/ServerInstanceDir.h',
+		'ext/common/MessageServer.h',
+		APACHE2_HELPER_COMMON_LIBRARY,
+		APACHE2_HELPER_BOOST_OXT_LIBRARY]
+	file 'ext/apache2/HelperServer' => apache2_helper_server_dependencies do
+		create_executable('ext/apache2/HelperServer',
+			'ext/apache2/HelperServer.cpp',
+			"#{APACHE2_HELPER_CXXFLAGS} " <<
+			"#{APACHE2_HELPER_COMMON_LIBRARY} " <<
+			"#{APACHE2_HELPER_BOOST_OXT_LIBRARY} " <<
+			"#{PlatformInfo.portability_ldflags} " <<
+			"#{EXTRA_LDFLAGS}")
+	end
 
-	APACHE2_INPUT_FILES.each_pair do |target, sources|
+	# Define rules for the individual Apache 2 module source files.
+	APACHE2_MODULE_INPUT_FILES.each_pair do |target, sources|
 		file(target => sources) do
 			object_basename = File.basename(target)
 			compile_cxx(sources[0],
-				APACHE2_CXXFLAGS +
+				APACHE2_MODULE_CXXFLAGS +
 				" -o ext/apache2/#{object_basename}")
 		end
 	end
@@ -320,25 +311,24 @@ end
 	task :clean => 'apache2:clean'
 	desc "Clean all compiled Apache 2 files"
 	task 'apache2:clean' do
-		files = [APACHE2_OBJECTS, %w(ext/apache2/mod_passenger.o
-			ext/apache2/mod_passenger.so)]
+		files = [APACHE2_MODULE_OBJECTS, %w(ext/apache2/mod_passenger.o
+			ext/apache2/mod_passenger.so ext/apache2/Watchdog
+			ext/apache2/HelperServer)]
 		sh("rm", "-rf", *files.flatten)
 	end
 
 
 ##### Nginx helper server
 
-	# NOTE: NGINX_BOOST_OXT_LIBRARY is a task name, while NGINX_COMMON_LIBRARY
-	# is an array of task names.
-	NGINX_BOOST_OXT_LIBRARY = define_libboost_oxt_task("nginx", "ext/nginx")
-	NGINX_COMMON_LIBRARY    = define_common_library_task("nginx", "ext/nginx")
+	NGINX_BOOST_OXT_LIBRARY = define_libboost_oxt_task("nginx", "ext/nginx/libboost_oxt")
+	NGINX_COMMON_LIBRARY    = define_common_library_task("nginx", "ext/nginx/libpassenger_common")
 	
 	desc "Build Nginx helper server"
 	task :nginx => ['ext/nginx/HelperServer', :native_support]
 	
 	helper_server_dependencies = [
 		NGINX_BOOST_OXT_LIBRARY,
-		NGINX_COMMON_LIBRARY[0],
+		NGINX_COMMON_LIBRARY,
 		'ext/nginx/HelperServer.cpp',
 		'ext/nginx/ScgiRequestParser.h',
 		'ext/nginx/HttpStatusExtractor.h',
@@ -357,7 +347,7 @@ end
 			"-Iext -Iext/common " <<
 			"#{PlatformInfo.portability_cflags} " <<
 			"#{EXTRA_CXXFLAGS}  " <<
-			"#{NGINX_COMMON_LIBRARY[0]} " <<
+			"#{NGINX_COMMON_LIBRARY} " <<
 			"#{NGINX_BOOST_OXT_LIBRARY} " <<
 			"#{PlatformInfo.portability_ldflags} " <<
 			"#{EXTRA_LDFLAGS}"
@@ -372,9 +362,8 @@ end
 
 ##### Unit tests
 
-	TEST_BOOST_OXT_LIBRARY = define_libboost_oxt_task("test", "test")
-	TEST_COMMON_LIBRARY    = define_common_library_task("test", "test",
-		nil, false, TEST_BOOST_OXT_LIBRARY)
+	TEST_BOOST_OXT_LIBRARY = define_libboost_oxt_task("test", "test/libboost_oxt")
+	TEST_COMMON_LIBRARY    = define_common_library_task("test", "test/libpassenger_common")
 	
 	TEST_COMMON_CFLAGS = "-DTESTING_APPLICATION_POOL " <<
 		"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
@@ -404,7 +393,7 @@ end
 	TEST_CXX_CFLAGS = "-Iext -Iext/common -Iext/nginx -Itest/support " <<
 		"#{PlatformInfo.apr_flags} #{PlatformInfo.apu_flags} #{TEST_COMMON_CFLAGS}"
 	TEST_CXX_LDFLAGS = "#{PlatformInfo.apr_libs} #{PlatformInfo.apu_libs} " <<
-		"#{TEST_COMMON_LIBRARY[0]} #{TEST_BOOST_OXT_LIBRARY} " <<
+		"#{TEST_COMMON_LIBRARY} #{TEST_BOOST_OXT_LIBRARY} " <<
 		"#{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
 	TEST_CXX_OBJECTS = {
 		'test/CxxTestMain.o' => %w(

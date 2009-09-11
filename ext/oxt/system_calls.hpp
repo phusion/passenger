@@ -125,6 +125,7 @@ namespace oxt {
 		ssize_t write(int fd, const void *buf, size_t count);
 		int close(int fd);
 		int pipe(int filedes[2]);
+		int dup2(int filedes, int filedes2);
 		
 		int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 		int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
@@ -153,6 +154,7 @@ namespace oxt {
 		
 		pid_t fork();
 		int kill(pid_t pid, int sig);
+		int killpg(pid_t pgrp, int sig);
 		pid_t waitpid(pid_t pid, int *status, int options);
 	}
 

@@ -33,28 +33,31 @@
 namespace Passenger {
 
 AccountsDatabasePtr
-AccountsDatabase::createDefault() {
+AccountsDatabase::createDefault(const ServerInstanceDir::GenerationPtr &generation,
+                                bool userSwitching, const string &defaultUser)
+{
 	AccountsDatabasePtr database(new AccountsDatabase());
-	string infoDir;
-	struct stat buf;
-	int ret;
+	uid_t defaultUid;
+	gid_t defaultGid;
+	struct {
+		char passengerStatus[MessageServer::MAX_PASSWORD_SIZE];
+	} passwords;
+	string passengerStatusPasswordString;
 	
-	infoDir = getPassengerTempDir() + "/info";
-	do {
-		ret = stat(infoDir.c_str(), &buf);
-	} while (ret == -1 && errno == EINTR);
-	if (ret == -1) {
-		int e = errno;
-		throw FileSystemException("Cannot stat " + infoDir, e, infoDir);
-	}
+	determineLowestUserAndGroup(defaultUser, defaultUid, defaultGid);
 	
-	char passengerStatusPasswordBuf[MessageServer::MAX_PASSWORD_SIZE];
-	generateSecureToken(passengerStatusPasswordBuf, sizeof(passengerStatusPasswordBuf));
-	string passengerStatusPassword(passengerStatusPasswordBuf, sizeof(passengerStatusPasswordBuf));
-	database->add("_passenger-status", passengerStatusPassword, false,
+	generateSecureToken(&passwords, sizeof(passwords));
+	passengerStatusPasswordString.assign(passwords.passengerStatus, sizeof(passwords.passengerStatus));
+	
+	database->add("_passenger-status", passengerStatusPasswordString, false,
 		Account::INSPECT_BASIC_INFO | Account::INSPECT_BACKTRACES);
-	createFile(infoDir + "/passenger-status-password.txt",
-		passengerStatusPassword, S_IRUSR, buf.st_uid, buf.st_gid);
+	if (geteuid() == 0 && !userSwitching) {
+		createFile(generation->getPath() + "/passenger-status-password.txt",
+			passengerStatusPasswordString, S_IRUSR, defaultUid, defaultGid);
+	} else {
+		createFile(generation->getPath() + "/passenger-status-password.txt",
+			passengerStatusPasswordString, S_IRUSR);
+	}
 	
 	return database;
 }

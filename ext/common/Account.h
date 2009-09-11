@@ -71,7 +71,10 @@ public:
 		//INSPECT_DETACH_KEYS       = 1 << 7,
 		
 		// BacktracesServer rights.
-		INSPECT_BACKTRACES        = 1 << 8
+		INSPECT_BACKTRACES        = 1 << 8,
+		
+		// Other rights.
+		EXIT                      = 1 << 9
 	};
 
 private:
@@ -105,6 +108,10 @@ public:
 	
 	void setRights(int rights) {
 		this->rights = (Rights) rights;
+	}
+	
+	string getRawPassword() const {
+		return passwordOrHash;
 	}
 	
 	static string createHash(const StaticString &userSuppliedPassword) {
