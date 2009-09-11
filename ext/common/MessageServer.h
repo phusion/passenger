@@ -236,6 +236,21 @@ public:
 		}
 		
 		/**
+		 * Called when a client has disconnected from the MessageServer. The
+		 * default implementation does nothing.
+		 *
+		 * This method is called even if processMessage() throws an exception.
+		 * It is however not called if newClient() throws an exception.
+		 *
+		 * @param commonContext Contains common client-specific information.
+		 * @param handlerSpecificContext The client context object as was returned
+		 *     earlier by newClient().
+		 */
+		virtual void clientDisconnected(MessageServer::CommonClientContext &context,
+		                                MessageServer::ClientContextPtr &handlerSpecificContext)
+		{ }
+		
+		/**
 		 * Called then a client has sent a request message.
 		 *
 		 * This method is called after newClient() is called.
@@ -278,6 +293,33 @@ protected:
 	 * @invariant serverFd >= 0
 	 */
 	int serverFd;
+	
+	
+	/** Calls clientDisconnected() on all handlers when destroyed. */
+	struct DisconnectEventBroadcastGuard {
+		vector<HandlerPtr> &handlers;
+		CommonClientContext &commonContext;
+		vector<ClientContextPtr> &handlerSpecificContexts;
+		
+		DisconnectEventBroadcastGuard(vector<HandlerPtr> &_handlers,
+		                              CommonClientContext &_commonContext,
+		                              vector<ClientContextPtr> &_handlerSpecificContexts)
+		: handlers(_handlers),
+		  commonContext(_commonContext),
+		  handlerSpecificContexts(_handlerSpecificContexts)
+		{ }
+		
+		~DisconnectEventBroadcastGuard() {
+			vector<HandlerPtr>::iterator handler_iter;
+			vector<ClientContextPtr>::iterator context_iter;
+
+			for (handler_iter = handlers.begin(), context_iter = handlerSpecificContexts.begin();
+			     handler_iter != handlers.end();
+			     handler_iter++, context_iter++) {
+				(*handler_iter)->clientDisconnected(commonContext, *context_iter);
+			}
+		}
+	};
 	
 	
 	/**
@@ -404,6 +446,7 @@ protected:
 			CommonClientContext commonContext(client, account);
 			vector<ClientContextPtr> handlerSpecificContexts;
 			broadcastNewClientEvent(commonContext, handlerSpecificContexts);
+			DisconnectEventBroadcastGuard dguard(handlers, commonContext, handlerSpecificContexts);
 			
 			while (!this_thread::interruption_requested()) {
 				UPDATE_TRACE_POINT();

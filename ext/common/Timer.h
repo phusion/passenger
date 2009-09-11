@@ -25,14 +25,22 @@
 #ifndef _PASSENGER_TIMER_H_
 #define _PASSENGER_TIMER_H_
 
+#include <boost/thread.hpp>
+#include <oxt/system_calls.hpp>
 #include <sys/time.h>
+#include <cerrno>
 
 namespace Passenger {
+
+using namespace boost;
+using namespace oxt;
 
 /**
  * A Timer which one can use to check how much time has elapsed since the
  * timer started. This timer support miliseconds-resolution, but the exact
  * resolution depends on the OS and the hardware.
+ *
+ * This class is thread-safe.
  *
  * @code
  * Timer timer;
@@ -43,6 +51,7 @@ namespace Passenger {
 class Timer {
 private:
 	struct timeval startTime;
+	mutable boost::mutex lock;
 public:
 	/**
 	 * Creates a new Timer object.
@@ -53,8 +62,7 @@ public:
 		if (startNow) {
 			start();
 		} else {
-			startTime.tv_sec = 0;
-			startTime.tv_usec = 0;
+			stop();
 		}
 	}
 	
@@ -65,23 +73,54 @@ public:
 	void start() {
 		// TODO: We really use should clock_gettime() and the monotonic
 		// clock whenever possible, instead of gettimeofday()...
-		gettimeofday(&startTime, NULL);
+		lock_guard<boost::mutex> l(lock);
+		int ret;
+		do {
+			ret = gettimeofday(&startTime, NULL);
+		} while (ret == -1 && errno == EINTR);
 	}
 	
 	/**
-	 * Checks how much time has elapsed since the timer was last started.
-	 *
-	 * @pre The timer must have been started.
-	 * @return The elapsed time, in miliseconds.
+	 * Stop the timer. If there's currently another thread waiting on the wait()
+	 * call, then that wait() call will block indefinitely until you call start()
+	 * and sufficient amount of time has elapsed.
+	 */
+	void stop() {
+		lock_guard<boost::mutex> l(lock);
+		startTime.tv_sec = 0;
+		startTime.tv_usec = 0;
+	}
+	
+	/**
+	 * Returns the amount of time that has elapsed since the timer was last started,
+	 * in miliseconds. If the timer is currently stopped, then 0 is returned.
 	 */
 	unsigned long long elapsed() const {
-		struct timeval t;
-		unsigned long long now, beginning;
-		
-		gettimeofday(&t, NULL);
-		now = (unsigned long long) t.tv_sec * 1000 + t.tv_usec / 1000;
-		beginning = (unsigned long long) startTime.tv_sec * 1000 + startTime.tv_usec / 1000;
-		return now - beginning;
+		lock_guard<boost::mutex> l(lock);
+		if (startTime.tv_sec == 0 && startTime.tv_usec == 0) {
+			return 0;
+		} else {
+			struct timeval t;
+			unsigned long long now, beginning;
+			int ret;
+			
+			do {
+				ret = gettimeofday(&t, NULL);
+			} while (ret == -1 && errno == EINTR);
+			now = (unsigned long long) t.tv_sec * 1000 + t.tv_usec / 1000;
+			beginning = (unsigned long long) startTime.tv_sec * 1000 + startTime.tv_usec / 1000;
+			return now - beginning;
+		}
+	}
+	
+	/**
+	 * Wait until <em>time</em> miliseconds have elapsed since the timer
+	 * was last started.
+	 */
+	void wait(unsigned long long time) const {
+		while (elapsed() < time) {
+			syscalls::usleep(25000);
+		}
 	}
 };
 

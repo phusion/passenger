@@ -27,11 +27,13 @@
 #include <boost/bind.hpp>
 #include <oxt/thread.hpp>
 #include <oxt/system_calls.hpp>
+#include <oxt/backtrace.hpp>
 
 #include <string>
 #include <sys/types.h>
 #include <sys/select.h>
 #include <unistd.h>
+#include <signal.h>
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
@@ -45,6 +47,7 @@
 #include "ServerInstanceDir.h"
 #include "MessageChannel.h"
 #include "FileDescriptor.h"
+#include "Timer.h"
 #include "Logging.h"
 #include "Exceptions.h"
 #include "Utils.h"
@@ -53,6 +56,102 @@ using namespace std;
 using namespace boost;
 using namespace oxt;
 using namespace Passenger;
+
+class Server;
+
+
+class EventFd {
+private:
+	int reader;
+	int writer;
+	
+public:
+	EventFd() {
+		int fds[2];
+		
+		if (syscalls::pipe(fds) == -1) {
+			int e = errno;
+			throw SystemException("Cannot create a pipe", e);
+		}
+		reader = fds[0];
+		writer = fds[1];
+	}
+	
+	~EventFd() {
+		this_thread::disable_syscall_interruption dsi;
+		syscalls::close(reader);
+		syscalls::close(writer);
+	}
+	
+	void notify() {
+		MessageChannel(writer).writeRaw("x", 1);
+	}
+	
+	int fd() const {
+		return reader;
+	}
+};
+
+class TimerUpdateHandler: public MessageServer::Handler {
+private:
+	Timer &timer;
+	unsigned int clients;
+	
+public:
+	TimerUpdateHandler(Timer &_timer): timer(_timer) {
+		clients = 0;
+	}
+	
+	virtual MessageServer::ClientContextPtr newClient(MessageServer::CommonClientContext &commonContext) {
+		clients++;
+		timer.stop();
+		return MessageServer::ClientContextPtr();
+	}
+	
+	virtual void clientDisconnected(MessageServer::CommonClientContext &commonContext,
+	                                MessageServer::ClientContextPtr &handlerSpecificContext)
+	{
+		clients--;
+		if (clients == 0) {
+			timer.start();
+		}
+	}
+	
+	virtual bool processMessage(MessageServer::CommonClientContext &commonContext,
+	                            MessageServer::ClientContextPtr &handlerSpecificContext,
+	                            const vector<string> &args)
+	{
+		return false;
+	}
+};
+
+class ExitHandler: public MessageServer::Handler {
+private:
+	Server *server;
+	EventFd &exitEvent;
+	
+public:
+	ExitHandler(Server *server, EventFd &_exitEvent)
+		: exitEvent(exitEvent)
+	{
+		this->server = server;
+	}
+	
+	virtual bool processMessage(MessageServer::CommonClientContext &commonContext,
+	                            MessageServer::ClientContextPtr &handlerSpecificContext,
+	                            const vector<string> &args)
+	{
+		TRACE_POINT();
+		if (args[0] == "exit") {
+			UPDATE_TRACE_POINT();
+			commonContext.requireRights(Account::EXIT);
+			exitEvent.notify();
+			return true;
+		} else {
+			return false;
+		}
+	}
+};
 
 class Server {
 private:
@@ -66,6 +165,8 @@ private:
 	MessageServerPtr messageServer;
 	ApplicationPool::PoolPtr pool;
 	shared_ptr<oxt::thread> messageServerThread;
+	EventFd exitEvent;
+	Timer exitTimer;
 	
 	string receiveWebServerPassword() {
 		vector<string> args;
@@ -143,8 +244,10 @@ public:
 		
 		UPDATE_TRACE_POINT();
 		pool.reset(new ApplicationPool::Pool(findSpawnServer(passengerRoot.c_str()), "", rubyCommand));
+		messageServer->addHandler(ptr(new TimerUpdateHandler(exitTimer)));
 		messageServer->addHandler(ptr(new ApplicationPool::Server(pool)));
 		messageServer->addHandler(ptr(new BacktracesServer()));
+		messageServer->addHandler(ptr(new ExitHandler(this, exitEvent)));
 		
 		UPDATE_TRACE_POINT();
 		feedbackChannel.write("initialized", messageServer->getSocketFilename().c_str(), NULL);
@@ -164,17 +267,39 @@ public:
 			MESSAGE_SERVER_STACK_SIZE
 		));
 		
+		/* Wait until the watchdog closes the feedback fd (meaning it
+		 * was killed) or until we receive an exit message.
+		 */
+		this_thread::disable_syscall_interruption dsi;
 		fd_set fds;
+		int largestFd;
+		
 		FD_ZERO(&fds);
 		FD_SET(feedbackFd, &fds);
-		try {
-			UPDATE_TRACE_POINT();
-			if (syscalls::select(feedbackFd + 1, &fds, NULL, NULL, NULL) == -1) {
-				int e = errno;
-				throw SystemException("select() failed", e);
-			}
-		} catch (const boost::thread_interrupted &) {
-			// Do nothing.
+		FD_SET(exitEvent.fd(), &fds);
+		largestFd = (feedbackFd > exitEvent.fd()) ? (int) feedbackFd : exitEvent.fd();
+		UPDATE_TRACE_POINT();
+		if (syscalls::select(largestFd + 1, &fds, NULL, NULL, NULL) == -1) {
+			int e = errno;
+			throw SystemException("select() failed", e);
+		}
+		
+		if (FD_ISSET(feedbackFd, &fds)) {
+			/* If the watchdog has been killed then we'll kill all descendant
+			 * processes and exit. There's no point in keeping this helper
+			 * server running because we can't detect when the web server exits,
+			 * and because this helper server doesn't own the server instance
+			 * directory. As soon as passenger-status is run, the server
+			 * instance directory will be cleaned up, making this helper server
+			 * inaccessible.
+			 */
+			syscalls::killpg(getpgrp(), SIGKILL);
+		} else {
+			/* We received an exit signal. We want to exit 5 seconds after
+			 * the last client has disconnected, .
+			 */
+			exitTimer.start();
+			exitTimer.wait(5000);
 		}
 	}
 };

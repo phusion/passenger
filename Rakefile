@@ -286,6 +286,7 @@ end
 		'ext/apache2/HelperServer.cpp',
 		'ext/common/ServerInstanceDir.h',
 		'ext/common/MessageServer.h',
+		'ext/common/Timer.h',
 		APACHE2_HELPER_COMMON_LIBRARY,
 		APACHE2_HELPER_BOOST_OXT_LIBRARY]
 	file 'ext/apache2/HelperServer' => apache2_helper_server_dependencies do

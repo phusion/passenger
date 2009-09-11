@@ -94,6 +94,7 @@ namespace tut {
 			
 			boost::mutex mutex;
 			volatile int clientsAccepted;
+			volatile int clientsDisconnected;
 			string receivedData;
 			volatile int id;
 			volatile int returnValue;
@@ -101,6 +102,7 @@ namespace tut {
 			
 			LoggingHandler() {
 				clientsAccepted = 0;
+				clientsDisconnected = 0;
 				returnValue = true;
 			}
 			
@@ -108,6 +110,13 @@ namespace tut {
 				boost::lock_guard<boost::mutex> l(mutex);
 				clientsAccepted++;
 				return ptr(new SpecificContext(id));
+			}
+			
+			virtual void clientDisconnected(MessageServer::CommonClientContext &context,
+			                                MessageServer::ClientContextPtr &handlerSpecificContext)
+			{
+				boost::lock_guard<boost::mutex> l(mutex);
+				clientsDisconnected++;
 			}
 			
 			virtual bool processMessage(MessageServer::CommonClientContext &commonContext,
@@ -347,5 +356,26 @@ namespace tut {
 		usleep(10000); // Give the thread some time to do work.
 		ensure_equals(handler1->latestContext->id, 100);
 		ensure_equals(handler2->latestContext->id, 101);
+	}
+	
+	TEST_METHOD(11) {
+		// It notifies all handlers when a client is disconnected.
+		LoggingHandlerPtr handler1(new LoggingHandler());
+		LoggingHandlerPtr handler2(new LoggingHandler());
+		server->addHandler(handler1);
+		server->addHandler(handler2);
+		{
+			{
+				Client().connect(socketFilename, "test", "12345");
+			}
+			usleep(10000); // Give the threads some time to do work.
+			ensure_equals(handler1->clientsDisconnected, 1);
+			ensure_equals(handler2->clientsDisconnected, 1);
+			
+			Client().connect(socketFilename, "test", "12345");
+		}
+		usleep(10000); // Give the threads some time to do work.
+		ensure_equals(handler1->clientsDisconnected, 2);
+		ensure_equals(handler2->clientsDisconnected, 2);
 	}
 }

@@ -310,8 +310,10 @@ watchdogMainLoop() {
 				this_thread::restore_syscall_interruption rsi(dsi);
 				ret = syscalls::waitpid(pid, &status, 0);
 			} catch (const thread_interrupted &) {
-				bool graceful;
+				// If we get interrupted here it means something happened
+				// to the web server.
 				
+				bool graceful;
 				globalMutex.lock();
 				graceful = exitGracefully;
 				globalMutex.unlock();
