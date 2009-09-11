@@ -193,7 +193,7 @@ main(int argc, char *argv[]) {
 	TRACE_POINT();
 	try {
 		/* Become the process group leader so that the watchdog can kill the
-		 * HelperServer as well as all child processes. */
+		 * HelperServer as well as all descendent processes. */
 		setpgrp();
 		
 		ignoreSigpipe();

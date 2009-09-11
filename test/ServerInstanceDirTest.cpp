@@ -68,6 +68,21 @@ namespace tut {
 	}
 	
 	TEST_METHOD(5) {
+		// The destructor doesnn't remove the server instance directory if it
+		// wasn't created with the ownership flag or if it's been detached.
+		string path, path2;
+		{
+			ServerInstanceDir dir(1234, parentDir, false);
+			ServerInstanceDir dir2(5678, parentDir);
+			dir2.detach();
+			path = dir.getPath();
+			path2 = dir2.getPath();
+		}
+		ensure_equals(getFileType(path), FT_DIRECTORY);
+		ensure_equals(getFileType(path2), FT_DIRECTORY);
+	}
+	
+	TEST_METHOD(6) {
 		// If there are no existing generations, newGeneration() creates a new
 		// generation directory with number 0.
 		ServerInstanceDir dir(1234, parentDir);
@@ -79,7 +94,7 @@ namespace tut {
 		ensure_equals(listDir(dir.getPath()).size(), ncontents + 1);
 	}
 	
-	TEST_METHOD(6) {
+	TEST_METHOD(7) {
 		// A Generation object returned by newGeneration() deletes the associated
 		// generation directory upon destruction.
 		ServerInstanceDir dir(1234, parentDir);
@@ -89,7 +104,7 @@ namespace tut {
 		ensure_equals(getFileType(path), FT_NONEXISTANT);
 	}
 	
-	TEST_METHOD(7) {
+	TEST_METHOD(8) {
 		// getNewestGeneration() returns the newest generation.
 		ServerInstanceDir dir(1234, parentDir);
 		ServerInstanceDir::GenerationPtr generation0 = dir.newGeneration(true, "nobody", 0, 0);
@@ -103,13 +118,13 @@ namespace tut {
 		ensure_equals(dir.getNewestGeneration()->getNumber(), 1u);
 	}
 	
-	TEST_METHOD(8) {
+	TEST_METHOD(9) {
 		// getNewestGeneration returns null if there are no generations.
 		ServerInstanceDir dir(1234, parentDir);
 		ensure(dir.getNewestGeneration() == NULL);
 	}
 	
-	TEST_METHOD(9) {
+	TEST_METHOD(10) {
 		// A Generation object returned by getNewestGeneration() doesn't delete
 		// the associated generation directory upon destruction.
 		ServerInstanceDir dir(1234, parentDir);
@@ -119,7 +134,7 @@ namespace tut {
 		ensure_equals(getFileType(generation->getPath()), FT_DIRECTORY);
 	}
 	
-	TEST_METHOD(10) {
+	TEST_METHOD(11) {
 		// getGeneration() returns the given generation.
 		ServerInstanceDir dir(1234, parentDir);
 		ServerInstanceDir::GenerationPtr generation0 = dir.newGeneration(true, "nobody", 0, 0);
@@ -131,7 +146,7 @@ namespace tut {
 		ensure_equals(dir.getGeneration(3)->getNumber(), 3u);
 	}
 	
-	TEST_METHOD(11) {
+	TEST_METHOD(12) {
 		// A Generation object returned by getGeneration() doesn't delete the
 		// associated generation directory upon destruction.
 		ServerInstanceDir dir(1234, parentDir);
@@ -144,7 +159,18 @@ namespace tut {
 		ensure_equals(getFileType(generation1->getPath()), FT_DIRECTORY);
 	}
 	
-	TEST_METHOD(12) {
+	TEST_METHOD(13) {
+		// A detached Generation doesn't delete the associated generation
+		// directory upon destruction.
+		ServerInstanceDir dir(1234, parentDir);
+		ServerInstanceDir::GenerationPtr generation = dir.newGeneration(true, "nobody", 0, 0);
+		string path = generation->getPath();
+		generation->detach();
+		generation.reset();
+		ensure_equals(getFileType(path), FT_DIRECTORY);
+	}
+	
+	TEST_METHOD(14) {
 		// It's possible to have two ServerInstanceDir objects constructed
 		// with the same (pid_t, string) constructor arguments.
 		ServerInstanceDir dir1(1234, parentDir);
