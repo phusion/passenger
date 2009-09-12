@@ -244,8 +244,8 @@ cleanupHelperServerInBackground(ServerInstanceDirPtr &serverInstanceDir,
 		syscalls::read(helperServerFeedbackFd, &x, 1);
 		
 		// Now clean up the server instance directory.
-		generation.reset();
-		serverInstanceDir.reset();
+		delete generation.get();
+		delete serverInstanceDir.get();
 		
 		_exit(0);
 		
@@ -385,7 +385,16 @@ disableOomKiller() {
 		fclose(f);
 	}
 }
-#include <pwd.h>
+
+static void
+ignoreSigpipe() {
+	struct sigaction action;
+	action.sa_handler = SIG_IGN;
+	action.sa_flags   = 0;
+	sigemptyset(&action.sa_mask);
+	sigaction(SIGPIPE, &action, NULL);
+}
+
 int
 main(int argc, char *argv[]) {
 	logLevel      = atoi(argv[1]);
@@ -400,7 +409,9 @@ main(int argc, char *argv[]) {
 	rubyCommand   = argv[10];
 	
 	disableOomKiller();
+	ignoreSigpipe();
 	setup_syscall_interruption_support();
+	setLogLevel(logLevel);
 	
 	// Don't make the stack any smaller, getpwnam() on OS X needs a lot of stack space.
 	oxt::thread watchdogThread(watchdogMainLoop, "Watchdog thread", 64 * 1024);

@@ -132,7 +132,7 @@ private:
 	
 public:
 	ExitHandler(Server *server, EventFd &_exitEvent)
-		: exitEvent(exitEvent)
+		: exitEvent(_exitEvent)
 	{
 		this->server = server;
 	}
@@ -141,11 +141,13 @@ public:
 	                            MessageServer::ClientContextPtr &handlerSpecificContext,
 	                            const vector<string> &args)
 	{
-		TRACE_POINT();
 		if (args[0] == "exit") {
-			UPDATE_TRACE_POINT();
+			TRACE_POINT();
 			commonContext.requireRights(Account::EXIT);
+			UPDATE_TRACE_POINT();
 			exitEvent.notify();
+			UPDATE_TRACE_POINT();
+			commonContext.channel.write("exit command received", NULL);
 			return true;
 		} else {
 			return false;
@@ -295,7 +297,7 @@ public:
 			 */
 			syscalls::killpg(getpgrp(), SIGKILL);
 		} else {
-			/* We received an exit signal. We want to exit 5 seconds after
+			/* We received an exit command. We want to exit 5 seconds after
 			 * the last client has disconnected, .
 			 */
 			exitTimer.start();
@@ -340,7 +342,7 @@ main(int argc, char *argv[]) {
 		Server server(logLevel, feedbackFd, webServerPid, tempDir,
 			userSwitching, defaultUser, workerUid, workerGid,
 			passengerRoot, rubyCommand, generationNumber);
-		P_DEBUG("Passenger helper server started on PID " << getpid());
+		P_DEBUG("Phusion Passenger helper server started on PID " << getpid());
 		
 		UPDATE_TRACE_POINT();
 		server.mainLoop();
@@ -355,6 +357,6 @@ main(int argc, char *argv[]) {
 		throw;
 	}
 	
-	P_TRACE(2, "Helper server exited.");
+	P_TRACE(2, "Phusion Passenger Helper server exited.");
 	return 0;
 }

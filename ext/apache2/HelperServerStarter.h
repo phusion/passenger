@@ -1,8 +1,33 @@
+/*
+ *  Phusion Passenger - http://www.modrails.com/
+ *  Copyright (c) 2009 Phusion
+ *
+ *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the "Software"), to deal
+ *  in the Software without restriction, including without limitation the rights
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions:
+ *
+ *  The above copyright notice and this permission notice shall be included in
+ *  all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ *  THE SOFTWARE.
+ */
 #ifndef _PASSENGER_HELPER_SERVER_STARTER_H_
 #define _PASSENGER_HELPER_SERVER_STARTER_H_
 
 #include <oxt/system_calls.hpp>
 #include <string>
+#include <vector>
 
 #include <sys/types.h>
 #include <unistd.h>
@@ -10,6 +35,7 @@
 
 #include "FileDescriptor.h"
 #include "MessageChannel.h"
+#include "MessageClient.h"
 #include "Base64.h"
 #include "Exceptions.h"
 #include "Utils.h"
@@ -45,8 +71,32 @@ public:
 		if (pid != 0) {
 			this_thread::disable_syscall_interruption dsi;
 			
-			// Send a single random byte to indicate that this is a normal shutdown.
-			syscalls::write(feedbackFd, "x", 1);
+			try {
+				// Tell the helper server that we're exiting.
+				MessageClient client;
+				vector<string> args;
+				
+				client.connect(socketFilename, "_web_server", password);
+				client.write("exit", NULL);
+				if (client.read(args) && args[0] == "Passed security" &&
+				    client.read(args) && args[0] == "exit command received") {
+					// Send a single random byte to tell the watchdog that this
+					// is a normal shutdown.
+					syscalls::write(feedbackFd, "x", 1);
+				}
+				
+				/* If an exception occurred then it means we failed to send an exit
+				 * command to the helper server. We have to forcefully kill the helper
+				 * server now because otherwise it'll never exit. We do this by closing
+				 * the feedback fd without sending a random byte, to indicate that this
+				 * is an abnormal shutdown. The watchdog will then kill the helper
+				 * server.
+				 */
+			} catch (const SystemException &) {
+			} catch (const IOException &) {
+			} catch (const SecurityException &) {
+			}
+			
 			feedbackFd.close();
 			syscalls::waitpid(pid, NULL, 0);
 		}

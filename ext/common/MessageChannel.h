@@ -244,6 +244,30 @@ public:
 	
 	/**
 	 * Send an array message, which consists of the given strings, over the underlying
+	 * file descriptor. Like <tt>write(const char *name, ...)</tt> but takes a va_list
+	 * instead.
+	 *
+	 * @throws SystemException An error occured while writing the data to the file descriptor.
+	 * @throws boost::thread_interrupted
+	 * @pre None of the message elements may contain a NUL character (<tt>'\\0'</tt>).
+	 */
+	void write(const char *name, va_list &ap) {
+		list<string> args;
+		args.push_back(name);
+		
+		while (true) {
+			const char *arg = va_arg(ap, const char *);
+			if (arg == NULL) {
+				break;
+			} else {
+				args.push_back(arg);
+			}
+		}
+		write(args);
+	}
+	
+	/**
+	 * Send an array message, which consists of the given strings, over the underlying
 	 * file descriptor.
 	 *
 	 * @param name The first element of the message to send.
@@ -255,21 +279,15 @@ public:
 	 * @see read(), write(const list<string> &)
 	 */
 	void write(const char *name, ...) {
-		list<string> args;
-		args.push_back(name);
-		
 		va_list ap;
 		va_start(ap, name);
-		while (true) {
-			const char *arg = va_arg(ap, const char *);
-			if (arg == NULL) {
-				break;
-			} else {
-				args.push_back(arg);
-			}
+		try {
+			write(name, ap);
+			va_end(ap);
+		} catch (...) {
+			va_end(ap);
+			throw;
 		}
-		va_end(ap);
-		write(args);
 	}
 	
 	/**
