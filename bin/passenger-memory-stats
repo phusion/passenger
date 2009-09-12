@@ -76,7 +76,7 @@ class Table
 				left_bar_size = free_space / 2
 				right_bar_size = free_space - left_bar_size
 			end
-			result = "#{BLUE_BG}#{BOLD}#{YELLOW}"
+			result = "#{BLUE_BG}#{BOLD}#{YELLOW}\n"
 			result << "#{"-" * left_bar_size} #{title} #{"-" * right_bar_size}\n"
 			if !@rows.empty?
 				result << WHITE
@@ -124,7 +124,7 @@ class MemoryStats
 		end
 		
 		def to_a
-			return [pid, ppid, threads, vm_size_in_mb, private_dirty_rss_in_mb, rss_in_mb, name]
+			return [pid, ppid, vm_size_in_mb, private_dirty_rss_in_mb, rss_in_mb, name]
 		end
 	end
 	
@@ -264,7 +264,7 @@ private
 	end
 	
 	def print_process_list(title, processes, options = {})
-		table = Table.new(%w{PID PPID Threads VMSize Private Resident Name})
+		table = Table.new(%w{PID PPID VMSize Private Resident Name})
 		table.add_rows(processes)
 		if options.has_key?(:show_ppid) && !options[:show_ppid]
 			table.remove_column('PPID')
