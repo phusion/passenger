@@ -778,6 +778,12 @@ main(int argc, char *argv[]) {
 		gid_t workerGid    = (gid_t) atoll(argv[12]);
 		string passengerTempDir = argv[13];
 		
+		// Change process title.
+		strncpy(argv[0], "PassengerHelperServer", strlen(argv[0]));
+		for (int i = 1; i < argc; i++) {
+			memset(argv[i], '\0', strlen(argv[i]));
+		}
+		
 		setLogLevel(logLevel);
 		P_DEBUG("Passenger helper server started on PID " << getpid());
 		

@@ -160,7 +160,7 @@ public:
 			}
 			
 			execl(watchdogFilename.c_str(),
-				watchdogFilename.c_str(),
+				"PassengerWatchdog",
 				toString(logLevel).c_str(),
 				"3",  // feedback fd
 				toString(webServerPid).c_str(),

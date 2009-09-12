@@ -325,7 +325,7 @@ end
 	NGINX_COMMON_LIBRARY    = define_common_library_task("nginx", "ext/nginx/libpassenger_common")
 	
 	desc "Build Nginx helper server"
-	task :nginx => ['ext/nginx/HelperServer', :native_support]
+	task :nginx => ['ext/nginx/PassengerHelperServer', :native_support]
 	
 	helper_server_dependencies = [
 		NGINX_BOOST_OXT_LIBRARY,
@@ -342,8 +342,8 @@ end
 		'ext/common/ApplicationPool/Interface.h',
 		'ext/common/ApplicationPool/Pool.h'
 		]
-	file 'ext/nginx/HelperServer' => helper_server_dependencies do
-		create_executable "ext/nginx/HelperServer",
+	file 'ext/nginx/PassengerHelperServer' => helper_server_dependencies do
+		create_executable "ext/nginx/PassengerHelperServer",
 			'ext/nginx/HelperServer.cpp',
 			"-Iext -Iext/common " <<
 			"#{PlatformInfo.portability_cflags} " <<
@@ -357,7 +357,7 @@ end
 	task :clean => 'nginx:clean'
 	desc "Clean all compiled Nginx files"
 	task 'nginx:clean' do
-		sh("rm", "-rf", "ext/nginx/HelperServer")
+		sh("rm", "-rf", "ext/nginx/PassengerHelperServer")
 	end
 
 

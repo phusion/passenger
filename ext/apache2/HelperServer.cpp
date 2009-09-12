@@ -338,6 +338,12 @@ main(int argc, char *argv[]) {
 		string  rubyCommand   = argv[10];
 		unsigned int generationNumber = atoll(argv[11]);
 		
+		// Change process title.
+		strncpy(argv[0], "PassengerHelperServer", strlen(argv[0]));
+		for (int i = 1; i < argc; i++) {
+			memset(argv[i], '\0', strlen(argv[i]));
+		}
+		
 		UPDATE_TRACE_POINT();
 		Server server(logLevel, feedbackFd, webServerPid, tempDir,
 			userSwitching, defaultUser, workerUid, workerGid,

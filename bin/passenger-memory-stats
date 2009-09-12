@@ -152,7 +152,7 @@ class MemoryStats
 		
 		puts
 		passenger_processes = list_processes(:match =>
-			/((^| )Passenger |(^| )Rails:|(^| )Rack:|ApplicationPoolServerExecutable|PassengerNginxHelperServer)/)
+			/((^| )Passenger |(^| )Rails:|(^| )Rack:|PassengerHelperServer|PassengerWatchdog)/)
 		print_process_list("Passenger processes", passenger_processes, :show_ppid => false)
 		
 		if RUBY_PLATFORM !~ /linux/

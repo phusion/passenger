@@ -158,7 +158,7 @@ start_helper_server(ngx_cycle_t *cycle)
     
     ngx_memzero(helper_server_filename, sizeof(helper_server_filename));
     ngx_snprintf(helper_server_filename, sizeof(helper_server_filename),
-                     "%s/ext/nginx/HelperServer",
+                     "%s/ext/nginx/PassengerHelperServer",
                      main_conf->root_dir.data);
     
     ngx_memzero(log_level_string, sizeof(log_level_string));
@@ -283,7 +283,7 @@ start_helper_server(ngx_cycle_t *cycle)
         setenv("SERVER_SOFTWARE", NGINX_VER, 1);
         
         execlp((const char *) helper_server_filename,
-               "PassengerNginxHelperServer",
+               "PassengerHelperServer",
                main_conf->root_dir.data,
                main_conf->ruby.data,
                "3",  /* Admin pipe file descriptor number. */

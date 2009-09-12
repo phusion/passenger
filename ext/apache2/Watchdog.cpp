@@ -103,7 +103,7 @@ startHelperServer(const string &helperServerFilename, unsigned int generationNum
 		}
 		
 		execl(helperServerFilename.c_str(),
-			helperServerFilename.c_str(),
+			"PassengerHelperServer",
 			toString(logLevel).c_str(),
 			"3",  // feedback fd
 			toString(webServerPid).c_str(),
@@ -412,6 +412,12 @@ main(int argc, char *argv[]) {
 	ignoreSigpipe();
 	setup_syscall_interruption_support();
 	setLogLevel(logLevel);
+	
+	// Change process title.
+	strncpy(argv[0], "PassengerWatchdog", strlen(argv[0]));
+	for (int i = 1; i < argc; i++) {
+		memset(argv[i], '\0', strlen(argv[i]));
+	}
 	
 	// Don't make the stack any smaller, getpwnam() on OS X needs a lot of stack space.
 	oxt::thread watchdogThread(watchdogMainLoop, "Watchdog thread", 64 * 1024);
