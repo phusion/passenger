@@ -241,6 +241,7 @@ cleanupHelperServerInBackground(ServerInstanceDirPtr &serverInstanceDir,
 		
 		// Wait until helper server has exited.
 		// TODO: wait a maximum amount of time, then kill the helper server.
+		// time should probably be configurable because some sites serve long-running requests.
 		syscalls::read(helperServerFeedbackFd, &x, 1);
 		
 		// Now clean up the server instance directory.
@@ -340,7 +341,14 @@ watchdogMainLoop() {
 					 * entire HelperServer process group (i.e. HelperServer and all
 					 * descendant processes).
 					 */
-					syscalls::killpg(pid, SIGKILL);
+					if (syscalls::killpg(pid, SIGKILL) == -1) {
+						/* Unable to kill the process group. Maybe the helper
+						 * server failed to become a process group leader, or
+						 * the OS doesn't support multiple process groups in a
+						 * session. So just kill the helper server PID instead.
+						 */
+						syscalls::kill(pid, SIGKILL);
+					}
 					syscalls::waitpid(pid, NULL, 0);
 				}
 				return;
@@ -407,6 +415,10 @@ main(int argc, char *argv[]) {
 	workerGid     = (uid_t) atoll(argv[8]);
 	passengerRoot = argv[9];
 	rubyCommand   = argv[10];
+	
+	/* Become the process group leader so that Apache can't kill
+	 * this watchdog with killpg() during shutdown. */
+	setpgrp();
 	
 	disableOomKiller();
 	ignoreSigpipe();

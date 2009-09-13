@@ -196,8 +196,8 @@ end
 			ext/apache2/Configuration.h
 			ext/apache2/Bucket.h
 			ext/apache2/DirectoryMapper.h
-			ext/common/ApplicationPool.h
-			ext/common/ApplicationPoolServer.h
+			ext/apache2/HelperServerStarter.h
+			ext/common/ApplicationPool/Client.h
 			ext/common/SpawnManager.h
 			ext/common/Exceptions.h
 			ext/common/Application.h
@@ -231,7 +231,7 @@ end
 	mod_passenger_dependencies = [APACHE2_MODULE_COMMON_LIBRARY,
 		APACHE2_MODULE_BOOST_OXT_LIBRARY,
 		'ext/apache2/mod_passenger.o',
-		APACHE2_MODULE_OBJECTS]
+		APACHE2_MODULE_OBJECTS].flatten
 	file 'ext/apache2/mod_passenger.so' => mod_passenger_dependencies do
 		PlatformInfo.apxs2.nil?      and raise "Could not find 'apxs' or 'apxs2'."
 		PlatformInfo.apache2ctl.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."

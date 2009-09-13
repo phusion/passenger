@@ -45,6 +45,11 @@ using namespace boost;
 
 class ServerInstanceDir: public noncopyable {
 public:
+	// Don't forget to update lib/phusion_passenger/admin_tools/server_instance.rb too.
+	static const int STRUCTURE_SUPER_VERSION = 1;
+	static const int STRUCTURE_MAJOR_VERSION = 1;
+	static const int STRUCTURE_MINOR_VERSION = 0;
+	
 	class Generation: public noncopyable {
 	private:
 		friend class ServerInstanceDir;
@@ -71,6 +76,13 @@ public:
 			 * decide for themselves whether they're readable by anybody.
 			 */
 			makeDirTree(path, "u=wxs,g=x,o=x");
+			
+			/* Write structure version file. */
+			string structureVersionFile = path + "/structure_version.txt";
+			createFile(structureVersionFile,
+				toString(STRUCTURE_MAJOR_VERSION) + "." +
+				toString(STRUCTURE_MINOR_VERSION),
+				S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 			
 			
 			/* We want the upload buffer directory to be only writable by the web
@@ -176,17 +188,6 @@ private:
 		 * generations no matter what user they're running as.
 		 */
 		makeDirTree(path, "u=rwxs,g=rx,o=rx");
-		
-		/* Write structure version file. If you change the version here don't forget
-		 * to do it in lib/phusion_passenger/admin_tools/server_instance.rb too.
-		 *
-		 * Once written, nobody may write to it; only reading is possible.
-		 */
-		string structureVersionFile = path + "/structure_version.txt";
-		if (getFileType(structureVersionFile) == FT_NONEXISTANT) {
-			createFile(structureVersionFile, "1.0", /* major.minor */
-				S_IRUSR | S_IRGRP | S_IROTH);
-		}
 	}
 	
 public:
@@ -198,7 +199,16 @@ public:
 		} else {
 			theParentDir = parentDir;
 		}
-		initialize(theParentDir + "/passenger." + toString<unsigned long long>(webServerPid), owner);
+		
+		/* We embed the super structure version in the server instance directory name
+		 * because it's possible to upgrade Phusion Passenger without changing the
+		 * web server's PID. This way each incompatible upgrade will use its own
+		 * server instance directory.
+		 */
+		initialize(theParentDir + "/passenger." +
+			toString(STRUCTURE_SUPER_VERSION) + "." +
+			toString<unsigned long long>(webServerPid),
+			owner);
 		
 	}
 	

@@ -686,10 +686,14 @@ getSignalName(int sig) {
 		return "SIGABRT";
 	case SIGFPE:
 		return "SIGFPE";
+	case SIGKILL:
+		return "SIGKILL";
 	case SIGBUS:
 		return "SIGBUS";
 	case SIGSEGV:
 		return "SIGSEGV";
+	case SIGPIPE:
+		return "SIGPIPE";
 	case SIGALRM:
 		return "SIGARLM";
 	case SIGTERM:

@@ -356,6 +356,14 @@
 				}
 			}
 			
+			bool userSwitchingEnabled() const {
+				if (userSwitchingSpecified) {
+					return userSwitching;
+				} else {
+					return true;
+				}
+			}
+			
 			const char *getDefaultUser() const {
 				if (defaultUser != NULL) {
 					return defaultUser;

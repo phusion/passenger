@@ -22,6 +22,17 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+
+/*
+ * This is the main source file which interfaces directly with Apache by
+ * installing hooks. The code here can look a bit convoluted, but it'll make
+ * more sense if you read:
+ * http://httpd.apache.org/docs/2.2/developer/request.html
+ *
+ * Scroll all the way down to passenger_register_hooks to get an idea of
+ * what we're hooking into and what we do in those hooks.
+ */
+
 #include <boost/thread.hpp>
 
 #include <sys/time.h>
@@ -36,7 +47,8 @@
 #include "Configuration.h"
 #include "Utils.h"
 #include "Logging.h"
-#include "ApplicationPoolServer.h"
+#include "HelperServerStarter.h"
+#include "ApplicationPool/Client.h"
 #include "MessageChannel.h"
 #include "DirectoryMapper.h"
 #include "Timer.h"
@@ -47,7 +59,7 @@
  *
  * apr_want.h *must* come after MessageChannel.h, otherwise compilation will
  * fail on platforms on which apr_want.h tries to redefine 'struct iovec'.
- * http://tinyurl.com/b6aatw
+ * http://groups.google.com/group/phusion-passenger/browse_thread/thread/7e162f60df212e9c
  */
 #include <ap_config.h>
 #include <httpd.h>
@@ -66,17 +78,6 @@ using namespace std;
 using namespace Passenger;
 
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
-
-
-/*
- * This is the main source file which interfaces directly with Apache by
- * installing hooks. The code here can look a bit convoluted, but it'll make
- * more sense if you read:
- * http://httpd.apache.org/docs/2.2/developer/request.html
- *
- * Scroll all the way down to passenger_register_hooks to get an idea of
- * what we're hooking into and what we do in those hooks.
- */
 
 
 /**
@@ -184,8 +185,8 @@ private:
 	
 	enum Threeway { YES, NO, UNKNOWN };
 
-	ApplicationPoolServerPtr applicationPoolServer;
-	thread_specific_ptr<ApplicationPoolPtr> threadSpecificApplicationPool;
+	HelperServerStarter helperServerStarter;
+	thread_specific_ptr<ApplicationPool::Client> threadSpecificApplicationPool;
 	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex;
 	CachedFileStat cstat;
 	
@@ -210,27 +211,36 @@ private:
 	}
 	
 	/**
-	 * Returns a usable ApplicationPool object.
+	 * Returns a usable ApplicationPool::Client object.
 	 *
-	 * When using the worker MPM and global queuing, deadlocks can occur, for
-	 * the same reason described in ApplicationPoolServer::connect(). This
-	 * method allows us to avoid this deadlock by making sure that each
-	 * thread gets its own connection to the application pool server.
+	 * When using the worker MPM and global queuing, deadlocks can occur, as
+	 * explained by ApplicationPool::Client's overview. This method allows us
+	 * to avoid deadlocks by making sure that each thread gets its own connection
+	 * to the application pool server.
 	 *
 	 * It also checks whether the currently cached ApplicationPool object
 	 * is disconnected (which can happen if an error previously occured).
-	 * If so, it will reconnect to the ApplicationPool server.
+	 * If so, it will reconnect to the application pool server.
+	 *
+	 * @throws SystemException
+	 * @throws IOException
+	 * @throws RuntimeException
+	 * @throws SecurityException
 	 */
-	ApplicationPoolPtr getApplicationPool() {
-		ApplicationPoolPtr *pool_ptr = threadSpecificApplicationPool.get();
-		if (pool_ptr == NULL) {
-			pool_ptr = new ApplicationPoolPtr(applicationPoolServer->connect());
-			threadSpecificApplicationPool.reset(pool_ptr);
-		} else if (!(*pool_ptr)->connected()) {
+	ApplicationPool::Client *getApplicationPool() {
+		ApplicationPool::Client *pool = threadSpecificApplicationPool.get();
+		if (pool == NULL) {
+			auto_ptr<ApplicationPool::Client> pool_ptr(new ApplicationPool::Client);
+			pool_ptr->connect(helperServerStarter.getSocketFilename(),
+				"_web_server", helperServerStarter.getPassword());
+			pool = pool_ptr.release();
+			threadSpecificApplicationPool.reset(pool);
+		} else if (!pool->connected()) {
 			P_DEBUG("Reconnecting to ApplicationPool server");
-			*pool_ptr = applicationPoolServer->connect();
+			pool->connect(helperServerStarter.getSocketFilename(),
+				"_web_server", helperServerStarter.getPassword());
 		}
-		return *pool_ptr;
+		return pool;
 	}
 	
 	bool hasModRewrite() {
@@ -1213,16 +1223,22 @@ public:
 		}
 		*/
 		
+		helperServerStarter.start(config->logLevel,
+			getpid(), config->getTempDir(),
+			config->userSwitchingEnabled(), config->getDefaultUser(),
+			unixd_config.user_id, unixd_config.group_id,
+			config->root, config->getRuby());
 		
-		
-		ApplicationPoolPtr pool(applicationPoolServer->connect());
-		pool->setMax(config->maxPoolSize);
-		pool->setMaxPerApp(config->maxInstancesPerApp);
-		pool->setMaxIdleTime(config->poolIdleTime);
+		ApplicationPool::Client pool;
+		pool.connect(helperServerStarter.getSocketFilename(),
+			"_web_server", helperServerStarter.getPassword());
+		pool.setMax(config->maxPoolSize);
+		pool.setMaxPerApp(config->maxInstancesPerApp);
+		pool.setMaxIdleTime(config->poolIdleTime);
 	}
 	
-	~Hooks() {
-		removeDirTree(getPassengerTempDir().c_str());
+	void childInit(apr_pool_t *pchild, server_rec *s) {
+		helperServerStarter.detach();
 	}
 	
 	int prepareRequestWhenInHighPerformanceMode(request_rec *r) {
@@ -1546,6 +1562,13 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 	}
 }
 
+static void
+child_init(apr_pool_t *pchild, server_rec *s) {
+	if (OXT_LIKELY(hooks != NULL)) {
+		hooks->childInit(pchild, s);
+	}
+}
+
 #define DEFINE_REQUEST_HOOK(c_name, cpp_name)        \
 	static int c_name(request_rec *r) {          \
 		if (OXT_LIKELY(hooks != NULL)) {     \
@@ -1578,6 +1601,7 @@ passenger_register_hooks(apr_pool_t *p) {
 	static const char * const autoindex_module[] = { "mod_autoindex.c", NULL };
 
 	ap_hook_post_config(init_module, NULL, NULL, APR_HOOK_MIDDLE);
+	ap_hook_child_init(child_init, NULL, NULL, APR_HOOK_MIDDLE);
 	
 	ap_hook_map_to_storage(prepare_request_when_in_high_performance_mode, NULL, NULL, APR_HOOK_FIRST);
 	ap_hook_map_to_storage(save_original_filename, NULL, NULL, APR_HOOK_LAST);

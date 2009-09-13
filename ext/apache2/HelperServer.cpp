@@ -296,6 +296,7 @@ public:
 			 * inaccessible.
 			 */
 			syscalls::killpg(getpgrp(), SIGKILL);
+			_exit(2); // In case killpg() fails.
 		} else {
 			/* We received an exit command. We want to exit 5 seconds after
 			 * the last client has disconnected, .
@@ -320,7 +321,7 @@ main(int argc, char *argv[]) {
 	TRACE_POINT();
 	try {
 		/* Become the process group leader so that the watchdog can kill the
-		 * HelperServer as well as all descendent processes. */
+		 * HelperServer as well as all descendant processes. */
 		setpgrp();
 		
 		ignoreSigpipe();

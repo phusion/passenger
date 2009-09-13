@@ -50,6 +50,8 @@ using namespace oxt;
  */
 class HelperServerStarter {
 private:
+	/** The watchdog's PID. Equals 0 if the watchdog hasn't been started yet
+	 * or if detach() is called. */
 	pid_t pid;
 	FileDescriptor feedbackFd;
 	string socketFilename;
@@ -63,6 +65,10 @@ private:
 	}
 	
 public:
+	/**
+	 * Construct a HelperServerStarter object. The watchdog and the helper server
+	 * aren't started yet until you call start().
+	 */
 	HelperServerStarter() {
 		pid = 0;
 	}
@@ -110,6 +116,12 @@ public:
 		return password;
 	}
 	
+	/**
+	 * Start the helper server through the watchdog, with the given parameters.
+	 *
+	 * @throws SystemException
+	 * @throws RuntimeException
+	 */
 	void start(unsigned int logLevel,
 	           pid_t webServerPid, const string &tempDir,
 	           bool userSwitching, const string &defaultUser, uid_t workerUid, gid_t workerGid,
@@ -259,6 +271,7 @@ public:
 	
 	void detach() {
 		feedbackFd.close();
+		pid = 0;
 	}
 };
 
