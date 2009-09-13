@@ -755,6 +755,7 @@ spec = Gem::Specification.new do |s|
 		'vendor/**/*',
 		'test/*.example',
 		'test/support/*.{cpp,h,rb}',
+		'test/tut/*',
 		'test/cxx/*.{cpp,h}',
 		'test/oxt/*.{cpp,hpp}',
 		'test/ruby/**/*',

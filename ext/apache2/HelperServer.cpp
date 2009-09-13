@@ -245,7 +245,9 @@ public:
 		}
 		
 		UPDATE_TRACE_POINT();
-		pool.reset(new ApplicationPool::Pool(findSpawnServer(passengerRoot.c_str()), "", rubyCommand));
+		pool.reset(new ApplicationPool::Pool(
+			findSpawnServer(passengerRoot.c_str()), generation, "", rubyCommand
+		));
 		messageServer->addHandler(ptr(new TimerUpdateHandler(exitTimer)));
 		messageServer->addHandler(ptr(new ApplicationPool::Server(pool)));
 		messageServer->addHandler(ptr(new BacktracesServer()));
