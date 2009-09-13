@@ -15,14 +15,17 @@
 #include <oxt/thread.hpp>
 #include <oxt/tracable_exception.hpp>
 
+#include "../tut/tut.h"
+#include "ServerInstanceDir.h"
 #include "Exceptions.h"
 #include "Utils.h"
 
-namespace Test {
+namespace TestSupport {
 
 using namespace std;
 using namespace Passenger;
 using namespace oxt;
+
 
 #define SHOW_EXCEPTION_BACKTRACE(code)                                \
 	do {                                                          \
@@ -33,6 +36,14 @@ using namespace oxt;
 			throw;                                        \
 		}                                                     \
 	} while (0)
+
+
+/**
+ * Create a server instance directory and generation with default parameters,
+ * suitable for unit testing.
+ */
+void createServerInstanceDirAndGeneration(ServerInstanceDirPtr &serverInstanceDir,
+                                          ServerInstanceDir::GenerationPtr &generation);
 
 /**
  * Read all data from the given file descriptor until EOF.
@@ -70,6 +81,7 @@ void touchFile(const char *filename, time_t timestamp = (time_t) - 1);
  */
 vector<string> listDir(const string &path);
 
+
 /**
  * Class which creates a temporary directory of the given name, and deletes
  * it upon destruction.
@@ -94,6 +106,7 @@ public:
 	}
 };
 
+
 /**
  * Creates a temporary copy of the given directory. This copy is deleted
  * upon object destruction.
@@ -117,6 +130,7 @@ public:
 	}
 };
 
+
 /**
  * Class which deletes the given file upon destruction.
  */
@@ -132,6 +146,7 @@ public:
 		unlink(filename.c_str());
 	}
 };
+
 
 /**
  * Spawns a thread which will be interrupted and joined when this TempThread
@@ -150,6 +165,8 @@ public:
 	}
 };
 
-} // namespace Test
+} // namespace TestSupport
+
+using namespace TestSupport;
 
 #endif /* _TEST_SUPPORT_H_ */

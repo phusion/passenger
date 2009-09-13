@@ -392,120 +392,6 @@ end
 		'syscall_interruption_test.o' => %w(syscall_interruption_test.cpp)
 	}
 	
-	TEST_CXX_CFLAGS = "-Iext -Iext/common -Iext/nginx -Itest/support " <<
-		"#{PlatformInfo.apr_flags} #{PlatformInfo.apu_flags} #{TEST_COMMON_CFLAGS}"
-	TEST_CXX_LDFLAGS = "#{PlatformInfo.apr_libs} #{PlatformInfo.apu_libs} " <<
-		"#{TEST_COMMON_LIBRARY} #{TEST_BOOST_OXT_LIBRARY} " <<
-		"#{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
-	TEST_CXX_OBJECTS = {
-		'test/CxxTestMain.o' => %w(
-			test/CxxTestMain.cpp),
-		'test/support/Support.o' => %w(
-			test/support/Support.cpp
-			test/support/Support.h),
-		'test/MessageChannelTest.o' => %w(
-			test/MessageChannelTest.cpp
-			ext/common/MessageChannel.h
-			ext/common/Exceptions.h
-			ext/common/Timer.h
-			ext/common/Utils.h),
-		'test/SpawnManagerTest.o' => %w(
-			test/SpawnManagerTest.cpp
-			ext/common/SpawnManager.h
-			ext/common/AbstractSpawnManager.h
-			ext/common/PoolOptions.h
-			ext/common/StringListCreator.h
-			ext/common/Application.h
-			ext/common/MessageChannel.h),
-		'test/ApplicationPool_ServerTest.o' => %w(
-			test/ApplicationPool_ServerTest.cpp
-			ext/common/ApplicationPool/Interface.h
-			ext/common/ApplicationPool/Server.h
-			ext/common/ApplicationPool/Client.h
-			ext/common/ApplicationPool/Pool.h
-			ext/common/Account.h
-			ext/common/AccountsDatabase.h
-			ext/common/MessageServer.h
-			ext/common/PoolOptions.h
-			ext/common/StringListCreator.h
-			ext/common/MessageChannel.h),
-		'test/ApplicationPool_Server_PoolTest.o' => %w(
-			test/ApplicationPool_Server_PoolTest.cpp
-			test/ApplicationPool_PoolTestCases.cpp
-			ext/common/ApplicationPool/Interface.h
-			ext/common/ApplicationPool/Server.h
-			ext/common/ApplicationPool/Client.h
-			ext/common/ApplicationPool/Pool.h
-			ext/common/AbstractSpawnManager.h
-			ext/common/Account.h
-			ext/common/AccountsDatabase.h
-			ext/common/MessageServer.h
-			ext/common/SpawnManager.h
-			ext/common/PoolOptions.h
-			ext/common/StringListCreator.h
-			ext/common/Application.h
-			ext/common/MessageChannel.h),
-		'test/ApplicationPool_PoolTest.o' => %w(
-			test/ApplicationPool_PoolTest.cpp
-			test/ApplicationPool_PoolTestCases.cpp
-			ext/common/ApplicationPool/Interface.h
-			ext/common/ApplicationPool/Pool.h
-			ext/common/AbstractSpawnManager.h
-			ext/common/SpawnManager.h
-			ext/common/PoolOptions.h
-			ext/common/StringListCreator.h
-			ext/common/FileChangeChecker.h
-			ext/common/CachedFileStat.hpp
-			ext/common/Application.h),
-		'test/PoolOptionsTest.o' => %w(
-			test/PoolOptionsTest.cpp
-			ext/common/PoolOptions.h
-			ext/common/StringListCreator.h),
-		'test/StaticStringTest.o' => %w(
-			test/StaticStringTest.cpp
-			ext/common/StaticString.h),
-		'test/Base64Test.o' => %w(
-			test/Base64Test.cpp
-			ext/common/Base64.h
-			ext/common/Base64.cpp),
-		'test/ScgiRequestParserTest.o' => %w(
-			test/ScgiRequestParserTest.cpp
-			ext/nginx/ScgiRequestParser.h
-			ext/common/StaticString.h),
-		'test/HttpStatusExtractorTest.o' => %w(
-			test/HttpStatusExtractorTest.cpp
-			ext/nginx/HttpStatusExtractor.h),
-		'test/MessageServerTest.o' => %w(
-			test/MessageServerTest.cpp
-			ext/common/ApplicationPool/Client.h
-			ext/common/Account.h
-			ext/common/AccountsDatabase.h
-			ext/common/MessageServer.h
-			ext/common/MessageChannel.h),
-		'test/ServerInstanceDir.o' => %w(
-			test/ServerInstanceDirTest.cpp
-			ext/common/ServerInstanceDir.h
-			ext/common/Utils.h),
-		'test/FileChangeCheckerTest.o' => %w(
-			test/FileChangeCheckerTest.cpp
-			ext/common/FileChangeChecker.h
-			ext/common/CachedFileStat.hpp),
-		'test/FileDescriptorTest.o' => %w(
-			test/FileDescriptorTest.cpp
-			ext/common/FileDescriptor.h),
-		'test/SystemTimeTest.o' => %w(
-			test/SystemTimeTest.cpp
-			ext/common/SystemTime.h
-			ext/common/SystemTime.cpp),
-		'test/CachedFileStatTest.o' => %w(
-			test/CachedFileStatTest.cpp
-			ext/common/CachedFileStat.hpp
-			ext/common/CachedFileStat.cpp),
-		'test/UtilsTest.o' => %w(
-			test/UtilsTest.cpp
-			ext/common/Utils.h)
-	}
-	
 	desc "Run unit tests for the OXT library"
 	task 'test:oxt' => 'test/oxt/oxt_test_main' do
 		sh "cd test && ./oxt/oxt_test_main"
@@ -523,7 +409,7 @@ end
 	
 	# Define tasks for each OXT test source file.
 	TEST_OXT_OBJECTS.each_pair do |target, sources|
-		file "test/oxt/#{target}" => sources.map{ |x| "test/oxt/#{x}" } + ['test/support/Support.h'] do
+		file "test/oxt/#{target}" => sources.map{ |x| "test/oxt/#{x}" } do
 			Dir.chdir('test/oxt') do
 				puts "### In test/oxt:"
 				compile_cxx sources[0], TEST_OXT_CFLAGS
@@ -534,25 +420,139 @@ end
 	
 	### C++ components tests ###
 	
+	TEST_CXX_CFLAGS = "-Iext -Iext/common -Iext/nginx -Itest/support " <<
+		"#{PlatformInfo.apr_flags} #{PlatformInfo.apu_flags} #{TEST_COMMON_CFLAGS}"
+	TEST_CXX_LDFLAGS = "#{PlatformInfo.apr_libs} #{PlatformInfo.apu_libs} " <<
+		"#{TEST_COMMON_LIBRARY} #{TEST_BOOST_OXT_LIBRARY} " <<
+		"#{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
+	TEST_CXX_OBJECTS = {
+		'test/cxx/CxxTestMain.o' => %w(
+			test/cxx/CxxTestMain.cpp),
+		'test/cxx/TestSupport.o' => %w(
+			test/cxx/TestSupport.cpp
+			test/cxx/TestSupport.h),
+		'test/cxx/MessageChannelTest.o' => %w(
+			test/cxx/MessageChannelTest.cpp
+			ext/common/MessageChannel.h
+			ext/common/Exceptions.h
+			ext/common/Timer.h
+			ext/common/Utils.h),
+		'test/cxx/SpawnManagerTest.o' => %w(
+			test/cxx/SpawnManagerTest.cpp
+			ext/common/SpawnManager.h
+			ext/common/AbstractSpawnManager.h
+			ext/common/PoolOptions.h
+			ext/common/StringListCreator.h
+			ext/common/Application.h
+			ext/common/MessageChannel.h),
+		'test/cxx/ApplicationPool_ServerTest.o' => %w(
+			test/cxx/ApplicationPool_ServerTest.cpp
+			ext/common/ApplicationPool/Interface.h
+			ext/common/ApplicationPool/Server.h
+			ext/common/ApplicationPool/Client.h
+			ext/common/ApplicationPool/Pool.h
+			ext/common/Account.h
+			ext/common/AccountsDatabase.h
+			ext/common/MessageServer.h
+			ext/common/PoolOptions.h
+			ext/common/StringListCreator.h
+			ext/common/MessageChannel.h),
+		'test/cxx/ApplicationPool_Server_PoolTest.o' => %w(
+			test/cxx/ApplicationPool_Server_PoolTest.cpp
+			test/cxx/ApplicationPool_PoolTestCases.cpp
+			ext/common/ApplicationPool/Interface.h
+			ext/common/ApplicationPool/Server.h
+			ext/common/ApplicationPool/Client.h
+			ext/common/ApplicationPool/Pool.h
+			ext/common/AbstractSpawnManager.h
+			ext/common/Account.h
+			ext/common/AccountsDatabase.h
+			ext/common/MessageServer.h
+			ext/common/SpawnManager.h
+			ext/common/PoolOptions.h
+			ext/common/StringListCreator.h
+			ext/common/Application.h
+			ext/common/MessageChannel.h),
+		'test/cxx/ApplicationPool_PoolTest.o' => %w(
+			test/cxx/ApplicationPool_PoolTest.cpp
+			test/cxx/ApplicationPool_PoolTestCases.cpp
+			ext/common/ApplicationPool/Interface.h
+			ext/common/ApplicationPool/Pool.h
+			ext/common/AbstractSpawnManager.h
+			ext/common/SpawnManager.h
+			ext/common/PoolOptions.h
+			ext/common/StringListCreator.h
+			ext/common/FileChangeChecker.h
+			ext/common/CachedFileStat.hpp
+			ext/common/Application.h),
+		'test/cxx/PoolOptionsTest.o' => %w(
+			test/cxx/PoolOptionsTest.cpp
+			ext/common/PoolOptions.h
+			ext/common/StringListCreator.h),
+		'test/cxx/StaticStringTest.o' => %w(
+			test/cxx/StaticStringTest.cpp
+			ext/common/StaticString.h),
+		'test/cxx/Base64Test.o' => %w(
+			test/cxx/Base64Test.cpp
+			ext/common/Base64.h
+			ext/common/Base64.cpp),
+		'test/cxx/ScgiRequestParserTest.o' => %w(
+			test/cxx/ScgiRequestParserTest.cpp
+			ext/nginx/ScgiRequestParser.h
+			ext/common/StaticString.h),
+		'test/cxx/HttpStatusExtractorTest.o' => %w(
+			test/cxx/HttpStatusExtractorTest.cpp
+			ext/nginx/HttpStatusExtractor.h),
+		'test/cxx/MessageServerTest.o' => %w(
+			test/cxx/MessageServerTest.cpp
+			ext/common/ApplicationPool/Client.h
+			ext/common/Account.h
+			ext/common/AccountsDatabase.h
+			ext/common/MessageServer.h
+			ext/common/MessageChannel.h),
+		'test/cxx/ServerInstanceDir.o' => %w(
+			test/cxx/ServerInstanceDirTest.cpp
+			ext/common/ServerInstanceDir.h
+			ext/common/Utils.h),
+		'test/cxx/FileChangeCheckerTest.o' => %w(
+			test/cxx/FileChangeCheckerTest.cpp
+			ext/common/FileChangeChecker.h
+			ext/common/CachedFileStat.hpp),
+		'test/cxx/FileDescriptorTest.o' => %w(
+			test/cxx/FileDescriptorTest.cpp
+			ext/common/FileDescriptor.h),
+		'test/cxx/SystemTimeTest.o' => %w(
+			test/cxx/SystemTimeTest.cpp
+			ext/common/SystemTime.h
+			ext/common/SystemTime.cpp),
+		'test/cxx/CachedFileStatTest.o' => %w(
+			test/cxx/CachedFileStatTest.cpp
+			ext/common/CachedFileStat.hpp
+			ext/common/CachedFileStat.cpp),
+		'test/cxx/UtilsTest.o' => %w(
+			test/cxx/UtilsTest.cpp
+			ext/common/Utils.h)
+	}
+	
 	desc "Run unit tests for the Apache 2 and Nginx C++ components"
-	task 'test:cxx' => ['test/CxxTests', :native_support] do
+	task 'test:cxx' => ['test/cxx/CxxTestMain', :native_support] do
 	        if ENV['GROUPS'].to_s.empty?
-		        sh "cd test && ./CxxTests"
+		        sh "cd test && ./cxx/CxxTestMain"
 	        else
 	                args = ENV['GROUPS'].split(",").map{ |name| "-g #{name}" }
-	                sh "cd test && ./CxxTests #{args.join(' ')}"
+	                sh "cd test && ./cxx/CxxTestMain #{args.join(' ')}"
                 end
 	end
 	
 	cxx_tests_dependencies = [TEST_CXX_OBJECTS.keys,
 		TEST_BOOST_OXT_LIBRARY, TEST_COMMON_LIBRARY]
-	file 'test/CxxTests' => cxx_tests_dependencies.flatten do
+	file 'test/cxx/CxxTestMain' => cxx_tests_dependencies.flatten do
 		objects = TEST_CXX_OBJECTS.keys.join(' ')
-		create_executable("test/CxxTests", objects, TEST_CXX_LDFLAGS)
+		create_executable("test/cxx/CxxTestMain", objects, TEST_CXX_LDFLAGS)
 	end
 	
 	TEST_CXX_OBJECTS.each_pair do |target, sources|
-		file(target => sources) do
+		file(target => sources + ['test/cxx/TestSupport.h']) do
 			compile_cxx sources[0], "-o #{target} #{TEST_CXX_CFLAGS}"
 		end
 	end
@@ -753,9 +753,10 @@ spec = Gem::Specification.new do |s|
 		'misc/*',
 		'misc/*/*',
 		'vendor/**/*',
-		'test/*.{rb,cpp,example}',
+		'test/*.example',
 		'test/support/*.{cpp,h,rb}',
-		'test/oxt/*.cpp',
+		'test/cxx/*.{cpp,h}',
+		'test/oxt/*.{cpp,hpp}',
 		'test/ruby/**/*',
 		'test/integration_tests/**/*',
 		'test/stub/**/*'

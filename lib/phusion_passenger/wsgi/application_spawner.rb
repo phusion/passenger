@@ -79,7 +79,14 @@ private
 			lower_privilege('passenger_wsgi.py', lowest_user)
 		end
 		
-		socket_file = "#{passenger_tmpdir}/backends/wsgi_backend.#{Process.pid}.#{rand 10000000}"
+		if defined?(NativeSupport)
+			unix_path_max = NativeSupport::UNIX_PATH_MAX
+		else
+			unix_path_max = 100
+		end
+		
+		socket_file = "#{passenger_tmpdir}/backends/wsgi.#{Process.pid}.#{rand 10000000}"
+		socket_file = socket_file.slice(0, unix_path_max - 1)
 		server = UNIXServer.new(socket_file)
 		begin
 			reader, writer = IO.pipe

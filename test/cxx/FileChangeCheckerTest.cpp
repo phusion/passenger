@@ -1,12 +1,10 @@
-#include "tut.h"
-#include "support/Support.h"
+#include "TestSupport.h"
 #include "FileChangeChecker.h"
 #include "SystemTime.h"
 #include <unistd.h>
 
 using namespace Passenger;
 using namespace std;
-using namespace Test;
 
 namespace tut {
 	struct FileChangeCheckerTest {

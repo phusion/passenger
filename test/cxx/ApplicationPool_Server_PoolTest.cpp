@@ -1,5 +1,4 @@
-#include "tut.h"
-#include "support/Support.h"
+#include "TestSupport.h"
 
 #include <string>
 #include <boost/thread.hpp>
@@ -13,10 +12,11 @@
 using namespace Passenger;
 using namespace std;
 using namespace boost;
-using namespace Test;
 
 namespace tut {
 	struct ApplicationPool_Server_PoolTest {
+		ServerInstanceDirPtr serverInstanceDir;
+		ServerInstanceDir::GenerationPtr generation;
 		AccountsDatabasePtr accountsDatabase;
 		shared_ptr<MessageServer> messageServer;
 		shared_ptr<ApplicationPool::Pool> realPool;
@@ -26,12 +26,13 @@ namespace tut {
 		string socketFilename;
 		
 		ApplicationPool_Server_PoolTest() {
-			socketFilename = getPassengerTempDir() + "/master/pool_server.sock";
+			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
+			socketFilename = generation->getPath() + "/socket";
 			accountsDatabase = ptr(new AccountsDatabase());
 			accountsDatabase->add("test", "12345", false);
 			
 			messageServer = ptr(new MessageServer(socketFilename, accountsDatabase));
-			realPool      = ptr(new ApplicationPool::Pool("../bin/passenger-spawn-server"));
+			realPool      = ptr(new ApplicationPool::Pool("../bin/passenger-spawn-server", generation));
 			poolServer    = ptr(new ApplicationPool::Server(realPool));
 			messageServer->addHandler(poolServer);
 			serverThread = ptr(new oxt::thread(

@@ -1,5 +1,5 @@
-#include "tut.h"
-#include "tut_reporter.h"
+#include "TestSupport.h"
+#include "../tut/tut_reporter.h"
 #include <oxt/system_calls.hpp>
 #include <string>
 #include <apr_general.h>
@@ -85,27 +85,6 @@ parseOptions(int argc, char *argv[]) {
 	}
 }
 
-/**
- * Creates a Phusion Passenger temp dir at the beginning, and deletes it
- * at program exit.
- */
-struct TempDirSetup {
-	TempDirSetup() {
-		char command[1024];
-		
-		Passenger::createPassengerTempDir("", geteuid() == 0,
-			"nobody", geteuid(), getgid());
-		
-		snprintf(command, sizeof(command), "chmod -R u=rwx,g=rwx,o=rwx \"%s\"",
-			Passenger::getPassengerTempDir().c_str());
-		system(command);
-	}
-	
-	~TempDirSetup() {
-		Passenger::removeDirTree(Passenger::getPassengerTempDir());
-	}
-};
-
 int
 main(int argc, char *argv[]) {
 	apr_initialize();
@@ -118,8 +97,6 @@ main(int argc, char *argv[]) {
 	tut::runner.get().set_callback(&reporter);
 	allGroups = tut::runner.get().list_groups();
 	parseOptions(argc, argv);
-	
-	TempDirSetup ts;
 	
 	try {
 		bool all_ok = true;

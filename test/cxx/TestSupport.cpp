@@ -1,8 +1,15 @@
 #include <dirent.h>
 #include <unistd.h>
-#include "Support.h"
+#include "TestSupport.h"
 
-namespace Test {
+namespace TestSupport {
+
+void createServerInstanceDirAndGeneration(ServerInstanceDirPtr &serverInstanceDir,
+                                          ServerInstanceDir::GenerationPtr &generation)
+{
+	serverInstanceDir.reset(new ServerInstanceDir(getpid()));
+	generation = serverInstanceDir->newGeneration(geteuid() == 0, "nobody", geteuid(), getegid());
+}
 
 string
 readAll(int fd) {
@@ -102,4 +109,4 @@ listDir(const string &path) {
 	return result;
 }
 
-} // namespace Test
+} // namespace TestSupport

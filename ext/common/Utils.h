@@ -282,36 +282,6 @@ void determineLowestUserAndGroup(const string &user, uid_t &uid, gid_t &gid);
  */
 const char *getSystemTempDir();
 
-/**
- * Return the path name for the directory in which Phusion Passenger-specific
- * temporary files are to be stored. This directory is unique for this instance
- * of the web server in which Phusion Passenger is running.
- *
- * The calculated value will be stored in an internal variable, so that subsequent
- * calls will return the same value. To bypass the usage of this internal variable,
- * set <tt>bypassCache</tt> to true. In this case, the value of the internal
- * variable will be set to the newly calculated value.
- *
- * @param bypassCache Whether the value of the internal variable should be bypassed.
- * @param parentDir The directory under which the Phusion Passenger-specific
- *                  temp directory should be located. If set to the empty string,
- *                  then the return value of getSystemTempDir() will be used.
- *                  This argument only has effect if the value of the internal
- *                  variable is not consulted.
- * @ensure !result.empty()
- * @ingroup Support
- */
-string getPassengerTempDir(bool bypassCache = false, const string &parentDir = "");
-
-/**
- * Force subsequent calls to <tt>getPassengerTempDir(false, ...)</tt> to return the given value.
- * <tt>dir</tt> is not created automatically if it doesn't exist.
- *
- * <tt>dir</tt> may also be an empty string, in which case it will cause the next
- * call to <tt>getPassengerTempDir()</tt> to re-calculate the temp directory's path.
- */
-void setPassengerTempDir(const string &dir);
-
 /* Create a temporary directory for storing Phusion Passenger instance-specific
  * temp files, such as temporarily buffered uploads, sockets for backend
  * processes, etc.
@@ -358,9 +328,9 @@ void setPassengerTempDir(const string &dir);
  * @throws SystemException Something went wrong.
  * @throws FileSystemException Something went wrong.
  */
-void createPassengerTempDir(const string &parentDir, bool userSwitching,
+/* void createPassengerTempDir(const string &parentDir, bool userSwitching,
                             const string &lowestUser,
-                            uid_t workerUid, gid_t workerGid);
+                            uid_t workerUid, gid_t workerGid); */
 
 /**
  * Create the directory at the given path, creating intermediate directories

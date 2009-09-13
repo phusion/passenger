@@ -51,10 +51,10 @@
 			vector<string> reloadLog;
 			
 			ReloadLoggingSpawnManager(const string &spawnServerCommand,
-			             const string &logFile = "",
-			             const string &rubyCommand = "ruby",
-			             const string &user = "")
-			: SpawnManager(spawnServerCommand, logFile, rubyCommand, user)
+				const ServerInstanceDir::GenerationPtr &generation,
+				const string &logFile = "",
+				const string &rubyCommand = "ruby")
+			: SpawnManager(spawnServerCommand, generation, logFile, rubyCommand)
 			{ }
 			
 			virtual void reload(const string &appRoot) {
@@ -611,7 +611,9 @@
 		Application::SessionPtr session;
 		TempDirCopy c1("stub/rack", "rackapp1.tmp");
 		TempDirCopy c2("stub/rack", "rackapp2.tmp");
-		shared_ptr<ReloadLoggingSpawnManager> spawnManager(new ReloadLoggingSpawnManager("../bin/passenger-spawn-server"));
+		shared_ptr<ReloadLoggingSpawnManager> spawnManager(
+			new ReloadLoggingSpawnManager("../bin/passenger-spawn-server", generation)
+		);
 		reinitializeWithSpawnManager(spawnManager);
 		
 		pool->setMax(1);

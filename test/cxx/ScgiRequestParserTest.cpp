@@ -1,4 +1,4 @@
-#include "tut.h"
+#include "TestSupport.h"
 #include "ScgiRequestParser.h"
 
 using namespace Passenger;

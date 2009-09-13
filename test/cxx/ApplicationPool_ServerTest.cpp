@@ -1,5 +1,4 @@
-#include "tut.h"
-#include "support/Support.h"
+#include "TestSupport.h"
 
 #include <boost/bind.hpp>
 
@@ -19,6 +18,8 @@ using namespace std;
 
 namespace tut {
 	struct ApplicationPool_ServerTest {
+		ServerInstanceDirPtr serverInstanceDir;
+		ServerInstanceDir::GenerationPtr generation;
 		string socketFilename;
 		AccountsDatabasePtr accountsDatabase;
 		AccountPtr clientAccount;
@@ -35,12 +36,13 @@ namespace tut {
 		}
 		
 		void initializePool() {
-			socketFilename = getPassengerTempDir() + "/master/pool_server.sock";
+			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
+			socketFilename = generation->getPath() + "/socket";
 			accountsDatabase = ptr(new AccountsDatabase());
 			clientAccount = accountsDatabase->add("test", "12345", false);
 			
 			messageServer = ptr(new MessageServer(socketFilename, accountsDatabase));
-			realPool      = ptr(new Pool("../bin/passenger-spawn-server"));
+			realPool      = ptr(new Pool("../bin/passenger-spawn-server", generation));
 			poolServer    = ptr(new Server(realPool));
 			messageServer->addHandler(poolServer);
 			serverThread = ptr(new oxt::thread(

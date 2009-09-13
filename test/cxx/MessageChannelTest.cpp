@@ -1,5 +1,4 @@
-#include "tut.h"
-#include "support/Support.h"
+#include "TestSupport.h"
 #include "MessageChannel.h"
 
 #include <boost/thread.hpp>
@@ -17,7 +16,6 @@ using namespace Passenger;
 using namespace std;
 using namespace boost;
 using namespace oxt;
-using namespace Test;
 
 namespace tut {
 	struct MessageChannelTest {

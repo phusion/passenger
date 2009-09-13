@@ -12,7 +12,6 @@ ext/apache2/*.la
 ext/apache2/*.lo
 ext/apache2/*.slo
 ext/apache2/.libs
-ext/apache2/ApplicationPoolServerExecutable
 ext/apache2/PassengerWatchdog
 ext/apache2/PassengerHelperServer
 ext/nginx/HelperServer
@@ -25,8 +24,7 @@ test/test.log
 test/apache2.log
 test/config.yml
 test/coverage
-test/CxxTests
-test/ApplicationPoolServerExecutable
+test/cxx/CxxTestMain
 test/oxt/oxt_test_main
 test/stub/railsapp/app/controllers/bar_controller.rb
 test/stub/apache2/*.log

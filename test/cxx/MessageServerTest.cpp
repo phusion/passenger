@@ -1,5 +1,4 @@
-#include "tut.h"
-#include "support/Support.h"
+#include "TestSupport.h"
 
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
@@ -19,6 +18,8 @@ using namespace std;
 
 namespace tut {
 	struct MessageServerTest {
+		ServerInstanceDirPtr serverInstanceDir;
+		ServerInstanceDir::GenerationPtr generation;
 		string socketFilename;
 		AccountsDatabasePtr accountsDatabase;
 		AccountPtr clientAccount;
@@ -26,7 +27,8 @@ namespace tut {
 		shared_ptr<oxt::thread> serverThread;
 		
 		MessageServerTest() {
-			socketFilename = getPassengerTempDir() + "/master/pool_server.sock";
+			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
+			socketFilename = generation->getPath() + "/socket";
 			accountsDatabase = ptr(new AccountsDatabase());
 			clientAccount = accountsDatabase->add("test", "12345", false);
 			

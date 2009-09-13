@@ -1,4 +1,4 @@
-#include "tut.h"
+#include "TestSupport.h"
 #include "SystemTime.h"
 
 using namespace Passenger;

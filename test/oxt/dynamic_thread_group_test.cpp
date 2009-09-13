@@ -1,4 +1,4 @@
-#include "tut.h"
+#include "../tut/tut.h"
 #include "counter.hpp"
 #include <boost/bind.hpp>
 #include <boost/thread/thread_time.hpp>

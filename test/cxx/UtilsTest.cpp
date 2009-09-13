@@ -1,6 +1,5 @@
-#include "tut.h"
+#include "TestSupport.h"
 #include "Utils.h"
-#include "support/Support.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -10,25 +9,20 @@
 
 using namespace Passenger;
 using namespace std;
-using namespace Test;
 
 namespace tut {
 	struct UtilsTest {
 		vector<string> output;
 		string oldPath;
-		string oldPassengerTempDir;
 		
 		UtilsTest() {
 			oldPath = getenv("PATH");
-			oldPassengerTempDir = getPassengerTempDir();
-			setPassengerTempDir("");
 			unsetenv("TMPDIR");
 		}
 		
 		~UtilsTest() {
 			setenv("PATH", oldPath.c_str(), 1);
 			unsetenv("TMPDIR");
-			setPassengerTempDir(oldPassengerTempDir);
 		}
 	};
 	
@@ -129,48 +123,6 @@ namespace tut {
 		// It returns the value of the TMPDIR environment if it is not NULL and not empty.
 		setenv("TMPDIR", "/foo", 1);
 		ensure_equals(string(getSystemTempDir()), "/foo");
-	}
-	
-	
-	/***** Test getPassengerTempDir() *****/
-	
-	TEST_METHOD(15) {
-		// It returns "(tempdir)/passenger.(pid)"
-		char dir[128];
-		
-		snprintf(dir, sizeof(dir), "/tmp/passenger.%lu", (unsigned long) getpid());
-		ensure_equals(getPassengerTempDir(), dir);
-	}
-	
-	TEST_METHOD(16) {
-		// It returns the cached value if it's not the empty string.
-		setPassengerTempDir("/foo");
-		ensure_equals(getPassengerTempDir(), "/foo");
-		
-		setPassengerTempDir("/bar");
-		ensure_equals(getPassengerTempDir(), "/bar");
-		
-		char dir[128];
-		snprintf(dir, sizeof(dir), "/tmp/passenger.%lu", (unsigned long) getpid());
-		setPassengerTempDir("");
-		ensure_equals(getPassengerTempDir(), dir);
-	}
-	
-	TEST_METHOD(17) {
-		// It does not use query the cached value if bypassCache is true.
-		char dir[128];
-		
-		setPassengerTempDir("/foo");
-		snprintf(dir, sizeof(dir), "/tmp/passenger.%lu", (unsigned long) getpid());
-		ensure_equals(getPassengerTempDir(true), dir);
-	}
-	
-	TEST_METHOD(18) {
-		// It uses the systemTempDir argument if it's not the empty string.
-		char dir[128];
-		
-		snprintf(dir, sizeof(dir), "/foo/passenger.%lu", (unsigned long) getpid());
-		ensure_equals(getPassengerTempDir(false, "/foo"), dir);
 	}
 	
 	

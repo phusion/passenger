@@ -605,9 +605,9 @@ public:
 	 * @throws boost::thread_resource_error Cannot spawn a new thread.
 	 */
 	Pool(const string &spawnServerCommand,
+	     const ServerInstanceDir::GenerationPtr &generation,
 	     const string &logFile = "",
-	     const string &rubyCommand = "ruby",
-	     const string &user = "")
+	     const string &rubyCommand = "ruby")
 	   : data(new SharedData()),
 		cstat(DEFAULT_MAX_POOL_SIZE),
 		lock(data->lock),
@@ -621,7 +621,7 @@ public:
 		appInstanceCount(data->appInstanceCount)
 	{
 		TRACE_POINT();
-		this->spawnManager = ptr(new SpawnManager(spawnServerCommand, logFile, rubyCommand, user));
+		this->spawnManager = ptr(new SpawnManager(spawnServerCommand, generation, logFile, rubyCommand));
 		initialize();
 	}
 	

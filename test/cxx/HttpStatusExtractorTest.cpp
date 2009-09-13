@@ -1,4 +1,4 @@
-#include "tut.h"
+#include "TestSupport.h"
 #include "HttpStatusExtractor.h"
 
 using namespace Passenger;

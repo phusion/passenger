@@ -1,17 +1,18 @@
-#include "tut.h"
-#include "support/Support.h"
+#include "TestSupport.h"
 #include "ApplicationPool/Pool.h"
 #include "Utils.h"
 
 using namespace Passenger;
-using namespace Test;
 
 namespace tut {
 	struct ApplicationPool_PoolTest {
+		ServerInstanceDirPtr serverInstanceDir;
+		ServerInstanceDir::GenerationPtr generation;
 		ApplicationPool::Ptr pool, pool2;
 		
 		ApplicationPool_PoolTest() {
-			pool = ptr(new ApplicationPool::Pool("../bin/passenger-spawn-server"));
+			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
+			pool = ptr(new ApplicationPool::Pool("../bin/passenger-spawn-server", generation));
 			pool2 = pool;
 		}
 		

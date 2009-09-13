@@ -45,6 +45,7 @@
 #include <signal.h>
 
 #include "AbstractSpawnManager.h"
+#include "ServerInstanceDir.h"
 #include "MessageChannel.h"
 #include "Exceptions.h"
 #include "Logging.h"
@@ -87,9 +88,9 @@ private:
 	static const int SPAWN_SERVER_INPUT_FD = 3;
 
 	string spawnServerCommand;
+	ServerInstanceDir::GenerationPtr generation;
 	string logFile;
 	string rubyCommand;
-	string user;
 	
 	boost::mutex lock;
 	
@@ -172,45 +173,10 @@ private:
 				close(i);
 			}
 			
-			if (!user.empty()) {
-				struct passwd *entry = getpwnam(user.c_str());
-				if (entry != NULL) {
-					if (initgroups(user.c_str(), entry->pw_gid) != 0) {
-						int e = errno;
-						fprintf(stderr, "*** Passenger: cannot set supplementary "
-							"groups for user %s: %s (%d)\n",
-							user.c_str(),
-							strerror(e),
-							e);
-					}
-					if (setgid(entry->pw_gid) != 0) {
-						int e = errno;
-						fprintf(stderr, "*** Passenger: cannot run spawn "
-							"manager as group %d: %s (%d)\n",
-							entry->pw_gid,
-							strerror(e),
-							e);
-					}
-					if (setuid(entry->pw_uid) != 0) {
-						int e = errno;
-						fprintf(stderr, "*** Passenger: cannot run spawn "
-							"manager as user %s (%d): %s (%d)\n",
-							user.c_str(), entry->pw_uid,
-							strerror(e),
-							e);
-					}
-				} else {
-					fprintf(stderr, "*** Passenger: cannot run spawn manager "
-						"as nonexistant user '%s'.\n",
-						user.c_str());
-				}
-				fflush(stderr);
-			}
-			
 			execlp(rubyCommand.c_str(),
 				rubyCommand.c_str(),
 				spawnServerCommand.c_str(),
-				getPassengerTempDir().c_str(),
+				generation->getPath().c_str(),
 				// The spawn server changes the process names of the subservers
 				// that it starts, for better usability. However, the process name length
 				// (as shown by ps) is limited. Here, we try to expand that limit by
@@ -424,6 +390,8 @@ public:
 	 * Construct a new SpawnManager.
 	 *
 	 * @param spawnServerCommand The filename of the spawn server to use.
+	 * @param generation The server instance dir generation in which
+	 *                   generation-specific are stored.
 	 * @param logFile Specify a log file that the spawn server should use.
 	 *            Messages on its standard output and standard error channels
 	 *            will be written to this log file. If an empty string is
@@ -431,23 +399,18 @@ public:
 	 *            will use the same standard output/error channels as the
 	 *            current process.
 	 * @param rubyCommand The Ruby interpreter's command.
-	 * @param user The user that the spawn manager should run as. This
-	 *             parameter only has effect if the current process is
-	 *             running as root. If the empty string is given, or if
-	 *             the <tt>user</tt> is not a valid username, then
-	 *             the spawn manager will be run as the current user.
 	 * @throws SystemException An error occured while trying to setup the spawn server.
 	 * @throws IOException The specified log file could not be opened.
 	 */
 	SpawnManager(const string &spawnServerCommand,
+	             const ServerInstanceDir::GenerationPtr &generation,
 	             const string &logFile = "",
-	             const string &rubyCommand = "ruby",
-	             const string &user = "") {
+	             const string &rubyCommand = "ruby") {
 		TRACE_POINT();
 		this->spawnServerCommand = spawnServerCommand;
+		this->generation = generation;
 		this->logFile = logFile;
 		this->rubyCommand = rubyCommand;
-		this->user = user;
 		pid = 0;
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;

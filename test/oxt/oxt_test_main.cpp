@@ -1,5 +1,5 @@
-#include "tut.h"
-#include "tut_reporter.h"
+#include "../tut/tut.h"
+#include "../tut/tut_reporter.h"
 #include <oxt/system_calls.hpp>
 #include <signal.h>
 #include <cstdlib>

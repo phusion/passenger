@@ -1,4 +1,4 @@
-#include "tut.h"
+#include "TestSupport.h"
 #include "SpawnManager.h"
 #include <sys/types.h>
 #include <signal.h>
@@ -10,10 +10,13 @@ using namespace Passenger;
 
 namespace tut {
 	struct SpawnManagerTest {
+		ServerInstanceDirPtr serverInstanceDir;
+		ServerInstanceDir::GenerationPtr generation;
 		SpawnManagerPtr manager;
 		
 		void initialize() {
-			manager = ptr(new SpawnManager("stub/spawn_server.rb"));
+			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
+			manager = ptr(new SpawnManager("stub/spawn_server.rb", generation));
 		}
 	};
 
@@ -60,7 +63,9 @@ namespace tut {
 	public:
 		bool nextRestartShouldFail;
 		
-		BuggySpawnManager(): SpawnManager("stub/spawn_server.rb") {
+		BuggySpawnManager(const ServerInstanceDir::GenerationPtr &generation)
+			: SpawnManager("stub/spawn_server.rb", generation)
+		{
 			nextRestartShouldFail = false;
 		}
 	};
@@ -71,7 +76,7 @@ namespace tut {
 		// This test fails in Valgrind, but that's normal.
 		// Killing the spawn server doesn't work there.
 		if (!RUNNING_ON_VALGRIND) {
-			BuggySpawnManager manager;
+			BuggySpawnManager manager(generation);
 			manager.killSpawnServer();
 			// Give the spawn server the time to properly terminate.
 			usleep(250000);

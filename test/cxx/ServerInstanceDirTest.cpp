@@ -1,10 +1,8 @@
-#include "tut.h"
-#include "support/Support.h"
+#include "TestSupport.h"
 #include "ServerInstanceDir.h"
 
 using namespace Passenger;
 using namespace std;
-using namespace Test;
 
 namespace tut {
 	struct ServerInstanceDirTest {
@@ -26,11 +24,11 @@ namespace tut {
 	TEST_METHOD(1) {
 		// The (pid_t, string) constructor creates a server instance directory
 		// in the given parent directory, and this server instance directory
-		// name contains the given PID.
+		// name contains the super structure version and the given PID.
 		ServerInstanceDir dir(1234, parentDir);
 		vector<string> contents = listDir(parentDir);
 		ensure_equals(contents.size(), 1u);
-		ensure_equals(contents[0], "passenger.1234");
+		ensure_equals(contents[0], "passenger.1.1234");
 	}
 	
 	TEST_METHOD(2) {
