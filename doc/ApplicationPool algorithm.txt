@@ -22,7 +22,7 @@ The algorithm should strive to keep spawning to a minimum.
   contains "config.ru".
 
 - "Active application instance":
-  An application instance that has more than 0 active sessions.
+  An application instance that has more than 0 sessions.
 
 === Types
 
@@ -34,16 +34,20 @@ explicitly define some special types:
   all the usual list operations that one can expect from a linked list, like
   add_to_back(), etc.
   
+  We assume that operations that insert an element into the list return an
+  iterator object. An iterator object is an opaque object which represents a
+  specific position in the list; it probably contains the links to the previous
+  and the next iterator, as well as a reference to the actual list element,
+  depending on the list implementation.
+  
   The following operations deserve special mention:
   * remove(iterator)
-    Removes the specified element from the list. _iterator_ is a linked list
-    iterator: it probably contains the links and a reference to the actual
-    list element, depending on the list implementation. This operation can be
-    done in O(1) time.
+    Removes the specified element from the list, as represented by the given
+    iterator. This operation can be done in O(1) time.
   
   * move_to_front(iterator)
-    Moves the specified element to the front of the list. _iterator_ is an
-    iterator, as described earlier.
+    Moves the specified element - as represented by the given iterator - to
+    the front of the list. This operation can be done in O(1) time.
   
 - Domain
   A compound type (class) which contains information about an application root,
