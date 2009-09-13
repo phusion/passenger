@@ -218,11 +218,15 @@ startHelperServer(const string &helperServerFilename, unsigned int generationNum
 }
 
 static void
-relayFeedback(const string &webServerPassword, const HelperServerFeedback &feedback) {
+relayFeedback(const string &webServerPassword, const ServerInstanceDirPtr &serverInstanceDir,
+              const ServerInstanceDir::GenerationPtr &generation, const HelperServerFeedback &feedback)
+{
 	MessageChannel feedbackChannel(feedbackFd);
 	feedbackChannel.write("initialized",
 		feedback.socketFilename.c_str(),
 		Base64::encode(webServerPassword).c_str(),
+		serverInstanceDir->getPath().c_str(),
+		toString(generation->getNumber()).c_str(),
 		NULL);
 }
 
@@ -302,7 +306,7 @@ watchdogMainLoop() {
 				this_thread::restore_interruption ri(di);
 				this_thread::restore_syscall_interruption rsi(dsi);
 				try {
-					relayFeedback(webServerPassword, feedback);
+					relayFeedback(webServerPassword, serverInstanceDir, generation, feedback);
 				} catch (const thread_interrupted &) {
 					killAndWait(pid);
 					return;

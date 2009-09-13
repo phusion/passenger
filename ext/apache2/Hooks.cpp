@@ -918,7 +918,8 @@ private:
 		string message("An error occured while "
 			"buffering HTTP upload data to "
 			"a temporary file in ");
-		message.append(config->getUploadBufferDir());
+		ServerInstanceDir::GenerationPtr generation = helperServerStarter.getGeneration();
+		message.append(config->getUploadBufferDir(generation));
 		
 		switch (code) {
 		case ENOSPC:
@@ -1093,7 +1094,9 @@ private:
 		DirConfig *config = getDirConfig(r);
 		shared_ptr<BufferedUpload> tempFile;
 		try {
-			tempFile.reset(new BufferedUpload(config->getUploadBufferDir()));
+			ServerInstanceDir::GenerationPtr generation = helperServerStarter.getGeneration();
+			string uploadBufferDir = config->getUploadBufferDir(generation);
+			tempFile.reset(new BufferedUpload(uploadBufferDir));
 		} catch (const SystemException &e) {
 			throwUploadBufferingException(r, e.code());
 		}

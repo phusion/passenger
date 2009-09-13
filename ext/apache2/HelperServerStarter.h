@@ -37,6 +37,7 @@
 #include "MessageChannel.h"
 #include "MessageClient.h"
 #include "Base64.h"
+#include "ServerInstanceDir.h"
 #include "Exceptions.h"
 #include "Utils.h"
 
@@ -56,6 +57,8 @@ private:
 	FileDescriptor feedbackFd;
 	string socketFilename;
 	string password;
+	ServerInstanceDirPtr serverInstanceDir;
+	ServerInstanceDir::GenerationPtr generation;
 	
 	static void
 	killAndWait(pid_t pid) {
@@ -116,10 +119,19 @@ public:
 		return password;
 	}
 	
+	ServerInstanceDirPtr getServerInstanceDir() const {
+		return serverInstanceDir;
+	}
+	
+	ServerInstanceDir::GenerationPtr getGeneration() const {
+		return generation;
+	}
+	
 	/**
 	 * Start the helper server through the watchdog, with the given parameters.
 	 *
 	 * @throws SystemException
+	 * @throws IOException
 	 * @throws RuntimeException
 	 */
 	void start(unsigned int logLevel,
@@ -241,7 +253,7 @@ public:
 				}
 			} catch (const SystemException &ex) {
 				killAndWait(pid);
-				throw SystemException("Unable to start the Phusion Passenger: "
+				throw SystemException("Unable to start the Phusion Passenger watchdog: "
 					"unable to read its initialization feedback",
 					ex.code());
 			} catch (const RuntimeException &) {
@@ -252,10 +264,18 @@ public:
 			}
 			
 			if (args[0] == "initialized") {
-				this->pid = pid;
-				this->feedbackFd = feedbackFd;
-				socketFilename = args[1];
-				password = Base64::decode(args[2]);
+				if (args.size() == 5) {
+					this->pid = pid;
+					this->feedbackFd = feedbackFd;
+					socketFilename = args[1];
+					password = Base64::decode(args[2]);
+					serverInstanceDir.reset(new ServerInstanceDir(args[3], false));
+					generation = serverInstanceDir->getGeneration(atoi(args[4]));
+				} else {
+					killAndWait(pid);
+					throw IOException("Unable to start the Phusion Passenger watchdog: "
+						"it returned an invalid initialization feedback message");
+				}
 			} else if (args[0] == "system error") {
 				killAndWait(pid);
 				throw SystemException(args[1], atoi(args[2]));

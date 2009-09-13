@@ -202,6 +202,7 @@ end
 			ext/common/Exceptions.h
 			ext/common/Application.h
 			ext/common/MessageChannel.h
+			ext/common/ServerInstanceDir.h
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
 			ext/common/Version.h

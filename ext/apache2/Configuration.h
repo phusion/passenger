@@ -29,6 +29,7 @@
 	#include "Utils.h"
 	#include "MessageChannel.h"
 	#include "Logging.h"
+	#include "ServerInstanceDir.h"
 #endif
 
 /* The APR headers must come after the Passenger headers. See Hooks.cpp
@@ -280,11 +281,11 @@
 				}
 			}
 			
-			string getUploadBufferDir() const {
+			string getUploadBufferDir(const ServerInstanceDir::GenerationPtr &generation) const {
 				if (uploadBufferDir != NULL) {
 					return uploadBufferDir;
 				} else {
-					return getPassengerTempDir() + "/webserver_private";
+					return generation->getPath() + "/buffered_uploads";
 				}
 			}
 			
