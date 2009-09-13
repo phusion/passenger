@@ -1207,25 +1207,6 @@ public:
 				"'passenger-install-apache2-module'.");
 		}
 		
-		/*
-		spawnServer = findSpawnServer(config->root);
-		if (!fileExists(spawnServer.c_str())) {
-			string message("The Passenger spawn server script, '");
-			message.append(spawnServer);
-			message.append("', does not exist. Please check whether the 'PassengerRoot' "
-				"option is specified correctly.");
-			throw FileNotFoundException(message);
-		}
-		applicationPoolServerExe = findApplicationPoolServer(config->root);
-		if (!fileExists(applicationPoolServerExe.c_str())) {
-			string message("The Passenger application pool server, '");
-			message.append(applicationPoolServerExe);
-			message.append("', does not exist. Please check whether the 'PassengerRoot' "
-				"option is specified correctly.");
-			throw FileNotFoundException(message);
-		}
-		*/
-		
 		helperServerStarter.start(config->logLevel,
 			getpid(), config->getTempDir(),
 			config->userSwitchingEnabled(), config->getDefaultUser(),
