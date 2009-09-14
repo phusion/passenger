@@ -32,13 +32,12 @@ module AdminTools
 
 class ServerInstance
 	# If you change the structure version then don't forget to change
-	# createPassengerTempDir() in ext/common/Utils.cpp too.
+	# ext/common/ServerInstanceDir.h too.
 	
-	# Increment this number if the server instance directory structure has changed in an incompatible way.
-	DIRECTORY_STRUCTURE_MAJOR_VERSION = 1
-	# Increment this number if new features have been added to the server instance directory structure,
-	# in a backwards compatible way.
-	DIRECTORY_STRUCTURE_MINOR_VERSION = 0
+	DIR_STRUCTURE_MAJOR_VERSION = 1
+	DIR_STRUCTURE_MINOR_VERSION = 0
+	GENERATION_STRUCTURE_MAJOR_VERSION = 1
+	GENERATION_STRUCTURE_MINOR_VERSION = 0
 	
 	STALE_TIME_THRESHOLD = 60
 	
@@ -46,8 +45,11 @@ class ServerInstance
 	end
 	class CorruptedDirectoryError < StandardError
 	end
-	class UnsupportedStructureVersionError < StandardError
+	class GenerationsAbsentError < StandardError
 	end
+	class UnsupportedGenerationStructureVersionError < StandardError
+	end
+	
 	class RoleDeniedError < StandardError
 	end
 	
@@ -57,8 +59,9 @@ class ServerInstance
 		INT_PROPERTIES = [:pid, :sessions]
 	end
 
-	attr_accessor :path
-	attr_accessor :pid
+	attr_reader :path
+	attr_reader :generation_path
+	attr_reader :pid
 	
 	def self.list(options = {})
 		options = {
@@ -67,7 +70,10 @@ class ServerInstance
 		instances = []
 		
 		Dir["#{AdminTools.tmpdir}/passenger.*"].each do |dir|
-			next if dir !~ /passenger.(\d+)\Z/
+			next if dir !~ /passenger\.#{DIR_STRUCTURE_MAJOR_VERSION}\.(\d+)\.(\d+)\Z/
+			minor = $1
+			next if minor.to_i > DIR_STRUCTURE_MINOR_VERSION
+			
 			begin
 				instances << ServerInstance.new(dir)
 			rescue StaleDirectoryError, CorruptedDirectoryError
@@ -77,7 +83,7 @@ class ServerInstance
 					FileUtils.chmod_R(0700, dir) rescue nil
 					FileUtils.rm_rf(dir)
 				end
-			rescue UnsupportedStructureVersionError
+			rescue UnsupportedGenerationStructureVersionError, GenerationsAbsentError
 				# Do nothing.
 			end
 		end
@@ -92,32 +98,45 @@ class ServerInstance
 		raise ArgumentError, "Path may not be nil." if path.nil?
 		@path = path
 		
-		if File.exist?("#{path}/instance.pid")
-			data = File.read("#{path}/instance.pid").strip
+		if File.exist?("#{path}/control_process.pid")
+			data = File.read("#{path}/control_process.pid").strip
 			@pid = data.to_i
 		else
-			path =~ /passenger.(\d+)\Z/
+			path =~ /passenger\.\d+\.\d+\.(\d+)\Z/
 			@pid = $1.to_i
 		end
 		if @pid == 0
-			raise CorruptedDirectoryError, "Instance directory contains corrupted instance.pid file."
+			raise CorruptedDirectoryError, "Instance directory contains corrupted control_process.pid file."
 		elsif !AdminTools.process_is_alive?(@pid)
 			raise StaleDirectoryError, "There is no instance with PID #{@pid}."
 		end
 		
-		if !File.exist?("#{path}/structure_version.txt")
-			raise CorruptedDirectoryError, "Directory doesn't contain a structure version specification file."
-		else
-			version_data = File.read("#{path}/structure_version.txt").strip
-			major, minor = version_data.split(".", 2)
-			if major.nil? || minor.nil? || major !~ /\A\d+\Z/ || minor !~ /\A\d+\Z/
-				raise CorruptedDirectoryError, "Directory doesn't contain a valid structure version specification file."
+		generations = Dir["#{path}/generation-*"]
+		if generations.empty?
+			raise GenerationsAbsentError, "There are no generation subdirectories in this instance directory."
+		end
+		highest_generation_number = 0
+		generations.each do |generation|
+			generation =~ /(\d+)/
+			generation_number = $1.to_i
+			if generation_number > highest_generation_number
+				highest_generation_number = generation_number
 			end
-			major = major.to_i
-			minor = minor.to_i
-			if major != DIRECTORY_STRUCTURE_MAJOR_VERSION || minor > DIRECTORY_STRUCTURE_MINOR_VERSION
-				raise UnsupportedStructureVersionError, "Unsupported directory structure version."
-			end
+		end
+		@generation_path = "#{path}/generation-#{highest_generation_number}"
+		
+		if !File.exist?("#{@generation_path}/structure_version.txt")
+			raise CorruptedDirectoryError, "The generation directory doesn't contain a structure version specification file."
+		end
+		version_data = File.read("#{@generation_path}/structure_version.txt").strip
+		major, minor = version_data.split(".", 2)
+		if major.nil? || minor.nil? || major !~ /\A\d+\Z/ || minor !~ /\A\d+\Z/
+			raise CorruptedDirectoryError, "The generation directory doesn't contain a valid structure version specification file."
+		end
+		major = major.to_i
+		minor = minor.to_i
+		if major != GENERATION_STRUCTURE_MAJOR_VERSION || minor > GENERATION_STRUCTURE_MINOR_VERSION
+			raise UnsupportedGenerationStructureVersionError, "Unsupported generation directory structure version."
 		end
 	end
 	
@@ -127,13 +146,13 @@ class ServerInstance
 	# - +EOFError+: The server unexpectedly closed the connection during authentication.
 	# - +SecurityError+: The server denied our authentication credentials.
 	def connect(role_or_username, password = nil)
-		@channel = MessageChannel.new(UNIXSocket.new("#{path}/master/pool_controller.socket"))
+		@channel = MessageChannel.new(UNIXSocket.new("#{@generation_path}/socket"))
 		if role_or_username.is_a?(Symbol)
 			case role_or_username
 			when :passenger_status
 				username = "_passenger-status"
 				begin
-					password = File.read("#{path}/info/passenger-status-password.txt")
+					password = File.read("#{@generation_path}/passenger-status-password.txt")
 				rescue Errno::EACCES
 					raise RoleDeniedError
 				end

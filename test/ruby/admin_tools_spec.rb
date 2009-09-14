@@ -19,6 +19,11 @@ end
 describe AdminTools::ServerInstance do
 	include Utils
 	
+	DIR_STRUCTURE_MAJOR_VERSION = AdminTools::ServerInstance::DIR_STRUCTURE_MAJOR_VERSION
+	DIR_STRUCTURE_MINOR_VERSION = AdminTools::ServerInstance::DIR_STRUCTURE_MINOR_VERSION
+	GENERATION_STRUCTURE_MAJOR_VERSION = AdminTools::ServerInstance::GENERATION_STRUCTURE_MAJOR_VERSION
+	GENERATION_STRUCTURE_MINOR_VERSION = AdminTools::ServerInstance::GENERATION_STRUCTURE_MINOR_VERSION
+	
 	before :each do
 		File.chmod(0700, passenger_tmpdir)
 	end
@@ -42,11 +47,17 @@ describe AdminTools::ServerInstance do
 		IO.popen("sleep 999")
 	end
 	
-	def create_instance_dir(dir)
+	def create_instance_dir(pid, major = DIR_STRUCTURE_MAJOR_VERSION, minor = DIR_STRUCTURE_MINOR_VERSION)
+		dir = "#{passenger_tmpdir}/passenger.#{major}.#{minor}.#{pid}"
 		Dir.mkdir(dir)
-		File.write("#{dir}/structure_version.txt",
-			AdminTools::ServerInstance::DIRECTORY_STRUCTURE_MAJOR_VERSION.to_s + "." +
-			AdminTools::ServerInstance::DIRECTORY_STRUCTURE_MINOR_VERSION.to_s)
+		return dir
+	end
+	
+	def create_generation(dir, number = 0, major = GENERATION_STRUCTURE_MAJOR_VERSION, minor = GENERATION_STRUCTURE_MINOR_VERSION)
+		dir = "#{dir}/generation-0"
+		Dir.mkdir(dir)
+		File.write("#{dir}/structure_version.txt", "#{major}.#{minor}")
+		return dir
 	end
 	
 	describe ".list" do
@@ -61,146 +72,185 @@ describe AdminTools::ServerInstance do
 			@process2 = spawn_process
 			processes = [@process1, @process2].sort { |a, b| a.pid <=> b.pid }
 			
-			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process1.pid}")
-			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process2.pid}")
+			dir1 = create_instance_dir(@process1.pid)
+			create_generation(dir1)
+			dir2 = create_instance_dir(@process2.pid)
+			create_generation(dir2)
+			
 			instances = AdminTools::ServerInstance.list.sort { |a, b| a.pid <=> b.pid }
 			instances.should have(2).items
-			instances[0].pid.should == @process1.pid
-			instances[1].pid.should == @process2.pid
+			instances[0].pid.should == processes[0].pid
+			instances[1].pid.should == processes[1].pid
 		end
 		
-		it "ignores directories that don't look like Phusion Passenger instance directories" do
+		it "doesn't list directories that don't look like Phusion Passenger server instance directories" do
 			@process1 = spawn_process
-			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process1.pid}")
+			
+			dir = create_instance_dir(@process1.pid)
+			create_generation(dir)
+			
 			Dir.mkdir("#{passenger_tmpdir}/foo.123")
+			create_generation("#{passenger_tmpdir}/foo.123")
+			
 			instances = AdminTools::ServerInstance.list
 			instances.should have(1).item
 			instances[0].pid.should == @process1.pid
 		end
 		
-		it "ignores instance directories that have a different major structure version" do
+		it "doesn't list server instance directories that have a different major structure version" do
 			@process1 = spawn_process
 			@process2 = spawn_process
 			
-			dir = "#{passenger_tmpdir}/passenger.#{@process1.pid}"
-			create_instance_dir(dir)
-			File.write("#{dir}/structure_version.txt", "0.0")
-			
-			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process2.pid}")
+			dir1 = create_instance_dir(@process1.pid, 0)
+			create_generation(dir1)
+			dir2 = create_instance_dir(@process2.pid)
+			create_generation(dir2)
 			
 			instances = AdminTools::ServerInstance.list
 			instances.should have(1).item
 			instances[0].pid.should == @process2.pid
 		end
 		
-		it "ignores instance directories that have the same major structure version but a larger minor structure version" do
+		it "doesn't list server instance directories that have the same major structure version but a larger minor structure version" do
 			@process1 = spawn_process
 			@process2 = spawn_process
 			
-			dir = "#{passenger_tmpdir}/passenger.#{@process1.pid}"
-			create_instance_dir(dir)
-			File.write("#{dir}/structure_version.txt",
-				AdminTools::ServerInstance::DIRECTORY_STRUCTURE_MAJOR_VERSION.to_s + "." +
-				"9" + AdminTools::ServerInstance::DIRECTORY_STRUCTURE_MINOR_VERSION.to_s)
-			
-			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process2.pid}")
+			dir1 = create_instance_dir(@process1.pid, DIR_STRUCTURE_MAJOR_VERSION, DIR_STRUCTURE_MINOR_VERSION + 1)
+			create_generation(dir1)
+			dir2 = create_instance_dir(@process2.pid)
+			create_generation(dir2)
 			
 			instances = AdminTools::ServerInstance.list
 			instances.should have(1).item
 			instances[0].pid.should == @process2.pid
 		end
+		
+		it "doesn't list server instance directories with no generations"
+		it "doesn't list server instance directories for which the newest generation has a different major version"
+		it "doesn't list server instance directories for which the newest generation has the same major version but a larger minor version"
 		
 		it "cleans up server instance directories for which its PID doesn't exist" do
 			@process1 = spawn_process
 			process2 = spawn_process
 			process2_pid = process2.pid
+			process3 = spawn_process
+			process3_pid = process3.pid
 			
-			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process1.pid}")
-			create_instance_dir("#{passenger_tmpdir}/passenger.#{process2_pid}")
+			dir1 = create_instance_dir(@process1.pid)
+			create_generation(dir1)
+			dir2 = create_instance_dir(process2_pid)
+			create_generation(dir2)
+			dir3 = create_instance_dir(process3_pid + 1)
+			create_generation(dir3)
+			File.write("#{dir3}/control_process.pid", process3_pid)
 			
 			Process.kill('KILL', process2_pid) rescue nil
 			process2.close
-			
-			AdminTools::ServerInstance.should_receive(:log_cleaning_action)
-			instances = AdminTools::ServerInstance.list
-			instances.should have(1).item
-			instances[0].pid.should == @process1.pid
-			File.exist?("#{passenger_tmpdir}/passenger.#{process2_pid}").should be_false
-		end
-		
-		it "cleans up server instance directories that don't contain structure_version.txt" do
-			@process1 = spawn_process
-			@process2 = spawn_process
-			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process1.pid}")
-			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process2.pid}")
-			File.unlink("#{passenger_tmpdir}/passenger.#{@process2.pid}/structure_version.txt")
-			
-			AdminTools::ServerInstance.should_receive(:log_cleaning_action)
-			instances = AdminTools::ServerInstance.list
-			instances.should have(1).item
-			instances[0].pid.should == @process1.pid
-			File.exist?("#{passenger_tmpdir}/passenger.#{@process2.pid}").should be_false
-		end
-		
-		it "cleans up server instance directories that contain a corrupted instance.pid" do
-			@process1 = spawn_process
-			@process2 = spawn_process
-			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process1.pid}")
-			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process2.pid}")
-			File.write("#{passenger_tmpdir}/passenger.#{@process2.pid}/instance.pid", "")
-			
-			AdminTools::ServerInstance.should_receive(:log_cleaning_action)
-			instances = AdminTools::ServerInstance.list
-			instances.should have(1).item
-			instances[0].pid.should == @process1.pid
-			File.exist?("#{passenger_tmpdir}/passenger.#{@process2.pid}").should be_false
-		end
-		
-		it "cleans up server instance directories that contain a corrupted structure_version.txt" do
-			@process1 = spawn_process
-			@process2 = spawn_process
-			@process3 = spawn_process
-			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process1.pid}")
-			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process2.pid}")
-			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process3.pid}")
-			File.write("#{passenger_tmpdir}/passenger.#{@process2.pid}/structure_version.txt", "")
-			File.write("#{passenger_tmpdir}/passenger.#{@process3.pid}/structure_version.txt", "1.x")
+			Process.kill('KILL', process3_pid) rescue nil
+			process3.close
 			
 			AdminTools::ServerInstance.should_receive(:log_cleaning_action).twice
 			instances = AdminTools::ServerInstance.list
 			instances.should have(1).item
 			instances[0].pid.should == @process1.pid
-			File.exist?("#{passenger_tmpdir}/passenger.#{@process2.pid}").should be_false
-			File.exist?("#{passenger_tmpdir}/passenger.#{@process3.pid}").should be_false
+			File.exist?(dir2).should be_false
+			File.exist?(dir3).should be_false
+		end
+		
+		it "doesn't clean up server instance directories for which the major structure version is different"
+		it "doesn't clean up server instance directories for which the major structure version is the same but the minor structure version is larger"
+		it "doesn't clean up server instance directories for which the latest generation has a different major version"
+		it "doesn't clean up server instance directories for which the latest generation has the same major version but a larger minor version"
+		
+		it "cleans up server instance directories that contain a corrupted control_process.pid" do
+			@process1 = spawn_process
+			@process2 = spawn_process
+			
+			dir1 = create_instance_dir(@process1.pid)
+			create_generation(dir1)
+			dir2 = create_instance_dir(@process2.pid)
+			create_generation(dir2)
+			File.write("#{dir2}/control_process.pid", "")
+			
+			AdminTools::ServerInstance.should_receive(:log_cleaning_action)
+			instances = AdminTools::ServerInstance.list
+			instances.should have(1).item
+			instances[0].pid.should == @process1.pid
+			File.exist?(dir2).should be_false
+		end
+		
+		it "cleans up server instance directories for which the latest generation has a corrupted structure_version.txt" do
+			@process1 = spawn_process
+			@process2 = spawn_process
+			@process3 = spawn_process
+			
+			dir1 = create_instance_dir(@process1.pid)
+			create_generation(dir1)
+			dir2 = create_instance_dir(@process2.pid)
+			generation2 = create_generation(dir2)
+			File.write("#{generation2}/structure_version.txt", "")
+			dir3 = create_instance_dir(@process3.pid)
+			generation3 = create_generation(dir3)
+			File.write("#{generation3}/structure_version.txt", "1.x")
+			
+			AdminTools::ServerInstance.should_receive(:log_cleaning_action).twice
+			instances = AdminTools::ServerInstance.list
+			instances.should have(1).item
+			instances[0].pid.should == @process1.pid
+			File.exist?(dir2).should be_false
+			File.exist?(dir3).should be_false
+		end
+		
+		it "cleans up server instance directories for which the latest generation doesn't have a structure_version.txt" do
+			@process1 = spawn_process
+			@process2 = spawn_process
+			
+			dir1 = create_instance_dir(@process1.pid)
+			create_generation(dir1)
+			dir2 = create_instance_dir(@process2.pid)
+			generation2 = create_generation(dir2)
+			File.unlink("#{generation2}/structure_version.txt")
+			
+			AdminTools::ServerInstance.should_receive(:log_cleaning_action)
+			instances = AdminTools::ServerInstance.list
+			instances.should have(1).item
+			instances[0].pid.should == @process1.pid
+			File.exist?(dir2).should be_false
 		end
 		
 		it "only cleans up an instance directory if it was created more than STALE_TIME_THRESHOLD seconds ago" do
 			@process1 = spawn_process
 			@process2 = spawn_process
-			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process1.pid}")
-			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process2.pid}")
-			File.unlink("#{passenger_tmpdir}/passenger.#{@process2.pid}/structure_version.txt")
+			
+			dir1 = create_instance_dir(@process1.pid)
+			create_generation(dir1)
+			dir2 = create_instance_dir(@process2.pid)
+			generation2 = create_generation(dir2)
+			File.unlink("#{generation2}/structure_version.txt")
 			
 			AdminTools::ServerInstance.should_not_receive(:log_cleaning_action)
 			AdminTools::ServerInstance.should_receive(:current_time).and_return(Time.now)
 			instances = AdminTools::ServerInstance.list
 			instances.should have(1).item
 			instances[0].pid.should == @process1.pid
-			File.exist?("#{passenger_tmpdir}/passenger.#{@process2.pid}").should be_true
+			File.exist?(dir2).should be_true
 		end
 		
 		it "does not clean up instance directories if clean_stale_or_corrupted is false" do
 			@process1 = spawn_process
 			@process2 = spawn_process
-			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process1.pid}")
-			create_instance_dir("#{passenger_tmpdir}/passenger.#{@process2.pid}")
-			File.write("#{passenger_tmpdir}/passenger.#{@process2.pid}/instance.pid", "")
+			
+			dir1 = create_instance_dir(@process1.pid)
+			create_generation(dir1)
+			dir2 = create_instance_dir(@process2.pid)
+			create_generation(dir2)
+			File.write("#{dir2}/control_process.pid", "")
 			
 			AdminTools::ServerInstance.should_not_receive(:log_cleaning_action)
 			instances = AdminTools::ServerInstance.list(:clean_stale_or_corrupted => false)
 			instances.should have(1).item
 			instances[0].pid.should == @process1.pid
-			File.exist?("#{passenger_tmpdir}/passenger.#{@process2.pid}").should be_true
+			File.exist?(dir2).should be_true
 		end
 	end
 	
@@ -221,5 +271,5 @@ describe AdminTools::ServerInstance do
 			File.write("#{dir}/instance.pid", @process1.pid)
 			AdminTools::ServerInstance.new(dir).pid.should == @process1.pid
 		end
-	end
+	end if false
 end

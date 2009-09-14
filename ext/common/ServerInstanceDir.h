@@ -46,9 +46,10 @@ using namespace boost;
 class ServerInstanceDir: public noncopyable {
 public:
 	// Don't forget to update lib/phusion_passenger/admin_tools/server_instance.rb too.
-	static const int STRUCTURE_SUPER_VERSION = 1;
-	static const int STRUCTURE_MAJOR_VERSION = 1;
-	static const int STRUCTURE_MINOR_VERSION = 0;
+	static const int DIR_STRUCTURE_MAJOR_VERSION = 1;
+	static const int DIR_STRUCTURE_MINOR_VERSION = 0;
+	static const int GENERATION_STRUCTURE_MAJOR_VERSION = 1;
+	static const int GENERATION_STRUCTURE_MINOR_VERSION = 0;
 	
 	class Generation: public noncopyable {
 	private:
@@ -80,8 +81,8 @@ public:
 			/* Write structure version file. */
 			string structureVersionFile = path + "/structure_version.txt";
 			createFile(structureVersionFile,
-				toString(STRUCTURE_MAJOR_VERSION) + "." +
-				toString(STRUCTURE_MINOR_VERSION),
+				toString(GENERATION_STRUCTURE_MAJOR_VERSION) + "." +
+				toString(GENERATION_STRUCTURE_MINOR_VERSION),
 				S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 			
 			
@@ -206,7 +207,8 @@ public:
 		 * server instance directory.
 		 */
 		initialize(theParentDir + "/passenger." +
-			toString(STRUCTURE_SUPER_VERSION) + "." +
+			toString(DIR_STRUCTURE_MAJOR_VERSION) + "." +
+			toString(DIR_STRUCTURE_MINOR_VERSION) + "." +
 			toString<unsigned long long>(webServerPid),
 			owner);
 		
