@@ -141,7 +141,7 @@ class ServerInstance
 	end
 	
 	# Raises:
-	# - +ArgumentError+
+	# - +ArgumentError+: Unsupported role
 	# - +RoleDeniedError+: The user that the current process is as is not authorized to utilize the given role.
 	# - +EOFError+: The server unexpectedly closed the connection during authentication.
 	# - +SecurityError+: The server denied our authentication credentials.
@@ -157,7 +157,7 @@ class ServerInstance
 					raise RoleDeniedError
 				end
 			else
-				raise ArgumentError, "Supported role #{role_or_username}"
+				raise ArgumentError, "Unsupported role #{role_or_username}"
 			end
 		else
 			username = role_or_username
