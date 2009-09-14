@@ -260,16 +260,16 @@ describe AdminTools::ServerInstance do
 		end
 		
 		it "returns the PID in the directory filename if instance.pid doesn't exist" do
-			dir = "#{passenger_tmpdir}/passenger.#{@process1.pid}"
-			create_instance_dir(dir)
+			dir = create_instance_dir(@process1.pid)
+			create_generation(dir)
 			AdminTools::ServerInstance.new(dir).pid.should == @process1.pid
 		end
 		
-		it "returns the PID in instance.pid if it exists" do
-			dir = "#{passenger_tmpdir}/passenger.#{@process1.pid + 1}"
-			create_instance_dir(dir)
-			File.write("#{dir}/instance.pid", @process1.pid)
+		it "returns the PID in control_process.pid if it exists" do
+			dir = create_instance_dir(@process1.pid + 1)
+			create_generation(dir)
+			File.write("#{dir}/control_process.pid", @process1.pid)
 			AdminTools::ServerInstance.new(dir).pid.should == @process1.pid
 		end
-	end if false
+	end
 end
