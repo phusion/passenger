@@ -218,22 +218,32 @@ describe AdminTools::ServerInstance do
 			File.exist?(dir2).should be_false
 		end
 		
-		it "only cleans up an instance directory if it was created more than STALE_TIME_THRESHOLD seconds ago" do
+		it "only cleans up an instance directory if it was modified more than STALE_TIME_THRESHOLD seconds ago" do
 			@process1 = spawn_process
 			@process2 = spawn_process
+			creation_time = Time.now
+			list_time = Time.now + AdminTools::ServerInstance::STALE_TIME_THRESHOLD + 1
 			
+			# This directory was created more than STALE_TIME_THRESHOLD secs ago, but
+			# modified just now.
 			dir1 = create_instance_dir(@process1.pid)
-			create_generation(dir1)
+			generation1 = create_generation(dir1)
+			File.unlink("#{generation1}/structure_version.txt")
+			File.utime(creation_time, list_time, dir1)
+			
+			# This directory was created and modified more than STALE_TIME_THRESHOLD
+			# secs ago.
 			dir2 = create_instance_dir(@process2.pid)
 			generation2 = create_generation(dir2)
 			File.unlink("#{generation2}/structure_version.txt")
+			File.utime(creation_time, creation_time, dir2)
 			
-			AdminTools::ServerInstance.should_not_receive(:log_cleaning_action)
-			AdminTools::ServerInstance.should_receive(:current_time).and_return(Time.now)
+			AdminTools::ServerInstance.should_receive(:log_cleaning_action)
+			AdminTools::ServerInstance.should_receive(:current_time).and_return(list_time)
 			instances = AdminTools::ServerInstance.list
-			instances.should have(1).item
-			instances[0].pid.should == @process1.pid
-			File.exist?(dir2).should be_true
+			instances.should have(0).items
+			File.exist?(dir1).should be_true
+			File.exist?(dir2).should be_false
 		end
 		
 		it "does not clean up instance directories if clean_stale_or_corrupted is false" do

@@ -78,7 +78,7 @@ class ServerInstance
 				instances << ServerInstance.new(dir)
 			rescue StaleDirectoryError, CorruptedDirectoryError
 				if options[:clean_stale_or_corrupted] &&
-				   File.stat(dir).ctime < current_time - STALE_TIME_THRESHOLD
+				   File.stat(dir).mtime < current_time - STALE_TIME_THRESHOLD
 					log_cleaning_action(dir)
 					FileUtils.chmod_R(0700, dir) rescue nil
 					FileUtils.rm_rf(dir)
