@@ -173,6 +173,21 @@ module TestHelper
 			exit!
 		end
 	end
+	
+	
+	######## Other helpers ########
+	
+	def retry_with_time_limit(seconds, interval = 0.2)
+		deadline = Time.now + seconds
+		while Time.now < deadline
+			if yield
+				return
+			else
+				sleep(interval)
+			end
+		end
+		raise "Time limit exceeded"
+	end
 end
 
 File.class_eval do

@@ -31,6 +31,7 @@ LoadModule passenger_module "<%= @mod_passenger %>"
 PassengerRoot "<%= @passenger_root %>"
 PassengerRuby "<%= PlatformInfo::RUBY %>"
 PassengerDefaultUser <%= CONFIG['lowest_user'] %>
+PassengerTempDir "<%= @server_root %>"
 RailsEnv production
 RackEnv production
 PassengerLogLevel 1

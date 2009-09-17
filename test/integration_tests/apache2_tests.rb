@@ -4,6 +4,8 @@ require 'support/config'
 require 'support/test_helper'
 require 'support/apache2_controller'
 require 'phusion_passenger/platform_info'
+require 'phusion_passenger/admin_tools'
+require 'phusion_passenger/admin_tools/server_instance'
 
 require 'integration_tests/mycook_spec'
 require 'integration_tests/cgi_environment_spec'
@@ -19,6 +21,7 @@ describe "Apache 2 module" do
 	before :all do
 		check_hosts_configuration
 		@apache2 = Apache2Controller.new
+		ENV['PASSENGER_TEMP_DIR'] = @apache2.server_root
 		if Process.uid == 0
 			@apache2.set(
 				:www_user => CONFIG['normal_user_1'],
@@ -517,6 +520,33 @@ describe "Apache 2 module" do
 				result = get("/app-with-crashing-vendor-rails/public")
 				result.should =~ @error_page_signature
 				result.should =~ /vendor crash/
+			end
+		end
+	end
+	
+	describe "HelperServer" do
+		before :all do
+			@mycook = setup_rails_stub('mycook', File.expand_path("tmp.mycook"))
+			@mycook_url_root = "http://1.passenger.test:#{@apache2.port}"
+			@apache2.set_vhost('1.passenger.test', "#{@mycook.app_root}/public")
+			@apache2.start
+			@server = "http://1.passenger.test:#{@apache2.port}"
+		end
+		
+		after :all do
+			@mycook.destroy
+		end
+		
+		before :each do
+			@mycook.reset
+		end
+		
+		it "is restarted if it crashes" do
+			get('/welcome').should =~ /Welcome to MyCook/
+			instance = PhusionPassenger::AdminTools::ServerInstance.list.first
+			Process.kill('SIGKILL', instance.helper_server_pid)
+			retry_with_time_limit(10) do
+				get('/welcome') =~ /Welcome to MyCook/
 			end
 		end
 	end

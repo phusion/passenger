@@ -240,6 +240,10 @@ public:
 		accountsDatabase->add("_web_server", webServerPassword, false,
 			Account::GET | Account::SET_PARAMETERS | Account::EXIT);
 		messageServer = ptr(new MessageServer(generation->getPath() + "/socket", accountsDatabase));
+		
+		createFile(generation->getPath() + "/helper_server.pid",
+			toString(getpid()), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+		
 		if (geteuid() == 0 && !userSwitching) {
 			lowerPrivilege(defaultUser);
 		}

@@ -70,7 +70,7 @@ class ServerInstance
 		instances = []
 		
 		Dir["#{AdminTools.tmpdir}/passenger.*"].each do |dir|
-			next if dir !~ /passenger\.#{DIR_STRUCTURE_MAJOR_VERSION}\.(\d+)\.(\d+)\Z/
+			next if File.basename(dir) !~ /passenger\.#{DIR_STRUCTURE_MAJOR_VERSION}\.(\d+)\.(\d+)\Z/
 			minor = $1
 			next if minor.to_i > DIR_STRUCTURE_MINOR_VERSION
 			
@@ -117,7 +117,7 @@ class ServerInstance
 		end
 		highest_generation_number = 0
 		generations.each do |generation|
-			generation =~ /(\d+)/
+			File.basename(generation) =~ /(\d+)/
 			generation_number = $1.to_i
 			if generation_number > highest_generation_number
 				highest_generation_number = generation_number
@@ -176,6 +176,10 @@ class ServerInstance
 		ensure
 			@channel.close
 		end
+	end
+	
+	def helper_server_pid
+		return File.read("#{@generation_path}/helper_server.pid").strip.to_i
 	end
 	
 	def status

@@ -78,6 +78,12 @@ protected:
 		}
 	}
 	
+	/** Closes the connection without throwing close exceptions. */
+	void silentDisconnect() {
+		fd = FileDescriptor();
+		channel = MessageChannel();
+	}
+	
 public:
 	/**
 	 * Create a new MessageClient object. It doesn't actually connect to the server until
@@ -93,8 +99,11 @@ public:
 	virtual ~MessageClient() { }
 	
 	/**
-	 * Connect to the given MessageChannel server. If a connection was already established,
+	 * Connect to the given MessageServer. If a connection was already established,
 	 * then the old connection will be closed and a new connection will be established.
+	 *
+	 * If this MessageClient was in a connected state, and this method throws an exception,
+	 * then old connection will be broken.
 	 *
 	 * @param socketFilename The filename of the server socket to connect to.
 	 * @param username The username to use for authenticating with the server.
@@ -114,37 +123,81 @@ public:
 			channel = MessageChannel(fd);
 			authenticate(username, userSuppliedPassword);
 			return this;
-		} catch (...) {
-			disconnect();
+		} catch (const RuntimeException &) {
+			silentDisconnect();
+			throw;
+		} catch (const SystemException &) {
+			silentDisconnect();
+			throw;
+		} catch (const IOException &) {
+			silentDisconnect();
+			throw;
+		} catch (const boost::thread_interrupt &) {
+			silentDisconnect();
 			throw;
 		}
 	}
 	
 	void disconnect() {
-		if (channel.connected()) {
-			channel.close();
+		if (fd != -1) {
+			fd.close();
+			fd = FileDescriptor();
+			channel = MessageChannel();
 		}
-		fd = FileDescriptor();
-		channel = MessageChannel();
 	}
 	
 	bool connected() const {
-		return channel.connected();
+		return fd != -1;
 	}
 	
+	/**
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
+	 */
 	bool read(vector<string> &args) {
-		return channel.read(args);
+		try {
+			return channel.read(args);
+		} catch (const SystemException &e) {
+			silentDisconnect();
+			throw;
+		}
 	}
 	
+	/**
+	 * @throws SystemException
+	 * @throws SecurityException
+	 * @throws TimeoutException
+	 * @throws boost::thread_interrupted
+	 */
 	bool readScalar(string &output, unsigned int maxSize = 0, unsigned long long *timeout = NULL) {
-		return channel.readScalar(output, maxSize, timeout);
+		try {
+			return channel.readScalar(output, maxSize, timeout);
+		} catch (const SystemException &) {
+			silentDisconnect();
+			throw;
+		} catch (const SecurityException &) {
+			silentDisconnect();
+			throw;
+		} catch (const TimeoutException &) {
+			silentDisconnect();
+			throw;
+		}
 	}
 	
+	/**
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
+	 */
 	void write(const char *name, ...) {
 		va_list ap;
 		va_start(ap, name);
 		try {
-			channel.write(name, ap);
+			try {
+				channel.write(name, ap);
+			} catch (const SystemException &) {
+				silentDisconnect();
+				throw;
+			}
 			va_end(ap);
 		} catch (...) {
 			va_end(ap);
@@ -152,12 +205,30 @@ public:
 		}
 	}
 	
+	/**
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
+	 */
 	void writeScalar(const char *data, unsigned int size) {
-		channel.write(data, size);
+		try {
+			channel.writeScalar(data, size);
+		} catch (const SystemException &) {
+			silentDisconnect();
+			throw;
+		}
 	}
 	
+	/**
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
+	 */
 	void writeScalar(const StaticString &data) {
-		channel.write(data.c_str(), data.size());
+		try {
+			channel.writeScalar(data.c_str(), data.size());
+		} catch (const SystemException &) {
+			silentDisconnect();
+			throw;
+		}
 	}
 };
 

@@ -93,9 +93,11 @@ protected:
 		
 		~SharedData() {
 			TRACE_POINT();
-			if (channel.connected()) {
-				disconnect();
-			}
+			disconnect();
+		}
+		
+		bool connected() const {
+			return fd != -1;
 		}
 		
 		/**
@@ -104,7 +106,7 @@ protected:
 		void disconnect() {
 			TRACE_POINT();
 			this_thread::disable_syscall_interruption dsi;
-			channel.close();
+			fd = FileDescriptor();
 		}
 	};
 	
@@ -230,7 +232,7 @@ protected:
 	void checkConnection() const {
 		if (data == NULL) {
 			throw RuntimeException("connect() hasn't been called on this ApplicationPool::Client instance.");
-		} else if (!data->channel.connected()) {
+		} else if (!data->connected()) {
 			throw IOException("The connection to the ApplicationPool server is closed.");
 		}
 	}
@@ -280,8 +282,11 @@ public:
 	 * @post connected()
 	 */
 	Client *connect(const string &socketFilename, const string &username, const StaticString &userSuppliedPassword) {
+		TRACE_POINT();
 		FileDescriptor fd = connectToUnixServer(socketFilename.c_str());
+		UPDATE_TRACE_POINT();
 		data = ptr(new SharedData(fd));
+		UPDATE_TRACE_POINT();
 		authenticate(username, userSuppliedPassword);
 		return this;
 	}
@@ -290,7 +295,7 @@ public:
 		if (data == NULL) {
 			throw RuntimeException("connect() hasn't been called on this ApplicationPool::Client instance.");
 		}
-		return data->channel.connected();
+		return data->connected();
 	}
 	
 	virtual void clear() {

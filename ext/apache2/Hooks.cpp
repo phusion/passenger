@@ -228,17 +228,18 @@ private:
 	 * @throws SecurityException
 	 */
 	ApplicationPool::Client *getApplicationPool() {
+		TRACE_POINT();
 		ApplicationPool::Client *pool = threadSpecificApplicationPool.get();
-		if (pool == NULL) {
+		if (pool == NULL || !pool->connected()) {
+			UPDATE_TRACE_POINT();
+			if (pool != NULL) {
+				P_DEBUG("Reconnecting to ApplicationPool server");
+			}
 			auto_ptr<ApplicationPool::Client> pool_ptr(new ApplicationPool::Client);
 			pool_ptr->connect(helperServerStarter.getSocketFilename(),
 				"_web_server", helperServerStarter.getPassword());
 			pool = pool_ptr.release();
 			threadSpecificApplicationPool.reset(pool);
-		} else if (!pool->connected()) {
-			P_DEBUG("Reconnecting to ApplicationPool server");
-			pool->connect(helperServerStarter.getSocketFilename(),
-				"_web_server", helperServerStarter.getPassword());
 		}
 		return pool;
 	}
