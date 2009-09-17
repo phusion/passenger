@@ -41,9 +41,9 @@ PassengerLogLevel 1
 
 TypesConfig "<%= @server_root %>/mime.types"
 StartServers          1
-ServerLimit          50
+ServerLimit          10
 MaxRequestsPerChild  50
-MaxClients           50
+MaxClients           10
 <IfModule mpm_prefork_module>
 	MinSpareServers       1
 	MaxSpareServers       1

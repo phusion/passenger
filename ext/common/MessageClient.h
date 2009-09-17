@@ -132,7 +132,7 @@ public:
 		} catch (const IOException &) {
 			silentDisconnect();
 			throw;
-		} catch (const boost::thread_interrupt &) {
+		} catch (const boost::thread_interrupted &) {
 			silentDisconnect();
 			throw;
 		}

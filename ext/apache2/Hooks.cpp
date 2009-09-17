@@ -244,6 +244,40 @@ private:
 		return pool;
 	}
 	
+	/**
+	 * Get a session from the application pool, similar to how
+	 * ApplicationPool::Interface::get() works. This method also checks whether
+	 * the helper server has crashed. If it did then it will wait a while (for
+	 * the watchdog to the restart the helper server) and then attempt to reconnect 
+	 * to the helper server.
+	 *
+	 * @throws SystemException
+	 * @throws IOException
+	 * @throws RuntimeException
+	 * @throws SecurityExcepion
+	 */
+	Application::SessionPtr getSession(const PoolOptions &options) {
+		ApplicationPool::Client *pool = getApplicationPool();
+		try {
+			return pool->get(options);
+		} catch (const SystemException &e) {
+			// Maybe the helper server crashed. First wait 100 ms.
+			/* usleep(100000);
+			
+			// Then try to reconnect to the helper server for the next
+			// 5 seconds.
+			time_t begin = time(NULL);
+			while (time(NULL)) */
+			
+			//Wait between 500 and 2500 ms,
+			// then reconnect again.
+			int r = rand(); // Don't care about thread-safety of this function.
+			usleep(500000 + r % 2000000);
+			pool = getApplicationPool();
+			return pool->get(options);
+		}
+	}
+	
 	bool hasModRewrite() {
 		if (m_hasModRewrite == UNKNOWN) {
 			if (ap_find_linked_module("mod_rewrite.c")) {
@@ -551,7 +585,7 @@ private:
 				);
 				options.environmentVariables = ptr(new EnvironmentVariablesStringListCreator(r));
 				
-				session = getApplicationPool()->get(options);
+				session = getSession(options);
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				r->status = 500;

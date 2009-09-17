@@ -542,11 +542,22 @@ describe "Apache 2 module" do
 		end
 		
 		it "is restarted if it crashes" do
-			get('/welcome').should =~ /Welcome to MyCook/
+			# Make sure that all Apache worker processes have connected to
+			# the helper server.
+			10.times do
+				get('/welcome').should =~ /Welcome to MyCook/
+				sleep 0.1
+			end
+			
+			# Now kill the helper server.
 			instance = PhusionPassenger::AdminTools::ServerInstance.list.first
 			Process.kill('SIGKILL', instance.helper_server_pid)
-			retry_with_time_limit(10) do
-				get('/welcome') =~ /Welcome to MyCook/
+			
+			# Each worker process should detect that the old
+			# helper server has died, and should reconnect.
+			10.times do
+				get('/welcome').should =~ /Welcome to MyCook/
+				sleep 0.1
 			end
 		end
 	end
