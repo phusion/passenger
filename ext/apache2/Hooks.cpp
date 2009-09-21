@@ -247,9 +247,9 @@ private:
 	/**
 	 * Get a session from the application pool, similar to how
 	 * ApplicationPool::Interface::get() works. This method also checks whether
-	 * the helper server has crashed. If it did then it will wait a while (for
-	 * the watchdog to the restart the helper server) and then attempt to reconnect 
-	 * to the helper server.
+	 * the helper server has crashed. If it did then it will attempt to
+	 * reconnect to the helper server for a small period of time until it's up
+	 * again.
 	 *
 	 * @throws SystemException
 	 * @throws IOException
@@ -257,24 +257,45 @@ private:
 	 * @throws SecurityExcepion
 	 */
 	Application::SessionPtr getSession(const PoolOptions &options) {
+		TRACE_POINT();
 		ApplicationPool::Client *pool = getApplicationPool();
 		try {
 			return pool->get(options);
 		} catch (const SystemException &e) {
-			// Maybe the helper server crashed. First wait 100 ms.
-			/* usleep(100000);
-			
-			// Then try to reconnect to the helper server for the next
-			// 5 seconds.
-			time_t begin = time(NULL);
-			while (time(NULL)) */
-			
-			//Wait between 500 and 2500 ms,
-			// then reconnect again.
-			int r = rand(); // Don't care about thread-safety of this function.
-			usleep(500000 + r % 2000000);
-			pool = getApplicationPool();
-			return pool->get(options);
+			if (e.code() == EPIPE) {
+				UPDATE_TRACE_POINT();
+				
+				// Maybe the helper server crashed. First wait 50 ms.
+				usleep(50000);
+				
+				// Then try to reconnect to the helper server for the
+				// next 5 seconds.
+				time_t deadline = time(NULL) + 5;
+				while (time(NULL) < deadline) {
+					try {
+						pool = getApplicationPool();
+					} catch (const SystemException &e) {
+						if (e.code() == ECONNREFUSED || e.code() == ECONNRESET) {
+							// Looks like the helper server hasn't been
+							// restarted yet. Wait between 20 and 100 ms.
+							usleep(20000 + rand() % 80000);
+							// Don't care about thread-safety of rand()
+						} else {
+							throw;
+						}
+					}
+				}
+				
+				UPDATE_TRACE_POINT();
+				if (pool != NULL && pool->connected()) {
+					return pool->get(options);
+				} else {
+					UPDATE_TRACE_POINT();
+					throw IOException("Cannot connect to the helper server");
+				}
+			} else {
+				throw;
+			}
 		}
 	}
 	

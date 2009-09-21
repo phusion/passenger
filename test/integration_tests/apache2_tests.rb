@@ -86,7 +86,7 @@ describe "Apache 2 module" do
 			size_of_first_half = upload_data.size / 2
 			
 			begin
-				10.times do |i|
+				9.times do |i|
 					socket = TCPSocket.new('passenger.test', @apache2.port)
 					sockets << socket
 					socket.write("POST / HTTP/1.1\r\n")
