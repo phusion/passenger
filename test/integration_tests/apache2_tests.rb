@@ -557,6 +557,7 @@ describe "Apache 2 module" do
 			# Now kill the helper server.
 			instance = PhusionPassenger::AdminTools::ServerInstance.list.first
 			Process.kill('SIGKILL', instance.helper_server_pid)
+			sleep 0.01 # Give the signal a small amount of time to take effect.
 			
 			# Each worker process should detect that the old
 			# helper server has died, and should reconnect.
