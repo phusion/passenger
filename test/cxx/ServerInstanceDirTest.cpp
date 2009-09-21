@@ -24,11 +24,16 @@ namespace tut {
 	TEST_METHOD(1) {
 		// The (pid_t, string) constructor creates a server instance directory
 		// in the given parent directory, and this server instance directory
-		// name contains the super structure version and the given PID.
+		// name contains the major and minor structure versions and the given PID.
 		ServerInstanceDir dir(1234, parentDir);
 		vector<string> contents = listDir(parentDir);
 		ensure_equals(contents.size(), 1u);
-		ensure_equals(contents[0], "passenger.1.1234");
+		ensure_equals(contents[0],
+			"passenger." +
+			toString(ServerInstanceDir::DIR_STRUCTURE_MAJOR_VERSION) +
+			"." +
+			toString(ServerInstanceDir::DIR_STRUCTURE_MINOR_VERSION) +
+			".1234");
 	}
 	
 	TEST_METHOD(2) {

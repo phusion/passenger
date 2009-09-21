@@ -33,7 +33,7 @@ describe PhusionPassenger::WSGI::ApplicationSpawner do
 		begin
 			app = spawn(@stub.app_root)
 			File.chmod(0700, "#{passenger_tmpdir}/backends")
-			Dir["#{passenger_tmpdir}/backends/wsgi_backend.*"].should have(1).item
+			Dir["#{passenger_tmpdir}/backends/wsgi.*"].should have(1).item
 		ensure
 			app.close rescue nil
 		end
@@ -43,7 +43,7 @@ describe PhusionPassenger::WSGI::ApplicationSpawner do
 		spawn(@stub.app_root).close
 		sleep 0.25 # Give it some time to terminate.
 		File.chmod(0700, "#{passenger_tmpdir}/backends")
-		Dir["#{passenger_tmpdir}/backends/wsgi_backend.*"].should be_empty
+		Dir["#{passenger_tmpdir}/backends/wsgi.*"].should be_empty
 	end
 	
 	def spawn(app_root)
