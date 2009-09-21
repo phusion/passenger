@@ -21,7 +21,10 @@ describe "Apache 2 module" do
 	before :all do
 		check_hosts_configuration
 		@apache2 = Apache2Controller.new
-		ENV['PASSENGER_TEMP_DIR'] = @apache2.server_root
+		@passenger_temp_dir = "/tmp/passenger-test.#{$$}"
+		Dir.mkdir(@passenger_temp_dir)
+		ENV['PASSENGER_TEMP_DIR'] = @passenger_temp_dir
+		@apache2.set(:passenger_temp_dir => @passenger_temp_dir)
 		if Process.uid == 0
 			@apache2.set(
 				:www_user => CONFIG['normal_user_1'],
@@ -32,6 +35,8 @@ describe "Apache 2 module" do
 	
 	after :all do
 		@apache2.stop
+		FileUtils.chmod_R(0777, @passenger_temp_dir)
+		FileUtils.rm_rf(@passenger_temp_dir)
 	end
 	
 	describe ": MyCook(tm) beta running on root URI" do
