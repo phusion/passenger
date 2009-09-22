@@ -52,6 +52,7 @@
 #include "MessageServer.h"
 #include "BacktracesServer.h"
 #include "FileDescriptor.h"
+#include "ServerInstanceDir.h"
 #include "Exceptions.h"
 #include "Utils.h"
 
@@ -520,11 +521,13 @@ private:
 	static const int MESSAGE_SERVER_THREAD_STACK_SIZE = 64 * 128;
 	
 	string password;
-	int adminPipe;
+	int feedbackFd;
 	int serverSocket;
 	bool userSwitching;
 	string defaultUser;
 	unsigned int numberOfThreads;
+	ServerInstanceDir serverInstanceDir;
+	ServerInstanceDir::GenerationPtr generation;
 	set<ClientPtr> clients;
 	ApplicationPool::Ptr pool;
 	AccountsDatabasePtr accountsDatabase;
@@ -542,7 +545,7 @@ private:
 	 */
 	void startListening() {
 		this_thread::disable_syscall_interruption dsi;
-		string socketName = getPassengerTempDir() + "/master/helper_server.sock";
+		string socketName = generation->getPath() + "/master.sock";
 		serverSocket = createUnixServer(socketName.c_str());
 		
 		int ret;
@@ -603,6 +606,13 @@ private:
 				"': user does not exist.");
 		}
 	}
+	
+	void sendFeedback() {
+		MessageChannel channel(feedbackFd);
+		channel.write("initialized",
+			generation->getPath().c_str(),
+			NULL);
+	}
 
 public:
 	/**
@@ -610,12 +620,10 @@ public:
 	 * for clients.
 	 *
 	 * @param password The password this server uses for its clients.
-	 * @param rootDir The Passenger root folder.
+	 * @param passengerRootDir The Passenger root folder.
 	 * @param ruby The filename of the Ruby interpreter to use.
-	 * @param adminPipe The pipe that is used to receive this Server's password and to see if Nginx
-	 *   has exited.
-	 * @param feedbackPipe The feedback pipe, used for telling the web server that we're done
-	 *   initializing.
+	 * @param feedbackFd The feedback pipe, used for telling the web server that we're done
+	 *   initializing and various initialization information.
 	 * @param maxPoolSize The maximum number of simultaneously alive application instances.
 	 * @param maxInstancesPerApp The maximum number of simultaneously alive Rails instances that
 	 *   a single Rails application may occupy.
@@ -632,49 +640,42 @@ public:
 	 * @param workerGid The GID of the web server's worker processes. Used for determining
 	 *   the optimal permissions for some temp files.
 	 */
-	Server(const string &password, const string &rootDir, const string &ruby,
-	       int adminPipe, int feedbackPipe, unsigned int maxPoolSize,
+	Server(const string &password, const string &passengerRootDir, const string &ruby,
+	       int feedbackFd, unsigned int maxPoolSize,
 	       unsigned int maxInstancesPerApp, unsigned int poolIdleTime,
 	       bool userSwitching, const string &defaultUser, uid_t workerUid,
-	       gid_t workerGid) {
+	       gid_t workerGid)
+		: serverInstanceDir(getppid(), "", false)
+	{
 		this->password      = password;
-		this->adminPipe     = adminPipe;
+		this->feedbackFd    = feedbackFd;
 		this->userSwitching = userSwitching;
 		this->defaultUser   = defaultUser;
 		numberOfThreads     = maxPoolSize * 4;
 		
-		removeDirTree(getPassengerTempDir());
-		createPassengerTempDir(getSystemTempDir(), userSwitching, defaultUser,
-			workerUid, workerGid);
+		generation = serverInstanceDir.newGeneration(userSwitching, defaultUser, workerUid, workerGid);
+		generation->detach();
 		startListening();
-		
+		messageServer = ptr(new MessageServer(
+			generation->getPath() + "/socket",
+			AccountsDatabase::createDefault(generation, userSwitching, defaultUser)
+		));
 		if (!userSwitching && geteuid() == 0) {
 			lowerPrivilege(defaultUser);
 		}
 		
-		/* Setup the application pool. */
 		pool = ptr(new ApplicationPool::Pool(
-			rootDir + "/bin/passenger-spawn-server",
-			"", ruby
+			passengerRootDir + "/bin/passenger-spawn-server",
+			generation, "", ruby
 		));
 		pool->setMax(maxPoolSize);
 		pool->setMaxPerApp(maxInstancesPerApp);
 		pool->setMaxIdleTime(poolIdleTime);
 		
-		/* Setup the message server and associated handlers. */
-		messageServer = ptr(new MessageServer(
-			getPassengerTempDir() + "/master/pool_controller.socket",
-			AccountsDatabase::createDefault()
-		));
 		messageServer->addHandler(ptr(new BacktracesServer()));
 		messageServer->addHandler(ptr(new ApplicationPool::Server(pool)));
-		messageServerThread = ptr(new oxt::thread(
-			boost::bind(&MessageServer::mainLoop, messageServer.get()),
-			"MessageServer thread", MESSAGE_SERVER_THREAD_STACK_SIZE
-		));
 		
-		// Tell the web server that we're done initializing.
-		syscalls::close(feedbackPipe);
+		sendFeedback();
 	}
 	
 	~Server() {
@@ -682,13 +683,15 @@ public:
 		this_thread::disable_syscall_interruption dsi;
 		this_thread::disable_interruption di;
 		
-		messageServerThread->interrupt_and_join();
+		if (messageServerThread != NULL) {
+			messageServerThread->interrupt_and_join();
+		}
 		
 		P_DEBUG("Shutting down helper server...");
 		clients.clear();
 		P_TRACE(2, "All threads have been shut down.");
 		syscalls::close(serverSocket);
-		syscalls::close(adminPipe);
+		syscalls::close(feedbackFd);
 	}
 	
 	/**
@@ -701,10 +704,14 @@ public:
 		char buf;
 		
 		startClientHandlerThreads();
+		messageServerThread = ptr(new oxt::thread(
+			boost::bind(&MessageServer::mainLoop, messageServer.get()),
+			"MessageServer thread", MESSAGE_SERVER_THREAD_STACK_SIZE
+		));
 		
 		try {
 			// Wait until the web server has exited.
-			syscalls::read(adminPipe, &buf, 1);
+			syscalls::read(feedbackFd, &buf, 1);
 		} catch (const boost::thread_interrupted &) {
 			// Do nothing.
 		}
@@ -764,19 +771,17 @@ main(int argc, char *argv[]) {
 		ignoreSigpipe();
 		
 		string password;
-		string rootDir  = argv[1];
+		string passengerRoot = argv[1];
 		string ruby      = argv[2];
-		int adminPipe    = atoi(argv[3]);
-		int feedbackPipe = atoi(argv[4]);
-		int logLevel     = atoi(argv[5]);
-		int maxPoolSize  = atoi(argv[6]);
-		int maxInstancesPerApp = atoi(argv[7]);
-		int poolIdleTime       = atoi(argv[8]);
-		bool userSwitching = strcmp(argv[9], "1") == 0;
-		string defaultUser = argv[10];
-		uid_t workerUid    = (uid_t) atoll(argv[11]);
-		gid_t workerGid    = (gid_t) atoll(argv[12]);
-		string passengerTempDir = argv[13];
+		int feedbackFd   = atoi(argv[3]);
+		int logLevel     = atoi(argv[4]);
+		int maxPoolSize  = atoi(argv[5]);
+		int maxInstancesPerApp = atoi(argv[6]);
+		int poolIdleTime       = atoi(argv[7]);
+		bool userSwitching = strcmp(argv[8], "1") == 0;
+		string defaultUser = argv[9];
+		uid_t workerUid    = (uid_t) atoll(argv[10]);
+		gid_t workerGid    = (gid_t) atoll(argv[11]);
 		
 		// Change process title.
 		strncpy(argv[0], "PassengerHelperServer", strlen(argv[0]));
@@ -787,12 +792,10 @@ main(int argc, char *argv[]) {
 		setLogLevel(logLevel);
 		P_DEBUG("Passenger helper server started on PID " << getpid());
 		
-		setPassengerTempDir(passengerTempDir);
-		
-		password = receivePassword(adminPipe);
+		password = receivePassword(feedbackFd);
 		P_TRACE(2, "Password received.");
 		
-		Server(password, rootDir, ruby, adminPipe, feedbackPipe, maxPoolSize,
+		Server(password, passengerRoot, ruby, feedbackFd, maxPoolSize,
 			maxInstancesPerApp, poolIdleTime, userSwitching,
 			defaultUser, workerUid, workerGid).start();
 	} catch (const tracable_exception &e) {

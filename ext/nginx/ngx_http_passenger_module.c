@@ -52,13 +52,13 @@
 static int        first_start = 1;
 static ngx_str_t  ngx_http_scgi_script_name = ngx_string("scgi_script_name");
 static pid_t      helper_server_pid = 0;
-static int        helper_server_admin_pipe;
+static int        helper_server_feedback_fd;
 static u_char     helper_server_password_data[HELPER_SERVER_PASSWORD_SIZE];
 /** perl_module destroys the original environment variables for some reason,
  * so when we get a SIGHUP (for restarting Nginx) $TMPDIR might not have the
- * same value as it had during Nginx startup. We need the original $TMPDIR
- * value for calculating the Passenger temp dir location, so here we cache
- * the original value instead of getenv()'ing it every time.
+ * same value as it had during Nginx startup. When restarting Nginx, we want
+ * the new helper server instance to have the same $TMPDIR as it initially had,
+ * so here we cache the original value instead of getenv()'ing it every time.
  */
 const char       *system_temp_dir = NULL;
 const char        passenger_temp_dir[NGX_MAX_PATH];
@@ -124,7 +124,7 @@ start_helper_server(ngx_cycle_t *cycle)
     u_char                 worker_gid_string[15];
     u_char                 filename[NGX_MAX_PATH];
     u_char                *last;
-    int                    admin_pipe[2], feedback_pipe[2], e;
+    int                    feedback_fds[2], e;
     pid_t                  pid;
     long                   i;
     ssize_t                ret;
@@ -213,16 +213,9 @@ start_helper_server(ngx_cycle_t *cycle)
     
     
     /* Now spawn the helper server. */
-    if (pipe(admin_pipe) == -1) {
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, feedback_fds) == -1) {
         ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                      "could not start the Passenger helper server: pipe() failed");
-        return NGX_ERROR;
-    }
-    if (pipe(feedback_pipe) == -1) {
-        close(admin_pipe[0]);
-        close(admin_pipe[1]);
-        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                      "could not start the Passenger helper server: pipe() failed");
+                      "could not start the Passenger helper server: socketpair() failed");
         return NGX_ERROR;
     }
     
@@ -230,8 +223,7 @@ start_helper_server(ngx_cycle_t *cycle)
     switch (pid) {
     case 0:
         /* Child process. */
-        close(admin_pipe[1]);
-        close(feedback_pipe[0]);
+        close(feedback_fds[0]);
         
         /* At this point, stdout and stderr may still point to the console.
          * Make sure that they're both redirected to the log file.
@@ -264,14 +256,9 @@ start_helper_server(ngx_cycle_t *cycle)
         }
         
         /* Close all file descriptors except stdin, stdout, stderr and
-         * the reader part of the pipe we just created. 
+         * feedback_fds[1].
          */
-        if (dup2(admin_pipe[0], 3) == -1) {
-            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                          "could not start the Passenger helper server: "
-                          "dup2() failed");
-        }
-        if (dup2(feedback_pipe[1], 4) == -1) {
+        if (feedback_fds[1] != 3 && dup2(feedback_fds[1], 3) == -1) {
             ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
                           "could not start the Passenger helper server: "
                           "dup2() failed");
@@ -281,13 +268,13 @@ start_helper_server(ngx_cycle_t *cycle)
         }
         
         setenv("SERVER_SOFTWARE", NGINX_VER, 1);
+        setenv("TMPDIR", system_temp_dir, 1);
         
         execlp((const char *) helper_server_filename,
                "PassengerHelperServer",
                main_conf->root_dir.data,
                main_conf->ruby.data,
-               "3",  /* Admin pipe file descriptor number. */
-               "4",  /* Feedback pipe file descriptor number. */
+               "3",  /* Feedback file descriptor number. */
                log_level_string,
                max_pool_size_string,
                max_instances_per_app_string,
@@ -296,7 +283,6 @@ start_helper_server(ngx_cycle_t *cycle)
                main_conf->default_user.data,
                worker_uid_string,
                worker_gid_string,
-               passenger_temp_dir,
                (char *) 0);
         e = errno;
         fprintf(stderr, "*** Could not start the Passenger helper server (%s): "
@@ -309,16 +295,13 @@ start_helper_server(ngx_cycle_t *cycle)
         ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
                       "could not start the Passenger helper server: "
                       "fork() failed");
-        close(admin_pipe[0]);
-        close(admin_pipe[1]);
-        close(feedback_pipe[0]);
-        close(feedback_pipe[1]);
+        close(feedback_fds[0]);
+        close(feedback_fds[1]);
         return NGX_ERROR;
         
     default:
         /* Parent process. */
-        close(admin_pipe[0]);
-        close(feedback_pipe[1]);
+        close(feedback_fds[1]);
         
         /* Pass our auto-generated password to the helper server. */
         i = 0;
@@ -467,30 +450,7 @@ shutdown_helper_server(ngx_cycle_t *cycle)
     
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, cycle->log, 0,
                    "Passenger helper server exited.");
-
     
-    /* Remove Passenger temp dir. */
-    ngx_memzero(command, sizeof(command));
-    if (ngx_snprintf(command, sizeof(command), "chmod -R u=rwx \"%s\"",
-                     passenger_temp_dir) != NULL) {
-        do {
-            ret = system((const char *) command);
-        } while (ret == -1 && errno == EINTR);
-    }
-    
-    ngx_memzero(command, sizeof(command));
-    if (ngx_snprintf(command, sizeof(command), "rm -rf \"%s\"",
-                     passenger_temp_dir) != NULL) {
-        ngx_log_debug1(NGX_LOG_DEBUG_HTTP, cycle->log, 0,
-                       "Removing Passenger temp folder with command: %s",
-                       command);
-        errno = 0;
-        if (system((const char *) command) != 0) {
-            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                          "Could not remove Passenger temp folder '%s'",
-                          passenger_temp_dir);
-        }
-    }
     helper_server_pid = 0;
 }
 
@@ -572,8 +532,7 @@ pre_config_init(ngx_conf_t *cf)
         return ret;
     }
     
-    /* Setup Passenger temp folder. */
-    
+    /* Cache $TMPDIR. */
     if (system_temp_dir == NULL) {
         const char *tmp = getenv("TMPDIR");
         if (tmp == NULL || *tmp == '\0') {
@@ -582,27 +541,6 @@ pre_config_init(ngx_conf_t *cf)
             system_temp_dir = strdup(tmp);
         }
     }
-    
-    ngx_memzero(&passenger_temp_dir, sizeof(passenger_temp_dir));
-    if (ngx_snprintf((u_char *) passenger_temp_dir, sizeof(passenger_temp_dir),
-                     "%s/passenger.%d", system_temp_dir, getpid()) == NULL) {
-        ngx_log_error(NGX_LOG_ALERT, cf->log, ngx_errno,
-                      "could not create Passenger temp dir string");
-        return NGX_ERROR;
-    }
-    
-    /* Temporarily create this temp directory. It must exist before the configuration is loaded,
-     * because during Configuration loading Nginx's upstream module will attempt to create
-     * the directory passenger_temp_dir + "/webserver_private".
-     *
-     * passenger_temp_dir will be removed and recreated by the HelperServer, with the right
-     * permissions. So right now we don't have to pay any attention to the permissions.
-     */
-    ngx_memzero(command, sizeof(command));
-    ngx_snprintf(command, sizeof(command), "mkdir -p \"%s\"", passenger_temp_dir);
-    do {
-        ret = system((const char *) command);
-    } while (ret == -1 && errno == EINTR);
     
     /* Build helper server socket filename string. */
     
