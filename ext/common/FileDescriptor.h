@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <cerrno>
 
+#include "MessageChannel.h"
 #include "Exceptions.h"
 
 namespace Passenger {
@@ -105,6 +106,45 @@ public:
 		} else {
 			return data->fd;
 		}
+	}
+};
+
+/**
+ * A synchronization mechanism that's implemented with file descriptors,
+ * and as such can be used in combination with select() and friends.
+ *
+ * One can wait for an event on an EventFd by select()ing it on read events.
+ * Another thread can signal the EventFd by calling notify().
+ */
+class EventFd {
+private:
+	int reader;
+	int writer;
+	
+public:
+	EventFd() {
+		int fds[2];
+		
+		if (syscalls::pipe(fds) == -1) {
+			int e = errno;
+			throw SystemException("Cannot create a pipe", e);
+		}
+		reader = fds[0];
+		writer = fds[1];
+	}
+	
+	~EventFd() {
+		this_thread::disable_syscall_interruption dsi;
+		syscalls::close(reader);
+		syscalls::close(writer);
+	}
+	
+	void notify() {
+		MessageChannel(writer).writeRaw("x", 1);
+	}
+	
+	int fd() const {
+		return reader;
 	}
 };
 

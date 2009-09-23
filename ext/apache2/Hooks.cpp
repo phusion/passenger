@@ -1269,14 +1269,8 @@ public:
 			getpid(), config->getTempDir(),
 			config->userSwitchingEnabled(), config->getDefaultUser(),
 			unixd_config.user_id, unixd_config.group_id,
-			config->root, config->getRuby());
-		
-		ApplicationPool::Client pool;
-		pool.connect(helperServerStarter.getMessageSocketFilename(),
-			"_web_server", helperServerStarter.getMessageSocketPassword());
-		pool.setMax(config->maxPoolSize);
-		pool.setMaxPerApp(config->maxInstancesPerApp);
-		pool.setMaxIdleTime(config->poolIdleTime);
+			config->root, config->getRuby(), config->maxPoolSize,
+			config->maxInstancesPerApp, config->poolIdleTime);
 	}
 	
 	void childInit(apr_pool_t *pchild, server_rec *s) {

@@ -56,10 +56,11 @@ static int        first_start = 1;
  * the new helper server instance to have the same $TMPDIR as it initially had,
  * so here we cache the original value instead of getenv()'ing it every time.
  */
-const char          *system_temp_dir = NULL;
+static const char   *system_temp_dir = NULL;
 ngx_str_t            passenger_schema_string;
 CachedFileStat      *passenger_stat_cache;
 HelperServerStarter *passenger_helper_server_starter = NULL;
+ngx_cycle_t         *passenger_current_cycle;
 
 
 /*
@@ -164,18 +165,14 @@ start_helper_server(ngx_cycle_t *cycle) {
     passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
     ruby           = ngx_str_null_terminate(&passenger_main_conf.ruby);
     
-    passenger_helper_server_starter = helper_server_starter_new(HSST_NGINX, &error_message);
-    if (passenger_helper_server_starter == NULL) {
-        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno, "%s", error_message);
-        result = NGX_ERROR;
-        goto cleanup;
-    }
-    
     ret = helper_server_starter_start(passenger_helper_server_starter,
         passenger_main_conf.log_level, getpid(),
         system_temp_dir, passenger_main_conf.user_switching,
         default_user, core_conf->user, core_conf->group,
-        passenger_root, ruby, &error_message);
+        passenger_root, ruby, passenger_main_conf.max_pool_size,
+        passenger_main_conf.max_instances_per_app,
+        passenger_main_conf.pool_idle_time,
+        &error_message);
     if (!ret) {
         ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno, "%s", error_message);
         result = NGX_ERROR;
@@ -194,7 +191,7 @@ cleanup:
  * Shutdown the helper server, if there's one running.
  */
 static void
-shutdown_helper_server(ngx_cycle_t *cycle) {
+shutdown_helper_server() {
     if (passenger_helper_server_starter != NULL) {
         helper_server_starter_free(passenger_helper_server_starter);
         passenger_helper_server_starter = NULL;
@@ -204,16 +201,27 @@ shutdown_helper_server(ngx_cycle_t *cycle) {
 
 /**
  * Called when:
- * - Nginx is started, before the configuration is reloaded and before daemonization.
+ * - Nginx is started, before the configuration is loaded and before daemonization.
  * - Nginx is restarted, before the configuration is reloaded.
  */
 static ngx_int_t
 pre_config_init(ngx_conf_t *cf)
-{   
+{
+    char *error_message;
+    
+    shutdown_helper_server();
+    
     ngx_memzero(&passenger_main_conf, sizeof(passenger_main_conf_t));
     passenger_schema_string.data = (u_char *) "passenger://";
     passenger_schema_string.len  = sizeof("passenger://") - 1;
     passenger_stat_cache = cached_file_stat_new(1024);
+    passenger_helper_server_starter = helper_server_starter_new(HSST_NGINX, &error_message);
+    
+    if (passenger_helper_server_starter == NULL) {
+        ngx_log_error(NGX_LOG_ALERT, cf->log, ngx_errno, "%s", error_message);
+        free(error_message);
+        return NGX_ERROR;
+    }
     
     if (system_temp_dir == NULL) {
         const char *tmp = getenv("TMPDIR");
@@ -234,7 +242,6 @@ pre_config_init(ngx_conf_t *cf)
  */
 static ngx_int_t
 init_module(ngx_cycle_t *cycle) {
-    shutdown_helper_server(cycle);
     if (passenger_main_conf.root_dir.len != 0) {
         if (first_start) {
             /* Ignore SIGPIPE now so that, if the helper server fails to start,
@@ -248,6 +255,7 @@ init_module(ngx_cycle_t *cycle) {
             passenger_main_conf.root_dir.len = 0;
             return NGX_OK;
         }
+        passenger_current_cycle = cycle;
     }
     return NGX_OK;
 }

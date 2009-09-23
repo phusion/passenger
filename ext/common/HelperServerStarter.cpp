@@ -26,14 +26,17 @@ helper_server_starter_start(HelperServerStarter *hps,
                             const char *tempDir, int userSwitching,
                             const char *defaultUser, uid_t workerUid,
                             gid_t workerGid, const char *passengerRoot,
-                            const char *rubyCommand,
+                            const char *rubyCommand, unsigned int maxPoolSize,
+                            unsigned int maxInstancesPerApp,
+                            unsigned int poolIdleTime,
                             char **errorMessage)
 {
 	Passenger::HelperServerStarter *helperServerStarter = (Passenger::HelperServerStarter *) hps;
 	this_thread::disable_syscall_interruption dsi;
 	try {
 		helperServerStarter->start(logLevel, webServerPid, tempDir, userSwitching,
-			defaultUser, workerUid, workerGid, passengerRoot, rubyCommand);
+			defaultUser, workerUid, workerGid, passengerRoot, rubyCommand,
+			maxPoolSize, maxInstancesPerApp, poolIdleTime);
 		return 1;
 	} catch (const Passenger::SystemException &e) {
 		errno = e.code();

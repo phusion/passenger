@@ -52,6 +52,7 @@
 #include "MessageServer.h"
 #include "BacktracesServer.h"
 #include "FileDescriptor.h"
+#include "Timer.h"
 #include "ServerInstanceDir.h"
 #include "Exceptions.h"
 #include "Utils.h"
@@ -63,6 +64,67 @@ using namespace Passenger;
 #define HELPER_SERVER_PASSWORD_SIZE     64
 
 struct ClientDisconnectedException { };
+
+
+class TimerUpdateHandler: public MessageServer::Handler {
+private:
+	Timer &timer;
+	unsigned int clients;
+	
+public:
+	TimerUpdateHandler(Timer &_timer): timer(_timer) {
+		clients = 0;
+	}
+	
+	virtual MessageServer::ClientContextPtr newClient(MessageServer::CommonClientContext &commonContext) {
+		clients++;
+		timer.stop();
+		return MessageServer::ClientContextPtr();
+	}
+	
+	virtual void clientDisconnected(MessageServer::CommonClientContext &commonContext,
+	                                MessageServer::ClientContextPtr &handlerSpecificContext)
+	{
+		clients--;
+		if (clients == 0) {
+			timer.start();
+		}
+	}
+	
+	virtual bool processMessage(MessageServer::CommonClientContext &commonContext,
+	                            MessageServer::ClientContextPtr &handlerSpecificContext,
+	                            const vector<string> &args)
+	{
+		return false;
+	}
+};
+
+class ExitHandler: public MessageServer::Handler {
+private:
+	EventFd &exitEvent;
+	
+public:
+	ExitHandler(EventFd &_exitEvent)
+		: exitEvent(_exitEvent)
+	{ }
+	
+	virtual bool processMessage(MessageServer::CommonClientContext &commonContext,
+	                            MessageServer::ClientContextPtr &handlerSpecificContext,
+	                            const vector<string> &args)
+	{
+		if (args[0] == "exit") {
+			TRACE_POINT();
+			commonContext.requireRights(Account::EXIT);
+			UPDATE_TRACE_POINT();
+			exitEvent.notify();
+			UPDATE_TRACE_POINT();
+			commonContext.channel.write("exit command received", NULL);
+			return true;
+		} else {
+			return false;
+		}
+	}
+};
 
 /**
  * A representation of a Client from the Server's point of view. This class
@@ -520,12 +582,13 @@ class Server {
 private:
 	static const int MESSAGE_SERVER_THREAD_STACK_SIZE = 64 * 128;
 	
-	string password;
-	int feedbackFd;
-	int serverSocket;
+	FileDescriptor feedbackFd;
 	bool userSwitching;
 	string defaultUser;
 	unsigned int numberOfThreads;
+	FileDescriptor requestSocket;
+	string requestSocketPassword;
+	MessageChannel feedbackChannel;
 	ServerInstanceDir serverInstanceDir;
 	ServerInstanceDir::GenerationPtr generation;
 	set<ClientPtr> clients;
@@ -533,24 +596,39 @@ private:
 	AccountsDatabasePtr accountsDatabase;
 	MessageServerPtr messageServer;
 	shared_ptr<oxt::thread> messageServerThread;
+	EventFd exitEvent;
+	Timer exitTimer;
+	
+	string getRequestSocketFilename() const {
+		return generation->getPath() + "/request.socket";
+	}
+	
+	string receivePassword() {
+		TRACE_POINT();
+		vector<string> args;
+		
+		if (!feedbackChannel.read(args)) {
+			throw IOException("The watchdog unexpectedly closed the connection.");
+		}
+		if (args[0] != "request socket password" && args[0] != "message socket password") {
+			throw IOException("Unexpected input message '" + args[0] + "'");
+		}
+		return Base64::decode(args[1]);
+	}
 	
 	/**
-	 * Starts listening for client connections from this server's <tt>serverSocket</tt>.
-	 * This server will first attempt to create an unconnected Unix socket on which it will
-	 * attempt to bind on. Once it is bound, it will start listening for incoming client
-	 * activity.
+	 * Starts listening for client connections on this server's request socket.
 	 *
 	 * @throws SystemException Something went wrong while trying to create and bind to the Unix socket.
 	 * @throws RuntimeException Something went wrong.
 	 */
 	void startListening() {
 		this_thread::disable_syscall_interruption dsi;
-		string socketName = generation->getPath() + "/master.sock";
-		serverSocket = createUnixServer(socketName.c_str());
+		requestSocket = createUnixServer(getRequestSocketFilename().c_str());
 		
 		int ret;
 		do {
-			ret = chmod(socketName.c_str(), S_ISVTX |
+			ret = chmod(getRequestSocketFilename().c_str(), S_ISVTX |
 				S_IRUSR | S_IWUSR | S_IXUSR |
 				S_IRGRP | S_IWGRP | S_IXGRP |
 				S_IROTH | S_IWOTH | S_IXOTH);
@@ -565,8 +643,8 @@ private:
 	 */
 	void startClientHandlerThreads() {
 		for (unsigned int i = 0; i < numberOfThreads; i++) {
-			ClientPtr client(new Client(i + 1, pool, password,
-				userSwitching, defaultUser, serverSocket));
+			ClientPtr client(new Client(i + 1, pool, requestSocketPassword,
+				userSwitching, defaultUser, requestSocket));
 			clients.insert(client);
 		}
 	}
@@ -607,75 +685,53 @@ private:
 		}
 	}
 	
-	void sendFeedback() {
-		MessageChannel channel(feedbackFd);
-		channel.write("initialized",
-			generation->getPath().c_str(),
-			NULL);
-	}
-
 public:
-	/**
-	 * Creates a server instance based on the given parameters, which starts to listen
-	 * for clients.
-	 *
-	 * @param password The password this server uses for its clients.
-	 * @param passengerRootDir The Passenger root folder.
-	 * @param ruby The filename of the Ruby interpreter to use.
-	 * @param feedbackFd The feedback pipe, used for telling the web server that we're done
-	 *   initializing and various initialization information.
-	 * @param maxPoolSize The maximum number of simultaneously alive application instances.
-	 * @param maxInstancesPerApp The maximum number of simultaneously alive Rails instances that
-	 *   a single Rails application may occupy.
-	 * @param poolIdleTime The maximum number of seconds that an application may be idle before
-	 *   it gets terminated.
-	 * @param userSwitching Whether user switching should be used.
-	 * @param defaultUser If user switching is turned on, then this is the
-	 *   username that a process should lower its privilege to if the
-	 *   initial attempt at user switching fails. If user switching is off,
-	 *   then this is the username that HelperServer and all spawned
-	 *   processes should run as.
-	 * @param workerUid The UID of the web server's worker processes. Used for determining
-	 *   the optimal permissions for some temp files.
-	 * @param workerGid The GID of the web server's worker processes. Used for determining
-	 *   the optimal permissions for some temp files.
-	 */
-	Server(const string &password, const string &passengerRootDir, const string &ruby,
-	       int feedbackFd, unsigned int maxPoolSize,
-	       unsigned int maxInstancesPerApp, unsigned int poolIdleTime,
-	       bool userSwitching, const string &defaultUser, uid_t workerUid,
-	       gid_t workerGid)
-		: serverInstanceDir(getppid(), "", false)
+	Server(FileDescriptor feedbackFd, pid_t webServerPid, const string &tempDir,
+		bool userSwitching, const string &defaultUser, uid_t workerUid, gid_t workerGid,
+		const string &passengerRoot, const string &rubyCommand, unsigned int generationNumber,
+		unsigned int maxPoolSize, unsigned int maxInstancesPerApp, unsigned int poolIdleTime)
+		: serverInstanceDir(webServerPid, tempDir, false)
 	{
-		this->password      = password;
+		string messageSocketPassword;
+		
+		TRACE_POINT();
 		this->feedbackFd    = feedbackFd;
 		this->userSwitching = userSwitching;
 		this->defaultUser   = defaultUser;
+		feedbackChannel     = MessageChannel(feedbackFd);
 		numberOfThreads     = maxPoolSize * 4;
 		
-		generation = serverInstanceDir.newGeneration(userSwitching, defaultUser, workerUid, workerGid);
-		generation->detach();
+		UPDATE_TRACE_POINT();
+		requestSocketPassword = receivePassword();
+		messageSocketPassword = receivePassword();
+		generation = serverInstanceDir.getGeneration(generationNumber);
 		startListening();
-		messageServer = ptr(new MessageServer(
-			generation->getPath() + "/socket",
-			AccountsDatabase::createDefault(generation, userSwitching, defaultUser)
-		));
-		if (!userSwitching && geteuid() == 0) {
+		accountsDatabase = AccountsDatabase::createDefault(generation, userSwitching, defaultUser);
+		accountsDatabase->add("_web_server", messageSocketPassword, false, Account::EXIT);
+		messageServer = ptr(new MessageServer(generation->getPath() + "/socket", accountsDatabase));
+		
+		if (geteuid() == 0 && !userSwitching) {
 			lowerPrivilege(defaultUser);
 		}
 		
-		pool = ptr(new ApplicationPool::Pool(
-			passengerRootDir + "/bin/passenger-spawn-server",
-			generation, "", ruby
+		UPDATE_TRACE_POINT();
+		pool.reset(new ApplicationPool::Pool(
+			findSpawnServer(passengerRoot.c_str()), generation, "", rubyCommand
 		));
 		pool->setMax(maxPoolSize);
 		pool->setMaxPerApp(maxInstancesPerApp);
 		pool->setMaxIdleTime(poolIdleTime);
 		
-		messageServer->addHandler(ptr(new BacktracesServer()));
+		messageServer->addHandler(ptr(new TimerUpdateHandler(exitTimer)));
 		messageServer->addHandler(ptr(new ApplicationPool::Server(pool)));
+		messageServer->addHandler(ptr(new BacktracesServer()));
+		messageServer->addHandler(ptr(new ExitHandler(exitEvent)));
 		
-		sendFeedback();
+		UPDATE_TRACE_POINT();
+		feedbackChannel.write("initialized",
+			getRequestSocketFilename().c_str(),
+			messageServer->getSocketFilename().c_str(),
+			NULL);
 	}
 	
 	~Server() {
@@ -683,25 +739,16 @@ public:
 		this_thread::disable_syscall_interruption dsi;
 		this_thread::disable_interruption di;
 		
+		P_DEBUG("Shutting down helper server...");
 		if (messageServerThread != NULL) {
 			messageServerThread->interrupt_and_join();
 		}
-		
-		P_DEBUG("Shutting down helper server...");
 		clients.clear();
 		P_TRACE(2, "All threads have been shut down.");
-		syscalls::close(serverSocket);
-		syscalls::close(feedbackFd);
 	}
 	
-	/**
-	 * Starts this server by starting the client handlers threads.
-	 *
-	 * @see startCientHandlerThreads
-	 */
-	void start() {
+	void mainLoop() {
 		TRACE_POINT();
-		char buf;
 		
 		startClientHandlerThreads();
 		messageServerThread = ptr(new oxt::thread(
@@ -709,11 +756,40 @@ public:
 			"MessageServer thread", MESSAGE_SERVER_THREAD_STACK_SIZE
 		));
 		
-		try {
-			// Wait until the web server has exited.
-			syscalls::read(feedbackFd, &buf, 1);
-		} catch (const boost::thread_interrupted &) {
-			// Do nothing.
+		/* Wait until the watchdog closes the feedback fd (meaning it
+		 * was killed) or until we receive an exit message.
+		 */
+		this_thread::disable_syscall_interruption dsi;
+		fd_set fds;
+		int largestFd;
+		
+		FD_ZERO(&fds);
+		FD_SET(feedbackFd, &fds);
+		FD_SET(exitEvent.fd(), &fds);
+		largestFd = (feedbackFd > exitEvent.fd()) ? (int) feedbackFd : exitEvent.fd();
+		UPDATE_TRACE_POINT();
+		if (syscalls::select(largestFd + 1, &fds, NULL, NULL, NULL) == -1) {
+			int e = errno;
+			throw SystemException("select() failed", e);
+		}
+		
+		if (FD_ISSET(feedbackFd, &fds)) {
+			/* If the watchdog has been killed then we'll kill all descendant
+			 * processes and exit. There's no point in keeping this helper
+			 * server running because we can't detect when the web server exits,
+			 * and because this helper server doesn't own the server instance
+			 * directory. As soon as passenger-status is run, the server
+			 * instance directory will be cleaned up, making this helper server
+			 * inaccessible.
+			 */
+			syscalls::killpg(getpgrp(), SIGKILL);
+			_exit(2); // In case killpg() fails.
+		} else {
+			/* We received an exit command. We want to exit 5 seconds after
+			 * the last client has disconnected, .
+			 */
+			exitTimer.start();
+			exitTimer.wait(5000);
 		}
 	}
 };
@@ -745,8 +821,12 @@ int
 main(int argc, char *argv[]) {
 	TRACE_POINT();
 	try {
-		setup_syscall_interruption_support();
+		/* Become the process group leader so that the watchdog can kill the
+		 * HelperServer as well as all descendant processes. */
+		setpgrp();
+		
 		ignoreSigpipe();
+		setup_syscall_interruption_support();
 		
 		unsigned int   logLevel   = atoi(argv[1]);
 		FileDescriptor feedbackFd = atoi(argv[2]);
@@ -758,7 +838,10 @@ main(int argc, char *argv[]) {
 		gid_t   workerGid     = (uid_t) atoll(argv[8]);
 		string  passengerRoot = argv[9];
 		string  rubyCommand   = argv[10];
-		unsigned int generationNumber = atoll(argv[11]);
+		unsigned int generationNumber   = atoll(argv[11]);
+		unsigned int maxPoolSize        = atoi(argv[12]);
+		unsigned int maxInstancesPerApp = atoi(argv[13]);
+		unsigned int poolIdleTime       = atoi(argv[14]);
 		
 		// Change process title.
 		strncpy(argv[0], "PassengerHelperServer", strlen(argv[0]));
@@ -766,12 +849,16 @@ main(int argc, char *argv[]) {
 			memset(argv[i], '\0', strlen(argv[i]));
 		}
 		
+		UPDATE_TRACE_POINT();
 		setLogLevel(logLevel);
+		Server server(feedbackFd, webServerPid, tempDir,
+			userSwitching, defaultUser, workerUid, workerGid,
+			passengerRoot, rubyCommand, generationNumber,
+			maxPoolSize, maxInstancesPerApp, poolIdleTime);
 		P_DEBUG("Passenger helper server started on PID " << getpid());
 		
-		Server(feedbackFd, webServerPid, tempDir,
-			userSwitching, defaultUser, workerUid, workerGid,
-			passengerRoot, rubyCommand, generationNumber).start();
+		UPDATE_TRACE_POINT();
+		server.mainLoop();
 	} catch (const tracable_exception &e) {
 		P_ERROR(e.what() << "\n" << e.backtrace());
 		return 1;

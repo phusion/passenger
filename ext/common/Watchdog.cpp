@@ -35,6 +35,9 @@ static uid_t   workerUid;
 static gid_t   workerGid;
 static string  passengerRoot;
 static string  rubyCommand;
+static unsigned int maxPoolSize;
+static unsigned int maxInstancesPerApp;
+static unsigned int poolIdleTime;
 
 static boost::mutex globalMutex;
 static bool exitGracefully = false;
@@ -122,6 +125,9 @@ startHelperServer(const string &helperServerFilename, unsigned int generationNum
 			passengerRoot.c_str(),
 			rubyCommand.c_str(),
 			toString(generationNumber).c_str(),
+			toString(maxPoolSize).c_str(),
+			toString(maxInstancesPerApp).c_str(),
+			toString(poolIdleTime).c_str(),
 			(char *) 0);
 		e = errno;
 		try {
@@ -431,6 +437,8 @@ ignoreSigpipe() {
 
 int
 main(int argc, char *argv[]) {
+	#define READ_ARG(index, expr, defaultValue) ((argc > index) ? (expr) : (defaultValue))
+	
 	webServerType = argv[1];
 	logLevel      = atoi(argv[2]);
 	feedbackFd    = atoi(argv[3]);
@@ -442,6 +450,9 @@ main(int argc, char *argv[]) {
 	workerGid     = (uid_t) atoll(argv[9]);
 	passengerRoot = argv[10];
 	rubyCommand   = argv[11];
+	maxPoolSize        = atoi(argv[12]);
+	maxInstancesPerApp = atoi(argv[13]);
+	poolIdleTime       = atoi(argv[14]);
 	
 	/* Become the process group leader so that Apache can't kill
 	 * this watchdog with killpg() during shutdown. */

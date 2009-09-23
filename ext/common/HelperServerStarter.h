@@ -23,7 +23,9 @@ int  helper_server_starter_start(HelperServerStarter *hps,
                                  const char *tempDir, int userSwitching,
                                  const char *defaultUser, uid_t workerUid,
                                  gid_t workerGid, const char *passengerRoot,
-                                 const char *rubyCommand,
+                                 const char *rubyCommand, unsigned int maxPoolSize,
+                                 unsigned int maxInstancesPerApp,
+                                 unsigned int poolIdleTime,
                                  char **errorMessage);
 const char *helper_server_starter_get_request_socket_filename(HelperServerStarter *hps, unsigned int *size);
 const char *helper_server_starter_get_request_socket_password(HelperServerStarter *hps, unsigned int *size);

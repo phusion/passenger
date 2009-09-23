@@ -60,38 +60,6 @@ using namespace Passenger;
 class Server;
 
 
-class EventFd {
-private:
-	int reader;
-	int writer;
-	
-public:
-	EventFd() {
-		int fds[2];
-		
-		if (syscalls::pipe(fds) == -1) {
-			int e = errno;
-			throw SystemException("Cannot create a pipe", e);
-		}
-		reader = fds[0];
-		writer = fds[1];
-	}
-	
-	~EventFd() {
-		this_thread::disable_syscall_interruption dsi;
-		syscalls::close(reader);
-		syscalls::close(writer);
-	}
-	
-	void notify() {
-		MessageChannel(writer).writeRaw("x", 1);
-	}
-	
-	int fd() const {
-		return reader;
-	}
-};
-
 class TimerUpdateHandler: public MessageServer::Handler {
 private:
 	Timer &timer;
@@ -127,15 +95,12 @@ public:
 
 class ExitHandler: public MessageServer::Handler {
 private:
-	Server *server;
 	EventFd &exitEvent;
 	
 public:
-	ExitHandler(Server *server, EventFd &_exitEvent)
+	ExitHandler(EventFd &_exitEvent)
 		: exitEvent(_exitEvent)
-	{
-		this->server = server;
-	}
+	{ }
 	
 	virtual bool processMessage(MessageServer::CommonClientContext &commonContext,
 	                            MessageServer::ClientContextPtr &handlerSpecificContext,
@@ -224,7 +189,8 @@ public:
 		pid_t webServerPid, const string &tempDir,
 		bool userSwitching, const string &defaultUser, uid_t workerUid, gid_t workerGid,
 		const string &passengerRoot, const string &rubyCommand,
-		unsigned int generationNumber)
+		unsigned int generationNumber, unsigned int maxPoolSize,
+		unsigned int maxInstancesPerApp, unsigned int poolIdleTime)
 		: serverInstanceDir(webServerPid, tempDir, false)
 	{
 		TRACE_POINT();
@@ -255,10 +221,14 @@ public:
 		pool.reset(new ApplicationPool::Pool(
 			findSpawnServer(passengerRoot.c_str()), generation, "", rubyCommand
 		));
+		pool->setMax(maxPoolSize);
+		pool->setMaxPerApp(maxInstancesPerApp);
+		pool->setMaxIdleTime(poolIdleTime);
+		
 		messageServer->addHandler(ptr(new TimerUpdateHandler(exitTimer)));
 		messageServer->addHandler(ptr(new ApplicationPool::Server(pool)));
 		messageServer->addHandler(ptr(new BacktracesServer()));
-		messageServer->addHandler(ptr(new ExitHandler(this, exitEvent)));
+		messageServer->addHandler(ptr(new ExitHandler(exitEvent)));
 		
 		UPDATE_TRACE_POINT();
 		feedbackChannel.write("initialized",
@@ -269,7 +239,9 @@ public:
 	
 	~Server() {
 		TRACE_POINT();
-		messageServerThread->interrupt_and_join();
+		if (messageServerThread != NULL) {
+			messageServerThread->interrupt_and_join();
+		}
 	}
 	
 	void mainLoop() {
@@ -349,7 +321,10 @@ main(int argc, char *argv[]) {
 		gid_t   workerGid     = (uid_t) atoll(argv[8]);
 		string  passengerRoot = argv[9];
 		string  rubyCommand   = argv[10];
-		unsigned int generationNumber = atoll(argv[11]);
+		unsigned int generationNumber  = atoll(argv[11]);
+		unsigned int maxPoolSize        = atoi(argv[12]);
+		unsigned int maxInstancesPerApp = atoi(argv[13]);
+		unsigned int poolIdleTime       = atoi(argv[14]);
 		
 		// Change process title.
 		strncpy(argv[0], "PassengerHelperServer", strlen(argv[0]));
@@ -360,7 +335,8 @@ main(int argc, char *argv[]) {
 		UPDATE_TRACE_POINT();
 		Server server(logLevel, feedbackFd, webServerPid, tempDir,
 			userSwitching, defaultUser, workerUid, workerGid,
-			passengerRoot, rubyCommand, generationNumber);
+			passengerRoot, rubyCommand, generationNumber,
+			maxPoolSize, maxInstancesPerApp, poolIdleTime);
 		P_DEBUG("Phusion Passenger helper server started on PID " << getpid());
 		
 		UPDATE_TRACE_POINT();

@@ -55,5 +55,7 @@ extern CachedFileStat      *passenger_stat_cache;
 
 extern HelperServerStarter *passenger_helper_server_starter;
 
+extern ngx_cycle_t         *passenger_current_cycle;
+
 #endif /* _PASSENGER_NGINX_MODULE_H_ */
 

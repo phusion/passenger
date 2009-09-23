@@ -230,7 +230,9 @@ public:
 	void start(unsigned int logLevel,
 	           pid_t webServerPid, const string &tempDir,
 	           bool userSwitching, const string &defaultUser, uid_t workerUid, gid_t workerGid,
-	           const string &passengerRoot, const string &rubyCommand)
+	           const string &passengerRoot, const string &rubyCommand,
+	           unsigned int maxPoolSize, unsigned int maxInstancesPerApp,
+	           unsigned int poolIdleTime)
 	{
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
@@ -293,6 +295,9 @@ public:
 				toString(workerGid).c_str(),
 				passengerRoot.c_str(),
 				rubyCommand.c_str(),
+				toString(maxPoolSize).c_str(),
+				toString(maxInstancesPerApp).c_str(),
+				toString(poolIdleTime).c_str(),
 				(char *) 0);
 			e = errno;
 			try {
