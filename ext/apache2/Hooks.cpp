@@ -47,7 +47,7 @@
 #include "Configuration.h"
 #include "Utils.h"
 #include "Logging.h"
-#include "HelperServerStarter.h"
+#include "HelperServerStarter.hpp"
 #include "ApplicationPool/Client.h"
 #include "MessageChannel.h"
 #include "DirectoryMapper.h"
@@ -185,10 +185,10 @@ private:
 	
 	enum Threeway { YES, NO, UNKNOWN };
 
-	HelperServerStarter helperServerStarter;
 	thread_specific_ptr<ApplicationPool::Client> threadSpecificApplicationPool;
 	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex;
 	CachedFileStat cstat;
+	HelperServerStarter helperServerStarter;
 	
 	inline DirConfig *getDirConfig(request_rec *r) {
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
@@ -236,8 +236,8 @@ private:
 				P_DEBUG("Reconnecting to ApplicationPool server");
 			}
 			auto_ptr<ApplicationPool::Client> pool_ptr(new ApplicationPool::Client);
-			pool_ptr->connect(helperServerStarter.getSocketFilename(),
-				"_web_server", helperServerStarter.getPassword());
+			pool_ptr->connect(helperServerStarter.getMessageSocketFilename(),
+				"_web_server", helperServerStarter.getMessageSocketPassword());
 			pool = pool_ptr.release();
 			threadSpecificApplicationPool.reset(pool);
 		}
@@ -1245,7 +1245,9 @@ private:
 
 public:
 	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
-	    : cstat(1024) {
+	    : cstat(1024),
+	      helperServerStarter(HelperServerStarter::APACHE)
+	{
 		passenger_config_merge_all_servers(pconf, s);
 		ServerConfig *config = getServerConfig(s);
 		Passenger::setLogLevel(config->logLevel);
@@ -1270,8 +1272,8 @@ public:
 			config->root, config->getRuby());
 		
 		ApplicationPool::Client pool;
-		pool.connect(helperServerStarter.getSocketFilename(),
-			"_web_server", helperServerStarter.getPassword());
+		pool.connect(helperServerStarter.getMessageSocketFilename(),
+			"_web_server", helperServerStarter.getMessageSocketPassword());
 		pool.setMax(config->maxPoolSize);
 		pool.setMaxPerApp(config->maxInstancesPerApp);
 		pool.setMaxIdleTime(config->poolIdleTime);

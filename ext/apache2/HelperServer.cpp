@@ -170,14 +170,15 @@ private:
 	EventFd exitEvent;
 	Timer exitTimer;
 	
-	string receiveWebServerPassword() {
+	string receivePassword() {
+		TRACE_POINT();
 		vector<string> args;
 		
 		if (!feedbackChannel.read(args)) {
-			throw IOException("Cannot read the web server account password");
+			throw IOException("The watchdog unexpectedly closed the connection.");
 		}
-		if (args[0] != "web server account password") {
-			throw IOException("Unexpected input message");
+		if (args[0] != "request socket password" && args[0] != "message socket password") {
+			throw IOException("Unexpected input message '" + args[0] + "'");
 		}
 		return Base64::decode(args[1]);
 	}
@@ -227,17 +228,19 @@ public:
 		: serverInstanceDir(webServerPid, tempDir, false)
 	{
 		TRACE_POINT();
-		string webServerPassword;
+		string messageSocketPassword;
 		
 		setLogLevel(logLevel);
 		this->feedbackFd  = feedbackFd;
 		feedbackChannel   = MessageChannel(feedbackFd);
 		
 		UPDATE_TRACE_POINT();
-		webServerPassword = receiveWebServerPassword();
+		receivePassword(); // Request socket password. Discard this because
+		                   // it's not used in the Apache helper server.
+		messageSocketPassword = receivePassword();
 		generation        = serverInstanceDir.getGeneration(generationNumber);
 		accountsDatabase  = AccountsDatabase::createDefault(generation, userSwitching, defaultUser);
-		accountsDatabase->add("_web_server", webServerPassword, false,
+		accountsDatabase->add("_web_server", messageSocketPassword, false,
 			Account::GET | Account::SET_PARAMETERS | Account::EXIT);
 		messageServer = ptr(new MessageServer(generation->getPath() + "/socket", accountsDatabase));
 		
@@ -258,7 +261,10 @@ public:
 		messageServer->addHandler(ptr(new ExitHandler(this, exitEvent)));
 		
 		UPDATE_TRACE_POINT();
-		feedbackChannel.write("initialized", messageServer->getSocketFilename().c_str(), NULL);
+		feedbackChannel.write("initialized",
+			"",  // Request socket filename; not available in the Apache helper server.
+			messageServer->getSocketFilename().c_str(),
+			NULL);
 	}
 	
 	~Server() {

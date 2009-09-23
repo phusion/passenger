@@ -22,8 +22,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_HELPER_SERVER_STARTER_H_
-#define _PASSENGER_HELPER_SERVER_STARTER_H_
+#ifndef _PASSENGER_HELPER_SERVER_STARTER_HPP_
+#define _PASSENGER_HELPER_SERVER_STARTER_HPP_
 
 #include <oxt/system_calls.hpp>
 #include <string>
@@ -47,17 +47,61 @@ using namespace std;
 using namespace oxt;
 
 /**
- * Utility class used by Hooks.cpp to start the helper server through the watchdog.
+ * Utility class for starting the helper server through the watchdog.
  */
 class HelperServerStarter {
+public:
+	enum Type {
+		APACHE,
+		NGINX
+	};
+	
 private:
 	/** The watchdog's PID. Equals 0 if the watchdog hasn't been started yet
 	 * or if detach() is called. */
 	pid_t pid;
+	
+	Type type;
+	
+	/** The watchdog's feedback file descriptor. Only valid if pid != 0. */
 	FileDescriptor feedbackFd;
-	string socketFilename;
-	string password;
+	
+	/**
+	 * The helper server's request socket filename. This socket only exists
+	 * for the Nginx helper server, and it's for serving SCGI requests.
+	 *
+	 * Only valid if pid != 0.
+	 */
+	string requestSocketFilename;
+	
+	/**
+	 * A password for connecting to the request socket. Only valid if pid != 0.
+	 */
+	string requestSocketPassword;
+	
+	/**
+	 * The helper server's message server socket filename, on which e.g. the
+	 * application pool server is listening. Only valid if pid != 0.
+	 *
+	 * The application pool server is available through the account "_web_server".
+	 */
+	string messageSocketFilename;
+	
+	/**
+	 * A password for the message server socket. The associated username is "_web_server".
+	 *
+	 * Only valid if pid != 0.
+	 */
+	string messageSocketPassword;
+	
+	/**
+	 * The server instance dir of the helper server. Only valid if pid != 0.
+	 */
 	ServerInstanceDirPtr serverInstanceDir;
+	
+	/**
+	 * The generation dir of the helper server. Only valid if pid != 0.
+	 */
 	ServerInstanceDir::GenerationPtr generation;
 	
 	static void
@@ -71,9 +115,12 @@ public:
 	/**
 	 * Construct a HelperServerStarter object. The watchdog and the helper server
 	 * aren't started yet until you call start().
+	 *
+	 * @param type Whether one wants to start the Apache or the Nginx helper server.
 	 */
-	HelperServerStarter() {
+	HelperServerStarter(Type type) {
 		pid = 0;
+		this->type = type;
 	}
 	
 	~HelperServerStarter() {
@@ -85,7 +132,8 @@ public:
 				MessageClient client;
 				vector<string> args;
 				
-				client.connect(socketFilename, "_web_server", password);
+				client.connect(messageSocketFilename, "_web_server",
+					messageSocketPassword);
 				client.write("exit", NULL);
 				if (client.read(args) && args[0] == "Passed security" &&
 				    client.read(args) && args[0] == "exit command received") {
@@ -111,18 +159,62 @@ public:
 		}
 	}
 	
-	string getSocketFilename() const {
-		return socketFilename;
+	/**
+	 * Returns the type as was passed to the constructor.
+	 */
+	Type getType() const {
+		return type;
 	}
 	
-	string getPassword() const {
-		return password;
+	/**
+	 * Returns the watchdog's PID. Equals 0 if the watchdog hasn't been started yet
+	 * or if detach() is called.
+	 */
+	pid_t getPid() const {
+		return pid;
 	}
 	
+	/**
+	 * The helper server's request socket filename, on which it's listening
+	 * for SCGI requests.
+	 *
+	 * @pre getPid() != 0 && getType() == NGINX
+	 */
+	string getRequestSocketFilename() const {
+		return requestSocketFilename;
+	}
+	
+	/**
+	 * Returns the password for connecting to the request socket.
+	 *
+	 * @pre getPid() != 0 && getType() == NGINX
+	 */
+	string getRequestSocketPassword() const {
+		return requestSocketPassword;
+	}
+	
+	string getMessageSocketFilename() const {
+		return messageSocketFilename;
+	}
+	
+	string getMessageSocketPassword() const {
+		return messageSocketPassword;
+	}
+	
+	/**
+	 * Returns the server instance dir of the helper server.
+	 *
+	 * @pre getPid() != 0
+	 */
 	ServerInstanceDirPtr getServerInstanceDir() const {
 		return serverInstanceDir;
 	}
 	
+	/**
+	 * Returns the generation dir of the helper server.
+	 *
+	 * @pre getPid() != 0
+	 */
 	ServerInstanceDir::GenerationPtr getGeneration() const {
 		return generation;
 	}
@@ -130,9 +222,10 @@ public:
 	/**
 	 * Start the helper server through the watchdog, with the given parameters.
 	 *
-	 * @throws SystemException
-	 * @throws IOException
-	 * @throws RuntimeException
+	 * @throws SystemException Something went wrong.
+	 * @throws IOException Something went wrong while communicating with the
+	 *                     helper server during its initialization phase.
+	 * @throws RuntimeException Something went wrong.
 	 */
 	void start(unsigned int logLevel,
 	           pid_t webServerPid, const string &tempDir,
@@ -145,7 +238,11 @@ public:
 		pid_t pid;
 		string watchdogFilename;
 		
-		watchdogFilename = passengerRoot + "/ext/apache2/PassengerWatchdog";
+		if (type == APACHE) {
+			watchdogFilename = passengerRoot + "/ext/apache2/PassengerWatchdog";
+		} else {
+			watchdogFilename = passengerRoot + "/ext/nginx/PassengerWatchdog";
+		}
 		if (syscalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
 			int e = errno;
 			throw SystemException("Cannot create a Unix socket pair", e);
@@ -185,6 +282,7 @@ public:
 			
 			execl(watchdogFilename.c_str(),
 				"PassengerWatchdog",
+				type == APACHE ? "apache" : "nginx",
 				toString(logLevel).c_str(),
 				"3",  // feedback fd
 				toString(webServerPid).c_str(),
@@ -264,13 +362,15 @@ public:
 			}
 			
 			if (args[0] == "initialized") {
-				if (args.size() == 5) {
+				if (args.size() == 7) {
 					this->pid = pid;
 					this->feedbackFd = feedbackFd;
-					socketFilename = args[1];
-					password = Base64::decode(args[2]);
-					serverInstanceDir.reset(new ServerInstanceDir(args[3], false));
-					generation = serverInstanceDir->getGeneration(atoi(args[4]));
+					requestSocketFilename = args[1];
+					requestSocketPassword = Base64::decode(args[2]);
+					messageSocketFilename = args[3];
+					messageSocketPassword = Base64::decode(args[4]);
+					serverInstanceDir.reset(new ServerInstanceDir(args[5], false));
+					generation = serverInstanceDir->getGeneration(atoi(args[6]));
 				} else {
 					killAndWait(pid);
 					throw IOException("Unable to start the Phusion Passenger watchdog: "
@@ -281,7 +381,8 @@ public:
 				throw SystemException(args[1], atoi(args[2]));
 			} else if (args[0] == "exec error") {
 				killAndWait(pid);
-				throw SystemException("Unable to start the helper server", atoi(args[1]));
+				throw SystemException("Unable to start the Phusion Passenger watchdog (" +
+					watchdogFilename + ")", atoi(args[1]));
 			} else {
 				killAndWait(pid);
 				throw RuntimeException("The helper server sent an unknown feedback message '" + args[0] + "'");
@@ -289,6 +390,12 @@ public:
 		}
 	}
 	
+	/**
+	 * Close any file descriptors that this object has, and make it so that the destructor
+	 * doesn't try to shut down the helper server.
+	 *
+	 * @post getPid() == 0
+	 */
 	void detach() {
 		feedbackFd.close();
 		pid = 0;
@@ -297,4 +404,4 @@ public:
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_HELPER_SERVER_STARTER_H_ */
+#endif /* _PASSENGER_HELPER_SERVER_STARTER_HPP_ */

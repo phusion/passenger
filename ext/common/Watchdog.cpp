@@ -24,6 +24,7 @@ using namespace oxt;
 using namespace Passenger;
 
 
+static string         webServerType;        // "apache" or "nginx"
 static unsigned int   logLevel;
 static FileDescriptor feedbackFd;  // This is the feedback fd to the web server, not to the helper server.
 static pid_t   webServerPid;
@@ -40,13 +41,18 @@ static bool exitGracefully = false;
 
 struct HelperServerFeedback {
 	FileDescriptor feedbackFd;
-	string socketFilename;
+	string requestSocketFilename;
+	string messageSocketFilename;
 };
 
 
 static string
 findHelperServer() {
-	return passengerRoot + "/ext/apache2/PassengerHelperServer";
+	if (webServerType == "apache") {
+		return passengerRoot + "/ext/apache2/PassengerHelperServer";
+	} else {
+		return passengerRoot + "/ext/nginx/PassengerHelperServer";
+	}
 }
 
 static void
@@ -59,7 +65,8 @@ killAndWait(pid_t pid) {
 
 static pid_t
 startHelperServer(const string &helperServerFilename, unsigned int generationNumber,
-	const string &webServerPassword, HelperServerFeedback &feedback
+	const string &requestSocketPassword, const string &messageSocketPassword,
+	HelperServerFeedback &feedback
 ) {
 	this_thread::disable_interruption di;
 	this_thread::disable_syscall_interruption dsi;
@@ -143,9 +150,13 @@ startHelperServer(const string &helperServerFilename, unsigned int generationNum
 		this_thread::restore_syscall_interruption rsi(dsi);
 		
 		try {
+			// Send the desired request socket password.
+			helperServerFeedbackChannel.write("request socket password",
+				Base64::encode(requestSocketPassword).c_str(),
+				NULL);
 			// Send the desired web server account password.
-			helperServerFeedbackChannel.write("web server account password",
-				Base64::encode(webServerPassword).c_str(),
+			helperServerFeedbackChannel.write("message socket password",
+				Base64::encode(messageSocketPassword).c_str(),
 				NULL);
 		} catch (const SystemException &ex) {
 			killAndWait(pid);
@@ -201,7 +212,8 @@ startHelperServer(const string &helperServerFilename, unsigned int generationNum
 		
 		if (args[0] == "initialized") {
 			feedback.feedbackFd = helperServerFeedbackFd;
-			feedback.socketFilename = args[1];
+			feedback.requestSocketFilename = args[1];
+			feedback.messageSocketFilename = args[2];
 		} else if (args[0] == "system error") {
 			killAndWait(pid);
 			throw SystemException(args[1], atoi(args[2]));
@@ -218,13 +230,17 @@ startHelperServer(const string &helperServerFilename, unsigned int generationNum
 }
 
 static void
-relayFeedback(const string &webServerPassword, const ServerInstanceDirPtr &serverInstanceDir,
-              const ServerInstanceDir::GenerationPtr &generation, const HelperServerFeedback &feedback)
+relayFeedback(const string &requestSocketPassword, const string &messageSocketPassword,
+              const ServerInstanceDirPtr &serverInstanceDir,
+              const ServerInstanceDir::GenerationPtr &generation,
+              const HelperServerFeedback &feedback)
 {
 	MessageChannel feedbackChannel(feedbackFd);
 	feedbackChannel.write("initialized",
-		feedback.socketFilename.c_str(),
-		Base64::encode(webServerPassword).c_str(),
+		feedback.requestSocketFilename.c_str(),
+		Base64::encode(requestSocketPassword).c_str(),
+		feedback.messageSocketFilename.c_str(),
+		Base64::encode(messageSocketPassword).c_str(),
 		serverInstanceDir->getPath().c_str(),
 		toString(generation->getNumber()).c_str(),
 		NULL);
@@ -277,16 +293,21 @@ watchdogMainLoop() {
 		ServerInstanceDir::GenerationPtr generation =
 			serverInstanceDir->newGeneration(userSwitching, defaultUser, workerUid, workerGid);
 		
-		char webServerPasswordData[MessageServer::MAX_PASSWORD_SIZE];
-		string webServerPassword;
+		struct {
+			char requestServer[128];
+			char messageServer[MessageServer::MAX_PASSWORD_SIZE];
+		} passwordData;
+		string requestServerPassword;
+		string messageServerPassword;
 		string helperServerFilename;
 		bool done = false;
 		bool firstStart = true;
 		pid_t pid;
 		int ret, status;
 		
-		generateSecureToken(webServerPasswordData, sizeof(webServerPasswordData));
-		webServerPassword.assign(webServerPasswordData, sizeof(webServerPasswordData));
+		generateSecureToken(&passwordData, sizeof(passwordData));
+		requestServerPassword.assign(passwordData.requestServer, sizeof(passwordData.requestServer));
+		messageServerPassword.assign(passwordData.messageServer, sizeof(passwordData.messageServer));
 		helperServerFilename = findHelperServer();
 		
 		while (!done && !this_thread::interruption_requested()) {
@@ -296,7 +317,7 @@ watchdogMainLoop() {
 				this_thread::restore_interruption ri(di);
 				this_thread::restore_syscall_interruption rsi(dsi);
 				pid = startHelperServer(helperServerFilename, generation->getNumber(),
-					webServerPassword, feedback);
+					requestServerPassword, messageServerPassword, feedback);
 			} catch (const thread_interrupted &) {
 				return;
 			}
@@ -306,7 +327,8 @@ watchdogMainLoop() {
 				this_thread::restore_interruption ri(di);
 				this_thread::restore_syscall_interruption rsi(dsi);
 				try {
-					relayFeedback(webServerPassword, serverInstanceDir, generation, feedback);
+					relayFeedback(requestServerPassword, messageServerPassword,
+						serverInstanceDir, generation, feedback);
 				} catch (const thread_interrupted &) {
 					killAndWait(pid);
 					return;
@@ -409,16 +431,17 @@ ignoreSigpipe() {
 
 int
 main(int argc, char *argv[]) {
-	logLevel      = atoi(argv[1]);
-	feedbackFd    = atoi(argv[2]);
-	webServerPid  = (pid_t) atoll(argv[3]);
-	tempDir       = argv[4];
-	userSwitching = strcmp(argv[5], "true") == 0;
-	defaultUser   = argv[6];
-	workerUid     = (uid_t) atoll(argv[7]);
-	workerGid     = (uid_t) atoll(argv[8]);
-	passengerRoot = argv[9];
-	rubyCommand   = argv[10];
+	webServerType = argv[1];
+	logLevel      = atoi(argv[2]);
+	feedbackFd    = atoi(argv[3]);
+	webServerPid  = (pid_t) atoll(argv[4]);
+	tempDir       = argv[5];
+	userSwitching = strcmp(argv[6], "true") == 0;
+	defaultUser   = argv[7];
+	workerUid     = (uid_t) atoll(argv[8]);
+	workerGid     = (uid_t) atoll(argv[9]);
+	passengerRoot = argv[10];
+	rubyCommand   = argv[11];
 	
 	/* Become the process group leader so that Apache can't kill
 	 * this watchdog with killpg() during shutdown. */

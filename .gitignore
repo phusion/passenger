@@ -14,7 +14,8 @@ ext/apache2/*.slo
 ext/apache2/.libs
 ext/apache2/PassengerWatchdog
 ext/apache2/PassengerHelperServer
-ext/nginx/HelperServer
+ext/nginx/PassengerWatchdog
+ext/nginx/PassengerHelperServer
 ext/phusion_passenger/Makefile
 ext/*.a
 doc/rdoc

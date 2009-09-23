@@ -225,6 +225,8 @@ static ngx_int_t
 create_request(ngx_http_request_t *r)
 {
     u_char                         ch;
+    const char *                   helper_server_request_socket_password_data;
+    unsigned int                   helper_server_request_socket_password_len;
     u_char                         buf[sizeof("4294967296")];
     size_t                         len, size, key_len, val_len, content_length;
     const u_char                  *app_type_string;
@@ -416,7 +418,10 @@ create_request(ngx_http_request_t *r)
      * Build the request header data.
      **************************************************/
     
-    size = passenger_helper_server_password.len +
+    helper_server_request_socket_password_data =
+        helper_server_starter_get_request_socket_password(passenger_helper_server_starter,
+            &helper_server_request_socket_password_len);
+    size = helper_server_request_socket_password_len +
         /* netstring length + ":" + trailing "," */
         /* note: 10 == sizeof("4294967296") - 1 */
         len + 10 + 1 + 1;
@@ -434,8 +439,8 @@ create_request(ngx_http_request_t *r)
     cl->buf = b;
     
     /* Build SCGI header netstring length part. */
-    b->last = ngx_copy(b->last, passenger_helper_server_password.data,
-                       passenger_helper_server_password.len);
+    b->last = ngx_copy(b->last, helper_server_request_socket_password_data,
+                       helper_server_request_socket_password_len);
 
     b->last = ngx_snprintf(b->last, 10, "%ui", len);
     *b->last++ = (u_char) ':';
@@ -943,11 +948,7 @@ process_header(ngx_http_request_t *r)
 
     for ( ;;  ) {
 
-        #if NGINX_VERSION_NUM >= 7000
-            rc = ngx_http_parse_header_line(r, &r->upstream->buffer, 1);
-        #else
-            rc = ngx_http_parse_header_line(r, &r->upstream->buffer);
-        #endif
+        rc = ngx_http_parse_header_line(r, &r->upstream->buffer, 1);
 
         if (rc == NGX_OK) {
 
@@ -1088,6 +1089,8 @@ passenger_content_handler(ngx_http_request_t *r)
     u_char                 page_cache_file_str[NGX_MAX_PATH + 1];
     ngx_str_t              page_cache_file;
     passenger_context_t   *context;
+    ngx_url_t              request_socket_url;
+    unsigned int           request_socket_url_len;
 
     if (passenger_main_conf.root_dir.len == 0) {
         return NGX_DECLINED;
@@ -1179,9 +1182,7 @@ passenger_content_handler(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
     
-#if NGINX_VERSION_NUM >= 7000
     u->schema = passenger_schema_string;
-#endif
 
     u->peer.log = r->connection->log;
     u->peer.log_error = NGX_ERROR_ERR;
@@ -1191,6 +1192,20 @@ passenger_content_handler(ngx_http_request_t *r)
 
     u->output.tag = (ngx_buf_tag_t) &ngx_http_passenger_module;
 
+    if (slcf->upstream.upstream == NULL) {
+        ngx_memzero(&request_socket_url, sizeof(ngx_url_t));
+        
+        request_socket_url.url.data = (u_char *)
+            helper_server_starter_get_request_socket_filename(passenger_helper_server_starter,
+                                                              &request_socket_url_len);
+        request_socket_url.url.len  = request_socket_url_len;
+        request_socket_url.no_resolve = 1;
+        slcf->upstream.upstream = ngx_http_upstream_add((ngx_conf_t *) slcf,
+                                                        &request_socket_url, 0);
+        if (slcf->upstream.upstream == NULL) {
+            return NGX_ERROR;
+        }
+    }
     u->conf = &slcf->upstream;
 
     u->create_request   = create_request;

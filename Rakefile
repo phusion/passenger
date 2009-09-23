@@ -154,7 +154,7 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 	flags << "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 	common_object_files = []
 	['Utils.cpp', 'Logging.cpp', 'SystemTime.cpp', 'CachedFileStat.cpp',
-	 'Base64.cpp', 'AccountsDatabase.cpp'].each do |source_file|
+	 'Base64.cpp', 'AccountsDatabase.cpp', 'HelperServerStarter.cpp'].each do |source_file|
 		object_name = source_file.sub(/\.cpp$/, '.o')
 		object_file = "#{output_dir}/#{object_name}"
 		header_file = source_file.sub(/\.cpp$/, '.h')
@@ -196,7 +196,7 @@ end
 			ext/apache2/Configuration.h
 			ext/apache2/Bucket.h
 			ext/apache2/DirectoryMapper.h
-			ext/apache2/HelperServerStarter.h
+			ext/common/HelperServerStarter.hpp
 			ext/common/ApplicationPool/Client.h
 			ext/common/SpawnManager.h
 			ext/common/Exceptions.h
@@ -269,13 +269,13 @@ end
 	end
 	
 	apache2_watchdog_dependencies = [
-		'ext/apache2/Watchdog.cpp',
+		'ext/common/Watchdog.cpp',
 		'ext/common/ServerInstanceDir.h',
 		APACHE2_HELPER_COMMON_LIBRARY,
 		APACHE2_HELPER_BOOST_OXT_LIBRARY]
 	file 'ext/apache2/PassengerWatchdog' => apache2_watchdog_dependencies do
 		create_executable('ext/apache2/PassengerWatchdog',
-			'ext/apache2/Watchdog.cpp',
+			'ext/common/Watchdog.cpp',
 			"#{APACHE2_HELPER_CXXFLAGS} " <<
 			"#{APACHE2_HELPER_COMMON_LIBRARY} " <<
 			"#{APACHE2_HELPER_BOOST_OXT_LIBRARY} " <<
@@ -326,7 +326,7 @@ end
 	NGINX_COMMON_LIBRARY    = define_common_library_task("nginx", "ext/nginx/libpassenger_common")
 	
 	desc "Build Nginx helper server"
-	task :nginx => ['ext/nginx/PassengerHelperServer', :native_support]
+	task :nginx => ['ext/nginx/PassengerHelperServer', 'ext/nginx/PassengerWatchdog', :native_support]
 	
 	helper_server_dependencies = [
 		NGINX_BOOST_OXT_LIBRARY,
@@ -355,10 +355,27 @@ end
 			"#{EXTRA_LDFLAGS}"
 	end
 	
+	nginx_watchdog_dependencies = [
+		'ext/common/Watchdog.cpp',
+		'ext/common/ServerInstanceDir.h',
+		NGINX_COMMON_LIBRARY,
+		NGINX_BOOST_OXT_LIBRARY]
+	file 'ext/nginx/PassengerWatchdog' => nginx_watchdog_dependencies do
+		create_executable('ext/nginx/PassengerWatchdog',
+			'ext/common/Watchdog.cpp',
+			"-Iext -Iext/common " <<
+			"#{PlatformInfo.portability_cflags} " <<
+			"#{EXTRA_CXXFLAGS} " <<
+			"#{NGINX_COMMON_LIBRARY} " <<
+			"#{NGINX_BOOST_OXT_LIBRARY} " <<
+			"#{PlatformInfo.portability_ldflags} " <<
+			"#{EXTRA_LDFLAGS}")
+	end
+	
 	task :clean => 'nginx:clean'
 	desc "Clean all compiled Nginx files"
 	task 'nginx:clean' do
-		sh("rm", "-rf", "ext/nginx/PassengerHelperServer")
+		sh("rm", "-rf", "ext/nginx/PassengerHelperServer", "ext/nginx/PassengerWatchdog")
 	end
 
 

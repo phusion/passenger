@@ -47,11 +47,9 @@ static ngx_str_t headers_to_hide[] = {
 
 passenger_main_conf_t passenger_main_conf;
 
-#if NGINX_VERSION_NUM >= 7000
-    static ngx_path_init_t  ngx_http_proxy_temp_path = {
-        ngx_string(NGX_HTTP_PROXY_TEMP_PATH), { 1, 2, 0 }
-    };
-#endif
+static ngx_path_init_t  ngx_http_proxy_temp_path = {
+    ngx_string(NGX_HTTP_PROXY_TEMP_PATH), { 1, 2, 0 }
+};
 
 
 void *
@@ -136,7 +134,6 @@ passenger_create_loc_conf(ngx_conf_t *cf)
      *     conf->upstream.hide_headers_hash = { NULL, 0 };
      *     conf->upstream.hide_headers = NULL;
      *     conf->upstream.pass_headers = NULL;
-     *     conf->upstream.schema = { 0, NULL };
      *     conf->upstream.uri = { 0, NULL };
      *     conf->upstream.location = NULL;
      *     conf->upstream.store_lengths = NULL;
@@ -224,9 +221,6 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_hash_init_t               hash;
     ngx_http_script_compile_t     sc;
     ngx_http_script_copy_code_t  *copy;
-    #if NGINX_VERSION_NUM < 7000
-        u_char                       *temp_path;
-    #endif
 
     ngx_conf_merge_value(conf->enabled, prev->enabled, 0);
     ngx_conf_merge_value(conf->use_global_queue, prev->use_global_queue, 0);
@@ -397,21 +391,10 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                                        |NGX_HTTP_UPSTREAM_FT_OFF;
     }
 
-    #if NGINX_VERSION_NUM < 7000
-        temp_path = ngx_palloc(cf->pool, NGX_MAX_PATH);
-        ngx_memzero(temp_path, NGX_MAX_PATH);
-        ngx_snprintf(temp_path, NGX_MAX_PATH, "%s/webserver_private", passenger_temp_dir);
-        ngx_conf_merge_path_value(conf->upstream.temp_path,
-                                  prev->upstream.temp_path,
-                                  temp_path, 1, 2, 0,
-                                  ngx_garbage_collector_temp_handler, cf);
-        conf->upstream.temp_path->name.len = ngx_strlen(conf->upstream.temp_path->name.data);
-    #else
-        ngx_conf_merge_path_value(cf,
-                                  &conf->upstream.temp_path,
-                                  prev->upstream.temp_path,
-                                  &ngx_http_proxy_temp_path);
-    #endif
+    ngx_conf_merge_path_value(cf,
+                              &conf->upstream.temp_path,
+                              prev->upstream.temp_path,
+                              &ngx_http_proxy_temp_path);
 
     ngx_conf_merge_value(conf->upstream.pass_request_headers,
                               prev->upstream.pass_request_headers, 1);
@@ -529,9 +512,6 @@ peers:
 
     if (conf->upstream.upstream == NULL) {
         conf->upstream.upstream = prev->upstream.upstream;
-        #if NGINX_VERSION_NUM < 7000
-            conf->upstream.schema = prev->upstream.schema;
-        #endif
     }
 
     if (conf->vars_source == NULL) {
@@ -670,35 +650,13 @@ static char *
 passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     passenger_loc_conf_t        *lcf = conf;
-
-    ngx_url_t                    u;
     ngx_http_core_loc_conf_t    *clcf;
     ngx_str_t                   *value;
 
     value = cf->args->elts;
     if (ngx_strcasecmp(value[1].data, (u_char *) "on") == 0) {
-        #if NGINX_VERSION_NUM < 7000
-            if (lcf->upstream.schema.len) {
-                return "is duplicate";
-            }
-        #endif
-
         lcf->enabled = 1;
-
-        ngx_memzero(&u, sizeof(ngx_url_t));
-        u.url.data = (u_char *) passenger_helper_server_socket;
-        u.url.len  = strlen(passenger_helper_server_socket);
-        u.no_resolve = 1;
-
-        lcf->upstream.upstream = ngx_http_upstream_add(cf, &u, 0);
-        if (lcf->upstream.upstream == NULL) {
-            return NGX_CONF_ERROR;
-        }
-
-        #if NGINX_VERSION_NUM < 7000
-            lcf->upstream.schema = passenger_schema_string;
-        #endif
-
+        
         clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
         clcf->handler = passenger_content_handler;
 

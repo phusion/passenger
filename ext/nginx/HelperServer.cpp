@@ -735,28 +735,6 @@ ignoreSigpipe() {
 }
 
 /**
- * Extracts and returns the password from the given <tt>adminPipe</tt>. This password is
- * used to determine which processes may connect with this server's Unix socket, as unix
- * sockets would normally allow any process to connect to it. In this case, we strictly
- * want Nginx to be able to connect to it, and it is for this reason that we maintain a
- * password system.
- *
- * @param adminPipe The pipe used to read the password for this server from.
- * @return The password for this server.
- */
-static string
-receivePassword(int adminPipe) {
-	TRACE_POINT();
-	MessageChannel channel(adminPipe);
-	char buf[HELPER_SERVER_PASSWORD_SIZE];
-	
-	if (!channel.readRaw(buf, HELPER_SERVER_PASSWORD_SIZE)) {
-		throw IOException("Could not read password from the admin pipe.");
-	}
-	return string(buf, HELPER_SERVER_PASSWORD_SIZE);
-}
-
-/**
  * Initializes and starts the helper server that is responsible for handling communication
  * between Nginx and the backend Rails processes.
  *
@@ -770,18 +748,17 @@ main(int argc, char *argv[]) {
 		setup_syscall_interruption_support();
 		ignoreSigpipe();
 		
-		string password;
-		string passengerRoot = argv[1];
-		string ruby      = argv[2];
-		int feedbackFd   = atoi(argv[3]);
-		int logLevel     = atoi(argv[4]);
-		int maxPoolSize  = atoi(argv[5]);
-		int maxInstancesPerApp = atoi(argv[6]);
-		int poolIdleTime       = atoi(argv[7]);
-		bool userSwitching = strcmp(argv[8], "1") == 0;
-		string defaultUser = argv[9];
-		uid_t workerUid    = (uid_t) atoll(argv[10]);
-		gid_t workerGid    = (gid_t) atoll(argv[11]);
+		unsigned int   logLevel   = atoi(argv[1]);
+		FileDescriptor feedbackFd = atoi(argv[2]);
+		pid_t   webServerPid  = (pid_t) atoll(argv[3]);
+		string  tempDir       = argv[4];
+		bool    userSwitching = strcmp(argv[5], "true") == 0;
+		string  defaultUser   = argv[6];
+		uid_t   workerUid     = (uid_t) atoll(argv[7]);
+		gid_t   workerGid     = (uid_t) atoll(argv[8]);
+		string  passengerRoot = argv[9];
+		string  rubyCommand   = argv[10];
+		unsigned int generationNumber = atoll(argv[11]);
 		
 		// Change process title.
 		strncpy(argv[0], "PassengerHelperServer", strlen(argv[0]));
@@ -792,12 +769,9 @@ main(int argc, char *argv[]) {
 		setLogLevel(logLevel);
 		P_DEBUG("Passenger helper server started on PID " << getpid());
 		
-		password = receivePassword(feedbackFd);
-		P_TRACE(2, "Password received.");
-		
-		Server(password, passengerRoot, ruby, feedbackFd, maxPoolSize,
-			maxInstancesPerApp, poolIdleTime, userSwitching,
-			defaultUser, workerUid, workerGid).start();
+		Server(feedbackFd, webServerPid, tempDir,
+			userSwitching, defaultUser, workerUid, workerGid,
+			passengerRoot, rubyCommand, generationNumber).start();
 	} catch (const tracable_exception &e) {
 		P_ERROR(e.what() << "\n" << e.backtrace());
 		return 1;
@@ -812,4 +786,3 @@ main(int argc, char *argv[]) {
 	P_TRACE(2, "Helper server exited.");
 	return 0;
 }
-
