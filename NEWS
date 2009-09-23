@@ -3,6 +3,7 @@ Release 3.0.0
 
  * Caveat: command line tools are not compatible with earlier Phusion
    Passenger versions, so do not attempt this!
+ * [Nginx] Dropped support for Nginx 0.6.
 
 
 Release 2.2.6
