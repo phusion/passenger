@@ -48,6 +48,8 @@ extern ngx_module_t ngx_http_passenger_module;
  */
 extern ngx_str_t    passenger_schema_string;
 
+extern ngx_str_t    passenger_placeholder_upstream_address;
+
 /**
  * A CachedFileStat object used for caching stat() calls.
  */

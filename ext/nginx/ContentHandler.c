@@ -220,6 +220,35 @@ find_base_uri(ngx_http_request_t *r, const passenger_loc_conf_t *loc,
     }
 }
 
+static void
+set_upstream_server_address(ngx_http_upstream_t *upstream, ngx_http_upstream_conf_t *upstream_config) {
+    ngx_http_upstream_server_t *servers = upstream_config->upstream->servers->elts;
+    ngx_peer_addr_t            *address = &servers[0].addrs[0];
+    const char                 *request_socket_filename;
+    unsigned int                request_socket_filename_len;
+    struct sockaddr_un         *sockaddr;
+    
+    /* The Nginx API makes it extremely difficult to register an upstream server
+     * address outside of the configuration loading phase. However we don't know
+     * the helper server's request socket filename until we're done with loading
+     * the configuration. So during configuration loading we register a placeholder
+     * address for the upstream configuration, and while processing requests
+     * we substitute the placeholder filename with the real helper server request
+     * socket filename.
+     */
+    if (address->name.data == passenger_placeholder_upstream_address.data) {
+        sockaddr = (struct sockaddr_un *) address->sockaddr;
+        request_socket_filename =
+            helper_server_starter_get_request_socket_filename(passenger_helper_server_starter,
+                                                              &request_socket_filename_len);
+        
+        address->name.data = (u_char *) request_socket_filename;
+        address->name.len  = request_socket_filename_len;
+        strncpy(sockaddr->sun_path, request_socket_filename, sizeof(sockaddr->sun_path));
+        sockaddr->sun_path[sizeof(sockaddr->sun_path) - 1] = '\0';
+    }
+}
+
 
 static ngx_int_t
 create_request(ngx_http_request_t *r)
@@ -1089,10 +1118,6 @@ passenger_content_handler(ngx_http_request_t *r)
     u_char                 page_cache_file_str[NGX_MAX_PATH + 1];
     ngx_str_t              page_cache_file;
     passenger_context_t   *context;
-    const char            *request_socket_filename;
-    unsigned int           request_socket_filename_len;
-    u_char                *request_socket_url_data;
-    ngx_url_t              request_socket_url;
 
     if (passenger_main_conf.root_dir.len == 0) {
         return NGX_DECLINED;
@@ -1194,30 +1219,7 @@ passenger_content_handler(ngx_http_request_t *r)
 
     u->output.tag = (ngx_buf_tag_t) &ngx_http_passenger_module;
 
-    if (slcf->upstream_config.upstream == NULL) {
-        /* Dynamically add an upstream target. This code is a bit hacky but Nginx
-         * provides no better way...
-         */
-        request_socket_filename =
-            helper_server_starter_get_request_socket_filename(passenger_helper_server_starter,
-                                                              &request_socket_filename_len);
-        request_socket_url_data = ngx_palloc(passenger_current_cycle->pool,
-                                             sizeof("unix:") + request_socket_filename_len);
-        end = ngx_copy(request_socket_url_data, "unix:", sizeof("unix:") - 1);
-        end = ngx_copy(end, request_socket_filename, request_socket_filename_len + 1);
-        
-        ngx_memzero(&request_socket_url, sizeof(ngx_url_t));
-        request_socket_url.url.data   = request_socket_url_data;
-        request_socket_url.url.len    = ngx_strlen(request_socket_url_data);
-        request_socket_url.no_resolve = 1;
-        slcf->ngx_conf->pool = passenger_current_cycle->pool;
-        slcf->ngx_conf->log  = r->connection->log;
-        slcf->upstream_config.upstream = ngx_http_upstream_add(slcf->ngx_conf,
-                                                               &request_socket_url, 0);
-        if (slcf->upstream_config.upstream == NULL) {
-            return NGX_ERROR;
-        }
-    }
+    set_upstream_server_address(u, &slcf->upstream_config);
     u->conf = &slcf->upstream_config;
 
     u->create_request   = create_request;

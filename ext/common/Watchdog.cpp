@@ -48,6 +48,8 @@ struct HelperServerFeedback {
 	string messageSocketFilename;
 };
 
+#define REQUEST_SOCKET_PASSWORD_SIZE     64
+
 
 static string
 findHelperServer() {
@@ -300,7 +302,7 @@ watchdogMainLoop() {
 			serverInstanceDir->newGeneration(userSwitching, defaultUser, workerUid, workerGid);
 		
 		struct {
-			char requestServer[128];
+			char requestServer[REQUEST_SOCKET_PASSWORD_SIZE];
 			char messageServer[MessageServer::MAX_PASSWORD_SIZE];
 		} passwordData;
 		string requestServerPassword;

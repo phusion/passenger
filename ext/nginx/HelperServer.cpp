@@ -61,7 +61,7 @@ using namespace boost;
 using namespace oxt;
 using namespace Passenger;
 
-#define HELPER_SERVER_PASSWORD_SIZE     64
+#define REQUEST_SOCKET_PASSWORD_SIZE     64
 
 struct ClientDisconnectedException { };
 
@@ -201,7 +201,7 @@ private:
 	bool readAndCheckPassword(FileDescriptor &fd) {
 		TRACE_POINT();
 		MessageChannel channel(fd);
-		char buf[HELPER_SERVER_PASSWORD_SIZE];
+		char buf[REQUEST_SOCKET_PASSWORD_SIZE];
 		
 		if (channel.readRaw(buf, sizeof(buf))) {
 			const char *password_data;

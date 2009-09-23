@@ -58,6 +58,7 @@ static int        first_start = 1;
  */
 static const char   *system_temp_dir = NULL;
 ngx_str_t            passenger_schema_string;
+ngx_str_t            passenger_placeholder_upstream_address;
 CachedFileStat      *passenger_stat_cache;
 HelperServerStarter *passenger_helper_server_starter = NULL;
 ngx_cycle_t         *passenger_current_cycle;
@@ -212,8 +213,10 @@ pre_config_init(ngx_conf_t *cf)
     shutdown_helper_server();
     
     ngx_memzero(&passenger_main_conf, sizeof(passenger_main_conf_t));
-    passenger_schema_string.data = (u_char *) "passenger://";
-    passenger_schema_string.len  = sizeof("passenger://") - 1;
+    passenger_schema_string.data = (u_char *) "passenger:";
+    passenger_schema_string.len  = sizeof("passenger:") - 1;
+    passenger_placeholder_upstream_address.data = (u_char *) "unix:/passenger_helper_server";
+    passenger_placeholder_upstream_address.len  = sizeof("unix:/passenger_helper_server") - 1;
     passenger_stat_cache = cached_file_stat_new(1024);
     passenger_helper_server_starter = helper_server_starter_new(HSST_NGINX, &error_message);
     

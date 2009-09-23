@@ -652,31 +652,26 @@ passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     passenger_loc_conf_t        *passenger_conf = conf;
     ngx_http_core_loc_conf_t    *clcf;
     ngx_str_t                   *value;
+    ngx_url_t                    upstream_url;
 //    char                        *request_socket_filename;
 
     value = cf->args->elts;
     if (ngx_strcasecmp(value[1].data, (u_char *) "on") == 0) {
         passenger_conf->enabled = 1;
         
-        /* Save the ngx_conf_t object, we'll need it later in the content handler. */
-        passenger_conf->ngx_conf = ngx_palloc(cf->cycle->pool, sizeof(struct ngx_conf_s));
-        *passenger_conf->ngx_conf = *cf;
-        /*
-        ngx_memzero(&u, sizeof(ngx_url_t));
-        request_socket_filename =
-            helper_server_starter_guess_request_socket_filename(
-                passenger_helper_server_starter);
-        u.url.len    = strlen(request_socket_filename);
-        u.url.data   = (u_char *) ngx_palloc(cf->pool, u.url.len + 1);
-        u.no_resolve = 1;
-        memcpy(u.url.data, request_socket_filename, u.url.len);
-        free(request_socket_filename);
-
-        passenger_conf->upstream_config.upstream = ngx_http_upstream_add(cf, &u, 0);
+        /* Register a placeholder value as upstream address. The real upstream
+         * address (the helper server socket filename) will be set while processing
+         * requests, because we can't start the helper server until config
+         * loading is done.
+         */
+        ngx_memzero(&upstream_url, sizeof(ngx_url_t));
+        upstream_url.url = passenger_placeholder_upstream_address;
+        upstream_url.no_resolve = 1;
+        passenger_conf->upstream_config.upstream = ngx_http_upstream_add(cf, &upstream_url, 0);
         if (passenger_conf->upstream_config.upstream == NULL) {
             return NGX_CONF_ERROR;
         }
-        */
+        
         clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
         clcf->handler = passenger_content_handler;
 
