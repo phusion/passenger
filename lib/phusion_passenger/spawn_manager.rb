@@ -72,7 +72,7 @@ class SpawnManager < AbstractServer
 		if GC.copy_on_write_friendly?
 			# Preload libraries for copy-on-write semantics.
 			require 'base64'
-			require 'phusion_passenger/application'
+			require 'phusion_passenger/app_process'
 			require 'phusion_passenger/railz/framework_spawner'
 			require 'phusion_passenger/railz/application_spawner'
 			require 'phusion_passenger/rack/application_spawner'
@@ -147,7 +147,7 @@ class SpawnManager < AbstractServer
 		
 		if options["app_type"] == "rails"
 			if !defined?(Railz::FrameworkSpawner)
-				require 'phusion_passenger/application'
+				require 'phusion_passenger/app_process'
 				require 'phusion_passenger/railz/framework_spawner'
 				require 'phusion_passenger/railz/application_spawner'
 			end
@@ -224,7 +224,7 @@ private
 		if [nil, "", "smart", "smart-lv2"].include?(spawn_method)
 			spawner_must_be_started = true
 			if spawn_method != "smart-lv2"
-				framework_version = Application.detect_framework_version(app_root)
+				framework_version = AppProcess.detect_framework_version(app_root)
 			end
 			if framework_version.nil? || framework_version == :vendor
 				key = "app:#{app_root}"
@@ -280,11 +280,11 @@ private
 	
 	def handle_spawn_application(*options)
 		options = sanitize_spawn_options(Hash[*options])
-		app = nil
+		process = nil
 		app_root = options["app_root"]
 		app_type = options["app_type"]
 		begin
-			app = spawn_application(options)
+			process = spawn_application(options)
 		rescue InvalidPath => e
 			send_error_page(client, 'invalid_app_root', :error => e, :app_root => app_root)
 		rescue AbstractServer::ServerError => e
@@ -314,17 +314,17 @@ private
 		rescue FrameworkInitError => e
 			send_error_page(client, 'framework_init_error', :error => e)
 		end
-		if app
+		if process
 			begin
 				client.write('ok')
-				client.write(app.pid, app.listen_socket_name,
-					app.listen_socket_type)
-				client.send_io(app.owner_pipe)
+				client.write(process.pid, process.listen_socket_name,
+					process.listen_socket_type)
+				client.send_io(process.owner_pipe)
 			rescue Errno::EPIPE
 				# The Apache module may be interrupted during a spawn command,
 				# in which case it will close the connection. We ignore this error.
 			ensure
-				app.close
+				process.close
 			end
 		end
 	end

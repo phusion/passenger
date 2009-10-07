@@ -25,9 +25,8 @@ require 'rubygems'
 require 'socket'
 require 'etc'
 require 'fcntl'
-require 'phusion_passenger/application'
 require 'phusion_passenger/abstract_server'
-require 'phusion_passenger/application'
+require 'phusion_passenger/app_process'
 require 'phusion_passenger/constants'
 require 'phusion_passenger/events'
 require 'phusion_passenger/railz/request_handler'
@@ -128,7 +127,7 @@ class ApplicationSpawner < AbstractServer
 			raise IOError, "Connection closed"
 		end
 		owner_pipe = server.recv_io
-		return Application.new(@app_root, pid, socket_name,
+		return AppProcess.new(@app_root, pid, socket_name,
 			socket_type, owner_pipe)
 	rescue SystemCallError, IOError, SocketError => e
 		raise Error, "The application spawner server exited unexpectedly: #{e}"
@@ -199,7 +198,7 @@ class ApplicationSpawner < AbstractServer
 			raise IOError, "Connection closed"
 		end
 		owner_pipe = channel.recv_io
-		return Application.new(@app_root, pid, socket_name,
+		return AppProcess.new(@app_root, pid, socket_name,
 			socket_type, owner_pipe)
 	end
 	

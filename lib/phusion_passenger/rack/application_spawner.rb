@@ -26,7 +26,7 @@ $LOAD_PATH.unshift(rack_dir) if !$LOAD_PATH.include?(rack_dir)
 require 'rack'
 
 require 'socket'
-require 'phusion_passenger/application'
+require 'phusion_passenger/app_process'
 require 'phusion_passenger/events'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/abstract_request_handler'
@@ -80,7 +80,7 @@ class ApplicationSpawner
 			raise IOError, "Connection closed"
 		end
 		owner_pipe = channel.recv_io
-		return Application.new(@app_root, pid, socket_name,
+		return AppProcess.new(@app_root, pid, socket_name,
 			socket_type, owner_pipe)
 	end
 

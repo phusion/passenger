@@ -20,7 +20,7 @@ describe FrameworkSpawner do
 			@stub.use_vendor_rails('minimal')
 			@spawner = FrameworkSpawner.new(:vendor => "#{@stub.app_root}/vendor/rails")
 		else
-			version = Application.detect_framework_version(@stub.app_root)
+			version = AppProcess.detect_framework_version(@stub.app_root)
 			@spawner = FrameworkSpawner.new(:version => version)
 		end
 		@spawner.start
@@ -80,7 +80,7 @@ describe FrameworkSpawner do
 		if use_vendor_rails?
 			stub.use_vendor_rails('minimal')
 		end
-		version = Application.detect_framework_version(stub.app_root)
+		version = AppProcess.detect_framework_version(stub.app_root)
 		if version == :vendor
 			options = { :vendor => "#{stub.app_root}/vendor/rails" }
 		else

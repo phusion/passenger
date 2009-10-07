@@ -25,13 +25,12 @@ require 'rubygems'
 require 'phusion_passenger/exceptions'
 module PhusionPassenger
 
-# Represents a single application instance.
-class Application
-	# The root directory of this application, i.e. the directory that contains
-	# 'app/', 'public/', etc.
+# Represents a single application process.
+class AppProcess
+	# The root directory of this application process.
 	attr_reader :app_root
 	
-	# The process ID of this application instance.
+	# This process's PID.
 	attr_reader :pid
 	
 	# The name of the socket on which the application instance will accept
@@ -90,7 +89,7 @@ class Application
 		end
 	end
 
-	# Creates a new instance of Application. The parameters correspond with the attributes
+	# Creates a new AppProcess instance. The parameters correspond with the attributes
 	# of the same names. No exceptions will be thrown.
 	def initialize(app_root, pid, listen_socket_name, listen_socket_type, owner_pipe)
 		@app_root = app_root
@@ -100,8 +99,8 @@ class Application
 		@owner_pipe = owner_pipe
 	end
 	
-	# Close the connection with the application instance. If there are no other
-	# processes that have connections to this application instance, then it will
+	# Close the connection with the application process. If there are no other
+	# processes that have connections to this application process, then it will
 	# shutdown as soon as possible.
 	#
 	# See also AbstractRequestHandler#owner_pipe.

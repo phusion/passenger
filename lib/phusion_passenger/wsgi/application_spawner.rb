@@ -22,7 +22,7 @@
 #  THE SOFTWARE.
 
 require 'socket'
-require 'phusion_passenger/application'
+require 'phusion_passenger/app_process'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/utils'
 module PhusionPassenger
@@ -66,7 +66,7 @@ class ApplicationSpawner
 			raise IOError, "Connection closed"
 		end
 		owner_pipe = channel.recv_io
-		return Application.new(@app_root, pid, socket_name,
+		return AppProcess.new(@app_root, pid, socket_name,
 			socket_type, owner_pipe)
 	end
 

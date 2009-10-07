@@ -177,7 +177,7 @@ class FrameworkSpawner < AbstractServer
 					raise IOError, "Connection closed"
 				end
 				owner_pipe = server.recv_io
-				return Application.new(app_root, pid, listen_socket_name,
+				return AppProcess.new(app_root, pid, listen_socket_name,
 					socket_type, owner_pipe)
 			end
 		rescue SystemCallError, IOError, SocketError => e
@@ -277,9 +277,8 @@ private
 	end
 
 	def handle_spawn_application(*options)
+		process = nil
 		options = sanitize_spawn_options(Hash[*options])
-		
-		app = nil
 		app_root = options["app_root"]
 		@spawners.synchronize do
 			begin
@@ -304,7 +303,7 @@ private
 				return
 			end
 			begin
-				app = spawner.spawn_application
+				process = spawner.spawn_application
 			rescue ApplicationSpawner::Error => e
 				spawner.stop
 				@spawners.delete(app_root)
@@ -314,9 +313,10 @@ private
 			end
 		end
 		client.write('success')
-		client.write(app.pid, app.listen_socket_name, app.listen_socket_type)
-		client.send_io(app.owner_pipe)
-		app.close
+		client.write(process.pid, process.listen_socket_name, process.listen_socket_type)
+		client.send_io(process.owner_pipe)
+	ensure
+		process.close if process
 	end
 	
 	def handle_reload(app_root = nil)
