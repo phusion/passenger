@@ -530,6 +530,8 @@ describe "Apache 2 module" do
 	end
 	
 	describe "HelperServer" do
+		AdminTools = PhusionPassenger::AdminTools
+		
 		before :all do
 			@mycook = setup_rails_stub('mycook', File.expand_path("tmp.mycook"))
 			@mycook_url_root = "http://1.passenger.test:#{@apache2.port}"
@@ -555,7 +557,7 @@ describe "Apache 2 module" do
 			end
 			
 			# Now kill the helper server.
-			instance = PhusionPassenger::AdminTools::ServerInstance.list.first
+			instance = AdminTools::ServerInstance.list.first
 			Process.kill('SIGKILL', instance.helper_server_pid)
 			sleep 0.01 # Give the signal a small amount of time to take effect.
 			
@@ -565,6 +567,18 @@ describe "Apache 2 module" do
 				get('/welcome').should =~ /Welcome to MyCook/
 				sleep 0.1
 			end
+		end
+		
+		it "exposes the application pool for passenger-status" do
+			File.touch("#{@mycook.app_root}/tmp/restart.txt")  # Get rid of all previous app processes.
+			get('/welcome').should =~ /Welcome to MyCook/
+			instance = AdminTools::ServerInstance.list.first
+			processes = instance.connect(:passenger_status) do
+				instance.processes
+			end
+			processes.should have(1).item
+			processes[0].domain.name.should == @mycook.app_root
+			processes[0].processed.should == 1
 		end
 	end
 	

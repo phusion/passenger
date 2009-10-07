@@ -47,10 +47,10 @@ def show_status(server_instance, options = {})
 				STDERR.puts e.to_s
 				exit 2
 			end
-		
+			
 			# Colorize output
 			text.gsub!(/^(----)(.*)$/, YELLOW + BLUE_BG + BOLD + '\1\2' + RESET)
-		
+			
 			puts text
 		
 		when 'backtraces'

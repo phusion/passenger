@@ -53,10 +53,23 @@ class ServerInstance
 	class RoleDeniedError < StandardError
 	end
 	
-	# TODO: really need to do something about the terminology. it should be "backend process" or something.
-	class Instance
-		attr_accessor :pid, :socket_name, :socket_type, :sessions, :uptime
-		INT_PROPERTIES = [:pid, :sessions]
+	class Domain
+		attr_reader :name, :processes
+		
+		def initialize(name)
+			@name = name
+			@processes = []
+		end
+	end
+	
+	class Process
+		attr_reader :domain
+		attr_accessor :pid, :socket_name, :socket_type, :sessions, :processed, :uptime
+		INT_PROPERTIES = [:pid, :sessions, :processed]
+		
+		def initialize(domain)
+			@domain = domain
+		end
 	end
 
 	attr_reader :path
@@ -204,34 +217,30 @@ class ServerInstance
 		doc = REXML::Document.new(xml)
 		
 		domains = []
-		doc.elements.each("info/domains/domain") do |domain|
-			instances = []
-			d = {
-				:name => domain.elements["name"].text,
-				:instances => instances
-			}
-			domain.elements.each("processes/process") do |instance|
-				i = Instance.new
-				instance.elements.each do |element|
-					if i.respond_to?("#{element.name}=")
-						if Instance::INT_PROPERTIES.include?(element.name.to_sym)
+		doc.elements.each("info/domains/domain") do |domain_xml|
+			domain = Domain.new(domain_xml.elements["name"].text)
+			domain_xml.elements.each("processes/process") do |process_xml|
+				process = Process.new(domain)
+				process_xml.elements.each do |element|
+					if process.respond_to?("#{element.name}=")
+						if Process::INT_PROPERTIES.include?(element.name.to_sym)
 							value = element.text.to_i
 						else
 							value = element.text
 						end
-						i.send("#{element.name}=", value)
+						process.send("#{element.name}=", value)
 					end
 				end
-				instances << i
+				domain.processes << process
 			end
-			domains << d
+			domains << domain
 		end
 		return domains
 	end
 	
-	def instances
+	def processes
 		return domains.map do |domain|
-			domain[:instances]
+			domain.processes
 		end.flatten
 	end
 	
