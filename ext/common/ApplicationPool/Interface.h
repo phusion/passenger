@@ -28,7 +28,7 @@
 #include <boost/shared_ptr.hpp>
 #include <sys/types.h>
 
-#include "../Application.h"
+#include "../Session.h"
 #include "../PoolOptions.h"
 
 namespace Passenger {
@@ -140,7 +140,7 @@ public:
 	 *       <tt>get("/home/../home/foo")</tt>, then ApplicationPool will think
 	 *       they're 2 different applications, and thus will spawn 2 application instances.
 	 */
-	virtual Application::SessionPtr get(const PoolOptions &options) = 0;
+	virtual SessionPtr get(const PoolOptions &options) = 0;
 	
 	/**
 	 * Convenience shortcut for calling get() with default spawn options.
@@ -149,7 +149,7 @@ public:
 	 * @throws SystemException
 	 * @throws boost::thread_interrupted
 	 */
-	virtual Application::SessionPtr get(const string &appRoot) {
+	virtual SessionPtr get(const string &appRoot) {
 		return get(PoolOptions(appRoot));
 	}
 	

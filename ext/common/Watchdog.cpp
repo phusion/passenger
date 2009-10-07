@@ -457,7 +457,9 @@ main(int argc, char *argv[]) {
 	poolIdleTime       = atoi(argv[14]);
 	
 	/* Become the process group leader so that Apache can't kill
-	 * this watchdog with killpg() during shutdown. */
+	 * this watchdog with killpg() during shutdown, and so that
+	 * a Ctrl-C only affects the web server.
+	 */
 	setpgrp();
 	
 	disableOomKiller();

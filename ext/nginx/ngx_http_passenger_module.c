@@ -166,6 +166,7 @@ start_helper_server(ngx_cycle_t *cycle) {
     passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
     ruby           = ngx_str_null_terminate(&passenger_main_conf.ruby);
     
+    /* TODO: make sure that the child process's stdout and stderr point to the Nginx config file! */
     ret = helper_server_starter_start(passenger_helper_server_starter,
         passenger_main_conf.log_level, getpid(),
         system_temp_dir, passenger_main_conf.user_switching,

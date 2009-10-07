@@ -135,6 +135,7 @@ class AbstractRequestHandler
 	# Additionally, the following options may be given:
 	# - memory_limit: Used to set the +memory_limit+ attribute.
 	def initialize(owner_pipe, options = {})
+		# TODO: password protect the socket
 		if should_use_unix_sockets?
 			create_unix_socket_on_filesystem
 		else

@@ -41,7 +41,7 @@ static const apr_bucket_type_t apr_bucket_type_passenger_pipe = {
 };
 
 struct BucketData {
-	Application::SessionPtr session;
+	SessionPtr session;
 	PassengerBucketStatePtr state;
 	int stream;
 	
@@ -163,7 +163,7 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 }
 
 static apr_bucket *
-passenger_bucket_make(apr_bucket *bucket, Application::SessionPtr session, PassengerBucketStatePtr state) {
+passenger_bucket_make(apr_bucket *bucket, SessionPtr session, PassengerBucketStatePtr state) {
 	BucketData *data = new BucketData();
 	data->session  = session;
 	data->stream   = session->getStream();
@@ -177,7 +177,7 @@ passenger_bucket_make(apr_bucket *bucket, Application::SessionPtr session, Passe
 }
 
 apr_bucket *
-passenger_bucket_create(Application::SessionPtr session, PassengerBucketStatePtr state, apr_bucket_alloc_t *list) {
+passenger_bucket_create(SessionPtr session, PassengerBucketStatePtr state, apr_bucket_alloc_t *list) {
 	apr_bucket *bucket;
 	
 	bucket = (apr_bucket *) apr_bucket_alloc(sizeof(*bucket), list);

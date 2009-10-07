@@ -47,7 +47,7 @@
 
 #include "ApplicationPool/Pool.h"
 #include "ApplicationPool/Server.h"
-#include "Application.h"
+#include "Session.h"
 #include "PoolOptions.h"
 #include "MessageServer.h"
 #include "BacktracesServer.h"
@@ -269,7 +269,7 @@ private:
 	 * @throws SystemException Request body could not be read from the specified
 	 *   <tt>clientFd</tt>.
 	 */
-	void sendRequestBody(Application::SessionPtr &session,
+	void sendRequestBody(SessionPtr &session,
 	                     FileDescriptor &clientFd,
 	                     const string &partialRequestBody,
 	                     unsigned long contentLength) {
@@ -322,7 +322,7 @@ private:
 	 *                                     before we were able to send back the
 	 *                                     full response.
 	 */
-	void forwardResponse(Application::SessionPtr &session, FileDescriptor &clientFd) {
+	void forwardResponse(SessionPtr &session, FileDescriptor &clientFd) {
 		TRACE_POINT();
 		HttpStatusExtractor ex;
 		int stream = session->getStream();
@@ -457,7 +457,7 @@ private:
 			options.appSpawnerTimeout       = atol(parser.getHeader("PASSENGER_APP_SPAWNER_IDLE_TIME"));
 			
 			try {
-				Application::SessionPtr session(pool->get(options));
+				SessionPtr session = pool->get(options);
 			
 				UPDATE_TRACE_POINT();
 				session->sendHeaders(parser.getHeaderData().c_str(),

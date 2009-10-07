@@ -54,7 +54,7 @@ namespace tut {
 			pool2->connect(socketFilename, "test", "12345");
 		}
 		
-		Application::SessionPtr spawnRackApp() {
+		SessionPtr spawnRackApp() {
 			PoolOptions options("stub/rack");
 			options.appType = "rack";
 			return pool->get(options);
@@ -124,7 +124,7 @@ namespace tut {
 		options.appType = "rack";
 		options.environmentVariables = strList;
 		
-		Application::SessionPtr session1 = pool->get(options);
+		SessionPtr session1 = pool->get(options);
 		session1.reset();
 		ensure_equals(strList->counter, 1);
 		

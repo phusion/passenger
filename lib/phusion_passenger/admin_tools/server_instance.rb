@@ -210,7 +210,7 @@ class ServerInstance
 				:name => domain.elements["name"].text,
 				:instances => instances
 			}
-			domain.elements.each("instances/instance") do |instance|
+			domain.elements.each("processes/process") do |instance|
 				i = Instance.new
 				instance.elements.each do |element|
 					if i.respond_to?("#{element.name}=")

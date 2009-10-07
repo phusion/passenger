@@ -74,7 +74,7 @@ using namespace oxt;
  *
  * The server will try to keep the spawning time as small as possible, by keeping
  * corresponding Ruby on Rails frameworks and application code in memory. So the second
- * time an instance of the same application is spawned, the spawn time is significantly
+ * time a process of the same application is spawned, the spawn time is significantly
  * lower than the first time. Nevertheless, spawning is a relatively expensive operation
  * (compared to the processing of a typical HTTP request/response), and so should be
  * avoided whenever possible.
@@ -216,11 +216,11 @@ private:
 	 * Send the spawn command to the spawn server.
 	 *
 	 * @param PoolOptions The spawn options to use.
-	 * @return An Application smart pointer, representing the spawned application.
+	 * @return A Process smart pointer, representing the spawned process.
 	 * @throws SpawnException Something went wrong.
 	 * @throws Anything thrown by options.environmentVariables->getItems().
 	 */
-	ApplicationPtr sendSpawnCommand(const PoolOptions &options) {
+	ProcessPtr sendSpawnCommand(const PoolOptions &options) {
 		TRACE_POINT();
 		vector<string> args;
 		int ownerPipe;
@@ -300,7 +300,7 @@ private:
 				ret = chown(args[1].c_str(), getuid(), getgid());
 			} while (ret == -1 && errno == EINTR);
 		}
-		return ApplicationPtr(new Application(options.appRoot,
+		return ProcessPtr(new Process(options.appRoot,
 			pid, args[1], args[2], ownerPipe));
 	}
 	
@@ -308,7 +308,7 @@ private:
 	 * @throws boost::thread_interrupted
 	 * @throws Anything thrown by options.environmentVariables->getItems().
 	 */
-	ApplicationPtr
+	ProcessPtr
 	handleSpawnException(const SpawnException &e, const PoolOptions &options) {
 		TRACE_POINT();
 		bool restarted;
@@ -436,7 +436,7 @@ public:
 		}
 	}
 	
-	virtual ApplicationPtr spawn(const PoolOptions &options) {
+	virtual ProcessPtr spawn(const PoolOptions &options) {
 		TRACE_POINT();
 		boost::mutex::scoped_lock l(lock);
 		try {

@@ -21,8 +21,8 @@ The algorithm should strive to keep spawning to a minimum.
   "app/", "public/", etc. For a Rack application, this is the directory that
   contains "config.ru".
 
-- "Active application instance":
-  An application instance that has more than 0 sessions.
+- "Active application process":
+  An application process that has more than 0 sessions.
 
 === Types
 
@@ -51,46 +51,47 @@ explicitly define some special types:
   
 - Domain
   A compound type (class) which contains information about an application root,
-  such as the application instances that have been spawned for this application
+  such as the application processes that have been spawned for this application
   root.
   
   A Domain has the following members:
-  * instances (list<AppContainer>) - a list of AppContainer objects.
+  * processes (list<ProcessInfo>) - a list of ProcessInfo objects.
     
     Invariant:
-        containers is non-empty.
-        for all 0 <= i < containers.size() - 1:
-           if containers[i].app is active:
-              containers[i + 1].app is active
+        processes is non-empty.
+        for all 0 <= i < processes.size() - 1:
+           if processes[i].process is active:
+              processes[i + 1].process is active
 
-  * size (unsigned integer): The number of items in _instances_.
+  * size (unsigned integer): The number of items in _processes_.
   
   * max_requests (unsigned integer): The maximum number of requests that each
-    application instance in this domain may process. After having processed this
-    many requests, the application instance will be shut down.
+    application process in this domain may process. After having processed this
+    many requests, the application process will be shut down.
     A value of 0 indicates that there is no maximum.
 
-- AppContainer
-  A compound type (class) which contains an application instance, as well as
-  iterators for various linked lists. These iterators make it possible to
-  perform actions on the linked list in O(1) time.
+- ProcessInfo
+  A compound type (class) which contains a reference to an application process
+  object, as well as various metadata, such as iterators for various linked
+  lists. These iterators make it possible to perform actions on the linked
+  lists in O(1) time.
   
-  An AppContainer has the following members:
-  * app - An Application object, representing an application instance.
+  A ProcessInfo has the following members:
+  * process - A process object, representing an application process.
   * start_time (time) - The time at which this application instance was
-    started. It's set to the current time by AppContainer's constructor.
+    started. It's set to the current time by ProcessInfo's constructor.
   * processed_requests (integer) - The number of requests processed by this
     application instance so far.
-  * last_used (time) - The last time a session for this application instance
+  * last_used (time) - The last time a session for this application process
     was opened or closed.
   * sessions (integer) - The number of open sessions for this application
-    instance.
+    process.
     Invariant:
-       (sessions == 0) == (This AppContainer is in inactive_apps.)
-  * iterator - The iterator for this AppContainer in the linked list
-    domains[app.app_root].instances
-  * ia_iterator - The iterator for this AppContainer in the linked list
-    inactive_apps. This iterator is only valid if this AppContainer really is
+       (sessions == 0) == (This ProcessInfo is in inactive_apps.)
+  * iterator - The iterator for this ProcessInfo in the linked list
+    domains[process.app_root].instances
+  * ia_iterator - The iterator for this ProcessInfo in the linked list
+    inactive_apps. This iterator is only valid if this ProcessInfo really is
     in that list.
 
 - PoolOptions
@@ -99,11 +100,11 @@ explicitly define some special types:
   
   A PoolOptions has at least the following members:
   * max_requests (unsigned integer) - The maximum number of requests that the
-    application instance may process. After having processed this many requests,
-    the application instance will be shut down. A value of 0 indicates that there
+    application process may process. After having processed this many requests,
+    the application process will be shut down. A value of 0 indicates that there
     is no maximum.
   * use_global_queue (boolean) - Whether to use a global queue for all
-    application instances, or a queue that's private to the application instance.
+    application processes, or a queue that's private to the application process.
     The users guide explains this feature in more detail.
   * restart_dir (string) - The directory in which the algorithm should look for
     restart.txt and always_restart.txt. The existance and modification times of
@@ -112,9 +113,10 @@ explicitly define some special types:
 === Special functions
 
 - spawn(app_root)
-  Spawns a new instance of the application at the given application root.
+  Spawns a new application process at the given application root.
   Throws an exception if something went wrong. This function is thread-safe.
-  Note that application initialization can take an arbitrary amount of time.
+  Note that application process initialization can take an arbitrary amount
+  of time.
 
 === Instance variables
 
@@ -128,7 +130,7 @@ information:
 
 - domains: map[string => Domain]
   Maps an application root to its Domain object. This map contains all
-  application instances in the pool.
+  application processes in the pool.
   
   Invariant:
      for all values d in domains:
@@ -148,19 +150,19 @@ information:
   pool, 'count > max' is possible.
 
 - active: integer
-  The number of application instances in the pool that are active.
+  The number of application processes in the pool that are active.
   Invariant:
      active <= count
 
-- inactive_apps: list<AppContainer>
-  A linked list of AppContainer objects. All application instances in this list
+- inactive_apps: list<ProcessInfo>
+  A linked list of ProcessInfo objects. All application processes in this list
   are inactive.
   
   Invariant:
      inactive_apps.size() == count - active
-     for all c in inactive_apps:
-        c can be found in _domains_.
-        c.sessions == 0
+     for all x in inactive_apps:
+        x can be found in _domains_.
+        x.sessions == 0
 
 - waiting_on_global_queue: integer
   If global queuing mode is enabled, then when get() is waiting for a backend
@@ -189,31 +191,31 @@ Here's an UML diagram in ASCII art:
 # Thread-safetiness notes:
 # - All wait commands are to unlock the lock during waiting.
 
-# Connect to an existing application instance or to a newly spawned application instance.
-# 'app_root' specifies the application root folder of the application. 'options' is an
-# object of type 'PoolOptions', which contains additional information which may be
-# relevant for spawning.
+# Connect to an existing application process, or spawn a new application process
+# and connect to that if necessary.
+# 'app_root' refers to an application root.
+# 'options' is an object of type 'PoolOptions', which contains additional
+# information which may be relevant for spawning.
 function get(app_root, options):
 	MAX_ATTEMPTS = 10
 	attempt = 0
-	time_limit = now() + 5 seconds
 	lock.synchronize:
 		while (true):
 			attempt++
-			container, domain = spawn_or_use_existing(app_root, options)
-			container.last_used = current_time()
-			container.sessions++
+			process_info, domain = spawn_or_use_existing(app_root, options)
+			process_info.last_used = current_time()
+			process_info.sessions++
 			try:
-				return container.app.connect()
+				return process_info.process.connect()
 			on exception:
-				# The app instance seems to have crashed.
-				# So we remove this instance from our data
+				# The app process seems to have crashed.
+				# So we remove this process from our data
 				# structures.
-				container.sessions--
-				instances = domain.instances
-				instances.remove(container.iterator)
+				process_info.sessions--
+				processes = domain.processes
+				processes.remove(process_info.iterator)
 				domain.size--
-				if instances.empty():
+				if processes.empty():
 					domains.remove(app_root)
 				count--
 				active--
@@ -221,44 +223,45 @@ function get(app_root, options):
 					propagate exception
 
 
-# Returns a pair of [AppContainer, Domain] that matches the given application
-# root. If no such AppContainer exists, then it is created and a new
-# application instance is spawned. All exceptions that occur are propagated.
+# Returns a pair of [ProcessInfo, Domain] that matches the given application
+# root. This function spawns a new process if necessary. All exceptions that
+# occur are propagated.
 function spawn_or_use_existing(app_root, options):
 	domain = domains[app_root]
 	
 	if needs_restart(app_root, options):
 		if (domain != nil):
-			for all container in domain.instances:
-				if container.sessions == 0:
-					inactive_apps.remove(container.ia_iterator)
+			for all process_info in domain.processes:
+				if (process_info.sessions == 0):
+					inactive_apps.remove(process_info.ia_iterator)
 				else:
 					active--
-				domain.instances.remove(container.iterator)
+				domain.processes.remove(process_info.iterator)
 				count--
 			domains.remove(app_root)
 		Tell spawn server to reload code for app_root.
 		domain = nil
 	
 	if domain != nil:
-		# There are apps for this app root.
-		instances = domain.instances
+		# There are existing processes for this app root.
+		processes = domain.processes
 		
-		if (instances.front.sessions == 0):
-			# There is an inactive app, so we use it.
-			container = instances.front
-			instances.move_to_back(container.iterator)
-			inactive_apps.remove(container.ia_iterator)
+		if (processes.front.sessions == 0):
+			# There is an inactive process, so we use it.
+			process_info = processes.front
+			processes.move_to_back(process_info.iterator)
+			inactive_apps.remove(process_info.ia_iterator)
 			active++
 		else if	(count >= max) or (
 			(max_per_app != 0) and (domain.size >= max_per_app)
 			):
-			# All apps are active, and the pool is full. 
+			# All processes are active, and the pool is full. 
 			#  -OR-
-			# All apps are active and the number of max instances
-			# spawned for this application domain has been reached.
+			# All processes are active and the maximum number of
+			# allowed processes for this application domain has
+			# been reached.
 			#
-			# We're not allowed to spawn a new application instance.
+			# We're not allowed to spawn a new application process.
 			if options.use_global_queue:
 				# So we wait until _active_ has changed, then
 				# we restart this function and try again.
@@ -267,99 +270,98 @@ function spawn_or_use_existing(app_root, options):
 				waiting_on_global_queue--
 				goto beginning of function
 			else:
-				# So we connect to an already active application.
+				# So we connect to an already active process.
 				# This connection will be put into that
-				# application's private queue.
-				container = a container in _instances_ with the smallest _session_ value
-				instances.move_to_back(container.iterator)
+				# process's private queue.
+				process_info = an element in _processes_ with the smallest _session_ value
+				processes.move_to_back(process_info.iterator)
 		else:
-			# All apps are active, but the pool hasn't reached its
-			# maximum yet. So we spawn a new app.
-			container = new AppContainer
+			# All processes are active, but the pool hasn't reached its
+			# maximum yet. So we spawn a new process.
+			process_info = new ProcessInfo
 			# TODO: we should add some kind of timeout check for spawning.
-			container.app = spawn(app_root)
-			container.sessions = 0
-			iterator = instances.add_to_back(container)
-			container.iterator = iterator
+			process_info.process = spawn(app_root)
+			process_info.sessions = 0
+			iterator = processes.add_to_back(process_info)
+			process_info.iterator = iterator
 			domain.size++
 			count++
 			active++
 	else:
-		# There are no apps for this app root. Wait until there's at
-		# least 1 idle instance, or until there's an empty slot in the
-		# pool, then restart this function. Restarting is necessary,
-		# because after waiting and reacquiring the lack, some other
-		# thread might already have spawned instances for this app root.
+		# There are no processes for this app root.
 		if (active >= max):
+			# Looks like the pool is full and all processes are busy.
+			# We wait until there's at least 1 idle process, or until
+			# there's an empty slot in the pool, then restart this
+			# function.
 			wait until _active_ has changed
 			goto beginning of function
 		elsif count == max:
-			# Here we are in a though situation. There are several
-			# apps which are inactive, and none of them have
-			# application root _app_root_, so we must kill one of
-			# them in order to free a spot in the pool. But which
+			# The pool is full, and not all processes are busy, but
+			# we're in a though situation nevertheless: there are
+			# several processes which are inactive, and none of them
+			# have application root _app_root_, so we must kill one
+			# of them in order to free a spot in the pool. But which
 			# one do we kill? We want to minimize spawning.
 			#
 			# It's probably a good idea to keep some kind of
 			# statistics in order to decide this. We want the
 			# application root that gets the least traffic to be
 			# killed. But for now, we kill a random application
-			# instance.
-			container = inactive_apps.pop_front
-			domain = domains[container.app.app_root]
-			instances = domain.instances
-			instances.remove(container.iterator)
-			if instances.empty():
-				domains.remove(container.app.app_root)
+			# process.
+			process_info = inactive_apps.pop_front
+			domain = domains[process_info.app.app_root]
+			processes = domain.processes
+			processes.remove(process_info.iterator)
+			if processes.empty():
+				domains.remove(process_info.process.app_root)
 			else:
 				domain.size--
 			count--
-		container = new AppContainer
+		process_info = new ProcessInfo
 		# TODO: we should add some kind of timeout check for spawning.
-		container.app = spawn(app_root)
-		container.sessions = 0
+		process_info.app = spawn(app_root)
 		domain = domains[app_root]
 		if domain == nil:
 			domain = new Domain
-			initialize domain.instances
 			domain.size = 1
 			domain.max_requests = options.max_requests
 			domains[app_root] = domain
 		else:
 			domain.size++
-		iterator = domain.instances.add_to_back(container)
-		container.iterator = iterator
+		iterator = domain.processes.add_to_back(process_info)
+		process_info.iterator = iterator
 		count++
 		active++
-	return [container, domain]
+	return [process_info, domain]
 
 
 # The following function is to be called when a session has been closed.
-# _container_ is the AppContainer that contains the application for which a
+# _process_info_ is the ProcessInfo that belongs to the process whose
 # session has been closed.
-function session_has_been_closed(container):
+function session_has_been_closed(process_info):
 	lock.synchronize:
-		domain = domains[container.app.app_root]
+		domain = domains[process_info.process.app_root]
 		if domain != nil:
-			instances = domain.instances
-			container.processed++
+			processes = domain.processes
+			process_info.processed++
 			
-			if (domain.max_requests) > 0 and (container.processed >= domain.max_requests):
-				# The application instance has processed its maximum allowed
+			if (domain.max_requests) > 0 and (process_info.processed >= domain.max_requests):
+				# The application process has processed its maximum allowed
 				# number of requests, so we shut it down.
-				instances.remove(container.iterator)
+				processes.remove(process_info.iterator)
 				domain.size--
-				if instances.empty():
+				if processes.empty():
 					domains.remove(app_root)
 				count--
 				active--
 			else:
-				container.last_used = current_time()
-				container.sessions--
-				container.processed++
-				if container.sessions == 0:
-					instances.move_to_front(container.iterator)
-					container.ia_iterator = inactive_apps.add_to_back(container.app)
+				process_info.last_used = current_time()
+				process_info.sessions--
+				process_info.processed++
+				if process_info.sessions == 0:
+					processes.move_to_front(process_info.iterator)
+					process_info.ia_iterator = inactive_apps.add_to_back(process_info.process)
 					active--
 
 
@@ -377,7 +379,7 @@ function needs_restart(app_root, options):
 
 
 # The following thread will be responsible for cleaning up idle application
-# instances, i.e. instances that haven't been used for a while.
+# process, i.e. processes that haven't been used for a while.
 # This can be disabled per app when setting it's maxIdleTime to 0.
 thread cleaner:
 	lock.synchronize:
@@ -389,18 +391,18 @@ thread cleaner:
 				break
 			
 			now = current_time()
-			for all container in inactive_apps:
-				app = container.app
-				domain = domains[app.app_root]
-				instances = domain.instances
-				# If MAX_IDLE_TIME is 0 we don't clean up the instance,
-				# giving us the option to persist the app container
-				# forever unless it's killed by another app.
-				if (MAX_IDLE_TIME > 0) and (now - container.last_used > MAX_IDLE_TIME):
-					instances.remove(container.iterator)
-					inactive_apps.remove(container.iterator)
+			for all process_info in inactive_apps:
+				process = process_info.process
+				domain = domains[process.app_root]
+				processes = domain.processes
+				# If MAX_IDLE_TIME is 0 we don't clean up the process,
+				# giving us the option to persist the process
+				# forever unless it's killed by another process.
+				if (MAX_IDLE_TIME > 0) and (now - process_info.last_used > MAX_IDLE_TIME):
+					processes.remove(process_info.iterator)
+					inactive_apps.remove(process_info.ia_iterator)
 					domain.size--
 					count--
-				if instances.empty():
-					domains.remove(app.app_root)
+				if processes.empty():
+					domains.remove(process.app_root)
 

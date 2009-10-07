@@ -33,7 +33,6 @@
 #include <oxt/system_calls.hpp>
 
 #include "Interface.h"
-#include "../Application.h"
 #include "../Exceptions.h"
 #include "../MessageChannel.h"
 #include "../Utils.h"
@@ -45,6 +44,7 @@ using namespace std;
 using namespace oxt;
 using namespace boost;
 
+// TODO: use MessageClient
 
 /* This source file follows the security guidelines written in Account.h. */
 
@@ -116,7 +116,7 @@ protected:
 	 * A communication stub for the Session object on the ApplicationPool server.
 	 * This class is not guaranteed to be thread-safe.
 	 */
-	class RemoteSession: public Application::Session {
+	class RemoteSession: public Session {
 	private:
 		SharedDataPtr data;
 		int id;
@@ -474,7 +474,7 @@ public:
 		}
 	}
 	
-	virtual Application::SessionPtr get(const PoolOptions &options) {
+	virtual SessionPtr get(const PoolOptions &options) {
 		TRACE_POINT();
 		checkConnection();
 		MessageChannel &channel(data->channel);

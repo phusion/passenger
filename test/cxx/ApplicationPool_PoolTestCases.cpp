@@ -31,14 +31,14 @@
 		return headers;
 	}
 	
-	static Application::SessionPtr spawnRackApp(ApplicationPool::Ptr pool, const char *appRoot) {
+	static SessionPtr spawnRackApp(ApplicationPool::Ptr pool, const char *appRoot) {
 		PoolOptions options;
 		options.appRoot = appRoot;
 		options.appType = "rack";
 		return pool->get(options);
 	}
 	
-	static Application::SessionPtr spawnWsgiApp(ApplicationPool::Ptr pool, const char *appRoot) {
+	static SessionPtr spawnWsgiApp(ApplicationPool::Ptr pool, const char *appRoot) {
 		PoolOptions options;
 		options.appRoot = appRoot;
 		options.appType = "wsgi";
@@ -66,7 +66,7 @@
 	
 	TEST_METHOD(1) {
 		// Calling ApplicationPool.get() once should return a valid Session.
-		Application::SessionPtr session(spawnRackApp(pool, "stub/rack"));
+		SessionPtr session(spawnRackApp(pool, "stub/rack"));
 		session->sendHeaders(createRequestHeaders());
 		session->shutdownWriter();
 
@@ -79,7 +79,7 @@
 	TEST_METHOD(2) {
 		// Verify that the pool spawns a new app, and that
 		// after the session is closed, the app is kept around.
-		Application::SessionPtr session(spawnRackApp(pool, "stub/rack"));
+		SessionPtr session(spawnRackApp(pool, "stub/rack"));
 		ensure_equals("Before the session was closed, the app was busy", pool->getActive(), 1u);
 		ensure_equals("Before the session was closed, the app was in the pool", pool->getCount(), 1u);
 		session.reset();
@@ -91,7 +91,7 @@
 		// If we call get() with an application root, then we close the session,
 		// and then we call get() again with the same application root,
 		// then the pool should not have spawned more than 1 app in total.
-		Application::SessionPtr session(spawnRackApp(pool, "stub/rack"));
+		SessionPtr session(spawnRackApp(pool, "stub/rack"));
 		session.reset();
 		session = spawnRackApp(pool, "stub/rack");
 		ensure_equals(pool->getCount(), 1u);
@@ -100,8 +100,8 @@
 	TEST_METHOD(4) {
 		// If we call get() with an application root, then we call get() again before closing
 		// the session, then the pool should have spawned 2 apps in total.
-		Application::SessionPtr session(spawnRackApp(pool, "stub/rack"));
-		Application::SessionPtr session2(spawnRackApp(pool2, "stub/rack"));
+		SessionPtr session(spawnRackApp(pool, "stub/rack"));
+		SessionPtr session2(spawnRackApp(pool2, "stub/rack"));
 		ensure_equals(pool->getCount(), 2u);
 	}
 	
@@ -111,8 +111,8 @@
 		TempDirCopy c1("stub/rack", "rackapp1.tmp");
 		TempDirCopy c2("stub/rack", "rackapp2.tmp");
 		replaceStringInFile("rackapp2.tmp/config.ru", "world", "world 2");
-		Application::SessionPtr session(spawnRackApp(pool, "rackapp1.tmp"));
-		Application::SessionPtr session2(spawnRackApp(pool2, "rackapp2.tmp"));
+		SessionPtr session(spawnRackApp(pool, "rackapp1.tmp"));
+		SessionPtr session2(spawnRackApp(pool2, "rackapp2.tmp"));
 		ensure_equals("Before the sessions were closed, both apps were busy", pool->getActive(), 2u);
 		ensure_equals("Before the sessions were closed, both apps were in the pool", pool->getCount(), 2u);
 		
@@ -133,8 +133,8 @@
 		// be in the pool.
 		TempDirCopy c1("stub/rack", "rackapp1.tmp");
 		TempDirCopy c2("stub/rack", "rackapp2.tmp");
-		Application::SessionPtr session(spawnRackApp(pool, "rackapp1.tmp"));
-		Application::SessionPtr session2(spawnRackApp(pool, "rackapp2.tmp"));
+		SessionPtr session(spawnRackApp(pool, "rackapp1.tmp"));
+		SessionPtr session2(spawnRackApp(pool, "rackapp2.tmp"));
 		session.reset();
 		session2.reset();
 		ensure_equals("There are 0 active apps", pool->getActive(), 0u);
@@ -157,7 +157,7 @@
 		// But the get() thereafter should not:
 		// ApplicationPool should have spawned a new instance
 		// after detecting that the original one died.
-		Application::SessionPtr session(spawnRackApp(pool, "stub/rack"));
+		SessionPtr session(spawnRackApp(pool, "stub/rack"));
 		kill(session->getPid(), SIGTERM);
 		session.reset();
 		try {
@@ -173,11 +173,11 @@
 	
 	struct PoolWaitTestThread {
 		ApplicationPool::Ptr pool;
-		Application::SessionPtr &m_session;
+		SessionPtr &m_session;
 		bool &m_done;
 		
 		PoolWaitTestThread(const ApplicationPool::Ptr &pool,
-			Application::SessionPtr &session,
+			SessionPtr &session,
 			bool &done)
 		: m_session(session), m_done(done) {
 			this->pool = pool;
@@ -196,9 +196,9 @@
 		// in the pool, then the pool will wait until enough sessions
 		// have been closed.
 		pool->setMax(2);
-		Application::SessionPtr session1(spawnRackApp(pool, "stub/rack"));
-		Application::SessionPtr session2(spawnRackApp(pool2, "stub/rack"));
-		Application::SessionPtr session3;
+		SessionPtr session1(spawnRackApp(pool, "stub/rack"));
+		SessionPtr session2(spawnRackApp(pool2, "stub/rack"));
+		SessionPtr session3;
 		bool done;
 		
 		shared_ptr<boost::thread> thr = ptr(new boost::thread(PoolWaitTestThread(pool2, session3, done)));
@@ -235,8 +235,8 @@
 		TempDirCopy c1("stub/rack", "rackapp1.tmp");
 		TempDirCopy c2("stub/rack", "rackapp2.tmp");
 		pool->setMax(2);
-		Application::SessionPtr session1(spawnRackApp(pool, "rackapp1.tmp"));
-		Application::SessionPtr session2(spawnRackApp(pool, "rackapp1.tmp"));
+		SessionPtr session1(spawnRackApp(pool, "rackapp1.tmp"));
+		SessionPtr session2(spawnRackApp(pool, "rackapp1.tmp"));
 		session1.reset();
 		session2.reset();
 		
@@ -249,7 +249,7 @@
 	
 	TEST_METHOD(11) {
 		// A Session should still be usable after the pool has been destroyed.
-		Application::SessionPtr session(spawnRackApp(pool, "stub/rack"));
+		SessionPtr session(spawnRackApp(pool, "stub/rack"));
 		pool->clear();
 		pool.reset();
 		pool2.reset();
@@ -268,8 +268,8 @@
 		// then the applications under app_root should be restarted.
 		struct stat buf;
 		TempDirCopy c("stub/rack", "rackapp.tmp");
-		Application::SessionPtr session1 = spawnRackApp(pool, "rackapp.tmp");
-		Application::SessionPtr session2 = spawnRackApp(pool, "rackapp.tmp");
+		SessionPtr session1 = spawnRackApp(pool, "rackapp.tmp");
+		SessionPtr session2 = spawnRackApp(pool, "rackapp.tmp");
 		session1.reset();
 		session2.reset();
 		
@@ -291,7 +291,7 @@
 		pid_t old_pid;
 		TempDirCopy c("stub/rack", "rackapp.tmp");
 		TempDir d("rackapp.tmp/tmp/restart.txt");
-		Application::SessionPtr session = spawnRackApp(pool, "rackapp.tmp");
+		SessionPtr session = spawnRackApp(pool, "rackapp.tmp");
 		old_pid = session->getPid();
 		session.reset();
 		
@@ -310,7 +310,7 @@
 	TEST_METHOD(15) {
 		// Test whether restarting with restart.txt really results in code reload.
 		TempDirCopy c("stub/rack", "rackapp.tmp");
-		Application::SessionPtr session = spawnRackApp(pool, "rackapp.tmp");
+		SessionPtr session = spawnRackApp(pool, "rackapp.tmp");
 		session->sendHeaders(createRequestHeaders());
 		string result = readAll(session->getStream());
 		ensure(result.find("hello <b>world</b>") != string::npos);
@@ -331,8 +331,8 @@
 		struct stat buf;
 		pid_t old_pid;
 		TempDirCopy c("stub/rack", "rackapp.tmp");
-		Application::SessionPtr session1 = spawnRackApp(pool, "rackapp.tmp");
-		Application::SessionPtr session2 = spawnRackApp(pool2, "rackapp.tmp");
+		SessionPtr session1 = spawnRackApp(pool, "rackapp.tmp");
+		SessionPtr session2 = spawnRackApp(pool2, "rackapp.tmp");
 		session1.reset();
 		session2.reset();
 		
@@ -365,8 +365,8 @@
 		struct stat buf;
 		pid_t old_pid;
 		TempDirCopy c("stub/rack", "rackapp.tmp");
-		Application::SessionPtr session1 = spawnRackApp(pool, "rackapp.tmp");
-		Application::SessionPtr session2 = spawnRackApp(pool, "rackapp.tmp");
+		SessionPtr session1 = spawnRackApp(pool, "rackapp.tmp");
+		SessionPtr session2 = spawnRackApp(pool, "rackapp.tmp");
 		session1.reset();
 		session2.reset();
 		
@@ -396,7 +396,7 @@
 	TEST_METHOD(18) {
 		// Test whether restarting with tmp/always_restart.txt really results in code reload.
 		TempDirCopy c("stub/rack", "rackapp.tmp");
-		Application::SessionPtr session = spawnRackApp(pool, "rackapp.tmp");
+		SessionPtr session = spawnRackApp(pool, "rackapp.tmp");
 		session->sendHeaders(createRequestHeaders());
 		string result = readAll(session->getStream());
 		ensure(result.find("hello <b>world</b>") != string::npos);
@@ -426,8 +426,8 @@
 		pid_t old_pid, pid;
 		struct stat buf;
 		TempDirCopy c("stub/rack", "rackapp.tmp");
-		Application::SessionPtr session1 = spawnRackApp(pool, "rackapp.tmp");
-		Application::SessionPtr session2 = spawnRackApp(pool2, "rackapp.tmp");
+		SessionPtr session1 = spawnRackApp(pool, "rackapp.tmp");
+		SessionPtr session2 = spawnRackApp(pool2, "rackapp.tmp");
 		session1.reset();
 		session2.reset();
 		
@@ -453,8 +453,8 @@
 		options.appType = "rack";
 		options.restartDir = string(getcwd(path, sizeof(path))) + "/stub/rack";
 		
-		Application::SessionPtr session1 = pool->get(options);
-		Application::SessionPtr session2 = pool2->get(options);
+		SessionPtr session1 = pool->get(options);
+		SessionPtr session2 = pool2->get(options);
 		session1.reset();
 		session2.reset();
 		
@@ -478,8 +478,8 @@
 		options.appType = "rack";
 		options.restartDir = "public";
 		
-		Application::SessionPtr session1 = pool->get(options);
-		Application::SessionPtr session2 = pool2->get(options);
+		SessionPtr session1 = pool->get(options);
+		SessionPtr session2 = pool2->get(options);
 		session1.reset();
 		session2.reset();
 		
@@ -515,15 +515,15 @@
 		// We connect to stub/rack while it already has an instance with
 		// 1 request in its queue. Assert that the pool doesn't spawn
 		// another instance.
-		Application::SessionPtr session1 = spawnRackApp(pool, "stub/rack");
-		Application::SessionPtr session2 = spawnRackApp(pool2, "stub/rack");
+		SessionPtr session1 = spawnRackApp(pool, "stub/rack");
+		SessionPtr session2 = spawnRackApp(pool2, "stub/rack");
 		ensure_equals(pool->getCount(), 1u);
 		
 		// We connect to stub/wsgi. Assert that the pool spawns a new
 		// instance for this app.
 		TempDirCopy c("stub/wsgi", "wsgiapp.tmp");
 		ApplicationPool::Ptr pool3(newPoolConnection());
-		Application::SessionPtr session3 = spawnWsgiApp(pool3, "wsgiapp.tmp");
+		SessionPtr session3 = spawnWsgiApp(pool3, "wsgiapp.tmp");
 		ensure_equals(pool->getCount(), 2u);
 	}
 	
@@ -532,7 +532,7 @@
 		PoolOptions options("stub/rack");
 		int reader;
 		pid_t originalPid;
-		Application::SessionPtr session;
+		SessionPtr session;
 		
 		options.appType = "rack";
 		options.maxRequests = 4;
@@ -585,7 +585,7 @@
 		options.appRoot = "stub/rack";
 		options.appType = "rack";
 		options.useGlobalQueue = true;
-		Application::SessionPtr session = pool->get(options);
+		SessionPtr session = pool->get(options);
 		
 		bool done = false;
 		SpawnRackAppFunction func;
@@ -608,7 +608,7 @@
 		// restart.txt and try to spin up a new process for this domain,
 		// then any ApplicationSpawner/FrameworkSpawner processes should be
 		// killed first.
-		Application::SessionPtr session;
+		SessionPtr session;
 		TempDirCopy c1("stub/rack", "rackapp1.tmp");
 		TempDirCopy c2("stub/rack", "rackapp2.tmp");
 		shared_ptr<ReloadLoggingSpawnManager> spawnManager(
@@ -634,7 +634,7 @@
 	
 	TEST_METHOD(27) {
 		// Test inspect()
-		Application::SessionPtr session1 = spawnRackApp(pool, "stub/rack");
+		SessionPtr session1 = spawnRackApp(pool, "stub/rack");
 		string str = pool->inspect();
 		ensure("Contains 'max = '", str.find("max ") != string::npos);
 		ensure("Contains PID", str.find("PID: " + toString(session1->getPid())) != string::npos);
@@ -642,18 +642,18 @@
 	
 	TEST_METHOD(28) {
 		// Test toXml(true)
-		Application::SessionPtr session1 = spawnRackApp(pool, "stub/rack");
+		SessionPtr session1 = spawnRackApp(pool, "stub/rack");
 		string xml = pool->toXml();
-		ensure("Contains <instance>", xml.find("<instance>") != string::npos);
+		ensure("Contains <process>", xml.find("<process>") != string::npos);
 		ensure("Contains PID", xml.find("<pid>" + toString(session1->getPid()) + "</pid>") != string::npos);
 		ensure("Contains sensitive information", xml.find("includes_sensitive_information") != string::npos);
 	}
 	
 	TEST_METHOD(29) {
 		// Test toXml(false)
-		Application::SessionPtr session1 = spawnRackApp(pool, "stub/rack");
+		SessionPtr session1 = spawnRackApp(pool, "stub/rack");
 		string xml = pool->toXml(false);
-		ensure("Contains <instance>", xml.find("<instance>") != string::npos);
+		ensure("Contains <process>", xml.find("<process>") != string::npos);
 		ensure("Contains PID", xml.find("<pid>" + toString(session1->getPid()) + "</pid>") != string::npos);
 		ensure("Does not contain sensitive information", xml.find("includes_sensitive_information") == string::npos);
 	}

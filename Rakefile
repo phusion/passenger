@@ -200,7 +200,8 @@ end
 			ext/common/ApplicationPool/Client.h
 			ext/common/SpawnManager.h
 			ext/common/Exceptions.h
-			ext/common/Application.h
+			ext/common/Process.h
+			ext/common/Session.h
 			ext/common/MessageChannel.h
 			ext/common/ServerInstanceDir.h
 			ext/common/PoolOptions.h
@@ -460,7 +461,7 @@ end
 			ext/common/AbstractSpawnManager.h
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
-			ext/common/Application.h
+			ext/common/Process.h
 			ext/common/MessageChannel.h),
 		'test/cxx/ApplicationPool_ServerTest.o' => %w(
 			test/cxx/ApplicationPool_ServerTest.cpp
@@ -488,7 +489,8 @@ end
 			ext/common/SpawnManager.h
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
-			ext/common/Application.h
+			ext/common/Process.h
+			ext/common/Session.h
 			ext/common/MessageChannel.h),
 		'test/cxx/ApplicationPool_PoolTest.o' => %w(
 			test/cxx/ApplicationPool_PoolTest.cpp
@@ -501,7 +503,8 @@ end
 			ext/common/StringListCreator.h
 			ext/common/FileChangeChecker.h
 			ext/common/CachedFileStat.hpp
-			ext/common/Application.h),
+			ext/common/Process.h
+			ext/common/Session.h),
 		'test/cxx/PoolOptionsTest.o' => %w(
 			test/cxx/PoolOptionsTest.cpp
 			ext/common/PoolOptions.h

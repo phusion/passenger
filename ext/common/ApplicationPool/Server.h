@@ -66,7 +66,7 @@ using namespace oxt;
  * <h2>Concurrency model</h2>
  * Each client is handled by a seperate thread. This is necessary because the current
  * algorithm for ApplicationPool::Pool::get() can block (in the case that the spawning
- * limit has been exceeded or when global queuing is used and all application instances
+ * limit has been exceeded or when global queuing is used and all application processes
  * are busy). While it is possible to get around this problem without using threads, a
  * thread-based implementation is easier to write.
  *
@@ -215,7 +215,7 @@ private:
 		 * are sent back to the ApplicationPool client. This allows the ApplicationPool
 		 * client to tell us which of the multiple sessions it wants to close, later on.
 		 */
-		map<int, Application::SessionPtr> sessions;
+		map<int, SessionPtr> sessions;
 		
 		/** Last used session ID. */
 		int lastSessionID;
@@ -238,7 +238,7 @@ private:
 	
 	void processGet(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
-		Application::SessionPtr session;
+		SessionPtr session;
 		bool failed = false;
 		
 		commonContext.requireRights(Account::GET);

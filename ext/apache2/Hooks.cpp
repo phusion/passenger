@@ -256,7 +256,7 @@ private:
 	 * @throws RuntimeException
 	 * @throws SecurityExcepion
 	 */
-	Application::SessionPtr getSession(const PoolOptions &options) {
+	SessionPtr getSession(const PoolOptions &options) {
 		TRACE_POINT();
 		ApplicationPool::Client *pool = getApplicationPool();
 		try {
@@ -539,7 +539,7 @@ private:
 		try {
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
-			Application::SessionPtr session;
+			SessionPtr session;
 			bool expectingUploadData;
 			string uploadDataMemory;
 			shared_ptr<BufferedUpload> uploadDataFile;
@@ -850,7 +850,7 @@ private:
 		}
 	}
 	
-	apr_status_t sendHeaders(request_rec *r, DirConfig *config, Application::SessionPtr &session, const char *baseURI) {
+	apr_status_t sendHeaders(request_rec *r, DirConfig *config, SessionPtr &session, const char *baseURI) {
 		apr_table_t *headers;
 		headers = apr_table_make(r->pool, 40);
 		if (headers == NULL) {
@@ -1226,7 +1226,7 @@ private:
 		}
 	}
 	
-	void sendRequestBody(request_rec *r, Application::SessionPtr &session, shared_ptr<BufferedUpload> &uploadData) {
+	void sendRequestBody(request_rec *r, SessionPtr &session, shared_ptr<BufferedUpload> &uploadData) {
 		TRACE_POINT();
 		rewind(uploadData->handle);
 		while (!feof(uploadData->handle)) {
@@ -1239,7 +1239,7 @@ private:
 		}
 	}
 	
-	void sendRequestBody(request_rec *r, Application::SessionPtr &session, const string &buffer) {
+	void sendRequestBody(request_rec *r, SessionPtr &session, const string &buffer) {
 		session->sendBodyBlock(buffer.c_str(), buffer.size());
 	}
 

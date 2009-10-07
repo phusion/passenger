@@ -25,9 +25,9 @@ namespace tut {
 	TEST_METHOD(1) {
 		// Spawning an application should return a valid Application object.
 		initialize();
-		ApplicationPtr app(manager->spawn(PoolOptions(".")));
+		ProcessPtr process = manager->spawn(PoolOptions("."));
 		ensure_equals("The Application object's PID is the same as the one returned by the stub",
-			app->getPid(), (pid_t) 1234);
+			process->getPid(), (pid_t) 1234);
 	}
 	
 	TEST_METHOD(2) {
@@ -39,9 +39,9 @@ namespace tut {
 		// Give the spawn server the time to properly terminate.
 		usleep(500000);
 		
-		ApplicationPtr app(manager->spawn(PoolOptions(".")));
+		ProcessPtr process = manager->spawn(PoolOptions("."));
 		ensure_equals("The Application object's PID is the same as the one specified by the stub",
-			app->getPid(), 1234);
+			process->getPid(), 1234);
 		
 		// The following test will fail if we're inside Valgrind, but that's normal.
 		// Killing the spawn server doesn't work there.
@@ -83,7 +83,7 @@ namespace tut {
 			
 			try {
 				manager.nextRestartShouldFail = true;
-				ApplicationPtr app(manager.spawn(PoolOptions(".")));
+				ProcessPtr process = manager.spawn(PoolOptions("."));
 				fail("SpawnManager did not throw a SpawnException");
 			} catch (const SpawnException &e) {
 				// Success.

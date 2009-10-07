@@ -31,7 +31,7 @@
 
 #include <unistd.h>
 
-#include "Application.h"
+#include "Process.h"
 #include "PoolOptions.h"
 
 namespace Passenger {
@@ -40,9 +40,9 @@ using namespace std;
 using namespace boost;
 
 /**
- * @brief Spawning of application instances.
+ * @brief Spawning of application processes.
  *
- * An AbstractSpawnManager is responsible for spawning new application instances.
+ * An AbstractSpawnManager is responsible for spawning new application processes.
  * Use the spawn() method to do so. AbstractSpawnManager is guaranteed to be thread-safe.
  *
  * AbstractSpawnManager is just an interface. There are two concrete implementations,
@@ -56,7 +56,7 @@ public:
 	virtual ~AbstractSpawnManager() { }
 	
 	/**
-	 * Spawn a new instance of an application. Spawning details are to be passed
+	 * Spawn a new application process. Spawning details are to be passed
 	 * via the <tt>options</tt> argument.
 	 *
 	 * If the spawn server died during the spawning process, then the server
@@ -65,20 +65,20 @@ public:
 	 * then an exception will be thrown.
 	 *
 	 * @param options An object containing the details for this spawn operation,
-	 *                    such as which application to spawn. See PoolOptions for details.
-	 * @return A smart pointer to an Application object, which represents the application
-	 *         instance that has been spawned. Use this object to communicate with the
-	 *         spawned application instance.
+	 *                such as which application to spawn. See PoolOptions for details.
+	 * @return A smart pointer to a Process object, which represents the application
+	 *         process that has been spawned. Use this object to communicate with the
+	 *         spawned process.
 	 * @throws SpawnException Something went wrong.
 	 * @throws boost::thread_interrupted
 	 * @throws Anything thrown by options.environmentVariables->getItems().
 	 */
-	virtual ApplicationPtr spawn(const PoolOptions &options) = 0;
+	virtual ProcessPtr spawn(const PoolOptions &options) = 0;
 	
 	/**
 	 * Shutdown the ApplicationSpawner server that's running at the given
 	 * application root. This method should be called when it's time to reload
-	 * an application, such as after a new deploy.
+	 * an application.
 	 *
 	 * @throws SystemException Unable to communicate with the spawn server,
 	 *         even after a restart.
