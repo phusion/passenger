@@ -53,7 +53,7 @@ class ServerInstance
 	class RoleDeniedError < StandardError
 	end
 	
-	class Domain
+	class Group
 		attr_reader :name, :processes
 		
 		def initialize(name)
@@ -63,12 +63,12 @@ class ServerInstance
 	end
 	
 	class Process
-		attr_reader :domain
+		attr_reader :group
 		attr_accessor :pid, :socket_name, :socket_type, :sessions, :processed, :uptime
 		INT_PROPERTIES = [:pid, :sessions, :processed]
 		
-		def initialize(domain)
-			@domain = domain
+		def initialize(group)
+			@group = group
 		end
 	end
 
@@ -213,14 +213,14 @@ class ServerInstance
 		return @channel.read_scalar
 	end
 	
-	def domains
+	def groups
 		doc = REXML::Document.new(xml)
 		
-		domains = []
-		doc.elements.each("info/domains/domain") do |domain_xml|
-			domain = Domain.new(domain_xml.elements["name"].text)
-			domain_xml.elements.each("processes/process") do |process_xml|
-				process = Process.new(domain)
+		groups = []
+		doc.elements.each("info/groups/group") do |group_xml|
+			group = Group.new(group_xml.elements["name"].text)
+			group_xml.elements.each("processes/process") do |process_xml|
+				process = Process.new(group)
 				process_xml.elements.each do |element|
 					if process.respond_to?("#{element.name}=")
 						if Process::INT_PROPERTIES.include?(element.name.to_sym)
@@ -231,16 +231,16 @@ class ServerInstance
 						process.send("#{element.name}=", value)
 					end
 				end
-				domain.processes << process
+				group.processes << process
 			end
-			domains << domain
+			groups << group
 		end
-		return domains
+		return groups
 	end
 	
 	def processes
-		return domains.map do |domain|
-			domain.processes
+		return groups.map do |group|
+			group.processes
 		end.flatten
 	end
 	

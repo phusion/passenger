@@ -49,12 +49,12 @@ explicitly define some special types:
     Moves the specified element - as represented by the given iterator - to
     the front of the list. This operation can be done in O(1) time.
   
-- Domain
+- Group
   A compound type (class) which contains information about an application root,
   such as the application processes that have been spawned for this application
   root.
   
-  A Domain has the following members:
+  A Group has the following members:
   * processes (list<ProcessInfo>) - a list of ProcessInfo objects.
     
     Invariant:
@@ -66,7 +66,7 @@ explicitly define some special types:
   * size (unsigned integer): The number of items in _processes_.
   
   * max_requests (unsigned integer): The maximum number of requests that each
-    application process in this domain may process. After having processed this
+    application process in this group may process. After having processed this
     many requests, the application process will be shut down.
     A value of 0 indicates that there is no maximum.
 
@@ -89,7 +89,7 @@ explicitly define some special types:
     Invariant:
        (sessions == 0) == (This ProcessInfo is in inactive_apps.)
   * iterator - The iterator for this ProcessInfo in the linked list
-    domains[process.app_root].instances
+    groups[process.app_root].processes
   * ia_iterator - The iterator for this ProcessInfo in the linked list
     inactive_apps. This iterator is only valid if this ProcessInfo really is
     in that list.
@@ -128,24 +128,24 @@ information:
   is non-recursive, i.e. if a thread locks a mutex that it has already locked,
   then it will result in a deadlock.
 
-- domains: map[string => Domain]
-  Maps an application root to its Domain object. This map contains all
+- groups: map[string => Group]
+  Maps an application root to its Group object. This map contains all
   application processes in the pool.
   
   Invariant:
-     for all values d in domains:
-        d.size <= count
-     (sum of all d.size in domains) == count
+     for all values g in groups:
+        g.size <= count
+     (sum of all g.size in groups) == count
   
 - max: integer
-  The maximum number of AppContainer objects that may exist in the pool.
+  The maximum number of ProcessInfo objects that may exist in the pool.
 
 - max_per_app: integer
-  The maximum number of AppContainer objects that may be simultaneously alive
-  for a single Domain.
+  The maximum number of ProcessInfo objects that may be simultaneously alive
+  for a single Group.
 
 - count: integer
-  The current number of AppContainer objects in the pool.
+  The current number of ProcessInfo objects in the pool.
   Since 'max' can be set dynamically during the life time of an application
   pool, 'count > max' is possible.
 
@@ -161,7 +161,7 @@ information:
   Invariant:
      inactive_apps.size() == count - active
      for all x in inactive_apps:
-        x can be found in _domains_.
+        x can be found in _groups_.
         x.sessions == 0
 
 - waiting_on_global_queue: integer
@@ -174,12 +174,12 @@ information:
 
 Here's an UML diagram in ASCII art:
 
-[AppContainer] 1..* -------+
+[ProcessInfo] 1..* --------+
                            |
                            |
                            
                            1
-[ApplicationPool]       [Domain]
+[ApplicationPool]       [Group]
        1                  0..*
 
        |                   |
@@ -202,7 +202,7 @@ function get(app_root, options):
 	lock.synchronize:
 		while (true):
 			attempt++
-			process_info, domain = spawn_or_use_existing(app_root, options)
+			process_info, group = spawn_or_use_existing(app_root, options)
 			process_info.last_used = current_time()
 			process_info.sessions++
 			try:
@@ -212,39 +212,39 @@ function get(app_root, options):
 				# So we remove this process from our data
 				# structures.
 				process_info.sessions--
-				processes = domain.processes
+				processes = group.processes
 				processes.remove(process_info.iterator)
-				domain.size--
+				group.size--
 				if processes.empty():
-					domains.remove(app_root)
+					groups.remove(app_root)
 				count--
 				active--
 				if (attempt == MAX_ATTEMPTS):
 					propagate exception
 
 
-# Returns a pair of [ProcessInfo, Domain] that matches the given application
+# Returns a pair of [ProcessInfo, Group] that matches the given application
 # root. This function spawns a new process if necessary. All exceptions that
 # occur are propagated.
 function spawn_or_use_existing(app_root, options):
-	domain = domains[app_root]
+	group = groups[app_root]
 	
 	if needs_restart(app_root, options):
-		if (domain != nil):
-			for all process_info in domain.processes:
+		if (group != nil):
+			for all process_info in group.processes:
 				if (process_info.sessions == 0):
 					inactive_apps.remove(process_info.ia_iterator)
 				else:
 					active--
-				domain.processes.remove(process_info.iterator)
+				group.processes.remove(process_info.iterator)
 				count--
-			domains.remove(app_root)
+			groups.remove(app_root)
 		Tell spawn server to reload code for app_root.
-		domain = nil
+		group = nil
 	
-	if domain != nil:
+	if group != nil:
 		# There are existing processes for this app root.
-		processes = domain.processes
+		processes = group.processes
 		
 		if (processes.front.sessions == 0):
 			# There is an inactive process, so we use it.
@@ -253,12 +253,12 @@ function spawn_or_use_existing(app_root, options):
 			inactive_apps.remove(process_info.ia_iterator)
 			active++
 		else if	(count >= max) or (
-			(max_per_app != 0) and (domain.size >= max_per_app)
+			(max_per_app != 0) and (group.size >= max_per_app)
 			):
 			# All processes are active, and the pool is full. 
 			#  -OR-
 			# All processes are active and the maximum number of
-			# allowed processes for this application domain has
+			# allowed processes for this application group has
 			# been reached.
 			#
 			# We're not allowed to spawn a new application process.
@@ -284,7 +284,7 @@ function spawn_or_use_existing(app_root, options):
 			process_info.sessions = 0
 			iterator = processes.add_to_back(process_info)
 			process_info.iterator = iterator
-			domain.size++
+			group.size++
 			count++
 			active++
 	else:
@@ -310,30 +310,26 @@ function spawn_or_use_existing(app_root, options):
 			# killed. But for now, we kill a random application
 			# process.
 			process_info = inactive_apps.pop_front
-			domain = domains[process_info.app.app_root]
-			processes = domain.processes
+			group = groups[process_info.app.app_root]
+			processes = group.processes
 			processes.remove(process_info.iterator)
 			if processes.empty():
-				domains.remove(process_info.process.app_root)
+				groups.remove(process_info.process.app_root)
 			else:
-				domain.size--
+				group.size--
 			count--
 		process_info = new ProcessInfo
 		# TODO: we should add some kind of timeout check for spawning.
 		process_info.app = spawn(app_root)
-		domain = domains[app_root]
-		if domain == nil:
-			domain = new Domain
-			domain.size = 1
-			domain.max_requests = options.max_requests
-			domains[app_root] = domain
-		else:
-			domain.size++
-		iterator = domain.processes.add_to_back(process_info)
+		group = new Group
+		group.size = 1
+		group.max_requests = options.max_requests
+		groups[app_root] = group
+		iterator = group.processes.add_to_back(process_info)
 		process_info.iterator = iterator
 		count++
 		active++
-	return [process_info, domain]
+	return [process_info, group]
 
 
 # The following function is to be called when a session has been closed.
@@ -341,18 +337,18 @@ function spawn_or_use_existing(app_root, options):
 # session has been closed.
 function session_has_been_closed(process_info):
 	lock.synchronize:
-		domain = domains[process_info.process.app_root]
-		if domain != nil:
-			processes = domain.processes
+		group = groups[process_info.process.app_root]
+		if group != nil:
+			processes = group.processes
 			process_info.processed++
 			
-			if (domain.max_requests) > 0 and (process_info.processed >= domain.max_requests):
+			if (group.max_requests) > 0 and (process_info.processed >= group.max_requests):
 				# The application process has processed its maximum allowed
 				# number of requests, so we shut it down.
 				processes.remove(process_info.iterator)
-				domain.size--
+				group.size--
 				if processes.empty():
-					domains.remove(app_root)
+					groups.remove(app_root)
 				count--
 				active--
 			else:
@@ -393,16 +389,16 @@ thread cleaner:
 			now = current_time()
 			for all process_info in inactive_apps:
 				process = process_info.process
-				domain = domains[process.app_root]
-				processes = domain.processes
+				group = groups[process.app_root]
+				processes = group.processes
 				# If MAX_IDLE_TIME is 0 we don't clean up the process,
 				# giving us the option to persist the process
 				# forever unless it's killed by another process.
 				if (MAX_IDLE_TIME > 0) and (now - process_info.last_used > MAX_IDLE_TIME):
 					processes.remove(process_info.iterator)
 					inactive_apps.remove(process_info.ia_iterator)
-					domain.size--
+					group.size--
 					count--
 				if processes.empty():
-					domains.remove(process.app_root)
+					groups.remove(process.app_root)
 

@@ -108,20 +108,20 @@ private:
 	static const int CLEANER_THREAD_STACK_SIZE = 1024 * 64;
 	static const unsigned int MAX_GET_ATTEMPTS = 10;
 
-	struct Domain;
+	struct Group;
 	struct ProcessInfo;
 	
-	typedef shared_ptr<Domain> DomainPtr;
+	typedef shared_ptr<Group> GroupPtr;
 	typedef shared_ptr<ProcessInfo> ProcessInfoPtr;
 	typedef list<ProcessInfoPtr> ProcessInfoList;
-	typedef map<string, DomainPtr> DomainMap;
+	typedef map<string, GroupPtr> GroupMap;
 	
-	struct Domain {
+	struct Group {
 		ProcessInfoList processes;
 		unsigned int size;
 		unsigned long maxRequests;
 		
-		Domain() {
+		Group() {
 			size = 0;
 			maxRequests = 0;
 		}
@@ -176,7 +176,7 @@ private:
 		boost::mutex lock;
 		condition activeOrMaxChanged;
 		
-		DomainMap domains;
+		GroupMap groups;
 		unsigned int max;
 		unsigned int count;
 		unsigned int active;
@@ -207,18 +207,18 @@ private:
 				return;
 			}
 			
-			DomainMap::iterator it;
-			it = data->domains.find(processInfo->process->getAppRoot());
-			if (it != data->domains.end()) {
-				Domain *domain = it->second.get();
-				ProcessInfoList *processes = &domain->processes;
+			GroupMap::iterator it;
+			it = data->groups.find(processInfo->process->getAppRoot());
+			if (it != data->groups.end()) {
+				Group *group = it->second.get();
+				ProcessInfoList *processes = &group->processes;
 				
 				processInfo->processed++;
-				if (domain->maxRequests > 0 && processInfo->processed >= domain->maxRequests) {
+				if (group->maxRequests > 0 && processInfo->processed >= group->maxRequests) {
 					processes->erase(processInfo->iterator);
-					domain->size--;
+					group->size--;
 					if (processes->empty()) {
-						data->domains.erase(processInfo->process->getAppRoot());
+						data->groups.erase(processInfo->process->getAppRoot());
 					}
 					data->count--;
 					data->active--;
@@ -255,7 +255,7 @@ private:
 	// and other methods.
 	boost::mutex &lock;
 	condition &activeOrMaxChanged;
-	DomainMap &domains;
+	GroupMap &groups;
 	unsigned int &max;
 	unsigned int &count;
 	unsigned int &active;
@@ -267,23 +267,23 @@ private:
 	 */
 	bool inline verifyState() {
 	#if PASSENGER_DEBUG
-		// Invariants for _domains_.
-		DomainMap::const_iterator it;
+		// Invariants for _groups_.
+		GroupMap::const_iterator it;
 		unsigned int totalSize = 0;
-		for (it = domains.begin(); it != domains.end(); it++) {
+		for (it = groups.begin(); it != groups.end(); it++) {
 			const string &appRoot = it->first;
-			Domain *domain = it->second.get();
-			ProcessInfoList *processes = &domain->processes;
+			Group *group = it->second.get();
+			ProcessInfoList *processes = &group->processes;
 			
-			P_ASSERT(domain->size <= count, false,
-				"domains['" << appRoot << "'].size (" << domain->size <<
+			P_ASSERT(group->size <= count, false,
+				"groups['" << appRoot << "'].size (" << group->size <<
 				") <= count (" << count << ")");
-			totalSize += domain->size;
+			totalSize += group->size;
 			
-			// Invariants for Domain.
+			// Invariants for Group.
 			
 			P_ASSERT(!processes->empty(), false,
-				"domains['" << appRoot << "'].processes is nonempty.");
+				"groups['" << appRoot << "'].processes is nonempty.");
 			
 			ProcessInfoList::const_iterator prev_lit;
 			ProcessInfoList::const_iterator lit;
@@ -293,12 +293,12 @@ private:
 			for (; lit != processes->end(); lit++) {
 				if ((*prev_lit)->sessions > 0) {
 					P_ASSERT((*lit)->sessions > 0, false,
-						"domains['" << appRoot << "'].processes "
+						"groups['" << appRoot << "'].processes "
 						"is sorted from nonactive to active");
 				}
 			}
 		}
-		P_ASSERT(totalSize == count, false, "(sum of all d.size in domains) == count");
+		P_ASSERT(totalSize == count, false, "(sum of all d.size in groups) == count");
 		
 		P_ASSERT(active <= count, false,
 			"active (" << active << ") < count (" << count << ")");
@@ -319,11 +319,11 @@ private:
 		result << "Waiting on global queue: " << waitingOnGlobalQueue << endl;
 		result << endl;
 		
-		result << "----------- Domains -----------" << endl;
-		DomainMap::const_iterator it;
-		for (it = domains.begin(); it != domains.end(); it++) {
-			Domain *domain = it->second.get();
-			ProcessInfoList *processes = &domain->processes;
+		result << "----------- Groups -----------" << endl;
+		GroupMap::const_iterator it;
+		for (it = groups.begin(); it != groups.end(); it++) {
+			Group *group = it->second.get();
+			ProcessInfoList *processes = &group->processes;
 			ProcessInfoList::const_iterator lit;
 			
 			result << it->first << ": " << endl;
@@ -345,7 +345,7 @@ private:
 	}
 	
 	/**
-	 * Checks whether the given application domain needs to be restarted.
+	 * Checks whether the given application group needs to be restarted.
 	 *
 	 * @throws TimeRetrievalException Something went wrong while retrieving the system time.
 	 * @throws boost::thread_interrupted
@@ -391,8 +391,8 @@ private:
 				for (it = inactiveApps.begin(); it != inactiveApps.end(); it++) {
 					ProcessInfo     &processInfo = *it->get();
 					ProcessPtr       process     = processInfo.process;
-					Domain          *domain      = domains[process->getAppRoot()].get();
-					ProcessInfoList *processes   = &domain->processes;
+					Group           *group       = groups[process->getAppRoot()].get();
+					ProcessInfoList *processes   = &group->processes;
 					
 					if (maxIdleTime > 0 &&  
 					   (now - processInfo.lastUsed > (time_t) maxIdleTime)) {
@@ -405,12 +405,12 @@ private:
 						inactiveApps.erase(it);
 						it = prev;
 						
-						domain->size--;
+						group->size--;
 						
 						count--;
 					}
 					if (processes->empty()) {
-						domains.erase(process->getAppRoot());
+						groups.erase(process->getAppRoot());
 					}
 				}
 			}
@@ -427,7 +427,7 @@ private:
 	 * @throws SystemException
 	 * @throws TimeRetrievalException Something went wrong while retrieving the system time.
 	 */
-	pair<ProcessInfoPtr, Domain *>
+	pair<ProcessInfoPtr, Group *>
 	spawnOrUseExisting(boost::mutex::scoped_lock &l, const PoolOptions &options) {
 		beginning_of_function:
 		
@@ -436,16 +436,16 @@ private:
 		this_thread::disable_syscall_interruption dsi;
 		const string &appRoot(options.appRoot);
 		ProcessInfoPtr processInfo;
-		Domain *domain;
+		Group *group;
 		ProcessInfoList *processes;
 		
 		try {
-			DomainMap::iterator domain_it(domains.find(appRoot));
+			GroupMap::iterator group_it = groups.find(appRoot);
 			
 			if (needsRestart(appRoot, options)) {
-				if (domain_it != domains.end()) {
+				if (group_it != groups.end()) {
 					ProcessInfoList::iterator list_it;
-					processes = &domain_it->second->processes;
+					processes = &group_it->second->processes;
 					for (list_it = processes->begin(); list_it != processes->end(); list_it++) {
 						processInfo = *list_it;
 						if (processInfo->sessions == 0) {
@@ -457,17 +457,17 @@ private:
 						processes->erase(processInfo->iterator);
 						count--;
 					}
-					domains.erase(appRoot);
+					groups.erase(appRoot);
 				}
 				P_DEBUG("Restarting " << appRoot);
 				spawnManager->reload(appRoot);
-				domain_it = domains.end();
+				group_it = groups.end();
 				activeOrMaxChanged.notify_all();
 			}
 			
-			if (domain_it != domains.end()) {
-				domain = domain_it->second.get();
-				processes = &domain->processes;
+			if (group_it != groups.end()) {
+				group = group_it->second.get();
+				processes = &group->processes;
 				
 				if (processes->front()->sessions == 0) {
 					processInfo = processes->front();
@@ -479,7 +479,7 @@ private:
 					active++;
 					activeOrMaxChanged.notify_all();
 				} else if (count >= max || (
-					maxPerApp != 0 && domain->size >= maxPerApp )
+					maxPerApp != 0 && group->size >= maxPerApp )
 					) {
 					if (options.useGlobalQueue) {
 						UPDATE_TRACE_POINT();
@@ -514,7 +514,7 @@ private:
 					processes->push_back(processInfo);
 					processInfo->iterator = processes->end();
 					processInfo->iterator--;
-					domain->size++;
+					group->size++;
 					count++;
 					active++;
 					activeOrMaxChanged.notify_all();
@@ -527,13 +527,13 @@ private:
 				} else if (count == max) {
 					processInfo = inactiveApps.front();
 					inactiveApps.pop_front();
-					domain = domains[processInfo->process->getAppRoot()].get();
-					processes = &domain->processes;
+					group = groups[processInfo->process->getAppRoot()].get();
+					processes = &group->processes;
 					processes->erase(processInfo->iterator);
 					if (processes->empty()) {
-						domains.erase(processInfo->process->getAppRoot());
+						groups.erase(processInfo->process->getAppRoot());
 					} else {
-						domain->size--;
+						group->size--;
 					}
 					count--;
 				}
@@ -546,17 +546,11 @@ private:
 					processInfo->process = spawnManager->spawn(options);
 				}
 				processInfo->sessions = 0;
-				domain_it = domains.find(appRoot);
-				if (domain_it == domains.end()) {
-					domain = new Domain();
-					domain->size = 1;
-					domain->maxRequests = options.maxRequests;
-					domains[appRoot] = ptr(domain);
-				} else {
-					domain = domain_it->second.get();
-					domain->size++;
-				}
-				processes = &domain->processes;
+				group = new Group();
+				group->size = 1;
+				group->maxRequests = options.maxRequests;
+				groups[appRoot] = ptr(group);
+				processes = &group->processes;
 				processes->push_back(processInfo);
 				processInfo->iterator = processes->end();
 				processInfo->iterator--;
@@ -582,7 +576,7 @@ private:
 			throw SpawnException(message);
 		}
 		
-		return make_pair(processInfo, domain);
+		return make_pair(processInfo, group);
 	}
 	
 	/** @throws boost::thread_resource_error */
@@ -618,7 +612,7 @@ public:
 		cstat(DEFAULT_MAX_POOL_SIZE),
 		lock(data->lock),
 		activeOrMaxChanged(data->activeOrMaxChanged),
-		domains(data->domains),
+		groups(data->groups),
 		max(data->max),
 		count(data->count),
 		active(data->active),
@@ -641,7 +635,7 @@ public:
 	     cstat(DEFAULT_MAX_POOL_SIZE),
 	     lock(data->lock),
 	     activeOrMaxChanged(data->activeOrMaxChanged),
-	     domains(data->domains),
+	     groups(data->groups),
 	     max(data->max),
 	     count(data->count),
 	     active(data->active),
@@ -680,9 +674,9 @@ public:
 		while (true) {
 			attempt++;
 			
-			pair<ProcessInfoPtr, Domain *> p(spawnOrUseExisting(l, options));
+			pair<ProcessInfoPtr, Group *> p(spawnOrUseExisting(l, options));
 			ProcessInfoPtr &processInfo = p.first;
-			Domain *domain = p.second;
+			Group *group = p.second;
 
 			processInfo->lastUsed = time(NULL);
 			processInfo->sessions++;
@@ -695,11 +689,11 @@ public:
 			} catch (const exception &e) {
 				processInfo->sessions--;
 				
-				ProcessInfoList &processes = domain->processes;
+				ProcessInfoList &processes = group->processes;
 				processes.erase(processInfo->iterator);
-				domain->size--;
+				group->size--;
 				if (processes.empty()) {
-					domains.erase(options.appRoot);
+					groups.erase(options.appRoot);
 				}
 				count--;
 				active--;
@@ -728,7 +722,7 @@ public:
 	
 	virtual void clear() {
 		boost::mutex::scoped_lock l(lock);
-		domains.clear();
+		groups.clear();
 		inactiveApps.clear();
 		count = 0;
 		active = 0;
@@ -774,7 +768,7 @@ public:
 	virtual string toXml(bool includeSensitiveInformation = true) const {
 		unique_lock<boost::mutex> l(lock);
 		stringstream result;
-		DomainMap::const_iterator it;
+		GroupMap::const_iterator it;
 		
 		result << "<?xml version=\"1.0\" encoding=\"iso8859-1\" ?>\n";
 		result << "<info>";
@@ -785,13 +779,13 @@ public:
 			result << "<includes_sensitive_information/>";
 		}
 		
-		result << "<domains>";
-		for (it = domains.begin(); it != domains.end(); it++) {
-			Domain *domain = it->second.get();
-			ProcessInfoList *processes = &domain->processes;
+		result << "<groups>";
+		for (it = groups.begin(); it != groups.end(); it++) {
+			Group *group = it->second.get();
+			ProcessInfoList *processes = &group->processes;
 			ProcessInfoList::const_iterator lit;
 			
-			result << "<domain>";
+			result << "<group>";
 			result << "<name>" << escapeForXml(it->first) << "</name>";
 			
 			result << "<processes>";
@@ -807,9 +801,9 @@ public:
 			}
 			result << "</processes>";
 			
-			result << "</domain>";
+			result << "</group>";
 		}
-		result << "</domains>";
+		result << "</groups>";
 		
 		result << "</info>";
 		return result.str();

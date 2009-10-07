@@ -577,7 +577,7 @@ describe "Apache 2 module" do
 				instance.processes
 			end
 			processes.should have(1).item
-			processes[0].domain.name.should == @mycook.app_root
+			processes[0].group.name.should == @mycook.app_root
 			processes[0].processed.should == 1
 		end
 	end

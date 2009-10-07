@@ -289,6 +289,9 @@ end
 		'ext/common/ServerInstanceDir.h',
 		'ext/common/MessageServer.h',
 		'ext/common/Timer.h',
+		'ext/common/ApplicationPool/Interface.h',
+		'ext/common/ApplicationPool/Pool.h',
+		'ext/common/ApplicationPool/Server.h',
 		APACHE2_HELPER_COMMON_LIBRARY,
 		APACHE2_HELPER_BOOST_OXT_LIBRARY]
 	file 'ext/apache2/PassengerHelperServer' => apache2_helper_server_dependencies do
@@ -342,7 +345,8 @@ end
 		'ext/common/FileDescriptor.h',
 		'ext/common/BacktracesServer.h',
 		'ext/common/ApplicationPool/Interface.h',
-		'ext/common/ApplicationPool/Pool.h'
+		'ext/common/ApplicationPool/Pool.h',
+		'ext/common/ApplicationPool/Server.h'
 		]
 	file 'ext/nginx/PassengerHelperServer' => helper_server_dependencies do
 		create_executable "ext/nginx/PassengerHelperServer",
