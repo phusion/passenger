@@ -576,6 +576,8 @@ private:
 			throw SpawnException(message);
 		}
 		
+		processInfo->lastUsed = time(NULL);
+		processInfo->sessions++;
 		return make_pair(processInfo, group);
 	}
 	
@@ -674,12 +676,9 @@ public:
 		while (true) {
 			attempt++;
 			
-			pair<ProcessInfoPtr, Group *> p(spawnOrUseExisting(l, options));
+			pair<ProcessInfoPtr, Group *> p = spawnOrUseExisting(l, options);
 			ProcessInfoPtr &processInfo = p.first;
 			Group *group = p.second;
-
-			processInfo->lastUsed = time(NULL);
-			processInfo->sessions++;
 			
 			P_ASSERT(verifyState(), SessionPtr(),
 				"State is valid:\n" << inspectWithoutLock());

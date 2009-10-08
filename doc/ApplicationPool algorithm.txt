@@ -203,8 +203,6 @@ function get(app_root, options):
 		while (true):
 			attempt++
 			process_info, group = spawn_or_use_existing(app_root, options)
-			process_info.last_used = current_time()
-			process_info.sessions++
 			try:
 				return process_info.process.connect()
 			on exception:
@@ -329,6 +327,9 @@ function spawn_or_use_existing(app_root, options):
 		process_info.iterator = iterator
 		count++
 		active++
+	
+	process_info.last_used = current_time()
+	process_info.sessions++
 	return [process_info, group]
 
 
