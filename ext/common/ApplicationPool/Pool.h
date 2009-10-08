@@ -129,18 +129,25 @@ private:
 	
 	struct ProcessInfo {
 		ProcessPtr process;
+		string identifier;
 		time_t startTime;
 		time_t lastUsed;
 		unsigned int sessions;
 		unsigned int processed;
 		ProcessInfoList::iterator iterator;
 		ProcessInfoList::iterator ia_iterator;
+		bool detached;
 		
 		ProcessInfo() {
-			startTime = time(NULL);
-			lastUsed  = 0;
-			sessions  = 0;
-			processed = 0;
+			char buf[32];
+			generateSecureToken(buf, sizeof(buf));
+			
+			startTime  = time(NULL);
+			identifier = toHex(StaticString(buf, sizeof(buf)));
+			lastUsed   = 0;
+			sessions   = 0;
+			processed  = 0;
+			detached   = false;
 		}
 		
 		/**
@@ -200,9 +207,13 @@ private:
 		}
 		
 		void operator()() {
+			/* It is important that the lock is obtained before locking
+			 * the weak pointer, otherwise bad things can happen in
+			 * concurrency scenarios.
+			 */
 			boost::mutex::scoped_lock l(data->lock);
-			ProcessInfoPtr processInfo = this->processInfo.lock();
 			
+			ProcessInfoPtr processInfo = this->processInfo.lock();
 			if (processInfo == NULL) {
 				return;
 			}
@@ -215,18 +226,20 @@ private:
 				
 				processInfo->processed++;
 				if (group->maxRequests > 0 && processInfo->processed >= group->maxRequests) {
-					processes->erase(processInfo->iterator);
-					group->size--;
-					if (processes->empty()) {
-						data->groups.erase(processInfo->process->getAppRoot());
+					if (!processInfo->detached) {
+						processes->erase(processInfo->iterator);
+						group->size--;
+						if (processes->empty()) {
+							data->groups.erase(processInfo->process->getAppRoot());
+						}
+						data->count--;
+						data->active--;
+						data->activeOrMaxChanged.notify_all();
 					}
-					data->count--;
-					data->active--;
-					data->activeOrMaxChanged.notify_all();
 				} else {
 					processInfo->lastUsed = time(NULL);
 					processInfo->sessions--;
-					if (processInfo->sessions == 0) {
+					if (!processInfo->detached && processInfo->sessions == 0) {
 						processes->erase(processInfo->iterator);
 						processes->push_front(processInfo);
 						processInfo->iterator = processes->begin();
@@ -291,10 +304,14 @@ private:
 			lit = prev_lit;
 			lit++;
 			for (; lit != processes->end(); lit++) {
+				const ProcessInfoPtr &processInfo = *lit;
 				if ((*prev_lit)->sessions > 0) {
-					P_ASSERT((*lit)->sessions > 0, false,
+					P_ASSERT(processInfo->sessions > 0, false,
 						"groups['" << appRoot << "'].processes "
 						"is sorted from nonactive to active");
+					P_ASSERT(!processInfo->detached, false,
+						"groups['" << appRoot << "'].detached "
+						"is false");
 				}
 			}
 		}
@@ -365,6 +382,40 @@ private:
 		struct stat buf;
 		return cstat.stat(alwaysRestartFile, &buf, options.statThrottleRate) == 0 ||
 		       fileChangeChecker.changed(restartFile, options.statThrottleRate);
+	}
+	
+	bool detachWithoutLock(const string &identifier) {
+		GroupMap::iterator group_it;
+		GroupMap::iterator group_it_end = groups.end();
+		
+		for (group_it = groups.begin(); group_it != group_it_end; group_it++) {
+			GroupPtr &group = group_it->second;
+			ProcessInfoList &processes = group->processes;
+			ProcessInfoList::iterator process_info_it = processes.begin();
+			ProcessInfoList::iterator process_info_it_end = processes.end();
+			
+			for (; process_info_it != process_info_it_end; process_info_it++) {
+				ProcessInfoPtr processInfo = *process_info_it;
+				if (processInfo->identifier == identifier) {
+					// Found a matching process.
+					processInfo->detached = true;
+					processes.erase(processInfo->iterator);
+					group->size--;
+					if (processes.empty()) {
+						groups.erase(processInfo->process->getAppRoot());
+					}
+					if (processInfo->sessions == 0) {
+						inactiveApps.erase(processInfo->ia_iterator);
+					} else {
+						active--;
+						activeOrMaxChanged.notify_all();
+					}
+					count--;
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 	
 	void cleanerThreadMainLoop() {
@@ -666,53 +717,48 @@ public:
 	
 	virtual SessionPtr get(const PoolOptions &options) {
 		TRACE_POINT();
-		using namespace boost::posix_time;
 		unsigned int attempt = 0;
-		// TODO: We should probably add a timeout to the following
-		// lock. This way we can fail gracefully if the server's under
-		// rediculous load. Though I'm not sure how much it really helps.
-		unique_lock<boost::mutex> l(lock);
 		
 		while (true) {
 			attempt++;
 			
-			pair<ProcessInfoPtr, Group *> p = spawnOrUseExisting(l, options);
+			pair<ProcessInfoPtr, Group *> p;
+			{
+				unique_lock<boost::mutex> l(lock);
+				p = spawnOrUseExisting(l, options);
+				P_ASSERT(verifyState(), SessionPtr(),
+					"ApplicationPool state is valid:\n" << inspectWithoutLock());
+			}
 			ProcessInfoPtr &processInfo = p.first;
-			Group *group = p.second;
 			
-			P_ASSERT(verifyState(), SessionPtr(),
-				"State is valid:\n" << inspectWithoutLock());
 			try {
 				UPDATE_TRACE_POINT();
 				return processInfo->process->connect(SessionCloseCallback(data, processInfo));
-			} catch (const exception &e) {
-				processInfo->sessions--;
 				
-				ProcessInfoList &processes = group->processes;
-				processes.erase(processInfo->iterator);
-				group->size--;
-				if (processes.empty()) {
-					groups.erase(options.appRoot);
+			} catch (exception &e) {
+				{
+					unique_lock<boost::mutex> l(lock);
+					detachWithoutLock(processInfo->identifier);
+					processInfo->sessions--;
+					P_ASSERT(verifyState(), SessionPtr(),
+						"ApplicationPool state is valid:\n" << inspectWithoutLock());
 				}
-				count--;
-				active--;
-				activeOrMaxChanged.notify_all();
-				P_ASSERT(verifyState(), SessionPtr(),
-					"State is valid: " << inspectWithoutLock());
 				if (attempt == MAX_GET_ATTEMPTS) {
-					string message("Cannot connect to an existing "
-						"application instance for '");
-					message.append(options.appRoot);
-					message.append("': ");
 					try {
-						const SystemException &syse =
-							dynamic_cast<const SystemException &>(e);
-						message.append(syse.sys());
+						SystemException &syse = dynamic_cast<SystemException &>(e);
+						syse.setBriefMessage("Cannot connect to an existing "
+							"application instance for '" +
+							options.appRoot);
+						throw syse;
 					} catch (const bad_cast &) {
+						string message("Cannot connect to an existing "
+							"application instance for '");
+						message.append(options.appRoot);
+						message.append("': ");
 						message.append(e.what());
+						throw IOException(message);
 					}
-					throw IOException(message);
-				}
+				} // else retry
 			}
 		}
 		// Never reached; shut up compiler warning
@@ -742,10 +788,12 @@ public:
 	}
 	
 	virtual unsigned int getActive() const {
+		boost::mutex::scoped_lock l(lock);
 		return active;
 	}
 	
 	virtual unsigned int getCount() const {
+		boost::mutex::scoped_lock l(lock);
 		return count;
 	}
 	

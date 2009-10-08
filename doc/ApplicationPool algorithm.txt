@@ -78,6 +78,10 @@ explicitly define some special types:
   
   A ProcessInfo has the following members:
   * process - A process object, representing an application process.
+  * identifier (string) - A key that uniquely identifies this ProcessInfo in
+    this application pool. This key allows external processes to refer to a
+    specific ProcessInfo object without knowing its memory pointer. It's set
+    to a random string by ProcessInfo's constructor.
   * start_time (time) - The time at which this application instance was
     started. It's set to the current time by ProcessInfo's constructor.
   * processed_requests (integer) - The number of requests processed by this
@@ -85,7 +89,7 @@ explicitly define some special types:
   * last_used (time) - The last time a session for this application process
     was opened or closed.
   * sessions (integer) - The number of open sessions for this application
-    process.
+    process. It's set to 0 by the constructor.
     Invariant:
        (sessions == 0) == (This ProcessInfo is in inactive_apps.)
   * iterator - The iterator for this ProcessInfo in the linked list
@@ -93,6 +97,11 @@ explicitly define some special types:
   * ia_iterator - The iterator for this ProcessInfo in the linked list
     inactive_apps. This iterator is only valid if this ProcessInfo really is
     in that list.
+  * detached (boolean) - Whether detach() has been called on this ProcessInfo.
+    If set to true then iterator and ia_iterator are no longer valid.
+    Set to false by the constructor.
+    Invariant:
+       (detached) == (This ProcessInfo is accessible via _domains_.)
 
 - PoolOptions
   A structure containing additional information used by the spawn manager's
@@ -112,11 +121,11 @@ explicitly define some special types:
 
 === Special functions
 
-- spawn(app_root)
-  Spawns a new application process at the given application root.
-  Throws an exception if something went wrong. This function is thread-safe.
-  Note that application process initialization can take an arbitrary amount
-  of time.
+- spawn(app_root, options)
+  Spawns a new application process at the given application root with the given
+  spawn options. Throws an exception if something went wrong. This function is
+  thread-safe. Note that application process initialization can take an arbitrary
+  amount of time.
 
 === Instance variables
 
@@ -135,6 +144,8 @@ information:
   Invariant:
      for all values g in groups:
         g.size <= count
+	for all i in g.processes:
+           !i.detached
      (sum of all g.size in groups) == count
   
 - max: integer
@@ -199,32 +210,32 @@ Here's an UML diagram in ASCII art:
 function get(app_root, options):
 	MAX_ATTEMPTS = 10
 	attempt = 0
-	lock.synchronize:
-		while (true):
-			attempt++
+	while (true):
+		attempt++
+		lock.synchronize:
 			process_info, group = spawn_or_use_existing(app_root, options)
-			try:
-				return process_info.process.connect()
-			on exception:
-				# The app process seems to have crashed.
-				# So we remove this process from our data
-				# structures.
+		try:
+			return process_info.process.connect()
+		on exception:
+			# The app process seems to have crashed.
+			# So we remove this process from our data
+			# structures.
+			lock.synchronize:
+				detach_without_lock(process_info.identifier)
 				process_info.sessions--
-				processes = group.processes
-				processes.remove(process_info.iterator)
-				group.size--
-				if processes.empty():
-					groups.remove(app_root)
-				count--
-				active--
-				if (attempt == MAX_ATTEMPTS):
-					propagate exception
+			if (attempt == MAX_ATTEMPTS):
+				propagate exception
+
+
+function detach(identifier):
+	lock.synchronize:
+		return detach_without_lock(identifier)
 
 
 # Returns a pair of [ProcessInfo, Group] that matches the given application
 # root. This function spawns a new process if necessary. All exceptions that
 # occur are propagated.
-function spawn_or_use_existing(app_root, options):
+private function spawn_or_use_existing(app_root, options):
 	group = groups[app_root]
 	
 	if needs_restart(app_root, options):
@@ -278,7 +289,7 @@ function spawn_or_use_existing(app_root, options):
 			# maximum yet. So we spawn a new process.
 			process_info = new ProcessInfo
 			# TODO: we should add some kind of timeout check for spawning.
-			process_info.process = spawn(app_root)
+			process_info.process = spawn(app_root, options)
 			process_info.sessions = 0
 			iterator = processes.add_to_back(process_info)
 			process_info.iterator = iterator
@@ -318,7 +329,7 @@ function spawn_or_use_existing(app_root, options):
 			count--
 		process_info = new ProcessInfo
 		# TODO: we should add some kind of timeout check for spawning.
-		process_info.app = spawn(app_root)
+		process_info.app = spawn(app_root, options)
 		group = new Group
 		group.size = 1
 		group.max_requests = options.max_requests
@@ -336,33 +347,34 @@ function spawn_or_use_existing(app_root, options):
 # The following function is to be called when a session has been closed.
 # _process_info_ is the ProcessInfo that belongs to the process whose
 # session has been closed.
-function session_has_been_closed(process_info):
+callback session_has_been_closed(process_info):
 	lock.synchronize:
 		group = groups[process_info.process.app_root]
-		if group != nil:
+		if (group != nil):
 			processes = group.processes
 			process_info.processed++
 			
-			if (group.max_requests) > 0 and (process_info.processed >= group.max_requests):
+			if (group.max_requests > 0) and (process_info.processed >= group.max_requests):
 				# The application process has processed its maximum allowed
 				# number of requests, so we shut it down.
-				processes.remove(process_info.iterator)
-				group.size--
-				if processes.empty():
-					groups.remove(app_root)
-				count--
-				active--
+				if !process_info.detached:
+					processes.remove(process_info.iterator)
+					group.size--
+					if processes.empty():
+						groups.remove(app_root)
+					count--
+					active--
 			else:
 				process_info.last_used = current_time()
 				process_info.sessions--
 				process_info.processed++
-				if process_info.sessions == 0:
+				if (!process_info.detached) and (process_info.sessions == 0):
 					processes.move_to_front(process_info.iterator)
 					process_info.ia_iterator = inactive_apps.add_to_back(process_info.process)
 					active--
 
 
-function needs_restart(app_root, options):
+private function needs_restart(app_root, options):
 	if (options.restart_dir is not set):
 		restart_dir = app_root + "/tmp"
 	else if (options.restart_dir is an absolute path):
@@ -373,6 +385,26 @@ function needs_restart(app_root, options):
 	return (file_exists("$restart_dir/always_restart.txt")) or
 	       (we haven't seen "$restart_dir/restart.txt" before) or
 	       ("$restart_dir/restart.txt" changed since the last time we checked)
+
+
+private function detach_without_lock(identifier):
+	for group in groups:
+		processes = group.processes
+		for process_info in processes:
+			if process_info.identifier == identifier:
+				# Found a matching process.
+				process_info.detached = true
+				processes.remove(process_info.iterator)
+				group.size--
+				if processes.empty():
+					groups.remove(process_info.process.app_root)
+				if process_info.sessions == 0:
+					inactive_apps.remove(process_info.ia_iterator)
+				else:
+					active--
+				count--
+				return true
+	return false
 
 
 # The following thread will be responsible for cleaning up idle application
