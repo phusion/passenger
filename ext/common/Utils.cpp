@@ -151,6 +151,7 @@ createFile(const string &filename, const StaticString &contents, mode_t permissi
 			ret = fchmod(fd, permissions);
 		} while (ret == -1 && errno == EINTR);
 		if (ret == -1) {
+			e = errno;
 			throw FileSystemException("Cannot set permissions on " + filename,
 				e, filename);
 		}
