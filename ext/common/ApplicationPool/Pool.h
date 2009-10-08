@@ -208,8 +208,10 @@ private:
 		
 		void operator()() {
 			/* It is important that the lock is obtained before locking
-			 * the weak pointer, otherwise bad things can happen in
-			 * concurrency scenarios.
+			 * the weak pointer: otherwise we may obtain a ProcessInfo
+			 * object that's on the verge of being destroyed. Obtaining
+			 * the lock before locking the weak pointer guarantees that
+			 * we either get a valid ProcessInfo, or NULL.
 			 */
 			boost::mutex::scoped_lock l(data->lock);
 			
