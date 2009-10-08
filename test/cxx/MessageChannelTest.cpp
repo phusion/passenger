@@ -359,10 +359,16 @@ namespace tut {
 		close(fd[1]);
 		
 		MessageChannel channel(fd[0]);
+		bool gotException;
 		try {
 			channel.close();
+			gotException = false;
+		} catch (...) {
+			gotException = true;
+		}
+		if (!gotException) {
 			fail("close() should have failed");
-		} catch (...) { }
+		}
 		ensure_equals(channel.fileno(), -1);
 		ensure(!channel.connected());
 	}

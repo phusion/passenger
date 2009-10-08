@@ -153,22 +153,14 @@
 	TEST_METHOD(8) {
 		// If ApplicationPool spawns a new instance,
 		// and we kill it, then the next get() with the
-		// same application root should throw an exception.
-		// But the get() thereafter should not:
-		// ApplicationPool should have spawned a new instance
+		// same application root should not throw an exception:
+		// ApplicationPool should spawn a new instance
 		// after detecting that the original one died.
-		SessionPtr session(spawnRackApp(pool, "stub/rack"));
-		kill(session->getPid(), SIGTERM);
+		SessionPtr session = spawnRackApp(pool, "stub/rack");
+		kill(session->getPid(), SIGKILL);
 		session.reset();
-		try {
-			session = spawnRackApp(pool, "stub/rack");
-			fail("ApplicationPool::get() is supposed to "
-				"throw an exception because we killed "
-				"the app instance.");
-		} catch (const exception &e) {
-			session = spawnRackApp(pool, "stub/rack");
-			// Should not throw.
-		}
+		usleep(20000); // Give the process some time to exit.
+		spawnRackApp(pool, "stub/rack"); // should not throw
 	}
 	
 	struct PoolWaitTestThread {
