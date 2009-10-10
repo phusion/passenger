@@ -281,8 +281,11 @@ private:
 			this_thread::disable_syscall_interruption dsi;
 			try {
 				UPDATE_TRACE_POINT();
-				commonContext.channel.write("ok", toString(session->getPid()).c_str(),
-					toString(specificContext->lastSessionID - 1).c_str(), NULL);
+				commonContext.channel.write("ok",
+					toString(session->getPid()).c_str(),
+					session->getPoolIdentifier().c_str(),
+					toString(specificContext->lastSessionID - 1).c_str(),
+					NULL);
 				UPDATE_TRACE_POINT();
 				commonContext.channel.writeFileDescriptor(session->getStream());
 				UPDATE_TRACE_POINT();
@@ -300,6 +303,16 @@ private:
 	void processClose(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		specificContext->sessions.erase(atoi(args[1]));
+	}
+	
+	void processDetach(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
+		TRACE_POINT();
+		commonContext.requireRights(Account::DETACH);
+		if (pool->detach(args[1])) {
+			commonContext.channel.write("true", NULL);
+		} else {
+			commonContext.channel.write("false", NULL);
+		}
 	}
 	
 	void processClear(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
@@ -383,6 +396,8 @@ public:
 				processGet(commonContext, specificContext, args);
 			} else if (args[0] == "close" && args.size() == 2) {
 				processClose(commonContext, specificContext, args);
+			} else if (args[0] == "detach" && args.size() == 2) {
+				processDetach(commonContext, specificContext, args);
 			} else if (args[0] == "clear" && args.size() == 1) {
 				processClear(commonContext, specificContext, args);
 			} else if (args[0] == "setMaxIdleTime" && args.size() == 2) {

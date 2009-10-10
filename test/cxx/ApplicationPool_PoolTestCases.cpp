@@ -650,6 +650,33 @@
 		ensure("Does not contain sensitive information", xml.find("includes_sensitive_information") == string::npos);
 	}
 	
+	TEST_METHOD(30) {
+		// Test detach()
+		SessionPtr session1 = spawnRackApp(pool, "stub/rack");
+		SessionPtr session2 = spawnRackApp(pool2, "stub/rack");
+		string session2id = session2->getPoolIdentifier();
+		session2.reset();
+		usleep(20000); // Give the session some time to be closed.
+		ensure_equals("(1)", pool->getActive(), 1u);
+		ensure_equals("(2)", pool->getCount(), 2u);
+		
+		// First detach works. It was active so the 'active' property
+		// is decremented.
+		ensure("(10)", pool->detach(session1->getPoolIdentifier()));
+		ensure_equals("(11)", pool->getActive(), 0u);
+		ensure_equals("(12)", pool->getCount(), 1u);
+		
+		// Second detach with the same identifier doesn't do anything.
+		ensure("(20)", !pool->detach(session1->getPoolIdentifier()));
+		ensure_equals("(21)", pool->getActive(), 0u);
+		ensure_equals("(22)", pool->getCount(), 1u);
+		
+		// Detaching an inactive process works too.
+		ensure("(30)", pool->detach(session2id));
+		ensure_equals("(31)", pool->getActive(), 0u);
+		ensure_equals("(32)", pool->getCount(), 0u);
+	}
+	
 	/*************************************/
 	
 #endif /* USE_TEMPLATE */

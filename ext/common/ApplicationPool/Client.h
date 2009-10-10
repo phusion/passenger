@@ -107,6 +107,7 @@ protected:
 			TRACE_POINT();
 			this_thread::disable_syscall_interruption dsi;
 			fd = FileDescriptor();
+			channel = MessageChannel();
 		}
 	};
 	
@@ -132,7 +133,9 @@ protected:
 		
 		virtual ~RemoteSession() {
 			closeStream();
-			data->channel.write("close", toString(id).c_str(), NULL);
+			if (data->connected()) {
+				data->channel.write("close", toString(id).c_str(), NULL);
+			}
 		}
 		
 		virtual int getStream() const {
@@ -296,6 +299,30 @@ public:
 			throw RuntimeException("connect() hasn't been called on this ApplicationPool::Client instance.");
 		}
 		return data->connected();
+	}
+	
+	virtual bool detach(const string &identifier) {
+		TRACE_POINT();
+		checkConnection();
+		MessageChannel &channel(data->channel);
+		vector<string> args;
+		
+		try {
+			channel.write("detach", identifier.c_str(), NULL);
+			checkSecurityResponse();
+			if (!channel.read(args)) {
+				throw IOException("Could not read a response from the ApplicationPool server "
+					"for the 'detach' command: the connection was closed unexpectedly");
+			}
+			return args[0] == "true";
+		} catch (const SecurityException &) {
+			// Don't disconnect.
+			throw;
+		} catch (...) {
+			this_thread::disable_syscall_interruption dsi;
+			data->disconnect();
+			throw;
+		}
 	}
 	
 	virtual void clear() {
@@ -592,7 +619,8 @@ public:
 		if (args[0] == "ok") {
 			UPDATE_TRACE_POINT();
 			pid_t pid = (pid_t) atol(args[1]);
-			int sessionID = atoi(args[2]);
+			string poolIdentifier = args[2];
+			int sessionID = atoi(args[3]);
 			
 			try {
 				stream = channel.readFileDescriptor();
@@ -603,7 +631,9 @@ public:
 				throw;
 			}
 			
-			return ptr(new RemoteSession(data, pid, sessionID, stream));
+			SessionPtr session(new RemoteSession(data, pid, sessionID, stream));
+			session->setPoolIdentifier(poolIdentifier);
+			return session;
 		} else if (args[0] == "SpawnException") {
 			UPDATE_TRACE_POINT();
 			if (args[2] == "true") {

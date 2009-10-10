@@ -70,6 +70,9 @@ using namespace std;
  * Session is not guaranteed to be thread-safe.
  */
 class Session {
+private:
+	string poolIdentifier;
+	
 public:
 	/**
 	 * Concrete classes might throw arbitrary exceptions.
@@ -234,6 +237,14 @@ public:
 	 * belongs to.
 	 */
 	virtual pid_t getPid() const = 0;
+	
+	virtual string getPoolIdentifier() const {
+		return poolIdentifier;
+	}
+	
+	virtual void setPoolIdentifier(const string &poolIdentifier) {
+		this->poolIdentifier = poolIdentifier;
+	}
 };
 
 typedef shared_ptr<Session> SessionPtr;

@@ -154,6 +154,19 @@ public:
 	}
 	
 	/**
+	 * Detach the process with the given identifier from this pool.
+	 *
+	 * The identifier can be obtained from a session through the
+	 * getPoolIdentifier() method.
+	 *
+	 * @param identifier The identifier.
+	 * @throws IOException
+	 * @throws SystemException
+	 * @throws thread_interrupted
+	 */
+	virtual bool detach(const string &identifier) = 0;
+	
+	/**
 	 * Clear all application instances that are currently in the pool.
 	 *
 	 * This method is used by unit tests to verify that the implementation is correct,

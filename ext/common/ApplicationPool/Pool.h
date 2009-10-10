@@ -735,7 +735,11 @@ public:
 			
 			try {
 				UPDATE_TRACE_POINT();
-				return processInfo->process->connect(SessionCloseCallback(data, processInfo));
+				SessionPtr session = processInfo->process->connect(
+					SessionCloseCallback(data, processInfo)
+				);
+				session->setPoolIdentifier(processInfo->identifier);
+				return session;
 				
 			} catch (SystemException &e) {
 				{
@@ -775,6 +779,11 @@ public:
 		}
 		// Never reached; shut up compiler warning
 		return SessionPtr();
+	}
+	
+	virtual bool detach(const string &identifier) {
+		unique_lock<boost::mutex> l(lock);
+		return detachWithoutLock(identifier);
 	}
 	
 	virtual void clear() {
