@@ -291,6 +291,7 @@ end
 		'ext/common/ServerInstanceDir.h',
 		'ext/common/MessageServer.h',
 		'ext/common/Timer.h',
+		'ext/common/Logging.h',
 		'ext/common/ApplicationPool/Interface.h',
 		'ext/common/ApplicationPool/Pool.h',
 		'ext/common/ApplicationPool/Server.h',

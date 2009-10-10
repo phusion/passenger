@@ -84,6 +84,16 @@ syscalls::open(const char *path, int oflag) {
 	return ret;
 }
 
+int
+syscalls::open(const char *path, int oflag, mode_t mode) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::open(path, oflag, mode)
+	);
+	return ret;
+}
+
 ssize_t
 syscalls::read(int fd, void *buf, size_t count) {
 	ssize_t ret;

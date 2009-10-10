@@ -531,7 +531,6 @@ private:
 		try {
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
-			RequestLogPtr log = requestLogger.newRequest();
 			SessionPtr session;
 			bool expectingUploadData;
 			string uploadDataMemory;
@@ -599,9 +598,7 @@ private:
 				);
 				options.environmentVariables = ptr(new EnvironmentVariablesStringListCreator(r));
 				
-				log->log("Begin obtaining session");
 				session = getSession(options);
-				log->log("Obtained session");
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				r->status = 500;
@@ -719,7 +716,6 @@ private:
 						"connection. Is this an Apache bug?");
 				}
 				
-				log->commit();
 				return OK;
 			} else if (backendData[0] == '\0') {
 				if ((long long) timer.elapsed() >= r->server->timeout / 1000) {

@@ -146,11 +146,15 @@ public:
 		
 		Timer timer;
 		int fd;
+		string filename;
 		string id;
+		bool owner;
 		
-		RequestLog(int fd, const string &id) {
+		RequestLog(const string &filename, int fd, const string &id, bool owner) {
+			this->filename = filename;
 			this->fd = fd;
 			this->id = id;
+			this->owner = owner;
 		}
 		
 		void atomicWrite(const char *data, unsigned int size) {
@@ -167,10 +171,18 @@ public:
 
 	public:
 		~RequestLog() {
-			if (fd != -1) {
+			if (fd != -1 && owner) {
 				this_thread::disable_syscall_interruption dsi;
 				abort();
 			}
+		}
+		
+		string getFilename() const {
+			return filename;
+		}
+		
+		string getId() const {
+			return id;
 		}
 		
 		void log(const StaticString &message) {
@@ -220,6 +232,13 @@ private:
 	string filename;
 	RandomGenerator randomGenerator;
 	
+	static int openLogFile(const string &filename) {
+		return syscalls::open(filename.c_str(), O_CREAT | O_WRONLY | O_APPEND,
+			S_IRUSR | S_IWUSR |
+			S_IRGRP | S_IWGRP |
+			S_IROTH | S_IWOTH);
+	}
+	
 public:
 	RequestLogger(const string &filename) {
 		this->filename = filename;
@@ -229,7 +248,7 @@ public:
 		TRACE_POINT();
 		int fd;
 		
-		fd = syscalls::open(filename.c_str(), O_CREAT | O_WRONLY | O_APPEND);
+		fd = openLogFile(filename);
 		try {
 			struct timeval timestamp;
 			string id;
@@ -262,12 +281,16 @@ public:
 				}
 			}
 			
-			return RequestLogPtr(new RequestLog(fd, id));
+			return RequestLogPtr(new RequestLog(filename, fd, id, true));
 		} catch (...) {
 			this_thread::disable_syscall_interruption dsi;
 			syscalls::close(fd);
 			throw;
 		}
+	}
+	
+	static RequestLogPtr continueLog(const string &logFile, const string &id, bool owner = false) {
+		return RequestLogPtr(new RequestLog(logFile, openLogFile(logFile), id, owner));
 	}
 };
 

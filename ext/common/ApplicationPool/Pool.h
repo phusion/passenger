@@ -737,6 +737,24 @@ public:
 				UPDATE_TRACE_POINT();
 				return processInfo->process->connect(SessionCloseCallback(data, processInfo));
 				
+			} catch (SystemException &e) {
+				{
+					unique_lock<boost::mutex> l(lock);
+					detachWithoutLock(processInfo->identifier);
+					processInfo->sessions--;
+					P_ASSERT(verifyState(), SessionPtr(),
+						"ApplicationPool state is valid:\n" << inspectWithoutLock());
+				}
+				if (e.code() == EMFILE || attempt == MAX_GET_ATTEMPTS) {
+					/* A "too many open files" (EMFILE) error is probably unrecoverable,
+					 * so propagate that immediately.
+					 */
+					e.setBriefMessage("Cannot connect to an existing "
+						"application instance for '" +
+						options.appRoot);
+					throw;
+				} // else retry
+				
 			} catch (exception &e) {
 				{
 					unique_lock<boost::mutex> l(lock);
@@ -746,20 +764,12 @@ public:
 						"ApplicationPool state is valid:\n" << inspectWithoutLock());
 				}
 				if (attempt == MAX_GET_ATTEMPTS) {
-					try {
-						SystemException &syse = dynamic_cast<SystemException &>(e);
-						syse.setBriefMessage("Cannot connect to an existing "
-							"application instance for '" +
-							options.appRoot);
-						throw syse;
-					} catch (const bad_cast &) {
-						string message("Cannot connect to an existing "
-							"application instance for '");
-						message.append(options.appRoot);
-						message.append("': ");
-						message.append(e.what());
-						throw IOException(message);
-					}
+					string message("Cannot connect to an existing "
+						"application instance for '");
+					message.append(options.appRoot);
+					message.append("': ");
+					message.append(e.what());
+					throw IOException(message);
 				} // else retry
 			}
 		}
