@@ -38,6 +38,7 @@ module TestHelper
 		end
 		
 		def destroy
+			system("chmod", "-R", "a+rwx", app_root)
 			FileUtils.rm_rf(@app_root)
 		end
 		

@@ -5,6 +5,8 @@ Release 3.0.0
    Passenger versions, so do not attempt this!
  * [Nginx] Dropped support for Nginx 0.6.
  * Better ApplicationPool multicore performance: critical section made smaller.
+ * [Apache] Fix some compatibility problems with mod_autoindex: it no longer
+   interferes with our own reporting of filesystem errors.
 
 
 Release 2.2.6

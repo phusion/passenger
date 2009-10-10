@@ -30,7 +30,11 @@
  * http://httpd.apache.org/docs/2.2/developer/request.html
  *
  * Scroll all the way down to passenger_register_hooks to get an idea of
- * what we're hooking into and what we do in those hooks.
+ * what we're hooking into and what we do in those hooks. There are many
+ * hooks but the gist is implemented in just two methods: prepareRequest()
+ * and handleRequest(). Most hooks exist for implementing compatibility
+ * with other Apache modules. These hooks create an environment in which
+ * prepareRequest() and handleRequest() can be comfortably run.
  */
 
 #include <boost/thread.hpp>
@@ -96,38 +100,17 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
  */
 class Hooks {
 private:
-	struct AprDestructable {
-		virtual ~AprDestructable() { }
-		
-		static apr_status_t cleanup(void *p) {
-			delete (AprDestructable *) p;
-			return APR_SUCCESS;
-		}
-	};
-	
-	struct RequestNote: public AprDestructable {
-		DirectoryMapper mapper;
-		DirConfig *config;
-		bool forwardToBackend;
-		const char *handlerBeforeModRewrite;
-		char *filenameBeforeModRewrite;
-		apr_filetype_e oldFileType;
-		const char *handlerBeforeModAutoIndex;
-		
-		RequestNote(const DirectoryMapper &m)
-			: mapper(m) {
-			forwardToBackend = false;
-			filenameBeforeModRewrite = NULL;
-		}
-	};
-	
-	struct ErrorReport: public AprDestructable {
+	class ErrorReport {
+	public:
+		virtual ~ErrorReport() { }
 		virtual int report(request_rec *r) = 0;
 	};
 	
-	struct ReportFileSystemError: public ErrorReport {
+	class ReportFileSystemError: public ErrorReport {
+	private:
 		FileSystemException e;
-		
+	
+	public:
 		ReportFileSystemError(const FileSystemException &ex): e(ex) { }
 		
 		int report(request_rec *r) {
@@ -148,6 +131,37 @@ private:
 				"  Message: " << e.what() << "\n" <<
 				"  Backtrace:\n" << e.backtrace());
 			return OK;
+		}
+	};
+	
+	struct RequestNote {
+		DirectoryMapper mapper;
+		DirConfig *config;
+		ErrorReport *errorReport;
+		
+		const char *handlerBeforeModRewrite;
+		char *filenameBeforeModRewrite;
+		apr_filetype_e oldFileType;
+		const char *handlerBeforeModAutoIndex;
+		
+		RequestNote(const DirectoryMapper &m, DirConfig *c)
+			: mapper(m),
+			  config(c)
+		{
+			errorReport      = NULL;
+			handlerBeforeModRewrite   = NULL;
+			filenameBeforeModRewrite  = NULL;
+			oldFileType               = APR_NOFILE;
+			handlerBeforeModAutoIndex = NULL;
+		}
+		
+		~RequestNote() {
+			delete errorReport;
+		}
+		
+		static apr_status_t cleanup(void *p) {
+			delete (RequestNote *) p;
+			return APR_SUCCESS;
 		}
 	};
 	
@@ -198,6 +212,9 @@ private:
 		return (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
 	}
 	
+	/**
+	 * The existance of a request note means that the handler should be run.
+	 */
 	inline RequestNote *getRequestNote(request_rec *r) {
 		// The union is needed in order to be compliant with
 		// C99/C++'s strict aliasing rules. http://tinyurl.com/g5hgh
@@ -346,31 +363,29 @@ private:
 	}
 	
 	/**
-	 * Gather some information about the request and do some preparations. In this method,
-	 * it will be determined whether the request URI should be served statically by Apache
-	 * (in case of static assets or in case there's a page cache file available) or
-	 * whether it should be forwarded to the backend application.
+	 * Gather some information about the request and do some preparations.
 	 *
-	 * The strategy is as follows:
-	 *
-	 * We check whether Phusion Passenger is enabled for this URI (A).
-	 * If so, then we check whether the following situations are true:
+	 * This method will determine whether the Phusion Passenger handler method
+	 * should be run for this request, through the following checks:
 	 * (B) There is a backend application defined for this URI.
-	 * (C) r->filename already exists.
-	 * (D) There is a page cache file for the URI.
+	 * (C) r->filename already exists, meaning that this URI already maps to an existing file.
+	 * (D) There is a page cache file for this URI.
 	 *
-	 * - If A is not true, or if B is not true, or if C is true, then don't do anything.
-	 *   Passenger will be disabled during the rest of this request.
+	 * - If B is not true, or if C is true, then the handler shouldn't be run.
 	 * - If D is true, then we first transform r->filename to the page cache file's
-	 *   filename, and then we let Apache serve it statically.
-	 * - If D is not true, then we forward the request to the backend application.
+	 *   filename, and then we let Apache serve it statically. The Phusion Passenger
+	 *   handler shouldn't be run.
+	 * - If D is not true, then the handler should be run.
 	 *
-	 * @pre The (A) condition must be true.
+	 * @pre config->isEnabled()
 	 * @param coreModuleWillBeRun Whether the core.c map_to_storage hook might be called after this.
-	 * @return Whether the Passenger handler hook method should be run.
+	 * @return Whether the Phusion Passenger handler hook method should be run.
+	 *         When true, this method will save a request note object so that future hooks
+	 *         can store request-specific information.
 	 */
 	bool prepareRequest(request_rec *r, DirConfig *config, const char *filename, bool coreModuleWillBeRun = false) {
 		TRACE_POINT();
+		
 		DirectoryMapper mapper(r, config, &cstat, config->getStatThrottleRate());
 		try {
 			if (mapper.getBaseURI() == NULL) {
@@ -392,34 +407,19 @@ private:
 			 * Phusion Passenger for the rest of the request.
 			 */
 			if (e.code() == EACCES || e.code() == EPERM) {
-				// TODO: filesystem error is not always reported. need
-				// to figure out why. test case:
-				// - mkdir /foo
-				// - mkdir /foo/public
-				// - mkdir /foo/config
-				// - chmod 000 /foo/config
-				// - add vhost 'foo' with document root /foo/public
-				// - curl http://foo/
-				apr_pool_userdata_set(new ReportFileSystemError(e),
-					"Phusion Passenger: error report",
-					ReportFileSystemError::cleanup,
-					r->pool);
+				auto_ptr<RequestNote> note(new RequestNote(mapper, config));
+				note->errorReport = new ReportFileSystemError(e);
+				apr_pool_userdata_set(note.release(), "Phusion Passenger",
+					RequestNote::cleanup, r->pool);
 				return true;
 			} else {
 				return false;
 			}
 		}
 		
-		/* Save some information for the hook methods that are called later.
-		 * The existance of this note indicates that the URI belongs to a Phusion
-		 * Passenger-served application.
-		 */
-		RequestNote *note = new RequestNote(mapper);
-		note->config = config;
-		apr_pool_userdata_set(note, "Phusion Passenger", RequestNote::cleanup, r->pool);
+		// (B) is true.
 		
 		try {
-			// (B) is true.
 			FileType fileType = getFileType(filename);
 			if (fileType == FT_REGULAR) {
 				// (C) is true.
@@ -470,7 +470,9 @@ private:
 				return false;
 			} else {
 				// (D) is not true.
-				note->forwardToBackend = true;
+				RequestNote *note = new RequestNote(mapper, config);
+				apr_pool_userdata_set(note, "Phusion Passenger",
+					RequestNote::cleanup, r->pool);
 				return true;
 			}
 		} catch (const FileSystemException &e) {
@@ -496,25 +498,14 @@ private:
 		 * to the browser.
 		 */
 		
-		// The union is needed in order to be compliant with
-		// C99/C++'s strict aliasing rules. http://tinyurl.com/g5hgh
-		union {
-			ErrorReport *errorReport;
-			void *pointer;
-		} u;
-		
-		/* Did an error occur in any of the previous hook methods during
-		 * this request? If so, show the error and stop here.
-		 */
-		u.errorReport = 0;
-		apr_pool_userdata_get(&u.pointer, "Phusion Passenger: error report", r->pool);
-		if (u.errorReport != 0) {
-			return u.errorReport->report(r);
-		}
-		
 		RequestNote *note = getRequestNote(r);
-		if (note == 0 || !note->forwardToBackend) {
+		if (note == NULL) {
 			return DECLINED;
+		} else if (note->errorReport != NULL) {
+			/* Did an error occur in any of the previous hook methods during
+			 * this request? If so, show the error and stop here.
+			 */
+			return note->errorReport->report(r);
 		} else if (r->handler != NULL && strcmp(r->handler, "redirect-handler") == 0) {
 			// mod_rewrite is at work.
 			return DECLINED;
@@ -1635,9 +1626,11 @@ passenger_register_hooks(apr_pool_t *p) {
 	static const char * const rewrite_module[] = { "mod_rewrite.c", NULL };
 	static const char * const dir_module[] = { "mod_dir.c", NULL };
 	static const char * const autoindex_module[] = { "mod_autoindex.c", NULL };
-
+	
 	ap_hook_post_config(init_module, NULL, NULL, APR_HOOK_MIDDLE);
 	ap_hook_child_init(child_init, NULL, NULL, APR_HOOK_MIDDLE);
+	
+	// The hooks here are defined in the order that they're called.
 	
 	ap_hook_map_to_storage(prepare_request_when_in_high_performance_mode, NULL, NULL, APR_HOOK_FIRST);
 	ap_hook_map_to_storage(save_original_filename, NULL, NULL, APR_HOOK_LAST);

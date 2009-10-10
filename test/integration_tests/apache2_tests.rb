@@ -490,21 +490,28 @@ describe "Apache 2 module" do
 			FileUtils.rm_rf('tmp.webdir')
 			FileUtils.mkdir_p('tmp.webdir')
 			@webdir = File.expand_path('tmp.webdir')
-			@apache2.set_vhost('passenger.test', @webdir) do |vhost|
+			@apache2.set_vhost('1.passenger.test', @webdir) do |vhost|
 				vhost << "RailsBaseURI /app-with-nonexistant-rails-version/public"
 				vhost << "RailsBaseURI /app-that-crashes-during-startup/public"
 				vhost << "RailsBaseURI /app-with-crashing-vendor-rails/public"
 			end
+			
+			@mycook = setup_rails_stub('mycook', File.expand_path("tmp.mycook"))
+			@mycook_url_root = "http://2.passenger.test:#{@apache2.port}"
+			@apache2.set_vhost('2.passenger.test', "#{@mycook.app_root}/public")
+			
 			@apache2.start
 		end
 		
 		after :all do
 			FileUtils.rm_rf('tmp.webdir')
+			@mycook.destroy
 		end
 		
 		before :each do
-			@server = "http://zsfa.passenger.test:64506"
+			@server = "http://1.passenger.test:#{@apache2.port}"
 			@error_page_signature = /<meta name="generator" content="Phusion Passenger">/
+			@mycook.reset
 		end
 		
 		it "displays an error page if the Rails application requires a nonexistant Rails version" do
@@ -534,6 +541,17 @@ describe "Apache 2 module" do
 				result.should =~ @error_page_signature
 				result.should =~ /vendor crash/
 			end
+		end
+		
+		it "displays an error if a filesystem permission error was encountered while autodetecting the application type" do
+			@server = @mycook_url_root
+			# This test used to fail because we were improperly blocking mod_autoindex,
+			# resulting in it displaying a directory index before we could display an
+			# error message.
+			File.chmod(0000, "#{@mycook.app_root}/config")
+			# Don't let mod_rewrite kick in so that mod_autoindex has a chance to run.
+			File.unlink("#{@mycook.app_root}/public/.htaccess")
+			get('/').should =~ /Please fix the relevant file permissions/
 		end
 	end
 	
