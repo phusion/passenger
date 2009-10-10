@@ -74,6 +74,16 @@ oxt::setup_syscall_interruption_support() {
 		errno = _my_errno; \
 	} while (false)
 
+int
+syscalls::open(const char *path, int oflag) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::open(path, oflag)
+	);
+	return ret;
+}
+
 ssize_t
 syscalls::read(int fd, void *buf, size_t count) {
 	ssize_t ret;

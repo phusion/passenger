@@ -202,6 +202,8 @@ end
 			ext/common/Exceptions.h
 			ext/common/Process.h
 			ext/common/Session.h
+			ext/common/Logging.h
+			ext/common/RandomGenerator.h
 			ext/common/MessageChannel.h
 			ext/common/ServerInstanceDir.h
 			ext/common/PoolOptions.h

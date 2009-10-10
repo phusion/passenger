@@ -33,6 +33,7 @@
 #include <sys/select.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <cstdio>
 #include <ctime>
@@ -121,6 +122,7 @@ namespace oxt {
 	 * by oxt::thread::interrupt() or oxt::thread::interrupt_and_join().
 	 */
 	namespace syscalls {
+		int open(const char *path, int oflag);
 		ssize_t read(int fd, void *buf, size_t count);
 		ssize_t write(int fd, const void *buf, size_t count);
 		int close(int fd);

@@ -25,16 +25,34 @@
 #ifndef _PASSENGER_LOGGING_H_
 #define _PASSENGER_LOGGING_H_
 
+#include <boost/shared_ptr.hpp>
+#include <oxt/system_calls.hpp>
+#include <oxt/backtrace.hpp>
+
 #include <sys/types.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <string>
 #include <ostream>
 #include <sstream>
+#include <cstdio>
 #include <ctime>
+
+#include "RandomGenerator.h"
+#include "Timer.h"
+#include "Exceptions.h"
+#include "Utils.h"
+
 
 namespace Passenger {
 
 using namespace std;
+using namespace boost;
+using namespace oxt;
+
+
+/********** Global logging facilities **********/
 
 extern unsigned int _logLevel;
 extern ostream *_logStream;
@@ -116,6 +134,146 @@ void setDebugFile(const char *logFile = NULL);
 	
 	#define P_ASSERT(expr, result_if_failed, message) do { /* nothing */ } while (false)
 #endif
+
+
+/********** Request-specific logging *********/
+
+class RequestLogger {
+public:
+	class RequestLog {
+	private:
+		friend class RequestLogger;
+		
+		Timer timer;
+		int fd;
+		string id;
+		
+		RequestLog(int fd, const string &id) {
+			this->fd = fd;
+			this->id = id;
+		}
+		
+		void atomicWrite(const char *data, unsigned int size) {
+			int ret;
+			
+			ret = write(fd, data, size);
+			if (ret == -1) {
+				int e = errno;
+				throw SystemException("Cannot write to the request log", e);
+			} else if ((unsigned int) ret != size) {
+				throw IOException("Cannot atomically write to the request log");
+			}
+		}
+
+	public:
+		~RequestLog() {
+			if (fd != -1) {
+				this_thread::disable_syscall_interruption dsi;
+				abort();
+			}
+		}
+		
+		void log(const StaticString &message) {
+			char data[id.size() + message.size() + 60];
+			unsigned long long elapsed;
+			int len;
+			
+			elapsed = timer.elapsed();
+			len = snprintf(data, sizeof(data), "Request %s at t+%llu.%u: %s\n",
+				id.c_str(),
+				elapsed / 1000,
+				(unsigned int) elapsed % 1000,
+				message.c_str());
+			if ((unsigned int) len >= sizeof(data)) {
+				throw IOException("Cannot format a request log message.");
+			}
+			atomicWrite(data, len);
+		}
+		
+		void commit() {
+			char data[id.size() + 30];
+			int len;
+			
+			len = snprintf(data, sizeof(data), "Request %s finished\n", id.c_str());
+			if ((unsigned int) len >= sizeof(data)) {
+				throw IOException("Cannot format a request log commit message.");
+			}
+			atomicWrite(data, len);
+			syscalls::close(fd);
+			fd = -1;
+		}
+		
+		void abort() {
+			char data[id.size() + 30];
+			int len;
+			
+			len = snprintf(data, sizeof(data), "Request %s aborted\n", id.c_str());
+			if ((unsigned int) len >= sizeof(data)) {
+				throw IOException("Cannot format a request log abort message.");
+			}
+			atomicWrite(data, len);
+			syscalls::close(fd);
+			fd = -1;
+		}
+	};
+	
+	typedef shared_ptr<RequestLog> RequestLogPtr;
+	
+private:
+	string filename;
+	RandomGenerator randomGenerator;
+	
+public:
+	RequestLogger(const string &filename) {
+		this->filename = filename;
+	}
+	
+	RequestLogPtr newRequest() {
+		TRACE_POINT();
+		int fd;
+		
+		fd = syscalls::open(filename.c_str(), O_CREAT | O_WRONLY | O_APPEND);
+		try {
+			struct timeval timestamp;
+			string id;
+			char message[40 + 40], buf[20];
+			int ret, len;
+			
+			do {
+				ret = gettimeofday(&timestamp, NULL);
+			} while (ret == -1 && errno == EINTR);
+			
+			id = toHex(randomGenerator.generateBytes(buf, 20));
+			len = snprintf(message, sizeof(message), "New transaction %s %llu.%u\n",
+				id.c_str(),
+				(unsigned long long) timestamp.tv_sec,
+				(unsigned int) timestamp.tv_usec / 1000);
+			if ((unsigned int) len >= sizeof(message)) {
+				// The buffer is too small.
+				throw IOException("Cannot format a new request log start message.");
+			}
+			
+			UPDATE_TRACE_POINT();
+			ret = syscalls::write(fd, message, len);
+			if (ret != len) {
+				if (ret == -1) {
+					int e = errno;
+					throw FileSystemException(
+						"Cannot write to the request log file " + filename,
+						e, filename);
+				} else {
+					throw IOException("Cannot atomically write a request log start message.");
+				}
+			}
+			
+			return RequestLogPtr(new RequestLog(fd, id));
+		} catch (...) {
+			this_thread::disable_syscall_interruption dsi;
+			syscalls::close(fd);
+			throw;
+		}
+	}
+};
 
 } // namespace Passenger
 
