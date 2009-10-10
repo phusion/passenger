@@ -203,6 +203,7 @@ private:
 	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex;
 	CachedFileStat cstat;
 	HelperServerStarter helperServerStarter;
+	RequestLogger requestLogger;
 	
 	inline DirConfig *getDirConfig(request_rec *r) {
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
@@ -530,6 +531,7 @@ private:
 		try {
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
+			RequestLogPtr log = requestLogger.newRequest();
 			SessionPtr session;
 			bool expectingUploadData;
 			string uploadDataMemory;
@@ -597,7 +599,9 @@ private:
 				);
 				options.environmentVariables = ptr(new EnvironmentVariablesStringListCreator(r));
 				
+				log->log("Begin obtaining session");
 				session = getSession(options);
+				log->log("Obtained session");
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				r->status = 500;
@@ -715,6 +719,7 @@ private:
 						"connection. Is this an Apache bug?");
 				}
 				
+				log->commit();
 				return OK;
 			} else if (backendData[0] == '\0') {
 				if ((long long) timer.elapsed() >= r->server->timeout / 1000) {
@@ -1237,7 +1242,8 @@ private:
 public:
 	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
 	    : cstat(1024),
-	      helperServerStarter(HelperServerStarter::APACHE)
+	      helperServerStarter(HelperServerStarter::APACHE),
+	      requestLogger("/tmp/passenger-requests.log")
 	{
 		passenger_config_merge_all_servers(pconf, s);
 		ServerConfig *config = getServerConfig(s);

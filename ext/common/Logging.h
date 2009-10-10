@@ -175,15 +175,10 @@ public:
 		
 		void log(const StaticString &message) {
 			char data[id.size() + message.size() + 60];
-			unsigned long long elapsed;
 			int len;
 			
-			elapsed = timer.elapsed();
-			len = snprintf(data, sizeof(data), "Request %s at t+%llu.%u: %s\n",
-				id.c_str(),
-				elapsed / 1000,
-				(unsigned int) elapsed % 1000,
-				message.c_str());
+			len = snprintf(data, sizeof(data), "Request %s at t+%llu: %s\n",
+				id.c_str(), timer.elapsed(), message.c_str());
 			if ((unsigned int) len >= sizeof(data)) {
 				throw IOException("Cannot format a request log message.");
 			}
@@ -191,10 +186,11 @@ public:
 		}
 		
 		void commit() {
-			char data[id.size() + 30];
+			char data[id.size() + 40];
 			int len;
 			
-			len = snprintf(data, sizeof(data), "Request %s finished\n", id.c_str());
+			len = snprintf(data, sizeof(data), "Request %s finished at t+%llu\n",
+				id.c_str(), timer.elapsed());
 			if ((unsigned int) len >= sizeof(data)) {
 				throw IOException("Cannot format a request log commit message.");
 			}
@@ -204,10 +200,11 @@ public:
 		}
 		
 		void abort() {
-			char data[id.size() + 30];
+			char data[id.size() + 40];
 			int len;
 			
-			len = snprintf(data, sizeof(data), "Request %s aborted\n", id.c_str());
+			len = snprintf(data, sizeof(data), "Request %s aborted at t+%llu\n",
+				id.c_str(), timer.elapsed());
 			if ((unsigned int) len >= sizeof(data)) {
 				throw IOException("Cannot format a request log abort message.");
 			}
@@ -244,10 +241,9 @@ public:
 			} while (ret == -1 && errno == EINTR);
 			
 			id = toHex(randomGenerator.generateBytes(buf, 20));
-			len = snprintf(message, sizeof(message), "New transaction %s %llu.%u\n",
+			len = snprintf(message, sizeof(message), "New transaction %s at t=%llu\n",
 				id.c_str(),
-				(unsigned long long) timestamp.tv_sec,
-				(unsigned int) timestamp.tv_usec / 1000);
+				(unsigned long long) (timestamp.tv_sec + timestamp.tv_usec / 1000));
 			if ((unsigned int) len >= sizeof(message)) {
 				// The buffer is too small.
 				throw IOException("Cannot format a new request log start message.");
@@ -274,6 +270,8 @@ public:
 		}
 	}
 };
+
+typedef shared_ptr<RequestLogger::RequestLog> RequestLogPtr;
 
 } // namespace Passenger
 
