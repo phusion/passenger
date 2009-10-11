@@ -755,7 +755,8 @@ public:
 					 */
 					e.setBriefMessage("Cannot connect to an existing "
 						"application instance for '" +
-						options.appRoot);
+						options.appRoot +
+						"'");
 					throw;
 				} // else retry
 				
