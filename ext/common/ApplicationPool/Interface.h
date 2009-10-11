@@ -145,9 +145,11 @@ public:
 	/**
 	 * Convenience shortcut for calling get() with default spawn options.
 	 *
+	 * @throws SpawnException
 	 * @throws IOException
 	 * @throws SystemException
 	 * @throws boost::thread_interrupted
+	 * @throws Anything thrown by options.environmentVariables->getItems().
 	 */
 	virtual SessionPtr get(const string &appRoot) {
 		return get(PoolOptions(appRoot));
@@ -162,7 +164,7 @@ public:
 	 * @param identifier The identifier.
 	 * @throws IOException
 	 * @throws SystemException
-	 * @throws thread_interrupted
+	 * @throws boost::thread_interrupted
 	 */
 	virtual bool detach(const string &identifier) = 0;
 	
