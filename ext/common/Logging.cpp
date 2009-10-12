@@ -31,6 +31,7 @@ namespace Passenger {
 unsigned int _logLevel = 0;
 ostream *_logStream = &cerr;
 ostream *_debugStream = &cerr;
+RequestLogger requestLogger;
 
 unsigned int
 getLogLevel() {

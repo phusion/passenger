@@ -40,7 +40,6 @@
 #include <ctime>
 
 #include "RandomGenerator.h"
-#include "Timer.h"
 #include "Exceptions.h"
 #include "Utils.h"
 
@@ -144,17 +143,26 @@ public:
 	private:
 		friend class RequestLogger;
 		
-		Timer timer;
 		int fd;
-		string filename;
 		string id;
 		bool owner;
+		bool m_autocommit;
 		
-		RequestLog(const string &filename, int fd, const string &id, bool owner) {
-			this->filename = filename;
+		RequestLog(int fd, const string &id, bool owner) {
 			this->fd = fd;
 			this->id = id;
 			this->owner = owner;
+			m_autocommit = false;
+		}
+		
+		unsigned long long currentTime() const {
+			struct timeval timestamp;
+			int ret;
+			
+			do {
+				ret = gettimeofday(&timestamp, NULL);
+			} while (ret == -1 && errno == EINTR);
+			return (unsigned long long) timestamp.tv_sec * 1000000 + timestamp.tv_usec;
 		}
 		
 		void atomicWrite(const char *data, unsigned int size) {
@@ -168,17 +176,41 @@ public:
 				throw IOException("Cannot atomically write to the request log");
 			}
 		}
+		
+		void commit() {
+			char data[id.size() + 80];
+			int len;
+			
+			len = snprintf(data, sizeof(data), "Request %s finished at t=%llu\n",
+				id.c_str(), currentTime());
+			if ((unsigned int) len >= sizeof(data)) {
+				throw IOException("Cannot format a request log commit message.");
+			}
+			atomicWrite(data, len);
+		}
+		
+		void abort() {
+			char data[id.size() + 80];
+			int len;
+			
+			len = snprintf(data, sizeof(data), "Request %s aborted at t=%llu\n",
+				id.c_str(), currentTime());
+			if ((unsigned int) len >= sizeof(data)) {
+				throw IOException("Cannot format a request log abort message.");
+			}
+			atomicWrite(data, len);
+		}
 
 	public:
 		~RequestLog() {
 			if (fd != -1 && owner) {
 				this_thread::disable_syscall_interruption dsi;
-				abort();
+				if (m_autocommit) {
+					commit();
+				} else {
+					abort();
+				}
 			}
-		}
-		
-		string getFilename() const {
-			return filename;
 		}
 		
 		string getId() const {
@@ -186,43 +218,19 @@ public:
 		}
 		
 		void log(const StaticString &message) {
-			char data[id.size() + message.size() + 60];
+			char data[id.size() + message.size() + 80];
 			int len;
 			
-			len = snprintf(data, sizeof(data), "Request %s at t+%llu: %s\n",
-				id.c_str(), timer.elapsed(), message.c_str());
+			len = snprintf(data, sizeof(data), "Request %s at t=%llu: %s\n",
+				id.c_str(), currentTime(), message.c_str());
 			if ((unsigned int) len >= sizeof(data)) {
 				throw IOException("Cannot format a request log message.");
 			}
 			atomicWrite(data, len);
 		}
 		
-		void commit() {
-			char data[id.size() + 40];
-			int len;
-			
-			len = snprintf(data, sizeof(data), "Request %s finished at t+%llu\n",
-				id.c_str(), timer.elapsed());
-			if ((unsigned int) len >= sizeof(data)) {
-				throw IOException("Cannot format a request log commit message.");
-			}
-			atomicWrite(data, len);
-			syscalls::close(fd);
-			fd = -1;
-		}
-		
-		void abort() {
-			char data[id.size() + 40];
-			int len;
-			
-			len = snprintf(data, sizeof(data), "Request %s aborted at t+%llu\n",
-				id.c_str(), timer.elapsed());
-			if ((unsigned int) len >= sizeof(data)) {
-				throw IOException("Cannot format a request log abort message.");
-			}
-			atomicWrite(data, len);
-			syscalls::close(fd);
-			fd = -1;
+		void autocommit() {
+			m_autocommit = true;
 		}
 	};
 	
@@ -231,28 +239,23 @@ public:
 private:
 	string filename;
 	RandomGenerator randomGenerator;
+	int fd;
 	
-	static int openLogFile(const string &filename) {
-		return syscalls::open(filename.c_str(), O_CREAT | O_WRONLY | O_APPEND,
+public:
+	RequestLogger() {
+		filename = "/tmp/passenger-requests.log";
+		fd = syscalls::open(filename.c_str(), O_CREAT | O_WRONLY | O_APPEND,
 			S_IRUSR | S_IWUSR |
 			S_IRGRP | S_IWGRP |
 			S_IROTH | S_IWOTH);
 	}
 	
-public:
-	RequestLogger(const string &filename) {
-		this->filename = filename;
-	}
-	
 	RequestLogPtr newRequest() {
 		TRACE_POINT();
-		int fd;
-		
-		fd = openLogFile(filename);
 		try {
 			struct timeval timestamp;
 			string id;
-			char message[40 + 40], buf[20];
+			char message[40 + 60], buf[20];
 			int ret, len;
 			
 			do {
@@ -260,9 +263,9 @@ public:
 			} while (ret == -1 && errno == EINTR);
 			
 			id = toHex(randomGenerator.generateBytes(buf, 20));
-			len = snprintf(message, sizeof(message), "New transaction %s at t=%llu\n",
+			len = snprintf(message, sizeof(message), "New request %s at t=%llu\n",
 				id.c_str(),
-				(unsigned long long) (timestamp.tv_sec + timestamp.tv_usec / 1000));
+				(unsigned long long) timestamp.tv_sec * 1000000 + timestamp.tv_usec);
 			if ((unsigned int) len >= sizeof(message)) {
 				// The buffer is too small.
 				throw IOException("Cannot format a new request log start message.");
@@ -281,7 +284,7 @@ public:
 				}
 			}
 			
-			return RequestLogPtr(new RequestLog(filename, fd, id, true));
+			return RequestLogPtr(new RequestLog(fd, id, true));
 		} catch (...) {
 			this_thread::disable_syscall_interruption dsi;
 			syscalls::close(fd);
@@ -289,12 +292,14 @@ public:
 		}
 	}
 	
-	static RequestLogPtr continueLog(const string &logFile, const string &id, bool owner = false) {
-		return RequestLogPtr(new RequestLog(logFile, openLogFile(logFile), id, owner));
+	RequestLogPtr continueLog(const string &id, bool owner = false) {
+		return RequestLogPtr(new RequestLog(fd, id, owner));
 	}
 };
 
 typedef shared_ptr<RequestLogger::RequestLog> RequestLogPtr;
+
+extern RequestLogger requestLogger;
 
 } // namespace Passenger
 

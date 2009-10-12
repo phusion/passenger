@@ -203,7 +203,6 @@ private:
 	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex;
 	CachedFileStat cstat;
 	HelperServerStarter helperServerStarter;
-	RequestLogger requestLogger;
 	
 	inline DirConfig *getDirConfig(request_rec *r) {
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
@@ -1238,8 +1237,7 @@ private:
 public:
 	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
 	    : cstat(1024),
-	      helperServerStarter(HelperServerStarter::APACHE),
-	      requestLogger("/tmp/passenger-requests.log")
+	      helperServerStarter(HelperServerStarter::APACHE)
 	{
 		passenger_config_merge_all_servers(pconf, s);
 		ServerConfig *config = getServerConfig(s);
