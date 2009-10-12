@@ -169,6 +169,12 @@ struct PoolOptions {
 	 */
 	string baseURI;
 	
+	/**
+	 * Whether the session returned by ApplicationPool::Interface::get()
+	 * should be automatically initiated. Defaults to true.
+	 */
+	bool initiateSession;
+	
 	/*********************************/
 	
 	/**
@@ -188,6 +194,7 @@ struct PoolOptions {
 		useGlobalQueue = false;
 		statThrottleRate        = 0;
 		baseURI        = "/";
+		initiateSession         = true;
 	}
 	
 	/**
@@ -222,6 +229,7 @@ struct PoolOptions {
 		this->statThrottleRate        = statThrottleRate;
 		this->restartDir     = restartDir;
 		this->baseURI        = baseURI;
+		this->initiateSession = true;
 	}
 	
 	/**
@@ -258,8 +266,9 @@ struct PoolOptions {
 		statThrottleRate = atol(vec[startIndex + 23]);
 		restartDir     = vec[startIndex + 25];
 		baseURI        = vec[startIndex + 27];
-		if (vec.size() > startIndex + 29) {
-			environmentVariables = ptr(new SimpleStringListCreator(vec[startIndex + 29]));
+		initiateSession = vec[startIndex + 29] == "true";
+		if (vec.size() > startIndex + 31) {
+			environmentVariables = ptr(new SimpleStringListCreator(vec[startIndex + 31]));
 		}
 	}
 	
@@ -290,6 +299,7 @@ struct PoolOptions {
 		appendKeyValue3(vec, "stat_throttle_rate", statThrottleRate);
 		appendKeyValue (vec, "restart_dir",     restartDir);
 		appendKeyValue (vec, "base_uri",        baseURI);
+		appendKeyValue (vec, "initiate_session", initiateSession ? "true" : "false");
 		if (storeEnvVars) {
 			vec.push_back("environment_variables");
 			vec.push_back(serializeEnvironmentVariables());

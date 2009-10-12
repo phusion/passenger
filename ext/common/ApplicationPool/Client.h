@@ -33,6 +33,7 @@
 #include <oxt/system_calls.hpp>
 
 #include "Interface.h"
+#include "Pool.h"
 #include "../Exceptions.h"
 #include "../MessageChannel.h"
 #include "../Utils.h"
@@ -82,11 +83,10 @@ protected:
 	 * have been destroyed.
 	 */
 	struct SharedData {
-		FileDescriptor fd;
-		
 		/**
 		 * The socket connection to the ApplicationPool server.
 		 */
+		FileDescriptor fd;
 		MessageChannel channel;
 		
 		SharedData(FileDescriptor _fd): fd(_fd), channel(fd) { }
@@ -120,15 +120,24 @@ protected:
 	class RemoteSession: public Session {
 	private:
 		SharedDataPtr data;
-		int id;
-		int fd;
 		pid_t pid;
+		string socketType;
+		string socketName;
+		int id;
+		
+		/** The session's socket connection to the process. */
+		int fd;
+		bool isInitiated;
+		
 	public:
-		RemoteSession(SharedDataPtr data, pid_t pid, int id, int fd) {
+		RemoteSession(SharedDataPtr data, pid_t pid, string socketType, string socketName, int id) {
 			this->data = data;
 			this->pid = pid;
+			this->socketType = socketType;
+			this->socketName = socketName;
 			this->id = id;
-			this->fd = fd;
+			fd = -1;
+			isInitiated = false;
 		}
 		
 		virtual ~RemoteSession() {
@@ -136,6 +145,33 @@ protected:
 			if (data->connected()) {
 				data->channel.write("close", toString(id).c_str(), NULL);
 			}
+		}
+		
+		virtual void initiate() {
+			if (socketType == "unix") {
+				fd = connectToUnixServer(socketName.c_str());
+			} else {
+				vector<string> args;
+				
+				split(socketName, ':', args);
+				if (args.size() != 2 || atoi(args[1]) == 0) {
+					throw IOException("Invalid TCP/IP address '" + socketName + "'");
+				}
+				fd = connectToTcpServer(args[0].c_str(), atoi(args[1]));
+			}
+			isInitiated = true;
+		}
+		
+		virtual bool initiated() const {
+			return isInitiated;
+		}
+		
+		virtual string getSocketType() const {
+			return socketType;
+		}
+
+		virtual string getSocketName() const {
+			return socketName;
 		}
 		
 		virtual int getStream() const {
@@ -253,6 +289,116 @@ protected:
 			}
 		} else {
 			return false;
+		}
+	}
+	
+	void sendGetCommand(const PoolOptions &options, vector<string> &reply) {
+		TRACE_POINT();
+		MessageChannel &channel(data->channel);
+		bool result;
+		bool serverMightNeedEnvironmentVariables = true;
+		
+		/* Send a 'get' request to the ApplicationPool server.
+		 * For efficiency reasons, we do not send the data for
+		 * options.environmentVariables over the wire yet until
+		 * it's necessary.
+		 */
+		try {
+			vector<string> args;
+			
+			args.push_back("get");
+			options.toVector(args, false);
+			channel.write(args);
+		} catch (SystemException &e) {
+			this_thread::disable_syscall_interruption dsi;
+			UPDATE_TRACE_POINT();
+			data->disconnect();
+			
+			e.setBriefMessage("Could not send the 'get' command to the ApplicationPool server: " +
+				e.brief());
+			throw;
+		} catch (...) {
+			this_thread::disable_syscall_interruption dsi;
+			UPDATE_TRACE_POINT();
+			data->disconnect();
+			throw;
+		}
+		
+		/* Now check the security response... */
+		UPDATE_TRACE_POINT();
+		try {
+			checkSecurityResponse();
+		} catch (SystemException &e) {
+			this_thread::disable_syscall_interruption dsi;
+			UPDATE_TRACE_POINT();
+			data->disconnect();
+			
+			e.setBriefMessage("Could not read security response for the 'get' command from the ApplicationPool server: " +
+				e.brief());
+			throw;
+		} catch (const SecurityException &) {
+			// Don't disconnect.
+			throw;
+		} catch (...) {
+			this_thread::disable_syscall_interruption dsi;
+			UPDATE_TRACE_POINT();
+			data->disconnect();
+			throw;
+		}
+		
+		/* After the security response, the first few replies from the server might
+		 * be for requesting environment variables in the pool options object, so
+		 * keep handling these requests until we receive a different reply.
+		 */
+		while (serverMightNeedEnvironmentVariables) {
+			try {
+				result = channel.read(reply);
+			} catch (const SystemException &e) {
+				this_thread::disable_syscall_interruption dsi;
+				UPDATE_TRACE_POINT();
+				data->disconnect();
+				throw SystemException("Could not read a response from "
+					"the ApplicationPool server for the 'get' command", e.code());
+			} catch (...) {
+				this_thread::disable_syscall_interruption dsi;
+				UPDATE_TRACE_POINT();
+				data->disconnect();
+				throw;
+			}
+			if (!result) {
+				this_thread::disable_syscall_interruption dsi;
+				UPDATE_TRACE_POINT();
+				data->disconnect();
+				throw IOException("The ApplicationPool server unexpectedly "
+					"closed the connection while we're reading a response "
+					"for the 'get' command.");
+			}
+			
+			if (reply[0] == "getEnvironmentVariables") {
+				try {
+					if (options.environmentVariables) {
+						UPDATE_TRACE_POINT();
+						channel.writeScalar(options.serializeEnvironmentVariables());
+					} else {
+						UPDATE_TRACE_POINT();
+						channel.writeScalar("");
+					}
+				} catch (SystemException &e) {
+					this_thread::disable_syscall_interruption dsi;
+					data->disconnect();
+					e.setBriefMessage("Could not send a response "
+						"for the 'getEnvironmentVariables' request "
+						"to the ApplicationPool server");
+					throw;
+				} catch (...) {
+					UPDATE_TRACE_POINT();
+					this_thread::disable_syscall_interruption dsi;
+					data->disconnect();
+					throw;
+				}
+			} else {
+				serverMightNeedEnvironmentVariables = false;
+			}
 		}
 	}
 	
@@ -503,173 +649,76 @@ public:
 	
 	virtual SessionPtr get(const PoolOptions &options) {
 		TRACE_POINT();
-		checkConnection();
 		MessageChannel &channel(data->channel);
-		vector<string> args;
-		int stream;
+		checkConnection();
+		vector<string> reply;
 		bool result;
-		bool serverMightNeedEnvironmentVariables = true;
+		unsigned int attempts = 0;
 		
-		/* Send a 'get' request to the ApplicationPool server.
-		 * For efficiency reasons, we do not send the data for
-		 * options.environmentVariables over the wire yet until
-		 * it's necessary.
-		 */
-		try {
-			vector<string> args;
+		while (true) {
+			attempts++;
+			sendGetCommand(options, reply);
 			
-			args.push_back("get");
-			options.toVector(args, false);
-			channel.write(args);
-		} catch (const SystemException &e) {
-			this_thread::disable_syscall_interruption dsi;
-			UPDATE_TRACE_POINT();
-			data->disconnect();
-			
-			string message("Could not send the 'get' command to the ApplicationPool server: ");
-			message.append(e.brief());
-			throw SystemException(message, e.code());
-		} catch (...) {
-			this_thread::disable_syscall_interruption dsi;
-			UPDATE_TRACE_POINT();
-			data->disconnect();
-			throw;
-		}
-		
-		/* Now check the security response... */
-		UPDATE_TRACE_POINT();
-		try {
-			checkSecurityResponse();
-		} catch (const SystemException &e) {
-			this_thread::disable_syscall_interruption dsi;
-			UPDATE_TRACE_POINT();
-			data->disconnect();
-			
-			string message("Could not read security response for the 'get' command from the ApplicationPool server: ");
-			message.append(e.brief());
-			throw SystemException(message, e.code());
-		} catch (const SecurityException &) {
-			// Don't disconnect.
-			throw;
-		} catch (...) {
-			this_thread::disable_syscall_interruption dsi;
-			UPDATE_TRACE_POINT();
-			data->disconnect();
-			throw;
-		}
-		
-		/* After the security response, the first few replies from the server might
-		 * be for requesting environment variables in the pool options object, so
-		 * keep handling these requests until we receive a different reply.
-		 */
-		while (serverMightNeedEnvironmentVariables) {
-			try {
-				result = channel.read(args);
-			} catch (const SystemException &e) {
-				this_thread::disable_syscall_interruption dsi;
+			if (reply[0] == "ok") {
 				UPDATE_TRACE_POINT();
-				data->disconnect();
-				throw SystemException("Could not read a response from "
-					"the ApplicationPool server for the 'get' command", e.code());
-			} catch (...) {
-				this_thread::disable_syscall_interruption dsi;
-				UPDATE_TRACE_POINT();
-				data->disconnect();
-				throw;
-			}
-			if (!result) {
-				this_thread::disable_syscall_interruption dsi;
-				UPDATE_TRACE_POINT();
-				data->disconnect();
-				throw IOException("The ApplicationPool server unexpectedly "
-					"closed the connection while we're reading a response "
-					"for the 'get' command.");
-			}
-			
-			if (args[0] == "getEnvironmentVariables") {
-				try {
-					if (options.environmentVariables) {
-						UPDATE_TRACE_POINT();
-						channel.writeScalar(options.serializeEnvironmentVariables());
-					} else {
-						UPDATE_TRACE_POINT();
-						channel.writeScalar("");
-					}
-				} catch (const SystemException &e) {
-					this_thread::disable_syscall_interruption dsi;
-					data->disconnect();
-					throw SystemException("Could not send a response "
-						"for the 'getEnvironmentVariables' request "
-						"to the ApplicationPool server",
-						e.code());
-				} catch (...) {
-					UPDATE_TRACE_POINT();
-					this_thread::disable_syscall_interruption dsi;
-					data->disconnect();
-					throw;
-				}
-			} else {
-				serverMightNeedEnvironmentVariables = false;
-			}
-		}
-		
-		/* We've now received a reply other than "getEnvironmentVariables".
-		 * Handle this...
-		 */
-		if (args[0] == "ok") {
-			UPDATE_TRACE_POINT();
-			pid_t pid = (pid_t) atol(args[1]);
-			string poolIdentifier = args[2];
-			int sessionID = atoi(args[3]);
-			
-			try {
-				stream = channel.readFileDescriptor();
-			} catch (...) {
-				this_thread::disable_syscall_interruption dsi;
-				UPDATE_TRACE_POINT();
-				data->disconnect();
-				throw;
-			}
-			
-			SessionPtr session(new RemoteSession(data, pid, sessionID, stream));
-			session->setPoolIdentifier(poolIdentifier);
-			return session;
-		} else if (args[0] == "SpawnException") {
-			UPDATE_TRACE_POINT();
-			if (args[2] == "true") {
-				string errorPage;
+				pid_t pid = (pid_t) atol(reply[1]);
+				string socketType = reply[2];
+				string socketName = reply[3];
+				string poolIdentifier = reply[4];
+				int sessionID = atoi(reply[5]);
 				
-				try {
-					result = channel.readScalar(errorPage);
-				} catch (...) {
-					this_thread::disable_syscall_interruption dsi;
-					data->disconnect();
-					throw;
-				}
-				if (!result) {
-					throw IOException("The ApplicationPool server "
-						"unexpectedly closed the connection while "
-						"we're reading the error page data.");
+				SessionPtr session(new RemoteSession(data, pid, socketType, socketName, sessionID));
+				session->setPoolIdentifier(poolIdentifier);
+				if (options.initiateSession) {
+					try {
+						session->initiate();
+						return session;
+					} catch (...) {
+						detach(poolIdentifier);
+						if (attempts == Pool::MAX_GET_ATTEMPTS) {
+							throw;
+						} // else retry
+					}
 				} else {
-					throw SpawnException(args[1], errorPage);
+					return session;
 				}
+			} else if (reply[0] == "SpawnException") {
+				UPDATE_TRACE_POINT();
+				if (reply[2] == "true") {
+					string errorPage;
+
+					try {
+						result = channel.readScalar(errorPage);
+					} catch (...) {
+						this_thread::disable_syscall_interruption dsi;
+						data->disconnect();
+						throw;
+					}
+					if (!result) {
+						throw IOException("The ApplicationPool server "
+							"unexpectedly closed the connection while "
+							"we're reading the error page data.");
+					} else {
+						throw SpawnException(reply[1], errorPage);
+					}
+				} else {
+					throw SpawnException(reply[1]);
+				}
+			} else if (reply[0] == "BusyException") {
+				UPDATE_TRACE_POINT();
+				throw BusyException(reply[1]);
+			} else if (reply[0] == "IOException") {
+				this_thread::disable_syscall_interruption dsi;
+				UPDATE_TRACE_POINT();
+				data->disconnect();
+				throw IOException(reply[1]);
 			} else {
-				throw SpawnException(args[1]);
+				this_thread::disable_syscall_interruption dsi;
+				UPDATE_TRACE_POINT();
+				data->disconnect();
+				throw IOException("The ApplicationPool server returned "
+					"an unknown message: " + toString(reply));
 			}
-		} else if (args[0] == "BusyException") {
-			UPDATE_TRACE_POINT();
-			throw BusyException(args[1]);
-		} else if (args[0] == "IOException") {
-			this_thread::disable_syscall_interruption dsi;
-			UPDATE_TRACE_POINT();
-			data->disconnect();
-			throw IOException(args[1]);
-		} else {
-			this_thread::disable_syscall_interruption dsi;
-			UPDATE_TRACE_POINT();
-			data->disconnect();
-			throw IOException("The ApplicationPool server returned "
-				"an unknown message: " + toString(args));
 		}
 	}
 };

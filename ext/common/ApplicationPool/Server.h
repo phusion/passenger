@@ -237,6 +237,30 @@ private:
 	 *********************************************/
 	
 	void processGet(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
+		/* Historical note:
+		 *
+		 * There seems to be a bug in MacOS X Leopard w.r.t. Unix server
+		 * sockets file descriptors that are passed to another process.
+		 * Usually Unix server sockets work fine, but when they're passed
+		 * to another process, then clients that connect to the socket
+		 * can incorrectly determine that the client socket is closed,
+		 * even though that's not actually the case. More specifically:
+		 * recv()/read() calls on these client sockets can return 0 even
+		 * when we know EOF is not reached.
+		 *
+		 * The ApplicationPool infrastructure used to connect to a backend
+		 * process's Unix socket in the helper server process, and then
+		 * pass the connection file descriptor to the web server, which
+		 * triggers this kernel bug. We used to work around this by using
+		 * TCP sockets instead of Unix sockets; TCP sockets can still fail
+		 * with this fake-EOF bug once in a while, but not nearly as often
+		 * as with Unix sockets.
+		 *
+		 * This problem no longer applies today. The client socket is now
+		 * created directly in the web server (implemented by the code below),
+		 * and the bug is no longer triggered.
+		 */
+		
 		TRACE_POINT();
 		SessionPtr session;
 		bool failed = false;
@@ -247,6 +271,7 @@ private:
 			PoolOptions options(args, 1);
 			options.environmentVariables = ptr(new EnvironmentVariablesFetcher(
 				commonContext.channel, options));
+			options.initiateSession = false;
 			session = pool->get(options);
 			specificContext->sessions[specificContext->lastSessionID] = session;
 			specificContext->lastSessionID++;
@@ -283,11 +308,11 @@ private:
 				UPDATE_TRACE_POINT();
 				commonContext.channel.write("ok",
 					toString(session->getPid()).c_str(),
+					session->getSocketType().c_str(),
+					session->getSocketName().c_str(),
 					session->getPoolIdentifier().c_str(),
 					toString(specificContext->lastSessionID - 1).c_str(),
 					NULL);
-				UPDATE_TRACE_POINT();
-				commonContext.channel.writeFileDescriptor(session->getStream());
 				UPDATE_TRACE_POINT();
 				session->closeStream();
 			} catch (const exception &e) {

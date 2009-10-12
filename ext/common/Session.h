@@ -26,8 +26,15 @@
 #define _PASSENGER_SESSION_H_
 
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
+#include <netdb.h>
 #include <cerrno>
+#include <cstring>
+
+#include <string>
+#include <vector>
 
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
@@ -62,7 +69,7 @@ using namespace std;
  *  -# When the HTTP response has been read, the session must be closed.
  *     This is done by destroying the Session object.
  *
- * A usage example is shown in Process::connect().
+ * A usage example is shown in Process::newSession().
  *
  * Session is an abstract base class. Concrete implementations can be found in
  * StandardSession and ApplicationPool::Client::RemoteSession.
@@ -78,6 +85,39 @@ public:
 	 * Concrete classes might throw arbitrary exceptions.
 	 */
 	virtual ~Session() {}
+	
+	/**
+	 * Initiate the session by connecting to the associated process.
+	 * A Session is not usable until it's initiated.
+	 *
+	 * @throws SystemException Something went wrong.
+	 * @throws IOException Something went wrong.
+	 * @throws boost::thread_interrupted
+	 */
+	virtual void initiate() = 0;
+	
+	/**
+	 * Returns whether this session has been initiated (that is, whether
+	 * initiate() had been called in the past).
+	 */
+	virtual bool initiated() const = 0;
+	
+	/**
+	 * Returns the type of the socket that this session is served from,
+	 * e.g. "unix" indicating a Unix socket.
+	 *
+	 * @post !result.empty()
+	 */
+	virtual string getSocketType() const = 0;
+	
+	/**
+	 * Returns the address of the socket that this session is served
+	 * from. This can be a Unix socket filename or a TCP host:port string
+	 * like "127.0.0.1:1234".
+	 *
+	 * @post !result.empty()
+	 */
+	virtual string getSocketName() const = 0;
 	
 	/**
 	 * Send HTTP request headers to the application. The HTTP headers must be
@@ -99,6 +139,7 @@ public:
 	 *                a string, according to the description.
 	 * @param size The size, in bytes, of <tt>headers</tt>.
 	 * @pre headers != NULL
+	 * @pre initiated()
 	 * @throws IOException The I/O channel has already been closed or discarded.
 	 * @throws SystemException Something went wrong during writing.
 	 * @throws boost::thread_interrupted
@@ -122,6 +163,7 @@ public:
 	/**
 	 * Convenience shortcut for sendHeaders(const char *, unsigned int)
 	 * @param headers The headers
+	 * @pre initiated()
 	 * @throws IOException The I/O channel has already been closed or discarded.
 	 * @throws SystemException Something went wrong during writing.
 	 * @throws boost::thread_interrupted
@@ -140,6 +182,7 @@ public:
 	 *
 	 * @param block A block of HTTP request body data to send.
 	 * @param size The size, in bytes, of <tt>block</tt>.
+	 * @pre initiated()
 	 * @throws IOException The I/O channel has already been closed or discarded.
 	 * @throws SystemException Something went wrong during writing.
 	 * @throws boost::thread_interrupted
@@ -166,6 +209,7 @@ public:
 	 * full-duplex, and will be automatically closed upon Session's
 	 * destruction, unless discardStream() is called.
 	 *
+	 * @pre initiated()
 	 * @returns The file descriptor, or -1 if the I/O channel has already
 	 *          been closed or discarded.
 	 */
@@ -177,6 +221,7 @@ public:
 	 * read call will fail with error EAGAIN or EWOULDBLOCK.
 	 *
 	 * @pre The I/O channel hasn't been closed or discarded.
+	 * @pre initiated()
 	 * @param msec The timeout, in milliseconds. If 0 is given,
 	 *             there will be no timeout.
 	 * @throws SystemException Cannot set the timeout.
@@ -189,6 +234,7 @@ public:
 	 * write call will fail with error EAGAIN or EWOULDBLOCK.
 	 *
 	 * @pre The I/O channel hasn't been closed or discarded.
+	 * @pre initiated()
 	 * @param msec The timeout, in milliseconds. If 0 is given,
 	 *             there will be no timeout.
 	 * @throws SystemException Cannot set the timeout.
@@ -200,6 +246,7 @@ public:
 	 * Calling this method after closeStream()/discardStream() is called will
 	 * have no effect.
 	 *
+	 * @pre initiated()
 	 * @throws SystemException Something went wrong.
 	 * @throws boost::thread_interrupted
 	 */
@@ -210,6 +257,7 @@ public:
 	 * Calling this method after closeStream()/discardStream() is called will
 	 * have no effect.
 	 *
+	 * @pre initiated()
 	 * @throws SystemException Something went wrong.
 	 * @throws boost::thread_interrupted
 	 */
@@ -220,6 +268,7 @@ public:
 	 *
 	 * @throws SystemException Something went wrong.
 	 * @throws boost::thread_interrupted
+	 * @pre initiated()
 	 * @post getStream() == -1
 	 */
 	virtual void closeStream() = 0;
@@ -228,6 +277,7 @@ public:
 	 * Discard the I/O channel's file descriptor, so that the destructor
 	 * won't automatically close it.
 	 *
+	 * @pre initiated()
 	 * @post getStream() == -1
 	 */
 	virtual void discardStream() = 0;
@@ -255,23 +305,65 @@ typedef shared_ptr<Session> SessionPtr;
  */
 class StandardSession: public Session {
 protected:
-	function<void()> closeCallback;
-	int fd;
 	pid_t pid;
+	function<void()> closeCallback;
+	string socketType;
+	string socketName;
+	
+	/** The session connection file descriptor. */
+	int fd;
+	bool isInitiated;
 	
 public:
 	StandardSession(pid_t pid,
 	                const function<void()> &closeCallback,
-	                int fd) {
+	                const string &socketType,
+	                const string &socketName) {
+		TRACE_POINT();
+		if (socketType != "unix" && socketType != "tcp") {
+			throw IOException("Unsupported socket type '" + socketType + "'");
+		}
 		this->pid = pid;
 		this->closeCallback = closeCallback;
-		this->fd = fd;
+		this->socketType = socketType;
+		this->socketName = socketName;
+		fd = -1;
+		isInitiated = false;
 	}
-
+	
 	virtual ~StandardSession() {
 		TRACE_POINT();
 		closeStream();
 		closeCallback();
+	}
+	
+	virtual void initiate() {
+		TRACE_POINT();
+		if (socketType == "unix") {
+			fd = connectToUnixServer(socketName.c_str());
+		} else {
+			vector<string> args;
+			
+			split(socketName, ':', args);
+			if (args.size() != 2 || atoi(args[1]) == 0) {
+				UPDATE_TRACE_POINT();
+				throw IOException("Invalid TCP/IP address '" + socketName + "'");
+			}
+			fd = connectToTcpServer(args[0].c_str(), atoi(args[1]));
+		}
+		isInitiated = true;
+	}
+	
+	virtual bool initiated() const {
+		return isInitiated;
+	}
+	
+	virtual string getSocketType() const {
+		return socketType;
+	}
+	
+	virtual string getSocketName() const {
+		return socketName;
 	}
 	
 	virtual int getStream() const {
@@ -292,8 +384,11 @@ public:
 			int ret = syscalls::shutdown(fd, SHUT_RD);
 			if (ret == -1) {
 				int e = errno;
-				throw SystemException("Cannot shutdown the reader stream",
-					e);
+				// ENOTCONN is harmless here.
+				if (e != ENOTCONN) {
+					throw SystemException("Cannot shutdown the reader stream",
+						e);
+				}
 			}
 		}
 	}
@@ -303,8 +398,12 @@ public:
 		if (fd != -1) {
 			int ret = syscalls::shutdown(fd, SHUT_WR);
 			if (ret == -1) {
-				throw SystemException("Cannot shutdown the writer stream",
-					errno);
+				int e = errno;
+				// ENOTCONN is harmless here.
+				if (e != ENOTCONN) {
+					throw SystemException("Cannot shutdown the writer stream",
+						e);
+				}
 			}
 		}
 	}

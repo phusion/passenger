@@ -259,12 +259,33 @@ private
 	include Utils
 	
 	def should_use_unix_sockets?
-		# There seems to be a bug in MacOS X w.r.t. Unix sockets.
-		# When the Unix socket subsystem is under high stress, a
-		# recv()/read() on a Unix socket can return 0 even when EOF is
-		# not reached. We work around this by using TCP sockets on
-		# MacOS X.
-		return RUBY_PLATFORM !~ /darwin/
+		# Historical note:
+		# There seems to be a bug in MacOS X Leopard w.r.t. Unix server
+		# sockets file descriptors that are passed to another process.
+		# Usually Unix server sockets work fine, but when they're passed
+		# to another process, then clients that connect to the socket
+		# can incorrectly determine that the client socket is closed,
+		# even though that's not actually the case. More specifically:
+		# recv()/read() calls on these client sockets can return 0 even
+		# when we know EOF is not reached.
+		#
+		# The ApplicationPool infrastructure used to connect to a backend
+		# process's Unix socket in the helper server process, and then
+		# pass the connection file descriptor to the web server, which
+		# triggers this kernel bug. We used to work around this by using
+		# TCP sockets instead of Unix sockets; TCP sockets can still fail
+		# with this fake-EOF bug once in a while, but not nearly as often
+		# as with Unix sockets.
+		#
+		# This problem no longer applies today. The client socket is now
+		# created directly in the web server, and the bug is no longer
+		# triggered. Nevertheless, we keep this function intact so that
+		# if something like this ever happens again, we know why, and we
+		# can easily reactivate the workaround. Or maybe if we just need
+		# TCP sockets for some other reason.
+		
+		#return RUBY_PLATFORM !~ /darwin/
+		return true
 	end
 
 	def create_unix_socket_on_filesystem

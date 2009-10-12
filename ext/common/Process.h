@@ -30,16 +30,10 @@
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
 #include <string>
-#include <vector>
 
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <netdb.h>
 #include <unistd.h>
 #include <errno.h>
-#include <ctime>
-#include <cstring>
 
 #include "Session.h"
 #include "MessageChannel.h"
@@ -66,65 +60,6 @@ private:
 	string listenSocketType;
 	int ownerPipe;
 	
-	SessionPtr connectToUnixServer(const function<void()> &closeCallback) const {
-		TRACE_POINT();
-		int fd = Passenger::connectToUnixServer(listenSocketName.c_str());
-		return ptr(new StandardSession(pid, closeCallback, fd));
-	}
-	
-	SessionPtr connectToTcpServer(const function<void()> &closeCallback) const {
-		TRACE_POINT();
-		int fd, ret;
-		vector<string> args;
-		
-		split(listenSocketName, ':', args);
-		if (args.size() != 2 || atoi(args[1]) == 0) {
-			UPDATE_TRACE_POINT();
-			throw IOException("Invalid TCP/IP address '" + listenSocketName + "'");
-		}
-		
-		struct addrinfo hints, *res;
-		
-		memset(&hints, 0, sizeof(hints));
-		hints.ai_family = PF_INET;
-		hints.ai_socktype = SOCK_STREAM;
-		ret = getaddrinfo(args[0].c_str(), args[1].c_str(), &hints, &res);
-		if (ret != 0) {
-			UPDATE_TRACE_POINT();
-			int e = errno;
-			throw IOException("Cannot resolve address '" + listenSocketName +
-				"': " + gai_strerror(e));
-		}
-		
-		do {
-			fd = socket(PF_INET, SOCK_STREAM, 0);
-		} while (fd == -1 && errno == EINTR);
-		if (fd == -1) {
-			UPDATE_TRACE_POINT();
-			int e = errno;
-			freeaddrinfo(res);
-			throw SystemException("Cannot create a new unconnected TCP socket", e);
-		}
-		
-		do {
-			ret = ::connect(fd, res->ai_addr, res->ai_addrlen);
-		} while (ret == -1 && errno == EINTR);
-		freeaddrinfo(res);
-		if (ret == -1) {
-			UPDATE_TRACE_POINT();
-			int e = errno;
-			string message("Cannot connect to TCP server '");
-			message.append(listenSocketName);
-			message.append("'");
-			do {
-				ret = close(fd);
-			} while (ret == -1 && errno == EINTR);
-			throw SystemException(message, e);
-		}
-		
-		return ptr(new StandardSession(pid, closeCallback, fd));
-	}
-
 public:
 	/**
 	 * Construct a new Process object.
@@ -181,17 +116,15 @@ public:
 	}
 	
 	/**
-	 * Connect to this application process with the purpose of sending
-	 * a request to the process. Once connected, a new session will
-	 * be opened. This session represents the life time of a single
-	 * request/response pair, and can be used to send the request
-	 * data to the application process, as well as receiving the response
-	 * data.
+	 * Request a new session from this application process. This session
+	 * represents the life time of a single request/response pair, and can
+	 * be used to send the request data to the application process, as
+	 * well as receiving the response data.
 	 *
 	 * The use of connect() is demonstrated in the following example.
 	 * @code
-	 *   // Connect to the process and get the newly opened session.
-	 *   SessionPtr session(app->connect("/home/webapps/foo"));
+	 *   // Request a new session from the process.
+	 *   SessionPtr session = process->newSession(...);
 	 *   
 	 *   // Send the request headers and request body data.
 	 *   session->sendHeaders(...);
@@ -210,7 +143,7 @@ public:
 	 *
 	 *   // We can connect to a Process multiple times. Just make sure
 	 *   // the previous session is closed.
-	 *   session = app->connect("/home/webapps/bar")
+	 *   session = process->newSession(...);
 	 * @endcode
 	 *
 	 * You <b>must</b> close a session when you no longer need it. If you
@@ -218,22 +151,22 @@ public:
 	 * you might cause a deadlock because the application process may be
 	 * waiting for you to close the previous session.
 	 *
-	 * @return A smart pointer to a Session object, which represents the created session.
 	 * @param closeCallback A function which will be called when the session has been closed.
-	 * @post this->getSessions() == old->getSessions() + 1
-	 * @throws SystemException Something went wrong during the connection process.
-	 * @throws IOException Something went wrong during the connection process.
+	 * @param initiateNow Whether the session should be initiated immediately.
+	 *                    If set to false then you must call <tt>initiate()</tt> on
+	 *                    the session before it's usable.
+	 * @return A smart pointer to a Session object, which represents the created session.
+	 * @post result->initiated() == initiateNow
+	 * @throws SystemException Something went wrong during session initiation.
+	 * @throws IOException Something went wrong during session initiation.
 	 * @throws boost::thread_interrupted
 	 */
-	SessionPtr connect(const function<void()> &closeCallback) const {
-		TRACE_POINT();
-		if (listenSocketType == "unix") {
-			return connectToUnixServer(closeCallback);
-		} else if (listenSocketType == "tcp") {
-			return connectToTcpServer(closeCallback);
-		} else {
-			throw IOException("Unsupported socket type '" + listenSocketType + "'");
+	SessionPtr newSession(const function<void()> &closeCallback, bool initiateNow = true) {
+		SessionPtr session(new StandardSession(pid, closeCallback, listenSocketType, listenSocketName));
+		if (initiateNow) {
+			session->initiate();
 		}
+		return session;
 	}
 };
 

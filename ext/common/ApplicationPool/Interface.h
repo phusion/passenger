@@ -162,6 +162,7 @@ public:
 	 * getPoolIdentifier() method.
 	 *
 	 * @param identifier The identifier.
+	 * @returns Whether there was a process in the pool with the given identifier.
 	 * @throws IOException
 	 * @throws SystemException
 	 * @throws boost::thread_interrupted

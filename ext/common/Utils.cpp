@@ -29,6 +29,8 @@
 #include <sys/types.h>
 #include <sys/un.h>
 #include <cassert>
+#include <cstring>
+#include <netdb.h>
 #include <libgen.h>
 #include <fcntl.h>
 #include <pwd.h>
@@ -658,11 +660,17 @@ connectToUnixServer(const char *filename) {
 		throw RuntimeException(message);
 	}
 	
-	do {
+	try {
 		fd = syscalls::socket(PF_UNIX, SOCK_STREAM, 0);
-	} while (fd == -1 && errno == EINTR);
+	} catch (...) {
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw;
+	}
 	if (fd == -1) {
-		throw SystemException("Cannot create a Unix socket file descriptor", errno);
+		int e = errno;
+		throw SystemException("Cannot create a Unix socket file descriptor", e);
 	}
 	
 	addr.sun_family = AF_UNIX;
@@ -681,6 +689,66 @@ connectToUnixServer(const char *filename) {
 		int e = errno;
 		string message("Cannot connect to Unix socket '");
 		message.append(filename);
+		message.append("'");
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw SystemException(message, e);
+	}
+	
+	return fd;
+}
+
+int
+connectToTcpServer(const char *hostname, unsigned int port) {
+	struct addrinfo hints, *res;
+	int ret, e, fd;
+	
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family   = PF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	ret = getaddrinfo(hostname, toString(port).c_str(), &hints, &res);
+	if (ret != 0) {
+		string message = "Cannot resolve IP address '";
+		message.append(hostname);
+		message.append(":");
+		message.append(toString(port));
+		message.append("': ");
+		message.append(gai_strerror(ret));
+		throw IOException(message);
+	}
+	
+	try {
+		fd = syscalls::socket(PF_INET, SOCK_STREAM, 0);
+	} catch (...) {
+		freeaddrinfo(res);
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw;
+	}
+	if (fd == -1) {
+		e = errno;
+		freeaddrinfo(res);
+		throw SystemException("Cannot create a TCP socket file descriptor", e);
+	}
+	
+	try {
+		ret = syscalls::connect(fd, res->ai_addr, res->ai_addrlen);
+	} catch (...) {
+		freeaddrinfo(res);
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw;
+	}
+	e = errno;
+	freeaddrinfo(res);
+	if (ret == -1) {
+		string message = "Cannot connect to TCP socket '";
+		message.append(hostname);
+		message.append(":");
+		message.append(toString(port));
 		message.append("'");
 		do {
 			ret = close(fd);

@@ -470,6 +470,19 @@ int createUnixServer(const char *filename, unsigned int backlogSize = 0, bool au
  */
 int connectToUnixServer(const char *filename);
 
+/**
+ * Connect to a TCP server socket at the given host name and port.
+ *
+ * @param hostname The host name of the TCP server.
+ * @param port The port number of the TCP server.
+ * @return The file descriptor of the connected client socket.
+ * @throws IOException Something went wrong while connecting to the Unix server.
+ * @throws SystemException Something went wrong while connecting to the Unix server.
+ * @throws boost::thread_interrupted A system call has been interrupted.
+ * @ingroup Support
+ */
+int connectToTcpServer(const char *hostname, unsigned int port);
+
 
 
 /**
