@@ -295,6 +295,14 @@ describe Utils do
 		to_boolean("bla bla").should be_true
 	end
 	
+	specify "#split_by_null_into_hash works" do
+		split_by_null_into_hash("").should == {}
+		split_by_null_into_hash("foo\0bar\0").should == { "foo" => "bar" }
+		split_by_null_into_hash("foo\0\0bar\0baz\0").should == { "foo" => "", "bar" => "baz" }
+		split_by_null_into_hash("foo\0bar\0baz\0\0").should == { "foo" => "bar", "baz" => "" }
+		split_by_null_into_hash("\0\0").should == { "" => "" }
+	end
+	
 	describe "#passenger_tmpdir" do
 		before :each do
 			@old_passenger_tmpdir = Utils.passenger_tmpdir

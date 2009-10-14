@@ -276,10 +276,45 @@ close_all_file_descriptors(VALUE self, VALUE exceptions) {
  * so that +fprintf()+ on +stdout+ and +stderr+ have immediate effect.
  */
 static VALUE
-disable_stdio_buffering() {
+disable_stdio_buffering(VALUE self) {
 	setvbuf(stdout, NULL, _IONBF, 0);
 	setvbuf(stderr, NULL, _IONBF, 0);
 	return Qnil;
+}
+
+/**
+ * Split the given string into an hash. Keys and values are obtained by splitting the
+ * string using the null character as the delimitor.
+ */
+static VALUE
+split_by_null_into_hash(VALUE self, VALUE data) {
+	const char *cdata   = RSTRING_PTR(data);
+	unsigned long len   = RSTRING_LEN(data);
+	const char *begin   = cdata;
+	const char *current = cdata;
+	const char *end     = cdata + len;
+	VALUE result, key, value;
+	
+	result = rb_hash_new();
+	while (current < end) {
+		if (*current == '\0') {
+			key   = rb_str_substr(data, begin - cdata, current - begin);
+			begin = current = current + 1;
+			while (current < end) {
+				if (*current == '\0') {
+					value = rb_str_substr(data, begin - cdata, current - begin);;
+					begin = current = current + 1;
+					rb_hash_aset(result, key, value);
+					break;
+				} else {
+					current++;
+				}
+			}
+		} else {
+			current++;
+		}
+	}
+	return result;
 }
 
 /***************************/
@@ -302,6 +337,7 @@ Init_native_support() {
 	rb_define_singleton_method(mNativeSupport, "accept", f_accept, 1);
 	rb_define_singleton_method(mNativeSupport, "close_all_file_descriptors", close_all_file_descriptors, 1);
 	rb_define_singleton_method(mNativeSupport, "disable_stdio_buffering", disable_stdio_buffering, 0);
+	rb_define_singleton_method(mNativeSupport, "split_by_null_into_hash", split_by_null_into_hash, 1);
 	
 	/* The maximum length of a Unix socket path, including terminating null. */
 	rb_define_const(mNativeSupport, "UNIX_PATH_MAX", INT2NUM(sizeof(addr.sun_path)));

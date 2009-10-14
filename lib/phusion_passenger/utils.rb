@@ -408,6 +408,25 @@ protected
 		return options
 	end
 	
+	if defined?(PhusionPassenger::NativeSupport)
+		# Split the given string into an hash. Keys and values are obtained by splitting the
+		# string using the null character as the delimitor.
+		def split_by_null_into_hash(data)
+			return PhusionPassenger::NativeSupport.split_by_null_into_hash(data)
+		end
+	else
+		PADDING = "_"
+		NULL = "\0"
+		
+		def split_by_null_into_hash(data)
+			data << PADDING
+			array = data.split(NULL)
+			array.pop
+			data.slice!(data.size - 1, data.size - 1)
+			return Hash[*array]
+		end
+	end
+	
 	@@passenger_tmpdir = nil
 	
 	def passenger_tmpdir(create = true)

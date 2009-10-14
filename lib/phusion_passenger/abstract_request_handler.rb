@@ -97,7 +97,6 @@ class AbstractRequestHandler
 	# String constants which exist to relieve Ruby's garbage collector.
 	IGNORE              = 'IGNORE'              # :nodoc:
 	DEFAULT             = 'DEFAULT'             # :nodoc:
-	NULL                = "\0"                  # :nodoc:
 	X_POWERED_BY        = 'X-Powered-By'        # :nodoc:
 	REQUEST_METHOD      = 'REQUEST_METHOD'      # :nodoc:
 	PING                = 'ping'                # :nodoc:
@@ -452,7 +451,7 @@ private
 		if headers_data.nil?
 			return
 		end
-		headers = Hash[*headers_data.split(NULL)]
+		headers = split_by_null_into_hash(headers_data)
 		return [headers, socket]
 	rescue SecurityError => e
 		STDERR.puts("*** Passenger RequestHandler: HTTP header size exceeded maximum.")
