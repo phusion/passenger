@@ -47,6 +47,22 @@ describe MessageChannel do
 			@reader.read.should be_nil
 		end
 		
+		specify "#read_hash works" do
+			@writer.write("hello", "world")
+			@reader.read_hash.should == { "hello" => "world" }
+			
+			@writer.write("hello", "world", "foo", "bar", "", "...")
+			@reader.read_hash.should == { "hello" => "world", "foo" => "bar", "" => "..." }
+		end
+		
+		specify "#read_hash throws an exception if the array message doesn't have an even number of items" do
+			@writer.write("foo")
+			lambda { @reader.read_hash }.should raise_error(MessageChannel::InvalidHashError)
+			
+			@writer.write("foo", "bar", "baz")
+			lambda { @reader.read_hash }.should raise_error(MessageChannel::InvalidHashError)
+		end
+		
 		it "can read a single written scalar message" do
 			@writer.write_scalar("hello world")
 			@reader.read_scalar.should == "hello world"
