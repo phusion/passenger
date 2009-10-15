@@ -660,14 +660,7 @@ connectToUnixServer(const char *filename) {
 		throw RuntimeException(message);
 	}
 	
-	try {
-		fd = syscalls::socket(PF_UNIX, SOCK_STREAM, 0);
-	} catch (...) {
-		do {
-			ret = close(fd);
-		} while (ret == -1 && errno == EINTR);
-		throw;
-	}
+	fd = syscalls::socket(PF_UNIX, SOCK_STREAM, 0);
 	if (fd == -1) {
 		int e = errno;
 		throw SystemException("Cannot create a Unix socket file descriptor", e);
@@ -722,9 +715,6 @@ connectToTcpServer(const char *hostname, unsigned int port) {
 		fd = syscalls::socket(PF_INET, SOCK_STREAM, 0);
 	} catch (...) {
 		freeaddrinfo(res);
-		do {
-			ret = close(fd);
-		} while (ret == -1 && errno == EINTR);
 		throw;
 	}
 	if (fd == -1) {
