@@ -38,6 +38,12 @@ require 'rbconfig'
 # Apache.
 module PlatformInfo
 private
+	def self.private_class_method(name)
+		metaclass = class << self; self; end
+		metaclass.send(:private, name)
+	end
+	private_class_method :private_class_method
+	
 	# Turn the specified class method into a memoized one. If the given
 	# class method is called without arguments, then its result will be
 	# memoized, frozen, and returned upon subsequent calls without arguments.
@@ -75,10 +81,12 @@ private
 		}
 		class_eval(source)
 	end
+	private_class_method :memoize
 	
 	def self.env_defined?(name)
 		return !ENV[name].nil? && !ENV[name].empty?
 	end
+	private_class_method :env_defined?
 	
 	def self.locate_ruby_executable(name)
 		if RUBY_PLATFORM =~ /darwin/ &&
@@ -109,6 +117,7 @@ private
 			end
 		end
 	end
+	private_class_method :locate_ruby_executable
 	
 	# Look in the directory +dir+ and check whether there's an executable
 	# whose base name is equal to one of the elements in +possible_names+.
@@ -122,6 +131,7 @@ private
 		end
 		return nil
 	end
+	private_class_method :select_executable
 
 	def self.find_apache2_executable(*possible_names)
 		[apache2_bindir, apache2_sbindir].each do |bindir|
@@ -137,6 +147,7 @@ private
 		end
 		return nil
 	end
+	private_class_method :find_apache2_executable
 	
 	def self.determine_apr_info
 		if apr_config.nil?
@@ -155,6 +166,7 @@ private
 		end
 	end
 	memoize :determine_apr_info
+	private_class_method :determine_apr_info
 
 	def self.determine_apu_info
 		if apu_config.nil?
@@ -167,12 +179,14 @@ private
 		end
 	end
 	memoize :determine_apu_info
+	private_class_method :determine_apu_info
 	
 	def self.read_file(filename)
 		return File.read(filename)
 	rescue
 		return ""
 	end
+	private_class_method :read_file
 
 public
 	# The absolute path to the current Ruby interpreter.
@@ -332,6 +346,11 @@ public
 	################ Compiler and linker flags ################
 	
 	
+	def self.compiler_supports_visibility_flag?
+		
+	end
+	memoize :compiler_supports_visibility_flag?
+	
 	# Compiler flags that should be used for compiling every C/C++ program,
 	# for portability reasons. These flags should be specified as last
 	# when invoking the compiler.
@@ -380,9 +399,12 @@ public
 	end
 	
 	# The C compiler flags that are necessary to compile an Apache module.
-	# Possibly includes APR and APU compiler flags.
+	# Also includes APR and APU compiler flags if with_apr_flags is true.
 	def self.apache2_module_cflags(with_apr_flags = true)
 		flags = ["-fPIC"]
+		if compiler_supports_visibility_flag?
+			flags << "-fvisibility=hidden"
+		end
 		if with_apr_flags
 			flags << apr_flags
 			flags << apu_flags
@@ -439,7 +461,7 @@ public
 	memoize :apache2_module_cflags
 	
 	# Linker flags that are necessary for linking an Apache module.
-	# Possibly includes APR and APU linker flags.
+	# Already includes APR and APU linker flags.
 	def self.apache2_module_ldflags
 		flags = "-fPIC #{apr_libs} #{apu_libs}"
 		flags.strip!
