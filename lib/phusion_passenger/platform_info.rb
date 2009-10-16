@@ -88,6 +88,27 @@ private
 	end
 	private_class_method :env_defined?
 	
+	def self.try_compile(language, source, flags)
+		if language == :c
+			compiler = 'gcc'
+		elsif language == :cxx
+			compiler = 'g++'
+		else
+			raise ArgumentError,"Unsupported language '#{language}'"
+		end
+		filename = File.join("/tmp/passenger-compile-check-#{Process.pid}.c")
+		File.open(filename, "w") do |f|
+			f.puts(source)
+		end
+		begin
+			return system("(#{compiler} #{flags} -c '#{filename}' -o '#{filename}.o') >/dev/null 2>/dev/null")
+		ensure
+			File.unlink(filename) rescue nil
+			File.unlink("#{filename}.o") rescue nil
+		end
+	end
+	private_class_method :try_compile
+	
 	def self.locate_ruby_executable(name)
 		if RUBY_PLATFORM =~ /darwin/ &&
 		   RUBY =~ %r(\A/System/Library/Frameworks/Ruby.framework/Versions/.*?/usr/bin/ruby\Z)
@@ -347,7 +368,7 @@ public
 	
 	
 	def self.compiler_supports_visibility_flag?
-		
+		return try_compile(:c, '', '-fvisibility=hidden')
 	end
 	memoize :compiler_supports_visibility_flag?
 	
@@ -403,7 +424,7 @@ public
 	def self.apache2_module_cflags(with_apr_flags = true)
 		flags = ["-fPIC"]
 		if compiler_supports_visibility_flag?
-			flags << "-fvisibility=hidden"
+			flags << "-fvisibility=hidden -DVISIBILITY_ATTRIBUTE_SUPPORTED"
 		end
 		if with_apr_flags
 			flags << apr_flags

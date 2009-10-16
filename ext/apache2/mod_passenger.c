@@ -27,7 +27,13 @@
 #include "Configuration.h"
 #include "Hooks.h"
 
-module AP_MODULE_DECLARE_DATA passenger_module = {
+#ifdef VISIBILITY_ATTRIBUTE_SUPPORTED
+	#define PUBLIC_SYMBOL __attribute__ ((visibility("default")))
+#else
+	#define PUBLIC_SYMBOL
+#endif
+
+PUBLIC_SYMBOL module AP_MODULE_DECLARE_DATA passenger_module = {
 	STANDARD20_MODULE_STUFF,
 	passenger_config_create_dir,        /* create per-dir config structs */
 	passenger_config_merge_dir,         /* merge per-dir config structs */
