@@ -7,6 +7,8 @@ Release 3.0.0
  * Much improved fault-tolerance: HelperServer is restarted by watchdog
    when it crashes. Processes reconnect to each other when connection lost.
  * Better ApplicationPool multicore performance: critical section made smaller.
+ * OS X kernel bug workaround; we now use Unix sockets again.
+ * Ruby RequestHandler optimizations.
  * [Apache] Fix some compatibility problems with mod_autoindex: it no longer
    interferes with our own reporting of filesystem errors.
 
