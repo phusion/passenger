@@ -474,15 +474,13 @@ private:
 	}
 	
 	/**
-	 * Spawn a new application instance, or use an existing one that's in the pool.
-	 *
 	 * @throws boost::thread_interrupted
 	 * @throws SpawnException
 	 * @throws SystemException
 	 * @throws TimeRetrievalException Something went wrong while retrieving the system time.
 	 */
 	pair<ProcessInfoPtr, Group *>
-	spawnOrUseExisting(boost::mutex::scoped_lock &l, const PoolOptions &options) {
+	checkoutWithoutLock(boost::mutex::scoped_lock &l, const PoolOptions &options) {
 		beginning_of_function:
 		
 		TRACE_POINT();
@@ -728,7 +726,7 @@ public:
 			pair<ProcessInfoPtr, Group *> p;
 			{
 				unique_lock<boost::mutex> l(lock);
-				p = spawnOrUseExisting(l, options);
+				p = checkoutWithoutLock(l, options);
 				P_ASSERT(verifyState(), SessionPtr(),
 					"ApplicationPool state is valid:\n" << inspectWithoutLock());
 			}

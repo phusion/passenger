@@ -213,7 +213,7 @@ function get(app_root, options):
 	while (true):
 		attempt++
 		lock.synchronize:
-			process_info, group = spawn_or_use_existing(app_root, options)
+			process_info, group = checkout_without_lock(app_root, options)
 		try:
 			return process_info.process.connect()
 		on exception:
@@ -227,10 +227,19 @@ function get(app_root, options):
 				propagate exception
 
 
-# Returns a pair of [ProcessInfo, Group] that matches the given application
-# root. This function spawns a new process if necessary. All exceptions that
-# occur are propagated.
-private function spawn_or_use_existing(app_root, options):
+# Detach the process with the given identifier from the pool's data structures.
+function detach(identifier):
+	lock.synchronize:
+		return detach_without_lock(identifier)
+
+
+# Checkout a process from the application pool and mark it as being used.
+# If there's no appropriate process in the pool, or if there are not
+# enough processes, then one will be spawned.
+#
+# Returns a pair of [ProcessInfo, Group].
+# All exceptions that occur are propagated.
+private function checkout_without_lock(app_root, options):
 	group = groups[app_root]
 	
 	if needs_restart(app_root, options):
@@ -337,12 +346,6 @@ private function spawn_or_use_existing(app_root, options):
 	process_info.last_used = current_time()
 	process_info.sessions++
 	return [process_info, group]
-
-
-# Detach the process with the given identifier from the pool's data structures.
-function detach(identifier):
-	lock.synchronize:
-		return detach_without_lock(identifier)
 
 
 private function needs_restart(app_root, options):
