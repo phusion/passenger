@@ -208,50 +208,49 @@ private:
 		}
 		
 		void operator()() {
-			/* It is important that the lock is obtained before locking
-			 * the weak pointer: otherwise we may obtain a ProcessInfo
-			 * object that's on the verge of being destroyed. Obtaining
-			 * the lock before locking the weak pointer guarantees that
-			 * we either get a valid ProcessInfo, or NULL.
-			 */
-			boost::mutex::scoped_lock l(data->lock);
-			
 			ProcessInfoPtr processInfo = this->processInfo.lock();
-			if (processInfo == NULL) {
+			if (processInfo == NULL || processInfo->detached) {
+				return;
+			}
+			
+			boost::mutex::scoped_lock l(data->lock);
+			if (processInfo->detached) {
 				return;
 			}
 			
 			GroupMap::iterator it;
 			it = data->groups.find(processInfo->process->getAppRoot());
-			if (it != data->groups.end()) {
-				Group *group = it->second.get();
-				ProcessInfoList *processes = &group->processes;
-				
-				processInfo->processed++;
-				if (group->maxRequests > 0 && processInfo->processed >= group->maxRequests) {
-					if (!processInfo->detached) {
-						processes->erase(processInfo->iterator);
-						group->size--;
-						if (processes->empty()) {
-							data->groups.erase(processInfo->process->getAppRoot());
-						}
-						data->count--;
-						data->active--;
-						data->activeOrMaxChanged.notify_all();
-					}
+			Group *group = it->second.get();
+			ProcessInfoList *processes = &group->processes;
+			
+			processInfo->processed++;
+			
+			if (group->maxRequests > 0 && processInfo->processed >= group->maxRequests) {
+				processInfo->detached = true;
+				processes->erase(processInfo->iterator);
+				group->size--;
+				if (processes->empty()) {
+					data->groups.erase(processInfo->process->getAppRoot());
+				}
+				data->count--;
+				if (processInfo->sessions == 0) {
+					data->inactiveApps.erase(processInfo->ia_iterator);
 				} else {
-					processInfo->lastUsed = time(NULL);
-					processInfo->sessions--;
-					if (!processInfo->detached && processInfo->sessions == 0) {
-						processes->erase(processInfo->iterator);
-						processes->push_front(processInfo);
-						processInfo->iterator = processes->begin();
-						data->inactiveApps.push_back(processInfo);
-						processInfo->ia_iterator = data->inactiveApps.end();
-						processInfo->ia_iterator--;
-						data->active--;
-						data->activeOrMaxChanged.notify_all();
-					}
+					data->active--;
+					data->activeOrMaxChanged.notify_all();
+				}
+			} else {
+				processInfo->lastUsed = time(NULL);
+				processInfo->sessions--;
+				if (processInfo->sessions == 0) {
+					processes->erase(processInfo->iterator);
+					processes->push_front(processInfo);
+					processInfo->iterator = processes->begin();
+					data->inactiveApps.push_back(processInfo);
+					processInfo->ia_iterator = data->inactiveApps.end();
+					processInfo->ia_iterator--;
+					data->active--;
+					data->activeOrMaxChanged.notify_all();
 				}
 			}
 		}
@@ -421,6 +420,26 @@ private:
 		return false;
 	}
 	
+	/**
+	 * Marks all ProcessInfo objects as detached. Doesn't lock the data structures.
+	 */
+	void markAllAsDetached() {
+		GroupMap::iterator group_it;
+		GroupMap::iterator group_it_end = groups.end();
+		
+		for (group_it = groups.begin(); group_it != group_it_end; group_it++) {
+			GroupPtr &group = group_it->second;
+			ProcessInfoList &processes = group->processes;
+			ProcessInfoList::iterator process_info_it = processes.begin();
+			ProcessInfoList::iterator process_info_it_end = processes.end();
+			
+			for (; process_info_it != process_info_it_end; process_info_it++) {
+				ProcessInfoPtr &processInfo = *process_info_it;
+				processInfo->detached = true;
+			}
+		}
+	}
+	
 	void cleanerThreadMainLoop() {
 		this_thread::disable_syscall_interruption dsi;
 		unique_lock<boost::mutex> l(lock);
@@ -453,6 +472,7 @@ private:
 						P_DEBUG("Cleaning idle process " << process->getAppRoot() <<
 							" (PID " << process->getPid() << ")");
 						processes->erase(processInfo.iterator);
+						processInfo.detached = true;
 						
 						ProcessInfoList::iterator prev = it;
 						prev--;
@@ -478,6 +498,7 @@ private:
 	 * @throws SpawnException
 	 * @throws SystemException
 	 * @throws TimeRetrievalException Something went wrong while retrieving the system time.
+	 * @throws Anything thrown by options.environmentVariables->getItems().
 	 */
 	pair<ProcessInfoPtr, Group *>
 	checkoutWithoutLock(boost::mutex::scoped_lock &l, const PoolOptions &options) {
@@ -504,9 +525,11 @@ private:
 							inactiveApps.erase(processInfo->ia_iterator);
 						} else {
 							active--;
+							activeOrMaxChanged.notify_all();
 						}
 						list_it--;
 						processes->erase(processInfo->iterator);
+						processInfo->detached = true;
 						count--;
 					}
 					groups.erase(appRoot);
@@ -514,7 +537,6 @@ private:
 				P_DEBUG("Restarting " << appRoot);
 				spawnManager->reload(appRoot);
 				group_it = groups.end();
-				activeOrMaxChanged.notify_all();
 			}
 			
 			if (group_it != groups.end()) {
@@ -579,6 +601,7 @@ private:
 				} else if (count == max) {
 					processInfo = inactiveApps.front();
 					inactiveApps.pop_front();
+					processInfo->detached = true;
 					group = groups[processInfo->process->getAppRoot()].get();
 					processes = &group->processes;
 					processes->erase(processInfo->iterator);
@@ -707,6 +730,7 @@ public:
 			boost::mutex::scoped_lock l(lock);
 			done = true;
 			cleanerThreadSleeper.notify_one();
+			markAllAsDetached();
 		}
 		cleanerThread->join();
 		delete cleanerThread;
@@ -789,6 +813,7 @@ public:
 	
 	virtual void clear() {
 		boost::mutex::scoped_lock l(lock);
+		markAllAsDetached();
 		groups.clear();
 		inactiveApps.clear();
 		count = 0;

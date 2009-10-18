@@ -97,8 +97,9 @@ explicitly define some special types:
   * ia_iterator - The iterator for this ProcessInfo in the linked list
     inactive_apps. This iterator is only valid if this ProcessInfo really is
     in that list.
-  * detached (boolean) - Whether detach() has been called on this ProcessInfo.
-    If set to true then iterator and ia_iterator are no longer valid.
+  * detached (boolean) - This ProcessInfo is still contained in the Group that
+    it belongs to, i.e. accessible via _domains_. If set to true then it means
+    that _iterator_ and _ia_iterator_ are no longer valid.
     Set to false by the constructor.
     Invariant:
        (detached) == (This ProcessInfo is accessible via _domains_.)
@@ -250,6 +251,7 @@ private function checkout_without_lock(app_root, options):
 				else:
 					active--
 				group.processes.remove(process_info.iterator)
+				process_info.detached = true
 				count--
 			groups.remove(app_root)
 		Tell spawn server to reload code for app_root.
@@ -323,6 +325,7 @@ private function checkout_without_lock(app_root, options):
 			# killed. But for now, we kill a random application
 			# process.
 			process_info = inactive_apps.pop_front
+			process_info.detached = true
 			group = groups[process_info.app.app_root]
 			processes = group.processes
 			processes.remove(process_info.iterator)
@@ -382,33 +385,49 @@ private function detach_without_lock(identifier):
 
 
 # The following function is to be called when a session has been closed.
-# _process_info_ is the ProcessInfo that belongs to the process whose
-# session has been closed.
+# _process_info_ is a weak reference to the ProcessInfo that belongs to
+# the process whose session has been closed; it evaluates to NULL if the
+# ProcessInfo object that it belongs to has been destroyed.
 callback session_has_been_closed(process_info):
+	convert process_info into a normal reference
+	
+	# We check process_info.detached without locking. This should be safe:
+	# even if a boolean update isn't atomic on the current CPU, a non-zero
+	# value values to true. Once true, _detached_ will never become false,
+	# so instruction reorderings by the compiler or CPU won't cause any
+	# damage.
+	if (process_info == null) or (process_info.detached):
+		return
+	
 	lock.synchronize:
+		if process_info.detached:
+			return
+		
 		group = groups[process_info.process.app_root]
-		if (group != nil):
-			processes = group.processes
-			process_info.processed++
-			
-			if (group.max_requests > 0) and (process_info.processed >= group.max_requests):
-				# The application process has processed its maximum allowed
-				# number of requests, so we shut it down.
-				if !process_info.detached:
-					processes.remove(process_info.iterator)
-					group.size--
-					if processes.empty():
-						groups.remove(app_root)
-					count--
-					active--
+		processes = group.processes
+		process_info.processed++
+		
+		if (group.max_requests > 0) and (process_info.processed >= group.max_requests):
+			# The application process has processed its maximum allowed
+			# number of requests, so we shut it down.
+			process_info.detached = true
+			processes.remove(process_info.iterator)
+			group.size--
+			if processes.empty():
+				groups.remove(app_root)
+			count--
+			if (process_info.sessions == 0):
+				inactive_apps.remove(process_info.ia_iterator)
 			else:
-				process_info.last_used = current_time()
-				process_info.sessions--
-				process_info.processed++
-				if (!process_info.detached) and (process_info.sessions == 0):
-					processes.move_to_front(process_info.iterator)
-					process_info.ia_iterator = inactive_apps.add_to_back(process_info.process)
-					active--
+				active--
+		else:
+			process_info.last_used = current_time()
+			process_info.sessions--
+			process_info.processed++
+			if (process_info.sessions == 0):
+				processes.move_to_front(process_info.iterator)
+				process_info.ia_iterator = inactive_apps.add_to_back(process_info.process)
+				active--
 
 
 # The following thread will be responsible for cleaning up idle application
@@ -433,6 +452,7 @@ thread cleaner:
 				# forever unless it's killed by another process.
 				if (MAX_IDLE_TIME > 0) and (now - process_info.last_used > MAX_IDLE_TIME):
 					processes.remove(process_info.iterator)
+					process_info.detached = true
 					inactive_apps.remove(process_info.ia_iterator)
 					group.size--
 					count--
