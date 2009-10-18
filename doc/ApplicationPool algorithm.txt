@@ -227,11 +227,6 @@ function get(app_root, options):
 				propagate exception
 
 
-function detach(identifier):
-	lock.synchronize:
-		return detach_without_lock(identifier)
-
-
 # Returns a pair of [ProcessInfo, Group] that matches the given application
 # root. This function spawns a new process if necessary. All exceptions that
 # occur are propagated.
@@ -344,34 +339,10 @@ private function spawn_or_use_existing(app_root, options):
 	return [process_info, group]
 
 
-# The following function is to be called when a session has been closed.
-# _process_info_ is the ProcessInfo that belongs to the process whose
-# session has been closed.
-callback session_has_been_closed(process_info):
+# Detach the process with the given identifier from the pool's data structures.
+function detach(identifier):
 	lock.synchronize:
-		group = groups[process_info.process.app_root]
-		if (group != nil):
-			processes = group.processes
-			process_info.processed++
-			
-			if (group.max_requests > 0) and (process_info.processed >= group.max_requests):
-				# The application process has processed its maximum allowed
-				# number of requests, so we shut it down.
-				if !process_info.detached:
-					processes.remove(process_info.iterator)
-					group.size--
-					if processes.empty():
-						groups.remove(app_root)
-					count--
-					active--
-			else:
-				process_info.last_used = current_time()
-				process_info.sessions--
-				process_info.processed++
-				if (!process_info.detached) and (process_info.sessions == 0):
-					processes.move_to_front(process_info.iterator)
-					process_info.ia_iterator = inactive_apps.add_to_back(process_info.process)
-					active--
+		return detach_without_lock(identifier)
 
 
 private function needs_restart(app_root, options):
@@ -405,6 +376,36 @@ private function detach_without_lock(identifier):
 				count--
 				return true
 	return false
+
+
+# The following function is to be called when a session has been closed.
+# _process_info_ is the ProcessInfo that belongs to the process whose
+# session has been closed.
+callback session_has_been_closed(process_info):
+	lock.synchronize:
+		group = groups[process_info.process.app_root]
+		if (group != nil):
+			processes = group.processes
+			process_info.processed++
+			
+			if (group.max_requests > 0) and (process_info.processed >= group.max_requests):
+				# The application process has processed its maximum allowed
+				# number of requests, so we shut it down.
+				if !process_info.detached:
+					processes.remove(process_info.iterator)
+					group.size--
+					if processes.empty():
+						groups.remove(app_root)
+					count--
+					active--
+			else:
+				process_info.last_used = current_time()
+				process_info.sessions--
+				process_info.processed++
+				if (!process_info.detached) and (process_info.sessions == 0):
+					processes.move_to_front(process_info.iterator)
+					process_info.ia_iterator = inactive_apps.add_to_back(process_info.process)
+					active--
 
 
 # The following thread will be responsible for cleaning up idle application
