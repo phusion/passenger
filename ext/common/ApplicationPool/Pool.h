@@ -501,7 +501,7 @@ private:
 	 * @throws Anything thrown by options.environmentVariables->getItems().
 	 */
 	pair<ProcessInfoPtr, Group *>
-	checkoutWithoutLock(boost::mutex::scoped_lock &l, const PoolOptions &options) {
+	checkoutWithoutLock(unique_lock<boost::mutex> &l, const PoolOptions &options) {
 		beginning_of_function:
 		
 		TRACE_POINT();
@@ -727,7 +727,7 @@ public:
 	virtual ~Pool() {
 		this_thread::disable_interruption di;
 		{
-			boost::mutex::scoped_lock l(lock);
+			lock_guard<boost::mutex> l(lock);
 			done = true;
 			cleanerThreadSleeper.notify_one();
 			markAllAsDetached();
@@ -812,7 +812,7 @@ public:
 	}
 	
 	virtual void clear() {
-		boost::mutex::scoped_lock l(lock);
+		lock_guard<boost::mutex> l(lock);
 		markAllAsDetached();
 		groups.clear();
 		inactiveApps.clear();
@@ -823,29 +823,29 @@ public:
 	}
 	
 	virtual void setMaxIdleTime(unsigned int seconds) {
-		boost::mutex::scoped_lock l(lock);
+		lock_guard<boost::mutex> l(lock);
 		maxIdleTime = seconds;
 		cleanerThreadSleeper.notify_one();
 	}
 	
 	virtual void setMax(unsigned int max) {
-		boost::mutex::scoped_lock l(lock);
+		lock_guard<boost::mutex> l(lock);
 		this->max = max;
 		activeOrMaxChanged.notify_all();
 	}
 	
 	virtual unsigned int getActive() const {
-		boost::mutex::scoped_lock l(lock);
+		lock_guard<boost::mutex> l(lock);
 		return active;
 	}
 	
 	virtual unsigned int getCount() const {
-		boost::mutex::scoped_lock l(lock);
+		lock_guard<boost::mutex> l(lock);
 		return count;
 	}
 	
 	virtual void setMaxPerApp(unsigned int maxPerApp) {
-		boost::mutex::scoped_lock l(lock);
+		lock_guard<boost::mutex> l(lock);
 		this->maxPerApp = maxPerApp;
 		activeOrMaxChanged.notify_all();
 	}
@@ -855,12 +855,12 @@ public:
 	}
 	
 	virtual string inspect() const {
-		unique_lock<boost::mutex> l(lock);
+		lock_guard<boost::mutex> l(lock);
 		return inspectWithoutLock();
 	}
 	
 	virtual string toXml(bool includeSensitiveInformation = true) const {
-		unique_lock<boost::mutex> l(lock);
+		lock_guard<boost::mutex> l(lock);
 		stringstream result;
 		GroupMap::const_iterator it;
 		

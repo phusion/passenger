@@ -389,11 +389,11 @@ private function detach_without_lock(identifier):
 # the process whose session has been closed; it evaluates to NULL if the
 # ProcessInfo object that it belongs to has been destroyed.
 callback session_has_been_closed(process_info):
-	convert process_info into a normal reference
+	Convert process_info into a normal reference.
 	
 	# We check process_info.detached without locking. This should be safe:
 	# even if a boolean update isn't atomic on the current CPU, a non-zero
-	# value values to true. Once true, _detached_ will never become false,
+	# value evaluates to true. Once true, _detached_ will never become false,
 	# so instruction reorderings by the compiler or CPU won't cause any
 	# damage.
 	if (process_info == null) or (process_info.detached):
