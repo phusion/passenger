@@ -435,27 +435,41 @@ callback session_has_been_closed(process_info):
 # This can be disabled per app when setting it's maxIdleTime to 0.
 thread cleaner:
 	lock.synchronize:
-		done = false
-		while !done:
-			Wait until CLEAN_INTERVAL seconds have expired, or until the thread has been signalled to quit.
-			if thread has been signalled to quit:
-				done = true
-				break
+		while true:
+			# If MAX_IDLE_TIME is 0 we don't clean up any processes,
+			# giving us the option to persist the processes
+			# forever unless it's killed in order to free up space
+			# for another process.
+			if (MAX_IDLE_TIME == 0):
+				Wait until the thread has been signalled to quit
+				  or until MAX_IDLE_TIME changed.
+				if thread has been signalled to quit:
+					return
+				else:
+					restart loop
+			else:
+				Wait until MAX_IDLE_TIME seconds have passed,
+				  or until the thread has been signalled to quit,
+				  or until MAX_IDLE_TIME changed.
+				if thread has been signalled to quit:
+					return
+				else if MAX_IDLE_TIME changed:
+					restart loop
+			
+			# Invariant:
+			# From this point on, MAX_IDLE_TIME > 0
 			
 			now = current_time()
 			for all process_info in inactive_apps:
 				process = process_info.process
-				group = groups[process.app_root]
-				processes = group.processes
-				# If MAX_IDLE_TIME is 0 we don't clean up the process,
-				# giving us the option to persist the process
-				# forever unless it's killed by another process.
-				if (MAX_IDLE_TIME > 0) and (now - process_info.last_used > MAX_IDLE_TIME):
+				if (now - process_info.last_used > MAX_IDLE_TIME):
+					processes = group.processes
 					processes.remove(process_info.iterator)
 					process_info.detached = true
 					inactive_apps.remove(process_info.ia_iterator)
+					group = groups[process.app_root]
 					group.size--
 					count--
-				if processes.empty():
-					groups.remove(process.app_root)
+					if processes.empty():
+						groups.remove(process.app_root)
 

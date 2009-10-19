@@ -445,11 +445,8 @@ private:
 		unique_lock<boost::mutex> l(lock);
 		try {
 			while (!done && !this_thread::interruption_requested()) {
-				xtime xt;
-				xtime_get(&xt, TIME_UTC);
-				xt.sec += maxIdleTime + 1;
-				if (cleanerThreadSleeper.timed_wait(l, xt)) {
-					// Condition was woken up.
+				if (maxIdleTime == 0) {
+					cleanerThreadSleeper.wait(l);
 					if (done) {
 						// ApplicationPool::Pool is being destroyed.
 						break;
@@ -457,22 +454,38 @@ private:
 						// maxIdleTime changed.
 						continue;
 					}
+				} else {
+					xtime xt;
+					xtime_get(&xt, TIME_UTC);
+					xt.sec += maxIdleTime + 1;
+					if (cleanerThreadSleeper.timed_wait(l, xt)) {
+						// Condition was woken up.
+						if (done) {
+							// ApplicationPool::Pool is being destroyed.
+							break;
+						} else {
+							// maxIdleTime changed.
+							continue;
+						}
+					}
+					// Timeout: maxIdleTime + 1 seconds passed.
 				}
 				
 				time_t now = syscalls::time(NULL);
-				ProcessInfoList::iterator it;
-				for (it = inactiveApps.begin(); it != inactiveApps.end(); it++) {
-					ProcessInfo     &processInfo = *it->get();
-					ProcessPtr       process     = processInfo.process;
-					Group           *group       = groups[process->getAppRoot()].get();
-					ProcessInfoList *processes   = &group->processes;
+				ProcessInfoList::iterator it = inactiveApps.begin();
+				ProcessInfoList::iterator end_it = inactiveApps.end();
+				for (; it != end_it; it++) {
+					ProcessInfoPtr processInfo = *it;
 					
-					if (maxIdleTime > 0 &&  
-					   (now - processInfo.lastUsed > (time_t) maxIdleTime)) {
+					if (now - processInfo->lastUsed > (time_t) maxIdleTime) {
+						ProcessPtr       process     = processInfo->process;
+						GroupPtr         group       = groups[process->getAppRoot()];
+						ProcessInfoList *processes   = &group->processes;
+						
 						P_DEBUG("Cleaning idle process " << process->getAppRoot() <<
 							" (PID " << process->getPid() << ")");
-						processes->erase(processInfo.iterator);
-						processInfo.detached = true;
+						processes->erase(processInfo->iterator);
+						processInfo->detached = true;
 						
 						ProcessInfoList::iterator prev = it;
 						prev--;
@@ -480,11 +493,11 @@ private:
 						it = prev;
 						
 						group->size--;
-						
 						count--;
-					}
-					if (processes->empty()) {
-						groups.erase(process->getAppRoot());
+						
+						if (processes->empty()) {
+							groups.erase(process->getAppRoot());
+						}
 					}
 				}
 			}
