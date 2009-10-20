@@ -54,6 +54,7 @@ class RequestHandler < AbstractRequestHandler
 	ON             = "on"     # :nodoc:
 	ONE            = "1"      # :nodoc:
 	CRLF           = "\r\n"   # :nodoc:
+	EMPTY          = ""       # :nodoc:
 
 	# +app+ is the Rack application object.
 	def initialize(owner_pipe, app, options = {})
@@ -94,17 +95,20 @@ protected
 			
 			status, headers, body = @app.call(env)
 			begin
-				output.write("Status: #{status.to_i}#{CRLF}")
-				output.write("X-Powered-By: #{PASSENGER_HEADER}#{CRLF}")
+				data = "Status: #{status.to_i}#{CRLF}"
+				data << "X-Powered-By: #{PASSENGER_HEADER}#{CRLF}"
 				headers.each do |key, values|
 					if values.is_a?(String)
 						values = values.split("\n")
 					end
 					values.each do |value|
-						output.write("#{key}: #{value}#{CRLF}")
+						data << "#{key}: #{value}#{CRLF}"
 					end
 				end
-				output.write(CRLF)
+				data << CRLF
+				output.write(data)
+				data.replace(EMPTY)
+				
 				if body.is_a?(String)
 					output.write(body)
 				elsif body
