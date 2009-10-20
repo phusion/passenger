@@ -64,9 +64,11 @@ private:
 	struct thread_handle {
 		list<thread_handle_ptr>::iterator iterator;
 		thread *thr;
+		bool removed_from_list;
 		
 		thread_handle() {
 			thr = NULL;
+			removed_from_list = false;
 		}
 		
 		~thread_handle() {
@@ -75,11 +77,11 @@ private:
 	};
 	
 	/** A mutex which protects thread_handles and nthreads. */
-	boost::mutex lock;
+	mutable boost::mutex lock;
 	/** The internal list of threads. */
 	list<thread_handle_ptr> thread_handles;
 	/** The number of threads in this thread group. */
-	volatile unsigned int nthreads;
+	unsigned int nthreads;
 	
 	struct thread_cleanup {
 		dynamic_thread_group *thread_group;
@@ -93,9 +95,11 @@ private:
 		~thread_cleanup() {
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
-			boost::unique_lock<boost::mutex> l(thread_group->lock);
-			thread_group->thread_handles.erase(handle->iterator);
-			thread_group->nthreads--;
+			boost::lock_guard<boost::mutex> l(thread_group->lock);
+			if (!handle->removed_from_list) {
+				thread_group->thread_handles.erase(handle->iterator);
+				thread_group->nthreads--;
+			}
 		}
 	};
 	
@@ -125,7 +129,7 @@ public:
 	 * @post this->num_threads() == old->num_threads() + 1
 	 */
 	void create_thread(boost::function<void ()> &func, const string &name = "", unsigned int stack_size = 0) {
-		boost::unique_lock<boost::mutex> l(lock);
+		boost::lock_guard<boost::mutex> l(lock);
 		thread_handle_ptr handle(new thread_handle());
 		thread_handles.push_back(handle);
 		handle->iterator = thread_handles.end();
@@ -149,37 +153,39 @@ public:
 	 * @post num_threads() == 0
 	 */
 	void interrupt_and_join_all() {
+		/* While interrupting and joining the threads, each thread
+		 * will try to lock the mutex and remove itself from
+		 * 'thread_handles'. We want to avoid deadlocks so we
+		 * empty 'thread_handles' in the critical section and
+		 * join the threads outside the critical section.
+		 */
+		boost::unique_lock<boost::mutex> l(lock);
 		list<thread_handle_ptr> thread_handles_copy;
 		list<thread_handle_ptr>::iterator it;
+		thread_handle_ptr handle;
+		unsigned int nthreads_copy = nthreads;
+		thread *threads[nthreads];
+		unsigned int i = 0;
 		
-		{
-			/* We can't just lock the mutex and iterate over
-			 * the threads and interrupt_and_join() each of them,
-			 * because each thread will try to lock the mutex
-			 * and remove itself from 'thread_handles', causing
-			 * a deadlock. So we make a copy of the list and
-			 * iterate over it outside the critical section.
-			 */
-			boost::unique_lock<boost::mutex> l(lock);
-			thread_handles_copy = thread_handles;
+		// We make a copy so that the handles aren't destroyed prematurely.
+		thread_handles_copy = thread_handles;
+		for (it = thread_handles.begin(); it != thread_handles.end(); it++, i++) {
+			handle = *it;
+			handle->removed_from_list = true;
+			threads[i] = handle->thr;
 		}
+		thread_handles.clear();
+		nthreads = 0;
 		
-		/* We first try to interrupt all threads without joining them, so that
-		 * we don't waste any time waiting for a thread to finish before
-		 * interrupting the next one.
-		 */
-		for (it = thread_handles_copy.begin(); it != thread_handles_copy.end(); it++) {
-			(*it)->thr->interrupt();
-		}
-		for (it = thread_handles_copy.begin(); it != thread_handles_copy.end(); it++) {
-			(*it)->thr->interrupt_and_join();
-		}
+		l.unlock();
+		thread::interrupt_and_join_multiple(threads, nthreads_copy);
 	}
 	
 	/**
 	 * Returns the number of threads currently in this thread group.
 	 */
 	unsigned int num_threads() const {
+		boost::lock_guard<boost::mutex> l(lock);
 		return nthreads;
 	}
 };

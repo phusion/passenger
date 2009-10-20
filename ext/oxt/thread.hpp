@@ -34,6 +34,8 @@
 #ifdef OXT_BACKTRACE_IS_ENABLED
 	#include <sstream>
 #endif
+#include <string>
+#include <list>
 #include <limits.h>  // for PTHREAD_STACK_MIN
 
 namespace oxt {
@@ -229,6 +231,47 @@ public:
 		while (!done) {
 			interrupt();
 			done = timed_join(boost::posix_time::millisec(10));
+		}
+	}
+	
+	/**
+	 * Interrupt and join multiple threads in a way that's more efficient than calling
+	 * interrupt_and_join() on each thread individually. It iterates over all threads,
+	 * interrupts each one without joining it, then waits until at least one thread
+	 * is joinable. This is repeated until all threads are joined.
+	 *
+	 * @param threads An array of threads to join.
+	 * @param size The number of elements in <em>threads</em>.
+	 * @throws boost::thread_interrupted The calling thread has been
+	 *    interrupted before all threads have been joined. Some threads
+	 *    may have been successfully joined while others haven't.
+	 */
+	static void interrupt_and_join_multiple(oxt::thread **threads, unsigned int size) {
+		std::list<oxt::thread *> remaining_threads;
+		std::list<oxt::thread *>::iterator it, current;
+		oxt::thread *thread;
+		unsigned int i;
+		
+		for (i = 0; i < size; i++) {
+			remaining_threads.push_back(threads[i]);
+		}
+		
+		while (!remaining_threads.empty()) {
+			for (it = remaining_threads.begin(); it != remaining_threads.end(); it++) {
+				thread = *it;
+				thread->interrupt();
+			}
+			for (it = remaining_threads.begin(); it != remaining_threads.end(); it++) {
+				thread = *it;
+				if (thread->timed_join(boost::posix_time::millisec(0))) {
+					current = it;
+					it--;
+					remaining_threads.erase(current);
+				}
+			}
+			if (!remaining_threads.empty()) {
+				syscalls::usleep(10000);
+			}
 		}
 	}
 };
