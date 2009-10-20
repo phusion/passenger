@@ -566,8 +566,14 @@ public:
 		this_thread::disable_syscall_interruption dsi;
 		this_thread::disable_interruption di;
 		
-		thr->interrupt_and_join();
+		if (thr->joinable()) {
+			thr->interrupt_and_join();
+		}
 		delete thr;
+	}
+	
+	oxt::thread *getThread() const {
+		return thr;
 	}
 };
 
@@ -738,12 +744,22 @@ public:
 		TRACE_POINT();
 		this_thread::disable_syscall_interruption dsi;
 		this_thread::disable_interruption di;
+		oxt::thread *threads[clients.size()];
+		set<ClientPtr>::iterator it;
+		unsigned int i = 0;
 		
 		P_DEBUG("Shutting down helper server...");
 		if (messageServerThread != NULL) {
 			messageServerThread->interrupt_and_join();
 		}
+		
+		for (it = clients.begin(); it != clients.end(); it++, i++) {
+			ClientPtr client = *it;
+			threads[i] = client->getThread();
+		}
+		oxt::thread::interrupt_and_join_multiple(threads, clients.size());
 		clients.clear();
+		
 		P_TRACE(2, "All threads have been shut down.");
 	}
 	
