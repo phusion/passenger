@@ -38,6 +38,8 @@ require 'rbconfig'
 # Apache.
 module PlatformInfo
 private
+	THIS_FILE_MTIME = File.stat(__FILE__).mtime
+	
 	def self.private_class_method(name)
 		metaclass = class << self; self; end
 		metaclass.send(:private, name)
@@ -49,6 +51,10 @@ private
 	# memoized, frozen, and returned upon subsequent calls without arguments.
 	# Calls with arguments are never memoized.
 	#
+	# If +cache_to_disk+ is true, then result is cached to a file on disk,
+	# so that memoized results persist over multiple process runs. This
+	# cache file expires in 3600 seconds (1 hour) after it has been written.
+	#
 	#   def self.foo(max = 10)
 	#      return rand(max)
 	#   end
@@ -59,7 +65,7 @@ private
 	#   foo(100)   # => 49
 	#   foo(100)   # => 26
 	#   foo   # => 3
-	def self.memoize(method)
+	def self.memoize(method, cache_to_disk = false)
 		metaclass = class << self; self; end
 		metaclass.send(:alias_method, "_unmemoized_#{method}", method)
 		variable_name = "@@memoized_#{method}".sub(/\?/, '')
@@ -67,17 +73,39 @@ private
 		eval("#{variable_name} = nil")
 		eval("#{check_variable_name} = false")
 		source = %Q{
-		   def self.#{method}(*args)                                # def self.httpd(*args)
-		      if args.empty?                                        #    if args.empty?
-		         if !#{check_variable_name}                         #       if !@@has_memoized_httpd
-		            #{variable_name} = _unmemoized_#{method}.freeze #          @@memoized_httpd = _unmemoized_httpd.freeze
-		            #{check_variable_name} = true                   #          @@has_memoized_httpd = true
-		         end                                                #       end
-		         return #{variable_name}                            #       return @@memoized_httpd
-		      else                                                  #    else
-		         return _unmemoized_#{method}(*args)                #       return _unmemoized_httpd(*args)
-		      end                                                   #    end
-		   end                                                      # end
+		   def self.#{method}(*args)                                   # def self.httpd(*args)
+		      if args.empty?                                           #    if args.empty?
+		         if !#{check_variable_name}                            #       if !@@has_memoized_httpd
+		            cache_file = ".cache/#{method}"                    #          cache_file = ".cache/httpd"
+		            read_from_cache_file = false                       #          read_from_cache_file = false
+		            if #{cache_to_disk} && File.exist?(cache_file)     #          if #{cache_to_disk} && File.exist?(cache_file)
+		               cache_file_stat = File.stat(cache_file)         #             cache_file_stat = File.stat(cache_file)
+		               read_from_cache_file =                          #             read_from_cache_file =
+		                  Time.now - cache_file_stat.mtime < 3600 &&   #                Time.now - cache_file_stat.mtime < 3600 &&
+		                  cache_file_stat.mtime > THIS_FILE_MTIME      #                cache_file_stat.mtime > THIS_FILE_MTIME
+		            end                                                #             end
+		            if read_from_cache_file                            #          if read_from_cache_file
+		               data = File.read(cache_file)                    #             data = File.read(cache_file)
+		               #{variable_name} = Marshal.load(data).freeze    #             @@memoized_httpd = Marshal.load(data).freeze
+		               #{check_variable_name} = true                   #             @@has_memoized_httpd = true
+		            else                                               #          else
+		               #{variable_name} = _unmemoized_#{method}.freeze #             @@memoized_httpd = _unmemoized_httpd.freeze
+		               #{check_variable_name} = true                   #             @@has_memoized_httpd = true
+		               if #{cache_to_disk}                             #             if #{cache_to_disk}
+		                  if !File.directory?(".cache")                #                if !File.directory?(".cache")
+		                     Dir.mkdir(".cache")                       #                   Dir.mkdir(".cache")
+		                  end                                          #                end
+		                  File.open(cache_file, "wb") do |f|           #                File.open(cache_file, "wb") do |f|
+		                     f.write(Marshal.dump(#{variable_name}))   #                   f.write(Marshal.dump(@@memoized_httpd))
+		                  end                                          #                end
+		               end                                             #             end
+		            end                                                #          end
+		         end                                                   #       end
+		         return #{variable_name}                               #       return @@memoized_httpd
+		      else                                                     #    else
+		         return _unmemoized_#{method}(*args)                   #       return _unmemoized_httpd(*args)
+		      end                                                      #    end
+		   end                                                         # end
 		}
 		class_eval(source)
 	end
@@ -370,7 +398,7 @@ public
 	def self.compiler_supports_visibility_flag?
 		return try_compile(:c, '', '-fvisibility=hidden')
 	end
-	memoize :compiler_supports_visibility_flag?
+	memoize :compiler_supports_visibility_flag?, true
 	
 	# Compiler flags that should be used for compiling every C/C++ program,
 	# for portability reasons. These flags should be specified as last
@@ -433,7 +461,7 @@ public
 		end
 		return flags.compact.join(" ").strip
 	end
-	memoize :portability_cflags
+	memoize :portability_cflags, true
 	
 	# Linker flags that should be used for linking every C/C++ program,
 	# for portability reasons. These flags should be specified as last

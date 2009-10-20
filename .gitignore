@@ -2,6 +2,7 @@ references
 scgi_demo
 /test*.rb
 
+.cache
 *.o
 *.so
 *.bundle

@@ -772,6 +772,8 @@ spec = Gem::Specification.new do |s|
 		'ext/nginx/config',
 		'ext/boost/*.{hpp,TXT}',
 		'ext/boost/**/*.{hpp,cpp,pl,inl,ipp}',
+		'ext/google/*',
+		'ext/google/sparsehash/*',
 		'ext/oxt/*.hpp',
 		'ext/oxt/*.cpp',
 		'ext/oxt/detail/*.hpp',
