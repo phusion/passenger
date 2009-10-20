@@ -88,7 +88,7 @@ private
 	end
 	private_class_method :env_defined?
 	
-	def self.try_compile(language, source, flags)
+	def self.try_compile(language, source, flags = nil)
 		if language == :c
 			compiler = 'gcc'
 		elsif language == :cxx
@@ -377,6 +377,46 @@ public
 	# when invoking the compiler.
 	def self.portability_cflags
 		flags = ["-D_REENTRANT -I/usr/local/include"]
+		
+		# Google SparseHash flags.
+		# Figure out header for hash function object and its namespace.
+		# Based on stl_hash.m4 and stl_hash_fun.m4 in the Google SparseHash sources.
+		hash_namespace = nil
+		ok = false
+		['__gnu_cxx', '', 'std', 'stdext'].each do |namespace|
+			['ext/hash_map', 'hash_map'].each do |hash_map_header|
+				ok = try_compile(:cxx, %Q{
+					#include <#{hash_map_header}>
+					int
+					main() {
+						#{namespace}::hash_map<int, int> m;
+						return 0;
+					}
+				})
+				if ok
+					hash_namespace = namespace
+					flags << "-DHASH_NAMESPACE=\"#{namespace}\""
+				end
+			end
+			break if ok
+		end
+		['ext/hash_fun.h', 'functional', 'tr1/functional',
+		 'ext/stl_hash_fun.h', 'hash_fun.h', 'stl_hash_fun.h',
+		 'stl/_hash_fun.h'].each do |hash_function_header|
+			ok = try_compile(:cxx, %Q{
+				#include <#{hash_function_header}>
+				int
+				main() {
+					#{hash_namespace}::hash<int>()(5);
+					return 0;
+				}
+			})
+			if ok
+				flags << "-DHASH_FUN_H=\"<#{hash_function_header}>\""
+				break
+			end
+		end
+		
 		if RUBY_PLATFORM =~ /solaris/
 			flags << '-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -D__SOLARIS__ -D_FILE_OFFSET_BITS=64'
 			flags << '-DBOOST_HAS_STDINT_H' unless RUBY_PLATFORM =~ /solaris2.9/

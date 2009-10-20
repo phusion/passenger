@@ -45,6 +45,20 @@ private:
 	string::size_type len;
 	
 public:
+	/** A hash function object for StaticString. */
+	struct Hash {
+		size_t operator()(const StaticString &str) const {
+			size_t result = 0;
+			const char *data = str.content;
+			const char *end  = data + str.len;
+			while (data != end) {
+				result = result * 33 + *data;
+				data++;
+			}
+			return result;
+		}
+	};
+	
 	StaticString() {
 		content = "";
 		len = 0;

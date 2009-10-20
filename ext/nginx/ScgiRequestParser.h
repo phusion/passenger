@@ -23,14 +23,17 @@
  *  THE SOFTWARE.
  */
 
+#include <google/dense_hash_map>
+
 #include <string>
 #include <map>
 
 #include "StaticString.h"
 
-using namespace std;
-
 namespace Passenger {
+
+using namespace std;
+using namespace google;
 
 /**
  * A parser for SCGI requests. It parses the request header and ignores the
@@ -92,12 +95,14 @@ public:
 	};
 	
 private:
+	typedef dense_hash_map<StaticString, StaticString, StaticString::Hash> HeaderMap;
+	
 	State state;
 	char lengthStringBuffer[sizeof("4294967296")];
 	unsigned int lengthStringBufferSize;
 	unsigned long headerSize;
 	string headerBuffer;
-	map<StaticString, StaticString> headers;
+	HeaderMap headers;
 	
 	static inline bool isDigit(char byte) {
 		return byte >= '0' && byte <= '9';
@@ -106,7 +111,7 @@ private:
 	/**
 	 * Parse the given header data into key-value pairs.
 	 */
-	bool parseHeaderData(const string &data, map<StaticString, StaticString> &output) {
+	bool parseHeaderData(const string &data, HeaderMap &output) {
 		bool isName = true; // Whether we're currently expecting a name or a value.
 		const char *startOfString, *current, *end;
 		StaticString key, value;
@@ -195,6 +200,7 @@ public:
 		state = READING_LENGTH_STRING;
 		lengthStringBufferSize = 0;
 		headerSize = 0;
+		headers.set_empty_key("");
 	}
 	
 	/**
@@ -280,7 +286,7 @@ public:
 	 * @pre getState() == DONE
 	 */
 	StaticString getHeader(const StaticString &name) const {
-		map<StaticString, StaticString>::const_iterator it(headers.find(name));
+		HeaderMap::const_iterator it(headers.find(name));
 		if (it == headers.end()) {
 			return "";
 		} else {
