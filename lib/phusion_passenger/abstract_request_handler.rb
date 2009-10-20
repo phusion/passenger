@@ -301,11 +301,7 @@ private
 				@socket = UNIXServer.new(@socket_name)
 				@socket.listen(BACKLOG_SIZE)
 				@socket_type = "unix"
-				File.chmod(0600, @socket_name)
-				
-				# The SpawnManager class will set tighter permissions on the
-				# socket later on. See sendSpawnCommand in SpawnManager.h.
-				
+				File.chmod(0666, @socket_name)
 				done = true
 			rescue Errno::EADDRINUSE
 				# Do nothing, try again with another name.
