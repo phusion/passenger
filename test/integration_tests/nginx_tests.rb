@@ -97,6 +97,87 @@ describe "Phusion Passenger for Nginx" do
 		end
 	end
 	
+	describe "Rack application running in root URI" do
+		before :all do
+			@server = "http://passenger.test:#{@nginx.port}"
+			@stub = setup_stub('rack')
+			@nginx.add_server do |server|
+				server[:server_name] = "passenger.test"
+				server[:root]        = File.expand_path("#{@stub.app_root}/public")
+			end
+			@nginx.start
+		end
+		
+		after :all do
+			@stub.destroy
+		end
+		
+		before :each do
+			@stub.reset
+		end
+		
+		it_should_behave_like "HelloWorld Rack application"
+	end
+	
+	describe "Rack application running in sub-URI" do
+		before :all do
+			FileUtils.rm_rf('tmp.webdir')
+			FileUtils.mkdir_p('tmp.webdir')
+			@stub = setup_stub('rack')
+			@nginx.add_server do |server|
+				FileUtils.ln_s(File.expand_path(@stub.app_root) + "/public", 'tmp.webdir/rack')
+				server[:server_name] = "passenger.test"
+				server[:root]        = File.expand_path('tmp.webdir')
+				server[:passenger_base_uri] = "/rack"
+			end
+			@nginx.start
+			@server = "http://passenger.test:#{@nginx.port}/rack"
+		end
+		
+		after :all do
+			@stub.destroy
+			FileUtils.rm_rf('tmp.webdir')
+		end
+		
+		before :each do
+			@stub.reset
+		end
+		
+		it_should_behave_like "HelloWorld Rack application"
+	end
+	
+	describe "various features" do
+		before :all do
+			@server = "http://passenger.test:#{@nginx.port}"
+			@stub = setup_stub('rack')
+			@nginx.add_server do |server|
+				server[:server_name] = "passenger.test"
+				server[:root]        = File.expand_path("#{@stub.app_root}/public")
+			end
+			@nginx.start
+		end
+		
+		after :all do
+			@stub.destroy
+		end
+		
+		before :each do
+			@stub.reset
+			File.touch("#{@stub.app_root}/tmp/restart.txt", 1 + rand(100000))
+		end
+		
+		it "sets ENV['SERVER_SOFTWARE']" do
+			File.write("#{@stub.app_root}/config.ru", %q{
+				server_software = ENV['SERVER_SOFTWARE']
+				app = lambda do |env|
+					[200, { "Content-Type" => "text/plain" }, [server_software]]
+				end
+				run app
+			})
+			get('/').should =~ /nginx/i
+		end
+	end
+	
 	
 	##### Helper methods #####
 	
