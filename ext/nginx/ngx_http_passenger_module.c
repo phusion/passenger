@@ -144,6 +144,42 @@ save_master_process_pid(ngx_cycle_t *cycle) {
 }
 
 /**
+ * This function is called after forking and just before exec()ing the helper server.
+ */
+static void
+redirect_output_to_log_file(void *arg) {
+    ngx_cycle_t *cycle = (void *) arg;
+    ngx_str_t   *log_filename;
+    FILE        *log_file;
+    
+    /* At this point, stdout and stderr may still point to the console.
+     * Make sure that they're both redirected to the log file.
+     */
+    log_file = NULL;
+    log_filename = &cycle->new_log.file->name;
+    if (log_filename->len > 0) {
+        log_file = fopen((const char *) log_filename->data, "a");
+        if (log_file == NULL) {
+            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                          "could not open the error log file for writing");
+        }
+    }
+    if (log_file == NULL) {
+        /* If the log file cannot be opened then we redirect stdout
+         * and stderr to /dev/null, because if the user disconnects
+         * from the console on which Nginx is started, then on Linux
+         * any writes to stdout or stderr will result in an EIO error.
+         */
+        log_file = fopen("/dev/null", "w");
+    }
+    if (log_file != NULL) {
+        dup2(fileno(log_file), 1);
+        dup2(fileno(log_file), 2);
+        fclose(log_file);
+    }
+}
+
+/**
  * Start the helper server and save its runtime information into various variables.
  *
  * @pre The helper server isn't already started.
@@ -174,6 +210,8 @@ start_helper_server(ngx_cycle_t *cycle) {
         passenger_root, ruby, passenger_main_conf.max_pool_size,
         passenger_main_conf.max_instances_per_app,
         passenger_main_conf.pool_idle_time,
+        redirect_output_to_log_file,
+        cycle,
         &error_message);
     if (!ret) {
         ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno, "%s", error_message);

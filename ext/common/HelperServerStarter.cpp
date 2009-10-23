@@ -29,14 +29,21 @@ helper_server_starter_start(HelperServerStarter *hps,
                             const char *rubyCommand, unsigned int maxPoolSize,
                             unsigned int maxInstancesPerApp,
                             unsigned int poolIdleTime,
+                            const AfterForkCallback afterFork,
+                            void *callbackArgument,
                             char **errorMessage)
 {
 	Passenger::HelperServerStarter *helperServerStarter = (Passenger::HelperServerStarter *) hps;
 	this_thread::disable_syscall_interruption dsi;
 	try {
+		function<void ()> afterForkFunctionObject;
+		
+		if (afterFork != NULL) {
+			afterForkFunctionObject = boost::bind(afterFork, callbackArgument);
+		}
 		helperServerStarter->start(logLevel, webServerPid, tempDir, userSwitching,
 			defaultUser, workerUid, workerGid, passengerRoot, rubyCommand,
-			maxPoolSize, maxInstancesPerApp, poolIdleTime);
+			maxPoolSize, maxInstancesPerApp, poolIdleTime, afterForkFunctionObject);
 		return 1;
 	} catch (const Passenger::SystemException &e) {
 		errno = e.code();

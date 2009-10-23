@@ -147,20 +147,54 @@ end
 ##### the Apache module and the Nginx helper server.
 
 def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil)
+	components = {
+		'Logging.o' => %w(
+			Logging.cpp
+			Logging.h
+		),
+		'SystemTime.o' => %w(
+			SystemTime.cpp
+			SystemTime.h
+		),
+		'CachedFileStat.o' => %w(
+			CachedFileStat.cpp
+			CachedFileStat.h
+			CachedFileStat.hpp
+		),
+		'Base64.o' => %w(
+			Base64.cpp
+			Base64.h
+		),
+		'Utils.o' => %w(
+			Utils.cpp
+			Utils.h
+		),
+		'AccountsDatabase.o' => %w(
+			AccountsDatabase.cpp
+			AccountsDatabase.h
+		),
+		'HelperServerStarter.o' => %w(
+			HelperServerStarter.cpp
+			HelperServerStarter.h
+			HelperServerStarter.hpp
+		)
+	}
+	
 	static_library = "#{output_dir}.a"
 	
 	# Define compilation targets for the object files in libpassenger_common.
 	flags =  "-Iext -Iext/common #{extra_compiler_flags} "
 	flags << "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 	common_object_files = []
-	['Utils.cpp', 'Logging.cpp', 'SystemTime.cpp', 'CachedFileStat.cpp',
-	 'Base64.cpp', 'AccountsDatabase.cpp', 'HelperServerStarter.cpp'].each do |source_file|
-		object_name = source_file.sub(/\.cpp$/, '.o')
+	components.each_pair do |object_name, dependencies|
+		source_file = dependencies[0]
 		object_file = "#{output_dir}/#{object_name}"
-		header_file = source_file.sub(/\.cpp$/, '.h')
 		common_object_files << object_file
+		dependencies = dependencies.map do |dep|
+			"ext/common/#{dep}"
+		end
 		
-		file object_file => ["ext/common/#{source_file}", "ext/common/#{header_file}"] do
+		file object_file => dependencies do
 			sh "mkdir -p #{output_dir}" if !File.directory?(output_dir)
 			compile_cxx("ext/common/#{source_file}", "#{flags} -o #{object_file}")
 		end

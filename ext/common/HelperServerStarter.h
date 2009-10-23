@@ -17,6 +17,8 @@ typedef enum {
 	HSST_NGINX
 } HelperServerStarterType;
 
+typedef void (*AfterForkCallback)(void *);
+
 HelperServerStarter *helper_server_starter_new(HelperServerStarterType type, char **error_message);
 int  helper_server_starter_start(HelperServerStarter *hps,
                                  unsigned int logLevel, pid_t webServerPid,
@@ -26,6 +28,8 @@ int  helper_server_starter_start(HelperServerStarter *hps,
                                  const char *rubyCommand, unsigned int maxPoolSize,
                                  unsigned int maxInstancesPerApp,
                                  unsigned int poolIdleTime,
+                                 const AfterForkCallback afterFork,
+                                 void *callbackArgument,
                                  char **errorMessage);
 const char *helper_server_starter_get_request_socket_filename(HelperServerStarter *hps, unsigned int *size);
 const char *helper_server_starter_get_request_socket_password(HelperServerStarter *hps, unsigned int *size);

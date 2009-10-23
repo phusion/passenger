@@ -25,6 +25,7 @@
 #ifndef _PASSENGER_HELPER_SERVER_STARTER_HPP_
 #define _PASSENGER_HELPER_SERVER_STARTER_HPP_
 
+#include <boost/function.hpp>
 #include <oxt/system_calls.hpp>
 #include <string>
 #include <vector>
@@ -44,6 +45,7 @@
 namespace Passenger {
 
 using namespace std;
+using namespace boost;
 using namespace oxt;
 
 /**
@@ -232,7 +234,8 @@ public:
 	           bool userSwitching, const string &defaultUser, uid_t workerUid, gid_t workerGid,
 	           const string &passengerRoot, const string &rubyCommand,
 	           unsigned int maxPoolSize, unsigned int maxInstancesPerApp,
-	           unsigned int poolIdleTime)
+	           unsigned int poolIdleTime,
+	           const function<void ()> &afterFork = function<void ()>())
 	{
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
@@ -255,7 +258,8 @@ public:
 			// Child
 			long max_fds, i;
 			
-			// Make sure the feedback fd is 3 and close all other file descriptors.
+			// Make sure the feedback fd is 3 and close all file descriptors
+			// except stdin, stdout, stderr and 3.
 			syscalls::close(fds[0]);
 			
 			if (fds[1] != 3) {
@@ -280,6 +284,13 @@ public:
 				if (i != fds[1]) {
 					syscalls::close(i);
 				}
+			}
+			
+			if (afterFork) {
+				afterFork();
+			} else {
+				printf("empty\n");
+				fflush(stdout);
 			}
 			
 			execl(watchdogFilename.c_str(),
