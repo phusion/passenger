@@ -147,7 +147,7 @@ save_master_process_pid(ngx_cycle_t *cycle) {
  * This function is called after forking and just before exec()ing the helper server.
  */
 static void
-redirect_output_to_log_file(void *arg) {
+starting_helper_server_after_fork(void *arg) {
     ngx_cycle_t *cycle = (void *) arg;
     ngx_str_t   *log_filename;
     FILE        *log_file;
@@ -177,6 +177,10 @@ redirect_output_to_log_file(void *arg) {
         dup2(fileno(log_file), 2);
         fclose(log_file);
     }
+    
+    /* Set SERVER_SOFTWARE so that application processes know what web
+     * server they're running on during startup. */
+    setenv("SERVER_SOFTWARE", NGINX_VER, 1);
 }
 
 /**
@@ -210,7 +214,7 @@ start_helper_server(ngx_cycle_t *cycle) {
         passenger_root, ruby, passenger_main_conf.max_pool_size,
         passenger_main_conf.max_instances_per_app,
         passenger_main_conf.pool_idle_time,
-        redirect_output_to_log_file,
+        starting_helper_server_after_fork,
         cycle,
         &error_message);
     if (!ret) {
