@@ -9,8 +9,10 @@ Release 3.0.0
  * Better ApplicationPool multicore performance: critical section made smaller.
  * OS X kernel bug workaround; we now use Unix sockets again.
  * Ruby RequestHandler optimizations.
+ * Ruby MessageChannel optimizations.
  * [Apache] Fix some compatibility problems with mod_autoindex: it no longer
    interferes with our own reporting of filesystem errors.
+ * Zero-copy I/O architecture.
 
 
 Release 2.2.6
