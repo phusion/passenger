@@ -54,7 +54,10 @@ class RequestHandler < AbstractRequestHandler
 	ON             = "on"     # :nodoc:
 	ONE            = "1"      # :nodoc:
 	CRLF           = "\r\n"   # :nodoc:
-	EMPTY          = ""       # :nodoc:
+	NEWLINE        = "\n"     # :nodoc:
+	STATUS         = "Status: "       # :nodoc:
+	X_POWERED_BY   = "X-Powered-By: "   # :nodoc:
+	NAME_VALUE_SEPARATOR = ": "       # :nodoc:
 
 	# +app+ is the Rack application object.
 	def initialize(owner_pipe, app, options = {})
@@ -95,25 +98,34 @@ protected
 			
 			status, headers, body = @app.call(env)
 			begin
-				data = "Status: #{status.to_i}#{CRLF}"
-				data << "X-Powered-By: #{PASSENGER_HEADER}#{CRLF}"
+				headers_output = [
+					STATUS, status.to_i.to_s, CRLF,
+					X_POWERED_BY, PASSENGER_HEADER, CRLF
+				]
 				headers.each do |key, values|
 					if values.is_a?(String)
-						values = values.split("\n")
+						values = values.split(NEWLINE)
 					end
 					values.each do |value|
-						data << "#{key}: #{value}#{CRLF}"
+						headers_output << key
+						headers_output << NAME_VALUE_SEPARATOR
+						headers_output << value
+						headers_output << CRLF
 					end
 				end
-				data << CRLF
-				output.write(data)
-				data.replace(EMPTY)
+				headers_output << CRLF
 				
-				if body.is_a?(String)
-					output.write(body)
-				elsif body
-					body.each do |s|
-						output.write(s)
+				if body.is_a?(Array)
+					output.writev2(headers_output, body)
+				elsif body.is_a?(String)
+					headers_output << body
+					output.writev(headers_output)
+				else
+					output.writev(headers_output)
+					if body
+						body.each do |s|
+							output.write(s)
+						end
 					end
 				end
 			ensure

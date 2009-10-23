@@ -23,18 +23,18 @@
  *  THE SOFTWARE.
  */
 #include "ruby.h"
+#include "rubysig.h"
 #include <sys/types.h>
 #include <sys/un.h>
 #include <sys/socket.h>
+#include <sys/uio.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-#ifdef __OpenBSD__
-	// OpenBSD needs this for 'struct iovec'. Apparently it isn't
-	// always included by unistd.h and sys/types.h.
-	#include <sys/uio.h>
-#endif
+#include <alloca.h>
+#include <limits.h>
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #ifndef RARRAY_LEN
@@ -45,6 +45,10 @@
 #endif
 #ifndef RSTRING_LEN
 	#define RSTRING_LEN(str) RSTRING(str)->len
+#endif
+#ifndef IOV_MAX
+	/* Linux doesn't define IOV_MAX in limits.h for some reason. */
+	#define IOV_MAX sysconf(_SC_IOV_MAX)
 #endif
 
 static VALUE mPassenger;
@@ -317,6 +321,223 @@ split_by_null_into_hash(VALUE self, VALUE data) {
 	return result;
 }
 
+typedef struct {
+	/* The IO vectors in this group. */
+	struct iovec *io_vectors;
+	
+	/* The number of IO vectors in io_vectors. */
+	unsigned int count;
+	
+	/* The combined size of all IO vectors in this group. */
+	ssize_t      total_size;
+} IOVectorGroup;
+
+/* Given that _bytes_written_ bytes in _group_ had been successfully written,
+ * update the information in _group_ so that the next writev() call doesn't
+ * write the already written bytes.
+ */
+static void
+update_group_written_info(IOVectorGroup *group, ssize_t bytes_written) {
+	unsigned int i;
+	size_t counter;
+	struct iovec *current_vec;
+	
+	/* Find the last vector that contains data that had already been written. */
+	counter = 0;
+	for (i = 0; i < group->count; i++) {
+		counter += group->io_vectors[i].iov_len;
+		if (counter == bytes_written) {
+			/* Found. In fact, all vectors up to this one contain exactly
+			 * bytes_written bytes. So discard all these vectors.
+			 */
+			group->io_vectors += i + 1;
+			group->count -= i + 1;
+			group->total_size -= bytes_written;
+			return;
+		} else if (counter > bytes_written) {
+			/* Found. Discard all vectors before this one, and
+			 * truncate this vector.
+			 */
+			group->io_vectors += i;
+			group->count -= i;
+			group->total_size -= bytes_written;
+			current_vec = &group->io_vectors[0];
+			current_vec->iov_base = ((char *) current_vec->iov_base) +
+				current_vec->iov_len - (counter - bytes_written);
+			current_vec->iov_len = counter - bytes_written;
+			return;
+		}
+	}
+	rb_raise(rb_eRuntimeError, "writev() returned an unexpected result");
+}
+
+static VALUE
+f_generic_writev(VALUE fd, VALUE *array_of_components, unsigned int count) {
+	VALUE components, str;
+	unsigned int total_size, total_components, ngroups;
+	IOVectorGroup *groups;
+	unsigned int i, j, group_offset, vector_offset;
+	ssize_t ret;
+	int done, fd_num, e;
+	
+	/* First determine the number of components that we have. */
+	total_components   = 0;
+	for (i = 0; i < count; i++) {
+		total_components += RARRAY_LEN(array_of_components[i]);
+	}
+	if (total_components == 0) {
+		return NUM2INT(0);
+	}
+	
+	/* A single writev() call can only accept IOV_MAX vectors, so we
+	 * may have to split the components into groups and perform
+	 * multiple writev() calls, one per group. Determine the number
+	 * of groups needed, how big each group should be and allocate
+	 * memory for them.
+	 */
+	if (total_components % IOV_MAX == 0) {
+		ngroups = total_components / IOV_MAX;
+		groups  = alloca(ngroups * sizeof(IOVectorGroup));
+		if (groups == NULL) {
+			rb_raise(rb_eNoMemError, "Insufficient stack space.");
+		}
+		memset(groups, 0, ngroups * sizeof(IOVectorGroup));
+		for (i = 0; i < ngroups; i++) {
+			groups[i].io_vectors = alloca(IOV_MAX * sizeof(struct iovec));
+			if (groups[i].io_vectors == NULL) {
+				rb_raise(rb_eNoMemError, "Insufficient stack space.");
+			}
+			groups[i].count = IOV_MAX;
+		}
+	} else {
+		ngroups = total_components / IOV_MAX + 1;
+		groups  = alloca(ngroups * sizeof(IOVectorGroup));
+		if (groups == NULL) {
+			rb_raise(rb_eNoMemError, "Insufficient stack space.");
+		}
+		memset(groups, 0, ngroups * sizeof(IOVectorGroup));
+		for (i = 0; i < ngroups - 1; i++) {
+			groups[i].io_vectors = alloca(IOV_MAX * sizeof(struct iovec));
+			if (groups[i].io_vectors == NULL) {
+				rb_raise(rb_eNoMemError, "Insufficient stack space.");
+			}
+			groups[i].count = IOV_MAX;
+		}
+		groups[ngroups - 1].io_vectors = alloca((total_components % IOV_MAX) * sizeof(struct iovec));
+		if (groups[ngroups - 1].io_vectors == NULL) {
+			rb_raise(rb_eNoMemError, "Insufficient stack space.");
+		}
+		groups[ngroups - 1].count = total_components % IOV_MAX;
+	}
+	
+	/* Now distribute the components among the groups, filling the iovec
+	 * array in each group. Also calculate the total data size while we're
+	 * at it.
+	 */
+	total_size    = 0;
+	group_offset  = 0;
+	vector_offset = 0;
+	for (i = 0; i < count; i++) {
+		components = array_of_components[i];
+		for (j = 0; j < RARRAY_LEN(components); j++) {
+			str = rb_ary_entry(components, j);
+			str = rb_obj_as_string(str);
+			total_size += RSTRING_LEN(str);
+			groups[group_offset].io_vectors[vector_offset].iov_base = RSTRING_PTR(str);
+			groups[group_offset].io_vectors[vector_offset].iov_len  = RSTRING_LEN(str);
+			groups[group_offset].total_size += RSTRING_LEN(str);
+			vector_offset++;
+			if (vector_offset == groups[group_offset].count) {
+				group_offset++;
+				vector_offset = 0;
+			}
+		}
+	}
+	
+	if (total_size > SSIZE_MAX) {
+		rb_raise(rb_eArgError, "The total size of the components may not be larger than SSIZE_MAX.");
+	}
+	
+	/* Write the data. */
+	fd_num = NUM2INT(fd);
+	for (i = 0; i < ngroups; i++) {
+		/* Wait until the file descriptor becomes writable before writing things. */
+		rb_thread_fd_writable(fd_num);
+		
+		done = 0;
+		while (!done) {
+			TRAP_BEG;
+			ret = writev(fd_num, groups[i].io_vectors, groups[i].count);
+			TRAP_END;
+			if (ret == -1) {
+				/* If the error is something like EAGAIN, yield to another
+				 * thread until the file descriptor becomes writable again.
+				 * In case of other errors, raise an exception.
+				 */
+				if (!rb_io_wait_writable(fd_num)) {
+					rb_sys_fail("writev()");
+				}
+			} else if (ret < groups[i].total_size) {
+				/* Not everything in this group has been written. Retry without
+				 * writing the bytes that been successfully written.
+				 */
+				e = errno;
+				update_group_written_info(&groups[i], ret);
+				errno = e;
+				rb_io_wait_writable(fd_num);
+			} else {
+				done = 1;
+			}
+		}
+	}
+	return INT2NUM(total_size);
+}
+
+/**
+ * Writes all of the strings in the +components+ array into the given file
+ * descriptor using the +writev()+ system call. Unlike IO#write, this method
+ * does not require one to concatenate all those strings into a single buffer
+ * in order to send the data in a single system call. Thus, #writev is a great
+ * way to perform zero-copy I/O.
+ *
+ * Unlike the raw writev() system call, this method ensures that all given
+ * data is written before returning, by performing multiple writev() calls
+ * and whatever else is necessary.
+ *
+ *   writev(@socket.fileno, ["hello ", "world", "\n"])
+ */
+static VALUE
+f_writev(VALUE self, VALUE fd, VALUE components) {
+	return f_generic_writev(fd, &components, 1);
+}
+
+/**
+ * Like #writev, but accepts two arrays. The data is written in the given order.
+ *
+ *   writev2(@socket.fileno, ["hello ", "world", "\n"], ["another ", "message\n"])
+ */
+static VALUE
+f_writev2(VALUE self, VALUE fd, VALUE components1, VALUE components2) {
+	VALUE array_of_components[2] = { components1, components2 };
+	return f_generic_writev(fd, array_of_components, 2);
+}
+
+/**
+ * Like #writev, but accepts three arrays. The data is written in the given order.
+ *
+ *   writev3(@socket.fileno,
+ *     ["hello ", "world", "\n"],
+ *     ["another ", "message\n"],
+ *     ["yet ", "another ", "one", "\n"])
+ */
+static VALUE
+f_writev3(VALUE self, VALUE fd, VALUE components1, VALUE components2, VALUE components3) {
+	VALUE array_of_components[3] = { components1, components2, components3 };
+	return f_generic_writev(fd, array_of_components, 3);
+}
+
+
+
 /***************************/
 
 void
@@ -338,7 +559,12 @@ Init_native_support() {
 	rb_define_singleton_method(mNativeSupport, "close_all_file_descriptors", close_all_file_descriptors, 1);
 	rb_define_singleton_method(mNativeSupport, "disable_stdio_buffering", disable_stdio_buffering, 0);
 	rb_define_singleton_method(mNativeSupport, "split_by_null_into_hash", split_by_null_into_hash, 1);
+	rb_define_singleton_method(mNativeSupport, "writev", f_writev, 2);
+	rb_define_singleton_method(mNativeSupport, "writev2", f_writev2, 3);
+	rb_define_singleton_method(mNativeSupport, "writev3", f_writev3, 4);
 	
 	/* The maximum length of a Unix socket path, including terminating null. */
 	rb_define_const(mNativeSupport, "UNIX_PATH_MAX", INT2NUM(sizeof(addr.sun_path)));
+	/* The maximum size of the data that may be passed to #writev. */
+	rb_define_const(mNativeSupport, "SSIZE_MAX", LL2NUM(SSIZE_MAX));
 }
