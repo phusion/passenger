@@ -843,6 +843,8 @@ main(int argc, char *argv[]) {
 		
 		ignoreSigpipe();
 		setup_syscall_interruption_support();
+		setvbuf(stdout, NULL, _IONBF, 0);
+		setvbuf(stderr, NULL, _IONBF, 0);
 		
 		unsigned int   logLevel   = atoi(argv[1]);
 		FileDescriptor feedbackFd = atoi(argv[2]);

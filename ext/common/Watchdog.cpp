@@ -465,6 +465,8 @@ main(int argc, char *argv[]) {
 	disableOomKiller();
 	ignoreSigpipe();
 	setup_syscall_interruption_support();
+	setvbuf(stdout, NULL, _IONBF, 0);
+	setvbuf(stderr, NULL, _IONBF, 0);
 	setLogLevel(logLevel);
 	
 	// Change process title.
