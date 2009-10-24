@@ -40,7 +40,8 @@ static unsigned int maxInstancesPerApp;
 static unsigned int poolIdleTime;
 
 static boost::mutex globalMutex;
-static bool exitGracefully = false;
+static bool  exitGracefully = false;
+static pid_t helperServerPid = 0;
 
 struct HelperServerFeedback {
 	FileDescriptor feedbackFd;
@@ -326,6 +327,9 @@ watchdogMainLoop() {
 				this_thread::restore_syscall_interruption rsi(dsi);
 				pid = startHelperServer(helperServerFilename, generation->getNumber(),
 					requestServerPassword, messageServerPassword, feedback);
+				globalMutex.lock();
+				helperServerPid = pid;
+				globalMutex.unlock();
 			} catch (const thread_interrupted &) {
 				return;
 			}
@@ -338,9 +342,15 @@ watchdogMainLoop() {
 					relayFeedback(requestServerPassword, messageServerPassword,
 						serverInstanceDir, generation, feedback);
 				} catch (const thread_interrupted &) {
+					globalMutex.lock();
+					helperServerPid = 0;
+					globalMutex.unlock();
 					killAndWait(pid);
 					return;
 				} catch (...) {
+					globalMutex.lock();
+					helperServerPid = 0;
+					globalMutex.unlock();
 					killAndWait(pid);
 					throw;
 				}
@@ -371,6 +381,9 @@ watchdogMainLoop() {
 					cleanupHelperServerInBackground(serverInstanceDir, generation,
 						feedback.feedbackFd);
 				} else {
+					globalMutex.lock();
+					helperServerPid = 0;
+					globalMutex.unlock();
 					/* Looks like the web server crashed. Let's kill the
 					 * entire HelperServer process group (i.e. HelperServer and all
 					 * descendant processes).
@@ -388,19 +401,21 @@ watchdogMainLoop() {
 				return;
 			}
 			
-			if (ret == -1) {
-				P_WARN("Phusion Passenger helper server crashed or killed for "
-					"an unknown reason, restarting it...");
-			} else if (WIFEXITED(status)) {
-				if (WEXITSTATUS(status) == 0) {
-					done = true;
+			if (!this_thread::interruption_requested()) {
+				if (ret == -1) {
+					P_WARN("Phusion Passenger helper server crashed or killed for "
+						"an unknown reason, restarting it...");
+				} else if (WIFEXITED(status)) {
+					if (WEXITSTATUS(status) == 0) {
+						done = true;
+					} else {
+						P_WARN("Phusion Passenger helper server crashed with exit status " <<
+							WEXITSTATUS(status) << ", restarting it...");
+					}
 				} else {
-					P_WARN("Phusion Passenger helper server crashed with exit status " <<
-						WEXITSTATUS(status) << ", restarting it...");
+					P_WARN("Phusion Passenger helper server crashed with signal " <<
+						getSignalName(WTERMSIG(status)) << ", restarting it...");
 				}
-			} else {
-				P_WARN("Phusion Passenger helper server crashed with signal " <<
-					getSignalName(WTERMSIG(status)) << ", restarting it...");
 			}
 		}
 	} catch (const tracable_exception &e) {
@@ -482,15 +497,35 @@ main(int argc, char *argv[]) {
 	this_thread::disable_syscall_interruption dsi;
 	char x;
 	int ret = syscalls::read(feedbackFd, &x, 1);
+	bool threadJoined;
+	pid_t pid;
+	
 	if (ret == 1) {
 		// The web server exited gracefully.
 		globalMutex.lock();
 		exitGracefully = true;
 		globalMutex.unlock();
-		watchdogThread.interrupt_and_join();
+		threadJoined = watchdogThread.interrupt_and_join(5000);
 	} else {
 		// The web server exited abnormally.
-		watchdogThread.interrupt_and_join();
+		threadJoined = watchdogThread.interrupt_and_join(5000);
+	}
+	if (!threadJoined) {
+		/* On OS X, waitpid() is sometimes non-interruptable for
+		 * some strange reason. Kernel bug? In any case, we forcefully
+		 * kill the HelperServer so that we can at least move on.
+		 */
+		globalMutex.lock();
+		pid = helperServerPid;
+		globalMutex.unlock();
+		
+		if (pid != 0) {
+			P_WARN("Unable to interrupt waitpid(); killing HelperServer's process group...");
+			if (syscalls::killpg(pid, SIGKILL) == -1) {
+				syscalls::kill(pid, SIGKILL);
+			}
+			watchdogThread.interrupt_and_join();
+		}
 	}
 	return 0;
 }

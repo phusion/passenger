@@ -235,6 +235,30 @@ public:
 	}
 	
 	/**
+	 * Keep interrupting the thread until it's done, then join it.
+	 * This method will keep trying for at most <em>timeout</em> milliseconds.
+	 *
+	 * @param timeout The maximum number of milliseconds that this method
+	 *                should keep trying.
+	 * @return True if the thread was successfully joined, false if the
+	 *         timeout has been reached.
+	 * @throws boost::thread_interrupted The calling thread has been
+	 *    interrupted before we could join this thread.
+	 */
+	bool interrupt_and_join(unsigned int timeout) {
+		bool joined = false, timed_out = false;
+		boost::posix_time::ptime deadline =
+			boost::posix_time::microsec_clock::local_time() +
+			boost::posix_time::millisec(timeout);
+		while (!joined && !timed_out) {
+			interrupt();
+			joined = timed_join(boost::posix_time::millisec(10));
+			timed_out = !joined && boost::posix_time::microsec_clock::local_time() > deadline;
+		}
+		return joined;
+	}
+	
+	/**
 	 * Interrupt and join multiple threads in a way that's more efficient than calling
 	 * interrupt_and_join() on each thread individually. It iterates over all threads,
 	 * interrupts each one without joining it, then waits until at least one thread
