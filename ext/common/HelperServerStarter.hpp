@@ -288,9 +288,6 @@ public:
 			
 			if (afterFork) {
 				afterFork();
-			} else {
-				printf("empty\n");
-				fflush(stdout);
 			}
 			
 			execl(watchdogFilename.c_str(),
