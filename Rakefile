@@ -150,34 +150,32 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 	components = {
 		'Logging.o' => %w(
 			Logging.cpp
-			Logging.h
-		),
+			Logging.h),
 		'SystemTime.o' => %w(
 			SystemTime.cpp
-			SystemTime.h
-		),
+			SystemTime.h),
 		'CachedFileStat.o' => %w(
 			CachedFileStat.cpp
 			CachedFileStat.h
-			CachedFileStat.hpp
-		),
+			CachedFileStat.hpp),
 		'Base64.o' => %w(
 			Base64.cpp
-			Base64.h
-		),
+			Base64.h),
 		'Utils.o' => %w(
 			Utils.cpp
-			Utils.h
-		),
+			Utils.h),
 		'AccountsDatabase.o' => %w(
 			AccountsDatabase.cpp
-			AccountsDatabase.h
-		),
+			AccountsDatabase.h),
 		'HelperServerStarter.o' => %w(
 			HelperServerStarter.cpp
 			HelperServerStarter.h
-			HelperServerStarter.hpp
-		)
+			HelperServerStarter.hpp),
+		'BCrypt.o' => %w(
+			BCrypt.cpp
+			BCrypt.h
+			Blowfish.h
+			Blowfish.c)
 	}
 	
 	static_library = "#{output_dir}.a"
