@@ -73,8 +73,7 @@ public:
 	 * @throws boost::thread_resource_error Something went wrong.
 	 */
 	void unlock() {
-		__sync_synchronize(); // Memory barrier.
-		exclusion = 0;
+		__sync_lock_release(&exclusion);
 	}
 };
 
