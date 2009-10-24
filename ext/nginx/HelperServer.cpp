@@ -65,40 +65,6 @@ using namespace Passenger;
 
 struct ClientDisconnectedException { };
 
-
-class TimerUpdateHandler: public MessageServer::Handler {
-private:
-	Timer &timer;
-	unsigned int clients;
-	
-public:
-	TimerUpdateHandler(Timer &_timer): timer(_timer) {
-		clients = 0;
-	}
-	
-	virtual MessageServer::ClientContextPtr newClient(MessageServer::CommonClientContext &commonContext) {
-		clients++;
-		timer.stop();
-		return MessageServer::ClientContextPtr();
-	}
-	
-	virtual void clientDisconnected(MessageServer::CommonClientContext &commonContext,
-	                                MessageServer::ClientContextPtr &handlerSpecificContext)
-	{
-		clients--;
-		if (clients == 0) {
-			timer.start();
-		}
-	}
-	
-	virtual bool processMessage(MessageServer::CommonClientContext &commonContext,
-	                            MessageServer::ClientContextPtr &handlerSpecificContext,
-	                            const vector<string> &args)
-	{
-		return false;
-	}
-};
-
 class ExitHandler: public MessageServer::Handler {
 private:
 	EventFd &exitEvent;
@@ -164,6 +130,11 @@ private:
 	
 	/** This client's thread. */
 	oxt::thread *thr;
+	
+	/** A timer for measuring how long this worker thread has been doing
+	 * nothing (i.e. waiting for a connection).
+	 */
+	Timer inactivityTimer;
 	
 	/**
 	 * Attempts to accept a connection made by the client.
@@ -507,7 +478,9 @@ private:
 		try {
 			while (true) {
 				UPDATE_TRACE_POINT();
+				inactivityTimer.start();
 				FileDescriptor fd(acceptConnection());
+				inactivityTimer.stop();
 				handleRequest(fd);
 			}
 		} catch (const boost::thread_interrupted &) {
@@ -544,7 +517,9 @@ public:
 	 */
 	Client(unsigned int number, ApplicationPool::Ptr pool,
 	       const string &password, bool lowerPrivilege,
-	       const string &lowestUser, int serverSocket) {
+	       const string &lowestUser, int serverSocket)
+		: inactivityTimer(false)
+	{
 		this->number = number;
 		this->pool = pool;
 		this->password = password;
@@ -575,6 +550,14 @@ public:
 	oxt::thread *getThread() const {
 		return thr;
 	}
+	
+	unsigned long long inactivityTime() const {
+		return inactivityTimer.elapsed();
+	}
+	
+	void resetInactivityTimer() {
+		inactivityTimer.start();
+	}
 };
 
 typedef shared_ptr<Client> ClientPtr;
@@ -603,7 +586,6 @@ private:
 	MessageServerPtr messageServer;
 	shared_ptr<oxt::thread> messageServerThread;
 	EventFd exitEvent;
-	Timer exitTimer;
 	
 	string getRequestSocketFilename() const {
 		return generation->getPath() + "/request.socket";
@@ -691,6 +673,29 @@ private:
 		}
 	}
 	
+	void resetWorkerThreadInactivityTimers() {
+		set<ClientPtr>::iterator it;
+		
+		for (it = clients.begin(); it != clients.end(); it++) {
+			ClientPtr client = *it;
+			client->resetInactivityTimer();
+		}
+	}
+	
+	unsigned long long minWorkerThreadInactivityTime() const {
+		set<ClientPtr>::const_iterator it;
+		unsigned long long result = 0;
+		
+		for (it = clients.begin(); it != clients.end(); it++) {
+			ClientPtr client = *it;
+			unsigned long long inactivityTime = client->inactivityTime();
+			if (inactivityTime < result || it == clients.begin()) {
+				result = inactivityTime;
+			}
+		}
+		return result;
+	}
+	
 public:
 	Server(FileDescriptor feedbackFd, pid_t webServerPid, const string &tempDir,
 		bool userSwitching, const string &defaultUser, uid_t workerUid, gid_t workerGid,
@@ -728,7 +733,6 @@ public:
 		pool->setMaxPerApp(maxInstancesPerApp);
 		pool->setMaxIdleTime(poolIdleTime);
 		
-		messageServer->addHandler(ptr(new TimerUpdateHandler(exitTimer)));
 		messageServer->addHandler(ptr(new ApplicationPool::Server(pool)));
 		messageServer->addHandler(ptr(new BacktracesServer()));
 		messageServer->addHandler(ptr(new ExitHandler(exitEvent)));
@@ -802,10 +806,12 @@ public:
 			_exit(2); // In case killpg() fails.
 		} else {
 			/* We received an exit command. We want to exit 5 seconds after
-			 * the last client has disconnected, .
+			 * all worker threads have become inactive.
 			 */
-			exitTimer.start();
-			exitTimer.wait(5000);
+			resetWorkerThreadInactivityTimers();
+			while (minWorkerThreadInactivityTime() < 5000) {
+				syscalls::usleep(250000);
+			}
 		}
 	}
 };
