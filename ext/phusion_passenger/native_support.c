@@ -377,6 +377,7 @@ f_generic_writev(VALUE fd, VALUE *array_of_components, unsigned int count) {
 	unsigned int total_size, total_components, ngroups;
 	IOVectorGroup *groups;
 	unsigned int i, j, group_offset, vector_offset;
+	unsigned long long ssize_max;
 	ssize_t ret;
 	int done, fd_num, e;
 	
@@ -454,7 +455,9 @@ f_generic_writev(VALUE fd, VALUE *array_of_components, unsigned int count) {
 		}
 	}
 	
-	if (total_size > SSIZE_MAX) {
+	/* We don't compare to SSIZE_MAX directly in order to shut up a compiler warning on OS X Snow Leopard. */
+	ssize_max = SSIZE_MAX;
+	if (total_size > ssize_max) {
 		rb_raise(rb_eArgError, "The total size of the components may not be larger than SSIZE_MAX.");
 	}
 	
