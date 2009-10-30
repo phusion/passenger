@@ -70,6 +70,15 @@ explicitly define some special types:
     many requests, the application process will be shut down.
     A value of 0 indicates that there is no maximum.
 
+  * detached (boolean): If true, then it indicates that this Group is
+    no longer accessible via _domains_.
+    Set to false by the constructor.
+    Invariant:
+       (detached) == (This Group is accessible via _domains_.)
+       if detached:
+          for all process_info objects p that have once been in this.processes:
+              p.detached
+
 - ProcessInfo
   A compound type (class) which contains a reference to an application process
   object, as well as various metadata, such as iterators for various linked
@@ -97,9 +106,10 @@ explicitly define some special types:
   * ia_iterator - The iterator for this ProcessInfo in the linked list
     inactive_apps. This iterator is only valid if this ProcessInfo really is
     in that list.
-  * detached (boolean) - This ProcessInfo is still contained in the Group that
-    it belongs to, i.e. accessible via _domains_. If set to true then it means
-    that _iterator_ and _ia_iterator_ are no longer valid.
+  * detached (boolean) - If true, then it indicates that this ProcessInfo is
+    no longer accessible via _domains_; this implies that it's no longer
+    contained in its associated Group's _processes_ member, a), and that
+    _iterator_ and _ia_iterator_ are no longer valid.
     Set to false by the constructor.
     Invariant:
        (detached) == (This ProcessInfo is accessible via _domains_.)
@@ -144,6 +154,7 @@ information:
   
   Invariant:
      for all values g in groups:
+        !g.detached
         g.size <= count
 	for all i in g.processes:
            !i.detached
@@ -253,6 +264,7 @@ private function checkout_without_lock(app_root, options):
 				group.processes.remove(process_info.iterator)
 				process_info.detached = true
 				count--
+			group.detached = true
 			groups.remove(app_root)
 		Tell spawn server to reload code for app_root.
 		group = nil
@@ -330,6 +342,7 @@ private function checkout_without_lock(app_root, options):
 			processes = group.processes
 			processes.remove(process_info.iterator)
 			if processes.empty():
+				group.detached = true
 				groups.remove(process_info.process.app_root)
 			else:
 				group.size--
@@ -374,6 +387,7 @@ private function detach_without_lock(identifier):
 				processes.remove(process_info.iterator)
 				group.size--
 				if processes.empty():
+					group.detached = true
 					groups.remove(process_info.process.app_root)
 				if process_info.sessions == 0:
 					inactive_apps.remove(process_info.ia_iterator)
@@ -414,6 +428,7 @@ callback session_has_been_closed(process_info):
 			processes.remove(process_info.iterator)
 			group.size--
 			if processes.empty():
+				group.detached = true
 				groups.remove(app_root)
 			count--
 			if (process_info.sessions == 0):
@@ -471,5 +486,6 @@ thread cleaner:
 					group.size--
 					count--
 					if processes.empty():
+						group.detached = true
 						groups.remove(process.app_root)
 

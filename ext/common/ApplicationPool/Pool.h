@@ -120,10 +120,12 @@ private:
 	struct Group {
 		ProcessInfoList processes;
 		unsigned int size;
+		bool detached;
 		unsigned long maxRequests;
 		
 		Group() {
 			size = 0;
+			detached = false;
 			maxRequests = 0;
 		}
 	};
@@ -230,6 +232,7 @@ private:
 				processes->erase(processInfo->iterator);
 				group->size--;
 				if (processes->empty()) {
+					group->detached = true;
 					data->groups.erase(processInfo->process->getAppRoot());
 				}
 				data->count--;
@@ -290,15 +293,16 @@ private:
 			Group *group = it->second.get();
 			ProcessInfoList *processes = &group->processes;
 			
+			// Invariants for Group.
+			
 			P_ASSERT(group->size <= count, false,
 				"groups['" << appRoot << "'].size (" << group->size <<
 				") <= count (" << count << ")");
 			totalSize += group->size;
-			
-			// Invariants for Group.
-			
 			P_ASSERT(!processes->empty(), false,
 				"groups['" << appRoot << "'].processes is nonempty.");
+			P_ASSERT(!group->detached, false,
+				"groups['" << appRoot << "'].detached is true");
 			
 			ProcessInfoList::const_iterator prev_lit;
 			ProcessInfoList::const_iterator lit;
@@ -307,6 +311,8 @@ private:
 			lit++;
 			for (; lit != processes->end(); lit++) {
 				const ProcessInfoPtr &processInfo = *lit;
+				
+				// Invariants for ProcessInfo.
 				if ((*prev_lit)->sessions > 0) {
 					P_ASSERT(processInfo->sessions > 0, false,
 						"groups['" << appRoot << "'].processes "
@@ -404,6 +410,7 @@ private:
 					processes.erase(processInfo->iterator);
 					group->size--;
 					if (processes.empty()) {
+						group->detached = true;
 						groups.erase(processInfo->process->getAppRoot());
 					}
 					if (processInfo->sessions == 0) {
@@ -496,6 +503,7 @@ private:
 						count--;
 						
 						if (processes->empty()) {
+							group->detached = true;
 							groups.erase(process->getAppRoot());
 						}
 					}
@@ -545,6 +553,9 @@ private:
 						processInfo->detached = true;
 						count--;
 					}
+					
+					group = group_it->second.get();
+					group->detached = true;
 					groups.erase(appRoot);
 				}
 				P_DEBUG("Restarting " << appRoot);
@@ -619,6 +630,7 @@ private:
 					processes = &group->processes;
 					processes->erase(processInfo->iterator);
 					if (processes->empty()) {
+						group->detached = true;
 						groups.erase(processInfo->process->getAppRoot());
 					} else {
 						group->size--;
