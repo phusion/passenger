@@ -172,26 +172,30 @@ private:
 	class EnvironmentVariablesStringListCreator: public StringListCreator {
 	private:
 		request_rec *r;
+		mutable StringListPtr result;
 	public:
 		EnvironmentVariablesStringListCreator(request_rec *r) {
 			this->r = r;
 		}
 		
 		virtual const StringListPtr getItems() const {
-			const apr_array_header_t *env_arr;
-			apr_table_entry_t *env_entries;
-			StringListPtr result = ptr(new StringList());
-			
-			// Some standard CGI headers.
-			result->push_back("SERVER_SOFTWARE");
-			result->push_back(ap_get_server_version());
-			
-			// Subprocess environment variables.
-			env_arr = apr_table_elts(r->subprocess_env);
-			env_entries = (apr_table_entry_t *) env_arr->elts;
-			for (int i = 0; i < env_arr->nelts; ++i) {
-				result->push_back(env_entries[i].key);
-				result->push_back(env_entries[i].val);
+			if (!result) {
+				const apr_array_header_t *env_arr;
+				apr_table_entry_t *env_entries;
+				
+				result.reset(new StringList());
+				
+				// Some standard CGI headers.
+				result->push_back("SERVER_SOFTWARE");
+				result->push_back(ap_get_server_version());
+				
+				// Subprocess environment variables.
+				env_arr = apr_table_elts(r->subprocess_env);
+				env_entries = (apr_table_entry_t *) env_arr->elts;
+				for (int i = 0; i < env_arr->nelts; ++i) {
+					result->push_back(env_entries[i].key);
+					result->push_back(env_entries[i].val);
+				}
 			}
 			return result;
 		}

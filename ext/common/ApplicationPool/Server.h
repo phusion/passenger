@@ -166,6 +166,7 @@ private:
 	private:
 		MessageChannel &channel;
 		PoolOptions &options;
+		mutable StringListPtr result;
 	public:
 		EnvironmentVariablesFetcher(MessageChannel &theChannel, PoolOptions &theOptions)
 			: channel(theChannel),
@@ -176,6 +177,10 @@ private:
 		 * @throws ClientCommunicationError
 		 */
 		virtual const StringListPtr getItems() const {
+			if (result) {
+				return result;
+			}
+			
 			string data;
 			
 			/* If an I/O error occurred while communicating with the client,
@@ -202,10 +207,11 @@ private:
 			
 			if (!data.empty()) {
 				SimpleStringListCreator list(data);
-				return list.getItems();
+				result = list.getItems();
 			} else {
-				return ptr(new StringList());
+				result.reset(new StringList());
 			}
+			return result;
 		}
 	};
 	
