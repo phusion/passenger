@@ -433,7 +433,7 @@ end
 	task :clean => 'test:clean'
 	desc "Clean all compiled test files"
 	task 'test:clean' do
-		sh("rm -rf test/oxt/oxt_test_main test/oxt/*.o test/CxxTests test/*.o")
+		sh("rm -rf test/oxt/oxt_test_main test/oxt/*.o test/cxx/CxxTestMain test/cxx/*.o")
 	end
 	
 	
