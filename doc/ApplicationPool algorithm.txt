@@ -91,10 +91,11 @@ explicitly define some special types:
     this application pool. This key allows external processes to refer to a
     specific ProcessInfo object without knowing its memory pointer. It's set
     to a random string by ProcessInfo's constructor.
-  * start_time (time) - The time at which this application instance was
-    started. It's set to the current time by ProcessInfo's constructor.
+  * start_time (timestamp with milisecond resolution) - The time at which this
+    application process was started. It's set to the current time by the
+    constructor.
   * processed_requests (integer) - The number of requests processed by this
-    application instance so far.
+    application instance so far. Set to 0 by the constructor.
   * last_used (time) - The last time a session for this application process
     was opened or closed.
   * sessions (integer) - The number of open sessions for this application
@@ -306,9 +307,7 @@ private function checkout_without_lock(app_root, options):
 			# All processes are active, but the pool hasn't reached its
 			# maximum yet. So we spawn a new process.
 			process_info = new ProcessInfo
-			# TODO: we should add some kind of timeout check for spawning.
 			process_info.process = spawn(app_root, options)
-			process_info.sessions = 0
 			iterator = processes.add_to_back(process_info)
 			process_info.iterator = iterator
 			group.size++
@@ -348,8 +347,7 @@ private function checkout_without_lock(app_root, options):
 				group.size--
 			count--
 		process_info = new ProcessInfo
-		# TODO: we should add some kind of timeout check for spawning.
-		process_info.app = spawn(app_root, options)
+		process_info.process = spawn(app_root, options)
 		group = new Group
 		group.size = 1
 		group.max_requests = options.max_requests
