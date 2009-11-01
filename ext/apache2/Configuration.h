@@ -245,11 +245,11 @@
 				}
 			}
 			
-			unsigned long getMemoryLimit() {
+			unsigned long getMemoryLimit() const {
 				if (memoryLimitSpecified) {
 					return memoryLimit;
 				} else {
-					return 200;
+					return 0;
 				}
 			}
 			
