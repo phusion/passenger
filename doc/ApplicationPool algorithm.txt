@@ -91,7 +91,7 @@ explicitly define some special types:
     this application pool. This key allows external processes to refer to a
     specific ProcessInfo object without knowing its memory pointer. It's set
     to a random string by ProcessInfo's constructor.
-  * start_time (timestamp with milisecond resolution) - The time at which this
+  * start_time (timestamp with millisecond resolution) - The time at which this
     application process was started. It's set to the current time by the
     constructor.
   * processed_requests (integer) - The number of requests processed by this

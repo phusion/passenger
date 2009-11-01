@@ -36,18 +36,25 @@ using namespace oxt;
 namespace SystemTimeData {
 	extern bool hasForcedValue;
 	extern time_t forcedValue;
+	extern bool hasForcedMsecValue;
+	extern unsigned long long forcedMsecValue;
 }
 
 /**
- * This class allows one to obtain the system time, similar to time(). Unlike
- * time(), it is possible to force a certain time to be returned, which is
- * useful for testing code that depends on the system time.
+ * This class allows one to obtain the system time, similar to time() and
+ * gettimeofday(). Unlike time(), it is possible to force a certain time
+ * to be returned, which is useful for testing code that depends on the
+ * system time.
+ *
+ * get() provides seconds resolution while getMsec() provides milliseconds
+ * resolution. Both clocks can be independently forced to a certain value
+ * through force() and forceMsec().
  */
 class SystemTime {
 public:
 	/**
 	 * Returns the time since the Epoch, measured in seconds. Or, if a time
-	 * was forced, then the forced time is returned instead.
+	 * was forced with force(), then the forced time is returned instead.
 	 *
 	 * @throws TimeRetrievalException Something went wrong while retrieving the time.
 	 * @throws boost::thread_interrupted
@@ -58,11 +65,39 @@ public:
 		} else {
 			time_t ret = syscalls::time(NULL);
 			if (ret == -1) {
+				int e = errno;
 				throw TimeRetrievalException(
 					"Unable to retrieve the system time",
-					errno);
+					e);
 			}
 			return ret;
+		}
+	}
+	
+	/**
+	 * Returns the time since the Epoch, measured in milliseconds. Or, if a
+	 * time was forced with forceMsec(), then the forced time is returned instead.
+	 *
+	 * @throws TimeRetrievalException Something went wrong while retrieving the time.
+	 * @throws boost::thread_interrupted
+	 */
+	static unsigned long long getMsec() {
+		if (SystemTimeData::hasForcedMsecValue) {
+			return SystemTimeData::forcedMsecValue;
+		} else {
+			struct timeval t;
+			int ret;
+			
+			do {
+				ret = gettimeofday(&t, NULL);
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1) {
+				int e = errno;
+				throw TimeRetrievalException(
+					"Unable to retrieve the system time",
+					e);
+			}
+			return (unsigned long long) t.tv_sec * 1000 + t.tv_usec / 1000;
 		}
 	}
 
@@ -73,6 +108,14 @@ public:
 		SystemTimeData::hasForcedValue = true;
 		SystemTimeData::forcedValue = value;
 	}
+	
+	/**
+	 * Force getMsec() to return the given value.
+	 */
+	static void forceMsec(unsigned long long value) {
+		SystemTimeData::hasForcedMsecValue = true;
+		SystemTimeData::forcedMsecValue = value;
+	}
 
 	/**
 	 * Release the previously forced value, so that get()
@@ -80,6 +123,14 @@ public:
 	 */
 	static void release() {
 		SystemTimeData::hasForcedValue = false;
+	}
+	
+	/**
+	 * Release the previously forced value, so that getMsec()
+	 * returns the system time once again.
+	 */
+	static void releaseMsec() {
+		SystemTimeData::hasForcedMsecValue = false;
 	}
 };
 

@@ -29,5 +29,7 @@ namespace Passenger {
 	namespace SystemTimeData {
 		bool hasForcedValue = false;
 		time_t forcedValue = 0;
+		bool hasForcedMsecValue = false;
+		unsigned long long forcedMsecValue = 0;
 	}
 }

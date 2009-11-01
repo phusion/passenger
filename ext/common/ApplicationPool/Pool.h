@@ -55,6 +55,7 @@
 #include "../FileChangeChecker.h"
 #include "../CachedFileStat.hpp"
 #include "../SpawnManager.h"
+#include "../SystemTime.h"
 
 namespace Passenger {
 namespace ApplicationPool {
@@ -133,7 +134,7 @@ private:
 	struct ProcessInfo {
 		ProcessPtr process;
 		string identifier;
-		time_t startTime;
+		unsigned long long startTime;
 		time_t lastUsed;
 		unsigned int sessions;
 		unsigned int processed;
@@ -145,7 +146,7 @@ private:
 			char buf[32];
 			generateSecureToken(buf, sizeof(buf));
 			
-			startTime  = time(NULL);
+			startTime  = SystemTime::getMsec();
 			identifier = toHex(StaticString(buf, sizeof(buf)));
 			lastUsed   = 0;
 			sessions   = 0;
@@ -157,13 +158,13 @@ private:
 		 * Returns the uptime of this process so far, as a string.
 		 */
 		string uptime() const {
-			time_t seconds = time(NULL) - startTime;
+			unsigned long long seconds = (unsigned long long) time(NULL) - startTime / 1000;
 			stringstream result;
 			
 			if (seconds >= 60) {
-				time_t minutes = seconds / 60;
+				unsigned long long minutes = seconds / 60;
 				if (minutes >= 60) {
-					time_t hours = minutes / 60;
+					unsigned long long hours = minutes / 60;
 					minutes = minutes % 60;
 					result << hours << "h ";
 				}
