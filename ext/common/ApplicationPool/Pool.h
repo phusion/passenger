@@ -538,9 +538,12 @@ private:
 			GroupMap::iterator group_it = groups.find(appRoot);
 			
 			if (needsRestart(appRoot, options)) {
+				P_DEBUG("Restarting " << appRoot);
+				spawnManager->reload(appRoot);
 				if (group_it != groups.end()) {
 					ProcessInfoList::iterator list_it;
-					processes = &group_it->second->processes;
+					group = group_it->second.get();
+					processes = &group->processes;
 					for (list_it = processes->begin(); list_it != processes->end(); list_it++) {
 						processInfo = *list_it;
 						if (processInfo->sessions == 0) {
@@ -555,13 +558,10 @@ private:
 						count--;
 					}
 					
-					group = group_it->second.get();
 					group->detached = true;
 					groups.erase(appRoot);
+					group_it = groups.end();
 				}
-				P_DEBUG("Restarting " << appRoot);
-				spawnManager->reload(appRoot);
-				group_it = groups.end();
 			}
 			
 			if (group_it != groups.end()) {

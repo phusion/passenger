@@ -256,6 +256,7 @@ private function checkout_without_lock(app_root, options):
 	group = groups[app_root]
 	
 	if needs_restart(app_root, options):
+		Tell spawn server to reload code for app_root.
 		if (group != nil):
 			for all process_info in group.processes:
 				if (process_info.sessions == 0):
@@ -267,8 +268,7 @@ private function checkout_without_lock(app_root, options):
 				count--
 			group.detached = true
 			groups.remove(app_root)
-		Tell spawn server to reload code for app_root.
-		group = nil
+			group = nil
 	
 	if group != nil:
 		# There are existing processes for this app root.

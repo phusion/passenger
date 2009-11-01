@@ -596,7 +596,7 @@ describe "Apache 2 module" do
 		end
 		
 		it "exposes the application pool for passenger-status" do
-			File.touch("#{@mycook.app_root}/tmp/restart.txt")  # Get rid of all previous app processes.
+			File.touch("#{@mycook.app_root}/tmp/restart.txt", 1)  # Get rid of all previous app processes.
 			get('/welcome').should =~ /Welcome to MyCook/
 			instance = AdminTools::ServerInstance.list.first
 			processes = instance.connect(:passenger_status) do

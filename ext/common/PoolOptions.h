@@ -195,6 +195,8 @@ struct PoolOptions {
 		statThrottleRate        = 0;
 		baseURI        = "/";
 		initiateSession         = true;
+		
+		/*********************************/
 	}
 	
 	/**
@@ -230,6 +232,8 @@ struct PoolOptions {
 		this->restartDir     = restartDir;
 		this->baseURI        = baseURI;
 		this->initiateSession = true;
+		
+		/*********************************/
 	}
 	
 	/**
@@ -252,24 +256,31 @@ struct PoolOptions {
 	 * @param startIndex The index in vec at which the information starts.
 	 */
 	PoolOptions(const vector<string> &vec, unsigned int startIndex = 0) {
-		appRoot        = vec[startIndex + 1];
-		lowerPrivilege = vec[startIndex + 3] == "true";
-		lowestUser     = vec[startIndex + 5];
-		environment    = vec[startIndex + 7];
-		spawnMethod    = vec[startIndex + 9];
-		appType        = vec[startIndex + 11];
-		frameworkSpawnerTimeout = atol(vec[startIndex + 13]);
-		appSpawnerTimeout       = atol(vec[startIndex + 15]);
-		maxRequests    = atol(vec[startIndex + 17]);
-		memoryLimit    = atol(vec[startIndex + 19]);
-		useGlobalQueue = vec[startIndex + 21] == "true";
-		statThrottleRate = atol(vec[startIndex + 23]);
-		restartDir     = vec[startIndex + 25];
-		baseURI        = vec[startIndex + 27];
-		initiateSession = vec[startIndex + 29] == "true";
-		if (vec.size() > startIndex + 31) {
-			environmentVariables = ptr(new SimpleStringListCreator(vec[startIndex + 31]));
+		int offset = 1;
+		bool hasEnvVars;
+		
+		appRoot          = vec[startIndex + offset];                 offset += 2;
+		lowerPrivilege   = vec[startIndex + offset] == "true";       offset += 2;
+		lowestUser       = vec[startIndex + offset];                 offset += 2;
+		environment      = vec[startIndex + offset];                 offset += 2;
+		spawnMethod      = vec[startIndex + offset];                 offset += 2;
+		appType          = vec[startIndex + offset];                 offset += 2;
+		frameworkSpawnerTimeout = atol(vec[startIndex + offset]);    offset += 2;
+		appSpawnerTimeout       = atol(vec[startIndex + offset]);    offset += 2;
+		maxRequests      = atol(vec[startIndex + offset]);           offset += 2;
+		memoryLimit      = atol(vec[startIndex + offset]);           offset += 2;
+		useGlobalQueue   = vec[startIndex + offset] == "true";       offset += 2;
+		statThrottleRate = atol(vec[startIndex + offset]);           offset += 2;
+		restartDir       = vec[startIndex + offset];                 offset += 2;
+		baseURI          = vec[startIndex + offset];                 offset += 2;
+		initiateSession  = vec[startIndex + offset] == "true";       offset += 2;
+		hasEnvVars       = vec[startIndex + offset] == "true";       offset += 2;
+		if (hasEnvVars) {
+			environmentVariables = ptr(new SimpleStringListCreator(vec[startIndex + offset]));
 		}
+		offset += 2;
+		
+		/*********************************/
 	}
 	
 	/**
@@ -301,9 +312,14 @@ struct PoolOptions {
 		appendKeyValue (vec, "base_uri",        baseURI);
 		appendKeyValue (vec, "initiate_session", initiateSession ? "true" : "false");
 		if (storeEnvVars) {
-			vec.push_back("environment_variables");
-			vec.push_back(serializeEnvironmentVariables());
+			appendKeyValue(vec, "has_environment_variables", "true");
+			appendKeyValue(vec, "environment_variables", serializeEnvironmentVariables());
+		} else {
+			appendKeyValue(vec, "has_environment_variables", "false");
+			appendKeyValue(vec, "environment_variables", "");
 		}
+		
+		/*********************************/
 	}
 	
 	/**
