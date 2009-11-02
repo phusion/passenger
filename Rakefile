@@ -87,7 +87,11 @@ file "ext/phusion_passenger/native_support.#{LIBEXT}" => [
 	sh "cd ext/phusion_passenger && make"
 end
 
-task :clean do
+task :clean => 'native_support:clean' do
+	sh "rm -rf .cache"
+end
+
+task 'native_support:clean' do
 	sh "cd ext/phusion_passenger && make clean" if File.exist?('ext/phusion_passenger/Makefile')
 	sh "rm -f ext/phusion_passenger/Makefile"
 end
@@ -351,7 +355,7 @@ end
 
 	task :clean => 'apache2:clean'
 	desc "Clean all compiled Apache 2 files"
-	task 'apache2:clean' do
+	task 'apache2:clean' => 'native_support:clean' do
 		files = [APACHE2_MODULE_OBJECTS, %w(ext/apache2/mod_passenger.o
 			ext/apache2/mod_passenger.so ext/apache2/PassengerWatchdog
 			ext/apache2/PassengerHelperServer)]
@@ -414,7 +418,7 @@ end
 	
 	task :clean => 'nginx:clean'
 	desc "Clean all compiled Nginx files"
-	task 'nginx:clean' do
+	task 'nginx:clean' => 'native_support:clean' do
 		sh("rm", "-rf", "ext/nginx/PassengerHelperServer", "ext/nginx/PassengerWatchdog")
 	end
 
