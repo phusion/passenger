@@ -67,6 +67,13 @@ string replaceString(const string &str, const string &toFind, const string &repl
 void replaceStringInFile(const char *filename, const string &toFind, const string &replaceWith);
 
 /**
+ * Writes the given data into the given file.
+ *
+ * @throws FileSystemException
+ */
+void writeFile(const string &filename, const string &contents);
+
+/**
  * Touch the given file: create the file if it doesn't exist, update its
  * timestamp if it does. If the <tt>timestamp</tt> argument is -1, then
  * the current system time will be used, otherwise the given timestamp

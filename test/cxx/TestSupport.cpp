@@ -69,6 +69,20 @@ replaceStringInFile(const char *filename, const string &toFind, const string &re
 }
 
 void
+writeFile(const string &filename, const string &contents) {
+	FILE *f = fopen(filename.c_str(), "w");
+	if (f == NULL) {
+		int e = errno;
+		string message = "Cannot open file '";
+		message.append(filename);
+		message.append("' for writing");
+		throw FileSystemException(message, e, filename);
+	}
+	fwrite(contents.data(), 1, contents.size(), f);
+	fclose(f);
+}
+
+void
 touchFile(const char *filename, time_t timestamp) {
 	FILE *f = fopen(filename, "a");
 	if (f != NULL) {
