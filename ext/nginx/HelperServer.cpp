@@ -427,6 +427,9 @@ private:
 			options.frameworkSpawnerTimeout = atol(parser.getHeader("PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME"));
 			options.appSpawnerTimeout       = atol(parser.getHeader("PASSENGER_APP_SPAWNER_IDLE_TIME"));
 			
+			/***********************/
+			/***********************/
+			
 			try {
 				SessionPtr session = pool->get(options);
 			

@@ -46,6 +46,8 @@ typedef struct {
     int          framework_spawner_idle_time;
     int          app_spawner_idle_time;
     ngx_array_t *base_uris;
+
+    /************************************/
 } passenger_loc_conf_t;
 
 typedef struct {

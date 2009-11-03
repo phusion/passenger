@@ -153,6 +153,9 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->framework_spawner_idle_time = -1;
     conf->app_spawner_idle_time = -1;
 
+    /******************************/
+    /******************************/
+
     conf->upstream_config.store = NGX_CONF_UNSET;
     conf->upstream_config.store_access = NGX_CONF_UNSET_UINT;
     conf->upstream_config.buffering = NGX_CONF_UNSET;
@@ -251,6 +254,8 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         }
     }
 
+    /******************************/
+    /******************************/
 
     if (conf->upstream_config.store != 0) {
         ngx_conf_merge_value(conf->upstream_config.store,
@@ -925,6 +930,9 @@ const ngx_command_t passenger_commands[] = {
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, environment),
       NULL },
+
+    /************************************/
+    /************************************/
 
 /*
 
