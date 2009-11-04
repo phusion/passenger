@@ -71,10 +71,10 @@ explicitly define some special types:
     A value of 0 indicates that there is no maximum.
 
   * detached (boolean): If true, then it indicates that this Group is
-    no longer accessible via _domains_.
+    no longer accessible via _groups_.
     Set to false by the constructor.
     Invariant:
-       (detached) == (This Group is accessible via _domains_.)
+       (detached) == (This Group is accessible via _groups_.)
        if detached:
           for all process_info objects p that have once been in this.processes:
               p.detached
@@ -108,12 +108,12 @@ explicitly define some special types:
     inactive_apps. This iterator is only valid if this ProcessInfo really is
     in that list.
   * detached (boolean) - If true, then it indicates that this ProcessInfo is
-    no longer accessible via _domains_; this implies that it's no longer
+    no longer accessible via _groups_; this implies that it's no longer
     contained in its associated Group's _processes_ member, a), and that
     _iterator_ and _ia_iterator_ are no longer valid.
     Set to false by the constructor.
     Invariant:
-       (detached) == (This ProcessInfo is accessible via _domains_.)
+       (detached) == (This ProcessInfo is accessible via _groups_.)
 
 - PoolOptions
   A structure containing additional information used by the spawn manager's
@@ -185,7 +185,7 @@ information:
   Invariant:
      inactive_apps.size() == count - active
      for all x in inactive_apps:
-        x can be found in _groups_.
+        x can be accessed from _groups_.
         x.sessions == 0
 
 - waiting_on_global_queue: integer
