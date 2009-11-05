@@ -357,7 +357,7 @@ run app
 -------------------------------------------
 
 Finally, we deploy it by adding the following configuration options to
-the Apache configuration file:
+the Nginx configuration file:
 
 -------------------------------------------
 http {
@@ -442,7 +442,7 @@ http {
     ...
 }
 -------------------------------------------
-Then restart Apache. The application has now been deployed.
+Then restart Nginx. The application has now been deployed.
 
 [TIP]
 ======================================
@@ -500,7 +500,7 @@ This required option may only occur once, in the 'http' configuration block.
 
 === passenger_log_level <integer> ===
 This option allows one to specify how much information Phusion Passenger should
-write to the Apache error log file. A higher log level value means that more
+write to the Nginx error log file. A higher log level value means that more
 information will be logged.
 
 Possible values are:
@@ -619,14 +619,17 @@ the given amount will be kept around. For example, suppose that you have the fol
 configuration:
 
 ---------------------------------
-passenger_max_pool_size 15;
-passenger_pool_idle_time 10;
-
-server {
-    listen 80;
-    server_name foobar.com;
-    root /webapps/foobar/public;
-    passenger_min_instances 2;
+http {
+    ...
+    passenger_max_pool_size 15;
+    passenger_pool_idle_time 10;
+    
+    server {
+        listen 80;
+        server_name foobar.com;
+        root /webapps/foobar/public;
+        passenger_min_instances 2;
+    }
 }
 ---------------------------------
 
