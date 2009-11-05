@@ -677,6 +677,37 @@
 		ensure_equals("(32)", pool->getCount(), 0u);
 	}
 	
+	TEST_METHOD(31) {
+		// When cleaning, at least options.minProcesses processes should be kept around.
+		pool->setMaxIdleTime(0);
+		ApplicationPool::Ptr pool3 = newPoolConnection();
+		PoolOptions options;
+		options.appRoot = "stub/rack";
+		options.appType = "rack";
+		options.minProcesses = 2;
+		
+		// Spawn 3 processes.
+		SessionPtr session1 = pool->get(options);
+		SessionPtr session2 = pool2->get(options);
+		SessionPtr session3 = pool3->get(options);
+		session1.reset();
+		session2.reset();
+		session3.reset();
+		ensure_equals(pool->getCount(), 3u);
+		while (pool->getActive() != 0) {
+			usleep(1);
+		}
+		
+		// Now wait until one process is idle cleaned.
+		pool->setMaxIdleTime(1);
+		time_t begin = time(NULL);
+		while (pool->getCount() != 2 && time(NULL) - begin < 10) {
+			usleep(10000);
+		}
+		
+		ensure_equals(pool->getCount(), 2u);
+	}
+	
 	/*************************************/
 	
 #endif /* USE_TEMPLATE */

@@ -123,11 +123,13 @@ private:
 		unsigned int size;
 		bool detached;
 		unsigned long maxRequests;
+		unsigned long minProcesses;
 		
 		Group() {
 			size = 0;
 			detached = false;
 			maxRequests = 0;
+			minProcesses = 0;
 		}
 	};
 	
@@ -486,26 +488,29 @@ private:
 					ProcessInfoPtr processInfo = *it;
 					
 					if (now - processInfo->lastUsed > (time_t) maxIdleTime) {
-						ProcessPtr       process     = processInfo->process;
-						GroupPtr         group       = groups[process->getAppRoot()];
-						ProcessInfoList *processes   = &group->processes;
+						ProcessPtr process = processInfo->process;
+						GroupPtr   group   = groups[process->getAppRoot()];
 						
-						P_DEBUG("Cleaning idle process " << process->getAppRoot() <<
-							" (PID " << process->getPid() << ")");
-						processes->erase(processInfo->iterator);
-						processInfo->detached = true;
-						
-						ProcessInfoList::iterator prev = it;
-						prev--;
-						inactiveApps.erase(it);
-						it = prev;
-						
-						group->size--;
-						count--;
-						
-						if (processes->empty()) {
-							group->detached = true;
-							groups.erase(process->getAppRoot());
+						if (group->size > group->minProcesses) {
+							ProcessInfoList *processes = &group->processes;
+							
+							P_DEBUG("Cleaning idle process " << process->getAppRoot() <<
+								" (PID " << process->getPid() << ")");
+							processes->erase(processInfo->iterator);
+							processInfo->detached = true;
+							
+							ProcessInfoList::iterator prev = it;
+							prev--;
+							inactiveApps.erase(it);
+							it = prev;
+							
+							group->size--;
+							count--;
+							
+							if (processes->empty()) {
+								group->detached = true;
+								groups.erase(process->getAppRoot());
+							}
 						}
 					}
 				}
@@ -650,6 +655,7 @@ private:
 				group = new Group();
 				group->size = 1;
 				group->maxRequests = options.maxRequests;
+				group->minProcesses = options.minProcesses;
 				groups[appRoot] = ptr(group);
 				processes = &group->processes;
 				processes->push_back(processInfo);

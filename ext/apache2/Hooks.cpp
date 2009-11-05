@@ -593,6 +593,7 @@ private:
 					config->frameworkSpawnerTimeout,
 					config->appSpawnerTimeout,
 					config->getMaxRequests(),
+					config->getMinInstances(),
 					config->getMemoryLimit(),
 					config->usingGlobalQueue(),
 					config->getStatThrottleRate(),

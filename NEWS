@@ -13,6 +13,7 @@ Release 3.0.0
  * [Apache] Fix some compatibility problems with mod_autoindex: it no longer
    interferes with our own reporting of filesystem errors.
  * Zero-copy I/O architecture.
+ * PassengerMinInstances
 
 
 Release 2.2.6

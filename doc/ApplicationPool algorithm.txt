@@ -55,7 +55,8 @@ explicitly define some special types:
   root.
   
   A Group has the following members:
-  * processes (list<ProcessInfo>) - a list of ProcessInfo objects.
+  * processes (list<ProcessInfo>):
+    A list of ProcessInfo objects.
     
     Invariant:
         processes is non-empty.
@@ -63,12 +64,21 @@ explicitly define some special types:
            if processes[i].process is active:
               processes[i + 1].process is active
 
-  * size (unsigned integer): The number of items in _processes_.
+  * size (unsigned integer):
+    The number of items in _processes_.
+    Invariant:
+        if !detached:
+           size == processes.size()
   
-  * max_requests (unsigned integer): The maximum number of requests that each
-    application process in this group may process. After having processed this
+  * max_requests (unsigned integer):
+    The maximum number of requests that each application process in
+    this group may process. After having processed this
     many requests, the application process will be shut down.
     A value of 0 indicates that there is no maximum.
+
+  * min_processes (unsigned integer):
+    The minimum number of processes that the cleaner thread should keep in
+    this group. Defaults to 0.
 
   * detached (boolean): If true, then it indicates that this Group is
     no longer accessible via _groups_.
@@ -101,7 +111,7 @@ explicitly define some special types:
   * sessions (integer) - The number of open sessions for this application
     process. It's set to 0 by the constructor.
     Invariant:
-       (sessions == 0) == (This ProcessInfo is in inactive_apps.)
+       (sessions == 0 && !detached) == (This ProcessInfo is in inactive_apps.)
   * iterator - The iterator for this ProcessInfo in the linked list
     groups[process.app_root].processes
   * ia_iterator - The iterator for this ProcessInfo in the linked list
@@ -124,6 +134,8 @@ explicitly define some special types:
     application process may process. After having processed this many requests,
     the application process will be shut down. A value of 0 indicates that there
     is no maximum.
+  * min_processes (unsigned integer) - The minimum number of processes for the
+    current group that the cleaner thread should keep around.
   * use_global_queue (boolean) - Whether to use a global queue for all
     application processes, or a queue that's private to the application process.
     The users guide explains this feature in more detail.
@@ -351,6 +363,7 @@ private function checkout_without_lock(app_root, options):
 		group = new Group
 		group.size = 1
 		group.max_requests = options.max_requests
+		group.min_processes = options.min_processes
 		groups[app_root] = group
 		iterator = group.processes.add_to_back(process_info)
 		process_info.iterator = iterator
@@ -474,16 +487,17 @@ thread cleaner:
 			
 			now = current_time()
 			for all process_info in inactive_apps:
-				process = process_info.process
-				if (now - process_info.last_used > MAX_IDLE_TIME):
-					processes = group.processes
-					processes.remove(process_info.iterator)
-					process_info.detached = true
-					inactive_apps.remove(process_info.ia_iterator)
+				if (now - process_info.last_used > MAX_IDLE_TIME)
+					process = process_info.process
 					group = groups[process.app_root]
-					group.size--
-					count--
-					if processes.empty():
-						group.detached = true
-						groups.remove(process.app_root)
+					if group.size > group.min_processes:
+						processes = group.processes
+						processes.remove(process_info.iterator)
+						process_info.detached = true
+						inactive_apps.remove(process_info.ia_iterator)
+						group.size--
+						count--
+						if processes.empty():
+							group.detached = true
+							groups.remove(process.app_root)
 

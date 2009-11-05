@@ -150,6 +150,7 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->spawn_method.data = NULL;
     conf->spawn_method.len = 0;
     conf->base_uris = NGX_CONF_UNSET_PTR;
+    conf->min_instances = -1;
     conf->framework_spawner_idle_time = -1;
     conf->app_spawner_idle_time = -1;
 
@@ -229,6 +230,9 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->use_global_queue, prev->use_global_queue, 0);
     ngx_conf_merge_str_value(conf->environment, prev->environment, "production");
     ngx_conf_merge_str_value(conf->spawn_method, prev->spawn_method, "smart-lv2");
+    if (conf->min_instances == -1 && prev->min_instances != -1) {
+        conf->min_instances = prev->min_instances;
+    }
     if (conf->framework_spawner_idle_time == -1 && prev->framework_spawner_idle_time != -1) {
         conf->framework_spawner_idle_time = prev->framework_spawner_idle_time;
     }
@@ -859,6 +863,13 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_num_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, max_pool_size),
+      NULL },
+
+    { ngx_string("passenger_min_instances"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_num_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, min_instances),
       NULL },
 
     { ngx_string("passenger_max_instances_per_app"),

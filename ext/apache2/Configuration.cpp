@@ -90,6 +90,8 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->appSpawnerTimeout = -1;
 	config->maxRequests = 0;
 	config->maxRequestsSpecified = false;
+	config->minInstances = 0;
+	config->minInstancesSpecified = false;
 	config->memoryLimit = 0;
 	config->memoryLimitSpecified = false;
 	config->highPerformance = DirConfig::UNSET;
@@ -133,6 +135,8 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->appSpawnerTimeout = (add->appSpawnerTimeout == -1) ? base->appSpawnerTimeout : add->appSpawnerTimeout;
 	config->maxRequests = (add->maxRequestsSpecified) ? add->maxRequests : base->maxRequests;
 	config->maxRequestsSpecified = base->maxRequestsSpecified || add->maxRequestsSpecified;
+	config->minInstances = (add->minInstancesSpecified) ? add->minInstances : base->minInstances;
+	config->minInstancesSpecified = base->minInstancesSpecified || add->minInstancesSpecified;
 	config->memoryLimit = (add->memoryLimitSpecified) ? add->memoryLimit : base->memoryLimit;
 	config->memoryLimitSpecified = base->memoryLimitSpecified || add->memoryLimitSpecified;
 	config->highPerformance = (add->highPerformance == DirConfig::UNSET) ? base->highPerformance : add->highPerformance;
@@ -269,6 +273,24 @@ cmd_passenger_max_pool_size(cmd_parms *cmd, void *pcfg, const char *arg) {
 	} else {
 		config->maxPoolSize = (unsigned int) result;
 		config->maxPoolSizeSpecified = true;
+		return NULL;
+	}
+}
+
+static const char *
+cmd_passenger_min_instances(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	char *end;
+	long int result;
+	
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		return "Invalid number specified for PassengerMinInstances.";
+	} else if (result < 0) {
+		return "Value for PassengerMinInstances must be greater than or equal to 0.";
+	} else {
+		config->minInstances = (unsigned long) result;
+		config->minInstancesSpecified = true;
 		return NULL;
 	}
 }
@@ -614,6 +636,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The maximum number of simultaneously alive application instances."),
+	AP_INIT_TAKE1("PassengerMinInstances",
+		(Take1Func) cmd_passenger_min_instances,
+		NULL,
+		OR_LIMIT | ACCESS_CONF | RSRC_CONF,
+		"The minimum number of application instances to keep when cleaning idle instances."),
 	AP_INIT_TAKE1("PassengerMaxInstancesPerApp",
 		(Take1Func) cmd_passenger_max_instances_per_app,
 		NULL,

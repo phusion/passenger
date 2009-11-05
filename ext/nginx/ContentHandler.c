@@ -260,6 +260,7 @@ create_request(ngx_http_request_t *r)
     size_t                         len, size, key_len, val_len, content_length;
     const u_char                  *app_type_string;
     size_t                         app_type_string_len;
+    u_char                         min_instances_string[12];
     u_char                         framework_spawner_idle_time_string[12];
     u_char                         app_spawner_idle_time_string[12];
     u_char                        *end;
@@ -353,6 +354,14 @@ create_request(ngx_http_request_t *r)
     len += sizeof("PASSENGER_ENVIRONMENT") + slcf->environment.len + 1;
     len += sizeof("PASSENGER_SPAWN_METHOD") + slcf->spawn_method.len + 1;
     len += sizeof("PASSENGER_APP_TYPE") + app_type_string_len;
+    
+    end = ngx_snprintf(min_instances_string,
+                       sizeof(min_instances_string) - 1,
+                       "%d",
+                       (slcf->min_instances == -1) ? 0 : slcf->min_instances);
+    *end = '\0';
+    len += sizeof("PASSENGER_MIN_INSTANCES") +
+           ngx_strlen(min_instances_string) + 1;
     
     end = ngx_snprintf(framework_spawner_idle_time_string,
                        sizeof(framework_spawner_idle_time_string) - 1,
@@ -552,6 +561,11 @@ create_request(ngx_http_request_t *r)
     b->last = ngx_copy(b->last, "PASSENGER_APP_TYPE",
                        sizeof("PASSENGER_APP_TYPE"));
     b->last = ngx_copy(b->last, app_type_string, app_type_string_len);
+
+    b->last = ngx_copy(b->last, "PASSENGER_MIN_INSTANCES",
+                       sizeof("PASSENGER_MIN_INSTANCES"));
+    b->last = ngx_copy(b->last, min_instances_string,
+                       ngx_strlen(min_instances_string) + 1);
 
     b->last = ngx_copy(b->last, "PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME",
                        sizeof("PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME"));

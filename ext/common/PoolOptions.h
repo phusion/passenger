@@ -118,6 +118,12 @@ struct PoolOptions {
 	unsigned long maxRequests;
 	
 	/**
+	 * The minimum number of processes for the current group that the application
+	 * pool's cleaner thread should keep around.
+	 */
+	unsigned long minProcesses;
+	
+	/**
 	 * The maximum amount of memory (in MB) the spawned application may use.
 	 * A value of 0 means unlimited.
 	 */
@@ -182,18 +188,19 @@ struct PoolOptions {
 	 * One must still set appRoot manually, after having used this constructor.
 	 */
 	PoolOptions() {
-		lowerPrivilege = true;
-		lowestUser     = "nobody";
-		environment    = "production";
-		spawnMethod    = "smart";
-		appType        = "rails";
+		lowerPrivilege          = true;
+		lowestUser              = "nobody";
+		environment             = "production";
+		spawnMethod             = "smart";
+		appType                 = "rails";
 		frameworkSpawnerTimeout = -1;
 		appSpawnerTimeout       = -1;
-		maxRequests    = 0;
-		memoryLimit    = 0;
-		useGlobalQueue = false;
+		maxRequests             = 0;
+		minProcesses            = 0;
+		memoryLimit             = 0;
+		useGlobalQueue          = false;
 		statThrottleRate        = 0;
-		baseURI        = "/";
+		baseURI                 = "/";
 		initiateSession         = true;
 		
 		/*********************************/
@@ -203,35 +210,37 @@ struct PoolOptions {
 	 * Creates a new PoolOptions object with the given values.
 	 */
 	PoolOptions(const string &appRoot,
-		bool lowerPrivilege       = true,
-		const string &lowestUser  = "nobody",
-		const string &environment = "production",
-		const string &spawnMethod = "smart",
-		const string &appType     = "rails",
+		bool lowerPrivilege          = true,
+		const string &lowestUser     = "nobody",
+		const string &environment    = "production",
+		const string &spawnMethod    = "smart",
+		const string &appType        = "rails",
 		long frameworkSpawnerTimeout = -1,
 		long appSpawnerTimeout       = -1,
 		unsigned long maxRequests    = 0,
+		unsigned long minProcesses   = 0,
 		unsigned long memoryLimit    = 0,
 		bool useGlobalQueue          = false,
 		unsigned long statThrottleRate = 0,
-		const string &restartDir  = "",
-		const string &baseURI     = "/"
+		const string &restartDir     = "",
+		const string &baseURI        = "/"
 	) {
-		this->appRoot        = appRoot;
-		this->lowerPrivilege = lowerPrivilege;
-		this->lowestUser     = lowestUser;
-		this->environment    = environment;
-		this->spawnMethod    = spawnMethod;
-		this->appType        = appType;
+		this->appRoot                 = appRoot;
+		this->lowerPrivilege          = lowerPrivilege;
+		this->lowestUser              = lowestUser;
+		this->environment             = environment;
+		this->spawnMethod             = spawnMethod;
+		this->appType                 = appType;
 		this->frameworkSpawnerTimeout = frameworkSpawnerTimeout;
 		this->appSpawnerTimeout       = appSpawnerTimeout;
-		this->maxRequests    = maxRequests;
-		this->memoryLimit    = memoryLimit;
-		this->useGlobalQueue = useGlobalQueue;
+		this->maxRequests             = maxRequests;
+		this->minProcesses            = minProcesses;
+		this->memoryLimit             = memoryLimit;
+		this->useGlobalQueue          = useGlobalQueue;
 		this->statThrottleRate        = statThrottleRate;
-		this->restartDir     = restartDir;
-		this->baseURI        = baseURI;
-		this->initiateSession = true;
+		this->restartDir              = restartDir;
+		this->baseURI                 = baseURI;
+		this->initiateSession         = true;
 		
 		/*********************************/
 	}
@@ -268,6 +277,7 @@ struct PoolOptions {
 		frameworkSpawnerTimeout = atol(vec[startIndex + offset]);    offset += 2;
 		appSpawnerTimeout       = atol(vec[startIndex + offset]);    offset += 2;
 		maxRequests      = atol(vec[startIndex + offset]);           offset += 2;
+		minProcesses     = atol(vec[startIndex + offset]);           offset += 2;
 		memoryLimit      = atol(vec[startIndex + offset]);           offset += 2;
 		useGlobalQueue   = vec[startIndex + offset] == "true";       offset += 2;
 		statThrottleRate = atol(vec[startIndex + offset]);           offset += 2;
@@ -305,6 +315,7 @@ struct PoolOptions {
 		appendKeyValue2(vec, "framework_spawner_timeout", frameworkSpawnerTimeout);
 		appendKeyValue2(vec, "app_spawner_timeout",       appSpawnerTimeout);
 		appendKeyValue3(vec, "max_requests",    maxRequests);
+		appendKeyValue3(vec, "min_processes",   minProcesses);
 		appendKeyValue3(vec, "memory_limit",    memoryLimit);
 		appendKeyValue (vec, "use_global_queue", useGlobalQueue ? "true" : "false");
 		appendKeyValue3(vec, "stat_throttle_rate", statThrottleRate);

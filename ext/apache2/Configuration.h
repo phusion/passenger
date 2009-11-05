@@ -127,6 +127,17 @@
 			bool maxRequestsSpecified;
 			
 			/**
+			 * The minimum number of processes for a group that should be kept in
+			 * the pool when cleaning idle processes. Defaults to 0.
+			 */
+			unsigned long minInstances;
+			
+			/**
+			 * Indicates whether the minInstances option was explicitly specified
+			 * in the directory configuration. */
+			bool minInstancesSpecified;
+			
+			/**
 			 * The maximum amount of memory (in MB) the spawned application may use.
 			 * A value of 0 means unlimited.
 			 */
@@ -224,7 +235,7 @@
 				}
 			}
 			
-			const char *getSpawnMethodString() {
+			const char *getSpawnMethodString() const {
 				switch (spawnMethod) {
 				case SM_SMART:
 					return "smart";
@@ -237,9 +248,17 @@
 				}
 			}
 			
-			unsigned long getMaxRequests() {
+			unsigned long getMaxRequests() const {
 				if (maxRequestsSpecified) {
 					return maxRequests;
+				} else {
+					return 0;
+				}
+			}
+			
+			unsigned long getMinInstances() const {
+				if (minInstancesSpecified) {
+					return minInstances;
 				} else {
 					return 0;
 				}
