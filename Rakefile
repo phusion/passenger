@@ -773,6 +773,7 @@ spec = Gem::Specification.new do |s|
 	s.require_paths = ["lib", "ext"]
 	s.add_dependency 'rake', '>= 0.8.1'
 	s.add_dependency 'fastthread', '>= 1.0.1'
+	s.add_dependency 'daemon_controller'
 	s.extensions << 'ext/phusion_passenger/extconf.rb'
 	s.files = FileList[
 		'Rakefile',

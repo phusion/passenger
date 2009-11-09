@@ -1,0 +1,101 @@
+#!/usr/bin/env ruby
+
+class Multicorn
+	def self.run_command(argv)
+		new.run_command(argv)
+	end
+	
+	def run_command(argv)
+		command, args = argv
+		if command.nil?
+			STDERR.puts "Please type --help for options."
+		end
+		if respond_to?("command_#{command}")
+			@args = args || []
+			send("command_#{command}")
+		else
+			STDERR.puts "Unknown command '#{command}'. Please type --help for options."
+			exit 1
+		end
+	end
+	
+	def help
+		return command_help
+	end
+
+private
+	def command_start
+		parse_options! do |opts|
+		end
+		
+		ensure_nginx_installed
+		write_config_file
+		
+		nginx = create_nginx_controller
+		begin
+			nginx.start
+		rescue AlreadyStarted
+			STDERR.puts "Multicorn is already started."
+			exit 1
+		end
+		puts "Multicorn web server started on PID #{nginx.pid}"
+		
+		daemonize if daemonization_requested?
+		watch_directory_in_background if serving_multiple_apps?
+		watch_log_files_in_background
+		Process.waitpid(nginx.pid)
+		exit $?.status
+	end
+	
+	def command_stop
+		nginx = create_nginx_controller
+		nginx.stop
+	end
+	
+	def command_status
+	end
+	
+	def command_help
+	end
+	
+	def daemonization_requested?
+		return @options[:daemonize]
+	end
+	
+	def serving_multiple_apps?
+		return @args.empty? || @args.size > 1 || !looks_like_app_directory?(@args[0])
+	end
+	
+	def ensure_nginx_installed
+		# Check whether all development tools and dependencies are installed!
+	end
+	
+	def write_config_file
+	end
+	
+	def create_nginx_controller
+		o = Object.new
+		def o.start
+		end
+		return o
+	end
+	
+	def daemonize
+	end
+	
+	def watch_directory_in_background
+		Thread.new do
+			
+		end
+	end
+	
+	def watch_log_files_in_background
+		Thread.new do
+			if serving_multiple_apps?
+			end
+		end
+	end
+end
+
+Thread.abort_on_exception = true
+Multicorn.run_command(ARGV)
