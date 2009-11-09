@@ -1125,7 +1125,7 @@ With this, http://www.example.com/users/fujikura%2fyuu will work properly, and
 accessing http://www.example.com/about will properly display the result of
 http://www.example.com/info/about. Notice that PassengerAllowEncodedSlashes only
 interferes with passthrough rules, not with any other mod_rewrite rules. The rules for
-displaying maintenance.html will work fine even URLs starting with "/users".
+displaying maintenance.html will work fine even for URLs starting with "/users".
 
 
 === Ruby on Rails-specific options ===
