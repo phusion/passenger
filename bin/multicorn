@@ -118,6 +118,10 @@ private
 				wrap_desc("Framework environment (default: #{@options[:env]})")) do |value|
 				@options[:port] = value
 			end
+			opts.on("-d", "--daemonize",
+				wrap_desc("Daemonize into the background")) do
+				@options[:daemonize] = true
+			end
 		end
 		if @options[:tcp] && @options[:socket_file]
 			STDERR.puts "You cannot specify both --address/--port and --socket. Please choose either one."
@@ -132,7 +136,16 @@ private
 		begin
 			@nginx.start
 		rescue DaemonController::AlreadyStarted
-			STDERR.puts "*** ERROR: Multicorn is already started."
+			begin
+				pid = @nginx.pid
+			rescue SystemCallError, IOError
+				pid = nil
+			end
+			if pid
+				STDERR.puts "*** ERROR: Multicorn is already running on PID #{pid}."
+			else
+				STDERR.puts "*** ERROR: Multicorn is already running."
+			end
 			exit 1
 		rescue DaemonController::StartError => e
 			STDERR.puts "*** ERROR: could not start Multicorn Nginx core:"
@@ -142,7 +155,7 @@ private
 			File.unlink(@config_filename) rescue nil
 		end
 		
-		puts "======= Multicorn web server started ======="
+		puts "=============== Multicorn web server started ==============="
 		puts "PID file: #{@options[:pid_file]}"
 		puts "Log file: #{@options[:log_file]}"
 		if @apps.size > 1
@@ -153,18 +166,20 @@ private
 				puts "Serving these applications on #{@options[:address]} port #{@options[:port]}:"
 			end
 			puts " Host name                     Directory"
-			puts "-----------------------------------------------------------"
+			puts "------------------------------------------------------------"
 			@apps.each do |app|
 				printf " %-26s    %s\n", app[:server_name], app[:root]
 			end
 		else
 			puts "Accessible via: #{listen_url}"
 		end
-		if !@options[:daemonize]
-			puts
+		puts
+		if @options[:daemonize]
+			puts "Serving in the background as a daemon."
+		else
 			puts "You can stop Multicorn by pressing Ctrl-C."
 		end
-		puts "============================================"
+		puts "============================================================"
 		
 		daemonize if @options[:daemonize]
 		watch_directories_in_background if @apps.size > 1
@@ -207,6 +222,19 @@ private
 	end
 	
 	def command_status
+		determine_various_resource_locations(false)
+		create_nginx_controller
+		begin
+			running = @nginx.running?
+			pid = @nginx.pid
+		rescue SystemCallError, IOError
+			running = false
+		end
+		if running
+			puts "Multicorn is running on PID #{pid}."
+		else
+			puts "Multicorn is not running."
+		end
 	end
 	
 	def command_help
@@ -401,7 +429,15 @@ private
 	def daemonize
 		pid = fork
 		if pid
+			# Parent
 			exit!
+		else
+			# Child
+			trap "HUP", "IGNORE"
+			STDIN.reopen("/dev/null", "r")
+			STDOUT.reopen(@options[:log_file], "a")
+			STDERR.reopen(@options[:log_file], "a")
+			Process.setsid
 		end
 	end
 	
@@ -469,6 +505,7 @@ private
 		STDOUT.flush
 		@nginx.stop
 		STDOUT.puts " done"
+		STDOUT.flush
 	end
 end
 
