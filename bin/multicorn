@@ -30,8 +30,29 @@ require 'socket'
 require 'thread'
 require 'erb'
 require 'tempfile'
-require 'daemon_controller'
 require 'phusion_passenger/packaging'
+
+begin
+	require 'daemon_controller'
+	begin
+		require 'daemon_controller/version'
+	rescue LoadError
+		STDERR.puts "*** Your version of daemon_controller is too old. You must install 0.2.3 or later. Please upgrade:"
+		STDERR.puts
+		STDERR.puts " sudo gem uninstall FooBarWidget-daemon_controller"
+		STDERR.puts " sudo gem install daemon_controller"
+		exit 1
+	end
+rescue LoadError
+	STDERR.puts "*** Please install daemon_controller first: sudo gem install daemon_controller"
+	exit 1
+end
+begin
+	require 'file/tail'
+rescue LoadError
+	STDERR.puts "*** Please install file-tail first: sudo gem install file-tail"
+	exit 1
+end
 
 module PhusionPassenger
 
@@ -116,7 +137,6 @@ private
 		rescue DaemonController::StartError => e
 			STDERR.puts "*** ERROR: could not start Multicorn Nginx core:"
 			STDERR.puts e
-			puts e.backtrace
 			exit 1
 		ensure
 			File.unlink(@config_filename) rescue nil
@@ -125,7 +145,21 @@ private
 		puts "======= Multicorn web server started ======="
 		puts "PID file: #{@options[:pid_file]}"
 		puts "Log file: #{@options[:log_file]}"
-		puts "Accessible via: #{listen_url}"
+		if @apps.size > 1
+			puts
+			if @options[:socket_file]
+				puts "Serving these applications:"
+			else
+				puts "Serving these applications on #{@options[:address]} port #{@options[:port]}:"
+			end
+			puts " Host name                     Directory"
+			puts "-----------------------------------------------------------"
+			@apps.each do |app|
+				printf " %-26s    %s\n", app[:server_name], app[:root]
+			end
+		else
+			puts "Accessible via: #{listen_url}"
+		end
 		if !@options[:daemonize]
 			puts
 			puts "You can stop Multicorn by pressing Ctrl-C."
@@ -147,6 +181,9 @@ private
 			else
 				raise
 			end
+		rescue Exception => e
+			stop_nginx
+			raise
 		end
 	end
 	
@@ -230,6 +267,7 @@ private
 			if @options[:port] != 80
 				result << ":#{@options[:port]}"
 			end
+			result << "/"
 			return result
 		end
 	end
@@ -249,7 +287,7 @@ private
 	end
 	
 	def ensure_nginx_installed
-		# Check whether all development tools and dependencies are installed!
+		# Also check whether all development tools and dependencies are installed!
 	end
 	
 	def filename_to_server_name(filename)
@@ -290,7 +328,6 @@ private
 					:root => File.expand_path(".")
 				}
 			else
-				
 				Dir["./*"].each do |entry|
 					if looks_like_app_directory?(entry)
 						server_name = filename_to_server_name(entry)
@@ -373,8 +410,35 @@ private
 		end
 	end
 	
+	def watch_log_file(log_file)
+		if File.exist?(log_file)
+			backward = 0
+		else
+			# File::Tail bails out if the file doesn't exist, so wait until it exists.
+			while !File.exist?(log_file)
+				sleep 1
+			end
+			backward = 10
+		end
+		
+		File::Tail::Logfile.open(log_file, :backward => backward) do |log|
+			log.interval = 0.1
+			log.max_interval = 1
+			log.tail do |line|
+				@stdout_lock.synchronize do
+					STDOUT.write(line)
+					STDOUT.flush
+				end
+			end
+		end
+	end
+	
 	def watch_log_files_in_background
-		Thread.new do
+		@stdout_lock = Mutex.new
+		@apps.each do |app|
+			Thread.new do
+				watch_log_file("#{app[:root]}/log/#{@options[:env]}.log")
+			end
 		end
 	end
 	
