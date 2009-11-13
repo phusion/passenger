@@ -393,8 +393,12 @@ private
 		end
 	end
 	
-	def create_nginx_config_file
-		config_file = Tempfile.new('nginx')
+	def create_nginx_config_file(filename = nil)
+		if filename
+			config_file = File.open(filename, 'w')
+		else
+			config_file = Tempfile.new('nginx')
+		end
 		@config_filename = config_file.path
 		begin
 			config_file.chmod(0644)
@@ -428,6 +432,7 @@ private
 			:log_file      => @options[:log_file],
 			:timeout       => 25
 		)
+		@nginx_mutex = Mutex.new
 	end
 	
 	def daemonize
@@ -441,12 +446,60 @@ private
 			STDIN.reopen("/dev/null", "r")
 			STDOUT.reopen(@options[:log_file], "a")
 			STDERR.reopen(@options[:log_file], "a")
+			STDOUT.sync = true
+			STDERR.sync = true
 			Process.setsid
 		end
 	end
 	
+	def directory_mtimes
+		if @args.empty?
+			dirs = ["."]
+		else
+			dirs = @args.sort
+		end
+		dirs.map! do |dir|
+			File.stat(dir).mtime
+		end
+		return dirs
+	end
+	
 	def watch_directories_in_background
 		Thread.new do
+			old_mtimes = directory_mtimes
+			while true
+				sleep 2
+				new_mtimes = directory_mtimes
+				if old_mtimes != new_mtimes
+					old_mtimes = new_mtimes
+					
+					puts "*** #{Time.now}: redeploying applications ***"
+					determine_apps_to_serve
+					begin
+						pid = @nginx.pid
+					rescue SystemCallError, IOError
+						next
+					end
+					create_nginx_config_file(@config_filename)
+					begin
+						Process.kill('HUP', pid) rescue nil
+						
+						puts "Now serving these applications:"
+						puts " Host name                     Directory"
+						puts "------------------------------------------------------------"
+						@apps.each do |app|
+							printf " %-26s    %s\n", app[:server_name], app[:root]
+						end
+						puts "------------------------------------------------------------"
+						
+						# Wait a short period for Nginx to reload its config
+						# before deleting the config file.
+						sleep 3
+					ensure
+						File.unlink(@config_filename) rescue nil
+					end
+				end
+			end
 		end
 	end
 	
@@ -465,7 +518,7 @@ private
 			log.interval = 0.1
 			log.max_interval = 1
 			log.tail do |line|
-				@stdout_lock.synchronize do
+				@stdout_mutex.synchronize do
 					STDOUT.write(line)
 					STDOUT.flush
 				end
@@ -474,7 +527,7 @@ private
 	end
 	
 	def watch_log_files_in_background
-		@stdout_lock = Mutex.new
+		@stdout_mutex = Mutex.new
 		@apps.each do |app|
 			Thread.new do
 				watch_log_file("#{app[:root]}/log/#{@options[:env]}.log")
@@ -505,11 +558,13 @@ private
 	end
 	
 	def stop_nginx
-		STDOUT.write("Stopping web server...")
-		STDOUT.flush
-		@nginx.stop
-		STDOUT.puts " done"
-		STDOUT.flush
+		@nginx_mutex.synchronize do
+			STDOUT.write("Stopping web server...")
+			STDOUT.flush
+			@nginx.stop
+			STDOUT.puts " done"
+			STDOUT.flush
+		end
 	end
 end
 
