@@ -63,6 +63,7 @@ class Multicorn
 	
 	def initialize
 		@options = {}
+		@console_mutex = Mutex.new
 	end
 	
 	def run_command(argv)
@@ -464,26 +465,34 @@ private
 		return dirs
 	end
 	
+	def watch_directories
+		old_mtimes = directory_mtimes
+		while true
+			sleep 3
+			new_mtimes = directory_mtimes
+			if old_mtimes != new_mtimes
+				old_mtimes = new_mtimes
+				yield
+			end
+		end
+	end
+	
 	def watch_directories_in_background
 		Thread.new do
-			old_mtimes = directory_mtimes
-			while true
-				sleep 2
-				new_mtimes = directory_mtimes
-				if old_mtimes != new_mtimes
-					old_mtimes = new_mtimes
+			watch_directories do
+				puts "*** #{Time.now}: redeploying applications ***"
+				determine_apps_to_serve
+				begin
+					pid = @nginx.pid
+				rescue SystemCallError, IOError
+					STDERR.puts "*** Error: unable to retrieve the web server's PID."
+					next
+				end
+				create_nginx_config_file(@config_filename)
+				begin
+					Process.kill('HUP', pid) rescue nil
 					
-					puts "*** #{Time.now}: redeploying applications ***"
-					determine_apps_to_serve
-					begin
-						pid = @nginx.pid
-					rescue SystemCallError, IOError
-						next
-					end
-					create_nginx_config_file(@config_filename)
-					begin
-						Process.kill('HUP', pid) rescue nil
-						
+					@console_mutex.synchronize do
 						puts "Now serving these applications:"
 						puts " Host name                     Directory"
 						puts "------------------------------------------------------------"
@@ -491,13 +500,13 @@ private
 							printf " %-26s    %s\n", app[:server_name], app[:root]
 						end
 						puts "------------------------------------------------------------"
-						
-						# Wait a short period for Nginx to reload its config
-						# before deleting the config file.
-						sleep 3
-					ensure
-						File.unlink(@config_filename) rescue nil
 					end
+					
+					# Wait a short period for Nginx to reload its config
+					# before deleting the config file.
+					sleep 3
+				ensure
+					File.unlink(@config_filename) rescue nil
 				end
 			end
 		end
@@ -518,7 +527,7 @@ private
 			log.interval = 0.1
 			log.max_interval = 1
 			log.tail do |line|
-				@stdout_mutex.synchronize do
+				@console_mutex.synchronize do
 					STDOUT.write(line)
 					STDOUT.flush
 				end
@@ -527,7 +536,6 @@ private
 	end
 	
 	def watch_log_files_in_background
-		@stdout_mutex = Mutex.new
 		@apps.each do |app|
 			Thread.new do
 				watch_log_file("#{app[:root]}/log/#{@options[:env]}.log")
