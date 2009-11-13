@@ -788,6 +788,7 @@ spec = Gem::Specification.new do |s|
 		'lib/phusion_passenger/templates/*',
 		'lib/phusion_passenger/templates/apache2/*',
 		'lib/phusion_passenger/templates/nginx/*',
+		'lib/phusion_passenger/templates/multicorn_default_root/*',
 		'bin/*',
 		'doc/*',
 		
