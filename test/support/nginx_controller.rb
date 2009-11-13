@@ -5,7 +5,7 @@ begin
 rescue LoadError
 	STDERR.puts "*** ERROR: daemon_controller is not installed. Please install with: "
 	STDERR.puts
-	STDERR.puts "  gem install FooBarWidget-daemon_controller -s http://gems.github.com"
+	STDERR.puts "  gem install daemon_controller"
 	STDERR.puts
 	exit!(1)
 end
