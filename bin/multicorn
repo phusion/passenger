@@ -1,101 +1,414 @@
 #!/usr/bin/env ruby
+#  Phusion Passenger - http://www.modrails.com/
+#  Copyright (c) 2009 Phusion
+#
+#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+#
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
+#
+#  The above copyright notice and this permission notice shall be included in
+#  all copies or substantial portions of the Software.
+#
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#  THE SOFTWARE.
+
+PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) << "/..")
+$LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
+require 'rubygems' rescue nil
+require 'optparse'
+require 'socket'
+require 'thread'
+require 'erb'
+require 'tempfile'
+require 'daemon_controller'
+require 'phusion_passenger/packaging'
+
+module PhusionPassenger
 
 class Multicorn
 	def self.run_command(argv)
 		new.run_command(argv)
 	end
 	
+	def initialize
+		@options = {}
+	end
+	
 	def run_command(argv)
-		command, args = argv
-		if command.nil?
-			STDERR.puts "Please type --help for options."
-		end
-		if respond_to?("command_#{command}")
-			@args = args || []
-			send("command_#{command}")
+		command = argv[0]
+		if command.nil? || command == '-h' || command == '--help'
+			command_help
+			exit
+		elsif command == '-v' || command == '--version'
+			command_version
+			exit
+		elsif respond_to?("command_#{command}", true)
+			@args = argv[1..-1]
+			begin
+				send("command_#{command}")
+			rescue OptionParser::ParseError => e
+				puts e
+				puts
+				puts "Please see '--help' for valid options."
+				exit 1
+			end
 		else
 			STDERR.puts "Unknown command '#{command}'. Please type --help for options."
 			exit 1
 		end
 	end
-	
-	def help
-		return command_help
-	end
 
 private
+	#### Commands ####
+	
 	def command_start
-		parse_options! do |opts|
+		description = "Starts Multicorn in order to serve a Ruby web application."
+		@options = {
+			:address => '0.0.0.0',
+			:port => 3000,
+			:env  => ENV['RAILS_ENV'] || ENV['RACK_ENV'] || 'development'
+		}
+		parse_options!("start [directory]", description) do |opts|
+			opts.on("-a", "--address HOST", String,
+				wrap_desc("Bind to HOST address (default: #{@options[:address]})")) do |value|
+				@options[:address] = value
+				@options[:tcp] = true
+			end
+			opts.on("-p", "--port NUMBER", Integer,
+				wrap_desc("Use the given port number (default: #{@options[:port]})")) do |value|
+				@options[:port] = value
+				@options[:tcp] = true
+			end
+			opts.on("-S", "--socket FILE", String,
+				wrap_desc("Bind to Unix domain socket instead of TCP socket")) do |value|
+				@options[:socket_file] = value
+			end
+			opts.on("-e", "--environment ENV", String,
+				wrap_desc("Framework environment (default: #{@options[:env]})")) do |value|
+				@options[:port] = value
+			end
+		end
+		if @options[:tcp] && @options[:socket_file]
+			STDERR.puts "You cannot specify both --address/--port and --socket. Please choose either one."
+			exit 1
 		end
 		
 		ensure_nginx_installed
-		write_config_file
+		determine_various_resource_locations
+		determine_apps_to_serve
 		
-		nginx = create_nginx_controller
+		create_nginx_controller
 		begin
-			nginx.start
-		rescue AlreadyStarted
-			STDERR.puts "Multicorn is already started."
+			@nginx.start
+		rescue DaemonController::AlreadyStarted
+			STDERR.puts "*** ERROR: Multicorn is already started."
 			exit 1
+		rescue DaemonController::StartError => e
+			STDERR.puts "*** ERROR: could not start Multicorn Nginx core:"
+			STDERR.puts e
+			puts e.backtrace
+			exit 1
+		ensure
+			File.unlink(@config_filename) rescue nil
 		end
-		puts "Multicorn web server started on PID #{nginx.pid}"
 		
-		daemonize if daemonization_requested?
-		watch_directory_in_background if serving_multiple_apps?
-		watch_log_files_in_background
-		Process.waitpid(nginx.pid)
-		exit $?.status
+		puts "======= Multicorn web server started ======="
+		puts "PID file: #{@options[:pid_file]}"
+		puts "Log file: #{@options[:log_file]}"
+		puts "Accessible via: #{listen_url}"
+		if !@options[:daemonize]
+			puts
+			puts "You can stop Multicorn by pressing Ctrl-C."
+		end
+		puts "============================================"
+		
+		daemonize if @options[:daemonize]
+		watch_directories_in_background if @apps.size > 1
+		watch_log_files_in_background if !@options[:daemonize]
+		begin
+			wait_until_nginx_has_exited
+		rescue Interrupt
+			stop_nginx
+			exit 2
+		rescue SignalException => signal
+			stop_nginx
+			if signal.message == 'SIGINT' || signal.message == 'SIGTERM'
+				exit 2
+			else
+				raise
+			end
+		end
 	end
 	
 	def command_stop
-		nginx = create_nginx_controller
-		nginx.stop
+		determine_various_resource_locations(false)
+		create_nginx_controller
+		begin
+			running = @nginx.running?
+		rescue SystemCallError, IOError
+			running = false
+		end
+		if running
+			@nginx.stop
+		else
+			STDERR.puts "According to the PID file '#{@options[:pid_file]}', Multicorn doesn't seem to be running."
+			STDERR.puts
+			STDERR.puts "If you know that Multicorn is running then you've probably specified the wrong PID " <<
+				"file. In that case, please specify the right one with --pid-file."
+			exit 1
+		end
 	end
 	
 	def command_status
 	end
 	
 	def command_help
+		puts "Available commands:"
+		puts
+		puts "  multicorn start       Start Multicorn."
+		puts "  multicorn stop        Stop a running Multicorn instance."
+		puts "  multicorn status      Show the status of a running Multicorn instance."
+		puts
+		puts "Special options:"
+		puts
+		puts "  multicorn --help      Display this help message."
+		puts "  multicorn --version   Display version number."
+		puts
+		puts "For more information about a specific command, please type 'multicorn <COMMAND> --help', e.g. 'multicorn start --help'."
 	end
 	
-	def daemonization_requested?
-		return @options[:daemonize]
+	def command_version
 	end
 	
-	def serving_multiple_apps?
-		return @args.empty? || @args.size > 1 || !looks_like_app_directory?(@args[0])
+	
+	#### Helper methods ####
+	
+	def parse_options!(command_name, description = nil)
+		help = false
+		parser = OptionParser.new do |opts|
+			opts.banner = "Usage: multicorn #{command_name} [options]"
+			opts.separator description if description
+			opts.separator " "
+			opts.separator "Options:"
+			yield opts
+			opts.on("-h", "--help", "Show this help message") do
+				help = true
+			end
+		end
+		parser.parse!(@args)
+		if help
+			puts parser
+			exit 0
+		end
+	end
+	
+	# Word wrap the given option description text so that it is formatted
+	# nicely in the --help output.
+	def wrap_desc(description_text)
+		line_prefix = "\n" << (' ' * 37)
+		col = 43
+		result = description_text.gsub(/(.{1,#{col}})( +|$\n?)|(.{1,#{col}})/, "\\1\\3#{line_prefix}")
+		result.strip!
+		return result
+	end
+	
+	def listen_url
+		if @options[:socket_file]
+			return @options[:socket_file]
+		else
+			result = "http://#{@options[:address]}"
+			if @options[:port] != 80
+				result << ":#{@options[:port]}"
+			end
+			return result
+		end
+	end
+	
+	def nginx_listen_address
+		if @options[:socket_file]
+			return "unix:" + File.expand_path(@options[:socket_file])
+		else
+			return "#{@options[:address]}:#{@options[:port]}"
+		end
+	end
+	
+	def looks_like_app_directory?(dir)
+		return File.exist?("#{dir}/config/environment.rb") ||
+			File.exist?("#{dir}/config.ru") ||
+			File.exist?("#{dir}/passenger_wsgi.py")
 	end
 	
 	def ensure_nginx_installed
 		# Check whether all development tools and dependencies are installed!
 	end
 	
-	def write_config_file
+	def filename_to_server_name(filename)
+		return File.basename(filename)
+	end
+	
+	def ensure_directory_exists(dir)
+		if !File.exist?(dir)
+			Dir.mkdir(dir)
+		end
+	end
+	
+	def determine_various_resource_locations(create_subdirs = true)
+		if @args.empty?
+			if looks_like_app_directory?(".")
+				@options[:pid_file] ||= File.expand_path("tmp/pids/multicorn.pid")
+				@options[:log_file] ||= File.expand_path("log/multicorn.log")
+				if create_subdirs
+					ensure_directory_exists(File.dirname(@options[:pid_file]))
+					ensure_directory_exists(File.dirname(@options[:log_file]))
+				end
+			else
+				@options[:pid_file] ||= File.expand_path("multicorn.pid")
+				@options[:log_file] ||= File.expand_path("multicorn.log")
+			end
+		else
+			@options[:pid_file] ||= File.expand_path(File.join(@args[0], "multicorn.pid"))
+			@options[:log_file] ||= File.expand_path(File.join(@args[0], "multicorn.log"))
+		end
+	end
+	
+	def determine_apps_to_serve
+		@apps = []
+		if @args.empty?
+			if looks_like_app_directory?(".")
+				@apps << {
+					:server_name => "_",
+					:root => File.expand_path(".")
+				}
+			else
+				
+				Dir["./*"].each do |entry|
+					if looks_like_app_directory?(entry)
+						server_name = filename_to_server_name(entry)
+						@apps << {
+							:server_name => server_name,
+							:root => File.expand_path(entry)
+						}
+					end
+				end
+			end
+		else
+			@args.each do |arg|
+				if looks_like_app_directory?(arg)
+					server_name = filename_to_server_name(arg)
+					@apps << {
+						:server_name => server_name,
+						:root => File.expand_path(arg)
+					}
+				else
+					Dir["#{arg}/*"].each do |entry|
+						if looks_like_app_directory?(entry)
+							server_name = filename_to_server_name(entry)
+							@apps << {
+								:server_name => server_name,
+								:root => File.expand_path(entry)
+							}
+						end
+					end
+				end
+			end
+		end
+	end
+	
+	def create_nginx_config_file
+		config_file = Tempfile.new('nginx')
+		@config_filename = config_file.path
+		begin
+			config_file.chmod(0644)
+			template_filename = File.join(LIBDIR, "phusion_passenger", "templates", "multicorn.conf.erb")
+			erb = ERB.new(File.read(template_filename))
+			config_file.write(erb.result(binding))
+		ensure
+			config_file.close
+		end
+	end
+	
+	def determine_nginx_start_command
+		return "/Users/hongli/Projects/nginx-0.7.62/objs/nginx -c '#{@config_filename}'"
+	end
+	
+	def ping_nginx
+		if @options[:socket_file]
+			UNIXSocket.new(@options[:socket_file])
+		else
+			TCPSocket.new(@options[:address], @options[:port])
+		end
 	end
 	
 	def create_nginx_controller
-		o = Object.new
-		def o.start
-		end
-		return o
+		@nginx = DaemonController.new(
+			:identifier    => 'Nginx',
+			:before_start  => method(:create_nginx_config_file),
+			:start_command => method(:determine_nginx_start_command),
+			:ping_command  => method(:ping_nginx),
+			:pid_file      => @options[:pid_file],
+			:log_file      => @options[:log_file],
+			:timeout       => 25
+		)
 	end
 	
 	def daemonize
+		pid = fork
+		if pid
+			exit!
+		end
 	end
 	
-	def watch_directory_in_background
+	def watch_directories_in_background
 		Thread.new do
-			
 		end
 	end
 	
 	def watch_log_files_in_background
 		Thread.new do
-			if serving_multiple_apps?
+		end
+	end
+	
+	def wait_until_nginx_has_exited
+		# Since Nginx is not our child process (it daemonizes or we daemonize)
+		# we cannot use Process.waitpid to wait for it. A busy-sleep-loop with
+		# Process.kill(0, pid) isn't very efficient. Instead we do this:
+		#
+		# Connect to Nginx and wait until Nginx disconnects the socket because of
+		# timeout. Keep doing this until we can no longer connect.
+		while true
+			if @options[:socket_file]
+				socket = UNIXSocket.new(@options[:socket_file])
+			else
+				socket = TCPSocket.new(@options[:address], @options[:port])
+			end
+			begin
+				socket.read rescue nil
+			ensure
+				socket.close rescue nil
 			end
 		end
+	rescue Errno::ECONNREFUSED, Errno::ECONNRESET
+	end
+	
+	def stop_nginx
+		STDOUT.write("Stopping web server...")
+		STDOUT.flush
+		@nginx.stop
+		STDOUT.puts " done"
 	end
 end
 
+end # module PhusionPassenger
+
 Thread.abort_on_exception = true
-Multicorn.run_command(ARGV)
+PhusionPassenger::Multicorn.run_command(ARGV)

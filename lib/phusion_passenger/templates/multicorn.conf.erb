@@ -1,0 +1,35 @@
+worker_processes 2;
+daemon on;
+error_log <%= @options[:log_file] %>;
+pid <%= @options[:pid_file] %>;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /Users/hongli/Projects/nginx-0.7.62/conf/mime.types;
+    default_type application/octet-stream;
+    client_max_body_size 50m;
+    gzip on;
+    keepalive_timeout 60;
+    passenger_root /Users/hongli/Projects/passenger;
+    
+    <% if @apps.size > 1 %>
+    # Default server entry.
+    server {
+        listen <%= nginx_listen_address %>;
+        root <%= LIBDIR %>/phusion_passenger/templates/multicorn_default_root;
+    }
+    <% end %>
+    
+    <% for app in @apps %>
+    server {
+        listen <%= @options[:address] %>:<%= @options[:port] %>;
+        server_name <%= app[:server_name] %>;
+        root <%= app[:root] %>/public;
+        passenger_enabled on;
+	rails_env <%= @options[:env] %>;
+    }
+    <% end %>
+}
