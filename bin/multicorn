@@ -169,7 +169,7 @@ private
 			puts " Host name                     Directory"
 			puts "------------------------------------------------------------"
 			@apps.each do |app|
-				printf " %-26s    %s\n", app[:server_name], app[:root]
+				printf " %-26s    %s\n", app[:server_names][0], app[:root]
 			end
 		else
 			puts "Accessible via: #{listen_url}"
@@ -323,8 +323,13 @@ private
 		# Also check whether all development tools and dependencies are installed!
 	end
 	
-	def filename_to_server_name(filename)
-		return File.basename(filename)
+	def filename_to_server_names(filename)
+		basename = File.basename(filename)
+		names = [basename]
+		if basename !~ /^www\.$/i
+			names << "www.#{basename}"
+		end
+		return names
 	end
 	
 	def ensure_directory_exists(dir)
@@ -357,15 +362,15 @@ private
 		if @args.empty?
 			if looks_like_app_directory?(".")
 				@apps << {
-					:server_name => "_",
+					:server_names => ["_"],
 					:root => File.expand_path(".")
 				}
 			else
 				Dir["./*"].each do |entry|
 					if looks_like_app_directory?(entry)
-						server_name = filename_to_server_name(entry)
+						server_names = filename_to_server_names(entry)
 						@apps << {
-							:server_name => server_name,
+							:server_names => server_names,
 							:root => File.expand_path(entry)
 						}
 					end
@@ -374,17 +379,17 @@ private
 		else
 			@args.each do |arg|
 				if looks_like_app_directory?(arg)
-					server_name = filename_to_server_name(arg)
+					server_names = filename_to_server_names(arg)
 					@apps << {
-						:server_name => server_name,
+						:server_names => server_names,
 						:root => File.expand_path(arg)
 					}
 				else
 					Dir["#{arg}/*"].each do |entry|
 						if looks_like_app_directory?(entry)
-							server_name = filename_to_server_name(entry)
+							server_names = filename_to_server_names(entry)
 							@apps << {
-								:server_name => server_name,
+								:server_names => server_names,
 								:root => File.expand_path(entry)
 							}
 						end
@@ -497,7 +502,7 @@ private
 						puts " Host name                     Directory"
 						puts "------------------------------------------------------------"
 						@apps.each do |app|
-							printf " %-26s    %s\n", app[:server_name], app[:root]
+							printf " %-26s    %s\n", app[:server_names][0], app[:root]
 						end
 						puts "------------------------------------------------------------"
 					end

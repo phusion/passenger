@@ -26,7 +26,7 @@ http {
     <% for app in @apps %>
     server {
         listen <%= @options[:address] %>:<%= @options[:port] %>;
-        server_name <%= app[:server_name] %>;
+        server_name <%= app[:server_names].join(' ') %>;
         root <%= app[:root] %>/public;
         passenger_enabled on;
 	rails_env <%= @options[:env] %>;
