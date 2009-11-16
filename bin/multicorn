@@ -29,7 +29,6 @@ require 'optparse'
 require 'socket'
 require 'thread'
 require 'erb'
-require 'tempfile'
 require 'phusion_passenger/constants'
 require 'phusion_passenger/packaging'
 require 'phusion_passenger/abstract_installer'
@@ -345,7 +344,7 @@ private
 	
 	def ensure_nginx_installed
 		nginx_version = @options[:nginx_version]
-		global_dir = "/var/lib/multicorn/#{VERSION_STRING}/nginx-#{nginx_version}-#{}"
+		global_dir = "/var/lib/multicorn/#{VERSION_STRING}/nginx-#{nginx_version}"
 		if File.exist?("#{global_dir}/sbin/nginx")
 			@nginx_directory = global_dir
 		elsif Process.euid == 0
@@ -437,20 +436,13 @@ private
 		end
 	end
 	
-	def create_nginx_config_file(filename = nil)
-		if filename
-			config_file = File.open(filename, 'w')
-		else
-			config_file = Tempfile.new('nginx')
-		end
-		@config_filename = config_file.path
-		begin
-			config_file.chmod(0644)
-			template_filename = File.join(LIBDIR, "phusion_passenger", "templates", "multicorn.conf.erb")
+	def create_nginx_config_file
+		File.open(@config_filename, 'w') do |f|
+			f.chmod(0644)
+			template_filename = File.join(LIBDIR, "phusion_passenger", "templates", "multicorn", "config.erb")
 			erb = ERB.new(File.read(template_filename))
-			config_file.write(erb.result(binding))
-		ensure
-			config_file.close
+			f.write(erb.result(binding))
+			puts erb.result(binding)
 		end
 	end
 	
@@ -467,6 +459,7 @@ private
 	end
 	
 	def create_nginx_controller
+		@config_filename = "/tmp/multicorn.#{$$}.conf"
 		@nginx = DaemonController.new(
 			:identifier    => 'Nginx',
 			:before_start  => method(:create_nginx_config_file),
@@ -531,7 +524,7 @@ private
 					STDERR.puts "*** Error: unable to retrieve the web server's PID."
 					next
 				end
-				create_nginx_config_file(@config_filename)
+				create_nginx_config_file
 				begin
 					Process.kill('HUP', pid) rescue nil
 					
@@ -639,7 +632,6 @@ class NginxInstaller < AbstractInstaller
 	
 	def install!
 		require 'fileutils'
-		require 'tempfile'
 		require 'phusion_passenger/platform_info'
 		require 'phusion_passenger/dependencies'
 		

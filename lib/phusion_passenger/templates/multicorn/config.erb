@@ -8,9 +8,10 @@ events {
 }
 
 http {
-    include /Users/hongli/Projects/nginx-0.7.62/conf/mime.types;
+    include <%= @nginx_directory %>/conf/mime.types;
     default_type application/octet-stream;
     client_max_body_size 50m;
+    access_log off;
     gzip on;
     keepalive_timeout 60;
     passenger_root /Users/hongli/Projects/passenger;
