@@ -214,6 +214,13 @@ private
 	end
 	
 	def command_stop
+		parse_options!("stop") do |opts|
+			opts.on("--pid-file FILE", String,
+				wrap_desc("PID file of a running Multicorn instance.")) do |value|
+				@options[:pid_file] = value
+			end
+		end
+		
 		determine_various_resource_locations(false)
 		create_nginx_controller
 		begin
@@ -233,6 +240,13 @@ private
 	end
 	
 	def command_status
+		parse_options!("status") do |opts|
+			opts.on("--pid-file FILE", String,
+				wrap_desc("PID file of a running Multicorn instance.")) do |value|
+				@options[:pid_file] = value
+			end
+		end
+		
 		determine_various_resource_locations(false)
 		create_nginx_controller
 		begin
