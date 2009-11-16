@@ -137,7 +137,7 @@ module Dependencies # :nodoc: all
 			end
 		end
 		if RUBY_PLATFORM =~ /linux/
-			case LINUX_DISTRO
+			case PlatformInfo.linux_distro
 			when :ubuntu, :debian
 				dep.install_command = "apt-get install build-essential"
 			when :rhel, :fedora, :centos
@@ -165,7 +165,7 @@ module Dependencies # :nodoc: all
 			end
 		end
 		if RUBY_PLATFORM =~ /linux/
-			case LINUX_DISTRO
+			case PlatformInfo.linux_distro
 			when :ubuntu, :debian
 				dep.install_command = "apt-get install wget curl"
 			when :rhel, :fedora, :centos
