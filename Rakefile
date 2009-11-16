@@ -817,6 +817,7 @@ spec = Gem::Specification.new do |s|
 		'man/*',
 		'debian/*',
 		'ext/common/*.{cpp,c,h,hpp}',
+		'ext/common/ApplicationPool/*.h',
 		'ext/apache2/*.{cpp,h,c,TXT}',
 		'ext/nginx/*.{c,cpp,h}',
 		'ext/nginx/config',
@@ -862,6 +863,10 @@ end
 
 Rake::GemPackageTask.new(spec) do |pkg|
 	pkg.need_tar_gz = true
+end
+
+task 'package:filelist' do
+	puts spec.files
 end
 
 Rake::Task['package'].prerequisites.unshift(:doc)

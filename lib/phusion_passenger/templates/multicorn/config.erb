@@ -9,13 +9,15 @@ events {
 }
 
 http {
-    include <%= @nginx_directory %>/conf/mime.types;
+    include <%= @nginx_dir %>/conf/mime.types;
+    client_body_temp_path <%= @temp_dir %>/client;
+    proxy_temp_path <%= @temp_dir %>/proxy;
     default_type application/octet-stream;
     client_max_body_size 50m;
     access_log off;
     gzip on;
     keepalive_timeout 60;
-    passenger_root /Users/hongli/Projects/passenger;
+    passenger_root <%= @multicorn_dir %>;
     passenger_user_switching off;
     <% if @options[:user] %>passenger_default_user <%= @options[:user] %>;<% end %>
     
