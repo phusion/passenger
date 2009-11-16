@@ -895,7 +895,7 @@ private
 			command = "./configure '--prefix=#{@nginx_dir}' --without-pcre " <<
 				"--without-http_rewrite_module " <<
 				"--without-http_fastcgi_module " <<
-				"'--add-module=#{PASSENGER_ROOT}/ext/nginx'"
+				"'--add-module=#{@multicorn_dir}/ext/nginx'"
 			run_command_with_throbber(command, "Preparing Nginx...") do |status_text|
 				yield(0, 1, status_text)
 			end
