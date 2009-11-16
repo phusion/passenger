@@ -289,6 +289,7 @@ class MessageChannel
 	# Might raise SystemCallError, IOError or SocketError when something
 	# goes wrong.
 	def recv_io
+		write("pass IO")
 		return @io.recv_io
 	end
 	
@@ -299,7 +300,34 @@ class MessageChannel
 	# Might raise SystemCallError, IOError or SocketError when something
 	# goes wrong.
 	def send_io(io)
-		@io.send_io(io)
+		# We read a message before actually calling #send_io
+		# in order to prevent the other side from accidentally
+		# read()ing past the normal data and reading our file
+		# descriptor too.
+		#
+		# For example suppose that side A looks like this:
+		#
+		#   read(fd, buf, 1024)
+		#   read_io(fd)
+		#
+		# and side B:
+		#
+		#   write(fd, buf, 100)
+		#   send_io(fd_to_pass)
+		#
+		# If B completes both write() and send_io(), then A's read() call
+		# reads past the 100 bytes that B sent. On some platforms, like
+		# Linux, this will cause read_io() to fail. And it just so happens
+		# that Ruby's IO#read method slurps more than just the given amount
+		# of bytes.
+		result = read
+		if !result
+			raise EOFError, "End of stream"
+		elsif result != ["pass IO"]
+			raise IOError, "IO passing header expected"
+		else
+			@io.send_io(io)
+		end
 	end
 	
 	# Return the file descriptor of the underlying IO object.

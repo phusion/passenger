@@ -170,8 +170,14 @@ namespace tut {
 		MessageChannel channel2(s[1]);
 		
 		pipe(my_pipe);
-		channel1.writeFileDescriptor(my_pipe[1]);
+		boost::thread thr(bind(
+			&MessageChannel::writeFileDescriptor,
+			&channel1,
+			my_pipe[1],
+			true
+		));
 		fd = channel2.readFileDescriptor();
+		thr.join();
 		
 		char buf[5];
 		write(fd, "hello", 5);
@@ -418,7 +424,7 @@ namespace tut {
 			reader.readRaw(&buf, 1, &timeout);
 			fail("No TimeoutException thrown.");
 		} catch (const TimeoutException &) {
-			ensure_equals("The passed time is deducted from timeout", timeout, 0u);
+			ensure("The passed time is deducted from timeout", timeout < 5);
 		}
 	}
 	
@@ -433,7 +439,7 @@ namespace tut {
 			reader.readRaw(&buf, sizeof(buf), &timeout);
 			fail("No TimeoutException thrown.");
 		} catch (const TimeoutException &) {
-			ensure_equals("The passed time is deducted from timeout", timeout, 0u);
+			ensure("The passed time is deducted from timeout", timeout < 5);
 		}
 	}
 	
@@ -517,7 +523,7 @@ namespace tut {
 			reader.readScalar(str, 0, &timeout);
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
-			ensure_equals("The passed time is deducted from timeout", timeout, 0u);
+			ensure("The passed time is deducted from timeout", timeout < 5);
 		}
 	}
 	
@@ -531,7 +537,7 @@ namespace tut {
 			reader.readScalar(str, 0, &timeout);
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
-			ensure_equals("The passed time is deducted from timeout", timeout, 0u);
+			ensure("The passed time is deducted from timeout", timeout < 5);
 		}
 	}
 	
@@ -545,7 +551,7 @@ namespace tut {
 			reader.readScalar(str, 0, &timeout);
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
-			ensure_equals("The passed time is deducted from timeout", timeout, 0u);
+			ensure("The passed time is deducted from timeout", timeout < 5);
 		}
 	}
 	
@@ -568,7 +574,7 @@ namespace tut {
 			unsigned long long elapsed = timer.elapsed();
 			ensure("Spent at least 35 msec waiting", elapsed >= 35);
 			ensure("Spent at most 60 msec waiting", elapsed <= 60);
-			ensure_equals("The passed time is deducted from timeout", timeout, 0u);
+			ensure("The passed time is deducted from timeout", timeout < 5);
 		}
 	}
 	
@@ -619,7 +625,7 @@ namespace tut {
 			reader.readUint32(i, &timeout);
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
-			ensure_equals("The spent time is deducted from timeout", timeout, 0u);
+			ensure("The spent time is deducted from timeout", timeout < 5);
 		}
 	}
 	
@@ -632,7 +638,7 @@ namespace tut {
 			reader.readUint32(i, &timeout);
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &e) {
-			ensure_equals("The spent time is deducted from timeout", timeout, 0u);
+			ensure("The spent time is deducted from timeout", timeout < 5);
 		}
 	}
 	
