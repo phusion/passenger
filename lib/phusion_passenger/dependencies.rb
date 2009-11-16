@@ -126,6 +126,29 @@ module Dependencies # :nodoc: all
 		dep.website = "http://gcc.gnu.org/"
 	end
 	
+	Make = Dependency.new do |dep|
+		dep.name = "The 'make' tool"
+		dep.define_checker do |result|
+			make = PlatformInfo.find_command('make')
+			if make
+				result.found(make)
+			else
+				result.not_found
+			end
+		end
+		if RUBY_PLATFORM =~ /linux/
+			case LINUX_DISTRO
+			when :ubuntu, :debian
+				dep.install_command = "apt-get install build-essential"
+			when :rhel, :fedora, :centos
+				dep.install_command = "yum install make"
+			end
+		elsif RUBY_PLATFORM =~ /darwin/
+			dep.install_instructions = "Please install the Apple Development Tools: http://developer.apple.com/tools/"
+		end
+		dep.website = "http://www.gnu.org/software/make/"
+	end
+	
 	Ruby_DevHeaders = Dependency.new do |dep|
 		dep.name = "Ruby development headers"
 		dep.define_checker do |result|

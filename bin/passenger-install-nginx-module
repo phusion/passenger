@@ -41,6 +41,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 	def dependencies
 		result = [
 			Dependencies::GCC,
+			Dependencies::Make,
 			Dependencies::Ruby_DevHeaders,
 			Dependencies::Ruby_OpenSSL,
 			Dependencies::RubyGems,
