@@ -77,6 +77,7 @@ class Multicorn
 			exit
 		elsif respond_to?("command_#{command}", true)
 			@args = argv[1..-1]
+			@original_args = @args.dup
 			begin
 				send("command_#{command}")
 			rescue OptionParser::ParseError => e
@@ -125,12 +126,17 @@ private
 				wrap_desc("Daemonize into the background")) do
 				@options[:daemonize] = true
 			end
+			opts.on("--user USERNAME", String,
+				wrap_desc("User to run as. Ignored unless running as root.")) do |value|
+				@options[:user] = value
+			end
 		end
 		if @options[:tcp] && @options[:socket_file]
 			STDERR.puts "You cannot specify both --address/--port and --socket. Please choose either one."
 			exit 1
 		end
 		
+		check_port_and_display_sudo_suggestion
 		ensure_nginx_installed
 		determine_various_resource_locations
 		determine_apps_to_serve
@@ -294,6 +300,28 @@ private
 		return result
 	end
 	
+	# Most platforms don't allow non-root processes to bind to a port lower than 1024.
+	# Check whether this is the case for the current platform and if so, tell the user
+	# that it must re-run Multicorn with sudo.
+	def check_port_and_display_sudo_suggestion
+		if !@options[:socket_file] && @options[:port] < 1024 && Process.euid != 0
+			begin
+				TCPServer.new('127.0.0.1', @options[:port]).close
+			rescue Errno::EACCES
+				myself = `whoami`.strip
+				STDERR.puts "Only the 'root' user can run Multicorn on port #{@options[:port]}. You are currently running"
+				STDERR.puts "as '#{myself}'. Please re-run Multicorn with root privileges with the"
+				STDERR.puts "following command:"
+				STDERR.puts
+				STDERR.puts "  sudo multicorn start #{@original_args.join(' ')} --user=#{myself}"
+				STDERR.puts
+				STDERR.puts "Don't forget the '--user' part! That will make Multicorn drop root privileges"
+				STDERR.puts "and switch to '#{myself}' after it has obtained port #{@options[:port]}."
+				exit 1
+			end
+		end
+	end
+	
 	def listen_url
 		if @options[:socket_file]
 			return @options[:socket_file]
@@ -442,8 +470,14 @@ private
 			template_filename = File.join(LIBDIR, "phusion_passenger", "templates", "multicorn", "config.erb")
 			erb = ERB.new(File.read(template_filename))
 			f.write(erb.result(binding))
-			puts erb.result(binding)
 		end
+	end
+	
+	def default_group_for(username)
+		require 'etc' unless defined?(Etc)
+		user = Etc.getpwnam(username)
+		group = Etc.getgrgid(user.gid)
+		return group.name
 	end
 	
 	def determine_nginx_start_command

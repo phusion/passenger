@@ -2,6 +2,7 @@ worker_processes 2;
 daemon on;
 error_log <%= @options[:log_file] %>;
 pid <%= @options[:pid_file] %>;
+<% if @options[:user] %>user <%= @options[:user] %> <%= default_group_for(@options[:user]) %>;<% end %>
 
 events {
     worker_connections 1024;
@@ -15,6 +16,8 @@ http {
     gzip on;
     keepalive_timeout 60;
     passenger_root /Users/hongli/Projects/passenger;
+    passenger_user_switching off;
+    <% if @options[:user] %>passenger_default_user <%= @options[:user] %>;<% end %>
     
     <% if @apps.size > 1 %>
     # Default server entry.
