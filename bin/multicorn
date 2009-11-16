@@ -30,7 +30,9 @@ require 'socket'
 require 'thread'
 require 'erb'
 require 'tempfile'
+require 'phusion_passenger/constants'
 require 'phusion_passenger/packaging'
+require 'phusion_passenger/abstract_installer'
 
 begin
 	require 'daemon_controller'
@@ -96,9 +98,10 @@ private
 	def command_start
 		description = "Starts Multicorn in order to serve a Ruby web application."
 		@options = {
-			:address => '0.0.0.0',
-			:port => 3000,
-			:env  => ENV['RAILS_ENV'] || ENV['RACK_ENV'] || 'development'
+			:address       => '0.0.0.0',
+			:port          => 3000,
+			:env           => ENV['RAILS_ENV'] || ENV['RACK_ENV'] || 'development',
+			:nginx_version => '0.7.63'
 		}
 		parse_options!("start [directory]", description) do |opts|
 			opts.on("-a", "--address HOST", String,
@@ -319,8 +322,43 @@ private
 			File.exist?("#{dir}/passenger_wsgi.py")
 	end
 	
+	def nginx_install_directory
+		global_dir = "/var/lib/multicorn/nginx-#{@options[:nginx_version]}"
+		if File.directory?(global_dir)
+			return global_dir
+		else
+			if Process.euid == 0
+			end
+			private_dir = "#{home}/.multicorn/nginx-#{@options[:nginx_version]}"
+		end
+		if Process.euid == 0
+			return 
+		else
+			home = ENV['HOME']
+			return 
+		end
+	end
+	
+	def install_nginx(dir, version)
+		NginxInstaller.new(:dir => dir, :version => version).start
+	end
+	
 	def ensure_nginx_installed
-		# Also check whether all development tools and dependencies are installed!
+		nginx_version = @options[:nginx_version]
+		global_dir = "/var/lib/multicorn/#{VERSION_STRING}/nginx-#{nginx_version}-#{}"
+		if File.exist?("#{global_dir}/sbin/nginx")
+			@nginx_directory = global_dir
+		elsif Process.euid == 0
+			install_nginx(global_dir, nginx_version)
+			@nginx_directory = global_dir
+		else
+			home = ENV['HOME']
+			private_dir = "#{home}/.multicorn/#{VERSION_STRING}/nginx-#{nginx_version}"
+			@nginx_directory = private_dir
+			if !File.exist?("#{private_dir}/sbin/nginx")
+				install_nginx(private_dir, nginx_version)
+			end
+		end
 	end
 	
 	def filename_to_server_names(filename)
@@ -417,7 +455,7 @@ private
 	end
 	
 	def determine_nginx_start_command
-		return "/Users/hongli/Projects/nginx-0.7.62/objs/nginx -c '#{@config_filename}'"
+		return "#{@nginx_directory}/sbin/nginx -c '#{@config_filename}'"
 	end
 	
 	def ping_nginx
@@ -577,6 +615,239 @@ private
 			@nginx.stop
 			STDOUT.puts " done"
 			STDOUT.flush
+		end
+	end
+end
+
+class NginxInstaller < AbstractInstaller
+	def dependencies
+		result = [
+			Dependencies::GCC,
+			Dependencies::Make,
+			Dependencies::DownloadTool,
+			Dependencies::Ruby_DevHeaders,
+			Dependencies::Ruby_OpenSSL,
+			Dependencies::RubyGems,
+			Dependencies::Rake,
+			Dependencies::Zlib_Dev
+		]
+		if Dependencies.fastthread_required?
+			result << Dependencies::FastThread
+		end
+		return result
+	end
+	
+	def install!
+		require 'fileutils'
+		require 'tempfile'
+		require 'phusion_passenger/platform_info'
+		require 'phusion_passenger/dependencies'
+		
+		show_welcome_screen
+		check_dependencies(false) || exit(1)
+		puts
+		check_whether_we_can_write_to(PASSENGER_ROOT) || exit(1)
+		check_whether_we_can_write_to(@dir) || exit(1)
+		
+		source_dir = download_and_extract_nginx do |progress, total|
+			show_progress(progress, total, 1, 6, "Extracting...")
+		end
+		if source_dir.nil?
+			puts
+			show_possible_solutions_for_download_and_extraction_problems
+			exit(1)
+		end
+		compile_passenger_support_files do |progress, total, status_text|
+			show_progress(progress, total, 2..4, 6, status_text)
+		end
+		install_nginx(source_dir) do |progress, total, status_text|
+			show_progress(progress, total, 5..6, 6, status_text)
+		end
+		puts
+		color_puts "<green><b>All done!</b></green>"
+		puts
+	end
+
+private
+	def show_welcome_screen
+		render_template 'multicorn/welcome',
+			:version => @version,
+			:dir => @dir
+		puts
+	end
+	
+	def check_whether_we_can_write_to(dir)
+		FileUtils.mkdir_p(dir)
+		File.new("#{dir}/__test__.txt", "w").close
+		return true
+	rescue
+		new_screen
+		if Process.uid == 0
+			render_template 'multicorn/cannot_write_to_dir', :dir => dir
+		else
+			render_template 'multicorn/run_installer_as_root', :dir => dir
+		end
+		return false
+	ensure
+		File.unlink("#{dir}/__test__.txt") rescue nil
+	end
+	
+	def show_progress(progress, total, phase, total_phases, status_text = "")
+		if !phase.is_a?(Range)
+			phase = phase..phase
+		end
+		total_progress = (phase.first - 1).to_f / total_phases
+		total_progress += (progress.to_f / total) * ((phase.last - phase.first + 1).to_f / total_phases)
+		
+		max_width = 79
+		progress_bar_width = 45
+		text = sprintf("[%-#{progress_bar_width}s] %s",
+			'*' * (progress_bar_width * total_progress).to_i,
+			status_text)
+		text = text.ljust(max_width)
+		text = text[0 .. max_width - 1]
+		STDOUT.write("#{text}\r")
+		STDOUT.flush
+	end
+	
+	def download_and_extract_nginx
+		color_puts "<banner>Downloading Nginx...</banner>"
+		
+		basename = "nginx-#{@version}.tar.gz"
+		url = "http://sysoev.ru/nginx/#{basename}"
+		File.unlink("/tmp/#{basename}") rescue nil
+		FileUtils.rm_rf("/tmp/nginx-#{@version}")
+		
+		if download(url, "/tmp/#{basename}")
+			Dir.chdir("/tmp") do
+				color_puts "<banner>Installing Nginx core...</banner>"
+				File.open(basename) do |f|
+					IO.popen("tar xzf -", "w") do |io|
+						buffer = ''
+						total_size = File.size(basename)
+						bytes_read = 0
+						yield(bytes_read, total_size)
+						begin
+							while !f.eof?
+								f.read(1024 * 8, buffer)
+								io.write(buffer)
+								io.flush
+								bytes_read += buffer.size
+								yield(bytes_read, total_size)
+							end
+						rescue Errno::EPIPE
+							return nil
+						end
+					end
+					if $?.exitstatus != 0
+						return nil
+					end
+				end
+				return "/tmp/nginx-#{@version}"
+			end
+		else
+			return nil
+		end
+	rescue Interrupt
+		exit 2
+	end
+	
+	def show_possible_solutions_for_download_and_extraction_problems
+		new_screen
+		render_template "multicorn/possible_solutions_for_download_and_extraction_problems"
+		puts
+	end
+	
+	def run_rake_task!(target)
+		rake = "#{PlatformInfo::RUBY} #{PlatformInfo.rake}"
+		total_lines = `#{rake} #{target} --dry-run`.split("\n").size - 1
+		backlog = ""
+		
+		IO.popen("#{rake} #{target} --trace STDERR_TO_STDOUT=1", "r") do |io|
+			progress = 1
+			while !io.eof?
+				line = io.readline
+				if line =~ /^\*\* /
+					yield(progress, total_lines)
+					backlog.replace("")
+					progress += 1
+				else
+					backlog << line
+				end
+			end
+		end
+		if $?.exitstatus != 0
+			STDERR.puts
+			STDERR.puts "*** ERROR: the following command failed:"
+			STDERR.puts(backlog)
+			exit 1
+		end
+	end
+	
+	def compile_passenger_support_files
+		yield(0, 1, "Preparing Phusion Passenger...")
+		Dir.chdir(PASSENGER_ROOT) do
+			rake = "#{PlatformInfo::RUBY} #{PlatformInfo.rake}"
+			clean_command = "#{rake} nginx:clean --silent REALLY_QUIET=1"
+			if !system(clean_command)
+				STDERR.puts
+				STDERR.puts "*** Command failed: #{clean_command}"
+				exit 1
+			end
+			run_rake_task!("nginx") do |progress, total|
+				yield(progress, total, "Compiling Phusion Passenger...")
+			end
+		end
+	end
+	
+	def install_nginx(source_dir)
+		Dir.chdir(source_dir) do
+			backlog = ""
+			command = "./configure '--prefix=#{@dir}' --without-pcre " <<
+				"--without-http_rewrite_module " <<
+				"'--add-module=#{PASSENGER_ROOT}/ext/nginx' 2>&1"
+			IO.popen(command, "r") do |io|
+				throbbers = ['-', '\\', '|', '/']
+				index = 0
+				while !io.eof?
+					backlog << io.readline
+					yield(0, 1, "Preparing Nginx... #{throbbers[index]}")
+					index = (index + 1) % throbbers.size
+				end
+			end
+			if $?.exitstatus != 0
+				STDERR.puts
+				STDERR.puts "*** ERROR: unable to configure Nginx."
+				STDERR.puts backlog
+				exit 1
+			end
+			
+			backlog = ""
+			total_lines = `make --dry-run`.split("\n").size
+			IO.popen("make 2>&1", "r") do |io|
+				progress = 1
+				while !io.eof?
+					line = io.readline
+					backlog << line
+					yield(progress, total_lines, "Compiling Nginx core...")
+					progress += 1
+				end
+			end
+			if $?.exitstatus != 0
+				STDERR.puts
+				STDERR.puts "*** ERROR: unable to compile Nginx."
+				STDERR.puts backlog
+				exit 1
+			end
+			
+			yield(1, 1, "Installing Nginx core...")
+			backlog = `make install 2>&1`
+			if $?.exitstatus != 0
+				STDERR.puts
+				STDERR.puts "*** ERROR: unable to install Nginx."
+				STDERR.puts backlog
+				exit 1
+			end
 		end
 	end
 end

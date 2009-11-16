@@ -127,8 +127,8 @@ private
 		return []
 	end
 	
-	def check_dependencies
-		new_screen
+	def check_dependencies(show_new_screen = true)
+		new_screen if show_new_screen
 		missing_dependencies = []
 		color_puts "<banner>Checking for required software...</banner>"
 		puts
@@ -189,6 +189,14 @@ private
 			end
 		else
 			color_puts "   Search Google."
+		end
+	end
+	
+	def download(url, output)
+		if PlatformInfo.find_command("wget")
+			return sh("wget", "-O", output, url)
+		else
+			return sh("curl", url, "-o", output)
 		end
 	end
 end

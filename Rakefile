@@ -27,7 +27,16 @@ require 'rake/cplusplus'
 require 'phusion_passenger/platform_info'
 require 'phusion_passenger/constants'
 
-verbose true
+verbose true unless ENV['REALLY_QUIET']
+if ENV['STDERR_TO_STDOUT']
+	# Just redirecting the file descriptor isn't enough because
+	# data written to STDERR might arrive in an unexpected order
+	# compared to STDOUT.
+	STDERR.reopen(STDOUT)
+	Object.send(:remove_const, :STDERR)
+	STDERR = STDOUT
+	$stderr = $stdout
+end
 
 ##### Configuration
 
@@ -788,6 +797,7 @@ spec = Gem::Specification.new do |s|
 		'lib/phusion_passenger/templates/*',
 		'lib/phusion_passenger/templates/apache2/*',
 		'lib/phusion_passenger/templates/nginx/*',
+		'lib/phusion_passenger/templates/multicorn/*',
 		'lib/phusion_passenger/templates/multicorn_default_root/*',
 		'bin/*',
 		'doc/*',

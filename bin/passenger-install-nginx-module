@@ -410,14 +410,6 @@ private
 		end
 		return @pcre_is_installed
 	end
-	
-	def download(url, output)
-		if PlatformInfo.find_command("wget")
-			return sh("wget", "-O", output, url)
-		else
-			return sh("curl", url, "-o", output)
-		end
-	end
 end
 
 options = {}
