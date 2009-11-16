@@ -17,7 +17,7 @@ http {
     access_log off;
     gzip on;
     keepalive_timeout 60;
-    passenger_root <%= @multicorn_dir %>;
+    passenger_root <%= passenger_root %>;
     passenger_user_switching off;
     <% if @options[:user] %>passenger_default_user <%= @options[:user] %>;<% end %>
     

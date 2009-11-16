@@ -475,9 +475,16 @@ private
 			f.chmod(0644)
 			template_filename = File.join(LIBDIR, "phusion_passenger", "templates", "multicorn", "config.erb")
 			erb = ERB.new(File.read(template_filename))
+			
+			debug = ENV['DEBUG_MULTICORN']
+			if debug
+				passenger_root = PASSENGER_ROOT
+			else
+				passenger_root = @multicorn_dir
+			end
 			output = erb.result(binding)
 			f.write(output)
-			puts output if ENV['DEBUG_MULTICORN']
+			puts output if debug
 		end
 	end
 	
