@@ -193,10 +193,12 @@ static ngx_int_t
 start_helper_server(ngx_cycle_t *cycle) {
     ngx_core_conf_t *core_conf;
     ngx_int_t        ret, result;
+    u_char           filename[NGX_MAX_PATH], *last;
     char            *default_user = NULL;
     char            *passenger_root = NULL;
     char            *ruby = NULL;
     char            *error_message = NULL;
+    FILE            *f;
     
     core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
     result    = NGX_OK;
@@ -206,7 +208,6 @@ start_helper_server(ngx_cycle_t *cycle) {
     passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
     ruby           = ngx_str_null_terminate(&passenger_main_conf.ruby);
     
-    /* TODO: make sure that the child process's stdout and stderr point to the Nginx config file! */
     ret = helper_server_starter_start(passenger_helper_server_starter,
         passenger_main_conf.log_level, getpid(),
         system_temp_dir, passenger_main_conf.user_switching,
@@ -221,6 +222,32 @@ start_helper_server(ngx_cycle_t *cycle) {
         ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno, "%s", error_message);
         result = NGX_ERROR;
         goto cleanup;
+    }
+    
+    /* Create the file passenger_temp_dir + "/control_process.pid"
+     * and make it writable by the worker processes. This is because
+     * save_master_process_pid is run after Nginx has lowered privileges.
+     */
+    last = ngx_snprintf(filename, sizeof(filename) - 1,
+                        "%s/control_process.pid",
+                        helper_server_starter_get_server_instance_dir(passenger_helper_server_starter));
+    *last = (u_char) '\0';
+    f = fopen((const char *) filename, "w");
+    if (f != NULL) {
+        /* We must do something with these return values because
+         * otherwise on some platforms it will cause a compiler
+         * warning.
+         */
+        do {
+            ret = fchmod(fileno(f), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        } while (ret == -1 && errno == EINTR);
+        do {
+            ret = fchown(fileno(f), core_conf->user, core_conf->group);
+        } while (ret == -1 && errno == EINTR);
+        fclose(f);
+    } else {
+        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                      "could not create %s", filename);
     }
 
 cleanup:
