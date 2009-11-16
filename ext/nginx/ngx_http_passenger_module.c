@@ -127,7 +127,7 @@ save_master_process_pid(ngx_cycle_t *cycle) {
     u_char *last;
     FILE *f;
     
-    last = ngx_snprintf(filename, sizeof(filename) - 1, "%s/instance.pid",
+    last = ngx_snprintf(filename, sizeof(filename) - 1, "%s/control_process.pid",
         helper_server_starter_get_server_instance_dir(passenger_helper_server_starter));
     *last = (u_char) '\0';
     

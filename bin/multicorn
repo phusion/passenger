@@ -29,6 +29,7 @@ require 'optparse'
 require 'socket'
 require 'thread'
 require 'fileutils'
+require 'etc'
 require 'erb'
 require 'phusion_passenger/constants'
 require 'phusion_passenger/packaging'
@@ -350,23 +351,6 @@ private
 			File.exist?("#{dir}/passenger_wsgi.py")
 	end
 	
-	def nginx_install_directory
-		multicorn_dir = "/var/lib/multicorn/#{VERSION_STRING}"
-		if File.directory?(global_dir)
-			return global_dir
-		else
-			if Process.euid == 0
-			end
-			private_dir = "#{home}/.multicorn/#{VERSION_STRING}/nginx-#{@options[:nginx_version]}"
-		end
-		if Process.euid == 0
-			return 
-		else
-			home = ENV['HOME']
-			return 
-		end
-	end
-	
 	def install_nginx(multicorn_dir, nginx_dir, version)
 		NginxInstaller.new(:multicorn_dir => multicorn_dir,
 			:nginx_dir => nginx_dir,
@@ -374,7 +358,7 @@ private
 	end
 	
 	def ensure_nginx_installed
-		home           = ENV['HOME']
+		home           = Etc.getpwuid.dir
 		nginx_version  = @options[:nginx_version]
 		@multicorn_dir = "/var/lib/multicorn/#{VERSION_STRING}"
 		@nginx_dir     = "#{@multicorn_dir}/nginx-#{nginx_version}"
@@ -476,7 +460,7 @@ private
 			template_filename = File.join(LIBDIR, "phusion_passenger", "templates", "multicorn", "config.erb")
 			erb = ERB.new(File.read(template_filename))
 			
-			debug = ENV['DEBUG_MULTICORN']
+			debug = ENV['MULTICORN_DEBUG']
 			if debug
 				passenger_root = PASSENGER_ROOT
 			else
@@ -761,11 +745,11 @@ private
 		basename   = "#{myself}-nginx-#{@version}.tar.gz"
 		original_output_dir = "/tmp/nginx-#{@version}"
 		output_dir = "/tmp/#{myself}-nginx-#{@version}"
-		#File.unlink("/tmp/#{basename}") rescue nil
+		File.unlink("/tmp/#{basename}") rescue nil
 		FileUtils.rm_rf(original_output_dir)
 		FileUtils.rm_rf(output_dir)
 		
-		if false && !download("http://sysoev.ru/nginx/nginx-#{@version}.tar.gz", "/tmp/#{basename}")
+		if !download("http://sysoev.ru/nginx/nginx-#{@version}.tar.gz", "/tmp/#{basename}")
 			return nil
 		end
 		Dir.chdir("/tmp") do
