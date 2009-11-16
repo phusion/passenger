@@ -42,6 +42,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 		result = [
 			Dependencies::GCC,
 			Dependencies::Make,
+			Dependencies::DownloadTool,
 			Dependencies::Ruby_DevHeaders,
 			Dependencies::Ruby_OpenSSL,
 			Dependencies::RubyGems,

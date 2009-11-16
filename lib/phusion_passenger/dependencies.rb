@@ -149,6 +149,33 @@ module Dependencies # :nodoc: all
 		dep.website = "http://www.gnu.org/software/make/"
 	end
 	
+	DownloadTool = Dependency.new do |dep|
+		dep.name = "A download tool like 'wget' or 'curl'"
+		dep.define_checker do |result|
+			tool = PlatformInfo.find_command('wget')
+			if tool
+				result.found(tool)
+			else
+				tool = PlatformInfo.find_command('curl')
+				if tool
+					result.found(tool)
+				else
+					result.not_found
+				end
+			end
+		end
+		if RUBY_PLATFORM =~ /linux/
+			case LINUX_DISTRO
+			when :ubuntu, :debian
+				dep.install_command = "apt-get install wget curl"
+			when :rhel, :fedora, :centos
+				dep.install_command = "yum install wget curl"
+			end
+		else
+			dep.install_instructions = "Please install either wget (http://www.gnu.org/software/wget/) or curl (http://curl.haxx.se/)."
+		end
+	end
+	
 	Ruby_DevHeaders = Dependency.new do |dep|
 		dep.name = "Ruby development headers"
 		dep.define_checker do |result|
