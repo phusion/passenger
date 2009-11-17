@@ -620,11 +620,7 @@ createUnixServer(const char *filename, unsigned int backlogSize, bool autoDelete
 	}
 	
 	if (backlogSize == 0) {
-		#ifdef SOMAXCONN
-			backlogSize = SOMAXCONN;
-		#else
-			backlogSize = 128;
-		#endif
+		backlogSize = 1024;
 	}
 	try {
 		ret = syscalls::listen(fd, backlogSize);

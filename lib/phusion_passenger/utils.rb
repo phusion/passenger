@@ -31,6 +31,7 @@ require 'pathname'
 require 'etc'
 require 'fcntl'
 require 'tempfile'
+require 'stringio'
 require 'phusion_passenger/exceptions'
 if !defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby"
 	require 'phusion_passenger/native_support'

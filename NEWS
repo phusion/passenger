@@ -20,6 +20,17 @@ Release 2.2.6
 -------------
 
  * Fixed a compilation problem on Solaris. Issue #369.
+ * Some /tmp cleaner programs such as tmpwatch try to remove subdirectories
+   in /tmp/passenger.xxx after a while because they think those
+   subdirectories are unused. This could cause Phusion Passenger to
+   malfunction, requiring a web server restart. Measures have now been
+   taken to prevent those tmp cleaner programs from removing anything
+   in /tmp/passenger.xxx. Issue #365.
+ * The default socket backlog has been increased from 'SOMAXCONN' (which
+   is 128 on most platforms) to 1024. This should fix most
+   'helper_server.sock failed: Resource temporarily unavailable'
+   errors.
+ * Some Ruby 1.9 compatibility fixes. Issue #398.
 
 
 Release 2.2.5

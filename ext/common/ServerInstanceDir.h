@@ -77,6 +77,7 @@ public:
 			 * decide for themselves whether they're readable by anybody.
 			 */
 			makeDirTree(path, "u=wxs,g=x,o=x");
+			ServerInstanceDir::createNonWritableFifo(path + "/.guard");
 			
 			/* Write structure version file. */
 			string structureVersionFile = path + "/structure_version.txt";
@@ -95,6 +96,7 @@ public:
 			} else {
 				makeDirTree(path + "/buffered_uploads", "u=wxs,g=,o=");
 			}
+			ServerInstanceDir::createNonWritableFifo(path + "/buffered_uploads/.guard");
 			
 			if (runningAsRoot) {
 				/* If we're running as root then the directory should not be writable
@@ -105,6 +107,7 @@ public:
 			} else {
 				makeDirTree(path + "/webserver_shared_resources", "u=wxs,g=,o=");
 			}
+			ServerInstanceDir::createNonWritableFifo(path + "/webserver_shared_resources/.guard");
 			
 			if (runningAsRoot) {
 				if (userSwitching) {
@@ -138,6 +141,7 @@ public:
 				 */
 				makeDirTree(path + "/backends", "u=wxs,g=,o=");
 			}
+			ServerInstanceDir::createNonWritableFifo(path + "/backends/.guard");
 			
 			owner = true;
 		}
@@ -168,6 +172,33 @@ private:
 	string path;
 	bool owner;
 	
+	friend class Generation;
+	
+	/* Creates a non-writable FIFO file in order to prevent /tmp cleaners from removing
+	 * passenger temp dir subdirectories. See http://code.google.com/p/phusion-passenger/issues/detail?id=365
+	 * for details.
+	 */
+	static void
+	createNonWritableFifo(const string &filename) {
+		int ret, e;
+		
+		do {
+			ret = mkfifo(filename.c_str(), 0);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1 && errno != EEXIST) {
+			e = errno;
+			throw FileSystemException("Cannot create FIFO file " + filename, e, filename);
+		}
+		
+		do {
+			ret = chmod(filename.c_str(), 0);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
+			e = errno;
+			throw FileSystemException("Cannot set permissions on file " + filename, e, filename);
+		}
+	}
+	
 	void initialize(const string &path, bool owner) {
 		this->path  = path;
 		this->owner = owner;
@@ -189,6 +220,7 @@ private:
 		 * generations no matter what user they're running as.
 		 */
 		makeDirTree(path, "u=rwxs,g=rx,o=rx");
+		createNonWritableFifo(path + "/.guard");
 	}
 	
 public:
