@@ -146,6 +146,30 @@ describe "Phusion Passenger for Nginx" do
 		it_should_behave_like "HelloWorld Rack application"
 	end
 	
+	describe "Rack application running within Rails directory structure" do
+		before :all do
+			@server = "http://passenger.test:#{@nginx.port}"
+			@stub = setup_rails_stub('mycook')
+			FileUtils.cp_r("stub/rack/.", @stub.app_root)
+			@nginx.add_server do |server|
+			server[:server_name] = "passenger.test"
+			server[:root]        = File.expand_path("#{@stub.app_root}/public")
+			end
+			@nginx.start
+		end
+		
+		after :all do
+			@stub.destroy
+		end
+		
+		before :each do
+			@stub.reset
+			FileUtils.cp_r("stub/rack/.", @stub.app_root)
+		end
+		
+		it_should_behave_like "HelloWorld Rack application"
+	end
+	
 	describe "various features" do
 		before :all do
 			@server = "http://passenger.test:#{@nginx.port}"

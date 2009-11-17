@@ -170,20 +170,20 @@ public:
 		}
 		
 		UPDATE_TRACE_POINT();
-		if (shouldAutoDetectRails()
-		 && verifyRailsDir(config->getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
-			baseURIKnown = true;
-			baseURI = "/";
-			appType = RAILS;
-			return baseURI;
-		}
-		
-		UPDATE_TRACE_POINT();
 		if (shouldAutoDetectRack()
 		 && verifyRackDir(config->getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
 			baseURIKnown = true;
 			baseURI = "/";
 			appType = RACK;
+			return baseURI;
+		}
+		
+		UPDATE_TRACE_POINT();
+		if (shouldAutoDetectRails()
+		 && verifyRailsDir(config->getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
+			baseURIKnown = true;
+			baseURI = "/";
+			appType = RAILS;
 			return baseURI;
 		}
 		
