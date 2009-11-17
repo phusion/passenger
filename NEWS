@@ -12,6 +12,7 @@ Release 2.2.6
    is 128 on most platforms) to 1024. This should fix most
    'helper_server.sock failed: Resource temporarily unavailable'
    errors.
+ * Some Ruby 1.9 compatibility fixes. Issue #398.
 
 
 Release 2.2.5
