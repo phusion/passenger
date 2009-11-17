@@ -8,6 +8,10 @@ Release 2.2.6
    malfunction, requiring a web server restart. Measures have now been
    taken to prevent those tmp cleaner programs from removing anything
    in /tmp/passenger.xxx. Issue #365.
+ * The default socket backlog has been increased from 'SOMAXCONN' (which
+   is 128 on most platforms) to 1024. This should fix most
+   'helper_server.sock failed: Resource temporarily unavailable'
+   errors.
 
 
 Release 2.2.5
