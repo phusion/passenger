@@ -112,12 +112,14 @@ module Dependencies # :nodoc: all
 			end
 		end
 		if RUBY_PLATFORM =~ /linux/
-			case PlatformInfo.linux_distro
-			when :ubuntu, :debian
+			tags = PlatformInfo.linux_distro_tags
+			if tags.include?(:debian)
 				dep.install_command = "apt-get install build-essential"
-			when :rhel, :fedora, :centos
+			elsif tags.include?(:mandriva)
+				dep.install_command = "urpmi gcc-c++"
+			elsif tags.include?(:redhat)
 				dep.install_command = "yum install gcc-c++"
-			when :gentoo
+			elsif tags.include?(:gentoo)
 				dep.install_command = "emerge -av gcc"
 			end
 		elsif RUBY_PLATFORM =~ /darwin/
@@ -192,12 +194,14 @@ module Dependencies # :nodoc: all
 			end
 		end
 		if RUBY_PLATFORM =~ /linux/
-			case PlatformInfo.linux_distro
-			when :ubuntu, :debian
+			tags = PlatformInfo.linux_distro_tags
+			if tags.include?(:debian)
 				dep.install_command = "apt-get install ruby1.8-dev"
-			when :rhel, :fedora, :centos
+			elsif tags.include?(:mandriva)
+				dep.install_command = "urpmi urpmi ruby-RubyGems"
+			elsif tags.include?(:redhat)
 				dep.install_command = "yum install ruby-devel"
-			when :gentoo
+			elsif tags.include?(:gentoo)
 				dep.install_command = "emerge -av ruby"
 			end
 		elsif RUBY_PLATFORM =~ /freebsd/
@@ -268,12 +272,14 @@ module Dependencies # :nodoc: all
 			end
 		end
 		if RUBY_PLATFORM =~ /linux/
-			case PlatformInfo.linux_distro
-			when :ubuntu, :debian
+			tags = PlatformInfo.linux_distro_tags
+			if tags.include?(:debian)
 				dep.install_command = "apt-get install apache2-mpm-prefork"
-			when :rhel, :fedora, :centos
+			elsif tags.include?(:mandriva)
+				dep.install_command = "urpmi apache"
+			elsif tags.include?(:redhat)
 				dep.install_command = "yum install httpd"
-			when :gentoo
+			elsif tags.include?(:gentoo)
 				dep.install_command = "emerge -av apache"
 			end
 		elsif RUBY_PLATFORM =~ /freebsd/
@@ -293,14 +299,17 @@ module Dependencies # :nodoc: all
 			end
 		end
 		if RUBY_PLATFORM =~ /linux/
-			case PlatformInfo.linux_distro
-			when :ubuntu, :debian
+			tags = PlatformInfo.linux_distro_tags
+			if tags.include?(:debian)
 				dep.install_command = "apt-get install apache2-prefork-dev"
 				dep.provides = [Apache2]
-			when :rhel, :fedora, :centos
+			elsif tags.include?(:mandriva)
+				dep.install_command = "urpmi apache-devel"
+				dep.provides = [Apache2]
+			elsif tags.include?(:redhat)
 				dep.install_command = "yum install httpd-devel"
 				dep.provides = [Apache2]
-			when :gentoo
+			elsif tags.include?(:gentoo)
 				dep.install_command = "emerge -av apache"
 				dep.provides = [Apache2]
 			end
@@ -320,12 +329,14 @@ module Dependencies # :nodoc: all
 			end
 		end
 		if RUBY_PLATFORM =~ /linux/
-			case PlatformInfo.linux_distro
-			when :ubuntu, :debian
+			tags = PlatformInfo.linux_distro_tags
+			if tags.include?(:debian)
 				dep.install_command = "apt-get install libapr1-dev"
-			when :rhel, :fedora, :centos
+			elsif tags.include?(:mandriva)
+				dep.install_command = "urpmi libapr-devel"
+			elsif tags.include?(:redhat)
 				dep.install_command = "yum install apr-devel"
-			when :gentoo
+			elsif tags.include?(:gentoo)
 				dep.install_command = "emerge -av apr"
 			end
 		elsif RUBY_PLATFORM =~ /darwin/
@@ -347,9 +358,11 @@ module Dependencies # :nodoc: all
 			end
 		end
 		if RUBY_PLATFORM =~ /linux/
-			case PlatformInfo.linux_distro
-			when :ubuntu, :debian
+			tags = PlatformInfo.linux_distro_tags
+			if tags.include?(:debian)
 				dep.install_command = "apt-get install libaprutil1-dev"
+			elsif tags.include?(:mandriva)
+				dep.install_command = "urpmi libapr-util-devel"
 			end
 		elsif RUBY_PLATFORM =~ /darwin/
 			dep.install_instructions = "Please install Apache from MacPorts, which will " <<
@@ -414,10 +427,12 @@ module Dependencies # :nodoc: all
 			end
 		end
 		if RUBY_PLATFORM =~ /linux/
-			case PlatformInfo.linux_distro
-			when :ubuntu, :debian
+			tags = PlatformInfo.linux_distro_tags
+			if tags.include?(:debian)
 				dep.install_command = "apt-get install zlib1g-dev"
-			when :rhel, :fedora, :centos
+			elsif tags.include?(:mandriva)
+				dep.install_command = "urpmi zlib1-devel"
+			elsif tags.include?(:redhat)
 				dep.install_command = "yum install zlib-devel"
 			end
 		end

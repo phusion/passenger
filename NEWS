@@ -31,6 +31,8 @@ Release 2.2.6
    'helper_server.sock failed: Resource temporarily unavailable'
    errors.
  * Some Ruby 1.9 compatibility fixes. Issue #398.
+ * The installer now displays correct dependency installation instructions
+   for Mandriva Linux.
 
 
 Release 2.2.5
