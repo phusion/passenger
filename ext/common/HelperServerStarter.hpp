@@ -237,6 +237,7 @@ public:
 	           unsigned int poolIdleTime,
 	           const function<void ()> &afterFork = function<void ()>())
 	{
+		TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		int fds[2], e, ret;
@@ -330,14 +331,21 @@ public:
 			throw SystemException("Cannot fork a new process", e);
 		} else {
 			// Parent
+			UPDATE_TRACE_POINT();
 			FileDescriptor feedbackFd(fds[0]);
 			MessageChannel feedbackChannel(fds[0]);
 			vector<string> args;
+			bool allServicesStarted;
 			int status;
+			
+			ServerInstanceDirPtr serverInstanceDir;
+			ServerInstanceDir::GenerationPtr generation;
 			
 			syscalls::close(fds[1]);
 			this_thread::restore_interruption ri(di);
 			this_thread::restore_syscall_interruption rsi(dsi);
+			
+			/****** Read basic startup information ******/
 			
 			try {
 				if (!feedbackChannel.read(args)) {
@@ -351,7 +359,7 @@ public:
 					if (ret == 0) {
 						/* Doesn't look like it; it seems it's still running.
 						 * We can't do anything without proper feedback so kill
-						 * the helper server and throw an exception.
+						 * the watchdog and throw an exception.
 						 */
 						killAndWait(pid);
 						throw RuntimeException("Unable to start the Phusion Passenger watchdog: "
@@ -370,30 +378,30 @@ public:
 			} catch (const SystemException &ex) {
 				killAndWait(pid);
 				throw SystemException("Unable to start the Phusion Passenger watchdog: "
-					"unable to read its initialization feedback",
+					"unable to read its startup information",
 					ex.code());
 			} catch (const RuntimeException &) {
+				// Watchdog has already exited, no need to kill it.
 				throw;
 			} catch (...) {
 				killAndWait(pid);
 				throw;
 			}
 			
-			if (args[0] == "initialized") {
-				if (args.size() == 7) {
-					this->pid = pid;
-					this->feedbackFd = feedbackFd;
-					requestSocketFilename = args[1];
-					requestSocketPassword = Base64::decode(args[2]);
-					messageSocketFilename = args[3];
-					messageSocketPassword = Base64::decode(args[4]);
-					serverInstanceDir.reset(new ServerInstanceDir(args[5], false));
-					generation = serverInstanceDir->getGeneration(atoi(args[6]));
+			if (args[0] == "Basic startup info") {
+				if (args.size() == 3) {
+					serverInstanceDir.reset(new ServerInstanceDir(args[1], false));
+					generation = serverInstanceDir->getGeneration(atoi(args[2]));
 				} else {
 					killAndWait(pid);
 					throw IOException("Unable to start the Phusion Passenger watchdog: "
-						"it returned an invalid initialization feedback message");
+						"it returned an invalid basic startup information message");
 				}
+			} else if (args[0] == "Watchdog startup error") {
+				syscalls::waitpid(pid, NULL, 0);
+				throw RuntimeException("Unable to start the Phusion Passenger watchdog "
+					"because it encountered the following error during startup: " +
+					args[1]);
 			} else if (args[0] == "system error") {
 				killAndWait(pid);
 				throw SystemException(args[1], atoi(args[2]));
@@ -401,9 +409,76 @@ public:
 				killAndWait(pid);
 				throw SystemException("Unable to start the Phusion Passenger watchdog (" +
 					watchdogFilename + ")", atoi(args[1]));
-			} else {
-				killAndWait(pid);
-				throw RuntimeException("The helper server sent an unknown feedback message '" + args[0] + "'");
+			}
+			
+			/****** Read services startup information ******/
+			
+			UPDATE_TRACE_POINT();
+			allServicesStarted = false;
+			
+			while (!allServicesStarted) {
+				try {
+					if (!feedbackChannel.read(args)) {
+						this_thread::disable_interruption di2;
+						this_thread::disable_syscall_interruption dsi2;
+						
+						/* The feedback fd was closed for an unknown reason.
+						 * Did the watchdog crash?
+						 */
+						ret = syscalls::waitpid(pid, &status, WNOHANG);
+						if (ret == 0) {
+							/* Doesn't look like it; it seems it's still running.
+							 * We can't do anything without proper feedback so kill
+							 * the watchdo and throw an exception.
+							 */
+							killAndWait(pid);
+							throw RuntimeException("Unable to start the Phusion Passenger watchdog: "
+								"an unknown error occurred during its startup");
+						} else if (ret != -1 && WIFSIGNALED(status)) {
+							/* Looks like a crash which caused a signal. */
+							throw RuntimeException("Unable to start the Phusion Passenger watchdog: "
+								"it seems to have been killed with signal " +
+								getSignalName(WTERMSIG(status)) + " during startup");
+						} else {
+							/* Looks like it exited after detecting an error. */
+							throw RuntimeException("Unable to start the Phusion Passenger watchdog: "
+								"it seems to have crashed during startup for an unknown reason");
+						}
+					}
+				} catch (const SystemException &ex) {
+					killAndWait(pid);
+					throw SystemException("Unable to start the Phusion Passenger watchdog: "
+						"unable to read all service startup information",
+						ex.code());
+				} catch (const RuntimeException &) {
+					// Watchdog has already exited, no need to kill it.
+					throw;
+				} catch (...) {
+					killAndWait(pid);
+					throw;
+				}
+				
+				if (args[0] == "HelperServer startup info") {
+					if (args.size() == 5) {
+						this->pid = pid;
+						this->feedbackFd = feedbackFd;
+						requestSocketFilename   = args[1];
+						requestSocketPassword   = Base64::decode(args[2]);
+						messageSocketFilename   = args[3];
+						messageSocketPassword   = Base64::decode(args[4]);
+						this->serverInstanceDir = serverInstanceDir;
+						this->generation        = generation;
+					} else {
+						killAndWait(pid);
+						throw IOException("Unable to start the Phusion Passenger watchdog: "
+							"it returned an invalid initialization feedback message");
+					}
+				} else if (args[0] == "All services started") {
+					allServicesStarted = true;
+				} else {
+					killAndWait(pid);
+					throw RuntimeException("The helper server sent an unknown feedback message '" + args[0] + "'");
+				}
 			}
 		}
 	}

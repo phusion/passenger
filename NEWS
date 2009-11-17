@@ -6,6 +6,8 @@ Release 3.0.0
  * [Nginx] Dropped support for Nginx 0.6.
  * Much improved fault-tolerance: HelperServer is restarted by watchdog
    when it crashes. Processes reconnect to each other when connection lost.
+   During shutdown if child processes don't exit quickly enough then they'll
+   be killed.
  * Better ApplicationPool multicore performance: critical section made smaller.
  * OS X kernel bug workaround; we now use Unix sockets again.
  * Ruby RequestHandler optimizations.

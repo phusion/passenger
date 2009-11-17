@@ -50,6 +50,7 @@ helper_server_starter_start(HelperServerStarter *hps,
 		*errorMessage = strdup(e.what());
 		return 0;
 	} catch (const exception &e) {
+		errno = -1;
 		*errorMessage = strdup(e.what());
 		return 0;
 	}

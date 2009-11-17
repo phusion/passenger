@@ -2,6 +2,7 @@
 #include <oxt/system_calls.hpp>
 #include <string>
 
+#include <sys/select.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <signal.h>
@@ -14,9 +15,12 @@
 #include "FileDescriptor.h"
 #include "MessageChannel.h"
 #include "MessageServer.h"
+#include "RandomGenerator.h"
+#include "Timer.h"
 #include "Base64.h"
 #include "Logging.h"
 #include "Exceptions.h"
+#include "Utils.h"
 
 using namespace std;
 using namespace boost;
@@ -39,389 +43,514 @@ static unsigned int maxPoolSize;
 static unsigned int maxInstancesPerApp;
 static unsigned int poolIdleTime;
 
-static boost::mutex globalMutex;
-static bool  exitGracefully = false;
-static pid_t helperServerPid = 0;
+static ServerInstanceDirPtr serverInstanceDir;
+static ServerInstanceDir::GenerationPtr generation;
+static EventFd errorEvent;
 
-struct HelperServerFeedback {
-	FileDescriptor feedbackFd;
-	string requestSocketFilename;
-	string messageSocketFilename;
-};
+static string logLevelString;
+static string webServerPidString;
+static string workerUidString;
+static string workerGidString;
+static string generationNumber;
+static string maxPoolSizeString;
+static string maxInstancesPerAppString;
+static string poolIdleTimeString;
 
 #define REQUEST_SOCKET_PASSWORD_SIZE     64
 
 
-static string
-findHelperServer() {
-	if (webServerType == "apache") {
-		return passengerRoot + "/ext/apache2/PassengerHelperServer";
-	} else {
-		return passengerRoot + "/ext/nginx/PassengerHelperServer";
-	}
-}
-
-static void
-killAndWait(pid_t pid) {
-	this_thread::disable_interruption di;
-	this_thread::disable_syscall_interruption dsi;
-	syscalls::kill(pid, SIGKILL);
-	syscalls::waitpid(pid, NULL, 0);
-}
-
-static pid_t
-startHelperServer(const string &helperServerFilename, unsigned int generationNumber,
-	const string &requestSocketPassword, const string &messageSocketPassword,
-	HelperServerFeedback &feedback
-) {
-	this_thread::disable_interruption di;
-	this_thread::disable_syscall_interruption dsi;
-	int fds[2], e, ret;
-	pid_t pid;
+/**
+ * Abstract base class for watching service processes.
+ */
+class AbstractWatcher {
+private:
+	/** The watcher thread. */
+	oxt::thread *thr;
 	
-	if (syscalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
-		int e = errno;
-		throw SystemException("Cannot create a Unix socket pair", e);
-	}
-	
-	pid = syscalls::fork();
-	if (pid == 0) {
-		// Child
-		long max_fds, i;
-		
-		// Make sure the feedback fd is 3 and close all other file descriptors.
-		syscalls::close(fds[0]);
-		if (fds[1] != 3) {
-			if (syscalls::dup2(fds[1], 3) == -1) {
-				e = errno;
-				try {
-					MessageChannel(fds[1]).write("system error",
-						"dup2() failed",
-						toString(e).c_str(),
-						NULL);
-					_exit(1);
-				} catch (...) {
-					fprintf(stderr, "Passenger Watchdog: dup2() failed: %s (%d)\n",
-						strerror(e), e);
-					fflush(stderr);
-					_exit(1);
+	void threadMain() {
+		try {
+			pid_t pid, ret;
+			int status;
+			
+			while (!this_thread::interruption_requested()) {
+				lock.lock();
+				pid = this->pid;
+				lock.unlock();
+				
+				if (pid == 0) {
+					pid = start();
+				}
+				ret = syscalls::waitpid(pid, &status, 0);
+				
+				lock.lock();
+				this->pid = 0;
+				lock.unlock();
+				
+				this_thread::disable_interruption di;
+				this_thread::disable_syscall_interruption dsi;
+				if (ret == -1) {
+					P_WARN(name() << " crashed or killed for "
+						"an unknown reason, restarting it...");
+				} else if (WIFEXITED(status)) {
+					if (WEXITSTATUS(status) == 0) {
+						/* When the web server is gracefully exiting, it will
+						 * tell one or more services to gracefully exit with exit
+						 * status 0. If we see this then it means the watchdog
+						 * is gracefully shutting down too and we should stop
+						 * watching.
+						 */
+						return;
+					} else {
+						P_WARN(name() << " crashed with exit status " <<
+							WEXITSTATUS(status) << ", restarting it...");
+					}
+				} else {
+					P_WARN(name() << " crashed with signal " <<
+						getSignalName(WTERMSIG(status)) <<
+						", restarting it...");
 				}
 			}
+		} catch (const boost::thread_interrupted &) {
+		} catch (const tracable_exception &e) {
+			lock_guard<boost::mutex> l(lock);
+			threadExceptionMessage = e.what();
+			threadExceptionBacktrace = e.backtrace();
+			errorEvent.notify();
+		} catch (const exception &e) {
+			lock_guard<boost::mutex> l(lock);
+			threadExceptionMessage = e.what();
+			errorEvent.notify();
+		} catch (...) {
+			lock_guard<boost::mutex> l(lock);
+			threadExceptionMessage = "Unknown error";
+			errorEvent.notify();
 		}
-		max_fds = sysconf(_SC_OPEN_MAX);
-		for (i = 4; i < max_fds; i++) {
-			if (i != fds[1]) {
-				syscalls::close(i);
+	}
+	
+protected:
+	/** PID of the process we're watching. 0 if no process is started at this time. */
+	pid_t pid;
+	
+	/** If the watcher thread threw an uncaught exception then its information will
+	 * be stored here so that the main thread can check whether a watcher encountered
+	 * an error. These are empty strings if everything is OK.
+	 */
+	string threadExceptionMessage;
+	string threadExceptionBacktrace;
+	
+	/** The service process's feedback fd. */
+	FileDescriptor feedbackFd;
+	
+	/**
+	 * Lock for protecting the exchange of data between the main thread and
+	 * the watcher thread.
+	 */
+	mutable boost::mutex lock;
+	
+	/**
+	 * Returns the filename of the service process's executable.
+	 */
+	virtual string getExeFilename() const = 0;
+	
+	/**
+	 * This method is to exec() the service program with the right arguments.
+	 * It is called from within a forked child process, so don't do any dynamic
+	 * memory allocations in here. It must also not throw any exceptions.
+	 * It must also preserve the value of errno after exec() is called.
+	 */
+	virtual void execProgram() const = 0;
+	
+	/**
+	 * This method is to send startup arguments to the service process through
+	 * the given file descriptor, which is the service process's feedback fd.
+	 * May throw arbitrary exceptions.
+	 */
+	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) = 0;
+	
+	/**
+	 * This method is to process the startup info that the service process has
+	 * sent back. May throw arbitrary exceptions.
+	 */
+	virtual bool processStartupInfo(pid_t pid, FileDescriptor &fd, const vector<string> &args) = 0;
+	
+	/**
+	 * Kill a process with SIGKILL, and attempt to kill its children too. 
+	 * Then wait until it has quit.
+	 */
+	void killAndWait(pid_t pid) {
+		this_thread::disable_interruption di;
+		this_thread::disable_syscall_interruption dsi;
+		// If the process is a process group leader then killing the
+		// group will likely kill all its child processes too.
+		if (syscalls::killpg(pid, SIGKILL) == -1) {
+			syscalls::kill(pid, SIGKILL);
+		}
+		syscalls::waitpid(pid, NULL, 0);
+	}
+	
+public:
+	AbstractWatcher() {
+		thr = NULL;
+		pid = 0;
+	}
+	
+	~AbstractWatcher() {
+		delete thr;
+	}
+	
+	/**
+	 * Send the started service process's startup information over the given channel,
+	 * to the starter process. May throw arbitrary exceptions.
+	 *
+	 * @pre start() has been called and succeeded.
+	 */
+	virtual void sendStartupInfo(MessageChannel &channel) = 0;
+	
+	/** Returns the name of the service that this class is watching. */
+	virtual const char *name() const = 0;
+	
+	/**
+	 * Starts the service process. May throw arbitrary exceptions.
+	 */
+	virtual pid_t start() {
+		this_thread::disable_interruption di;
+		this_thread::disable_syscall_interruption dsi;
+		string exeFilename = getExeFilename();
+		int fds[2], e, ret;
+		pid_t pid;
+		
+		/* Create feedback fd for this service process. We'll send some startup
+		 * arguments to this service process through this fd, and we'll receive
+		 * startup information through it as well.
+		 */
+		if (syscalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
+			int e = errno;
+			throw SystemException("Cannot create a Unix socket pair", e);
+		}
+		
+		pid = syscalls::fork();
+		if (pid == 0) {
+			// Child
+			long max_fds, i;
+			
+			/* Make sure the feedback fd (fds[1]) is 3 and close
+			 * all other file descriptors.
+			 */
+			syscalls::close(fds[0]);
+			if (fds[1] != 3) {
+				if (syscalls::dup2(fds[1], 3) == -1) {
+					/* Something went wrong, report error through feedback fd. */
+					e = errno;
+					try {
+						MessageChannel(fds[1]).write("system error before fork",
+							"dup2() failed",
+							toString(e).c_str(),
+							NULL);
+						_exit(1);
+					} catch (...) {
+						fprintf(stderr, "Passenger Watchdog: dup2() failed: %s (%d)\n",
+							strerror(e), e);
+						fflush(stderr);
+						_exit(1);
+					}
+				}
 			}
-		}
-		
-		execl(helperServerFilename.c_str(),
-			"PassengerHelperServer",
-			toString(logLevel).c_str(),
-			"3",  // feedback fd
-			toString(webServerPid).c_str(),
-			tempDir.c_str(),
-			userSwitching ? "true" : "false",
-			defaultUser.c_str(),
-			toString(workerUid).c_str(),
-			toString(workerGid).c_str(),
-			passengerRoot.c_str(),
-			rubyCommand.c_str(),
-			toString(generationNumber).c_str(),
-			toString(maxPoolSize).c_str(),
-			toString(maxInstancesPerApp).c_str(),
-			toString(poolIdleTime).c_str(),
-			(char *) 0);
-		e = errno;
-		try {
-			MessageChannel(3).write("exec error", toString(e).c_str(), NULL);
-			_exit(1);
-		} catch (...) {
-			fprintf(stderr, "Passenger Watchdog: could not execute %s: %s (%d)\n",
-				helperServerFilename.c_str(), strerror(e), e);
-			fflush(stderr);
-			_exit(1);
-		}
-	} else if (pid == -1) {
-		// Error
-		e = errno;
-		syscalls::close(fds[0]);
-		syscalls::close(fds[1]);
-		throw SystemException("Cannot fork a new process", e);
-	} else {
-		// Parent
-		FileDescriptor helperServerFeedbackFd(fds[0]);
-		MessageChannel helperServerFeedbackChannel(fds[0]);
-		vector<string> args;
-		
-		syscalls::close(fds[1]);
-		this_thread::restore_interruption ri(di);
-		this_thread::restore_syscall_interruption rsi(dsi);
-		
-		try {
-			// Send the desired request socket password.
-			helperServerFeedbackChannel.write("request socket password",
-				Base64::encode(requestSocketPassword).c_str(),
-				NULL);
-			// Send the desired web server account password.
-			helperServerFeedbackChannel.write("message socket password",
-				Base64::encode(messageSocketPassword).c_str(),
-				NULL);
-		} catch (const SystemException &ex) {
-			killAndWait(pid);
-			throw SystemException("Unable to start the helper server: "
-				"an error occurred while sending startup arguments",
-				ex.code());
-		} catch (...) {
-			killAndWait(pid);
-			throw;
-		}
-		
-		// Now read its feedback.
-		try {
-			if (!helperServerFeedbackChannel.read(args)) {
+			/* Close all file descriptors except 0-3. */
+			max_fds = sysconf(_SC_OPEN_MAX);
+			for (i = 4; i < max_fds; i++) {
+				if (i != fds[1]) {
+					syscalls::close(i);
+				}
+			}
+			
+			try {
+				execProgram();
+			} catch (...) {
+				fprintf(stderr, "PassengerWatchdog: execProgram() threw an exception\n");
+				fflush(stderr);
+				_exit(1);
+			}
+			e = errno;
+			try {
+				MessageChannel(3).write("exec error", toString(e).c_str(), NULL);
+				_exit(1);
+			} catch (...) {
+				fprintf(stderr, "Passenger Watchdog: could not execute %s: %s (%d)\n",
+					exeFilename.c_str(), strerror(e), e);
+				fflush(stderr);
+				_exit(1);
+			}
+		} else if (pid == -1) {
+			// Error
+			e = errno;
+			syscalls::close(fds[0]);
+			syscalls::close(fds[1]);
+			throw SystemException("Cannot fork a new process", e);
+		} else {
+			// Parent
+			FileDescriptor feedbackFd(fds[0]);
+			vector<string> args;
+			
+			syscalls::close(fds[1]);
+			this_thread::restore_interruption ri(di);
+			this_thread::restore_syscall_interruption rsi(dsi);
+			
+			// Send startup arguments.
+			try {
+				sendStartupArguments(pid, feedbackFd);
+			} catch (const SystemException &ex) {
+				killAndWait(pid);
+				throw SystemException(string("Unable to start the ") + name() +
+					": an error occurred while sending startup arguments",
+					ex.code());
+			} catch (...) {
+				killAndWait(pid);
+				throw;
+			}
+			
+			// Now read its feedback.
+			try {
+				if (!MessageChannel(feedbackFd).read(args)) {
+					throw EOFException("");
+				}
+			} catch (const EOFException &e) {
 				this_thread::disable_interruption di2;
 				this_thread::disable_syscall_interruption dsi2;
 				int status;
 				
 				/* The feedback fd was closed for an unknown reason.
-				 * Did the helper server crash?
+				 * Did the service process crash?
 				 */
 				ret = syscalls::waitpid(pid, &status, WNOHANG);
 				if (ret == 0) {
 					/* Doesn't look like it; it seems it's still running.
 					 * We can't do anything without proper feedback so kill
-					 * the helper server and throw an exception.
+					 * the service process and throw an exception.
 					 */
 					killAndWait(pid);
-					throw RuntimeException("Unable to start the Phusion Passenger helper server: "
-						"an unknown error occurred during its startup");
+					throw RuntimeException(string("Unable to start the ") + name() +
+						": an unknown error occurred during its startup");
 				} else if (ret != -1 && WIFSIGNALED(status)) {
 					/* Looks like a crash which caused a signal. */
-					throw RuntimeException("Unable to start the Phusion Passenger helper server: "
-						"it seems to have been killed with signal " +
+					throw RuntimeException(string("Unable to start the ") + name() +
+						": it seems to have been killed with signal " +
 						getSignalName(WTERMSIG(status)) + " during startup");
 				} else {
 					/* Looks like it exited after detecting an error. */
-					throw RuntimeException("Unable to start the Phusion Passenger helper server: "
-						"it seems to have crashed during startup for an unknown reason");
+					throw RuntimeException(string("Unable to start the ") + name() +
+						": it seems to have crashed during startup for an unknown reason");
 				}
-			}
-		} catch (const SystemException &ex) {
-			killAndWait(pid);
-			throw SystemException("Unable to start the Phusion Passenger helper server: "
-				"unable to read its initialization feedback",
-				ex.code());
-		} catch (const RuntimeException &) {
-			throw;
-		} catch (...) {
-			killAndWait(pid);
-			throw;
-		}
-		
-		if (args[0] == "initialized") {
-			feedback.feedbackFd = helperServerFeedbackFd;
-			feedback.requestSocketFilename = args[1];
-			feedback.messageSocketFilename = args[2];
-		} else if (args[0] == "system error") {
-			killAndWait(pid);
-			throw SystemException(args[1], atoi(args[2]));
-		} else if (args[0] == "exec error") {
-			killAndWait(pid);
-			throw SystemException("Unable to start the Phusion Passenger helper server", atoi(args[1]));
-		} else {
-			killAndWait(pid);
-			throw RuntimeException("The helper server sent an unknown feedback message '" + args[0] + "'");
-		}
-		
-		return pid;
-	}
-}
-
-static void
-relayFeedback(const string &requestSocketPassword, const string &messageSocketPassword,
-              const ServerInstanceDirPtr &serverInstanceDir,
-              const ServerInstanceDir::GenerationPtr &generation,
-              const HelperServerFeedback &feedback)
-{
-	MessageChannel feedbackChannel(feedbackFd);
-	feedbackChannel.write("initialized",
-		feedback.requestSocketFilename.c_str(),
-		Base64::encode(requestSocketPassword).c_str(),
-		feedback.messageSocketFilename.c_str(),
-		Base64::encode(messageSocketPassword).c_str(),
-		serverInstanceDir->getPath().c_str(),
-		toString(generation->getNumber()).c_str(),
-		NULL);
-}
-
-static void
-cleanupHelperServerInBackground(ServerInstanceDirPtr &serverInstanceDir,
-	ServerInstanceDir::GenerationPtr &generation, FileDescriptor &helperServerFeedbackFd)
-{
-	this_thread::disable_interruption di;
-	this_thread::disable_syscall_interruption dsi;
-	pid_t pid;
-	
-	pid = fork();
-	if (pid == 0) {
-		// Child
-		char x;
-		
-		// Wait until helper server has exited.
-		// TODO: wait a maximum amount of time, then kill the helper server.
-		// time should probably be configurable because some sites serve long-running requests.
-		syscalls::read(helperServerFeedbackFd, &x, 1);
-		
-		// Now clean up the server instance directory.
-		delete generation.get();
-		delete serverInstanceDir.get();
-		
-		_exit(0);
-		
-	} else if (pid == -1) {
-		// Error
-		// TODO
-		
-	} else {
-		// Parent
-		
-		// Let child process handle cleanup.
-		serverInstanceDir->detach();
-		generation->detach();
-	}
-}
-
-static void
-watchdogMainLoop() {
-	this_thread::disable_interruption di;
-	this_thread::disable_syscall_interruption dsi;
-	
-	try {
-		ServerInstanceDirPtr serverInstanceDir(new ServerInstanceDir(webServerPid, tempDir));
-		ServerInstanceDir::GenerationPtr generation =
-			serverInstanceDir->newGeneration(userSwitching, defaultUser, workerUid, workerGid);
-		
-		struct {
-			char requestServer[REQUEST_SOCKET_PASSWORD_SIZE];
-			char messageServer[MessageServer::MAX_PASSWORD_SIZE];
-		} passwordData;
-		string requestServerPassword;
-		string messageServerPassword;
-		string helperServerFilename;
-		bool done = false;
-		bool firstStart = true;
-		pid_t pid;
-		int ret, status;
-		
-		generateSecureToken(&passwordData, sizeof(passwordData));
-		requestServerPassword.assign(passwordData.requestServer, sizeof(passwordData.requestServer));
-		messageServerPassword.assign(passwordData.messageServer, sizeof(passwordData.messageServer));
-		helperServerFilename = findHelperServer();
-		
-		while (!done && !this_thread::interruption_requested()) {
-			HelperServerFeedback feedback;
-			
-			try {
-				this_thread::restore_interruption ri(di);
-				this_thread::restore_syscall_interruption rsi(dsi);
-				pid = startHelperServer(helperServerFilename, generation->getNumber(),
-					requestServerPassword, messageServerPassword, feedback);
-				globalMutex.lock();
-				helperServerPid = pid;
-				globalMutex.unlock();
-			} catch (const thread_interrupted &) {
-				return;
+			} catch (const SystemException &e) {
+				killAndWait(pid);
+				throw SystemException(string("Unable to start the ") + name() +
+					": unable to read its startup information",
+					e.code());
+			} catch (const RuntimeException &) {
+				/* Rethrow without killing the PID because the process
+				 * is already dead.
+				 */
+				throw;
+			} catch (...) {
+				killAndWait(pid);
+				throw;
 			}
 			
-			if (firstStart) {
-				firstStart = false;
-				this_thread::restore_interruption ri(di);
-				this_thread::restore_syscall_interruption rsi(dsi);
+			if (args[0] == "system error before exec") {
+				killAndWait(pid);
+				throw SystemException(string("Unable to start the ") + name() +
+					": " + args[1], atoi(args[2]));
+			} else if (args[0] == "exec error") {
+				killAndWait(pid);
+				throw SystemException(string("Unable to start the ") + name(),
+					atoi(args[1]));
+			} else {
+				bool processed;
 				try {
-					relayFeedback(requestServerPassword, messageServerPassword,
-						serverInstanceDir, generation, feedback);
-				} catch (const thread_interrupted &) {
-					globalMutex.lock();
-					helperServerPid = 0;
-					globalMutex.unlock();
-					killAndWait(pid);
-					return;
+					processed = processStartupInfo(pid, feedbackFd, args);
 				} catch (...) {
-					globalMutex.lock();
-					helperServerPid = 0;
-					globalMutex.unlock();
 					killAndWait(pid);
 					throw;
 				}
-			}
-			
-			
-			try {
-				this_thread::restore_interruption ri(di);
-				this_thread::restore_syscall_interruption rsi(dsi);
-				ret = syscalls::waitpid(pid, &status, 0);
-			} catch (const thread_interrupted &) {
-				// If we get interrupted here it means something happened
-				// to the web server.
-				
-				bool graceful;
-				globalMutex.lock();
-				graceful = exitGracefully;
-				globalMutex.unlock();
-				
-				if (graceful) {
-					/* The web server exited gracefully. In this case it must have
-					 * sent an exit message to the helper server. So we fork a child
-					 * process which waits until the helper server has exited, and then
-					 * removes the generation directory and server instance directory.
-					 * The parent watchdog process exits so that it doesn't block
-					 * the web server's shutdown process.
-					 */
-					cleanupHelperServerInBackground(serverInstanceDir, generation,
-						feedback.feedbackFd);
-				} else {
-					globalMutex.lock();
-					helperServerPid = 0;
-					globalMutex.unlock();
-					/* Looks like the web server crashed. Let's kill the
-					 * entire HelperServer process group (i.e. HelperServer and all
-					 * descendant processes).
-					 */
-					if (syscalls::killpg(pid, SIGKILL) == -1) {
-						/* Unable to kill the process group. Maybe the helper
-						 * server failed to become a process group leader, or
-						 * the OS doesn't support multiple process groups in a
-						 * session. So just kill the helper server PID instead.
-						 */
-						syscalls::kill(pid, SIGKILL);
-					}
-					syscalls::waitpid(pid, NULL, 0);
-				}
-				return;
-			}
-			
-			if (!this_thread::interruption_requested()) {
-				if (ret == -1) {
-					P_WARN("Phusion Passenger helper server crashed or killed for "
-						"an unknown reason, restarting it...");
-				} else if (WIFEXITED(status)) {
-					if (WEXITSTATUS(status) == 0) {
-						done = true;
-					} else {
-						P_WARN("Phusion Passenger helper server crashed with exit status " <<
-							WEXITSTATUS(status) << ", restarting it...");
-					}
-				} else {
-					P_WARN("Phusion Passenger helper server crashed with signal " <<
-						getSignalName(WTERMSIG(status)) << ", restarting it...");
+				if (!processed) {
+					killAndWait(pid);
+					throw RuntimeException(string("The ") + name() +
+						" sent an unknown startup info message '" +
+						args[0] + "'");
 				}
 			}
+			
+			lock_guard<boost::mutex> l(lock);
+			this->feedbackFd = feedbackFd;
+			this->pid = pid;
+			return pid;
 		}
-	} catch (const tracable_exception &e) {
-		P_ERROR(e.what() << "\n" << e.backtrace());
 	}
-}
+	
+	/**
+	 * Start watching the service process.
+	 *
+	 * @pre start() has been called and succeeded.
+	 * @pre This watcher isn't already watching.
+	 * @throws RuntimeException If a precondition failed.
+	 * @throws thread_interrupted
+	 * @throws thread_resource_error
+	 */
+	virtual void startWatching() {
+		lock_guard<boost::mutex> l(lock);
+		if (pid == 0) {
+			throw RuntimeException("start() hasn't been called yet");
+		}
+		if (thr != NULL) {
+			throw RuntimeException("Already started watching.");
+		}
+		
+		/* Don't make the stack any smaller, getpwnam() on OS
+		 * X needs a lot of stack space.
+		 */
+		thr = new oxt::thread(boost::bind(&AbstractWatcher::threadMain, this),
+			name(), 64 * 1024);
+	}
+	
+	static void stopWatching(vector<AbstractWatcher *> &watchers) {
+		vector<AbstractWatcher *>::const_iterator it;
+		oxt::thread *threads[watchers.size()];
+		unsigned int i = 0;
+		
+		for (it = watchers.begin(); it != watchers.end(); it++, i++) {
+			threads[i] = (*it)->thr;
+		}
+		
+		oxt::thread::interrupt_and_join_multiple(threads, watchers.size());
+	}
+	
+	/**
+	 * Force the service process to shut down. Returns true if it was shut down,
+	 * or false if it wasn't started.
+	 */
+	virtual bool forceShutdown() {
+		lock_guard<boost::mutex> l(lock);
+		if (pid == 0) {
+			return false;
+		} else {
+			killAndWait(pid);
+			this->pid = 0;
+			return true;
+		}
+	}
+	
+	/**
+	 * If the watcher thread has encountered an error, then the error message
+	 * will be stored here. If the error message is empty then it means
+	 * everything is still OK.
+	 */
+	string getErrorMessage() const {
+		lock_guard<boost::mutex> l(lock);
+		return threadExceptionMessage;
+	}
+	
+	/**
+	 * The error backtrace, if applicable.
+	 */
+	string getErrorBacktrace() const {
+		lock_guard<boost::mutex> l(lock);
+		return threadExceptionBacktrace;
+	}
+	
+	/**
+	 * Returns the service process feedback fd, or NULL if the service process
+	 * hasn't been started yet. Can be used to check whether this service process
+	 * has exited without using waitpid().
+	 */
+	const FileDescriptor getFeedbackFd() const {
+		lock_guard<boost::mutex> l(lock);
+		return feedbackFd;
+	}
+};
+
+
+class HelperServerWatcher: public AbstractWatcher {
+protected:
+	string         requestSocketPassword;
+	string         messageSocketPassword;
+	string         helperServerFilename;
+	FileDescriptor feedbackFd;
+	string         requestSocketFilename;
+	string         messageSocketFilename;
+	
+	virtual const char *name() const {
+		return "Phusion Passenger helper server";
+	}
+	
+	virtual string getExeFilename() const {
+		return helperServerFilename;
+	}
+	
+	virtual void execProgram() const {
+		execl(helperServerFilename.c_str(),
+			"PassengerHelperServer",
+			logLevelString.c_str(),
+			"3",  // feedback fd
+			webServerPidString.c_str(),
+			tempDir.c_str(),
+			userSwitching ? "true" : "false",
+			defaultUser.c_str(),
+			workerUidString.c_str(),
+			workerGidString.c_str(),
+			passengerRoot.c_str(),
+			rubyCommand.c_str(),
+			generationNumber.c_str(),
+			maxPoolSizeString.c_str(),
+			maxInstancesPerAppString.c_str(),
+			poolIdleTimeString.c_str(),
+			(char *) 0);
+	}
+	
+	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
+		MessageChannel channel(fd);
+		
+		// Send the desired request socket password.
+		channel.write("request socket password",
+			Base64::encode(requestSocketPassword).c_str(),
+			NULL);
+		// Send the desired web server account password.
+		channel.write("message socket password",
+			Base64::encode(messageSocketPassword).c_str(),
+			NULL);
+	}
+	
+	virtual bool processStartupInfo(pid_t pid, FileDescriptor &fd, const vector<string> &args) {
+		if (args[0] == "initialized") {
+			feedbackFd            = fd;
+			requestSocketFilename = args[1];
+			messageSocketFilename = args[2];
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+public:
+	HelperServerWatcher() {
+		RandomGenerator generator;
+		
+		requestSocketPassword = generator.generateByteString(REQUEST_SOCKET_PASSWORD_SIZE);
+		messageSocketPassword = generator.generateByteString(MessageServer::MAX_PASSWORD_SIZE);
+		if (webServerType == "apache") {
+			helperServerFilename = passengerRoot + "/ext/apache2/PassengerHelperServer";
+		} else {
+			helperServerFilename = passengerRoot + "/ext/nginx/PassengerHelperServer";
+		}
+	}
+	
+	virtual void sendStartupInfo(MessageChannel &channel) {
+		channel.write("HelperServer startup info",
+			requestSocketFilename.c_str(),
+			Base64::encode(requestSocketPassword).c_str(),
+			messageSocketFilename.c_str(),
+			Base64::encode(messageSocketPassword).c_str(),
+			NULL);
+	}
+};
 
 /**
  * Most operating systems overcommit memory. We *know* that this watchdog process
@@ -452,6 +581,146 @@ ignoreSigpipe() {
 	sigaction(SIGPIPE, &action, NULL);
 }
 
+/**
+ * Wait until the starter process has exited or sent us an exit command,
+ * or until one of the watcher threads encounter an error. If a thread
+ * encountered an error then the error message will be printed.
+ *
+ * Returns whether this watchdog should exit gracefully, which is only the
+ * case if the web server sent us an exit command and no thread encountered
+ * an error.
+ */
+static bool
+waitForStarterProcessOrWatchers(vector<AbstractWatcher *> &watchers) {
+	fd_set fds;
+	int max, ret;
+	char x;
+	
+	FD_ZERO(&fds);
+	FD_SET(feedbackFd, &fds);
+	FD_SET(errorEvent.fd(), &fds);
+	
+	if (feedbackFd > errorEvent.fd()) {
+		max = feedbackFd;
+	} else {
+		max = errorEvent.fd();
+	}
+	
+	ret = syscalls::select(max + 1, &fds, NULL, NULL, NULL);
+	if (ret == -1) {
+		int e = errno;
+		P_ERROR("select() failed: " << strerror(e));
+		return false;
+	}
+	
+	if (FD_ISSET(errorEvent.fd(), &fds)) {
+		vector<AbstractWatcher *>::const_iterator it;
+		string message, backtrace, watcherName;
+		
+		for (it = watchers.begin(); it != watchers.end() && message.empty(); it++) {
+			message   = (*it)->getErrorMessage();
+			backtrace = (*it)->getErrorBacktrace();
+			watcherName = (*it)->name();
+		}
+		
+		if (!message.empty() && backtrace.empty()) {
+			P_ERROR("Error in " << watcherName << " watcher:\n  " << message);
+		} else if (!message.empty() && !backtrace.empty()) {
+			P_ERROR("Error in " << watcherName << " watcher:\n  " <<
+				message << "\n" << backtrace);
+		}
+		
+		return false;
+	} else {
+		return syscalls::read(feedbackFd, &x, 1) == 1;
+	}
+}
+
+static void
+cleanupServicesInBackground(vector<AbstractWatcher *> &watchers) {
+	this_thread::disable_interruption di;
+	this_thread::disable_syscall_interruption dsi;
+	pid_t pid;
+	int e;
+	
+	pid = fork();
+	if (pid == 0) {
+		// Child
+		vector<AbstractWatcher *>::const_iterator it;
+		Timer timer(false);
+		fd_set fds, fds2;
+		int max, serviceProcessesDone;
+		unsigned long long deadline = 30000; // miliseconds
+		
+		// Wait until all service processes have exited.
+		
+		max = 0;
+		FD_ZERO(&fds);
+		for (it = watchers.begin(); it != watchers.end(); it++) {
+			FD_SET((*it)->getFeedbackFd(), &fds);
+			if ((*it)->getFeedbackFd() > max) {
+				max = (*it)->getFeedbackFd();
+			}
+		}
+		
+		timer.start();
+		serviceProcessesDone = 0;
+		while (serviceProcessesDone != -1
+		    && serviceProcessesDone < (int) watchers.size()
+		    && timer.elapsed() < deadline)
+		{
+			struct timeval timeout;
+			
+			FD_COPY(&fds, &fds2);
+			timeout.tv_sec = 0;
+			timeout.tv_usec = 10000;
+			serviceProcessesDone = syscalls::select(max + 1, &fds2, NULL, NULL, &timeout);
+			if (serviceProcessesDone > 0 && timer.elapsed() < deadline) {
+				usleep(10000);
+			}
+		}
+		
+		if (serviceProcessesDone == -1 || timer.elapsed() >= deadline) {
+			// An error occurred or we've waited long enough. Kill all the
+			// processes.
+			P_WARN("Some Phusion Passenger service processes did not exit " <<
+				"in time, forcefully shutting down all.");
+			for (it = watchers.begin(); it != watchers.end(); it++) {
+				(*it)->forceShutdown();
+			}
+		} else {
+			P_DEBUG("All Phusion Passenger service processes have exited.");
+		}
+		
+		// Now clean up the server instance directory.
+		delete generation.get();
+		delete serverInstanceDir.get();
+		
+		_exit(0);
+		
+	} else if (pid == -1) {
+		// Error
+		e = errno;
+		throw SystemException("fork() failed", errno);
+		
+	} else {
+		// Parent
+		
+		// Let child process handle cleanup.
+		serverInstanceDir->detach();
+		generation->detach();
+	}
+}
+
+static void
+forceAllServicesShutdown(vector<AbstractWatcher *> &watchers) {
+	vector<AbstractWatcher *>::iterator it;
+	
+	for (it = watchers.begin(); it != watchers.end(); it++) {
+		(*it)->forceShutdown();
+	}
+}
+
 int
 main(int argc, char *argv[]) {
 	#define READ_ARG(index, expr, defaultValue) ((argc > index) ? (expr) : (defaultValue))
@@ -471,11 +740,11 @@ main(int argc, char *argv[]) {
 	maxInstancesPerApp = atoi(argv[13]);
 	poolIdleTime       = atoi(argv[14]);
 	
-	/* Become the process group leader so that Apache can't kill
-	 * this watchdog with killpg() during shutdown, and so that
-	 * a Ctrl-C only affects the web server.
+	/* Become the session leader so that Apache can't kill this
+	 * watchdog with killpg() during shutdown, and so that a
+	 * Ctrl-C only affects the web server.
 	 */
-	setpgrp();
+	setsid();
 	
 	disableOomKiller();
 	ignoreSigpipe();
@@ -490,42 +759,83 @@ main(int argc, char *argv[]) {
 		memset(argv[i], '\0', strlen(argv[i]));
 	}
 	
-	// Don't make the stack any smaller, getpwnam() on OS X needs a lot of stack space.
-	oxt::thread watchdogThread(watchdogMainLoop, "Watchdog thread", 64 * 1024);
-	
-	this_thread::disable_interruption di;
-	this_thread::disable_syscall_interruption dsi;
-	char x;
-	int ret = syscalls::read(feedbackFd, &x, 1);
-	bool threadJoined;
-	pid_t pid;
-	
-	if (ret == 1) {
-		// The web server exited gracefully.
-		globalMutex.lock();
-		exitGracefully = true;
-		globalMutex.unlock();
-		threadJoined = watchdogThread.interrupt_and_join(5000);
-	} else {
-		// The web server exited abnormally.
-		threadJoined = watchdogThread.interrupt_and_join(5000);
-	}
-	if (!threadJoined) {
-		/* On OS X, waitpid() is sometimes non-interruptable for
-		 * some strange reason. Kernel bug? In any case, we forcefully
-		 * kill the HelperServer so that we can at least move on.
-		 */
-		globalMutex.lock();
-		pid = helperServerPid;
-		globalMutex.unlock();
+	try {
+		MessageChannel feedbackChannel(feedbackFd);
+		serverInstanceDir.reset(new ServerInstanceDir(webServerPid, tempDir));
+		generation = serverInstanceDir->newGeneration(userSwitching, defaultUser, workerUid, workerGid);
 		
-		if (pid != 0) {
-			P_WARN("Unable to interrupt waitpid(); killing HelperServer's process group...");
-			if (syscalls::killpg(pid, SIGKILL) == -1) {
-				syscalls::kill(pid, SIGKILL);
+		/* Pre-convert some integers to strings so that we don't have to do this
+		 * after forking.
+		 */
+		logLevelString     = toString(logLevel);
+		webServerPidString = toString(webServerPid);
+		workerUidString    = toString(workerUid);
+		workerGidString    = toString(workerGid);
+		generationNumber   = toString(generation->getNumber());
+		maxPoolSizeString  = toString(maxPoolSize);
+		maxInstancesPerAppString = toString(maxInstancesPerApp);
+		poolIdleTimeString = toString(poolIdleTime);
+		
+		HelperServerWatcher helperServerWatcher;
+		
+		vector<AbstractWatcher *> watchers;
+		vector<AbstractWatcher *>::iterator it;
+		watchers.push_back(&helperServerWatcher);
+		
+		for (it = watchers.begin(); it != watchers.end(); it++) {
+			try {
+				(*it)->start();
+			} catch (const exception &e) {
+				feedbackChannel.write("Watchdog startup error",
+					e.what(), NULL);
+				forceAllServicesShutdown(watchers);
+				return 1;
 			}
-			watchdogThread.interrupt_and_join();
+			// Allow other exceptions to propagate and crash the watchdog.
 		}
+		for (it = watchers.begin(); it != watchers.end(); it++) {
+			try {
+				(*it)->startWatching();
+			} catch (const exception &e) {
+				feedbackChannel.write("Watchdog startup error",
+					e.what(), NULL);
+				forceAllServicesShutdown(watchers);
+				return 1;
+			}
+			// Allow other exceptions to propagate and crash the watchdog.
+		}
+		
+		feedbackChannel.write("Basic startup info",
+			serverInstanceDir->getPath().c_str(),
+			toString(generation->getNumber()).c_str(),
+			NULL);
+		
+		for (it = watchers.begin(); it != watchers.end(); it++) {
+			(*it)->sendStartupInfo(feedbackChannel);
+		}
+		
+		feedbackChannel.write("All services started", NULL);
+		
+		this_thread::disable_interruption di;
+		this_thread::disable_syscall_interruption dsi;
+		bool exitGracefully = waitForStarterProcessOrWatchers(watchers);
+		AbstractWatcher::stopWatching(watchers);
+		if (exitGracefully) {
+			/* Fork a child process which cleans up all the service processes in
+			 * the background and exit this watchdog process so that we don't block
+			 * the web server.
+			 */
+			cleanupServicesInBackground(watchers);
+			return 0;
+		} else {
+			forceAllServicesShutdown(watchers);
+			return 1;
+		}
+	} catch (const tracable_exception &e) {
+		P_ERROR(e.what() << "\n" << e.backtrace());
+		return 1;
+	} catch (const exception &e) {
+		P_ERROR(e.what());
+		return 1;
 	}
-	return 0;
 }

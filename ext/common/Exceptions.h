@@ -173,6 +173,17 @@ public:
 };
 
 /**
+ * An unexpected end-of-file I/O error.
+ *
+ * @ingroup Exceptions
+ */
+class EOFException: public IOException {
+public:
+	EOFException(const string &message): IOException(message) {}
+	virtual ~EOFException() throw() {}
+};
+
+/**
  * Thrown when an invalid configuration is given.
  */
 class ConfigurationException: public oxt::tracable_exception {
