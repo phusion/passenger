@@ -37,6 +37,10 @@ Release 2.2.6
    than Rails. This allows one to drop a config.ru file in a Rails directory
    and have it detected as a Rack application instead of a Rails application.
    Patch contributed by Sam Pohlenz: issue #338.
+ * [Apache] The location of the 'apxs' and 'apr-config' commands can now
+   also be passed to the installer through the --apxs-path and
+   --apr-config-path parameters, in addition to the $APXS2 and $APR_CONFIG
+   environment variables. Issue #3.
 
 
 Release 2.2.5
