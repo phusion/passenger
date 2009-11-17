@@ -383,7 +383,7 @@ namespace tut {
 		// waitUntilReadable() waits for the specified timeout if no data is readable.
 		unsigned long long timeout = 25;
 		ensure("No data is available", !reader.waitUntilReadable(&timeout));
-		ensure_equals("The passed time is deducted from the timeout", timeout, 0u);
+		ensure("The passed time is deducted from the timeout", timeout < 5);
 	}
 	
 	TEST_METHOD(16) {
