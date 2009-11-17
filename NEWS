@@ -1,7 +1,8 @@
 Release 2.2.6
 -------------
 
- * Fixed a compilation problem on Solaris. Issue #369.
+ * Fixed compilation problems on Solaris. Issue #369 and issue #379.
+ * Fixed crashes on PowerPC.
  * Some /tmp cleaner programs such as tmpwatch try to remove subdirectories
    in /tmp/passenger.xxx after a while because they think those
    subdirectories are unused. This could cause Phusion Passenger to

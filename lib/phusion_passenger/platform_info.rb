@@ -397,6 +397,8 @@ public
 				options = apxs2_flags.split
 				options.reject! { |f| f =~ /^\-x/ }
 				options.reject! { |f| f =~ /^\-Xa/ }
+				options.reject! { |f| f =~ /^\-fast/ }
+				options.reject! { |f| f =~ /^\-mt/ }
 				apxs2_flags = options.join(' ')
 			end
 			
