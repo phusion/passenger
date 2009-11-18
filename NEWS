@@ -1,3 +1,10 @@
+Release 2.2.7
+-------------
+
+ * Removed forgotten debugging code in passenger-install-apache2-module,
+   which caused it not to compile anything.
+
+
 Release 2.2.6
 -------------
 
