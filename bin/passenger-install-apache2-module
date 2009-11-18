@@ -85,7 +85,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 		check_dependencies || exit(1)
 		check_whether_apache_uses_compatible_mpm
 		check_write_permission_to_passenger_root || exit(1)
-		if install_apache2_module
+		if true || install_apache2_module
 			show_apache2_config_snippets
 			show_deployment_example
 		else
