@@ -24,6 +24,8 @@ Release 2.2.6
    also be passed to the installer through the --apxs-path and
    --apr-config-path parameters, in addition to the $APXS2 and $APR_CONFIG
    environment variables. Issue #3.
+ * [Nginx] Fixed errorneous 'rails_app_spawner_idle_time directive is
+   duplicate' problems on 64-bit platforms.
 
 
 Release 2.2.5
