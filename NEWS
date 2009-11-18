@@ -25,6 +25,7 @@ Release 2.2.6
    --apr-config-path parameters, in addition to the $APXS2 and $APR_CONFIG
    environment variables. Issue #3.
  * [Nginx] Various problems that only occur on 64-bit platforms have been fixed.
+ * [Nginx] The installer now installs Nginx 0.7.64 by default.
 
 
 Release 2.2.5
