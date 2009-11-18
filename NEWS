@@ -14,6 +14,8 @@ Release 3.0.0
    interferes with our own reporting of filesystem errors.
  * Zero-copy I/O architecture.
  * PassengerMinInstances
+ * File descriptor passing fixes: more robust now.
+ * Multicorn.
 
 
 Release 2.2.6
