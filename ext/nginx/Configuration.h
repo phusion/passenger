@@ -43,9 +43,9 @@ typedef struct {
     ngx_flag_t   use_global_queue;
     ngx_str_t    environment;
     ngx_str_t    spawn_method;
-    int          min_instances;
-    int          framework_spawner_idle_time;
-    int          app_spawner_idle_time;
+    ngx_int_t    min_instances;
+    ngx_int_t    framework_spawner_idle_time;
+    ngx_int_t    app_spawner_idle_time;
     ngx_array_t *base_uris;
 
     /************************************/
