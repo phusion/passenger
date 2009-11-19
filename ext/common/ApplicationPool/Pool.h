@@ -395,6 +395,36 @@ private:
 		       fileChangeChecker.changed(restartFile, options.statThrottleRate);
 	}
 	
+	ProcessInfoPtr selectProcess(ProcessInfoList *processes, const PoolOptions &options,
+	                             unique_lock<boost::mutex> &l)
+	{
+		if (options.useGlobalQueue) {
+			TRACE_POINT();
+			waitingOnGlobalQueue++;
+			activeOrMaxChanged.wait(l);
+			waitingOnGlobalQueue--;
+			return ProcessInfoPtr();
+		} else {
+			ProcessInfoList::iterator it = processes->begin();
+			ProcessInfoList::iterator end = processes->end();
+			ProcessInfoList::iterator smallest = processes->begin();
+			ProcessInfoPtr processInfo;
+			
+			it++;
+			for (; it != end; it++) {
+				if ((*it)->sessions < (*smallest)->sessions) {
+					smallest = it;
+				}
+			}
+			processInfo = *smallest;
+			processes->erase(smallest);
+			processes->push_back(processInfo);
+			processInfo->iterator = processes->end();
+			processInfo->iterator--;
+			return processInfo;
+		}
+	}
+	
 	bool detachWithoutLock(const string &identifier) {
 		GroupMap::iterator group_it;
 		GroupMap::iterator group_it_end = groups.end();
@@ -584,36 +614,21 @@ private:
 					activeOrMaxChanged.notify_all();
 				} else if (count >= max || (
 					maxPerApp != 0 && group->size >= maxPerApp )
-					) {
-					if (options.useGlobalQueue) {
-						UPDATE_TRACE_POINT();
-						waitingOnGlobalQueue++;
-						activeOrMaxChanged.wait(l);
-						waitingOnGlobalQueue--;
+					)
+				{
+					processInfo = selectProcess(processes, options, l);
+					if (processInfo == NULL) {
 						goto beginning_of_function;
-					} else {
-						ProcessInfoList::iterator it(processes->begin());
-						ProcessInfoList::iterator end(processes->end());
-						ProcessInfoList::iterator smallest(processes->begin());
-						it++;
-						for (; it != end; it++) {
-							if ((*it)->sessions < (*smallest)->sessions) {
-								smallest = it;
-							}
-						}
-						processInfo = *smallest;
-						processes->erase(smallest);
-						processes->push_back(processInfo);
-						processInfo->iterator = processes->end();
-						processInfo->iterator--;
 					}
 				} else {
-					processInfo = ptr(new ProcessInfo());
+					ProcessPtr process;
 					{
 						this_thread::restore_interruption ri(di);
 						this_thread::restore_syscall_interruption rsi(dsi);
-						processInfo->process = spawnManager->spawn(options);
+						process = spawnManager->spawn(options);
 					}
+					processInfo = ptr(new ProcessInfo());
+					processInfo->process = process;
 					processInfo->sessions = 0;
 					processes->push_back(processInfo);
 					processInfo->iterator = processes->end();

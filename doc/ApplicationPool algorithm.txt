@@ -302,24 +302,15 @@ private function checkout_without_lock(app_root, options):
 			# been reached.
 			#
 			# We're not allowed to spawn a new application process.
-			if options.use_global_queue:
-				# So we wait until _active_ has changed, then
-				# we restart this function and try again.
-				waiting_on_global_queue++
-				wait until _active_ has changed
-				waiting_on_global_queue--
+			process_info = select_process(processes, options)
+			if process_info == null:
 				goto beginning of function
-			else:
-				# So we connect to an already active process.
-				# This connection will be put into that
-				# process's private queue.
-				process_info = an element in _processes_ with the smallest _session_ value
-				processes.move_to_back(process_info.iterator)
 		else:
 			# All processes are active, but the pool hasn't reached its
 			# maximum yet. So we spawn a new process.
+			process = spawn(app_root, options)
 			process_info = new ProcessInfo
-			process_info.process = spawn(app_root, options)
+			process_info.process = process
 			iterator = processes.add_to_back(process_info)
 			process_info.iterator = iterator
 			group.size++
@@ -386,6 +377,23 @@ private function needs_restart(app_root, options):
 	return (file_exists("$restart_dir/always_restart.txt")) or
 	       (we haven't seen "$restart_dir/restart.txt" before) or
 	       ("$restart_dir/restart.txt" changed since the last time we checked)
+
+
+private function select_process(processes, options):
+	if options.use_global_queue:
+		# So we wait until _active_ has changed, then
+		# we restart this function and try again.
+		waiting_on_global_queue++
+		wait until _active_ has changed
+		waiting_on_global_queue--
+		return null
+	else:
+		# So we connect to an already active process.
+		# This connection will be put into that
+		# process's private queue.
+		process_info = an element in _processes_ with the smallest _session_ value
+		processes.move_to_back(process_info.iterator)
+		return process_info
 
 
 private function detach_without_lock(identifier):

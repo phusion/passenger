@@ -23,11 +23,16 @@ module TestHelper
 		end
 		
 		def reset
+			# Empty directory without removing the directory itself,
+			# allowing processes with this directory as current working
+			# directory to continue to function properly.
 			files = Dir["#{@app_root}/*"]
 			files |= Dir["#{@app_root}/.*"]
 			files.delete("#{@app_root}/.")
 			files.delete("#{@app_root}/..")
+			FileUtils.chmod_R(0777, files)
 			FileUtils.rm_rf(files)
+			
 			copy_stub_contents
 			system("chmod", "-R", "a+rw", app_root)
 		end
