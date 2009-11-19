@@ -41,6 +41,7 @@ typedef struct {
     
     ngx_flag_t   enabled;
     ngx_flag_t   use_global_queue;
+    ngx_flag_t   friendly_error_pages;
     ngx_str_t    environment;
     ngx_str_t    spawn_method;
     ngx_int_t    min_instances;

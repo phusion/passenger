@@ -553,6 +553,16 @@ describe "Apache 2 module" do
 			File.unlink("#{@mycook.app_root}/public/.htaccess")
 			get('/').should =~ /Please fix the relevant file permissions/
 		end
+		
+		it "doesn't display a Ruby spawn error page if PassengerFriendlyErrorPages is off" do
+			use_rails_stub('foobar', "#{@webdir}/app-that-crashes-during-startup") do |stub|
+				File.write("#{stub.app_root}/public/.htaccess", "PassengerFriendlyErrorPages off")
+				File.prepend(stub.environment_rb, "raise 'app crash'")
+				result = get("/app-that-crashes-during-startup/public")
+				result.should_not =~ @error_page_signature
+				result.should_not =~ /app crash/
+			end
+		end
 	end
 	
 	describe "HelperServer" do

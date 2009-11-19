@@ -102,6 +102,7 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->statThrottleRateSpecified = false;
 	config->restartDir = NULL;
 	config->uploadBufferDir = NULL;
+	config->friendlyErrorPages = DirConfig::UNSET;
 	/*************************************/
 	return config;
 }
@@ -147,6 +148,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->uploadBufferDir = (add->uploadBufferDir == NULL) ? base->uploadBufferDir : add->uploadBufferDir;
 	config->resolveSymlinksInDocRoot = (add->resolveSymlinksInDocRoot == DirConfig::UNSET) ? base->resolveSymlinksInDocRoot : add->resolveSymlinksInDocRoot;
 	config->allowEncodedSlashes = (add->allowEncodedSlashes == DirConfig::UNSET) ? base->allowEncodedSlashes : add->allowEncodedSlashes;
+	config->friendlyErrorPages = (add->friendlyErrorPages == DirConfig::UNSET) ? base->friendlyErrorPages : add->friendlyErrorPages;
 	/*************************************/
 	return config;
 }
@@ -460,6 +462,13 @@ cmd_passenger_allow_encoded_slashes(cmd_parms *cmd, void *pcfg, int arg) {
 	return NULL;
 }
 
+static const char *
+cmd_passenger_friendly_error_pages(cmd_parms *cmd, void *pcfg, int arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->friendlyErrorPages = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
+	return NULL;
+}
+
 
 /*************************************************
  * Rails-specific settings
@@ -716,6 +725,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Whether to support encoded slashes in the URL"),
+	AP_INIT_FLAG("PassengerFriendlyErrorPages",
+		(FlagFunc) cmd_passenger_friendly_error_pages,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Whether to display friendly error pages when something goes wrong"),
 	
 	/*****************************/
 
@@ -745,12 +759,12 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The spawn method to use."),
-	AP_INIT_TAKE1("RailsFrameworkSpawnerIdleTime", // TODO: document this
+	AP_INIT_TAKE1("RailsFrameworkSpawnerIdleTime",
 		(Take1Func) cmd_rails_framework_spawner_idle_time,
 		NULL,
 		RSRC_CONF,
 		"The maximum number of seconds that a framework spawner may be idle before it is shutdown."),
-	AP_INIT_TAKE1("RailsAppSpawnerIdleTime", // TODO: document this
+	AP_INIT_TAKE1("RailsAppSpawnerIdleTime",
 		(Take1Func) cmd_rails_app_spawner_idle_time,
 		NULL,
 		RSRC_CONF,

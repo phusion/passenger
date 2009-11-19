@@ -606,7 +606,7 @@ private:
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
 			} catch (const SpawnException &e) {
 				r->status = 500;
-				if (e.hasErrorPage()) {
+				if (e.hasErrorPage() && config->showFriendlyErrorPages()) {
 					ap_set_content_type(r, "text/html; charset=utf-8");
 					ap_rputs(e.getErrorPage().c_str(), r);
 					return OK;

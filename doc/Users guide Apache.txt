@@ -750,22 +750,6 @@ In each place, it may be specified at most once. The default value is 'off'.
 include::users_guide_snippets/global_queueing_explained.txt[]
 
 
-[[PassengerUserSwitching]]
-=== PassengerUserSwitching <on|off> ===
-Whether to enable <<user_switching,user switching support>>.
-
-This option may only occur once, in the global server configuration.
-The default value is 'on'.
-
-[[PassengerDefaultUser]]
-=== PassengerDefaultUser <username> ===
-Phusion Passenger enables <<user_switching,user switching support>> by default.
-This configuration option allows one to specify which user Rails/Rack
-applications must run as, if user switching fails or is disabled.
-
-This option may only occur once, in the global server configuration.
-The default value is 'nobody'.
-
 === PassengerEnabled <on|off> ===
 You can set this option to 'off' to completely disable Phusion Passenger for
 a certain location. This is useful if, for example, you want to integrate a PHP
@@ -915,6 +899,43 @@ allow the attacker to cause a Denial-of-Service.
 
 You can prevent this from happening by pointing PassengerRestartDir to a
 directory that's readable by Apache, but only writable by administrators.
+
+
+=== Security options ===
+
+[[PassengerUserSwitching]]
+==== PassengerUserSwitching <on|off> ====
+Whether to enable <<user_switching,user switching support>>.
+
+This option may only occur once, in the global server configuration.
+The default value is 'on'.
+
+[[PassengerDefaultUser]]
+==== PassengerDefaultUser <username> ====
+Phusion Passenger enables <<user_switching,user switching support>> by default.
+This configuration option allows one to specify which user Rails/Rack
+applications must run as, if user switching fails or is disabled.
+
+This option may only occur once, in the global server configuration.
+The default value is 'nobody'.
+
+==== PassengerFriendlyErrorPages <on|off> ====
+Phusion Passenger can display friendly error pages whenever an application fails
+to start. This friendly error page presents the startup error message, some
+suggestions for solving the problem, and a backtrace. This feature is very useful
+during application development and useful for less experienced system administrators,
+but the page might reveal potentially sensitive information, depending on the
+application. Experienced system administrators who are using Phusion Passenger
+on serious production servers should consider turning this feature off.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess', if `AllowOverride Options` is on.
+
+In each place, it may be specified at most once. The default value is 'on'.
 
 
 === Resource control and optimization options ===

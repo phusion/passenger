@@ -16,6 +16,7 @@ Release 3.0.0
  * PassengerMinInstances
  * File descriptor passing fixes: more robust now.
  * Multicorn.
+ * PassengerFriendlyErrorPages/passenger_friendly_error_pages
 
 
 Release 2.2.7

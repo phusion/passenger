@@ -537,23 +537,7 @@ In each place, it may be specified at most once. The default value is 'off'.
 
 include::users_guide_snippets/global_queueing_explained.txt[]
 
-[[PassengerUserSwitching]]
-=== passenger_user_switching <on|off> ===
-Whether to enable <<user_switching,user switching support>>.
-
-This option may only occur once, in the 'http' configuration block.
-The default value is 'on'.
-
-[[PassengerDefaultUser]]
-=== passenger_default_user <username> ===
-Phusion Passenger enables <<user_switching,user switching support>> by default.
-This configuration option allows one to specify which user Rails/Rack
-applications must run as, if user switching fails or is disabled.
-
-This option may only occur once, in the 'http' configuration block.
-The default value is 'nobody'.
-
-=== Important deployment options
+=== Important deployment options ===
 ==== passenger_enabled <on|off> ====
 This option may be specified in a 'server' configuration block, a
 'location' configuration block or an 'if' configuration scope, to
@@ -580,6 +564,41 @@ This option may occur in the following places:
  * In a 'server' configuration block.
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
+
+=== Security options ===
+[[PassengerUserSwitching]]
+==== passenger_user_switching <on|off> ====
+Whether to enable <<user_switching,user switching support>>.
+
+This option may only occur once, in the 'http' configuration block.
+The default value is 'on'.
+
+[[PassengerDefaultUser]]
+==== passenger_default_user <username> ====
+Phusion Passenger enables <<user_switching,user switching support>> by default.
+This configuration option allows one to specify which user Rails/Rack
+applications must run as, if user switching fails or is disabled.
+
+This option may only occur once, in the 'http' configuration block.
+The default value is 'nobody'.
+
+==== passenger_friendly_error_pages <on|off> ====
+Phusion Passenger can display friendly error pages whenever an application fails
+to start. This friendly error page presents the startup error message, some
+suggestions for solving the problem, and a backtrace. This feature is very useful
+during application development and useful for less experienced system administrators,
+but the page might reveal potentially sensitive information, depending on the
+application. Experienced system administrators who are using Phusion Passenger
+on serious production servers should consider turning this feature off.
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is 'on'.
 
 === Resource control and optimization options ===
 [[PassengerMaxPoolSize]]

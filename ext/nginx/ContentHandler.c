@@ -250,6 +250,28 @@ set_upstream_server_address(ngx_http_upstream_t *upstream, ngx_http_upstream_con
 }
 
 
+/* Convenience macros for building the SCGI header in create_request(). */
+
+#define ANALYZE_BOOLEAN_CONFIG_LENGTH(name, config_field)   \
+    do {                                                    \
+        if (config_field) {                                 \
+            len += sizeof(name) + sizeof("true");           \
+        } else {                                            \
+            len += sizeof(name) + sizeof("false");          \
+        }                                                   \
+    } while (0)
+
+#define SERIALIZE_BOOLEAN_CONFIG_DATA(name, config_field)            \
+    do {                                                             \
+        b->last = ngx_copy(b->last, name, sizeof(name));             \
+        if (config_field) {                                          \
+            b->last = ngx_copy(b->last, "true", sizeof("true"));     \
+        } else {                                                     \
+            b->last = ngx_copy(b->last, "false", sizeof("false"));   \
+        }                                                            \
+    } while (0)
+
+
 static ngx_int_t
 create_request(ngx_http_request_t *r)
 {
@@ -346,11 +368,10 @@ create_request(ngx_http_request_t *r)
     #endif
     
     /* Lengths of Passenger application pool options. */
-    if (slcf->use_global_queue) {
-        len += sizeof("PASSENGER_USE_GLOBAL_QUEUE") + sizeof("true");
-    } else {
-        len += sizeof("PASSENGER_USE_GLOBAL_QUEUE") + sizeof("false");
-    }
+    ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_USE_GLOBAL_QUEUE",
+                                  slcf->use_global_queue);
+    ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_FRIENDLY_ERROR_PAGES",
+                                  slcf->friendly_error_pages);
     len += sizeof("PASSENGER_ENVIRONMENT") + slcf->environment.len + 1;
     len += sizeof("PASSENGER_SPAWN_METHOD") + slcf->spawn_method.len + 1;
     len += sizeof("PASSENGER_APP_TYPE") + app_type_string_len;
@@ -544,13 +565,10 @@ create_request(ngx_http_request_t *r)
     
 
     /* Build Passenger application pool option headers. */
-    b->last = ngx_copy(b->last, "PASSENGER_USE_GLOBAL_QUEUE",
-                       sizeof("PASSENGER_USE_GLOBAL_QUEUE"));
-    if (slcf->use_global_queue) {
-        b->last = ngx_copy(b->last, "true", sizeof("true"));
-    } else {
-        b->last = ngx_copy(b->last, "false", sizeof("false"));
-    }
+    SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_USE_GLOBAL_QUEUE",
+                                  slcf->use_global_queue);
+    SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_FRIENDLY_ERROR_PAGES",
+                                  slcf->friendly_error_pages);
     
     b->last = ngx_copy(b->last, "PASSENGER_ENVIRONMENT",
                        sizeof("PASSENGER_ENVIRONMENT"));

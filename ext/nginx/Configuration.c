@@ -145,6 +145,7 @@ passenger_create_loc_conf(ngx_conf_t *cf)
 
     conf->enabled = NGX_CONF_UNSET;
     conf->use_global_queue = NGX_CONF_UNSET;
+    conf->friendly_error_pages = NGX_CONF_UNSET;
     conf->environment.data = NULL;
     conf->environment.len = 0;
     conf->spawn_method.data = NULL;
@@ -228,6 +229,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_value(conf->enabled, prev->enabled, 0);
     ngx_conf_merge_value(conf->use_global_queue, prev->use_global_queue, 0);
+    ngx_conf_merge_value(conf->friendly_error_pages, prev->friendly_error_pages, 1);
     ngx_conf_merge_str_value(conf->environment, prev->environment, "production");
     ngx_conf_merge_str_value(conf->spawn_method, prev->spawn_method, "smart-lv2");
     ngx_conf_merge_value(conf->min_instances, prev->min_instances, (ngx_int_t) -1);
@@ -850,6 +852,13 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_flag_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, use_global_queue),
+      NULL },
+
+    { ngx_string("passenger_friendly_error_pages"),
+      NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+      ngx_conf_set_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, friendly_error_pages),
       NULL },
 
     { ngx_string("passenger_max_pool_size"),

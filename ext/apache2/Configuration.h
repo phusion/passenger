@@ -188,6 +188,11 @@
 			 */
 			const char *uploadBufferDir;
 			
+			/**
+			 * Whether Phusion Passenger should show friendly error pages.
+			 */
+			Threeway friendlyErrorPages;
+			
 			/*************************************/
 			/*************************************/
 			
@@ -306,6 +311,10 @@
 				} else {
 					return generation->getPath() + "/buffered_uploads";
 				}
+			}
+			
+			bool showFriendlyErrorPages() const {
+				return friendlyErrorPages != DISABLED;
 			}
 			
 			/*************************************/

@@ -369,25 +369,34 @@ private:
 	 *   spawn exception <tt>e</tt> to.
 	 * @param e The spawn exception to be written to the given <tt>fd</tt>'s message
 	 *   channel.
+	 * @param friendly Whether to show a friendly error page.
 	 */
-	void handleSpawnException(FileDescriptor &fd, const SpawnException &e) {
+	void handleSpawnException(FileDescriptor &fd, const SpawnException &e, bool friendly) {
 		MessageChannel channel(fd);
 		channel.writeRaw("HTTP/1.1 500 Internal Server Error\x0D\x0A");
 		channel.writeRaw("Status: 500 Internal Server Error\x0D\x0A");
 		channel.writeRaw("Connection: close\x0D\x0A");
 		channel.writeRaw("Content-Type: text/html; charset=utf-8\x0D\x0A");
 		
-		if (e.hasErrorPage()) {
-			channel.writeRaw("Content-Length: " +
-				toString(e.getErrorPage().size()) +
-				"\x0D\x0A");
-			channel.writeRaw("\x0D\x0A");
-			channel.writeRaw(e.getErrorPage());
+		if (friendly) {
+			if (e.hasErrorPage()) {
+				channel.writeRaw("Content-Length: " +
+					toString(e.getErrorPage().size()) +
+					"\x0D\x0A");
+				channel.writeRaw("\x0D\x0A");
+				channel.writeRaw(e.getErrorPage());
+			} else {
+				channel.writeRaw("Content-Length: " +
+					toString(strlen(e.what())) + "\x0D\x0A");
+				channel.writeRaw("\x0D\x0A");
+				channel.writeRaw(e.what());
+			}
 		} else {
+			const char body[] = "<h1>Internal Server Error (500)</h1>";
 			channel.writeRaw("Content-Length: " +
-				toString(strlen(e.what())) + "\x0D\x0A");
+				toString(strlen(body)) + "\x0D\x0A");
 			channel.writeRaw("\x0D\x0A");
-			channel.writeRaw(e.what());
+			channel.writeRaw(body);
 		}
 	}
 	
@@ -448,7 +457,8 @@ private:
 				session->shutdownWriter();
 				forwardResponse(session, clientFd);
 			} catch (const SpawnException &e) {
-				handleSpawnException(clientFd, e);
+				handleSpawnException(clientFd, e,
+					parser.getHeader("PASSENGER_FRIENDLY_ERROR_PAGES") == "true");
 			} catch (const ClientDisconnectedException &) {
 				P_WARN("Couldn't forward the HTTP response back to the HTTP client: "
 					"It seems the user clicked on the 'Stop' button in his "

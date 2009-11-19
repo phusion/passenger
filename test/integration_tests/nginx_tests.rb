@@ -177,6 +177,11 @@ describe "Phusion Passenger for Nginx" do
 			@nginx.add_server do |server|
 				server[:server_name] = "passenger.test"
 				server[:root]        = File.expand_path("#{@stub.app_root}/public")
+				server << %q{
+					location /crash_without_friendly_error_page {
+						passenger_friendly_error_pages off;
+					}
+				}
 			end
 			@nginx.start
 		end
@@ -187,6 +192,7 @@ describe "Phusion Passenger for Nginx" do
 		
 		before :each do
 			@stub.reset
+			@error_page_signature = /<meta name="generator" content="Phusion Passenger">/
 			File.touch("#{@stub.app_root}/tmp/restart.txt", 1 + rand(100000))
 		end
 		
@@ -199,6 +205,24 @@ describe "Phusion Passenger for Nginx" do
 				run app
 			})
 			get('/').should =~ /nginx/i
+		end
+		
+		it "displays a friendly error page if the application fails to spawn" do
+			File.write("#{@stub.app_root}/config.ru", %q{
+				raise "my error"
+			})
+			data = get('/')
+			data.should =~ /#{@error_page_signature}/
+			data.should =~ /my error/
+		end
+		
+		it "doesn't display a friendly error page if the application fails to spawn but passenger_friendly_error_pages is off" do
+			File.write("#{@stub.app_root}/config.ru", %q{
+				raise "my error"
+			})
+			data = get('/crash_without_friendly_error_page')
+			data.should_not =~ /#{@error_page_signature}/
+			data.should_not =~ /my error/
 		end
 	end
 	
