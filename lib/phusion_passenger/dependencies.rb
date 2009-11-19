@@ -438,6 +438,49 @@ module Dependencies # :nodoc: all
 		end
 		dep.website = "http://www.zlib.net/"
 	end
+	
+	File_Tail = Dependency.new do |dep|
+		dep.name = "file-tail"
+		dep.define_checker do |result|
+			begin
+				begin
+					require 'rubygems'
+				rescue LoadError
+				end
+				require 'file/tail'
+				result.found
+			rescue LoadError
+				result.not_found
+			end
+		end
+		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM || "gem"} install file-tail</b>"
+	end
+	
+	Daemon_Controller = Dependency.new do |dep|
+		dep.name = "daemon_controller >= 0.2.3"
+		dep.install_instructions = "Please install RubyGems first, then run " <<
+			"<b>#{PlatformInfo::GEM || "gem"} install daemon_controller</b>"
+		dep.define_checker do |result|
+			begin
+				begin
+					require 'rubygems'
+				rescue LoadError
+				end
+				require 'daemon_controller'
+				if defined?(DaemonController::VERSION)
+					result.found
+				else
+					result.not_found
+					dep.install_instructions = "Your version of daemon_controller is too old. " <<
+						"Please upgrade with the following commands:\n" <<
+						"   <b>#{PlatformInfo::GEM || "gem"} uninstall FooBarWidget-daemon_controller</b>\n" <<
+						"   <b>#{PlatformInfo::GEM || "gem"} install daemon_controller</b>"
+				end
+			rescue LoadError
+				result.not_found
+			end
+		end
+	end
 end
 
 end # module PhusionPassenger

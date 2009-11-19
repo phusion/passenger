@@ -9,7 +9,7 @@ events {
 }
 
 http {
-    include <%= @nginx_dir %>/conf/mime.types;
+    include <%= nginx_dir %>/conf/mime.types;
     client_body_temp_path <%= @temp_dir %>/client;
     proxy_temp_path <%= @temp_dir %>/proxy;
     passenger_ruby <%= PlatformInfo::RUBY %>;
