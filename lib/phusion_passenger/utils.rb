@@ -263,9 +263,6 @@ protected
 			channel.write('success')
 			return true
 		rescue StandardError, ScriptError, NoMemoryError => e
-			if ENV['TESTING_PASSENGER'] == '1'
-				print_exception(self.class.to_s, e)
-			end
 			channel.write('exception')
 			channel.write_scalar(marshal_exception(e))
 			channel.write_scalar(stderr_output)

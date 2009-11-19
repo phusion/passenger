@@ -181,6 +181,12 @@ struct PoolOptions {
 	 */
 	bool initiateSession;
 	
+	/**
+	 * Whether application processes should print exceptions during spawning
+	 * to STDERR. Defaults to true.
+	 */
+	bool printExceptions;
+	
 	/*********************************/
 	
 	/**
@@ -202,6 +208,7 @@ struct PoolOptions {
 		statThrottleRate        = 0;
 		baseURI                 = "/";
 		initiateSession         = true;
+		printExceptions         = true;
 		
 		/*********************************/
 	}
@@ -241,6 +248,7 @@ struct PoolOptions {
 		this->restartDir              = restartDir;
 		this->baseURI                 = baseURI;
 		this->initiateSession         = true;
+		this->printExceptions         = true;
 		
 		/*********************************/
 	}
@@ -284,6 +292,7 @@ struct PoolOptions {
 		restartDir       = vec[startIndex + offset];                 offset += 2;
 		baseURI          = vec[startIndex + offset];                 offset += 2;
 		initiateSession  = vec[startIndex + offset] == "true";       offset += 2;
+		printExceptions  = vec[startIndex + offset] == "true";       offset += 2;
 		hasEnvVars       = vec[startIndex + offset] == "true";       offset += 2;
 		if (hasEnvVars) {
 			environmentVariables = ptr(new SimpleStringListCreator(vec[startIndex + offset]));
@@ -322,6 +331,7 @@ struct PoolOptions {
 		appendKeyValue (vec, "restart_dir",     restartDir);
 		appendKeyValue (vec, "base_uri",        baseURI);
 		appendKeyValue (vec, "initiate_session", initiateSession ? "true" : "false");
+		appendKeyValue (vec, "print_exceptions", printExceptions ? "true" : "false");
 		if (storeEnvVars) {
 			appendKeyValue(vec, "has_environment_variables", "true");
 			appendKeyValue(vec, "environment_variables", serializeEnvironmentVariables());
