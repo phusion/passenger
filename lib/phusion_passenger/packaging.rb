@@ -22,18 +22,25 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
-	LIBDIR = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+	LIBDIR        = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+	TEMPLATES_DIR = File.join(LIBDIR, "phusion_passenger", "templates")
 	
 	# Returns whether this Phusion Passenger installation is packaged
 	# using the OS's native package management system, i.e. as opposed
 	# to being installed from source or with RubyGems.
 	def self.natively_packaged?
-		return !File.exist?("#{LIBDIR}/../Rakefile")
+		return !File.exist?("#{LIBDIR}/../Rakefile") ||
+		       !File.exist?("#{LIBDIR}/../DEVELOPERS.TXT")
 	end
 	
 	if natively_packaged?
-		DOCDIR = "/usr/share/doc/phusion_passenger"
+		SOURCE_ROOT = "/usr/lib/phusion_passenger/source"
+		DOCDIR      = "/usr/share/doc/phusion_passenger"
 	else
-		DOCDIR = File.expand_path(File.join(LIBDIR, "..", "doc"))
+		# Top directory of the Phusion Passenger source code.
+		SOURCE_ROOT = File.expand_path(File.join(LIBDIR, ".."))
+		
+		# Documentation directory.
+		DOCDIR      = File.expand_path(File.join(SOURCE_ROOT, "doc"))
 	end
 end
