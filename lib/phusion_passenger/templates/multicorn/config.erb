@@ -12,14 +12,16 @@ http {
     include <%= @nginx_dir %>/conf/mime.types;
     client_body_temp_path <%= @temp_dir %>/client;
     proxy_temp_path <%= @temp_dir %>/proxy;
+    passenger_ruby <%= PlatformInfo::RUBY %>;
+    passenger_root <%= passenger_root %>;
+    passenger_user_switching off;
+    <% if @options[:user] %>passenger_default_user <%= @options[:user] %>;<% end %>
+    
     default_type application/octet-stream;
     client_max_body_size 50m;
     access_log off;
     gzip on;
     keepalive_timeout 60;
-    passenger_root <%= passenger_root %>;
-    passenger_user_switching off;
-    <% if @options[:user] %>passenger_default_user <%= @options[:user] %>;<% end %>
     
     <% if @apps.size > 1 %>
     # Default server entry.
