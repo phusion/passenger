@@ -17,6 +17,8 @@ Release 3.0.0
  * File descriptor passing fixes: more robust now.
  * Multicorn.
  * PassengerFriendlyErrorPages/passenger_friendly_error_pages
+ * [Nginx] More options are now valid in a wider scope (e.g.
+   passenger_enabled can now be specified in http block)
 
 
 Release 2.2.7

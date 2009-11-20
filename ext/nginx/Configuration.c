@@ -848,14 +848,14 @@ const ngx_command_t passenger_commands[] = {
       NULL },
 
     { ngx_string("passenger_use_global_queue"),
-      NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, use_global_queue),
       NULL },
 
     { ngx_string("passenger_friendly_error_pages"),
-      NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, friendly_error_pages),
@@ -890,7 +890,7 @@ const ngx_command_t passenger_commands[] = {
       NULL },
 
     { ngx_string("passenger_base_uri"),
-      NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_array_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, base_uris),
@@ -911,7 +911,7 @@ const ngx_command_t passenger_commands[] = {
       NULL },
 
     { ngx_string("rails_env"),
-      NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, environment),
@@ -939,7 +939,7 @@ const ngx_command_t passenger_commands[] = {
       NULL },
 
     { ngx_string("rack_env"),
-      NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, environment),

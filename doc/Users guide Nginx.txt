@@ -527,6 +527,7 @@ Turns the use of global queuing on or off.
 
 This option may occur in the following places:
 
+ * In the 'http' configuration block.
  * In a 'server' configuration block.
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
@@ -539,9 +540,10 @@ include::users_guide_snippets/global_queueing_explained.txt[]
 
 === Important deployment options ===
 ==== passenger_enabled <on|off> ====
-This option may be specified in a 'server' configuration block, a
-'location' configuration block or an 'if' configuration scope, to
-enable or disable Phusion Passenger for that server or that location.
+This option may be specified in the 'http' configuration block, a
+'server' configuration block, a 'location' configuration block or
+an 'if' configuration scope, to enable or disable Phusion Passenger
+for that server or that location.
 
 Phusion Passenger is disabled by default, so you must explicitly enable
 it for server blocks that you wish to serve through Phusion Passenger.
@@ -561,6 +563,7 @@ applications in different sub-URIs under the same virtual host.
 
 This option may occur in the following places:
 
+ * In the 'http' configuration block.
  * In a 'server' configuration block.
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
@@ -717,6 +720,7 @@ This option allows one to specify the default `RAILS_ENV` value.
 
 This option may occur in the following places:
 
+ * In the 'http' configuration block.
  * In a 'server' configuration block.
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
@@ -809,6 +813,7 @@ This option allows one to specify the default `RACK_ENV` value.
 
 This option may occur in the following places:
 
+ * In the 'http' configuration block.
  * In a 'server' configuration block.
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
