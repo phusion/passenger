@@ -609,6 +609,10 @@ describe "Apache 2 module" do
 			File.touch("#{@mycook.app_root}/tmp/restart.txt", 1)  # Get rid of all previous app processes.
 			get('/welcome').should =~ /Welcome to MyCook/
 			instance = AdminTools::ServerInstance.list.first
+			
+			# Wait until the server has processed the session close event.
+			sleep 0.1
+			
 			processes = instance.connect(:passenger_status) do
 				instance.processes
 			end
