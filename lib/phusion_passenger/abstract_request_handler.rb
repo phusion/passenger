@@ -108,8 +108,7 @@ class AbstractRequestHandler
 	# See also #socket_type.
 	attr_reader :socket_name
 	
-	# The type of socket that #socket_name refers to. At the moment, the
-	# value is always 'unix', which indicates a Unix domain socket.
+	# The type of socket that #socket_name refers to. Either 'unix' or 'tcp'.
 	attr_reader :socket_type
 	
 	# Specifies the maximum allowed memory usage, in MB. If after having processed
@@ -136,9 +135,11 @@ class AbstractRequestHandler
 	def initialize(owner_pipe, options = {})
 		# TODO: password protect the socket
 		if should_use_unix_sockets?
-			create_unix_socket_on_filesystem
+			@socket_name, @socket = create_unix_socket_on_filesystem
+			@socket_type = 'unix'
 		else
-			create_tcp_socket
+			@socket_name, @socket = create_tcp_socket
+			@socket_type = 'tcp'
 		end
 		@socket.close_on_exec!
 		@owner_pipe = owner_pipe
@@ -150,6 +151,8 @@ class AbstractRequestHandler
 		@iterations = 0
 		@processed_requests = 0
 		@main_loop_running = false
+		
+		#############
 	end
 	
 	# Clean up temporary stuff created by the request handler.
@@ -288,21 +291,19 @@ private
 	end
 
 	def create_unix_socket_on_filesystem
-		done = false
-		while !done
+		while true
 			begin
 				if defined?(NativeSupport)
 					unix_path_max = NativeSupport::UNIX_PATH_MAX
 				else
 					unix_path_max = 100
 				end
-				@socket_name = "#{passenger_tmpdir}/backends/backend.#{generate_random_id(:base64)}"
-				@socket_name = @socket_name.slice(0, unix_path_max - 1)
-				@socket = UNIXServer.new(@socket_name)
-				@socket.listen(BACKLOG_SIZE)
-				@socket_type = "unix"
-				File.chmod(0666, @socket_name)
-				done = true
+				socket_name = "#{passenger_tmpdir}/backends/backend.#{generate_random_id(:base64)}"
+				socket_name = socket_name.slice(0, unix_path_max - 1)
+				socket = UNIXServer.new(socket_name)
+				socket.listen(BACKLOG_SIZE)
+				File.chmod(0666, socket_name)
+				return [socket_name, socket]
 			rescue Errno::EADDRINUSE
 				# Do nothing, try again with another name.
 			end
@@ -312,10 +313,10 @@ private
 	def create_tcp_socket
 		# We use "127.0.0.1" as address in order to force
 		# TCPv4 instead of TCPv6.
-		@socket = TCPServer.new('127.0.0.1', 0)
-		@socket.listen(BACKLOG_SIZE)
-		@socket_name = "127.0.0.1:#{@socket.addr[1]}"
-		@socket_type = "tcp"
+		socket = TCPServer.new('127.0.0.1', 0)
+		socket.listen(BACKLOG_SIZE)
+		socket_name = "127.0.0.1:#{@socket.addr[1]}"
+		return [socket_name, socket]
 	end
 
 	# Reset signal handlers to their default handler, and install some
