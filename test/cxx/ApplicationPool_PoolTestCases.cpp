@@ -638,7 +638,7 @@
 		string xml = pool->toXml();
 		ensure("Contains <process>", xml.find("<process>") != string::npos);
 		ensure("Contains PID", xml.find("<pid>" + toString(session1->getPid()) + "</pid>") != string::npos);
-		ensure("Contains sensitive information", xml.find("includes_sensitive_information") != string::npos);
+		ensure("Contains sensitive information", xml.find("<server_sockets>") != string::npos);
 	}
 	
 	TEST_METHOD(29) {
@@ -647,7 +647,7 @@
 		string xml = pool->toXml(false);
 		ensure("Contains <process>", xml.find("<process>") != string::npos);
 		ensure("Contains PID", xml.find("<pid>" + toString(session1->getPid()) + "</pid>") != string::npos);
-		ensure("Does not contain sensitive information", xml.find("includes_sensitive_information") == string::npos);
+		ensure("Does not contain sensitive information", xml.find("<server_sockets>") == string::npos);
 	}
 	
 	TEST_METHOD(30) {

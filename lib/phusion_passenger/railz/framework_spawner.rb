@@ -172,13 +172,7 @@ class FrameworkSpawner < AbstractServer
 				end
 				raise e
 			else
-				pid, listen_socket_name, socket_type = server.read
-				if pid.nil?
-					raise IOError, "Connection closed"
-				end
-				owner_pipe = server.recv_io
-				return AppProcess.new(app_root, pid, listen_socket_name,
-					socket_type, owner_pipe)
+				return AppProcess.read_from_channel(server)
 			end
 		rescue SystemCallError, IOError, SocketError => e
 			raise Error, "The framework spawner server exited unexpectedly"
@@ -277,7 +271,7 @@ private
 	end
 
 	def handle_spawn_application(*options)
-		process = nil
+		app_process = nil
 		options = sanitize_spawn_options(Hash[*options])
 		app_root = options["app_root"]
 		@spawners.synchronize do
@@ -303,7 +297,7 @@ private
 				return
 			end
 			begin
-				process = spawner.spawn_application
+				app_process = spawner.spawn_application
 			rescue ApplicationSpawner::Error => e
 				spawner.stop
 				@spawners.delete(app_root)
@@ -313,10 +307,9 @@ private
 			end
 		end
 		client.write('success')
-		client.write(process.pid, process.listen_socket_name, process.listen_socket_type)
-		client.send_io(process.owner_pipe)
+		app_process.write_to_channel(client)
 	ensure
-		process.close if process
+		app_process.close if app_process
 	end
 	
 	def handle_reload(app_root = nil)

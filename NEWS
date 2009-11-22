@@ -19,6 +19,8 @@ Release 3.0.0
  * PassengerFriendlyErrorPages/passenger_friendly_error_pages
  * [Nginx] More options are now valid in a wider scope (e.g.
    passenger_enabled can now be specified in http block)
+ * App processes are now individually addressable via HTTP, for
+   debugging purposes.
 
 
 Release 2.2.7

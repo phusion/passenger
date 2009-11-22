@@ -49,8 +49,11 @@ AccountsDatabase::createDefault(const ServerInstanceDir::GenerationPtr &generati
 	generateSecureToken(&passwords, sizeof(passwords));
 	passengerStatusPasswordString.assign(passwords.passengerStatus, sizeof(passwords.passengerStatus));
 	
+	// An account for the 'passenger-status' command. Its password is only readable by
+	// root, or (if user switching is turned off) only by the web server's user.
 	database->add("_passenger-status", passengerStatusPasswordString, false,
-		Account::INSPECT_BASIC_INFO | Account::INSPECT_BACKTRACES);
+		Account::INSPECT_BASIC_INFO | Account::INSPECT_SENSITIVE_INFO |
+		Account::INSPECT_BACKTRACES);
 	if (geteuid() == 0 && !userSwitching) {
 		createFile(generation->getPath() + "/passenger-status-password.txt",
 			passengerStatusPasswordString, S_IRUSR, defaultUid, defaultGid);

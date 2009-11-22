@@ -30,6 +30,7 @@
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
 #include <string>
+#include <map>
 
 #include <sys/types.h>
 #include <unistd.h>
@@ -53,12 +54,27 @@ using namespace boost;
  * @ingroup Support
  */
 class Process {
+public:
+	struct SocketInfo {
+		string address;
+		string type;
+		
+		SocketInfo() {}
+		
+		SocketInfo(const string &address, const string &type) {
+			this->address = address;
+			this->type    = type;
+		}
+	};
+	
+	typedef map<string, SocketInfo> SocketInfoMap;
+	
 private:
 	string appRoot;
 	pid_t pid;
-	string listenSocketName;
-	string listenSocketType;
 	int ownerPipe;
+	SocketInfoMap serverSockets;
+	SocketInfo *mainServerSocket;
 	
 public:
 	/**
@@ -67,24 +83,28 @@ public:
 	 * @param theAppRoot The application root of an application.
 	 *             This must be a valid directory, but the path does not have to be absolute.
 	 * @param pid The process ID of this application process.
-	 * @param listenSocketName The name of the listener socket of this application process.
-	 * @param listenSocketType The type of the listener socket, e.g. "unix" for Unix
-	 *                         domain sockets.
 	 * @param ownerPipe The owner pipe of this application process.
+	 * @param serverSockets All the server sockets that this process listens on.
+	 *                      There must a server socket with the name 'main'.
 	 * @post getAppRoot() == theAppRoot && getPid() == pid
+	 * @throws ArgumentException If serverSockets has no socket named 'main'.
 	 */
-	Process(const string &theAppRoot, pid_t pid, const string &listenSocketName,
-	            const string &listenSocketType, int ownerPipe) {
+	Process(const string &theAppRoot, pid_t pid, int ownerPipe, const SocketInfoMap &serverSockets) {
 		appRoot = theAppRoot;
 		this->pid = pid;
-		this->listenSocketName = listenSocketName;
-		this->listenSocketType = listenSocketType;
 		this->ownerPipe = ownerPipe;
+		this->serverSockets = serverSockets;
+		if (serverSockets.find("main") == serverSockets.end()) {
+			TRACE_POINT();
+			throw ArgumentException("There must be a server socket named 'main'.");
+		}
+		mainServerSocket = &this->serverSockets["main"];
 		P_TRACE(3, "Application process " << this << ": created.");
 	}
 	
 	virtual ~Process() {
 		TRACE_POINT();
+		SocketInfoMap::const_iterator it;
 		int ret;
 		
 		if (ownerPipe != -1) {
@@ -92,10 +112,13 @@ public:
 				ret = close(ownerPipe);
 			} while (ret == -1 && errno == EINTR);
 		}
-		if (listenSocketType == "unix") {
-			do {
-				ret = unlink(listenSocketName.c_str());
-			} while (ret == -1 && errno == EINTR);
+		for (it = serverSockets.begin(); it != serverSockets.end(); it++) {
+			const SocketInfo &info = it->second;
+			if (info.type == "unix") {
+				do {
+					ret = unlink(info.address.c_str());
+				} while (ret == -1 && errno == EINTR);
+			}
 		}
 		P_TRACE(3, "Application process " << this << ": destroyed.");
 	}
@@ -113,6 +136,14 @@ public:
 	 */
 	pid_t getPid() const {
 		return pid;
+	}
+	
+	/**
+	 * Returns a map containing all server sockets that this process
+	 * listens on.
+	 */
+	const SocketInfoMap *getServerSockets() const {
+		return &serverSockets;
 	}
 	
 	/**
@@ -162,7 +193,8 @@ public:
 	 * @throws boost::thread_interrupted
 	 */
 	SessionPtr newSession(const function<void()> &closeCallback, bool initiateNow = true) {
-		SessionPtr session(new StandardSession(pid, closeCallback, listenSocketType, listenSocketName));
+		SessionPtr session(new StandardSession(pid, closeCallback,
+			mainServerSocket->type, mainServerSocket->address));
 		if (initiateNow) {
 			session->initiate();
 		}

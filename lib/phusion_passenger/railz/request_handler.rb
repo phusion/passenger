@@ -44,7 +44,8 @@ class RequestHandler < AbstractRequestHandler
 
 protected
 	# Overrided method.
-	def process_request(headers, input, output)
+	def process_request(headers, input, output, status_line_desired)
+		# FIXME: how to print status line?
 		headers[CONTENT_LENGTH] = headers[HTTP_CONTENT_LENGTH]
 		cgi = CGIFixed.new(headers, input, output)
 		::Dispatcher.dispatch(cgi,

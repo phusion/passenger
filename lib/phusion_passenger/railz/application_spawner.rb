@@ -122,13 +122,7 @@ class ApplicationSpawner < AbstractServer
 	# - ApplicationSpawner::Error: The ApplicationSpawner server exited unexpectedly.
 	def spawn_application
 		server.write("spawn_application")
-		pid, socket_name, socket_type = server.read
-		if pid.nil?
-			raise IOError, "Connection closed"
-		end
-		owner_pipe = server.recv_io
-		return AppProcess.new(@app_root, pid, socket_name,
-			socket_type, owner_pipe)
+		return AppProcess.read_from_channel(server)
 	rescue SystemCallError, IOError, SocketError => e
 		raise Error, "The application spawner server exited unexpectedly: #{e}"
 	end
@@ -189,13 +183,7 @@ class ApplicationSpawner < AbstractServer
 		unmarshal_and_raise_errors(channel, @print_exceptions)
 		
 		# No exception was raised, so spawning succeeded.
-		pid, socket_name, socket_type = channel.read
-		if pid.nil?
-			raise IOError, "Connection closed"
-		end
-		owner_pipe = channel.recv_io
-		return AppProcess.new(@app_root, pid, socket_name,
-			socket_type, owner_pipe)
+		return AppProcess.read_from_channel(channel)
 	end
 	
 	# Overrided from AbstractServer#start.
@@ -342,14 +330,12 @@ private
 		
 		b.close
 		worker_channel = MessageChannel.new(a)
-		info = worker_channel.read
-		owner_pipe = worker_channel.recv_io
-		client.write(*info)
-		client.send_io(owner_pipe)
+		app_process = AppProcess.read_from_channel(worker_channel)
+		app_process.write_to_channel(client)
 	ensure
 		a.close if a
 		b.close if b && !b.closed?
-		owner_pipe.close if owner_pipe
+		app_process.close if app_process
 	end
 	
 	# Initialize the request handler and enter its main loop.
@@ -377,9 +363,9 @@ private
 				handler = RequestHandler.new(reader, @options)
 			end
 			
-			channel.write(Process.pid, handler.socket_name,
-				handler.socket_type)
-			channel.send_io(writer)
+			app_process = AppProcess.new(@app_root, Process.pid, writer,
+				handler.server_sockets)
+			app_process.write_to_channel(channel)
 			writer.close
 			channel.close
 			

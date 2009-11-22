@@ -312,7 +312,8 @@ escapeForXml(const string &input) {
 		
 		if ((ch >= 'A' && ch <= 'z')
 		 || (ch >= '0' && ch <= '9')
-		 || ch == '/' || ch == ' ' || ch == '_' || ch == '.') {
+		 || ch == '/' || ch == ' ' || ch == '_' || ch == '.'
+		 || ch == ':' || ch == '+' || ch == '-') {
 			// This is an ASCII character. Ignore it and
 			// go to next character.
 			result_pos++;

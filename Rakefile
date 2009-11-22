@@ -392,6 +392,7 @@ end
 		'ext/common/MessageServer.h',
 		'ext/common/FileDescriptor.h',
 		'ext/common/BacktracesServer.h',
+		'ext/common/SpawnManager.h',
 		'ext/common/ApplicationPool/Interface.h',
 		'ext/common/ApplicationPool/Pool.h',
 		'ext/common/ApplicationPool/Server.h'
@@ -578,7 +579,9 @@ end
 		'test/cxx/MessageServerTest.o' => %w(
 			test/cxx/MessageServerTest.cpp
 			ext/common/ApplicationPool/Client.h
+			ext/common/ApplicationPool/Pool.h
 			ext/common/PoolOptions.h
+			ext/common/SpawnManager.h
 			ext/common/Account.h
 			ext/common/AccountsDatabase.h
 			ext/common/MessageServer.h

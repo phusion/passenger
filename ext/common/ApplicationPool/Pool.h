@@ -914,12 +914,6 @@ public:
 		result << "<?xml version=\"1.0\" encoding=\"iso8859-1\" ?>\n";
 		result << "<info>";
 		
-		if (includeSensitiveInformation) {
-			// TODO: get rid of this and insert *real* sensitive information.
-			// This code is just temporary in order to make the unit test pass.
-			result << "<includes_sensitive_information/>";
-		}
-		
 		result << "<groups>";
 		for (it = groups.begin(); it != groups.end(); it++) {
 			Group *group = it->second.get();
@@ -938,6 +932,24 @@ public:
 				result << "<sessions>" << processInfo->sessions << "</sessions>";
 				result << "<processed>" << processInfo->processed << "</processed>";
 				result << "<uptime>" << processInfo->uptime() << "</uptime>";
+				if (includeSensitiveInformation) {
+					const ProcessPtr &process = processInfo->process;
+					const Process::SocketInfoMap *serverSockets;
+					Process::SocketInfoMap::const_iterator sit;
+					
+					result << "<server_sockets>";
+					serverSockets = process->getServerSockets();
+					for (sit = serverSockets->begin(); sit != serverSockets->end(); sit++) {
+						const string &name = sit->first;
+						const Process::SocketInfo &info = sit->second;
+						result << "<server_socket>";
+						result << "<name>" << escapeForXml(name) << "</name>";
+						result << "<address>" << escapeForXml(info.address) << "</address>";
+						result << "<type>" << escapeForXml(info.type) << "</type>";
+						result << "</server_socket>";
+					}
+					result << "</server_sockets>";
+				}
 				result << "</process>";
 			}
 			result << "</processes>";

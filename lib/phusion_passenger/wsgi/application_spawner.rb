@@ -61,13 +61,7 @@ class ApplicationSpawner
 		Process.waitpid(pid) rescue nil
 		
 		channel = MessageChannel.new(a)
-		pid, socket_name, socket_type = channel.read
-		if pid.nil?
-			raise IOError, "Connection closed"
-		end
-		owner_pipe = channel.recv_io
-		return AppProcess.new(@app_root, pid, socket_name,
-			socket_type, owner_pipe)
+		return AppProcess.read_from_channel(channel)
 	end
 
 private
@@ -90,8 +84,9 @@ private
 		server = UNIXServer.new(socket_file)
 		begin
 			reader, writer = IO.pipe
-			channel.write(Process.pid, socket_file, "unix")
-			channel.send_io(writer)
+			app_process = AppProcess.new(app_root, Process.pid, writer,
+				:main => [socket_file, 'unix'])
+			app_process.write_to_channel(channel)
 			writer.close
 			channel.close
 			

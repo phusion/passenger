@@ -99,17 +99,23 @@ class AbstractRequestHandler
 	DEFAULT             = 'DEFAULT'             # :nodoc:
 	X_POWERED_BY        = 'X-Powered-By'        # :nodoc:
 	REQUEST_METHOD      = 'REQUEST_METHOD'      # :nodoc:
-	PING                = 'ping'                # :nodoc:
+	PING                = 'PING'                # :nodoc:
 	
-	# The name of the socket on which the request handler accepts
-	# new connections. At this moment, this value is always the filename
-	# of a Unix domain socket.
+	# A hash containing all server sockets that this request handler listens on.
+	# The hash is in the form of:
 	#
-	# See also #socket_type.
-	attr_reader :socket_name
-	
-	# The type of socket that #socket_name refers to. Either 'unix' or 'tcp'.
-	attr_reader :socket_type
+	#   {
+	#      name1 => [socket_address1, socket_type1, socket1],
+	#      name2 => [socket_address2, socket_type2, socket2],
+	#      ...
+	#   }
+	#
+	# +name+ is a Symbol. +socket_addressx+ is the address of the socket,
+	# +socket_typex+ is the socket's type (either 'unix' or 'tcp') and
+	# +socketx+ is the actual socket IO objec.
+	# There's guaranteed to be at least one server socket, namely one with the
+	# name +:main+.
+	attr_reader :server_sockets
 	
 	# Specifies the maximum allowed memory usage, in MB. If after having processed
 	# a request AbstractRequestHandler detects that memory usage has risen above
@@ -133,15 +139,21 @@ class AbstractRequestHandler
 	# Additionally, the following options may be given:
 	# - memory_limit: Used to set the +memory_limit+ attribute.
 	def initialize(owner_pipe, options = {})
-		# TODO: password protect the socket
+		# TODO: password protect the sockets
+		
+		@server_sockets = {}
+		
 		if should_use_unix_sockets?
-			@socket_name, @socket = create_unix_socket_on_filesystem
-			@socket_type = 'unix'
+			@main_socket_address, @main_socket = create_unix_socket_on_filesystem
+			@server_sockets[:main] = [@main_socket_address, 'unix', @main_socket]
 		else
-			@socket_name, @socket = create_tcp_socket
-			@socket_type = 'tcp'
+			@main_socket_address, @main_socket = create_tcp_socket
+			@server_sockets[:main] = [@main_socket_address, 'tcp', @main_socket]
 		end
-		@socket.close_on_exec!
+		
+		@http_socket_address, @http_socket = create_tcp_socket
+		@server_sockets[:http] = [@http_socket_address, 'tcp', @http_socket]
+		
 		@owner_pipe = owner_pipe
 		@previous_signal_handlers = {}
 		@main_loop_generation  = 0
@@ -169,9 +181,14 @@ class AbstractRequestHandler
 			end
 			@main_loop_thread.join
 		end
-		@socket.close rescue nil
+		@server_sockets.each_value do |value|
+			address, type, socket = value
+			socket.close rescue nil
+			if type == 'unix'
+				File.unlink(address) rescue nil
+			end
+		end
 		@owner_pipe.close rescue nil
-		File.unlink(@socket_name) rescue nil
 	end
 	
 	# Check whether the main loop's currently running.
@@ -193,34 +210,19 @@ class AbstractRequestHandler
 				@main_loop_thread_cond.broadcast
 			end
 			
-			install_useful_signal_handlers
+			@selectable_sockets = []
+			@server_sockets.each_value do |value|
+				@selectable_sockets << value[2]
+			end
+			@selectable_sockets << @owner_pipe
+			@selectable_sockets << @graceful_termination_pipe[0]
 			
-			while true
+			install_useful_signal_handlers
+			done = false
+			
+			while !done
 				@iterations += 1
-				client = accept_connection
-				if client.nil?
-					break
-				end
-				begin
-					headers, input = parse_request(client)
-					if headers
-						if headers[REQUEST_METHOD] == PING
-							process_ping(headers, input, client)
-						else
-							process_request(headers, input, client)
-						end
-					end
-				rescue IOError, SocketError, SystemCallError => e
-					print_exception("Passenger RequestHandler", e)
-				ensure
-					# 'input' is the same as 'client' so we don't
-					# need to close that.
-					# The 'close_write' here prevents forked child
-					# processes from unintentionally keeping the
-					# connection open.
-					client.close_write rescue nil
-					client.close rescue nil
-				end
+				done = accept_and_process_next_request
 				@processed_requests += 1
 			end
 		rescue EOFError
@@ -241,6 +243,7 @@ class AbstractRequestHandler
 				@main_loop_running = false
 				@main_loop_thread_cond.broadcast
 			end
+			@selectable_sockets = []
 		end
 	end
 	
@@ -298,12 +301,13 @@ private
 				else
 					unix_path_max = 100
 				end
-				socket_name = "#{passenger_tmpdir}/backends/backend.#{generate_random_id(:base64)}"
-				socket_name = socket_name.slice(0, unix_path_max - 1)
-				socket = UNIXServer.new(socket_name)
+				socket_address = "#{passenger_tmpdir}/backends/backend.#{generate_random_id(:base64)}"
+				socket_address = socket_address.slice(0, unix_path_max - 1)
+				socket = UNIXServer.new(socket_address)
 				socket.listen(BACKLOG_SIZE)
-				File.chmod(0666, socket_name)
-				return [socket_name, socket]
+				socket.close_on_exec!
+				File.chmod(0666, socket_address)
+				return [socket_address, socket]
 			rescue Errno::EADDRINUSE
 				# Do nothing, try again with another name.
 			end
@@ -315,8 +319,9 @@ private
 		# TCPv4 instead of TCPv6.
 		socket = TCPServer.new('127.0.0.1', 0)
 		socket.listen(BACKLOG_SIZE)
-		socket_name = "127.0.0.1:#{@socket.addr[1]}"
-		return [socket_name, socket]
+		socket.close_on_exec!
+		socket_address = "127.0.0.1:#{socket.addr[1]}"
+		return [socket_address, socket]
 	end
 
 	# Reset signal handlers to their default handler, and install some
@@ -381,59 +386,94 @@ private
 		end
 	end
 	
-	def accept_connection
-		ios = select([@socket, @owner_pipe, @graceful_termination_pipe[0]]).first
-		if ios.include?(@socket)
-			client = @socket.accept
-			client.close_on_exec!
-			
-			# Some people report that sometimes their Ruby (MRI/REE)
-			# processes get stuck with 100% CPU usage. Upon further
-			# inspection with strace, it turns out that these Ruby
-			# processes are continuously calling lseek() on a socket,
-			# which of course returns ESPIPE as error. gdb reveals
-			# lseek() is called by fwrite(), which in turn is called
-			# by rb_fwrite(). The affected socket is the
-			# AbstractRequestHandler client socket.
-			#
-			# I inspected the MRI source code and didn't find
-			# anything that would explain this behavior. This makes
-			# me think that it's a glibc bug, but that's very
-			# unlikely.
-			#
-			# The rb_fwrite() implementation takes an entirely
-			# different code path if I set 'sync' to true: it will
-			# skip fwrite() and use write() instead. So here we set
-			# 'sync' to true in the hope that this will work around
-			# the problem.
-			client.sync = true
-			
-			# We monkeypatch the 'sync=' method to a no-op so that
-			# sync mode can't be disabled.
-			def client.sync=(value)
-			end
-			
-			# The real input stream is not seekable (calling _seek_
-			# or _rewind_ on it will raise an exception). But some
-			# frameworks (e.g. Merb) call _rewind_ if the object
-			# responds to it. So we simply undefine _seek_ and
-			# _rewind_.
-			client.instance_eval do
-				undef seek if respond_to?(:seek)
-				undef rewind if respond_to?(:rewind)
-			end
-			
-			# There's no need to set the encoding for Ruby 1.9 because this
-			# source file is tagged with 'encoding: binary'.
-			
-			return client
+	def accept_and_process_next_request
+		ios = select(@selectable_sockets).first
+		if ios.include?(@main_socket)
+			connection = prepare_client_socket(@main_socket.accept)
+			headers, input_stream = parse_native_request(connection)
+			status_line_desired = false
+		elsif ios.include?(@http_socket)
+			connection = prepare_client_socket(@http_socket.accept)
+			headers, input_stream = parse_http_request(connection)
+			status_line_desired = true
 		else
 			# The other end of the owner pipe has been closed, or the
 			# graceful termination pipe has been closed. This is our
 			# call to gracefully terminate (after having processed all
 			# incoming requests).
-			return nil
+			return true
 		end
+		
+		if headers
+			if headers[REQUEST_METHOD] == PING
+				process_ping(headers, input_stream, connection)
+			else
+				process_request(headers, input_stream, connection, status_line_desired)
+			end
+			return false
+		else
+			return true
+		end
+	rescue IOError, SocketError, SystemCallError => e
+		# TODO: we should only catch these exceptions if they originate
+		# from our own socket.
+		print_exception("Passenger RequestHandler", e)
+	ensure
+		# The 'close_write' here prevents forked child
+		# processes from unintentionally keeping the
+		# connection open.
+		if connection && !connection.closed?
+			connection.close_write rescue nil
+			connection.close rescue nil
+		end
+		if input_stream && !input_stream.closed?
+			input_stream.close rescue nil
+		end
+	end
+	
+	def prepare_client_socket(socket)
+		socket.close_on_exec!
+		
+		# Some people report that sometimes their Ruby (MRI/REE)
+		# processes get stuck with 100% CPU usage. Upon further
+		# inspection with strace, it turns out that these Ruby
+		# processes are continuously calling lseek() on a socket,
+		# which of course returns ESPIPE as error. gdb reveals
+		# lseek() is called by fwrite(), which in turn is called
+		# by rb_fwrite(). The affected socket is the
+		# AbstractRequestHandler client socket.
+		#
+		# I inspected the MRI source code and didn't find
+		# anything that would explain this behavior. This makes
+		# me think that it's a glibc bug, but that's very
+		# unlikely.
+		#
+		# The rb_fwrite() implementation takes an entirely
+		# different code path if I set 'sync' to true: it will
+		# skip fwrite() and use write() instead. So here we set
+		# 'sync' to true in the hope that this will work around
+		# the problem.
+		socket.sync = true
+		
+		# We monkeypatch the 'sync=' method to a no-op so that
+		# sync mode can't be disabled.
+		def socket.sync=(value)
+		end
+		
+		# The real input stream is not seekable (calling _seek_
+		# or _rewind_ on it will raise an exception). But some
+		# frameworks (e.g. Merb) call _rewind_ if the object
+		# responds to it. So we simply undefine _seek_ and
+		# _rewind_.
+		socket.instance_eval do
+			undef seek if respond_to?(:seek)
+			undef rewind if respond_to?(:rewind)
+		end
+		
+		# There's no need to set the encoding for Ruby 1.9 because this
+		# source file is tagged with 'encoding: binary'.
+		
+		return socket
 	end
 	
 	# Read the next request from the given socket, and return
@@ -442,7 +482,7 @@ private
 	# reading HTTP POST data.
 	#
 	# Returns nil if end-of-stream was encountered.
-	def parse_request(socket)
+	def parse_native_request(socket)
 		channel = MessageChannel.new(socket)
 		headers_data = channel.read_scalar(MAX_HEADER_SIZE)
 		if headers_data.nil?
@@ -454,6 +494,48 @@ private
 		STDERR.puts("*** Passenger RequestHandler: HTTP header size exceeded maximum.")
 		STDERR.flush
 		print_exception("Passenger RequestHandler", e)
+	end
+	
+	# Like parse_native_request, but parses an HTTP request. This is a very minimalistic
+	# HTTP parser and is not intended to be complete, fast or secure, since the HTTP server
+	# socket is intended to be used for debugging purposes only.
+	def parse_http_request(socket)
+		headers = {}
+		data = ""
+		while data !~ /\r\n\r\n\Z/
+			data << socket.readline
+		end
+		data.gsub!(/\r\n\r\n\Z/, '')
+		data.split("\r\n").each_with_index do |line, i|
+			if i == 0
+				# GET / HTTP/1.1
+				line =~ /^([A-Za-z]+) (.+?) (HTTP\/\d\.\d)$/
+				request_method = $1
+				request_uri    = $2
+				protocol       = $3
+				path_info, query_string    = request_uri.split("?", 2)
+				headers[REQUEST_METHOD]    = request_method
+				headers["REQUEST_URI"]     = request_uri
+				headers["QUERY_STRING"]    = query_string || ""
+				headers["SCRIPT_NAME"]     = ""
+				headers["PATH_INFO"]       = path_info
+				headers["SERVER_NAME"]     = "127.0.0.1"
+				headers["SERVER_PORT"]     = socket.addr[1].to_s
+				headers["SERVER_PROTOCOL"] = protocol
+			else
+				header, value = line.split(/\s*:\s*/, 2)
+				header.upcase!            # "Foo-Bar" => "FOO-BAR"
+				header.gsub!("-", "_")    #           => "FOO_BAR"
+				if header == "CONTENT_LENGTH" || header == "CONTENT_TYPE"
+					headers[header] = value
+				else
+					headers["HTTP_#{header}"] = value
+				end
+			end
+		end
+		return headers
+	rescue EOFError
+		return nil
 	end
 	
 	def process_ping(env, input, output)

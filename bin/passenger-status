@@ -67,12 +67,60 @@ def show_status(server_instance, options = {})
 			text.gsub!(/^( +in '.*? )(.*?)\(/, '\1' + BOLD + '\2' + RESET + '(')
 		
 			puts text
+		
+		when 'xml'
+			begin
+				xml = server_instance.xml
+			rescue SystemCallError => e
+				STDERR.puts "*** ERROR: Cannot query status for Passenger instance #{control_process.pid}:"
+				STDERR.puts e.to_s
+				exit 2
+			end
+			
+			indented = format_with_xmllint(xml)
+			if indented
+				puts indented
+			else
+				puts xml
+				STDERR.puts "*** Tip: if you install the 'xmllint' command then the XML output will be indented."
+			end
 		end
 	end
 rescue ServerInstance::RoleDeniedError
 	STDERR.puts "*** ERROR: You are not authorized to query the status for this Phusion " <<
 		"Passenger instance. Please try again with 'sudo'."
 	exit 2
+end
+
+def format_with_xmllint(xml)
+	require 'open3'
+	require 'thread'
+	ENV['XMLLINT_INDENT'] = '   '
+	Open3.popen3("xmllint", "--format", "-") do |stdin, stdout, stderr|
+		stdout_text = nil
+		stderr_text = nil
+		thread1 = Thread.new do
+			stdin.write(xml)
+			stdin.close
+		end
+		thread2 = Thread.new do
+			stdout_text = stdout.read
+			stdout.close
+		end
+		thread3 = Thread.new do
+			stderr_text = stderr.read
+			stderr.close
+		end
+		thread1.join
+		thread2.join
+		thread3.join
+		
+		if stdout_text.nil? || stdout_text.empty?
+			return nil
+		else
+			return stdout_text
+		end
+	end
 end
 
 def start
@@ -84,10 +132,11 @@ def start
 		opts.separator ""
 
 		opts.separator "Options:"
-		opts.on("--show=pool|backtraces", String,
-		        "Whether to show the pool's contents or\n" <<
-		        "#{' ' * 37}the backtraces of all threads.") do |what|
-			if what !~ /\A(pool|backtraces)\Z/
+		opts.on("--show=pool|backtraces|xml", String,
+		        "Whether to show the pool's contents, \n" <<
+		        "#{' ' * 37}the backtraces of all threads or an XML\n" <<
+		        "#{' ' * 37}description of the pool.") do |what|
+			if what !~ /\A(pool|backtraces|xml)\Z/
 				STDERR.puts "Invalid argument for --show."
 				exit 1
 			else

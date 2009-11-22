@@ -2,13 +2,15 @@
 $LOAD_PATH << "#{File.dirname(__FILE__)}/../../lib"
 $LOAD_PATH << "#{File.dirname(__FILE__)}/../../ext"
 require 'phusion_passenger/spawn_manager'
+require 'phusion_passenger/app_process'
 
 include PhusionPassenger
 class SpawnManager
 	def handle_spawn_application(*options)
 		client.write('ok')
-		client.write(1234, "/tmp/nonexistant.socket", false)
-		client.send_io(STDERR)
+		app_process = AppProcess.new('/somewhere', 1234, STDERR,
+			:main => ['/tmp/nonexistant.socket', 'unix'])
+		app_process.write_to_channel(client)
 	end
 end
 

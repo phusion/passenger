@@ -25,7 +25,7 @@ require 'rubygems'
 require 'phusion_passenger/exceptions'
 module PhusionPassenger
 
-# Represents a single application process.
+# Contains various information about an application process.
 class AppProcess
 	# The root directory of this application process.
 	attr_reader :app_root
@@ -33,15 +33,20 @@ class AppProcess
 	# This process's PID.
 	attr_reader :pid
 	
-	# The name of the socket on which the application instance will accept
-	# new connections. See #listen_socket_type on how one should interpret
-	# this value.
-	attr_reader :listen_socket_name
-	
-	# The type of socket that #listen_socket_name refers to. Currently this
-	# is always 'unix', which means that #listen_socket_name refers to the
-	# filename of a Unix domain socket.
-	attr_reader :listen_socket_type
+	# A hash containing all server sockets that this application process listens on.
+	# The hash is in the form of:
+	#
+	#   {
+	#      name1 => [socket_address1, socket_type1],
+	#      name2 => [socket_address2, socket_type2],
+	#      ...
+	#   }
+	#
+	# +name+ is a Symbol. +socket_addressx+ is the address of the socket
+	# and +socket_type1+ is the socket's type (either 'unix' or 'tcp').
+	# There's guaranteed to be at least one server socket, namely one with the
+	# name +:main+.
+	attr_reader :server_sockets
 	
 	# The owner pipe of the application instance (an IO object). Please see
 	# RequestHandler for a description of the owner pipe.
@@ -88,15 +93,60 @@ class AppProcess
 			return found_version
 		end
 	end
-
+	
+	# Construct an AppProcess by reading information from the given MessageChannel.
+	# The other side of the channel must be writing AppProcess information using
+	# AppProcess#write_to_channel.
+	#
+	# Might raise SystemCallError, IOError or SocketError.
+	def self.read_from_channel(channel)
+		app_root, pid, n_server_sockets = channel.read
+		if app_root.nil?
+			raise IOError, "Connection closed"
+		end
+		
+		server_sockets = {}
+		n_server_sockets.to_i.times do
+			message = channel.read
+			if message.nil?
+				raise IOError, "Connection closed"
+			end
+			name = message.shift
+			server_sockets[name.to_sym] = message
+		end
+		
+		owner_pipe = channel.recv_io
+		
+		return new(app_root, pid.to_i, owner_pipe, server_sockets)
+	end
+	
+	# Write this AppProcess's information over the given MessageChannel.
+	# The other side must read the information using AppProces.read_from_channel.
+	#
+	# Might raise SystemCallError, IOError or SocketError.
+	def write_to_channel(channel)
+		channel.write(@app_root, @pid, @server_sockets.size)
+		@server_sockets.each_pair do |name, value|
+			channel.write(name.to_s, *value)
+		end
+		channel.send_io(@owner_pipe)
+	end
+	
 	# Creates a new AppProcess instance. The parameters correspond with the attributes
 	# of the same names. No exceptions will be thrown.
-	def initialize(app_root, pid, listen_socket_name, listen_socket_type, owner_pipe)
-		@app_root = app_root
-		@pid = pid
-		@listen_socket_name = listen_socket_name
-		@listen_socket_type = listen_socket_type
+	def initialize(app_root, pid, owner_pipe, server_sockets)
+		@app_root   = app_root
+		@pid        = pid
 		@owner_pipe = owner_pipe
+		
+		# We copy the values like this so one can directly pass
+		# AbstractRequestHandler#server_sockets as arguments
+		# without having AppProcess store references to the socket
+		# IO objects.
+		@server_sockets = {}
+		server_sockets.each_pair do |name, value|
+			@server_sockets[name] = [value[0], value[1]]
+		end
 	end
 	
 	# Close the connection with the application process. If there are no other

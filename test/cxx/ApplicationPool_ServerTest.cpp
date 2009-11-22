@@ -126,11 +126,11 @@ namespace tut {
 		
 		SessionPtr session1 = pool->get(options);
 		session1.reset();
-		ensure_equals(strList->counter, 1);
+		ensure_equals("(1)", strList->counter, 1);
 		
 		session1 = pool->get(options);
 		session1.reset();
-		ensure_equals(strList->counter, 1);
+		ensure_equals("(2)", strList->counter, 1);
 	}
 	
 	TEST_METHOD(5) {
@@ -296,9 +296,13 @@ namespace tut {
 	TEST_METHOD(15) {
 		// toXml() only prints private information if the client has the INSPECT_SENSITIVE_INFO right.
 		initializePool();
+		PoolOptions options("stub/rack");
+		options.appType = "rack";
+		pool->get(options);
+		
 		clientAccount->setRights(Account::INSPECT_BASIC_INFO);
-		ensure("Does not contain private information", pool->toXml().find("includes_sensitive_information") == string::npos);
+		ensure("Does not contain private information", pool->toXml().find("<server_sockets>") == string::npos);
 		clientAccount->setRights(Account::INSPECT_BASIC_INFO | Account::INSPECT_SENSITIVE_INFO);
-		ensure("Contains private information", pool->toXml().find("includes_sensitive_information") != string::npos);
+		ensure("Contains private information", pool->toXml().find("<server_sockets>") != string::npos);
 	}
 }

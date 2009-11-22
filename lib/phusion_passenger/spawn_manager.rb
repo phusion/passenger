@@ -280,11 +280,11 @@ private
 	
 	def handle_spawn_application(*options)
 		options = sanitize_spawn_options(Hash[*options])
-		process = nil
+		app_process = nil
 		app_root = options["app_root"]
 		app_type = options["app_type"]
 		begin
-			process = spawn_application(options)
+			app_process = spawn_application(options)
 		rescue InvalidPath => e
 			send_error_page(client, 'invalid_app_root', :error => e, :app_root => app_root)
 		rescue AbstractServer::ServerError => e
@@ -314,17 +314,15 @@ private
 		rescue FrameworkInitError => e
 			send_error_page(client, 'framework_init_error', :error => e)
 		end
-		if process
+		if app_process
 			begin
 				client.write('ok')
-				client.write(process.pid, process.listen_socket_name,
-					process.listen_socket_type)
-				client.send_io(process.owner_pipe)
+				app_process.write_to_channel(client)
 			rescue Errno::EPIPE
 				# The Apache module may be interrupted during a spawn command,
 				# in which case it will close the connection. We ignore this error.
 			ensure
-				process.close
+				app_process.close
 			end
 		end
 	end

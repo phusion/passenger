@@ -223,7 +223,10 @@ private:
 	ProcessPtr sendSpawnCommand(const PoolOptions &options) {
 		TRACE_POINT();
 		vector<string> args;
-		int ownerPipe;
+		string appRoot;
+		pid_t appPid;
+		int i, nServerSockets, ownerPipe;
+		Process::SocketInfoMap serverSockets;
 		
 		try {
 			args.push_back("spawn_application");
@@ -259,6 +262,29 @@ private:
 			if (!channel.read(args)) {
 				throw SpawnException("The spawn server has exited unexpectedly.");
 			}
+			if (args.size() != 3) {
+				UPDATE_TRACE_POINT();
+				throw SpawnException("The spawn server sent an invalid message.");
+			}
+			
+			appRoot = args[0];
+			appPid  = (pid_t) atoll(args[1].c_str());
+			nServerSockets = atoi(args[2]);
+			
+			UPDATE_TRACE_POINT();
+			for (i = 0; i < nServerSockets; i++) {
+				if (!channel.read(args)) {
+					throw SpawnException("The spawn server has exited unexpectedly.");
+				}
+				if (args.size() != 3) {
+					throw SpawnException("The spawn server sent an invalid message.");
+				}
+				serverSockets[args[0]] = Process::SocketInfo(args[1], args[2]);
+			}
+			if (serverSockets.find("main") == serverSockets.end()) {
+				UPDATE_TRACE_POINT();
+				throw SpawnException("The spawn server sent an invalid message.");
+			}
 		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not read from the spawn server: ") + e.sys());
 		}
@@ -276,17 +302,8 @@ private:
 				e.what());
 		}
 		
-		if (args.size() != 3) {
-			UPDATE_TRACE_POINT();
-			syscalls::close(ownerPipe);
-			throw SpawnException("The spawn server sent an invalid message.");
-		}
-		
-		pid_t pid = atoi(args[0]);
-		
 		UPDATE_TRACE_POINT();
-		return ProcessPtr(new Process(options.appRoot,
-			pid, args[1], args[2], ownerPipe));
+		return ProcessPtr(new Process(appRoot, appPid, ownerPipe, serverSockets));
 	}
 	
 	/**
