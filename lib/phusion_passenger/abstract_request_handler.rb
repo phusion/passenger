@@ -208,14 +208,14 @@ class AbstractRequestHandler
 				@main_loop_generation += 1
 				@main_loop_running = true
 				@main_loop_thread_cond.broadcast
+				
+				@selectable_sockets = []
+				@server_sockets.each_value do |value|
+					@selectable_sockets << value[2]
+				end
+				@selectable_sockets << @owner_pipe
+				@selectable_sockets << @graceful_termination_pipe[0]
 			end
-			
-			@selectable_sockets = []
-			@server_sockets.each_value do |value|
-				@selectable_sockets << value[2]
-			end
-			@selectable_sockets << @owner_pipe
-			@selectable_sockets << @graceful_termination_pipe[0]
 			
 			install_useful_signal_handlers
 			
@@ -238,13 +238,13 @@ class AbstractRequestHandler
 		ensure
 			revert_signal_handlers
 			@main_loop_thread_lock.synchronize do
-				@graceful_termination_pipe[0].close rescue nil
 				@graceful_termination_pipe[1].close rescue nil
+				@graceful_termination_pipe[0].close rescue nil
+				@selectable_sockets = []
 				@main_loop_generation += 1
 				@main_loop_running = false
 				@main_loop_thread_cond.broadcast
 			end
-			@selectable_sockets = []
 		end
 	end
 	
