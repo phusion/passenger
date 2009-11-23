@@ -397,6 +397,8 @@ public
 				options = apxs2_flags.split
 				options.reject! { |f| f =~ /^\-x/ }
 				options.reject! { |f| f =~ /^\-Xa/ }
+				options.reject! { |f| f =~ /^\-fast/ }
+				options.reject! { |f| f =~ /^\-mt/ }
 				apxs2_flags = options.join(' ')
 			end
 			
@@ -501,33 +503,48 @@ public
 	
 	# An identifier for the current Linux distribution. nil if the operating system is not Linux.
 	def self.linux_distro
+		tags = linux_distro_tags
+		if tags
+			return tags.first
+		else
+			return nil
+		end
+	end
+	
+	# Autodetects the current Linux distribution and return a number of identifier tags.
+	# The first tag identifies the distribution while the other tags indicate which
+	# distributions it is likely compatible with.
+	# Returns nil if the operating system is not Linux.
+	def self.linux_distro_tags
 		if RUBY_PLATFORM !~ /linux/
 			return nil
 		end
 		lsb_release = read_file("/etc/lsb-release")
 		if lsb_release =~ /Ubuntu/
-			return :ubuntu
+			return [:ubuntu, :debian]
 		elsif File.exist?("/etc/debian_version")
-			return :debian
+			return [:debian]
 		elsif File.exist?("/etc/redhat-release")
 			redhat_release = read_file("/etc/redhat-release")
 			if redhat_release =~ /CentOS/
-				return :centos
-			elsif redhat_release =~ /Fedora/  # is this correct?
-				return :fedora
+				return [:centos, :redhat]
+			elsif redhat_release =~ /Fedora/
+				return [:fedora, :redhat]
+			elsif redhat_release =~ /Mandriva/
+				return [:mandriva, :redhat]
 			else
 				# On official RHEL distros, the content is in the form of
 				# "Red Hat Enterprise Linux Server release 5.1 (Tikanga)"
-				return :rhel
+				return [:rhel, :redhat]
 			end
 		elsif File.exist?("/etc/suse-release")
-			return :suse
+			return [:suse]
 		elsif File.exist?("/etc/gentoo-release")
-			return :gentoo
+			return [:gentoo]
 		else
-			return :unknown
+			return [:unknown]
 		end
-		# TODO: Slackware, Mandrake/Mandriva
+		# TODO: Slackware
 	end
-	memoize :linux_distro
+	memoize :linux_distro_tags
 end

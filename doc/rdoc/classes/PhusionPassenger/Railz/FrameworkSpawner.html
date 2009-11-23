@@ -95,9 +95,9 @@ href="ApplicationSpawner.html">ApplicationSpawner</a> internally.
 <p>
 <b>Note</b>: <a href="FrameworkSpawner.html">FrameworkSpawner</a> may only
 be started asynchronously with <a
-href="../AbstractServer.html#M000134">AbstractServer#start</a>. Starting it
+href="../AbstractServer.html#M000120">AbstractServer#start</a>. Starting it
 synchronously with <a
-href="../AbstractServer.html#M000135">AbstractServer#start_synchronously</a>
+href="../AbstractServer.html#M000121">AbstractServer#start_synchronously</a>
 has not been tested.
 </p>
 </div>
@@ -106,10 +106,10 @@ has not been tested.
 
   <div class="sectiontitle">Methods</div>
   <ul>
-  <li><a href="#M000039">new</a></li>
-  <li><a href="#M000042">reload</a></li>
-  <li><a href="#M000041">spawn_application</a></li>
-  <li><a href="#M000040">start</a></li>
+  <li><a href="#M000060">new</a></li>
+  <li><a href="#M000063">reload</a></li>
+  <li><a href="#M000062">spawn_application</a></li>
+  <li><a href="#M000061">start</a></li>
   </ul>
 
 <div class="sectiontitle">Included Modules</div>
@@ -127,11 +127,11 @@ has not been tested.
 <div class="sectiontitle">Public Class methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000039"></a><b>new</b>(options = {})
+    <a name="M000060"></a><b>new</b>(options = {})
   </div>
   <div class="description">
   <p>
-Creates a <a href="FrameworkSpawner.html#M000039">new</a> instance of <a
+Creates a <a href="FrameworkSpawner.html#M000060">new</a> instance of <a
 href="FrameworkSpawner.html">FrameworkSpawner</a>.
 </p>
 <p>
@@ -163,15 +163,15 @@ href="RequestHandler.html">RequestHandler</a>.
 <p>
 Note that the specified Rails framework will be loaded during the entire
 life time of the <a href="FrameworkSpawner.html">FrameworkSpawner</a>
-server. If you wish to <a href="FrameworkSpawner.html#M000042">reload</a>
+server. If you wish to <a href="FrameworkSpawner.html#M000063">reload</a>
 the Rails framework&#8216;s code, then restart the server by calling <a
-href="../AbstractServer.html#M000136">AbstractServer#stop</a> and <a
-href="../AbstractServer.html#M000134">AbstractServer#start</a>.
+href="../AbstractServer.html#M000122">AbstractServer#stop</a> and <a
+href="../AbstractServer.html#M000120">AbstractServer#start</a>.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000039_source')" id="l_M000039_source">show source</a> ]</p>
-  <div id="M000039_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000060_source')" id="l_M000060_source">show source</a> ]</p>
+  <div id="M000060_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/phusion_passenger/railz/framework_spawner.rb, line 72</span>
 72:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">options</span> = {})
@@ -203,7 +203,7 @@ href="../AbstractServer.html#M000134">AbstractServer#start</a>.
 <div class="sectiontitle">Public Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000042"></a><b>reload</b>(app_root = nil)
+    <a name="M000063"></a><b>reload</b>(app_root = nil)
   </div>
   <div class="description">
   <p>
@@ -215,9 +215,9 @@ will be removed, no matter the application root.
 <b>Long description:</b> <a href="../Application.html">Application</a> code
 might be cached in memory by a <a
 href="FrameworkSpawner.html">FrameworkSpawner</a>. But once it a while, it
-will be necessary to <a href="FrameworkSpawner.html#M000042">reload</a> the
+will be necessary to <a href="FrameworkSpawner.html#M000063">reload</a> the
 code for an application, such as after deploying a <a
-href="FrameworkSpawner.html#M000039">new</a> version of the application.
+href="FrameworkSpawner.html#M000060">new</a> version of the application.
 This method makes sure that any cached application code is removed, so that
 the next time an application instance is spawned, the application code will
 be freshly loaded into memory.
@@ -238,8 +238,8 @@ unexpectedly.
 </ul>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000042_source')" id="l_M000042_source">show source</a> ]</p>
-  <div id="M000042_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000063_source')" id="l_M000063_source">show source</a> ]</p>
+  <div id="M000063_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/railz/framework_spawner.rb, line 204</span>
 204:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">reload</span>(<span class="ruby-identifier">app_root</span> = <span class="ruby-keyword kw">nil</span>)
@@ -257,7 +257,7 @@ unexpectedly.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000041"></a><b>spawn_application</b>(app_root, options = {})
+    <a name="M000062"></a><b>spawn_application</b>(app_root, options = {})
   </div>
   <div class="description">
   <p>
@@ -268,8 +268,8 @@ will be returned, which represents the spawned RoR application.
 </p>
 <p>
 All options accepted by <a
-href="ApplicationSpawner.html#M000048">ApplicationSpawner.new</a> and <a
-href="RequestHandler.html#M000052">RequestHandler.new</a> are accepted.
+href="ApplicationSpawner.html#M000069">ApplicationSpawner.new</a> and <a
+href="RequestHandler.html#M000073">RequestHandler.new</a> are accepted.
 </p>
 <p>
 <a href="FrameworkSpawner.html">FrameworkSpawner</a> will internally cache
@@ -279,12 +279,12 @@ you must do one of these things:
 </p>
 <ul>
 <li>Restart this <a href="FrameworkSpawner.html">FrameworkSpawner</a> by
-calling <a href="../AbstractServer.html#M000136">AbstractServer#stop</a>,
-then <a href="../AbstractServer.html#M000134">AbstractServer#start</a>.
+calling <a href="../AbstractServer.html#M000122">AbstractServer#stop</a>,
+then <a href="../AbstractServer.html#M000120">AbstractServer#start</a>.
 
 </li>
 <li>Reload the application by calling <a
-href="FrameworkSpawner.html#M000042">reload</a> with the correct app_root
+href="FrameworkSpawner.html#M000063">reload</a> with the correct app_root
 argument.
 
 </li>
@@ -320,8 +320,8 @@ unexpectedly.
 </ul>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000041_source')" id="l_M000041_source">show source</a> ]</p>
-  <div id="M000041_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000062_source')" id="l_M000062_source">show source</a> ]</p>
+  <div id="M000062_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/railz/framework_spawner.rb, line 150</span>
 150:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">spawn_application</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">options</span> = {})
@@ -367,12 +367,12 @@ unexpectedly.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000040"></a><b>start</b>()
+    <a name="M000061"></a><b>start</b>()
   </div>
   <div class="description">
   <p>
 Overrided from <a
-href="../AbstractServer.html#M000134">AbstractServer#start</a>.
+href="../AbstractServer.html#M000120">AbstractServer#start</a>.
 </p>
 <p>
 May raise these additional exceptions:
@@ -390,8 +390,8 @@ unexpectedly.
 </ul>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000040_source')" id="l_M000040_source">show source</a> ]</p>
-  <div id="M000040_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000061_source')" id="l_M000061_source">show source</a> ]</p>
+  <div id="M000061_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/railz/framework_spawner.rb, line 100</span>
 100:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">start</span>

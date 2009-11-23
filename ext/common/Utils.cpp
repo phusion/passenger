@@ -348,6 +348,31 @@ setPassengerTempDir(const string &dir) {
 	passengerTempDir = dir;
 }
 
+/* Creates a non-writable FIFO file in order to prevent /tmp cleaners from removing
+ * passenger temp dir subdirectories. See http://code.google.com/p/phusion-passenger/issues/detail?id=365
+ * for details.
+ */
+static void
+createNonWritableFifo(const string &filename) {
+	int ret, e;
+	
+	do {
+		ret = mkfifo(filename.c_str(), 0);
+	} while (ret == -1 && errno == EINTR);
+	if (ret == -1 && errno != EEXIST) {
+		e = errno;
+		throw FileSystemException("Cannot create FIFO file " + filename, e, filename);
+	}
+	
+	do {
+		ret = chmod(filename.c_str(), 0);
+	} while (ret == -1 && errno == EINTR);
+	if (ret == -1) {
+		e = errno;
+		throw FileSystemException("Cannot set permissions on file " + filename, e, filename);
+	}
+}
+
 void
 createPassengerTempDir(const string &parentDir, bool userSwitching,
                        const string &lowestUser, uid_t workerUid, gid_t workerGid) {
@@ -364,6 +389,7 @@ createPassengerTempDir(const string &parentDir, bool userSwitching,
 	 * whether a user may access that specific subdirectory.
 	 */
 	makeDirTree(tmpDir, "u=wxs,g=x,o=x");
+	createNonWritableFifo(tmpDir + "/.guard");
 	
 	/* We want this upload buffer directory to be only accessible by the web server's
 	 * worker processs.
@@ -377,6 +403,7 @@ createPassengerTempDir(const string &parentDir, bool userSwitching,
 	} else {
 		makeDirTree(tmpDir + "/webserver_private", "u=wxs,g=,o=");
 	}
+	createNonWritableFifo(tmpDir + "/webserver_private/.guard");
 	
 	/* If the web server is running as root (i.e. user switching is possible to begin with)
 	 * but user switching is off...
@@ -393,6 +420,7 @@ createPassengerTempDir(const string &parentDir, bool userSwitching,
 		 */
 		makeDirTree(tmpDir + "/info", "u=rwxs,g=,o=");
 	}
+	createNonWritableFifo(tmpDir + "/info/.guard");
 	
 	if (geteuid() == 0) {
 		if (userSwitching) {
@@ -403,6 +431,7 @@ createPassengerTempDir(const string &parentDir, bool userSwitching,
 	} else {
 		makeDirTree(tmpDir + "/master", "u=wxs,g=,o=");
 	}
+	createNonWritableFifo(tmpDir + "/master/.guard");
 	
 	if (geteuid() == 0) {
 		if (userSwitching) {
@@ -436,6 +465,7 @@ createPassengerTempDir(const string &parentDir, bool userSwitching,
 		 */
 		makeDirTree(tmpDir + "/backends", "u=wxs,g=,o=");
 	}
+	createNonWritableFifo(tmpDir + "/backends/.guard");
 }
 
 void
@@ -579,11 +609,7 @@ createUnixServer(const char *filename, unsigned int backlogSize, bool autoDelete
 	}
 	
 	if (backlogSize == 0) {
-		#ifdef SOMAXCONN
-			backlogSize = SOMAXCONN;
-		#else
-			backlogSize = 128;
-		#endif
+		backlogSize = 1024;
 	}
 	try {
 		ret = syscalls::listen(fd, backlogSize);

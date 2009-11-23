@@ -169,12 +169,8 @@ class ApplicationSpawner < AbstractServer
 					if @lower_privilege
 						lower_privilege('config/environment.rb', @lowest_user)
 					end
-
-					# require Rails' environment, using the same path as the original rails dispatcher,
-					# which normally does: require File.dirname(__FILE__) + "/../config/environment"
-					# thus avoiding the possibility of including the same file twice.
-					require 'public/../config/environment'
-
+					
+					require File.expand_path('config/environment')
 					require 'dispatcher'
 				end
 				if success
@@ -298,7 +294,7 @@ private
 			end
 		end
 		if File.exist?('config/preinitializer.rb')
-			require 'config/preinitializer'
+			require File.expand_path('config/preinitializer')
 		end
 		require File.expand_path('config/environment')
 		if ActionController::Base.page_cache_directory.blank?

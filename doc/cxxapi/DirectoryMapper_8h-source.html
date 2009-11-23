@@ -191,20 +191,20 @@
 <a name="l00170"></a>00170                 }
 <a name="l00171"></a>00171                 
 <a name="l00172"></a>00172                 UPDATE_TRACE_POINT();
-<a name="l00173"></a>00173                 <span class="keywordflow">if</span> (shouldAutoDetectRails()
-<a name="l00174"></a>00174                  &amp;&amp; verifyRailsDir(config-&gt;getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
+<a name="l00173"></a>00173                 <span class="keywordflow">if</span> (shouldAutoDetectRack()
+<a name="l00174"></a>00174                  &amp;&amp; verifyRackDir(config-&gt;getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
 <a name="l00175"></a>00175                         baseURIKnown = <span class="keyword">true</span>;
 <a name="l00176"></a>00176                         baseURI = <span class="stringliteral">"/"</span>;
-<a name="l00177"></a>00177                         appType = RAILS;
+<a name="l00177"></a>00177                         appType = RACK;
 <a name="l00178"></a>00178                         <span class="keywordflow">return</span> baseURI;
 <a name="l00179"></a>00179                 }
 <a name="l00180"></a>00180                 
 <a name="l00181"></a>00181                 UPDATE_TRACE_POINT();
-<a name="l00182"></a>00182                 <span class="keywordflow">if</span> (shouldAutoDetectRack()
-<a name="l00183"></a>00183                  &amp;&amp; verifyRackDir(config-&gt;getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
+<a name="l00182"></a>00182                 <span class="keywordflow">if</span> (shouldAutoDetectRails()
+<a name="l00183"></a>00183                  &amp;&amp; verifyRailsDir(config-&gt;getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
 <a name="l00184"></a>00184                         baseURIKnown = <span class="keyword">true</span>;
 <a name="l00185"></a>00185                         baseURI = <span class="stringliteral">"/"</span>;
-<a name="l00186"></a>00186                         appType = RACK;
+<a name="l00186"></a>00186                         appType = RAILS;
 <a name="l00187"></a>00187                         <span class="keywordflow">return</span> baseURI;
 <a name="l00188"></a>00188                 }
 <a name="l00189"></a>00189                 
@@ -316,7 +316,7 @@
 <a name="l00295"></a>00295 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_DIRECTORY_MAPPER_H_ */</span>
 <a name="l00296"></a>00296 
 </pre></div></div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Tue Sep 1 11:23:09 2009 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Wed Nov 18 17:56:37 2009 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.8 </small></address>
 </body>

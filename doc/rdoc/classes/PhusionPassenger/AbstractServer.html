@@ -77,29 +77,29 @@ Object
 
   <div class="description"><p>
 An abstract base class for a <a
-href="AbstractServer.html#M000144">server</a>, with the following
+href="AbstractServer.html#M000130">server</a>, with the following
 properties:
 </p>
 <ul>
-<li>The <a href="AbstractServer.html#M000144">server</a> has exactly one <a
-href="AbstractServer.html#M000145">client</a>, and is connected to that <a
-href="AbstractServer.html#M000145">client</a> at all times. The <a
-href="AbstractServer.html#M000144">server</a> will quit when the connection
+<li>The <a href="AbstractServer.html#M000130">server</a> has exactly one <a
+href="AbstractServer.html#M000131">client</a>, and is connected to that <a
+href="AbstractServer.html#M000131">client</a> at all times. The <a
+href="AbstractServer.html#M000130">server</a> will quit when the connection
 closes.
 
 </li>
-<li>The <a href="AbstractServer.html#M000144">server</a>&#8216;s main loop may
+<li>The <a href="AbstractServer.html#M000130">server</a>&#8216;s main loop may
 be run in a child process (and so is asynchronous from the main process).
 
 </li>
 <li>One can communicate with the <a
-href="AbstractServer.html#M000144">server</a> through discrete messages (as
+href="AbstractServer.html#M000130">server</a> through discrete messages (as
 opposed to byte streams).
 
 </li>
-<li>The <a href="AbstractServer.html#M000144">server</a> can pass file
+<li>The <a href="AbstractServer.html#M000130">server</a> can pass file
 descriptors (<a href="../IO.html">IO</a> objects) back to the <a
-href="AbstractServer.html#M000145">client</a>.
+href="AbstractServer.html#M000131">client</a>.
 
 </li>
 </ul>
@@ -108,17 +108,17 @@ A message is just an ordered list of strings. The first element in the
 message is the _message name_.
 </p>
 <p>
-The <a href="AbstractServer.html#M000144">server</a> will also reset all
+The <a href="AbstractServer.html#M000130">server</a> will also reset all
 signal handlers (in the child process). That is, it will respond to all
 signals in the default manner. The only exception is SIGHUP, which is
 ignored. One may define additional signal handlers using <a
-href="AbstractServer.html#M000143">define_signal_handler</a>().
+href="AbstractServer.html#M000129">define_signal_handler</a>().
 </p>
 <p>
 Before an <a href="AbstractServer.html">AbstractServer</a> can be used, it
 must first be started by calling <a
-href="AbstractServer.html#M000134">start</a>(). When it is no longer
-needed, <a href="AbstractServer.html#M000136">stop</a>() should be called.
+href="AbstractServer.html#M000120">start</a>(). When it is no longer
+needed, <a href="AbstractServer.html#M000122">stop</a>() should be called.
 </p>
 <p>
 Here&#8216;s an example on using <a
@@ -155,21 +155,21 @@ href="AbstractServer.html">AbstractServer</a>:
 
   <div class="sectiontitle">Methods</div>
   <ul>
-  <li><a href="#M000139">before_fork</a></li>
-  <li><a href="#M000145">client</a></li>
-  <li><a href="#M000142">define_message_handler</a></li>
-  <li><a href="#M000143">define_signal_handler</a></li>
-  <li><a href="#M000147">fileno_of</a></li>
-  <li><a href="#M000141">finalize_server</a></li>
-  <li><a href="#M000140">initialize_server</a></li>
-  <li><a href="#M000133">new</a></li>
-  <li><a href="#M000146">quit_main</a></li>
-  <li><a href="#M000144">server</a></li>
-  <li><a href="#M000138">server_pid</a></li>
-  <li><a href="#M000134">start</a></li>
-  <li><a href="#M000135">start_synchronously</a></li>
-  <li><a href="#M000137">started?</a></li>
-  <li><a href="#M000136">stop</a></li>
+  <li><a href="#M000125">before_fork</a></li>
+  <li><a href="#M000131">client</a></li>
+  <li><a href="#M000128">define_message_handler</a></li>
+  <li><a href="#M000129">define_signal_handler</a></li>
+  <li><a href="#M000133">fileno_of</a></li>
+  <li><a href="#M000127">finalize_server</a></li>
+  <li><a href="#M000126">initialize_server</a></li>
+  <li><a href="#M000119">new</a></li>
+  <li><a href="#M000132">quit_main</a></li>
+  <li><a href="#M000130">server</a></li>
+  <li><a href="#M000124">server_pid</a></li>
+  <li><a href="#M000120">start</a></li>
+  <li><a href="#M000121">start_synchronously</a></li>
+  <li><a href="#M000123">started?</a></li>
+  <li><a href="#M000122">stop</a></li>
   </ul>
 
 <div class="sectiontitle">Included Modules</div>
@@ -239,11 +239,11 @@ be idle cleaned.
 <div class="sectiontitle">Public Class methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000133"></a><b>new</b>()
+    <a name="M000119"></a><b>new</b>()
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000133_source')" id="l_M000133_source">show source</a> ]</p>
-  <div id="M000133_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000119_source')" id="l_M000119_source">show source</a> ]</p>
+  <div id="M000119_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 109</span>
 109:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>
@@ -260,18 +260,18 @@ be idle cleaned.
 <div class="sectiontitle">Public Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000138"></a><b>server_pid</b>()
+    <a name="M000124"></a><b>server_pid</b>()
   </div>
   <div class="description">
   <p>
 Return the PID of the started <a
-href="AbstractServer.html#M000144">server</a>. This is only valid if <a
-href="AbstractServer.html#M000134">start</a>() has been called.
+href="AbstractServer.html#M000130">server</a>. This is only valid if <a
+href="AbstractServer.html#M000120">start</a>() has been called.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000138_source')" id="l_M000138_source">show source</a> ]</p>
-  <div id="M000138_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000124_source')" id="l_M000124_source">show source</a> ]</p>
+  <div id="M000124_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 244</span>
 244:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">server_pid</span>
@@ -283,17 +283,17 @@ href="AbstractServer.html#M000134">start</a>() has been called.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000134"></a><b>start</b>()
+    <a name="M000120"></a><b>start</b>()
   </div>
   <div class="description">
   <p>
-Start the <a href="AbstractServer.html#M000144">server</a>. This method
-does not block since the <a href="AbstractServer.html#M000144">server</a>
+Start the <a href="AbstractServer.html#M000130">server</a>. This method
+does not block since the <a href="AbstractServer.html#M000130">server</a>
 runs asynchronously from the current process.
 </p>
 <p>
 You may only call this method if the <a
-href="AbstractServer.html#M000144">server</a> is not already started.
+href="AbstractServer.html#M000130">server</a> is not already started.
 Otherwise, a <a
 href="AbstractServer/ServerAlreadyStarted.html">ServerAlreadyStarted</a>
 will be raised.
@@ -303,8 +303,8 @@ Derived classes may raise additional exceptions.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000134_source')" id="l_M000134_source">show source</a> ]</p>
-  <div id="M000134_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000120_source')" id="l_M000120_source">show source</a> ]</p>
+  <div id="M000120_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 124</span>
 124:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">start</span>
@@ -370,29 +370,29 @@ Derived classes may raise additional exceptions.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000135"></a><b>start_synchronously</b>(socket)
+    <a name="M000121"></a><b>start_synchronously</b>(socket)
   </div>
   <div class="description">
   <p>
-Start the <a href="AbstractServer.html#M000144">server</a>, but in the
+Start the <a href="AbstractServer.html#M000130">server</a>, but in the
 current process instead of in a child process. This method blocks until the
-<a href="AbstractServer.html#M000144">server</a>&#8216;s main loop has
+<a href="AbstractServer.html#M000130">server</a>&#8216;s main loop has
 ended.
 </p>
 <p>
 <em>socket</em> is the socket that the <a
-href="AbstractServer.html#M000144">server</a> should listen on. The <a
-href="AbstractServer.html#M000144">server</a> main loop will end if the
+href="AbstractServer.html#M000130">server</a> should listen on. The <a
+href="AbstractServer.html#M000130">server</a> main loop will end if the
 socket has been closed.
 </p>
 <p>
 All hooks will be called, except <a
-href="AbstractServer.html#M000139">before_fork</a>().
+href="AbstractServer.html#M000125">before_fork</a>().
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000135_source')" id="l_M000135_source">show source</a> ]</p>
-  <div id="M000135_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000121_source')" id="l_M000121_source">show source</a> ]</p>
+  <div id="M000121_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 189</span>
 189:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">start_synchronously</span>(<span class="ruby-identifier">socket</span>)
@@ -416,17 +416,17 @@ href="AbstractServer.html#M000139">before_fork</a>().
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000137"></a><b>started?</b>()
+    <a name="M000123"></a><b>started?</b>()
   </div>
   <div class="description">
   <p>
-Return whether the <a href="AbstractServer.html#M000144">server</a> has
+Return whether the <a href="AbstractServer.html#M000130">server</a> has
 been started.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000137_source')" id="l_M000137_source">show source</a> ]</p>
-  <div id="M000137_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000123_source')" id="l_M000123_source">show source</a> ]</p>
+  <div id="M000123_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 239</span>
 239:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">started?</span>
@@ -438,25 +438,25 @@ been started.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000136"></a><b>stop</b>()
+    <a name="M000122"></a><b>stop</b>()
   </div>
   <div class="description">
   <p>
-Stop the <a href="AbstractServer.html#M000144">server</a>. The <a
-href="AbstractServer.html#M000144">server</a> will quit as soon as
+Stop the <a href="AbstractServer.html#M000130">server</a>. The <a
+href="AbstractServer.html#M000130">server</a> will quit as soon as
 possible. This method waits until the <a
-href="AbstractServer.html#M000144">server</a> has been stopped.
+href="AbstractServer.html#M000130">server</a> has been stopped.
 </p>
 <p>
 When calling this method, the <a
-href="AbstractServer.html#M000144">server</a> must already be started. If
+href="AbstractServer.html#M000130">server</a> must already be started. If
 not, a <a href="AbstractServer/ServerNotStarted.html">ServerNotStarted</a>
 will be raised.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000136_source')" id="l_M000136_source">show source</a> ]</p>
-  <div id="M000136_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000122_source')" id="l_M000122_source">show source</a> ]</p>
+  <div id="M000122_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 210</span>
 210:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">stop</span>
@@ -493,20 +493,20 @@ will be raised.
 <div class="sectiontitle">Protected Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000139"></a><b>before_fork</b>()
+    <a name="M000125"></a><b>before_fork</b>()
   </div>
   <div class="description">
   <p>
 A hook which is called when the <a
-href="AbstractServer.html#M000144">server</a> is being started, just before
-forking a <a href="AbstractServer.html#M000133">new</a> process. The
+href="AbstractServer.html#M000130">server</a> is being started, just before
+forking a <a href="AbstractServer.html#M000119">new</a> process. The
 default implementation does nothing, this method is supposed to be
 overrided by child classes.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000139_source')" id="l_M000139_source">show source</a> ]</p>
-  <div id="M000139_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000125_source')" id="l_M000125_source">show source</a> ]</p>
+  <div id="M000125_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 251</span>
 251:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">before_fork</span>
@@ -517,19 +517,19 @@ overrided by child classes.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000145"></a><b>client</b>()
+    <a name="M000131"></a><b>client</b>()
   </div>
   <div class="description">
   <p>
 Return the communication channel with the <a
-href="AbstractServer.html#M000145">client</a> (i.e. the parent process that
-started the <a href="AbstractServer.html#M000144">server</a>). This is a <a
+href="AbstractServer.html#M000131">client</a> (i.e. the parent process that
+started the <a href="AbstractServer.html#M000130">server</a>). This is a <a
 href="MessageChannel.html">MessageChannel</a> object.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000145_source')" id="l_M000145_source">show source</a> ]</p>
-  <div id="M000145_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000131_source')" id="l_M000131_source">show source</a> ]</p>
+  <div id="M000131_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 296</span>
 296:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">client</span>
@@ -541,7 +541,7 @@ href="MessageChannel.html">MessageChannel</a> object.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000142"></a><b>define_message_handler</b>(message_name, handler)
+    <a name="M000128"></a><b>define_message_handler</b>(message_name, handler)
   </div>
   <div class="description">
   <p>
@@ -556,8 +556,8 @@ the example in the class description.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000142_source')" id="l_M000142_source">show source</a> ]</p>
-  <div id="M000142_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000128_source')" id="l_M000128_source">show source</a> ]</p>
+  <div id="M000128_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 271</span>
 271:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">define_message_handler</span>(<span class="ruby-identifier">message_name</span>, <span class="ruby-identifier">handler</span>)
@@ -569,7 +569,7 @@ the example in the class description.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000143"></a><b>define_signal_handler</b>(signal, handler)
+    <a name="M000129"></a><b>define_signal_handler</b>(signal, handler)
   </div>
   <div class="description">
   <p>
@@ -577,8 +577,8 @@ Define a handler for a signal.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000143_source')" id="l_M000143_source">show source</a> ]</p>
-  <div id="M000143_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000129_source')" id="l_M000129_source">show source</a> ]</p>
+  <div id="M000129_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 276</span>
 276:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">define_signal_handler</span>(<span class="ruby-identifier">signal</span>, <span class="ruby-identifier">handler</span>)
@@ -590,11 +590,11 @@ Define a handler for a signal.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000147"></a><b>fileno_of</b>(io)
+    <a name="M000133"></a><b>fileno_of</b>(io)
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000147_source')" id="l_M000147_source">show source</a> ]</p>
-  <div id="M000147_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000133_source')" id="l_M000133_source">show source</a> ]</p>
+  <div id="M000133_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 305</span>
 305:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">fileno_of</span>(<span class="ruby-identifier">io</span>)
@@ -608,20 +608,20 @@ Define a handler for a signal.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000141"></a><b>finalize_server</b>()
+    <a name="M000127"></a><b>finalize_server</b>()
   </div>
   <div class="description">
   <p>
 A hook which is called when the <a
-href="AbstractServer.html#M000144">server</a> is being stopped. This is
+href="AbstractServer.html#M000130">server</a> is being stopped. This is
 called in the child process, after the main loop has been left. The default
 implementation does nothing, this method is supposed to be overrided by
 child classes.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000141_source')" id="l_M000141_source">show source</a> ]</p>
-  <div id="M000141_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000127_source')" id="l_M000127_source">show source</a> ]</p>
+  <div id="M000127_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 263</span>
 263:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">finalize_server</span>
@@ -632,20 +632,20 @@ child classes.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000140"></a><b>initialize_server</b>()
+    <a name="M000126"></a><b>initialize_server</b>()
   </div>
   <div class="description">
   <p>
 A hook which is called when the <a
-href="AbstractServer.html#M000144">server</a> is being started. This is
+href="AbstractServer.html#M000130">server</a> is being started. This is
 called in the child process, before the main loop is entered. The default
 implementation does nothing, this method is supposed to be overrided by
 child classes.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000140_source')" id="l_M000140_source">show source</a> ]</p>
-  <div id="M000140_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000126_source')" id="l_M000126_source">show source</a> ]</p>
+  <div id="M000126_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 257</span>
 257:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize_server</span>
@@ -656,17 +656,17 @@ child classes.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000146"></a><b>quit_main</b>()
+    <a name="M000132"></a><b>quit_main</b>()
   </div>
   <div class="description">
   <p>
-Tell the main loop to <a href="AbstractServer.html#M000136">stop</a> as
+Tell the main loop to <a href="AbstractServer.html#M000122">stop</a> as
 soon as possible.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000146_source')" id="l_M000146_source">show source</a> ]</p>
-  <div id="M000146_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000132_source')" id="l_M000132_source">show source</a> ]</p>
+  <div id="M000132_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 301</span>
 301:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">quit_main</span>
@@ -678,27 +678,27 @@ soon as possible.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000144"></a><b>server</b>()
+    <a name="M000130"></a><b>server</b>()
   </div>
   <div class="description">
   <p>
 Return the communication channel with the <a
-href="AbstractServer.html#M000144">server</a>. This is a <a
+href="AbstractServer.html#M000130">server</a>. This is a <a
 href="MessageChannel.html">MessageChannel</a> object.
 </p>
 <p>
 Raises <a href="AbstractServer/ServerNotStarted.html">ServerNotStarted</a>
-if the <a href="AbstractServer.html#M000144">server</a> hasn&#8216;t been
+if the <a href="AbstractServer.html#M000130">server</a> hasn&#8216;t been
 started yet.
 </p>
 <p>
 This method may only be called in the parent process, and not in the
-started <a href="AbstractServer.html#M000144">server</a> process.
+started <a href="AbstractServer.html#M000130">server</a> process.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000144_source')" id="l_M000144_source">show source</a> ]</p>
-  <div id="M000144_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000130_source')" id="l_M000130_source">show source</a> ]</p>
+  <div id="M000130_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server.rb, line 287</span>
 287:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">server</span>

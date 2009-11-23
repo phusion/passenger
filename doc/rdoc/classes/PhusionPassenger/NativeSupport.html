@@ -78,12 +78,12 @@ Utility functions for accessing system functionality.
 
   <div class="sectiontitle">Methods</div>
   <ul>
-  <li><a href="#M000061">accept</a></li>
-  <li><a href="#M000062">close_all_file_descriptors</a></li>
-  <li><a href="#M000060">create_unix_socket</a></li>
-  <li><a href="#M000063">disable_stdio_buffering</a></li>
-  <li><a href="#M000059">recv_fd</a></li>
-  <li><a href="#M000058">send_fd</a></li>
+  <li><a href="#M000047">accept</a></li>
+  <li><a href="#M000048">close_all_file_descriptors</a></li>
+  <li><a href="#M000046">create_unix_socket</a></li>
+  <li><a href="#M000049">disable_stdio_buffering</a></li>
+  <li><a href="#M000045">recv_fd</a></li>
+  <li><a href="#M000044">send_fd</a></li>
   </ul>
 
 
@@ -109,7 +109,7 @@ The maximum length of a Unix socket path, including terminating null.
 <div class="sectiontitle">Public Class methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000061"></a><b> accept(fileno)<br />
+    <a name="M000047"></a><b> accept(fileno)<br />
 </b>
   </div>
   <div class="description">
@@ -129,8 +129,8 @@ Accept a new client from the given socket.
 </ul>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000061_source')" id="l_M000061_source">show source</a> ]</p>
-  <div id="M000061_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000047_source')" id="l_M000047_source">show source</a> ]</p>
+  <div id="M000047_source" class="dyn-source">
 <pre>
 /*
  * call-seq: accept(fileno)
@@ -150,7 +150,7 @@ f_accept(VALUE self, VALUE fileno) {
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000062"></a><b> close_all_file_descriptors(exceptions)<br />
+    <a name="M000048"></a><b> close_all_file_descriptors(exceptions)<br />
 </b>
   </div>
   <div class="description">
@@ -164,8 +164,8 @@ standard input (0) and standard output (1).
 </pre>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000062_source')" id="l_M000062_source">show source</a> ]</p>
-  <div id="M000062_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000048_source')" id="l_M000048_source">show source</a> ]</p>
+  <div id="M000048_source" class="dyn-source">
 <pre>
 /*
  * call-seq: close_all_file_descriptors(exceptions)
@@ -185,7 +185,7 @@ close_all_file_descriptors(VALUE self, VALUE exceptions) {
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000060"></a><b> create_unix_socket(filename, backlog)<br />
+    <a name="M000046"></a><b> create_unix_socket(filename, backlog)<br />
 </b>
   </div>
   <div class="description">
@@ -210,8 +210,8 @@ namespace by prepending the filename with a null byte.
 </ul>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000060_source')" id="l_M000060_source">show source</a> ]</p>
-  <div id="M000060_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000046_source')" id="l_M000046_source">show source</a> ]</p>
+  <div id="M000046_source" class="dyn-source">
 <pre>
 /*
  * call-seq: create_unix_socket(filename, backlog)
@@ -234,7 +234,7 @@ create_unix_socket(VALUE self, VALUE filename, VALUE backlog) {
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000063"></a><b> disable_stdio_buffering<br />
+    <a name="M000049"></a><b> disable_stdio_buffering<br />
 </b>
   </div>
   <div class="description">
@@ -245,8 +245,8 @@ immediate effect.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000063_source')" id="l_M000063_source">show source</a> ]</p>
-  <div id="M000063_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000049_source')" id="l_M000049_source">show source</a> ]</p>
+  <div id="M000049_source" class="dyn-source">
 <pre>
 /*
  * call-seq: disable_stdio_buffering
@@ -263,7 +263,7 @@ disable_stdio_buffering() {
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000059"></a><b> recv_fd(socket_fd)<br />
+    <a name="M000045"></a><b> recv_fd(socket_fd)<br />
 </b>
   </div>
   <div class="description">
@@ -278,8 +278,8 @@ provided by <a href="../IO.html#M000006">IO#recv_io</a>.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000059_source')" id="l_M000059_source">show source</a> ]</p>
-  <div id="M000059_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000045_source')" id="l_M000045_source">show source</a> ]</p>
+  <div id="M000045_source" class="dyn-source">
 <pre>
 /*
  * call-seq: recv_fd(socket_fd)
@@ -300,7 +300,7 @@ recv_fd(VALUE self, VALUE socket_fd) {
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000058"></a><b> send_fd(socket_fd, fd_to_send)<br />
+    <a name="M000044"></a><b> send_fd(socket_fd, fd_to_send)<br />
 </b>
   </div>
   <div class="description">
@@ -322,8 +322,8 @@ href="../IO.html#M000005">IO#send_io</a>.
 </ul>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000058_source')" id="l_M000058_source">show source</a> ]</p>
-  <div id="M000058_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000044_source')" id="l_M000044_source">show source</a> ]</p>
+  <div id="M000044_source" class="dyn-source">
 <pre>
 /*
  * call-seq: send_fd(socket_fd, fd_to_send)

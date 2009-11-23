@@ -99,12 +99,12 @@ Object
   <p class="source-link">[ <a href="javascript:toggleSource('M000007_source')" id="l_M000007_source">show source</a> ]</p>
   <div id="M000007_source" class="dyn-source">
 <pre>
-     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 545</span>
-545:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">close_on_exec!</span>
-546:                 <span class="ruby-keyword kw">if</span> <span class="ruby-keyword kw">defined?</span>(<span class="ruby-constant">Fcntl</span><span class="ruby-operator">::</span><span class="ruby-constant">F_SETFD</span>)
-547:                         <span class="ruby-identifier">fcntl</span>(<span class="ruby-constant">Fcntl</span><span class="ruby-operator">::</span><span class="ruby-constant">F_SETFD</span>, <span class="ruby-constant">Fcntl</span><span class="ruby-operator">::</span><span class="ruby-constant">FD_CLOEXEC</span>)
-548:                 <span class="ruby-keyword kw">end</span>
-549:         <span class="ruby-keyword kw">end</span>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 546</span>
+546:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">close_on_exec!</span>
+547:                 <span class="ruby-keyword kw">if</span> <span class="ruby-keyword kw">defined?</span>(<span class="ruby-constant">Fcntl</span><span class="ruby-operator">::</span><span class="ruby-constant">F_SETFD</span>)
+548:                         <span class="ruby-identifier">fcntl</span>(<span class="ruby-constant">Fcntl</span><span class="ruby-operator">::</span><span class="ruby-constant">F_SETFD</span>, <span class="ruby-constant">Fcntl</span><span class="ruby-operator">::</span><span class="ruby-constant">FD_CLOEXEC</span>)
+549:                 <span class="ruby-keyword kw">end</span>
+550:         <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>
@@ -127,10 +127,10 @@ Raises SystemCallError if something went wrong.
   <p class="source-link">[ <a href="javascript:toggleSource('M000006_source')" id="l_M000006_source">show source</a> ]</p>
   <div id="M000006_source" class="dyn-source">
 <pre>
-     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 540</span>
-540:                 <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">recv_io</span>
-541:                         <span class="ruby-keyword kw">return</span> <span class="ruby-constant">IO</span>.<span class="ruby-identifier">new</span>(<span class="ruby-constant">PhusionPassenger</span><span class="ruby-operator">::</span><span class="ruby-constant">NativeSupport</span>.<span class="ruby-identifier">recv_fd</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">fileno</span>))
-542:                 <span class="ruby-keyword kw">end</span>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 541</span>
+541:                 <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">recv_io</span>
+542:                         <span class="ruby-keyword kw">return</span> <span class="ruby-constant">IO</span>.<span class="ruby-identifier">new</span>(<span class="ruby-constant">PhusionPassenger</span><span class="ruby-operator">::</span><span class="ruby-constant">NativeSupport</span>.<span class="ruby-identifier">recv_fd</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">fileno</span>))
+543:                 <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>
@@ -153,10 +153,10 @@ Raises SystemCallError if something went wrong.
   <p class="source-link">[ <a href="javascript:toggleSource('M000005_source')" id="l_M000005_source">show source</a> ]</p>
   <div id="M000005_source" class="dyn-source">
 <pre>
-     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 532</span>
-532:                 <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">send_io</span>(<span class="ruby-identifier">io</span>)
-533:                         <span class="ruby-constant">PhusionPassenger</span><span class="ruby-operator">::</span><span class="ruby-constant">NativeSupport</span>.<span class="ruby-identifier">send_fd</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">fileno</span>, <span class="ruby-identifier">io</span>.<span class="ruby-identifier">fileno</span>)
-534:                 <span class="ruby-keyword kw">end</span>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 533</span>
+533:                 <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">send_io</span>(<span class="ruby-identifier">io</span>)
+534:                         <span class="ruby-constant">PhusionPassenger</span><span class="ruby-operator">::</span><span class="ruby-constant">NativeSupport</span>.<span class="ruby-identifier">send_fd</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">fileno</span>, <span class="ruby-identifier">io</span>.<span class="ruby-identifier">fileno</span>)
+535:                 <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>

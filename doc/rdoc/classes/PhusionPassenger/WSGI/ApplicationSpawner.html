@@ -84,8 +84,8 @@ Class for spawning <a href="../WSGI.html">WSGI</a> applications.
 
   <div class="sectiontitle">Methods</div>
   <ul>
-  <li><a href="#M000037">spawn_application</a></li>
   <li><a href="#M000038">spawn_application</a></li>
+  <li><a href="#M000039">spawn_application</a></li>
   </ul>
 
 <div class="sectiontitle">Included Modules</div>
@@ -108,11 +108,11 @@ Class for spawning <a href="../WSGI.html">WSGI</a> applications.
 <div class="sectiontitle">Public Class methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000037"></a><b>spawn_application</b>(*args)
+    <a name="M000038"></a><b>spawn_application</b>(*args)
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000037_source')" id="l_M000037_source">show source</a> ]</p>
-  <div id="M000037_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000038_source')" id="l_M000038_source">show source</a> ]</p>
+  <div id="M000038_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/phusion_passenger/wsgi/application_spawner.rb, line 36</span>
 36:         <span class="ruby-keyword kw">def</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">spawn_application</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
@@ -126,7 +126,7 @@ Class for spawning <a href="../WSGI.html">WSGI</a> applications.
 <div class="sectiontitle">Public Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000038"></a><b>spawn_application</b>(app_root, lower_privilege = true, lowest_user = &quot;nobody&quot;, environment = &quot;production&quot;)
+    <a name="M000039"></a><b>spawn_application</b>(app_root, lower_privilege = true, lowest_user = &quot;nobody&quot;, environment = &quot;production&quot;)
   </div>
   <div class="description">
   <p>
@@ -149,8 +149,8 @@ exit() during startup.
 </ul>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000038_source')" id="l_M000038_source">show source</a> ]</p>
-  <div id="M000038_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000039_source')" id="l_M000039_source">show source</a> ]</p>
+  <div id="M000039_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/phusion_passenger/wsgi/application_spawner.rb, line 49</span>
 49:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">spawn_application</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">lower_privilege</span> = <span class="ruby-keyword kw">true</span>, <span class="ruby-identifier">lowest_user</span> = <span class="ruby-value str">&quot;nobody&quot;</span>, <span class="ruby-identifier">environment</span> = <span class="ruby-value str">&quot;production&quot;</span>)

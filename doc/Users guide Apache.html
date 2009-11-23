@@ -798,14 +798,36 @@ are run, is &#8220;production&#8221;. You can change this by changing the
 </tr></table>
 </div>
 <h3 id="_deploying_to_a_virtual_host_8217_s_root">3.1. Deploying to a virtual host&#8217;s root</h3>
-<div class="paragraph"><p>Add a virtual host entry to your Apache configuration file. The virtual host&#8217;s
-document root must point to your Ruby on Rails application&#8217;s <em>public</em> folder.
-For example:</p></div>
+<div class="paragraph"><p>Add a virtual host entry to your Apache configuration file. Make sure that the
+following conditions are met:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+The virtual host&#8217;s document root must point to your Ruby on Rails application&#8217;s
+  <em>public</em> folder.
+</p>
+</li>
+<li>
+<p>
+The Apache per-directory permissions must allow access to this folder.
+</p>
+</li>
+<li>
+<p>
+MultiViews must be disabled for this folder.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>For example:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>&lt;VirtualHost *:80&gt;
     ServerName www.mycook.com
     DocumentRoot /webapps/mycook/public
+    &lt;Directory /webapps/mycook/public&gt;
+        Allow from all
+        Options -MultiViews
+    &lt;/Directory&gt;
 &lt;/VirtualHost&gt;</tt></pre>
 </div></div>
 <div class="paragraph"><p>You may also need to tweak your file/folder permissions. Make sure that the
@@ -835,6 +857,9 @@ all parent folders. That is, /webapps/mycook and /webapps must also be readable 
 <pre><tt>&lt;VirtualHost *:80&gt;
     ServerName www.phusion.nl
     DocumentRoot /websites/phusion
+    &lt;Directory /websites/phusion&gt;
+        Allow from all
+    &lt;/Directory&gt;
 &lt;/VirtualHost&gt;</tt></pre>
 </div></div>
 <div class="paragraph"><p>And you want your Ruby on Rails application to be accessible from the URL
@@ -845,13 +870,34 @@ folder to a directory in the document root. For example:</p></div>
 <div class="content">
 <pre><tt>ln -s /webapps/mycook/public /websites/phusion/rails</tt></pre>
 </div></div>
-<div class="paragraph"><p>Next, add a <a href="#RailsBaseURI">RailsBaseURI</a> option to the virtual host configuration:</p></div>
+<div class="paragraph"><p>Next, add a <a href="#RailsBaseURI">RailsBaseURI</a> option to the virtual host configuration,
+and also make sure that:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+The Apache per-directory permissions allow access to this folder.
+</p>
+</li>
+<li>
+<p>
+MultiViews is disabled for this folder.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>For example:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>&lt;VirtualHost *:80&gt;
     ServerName www.phusion.nl
     DocumentRoot /websites/phusion
-    RailsBaseURI /rails                # This line has been added.
+    &lt;Directory /websites/phusion&gt;
+        Allow from all
+    &lt;/Directory&gt;
+
+    RailsBaseURI /rails                   # &lt;-- These lines have
+    &lt;Directory /websites/phusion/rails&gt;   # &lt;-- been added.
+        Options -MultiViews               # &lt;--
+    &lt;/Directory&gt;                          # &lt;--
 &lt;/VirtualHost&gt;</tt></pre>
 </div></div>
 <div class="paragraph"><p>Then restart Apache. The application has now been deployed.</p></div>
@@ -1001,19 +1047,45 @@ the Apache configuration file:</p></div>
 <pre><tt>&lt;VirtualHost *:80&gt;
     ServerName www.rackexample.com
     DocumentRoot /webapps/rack_example/public
+    &lt;Directory /webapps/rack_example/public&gt;
+        Allow from all
+        Options -MultiViews
+    &lt;/Directory&gt;
 &lt;/VirtualHost&gt;</tt></pre>
 </div></div>
 <div class="paragraph"><p>And we&#8217;re done! After an Apache restart, the above Rack application will be available
 under the URL <em>http://www.rackexample.com/</em>.</p></div>
 <h3 id="_deploying_to_a_virtual_host_8217_s_root_2">4.2. Deploying to a virtual host&#8217;s root</h3>
-<div class="paragraph"><p>Add a virtual host entry to your Apache configuration file. The virtual host&#8217;s
-document root must point to your Rack application&#8217;s <em>public</em> folder.
-For example:</p></div>
+<div class="paragraph"><p>Add a virtual host entry to your Apache configuration file. Make sure that the
+following conditions are met:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+The virtual host&#8217;s document root must point to your Rack application&#8217;s
+  <em>public</em> folder.
+</p>
+</li>
+<li>
+<p>
+The Apache per-directory permissions must allow access to this folder.
+</p>
+</li>
+<li>
+<p>
+MultiViews must be disabled for this folder.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>For example:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>&lt;VirtualHost *:80&gt;
     ServerName www.rackapp.com
     DocumentRoot /webapps/rackapp/public
+    &lt;Directory /webapps/rackapp/public&gt;
+        Allow from all
+        Options -MultiViews
+    &lt;/Directory&gt;
 &lt;/VirtualHost&gt;</tt></pre>
 </div></div>
 <div class="paragraph"><p>You may also need to tweak your file/folder permissions. Make sure that the
@@ -1043,6 +1115,9 @@ all parent folders. That is, /webapps/rackapp and /webapps must also be readable
 <pre><tt>&lt;VirtualHost *:80&gt;
     ServerName www.phusion.nl
     DocumentRoot /websites/phusion
+    &lt;Directory /websites/phusion&gt;
+        Allow from all
+    &lt;/Directory&gt;
 &lt;/VirtualHost&gt;</tt></pre>
 </div></div>
 <div class="paragraph"><p>And you want your Rack application to be accessible from the URL
@@ -1053,13 +1128,34 @@ folder to a directory in the document root. For example:</p></div>
 <div class="content">
 <pre><tt>ln -s /webapps/rackapp/public /websites/phusion/rack</tt></pre>
 </div></div>
-<div class="paragraph"><p>Next, add a <a href="#RackBaseURI">RackBaseURI</a> option to the virtual host configuration:</p></div>
+<div class="paragraph"><p>Next, add a <a href="#RackBaseURI">RackBaseURI</a> option to the virtual host configuration,
+and also make sure that:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+The Apache per-directory permissions allow access to this folder.
+</p>
+</li>
+<li>
+<p>
+MultiViews is disabled for this folder.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>For example:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>&lt;VirtualHost *:80&gt;
     ServerName www.phusion.nl
     DocumentRoot /websites/phusion
-    RackBaseURI /rack                # This line has been added.
+    &lt;Directory /websites/phusion&gt;
+        Allow from all
+    &lt;/Directory&gt;
+
+    RackBaseURI /rails                    # &lt;-- These lines have
+    &lt;Directory /websites/phusion/rails&gt;   # &lt;-- been added.
+        Options -MultiViews               # &lt;--
+    &lt;/Directory&gt;                          # &lt;--
 &lt;/VirtualHost&gt;</tt></pre>
 </div></div>
 <div class="paragraph"><p>Then restart Apache. The application has now been deployed.</p></div>
@@ -1862,7 +1958,7 @@ virtual hosts or URLs that need it:</p></div>
 accessing <a href="http://www.example.com/about">http://www.example.com/about</a> will properly display the result of
 <a href="http://www.example.com/info/about">http://www.example.com/info/about</a>. Notice that PassengerAllowEncodedSlashes only
 interferes with passthrough rules, not with any other mod_rewrite rules. The rules for
-displaying maintenance.html will work fine even URLs starting with "/users".</p></div>
+displaying maintenance.html will work fine even for URLs starting with "/users".</p></div>
 <h3 id="_ruby_on_rails_specific_options">5.14. Ruby on Rails-specific options</h3>
 <h4 id="_railsautodetect_lt_on_off_gt">5.14.1. RailsAutoDetect &lt;on|off&gt;</h4>
 <div class="paragraph"><p>Whether Phusion Passenger should automatically detect whether a virtual host&#8217;s
@@ -2606,7 +2702,10 @@ following command to give your Rails application folder that context:</p></div>
 <h3 id="conflicting_apache_modules">6.4. Conflicting Apache modules</h3>
 <h4 id="_mod_userdir">6.4.1. mod_userdir</h4>
 <div class="paragraph"><p><em>mod_userdir</em> is not compatible with Phusion Passenger at the moment.</p></div>
-<h4 id="_virtualdocumentroot">6.4.2. VirtualDocumentRoot</h4>
+<h4 id="_multiviews_mod_negotiation">6.4.2. MultiViews (mod_negotiation)</h4>
+<div class="paragraph"><p>MultiViews is not compatible with Phusion Passenger. You should disable MultiViews
+for all Phusion Passenger hosts.</p></div>
+<h4 id="_virtualdocumentroot">6.4.3. VirtualDocumentRoot</h4>
 <div class="paragraph"><p>VirtualDocumentRoot is not compatible with Phusion Passenger at the moment.</p></div>
 </div>
 <h2 id="_analysis_and_system_maintenance_tools">7. Analysis and system maintenance tools</h2>
@@ -3482,7 +3581,7 @@ has no effect.</p></div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-08-31 15:39:27 CEST
+Last updated 2009-11-18 17:54:42 CEST
 </div>
 </div>
 </body>
