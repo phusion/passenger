@@ -81,8 +81,8 @@ describe SpawnManager do
 					"app_root", @stub.app_root,
 					"lowest_user", CONFIG['lowest_user'])
 				channel.read
-				pid, listen_socket = channel.read
-				channel.recv_io.close
+				app_process = AppProcess.read_from_channel(channel)
+				app_process.close
 				channel.close
 			rescue Exception => e
 				print_exception("child", e)

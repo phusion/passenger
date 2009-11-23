@@ -218,11 +218,12 @@ class AbstractRequestHandler
 			@selectable_sockets << @graceful_termination_pipe[0]
 			
 			install_useful_signal_handlers
-			done = false
 			
-			while !done
+			while true
 				@iterations += 1
-				done = accept_and_process_next_request
+				if !accept_and_process_next_request
+					break
+				end
 				@processed_requests += 1
 			end
 		rescue EOFError
@@ -401,7 +402,7 @@ private
 			# graceful termination pipe has been closed. This is our
 			# call to gracefully terminate (after having processed all
 			# incoming requests).
-			return true
+			return false
 		end
 		
 		if headers
@@ -410,10 +411,8 @@ private
 			else
 				process_request(headers, input_stream, connection, status_line_desired)
 			end
-			return false
-		else
-			return true
 		end
+		return true
 	rescue IOError, SocketError, SystemCallError => e
 		# TODO: we should only catch these exceptions if they originate
 		# from our own socket.

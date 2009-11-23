@@ -154,7 +154,7 @@ def start
 	end
 	
 	if ARGV.empty?
-		server_instances = ServerInstance.list(:clean_stale_or_corrupted => false)
+		server_instances = ServerInstance.list
 		if server_instances.empty?
 			STDERR.puts("ERROR: Phusion Passenger doesn't seem to be running.")
 			exit 2
