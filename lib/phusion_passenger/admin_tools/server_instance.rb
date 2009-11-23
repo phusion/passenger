@@ -24,6 +24,7 @@
 require 'rexml/document'
 require 'fileutils'
 require 'socket'
+require 'ostruct'
 require 'phusion_passenger/admin_tools'
 require 'phusion_passenger/message_channel'
 
@@ -64,11 +65,25 @@ class ServerInstance
 	
 	class Process
 		attr_reader :group
-		attr_accessor :pid, :socket_name, :socket_type, :sessions, :processed, :uptime
+		attr_accessor :pid, :sessions, :processed, :uptime, :server_sockets
 		INT_PROPERTIES = [:pid, :sessions, :processed]
 		
 		def initialize(group)
 			@group = group
+			@server_sockets = {}
+		end
+		
+		def connect(socket_name = :main)
+			socket_info = @server_sockets[socket_name]
+			if !socket_info
+				raise "This process has no server socket named '#{socket_name}'."
+			end
+			if socket_info.address_type == 'unix'
+				return UNIXSocket.new(socket_info.address)
+			else
+				host, port = socket_info.address.split(':', 2)
+				return TCPSocket.new(host, port.to_i)
+			end
 		end
 	end
 
@@ -222,13 +237,25 @@ class ServerInstance
 			group_xml.elements.each("processes/process") do |process_xml|
 				process = Process.new(group)
 				process_xml.elements.each do |element|
-					if process.respond_to?("#{element.name}=")
-						if Process::INT_PROPERTIES.include?(element.name.to_sym)
-							value = element.text.to_i
-						else
-							value = element.text
+					if element.name == "server_sockets"
+						element.elements.each("server_socket") do |server_socket|
+							name = server_socket.elements["name"].text.to_sym
+							address = server_socket.elements["address"].text
+							address_type = server_socket.elements["type"].text
+							process.server_sockets[name] = OpenStruct.new(
+								:address => address,
+								:address_type => address_type
+							)
 						end
-						process.send("#{element.name}=", value)
+					else
+						if process.respond_to?("#{element.name}=")
+							if Process::INT_PROPERTIES.include?(element.name.to_sym)
+								value = element.text.to_i
+							else
+								value = element.text
+							end
+							process.send("#{element.name}=", value)
+						end
 					end
 				end
 				group.processes << process
