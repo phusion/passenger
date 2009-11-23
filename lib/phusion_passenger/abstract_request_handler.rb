@@ -302,7 +302,7 @@ private
 				else
 					unix_path_max = 100
 				end
-				socket_address = "#{passenger_tmpdir}/backends/backend.#{generate_random_id(:base64)}"
+				socket_address = "#{passenger_tmpdir}/backends/ruby.#{generate_random_id(:base64)}"
 				socket_address = socket_address.slice(0, unix_path_max - 1)
 				socket = UNIXServer.new(socket_address)
 				socket.listen(BACKLOG_SIZE)

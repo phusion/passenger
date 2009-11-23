@@ -438,6 +438,7 @@ protected
 		dir = @@passenger_tmpdir
 		if dir.nil? || dir.empty?
 			dir = "#{Dir.tmpdir}/passenger.#{Process.pid}"
+			dir.gsub!(%r{//+}, '/')
 			@@passenger_tmpdir = dir
 		end
 		if create && !File.exist?(dir)
