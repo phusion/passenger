@@ -345,13 +345,23 @@ are run, is ``production''. You can change this by changing the
 
 === Deploying to a virtual host's root ===
 
-Add a virtual host entry to your Apache configuration file. The virtual host's
-document root must point to your Ruby on Rails application's 'public' folder.
+Add a virtual host entry to your Apache configuration file. Make sure that the
+following conditions are met:
+
+- The virtual host's document root must point to your Ruby on Rails application's
+  'public' folder.
+- The Apache per-directory permissions must allow access to this folder.
+- MultiViews must be disabled for this folder.
+
 For example:
 -------------------------------------------
 <VirtualHost *:80>
     ServerName www.mycook.com
     DocumentRoot /webapps/mycook/public
+    <Directory /webapps/mycook/public>
+        Allow from all
+        Options -MultiViews
+    </Directory>
 </VirtualHost>
 -------------------------------------------
 
@@ -373,6 +383,9 @@ Suppose that you already have a virtual host:
 <VirtualHost *:80>
     ServerName www.phusion.nl
     DocumentRoot /websites/phusion
+    <Directory /websites/phusion>
+        Allow from all
+    </Directory>
 </VirtualHost>
 -------------------------------------------
 
@@ -385,12 +398,25 @@ folder to a directory in the document root. For example:
 ln -s /webapps/mycook/public /websites/phusion/rails
 -------------------------------------------
 
-Next, add a <<RailsBaseURI,RailsBaseURI>> option to the virtual host configuration:
+Next, add a <<RailsBaseURI,RailsBaseURI>> option to the virtual host configuration,
+and also make sure that:
+
+- The Apache per-directory permissions allow access to this folder.
+- MultiViews is disabled for this folder.
+
+For example:
 -------------------------------------------
 <VirtualHost *:80>
     ServerName www.phusion.nl
     DocumentRoot /websites/phusion
-    RailsBaseURI /rails                # This line has been added.
+    <Directory /websites/phusion>
+        Allow from all
+    </Directory>
+    
+    RailsBaseURI /rails                   # <-- These lines have
+    <Directory /websites/phusion/rails>   # <-- been added.
+        Options -MultiViews               # <--
+    </Directory>                          # <--
 </VirtualHost>
 -------------------------------------------
 Then restart Apache. The application has now been deployed.
@@ -515,6 +541,10 @@ the Apache configuration file:
 <VirtualHost *:80>
     ServerName www.rackexample.com
     DocumentRoot /webapps/rack_example/public
+    <Directory /webapps/rack_example/public>
+        Allow from all
+        Options -MultiViews
+    </Directory>
 </VirtualHost>
 -------------------------------------------
 
@@ -523,13 +553,23 @@ under the URL 'http://www.rackexample.com/'.
 
 === Deploying to a virtual host's root ===
 
-Add a virtual host entry to your Apache configuration file. The virtual host's
-document root must point to your Rack application's 'public' folder.
+Add a virtual host entry to your Apache configuration file. Make sure that the
+following conditions are met:
+
+- The virtual host's document root must point to your Rack application's
+  'public' folder.
+- The Apache per-directory permissions must allow access to this folder.
+- MultiViews must be disabled for this folder.
+
 For example:
 -------------------------------------------
 <VirtualHost *:80>
     ServerName www.rackapp.com
     DocumentRoot /webapps/rackapp/public
+    <Directory /webapps/rackapp/public>
+        Allow from all
+        Options -MultiViews
+    </Directory>
 </VirtualHost>
 -------------------------------------------
 
@@ -551,6 +591,9 @@ Suppose that you already have a virtual host:
 <VirtualHost *:80>
     ServerName www.phusion.nl
     DocumentRoot /websites/phusion
+    <Directory /websites/phusion>
+        Allow from all
+    </Directory>
 </VirtualHost>
 -------------------------------------------
 
@@ -563,12 +606,25 @@ folder to a directory in the document root. For example:
 ln -s /webapps/rackapp/public /websites/phusion/rack
 -------------------------------------------
 
-Next, add a <<RackBaseURI,RackBaseURI>> option to the virtual host configuration:
+Next, add a <<RackBaseURI,RackBaseURI>> option to the virtual host configuration,
+and also make sure that:
+
+- The Apache per-directory permissions allow access to this folder.
+- MultiViews is disabled for this folder.
+
+For example:
 -------------------------------------------
 <VirtualHost *:80>
     ServerName www.phusion.nl
     DocumentRoot /websites/phusion
-    RackBaseURI /rack                # This line has been added.
+    <Directory /websites/phusion>
+        Allow from all
+    </Directory>
+
+    RackBaseURI /rails                    # <-- These lines have
+    <Directory /websites/phusion/rails>   # <-- been added.
+        Options -MultiViews               # <--
+    </Directory>                          # <--
 </VirtualHost>
 -------------------------------------------
 Then restart Apache. The application has now been deployed.
@@ -1125,7 +1181,7 @@ With this, http://www.example.com/users/fujikura%2fyuu will work properly, and
 accessing http://www.example.com/about will properly display the result of
 http://www.example.com/info/about. Notice that PassengerAllowEncodedSlashes only
 interferes with passthrough rules, not with any other mod_rewrite rules. The rules for
-displaying maintenance.html will work fine even URLs starting with "/users".
+displaying maintenance.html will work fine even for URLs starting with "/users".
 
 
 === Ruby on Rails-specific options ===
@@ -1659,6 +1715,11 @@ chcon -R -h -t httpd_sys_content_t /path/to/your/rails/app
 ==== mod_userdir ====
 
 'mod_userdir' is not compatible with Phusion Passenger at the moment.
+
+==== MultiViews (mod_negotiation) ====
+
+MultiViews is not compatible with Phusion Passenger. You should disable MultiViews
+for all Phusion Passenger hosts.
 
 ==== VirtualDocumentRoot ====
 

@@ -204,6 +204,12 @@ parser = OptionParser.new do |opts|
 	        "#{' ' * 37}input.") do
 		options[:auto] = true
 	end
+	opts.on("--apxs2-path PATH", String, "Path to 'apxs2' command.") do |value|
+		ENV['APXS2'] = value
+	end
+	opts.on("--apr-config-path PATH", String, "Path to 'apr-config' command.") do |value|
+		ENV['APR_CONFIG'] = value
+	end
 end
 begin
 	parser.parse!

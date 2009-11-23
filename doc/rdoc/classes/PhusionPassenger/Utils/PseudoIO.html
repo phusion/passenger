@@ -80,10 +80,10 @@ Object
 
   <div class="sectiontitle">Methods</div>
   <ul>
-  <li><a href="#M000095">done!</a></li>
-  <li><a href="#M000096">method_missing</a></li>
-  <li><a href="#M000094">new</a></li>
-  <li><a href="#M000097">respond_to?</a></li>
+  <li><a href="#M000096">done!</a></li>
+  <li><a href="#M000097">method_missing</a></li>
+  <li><a href="#M000095">new</a></li>
+  <li><a href="#M000098">respond_to?</a></li>
   </ul>
 
 
@@ -94,17 +94,17 @@ Object
 <div class="sectiontitle">Public Class methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000094"></a><b>new</b>(sink)
+    <a name="M000095"></a><b>new</b>(sink)
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000094_source')" id="l_M000094_source">show source</a> ]</p>
-  <div id="M000094_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000095_source')" id="l_M000095_source">show source</a> ]</p>
+  <div id="M000095_source" class="dyn-source">
 <pre>
-     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 205</span>
-205:                 <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">sink</span>)
-206:                         <span class="ruby-ivar">@sink</span> = <span class="ruby-identifier">sink</span> <span class="ruby-operator">||</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">open</span>(<span class="ruby-value str">&quot;/dev/null&quot;</span>, <span class="ruby-value str">&quot;w&quot;</span>)
-207:                         <span class="ruby-ivar">@buffer</span> = <span class="ruby-constant">StringIO</span>.<span class="ruby-identifier">new</span>
-208:                 <span class="ruby-keyword kw">end</span>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 206</span>
+206:                 <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">sink</span>)
+207:                         <span class="ruby-ivar">@sink</span> = <span class="ruby-identifier">sink</span> <span class="ruby-operator">||</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">open</span>(<span class="ruby-value str">&quot;/dev/null&quot;</span>, <span class="ruby-value str">&quot;w&quot;</span>)
+208:                         <span class="ruby-ivar">@buffer</span> = <span class="ruby-constant">StringIO</span>.<span class="ruby-identifier">new</span>
+209:                 <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>
@@ -112,51 +112,51 @@ Object
 <div class="sectiontitle">Public Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000095"></a><b>done!</b>()
-  </div>
-<div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000095_source')" id="l_M000095_source">show source</a> ]</p>
-  <div id="M000095_source" class="dyn-source">
-<pre>
-     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 210</span>
-210:                 <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">done!</span>
-211:                         <span class="ruby-identifier">result</span> = <span class="ruby-ivar">@buffer</span>.<span class="ruby-identifier">string</span>
-212:                         <span class="ruby-ivar">@buffer</span> = <span class="ruby-keyword kw">nil</span>
-213:                         <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">result</span>
-214:                 <span class="ruby-keyword kw">end</span>
-</pre>
-  </div>
-</div>
-</div>
-<div class="method">
-  <div class="title">
-    <a name="M000096"></a><b>method_missing</b>(*args, &amp;block)
+    <a name="M000096"></a><b>done!</b>()
   </div>
 <div class="sourcecode">
   <p class="source-link">[ <a href="javascript:toggleSource('M000096_source')" id="l_M000096_source">show source</a> ]</p>
   <div id="M000096_source" class="dyn-source">
 <pre>
-     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 216</span>
-216:                 <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">method_missing</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
-217:                         <span class="ruby-ivar">@buffer</span>.<span class="ruby-identifier">send</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>) <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@buffer</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">args</span>.<span class="ruby-identifier">first</span> <span class="ruby-operator">!=</span> <span class="ruby-identifier">:reopen</span>
-218:                         <span class="ruby-keyword kw">return</span> <span class="ruby-ivar">@sink</span>.<span class="ruby-identifier">send</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
-219:                 <span class="ruby-keyword kw">end</span>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 211</span>
+211:                 <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">done!</span>
+212:                         <span class="ruby-identifier">result</span> = <span class="ruby-ivar">@buffer</span>.<span class="ruby-identifier">string</span>
+213:                         <span class="ruby-ivar">@buffer</span> = <span class="ruby-keyword kw">nil</span>
+214:                         <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">result</span>
+215:                 <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000097"></a><b>respond_to?</b>(symbol, include_private = false)
+    <a name="M000097"></a><b>method_missing</b>(*args, &amp;block)
   </div>
 <div class="sourcecode">
   <p class="source-link">[ <a href="javascript:toggleSource('M000097_source')" id="l_M000097_source">show source</a> ]</p>
   <div id="M000097_source" class="dyn-source">
 <pre>
-     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 221</span>
-221:                 <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">symbol</span>, <span class="ruby-identifier">include_private</span> = <span class="ruby-keyword kw">false</span>)
-222:                         <span class="ruby-keyword kw">return</span> <span class="ruby-ivar">@sink</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">symbol</span>, <span class="ruby-identifier">include_private</span>)
-223:                 <span class="ruby-keyword kw">end</span>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 217</span>
+217:                 <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">method_missing</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+218:                         <span class="ruby-ivar">@buffer</span>.<span class="ruby-identifier">send</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>) <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@buffer</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">args</span>.<span class="ruby-identifier">first</span> <span class="ruby-operator">!=</span> <span class="ruby-identifier">:reopen</span>
+219:                         <span class="ruby-keyword kw">return</span> <span class="ruby-ivar">@sink</span>.<span class="ruby-identifier">send</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+220:                 <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000098"></a><b>respond_to?</b>(symbol, include_private = false)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000098_source')" id="l_M000098_source">show source</a> ]</p>
+  <div id="M000098_source" class="dyn-source">
+<pre>
+     <span class="ruby-comment cmt"># File lib/phusion_passenger/utils.rb, line 222</span>
+222:                 <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">symbol</span>, <span class="ruby-identifier">include_private</span> = <span class="ruby-keyword kw">false</span>)
+223:                         <span class="ruby-keyword kw">return</span> <span class="ruby-ivar">@sink</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">symbol</span>, <span class="ruby-identifier">include_private</span>)
+224:                 <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>

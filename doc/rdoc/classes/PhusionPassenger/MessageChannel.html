@@ -134,8 +134,8 @@ The life time of a <a href="MessageChannel.html">MessageChannel</a> is
 independent from that of the wrapped <a href="../IO.html">IO</a> object. If
 a <a href="MessageChannel.html">MessageChannel</a> object is destroyed, the
 underlying <a href="../IO.html">IO</a> object is not automatically closed.
-Call <a href="MessageChannel.html#M000156">close</a>() if you want to <a
-href="MessageChannel.html#M000156">close</a> the underlying <a
+Call <a href="MessageChannel.html#M000147">close</a>() if you want to <a
+href="MessageChannel.html#M000147">close</a> the underlying <a
 href="../IO.html">IO</a> object.
 </p>
 <p>
@@ -154,15 +154,15 @@ things in the wrong order then bad things will happen.
 
   <div class="sectiontitle">Methods</div>
   <ul>
-  <li><a href="#M000156">close</a></li>
-  <li><a href="#M000155">fileno</a></li>
-  <li><a href="#M000148">new</a></li>
-  <li><a href="#M000149">read</a></li>
-  <li><a href="#M000150">read_scalar</a></li>
-  <li><a href="#M000153">recv_io</a></li>
-  <li><a href="#M000154">send_io</a></li>
-  <li><a href="#M000151">write</a></li>
-  <li><a href="#M000152">write_scalar</a></li>
+  <li><a href="#M000147">close</a></li>
+  <li><a href="#M000146">fileno</a></li>
+  <li><a href="#M000139">new</a></li>
+  <li><a href="#M000140">read</a></li>
+  <li><a href="#M000141">read_scalar</a></li>
+  <li><a href="#M000144">recv_io</a></li>
+  <li><a href="#M000145">send_io</a></li>
+  <li><a href="#M000142">write</a></li>
+  <li><a href="#M000143">write_scalar</a></li>
   </ul>
 
 
@@ -186,18 +186,18 @@ The wrapped <a href="../IO.html">IO</a> object.
 <div class="sectiontitle">Public Class methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000148"></a><b>new</b>(io)
+    <a name="M000139"></a><b>new</b>(io)
   </div>
   <div class="description">
   <p>
-Create a <a href="MessageChannel.html#M000148">new</a> <a
+Create a <a href="MessageChannel.html#M000139">new</a> <a
 href="MessageChannel.html">MessageChannel</a> by wrapping the given <a
 href="../IO.html">IO</a> object.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000148_source')" id="l_M000148_source">show source</a> ]</p>
-  <div id="M000148_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000139_source')" id="l_M000139_source">show source</a> ]</p>
+  <div id="M000139_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/phusion_passenger/message_channel.rb, line 83</span>
 83:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">io</span>)
@@ -210,7 +210,7 @@ href="../IO.html">IO</a> object.
 <div class="sectiontitle">Public Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000156"></a><b>close</b>()
+    <a name="M000147"></a><b>close</b>()
   </div>
   <div class="description">
   <p>
@@ -219,8 +219,8 @@ SystemCallError or IOError when something goes wrong.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000156_source')" id="l_M000156_source">show source</a> ]</p>
-  <div id="M000156_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000147_source')" id="l_M000147_source">show source</a> ]</p>
+  <div id="M000147_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/message_channel.rb, line 217</span>
 217:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">close</span>
@@ -232,7 +232,7 @@ SystemCallError or IOError when something goes wrong.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000155"></a><b>fileno</b>()
+    <a name="M000146"></a><b>fileno</b>()
   </div>
   <div class="description">
   <p>
@@ -241,8 +241,8 @@ object.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000155_source')" id="l_M000155_source">show source</a> ]</p>
-  <div id="M000155_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000146_source')" id="l_M000146_source">show source</a> ]</p>
+  <div id="M000146_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/message_channel.rb, line 211</span>
 211:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">fileno</span>
@@ -254,7 +254,7 @@ object.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000149"></a><b>read</b>()
+    <a name="M000140"></a><b>read</b>()
   </div>
   <div class="description">
   <p>
@@ -267,8 +267,8 @@ wrong.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000149_source')" id="l_M000149_source">show source</a> ]</p>
-  <div id="M000149_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000140_source')" id="l_M000140_source">show source</a> ]</p>
+  <div id="M000140_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/message_channel.rb, line 93</span>
  93:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">read</span>
@@ -307,12 +307,12 @@ wrong.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000150"></a><b>read_scalar</b>(max_size = nil)
+    <a name="M000141"></a><b>read_scalar</b>(max_size = nil)
   </div>
   <div class="description">
   <p>
 Read a scalar message from the underlying <a href="../IO.html">IO</a>
-object. Returns the <a href="MessageChannel.html#M000149">read</a> message,
+object. Returns the <a href="MessageChannel.html#M000140">read</a> message,
 or nil on end-of-stream.
 </p>
 <p>
@@ -326,8 +326,8 @@ larger than <tt>max_size</tt>, then a SecurityError will be raised.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000150_source')" id="l_M000150_source">show source</a> ]</p>
-  <div id="M000150_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000141_source')" id="l_M000141_source">show source</a> ]</p>
+  <div id="M000141_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/message_channel.rb, line 133</span>
 133:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">read_scalar</span>(<span class="ruby-identifier">max_size</span> = <span class="ruby-keyword kw">nil</span>)
@@ -362,13 +362,13 @@ larger than <tt>max_size</tt>, then a SecurityError will be raised.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000153"></a><b>recv_io</b>()
+    <a name="M000144"></a><b>recv_io</b>()
   </div>
   <div class="description">
   <p>
 Receive an <a href="../IO.html">IO</a> object (a file descriptor) from the
 channel. The other side must have sent an <a href="../IO.html">IO</a>
-object by calling <a href="MessageChannel.html#M000154">send_io</a>(). Note
+object by calling <a href="MessageChannel.html#M000145">send_io</a>(). Note
 that this only works on Unix sockets.
 </p>
 <p>
@@ -377,8 +377,8 @@ wrong.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000153_source')" id="l_M000153_source">show source</a> ]</p>
-  <div id="M000153_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000144_source')" id="l_M000144_source">show source</a> ]</p>
+  <div id="M000144_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/message_channel.rb, line 196</span>
 196:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">recv_io</span>
@@ -390,13 +390,13 @@ wrong.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000154"></a><b>send_io</b>(io)
+    <a name="M000145"></a><b>send_io</b>(io)
   </div>
   <div class="description">
   <p>
 Send an <a href="../IO.html">IO</a> object (a file descriptor) over the
 channel. The other side must receive the <a href="../IO.html">IO</a> object
-by calling <a href="MessageChannel.html#M000153">recv_io</a>(). Note that
+by calling <a href="MessageChannel.html#M000144">recv_io</a>(). Note that
 this only works on Unix sockets.
 </p>
 <p>
@@ -405,8 +405,8 @@ wrong.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000154_source')" id="l_M000154_source">show source</a> ]</p>
-  <div id="M000154_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000145_source')" id="l_M000145_source">show source</a> ]</p>
+  <div id="M000145_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/message_channel.rb, line 206</span>
 206:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">send_io</span>(<span class="ruby-identifier">io</span>)
@@ -418,7 +418,7 @@ wrong.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000151"></a><b>write</b>(name, *args)
+    <a name="M000142"></a><b>write</b>(name, *args)
   </div>
   <div class="description">
   <p>
@@ -433,8 +433,8 @@ wrong.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000151_source')" id="l_M000151_source">show source</a> ]</p>
-  <div id="M000151_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000142_source')" id="l_M000142_source">show source</a> ]</p>
+  <div id="M000142_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/message_channel.rb, line 167</span>
 167:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">write</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
@@ -456,7 +456,7 @@ wrong.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000152"></a><b>write_scalar</b>(data)
+    <a name="M000143"></a><b>write_scalar</b>(data)
   </div>
   <div class="description">
   <p>
@@ -469,8 +469,8 @@ wrong.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000152_source')" id="l_M000152_source">show source</a> ]</p>
-  <div id="M000152_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000143_source')" id="l_M000143_source">show source</a> ]</p>
+  <div id="M000143_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/message_channel.rb, line 185</span>
 185:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">write_scalar</span>(<span class="ruby-identifier">data</span>)

@@ -85,9 +85,9 @@ fascade for the rest of the spawn manager system.
 <p>
 <b>Note</b>: <a href="SpawnManager.html">SpawnManager</a> may only be
 started synchronously with <a
-href="AbstractServer.html#M000135">AbstractServer#start_synchronously</a>.
+href="AbstractServer.html#M000121">AbstractServer#start_synchronously</a>.
 Starting asynchronously has not been tested. Don&#8216;t forget to call <a
-href="SpawnManager.html#M000123">cleanup</a> after the server&#8216;s main
+href="SpawnManager.html#M000153">cleanup</a> after the server&#8216;s main
 loop has finished.
 </p>
 <h2>Ruby on Rails optimizations</h2>
@@ -116,10 +116,10 @@ work around an obscure bug in ActiveSupport&#8216;s Dispatcher.
 
   <div class="sectiontitle">Methods</div>
   <ul>
-  <li><a href="#M000123">cleanup</a></li>
-  <li><a href="#M000120">new</a></li>
-  <li><a href="#M000122">reload</a></li>
-  <li><a href="#M000121">spawn_application</a></li>
+  <li><a href="#M000153">cleanup</a></li>
+  <li><a href="#M000150">new</a></li>
+  <li><a href="#M000152">reload</a></li>
+  <li><a href="#M000151">spawn_application</a></li>
   </ul>
 
 <div class="sectiontitle">Included Modules</div>
@@ -134,11 +134,11 @@ work around an obscure bug in ActiveSupport&#8216;s Dispatcher.
 <div class="sectiontitle">Public Class methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000120"></a><b>new</b>()
+    <a name="M000150"></a><b>new</b>()
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000120_source')" id="l_M000120_source">show source</a> ]</p>
-  <div id="M000120_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000150_source')" id="l_M000150_source">show source</a> ]</p>
+  <div id="M000150_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/phusion_passenger/spawn_manager.rb, line 61</span>
 61:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>
@@ -180,7 +180,7 @@ work around an obscure bug in ActiveSupport&#8216;s Dispatcher.
 <div class="sectiontitle">Public Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000123"></a><b>cleanup</b>()
+    <a name="M000153"></a><b>cleanup</b>()
   </div>
   <div class="description">
   <p>
@@ -189,8 +189,8 @@ href="SpawnManager.html">SpawnManager</a> is no longer needed.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000123_source')" id="l_M000123_source">show source</a> ]</p>
-  <div id="M000123_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000153_source')" id="l_M000153_source">show source</a> ]</p>
+  <div id="M000153_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/spawn_manager.rb, line 215</span>
 215:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">cleanup</span>
@@ -202,7 +202,7 @@ href="SpawnManager.html">SpawnManager</a> is no longer needed.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000122"></a><b>reload</b>(app_root = nil)
+    <a name="M000152"></a><b>reload</b>(app_root = nil)
   </div>
   <div class="description">
   <p>
@@ -213,8 +213,8 @@ will be removed, no matter the application root.
 <p>
 <b>Long description:</b> <a href="Application.html">Application</a> code
 might be cached in memory. But once it a while, it will be necessary to <a
-href="SpawnManager.html#M000122">reload</a> the code for an application,
-such as after deploying a <a href="SpawnManager.html#M000120">new</a>
+href="SpawnManager.html#M000152">reload</a> the code for an application,
+such as after deploying a <a href="SpawnManager.html#M000150">new</a>
 version of the application. This method makes sure that any cached
 application code is removed, so that the next time an application instance
 is spawned, the application code will be freshly loaded into memory.
@@ -224,8 +224,8 @@ Raises AbstractServer::SpawnError if something went wrong.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000122_source')" id="l_M000122_source">show source</a> ]</p>
-  <div id="M000122_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000152_source')" id="l_M000152_source">show source</a> ]</p>
+  <div id="M000152_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/spawn_manager.rb, line 188</span>
 188:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">reload</span>(<span class="ruby-identifier">app_root</span> = <span class="ruby-keyword kw">nil</span>)
@@ -259,7 +259,7 @@ Raises AbstractServer::SpawnError if something went wrong.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000121"></a><b>spawn_application</b>(options)
+    <a name="M000151"></a><b>spawn_application</b>(options)
   </div>
   <div class="description">
   <p>
@@ -288,12 +288,12 @@ must do one of these things:
 
 <ul>
 <li>Restart this <a href="SpawnManager.html">SpawnManager</a> by calling <a
-href="AbstractServer.html#M000136">AbstractServer#stop</a>, then <a
-href="AbstractServer.html#M000134">AbstractServer#start</a>.
+href="AbstractServer.html#M000122">AbstractServer#stop</a>, then <a
+href="AbstractServer.html#M000120">AbstractServer#start</a>.
 
 </li>
 <li>Reload the application by calling <a
-href="SpawnManager.html#M000122">reload</a> with the correct app_root
+href="SpawnManager.html#M000152">reload</a> with the correct app_root
 argument.
 
 </li>
@@ -354,8 +354,8 @@ exception or called exit() during startup.
 </ul>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000121_source')" id="l_M000121_source">show source</a> ]</p>
-  <div id="M000121_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000151_source')" id="l_M000151_source">show source</a> ]</p>
+  <div id="M000151_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/spawn_manager.rb, line 142</span>
 142:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">spawn_application</span>(<span class="ruby-identifier">options</span>)

@@ -78,7 +78,7 @@ Object
   <div class="description"><p>
 This class maintains a collection of <a
 href="AbstractServer.html">AbstractServer</a> objects. One can add <a
-href="AbstractServerCollection.html#M000101">new</a> <a
+href="AbstractServerCollection.html#M000104">new</a> <a
 href="AbstractServer.html">AbstractServer</a> objects, or look up existing
 ones via a key. <a
 href="AbstractServerCollection.html">AbstractServerCollection</a> also
@@ -106,18 +106,18 @@ followed.
 
   <div class="sectiontitle">Methods</div>
   <ul>
-  <li><a href="#M000108">check_idle_servers!</a></li>
-  <li><a href="#M000112">cleanup</a></li>
-  <li><a href="#M000111">clear</a></li>
-  <li><a href="#M000106">delete</a></li>
-  <li><a href="#M000109">each</a></li>
-  <li><a href="#M000110">each_pair</a></li>
-  <li><a href="#M000105">empty?</a></li>
-  <li><a href="#M000104">has_key?</a></li>
-  <li><a href="#M000103">lookup_or_add</a></li>
-  <li><a href="#M000101">new</a></li>
-  <li><a href="#M000107">register_activity</a></li>
-  <li><a href="#M000102">synchronize</a></li>
+  <li><a href="#M000111">check_idle_servers!</a></li>
+  <li><a href="#M000115">cleanup</a></li>
+  <li><a href="#M000114">clear</a></li>
+  <li><a href="#M000109">delete</a></li>
+  <li><a href="#M000112">each</a></li>
+  <li><a href="#M000113">each_pair</a></li>
+  <li><a href="#M000108">empty?</a></li>
+  <li><a href="#M000107">has_key?</a></li>
+  <li><a href="#M000106">lookup_or_add</a></li>
+  <li><a href="#M000104">new</a></li>
+  <li><a href="#M000110">register_activity</a></li>
+  <li><a href="#M000105">synchronize</a></li>
   </ul>
 
 <div class="sectiontitle">Included Modules</div>
@@ -142,11 +142,11 @@ followed.
 <div class="sectiontitle">Public Class methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000101"></a><b>new</b>()
+    <a name="M000104"></a><b>new</b>()
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000101_source')" id="l_M000101_source">show source</a> ]</p>
-  <div id="M000101_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000104_source')" id="l_M000104_source">show source</a> ]</p>
+  <div id="M000104_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 44</span>
 44:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>
@@ -186,7 +186,7 @@ followed.
 <div class="sectiontitle">Public Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000108"></a><b>check_idle_servers!</b>()
+    <a name="M000111"></a><b>check_idle_servers!</b>()
   </div>
   <div class="description">
   <p>
@@ -195,12 +195,12 @@ instead of sleeping until the next scheduled cleaning time.
 </p>
 <p>
 Precondition: this method must NOT be called within a <a
-href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+href="AbstractServerCollection.html#M000105">#synchronize</a> block.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000108_source')" id="l_M000108_source">show source</a> ]</p>
-  <div id="M000108_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000111_source')" id="l_M000111_source">show source</a> ]</p>
+  <div id="M000111_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 198</span>
 198:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">check_idle_servers!</span>
@@ -215,7 +215,7 @@ href="AbstractServerCollection.html#M000102">#synchronize</a> block.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000112"></a><b>cleanup</b>()
+    <a name="M000115"></a><b>cleanup</b>()
   </div>
   <div class="description">
   <p>
@@ -233,12 +233,12 @@ will become unusable.
 </p>
 <p>
 Precondition: this method must <b>NOT</b> be called within a <a
-href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+href="AbstractServerCollection.html#M000105">#synchronize</a> block.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000112_source')" id="l_M000112_source">show source</a> ]</p>
-  <div id="M000112_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000115_source')" id="l_M000115_source">show source</a> ]</p>
+  <div id="M000115_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 246</span>
 246:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">cleanup</span>
@@ -258,7 +258,7 @@ href="AbstractServerCollection.html#M000102">#synchronize</a> block.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000111"></a><b>clear</b>()
+    <a name="M000114"></a><b>clear</b>()
   </div>
   <div class="description">
   <p>
@@ -268,12 +268,12 @@ necessary.
 </p>
 <p>
 Precondition: this method must be called within a <a
-href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+href="AbstractServerCollection.html#M000105">#synchronize</a> block.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000111_source')" id="l_M000111_source">show source</a> ]</p>
-  <div id="M000111_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000114_source')" id="l_M000114_source">show source</a> ]</p>
+  <div id="M000114_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 228</span>
 228:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">clear</span>
@@ -291,7 +291,7 @@ href="AbstractServerCollection.html#M000102">#synchronize</a> block.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000106"></a><b>delete</b>(key)
+    <a name="M000109"></a><b>delete</b>(key)
   </div>
   <div class="description">
   <p>
@@ -306,12 +306,12 @@ will be stopped before deletion.
 </p>
 <p>
 Precondition: this method must be called within a <a
-href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+href="AbstractServerCollection.html#M000105">#synchronize</a> block.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000106_source')" id="l_M000106_source">show source</a> ]</p>
-  <div id="M000106_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000109_source')" id="l_M000109_source">show source</a> ]</p>
+  <div id="M000109_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 162</span>
 162:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">delete</span>(<span class="ruby-identifier">key</span>)
@@ -333,7 +333,7 @@ href="AbstractServerCollection.html#M000102">#synchronize</a> block.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000109"></a><b>each</b>() {|server| ...}
+    <a name="M000112"></a><b>each</b>() {|server| ...}
   </div>
   <div class="description">
   <p>
@@ -341,12 +341,12 @@ Iterate over all <a href="AbstractServer.html">AbstractServer</a> objects.
 </p>
 <p>
 Precondition: this method must be called within a <a
-href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+href="AbstractServerCollection.html#M000105">#synchronize</a> block.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000109_source')" id="l_M000109_source">show source</a> ]</p>
-  <div id="M000109_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000112_source')" id="l_M000112_source">show source</a> ]</p>
+  <div id="M000112_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 208</span>
 208:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">each</span>
@@ -360,7 +360,7 @@ href="AbstractServerCollection.html#M000102">#synchronize</a> block.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000110"></a><b>each_pair</b>() {|key, server| ...}
+    <a name="M000113"></a><b>each_pair</b>() {|key, server| ...}
   </div>
   <div class="description">
   <p>
@@ -369,12 +369,12 @@ href="AbstractServer.html">AbstractServer</a> objects.
 </p>
 <p>
 Precondition: this method must be called within a <a
-href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+href="AbstractServerCollection.html#M000105">#synchronize</a> block.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000110_source')" id="l_M000110_source">show source</a> ]</p>
-  <div id="M000110_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000113_source')" id="l_M000113_source">show source</a> ]</p>
+  <div id="M000113_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 217</span>
 217:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">each_pair</span>
@@ -389,7 +389,7 @@ href="AbstractServerCollection.html#M000102">#synchronize</a> block.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000105"></a><b>empty?</b>()
+    <a name="M000108"></a><b>empty?</b>()
   </div>
   <div class="description">
   <p>
@@ -397,12 +397,12 @@ Checks whether the collection is empty.
 </p>
 <p>
 Precondition: this method must be called within a <a
-href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+href="AbstractServerCollection.html#M000105">#synchronize</a> block.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000105_source')" id="l_M000105_source">show source</a> ]</p>
-  <div id="M000105_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000108_source')" id="l_M000108_source">show source</a> ]</p>
+  <div id="M000108_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 152</span>
 152:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">empty?</span>
@@ -414,7 +414,7 @@ href="AbstractServerCollection.html#M000102">#synchronize</a> block.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000104"></a><b>has_key?</b>(key)
+    <a name="M000107"></a><b>has_key?</b>(key)
   </div>
   <div class="description">
   <p>
@@ -424,12 +424,12 @@ given key.
 </p>
 <p>
 Precondition: this method must be called within a <a
-href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+href="AbstractServerCollection.html#M000105">#synchronize</a> block.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000104_source')" id="l_M000104_source">show source</a> ]</p>
-  <div id="M000104_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000107_source')" id="l_M000107_source">show source</a> ]</p>
+  <div id="M000107_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 145</span>
 145:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">has_key?</span>(<span class="ruby-identifier">key</span>)
@@ -441,7 +441,7 @@ href="AbstractServerCollection.html#M000102">#synchronize</a> block.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000103"></a><b>lookup_or_add</b>(key) {|| ...}
+    <a name="M000106"></a><b>lookup_or_add</b>(key) {|| ...}
   </div>
   <div class="description">
   <p>
@@ -469,12 +469,12 @@ and the exception will be propagated.
 </p>
 <p>
 Precondition: this method must be called within a <a
-href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+href="AbstractServerCollection.html#M000105">#synchronize</a> block.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000103_source')" id="l_M000103_source">show source</a> ]</p>
-  <div id="M000103_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000106_source')" id="l_M000106_source">show source</a> ]</p>
+  <div id="M000106_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 119</span>
 119:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">lookup_or_add</span>(<span class="ruby-identifier">key</span>)
@@ -505,7 +505,7 @@ href="AbstractServerCollection.html#M000102">#synchronize</a> block.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000107"></a><b>register_activity</b>(server)
+    <a name="M000110"></a><b>register_activity</b>(server)
   </div>
   <div class="description">
   <p>
@@ -516,21 +516,21 @@ href="AbstractServerCollection.html">AbstractServerCollection</a> will
 update the idle information associated with <tt>server</tt> accordingly.
 </p>
 <p>
-<a href="AbstractServerCollection.html#M000103">lookup_or_add</a> already
+<a href="AbstractServerCollection.html#M000106">lookup_or_add</a> already
 automatically updates idle information, so you only need to call this
 method if the time at which the server has performed an activity is not
 close to the time at which <a
-href="AbstractServerCollection.html#M000103">lookup_or_add</a> had been
+href="AbstractServerCollection.html#M000106">lookup_or_add</a> had been
 called.
 </p>
 <p>
 Precondition: this method must be called within a <a
-href="AbstractServerCollection.html#M000102">#synchronize</a> block.
+href="AbstractServerCollection.html#M000105">#synchronize</a> block.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000107_source')" id="l_M000107_source">show source</a> ]</p>
-  <div id="M000107_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000110_source')" id="l_M000110_source">show source</a> ]</p>
+  <div id="M000110_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 185</span>
 185:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">register_activity</span>(<span class="ruby-identifier">server</span>)
@@ -547,7 +547,7 @@ href="AbstractServerCollection.html#M000102">#synchronize</a> block.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000102"></a><b>synchronize</b>() {|| ...}
+    <a name="M000105"></a><b>synchronize</b>() {|| ...}
   </div>
   <div class="description">
   <p>
@@ -558,8 +558,8 @@ operation.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000102_source')" id="l_M000102_source">show source</a> ]</p>
-  <div id="M000102_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000105_source')" id="l_M000105_source">show source</a> ]</p>
+  <div id="M000105_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_server_collection.rb, line 78</span>
  78:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">synchronize</span>

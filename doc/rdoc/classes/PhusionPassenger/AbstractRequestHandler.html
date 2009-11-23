@@ -161,11 +161,11 @@ and sends it to the request handler.
 
   <div class="sectiontitle">Methods</div>
   <ul>
-  <li><a href="#M000125">cleanup</a></li>
-  <li><a href="#M000127">main_loop</a></li>
-  <li><a href="#M000126">main_loop_running?</a></li>
-  <li><a href="#M000124">new</a></li>
-  <li><a href="#M000128">start_main_loop_thread</a></li>
+  <li><a href="#M000135">cleanup</a></li>
+  <li><a href="#M000137">main_loop</a></li>
+  <li><a href="#M000136">main_loop_running?</a></li>
+  <li><a href="#M000134">new</a></li>
+  <li><a href="#M000138">start_main_loop_thread</a></li>
   </ul>
 
 <div class="sectiontitle">Included Modules</div>
@@ -268,7 +268,7 @@ exceptions.
     <td class='attr-name'>socket_name</td>
     <td class='attr-desc'>
 The name of the socket on which the request handler accepts <a
-href="AbstractRequestHandler.html#M000124">new</a> connections. At this
+href="AbstractRequestHandler.html#M000134">new</a> connections. At this
 moment, this value is always the filename of a Unix domain socket.
 
 <p>
@@ -292,11 +292,11 @@ always &#8216;unix&#8217;, which indicates a Unix domain socket.
 <div class="sectiontitle">Public Class methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000124"></a><b>new</b>(owner_pipe, options = {})
+    <a name="M000134"></a><b>new</b>(owner_pipe, options = {})
   </div>
   <div class="description">
   <p>
-Create a <a href="AbstractRequestHandler.html#M000124">new</a>
+Create a <a href="AbstractRequestHandler.html#M000134">new</a>
 RequestHandler with the given owner pipe. <tt>owner_pipe</tt> must be the
 readable part of a pipe <a href="../IO.html">IO</a> object.
 </p>
@@ -310,8 +310,8 @@ Additionally, the following options may be given:
 </ul>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000124_source')" id="l_M000124_source">show source</a> ]</p>
-  <div id="M000124_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000134_source')" id="l_M000134_source">show source</a> ]</p>
+  <div id="M000134_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_request_handler.rb, line 137</span>
 137:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">owner_pipe</span>, <span class="ruby-identifier">options</span> = {})
@@ -338,7 +338,7 @@ Additionally, the following options may be given:
 <div class="sectiontitle">Public Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000125"></a><b>cleanup</b>()
+    <a name="M000135"></a><b>cleanup</b>()
   </div>
   <div class="description">
   <p>
@@ -346,19 +346,19 @@ Clean up temporary stuff created by the request handler.
 </p>
 <p>
 If the main loop was started by <a
-href="AbstractRequestHandler.html#M000127">#main_loop</a>, then this method
+href="AbstractRequestHandler.html#M000137">#main_loop</a>, then this method
 may only be called after the main loop has exited.
 </p>
 <p>
 If the main loop was started by <a
-href="AbstractRequestHandler.html#M000128">#start_main_loop_thread</a>,
+href="AbstractRequestHandler.html#M000138">#start_main_loop_thread</a>,
 then this method may be called at any time, and it will stop the main loop
 thread.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000125_source')" id="l_M000125_source">show source</a> ]</p>
-  <div id="M000125_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000135_source')" id="l_M000135_source">show source</a> ]</p>
+  <div id="M000135_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_request_handler.rb, line 162</span>
 162:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">cleanup</span>
@@ -378,7 +378,7 @@ thread.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000127"></a><b>main_loop</b>()
+    <a name="M000137"></a><b>main_loop</b>()
   </div>
   <div class="description">
   <p>
@@ -386,8 +386,8 @@ Enter the request handler&#8216;s main loop.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000127_source')" id="l_M000127_source">show source</a> ]</p>
-  <div id="M000127_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000137_source')" id="l_M000137_source">show source</a> ]</p>
+  <div id="M000137_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_request_handler.rb, line 180</span>
 180:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">main_loop</span>
@@ -459,7 +459,7 @@ Enter the request handler&#8216;s main loop.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000126"></a><b>main_loop_running?</b>()
+    <a name="M000136"></a><b>main_loop_running?</b>()
   </div>
   <div class="description">
   <p>
@@ -467,8 +467,8 @@ Check whether the main loop&#8216;s currently running.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000126_source')" id="l_M000126_source">show source</a> ]</p>
-  <div id="M000126_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000136_source')" id="l_M000136_source">show source</a> ]</p>
+  <div id="M000136_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_request_handler.rb, line 175</span>
 175:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">main_loop_running?</span>
@@ -480,18 +480,18 @@ Check whether the main loop&#8216;s currently running.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000128"></a><b>start_main_loop_thread</b>()
+    <a name="M000138"></a><b>start_main_loop_thread</b>()
   </div>
   <div class="description">
   <p>
 Start the main loop in a <a
-href="AbstractRequestHandler.html#M000124">new</a> thread. This thread will
-be stopped by <a href="AbstractRequestHandler.html#M000125">#cleanup</a>.
+href="AbstractRequestHandler.html#M000134">new</a> thread. This thread will
+be stopped by <a href="AbstractRequestHandler.html#M000135">#cleanup</a>.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000128_source')" id="l_M000128_source">show source</a> ]</p>
-  <div id="M000128_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000138_source')" id="l_M000138_source">show source</a> ]</p>
+  <div id="M000138_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/abstract_request_handler.rb, line 245</span>
 245:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">start_main_loop_thread</span>

@@ -554,6 +554,22 @@ describe "Apache 2 module" do
 		it_should_behave_like "HelloWorld Rack application"
 	end
 	
+	describe "Rack application running within Rails directory structure" do
+		before :all do
+			@stub = setup_rails_stub('mycook')
+			FileUtils.cp_r("stub/rack/.", @stub.app_root)
+			@apache2.set_vhost('passenger.test', File.expand_path(@stub.app_root) + "/public")
+			@apache2.start
+			@server = "http://passenger.test:#{@apache2.port}"
+		end
+
+		after :all do
+			@stub.destroy
+		end
+
+		it_should_behave_like "HelloWorld Rack application"
+	end
+
 	describe "WSGI application running in root URI" do
 		before :all do
 			@stub = setup_stub('wsgi')

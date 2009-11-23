@@ -109,15 +109,6 @@ private:
 	
 public:
 	/**
-	 * The platform's minimum stack size, in bytes.
-	 */
-	#if defined(PTHREAD_STACK_MIN)
-		static const unsigned int MIN_STACK_SIZE = PTHREAD_STACK_MIN;
-	#else
-		static const unsigned int MIN_STACK_SIZE = 1024 * 128;
-	#endif
-	
-	/**
 	 * Create a new thread.
 	 *
 	 * @param func A function object which will be called as the thread's
@@ -139,8 +130,18 @@ public:
 		initialize_data(name);
 		
 		set_thread_main_function(boost::bind(thread_main, func, data));
-		if (stack_size < MIN_STACK_SIZE) {
-			stack_size = MIN_STACK_SIZE;
+		
+		unsigned long min_stack_size;
+		#ifdef PTHREAD_STACK_MIN
+			// PTHREAD_STACK_MIN may not be a constant macro so we need
+			// to evaluate it dynamically.
+			min_stack_size = PTHREAD_STACK_MIN;
+		#else
+			// Assume minimum stack size is 128 KB.
+			min_stack_size = 128 * 1024;
+		#endif
+		if (stack_size < min_stack_size) {
+			stack_size = min_stack_size;
 		}
 		start_thread(stack_size);
 	}

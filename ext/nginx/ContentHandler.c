@@ -91,18 +91,18 @@ detect_application_type(const ngx_str_t *public_dir) {
     
     ngx_memzero(filename, sizeof(filename));
     ngx_snprintf(filename, sizeof(filename), "%s/%s",
-                 public_dir->data, "../config/environment.rb");
-    if (file_exists(filename, 1)) {
-        return AP_RAILS;
-    }
-    
-    ngx_memzero(filename, sizeof(filename));
-    ngx_snprintf(filename, sizeof(filename), "%s/%s",
                  public_dir->data, "../config.ru");
     if (file_exists(filename, 1)) {
         return AP_RACK;
     }
     
+    ngx_memzero(filename, sizeof(filename));
+    ngx_snprintf(filename, sizeof(filename), "%s/%s",
+                 public_dir->data, "../config/environment.rb");
+    if (file_exists(filename, 1)) {
+        return AP_RAILS;
+    }
+        
     ngx_memzero(filename, sizeof(filename));
     ngx_snprintf(filename, sizeof(filename), "%s/%s",
                  public_dir->data, "../passenger_wsgi.py");
@@ -325,14 +325,18 @@ create_request(ngx_http_request_t *r)
     
     end = ngx_snprintf(framework_spawner_idle_time_string,
                        sizeof(framework_spawner_idle_time_string) - 1,
-                       "%d", slcf->framework_spawner_idle_time);
+                       "%d",
+                       (slcf->framework_spawner_idle_time == (ngx_int_t) -1) ?
+                           -1 : slcf->framework_spawner_idle_time);
     *end = '\0';
     len += sizeof("PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME") +
            ngx_strlen(framework_spawner_idle_time_string) + 1;
     
     end = ngx_snprintf(app_spawner_idle_time_string,
                        sizeof(app_spawner_idle_time_string) - 1,
-                       "%d", slcf->app_spawner_idle_time);
+                       "%d",
+                       (slcf->app_spawner_idle_time == (ngx_int_t) -1) ?
+                           -1 : slcf->app_spawner_idle_time);
     *end = '\0';
     len += sizeof("PASSENGER_APP_SPAWNER_IDLE_TIME") +
            ngx_strlen(app_spawner_idle_time_string) + 1;

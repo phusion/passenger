@@ -84,8 +84,8 @@ A request handler for <a href="../Rack.html">Rack</a> applications.
 
   <div class="sectiontitle">Methods</div>
   <ul>
-  <li><a href="#M000056">new</a></li>
-  <li><a href="#M000057">process_request</a></li>
+  <li><a href="#M000042">new</a></li>
+  <li><a href="#M000043">process_request</a></li>
   </ul>
 
 
@@ -96,7 +96,7 @@ A request handler for <a href="../Rack.html">Rack</a> applications.
 <div class="sectiontitle">Public Class methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000056"></a><b>new</b>(owner_pipe, app, options = {})
+    <a name="M000042"></a><b>new</b>(owner_pipe, app, options = {})
   </div>
   <div class="description">
   <p>
@@ -104,8 +104,8 @@ A request handler for <a href="../Rack.html">Rack</a> applications.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000056_source')" id="l_M000056_source">show source</a> ]</p>
-  <div id="M000056_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000042_source')" id="l_M000042_source">show source</a> ]</p>
+  <div id="M000042_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/phusion_passenger/rack/request_handler.rb, line 59</span>
 59:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">owner_pipe</span>, <span class="ruby-identifier">app</span>, <span class="ruby-identifier">options</span> = {})
@@ -119,7 +119,7 @@ A request handler for <a href="../Rack.html">Rack</a> applications.
 <div class="sectiontitle">Protected Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000057"></a><b>process_request</b>(env, input, output)
+    <a name="M000043"></a><b>process_request</b>(env, input, output)
   </div>
   <div class="description">
   <p>
@@ -127,8 +127,8 @@ Overrided method.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000057_source')" id="l_M000057_source">show source</a> ]</p>
-  <div id="M000057_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000043_source')" id="l_M000043_source">show source</a> ]</p>
+  <div id="M000043_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/rack/request_handler.rb, line 66</span>
  66:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">process_request</span>(<span class="ruby-identifier">env</span>, <span class="ruby-identifier">input</span>, <span class="ruby-identifier">output</span>)
