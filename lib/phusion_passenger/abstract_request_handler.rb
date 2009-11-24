@@ -27,6 +27,7 @@ require 'fcntl'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/utils'
 require 'phusion_passenger/utils/unseekable_socket'
+require 'phusion_passenger/utils/message_client'
 require 'phusion_passenger/constants'
 module PhusionPassenger
 
@@ -134,11 +135,20 @@ class AbstractRequestHandler
 	# exceptions.
 	attr_reader :processed_requests
 	
+	# If a soft termination signal was received, then the main loop will quit
+	# the given amount of seconds after the last time a connection was accepted.
+	# Defaults to 3 seconds.
+	attr_accessor :soft_termination_linger_time
+	
 	# Create a new RequestHandler with the given owner pipe.
 	# +owner_pipe+ must be the readable part of a pipe IO object.
 	#
 	# Additionally, the following options may be given:
 	# - memory_limit: Used to set the +memory_limit+ attribute.
+	# - detach_key
+	# - connect_password
+	# - pool_account_username
+	# - pool_account_password_base64
 	def initialize(owner_pipe, options = {})
 		# TODO: password protect the sockets
 		
@@ -160,10 +170,16 @@ class AbstractRequestHandler
 		@main_loop_generation  = 0
 		@main_loop_thread_lock = Mutex.new
 		@main_loop_thread_cond = ConditionVariable.new
-		@memory_limit = options["memory_limit"] || 0
-		@iterations = 0
+		@memory_limit          = options["memory_limit"] || 0
+		@detach_key            = options["detach_key"]
+		@pool_account_username = options["pool_account_username"]
+		if options["pool_account_password_base64"]
+			@pool_account_password = options["pool_account_password_base64"].unpack('m').first
+		end
+		@iterations         = 0
 		@processed_requests = 0
-		@main_loop_running = false
+		@soft_termination_linger_time = 3
+		@main_loop_running  = false
 		
 		#############
 	end
@@ -209,6 +225,8 @@ class AbstractRequestHandler
 				@main_loop_generation += 1
 				@main_loop_running = true
 				@main_loop_thread_cond.broadcast
+				
+				@select_timeout = nil
 				
 				@selectable_sockets = []
 				@server_sockets.each_value do |value|
@@ -261,6 +279,26 @@ class AbstractRequestHandler
 		@main_loop_thread_lock.synchronize do
 			while @main_loop_generation == current_generation
 				@main_loop_thread_cond.wait(@main_loop_thread_lock)
+			end
+		end
+	end
+	
+	# Remove this request handler from the application pool so that no
+	# new connections will come in. Then make the main loop quit a few
+	# seconds after the last time a connection came in. This all is to
+	# ensure that no connections come in while we're shutting down.
+	#
+	# May only be called while the main loop is running. May be called
+	# from any thread.
+	def soft_shutdown
+		@select_timeout = @soft_termination_linger_time
+		@graceful_termination_pipe[1].close rescue nil
+		if @detach_key && @pool_account_username && @pool_account_password
+			client = Utils::MessageClient.new(@pool_account_username, @pool_account_password)
+			begin
+				client.detach(@detach_key)
+			ensure
+				client.close
 			end
 		end
 	end
@@ -350,7 +388,11 @@ private
 		trappable_signals = Signal.list_trappable
 		
 		trap(SOFT_TERMINATION_SIGNAL) do
-			@graceful_termination_pipe[1].close rescue nil
+			begin
+				soft_shutdown
+			rescue => e
+				print_exception("Passenger RequestHandler soft shutdown routine", e)
+			end
 		end if trappable_signals.has_key?(SOFT_TERMINATION_SIGNAL.sub(/^SIG/, ''))
 		
 		trap('ABRT') do
@@ -370,7 +412,15 @@ private
 	end
 	
 	def accept_and_process_next_request(socket_wrapper, channel, buffer)
-		ios = select(@selectable_sockets).first
+		select_result = select(@selectable_sockets, nil, nil, @select_timeout)
+		if select_result.nil?
+			# This can only happen after we've received a soft termination
+			# signal. No connection was accepted for @select_timeout seconds,
+			# so now we quit the main loop.
+			return false
+		end
+		
+		ios = select_result.first
 		if ios.include?(@main_socket)
 			connection = socket_wrapper.wrap(@main_socket.accept)
 			channel.io = connection
@@ -385,7 +435,25 @@ private
 			# graceful termination pipe has been closed. This is our
 			# call to gracefully terminate (after having processed all
 			# incoming requests).
-			return false
+			if @select_timeout
+				# But if @select_timeout is set then it means that we
+				# received a soft termination signal. In that case
+				# we don't want to quit immediately, but @select_timeout
+				# seconds after the last time a connection was accepted.
+				#
+				# #soft_shutdown not only closes the graceful termination
+				# pipe, but it also tells the application pool to remove
+				# this process from the pool, which will cause the owner
+				# pipe to be closed. So we remove both IO objects
+				# from @selectable_sockets in order to prevent the
+				# next select call from immediately returning, allowing
+				# it to time out.
+				@selectable_sockets.delete(@graceful_termination_pipe[0])
+				@selectable_sockets.delete(@owner_pipe)
+				return true
+			else
+				return false
+			end
 		end
 		
 		if headers

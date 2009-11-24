@@ -179,7 +179,10 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 			Utils.h),
 		'AccountsDatabase.o' => %w(
 			AccountsDatabase.cpp
-			AccountsDatabase.h),
+			AccountsDatabase.h
+			RandomGenerator.h
+			MessageServer.h
+			Utils.h),
 		'HelperServerStarter.o' => %w(
 			HelperServerStarter.cpp
 			HelperServerStarter.h
@@ -337,6 +340,8 @@ end
 		'ext/common/MessageServer.h',
 		'ext/common/Timer.h',
 		'ext/common/Logging.h',
+		'ext/common/SpawnManager.h',
+		'ext/common/Account.h',
 		'ext/common/ApplicationPool/Interface.h',
 		'ext/common/ApplicationPool/Pool.h',
 		'ext/common/ApplicationPool/Server.h',
@@ -515,6 +520,7 @@ end
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
 			ext/common/Process.h
+			ext/common/Account.h
 			ext/common/MessageChannel.h),
 		'test/cxx/ApplicationPool_ServerTest.o' => %w(
 			test/cxx/ApplicationPool_ServerTest.cpp

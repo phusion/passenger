@@ -21,6 +21,8 @@ Release 3.0.0
    passenger_enabled can now be specified in http block)
  * App processes are now individually addressable via HTTP, for
    debugging purposes.
+ * Killing an app with SIGUSR1 now ensures that no connections are dropped
+   through race conditions, even on high volume websites.
 
 
 Release 2.2.7

@@ -77,8 +77,9 @@ using namespace std;
  * Session is not guaranteed to be thread-safe.
  */
 class Session {
-private:
-	string poolIdentifier;
+protected:
+	string detachKey;
+	string connectPassword;
 	
 public:
 	/**
@@ -288,12 +289,12 @@ public:
 	 */
 	virtual pid_t getPid() const = 0;
 	
-	virtual string getPoolIdentifier() const {
-		return poolIdentifier;
+	const string getDetachKey() const {
+		return detachKey;
 	}
 	
-	virtual void setPoolIdentifier(const string &poolIdentifier) {
-		this->poolIdentifier = poolIdentifier;
+	const string getConnectPassword() const {
+		return connectPassword;
 	}
 };
 
@@ -318,15 +319,20 @@ public:
 	StandardSession(pid_t pid,
 	                const function<void()> &closeCallback,
 	                const string &socketType,
-	                const string &socketName) {
+	                const string &socketName,
+	                const string &detachKey,
+	                const string &connectPassword)
+	{
 		TRACE_POINT();
 		if (socketType != "unix" && socketType != "tcp") {
 			throw IOException("Unsupported socket type '" + socketType + "'");
 		}
 		this->pid = pid;
 		this->closeCallback = closeCallback;
-		this->socketType = socketType;
-		this->socketName = socketName;
+		this->socketType    = socketType;
+		this->socketName    = socketName;
+		this->detachKey     = detachKey;
+		this->connectPassword = connectPassword;
 		fd = -1;
 		isInitiated = false;
 	}

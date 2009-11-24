@@ -25,8 +25,13 @@ describe AbstractRequestHandler do
 		FileUtils.rm_rf("abstract_request_handler_spec.tmp")
 	end
 	
-	def prepare
-		# Do nothing. To be overrided by sub describe blocks.
+	def connect
+		if @request_handler.server_sockets[:main][1] == "unix"
+			return UNIXSocket.new(@request_handler.server_sockets[:main][0])
+		else
+			addr, port = @request_handler.server_sockets[:main][0].split(/:/)
+			return TCPSocket.new(addr, port.to_i)
+		end
 	end
 	
 	it "exits if the owner pipe is closed" do
@@ -63,12 +68,7 @@ describe AbstractRequestHandler do
 	
 	it "accepts pings on the main server socket" do
 		@request_handler.start_main_loop_thread
-		if @request_handler.server_sockets[:main][1] == "unix"
-			client = UNIXSocket.new(@request_handler.server_sockets[:main][0])
-		else
-			addr, port = @request_handler.server_sockets[:main][0].split(/:/)
-			client = TCPSocket.new(addr, port.to_i)
-		end
+		client = connect
 		begin
 			channel = MessageChannel.new(client)
 			channel.write_scalar("REQUEST_METHOD\0PING\0")
@@ -156,6 +156,37 @@ describe AbstractRequestHandler do
 			@client.read
 		end
 	end
+	
+	specify "upon receiving a soft shutdown signal, the main loop quits a while after the last connection was accepted" do
+		@request_handler.soft_termination_linger_time = 0.2
+		@request_handler.start_main_loop_thread
+		@request_handler.soft_shutdown
+		
+		# Each time we ping the server it should reset the exit time.
+		deadline = Time.now + 0.6
+		while Time.now < deadline
+			@request_handler.should be_main_loop_running
+			client = connect
+			begin
+				channel = MessageChannel.new(client)
+				channel.write_scalar("REQUEST_METHOD\0PING\0")
+				client.read
+				sleep 0.02
+			ensure
+				client.close
+			end
+		end
+		@request_handler.should be_main_loop_running
+		
+		# After we're done pinging it should quit within a short period of time.
+		deadline = Time.now + 0.6
+		while Time.now < deadline && @request_handler.main_loop_running?
+			sleep 0.01
+		end
+		@request_handler.should_not be_main_loop_running
+	end
+	
+	############################
 	
 	def wait_until
 		while !yield

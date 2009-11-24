@@ -135,7 +135,6 @@ private:
 	
 	struct ProcessInfo {
 		ProcessPtr process;
-		string identifier;
 		unsigned long long startTime;
 		time_t lastUsed;
 		unsigned int sessions;
@@ -145,11 +144,7 @@ private:
 		bool detached;
 		
 		ProcessInfo() {
-			char buf[32];
-			generateSecureToken(buf, sizeof(buf));
-			
 			startTime  = SystemTime::getMsec();
-			identifier = toHex(StaticString(buf, sizeof(buf)));
 			lastUsed   = 0;
 			sessions   = 0;
 			processed  = 0;
@@ -425,7 +420,7 @@ private:
 		}
 	}
 	
-	bool detachWithoutLock(const string &identifier) {
+	bool detachWithoutLock(const string &detachKey) {
 		GroupMap::iterator group_it;
 		GroupMap::iterator group_it_end = groups.end();
 		
@@ -437,7 +432,7 @@ private:
 			
 			for (; process_info_it != process_info_it_end; process_info_it++) {
 				ProcessInfoPtr processInfo = *process_info_it;
-				if (processInfo->identifier == identifier) {
+				if (processInfo->process->getDetachKey() == detachKey) {
 					// Found a matching process.
 					processInfo->detached = true;
 					processes.erase(processInfo->iterator);
@@ -730,6 +725,7 @@ public:
 	 */
 	Pool(const string &spawnServerCommand,
 	     const ServerInstanceDir::GenerationPtr &generation,
+	     const AccountPtr &poolAccount = AccountPtr(),
 	     const string &logFile = "",
 	     const string &rubyCommand = "ruby")
 	   : data(new SharedData()),
@@ -744,7 +740,8 @@ public:
 		inactiveApps(data->inactiveApps)
 	{
 		TRACE_POINT();
-		this->spawnManager = ptr(new SpawnManager(spawnServerCommand, generation, logFile, rubyCommand));
+		this->spawnManager = ptr(new SpawnManager(spawnServerCommand, generation,
+			poolAccount, logFile, rubyCommand));
 		initialize();
 	}
 	
@@ -809,13 +806,12 @@ public:
 					SessionCloseCallback(data, processInfo),
 					options.initiateSession
 				);
-				session->setPoolIdentifier(processInfo->identifier);
 				return session;
 				
 			} catch (SystemException &e) {
 				{
 					unique_lock<boost::mutex> l(lock);
-					detachWithoutLock(processInfo->identifier);
+					detachWithoutLock(processInfo->process->getDetachKey());
 					processInfo->sessions--;
 					P_ASSERT(verifyState(), SessionPtr(),
 						"ApplicationPool state is valid:\n" << inspectWithoutLock());
@@ -834,7 +830,7 @@ public:
 			} catch (exception &e) {
 				{
 					unique_lock<boost::mutex> l(lock);
-					detachWithoutLock(processInfo->identifier);
+					detachWithoutLock(processInfo->process->getDetachKey());
 					processInfo->sessions--;
 					P_ASSERT(verifyState(), SessionPtr(),
 						"ApplicationPool state is valid:\n" << inspectWithoutLock());
@@ -853,9 +849,9 @@ public:
 		return SessionPtr();
 	}
 	
-	virtual bool detach(const string &identifier) {
+	virtual bool detach(const string &detachKey) {
 		unique_lock<boost::mutex> l(lock);
-		return detachWithoutLock(identifier);
+		return detachWithoutLock(detachKey);
 	}
 	
 	virtual void clear() {

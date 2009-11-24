@@ -130,11 +130,16 @@ protected:
 		bool isInitiated;
 		
 	public:
-		RemoteSession(SharedDataPtr data, pid_t pid, string socketType, string socketName, int id) {
+		RemoteSession(SharedDataPtr data, pid_t pid, const string &socketType,
+		              const string &socketName, const string &detachKey,
+		              const string &connectPassword, int id)
+		{
 			this->data = data;
 			this->pid = pid;
 			this->socketType = socketType;
 			this->socketName = socketName;
+			this->detachKey  = detachKey;
+			this->connectPassword = connectPassword;
 			this->id = id;
 			fd = -1;
 			isInitiated = false;
@@ -447,14 +452,14 @@ public:
 		return data->connected();
 	}
 	
-	virtual bool detach(const string &identifier) {
+	virtual bool detach(const string &detachKey) {
 		TRACE_POINT();
 		checkConnection();
 		MessageChannel &channel(data->channel);
 		vector<string> args;
 		
 		try {
-			channel.write("detach", identifier.c_str(), NULL);
+			channel.write("detach", detachKey.c_str(), NULL);
 			checkSecurityResponse();
 			if (!channel.read(args)) {
 				throw IOException("Could not read a response from the ApplicationPool server "
@@ -664,17 +669,18 @@ public:
 				pid_t pid = (pid_t) atol(reply[1]);
 				string socketType = reply[2];
 				string socketName = reply[3];
-				string poolIdentifier = reply[4];
-				int sessionID = atoi(reply[5]);
+				string detachKey = reply[4];
+				string connectPassword = reply[5];
+				int sessionID = atoi(reply[6]);
 				
-				SessionPtr session(new RemoteSession(data, pid, socketType, socketName, sessionID));
-				session->setPoolIdentifier(poolIdentifier);
+				SessionPtr session(new RemoteSession(data, pid, socketType, socketName,
+					detachKey, connectPassword, sessionID));
 				if (options.initiateSession) {
 					try {
 						session->initiate();
 						return session;
 					} catch (...) {
-						detach(poolIdentifier);
+						detach(detachKey);
 						if (attempts == Pool::MAX_GET_ATTEMPTS) {
 							throw;
 						} // else retry

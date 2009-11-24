@@ -27,6 +27,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "AccountsDatabase.h"
+#include "RandomGenerator.h"
 #include "MessageServer.h"
 #include "Utils.h"
 
@@ -39,28 +40,26 @@ AccountsDatabase::createDefault(const ServerInstanceDir::GenerationPtr &generati
 	AccountsDatabasePtr database(new AccountsDatabase());
 	uid_t defaultUid;
 	gid_t defaultGid;
-	struct {
-		char passengerStatus[MessageServer::MAX_PASSWORD_SIZE];
-	} passwords;
-	string passengerStatusPasswordString;
+	RandomGenerator random;
+	string passengerStatusPassword = random.generateByteString(MessageServer::MAX_PASSWORD_SIZE);
 	
 	determineLowestUserAndGroup(defaultUser, defaultUid, defaultGid);
 	
-	generateSecureToken(&passwords, sizeof(passwords));
-	passengerStatusPasswordString.assign(passwords.passengerStatus, sizeof(passwords.passengerStatus));
-	
 	// An account for the 'passenger-status' command. Its password is only readable by
 	// root, or (if user switching is turned off) only by the web server's user.
-	database->add("_passenger-status", passengerStatusPasswordString, false,
+	database->add("_passenger-status", passengerStatusPassword, false,
 		Account::INSPECT_BASIC_INFO | Account::INSPECT_SENSITIVE_INFO |
 		Account::INSPECT_BACKTRACES);
 	if (geteuid() == 0 && !userSwitching) {
 		createFile(generation->getPath() + "/passenger-status-password.txt",
-			passengerStatusPasswordString, S_IRUSR, defaultUid, defaultGid);
+			passengerStatusPassword, S_IRUSR, defaultUid, defaultGid);
 	} else {
 		createFile(generation->getPath() + "/passenger-status-password.txt",
-			passengerStatusPasswordString, S_IRUSR | S_IWUSR);
+			passengerStatusPassword, S_IRUSR | S_IWUSR);
 	}
+	
+	database->add("_backend", random.generateByteString(MessageServer::MAX_PASSWORD_SIZE),
+		false, Account::DETACH);
 	
 	return database;
 }

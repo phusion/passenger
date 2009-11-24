@@ -85,7 +85,7 @@ private:
 
 public:
 	// Urgh, I can't use 'Rights' here as type because apparently bitwise
-	// ORing two enums result in an int type.
+	// ORing two enums results in an int type.
 	
 	Account(const string &username, const string &passwordOrHash, bool hashGiven, int rights = ALL) {
 		this->username       = username;
@@ -108,6 +108,10 @@ public:
 	
 	void setRights(int rights) {
 		this->rights = (Rights) rights;
+	}
+	
+	string getUsername() const {
+		return username;
 	}
 	
 	string getRawPassword() const {

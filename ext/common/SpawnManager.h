@@ -47,6 +47,9 @@
 #include "AbstractSpawnManager.h"
 #include "ServerInstanceDir.h"
 #include "MessageChannel.h"
+#include "Account.h"
+#include "Base64.h"
+#include "RandomGenerator.h"
 #include "Exceptions.h"
 #include "Logging.h"
 
@@ -89,10 +92,12 @@ private:
 
 	string spawnServerCommand;
 	ServerInstanceDir::GenerationPtr generation;
+	AccountPtr poolAccount;
 	string logFile;
 	string rubyCommand;
 	
 	boost::mutex lock;
+	RandomGenerator random;
 	
 	MessageChannel channel;
 	pid_t pid;
@@ -227,10 +232,24 @@ private:
 		pid_t appPid;
 		int i, nServerSockets, ownerPipe;
 		Process::SocketInfoMap serverSockets;
+		string detachKey = Base64::encode(random.generateByteString(32));
+		string connectPassword = Base64::encode(random.generateByteString(32));
 		
 		try {
 			args.push_back("spawn_application");
 			options.toVector(args);
+			
+			args.push_back("detach_key");
+			args.push_back(detachKey);
+			args.push_back("connect_password");
+			args.push_back(connectPassword);
+			if (poolAccount != NULL) {
+				args.push_back("pool_account_username");
+				args.push_back(poolAccount->getUsername());
+				args.push_back("pool_account_password_base64");
+				args.push_back(Base64::encode(poolAccount->getRawPassword()));
+			}
+			
 			channel.write(args);
 		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not write 'spawn_application' "
@@ -303,7 +322,8 @@ private:
 		}
 		
 		UPDATE_TRACE_POINT();
-		return ProcessPtr(new Process(appRoot, appPid, ownerPipe, serverSockets));
+		return ProcessPtr(new Process(appRoot, appPid, ownerPipe, serverSockets,
+			detachKey, connectPassword));
 	}
 	
 	/**
@@ -394,6 +414,8 @@ public:
 	 * @param spawnServerCommand The filename of the spawn server to use.
 	 * @param generation The server instance dir generation in which
 	 *                   generation-specific are stored.
+	 * @param poolAccount An account with which spawned processes may access
+	 *                    the application pool. May be a null pointer.
 	 * @param logFile Specify a log file that the spawn server should use.
 	 *            Messages on its standard output and standard error channels
 	 *            will be written to this log file. If an empty string is
@@ -406,11 +428,13 @@ public:
 	 */
 	SpawnManager(const string &spawnServerCommand,
 	             const ServerInstanceDir::GenerationPtr &generation,
+	             const AccountPtr &poolAccount = AccountPtr(),
 	             const string &logFile = "",
 	             const string &rubyCommand = "ruby") {
 		TRACE_POINT();
 		this->spawnServerCommand = spawnServerCommand;
-		this->generation = generation;
+		this->generation  = generation;
+		this->poolAccount = poolAccount;
 		this->logFile = logFile;
 		this->rubyCommand = rubyCommand;
 		pid = 0;

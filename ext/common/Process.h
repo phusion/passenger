@@ -73,6 +73,8 @@ private:
 	string appRoot;
 	pid_t pid;
 	int ownerPipe;
+	string detachKey;
+	string connectPassword;
 	SocketInfoMap serverSockets;
 	SocketInfo *mainServerSocket;
 	
@@ -80,20 +82,25 @@ public:
 	/**
 	 * Construct a new Process object.
 	 *
-	 * @param theAppRoot The application root of an application.
+	 * @param appRoot The application root of an application.
 	 *             This must be a valid directory, but the path does not have to be absolute.
 	 * @param pid The process ID of this application process.
 	 * @param ownerPipe The owner pipe of this application process.
 	 * @param serverSockets All the server sockets that this process listens on.
 	 *                      There must a server socket with the name 'main'.
-	 * @post getAppRoot() == theAppRoot && getPid() == pid
+	 * @param detachKey A detach key. Used by the ApplicationPool algorithm.
+	 * @param connectPassword The password to use when connecting to this process.
 	 * @throws ArgumentException If serverSockets has no socket named 'main'.
 	 */
-	Process(const string &theAppRoot, pid_t pid, int ownerPipe, const SocketInfoMap &serverSockets) {
-		appRoot = theAppRoot;
-		this->pid = pid;
-		this->ownerPipe = ownerPipe;
-		this->serverSockets = serverSockets;
+	Process(const string &appRoot, pid_t pid, int ownerPipe, const SocketInfoMap &serverSockets,
+	        const string &detachKey, const string &connectPassword)
+	{
+		this->appRoot         = appRoot;
+		this->pid             = pid;
+		this->ownerPipe       = ownerPipe;
+		this->serverSockets   = serverSockets;
+		this->detachKey       = detachKey;
+		this->connectPassword = connectPassword;
 		if (serverSockets.find("main") == serverSockets.end()) {
 			TRACE_POINT();
 			throw ArgumentException("There must be a server socket named 'main'.");
@@ -139,6 +146,20 @@ public:
 	}
 	
 	/**
+	 * Returns this process's detach key.
+	 */
+	string getDetachKey() const {
+		return detachKey;
+	}
+	
+	/**
+	 * Returns this process's connect password.
+	 */
+	string getConnectPassword() const {
+		return connectPassword;
+	}
+	
+	/**
 	 * Returns a map containing all server sockets that this process
 	 * listens on.
 	 */
@@ -147,10 +168,10 @@ public:
 	}
 	
 	/**
-	 * Request a new session from this application process. This session
-	 * represents the life time of a single request/response pair, and can
-	 * be used to send the request data to the application process, as
-	 * well as receiving the response data.
+	 * Request a new session from this application process by connecting to its
+	 * main server socket. This session represents the life time of a single
+	 * request/response pair, and can be used to send the request data to the
+	 * application process, as well as receiving the response data.
 	 *
 	 * The use of connect() is demonstrated in the following example.
 	 * @code
@@ -194,7 +215,8 @@ public:
 	 */
 	SessionPtr newSession(const function<void()> &closeCallback, bool initiateNow = true) {
 		SessionPtr session(new StandardSession(pid, closeCallback,
-			mainServerSocket->type, mainServerSocket->address));
+			mainServerSocket->type, mainServerSocket->address,
+			detachKey, connectPassword));
 		if (initiateNow) {
 			session->initiate();
 		}
