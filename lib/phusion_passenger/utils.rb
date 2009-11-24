@@ -437,7 +437,7 @@ protected
 	def self.passenger_tmpdir(create = true)
 		dir = @@passenger_tmpdir
 		if dir.nil? || dir.empty?
-			dir = "#{Dir.tmpdir}/passenger.#{Process.pid}"
+			dir = "#{Dir.tmpdir}/passenger.1.0.#{Process.pid}"
 			dir.gsub!(%r{//+}, '/')
 			@@passenger_tmpdir = dir
 		end
