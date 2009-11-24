@@ -382,6 +382,34 @@ protected
 		end
 	end
 	
+	# Returns a string which reports the backtraces for all threads,
+	# or if that's not supported the backtrace for the current thread.
+	def global_backtrace_report
+		if Kernel.respond_to?(:caller_for_all_threads)
+			output = "========== Process #{Process.pid}: backtrace dump ==========\n"
+			caller_for_all_threads.each_pair do |thread, stack|
+				output << ("-" * 60) << "\n"
+				output << "# Thread: #{thread.inspect}, "
+				if thread == Thread.main
+					output << "[main thread], "
+				else
+					output << "[current thread], "
+				end
+				output << "alive = #{thread.alive?}\n"
+				output << ("-" * 60) << "\n"
+				output << "    " << stack.join("\n    ")
+				output << "\n\n"
+			end
+		else
+			output = "========== Process #{Process.pid}: backtrace dump ==========\n"
+			output << ("-" * 60) << "\n"
+			output << "# Current thread: #{Thread.current.inspect}\n"
+			output << ("-" * 60) << "\n"
+			output << "    " << caller.join("\n    ")
+		end
+		return output
+	end
+	
 	def to_boolean(value)
 		return !(value.nil? || value == false || value == "false")
 	end
@@ -593,9 +621,12 @@ class IO
 		end
 	end
 	
-	def close_on_exec!
-		if defined?(Fcntl::F_SETFD)
+	if defined?(Fcntl::F_SETFD)
+		def close_on_exec!
 			fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+		end
+	else
+		def close_on_exec!
 		end
 	end
 end
