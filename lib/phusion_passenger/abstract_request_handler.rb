@@ -26,6 +26,7 @@ require 'socket'
 require 'fcntl'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/utils'
+require 'phusion_passenger/utils/unseekable_socket'
 require 'phusion_passenger/constants'
 module PhusionPassenger
 
@@ -218,7 +219,7 @@ class AbstractRequestHandler
 			end
 			
 			install_useful_signal_handlers
-			socket_wrapper = SocketWrapper.new
+			socket_wrapper = Utils::UnseekableSocket.new
 			channel        = MessageChannel.new
 			buffer         = ''
 			
@@ -417,10 +418,12 @@ private
 			end
 		end
 		return true
-	rescue IOError, SocketError, SystemCallError => e
-		# TODO: we should only catch these exceptions if they originate
-		# from our own socket.
-		print_exception("Passenger RequestHandler", e)
+	rescue => e
+		if socket_wrapper.source_of_exception?(e)
+			print_exception("Passenger RequestHandler's client socket", e)
+		else
+			raise
+		end
 	ensure
 		# The 'close_write' here prevents forked child
 		# processes from unintentionally keeping the
@@ -431,117 +434,6 @@ private
 		end
 		if input_stream && !input_stream.closed?
 			input_stream.close rescue nil
-		end
-	end
-	
-	# Sockets are not seekable (calling _seek_ or _rewind_ on it will
-	# raise an exception). But some frameworks (e.g. Merb) call _rewind_
-	# on the input stream (= our client socket) if it responds to it,
-	# which it does. So we wrap all client sockets into a SocketWrapper
-	# which doesn't respond to _seek_ and _rewind_.
-	#
-	# We used to dynamically undef _seek_ and _rewind_ on sockets, but this
-	# blows the Ruby interpreter's method cache and made things slower.
-	# Wrapping a socket is faster despite extra method calls.
-	class SocketWrapper
-		def wrap(socket)
-			# Some people report that sometimes their Ruby (MRI/REE)
-			# processes get stuck with 100% CPU usage. Upon further
-			# inspection with strace, it turns out that these Ruby
-			# processes are continuously calling lseek() on a socket,
-			# which of course returns ESPIPE as error. gdb reveals
-			# lseek() is called by fwrite(), which in turn is called
-			# by rb_fwrite(). The affected socket is the
-			# AbstractRequestHandler client socket.
-			#
-			# I inspected the MRI source code and didn't find
-			# anything that would explain this behavior. This makes
-			# me think that it's a glibc bug, but that's very
-			# unlikely.
-			#
-			# The rb_fwrite() implementation takes an entirely
-			# different code path if I set 'sync' to true: it will
-			# skip fwrite() and use write() instead. So here we set
-			# 'sync' to true in the hope that this will work around
-			# the problem.
-			socket.sync = true
-			
-			# There's no need to set the encoding for Ruby 1.9 because this
-			# source file is tagged with 'encoding: binary'.
-			
-			@socket = socket
-		end
-		
-		# Don't allow disabling of sync.
-		def sync=(value)
-		end
-		
-		# Socket is sync'ed so flushing shouldn't do anything.
-		def flush
-		end
-		
-		# Already set to binary mode.
-		def binmode
-		end
-		
-		def to_io
-			self
-		end
-		
-		def addr
-			@socket.addr
-		end
-		
-		def write(string)
-			@socket.write(string)
-		end
-		
-		def writev(components)
-			@socket.writev(components)
-		end
-		
-		def writev2(components, components2)
-			@socket.writev2(components, components2)
-		end
-		
-		def writev3(components, components2, components3)
-			@socket.writev3(components, components2, components3)
-		end
-		
-		def puts(*args)
-			@socket.puts(*args)
-		end
-		
-		def gets
-			@socket.gets
-		end
-		
-		def read(*args)
-			@socket.read(*args)
-		end
-		
-		def readline
-			@socket.readline
-		end
-		
-		def each(&block)
-			@socket.each(&block)
-		end
-		
-		def closed?
-			@socket.closed?
-		end
-		
-		def close
-			@socket.close
-		end
-		
-		def close_read
-			@socket.close_read
-		end
-		
-		def close_write
-			@socket.close_write
 		end
 	end
 	
