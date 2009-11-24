@@ -390,11 +390,11 @@ private
 	def accept_and_process_next_request
 		ios = select(@selectable_sockets).first
 		if ios.include?(@main_socket)
-			connection = prepare_client_socket(@main_socket.accept)
+			connection = SocketWrapper.new(@main_socket.accept)
 			headers, input_stream = parse_native_request(connection)
 			status_line_desired = false
 		elsif ios.include?(@http_socket)
-			connection = prepare_client_socket(@http_socket.accept)
+			connection = SocketWrapper.new(@http_socket.accept)
 			headers, input_stream = parse_http_request(connection)
 			status_line_desired = true
 		else
@@ -430,49 +430,115 @@ private
 		end
 	end
 	
-	def prepare_client_socket(socket)
-		socket.close_on_exec!
-		
-		# Some people report that sometimes their Ruby (MRI/REE)
-		# processes get stuck with 100% CPU usage. Upon further
-		# inspection with strace, it turns out that these Ruby
-		# processes are continuously calling lseek() on a socket,
-		# which of course returns ESPIPE as error. gdb reveals
-		# lseek() is called by fwrite(), which in turn is called
-		# by rb_fwrite(). The affected socket is the
-		# AbstractRequestHandler client socket.
-		#
-		# I inspected the MRI source code and didn't find
-		# anything that would explain this behavior. This makes
-		# me think that it's a glibc bug, but that's very
-		# unlikely.
-		#
-		# The rb_fwrite() implementation takes an entirely
-		# different code path if I set 'sync' to true: it will
-		# skip fwrite() and use write() instead. So here we set
-		# 'sync' to true in the hope that this will work around
-		# the problem.
-		socket.sync = true
-		
-		# We monkeypatch the 'sync=' method to a no-op so that
-		# sync mode can't be disabled.
-		def socket.sync=(value)
+	# Sockets are not seekable (calling _seek_ or _rewind_ on it will
+	# raise an exception). But some frameworks (e.g. Merb) call _rewind_
+	# on the input stream (= our client socket) if it responds to it,
+	# which it does. So we wrap all client sockets into a SocketWrapper
+	# which doesn't respond to _seek_ and _rewind_.
+	#
+	# We used to dynamically undef _seek_ and _rewind_ on sockets, but this
+	# blows the Ruby interpreter's method cache and made things slower.
+	# Wrapping a socket is faster despite extra method calls.
+	class SocketWrapper
+		def initialize(socket)
+			# Some people report that sometimes their Ruby (MRI/REE)
+			# processes get stuck with 100% CPU usage. Upon further
+			# inspection with strace, it turns out that these Ruby
+			# processes are continuously calling lseek() on a socket,
+			# which of course returns ESPIPE as error. gdb reveals
+			# lseek() is called by fwrite(), which in turn is called
+			# by rb_fwrite(). The affected socket is the
+			# AbstractRequestHandler client socket.
+			#
+			# I inspected the MRI source code and didn't find
+			# anything that would explain this behavior. This makes
+			# me think that it's a glibc bug, but that's very
+			# unlikely.
+			#
+			# The rb_fwrite() implementation takes an entirely
+			# different code path if I set 'sync' to true: it will
+			# skip fwrite() and use write() instead. So here we set
+			# 'sync' to true in the hope that this will work around
+			# the problem.
+			socket.sync = true
+			
+			# There's no need to set the encoding for Ruby 1.9 because this
+			# source file is tagged with 'encoding: binary'.
+			
+			@socket = socket
 		end
 		
-		# The real input stream is not seekable (calling _seek_
-		# or _rewind_ on it will raise an exception). But some
-		# frameworks (e.g. Merb) call _rewind_ if the object
-		# responds to it. So we simply undefine _seek_ and
-		# _rewind_.
-		socket.instance_eval do
-			undef seek if respond_to?(:seek)
-			undef rewind if respond_to?(:rewind)
+		# Don't allow disabling of sync.
+		def sync=(value)
 		end
 		
-		# There's no need to set the encoding for Ruby 1.9 because this
-		# source file is tagged with 'encoding: binary'.
+		# Socket is sync'ed so flushing shouldn't do anything.
+		def flush
+		end
 		
-		return socket
+		# Already set to binary mode.
+		def binmode
+		end
+		
+		def to_io
+			self
+		end
+		
+		def addr
+			@socket.addr
+		end
+		
+		def write(string)
+			@socket.write(string)
+		end
+		
+		def writev(components)
+			@socket.writev(components)
+		end
+		
+		def writev2(components, components2)
+			@socket.writev2(components, components2)
+		end
+		
+		def writev3(components, components2, components3)
+			@socket.writev3(components, components2, components3)
+		end
+		
+		def puts(*args)
+			@socket.puts(*args)
+		end
+		
+		def gets
+			@socket.gets
+		end
+		
+		def read(*args)
+			@socket.read(*args)
+		end
+		
+		def readline
+			@socket.readline
+		end
+		
+		def each(&block)
+			@socket.each(&block)
+		end
+		
+		def closed?
+			@socket.closed?
+		end
+		
+		def close
+			@socket.close
+		end
+		
+		def close_read
+			@socket.close_read
+		end
+		
+		def close_write
+			@socket.close_write
+		end
 	end
 	
 	# Read the next request from the given socket, and return
