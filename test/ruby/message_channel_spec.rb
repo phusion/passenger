@@ -78,9 +78,17 @@ describe MessageChannel do
 			@reader.read_scalar.should be_nil
 		end
 		
+		it "puts the data into the given buffer" do
+			buffer = ''
+			@writer.write_scalar("x" * 100)
+			result = @reader.read_scalar(buffer)
+			result.object_id.should == buffer.object_id
+			buffer.should == "x" * 100
+		end
+		
 		it "raises SecurityError when a received scalar message's size is larger than a specified maximum" do
 			@writer.write_scalar(" " * 100)
-			lambda { @reader.read_scalar(99) }.should raise_error(SecurityError)
+			lambda { @reader.read_scalar('', 99) }.should raise_error(SecurityError)
 		end
 	end
 	

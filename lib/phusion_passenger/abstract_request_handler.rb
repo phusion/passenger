@@ -218,10 +218,13 @@ class AbstractRequestHandler
 			end
 			
 			install_useful_signal_handlers
+			socket_wrapper = SocketWrapper.new
+			channel        = MessageChannel.new
+			buffer         = ''
 			
 			while true
 				@iterations += 1
-				if !accept_and_process_next_request
+				if !accept_and_process_next_request(socket_wrapper, channel, buffer)
 					break
 				end
 				@processed_requests += 1
@@ -387,14 +390,15 @@ private
 		end
 	end
 	
-	def accept_and_process_next_request
+	def accept_and_process_next_request(socket_wrapper, channel, buffer)
 		ios = select(@selectable_sockets).first
 		if ios.include?(@main_socket)
-			connection = SocketWrapper.new(@main_socket.accept)
-			headers, input_stream = parse_native_request(connection)
+			connection = socket_wrapper.wrap(@main_socket.accept)
+			channel.io = connection
+			headers, input_stream = parse_native_request(connection, channel, buffer)
 			status_line_desired = false
 		elsif ios.include?(@http_socket)
-			connection = SocketWrapper.new(@http_socket.accept)
+			connection = socket_wrapper.wrap(@http_socket.accept)
 			headers, input_stream = parse_http_request(connection)
 			status_line_desired = true
 		else
@@ -440,7 +444,7 @@ private
 	# blows the Ruby interpreter's method cache and made things slower.
 	# Wrapping a socket is faster despite extra method calls.
 	class SocketWrapper
-		def initialize(socket)
+		def wrap(socket)
 			# Some people report that sometimes their Ruby (MRI/REE)
 			# processes get stuck with 100% CPU usage. Upon further
 			# inspection with strace, it turns out that these Ruby
@@ -547,9 +551,8 @@ private
 	# reading HTTP POST data.
 	#
 	# Returns nil if end-of-stream was encountered.
-	def parse_native_request(socket)
-		channel = MessageChannel.new(socket)
-		headers_data = channel.read_scalar(MAX_HEADER_SIZE)
+	def parse_native_request(socket, channel, buffer)
+		headers_data = channel.read_scalar(buffer, MAX_HEADER_SIZE)
 		if headers_data.nil?
 			return
 		end

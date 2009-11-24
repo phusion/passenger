@@ -82,10 +82,10 @@ class MessageChannel
 	end
 	
 	# The wrapped IO object.
-	attr_reader :io
+	attr_accessor :io
 
 	# Create a new MessageChannel by wrapping the given IO object.
-	def initialize(io)
+	def initialize(io = nil)
 		@io = io
 	end
 	
@@ -208,11 +208,14 @@ class MessageChannel
 	# Might raise SystemCallError, IOError or SocketError when something
 	# goes wrong.
 	#
+	# The +buffer+ argument specifies a buffer in which #read_scalar
+	# stores the read data. It is good practice to reuse existing buffers
+	# in order to minimize stress on the garbage collector.
+	#
 	# The +max_size+ argument allows one to specify the maximum allowed
 	# size for the scalar message. If the received scalar message's size
 	# is larger than +max_size+, then a SecurityError will be raised.
-	def read_scalar(max_size = nil)
-		buffer = ''
+	def read_scalar(buffer = '', max_size = nil)
 		if !@io.read(4, buffer)
 			return nil
 		end
@@ -227,7 +230,8 @@ class MessageChannel
 		
 		size = buffer.unpack(UINT32_PACK_FORMAT)[0]
 		if size == 0
-			return ''
+			buffer.replace('')
+			return buffer
 		else
 			if !max_size.nil? && size > max_size
 				raise SecurityError, "Scalar message size (#{size}) " <<
