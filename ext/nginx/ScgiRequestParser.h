@@ -94,10 +94,33 @@ public:
 		ERROR
 	};
 	
+	enum ErrorReason {
+		NONE,
+		
+		/** The length string is too large. */
+		LENGTH_STRING_TOO_LARGE,
+		
+		/** The header is larger than the maxSize value provided to the constructor. */
+		LIMIT_REACHED,
+		
+		/** The length string contains an invalid character. */
+		INVALID_LENGTH_STRING,
+		
+		/** A header terminator character (",") was expected, but some else
+		 * was encountered instead. */
+		HEADER_TERMINATOR_EXPECTED,
+		
+		/** The header data itself contains errors. */
+		INVALID_HEADER_DATA
+	};
+	
 private:
 	typedef dense_hash_map<StaticString, StaticString, StaticString::Hash> HeaderMap;
 	
+	unsigned long maxSize;
+	
 	State state;
+	ErrorReason errorReason;
 	char lengthStringBuffer[sizeof("4294967296")];
 	unsigned int lengthStringBufferSize;
 	unsigned long headerSize;
@@ -172,10 +195,12 @@ private:
 						return bytesToRead + 1;
 					} else {
 						state = ERROR;
+						errorReason = INVALID_HEADER_DATA;
 						return bytesToRead;
 					}
 				} else {
 					state = ERROR;
+					errorReason = HEADER_TERMINATOR_EXPECTED;
 					return bytesToRead;
 				}
 			} else {
@@ -183,6 +208,7 @@ private:
 					state = EXPECTING_COMMA;
 				} else {
 					state = ERROR;
+					errorReason = INVALID_HEADER_DATA;
 				}
 				return bytesToRead;
 			}
@@ -195,9 +221,14 @@ private:
 public:
 	/**
 	 * Create a new ScgiRequestParser, ready to parse a request.
+	 *
+	 * @param maxSize The maximum size that the SCGI data is allowed to
+	 *                be, or 0 if no limit is desired.
 	 */
-	ScgiRequestParser() {
+	ScgiRequestParser(unsigned long maxSize = 0) {
+		this->maxSize = maxSize;
 		state = READING_LENGTH_STRING;
+		errorReason = NONE;
 		lengthStringBufferSize = 0;
 		headerSize = 0;
 		headers.set_empty_key("");
@@ -230,6 +261,7 @@ public:
 				if (lengthStringBufferSize == sizeof(lengthStringBuffer) - 1) {
 					// ...and abort if the length string is too long.
 					state = ERROR;
+					errorReason = LENGTH_STRING_TOO_LARGE;
 					return i;
 				} else if (!isDigit(byte)) {
 					if (byte == ':') {
@@ -237,13 +269,19 @@ public:
 						state = READING_HEADER_DATA;
 						lengthStringBuffer[lengthStringBufferSize] = '\0';
 						headerSize = atol(lengthStringBuffer);
-						headerBuffer.reserve(headerSize);
-						// From here on, process the rest of the data that we've
-						// received, as header data.
-						return readHeaderData(data + i + 1, size - i - 1) + i + 1;
+						if (maxSize > 0 && headerSize > maxSize) {
+							state = ERROR;
+							errorReason = LIMIT_REACHED;
+						} else {
+							headerBuffer.reserve(headerSize);
+							// From here on, process the rest of the data that we've
+							// received, as header data.
+							return readHeaderData(data + i + 1, size - i - 1) + i + 1;
+						}
 					} else {
 						// ...until we encounter a parse error.
 						state = ERROR;
+						errorReason = INVALID_LENGTH_STRING;
 						return i;
 					}
 				} else {
@@ -262,6 +300,7 @@ public:
 				return 1;
 			} else {
 				state = ERROR;
+				errorReason = HEADER_TERMINATOR_EXPECTED;
 				return 0;
 			}
 		
@@ -309,6 +348,15 @@ public:
 	 */
 	State getState() const {
 		return state;
+	}
+	
+	/**
+	 * Returns the reason why the parser entered the error state.
+	 *
+	 * @pre getState() == ERROR
+	 */
+	ErrorReason getErrorReason() const {
+		return errorReason;
 	}
 	
 	/**

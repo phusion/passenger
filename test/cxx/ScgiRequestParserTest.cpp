@@ -78,6 +78,16 @@ namespace tut {
 		ensure(parser.getHeader("SCGI") == "1");
 	}
 	
+	TEST_METHOD(6) {
+		// Parsing a request that's larger than the limit.
+		parser = ScgiRequestParser(9);
+		parser.feed("10:", 3);
+		ensure_equals("It is in the error state",
+			parser.getState(), ScgiRequestParser::ERROR);
+		ensure_equals(parser.getErrorReason(),
+			ScgiRequestParser::LIMIT_REACHED);
+	}
+	
 	/***** Test parsing a complete SCGI request in multiple passes. *****/
 	
 	TEST_METHOD(8) {
@@ -305,6 +315,18 @@ namespace tut {
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
 	
+	TEST_METHOD(36) {
+		// Parsing a request that's larger than the limit.
+		parser = ScgiRequestParser(9);
+		parser.feed("1", 1);
+		parser.feed("0", 1);
+		parser.feed(":", 1);
+		ensure_equals("It is in the error state",
+			parser.getState(), ScgiRequestParser::ERROR);
+		ensure_equals(parser.getErrorReason(),
+			ScgiRequestParser::LIMIT_REACHED);
+	}
+	
 	/***** Test parsing incomplete SCGI requests. *****/
 	
 	TEST_METHOD(40) {
@@ -333,5 +355,20 @@ namespace tut {
 		ensure_equals(parser.feed("8:foo\0bar\0", 10), 10u);
 		ensure_equals("Parser is waiting for comma.",
 			parser.getState(), ScgiRequestParser::EXPECTING_COMMA);
+	}
+	
+	TEST_METHOD(44) {
+		// Parsing a request that's smaller than the limit.
+		static const char data[] = "10:";
+		
+		parser = ScgiRequestParser(11);
+		parser.feed(data, sizeof(data) - 1);
+		ensure_equals("It accepted the data (9)",
+			parser.getState(), ScgiRequestParser::READING_HEADER_DATA);
+		
+		parser = ScgiRequestParser(10);
+		parser.feed(data, sizeof(data) - 1);
+		ensure_equals("It accepted the data (10)",
+			parser.getState(), ScgiRequestParser::READING_HEADER_DATA);
 	}
 }

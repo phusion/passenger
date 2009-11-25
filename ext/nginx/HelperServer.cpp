@@ -106,8 +106,13 @@ public:
  */
 class Client {
 private:
+	/** Maximum allowed size of SCGI headers. */
+	static const unsigned int MAX_HEADER_SIZE = 1024 * 128;
 	/** The client thread stack size in bytes. */
-	static const int CLIENT_THREAD_STACK_SIZE = 1024 * 64;
+	static const int CLIENT_THREAD_STACK_SIZE =
+		// Give 64 KB of normal stack space and more stack space
+		// for storing the session header.
+		(1024 * 64) + MAX_HEADER_SIZE + 1024;
 	
 	/** The client number for this Client object, assigned by Server. */
 	unsigned int number;
@@ -214,7 +219,12 @@ private:
 		} while (parser.acceptingInput());
 
 		if (parser.getState() != ScgiRequestParser::DONE) {
-			P_ERROR("Invalid SCGI header received.");
+			if (parser.getState() == ScgiRequestParser::ERROR
+			 && parser.getErrorReason() == LIMIT_REACHED) {
+				P_ERROR("SCGI header too large.");
+			} else {
+				P_ERROR("Invalid SCGI header received.");
+			}
 			return false;
 		} else if (!parser.hasHeader("DOCUMENT_ROOT")) {
 			P_ERROR("DOCUMENT_ROOT header is missing.");
@@ -407,7 +417,7 @@ private:
 	 */
 	void handleRequest(FileDescriptor &clientFd) {
 		TRACE_POINT();
-		ScgiRequestParser parser;
+		ScgiRequestParser parser(MAX_HEADER_SIZE);
 		string partialRequestBody;
 		unsigned long contentLength;
 		
