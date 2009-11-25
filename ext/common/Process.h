@@ -90,6 +90,7 @@ public:
 	 *                      There must a server socket with the name 'main'.
 	 * @param detachKey A detach key. Used by the ApplicationPool algorithm.
 	 * @param connectPassword The password to use when connecting to this process.
+	 *                        Must be valid ASCII.
 	 * @throws ArgumentException If serverSockets has no socket named 'main'.
 	 */
 	Process(const string &appRoot, pid_t pid, int ownerPipe, const SocketInfoMap &serverSockets,
@@ -153,7 +154,8 @@ public:
 	}
 	
 	/**
-	 * Returns this process's connect password.
+	 * Returns this process's connect password. This password is
+	 * guaranteed to be valid ASCII.
 	 */
 	string getConnectPassword() const {
 		return connectPassword;
