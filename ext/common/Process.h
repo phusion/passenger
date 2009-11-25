@@ -213,7 +213,9 @@ public:
 	 * @throws IOException Something went wrong during session initiation.
 	 * @throws boost::thread_interrupted
 	 */
-	SessionPtr newSession(const function<void()> &closeCallback, bool initiateNow = true) {
+	SessionPtr newSession(const function<void()> &closeCallback = function<void()>(),
+	                      bool initiateNow = true)
+	{
 		SessionPtr session(new StandardSession(pid, closeCallback,
 			mainServerSocket->type, mainServerSocket->address,
 			detachKey, connectPassword));

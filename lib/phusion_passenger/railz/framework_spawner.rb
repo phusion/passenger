@@ -297,7 +297,7 @@ private
 				return
 			end
 			begin
-				app_process = spawner.spawn_application
+				app_process = spawner.spawn_application(options)
 			rescue ApplicationSpawner::Error => e
 				spawner.stop
 				@spawners.delete(app_root)

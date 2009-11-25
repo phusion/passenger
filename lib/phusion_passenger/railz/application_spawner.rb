@@ -117,11 +117,13 @@ class ApplicationSpawner < AbstractServer
 	# Spawn an instance of the RoR application. When successful, an Application object
 	# will be returned, which represents the spawned RoR application.
 	#
+	# +options+ will be passed to the request handler's constructor.
+	#
 	# Raises:
 	# - AbstractServer::ServerNotStarted: The ApplicationSpawner server hasn't already been started.
 	# - ApplicationSpawner::Error: The ApplicationSpawner server exited unexpectedly.
-	def spawn_application
-		server.write("spawn_application")
+	def spawn_application(options = {})
+		server.write("spawn_application", *options.to_a.flatten)
 		return AppProcess.read_from_channel(server)
 	rescue SystemCallError, IOError, SocketError => e
 		raise Error, "The application spawner server exited unexpectedly: #{e}"
@@ -137,11 +139,13 @@ class ApplicationSpawner < AbstractServer
 	# This method may only be called if no Rails framework has been loaded in the current
 	# Ruby VM.
 	#
+	# +options+ will be passed to the request handler's constructor.
+	#
 	# Raises:
 	# - AppInitError: The Ruby on Rails application raised an exception
 	#   or called exit() during startup.
 	# - SystemCallError, IOError, SocketError: Something went wrong.
-	def spawn_application!
+	def spawn_application!(options = {})
 		a, b = UNIXSocket.pair
 		pid = safe_fork('application', true) do
 			begin
@@ -167,7 +171,7 @@ class ApplicationSpawner < AbstractServer
 					require 'dispatcher'
 				end
 				if success
-					start_request_handler(channel, false)
+					start_request_handler(channel, false, options)
 				end
 			rescue SignalException => e
 				if e.message != AbstractRequestHandler::HARD_TERMINATION_SIGNAL &&
@@ -313,13 +317,14 @@ private
 		end
 	end
 
-	def handle_spawn_application
+	def handle_spawn_application(*options)
+		options = sanitize_spawn_options(Hash[*options])
 		a, b = UNIXSocket.pair
 		safe_fork('application', true) do
 			begin
 				a.close
 				client.close
-				start_request_handler(MessageChannel.new(b), true)
+				start_request_handler(MessageChannel.new(b), true, options)
 			rescue SignalException => e
 				if e.message != AbstractRequestHandler::HARD_TERMINATION_SIGNAL &&
 				   e.message != AbstractRequestHandler::SOFT_TERMINATION_SIGNAL
@@ -343,7 +348,7 @@ private
 	# The _forked_ argument indicates whether a new process was forked off
 	# after loading environment.rb (i.e. whether smart spawning is being
 	# used).
-	def start_request_handler(channel, forked)
+	def start_request_handler(channel, forked, options = {})
 		$0 = "Rails: #{@app_root}"
 		reader, writer = IO.pipe
 		begin
@@ -354,13 +359,14 @@ private
 				::ActiveRecord::Base.establish_connection
 			end
 			
-			reader.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
+			reader.close_on_exec!
 			
+			options = @options.merge(options)
 			if Rails::VERSION::STRING >= '2.3.0'
 				rack_app = ::ActionController::Dispatcher.new
-				handler = Rack::RequestHandler.new(reader, rack_app, @options)
+				handler = Rack::RequestHandler.new(reader, rack_app, options)
 			else
-				handler = RequestHandler.new(reader, @options)
+				handler = RequestHandler.new(reader, options)
 			end
 			
 			app_process = AppProcess.new(@app_root, Process.pid, writer,

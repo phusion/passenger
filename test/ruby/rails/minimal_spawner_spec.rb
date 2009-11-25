@@ -1,4 +1,22 @@
+require 'phusion_passenger/message_channel'
+
 shared_examples_for "a minimal spawner" do
+	def ping_app(app, connect_password)
+		if app.server_sockets[:main][1] == "unix"
+			client = UNIXSocket.new(app.server_sockets[:main][0])
+		else
+			addr, port = app.server_sockets[:main][0].split(/:/)
+			client = TCPSocket.new(addr, port.to_i)
+		end
+		begin
+			channel = MessageChannel.new(client)
+			channel.write_scalar("REQUEST_METHOD\0PING\0PASSENGER_CONNECT_PASSWORD\0#{connect_password}\0")
+			return client.read
+		ensure
+			client.close
+		end
+	end
+	
 	it "can spawn our stub application" do
 		use_rails_stub('foobar') do |stub|
 			app = spawn_stub_application(stub)
@@ -88,6 +106,20 @@ shared_examples_for "a minimal spawner" do
 			contents = File.read("#{stub.app_root}/env.txt")
 			contents.should =~ %r(PATH = /usr/bin:/opt/sw/bin\n)
 			contents.should =~ %r(FOO = foo bar\!\n)
+		end
+	end
+	
+	it "does not cache things like the connect password" do
+		use_rails_stub('foobar') do |stub|
+			begin
+				app1 = spawn_stub_application(stub, "connect_password" => "1234")
+				app2 = spawn_stub_application(stub, "connect_password" => "5678")
+				ping_app(app1, "1234").should == "pong"
+				ping_app(app2, "5678").should == "pong"
+			ensure
+				app1.close rescue nil
+				app2.close rescue nil
+			end
 		end
 	end
 end

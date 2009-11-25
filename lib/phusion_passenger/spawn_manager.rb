@@ -267,9 +267,9 @@ private
 				if spawner.is_a?(Railz::FrameworkSpawner)
 					return spawner.spawn_application(app_root, options)
 				elsif spawner.started?
-					return spawner.spawn_application
+					return spawner.spawn_application(options)
 				else
-					return spawner.spawn_application!
+					return spawner.spawn_application!(options)
 				end
 			rescue AbstractServer::ServerError
 				@spawners.delete(key)

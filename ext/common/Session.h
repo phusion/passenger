@@ -133,6 +133,9 @@ public:
 	   NUL = "\x00"
 	   @endverbatim
 	 *
+	 * There must be a header with the name "PASSWORD_CONNECT_PASSWORD", and it must
+	 * have the same value as the string returned by getConnectPassword().
+	 *
 	 * This method should be the first one to be called during the lifetime of a Session
 	 * object, otherwise strange things may happen.
 	 *
@@ -293,6 +296,10 @@ public:
 		return detachKey;
 	}
 	
+	/**
+	 * Returns this session's process's connect password. This password is
+	 * guaranteed to be valid ASCII.
+	 */
 	const string getConnectPassword() const {
 		return connectPassword;
 	}
@@ -340,7 +347,9 @@ public:
 	virtual ~StandardSession() {
 		TRACE_POINT();
 		closeStream();
-		closeCallback();
+		if (closeCallback != NULL) {
+			closeCallback();
+		}
 	}
 	
 	virtual void initiate() {

@@ -13,8 +13,7 @@
  * It is #included in ApplicationPool_PoolTest.cpp and ApplicationPool_Server_PoolTest.cpp
  */
 #ifdef USE_TEMPLATE
-	/** Create some stub request headers. */
-	static string createRequestHeaders(const char *uri = "/foo/new") {
+	static void sendTestRequest(SessionPtr &session, const char *uri = "/foo/new") {
 		string headers;
 		#define ADD_HEADER(name, value) \
 			headers.append(name); \
@@ -28,7 +27,8 @@
 		ADD_HEADER("REMOTE_ADDR", "localhost");
 		ADD_HEADER("SCRIPT_NAME", "");
 		ADD_HEADER("PATH_INFO", uri);
-		return headers;
+		ADD_HEADER("PASSENGER_CONNECT_PASSWORD", session->getConnectPassword());
+		session->sendHeaders(headers);
 	}
 	
 	static SessionPtr spawnRackApp(ApplicationPool::Ptr pool, const char *appRoot) {
@@ -68,7 +68,7 @@
 	TEST_METHOD(1) {
 		// Calling ApplicationPool.get() once should return a valid Session.
 		SessionPtr session(spawnRackApp(pool, "stub/rack"));
-		session->sendHeaders(createRequestHeaders());
+		sendTestRequest(session);
 		session->shutdownWriter();
 
 		int reader = session->getStream();
@@ -117,12 +117,12 @@
 		ensure_equals("Before the sessions were closed, both apps were busy", pool->getActive(), 2u);
 		ensure_equals("Before the sessions were closed, both apps were in the pool", pool->getCount(), 2u);
 		
-		session->sendHeaders(createRequestHeaders());
+		sendTestRequest(session);
 		string result(readAll(session->getStream()));
 		ensure("Session 1 belongs to the correct app", result.find("hello <b>world</b>") != string::npos);
 		session.reset();
 		
-		session2->sendHeaders(createRequestHeaders());
+		sendTestRequest(session2);
 		result = readAll(session2->getStream());
 		ensure("Session 2 belongs to the correct app", result.find("hello <b>world 2</b>") != string::npos);
 		session2.reset();
@@ -247,7 +247,7 @@
 		pool.reset();
 		pool2.reset();
 		
-		session->sendHeaders(createRequestHeaders());
+		sendTestRequest(session);
 		session->shutdownWriter();
 		
 		int reader = session->getStream();
@@ -304,7 +304,7 @@
 		// Test whether restarting with restart.txt really results in code reload.
 		TempDirCopy c("stub/rack", "rackapp.tmp");
 		SessionPtr session = spawnRackApp(pool, "rackapp.tmp");
-		session->sendHeaders(createRequestHeaders());
+		sendTestRequest(session);
 		string result = readAll(session->getStream());
 		ensure(result.find("hello <b>world</b>") != string::npos);
 		session.reset();
@@ -313,7 +313,7 @@
 		replaceStringInFile("rackapp.tmp/config.ru", "world", "world 2");
 		
 		session = spawnRackApp(pool, "rackapp.tmp");
-		session->sendHeaders(createRequestHeaders());
+		sendTestRequest(session);
 		result = readAll(session->getStream());
 		ensure("App code has been reloaded", result.find("hello <b>world 2</b>") != string::npos);
 	}
@@ -390,7 +390,7 @@
 		// Test whether restarting with tmp/always_restart.txt really results in code reload.
 		TempDirCopy c("stub/rack", "rackapp.tmp");
 		SessionPtr session = spawnRackApp(pool, "rackapp.tmp");
-		session->sendHeaders(createRequestHeaders());
+		sendTestRequest(session);
 		string result = readAll(session->getStream());
 		ensure(result.find("hello <b>world</b>") != string::npos);
 		session.reset();
@@ -399,14 +399,14 @@
 		replaceStringInFile("rackapp.tmp/config.ru", "world", "world 2");
 		
 		session = spawnRackApp(pool, "rackapp.tmp");
-		session->sendHeaders(createRequestHeaders());
+		sendTestRequest(session);
 		result = readAll(session->getStream());
 		ensure("App code has been reloaded (1)", result.find("hello <b>world 2</b>") != string::npos);
 		session.reset();
 		
 		replaceStringInFile("rackapp.tmp/config.ru", "world 2", "world 3");
 		session = spawnRackApp(pool, "rackapp.tmp");
-		session->sendHeaders(createRequestHeaders());
+		sendTestRequest(session);
 		result = readAll(session->getStream());
 		ensure("App code has been reloaded (2)", result.find("hello <b>world 3</b>") != string::npos);
 		session.reset();
@@ -536,7 +536,7 @@
 		
 		for (unsigned int i = 0; i < 4; i++) {
 			session = pool->get(options);
-			session->sendHeaders(createRequestHeaders());
+			sendTestRequest(session);
 			session->shutdownWriter();
 			reader = session->getStream();
 			readAll(reader);

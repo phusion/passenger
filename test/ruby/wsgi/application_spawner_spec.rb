@@ -41,7 +41,7 @@ describe PhusionPassenger::WSGI::ApplicationSpawner do
 	
 	specify "the backend process deletes its socket upon termination" do
 		spawn(@stub.app_root).close
-		sleep 0.25 # Give it some time to terminate.
+		sleep 0.3 # Give it some time to terminate.
 		File.chmod(0700, "#{passenger_tmpdir}/backends")
 		Dir["#{passenger_tmpdir}/backends/wsgi.*"].should be_empty
 	end

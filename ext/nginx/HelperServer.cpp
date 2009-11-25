@@ -220,7 +220,7 @@ private:
 
 		if (parser.getState() != ScgiRequestParser::DONE) {
 			if (parser.getState() == ScgiRequestParser::ERROR
-			 && parser.getErrorReason() == LIMIT_REACHED) {
+			 && parser.getErrorReason() == ScgiRequestParser::LIMIT_REACHED) {
 				P_ERROR("SCGI header too large.");
 			} else {
 				P_ERROR("Invalid SCGI header received.");
@@ -452,11 +452,21 @@ private:
 			
 			try {
 				SessionPtr session = pool->get(options);
-			
+				
 				UPDATE_TRACE_POINT();
-				session->sendHeaders(parser.getHeaderData().c_str(),
-					parser.getHeaderData().size());
-			
+				
+				char headers[parser.getHeaderData().size() +
+					sizeof("PASSENGER_CONNECT_PASSWORD") +
+					session->getConnectPassword().size() + 1];
+				memcpy(headers, parser.getHeaderData().c_str(), parser.getHeaderData().size());
+				memcpy(headers + parser.getHeaderData().size(),
+					"PASSENGER_CONNECT_PASSWORD",
+					sizeof("PASSENGER_CONNECT_PASSWORD"));
+				memcpy(headers + parser.getHeaderData().size() + sizeof("PASSENGER_CONNECT_PASSWORD"),
+					session->getConnectPassword().c_str(),
+					session->getConnectPassword().size() + 1);
+				session->sendHeaders(headers, sizeof(headers));
+				
 				contentLength = atol(
 					parser.getHeader("CONTENT_LENGTH").c_str());
 				sendRequestBody(session,

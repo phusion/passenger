@@ -13,10 +13,36 @@ namespace tut {
 		ServerInstanceDirPtr serverInstanceDir;
 		ServerInstanceDir::GenerationPtr generation;
 		SpawnManagerPtr manager;
+		PoolOptions rackOptions;
+		
+		SpawnManagerTest() {
+			rackOptions.appRoot = "stub/rack";
+			rackOptions.appType = "rack";
+		}
 		
 		void initialize() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
-			manager = ptr(new SpawnManager("stub/spawn_server.rb", generation));
+			manager = ptr(new SpawnManager("../bin/passenger-spawn-server", generation));
+		}
+		
+		void sendTestRequest(SessionPtr &session, bool authenticate = true, const char *uri = "/foo/new") {
+			string headers;
+			#define ADD_HEADER(name, value) \
+				headers.append(name); \
+				headers.append(1, '\0'); \
+				headers.append(value); \
+				headers.append(1, '\0')
+			ADD_HEADER("HTTP_HOST", "www.test.com");
+			ADD_HEADER("QUERY_STRING", "");
+			ADD_HEADER("REQUEST_URI", uri);
+			ADD_HEADER("REQUEST_METHOD", "GET");
+			ADD_HEADER("REMOTE_ADDR", "localhost");
+			ADD_HEADER("SCRIPT_NAME", "");
+			ADD_HEADER("PATH_INFO", uri);
+			if (authenticate) {
+				ADD_HEADER("PASSENGER_CONNECT_PASSWORD", session->getConnectPassword());
+			}
+			session->sendHeaders(headers);
 		}
 	};
 
@@ -25,9 +51,12 @@ namespace tut {
 	TEST_METHOD(1) {
 		// Spawning an application should return a valid Application object.
 		initialize();
-		ProcessPtr process = manager->spawn(PoolOptions("."));
-		ensure_equals("The Application object's PID is the same as the one returned by the stub",
-			process->getPid(), (pid_t) 1234);
+		ProcessPtr process = manager->spawn(rackOptions);
+		SessionPtr session = process->newSession();
+		sendTestRequest(session);
+		session->shutdownWriter();
+		string result = readAll(session->getStream());
+		ensure(result.find("hello <b>world</b>") != string::npos);
 	}
 	
 	TEST_METHOD(2) {
@@ -39,9 +68,12 @@ namespace tut {
 		// Give the spawn server the time to properly terminate.
 		usleep(500000);
 		
-		ProcessPtr process = manager->spawn(PoolOptions("."));
-		ensure_equals("The Application object's PID is the same as the one specified by the stub",
-			process->getPid(), 1234);
+		ProcessPtr process = manager->spawn(rackOptions);
+		SessionPtr session = process->newSession();
+		sendTestRequest(session);
+		session->shutdownWriter();
+		string result = readAll(session->getStream());
+		ensure(result.find("hello <b>world</b>") != string::npos);
 		
 		// The following test will fail if we're inside Valgrind, but that's normal.
 		// Killing the spawn server doesn't work there.
@@ -83,11 +115,23 @@ namespace tut {
 			
 			try {
 				manager.nextRestartShouldFail = true;
-				ProcessPtr process = manager.spawn(PoolOptions("."));
+				ProcessPtr process = manager.spawn(rackOptions);
 				fail("SpawnManager did not throw a SpawnException");
 			} catch (const SpawnException &e) {
 				// Success.
 			}
 		}
+	}
+	
+	TEST_METHOD(4) {
+		// The connect password is passed to the spawned application, which rejects
+		// sessions that aren't authenticated with the right password.
+		initialize();
+		ProcessPtr process = manager->spawn(rackOptions);
+		SessionPtr session = process->newSession();
+		sendTestRequest(session, false);
+		session->shutdownWriter();
+		string result = readAll(session->getStream());
+		ensure_equals(result, "");
 	}
 }

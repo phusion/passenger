@@ -521,6 +521,7 @@ end
 			ext/common/StringListCreator.h
 			ext/common/Process.h
 			ext/common/Account.h
+			ext/common/Session.h
 			ext/common/MessageChannel.h),
 		'test/cxx/ApplicationPool_ServerTest.o' => %w(
 			test/cxx/ApplicationPool_ServerTest.cpp
@@ -531,6 +532,7 @@ end
 			ext/common/Account.h
 			ext/common/AccountsDatabase.h
 			ext/common/MessageServer.h
+			ext/common/Session.h
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
 			ext/common/MessageChannel.h),
@@ -567,6 +569,7 @@ end
 		'test/cxx/PoolOptionsTest.o' => %w(
 			test/cxx/PoolOptionsTest.cpp
 			ext/common/PoolOptions.h
+			ext/common/Session.h
 			ext/common/StringListCreator.h),
 		'test/cxx/StaticStringTest.o' => %w(
 			test/cxx/StaticStringTest.cpp
@@ -588,8 +591,10 @@ end
 			ext/common/ApplicationPool/Pool.h
 			ext/common/PoolOptions.h
 			ext/common/SpawnManager.h
+			ext/common/Session.h
 			ext/common/Account.h
 			ext/common/AccountsDatabase.h
+			ext/common/Session.h
 			ext/common/MessageServer.h
 			ext/common/MessageChannel.h),
 		'test/cxx/ServerInstanceDir.o' => %w(

@@ -935,6 +935,14 @@ private:
 			buffer.append(1, '\0');
 		}
 		
+		buffer.append("PASSENGER_CONNECT_PASSWORD");
+		buffer.append(1, '\0');
+		buffer.append(session->getConnectPassword());
+		buffer.append(1, '\0');
+		
+		/*********************/
+		/*********************/
+		
 		/*
 		 * If the last header value is an empty string, then the buffer
 		 * will end with "\0\0". For example, if 'SSLOptions +ExportCertData'

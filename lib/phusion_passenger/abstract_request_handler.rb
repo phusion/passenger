@@ -102,6 +102,7 @@ class AbstractRequestHandler
 	X_POWERED_BY        = 'X-Powered-By'        # :nodoc:
 	REQUEST_METHOD      = 'REQUEST_METHOD'      # :nodoc:
 	PING                = 'PING'                # :nodoc:
+	PASSENGER_CONNECT_PASSWORD = "PASSENGER_CONNECT_PASSWORD"   # :nodoc:
 	
 	# A hash containing all server sockets that this request handler listens on.
 	# The hash is in the form of:
@@ -150,8 +151,6 @@ class AbstractRequestHandler
 	# - pool_account_username
 	# - pool_account_password_base64
 	def initialize(owner_pipe, options = {})
-		# TODO: password protect the sockets
-		
 		@server_sockets = {}
 		
 		if should_use_unix_sockets?
@@ -171,6 +170,7 @@ class AbstractRequestHandler
 		@main_loop_thread_lock = Mutex.new
 		@main_loop_thread_cond = ConditionVariable.new
 		@memory_limit          = options["memory_limit"] || 0
+		@connect_password      = options["connect_password"]
 		@detach_key            = options["detach_key"]
 		@pool_account_username = options["pool_account_username"]
 		if options["pool_account_password_base64"]
@@ -457,7 +457,10 @@ private
 		end
 		
 		if headers
-			if headers[REQUEST_METHOD] == PING
+			if @connect_password && headers[PASSENGER_CONNECT_PASSWORD] != @connect_password
+				STDERR.puts "*** Process #{$$} warning: someone tried to connect " <<
+					"with an invalid connect password."
+			elsif headers[REQUEST_METHOD] == PING
 				process_ping(headers, input_stream, connection)
 			else
 				process_request(headers, input_stream, connection, status_line_desired)
@@ -553,8 +556,7 @@ private
 	def generate_random_id(method)
 		case method
 		when :base64
-			require 'base64' unless defined?(Base64)
-			data = Base64.encode64(File.read("/dev/urandom", 64))
+			data = [File.read("/dev/urandom", 64)].pack('m')
 			data.gsub!("\n", '')
 			data.gsub!("+", '')
 			data.gsub!("/", '')
