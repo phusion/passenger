@@ -36,6 +36,7 @@
 #endif
 #include <string>
 #include <list>
+#include <unistd.h>
 #include <limits.h>  // for PTHREAD_STACK_MIN
 
 namespace oxt {
@@ -134,17 +135,45 @@ public:
 		set_thread_main_function(boost::bind(thread_main, func, data));
 		
 		unsigned long min_stack_size;
+		bool stack_min_size_defined;
+		bool round_stack_size;
+		
 		#ifdef PTHREAD_STACK_MIN
 			// PTHREAD_STACK_MIN may not be a constant macro so we need
 			// to evaluate it dynamically.
 			min_stack_size = PTHREAD_STACK_MIN;
+			stack_min_size_defined = true;
 		#else
 			// Assume minimum stack size is 128 KB.
 			min_stack_size = 128 * 1024;
+			stack_min_size_defined = false;
 		#endif
 		if (stack_size != 0 && stack_size < min_stack_size) {
 			stack_size = min_stack_size;
+			round_stack_size = !stack_min_size_defined;
+		} else {
+			round_stack_size = true;
 		}
+		
+		if (round_stack_size) {
+			// Round stack size up to page boundary.
+			long page_size;
+			#if defined(_SC_PAGESIZE)
+				page_size = sysconf(_SC_PAGESIZE);
+			#elif defined(_SC_PAGE_SIZE)
+				page_size = sysconf(_SC_PAGE_SIZE);
+			#elif defined(PAGESIZE)
+				page_size = sysconf(PAGESIZE);
+			#elif defined(PAGE_SIZE)
+				page_size = sysconf(PAGE_SIZE);
+			#else
+				page_size = getpagesize();
+			#endif
+			if (stack_size % page_size != 0) {
+				stack_size = stack_size - (stack_size % page_size) + page_size;
+			}
+		}
+		
 		start_thread(stack_size);
 	}
 	
