@@ -1,5 +1,4 @@
-require 'support/config'
-require 'support/test_helper'
+require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
 require 'phusion_passenger/railz/application_spawner'
 
 require 'ruby/rails/minimal_spawner_spec'
@@ -7,15 +6,12 @@ require 'ruby/spawn_server_spec'
 require 'ruby/rails/spawner_privilege_lowering_spec'
 require 'ruby/rails/spawner_error_handling_spec'
 
-include PhusionPassenger
-include PhusionPassenger::Railz
-
-describe ApplicationSpawner do
+describe Railz::ApplicationSpawner do
 	include TestHelper
 	
 	before :each do
 		@stub = setup_rails_stub('foobar')
-		@spawner = ApplicationSpawner.new(@stub.app_root,
+		@spawner = Railz::ApplicationSpawner.new(@stub.app_root,
 			"lowest_user" => CONFIG['lowest_user'])
 		@spawner.start
 		@server = @spawner
@@ -33,7 +29,7 @@ describe ApplicationSpawner do
 	end
 end
 
-describe ApplicationSpawner do
+describe Railz::ApplicationSpawner do
 	include TestHelper
 	
 	describe "smart spawning" do
@@ -44,12 +40,12 @@ describe ApplicationSpawner do
 			use_rails_stub('foobar') do |stub|
 				File.append(stub.environment_rb, %q{
 					PhusionPassenger.on_event(:starting_worker_process) do |forked|
-						File.append("result.txt", "forked = #{forked}\n")
+						::File.append("result.txt", "forked = #{forked}\n")
 					end
-					File.append("result.txt", "end of environment.rb\n");
+					::File.append("result.txt", "end of environment.rb\n");
 				})
 				
-				spawner = ApplicationSpawner.new(stub.app_root,
+				spawner = Railz::ApplicationSpawner.new(stub.app_root,
 					"lowest_user" => CONFIG['lowest_user'])
 				spawner.start
 				begin
@@ -71,7 +67,7 @@ describe ApplicationSpawner do
 		
 		def spawn_stub_application(stub, extra_options = {})
 			options = { "lowest_user" => CONFIG['lowest_user'] }.merge(extra_options)
-			@spawner = ApplicationSpawner.new(stub.app_root, options)
+			@spawner = Railz::ApplicationSpawner.new(stub.app_root, options)
 			begin
 				@spawner.start
 				return @spawner.spawn_application
@@ -89,9 +85,9 @@ describe ApplicationSpawner do
 			use_rails_stub('foobar') do |stub|
 				File.append(stub.environment_rb, %q{
 					PhusionPassenger.on_event(:starting_worker_process) do |forked|
-						File.append("result.txt", "forked = #{forked}\n")
+						::File.append("result.txt", "forked = #{forked}\n")
 					end
-					File.append("result.txt", "end of environment.rb\n");
+					::File.append("result.txt", "end of environment.rb\n");
 				})
 				spawn_stub_application(stub).close
 				spawn_stub_application(stub).close
@@ -109,13 +105,13 @@ describe ApplicationSpawner do
 		
 		def spawn_stub_application(stub, extra_options = {})
 			options = { "lowest_user" => CONFIG['lowest_user'] }.merge(extra_options)
-			@spawner = ApplicationSpawner.new(stub.app_root, options)
+			@spawner = Railz::ApplicationSpawner.new(stub.app_root, options)
 			return @spawner.spawn_application!
 		end
 	end
 end
 
-Process.euid == ApplicationSpawner::ROOT_UID &&
+Process.euid == Railz::ApplicationSpawner::ROOT_UID &&
 describe("ApplicationSpawner privilege lowering support") do
 	include TestHelper
 	
@@ -127,7 +123,7 @@ describe("ApplicationSpawner privilege lowering support") do
 				"lower_privilege" => true,
 				"lowest_user" => CONFIG['lowest_user']
 			}.merge(options)
-			@spawner = ApplicationSpawner.new(@stub.app_root, options)
+			@spawner = Railz::ApplicationSpawner.new(@stub.app_root, options)
 			@spawner.start
 			begin
 				app = @spawner.spawn_application
@@ -147,7 +143,7 @@ describe("ApplicationSpawner privilege lowering support") do
 				"lower_privilege" => true,
 				"lowest_user" => CONFIG['lowest_user']
 			}.merge(options)
-			@spawner = ApplicationSpawner.new(@stub.app_root, options)
+			@spawner = Railz::ApplicationSpawner.new(@stub.app_root, options)
 			begin
 				app = @spawner.spawn_application!
 				yield app

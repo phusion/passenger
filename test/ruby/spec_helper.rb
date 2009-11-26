@@ -1,8 +1,7 @@
-root = File.expand_path("#{File.dirname(__FILE__)}/../..")
-Dir.chdir("#{root}/test")
-$LOAD_PATH.unshift("#{root}/lib", "#{root}/ext")
-require 'yaml'
+source_root = File.expand_path(File.dirname(__FILE__) + "/../..")
+Dir.chdir("#{source_root}/test")
 
+require 'yaml'
 begin
 	CONFIG = YAML::load_file('config.yml')
 rescue Errno::ENOENT
@@ -12,12 +11,23 @@ rescue Errno::ENOENT
 	exit 1
 end
 
+$LOAD_PATH.unshift("#{source_root}/lib")
+$LOAD_PATH.unshift("#{source_root}/ext")
+$LOAD_PATH.unshift("#{source_root}/test")
+
 require 'fileutils'
+require 'support/test_helper'
 require 'phusion_passenger/utils'
+
+include PhusionPassenger
 
 # Seed the pseudo-random number generator here
 # so that it doesn't happen in the child processes.
 srand
+
+trap "QUIT" do
+	puts caller
+end
 
 Spec::Runner.configure do |config|
 	config.append_before do

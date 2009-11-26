@@ -653,7 +653,7 @@ end
 			abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo::RUBY}'. Please install it."
 		else
 			Dir.chdir("test") do
-				ruby "#{PlatformInfo.rspec} -c -f s ruby/*.rb ruby/*/*.rb"
+				ruby "#{PlatformInfo.rspec} -c -f s ruby/*_spec.rb ruby/*/*_spec.rb"
 			end
 		end
 	end

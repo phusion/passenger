@@ -1,7 +1,5 @@
-require 'support/config'
-require 'support/test_helper'
+require File.expand_path(File.dirname(__FILE__) + "/spec_helper")
 require 'support/nginx_controller'
-
 require 'integration_tests/mycook_spec'
 require 'integration_tests/cgi_environment_spec'
 require 'integration_tests/hello_world_rack_spec'

@@ -1,10 +1,7 @@
-require 'support/config'
-require 'support/test_helper'
+require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'phusion_passenger/abstract_request_handler'
 
 require 'fileutils'
-
-include PhusionPassenger
 
 describe AbstractRequestHandler do
 	before :each do

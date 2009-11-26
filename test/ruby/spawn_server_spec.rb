@@ -1,5 +1,4 @@
-require 'support/config'
-
+require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'ruby/abstract_server_spec'
 
 shared_examples_for "a spawn server" do

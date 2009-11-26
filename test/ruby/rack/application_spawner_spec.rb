@@ -1,5 +1,4 @@
-require 'support/config'
-require 'support/test_helper'
+require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
 require 'phusion_passenger/rack/application_spawner'
 
 describe PhusionPassenger::Rack::ApplicationSpawner do
@@ -26,7 +25,7 @@ describe PhusionPassenger::Rack::ApplicationSpawner do
 	it "lowers privilege to the owner of config.ru" do
 		system("chown", "-R", CONFIG['normal_user_1'], @stub.app_root)
 		File.prepend("#{@stub.app_root}/config.ru", %q{
-			File.new('touch.txt', 'w').close
+			::File.new('touch.txt', 'w').close
 		})
 		spawn(@stub.app_root).close
 		config_ru_owner = File.stat("#{@stub.app_root}/config.ru").uid
@@ -36,7 +35,7 @@ describe PhusionPassenger::Rack::ApplicationSpawner do
 	
 	it "sets the environment variables passed in the environment_variables option" do
 		File.append("#{@stub.app_root}/config.ru", %q{
-			File.open("env.txt", "w") do |f|
+			::File.open("env.txt", "w") do |f|
 				ENV.each_pair do |key, value|
 					f.puts("#{key} = #{value}")
 				end
@@ -54,9 +53,9 @@ describe PhusionPassenger::Rack::ApplicationSpawner do
 	it "calls the starting_worker_process event after config.ru has been loaded" do
 		File.append("#{@stub.app_root}/config.ru", %q{
 			PhusionPassenger.on_event(:starting_worker_process) do
-				File.append("rackresult.txt", "worker_process_started\n")
+				::File.append("rackresult.txt", "worker_process_started\n")
 			end
-			File.append("rackresult.txt", "end of config.ru\n");
+			::File.append("rackresult.txt", "end of config.ru\n");
 		})
 		spawn(@stub.app_root).close
 		spawn(@stub.app_root).close
@@ -74,9 +73,9 @@ describe PhusionPassenger::Rack::ApplicationSpawner do
 	it "calls the stopping_worker_process event" do
 		File.append("#{@stub.app_root}/config.ru", %q{
 			PhusionPassenger.on_event(:stopping_worker_process) do
-				File.append("rackresult.txt", "worker_process_stopped\n")
+				::File.append("rackresult.txt", "worker_process_stopped\n")
 			end
-			File.append("rackresult.txt", "end of config.ru\n");
+			::File.append("rackresult.txt", "end of config.ru\n");
 		})
 		spawn(@stub.app_root).close
 		spawn(@stub.app_root).close

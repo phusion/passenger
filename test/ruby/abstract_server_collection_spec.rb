@@ -1,9 +1,6 @@
-require 'support/config'
-require 'support/test_helper'
+require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'phusion_passenger/abstract_server'
 require 'phusion_passenger/abstract_server_collection'
-
-include PhusionPassenger
 
 describe AbstractServerCollection do
 	before :each do

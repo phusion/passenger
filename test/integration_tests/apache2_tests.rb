@@ -1,7 +1,6 @@
+require File.expand_path(File.dirname(__FILE__) + "/spec_helper")
 require 'socket'
 require 'fileutils'
-require 'support/config'
-require 'support/test_helper'
 require 'support/apache2_controller'
 require 'phusion_passenger/platform_info'
 require 'phusion_passenger/admin_tools'

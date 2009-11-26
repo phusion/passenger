@@ -1,5 +1,4 @@
-require 'support/config'
-require 'support/test_helper'
+require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'phusion_passenger/app_process'
 require 'phusion_passenger/spawn_manager'
 
@@ -7,8 +6,6 @@ require 'ruby/abstract_server_spec'
 require 'ruby/rails/minimal_spawner_spec'
 require 'ruby/rails/spawner_privilege_lowering_spec'
 require 'ruby/rails/spawner_error_handling_spec'
-include PhusionPassenger
-include PhusionPassenger::Utils
 
 # TODO: test whether SpawnManager restarts FrameworkSpawner if it crashed
 

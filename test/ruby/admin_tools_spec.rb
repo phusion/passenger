@@ -1,12 +1,8 @@
-require 'support/config'
-require 'support/test_helper'
-
+require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'fileutils'
 require 'phusion_passenger/utils'
 require 'phusion_passenger/admin_tools'
 require 'phusion_passenger/admin_tools/server_instance'
-
-include PhusionPassenger
 
 describe AdminTools do
 	include Utils

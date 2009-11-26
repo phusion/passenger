@@ -1,3 +1,4 @@
+require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
 require 'phusion_passenger/message_channel'
 
 shared_examples_for "a minimal spawner" do

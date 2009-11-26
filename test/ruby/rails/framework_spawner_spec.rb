@@ -1,27 +1,24 @@
-require 'support/config'
-require 'support/test_helper'
+require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
 require 'phusion_passenger/railz/framework_spawner'
 
 require 'ruby/rails/minimal_spawner_spec'
 require 'ruby/spawn_server_spec'
 require 'ruby/rails/spawner_privilege_lowering_spec'
 require 'ruby/rails/spawner_error_handling_spec'
-include PhusionPassenger
-include PhusionPassenger::Railz
 
 # TODO: test whether FrameworkSpawner restarts ApplicationSpawner if it crashed
 
-describe FrameworkSpawner do
+describe Railz::FrameworkSpawner do
 	include TestHelper
 	
 	before :each do
 		@stub = setup_rails_stub('foobar')
 		if use_vendor_rails?
 			@stub.use_vendor_rails('minimal')
-			@spawner = FrameworkSpawner.new(:vendor => "#{@stub.app_root}/vendor/rails")
+			@spawner = Railz::FrameworkSpawner.new(:vendor => "#{@stub.app_root}/vendor/rails")
 		else
 			version = AppProcess.detect_framework_version(@stub.app_root)
-			@spawner = FrameworkSpawner.new(:version => version)
+			@spawner = Railz::FrameworkSpawner.new(:version => version)
 		end
 		@spawner.start
 		@server = @spawner
@@ -54,7 +51,7 @@ describe FrameworkSpawner do
 	end
 end
 
-describe FrameworkSpawner do
+describe Railz::FrameworkSpawner do
 	include TestHelper
 	
 	describe "situations in which Rails is loaded via the gem" do
@@ -88,7 +85,7 @@ describe FrameworkSpawner do
 		end
 		options["lowest_user"] = CONFIG['lowest_user']
 		options = options.merge(extra_options)
-		spawner = FrameworkSpawner.new(options)
+		spawner = Railz::FrameworkSpawner.new(options)
 		spawner.start
 		begin
 			return spawner.spawn_application(stub.app_root, options)
@@ -98,7 +95,7 @@ describe FrameworkSpawner do
 	end
 	
 	def load_nonexistant_framework(options = {})
-		spawner = FrameworkSpawner.new(options.merge(:version => "1.9.827"))
+		spawner = Railz::FrameworkSpawner.new(options.merge(:version => "1.9.827"))
 		begin
 			spawner.start
 		ensure
@@ -107,7 +104,7 @@ describe FrameworkSpawner do
 	end
 end
 
-Process.euid == ApplicationSpawner::ROOT_UID &&
+Process.euid == Railz::ApplicationSpawner::ROOT_UID &&
 describe("FrameworkSpawner privilege lowering support") do
 	include TestHelper
 	
@@ -119,7 +116,7 @@ describe("FrameworkSpawner privilege lowering support") do
 			"lowest_user" => CONFIG['lowest_user']
 		}.merge(options)
 		@stub.use_vendor_rails('minimal')
-		@spawner = FrameworkSpawner.new(:vendor =>
+		@spawner = Railz::FrameworkSpawner.new(:vendor =>
 			"#{@stub.app_root}/vendor/rails")
 		@spawner.start
 		begin

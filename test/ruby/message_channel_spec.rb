@@ -1,7 +1,6 @@
+require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'socket'
-require 'support/config'
 require 'phusion_passenger/message_channel'
-include PhusionPassenger
 
 describe MessageChannel do
 	describe "scenarios with a single channel" do

@@ -1,7 +1,5 @@
-require 'support/config'
-require 'support/test_helper'
+require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'phusion_passenger/app_process'
-include PhusionPassenger
 
 describe AppProcess do
 	include TestHelper

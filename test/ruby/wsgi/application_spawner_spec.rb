@@ -1,15 +1,12 @@
-require 'support/config'
-require 'support/test_helper'
+require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
 require 'phusion_passenger/wsgi/application_spawner'
 require 'phusion_passenger/utils'
 require 'fileutils'
 require 'tempfile'
 
-include PhusionPassenger
-
-describe PhusionPassenger::WSGI::ApplicationSpawner do
+describe WSGI::ApplicationSpawner do
 	include TestHelper
-	include PhusionPassenger::Utils
+	include Utils
 	
 	before :each do
 		@old_passenger_tmpdir = Utils.passenger_tmpdir
@@ -47,7 +44,7 @@ describe PhusionPassenger::WSGI::ApplicationSpawner do
 	end
 	
 	def spawn(app_root)
-		PhusionPassenger::WSGI::ApplicationSpawner.spawn_application(app_root,
+		WSGI::ApplicationSpawner.spawn_application(app_root,
 			true, CONFIG['lowest_user'])
 	end
 end

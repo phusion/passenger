@@ -1,8 +1,5 @@
-require 'support/config'
-
+require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
 require 'phusion_passenger/utils/unseekable_socket'
-
-include PhusionPassenger
 
 describe Utils::UnseekableSocket do
 	class MyException < StandardError
