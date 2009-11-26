@@ -67,7 +67,7 @@ class RequestHandler < AbstractRequestHandler
 
 protected
 	# Overrided method.
-	def process_request(env, input, output, status_line_desired)
+	def process_request(env, input, output, full_http_response)
 		rewindable_input = ::Rack::RewindableInput.new(input)
 		begin
 			env[RACK_VERSION]      = RACK_VERSION_VALUE
@@ -98,8 +98,9 @@ protected
 			
 			status, headers, body = @app.call(env)
 			begin
-				if status_line_desired
+				if full_http_response
 					output.write("HTTP/1.1 #{status.to_i.to_s} Whatever#{CRLF}")
+					output.write("Connection: close#{CRLF}")
 				end
 				headers_output = [
 					STATUS, status.to_i.to_s, CRLF,

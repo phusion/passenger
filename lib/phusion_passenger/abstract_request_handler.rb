@@ -141,6 +141,12 @@ class AbstractRequestHandler
 	# Defaults to 3 seconds.
 	attr_accessor :soft_termination_linger_time
 	
+	# A password with which clients must authenticate. Default is unauthenticated.
+	attr_accessor :connect_password
+	
+	# Stream to write error messages to. Defaults to STDERR.
+	attr_accessor :stderr
+	
 	# Create a new RequestHandler with the given owner pipe.
 	# +owner_pipe+ must be the readable part of a pipe IO object.
 	#
@@ -179,6 +185,7 @@ class AbstractRequestHandler
 		@iterations         = 0
 		@processed_requests = 0
 		@soft_termination_linger_time = 3
+		@stderr             = STDERR
 		@main_loop_running  = false
 		
 		#############
@@ -400,8 +407,8 @@ private
 		end if trappable_signals.has_key?('ABRT')
 		
 		trap('QUIT') do
-			STDERR.puts(global_backtrace_report)
-			STDERR.flush
+			@stderr.puts(global_backtrace_report)
+			@stderr.flush
 		end if trappable_signals.has_key?('QUIT')
 	end
 	
@@ -425,11 +432,11 @@ private
 			connection = socket_wrapper.wrap(@main_socket.accept)
 			channel.io = connection
 			headers, input_stream = parse_native_request(connection, channel, buffer)
-			status_line_desired = false
+			full_http_response = false
 		elsif ios.include?(@http_socket)
 			connection = socket_wrapper.wrap(@http_socket.accept)
 			headers, input_stream = parse_http_request(connection)
-			status_line_desired = true
+			full_http_response = true
 		else
 			# The other end of the owner pipe has been closed, or the
 			# graceful termination pipe has been closed. This is our
@@ -457,13 +464,10 @@ private
 		end
 		
 		if headers
-			if @connect_password && headers[PASSENGER_CONNECT_PASSWORD] != @connect_password
-				STDERR.puts "*** Process #{$$} warning: someone tried to connect " <<
-					"with an invalid connect password."
-			elsif headers[REQUEST_METHOD] == PING
+			if headers[REQUEST_METHOD] == PING
 				process_ping(headers, input_stream, connection)
 			else
-				process_request(headers, input_stream, connection, status_line_desired)
+				process_request(headers, input_stream, connection, full_http_response)
 			end
 		end
 		return true
@@ -478,8 +482,14 @@ private
 		# processes from unintentionally keeping the
 		# connection open.
 		if connection && !connection.closed?
-			connection.close_write rescue nil
-			connection.close rescue nil
+			begin
+				connection.close_write
+			rescue SystemCallError
+			end
+			begin
+				connection.close
+			rescue SystemCallError
+			end
 		end
 		if input_stream && !input_stream.closed?
 			input_stream.close rescue nil
@@ -498,11 +508,19 @@ private
 			return
 		end
 		headers = split_by_null_into_hash(headers_data)
-		return [headers, socket]
+		if @connect_password && headers[PASSENGER_CONNECT_PASSWORD] != @connect_password
+			@stderr.puts "*** Passenger RequestHandler #{$$} warning: " <<
+				"someone tried to connect with an invalid connect password."
+			@stderr.flush
+			return
+		else
+			return [headers, socket]
+		end
 	rescue SecurityError => e
-		STDERR.puts("*** Passenger RequestHandler: HTTP header size exceeded maximum.")
-		STDERR.flush
-		print_exception("Passenger RequestHandler", e)
+		@stderr.puts("*** Passenger RequestHandler #{$$} warning: " <<
+			"HTTP header size exceeded maximum.")
+		@stderr.flush
+		return nil
 	end
 	
 	# Like parse_native_request, but parses an HTTP request. This is a very minimalistic
@@ -510,11 +528,19 @@ private
 	# socket is intended to be used for debugging purposes only.
 	def parse_http_request(socket)
 		headers = {}
+		
 		data = ""
-		while data !~ /\r\n\r\n\Z/
-			data << socket.readline
+		while data !~ /\r\n\r\n/ && data.size < MAX_HEADER_SIZE
+			data << socket.readpartial(16 * 1024)
 		end
-		data.gsub!(/\r\n\r\n\Z/, '')
+		if data.size >= MAX_HEADER_SIZE
+			@stderr.puts("*** Passenger RequestHandler #{$$} warning: " <<
+				"HTTP header size exceeded maximum.")
+			@stderr.flush
+			return nil
+		end
+		
+		data.gsub!(/\r\n\r\n.*/, '')
 		data.split("\r\n").each_with_index do |line, i|
 			if i == 0
 				# GET / HTTP/1.1
@@ -542,7 +568,15 @@ private
 				end
 			end
 		end
-		return headers
+		
+		if @connect_password && headers["HTTP_X_PASSENGER_CONNECT_PASSWORD"] != @connect_password
+			@stderr.puts "*** Passenger RequestHandler #{$$} warning: " <<
+				"someone tried to connect with an invalid connect password."
+			@stderr.flush
+			return
+		else
+			return [headers, socket]
+		end
 	rescue EOFError
 		return nil
 	end

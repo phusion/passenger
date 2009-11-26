@@ -139,6 +139,12 @@ class UnseekableSocket
 		raise annotate(e)
 	end
 	
+	def readpartial(*args)
+		@socket.readpartial(*args)
+	rescue => e
+		raise annotate(e)
+	end
+	
 	def readline
 		@socket.readline
 	rescue => e
