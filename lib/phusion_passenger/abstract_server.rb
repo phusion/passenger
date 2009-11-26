@@ -24,7 +24,6 @@
 
 require 'socket'
 require 'set'
-require 'timeout'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/utils'
 module PhusionPassenger
@@ -218,19 +217,11 @@ class AbstractServer
 		# Wait at most 3 seconds for server to exit. If it doesn't do that,
 		# we kill it. If that doesn't work either, we kill it forcefully with
 		# SIGKILL.
-		begin
-			Timeout::timeout(3) do
-				Process.waitpid(@pid) rescue nil
-			end
-		rescue Timeout::Error
+		if !Process.timed_waitpid(@pid, 3)
 			Process.kill(SERVER_TERMINATION_SIGNAL, @pid) rescue nil
-			begin
-				Timeout::timeout(3) do
-					Process.waitpid(@pid) rescue nil
-				end
-			rescue Timeout::Error
+			if !Process.timed_waitpid(@pid, 3)
 				Process.kill('SIGKILL', @pid) rescue nil
-				Process.waitpid(@pid, Process::WNOHANG) rescue nil
+				Process.timed_waitpid(@pid, 1)
 			end
 		end
 	end
