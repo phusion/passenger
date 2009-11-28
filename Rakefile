@@ -1069,3 +1069,20 @@ task :news_as_html do
 	end
 	puts "</dl>"
 end
+
+task :compile_app => [NGINX_COMMON_LIBRARY, NGINX_BOOST_OXT_LIBRARY] do
+	source = ENV['SOURCE'] || ENV['FILE'] || ENV['F']
+	if !source
+		STDERR.puts "Please specify the source filename with SOURCE=(...)"
+		exit 1
+	end
+	exe    = source.sub(/\.cpp$/, '')
+	create_executable(exe, source,
+		"-Iext -Iext/common " <<
+		"#{PlatformInfo.portability_cflags} " <<
+		"#{EXTRA_CXXFLAGS} " <<
+		"#{NGINX_COMMON_LIBRARY} " <<
+		"#{NGINX_BOOST_OXT_LIBRARY} " <<
+		"#{PlatformInfo.portability_ldflags} " <<
+		"#{EXTRA_LDFLAGS}")
+end
