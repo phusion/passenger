@@ -1275,6 +1275,21 @@ public:
 			unixd_config.user_id, unixd_config.group_id,
 			config->root, config->getRuby(), config->maxPoolSize,
 			config->maxInstancesPerApp, config->poolIdleTime);
+		
+		// Store some relevant information in the generation directory.
+		string generationPath = helperServerStarter.getGeneration()->getPath();
+		server_rec *server;
+		string configFiles;
+		
+		createFile(generationPath + "/web_server.txt", ap_get_server_description());
+		
+		for (server = s; server != NULL; server = server->next) {
+			if (server->defn_name != NULL) {
+				configFiles.append(server->defn_name);
+				configFiles.append(1, '\n');
+			}
+		}
+		createFile(generationPath + "/config_files.txt", configFiles);
 	}
 	
 	void childInit(apr_pool_t *pchild, server_rec *s) {

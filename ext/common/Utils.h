@@ -200,7 +200,8 @@ FileType getFileType(const StaticString &filename, CachedFileStat *cstat = 0,
  * @throws FileSystemException Something went wrong.
  * @ingroup Support
  */
-void createFile(const string &filename, const StaticString &contents, mode_t permissions,
+void createFile(const string &filename, const StaticString &contents,
+                mode_t permissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,
                 uid_t owner = (uid_t) -1, gid_t group = (gid_t) -1);
 
 /**

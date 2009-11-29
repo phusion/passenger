@@ -183,6 +183,30 @@ starting_helper_server_after_fork(void *arg) {
     setenv("SERVER_SOFTWARE", NGINX_VER, 1);
 }
 
+static ngx_int_t
+create_file(ngx_cycle_t *cycle, const u_char *filename, const u_char *contents, size_t len) {
+	FILE *f;
+	int   ret;
+	
+	f = fopen((const char *) filename, "w");
+	if (f != NULL) {
+		/* We must do something with these return values because
+		 * otherwise on some platforms it will cause a compiler
+		 * warning.
+		 */
+		do {
+			ret = fchmod(fileno(f), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+		} while (ret == -1 && errno == EINTR);
+		fwrite(contents, 1, len, f);
+		fclose(f);
+		return NGX_OK;
+	} else {
+		ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+			"could not create %s", filename);
+		return NGX_ERROR;
+	}
+}
+
 /**
  * Start the helper server and save its runtime information into various variables.
  *
@@ -198,7 +222,6 @@ start_helper_server(ngx_cycle_t *cycle) {
     char            *passenger_root = NULL;
     char            *ruby = NULL;
     char            *error_message = NULL;
-    FILE            *f;
     
     core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
     result    = NGX_OK;
@@ -232,23 +255,29 @@ start_helper_server(ngx_cycle_t *cycle) {
                         "%s/control_process.pid",
                         helper_server_starter_get_server_instance_dir(passenger_helper_server_starter));
     *last = (u_char) '\0';
-    f = fopen((const char *) filename, "w");
-    if (f != NULL) {
-        /* We must do something with these return values because
-         * otherwise on some platforms it will cause a compiler
-         * warning.
-         */
-        do {
-            ret = fchmod(fileno(f), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-        } while (ret == -1 && errno == EINTR);
-        do {
-            ret = fchown(fileno(f), core_conf->user, core_conf->group);
-        } while (ret == -1 && errno == EINTR);
-        fclose(f);
-    } else {
-        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                      "could not create %s", filename);
-    }
+	if (create_file(cycle, filename, (const u_char *) "", 0) != NGX_OK) {
+		result = NGX_ERROR;
+		goto cleanup;
+	}
+	
+	/* Create various other info files. */
+	last = ngx_snprintf(filename, sizeof(filename) - 1,
+						"%s/web_server.txt",
+						helper_server_starter_get_generation_dir(passenger_helper_server_starter));
+	*last = (u_char) '\0';
+	if (create_file(cycle, filename, (const u_char *) NGINX_VER, strlen(NGINX_VER)) != NGX_OK) {
+		result = NGX_ERROR;
+		goto cleanup;
+	}
+	
+	last = ngx_snprintf(filename, sizeof(filename) - 1,
+						"%s/config_files.txt",
+						helper_server_starter_get_generation_dir(passenger_helper_server_starter));
+	*last = (u_char) '\0';
+	if (create_file(cycle, filename, cycle->conf_file.data, cycle->conf_file.len) != NGX_OK) {
+		result = NGX_ERROR;
+		goto cleanup;
+	}
 
 cleanup:
     free(default_user);

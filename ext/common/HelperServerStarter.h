@@ -34,6 +34,7 @@ int  helper_server_starter_start(HelperServerStarter *hps,
 const char *helper_server_starter_get_request_socket_filename(HelperServerStarter *hps, unsigned int *size);
 const char *helper_server_starter_get_request_socket_password(HelperServerStarter *hps, unsigned int *size);
 const char *helper_server_starter_get_server_instance_dir(HelperServerStarter *hps);
+const char *helper_server_starter_get_generation_dir(HelperServerStarter *hps);
 pid_t       helper_server_starter_get_pid(HelperServerStarter *hps);
 void        helper_server_starter_free(HelperServerStarter *hps);
 

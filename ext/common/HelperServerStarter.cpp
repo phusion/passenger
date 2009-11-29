@@ -78,6 +78,11 @@ const char *helper_server_starter_get_server_instance_dir(HelperServerStarter *h
 	return helperServerStarter->getServerInstanceDir()->getPath().c_str();
 }
 
+const char *helper_server_starter_get_generation_dir(HelperServerStarter *hps) {
+	Passenger::HelperServerStarter *helperServerStarter = (Passenger::HelperServerStarter *) hps;
+	return helperServerStarter->getGeneration()->getPath().c_str();
+}
+
 pid_t helper_server_starter_get_pid(HelperServerStarter *hps) {
 	Passenger::HelperServerStarter *helperServerStarter = (Passenger::HelperServerStarter *) hps;
 	return helperServerStarter->getPid();
