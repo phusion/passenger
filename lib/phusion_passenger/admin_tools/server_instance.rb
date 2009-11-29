@@ -206,6 +206,21 @@ class ServerInstance
 		end
 	end
 	
+	def web_server_description
+		return File.read("#{@generation_path}/web_server.txt")
+	end
+	
+	def web_server_config_files
+		config_files = File.read("#{@generation_path}/config_files.txt").split("\n")
+		config_files.map! do |filename|
+			filename.strip
+		end
+		config_files.reject do |filename|
+			filename.empty?
+		end
+		return config_files
+	end
+	
 	def helper_server_pid
 		return File.read("#{@generation_path}/helper_server.pid").strip.to_i
 	end
