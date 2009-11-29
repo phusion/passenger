@@ -467,9 +467,10 @@ module Dependencies # :nodoc: all
 				rescue LoadError
 				end
 				require 'daemon_controller'
-				if defined?(DaemonController::VERSION)
+				begin
+					require 'daemon_controller/version'
 					result.found
-				else
+				rescue LoadError
 					result.not_found
 					dep.install_instructions = "Your version of daemon_controller is too old. " <<
 						"Please upgrade with the following commands:\n" <<

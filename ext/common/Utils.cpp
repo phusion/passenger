@@ -382,9 +382,12 @@ determineLowestUserAndGroup(const string &user, uid_t &uid, gid_t &gid) {
 
 const char *
 getSystemTempDir() {
-	const char *temp_dir = getenv("TMPDIR");
+	const char *temp_dir = getenv("PASSENGER_TEMP_DIR");
 	if (temp_dir == NULL || *temp_dir == '\0') {
-		temp_dir = "/tmp";
+		temp_dir = getenv("PASSENGER_TMPDIR");
+		if (temp_dir == NULL || *temp_dir == '\0') {
+			temp_dir = "/tmp";
+		}
 	}
 	return temp_dir;
 }

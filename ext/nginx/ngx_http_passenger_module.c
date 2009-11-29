@@ -49,14 +49,7 @@
 #define HELPER_SERVER_PASSWORD_SIZE     64
 
 
-static int        first_start = 1;
-/** perl_module destroys the original environment variables for some reason,
- * so when we get a SIGHUP (for restarting Nginx) $TMPDIR might not have the
- * same value as it had during Nginx startup. When restarting Nginx, we want
- * the new helper server instance to have the same $TMPDIR as it initially had,
- * so here we cache the original value instead of getenv()'ing it every time.
- */
-static const char   *system_temp_dir = NULL;
+static int           first_start = 1;
 ngx_str_t            passenger_schema_string;
 ngx_str_t            passenger_placeholder_upstream_address;
 CachedFileStat      *passenger_stat_cache;
@@ -233,7 +226,7 @@ start_helper_server(ngx_cycle_t *cycle) {
     
     ret = helper_server_starter_start(passenger_helper_server_starter,
         passenger_main_conf.log_level, getpid(),
-        system_temp_dir, passenger_main_conf.user_switching,
+        "", passenger_main_conf.user_switching,
         default_user, core_conf->user, core_conf->group,
         passenger_root, ruby, passenger_main_conf.max_pool_size,
         passenger_main_conf.max_instances_per_app,
@@ -323,15 +316,6 @@ pre_config_init(ngx_conf_t *cf)
         ngx_log_error(NGX_LOG_ALERT, cf->log, ngx_errno, "%s", error_message);
         free(error_message);
         return NGX_ERROR;
-    }
-    
-    if (system_temp_dir == NULL) {
-        const char *tmp = getenv("TMPDIR");
-        if (tmp == NULL || *tmp == '\0') {
-            system_temp_dir = "/tmp";
-        } else {
-            system_temp_dir = strdup(tmp);
-        }
     }
     
     return NGX_OK;

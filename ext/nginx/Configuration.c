@@ -658,7 +658,6 @@ passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_http_core_loc_conf_t    *clcf;
     ngx_str_t                   *value;
     ngx_url_t                    upstream_url;
-//    char                        *request_socket_filename;
 
     value = cf->args->elts;
     if (ngx_strcasecmp(value[1].data, (u_char *) "on") == 0) {

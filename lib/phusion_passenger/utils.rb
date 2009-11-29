@@ -465,7 +465,14 @@ protected
 	def self.passenger_tmpdir(create = true)
 		dir = @@passenger_tmpdir
 		if dir.nil? || dir.empty?
-			dir = "#{Dir.tmpdir}/passenger.1.0.#{Process.pid}"
+			tmpdir = "/tmp"
+			["PASSENGER_TEMP_DIR", "PASSENGER_TMPDIR"].each do |name|
+				if ENV.has_key?(name) && !ENV[name].empty?
+					tmpdir = ENV[name]
+					break
+				end
+			end
+			dir = "#{tmpdir}/passenger.1.0.#{Process.pid}"
 			dir.gsub!(%r{//+}, '/')
 			@@passenger_tmpdir = dir
 		end

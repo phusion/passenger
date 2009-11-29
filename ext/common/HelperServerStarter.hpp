@@ -241,6 +241,7 @@ public:
 		this_thread::disable_syscall_interruption dsi;
 		int fds[2], e, ret;
 		pid_t pid;
+		string theTempDir;
 		string watchdogFilename;
 		
 		if (type == APACHE) {
@@ -248,6 +249,10 @@ public:
 		} else {
 			watchdogFilename = passengerRoot + "/ext/nginx/PassengerWatchdog";
 		}
+		if (tempDir.empty()) {
+			theTempDir = getSystemTempDir();
+		}
+		
 		if (syscalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
 			int e = errno;
 			throw SystemException("Cannot create a Unix socket pair", e);
@@ -296,7 +301,7 @@ public:
 				toString(logLevel).c_str(),
 				"3",  // feedback fd
 				toString(webServerPid).c_str(),
-				tempDir.c_str(),
+				theTempDir.c_str(),
 				userSwitching ? "true" : "false",
 				defaultUser.c_str(),
 				toString(workerUid).c_str(),
