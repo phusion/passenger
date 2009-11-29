@@ -811,8 +811,8 @@ spec = Gem::Specification.new do |s|
 		'lib/phusion_passenger/templates/*',
 		'lib/phusion_passenger/templates/apache2/*',
 		'lib/phusion_passenger/templates/nginx/*',
-		'lib/phusion_passenger/templates/multicorn/*',
-		'lib/phusion_passenger/templates/multicorn_default_root/*',
+		'lib/phusion_passenger/templates/lite/*',
+		'lib/phusion_passenger/templates/lite_default_root/*',
 		'bin/*',
 		'doc/*',
 		
@@ -857,6 +857,7 @@ spec = Gem::Specification.new do |s|
 		'test/stub/**/*'
 	]
 	s.executables = [
+		'passenger',
 		'passenger-spawn-server',
 		'passenger-install-apache2-module',
 		'passenger-install-nginx-module',

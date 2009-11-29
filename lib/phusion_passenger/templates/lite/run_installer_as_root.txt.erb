@@ -1,0 +1,8 @@
+<red>Permission problems</red>
+
+Phusion Passenger Lite must be able to write to the following directory:
+
+  <b><%= @dir %></b>
+
+But it can't do that, because you're running Phusion Passenger Lite as
+<b><%= `whoami`.strip %></b>. Please re-run Phusion Passenger Lite as <b>root</b>.

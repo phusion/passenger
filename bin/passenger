@@ -26,6 +26,6 @@ source_root = File.expand_path(File.dirname(__FILE__) << "/..")
 $LOAD_PATH.unshift("#{source_root}/lib")
 
 require 'rubygems' rescue nil
-require 'phusion_passenger/multicorn/app'
+require 'phusion_passenger/lite/app'
 
-PhusionPassenger::Multicorn::App.run!(ARGV)
+PhusionPassenger::Lite::App.run!(ARGV)
