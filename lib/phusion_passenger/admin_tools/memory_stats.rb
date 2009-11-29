@@ -144,13 +144,32 @@ class MemoryStats
 					inactive = inactive.to_i * page_size / 1024
 					wired = wired.to_i * page_size / 1024
 					
-					used = active + inactive + wired
-					[free + used, used]
+					used = active + wired
+					[free + inactive + used, used]
 				else
 					nil
 				end
 			else
-				nil
+				`top` =~ /(\d+)(K|M) Active, (\d+)(K|M) Inact, (\d+)(K|M) Wired,.*?(\d+)(K|M) Free/
+				if $1 && $2 && $3 && $4 && $5 && $6 && $7 && $8
+					to_kb = lambda do |number, unit|
+						if unit == 'K'
+							number.to_i
+						else
+							number.to_i * 1024
+						end
+					end
+					
+					active = to_kb.call($1, $2)
+					inactive = to_kb.call($3, $4)
+					wired = to_kb.call($5, $6)
+					free = to_kb.call($7, $8)
+					
+					used = active + wired
+					[free + inactive + used, used]
+				else
+					nil
+				end
 			end
 		end
 	end
