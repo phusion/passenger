@@ -27,6 +27,7 @@ require 'socket'
 require 'ostruct'
 require 'phusion_passenger/admin_tools'
 require 'phusion_passenger/message_channel'
+require 'phusion_passenger/utils/message_client'
 
 module PhusionPassenger
 module AdminTools
@@ -174,7 +175,6 @@ class ServerInstance
 	# - +EOFError+: The server unexpectedly closed the connection during authentication.
 	# - +SecurityError+: The server denied our authentication credentials.
 	def connect(role_or_username, password = nil)
-		@channel = MessageChannel.new(UNIXSocket.new("#{@generation_path}/socket"))
 		if role_or_username.is_a?(Symbol)
 			case role_or_username
 			when :passenger_status
@@ -191,18 +191,11 @@ class ServerInstance
 			username = role_or_username
 		end
 		
+		@client = Utils::MessageClient.new(username, password, "#{@generation_path}/socket")
 		begin
-			@channel.write_scalar(username)
-			@channel.write_scalar(password)
-			result = @channel.read
-			if result.nil?
-				raise EOFError
-			elsif result[0] != "ok"
-				raise SecurityError, result[0]
-			end
 			yield self
 		ensure
-			@channel.close
+			@client.close
 		end
 	end
 	
@@ -226,21 +219,15 @@ class ServerInstance
 	end
 	
 	def status
-		@channel.write("inspect")
-		check_security_response
-		return @channel.read_scalar
+		return @client.status
 	end
 	
 	def backtraces
-		@channel.write("backtraces")
-		check_security_response
-		return @channel.read_scalar
+		return @client.backtraces
 	end
 	
 	def xml
-		@channel.write("toXml", true)
-		check_security_response
-		return @channel.read_scalar
+		return @client.xml
 	end
 	
 	def groups
@@ -298,15 +285,6 @@ private
 	class << self;
 		private :log_cleaning_action
 		private :current_time
-	end
-	
-	def check_security_response
-		result = @channel.read
-		if result.nil?
-			raise EOFError
-		elsif result[0] != "Passed security"
-			raise SecurityError, result[0]
-		end
 	end
 end
 

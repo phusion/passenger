@@ -36,15 +36,20 @@ class MessageClient
 	# generation's helper server.
 	def initialize(username, password, filename = "#{Utils.passenger_tmpdir}/socket")
 		@socket = UNIXSocket.new(filename)
-		@channel = MessageChannel.new(@socket)
-		@channel.write_scalar(username)
-		@channel.write_scalar(password)
+		begin
+			@channel = MessageChannel.new(@socket)
+			@channel.write_scalar(username)
+			@channel.write_scalar(password)
 		
-		result = @channel.read
-		if result.nil?
-			raise EOFError
-		elsif result[0] != "ok"
-			raise SecurityError, result[0]
+			result = @channel.read
+			if result.nil?
+				raise EOFError
+			elsif result[0] != "ok"
+				raise SecurityError, result[0]
+			end
+		rescue Exception
+			@socket.close
+			raise
 		end
 	end
 	
@@ -63,6 +68,26 @@ class MessageClient
 		else
 			return result.first == "true"
 		end
+	end
+	
+	def status
+		@channel.write("inspect")
+		check_security_response
+		return @channel.read_scalar
+	end
+	
+	def xml
+		@channel.write("toXml", true)
+		check_security_response
+		return @channel.read_scalar
+	end
+	
+	### BacktracesServer methods ###
+	
+	def backtraces
+		@channel.write("backtraces")
+		check_security_response
+		return @channel.read_scalar
 	end
 	
 	### Low level I/O methods ###
