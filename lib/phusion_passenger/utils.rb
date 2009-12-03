@@ -647,7 +647,6 @@ module Signal
 			result = Signal.list
 			result.delete("ALRM")
 			result.delete("VTALRM")
-			return result
 		when "jruby"
 			result = Signal.list
 			result.delete("QUIT")
@@ -655,12 +654,21 @@ module Signal
 			result.delete("FPE")
 			result.delete("KILL")
 			result.delete("SEGV")
-			result.delete("STOP")
 			result.delete("USR1")
-			return result
 		else
-			return Signal.list
+			result = Signal.list
 		end
+		
+		# Don't touch SIGCHLD no matter what! On OS X waitpid() will
+		# malfunction if SIGCHLD doesn't have a correct handler.
+		result.delete("CLD")
+		result.delete("CHLD")
+		
+		# Other stuff that we don't want to trap no matter which
+		# Ruby engine.
+		result.delete("STOP")
+		
+		return result
 	end
 end
 
