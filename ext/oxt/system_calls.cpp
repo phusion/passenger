@@ -42,7 +42,18 @@ interruption_signal_handler(int sig) {
 void
 oxt::setup_syscall_interruption_support() {
 	struct sigaction action;
+	sigset_t signal_set;
 	int ret;
+	
+	/* Very important! The signal mask is inherited across fork()
+	 * and exec() and we don't know what the parent process did to
+	 * us. At least on OS X, having a signal mask blocking important
+	 * signals can lead to stuff like waitpid() malfunction.
+	 */
+	sigemptyset(&signal_set);
+	do {
+		ret = sigprocmask(SIG_SETMASK, &signal_set, NULL);
+	} while (ret == -1 && errno == EINTR);
 	
 	action.sa_handler = interruption_signal_handler;
 	action.sa_flags   = 0;
