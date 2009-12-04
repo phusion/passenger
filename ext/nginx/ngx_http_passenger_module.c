@@ -248,29 +248,29 @@ start_helper_server(ngx_cycle_t *cycle) {
                         "%s/control_process.pid",
                         helper_server_starter_get_server_instance_dir(passenger_helper_server_starter));
     *last = (u_char) '\0';
-	if (create_file(cycle, filename, (const u_char *) "", 0) != NGX_OK) {
-		result = NGX_ERROR;
-		goto cleanup;
-	}
-	
-	/* Create various other info files. */
-	last = ngx_snprintf(filename, sizeof(filename) - 1,
-						"%s/web_server.txt",
-						helper_server_starter_get_generation_dir(passenger_helper_server_starter));
-	*last = (u_char) '\0';
-	if (create_file(cycle, filename, (const u_char *) NGINX_VER, strlen(NGINX_VER)) != NGX_OK) {
-		result = NGX_ERROR;
-		goto cleanup;
-	}
-	
-	last = ngx_snprintf(filename, sizeof(filename) - 1,
-						"%s/config_files.txt",
-						helper_server_starter_get_generation_dir(passenger_helper_server_starter));
-	*last = (u_char) '\0';
-	if (create_file(cycle, filename, cycle->conf_file.data, cycle->conf_file.len) != NGX_OK) {
-		result = NGX_ERROR;
-		goto cleanup;
-	}
+    if (create_file(cycle, filename, (const u_char *) "", 0) != NGX_OK) {
+        result = NGX_ERROR;
+        goto cleanup;
+    }
+
+    /* Create various other info files. */
+    last = ngx_snprintf(filename, sizeof(filename) - 1,
+                        "%s/web_server.txt",
+                        helper_server_starter_get_generation_dir(passenger_helper_server_starter));
+    *last = (u_char) '\0';
+    if (create_file(cycle, filename, (const u_char *) NGINX_VER, strlen(NGINX_VER)) != NGX_OK) {
+        result = NGX_ERROR;
+        goto cleanup;
+    }
+
+    last = ngx_snprintf(filename, sizeof(filename) - 1,
+                        "%s/config_files.txt",
+                        helper_server_starter_get_generation_dir(passenger_helper_server_starter));
+    *last = (u_char) '\0';
+    if (create_file(cycle, filename, cycle->conf_file.data, cycle->conf_file.len) != NGX_OK) {
+        result = NGX_ERROR;
+        goto cleanup;
+    }
 
 cleanup:
     free(default_user);
