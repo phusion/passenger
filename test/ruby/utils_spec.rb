@@ -310,13 +310,13 @@ describe Utils do
 			Utils.passenger_tmpdir = @old_passenger_tmpdir
 		end
 		
-		it "returns a directory under Dir.tmpdir if Utils.passenger_tmpdir is nil" do
-			File.dirname(passenger_tmpdir(false)).should == Dir.tmpdir
+		it "returns a directory under /tmp if Utils.passenger_tmpdir is nil" do
+			File.dirname(passenger_tmpdir(false)).should == "/tmp"
 		end
 		
-		it "returns a directory under Dir.tmpdir if Utils.passenger_tmpdir is an empty string" do
+		it "returns a directory under /tmp if Utils.passenger_tmpdir is an empty string" do
 			Utils.passenger_tmpdir = ''
-			File.dirname(passenger_tmpdir(false)).should == Dir.tmpdir
+			File.dirname(passenger_tmpdir(false)).should == "/tmp"
 		end
 		
 		it "returns Utils.passenger_tmpdir if it's set" do

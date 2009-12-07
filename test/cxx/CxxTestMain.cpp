@@ -91,6 +91,8 @@ main(int argc, char *argv[]) {
 	signal(SIGPIPE, SIG_IGN);
 	setenv("RAILS_ENV", "production", 1);
 	setenv("TESTING_PASSENGER", "1", 1);
+	unsetenv("PASSENGER_TMPDIR");
+	unsetenv("PASSENGER_TEMP_DIR");
 	oxt::setup_syscall_interruption_support();
 	
 	tut::reporter reporter;
