@@ -175,8 +175,10 @@ private:
 			env_arr = apr_table_elts(r->subprocess_env);
 			env_entries = (apr_table_entry_t *) env_arr->elts;
 			for (int i = 0; i < env_arr->nelts; ++i) {
-				result->push_back(env_entries[i].key);
-				result->push_back(env_entries[i].val);
+				if (env_entries[i].key != NULL && env_entries[i].val != NULL) {
+					result->push_back(env_entries[i].key);
+					result->push_back(env_entries[i].val);
+				}
 			}
 			return result;
 		}
