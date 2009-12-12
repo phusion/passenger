@@ -10,6 +10,8 @@ Release 2.2.8
    by passenger-install-nginx-module. As a result,
    passenger-install-nginx-module fails on e.g. out-of-the-box Ubuntu
    installations until the user manually installs OpenSSL. Issue #422.
+ * Fixed thread creation issue on Intel Itanium platforms.
+   This fixes issue #427.
 
 
 Release 2.2.7
