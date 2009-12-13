@@ -40,6 +40,9 @@ Release 2.2.8
    by passenger-install-nginx-module. As a result,
    passenger-install-nginx-module fails on e.g. out-of-the-box Ubuntu
    installations until the user manually installs OpenSSL. Issue #422.
+ * [Nginx] Fixed support for internal redirects and subrequests.
+   It is now possible to, for example, point X-Accel-Redirects to Phusion
+   Passenger-served URLs. Patch contributed by W. Andrew Loe III: issue #433.
  * [Apache] Fixed a GnuTLS compatibility issue.
    mod_gnutls can cause Phusion Passenger to crash because of an unchecked
    NULL pointer. This problem has now been fixed: issue #391.
