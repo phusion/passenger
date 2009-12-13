@@ -34,6 +34,7 @@
 
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
+#include <oxt/thread.hpp>
 
 #include <string>
 #include <sstream>
@@ -259,7 +260,7 @@ private:
 	
 	AbstractSpawnManagerPtr spawnManager;
 	SharedDataPtr data;
-	boost::thread *cleanerThread;
+	oxt::thread *cleanerThread;
 	bool done;
 	unsigned int maxIdleTime;
 	unsigned int waitingOnGlobalQueue;
@@ -707,8 +708,9 @@ private:
 		waitingOnGlobalQueue = 0;
 		maxPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
 		maxIdleTime = DEFAULT_MAX_IDLE_TIME;
-		cleanerThread = new boost::thread(
+		cleanerThread = new oxt::thread(
 			bind(&Pool::cleanerThreadMainLoop, this),
+			"ApplicationPool cleaner",
 			CLEANER_THREAD_STACK_SIZE
 		);
 	}

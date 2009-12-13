@@ -47,6 +47,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 			Dependencies::Ruby_OpenSSL,
 			Dependencies::RubyGems,
 			Dependencies::Rake,
+			Dependencies::OpenSSL_Dev,
 			Dependencies::Zlib_Dev
 		]
 		if Dependencies.fastthread_required?

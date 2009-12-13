@@ -28,6 +28,27 @@ Release 3.0.0
    through race conditions, even on high volume websites.
 
 
+Release 2.2.8
+-------------
+
+ * [Nginx] Fixed some signal handling problems.
+   Restarting Nginx on OS X with SIGHUP can sometimes take a long time or
+   even fail completely. This is because of some signal handling problems,
+   which have now been fixed.
+ * [Nginx] Added OpenSSL as dependency.
+   OpenSSL is required in order to install Nginx, but this was not checked
+   by passenger-install-nginx-module. As a result,
+   passenger-install-nginx-module fails on e.g. out-of-the-box Ubuntu
+   installations until the user manually installs OpenSSL. Issue #422.
+ * [Apache] Fixed a GnuTLS compatibility issue.
+   mod_gnutls can cause Phusion Passenger to crash because of an unchecked
+   NULL pointer. This problem has now been fixed: issue #391.
+ * Fixed thread creation issue on Intel Itanium platforms.
+   This fixes issue #427.
+ * Fixed compilation problems on Linux running on the Renesas SH4 CPU.
+   Patch contributed by iwamatsu: issue #428.
+
+
 Release 2.2.7
 -------------
 
