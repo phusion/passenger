@@ -298,10 +298,21 @@ private
 		if !defined?(Dispatcher)
 			require 'dispatcher'
 		end
+		# Rails 2.2+ uses application_controller.rb while older versions use application.rb.
 		begin
 			require_dependency 'application_controller'
-		rescue LoadError
-			require_dependency 'application'
+		rescue LoadError => e
+			begin
+				require_dependency 'application'
+			rescue LoadError
+				# Considering that most apps these das are written in Rails
+				# 2.2+, if application.rb cannot be loaded either then it
+				# probably just means that application_controller.rb threw
+				# a LoadError. So we raise the original error here; if the
+				# app is based on Rails < 2.2 then the error will make less
+				# sense but we can only choose one or the other.
+				raise e
+			end
 		end
 		
 		# - No point in preloading the application sources if the garbage collector
