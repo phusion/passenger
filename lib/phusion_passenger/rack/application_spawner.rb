@@ -21,10 +21,6 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-rack_dir = File.expand_path(File.dirname(__FILE__) + "/../../../vendor/rack-1.0.0-git/lib")
-$LOAD_PATH.unshift(rack_dir) if !$LOAD_PATH.include?(rack_dir)
-require 'rack'
-
 require 'socket'
 require 'phusion_passenger/app_process'
 require 'phusion_passenger/events'
@@ -131,6 +127,10 @@ private
 	end
 
 	def load_rack_app
+		# Load Rack inside the spawned child process so that the spawn manager
+		# itself doesn't preload Rack. This is necessary because some broken
+		# Rails apps explicitly specify a Rack version as dependency.
+		require 'rack'
 		rackup_code = ::File.read("config.ru")
 		eval("Rack::Builder.new {( #{rackup_code}\n )}.to_app", TOPLEVEL_BINDING, "config.ru")
 	end

@@ -47,6 +47,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 			Dependencies::Ruby_OpenSSL,
 			Dependencies::RubyGems,
 			Dependencies::Rake,
+			Dependencies::Rack,
 			Dependencies::OpenSSL_Dev,
 			Dependencies::Zlib_Dev
 		]

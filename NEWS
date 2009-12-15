@@ -50,6 +50,20 @@ Release 2.2.8
    This fixes issue #427.
  * Fixed compilation problems on Linux running on the Renesas SH4 CPU.
    Patch contributed by iwamatsu: issue #428.
+ * The Rack library has been unvendored.
+   The original reason for vendoring was to work around broken Rails
+   applications that explicitly specify Rack as a gem dependency. We've
+   found a better workaround that does not require vendoring Rack.
+   Issue #432.
+ * Fixed compatibility with Ruby 1.9.1 patchlevel >= 152
+   Ruby 1.9.1 patchlevel >= 152 has a bug in its tempfile library. If you've
+   seen an error message along the lines of
+
+      *** Exception IOError in Passenger RequestHandler (closed stream)
+   
+   then this is a Ruby bug at work. This bug has been fixed in Ruby 1.9.2,
+   but Ruby 1.9.1 still contains this bug. We've added a workaround so that
+   the bug is not triggered with this Ruby version. Issue #432.
 
 
 Release 2.2.7
