@@ -22,11 +22,8 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-rack_dir = File.expand_path(File.dirname(__FILE__) + "/../../../vendor/rack-1.0.0-git/lib")
-$LOAD_PATH.unshift(rack_dir) if !$LOAD_PATH.include?(rack_dir)
-require 'rack/rewindable_input'
-
 require 'phusion_passenger/abstract_request_handler'
+require 'phusion_passenger/utils/rewindable_input'
 
 module PhusionPassenger
 module Rack
@@ -64,7 +61,7 @@ class RequestHandler < AbstractRequestHandler
 protected
 	# Overrided method.
 	def process_request(env, input, output)
-		rewindable_input = ::Rack::RewindableInput.new(input)
+		rewindable_input = Utils::RewindableInput.new(input)
 		begin
 			env[RACK_VERSION]      = RACK_VERSION_VALUE
 			env[RACK_INPUT]        = rewindable_input

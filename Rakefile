@@ -699,7 +699,6 @@ spec = Gem::Specification.new do |s|
 		'benchmark/*.{cpp,rb}',
 		'misc/*',
 		'misc/*/*',
-		'vendor/**/*',
 		'test/*.{rb,cpp,example}',
 		'test/support/*.{cpp,h,rb}',
 		'test/oxt/*.cpp',
