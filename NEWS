@@ -54,6 +54,8 @@ Release 2.2.8
    The original reason for vendoring was to work around broken Rails
    applications that explicitly specify Rack as a gem dependency. We've
    found a better workaround that does not require vendoring Rack.
+   This also fixes a compatibility problem with Rails 3, because Rails
+   3 depends on a newer Rack version than the one we had vendored.
    Issue #432.
  * Fixed compatibility with Ruby 1.9.1 patchlevel >= 152
    Ruby 1.9.1 patchlevel >= 152 has a bug in its tempfile library. If you've
