@@ -39,7 +39,8 @@ http {
         server_name <%= app[:server_names].join(' ') %>;
         root <%= app[:root] %>/public;
         passenger_enabled on;
-	rails_env <%= @options[:env] %>;
+	rails_env <%= app[:env] %>;
+	<% if app[:min_instances] %>passenger_min_instances <%= app[:min_instances] %>;<% end%>
     }
     <% end %>
 }
