@@ -909,6 +909,20 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_main_conf_t, default_user),
       NULL },
 
+    { ngx_string("passenger_pass_header"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+      ngx_conf_set_str_array_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, upstream_config.pass_headers),
+      NULL },
+
+    { ngx_string("passenger_ignore_client_abort"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_CONF_FLAG,
+      ngx_conf_set_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, upstream_config.ignore_client_abort),
+      NULL },
+
     { ngx_string("rails_env"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
@@ -1073,13 +1087,6 @@ const ngx_command_t passenger_commands[] = {
       ngx_scgi_set_keyval_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, vars_source),
-      NULL },
-
-    { ngx_string("scgi_pass_header"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
-      ngx_conf_set_str_array_slot,
-      NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(passenger_loc_conf_t, upstream.pass_headers),
       NULL },
 
     { ngx_string("scgi_hide_header"),
