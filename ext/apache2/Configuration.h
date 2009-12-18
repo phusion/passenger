@@ -137,16 +137,6 @@
 			 * in the directory configuration. */
 			bool minInstancesSpecified;
 			
-			/**
-			 * The maximum amount of memory (in MB) the spawned application may use.
-			 * A value of 0 means unlimited.
-			 */
-			unsigned long memoryLimit;
-			
-			/** Indicates whether the memoryLimit option was explicitly specified
-			 * in the directory configuration. */
-			bool memoryLimitSpecified;
-			
 			/** Whether symlinks in the document root path should be resolved.
 			 * The implication of this is documented in the users guide, section
 			 * "How Phusion Passenger detects whether a virtual host is a web application".
@@ -264,14 +254,6 @@
 			unsigned long getMinInstances() const {
 				if (minInstancesSpecified) {
 					return minInstances;
-				} else {
-					return 0;
-				}
-			}
-			
-			unsigned long getMemoryLimit() const {
-				if (memoryLimitSpecified) {
-					return memoryLimit;
 				} else {
 					return 0;
 				}

@@ -92,8 +92,6 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->maxRequestsSpecified = false;
 	config->minInstances = 0;
 	config->minInstancesSpecified = false;
-	config->memoryLimit = 0;
-	config->memoryLimitSpecified = false;
 	config->highPerformance = DirConfig::UNSET;
 	config->useGlobalQueue = DirConfig::UNSET;
 	config->resolveSymlinksInDocRoot = DirConfig::UNSET;
@@ -138,8 +136,6 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->maxRequestsSpecified = base->maxRequestsSpecified || add->maxRequestsSpecified;
 	config->minInstances = (add->minInstancesSpecified) ? add->minInstances : base->minInstances;
 	config->minInstancesSpecified = base->minInstancesSpecified || add->minInstancesSpecified;
-	config->memoryLimit = (add->memoryLimitSpecified) ? add->memoryLimit : base->memoryLimit;
-	config->memoryLimitSpecified = base->memoryLimitSpecified || add->memoryLimitSpecified;
 	config->highPerformance = (add->highPerformance == DirConfig::UNSET) ? base->highPerformance : add->highPerformance;
 	config->useGlobalQueue = (add->useGlobalQueue == DirConfig::UNSET) ? base->useGlobalQueue : add->useGlobalQueue;
 	config->statThrottleRate = (add->statThrottleRateSpecified) ? add->statThrottleRate : base->statThrottleRate;

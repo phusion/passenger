@@ -124,12 +124,6 @@ struct PoolOptions {
 	unsigned long minProcesses;
 	
 	/**
-	 * The maximum amount of memory (in MB) the spawned application may use.
-	 * A value of 0 means unlimited.
-	 */
-	unsigned long memoryLimit;
-	
-	/**
 	 * Whether to use a global queue instead of a per-backend process
 	 * queue. This option is only used by ApplicationPool::get().
 	 *
@@ -203,7 +197,6 @@ struct PoolOptions {
 		appSpawnerTimeout       = -1;
 		maxRequests             = 0;
 		minProcesses            = 0;
-		memoryLimit             = 0;
 		useGlobalQueue          = false;
 		statThrottleRate        = 0;
 		baseURI                 = "/";
@@ -226,7 +219,6 @@ struct PoolOptions {
 		long appSpawnerTimeout       = -1,
 		unsigned long maxRequests    = 0,
 		unsigned long minProcesses   = 0,
-		unsigned long memoryLimit    = 0,
 		bool useGlobalQueue          = false,
 		unsigned long statThrottleRate = 0,
 		const string &restartDir     = "",
@@ -242,7 +234,6 @@ struct PoolOptions {
 		this->appSpawnerTimeout       = appSpawnerTimeout;
 		this->maxRequests             = maxRequests;
 		this->minProcesses            = minProcesses;
-		this->memoryLimit             = memoryLimit;
 		this->useGlobalQueue          = useGlobalQueue;
 		this->statThrottleRate        = statThrottleRate;
 		this->restartDir              = restartDir;
@@ -286,7 +277,6 @@ struct PoolOptions {
 		appSpawnerTimeout       = atol(vec[startIndex + offset]);    offset += 2;
 		maxRequests      = atol(vec[startIndex + offset]);           offset += 2;
 		minProcesses     = atol(vec[startIndex + offset]);           offset += 2;
-		memoryLimit      = atol(vec[startIndex + offset]);           offset += 2;
 		useGlobalQueue   = vec[startIndex + offset] == "true";       offset += 2;
 		statThrottleRate = atol(vec[startIndex + offset]);           offset += 2;
 		restartDir       = vec[startIndex + offset];                 offset += 2;
@@ -325,7 +315,6 @@ struct PoolOptions {
 		appendKeyValue2(vec, "app_spawner_timeout",       appSpawnerTimeout);
 		appendKeyValue3(vec, "max_requests",    maxRequests);
 		appendKeyValue3(vec, "min_processes",   minProcesses);
-		appendKeyValue3(vec, "memory_limit",    memoryLimit);
 		appendKeyValue (vec, "use_global_queue", useGlobalQueue ? "true" : "false");
 		appendKeyValue3(vec, "stat_throttle_rate", statThrottleRate);
 		appendKeyValue (vec, "restart_dir",     restartDir);
