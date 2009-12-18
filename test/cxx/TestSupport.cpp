@@ -12,6 +12,19 @@ void createServerInstanceDirAndGeneration(ServerInstanceDirPtr &serverInstanceDi
 }
 
 string
+readAll(const string &filename) {
+	FILE *f = fopen(filename.c_str(), "rb");
+	try {
+		string result = readAll(fileno(f));
+		fclose(f);
+		return result;
+	} catch (...) {
+		fclose(f);
+		throw;
+	}
+}
+
+string
 readAll(int fd) {
 	string result;
 	char buf[1024 * 32];

@@ -46,6 +46,13 @@ void createServerInstanceDirAndGeneration(ServerInstanceDirPtr &serverInstanceDi
                                           ServerInstanceDir::GenerationPtr &generation);
 
 /**
+ * Read all data from the given file until EOF.
+ *
+ * @throws SystemException
+ */
+string readAll(const string &filename);
+
+/**
  * Read all data from the given file descriptor until EOF.
  *
  * @throws SystemException

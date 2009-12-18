@@ -185,6 +185,23 @@ public:
 	}
 	
 	/**
+	 * @throws SystemExeption
+	 * @throws IOException
+	 * @throws boost::thread_interrupted
+	 */
+	int readFileDescriptor(bool negotiate = true) {
+		try {
+			return channel.readFileDescriptor(negotiate);
+		} catch (const SystemException &) {
+			silentDisconnect();
+			throw;
+		} catch (const IOException &) {
+			silentDisconnect();
+			throw;
+		}
+	}
+	
+	/**
 	 * @throws SystemException
 	 * @throws boost::thread_interrupted
 	 */
@@ -225,6 +242,19 @@ public:
 	void writeScalar(const StaticString &data) {
 		try {
 			channel.writeScalar(data.c_str(), data.size());
+		} catch (const SystemException &) {
+			silentDisconnect();
+			throw;
+		}
+	}
+	
+	/**
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
+	 */
+	void writeFileDescriptor(int fileDescriptor, bool negotiate = true) {
+		try {
+			channel.writeFileDescriptor(fileDescriptor, negotiate);
 		} catch (const SystemException &) {
 			silentDisconnect();
 			throw;

@@ -585,6 +585,13 @@ end
 		'test/cxx/HttpStatusExtractorTest.o' => %w(
 			test/cxx/HttpStatusExtractorTest.cpp
 			ext/nginx/HttpStatusExtractor.h),
+		'test/cxx/LoggingTest.o' => %w(
+			test/cxx/LoggingTest.cpp
+			ext/common/LoggingServer.h
+			ext/common/Logging.h
+			ext/common/Utils.h
+			ext/common/MessageServer.h
+			ext/common/MessageClient.h),
 		'test/cxx/MessageServerTest.o' => %w(
 			test/cxx/MessageServerTest.cpp
 			ext/common/ApplicationPool/Client.h

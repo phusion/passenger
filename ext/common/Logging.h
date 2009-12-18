@@ -40,6 +40,10 @@
 #include <ctime>
 
 #include "RandomGenerator.h"
+#include "FileDescriptor.h"
+#include "SystemTime.h"
+#include "MessageClient.h"
+#include "StaticString.h"
 #include "Exceptions.h"
 #include "Utils.h"
 
@@ -137,169 +141,202 @@ void setDebugFile(const char *logFile = NULL);
 
 /********** Request-specific logging *********/
 
-class RequestLogger {
-public:
-	class RequestLog {
-	private:
-		friend class RequestLogger;
-		
-		int fd;
-		string id;
-		bool owner;
-		bool m_autocommit;
-		
-		RequestLog(int fd, const string &id, bool owner) {
-			this->fd = fd;
-			this->id = id;
-			this->owner = owner;
-			m_autocommit = false;
-		}
-		
-		unsigned long long currentTime() const {
-			struct timeval timestamp;
-			int ret;
-			
-			do {
-				ret = gettimeofday(&timestamp, NULL);
-			} while (ret == -1 && errno == EINTR);
-			return (unsigned long long) timestamp.tv_sec * 1000000 + timestamp.tv_usec;
-		}
-		
-		void atomicWrite(const char *data, unsigned int size) {
-			int ret;
-			
-			ret = write(fd, data, size);
-			if (ret == -1) {
-				int e = errno;
-				throw SystemException("Cannot write to the request log", e);
-			} else if ((unsigned int) ret != size) {
-				throw IOException("Cannot atomically write to the request log");
-			}
-		}
-		
-		void commit() {
-			char data[id.size() + 80];
-			int len;
-			
-			len = snprintf(data, sizeof(data), "Request %s finished at t=%llu\n",
-				id.c_str(), currentTime());
-			if ((unsigned int) len >= sizeof(data)) {
-				throw IOException("Cannot format a request log commit message.");
-			}
-			atomicWrite(data, len);
-		}
-		
-		void abort() {
-			char data[id.size() + 80];
-			int len;
-			
-			len = snprintf(data, sizeof(data), "Request %s aborted at t=%llu\n",
-				id.c_str(), currentTime());
-			if ((unsigned int) len >= sizeof(data)) {
-				throw IOException("Cannot format a request log abort message.");
-			}
-			atomicWrite(data, len);
-		}
-
-	public:
-		~RequestLog() {
-			if (fd != -1 && owner) {
-				this_thread::disable_syscall_interruption dsi;
-				if (m_autocommit) {
-					commit();
-				} else {
-					abort();
-				}
-			}
-		}
-		
-		string getId() const {
-			return id;
-		}
-		
-		void log(const StaticString &message) {
-			char data[id.size() + message.size() + 80];
-			int len;
-			
-			len = snprintf(data, sizeof(data), "Request %s at t=%llu: %s\n",
-				id.c_str(), currentTime(), message.c_str());
-			if ((unsigned int) len >= sizeof(data)) {
-				throw IOException("Cannot format a request log message.");
-			}
-			atomicWrite(data, len);
-		}
-		
-		void autocommit() {
-			m_autocommit = true;
-		}
-	};
-	
-	typedef shared_ptr<RequestLog> RequestLogPtr;
-	
+class TxnLog {
 private:
-	string filename;
-	RandomGenerator randomGenerator;
-	int fd;
+	FileDescriptor handle;
+	string fullId;
+	string shortId;
 	
-public:
-	RequestLogger() {
-		filename = "/tmp/passenger-requests.log";
-		fd = syscalls::open(filename.c_str(), O_CREAT | O_WRONLY | O_APPEND,
-			S_IRUSR | S_IWUSR |
-			S_IRGRP | S_IWGRP |
-			S_IROTH | S_IWOTH);
-	}
-	
-	RequestLogPtr newRequest() {
-		TRACE_POINT();
-		try {
-			struct timeval timestamp;
-			string id;
-			char message[40 + 60], buf[20];
-			int ret, len;
-			
-			do {
-				ret = gettimeofday(&timestamp, NULL);
-			} while (ret == -1 && errno == EINTR);
-			
-			id = toHex(randomGenerator.generateBytes(buf, 20));
-			len = snprintf(message, sizeof(message), "New request %s at t=%llu\n",
-				id.c_str(),
-				(unsigned long long) timestamp.tv_sec * 1000000 + timestamp.tv_usec);
-			if ((unsigned int) len >= sizeof(message)) {
-				// The buffer is too small.
-				throw IOException("Cannot format a new request log start message.");
-			}
-			
-			UPDATE_TRACE_POINT();
-			ret = syscalls::write(fd, message, len);
-			if (ret != len) {
-				if (ret == -1) {
-					int e = errno;
-					throw FileSystemException(
-						"Cannot write to the request log file " + filename,
-						e, filename);
-				} else {
-					throw IOException("Cannot atomically write a request log start message.");
-				}
-			}
-			
-			return RequestLogPtr(new RequestLog(fd, id, true));
-		} catch (...) {
-			this_thread::disable_syscall_interruption dsi;
-			syscalls::close(fd);
-			throw;
+	void atomicWrite(const char *data, unsigned int size) {
+		int ret;
+		
+		ret = write(handle, data, size);
+		if (ret == -1) {
+			int e = errno;
+			throw SystemException("Cannot write to the transaction log", e);
+		} else if ((unsigned int) ret != size) {
+			throw IOException("Cannot atomically write to the transaction log");
 		}
 	}
 	
-	RequestLogPtr continueLog(const string &id, bool owner = false) {
-		return RequestLogPtr(new RequestLog(fd, id, owner));
+public:
+	TxnLog() { }
+	
+	TxnLog(const FileDescriptor &handle, const string &fullId, const string &shortId) {
+		this->handle  = handle;
+		this->fullId  = fullId;
+		this->shortId = shortId;
+		message("BEGIN");
+	}
+	
+	~TxnLog() {
+		if (handle != -1) {
+			message("END");
+		}
+	}
+	
+	void message(const StaticString &text) {
+		if (handle != -1) {
+			char timestampString[22]; // Long enough for a 64-bit number.
+			size_t timestampStringLen;
+			int size;
+			
+			size = snprintf(timestampString, sizeof(timestampString),
+				"%llu", SystemTime::getMsec());
+			if (size >= (int) sizeof(timestampString)) {
+				// The buffer is too small.
+				TRACE_POINT();
+				throw IOException("Cannot format a new transaction log message timestamp.");
+			}
+			timestampStringLen = strlen(timestampString);
+			
+			// "txn-id-here 123456: log message here\n"
+			char data[shortId.size() + 1 + timestampStringLen + 2 + text.size() + 1];
+			char *end = data;
+			
+			// "txn-id-here"
+			memcpy(data, shortId.c_str(), shortId.size());
+			end += shortId.size();
+			
+			// "txn-id-here "
+			*end = ' ';
+			end++;
+			
+			// "txn-id-here 123456"
+			memcpy(end, timestampString, timestampStringLen);
+			end += timestampStringLen;
+			
+			// "txn-id-here 123456: "
+			*end = ':';
+			end++;
+			*end = ' ';
+			end++;
+			
+			// "txn-id-here 123456: log message here"
+			memcpy(end, text.c_str(), text.size());
+			end += text.size();
+			
+			// "txn-id-here 123456: log message here\n"
+			*end = '\n';
+			
+			atomicWrite(data, sizeof(data));
+		}
+	}
+	
+	bool isNull() const {
+		return handle == -1;
+	}
+	
+	string getShortId() const {
+		return shortId;
+	}
+	
+	string getFullId() const {
+		return fullId;
 	}
 };
 
-typedef shared_ptr<RequestLogger::RequestLog> RequestLogPtr;
+typedef shared_ptr<TxnLog> TxnLogPtr;
 
-extern RequestLogger requestLogger;
+class TxnLogger {
+private:
+	string dir;
+	string socketFilename;
+	string username;
+	string password;
+	RandomGenerator randomGenerator;
+	
+	boost::mutex lock;
+	string currentLogFile;
+	FileDescriptor currentLogHandle;
+	
+	FileDescriptor openLogFile(unsigned long long timestamp) {
+		string logFile = determineLogFilename(dir, timestamp);
+		lock_guard<boost::mutex> l(lock);
+		if (logFile != currentLogFile) {
+			MessageClient client;
+			FileDescriptor fd;
+			vector<string> args;
+			
+			client.connect(socketFilename, username, password);
+			client.write("open log file", toString(timestamp).c_str(), NULL);
+			if (!client.read(args)) {
+				// TODO: retry in a short while because the watchdog may restart
+				// the logging server
+				throw IOException("The logging server unexpectedly closed the connection.");
+			}
+			if (args[0] == "error") {
+				throw IOException("The logging server could not open the log file: " + args[1]);
+			}
+			fd = client.readFileDescriptor();
+			
+			currentLogFile   = logFile;
+			currentLogHandle = fd;
+		}
+		return currentLogHandle;
+	}
+	
+	bool parseFullId(const string &fullId, unsigned long long &timestamp, string &shortId) const {
+		const char *shortIdBegin = strchr(fullId.c_str(), '-');
+		if (shortIdBegin != NULL) {
+			char timestampString[shortIdBegin - fullId.c_str() + 1];
+			
+			memcpy(timestampString, fullId.c_str(), shortIdBegin - fullId.c_str());
+			timestampString[shortIdBegin - fullId.c_str()] = '\0';
+			timestamp = atoll(timestampString);
+			
+			shortId.assign(shortIdBegin + 1);
+			
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+public:
+	TxnLogger(const string &dir, const string &socketFilename, const string &username, const string &password) {
+		this->dir            = dir;
+		this->socketFilename = socketFilename;
+		this->username       = username;
+		this->password       = password;
+	}
+	
+	static string determineLogFilename(const string &dir, unsigned long long timestamp) {
+		struct tm tm;
+		time_t time_value;
+		string filename = dir + "/1/";
+		char dateName[12];
+		
+		time_value = timestamp / 1000;
+		localtime_r(&time_value, &tm);
+		strftime(dateName, sizeof(dateName), "%G/%m/%d", &tm);
+		filename.append(dateName);
+		filename.append("/log.txt");
+		return filename;
+	}
+	
+	TxnLogPtr newTransaction() {
+		unsigned long long timestamp = SystemTime::getMsec();
+		string shortId = toHex(randomGenerator.generateByteString(20));
+		string fullId = toString(timestamp);
+		fullId.append("-");
+		fullId.append(shortId);
+		return ptr(new TxnLog(openLogFile(timestamp), fullId, shortId));
+	}
+	
+	TxnLogPtr continueTransaction(const string &fullId) {
+		unsigned long long timestamp;
+		string shortId;
+		
+		if (!parseFullId(fullId, timestamp, shortId)) {
+			TRACE_POINT();
+			throw ArgumentException("Invalid transaction full ID '" + fullId + "'");
+		}
+		return ptr(new TxnLog(openLogFile(timestamp), fullId, shortId));
+	}
+};
+
+typedef shared_ptr<TxnLogger> TxnLoggerPtr;
 
 } // namespace Passenger
 
