@@ -52,8 +52,9 @@ private:
 				this_thread::disable_syscall_interruption dsi;
 				int theFd = fd;
 				fd = -1;
-				if (syscalls::close(theFd) == -1) {
-					throw SystemException("Cannot close file descriptor", errno);
+				if (syscalls::close(theFd) == -1 && errno != ENOTCONN) {
+					int e = errno;
+					throw SystemException("Cannot close file descriptor", e);
 				}
 			}
 		}
