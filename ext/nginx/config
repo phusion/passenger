@@ -1,5 +1,5 @@
-if ! test -f "$ngx_addon_dir/libpassenger_common.a" || \
-   ! test -f "$ngx_addon_dir/libboost_oxt.a"; then
+if ! test -f "$ngx_addon_dir/../common/libpassenger_common.a" || \
+   ! test -f "$ngx_addon_dir/../common/libboost_oxt.a"; then
     echo "*** The Phusion Passenger support files are not yet compiled. Compiling them for you... ***"
     echo "*** Running 'rake nginx' in $ngx_addon_dir... ***"
     if ! (cd $ngx_addon_dir; rake nginx); then
@@ -23,8 +23,8 @@ NGX_ADDON_DEPS="$NGX_ADDON_DEPS \
     ${ngx_addon_dir}/ngx_http_passenger_module.h \
     ${ngx_addon_dir}/../common/Version.h"
 CORE_LIBS="$CORE_LIBS  \
-    ${ngx_addon_dir}/libpassenger_common.a \
-    ${ngx_addon_dir}/libboost_oxt.a \
+    ${ngx_addon_dir}/../common/libpassenger_common.a \
+    ${ngx_addon_dir}/../common/libboost_oxt.a \
     -lstdc++ -lpthread"
 if test x`uname` = xOpenBSD; then
     CORE_LIBS="$CORE_LIBS -lm"

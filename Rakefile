@@ -75,7 +75,9 @@ task :default => [
 ]
 
 desc "Remove compiled files"
-task :clean
+task :clean do
+	sh "rm -rf .cache"
+end
 
 desc "Remove all generated files"
 task :clobber
@@ -96,9 +98,7 @@ file "ext/phusion_passenger/native_support.#{LIBEXT}" => [
 	sh "cd ext/phusion_passenger && make"
 end
 
-task :clean => 'native_support:clean' do
-	sh "rm -rf .cache"
-end
+task :clean => 'native_support:clean'
 
 task 'native_support:clean' do
 	sh "cd ext/phusion_passenger && make clean" if File.exist?('ext/phusion_passenger/Makefile')
@@ -227,6 +227,48 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 end
 
 
+##### Common stuff
+
+	BOOST_OXT_LIBRARY = define_libboost_oxt_task("common",
+		"ext/common/libboost_oxt")
+	COMMON_LIBRARY    = define_common_library_task("common",
+		"ext/common/libpassenger_common")
+	
+	task :clean => 'common:clean' do
+		sh "rm -f ext/common/PassengerWatchdog ext/common/PassengerLoggingAgent"
+	end
+	
+	watchdog_dependencies = [
+		'ext/common/Watchdog.cpp',
+		'ext/common/ServerInstanceDir.h',
+		COMMON_LIBRARY,
+		BOOST_OXT_LIBRARY]
+	file 'ext/common/PassengerWatchdog' => watchdog_dependencies do
+		create_executable('ext/common/PassengerWatchdog',
+			'ext/common/Watchdog.cpp',
+			"-Iext -Iext/common #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
+			"#{COMMON_LIBRARY} " <<
+			"#{BOOST_OXT_LIBRARY} " <<
+			"#{PlatformInfo.portability_ldflags} " <<
+			"#{EXTRA_LDFLAGS}")
+	end
+	
+	logging_agent_dependencies = [
+		'ext/common/LoggingAgent.cpp',
+		'ext/common/ServerInstanceDir.h',
+		COMMON_LIBRARY,
+		BOOST_OXT_LIBRARY]
+	file 'ext/common/PassengerLoggingAgent' => logging_agent_dependencies do
+		create_executable('ext/common/PassengerLoggingAgent',
+			'ext/common/LoggingAgent.cpp',
+			"-Iext -Iext/common #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
+			"#{COMMON_LIBRARY} " <<
+			"#{BOOST_OXT_LIBRARY} " <<
+			"#{PlatformInfo.portability_ldflags} " <<
+			"#{EXTRA_LDFLAGS}")
+	end
+
+
 ##### Apache 2 module
 
 	APACHE2_MODULE_CXXFLAGS = "-Iext -Iext/common #{PlatformInfo.apache2_module_cflags} " <<
@@ -270,15 +312,16 @@ end
 	APACHE2_MODULE_COMMON_LIBRARY    = define_common_library_task("apache2",
 		"ext/apache2/module_libpassenger_common",
 		PlatformInfo.apache2_module_cflags)
-	APACHE2_HELPER_BOOST_OXT_LIBRARY = define_libboost_oxt_task("apache2",
-		"ext/apache2/helper_libboost_oxt")
-	APACHE2_HELPER_COMMON_LIBRARY    = define_common_library_task("apache2",
-		"ext/apache2/helper_libpassenger_common")
+	APACHE2_HELPER_BOOST_OXT_LIBRARY = BOOST_OXT_LIBRARY
+	APACHE2_HELPER_COMMON_LIBRARY    = COMMON_LIBRARY
 	
 	
 	desc "Build Apache 2 module"
-	task :apache2 => ['ext/apache2/mod_passenger.so', 'ext/apache2/PassengerWatchdog',
-		'ext/apache2/PassengerHelperServer', :native_support]
+	task :apache2 => ['ext/apache2/mod_passenger.so',
+		'ext/apache2/PassengerHelperServer',
+		'ext/common/PassengerWatchdog',
+		'ext/common/PassengerLoggingAgent',
+		:native_support]
 	
 	mod_passenger_dependencies = [APACHE2_MODULE_COMMON_LIBRARY,
 		APACHE2_MODULE_BOOST_OXT_LIBRARY,
@@ -319,21 +362,6 @@ end
 			" -o ext/apache2/mod_passenger.o")
 	end
 	
-	apache2_watchdog_dependencies = [
-		'ext/common/Watchdog.cpp',
-		'ext/common/ServerInstanceDir.h',
-		APACHE2_HELPER_COMMON_LIBRARY,
-		APACHE2_HELPER_BOOST_OXT_LIBRARY]
-	file 'ext/apache2/PassengerWatchdog' => apache2_watchdog_dependencies do
-		create_executable('ext/apache2/PassengerWatchdog',
-			'ext/common/Watchdog.cpp',
-			"#{APACHE2_HELPER_CXXFLAGS} " <<
-			"#{APACHE2_HELPER_COMMON_LIBRARY} " <<
-			"#{APACHE2_HELPER_BOOST_OXT_LIBRARY} " <<
-			"#{PlatformInfo.portability_ldflags} " <<
-			"#{EXTRA_LDFLAGS}")
-	end
-	
 	apache2_helper_server_dependencies = [
 		'ext/apache2/HelperServer.cpp',
 		'ext/common/ServerInstanceDir.h',
@@ -371,7 +399,7 @@ end
 	desc "Clean all compiled Apache 2 files"
 	task 'apache2:clean' => 'native_support:clean' do
 		files = [APACHE2_MODULE_OBJECTS, %w(ext/apache2/mod_passenger.o
-			ext/apache2/mod_passenger.so ext/apache2/PassengerWatchdog
+			ext/apache2/mod_passenger.so
 			ext/apache2/PassengerHelperServer)]
 		sh("rm", "-rf", *files.flatten)
 	end
@@ -379,11 +407,14 @@ end
 
 ##### Nginx helper server
 
-	NGINX_BOOST_OXT_LIBRARY = define_libboost_oxt_task("nginx", "ext/nginx/libboost_oxt")
-	NGINX_COMMON_LIBRARY    = define_common_library_task("nginx", "ext/nginx/libpassenger_common")
+	NGINX_BOOST_OXT_LIBRARY = BOOST_OXT_LIBRARY
+	NGINX_COMMON_LIBRARY    = COMMON_LIBRARY
 	
 	desc "Build Nginx helper server"
-	task :nginx => ['ext/nginx/PassengerHelperServer', 'ext/nginx/PassengerWatchdog', :native_support]
+	task :nginx => ['ext/nginx/PassengerHelperServer',
+			'ext/common/PassengerWatchdog',
+			'ext/common/PassengerLoggingAgent',
+			:native_support]
 	
 	helper_server_dependencies = [
 		NGINX_BOOST_OXT_LIBRARY,
@@ -414,34 +445,17 @@ end
 			"#{EXTRA_LDFLAGS}"
 	end
 	
-	nginx_watchdog_dependencies = [
-		'ext/common/Watchdog.cpp',
-		'ext/common/ServerInstanceDir.h',
-		NGINX_COMMON_LIBRARY,
-		NGINX_BOOST_OXT_LIBRARY]
-	file 'ext/nginx/PassengerWatchdog' => nginx_watchdog_dependencies do
-		create_executable('ext/nginx/PassengerWatchdog',
-			'ext/common/Watchdog.cpp',
-			"-Iext -Iext/common " <<
-			"#{PlatformInfo.portability_cflags} " <<
-			"#{EXTRA_CXXFLAGS} " <<
-			"#{NGINX_COMMON_LIBRARY} " <<
-			"#{NGINX_BOOST_OXT_LIBRARY} " <<
-			"#{PlatformInfo.portability_ldflags} " <<
-			"#{EXTRA_LDFLAGS}")
-	end
-	
 	task :clean => 'nginx:clean'
 	desc "Clean all compiled Nginx files"
 	task 'nginx:clean' => 'native_support:clean' do
-		sh("rm", "-rf", "ext/nginx/PassengerHelperServer", "ext/nginx/PassengerWatchdog")
+		sh("rm", "-rf", "ext/nginx/PassengerHelperServer")
 	end
 
 
 ##### Unit tests
 
-	TEST_BOOST_OXT_LIBRARY = define_libboost_oxt_task("test", "test/libboost_oxt")
-	TEST_COMMON_LIBRARY    = define_common_library_task("test", "test/libpassenger_common")
+	TEST_BOOST_OXT_LIBRARY = BOOST_OXT_LIBRARY
+	TEST_COMMON_LIBRARY    = COMMON_LIBRARY
 	
 	TEST_COMMON_CFLAGS = "-DTESTING_APPLICATION_POOL " <<
 		"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
@@ -1077,7 +1091,7 @@ task :news_as_html do
 	puts "</dl>"
 end
 
-task :compile_app => [NGINX_COMMON_LIBRARY, NGINX_BOOST_OXT_LIBRARY] do
+task :compile_app => [COMMON_LIBRARY, BOOST_OXT_LIBRARY] do
 	source = ENV['SOURCE'] || ENV['FILE'] || ENV['F']
 	if !source
 		STDERR.puts "Please specify the source filename with SOURCE=(...)"
@@ -1088,8 +1102,8 @@ task :compile_app => [NGINX_COMMON_LIBRARY, NGINX_BOOST_OXT_LIBRARY] do
 		"-Iext -Iext/common " <<
 		"#{PlatformInfo.portability_cflags} " <<
 		"#{EXTRA_CXXFLAGS} " <<
-		"#{NGINX_COMMON_LIBRARY} " <<
-		"#{NGINX_BOOST_OXT_LIBRARY} " <<
+		"#{COMMON_LIBRARY} " <<
+		"#{BOOST_OXT_LIBRARY} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
 		"#{EXTRA_LDFLAGS}")
 end

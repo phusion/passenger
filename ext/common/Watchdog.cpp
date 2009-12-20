@@ -45,6 +45,9 @@ static unsigned int poolIdleTime;
 
 static ServerInstanceDirPtr serverInstanceDir;
 static ServerInstanceDir::GenerationPtr generation;
+static string loggingSocketFilename;
+static string loggingSocketPassword;
+static RandomGenerator randomGenerator;
 static EventFd errorEvent;
 
 static string logLevelString;
@@ -148,7 +151,8 @@ protected:
 	mutable boost::mutex lock;
 	
 	/**
-	 * Returns the filename of the agent process's executable.
+	 * Returns the filename of the agent process's executable. This method may be
+	 * called in a forked child process and may therefore not allocate memory.
 	 */
 	virtual string getExeFilename() const = 0;
 	
@@ -158,7 +162,12 @@ protected:
 	 * memory allocations in here. It must also not throw any exceptions.
 	 * It must also preserve the value of errno after exec() is called.
 	 */
-	virtual void execProgram() const = 0;
+	virtual void execProgram() const {
+		execl(getExeFilename().c_str(),
+			getExeFilename().c_str(),
+			"3",  // feedback fd
+			(char *) 0);
+	}
 	
 	/**
 	 * This method is to send startup arguments to the agent process through
@@ -473,7 +482,6 @@ protected:
 	string         requestSocketPassword;
 	string         messageSocketPassword;
 	string         helperServerFilename;
-	FileDescriptor feedbackFd;
 	string         requestSocketFilename;
 	string         messageSocketFilename;
 	
@@ -520,7 +528,6 @@ protected:
 	
 	virtual bool processStartupInfo(pid_t pid, FileDescriptor &fd, const vector<string> &args) {
 		if (args[0] == "initialized") {
-			feedbackFd            = fd;
 			requestSocketFilename = args[1];
 			messageSocketFilename = args[2];
 			return true;
@@ -531,10 +538,8 @@ protected:
 	
 public:
 	HelperServerWatcher() {
-		RandomGenerator generator;
-		
-		requestSocketPassword = generator.generateByteString(REQUEST_SOCKET_PASSWORD_SIZE);
-		messageSocketPassword = generator.generateByteString(MessageServer::MAX_PASSWORD_SIZE);
+		requestSocketPassword = randomGenerator.generateByteString(REQUEST_SOCKET_PASSWORD_SIZE);
+		messageSocketPassword = randomGenerator.generateByteString(MessageServer::MAX_PASSWORD_SIZE);
 		if (webServerType == "apache") {
 			helperServerFilename = passengerRoot + "/ext/apache2/PassengerHelperServer";
 		} else {
@@ -543,7 +548,7 @@ public:
 	}
 	
 	virtual void sendStartupInfo(MessageChannel &channel) {
-		channel.write("HelperServer startup info",
+		channel.write("HelperServer info",
 			requestSocketFilename.c_str(),
 			Base64::encode(requestSocketPassword).c_str(),
 			messageSocketFilename.c_str(),
@@ -551,6 +556,61 @@ public:
 			NULL);
 	}
 };
+
+
+class LoggingAgentWatcher: public AgentWatcher {
+protected:
+	string agentFilename;
+	
+	virtual const char *name() const {
+		return "Phusion Passenger logging agent";
+	}
+	
+	virtual string getExeFilename() const {
+		return agentFilename;
+	}
+	
+	virtual void execProgram() const {
+		execl(agentFilename.c_str(),
+			"PassengerLoggingAgent",
+			"3",  // feedback fd
+			webServerPidString.c_str(),
+			tempDir.c_str(),
+			generationNumber.c_str(),
+			// TODO
+			"/tmp/passenger-logs",
+			"",
+			"",
+			(char *) 0);
+	}
+	
+	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
+		MessageChannel channel(fd);
+		channel.write("logging socket password",
+			Base64::encode(loggingSocketPassword).c_str(),
+			NULL);
+	}
+	
+	virtual bool processStartupInfo(pid_t pid, FileDescriptor &fd, const vector<string> &args) {
+		if (args[0] == "initialized") {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+public:
+	LoggingAgentWatcher() {
+		agentFilename = passengerRoot + "/ext/common/PassengerLoggingAgent";
+	}
+	
+	virtual void sendStartupInfo(MessageChannel &channel) {
+		channel.write("LoggingServer info",
+			Base64::encode(loggingSocketPassword).c_str(),
+			NULL);
+	}
+};
+
 
 /**
  * Most operating systems overcommit memory. We *know* that this watchdog process
@@ -776,11 +836,15 @@ main(int argc, char *argv[]) {
 		maxInstancesPerAppString = toString(maxInstancesPerApp);
 		poolIdleTimeString = toString(poolIdleTime);
 		
+		loggingSocketPassword = randomGenerator.generateByteString(32);
+		
 		HelperServerWatcher helperServerWatcher;
+		LoggingAgentWatcher loggingAgentWatcher;
 		
 		vector<AgentWatcher *> watchers;
 		vector<AgentWatcher *>::iterator it;
 		watchers.push_back(&helperServerWatcher);
+		watchers.push_back(&loggingAgentWatcher);
 		
 		for (it = watchers.begin(); it != watchers.end(); it++) {
 			try {

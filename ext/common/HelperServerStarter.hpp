@@ -96,6 +96,8 @@ private:
 	 */
 	string messageSocketPassword;
 	
+	string loggingSocketPassword;
+	
 	/**
 	 * The server instance dir of the helper server. Only valid if pid != 0.
 	 */
@@ -245,11 +247,7 @@ public:
 		string theTempDir;
 		string watchdogFilename;
 		
-		if (type == APACHE) {
-			watchdogFilename = passengerRoot + "/ext/apache2/PassengerWatchdog";
-		} else {
-			watchdogFilename = passengerRoot + "/ext/nginx/PassengerWatchdog";
-		}
+		watchdogFilename = passengerRoot + "/ext/common/PassengerWatchdog";
 		if (tempDir.empty()) {
 			theTempDir = getSystemTempDir();
 		}
@@ -335,7 +333,7 @@ public:
 			FileDescriptor feedbackFd(fds[0]);
 			MessageChannel feedbackChannel(fds[0]);
 			vector<string> args;
-			bool allServicesStarted;
+			bool allAgentsStarted;
 			int status;
 			
 			ServerInstanceDirPtr serverInstanceDir;
@@ -411,13 +409,14 @@ public:
 					watchdogFilename + ")", atoi(args[1]));
 			}
 			
-			/****** Read services startup information ******/
+			/****** Read agents startup information ******/
 			
 			UPDATE_TRACE_POINT();
-			allServicesStarted = false;
+			allAgentsStarted = false;
 			
-			while (!allServicesStarted) {
+			while (!allAgentsStarted) {
 				try {
+					UPDATE_TRACE_POINT();
 					if (!feedbackChannel.read(args)) {
 						this_thread::disable_interruption di2;
 						this_thread::disable_syscall_interruption dsi2;
@@ -448,7 +447,7 @@ public:
 				} catch (const SystemException &ex) {
 					killAndWait(pid);
 					throw SystemException("Unable to start the Phusion Passenger watchdog: "
-						"unable to read all service startup information",
+						"unable to read all agent startup information",
 						ex.code());
 				} catch (const RuntimeException &) {
 					// Watchdog has already exited, no need to kill it.
@@ -458,7 +457,8 @@ public:
 					throw;
 				}
 				
-				if (args[0] == "HelperServer startup info") {
+				if (args[0] == "HelperServer info") {
+					UPDATE_TRACE_POINT();
 					if (args.size() == 5) {
 						this->pid = pid;
 						this->feedbackFd = feedbackFd;
@@ -473,11 +473,21 @@ public:
 						throw IOException("Unable to start the Phusion Passenger watchdog: "
 							"it returned an invalid initialization feedback message");
 					}
-				} else if (args[0] == "All services started") {
-					allServicesStarted = true;
+				} else if (args[0] == "LoggingServer info") {
+					UPDATE_TRACE_POINT();
+					if (args.size() == 2) {
+						loggingSocketPassword = Base64::decode(args[1]);
+					} else {
+						killAndWait(pid);
+						throw IOException("Unable to start the Phusion Passenger watchdog: "
+							"it returned an invalid initialization feedback message");
+					}
+				} else if (args[0] == "All agents started") {
+					allAgentsStarted = true;
 				} else {
+					UPDATE_TRACE_POINT();
 					killAndWait(pid);
-					throw RuntimeException("The helper server sent an unknown feedback message '" + args[0] + "'");
+					throw RuntimeException("One of the Passenger agents sent an unknown feedback message '" + args[0] + "'");
 				}
 			}
 		}
