@@ -394,47 +394,158 @@ getSystemTempDir() {
 
 void
 makeDirTree(const string &path, const char *mode, uid_t owner, gid_t group) {
-	char command[PATH_MAX + 10];
 	struct stat buf;
+	vector<string> paths;
+	vector<string> clauses;
+	vector<string>::iterator it;
+	vector<string>::reverse_iterator rit;
+	string current = path;
+	mode_t modeBits = 0;
+	int ret;
 	
 	if (stat(path.c_str(), &buf) == 0) {
 		return;
 	}
 	
-	snprintf(command, sizeof(command), "mkdir -p -m \"%s\" \"%s\"", mode, path.c_str());
-	command[sizeof(command) - 1] = '\0';
-	
-	int result;
-	do {
-		result = system(command);
-	} while (result == -1 && errno == EINTR);
-	if (result != 0) {
-		char message[1024];
-		int e = errno;
+	/* Parse mode bits. Grammar:
+	 *
+	 *   mode   ::= (clause ("," clause)*)?
+	 *   clause ::= who "=" permission*
+	 *   who    ::= "u" | "g" | "o"
+	 *   permission ::= "r" | "w" | "x" | "s"
+	 *
+	 * The "s" permission is only allowed for who == "u" or who == "g".
+	 */
+	split(mode, ',', clauses);
+	for (it = clauses.begin(); it != clauses.end(); it++) {
+		string clause = *it;
 		
-		snprintf(message, sizeof(message) - 1, "Cannot create directory '%s'",
-			path.c_str());
-		message[sizeof(message) - 1] = '\0';
-		if (result == -1) {
-			throw SystemException(message, e);
-		} else {
-			throw IOException(message);
+		if (clause.empty()) {
+			continue;
+		} else if (clause.size() < 2 || clause[1] != '=') {
+			throw ArgumentException("Invalid mode clause specification '" + clause + "'");
+		}
+		
+		switch (clause[0]) {
+		case 'u':
+			for (string::size_type i = 2; i < clause.size(); i++) {
+				switch (clause[i]) {
+				case 'r':
+					modeBits |= S_IRUSR;
+					break;
+				case 'w':
+					modeBits |= S_IWUSR;
+					break;
+				case 'x':
+					modeBits |= S_IXUSR;
+					break;
+				case 's':
+					modeBits |= S_ISUID;
+					break;
+				default:
+					throw ArgumentException("Invalid permission '" + string(1, clause[i]) +
+						"' in mode clause specification '" +
+						clause + "'");
+				}
+			}
+			break;
+		case 'g':
+			for (string::size_type i = 2; i < clause.size(); i++) {
+				switch (clause[i]) {
+				case 'r':
+					modeBits |= S_IRGRP;
+					break;
+				case 'w':
+					modeBits |= S_IWGRP;
+					break;
+				case 'x':
+					modeBits |= S_IXGRP;
+					break;
+				case 's':
+					modeBits |= S_ISGID;
+					break;
+				default:
+					throw ArgumentException("Invalid permission '" + string(1, clause[i]) +
+						"' in mode clause specification '" +
+						clause + "'");
+				}
+			}
+			break;
+		case 'o':
+			for (string::size_type i = 2; i < clause.size(); i++) {
+				switch (clause[i]) {
+				case 'r':
+					modeBits |= S_IROTH;
+					break;
+				case 'w':
+					modeBits |= S_IWOTH;
+					break;
+				case 'x':
+					modeBits |= S_IXOTH;
+					break;
+				default:
+					throw ArgumentException("Invalid permission '" + string(1, clause[i]) +
+						"' in mode clause specification '" +
+						clause + "'");
+				}
+			}
+			break;
+		default:
+			throw ArgumentException("Invalid owner '" + string(1, clause[0]) +
+				"' in mode clause specification '" + clause + "'");
 		}
 	}
 	
-	if (owner != (uid_t) -1 && group != (gid_t) -1) {
+	/* Create a list of parent paths that don't exist. For example, given
+	 * path == "/a/b/c/d/e" and that only /a exists, the list will become
+	 * as follows:
+	 *
+	 * /a/b/c/d
+	 * /a/b/c
+	 * /a/b
+	 */
+	while (current != "/" && current != "." && getFileType(current) == FT_NONEXISTANT) {
+		paths.push_back(current);
+		current = extractDirName(current);
+	}
+	
+	/* Now traverse the list in reverse order and create directories that don't exist. */
+	for (rit = paths.rbegin(); rit != paths.rend(); rit++) {
+		current = *rit;
+		
 		do {
-			result = chown(path.c_str(), owner, group);
-		} while (result == -1 && errno == EINTR);
-		if (result != 0) {
-			char message[1024];
-			int e = errno;
-			
-			snprintf(message, sizeof(message) - 1,
-				"Cannot change the directory '%s' its UID to %lld and GID to %lld",
-				path.c_str(), (long long) owner, (long long) group);
-			message[sizeof(message) - 1] = '\0';
-			throw FileSystemException(message, e, path);
+			ret = mkdir(current.c_str(), modeBits);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
+			if (errno == EEXIST) {
+				// Ignore error and don't chmod/chown.
+				continue;
+			} else {
+				int e = errno;
+				throw FileSystemException("Cannot create directory '" + *it + "'",
+					e, *it);
+			}
+		}
+		
+		/* Chmod in order to override the umask. */
+		do {
+			ret = chmod(current.c_str(), modeBits);
+		} while (ret == -1 && errno == EINTR);
+		
+		if (owner != (uid_t) -1 && group != (gid_t) -1) {
+			do {
+				ret = chown(current.c_str(), owner, group);
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1) {
+				char message[1024];
+				int e = errno;
+				
+				snprintf(message, sizeof(message) - 1,
+					"Cannot change the directory '%s' its UID to %lld and GID to %lld",
+					current.c_str(), (long long) owner, (long long) group);
+				message[sizeof(message) - 1] = '\0';
+				throw FileSystemException(message, e, path);
+			}
 		}
 	}
 }

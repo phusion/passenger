@@ -335,10 +335,11 @@ const char *getSystemTempDir();
 
 /**
  * Create the directory at the given path, creating intermediate directories
- * if necessary. The created directories' permissions are as specified by the
- * 'mode' parameter. You can specify this directory's owner and group through
- * the 'owner' and 'group' parameters. A value of -1 for 'owner' or 'group'
- * means that the owner/group should not be changed.
+ * if necessary. The created directories' permissions are exactly as specified
+ * by the 'mode' parameter (i.e. the umask will be ignored). You can specify
+ * this directory's owner and group through the 'owner' and 'group' parameters.
+ * A value of -1 for 'owner' or 'group' means that the owner/group should not
+ * be changed.
  *
  * If 'path' already exists, then nothing will happen.
  *

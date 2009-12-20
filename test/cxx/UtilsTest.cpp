@@ -14,8 +14,9 @@ namespace tut {
 	struct UtilsTest {
 		vector<string> output;
 		string oldPath;
+		TempDir tempDir;
 		
-		UtilsTest() {
+		UtilsTest(): tempDir("tmp.dir") {
 			oldPath = getenv("PATH");
 			unsetenv("PASSENGER_TEMP_DIR");
 		}
@@ -23,6 +24,16 @@ namespace tut {
 		~UtilsTest() {
 			setenv("PATH", oldPath.c_str(), 1);
 			unsetenv("PASSENGER_TEMP_DIR");
+		}
+		
+		void testMakeDirTreeMode(const char *name, const char *mode, mode_t expected) {
+			TempDir td("tmp.dir2");
+			struct stat buf;
+			mode_t allModes = S_IRWXU | S_ISUID | S_IRWXG | S_ISGID | S_IRWXO;
+			
+			makeDirTree("tmp.dir2/foo", mode);
+			stat("tmp.dir2/foo", &buf);
+			ensure_equals(name, buf.st_mode & allModes, expected);
 		}
 	};
 	
@@ -272,5 +283,63 @@ namespace tut {
 			ensure(memcmp(str.c_str(), "\0\0\0\0\0\0world", 11) == 0);
 		}
 		ensure(memcmp(str.c_str(), "\0\0\0\0\0\0\0\0\0\0\0", 11) == 0);
+	}
+	
+	/***** Test makeDirTree() *****/
+	
+	TEST_METHOD(35) {
+		// Creating a single subdirectory works.
+		makeDirTree("tmp.dir/foo");
+		ensure_equals(getFileType("tmp.dir/foo"), FT_DIRECTORY);
+	}
+	
+	TEST_METHOD(36) {
+		// Creating multiple subdirectories works.
+		makeDirTree("tmp.dir/foo/bar");
+		ensure_equals(getFileType("tmp.dir/foo"), FT_DIRECTORY);
+		ensure_equals(getFileType("tmp.dir/foo/bar"), FT_DIRECTORY);
+	}
+	
+	TEST_METHOD(37) {
+		// It applies the permissions to all created directories.
+		struct stat buf, buf2;
+		
+		stat("tmp.dir", &buf);
+		makeDirTree("tmp.dir/foo/bar", "u=rwxs,g=,o=rx");
+		stat("tmp.dir", &buf2);
+		ensure_equals(buf.st_mode, buf2.st_mode);
+		
+		stat("tmp.dir/foo", &buf);
+		stat("tmp.dir/foo/bar", &buf2);
+		ensure_equals(buf.st_mode, buf2.st_mode);
+		ensure_equals(buf.st_mode & 0xFFF,
+			S_IRUSR | S_IWUSR | S_IXUSR | S_ISUID |
+			S_IROTH | S_IXOTH);
+	}
+	
+	TEST_METHOD(38) {
+		// It correctly parses the permission string.
+		testMakeDirTreeMode("empty 1", "", 0);
+		testMakeDirTreeMode("empty 2", "u=", 0);
+		testMakeDirTreeMode("empty 3", "g=", 0);
+		testMakeDirTreeMode("empty 4", "o=", 0);
+		testMakeDirTreeMode("empty 5", "u=,g=", 0);
+		testMakeDirTreeMode("empty 6", "g=,o=", 0);
+		
+		testMakeDirTreeMode("(1)", "u=rwxs,g=rwxs,o=rwx",
+			S_IRWXU | S_ISUID | S_IRWXG | S_ISGID | S_IRWXO);
+		testMakeDirTreeMode("(2)", "u=s,g=rx,o=w",
+			S_ISUID | S_IRGRP | S_IXGRP | S_IWOTH);
+		testMakeDirTreeMode("(3)", "u=rwxs,g=,o=rwx",
+			S_IRWXU | S_ISUID | S_IRWXO);
+	}
+	
+	TEST_METHOD(39) {
+		// It doesn't do anything if the directory already exists.
+		struct stat buf, buf2;
+		stat("tmp.dir", &buf);
+		makeDirTree("tmp.dir");
+		stat("tmp.dir", &buf2);
+		ensure_equals(buf.st_mode, buf2.st_mode);
 	}
 }
