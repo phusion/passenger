@@ -60,9 +60,9 @@ static string poolIdleTimeString;
 
 
 /**
- * Abstract base class for watching service processes.
+ * Abstract base class for watching agent processes.
  */
-class AbstractWatcher {
+class AgentWatcher {
 private:
 	/** The watcher thread. */
 	oxt::thread *thr;
@@ -94,7 +94,7 @@ private:
 				} else if (WIFEXITED(status)) {
 					if (WEXITSTATUS(status) == 0) {
 						/* When the web server is gracefully exiting, it will
-						 * tell one or more services to gracefully exit with exit
+						 * tell one or more agents to gracefully exit with exit
 						 * status 0. If we see this then it means the watchdog
 						 * is gracefully shutting down too and we should stop
 						 * watching.
@@ -138,7 +138,7 @@ protected:
 	string threadExceptionMessage;
 	string threadExceptionBacktrace;
 	
-	/** The service process's feedback fd. */
+	/** The agent process's feedback fd. */
 	FileDescriptor feedbackFd;
 	
 	/**
@@ -148,12 +148,12 @@ protected:
 	mutable boost::mutex lock;
 	
 	/**
-	 * Returns the filename of the service process's executable.
+	 * Returns the filename of the agent process's executable.
 	 */
 	virtual string getExeFilename() const = 0;
 	
 	/**
-	 * This method is to exec() the service program with the right arguments.
+	 * This method is to exec() the agent with the right arguments.
 	 * It is called from within a forked child process, so don't do any dynamic
 	 * memory allocations in here. It must also not throw any exceptions.
 	 * It must also preserve the value of errno after exec() is called.
@@ -161,14 +161,14 @@ protected:
 	virtual void execProgram() const = 0;
 	
 	/**
-	 * This method is to send startup arguments to the service process through
-	 * the given file descriptor, which is the service process's feedback fd.
+	 * This method is to send startup arguments to the agent process through
+	 * the given file descriptor, which is the agent process's feedback fd.
 	 * May throw arbitrary exceptions.
 	 */
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) = 0;
 	
 	/**
-	 * This method is to process the startup info that the service process has
+	 * This method is to process the startup info that the agent process has
 	 * sent back. May throw arbitrary exceptions.
 	 */
 	virtual bool processStartupInfo(pid_t pid, FileDescriptor &fd, const vector<string> &args) = 0;
@@ -189,28 +189,28 @@ protected:
 	}
 	
 public:
-	AbstractWatcher() {
+	AgentWatcher() {
 		thr = NULL;
 		pid = 0;
 	}
 	
-	~AbstractWatcher() {
+	~AgentWatcher() {
 		delete thr;
 	}
 	
 	/**
-	 * Send the started service process's startup information over the given channel,
+	 * Send the started agent process's startup information over the given channel,
 	 * to the starter process. May throw arbitrary exceptions.
 	 *
 	 * @pre start() has been called and succeeded.
 	 */
 	virtual void sendStartupInfo(MessageChannel &channel) = 0;
 	
-	/** Returns the name of the service that this class is watching. */
+	/** Returns the name of the agent that this class is watching. */
 	virtual const char *name() const = 0;
 	
 	/**
-	 * Starts the service process. May throw arbitrary exceptions.
+	 * Starts the agent process. May throw arbitrary exceptions.
 	 */
 	virtual pid_t start() {
 		this_thread::disable_interruption di;
@@ -219,8 +219,8 @@ public:
 		int fds[2], e, ret;
 		pid_t pid;
 		
-		/* Create feedback fd for this service process. We'll send some startup
-		 * arguments to this service process through this fd, and we'll receive
+		/* Create feedback fd for this agent process. We'll send some startup
+		 * arguments to this agent process through this fd, and we'll receive
 		 * startup information through it as well.
 		 */
 		if (syscalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
@@ -319,13 +319,13 @@ public:
 				int status;
 				
 				/* The feedback fd was closed for an unknown reason.
-				 * Did the service process crash?
+				 * Did the agent process crash?
 				 */
 				ret = syscalls::waitpid(pid, &status, WNOHANG);
 				if (ret == 0) {
 					/* Doesn't look like it; it seems it's still running.
 					 * We can't do anything without proper feedback so kill
-					 * the service process and throw an exception.
+					 * the agent process and throw an exception.
 					 */
 					killAndWait(pid);
 					throw RuntimeException(string("Unable to start the ") + name() +
@@ -387,7 +387,7 @@ public:
 	}
 	
 	/**
-	 * Start watching the service process.
+	 * Start watching the agent process.
 	 *
 	 * @pre start() has been called and succeeded.
 	 * @pre This watcher isn't already watching.
@@ -407,12 +407,12 @@ public:
 		/* Don't make the stack any smaller, getpwnam() on OS
 		 * X needs a lot of stack space.
 		 */
-		thr = new oxt::thread(boost::bind(&AbstractWatcher::threadMain, this),
+		thr = new oxt::thread(boost::bind(&AgentWatcher::threadMain, this),
 			name(), 64 * 1024);
 	}
 	
-	static void stopWatching(vector<AbstractWatcher *> &watchers) {
-		vector<AbstractWatcher *>::const_iterator it;
+	static void stopWatching(vector<AgentWatcher *> &watchers) {
+		vector<AgentWatcher *>::const_iterator it;
 		oxt::thread *threads[watchers.size()];
 		unsigned int i = 0;
 		
@@ -424,7 +424,7 @@ public:
 	}
 	
 	/**
-	 * Force the service process to shut down. Returns true if it was shut down,
+	 * Force the agent process to shut down. Returns true if it was shut down,
 	 * or false if it wasn't started.
 	 */
 	virtual bool forceShutdown() {
@@ -457,8 +457,8 @@ public:
 	}
 	
 	/**
-	 * Returns the service process feedback fd, or NULL if the service process
-	 * hasn't been started yet. Can be used to check whether this service process
+	 * Returns the agent process feedback fd, or NULL if the agent process
+	 * hasn't been started yet. Can be used to check whether this agent process
 	 * has exited without using waitpid().
 	 */
 	const FileDescriptor getFeedbackFd() const {
@@ -468,7 +468,7 @@ public:
 };
 
 
-class HelperServerWatcher: public AbstractWatcher {
+class HelperServerWatcher: public AgentWatcher {
 protected:
 	string         requestSocketPassword;
 	string         messageSocketPassword;
@@ -591,7 +591,7 @@ ignoreSigpipe() {
  * an error.
  */
 static bool
-waitForStarterProcessOrWatchers(vector<AbstractWatcher *> &watchers) {
+waitForStarterProcessOrWatchers(vector<AgentWatcher *> &watchers) {
 	fd_set fds;
 	int max, ret;
 	char x;
@@ -614,7 +614,7 @@ waitForStarterProcessOrWatchers(vector<AbstractWatcher *> &watchers) {
 	}
 	
 	if (FD_ISSET(errorEvent.fd(), &fds)) {
-		vector<AbstractWatcher *>::const_iterator it;
+		vector<AgentWatcher *>::const_iterator it;
 		string message, backtrace, watcherName;
 		
 		for (it = watchers.begin(); it != watchers.end() && message.empty(); it++) {
@@ -637,7 +637,7 @@ waitForStarterProcessOrWatchers(vector<AbstractWatcher *> &watchers) {
 }
 
 static void
-cleanupServicesInBackground(vector<AbstractWatcher *> &watchers) {
+cleanupAgentsInBackground(vector<AgentWatcher *> &watchers) {
 	this_thread::disable_interruption di;
 	this_thread::disable_syscall_interruption dsi;
 	pid_t pid;
@@ -646,13 +646,13 @@ cleanupServicesInBackground(vector<AbstractWatcher *> &watchers) {
 	pid = fork();
 	if (pid == 0) {
 		// Child
-		vector<AbstractWatcher *>::const_iterator it;
+		vector<AgentWatcher *>::const_iterator it;
 		Timer timer(false);
 		fd_set fds, fds2;
-		int max, serviceProcessesDone;
+		int max, agentProcessesDone;
 		unsigned long long deadline = 30000; // miliseconds
 		
-		// Wait until all service processes have exited.
+		// Wait until all agent processes have exited.
 		
 		max = 0;
 		FD_ZERO(&fds);
@@ -664,9 +664,9 @@ cleanupServicesInBackground(vector<AbstractWatcher *> &watchers) {
 		}
 		
 		timer.start();
-		serviceProcessesDone = 0;
-		while (serviceProcessesDone != -1
-		    && serviceProcessesDone < (int) watchers.size()
+		agentProcessesDone = 0;
+		while (agentProcessesDone != -1
+		    && agentProcessesDone < (int) watchers.size()
 		    && timer.elapsed() < deadline)
 		{
 			struct timeval timeout;
@@ -674,22 +674,22 @@ cleanupServicesInBackground(vector<AbstractWatcher *> &watchers) {
 			FD_COPY(&fds, &fds2);
 			timeout.tv_sec = 0;
 			timeout.tv_usec = 10000;
-			serviceProcessesDone = syscalls::select(max + 1, &fds2, NULL, NULL, &timeout);
-			if (serviceProcessesDone > 0 && timer.elapsed() < deadline) {
+			agentProcessesDone = syscalls::select(max + 1, &fds2, NULL, NULL, &timeout);
+			if (agentProcessesDone > 0 && timer.elapsed() < deadline) {
 				usleep(10000);
 			}
 		}
 		
-		if (serviceProcessesDone == -1 || timer.elapsed() >= deadline) {
+		if (agentProcessesDone == -1 || timer.elapsed() >= deadline) {
 			// An error occurred or we've waited long enough. Kill all the
 			// processes.
-			P_WARN("Some Phusion Passenger service processes did not exit " <<
+			P_WARN("Some Phusion Passenger agent processes did not exit " <<
 				"in time, forcefully shutting down all.");
 			for (it = watchers.begin(); it != watchers.end(); it++) {
 				(*it)->forceShutdown();
 			}
 		} else {
-			P_DEBUG("All Phusion Passenger service processes have exited.");
+			P_DEBUG("All Phusion Passenger agent processes have exited.");
 		}
 		
 		// Now clean up the server instance directory.
@@ -713,8 +713,8 @@ cleanupServicesInBackground(vector<AbstractWatcher *> &watchers) {
 }
 
 static void
-forceAllServicesShutdown(vector<AbstractWatcher *> &watchers) {
-	vector<AbstractWatcher *>::iterator it;
+forceAllAgentsShutdown(vector<AgentWatcher *> &watchers) {
+	vector<AgentWatcher *>::iterator it;
 	
 	for (it = watchers.begin(); it != watchers.end(); it++) {
 		(*it)->forceShutdown();
@@ -778,8 +778,8 @@ main(int argc, char *argv[]) {
 		
 		HelperServerWatcher helperServerWatcher;
 		
-		vector<AbstractWatcher *> watchers;
-		vector<AbstractWatcher *>::iterator it;
+		vector<AgentWatcher *> watchers;
+		vector<AgentWatcher *>::iterator it;
 		watchers.push_back(&helperServerWatcher);
 		
 		for (it = watchers.begin(); it != watchers.end(); it++) {
@@ -788,7 +788,7 @@ main(int argc, char *argv[]) {
 			} catch (const exception &e) {
 				feedbackChannel.write("Watchdog startup error",
 					e.what(), NULL);
-				forceAllServicesShutdown(watchers);
+				forceAllAgentsShutdown(watchers);
 				return 1;
 			}
 			// Allow other exceptions to propagate and crash the watchdog.
@@ -799,7 +799,7 @@ main(int argc, char *argv[]) {
 			} catch (const exception &e) {
 				feedbackChannel.write("Watchdog startup error",
 					e.what(), NULL);
-				forceAllServicesShutdown(watchers);
+				forceAllAgentsShutdown(watchers);
 				return 1;
 			}
 			// Allow other exceptions to propagate and crash the watchdog.
@@ -814,21 +814,21 @@ main(int argc, char *argv[]) {
 			(*it)->sendStartupInfo(feedbackChannel);
 		}
 		
-		feedbackChannel.write("All services started", NULL);
+		feedbackChannel.write("All agents started", NULL);
 		
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		bool exitGracefully = waitForStarterProcessOrWatchers(watchers);
-		AbstractWatcher::stopWatching(watchers);
+		AgentWatcher::stopWatching(watchers);
 		if (exitGracefully) {
-			/* Fork a child process which cleans up all the service processes in
+			/* Fork a child process which cleans up all the agent processes in
 			 * the background and exit this watchdog process so that we don't block
 			 * the web server.
 			 */
-			cleanupServicesInBackground(watchers);
+			cleanupAgentsInBackground(watchers);
 			return 0;
 		} else {
-			forceAllServicesShutdown(watchers);
+			forceAllAgentsShutdown(watchers);
 			return 1;
 		}
 	} catch (const tracable_exception &e) {
