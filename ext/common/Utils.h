@@ -259,7 +259,7 @@ string escapeForXml(const string &input);
 
 /**
  * Returns the username of the user that the current process is running as.
- * If the user has no associated username, then the "UID xxxx" is returned,
+ * If the user has no associated username, then "UID xxxx" is returned,
  * where xxxx is the current UID.
  */
 string getProcessUsername();

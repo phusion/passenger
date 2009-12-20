@@ -55,7 +55,7 @@ using namespace boost;
 using namespace oxt;
 
 
-/********** Global logging facilities **********/
+/********** Debug logging facilities **********/
 
 extern unsigned int _logLevel;
 extern ostream *_logStream;
@@ -139,7 +139,7 @@ void setDebugFile(const char *logFile = NULL);
 #endif
 
 
-/********** Request-specific logging *********/
+/********** Transaction logging facilities *********/
 
 class TxnLog {
 private:

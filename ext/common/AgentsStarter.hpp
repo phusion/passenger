@@ -260,6 +260,7 @@ public:
 	           const string &passengerRoot, const string &rubyCommand,
 	           unsigned int maxPoolSize, unsigned int maxInstancesPerApp,
 	           unsigned int poolIdleTime,
+	           const string &monitoringLogDir,
 	           const function<void ()> &afterFork = function<void ()>())
 	{
 		TRACE_POINT();
@@ -333,6 +334,7 @@ public:
 				toString(maxPoolSize).c_str(),
 				toString(maxInstancesPerApp).c_str(),
 				toString(poolIdleTime).c_str(),
+				monitoringLogDir.c_str(),
 				(char *) 0);
 			e = errno;
 			try {

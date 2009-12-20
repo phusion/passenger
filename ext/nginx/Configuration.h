@@ -61,6 +61,7 @@ typedef struct {
     ngx_uint_t  pool_idle_time;
     ngx_flag_t  user_switching;
     ngx_str_t   default_user;
+    ngx_str_t   monitoring_log_dir;
 } passenger_main_conf_t;
 
 extern const ngx_command_t   passenger_commands[];

@@ -209,6 +209,7 @@ private:
 	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex;
 	CachedFileStat cstat;
 	AgentsStarter agentsStarter;
+	TxnLoggerPtr txnLogger;
 	
 	inline DirConfig *getDirConfig(request_rec *r) {
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
@@ -1275,7 +1276,12 @@ public:
 			config->userSwitchingEnabled(), config->getDefaultUser(),
 			unixd_config.user_id, unixd_config.group_id,
 			config->root, config->getRuby(), config->maxPoolSize,
-			config->maxInstancesPerApp, config->poolIdleTime);
+			config->maxInstancesPerApp, config->poolIdleTime,
+			config->monitoringLogDir);
+		
+		txnLogger = ptr(new TxnLogger(config->monitoringLogDir,
+			agentsStarter.getLoggingSocketFilename(),
+			"logging", agentsStarter.getLoggingSocketPassword()));
 		
 		// Store some relevant information in the generation directory.
 		string generationPath = agentsStarter.getGeneration()->getPath();

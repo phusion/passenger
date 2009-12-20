@@ -22,16 +22,17 @@ agents_starter_new(AgentsStarterType type, char **error_message) {
 
 int
 agents_starter_start(AgentsStarter *as,
-                            unsigned int logLevel, pid_t webServerPid,
-                            const char *tempDir, int userSwitching,
-                            const char *defaultUser, uid_t workerUid,
-                            gid_t workerGid, const char *passengerRoot,
-                            const char *rubyCommand, unsigned int maxPoolSize,
-                            unsigned int maxInstancesPerApp,
-                            unsigned int poolIdleTime,
-                            const AfterForkCallback afterFork,
-                            void *callbackArgument,
-                            char **errorMessage)
+                     unsigned int logLevel, pid_t webServerPid,
+                     const char *tempDir, int userSwitching,
+                     const char *defaultUser, uid_t workerUid,
+                     gid_t workerGid, const char *passengerRoot,
+                     const char *rubyCommand, unsigned int maxPoolSize,
+                     unsigned int maxInstancesPerApp,
+                     unsigned int poolIdleTime,
+                     const char *monitoringLogDir,
+                     const AfterForkCallback afterFork,
+                     void *callbackArgument,
+                     char **errorMessage)
 {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	this_thread::disable_syscall_interruption dsi;
@@ -43,7 +44,9 @@ agents_starter_start(AgentsStarter *as,
 		}
 		agentsStarter->start(logLevel, webServerPid, tempDir, userSwitching,
 			defaultUser, workerUid, workerGid, passengerRoot, rubyCommand,
-			maxPoolSize, maxInstancesPerApp, poolIdleTime, afterForkFunctionObject);
+			maxPoolSize, maxInstancesPerApp, poolIdleTime,
+			monitoringLogDir,
+			afterForkFunctionObject);
 		return 1;
 	} catch (const Passenger::SystemException &e) {
 		errno = e.code();

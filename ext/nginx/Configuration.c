@@ -29,6 +29,9 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+#include <sys/types.h>
+#include <pwd.h>
+
 #include "ngx_http_passenger_module.h"
 #include "Configuration.h"
 #include "ContentHandler.h"
@@ -69,6 +72,8 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->user_switching = NGX_CONF_UNSET;
     conf->default_user.data = NULL;
     conf->default_user.len  = 0;
+    conf->monitoring_log_dir.data = NULL;
+    conf->monitoring_log_dir.len  = 0;
     
     return conf;
 }
@@ -77,6 +82,9 @@ char *
 passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
 {
     passenger_main_conf_t *conf;
+    u_char                 filename[NGX_MAX_PATH], *last;
+    ngx_str_t              str;
+    struct passwd         *user;
     
     conf = &passenger_main_conf;
     *conf = *((passenger_main_conf_t *) conf_pointer);
@@ -109,6 +117,33 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     if (conf->default_user.len == 0) {
         conf->default_user.len  = sizeof("nobody") - 1;
         conf->default_user.data = (u_char *) "nobody";
+    }
+    
+    if (conf->default_user.len == 0) {
+        conf->default_user.len  = sizeof("nobody") - 1;
+        conf->default_user.data = (u_char *) "nobody";
+    }
+    
+    if (conf->monitoring_log_dir.len == 0) {
+        if (geteuid() == 0) {
+            conf->monitoring_log_dir.data = (u_char *) "/var/log/passenger";
+            conf->monitoring_log_dir.len  = sizeof("/var/log/passenger") - 1;
+        } else {
+            user = getpwuid(geteuid());
+            if (user == NULL) {
+                last = ngx_snprintf(filename, sizeof(filename),
+                                    "/tmp/passenger-monitoring-logs.user-%L",
+                                    (int64_t) geteuid());
+            } else {
+                last = ngx_snprintf(filename, sizeof(filename),
+                                    "/tmp/passenger-monitoring-logs.%s",
+                                    user->pw_name);
+            }
+            str.data = filename;
+            str.len  = last - filename;
+            conf->monitoring_log_dir.data = ngx_pstrdup(cf->pool, &str);
+            conf->monitoring_log_dir.len  = str.len;
+        }
     }
     
     return NGX_CONF_OK;
@@ -907,6 +942,13 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, default_user),
+      NULL },
+
+    { ngx_string("passenger_monitoring_log_dir"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, monitoring_log_dir),
       NULL },
 
     { ngx_string("passenger_pass_header"),

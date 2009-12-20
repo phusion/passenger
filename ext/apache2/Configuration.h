@@ -52,6 +52,9 @@
 #ifdef __cplusplus
 	#include <set>
 	#include <string>
+	
+	#include <sys/types.h>
+	#include <pwd.h>
 
 	namespace Passenger {
 	
@@ -358,6 +361,33 @@
 			 * means unspecified.
 			 */
 			const char *tempDir;
+			
+			/**
+			 * Directory in which monitoring logs should be saved. The
+			 * empty string means unspecified.
+			 */
+			string monitoringLogDir;
+			
+			/** Called at the end of the server config merging process, inside
+			 * the control process.
+			 */
+			void finalize() {
+				if (monitoringLogDir.empty() && geteuid() == 0) {
+					monitoringLogDir = "/var/log/passenger-monitoring";
+				} else if (monitoringLogDir.empty()) {
+					struct passwd *user = getpwuid(geteuid());
+					string username;
+					
+					if (user == NULL) {
+						username = user->pw_name;
+					} else {
+						username = "user-" + toString(geteuid());
+					}
+					monitoringLogDir = string(getSystemTempDir()) +
+						"/passenger-monitoring-logs." +
+						username;
+				}
+			}
 			
 			const char *getRuby() const {
 				if (ruby != NULL) {

@@ -182,103 +182,124 @@ main(int argc, char *argv[]) {
 		memset(argv[i], '\0', strlen(argv[i]));
 	}
 	
-	ServerInstanceDirPtr serverInstanceDir;
-	ServerInstanceDir::GenerationPtr generation;
-	AccountsDatabasePtr  accountsDatabase;
-	MessageServerPtr     messageServer;
 	
-	serverInstanceDir = ptr(new ServerInstanceDir(webServerPid, tempDir, false));
-	generation = serverInstanceDir->getGeneration(generationNumber);
-	accountsDatabase = ptr(new AccountsDatabase());
-	messageServer = ptr(new MessageServer(generation->getPath() + "/logging.socket",
-		accountsDatabase));
-	
-	if (geteuid() == 0) {
-		if (username.empty()) {
-			// TODO: autodetect the logging dir's owner
-			lowerPrivilege("nobody");
-		} else {
-			lowerPrivilege(username, groupname);
+	try {
+		/********** Now begins the real initialization **********/
+		
+		/* Create all the necessary objects... */
+		ServerInstanceDirPtr serverInstanceDir;
+		ServerInstanceDir::GenerationPtr generation;
+		AccountsDatabasePtr  accountsDatabase;
+		MessageServerPtr     messageServer;
+		
+		serverInstanceDir = ptr(new ServerInstanceDir(webServerPid, tempDir, false));
+		generation = serverInstanceDir->getGeneration(generationNumber);
+		accountsDatabase = ptr(new AccountsDatabase());
+		messageServer = ptr(new MessageServer(generation->getPath() + "/logging.socket",
+			accountsDatabase));
+		
+		/* Create the logging directory if necessary. */
+		if (getFileType(loggingDir) == FT_NONEXISTANT) {
+			if (geteuid() == 0) {
+				struct passwd *user = getpwnam(username.c_str());
+				struct group *group = getgrnam(groupname.c_str());
+				
+				if (user == NULL) {
+					P_ERROR("Cannot create directory " << loggingDir <<
+						" with owner '" << username <<
+						"': user does not exist");
+					return 1;
+				}
+				if (group == NULL) {
+					P_ERROR("Cannot create directory " << loggingDir <<
+						" with group '" << username <<
+						"': group does not exist");
+					return 1;
+				}
+				makeDirTree(loggingDir, "u=rwx,g=,o=", user->pw_uid, group->gr_gid);
+			} else {
+				makeDirTree(loggingDir);
+			}
 		}
-	}
-	
-	
-	/********** Retrieve desired password for protecting the logging socket **********/
-	
-	MessageChannel feedbackChannel(feedbackFd);
-	vector<string> args;
-	
-	if (!feedbackChannel.read(args)) {
-		throw IOException("The watchdog unexpectedly closed the connection.");
-	} else if (args[0] != "logging socket password") {
-		throw IOException("Unexpected input message '" + args[0] + "'");
-	}
-	
-	
-	/********** Now setup the logging server **********/
-	
-	oxt::thread *messageServerThread;
-	Timer        exitTimer;
-	EventFd      exitEvent;
-	
-	accountsDatabase->add("logging", Base64::decode(args[1]), false);
-	messageServer->addHandler(ptr(new TimerUpdateHandler(exitTimer)));
-	messageServer->addHandler(ptr(new LoggingServer(loggingDir)));
-	messageServer->addHandler(ptr(new ExitHandler(exitEvent)));
-	messageServerThread = new oxt::thread(
-		boost::bind(&MessageServer::mainLoop, messageServer.get())
-	);
-	
-	if (geteuid() == 0) {
-		if (username.empty()) {
-			// TODO: autodetect the logging dir's owner
-			lowerPrivilege("nobody");
-		} else {
-			lowerPrivilege(username, groupname);
+		
+		/* Now's a good time to lower the privilege. */
+		if (geteuid() == 0) {
+			if (username.empty()) {
+				// TODO: autodetect the logging dir's owner
+				lowerPrivilege("nobody");
+			} else {
+				lowerPrivilege(username, groupname);
+			}
 		}
-	}
-	
-	
-	/********** Initialized! Enter main loop... **********/
-	
-	feedbackChannel.write("initialized", NULL);
-	
-	/* Wait until the watchdog closes the feedback fd (meaning it
-	 * was killed) or until we receive an exit message.
-	 */
-	this_thread::disable_syscall_interruption dsi;
-	fd_set fds;
-	int largestFd;
-	
-	FD_ZERO(&fds);
-	FD_SET(feedbackFd, &fds);
-	FD_SET(exitEvent.fd(), &fds);
-	largestFd = (feedbackFd > exitEvent.fd()) ? (int) feedbackFd : exitEvent.fd();
-	if (syscalls::select(largestFd + 1, &fds, NULL, NULL, NULL) == -1) {
-		int e = errno;
-		throw SystemException("select() failed", e);
-	}
-	
-	if (FD_ISSET(feedbackFd, &fds)) {
-		/* If the watchdog has been killed then we'll kill all descendant
-		 * processes and exit. There's no point in keeping this agent
-		 * running because we can't detect when the web server exits,
-		 * and because this agent doesn't own the server instance
-		 * directory. As soon as passenger-status is run, the server
-		 * instance directory will be cleaned up, making this agent's
-		 * services inaccessible.
+		
+		/* Retrieve desired password for protecting the logging socket */
+		MessageChannel feedbackChannel(feedbackFd);
+		vector<string> args;
+		
+		if (!feedbackChannel.read(args)) {
+			throw IOException("The watchdog unexpectedly closed the connection.");
+		} else if (args[0] != "logging socket password") {
+			throw IOException("Unexpected input message '" + args[0] + "'");
+		}
+		
+		/* Now setup the actual logging server. */
+		oxt::thread *messageServerThread;
+		Timer        exitTimer;
+		EventFd      exitEvent;
+		
+		accountsDatabase->add("logging", Base64::decode(args[1]), false);
+		messageServer->addHandler(ptr(new TimerUpdateHandler(exitTimer)));
+		messageServer->addHandler(ptr(new LoggingServer(loggingDir)));
+		messageServer->addHandler(ptr(new ExitHandler(exitEvent)));
+		messageServerThread = new oxt::thread(
+			boost::bind(&MessageServer::mainLoop, messageServer.get())
+		);
+		
+		
+		/********** Initialized! Enter main loop... **********/
+		
+		feedbackChannel.write("initialized", NULL);
+		
+		/* Wait until the watchdog closes the feedback fd (meaning it
+		 * was killed) or until we receive an exit message.
 		 */
-		syscalls::killpg(getpgrp(), SIGKILL);
-		_exit(2); // In case killpg() fails.
-	} else {
-		/* We received an exit command. We want to exit 5 seconds after
-		 * the last client has disconnected, .
-		 */
-		exitTimer.start();
-		exitTimer.wait(5000);
+		this_thread::disable_syscall_interruption dsi;
+		fd_set fds;
+		int largestFd;
+		
+		FD_ZERO(&fds);
+		FD_SET(feedbackFd, &fds);
+		FD_SET(exitEvent.fd(), &fds);
+		largestFd = (feedbackFd > exitEvent.fd()) ? (int) feedbackFd : exitEvent.fd();
+		if (syscalls::select(largestFd + 1, &fds, NULL, NULL, NULL) == -1) {
+			int e = errno;
+			throw SystemException("select() failed", e);
+		}
+		
+		if (FD_ISSET(feedbackFd, &fds)) {
+			/* If the watchdog has been killed then we'll kill all descendant
+			 * processes and exit. There's no point in keeping this agent
+			 * running because we can't detect when the web server exits,
+			 * and because this agent doesn't own the server instance
+			 * directory. As soon as passenger-status is run, the server
+			 * instance directory will be cleaned up, making this agent's
+			 * services inaccessible.
+			 */
+			syscalls::killpg(getpgrp(), SIGKILL);
+			_exit(2); // In case killpg() fails.
+		} else {
+			/* We received an exit command. We want to exit 5 seconds after
+			 * the last client has disconnected, .
+			 */
+			exitTimer.start();
+			exitTimer.wait(5000);
+		}
+		
+		messageServerThread->interrupt_and_join();
+		
+		return 0;
+	} catch (const tracable_exception &e) {
+		P_ERROR(e.what() << "\n" << e.backtrace());
+		return 1;
 	}
-	
-	messageServerThread->interrupt_and_join();
-	
-	return 0;
 }

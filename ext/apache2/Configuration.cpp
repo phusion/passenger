@@ -187,6 +187,7 @@ passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
 	config->userSwitchingSpecified = base->userSwitchingSpecified || add->userSwitchingSpecified;
 	config->defaultUser = (add->defaultUser == NULL) ? base->defaultUser : add->defaultUser;
 	config->tempDir = (add->tempDir == NULL) ? base->tempDir : add->tempDir;
+	config->monitoringLogDir = (add->monitoringLogDir.empty()) ? base->monitoringLogDir : add->monitoringLogDir;
 	return config;
 }
 
@@ -210,7 +211,9 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 		final->userSwitchingSpecified = final->userSwitchingSpecified || config->userSwitchingSpecified;
 		final->defaultUser = (final->defaultUser != NULL) ? final->defaultUser : config->defaultUser;
 		final->tempDir = (final->tempDir != NULL) ? final->tempDir : config->tempDir;
+		final->monitoringLogDir = (!final->monitoringLogDir.empty()) ? final->monitoringLogDir : config->monitoringLogDir;
 	}
+	final->finalize();
 	for (s = main_server; s != NULL; s = s->next) {
 		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
 		*config = *final;

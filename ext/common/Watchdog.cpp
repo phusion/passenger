@@ -42,6 +42,7 @@ static string  rubyCommand;
 static unsigned int maxPoolSize;
 static unsigned int maxInstancesPerApp;
 static unsigned int poolIdleTime;
+static string  monitoringLogDir;
 
 static ServerInstanceDirPtr serverInstanceDir;
 static ServerInstanceDir::GenerationPtr generation;
@@ -578,7 +579,7 @@ protected:
 			tempDir.c_str(),
 			generationNumber.c_str(),
 			// TODO
-			"/tmp/passenger-logs",
+			monitoringLogDir.c_str(),
 			"",
 			"",
 			(char *) 0);
@@ -799,6 +800,7 @@ main(int argc, char *argv[]) {
 	maxPoolSize        = atoi(argv[12]);
 	maxInstancesPerApp = atoi(argv[13]);
 	poolIdleTime       = atoi(argv[14]);
+	monitoringLogDir   = argv[15];
 	
 	/* Become the session leader so that Apache can't kill this
 	 * watchdog with killpg() during shutdown, and so that a

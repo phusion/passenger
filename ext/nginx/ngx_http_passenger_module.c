@@ -210,11 +210,12 @@ static ngx_int_t
 start_helper_server(ngx_cycle_t *cycle) {
     ngx_core_conf_t *core_conf;
     ngx_int_t        ret, result;
-    u_char           filename[NGX_MAX_PATH], *last;
-    char            *default_user = NULL;
-    char            *passenger_root = NULL;
-    char            *ruby = NULL;
-    char            *error_message = NULL;
+    u_char  filename[NGX_MAX_PATH], *last;
+    char   *default_user = NULL;
+    char   *passenger_root = NULL;
+    char   *ruby = NULL;
+    char   *monitoring_log_dir;
+    char   *error_message = NULL;
     
     core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
     result    = NGX_OK;
@@ -223,6 +224,7 @@ start_helper_server(ngx_cycle_t *cycle) {
     default_user   = ngx_str_null_terminate(&passenger_main_conf.default_user);
     passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
     ruby           = ngx_str_null_terminate(&passenger_main_conf.ruby);
+    monitoring_log_dir = ngx_str_null_terminate(&passenger_main_conf.monitoring_log_dir);
     
     ret = agents_starter_start(passenger_agents_starter,
         passenger_main_conf.log_level, getpid(),
@@ -231,6 +233,7 @@ start_helper_server(ngx_cycle_t *cycle) {
         passenger_root, ruby, passenger_main_conf.max_pool_size,
         passenger_main_conf.max_instances_per_app,
         passenger_main_conf.pool_idle_time,
+        monitoring_log_dir,
         starting_helper_server_after_fork,
         cycle,
         &error_message);
@@ -276,6 +279,7 @@ cleanup:
     free(default_user);
     free(passenger_root);
     free(ruby);
+    free(monitoring_log_dir);
     free(error_message);
     return result;
 }

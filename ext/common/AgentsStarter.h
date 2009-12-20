@@ -28,6 +28,7 @@ int  agents_starter_start(AgentsStarter *as,
                           const char *rubyCommand, unsigned int maxPoolSize,
                           unsigned int maxInstancesPerApp,
                           unsigned int poolIdleTime,
+                          const char *monitoringLogDir,
                           const AfterForkCallback afterFork,
                           void *callbackArgument,
                           char **errorMessage);
