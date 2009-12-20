@@ -57,7 +57,7 @@ namespace tut {
 		log->message("hello");
 		log->message("world");
 		
-		string data = readAll(loggingDir + "/1/2009/12/18/log.txt");
+		string data = readAll(loggingDir + "/1/2009/12/18/web_txns.txt");
 		ensure(data.find("hello\n") != string::npos);
 		ensure(data.find("world\n") != string::npos);
 	}
@@ -72,7 +72,7 @@ namespace tut {
 		TxnLogPtr log2 = logger->continueTransaction(log->getFullId());
 		log->message("message 2");
 		
-		string data = readAll(loggingDir + "/1/2009/12/18/log.txt");
+		string data = readAll(loggingDir + "/1/2009/12/18/web_txns.txt");
 		ensure(data.find("message 1\n") != string::npos);
 		ensure(data.find("message 2\n") != string::npos);
 	}
@@ -92,8 +92,8 @@ namespace tut {
 		TxnLogPtr log3 = logger->newTransaction();
 		log3->message("message 4");
 		
-		string yesterdayData = readAll(loggingDir + "/1/2009/12/18/log.txt");
-		string tomorrowData = readAll(loggingDir + "/1/2009/12/20/log.txt");
+		string yesterdayData = readAll(loggingDir + "/1/2009/12/18/web_txns.txt");
+		string tomorrowData = readAll(loggingDir + "/1/2009/12/20/web_txns.txt");
 		
 		ensure("(1)", yesterdayData.find(toString(YESTERDAY) + ": message 1\n") != string::npos);
 		ensure("(2)", yesterdayData.find(toString(TODAY) + ": message 2\n") != string::npos);
@@ -113,7 +113,7 @@ namespace tut {
 		SystemTime::forceMsec(TOMORROW);
 		log.reset();
 		
-		string data = readAll(loggingDir + "/1/2009/12/18/log.txt");
+		string data = readAll(loggingDir + "/1/2009/12/18/web_txns.txt");
 		ensure("(1)", data.find(toString(YESTERDAY) + ": BEGIN\n") != string::npos);
 		ensure("(2)", data.find(toString(TODAY) + ": BEGIN\n") != string::npos);
 		ensure("(3)", data.find(toString(TODAY) + ": END\n") != string::npos);

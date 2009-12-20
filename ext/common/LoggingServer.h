@@ -74,6 +74,7 @@ public:
 			int ret;
 			
 			try {
+				// TODO: fix permissions
 				makeDirTree(extractDirName(filename));
 			} catch (const IOException &e) {
 				string message = "Cannot create directory " + extractDirName(filename) +

@@ -311,7 +311,7 @@ public:
 		localtime_r(&time_value, &tm);
 		strftime(dateName, sizeof(dateName), "%G/%m/%d", &tm);
 		filename.append(dateName);
-		filename.append("/log.txt");
+		filename.append("/web_txns.txt");
 		return filename;
 	}
 	
