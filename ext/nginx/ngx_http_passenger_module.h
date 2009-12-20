@@ -30,7 +30,7 @@
 
 #include <ngx_core.h>
 #include "../common/CachedFileStat.h"
-#include "../common/HelperServerStarter.h"
+#include "../common/AgentsStarter.h"
 
 /**
  * The Nginx version number as an integer.
@@ -53,11 +53,11 @@ extern ngx_str_t    passenger_placeholder_upstream_address;
 /**
  * A CachedFileStat object used for caching stat() calls.
  */
-extern CachedFileStat      *passenger_stat_cache;
+extern CachedFileStat *passenger_stat_cache;
 
-extern HelperServerStarter *passenger_helper_server_starter;
+extern AgentsStarter  *passenger_agents_starter;
 
-extern ngx_cycle_t         *passenger_current_cycle;
+extern ngx_cycle_t    *passenger_current_cycle;
 
 #endif /* _PASSENGER_NGINX_MODULE_H_ */
 

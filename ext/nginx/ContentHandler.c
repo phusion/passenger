@@ -239,8 +239,8 @@ set_upstream_server_address(ngx_http_upstream_t *upstream, ngx_http_upstream_con
     if (address->name.data == passenger_placeholder_upstream_address.data) {
         sockaddr = (struct sockaddr_un *) address->sockaddr;
         request_socket_filename =
-            helper_server_starter_get_request_socket_filename(passenger_helper_server_starter,
-                                                              &request_socket_filename_len);
+            agents_starter_get_request_socket_filename(passenger_agents_starter,
+                                                       &request_socket_filename_len);
         
         address->name.data = (u_char *) request_socket_filename;
         address->name.len  = request_socket_filename_len;
@@ -502,7 +502,7 @@ create_request(ngx_http_request_t *r)
      **************************************************/
     
     helper_server_request_socket_password_data =
-        helper_server_starter_get_request_socket_password(passenger_helper_server_starter,
+        agents_starter_get_request_socket_password(passenger_agents_starter,
             &helper_server_request_socket_password_len);
     size = helper_server_request_socket_password_len +
         /* netstring length + ":" + trailing "," */

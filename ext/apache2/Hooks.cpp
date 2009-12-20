@@ -51,7 +51,7 @@
 #include "Configuration.h"
 #include "Utils.h"
 #include "Logging.h"
-#include "HelperServerStarter.hpp"
+#include "AgentsStarter.hpp"
 #include "ApplicationPool/Client.h"
 #include "MessageChannel.h"
 #include "DirectoryMapper.h"
@@ -208,7 +208,7 @@ private:
 	thread_specific_ptr<ApplicationPool::Client> threadSpecificApplicationPool;
 	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex;
 	CachedFileStat cstat;
-	HelperServerStarter helperServerStarter;
+	AgentsStarter agentsStarter;
 	
 	inline DirConfig *getDirConfig(request_rec *r) {
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
@@ -259,8 +259,8 @@ private:
 				P_DEBUG("Reconnecting to ApplicationPool server");
 			}
 			auto_ptr<ApplicationPool::Client> pool_ptr(new ApplicationPool::Client);
-			pool_ptr->connect(helperServerStarter.getMessageSocketFilename(),
-				"_web_server", helperServerStarter.getMessageSocketPassword());
+			pool_ptr->connect(agentsStarter.getMessageSocketFilename(),
+				"_web_server", agentsStarter.getMessageSocketPassword());
 			pool = pool_ptr.release();
 			threadSpecificApplicationPool.reset(pool);
 		}
@@ -979,7 +979,7 @@ private:
 		string message("An error occured while "
 			"buffering HTTP upload data to "
 			"a temporary file in ");
-		ServerInstanceDir::GenerationPtr generation = helperServerStarter.getGeneration();
+		ServerInstanceDir::GenerationPtr generation = agentsStarter.getGeneration();
 		message.append(config->getUploadBufferDir(generation));
 		
 		switch (code) {
@@ -1155,7 +1155,7 @@ private:
 		DirConfig *config = getDirConfig(r);
 		shared_ptr<BufferedUpload> tempFile;
 		try {
-			ServerInstanceDir::GenerationPtr generation = helperServerStarter.getGeneration();
+			ServerInstanceDir::GenerationPtr generation = agentsStarter.getGeneration();
 			string uploadBufferDir = config->getUploadBufferDir(generation);
 			tempFile.reset(new BufferedUpload(uploadBufferDir));
 		} catch (const SystemException &e) {
@@ -1251,7 +1251,7 @@ private:
 public:
 	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
 	    : cstat(1024),
-	      helperServerStarter(HelperServerStarter::APACHE)
+	      agentsStarter(AgentsStarter::APACHE)
 	{
 		passenger_config_merge_all_servers(pconf, s);
 		ServerConfig *config = getServerConfig(s);
@@ -1270,7 +1270,7 @@ public:
 				"'passenger-install-apache2-module'.");
 		}
 		
-		helperServerStarter.start(config->logLevel,
+		agentsStarter.start(config->logLevel,
 			getpid(), config->getTempDir(),
 			config->userSwitchingEnabled(), config->getDefaultUser(),
 			unixd_config.user_id, unixd_config.group_id,
@@ -1278,7 +1278,7 @@ public:
 			config->maxInstancesPerApp, config->poolIdleTime);
 		
 		// Store some relevant information in the generation directory.
-		string generationPath = helperServerStarter.getGeneration()->getPath();
+		string generationPath = agentsStarter.getGeneration()->getPath();
 		server_rec *server;
 		string configFiles;
 		
@@ -1294,7 +1294,7 @@ public:
 	}
 	
 	void childInit(apr_pool_t *pchild, server_rec *s) {
-		helperServerStarter.detach();
+		agentsStarter.detach();
 	}
 	
 	int prepareRequestWhenInHighPerformanceMode(request_rec *r) {

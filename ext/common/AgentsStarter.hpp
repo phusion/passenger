@@ -22,8 +22,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_HELPER_SERVER_STARTER_HPP_
-#define _PASSENGER_HELPER_SERVER_STARTER_HPP_
+#ifndef _PASSENGER_AGENTS_STARTER_HPP_
+#define _PASSENGER_AGENTS_STARTER_HPP_
 
 #include <boost/function.hpp>
 #include <oxt/system_calls.hpp>
@@ -49,9 +49,9 @@ using namespace boost;
 using namespace oxt;
 
 /**
- * Utility class for starting the helper server through the watchdog.
+ * Utility class for starting various Phusion Passenger agents through the watchdog.
  */
-class HelperServerStarter {
+class AgentsStarter {
 public:
 	enum Type {
 		APACHE,
@@ -96,6 +96,7 @@ private:
 	 */
 	string messageSocketPassword;
 	
+	string loggingSocketFilename;
 	string loggingSocketPassword;
 	
 	/**
@@ -115,48 +116,62 @@ private:
 		syscalls::waitpid(pid, NULL, 0);
 	}
 	
+	/**
+	 * Gracefully shutdown an agent process by sending an exit command to its socket.
+	 * Returns whether the agent has successfully processed the exit command.
+	 * Any exceptions are caught and will cause false to be returned.
+	 */
+	bool gracefullyShutdownAgent(const string &socketFilename, const string &username,
+	                             const string &password
+	) {
+		try {
+			MessageClient client;
+			vector<string> args;
+			
+			client.connect(socketFilename, username, password);
+			client.write("exit", NULL);
+			return client.read(args) && args[0] == "Passed security" &&
+			       client.read(args) && args[0] == "exit command received";
+		} catch (const SystemException &) {
+		} catch (const IOException &) {
+		} catch (const SecurityException &) {
+		}
+		return false;
+	}
+	
 public:
 	/**
-	 * Construct a HelperServerStarter object. The watchdog and the helper server
+	 * Construct a AgentsStarter object. The watchdog and the helper server
 	 * aren't started yet until you call start().
 	 *
 	 * @param type Whether one wants to start the Apache or the Nginx helper server.
 	 */
-	HelperServerStarter(Type type) {
+	AgentsStarter(Type type) {
 		pid = 0;
 		this->type = type;
 	}
 	
-	~HelperServerStarter() {
+	~AgentsStarter() {
 		if (pid != 0) {
 			this_thread::disable_syscall_interruption dsi;
+			bool cleanShutdown =
+				   gracefullyShutdownAgent(messageSocketFilename,
+					"_web_server", messageSocketPassword)
+				&& gracefullyShutdownAgent(loggingSocketFilename,
+					"logging", loggingSocketPassword);
 			
-			try {
-				// Tell the helper server that we're exiting.
-				MessageClient client;
-				vector<string> args;
-				
-				client.connect(messageSocketFilename, "_web_server",
-					messageSocketPassword);
-				client.write("exit", NULL);
-				if (client.read(args) && args[0] == "Passed security" &&
-				    client.read(args) && args[0] == "exit command received") {
-					// Send a single random byte to tell the watchdog that this
-					// is a normal shutdown.
-					syscalls::write(feedbackFd, "x", 1);
-				}
-				
-				/* If an exception occurred then it means we failed to send an exit
-				 * command to the helper server. We have to forcefully kill the helper
-				 * server now because otherwise it'll never exit. We do this by closing
-				 * the feedback fd without sending a random byte, to indicate that this
-				 * is an abnormal shutdown. The watchdog will then kill the helper
-				 * server.
-				 */
-			} catch (const SystemException &) {
-			} catch (const IOException &) {
-			} catch (const SecurityException &) {
+			if (cleanShutdown) {
+				// Send a single random byte to tell the watchdog that this
+				// is a normal shutdown.
+				syscalls::write(feedbackFd, "x", 1);
 			}
+			
+			/* If we failed to send an exit command to one of the agents then we have
+			 * to forcefully kill all agents now because otherwise one of them might
+			 * never exit. We do this by closing the feedback fd without sending a
+			 * random byte, to indicate that this is an abnormal shutdown. The watchdog
+			 * will then kill all agents.
+			 */
 			
 			feedbackFd.close();
 			syscalls::waitpid(pid, NULL, 0);
@@ -203,6 +218,14 @@ public:
 	
 	string getMessageSocketPassword() const {
 		return messageSocketPassword;
+	}
+	
+	string getLoggingSocketFilename() const {
+		return loggingSocketFilename;
+	}
+	
+	string getLoggingSocketPassword() const {
+		return loggingSocketPassword;
 	}
 	
 	/**
@@ -276,7 +299,7 @@ public:
 							NULL);
 						_exit(1);
 					} catch (...) {
-						fprintf(stderr, "Passenger HelperServerStarter: dup2() failed: %s (%d)\n",
+						fprintf(stderr, "Passenger AgentsStarter: dup2() failed: %s (%d)\n",
 							strerror(e), e);
 						fflush(stderr);
 						_exit(1);
@@ -316,7 +339,7 @@ public:
 				MessageChannel(3).write("exec error", toString(e).c_str(), NULL);
 				_exit(1);
 			} catch (...) {
-				fprintf(stderr, "Passenger HelperServerStarter: could not execute %s: %s (%d)\n",
+				fprintf(stderr, "Passenger AgentsStarter: could not execute %s: %s (%d)\n",
 					watchdogFilename.c_str(), strerror(e), e);
 				fflush(stderr);
 				_exit(1);
@@ -476,6 +499,7 @@ public:
 				} else if (args[0] == "LoggingServer info") {
 					UPDATE_TRACE_POINT();
 					if (args.size() == 2) {
+						loggingSocketFilename = generation->getPath() + "/logging.socket";
 						loggingSocketPassword = Base64::decode(args[1]);
 					} else {
 						killAndWait(pid);
@@ -495,7 +519,7 @@ public:
 	
 	/**
 	 * Close any file descriptors that this object has, and make it so that the destructor
-	 * doesn't try to shut down the helper server.
+	 * doesn't try to shut down the agents.
 	 *
 	 * @post getPid() == 0
 	 */
@@ -507,4 +531,4 @@ public:
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_HELPER_SERVER_STARTER_HPP_ */
+#endif /* _PASSENGER_AGENTS_STARTER_HPP_ */

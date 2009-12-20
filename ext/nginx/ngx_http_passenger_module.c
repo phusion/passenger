@@ -49,12 +49,12 @@
 #define HELPER_SERVER_PASSWORD_SIZE     64
 
 
-static int           first_start = 1;
-ngx_str_t            passenger_schema_string;
-ngx_str_t            passenger_placeholder_upstream_address;
-CachedFileStat      *passenger_stat_cache;
-HelperServerStarter *passenger_helper_server_starter = NULL;
-ngx_cycle_t         *passenger_current_cycle;
+static int      first_start = 1;
+ngx_str_t       passenger_schema_string;
+ngx_str_t       passenger_placeholder_upstream_address;
+CachedFileStat *passenger_stat_cache;
+AgentsStarter  *passenger_agents_starter = NULL;
+ngx_cycle_t    *passenger_current_cycle;
 
 
 /*
@@ -121,7 +121,7 @@ save_master_process_pid(ngx_cycle_t *cycle) {
     FILE *f;
     
     last = ngx_snprintf(filename, sizeof(filename) - 1, "%s/control_process.pid",
-        helper_server_starter_get_server_instance_dir(passenger_helper_server_starter));
+        agents_starter_get_server_instance_dir(passenger_agents_starter));
     *last = (u_char) '\0';
     
     f = fopen((const char *) filename, "w");
@@ -224,7 +224,7 @@ start_helper_server(ngx_cycle_t *cycle) {
     passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
     ruby           = ngx_str_null_terminate(&passenger_main_conf.ruby);
     
-    ret = helper_server_starter_start(passenger_helper_server_starter,
+    ret = agents_starter_start(passenger_agents_starter,
         passenger_main_conf.log_level, getpid(),
         "", passenger_main_conf.user_switching,
         default_user, core_conf->user, core_conf->group,
@@ -246,7 +246,7 @@ start_helper_server(ngx_cycle_t *cycle) {
      */
     last = ngx_snprintf(filename, sizeof(filename) - 1,
                         "%s/control_process.pid",
-                        helper_server_starter_get_server_instance_dir(passenger_helper_server_starter));
+                        agents_starter_get_server_instance_dir(passenger_agents_starter));
     *last = (u_char) '\0';
     if (create_file(cycle, filename, (const u_char *) "", 0) != NGX_OK) {
         result = NGX_ERROR;
@@ -256,7 +256,7 @@ start_helper_server(ngx_cycle_t *cycle) {
     /* Create various other info files. */
     last = ngx_snprintf(filename, sizeof(filename) - 1,
                         "%s/web_server.txt",
-                        helper_server_starter_get_generation_dir(passenger_helper_server_starter));
+                        agents_starter_get_generation_dir(passenger_agents_starter));
     *last = (u_char) '\0';
     if (create_file(cycle, filename, (const u_char *) NGINX_VER, strlen(NGINX_VER)) != NGX_OK) {
         result = NGX_ERROR;
@@ -265,7 +265,7 @@ start_helper_server(ngx_cycle_t *cycle) {
 
     last = ngx_snprintf(filename, sizeof(filename) - 1,
                         "%s/config_files.txt",
-                        helper_server_starter_get_generation_dir(passenger_helper_server_starter));
+                        agents_starter_get_generation_dir(passenger_agents_starter));
     *last = (u_char) '\0';
     if (create_file(cycle, filename, cycle->conf_file.data, cycle->conf_file.len) != NGX_OK) {
         result = NGX_ERROR;
@@ -285,9 +285,9 @@ cleanup:
  */
 static void
 shutdown_helper_server() {
-    if (passenger_helper_server_starter != NULL) {
-        helper_server_starter_free(passenger_helper_server_starter);
-        passenger_helper_server_starter = NULL;
+    if (passenger_agents_starter != NULL) {
+        agents_starter_free(passenger_agents_starter);
+        passenger_agents_starter = NULL;
     }
 }
 
@@ -310,9 +310,9 @@ pre_config_init(ngx_conf_t *cf)
     passenger_placeholder_upstream_address.data = (u_char *) "unix:/passenger_helper_server";
     passenger_placeholder_upstream_address.len  = sizeof("unix:/passenger_helper_server") - 1;
     passenger_stat_cache = cached_file_stat_new(1024);
-    passenger_helper_server_starter = helper_server_starter_new(HSST_NGINX, &error_message);
+    passenger_agents_starter = agents_starter_new(AS_NGINX, &error_message);
     
-    if (passenger_helper_server_starter == NULL) {
+    if (passenger_agents_starter == NULL) {
         ngx_log_error(NGX_LOG_ALERT, cf->log, ngx_errno, "%s", error_message);
         free(error_message);
         return NGX_ERROR;

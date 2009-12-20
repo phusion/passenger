@@ -183,10 +183,10 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 			RandomGenerator.h
 			MessageServer.h
 			Utils.h),
-		'HelperServerStarter.o' => %w(
-			HelperServerStarter.cpp
-			HelperServerStarter.h
-			HelperServerStarter.hpp),
+		'AgentsStarter.o' => %w(
+			AgentsStarter.cpp
+			AgentsStarter.h
+			AgentsStarter.hpp),
 		'BCrypt.o' => %w(
 			BCrypt.cpp
 			BCrypt.h
@@ -286,7 +286,7 @@ end
 			ext/apache2/Configuration.h
 			ext/apache2/Bucket.h
 			ext/apache2/DirectoryMapper.h
-			ext/common/HelperServerStarter.hpp
+			ext/common/AgentsStarter.hpp
 			ext/common/ApplicationPool/Client.h
 			ext/common/SpawnManager.h
 			ext/common/Exceptions.h
