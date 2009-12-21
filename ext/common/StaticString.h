@@ -169,6 +169,18 @@ public:
 	}
 };
 
+inline string
+operator+(const char *lhs, const StaticString &rhs) {
+	return StaticString(lhs) + rhs;
+}
+
+inline string
+operator+(const string &lhs, const StaticString &rhs) {
+	string result = lhs;
+	result.append(rhs.data(), rhs.size());
+	return result;
+}
+
 } // namespace Passenger
 
 #endif /* _PASSENGER_STATIC_STRING_H_ */
