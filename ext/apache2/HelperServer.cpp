@@ -128,6 +128,7 @@ private:
 	ServerInstanceDir::GenerationPtr generation;
 	FileDescriptor feedbackFd;
 	MessageChannel feedbackChannel;
+	TxnLoggerPtr txnLogger;
 	AccountsDatabasePtr accountsDatabase;
 	MessageServerPtr messageServer;
 	ApplicationPool::PoolPtr pool;
@@ -190,20 +191,29 @@ public:
 		bool userSwitching, const string &defaultUser, uid_t workerUid, gid_t workerGid,
 		const string &passengerRoot, const string &rubyCommand,
 		unsigned int generationNumber, unsigned int maxPoolSize,
-		unsigned int maxInstancesPerApp, unsigned int poolIdleTime)
+		unsigned int maxInstancesPerApp, unsigned int poolIdleTime,
+		const string &monitoringLogDir)
 		: serverInstanceDir(webServerPid, tempDir, false)
 	{
 		TRACE_POINT();
+		vector<string> args;
 		string messageSocketPassword;
+		string loggingSocketPassword;
 		
 		setLogLevel(logLevel);
 		this->feedbackFd  = feedbackFd;
 		feedbackChannel   = MessageChannel(feedbackFd);
 		
 		UPDATE_TRACE_POINT();
-		receivePassword(); // Request socket password. Discard this because
-		                   // it's not used in the Apache helper server.
-		messageSocketPassword = receivePassword();
+		if (!feedbackChannel.read(args)) {
+			throw IOException("The watchdog unexpectedly closed the connection.");
+		}
+		if (args[0] != "passwords") {
+			throw IOException("Unexpected input message '" + args[0] + "'");
+		}
+		messageSocketPassword = Base64::decode(args[2]);
+		loggingSocketPassword = Base64::decode(args[3]);
+		
 		generation        = serverInstanceDir.getGeneration(generationNumber);
 		accountsDatabase  = AccountsDatabase::createDefault(generation, userSwitching, defaultUser);
 		accountsDatabase->add("_web_server", messageSocketPassword, false,
@@ -218,7 +228,11 @@ public:
 		}
 		
 		UPDATE_TRACE_POINT();
-		pool.reset(new ApplicationPool::Pool(
+		txnLogger = ptr(new TxnLogger(monitoringLogDir,
+			generation->getPath() + "/logging.socket",
+			"logging", loggingSocketPassword));
+		
+		pool = ptr(new ApplicationPool::Pool(
 			findSpawnServer(passengerRoot.c_str()), generation,
 			accountsDatabase->get("_backend"), rubyCommand
 		));
@@ -328,6 +342,7 @@ main(int argc, char *argv[]) {
 		unsigned int maxPoolSize        = atoi(argv[12]);
 		unsigned int maxInstancesPerApp = atoi(argv[13]);
 		unsigned int poolIdleTime       = atoi(argv[14]);
+		string  monitoringLogDir = argv[15];
 		
 		// Change process title.
 		strncpy(argv[0], "PassengerHelperServer", strlen(argv[0]));
@@ -339,7 +354,8 @@ main(int argc, char *argv[]) {
 		Server server(logLevel, feedbackFd, webServerPid, tempDir,
 			userSwitching, defaultUser, workerUid, workerGid,
 			passengerRoot, rubyCommand, generationNumber,
-			maxPoolSize, maxInstancesPerApp, poolIdleTime);
+			maxPoolSize, maxInstancesPerApp, poolIdleTime,
+			monitoringLogDir);
 		P_DEBUG("Phusion Passenger helper server started on PID " << getpid());
 		
 		UPDATE_TRACE_POINT();

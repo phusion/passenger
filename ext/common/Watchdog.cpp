@@ -46,7 +46,6 @@ static string  monitoringLogDir;
 
 static ServerInstanceDirPtr serverInstanceDir;
 static ServerInstanceDir::GenerationPtr generation;
-static string loggingSocketFilename;
 static string loggingSocketPassword;
 static RandomGenerator randomGenerator;
 static EventFd errorEvent;
@@ -511,19 +510,16 @@ protected:
 			maxPoolSizeString.c_str(),
 			maxInstancesPerAppString.c_str(),
 			poolIdleTimeString.c_str(),
+			monitoringLogDir.c_str(),
 			(char *) 0);
 	}
 	
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
 		MessageChannel channel(fd);
-		
-		// Send the desired request socket password.
-		channel.write("request socket password",
+		channel.write("passwords",
 			Base64::encode(requestSocketPassword).c_str(),
-			NULL);
-		// Send the desired web server account password.
-		channel.write("message socket password",
 			Base64::encode(messageSocketPassword).c_str(),
+			Base64::encode(loggingSocketPassword).c_str(),
 			NULL);
 	}
 	
@@ -578,7 +574,6 @@ protected:
 			webServerPidString.c_str(),
 			tempDir.c_str(),
 			generationNumber.c_str(),
-			// TODO
 			monitoringLogDir.c_str(),
 			"",
 			"",

@@ -429,6 +429,7 @@ end
 		'ext/common/FileDescriptor.h',
 		'ext/common/BacktracesServer.h',
 		'ext/common/SpawnManager.h',
+		'ext/common/Logging.h',
 		'ext/common/ApplicationPool/Interface.h',
 		'ext/common/ApplicationPool/Pool.h',
 		'ext/common/ApplicationPool/Server.h'

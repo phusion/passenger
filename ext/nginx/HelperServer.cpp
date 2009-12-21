@@ -133,6 +133,9 @@ private:
 	/** The server socket file descriptor. */
 	int serverSocket;
 	
+	/** The transaction logger to use. */
+	TxnLoggerPtr txnLogger;
+	
 	/** This client's thread. */
 	oxt::thread *thr;
 	
@@ -420,16 +423,30 @@ private:
 		ScgiRequestParser parser(MAX_HEADER_SIZE);
 		string partialRequestBody;
 		unsigned long contentLength;
+		TxnLogPtr log;
+		
+		if (txnLogger) {
+			log = txnLogger->newTransaction();
+		} else {
+			log = ptr(new TxnLog());
+		}
 		
 		if (!readAndCheckPassword(clientFd)) {
+			log->abort("Improper request socket connect password");
 			P_ERROR("Client did not send a correct password.");
 			return;
 		}
 		if (!readAndParseRequestHeaders(clientFd, parser, partialRequestBody)) {
+			log->abort("Improper SCGI headers");
 			return;
 		}
 		
 		try {
+			TxnScopeLog requestProcessingScope(log,
+				"BEGIN: request processing",
+				"END: request processing",
+				"FAIL: request processing");
+			
 			PoolOptions options;
 			if (parser.getHeader("SCRIPT_NAME").empty()) {
 				options.appRoot = extractDirName(parser.getHeader("DOCUMENT_ROOT"));
@@ -451,9 +468,19 @@ private:
 			/***********************/
 			
 			try {
-				SessionPtr session = pool->get(options);
+				SessionPtr session;
+				
+				{
+					TxnScopeLog sl(log,
+						"BEGIN: get from pool",
+						"END: get from pool");
+					session = pool->get(options);
+				}
 				
 				UPDATE_TRACE_POINT();
+				TxnScopeLog requestProxyingScope(log,
+					"BEGIN: request proxying",
+					"END: request proxying");
 				
 				char headers[parser.getHeaderData().size() +
 					sizeof("PASSENGER_CONNECT_PASSWORD") +
@@ -469,13 +496,16 @@ private:
 				
 				contentLength = atol(
 					parser.getHeader("CONTENT_LENGTH").c_str());
+				
 				sendRequestBody(session,
 					clientFd,
 					partialRequestBody,
 					contentLength);
-			
+				
 				session->shutdownWriter();
 				forwardResponse(session, clientFd);
+				
+				requestProxyingScope.success();
 			} catch (const SpawnException &e) {
 				handleSpawnException(clientFd, e,
 					parser.getHeader("PASSENGER_FRIENDLY_ERROR_PAGES") == "true");
@@ -484,6 +514,8 @@ private:
 					"It seems the user clicked on the 'Stop' button in his "
 					"browser.");
 			}
+			
+			requestProcessingScope.success();
 			clientFd.close();
 		} catch (const boost::thread_interrupted &) {
 			throw;
@@ -551,7 +583,8 @@ public:
 	 */
 	Client(unsigned int number, ApplicationPool::Ptr pool,
 	       const string &password, bool lowerPrivilege,
-	       const string &lowestUser, int serverSocket)
+	       const string &lowestUser, int serverSocket,
+	       TxnLoggerPtr logger)
 		: inactivityTimer(false)
 	{
 		this->number = number;
@@ -560,6 +593,7 @@ public:
 		this->lowerPrivilege = lowerPrivilege;
 		this->lowestUser = lowestUser;
 		this->serverSocket = serverSocket;
+		this->txnLogger = logger;
 		thr = new oxt::thread(
 			bind(&Client::threadMain, this),
 			"Client thread " + toString(number),
@@ -615,6 +649,7 @@ private:
 	ServerInstanceDir serverInstanceDir;
 	ServerInstanceDir::GenerationPtr generation;
 	set<ClientPtr> clients;
+	TxnLoggerPtr txnLogger;
 	ApplicationPool::Ptr pool;
 	AccountsDatabasePtr accountsDatabase;
 	MessageServerPtr messageServer;
@@ -623,19 +658,6 @@ private:
 	
 	string getRequestSocketFilename() const {
 		return generation->getPath() + "/request.socket";
-	}
-	
-	string receivePassword() {
-		TRACE_POINT();
-		vector<string> args;
-		
-		if (!feedbackChannel.read(args)) {
-			throw IOException("The watchdog unexpectedly closed the connection.");
-		}
-		if (args[0] != "request socket password" && args[0] != "message socket password") {
-			throw IOException("Unexpected input message '" + args[0] + "'");
-		}
-		return Base64::decode(args[1]);
 	}
 	
 	/**
@@ -666,7 +688,7 @@ private:
 	void startClientHandlerThreads() {
 		for (unsigned int i = 0; i < numberOfThreads; i++) {
 			ClientPtr client(new Client(i + 1, pool, requestSocketPassword,
-				userSwitching, defaultUser, requestSocket));
+				userSwitching, defaultUser, requestSocket, txnLogger));
 			clients.insert(client);
 		}
 	}
@@ -734,10 +756,13 @@ public:
 	Server(FileDescriptor feedbackFd, pid_t webServerPid, const string &tempDir,
 		bool userSwitching, const string &defaultUser, uid_t workerUid, gid_t workerGid,
 		const string &passengerRoot, const string &rubyCommand, unsigned int generationNumber,
-		unsigned int maxPoolSize, unsigned int maxInstancesPerApp, unsigned int poolIdleTime)
+		unsigned int maxPoolSize, unsigned int maxInstancesPerApp, unsigned int poolIdleTime,
+		const string &monitoringLogDir)
 		: serverInstanceDir(webServerPid, tempDir, false)
 	{
+		vector<string> args;
 		string messageSocketPassword;
+		string loggingSocketPassword;
 		
 		TRACE_POINT();
 		this->feedbackFd    = feedbackFd;
@@ -747,8 +772,15 @@ public:
 		numberOfThreads     = maxPoolSize * 4;
 		
 		UPDATE_TRACE_POINT();
-		requestSocketPassword = receivePassword();
-		messageSocketPassword = receivePassword();
+		if (!feedbackChannel.read(args)) {
+			throw IOException("The watchdog unexpectedly closed the connection.");
+		}
+		if (args[0] != "passwords") {
+			throw IOException("Unexpected input message '" + args[0] + "'");
+		}
+		requestSocketPassword = Base64::decode(args[1]);
+		messageSocketPassword = Base64::decode(args[2]);
+		loggingSocketPassword = Base64::decode(args[3]);
 		generation = serverInstanceDir.getGeneration(generationNumber);
 		startListening();
 		accountsDatabase = AccountsDatabase::createDefault(generation, userSwitching, defaultUser);
@@ -760,7 +792,11 @@ public:
 		}
 		
 		UPDATE_TRACE_POINT();
-		pool.reset(new ApplicationPool::Pool(
+		txnLogger = ptr(new TxnLogger(monitoringLogDir,
+			generation->getPath() + "/logging.socket",
+			"logging", loggingSocketPassword));
+		
+		pool = ptr(new ApplicationPool::Pool(
 			findSpawnServer(passengerRoot.c_str()), generation,
 			accountsDatabase->get("_backend"), rubyCommand
 		));
@@ -901,6 +937,7 @@ main(int argc, char *argv[]) {
 		unsigned int maxPoolSize        = atoi(argv[12]);
 		unsigned int maxInstancesPerApp = atoi(argv[13]);
 		unsigned int poolIdleTime       = atoi(argv[14]);
+		string  monitoringLogDir = argv[15];
 		
 		// Change process title.
 		strncpy(argv[0], "PassengerHelperServer", strlen(argv[0]));
@@ -913,7 +950,8 @@ main(int argc, char *argv[]) {
 		Server server(feedbackFd, webServerPid, tempDir,
 			userSwitching, defaultUser, workerUid, workerGid,
 			passengerRoot, rubyCommand, generationNumber,
-			maxPoolSize, maxInstancesPerApp, poolIdleTime);
+			maxPoolSize, maxInstancesPerApp, poolIdleTime,
+			monitoringLogDir);
 		P_DEBUG("Passenger helper server started on PID " << getpid());
 		
 		UPDATE_TRACE_POINT();

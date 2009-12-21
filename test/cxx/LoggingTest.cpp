@@ -102,8 +102,8 @@ namespace tut {
 	}
 	
 	TEST_METHOD(4) {
-		// newTransaction() and continueTransaction() write a BEGIN message
-		// to the log file, while TxnLogPtr writes an END message upon
+		// newTransaction() and continueTransaction() write a ATTACH message
+		// to the log file, while TxnLogPtr writes an DETACH message upon
 		// destruction.
 		SystemTime::forceMsec(YESTERDAY);
 		TxnLogPtr log = logger->newTransaction();
@@ -114,10 +114,10 @@ namespace tut {
 		log.reset();
 		
 		string data = readAll(loggingDir + "/1/2009/12/18/web_txns.txt");
-		ensure("(1)", data.find(toString(YESTERDAY) + ": BEGIN\n") != string::npos);
-		ensure("(2)", data.find(toString(TODAY) + ": BEGIN\n") != string::npos);
-		ensure("(3)", data.find(toString(TODAY) + ": END\n") != string::npos);
-		ensure("(4)", data.find(toString(TOMORROW) + ": END\n") != string::npos);
+		ensure("(1)", data.find(toString(YESTERDAY) + ": ATTACH\n") != string::npos);
+		ensure("(2)", data.find(toString(TODAY) + ": ATTACH\n") != string::npos);
+		ensure("(3)", data.find(toString(TODAY) + ": DETACH\n") != string::npos);
+		ensure("(4)", data.find(toString(TOMORROW) + ": DETACH\n") != string::npos);
 	}
 	
 	TEST_METHOD(5) {

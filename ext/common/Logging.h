@@ -143,6 +143,8 @@ void setDebugFile(const char *logFile = NULL);
 
 class TxnLog {
 private:
+	static const int INT64_STR_BUFSIZE = 22; // Long enough for a 64-bit number.
+	
 	FileDescriptor handle;
 	string fullId;
 	string shortId;
@@ -159,6 +161,35 @@ private:
 		}
 	}
 	
+	/**
+	 * Buffer must be at least shortId.size() + 1 + INT64_STR_BUFSIZE + 2 bytes.
+	 */
+	char *insertShortIdAndTimestamp(char *buffer) {
+		int size;
+		
+		// "txn-id-here"
+		memcpy(buffer, shortId.c_str(), shortId.size());
+		buffer += shortId.size();
+		
+		// "txn-id-here "
+		*buffer = ' ';
+		buffer++;
+		
+		// "txn-id-here 123456"
+		size = snprintf(buffer, INT64_STR_BUFSIZE, "%llu", SystemTime::getMsec());
+		if (size >= INT64_STR_BUFSIZE) {
+			// The buffer is too small.
+			throw IOException("Cannot format a new transaction log message timestamp.");
+		}
+		buffer += size;
+		
+		// "txn-id-here 123456: "
+		buffer[0] = ':';
+		buffer[1] = ' ';
+		
+		return buffer + 2;
+	}
+	
 public:
 	TxnLog() { }
 	
@@ -166,51 +197,23 @@ public:
 		this->handle  = handle;
 		this->fullId  = fullId;
 		this->shortId = shortId;
-		message("BEGIN");
+		message("ATTACH");
 	}
 	
 	~TxnLog() {
 		if (handle != -1) {
-			message("END");
+			message("DETACH");
 		}
 	}
 	
 	void message(const StaticString &text) {
 		if (handle != -1) {
-			char timestampString[22]; // Long enough for a 64-bit number.
-			size_t timestampStringLen;
-			int size;
-			
-			size = snprintf(timestampString, sizeof(timestampString),
-				"%llu", SystemTime::getMsec());
-			if (size >= (int) sizeof(timestampString)) {
-				// The buffer is too small.
-				TRACE_POINT();
-				throw IOException("Cannot format a new transaction log message timestamp.");
-			}
-			timestampStringLen = strlen(timestampString);
-			
-			// "txn-id-here 123456: log message here\n"
-			char data[shortId.size() + 1 + timestampStringLen + 2 + text.size() + 1];
-			char *end = data;
-			
-			// "txn-id-here"
-			memcpy(data, shortId.c_str(), shortId.size());
-			end += shortId.size();
-			
-			// "txn-id-here "
-			*end = ' ';
-			end++;
-			
-			// "txn-id-here 123456"
-			memcpy(end, timestampString, timestampStringLen);
-			end += timestampStringLen;
+			// We want: "txn-id-here 123456: log message here\n"
+			char data[shortId.size() + 1 + INT64_STR_BUFSIZE + 2 + text.size() + 1];
+			char *end;
 			
 			// "txn-id-here 123456: "
-			*end = ':';
-			end++;
-			*end = ' ';
-			end++;
+			end = insertShortIdAndTimestamp(data);
 			
 			// "txn-id-here 123456: log message here"
 			memcpy(end, text.c_str(), text.size());
@@ -218,8 +221,31 @@ public:
 			
 			// "txn-id-here 123456: log message here\n"
 			*end = '\n';
+			end++;
 			
-			atomicWrite(data, sizeof(data));
+			atomicWrite(data, end - data);
+		}
+	}
+	
+	void abort(const StaticString &text) {
+		if (handle != -1) {
+			// We want: "txn-id-here 123456: ABORT: log message here\n"
+			char data[shortId.size() + 1 + INT64_STR_BUFSIZE + 2 +
+				(sizeof("ABORT: ") - 1) + text.size() + 1];
+			char *end;
+			
+			// "txn-id-here 123456: "
+			end = insertShortIdAndTimestamp(data);
+			
+			// "txn-id-here 123456: ABORT: "
+			memcpy(end, "ABORT: ", sizeof("ABORT: ") - 1);
+			end += sizeof("ABORT: ") - 1;
+			
+			// "txn-id-here 123456: ABORT: log message here\n"
+			*end = '\n';
+			end++;
+			
+			atomicWrite(data, end - data);
 		}
 	}
 	
@@ -237,6 +263,36 @@ public:
 };
 
 typedef shared_ptr<TxnLog> TxnLogPtr;
+
+class TxnScopeLog {
+private:
+	TxnLog *log;
+	const char *endMessage;
+	const char *abortMessage;
+	bool ok;
+public:
+	TxnScopeLog(const TxnLogPtr &log, const char *beginMessage,
+	            const char *endMessage, const char *abortMessage = NULL
+	) {
+		this->log = log.get();
+		this->endMessage = endMessage;
+		this->abortMessage = abortMessage;
+		ok = abortMessage == NULL;
+		log->message(beginMessage);
+	}
+	
+	~TxnScopeLog() {
+		if (ok) {
+			log->message(endMessage);
+		} else {
+			log->message(abortMessage);
+		}
+	}
+	
+	void success() {
+		ok = true;
+	}
+};
 
 class TxnLogger {
 private:
