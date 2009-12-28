@@ -423,29 +423,19 @@ private:
 		ScgiRequestParser parser(MAX_HEADER_SIZE);
 		string partialRequestBody;
 		unsigned long contentLength;
-		TxnLogPtr log;
-		
-		if (txnLogger) {
-			log = txnLogger->newTransaction();
-		} else {
-			log = ptr(new TxnLog());
-		}
 		
 		if (!readAndCheckPassword(clientFd)) {
-			log->abort("Improper request socket connect password");
 			P_ERROR("Client did not send a correct password.");
 			return;
 		}
 		if (!readAndParseRequestHeaders(clientFd, parser, partialRequestBody)) {
-			log->abort("Improper SCGI headers");
 			return;
 		}
 		
 		try {
-			TxnScopeLog requestProcessingScope(log,
-				"BEGIN: request processing",
-				"END: request processing",
-				"FAIL: request processing");
+			TxnLogPtr log = txnLogger->newTransaction(parser.getHeader("PASSENGER_ANALYTICS_ID"));
+			
+			TxnScopeLog requestProcessingScope(log, "request processing");
 			
 			PoolOptions options;
 			if (parser.getHeader("SCRIPT_NAME").empty()) {
@@ -471,16 +461,13 @@ private:
 				SessionPtr session;
 				
 				{
-					TxnScopeLog sl(log,
-						"BEGIN: get from pool",
-						"END: get from pool");
+					TxnScopeLog sl(log, "get from pool");
 					session = pool->get(options);
+					sl.success();
 				}
 				
 				UPDATE_TRACE_POINT();
-				TxnScopeLog requestProxyingScope(log,
-					"BEGIN: request proxying",
-					"END: request proxying");
+				TxnScopeLog requestProxyingScope(log, "request proxying");
 				
 				char headers[parser.getHeaderData().size() +
 					sizeof("PASSENGER_CONNECT_PASSWORD") +
@@ -757,7 +744,7 @@ public:
 		bool userSwitching, const string &defaultUser, uid_t workerUid, gid_t workerGid,
 		const string &passengerRoot, const string &rubyCommand, unsigned int generationNumber,
 		unsigned int maxPoolSize, unsigned int maxInstancesPerApp, unsigned int poolIdleTime,
-		const string &monitoringLogDir)
+		const string &analyticsLogDir)
 		: serverInstanceDir(webServerPid, tempDir, false)
 	{
 		vector<string> args;
@@ -792,7 +779,7 @@ public:
 		}
 		
 		UPDATE_TRACE_POINT();
-		txnLogger = ptr(new TxnLogger(monitoringLogDir,
+		txnLogger = ptr(new TxnLogger(analyticsLogDir,
 			generation->getPath() + "/logging.socket",
 			"logging", loggingSocketPassword));
 		
@@ -937,7 +924,7 @@ main(int argc, char *argv[]) {
 		unsigned int maxPoolSize        = atoi(argv[12]);
 		unsigned int maxInstancesPerApp = atoi(argv[13]);
 		unsigned int poolIdleTime       = atoi(argv[14]);
-		string  monitoringLogDir = argv[15];
+		string  analyticsLogDir = argv[15];
 		
 		// Change process title.
 		strncpy(argv[0], "PassengerHelperServer", strlen(argv[0]));
@@ -951,7 +938,7 @@ main(int argc, char *argv[]) {
 			userSwitching, defaultUser, workerUid, workerGid,
 			passengerRoot, rubyCommand, generationNumber,
 			maxPoolSize, maxInstancesPerApp, poolIdleTime,
-			monitoringLogDir);
+			analyticsLogDir);
 		P_DEBUG("Passenger helper server started on PID " << getpid());
 		
 		UPDATE_TRACE_POINT();

@@ -192,7 +192,7 @@ public:
 		const string &passengerRoot, const string &rubyCommand,
 		unsigned int generationNumber, unsigned int maxPoolSize,
 		unsigned int maxInstancesPerApp, unsigned int poolIdleTime,
-		const string &monitoringLogDir)
+		const string &analyticsLogDir)
 		: serverInstanceDir(webServerPid, tempDir, false)
 	{
 		TRACE_POINT();
@@ -228,7 +228,7 @@ public:
 		}
 		
 		UPDATE_TRACE_POINT();
-		txnLogger = ptr(new TxnLogger(monitoringLogDir,
+		txnLogger = ptr(new TxnLogger(analyticsLogDir,
 			generation->getPath() + "/logging.socket",
 			"logging", loggingSocketPassword));
 		
@@ -342,7 +342,7 @@ main(int argc, char *argv[]) {
 		unsigned int maxPoolSize        = atoi(argv[12]);
 		unsigned int maxInstancesPerApp = atoi(argv[13]);
 		unsigned int poolIdleTime       = atoi(argv[14]);
-		string  monitoringLogDir = argv[15];
+		string  analyticsLogDir = argv[15];
 		
 		// Change process title.
 		strncpy(argv[0], "PassengerHelperServer", strlen(argv[0]));
@@ -355,7 +355,7 @@ main(int argc, char *argv[]) {
 			userSwitching, defaultUser, workerUid, workerGid,
 			passengerRoot, rubyCommand, generationNumber,
 			maxPoolSize, maxInstancesPerApp, poolIdleTime,
-			monitoringLogDir);
+			analyticsLogDir);
 		P_DEBUG("Phusion Passenger helper server started on PID " << getpid());
 		
 		UPDATE_TRACE_POINT();

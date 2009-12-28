@@ -31,5 +31,7 @@ namespace Passenger {
 		time_t forcedValue = 0;
 		bool hasForcedMsecValue = false;
 		unsigned long long forcedMsecValue = 0;
+		bool hasForcedUsecValue = false;
+		unsigned long long forcedUsecValue = 0;
 	}
 }

@@ -288,6 +288,24 @@ set_upstream_server_address(ngx_http_upstream_t *upstream, ngx_http_upstream_con
                            ngx_strlen(config_field ## _string) + 1);    \
     } while (0)
 
+#define ANALYZE_STR_CONFIG_LENGTH(name, container, config_field)        \
+    do {                                                                \
+        if (container->config_field.data != NULL) {                     \
+            len += sizeof(name) + (container->config_field.len) + 1;    \
+        }                                                               \
+    } while (0)
+
+#define SERIALIZE_STR_CONFIG_DATA(name, container, config_field)        \
+    do {                                                                \
+        if (container->config_field.data != NULL) {                     \
+            b->last = ngx_copy(b->last, name, sizeof(name));            \
+            b->last = ngx_copy(b->last, container->config_field.data,   \
+                               container->config_field.len);            \
+            *b->last = '\0';                                            \
+            b->last++;                                                  \
+        }                                                               \
+    } while (0)
+
 
 static ngx_int_t
 create_request(ngx_http_request_t *r)
@@ -418,6 +436,8 @@ create_request(ngx_http_request_t *r)
     *end = '\0';
     len += sizeof("PASSENGER_APP_SPAWNER_IDLE_TIME") +
            ngx_strlen(app_spawner_idle_time_string) + 1;
+
+    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_ANALYTICS_ID", slcf, analytics_id);
 
     /***********************/
     /***********************/
@@ -615,6 +635,8 @@ create_request(ngx_http_request_t *r)
                        sizeof("PASSENGER_APP_SPAWNER_IDLE_TIME"));
     b->last = ngx_copy(b->last, app_spawner_idle_time_string,
                        ngx_strlen(app_spawner_idle_time_string) + 1);
+
+    SERIALIZE_STR_CONFIG_DATA("PASSENGER_ANALYTICS_ID", slcf, analytics_id);
 
     /***********************/
     /***********************/

@@ -38,6 +38,8 @@ namespace SystemTimeData {
 	extern time_t forcedValue;
 	extern bool hasForcedMsecValue;
 	extern unsigned long long forcedMsecValue;
+	extern bool hasForcedUsecValue;
+	extern unsigned long long forcedUsecValue;
 }
 
 /**
@@ -100,6 +102,33 @@ public:
 			return (unsigned long long) t.tv_sec * 1000 + t.tv_usec / 1000;
 		}
 	}
+	
+	/**
+	 * Returns the time since the Epoch, measured in microseconds. Or, if a
+	 * time was forced with forceUsec(), then the forced time is returned instead.
+	 *
+	 * @throws TimeRetrievalException Something went wrong while retrieving the time.
+	 * @throws boost::thread_interrupted
+	 */
+	static unsigned long long getUsec() {
+		if (SystemTimeData::hasForcedUsecValue) {
+			return SystemTimeData::forcedUsecValue;
+		} else {
+			struct timeval t;
+			int ret;
+			
+			do {
+				ret = gettimeofday(&t, NULL);
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1) {
+				int e = errno;
+				throw TimeRetrievalException(
+					"Unable to retrieve the system time",
+					e);
+			}
+			return (unsigned long long) t.tv_sec * 1000000 + t.tv_usec;
+		}
+	}
 
 	/**
 	 * Force get() to return the given value.
@@ -116,9 +145,17 @@ public:
 		SystemTimeData::hasForcedMsecValue = true;
 		SystemTimeData::forcedMsecValue = value;
 	}
+	
+	/**
+	 * Force getUsec() to return the given value.
+	 */
+	static void forceUsec(unsigned long long value) {
+		SystemTimeData::hasForcedUsecValue = true;
+		SystemTimeData::forcedUsecValue = value;
+	}
 
 	/**
-	 * Release the previously forced value, so that get()
+	 * Release the previously forced seconds value, so that get()
 	 * returns the system time once again.
 	 */
 	static void release() {
@@ -126,11 +163,29 @@ public:
 	}
 	
 	/**
-	 * Release the previously forced value, so that getMsec()
+	 * Release the previously forced msec value, so that getMsec()
 	 * returns the system time once again.
 	 */
 	static void releaseMsec() {
 		SystemTimeData::hasForcedMsecValue = false;
+	}
+	
+	/**
+	 * Release the previously forced usec value, so that getUsec()
+	 * returns the system time once again.
+	 */
+	static void releaseUsec() {
+		SystemTimeData::hasForcedUsecValue = false;
+	}
+	
+	/**
+	 * Release all previously forced values, so that get(), getMsec()
+	 * and getUsec() return the system time once again.
+	 */
+	static void releaseAll() {
+		SystemTimeData::hasForcedValue = false;
+		SystemTimeData::hasForcedMsecValue = false;
+		SystemTimeData::hasForcedUsecValue = false;
 	}
 };
 

@@ -363,18 +363,18 @@
 			const char *tempDir;
 			
 			/**
-			 * Directory in which monitoring logs should be saved. The
+			 * Directory in which analytics logs should be saved. The
 			 * empty string means unspecified.
 			 */
-			string monitoringLogDir;
+			string analyticsLogDir;
 			
 			/** Called at the end of the server config merging process, inside
 			 * the control process.
 			 */
 			void finalize() {
-				if (monitoringLogDir.empty() && geteuid() == 0) {
-					monitoringLogDir = "/var/log/passenger-monitoring";
-				} else if (monitoringLogDir.empty()) {
+				if (analyticsLogDir.empty() && geteuid() == 0) {
+					analyticsLogDir = "/var/log/passenger-analytics";
+				} else if (analyticsLogDir.empty()) {
 					struct passwd *user = getpwuid(geteuid());
 					string username;
 					
@@ -383,8 +383,8 @@
 					} else {
 						username = "user-" + toString(geteuid());
 					}
-					monitoringLogDir = string(getSystemTempDir()) +
-						"/passenger-monitoring-logs." +
+					analyticsLogDir = string(getSystemTempDir()) +
+						"/passenger-analytics-logs." +
 						username;
 				}
 			}

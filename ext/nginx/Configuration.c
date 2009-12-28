@@ -72,8 +72,8 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->user_switching = NGX_CONF_UNSET;
     conf->default_user.data = NULL;
     conf->default_user.len  = 0;
-    conf->monitoring_log_dir.data = NULL;
-    conf->monitoring_log_dir.len  = 0;
+    conf->analytics_log_dir.data = NULL;
+    conf->analytics_log_dir.len  = 0;
     
     return conf;
 }
@@ -124,25 +124,25 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
         conf->default_user.data = (u_char *) "nobody";
     }
     
-    if (conf->monitoring_log_dir.len == 0) {
+    if (conf->analytics_log_dir.len == 0) {
         if (geteuid() == 0) {
-            conf->monitoring_log_dir.data = (u_char *) "/var/log/passenger";
-            conf->monitoring_log_dir.len  = sizeof("/var/log/passenger") - 1;
+            conf->analytics_log_dir.data = (u_char *) "/var/log/passenger-analytics";
+            conf->analytics_log_dir.len  = sizeof("/var/log/passenger-analytics") - 1;
         } else {
             user = getpwuid(geteuid());
             if (user == NULL) {
                 last = ngx_snprintf(filename, sizeof(filename),
-                                    "/tmp/passenger-monitoring-logs.user-%L",
+                                    "/tmp/passenger-analytics-logs.user-%L",
                                     (int64_t) geteuid());
             } else {
                 last = ngx_snprintf(filename, sizeof(filename),
-                                    "/tmp/passenger-monitoring-logs.%s",
+                                    "/tmp/passenger-analytics-logs.%s",
                                     user->pw_name);
             }
             str.data = filename;
             str.len  = last - filename;
-            conf->monitoring_log_dir.data = ngx_pstrdup(cf->pool, &str);
-            conf->monitoring_log_dir.len  = str.len;
+            conf->analytics_log_dir.data = ngx_pstrdup(cf->pool, &str);
+            conf->analytics_log_dir.len  = str.len;
         }
     }
     
@@ -189,6 +189,8 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->min_instances = NGX_CONF_UNSET;
     conf->framework_spawner_idle_time = NGX_CONF_UNSET;
     conf->app_spawner_idle_time = NGX_CONF_UNSET;
+    conf->analytics_id.data = NULL;
+    conf->analytics_id.len = 0;
 
     /******************************/
     /******************************/
@@ -270,6 +272,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->min_instances, prev->min_instances, (ngx_int_t) -1);
     ngx_conf_merge_value(conf->framework_spawner_idle_time, prev->framework_spawner_idle_time, (ngx_int_t) -1);
     ngx_conf_merge_value(conf->app_spawner_idle_time, prev->app_spawner_idle_time, (ngx_int_t) -1);
+    ngx_conf_merge_str_value(conf->analytics_id, prev->analytics_id, NULL);
     
     if (prev->base_uris != NGX_CONF_UNSET_PTR) {
         if (conf->base_uris == NGX_CONF_UNSET_PTR) {
@@ -931,7 +934,7 @@ const ngx_command_t passenger_commands[] = {
       NULL },
 
     { ngx_string("passenger_user_switching"),
-      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      NGX_HTTP_MAIN_CONF | NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, user_switching),
@@ -944,11 +947,18 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_main_conf_t, default_user),
       NULL },
 
-    { ngx_string("passenger_monitoring_log_dir"),
+    { ngx_string("passenger_analytics_id"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, analytics_id),
+      NULL },
+
+    { ngx_string("passenger_analytics_log_dir"),
       NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, monitoring_log_dir),
+      offsetof(passenger_main_conf_t, analytics_log_dir),
       NULL },
 
     { ngx_string("passenger_pass_header"),

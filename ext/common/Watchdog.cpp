@@ -42,7 +42,7 @@ static string  rubyCommand;
 static unsigned int maxPoolSize;
 static unsigned int maxInstancesPerApp;
 static unsigned int poolIdleTime;
-static string  monitoringLogDir;
+static string  analyticsLogDir;
 
 static ServerInstanceDirPtr serverInstanceDir;
 static ServerInstanceDir::GenerationPtr generation;
@@ -510,7 +510,7 @@ protected:
 			maxPoolSizeString.c_str(),
 			maxInstancesPerAppString.c_str(),
 			poolIdleTimeString.c_str(),
-			monitoringLogDir.c_str(),
+			analyticsLogDir.c_str(),
 			(char *) 0);
 	}
 	
@@ -574,7 +574,7 @@ protected:
 			webServerPidString.c_str(),
 			tempDir.c_str(),
 			generationNumber.c_str(),
-			monitoringLogDir.c_str(),
+			analyticsLogDir.c_str(),
 			"",
 			"",
 			(char *) 0);
@@ -685,7 +685,6 @@ waitForStarterProcessOrWatchers(vector<AgentWatcher *> &watchers) {
 			P_ERROR("Error in " << watcherName << " watcher:\n  " <<
 				message << "\n" << backtrace);
 		}
-		
 		return false;
 	} else {
 		return syscalls::read(feedbackFd, &x, 1) == 1;
@@ -795,7 +794,7 @@ main(int argc, char *argv[]) {
 	maxPoolSize        = atoi(argv[12]);
 	maxInstancesPerApp = atoi(argv[13]);
 	poolIdleTime       = atoi(argv[14]);
-	monitoringLogDir   = argv[15];
+	analyticsLogDir    = argv[15];
 	
 	/* Become the session leader so that Apache can't kill this
 	 * watchdog with killpg() during shutdown, and so that a
@@ -889,6 +888,7 @@ main(int argc, char *argv[]) {
 			cleanupAgentsInBackground(watchers);
 			return 0;
 		} else {
+			P_DEBUG("Web server did not exit gracefully, forcing shutdown of all service processes...");
 			forceAllAgentsShutdown(watchers);
 			return 1;
 		}

@@ -154,15 +154,15 @@ public:
 	~AgentsStarter() {
 		if (pid != 0) {
 			this_thread::disable_syscall_interruption dsi;
-			bool cleanShutdown =
-				   gracefullyShutdownAgent(messageSocketFilename,
-					"_web_server", messageSocketPassword)
-				&& gracefullyShutdownAgent(loggingSocketFilename,
+			bool cleanShutdown = gracefullyShutdownAgent(messageSocketFilename,
+				"_web_server", messageSocketPassword);
+			cleanShutdown = cleanShutdown &&
+				gracefullyShutdownAgent(loggingSocketFilename,
 					"logging", loggingSocketPassword);
-			
 			if (cleanShutdown) {
-				// Send a single random byte to tell the watchdog that this
-				// is a normal shutdown.
+				/* Send a single random byte to tell the watchdog that this
+				 * is a normal shutdown.
+				 */
 				syscalls::write(feedbackFd, "x", 1);
 			}
 			
@@ -260,7 +260,7 @@ public:
 	           const string &passengerRoot, const string &rubyCommand,
 	           unsigned int maxPoolSize, unsigned int maxInstancesPerApp,
 	           unsigned int poolIdleTime,
-	           const string &monitoringLogDir,
+	           const string &analyticsLogDir,
 	           const function<void ()> &afterFork = function<void ()>())
 	{
 		TRACE_POINT();
@@ -334,7 +334,7 @@ public:
 				toString(maxPoolSize).c_str(),
 				toString(maxInstancesPerApp).c_str(),
 				toString(poolIdleTime).c_str(),
-				monitoringLogDir.c_str(),
+				analyticsLogDir.c_str(),
 				(char *) 0);
 			e = errno;
 			try {

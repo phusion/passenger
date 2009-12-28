@@ -146,13 +146,18 @@ private:
 	static const int INT64_STR_BUFSIZE = 22; // Long enough for a 64-bit number.
 	
 	FileDescriptor handle;
-	string fullId;
-	string shortId;
+	string groupName;
+	string id;
 	
+	/**
+	 * @throws SystemException
+	 * @throws IOException
+	 * @throws boost::thread_interrupted
+	 */
 	void atomicWrite(const char *data, unsigned int size) {
 		int ret;
 		
-		ret = write(handle, data, size);
+		ret = syscalls::write(handle, data, size);
 		if (ret == -1) {
 			int e = errno;
 			throw SystemException("Cannot write to the transaction log", e);
@@ -162,41 +167,40 @@ private:
 	}
 	
 	/**
-	 * Buffer must be at least shortId.size() + 1 + INT64_STR_BUFSIZE + 2 bytes.
+	 * Buffer must be at least id.size() + 1 + INT64_STR_BUFSIZE + 1 bytes.
 	 */
-	char *insertShortIdAndTimestamp(char *buffer) {
+	char *insertIdAndTimestamp(char *buffer) {
 		int size;
 		
 		// "txn-id-here"
-		memcpy(buffer, shortId.c_str(), shortId.size());
-		buffer += shortId.size();
+		memcpy(buffer, id.c_str(), id.size());
+		buffer += id.size();
 		
 		// "txn-id-here "
 		*buffer = ' ';
 		buffer++;
 		
 		// "txn-id-here 123456"
-		size = snprintf(buffer, INT64_STR_BUFSIZE, "%llu", SystemTime::getMsec());
+		size = snprintf(buffer, INT64_STR_BUFSIZE, "%llu", SystemTime::getUsec());
 		if (size >= INT64_STR_BUFSIZE) {
 			// The buffer is too small.
 			throw IOException("Cannot format a new transaction log message timestamp.");
 		}
 		buffer += size;
 		
-		// "txn-id-here 123456: "
-		buffer[0] = ':';
-		buffer[1] = ' ';
+		// "txn-id-here 123456 "
+		*buffer = ' ';
 		
-		return buffer + 2;
+		return buffer + 1;
 	}
 	
 public:
 	TxnLog() { }
 	
-	TxnLog(const FileDescriptor &handle, const string &fullId, const string &shortId) {
-		this->handle  = handle;
-		this->fullId  = fullId;
-		this->shortId = shortId;
+	TxnLog(const FileDescriptor &handle, const string &groupName, const string &id) {
+		this->handle    = handle;
+		this->groupName = groupName;
+		this->id        = id;
 		message("ATTACH");
 	}
 	
@@ -208,18 +212,18 @@ public:
 	
 	void message(const StaticString &text) {
 		if (handle != -1) {
-			// We want: "txn-id-here 123456: log message here\n"
-			char data[shortId.size() + 1 + INT64_STR_BUFSIZE + 2 + text.size() + 1];
+			// We want: "txn-id-here 123456 log message here\n"
+			char data[id.size() + 1 + INT64_STR_BUFSIZE + 1 + text.size() + 1];
 			char *end;
 			
-			// "txn-id-here 123456: "
-			end = insertShortIdAndTimestamp(data);
+			// "txn-id-here 123456 "
+			end = insertIdAndTimestamp(data);
 			
-			// "txn-id-here 123456: log message here"
+			// "txn-id-here 123456 log message here"
 			memcpy(end, text.c_str(), text.size());
 			end += text.size();
 			
-			// "txn-id-here 123456: log message here\n"
+			// "txn-id-here 123456 log message here\n"
 			*end = '\n';
 			end++;
 			
@@ -229,19 +233,19 @@ public:
 	
 	void abort(const StaticString &text) {
 		if (handle != -1) {
-			// We want: "txn-id-here 123456: ABORT: log message here\n"
-			char data[shortId.size() + 1 + INT64_STR_BUFSIZE + 2 +
+			// We want: "txn-id-here 123456 ABORT: log message here\n"
+			char data[id.size() + 1 + INT64_STR_BUFSIZE + 1 +
 				(sizeof("ABORT: ") - 1) + text.size() + 1];
 			char *end;
 			
-			// "txn-id-here 123456: "
-			end = insertShortIdAndTimestamp(data);
+			// "txn-id-here 123456 "
+			end = insertIdAndTimestamp(data);
 			
-			// "txn-id-here 123456: ABORT: "
+			// "txn-id-here 123456 ABORT: "
 			memcpy(end, "ABORT: ", sizeof("ABORT: ") - 1);
 			end += sizeof("ABORT: ") - 1;
 			
-			// "txn-id-here 123456: ABORT: log message here\n"
+			// "txn-id-here 123456 ABORT: log message here\n"
 			*end = '\n';
 			end++;
 			
@@ -253,12 +257,12 @@ public:
 		return handle == -1;
 	}
 	
-	string getShortId() const {
-		return shortId;
+	string getId() const {
+		return id;
 	}
 	
-	string getFullId() const {
-		return fullId;
+	string getGroupName() const {
+		return groupName;
 	}
 };
 
@@ -267,25 +271,51 @@ typedef shared_ptr<TxnLog> TxnLogPtr;
 class TxnScopeLog {
 private:
 	TxnLog *log;
-	const char *endMessage;
-	const char *abortMessage;
+	enum {
+		NAME,
+		GRANULAR
+	} type;
+	union {
+		const char *name;
+		struct {
+			const char *endMessage;
+			const char *abortMessage;	
+		} granular;
+	} data;
 	bool ok;
 public:
+	TxnScopeLog(const TxnLogPtr &log, const char *name) {
+		this->log = log.get();
+		type = NAME;
+		data.name = name;
+		ok = false;
+		log->message(string("BEGIN: ") + name);
+	}
+	
 	TxnScopeLog(const TxnLogPtr &log, const char *beginMessage,
 	            const char *endMessage, const char *abortMessage = NULL
 	) {
 		this->log = log.get();
-		this->endMessage = endMessage;
-		this->abortMessage = abortMessage;
+		type = GRANULAR;
+		data.granular.endMessage = endMessage;
+		data.granular.abortMessage = abortMessage;
 		ok = abortMessage == NULL;
 		log->message(beginMessage);
 	}
 	
 	~TxnScopeLog() {
-		if (ok) {
-			log->message(endMessage);
+		if (type == NAME) {
+			if (ok) {
+				log->message(string("END: ") + data.name);
+			} else {
+				log->message(string("FAIL: ") + data.name);
+			}
 		} else {
-			log->message(abortMessage);
+			if (ok) {
+				log->message(data.granular.endMessage);
+			} else {
+				log->message(data.granular.abortMessage);
+			}
 		}
 	}
 	
@@ -306,16 +336,20 @@ private:
 	string currentLogFile;
 	FileDescriptor currentLogHandle;
 	
-	FileDescriptor openLogFile(unsigned long long timestamp) {
-		string logFile = determineLogFilename(dir, timestamp);
+	FileDescriptor openLogFile(const StaticString &groupName, unsigned long long timestamp) {
+		string logFile = determineLogFilename(dir, groupName, timestamp);
 		lock_guard<boost::mutex> l(lock);
+		
+		// TODO: use a cache
+		
 		if (logFile != currentLogFile) {
 			MessageClient client;
 			FileDescriptor fd;
 			vector<string> args;
 			
 			client.connect(socketFilename, username, password);
-			client.write("open log file", toString(timestamp).c_str(), NULL);
+			client.write("open log file", groupName.c_str(),
+				toString(timestamp).c_str(), NULL);
 			if (!client.read(args)) {
 				// TODO: retry in a short while because the watchdog may restart
 				// the logging server
@@ -332,24 +366,18 @@ private:
 		return currentLogHandle;
 	}
 	
-	bool parseFullId(const string &fullId, unsigned long long &timestamp, string &shortId) const {
-		const char *shortIdBegin = strchr(fullId.c_str(), '-');
-		if (shortIdBegin != NULL) {
-			char timestampString[shortIdBegin - fullId.c_str() + 1];
-			
-			memcpy(timestampString, fullId.c_str(), shortIdBegin - fullId.c_str());
-			timestampString[shortIdBegin - fullId.c_str()] = '\0';
-			timestamp = atoll(timestampString);
-			
-			shortId.assign(shortIdBegin + 1);
-			
-			return true;
+	unsigned long long extractTimestamp(const string &id) const {
+		const char *timestampBegin = strchr(id.c_str(), '-');
+		if (timestampBegin != NULL) {
+			return atoll(timestampBegin + 1);
 		} else {
-			return false;
+			return 0;
 		}
 	}
 	
 public:
+	TxnLogger() { }
+	
 	TxnLogger(const string &dir, const string &socketFilename, const string &username, const string &password) {
 		this->dir            = dir;
 		this->socketFilename = socketFilename;
@@ -357,38 +385,78 @@ public:
 		this->password       = password;
 	}
 	
-	static string determineLogFilename(const string &dir, unsigned long long timestamp) {
+	static bool validateGroupName(const StaticString &groupName) {
+		if (groupName.empty() || groupName[0] == ' ' || groupName[groupName.size() - 1] == ' ') {
+			return false;
+		}
+		
+		const char *c = groupName.data();
+		bool result = true;
+		while (*c != '\0' && result) {
+			result = result && (
+				   (*c >= 'a' && *c <= 'z')
+				|| (*c >= 'A' && *c <= 'Z')
+				|| (*c >= '0' && *c <= '9')
+				|| *c == '_' || *c == '-' || *c == '.' || *c == ' '
+			);
+			c++;
+		}
+		return result;
+	}
+	
+	static string determineLogFilename(const string &dir, const StaticString &groupName,
+		unsigned long long timestamp)
+	{
 		struct tm tm;
 		time_t time_value;
 		string filename = dir + "/1/";
-		char dateName[12];
+		char dateName[14];
 		
-		time_value = timestamp / 1000;
+		if (!validateGroupName(groupName)) {
+			TRACE_POINT();
+			throw ArgumentException("Invalid analytics ID '" + groupName + "'");
+		}
+		
+		time_value = timestamp / 1000000;
 		localtime_r(&time_value, &tm);
-		strftime(dateName, sizeof(dateName), "%G/%m/%d", &tm);
+		// Index log on the filesystem by its group name and begin time.
+		strftime(dateName, sizeof(dateName), "%G/%m/%d/%H", &tm);
+		filename.append(groupName.data(), groupName.size());
+		filename.append(1, '/');
 		filename.append(dateName);
 		filename.append("/web_txns.txt");
 		return filename;
 	}
 	
-	TxnLogPtr newTransaction() {
-		unsigned long long timestamp = SystemTime::getMsec();
-		string shortId = toHex(randomGenerator.generateByteString(20));
-		string fullId = toString(timestamp);
-		fullId.append("-");
-		fullId.append(shortId);
-		return ptr(new TxnLog(openLogFile(timestamp), fullId, shortId));
+	TxnLogPtr newTransaction(const string &groupName) {
+		if (dir.empty() || groupName.empty()) {
+			return ptr(new TxnLog());
+		} else {
+			unsigned long long timestamp = SystemTime::getUsec();
+			string id = toHex(randomGenerator.generateByteString(4));
+			id.append("-");
+			id.append(toString(timestamp));
+			return ptr(new TxnLog(openLogFile(groupName, timestamp), groupName, id));
+		}
 	}
 	
-	TxnLogPtr continueTransaction(const string &fullId) {
-		unsigned long long timestamp;
-		string shortId;
-		
-		if (!parseFullId(fullId, timestamp, shortId)) {
-			TRACE_POINT();
-			throw ArgumentException("Invalid transaction full ID '" + fullId + "'");
+	TxnLogPtr continueTransaction(const string &groupName, const string &id) {
+		if (dir.empty() || groupName.empty()) {
+			return ptr(new TxnLog());
+		} else {
+			unsigned long long timestamp;
+			
+			timestamp = extractTimestamp(id);
+			if (timestamp == 0) {
+				TRACE_POINT();
+				throw ArgumentException("Invalid transaction ID '" + id + "'");
+			}
+			return ptr(new TxnLog(openLogFile(groupName, timestamp), groupName, id));
 		}
-		return ptr(new TxnLog(openLogFile(timestamp), fullId, shortId));
+	}
+	
+	bool isNull() const {
+		return dir.empty();
 	}
 };
 

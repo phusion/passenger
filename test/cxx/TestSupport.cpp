@@ -14,13 +14,19 @@ void createServerInstanceDirAndGeneration(ServerInstanceDirPtr &serverInstanceDi
 string
 readAll(const string &filename) {
 	FILE *f = fopen(filename.c_str(), "rb");
-	try {
-		string result = readAll(fileno(f));
-		fclose(f);
-		return result;
-	} catch (...) {
-		fclose(f);
-		throw;
+	if (f != NULL) {
+		try {
+			string result = readAll(fileno(f));
+			fclose(f);
+			return result;
+		} catch (...) {
+			fclose(f);
+			throw;
+		}
+	} else {
+		int e = errno;
+		throw FileSystemException("Cannot open '" + filename + "' for reading",
+			e, filename);
 	}
 }
 

@@ -1277,9 +1277,9 @@ public:
 			unixd_config.user_id, unixd_config.group_id,
 			config->root, config->getRuby(), config->maxPoolSize,
 			config->maxInstancesPerApp, config->poolIdleTime,
-			config->monitoringLogDir);
+			config->analyticsLogDir);
 		
-		txnLogger = ptr(new TxnLogger(config->monitoringLogDir,
+		txnLogger = ptr(new TxnLogger(config->analyticsLogDir,
 			agentsStarter.getLoggingSocketFilename(),
 			"logging", agentsStarter.getLoggingSocketPassword()));
 		

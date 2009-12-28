@@ -218,6 +218,12 @@ class ServerInstance
 		return File.read("#{@generation_path}/helper_server.pid").strip.to_i
 	end
 	
+	def analytics_log_dir
+		return File.read("#{@generation_path}/analytics_log_dir.txt")
+	rescue Errno::ENOENT
+		return nil
+	end
+	
 	def status
 		return @client.status
 	end

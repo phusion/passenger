@@ -198,6 +198,14 @@ main(int argc, char *argv[]) {
 		messageServer = ptr(new MessageServer(generation->getPath() + "/logging.socket",
 			accountsDatabase));
 		
+		// TODO: check whether this logic is right....
+		if (username.empty()) {
+			username = "nobody";
+		}
+		if (groupname.empty()) {
+			groupname = "nobody";
+		}
+		
 		/* Create the logging directory if necessary. */
 		if (getFileType(loggingDir) == FT_NONEXISTANT) {
 			if (geteuid() == 0) {

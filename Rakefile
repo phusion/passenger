@@ -255,6 +255,7 @@ end
 	
 	logging_agent_dependencies = [
 		'ext/common/LoggingAgent.cpp',
+		'ext/common/LoggingServer.h',
 		'ext/common/ServerInstanceDir.h',
 		COMMON_LIBRARY,
 		BOOST_OXT_LIBRARY]
