@@ -328,12 +328,20 @@ private
 		#   isn't copy-on-write friendly.
 		# - Rails >= 2.2 already preloads application sources by default, so no need
 		#   to do that again.
-		if GC.copy_on_write_friendly? && !::Rails::Initializer.method_defined?(:load_application_classes)
+		if GC.copy_on_write_friendly? && !rails_will_preload_app_code?
 			['models','controllers','helpers'].each do |section|
 				Dir.glob("app/#{section}}/*.rb").each do |file|
 					require_dependency canonicalize_path(file)
 				end
 			end
+		end
+	end
+	
+	def rails_will_preload_app_code?
+		if defined?(Rails::Initializer)
+			return ::Rails::Initializer.method_defined?(:load_application_classes)
+		else
+			return defined?(::Rails3)
 		end
 	end
 
