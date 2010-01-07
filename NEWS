@@ -49,12 +49,17 @@ Release 2.2.9
    Earlier versions of Phusion Passenger would just completely bail out
    because they'd use the Rails loader.
    
-   Please note that smart spawning (the mechanism with which REE's 33%
-   memory reduction is implemented) is *not* supported for Rack apps. This
-   means that if you want to utilize smart spawning with Rails 3, then you
-   should remove your config.ru file. This is just a temporary measure;
-   we have future plans to make smart spawning work out-of-the-box with
-   Rails 3.
+   That said, with 2.2.9 there are still some caveats:
+   - Smart spawning (the mechanism with which REE's 33% memory reduction
+     is implemented) is *not* supported for Rack apps. This means that if
+     you want to utilize smart spawning with Rails 3, then you should
+     remove your config.ru file.
+   - Rails 3 depends on Rack 1.1.0. You must have Rack 1.1.0 installed as
+     a gem, even if you've bundled it with the gem bundler. This is because
+     Phusion Passenger itself depends on Rack.
+   
+   Both of these caveats are temporary. We have plans to solve both of these
+   properly in the future.
  * What's up with the Gem Bundler?
    There has been some reports that Phusion Passenger is not compatible with
    Yehuda Katz's gem bundler (http://github.com/wycats/bundler). This might
