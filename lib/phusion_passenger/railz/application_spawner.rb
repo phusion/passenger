@@ -367,11 +367,16 @@ private
 		$0 = "Rails: #{@app_root}"
 		reader, writer = IO.pipe
 		begin
-			# Re-establish connection if a connection was established
+			# Clear or re-establish connection if a connection was established
 			# in environment.rb. This prevents us from concurrently
 			# accessing the same MySQL connection handle.
-			if defined?(::ActiveRecord::Base) && ::ActiveRecord::Base.connected?
-				::ActiveRecord::Base.establish_connection
+			if defined?(::ActiveRecord::Base)
+				if ::ActiveRecord::Base.respond_to?(:clear_all_connections!)
+					::ActiveRecord::Base.clear_all_connections!
+				elsif ::ActiveRecord::Base.respond_to?(:connected?) &&
+				      ::ActiveRecord::Base.connected?
+					::ActiveRecord::Base.establish_connection
+				end
 			end
 			
 			reader.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)

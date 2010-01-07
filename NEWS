@@ -38,6 +38,11 @@ Release 2.2.9
    The Rails::Boot monkey patching code as posted at
    http://yehudakatz.com/2009/11/03/using-the-new-gem-bundler-today/
    does not seem to be required anymore.
+ * Fixed support for ActiveRecord subclasses that connect to another database.
+   ActiveRecord subclasses that connect to a database other than the default
+   one did not have their connection correctly cleared after forking.
+   This can result in weird errors along the lines of "Lost connection to
+   MySQL server during query". Issue #429.
  * [Nginx] Fixed PCRE URL.
    passenger-install-nginx-module downloads PCRE 7.8 if PCRE is not already
    installed. However PCRE 7.8 has been removed from their FTP server,
