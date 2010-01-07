@@ -151,8 +151,8 @@ private
 		new_screen
 		color_puts "<banner>PCRE (required by Nginx) not installed, downloading it...</banner>"
 		
-		basename = "pcre-7.8.tar.gz"
-		dirname = "pcre-7.8"
+		basename = "pcre-8.00.tar.gz"
+		dirname = "pcre-8.00"
 		url = "ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/#{basename}"
 		File.unlink("/tmp/#{basename}") rescue nil
 		FileUtils.rm_rf("/tmp/#{dirname}")

@@ -319,12 +319,20 @@ private
 		#   isn't copy-on-write friendly.
 		# - Rails >= 2.2 already preloads application sources by default, so no need
 		#   to do that again.
-		if GC.copy_on_write_friendly? && !::Rails::Initializer.method_defined?(:load_application_classes)
+		if GC.copy_on_write_friendly? && !rails_will_preload_app_code?
 			['models','controllers','helpers'].each do |section|
 				Dir.glob("app/#{section}}/*.rb").each do |file|
 					require_dependency canonicalize_path(file)
 				end
 			end
+		end
+	end
+	
+	def rails_will_preload_app_code?
+		if defined?(Rails::Initializer)
+			return ::Rails::Initializer.method_defined?(:load_application_classes)
+		else
+			return defined?(::Rails3)
 		end
 	end
 
@@ -363,11 +371,16 @@ private
 		$0 = "Rails: #{@app_root}"
 		reader, writer = IO.pipe
 		begin
-			# Re-establish connection if a connection was established
+			# Clear or re-establish connection if a connection was established
 			# in environment.rb. This prevents us from concurrently
 			# accessing the same MySQL connection handle.
-			if defined?(::ActiveRecord::Base) && ::ActiveRecord::Base.connected?
-				::ActiveRecord::Base.establish_connection
+			if defined?(::ActiveRecord::Base)
+				if ::ActiveRecord::Base.respond_to?(:clear_all_connections!)
+					::ActiveRecord::Base.clear_all_connections!
+				elsif ::ActiveRecord::Base.respond_to?(:connected?) &&
+				      ::ActiveRecord::Base.connected?
+					::ActiveRecord::Base.establish_connection
+				end
 			end
 			
 			reader.close_on_exec!

@@ -28,6 +28,57 @@ Release 3.0.0
    through race conditions, even on high volume websites.
 
 
+Release 2.2.9
+-------------
+
+ * Fixed compatibility with Rails 3.
+   Actually, previous Phusion Passenger releases were already compatible
+   with Rails 3, depending on the spawn method that would be invoked. Here's
+   the story:
+   
+   Since Phusion Passenger 2.2.8, when the file config.ru exists, Phusion
+   Passenger will treat the app as a Rack app, not as a Rails app. This is
+   in contrast to earlier versions which gave Rails detection more priority
+   than Rack detection. Phusion Passenger loads Rack apps and Rails apps in
+   different ways. The Rails loader was not compatible with Rails 3, which
+   is what we've fixed in this release.
+   
+   That said, a Rails 3 app would have worked out-of-the-box on Phusion
+   Passenger 2.2.8 as well because Rails 3 apps include a config.ru file
+   by default, causing Phusion Passenger 2.2.8 to use the Rack loader.
+   Earlier versions of Phusion Passenger would just completely bail out
+   because they'd use the Rails loader.
+   
+   Please note that smart spawning (the mechanism with which REE's 33%
+   memory reduction is implemented) is *not* supported for Rack apps. This
+   means that if you want to utilize smart spawning with Rails 3, then you
+   should remove your config.ru file. This is just a temporary measure;
+   we have future plans to make smart spawning work out-of-the-box with
+   Rails 3.
+ * What's up with the Gem Bundler?
+   There has been some reports that Phusion Passenger is not compatible with
+   Yehuda Katz's gem bundler (http://github.com/wycats/bundler). This might
+   have been true for an earlier version of the gem bundler, but the latest
+   version seems to work fine. Please note that you need to insert the
+   following snippet in config/preinitializer.rb, as instructed by the gem
+   bundler's README:
+   
+     require "#{RAILS_ROOT}/vendor/gems/environment"
+   
+   The Rails::Boot monkey patching code as posted at
+   http://yehudakatz.com/2009/11/03/using-the-new-gem-bundler-today/
+   does not seem to be required anymore.
+ * Fixed support for ActiveRecord subclasses that connect to another database.
+   ActiveRecord subclasses that connect to a database other than the default
+   one did not have their connection correctly cleared after forking.
+   This can result in weird errors along the lines of "Lost connection to
+   MySQL server during query". Issue #429.
+ * [Nginx] Fixed PCRE URL.
+   passenger-install-nginx-module downloads PCRE 7.8 if PCRE is not already
+   installed. However PCRE 7.8 has been removed from their FTP server,
+   so we've updated the URL to point to the latest version, 8.0.
+
+
 Release 2.2.8
 -------------
 
