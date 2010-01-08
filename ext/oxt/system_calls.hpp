@@ -102,7 +102,8 @@ namespace oxt {
 	 * Setup system call interruption support.
 	 * This function may only be called once. It installs a signal handler
 	 * for INTERRUPTION_SIGNAL, so one should not install a different signal
-	 * handler for that signal after calling this function.
+	 * handler for that signal after calling this function. It also resets
+	 * the process signal mask.
 	 *
 	 * @warning
 	 * After oxt::setup_syscall_interruption_support() is called, sending a signal

@@ -3,7 +3,8 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.2.5" />
+<meta name="generator" content="AsciiDoc 8.4.2" />
+<title>Security of user switching support in Passenger</title>
 <style type="text/css">
 /* Debug borders */
 p, li, dt, dd, div, pre, h1, h2, h3, h4, h5, h6 {
@@ -26,10 +27,12 @@ a:visited {
 
 em {
   font-style: italic;
+  color: navy;
 }
 
 strong {
   font-weight: bold;
+  color: #083194;
 }
 
 tt {
@@ -71,6 +74,10 @@ p {
   margin-bottom: 0.5em;
 }
 
+ul, ol, li > p {
+  margin-top: 0;
+}
+
 pre {
   padding: 0;
   margin: 0;
@@ -104,11 +111,13 @@ div#footer-badges {
   padding-bottom: 0.5em;
 }
 
-div#preamble,
+div#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
 div.tableblock, div.imageblock, div.exampleblock, div.verseblock,
 div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
 div.admonitionblock {
-  margin-right: 10%;
   margin-top: 1.5em;
   margin-bottom: 1.5em;
 }
@@ -123,6 +132,7 @@ div.content { /* Block element content. */
 
 /* Block element titles. */
 div.title, caption.title {
+  color: #527bbd;
   font-family: sans-serif;
   font-weight: bold;
   text-align: left;
@@ -149,22 +159,33 @@ div.sidebarblock > div.content {
   padding: 0.5em;
 }
 
-div.listingblock {
-  margin-right: 0%;
-}
 div.listingblock > div.content {
   border: 1px solid silver;
   background: #f4f4f4;
   padding: 0.5em;
 }
 
-div.quoteblock > div.content {
+div.quoteblock {
   padding-left: 2.0em;
+  margin-right: 10%;
 }
-
-div.attribution {
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
   text-align: right;
 }
+
+div.verseblock {
+  padding-left: 2.0em;
+  margin-right: 10%;
+}
+div.verseblock > div.content {
+  white-space: pre;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
 div.verseblock + div.attribution {
   text-align: left;
 }
@@ -187,10 +208,6 @@ div.exampleblock > div.content {
   padding: 0.5em;
 }
 
-div.verseblock div.content {
-  white-space: pre;
-}
-
 div.imageblock div.content { padding-left: 0; }
 div.imageblock img { border: 1px solid silver; }
 span.image img { border-style: none; }
@@ -202,17 +219,37 @@ dl {
 dt {
   margin-top: 0.5em;
   margin-bottom: 0;
-  font-style: italic;
+  font-style: normal;
+  color: navy;
 }
 dd > *:first-child {
-  margin-top: 0;
+  margin-top: 0.1em;
 }
 
 ul, ol {
     list-style-position: outside;
 }
-div.olist2 ol {
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
   list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
 }
 
 div.tableblock > table {
@@ -225,21 +262,52 @@ thead {
 tfoot {
   font-weight: bold;
 }
+td > div.verse {
+  white-space: pre;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
 
-div.hlist {
+
+div.hdlist {
   margin-top: 0.8em;
   margin-bottom: 0.8em;
 }
-div.hlist td {
-  padding-bottom: 5px;
+div.hdlist tr {
+  padding-bottom: 15px;
 }
-td.hlist1 {
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
   vertical-align: top;
-  font-style: italic;
+  font-style: normal;
   padding-right: 0.8em;
+  color: navy;
 }
-td.hlist2 {
+td.hdlist2 {
   vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
 }
 
 @media print {
@@ -271,37 +339,6 @@ div.toclevel4 {
   margin-left: 6em;
   font-size: 0.9em;
 }
-/* Workarounds for IE6's broken and incomplete CSS2. */
-
-div.sidebar-content {
-  background: #ffffee;
-  border: 1px solid silver;
-  padding: 0.5em;
-}
-div.sidebar-title, div.image-title {
-  font-family: sans-serif;
-  font-weight: bold;
-  margin-top: 0.0em;
-  margin-bottom: 0.5em;
-}
-
-div.listingblock div.content {
-  border: 1px solid silver;
-  background: #f4f4f4;
-  padding: 0.5em;
-}
-
-div.quoteblock-content {
-  padding-left: 2.0em;
-}
-
-div.exampleblock-content {
-  border-left: 2px solid silver;
-  padding-left: 0.5em;
-}
-
-/* IE6 sets dynamically generated links as visited. */
-div#toc a:visited { color: blue; }
 </style>
 <script type="text/javascript">
 /*<![CDATA[*/
@@ -372,10 +409,11 @@ function generateToc(toclevels) {
     div.className = "toclevel" + entry.toclevel;
     toc.appendChild(div);
   }
+  if (entries.length == 0)
+    document.getElementById("header").removeChild(toc);
 }
 /*]]>*/
 </script>
-<title>Security of user switching support in Passenger</title>
 </head>
 <body>
 <div id="header">
@@ -396,23 +434,23 @@ function generateToc(toclevels) {
 <a href="Architectural%20overview.html">Architectural Overview</a>.</td>
 </tr></table>
 </div>
-<div class="para"><p>A straightforward implementation of Passenger will spawn Rails applications in
+<div class="paragraph"><p>A straightforward implementation of Passenger will spawn Rails applications in
 the same user context as Apache itself. On server machines which host multiple
 websites for multiple users, this may not be desired. All Rails applications
 spawned by Passenger will be able to read and write to all directories that the
-web server can. So for example, Joe's Rails applications could read Jane's
-Rails application's <em>database.yml</em> or delete her application files. This is
+web server can. So for example, Joe&#8217;s Rails applications could read Jane&#8217;s
+Rails application&#8217;s <em>database.yml</em> or delete her application files. This is
 also a problem that typically plagues PHP web hosts.</p></div>
-<div class="para"><p>There are multiple ways to solve this problem. The goal of this document is to
+<div class="paragraph"><p>There are multiple ways to solve this problem. The goal of this document is to
 inform the reader about the solutions have we have analyzed, so that
-Passenger's security may be peer reviewed.</p></div>
+Passenger&#8217;s security may be peer reviewed.</p></div>
 </div>
 <h2 id="_analysis_of_possible_solutions">2. Analysis of possible solutions</h2>
 <div class="sectionbody">
-<div class="para"><p>It seems that the only way to solve this problem on Unix, is to run each Rails
-application server as its owner's user and group. Passenger can make use of
+<div class="paragraph"><p>It seems that the only way to solve this problem on Unix, is to run each Rails
+application server as its owner&#8217;s user and group. Passenger can make use of
 one of the following methods to implement this:</p></div>
-<div class="olist"><ol>
+<div class="olist arabic"><ol class="arabic">
 <li>
 <p>
 Apache (and thus Passenger) must already be running as root.
@@ -420,7 +458,7 @@ Apache (and thus Passenger) must already be running as root.
 </li>
 <li>
 <p>
-Using Apache's suEXEC.
+Using Apache&#8217;s suEXEC.
 </p>
 </li>
 <li>
@@ -446,12 +484,12 @@ Using <em>sudo</em>.
 </p>
 </li>
 </ol></div>
-<div class="para"><p>Let us take a look at each method in detail.</p></div>
-<h3 id="apache_root">2.1. Apache must already be running as root</h3><div style="clear:left"></div>
-<div class="para"><p>First, let us take a look at the typical Apache setup, in which Apache is bound
+<div class="paragraph"><p>Let us take a look at each method in detail.</p></div>
+<h3 id="apache_root">2.1. Apache must already be running as root</h3>
+<div class="paragraph"><p>First, let us take a look at the typical Apache setup, in which Apache is bound
 to port 80, and uses the prefork MPM. Binding to any port lower than 1024
 requires root privileges, so Apache is typically run as root. This poses an
-unacceptable security risk, so Apache's prefork MPM will, upon receiving an
+unacceptable security risk, so Apache&#8217;s prefork MPM will, upon receiving an
 HTTP request, spawn a child process with the privileges of a normal user,
 typically <em>www-data</em> or <em>nobody</em>.
 See <a href="http://httpd.apache.org/docs/2.2/mod/prefork.html">the documentation for the
@@ -459,37 +497,37 @@ prefork MPM</a> - in particular the &#8220;User&#8221; and &#8220;Group&#8221; d
 The process which is responsible for spawning child processes (also called the
 control process) is run as root. This is also true for
 <a href="http://httpd.apache.org/docs/2.2/mod/worker.html">the worker MPM</a>.</p></div>
-<div class="para"><p>Since Passenger has access to the control process, in the typical Apache setup,
+<div class="paragraph"><p>Since Passenger has access to the control process, in the typical Apache setup,
 Passenger can already launch Rails applications as a different user. But now we
 have to ask this question:</p></div>
 <div class="exampleblock">
-<div class="exampleblock-content">
-<div class="para"><p>If Apache is not running as root, are there still any Passenger users who
+<div class="content">
+<div class="paragraph"><p>If Apache is not running as root, are there still any Passenger users who
 want to run Rails applications as different users?</p></div>
 </div></div>
-<div class="para"><p>If the answer is yes, then we cannot use this method.</p></div>
-<div class="para"><p>The advantage of this method is that setting up Apache to run as root is
+<div class="paragraph"><p>If the answer is yes, then we cannot use this method.</p></div>
+<div class="paragraph"><p>The advantage of this method is that setting up Apache to run as root is
 incredibly easy, and requires no new framework to be written. However, testing
 this method in automated unit tests will require running the unit test suit as
 root.</p></div>
-<h3 id="_using_apache_s_suexec">2.2. Using Apache's suEXEC</h3><div style="clear:left"></div>
-<div class="para"><p>Apache's <a href="http://httpd.apache.org/docs/2.0/suexec.html">suEXEC</a> allows one to
+<h3 id="_using_apache_8217_s_suexec">2.2. Using Apache&#8217;s suEXEC</h3>
+<div class="paragraph"><p>Apache&#8217;s <a href="http://httpd.apache.org/docs/2.0/suexec.html">suEXEC</a> allows one to
 run CGI processes as different users. But it seems that suEXEC can only be
 used for CGI, and is not a general-purpose mechanism. The
 <a href="http://alain.knaff.lu/howto/PhpSuexec/">PHP-suEXEC</a> software allows one to run
 PHP applications via suEXEC, but it requires patching suEXEC. If Passenger is
-to use suEXEC, then it is likely that we'll have to patch suEXEC. The suEXEC
+to use suEXEC, then it is likely that we&#8217;ll have to patch suEXEC. The suEXEC
 website strongly discourages patching.</p></div>
-<h3 id="_using_a_setuid_root_wrapper_application">2.3. Using a setuid root wrapper application</h3><div style="clear:left"></div>
-<div class="para"><p>If we use this method, we must be extremely careful. It must not be possible
+<h3 id="_using_a_setuid_root_wrapper_application">2.3. Using a setuid root wrapper application</h3>
+<div class="paragraph"><p>If we use this method, we must be extremely careful. It must not be possible
 for arbitrary processes to gain root privileges. We want Passenger, and only
 Passenger, to be able to gain root privileges.</p></div>
-<div class="para"><p>There are multiple ways to implement this security. The first one is to use
+<div class="paragraph"><p>There are multiple ways to implement this security. The first one is to use
 a password file, which only Apache and the wrapper can read, through
 the use of proper file permissions. The password file must never be world
 readable or writable.</p></div>
-<div class="para"><p>It works as follows:</p></div>
-<div class="olist"><ol>
+<div class="paragraph"><p>It works as follows:</p></div>
+<div class="olist arabic"><ol class="arabic">
 <li>
 <p>
 Passenger runs the wrapper.
@@ -511,40 +549,40 @@ The wrapper checks whether the passed content is the same as what is in
 </p>
 </li>
 </ol></div>
-<div class="para"><p>An obvious problem that arises is: how does the wrapper locate its own password
+<div class="paragraph"><p>An obvious problem that arises is: how does the wrapper locate its own password
 file? We obviously do not want to be able to specify the password filename as
 an argument to the wrapper: that would defeat the point of the password file.
 The solution is that the filename is to be hardcoded into the binary during
 compile time.</p></div>
-<div class="para"><p>Another way to implement security is to use a whitelist of users that are
+<div class="paragraph"><p>Another way to implement security is to use a whitelist of users that are
 allowed to use the wrapper. The wrapper can then check whether the calling
-process's user is in the whitelist.</p></div>
-<div class="para"><p>Writing a wrapper is not too hard. Furthermore, unit tests do not have to be
+process&#8217;s user is in the whitelist.</p></div>
+<div class="paragraph"><p>Writing a wrapper is not too hard. Furthermore, unit tests do not have to be
 run as root, in contrast to the run-Apache-as-root method.</p></div>
-<h3 id="setuid_root">2.4. Using a setuid $X wrapper application</h3><div style="clear:left"></div>
-<div class="para"><p>A setuid $X wrapper will work in a fashion similar to the setuid root wrapper,
+<h3 id="setuid_root">2.4. Using a setuid $X wrapper application</h3>
+<div class="paragraph"><p>A setuid $X wrapper will work in a fashion similar to the setuid root wrapper,
 i.e. it will use a password file for authorization.</p></div>
-<div class="para"><p>Passenger does not spawn Rails applications itself, but does so via the spawn
+<div class="paragraph"><p>Passenger does not spawn Rails applications itself, but does so via the spawn
 server. This spawn server is also responsible for preloading the Rails
 framework and the Rails application code, in order to speed up the spawning
 of Rails applications. See the design document of the spawn server for details.
 The spawn server never calls <tt>exec()</tt>: doing so will make preloading useless.
 If Passenger is to use a setuid $X wrapper, then it must start the spawn
 server via the wrapper. The spawn server itself cannot use the wrapper.</p></div>
-<div class="para"><p>However, doing so will make preloading less efficient. Passenger will be forced
+<div class="paragraph"><p>However, doing so will make preloading less efficient. Passenger will be forced
 to run a spawn server for each user. The different spawn servers do not share
 memory with each other, so a lot of memory is wasted compared to the other
 methods.</p></div>
-<div class="para"><p>Implementing this will also take more work. One has to create a different
+<div class="paragraph"><p>Implementing this will also take more work. One has to create a different
 wrapper for each user, and to install it.</p></div>
-<h3 id="_using_em_su_em">2.5. Using <em>su</em></h3><div style="clear:left"></div>
-<div class="para"><p>The standard Unix <em>su</em> tool asks for the root password. It's a bad idea for
+<h3 id="_using_em_su_em">2.5. Using <em>su</em></h3>
+<div class="paragraph"><p>The standard Unix <em>su</em> tool asks for the root password. It&#8217;s a bad idea for
 Apache to know the root password, so using <em>su</em> is not a viable alternative.</p></div>
-<h3 id="_using_em_sudo_em">2.6. Using <em>sudo</em></h3><div style="clear:left"></div>
-<div class="para"><p>It might be possible to use the <em>sudo</em> utility. sudo can be configured in
+<h3 id="_using_em_sudo_em">2.6. Using <em>sudo</em></h3>
+<div class="paragraph"><p>It might be possible to use the <em>sudo</em> utility. sudo can be configured in
 such a way that the user Apache runs as can use sudo without having to enter a
 password.</p></div>
-<div class="para"><p>However, Passenger uses an anonymous communication channel (an unnamed Unix
+<div class="paragraph"><p>However, Passenger uses an anonymous communication channel (an unnamed Unix
 socket) to communicate with the spawn server. sudo seems to close all file
 descriptors before executing an application, so Passenger will have to
 communicate with the spawn server via a non-anonymous channel, such as a named
@@ -552,20 +590,20 @@ Unix socket. Because other processes can access this channel, it can introduce
 potential security problems. Note that passing information via program arguments
 is not secure: it is possible to view that information with tools like <em>ps</em>,
 or (on Linux) by reading the file <tt>/proc/$PID/cmdline</tt>.</p></div>
-<div class="para"><p>So it seems <em>sudo</em> is not a viable alternative.</p></div>
-<h3 id="_common_security_issues">2.7. Common security issues</h3><div style="clear:left"></div>
-<div class="para"><p>Whatever method Passenger will use, the following security principles must be
+<div class="paragraph"><p>So it seems <em>sudo</em> is not a viable alternative.</p></div>
+<h3 id="_common_security_issues">2.7. Common security issues</h3>
+<div class="paragraph"><p>Whatever method Passenger will use, the following security principles must be
 honored:</p></div>
-<div class="ilist"><ul>
+<div class="ulist"><ul>
 <li>
 <p>
 Rails applications must never be run as root.
 </p>
 </li>
 </ul></div>
-<div class="para"><p>It might also be worthy to look into suEXEC's security model for inspiration.</p></div>
-<div class="para"><p>Also, the following questions remain:</p></div>
-<div class="ilist"><ul>
+<div class="paragraph"><p>It might also be worthy to look into suEXEC&#8217;s security model for inspiration.</p></div>
+<div class="paragraph"><p>Also, the following questions remain:</p></div>
+<div class="ulist"><ul>
 <li>
 <p>
 Is there a need for a user whitelist/blacklist? That is, is there a need for
@@ -576,29 +614,29 @@ Is there a need for a user whitelist/blacklist? That is, is there a need for
 </div>
 <h2 id="_chosen_solution">3. Chosen solution</h2>
 <div class="sectionbody">
-<div class="para"><p>Running Apache as root and writing a setuid root wrapper are the main
-contestants. The former is preferred, because it's easier to implement.</p></div>
-<div class="para"><p>We have had some conversations with people on the IRC channel #rubyonrails.
+<div class="paragraph"><p>Running Apache as root and writing a setuid root wrapper are the main
+contestants. The former is preferred, because it&#8217;s easier to implement.</p></div>
+<div class="paragraph"><p>We have had some conversations with people on the IRC channel #rubyonrails.
 Among those people, nobody has ever run Apache as non-root. Because of this
 we have chosen to implement the <a href="#apache_root">Running Apache as root</a>
 solution, until a significant number of users request us to implement the
 <a href="#setuid_root">setuid root wrapper</a> solution.</p></div>
-<div class="para"><p>Please read <a href="rdoc/index.html">the Ruby API documentation</a> &#8212; in particular
-that of the <em>ApplicationSpawner</em> class &#8212; for implementation details. But to
+<div class="paragraph"><p>Please read <a href="rdoc/index.html">the Ruby API documentation</a>&#8201;&#8212;&#8201;in particular
+that of the <em>ApplicationSpawner</em> class&#8201;&#8212;&#8201;for implementation details. But to
 make a long story short: it will switch to the owner of the file
 <em>config/environment.rb</em>. User whitelisting/blacklisting is currently not
 implemented. We rely on the system administrator to set the correct owner
 on that file.</p></div>
-<div class="para"><p>We have also not implemented suEXEC's security model. suEXEC's model is quite
+<div class="paragraph"><p>We have also not implemented suEXEC&#8217;s security model. suEXEC&#8217;s model is quite
 paranoid, and although paranoia is good to a certain extend, it can be in the
 way of usability while proving little extra security. We are not entirely
-convinced that implementing suEXEC's full security model will provide
+convinced that implementing suEXEC&#8217;s full security model will provide
 significant benefits, but if you have good reasons to think otherwise, please
 feel free to discuss it with us.</p></div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-03-30 15:30:51 CEST
+Last updated 2009-11-24 04:33:45 PDT
 </div>
 </div>
 </body>

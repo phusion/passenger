@@ -357,6 +357,38 @@ module Dependencies # :nodoc: all
 		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM || "gem"} install rack</b>"
 	end
 	
+	OpenSSL_Dev = Dependency.new do |dep|
+		dep.name = "OpenSSL development headers"
+		dep.define_checker do |result|
+			source_file = '/tmp/passenger-openssl-check.c'
+			object_file = '/tmp/passenger-openssl-check.o'
+			begin
+				File.open(source_file, 'w') do |f|
+					f.write("#include <openssl/ssl.h>")
+				end
+				Dir.chdir(File.dirname(source_file)) do
+					if system("(gcc #{ENV['CFLAGS']} -c '#{source_file}') >/dev/null 2>/dev/null")
+						result.found
+					else
+						result.not_found
+					end
+				end
+			ensure
+				File.unlink(source_file) rescue nil
+				File.unlink(object_file) rescue nil
+			end
+		end
+		if RUBY_PLATFORM =~ /linux/
+			tags = PlatformInfo.linux_distro_tags
+			if tags.include?(:debian)
+				dep.install_command = "apt-get install libssl-dev"
+			elsif tags.include?(:redhat)
+				dep.install_command = "yum install openssl-devel"
+			end
+		end
+		dep.website = "http://www.openssl.org/"
+	end
+	
 	Zlib_Dev = Dependency.new do |dep|
 		dep.name = "Zlib development headers"
 		dep.define_checker do |result|

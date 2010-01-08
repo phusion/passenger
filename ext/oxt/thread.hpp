@@ -34,6 +34,9 @@
 #ifdef OXT_BACKTRACE_IS_ENABLED
 	#include <sstream>
 #endif
+#include <string>
+#include <list>
+#include <unistd.h>
 #include <limits.h>  // for PTHREAD_STACK_MIN
 
 namespace oxt {
@@ -132,17 +135,45 @@ public:
 		set_thread_main_function(boost::bind(thread_main, func, data));
 		
 		unsigned long min_stack_size;
+		bool stack_min_size_defined;
+		bool round_stack_size;
+		
 		#ifdef PTHREAD_STACK_MIN
 			// PTHREAD_STACK_MIN may not be a constant macro so we need
 			// to evaluate it dynamically.
 			min_stack_size = PTHREAD_STACK_MIN;
+			stack_min_size_defined = true;
 		#else
 			// Assume minimum stack size is 128 KB.
 			min_stack_size = 128 * 1024;
+			stack_min_size_defined = false;
 		#endif
-		if (stack_size < min_stack_size) {
+		if (stack_size != 0 && stack_size < min_stack_size) {
 			stack_size = min_stack_size;
+			round_stack_size = !stack_min_size_defined;
+		} else {
+			round_stack_size = true;
 		}
+		
+		if (round_stack_size) {
+			// Round stack size up to page boundary.
+			long page_size;
+			#if defined(_SC_PAGESIZE)
+				page_size = sysconf(_SC_PAGESIZE);
+			#elif defined(_SC_PAGE_SIZE)
+				page_size = sysconf(_SC_PAGE_SIZE);
+			#elif defined(PAGESIZE)
+				page_size = sysconf(PAGESIZE);
+			#elif defined(PAGE_SIZE)
+				page_size = sysconf(PAGE_SIZE);
+			#else
+				page_size = getpagesize();
+			#endif
+			if (stack_size % page_size != 0) {
+				stack_size = stack_size - (stack_size % page_size) + page_size;
+			}
+		}
+		
 		start_thread(stack_size);
 	}
 	
@@ -229,6 +260,71 @@ public:
 		while (!done) {
 			interrupt();
 			done = timed_join(boost::posix_time::millisec(10));
+		}
+	}
+	
+	/**
+	 * Keep interrupting the thread until it's done, then join it.
+	 * This method will keep trying for at most <em>timeout</em> milliseconds.
+	 *
+	 * @param timeout The maximum number of milliseconds that this method
+	 *                should keep trying.
+	 * @return True if the thread was successfully joined, false if the
+	 *         timeout has been reached.
+	 * @throws boost::thread_interrupted The calling thread has been
+	 *    interrupted before we could join this thread.
+	 */
+	bool interrupt_and_join(unsigned int timeout) {
+		bool joined = false, timed_out = false;
+		boost::posix_time::ptime deadline =
+			boost::posix_time::microsec_clock::local_time() +
+			boost::posix_time::millisec(timeout);
+		while (!joined && !timed_out) {
+			interrupt();
+			joined = timed_join(boost::posix_time::millisec(10));
+			timed_out = !joined && boost::posix_time::microsec_clock::local_time() > deadline;
+		}
+		return joined;
+	}
+	
+	/**
+	 * Interrupt and join multiple threads in a way that's more efficient than calling
+	 * interrupt_and_join() on each thread individually. It iterates over all threads,
+	 * interrupts each one without joining it, then waits until at least one thread
+	 * is joinable. This is repeated until all threads are joined.
+	 *
+	 * @param threads An array of threads to join.
+	 * @param size The number of elements in <em>threads</em>.
+	 * @throws boost::thread_interrupted The calling thread has been
+	 *    interrupted before all threads have been joined. Some threads
+	 *    may have been successfully joined while others haven't.
+	 */
+	static void interrupt_and_join_multiple(oxt::thread **threads, unsigned int size) {
+		std::list<oxt::thread *> remaining_threads;
+		std::list<oxt::thread *>::iterator it, current;
+		oxt::thread *thread;
+		unsigned int i;
+		
+		for (i = 0; i < size; i++) {
+			remaining_threads.push_back(threads[i]);
+		}
+		
+		while (!remaining_threads.empty()) {
+			for (it = remaining_threads.begin(); it != remaining_threads.end(); it++) {
+				thread = *it;
+				thread->interrupt();
+			}
+			for (it = remaining_threads.begin(); it != remaining_threads.end(); it++) {
+				thread = *it;
+				if (thread->timed_join(boost::posix_time::millisec(0))) {
+					current = it;
+					it--;
+					remaining_threads.erase(current);
+				}
+			}
+			if (!remaining_threads.empty()) {
+				syscalls::usleep(10000);
+			}
 		}
 	}
 };

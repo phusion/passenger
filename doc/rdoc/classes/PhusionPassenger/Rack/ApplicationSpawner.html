@@ -106,11 +106,11 @@ Class for spawning <a href="../Rack.html">Rack</a> applications.
   <p class="source-link">[ <a href="javascript:toggleSource('M000040_source')" id="l_M000040_source">show source</a> ]</p>
   <div id="M000040_source" class="dyn-source">
 <pre>
-    <span class="ruby-comment cmt"># File lib/phusion_passenger/rack/application_spawner.rb, line 43</span>
-43:         <span class="ruby-keyword kw">def</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">spawn_application</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
-44:                 <span class="ruby-ivar">@@instance</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">ApplicationSpawner</span>.<span class="ruby-identifier">new</span>
-45:                 <span class="ruby-ivar">@@instance</span>.<span class="ruby-identifier">spawn_application</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
-46:         <span class="ruby-keyword kw">end</span>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/rack/application_spawner.rb, line 39</span>
+39:         <span class="ruby-keyword kw">def</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">spawn_application</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+40:                 <span class="ruby-ivar">@@instance</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">ApplicationSpawner</span>.<span class="ruby-identifier">new</span>
+41:                 <span class="ruby-ivar">@@instance</span>.<span class="ruby-identifier">spawn_application</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+42:         <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>
@@ -147,35 +147,35 @@ exit() during startup.
   <p class="source-link">[ <a href="javascript:toggleSource('M000041_source')" id="l_M000041_source">show source</a> ]</p>
   <div id="M000041_source" class="dyn-source">
 <pre>
-    <span class="ruby-comment cmt"># File lib/phusion_passenger/rack/application_spawner.rb, line 58</span>
-58:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">spawn_application</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">options</span> = {})
-59:                 <span class="ruby-identifier">options</span> = <span class="ruby-identifier">sanitize_spawn_options</span>(<span class="ruby-identifier">options</span>)
-60:                 
-61:                 <span class="ruby-identifier">a</span>, <span class="ruby-identifier">b</span> = <span class="ruby-constant">UNIXSocket</span>.<span class="ruby-identifier">pair</span>
-62:                 <span class="ruby-identifier">pid</span> = <span class="ruby-identifier">safe_fork</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">to_s</span>, <span class="ruby-keyword kw">true</span>) <span class="ruby-keyword kw">do</span>
-63:                         <span class="ruby-identifier">a</span>.<span class="ruby-identifier">close</span>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/rack/application_spawner.rb, line 54</span>
+54:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">spawn_application</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">options</span> = {})
+55:                 <span class="ruby-identifier">options</span> = <span class="ruby-identifier">sanitize_spawn_options</span>(<span class="ruby-identifier">options</span>)
+56:                 
+57:                 <span class="ruby-identifier">a</span>, <span class="ruby-identifier">b</span> = <span class="ruby-constant">UNIXSocket</span>.<span class="ruby-identifier">pair</span>
+58:                 <span class="ruby-identifier">pid</span> = <span class="ruby-identifier">safe_fork</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">to_s</span>, <span class="ruby-keyword kw">true</span>) <span class="ruby-keyword kw">do</span>
+59:                         <span class="ruby-identifier">a</span>.<span class="ruby-identifier">close</span>
+60:                         
+61:                         <span class="ruby-identifier">file_descriptors_to_leave_open</span> = [<span class="ruby-value">0</span>, <span class="ruby-value">1</span>, <span class="ruby-value">2</span>, <span class="ruby-identifier">b</span>.<span class="ruby-identifier">fileno</span>]
+62:                         <span class="ruby-constant">NativeSupport</span>.<span class="ruby-identifier">close_all_file_descriptors</span>(<span class="ruby-identifier">file_descriptors_to_leave_open</span>)
+63:                         <span class="ruby-identifier">close_all_io_objects_for_fds</span>(<span class="ruby-identifier">file_descriptors_to_leave_open</span>)
 64:                         
-65:                         <span class="ruby-identifier">file_descriptors_to_leave_open</span> = [<span class="ruby-value">0</span>, <span class="ruby-value">1</span>, <span class="ruby-value">2</span>, <span class="ruby-identifier">b</span>.<span class="ruby-identifier">fileno</span>]
-66:                         <span class="ruby-constant">NativeSupport</span>.<span class="ruby-identifier">close_all_file_descriptors</span>(<span class="ruby-identifier">file_descriptors_to_leave_open</span>)
-67:                         <span class="ruby-identifier">close_all_io_objects_for_fds</span>(<span class="ruby-identifier">file_descriptors_to_leave_open</span>)
-68:                         
-69:                         <span class="ruby-identifier">run</span>(<span class="ruby-constant">MessageChannel</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">b</span>), <span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">options</span>)
-70:                 <span class="ruby-keyword kw">end</span>
-71:                 <span class="ruby-identifier">b</span>.<span class="ruby-identifier">close</span>
-72:                 <span class="ruby-constant">Process</span>.<span class="ruby-identifier">waitpid</span>(<span class="ruby-identifier">pid</span>) <span class="ruby-keyword kw">rescue</span> <span class="ruby-keyword kw">nil</span>
-73:                 
-74:                 <span class="ruby-identifier">channel</span> = <span class="ruby-constant">MessageChannel</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">a</span>)
-75:                 <span class="ruby-identifier">unmarshal_and_raise_errors</span>(<span class="ruby-identifier">channel</span>, <span class="ruby-operator">!</span><span class="ruby-operator">!</span><span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;print_exceptions&quot;</span>], <span class="ruby-value str">&quot;rack&quot;</span>)
-76:                 
-77:                 <span class="ruby-comment cmt"># No exception was raised, so spawning succeeded.</span>
-78:                 <span class="ruby-identifier">pid</span>, <span class="ruby-identifier">socket_name</span>, <span class="ruby-identifier">socket_type</span> = <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">read</span>
-79:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">pid</span>.<span class="ruby-identifier">nil?</span>
-80:                         <span class="ruby-identifier">raise</span> <span class="ruby-constant">IOError</span>, <span class="ruby-value str">&quot;Connection closed&quot;</span>
-81:                 <span class="ruby-keyword kw">end</span>
-82:                 <span class="ruby-identifier">owner_pipe</span> = <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">recv_io</span>
-83:                 <span class="ruby-keyword kw">return</span> <span class="ruby-constant">Application</span>.<span class="ruby-identifier">new</span>(<span class="ruby-ivar">@app_root</span>, <span class="ruby-identifier">pid</span>, <span class="ruby-identifier">socket_name</span>,
-84:                         <span class="ruby-identifier">socket_type</span>, <span class="ruby-identifier">owner_pipe</span>)
-85:         <span class="ruby-keyword kw">end</span>
+65:                         <span class="ruby-identifier">run</span>(<span class="ruby-constant">MessageChannel</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">b</span>), <span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">options</span>)
+66:                 <span class="ruby-keyword kw">end</span>
+67:                 <span class="ruby-identifier">b</span>.<span class="ruby-identifier">close</span>
+68:                 <span class="ruby-constant">Process</span>.<span class="ruby-identifier">waitpid</span>(<span class="ruby-identifier">pid</span>) <span class="ruby-keyword kw">rescue</span> <span class="ruby-keyword kw">nil</span>
+69:                 
+70:                 <span class="ruby-identifier">channel</span> = <span class="ruby-constant">MessageChannel</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">a</span>)
+71:                 <span class="ruby-identifier">unmarshal_and_raise_errors</span>(<span class="ruby-identifier">channel</span>, <span class="ruby-operator">!</span><span class="ruby-operator">!</span><span class="ruby-identifier">options</span>[<span class="ruby-value str">&quot;print_exceptions&quot;</span>], <span class="ruby-value str">&quot;rack&quot;</span>)
+72:                 
+73:                 <span class="ruby-comment cmt"># No exception was raised, so spawning succeeded.</span>
+74:                 <span class="ruby-identifier">pid</span>, <span class="ruby-identifier">socket_name</span>, <span class="ruby-identifier">socket_type</span> = <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">read</span>
+75:                 <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">pid</span>.<span class="ruby-identifier">nil?</span>
+76:                         <span class="ruby-identifier">raise</span> <span class="ruby-constant">IOError</span>, <span class="ruby-value str">&quot;Connection closed&quot;</span>
+77:                 <span class="ruby-keyword kw">end</span>
+78:                 <span class="ruby-identifier">owner_pipe</span> = <span class="ruby-identifier">channel</span>.<span class="ruby-identifier">recv_io</span>
+79:                 <span class="ruby-keyword kw">return</span> <span class="ruby-constant">Application</span>.<span class="ruby-identifier">new</span>(<span class="ruby-ivar">@app_root</span>, <span class="ruby-identifier">pid</span>, <span class="ruby-identifier">socket_name</span>,
+80:                         <span class="ruby-identifier">socket_type</span>, <span class="ruby-identifier">owner_pipe</span>)
+81:         <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>

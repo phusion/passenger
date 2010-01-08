@@ -3,7 +3,8 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.2.5" />
+<meta name="generator" content="AsciiDoc 8.4.2" />
+<title>Passenger architectural overview</title>
 <style type="text/css">
 /* Debug borders */
 p, li, dt, dd, div, pre, h1, h2, h3, h4, h5, h6 {
@@ -26,10 +27,12 @@ a:visited {
 
 em {
   font-style: italic;
+  color: navy;
 }
 
 strong {
   font-weight: bold;
+  color: #083194;
 }
 
 tt {
@@ -71,6 +74,10 @@ p {
   margin-bottom: 0.5em;
 }
 
+ul, ol, li > p {
+  margin-top: 0;
+}
+
 pre {
   padding: 0;
   margin: 0;
@@ -104,11 +111,13 @@ div#footer-badges {
   padding-bottom: 0.5em;
 }
 
-div#preamble,
+div#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
 div.tableblock, div.imageblock, div.exampleblock, div.verseblock,
 div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
 div.admonitionblock {
-  margin-right: 10%;
   margin-top: 1.5em;
   margin-bottom: 1.5em;
 }
@@ -123,6 +132,7 @@ div.content { /* Block element content. */
 
 /* Block element titles. */
 div.title, caption.title {
+  color: #527bbd;
   font-family: sans-serif;
   font-weight: bold;
   text-align: left;
@@ -149,22 +159,33 @@ div.sidebarblock > div.content {
   padding: 0.5em;
 }
 
-div.listingblock {
-  margin-right: 0%;
-}
 div.listingblock > div.content {
   border: 1px solid silver;
   background: #f4f4f4;
   padding: 0.5em;
 }
 
-div.quoteblock > div.content {
+div.quoteblock {
   padding-left: 2.0em;
+  margin-right: 10%;
 }
-
-div.attribution {
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
   text-align: right;
 }
+
+div.verseblock {
+  padding-left: 2.0em;
+  margin-right: 10%;
+}
+div.verseblock > div.content {
+  white-space: pre;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
 div.verseblock + div.attribution {
   text-align: left;
 }
@@ -187,10 +208,6 @@ div.exampleblock > div.content {
   padding: 0.5em;
 }
 
-div.verseblock div.content {
-  white-space: pre;
-}
-
 div.imageblock div.content { padding-left: 0; }
 div.imageblock img { border: 1px solid silver; }
 span.image img { border-style: none; }
@@ -202,17 +219,37 @@ dl {
 dt {
   margin-top: 0.5em;
   margin-bottom: 0;
-  font-style: italic;
+  font-style: normal;
+  color: navy;
 }
 dd > *:first-child {
-  margin-top: 0;
+  margin-top: 0.1em;
 }
 
 ul, ol {
     list-style-position: outside;
 }
-div.olist2 ol {
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
   list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
 }
 
 div.tableblock > table {
@@ -225,21 +262,52 @@ thead {
 tfoot {
   font-weight: bold;
 }
+td > div.verse {
+  white-space: pre;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
 
-div.hlist {
+
+div.hdlist {
   margin-top: 0.8em;
   margin-bottom: 0.8em;
 }
-div.hlist td {
-  padding-bottom: 5px;
+div.hdlist tr {
+  padding-bottom: 15px;
 }
-td.hlist1 {
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
   vertical-align: top;
-  font-style: italic;
+  font-style: normal;
   padding-right: 0.8em;
+  color: navy;
 }
-td.hlist2 {
+td.hdlist2 {
   vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
 }
 
 @media print {
@@ -271,37 +339,6 @@ div.toclevel4 {
   margin-left: 6em;
   font-size: 0.9em;
 }
-/* Workarounds for IE6's broken and incomplete CSS2. */
-
-div.sidebar-content {
-  background: #ffffee;
-  border: 1px solid silver;
-  padding: 0.5em;
-}
-div.sidebar-title, div.image-title {
-  font-family: sans-serif;
-  font-weight: bold;
-  margin-top: 0.0em;
-  margin-bottom: 0.5em;
-}
-
-div.listingblock div.content {
-  border: 1px solid silver;
-  background: #f4f4f4;
-  padding: 0.5em;
-}
-
-div.quoteblock-content {
-  padding-left: 2.0em;
-}
-
-div.exampleblock-content {
-  border-left: 2px solid silver;
-  padding-left: 0.5em;
-}
-
-/* IE6 sets dynamically generated links as visited. */
-div#toc a:visited { color: blue; }
 </style>
 <script type="text/javascript">
 /*<![CDATA[*/
@@ -372,10 +409,11 @@ function generateToc(toclevels) {
     div.className = "toclevel" + entry.toclevel;
     toc.appendChild(div);
   }
+  if (entries.length == 0)
+    document.getElementById("header").removeChild(toc);
 }
 /*]]>*/
 </script>
-<title>Passenger architectural overview</title>
 </head>
 <body>
 <div id="header">
@@ -387,30 +425,30 @@ function generateToc(toclevels) {
 </div>
 <div id="preamble">
 <div class="sectionbody">
-<div class="para"><p>This document describes Passenger's architure in a global way. The purpose of
+<div class="paragraph"><p>This document describes Passenger&#8217;s architure in a global way. The purpose of
 this document is to lower the barrier to entry for new contributors, as well
 as to explain (some of the) design choices that we have made.</p></div>
-<div class="para"><p>Or it can be a fun read for people who just want to know how Passenger works.</p></div>
+<div class="paragraph"><p>Or it can be a fun read for people who just want to know how Passenger works.</p></div>
 </div>
 </div>
 <h2 id="_about_the_involved_technologies">1. About the involved technologies</h2>
 <div class="sectionbody">
-<h3 id="typical_web_applications">1.1. Typical web applications</h3><div style="clear:left"></div>
-<div class="para"><p>Before we describe Passenger, it is important to understand how typical web
+<h3 id="typical_web_applications">1.1. Typical web applications</h3>
+<div class="paragraph"><p>Before we describe Passenger, it is important to understand how typical web
 applications work, from the point of view of someone who wants to connect the
 application to a web server.</p></div>
-<div class="para"><p>A typical, isolated, web application accepts an HTTP request from some I/O
+<div class="paragraph"><p>A typical, isolated, web application accepts an HTTP request from some I/O
 channel, processes it internally, and outputs an HTTP response, which is sent
 back to the client. This is done in a loop, until the application is commanded
 to exit. This does not necessarily mean that the web application speaks HTTP
 directly: it just means that the web application accepts some kind of
 representation of an HTTP request.</p></div>
-<div class="para"><p><span class="image">
+<div class="paragraph"><p><span class="image">
 <img src="images/typical_isolated_web_application.png" alt="Architecture of a typical web application in isolation" title="Architecture of a typical web application in isolation" />
 </span></p></div>
-<div class="para"><p>Few web applications are accessible directly by HTTP clients. Common setups
+<div class="paragraph"><p>Few web applications are accessible directly by HTTP clients. Common setups
 are:</p></div>
-<div class="olist"><ol>
+<div class="olist arabic"><ol class="arabic">
 <li>
 <p>
 The web application is contained in an application server. This application
@@ -422,7 +460,7 @@ understands. Conversely, HTTP responses outputted by the web application are
 sent to the application server, which in turn sends them to the web server,
 and eventually to the HTTP client.
 </p>
-<div class="para"><p>A typical example of such a setup is a J2EE application, contained in the
+<div class="paragraph"><p>A typical example of such a setup is a J2EE application, contained in the
 Tomcat web server, behind the Apache web server.</p></div>
 </li>
 <li>
@@ -451,86 +489,85 @@ are good examples of this.
 </p>
 </li>
 </ol></div>
-<div class="para"><p>These descriptions are true for virtually all web applications, whether they're
+<div class="paragraph"><p>These descriptions are true for virtually all web applications, whether they&#8217;re
 based on PHP, Django, J2EE, ASP.NET, Ruby on Rails, or whatever. Note that all
 of these setups provide the same functionality, i.e. no setup can do something
-that a different setup can't. The critical reader will notice that all of these
+that a different setup can&#8217;t. The critical reader will notice that all of these
 setups are identical to the one described in the first diagram, if the
 combination of web servers, application servers, web applications etc. are
 considered to be a single entity; a black box if you will.</p></div>
-<div class="para"><p>It should also be noted that these setups do not enforce any particular
+<div class="paragraph"><p>It should also be noted that these setups do not enforce any particular
 I/O processing implementation. The web servers, application servers, web
 applications, etc. could process I/O serially (i.e. one request at a time),
 could multiplex I/O with a single thread (e.g. by using <tt>select(2)</tt> or
 <tt>poll(2)</tt>) or it could process I/O with multiple threads and/or multiple
 processes.</p></div>
-<div class="para"><p>Of course, there are many variations possible. For example, load balancers
+<div class="paragraph"><p>Of course, there are many variations possible. For example, load balancers
 could be used. But that is outside the scope of this document.</p></div>
-<h3 id="_ruby_on_rails">1.2. Ruby on Rails</h3><div style="clear:left"></div>
-<div class="para"><p>Every Ruby on Rails application has a <em>dispatcher</em>. This dispatcher is
+<h3 id="_ruby_on_rails">1.2. Ruby on Rails</h3>
+<div class="paragraph"><p>Every Ruby on Rails application has a <em>dispatcher</em>. This dispatcher is
 responsible for processing HTTP requests. It does not speak HTTP directly.
 Instead, it accepts data structures that contain the information of an
 HTTP request. Thus, the dispatcher is particularly interesting to
 developers who wish to develop software which connects Ruby on Rails to an
 HTTP processing layer (e.g. a web server).</p></div>
-<div class="para"><p>The Ruby on Rails dispatcher can only process requests serially, i.e. one
+<div class="paragraph"><p>The Ruby on Rails dispatcher can only process requests serially, i.e. one
 at a time. It is not possible to process two requests at the same time
 with threads, because parts of Ruby on Rails are not thread-safe. (In
-practice, this isn't as big of a problem as some people imagine. This will
+practice, this isn&#8217;t as big of a problem as some people imagine. This will
 be elaborated further in <a href="#concurrent_requests">Handling of concurrent requests</a>.)</p></div>
-<div class="para"><p>A particularly interesting thing to note, is that a lot of the memory
+<div class="paragraph"><p>A particularly interesting thing to note, is that a lot of the memory
 occupied by Ruby on Rails applications is spent on storing the program code
 (i.e. the <a href="http://en.wikipedia.org/wiki/Abstract_syntax_tree">abstract
 syntax tree (AST)</a>) in memory. This is observed through the use of the
 memory statistics function in <a href="http://www.rubyenterpriseedition.com/">Ruby
 Enterprise Edition</a>. Also, a lot of the startup time of a Ruby on Rails
 application is spent on bootstrapping the Rails framework.</p></div>
-<h3 id="_apache">1.3. Apache</h3><div style="clear:left"></div>
-<div class="para"><p>The Apache web server has a pluggable I/O multiprocessing (the ability to
+<h3 id="_apache">1.3. Apache</h3>
+<div class="paragraph"><p>The Apache web server has a pluggable I/O multiprocessing (the ability to
 handle more than 1 concurrent HTTP client at the same time) architecture. An
 Apache module which implements a particular multiprocessing strategy, is called
 a Multi-Processing Module (MPM). The
-<a href="http://httpd.apache.org/docs/2.0/mod/prefork.html">prefork MPM</a> &#8212; which
-also happens to be the default &#8212; appears to be the most popular one. This MPM
+<a href="http://httpd.apache.org/docs/2.0/mod/prefork.html">prefork MPM</a>&#8201;&#8212;&#8201;which
+also happens to be the default&#8201;&#8212;&#8201;appears to be the most popular one. This MPM
 spawns multiple worker child processes. HTTP requests are first accepted by a
 so-called control process, and then forwarded to one of the worker processes.
-The next section contains a diagram which shows the prefork MPM's architecture.</p></div>
+The next section contains a diagram which shows the prefork MPM&#8217;s architecture.</p></div>
 </div>
 <h2 id="_passenger_architecture">2. Passenger architecture</h2>
 <div class="sectionbody">
-<h3 id="_overview">2.1. Overview</h3><div style="clear:left"></div>
-<div class="para"><p>Passenger's architecture is a lot like setup #2 described in
+<h3 id="_overview">2.1. Overview</h3>
+<div class="paragraph"><p>Passenger&#8217;s architecture is a lot like setup #2 described in
 <a href="#typical_web_applications">Typical web applications</a>. In other words,
 Passenger extends Apache and allows it to act like an application server.
-Passenger's architecture &#8212; assuming Apache 2 with the prefork MPM is used &#8212;
-is shown in the following diagram:</p></div>
-<div class="para"><p><span class="image">
-<img src="images/passenger_architecture.png" alt="Passenger's architecture" title="Passenger's architecture" />
+Passenger&#8217;s architecture&#8201;&#8212;&#8201;assuming Apache 2 with the prefork MPM is used&#8201;&#8212;&#8201;is shown in the following diagram:</p></div>
+<div class="paragraph"><p><span class="image">
+<img src="images/passenger_architecture.png" alt="Passenger&#8217;s architecture" title="Passenger&#8217;s architecture" />
 </span></p></div>
-<div class="para"><p>Passenger consists of an Apache module, <em>mod_passenger</em>. This is written in
+<div class="paragraph"><p>Passenger consists of an Apache module, <em>mod_passenger</em>. This is written in
 C++, and can be found in the directory <em>ext/apache2</em>. The module is active in
 the Apache control process and in all the Apache worker processes. When an
 HTTP request comes in, <em>mod_passenger</em> will check whether the request should
 be handled by a Ruby on Rails application. If so, then <em>mod_passenger</em> will
 spawn the corresponding Rails application (if necessary) and forward the
 request to that application.</p></div>
-<div class="para"><p>It should be noted that the Ruby on Rails application does <strong>not</strong> run in the
+<div class="paragraph"><p>It should be noted that the Ruby on Rails application does <strong>not</strong> run in the
 same address space as Apache. This differentiates Passenger from other
 application-server-inside-web-server software such as mod_php, mod_perl and
 mod_ruby. If the Rails application crashes or leak memory, it will have no
 effect on Apache. In fact, stability is one of our highest goals. Passenger
-is carefully designed and implemented so that Apache shouldn't crash because
+is carefully designed and implemented so that Apache shouldn&#8217;t crash because
 of Passenger.</p></div>
-<h3 id="_spawning_and_caching_of_code_and_applications">2.2. Spawning and caching of code and applications</h3><div style="clear:left"></div>
-<div class="para"><p>A very naive implementation of Passenger would spawn a Ruby on Rails
+<h3 id="_spawning_and_caching_of_code_and_applications">2.2. Spawning and caching of code and applications</h3>
+<div class="paragraph"><p>A very naive implementation of Passenger would spawn a Ruby on Rails
 application every time an HTTP request is received, just like CGI would.
 However, spawning Ruby on Rails applications is expensive. It can take 1 or 2
 seconds on a modern PC, and possibly much longer on a heavily loaded server.
 This overhead is particularily unacceptable on shared hosts. A less naive
 implementation would keep spawned Ruby on Rails application instances alive,
-similar to how Lighttpd's FastCGI implementation works.
+similar to how Lighttpd&#8217;s FastCGI implementation works.
 However, this still has several problems:</p></div>
-<div class="olist"><ol>
+<div class="olist arabic"><ol class="arabic">
 <li>
 <p>
 The first request to a Rails website will be slow, and subsequent requests
@@ -540,62 +577,62 @@ The first request to a Rails website will be slow, and subsequent requests
 </li>
 <li>
 <p>
-As we've explained earlier in this article, a lot of memory in a Rails
+As we&#8217;ve explained earlier in this article, a lot of memory in a Rails
    application is spent on storing the AST of the Ruby on Rails framework and
    the application. Especially on shared hosts and on memory-constrained
    Virtual Private Servers (VPS), this can be a problem.
 </p>
 </li>
 </ol></div>
-<div class="para"><p>Both of these problems are very much solvable, and we've chosen to do just
+<div class="paragraph"><p>Both of these problems are very much solvable, and we&#8217;ve chosen to do just
 that.</p></div>
-<div class="para"><p>The first problem can be solved by preloading Rails applications, i.e. by
+<div class="paragraph"><p>The first problem can be solved by preloading Rails applications, i.e. by
 running the Rails application before a request is ever made to that website.
 This is the approach taken by most Rails hosts, for example in the form of a
 Mongrel cluster which is running all the time. However, this is unacceptable
 for a shared host: such an application would just sit there and waste memory
-even if it's not doing anything. Instead, we've chosen to take a different
+even if it&#8217;s not doing anything. Instead, we&#8217;ve chosen to take a different
 approach, which solves both of the aforementioned problems.</p></div>
-<div class="para"><p>We spawn Rails applications via a <em>spawn server</em>. The spawn server caches Ruby
+<div class="paragraph"><p>We spawn Rails applications via a <em>spawn server</em>. The spawn server caches Ruby
 on Rails framework code and application code in memory. Spawning a Rails
 application for the first time will still be slow, but subsequent spawn
 attempts will be very fast. Furthermore, because the framework code is cached
 independently from the application code, spawning a different Rails application
 will also be very fast, as long as that application is using a Rails framework
 version that has already been cached.</p></div>
-<div class="para"><p>Another implication of the spawn server is that different Ruby on Rails will
+<div class="paragraph"><p>Another implication of the spawn server is that different Ruby on Rails will
 share memory with each other, thus solving problem #2. This is described in
 detail in <a href="#spawn_server">the next section</a>.</p></div>
-<div class="para"><p>But despite the caching of framework code and application code, spawning is
+<div class="paragraph"><p>But despite the caching of framework code and application code, spawning is
 still expensive compared to an HTTP request. We want to avoid spawning whenever
-possible. This is why we've introduced the <strong>application pool</strong>. Spawned
+possible. This is why we&#8217;ve introduced the <strong>application pool</strong>. Spawned
 application instances are kept alive, and their handles are stored into this
 pool, allowing each application instance to be reused later. Thus, Passenger
 has very good average case performance.</p></div>
-<div class="para"><p>The application pool is shared between different worker processes. Because the
+<div class="paragraph"><p>The application pool is shared between different worker processes. Because the
 worker processes cannot share memory with each other, either shared memory must
 be used to implement the application pool, or a client/server architecture must
-be implemented. We've chosen the latter because it is easier
+be implemented. We&#8217;ve chosen the latter because it is easier
 to implement. The Apache control process acts like a server for the application
 pool. However, this does not mean that all HTTP request/response data go
 through the control process. A worker process queries the pool for a connection
 session with a Rails application. Once this session has been obtained, the
 worker process will communicate directly with the Rails application.</p></div>
-<div class="para"><p>The application pool is implemented inside <em>mod_passenger</em>. One can find
+<div class="paragraph"><p>The application pool is implemented inside <em>mod_passenger</em>. One can find
 detailed documentation about it in
 <a href="cxxapi/index.html">the C++ API documentation</a>,
 in particular the documentation about the <tt>ApplicationPool</tt>,
 <tt>StandardApplicationPool</tt> and <tt>ApplicationPoolServer</tt> classes.</p></div>
-<div class="para"><p>The application pool is responsible for spawning applications, caching
+<div class="paragraph"><p>The application pool is responsible for spawning applications, caching
 spawned applications' handles, and cleaning up applications which have been
 idle for an extended period of time.</p></div>
-<h3 id="spawn_server">2.3. The spawn server</h3><div style="clear:left"></div>
-<div class="para"><p>The spawn server is written in Ruby, and its code can be found in the directory
+<h3 id="spawn_server">2.3. The spawn server</h3>
+<div class="paragraph"><p>The spawn server is written in Ruby, and its code can be found in the directory
 <em>lib/passenger</em>. Its main executable is <em>bin/passenger-spawn-server</em>.
-<a href="rdoc/index.html">The spawn server's RDoc documentation</a> documents the
+<a href="rdoc/index.html">The spawn server&#8217;s RDoc documentation</a> documents the
 implementation in detail.</p></div>
-<div class="para"><p>The spawn server consists of 3 logical layers:</p></div>
-<div class="olist"><ol>
+<div class="paragraph"><p>The spawn server consists of 3 logical layers:</p></div>
+<div class="olist arabic"><ol class="arabic">
 <li>
 <p>
 <strong>The spawn manager.</strong> This is the topmost layer, and acts like a fascade for
@@ -624,37 +661,36 @@ implementation in detail.</p></div>
 </p>
 </li>
 </ol></div>
-<div class="para"><p><span class="image">
-<img src="images/spawn_server_architecture.png" alt="The spawn server's architecture" title="The spawn server's architecture" />
+<div class="paragraph"><p><span class="image">
+<img src="images/spawn_server_architecture.png" alt="The spawn server&#8217;s architecture" title="The spawn server&#8217;s architecture" />
 </span></p></div>
-<div class="para"><p>As you can see, we have two layers of code caching: when the spawn server
+<div class="paragraph"><p>As you can see, we have two layers of code caching: when the spawn server
 receives a request to spawn a new application instance, it will forward the
 request to the correct framework spawner server (and will spawn that framework
-spawner server if it doesn't already exist), which &#8212; in turn &#8212; will forward
+spawner server if it doesn&#8217;t already exist), which&#8201;&#8212;&#8201;in turn&#8201;&#8212;&#8201;will forward
 it to the correct application spawner server (which will, again, be created if
-it doesn't already exist).</p></div>
-<div class="para"><p>Each layer is only responsible for the layer directly below. The spawn manager
+it doesn&#8217;t already exist).</p></div>
+<div class="paragraph"><p>Each layer is only responsible for the layer directly below. The spawn manager
 only knows about framework spawner servers, and a framework spawner server only
 knows about its application spawner servers. The application spawner server is,
 however, not responsible for managing spawned application instances. If an
 application instance is spawned by mod_passenger, its information will be sent
 back to mod_passenger, which will be fully responsible for managing the
-application instance's life time (through the application pool).</p></div>
-<div class="para"><p>Also note that each layer is a seperate process. This is required because a
+application instance&#8217;s life time (through the application pool).</p></div>
+<div class="paragraph"><p>Also note that each layer is a seperate process. This is required because a
 single Ruby process can only load a single Ruby on Rails framework and a
 single application.</p></div>
 <h4 id="_memory_sharing">2.3.1. Memory sharing</h4>
-<div class="para"><p>On most modern Unix operating systems, when a child process is created, it will
+<div class="paragraph"><p>On most modern Unix operating systems, when a child process is created, it will
 share most of its memory with the parent process. Processes are not supposed to
 be able to access each others' memory, so the operating system makes a copy of
 a piece of memory when it is written to by the parent process or the child
 process. This is called copy-on-write (COW). Detailed background information
 can be found on <a href="http://www.rubyenterpriseedition.com/">Ruby Enterprise
-Edition's website</a>.</p></div>
-<div class="para"><p>The spawn server makes use of this useful fact. Each layer shares its Ruby AST
+Edition&#8217;s website</a>.</p></div>
+<div class="paragraph"><p>The spawn server makes use of this useful fact. Each layer shares its Ruby AST
 memory with all of its lower layers, as long as the AST nodes in question
-haven't been written to. This means that all spawned Rails applications will
-&#8212; if possible &#8212; share the Ruby on Rails framework's code, as well as its own
+haven&#8217;t been written to. This means that all spawned Rails applications will&#8201;&#8212;&#8201;if possible&#8201;&#8212;&#8201;share the Ruby on Rails framework&#8217;s code, as well as its own
 application code, with each other. This results in a dramatic reduction in
 memory usage.</p></div>
 <div class="admonitionblock">
@@ -663,28 +699,28 @@ memory usage.</p></div>
 <img src="./images/icons/note.png" alt="Note" />
 </td>
 <td class="content">
-<div class="para"><p>Sharing memory only works if <a href="http://www.rubyenterpriseedition.com/">Ruby
-Enterprise Edition</a> is used. This is because the standard Ruby interpreter's
-garbage collector isn't copy-on-write friendly. Please visit the Ruby
+<div class="paragraph"><p>Sharing memory only works if <a href="http://www.rubyenterpriseedition.com/">Ruby
+Enterprise Edition</a> is used. This is because the standard Ruby interpreter&#8217;s
+garbage collector isn&#8217;t copy-on-write friendly. Please visit the Ruby
 Enterprise Edition website for technical details.</p></div>
-<div class="para"><p>Passenger works fine with standard Ruby. You still get to enjoy reduced Rails
-startup times. You just won't be able to benefit from memory sharing.</p></div>
+<div class="paragraph"><p>Passenger works fine with standard Ruby. You still get to enjoy reduced Rails
+startup times. You just won&#8217;t be able to benefit from memory sharing.</p></div>
 </td>
 </tr></table>
 </div>
-<div class="para"><p>Note that <a href="http://rubini.us/">Rubinius</a>'s garbage collector is already
+<div class="paragraph"><p>Note that <a href="http://rubini.us/">Rubinius</a>'s garbage collector is already
 copy-on-write friendly.</p></div>
-<h3 id="concurrent_requests">2.4. Handling of concurrent requests</h3><div style="clear:left"></div>
-<div class="para"><p>As explained earlier, a single Rails application instance can only handle a
+<h3 id="concurrent_requests">2.4. Handling of concurrent requests</h3>
+<div class="paragraph"><p>As explained earlier, a single Rails application instance can only handle a
 single request at the same time. This is obviously undesirable. But before we
 dive into the solution, let us take a look how the &#8220;competition&#8221; solves this
 problem. PHP has similar problems: a single PHP script can also process only
 one HTTP request at a time.</p></div>
-<div class="ilist"><ul>
+<div class="ulist"><ul>
 <li>
 <p>
-mod_php &#8220;solves&#8221; this problem by using Apache's MPM. In other words,
-  mod_php doesn't do anything by itself at all. A single Apache worker
+mod_php &#8220;solves&#8221; this problem by using Apache&#8217;s MPM. In other words,
+  mod_php doesn&#8217;t do anything by itself at all. A single Apache worker
   process/thread can only handle 1 PHP request at a time, but Apache spawns
   multiple worker processes/threads.
 </p>
@@ -698,23 +734,22 @@ PHP-FastCGI solves the problem by spawning multiple persistent PHP servers.
 </p>
 </li>
 </ul></div>
-<div class="para"><p>Passenger cannot use the mod_php way because it would force us to spawn a new
-Rails application for each request, which is &#8212; as explained earlier &#8212;
-unacceptably slow. Instead, Passenger uses the PHP-FastCGI approach. We
+<div class="paragraph"><p>Passenger cannot use the mod_php way because it would force us to spawn a new
+Rails application for each request, which is&#8201;&#8212;&#8201;as explained earlier&#8201;&#8212;&#8201;unacceptably slow. Instead, Passenger uses the PHP-FastCGI approach. We
 maintain a pool of application instances, and whenever a request is received,
 we forward the request to one of the application instances in the pool. The
 size of the pool is configurable, which is useful for administrators of servers
 that are either heavily loaded or have little memory.</p></div>
-<div class="para"><p>The reader might also be interested in studying the application pool's
+<div class="paragraph"><p>The reader might also be interested in studying the application pool&#8217;s
 algorithm, which is non-trivial. The algorithm is documented in detail in
 <a href="ApplicationPool%20algorithm.txt">ApplicationPool algorithm.txt</a>.</p></div>
 </div>
 <h2 id="_appendix_a_about_this_document">3. Appendix A: About this document</h2>
 <div class="sectionbody">
-<div class="para"><p>The text of this document is licensed under the
+<div class="paragraph"><p>The text of this document is licensed under the
 <a href="http://creativecommons.org/licenses/by-sa/3.0/">Creative Commons
 Attribution-Share Alike 3.0 Unported License</a>.</p></div>
-<div class="para"><p><span class="image">
+<div class="paragraph"><p><span class="image">
 <a class="image" href="link:http://creativecommons.org/licenses/by-sa/3.0/">
 <img src="images/by_sa.png" alt="images/by_sa.png" />
 </a>
@@ -722,7 +757,7 @@ Attribution-Share Alike 3.0 Unported License</a>.</p></div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-03-30 15:30:58 CEST
+Last updated 2009-11-24 04:33:45 PDT
 </div>
 </div>
 </body>

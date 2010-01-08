@@ -4,9 +4,9 @@
      "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html>
   <head>
-    <title>Class: PhusionPassenger::VersionNotFound</title>
+    <title>Class: PhusionPassenger::Utils::RewindableInput::Tempfile</title>
     <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
-    <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+    <link rel="stylesheet" href="../../../.././rdoc-style.css" type="text/css" media="screen" />
 
     <script language="JavaScript" type="text/javascript">
     // <![CDATA[
@@ -51,19 +51,19 @@
 
   <body>
   <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
-  <td class="file-title"><span class="file-title-prefix">Class</span><br />PhusionPassenger::VersionNotFound</td>
+  <td class="file-title"><span class="file-title-prefix">Class</span><br />PhusionPassenger::Utils::RewindableInput::Tempfile</td>
   <td align="right">
     <table cellspacing="0" cellpadding="2">
       <tr valign="top">
         <td>In:</td>
         <td>
-<a href="../../files/lib/phusion_passenger/exceptions_rb.html">lib/phusion_passenger/exceptions.rb</a>
+<a href="../../../../files/lib/phusion_passenger/utils/rewindable_input_rb.html">lib/phusion_passenger/utils/rewindable_input.rb</a>
         </td>
       </tr>
     <tr>
       <td>Parent:</td>
       <td>
-StandardError
+::Tempfile
      </td>
    </tr>
          </table>
@@ -76,8 +76,8 @@ StandardError
       <div id="content">
 
   <div class="description"><p>
-Indicates that there is no Ruby on Rails version installed that satisfies a
-given Ruby on Rails Gem version specification.
+Ruby&#8216;s <a href="Tempfile.html">Tempfile</a> class has a bug. Subclass
+it and fix it.
 </p>
 </div>
 
@@ -85,49 +85,29 @@ given Ruby on Rails Gem version specification.
 
   <div class="sectiontitle">Methods</div>
   <ul>
-  <li><a href="#M000161">new</a></li>
+  <li><a href="#M000101">_close</a></li>
   </ul>
 
 
 
 
 
-  <div class="sectiontitle">Attributes</div>
-  <table border='0' cellpadding='5'>
-  <tr valign='top'>
-    <td class='attr-rw'>
-[R]
-    </td>
-    <td class='attr-name'>gem_version_spec</td>
-    <td class='attr-desc'></td>
-  </tr>
-  </table>
 
-<div class="sectiontitle">Public Class methods</div>
+<div class="sectiontitle">Public Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000161"></a><b>new</b>(message, gem_version_spec)
-  </div>
-  <div class="description">
-  <ul>
-<li><tt>message</tt>: The exception message.
-
-</li>
-<li><tt>gem_version_spec</tt>: The Ruby on Rails Gem version specification that
-caused this error.
-
-</li>
-</ul>
+    <a name="M000101"></a><b>_close</b>()
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000161_source')" id="l_M000161_source">show source</a> ]</p>
-  <div id="M000161_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000101_source')" id="l_M000101_source">show source</a> ]</p>
+  <div id="M000101_source" class="dyn-source">
 <pre>
-    <span class="ruby-comment cmt"># File lib/phusion_passenger/exceptions.rb, line 33</span>
-33:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">message</span>, <span class="ruby-identifier">gem_version_spec</span>)
-34:                 <span class="ruby-keyword kw">super</span>(<span class="ruby-identifier">message</span>)
-35:                 <span class="ruby-ivar">@gem_version_spec</span> = <span class="ruby-identifier">gem_version_spec</span>
-36:         <span class="ruby-keyword kw">end</span>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/utils/rewindable_input.rb, line 64</span>
+64:       <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">_close</span>
+65:         <span class="ruby-ivar">@tmpfile</span>.<span class="ruby-identifier">close</span> <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@tmpfile</span>
+66:         <span class="ruby-ivar">@data</span>[<span class="ruby-value">1</span>] = <span class="ruby-keyword kw">nil</span> <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@data</span>
+67:         <span class="ruby-ivar">@tmpfile</span> = <span class="ruby-keyword kw">nil</span>
+68:       <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>

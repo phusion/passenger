@@ -346,7 +346,7 @@ public
 			flags << '-DBOOST_HAS_STDINT_H -D_GLIBCPP__PTHREADS'
 		elsif RUBY_PLATFORM =~ /aix/
 			flags << '-DOXT_DISABLE_BACKTRACES'
-		elsif RUBY_PLATFORM =~ /(sparc-linux|arm-linux)/
+		elsif RUBY_PLATFORM =~ /(sparc-linux|arm-linux|sh4-linux)/
 			# http://code.google.com/p/phusion-passenger/issues/detail?id=200
 			# http://groups.google.com/group/phusion-passenger/t/6b904a962ee28e5c
 			flags << '-DBOOST_SP_USE_PTHREADS'
