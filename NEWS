@@ -26,6 +26,8 @@ Release 3.0.0
    debugging purposes.
  * Killing an app with SIGUSR1 now ensures that no connections are dropped
    through race conditions, even on high volume websites.
+ * [Nginx] passenger_ignore_client_abort
+ * [Nginx] passenger_pass_header
 
 
 Release 2.2.9

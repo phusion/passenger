@@ -538,6 +538,45 @@ In each place, it may be specified at most once. The default value is 'off'.
 
 include::users_guide_snippets/global_queueing_explained.txt[]
 
+=== passenger_ignore_client_abort <on|off> ===
+Normally, when the HTTP client aborts the connection (e.g. when the user clicked on "Stop"
+in the browser), the connection with the application process will be closed too. If the
+application process continues to send its response, then that will result in EPIPE errors
+in the application, which will be printed in the error log if the application doesn't
+handle them gracefully.
+
+If this option is turned on then upon client abort Phusion Passenger will continue to
+read the application process's response while discarding all the read data. This prevents
+EPIPE errors but it'll also mean the backend process will be unavailable for new requests
+until it is done sending its response.
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is 'off'.
+
+=== passenger_pass_header <header name> ===
+This directive allows transferring header-lines forbidden for response, similar to 'proxy_pass_header'.
+
+For example:
+
+------------------------------
+location / {
+   passenger_pass_header X-Accel-Redirect;
+}
+------------------------------
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
 === Important deployment options ===
 ==== passenger_enabled <on|off> ====
 This option may be specified in the 'http' configuration block, a
