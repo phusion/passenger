@@ -84,9 +84,9 @@ Represents a single application instance.
 
   <div class="sectiontitle">Methods</div>
   <ul>
-  <li><a href="#M000103">close</a></li>
-  <li><a href="#M000101">detect_framework_version</a></li>
-  <li><a href="#M000102">new</a></li>
+  <li><a href="#M000110">close</a></li>
+  <li><a href="#M000108">detect_framework_version</a></li>
+  <li><a href="#M000109">new</a></li>
   </ul>
 
 
@@ -113,7 +113,7 @@ The root directory of this application, i.e. the directory that contains
     <td class='attr-name'>listen_socket_name</td>
     <td class='attr-desc'>
 The name of the socket on which the application instance will accept <a
-href="Application.html#M000102">new</a> connections. See
+href="Application.html#M000109">new</a> connections. See
 #listen_socket_type on how one should interpret this value.
 
 </td>
@@ -156,7 +156,7 @@ The process ID of this application instance.
 <div class="sectiontitle">Public Class methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000101"></a><b>detect_framework_version</b>(app_root)
+    <a name="M000108"></a><b>detect_framework_version</b>(app_root)
   </div>
   <div class="description">
   <ul>
@@ -176,8 +176,8 @@ Rails version is not installed.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000101_source')" id="l_M000101_source">show source</a> ]</p>
-  <div id="M000101_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000108_source')" id="l_M000108_source">show source</a> ]</p>
+  <div id="M000108_source" class="dyn-source">
 <pre>
     <span class="ruby-comment cmt"># File lib/phusion_passenger/application.rb, line 55</span>
 55:         <span class="ruby-keyword kw">def</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">detect_framework_version</span>(<span class="ruby-identifier">app_root</span>)
@@ -223,18 +223,18 @@ Rails version is not installed.
 </div>
 <div class="method">
   <div class="title">
-    <a name="M000102"></a><b>new</b>(app_root, pid, listen_socket_name, listen_socket_type, owner_pipe)
+    <a name="M000109"></a><b>new</b>(app_root, pid, listen_socket_name, listen_socket_type, owner_pipe)
   </div>
   <div class="description">
   <p>
-Creates a <a href="Application.html#M000102">new</a> instance of <a
+Creates a <a href="Application.html#M000109">new</a> instance of <a
 href="Application.html">Application</a>. The parameters correspond with the
 attributes of the same names. No exceptions will be thrown.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000102_source')" id="l_M000102_source">show source</a> ]</p>
-  <div id="M000102_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000109_source')" id="l_M000109_source">show source</a> ]</p>
+  <div id="M000109_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/application.rb, line 95</span>
  95:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">app_root</span>, <span class="ruby-identifier">pid</span>, <span class="ruby-identifier">listen_socket_name</span>, <span class="ruby-identifier">listen_socket_type</span>, <span class="ruby-identifier">owner_pipe</span>)
@@ -251,7 +251,7 @@ attributes of the same names. No exceptions will be thrown.
 <div class="sectiontitle">Public Instance methods</div>
 <div class="method">
   <div class="title">
-    <a name="M000103"></a><b>close</b>()
+    <a name="M000110"></a><b>close</b>()
   </div>
   <div class="description">
   <p>
@@ -264,8 +264,8 @@ See also AbstractRequestHandler#owner_pipe.
 </p>
   </div>
 <div class="sourcecode">
-  <p class="source-link">[ <a href="javascript:toggleSource('M000103_source')" id="l_M000103_source">show source</a> ]</p>
-  <div id="M000103_source" class="dyn-source">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000110_source')" id="l_M000110_source">show source</a> ]</p>
+  <div id="M000110_source" class="dyn-source">
 <pre>
      <span class="ruby-comment cmt"># File lib/phusion_passenger/application.rb, line 108</span>
 108:         <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">close</span>

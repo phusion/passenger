@@ -95,9 +95,9 @@ href="ApplicationSpawner.html">ApplicationSpawner</a> internally.
 <p>
 <b>Note</b>: <a href="FrameworkSpawner.html">FrameworkSpawner</a> may only
 be started asynchronously with <a
-href="../AbstractServer.html#M000120">AbstractServer#start</a>. Starting it
+href="../AbstractServer.html#M000127">AbstractServer#start</a>. Starting it
 synchronously with <a
-href="../AbstractServer.html#M000121">AbstractServer#start_synchronously</a>
+href="../AbstractServer.html#M000128">AbstractServer#start_synchronously</a>
 has not been tested.
 </p>
 </div>
@@ -165,8 +165,8 @@ Note that the specified Rails framework will be loaded during the entire
 life time of the <a href="FrameworkSpawner.html">FrameworkSpawner</a>
 server. If you wish to <a href="FrameworkSpawner.html#M000063">reload</a>
 the Rails framework&#8216;s code, then restart the server by calling <a
-href="../AbstractServer.html#M000122">AbstractServer#stop</a> and <a
-href="../AbstractServer.html#M000120">AbstractServer#start</a>.
+href="../AbstractServer.html#M000129">AbstractServer#stop</a> and <a
+href="../AbstractServer.html#M000127">AbstractServer#start</a>.
 </p>
   </div>
 <div class="sourcecode">
@@ -279,8 +279,8 @@ you must do one of these things:
 </p>
 <ul>
 <li>Restart this <a href="FrameworkSpawner.html">FrameworkSpawner</a> by
-calling <a href="../AbstractServer.html#M000122">AbstractServer#stop</a>,
-then <a href="../AbstractServer.html#M000120">AbstractServer#start</a>.
+calling <a href="../AbstractServer.html#M000129">AbstractServer#stop</a>,
+then <a href="../AbstractServer.html#M000127">AbstractServer#start</a>.
 
 </li>
 <li>Reload the application by calling <a
@@ -372,7 +372,7 @@ unexpectedly.
   <div class="description">
   <p>
 Overrided from <a
-href="../AbstractServer.html#M000120">AbstractServer#start</a>.
+href="../AbstractServer.html#M000127">AbstractServer#start</a>.
 </p>
 <p>
 May raise these additional exceptions:

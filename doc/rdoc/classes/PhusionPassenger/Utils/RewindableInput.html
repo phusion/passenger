@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>Class: PhusionPassenger::Utils::RewindableInput</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <link rel="stylesheet" href="../../.././rdoc-style.css" type="text/css" media="screen" />
+
+    <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+
+        function toggleSource( id )
+        {
+          var elem
+          var link
+
+          if( document.getElementById )
+          {
+            elem = document.getElementById( id )
+            link = document.getElementById( "l_" + id )
+          }
+          else if ( document.all )
+          {
+            elem = eval( "document.all." + id )
+            link = eval( "document.all.l_" + id )
+          }
+          else
+            return false;
+
+          if( elem.style.display == "block" )
+          {
+            elem.style.display = "none"
+            link.innerHTML = "show source"
+          }
+          else
+          {
+            elem.style.display = "block"
+            link.innerHTML = "hide source"
+          }
+        }
+
+        function openCode( url )
+        {
+          window.open( url, "SOURCE_CODE", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=480,width=750" ).focus();
+        }
+      // ]]>
+    </script>
+  </head>
+
+  <body>
+  <table width="100%" border='0' cellpadding='0' cellspacing='0' class='banner'><tr>
+  <td class="file-title"><span class="file-title-prefix">Class</span><br />PhusionPassenger::Utils::RewindableInput</td>
+  <td align="right">
+    <table cellspacing="0" cellpadding="2">
+      <tr valign="top">
+        <td>In:</td>
+        <td>
+<a href="../../../files/lib/phusion_passenger/utils/rewindable_input_rb.html">lib/phusion_passenger/utils/rewindable_input.rb</a>
+        </td>
+      </tr>
+    <tr>
+      <td>Parent:</td>
+      <td>
+Object
+     </td>
+   </tr>
+         </table>
+        </td>
+        </tr>
+      </table>
+ <!-- banner header -->
+
+  <div id="bodyContent">
+      <div id="content">
+
+  <div class="description"><p>
+Class which can make any <a href="../../IO.html">IO</a> object rewindable,
+including non-rewindable ones. It does this by buffering the data into a
+tempfile, which is rewindable.
+</p>
+<p>
+rack.input is required to be rewindable, so if your input stream <a
+href="../../IO.html">IO</a> is non-rewindable by nature (e.g. a pipe or a
+socket) then you can wrap it in an object of this class to easily make it
+rewindable.
+</p>
+<p>
+Don&#8216;t forget to call <a
+href="RewindableInput.html#M000100">#close</a> when you&#8216;re done. This
+frees up temporary resources that <a
+href="RewindableInput.html">RewindableInput</a> uses, though it does
+<b>not</b> <a href="RewindableInput.html#M000100">close</a> the original <a
+href="../../IO.html">IO</a> object.
+</p>
+</div>
+
+
+
+  <div class="sectiontitle">Methods</div>
+  <ul>
+  <li><a href="#M000100">close</a></li>
+  <li><a href="#M000098">each</a></li>
+  <li><a href="#M000096">gets</a></li>
+  <li><a href="#M000095">new</a></li>
+  <li><a href="#M000097">read</a></li>
+  <li><a href="#M000099">rewind</a></li>
+  </ul>
+
+
+
+  <div class="sectiontitle">Classes and Modules</div>
+  Class <a href="RewindableInput/Tempfile.html" class="link">PhusionPassenger::Utils::RewindableInput::Tempfile</a><br />
+
+
+
+
+<div class="sectiontitle">Public Class methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000095"></a><b>new</b>(io)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000095_source')" id="l_M000095_source">show source</a> ]</p>
+  <div id="M000095_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/utils/rewindable_input.rb, line 18</span>
+18:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">initialize</span>(<span class="ruby-identifier">io</span>)
+19:       <span class="ruby-ivar">@io</span> = <span class="ruby-identifier">io</span>
+20:       <span class="ruby-ivar">@rewindable_io</span> = <span class="ruby-keyword kw">nil</span>
+21:       <span class="ruby-ivar">@unlinked</span> = <span class="ruby-keyword kw">false</span>
+22:     <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="sectiontitle">Public Instance methods</div>
+<div class="method">
+  <div class="title">
+    <a name="M000100"></a><b>close</b>()
+  </div>
+  <div class="description">
+  <p>
+Closes this <a href="RewindableInput.html">RewindableInput</a> object
+without closing the originally wrapped <a href="../../IO.html">IO</a>
+oject. Cleans up any temporary resources that this <a
+href="RewindableInput.html">RewindableInput</a> has created.
+</p>
+<p>
+This method may be called multiple times. It does nothing on subsequent
+calls.
+</p>
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000100_source')" id="l_M000100_source">show source</a> ]</p>
+  <div id="M000100_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/utils/rewindable_input.rb, line 49</span>
+49:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">close</span>
+50:       <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@rewindable_io</span>
+51:         <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@unlinked</span>
+52:           <span class="ruby-ivar">@rewindable_io</span>.<span class="ruby-identifier">close</span>
+53:         <span class="ruby-keyword kw">else</span>
+54:           <span class="ruby-ivar">@rewindable_io</span>.<span class="ruby-identifier">close!</span>
+55:         <span class="ruby-keyword kw">end</span>
+56:         <span class="ruby-ivar">@rewindable_io</span> = <span class="ruby-keyword kw">nil</span>
+57:       <span class="ruby-keyword kw">end</span>
+58:     <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000098"></a><b>each</b>(&amp;block)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000098_source')" id="l_M000098_source">show source</a> ]</p>
+  <div id="M000098_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/utils/rewindable_input.rb, line 34</span>
+34:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">each</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+35:       <span class="ruby-identifier">make_rewindable</span> <span class="ruby-keyword kw">unless</span> <span class="ruby-ivar">@rewindable_io</span>
+36:       <span class="ruby-ivar">@rewindable_io</span>.<span class="ruby-identifier">each</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+37:     <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000096"></a><b>gets</b>()
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000096_source')" id="l_M000096_source">show source</a> ]</p>
+  <div id="M000096_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/utils/rewindable_input.rb, line 24</span>
+24:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">gets</span>
+25:       <span class="ruby-identifier">make_rewindable</span> <span class="ruby-keyword kw">unless</span> <span class="ruby-ivar">@rewindable_io</span>
+26:       <span class="ruby-ivar">@rewindable_io</span>.<span class="ruby-identifier">gets</span>
+27:     <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000097"></a><b>read</b>(*args)
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000097_source')" id="l_M000097_source">show source</a> ]</p>
+  <div id="M000097_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/utils/rewindable_input.rb, line 29</span>
+29:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">read</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+30:       <span class="ruby-identifier">make_rewindable</span> <span class="ruby-keyword kw">unless</span> <span class="ruby-ivar">@rewindable_io</span>
+31:       <span class="ruby-ivar">@rewindable_io</span>.<span class="ruby-identifier">read</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+32:     <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+<div class="method">
+  <div class="title">
+    <a name="M000099"></a><b>rewind</b>()
+  </div>
+<div class="sourcecode">
+  <p class="source-link">[ <a href="javascript:toggleSource('M000099_source')" id="l_M000099_source">show source</a> ]</p>
+  <div id="M000099_source" class="dyn-source">
+<pre>
+    <span class="ruby-comment cmt"># File lib/phusion_passenger/utils/rewindable_input.rb, line 39</span>
+39:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">rewind</span>
+40:       <span class="ruby-identifier">make_rewindable</span> <span class="ruby-keyword kw">unless</span> <span class="ruby-ivar">@rewindable_io</span>
+41:       <span class="ruby-ivar">@rewindable_io</span>.<span class="ruby-identifier">rewind</span>
+42:     <span class="ruby-keyword kw">end</span>
+</pre>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+
+    </body>
+</html>

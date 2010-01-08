@@ -776,7 +776,7 @@ the compiler.
 346:                         <span class="ruby-identifier">flags</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-value str">'-DBOOST_HAS_STDINT_H -D_GLIBCPP__PTHREADS'</span>
 347:                 <span class="ruby-keyword kw">elsif</span> <span class="ruby-constant">RUBY_PLATFORM</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp re">/aix/</span>
 348:                         <span class="ruby-identifier">flags</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-value str">'-DOXT_DISABLE_BACKTRACES'</span>
-349:                 <span class="ruby-keyword kw">elsif</span> <span class="ruby-constant">RUBY_PLATFORM</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp re">/(sparc-linux|arm-linux)/</span>
+349:                 <span class="ruby-keyword kw">elsif</span> <span class="ruby-constant">RUBY_PLATFORM</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp re">/(sparc-linux|arm-linux|sh4-linux)/</span>
 350:                         <span class="ruby-comment cmt"># http://code.google.com/p/phusion-passenger/issues/detail?id=200</span>
 351:                         <span class="ruby-comment cmt"># http://groups.google.com/group/phusion-passenger/t/6b904a962ee28e5c</span>
 352:                         <span class="ruby-identifier">flags</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-value str">'-DBOOST_SP_USE_PTHREADS'</span>

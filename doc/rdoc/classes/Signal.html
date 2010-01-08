@@ -104,21 +104,29 @@ Like Signal.list, but only returns signals that we can actually trap.
 559:                         <span class="ruby-identifier">result</span> = <span class="ruby-constant">Signal</span>.<span class="ruby-identifier">list</span>
 560:                         <span class="ruby-identifier">result</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value str">&quot;ALRM&quot;</span>)
 561:                         <span class="ruby-identifier">result</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value str">&quot;VTALRM&quot;</span>)
-562:                         <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">result</span>
-563:                 <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;jruby&quot;</span>
-564:                         <span class="ruby-identifier">result</span> = <span class="ruby-constant">Signal</span>.<span class="ruby-identifier">list</span>
-565:                         <span class="ruby-identifier">result</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value str">&quot;QUIT&quot;</span>)
-566:                         <span class="ruby-identifier">result</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value str">&quot;ILL&quot;</span>)
-567:                         <span class="ruby-identifier">result</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value str">&quot;FPE&quot;</span>)
-568:                         <span class="ruby-identifier">result</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value str">&quot;KILL&quot;</span>)
-569:                         <span class="ruby-identifier">result</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value str">&quot;SEGV&quot;</span>)
-570:                         <span class="ruby-identifier">result</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value str">&quot;STOP&quot;</span>)
-571:                         <span class="ruby-identifier">result</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value str">&quot;USR1&quot;</span>)
-572:                         <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">result</span>
-573:                 <span class="ruby-keyword kw">else</span>
-574:                         <span class="ruby-keyword kw">return</span> <span class="ruby-constant">Signal</span>.<span class="ruby-identifier">list</span>
-575:                 <span class="ruby-keyword kw">end</span>
-576:         <span class="ruby-keyword kw">end</span>
+562:                 <span class="ruby-keyword kw">when</span> <span class="ruby-value str">&quot;jruby&quot;</span>
+563:                         <span class="ruby-identifier">result</span> = <span class="ruby-constant">Signal</span>.<span class="ruby-identifier">list</span>
+564:                         <span class="ruby-identifier">result</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value str">&quot;QUIT&quot;</span>)
+565:                         <span class="ruby-identifier">result</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value str">&quot;ILL&quot;</span>)
+566:                         <span class="ruby-identifier">result</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value str">&quot;FPE&quot;</span>)
+567:                         <span class="ruby-identifier">result</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value str">&quot;KILL&quot;</span>)
+568:                         <span class="ruby-identifier">result</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value str">&quot;SEGV&quot;</span>)
+569:                         <span class="ruby-identifier">result</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value str">&quot;USR1&quot;</span>)
+570:                 <span class="ruby-keyword kw">else</span>
+571:                         <span class="ruby-identifier">result</span> = <span class="ruby-constant">Signal</span>.<span class="ruby-identifier">list</span>
+572:                 <span class="ruby-keyword kw">end</span>
+573:                 
+574:                 <span class="ruby-comment cmt"># Don't touch SIGCHLD no matter what! On OS X waitpid() will</span>
+575:                 <span class="ruby-comment cmt"># malfunction if SIGCHLD doesn't have a correct handler.</span>
+576:                 <span class="ruby-identifier">result</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value str">&quot;CLD&quot;</span>)
+577:                 <span class="ruby-identifier">result</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value str">&quot;CHLD&quot;</span>)
+578:                 
+579:                 <span class="ruby-comment cmt"># Other stuff that we don't want to trap no matter which</span>
+580:                 <span class="ruby-comment cmt"># Ruby engine.</span>
+581:                 <span class="ruby-identifier">result</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value str">&quot;STOP&quot;</span>)
+582:                 
+583:                 <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">result</span>
+584:         <span class="ruby-keyword kw">end</span>
 </pre>
   </div>
 </div>

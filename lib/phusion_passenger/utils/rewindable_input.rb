@@ -1,6 +1,10 @@
+# Modified version of Rack::RewindableInput with Ruby 1.9 fix.
+
 require 'tempfile'
 
-module Rack
+module PhusionPassenger
+module Utils
+
   # Class which can make any IO object rewindable, including non-rewindable ones. It does
   # this by buffering the data into a tempfile, which is rewindable.
   #
@@ -74,7 +78,7 @@ module Rack
       @rewindable_io.chmod(0000)
       @rewindable_io.set_encoding(Encoding::BINARY) if @rewindable_io.respond_to?(:set_encoding)
       @rewindable_io.binmode
-      if filesystem_has_posix_semantics?
+      if filesystem_has_posix_semantics? && !tempfile_unlink_contains_bug?
         @rewindable_io.unlink
         @unlinked = true
       end
@@ -96,5 +100,17 @@ module Rack
     def filesystem_has_posix_semantics?
       RUBY_PLATFORM !~ /(mswin|mingw|cygwin|java)/
     end
+    
+    def tempfile_unlink_contains_bug?
+      # The tempfile library as included in Ruby 1.9.1-p152 and later
+      # contains a bug: unlinking an open Tempfile object also closes
+      # it, which breaks our expected POSIX semantics. This problem
+      # has been fixed in Ruby 1.9.2, but the Ruby team chose not to
+      # include the bug fix in later versions of the 1.9.1 series.
+      ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
+      ruby_engine == "ruby" && RUBY_VERSION == "1.9.1" && RUBY_PATCHLEVEL >= 152
+    end
   end
-end
+
+end # module Utils
+end # module PhusionPassenger
