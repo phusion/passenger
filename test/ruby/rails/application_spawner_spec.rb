@@ -11,7 +11,8 @@ describe Railz::ApplicationSpawner do
 	
 	before :each do
 		@stub = setup_rails_stub('foobar')
-		@spawner = Railz::ApplicationSpawner.new(@stub.app_root,
+		@spawner = Railz::ApplicationSpawner.new(
+			"app_root"    => @stub.app_root,
 			"lowest_user" => CONFIG['lowest_user'])
 		@spawner.start
 		@server = @spawner
@@ -45,7 +46,8 @@ describe Railz::ApplicationSpawner do
 					::File.append("result.txt", "end of environment.rb\n");
 				})
 				
-				spawner = Railz::ApplicationSpawner.new(stub.app_root,
+				spawner = Railz::ApplicationSpawner.new(
+					"app_root"    => stub.app_root,
 					"lowest_user" => CONFIG['lowest_user'])
 				spawner.start
 				begin
@@ -66,8 +68,12 @@ describe Railz::ApplicationSpawner do
 		end
 		
 		def spawn_stub_application(stub, extra_options = {})
-			options = { "lowest_user" => CONFIG['lowest_user'] }.merge(extra_options)
-			@spawner = Railz::ApplicationSpawner.new(stub.app_root, options)
+			defaults = {
+				"lowest_user" => CONFIG['lowest_user']
+			}
+			options = defaults.merge(extra_options)
+			options["app_root"] = stub.app_root
+			@spawner = Railz::ApplicationSpawner.new(options)
 			begin
 				@spawner.start
 				return @spawner.spawn_application
@@ -104,8 +110,12 @@ describe Railz::ApplicationSpawner do
 		end
 		
 		def spawn_stub_application(stub, extra_options = {})
-			options = { "lowest_user" => CONFIG['lowest_user'] }.merge(extra_options)
-			@spawner = Railz::ApplicationSpawner.new(stub.app_root, options)
+			defaults = {
+				"lowest_user" => CONFIG['lowest_user']
+			}
+			options = defaults.merge(extra_options)
+			options["app_root"] = stub.app_root
+			@spawner = Railz::ApplicationSpawner.new(options)
 			return @spawner.spawn_application!
 		end
 	end
@@ -120,10 +130,11 @@ describe("ApplicationSpawner privilege lowering support") do
 	
 		def spawn_stub_application(options = {})
 			options = {
+				"app_root" => @stub.app_root,
 				"lower_privilege" => true,
 				"lowest_user" => CONFIG['lowest_user']
 			}.merge(options)
-			@spawner = Railz::ApplicationSpawner.new(@stub.app_root, options)
+			@spawner = Railz::ApplicationSpawner.new(options)
 			@spawner.start
 			begin
 				app = @spawner.spawn_application
@@ -140,10 +151,11 @@ describe("ApplicationSpawner privilege lowering support") do
 	
 		def spawn_stub_application(options = {})
 			options = {
+				"app_root" => @stub.app_root,
 				"lower_privilege" => true,
 				"lowest_user" => CONFIG['lowest_user']
 			}.merge(options)
-			@spawner = Railz::ApplicationSpawner.new(@stub.app_root, options)
+			@spawner = Railz::ApplicationSpawner.new(options)
 			begin
 				app = @spawner.spawn_application!
 				yield app

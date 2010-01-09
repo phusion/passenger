@@ -91,25 +91,31 @@ class SpawnManager < AbstractServer
 		end
 	end
 	
-	# Spawn an application with the given spawn options. When successful, an
-	# Application object will be returned, which represents the spawned application.
-	# At least one option must be given: +app_root+. This is the application's root
-	# folder.
+	# Spawns an application with the given spawn options. When successful, an
+	# AppProcess object will be returned, which represents the spawned application
+	# process.
 	#
-	# Other options are:
+	# The following options are mandatory:
 	#
-	# ['lower_privilege', 'lowest_user', 'environment', 'environment_variables', 'base_uri' and 'print_exceptions']
-	#   See Railz::ApplicationSpawner.new for an explanation of these options.
-	# 
+	# ['app_root']
+	#   The application's root directory. In case of a Rails app this is the directory
+	#   that contains 'app/', 'public/', etc.
+	#
+	# Optional options:
+	#
 	# ['app_type']
-	#   What kind of application is being spawned. Either "rails" (default), "rack" or "wsgi".
+	#   What kind of application is being spawned. Either "rails" (default), "rack" or
+	#   "wsgi".
 	# 
+	# ['environment']
+	#   Allows one to specify the RAILS_ENV and RACK_ENV environment to use. The default
+	#   is "production".
+	#
 	# ['spawn_method']
 	#   May be one of "smart", "smart-lv2" or "conservative". When "smart" is specified,
 	#   SpawnManager will internally cache the code of Rails applications, in
 	#   order to speed up future spawning attempts. This implies that, if you've changed
-	#   the application's
-	#   code, you must do one of these things:
+	#   the application's code, you must do one of these things:
 	#   - Restart this SpawnManager by calling AbstractServer#stop, then AbstractServer#start.
 	#   - Reload the application by calling reload with the correct app_root argument.
 	#   
@@ -132,6 +138,35 @@ class SpawnManager < AbstractServer
 	#   A timeout of 0 means that the spawner server should never idle timeout. A timeout of
 	#   -1 means that the default timeout value should be used. The default value is -1.
 	#
+	# ['lower_privilege' and 'lowest_user']
+	#   If +lower_privilege+ is true, then the application process's user will be
+	#   switched to the owner of the file <tt>config.ru</tt> (for Rack apps) or
+	#   <tt>config/environment.rb</tt> (for Rails apps). The group will be set
+	#   to the default group of that user.
+	#   
+	#   If that user doesn't exist on the system, or if that user is root,
+	#   then the application process's user will be switched to the username
+	#   given by +lowest_user+ (and to the default group of that user).
+	#   If +lowest_user+ doesn't exist either, or if switching user failed
+	#   (because the current process does not have the privilege to do so),
+	#   then the application process will continue without reporting an error.
+	#   
+	#   +lower_privilege+ defaults to true, +lowest_user+ defaults to "nobody".
+	#
+	# ['environment_variables']
+	#   Environment variables which should be passed to the spawned application
+	#   process. This is NULL-seperated string of key-value pairs, encoded in
+	#   base64. The last byte in the unencoded data must be a NULL.
+	#
+	# ['base_uri']
+	#   The base URI on which this application is deployed. It equals "/"
+	#   if the application is deployed on the root URI. It must not equal
+	#   the empty string.
+	#
+	# ['print_exceptions']
+	#   Whether exceptions that have occurred during application initialization
+	#   should be printed to STDERR. The default is true.
+	#
 	# <b>Exceptions:</b>
 	# - InvalidPath: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
 	# - VersionNotFound: The Ruby on Rails framework version that the given application requires
@@ -145,21 +180,20 @@ class SpawnManager < AbstractServer
 		end
 		options = sanitize_spawn_options(options)
 		
-		if options["app_type"] == "rails"
+		case options["app_type"]
+		when "rails"
 			if !defined?(Railz::FrameworkSpawner)
 				require 'phusion_passenger/app_process'
 				require 'phusion_passenger/railz/framework_spawner'
 				require 'phusion_passenger/railz/application_spawner'
 			end
 			return spawn_rails_application(options)
-		elsif options["app_type"] == "rack"
+		when "rack"
 			if !defined?(Rack::ApplicationSpawner)
 				require 'phusion_passenger/rack/application_spawner'
 			end
-			return Rack::ApplicationSpawner.spawn_application(
-				options["app_root"], options
-			)
-		elsif options["app_type"] == "wsgi"
+			return Rack::ApplicationSpawner.spawn_application(options)
+		when "wsgi"
 			require 'phusion_passenger/wsgi/application_spawner'
 			return WSGI::ApplicationSpawner.spawn_application(
 				options["app_root"],
@@ -218,10 +252,11 @@ class SpawnManager < AbstractServer
 
 private
 	def spawn_rails_application(options)
-		spawn_method = options["spawn_method"]
 		app_root     = options["app_root"]
+		spawn_method = options["spawn_method"]
 		
-		if [nil, "", "smart", "smart-lv2"].include?(spawn_method)
+		case options["spawn_method"]
+		when nil, "", "smart", "smart-lv2"
 			spawner_must_be_started = true
 			if spawn_method != "smart-lv2"
 				framework_version = AppProcess.detect_framework_version(app_root)
@@ -229,7 +264,7 @@ private
 			if framework_version.nil? || framework_version == :vendor
 				key = "app:#{app_root}"
 				create_spawner = proc do
-					Railz::ApplicationSpawner.new(app_root, options)
+					Railz::ApplicationSpawner.new(options)
 				end
 				spawner_timeout = options["app_spawner_timeout"]
 			else
@@ -246,7 +281,7 @@ private
 		else
 			key = "app:#{app_root}"
 			create_spawner = proc do
-				Railz::ApplicationSpawner.new(app_root, options)
+				Railz::ApplicationSpawner.new(options)
 			end
 			spawner_timeout = options["app_spawner_timeout"]
 			spawner_must_be_started = false
@@ -265,7 +300,7 @@ private
 			end
 			begin
 				if spawner.is_a?(Railz::FrameworkSpawner)
-					return spawner.spawn_application(app_root, options)
+					return spawner.spawn_application(options)
 				elsif spawner.started?
 					return spawner.spawn_application(options)
 				else
@@ -279,10 +314,10 @@ private
 	end
 	
 	def handle_spawn_application(*options)
-		options = sanitize_spawn_options(Hash[*options])
+		options     = sanitize_spawn_options(Hash[*options])
 		app_process = nil
-		app_root = options["app_root"]
-		app_type = options["app_type"]
+		app_root    = options["app_root"]
+		app_type    = options["app_type"]
 		begin
 			app_process = spawn_application(options)
 		rescue InvalidPath => e

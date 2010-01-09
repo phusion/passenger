@@ -182,7 +182,7 @@ class AbstractServer
 	# Start the server, but in the current process instead of in a child process.
 	# This method blocks until the server's main loop has ended.
 	#
-	# _socket_ is the socket that the server should listen on. The server main
+	# +socket+ is the socket that the server should listen on. The server main
 	# loop will end if the socket has been closed.
 	#
 	# All hooks will be called, except before_fork().

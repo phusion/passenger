@@ -50,7 +50,7 @@ shared_examples_for "a spawner that supports lowering of privileges" do
 	end
 	
 	it "lowers its privileges to 'lowest_user' if environment.rb is owned by root" do
-		File.chown(ApplicationSpawner::ROOT_UID, nil, @environment_rb)
+		File.chown(Railz::ApplicationSpawner::ROOT_UID, nil, @environment_rb)
 		spawn_stub_application do |app|
 			read_dumped_info[:username].should == CONFIG['lowest_user']
 		end

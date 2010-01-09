@@ -46,7 +46,8 @@ describe Railz::FrameworkSpawner do
 	end
 	
 	def spawn_arbitrary_application
-		@spawner.spawn_application(@stub.app_root,
+		@spawner.spawn_application(
+			"app_root" => @stub.app_root,
 			"lowest_user" => CONFIG['lowest_user'])
 	end
 end
@@ -83,12 +84,13 @@ describe Railz::FrameworkSpawner do
 		else
 			options = { :version => version }
 		end
+		options["app_root"] = stub.app_root
 		options["lowest_user"] = CONFIG['lowest_user']
 		options = options.merge(extra_options)
 		spawner = Railz::FrameworkSpawner.new(options)
 		spawner.start
 		begin
-			return spawner.spawn_application(stub.app_root, options)
+			return spawner.spawn_application(options)
 		ensure
 			spawner.stop
 		end
@@ -115,12 +117,13 @@ describe("FrameworkSpawner privilege lowering support") do
 			"lower_privilege" => true,
 			"lowest_user" => CONFIG['lowest_user']
 		}.merge(options)
+		options["app_root"] = @stub.app_root
 		@stub.use_vendor_rails('minimal')
 		@spawner = Railz::FrameworkSpawner.new(:vendor =>
 			"#{@stub.app_root}/vendor/rails")
 		@spawner.start
 		begin
-			app = @spawner.spawn_application(@stub.app_root, options)
+			app = @spawner.spawn_application(options)
 			yield app
 		ensure
 			app.close if app

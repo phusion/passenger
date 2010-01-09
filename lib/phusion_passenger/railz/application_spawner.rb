@@ -61,51 +61,23 @@ class ApplicationSpawner < AbstractServer
 	
 	# The application root of this spawner.
 	attr_reader :app_root
-
-	# +app_root+ is the root directory of this application, i.e. the directory
-	# that contains 'app/', 'public/', etc. If given an invalid directory,
-	# or a directory that doesn't appear to be a Rails application root directory,
-	# then an InvalidPath will be raised.
+	
+	# The following options are accepted:
+	# - 'app_root'
 	#
-	# Additional options are:
-	# - +lower_privilege+ and +lowest_user+:
-	#   If +lower_privilege+ is true, then ApplicationSpawner will attempt to
-	#   switch to the user who owns the application's <tt>config/environment.rb</tt>,
-	#   and to the default group of that user.
+	# See SpawnManager#spawn_application for information about the options.
 	#
-	#   If that user doesn't exist on the system, or if that user is root,
-	#   then ApplicationSpawner will attempt to switch to the username given by
-	#   +lowest_user+ (and to the default group of that user).
-	#   If +lowest_user+ doesn't exist either, or if switching user failed
-	#   (because the current process does not have the privilege to do so),
-	#   then ApplicationSpawner will continue without reporting an error.
-	#
-	# - +environment+:
-	#   Allows one to specify the RAILS_ENV environment to use.
-	#
-	# - +environment_variables+:
-	#   Environment variables which should be passed to the spawned application.
-	#   This is NULL-seperated string of key-value pairs, encoded in base64.
-	#   The last byte in the unencoded data must be a NULL.
-	#
-	# - +base_uri+:
-	#   The base URI on which this application is deployed. It equals "/"
-	#   string if the application is deployed on the root URI. It must not
-	#   equal the empty string.
-	#
-	# - +print_exceptions+:
-	#   Whether exceptions that have occurred during application initialization
-	#   should be printed to STDERR. The default is true.
-	#
-	# All other options will be passed on to RequestHandler.
-	def initialize(app_root, options = {})
+	# Raises:
+	# - InvalidPath: If given an invalid app root, or an app root that doesn't appear to
+	#   be a Rails application root directory.
+	def initialize(options = {})
 		super()
-		@app_root = app_root
+		@options          = sanitize_spawn_options(options)
+		@app_root         = @options["app_root"]
 		@canonicalized_app_root = canonicalize_path(app_root)
-		@options = sanitize_spawn_options(options)
-		@lower_privilege = @options["lower_privilege"]
-		@lowest_user     = @options["lowest_user"]
-		@environment     = @options["environment"]
+		@lower_privilege  = @options["lower_privilege"]
+		@lowest_user      = @options["lowest_user"]
+		@environment      = @options["environment"]
 		@encoded_environment_variables = @options["environment_variables"]
 		@base_uri = @options["base_uri"] if @options["base_uri"] && @options["base_uri"] != "/"
 		@print_exceptions = @options["print_exceptions"]

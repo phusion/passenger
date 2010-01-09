@@ -91,8 +91,12 @@ describe PhusionPassenger::Rack::ApplicationSpawner do
 	end	
 	
 	def spawn(app_root, extra_options = {})
-		options = { "lowest_user" => CONFIG['lowest_user'] }.merge(extra_options)
-		PhusionPassenger::Rack::ApplicationSpawner.spawn_application(app_root, options)
+		defaults = {
+			"lowest_user" => CONFIG['lowest_user']
+		}
+		options = defaults.merge(extra_options)
+		options["app_root"] = app_root
+		PhusionPassenger::Rack::ApplicationSpawner.spawn_application(options)
 	end
 end
 

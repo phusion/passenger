@@ -416,11 +416,11 @@ protected
 	
 	def sanitize_spawn_options(options)
 		defaults = {
-			"lower_privilege" => true,
-			"lowest_user"     => "nobody",
-			"environment"     => "production",
-			"app_type"        => "rails",
-			"spawn_method"    => "smart-lv2",
+			"app_type"         => "rails",
+			"environment"      => "production",
+			"spawn_method"     => "smart-lv2",
+			"lower_privilege"  => true,
+			"lowest_user"      => "nobody",
 			"framework_spawner_timeout" => -1,
 			"app_spawner_timeout"       => -1,
 			"print_exceptions" => true

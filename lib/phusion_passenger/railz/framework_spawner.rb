@@ -147,7 +147,8 @@ class FrameworkSpawner < AbstractServer
 	# - AppInitError: The application raised an exception or called exit() during startup.
 	# - ApplicationSpawner::Error: The ApplicationSpawner server exited unexpectedly.
 	# - FrameworkSpawner::Error: The FrameworkSpawner server exited unexpectedly.
-	def spawn_application(app_root, options = {})
+	def spawn_application(options = {})
+		app_root = options["app_root"]
 		assert_valid_app_root(app_root)
 		options = sanitize_spawn_options(options)
 		options["app_root"] = app_root
@@ -277,7 +278,7 @@ private
 		@spawners.synchronize do
 			begin
 				spawner = @spawners.lookup_or_add(app_root) do
-					spawner = ApplicationSpawner.new(app_root, options)
+					spawner = ApplicationSpawner.new(options)
 					if options["app_spawner_timeout"] && options["app_spawner_timeout"] != -1
 						spawner.max_idle_time = options["app_spawner_timeout"]
 					end

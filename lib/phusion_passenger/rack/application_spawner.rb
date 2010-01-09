@@ -45,13 +45,13 @@ class ApplicationSpawner
 	# Application object will be returned, which represents the spawned
 	# application.
 	#
-	# Accepts the same options as Railz::ApplicationSpawner#initialize.
+	# Accepts the same options as SpawnManager#spawn_application.
 	#
 	# Raises:
 	# - AppInitError: The Rack application raised an exception or called
 	#   exit() during startup.
 	# - SystemCallError, IOError, SocketError: Something went wrong.
-	def spawn_application(app_root, options = {})
+	def spawn_application(options = {})
 		options = sanitize_spawn_options(options)
 		
 		a, b = UNIXSocket.pair
@@ -62,7 +62,7 @@ class ApplicationSpawner
 			NativeSupport.close_all_file_descriptors(file_descriptors_to_leave_open)
 			close_all_io_objects_for_fds(file_descriptors_to_leave_open)
 			
-			run(MessageChannel.new(b), app_root, options)
+			run(MessageChannel.new(b), options)
 		end
 		b.close
 		Process.waitpid(pid) rescue nil
@@ -75,7 +75,8 @@ class ApplicationSpawner
 	end
 
 private
-	def run(channel, app_root, options)
+	def run(channel, options)
+		app_root = options["app_root"]
 		$0 = "Rack: #{app_root}"
 		app = nil
 		success = report_app_init_status(channel) do
