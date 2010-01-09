@@ -377,6 +377,8 @@ private
 			if defined?(::ActiveRecord::Base)
 				if ::ActiveRecord::Base.respond_to?(:clear_all_connections!)
 					::ActiveRecord::Base.clear_all_connections!
+				elsif ::ActiveRecord::Base.respond_to?(:clear_active_connections!)
+					::ActiveRecord::Base.clear_active_connections!
 				elsif ::ActiveRecord::Base.respond_to?(:connected?) &&
 				      ::ActiveRecord::Base.connected?
 					::ActiveRecord::Base.establish_connection
