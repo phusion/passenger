@@ -28,7 +28,6 @@ test/config.yml
 test/coverage
 test/cxx/CxxTestMain
 test/oxt/oxt_test_main
-test/stub/railsapp/app/controllers/bar_controller.rb
 test/stub/apache2/*.log
 test/stub/apache2/*.pid
 test/stub/apache2/httpd.conf

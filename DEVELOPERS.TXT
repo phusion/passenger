@@ -5,7 +5,7 @@
 The tests need the following software installed:
 
 * All the usual Phusion Passenger dependencies.
-* Ruby on Rails 2.0.1 (*exactly* 2.0.1)
+* Ruby on Rails 2.3.x
 * rspec >= 1.1.2
 * mime-types >= 1.15
 
@@ -74,11 +74,11 @@ Less important directories:
 
 Run all tests:
 
- rake
+ rake test
 
-Run just the tests for the Apache 2 module:
+Run only the unit tests for the C++ components:
 
- rake test:apache2
+ rake test:cxx
 
 Run just the unit tests for the Ruby spawn server:
 
@@ -86,7 +86,9 @@ Run just the unit tests for the Ruby spawn server:
 
 Run just the integration tests:
 
- rake test:integration
+ rake test:integration            # All integration tests.
+ rake test:integration:apache2    # Just integration tests for Apache 2.
+ rake test:integration:nginx      # Just integration tests for Nginx.
 
 *Note*: some tests, such as the ones that test privilege lowering, require
 root privileges. Those will only be run if Rake is run as root.

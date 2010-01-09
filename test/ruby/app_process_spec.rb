@@ -12,7 +12,7 @@ describe AppProcess do
 	
 	it "correctly detects Rails version numbers specified in environment.rb" do
 		rails_version = AppProcess.detect_framework_version(@stub.app_root)
-		rails_version.should =~ /^2\.0\.(\d+)$/
+		rails_version.should =~ /^2\.3\.(\d+)$/
 	end
 	
 	it "returns :vendor if an application uses a vendored Rails" do

@@ -78,6 +78,7 @@ shared_examples_for "MyCook(tm) beta" do
 			socket.write("POST #{base_uri}/uploads/single HTTP/1.1\r\n")
 			socket.write("Host: #{uri.host}\r\n")
 			socket.write("Transfer-Encoding: chunked\r\n")
+			socket.write("Content-Type: application/x-www-form-urlencoded\r\n")
 			socket.write("\r\n")
 			
 			chunk = "foo=bar!"
@@ -147,7 +148,7 @@ shared_examples_for "MyCook(tm) beta" do
 	
 	it "sets the 'Status' header" do
 		response = get_response('/nonexistant')
-		response["Status"].should == "404 Not Found"
+		response["Status"].should == "404"
 	end
 	
 	if Process.uid == 0
