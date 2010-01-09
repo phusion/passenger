@@ -792,7 +792,6 @@ spec = Gem::Specification.new do |s|
 	s.rubyforge_project = "passenger"
 	s.author = "Phusion - http://www.phusion.nl/"
 	s.email = "info@phusion.nl"
-	s.requirements << "fastthread" << "Apache 2 with development headers"
 	s.require_paths = ["lib", "ext"]
 	s.add_dependency 'rake', '>= 0.8.1'
 	s.add_dependency 'fastthread', '>= 1.0.1'
