@@ -27,7 +27,7 @@ module TestHelper
 			else
 				@app_root = "tmp.#{name}.#{object_id}"
 			end
-			FileUtils.rm_rf(@app_root)
+			remove_dir_tree(@app_root)
 			FileUtils.mkdir_p(@app_root)
 			copy_stub_contents
 			system("chmod", "-R", "a+rw", @app_root)
@@ -54,8 +54,7 @@ module TestHelper
 		end
 		
 		def destroy
-			system("chmod", "-R", "a+rwx", @app_root)
-			FileUtils.rm_rf(@app_root)
+			remove_dir_tree(@app_root)
 		end
 		
 		def public_file(name)
@@ -82,6 +81,10 @@ module TestHelper
 			end
 		end
 		
+		def startup_file
+			return environment_rb
+		end
+		
 		def environment_rb
 			return "#{@app_root}/config/environment.rb"
 		end
@@ -92,7 +95,7 @@ module TestHelper
 		end
 		
 		def dont_use_vendor_rails
-			FileUtils.rm_rf("#{@app_root}/vendor/rails")
+			remove_dir_tree("#{@app_root}/vendor/rails")
 		end
 		
 	private
@@ -103,6 +106,12 @@ module TestHelper
 		def copy_stub_contents
 			super
 			FileUtils.mkdir_p("#{@app_root}/log")
+		end
+	end
+	
+	class RackStub < Stub
+		def startup_file
+			return "#{@app_root}/config.ru"
 		end
 	end
 	
@@ -180,6 +189,12 @@ module TestHelper
 	
 	######## Other helpers ########
 	
+	def when_user_switching_possible
+		if Process.euid == 0
+			yield
+		end
+	end
+	
 	def retry_with_time_limit(seconds, interval = 0.2)
 		deadline = Time.now + seconds
 		while Time.now < deadline
@@ -190,6 +205,36 @@ module TestHelper
 			end
 		end
 		raise "Time limit exceeded"
+	end
+	
+	def eventually(deadline_duration = 1, check_interval = 0.05)
+		deadline = Time.now + deadline_duration
+		while Time.now < deadline
+			if yield
+				return
+			else
+				sleep(check_interval)
+			end
+		end
+		raise "Time limit exceeded"
+	end
+	
+	def remove_dir_tree(dir)
+		# FileUtils.chmod_R is susceptible to race conditions:
+		# if another thread/process deletes a file just before
+		# chmod_R has chmodded it, then chmod_R will raise an error.
+		# Keep trying until a real error has been reached or until
+		# chmod_R is done.
+		done = false
+		while !done
+			begin
+				FileUtils.chmod_R(0777, dir)
+				done = true
+			rescue Errno::ENOENT
+				done = !File.exist?(dir)
+			end
+		end
+		FileUtils.rm_rf(dir)
 	end
 end
 

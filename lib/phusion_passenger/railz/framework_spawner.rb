@@ -53,16 +53,9 @@ class FrameworkSpawner < AbstractServer
 	
 	# Creates a new instance of FrameworkSpawner.
 	#
-	# Valid options are:
+	# Extra supported options:
 	# - <tt>:version</tt>: The Ruby on Rails version to use. It is not checked whether
 	#   this version is actually installed.
-	# - <tt>:vendor</tt>: The directory to the vendor Rails framework to use. This is
-	#   usually something like "/webapps/foo/vendor/rails".
-	# - <tt>:print_framework_loading_exceptions</tt>:
-	#   Whether exceptions that have occurred while loading the Ruby on Rails framework
-	#   should be printed to STDERR. The default is true.
-	#
-	# It is not allowed to specify both +version+ and +vendor+.
 	#
 	# All other options will be passed on to ApplicationSpawner and RequestHandler.
 	#
@@ -71,19 +64,16 @@ class FrameworkSpawner < AbstractServer
 	# then restart the server by calling AbstractServer#stop and AbstractServer#start.
 	def initialize(options = {})
 		if !options.respond_to?(:'[]')
-			raise ArgumentError, "The 'options' argument not seem to be an options hash"
+			raise ArgumentError, "The 'options' argument does not seem to be an options hash"
 		end
 		@version = options[:version]
-		@vendor  = options[:vendor]
 		if options.has_key?(:print_framework_loading_exceptions)
 			@print_framework_loading_exceptions = options[:print_framework_loading_exceptions]
 		else
 			@print_framework_loading_exceptions = true
 		end
-		if !@version && !@vendor
-			raise ArgumentError, "Either the 'version' or the 'vendor' option must specified"
-		elsif @version && @vendor
-			raise ArgumentError, "It is not allowed to specify both the 'version' and the 'vendor' options"
+		if !@version
+			raise ArgumentError, "The 'version' option must specified"
 		end
 		
 		super()
@@ -109,14 +99,9 @@ class FrameworkSpawner < AbstractServer
 			if status == 'exception'
 				child_exception = unmarshal_exception(server.read_scalar)
 				stop
-				if @version
-					message = "Could not load Ruby on Rails framework version #{@version}: " <<
-						"#{child_exception.class} (#{child_exception.message})"
-				else
-					message = "Could not load Ruby on Rails framework at '#{@vendor}': " <<
-						"#{child_exception.class} (#{child_exception.message})"
-				end
-				options = { :vendor => @vendor, :version => @version }
+				message = "Could not load Ruby on Rails framework version #{@version}: " <<
+					"#{child_exception.class} (#{child_exception.message})"
+				options = { :version => @version }
 				if @print_framework_loading_exceptions
 					print_exception(self.class.to_s, child_exception)
 				end
@@ -218,7 +203,7 @@ protected
 
 	# Overrided method.
 	def initialize_server # :nodoc:
-		$0 = "Passenger FrameworkSpawner: #{@version || @vendor}"
+		$0 = "Passenger FrameworkSpawner: #{@version}"
 		@spawners = AbstractServerCollection.new
 		begin
 			preload_rails
@@ -238,17 +223,8 @@ protected
 private
 	def preload_rails
 		Object.const_set(:RAILS_ROOT, ".")
-		if @version
-			gem 'rails', "=#{@version}"
-			require 'initializer'
-		else
-			$LOAD_PATH.unshift("#{@vendor}/railties/builtin/rails_info")
-			Dir["#{@vendor}/*"].each do |entry|
-				next unless File.directory?(entry)
-				$LOAD_PATH.unshift("#{entry}/lib")
-			end
-			require "#{@vendor}/railties/lib/initializer"
-		end
+		gem 'rails', "=#{@version}"
+		require 'initializer'
 		require 'active_support'
 		require 'active_record'
 		require 'action_controller'

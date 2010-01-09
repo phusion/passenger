@@ -543,6 +543,28 @@ f_writev3(VALUE self, VALUE fd, VALUE components1, VALUE components2, VALUE comp
 	return f_generic_writev(fd, array_of_components, 3);
 }
 
+/**
+ * Ruby's implementations of initgroups, setgid and setuid are broken various ways,
+ * sigh...
+ * Ruby's setgid and setuid can't handle negative UIDs and initgroups is just broken.
+ * Work around it by using our own implementation.
+ */
+static VALUE
+switch_user(VALUE self, VALUE username, VALUE uid, VALUE gid) {
+	uid_t the_uid = NUM2LL(uid);
+	gid_t the_gid = NUM2LL(gid);
+	
+	if (initgroups(RSTRING_PTR(username), the_gid) == -1) {
+		rb_sys_fail("initgroups");
+	}
+	if (setgid(the_gid) == -1) {
+		rb_sys_fail("setgid");
+	}
+	if (setuid(the_uid) == -1) {
+		rb_sys_fail("setuid");
+	}
+	return Qnil;
+}
 
 
 /***************************/
@@ -569,6 +591,7 @@ Init_native_support() {
 	rb_define_singleton_method(mNativeSupport, "writev", f_writev, 2);
 	rb_define_singleton_method(mNativeSupport, "writev2", f_writev2, 3);
 	rb_define_singleton_method(mNativeSupport, "writev3", f_writev3, 4);
+	rb_define_singleton_method(mNativeSupport, "switch_user", switch_user, 3);
 	
 	/* The maximum length of a Unix socket path, including terminating null. */
 	rb_define_const(mNativeSupport, "UNIX_PATH_MAX", INT2NUM(sizeof(addr.sun_path)));

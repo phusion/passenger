@@ -129,7 +129,7 @@ class ApplicationSpawner < AbstractServer
 				
 				channel = MessageChannel.new(b)
 				success = report_app_init_status(channel) do
-					ENV['RAILS_ENV'] = @environment
+					ENV['RAILS_ENV'] = ENV['RACK_ENV'] = @environment
 					ENV['RAILS_RELATIVE_URL_ROOT'] = @base_uri
 					Dir.chdir(@app_root)
 					if @encoded_environment_variables
@@ -195,7 +195,7 @@ protected
 	def initialize_server # :nodoc:
 		report_app_init_status(client) do
 			$0 = "Passenger ApplicationSpawner: #{@app_root}"
-			ENV['RAILS_ENV'] = @environment
+			ENV['RAILS_ENV'] = ENV['RACK_ENV'] = @environment
 			ENV['RAILS_RELATIVE_URL_ROOT'] = @base_uri
 			if defined?(RAILS_ENV)
 				Object.send(:remove_const, :RAILS_ENV)

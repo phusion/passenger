@@ -39,8 +39,45 @@ Spec::Runner.configure do |config|
 	config.append_after do
 		tmpdir = PhusionPassenger::Utils.passenger_tmpdir(false)
 		if File.exist?(tmpdir)
-			FileUtils.chmod_R(0777, tmpdir)
-			FileUtils.rm_rf(tmpdir)
+			remove_dir_tree(tmpdir)
 		end
+	end
+end
+
+module SpawnerSpecHelper
+	def self.included(klass)
+		klass.before(:each) do
+			@stubs = []
+			@apps = []
+		end
+		
+		klass.after(:each) do
+			@stubs.each do |stub|
+				stub.destroy
+			end
+			@apps.each do |app|
+				app.close
+			end
+		end
+	end
+	
+	def before_start(code)
+		@before_start = code
+	end
+	
+	def after_start(code)
+		@after_start = code
+	end
+	
+	def register_stub(stub)
+		@stubs << stub
+		File.prepend(stub.startup_file, "#{@before_start}\n")
+		File.append(stub.startup_file, "\n#{@after_start}")
+		return stub
+	end
+	
+	def register_app(app)
+		@apps << app
+		return app
 	end
 end

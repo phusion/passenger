@@ -368,15 +368,7 @@ protected
 		if uid == 0
 			return false
 		else
-			# Some systems are broken. initgroups can fail because of
-			# all kinds of stupid reasons. So we ignore any errors
-			# raised by initgroups.
-			begin
-				Process.groups = Process.initgroups(username, gid)
-			rescue
-			end
-			Process::Sys.setgid(gid)
-			Process::Sys.setuid(uid)
+			NativeSupport.switch_user(username, uid, gid)
 			ENV['HOME'] = pw.dir
 			return true
 		end

@@ -8,17 +8,17 @@ describe WSGI::ApplicationSpawner do
 	include Utils
 	
 	before :each do
-		@old_passenger_tmpdir = Utils.passenger_tmpdir
-		Utils.passenger_tmpdir = "#{Dir.tmpdir}/wsgi_test.tmp"
 		@stub = Stub.new('wsgi')
 		File.unlink("#{@stub.app_root}/passenger_wsgi.pyc") rescue nil
 	end
 	
 	after :each do
 		@stub.destroy
-		FileUtils.chmod_R(0700, Utils.passenger_tmpdir)
-		FileUtils.rm_rf(Utils.passenger_tmpdir)
-		Utils.passenger_tmpdir = @old_passenger_tmpdir
+	end
+	
+	def spawn(app_root)
+		WSGI::ApplicationSpawner.spawn_application(app_root,
+			true, CONFIG['lowest_user'])
 	end
 	
 	it "can spawn our stub application" do
@@ -37,14 +37,10 @@ describe WSGI::ApplicationSpawner do
 	
 	specify "the backend process deletes its socket upon termination" do
 		spawn(@stub.app_root).close
-		sleep 0.3 # Give it some time to terminate.
 		File.chmod(0700, "#{passenger_tmpdir}/backends")
-		Dir["#{passenger_tmpdir}/backends/wsgi.*"].should be_empty
-	end
-	
-	def spawn(app_root)
-		WSGI::ApplicationSpawner.spawn_application(app_root,
-			true, CONFIG['lowest_user'])
+		eventually do
+			Dir["#{passenger_tmpdir}/backends/wsgi.*"].empty?
+		end
 	end
 end
 
