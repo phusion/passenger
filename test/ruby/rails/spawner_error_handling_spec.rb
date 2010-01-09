@@ -4,12 +4,12 @@ require 'stringio'
 
 shared_examples_for "handling errors in application initialization" do
 	before :each do
-		@stub = setup_rails_stub('foobar')
+		@stub = RailsStub.new('foobar')
 		@stub.use_vendor_rails('minimal')
 	end
 	
 	after :each do
-		teardown_rails_stub
+		@stub.destroy
 	end
 
 	it "raises an AppInitError if the spawned app raises a standard exception during startup" do

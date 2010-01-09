@@ -19,7 +19,7 @@ shared_examples_for "a minimal spawner" do
 	end
 	
 	it "can spawn our stub application" do
-		use_rails_stub('foobar') do |stub|
+		RailsStub.use('foobar') do |stub|
 			app = spawn_stub_application(stub)
 			app.pid.should_not == 0
 			app.app_root.should_not be_nil
@@ -28,7 +28,7 @@ shared_examples_for "a minimal spawner" do
 	end
 	
 	it "can spawn an arbitary number of applications" do
-		use_rails_stub('foobar') do |stub|
+		RailsStub.use('foobar') do |stub|
 			last_pid = 0
 			4.times do
 				app = spawn_stub_application(stub)
@@ -41,7 +41,7 @@ shared_examples_for "a minimal spawner" do
 	end
 	
 	it "respects ENV['RAILS_ENV']= in environment.rb" do
-		use_rails_stub('foobar') do |stub|
+		RailsStub.use('foobar') do |stub|
 			File.prepend(stub.environment_rb, "ENV['RAILS_ENV'] = 'development'\n")
 			File.append(stub.environment_rb, %q{
 				File.open('environment.txt', 'w') do |f|
@@ -55,7 +55,7 @@ shared_examples_for "a minimal spawner" do
 	end
 	
 	it "does not conflict with models in the application that are named 'Passenger'" do
-		use_rails_stub('foobar') do |stub|
+		RailsStub.use('foobar') do |stub|
 			if !File.directory?("#{stub.app_root}/app/models")
 				Dir.mkdir("#{stub.app_root}/app/models")
 			end
@@ -84,7 +84,7 @@ shared_examples_for "a minimal spawner" do
 	end
 	
 	it "loads application_controller.rb instead of application.rb, if the former exists" do
-		use_rails_stub('foobar') do |stub|
+		RailsStub.use('foobar') do |stub|
 			File.rename("#{stub.app_root}/app/controllers/application.rb",
 				"#{stub.app_root}/app/controllers/application_controller.rb")
 			lambda { spawn_stub_application(stub).close }.should_not raise_error
@@ -92,7 +92,7 @@ shared_examples_for "a minimal spawner" do
 	end
 	
 	it "sets the environment variables passed in the environment_variables option" do
-		use_rails_stub('foobar') do |stub|
+		RailsStub.use('foobar') do |stub|
 			File.append(stub.environment_rb, %q{
 				File.open("env.txt", "w") do |f|
 					ENV.each_pair do |key, value|
@@ -111,7 +111,7 @@ shared_examples_for "a minimal spawner" do
 	end
 	
 	it "does not cache things like the connect password" do
-		use_rails_stub('foobar') do |stub|
+		RailsStub.use('foobar') do |stub|
 			begin
 				app1 = spawn_stub_application(stub, "connect_password" => "1234")
 				app2 = spawn_stub_application(stub, "connect_password" => "5678")

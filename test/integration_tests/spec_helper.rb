@@ -16,3 +16,4 @@ $LOAD_PATH.unshift("#{source_root}/ext")
 $LOAD_PATH.unshift("#{source_root}/test")
 
 require 'support/test_helper'
+include TestHelper

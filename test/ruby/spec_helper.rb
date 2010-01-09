@@ -20,6 +20,7 @@ require 'support/test_helper'
 require 'phusion_passenger/utils'
 
 include PhusionPassenger
+include TestHelper
 
 # Seed the pseudo-random number generator here
 # so that it doesn't happen in the child processes.

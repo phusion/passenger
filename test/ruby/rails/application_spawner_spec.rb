@@ -7,10 +7,8 @@ require 'ruby/rails/spawner_privilege_lowering_spec'
 require 'ruby/rails/spawner_error_handling_spec'
 
 describe Railz::ApplicationSpawner do
-	include TestHelper
-	
 	before :each do
-		@stub = setup_rails_stub('foobar')
+		@stub = RailsStub.new('foobar')
 		@spawner = Railz::ApplicationSpawner.new(
 			"app_root"    => @stub.app_root,
 			"lowest_user" => CONFIG['lowest_user'])
@@ -31,14 +29,12 @@ describe Railz::ApplicationSpawner do
 end
 
 describe Railz::ApplicationSpawner do
-	include TestHelper
-	
 	describe "smart spawning" do
 		it_should_behave_like "a minimal spawner"
 		it_should_behave_like "handling errors in application initialization"
 		
 		it "calls the starting_worker_process event, with forked=true, after a new worker process has been forked off" do
-			use_rails_stub('foobar') do |stub|
+			RailsStub.use('foobar') do |stub|
 				File.append(stub.environment_rb, %q{
 					PhusionPassenger.on_event(:starting_worker_process) do |forked|
 						::File.append("result.txt", "forked = #{forked}\n")
@@ -88,7 +84,7 @@ describe Railz::ApplicationSpawner do
 		it_should_behave_like "handling errors in application initialization"
 		
 		it "calls the starting_worker_process event, with forked=true, after environment.rb has been loaded" do
-			use_rails_stub('foobar') do |stub|
+			RailsStub.use('foobar') do |stub|
 				File.append(stub.environment_rb, %q{
 					PhusionPassenger.on_event(:starting_worker_process) do |forked|
 						::File.append("result.txt", "forked = #{forked}\n")
@@ -123,8 +119,6 @@ end
 
 Process.euid == Railz::ApplicationSpawner::ROOT_UID &&
 describe("ApplicationSpawner privilege lowering support") do
-	include TestHelper
-	
 	describe "regular spawning" do
 		it_should_behave_like "a spawner that supports lowering of privileges"
 	

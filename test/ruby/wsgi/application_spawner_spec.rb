@@ -5,13 +5,12 @@ require 'fileutils'
 require 'tempfile'
 
 describe WSGI::ApplicationSpawner do
-	include TestHelper
 	include Utils
 	
 	before :each do
 		@old_passenger_tmpdir = Utils.passenger_tmpdir
 		Utils.passenger_tmpdir = "#{Dir.tmpdir}/wsgi_test.tmp"
-		@stub = setup_stub('wsgi')
+		@stub = Stub.new('wsgi')
 		File.unlink("#{@stub.app_root}/passenger_wsgi.pyc") rescue nil
 	end
 	

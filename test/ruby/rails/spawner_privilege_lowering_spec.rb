@@ -4,7 +4,7 @@ require 'yaml'
 
 shared_examples_for "a spawner that supports lowering of privileges" do
 	before :each do
-		@stub = setup_rails_stub('foobar')
+		@stub = RailsStub.new('foobar')
 		@environment_rb = @stub.environment_rb
 		@original_uid = File.stat(@environment_rb).uid
 		File.append(@environment_rb, %q{

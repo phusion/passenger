@@ -9,10 +9,8 @@ require 'ruby/rails/spawner_error_handling_spec'
 # TODO: test whether FrameworkSpawner restarts ApplicationSpawner if it crashed
 
 describe Railz::FrameworkSpawner do
-	include TestHelper
-	
 	before :each do
-		@stub = setup_rails_stub('foobar')
+		@stub = RailsStub.new('foobar')
 		if use_vendor_rails?
 			@stub.use_vendor_rails('minimal')
 			@spawner = Railz::FrameworkSpawner.new(:vendor => "#{@stub.app_root}/vendor/rails")
@@ -53,8 +51,6 @@ describe Railz::FrameworkSpawner do
 end
 
 describe Railz::FrameworkSpawner do
-	include TestHelper
-	
 	describe "situations in which Rails is loaded via the gem" do
 		def use_vendor_rails?
 			false
@@ -108,8 +104,6 @@ end
 
 Process.euid == Railz::ApplicationSpawner::ROOT_UID &&
 describe("FrameworkSpawner privilege lowering support") do
-	include TestHelper
-	
 	it_should_behave_like "a spawner that supports lowering of privileges"
 	
 	def spawn_stub_application(options = {})

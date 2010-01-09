@@ -8,18 +8,29 @@ require 'support/multipart'
 module TestHelper
 	######## Stub helpers ########
 	
-	STUB_TEMP_DIR = 'tmp.stub'
-	
 	class Stub
 		attr_reader :app_root
 		
-		def initialize(name, app_root)
+		def self.use(name, app_root = nil)
+			stub = new(name, app_root)
+			begin
+				yield stub
+			ensure
+				stub.destroy
+			end
+		end
+		
+		def initialize(name, app_root = nil)
 			@name = name
-			@app_root = app_root
-			FileUtils.rm_rf(app_root)
-			FileUtils.mkdir_p(app_root)
+			if app_root
+				@app_root = app_root
+			else
+				@app_root = "tmp.#{name}.#{object_id}"
+			end
+			FileUtils.rm_rf(@app_root)
+			FileUtils.mkdir_p(@app_root)
 			copy_stub_contents
-			system("chmod", "-R", "a+rw", app_root)
+			system("chmod", "-R", "a+rw", @app_root)
 		end
 		
 		def reset
@@ -43,7 +54,7 @@ module TestHelper
 		end
 		
 		def destroy
-			system("chmod", "-R", "a+rwx", app_root)
+			system("chmod", "-R", "a+rwx", @app_root)
 			FileUtils.rm_rf(@app_root)
 		end
 		
@@ -52,26 +63,23 @@ module TestHelper
 		end
 	
 	private
+		def stub_source_dir
+			return "stub/#{@name}"
+		end
+		
 		def copy_stub_contents
-			FileUtils.cp_r("stub/#{@name}/.", @app_root)
+			FileUtils.cp_r("#{stub_source_dir}/.", @app_root)
 		end
 	end
 	
-	def setup_stub(name, dir = STUB_TEMP_DIR)
-		return Stub.new(name, dir)
-	end
-	
-	# Setup a stub, yield the given block, then destroy the stub.
-	def use_stub(name, dir = STUB_TEMP_DIR)
-		stub = setup_stub(name, dir)
-		yield stub
-	ensure
-		stub.destroy
-	end
-	
 	class RailsStub < Stub
-		def initialize(name, app_root)
-			super("rails_apps/#{name}", app_root)
+		def self.use(name, app_root = nil)
+			stub = new(name, app_root)
+			begin
+				yield stub
+			ensure
+				stub.destroy
+			end
 		end
 		
 		def environment_rb
@@ -88,25 +96,14 @@ module TestHelper
 		end
 		
 	private
+		def stub_source_dir
+			return "stub/rails_apps/#{@name}"
+		end
+		
 		def copy_stub_contents
 			super
 			FileUtils.mkdir_p("#{@app_root}/log")
 		end
-	end
-	
-	def setup_rails_stub(name, dir = STUB_TEMP_DIR)
-		return RailsStub.new(name, dir)
-	end
-	
-	def teardown_rails_stub
-		FileUtils.rm_rf(STUB_TEMP_DIR)
-	end
-	
-	def use_rails_stub(name, dir = STUB_TEMP_DIR)
-		stub = setup_rails_stub(name, dir)
-		yield stub
-	ensure
-		stub.destroy
 	end
 	
 	

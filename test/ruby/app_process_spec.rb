@@ -2,14 +2,12 @@ require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'phusion_passenger/app_process'
 
 describe AppProcess do
-	include TestHelper
-	
 	before :each do
-		@stub = setup_rails_stub('foobar')
+		@stub = RailsStub.new('foobar')
 	end
 	
 	after :each do
-		teardown_rails_stub
+		@stub.destroy
 	end
 	
 	it "correctly detects Rails version numbers specified in environment.rb" do

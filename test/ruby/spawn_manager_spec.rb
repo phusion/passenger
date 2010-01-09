@@ -10,11 +10,9 @@ require 'ruby/rails/spawner_error_handling_spec'
 # TODO: test whether SpawnManager restarts FrameworkSpawner if it crashed
 
 describe SpawnManager do
-	include TestHelper
-	
 	before :each do
 		@manager = SpawnManager.new
-		@stub = setup_rails_stub('foobar')
+		@stub = RailsStub.new('foobar')
 		@stub.use_vendor_rails('minimal')
 		@server = @manager
 		@server.start
@@ -48,11 +46,9 @@ describe SpawnManager do
 end
 
 describe SpawnManager do
-	include TestHelper
-	
 	before :each do
 		@manager = SpawnManager.new
-		@stub = setup_rails_stub('foobar')
+		@stub = RailsStub.new('foobar')
 		@stub.use_vendor_rails('minimal')
 	end
 	
@@ -116,10 +112,8 @@ describe SpawnManager do
 end
 
 describe SpawnManager do
-	include TestHelper
-
 	it "can spawn a Rack application" do
-		use_stub('rack') do |stub|
+		Stub.use('rack') do |stub|
 			@manager = SpawnManager.new
 			begin
 				app = @manager.spawn_application(
@@ -138,8 +132,6 @@ describe SpawnManager do
 end
 
 describe SpawnManager do
-	include TestHelper
-	
 	before :each do
 		@spawn_method = "smart"
 	end

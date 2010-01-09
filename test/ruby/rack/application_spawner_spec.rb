@@ -2,10 +2,8 @@ require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
 require 'phusion_passenger/rack/application_spawner'
 
 describe PhusionPassenger::Rack::ApplicationSpawner do
-	include TestHelper
-	
 	before :each do
-		@stub = setup_stub('rack')
+		@stub = Stub.new('rack')
 	end
 	
 	after :each do
