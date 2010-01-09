@@ -37,10 +37,10 @@ describe "Phusion Passenger for Nginx" do
 		before :all do
 			@server = "http://1.passenger.test:#{@nginx.port}"
 			@base_uri = ""
-			@stub = RailsStub.new('mycook')
+			@stub = RailsStub.new('2.3/mycook')
 			@nginx.add_server do |server|
 				server[:server_name] = "1.passenger.test"
-				server[:root]        = File.expand_path("#{@stub.app_root}/public")
+				server[:root]        = "#{@stub.full_app_root}/public"
 			end
 			@nginx.start
 		end
@@ -60,11 +60,11 @@ describe "Phusion Passenger for Nginx" do
 	describe "MyCook(tm) beta running in a sub-URI" do
 		before :all do
 			@base_uri = "/mycook"
-			@stub = RailsStub.new('mycook')
+			@stub = RailsStub.new('2.3/mycook')
 			FileUtils.rm_rf('tmp.webdir')
 			FileUtils.mkdir_p('tmp.webdir')
 			FileUtils.cp_r('stub/zsfa/.', 'tmp.webdir')
-			FileUtils.ln_sf(File.expand_path(@stub.app_root) + "/public", 'tmp.webdir/mycook')
+			FileUtils.ln_sf(@stub.full_app_root + "/public", 'tmp.webdir/mycook')
 			
 			@nginx.add_server do |server|
 				server[:server_name] = "1.passenger.test"
@@ -96,10 +96,10 @@ describe "Phusion Passenger for Nginx" do
 	describe "Rack application running in root URI" do
 		before :all do
 			@server = "http://passenger.test:#{@nginx.port}"
-			@stub = Stub.new('rack')
+			@stub = RackStub.new('rack')
 			@nginx.add_server do |server|
 				server[:server_name] = "passenger.test"
-				server[:root]        = File.expand_path("#{@stub.app_root}/public")
+				server[:root]        = "#{@stub.full_app_root}/public"
 			end
 			@nginx.start
 		end
@@ -119,9 +119,9 @@ describe "Phusion Passenger for Nginx" do
 		before :all do
 			FileUtils.rm_rf('tmp.webdir')
 			FileUtils.mkdir_p('tmp.webdir')
-			@stub = Stub.new('rack')
+			@stub = RackStub.new('rack')
 			@nginx.add_server do |server|
-				FileUtils.ln_s(File.expand_path(@stub.app_root) + "/public", 'tmp.webdir/rack')
+				FileUtils.ln_s(@stub.full_app_root + "/public", 'tmp.webdir/rack')
 				server[:server_name] = "passenger.test"
 				server[:root]        = File.expand_path('tmp.webdir')
 				server[:passenger_base_uri] = "/rack"
@@ -145,11 +145,11 @@ describe "Phusion Passenger for Nginx" do
 	describe "Rack application running within Rails directory structure" do
 		before :all do
 			@server = "http://passenger.test:#{@nginx.port}"
-			@stub = RailsStub.new('mycook')
+			@stub = RailsStub.new('2.3/mycook')
 			FileUtils.cp_r("stub/rack/.", @stub.app_root)
 			@nginx.add_server do |server|
 			server[:server_name] = "passenger.test"
-			server[:root]        = File.expand_path("#{@stub.app_root}/public")
+			server[:root]        = "#{@stub.full_app_root}/public"
 			end
 			@nginx.start
 		end
@@ -169,10 +169,10 @@ describe "Phusion Passenger for Nginx" do
 	describe "various features" do
 		before :all do
 			@server = "http://passenger.test:#{@nginx.port}"
-			@stub = Stub.new('rack')
+			@stub = RackStub.new('rack')
 			@nginx.add_server do |server|
 				server[:server_name] = "passenger.test"
-				server[:root]        = File.expand_path("#{@stub.app_root}/public")
+				server[:root]        = "#{@stub.full_app_root}/public"
 				server << %q{
 					location /crash_without_friendly_error_page {
 						passenger_friendly_error_pages off;

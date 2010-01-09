@@ -3,7 +3,7 @@ require 'phusion_passenger/app_process'
 
 describe AppProcess do
 	before :each do
-		@stub = RailsStub.new('foobar')
+		@stub = RailsStub.new('2.3/foobar')
 	end
 	
 	after :each do

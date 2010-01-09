@@ -3,6 +3,7 @@ scgi_demo
 /test*.rb
 
 .cache
+.DS_Store
 *.o
 *.so
 *.bundle

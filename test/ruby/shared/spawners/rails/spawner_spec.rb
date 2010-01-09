@@ -1,5 +1,4 @@
 require File.expand_path(File.dirname(__FILE__) + '/../../../spec_helper')
-require 'ruby/shared/abstract_server_spec'
 
 shared_examples_for "a Rails spawner" do
 	it "sets RAILS_ENV" do

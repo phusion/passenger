@@ -10,6 +10,7 @@ module TestHelper
 	
 	class Stub
 		attr_reader :app_root
+		attr_reader :full_app_root
 		
 		def self.use(name, app_root = nil)
 			stub = new(name, app_root)
@@ -22,43 +23,54 @@ module TestHelper
 		
 		def initialize(name, app_root = nil)
 			@name = name
+			if !File.exist?(stub_source_dir)
+				raise Errno::ENOENT, "Stub '#{name}' not found."
+			end
+			
 			if app_root
 				@app_root = app_root
 			else
-				@app_root = "tmp.#{name}.#{object_id}"
+				identifier = name.gsub('/', '-')
+				@app_root = "tmp.#{identifier}.#{object_id}"
 			end
-			remove_dir_tree(@app_root)
-			FileUtils.mkdir_p(@app_root)
+			@full_app_root = File.expand_path(@app_root)
+			remove_dir_tree(@full_app_root)
+			FileUtils.mkdir_p(@full_app_root)
 			copy_stub_contents
-			system("chmod", "-R", "a+rw", @app_root)
+			system("chmod", "-R", "a+rw", @full_app_root)
 		end
 		
 		def reset
 			# Empty directory without removing the directory itself,
 			# allowing processes with this directory as current working
 			# directory to continue to function properly.
-			files = Dir["#{@app_root}/*"]
-			files |= Dir["#{@app_root}/.*"]
-			files.delete("#{@app_root}/.")
-			files.delete("#{@app_root}/..")
+			files = Dir["#{@full_app_root}/*"]
+			files |= Dir["#{@full_app_root}/.*"]
+			files.delete("#{@full_app_root}/.")
+			files.delete("#{@full_app_root}/..")
 			FileUtils.chmod_R(0777, files)
 			FileUtils.rm_rf(files)
 			
 			copy_stub_contents
-			system("chmod", "-R", "a+rw", app_root)
+			system("chmod", "-R", "a+rw", @full_app_root)
 		end
 		
 		def move(new_app_root)
-			File.rename(@app_root, new_app_root)
+			File.rename(@full_app_root, new_app_root)
 			@app_root = new_app_root
+			@full_app_root = File.expand_path(new_app_root)
 		end
 		
 		def destroy
-			remove_dir_tree(@app_root)
+			remove_dir_tree(@full_app_root)
+		end
+		
+		def full_app_root
+			return File.expand_path(@app_root)
 		end
 		
 		def public_file(name)
-			return File.read("#{@app_root}/public/#{name}")
+			return File.read("#{@full_app_root}/public/#{name}")
 		end
 	
 	private
@@ -67,7 +79,7 @@ module TestHelper
 		end
 		
 		def copy_stub_contents
-			FileUtils.cp_r("#{stub_source_dir}/.", @app_root)
+			FileUtils.cp_r("#{stub_source_dir}/.", @full_app_root)
 		end
 	end
 	
@@ -86,16 +98,16 @@ module TestHelper
 		end
 		
 		def environment_rb
-			return "#{@app_root}/config/environment.rb"
+			return "#{@full_app_root}/config/environment.rb"
 		end
 		
 		def use_vendor_rails(name)
-			FileUtils.mkdir_p("#{@app_root}/vendor/rails")
-			FileUtils.cp_r("stub/vendor_rails/#{name}/.", "#{@app_root}/vendor/rails")
+			FileUtils.mkdir_p("#{@full_app_root}/vendor/rails")
+			FileUtils.cp_r("stub/vendor_rails/#{name}/.", "#{@full_app_root}/vendor/rails")
 		end
 		
 		def dont_use_vendor_rails
-			remove_dir_tree("#{@app_root}/vendor/rails")
+			remove_dir_tree("#{@full_app_root}/vendor/rails")
 		end
 		
 	private
@@ -105,13 +117,33 @@ module TestHelper
 		
 		def copy_stub_contents
 			super
-			FileUtils.mkdir_p("#{@app_root}/log")
+			FileUtils.mkdir_p("#{@full_app_root}/log")
 		end
 	end
 	
 	class RackStub < Stub
 		def startup_file
-			return "#{@app_root}/config.ru"
+			return "#{@full_app_root}/config.ru"
+		end
+	end
+	
+	def describe_each_rails_version(&block)
+		if ENV['ONLY_RAILS_VERSION']
+			versions = [ENV['ONLY_RAILS_VERSION']]
+		else
+			versions = Dir.entries("stub/rails_apps").grep(/^\d+\.\d+$/)
+			if RUBY_VERSION >= '1.9.0'
+				# Only Rails >= 2.3 is compatible with Ruby 1.9.
+				versions.reject! do |version|
+					version < '2.3'
+				end
+			end
+		end
+		versions.sort.each do |version|
+			klass = describe("Rails #{version}", &block)
+			klass.send(:define_method, :rails_version) do
+				version
+			end
 		end
 	end
 	

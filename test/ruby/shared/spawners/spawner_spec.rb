@@ -32,6 +32,7 @@ shared_examples_for "a spawner" do
 			app.app_root.should_not be_nil
 			last_pid = app.pid
 			app.close
+			sleep 0.1  # Give process some time to free memory.
 		end
 	end
 	

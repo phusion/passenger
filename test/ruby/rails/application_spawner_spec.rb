@@ -5,6 +5,7 @@ require 'ruby/shared/abstract_server_spec'
 require 'ruby/shared/spawners/spawn_server_spec'
 require 'ruby/shared/spawners/spawner_spec'
 require 'ruby/shared/spawners/rails/spawner_spec'
+require 'ruby/shared/spawners/rails/lack_of_rails_gem_version_spec'
 
 describe Railz::ApplicationSpawner do
 	include SpawnerSpecHelper
@@ -15,7 +16,7 @@ describe Railz::ApplicationSpawner do
 	
 	describe "conservative spawning" do
 		def spawn_some_application(extra_options = {})
-			stub = register_stub(RailsStub.new('foobar'))
+			stub = register_stub(RailsStub.new("#{rails_version}/empty"))
 			yield stub if block_given?
 			
 			default_options = {
@@ -28,26 +29,29 @@ describe Railz::ApplicationSpawner do
 			return register_app(app)
 		end
 		
-		it_should_behave_like "a spawner"
-		it_should_behave_like "a Rails spawner"
-		
-		specify "the starting_worker_process event is called with forked=false" do
-			after_start %q{
+		describe_each_rails_version do
+			it_should_behave_like "a spawner"
+			it_should_behave_like "a Rails spawner"
+			include_shared_example_group "a Rails app that lacks RAILS_GEM_VERSION"
+			
+			specify "the starting_worker_process event is called with forked=false" do
+				after_start %q{
+					history_file = "#{PhusionPassenger::Utils.passenger_tmpdir}/history.txt"
+					PhusionPassenger.on_event(:starting_worker_process) do |forked|
+						::File.append(history_file, "forked = #{forked}\n")
+					end
+					::File.append(history_file, "end of environment.rb\n");
+				}
+				
+				spawn_some_application
+				spawn_some_application
+				
 				history_file = "#{PhusionPassenger::Utils.passenger_tmpdir}/history.txt"
-				PhusionPassenger.on_event(:starting_worker_process) do |forked|
-					::File.append(history_file, "forked = #{forked}\n")
+				eventually(2, 0.5) do
+					contents = File.read(history_file)
+					lines = contents.split("\n")
+					lines.count("forked = false") == 2
 				end
-				::File.append(history_file, "end of environment.rb\n");
-			}
-			
-			spawn_some_application
-			spawn_some_application
-			
-			history_file = "#{PhusionPassenger::Utils.passenger_tmpdir}/history.txt"
-			eventually(2, 0.5) do
-				contents = File.read(history_file)
-				lines = contents.split("\n")
-				lines.count("forked = false") == 2
 			end
 		end
 	end
@@ -59,7 +63,7 @@ describe Railz::ApplicationSpawner do
 		
 		def spawner
 			@spawner ||= begin
-				stub = register_stub(RailsStub.new('foobar'))
+				stub = register_stub(RailsStub.new("#{rails_version}/empty"))
 				spawner = Railz::ApplicationSpawner.new("app_root" => stub.app_root)
 				spawner.start
 				spawner
@@ -67,7 +71,7 @@ describe Railz::ApplicationSpawner do
 		end
 		
 		def spawn_some_application(extra_options = {})
-			stub = register_stub(RailsStub.new('foobar'))
+			stub = register_stub(RailsStub.new("#{rails_version}/empty"))
 			yield stub if block_given?
 			
 			default_options = {
@@ -84,30 +88,33 @@ describe Railz::ApplicationSpawner do
 			return register_app(app)
 		end
 		
-		it_should_behave_like "an AbstractServer"
-		it_should_behave_like "a spawn server"
-		it_should_behave_like "a spawner"
-		it_should_behave_like "a Rails spawner"
-		
-		specify "the starting_worker_process event is called with forked=true" do
-			after_start %q{
+		describe_each_rails_version do
+			it_should_behave_like "an AbstractServer"
+			it_should_behave_like "a spawn server"
+			it_should_behave_like "a spawner"
+			it_should_behave_like "a Rails spawner"
+			include_shared_example_group "a Rails app that lacks RAILS_GEM_VERSION"
+			
+			specify "the starting_worker_process event is called with forked=true" do
+				after_start %q{
+					history_file = "#{PhusionPassenger::Utils.passenger_tmpdir}/history.txt"
+					PhusionPassenger.on_event(:starting_worker_process) do |forked|
+						::File.append(history_file, "forked = #{forked}\n")
+					end
+					::File.append(history_file, "end of environment.rb\n");
+				}
+				
+				spawn_some_application
+				spawn_some_application
+				
 				history_file = "#{PhusionPassenger::Utils.passenger_tmpdir}/history.txt"
-				PhusionPassenger.on_event(:starting_worker_process) do |forked|
-					::File.append(history_file, "forked = #{forked}\n")
+				eventually(2, 0.5) do
+					contents = File.read(history_file)
+					contents ==
+						"end of environment.rb\n" +
+						"forked = true\n" +
+						"forked = true\n"
 				end
-				::File.append(history_file, "end of environment.rb\n");
-			}
-			
-			spawn_some_application
-			spawn_some_application
-			
-			history_file = "#{PhusionPassenger::Utils.passenger_tmpdir}/history.txt"
-			eventually(2, 0.5) do
-				contents = File.read(history_file)
-				contents ==
-					"end of environment.rb\n" +
-					"forked = true\n" +
-					"forked = true\n"
 			end
 		end
 	end

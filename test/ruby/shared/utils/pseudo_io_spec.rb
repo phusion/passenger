@@ -1,6 +1,6 @@
 require File.expand_path(File.dirname(__FILE__) + '/../../spec_helper')
 require 'stringio'
-require 'phusion_passeger/message_channel'
+require 'phusion_passenger/message_channel'
 
 shared_examples_for "a pseudo stderr created by #report_app_init_status" do
 	before :each do
