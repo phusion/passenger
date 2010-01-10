@@ -24,6 +24,7 @@
 require 'rubygems'
 require 'phusion_passenger/abstract_server'
 require 'phusion_passenger/abstract_server_collection'
+require 'phusion_passenger/app_process'
 require 'phusion_passenger/railz/application_spawner'
 require 'phusion_passenger/exceptions'
 require 'phusion_passenger/constants'

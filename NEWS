@@ -28,6 +28,7 @@ Release 3.0.0
    through race conditions, even on high volume websites.
  * [Nginx] passenger_ignore_client_abort
  * [Nginx] passenger_pass_header
+ * Smart spawning for Rack apps
 
 
 Release 2.2.9

@@ -183,7 +183,6 @@ class SpawnManager < AbstractServer
 		case options["app_type"]
 		when "rails"
 			if !defined?(Railz::FrameworkSpawner)
-				require 'phusion_passenger/app_process'
 				require 'phusion_passenger/railz/framework_spawner'
 				require 'phusion_passenger/railz/application_spawner'
 			end
@@ -192,9 +191,11 @@ class SpawnManager < AbstractServer
 			if !defined?(Rack::ApplicationSpawner)
 				require 'phusion_passenger/rack/application_spawner'
 			end
-			return Rack::ApplicationSpawner.spawn_application(options)
+			return spawn_rack_application(options)
 		when "wsgi"
-			require 'phusion_passenger/wsgi/application_spawner'
+			if !defined?(WSGI::ApplicationSpawner)
+				require 'phusion_passenger/wsgi/application_spawner'
+			end
 			return WSGI::ApplicationSpawner.spawn_application(
 				options["app_root"],
 				options["lower_privilege"],
@@ -252,7 +253,6 @@ private
 		
 		case spawn_method
 		when nil, "", "smart", "smart-lv2"
-			spawner_must_be_started = true
 			if spawn_method != "smart-lv2"
 				framework_version = AppProcess.detect_framework_version(app_root)
 			end
@@ -271,22 +271,14 @@ private
 				end
 				spawner_timeout = options["framework_spawner_timeout"]
 			end
-		else
-			spawner = Railz::ApplicationSpawner
-			spawner_timeout = options["app_spawner_timeout"]
-			spawner_must_be_started = false
-		end
-		
-		if create_spawner
+			
 			@spawners.synchronize do
 				spawner = @spawners.lookup_or_add(key) do
 					spawner = create_spawner.call
 					if spawner_timeout != -1
 						spawner.max_idle_time = spawner_timeout
 					end
-					if spawner_must_be_started
-						spawner.start
-					end
+					spawner.start
 					spawner
 				end
 				begin
@@ -297,7 +289,39 @@ private
 				end
 			end
 		else
-			return spawner.spawn_application(options)
+			return Railz::ApplicationSpawner.spawn_application(options)
+		end
+	end
+	
+	def spawn_rack_application(options)
+		app_root       = options["app_root"]
+		spawn_method   = options["spawn_method"]
+		spawner        = nil
+		create_spawner = nil
+		key            = nil
+		
+		case spawn_method
+		when nil, "", "smart", "smart-lv2"
+			@spawners.synchronize do
+				key = "app:#{app_root}"
+				spawner = @spawners.lookup_or_add(key) do
+					spawner_timeout = options["app_spawner_timeout"]
+					spawner = Rack::ApplicationSpawner.new(options)
+					if spawner_timeout != -1
+						spawner.max_idle_time = spawner_timeout
+					end
+					spawner.start
+					spawner
+				end
+				begin
+					return spawner.spawn_application(options)
+				rescue AbstractServer::ServerError
+					@spawners.delete(key)
+					raise
+				end
+			end
+		else
+			return Rack::ApplicationSpawner.spawn_application(options)
 		end
 	end
 	

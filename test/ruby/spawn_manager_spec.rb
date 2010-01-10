@@ -100,9 +100,10 @@ describe SpawnManager do
 			yield stub if block_given?
 			
 			default_options = {
-				"app_root"    => stub.app_root,
-				"app_type"    => "rack",
-				"lowest_user" => CONFIG['lowest_user']
+				"app_root"     => stub.app_root,
+				"app_type"     => "rack",
+				"spawn_method" => @spawn_method,
+				"lowest_user"  => CONFIG['lowest_user']
 			}
 			options = default_options.merge(extra_options)
 			@spawner ||= SpawnManager.new
@@ -110,6 +111,20 @@ describe SpawnManager do
 			return register_app(app)
 		end
 		
-		it_should_behave_like "a spawner"
+		describe "smart spawning" do
+			before :each do
+				@spawn_method = "smart"
+			end
+			
+			it_should_behave_like "a spawner"
+		end
+		
+		describe "conservative spawning" do
+			before :each do
+				@spawn_method = "conservative"
+			end
+			
+			it_should_behave_like "a spawner"
+		end
 	end
 end
