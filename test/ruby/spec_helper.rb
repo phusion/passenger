@@ -1,3 +1,7 @@
+if GC.respond_to?(:copy_on_write_friendly?) && !GC.copy_on_write_friendly?
+	GC.copy_on_write_friendly = true
+end
+
 source_root = File.expand_path(File.dirname(__FILE__) + "/../..")
 Dir.chdir("#{source_root}/test")
 
@@ -52,11 +56,21 @@ module SpawnerSpecHelper
 		end
 		
 		klass.after(:each) do
-			@stubs.each do |stub|
-				stub.destroy
-			end
-			@apps.each do |app|
-				app.close
+			begin
+				@apps.each do |app|
+					app.close
+				end
+				# Wait until all apps have exited, so that they don't
+				# hog memory for the next test case.
+				eventually(5) do
+					@apps.all? do |app|
+						!Utils.process_is_alive?(app.pid)
+					end
+				end
+			ensure
+				@stubs.each do |stub|
+					stub.destroy
+				end
 			end
 		end
 	end

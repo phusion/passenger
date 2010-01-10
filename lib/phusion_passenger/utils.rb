@@ -254,6 +254,19 @@ protected
 		end
 	end
 	
+	# Checks whether the given process exists.
+	def process_is_alive?(pid)
+		begin
+			Process.kill(0, pid)
+			return true
+		rescue Errno::ESRCH
+			return false
+		rescue SystemCallError => e
+			return true
+		end
+	end
+	module_function :process_is_alive?
+	
 	class PseudoIO
 		def initialize(sink)
 			@sink = sink || File.open("/dev/null", "w")
