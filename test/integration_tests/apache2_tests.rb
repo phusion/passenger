@@ -217,7 +217,7 @@ describe "Apache 2 module" do
 			@foobar_url_root = "http://3.passenger.test:#{@apache2.port}"
 			@apache2.set_vhost('3.passenger.test', "#{@foobar.full_app_root}/public") do |vhost|
 				vhost << "RailsEnv development"
-				vhost << "RailsSpawnMethod conservative"
+				vhost << "PassengerSpawnMethod conservative"
 				vhost << "PassengerUseGlobalQueue on"
 				vhost << "PassengerRestartDir #{@foobar.full_app_root}/public"
 			end
@@ -268,7 +268,7 @@ describe "Apache 2 module" do
 			get('/foo/backtrace').should_not =~ /framework_spawner/
 		end
 		
-		specify "RailsSpawnMethod spawning is per-virtual host" do
+		specify "PassengerSpawnMethod spawning is per-virtual host" do
 			@server = @mycook_url_root
 			get('/welcome/backtrace').should =~ /application_spawner/
 		end

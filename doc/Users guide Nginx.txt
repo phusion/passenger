@@ -521,6 +521,34 @@ This option allows one to specify the Ruby interpreter to use.
 This option may only occur once, in the 'http' configuration block.
 The default is 'ruby'.
 
+[[PassengerSpawnMethod]]
+=== passenger_spawn_method <string> ===
+[TIP]
+."What spawn method should I use?"
+=========================================================
+This subsection attempts to describe spawn methods, but it's okay if you don't (want to)
+understand it, as it's mostly a technical detail. You can basically follow this rule of thumb:
+
+************************************************
+If your application works on Mongrel, but not on Phusion Passenger, then set
+`passenger_spawn_method` to 'conservative'. Otherwise, leave it at 'smart-lv2' (the default).
+************************************************
+
+However, we do recommend you to try to understand it. The 'smart' and 'smart-lv2' spawn
+methods bring many benefits.
+=========================================================
+
+include::users_guide_snippets/passenger_spawn_method.txt[]
+
+This option may occur in the following places:
+
+ * In the 'http' configuration block.
+ * In a 'server' configuration block.
+ * In a 'location' configuration block.
+ * In an 'if' configuration scope.
+
+In each place, it may be specified at most once. The default value is 'smart-lv2'.
+
 [[PassengerUseGlobalQueue]]
 === passenger_use_global_queue <on|off> ===
 Turns the use of global queuing on or off.
@@ -766,33 +794,6 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'production'.
 
-==== rails_spawn_method <string> ====
-[TIP]
-."What spawn method should I use?"
-=========================================================
-This subsection attempts to describe spawn methods, but it's okay if you don't (want to)
-understand it, as it's mostly a technical detail. You can basically follow this rule of thumb:
-
-************************************************
-If your application works on Mongrel, but not on Phusion Passenger, then set
-`rails_spawn_method` to 'conservative'. Otherwise, leave it at 'smart-lv2' (the default).
-************************************************
-
-However, we do recommend you to try to understand it. The 'smart' and 'smart-lv2' spawn
-methods bring many benefits.
-=========================================================
-
-include::users_guide_snippets/rails_spawn_method.txt[]
-
-This option may occur in the following places:
-
- * In the 'http' configuration block.
- * In a 'server' configuration block.
- * In a 'location' configuration block.
- * In an 'if' configuration scope.
-
-In each place, it may be specified at most once. The default value is 'smart-lv2'.
-
 ==== rails_framework_spawner_idle_time <integer> ====
 The FrameworkSpawner server (explained in <<spawning_methods_explained,Spawning
 methods explained>>) has an idle timeout, just like the backend processes spawned by
@@ -858,6 +859,15 @@ This option may occur in the following places:
  * In an 'if' configuration scope.
 
 In each place, it may be specified at most once. The default value is 'production'.
+
+
+=== Deprecated options ===
+
+The following options have been deprecated, but are still supported for backwards
+compatibility reasons.
+
+==== rails_spawn_method ====
+Deprecated in favor of <<PassengerSpawnMethod,passenger_spawn_method>>.
 
 
 == Analysis and system maintenance tools ==

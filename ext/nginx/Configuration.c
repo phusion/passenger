@@ -923,18 +923,18 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_loc_conf_t, upstream_config.ignore_client_abort),
       NULL },
 
+    { ngx_string("passenger_spawn_method"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, spawn_method),
+      NULL },
+
     { ngx_string("rails_env"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, environment),
-      NULL },
-
-    { ngx_string("rails_spawn_method"),
-      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
-      ngx_conf_set_str_slot,
-      NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(passenger_loc_conf_t, spawn_method),
       NULL },
 
     { ngx_string("rails_framework_spawner_idle_time"),
@@ -960,6 +960,15 @@ const ngx_command_t passenger_commands[] = {
 
     /************************************/
     /************************************/
+
+    /******** Backward compatibility options ********/
+
+    { ngx_string("rails_spawn_method"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, spawn_method),
+      NULL },
 
 /*
 

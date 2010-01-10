@@ -25,6 +25,7 @@ shared_examples_for "a spawner" do
 	end
 	
 	specify "spawning multiple times works" do
+		sleep 1 # Give previous processes some time to free their memory.
 		last_pid = nil
 		4.times do
 			app = spawn_some_application

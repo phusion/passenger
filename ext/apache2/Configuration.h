@@ -99,7 +99,7 @@
 			 * Rack applications should operate. */
 			const char *rackEnv;
 			
-			/** The Rails spawn method to use. */
+			/** The spawn method to use. */
 			SpawnMethod spawnMethod;
 			
 			/**

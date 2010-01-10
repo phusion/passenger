@@ -1,21 +1,22 @@
-Internally, Phusion Passenger spawns multiple Ruby on Rails processes in order to handle
+Internally, Phusion Passenger spawns multiple Ruby application processes in order to handle
 requests. But there are multiple ways with which processes can be spawned, each having
 its own set of pros and cons. Supported spawn methods are:
 
 'smart'::
-When this spawn method is used, Phusion Passenger will attempt to cache Ruby on Rails
-framework code and application code for a limited period of time. Please read
-<<spawning_methods_explained,Spawning methods explained>> for a more detailed
-explanation of what smart spawning exactly does.
+When this spawn method is used, Phusion Passenger will attempt to cache any
+framework code (e.g. Ruby on Rails itself) and application code for a limited
+period of time. Please read <<spawning_methods_explained,Spawning methods explained>>
+for a more detailed explanation of what smart spawning exactly does.
 +
 *Pros:*
 This can significantly decrease spawn time (by as much as 90%). And, when Ruby Enterprise
 Edition is used, <<reducing_memory_usage,memory usage can be reduced by 33% on average>>.
 +
 *Cons:*
-Some Ruby on Rails applications and libraries are not compatible with smart spawning.
+Some applications and libraries are not compatible with smart spawning.
 If that's the case for your application, then you should use 'conservative' as
-spawning method.
+spawning method. Please read <<spawning_methods_explained,Spawning methods explained>>
+for possible compatibility issues.
 
 'smart-lv2'::
 This spawning method is similar to 'smart' but it skips the framework spawner
@@ -39,7 +40,7 @@ perform any code caching at all. Please read
 explanation of what conservative spawning exactly does.
 +
 *Pros:*
-Conservative spawning is guaranteed to be compatible with all Rails applications
+Conservative spawning is guaranteed to be compatible with all applications
 and libraries.
 +
 *Cons:*

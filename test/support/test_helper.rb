@@ -227,18 +227,6 @@ module TestHelper
 		end
 	end
 	
-	def retry_with_time_limit(seconds, interval = 0.2)
-		deadline = Time.now + seconds
-		while Time.now < deadline
-			if yield
-				return
-			else
-				sleep(interval)
-			end
-		end
-		raise "Time limit exceeded"
-	end
-	
 	def eventually(deadline_duration = 1, check_interval = 0.05)
 		deadline = Time.now + deadline_duration
 		while Time.now < deadline

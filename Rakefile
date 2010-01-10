@@ -737,7 +737,7 @@ subdir 'doc' do
 	task :doc => ASCII_DOCS.map{ |x| "#{x}.html" }
 
 	ASCII_DOCS.each do |name|
-		file "#{name}.html" => ["#{name}.txt"] do
+		file "#{name}.html" => ["#{name}.txt"] + Dir["users_guide_snippets/*"] do
 			if PlatformInfo.find_command(ASCIIDOC)
 		  		sh "#{ASCIIDOC} #{ASCIIDOC_FLAGS} '#{name}.txt'"
 			else

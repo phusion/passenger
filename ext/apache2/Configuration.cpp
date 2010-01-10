@@ -465,6 +465,21 @@ cmd_passenger_friendly_error_pages(cmd_parms *cmd, void *pcfg, int arg) {
 	return NULL;
 }
 
+static const char *
+cmd_passenger_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	if (strcmp(arg, "smart") == 0) {
+		config->spawnMethod = DirConfig::SM_SMART;
+	} else if (strcmp(arg, "smart-lv2") == 0) {
+		config->spawnMethod = DirConfig::SM_SMART_LV2;
+	} else if (strcmp(arg, "conservative") == 0) {
+		config->spawnMethod = DirConfig::SM_CONSERVATIVE;
+	} else {
+		return "PassengerSpawnMethod may only be 'smart', 'smart-lv2' or 'conservative'.";
+	}
+	return NULL;
+}
+
 
 /*************************************************
  * Rails-specific settings
@@ -503,21 +518,6 @@ static const char *
 cmd_rails_env(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->railsEnv = arg;
-	return NULL;
-}
-
-static const char *
-cmd_rails_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	if (strcmp(arg, "smart") == 0) {
-		config->spawnMethod = DirConfig::SM_SMART;
-	} else if (strcmp(arg, "smart-lv2") == 0) {
-		config->spawnMethod = DirConfig::SM_SMART_LV2;
-	} else if (strcmp(arg, "conservative") == 0) {
-		config->spawnMethod = DirConfig::SM_CONSERVATIVE;
-	} else {
-		return "RailsSpawnMethod may only be 'smart', 'smart-lv2' or 'conservative'.";
-	}
 	return NULL;
 }
 
@@ -726,6 +726,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Whether to display friendly error pages when something goes wrong"),
+	AP_INIT_TAKE1("PassengerSpawnMethod",
+		(Take1Func) cmd_passenger_spawn_method,
+		NULL,
+		RSRC_CONF,
+		"The spawn method to use."),
 	
 	/*****************************/
 
@@ -750,11 +755,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The environment under which a Rails app must run."),
-	AP_INIT_TAKE1("RailsSpawnMethod",
-		(Take1Func) cmd_rails_spawn_method,
-		NULL,
-		RSRC_CONF,
-		"The spawn method to use."),
 	AP_INIT_TAKE1("RailsFrameworkSpawnerIdleTime",
 		(Take1Func) cmd_rails_framework_spawner_idle_time,
 		NULL,
@@ -818,6 +818,11 @@ const command_rec passenger_commands[] = {
 		"Deprecated option."),
 	AP_INIT_TAKE1("RailsDefaultUser",
 		(Take1Func) cmd_passenger_default_user,
+		NULL,
+		RSRC_CONF,
+		"Deprecated option."),
+	AP_INIT_TAKE1("RailsSpawnMethod",
+		(Take1Func) cmd_passenger_spawn_method,
 		NULL,
 		RSRC_CONF,
 		"Deprecated option."),

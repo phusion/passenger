@@ -734,6 +734,32 @@ Example:
 </VirtualHost>
 -----------------------------
 
+[[PassengerSpawnMethod]]
+=== PassengerSpawnMethod <string> ===
+[TIP]
+."What spawn method should I use?"
+=========================================================
+This subsection attempts to describe spawn methods, but it's okay if you don't (want to)
+understand it, as it's mostly a technical detail. You can basically follow this rule of thumb:
+
+************************************************
+If your application works on Mongrel, but not on Phusion Passenger, then set
+`PassengerSpawnMethod` to 'conservative'. Otherwise, leave it at 'smart-lv2' (the default).
+************************************************
+
+However, we do recommend you to try to understand it. The 'smart' and 'smart-lv2' spawn
+methods bring many benefits.
+=========================================================
+
+include::users_guide_snippets/passenger_spawn_method.txt[]
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+
+In each place, it may be specified at most once. The default value is 'smart-lv2'.
+
 [[PassengerUseGlobalQueue]]
 === PassengerUseGlobalQueue <on|off> ===
 Turns the use of global queuing on or off.
@@ -1309,32 +1335,6 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'production'.
 
-[[RailsSpawnMethod]]
-==== RailsSpawnMethod <string> ====
-[TIP]
-."What spawn method should I use?"
-=========================================================
-This subsection attempts to describe spawn methods, but it's okay if you don't (want to)
-understand it, as it's mostly a technical detail. You can basically follow this rule of thumb:
-
-************************************************
-If your application works on Mongrel, but not on Phusion Passenger, then set
-`RailsSpawnMethod` to 'conservative'. Otherwise, leave it at 'smart-lv2' (the default).
-************************************************
-
-However, we do recommend you to try to understand it. The 'smart' and 'smart-lv2' spawn
-methods bring many benefits.
-=========================================================
-
-include::users_guide_snippets/rails_spawn_method.txt[]
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
-
-In each place, it may be specified at most once. The default value is 'smart-lv2'.
-
 ==== RailsFrameworkSpawnerIdleTime <integer> ====
 The FrameworkSpawner server (explained in <<spawning_methods_explained,Spawning
 methods explained>>) has an idle timeout, just like the backend processes spawned by
@@ -1348,7 +1348,7 @@ Setting a higher value will mean that the FrameworkSpawner server is kept around
 longer, which may slightly increase memory usage. But as long as the
 FrameworkSpawner server is running, the time to spawn a Ruby on Rails backend
 process only takes about 40% of the time that is normally needed, assuming that
-you're using the 'smart' <<RailsSpawnMethod,spawning method>>. So if your
+you're using the 'smart' <<PassengerSpawnMethod,spawning method>>. So if your
 system has enough memory, is it recommended that you set this option to a high
 value or to '0'.
 
@@ -1372,7 +1372,7 @@ Setting a higher value will mean that the ApplicationSpawner server is kept arou
 longer, which may slightly increase memory usage. But as long as the
 ApplicationSpawner server is running, the time to spawn a Ruby on Rails backend
 process only takes about 10% of the time that is normally needed, assuming that
-you're using the 'smart' or 'smart-lv2' <<RailsSpawnMethod,spawning method>>. So if your
+you're using the 'smart' or 'smart-lv2' <<PassengerSpawnMethod,spawning method>>. So if your
 system has enough memory, is it recommended that you set this option to a high
 value or to '0'.
 
@@ -1464,6 +1464,9 @@ Deprecated in favor of <<PassengerDefaultUser,PassengerDefaultUser>>.
 
 ==== RailsAllowModRewrite ====
 This option doesn't do anything anymore in recent versions of Phusion Passenger.
+
+==== RailsSpawnMethod ====
+Deprecated in favor of <<PassengerSpawnMethod,PassengerSpawnMethod>>.
 
 
 == Troubleshooting ==
@@ -1655,7 +1658,7 @@ inside the Apache error logs. It will tell you what exactly went wrong.
 
 ==== My Rails application works on Mongrel, but not on Phusion Passenger ====
 
-Please try setting <<RailsSpawnMethod,RailsSpawnMethod>> to 'conservative'.
+Please try setting <<PassengerSpawnMethod,PassengerSpawnMethod>> to 'conservative'.
 
 ==== Phusion Passenger has been compiled against the wrong Apache installation ====
 

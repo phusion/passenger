@@ -28,7 +28,7 @@ Release 3.0.0
    through race conditions, even on high volume websites.
  * [Nginx] passenger_ignore_client_abort
  * [Nginx] passenger_pass_header
- * Smart spawning for Rack apps
+ * Smart spawning for Rack apps. RailsSpawnMethod renamed to PassengerSpawnMethod.
 
 
 Release 2.2.9

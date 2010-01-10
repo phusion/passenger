@@ -81,8 +81,8 @@ struct PoolOptions {
 	string environment;
 	
 	/**
-	 * The spawn method to use. Either "smart" or "conservative". See the Ruby
-	 * class <tt>SpawnManager</tt> for details.
+	 * The spawn method to use. Either "smart", "smart-lv2" or "conservative". See
+	 * the Ruby class <tt>SpawnManager</tt> for details.
 	 */
 	string spawnMethod;
 	
@@ -191,7 +191,7 @@ struct PoolOptions {
 		lowerPrivilege          = true;
 		lowestUser              = "nobody";
 		environment             = "production";
-		spawnMethod             = "smart";
+		spawnMethod             = "smart-lv2";
 		appType                 = "rails";
 		frameworkSpawnerTimeout = -1;
 		appSpawnerTimeout       = -1;
@@ -213,7 +213,7 @@ struct PoolOptions {
 		bool lowerPrivilege          = true,
 		const string &lowestUser     = "nobody",
 		const string &environment    = "production",
-		const string &spawnMethod    = "smart",
+		const string &spawnMethod    = "smart-lv2",
 		const string &appType        = "rails",
 		long frameworkSpawnerTimeout = -1,
 		long appSpawnerTimeout       = -1,
