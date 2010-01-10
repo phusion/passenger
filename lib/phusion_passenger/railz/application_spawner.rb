@@ -299,20 +299,7 @@ private
 		$0 = "Rails: #{app_root}"
 		reader, writer = IO.pipe
 		begin
-			# Clear or re-establish connection if a connection was established
-			# in environment.rb. This prevents us from concurrently
-			# accessing the same MySQL connection handle.
-			if defined?(::ActiveRecord::Base)
-				if ::ActiveRecord::Base.respond_to?(:clear_all_connections!)
-					::ActiveRecord::Base.clear_all_connections!
-				elsif ::ActiveRecord::Base.respond_to?(:clear_active_connections!)
-					::ActiveRecord::Base.clear_active_connections!
-				elsif ::ActiveRecord::Base.respond_to?(:connected?) &&
-				      ::ActiveRecord::Base.connected?
-					::ActiveRecord::Base.establish_connection
-				end
-			end
-			
+			fix_framework_after_forking
 			reader.close_on_exec!
 			
 			if Rails::VERSION::STRING >= '2.3.0'

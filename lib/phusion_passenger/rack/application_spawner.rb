@@ -183,6 +183,7 @@ private
 		$0 = "Rack: #{app_root}"
 		reader, writer = IO.pipe
 		begin
+			fix_framework_after_forking
 			reader.close_on_exec!
 			
 			handler = RequestHandler.new(reader, app, options)

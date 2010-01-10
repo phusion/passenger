@@ -162,7 +162,8 @@ protected
 	end
 	
 	# Prepare an application process using rules for the given spawn options.
-	# This method may only be called in a forked off application process.
+	# This method is to be called in a forked off application process, before
+	# loading the application code.
 	#
 	# +startup_file+ is the application type's startup file, e.g.
 	# "config/environment.rb" for Rails apps and "config.ru" for Rack apps.
@@ -190,6 +191,26 @@ protected
 			env_vars = Hash[*env_vars_array]
 			env_vars.each_pair do |key, value|
 				ENV[key] = value
+			end
+		end
+	end
+	
+	# This method is to be called after an application process has been forked
+	# off from an ApplicationSpawner that had preloaded the application code.
+	# It fixes various things in supported framework, e.g. in case of Rails it'll
+	# clear the database connections and stuff.
+	def fix_framework_after_forking
+		# Clear or re-establish connection if a connection was established
+		# in environment.rb. This prevents us from concurrently
+		# accessing the same database connection handle.
+		if defined?(::ActiveRecord::Base)
+			if ::ActiveRecord::Base.respond_to?(:clear_all_connections!)
+				::ActiveRecord::Base.clear_all_connections!
+			elsif ::ActiveRecord::Base.respond_to?(:clear_active_connections!)
+				::ActiveRecord::Base.clear_active_connections!
+			elsif ::ActiveRecord::Base.respond_to?(:connected?) &&
+			      ::ActiveRecord::Base.connected?
+				::ActiveRecord::Base.establish_connection
 			end
 		end
 	end
