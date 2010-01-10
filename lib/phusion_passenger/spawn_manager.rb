@@ -222,25 +222,17 @@ class SpawnManager < AbstractServer
 	def reload(app_root = nil)
 		@spawners.synchronize do
 			if app_root
-				# Delete associated ApplicationSpawner.
+				# Stop and delete associated ApplicationSpawner.
 				@spawners.delete("app:#{app_root}")
-			else
-				# Delete all ApplicationSpawners.
-				keys_to_delete = []
-				@spawners.each_pair do |key, spawner|
-					if spawner.is_a?(Railz::ApplicationSpawner)
-						keys_to_delete << key
+				# Propagate reload command to associated FrameworkSpawner.
+				@spawners.each do |spawner|
+					if spawner.respond_to?(:reload)
+						spawner.reload(app_root)
 					end
 				end
-				keys_to_delete.each do |key|
-					@spawners.delete(key)
-				end
-			end
-			@spawners.each do |spawner|
-				# Reload all FrameworkSpawners.
-				if spawner.respond_to?(:reload)
-					spawner.reload(app_root)
-				end
+			else
+				# Stop and delete all spawners.
+				@spawners.clear
 			end
 		end
 	end
@@ -252,10 +244,13 @@ class SpawnManager < AbstractServer
 
 private
 	def spawn_rails_application(options)
-		app_root     = options["app_root"]
-		spawn_method = options["spawn_method"]
+		app_root       = options["app_root"]
+		spawn_method   = options["spawn_method"]
+		spawner        = nil
+		create_spawner = nil
+		key            = nil
 		
-		case options["spawn_method"]
+		case spawn_method
 		when nil, "", "smart", "smart-lv2"
 			spawner_must_be_started = true
 			if spawn_method != "smart-lv2"
@@ -263,9 +258,7 @@ private
 			end
 			if framework_version.nil? || framework_version == :vendor
 				key = "app:#{app_root}"
-				create_spawner = proc do
-					Railz::ApplicationSpawner.new(options)
-				end
+				create_spawner = proc { Railz::ApplicationSpawner.new(options) }
 				spawner_timeout = options["app_spawner_timeout"]
 			else
 				key = "version:#{framework_version}"
@@ -279,37 +272,32 @@ private
 				spawner_timeout = options["framework_spawner_timeout"]
 			end
 		else
-			key = "app:#{app_root}"
-			create_spawner = proc do
-				Railz::ApplicationSpawner.new(options)
-			end
+			spawner = Railz::ApplicationSpawner
 			spawner_timeout = options["app_spawner_timeout"]
 			spawner_must_be_started = false
 		end
 		
-		@spawners.synchronize do
-			spawner = @spawners.lookup_or_add(key) do
-				spawner = create_spawner.call
-				if spawner_timeout != -1
-					spawner.max_idle_time = spawner_timeout
+		if create_spawner
+			@spawners.synchronize do
+				spawner = @spawners.lookup_or_add(key) do
+					spawner = create_spawner.call
+					if spawner_timeout != -1
+						spawner.max_idle_time = spawner_timeout
+					end
+					if spawner_must_be_started
+						spawner.start
+					end
+					spawner
 				end
-				if spawner_must_be_started
-					spawner.start
-				end
-				spawner
-			end
-			begin
-				if spawner.is_a?(Railz::FrameworkSpawner)
+				begin
 					return spawner.spawn_application(options)
-				elsif spawner.started?
-					return spawner.spawn_application(options)
-				else
-					return spawner.spawn_application!(options)
+				rescue AbstractServer::ServerError
+					@spawners.delete(key)
+					raise
 				end
-			rescue AbstractServer::ServerError
-				@spawners.delete(key)
-				raise
 			end
+		else
+			return spawner.spawn_application(options)
 		end
 	end
 	
@@ -320,8 +308,6 @@ private
 		app_type    = options["app_type"]
 		begin
 			app_process = spawn_application(options)
-		rescue InvalidPath => e
-			send_error_page(client, 'invalid_app_root', :error => e, :app_root => app_root)
 		rescue AbstractServer::ServerError => e
 			send_error_page(client, 'general_error', :error => e)
 		rescue VersionNotFound => e

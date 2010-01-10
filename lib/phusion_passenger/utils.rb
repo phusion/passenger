@@ -42,6 +42,11 @@ module PhusionPassenger
 # Utility functions.
 module Utils
 protected
+	def private_class_method(name)
+		metaclass = class << self; self; end
+		metaclass.send(:private, name)
+	end
+	
 	# Return the canonicalized version of +path+. This path is guaranteed to
 	# to be "normal", i.e. it doesn't contain stuff like ".." or "/",
 	# and it fully resolves symbolic links.
@@ -54,13 +59,6 @@ protected
 		return Pathname.new(path).realpath.to_s
 	rescue Errno::ENOENT => e
 		raise InvalidAPath, e.message
-	end
-	
-	# Assert that +app_root+ is a valid Ruby on Rails application root.
-	# Raises InvalidPath if that is not the case.
-	def assert_valid_app_root(app_root)
-		assert_valid_directory(app_root)
-		assert_valid_file("#{app_root}/config/environment.rb")
 	end
 	
 	# Assert that +path+ is a directory. Raises +InvalidPath+ if it isn't.
@@ -160,6 +158,39 @@ protected
 		if !exception.is_a?(SystemExit)
 			destination.puts(exception.backtrace_string(current_location))
 			destination.flush if destination.respond_to?(:flush)
+		end
+	end
+	
+	# Prepare an application process using rules for the given spawn options.
+	# This method may only be called in a forked off application process.
+	#
+	# +startup_file+ is the application type's startup file, e.g.
+	# "config/environment.rb" for Rails apps and "config.ru" for Rack apps.
+	# See SpawnManager#spawn_application for options.
+	def prepare_app_process(startup_file, options)
+		Dir.chdir(options["app_root"])
+		
+		if options["lower_privilege"]
+			lower_privilege(startup_file, options["lowest_user"])
+		end
+		
+		ENV["RAILS_ENV"] = ENV["RACK_ENV"] = options["environment"]
+		
+		base_uri = options["base_uri"]
+		if base_uri && !base_uri.empty? && base_uri != "/"
+			ENV["RAILS_RELATIVE_URL_ROOT"] = base_uri
+			ENV["RACK_BASE_URI"] = base_uri
+		end
+		
+		encoded_environment_variables = options["environment_variables"]
+		if encoded_environment_variables
+			env_vars_string = encoded_environment_variables.unpack("m").first
+			env_vars_array  = env_vars_string.split("\0", -1)
+			env_vars_array.pop
+			env_vars = Hash[*env_vars_array]
+			env_vars.each_pair do |key, value|
+				ENV[key] = value
+			end
 		end
 	end
 	

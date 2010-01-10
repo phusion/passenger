@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2008, 2009 Phusion
+#  Copyright (c) 2008, 2009, 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -37,57 +37,90 @@ require 'phusion_passenger/utils'
 module PhusionPassenger
 module Railz
 
-# This class is capable of spawning instances of a single Ruby on Rails application.
-# It does so by preloading as much of the application's code as possible, then creating
-# instances of the application using what is already preloaded. This makes it spawning
-# application instances very fast, except for the first spawn.
+# Spawning of Rails applications.
 #
-# Use multiple instances of ApplicationSpawner if you need to spawn multiple different
-# Ruby on Rails applications.
-#
-# *Note*: ApplicationSpawner may only be started asynchronously with AbstractServer#start.
-# Starting it synchronously with AbstractServer#start_synchronously has not been tested.
+# Railz::ApplicationSpawner can operate in two modes:
+# - Smart mode. In this mode, the Rails application's code is first preloaded into
+#   a temporary process, which can then further fork off application processes.
+#   Once the code has been preloaded, forking off application processes is very fast,
+#   and all the forked off application processes can share code memory with each other.
+#   To use this mode, create an ApplicationSpawner object, start it, and call
+#   #spawn_application on it.
+#   A single ApplicationSpawner object can only handle a single Rails application.
+# - Conservative mode. In this mode, a Rails app process is directly spawned
+#   without any preloading. This increases compatibility with applications. To use this
+#   mode, call ApplicationSpawner.spawn_application.
 class ApplicationSpawner < AbstractServer
 	include Utils
+	extend Utils
 	
 	# This exception means that the ApplicationSpawner server process exited unexpectedly.
 	class Error < AbstractServer::ServerError
 	end
 	
-	# The user ID of the root user.
-	ROOT_UID = 0
-	# The group ID of the root user.
-	ROOT_GID = 0
-	
 	# The application root of this spawner.
 	attr_reader :app_root
+	
+	# Spawns an instance of a Rails application. When successful, an AppProcess object
+	# will be returned, which represents the spawned Rails application.
+	#
+	# This method spawns the application directly, without preloading its code.
+	# This method may only be called if no Rails framework has been loaded in the current
+	# Ruby VM.
+	#
+	# The "app_root" option must be given. All other options are passed to the request
+	# handler's constructor.
+	#
+	# Raises:
+	# - AppInitError: The Ruby on Rails application raised an exception
+	#   or called exit() during startup.
+	# - SystemCallError, IOError, SocketError: Something went wrong.
+	def self.spawn_application(options)
+		options = sanitize_spawn_options(options)
+		
+		a, b = UNIXSocket.pair
+		pid = safe_fork('application', true) do
+			a.close
+			
+			file_descriptors_to_leave_open = [0, 1, 2, b.fileno]
+			NativeSupport.close_all_file_descriptors(file_descriptors_to_leave_open)
+			close_all_io_objects_for_fds(file_descriptors_to_leave_open)
+			
+			channel = MessageChannel.new(b)
+			success = report_app_init_status(channel) do
+				prepare_app_process('config/environment.rb', options)
+				require File.expand_path('config/environment')
+				require 'dispatcher'
+			end
+			if success
+				start_request_handler(channel, false, options)
+			end
+		end
+		b.close
+		Process.waitpid(pid) rescue nil
+		
+		channel = MessageChannel.new(a)
+		unmarshal_and_raise_errors(channel, options["print_exceptions"])
+		
+		# No exception was raised, so spawning succeeded.
+		return AppProcess.read_from_channel(channel)
+	end
 	
 	# The following options are accepted:
 	# - 'app_root'
 	#
 	# See SpawnManager#spawn_application for information about the options.
-	#
-	# Raises:
-	# - InvalidPath: If given an invalid app root, or an app root that doesn't appear to
-	#   be a Rails application root directory.
-	def initialize(options = {})
+	def initialize(options)
 		super()
 		@options          = sanitize_spawn_options(options)
 		@app_root         = @options["app_root"]
 		@canonicalized_app_root = canonicalize_path(app_root)
-		@lower_privilege  = @options["lower_privilege"]
-		@lowest_user      = @options["lowest_user"]
-		@environment      = @options["environment"]
-		@encoded_environment_variables = @options["environment_variables"]
-		@base_uri = @options["base_uri"] if @options["base_uri"] && @options["base_uri"] != "/"
-		@print_exceptions = @options["print_exceptions"]
 		self.max_idle_time = DEFAULT_APP_SPAWNER_MAX_IDLE_TIME
-		assert_valid_app_root(@app_root)
 		define_message_handler(:spawn_application, :handle_spawn_application)
 	end
 	
-	# Spawn an instance of the RoR application. When successful, an Application object
-	# will be returned, which represents the spawned RoR application.
+	# Spawns an instance of the Rails application. When successful, an AppProcess object
+	# will be returned, which represents the spawned Rails application.
 	#
 	# +options+ will be passed to the request handler's constructor.
 	#
@@ -101,67 +134,6 @@ class ApplicationSpawner < AbstractServer
 		raise Error, "The application spawner server exited unexpectedly: #{e}"
 	end
 	
-	# Spawn an instance of the RoR application. When successful, an Application object
-	# will be returned, which represents the spawned RoR application.
-	#
-	# Unlike spawn_application, this method may be called even when the ApplicationSpawner
-	# server isn't started. This allows one to spawn a RoR application without preloading
-	# any source files.
-	#
-	# This method may only be called if no Rails framework has been loaded in the current
-	# Ruby VM.
-	#
-	# +options+ will be passed to the request handler's constructor.
-	#
-	# Raises:
-	# - AppInitError: The Ruby on Rails application raised an exception
-	#   or called exit() during startup.
-	# - SystemCallError, IOError, SocketError: Something went wrong.
-	def spawn_application!(options = {})
-		a, b = UNIXSocket.pair
-		pid = safe_fork('application', true) do
-			begin
-				a.close
-				
-				file_descriptors_to_leave_open = [0, 1, 2, b.fileno]
-				NativeSupport.close_all_file_descriptors(file_descriptors_to_leave_open)
-				close_all_io_objects_for_fds(file_descriptors_to_leave_open)
-				
-				channel = MessageChannel.new(b)
-				success = report_app_init_status(channel) do
-					ENV['RAILS_ENV'] = ENV['RACK_ENV'] = @environment
-					ENV['RAILS_RELATIVE_URL_ROOT'] = @base_uri
-					Dir.chdir(@app_root)
-					if @encoded_environment_variables
-						set_passed_environment_variables
-					end
-					if @lower_privilege
-						lower_privilege('config/environment.rb', @lowest_user)
-					end
-					
-					require File.expand_path('config/environment')
-					require 'dispatcher'
-				end
-				if success
-					start_request_handler(channel, false, options)
-				end
-			rescue SignalException => e
-				if e.message != AbstractRequestHandler::HARD_TERMINATION_SIGNAL &&
-				   e.message != AbstractRequestHandler::SOFT_TERMINATION_SIGNAL
-					raise
-				end
-			end
-		end
-		b.close
-		Process.waitpid(pid) rescue nil
-		
-		channel = MessageChannel.new(a)
-		unmarshal_and_raise_errors(channel, @print_exceptions)
-		
-		# No exception was raised, so spawning succeeded.
-		return AppProcess.read_from_channel(channel)
-	end
-	
 	# Overrided from AbstractServer#start.
 	#
 	# May raise these additional exceptions:
@@ -171,7 +143,7 @@ class ApplicationSpawner < AbstractServer
 	def start
 		super
 		begin
-			unmarshal_and_raise_errors(server, @print_exceptions)
+			unmarshal_and_raise_errors(server, @options["print_exceptions"])
 		rescue IOError, SystemCallError, SocketError => e
 			stop
 			raise Error, "The application spawner server exited unexpectedly: #{e}"
@@ -195,35 +167,16 @@ protected
 	def initialize_server # :nodoc:
 		report_app_init_status(client) do
 			$0 = "Passenger ApplicationSpawner: #{@app_root}"
-			ENV['RAILS_ENV'] = ENV['RACK_ENV'] = @environment
-			ENV['RAILS_RELATIVE_URL_ROOT'] = @base_uri
+			prepare_app_process('config/environment.rb', @options)
 			if defined?(RAILS_ENV)
 				Object.send(:remove_const, :RAILS_ENV)
 				Object.const_set(:RAILS_ENV, ENV['RAILS_ENV'])
-			end
-			Dir.chdir(@app_root)
-			if @encoded_environment_variables
-				set_passed_environment_variables
-			end
-			if @lower_privilege
-				lower_privilege('config/environment.rb', @lowest_user)
 			end
 			preload_application
 		end
 	end
 	
 private
-	def set_passed_environment_variables
-		env_vars_string = @encoded_environment_variables.unpack("m").first
-		# Prevent empty string as last item from b0rking the Hash[...] statement.
-		# See comment in Hooks.cpp (sendHeaders) for details.
-		env_vars_string << "_\0_"
-		env_vars = Hash[*env_vars_string.split("\0")]
-		env_vars.each_pair do |key, value|
-			ENV[key] = value
-		end
-	end
-	
 	def preload_application
 		Object.const_set(:RAILS_ROOT, @canonicalized_app_root)
 		if defined?(::Rails::Initializer)
@@ -315,7 +268,8 @@ private
 			begin
 				a.close
 				client.close
-				start_request_handler(MessageChannel.new(b), true, options)
+				options = @options.merge(options)
+				self.class.send(:start_request_handler, MessageChannel.new(b), true, options)
 			rescue SignalException => e
 				if e.message != AbstractRequestHandler::HARD_TERMINATION_SIGNAL &&
 				   e.message != AbstractRequestHandler::SOFT_TERMINATION_SIGNAL
@@ -335,12 +289,13 @@ private
 	end
 	
 	# Initialize the request handler and enter its main loop.
-	# Spawn information will be sent back via _channel_.
-	# The _forked_ argument indicates whether a new process was forked off
+	# Spawn information will be sent back via +channel+.
+	# The +forked+ argument indicates whether a new process was forked off
 	# after loading environment.rb (i.e. whether smart spawning is being
 	# used).
-	def start_request_handler(channel, forked, options = {})
-		$0 = "Rails: #{@app_root}"
+	def self.start_request_handler(channel, forked, options = {})
+		app_root = options["app_root"]
+		$0 = "Rails: #{app_root}"
 		reader, writer = IO.pipe
 		begin
 			# Clear or re-establish connection if a connection was established
@@ -359,7 +314,6 @@ private
 			
 			reader.close_on_exec!
 			
-			options = @options.merge(options)
 			if Rails::VERSION::STRING >= '2.3.0'
 				rack_app = ::ActionController::Dispatcher.new
 				handler = Rack::RequestHandler.new(reader, rack_app, options)
@@ -367,7 +321,7 @@ private
 				handler = RequestHandler.new(reader, options)
 			end
 			
-			app_process = AppProcess.new(@app_root, Process.pid, writer,
+			app_process = AppProcess.new(app_root, Process.pid, writer,
 				handler.server_sockets)
 			app_process.write_to_channel(channel)
 			writer.close
@@ -382,6 +336,7 @@ private
 			PhusionPassenger.call_event(:stopping_worker_process)
 		end
 	end
+	private_class_method :start_request_handler
 end
 
 end # module Railz

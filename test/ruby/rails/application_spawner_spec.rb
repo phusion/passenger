@@ -24,8 +24,7 @@ describe Railz::ApplicationSpawner do
 				"lowest_user" => CONFIG['lowest_user']
 			}
 			options = default_options.merge(extra_options)
-			@spawner ||= Railz::ApplicationSpawner.new(options)
-			app = @spawner.spawn_application!(options)
+			app = Railz::ApplicationSpawner.spawn_application(options)
 			return register_app(app)
 		end
 		
@@ -47,7 +46,7 @@ describe Railz::ApplicationSpawner do
 				spawn_some_application
 				
 				history_file = "#{PhusionPassenger::Utils.passenger_tmpdir}/history.txt"
-				eventually(2, 0.5) do
+				eventually do
 					contents = File.read(history_file)
 					lines = contents.split("\n")
 					lines.count("forked = false") == 2
@@ -108,7 +107,7 @@ describe Railz::ApplicationSpawner do
 				spawn_some_application
 				
 				history_file = "#{PhusionPassenger::Utils.passenger_tmpdir}/history.txt"
-				eventually(2, 0.5) do
+				eventually do
 					contents = File.read(history_file)
 					contents ==
 						"end of environment.rb\n" +

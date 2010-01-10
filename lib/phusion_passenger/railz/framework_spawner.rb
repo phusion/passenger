@@ -128,13 +128,11 @@ class FrameworkSpawner < AbstractServer
 	#
 	# Raises:
 	# - AbstractServer::ServerNotStarted: The FrameworkSpawner server hasn't already been started.
-	# - InvalidPath: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
 	# - AppInitError: The application raised an exception or called exit() during startup.
 	# - ApplicationSpawner::Error: The ApplicationSpawner server exited unexpectedly.
 	# - FrameworkSpawner::Error: The FrameworkSpawner server exited unexpectedly.
 	def spawn_application(options = {})
 		app_root = options["app_root"]
-		assert_valid_app_root(app_root)
 		options = sanitize_spawn_options(options)
 		options["app_root"] = app_root
 		# No need for the ApplicationSpawner to print exceptions. All

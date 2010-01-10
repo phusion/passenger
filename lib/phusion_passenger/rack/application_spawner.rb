@@ -32,14 +32,10 @@ require 'phusion_passenger/rack/request_handler'
 module PhusionPassenger
 module Rack
 
-# Class for spawning Rack applications.
+# Spawning of Rack applications.
 class ApplicationSpawner
 	include Utils
-	
-	def self.spawn_application(*args)
-		@@instance ||= ApplicationSpawner.new
-		@@instance.spawn_application(*args)
-	end
+	extend Utils
 	
 	# Spawn an instance of the given Rack application. When successful, an
 	# Application object will be returned, which represents the spawned
@@ -51,7 +47,7 @@ class ApplicationSpawner
 	# - AppInitError: The Rack application raised an exception or called
 	#   exit() during startup.
 	# - SystemCallError, IOError, SocketError: Something went wrong.
-	def spawn_application(options = {})
+	def self.spawn_application(options = {})
 		options = sanitize_spawn_options(options)
 		
 		a, b = UNIXSocket.pair
@@ -68,30 +64,19 @@ class ApplicationSpawner
 		Process.waitpid(pid) rescue nil
 		
 		channel = MessageChannel.new(a)
-		unmarshal_and_raise_errors(channel, !!options["print_exceptions"], "rack")
+		unmarshal_and_raise_errors(channel, options["print_exceptions"], "rack")
 		
 		# No exception was raised, so spawning succeeded.
 		return AppProcess.read_from_channel(channel)
 	end
 
 private
-	def run(channel, options)
+	def self.run(channel, options)
 		app_root = options["app_root"]
 		$0 = "Rack: #{app_root}"
 		app = nil
 		success = report_app_init_status(channel) do
-			ENV['RAILS_ENV'] = ENV['RACK_ENV'] = options["environment"]
-			if options["base_uri"] && options["base_uri"] != "/"
-				ENV['RACK_BASE_URI'] = options["base_uri"]
-				ENV['RAILS_RELATIVE_URL_ROOT'] = options["base_uri"]
-			end
-			Dir.chdir(app_root)
-			if options["environment_variables"]
-				set_passed_environment_variables(options["environment_variables"])
-			end
-			if options["lower_privilege"]
-				lower_privilege('config.ru', options["lowest_user"])
-			end
+			prepare_app_process('config.ru', options)
 			app = load_rack_app
 		end
 		
@@ -115,19 +100,9 @@ private
 			end
 		end
 	end
+	private_class_method :run
 	
-	def set_passed_environment_variables(encoded_environment_variables)
-		env_vars_string = encoded_environment_variables.unpack("m").first
-		# Prevent empty string as last item from b0rking the Hash[...] statement.
-		# See comment in Hooks.cpp (sendHeaders) for details.
-		env_vars_string << "_\0_"
-		env_vars = Hash[*env_vars_string.split("\0")]
-		env_vars.each_pair do |key, value|
-			ENV[key] = value
-		end
-	end
-
-	def load_rack_app
+	def self.load_rack_app
 		# Load Rack inside the spawned child process so that the spawn manager
 		# itself doesn't preload Rack. This is necessary because some broken
 		# Rails apps explicitly specify a Rack version as dependency.
@@ -135,6 +110,7 @@ private
 		rackup_code = ::File.read("config.ru")
 		eval("Rack::Builder.new {( #{rackup_code}\n )}.to_app", TOPLEVEL_BINDING, "config.ru")
 	end
+	private_class_method :load_rack_app
 end
 
 end # module Rack
