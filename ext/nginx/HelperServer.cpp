@@ -762,7 +762,7 @@ public:
 		UPDATE_TRACE_POINT();
 		pool.reset(new ApplicationPool::Pool(
 			findSpawnServer(passengerRoot.c_str()), generation,
-			accountsDatabase->get("_backend"), "", rubyCommand
+			accountsDatabase->get("_backend"), rubyCommand
 		));
 		pool->setMax(maxPoolSize);
 		pool->setMaxPerApp(maxInstancesPerApp);

@@ -91,14 +91,15 @@ class FrameworkSpawner < AbstractServer
 	def start
 		super
 		begin
-			result = server.read
+			channel = MessageChannel.new(@owner_socket)
+			result = channel.read
 			if result.nil?
 				raise Error, "The framework spawner server exited unexpectedly."
 			else
 				status = result[0]
 			end
 			if status == 'exception'
-				child_exception = unmarshal_exception(server.read_scalar)
+				child_exception = unmarshal_exception(channel.read_scalar)
 				stop
 				message = "Could not load Ruby on Rails framework version #{@version}: " <<
 					"#{child_exception.class} (#{child_exception.message})"
@@ -108,9 +109,12 @@ class FrameworkSpawner < AbstractServer
 				end
 				raise FrameworkInitError.new(message, child_exception, options)
 			end
-		rescue IOError, SystemCallError, SocketError
-			stop
-			raise Error, "The framework spawner server exited unexpectedly"
+		rescue IOError, SystemCallError, SocketError => e
+			stop if started?
+			raise Error, "The framework spawner server exited unexpectedly: #{e}"
+		rescue
+			stop if started?
+			raise
 		end
 	end
 	
@@ -143,24 +147,26 @@ class FrameworkSpawner < AbstractServer
 		options["print_exceptions"] = false
 		
 		begin
-			server.write("spawn_application", *options.to_a.flatten)
-			result = server.read
-			if result.nil?
-				raise IOError, "Connection closed"
-			end
-			if result[0] == 'exception'
-				e = unmarshal_exception(server.read_scalar)
-				if print_exceptions && e.respond_to?(:child_exception) && e.child_exception
-					print_exception(self.class.to_s, e.child_exception)
-				elsif print_exceptions
-					print_exception(self.class.to_s, e)
+			connect do |channel|
+				channel.write("spawn_application", *options.to_a.flatten)
+				result = channel.read
+				if result.nil?
+					raise IOError, "Connection closed"
 				end
-				raise e
-			else
-				return AppProcess.read_from_channel(server)
+				if result[0] == 'exception'
+					e = unmarshal_exception(channel.read_scalar)
+					if print_exceptions && e.respond_to?(:child_exception) && e.child_exception
+						print_exception(self.class.to_s, e.child_exception)
+					elsif print_exceptions
+						print_exception(self.class.to_s, e)
+					end
+					raise e
+				else
+					return AppProcess.read_from_channel(channel)
+				end
 			end
 		rescue SystemCallError, IOError, SocketError => e
-			raise Error, "The framework spawner server exited unexpectedly"
+			raise Error, "The framework spawner server exited unexpectedly: #{e}"
 		end
 	end
 	
@@ -181,13 +187,15 @@ class FrameworkSpawner < AbstractServer
 	#   application root.
 	# - FrameworkSpawner::Error: The FrameworkSpawner server exited unexpectedly.
 	def reload(app_root = nil)
-		if app_root.nil?
-			server.write("reload")
-		else
-			server.write("reload", app_root)
+		connect do |channel|
+			if app_root.nil?
+				channel.write("reload")
+			else
+				channel.write("reload", app_root)
+			end
 		end
 	rescue SystemCallError, IOError, SocketError
-		raise Error, "The framework spawner server exited unexpectedly"
+		raise Error, "The framework spawner server exited unexpectedly: #{e}"
 	end
 
 protected
@@ -204,14 +212,15 @@ protected
 	def initialize_server # :nodoc:
 		$0 = "Passenger FrameworkSpawner: #{@version}"
 		@spawners = AbstractServerCollection.new
+		channel = MessageChannel.new(@owner_socket)
 		begin
 			preload_rails
 		rescue StandardError, ScriptError, NoMemoryError => e
-			client.write('exception')
-			client.write_scalar(marshal_exception(e))
+			channel.write('exception')
+			channel.write_scalar(marshal_exception(e))
 			return
 		end
-		client.write('success')
+		channel.write('success')
 	end
 	
 	# Overrided method.
@@ -246,7 +255,7 @@ private
 		Object.send(:remove_const, :RAILS_ROOT)
 	end
 
-	def handle_spawn_application(*options)
+	def handle_spawn_application(client, *options)
 		app_process = nil
 		options = sanitize_spawn_options(Hash[*options])
 		app_root = options["app_root"]
@@ -288,7 +297,7 @@ private
 		app_process.close if app_process
 	end
 	
-	def handle_reload(app_root = nil)
+	def handle_reload(client, app_root = nil)
 		@spawners.synchronize do
 			if app_root
 				@spawners.delete(app_root)

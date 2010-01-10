@@ -344,6 +344,10 @@ class MessageChannel
 	def close
 		@io.close
 	end
+	
+	def closed?
+		return @io.closed?
+	end
 
 private
 	def check_argument(arg)

@@ -59,7 +59,7 @@ class SpawnManager < AbstractServer
 	include Utils
 	
 	def initialize
-		super()
+		super("", "")
 		@spawners = AbstractServerCollection.new
 		define_message_handler(:spawn_application, :handle_spawn_application)
 		define_message_handler(:reload, :handle_reload)
@@ -325,7 +325,7 @@ private
 		end
 	end
 	
-	def handle_spawn_application(*options)
+	def handle_spawn_application(client, *options)
 		options     = sanitize_spawn_options(Hash[*options])
 		app_process = nil
 		app_root    = options["app_root"]
@@ -372,7 +372,7 @@ private
 		end
 	end
 	
-	def handle_reload(app_root)
+	def handle_reload(client, app_root)
 		reload(app_root)
 	end
 	

@@ -24,7 +24,10 @@
 
 root = File.expand_path("#{File.dirname(__FILE__)}/..")
 $LOAD_PATH.unshift("#{root}/lib", "#{root}/ext")
-DEFAULT_INPUT_FD = 3
+require 'socket'
+
+SERVER_SOCKET_FD = 3
+OWNER_SOCKET_FD  = 4
 
 begin
 	STDOUT.sync = true
@@ -34,17 +37,29 @@ begin
 		GC.copy_on_write_friendly = true
 	end
 	
-	input = IO.new(DEFAULT_INPUT_FD)
+	server_socket = UNIXServer.for_fd(SERVER_SOCKET_FD)
+	owner_socket  = UNIXSocket.for_fd(OWNER_SOCKET_FD)
+	begin
+		socket_filename = owner_socket.readline.strip
+		socket_password = owner_socket.readline.strip
+	rescue EOFError
+		exit
+	end
+	
 	# Optimization for decreasing startup time. Since Apache starts the spawn
 	# server twice during startup, we don't want to load the Passenger classes
 	# if we don't need them.
-	# So we check whether Apache immediately closes the connection. If so,
+	# We check whether Apache immediately closes the connection. If so,
 	# we exit without loading the rest of Passenger. If Apache doesn't close
 	# the connection within 4 seconds then we continue with loading Passenger,
 	# so that loading doesn't happen during the first spawn.
 	begin
-		if select([input], nil, nil, 4) && input.eof?
-			exit
+		ios = select([server_socket, owner_socket], nil, nil, 4)
+		if ios
+			readable = ios[0]
+			if !readable.include?(server_socket) && readable.include?(owner_socket)
+				exit
+			end
 		end
 	rescue Interrupt
 		exit
@@ -58,7 +73,7 @@ begin
 	
 	require 'phusion_passenger/spawn_manager'
 	spawn_manager = PhusionPassenger::SpawnManager.new
-	spawn_manager.start_synchronously(input)
+	spawn_manager.start_synchronously(socket_filename, socket_password, server_socket, owner_socket)
 	spawn_manager.cleanup
 rescue => e
 	require 'phusion_passenger/utils'

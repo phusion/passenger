@@ -16,12 +16,12 @@ namespace tut {
 		PoolOptions rackOptions;
 		
 		SpawnManagerTest() {
+			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			rackOptions.appRoot = "stub/rack";
 			rackOptions.appType = "rack";
 		}
 		
 		void initialize() {
-			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			manager = ptr(new SpawnManager("../bin/passenger-spawn-server", generation));
 		}
 		

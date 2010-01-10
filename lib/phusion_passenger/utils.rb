@@ -89,6 +89,24 @@ protected
 		groupname && Etc.getgrnam(groupname)
 	end
 	
+	# Generate a long, cryptographically secure random ID string, which
+	# is also a valid filename.
+	def generate_random_id(method)
+		case method
+		when :base64
+			data = [File.read("/dev/urandom", 64)].pack('m')
+			data.gsub!("\n", '')
+			data.gsub!("+", '')
+			data.gsub!("/", '')
+			data.gsub!(/==$/, '')
+			return data
+		when :hex
+			return File.read("/dev/urandom", 64).unpack('H*')[0]
+		else
+			raise ArgumentError, "Invalid method #{method.inspect}"
+		end
+	end
+	
 	def close_all_io_objects_for_fds(file_descriptors_to_leave_open)
 		ObjectSpace.each_object(IO) do |io|
 			begin
@@ -562,7 +580,7 @@ class Exception
 			location = "in #{current_location} "
 		end
 		return "*** Exception #{self.class} #{location}" <<
-			"(#{self}) (process #{$$}):\n" <<
+			"(#{self}) (process #{$$}, thread #{Thread.current}):\n" <<
 			"\tfrom " << backtrace.join("\n\tfrom ")
 	end
 end

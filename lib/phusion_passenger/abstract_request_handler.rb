@@ -585,22 +585,6 @@ private
 		output.write("pong")
 	end
 	
-	# Generate a long, cryptographically secure random ID string, which
-	# is also a valid filename.
-	def generate_random_id(method)
-		case method
-		when :base64
-			data = [File.read("/dev/urandom", 64)].pack('m')
-			data.gsub!("\n", '')
-			data.gsub!("+", '')
-			data.gsub!("/", '')
-			data.gsub!(/==$/, '')
-		when :hex
-			data = File.read("/dev/urandom", 64).unpack('H*')[0]
-		end
-		return data
-	end
-	
 	def self.determine_passenger_header
 		header = "Phusion Passenger (mod_rails/mod_rack) #{VERSION_STRING}"
 		if File.exist?("#{File.dirname(__FILE__)}/../../enterprisey.txt") ||

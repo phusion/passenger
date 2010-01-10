@@ -105,8 +105,10 @@ class ApplicationSpawner < AbstractServer
 	# - AbstractServer::ServerNotStarted: The ApplicationSpawner server hasn't already been started.
 	# - ApplicationSpawner::Error: The ApplicationSpawner server exited unexpectedly.
 	def spawn_application(options = {})
-		server.write("spawn_application", *options.to_a.flatten)
-		return AppProcess.read_from_channel(server)
+		connect do |channel|
+			channel.write("spawn_application", *options.to_a.flatten)
+			return AppProcess.read_from_channel(channel)
+		end
 	rescue SystemCallError, IOError, SocketError => e
 		raise Error, "The application spawner server exited unexpectedly: #{e}"
 	end
@@ -120,12 +122,13 @@ class ApplicationSpawner < AbstractServer
 	def start
 		super
 		begin
-			unmarshal_and_raise_errors(server, @options["print_exceptions"])
+			channel = MessageChannel.new(@owner_socket)
+			unmarshal_and_raise_errors(channel, @options["print_exceptions"])
 		rescue IOError, SystemCallError, SocketError => e
-			stop
+			stop if started?
 			raise Error, "The application spawner server exited unexpectedly: #{e}"
 		rescue
-			stop
+			stop if started?
 			raise
 		end
 	end
@@ -142,7 +145,7 @@ protected
 
 	# Overrided method.
 	def initialize_server # :nodoc:
-		report_app_init_status(client) do
+		report_app_init_status(MessageChannel.new(@owner_socket)) do
 			$0 = "Passenger ApplicationSpawner: #{@app_root}"
 			prepare_app_process('config.ru', @options)
 			@app = self.class.send(:load_rack_app)
@@ -150,7 +153,7 @@ protected
 	end
 
 private
-	def handle_spawn_application(*options)
+	def handle_spawn_application(client, *options)
 		options = sanitize_spawn_options(Hash[*options])
 		a, b = UNIXSocket.pair
 		safe_fork('application', true) do

@@ -46,6 +46,7 @@
 
 #include "AbstractSpawnManager.h"
 #include "ServerInstanceDir.h"
+#include "FileDescriptor.h"
 #include "MessageChannel.h"
 #include "Account.h"
 #include "Base64.h"
@@ -88,37 +89,42 @@ using namespace oxt;
  */
 class SpawnManager: public AbstractSpawnManager {
 private:
-	static const int SPAWN_SERVER_INPUT_FD = 3;
+	static const int SERVER_SOCKET_FD = 3;
+	static const int OWNER_SOCKET_FD  = 4;
+	static const int HIGHEST_FD       = OWNER_SOCKET_FD;
 
 	string spawnServerCommand;
 	ServerInstanceDir::GenerationPtr generation;
 	AccountPtr poolAccount;
-	string logFile;
 	string rubyCommand;
 	
 	boost::mutex lock;
 	RandomGenerator random;
 	
-	MessageChannel channel;
 	pid_t pid;
+	FileDescriptor ownerSocket;
+	string socketFilename;
+	string socketPassword;
 	bool serverNeedsRestart;
-
+	
 	/**
 	 * Restarts the spawn server.
 	 *
 	 * @pre System call interruption is disabled.
+	 * @throws RuntimeException An error occurred while creating a Unix server socket.
 	 * @throws SystemException An error occured while trying to setup the spawn server.
-	 * @throws IOException The specified log file could not be opened.
+	 * @throws IOException An error occurred while generating random data.
 	 */
 	void restartServer() {
 		TRACE_POINT();
 		if (pid != 0) {
 			UPDATE_TRACE_POINT();
-			channel.close();
+			ownerSocket.close();
 			
-			// Wait at most 5 seconds for the spawn server to exit.
-			// If that doesn't work, kill it, then wait at most 5 seconds
-			// for it to exit.
+			/* Wait at most 5 seconds for the spawn server to exit.
+			 * If that doesn't work, kill it, then wait at most 5 seconds
+			 * for it to exit.
+			 */
 			time_t begin = syscalls::time(NULL);
 			bool done = false;
 			while (!done && syscalls::time(NULL) - begin < 5) {
@@ -146,35 +152,43 @@ private:
 			pid = 0;
 		}
 		
-		int fds[2];
-		FILE *logFileHandle = NULL;
+		FileDescriptor serverSocket;
+		string socketFilename;
+		string socketPassword;
+		int ret, fds[2];
 		
-		serverNeedsRestart = true;
-		if (syscalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
-			throw SystemException("Cannot create a Unix socket", errno);
+		UPDATE_TRACE_POINT();
+		socketFilename = generation->getPath() + "/server." +
+			toString(getpid()) + "." +
+			toString((unsigned long long) this);
+		socketPassword = Base64::encode(random.generateByteString(32));
+		serverSocket = createUnixServer(socketFilename.c_str());
+		do {
+			ret = chmod(socketFilename.c_str(), S_IRUSR | S_IWUSR | S_IXUSR);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
+			int e = errno;
+			syscalls::unlink(socketFilename.c_str());
+			throw FileSystemException("Cannot set permissions on '" + socketFilename + "'",
+				e, socketFilename);
 		}
-		if (!logFile.empty()) {
-			logFileHandle = syscalls::fopen(logFile.c_str(), "a");
-			if (logFileHandle == NULL) {
-				string message("Cannot open log file '");
-				message.append(logFile);
-				message.append("' for writing.");
-				throw IOException(message);
-			}
+		
+		if (syscalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
+			int e = errno;
+			syscalls::unlink(socketFilename.c_str());
+			throw SystemException("Cannot create a Unix socket", e);
 		}
 
 		UPDATE_TRACE_POINT();
 		pid = syscalls::fork();
 		if (pid == 0) {
-			if (!logFile.empty()) {
-				dup2(fileno(logFileHandle), STDERR_FILENO);
-				fclose(logFileHandle);
-			}
-			dup2(STDERR_FILENO, STDOUT_FILENO);
-			dup2(fds[1], SPAWN_SERVER_INPUT_FD);
+			dup2(serverSocket, HIGHEST_FD + 1);
+			dup2(fds[1], HIGHEST_FD + 2);
+			dup2(HIGHEST_FD + 1, SERVER_SOCKET_FD);
+			dup2(HIGHEST_FD + 2, OWNER_SOCKET_FD);
 			
 			// Close all unnecessary file descriptors
-			for (long i = sysconf(_SC_OPEN_MAX) - 1; i > SPAWN_SERVER_INPUT_FD; i--) {
+			for (long i = sysconf(_SC_OPEN_MAX) - 1; i > HIGHEST_FD; i--) {
 				close(i);
 			}
 			
@@ -182,12 +196,13 @@ private:
 				rubyCommand.c_str(),
 				spawnServerCommand.c_str(),
 				generation->getPath().c_str(),
-				// The spawn server changes the process names of the subservers
-				// that it starts, for better usability. However, the process name length
-				// (as shown by ps) is limited. Here, we try to expand that limit by
-				// deliberately passing a useless whitespace string to the spawn server.
-				// This argument is ignored by the spawn server. This works on some
-				// systems, such as Ubuntu Linux.
+				/* The spawn server changes the process names of the subservers
+				 * that it starts, for better usability. However, the process name length
+				 * (as shown by ps) is limited. Here, we try to expand that limit by
+				 * deliberately passing a useless whitespace string to the spawn server.
+				 * This argument is ignored by the spawn server. This works on some
+				 * systems, such as Ubuntu Linux.
+				 */
 				"                                                             ",
 				(char *) NULL);
 			int e = errno;
@@ -199,22 +214,41 @@ private:
 			_exit(1);
 		} else if (pid == -1) {
 			int e = errno;
+			syscalls::unlink(socketFilename.c_str());
 			syscalls::close(fds[0]);
 			syscalls::close(fds[1]);
-			if (logFileHandle != NULL) {
-				syscalls::fclose(logFileHandle);
-			}
 			pid = 0;
 			throw SystemException("Unable to fork a process", e);
 		} else {
+			FileDescriptor ownerSocket = fds[0];
 			syscalls::close(fds[1]);
-			if (!logFile.empty()) {
-				syscalls::fclose(logFileHandle);
-			}
-			channel = MessageChannel(fds[0]);
-			serverNeedsRestart = false;
+			serverSocket.close();
+			
+			MessageChannel ownerSocketChannel(ownerSocket);
+			ownerSocketChannel.writeRaw(socketFilename + "\n");
+			ownerSocketChannel.writeRaw(socketPassword + "\n");
+			
+			this->ownerSocket    = ownerSocket;
+			this->socketFilename = socketFilename;
+			this->socketPassword = socketPassword;
 			spawnServerStarted();
 		}
+	}
+	
+	/**
+	 * Connects to the spawn server and returns the connection.
+	 *
+	 * @throws RuntimeException
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
+	 */
+	FileDescriptor connect() const {
+		TRACE_POINT();
+		FileDescriptor fd = connectToUnixServer(socketFilename.c_str());
+		MessageChannel channel(fd);
+		UPDATE_TRACE_POINT();
+		channel.writeScalar(socketPassword);
+		return fd;
 	}
 	
 	/**
@@ -224,9 +258,25 @@ private:
 	 * @return A Process smart pointer, representing the spawned process.
 	 * @throws SpawnException Something went wrong.
 	 * @throws Anything thrown by options.environmentVariables->getItems().
+	 * @throws boost::thread_interrupted
 	 */
 	ProcessPtr sendSpawnCommand(const PoolOptions &options) {
 		TRACE_POINT();
+		FileDescriptor connection;
+		MessageChannel channel;
+		
+		try {
+			connection = connect();
+			channel = MessageChannel(connection);
+		} catch (SystemException &e) {
+			throw SpawnException(string("Could not connect to the spawn server: ") +
+				e.sys());
+		} catch (const exception &e) {
+			throw SpawnException(string("Could not connect to the spawn server: ") +
+				e.what());
+		}
+		
+		UPDATE_TRACE_POINT();
 		vector<string> args;
 		string appRoot;
 		pid_t appPid;
@@ -266,6 +316,7 @@ private:
 				throw SpawnException("The spawn server sent an invalid message.");
 			}
 			if (args[0] == "error_page") {
+				UPDATE_TRACE_POINT();
 				string errorPage;
 				
 				if (!channel.readScalar(errorPage)) {
@@ -278,11 +329,11 @@ private:
 			}
 			
 			// Read application info.
+			UPDATE_TRACE_POINT();
 			if (!channel.read(args)) {
 				throw SpawnException("The spawn server has exited unexpectedly.");
 			}
 			if (args.size() != 3) {
-				UPDATE_TRACE_POINT();
 				throw SpawnException("The spawn server sent an invalid message.");
 			}
 			
@@ -358,15 +409,31 @@ private:
 	 * Send the reload command to the spawn server.
 	 *
 	 * @param appRoot The application root to reload.
-	 * @throws SystemException Something went wrong.
+	 * @throws RuntimeException 
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
 	 */
 	void sendReloadCommand(const string &appRoot) {
 		TRACE_POINT();
+		FileDescriptor connection;
+		MessageChannel channel;
+		
+		try {
+			connection = connect();
+			channel = MessageChannel(connection);
+		} catch (SystemException &e) {
+			e.setBriefMessage("Could not connect to the spawn server");
+			throw;
+		} catch (const RuntimeException &e) {
+			throw RuntimeException(string("Could not connect to the spawn server: ") +
+				e.what());
+		}
+		
 		try {
 			channel.write("reload", appRoot.c_str(), NULL);
-		} catch (const SystemException &e) {
-			throw SystemException("Could not write 'reload' command "
-				"to the spawn server", e.code());
+		} catch (SystemException &e) {
+			e.setBriefMessage("Could not write 'reload' command to the spawn server");
+			throw;
 		}
 	}
 	
@@ -416,26 +483,19 @@ public:
 	 *                   generation-specific are stored.
 	 * @param poolAccount An account with which spawned processes may access
 	 *                    the application pool. May be a null pointer.
-	 * @param logFile Specify a log file that the spawn server should use.
-	 *            Messages on its standard output and standard error channels
-	 *            will be written to this log file. If an empty string is
-	 *            specified, no log file will be used, and the spawn server
-	 *            will use the same standard output/error channels as the
-	 *            current process.
 	 * @param rubyCommand The Ruby interpreter's command.
+	 * @throws RuntimeException An error occurred while creating a Unix server socket.
 	 * @throws SystemException An error occured while trying to setup the spawn server.
-	 * @throws IOException The specified log file could not be opened.
+	 * @throws IOException An error occurred while generating random data.
 	 */
 	SpawnManager(const string &spawnServerCommand,
 	             const ServerInstanceDir::GenerationPtr &generation,
 	             const AccountPtr &poolAccount = AccountPtr(),
-	             const string &logFile = "",
 	             const string &rubyCommand = "ruby") {
 		TRACE_POINT();
 		this->spawnServerCommand = spawnServerCommand;
 		this->generation  = generation;
 		this->poolAccount = poolAccount;
-		this->logFile = logFile;
 		this->rubyCommand = rubyCommand;
 		pid = 0;
 		this_thread::disable_interruption di;
@@ -455,8 +515,9 @@ public:
 			UPDATE_TRACE_POINT();
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
+			syscalls::unlink(socketFilename.c_str());
 			P_TRACE(2, "Shutting down spawn manager (PID " << pid << ").");
-			channel.close();
+			ownerSocket.close();
 			syscalls::waitpid(pid, NULL, 0);
 			P_TRACE(2, "Spawn manager exited.");
 		}

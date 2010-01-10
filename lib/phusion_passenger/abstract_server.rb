@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2008, 2009 Phusion
+#  Copyright (c) 2008, 2009, 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -23,27 +23,28 @@
 #  THE SOFTWARE.
 
 require 'socket'
-require 'set'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/utils'
 module PhusionPassenger
 
-# An abstract base class for a server, with the following properties:
+# An abstract base class for a server that has the following properties:
 #
-# - The server has exactly one client, and is connected to that client at all times. The server will
-#   quit when the connection closes.
-# - The server's main loop may be run in a child process (and so is asynchronous from the main process).
-# - One can communicate with the server through discrete messages (as opposed to byte streams).
+# - The server listens on a password protected Unix socket.
+# - The server is multithreaded and handles one client per thread.
+# - The server is owned by one or more processes. If all processes close their
+#   reference to the server, then the server will quit.
+# - The server's main loop may be run in a child process (and so is asynchronous
+#   from the parent process).
+# - One can communicate with the server through discrete MessageChannel messages,
+#   as opposed to byte streams.
 # - The server can pass file descriptors (IO objects) back to the client.
 #
-# A message is just an ordered list of strings. The first element in the message is the _message name_.
+# The server will also reset all signal handlers. That is, it will respond to
+# all signals in the default manner. The only exception is SIGHUP, which is
+# ignored. One may define additional signal handlers using define_signal_handler().
 #
-# The server will also reset all signal handlers (in the child process). That is, it will respond to
-# all signals in the default manner. The only exception is SIGHUP, which is ignored. One may define
-# additional signal handlers using define_signal_handler().
-#
-# Before an AbstractServer can be used, it must first be started by calling start(). When it is no
-# longer needed, stop() should be called.
+# Before an AbstractServer can be used, it must first be started by calling start().
+# When it is no longer needed, stop() should be called.
 #
 # Here's an example on using AbstractServer:
 #
@@ -52,17 +53,19 @@ module PhusionPassenger
 #        super()
 #        define_message_handler(:hello, :handle_hello)
 #     end
-#
+#     
 #     def hello(first_name, last_name)
-#        send_to_server('hello', first_name, last_name)
-#        reply, pointless_number = recv_from_server
-#        puts "The server said: #{reply}"
-#        puts "In addition, it sent this pointless number: #{pointless_number}"
+#        connect do |channel|
+#           channel.write('hello', first_name, last_name)
+#           reply, pointless_number = channel.read
+#           puts "The server said: #{reply}"
+#           puts "In addition, it sent this pointless number: #{pointless_number}"
+#        end
 #     end
-#
+#  
 #  private
-#     def handle_hello(first_name, last_name)
-#        send_to_client("Hello #{first_name} #{last_name}, how are you?", 1234)
+#     def handle_hello(channel, first_name, last_name)
+#        channel.write("Hello #{first_name} #{last_name}, how are you?", 1234)
 #     end
 #  end
 #  
@@ -72,7 +75,6 @@ module PhusionPassenger
 #  server.stop
 class AbstractServer
 	include Utils
-	SERVER_TERMINATION_SIGNAL = "SIGTERM"
 
 	# Raised when the server receives a message with an unknown message name.
 	class UnknownMessage < StandardError
@@ -92,8 +94,11 @@ class AbstractServer
 	class ServerError < StandardError
 	end
 	
-	# The last time when this AbstractServer had processed a message.
-	attr_accessor :last_activity_time
+	class InvalidPassword < StandardError
+	end
+	
+	attr_reader :password
+	attr_accessor :ignore_password_errors
 	
 	# The maximum time that this AbstractServer may be idle. Used by
 	# AbstractServerCollection to determine when this object should
@@ -105,12 +110,15 @@ class AbstractServer
 	# should be idle cleaned.
 	attr_accessor :next_cleaning_time
 	
-	def initialize
-		@done = false
+	def initialize(socket_filename = nil, password = nil)
+		@socket_filename = socket_filename
+		@password = password
+		@socket_filename ||= "#{passenger_tmpdir}/server.#{Process.pid}.#{object_id}"
+		@password ||= generate_random_id(:base64)
+		
 		@message_handlers = {}
 		@signal_handlers = {}
 		@orig_signal_handlers = {}
-		@last_activity_time = Time.now
 	end
 	
 	# Start the server. This method does not block since the server runs
@@ -125,14 +133,18 @@ class AbstractServer
 			raise ServerAlreadyStarted, "Server is already started"
 		end
 		
-		@parent_socket, @child_socket = UNIXSocket.pair
+		a, b = UNIXSocket.pair
+		File.unlink(@socket_filename) rescue nil
+		server_socket = UNIXServer.new(@socket_filename)
+		File.chmod(0700, @socket_filename)
+		
 		before_fork
 		@pid = fork
 		if @pid.nil?
 			begin
 				STDOUT.sync = true
 				STDERR.sync = true
-				@parent_socket.close
+				a.close
 				
 				# During Passenger's early days, we used to close file descriptors based
 				# on a white list of file descriptors. That proved to be way too fragile:
@@ -142,8 +154,10 @@ class AbstractServer
 				# Note that STDIN, STDOUT and STDERR may be temporarily set to
 				# different file descriptors than 0, 1 and 2, e.g. in unit tests.
 				# We don't want to close these either.
-				file_descriptors_to_leave_open = [0, 1, 2, @child_socket.fileno,
-					fileno_of(STDIN), fileno_of(STDOUT), fileno_of(STDERR)].compact.uniq
+				file_descriptors_to_leave_open = [0, 1, 2,
+					b.fileno, server_socket.fileno,
+					fileno_of(STDIN), fileno_of(STDOUT), fileno_of(STDERR)
+				].compact.uniq
 				NativeSupport.close_all_file_descriptors(file_descriptors_to_leave_open)
 				# In addition to closing the file descriptors, one must also close
 				# the associated IO objects. This is to prevent IO.close from
@@ -159,45 +173,41 @@ class AbstractServer
 				# Reseed pseudo-random number generator for security reasons.
 				srand
 				
-				start_synchronously(@child_socket)
+				start_synchronously(@socket_filename, @password, server_socket, b)
 			rescue Interrupt
 				# Do nothing.
-			rescue SignalException => signal
-				if signal.message == SERVER_TERMINATION_SIGNAL
-					# Do nothing.
-				else
-					print_exception(self.class.to_s, signal)
-				end
 			rescue Exception => e
 				print_exception(self.class.to_s, e)
 			ensure
 				exit!
 			end
 		end
-		@child_socket.close
-		@parent_channel = MessageChannel.new(@parent_socket)
+		server_socket.close
+		b.close
+		@owner_socket = a
 	end
 	
 	# Start the server, but in the current process instead of in a child process.
 	# This method blocks until the server's main loop has ended.
 	#
-	# +socket+ is the socket that the server should listen on. The server main
-	# loop will end if the socket has been closed.
-	#
 	# All hooks will be called, except before_fork().
-	def start_synchronously(socket)
-		@child_socket = socket
-		@child_channel = MessageChannel.new(socket)
+	def start_synchronously(socket_filename, password, server_socket, owner_socket)
+		@owner_socket = owner_socket
 		begin
 			reset_signal_handlers
 			initialize_server
 			begin
-				main_loop
+				server_main_loop(password, server_socket)
 			ensure
 				finalize_server
 			end
+		rescue Interrupt
+			# Do nothing
 		ensure
+			@owner_socket = nil
 			revert_signal_handlers
+			File.unlink(socket_filename) rescue nil
+			server_socket.close
 		end
 	end
 	
@@ -211,29 +221,51 @@ class AbstractServer
 			raise ServerNotStarted, "Server is not started"
 		end
 		
-		@parent_socket.close
-		@parent_channel = nil
+		begin
+			@owner_socket.write("x")
+		rescue Errno::EPIPE
+		end
+		@owner_socket.close
+		@owner_socket = nil
+		File.unlink(@socket_filename) rescue nil
 		
-		# Wait at most 3 seconds for server to exit. If it doesn't do that,
-		# we kill it. If that doesn't work either, we kill it forcefully with
-		# SIGKILL.
-		if !Process.timed_waitpid(@pid, 3)
-			Process.kill(SERVER_TERMINATION_SIGNAL, @pid) rescue nil
-			if !Process.timed_waitpid(@pid, 3)
-				Process.kill('SIGKILL', @pid) rescue nil
-				Process.timed_waitpid(@pid, 1)
-			end
+		# Wait at most 4 seconds for server to exit. If it doesn't do that,
+		# we kill it forcefully with SIGKILL.
+		if !Process.timed_waitpid(@pid, 4)
+			Process.kill('SIGKILL', @pid) rescue nil
+			Process.timed_waitpid(@pid, 1)
 		end
 	end
 	
 	# Return whether the server has been started.
 	def started?
-		return !@parent_channel.nil?
+		return !!@owner_socket
 	end
 	
-	# Return the PID of the started server. This is only valid if start() has been called.
+	# Return the PID of the started server. This is only valid if #start has been called.
 	def server_pid
 		return @pid
+	end
+	
+	# Connects to the server and yields a channel for communication.
+	# The first message's name must match a handler name. The connection can only
+	# be used for a single handler cycle; after the handler is done, the connection
+	# will be closed.
+	#
+	#   server.connect do |channel|
+	#      channel.write("a message")
+	#      ...
+	#   end
+	#
+	# Raises: SystemCallError, IOError, SocketError
+	def connect
+		channel = MessageChannel.new(UNIXSocket.new(@socket_filename))
+		begin
+			channel.write_scalar(@password)
+			yield channel
+		ensure
+			channel.close
+		end
 	end
 
 protected
@@ -268,31 +300,6 @@ protected
 		@signal_handlers[signal.to_s] = handler
 	end
 	
-	# Return the communication channel with the server. This is a MessageChannel
-	# object.
-	#
-	# Raises ServerNotStarted if the server hasn't been started yet.
-	#
-	# This method may only be called in the parent process, and not
-	# in the started server process.
-	def server
-		if !started?
-			raise ServerNotStarted, "Server hasn't been started yet. Please call start() first."
-		end
-		return @parent_channel
-	end
-	
-	# Return the communication channel with the client (i.e. the parent process
-	# that started the server). This is a MessageChannel object.
-	def client
-		return @child_channel
-	end
-	
-	# Tell the main loop to stop as soon as possible.
-	def quit_main
-		@done = true
-	end
-	
 	def fileno_of(io)
 		return io.fileno
 	rescue
@@ -325,33 +332,32 @@ private
 		@orig_signal_handlers.clear
 	end
 	
-	# The server's main loop. This is called in the child process.
-	# The main loop's main function is to read messages from the socket,
-	# and letting registered message handlers handle each message.
-	# Use define_message_handler() to register a message handler.
-	#
-	# If an unknown message is encountered, UnknownMessage will be raised.
-	def main_loop
-		channel = MessageChannel.new(@child_socket)
-		while !@done
-			begin
-				name, *args = channel.read
-				@last_activity_time = Time.now
-				if name.nil?
-					@done = true
-				elsif @message_handlers.has_key?(name)
-					__send__(@message_handlers[name], *args)
-				else
-					raise UnknownMessage, "Unknown message '#{name}' received."
+	def server_main_loop(password, server_socket)
+		while true
+			ios = select([@owner_socket, server_socket]).first
+			if ios.include?(server_socket)
+				client_socket = server_socket.accept
+				begin
+					client = MessageChannel.new(client_socket)
+					
+					client_password = client.read_scalar
+					if client_password != password
+						next
+					end
+					
+					name, *args = client.read
+					if name
+						if @message_handlers.has_key?(name)
+							__send__(@message_handlers[name], client, *args)
+						else
+							raise UnknownMessage, "Unknown message '#{name}' received."
+						end
+					end
+				ensure
+					client_socket.close
 				end
-			rescue Interrupt
-				@done = true
-			rescue SignalException => signal
-				if signal.message == SERVER_TERMINATION_SIGNAL
-					@done = true
-				else
-					raise
-				end
+			else
+				break
 			end
 		end
 	end
