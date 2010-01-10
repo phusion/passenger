@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2008, 2009 Phusion
+#  Copyright (c) 2008, 2009, 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -25,6 +25,7 @@ require 'socket'
 require 'phusion_passenger/app_process'
 require 'phusion_passenger/events'
 require 'phusion_passenger/message_channel'
+require 'phusion_passenger/abstract_server'
 require 'phusion_passenger/abstract_request_handler'
 require 'phusion_passenger/utils'
 require 'phusion_passenger/rack/request_handler'
@@ -33,12 +34,16 @@ module PhusionPassenger
 module Rack
 
 # Spawning of Rack applications.
-class ApplicationSpawner
+class ApplicationSpawner < AbstractServer
 	include Utils
 	extend Utils
 	
+	# This exception means that the ApplicationSpawner server process exited unexpectedly.
+	class Error < AbstractServer::ServerError
+	end
+	
 	# Spawn an instance of the given Rack application. When successful, an
-	# Application object will be returned, which represents the spawned
+	# AppProcess object will be returned, which represents the spawned
 	# application.
 	#
 	# Accepts the same options as SpawnManager#spawn_application.
@@ -58,7 +63,15 @@ class ApplicationSpawner
 			NativeSupport.close_all_file_descriptors(file_descriptors_to_leave_open)
 			close_all_io_objects_for_fds(file_descriptors_to_leave_open)
 			
-			run(MessageChannel.new(b), options)
+			channel = MessageChannel.new(b)
+			app = nil
+			success = report_app_init_status(channel) do
+				prepare_app_process('config.ru', options)
+				app = load_rack_app
+			end
+			if success
+				start_request_handler(channel, app, false, options)
+			end
 		end
 		b.close
 		Process.waitpid(pid) rescue nil
@@ -69,38 +82,126 @@ class ApplicationSpawner
 		# No exception was raised, so spawning succeeded.
 		return AppProcess.read_from_channel(channel)
 	end
-
-private
-	def self.run(channel, options)
-		app_root = options["app_root"]
-		$0 = "Rack: #{app_root}"
-		app = nil
-		success = report_app_init_status(channel) do
-			prepare_app_process('config.ru', options)
-			app = load_rack_app
-		end
-		
-		if success
-			reader, writer = IO.pipe
-			begin
-				handler = RequestHandler.new(reader, app, options)
-				app_process = AppProcess.new(app_root, Process.pid, writer,
-					handler.server_sockets)
-				app_process.write_to_channel(channel)
-				writer.close
-				channel.close
-				
-				PhusionPassenger.call_event(:starting_worker_process)
-				handler.main_loop
-			ensure
-				channel.close rescue nil
-				writer.close rescue nil
-				handler.cleanup rescue nil
-				PhusionPassenger.call_event(:stopping_worker_process)
-			end
+	
+	# The following options are accepted:
+	# - 'app_root'
+	#
+	# See SpawnManager#spawn_application for information about the options.
+	def initialize(options)
+		super()
+		@options          = sanitize_spawn_options(options)
+		@app_root         = @options["app_root"]
+		@canonicalized_app_root = canonicalize_path(@app_root)
+		self.max_idle_time = DEFAULT_APP_SPAWNER_MAX_IDLE_TIME
+		define_message_handler(:spawn_application, :handle_spawn_application)
+	end
+	
+	# Spawns an instance of the Rack application. When successful, an AppProcess object
+	# will be returned, which represents the spawned Rack application.
+	#
+	# +options+ will be passed to the request handler's constructor.
+	#
+	# Raises:
+	# - AbstractServer::ServerNotStarted: The ApplicationSpawner server hasn't already been started.
+	# - ApplicationSpawner::Error: The ApplicationSpawner server exited unexpectedly.
+	def spawn_application(options = {})
+		server.write("spawn_application", *options.to_a.flatten)
+		return AppProcess.read_from_channel(server)
+	rescue SystemCallError, IOError, SocketError => e
+		raise Error, "The application spawner server exited unexpectedly: #{e}"
+	end
+	
+	# Overrided from AbstractServer#start.
+	#
+	# May raise these additional exceptions:
+	# - AppInitError: The Rack application raised an exception
+	#   or called exit() during startup.
+	# - ApplicationSpawner::Error: The ApplicationSpawner server exited unexpectedly.
+	def start
+		super
+		begin
+			unmarshal_and_raise_errors(server, @options["print_exceptions"])
+		rescue IOError, SystemCallError, SocketError => e
+			stop
+			raise Error, "The application spawner server exited unexpectedly: #{e}"
+		rescue
+			stop
+			raise
 		end
 	end
-	private_class_method :run
+
+protected
+	# Overrided method.
+	def before_fork # :nodoc:
+		if GC.copy_on_write_friendly?
+			# Garbage collect now so that the child process doesn't have to
+			# do that (to prevent making pages dirty).
+			GC.start
+		end
+	end
+
+	# Overrided method.
+	def initialize_server # :nodoc:
+		report_app_init_status(client) do
+			$0 = "Passenger ApplicationSpawner: #{@app_root}"
+			prepare_app_process('config.ru', @options)
+			@app = self.class.send(:load_rack_app)
+		end
+	end
+
+private
+	def handle_spawn_application(*options)
+		options = sanitize_spawn_options(Hash[*options])
+		a, b = UNIXSocket.pair
+		safe_fork('application', true) do
+			begin
+				a.close
+				client.close
+				options = @options.merge(options)
+				self.class.send(:start_request_handler, MessageChannel.new(b),
+					@app, true, options)
+			rescue SignalException => e
+				if e.message != AbstractRequestHandler::HARD_TERMINATION_SIGNAL &&
+				   e.message != AbstractRequestHandler::SOFT_TERMINATION_SIGNAL
+					raise
+				end
+			end
+		end
+		
+		b.close
+		worker_channel = MessageChannel.new(a)
+		app_process = AppProcess.read_from_channel(worker_channel)
+		app_process.write_to_channel(client)
+	ensure
+		a.close if a
+		b.close if b && !b.closed?
+		app_process.close if app_process
+	end
+
+	def self.start_request_handler(channel, app, forked, options)
+		app_root = options["app_root"]
+		$0 = "Rack: #{app_root}"
+		reader, writer = IO.pipe
+		begin
+			reader.close_on_exec!
+			
+			handler = RequestHandler.new(reader, app, options)
+			app_process = AppProcess.new(app_root, Process.pid, writer,
+				handler.server_sockets)
+			app_process.write_to_channel(channel)
+			writer.close
+			channel.close
+			
+			PhusionPassenger.call_event(:starting_worker_process)
+			handler.main_loop
+		ensure
+			channel.close rescue nil
+			writer.close rescue nil
+			handler.cleanup rescue nil
+			PhusionPassenger.call_event(:stopping_worker_process)
+		end
+	end
+	private_class_method :start_request_handler
 	
 	def self.load_rack_app
 		# Load Rack inside the spawned child process so that the spawn manager

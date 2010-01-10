@@ -54,6 +54,58 @@ shared_examples_for "a spawner" do
 		File.read("#{app.app_root}/rack_env.txt").should == "staging"
 	end
 	
+	it "sets ENV['RAILS_RELATIVE_URL_ROOT'] and ENV['RACK_BASE_URI'] if the 'base_uri' option is set to a valid value" do
+		before_start %q{
+			File.write("rails_relative_url_root.txt", ENV['RAILS_RELATIVE_URL_ROOT'])
+			File.write("rack_base_uri.txt", ENV['RACK_BASE_URI'])
+		}
+		app = spawn_some_application("base_uri" => "/foo")
+		File.read("#{app.app_root}/rails_relative_url_root.txt").should == "/foo"
+		File.read("#{app.app_root}/rack_base_uri.txt").should == "/foo"
+	end
+	
+	it "doesn't set ENV['RAILS_RELATIVE_URL_ROOT'] and ENV['RACK_BASE_URI'] if 'base_uri' is not given" do
+		before_start %q{
+			if ENV['RAILS_RELATIVE_URL_ROOT']
+				File.touch("rails_relative_url_root.txt")
+			end
+			if ENV['RACK_BASE_URI']
+				File.touch("rack_base_uri.txt")
+			end
+		}
+		app = spawn_some_application
+		File.exist?("#{app.app_root}/rails_relative_url_root.txt").should be_false
+		File.exist?("#{app.app_root}/rack_base_uri.txt").should be_false
+	end
+	
+	it "doesn't set ENV['RAILS_RELATIVE_URL_ROOT'] and ENV['RACK_BASE_URI'] if 'base_uri' is empty" do
+		before_start %q{
+			if ENV['RAILS_RELATIVE_URL_ROOT']
+				File.touch("rails_relative_url_root.txt")
+			end
+			if ENV['RACK_BASE_URI']
+				File.touch("rack_base_uri.txt")
+			end
+		}
+		app = spawn_some_application("base_uri" => "")
+		File.exist?("#{app.app_root}/rails_relative_url_root.txt").should be_false
+		File.exist?("#{app.app_root}/rack_base_uri.txt").should be_false
+	end
+	
+	it "doesn't set ENV['RAILS_RELATIVE_URL_ROOT'] and ENV['RACK_BASE_URI'] if 'base_uri' is '/'" do
+		before_start %q{
+			if ENV['RAILS_RELATIVE_URL_ROOT']
+				File.touch("rails_relative_url_root.txt")
+			end
+			if ENV['RACK_BASE_URI']
+				File.touch("rack_base_uri.txt")
+			end
+		}
+		app = spawn_some_application("base_uri" => "/")
+		File.exist?("#{app.app_root}/rails_relative_url_root.txt").should be_false
+		File.exist?("#{app.app_root}/rack_base_uri.txt").should be_false
+	end
+	
 	it "sets the environment variables in the 'environment_variables' option" do
 		before_start %q{
 			File.open("env.txt", "w") do |f|

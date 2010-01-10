@@ -114,7 +114,7 @@ class ApplicationSpawner < AbstractServer
 		super()
 		@options          = sanitize_spawn_options(options)
 		@app_root         = @options["app_root"]
-		@canonicalized_app_root = canonicalize_path(app_root)
+		@canonicalized_app_root = canonicalize_path(@app_root)
 		self.max_idle_time = DEFAULT_APP_SPAWNER_MAX_IDLE_TIME
 		define_message_handler(:spawn_application, :handle_spawn_application)
 	end
@@ -269,7 +269,8 @@ private
 				a.close
 				client.close
 				options = @options.merge(options)
-				self.class.send(:start_request_handler, MessageChannel.new(b), true, options)
+				self.class.send(:start_request_handler, MessageChannel.new(b),
+					true, options)
 			rescue SignalException => e
 				if e.message != AbstractRequestHandler::HARD_TERMINATION_SIGNAL &&
 				   e.message != AbstractRequestHandler::SOFT_TERMINATION_SIGNAL
@@ -293,7 +294,7 @@ private
 	# The +forked+ argument indicates whether a new process was forked off
 	# after loading environment.rb (i.e. whether smart spawning is being
 	# used).
-	def self.start_request_handler(channel, forked, options = {})
+	def self.start_request_handler(channel, forked, options)
 		app_root = options["app_root"]
 		$0 = "Rails: #{app_root}"
 		reader, writer = IO.pipe
