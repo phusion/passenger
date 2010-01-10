@@ -24,19 +24,6 @@ shared_examples_for "a spawner" do
 		lambda { Process.kill(0, app.pid) }.should_not raise_error
 	end
 	
-	specify "spawning multiple times works" do
-		sleep 1 # Give previous processes some time to free their memory.
-		last_pid = nil
-		4.times do
-			app = spawn_some_application
-			app.pid.should_not == last_pid
-			app.app_root.should_not be_nil
-			last_pid = app.pid
-			app.close
-			sleep 0.1  # Give process some time to free memory.
-		end
-	end
-	
 	it "sets the working directory of the app to its app root" do
 		before_start %q{
 			File.touch("cwd.txt")
