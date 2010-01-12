@@ -51,6 +51,12 @@ Rails::Initializer.run do |config|
   # end
 
   # See Rails::Configuration for more options
+  if Rails::VERSION::STRING >= '2.0.0'
+    config.action_controller.session = {
+      :key => "_myapp_session",
+      :secret => "7d73d1ddded38a49232479fea54be1d6"
+    }
+  end
 end
 
 # Add new mime types for use in respond_to blocks:
