@@ -156,9 +156,9 @@ public:
 			this_thread::disable_syscall_interruption dsi;
 			bool cleanShutdown = gracefullyShutdownAgent(messageSocketFilename,
 				"_web_server", messageSocketPassword);
-			cleanShutdown = cleanShutdown &&
+			/* cleanShutdown = cleanShutdown &&
 				gracefullyShutdownAgent(loggingSocketFilename,
-					"logging", loggingSocketPassword);
+					"logging", loggingSocketPassword); */
 			
 			/* Send a message down the feedback fd to tell the watchdog
 			 * Whether this is a clean shutdown. Closing the fd without
