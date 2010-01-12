@@ -294,7 +294,10 @@ shared_examples_for "a spawner" do
 		it "switches the group to the owner's primary group" do
 			spawn_some_application_as(:role => 'normal_user_1')
 			dump_yml_gid = File.stat("#{@app.app_root}/dump.yml").gid
-			dump_yml_gid.should == gid_for('normal_user_1')
+			parent_dir_gid = File.stat(@app.app_root).gid
+			# POSIX allows dump.yml to be owned by the process's group,
+			# OR by the parent directory's group.
+			[gid_for('normal_user_1'), parent_dir_gid].should include(dump_yml_gid)
 			read_dump[:group_id].should == gid_for('normal_user_1')
 		end
 		
