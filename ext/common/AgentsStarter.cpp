@@ -77,19 +77,28 @@ agents_starter_get_request_socket_password(AgentsStarter *as, unsigned int *size
 	return agentsStarter->getRequestSocketPassword().c_str();
 }
 
-const char *agents_starter_get_server_instance_dir(AgentsStarter *as) {
+const char *
+agents_starter_get_server_instance_dir(AgentsStarter *as) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	return agentsStarter->getServerInstanceDir()->getPath().c_str();
 }
 
-const char *agents_starter_get_generation_dir(AgentsStarter *as) {
+const char *
+agents_starter_get_generation_dir(AgentsStarter *as) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	return agentsStarter->getGeneration()->getPath().c_str();
 }
 
-pid_t agents_starter_get_pid(AgentsStarter *as) {
+pid_t
+agents_starter_get_pid(AgentsStarter *as) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	return agentsStarter->getPid();
+}
+
+void
+agents_starter_detach(AgentsStarter *as) {
+	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
+	agentsStarter->detach();
 }
 
 void

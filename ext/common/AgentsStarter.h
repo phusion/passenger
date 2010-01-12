@@ -37,6 +37,7 @@ const char *agents_starter_get_request_socket_password(AgentsStarter *as, unsign
 const char *agents_starter_get_server_instance_dir(AgentsStarter *as);
 const char *agents_starter_get_generation_dir(AgentsStarter *as);
 pid_t       agents_starter_get_pid(AgentsStarter *as);
+void        agents_starter_detach(AgentsStarter *as);
 void        agents_starter_free(AgentsStarter *as);
 
 

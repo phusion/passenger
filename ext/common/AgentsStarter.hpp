@@ -159,11 +159,17 @@ public:
 			cleanShutdown = cleanShutdown &&
 				gracefullyShutdownAgent(loggingSocketFilename,
 					"logging", loggingSocketPassword);
+			
+			/* Send a message down the feedback fd to tell the watchdog
+			 * Whether this is a clean shutdown. Closing the fd without
+			 * sending anything also indicates an unclean shutdown,
+			 * but we send a byte anyway in case there are other processes
+			 * who have the fd open.
+			 */
 			if (cleanShutdown) {
-				/* Send a single random byte to tell the watchdog that this
-				 * is a normal shutdown.
-				 */
-				syscalls::write(feedbackFd, "x", 1);
+				syscalls::write(feedbackFd, "c", 1);
+			} else {
+				syscalls::write(feedbackFd, "u", 1);
 			}
 			
 			/* If we failed to send an exit command to one of the agents then we have

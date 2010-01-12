@@ -687,7 +687,8 @@ waitForStarterProcessOrWatchers(vector<AgentWatcher *> &watchers) {
 		}
 		return false;
 	} else {
-		return syscalls::read(feedbackFd, &x, 1) == 1;
+		ret = syscalls::read(feedbackFd, &x, 1);
+		return ret == 1 && x == 'c';
 	}
 }
 

@@ -372,6 +372,7 @@ static ngx_int_t
 init_worker_process(ngx_cycle_t *cycle) {
     if (passenger_main_conf.root_dir.len != 0) {
         save_master_process_pid(cycle);
+	agents_starter_detach(passenger_agents_starter);
     }
     return NGX_OK;
 }
