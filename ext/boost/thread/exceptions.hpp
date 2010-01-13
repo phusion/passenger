@@ -9,6 +9,7 @@
 #define BOOST_THREAD_EXCEPTIONS_PDM070801_H
 
 #include <boost/thread/detail/config.hpp>
+#include <oxt/tracable_exception.hpp>
 
 //  pdm: Sorry, but this class is used all over the place & I end up
 //       with recursive headers if I don't separate it
@@ -26,11 +27,12 @@
 namespace boost
 {
 
-    class thread_interrupted
+    class thread_interrupted:
+        public oxt::tracable_exception
     {};
 
     class thread_exception:
-        public std::exception
+        public oxt::tracable_exception
     {
     protected:
         std::string message;
