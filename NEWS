@@ -18,6 +18,9 @@ Release 3.0.0
  * PassengerMinInstances
  * File descriptor passing fixes: more robust now.
  * Multicorn.
+    * Mongrel-like interface
+    * Serving multiple apps
+    * Production ready
  * PassengerFriendlyErrorPages/passenger_friendly_error_pages
    Issue #132.
  * [Nginx] More options are now valid in a wider scope (e.g.
@@ -28,7 +31,11 @@ Release 3.0.0
    through race conditions, even on high volume websites.
  * [Nginx] passenger_ignore_client_abort
  * [Nginx] passenger_pass_header
- * Smart spawning for Rack apps. RailsSpawnMethod renamed to PassengerSpawnMethod.
+ * Smart spawning for Rack apps. RailsSpawnMethod renamed to
+   PassengerSpawnMethod.
+ * Unit tests now test with multiple Rails versions.
+ * More Ruby 1.9 compatibility fixes.
+ * FileDescriptor::close() ignores ENOTCONN.
 
 
 Release 2.2.9
