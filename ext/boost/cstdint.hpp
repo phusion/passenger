@@ -137,7 +137,7 @@ namespace boost
 
 } // namespace boost
 
-#elif defined(__FreeBSD__) && (__FreeBSD__ <= 4) || defined(__osf__) || defined(__VMS)
+#elif defined(__FreeBSD__) && (__FreeBSD__ <= 4) || defined(__osf__) || defined(__VMS) || defined(__SOLARIS9__)
 // FreeBSD and Tru64 have an <inttypes.h> that contains much of what we need.
 # include <inttypes.h>
 
