@@ -35,7 +35,10 @@ namespace boost
         }
         ~condition_variable()
         {
-            BOOST_VERIFY(!pthread_cond_destroy(&cond));
+            int ret;
+            do {
+                ret = pthread_cond_destroy(&cond);
+            } while (ret == EINTR);
         }
 
         void wait(unique_lock<mutex>& m);
