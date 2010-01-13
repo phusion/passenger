@@ -11,11 +11,8 @@ normal_user_2: daemon
 
 # The username of a user that has less privileges than a normal user.
 #
-# NOTES:
-# - this user MUST be able to access this 'test' directory, otherwise
-#   the tests will fail.
-# - this user MUST NOT have a negative UID value. So on OS X, this may
-#   not be the 'nobody' user.
+# This user MUST be able to access this 'test' directory, otherwise
+# the tests will fail.
 lowest_user: nobody
 
 # A nonexistant username.
