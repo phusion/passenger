@@ -6,7 +6,7 @@
  * Boost Software License, Version 1.0. (See accompanying
  * file LICENSE_1_0.txt or http://www.boost.org/LICENSE_1_0.txt)
  * Author: Jeff Garland 
- * $Date: 2008-02-27 15:00:24 -0500 (Wed, 27 Feb 2008) $
+ * $Date: 2009-09-28 14:10:02 -0400 (Mon, 28 Sep 2009) $
  */
 
 
@@ -44,10 +44,10 @@ namespace date_time {
     //static unsigned short day_of_year(date_int_type);
     static date_int_type day_number(const ymd_type& ymd);
     static date_int_type julian_day_number(const ymd_type& ymd);
-    static long modjulian_day_number(const ymd_type& ymd);
+    static date_int_type modjulian_day_number(const ymd_type& ymd);
     static ymd_type from_day_number(date_int_type);
     static ymd_type from_julian_day_number(date_int_type);
-    static ymd_type from_modjulian_day_number(long);
+    static ymd_type from_modjulian_day_number(date_int_type);
     static bool is_leap_year(year_type);
     static unsigned short end_of_month_day(year_type y, month_type m);
     static ymd_type epoch();

@@ -33,6 +33,31 @@
 #  define BOOST_HAS_SLIST
 #endif
 
+//  C++0x headers not yet implemented
+//
+#  define BOOST_NO_0X_HDR_ARRAY
+#  define BOOST_NO_0X_HDR_CHRONO
+#  define BOOST_NO_0X_HDR_CODECVT
+#  define BOOST_NO_0X_HDR_CONCEPTS
+#  define BOOST_NO_0X_HDR_CONDITION_VARIABLE
+#  define BOOST_NO_0X_HDR_CONTAINER_CONCEPTS
+#  define BOOST_NO_0X_HDR_FORWARD_LIST
+#  define BOOST_NO_0X_HDR_FUTURE
+#  define BOOST_NO_0X_HDR_INITIALIZER_LIST
+#  define BOOST_NO_0X_HDR_ITERATOR_CONCEPTS
+#  define BOOST_NO_0X_HDR_MEMORY_CONCEPTS
+#  define BOOST_NO_0X_HDR_MUTEX
+#  define BOOST_NO_0X_HDR_RANDOM
+#  define BOOST_NO_0X_HDR_RATIO
+#  define BOOST_NO_0X_HDR_REGEX
+#  define BOOST_NO_0X_HDR_SYSTEM_ERROR
+#  define BOOST_NO_0X_HDR_THREAD
+#  define BOOST_NO_0X_HDR_TUPLE
+#  define BOOST_NO_0X_HDR_TYPE_TRAITS
+#  define BOOST_NO_STD_UNORDERED        // deprecated; see following
+#  define BOOST_NO_0X_HDR_UNORDERED_MAP
+#  define BOOST_NO_0X_HDR_UNORDERED_SET
+
 //
 // Intrinsic type_traits support.
 // The SGI STL has it's own __type_traits class, which

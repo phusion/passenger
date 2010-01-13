@@ -50,7 +50,7 @@ namespace boost {
         {
             return detail::const_formatF<
                 iterator_range<
-                    BOOST_STRING_TYPENAME range_const_iterator<RangeT>::type> >(as_literal(Format));
+                    BOOST_STRING_TYPENAME range_const_iterator<RangeT>::type> >(::boost::as_literal(Format));
         }
 
         //! Identity formatter

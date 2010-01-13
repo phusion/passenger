@@ -30,7 +30,7 @@
     || BOOST_WORKAROUND(BOOST_MSVC, <= 1301)                        \
     || !defined(__EDG_VERSION__) && BOOST_WORKAROUND(__GNUC__, < 3) \
     || BOOST_WORKAROUND(__IBMCPP__, < 600 )                         \
-    || BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x564))       \
+    || BOOST_WORKAROUND(__BORLANDC__, < 0x5A0)                      \
     || defined(__ghs)                                               \
     || BOOST_WORKAROUND(__HP_aCC, < 60700)           \
     || BOOST_WORKAROUND(MPW_CPLUS, BOOST_TESTED_AT(0x890))          \

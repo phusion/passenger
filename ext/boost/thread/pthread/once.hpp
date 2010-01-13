@@ -3,7 +3,7 @@
 
 //  once.hpp
 //
-//  (C) Copyright 2007 Anthony Williams 
+//  (C) Copyright 2007-8 Anthony Williams 
 //
 //  Distributed under the Boost Software License, Version 1.0. (See
 //  accompanying file LICENSE_1_0.txt or copy at
@@ -17,7 +17,10 @@
 #include <boost/thread/pthread/pthread_mutex_scoped_lock.hpp>
 #include <boost/cstdint.hpp>
 
-namespace boost {
+#include <boost/config/abi_prefix.hpp>
+
+namespace boost
+{
 
     struct once_flag
     {
@@ -81,5 +84,7 @@ namespace boost {
         }
     }
 }
+
+#include <boost/config/abi_suffix.hpp>
 
 #endif

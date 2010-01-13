@@ -21,6 +21,11 @@ namespace boost {
 
 //  case conversion functors -----------------------------------------------//
 
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400)
+#pragma warning(push)
+#pragma warning(disable:4512) //assignment operator could not be generated
+#endif
+
             // a tolower functor
             template<typename CharT>
             struct to_lowerF : public std::unary_function<CharT, CharT>
@@ -61,6 +66,10 @@ namespace boost {
                 const std::locale& m_Loc;
             };
 
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400)
+#pragma warning(pop)
+#endif
+
 // algorithm implementation -------------------------------------------------------------------------
 
             // Transform a range
@@ -71,8 +80,8 @@ namespace boost {
                 FunctorT Functor)
             {
                 return std::transform( 
-                    begin(Input), 
-                    end(Input), 
+                    ::boost::begin(Input), 
+                    ::boost::end(Input), 
                     Output,
                     Functor);
             }
@@ -84,9 +93,9 @@ namespace boost {
                 FunctorT Functor)
             {
                 std::transform( 
-                    begin(Input), 
-                    end(Input), 
-                    begin(Input),
+                    ::boost::begin(Input), 
+                    ::boost::end(Input), 
+                    ::boost::begin(Input),
                     Functor);
             }
 
@@ -96,11 +105,11 @@ namespace boost {
                 FunctorT Functor)
             {
                 return SequenceT(
-                    make_transform_iterator(
-                        begin(Input),
+                    ::boost::make_transform_iterator(
+                        ::boost::begin(Input),
                         Functor),
-                    make_transform_iterator(
-                        end(Input), 
+                    ::boost::make_transform_iterator(
+                        ::boost::end(Input), 
                         Functor));
             }
 

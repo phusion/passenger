@@ -6,28 +6,40 @@
 // (C) Copyright 2007 Anthony Williams
 
 #include <boost/thread/detail/config.hpp>
+#include <boost/thread/exceptions.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/optional.hpp>
-#include <oxt/tracable_exception.hpp>
 #include <pthread.h>
 #include "condition_variable_fwd.hpp"
+#include <map>
+
+#include <boost/config/abi_prefix.hpp>
 
 namespace boost
 {
-    class thread_interrupted: public oxt::tracable_exception
-    {};
-
+    class thread;
+    
     namespace detail
     {
+        struct tss_cleanup_function;
         struct thread_exit_callback_node;
-        struct tss_data_node;
+        struct tss_data_node
+        {
+            boost::shared_ptr<boost::detail::tss_cleanup_function> func;
+            void* value;
+
+            tss_data_node(boost::shared_ptr<boost::detail::tss_cleanup_function> func_,
+                          void* value_):
+                func(func_),value(value_)
+            {}
+        };
 
         struct thread_data_base;
         typedef boost::shared_ptr<thread_data_base> thread_data_ptr;
         
-        struct thread_data_base:
+        struct BOOST_THREAD_DECL thread_data_base:
             enable_shared_from_this<thread_data_base>
         {
             thread_data_ptr self;
@@ -40,20 +52,21 @@ namespace boost
             bool join_started;
             bool joined;
             boost::detail::thread_exit_callback_node* thread_exit_callbacks;
-            boost::detail::tss_data_node* tss_data;
+            std::map<void const*,boost::detail::tss_data_node> tss_data;
             bool interrupt_enabled;
             bool interrupt_requested;
             pthread_cond_t* current_cond;
 
             thread_data_base():
                 done(false),join_started(false),joined(false),
-                thread_exit_callbacks(0),tss_data(0),
+                thread_exit_callbacks(0),
                 interrupt_enabled(true),
                 interrupt_requested(false),
                 current_cond(0)
             {}
-            virtual ~thread_data_base()
-            {}
+            virtual ~thread_data_base();
+
+            typedef pthread_t native_handle_type;
 
             virtual void run()=0;
         };
@@ -96,7 +109,21 @@ namespace boost
             }
         };
     }
+
+    namespace this_thread
+    {
+        void BOOST_THREAD_DECL yield();
+        
+        void BOOST_THREAD_DECL sleep(system_time const& abs_time);
+        
+        template<typename TimeDuration>
+        inline void sleep(TimeDuration const& rel_time)
+        {
+            this_thread::sleep(get_system_time()+rel_time);
+        }
+    }
 }
 
+#include <boost/config/abi_suffix.hpp>
 
 #endif

@@ -36,7 +36,7 @@
       // this is triggered with GCC, because it defines __cplusplus < 199707L
 #     define BOOST_NO_INT64_T
 #   endif 
-# elif defined(__FreeBSD__) || defined(__IBMCPP__)
+# elif defined(__FreeBSD__) || defined(__IBMCPP__) || defined(_AIX)
 #   include <inttypes.h>
 # else
 #   include <stdint.h>
@@ -122,10 +122,8 @@ namespace boost
 
 } // namespace boost
 
-#elif defined(__FreeBSD__) && (__FreeBSD__ <= 4) || defined(__osf__) || \
-      defined(__SOLARIS9__) || defined(__NetBSD__)
-// FreeBSD, Tru64 and Solaris 9 have an <inttypes.h> that contains much of 
-// what we need.
+#elif defined(__FreeBSD__) && (__FreeBSD__ <= 4) || defined(__osf__)
+// FreeBSD and Tru64 have an <inttypes.h> that contains much of what we need.
 # include <inttypes.h>
 
 namespace boost {
@@ -362,7 +360,6 @@ BOOST_HAS_STDINT_H is defined (John Maddock).
 #  define INTMAX_C(value)   value##i64
 #  define UINTMAX_C(value)  value##ui64
 
-# elif defined(__NetBSD__)
 # else
 //  do it the old fashioned way:
 

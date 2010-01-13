@@ -10,9 +10,9 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source$
-// $Date: 2004-09-02 11:41:37 -0400 (Thu, 02 Sep 2004) $
-// $Revision: 24874 $
+// $Id: dtp.hpp 49267 2008-10-11 06:19:02Z agurtovoy $
+// $Date: 2008-10-11 02:19:02 -0400 (Sat, 11 Oct 2008) $
+// $Revision: 49267 $
 
 #include <boost/mpl/aux_/config/workaround.hpp>
 
@@ -25,7 +25,7 @@
 #if    !defined(BOOST_MPL_CFG_NO_DEFAULT_PARAMETERS_IN_NESTED_TEMPLATES) \
     && !defined(BOOST_MPL_PREPROCESSING_MODE) \
     && BOOST_WORKAROUND(__BORLANDC__, >= 0x560) \
-    && BOOST_WORKAROUND(__BORLANDC__, < 0x600)
+    && BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x610))
 
 #   define BOOST_MPL_CFG_NO_DEFAULT_PARAMETERS_IN_NESTED_TEMPLATES
 
@@ -35,7 +35,7 @@
 #if    !defined(BOOST_MPL_CFG_BROKEN_DEFAULT_PARAMETERS_IN_NESTED_TEMPLATES) \
     && !defined(BOOST_MPL_PREPROCESSING_MODE) \
     && (   BOOST_WORKAROUND(__MWERKS__, <= 0x3001) \
-        || BOOST_WORKAROUND(__BORLANDC__, < 0x600) \
+        || BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x610)) \
         || defined(BOOST_MPL_CFG_NO_DEFAULT_PARAMETERS_IN_NESTED_TEMPLATES) \
         )
         

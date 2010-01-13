@@ -6,14 +6,15 @@
  * Boost Software License, Version 1.0. (See accompanying
  * file LICENSE_1_0.txt or http://www.boost.org/LICENSE_1_0.txt)
  * Author: Jeff Garland, Bart Garst
- * $Date: 2008-02-27 15:00:24 -0500 (Wed, 27 Feb 2008) $
+ * $Date: 2009-09-28 14:10:02 -0400 (Mon, 28 Sep 2009) $
  */
 
-#include "boost/date_time/posix_time/ptime.hpp"
-#include "boost/date_time/posix_time/posix_time_duration.hpp"
-#include "boost/date_time/filetime_functions.hpp"
-#include "boost/date_time/c_time.hpp"
-#include "boost/date_time/gregorian/conversion.hpp"
+#include <boost/date_time/posix_time/ptime.hpp>
+#include <boost/date_time/posix_time/posix_time_duration.hpp>
+#include <boost/date_time/filetime_functions.hpp>
+#include <boost/date_time/c_time.hpp>
+#include <boost/date_time/time_resolution_traits.hpp> // absolute_value
+#include <boost/date_time/gregorian/conversion.hpp>
 
 namespace boost {
 
@@ -22,7 +23,7 @@ namespace posix_time {
 
   //! Function that converts a time_t into a ptime.
   inline
-  ptime from_time_t(std::time_t t) 
+  ptime from_time_t(std::time_t t)
   {
     ptime start(gregorian::date(1970,1,1));
     return start + seconds(static_cast<long>(t));
@@ -42,14 +43,8 @@ namespace posix_time {
   //! Convert a time_duration to a tm structure truncating any fractional seconds and zeroing fields for date components 
   inline
   std::tm to_tm(const boost::posix_time::time_duration& td) {
-    std::tm timetm;
-    timetm.tm_year = 0;
-    timetm.tm_mon = 0;
-    timetm.tm_mday = 0;
-    timetm.tm_wday = 0;
-    timetm.tm_yday = 0;
-    
-    timetm.tm_hour = date_time::absolute_value(td.hours()); 
+    std::tm timetm = {};
+    timetm.tm_hour = date_time::absolute_value(td.hours());
     timetm.tm_min = date_time::absolute_value(td.minutes());
     timetm.tm_sec = date_time::absolute_value(td.seconds());
     timetm.tm_isdst = -1; // -1 used when dst info is unknown
@@ -72,14 +67,18 @@ namespace posix_time {
    * built with microsecond resolution the FILETIME's sub second value 
    * will be truncated. Nanosecond resolution has no truncation. 
    *
-   * Note ftime is part of the Win32 API, so it is not portable to non-windows
+   * \note FILETIME is part of the Win32 API, so it is not portable to non-windows
    * platforms.
+   *
+   * \note The function is templated on the FILETIME type, so that
+   *       it can be used with both native FILETIME and the ad-hoc
+   *       boost::date_time::winapi::file_time type.
    */
-  template<class time_type>
+  template< typename TimeT, typename FileTimeT >
   inline
-  time_type from_ftime(const FILETIME& ft)
+  TimeT from_ftime(const FileTimeT& ft)
   {
-    return boost::date_time::time_from_ftime<time_type>(ft);
+    return boost::date_time::time_from_ftime<TimeT>(ft);
   }
 
 #endif // BOOST_HAS_FTIME

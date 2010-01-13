@@ -6,11 +6,12 @@
  * Boost Software License, Version 1.0. (See accompanying
  * file LICENSE_1_0.txt or http://www.boost.org/LICENSE_1_0.txt)
  * Author: Jeff Garland, Bart Garst
- * $Date: 2008-02-27 15:00:24 -0500 (Wed, 27 Feb 2008) $
+ * $Date: 2008-11-12 14:37:53 -0500 (Wed, 12 Nov 2008) $
  */
 
 
 #include <boost/operators.hpp>
+#include <boost/date_time/special_defs.hpp>
 
 namespace boost {
 namespace date_time {
@@ -19,11 +20,12 @@ namespace date_time {
   //! Duration type with date level resolution
   template<class duration_rep_traits>
   class date_duration : private
-              boost::less_than_comparable<date_duration< duration_rep_traits>
-            , boost::equality_comparable< date_duration< duration_rep_traits>
-            , boost::addable< date_duration< duration_rep_traits>
-            , boost::subtractable< date_duration< duration_rep_traits>
-            > > > >
+              boost::less_than_comparable1< date_duration< duration_rep_traits >
+            , boost::equality_comparable1< date_duration< duration_rep_traits >
+            , boost::addable1< date_duration< duration_rep_traits >
+            , boost::subtractable1< date_duration< duration_rep_traits >
+            , boost::dividable2< date_duration< duration_rep_traits >, int
+            > > > > >
   { 
   public:
     typedef typename duration_rep_traits::int_type duration_rep_type;
@@ -80,33 +82,29 @@ namespace date_time {
      * so this will not compile */
 
     //! Subtract another duration -- result is signed
-    date_duration operator-=(const date_duration& rhs)
+    date_duration& operator-=(const date_duration& rhs)
     {
         //days_ -= rhs.days_;
         days_ = days_ - rhs.days_;
         return *this;
     }
     //! Add a duration -- result is signed
-    date_duration operator+=(const date_duration& rhs)
+    date_duration& operator+=(const date_duration& rhs)
     {
         days_ = days_ + rhs.days_;
         return *this;
     }
 
     //! unary- Allows for dd = -date_duration(2); -> dd == -2
-    date_duration operator-()const
+    date_duration operator-() const
     {
         return date_duration<duration_rep_traits>(get_rep() * (-1));
     }
     //! Division operations on a duration with an integer.
-    date_duration<duration_rep_traits> operator/=(int divisor)
+    date_duration& operator/=(int divisor)
     {
         days_ = days_ / divisor;
         return *this;
-    }
-    date_duration<duration_rep_traits> operator/(int divisor)
-    {
-        return date_duration<duration_rep_traits>(days_ / divisor);
     }
 
     //! return sign information
@@ -114,6 +112,7 @@ namespace date_time {
     {
         return days_ < 0;
     }
+
   private:
     duration_rep days_;
   };

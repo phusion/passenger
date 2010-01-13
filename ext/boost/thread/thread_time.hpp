@@ -9,6 +9,8 @@
 #include <boost/date_time/microsec_time_clock.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 
+#include <boost/config/abi_prefix.hpp>
+
 namespace boost
 {
     typedef boost::posix_time::ptime system_time;
@@ -42,5 +44,7 @@ namespace boost
     }
     
 }
+
+#include <boost/config/abi_suffix.hpp>
 
 #endif

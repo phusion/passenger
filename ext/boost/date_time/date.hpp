@@ -6,12 +6,12 @@
  * Boost Software License, Version 1.0. (See accompanying
  * file LICENSE_1_0.txt or http://www.boost.org/LICENSE_1_0.txt)
  * Author: Jeff Garland, Bart Garst
- * $Date: 2008-02-27 15:00:24 -0500 (Wed, 27 Feb 2008) $
+ * $Date: 2009-09-28 14:10:02 -0400 (Mon, 28 Sep 2009) $
  */
 
-#include "boost/date_time/year_month_day.hpp"
-#include "boost/date_time/special_defs.hpp"
-#include "boost/operators.hpp"
+#include <boost/operators.hpp>
+#include <boost/date_time/year_month_day.hpp>
+#include <boost/date_time/special_defs.hpp>
 
 namespace boost {
 namespace date_time {
@@ -138,8 +138,19 @@ namespace date_time {
     }
     duration_type operator-(const date_type& d) const
     {
-      date_rep_type val = date_rep_type(days_) - date_rep_type(d.days_);
-      return duration_type(val.as_number());
+      if (!this->is_special() && !d.is_special())
+      {
+        // The duration underlying type may be wider than the date underlying type.
+        // Thus we calculate the difference in terms of two durations from some common fixed base date.
+        typedef typename duration_type::duration_rep_type duration_rep_type;
+        return duration_type(static_cast< duration_rep_type >(days_) - static_cast< duration_rep_type >(d.days_));
+      }
+      else
+      {
+        // In this case the difference will be a special value, too
+        date_rep_type val = date_rep_type(days_) - date_rep_type(d.days_);
+        return duration_type(val.as_special());
+      }
     }
     
     date_type operator-(const duration_type& dd) const
@@ -158,7 +169,7 @@ namespace date_time {
     date_rep_type day_count() const 
     {
       return days_;
-    };
+    }
     //allow internal access from operators
     date_type operator+(const duration_type& dd) const
     {

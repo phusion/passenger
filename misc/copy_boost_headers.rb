@@ -25,13 +25,20 @@
 ESSENTIALS = [
 	"boost/detail/{limits,endian}.hpp",
 	"boost/config/*",
-	"boost/detail/sp_counted_*",
-	"boost/detail/atomic_count*",
-	"libs/thread/src/*"
+	"boost/smart_ptr/detail/sp_counted_*",
+	"boost/smart_ptr/detail/atomic_count*",
+	"boost/thread/*",
+	"boost/thread/*/*",
+	"libs/thread/src/*",
+	"boost/date_time/gregorian/formatters_limited.hpp",
+	"boost/date_time/date_formatting_limited.hpp",
+	"boost/non_type.hpp"
 ]
 PROGRAM_SOURCE = %q{
 	#include <boost/shared_ptr.hpp>
+	#include <boost/weak_ptr.hpp>
 	#include <boost/thread.hpp>
+	#include <boost/noncopyable.hpp>
 	#include <boost/function.hpp>
 	#include <boost/bind.hpp>
 	#include <boost/date_time/posix_time/posix_time.hpp>
@@ -49,7 +56,11 @@ def sh(*command)
 end
 
 def install(source_filename, target_filename)
-	command = ["install", "-D", "--mode=u+rw,g+r,o+r", source_filename, target_filename]
+	dir = File.dirname(target_filename)
+	if !File.exist?(dir)
+		sh "mkdir", "-p", dir
+	end
+	command = ["install", "-m", "u+rw,g+r,o+r", source_filename, target_filename]
 	sh(*command)
 end
 

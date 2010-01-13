@@ -28,6 +28,16 @@
 #  define BOOST_SA_GCC_WORKAROUND
 #endif
 
+//
+// If the compiler issues warnings about old C style casts,
+// then enable this:
+//
+#if defined(__GNUC__) && ((__GNUC__ > 3) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 4)))
+#  define BOOST_STATIC_ASSERT_BOOL_CAST( x ) ((x) == 0 ? false : true)
+#else
+#  define BOOST_STATIC_ASSERT_BOOL_CAST(x) (bool)(x)
+#endif
+
 #ifdef BOOST_HAS_STATIC_ASSERT
 #  define BOOST_STATIC_ASSERT( B ) static_assert(B, #B)
 #else
@@ -78,14 +88,14 @@ template<int x> struct static_assert_test{};
 #elif defined(BOOST_MSVC)
 #define BOOST_STATIC_ASSERT( B ) \
    typedef ::boost::static_assert_test<\
-      sizeof(::boost::STATIC_ASSERTION_FAILURE< (bool)( B ) >)>\
+      sizeof(::boost::STATIC_ASSERTION_FAILURE< BOOST_STATIC_ASSERT_BOOL_CAST ( B ) >)>\
          BOOST_JOIN(boost_static_assert_typedef_, __COUNTER__)
 #elif defined(BOOST_INTEL_CXX_VERSION) || defined(BOOST_SA_GCC_WORKAROUND)
 // agurt 15/sep/02: a special care is needed to force Intel C++ issue an error 
 // instead of warning in case of failure
 # define BOOST_STATIC_ASSERT( B ) \
     typedef char BOOST_JOIN(boost_static_assert_typedef_, __LINE__) \
-        [ ::boost::STATIC_ASSERTION_FAILURE< (bool)( B ) >::value ]
+        [ ::boost::STATIC_ASSERTION_FAILURE< BOOST_STATIC_ASSERT_BOOL_CAST( B ) >::value ]
 #elif defined(__sgi)
 // special version for SGI MIPSpro compiler
 #define BOOST_STATIC_ASSERT( B ) \
@@ -100,12 +110,12 @@ template<int x> struct static_assert_test{};
 #define BOOST_STATIC_ASSERT( B ) \
    BOOST_STATIC_CONSTANT(int, \
      BOOST_JOIN(boost_static_assert_test_, __LINE__) = \
-       sizeof(::boost::STATIC_ASSERTION_FAILURE< (bool)( B ) >) )
+       sizeof(::boost::STATIC_ASSERTION_FAILURE< BOOST_STATIC_ASSERT_BOOL_CAST( B ) >) )
 #else
 // generic version
 #define BOOST_STATIC_ASSERT( B ) \
    typedef ::boost::static_assert_test<\
-      sizeof(::boost::STATIC_ASSERTION_FAILURE< (bool)( B ) >)>\
+      sizeof(::boost::STATIC_ASSERTION_FAILURE< BOOST_STATIC_ASSERT_BOOL_CAST( B ) >)>\
          BOOST_JOIN(boost_static_assert_typedef_, __LINE__)
 #endif
 

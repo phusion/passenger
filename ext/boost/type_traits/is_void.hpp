@@ -17,6 +17,9 @@
 namespace boost {
 
 //* is a type T void - is_void<T>
+#if defined( __CODEGEARC__ )
+BOOST_TT_AUX_BOOL_TRAIT_DEF1(is_void,T,__is_void(T))
+#else
 BOOST_TT_AUX_BOOL_TRAIT_DEF1(is_void,T,false)
 BOOST_TT_AUX_BOOL_TRAIT_SPEC1(is_void,void,true)
 
@@ -25,6 +28,8 @@ BOOST_TT_AUX_BOOL_TRAIT_SPEC1(is_void,void const,true)
 BOOST_TT_AUX_BOOL_TRAIT_SPEC1(is_void,void volatile,true)
 BOOST_TT_AUX_BOOL_TRAIT_SPEC1(is_void,void const volatile,true)
 #endif
+
+#endif  // non-CodeGear implementation
 
 } // namespace boost
 

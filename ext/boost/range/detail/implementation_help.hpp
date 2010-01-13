@@ -25,6 +25,8 @@ namespace boost
 {
     namespace range_detail
     {
+        template <typename T>
+        inline void boost_range_silence_warning( const T& ) { }
         
         /////////////////////////////////////////////////////////////////////
         // end() help
@@ -82,12 +84,14 @@ namespace boost
         template< class T, std::size_t sz >
         inline std::size_t array_size( T BOOST_RANGE_ARRAY_REF()[sz] )
         {
+            boost_range_silence_warning( boost_range_array );
             return sz;
         }
 
         template< class T, std::size_t sz >
         inline std::size_t array_size( const T BOOST_RANGE_ARRAY_REF()[sz] )
         {
+            boost_range_silence_warning( boost_range_array );
             return sz;
         }
 

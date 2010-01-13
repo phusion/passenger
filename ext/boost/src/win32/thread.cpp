@@ -29,13 +29,26 @@ namespace boost
 
         void create_current_thread_tls_key()
         {
+            tss_cleanup_implemented(); // if anyone uses TSS, we need the cleanup linked in
             current_thread_tls_key=TlsAlloc();
             BOOST_ASSERT(current_thread_tls_key!=TLS_OUT_OF_INDEXES);
         }
 
+        void cleanup_tls_key()
+        {
+            if(current_thread_tls_key)
+            {
+                TlsFree(current_thread_tls_key);
+                current_thread_tls_key=0;
+            }
+        }
+
         detail::thread_data_base* get_current_thread_data()
         {
-            boost::call_once(current_thread_tls_init_flag,create_current_thread_tls_key);
+            if(!current_thread_tls_key)
+            {
+                return 0;
+            }
             return (detail::thread_data_base*)TlsGetValue(current_thread_tls_key);
         }
 
@@ -79,25 +92,6 @@ namespace boost
 
 #endif
 
-    }
-
-    void thread::yield()
-    {
-        this_thread::yield();
-    }
-    
-    void thread::sleep(const system_time& target)
-    {
-        system_time const now(get_system_time());
-        
-        if(target<=now)
-        {
-            this_thread::yield();
-        }
-        else
-        {
-            this_thread::sleep(target-now);
-        }
     }
 
     namespace detail
@@ -160,30 +154,30 @@ namespace boost
                     }
                 }
                 
+                set_current_thread_data(0);
             }
-            set_current_thread_data(0);
         }
         
-    }
-    
-
-    unsigned __stdcall thread::thread_start_function(void* param)
-    {
-        detail::thread_data_base* const thread_info(reinterpret_cast<detail::thread_data_base*>(param));
-        set_current_thread_data(thread_info);
-        try
+        unsigned __stdcall thread_start_function(void* param)
         {
-            thread_info->run();
+            detail::thread_data_base* const thread_info(reinterpret_cast<detail::thread_data_base*>(param));
+            set_current_thread_data(thread_info);
+            try
+            {
+                thread_info->run();
+            }
+            catch(thread_interrupted const&)
+            {
+            }
+// Removed as it stops the debugger identifying the cause of the exception
+// Unhandled exceptions still cause the application to terminate
+//             catch(...)
+//             {
+//                 std::terminate();
+//             }
+            run_thread_exit_callbacks();
+            return 0;
         }
-        catch(thread_interrupted const&)
-        {
-        }
-        catch(...)
-        {
-            std::terminate();
-        }
-        run_thread_exit_callbacks();
-        return 0;
     }
 
     thread::thread()
@@ -218,6 +212,9 @@ namespace boost
             
             void run()
             {}
+        private:
+            externally_launched_thread(externally_launched_thread&);
+            void operator=(externally_launched_thread&);
         };
 
         void make_external_thread_data()
@@ -244,36 +241,6 @@ namespace boost
         detach();
     }
     
-    thread::thread(detail::thread_move_t<thread> x)
-    {
-        lock_guard<mutex> lock(x->thread_info_mutex);
-        thread_info=x->thread_info;
-        x->thread_info=0;
-    }
-    
-    thread& thread::operator=(detail::thread_move_t<thread> x)
-    {
-        thread new_thread(x);
-        swap(new_thread);
-        return *this;
-    }
-        
-    thread::operator detail::thread_move_t<thread>()
-    {
-        return move();
-    }
-
-    detail::thread_move_t<thread> thread::move()
-    {
-        detail::thread_move_t<thread> x(*this);
-        return x;
-    }
-
-    void thread::swap(thread& x)
-    {
-        thread_info.swap(x.thread_info);
-    }
-
     thread::id thread::get_id() const
     {
         return thread::id(get_thread_info());
@@ -592,10 +559,9 @@ namespace boost
         
         void set_tss_data(void const* key,boost::shared_ptr<tss_cleanup_function> func,void* tss_data,bool cleanup_existing)
         {
-            tss_cleanup_implemented(); // if anyone uses TSS, we need the cleanup linked in
             if(tss_data_node* const current_node=find_tss_data(key))
             {
-                if(cleanup_existing && current_node->func.get())
+                if(cleanup_existing && current_node->func.get() && current_node->value)
                 {
                     (*current_node->func)(current_node->value);
                 }
@@ -620,7 +586,9 @@ extern "C" BOOST_THREAD_DECL void on_thread_enter()
 {}
 
 extern "C" BOOST_THREAD_DECL void on_process_exit()
-{}
+{
+    boost::cleanup_tls_key();
+}
 
 extern "C" BOOST_THREAD_DECL void on_thread_exit()
 {

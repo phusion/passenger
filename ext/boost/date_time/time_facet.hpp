@@ -7,15 +7,27 @@
  * Boost Software License, Version 1.0. (See accompanying
  * file LICENSE_1_0.txt or http://www.boost.org/LICENSE_1_0.txt)
  * Author:  Martin Andrian, Jeff Garland, Bart Garst
- * $Date: 2008-02-27 15:00:24 -0500 (Wed, 27 Feb 2008) $
+ * $Date: 2009-10-03 06:04:00 -0400 (Sat, 03 Oct 2009) $
  */
 
-#include "boost/date_time/date_facet.hpp"
-#include "boost/date_time/string_convert.hpp"
-#include "boost/algorithm/string/erase.hpp"
+#include <cctype>
+#include <locale>
+#include <limits>
+#include <string>
 #include <sstream>
 #include <iomanip>
+#include <iterator> // i/ostreambuf_iterator
 #include <exception>
+#include <boost/assert.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/throw_exception.hpp>
+#include <boost/algorithm/string/erase.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/date_time/compiler_config.hpp>
+#include <boost/date_time/date_facet.hpp>
+#include <boost/date_time/string_convert.hpp>
+#include <boost/date_time/special_defs.hpp>
+#include <boost/date_time/time_resolution_traits.hpp> // absolute_value
 
 namespace boost {
 namespace date_time {
@@ -28,6 +40,8 @@ namespace date_time {
       static const char_type fractional_seconds_or_none_format[3];       // F
       static const char_type seconds_with_fractional_seconds_format[3];  // s
       static const char_type seconds_format[3];                          // S
+      static const char_type hours_format[3];                            // H
+      static const char_type unrestricted_hours_format[3];               // O
       static const char_type standard_format[9];                         // x X
       static const char_type zone_abbrev_format[3];                      // z
       static const char_type zone_name_format[3];                        // Z
@@ -62,9 +76,17 @@ namespace date_time {
   time_formats<CharT>::seconds_with_fractional_seconds_format[3] = 
     {'%','s'};
 
-  template <class CharT>  
+  template <class CharT>
   const typename time_formats<CharT>::char_type 
   time_formats<CharT>::seconds_format[3] =  {'%','S'};
+
+  template <class CharT>
+  const typename time_formats<CharT>::char_type 
+  time_formats<CharT>::hours_format[3] =  {'%','H'};
+
+  template <class CharT>
+  const typename time_formats<CharT>::char_type 
+  time_formats<CharT>::unrestricted_hours_format[3] =  {'%','O'};
 
   template <class CharT>  
   const typename time_formats<CharT>::char_type 
@@ -138,7 +160,7 @@ namespace date_time {
   template <class CharT>  
   const typename time_formats<CharT>::char_type 
   time_formats<CharT>::default_time_duration_format[11] = 
-    {'%','H',':','%','M',':','%','S','%','F'};
+    {'%','O',':','%','M',':','%','S','%','F'};
 
 
 
@@ -172,6 +194,8 @@ namespace date_time {
     static const char_type* fractional_seconds_or_none_format;        // %F
     static const char_type* seconds_with_fractional_seconds_format;   // %s
     static const char_type* seconds_format;                           // %S
+    static const char_type* hours_format;                             // %H
+    static const char_type* unrestricted_hours_format;                // %O
     static const char_type* standard_format;                          // %x X
     static const char_type* zone_abbrev_format;                       // %z
     static const char_type* zone_name_format;                         // %Z
@@ -197,9 +221,8 @@ namespace date_time {
 #endif
 
     //! sets default formats for ptime, local_date_time, and time_duration
-    explicit time_facet(::size_t /* a_ref */ = 0) 
-      //: base_type(standard_format),
-      : base_type(default_time_format), 
+    explicit time_facet(::size_t a_ref = 0)
+      : base_type(default_time_format, period_formatter_type(), special_values_formatter_type(), date_gen_formatter_type(), a_ref),
         m_time_duration_format(string_type(duration_sign_negative_only) + default_time_duration_format)
     {}
 
@@ -242,6 +265,7 @@ namespace date_time {
                               a_time.date().as_special());
       }
       string_type format(this->m_format);
+
       string_type frac_str;
       if (format.find(seconds_with_fractional_seconds_format) != string_type::npos) {
         // replace %s with %S.nnn 
@@ -263,9 +287,7 @@ namespace date_time {
         if(a_time.zone_abbrev().empty()) {
           // if zone_abbrev() returns an empty string, we want to
           // erase posix_zone_string_format from format
-          boost::algorithm::replace_all(format,
-                                        posix_zone_string_format,
-                                        "");
+          boost::algorithm::erase_all(format, posix_zone_string_format);
         }
         else{
           boost::algorithm::replace_all(format,
@@ -283,9 +305,7 @@ namespace date_time {
           // erase zone_name_format & one preceeding space
           std::basic_ostringstream<char_type> ss;
           ss << ' ' << zone_name_format;
-          boost::algorithm::replace_all(format,
-                                        ss.str(),
-                                        "");
+          boost::algorithm::erase_all(format, ss.str());
         }
         else{
           boost::algorithm::replace_all(format,
@@ -303,9 +323,7 @@ namespace date_time {
           // erase zone_abbrev_format & one preceeding space
           std::basic_ostringstream<char_type> ss;
           ss << ' ' << zone_abbrev_format;
-          boost::algorithm::replace_all(format,
-                                        ss.str(),
-                                        "");
+          boost::algorithm::erase_all(format, ss.str());
         }
         else{
           boost::algorithm::replace_all(format,
@@ -321,9 +339,7 @@ namespace date_time {
 
           // if zone_name() returns an empty string, we want to
           // erase zone_iso_extended_format from format
-          boost::algorithm::replace_all(format,
-                                        zone_iso_extended_format,
-                                        "");
+          boost::algorithm::erase_all(format, zone_iso_extended_format);
         }
         else{
           boost::algorithm::replace_all(format,
@@ -340,9 +356,7 @@ namespace date_time {
 
           // if zone_abbrev() returns an empty string, we want to
           // erase zone_iso_format from format
-          boost::algorithm::replace_all(format,
-                                        zone_iso_format,
-                                        "");
+          boost::algorithm::erase_all(format, zone_iso_format);
         }
         else{
           boost::algorithm::replace_all(format,
@@ -396,24 +410,45 @@ namespace date_time {
 
       string_type format(m_time_duration_format);
       if (a_time_dur.is_negative()) {
-          // replace %- with minus sign.  Should we use the numpunct facet?
-          boost::algorithm::replace_all(format, 
-                                        duration_sign_negative_only, 
-                                        negative_sign);
+        // replace %- with minus sign.  Should we use the numpunct facet?
+        boost::algorithm::replace_all(format, 
+                                      duration_sign_negative_only, 
+                                      negative_sign);
           // remove all the %+ in the string with '-'
-          boost::algorithm::replace_all(format, 
-                                        duration_sign_always, 
-                                        negative_sign);
+        boost::algorithm::replace_all(format, 
+                                      duration_sign_always, 
+                                      negative_sign);
       }
       else { //duration is positive
-          // remove all the %- combos from the string
-          boost::algorithm::replace_all(format, 
-                                        duration_sign_negative_only, 
-                                        "");
-          // remove all the %+ in the string with '+'
-          boost::algorithm::replace_all(format, 
-                                        duration_sign_always, 
-                                        positive_sign);
+        // remove all the %- combos from the string
+        boost::algorithm::erase_all(format, duration_sign_negative_only);
+        // remove all the %+ in the string with '+'
+        boost::algorithm::replace_all(format, 
+                                      duration_sign_always, 
+                                      positive_sign);
+      }
+
+      /*
+       * It is possible for a time duration to span more then 24 hours.  
+       * Standard time_put::put is obliged to behave the same as strftime 
+       * (See ISO 14882-2003 22.2.5.3.1 par. 1) and strftime's behavior is 
+       * unspecified for the case when tm_hour field is outside 0-23 range 
+       * (See ISO 9899-1999 7.23.3.5 par. 3). So we must output %H and %O
+       * here ourself.
+       */
+      string_type hours_str;
+      if (format.find(unrestricted_hours_format) != string_type::npos) {
+        hours_str = hours_as_string(a_time_dur);
+        boost::algorithm::replace_all(format, unrestricted_hours_format, hours_str);
+      }
+      // We still have to process restricted hours format specifier. In order to
+      // support parseability of durations in ISO format (%H%M%S), we'll have to
+      // restrict the stringified hours length to 2 characters.
+      if (format.find(hours_format) != string_type::npos) {
+        if (hours_str.empty())
+          hours_str = hours_as_string(a_time_dur);
+        BOOST_ASSERT(hours_str.length() <= 2);
+        boost::algorithm::replace_all(format, hours_format, hours_str);
       }
 
       string_type frac_str;
@@ -485,17 +520,33 @@ namespace date_time {
       }
 
       //make sure there is no sign
-      frac_sec = date_time::absolute_value(frac_sec);
+      return integral_as_string(
+        date_time::absolute_value(frac_sec),
+        time_duration_type::num_fractional_digits());
+    }
+
+    static
+    string_type
+    hours_as_string(const time_duration_type& a_time, int width = 2)
+    {
+      return integral_as_string(date_time::absolute_value(a_time.hours()), width);
+    }
+
+    template< typename IntT >
+    static
+    string_type
+    integral_as_string(IntT val, int width = 2)
+    {
       std::basic_ostringstream<char_type> ss;
       ss.imbue(std::locale::classic()); // don't want any formatting
-      ss << std::setw(time_duration_type::num_fractional_digits())
-         << std::setfill(static_cast<char_type>('0'));
+      ss << std::setw(width) 
+        << std::setfill(static_cast<char_type>('0'));
 #if (defined(BOOST_MSVC) && (_MSC_VER < 1300))
       // JDG [7/6/02 VC++ compatibility]
       char_type buff[34];
-      ss << _i64toa(static_cast<boost::int64_t>(frac_sec), buff, 10);
+      ss << _i64toa(static_cast<boost::int64_t>(val), buff, 10);
 #else
-      ss << frac_sec;
+      ss << val;
 #endif
       return ss.str();
     }
@@ -504,7 +555,7 @@ namespace date_time {
     string_type m_time_duration_format;
 
   };
-  
+
   template <class time_type, class CharT, class OutItrT>  
   std::locale::id time_facet<time_type, CharT, OutItrT>::id;
 
@@ -545,6 +596,14 @@ namespace date_time {
   template <class time_type, class CharT, class OutItrT>  
   const typename time_facet<time_type, CharT, OutItrT>::char_type*
   time_facet<time_type, CharT, OutItrT>::seconds_format =  time_formats<CharT>::seconds_format;
+
+  template <class time_type, class CharT, class OutItrT>  
+  const typename time_facet<time_type, CharT, OutItrT>::char_type*
+  time_facet<time_type, CharT, OutItrT>::hours_format =  time_formats<CharT>::hours_format;
+
+  template <class time_type, class CharT, class OutItrT>  
+  const typename time_facet<time_type, CharT, OutItrT>::char_type*
+  time_facet<time_type, CharT, OutItrT>::unrestricted_hours_format =  time_formats<CharT>::unrestricted_hours_format;
 
   template <class time_type, class CharT, class OutItrT>  
   const typename time_facet<time_type, CharT, OutItrT>::char_type*
@@ -705,11 +764,15 @@ namespace date_time {
           c = *sitr;
         }
         
-        long hour = 0; 
-        long min = 0; 
-        long sec = 0; 
+        typedef typename time_duration_type::hour_type hour_type;
+        typedef typename time_duration_type::min_type min_type;
+        typedef typename time_duration_type::sec_type sec_type;
+
+        hour_type hour = 0; 
+        min_type min = 0; 
+        sec_type sec = 0; 
         typename time_duration_type::fractional_seconds_type frac(0);
-        
+
         typedef std::num_get<CharT, InItrT> num_get;
         if(!std::has_facet<num_get>(a_ios.getloc())) {
           num_get* ng = new num_get();
@@ -720,13 +783,24 @@ namespace date_time {
         const_itr itr(m_time_duration_format.begin());
         while (itr != m_time_duration_format.end() && (sitr != stream_end)) {
           if (*itr == '%') {
-            itr++;
+            ++itr;
             if (*itr != '%') {
               switch(*itr) {
+              case 'O': 
+                {
+                  // A period may span more than 24 hours. In that case the format
+                  // string should be composed with the unrestricted hours specifier.
+                  hour = var_string_to_int<hour_type, CharT>(sitr, stream_end, 
+                                      std::numeric_limits<hour_type>::digits10 + 1);
+                  if(hour == -1){
+                     return check_special_value(sitr, stream_end, td, c);
+                  }
+                  break;
+                }
               case 'H': 
                 {
                   match_results mr;
-                  hour = fixed_string_to_int<short, CharT>(sitr, stream_end, mr, 2);
+                  hour = fixed_string_to_int<hour_type, CharT>(sitr, stream_end, mr, 2);
                   if(hour == -1){
                      return check_special_value(sitr, stream_end, td, c);
                   }
@@ -735,30 +809,23 @@ namespace date_time {
               case 'M': 
                 {
                   match_results mr;
-                  min = fixed_string_to_int<short, CharT>(sitr, stream_end, mr, 2);
+                  min = fixed_string_to_int<min_type, CharT>(sitr, stream_end, mr, 2);
                   if(min == -1){
                      return check_special_value(sitr, stream_end, td, c);
                   }
                   break;
                 }
+              case 's':
               case 'S': 
                 {
                   match_results mr;
-                  sec = fixed_string_to_int<short, CharT>(sitr, stream_end, mr, 2);
+                  sec = fixed_string_to_int<sec_type, CharT>(sitr, stream_end, mr, 2);
                   if(sec == -1){
                      return check_special_value(sitr, stream_end, td, c);
                   }
-                  break;
-                }
-              case 's':
-                {
-                  match_results mr;
-                  sec = fixed_string_to_int<short, CharT>(sitr, stream_end, mr, 2);
-                  if(sec == -1){
-                     return check_special_value(sitr, stream_end, td, c);
-                  }
+                  if (*itr == 'S')
+                    break;
                   // %s is the same as %S%f so we drop through into %f
-                  //break;
                 }
               case 'f':
                 {
@@ -796,20 +863,20 @@ namespace date_time {
               }// switch
             }
             else { // itr == '%', second consecutive
-              sitr++;
+              ++sitr;
             }
         
-            itr++; //advance past format specifier
+            ++itr; //advance past format specifier
           }
           else {  //skip past chars in format and in buffer
-            itr++;
+            ++itr;
             // set use_current_char when sitr is already 
             // pointing at the next character to process
             if (use_current_char) {
               use_current_char = false;
             }
             else {
-              sitr++;
+              ++sitr;
             }
           }
         }
@@ -858,11 +925,15 @@ namespace date_time {
         if((sitr != stream_end) && (*sitr == '-' || *sitr == '+')) {
           c = *sitr;
         }
-       
+
+        typedef typename time_duration_type::hour_type hour_type;
+        typedef typename time_duration_type::min_type min_type;
+        typedef typename time_duration_type::sec_type sec_type;
+
         // time elements
-        long hour = 0; 
-        long min = 0; 
-        long sec = 0; 
+        hour_type hour = 0; 
+        min_type min = 0; 
+        sec_type sec = 0; 
         typename time_duration_type::fractional_seconds_type frac(0);
         // date elements
         short day_of_year(0);
@@ -884,7 +955,7 @@ namespace date_time {
         const_itr itr(this->m_format.begin());
         while (itr != this->m_format.end() && (sitr != stream_end)) {
           if (*itr == '%') {
-            itr++;
+            ++itr;
             if (*itr != '%') {
               // the cases are grouped by date & time flags - not alphabetical order
               switch(*itr) {
@@ -898,7 +969,7 @@ namespace date_time {
                     try {
                       t_year = this->m_parser.parse_year(sitr, stream_end, s, mr);
                     }
-                    catch(std::out_of_range bad_year) { // base class for bad_year exception
+                    catch(std::out_of_range&) { // base class for bad_year exception
                       if(this->m_sv_parser.match(sitr, stream_end, mr)) {
                         t = time_type(static_cast<special_values>(mr.current_match));
                         return sitr;
@@ -919,13 +990,13 @@ namespace date_time {
                     try {
                       t_month = this->m_parser.parse_month(sitr, stream_end, s, mr);
                     }
-                    catch(std::out_of_range bad_month) { // base class for bad_month exception
+                    catch(std::out_of_range&) { // base class for bad_month exception
                       if(this->m_sv_parser.match(sitr, stream_end, mr)) {
                         t = time_type(static_cast<special_values>(mr.current_match));
                         return sitr;
                       }
                       else {
-                        throw; // rethrow bad_year
+                        throw; // rethrow bad_month
                       }
                     }
                     // did m_parser already advance sitr to next char?
@@ -946,7 +1017,7 @@ namespace date_time {
                     try {
                       wd = this->m_parser.parse_weekday(sitr, stream_end, s, mr);
                     }
-                    catch(std::out_of_range bad_weekday) { // base class for bad_weekday exception
+                    catch(std::out_of_range&) { // base class for bad_weekday exception
                       if(this->m_sv_parser.match(sitr, stream_end, mr)) {
                         t = time_type(static_cast<special_values>(mr.current_match));
                         return sitr;
@@ -982,14 +1053,14 @@ namespace date_time {
                     try {
                       t_day = this->m_parser.parse_day_of_month(sitr, stream_end);
                     }
-                    catch(std::out_of_range bad_day_of_month) { // base class for exception
+                    catch(std::out_of_range&) { // base class for exception bad_day_of_month
                       match_results mr;
                       if(this->m_sv_parser.match(sitr, stream_end, mr)) {
                         t = time_type(static_cast<special_values>(mr.current_match));
                         return sitr;
                       }
                       else {
-                        throw; // rethrow bad_year
+                        throw; // rethrow bad_day_of_month
                       }
                     }
                     break;
@@ -998,7 +1069,7 @@ namespace date_time {
                 case 'H': 
                   {
                     match_results mr;
-                    hour = fixed_string_to_int<short, CharT>(sitr, stream_end, mr, 2);
+                    hour = fixed_string_to_int<hour_type, CharT>(sitr, stream_end, mr, 2);
                     if(hour == -1){
                        return check_special_value(sitr, stream_end, t, c);
                     }
@@ -1007,30 +1078,23 @@ namespace date_time {
                 case 'M': 
                   {
                     match_results mr;
-                    min = fixed_string_to_int<short, CharT>(sitr, stream_end, mr, 2);
+                    min = fixed_string_to_int<min_type, CharT>(sitr, stream_end, mr, 2);
                     if(min == -1){
                        return check_special_value(sitr, stream_end, t, c);
                     }
                     break;
                   }
+                case 's':
                 case 'S': 
                   {
                     match_results mr;
-                    sec = fixed_string_to_int<short, CharT>(sitr, stream_end, mr, 2);
+                    sec = fixed_string_to_int<sec_type, CharT>(sitr, stream_end, mr, 2);
                     if(sec == -1){
                        return check_special_value(sitr, stream_end, t, c);
                     }
-                    break;
-                  }
-                case 's':
-                  {
-                    match_results mr;
-                    sec = fixed_string_to_int<short, CharT>(sitr, stream_end, mr, 2);
-                    if(sec == -1){
-                       return check_special_value(sitr, stream_end, t, c);
-                    }
+                    if (*itr == 'S')
+                      break;
                     // %s is the same as %S%f so we drop through into %f
-                    //break;
                   }
                 case 'f':
                   {
@@ -1097,26 +1161,26 @@ namespace date_time {
               }// switch
             } 
             else { // itr == '%', second consecutive
-              sitr++;
+              ++sitr;
             }
        
             if(use_current_format_char) {
               use_current_format_char = false;
             }
             else {
-              itr++; //advance past format specifier
+              ++itr; //advance past format specifier
             }
              
           }
           else {  //skip past chars in format and in buffer
-            itr++;
+            ++itr;
             // set use_current_char when sitr is already 
             // pointing at the next character to process
             if (use_current_char) {
               use_current_char = false;
             }
             else {
-              sitr++;
+              ++sitr;
             }
           }
         }
@@ -1149,7 +1213,8 @@ namespace date_time {
         this->m_sv_parser.match(sitr, stream_end, mr);
         if(mr.current_match == match_results::PARSE_ERROR) {
           std::string tmp = convert_string_type<char_type, char>(mr.cache);
-          throw std::ios_base::failure("Parse failed. No match found for '" + tmp + "'");
+          boost::throw_exception(std::ios_base::failure("Parse failed. No match found for '" + tmp + "'"));
+          BOOST_DATE_TIME_UNREACHABLE_EXPRESSION(return sitr); // should never reach
         }
         tt = temporal_type(static_cast<special_values>(mr.current_match)); 
         return sitr;

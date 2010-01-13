@@ -1,6 +1,6 @@
 #ifndef BOOST_THREAD_PTHREAD_RECURSIVE_MUTEX_HPP
 #define BOOST_THREAD_PTHREAD_RECURSIVE_MUTEX_HPP
-// (C) Copyright 2007 Anthony Williams
+// (C) Copyright 2007-8 Anthony Williams
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -11,7 +11,7 @@
 #include <boost/thread/locks.hpp>
 #include <boost/thread/thread_time.hpp>
 #include <boost/assert.hpp>
-#ifndef WIN32
+#ifndef _WIN32
 #include <unistd.h>
 #endif
 #include <boost/date_time/posix_time/conversion.hpp>
@@ -24,6 +24,8 @@
 #define BOOST_PTHREAD_HAS_TIMEDLOCK
 #endif
 #endif
+
+#include <boost/config/abi_prefix.hpp>
 
 namespace boost
 {
@@ -76,8 +78,15 @@ namespace boost
             BOOST_ASSERT(!res || res==EBUSY);
             return !res;
         }
+
+        typedef pthread_mutex_t* native_handle_type;
+        native_handle_type native_handle()
+        {
+            return &m;
+        }
+
         typedef unique_lock<recursive_mutex> scoped_lock;
-        typedef scoped_lock scoped_try_lock;
+        typedef detail::try_lock_wrapper<recursive_mutex> scoped_try_lock;
     };
 
     typedef recursive_mutex recursive_try_mutex;
@@ -168,9 +177,16 @@ namespace boost
         {
             struct timespec const timeout=detail::get_timespec(abs_time);
             int const res=pthread_mutex_timedlock(&m,&timeout);
-            BOOST_ASSERT(!res || res==EBUSY);
+            BOOST_ASSERT(!res || res==ETIMEDOUT);
             return !res;
         }
+
+        typedef pthread_mutex_t* native_handle_type;
+        native_handle_type native_handle()
+        {
+            return &m;
+        }
+
 #else
         void lock()
         {
@@ -239,11 +255,12 @@ namespace boost
 #endif
 
         typedef unique_lock<recursive_timed_mutex> scoped_timed_lock;
-        typedef scoped_timed_lock scoped_try_lock;
+        typedef detail::try_lock_wrapper<recursive_timed_mutex> scoped_try_lock;
         typedef scoped_timed_lock scoped_lock;
     };
 
 }
 
+#include <boost/config/abi_suffix.hpp>
 
 #endif
