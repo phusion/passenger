@@ -138,7 +138,7 @@ namespace boost
 } // namespace boost
 
 #elif defined(__FreeBSD__) && (__FreeBSD__ <= 4) || defined(__osf__) || \
-      defined(__SOLARIS9__)
+      defined(__SOLARIS9__) || defined(__NetBSD__)
 // FreeBSD, Tru64 and Solaris 9 have an <inttypes.h> that contains much of 
 // what we need.
 # include <inttypes.h>
@@ -391,6 +391,7 @@ INT#_C macros if they're not already defined (John Maddock).
 #  define INTMAX_C(value)   value##i64
 #  define UINTMAX_C(value)  value##ui64
 
+# elif defined(__NetBSD__)
 # else
 //  do it the old fashioned way:
 
