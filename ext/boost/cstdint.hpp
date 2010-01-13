@@ -137,7 +137,7 @@ namespace boost
 
 } // namespace boost
 
-#elif defined(__FreeBSD__) && (__FreeBSD__ <= 4) || defined(__osf__) || defined(__VMS) || defined(__SOLARIS9__)
+#elif defined(__FreeBSD__) && (__FreeBSD__ <= 4) || defined(__osf__) || defined(__VMS) || defined(__SOLARIS9__) || defined(__NetBSD__)
 // FreeBSD and Tru64 have an <inttypes.h> that contains much of what we need.
 # include <inttypes.h>
 
@@ -424,6 +424,7 @@ INT#_C macros if they're not already defined (John Maddock).
 #  define UINTMAX_C(value)  value##ui64
 #endif
 
+# elif defined(__NetBSD__)
 # else
 //  do it the old fashioned way:
 
