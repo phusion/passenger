@@ -17,7 +17,10 @@ namespace boost
     inline void condition_variable::wait(unique_lock<mutex>& m)
     {
         detail::interruption_checker check_for_interruption(&cond);
-        BOOST_VERIFY(!pthread_cond_wait(&cond,m.mutex()->native_handle()));
+        int ret;
+        do {
+            ret = pthread_cond_wait(&cond,m.mutex()->native_handle());
+        } while (ret == EINTR);
     }
 
     inline bool condition_variable::timed_wait(unique_lock<mutex>& m,boost::system_time const& wait_until)
