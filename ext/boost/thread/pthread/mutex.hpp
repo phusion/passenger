@@ -42,22 +42,37 @@ namespace boost
         }
         ~mutex()
         {
-            BOOST_VERIFY(!pthread_mutex_destroy(&m));
+            int ret;
+            do {
+                ret = pthread_mutex_destroy(&m);
+            } while (ret == EINTR);
+            BOOST_VERIFY(!ret);
         }
         
         void lock()
         {
-            BOOST_VERIFY(!pthread_mutex_lock(&m));
+            int ret;
+            do {
+                ret = pthread_mutex_lock(&m);
+            } while (ret == EINTR);
+            BOOST_VERIFY(!ret);
         }
 
         void unlock()
         {
-            BOOST_VERIFY(!pthread_mutex_unlock(&m));
+            int ret;
+            do {
+                ret = pthread_mutex_unlock(&m);
+            } while (ret == EINTR);
+            BOOST_VERIFY(!ret);
         }
         
         bool try_lock()
         {
-            int const res=pthread_mutex_trylock(&m);
+            int res;
+            do {
+                res = pthread_mutex_trylock(&m);
+            } while (res == EINTR);
             BOOST_ASSERT(!res || res==EBUSY);
             return !res;
         }
