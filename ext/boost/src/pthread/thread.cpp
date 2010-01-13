@@ -21,6 +21,7 @@
 #elif defined BOOST_HAS_UNISTD_H
 #include <unistd.h>
 #endif
+#include <cassert>
 
 #include "timeconv.inl"
 
