@@ -727,7 +727,15 @@ cleanupAgentsInBackground(vector<AgentWatcher *> &watchers) {
 		{
 			struct timeval timeout;
 			
-			FD_COPY(&fds, &fds2);
+			#ifdef FD_COPY
+				FD_COPY(&fds, &fds2);
+			#else
+				FD_ZERO(&fds2);
+				for (it = watchers.begin(); it != watchers.end(); it++) {
+					FD_SET((*it)->getFeedbackFd(), &fds2);
+				}
+			#endif
+			
 			timeout.tv_sec = 0;
 			timeout.tv_usec = 10000;
 			agentProcessesDone = syscalls::select(max + 1, &fds2, NULL, NULL, &timeout);
