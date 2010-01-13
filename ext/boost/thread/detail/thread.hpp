@@ -113,8 +113,6 @@ namespace boost
         mutable boost::mutex thread_info_mutex;
         detail::thread_data_ptr thread_info;
 
-        void start_thread(unsigned int stack_size = 0);
-        
         explicit thread(detail::thread_data_ptr data);
 
         detail::thread_data_ptr get_thread_info() const;
@@ -142,13 +140,24 @@ namespace boost
         }
 
         struct dummy;
+    
+    protected:
+        template <class F>
+        void set_thread_main_function(F f)
+        {
+            thread_info = make_thread_info(f);
+        }
+        
+        void start_thread(unsigned int stack_size = 0);
+        
+        
 #endif
     public:
 #ifdef __SUNPRO_CC 
         thread(const volatile thread&); 
 #endif 
         thread();
-        ~thread();
+        virtual ~thread();
 
 #ifdef BOOST_HAS_RVALUE_REFS
         template <class F>
