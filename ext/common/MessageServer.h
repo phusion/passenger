@@ -475,7 +475,7 @@ protected:
 				<< "   message: " << toString(args) << "\n"
 				<< "   exception: " << e.what() << "\n"
 				<< "   backtrace:\n" << e.backtrace());
-		} catch (const exception &e) {
+		} catch (const std::exception &e) {
 			P_TRACE(2, "An error occurred in a MessageServer client thread " << (int) client <<":\n"
 				<< "   message: " << toString(args) << "\n"
 				<< "   exception: " << e.what() << "\n"

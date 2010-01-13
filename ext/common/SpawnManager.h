@@ -268,10 +268,10 @@ private:
 		try {
 			connection = connect();
 			channel = MessageChannel(connection);
-		} catch (SystemException &e) {
+		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not connect to the spawn server: ") +
 				e.sys());
-		} catch (const exception &e) {
+		} catch (const std::exception &e) {
 			throw SpawnException(string("Could not connect to the spawn server: ") +
 				e.what());
 		}

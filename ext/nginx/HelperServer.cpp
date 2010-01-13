@@ -510,7 +510,7 @@ private:
 			P_ERROR("Uncaught exception in PassengerServer client thread:\n"
 				<< "   exception: " << e.what() << "\n"
 				<< "   backtrace:\n" << e.backtrace());
-		} catch (const exception &e) {
+		} catch (const std::exception &e) {
 			P_ERROR("Uncaught exception in PassengerServer client thread:\n"
 				<< "   exception: " << e.what() << "\n"
 				<< "   backtrace: not available");
@@ -543,7 +543,7 @@ private:
 				<< "   exception: " << e.what() << "\n"
 				<< "   backtrace:\n" << e.backtrace());
 			abort();
-		} catch (const exception &e) {
+		} catch (const std::exception &e) {
 			P_ERROR("Uncaught exception in PassengerServer client thread:\n"
 				<< "   exception: " << e.what() << "\n"
 				<< "   backtrace: not available");
@@ -946,7 +946,7 @@ main(int argc, char *argv[]) {
 	} catch (const tracable_exception &e) {
 		P_ERROR(e.what() << "\n" << e.backtrace());
 		return 1;
-	} catch (const exception &e) {
+	} catch (const std::exception &e) {
 		P_ERROR(e.what());
 		return 1;
 	} catch (...) {

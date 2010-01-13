@@ -322,7 +322,7 @@ private:
 					NULL);
 				UPDATE_TRACE_POINT();
 				session->closeStream();
-			} catch (const exception &e) {
+			} catch (const std::exception &e) {
 				P_TRACE(3, "Client " << commonContext.name() << ": could not send "
 					"'ok' back to the ApplicationPool client: " <<
 					e.what());

@@ -119,7 +119,7 @@ private:
 			threadExceptionMessage = e.what();
 			threadExceptionBacktrace = e.backtrace();
 			errorEvent.notify();
-		} catch (const exception &e) {
+		} catch (const std::exception &e) {
 			lock_guard<boost::mutex> l(lock);
 			threadExceptionMessage = e.what();
 			errorEvent.notify();
@@ -854,7 +854,7 @@ main(int argc, char *argv[]) {
 		for (it = watchers.begin(); it != watchers.end(); it++) {
 			try {
 				(*it)->start();
-			} catch (const exception &e) {
+			} catch (const std::exception &e) {
 				feedbackChannel.write("Watchdog startup error",
 					e.what(), NULL);
 				forceAllAgentsShutdown(watchers);
@@ -865,7 +865,7 @@ main(int argc, char *argv[]) {
 		for (it = watchers.begin(); it != watchers.end(); it++) {
 			try {
 				(*it)->startWatching();
-			} catch (const exception &e) {
+			} catch (const std::exception &e) {
 				feedbackChannel.write("Watchdog startup error",
 					e.what(), NULL);
 				forceAllAgentsShutdown(watchers);
@@ -904,7 +904,7 @@ main(int argc, char *argv[]) {
 	} catch (const tracable_exception &e) {
 		P_ERROR(e.what() << "\n" << e.backtrace());
 		return 1;
-	} catch (const exception &e) {
+	} catch (const std::exception &e) {
 		P_ERROR(e.what());
 		return 1;
 	}

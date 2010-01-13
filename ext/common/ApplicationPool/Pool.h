@@ -183,7 +183,7 @@ private:
 	 */
 	struct SharedData {
 		boost::mutex lock;
-		condition activeOrMaxChanged;
+		condition_variable activeOrMaxChanged;
 		
 		GroupMap groups;
 		unsigned int max;
@@ -264,14 +264,14 @@ private:
 	bool done;
 	unsigned int maxIdleTime;
 	unsigned int waitingOnGlobalQueue;
-	condition cleanerThreadSleeper;
+	condition_variable cleanerThreadSleeper;
 	CachedFileStat cstat;
 	FileChangeChecker fileChangeChecker;
 	
 	// Shortcuts for instance variables in SharedData. Saves typing in get()
 	// and other methods.
 	boost::mutex &lock;
-	condition &activeOrMaxChanged;
+	condition_variable &activeOrMaxChanged;
 	GroupMap &groups;
 	unsigned int &max;
 	unsigned int &count;
@@ -541,7 +541,7 @@ private:
 					}
 				}
 			}
-		} catch (const exception &e) {
+		} catch (const std::exception &e) {
 			P_ERROR("Uncaught exception: " << e.what());
 		}
 	}
@@ -686,7 +686,7 @@ private:
 			} else {
 				throw SpawnException(message);
 			}
-		} catch (const exception &e) {
+		} catch (const std::exception &e) {
 			string message("Cannot spawn application '");
 			message.append(appRoot);
 			message.append("': ");
@@ -828,7 +828,7 @@ public:
 					throw;
 				} // else retry
 				
-			} catch (exception &e) {
+			} catch (std::exception &e) {
 				{
 					unique_lock<boost::mutex> l(lock);
 					detachWithoutLock(processInfo->process->getDetachKey());

@@ -789,7 +789,7 @@ private:
 				e.what() << "\n" << "  Backtrace:\n" << e.backtrace());
 			return HTTP_INTERNAL_SERVER_ERROR;
 		
-		} catch (const exception &e) {
+		} catch (const std::exception &e) {
 			P_ERROR("Unexpected error in mod_passenger: " <<
 				e.what() << "\n" << "  Backtrace: not available");
 			return HTTP_INTERNAL_SERVER_ERROR;
@@ -1527,7 +1527,7 @@ destroy_hooks(void *arg) {
 	} catch (const thread_interrupted &) {
 		// Ignore interruptions, we're shutting down anyway.
 		P_TRACE(3, "A system call was interrupted during shutdown of mod_passenger.");
-	} catch (const exception &e) {
+	} catch (const std::exception &e) {
 		// Ignore other exceptions, we're shutting down anyway.
 		P_TRACE(3, "Exception during shutdown of mod_passenger: " << e.what());
 	}
@@ -1615,7 +1615,7 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 		
 		return DECLINED;
 		
-	} catch (const exception &e) {
+	} catch (const std::exception &e) {
 		ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,
 			"*** Passenger could not be initialized because of this error: %s",
 			e.what());

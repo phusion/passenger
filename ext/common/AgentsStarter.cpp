@@ -52,7 +52,7 @@ agents_starter_start(AgentsStarter *as,
 		errno = e.code();
 		*errorMessage = strdup(e.what());
 		return 0;
-	} catch (const exception &e) {
+	} catch (const std::exception &e) {
 		errno = -1;
 		*errorMessage = strdup(e.what());
 		return 0;

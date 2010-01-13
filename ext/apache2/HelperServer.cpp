@@ -363,7 +363,7 @@ main(int argc, char *argv[]) {
 	} catch (const tracable_exception &e) {
 		P_ERROR(e.what() << "\n" << e.backtrace());
 		return 1;
-	} catch (const exception &e) {
+	} catch (const std::exception &e) {
 		P_ERROR(e.what());
 		return 1;
 	} catch (...) {
