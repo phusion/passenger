@@ -9,7 +9,7 @@ using namespace oxt;
 namespace tut {
 	struct spin_lock_test {
 		boost::mutex continue_mutex;
-		boost::condition continue_cond;
+		boost::condition_variable continue_cond;
 		bool continue_ok;
 		spin_lock lock;
 		volatile unsigned int counter;
