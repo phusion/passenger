@@ -33,8 +33,10 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-#include <alloca.h>
 #include <limits.h>
+#ifdef HAVE_ALLOCA_H
+	#include <alloca.h>
+#endif
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #ifndef RARRAY_LEN

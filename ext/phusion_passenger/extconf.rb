@@ -32,6 +32,8 @@ if RUBY_PLATFORM =~ /solaris/
 	end
 end
 
+have_header('alloca.h')
+
 with_cflags($CFLAGS) do
 	create_makefile('native_support')
 end
