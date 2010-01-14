@@ -19,6 +19,7 @@ ext/nginx/PassengerHelperServer
 ext/common/PassengerWatchdog
 ext/common/PassengerLoggingAgent
 ext/phusion_passenger/Makefile
+ext/phusion_passenger/mkmf.log
 ext/*.a
 doc/rdoc
 doc/cxxapi
