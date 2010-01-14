@@ -350,10 +350,10 @@ namespace tut {
 		
 		MessageChannel channel(fd[0]);
 		ensure(channel.connected());
-		ensure_equals(channel.fileno(), fd[0]);
+		ensure_equals(channel.filenum(), fd[0]);
 		
 		channel.close();
-		ensure_equals(channel.fileno(), -1);
+		ensure_equals(channel.filenum(), -1);
 		ensure(!channel.connected());
 	}
 	
@@ -375,7 +375,7 @@ namespace tut {
 		if (!gotException) {
 			fail("close() should have failed");
 		}
-		ensure_equals(channel.fileno(), -1);
+		ensure_equals(channel.filenum(), -1);
 		ensure(!channel.connected());
 	}
 	
@@ -389,7 +389,7 @@ namespace tut {
 	TEST_METHOD(16) {
 		// waitUntilReadable() waits for less than the specified timeout if data
 		// is not available immediately but still available before the timeout.
-		TempThread thr(boost::bind(&writeDataAfterSomeTime, writer.fileno(), 35));
+		TempThread thr(boost::bind(&writeDataAfterSomeTime, writer.filenum(), 35));
 		
 		unsigned long long timeout = 1000;
 		ensure("Data is available", reader.waitUntilReadable(&timeout));
@@ -403,7 +403,7 @@ namespace tut {
 		ensure("No data is available", !reader.waitUntilReadable(&timeout));
 		ensure_equals("Timeout is not modified", timeout, 0u);
 		
-		write(writer.fileno(), "hi", 2);
+		write(writer.filenum(), "hi", 2);
 		ensure("Data is available", reader.waitUntilReadable(&timeout));
 		ensure_equals("Timeout is not modified", timeout, 0u);
 	}
@@ -433,7 +433,7 @@ namespace tut {
 		unsigned long long timeout = 20;
 		char buf[100];
 		
-		TempThread thr(boost::bind(&writeDataSlowly, writer.fileno(), sizeof(buf), 1));
+		TempThread thr(boost::bind(&writeDataSlowly, writer.filenum(), sizeof(buf), 1));
 		
 		try {
 			reader.readRaw(&buf, sizeof(buf), &timeout);
@@ -475,7 +475,7 @@ namespace tut {
 		char buf[3];
 		
 		// Spawn a thread that writes 100 bytes per second, i.e. each byte takes 10 msec.
-		TempThread thr(boost::bind(&writeDataSlowly, writer.fileno(), 1000, 100));
+		TempThread thr(boost::bind(&writeDataSlowly, writer.filenum(), 1000, 100));
 		
 		// We read 3 bytes.
 		reader.readRaw(&buf, sizeof(buf), &timeout);
@@ -563,7 +563,7 @@ namespace tut {
 		
 		// Write a dummy body at 100 bytes per sec, or 1 byte every 10 msec.
 		// Takes 10 seconds.
-		TempThread thr(boost::bind(&writeDataSlowly, writer.fileno(), 1000, 100));
+		TempThread thr(boost::bind(&writeDataSlowly, writer.filenum(), 1000, 100));
 		
 		unsigned long long timeout = 35;
 		Timer timer;
@@ -584,7 +584,7 @@ namespace tut {
 		unsigned long long timeout = 1000;
 		
 		writer.writeUint32(250);
-		TempThread thr(boost::bind(&writeDataSlowly, writer.fileno(), 250, 1000));
+		TempThread thr(boost::bind(&writeDataSlowly, writer.filenum(), 250, 1000));
 		
 		reader.readScalar(str, 0, &timeout);
 		ensure("Spent at least 250 msec waiting", timeout <= 1000 - 250);
