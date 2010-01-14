@@ -105,7 +105,7 @@ namespace tut {
 	static void create_threads(dynamic_thread_group *group) {
 		for (int i = 1000; i >= 0; i--) {
 			boost::function<void ()> f(boost::bind(do_nothing, i * 1000));
-			group->create_thread(f);
+			group->create_thread(f, "", 256 * 1024);
 		}
 	}
 	
