@@ -151,7 +151,7 @@ public:
 	/**
 	 * Returns the underlying file descriptor. -1 if it has already been closed.
 	 */
-	int fileno() const {
+	int filenum() const {
 		return fd;
 	}
 	
@@ -168,7 +168,7 @@ public:
 	 *
 	 * @throw SystemException
 	 * @throw boost::thread_interrupted
-	 * @post fileno() == -1
+	 * @post filenum() == -1
 	 * @post !connected()
 	 */
 	void close() {

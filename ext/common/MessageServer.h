@@ -188,7 +188,7 @@ public:
 		
 		/** Returns a string representation for this client context. */
 		string name() {
-			return toString(channel.fileno());
+			return toString(channel.filenum());
 		}
 		
 		/**
