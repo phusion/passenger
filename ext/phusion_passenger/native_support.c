@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <limits.h>
+#include <grp.h>
 #ifdef HAVE_ALLOCA_H
 	#include <alloca.h>
 #endif
