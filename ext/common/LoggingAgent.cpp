@@ -169,7 +169,7 @@ main(int argc, char *argv[]) {
 	
 	/* Become the process group leader so that the watchdog can kill this
 	 * app as well as all descendant processes. */
-	setpgrp();
+	setpgid(getpid(), getpid());
 	
 	ignoreSigpipe();
 	setup_syscall_interruption_support();

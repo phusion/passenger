@@ -903,7 +903,7 @@ main(int argc, char *argv[]) {
 	try {
 		/* Become the process group leader so that the watchdog can kill the
 		 * HelperServer as well as all descendant processes. */
-		setpgrp();
+		setpgid(getpid(), getpid());
 		
 		ignoreSigpipe();
 		setup_syscall_interruption_support();
