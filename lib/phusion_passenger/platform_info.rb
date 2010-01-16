@@ -111,11 +111,6 @@ private
 	end
 	private_class_method :memoize
 	
-	def self.env_defined?(name)
-		return !ENV[name].nil? && !ENV[name].empty?
-	end
-	private_class_method :env_defined?
-	
 	def self.try_compile(language, source, flags = nil)
 		if language == :c
 			compiler = 'gcc'
@@ -583,6 +578,10 @@ public
 	
 	################ Miscellaneous information ################
 	
+	
+	def self.env_defined?(name)
+		return !ENV[name].nil? && !ENV[name].empty?
+	end
 	
 	# Returns whether it is necessary to use information outputted by
 	# 'apr-config' and 'apu-config' in order to compile an Apache module.

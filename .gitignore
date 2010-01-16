@@ -1,5 +1,3 @@
-references
-scgi_demo
 /test*.rb
 
 .cache
@@ -10,6 +8,7 @@ scgi_demo
 *.pyc
 *.a
 *.dSYM
+config.rb
 ext/apache2/*.la
 ext/apache2/*.lo
 ext/apache2/*.slo

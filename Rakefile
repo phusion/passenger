@@ -16,8 +16,9 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-$LOAD_PATH.unshift("#{File.dirname(__FILE__)}/lib")
-$LOAD_PATH.unshift("#{File.dirname(__FILE__)}/misc")
+source_root = File.expand_path(File.dirname(__FILE__))
+$LOAD_PATH.unshift("#{source_root}/lib")
+$LOAD_PATH.unshift("#{source_root}/misc")
 require 'rubygems'
 require 'pathname'
 require 'rake/rdoctask'
@@ -26,6 +27,7 @@ require 'rake/extensions'
 require 'rake/cplusplus'
 require 'phusion_passenger/platform_info'
 require 'phusion_passenger/constants'
+require "#{source_root}/config" if File.exist?("#{source_root}/config.rb")
 
 verbose true unless ENV['REALLY_QUIET']
 if ENV['STDERR_TO_STDOUT']
@@ -45,8 +47,8 @@ OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 
 include PlatformInfo
 
-CC  = "gcc"
-CXX = "g++"
+CC  = PlatformInfo.env_defined?('CC')  ? ENV['CC']  : 'gcc'
+CXX = PlatformInfo.env_defined?('CXX') ? ENV['CXX'] : 'g++'
 LIBEXT = PlatformInfo.library_extension
 if OPTIMIZE
 	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -O2 -DBOOST_DISABLE_ASSERTS"
