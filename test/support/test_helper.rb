@@ -227,6 +227,12 @@ module TestHelper
 		end
 	end
 	
+	def when_not_running_as_root
+		if Process.euid != 0
+			yield
+		end
+	end
+	
 	def eventually(deadline_duration = 1, check_interval = 0.05)
 		deadline = Time.now + deadline_duration
 		while Time.now < deadline
@@ -237,6 +243,17 @@ module TestHelper
 			end
 		end
 		raise "Time limit exceeded"
+	end
+	
+	def should_never_happen(deadline_duration = 1, check_interval = 0.05)
+		deadline = Time.now + deadline_duration
+		while Time.now < deadline
+			if yield
+				raise "That which shouldn't happen happened anyway"
+			else
+				sleep(check_interval)
+			end
+		end
 	end
 	
 	def remove_dir_tree(dir)

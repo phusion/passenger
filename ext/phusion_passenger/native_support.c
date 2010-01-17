@@ -23,8 +23,15 @@
  *  THE SOFTWARE.
  */
 #include "ruby.h"
-#include "rubysig.h"
+#ifdef HAVE_RUBY_IO_H
+	/* Ruby 1.9 */
+	#include "ruby/intern.h"
+	#include "ruby/io.h"
+#else
+	#include "rubysig.h"
+#endif
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
@@ -32,11 +39,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <limits.h>
 #include <grp.h>
 #ifdef HAVE_ALLOCA_H
 	#include <alloca.h>
+#endif
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+	#define HAVE_KQUEUE
+	#include <pthread.h>
+	#include <sys/event.h>
+	#include <sys/time.h>
 #endif
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -56,6 +70,9 @@
 
 static VALUE mPassenger;
 static VALUE mNativeSupport;
+#ifdef HAVE_KQUEUE
+	static VALUE cFileSystemWatcher;
+#endif
 
 /*
  * call-seq: send_fd(socket_fd, fd_to_send)
@@ -378,6 +395,20 @@ update_group_written_info(IOVectorGroup *group, ssize_t bytes_written) {
 	rb_raise(rb_eRuntimeError, "writev() returned an unexpected result");
 }
 
+#ifndef TRAP_BEG
+	typedef struct {
+		int filedes;
+		const struct iovec *iov;
+		int iovcnt;
+	} WritevWrapperData;
+	
+	static VALUE
+	writev_wrapper(void *ptr) {
+		WritevWrapperData *data = (WritevWrapperData *) ptr;
+		return (VALUE) writev(data->filedes, data->iov, data->iovcnt);
+	}
+#endif
+
 static VALUE
 f_generic_writev(VALUE fd, VALUE *array_of_components, unsigned int count) {
 	VALUE components, str;
@@ -387,6 +418,9 @@ f_generic_writev(VALUE fd, VALUE *array_of_components, unsigned int count) {
 	unsigned long long ssize_max;
 	ssize_t ret;
 	int done, fd_num, e;
+	#ifndef TRAP_BEG
+		WritevWrapperData writev_wrapper_data;
+	#endif
 	
 	/* First determine the number of components that we have. */
 	total_components   = 0;
@@ -476,9 +510,17 @@ f_generic_writev(VALUE fd, VALUE *array_of_components, unsigned int count) {
 		
 		done = 0;
 		while (!done) {
-			TRAP_BEG;
-			ret = writev(fd_num, groups[i].io_vectors, groups[i].count);
-			TRAP_END;
+			#ifdef TRAP_BEG
+				TRAP_BEG;
+				ret = writev(fd_num, groups[i].io_vectors, groups[i].count);
+				TRAP_END;
+			#else
+				writev_wrapper_data.filedes = fd_num;
+				writev_wrapper_data.iov     = groups[i].io_vectors;
+				writev_wrapper_data.iovcnt  = groups[i].count;
+				ret = (int) rb_thread_blocking_region(writev_wrapper,
+					&writev_wrapper_data, RUBY_UBF_IO, 0);
+			#endif
 			if (ret == -1) {
 				/* If the error is something like EAGAIN, yield to another
 				 * thread until the file descriptor becomes writable again.
@@ -569,6 +611,267 @@ switch_user(VALUE self, VALUE username, VALUE uid, VALUE gid) {
 	return Qnil;
 }
 
+#if defined(HAVE_KQUEUE) || defined(IN_DOXYGEN)
+typedef struct {
+	VALUE klass;
+	VALUE filenames;
+	VALUE termination_pipe;
+	
+	int preparation_error;
+	unsigned int events_len;
+	int *fds;
+	unsigned int fds_len;
+	int kq;
+	int notification_fd[2];
+	int termination_fd;
+} FSWatcher;
+
+static void
+fs_watcher_real_close(FSWatcher *watcher) {
+	unsigned int i;
+	
+	if (watcher->kq != -1) {
+		close(watcher->kq);
+		watcher->kq = -1;
+	}
+	if (watcher->notification_fd[0] != -1) {
+		close(watcher->notification_fd[0]);
+		watcher->notification_fd[0] = -1;
+	}
+	if (watcher->notification_fd[1] != -1) {
+		close(watcher->notification_fd[1]);
+		watcher->notification_fd[1] = -1;
+	}
+	if (watcher->fds != NULL) {
+		for (i = 0; i < watcher->fds_len; i++) {
+			close(watcher->fds[i]);
+		}
+		free(watcher->fds);
+		watcher->fds = NULL;
+		watcher->fds_len = 0;
+	}
+}
+
+static void
+fs_watcher_free(void *obj) {
+	FSWatcher *watcher = (FSWatcher *) obj;
+	fs_watcher_real_close(watcher);
+	free(watcher);
+}
+
+static VALUE
+fs_watcher_init(VALUE arg) {
+	FSWatcher *watcher = (FSWatcher *) arg;
+	struct kevent *events;
+	VALUE filename;
+	unsigned int i;
+	uint32_t fflags;
+	VALUE filenum;
+	struct stat buf;
+	int fd;
+	
+	/* Open each file in the filenames list and add each one to the events array. */
+	
+	events = alloca((RARRAY_LEN(watcher->filenames) + 1) * sizeof(struct kevent));
+	watcher->fds = malloc(RARRAY_LEN(watcher->filenames) * sizeof(int));
+	if (watcher->fds == NULL) {
+		rb_raise(rb_eNoMemError, "Cannot allocate memory.");
+		return Qnil;
+	}
+	for (i = 0; i < RARRAY_LEN(watcher->filenames); i++) {
+		filename = rb_ary_entry(watcher->filenames, i);
+		if (TYPE(filename) != T_STRING) {
+			filename = rb_obj_as_string(filename);
+		}
+		
+		if (stat(RSTRING_PTR(filename), &buf) == -1) {
+			watcher->preparation_error = 1;
+			goto end;
+		}
+		
+		#ifdef O_EVTONLY
+			fd = open(RSTRING_PTR(filename), O_EVTONLY);
+		#else
+			fd = open(RSTRING_PTR(filename), O_RDONLY);
+		#endif
+		if (fd == -1) {
+			watcher->preparation_error = 1;
+			goto end;
+		}
+		
+		watcher->fds[i] = fd;
+		watcher->fds_len++;
+		if (S_ISDIR(buf.st_mode)) {
+			fflags = NOTE_WRITE | NOTE_RENAME | NOTE_DELETE | NOTE_REVOKE;
+		} else {
+			fflags = NOTE_RENAME | NOTE_DELETE | NOTE_REVOKE;
+		}
+		EV_SET(&events[i], fd, EVFILT_VNODE, EV_ADD | EV_ENABLE | EV_CLEAR,
+			fflags, 0, 0);
+	}
+	
+	watcher->events_len = watcher->fds_len;
+	
+	/* Create a pipe for inter-thread communication. */
+	
+	if (pipe(watcher->notification_fd) == -1) {
+		rb_sys_fail("pipe()");
+		return Qnil;
+	}
+	
+	/* Create a kqueue and register all events. */
+	
+	watcher->kq = kqueue();
+	if (watcher->kq == -1) {
+		rb_sys_fail("kqueue()");
+		return Qnil;
+	}
+	
+	if (watcher->termination_pipe != Qnil) {
+		filenum = rb_funcall(watcher->termination_pipe,
+			rb_intern("fileno"), 0);
+		EV_SET(&events[watcher->events_len], NUM2INT(filenum),
+			EVFILT_READ, EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0, 0);
+		watcher->termination_fd = NUM2INT(filenum);
+		watcher->events_len++;
+	}
+	
+	if (kevent(watcher->kq, events, watcher->events_len, NULL, 0, NULL) == -1) {
+		rb_sys_fail("kevent()");
+		return Qnil;
+	}
+	
+end:
+	if (watcher->preparation_error) {
+		for (i = 0; i < watcher->fds_len; i++) {
+			close(watcher->fds[i]);
+		}
+		free(watcher->fds);
+		watcher->fds = NULL;
+		watcher->fds_len = 0;
+	}
+	return Data_Wrap_Struct(watcher->klass, NULL, fs_watcher_free, watcher);
+}
+
+static VALUE
+fs_watcher_new(VALUE klass, VALUE filenames, VALUE termination_pipe) {
+	FSWatcher *watcher;
+	VALUE result;
+	int status;
+	
+	Check_Type(filenames, T_ARRAY);
+	watcher = (FSWatcher *) calloc(1, sizeof(FSWatcher));
+	if (watcher == NULL) {
+		rb_raise(rb_eNoMemError, "Cannot allocate memory.");
+		return Qnil;
+	}
+	watcher->klass = klass;
+	watcher->filenames = filenames;
+	watcher->termination_pipe = termination_pipe;
+	watcher->kq = -1;
+	watcher->notification_fd[0] = -1;
+	watcher->notification_fd[1] = -1;
+	watcher->termination_fd = -1;
+	
+	result = rb_protect(fs_watcher_init, (VALUE) watcher, &status);
+	if (status) {
+		fs_watcher_free(watcher);
+		rb_jump_tag(status);
+	} else {
+		return result;
+	}
+}
+
+static void *
+fs_watcher_wait_on_kqueue(void *arg) {
+	FSWatcher *watcher = (FSWatcher *) arg;
+	struct kevent *events;
+	int nevents;
+	ssize_t ret;
+	
+	events = alloca(sizeof(struct kevent) * watcher->events_len);
+	nevents = kevent(watcher->kq, NULL, 0, events, watcher->events_len, NULL);
+	if (nevents == -1) {
+		ret = write(watcher->notification_fd[1], "e", 1);
+	} else if (nevents == 1 && events[0].ident == (uintptr_t) watcher->termination_fd) {
+		ret = write(watcher->notification_fd[1], "t", 1);
+	} else {
+		ret = write(watcher->notification_fd[1], "f", 1);
+	}
+	if (ret == -1) {
+		close(watcher->notification_fd[1]);
+		watcher->notification_fd[1] = -1;
+	}
+	return NULL;
+}
+
+static VALUE
+fs_watcher_wait_for_change(VALUE self) {
+	FSWatcher *watcher;
+	pthread_t thr;
+	ssize_t ret;
+	int e;
+	char c;
+	
+	Data_Get_Struct(self, FSWatcher, watcher);
+	
+	if (watcher->preparation_error) {
+		return Qfalse;
+	}
+	
+	/* Spawn a thread, and let the thread perform the blocking kqueue
+	 * wait. When kevent() returns the thread will write its status to the
+	 * pipe. In the mean time we let the Ruby interpreter wait on the other
+	 * side of the pipe for us so that we don't block Ruby threads.
+	 */
+	
+	e = pthread_create(&thr, NULL, fs_watcher_wait_on_kqueue, watcher);
+	if (e != 0) {
+		errno = e;
+		rb_sys_fail("pthread_create()");
+		return Qnil;
+	}
+	/* We don't cleanup anything if we're interrupted, so don't use Thread#interrupt. */
+	rb_thread_wait_fd(watcher->notification_fd[0]);
+	pthread_join(thr, NULL);
+	
+	ret = read(watcher->notification_fd[0], &c, 1);
+	if (ret == -1) {
+		e = errno;
+		fs_watcher_real_close(watcher);
+		errno = e;
+		rb_sys_fail("read()");
+		return Qnil;
+	} else if (ret == 0) {
+		e = errno;
+		fs_watcher_real_close(watcher);
+		errno = e;
+		rb_raise(rb_eRuntimeError, "Unknown error: unexpected EOF");
+		return Qnil;
+	} else if (c == 't') {
+		/* termination_fd became readable */
+		return Qnil;
+	} else if (c == 'f') {
+		/* a file or directory changed */
+		return Qtrue;
+	} else {
+		e = errno;
+		fs_watcher_real_close(watcher);
+		errno = e;
+		rb_raise(rb_eRuntimeError, "Unknown error: unexpected notification data");
+		return Qnil;
+	}
+}
+
+static VALUE
+fs_watcher_close(VALUE self) {
+	FSWatcher *watcher;
+	Data_Get_Struct(self, FSWatcher, watcher);
+	fs_watcher_real_close(watcher);
+	return Qnil;
+}
+#endif
+
 
 /***************************/
 
@@ -595,6 +898,17 @@ Init_native_support() {
 	rb_define_singleton_method(mNativeSupport, "writev2", f_writev2, 3);
 	rb_define_singleton_method(mNativeSupport, "writev3", f_writev3, 4);
 	rb_define_singleton_method(mNativeSupport, "switch_user", switch_user, 3);
+	
+	#ifdef HAVE_KQUEUE
+		cFileSystemWatcher = rb_define_class_under(mNativeSupport,
+			"FileSystemWatcher", rb_cObject);
+		rb_define_singleton_method(cFileSystemWatcher, "_new",
+			fs_watcher_new, 2);
+		rb_define_method(cFileSystemWatcher, "wait_for_change",
+			fs_watcher_wait_for_change, 0);
+		rb_define_method(cFileSystemWatcher, "close",
+			fs_watcher_close, 0);
+	#endif
 	
 	/* The maximum length of a Unix socket path, including terminating null. */
 	rb_define_const(mNativeSupport, "UNIX_PATH_MAX", INT2NUM(sizeof(addr.sun_path)));
