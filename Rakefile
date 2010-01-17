@@ -811,7 +811,7 @@ end
 spec = Gem::Specification.new do |s|
 	s.platform = Gem::Platform::RUBY
 	s.homepage = "http://www.modrails.com/"
-	s.summary = "Apache module for Ruby on Rails support."
+	s.summary = "Easy and robust Ruby web application deployment"
 	s.name = "passenger"
 	s.version = PACKAGE_VERSION
 	s.rubyforge_project = "passenger"
@@ -898,7 +898,7 @@ spec = Gem::Specification.new do |s|
 		"-S" << "-N" << "-p" << "-H" <<
 		'--main' << 'README' <<
 		'--title' << 'Passenger Ruby API'
-	s.description = "Passenger is an Apache module for Ruby on Rails support."
+	s.description = "Easy and robust Ruby web application deployment."
 end
 
 Rake::GemPackageTask.new(spec) do |pkg|
