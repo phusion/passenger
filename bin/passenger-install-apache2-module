@@ -22,9 +22,9 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) << "/..")
+PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) + "/..")
 $LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
-$LOAD_PATH.unshift("#{PASSENGER_ROOT}/ext")
+require 'phusion_passenger'
 
 # The Apache executable may be located in an 'sbin' folder. We add
 # the 'sbin' folders to $PATH just in case. On some systems

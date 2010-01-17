@@ -22,8 +22,6 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-root = File.expand_path("#{File.dirname(__FILE__)}/..")
-$LOAD_PATH.unshift("#{root}/lib", "#{root}/ext")
 require 'socket'
 
 SERVER_SOCKET_FD = 3
@@ -65,7 +63,12 @@ begin
 		exit
 	end
 	
+	source_root = File.expand_path(File.dirname(__FILE__) + "/..")
+	$LOAD_PATH.unshift("#{source_root}/lib")
+	require 'rubygems' rescue nil
+	require 'phusion_passenger'
 	require 'phusion_passenger/utils'
+	require 'phusion_passenger/native_support'
 	if defined?(PhusionPassenger::NativeSupport)
 		PhusionPassenger::NativeSupport.disable_stdio_buffering
 	end

@@ -12,8 +12,8 @@ rescue Errno::ENOENT
 end
 
 $LOAD_PATH.unshift("#{source_root}/lib")
-$LOAD_PATH.unshift("#{source_root}/ext")
 $LOAD_PATH.unshift("#{source_root}/test")
 
+require 'phusion_passenger'
 require 'support/test_helper'
 include TestHelper

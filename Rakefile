@@ -817,7 +817,7 @@ spec = Gem::Specification.new do |s|
 	s.rubyforge_project = "passenger"
 	s.author = "Phusion - http://www.phusion.nl/"
 	s.email = "info@phusion.nl"
-	s.require_paths = ["lib", "ext"]
+	s.require_paths = "lib"
 	s.add_dependency 'rake', '>= 0.8.1'
 	s.add_dependency 'fastthread', '>= 1.0.1'
 	s.add_dependency 'daemon_controller', '>= 0.2.3'
@@ -831,6 +831,7 @@ spec = Gem::Specification.new do |s|
 		'LICENSE',
 		'INSTALL',
 		'NEWS',
+		'lib/*.rb',
 		'lib/**/*.rb',
 		'lib/**/*.py',
 		'lib/phusion_passenger/templates/*',

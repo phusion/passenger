@@ -21,8 +21,8 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'phusion_passenger'
 require 'phusion_passenger/constants'
-require 'phusion_passenger/packaging'
 require 'phusion_passenger/console_text_template'
 
 module PhusionPassenger

@@ -21,9 +21,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-if !defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby"
-	require 'phusion_passenger/native_support'
-end
+require 'phusion_passenger/native_support'
 
 module PhusionPassenger
 module Utils

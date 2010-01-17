@@ -22,10 +22,9 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) << "/..")
+PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) + "/..")
 $LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
-$LOAD_PATH.unshift("#{PASSENGER_ROOT}/ext")
-
+require 'phusion_passenger'
 require 'optparse'
 require 'fileutils'
 require 'phusion_passenger/platform_info'

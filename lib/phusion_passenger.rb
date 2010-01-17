@@ -22,25 +22,38 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
-	LIBDIR        = File.expand_path(File.join(File.dirname(__FILE__), ".."))
-	TEMPLATES_DIR = File.join(LIBDIR, "phusion_passenger", "templates")
-	
 	# Returns whether this Phusion Passenger installation is packaged
 	# using the OS's native package management system, i.e. as opposed
 	# to being installed from source or with RubyGems.
 	def self.natively_packaged?
-		return !File.exist?("#{LIBDIR}/../Rakefile") ||
-		       !File.exist?("#{LIBDIR}/../DEVELOPERS.TXT")
+		if !defined?(@natively_packaged)
+			@natively_packaged = !File.exist?("#{LIBDIR}/../Rakefile") ||
+			                     !File.exist?("#{LIBDIR}/../DEVELOPERS.TXT")
+		end
+		return @natively_packaged
 	end
 	
+	LIBDIR        = File.expand_path(File.dirname(__FILE__))
+	TEMPLATES_DIR = File.join(LIBDIR, "phusion_passenger", "templates")
 	if natively_packaged?
-		SOURCE_ROOT = "/usr/lib/phusion_passenger/source"
-		DOCDIR      = "/usr/share/doc/phusion_passenger"
-	else
+		require 'rbconfig'
+		
 		# Top directory of the Phusion Passenger source code.
-		SOURCE_ROOT = File.expand_path(File.join(LIBDIR, ".."))
+		SOURCE_ROOT        = "/usr/lib/phusion_passenger/source"
+		
+		# Directory containing native_support.so.
+		NATIVE_SUPPORT_DIR = File.join(Config::CONFIG["archdir"], "phusion_passenger")
 		
 		# Documentation directory.
-		DOCDIR      = File.expand_path(File.join(SOURCE_ROOT, "doc"))
+		DOCDIR             = "/usr/share/doc/phusion_passenger"
+	else
+		SOURCE_ROOT        = File.expand_path(File.join(LIBDIR, ".."))
+		NATIVE_SUPPORT_DIR = File.join(SOURCE_ROOT, "ext", "phusion_passenger")
+		DOCDIR             = File.join(SOURCE_ROOT, "doc")
 	end
-end
+	
+	if $LOAD_PATH.first != LIBDIR
+		$LOAD_PATH.unshift(LIBDIR)
+		$LOAD_PATH.uniq!
+	end
+end if !defined?(PhusionPassenger)

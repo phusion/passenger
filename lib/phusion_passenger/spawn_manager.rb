@@ -22,6 +22,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'phusion_passenger'
 require 'phusion_passenger/abstract_server'
 require 'phusion_passenger/abstract_server_collection'
 require 'phusion_passenger/constants'
@@ -379,7 +380,7 @@ private
 	def send_error_page(channel, template_name, options = {})
 		require 'phusion_passenger/html_template' unless defined?(HTMLTemplate)
 		require 'phusion_passenger/platform_info' unless defined?(PlatformInfo)
-		options["enterprisey"] = File.exist?("#{File.dirname(__FILE__)}/../../enterprisey.txt") ||
+		options["enterprisey"] = File.exist?("#{SOURCE_ROOT}/enterprisey.txt") ||
 			File.exist?("/etc/passenger_enterprisey.txt")
 		data = HTMLTemplate.new(template_name, options).result
 		channel.write('error_page')

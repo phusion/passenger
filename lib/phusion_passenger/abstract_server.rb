@@ -25,6 +25,8 @@
 require 'socket'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/utils'
+require 'phusion_passenger/native_support'
+
 module PhusionPassenger
 
 # An abstract base class for a server that has the following properties:

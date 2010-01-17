@@ -16,11 +16,11 @@ rescue Errno::ENOENT
 end
 
 $LOAD_PATH.unshift("#{source_root}/lib")
-$LOAD_PATH.unshift("#{source_root}/ext")
 $LOAD_PATH.unshift("#{source_root}/test")
 
 require 'fileutils'
 require 'support/test_helper'
+require 'phusion_passenger'
 require 'phusion_passenger/utils'
 
 include PhusionPassenger

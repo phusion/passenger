@@ -24,11 +24,14 @@
 
 require 'socket'
 require 'fcntl'
+require 'phusion_passenger'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/utils'
 require 'phusion_passenger/utils/unseekable_socket'
 require 'phusion_passenger/utils/message_client'
+require 'phusion_passenger/native_support'
 require 'phusion_passenger/constants'
+
 module PhusionPassenger
 
 # The request handler is the layer which connects Apache with the underlying application's
@@ -587,7 +590,7 @@ private
 	
 	def self.determine_passenger_header
 		header = "Phusion Passenger (mod_rails/mod_rack) #{VERSION_STRING}"
-		if File.exist?("#{File.dirname(__FILE__)}/../../enterprisey.txt") ||
+		if File.exist?("#{SOURCE_ROOT}/enterprisey.txt") ||
 		   File.exist?("/etc/passenger_enterprisey.txt")
 			header << ", Enterprise Edition"
 		end

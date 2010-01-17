@@ -28,6 +28,7 @@ require 'phusion_passenger/message_channel'
 require 'phusion_passenger/abstract_server'
 require 'phusion_passenger/abstract_request_handler'
 require 'phusion_passenger/utils'
+require 'phusion_passenger/native_support'
 require 'phusion_passenger/rack/request_handler'
 
 module PhusionPassenger

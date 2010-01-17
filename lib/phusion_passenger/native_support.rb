@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby
+# encoding: binary
 #  Phusion Passenger - http://www.modrails.com/
 #  Copyright (c) 2010 Phusion
 #
@@ -22,26 +22,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-source_root = File.expand_path(File.dirname(__FILE__) + "/..")
-$LOAD_PATH.unshift("#{source_root}/lib")
-require 'phusion_passenger'
-require 'phusion_passenger/constants'
-
-def help
-	puts "Tool for showing Passenger configuration information."
-	puts "Usage: passenger-config <OPTIONS>"
-	puts
-	puts "Options:"
-	puts "  --root      Show Passenger's root directory."
-	puts "  --version   Show Passenger's version number."
-end
-
-case ARGV[0]
-when "--root"
-	puts PhusionPassenger::SOURCE_ROOT
-when "--version"
-	puts PhusionPassenger::VERSION_STRING
-else
-	help
-	exit 1
+if !defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby"
+	require 'phusion_passenger'
+	require "#{PhusionPassenger::NATIVE_SUPPORT_DIR}/native_support"
 end
