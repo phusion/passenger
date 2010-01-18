@@ -36,6 +36,9 @@ Release 3.0.0
  * Unit tests now test with multiple Rails versions.
  * More Ruby 1.9 compatibility fixes.
  * FileDescriptor::close() ignores ENOTCONN.
+ * We support negative UIDs now because we override Ruby's setuid
+   implementation.
+ * Auto-compilation of native_support.so.
 
 
 Release 2.2.9
