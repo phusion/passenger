@@ -837,6 +837,7 @@ spec = Gem::Specification.new do |s|
 		'Rakefile',
 		'README',
 		'DEVELOPERS.TXT',
+		'PACKAGING.TXT',
 		'LICENSE',
 		'INSTALL',
 		'NEWS',
