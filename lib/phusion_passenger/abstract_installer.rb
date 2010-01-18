@@ -24,6 +24,7 @@
 require 'phusion_passenger'
 require 'phusion_passenger/constants'
 require 'phusion_passenger/console_text_template'
+require 'phusion_passenger/platform_info'
 
 module PhusionPassenger
 

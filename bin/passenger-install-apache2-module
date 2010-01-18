@@ -33,13 +33,14 @@ require 'phusion_passenger'
 ENV["PATH"] += ":/usr/sbin:/sbin:/usr/local/sbin"
 
 require 'optparse'
-require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/ruby'
+require 'phusion_passenger/platform_info/apache'
 require 'phusion_passenger/dependencies'
 require 'phusion_passenger/abstract_installer'
-include PlatformInfo
 
 class Installer < PhusionPassenger::AbstractInstaller
 	include PhusionPassenger
+	include PhusionPassenger::PlatformInfo
 	
 	def dependencies
 		result = [

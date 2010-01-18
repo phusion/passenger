@@ -21,7 +21,12 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'rbconfig'
 require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/apache'
+require 'phusion_passenger/platform_info/ruby'
+require 'phusion_passenger/platform_info/linux'
+
 module PhusionPassenger
 
 # Represents a dependency software that Passenger requires. It's used by the
@@ -259,7 +264,7 @@ module Dependencies # :nodoc: all
 			end
 		end
 		dep.website = "http://rake.rubyforge.org/"
-		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM || "gem"} install rake</b>"
+		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo.gem_command || "gem"} install rake</b>"
 	end
 	
 	Apache2 = Dependency.new do |dep|
@@ -387,7 +392,7 @@ module Dependencies # :nodoc: all
 				result.not_found
 			end
 		end
-		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM || "gem"} install fastthread</b>"
+		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo.gem_command || "gem"} install fastthread</b>"
 	end
 
 	Rack = Dependency.new do |dep|
@@ -404,7 +409,7 @@ module Dependencies # :nodoc: all
 				result.not_found
 			end
 		end
-		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM || "gem"} install rack</b>"
+		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo.gem_command || "gem"} install rack</b>"
 	end
 	
 	OpenSSL_Dev = Dependency.new do |dep|
@@ -485,13 +490,13 @@ module Dependencies # :nodoc: all
 				result.not_found
 			end
 		end
-		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo::GEM || "gem"} install file-tail</b>"
+		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo.gem_command || "gem"} install file-tail</b>"
 	end
 	
 	Daemon_Controller = Dependency.new do |dep|
 		dep.name = "daemon_controller >= 0.2.3"
 		dep.install_instructions = "Please install RubyGems first, then run " <<
-			"<b>#{PlatformInfo::GEM || "gem"} install daemon_controller</b>"
+			"<b>#{PlatformInfo.gem_command || "gem"} install daemon_controller</b>"
 		dep.define_checker do |result|
 			begin
 				begin
@@ -506,8 +511,8 @@ module Dependencies # :nodoc: all
 					result.not_found
 					dep.install_instructions = "Your version of daemon_controller is too old. " <<
 						"Please upgrade with the following commands:\n" <<
-						"   <b>#{PlatformInfo::GEM || "gem"} uninstall FooBarWidget-daemon_controller</b>\n" <<
-						"   <b>#{PlatformInfo::GEM || "gem"} install daemon_controller</b>"
+						"   <b>#{PlatformInfo.gem_command || "gem"} uninstall FooBarWidget-daemon_controller</b>\n" <<
+						"   <b>#{PlatformInfo.gem_command || "gem"} install daemon_controller</b>"
 				end
 			rescue LoadError
 				result.not_found

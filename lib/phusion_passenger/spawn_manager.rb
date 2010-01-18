@@ -379,7 +379,10 @@ private
 	
 	def send_error_page(channel, template_name, options = {})
 		require 'phusion_passenger/html_template' unless defined?(HTMLTemplate)
-		require 'phusion_passenger/platform_info' unless defined?(PlatformInfo)
+		if !defined?(PlatformInfo)
+			require 'phusion_passenger/platform_info'
+			require 'phusion_passenger/platform_info/ruby'
+		end
 		options["enterprisey"] = File.exist?("#{SOURCE_ROOT}/enterprisey.txt") ||
 			File.exist?("/etc/passenger_enterprisey.txt")
 		data = HTMLTemplate.new(template_name, options).result

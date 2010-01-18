@@ -24,10 +24,11 @@
 
 module PhusionPassenger
 	require 'phusion_passenger'
-	require 'phusion_passenger/platform_info'
+	require 'phusion_passenger/platform_info/operating_system'
+	require 'phusion_passenger/platform_info/binary_compatibility'
 	
-	archdir = PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")
 	libext  = PlatformInfo.library_extension
+	archdir = PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")
 	loaded  = false
 	begin
 		require "#{NATIVE_SUPPORT_DIR}/#{archdir}/native_support.#{libext}"
@@ -49,6 +50,7 @@ module PhusionPassenger
 			"the current Ruby interpreter. Compiling one..."
 		
 		require 'fileutils'
+		require 'phusion_passenger/platform_info/ruby'
 		
 		mkdir = proc do |dir|
 			begin

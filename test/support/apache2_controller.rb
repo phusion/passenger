@@ -1,6 +1,6 @@
 require 'erb'
 require 'fileutils'
-require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/apache'
 
 # A class for starting, stopping and restarting Apache, and for manipulating
 # its configuration file. This is used by the integration tests.
@@ -40,6 +40,7 @@ require 'phusion_passenger/platform_info'
 #       apache.stop
 #   end
 class Apache2Controller
+	include PhusionPassenger
 	STUB_DIR = File.expand_path(File.dirname(__FILE__) + "/../stub/apache2")
 	
 	class VHost

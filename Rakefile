@@ -25,8 +25,13 @@ require 'rake/rdoctask'
 require 'rake/gempackagetask'
 require 'rake/extensions'
 require 'rake/cplusplus'
-require 'phusion_passenger/platform_info'
 require 'phusion_passenger/constants'
+require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/operating_system'
+require 'phusion_passenger/platform_info/binary_compatibility'
+require 'phusion_passenger/platform_info/ruby'
+require 'phusion_passenger/platform_info/apache'
+require 'phusion_passenger/platform_info/compiler'
 require "#{source_root}/config" if File.exist?("#{source_root}/config.rb")
 
 verbose true unless ENV['REALLY_QUIET']
@@ -42,10 +47,11 @@ end
 
 ##### Configuration
 
-PACKAGE_VERSION = PhusionPassenger::VERSION_STRING
-OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
+include PhusionPassenger
+include PhusionPassenger::PlatformInfo
 
-include PlatformInfo
+PACKAGE_VERSION = VERSION_STRING
+OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 
 CC  = PlatformInfo.env_defined?('CC')  ? ENV['CC']  : 'gcc'
 CXX = PlatformInfo.env_defined?('CXX') ? ENV['CXX'] : 'g++'
@@ -410,10 +416,13 @@ end
 
 	task :clean => 'apache2:clean'
 	desc "Clean all compiled Apache 2 files"
-	task 'apache2:clean' => 'native_support:clean' do
-		files = [APACHE2_MODULE_OBJECTS, %w(ext/apache2/mod_passenger.o
+	task 'apache2:clean' do
+		files = [APACHE2_MODULE_OBJECTS]
+		files += %w(
+			ext/apache2/mod_passenger.o
 			ext/apache2/mod_passenger.so
-			ext/apache2/PassengerHelperServer)]
+			ext/apache2/PassengerHelperServer
+		)
 		sh("rm", "-rf", *files.flatten)
 	end
 
@@ -461,7 +470,7 @@ end
 	
 	task :clean => 'nginx:clean'
 	desc "Clean all compiled Nginx files"
-	task 'nginx:clean' => 'native_support:clean' do
+	task 'nginx:clean' do
 		sh("rm", "-rf", "ext/nginx/PassengerHelperServer")
 	end
 

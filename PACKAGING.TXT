@@ -19,8 +19,10 @@ Packagers should pay attention to the following:
   where "<SOME ARCH NAME>" can be obtained by running the following
   command from the Phusion Passenger source root:
 
-     ruby -Ilib -rphusion_passenger/platform_info -e \
-     'puts PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")'
+     ruby -Ilib -rphusion_passenger/platform_info/binary_compatibility \
+     -e 'include PhusionPassenger' \
+     -e 'ids = PlatformInfo.ruby_extension_binary_compatibility_ids' \
+     -e 'puts ids.join("-")'
 
 - There must be a full copy of the Phusion Passenger source tree located
   in /usr/lib/phusion_passenger/source. The reasons are as follows:

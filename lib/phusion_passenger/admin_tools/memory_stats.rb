@@ -1,4 +1,4 @@
-require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/apache'
 
 module PhusionPassenger
 module AdminTools

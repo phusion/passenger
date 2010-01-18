@@ -27,13 +27,13 @@ $LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
 require 'phusion_passenger'
 require 'optparse'
 require 'fileutils'
-require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/dependencies'
 require 'phusion_passenger/abstract_installer'
-include PlatformInfo
 
 class Installer < PhusionPassenger::AbstractInstaller
 	include PhusionPassenger
+	include PhusionPassenger::PlatformInfo
 	
 	NGINX_VERSION = "0.7.64"
 	

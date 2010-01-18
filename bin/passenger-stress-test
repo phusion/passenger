@@ -35,7 +35,7 @@ require 'phusion_passenger/utils'
 
 include PhusionPassenger
 include PhusionPassenger::Utils
-include PlatformInfo
+include PhusionPassenger::PlatformInfo
 
 # A thread or a process, depending on the Ruby VM implementation.
 class Subprocess

@@ -1,5 +1,5 @@
 require 'erb'
-require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/ruby'
 begin
 	require 'daemon_controller'
 rescue LoadError
@@ -11,6 +11,7 @@ rescue LoadError
 end
 
 class NginxController
+	include PhusionPassenger
 	PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) + "/../..")
 	TEMPLATE_DIR = File.expand_path(File.dirname(__FILE__) + "/../stub/nginx")
 	PORT = 64507

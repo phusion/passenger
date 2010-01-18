@@ -10,7 +10,7 @@
 		Ruby on Rails framework version <%=h @error.version %> seems to be
 		corrupted. Please reinstall it.
 		This can be done with the following command:
-		<pre class="commands"><%= PlatformInfo::GEM %> install rails --version <%=h @error.version %></pre>
+		<pre class="commands"><%= PlatformInfo.gem_command %> install rails --version <%=h @error.version %></pre>
 	<% end %>
 	
 	<dl>

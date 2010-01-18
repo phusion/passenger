@@ -16,7 +16,7 @@
 		"<%=h @error.gem_version_spec %>", but there is no such Ruby on Rails
 		version installed. Please install it with the following command:
 		<div class="commands">
-			<%= PlatformInfo::GEM %> install rails --version <em>some_version_number</em>
+			<%= PlatformInfo.gem_command %> install rails --version <em>some_version_number</em>
 		</div>
 		
 	<% end %>
