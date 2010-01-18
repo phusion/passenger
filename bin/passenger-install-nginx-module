@@ -381,7 +381,7 @@ private
 	end
 	
 	def build_nginx_configure_command(prefix, extra_configure_flags = nil)
-		command = "./configure --prefix='#{prefix}' "
+		command = "./configure --prefix='#{prefix}' --with-http_ssl_module "
 		if @pcre_source_dir
 			command << "--with-pcre='#{@pcre_source_dir}' "
 		elsif !pcre_is_installed?
