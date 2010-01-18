@@ -36,19 +36,17 @@ module PhusionPassenger
 	LIBDIR        = File.expand_path(File.dirname(__FILE__))
 	TEMPLATES_DIR = File.join(LIBDIR, "phusion_passenger", "templates")
 	if natively_packaged?
-		require 'rbconfig'
-		
-		# Top directory of the Phusion Passenger source code.
 		SOURCE_ROOT        = "/usr/lib/phusion_passenger/source"
-		
-		# Directory containing native_support.so.
-		NATIVE_SUPPORT_DIR = File.join(Config::CONFIG["archdir"], "phusion_passenger")
-		
-		# Documentation directory.
+		NATIVE_SUPPORT_DIR = "/usr/lib/phusion_passenger/native_support"
 		DOCDIR             = "/usr/share/doc/phusion_passenger"
 	else
+		# Top directory of the Phusion Passenger source code.
 		SOURCE_ROOT        = File.expand_path(File.join(LIBDIR, ".."))
+		
+		# Directory containing native_support.so.
 		NATIVE_SUPPORT_DIR = File.join(SOURCE_ROOT, "ext", "phusion_passenger")
+		
+		# Documentation directory.
 		DOCDIR             = File.join(SOURCE_ROOT, "doc")
 	end
 	
@@ -56,4 +54,4 @@ module PhusionPassenger
 		$LOAD_PATH.unshift(LIBDIR)
 		$LOAD_PATH.uniq!
 	end
-end if !defined?(PhusionPassenger)
+end if !defined?(PhusionPassenger::LIBDIR)

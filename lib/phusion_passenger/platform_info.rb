@@ -620,6 +620,27 @@ public
 	end
 	memoize :cpu_architecture
 	
+	def self.ruby_extension_binary_compatibility_ids
+		ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
+		ruby_ext_version = RUBY_VERSION
+		if RUBY_PLATFORM =~ /darwin/
+			if RUBY_PLATFORM =~ /universal/
+				ruby_arch = "universal"
+			else
+				# Something like:
+				# "/opt/ruby-enterprise/bin/ruby: Mach-O 64-bit executable x86_64"
+				ruby_arch = `file -L "#{RUBY}"`.strip
+				ruby_arch.sub!(/.* /, '')
+			end
+		elsif RUBY_PLATFORM == "java"
+			ruby_arch = "java"
+		else
+			ruby_arch = cpu_architecture
+		end
+		return [ruby_engine, ruby_ext_version, ruby_arch]
+	end
+	memoize :ruby_extension_binary_compatibility_ids
+	
 	# Returns a string that describes the current platform's binary
 	# compatibility with regard to Phusion Passenger binaries.
 	# Two systems with the same binary compatibility identifiers
@@ -661,22 +682,7 @@ public
 	#   compiling a binary with the system's C++ compiler with its default
 	#   options.
 	def self.passenger_binary_compatibility_identifier
-		ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
-		ruby_ext_version = RUBY_VERSION
-		if RUBY_PLATFORM =~ /darwin/
-			if RUBY_PLATFORM =~ /universal/
-				ruby_arch = "universal"
-			else
-				# Something like:
-				# "/opt/ruby-enterprise/bin/ruby: Mach-O 64-bit executable x86_64"
-				ruby_arch = `file -L "#{RUBY}"`.strip
-				ruby_arch.sub!(/.* /, '')
-			end
-		elsif RUBY_PLATFORM == "java"
-			ruby_arch = "java"
-		else
-			ruby_arch = cpu_architecture
-		end
+		ruby_engine, ruby_ext_version, ruby_arch = ruby_extension_binary_compatibility_ids
 		
 		if Config::CONFIG['target_os'] =~ /darwin/ && (sw_vers = find_command('sw_vers'))
 			# RUBY_PLATFORM gives us the kernel version, but we want

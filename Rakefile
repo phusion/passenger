@@ -87,24 +87,34 @@ task :clobber
 
 ##### Ruby C extension
 
-task :native_support => "ext/phusion_passenger/native_support.#{LIBEXT}"
+native_support_archdir = PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")
+task :native_support => "ext/phusion_passenger/#{native_support_archdir}/native_support.#{LIBEXT}"
 
-file 'ext/phusion_passenger/Makefile' => 'ext/phusion_passenger/extconf.rb' do
-	sh "cd ext/phusion_passenger && #{RUBY} extconf.rb"
+file "ext/phusion_passenger/#{native_support_archdir}/Makefile" => 'ext/phusion_passenger/extconf.rb' do
+	if !File.exist?("ext/phusion_passenger/#{native_support_archdir}")
+		sh "mkdir -p ext/phusion_passenger/#{native_support_archdir}"
+	end
+	sh "cd ext/phusion_passenger/#{native_support_archdir} && #{RUBY} ../extconf.rb"
 end
 
-file "ext/phusion_passenger/native_support.#{LIBEXT}" => [
-	'ext/phusion_passenger/Makefile',
-	'ext/phusion_passenger/native_support.c'
+file "ext/phusion_passenger/#{native_support_archdir}/native_support.#{LIBEXT}" => [
+	"ext/phusion_passenger/#{native_support_archdir}/Makefile",
+	"ext/phusion_passenger/native_support.c"
 ] do
-	sh "cd ext/phusion_passenger && make"
+	if !File.exist?("ext/phusion_passenger/#{native_support_archdir}")
+		sh "mkdir -p ext/phusion_passenger/#{native_support_archdir}"
+	end
+	sh "cd ext/phusion_passenger/#{native_support_archdir} && make"
 end
 
 task :clean => 'native_support:clean'
 
 task 'native_support:clean' do
-	sh "cd ext/phusion_passenger && make clean" if File.exist?('ext/phusion_passenger/Makefile')
-	sh "rm -f ext/phusion_passenger/Makefile"
+	Dir["ext/phusion_passenger/*"].each do |entry|
+		if File.exist?("#{entry}/Makefile")
+			sh "rm -rf #{entry}"
+		end
+	end
 end
 
 
@@ -823,7 +833,6 @@ spec = Gem::Specification.new do |s|
 	s.add_dependency 'daemon_controller', '>= 0.2.3'
 	s.add_dependency 'file-tail'
 	s.add_dependency 'rack'
-	s.extensions << 'ext/phusion_passenger/extconf.rb'
 	s.files = FileList[
 		'Rakefile',
 		'README',
