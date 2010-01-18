@@ -152,10 +152,10 @@ private
 		puts "cd #{PASSENGER_ROOT}"
 		if ENV['TRACE']
 			puts "#{RUBY} -S #{PlatformInfo.rake} --trace clean apache2"
-			return sh(RUBY, "-S", PlatformInfo.rake, "--trace", "clean", "apache2")
+			return sh(RUBY, "-S", PlatformInfo.rake, "--trace", "apache2:clean", "apache2")
 		else
 			puts "#{RUBY} -S #{PlatformInfo.rake} clean apache2"
-			return sh(RUBY, "-S", PlatformInfo.rake, "clean", "apache2")
+			return sh(RUBY, "-S", PlatformInfo.rake, "apache2:clean", "apache2")
 		end
 	end
 	
