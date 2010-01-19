@@ -79,7 +79,7 @@ task :default => [
 	:apache2,
 	:nginx,
 	'test/oxt/oxt_test_main',
-	'test/CxxTests'
+	'test/cxx/CxxTestMain'
 ]
 
 desc "Remove compiled files"
