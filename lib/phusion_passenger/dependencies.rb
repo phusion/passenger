@@ -494,7 +494,7 @@ module Dependencies # :nodoc: all
 	end
 	
 	Daemon_Controller = Dependency.new do |dep|
-		dep.name = "daemon_controller >= 0.2.3"
+		dep.name = "daemon_controller >= 0.2.5"
 		dep.install_instructions = "Please install RubyGems first, then run " <<
 			"<b>#{PlatformInfo.gem_command || "gem"} install daemon_controller</b>"
 		dep.define_checker do |result|
@@ -506,13 +506,18 @@ module Dependencies # :nodoc: all
 				require 'daemon_controller'
 				begin
 					require 'daemon_controller/version'
-					result.found
+					too_old = DaemonController::VERSION_STRING < '0.2.5'
 				rescue LoadError
+					too_old = true
+				end
+				if too_old
 					result.not_found
 					dep.install_instructions = "Your version of daemon_controller is too old. " <<
 						"Please upgrade with the following commands:\n" <<
 						"   <b>#{PlatformInfo.gem_command || "gem"} uninstall FooBarWidget-daemon_controller</b>\n" <<
 						"   <b>#{PlatformInfo.gem_command || "gem"} install daemon_controller</b>"
+				else
+					result.found
 				end
 			rescue LoadError
 				result.not_found
