@@ -37,7 +37,7 @@ class Plugin
 				plugin_dir = plugin_dir.sub(/\A~/, home)
 			end
 			plugin_dir = File.expand_path(plugin_dir)
-			Dir["#{plugin_dir}/#{name}/*.rb"].each do |filename|
+			Dir["#{plugin_dir}/*/#{name}.rb"].each do |filename|
 				if load_once
 					require(filename)
 				else
