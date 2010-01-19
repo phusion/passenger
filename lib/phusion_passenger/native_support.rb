@@ -39,7 +39,7 @@ module PhusionPassenger
 		
 		home = Etc.getpwuid(Process.uid).dir
 		begin
-			require "#{home}/.passenger/native_support/#{VERSION_STRING}/#{archdir}/native_support.#{libext}"
+			require "#{home}/#{LOCAL_DIR}/native_support/#{VERSION_STRING}/#{archdir}/native_support.#{libext}"
 			loaded = true
 		rescue LoadError
 		end
@@ -103,7 +103,7 @@ module PhusionPassenger
 		
 		target_dir = compile.call([
 			"#{NATIVE_SUPPORT_DIR}/#{archdir}",
-			"#{home}/.passenger/native_support/#{VERSION_STRING}/#{archdir}"
+			"#{home}/#{LOCAL_DIR}/native_support/#{VERSION_STRING}/#{archdir}"
 		])
 		require "#{target_dir}/native_support.#{libext}"
 	end

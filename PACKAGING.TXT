@@ -10,11 +10,11 @@ to something like "/usr/lib/ruby/1.8/.." and so returns false).
 
 Packagers should pay attention to the following:
 - Documentation like "Users guide Apache.html" must be located
-  in /usr/share/doc/phusion_passenger.
+  in /usr/share/doc/phusion-passenger.
 - Phusion Passenger has a Ruby extension called native_support.so.
   This must be located in
 
-     /usr/lib/phusion_passenger/native_support/<VERSION>/<SOME ARCH NAME>
+     /usr/lib/phusion-passenger/native_support/<VERSION>/<SOME ARCH NAME>
 
   where "<VERSION>" is the Phusion Passenger version number, and
   "<SOME ARCH NAME>" can be obtained by running the following command
@@ -26,7 +26,7 @@ Packagers should pay attention to the following:
      -e 'puts ids.join("-")'
 
 - There must be a full copy of the Phusion Passenger source tree located
-  in /usr/lib/phusion_passenger/source. The reasons are as follows:
+  in /usr/lib/phusion-passenger/source. The reasons are as follows:
   
   * passenger-install-nginx-module and Phusion Passenger Lite must compile
     Nginx, and this process requires the Phusion Passenger source code to
