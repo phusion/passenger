@@ -33,11 +33,15 @@ module PhusionPassenger
 		return @natively_packaged
 	end
 	
-	LIBDIR        = File.expand_path(File.dirname(__FILE__))
-	TEMPLATES_DIR = File.join(LIBDIR, "phusion_passenger", "templates")
+	# Phusion Passenger version number.
+	# Don't forget to edit ext/common/Version.h too.
+	VERSION_STRING = '2.9.0'
+	
+	LIBDIR         = File.expand_path(File.dirname(__FILE__))
+	TEMPLATES_DIR  = File.join(LIBDIR, "phusion_passenger", "templates")
 	if natively_packaged?
 		SOURCE_ROOT        = "/usr/lib/phusion_passenger/source"
-		NATIVE_SUPPORT_DIR = "/usr/lib/phusion_passenger/native_support"
+		NATIVE_SUPPORT_DIR = "/usr/lib/phusion_passenger/native_support/#{VERSION_STRING}"
 		DOCDIR             = "/usr/share/doc/phusion_passenger"
 	else
 		# Top directory of the Phusion Passenger source code.

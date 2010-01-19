@@ -30,7 +30,6 @@ require 'phusion_passenger/utils'
 require 'phusion_passenger/utils/unseekable_socket'
 require 'phusion_passenger/utils/message_client'
 require 'phusion_passenger/native_support'
-require 'phusion_passenger/constants'
 
 module PhusionPassenger
 

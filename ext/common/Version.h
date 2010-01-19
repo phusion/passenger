@@ -25,7 +25,7 @@
 #ifndef _PASSENGER_VERSION_H_
 #define _PASSENGER_VERSION_H_
 
-/* Don't forget to update lib/phusion_passenger/constants.rb too. */
+/* Don't forget to update lib/phusion_passenger.rb too. */
 #define PASSENGER_VERSION "2.9.0"
 
 #endif /* _PASSENGER_VERSION_H */

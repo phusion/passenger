@@ -14,10 +14,11 @@ Packagers should pay attention to the following:
 - Phusion Passenger has a Ruby extension called native_support.so.
   This must be located in
 
-     /usr/lib/phusion_passenger/native_support/<SOME ARCH NAME>
+     /usr/lib/phusion_passenger/native_support/<VERSION>/<SOME ARCH NAME>
 
-  where "<SOME ARCH NAME>" can be obtained by running the following
-  command from the Phusion Passenger source root:
+  where "<VERSION>" is the Phusion Passenger version number, and
+  "<SOME ARCH NAME>" can be obtained by running the following command
+  from the Phusion Passenger source root:
 
      ruby -Ilib -rphusion_passenger/platform_info/binary_compatibility \
      -e 'include PhusionPassenger' \
