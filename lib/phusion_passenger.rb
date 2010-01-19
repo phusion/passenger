@@ -46,6 +46,11 @@ module PhusionPassenger
 	# Subdirectory under $HOME to use for storing resource files.
 	LOCAL_DIR      = ".passenger"
 	
+	# Directories in which to look for plugins.
+	PLUGIN_DIRS    = ["/usr/share/phusion-passenger/plugins",
+		"/usr/local/share/phusion-passenger/plugins",
+		"~/#{LOCAL_DIR}/plugins"]
+	
 	if natively_packaged?
 		SOURCE_ROOT        = "/usr/lib/phusion-passenger/source"
 		NATIVE_SUPPORT_DIR = "/usr/lib/phusion-passenger/native_support/#{VERSION_STRING}"
@@ -60,6 +65,8 @@ module PhusionPassenger
 		# Documentation directory.
 		DOCDIR             = File.join(SOURCE_ROOT, "doc")
 	end
+	
+	LITE_INTERFACE_VERSION = 1
 	
 	if $LOAD_PATH.first != LIBDIR
 		$LOAD_PATH.unshift(LIBDIR)
