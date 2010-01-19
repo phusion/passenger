@@ -252,26 +252,6 @@ create_unix_socket(VALUE self, VALUE filename, VALUE backlog) {
 }
 
 /*
- * call-seq: accept(fileno)
- *
- * Accept a new client from the given socket.
- *
- * - +fileno+ (integer): The file descriptor of the server socket.
- * - Returns: The accepted client's file descriptor.
- * - Raises +SystemCallError+ if something went wrong.
- */
-static VALUE
-f_accept(VALUE self, VALUE fileno) {
-	int fd = accept(NUM2INT(fileno), NULL, NULL);
-	if (fd == -1) {
-		rb_sys_fail("accept() failed");
-		return Qnil;
-	} else {
-		return INT2NUM(fd);
-	}
-}
-
-/*
  * call-seq: close_all_file_descriptors(exceptions)
  *
  * Close all file descriptors, except those given in the +exceptions+ array.
@@ -890,7 +870,6 @@ Init_native_support() {
 	rb_define_singleton_method(mNativeSupport, "send_fd", send_fd, 2);
 	rb_define_singleton_method(mNativeSupport, "recv_fd", recv_fd, 1);
 	rb_define_singleton_method(mNativeSupport, "create_unix_socket", create_unix_socket, 2);
-	rb_define_singleton_method(mNativeSupport, "accept", f_accept, 1);
 	rb_define_singleton_method(mNativeSupport, "close_all_file_descriptors", close_all_file_descriptors, 1);
 	rb_define_singleton_method(mNativeSupport, "disable_stdio_buffering", disable_stdio_buffering, 0);
 	rb_define_singleton_method(mNativeSupport, "split_by_null_into_hash", split_by_null_into_hash, 1);
