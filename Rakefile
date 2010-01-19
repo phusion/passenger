@@ -888,7 +888,6 @@ spec = Gem::Specification.new do |s|
 		'ext/oxt/*.cpp',
 		'ext/oxt/detail/*.hpp',
 		'ext/phusion_passenger/*.{c,rb}',
-		'benchmark/*.{cpp,rb}',
 		'misc/*',
 		'misc/*/*',
 		'test/*.example',
@@ -1022,8 +1021,7 @@ task :sloccount do
 			"ext/common",
 			"ext/oxt",
 			"ext/phusion_passenger/*.c",
-			"test/**/*.{cpp,rb}",
-			"benchmark/*.{cpp,rb}"
+			"test/**/*.{cpp,rb}"
 		]
 	ensure
 		system "rm -rf #{tmpdir}"
