@@ -1,4 +1,3 @@
-# encoding: binary
 #  Phusion Passenger - http://www.modrails.com/
 #  Copyright (c) 2010 Phusion
 #
@@ -35,7 +34,6 @@ module PhusionPassenger
 		loaded = true
 	rescue LoadError
 		require 'etc'
-		require 'phusion_passenger/constants'
 		
 		home = Etc.getpwuid(Process.uid).dir
 		begin
@@ -75,7 +73,7 @@ module PhusionPassenger
 					mkdir.call(target_dir)
 					File.open("#{target_dir}/.permission_test", "w").close
 					File.unlink("#{target_dir}/.permission_test")
-					STDERR.puts "cd #{target_dir}"
+					STDERR.puts "# cd #{target_dir}"
 					Dir.chdir(target_dir) do
 						extconf_rb = File.join(SOURCE_ROOT, "ext",
 							"phusion_passenger", "extconf.rb")
