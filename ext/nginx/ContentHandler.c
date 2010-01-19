@@ -223,7 +223,11 @@ find_base_uri(ngx_http_request_t *r, const passenger_loc_conf_t *loc,
 static void
 set_upstream_server_address(ngx_http_upstream_t *upstream, ngx_http_upstream_conf_t *upstream_config) {
     ngx_http_upstream_server_t *servers = upstream_config->upstream->servers->elts;
-    ngx_peer_addr_t            *address = &servers[0].addrs[0];
+    #if NGINX_VERSION_NUM >= 8000
+        ngx_addr_t             *address = &servers[0].addrs[0];
+    #else
+        ngx_peer_addr_t        *address = &servers[0].addrs[0];
+    #endif
     const char                 *request_socket_filename;
     unsigned int                request_socket_filename_len;
     struct sockaddr_un         *sockaddr;
