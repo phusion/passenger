@@ -23,6 +23,7 @@
 
 require 'socket'
 require 'phusion_passenger/app_process'
+require 'phusion_passenger/constants'
 require 'phusion_passenger/events'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/abstract_server'
