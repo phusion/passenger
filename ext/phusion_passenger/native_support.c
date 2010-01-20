@@ -63,6 +63,10 @@
 #ifndef RSTRING_LEN
 	#define RSTRING_LEN(str) RSTRING(str)->len
 #endif
+#if !defined(RUBY_UBF_IO) && defined(RB_UBF_DFL)
+	/* MacRuby compatibility */
+	#define RUBY_UBF_IO RB_UBF_DFL
+#endif
 #ifndef IOV_MAX
 	/* Linux doesn't define IOV_MAX in limits.h for some reason. */
 	#define IOV_MAX sysconf(_SC_IOV_MAX)
@@ -215,7 +219,7 @@ static VALUE
 create_unix_socket(VALUE self, VALUE filename, VALUE backlog) {
 	int fd, ret;
 	struct sockaddr_un addr;
-	char *filename_str;
+	const char *filename_str;
 	long filename_length;
 	
 	filename_str = RSTRING_PTR(filename);
@@ -465,7 +469,11 @@ f_generic_writev(VALUE fd, VALUE *array_of_components, unsigned int count) {
 			str = rb_ary_entry(components, j);
 			str = rb_obj_as_string(str);
 			total_size += RSTRING_LEN(str);
-			groups[group_offset].io_vectors[vector_offset].iov_base = RSTRING_PTR(str);
+			/* I know writev() doesn't write to iov_base, but on some
+			 * platforms it's still defined as non-const char *
+			 * :-(
+			 */
+			groups[group_offset].io_vectors[vector_offset].iov_base = (char *) RSTRING_PTR(str);
 			groups[group_offset].io_vectors[vector_offset].iov_len  = RSTRING_LEN(str);
 			groups[group_offset].total_size += RSTRING_LEN(str);
 			vector_offset++;
