@@ -232,7 +232,8 @@ create_unix_socket(VALUE self, VALUE filename, VALUE backlog) {
 	}
 	
 	addr.sun_family = AF_UNIX;
-	memcpy(addr.sun_path, filename_str, MIN(filename_length, sizeof(addr.sun_path)));
+	memcpy(addr.sun_path, filename_str,
+		MIN((long) filename_length, (long) sizeof(addr.sun_path)));
 	addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
 	
 	ret = bind(fd, (const struct sockaddr *) &addr, sizeof(addr));
@@ -275,7 +276,7 @@ close_all_file_descriptors(VALUE self, VALUE exceptions) {
 			is_exception = i == fd;
 		}
 		if (!is_exception) {
-			close(i);
+			close((int) i);
 		}
 	}
 	return Qnil;
@@ -354,7 +355,7 @@ update_group_written_info(IOVectorGroup *group, ssize_t bytes_written) {
 	counter = 0;
 	for (i = 0; i < group->count; i++) {
 		counter += group->io_vectors[i].iov_len;
-		if (counter == bytes_written) {
+		if (counter == (size_t) bytes_written) {
 			/* Found. In fact, all vectors up to this one contain exactly
 			 * bytes_written bytes. So discard all these vectors.
 			 */
@@ -362,7 +363,7 @@ update_group_written_info(IOVectorGroup *group, ssize_t bytes_written) {
 			group->count -= i + 1;
 			group->total_size -= bytes_written;
 			return;
-		} else if (counter > bytes_written) {
+		} else if (counter > (size_t) bytes_written) {
 			/* Found. Discard all vectors before this one, and
 			 * truncate this vector.
 			 */
@@ -409,7 +410,7 @@ f_generic_writev(VALUE fd, VALUE *array_of_components, unsigned int count) {
 	/* First determine the number of components that we have. */
 	total_components   = 0;
 	for (i = 0; i < count; i++) {
-		total_components += RARRAY_LEN(array_of_components[i]);
+		total_components += (unsigned int) RARRAY_LEN(array_of_components[i]);
 	}
 	if (total_components == 0) {
 		return NUM2INT(0);
@@ -468,7 +469,7 @@ f_generic_writev(VALUE fd, VALUE *array_of_components, unsigned int count) {
 		for (j = 0; j < RARRAY_LEN(components); j++) {
 			str = rb_ary_entry(components, j);
 			str = rb_obj_as_string(str);
-			total_size += RSTRING_LEN(str);
+			total_size += (unsigned int) RSTRING_LEN(str);
 			/* I know writev() doesn't write to iov_base, but on some
 			 * platforms it's still defined as non-const char *
 			 * :-(
@@ -584,8 +585,8 @@ f_writev3(VALUE self, VALUE fd, VALUE components1, VALUE components2, VALUE comp
  */
 static VALUE
 switch_user(VALUE self, VALUE username, VALUE uid, VALUE gid) {
-	uid_t the_uid = NUM2LL(uid);
-	gid_t the_gid = NUM2LL(gid);
+	uid_t the_uid = (uid_t) NUM2LL(uid);
+	gid_t the_gid = (gid_t) NUM2LL(gid);
 	
 	if (initgroups(RSTRING_PTR(username), the_gid) == -1) {
 		rb_sys_fail("initgroups");
