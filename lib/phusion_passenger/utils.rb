@@ -31,6 +31,7 @@ require 'pathname'
 require 'etc'
 require 'fcntl'
 require 'tempfile'
+require 'timeout'
 require 'stringio'
 require 'phusion_passenger/exceptions'
 require 'phusion_passenger/native_support'
@@ -588,6 +589,7 @@ class ConditionVariable
 	# amount of time. Returns true if this condition was signaled, false if a
 	# timeout occurred.
 	def timed_wait(mutex, secs)
+		ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
 		if secs > 100000000
 			# NOTE: If one calls timeout() on FreeBSD 5 with an
 			# argument of more than 100000000, then MRI will become
@@ -599,14 +601,21 @@ class ConditionVariable
 			# seconds.
 			secs = 100000000
 		end
-		if defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby"
+		if ruby_engine == "jruby"
 			if secs > 0
 				return wait(mutex, secs)
 			else
 				return wait(mutex)
 			end
+		elsif RUBY_VERSION >= '1.9.0'
+			if secs > 0
+				waited = wait(mutex, secs)
+				return waited < secs
+			else
+				wait(mutex)
+				return true
+			end
 		else
-			require 'timeout' unless defined?(Timeout)
 			if secs > 0
 				Timeout.timeout(secs) do
 					wait(mutex)
@@ -623,14 +632,23 @@ class ConditionVariable
 	# This is like ConditionVariable.wait(), but allows one to wait a maximum
 	# amount of time. Raises Timeout::Error if the timeout has elapsed.
 	def timed_wait!(mutex, secs)
-		require 'timeout' unless defined?(Timeout)
+		ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
 		if secs > 100000000
 			# See the corresponding note for timed_wait().
 			secs = 100000000
 		end
-		if defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby"
+		if ruby_engine == "jruby"
 			if secs > 0
 				if !wait(mutex, secs)
+					raise Timeout::Error, "Timeout"
+				end
+			else
+				wait(mutex)
+			end
+		elsif RUBY_VERSION >= '1.9.0'
+			if secs > 0
+				waited = wait(mutex, secs)
+				if waited >= secs
 					raise Timeout::Error, "Timeout"
 				end
 			else
@@ -651,22 +669,6 @@ end
 
 class IO
 	if defined?(PhusionPassenger::NativeSupport)
-		# Send an IO object (i.e. a file descriptor) over this IO channel.
-		# This only works if this IO channel is a Unix socket.
-		#
-		# Raises SystemCallError if something went wrong.
-		def send_io(io)
-			PhusionPassenger::NativeSupport.send_fd(self.fileno, io.fileno)
-		end
-		
-		# Receive an IO object (i.e. a file descriptor) from this IO channel.
-		# This only works if this IO channel is a Unix socket.
-		#
-		# Raises SystemCallError if something went wrong.
-		def recv_io
-			return IO.new(PhusionPassenger::NativeSupport.recv_fd(self.fileno))
-		end
-		
 		# Writes all of the strings in the +components+ array into the given file
 		# descriptor using the +writev()+ system call. Unlike IO#write, this method
 		# does not require one to concatenate all those strings into a single buffer
@@ -759,18 +761,23 @@ module Process
 	end
 end
 
-# Ruby's implementation of UNIXSocket#recv_io and UNIXSocket#send_io
-# are broken on 64-bit FreeBSD 7, OpenBSD and x86_64/ppc64 OS X. So we override them
-# with our own implementation.
-if RUBY_PLATFORM =~ /freebsd/ || RUBY_PLATFORM =~ /openbsd/ || (RUBY_PLATFORM =~ /darwin/ && RUBY_PLATFORM !~ /universal/)
+# MRI's implementations of UNIXSocket#recv_io and UNIXSocket#send_io
+# are broken on 64-bit FreeBSD 7, OpenBSD and x86_64/ppc64 OS X. So
+# we override them with our own implementation.
+ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
+if ruby_engine == "ruby" && defined?(PhusionPassenger::NativeSupport) && (
+  RUBY_PLATFORM =~ /freebsd/ ||
+  RUBY_PLATFORM =~ /openbsd/ ||
+  (RUBY_PLATFORM =~ /darwin/ && RUBY_PLATFORM !~ /universal/)
+)
 	require 'socket'
 	UNIXSocket.class_eval do
-		def recv_io
-			super
+		def recv_io(klass = IO)
+			return klass.new(PhusionPassenger::NativeSupport.recv_fd(self.fileno))
 		end
-
+		
 		def send_io(io)
-			super
+			PhusionPassenger::NativeSupport.send_fd(self.fileno, io.fileno)
 		end
 	end
 end

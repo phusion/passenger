@@ -87,6 +87,8 @@ class MessageChannel
 	# Create a new MessageChannel by wrapping the given IO object.
 	def initialize(io = nil)
 		@io = io
+		# Make it binary just in case.
+		@io.binmode if @io
 	end
 	
 	# Read an array message from the underlying file descriptor.
@@ -345,6 +347,7 @@ class MessageChannel
 		@io.close
 	end
 	
+	# Checks whether the underlying IO stream is closed.
 	def closed?
 		return @io.closed?
 	end

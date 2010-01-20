@@ -70,7 +70,7 @@ module TestHelper
 		end
 		
 		def public_file(name)
-			return File.read("#{@full_app_root}/public/#{name}")
+			return File.binread("#{@full_app_root}/public/#{name}")
 		end
 	
 	private
@@ -303,5 +303,9 @@ File.class_eval do
 		File.open(filename, 'w').close
 		File.utime(timestamp, timestamp, filename) if timestamp
 	end
+	
+	def self.binread(filename)
+		return File.read(filename)
+	end if !respond_to?(:binread)
 end
 

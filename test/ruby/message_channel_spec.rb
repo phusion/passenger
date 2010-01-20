@@ -97,10 +97,28 @@ describe MessageChannel do
 			Process.waitpid(@pid) rescue nil
 		end
 		
+		def spawn_process
+			@parent_socket, @child_socket = UNIXSocket.pair
+			@pid = fork do
+				@parent_socket.close
+				@channel = MessageChannel.new(@child_socket)
+				begin
+					yield
+				rescue Exception => e
+					print_exception("child", e)
+				ensure
+					@child_socket.close
+					exit!
+				end
+			end
+			@child_socket.close
+			@channel = MessageChannel.new(@parent_socket)
+		end
+		
 		it "both processes can read and write a single array message" do
 			spawn_process do
 				x = @channel.read
-				@channel.write("#{x}!")
+				@channel.write("#{x[0]}!")
 			end
 			@channel.write("hello")
 			@channel.read.should == ["hello!"]
@@ -110,13 +128,13 @@ describe MessageChannel do
 			garbage_files = ["garbage1.dat", "garbage2.dat", "garbage3.dat"]
 			spawn_process do
 				garbage_files.each do |name|
-					data = File.read("stub/#{name}")
+					data = File.binread("stub/#{name}")
 					@channel.write_scalar(data)
 				end
 			end
 			
 			garbage_files.each do |name|
-				data = File.read("stub/#{name}")
+				data = File.binread("stub/#{name}")
 				@channel.read_scalar.should == data
 			end
 		end
@@ -148,7 +166,7 @@ describe MessageChannel do
 		end
 		
 		it "has stream properties" do
-			garbage = File.read("stub/garbage1.dat")
+			garbage = File.binread("stub/garbage1.dat")
 			spawn_process do
 				@channel.write("hello", "world")
 				@channel.write_scalar(garbage)
@@ -170,24 +188,5 @@ describe MessageChannel do
 			@channel.read.should == ["Uhm, watch your step.", "WAAHH?!", "Calm down, Motoko!!",
 				"TASTE MY WRATH! ULTIMATE SWORD TECHNIQUE!! DRAGON'S BREATH SL--"]
 		end
-		
-		def spawn_process
-			@parent_socket, @child_socket = UNIXSocket.pair
-			@pid = fork do
-				@parent_socket.close
-				@channel = MessageChannel.new(@child_socket)
-				begin
-					yield
-				rescue Exception => e
-					print_exception("child", e)
-				ensure
-					@child_socket.close
-					exit!
-				end
-			end
-			@child_socket.close
-			@channel = MessageChannel.new(@parent_socket)
-		end
 	end
 end
-

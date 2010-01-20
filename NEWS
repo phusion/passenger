@@ -6,6 +6,7 @@ Release 2.9.1
    passenger-install-nginx-module won't delete the Apache module.
  * passenger-install-nginx-module: compile with SSL support by default.
  * Support for Nginx 0.8
+ * 100% Ruby 1.9 support, passes entire unit test suite
 
 
 Release 2.9.0
