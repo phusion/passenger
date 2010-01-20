@@ -1,4 +1,14 @@
-Release 3.0.0
+Release 2.9.1
+-------------
+
+ * Auto-compilation of native_support.so.
+ * passenger-install-*-module only cleans its own files so that e.g. running
+   passenger-install-nginx-module won't delete the Apache module.
+ * passenger-install-nginx-module: compile with SSL support by default.
+ * Support for Nginx 0.8
+
+
+Release 2.9.0
 -------------
 
  * Caveat: command line tools are not compatible with earlier Phusion
@@ -38,11 +48,6 @@ Release 3.0.0
  * FileDescriptor::close() ignores ENOTCONN.
  * We support negative UIDs now because we override Ruby's setuid
    implementation.
- * Auto-compilation of native_support.so.
- * passenger-install-*-module only cleans its own files so that e.g. running
-   passenger-install-nginx-module won't delete the Apache module.
- * passenger-install-nginx-module: compile with SSL support by default.
- * Support for Nginx 0.8
 
 
 Release 2.2.9

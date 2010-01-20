@@ -35,7 +35,7 @@ module PhusionPassenger
 	
 	# Phusion Passenger version number.
 	# Don't forget to edit ext/common/Version.h too.
-	VERSION_STRING = '2.9.0'
+	VERSION_STRING = '2.9.1'
 	
 	# Directory containing the Phusion Passenger Ruby libraries.
 	LIBDIR         = File.expand_path(File.dirname(__FILE__))
