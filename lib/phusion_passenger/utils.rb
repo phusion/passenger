@@ -607,10 +607,12 @@ class ConditionVariable
 			else
 				return wait(mutex)
 			end
-		elsif RUBY_VERSION >= '1.9.0'
+		elsif RUBY_VERSION >= '1.9.2'
 			if secs > 0
-				waited = wait(mutex, secs)
-				return waited < secs
+				t1 = Time.now
+				wait(mutex, secs)
+				t2 = Time.now
+				return t2.to_f - t1.to_f < secs
 			else
 				wait(mutex)
 				return true
@@ -645,10 +647,12 @@ class ConditionVariable
 			else
 				wait(mutex)
 			end
-		elsif RUBY_VERSION >= '1.9.0'
+		elsif RUBY_VERSION >= '1.9.2'
 			if secs > 0
-				waited = wait(mutex, secs)
-				if waited >= secs
+				t1 = Time.now
+				wait(mutex, secs)
+				t2 = Time.now
+				if t2.to_f - t1.to_f >= secs
 					raise Timeout::Error, "Timeout"
 				end
 			else
