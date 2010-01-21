@@ -30,6 +30,18 @@ module PlatformInfo
 	# The absolute path to the current Ruby interpreter.
 	RUBY = Config::CONFIG['bindir'] + '/' + Config::CONFIG['RUBY_INSTALL_NAME'] + Config::CONFIG['EXEEXT']
 	
+	RUBY_ENGINE = defined?(::RUBY_ENGINE) ? ::RUBY_ENGINE : "ruby"
+	
+	# Returns whether the Ruby interpreter supports process forking.
+	def self.fork_supported?
+		# MRI >= 1.9.2's respond_to? returns false for methods
+		# that are not implemented.
+		return Process.respond_to?(:fork) &&
+			RUBY_ENGINE != "jruby" &&
+			RUBY_ENGINE != "macruby" &&
+			Config::CONFIG['target_os'] !~ /mswin|windows/
+	end
+	
 	# The correct 'gem' command for this Ruby interpreter.
 	def self.gem_command
 		return locate_ruby_executable('gem')
