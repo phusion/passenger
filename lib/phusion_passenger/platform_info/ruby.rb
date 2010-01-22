@@ -72,9 +72,6 @@ private
 			# RubyGems puts executables (e.g. 'rake') in there, not in
 			# /System/Libraries/(...)/bin.
 			filename = "/usr/bin/#{name}"
-		elsif RUBY_ENGINE == "macruby"
-			name = "mac#{name}"
-			filename = File.dirname(RUBY) + "/#{name}"
 		else
 			filename = File.dirname(RUBY) + "/#{name}"
 		end
