@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string>
+#include <map>
 #include <ostream>
 #include <sstream>
 #include <cstdio>
@@ -326,6 +327,13 @@ public:
 
 class TxnLogger {
 private:
+	struct CachedFileHandle {
+		FileDescriptor fd;
+		time_t lastUsed;
+	};
+	
+	typedef map<string, CachedFileHandle> Cache;
+	
 	string dir;
 	string socketFilename;
 	string username;
@@ -333,18 +341,36 @@ private:
 	RandomGenerator randomGenerator;
 	
 	boost::mutex lock;
-	string currentLogFile;
-	FileDescriptor currentLogHandle;
+	Cache fileHandleCache;
 	
 	FileDescriptor openLogFile(const StaticString &groupName, unsigned long long timestamp) {
 		string logFile = determineLogFilename(dir, groupName, timestamp);
+		Cache::iterator it;
 		lock_guard<boost::mutex> l(lock);
 		
-		// TODO: use a cache
-		
-		if (logFile != currentLogFile) {
+		it = fileHandleCache.find(logFile);
+		if (it == fileHandleCache.end()) {
+			/* If there are more than 10 analytics groups then this server is probably
+			 * a low-traffic server or a shared host. In such a situation opening the
+			 * transaction log file won't be a significant performance bottleneck.
+			 * Therefore I think the hardcoded cache limit of 10 is justified.
+			 */
+			while (fileHandleCache.size() >= 10) {
+				Cache::iterator oldest_it = fileHandleCache.begin();
+				it = oldest_it;
+				it++;
+				
+				for (; it != fileHandleCache.end(); it++) {
+					if (it->second.lastUsed < oldest_it->second.lastUsed) {
+						oldest_it = it;
+					}
+				}
+				
+				fileHandleCache.erase(oldest_it);
+			}
+			
 			MessageClient client;
-			FileDescriptor fd;
+			CachedFileHandle fileHandle;
 			vector<string> args;
 			
 			client.connect(socketFilename, username, password);
@@ -358,12 +384,13 @@ private:
 			if (args[0] == "error") {
 				throw IOException("The logging server could not open the log file: " + args[1]);
 			}
-			fd = client.readFileDescriptor();
-			
-			currentLogFile   = logFile;
-			currentLogHandle = fd;
+			fileHandle.fd = client.readFileDescriptor();
+			fileHandle.lastUsed = SystemTime::get();
+			it = fileHandleCache.insert(make_pair(logFile, fileHandle)).first;
+		} else {
+			it->second.lastUsed = SystemTime::get();
 		}
-		return currentLogHandle;
+		return it->second.fd;
 	}
 	
 	unsigned long long extractTimestamp(const string &id) const {
