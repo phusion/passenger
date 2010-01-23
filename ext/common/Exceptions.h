@@ -250,6 +250,14 @@ public:
 	virtual const char *what() const throw() { return msg.c_str(); }
 };
 
+/*
+ * @ingroup Exceptions
+ */
+class InvalidModeStringException: public ArgumentException {
+public:
+	InvalidModeStringException(const string &message): ArgumentException(message) {}
+};
+
 /**
  * A generic runtime exception.
  *
@@ -290,6 +298,22 @@ public:
 	SecurityException(const string &message): msg(message) {}
 	virtual ~SecurityException() throw() {}
 	virtual const char *what() const throw() { return msg.c_str(); }
+};
+
+/**
+ * @ingroup Exceptions
+ */
+class NonExistentUserException: public SecurityException {
+public:
+	NonExistentUserException(const string &message): SecurityException(message) {}
+};
+
+/**
+ * @ingroup Exceptions
+ */
+class NonExistentGroupException: public SecurityException {
+public:
+	NonExistentGroupException(const string &message): SecurityException(message) {}
 };
 
 /**

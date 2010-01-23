@@ -285,22 +285,63 @@ namespace tut {
 		ensure(memcmp(str.c_str(), "\0\0\0\0\0\0\0\0\0\0\0", 11) == 0);
 	}
 	
+	/***** Test parseModeString() *****/
+	
+	static bool modeStringCannotBeParsed(const StaticString &modeString) {
+		try {
+			parseModeString(modeString);
+			return false;
+		} catch (const InvalidModeStringException &) {
+			return true;
+		}
+	}
+	
+	TEST_METHOD(36) {
+		ensure_equals(parseModeString(""), 0);
+		ensure_equals(parseModeString("u="), 0);
+		ensure_equals(parseModeString("u=,u="), 0);
+		ensure_equals(parseModeString("u=,g="), 0);
+		ensure_equals(parseModeString("u=,g=,o="), 0);
+		ensure_equals(parseModeString("u=,g=,o=,u=,g="), 0);
+		ensure_equals(parseModeString("o="), 0);
+	}
+	
+	TEST_METHOD(37) {
+		ensure_equals("(1)", parseModeString("u=rwx"), S_IRWXU);
+		ensure_equals("(2)", parseModeString("g=rwx"), S_IRWXG);
+		ensure_equals("(3)", parseModeString("o=rwx"), S_IRWXO);
+		ensure_equals("(4)", parseModeString("u=r,g=,o=rx"), S_IRUSR | S_IROTH | S_IXOTH);
+		ensure_equals("(5)", parseModeString("o=r,g=wx"), S_IROTH | S_IWGRP | S_IXGRP);
+		ensure_equals("(6)", parseModeString("u=r,g=w,o=x,u=x"), S_IRUSR | S_IXUSR | S_IWGRP | S_IXOTH);
+		ensure_equals("(7)", parseModeString("u=rs,g=ws"), S_IRUSR | S_ISUID | S_IWGRP | S_ISGID);
+	}
+	
+	TEST_METHOD(38) {
+		ensure(modeStringCannotBeParsed("0"));
+		ensure(modeStringCannotBeParsed("0600"));
+		ensure(modeStringCannotBeParsed("600"));
+		ensure(modeStringCannotBeParsed("x=rs"));
+		ensure(modeStringCannotBeParsed("u=rs,g=rs,x=rs"));
+		ensure(modeStringCannotBeParsed("x=rs"));
+		ensure(modeStringCannotBeParsed("rwxrwxrwx"));
+	}
+	
 	/***** Test makeDirTree() *****/
 	
-	TEST_METHOD(35) {
+	TEST_METHOD(40) {
 		// Creating a single subdirectory works.
 		makeDirTree("tmp.dir/foo");
 		ensure_equals(getFileType("tmp.dir/foo"), FT_DIRECTORY);
 	}
 	
-	TEST_METHOD(36) {
+	TEST_METHOD(41) {
 		// Creating multiple subdirectories works.
 		makeDirTree("tmp.dir/foo/bar");
 		ensure_equals(getFileType("tmp.dir/foo"), FT_DIRECTORY);
 		ensure_equals(getFileType("tmp.dir/foo/bar"), FT_DIRECTORY);
 	}
 	
-	TEST_METHOD(37) {
+	TEST_METHOD(42) {
 		// It applies the permissions to all created directories.
 		struct stat buf, buf2;
 		
@@ -317,7 +358,7 @@ namespace tut {
 			S_IROTH | S_IXOTH);
 	}
 	
-	TEST_METHOD(38) {
+	TEST_METHOD(43) {
 		// It correctly parses the permission string.
 		testMakeDirTreeMode("empty 1", "", 0);
 		testMakeDirTreeMode("empty 2", "u=", 0);
@@ -334,7 +375,7 @@ namespace tut {
 			S_IRWXU | S_ISUID | S_IRWXO);
 	}
 	
-	TEST_METHOD(39) {
+	TEST_METHOD(44) {
 		// It doesn't do anything if the directory already exists.
 		struct stat buf, buf2;
 		stat("tmp.dir", &buf);

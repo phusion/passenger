@@ -46,6 +46,9 @@ namespace Passenger {
 using namespace std;
 using namespace boost;
 
+static const uid_t USER_NOT_GIVEN = (uid_t) -1;
+static const gid_t GROUP_NOT_GIVEN = (gid_t) -1;
+
 typedef struct CachedFileStat CachedFileStat;
 
 /** Enumeration which indicates what kind of file a file is. */
@@ -193,16 +196,16 @@ FileType getFileType(const StaticString &filename, CachedFileStat *cstat = 0,
  * @param filename The file to create.
  * @param contents The contents to write to the file.
  * @param permissions The desired file permissions.
- * @param owner The desired file owner. Specify -1 if you want to use the current
+ * @param owner The desired file owner. Specify USER_NOT_GIVEN if you want to use the current
  *              process's owner as the file owner.
- * @param group The desired file group. Specify -1 if you want to use the current
+ * @param group The desired file group. Specify GROUP_NOT_GIVEN if you want to use the current
  *              process's group as the file group.
  * @throws FileSystemException Something went wrong.
  * @ingroup Support
  */
 void createFile(const string &filename, const StaticString &contents,
                 mode_t permissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,
-                uid_t owner = (uid_t) -1, gid_t group = (gid_t) -1);
+                uid_t owner = USER_NOT_GIVEN, gid_t group = GROUP_NOT_GIVEN);
 
 /**
  * Find the location of the Passenger spawn server script.
@@ -274,6 +277,28 @@ string getProcessUsername();
 void determineLowestUserAndGroup(const string &user, uid_t &uid, gid_t &gid);
 
 /**
+ * Converts a mode string into a mode_t value.
+ *
+ * At this time only the symbolic mode strings are supported, e.g. something like looks
+ * this: "u=rwx,g=w,o=rx". The grammar is as follows:
+ * @code
+ *   mode   ::= (clause ("," clause)*)?
+ *   clause ::= who "=" permission*
+ *   who    ::= "u" | "g" | "o"
+ *   permission ::= "r" | "w" | "x" | "s"
+ * @endcode
+ *
+ * Notes:
+ * - The mode value starts with 0. So if you specify "u=rwx", then the group and world
+ *   permissions will be empty (set to 0).
+ * - The "s" permission is only allowed for who == "u" or who == "g".
+ * - The return value does not depend on the umask.
+ *
+ * @throws InvalidModeStringException The mode string cannot be parsed.
+ */
+mode_t parseModeString(const StaticString &mode);
+
+/**
  * Return the path name for the directory in which the system stores general
  * temporary files. This is usually "/tmp", but might be something else depending
  * on some environment variables.
@@ -338,16 +363,19 @@ const char *getSystemTempDir();
  * if necessary. The created directories' permissions are exactly as specified
  * by the 'mode' parameter (i.e. the umask will be ignored). You can specify
  * this directory's owner and group through the 'owner' and 'group' parameters.
- * A value of -1 for 'owner' or 'group' means that the owner/group should not
- * be changed.
+ * A value of USER_NOT_GIVEN for 'owner' and/or GROUP_NOT_GIVEN 'group' means
+ * that the owner/group should not be changed.
  *
  * If 'path' already exists, then nothing will happen.
  *
+ * @param mode A mode string, as supported by parseModeString().
  * @throws IOException Something went wrong.
  * @throws SystemException Something went wrong.
  * @throws FileSystemException Something went wrong.
+ * @throws InvalidModeStringException The mode string cannot be parsed.
  */
-void makeDirTree(const string &path, const char *mode = "u=rwx,g=,o=", uid_t owner = (uid_t) -1, gid_t group = (gid_t) -1);
+void makeDirTree(const string &path, const StaticString &mode = "u=rwx,g=,o=",
+	uid_t owner = USER_NOT_GIVEN, gid_t group = GROUP_NOT_GIVEN);
 
 /**
  * Remove an entire directory tree recursively. If the directory doesn't exist then this

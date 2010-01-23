@@ -74,6 +74,12 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->default_user.len  = 0;
     conf->analytics_log_dir.data = NULL;
     conf->analytics_log_dir.len  = 0;
+    conf->analytics_log_user.data = NULL;
+    conf->analytics_log_user.len  = 0;
+    conf->analytics_log_group.data = (u_char *) "";
+    conf->analytics_log_group.len  = 0;
+    conf->analytics_log_permissions.data = NULL;
+    conf->analytics_log_permissions.len  = 0;
     
     return conf;
 }
@@ -144,6 +150,16 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
             conf->analytics_log_dir.data = ngx_pstrdup(cf->pool, &str);
             conf->analytics_log_dir.len  = str.len;
         }
+    }
+    
+    if (conf->analytics_log_user.len == 0) {
+        conf->analytics_log_user.len  = sizeof("nobody") - 1;
+        conf->analytics_log_user.data = (u_char *) "nobody";
+    }
+    
+    if (conf->analytics_log_permissions.len == 0) {
+        conf->analytics_log_permissions.len  = sizeof("u=rwx,g=rx,o=rx") - 1;
+        conf->analytics_log_permissions.data = (u_char *) "u=rwx,g=rx,o=rx";
     }
     
     return NGX_CONF_OK;
@@ -1004,6 +1020,27 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, analytics_log_dir),
+      NULL },
+
+    { ngx_string("passenger_analytics_log_user"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, analytics_log_user),
+      NULL },
+
+    { ngx_string("passenger_analytics_log_group"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, analytics_log_group),
+      NULL },
+
+    { ngx_string("passenger_analytics_log_permissions"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, analytics_log_permissions),
       NULL },
 
     { ngx_string("passenger_pass_header"),

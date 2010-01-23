@@ -98,60 +98,29 @@ ignoreSigpipe() {
 	sigaction(SIGPIPE, &action, NULL);
 }
 
-/**
- * Lowers this process's privilege to user <em>username</em> and
- * group <em>groupname</em>. <em>groupname</em> may be the empty string,
- * in which case <em>username</em>'s default group will be used.
- */
 static void
-lowerPrivilege(const string &username, const string &groupname = "") {
-	struct passwd *entry;
+lowerPrivilege(const string &username, const struct passwd *user, const struct group *group) {
+	int e;
 	
-	entry = getpwnam(username.c_str());
-	if (entry != NULL) {
-		gid_t groupId;
-		
-		if (initgroups(username.c_str(), entry->pw_gid) != 0) {
-			int e = errno;
-			P_WARN("WARNING: Unable to lower PassengerLoggingAgent's "
-				"privilege to that of user '" << username <<
-				"': cannot set supplementary groups for this "
-				"user: " << strerror(e) << " (" << e << ")");
-		}
-		if (groupname.empty()) {
-			groupId = entry->pw_gid;
-		} else {
-			struct group *group;
-			
-			group = getgrnam(groupname.c_str());
-			if (group == NULL) {
-				P_WARN("WARNING: Group '" << groupname <<
-					"' not found; using default group for user '" <<
-					username << "' instead.");
-				groupId = entry->pw_gid;
-			} else {
-				groupId = group->gr_gid;
-			}
-		}
-		if (setgid(groupId) != 0) {
-			int e = errno;
-			P_WARN("WARNING: Unable to lower PassengerLoggingAgent's "
-				"privilege to that of user '" << username <<
-				"': cannot set group ID to " << groupId <<
-				": " << strerror(e) <<
-				" (" << e << ")");
-		}
-		if (setuid(entry->pw_uid) != 0) {
-			int e = errno;
-			P_WARN("WARNING: Unable to lower PassengerLoggingAgent's "
-				"privilege to that of user '" << username <<
-				"': cannot set user ID: " << strerror(e) <<
-				" (" << e << ")");
-		}
-	} else {
+	if (initgroups(username.c_str(), group->gr_gid) != 0) {
+		e = errno;
+		P_WARN("WARNING: Unable to set supplementary groups for " <<
+			"PassengerLoggingAgent: " << strerror(e) << " (" << e << ")");
+	}
+	if (setgid(group->gr_gid) != 0) {
+		e = errno;
 		P_WARN("WARNING: Unable to lower PassengerLoggingAgent's "
 			"privilege to that of user '" << username <<
-			"': user does not exist.");
+			"': cannot set group ID to " << group->gr_gid <<
+			": " << strerror(e) <<
+			" (" << e << ")");
+	}
+	if (setuid(user->pw_uid) != 0) {
+		e = errno;
+		P_WARN("WARNING: Unable to lower PassengerLoggingAgent's "
+			"privilege to that of user '" << username <<
+			"': cannot set user ID: " << strerror(e) <<
+			" (" << e << ")");
 	}
 }
 
@@ -164,6 +133,7 @@ main(int argc, char *argv[]) {
 	string loggingDir       = argv[5];
 	string username         = argv[6];
 	string groupname        = argv[7];
+	string permissions      = argv[8];
 	
 	/********** Boilerplate environment setup code.... **********/
 	
@@ -191,6 +161,8 @@ main(int argc, char *argv[]) {
 		ServerInstanceDir::GenerationPtr generation;
 		AccountsDatabasePtr  accountsDatabase;
 		MessageServerPtr     messageServer;
+		struct passwd       *user;
+		struct group        *group;
 		
 		serverInstanceDir = ptr(new ServerInstanceDir(webServerPid, tempDir, false));
 		generation = serverInstanceDir->getGeneration(generationNumber);
@@ -198,46 +170,57 @@ main(int argc, char *argv[]) {
 		messageServer = ptr(new MessageServer(generation->getPath() + "/logging.socket",
 			accountsDatabase));
 		
-		// TODO: check whether this logic is right....
-		if (username.empty()) {
-			username = "nobody";
+		user = getpwnam(username.c_str());
+		if (user == NULL) {
+			throw NonExistentUserException(string("The configuration option ") +
+				"'PassengerAnalyticsLogUser' (Apache) or " +
+				"'passenger_analytics_log_user' (Nginx) was set to '" +
+				username + "', but this user doesn't exist. Please fix " +
+				"the configuration option.");
 		}
+		
 		if (groupname.empty()) {
-			groupname = "nobody";
+			group = getgrgid(user->pw_gid);
+			if (group == NULL) {
+				throw NonExistentGroupException(string("The configuration option ") +
+					"'PassengerAnalyticsLogGroup' (Apache) or " +
+					"'passenger_analytics_log_group' (Nginx) wasn't set, " +
+					"so PassengerLoggingAgent tried to use the default group " +
+					"for user '" + username + "' - which is GID #" +
+					toString(user->pw_gid) + " - as the group for the analytics " +
+					"log dir, but this GID doesn't exist. " +
+					"You can solve this problem by explicitly " +
+					"setting PassengerAnalyticsLogGroup (Apache) or " +
+					"passenger_analytics_log_group (Nginx) to a group that " +
+					"does exist. In any case, it looks like your system's user " +
+					"database is broken; Phusion Passenger can work fine even " +
+					"with this broken user database, but you should still fix it.");
+			} else {
+				groupname = group->gr_name;
+			}
+		} else {
+			group = getgrnam(groupname.c_str());
+			if (group == NULL) {
+				throw NonExistentGroupException(string("The configuration option ") +
+					"'PassengerAnalyticsLogGroup' (Apache) or " +
+					"'passenger_analytics_log_group' (Nginx) was set to '" +
+					groupname + "', but this group doesn't exist. Please fix " +
+					"the configuration option.");
+			}
 		}
 		
 		/* Create the logging directory if necessary. */
 		if (getFileType(loggingDir) == FT_NONEXISTANT) {
 			if (geteuid() == 0) {
-				struct passwd *user = getpwnam(username.c_str());
-				struct group *group = getgrnam(groupname.c_str());
-				
-				if (user == NULL) {
-					P_ERROR("Cannot create directory " << loggingDir <<
-						" with owner '" << username <<
-						"': user does not exist");
-					return 1;
-				}
-				if (group == NULL) {
-					P_ERROR("Cannot create directory " << loggingDir <<
-						" with group '" << username <<
-						"': group does not exist");
-					return 1;
-				}
-				makeDirTree(loggingDir, "u=rwx,g=,o=", user->pw_uid, group->gr_gid);
+				makeDirTree(loggingDir, permissions, user->pw_uid, group->gr_gid);
 			} else {
-				makeDirTree(loggingDir);
+				makeDirTree(loggingDir, permissions);
 			}
 		}
 		
 		/* Now's a good time to lower the privilege. */
 		if (geteuid() == 0) {
-			if (username.empty()) {
-				// TODO: autodetect the logging dir's owner
-				lowerPrivilege("nobody");
-			} else {
-				lowerPrivilege(username, groupname);
-			}
+			lowerPrivilege(username, user, group);
 		}
 		
 		/* Retrieve desired password for protecting the logging socket */
@@ -257,7 +240,8 @@ main(int argc, char *argv[]) {
 		
 		accountsDatabase->add("logging", Base64::decode(args[1]), false);
 		messageServer->addHandler(ptr(new TimerUpdateHandler(exitTimer)));
-		messageServer->addHandler(ptr(new LoggingServer(loggingDir)));
+		messageServer->addHandler(ptr(new LoggingServer(loggingDir, permissions,
+			group->gr_gid)));
 		messageServer->addHandler(ptr(new ExitHandler(exitEvent)));
 		messageServerThread = new oxt::thread(
 			boost::bind(&MessageServer::mainLoop, messageServer.get())
@@ -307,7 +291,7 @@ main(int argc, char *argv[]) {
 		
 		return 0;
 	} catch (const tracable_exception &e) {
-		P_ERROR(e.what() << "\n" << e.backtrace());
+		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
 		return 1;
 	}
 }

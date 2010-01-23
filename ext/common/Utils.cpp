@@ -158,7 +158,13 @@ createFile(const string &filename, const StaticString &contents, mode_t permissi
 				e, filename);
 		}
 		
-		if (owner != (uid_t) -1 && group != (gid_t) -1) {
+		if (owner != USER_NOT_GIVEN && group != GROUP_NOT_GIVEN) {
+			if (owner == USER_NOT_GIVEN) {
+				owner = (uid_t) -1; // Don't let fchown change file owner.
+			}
+			if (group == GROUP_NOT_GIVEN) {
+				group = (gid_t) -1; // Don't let fchown change file group.
+			}
 			do {
 				ret = fchown(fd, owner, group);
 			} while (ret == -1 && errno == EINTR);
@@ -372,58 +378,28 @@ determineLowestUserAndGroup(const string &user, uid_t &uid, gid_t &gid) {
 		ent = getpwnam("nobody");
 	}
 	if (ent == NULL) {
-		uid = (uid_t) -1;
-		gid = (gid_t) -1;
+		uid = USER_NOT_GIVEN;
+		gid = GROUP_NOT_GIVEN;
 	} else {
 		uid = ent->pw_uid;
 		gid = ent->pw_gid;
 	}
 }
 
-const char *
-getSystemTempDir() {
-	const char *temp_dir = getenv("PASSENGER_TEMP_DIR");
-	if (temp_dir == NULL || *temp_dir == '\0') {
-		temp_dir = getenv("PASSENGER_TMPDIR");
-		if (temp_dir == NULL || *temp_dir == '\0') {
-			temp_dir = "/tmp";
-		}
-	}
-	return temp_dir;
-}
-
-void
-makeDirTree(const string &path, const char *mode, uid_t owner, gid_t group) {
-	struct stat buf;
-	vector<string> paths;
+mode_t
+parseModeString(const StaticString &mode) {
+	mode_t modeBits = 0;
 	vector<string> clauses;
 	vector<string>::iterator it;
-	vector<string>::reverse_iterator rit;
-	string current = path;
-	mode_t modeBits = 0;
-	int ret;
 	
-	if (stat(path.c_str(), &buf) == 0) {
-		return;
-	}
-	
-	/* Parse mode bits. Grammar:
-	 *
-	 *   mode   ::= (clause ("," clause)*)?
-	 *   clause ::= who "=" permission*
-	 *   who    ::= "u" | "g" | "o"
-	 *   permission ::= "r" | "w" | "x" | "s"
-	 *
-	 * The "s" permission is only allowed for who == "u" or who == "g".
-	 */
 	split(mode, ',', clauses);
 	for (it = clauses.begin(); it != clauses.end(); it++) {
-		string clause = *it;
+		const string &clause = *it;
 		
 		if (clause.empty()) {
 			continue;
 		} else if (clause.size() < 2 || clause[1] != '=') {
-			throw ArgumentException("Invalid mode clause specification '" + clause + "'");
+			throw InvalidModeStringException("Invalid mode clause specification '" + clause + "'");
 		}
 		
 		switch (clause[0]) {
@@ -443,7 +419,8 @@ makeDirTree(const string &path, const char *mode, uid_t owner, gid_t group) {
 					modeBits |= S_ISUID;
 					break;
 				default:
-					throw ArgumentException("Invalid permission '" + string(1, clause[i]) +
+					throw InvalidModeStringException("Invalid permission '" +
+						string(1, clause[i]) +
 						"' in mode clause specification '" +
 						clause + "'");
 				}
@@ -465,7 +442,8 @@ makeDirTree(const string &path, const char *mode, uid_t owner, gid_t group) {
 					modeBits |= S_ISGID;
 					break;
 				default:
-					throw ArgumentException("Invalid permission '" + string(1, clause[i]) +
+					throw InvalidModeStringException("Invalid permission '" +
+						string(1, clause[i]) +
 						"' in mode clause specification '" +
 						clause + "'");
 				}
@@ -484,17 +462,48 @@ makeDirTree(const string &path, const char *mode, uid_t owner, gid_t group) {
 					modeBits |= S_IXOTH;
 					break;
 				default:
-					throw ArgumentException("Invalid permission '" + string(1, clause[i]) +
+					throw InvalidModeStringException("Invalid permission '" +
+						string(1, clause[i]) +
 						"' in mode clause specification '" +
 						clause + "'");
 				}
 			}
 			break;
 		default:
-			throw ArgumentException("Invalid owner '" + string(1, clause[0]) +
+			throw InvalidModeStringException("Invalid owner '" + string(1, clause[0]) +
 				"' in mode clause specification '" + clause + "'");
 		}
 	}
+	
+	return modeBits;
+}
+
+const char *
+getSystemTempDir() {
+	const char *temp_dir = getenv("PASSENGER_TEMP_DIR");
+	if (temp_dir == NULL || *temp_dir == '\0') {
+		temp_dir = getenv("PASSENGER_TMPDIR");
+		if (temp_dir == NULL || *temp_dir == '\0') {
+			temp_dir = "/tmp";
+		}
+	}
+	return temp_dir;
+}
+
+void
+makeDirTree(const string &path, const StaticString &mode, uid_t owner, gid_t group) {
+	struct stat buf;
+	vector<string> paths;
+	vector<string>::reverse_iterator rit;
+	string current = path;
+	mode_t modeBits;
+	int ret;
+	
+	if (stat(path.c_str(), &buf) == 0) {
+		return;
+	}
+	
+	modeBits = parseModeString(mode);
 	
 	/* Create a list of parent paths that don't exist. For example, given
 	 * path == "/a/b/c/d/e" and that only /a exists, the list will become
@@ -522,8 +531,8 @@ makeDirTree(const string &path, const char *mode, uid_t owner, gid_t group) {
 				continue;
 			} else {
 				int e = errno;
-				throw FileSystemException("Cannot create directory '" + *it + "'",
-					e, *it);
+				throw FileSystemException("Cannot create directory '" + current + "'",
+					e, current);
 			}
 		}
 		
@@ -532,7 +541,13 @@ makeDirTree(const string &path, const char *mode, uid_t owner, gid_t group) {
 			ret = chmod(current.c_str(), modeBits);
 		} while (ret == -1 && errno == EINTR);
 		
-		if (owner != (uid_t) -1 && group != (gid_t) -1) {
+		if (owner != USER_NOT_GIVEN && group != GROUP_NOT_GIVEN) {
+			if (owner == USER_NOT_GIVEN) {
+				owner = (uid_t) -1; // Don't let chown change file owner.
+			}
+			if (group == GROUP_NOT_GIVEN) {
+				group = (gid_t) -1; // Don't let chown change file group.
+			}
 			do {
 				ret = chown(current.c_str(), owner, group);
 			} while (ret == -1 && errno == EINTR);

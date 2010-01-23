@@ -43,6 +43,9 @@ static unsigned int maxPoolSize;
 static unsigned int maxInstancesPerApp;
 static unsigned int poolIdleTime;
 static string  analyticsLogDir;
+static string  analyticsLogUser;
+static string  analyticsLogGroup;
+static string  analyticsLogPermissions;
 
 static ServerInstanceDirPtr serverInstanceDir;
 static ServerInstanceDir::GenerationPtr generation;
@@ -575,8 +578,9 @@ protected:
 			tempDir.c_str(),
 			generationNumber.c_str(),
 			analyticsLogDir.c_str(),
-			"",
-			"",
+			analyticsLogUser.c_str(),
+			analyticsLogGroup.c_str(),
+			analyticsLogPermissions.c_str(),
 			(char *) 0);
 	}
 	
@@ -804,6 +808,9 @@ main(int argc, char *argv[]) {
 	maxInstancesPerApp = atoi(argv[13]);
 	poolIdleTime       = atoi(argv[14]);
 	analyticsLogDir    = argv[15];
+	analyticsLogUser        = argv[16];
+	analyticsLogGroup       = argv[17];
+	analyticsLogPermissions = argv[18];
 	
 	/* Become the session leader so that Apache can't kill this
 	 * watchdog with killpg() during shutdown, and so that a

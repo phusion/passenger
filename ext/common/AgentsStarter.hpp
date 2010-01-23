@@ -266,7 +266,8 @@ public:
 	           const string &passengerRoot, const string &rubyCommand,
 	           unsigned int maxPoolSize, unsigned int maxInstancesPerApp,
 	           unsigned int poolIdleTime,
-	           const string &analyticsLogDir,
+	           const string &analyticsLogDir, const string &analyticsLogUser,
+	           const string &analyticsLogGroup, const string &analyticsLogPermissions,
 	           const function<void ()> &afterFork = function<void ()>())
 	{
 		TRACE_POINT();
@@ -283,7 +284,7 @@ public:
 		}
 		
 		if (syscalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
-			int e = errno;
+			e = errno;
 			throw SystemException("Cannot create a Unix socket pair", e);
 		}
 		
@@ -341,6 +342,9 @@ public:
 				toString(maxInstancesPerApp).c_str(),
 				toString(poolIdleTime).c_str(),
 				analyticsLogDir.c_str(),
+				analyticsLogUser.c_str(),
+				analyticsLogGroup.c_str(),
+				analyticsLogPermissions.c_str(),
 				(char *) 0);
 			e = errno;
 			try {

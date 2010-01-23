@@ -29,7 +29,8 @@ agents_starter_start(AgentsStarter *as,
                      const char *rubyCommand, unsigned int maxPoolSize,
                      unsigned int maxInstancesPerApp,
                      unsigned int poolIdleTime,
-                     const char *analyticsLogDir,
+                     const char *analyticsLogDir, const char *analyticsLogUser,
+                     const char *analyticsLogGroup, const char *analyticsLogPermissions,
                      const AfterForkCallback afterFork,
                      void *callbackArgument,
                      char **errorMessage)
@@ -45,7 +46,8 @@ agents_starter_start(AgentsStarter *as,
 		agentsStarter->start(logLevel, webServerPid, tempDir, userSwitching,
 			defaultUser, workerUid, workerGid, passengerRoot, rubyCommand,
 			maxPoolSize, maxInstancesPerApp, poolIdleTime,
-			analyticsLogDir,
+			analyticsLogDir, analyticsLogUser,
+			analyticsLogGroup, analyticsLogPermissions,
 			afterForkFunctionObject);
 		return 1;
 	} catch (const Passenger::SystemException &e) {

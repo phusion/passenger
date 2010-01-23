@@ -220,6 +220,9 @@ start_helper_server(ngx_cycle_t *cycle) {
     char   *passenger_root = NULL;
     char   *ruby = NULL;
     char   *analytics_log_dir;
+    char   *analytics_log_user;
+    char   *analytics_log_group;
+    char   *analytics_log_permissions;
     char   *error_message = NULL;
     
     core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
@@ -230,6 +233,9 @@ start_helper_server(ngx_cycle_t *cycle) {
     passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
     ruby           = ngx_str_null_terminate(&passenger_main_conf.ruby);
     analytics_log_dir = ngx_str_null_terminate(&passenger_main_conf.analytics_log_dir);
+    analytics_log_user = ngx_str_null_terminate(&passenger_main_conf.analytics_log_user);
+    analytics_log_group = ngx_str_null_terminate(&passenger_main_conf.analytics_log_group);
+    analytics_log_permissions = ngx_str_null_terminate(&passenger_main_conf.analytics_log_permissions);
     
     ret = agents_starter_start(passenger_agents_starter,
         passenger_main_conf.log_level, getpid(),
@@ -238,7 +244,8 @@ start_helper_server(ngx_cycle_t *cycle) {
         passenger_root, ruby, passenger_main_conf.max_pool_size,
         passenger_main_conf.max_instances_per_app,
         passenger_main_conf.pool_idle_time,
-        analytics_log_dir,
+        analytics_log_dir, analytics_log_user,
+        analytics_log_group, analytics_log_permissions,
         starting_helper_server_after_fork,
         cycle,
         &error_message);
@@ -302,6 +309,9 @@ cleanup:
     free(passenger_root);
     free(ruby);
     free(analytics_log_dir);
+    free(analytics_log_user);
+    free(analytics_log_group);
+    free(analytics_log_permissions);
     free(error_message);
     return result;
 }

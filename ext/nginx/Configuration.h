@@ -63,6 +63,9 @@ typedef struct {
     ngx_flag_t  user_switching;
     ngx_str_t   default_user;
     ngx_str_t   analytics_log_dir;
+    ngx_str_t   analytics_log_user;
+    ngx_str_t   analytics_log_group;
+    ngx_str_t   analytics_log_permissions;
 } passenger_main_conf_t;
 
 extern const ngx_command_t   passenger_commands[];

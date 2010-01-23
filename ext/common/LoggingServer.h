@@ -35,6 +35,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <grp.h>
 
 #include "MessageServer.h"
 #include "Logging.h"
@@ -51,10 +52,16 @@ using namespace oxt;
 class LoggingServer: public MessageServer::Handler {
 private:
 	string dir;
+	string dirPermissions;
+	mode_t filePermissions;
+	gid_t gid;
 	
 public:
-	LoggingServer(const string &dir) {
+	LoggingServer(const string &dir, const string &permissions = "u=rwx,g=rx,o=rx", gid_t gid = GROUP_NOT_GIVEN) {
 		this->dir = dir;
+		this->gid = gid;
+		dirPermissions = permissions;
+		filePermissions = parseModeString(permissions) & ~(S_IXUSR | S_IXGRP | S_IXOTH);
 	}
 	
 	virtual bool processMessage(MessageServer::CommonClientContext &commonContext,
@@ -78,13 +85,12 @@ public:
 				return true;
 			}
 			
-			mode_t mode = S_IRUSR | S_IWUSR;
 			FileDescriptor fd;
 			int ret;
 			
 			try {
 				// TODO: fix permissions
-				makeDirTree(extractDirName(filename));
+				makeDirTree(extractDirName(filename), dirPermissions, USER_NOT_GIVEN, gid);
 			} catch (const IOException &e) {
 				string message = "Cannot create directory " + extractDirName(filename) +
 					": " + e.what();
@@ -99,7 +105,7 @@ public:
 			
 			fd = syscalls::open(filename.c_str(),
 				O_CREAT | O_WRONLY | O_APPEND,
-				mode);
+				filePermissions);
 			if (fd == -1) {
 				const char *message = strerror(errno);
 				commonContext.channel.write("error", message, NULL);
@@ -107,7 +113,7 @@ public:
 			}
 			
 			do {
-				ret = fchmod(fd, mode);
+				ret = fchmod(fd, filePermissions);
 			} while (ret == -1 && errno == EINTR);
 			commonContext.channel.write("ok", NULL);
 			commonContext.channel.writeFileDescriptor(fd);
