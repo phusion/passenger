@@ -260,6 +260,13 @@ start_helper_server(ngx_cycle_t *cycle) {
         result = NGX_ERROR;
         goto cleanup;
     }
+    do {
+        ret = chown(filename, core_conf->user, (gid_t) -1);
+    } while (ret == -1 && errno == EINTR);
+    if (ret == -1) {
+        result = NGX_ERROR;
+        goto cleanup;
+    }
 
     /* Create various other info files. */
     last = ngx_snprintf(filename, sizeof(filename) - 1,
