@@ -261,7 +261,7 @@ start_helper_server(ngx_cycle_t *cycle) {
         goto cleanup;
     }
     do {
-        ret = chown(filename, core_conf->user, (gid_t) -1);
+        ret = chown((const char *) filename, (uid_t) core_conf->user, (gid_t) -1);
     } while (ret == -1 && errno == EINTR);
     if (ret == -1) {
         result = NGX_ERROR;
