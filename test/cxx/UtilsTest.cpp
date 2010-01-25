@@ -383,4 +383,14 @@ namespace tut {
 		stat("tmp.dir", &buf2);
 		ensure_equals(buf.st_mode, buf2.st_mode);
 	}
+	
+	/***** Test appRootToAnalyticsGroupName() *****/
+	
+	TEST_METHOD(46) {
+		ensure_equals(appRootToAnalyticsGroupName("/var/webapps/foobar"), "foobar");
+		ensure_equals(appRootToAnalyticsGroupName("/var/webapps/foobar/"), "foobar");
+		ensure_equals(appRootToAnalyticsGroupName("/webapp.com"), "webapp.com");
+		ensure_equals(appRootToAnalyticsGroupName("/u/apps/foobar/current"), "foobar");
+		ensure_equals(appRootToAnalyticsGroupName("/u/apps/foobar/current/"), "foobar");
+	}
 }

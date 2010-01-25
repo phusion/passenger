@@ -411,9 +411,12 @@ create_request(ngx_http_request_t *r)
                                   slcf, use_global_queue);
     ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_FRIENDLY_ERROR_PAGES",
                                   slcf, friendly_error_pages);
+    ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_ANALYTICS",
+                                  slcf, analytics);
     len += sizeof("PASSENGER_ENVIRONMENT") + slcf->environment.len + 1;
     len += sizeof("PASSENGER_SPAWN_METHOD") + slcf->spawn_method.len + 1;
     len += sizeof("PASSENGER_APP_TYPE") + app_type_string_len;
+    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_APP_GROUP_NAME", slcf, app_group_name);
     
     end = ngx_snprintf(min_instances_string,
                        sizeof(min_instances_string) - 1,
@@ -441,7 +444,6 @@ create_request(ngx_http_request_t *r)
     len += sizeof("PASSENGER_APP_SPAWNER_IDLE_TIME") +
            ngx_strlen(app_spawner_idle_time_string) + 1;
 
-    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_ANALYTICS_ID", slcf, analytics_id);
 
     /***********************/
     /***********************/
@@ -610,6 +612,8 @@ create_request(ngx_http_request_t *r)
                                   slcf, use_global_queue);
     SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_FRIENDLY_ERROR_PAGES",
                                   slcf, friendly_error_pages);
+    SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_ANALYTICS",
+                                  slcf, analytics);
     
     b->last = ngx_copy(b->last, "PASSENGER_ENVIRONMENT",
                        sizeof("PASSENGER_ENVIRONMENT"));
@@ -620,6 +624,9 @@ create_request(ngx_http_request_t *r)
                        sizeof("PASSENGER_SPAWN_METHOD"));
     b->last = ngx_copy(b->last, slcf->spawn_method.data,
                        slcf->spawn_method.len + 1);
+
+    SERIALIZE_STR_CONFIG_DATA("PASSENGER_APP_GROUP_NAME",
+                              slcf, app_group_name);
 
     b->last = ngx_copy(b->last, "PASSENGER_APP_TYPE",
                        sizeof("PASSENGER_APP_TYPE"));
@@ -639,8 +646,6 @@ create_request(ngx_http_request_t *r)
                        sizeof("PASSENGER_APP_SPAWNER_IDLE_TIME"));
     b->last = ngx_copy(b->last, app_spawner_idle_time_string,
                        ngx_strlen(app_spawner_idle_time_string) + 1);
-
-    SERIALIZE_STR_CONFIG_DATA("PASSENGER_ANALYTICS_ID", slcf, analytics_id);
 
     /***********************/
     /***********************/

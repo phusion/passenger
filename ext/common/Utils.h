@@ -250,7 +250,14 @@ string resolveSymlink(const string &path);
  *
  * @ingroup Support
  */
-string extractDirName(const string &path);
+string extractDirName(const StaticString &path);
+
+/**
+ * Given a path, extracts its base name.
+ *
+ * @ingroup Support
+ */
+string extractBaseName(const StaticString &path);
 
 /**
  * Escape the given raw string into an XML value.
@@ -426,6 +433,14 @@ bool verifyRackDir(const string &dir, CachedFileStat *cstat = 0,
  */
 bool verifyWSGIDir(const string &dir, CachedFileStat *cstat = 0,
                    unsigned int throttleRate = 0);
+
+/**
+ * Converts an application root to an analytics group name, suitable for use
+ * in TxnLogger::newTransaction().
+ *
+ * @ingroup Support
+ */
+string appRootToAnalyticsGroupName(const StaticString &appRoot);
 
 /**
  * Generate a secure, random token of the <tt>size</tt> bytes and put

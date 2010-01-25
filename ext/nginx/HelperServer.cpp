@@ -433,16 +433,20 @@ private:
 		}
 		
 		try {
-			TxnLogPtr log = txnLogger->newTransaction(parser.getHeader("PASSENGER_ANALYTICS_ID"));
-			
-			TxnScopeLog requestProcessingScope(log, "request processing");
-			
+			bool enableAnalytics = parser.getHeader("PASSENGER_ANALYTICS") == "true";
+			StaticString appGroupName = parser.getHeader("PASSENGER_APP_GROUP_NAME");
 			PoolOptions options;
+			
 			if (parser.getHeader("SCRIPT_NAME").empty()) {
 				options.appRoot = extractDirName(parser.getHeader("DOCUMENT_ROOT"));
 			} else {
 				options.appRoot = extractDirName(resolveSymlink(parser.getHeader("DOCUMENT_ROOT")));
 				options.baseURI = parser.getHeader("SCRIPT_NAME");
+			}
+			if (appGroupName.empty()) {
+				options.appGroupName = options.appRoot;
+			} else {
+				options.appGroupName = appGroupName;
 			}
 			options.useGlobalQueue = parser.getHeader("PASSENGER_USE_GLOBAL_QUEUE") == "true";
 			options.environment    = parser.getHeader("PASSENGER_ENVIRONMENT");
@@ -453,6 +457,23 @@ private:
 			options.minProcesses   = atol(parser.getHeader("PASSENGER_MIN_INSTANCES"));
 			options.frameworkSpawnerTimeout = atol(parser.getHeader("PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME"));
 			options.appSpawnerTimeout       = atol(parser.getHeader("PASSENGER_APP_SPAWNER_IDLE_TIME"));
+			
+			TxnLogPtr log;
+			if (enableAnalytics) {
+				string analyticsGroupName;
+				
+				if (appGroupName.empty()) {
+					analyticsGroupName = appRootToAnalyticsGroupName(options.appRoot);
+				} else {
+					analyticsGroupName = appGroupName;
+				}
+				analyticsGroupName = txnLogger->sanitizeGroupName(analyticsGroupName);
+				log = txnLogger->newTransaction(analyticsGroupName);
+			} else {
+				log.reset(new TxnLog());
+			}
+			
+			TxnScopeLog requestProcessingScope(log, "request processing");
 			
 			/***********************/
 			/***********************/

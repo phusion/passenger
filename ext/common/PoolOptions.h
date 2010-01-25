@@ -66,6 +66,17 @@ struct PoolOptions {
 	 */
 	string appRoot;
 	
+	/**
+	 * A name used by ApplicationPool to uniquely identify an application.
+	 * If one tries to get() from the application pool with name "A", then get()
+	 * again with name "B", then the latter will spawn a new application process,
+	 * even if both get() requests have the same app root.
+	 *
+	 * If left empty (the default), then the app root is used as the app group
+	 * name.
+	 */
+	string appGroupName;
+	
 	/** Whether to lower the application's privileges. */
 	bool lowerPrivilege;
 	
@@ -210,6 +221,7 @@ struct PoolOptions {
 	 * Creates a new PoolOptions object with the given values.
 	 */
 	PoolOptions(const string &appRoot,
+		bool appGroupName            = "",
 		bool lowerPrivilege          = true,
 		const string &lowestUser     = "nobody",
 		const string &environment    = "production",
@@ -225,6 +237,7 @@ struct PoolOptions {
 		const string &baseURI        = "/"
 	) {
 		this->appRoot                 = appRoot;
+		this->appGroupName            = appGroupName;
 		this->lowerPrivilege          = lowerPrivilege;
 		this->lowestUser              = lowestUser;
 		this->environment             = environment;
@@ -268,6 +281,7 @@ struct PoolOptions {
 		bool hasEnvVars;
 		
 		appRoot          = vec[startIndex + offset];                 offset += 2;
+		appGroupName     = vec[startIndex + offset];                 offset += 2;
 		lowerPrivilege   = vec[startIndex + offset] == "true";       offset += 2;
 		lowestUser       = vec[startIndex + offset];                 offset += 2;
 		environment      = vec[startIndex + offset];                 offset += 2;
@@ -306,6 +320,7 @@ struct PoolOptions {
 			vec.reserve(vec.size() + 30);
 		}
 		appendKeyValue (vec, "app_root",        appRoot);
+		appendKeyValue (vec, "app_group_name",  getAppGroupName());
 		appendKeyValue (vec, "lower_privilege", lowerPrivilege ? "true" : "false");
 		appendKeyValue (vec, "lowest_user",     lowestUser);
 		appendKeyValue (vec, "environment",     environment);
@@ -330,6 +345,18 @@ struct PoolOptions {
 		}
 		
 		/*********************************/
+	}
+	
+	/**
+	 * Returns the app group name. If there is no explicitly set app group name
+	 * then the app root is considered to be the app group name.
+	 */
+	string getAppGroupName() const {
+		if (appGroupName.empty()) {
+			return appRoot;
+		} else {
+			return appGroupName;
+		}
 	}
 	
 	/**

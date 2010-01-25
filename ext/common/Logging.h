@@ -402,6 +402,14 @@ private:
 		}
 	}
 	
+	static bool validGroupNameCharacter(char c) {
+		return (c >= 'a' && c <= 'z')
+			|| (c >= 'A' && c <= 'Z')
+			|| (c >= '0' && c <= '9')
+			|| c == '_' || c == '-' || c == '.' || c == ' '
+			|| c == '(' || c == ')' || c == '[' || c == ']';
+	}
+	
 public:
 	TxnLogger() { }
 	
@@ -413,23 +421,44 @@ public:
 	}
 	
 	static bool validateGroupName(const StaticString &groupName) {
-		if (groupName.empty() || groupName[0] == ' ' || groupName[groupName.size() - 1] == ' ') {
+		if (groupName.empty() || groupName[0] == ' '
+		 || groupName[groupName.size() - 1] == ' ' || groupName[0] == '.') {
 			return false;
 		}
 		
-		const char *c = groupName.data();
+		string::size_type i = 0;
 		bool result = true;
-		while (*c != '\0' && result) {
-			result = result && (
-				   (*c >= 'a' && *c <= 'z')
-				|| (*c >= 'A' && *c <= 'Z')
-				|| (*c >= '0' && *c <= '9')
-				|| *c == '_' || *c == '-' || *c == '.' || *c == ' '
-				|| *c == '(' || *c == ')' || *c == '[' || *c == ']'
-			);
-			c++;
+		while (i < groupName.size() && result) {
+			result = result && validGroupNameCharacter(groupName[i]);
+			i++;
 		}
 		return result;
+	}
+	
+	static string sanitizeGroupName(const string &groupName) {
+		if (validateGroupName(groupName)) {
+			return groupName;
+		} else {
+			const char *c = groupName.c_str();
+			char result[groupName.size()];
+			char *end = result;
+			
+			while (*c != '\0') {
+				if (validGroupNameCharacter(*c)) {
+					*end = *c;
+					c++;
+					end++;
+				} else {
+					c++;
+				}
+			}
+			
+			if (!validateGroupName(StaticString(result, end - result))) {
+				throw ArgumentException("'" + groupName + "' is not a " +
+					"valid group name and cannot be sanitized either.");
+			}
+			return string(result, end - result);
+		}
 	}
 	
 	static string determineLogFilename(const string &dir, const StaticString &groupName,

@@ -298,10 +298,18 @@ resolveSymlink(const string &path) {
 }
 
 string
-extractDirName(const string &path) {
+extractDirName(const StaticString &path) {
 	char *path_copy = strdup(path.c_str());
 	char *result = dirname(path_copy);
 	string result_string(result);
+	free(path_copy);
+	return result_string;
+}
+
+string
+extractBaseName(const StaticString &path) {
+	char *path_copy = strdup(path.c_str());
+	string result_string = basename(path_copy);
 	free(path_copy);
 	return result_string;
 }
@@ -610,6 +618,17 @@ verifyWSGIDir(const string &dir, CachedFileStat *cstat, unsigned int throttleRat
 	string temp(dir);
 	temp.append("/passenger_wsgi.py");
 	return fileExists(temp.c_str(), cstat, throttleRate);
+}
+
+string
+appRootToAnalyticsGroupName(const StaticString &appRoot) {
+	string baseName = extractBaseName(appRoot);
+	if (baseName == "current") {
+		string dir = extractDirName(appRoot);
+		return extractBaseName(dir);
+	} else {
+		return baseName;
+	}
 }
 
 void
