@@ -39,7 +39,7 @@ module PlatformInfo
 		return Process.respond_to?(:fork) &&
 			RUBY_ENGINE != "jruby" &&
 			RUBY_ENGINE != "macruby" &&
-			Config::CONFIG['target_os'] !~ /mswin|windows/
+			Config::CONFIG['target_os'] !~ /mswin|windows|mingw/
 	end
 	
 	# The correct 'gem' command for this Ruby interpreter.
