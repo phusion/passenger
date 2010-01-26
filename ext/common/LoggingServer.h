@@ -69,7 +69,7 @@ public:
 	                            const vector<string> &args)
 	{
 		if (args[0] == "open log file") {
-			string groupName = args[1];
+			string sanitizedGroupName = args[1];
 			unsigned long long timestamp = atoll(args[2].c_str());
 			if (timestamp > SystemTime::getUsec()) {
 				commonContext.channel.write("error",
@@ -79,7 +79,8 @@ public:
 			
 			string filename;
 			try {
-				filename = TxnLogger::determineLogFilename(dir, groupName, timestamp);
+				filename = TxnLogger::determineLogFilename(dir,
+					sanitizedGroupName, timestamp);
 			} catch (const ArgumentException &e) {
 				commonContext.channel.write("error", e.what(), NULL);
 				return true;

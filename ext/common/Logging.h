@@ -198,9 +198,9 @@ private:
 public:
 	TxnLog() { }
 	
-	TxnLog(const FileDescriptor &handle, const string &groupName, const string &id) {
+	TxnLog(const FileDescriptor &handle, const string &sanitizedGroupName, const string &id) {
 		this->handle    = handle;
-		this->groupName = groupName;
+		this->groupName = sanitizedGroupName;
 		this->id        = id;
 		message("ATTACH");
 	}
@@ -262,6 +262,7 @@ public:
 		return id;
 	}
 	
+	/** Guaranteed to pass TxnLogger::groupNameIsSane(). */
 	string getGroupName() const {
 		return groupName;
 	}
@@ -343,8 +344,8 @@ private:
 	boost::mutex lock;
 	Cache fileHandleCache;
 	
-	FileDescriptor openLogFile(const StaticString &groupName, unsigned long long timestamp) {
-		string logFile = determineLogFilename(dir, groupName, timestamp);
+	FileDescriptor openLogFile(const StaticString &sanitizedGroupName, unsigned long long timestamp) {
+		string logFile = determineLogFilename(dir, sanitizedGroupName, timestamp);
 		Cache::iterator it;
 		lock_guard<boost::mutex> l(lock);
 		
@@ -374,7 +375,7 @@ private:
 			vector<string> args;
 			
 			client.connect(socketFilename, username, password);
-			client.write("open log file", groupName.c_str(),
+			client.write("open log file", sanitizedGroupName.c_str(),
 				toString(timestamp).c_str(), NULL);
 			if (!client.read(args)) {
 				// TODO: retry in a short while because the watchdog may restart
@@ -402,12 +403,16 @@ private:
 		}
 	}
 	
-	static bool validGroupNameCharacter(char c) {
+	static bool saneGroupNameCharacter(char c) {
+		/* Don't allow any other characters; the Rails router
+		 * has problems with generating RESTful paths where
+		 * ID contains a dot. There might also be other
+		 * characters that can cause problems.
+		 */
 		return (c >= 'a' && c <= 'z')
 			|| (c >= 'A' && c <= 'Z')
 			|| (c >= '0' && c <= '9')
-			|| c == '_' || c == '-' || c == '.' || c == ' '
-			|| c == '(' || c == ')' || c == '[' || c == ']';
+			|| c == '_' || c == '-' || c == '%';
 	}
 	
 public:
@@ -420,80 +425,83 @@ public:
 		this->password       = password;
 	}
 	
-	static bool validateGroupName(const StaticString &groupName) {
-		if (groupName.empty() || groupName[0] == ' '
-		 || groupName[groupName.size() - 1] == ' ' || groupName[0] == '.') {
-			return false;
-		}
-		
+	static bool groupNameIsSane(const StaticString &groupName) {
 		string::size_type i = 0;
 		bool result = true;
 		while (i < groupName.size() && result) {
-			result = result && validGroupNameCharacter(groupName[i]);
+			result = result && saneGroupNameCharacter(groupName[i]);
 			i++;
 		}
 		return result;
 	}
 	
 	static string sanitizeGroupName(const string &groupName) {
-		if (validateGroupName(groupName)) {
-			return groupName;
-		} else {
-			const char *c = groupName.c_str();
-			char result[groupName.size()];
-			char *end = result;
+		// URL escaped result cannot possibly be larger than this:
+		char result[groupName.size() * 3];
+		char *end = result;
+		string::size_type i;
+		static const unsigned char hex_chars[] = {
+			'0', '1', '2', '3', '4', '5', '6', '7',
+			'8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+		};
+		
+		for (i = 0; i < groupName.size(); i++) {
+			unsigned char c = (unsigned char) groupName[i];
 			
-			while (*c != '\0') {
-				if (validGroupNameCharacter(*c)) {
-					*end = *c;
-				} else {
-					*end = '-';
-				}
-				c++;
+			if (saneGroupNameCharacter(c) && c != '%') {
+				*end = c;
 				end++;
+			} else {
+				end[0] = '%';
+				end[1] = hex_chars[c / 16];
+				end[2] = hex_chars[c % 16];
+				end += 3;
 			}
-			return string(result, end - result);
 		}
+		
+		return string(result, end - result);
 	}
 	
-	static string determineLogFilename(const string &dir, const StaticString &groupName,
-		unsigned long long timestamp)
+	static string determineLogFilename(const string &dir,
+		const StaticString &sanitizedGroupName, unsigned long long timestamp)
 	{
 		struct tm tm;
 		time_t time_value;
 		string filename = dir + "/1/";
 		char dateName[14];
 		
-		if (!validateGroupName(groupName)) {
+		if (!groupNameIsSane(sanitizedGroupName)) {
 			TRACE_POINT();
-			throw ArgumentException("Invalid analytics ID '" + groupName + "'");
+			throw ArgumentException("Unsanitized analytics group name '" +
+				sanitizedGroupName + "'");
 		}
 		
 		time_value = timestamp / 1000000;
 		localtime_r(&time_value, &tm);
 		// Index log on the filesystem by its group name and begin time.
 		strftime(dateName, sizeof(dateName), "%G/%m/%d/%H", &tm);
-		filename.append(groupName.data(), groupName.size());
+		filename.append(sanitizedGroupName.data(), sanitizedGroupName.size());
 		filename.append(1, '/');
 		filename.append(dateName);
 		filename.append("/web_txns.txt");
 		return filename;
 	}
 	
-	TxnLogPtr newTransaction(const string &groupName) {
-		if (dir.empty() || groupName.empty()) {
+	TxnLogPtr newTransaction(const string &sanitizedGroupName) {
+		if (dir.empty() || sanitizedGroupName.empty()) {
 			return ptr(new TxnLog());
 		} else {
 			unsigned long long timestamp = SystemTime::getUsec();
 			string id = toHex(randomGenerator.generateByteString(4));
 			id.append("-");
 			id.append(toString(timestamp));
-			return ptr(new TxnLog(openLogFile(groupName, timestamp), groupName, id));
+			return ptr(new TxnLog(openLogFile(sanitizedGroupName, timestamp),
+				sanitizedGroupName, id));
 		}
 	}
 	
-	TxnLogPtr continueTransaction(const string &groupName, const string &id) {
-		if (dir.empty() || groupName.empty()) {
+	TxnLogPtr continueTransaction(const string &sanitizedGroupName, const string &id) {
+		if (dir.empty() || sanitizedGroupName.empty()) {
 			return ptr(new TxnLog());
 		} else {
 			unsigned long long timestamp;
@@ -503,7 +511,8 @@ public:
 				TRACE_POINT();
 				throw ArgumentException("Invalid transaction ID '" + id + "'");
 			}
-			return ptr(new TxnLog(openLogFile(groupName, timestamp), groupName, id));
+			return ptr(new TxnLog(openLogFile(sanitizedGroupName, timestamp),
+				sanitizedGroupName, id));
 		}
 	}
 	
