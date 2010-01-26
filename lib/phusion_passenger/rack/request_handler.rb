@@ -117,7 +117,10 @@ protected
 				headers_output << CRLF
 				
 				if body.is_a?(Array)
-					output.writev2(headers_output, body)
+					# The body may be an ActionController::StringCoercion::UglyBody
+					# object instead of a real Array, even when #is_a? claims so.
+					# Call #to_a just to be sure.
+					output.writev2(headers_output, body.to_a)
 				elsif body.is_a?(String)
 					headers_output << body
 					output.writev(headers_output)

@@ -410,6 +410,7 @@ f_generic_writev(VALUE fd, VALUE *array_of_components, unsigned int count) {
 	/* First determine the number of components that we have. */
 	total_components   = 0;
 	for (i = 0; i < count; i++) {
+	        Check_Type(array_of_components[i], T_ARRAY);
 		total_components += (unsigned int) RARRAY_LEN(array_of_components[i]);
 	}
 	if (total_components == 0) {
