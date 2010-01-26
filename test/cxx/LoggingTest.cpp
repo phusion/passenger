@@ -188,13 +188,7 @@ namespace tut {
 	TEST_METHOD(9) {
 		// Test group name sanitization.
 		ensure_equals(TxnLogger::sanitizeGroupName("hello"), "hello");
-		ensure_equals(TxnLogger::sanitizeGroupName("hello@world"), "helloworld");
-		ensure_equals(TxnLogger::sanitizeGroupName("hello@world%%$.com"), "helloworld.com");
-		try {
-			TxnLogger::sanitizeGroupName("%%$");
-			fail("Sanitize should have failed");
-		} catch (const ArgumentException &) {
-			// Success.
-		}
+		ensure_equals(TxnLogger::sanitizeGroupName("hello@world"), "hello-world");
+		ensure_equals(TxnLogger::sanitizeGroupName("hello@world%%$.com"), "hello-world---.com");
 	}
 }

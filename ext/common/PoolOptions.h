@@ -66,17 +66,6 @@ struct PoolOptions {
 	 */
 	string appRoot;
 	
-	/**
-	 * A name used by ApplicationPool to uniquely identify an application.
-	 * If one tries to get() from the application pool with name "A", then get()
-	 * again with name "B", then the latter will spawn a new application process,
-	 * even if both get() requests have the same app root.
-	 *
-	 * If left empty (the default), then the app root is used as the app group
-	 * name.
-	 */
-	string appGroupName;
-	
 	/** Whether to lower the application's privileges. */
 	bool lowerPrivilege;
 	
@@ -99,6 +88,23 @@ struct PoolOptions {
 	
 	/** The application type. Either "rails", "rack" or "wsgi". */
 	string appType;
+	
+	/**
+	 * A name used by ApplicationPool to uniquely identify an application.
+	 * If one tries to get() from the application pool with name "A", then get()
+	 * again with name "B", then the latter will spawn a new application process,
+	 * even if both get() requests have the same app root.
+	 *
+	 * If left empty (the default), then the app root is used as the app group
+	 * name.
+	 */
+	string appGroupName;
+	
+	/**
+	 * The group name used for analytics (transaction logging), or empty if
+	 * analytics is disabled. Must pass TxnLogger::validateGroupName().
+	 */
+	string analyticsGroupName;
 	
 	/**
 	 * The idle timeout, in seconds, of Rails framework spawners.
@@ -221,12 +227,13 @@ struct PoolOptions {
 	 * Creates a new PoolOptions object with the given values.
 	 */
 	PoolOptions(const string &appRoot,
-		bool appGroupName            = "",
 		bool lowerPrivilege          = true,
 		const string &lowestUser     = "nobody",
 		const string &environment    = "production",
 		const string &spawnMethod    = "smart-lv2",
 		const string &appType        = "rails",
+		string appGroupName          = "",
+		string analyticsGroupName    = "",
 		long frameworkSpawnerTimeout = -1,
 		long appSpawnerTimeout       = -1,
 		unsigned long maxRequests    = 0,
@@ -237,12 +244,13 @@ struct PoolOptions {
 		const string &baseURI        = "/"
 	) {
 		this->appRoot                 = appRoot;
-		this->appGroupName            = appGroupName;
 		this->lowerPrivilege          = lowerPrivilege;
 		this->lowestUser              = lowestUser;
 		this->environment             = environment;
 		this->spawnMethod             = spawnMethod;
 		this->appType                 = appType;
+		this->appGroupName            = appGroupName;
+		this->analyticsGroupName      = analyticsGroupName;
 		this->frameworkSpawnerTimeout = frameworkSpawnerTimeout;
 		this->appSpawnerTimeout       = appSpawnerTimeout;
 		this->maxRequests             = maxRequests;
@@ -281,12 +289,13 @@ struct PoolOptions {
 		bool hasEnvVars;
 		
 		appRoot          = vec[startIndex + offset];                 offset += 2;
-		appGroupName     = vec[startIndex + offset];                 offset += 2;
 		lowerPrivilege   = vec[startIndex + offset] == "true";       offset += 2;
 		lowestUser       = vec[startIndex + offset];                 offset += 2;
 		environment      = vec[startIndex + offset];                 offset += 2;
 		spawnMethod      = vec[startIndex + offset];                 offset += 2;
 		appType          = vec[startIndex + offset];                 offset += 2;
+		appGroupName     = vec[startIndex + offset];                 offset += 2;
+		analyticsGroupName = vec[startIndex + offset];               offset += 2;
 		frameworkSpawnerTimeout = atol(vec[startIndex + offset]);    offset += 2;
 		appSpawnerTimeout       = atol(vec[startIndex + offset]);    offset += 2;
 		maxRequests      = atol(vec[startIndex + offset]);           offset += 2;
@@ -320,12 +329,13 @@ struct PoolOptions {
 			vec.reserve(vec.size() + 30);
 		}
 		appendKeyValue (vec, "app_root",        appRoot);
-		appendKeyValue (vec, "app_group_name",  getAppGroupName());
 		appendKeyValue (vec, "lower_privilege", lowerPrivilege ? "true" : "false");
 		appendKeyValue (vec, "lowest_user",     lowestUser);
 		appendKeyValue (vec, "environment",     environment);
 		appendKeyValue (vec, "spawn_method",    spawnMethod);
 		appendKeyValue (vec, "app_type",        appType);
+		appendKeyValue (vec, "app_group_name",  getAppGroupName());
+		appendKeyValue (vec, "analytics_group_name", analyticsGroupName);
 		appendKeyValue2(vec, "framework_spawner_timeout", frameworkSpawnerTimeout);
 		appendKeyValue2(vec, "app_spawner_timeout",       appSpawnerTimeout);
 		appendKeyValue3(vec, "max_requests",    maxRequests);

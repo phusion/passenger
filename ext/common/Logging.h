@@ -446,16 +446,11 @@ public:
 			while (*c != '\0') {
 				if (validGroupNameCharacter(*c)) {
 					*end = *c;
-					c++;
-					end++;
 				} else {
-					c++;
+					*end = '-';
 				}
-			}
-			
-			if (!validateGroupName(StaticString(result, end - result))) {
-				throw ArgumentException("'" + groupName + "' is not a " +
-					"valid group name and cannot be sanitized either.");
+				c++;
+				end++;
 			}
 			return string(result, end - result);
 		}

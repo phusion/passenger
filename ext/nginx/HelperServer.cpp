@@ -460,15 +460,14 @@ private:
 			
 			TxnLogPtr log;
 			if (enableAnalytics) {
-				string analyticsGroupName;
-				
 				if (appGroupName.empty()) {
-					analyticsGroupName = appRootToAnalyticsGroupName(options.appRoot);
+					options.analyticsGroupName = txnLogger->sanitizeGroupName(
+						appRootToAnalyticsGroupName(options.appRoot));
 				} else {
-					analyticsGroupName = appGroupName;
+					options.analyticsGroupName = txnLogger->sanitizeGroupName(
+						appGroupName);
 				}
-				analyticsGroupName = txnLogger->sanitizeGroupName(analyticsGroupName);
-				log = txnLogger->newTransaction(analyticsGroupName);
+				log = txnLogger->newTransaction(options.analyticsGroupName);
 			} else {
 				log.reset(new TxnLog());
 			}
