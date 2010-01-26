@@ -82,7 +82,6 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->autoDetectRails = DirConfig::UNSET;
 	config->autoDetectRack = DirConfig::UNSET;
 	config->autoDetectWSGI = DirConfig::UNSET;
-	config->allowModRewrite = DirConfig::UNSET;
 	config->railsEnv = NULL;
 	config->rackEnv = NULL;
 	config->appRoot = NULL;
@@ -126,7 +125,6 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	MERGE_THREEWAY_CONFIG(autoDetectRails);
 	MERGE_THREEWAY_CONFIG(autoDetectRack);
 	MERGE_THREEWAY_CONFIG(autoDetectWSGI);
-	MERGE_THREEWAY_CONFIG(allowModRewrite);
 	MERGE_STR_CONFIG(railsEnv);
 	MERGE_STR_CONFIG(rackEnv);
 	MERGE_STR_CONFIG(appRoot);
@@ -527,13 +525,6 @@ cmd_rails_auto_detect(cmd_parms *cmd, void *pcfg, int arg) {
 }
 
 static const char *
-cmd_rails_allow_mod_rewrite(cmd_parms *cmd, void *pcfg, int arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->allowModRewrite = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
-	return NULL;
-}
-
-static const char *
 cmd_rails_env(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->railsEnv = arg;
@@ -630,6 +621,15 @@ cmd_rails_spawn_server(cmd_parms *cmd, void *pcfg, const char *arg) {
 	fprintf(stderr, "WARNING: The 'RailsSpawnServer' option is obsolete. "
 		"Please specify 'PassengerRoot' instead. The correct value was "
 		"given to you by 'passenger-install-apache2-module'.");
+	fflush(stderr);
+	return NULL;
+}
+
+static const char *
+cmd_rails_allow_mod_rewrite(cmd_parms *cmd, void *pcfg, int arg) {
+	fprintf(stderr, "WARNING: The 'RailsAllowModRewrite' option is obsolete: "
+		"Phusion Passenger now fully supports mod_rewrite. "
+		"Please remove this option from your configuration file.");
 	fflush(stderr);
 	return NULL;
 }
@@ -764,11 +764,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Whether auto-detection of Ruby on Rails applications should be enabled."),
-	AP_INIT_FLAG("RailsAllowModRewrite",
-		(FlagFunc) cmd_rails_allow_mod_rewrite,
-		NULL,
-		RSRC_CONF,
-		"Whether custom mod_rewrite rules should be allowed."),
 	AP_INIT_TAKE1("RailsEnv",
 		(Take1Func) cmd_rails_env,
 		NULL,
@@ -852,6 +847,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Obsolete option."),
+	AP_INIT_FLAG("RailsAllowModRewrite",
+		(FlagFunc) cmd_rails_allow_mod_rewrite,
+		NULL,
+		RSRC_CONF,
+		"Whether custom mod_rewrite rules should be allowed."),
 	
 	{ NULL }
 };

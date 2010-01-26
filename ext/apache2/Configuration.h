@@ -85,9 +85,6 @@
 			/** Whether to autodetect WSGI applications. */
 			Threeway autoDetectWSGI;
 			
-			/** Whether mod_rewrite should be allowed for Rails applications. */
-			Threeway allowModRewrite;
-			
 			/** The environment (i.e. value for RAILS_ENV) under which
 			 * Rails applications should operate. */
 			const char *railsEnv;
