@@ -728,6 +728,51 @@ passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     return NGX_CONF_OK;
 }
 
+static char *
+set_null_terminated_keyval_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    char  *p = conf;
+
+    ngx_str_t         *value;
+    ngx_array_t      **a;
+    ngx_keyval_t      *kv;
+    ngx_conf_post_t   *post;
+    u_char            *last;
+
+    a = (ngx_array_t **) (p + cmd->offset);
+
+    if (*a == NULL) {
+        *a = ngx_array_create(cf->pool, 4, sizeof(ngx_keyval_t));
+        if (*a == NULL) {
+            return NGX_CONF_ERROR;
+        }
+    }
+
+    kv = ngx_array_push(*a);
+    if (kv == NULL) {
+        return NGX_CONF_ERROR;
+    }
+
+    value = cf->args->elts;
+
+    kv->key.data = ngx_palloc(cf->pool, value[1].len + 1);
+    kv->key.len  = value[1].len + 1;
+    last = ngx_copy(kv->key.data, value[1].data, value[1].len);
+    *last = '\0';
+    
+    kv->value.data = ngx_palloc(cf->pool, value[2].len + 1);
+    kv->value.len  = value[2].len + 1;
+    last = ngx_copy(kv->value.data, value[2].data, value[2].len);
+    *last = '\0';
+
+    if (cmd->post) {
+        post = cmd->post;
+        return post->post_handler(cf, post, kv);
+    }
+
+    return NGX_CONF_OK;
+}
+
 #if 0
 static char *
 ngx_http_scgi_lowat_check(ngx_conf_t *cf, void *post, void *data)
@@ -966,6 +1011,13 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_str_array_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, upstream_config.pass_headers),
+      NULL },
+
+    { ngx_string("passenger_set_cgi_param"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE2,
+      set_null_terminated_keyval_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, vars_source),
       NULL },
 
     { ngx_string("passenger_ignore_client_abort"),
