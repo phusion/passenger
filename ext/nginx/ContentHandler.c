@@ -495,29 +495,29 @@ create_request(ngx_http_request_t *r)
 
     /* Trailing dummy header.
      *
-	 * If the last header value is an empty string, then the buffer
-	 * will end with "\0\0". For example, if 'SSL_CLIENT_CERT'
-	 * is the last header and it has an empty value, then the SCGI header
-	 * will end with:
-	 *
-	 *   "SSL_CLIENT_CERT\0\0"
-	 *
-	 * The data in the buffer will be processed by the AbstractRequestHandler class,
-	 * which is implemented in Ruby. But it uses Hash[*data.split("\0")] to
-	 * unserialize the data. Unfortunately String#split will not transform
-	 * the trailing "\0\0" into an empty string:
-	 *
-	 *   "SSL_CLIENT_CERT\0\0".split("\0")
-	 *   # => desired result: ["SSL_CLIENT_CERT", ""]
-	 *   # => actual result:  ["SSL_CLIENT_CERT"]
-	 *
-	 * When that happens, Hash[..] will raise an ArgumentError because
-	 * data.split("\0") does not return an array with a length that is a
-	 * multiple of 2.
-	 *
-	 * So here, we add a dummy header to prevent situations like that from
-	 * happening.
-	 */
+     * If the last header value is an empty string, then the buffer
+     * will end with "\0\0". For example, if 'SSL_CLIENT_CERT'
+     * is the last header and it has an empty value, then the SCGI header
+     * will end with:
+     *
+     *   "SSL_CLIENT_CERT\0\0"
+     *
+     * The data in the buffer will be processed by the AbstractRequestHandler class,
+     * which is implemented in Ruby. But it uses Hash[*data.split("\0")] to
+     * unserialize the data. Unfortunately String#split will not transform
+     * the trailing "\0\0" into an empty string:
+     *
+     *   "SSL_CLIENT_CERT\0\0".split("\0")
+     *   # => desired result: ["SSL_CLIENT_CERT", ""]
+     *   # => actual result:  ["SSL_CLIENT_CERT"]
+     *
+     * When that happens, Hash[..] will raise an ArgumentError because
+     * data.split("\0") does not return an array with a length that is a
+     * multiple of 2.
+     *
+     * So here, we add a dummy header to prevent situations like that from
+     * happening.
+     */
     len += sizeof("_") + sizeof("_");
 
 
