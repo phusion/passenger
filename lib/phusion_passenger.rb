@@ -34,7 +34,7 @@ module PhusionPassenger
 	end
 	
 	# Phusion Passenger version number.
-	# Don't forget to edit ext/common/Version.h too.
+	# Don't forget to edit ext/common/Constants.h too.
 	VERSION_STRING = '2.9.1'
 	
 	# Directory containing the Phusion Passenger Ruby libraries.

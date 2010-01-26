@@ -30,6 +30,7 @@
 	#include "MessageChannel.h"
 	#include "Logging.h"
 	#include "ServerInstanceDir.h"
+	#include "Constants.h"
 #endif
 
 /* The APR headers must come after the Passenger headers. See Hooks.cpp
@@ -368,6 +369,10 @@
 			 */
 			string analyticsLogDir;
 			
+			const char *analyticsLogUser;
+			const char *analyticsLogGroup;
+			const char *analyticsLogPermissions;
+			
 			/** Called at the end of the server config merging process, inside
 			 * the control process.
 			 */
@@ -418,6 +423,30 @@
 					return tempDir;
 				} else {
 					return getSystemTempDir();
+				}
+			}
+			
+			const char *getAnalyticsLogUser() const {
+				if (analyticsLogUser != NULL) {
+					return analyticsLogUser;
+				} else {
+					return DEFAULT_ANALYTICS_LOG_USER;
+				}
+			}
+			
+			const char *getAnalyticsLogGroup() const {
+				if (analyticsLogGroup != NULL) {
+					return analyticsLogGroup;
+				} else {
+					return DEFAULT_ANALYTICS_LOG_GROUP;
+				}
+			}
+			
+			const char *getAnalyticsLogPermissions() const {
+				if (analyticsLogPermissions != NULL) {
+					return analyticsLogPermissions;
+				} else {
+					return DEFAULT_ANALYTICS_LOG_PERMISSIONS;
 				}
 			}
 		};

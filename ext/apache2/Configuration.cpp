@@ -46,11 +46,6 @@ using namespace Passenger;
 
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
-#define DEFAULT_LOG_LEVEL 0
-#define DEFAULT_MAX_POOL_SIZE 6
-#define DEFAULT_POOL_IDLE_TIME 300
-#define DEFAULT_MAX_INSTANCES_PER_APP 0
-
 #define MERGE_THREEWAY_CONFIG(field) \
 	config->field = (add->field == DirConfig::UNSET) ? base->field : add->field
 #define MERGE_STR_CONFIG(field) \
@@ -171,6 +166,9 @@ passenger_config_create_server(apr_pool_t *p, server_rec *s) {
 	config->userSwitchingSpecified = false;
 	config->defaultUser = NULL;
 	config->tempDir = NULL;
+	config->analyticsLogUser = NULL;
+	config->analyticsLogGroup = NULL;
+	config->analyticsLogPermissions = NULL;
 	return config;
 }
 
@@ -195,6 +193,9 @@ passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
 	MERGE_STR_CONFIG(defaultUser);
 	MERGE_STR_CONFIG(tempDir);
 	MERGE_STRING_CONFIG(analyticsLogDir);
+	MERGE_STR_CONFIG(analyticsLogUser);
+	MERGE_STR_CONFIG(analyticsLogGroup);
+	MERGE_STR_CONFIG(analyticsLogPermissions);
 	return config;
 }
 
@@ -224,6 +225,9 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 		MERGE_SERVER_STR_CONFIGS(defaultUser);
 		MERGE_SERVER_STR_CONFIGS(tempDir);
 		MERGE_SERVER_STRING_CONFIGS(analyticsLogDir);
+		MERGE_SERVER_STR_CONFIGS(analyticsLogUser);
+		MERGE_SERVER_STR_CONFIGS(analyticsLogGroup);
+		MERGE_SERVER_STR_CONFIGS(analyticsLogPermissions);
 	}
 	final->finalize();
 	for (s = main_server; s != NULL; s = s->next) {

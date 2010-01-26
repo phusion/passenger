@@ -56,7 +56,7 @@
 #include "MessageChannel.h"
 #include "DirectoryMapper.h"
 #include "Timer.h"
-#include "Version.h"
+#include "Constants.h"
 
 /* The Apache/APR headers *must* come after the Boost headers, otherwise
  * compilation will fail on OpenBSD.
@@ -593,6 +593,8 @@ private:
 					mapper.getEnvironment(),
 					config->getSpawnMethodString(),
 					mapper.getApplicationTypeString(),
+					"",
+					"",
 					config->frameworkSpawnerTimeout,
 					config->appSpawnerTimeout,
 					config->getMaxRequests(),
@@ -1277,7 +1279,8 @@ public:
 			unixd_config.user_id, unixd_config.group_id,
 			config->root, config->getRuby(), config->maxPoolSize,
 			config->maxInstancesPerApp, config->poolIdleTime,
-			config->analyticsLogDir);
+			config->analyticsLogDir, config->getAnalyticsLogUser(),
+			config->getAnalyticsLogGroup(), config->getAnalyticsLogPermissions());
 		
 		txnLogger = ptr(new TxnLogger(config->analyticsLogDir,
 			agentsStarter.getLoggingSocketFilename(),

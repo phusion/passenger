@@ -57,6 +57,7 @@
 #include "../CachedFileStat.hpp"
 #include "../SpawnManager.h"
 #include "../SystemTime.h"
+#include "../Constants.h"
 
 namespace Passenger {
 namespace ApplicationPool {
@@ -104,9 +105,6 @@ class Server;
  */
 class Pool: public ApplicationPool::Interface {
 public:
-	static const int DEFAULT_MAX_IDLE_TIME = 120;
-	static const int DEFAULT_MAX_POOL_SIZE = 20;
-	static const int DEFAULT_MAX_INSTANCES_PER_APP = 0;
 	static const int CLEANER_THREAD_STACK_SIZE = 1024 * 64;
 	static const unsigned int MAX_GET_ATTEMPTS = 10;
 
@@ -707,7 +705,7 @@ private:
 		active = 0;
 		waitingOnGlobalQueue = 0;
 		maxPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
-		maxIdleTime = DEFAULT_MAX_IDLE_TIME;
+		maxIdleTime = DEFAULT_POOL_IDLE_TIME;
 		cleanerThread = new oxt::thread(
 			bind(&Pool::cleanerThreadMainLoop, this),
 			"ApplicationPool cleaner",

@@ -295,7 +295,8 @@ end
 	APACHE2_MODULE_INPUT_FILES = {
 		'ext/apache2/Configuration.o' => %w(
 			ext/apache2/Configuration.cpp
-			ext/apache2/Configuration.h),
+			ext/apache2/Configuration.h
+			ext/common/Constants.h),
 		'ext/apache2/Bucket.o' => %w(
 			ext/apache2/Bucket.cpp
 			ext/apache2/Bucket.h),
@@ -317,7 +318,7 @@ end
 			ext/common/ServerInstanceDir.h
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
-			ext/common/Version.h
+			ext/common/Constants.h
 			ext/common/Timer.h
 			ext/common/Utils.h)
 	}
