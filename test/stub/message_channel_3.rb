@@ -1,11 +1,12 @@
 #!/usr/bin/env ruby
-$LOAD_PATH.unshift("#{File.dirname(__FILE__)}/../../lib")
-$LOAD_PATH.unshift("#{File.dirname(__FILE__)}/../../ext")
+source_root = File.expand_path(File.dirname(__FILE__) + "/../..")
+$LOAD_PATH.unshift("#{source_root}/lib")
+require 'phusion_passenger'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/utils'
 
 include PhusionPassenger
-channel = MessageChannel.new(IO.new(3))
+channel = MessageChannel.new(UNIXSocket.for_fd(3))
 channel.write(*channel.read)
 channel.write_scalar(channel.read_scalar)
 
