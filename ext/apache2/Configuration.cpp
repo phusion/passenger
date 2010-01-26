@@ -51,6 +51,12 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 #define DEFAULT_POOL_IDLE_TIME 300
 #define DEFAULT_MAX_INSTANCES_PER_APP 0
 
+#define MERGE_THREEWAY_CONFIG(field) \
+	config->field = (add->field == DirConfig::UNSET) ? base->field : add->field
+#define MERGE_STR_CONFIG(field) \
+	config->field = (add->field == NULL) ? base->field : add->field
+#define MERGE_STRING_CONFIG(field) \
+	config->field = (add->field.empty()) ? base->field : add->field
 
 template<typename T> static apr_status_t
 destroy_config_struct(void *x) {
@@ -83,8 +89,8 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->autoDetectWSGI = DirConfig::UNSET;
 	config->allowModRewrite = DirConfig::UNSET;
 	config->railsEnv = NULL;
-	config->appRoot = NULL;
 	config->rackEnv = NULL;
+	config->appRoot = NULL;
 	config->spawnMethod = DirConfig::SM_UNSET;
 	config->frameworkSpawnerTimeout = -1;
 	config->appSpawnerTimeout = -1;
@@ -122,13 +128,13 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 		config->rackBaseURIs.insert(*it);
 	}
 	
-	config->autoDetectRails = (add->autoDetectRails == DirConfig::UNSET) ? base->autoDetectRails : add->autoDetectRails;
-	config->autoDetectRack = (add->autoDetectRack == DirConfig::UNSET) ? base->autoDetectRack : add->autoDetectRack;
-	config->autoDetectWSGI = (add->autoDetectWSGI == DirConfig::UNSET) ? base->autoDetectWSGI : add->autoDetectWSGI;
-	config->allowModRewrite = (add->allowModRewrite == DirConfig::UNSET) ? base->allowModRewrite : add->allowModRewrite;
-	config->railsEnv = (add->railsEnv == NULL) ? base->railsEnv : add->railsEnv;
-	config->appRoot = (add->appRoot == NULL) ? base->appRoot : add->appRoot;
-	config->rackEnv = (add->rackEnv == NULL) ? base->rackEnv : add->rackEnv;
+	MERGE_THREEWAY_CONFIG(autoDetectRails);
+	MERGE_THREEWAY_CONFIG(autoDetectRack);
+	MERGE_THREEWAY_CONFIG(autoDetectWSGI);
+	MERGE_THREEWAY_CONFIG(allowModRewrite);
+	MERGE_STR_CONFIG(railsEnv);
+	MERGE_STR_CONFIG(rackEnv);
+	MERGE_STR_CONFIG(appRoot);
 	config->spawnMethod = (add->spawnMethod == DirConfig::SM_UNSET) ? base->spawnMethod : add->spawnMethod;
 	config->frameworkSpawnerTimeout = (add->frameworkSpawnerTimeout == -1) ? base->frameworkSpawnerTimeout : add->frameworkSpawnerTimeout;
 	config->appSpawnerTimeout = (add->appSpawnerTimeout == -1) ? base->appSpawnerTimeout : add->appSpawnerTimeout;
@@ -136,15 +142,15 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->maxRequestsSpecified = base->maxRequestsSpecified || add->maxRequestsSpecified;
 	config->minInstances = (add->minInstancesSpecified) ? add->minInstances : base->minInstances;
 	config->minInstancesSpecified = base->minInstancesSpecified || add->minInstancesSpecified;
-	config->highPerformance = (add->highPerformance == DirConfig::UNSET) ? base->highPerformance : add->highPerformance;
-	config->useGlobalQueue = (add->useGlobalQueue == DirConfig::UNSET) ? base->useGlobalQueue : add->useGlobalQueue;
+	MERGE_THREEWAY_CONFIG(highPerformance);
+	MERGE_THREEWAY_CONFIG(useGlobalQueue);
 	config->statThrottleRate = (add->statThrottleRateSpecified) ? add->statThrottleRate : base->statThrottleRate;
 	config->statThrottleRateSpecified = base->statThrottleRateSpecified || add->statThrottleRateSpecified;
-	config->restartDir = (add->restartDir == NULL) ? base->restartDir : add->restartDir;
-	config->uploadBufferDir = (add->uploadBufferDir == NULL) ? base->uploadBufferDir : add->uploadBufferDir;
-	config->resolveSymlinksInDocRoot = (add->resolveSymlinksInDocRoot == DirConfig::UNSET) ? base->resolveSymlinksInDocRoot : add->resolveSymlinksInDocRoot;
-	config->allowEncodedSlashes = (add->allowEncodedSlashes == DirConfig::UNSET) ? base->allowEncodedSlashes : add->allowEncodedSlashes;
-	config->friendlyErrorPages = (add->friendlyErrorPages == DirConfig::UNSET) ? base->friendlyErrorPages : add->friendlyErrorPages;
+	MERGE_STR_CONFIG(restartDir);
+	MERGE_STR_CONFIG(uploadBufferDir);
+	MERGE_THREEWAY_CONFIG(resolveSymlinksInDocRoot);
+	MERGE_THREEWAY_CONFIG(allowEncodedSlashes);
+	MERGE_THREEWAY_CONFIG(friendlyErrorPages);
 	/*************************************/
 	return config;
 }
@@ -174,8 +180,8 @@ passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
 	ServerConfig *base = (ServerConfig *) basev;
 	ServerConfig *add = (ServerConfig *) addv;
 	
-	config->ruby = (add->ruby == NULL) ? base->ruby : add->ruby;
-	config->root = (add->root == NULL) ? base->root : add->root;
+	MERGE_STR_CONFIG(ruby);
+	MERGE_STR_CONFIG(root);
 	config->logLevel = (add->logLevel) ? base->logLevel : add->logLevel;
 	config->maxPoolSize = (add->maxPoolSizeSpecified) ? base->maxPoolSize : add->maxPoolSize;
 	config->maxPoolSizeSpecified = base->maxPoolSizeSpecified || add->maxPoolSizeSpecified;
@@ -186,8 +192,9 @@ passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
 	config->userSwitching = (add->userSwitchingSpecified) ? add->userSwitching : base->userSwitching;
 	config->userSwitchingSpecified = base->userSwitchingSpecified || add->userSwitchingSpecified;
 	config->defaultUser = (add->defaultUser == NULL) ? base->defaultUser : add->defaultUser;
-	config->tempDir = (add->tempDir == NULL) ? base->tempDir : add->tempDir;
-	config->analyticsLogDir = (add->analyticsLogDir.empty()) ? base->analyticsLogDir : add->analyticsLogDir;
+	MERGE_STR_CONFIG(defaultUser);
+	MERGE_STR_CONFIG(tempDir);
+	MERGE_STRING_CONFIG(analyticsLogDir);
 	return config;
 }
 
@@ -196,10 +203,15 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 	ServerConfig *final = (ServerConfig *) passenger_config_create_server(pool, main_server);
 	server_rec *s;
 	
+	#define MERGE_SERVER_STR_CONFIGS(field) \
+		final->field = (final->field != NULL) ? final->field : config->field
+	#define MERGE_SERVER_STRING_CONFIGS(field) \
+		final->field = (!final->field.empty()) ? final->field : config->field
+	
 	for (s = main_server; s != NULL; s = s->next) {
 		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
-		final->ruby = (final->ruby != NULL) ? final->ruby : config->ruby;
-		final->root = (final->root != NULL) ? final->root : config->root;
+		MERGE_SERVER_STR_CONFIGS(ruby);
+		MERGE_SERVER_STR_CONFIGS(root);
 		final->logLevel = (final->logLevel != 0) ? final->logLevel : config->logLevel;
 		final->maxPoolSize = (final->maxPoolSizeSpecified) ? final->maxPoolSize : config->maxPoolSize;
 		final->maxPoolSizeSpecified = final->maxPoolSizeSpecified || config->maxPoolSizeSpecified;
@@ -209,9 +221,9 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 		final->poolIdleTimeSpecified = final->poolIdleTimeSpecified || config->poolIdleTimeSpecified;
 		final->userSwitching = (config->userSwitchingSpecified) ? config->userSwitching : final->userSwitching;
 		final->userSwitchingSpecified = final->userSwitchingSpecified || config->userSwitchingSpecified;
-		final->defaultUser = (final->defaultUser != NULL) ? final->defaultUser : config->defaultUser;
-		final->tempDir = (final->tempDir != NULL) ? final->tempDir : config->tempDir;
-		final->analyticsLogDir = (!final->analyticsLogDir.empty()) ? final->analyticsLogDir : config->analyticsLogDir;
+		MERGE_SERVER_STR_CONFIGS(defaultUser);
+		MERGE_SERVER_STR_CONFIGS(tempDir);
+		MERGE_SERVER_STRING_CONFIGS(analyticsLogDir);
 	}
 	final->finalize();
 	for (s = main_server; s != NULL; s = s->next) {
