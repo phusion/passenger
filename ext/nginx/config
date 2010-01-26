@@ -21,7 +21,7 @@ NGX_ADDON_DEPS="$NGX_ADDON_DEPS \
     ${ngx_addon_dir}/ContentHandler.h \
     ${ngx_addon_dir}/StaticContentHandler.h \
     ${ngx_addon_dir}/ngx_http_passenger_module.h \
-    ${ngx_addon_dir}/../common/Version.h"
+    ${ngx_addon_dir}/../common/Constants.h"
 CORE_LIBS="$CORE_LIBS  \
     ${ngx_addon_dir}/../common/libpassenger_common.a \
     ${ngx_addon_dir}/../common/libboost_oxt.a \

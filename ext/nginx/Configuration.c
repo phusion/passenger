@@ -35,6 +35,7 @@
 #include "ngx_http_passenger_module.h"
 #include "Configuration.h"
 #include "ContentHandler.h"
+#include "../common/Constants.h"
 
 
 static ngx_str_t headers_to_hide[] = {
@@ -76,7 +77,7 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->analytics_log_dir.len  = 0;
     conf->analytics_log_user.data = NULL;
     conf->analytics_log_user.len  = 0;
-    conf->analytics_log_group.data = (u_char *) "";
+    conf->analytics_log_group.data = NULL;
     conf->analytics_log_group.len  = 0;
     conf->analytics_log_permissions.data = NULL;
     conf->analytics_log_permissions.len  = 0;
@@ -101,19 +102,19 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     }
     
     if (conf->log_level == (ngx_uint_t) NGX_CONF_UNSET) {
-        conf->log_level = 0;
+        conf->log_level = DEFAULT_LOG_LEVEL;
     }
     
     if (conf->max_pool_size == (ngx_uint_t) NGX_CONF_UNSET) {
-        conf->max_pool_size = 6;
+        conf->max_pool_size = DEFAULT_MAX_POOL_SIZE;
     }
     
     if (conf->max_instances_per_app == (ngx_uint_t) NGX_CONF_UNSET) {
-        conf->max_instances_per_app = 0;
+        conf->max_instances_per_app = DEFAULT_MAX_INSTANCES_PER_APP;
     }
     
     if (conf->pool_idle_time == (ngx_uint_t) NGX_CONF_UNSET) {
-        conf->pool_idle_time = 300;
+        conf->pool_idle_time = DEFAULT_POOL_IDLE_TIME;
     }
     
     if (conf->user_switching == NGX_CONF_UNSET) {
@@ -153,13 +154,18 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     }
     
     if (conf->analytics_log_user.len == 0) {
-        conf->analytics_log_user.len  = sizeof("nobody") - 1;
-        conf->analytics_log_user.data = (u_char *) "nobody";
+        conf->analytics_log_user.len  = sizeof(DEFAULT_ANALYTICS_LOG_USER) - 1;
+        conf->analytics_log_user.data = (u_char *) DEFAULT_ANALYTICS_LOG_USER;
+    }
+    
+    if (conf->analytics_log_group.len == 0) {
+        conf->analytics_log_group.len  = sizeof(DEFAULT_ANALYTICS_LOG_GROUP) - 1;
+        conf->analytics_log_group.data = (u_char *) DEFAULT_ANALYTICS_LOG_GROUP;
     }
     
     if (conf->analytics_log_permissions.len == 0) {
-        conf->analytics_log_permissions.len  = sizeof("u=rwx,g=rx,o=rx") - 1;
-        conf->analytics_log_permissions.data = (u_char *) "u=rwx,g=rx,o=rx";
+        conf->analytics_log_permissions.len  = sizeof(DEFAULT_ANALYTICS_LOG_PERMISSIONS) - 1;
+        conf->analytics_log_permissions.data = (u_char *) DEFAULT_ANALYTICS_LOG_PERMISSIONS;
     }
     
     return NGX_CONF_OK;
