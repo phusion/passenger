@@ -1,6 +1,6 @@
 /*
  * Copyright (C) Igor Sysoev
- * Copyright (C) 2009 Phusion
+ * Copyright (C) 2010 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
