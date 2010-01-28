@@ -81,6 +81,9 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
     #if NGINX_VERSION_NUM < 7000
         of.test_dir = 0;
     #else
+        #if NGX_VERSION_NUM >= 8000
+            of.read_ahead = clcf->read_ahead;
+        #endif
         of.directio = clcf->directio;
     #endif
     of.valid = clcf->open_file_cache_valid;
