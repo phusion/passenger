@@ -212,6 +212,29 @@ protected
 		end
 	end
 	
+	# To be called before the request handler main loop is entered. This function
+	# will fire off necessary events perform necessary preparation tasks.
+	#
+	# +forked+ indicates whether the current worker process is forked off from
+	# an ApplicationSpawner that has preloaded the app code.
+	# +options+ are the spawn options that were passed.
+	def before_handling_requests(forked, options)
+		PhusionPassenger.call_event(:starting_worker_process, forked)
+		if options["pool_account_username"] && options["pool_account_password_base64"]
+			password = options["pool_account_password_base64"].unpack('m').first
+			PhusionPassenger.call_event(:credentials,
+				options["pool_account_username"], password)
+		else
+			PhusionPassenger.call_event(:credentials, nil, nil)
+		end
+	end
+	
+	# To be called after the request handler main loop is exited. This function
+	# will fire off necessary events perform necessary cleanup tasks.
+	def after_handling_requests
+		PhusionPassenger.call_event(:stopping_worker_process)
+	end
+	
 	# This method is to be called after an application process has been forked
 	# off from an ApplicationSpawner that had preloaded the application code.
 	# It fixes various things in supported framework, e.g. in case of Rails it'll

@@ -24,6 +24,7 @@
 module PhusionPassenger
 	@@event_starting_worker_process = []
 	@@event_stopping_worker_process = []
+	@@event_credentials = []
 	
 	def self.on_event(name, &block)
 		callback_list_for_event(name) << block
@@ -42,6 +43,8 @@ private
 			@@event_starting_worker_process
 		when :stopping_worker_process
 			@@event_stopping_worker_process
+		when :credentials
+			@@event_credentials
 		else
 			raise ArgumentError, "Unknown event name '#{name}'"
 		end

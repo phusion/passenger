@@ -198,13 +198,13 @@ private
 			writer.close
 			channel.close
 			
-			PhusionPassenger.call_event(:starting_worker_process, forked)
+			before_handling_requests(forked, options)
 			handler.main_loop
 		ensure
 			channel.close rescue nil
 			writer.close rescue nil
 			handler.cleanup rescue nil
-			PhusionPassenger.call_event(:stopping_worker_process)
+			after_handling_requests
 		end
 	end
 	private_class_method :start_request_handler
