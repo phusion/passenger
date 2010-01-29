@@ -55,12 +55,20 @@ explicitly define some special types:
   root.
   
   A Group has the following members:
+  * name (string):
+    This group's key in the _groups_ map of the application pool.
+
+  * app_root (string):
+    This group's application root. Note that it is *not* guaranteed that all
+    ProcessInfo objects in _processes_ have the same application root.
+
   * processes (list<ProcessInfo>):
     A list of ProcessInfo objects.
     
     Invariant:
         processes is non-empty.
         for all 0 <= i < processes.size() - 1:
+           processes[i].group_name == name
            if processes[i].process is active:
               processes[i + 1].process is active
 
@@ -97,6 +105,8 @@ explicitly define some special types:
   
   A ProcessInfo has the following members:
   * process - A process object, representing an application process.
+  * group_name (string) - The name of the group that this ProcessInfo belongs
+    to.
   * identifier (string) - A key that uniquely identifies this ProcessInfo in
     this application pool. This key allows external processes to refer to a
     specific ProcessInfo object without knowing its memory pointer. It's set
@@ -113,7 +123,7 @@ explicitly define some special types:
     Invariant:
        (sessions == 0 && !detached) == (This ProcessInfo is in inactive_apps.)
   * iterator - The iterator for this ProcessInfo in the linked list
-    groups[process.app_root].processes
+    groups[process_info.group_name].processes
   * ia_iterator - The iterator for this ProcessInfo in the linked list
     inactive_apps. This iterator is only valid if this ProcessInfo really is
     in that list.
@@ -130,6 +140,8 @@ explicitly define some special types:
   spawning process, as well as by the get() function.
   
   A PoolOptions has at least the following members:
+  * app_group_name (string) - A name which is used to group application
+    processes together.
   * max_requests (unsigned integer) - The maximum number of requests that the
     application process may process. After having processed this many requests,
     the application process will be shut down. A value of 0 indicates that there
@@ -265,10 +277,10 @@ function detach(identifier):
 # Returns a pair of [ProcessInfo, Group].
 # All exceptions that occur are propagated.
 private function checkout_without_lock(app_root, options):
-	group = groups[app_root]
+	group = groups[options.app_group_name]
 	
 	if needs_restart(app_root, options):
-		Tell spawn server to reload code for app_root.
+		Tell spawn server to reload code for options.app_group_name.
 		if (group != nil):
 			for all process_info in group.processes:
 				if (process_info.sessions == 0):
@@ -279,11 +291,11 @@ private function checkout_without_lock(app_root, options):
 				process_info.detached = true
 				count--
 			group.detached = true
-			groups.remove(app_root)
+			groups.remove(options.app_group_name)
 			group = nil
 	
 	if group != nil:
-		# There are existing processes for this app root.
+		# There are existing processes for this app group.
 		processes = group.processes
 		
 		if (processes.front.sessions == 0):
@@ -311,13 +323,14 @@ private function checkout_without_lock(app_root, options):
 			process = spawn(app_root, options)
 			process_info = new ProcessInfo
 			process_info.process = process
+			process_info.group_name = options.app_group_name
 			iterator = processes.add_to_back(process_info)
 			process_info.iterator = iterator
 			group.size++
 			count++
 			active++
 	else:
-		# There are no processes for this app root.
+		# There are no processes for this app group.
 		if (active >= max):
 			# Looks like the pool is full and all processes are busy.
 			# We wait until there's at least 1 idle process, or until
@@ -329,7 +342,7 @@ private function checkout_without_lock(app_root, options):
 			# The pool is full, and not all processes are busy, but
 			# we're in a though situation nevertheless: there are
 			# several processes which are inactive, and none of them
-			# have application root _app_root_, so we must kill one
+			# belong to our current app group, so we must kill one
 			# of them in order to free a spot in the pool. But which
 			# one do we kill? We want to minimize spawning.
 			#
@@ -340,22 +353,25 @@ private function checkout_without_lock(app_root, options):
 			# process.
 			process_info = inactive_apps.pop_front
 			process_info.detached = true
-			group = groups[process_info.app.app_root]
+			group = groups[process_info.group_name]
 			processes = group.processes
 			processes.remove(process_info.iterator)
 			if processes.empty():
 				group.detached = true
-				groups.remove(process_info.process.app_root)
+				groups.remove(process_info.group_name)
 			else:
 				group.size--
 			count--
 		process_info = new ProcessInfo
 		process_info.process = spawn(app_root, options)
+		process_info.group_name = options.app_group_name
 		group = new Group
+		group.name = options.app_group_name
+		group.app_root = app_root
 		group.size = 1
 		group.max_requests = options.max_requests
 		group.min_processes = options.min_processes
-		groups[app_root] = group
+		groups[options.app_group_name] = group
 		iterator = group.processes.add_to_back(process_info)
 		process_info.iterator = iterator
 		count++
@@ -407,7 +423,7 @@ private function detach_without_lock(identifier):
 				group.size--
 				if processes.empty():
 					group.detached = true
-					groups.remove(process_info.process.app_root)
+					groups.remove(group.name)
 				if process_info.sessions == 0:
 					inactive_apps.remove(process_info.ia_iterator)
 				else:
@@ -436,7 +452,7 @@ callback session_has_been_closed(process_info):
 		if process_info.detached:
 			return
 		
-		group = groups[process_info.process.app_root]
+		group = groups[process_info.group_name]
 		processes = group.processes
 		process_info.processed++
 		
@@ -448,7 +464,7 @@ callback session_has_been_closed(process_info):
 			group.size--
 			if processes.empty():
 				group.detached = true
-				groups.remove(app_root)
+				groups.remove(group.name)
 			count--
 			if (process_info.sessions == 0):
 				inactive_apps.remove(process_info.ia_iterator)
@@ -497,7 +513,7 @@ thread cleaner:
 			for all process_info in inactive_apps:
 				if (now - process_info.last_used > MAX_IDLE_TIME):
 					process = process_info.process
-					group = groups[process.app_root]
+					group = groups[process_info.group_name]
 					if (group.size > group.min_processes):
 						processes = group.processes
 						processes.remove(process_info.iterator)
@@ -507,5 +523,5 @@ thread cleaner:
 						count--
 						if processes.empty():
 							group.detached = true
-							groups.remove(process.app_root)
+							groups.remove(group.name)
 

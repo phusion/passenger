@@ -65,7 +65,7 @@ describe SpawnManager do
 			
 			it_should_behave_like "a spawner"
 			it_should_behave_like "a Rails spawner"
-			it_should_behave_like "a Rails spawner that supports #reload(app_root)"
+			it_should_behave_like "a Rails spawner that supports #reload(app_group_name)"
 			it_should_behave_like "a Rails spawner that supports #reload()"
 			include_shared_example_group "a Rails app that lacks RAILS_GEM_VERSION"
 		end
@@ -77,7 +77,7 @@ describe SpawnManager do
 			
 			it_should_behave_like "a spawner"
 			it_should_behave_like "a Rails spawner"
-			it_should_behave_like "a Rails spawner that supports #reload(app_root)"
+			it_should_behave_like "a Rails spawner that supports #reload(app_group_name)"
 			it_should_behave_like "a Rails spawner that supports #reload()"
 			include_shared_example_group "a Rails app that lacks RAILS_GEM_VERSION"
 		end

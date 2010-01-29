@@ -708,6 +708,31 @@
 		ensure_equals(pool->getCount(), 2u);
 	}
 	
+	TEST_METHOD(32) {
+		// Test whether processes are grouped together by appGroupName.
+		TempDirCopy c1("stub/rack", "rackapp.tmp");
+		PoolOptions options1;
+		options1.appRoot = "rackapp.tmp";
+		options1.appType = "rack";
+		options1.appGroupName = "group A";
+		SessionPtr session1 = pool->get(options1);
+		
+		TempDirCopy c2("stub/rack", "rackapp2.tmp");
+		PoolOptions options2;
+		options2.appRoot = "rackapp2.tmp";
+		options2.appType = "rack";
+		options2.appGroupName = "group A";
+		SessionPtr session2 = pool2->get(options2);
+		
+		session1.reset();
+		session2.reset();
+		
+		ensure_equals(pool->getCount(), 2u);
+		touchFile("rackapp.tmp/tmp/restart.txt");
+		session1 = pool->get(options1);
+		ensure_equals(pool->getCount(), 1u);
+	}
+	
 	/*************************************/
 	
 #endif /* USE_TEMPLATE */

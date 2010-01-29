@@ -56,9 +56,10 @@ class ServerInstance
 	end
 	
 	class Group
-		attr_reader :name, :processes
+		attr_reader :app_root, :name, :processes
 		
-		def initialize(name)
+		def initialize(app_root, name)
+			@app_root = app_root
 			@name = name
 			@processes = []
 		end
@@ -241,7 +242,8 @@ class ServerInstance
 		
 		groups = []
 		doc.elements.each("info/groups/group") do |group_xml|
-			group = Group.new(group_xml.elements["name"].text)
+			group = Group.new(group_xml.elements["app_root"].text,
+				group_xml.elements["name"].text)
 			group_xml.elements.each("processes/process") do |process_xml|
 				process = Process.new(group)
 				process_xml.elements.each do |element|

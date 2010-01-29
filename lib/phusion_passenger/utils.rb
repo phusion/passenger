@@ -523,6 +523,7 @@ protected
 			"print_exceptions" => true
 		}
 		options = defaults.merge(options)
+		options["app_group_name"]            = options["app_root"] if !options["app_group_name"]
 		options["lower_privilege"]           = to_boolean(options["lower_privilege"])
 		options["framework_spawner_timeout"] = options["framework_spawner_timeout"].to_i
 		options["app_spawner_timeout"]       = options["app_spawner_timeout"].to_i

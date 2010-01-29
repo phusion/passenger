@@ -81,7 +81,7 @@ describe Railz::FrameworkSpawner do
 		it_should_behave_like "a spawner"
 		it_should_behave_like "a Rails spawner"
 		it_should_behave_like "a Railz::FrameworkSpawner"
-		it_should_behave_like "a Rails spawner that supports #reload(app_root)"
+		it_should_behave_like "a Rails spawner that supports #reload(app_group_name)"
 		it_should_behave_like "a Rails spawner that supports #reload()"
 	end
 end

@@ -208,9 +208,9 @@ class SpawnManager < AbstractServer
 		end
 	end
 	
-	# Remove the cached application instances at the given application root.
-	# If nil is specified as application root, then all cached application
-	# instances will be removed, no matter the application root.
+	# Remove the cached application instances at the given group name.
+	# If nil is specified as group name, then all cached application
+	# instances will be removed, no matter the group name.
 	#
 	# <b>Long description:</b>
 	# Application code might be cached in memory. But once it a while, it will
@@ -221,15 +221,15 @@ class SpawnManager < AbstractServer
 	# loaded into memory.
 	#
 	# Raises AbstractServer::SpawnError if something went wrong.
-	def reload(app_root = nil)
+	def reload(app_group_name = nil)
 		@spawners.synchronize do
-			if app_root
+			if app_group_name
 				# Stop and delete associated ApplicationSpawner.
-				@spawners.delete("app:#{app_root}")
+				@spawners.delete("app:#{app_group_name}")
 				# Propagate reload command to associated FrameworkSpawner.
 				@spawners.each do |spawner|
 					if spawner.respond_to?(:reload)
-						spawner.reload(app_root)
+						spawner.reload(app_group_name)
 					end
 				end
 			else
@@ -247,6 +247,7 @@ class SpawnManager < AbstractServer
 private
 	def spawn_rails_application(options)
 		app_root       = options["app_root"]
+		app_group_name = options["app_group_name"]
 		spawn_method   = options["spawn_method"]
 		spawner        = nil
 		create_spawner = nil
@@ -258,7 +259,7 @@ private
 				framework_version = AppProcess.detect_framework_version(app_root)
 			end
 			if framework_version.nil? || framework_version == :vendor
-				key = "app:#{app_root}"
+				key = "app:#{app_group_name}"
 				create_spawner = proc { Railz::ApplicationSpawner.new(options) }
 				spawner_timeout = options["app_spawner_timeout"]
 			else
@@ -295,7 +296,7 @@ private
 	end
 	
 	def spawn_rack_application(options)
-		app_root       = options["app_root"]
+		app_group_name = options["app_group_name"]
 		spawn_method   = options["spawn_method"]
 		spawner        = nil
 		create_spawner = nil
@@ -304,7 +305,7 @@ private
 		case spawn_method
 		when nil, "", "smart", "smart-lv2"
 			@spawners.synchronize do
-				key = "app:#{app_root}"
+				key = "app:#{app_group_name}"
 				spawner = @spawners.lookup_or_add(key) do
 					spawner_timeout = options["app_spawner_timeout"]
 					spawner = Rack::ApplicationSpawner.new(options)
@@ -373,8 +374,8 @@ private
 		end
 	end
 	
-	def handle_reload(client, app_root)
-		reload(app_root)
+	def handle_reload(client, app_group_name)
+		reload(app_group_name)
 	end
 	
 	def send_error_page(channel, template_name, options = {})

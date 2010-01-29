@@ -118,6 +118,8 @@ private:
 	typedef map<string, GroupPtr> GroupMap;
 	
 	struct Group {
+		string name;
+		string appRoot;
 		ProcessInfoList processes;
 		unsigned int size;
 		bool detached;
@@ -134,6 +136,7 @@ private:
 	
 	struct ProcessInfo {
 		ProcessPtr process;
+		string groupName;
 		unsigned long long startTime;
 		time_t lastUsed;
 		unsigned int sessions;
@@ -218,7 +221,7 @@ private:
 			}
 			
 			GroupMap::iterator it;
-			it = data->groups.find(processInfo->process->getAppRoot());
+			it = data->groups.find(processInfo->groupName);
 			Group *group = it->second.get();
 			ProcessInfoList *processes = &group->processes;
 			
@@ -230,7 +233,7 @@ private:
 				group->size--;
 				if (processes->empty()) {
 					group->detached = true;
-					data->groups.erase(processInfo->process->getAppRoot());
+					data->groups.erase(processInfo->groupName);
 				}
 				data->count--;
 				if (processInfo->sessions == 0) {
@@ -310,12 +313,15 @@ private:
 				const ProcessInfoPtr &processInfo = *lit;
 				
 				// Invariants for ProcessInfo.
+				P_ASSERT(processInfo->groupName == group->name, false,
+					"groups['" << appRoot << "'].processes[x].groupName "
+					"equals groups['" << appRoot << "'].name");
 				if ((*prev_lit)->sessions > 0) {
 					P_ASSERT(processInfo->sessions > 0, false,
 						"groups['" << appRoot << "'].processes "
 						"is sorted from nonactive to active");
 					P_ASSERT(!processInfo->detached, false,
-						"groups['" << appRoot << "'].detached "
+						"groups['" << appRoot << "'].processes[x].detached "
 						"is false");
 				}
 			}
@@ -438,7 +444,7 @@ private:
 					group->size--;
 					if (processes.empty()) {
 						group->detached = true;
-						groups.erase(processInfo->process->getAppRoot());
+						groups.erase(group->name);
 					}
 					if (processInfo->sessions == 0) {
 						inactiveApps.erase(processInfo->ia_iterator);
@@ -513,7 +519,7 @@ private:
 					
 					if (now - processInfo->lastUsed > (time_t) maxIdleTime) {
 						ProcessPtr process = processInfo->process;
-						GroupPtr   group   = groups[process->getAppRoot()];
+						GroupPtr   group   = groups[processInfo->groupName];
 						
 						if (group->size > group->minProcesses) {
 							ProcessInfoList *processes = &group->processes;
@@ -533,7 +539,7 @@ private:
 							
 							if (processes->empty()) {
 								group->detached = true;
-								groups.erase(process->getAppRoot());
+								groups.erase(group->name);
 							}
 						}
 					}
@@ -558,17 +564,18 @@ private:
 		TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
-		const string &appRoot(options.appRoot);
+		const string &appRoot = options.appRoot;
+		const string appGroupName = options.getAppGroupName();
 		ProcessInfoPtr processInfo;
 		Group *group;
 		ProcessInfoList *processes;
 		
 		try {
-			GroupMap::iterator group_it = groups.find(appRoot);
+			GroupMap::iterator group_it = groups.find(appGroupName);
 			
 			if (needsRestart(appRoot, options)) {
-				P_DEBUG("Restarting " << appRoot);
-				spawnManager->reload(appRoot);
+				P_DEBUG("Restarting " << appGroupName);
+				spawnManager->reload(appGroupName);
 				if (group_it != groups.end()) {
 					ProcessInfoList::iterator list_it;
 					group = group_it->second.get();
@@ -588,7 +595,7 @@ private:
 					}
 					
 					group->detached = true;
-					groups.erase(appRoot);
+					groups.erase(appGroupName);
 					group_it = groups.end();
 				}
 			}
@@ -623,6 +630,7 @@ private:
 					}
 					processInfo = ptr(new ProcessInfo());
 					processInfo->process = process;
+					processInfo->groupName = appGroupName;
 					processInfo->sessions = 0;
 					processes->push_back(processInfo);
 					processInfo->iterator = processes->end();
@@ -641,12 +649,12 @@ private:
 					processInfo = inactiveApps.front();
 					inactiveApps.pop_front();
 					processInfo->detached = true;
-					group = groups[processInfo->process->getAppRoot()].get();
+					group = groups[processInfo->groupName].get();
 					processes = &group->processes;
 					processes->erase(processInfo->iterator);
 					if (processes->empty()) {
 						group->detached = true;
-						groups.erase(processInfo->process->getAppRoot());
+						groups.erase(processInfo->groupName);
 					} else {
 						group->size--;
 					}
@@ -660,12 +668,15 @@ private:
 					this_thread::restore_syscall_interruption rsi(dsi);
 					processInfo->process = spawnManager->spawn(options);
 				}
+				processInfo->groupName = appGroupName;
 				processInfo->sessions = 0;
 				group = new Group();
+				group->name = appGroupName;
+				group->appRoot = appRoot;
 				group->size = 1;
 				group->maxRequests = options.maxRequests;
 				group->minProcesses = options.minProcesses;
-				groups[appRoot] = ptr(group);
+				groups[appGroupName] = ptr(group);
 				processes = &group->processes;
 				processes->push_back(processInfo);
 				processInfo->iterator = processes->end();
@@ -676,7 +687,7 @@ private:
 			}
 		} catch (const SpawnException &e) {
 			string message("Cannot spawn application '");
-			message.append(appRoot);
+			message.append(appGroupName);
 			message.append("': ");
 			message.append(e.what());
 			if (e.hasErrorPage()) {
@@ -686,7 +697,7 @@ private:
 			}
 		} catch (const std::exception &e) {
 			string message("Cannot spawn application '");
-			message.append(appRoot);
+			message.append(appGroupName);
 			message.append("': ");
 			message.append(e.what());
 			throw SpawnException(message);
@@ -916,7 +927,8 @@ public:
 			ProcessInfoList::const_iterator lit;
 			
 			result << "<group>";
-			result << "<name>" << escapeForXml(it->first) << "</name>";
+			result << "<app_root>" << escapeForXml(group->appRoot) << "</app_root>";
+			result << "<name>" << escapeForXml(group->name) << "</name>";
 			
 			result << "<processes>";
 			for (lit = processes->begin(); lit != processes->end(); lit++) {

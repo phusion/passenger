@@ -170,9 +170,9 @@ class FrameworkSpawner < AbstractServer
 		end
 	end
 	
-	# Remove the cached application instances at the given application root.
-	# If nil is specified as application root, then all cached application
-	# instances will be removed, no matter the application root.
+	# Remove the cached application instances at the given group name.
+	# If nil is specified as group name, then all cached application
+	# instances will be removed, no matter the group name.
 	#
 	# <b>Long description:</b>
 	# Application code might be cached in memory by a FrameworkSpawner. But
@@ -183,15 +183,13 @@ class FrameworkSpawner < AbstractServer
 	# code will be freshly loaded into memory.
 	#
 	# Raises:
-	# - ArgumentError: +app_root+ doesn't appear to be a valid Ruby on Rails
-	#   application root.
 	# - FrameworkSpawner::Error: The FrameworkSpawner server exited unexpectedly.
-	def reload(app_root = nil)
+	def reload(app_group_name = nil)
 		connect do |channel|
-			if app_root.nil?
+			if app_group_name.nil?
 				channel.write("reload")
 			else
-				channel.write("reload", app_root)
+				channel.write("reload", app_group_name)
 			end
 		end
 	rescue SystemCallError, IOError, SocketError
@@ -258,10 +256,10 @@ private
 	def handle_spawn_application(client, *options)
 		app_process = nil
 		options = sanitize_spawn_options(Hash[*options])
-		app_root = options["app_root"]
+		app_group_name = options["app_group_name"]
 		@spawners.synchronize do
 			begin
-				spawner = @spawners.lookup_or_add(app_root) do
+				spawner = @spawners.lookup_or_add(app_group_name) do
 					spawner = ApplicationSpawner.new(options)
 					if options["app_spawner_timeout"] && options["app_spawner_timeout"] != -1
 						spawner.max_idle_time = options["app_spawner_timeout"]
@@ -285,7 +283,7 @@ private
 				app_process = spawner.spawn_application(options)
 			rescue ApplicationSpawner::Error => e
 				spawner.stop
-				@spawners.delete(app_root)
+				@spawners.delete(app_group_name)
 				client.write('exception')
 				client.write_scalar(marshal_exception(e))
 				return
@@ -297,10 +295,10 @@ private
 		app_process.close if app_process
 	end
 	
-	def handle_reload(client, app_root = nil)
+	def handle_reload(client, app_group_name = nil)
 		@spawners.synchronize do
-			if app_root
-				@spawners.delete(app_root)
+			if app_group_name
+				@spawners.delete(app_group_name)
 			else
 				@spawners.clear
 			end
