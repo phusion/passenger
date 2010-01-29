@@ -53,8 +53,15 @@
 
 #include "md5.h"
 #include <string.h>
+#include <boost/detail/endian.hpp>
 
 namespace Passenger {
+
+#if defined(BOOST_BIG_ENDIAN)
+#  define ARCH_IS_BIG_ENDIAN 1
+#elif defined(BOOST_LITTLE_ENDIAN)
+#  define ARCH_IS_BIG_ENDIAN 0
+#endif
 
 #undef BYTE_ORDER	/* 1 = big-endian, -1 = little-endian, 0 = unknown */
 #ifdef ARCH_IS_BIG_ENDIAN

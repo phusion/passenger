@@ -192,6 +192,10 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 		'Base64.o' => %w(
 			Base64.cpp
 			Base64.h),
+		'md5.o' => %w(
+			md5.cpp
+			md5.h
+		),
 		'Utils.o' => %w(
 			Utils.cpp
 			Utils.h),
