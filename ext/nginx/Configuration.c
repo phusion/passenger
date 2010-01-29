@@ -210,6 +210,8 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->spawn_method.len = 0;
     conf->app_group_name.data = NULL;
     conf->app_group_name.len = 0;
+    conf->app_rights.data = NULL;
+    conf->app_rights.len = 0;
     conf->base_uris = NGX_CONF_UNSET_PTR;
     conf->min_instances = NGX_CONF_UNSET;
     conf->framework_spawner_idle_time = NGX_CONF_UNSET;
@@ -294,6 +296,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_str_value(conf->environment, prev->environment, "production");
     ngx_conf_merge_str_value(conf->spawn_method, prev->spawn_method, "smart-lv2");
     ngx_conf_merge_str_value(conf->app_group_name, prev->app_group_name, NULL);
+    ngx_conf_merge_str_value(conf->app_rights, prev->app_rights, NULL);
     ngx_conf_merge_value(conf->min_instances, prev->min_instances, (ngx_int_t) -1);
     ngx_conf_merge_value(conf->framework_spawner_idle_time, prev->framework_spawner_idle_time, (ngx_int_t) -1);
     ngx_conf_merge_value(conf->app_spawner_idle_time, prev->app_spawner_idle_time, (ngx_int_t) -1);
@@ -1021,6 +1024,13 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, app_group_name),
+      NULL },
+
+    { ngx_string("passenger_app_rights"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, app_rights),
       NULL },
 
     { ngx_string("passenger_analytics"),

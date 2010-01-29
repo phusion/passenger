@@ -46,6 +46,7 @@ typedef struct {
     ngx_str_t    environment;
     ngx_str_t    spawn_method;
     ngx_str_t    app_group_name;
+    ngx_str_t    app_rights;
     ngx_int_t    min_instances;
     ngx_int_t    framework_spawner_idle_time;
     ngx_int_t    app_spawner_idle_time;

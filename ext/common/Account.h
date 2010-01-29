@@ -89,10 +89,10 @@ public:
 	// Urgh, I can't use 'Rights' here as type because apparently bitwise
 	// ORing two enums results in an int type.
 	
-	static Rights parseRightsString(const string &str) {
+	static Rights parseRightsString(const string &str, int defaultValue = NONE) {
 		vector<string> rights_vec;
 		vector<string>::const_iterator it;
-		int result = 0;
+		int result = defaultValue;
 		
 		split(str, ',', rights_vec);
 		for (it = rights_vec.begin(); it != rights_vec.end(); it++) {
@@ -122,7 +122,7 @@ public:
 			} else if (*it == "exit") {
 				result |= EXIT;
 				
-			} else {
+			} else if (*it != "") {
 				throw ArgumentException("Unknown right '" + *it + "'.");
 			}
 		}

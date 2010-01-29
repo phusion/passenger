@@ -7,7 +7,8 @@ Release 2.9.1
  * passenger-install-nginx-module: compile with SSL support by default.
  * Support for Nginx 0.8
  * 100% Ruby 1.9 support, passes entire unit test suite
- * passenger_set_cgi_param
+ * [Nginx] passenger_set_cgi_param
+ * [Nginx] passenger_app_rights
 
 
 Release 2.9.0

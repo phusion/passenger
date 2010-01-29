@@ -458,6 +458,9 @@ private:
 			options.lowerPrivilege = lowerPrivilege;
 			options.lowestUser     = lowestUser;
 			options.appType        = parser.getHeader("PASSENGER_APP_TYPE");
+			options.rights         = Account::parseRightsString(
+				parser.getHeader("PASSENGER_APP_RIGHTS"),
+				DEFAULT_BACKEND_ACCOUNT_RIGHTS);
 			options.minProcesses   = atol(parser.getHeader("PASSENGER_MIN_INSTANCES"));
 			options.frameworkSpawnerTimeout = atol(parser.getHeader("PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME"));
 			options.appSpawnerTimeout       = atol(parser.getHeader("PASSENGER_APP_SPAWNER_IDLE_TIME"));

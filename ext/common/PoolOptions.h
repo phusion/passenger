@@ -28,6 +28,7 @@
 #include <string>
 #include <vector>
 #include "Account.h"
+#include "Constants.h"
 #include "StringListCreator.h"
 
 namespace Passenger {
@@ -225,7 +226,7 @@ struct PoolOptions {
 		useGlobalQueue          = false;
 		statThrottleRate        = 0;
 		baseURI                 = "/";
-		rights                  = Account::DETACH;
+		rights                  = DEFAULT_BACKEND_ACCOUNT_RIGHTS;
 		initiateSession         = true;
 		printExceptions         = true;
 		
@@ -251,7 +252,7 @@ struct PoolOptions {
 		unsigned long statThrottleRate = 0,
 		const string &restartDir     = "",
 		const string &baseURI        = "/",
-		Account::Rights rights       = Account::DETACH
+		Account::Rights rights       = DEFAULT_BACKEND_ACCOUNT_RIGHTS
 	) {
 		this->appRoot                 = appRoot;
 		this->lowerPrivilege          = lowerPrivilege;

@@ -417,6 +417,7 @@ create_request(ngx_http_request_t *r)
     len += sizeof("PASSENGER_SPAWN_METHOD") + slcf->spawn_method.len + 1;
     len += sizeof("PASSENGER_APP_TYPE") + app_type_string_len;
     ANALYZE_STR_CONFIG_LENGTH("PASSENGER_APP_GROUP_NAME", slcf, app_group_name);
+    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_APP_RIGHTS", slcf, app_rights);
     
     end = ngx_snprintf(min_instances_string,
                        sizeof(min_instances_string) - 1,
@@ -627,6 +628,8 @@ create_request(ngx_http_request_t *r)
 
     SERIALIZE_STR_CONFIG_DATA("PASSENGER_APP_GROUP_NAME",
                               slcf, app_group_name);
+    SERIALIZE_STR_CONFIG_DATA("PASSENGER_APP_RIGHTS",
+                              slcf, app_rights);
 
     b->last = ngx_copy(b->last, "PASSENGER_APP_TYPE",
                        sizeof("PASSENGER_APP_TYPE"));
