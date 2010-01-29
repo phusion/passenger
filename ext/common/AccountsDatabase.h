@@ -27,6 +27,7 @@
 
 #include <string>
 #include <map>
+#include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include "Account.h"
 #include "ServerInstanceDir.h"
@@ -45,20 +46,43 @@ typedef shared_ptr<AccountsDatabase> AccountsDatabasePtr;
 
 class AccountsDatabase {
 private:
+	mutable boost::mutex lock;
 	map<string, AccountPtr> accounts;
+	unsigned int uniqueNumber;
 	
 public:
 	static AccountsDatabasePtr createDefault(const ServerInstanceDir::GenerationPtr &generation,
 	                                         bool userSwitching, const string &defaultUser);
 	
+	AccountsDatabase() {
+		uniqueNumber = 0;
+	}
+	
+	unsigned int size() const {
+		lock_guard<boost::mutex> l(lock);
+		return accounts.size();
+	}
+	
+	vector<string> listUsernames() const {
+		map<string, AccountPtr>::const_iterator it;
+		vector<string> result;
+		
+		for (it = accounts.begin(); it != accounts.end(); it++) {
+			result.push_back(it->second->getUsername());
+		}
+		return result;
+	}
+	
 	AccountPtr add(const string &username, const string &passwordOrHash, bool hashGiven, int rights = Account::ALL) {
 		AccountPtr account(new Account(username, passwordOrHash, hashGiven, rights));
+		lock_guard<boost::mutex> l(lock);
 		accounts[username] = account;
 		return account;
 	}
 	
 	const AccountPtr get(const string &username) const {
-		map<string, AccountPtr>::const_iterator it(accounts.find(username));
+		lock_guard<boost::mutex> l(lock);
+		map<string, AccountPtr>::const_iterator it = accounts.find(username);
 		if (it == accounts.end()) {
 			return AccountPtr();
 		} else {
@@ -66,18 +90,37 @@ public:
 		}
 	}
 	
-	AccountPtr authenticate(const string &username, const StaticString &userSuppliedPassword) {
-		map<string, AccountPtr>::iterator it = accounts.find(username);
+	AccountPtr authenticate(const string &username, const StaticString &userSuppliedPassword) const {
+		lock_guard<boost::mutex> l(lock);
+		map<string, AccountPtr>::const_iterator it = accounts.find(username);
 		if (it == accounts.end()) {
 			return AccountPtr();
 		} else {
-			AccountPtr account(it->second);
+			AccountPtr account = it->second;
 			if (account->checkPasswordOrHash(userSuppliedPassword)) {
 				return account;
 			} else {
 				return AccountPtr();
 			}
 		}
+	}
+	
+	bool remove(const string &username) {
+		lock_guard<boost::mutex> l(lock);
+		map<string, AccountPtr>::iterator it = accounts.find(username);
+		if (it == accounts.end()) {
+			return false;
+		} else {
+			accounts.erase(it);
+			return true;
+		}
+	}
+	
+	unsigned int getUniqueNumber() {
+		lock_guard<boost::mutex> l(lock);
+		unsigned int result = uniqueNumber;
+		uniqueNumber++;
+		return result;
 	}
 };
 

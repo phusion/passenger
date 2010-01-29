@@ -14,7 +14,7 @@
 #include "ServerInstanceDir.h"
 #include "FileDescriptor.h"
 #include "MessageChannel.h"
-#include "MessageServer.h"
+#include "Constants.h"
 #include "RandomGenerator.h"
 #include "Timer.h"
 #include "Base64.h"
@@ -539,7 +539,7 @@ protected:
 public:
 	HelperServerWatcher() {
 		requestSocketPassword = randomGenerator.generateByteString(REQUEST_SOCKET_PASSWORD_SIZE);
-		messageSocketPassword = randomGenerator.generateByteString(MessageServer::MAX_PASSWORD_SIZE);
+		messageSocketPassword = randomGenerator.generateByteString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
 		if (webServerType == "apache") {
 			helperServerFilename = passengerRoot + "/ext/apache2/PassengerHelperServer";
 		} else {

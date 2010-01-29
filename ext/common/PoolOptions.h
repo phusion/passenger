@@ -27,6 +27,7 @@
 
 #include <string>
 #include <vector>
+#include "Account.h"
 #include "StringListCreator.h"
 
 namespace Passenger {
@@ -187,6 +188,13 @@ struct PoolOptions {
 	string baseURI;
 	
 	/**
+	 * Any rights that the spawned application process may have. The SpawnManager
+	 * will create a new account for each spawned app, and that account will be
+	 * assigned these rights.
+	 */
+	Account::Rights rights;
+	
+	/**
 	 * Whether the session returned by ApplicationPool::Interface::get()
 	 * should be automatically initiated. Defaults to true.
 	 */
@@ -217,6 +225,7 @@ struct PoolOptions {
 		useGlobalQueue          = false;
 		statThrottleRate        = 0;
 		baseURI                 = "/";
+		rights                  = Account::DETACH;
 		initiateSession         = true;
 		printExceptions         = true;
 		
@@ -241,7 +250,8 @@ struct PoolOptions {
 		bool useGlobalQueue          = false,
 		unsigned long statThrottleRate = 0,
 		const string &restartDir     = "",
-		const string &baseURI        = "/"
+		const string &baseURI        = "/",
+		Account::Rights rights       = Account::DETACH
 	) {
 		this->appRoot                 = appRoot;
 		this->lowerPrivilege          = lowerPrivilege;
@@ -259,6 +269,7 @@ struct PoolOptions {
 		this->statThrottleRate        = statThrottleRate;
 		this->restartDir              = restartDir;
 		this->baseURI                 = baseURI;
+		this->rights                  = rights;
 		this->initiateSession         = true;
 		this->printExceptions         = true;
 		
@@ -304,6 +315,8 @@ struct PoolOptions {
 		statThrottleRate = atol(vec[startIndex + offset]);           offset += 2;
 		restartDir       = vec[startIndex + offset];                 offset += 2;
 		baseURI          = vec[startIndex + offset];                 offset += 2;
+		rights           = (Account::Rights) atol(vec[startIndex + offset]);
+		                                                             offset += 2;
 		initiateSession  = vec[startIndex + offset] == "true";       offset += 2;
 		printExceptions  = vec[startIndex + offset] == "true";       offset += 2;
 		hasEnvVars       = vec[startIndex + offset] == "true";       offset += 2;
@@ -325,27 +338,28 @@ struct PoolOptions {
 	 * @throws Anything thrown by environmentVariables->getItems().
 	 */
 	void toVector(vector<string> &vec, bool storeEnvVars = true) const {
-		if (vec.capacity() < vec.size() + 30) {
-			vec.reserve(vec.size() + 30);
+		if (vec.capacity() < vec.size() + 42) {
+			vec.reserve(vec.size() + 42);
 		}
-		appendKeyValue (vec, "app_root",        appRoot);
-		appendKeyValue (vec, "lower_privilege", lowerPrivilege ? "true" : "false");
-		appendKeyValue (vec, "lowest_user",     lowestUser);
-		appendKeyValue (vec, "environment",     environment);
-		appendKeyValue (vec, "spawn_method",    spawnMethod);
-		appendKeyValue (vec, "app_type",        appType);
-		appendKeyValue (vec, "app_group_name",  getAppGroupName());
-		appendKeyValue (vec, "analytics_group_name", analyticsGroupName);
+		appendKeyValue (vec, "app_root",           appRoot);
+		appendKeyValue4(vec, "lower_privilege",    lowerPrivilege);
+		appendKeyValue (vec, "lowest_user",        lowestUser);
+		appendKeyValue (vec, "environment",        environment);
+		appendKeyValue (vec, "spawn_method",       spawnMethod);
+		appendKeyValue (vec, "app_type",           appType);
+		appendKeyValue (vec, "app_group_name",     getAppGroupName());
+		appendKeyValue (vec, "analytics_group_name",      analyticsGroupName);
 		appendKeyValue2(vec, "framework_spawner_timeout", frameworkSpawnerTimeout);
 		appendKeyValue2(vec, "app_spawner_timeout",       appSpawnerTimeout);
-		appendKeyValue3(vec, "max_requests",    maxRequests);
-		appendKeyValue3(vec, "min_processes",   minProcesses);
-		appendKeyValue (vec, "use_global_queue", useGlobalQueue ? "true" : "false");
+		appendKeyValue3(vec, "max_requests",       maxRequests);
+		appendKeyValue3(vec, "min_processes",      minProcesses);
+		appendKeyValue4(vec, "use_global_queue",   useGlobalQueue);
 		appendKeyValue3(vec, "stat_throttle_rate", statThrottleRate);
-		appendKeyValue (vec, "restart_dir",     restartDir);
-		appendKeyValue (vec, "base_uri",        baseURI);
-		appendKeyValue (vec, "initiate_session", initiateSession ? "true" : "false");
-		appendKeyValue (vec, "print_exceptions", printExceptions ? "true" : "false");
+		appendKeyValue (vec, "restart_dir",        restartDir);
+		appendKeyValue (vec, "base_uri",           baseURI);
+		appendKeyValue3(vec, "rights",             rights);
+		appendKeyValue4(vec, "initiate_session",   initiateSession);
+		appendKeyValue4(vec, "print_exceptions",   printExceptions);
 		if (storeEnvVars) {
 			appendKeyValue(vec, "has_environment_variables", "true");
 			appendKeyValue(vec, "environment_variables", serializeEnvironmentVariables());
@@ -419,6 +433,12 @@ private:
 	appendKeyValue3(vector<string> &vec, const char *key, unsigned long value) {
 		vec.push_back(key);
 		vec.push_back(toString(value));
+	}
+	
+	static inline void
+	appendKeyValue4(vector<string> &vec, const char *key, bool value) {
+		vec.push_back(key);
+		vec.push_back(value ? "true" : "false");
 	}
 };
 

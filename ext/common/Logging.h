@@ -426,6 +426,10 @@ public:
 	}
 	
 	static bool groupNameIsSane(const StaticString &groupName) {
+		if (groupName.empty()) {
+			return false;
+		}
+		
 		string::size_type i = 0;
 		bool result = true;
 		while (i < groupName.size() && result) {

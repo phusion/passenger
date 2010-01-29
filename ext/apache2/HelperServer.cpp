@@ -234,7 +234,7 @@ public:
 		
 		pool = ptr(new ApplicationPool::Pool(
 			findSpawnServer(passengerRoot.c_str()), generation,
-			accountsDatabase->get("_backend"), rubyCommand
+			accountsDatabase, rubyCommand
 		));
 		pool->setMax(maxPoolSize);
 		pool->setMaxPerApp(maxInstancesPerApp);

@@ -52,9 +52,9 @@
 			
 			ReloadLoggingSpawnManager(const string &spawnServerCommand,
 				const ServerInstanceDir::GenerationPtr &generation,
-				const AccountPtr &account = AccountPtr(),
+				const AccountsDatabasePtr &accountsDatabase = AccountsDatabasePtr(),
 				const string &rubyCommand = "ruby")
-			: SpawnManager(spawnServerCommand, generation, account, rubyCommand)
+			: SpawnManager(spawnServerCommand, generation, accountsDatabase, rubyCommand)
 			{ }
 			
 			virtual void reload(const string &appRoot) {

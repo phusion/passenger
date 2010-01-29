@@ -13,6 +13,7 @@ namespace tut {
 		ServerInstanceDirPtr serverInstanceDir;
 		ServerInstanceDir::GenerationPtr generation;
 		SpawnManagerPtr manager;
+		AccountsDatabasePtr accountsDatabase;
 		PoolOptions rackOptions;
 		
 		SpawnManagerTest() {
@@ -22,7 +23,8 @@ namespace tut {
 		}
 		
 		void initialize() {
-			manager = ptr(new SpawnManager("../bin/passenger-spawn-server", generation));
+			manager = ptr(new SpawnManager("../bin/passenger-spawn-server", generation,
+				accountsDatabase));
 		}
 		
 		void sendTestRequest(SessionPtr &session, bool authenticate = true, const char *uri = "/foo/new") {
@@ -133,5 +135,27 @@ namespace tut {
 		session->shutdownWriter();
 		string result = readAll(session->getStream());
 		ensure_equals(result, "");
+	}
+	
+	TEST_METHOD(5) {
+		// It automatically creates a unique account for the application,
+		// which is deleted when no longer needed.
+		accountsDatabase = ptr(new AccountsDatabase());
+		initialize();
+		
+		ProcessPtr process1 = manager->spawn(rackOptions);
+		vector<string> usernames1 = accountsDatabase->listUsernames();
+		ensure_equals(accountsDatabase->size(), 1u);
+		
+		ProcessPtr process2 = manager->spawn(rackOptions);
+		vector<string> usernames2 = accountsDatabase->listUsernames();
+		ensure_equals(accountsDatabase->size(), 2u);
+		
+		process1.reset();
+		ensure_equals(accountsDatabase->size(), 1u);
+		ensure_equals(accountsDatabase->get(usernames1[0]), AccountPtr());
+		
+		process2.reset();
+		ensure_equals(accountsDatabase->size(), 0u);
 	}
 }

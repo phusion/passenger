@@ -77,6 +77,7 @@ private:
 	string connectPassword;
 	SocketInfoMap serverSockets;
 	SocketInfo *mainServerSocket;
+	function<void ()> destructionCallback;
 	
 public:
 	/**
@@ -91,10 +92,12 @@ public:
 	 * @param detachKey A detach key. Used by the ApplicationPool algorithm.
 	 * @param connectPassword The password to use when connecting to this process.
 	 *                        Must be valid ASCII.
+	 * @param destructionCallback A callback to be called when this Process is destroyed.
 	 * @throws ArgumentException If serverSockets has no socket named 'main'.
 	 */
 	Process(const string &appRoot, pid_t pid, int ownerPipe, const SocketInfoMap &serverSockets,
-	        const string &detachKey, const string &connectPassword)
+	        const string &detachKey, const string &connectPassword,
+	        const function<void ()> &destructionCallback = function<void ()>())
 	{
 		this->appRoot         = appRoot;
 		this->pid             = pid;
@@ -102,6 +105,7 @@ public:
 		this->serverSockets   = serverSockets;
 		this->detachKey       = detachKey;
 		this->connectPassword = connectPassword;
+		this->destructionCallback = destructionCallback;
 		if (serverSockets.find("main") == serverSockets.end()) {
 			TRACE_POINT();
 			throw ArgumentException("There must be a server socket named 'main'.");
@@ -129,6 +133,10 @@ public:
 			}
 		}
 		P_TRACE(3, "Application process " << this << ": destroyed.");
+		
+		if (destructionCallback) {
+			destructionCallback();
+		}
 	}
 	
 	/**

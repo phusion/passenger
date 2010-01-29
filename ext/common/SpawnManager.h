@@ -26,9 +26,10 @@
 #define _PASSENGER_SPAWN_MANAGER_H_
 
 #include <string>
-#include <list>
+#include <vector>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
+#include <boost/function.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
 
@@ -47,8 +48,9 @@
 #include "AbstractSpawnManager.h"
 #include "ServerInstanceDir.h"
 #include "FileDescriptor.h"
+#include "Constants.h"
 #include "MessageChannel.h"
-#include "Account.h"
+#include "AccountsDatabase.h"
 #include "Base64.h"
 #include "RandomGenerator.h"
 #include "Exceptions.h"
@@ -95,7 +97,7 @@ private:
 
 	string spawnServerCommand;
 	ServerInstanceDir::GenerationPtr generation;
-	AccountPtr poolAccount;
+	AccountsDatabasePtr accountsDatabase;
 	string rubyCommand;
 	
 	boost::mutex lock;
@@ -106,6 +108,10 @@ private:
 	string socketFilename;
 	string socketPassword;
 	bool serverNeedsRestart;
+	
+	static void deleteAccount(AccountsDatabasePtr accountsDatabase, const string &username) {
+		accountsDatabase->remove(username);
+	}
 	
 	/**
 	 * Restarts the spawn server.
@@ -284,6 +290,8 @@ private:
 		Process::SocketInfoMap serverSockets;
 		string detachKey = Base64::encode(random.generateByteString(32));
 		string connectPassword = Base64::encode(random.generateByteString(32));
+		AccountPtr account;
+		function<void ()> destructionCallback;
 		
 		try {
 			args.push_back("spawn_application");
@@ -293,11 +301,17 @@ private:
 			args.push_back(detachKey);
 			args.push_back("connect_password");
 			args.push_back(connectPassword);
-			if (poolAccount != NULL) {
+			if (accountsDatabase != NULL) {
+				string username = "_backend-" + toString(accountsDatabase->getUniqueNumber());
+				string password = random.generateByteString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
+				account = accountsDatabase->add(username, password, false, options.rights);
+				destructionCallback = boost::bind(&SpawnManager::deleteAccount,
+					accountsDatabase, username);
+				
 				args.push_back("pool_account_username");
-				args.push_back(poolAccount->getUsername());
+				args.push_back(username);
 				args.push_back("pool_account_password_base64");
-				args.push_back(Base64::encode(poolAccount->getRawPassword()));
+				args.push_back(Base64::encode(password));
 			}
 			
 			channel.write(args);
@@ -374,7 +388,7 @@ private:
 		
 		UPDATE_TRACE_POINT();
 		return ProcessPtr(new Process(appRoot, appPid, ownerPipe, serverSockets,
-			detachKey, connectPassword));
+			detachKey, connectPassword, destructionCallback));
 	}
 	
 	/**
@@ -481,8 +495,11 @@ public:
 	 * @param spawnServerCommand The filename of the spawn server to use.
 	 * @param generation The server instance dir generation in which
 	 *                   generation-specific are stored.
-	 * @param poolAccount An account with which spawned processes may access
-	 *                    the application pool. May be a null pointer.
+	 * @param accountsDatabase An accounts database. SpawnManager will automatically
+	 *                         create a new account for each spawned process, assigning
+	 *                         it the rights as set in the PoolOptions object. This
+	 *                         account is also automatically deleted when no longer needed.
+	 *                         May be a null pointer.
 	 * @param rubyCommand The Ruby interpreter's command.
 	 * @throws RuntimeException An error occurred while creating a Unix server socket.
 	 * @throws SystemException An error occured while trying to setup the spawn server.
@@ -490,12 +507,12 @@ public:
 	 */
 	SpawnManager(const string &spawnServerCommand,
 	             const ServerInstanceDir::GenerationPtr &generation,
-	             const AccountPtr &poolAccount = AccountPtr(),
+	             const AccountsDatabasePtr &accountsDatabase = AccountsDatabasePtr(),
 	             const string &rubyCommand = "ruby") {
 		TRACE_POINT();
 		this->spawnServerCommand = spawnServerCommand;
 		this->generation  = generation;
-		this->poolAccount = poolAccount;
+		this->accountsDatabase = accountsDatabase;
 		this->rubyCommand = rubyCommand;
 		pid = 0;
 		this_thread::disable_interruption di;

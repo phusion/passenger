@@ -26,8 +26,10 @@
 #define _PASSENGER_ACCOUNT_H_
 
 #include <string>
+#include <vector>
 #include <boost/shared_ptr.hpp>
 #include "StaticString.h"
+#include "Utils.h"
 
 namespace Passenger {
 
@@ -86,6 +88,47 @@ private:
 public:
 	// Urgh, I can't use 'Rights' here as type because apparently bitwise
 	// ORing two enums results in an int type.
+	
+	static Rights parseRightsString(const string &str) {
+		vector<string> rights_vec;
+		vector<string>::const_iterator it;
+		int result = 0;
+		
+		split(str, ',', rights_vec);
+		for (it = rights_vec.begin(); it != rights_vec.end(); it++) {
+			if (*it == "all") {
+				result = ALL;
+			} else if (*it == "none") {
+				result = NONE;
+			
+			} else if (*it == "get") {
+				result |= GET;
+			} else if (*it == "clear") {
+				result |= CLEAR;
+			} else if (*it == "detach") {
+				result |= DETACH;
+			} else if (*it == "get_parameters") {
+				result |= GET_PARAMETERS;
+			} else if (*it == "set_parameters") {
+				result |= SET_PARAMETERS;
+			} else if (*it == "inspect_basic_info") {
+				result |= INSPECT_BASIC_INFO;
+			} else if (*it == "inspect_sensitive_info") {
+				result |= INSPECT_SENSITIVE_INFO;
+			
+			} else if (*it == "inspect_backtraces") {
+				result |= INSPECT_BACKTRACES;
+				
+			} else if (*it == "exit") {
+				result |= EXIT;
+				
+			} else {
+				throw ArgumentException("Unknown right '" + *it + "'.");
+			}
+		}
+		
+		return (Rights) result;
+	}
 	
 	Account(const string &username, const string &passwordOrHash, bool hashGiven, int rights = ALL) {
 		this->username       = username;

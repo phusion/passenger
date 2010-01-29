@@ -199,7 +199,7 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 			AccountsDatabase.cpp
 			AccountsDatabase.h
 			RandomGenerator.h
-			MessageServer.h
+			Constants.h
 			Utils.h),
 		'AgentsStarter.o' => %w(
 			AgentsStarter.cpp
@@ -558,8 +558,10 @@ end
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
 			ext/common/Process.h
+			ext/common/AccountsDatabase.h
 			ext/common/Account.h
 			ext/common/Session.h
+			ext/common/Constants.h
 			ext/common/MessageChannel.h),
 		'test/cxx/ApplicationPool_ServerTest.o' => %w(
 			test/cxx/ApplicationPool_ServerTest.cpp

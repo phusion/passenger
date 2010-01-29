@@ -42,6 +42,7 @@
 
 #include "Account.h"
 #include "AccountsDatabase.h"
+#include "Constants.h"
 #include "FileDescriptor.h"
 #include "MessageChannel.h"
 #include "Logging.h"
@@ -156,7 +157,6 @@ using namespace oxt;
 class MessageServer {
 public:
 	static const unsigned int CLIENT_THREAD_STACK_SIZE = 64 * 1024;
-	static const unsigned int MAX_PASSWORD_SIZE = 100;
 	
 	/** Interface for client context objects. */
 	class ClientContext {
@@ -366,7 +366,7 @@ protected:
 			}
 			
 			try {
-				if (!channel.readScalar(password, MAX_PASSWORD_SIZE, &timeout)) {
+				if (!channel.readScalar(password, MESSAGE_SERVER_MAX_PASSWORD_SIZE, &timeout)) {
 					return AccountPtr();
 				}
 			} catch (const SecurityException &) {

@@ -725,7 +725,7 @@ public:
 	 */
 	Pool(const string &spawnServerCommand,
 	     const ServerInstanceDir::GenerationPtr &generation,
-	     const AccountPtr &poolAccount = AccountPtr(),
+	     const AccountsDatabasePtr &accountsDatabase = AccountsDatabasePtr(),
 	     const string &rubyCommand = "ruby")
 	   : data(new SharedData()),
 		cstat(DEFAULT_MAX_POOL_SIZE),
@@ -740,7 +740,7 @@ public:
 	{
 		TRACE_POINT();
 		this->spawnManager = ptr(new SpawnManager(spawnServerCommand, generation,
-			poolAccount, rubyCommand));
+			accountsDatabase, rubyCommand));
 		initialize();
 	}
 	

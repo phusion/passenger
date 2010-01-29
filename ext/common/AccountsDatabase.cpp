@@ -28,7 +28,7 @@
 #include <unistd.h>
 #include "AccountsDatabase.h"
 #include "RandomGenerator.h"
-#include "MessageServer.h"
+#include "Constants.h"
 #include "Utils.h"
 
 namespace Passenger {
@@ -41,7 +41,7 @@ AccountsDatabase::createDefault(const ServerInstanceDir::GenerationPtr &generati
 	uid_t defaultUid;
 	gid_t defaultGid;
 	RandomGenerator random;
-	string passengerStatusPassword = random.generateByteString(MessageServer::MAX_PASSWORD_SIZE);
+	string passengerStatusPassword = random.generateByteString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
 	
 	determineLowestUserAndGroup(defaultUser, defaultUid, defaultGid);
 	
@@ -57,9 +57,6 @@ AccountsDatabase::createDefault(const ServerInstanceDir::GenerationPtr &generati
 		createFile(generation->getPath() + "/passenger-status-password.txt",
 			passengerStatusPassword, S_IRUSR | S_IWUSR);
 	}
-	
-	database->add("_backend", random.generateByteString(MessageServer::MAX_PASSWORD_SIZE),
-		false, Account::DETACH);
 	
 	return database;
 }
