@@ -4,6 +4,8 @@ require 'phusion_passenger/rack/application_spawner'
 require 'ruby/shared/abstract_server_spec'
 require 'ruby/shared/spawners/spawn_server_spec'
 require 'ruby/shared/spawners/spawner_spec'
+require 'ruby/shared/spawners/preloading_spawner_spec'
+require 'ruby/shared/spawners/non_preloading_spawner_spec'
 
 describe Rack::ApplicationSpawner do
 	include SpawnerSpecHelper
@@ -27,6 +29,7 @@ describe Rack::ApplicationSpawner do
 		end
 		
 		it_should_behave_like "a spawner"
+		it_should_behave_like "a spawner that does not preload app code"
 	end
 	
 	describe "smart spawning" do
@@ -64,5 +67,6 @@ describe Rack::ApplicationSpawner do
 		it_should_behave_like "an AbstractServer"
 		it_should_behave_like "a spawn server"
 		it_should_behave_like "a spawner"
+		it_should_behave_like "a spawner that preloads app code"
 	end
 end

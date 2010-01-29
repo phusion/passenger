@@ -334,6 +334,3 @@ shared_examples_for "a spawner" do
 		end
 	end
 end
-
-#shared_examples_for "a Rack spawner"
-#shared_examples_for "a WSGI spawner"
