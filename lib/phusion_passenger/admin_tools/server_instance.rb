@@ -27,7 +27,7 @@ require 'socket'
 require 'ostruct'
 require 'phusion_passenger/admin_tools'
 require 'phusion_passenger/message_channel'
-require 'phusion_passenger/utils/message_client'
+require 'phusion_passenger/message_client'
 
 module PhusionPassenger
 module AdminTools
@@ -191,7 +191,7 @@ class ServerInstance
 			username = role_or_username
 		end
 		
-		@client = Utils::MessageClient.new(username, password, "#{@generation_path}/socket")
+		@client = MessageClient.new(username, password, "#{@generation_path}/socket")
 		begin
 			yield self
 		ensure

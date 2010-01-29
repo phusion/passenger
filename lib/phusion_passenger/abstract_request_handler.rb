@@ -26,9 +26,9 @@ require 'socket'
 require 'fcntl'
 require 'phusion_passenger'
 require 'phusion_passenger/message_channel'
+require 'phusion_passenger/message_client'
 require 'phusion_passenger/utils'
 require 'phusion_passenger/utils/unseekable_socket'
-require 'phusion_passenger/utils/message_client'
 require 'phusion_passenger/native_support'
 
 module PhusionPassenger
@@ -303,7 +303,7 @@ class AbstractRequestHandler
 		@select_timeout = @soft_termination_linger_time
 		@graceful_termination_pipe[1].close rescue nil
 		if @detach_key && @pool_account_username && @pool_account_password
-			client = Utils::MessageClient.new(@pool_account_username, @pool_account_password)
+			client = MessageClient.new(@pool_account_username, @pool_account_password)
 			begin
 				client.detach(@detach_key)
 			ensure

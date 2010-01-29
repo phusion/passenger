@@ -27,7 +27,6 @@ require 'phusion_passenger/message_channel'
 require 'phusion_passenger/utils'
 
 module PhusionPassenger
-module Utils
 
 # A convenience class for communicating with MessageServer servers,
 # for example the ApplicationPool server.
@@ -114,5 +113,4 @@ class MessageClient
 	end
 end
 
-end # module Utils
 end # module PhusionPassenger
