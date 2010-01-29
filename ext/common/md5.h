@@ -50,6 +50,8 @@
 #ifndef md5_INCLUDED
 #  define md5_INCLUDED
 
+#include <boost/cstdint.hpp>
+
 /*
  * This package supports both compile-time and run-time determination of CPU
  * byte order.  If ARCH_IS_BIG_ENDIAN is defined as 0, the code will be
@@ -62,8 +64,8 @@
 
 namespace Passenger {
 
-typedef unsigned char md5_byte_t; /* 8-bit byte */
-typedef unsigned int md5_word_t; /* 32-bit word */
+typedef uint8_t md5_byte_t; /* 8-bit byte */
+typedef uint32_t md5_word_t; /* 32-bit word */
 
 /* Define the state of the MD5 Algorithm. */
 typedef struct md5_state_s {
