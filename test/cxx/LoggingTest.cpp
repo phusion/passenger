@@ -158,37 +158,29 @@ namespace tut {
 	TEST_METHOD(8) {
 		// Test group name validation.
 		
-		// Empty strings not allowed.
-		ensure("(1)", !TxnLogger::validateGroupName(""));
-		ensure("(2)", !TxnLogger::validateGroupName(" "));
-		ensure("(3)", !TxnLogger::validateGroupName("   "));
-		
-		// No leading or trailing spaces.
-		ensure("(4)", !TxnLogger::validateGroupName("hello "));
-		ensure("(5)", !TxnLogger::validateGroupName(" hello"));
-		
-		// No leading dots.
-		ensure("(16)", !TxnLogger::validateGroupName(".foo"));
+		// The empty string not allowed.
+		ensure("(1)", !TxnLogger::groupNameIsSane(""));
 		
 		// Disallowed characters.
-		const char *disallowedChars[] = { "\r", "\n", "@", "%", "$",
-			"~", "/", "\\", "{", "}", "?", "!" };
+		const char *disallowedChars[] = { "\r", "\n", "@", "$",
+			"~", "/", "\\", "{", "}", "?", "!", ".", " " };
 		for (unsigned int i = 0; i < sizeof(disallowedChars) / sizeof(char *); i++) {
-			ensure("(6)", !TxnLogger::validateGroupName(disallowedChars[i]));
+			ensure(string("'") + disallowedChars[i] + "' is disallowed",
+				!TxnLogger::groupNameIsSane(disallowedChars[i]));
 		}
 		
-		ensure("(10)", TxnLogger::validateGroupName("hello"));
-		ensure("(11)", TxnLogger::validateGroupName("hello world"));
-		ensure("(12)", TxnLogger::validateGroupName("foobar"));
-		ensure("(13)", TxnLogger::validateGroupName("Sumiyoshi Kanako"));
-		ensure("(14)", TxnLogger::validateGroupName("lAJ83.kj 1ke-J8si3fKJe_83jr"));
-		ensure("(15)", TxnLogger::validateGroupName("webapp [2.0] (production mode)"));
+		ensure("(10)", TxnLogger::groupNameIsSane("hello"));
+		ensure("(11)", TxnLogger::groupNameIsSane("UPPERCaSE"));
+		ensure("(12)", TxnLogger::groupNameIsSane("foobar"));
+		ensure("(13)", TxnLogger::groupNameIsSane("SumiyoshiKanako"));
 	}
 	
 	TEST_METHOD(9) {
 		// Test group name sanitization.
 		ensure_equals(TxnLogger::sanitizeGroupName("hello"), "hello");
-		ensure_equals(TxnLogger::sanitizeGroupName("hello@world"), "hello-world");
-		ensure_equals(TxnLogger::sanitizeGroupName("hello@world%%$.com"), "hello-world---.com");
+		ensure_equals(TxnLogger::sanitizeGroupName("hello@world"), "hello%40world");
+		ensure_equals(TxnLogger::sanitizeGroupName(".hello world"), "%2ehello%20world");
+		ensure_equals(TxnLogger::sanitizeGroupName("hello%20world"), "hello%2520world");
+		ensure_equals(TxnLogger::sanitizeGroupName("hello@world%%$.com"), "hello%40world%25%25%24%2ecom");
 	}
 }
