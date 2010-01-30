@@ -32,6 +32,7 @@
 #include <oxt/system_calls.hpp>
 
 #include "StaticString.h"
+#include "Utils.h"
 #include "Exceptions.h"
 
 
@@ -101,6 +102,12 @@ public:
 		char buf[size];
 		generateBytes(buf, size);
 		return string(buf, size);
+	}
+	
+	string generateHexString(unsigned int size) {
+		char buf[size];
+		generateBytes(buf, size);
+		return toHex(StaticString(buf, size));
 	}
 	
 	int generateInt() {

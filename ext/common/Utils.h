@@ -200,12 +200,15 @@ FileType getFileType(const StaticString &filename, CachedFileStat *cstat = 0,
  *              process's owner as the file owner.
  * @param group The desired file group. Specify GROUP_NOT_GIVEN if you want to use the current
  *              process's group as the file group.
+ * @param overwrite Whether to overwrite the file if it exists. If set to false
+ *                  and the file exists then nothing will happen.
  * @throws FileSystemException Something went wrong.
  * @ingroup Support
  */
 void createFile(const string &filename, const StaticString &contents,
                 mode_t permissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,
-                uid_t owner = USER_NOT_GIVEN, gid_t group = GROUP_NOT_GIVEN);
+                uid_t owner = USER_NOT_GIVEN, gid_t group = GROUP_NOT_GIVEN,
+                bool overwrite = true);
 
 /**
  * Find the location of the Passenger spawn server script.
@@ -435,14 +438,6 @@ bool verifyWSGIDir(const string &dir, CachedFileStat *cstat = 0,
                    unsigned int throttleRate = 0);
 
 /**
- * Converts an application root to an analytics group name, suitable for use
- * in TxnLogger::newTransaction().
- *
- * @ingroup Support
- */
-string appRootToAnalyticsGroupName(const StaticString &appRoot);
-
-/**
  * Generate a secure, random token of the <tt>size</tt> bytes and put
  * the result into <tt>buf</tt>.
  *
@@ -482,6 +477,12 @@ string fillInMiddle(unsigned int max, const string &prefix, const string &middle
  * Convert the given binary data to hexadecimal.
  */
 string toHex(const StaticString &data);
+
+/**
+ * Convert the given binary data to hexadecimal. This form accepts an
+ * output buffer which must be at least data.size() * 2 bytes large.
+ */
+void toHex(const StaticString &data, char *output);
 
 /**
  * Convert a signal number to its associated name.

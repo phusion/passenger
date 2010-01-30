@@ -103,12 +103,6 @@ struct PoolOptions {
 	string appGroupName;
 	
 	/**
-	 * The group name used for analytics (transaction logging), or empty if
-	 * analytics is disabled. Must pass TxnLogger::validateGroupName().
-	 */
-	string analyticsGroupName;
-	
-	/**
 	 * The idle timeout, in seconds, of Rails framework spawners.
 	 * A timeout of 0 means that the framework spawner should never idle timeout. A timeout
 	 * of -1 means that the default timeout value should be used.
@@ -243,7 +237,6 @@ struct PoolOptions {
 		const string &spawnMethod    = "smart-lv2",
 		const string &appType        = "rails",
 		string appGroupName          = "",
-		string analyticsGroupName    = "",
 		long frameworkSpawnerTimeout = -1,
 		long appSpawnerTimeout       = -1,
 		unsigned long maxRequests    = 0,
@@ -261,7 +254,6 @@ struct PoolOptions {
 		this->spawnMethod             = spawnMethod;
 		this->appType                 = appType;
 		this->appGroupName            = appGroupName;
-		this->analyticsGroupName      = analyticsGroupName;
 		this->frameworkSpawnerTimeout = frameworkSpawnerTimeout;
 		this->appSpawnerTimeout       = appSpawnerTimeout;
 		this->maxRequests             = maxRequests;
@@ -307,7 +299,6 @@ struct PoolOptions {
 		spawnMethod      = vec[startIndex + offset];                 offset += 2;
 		appType          = vec[startIndex + offset];                 offset += 2;
 		appGroupName     = vec[startIndex + offset];                 offset += 2;
-		analyticsGroupName = vec[startIndex + offset];               offset += 2;
 		frameworkSpawnerTimeout = atol(vec[startIndex + offset]);    offset += 2;
 		appSpawnerTimeout       = atol(vec[startIndex + offset]);    offset += 2;
 		maxRequests      = atol(vec[startIndex + offset]);           offset += 2;
@@ -339,8 +330,8 @@ struct PoolOptions {
 	 * @throws Anything thrown by environmentVariables->getItems().
 	 */
 	void toVector(vector<string> &vec, bool storeEnvVars = true) const {
-		if (vec.capacity() < vec.size() + 42) {
-			vec.reserve(vec.size() + 42);
+		if (vec.capacity() < vec.size() + 40) {
+			vec.reserve(vec.size() + 40);
 		}
 		appendKeyValue (vec, "app_root",           appRoot);
 		appendKeyValue4(vec, "lower_privilege",    lowerPrivilege);
@@ -349,7 +340,6 @@ struct PoolOptions {
 		appendKeyValue (vec, "spawn_method",       spawnMethod);
 		appendKeyValue (vec, "app_type",           appType);
 		appendKeyValue (vec, "app_group_name",     getAppGroupName());
-		appendKeyValue (vec, "analytics_group_name",      analyticsGroupName);
 		appendKeyValue2(vec, "framework_spawner_timeout", frameworkSpawnerTimeout);
 		appendKeyValue2(vec, "app_spawner_timeout",       appSpawnerTimeout);
 		appendKeyValue3(vec, "max_requests",       maxRequests);

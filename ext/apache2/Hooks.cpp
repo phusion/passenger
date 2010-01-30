@@ -594,7 +594,6 @@ private:
 					config->getSpawnMethodString(),
 					mapper.getApplicationTypeString(),
 					"",
-					"",
 					config->frameworkSpawnerTimeout,
 					config->appSpawnerTimeout,
 					config->getMaxRequests(),

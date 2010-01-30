@@ -137,12 +137,18 @@ getFileType(const StaticString &filename, CachedFileStat *cstat, unsigned int th
 }
 
 void
-createFile(const string &filename, const StaticString &contents, mode_t permissions, uid_t owner, gid_t group) {
+createFile(const string &filename, const StaticString &contents, mode_t permissions, uid_t owner,
+	gid_t group, bool overwrite)
+{
 	FileDescriptor fd;
-	int ret, e;
+	int ret, e, options;
 	
+	options = O_WRONLY | O_CREAT | O_TRUNC;
+	if (!overwrite) {
+		options |= O_EXCL;
+	}
 	do {
-		fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, permissions);
+		fd = open(filename.c_str(), options, permissions);
 	} while (fd == -1 && errno == EINTR);
 	if (fd != -1) {
 		FileGuard guard(filename);
@@ -185,8 +191,10 @@ createFile(const string &filename, const StaticString &contents, mode_t permissi
 		guard.commit();
 	} else {
 		e = errno;
-		throw FileSystemException("Cannot create file " + filename,
-			e, filename);
+		if (overwrite || e != EEXIST) {
+			throw FileSystemException("Cannot create file " + filename,
+				e, filename);
+		}
 	}
 }
 
@@ -620,17 +628,6 @@ verifyWSGIDir(const string &dir, CachedFileStat *cstat, unsigned int throttleRat
 	return fileExists(temp.c_str(), cstat, throttleRate);
 }
 
-string
-appRootToAnalyticsGroupName(const StaticString &appRoot) {
-	string baseName = extractBaseName(appRoot);
-	if (baseName == "current") {
-		string dir = extractDirName(appRoot);
-		return extractBaseName(dir);
-	} else {
-		return baseName;
-	}
-}
-
 void
 generateSecureToken(void *buf, unsigned int size) {
 	FILE *f;
@@ -670,18 +667,24 @@ fillInMiddle(unsigned int max, const string &prefix, const string &middle, const
 
 string
 toHex(const StaticString &data) {
-	static const char chars[] = {
+	string result(data.size() * 2, '\0');
+	toHex(data, (char *) result.data());
+	return result;
+}
+
+void
+toHex(const StaticString &data, char *output) {
+	static const char hex_chars[] = {
 		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 		'a', 'b', 'c', 'd', 'e', 'f'
 	};
-	string result(data.size() * 2, '\0');
+	const char *data_buf = data.c_str();
 	string::size_type i;
 	
 	for (i = 0; i < data.size(); i++) {
-		result[i * 2] = chars[(unsigned char) data.at(i) / 16];
-		result[i * 2 + 1] = chars[(unsigned char) data.at(i) % 16];
+		output[i * 2] = hex_chars[(unsigned char) data_buf[i] / 16];
+		output[i * 2 + 1] = hex_chars[(unsigned char) data_buf[i] % 16];
 	}
-	return result;
 }
 
 string

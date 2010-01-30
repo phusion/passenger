@@ -50,7 +50,9 @@
 #ifndef md5_INCLUDED
 #  define md5_INCLUDED
 
+#include <string>
 #include <boost/cstdint.hpp>
+#include "StaticString.h"
 
 /*
  * This package supports both compile-time and run-time determination of CPU
@@ -82,6 +84,9 @@ void md5_append(md5_state_t *pms, const md5_byte_t *data, int nbytes);
 
 /* Finish the message and return the digest. */
 void md5_finish(md5_state_t *pms, md5_byte_t digest[16]);
+
+/* Convenience method for directly converting data into a hexadecimal MD5 string. */
+std::string md5_hex(const StaticString &input);
 
 } // namespace Passenger
 

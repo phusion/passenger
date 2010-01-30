@@ -54,6 +54,7 @@
 #include "md5.h"
 #include <string.h>
 #include <boost/detail/endian.hpp>
+#include "Utils.h"
 
 namespace Passenger {
 
@@ -387,6 +388,24 @@ md5_finish(md5_state_t *pms, md5_byte_t digest[16])
     md5_append(pms, data, 8);
     for (i = 0; i < 16; ++i)
 	digest[i] = (md5_byte_t)(pms->abcd[i >> 2] >> ((i & 3) << 3));
+}
+
+static const char hex_chars[] = {
+	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+	'a', 'b', 'c', 'd', 'e', 'f'
+};
+
+std::string
+md5_hex(const StaticString &input)
+{
+    md5_state_t pms;
+    md5_byte_t digest[16];
+
+    md5_init(&pms);
+    md5_append(&pms, (const md5_byte_t *) input.data(), input.size());
+    md5_finish(&pms, digest);
+
+    return toHex(StaticString((const char *) digest, 16));
 }
 
 } // namespace Passenger

@@ -445,12 +445,8 @@ private:
 			}
 			if (appGroupName.empty()) {
 				options.appGroupName = options.appRoot;
-				options.analyticsGroupName = TxnLogger::sanitizeGroupName(
-					appRootToAnalyticsGroupName(options.appRoot));
 			} else {
 				options.appGroupName = appGroupName;
-				options.analyticsGroupName = TxnLogger::sanitizeGroupName(
-					appGroupName);
 			}
 			options.useGlobalQueue = parser.getHeader("PASSENGER_USE_GLOBAL_QUEUE") == "true";
 			options.environment    = parser.getHeader("PASSENGER_ENVIRONMENT");
@@ -467,7 +463,7 @@ private:
 			
 			TxnLogPtr log;
 			if (enableAnalytics) {
-				log = txnLogger->newTransaction(options.analyticsGroupName);
+				log = txnLogger->newTransaction(options.getAppGroupName());
 			} else {
 				log.reset(new TxnLog());
 			}

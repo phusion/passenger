@@ -69,7 +69,7 @@ public:
 	                            const vector<string> &args)
 	{
 		if (args[0] == "open log file") {
-			string sanitizedGroupName = args[1];
+			string groupName = args[1];
 			unsigned long long timestamp = atoll(args[2].c_str());
 			if (timestamp > SystemTime::getUsec()) {
 				commonContext.channel.write("error",
@@ -77,10 +77,12 @@ public:
 				return true;
 			}
 			
+			string groupDir;
 			string filename;
 			try {
+				groupDir = TxnLogger::determineGroupDir(dir, groupName);
 				filename = TxnLogger::determineLogFilename(dir,
-					sanitizedGroupName, timestamp);
+					groupName, timestamp);
 			} catch (const ArgumentException &e) {
 				commonContext.channel.write("error", e.what(), NULL);
 				return true;
@@ -90,8 +92,8 @@ public:
 			int ret;
 			
 			try {
-				// TODO: fix permissions
-				makeDirTree(extractDirName(filename), dirPermissions, USER_NOT_GIVEN, gid);
+				makeDirTree(extractDirName(filename), dirPermissions,
+					USER_NOT_GIVEN, gid);
 			} catch (const IOException &e) {
 				string message = "Cannot create directory " + extractDirName(filename) +
 					": " + e.what();
@@ -101,6 +103,16 @@ public:
 				string message = "Cannot create directory " + extractDirName(filename) +
 					": " + e.what();
 				commonContext.channel.write("error", message.c_str(), NULL);
+				return true;
+			}
+			
+			try {
+				createFile(groupDir + "/group_name.txt", groupName,
+					S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,
+					USER_NOT_GIVEN, GROUP_NOT_GIVEN,
+					false);
+			} catch (const FileSystemException &e) {
+				commonContext.channel.write("error", e.what(), NULL);
 				return true;
 			}
 			

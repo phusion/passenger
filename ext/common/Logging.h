@@ -46,6 +46,7 @@
 #include "MessageClient.h"
 #include "StaticString.h"
 #include "Exceptions.h"
+#include "md5.h"
 #include "Utils.h"
 
 
@@ -148,7 +149,7 @@ private:
 	
 	FileDescriptor handle;
 	string groupName;
-	string id;
+	string txnId;
 	
 	/**
 	 * @throws SystemException
@@ -168,14 +169,14 @@ private:
 	}
 	
 	/**
-	 * Buffer must be at least id.size() + 1 + INT64_STR_BUFSIZE + 1 bytes.
+	 * Buffer must be at least txnId.size() + 1 + INT64_STR_BUFSIZE + 1 bytes.
 	 */
-	char *insertIdAndTimestamp(char *buffer) {
+	char *insertTxnIdAndTimestamp(char *buffer) {
 		int size;
 		
 		// "txn-id-here"
-		memcpy(buffer, id.c_str(), id.size());
-		buffer += id.size();
+		memcpy(buffer, txnId.c_str(), txnId.size());
+		buffer += txnId.size();
 		
 		// "txn-id-here "
 		*buffer = ' ';
@@ -198,10 +199,10 @@ private:
 public:
 	TxnLog() { }
 	
-	TxnLog(const FileDescriptor &handle, const string &sanitizedGroupName, const string &id) {
+	TxnLog(const FileDescriptor &handle, const string &groupName, const string &txnId) {
 		this->handle    = handle;
-		this->groupName = sanitizedGroupName;
-		this->id        = id;
+		this->groupName = groupName;
+		this->txnId     = txnId;
 		message("ATTACH");
 	}
 	
@@ -214,11 +215,11 @@ public:
 	void message(const StaticString &text) {
 		if (handle != -1) {
 			// We want: "txn-id-here 123456 log message here\n"
-			char data[id.size() + 1 + INT64_STR_BUFSIZE + 1 + text.size() + 1];
+			char data[txnId.size() + 1 + INT64_STR_BUFSIZE + 1 + text.size() + 1];
 			char *end;
 			
 			// "txn-id-here 123456 "
-			end = insertIdAndTimestamp(data);
+			end = insertTxnIdAndTimestamp(data);
 			
 			// "txn-id-here 123456 log message here"
 			memcpy(end, text.c_str(), text.size());
@@ -235,12 +236,12 @@ public:
 	void abort(const StaticString &text) {
 		if (handle != -1) {
 			// We want: "txn-id-here 123456 ABORT: log message here\n"
-			char data[id.size() + 1 + INT64_STR_BUFSIZE + 1 +
+			char data[txnId.size() + 1 + INT64_STR_BUFSIZE + 1 +
 				(sizeof("ABORT: ") - 1) + text.size() + 1];
 			char *end;
 			
 			// "txn-id-here 123456 "
-			end = insertIdAndTimestamp(data);
+			end = insertTxnIdAndTimestamp(data);
 			
 			// "txn-id-here 123456 ABORT: "
 			memcpy(end, "ABORT: ", sizeof("ABORT: ") - 1);
@@ -258,11 +259,10 @@ public:
 		return handle == -1;
 	}
 	
-	string getId() const {
-		return id;
+	string getTxnId() const {
+		return txnId;
 	}
 	
-	/** Guaranteed to pass TxnLogger::groupNameIsSane(). */
 	string getGroupName() const {
 		return groupName;
 	}
@@ -344,8 +344,8 @@ private:
 	boost::mutex lock;
 	Cache fileHandleCache;
 	
-	FileDescriptor openLogFile(const StaticString &sanitizedGroupName, unsigned long long timestamp) {
-		string logFile = determineLogFilename(dir, sanitizedGroupName, timestamp);
+	FileDescriptor openLogFile(const StaticString &groupName, unsigned long long timestamp) {
+		string logFile = determineLogFilename(dir, groupName, timestamp);
 		Cache::iterator it;
 		lock_guard<boost::mutex> l(lock);
 		
@@ -375,8 +375,10 @@ private:
 			vector<string> args;
 			
 			client.connect(socketFilename, username, password);
-			client.write("open log file", sanitizedGroupName.c_str(),
-				toString(timestamp).c_str(), NULL);
+			client.write("open log file",
+				groupName.c_str(),
+				toString(timestamp).c_str(),
+				NULL);
 			if (!client.read(args)) {
 				// TODO: retry in a short while because the watchdog may restart
 				// the logging server
@@ -394,25 +396,13 @@ private:
 		return it->second.fd;
 	}
 	
-	unsigned long long extractTimestamp(const string &id) const {
-		const char *timestampBegin = strchr(id.c_str(), '-');
+	unsigned long long extractTimestamp(const string &txnId) const {
+		const char *timestampBegin = strchr(txnId.c_str(), '-');
 		if (timestampBegin != NULL) {
 			return atoll(timestampBegin + 1);
 		} else {
 			return 0;
 		}
-	}
-	
-	static bool saneGroupNameCharacter(char c) {
-		/* Don't allow any other characters; the Rails router
-		 * has problems with generating RESTful paths where
-		 * ID contains a dot. There might also be other
-		 * characters that can cause problems.
-		 */
-		return (c >= 'a' && c <= 'z')
-			|| (c >= 'A' && c <= 'Z')
-			|| (c >= '0' && c <= '9')
-			|| c == '_' || c == '-' || c == '%';
 	}
 	
 public:
@@ -425,98 +415,84 @@ public:
 		this->password       = password;
 	}
 	
-	static bool groupNameIsSane(const StaticString &groupName) {
-		if (groupName.empty()) {
+	static bool validateGroupId(const StaticString &groupId) {
+		if (groupId.empty()) {
 			return false;
 		}
-		
-		string::size_type i = 0;
+		string::size_type i;
 		bool result = true;
-		while (i < groupName.size() && result) {
-			result = result && saneGroupNameCharacter(groupName[i]);
-			i++;
+		for (i = 0; i < groupId.size() && result; i++) {
+			char c = groupId[i];
+			result = result && (
+				(c >= '0' && c <= '9') ||
+				(c >= 'a' && c <= 'f') ||
+				(c >= 'A' && c <= 'F')
+			);
 		}
 		return result;
 	}
 	
-	static string sanitizeGroupName(const string &groupName) {
-		// URL escaped result cannot possibly be larger than this:
-		char result[groupName.size() * 3];
-		char *end = result;
-		string::size_type i;
-		static const unsigned char hex_chars[] = {
-			'0', '1', '2', '3', '4', '5', '6', '7',
-			'8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
-		};
+	static string determineGroupDir(const string &dir, const StaticString &groupName) {
+		string result = dir;
+		result.append("/1/");
 		
-		for (i = 0; i < groupName.size(); i++) {
-			unsigned char c = (unsigned char) groupName[i];
-			
-			if (saneGroupNameCharacter(c) && c != '%') {
-				*end = c;
-				end++;
-			} else {
-				end[0] = '%';
-				end[1] = hex_chars[c / 16];
-				end[2] = hex_chars[c % 16];
-				end += 3;
-			}
-		}
+		md5_state_t state;
+		md5_byte_t  digest[16];
+		char        groupId[32];
 		
-		return string(result, end - result);
+		md5_init(&state);
+		md5_append(&state, (const md5_byte_t *) groupName.data(), groupName.size());
+		md5_finish(&state, digest);
+		toHex(StaticString((const char *) digest, 16), groupId);
+		result.append(groupId, 32);
+		
+		return result;
 	}
 	
-	static string determineLogFilename(const string &dir,
-		const StaticString &sanitizedGroupName, unsigned long long timestamp)
+	static string determineLogFilename(const string &dir, const StaticString &groupName,
+		unsigned long long timestamp)
 	{
 		struct tm tm;
 		time_t time_value;
-		string filename = dir + "/1/";
 		char dateName[14];
-		
-		if (!groupNameIsSane(sanitizedGroupName)) {
-			TRACE_POINT();
-			throw ArgumentException("Unsanitized analytics group name '" +
-				sanitizedGroupName + "'");
-		}
 		
 		time_value = timestamp / 1000000;
 		localtime_r(&time_value, &tm);
-		// Index log on the filesystem by its group name and begin time.
 		strftime(dateName, sizeof(dateName), "%G/%m/%d/%H", &tm);
-		filename.append(sanitizedGroupName.data(), sanitizedGroupName.size());
+		
+		string filename = determineGroupDir(dir, groupName);
 		filename.append(1, '/');
 		filename.append(dateName);
 		filename.append("/web_txns.txt");
 		return filename;
 	}
 	
-	TxnLogPtr newTransaction(const string &sanitizedGroupName) {
-		if (dir.empty() || sanitizedGroupName.empty()) {
+	TxnLogPtr newTransaction(const string &groupName) {
+		if (dir.empty()) {
 			return ptr(new TxnLog());
 		} else {
 			unsigned long long timestamp = SystemTime::getUsec();
-			string id = toHex(randomGenerator.generateByteString(4));
-			id.append("-");
-			id.append(toString(timestamp));
-			return ptr(new TxnLog(openLogFile(sanitizedGroupName, timestamp),
-				sanitizedGroupName, id));
+			string txnId = randomGenerator.generateHexString(4);
+			txnId.append("-");
+			txnId.append(toString(timestamp));
+			return ptr(new TxnLog(openLogFile(groupName, timestamp),
+				groupName, txnId));
 		}
 	}
 	
-	TxnLogPtr continueTransaction(const string &sanitizedGroupName, const string &id) {
-		if (dir.empty() || sanitizedGroupName.empty()) {
+	TxnLogPtr continueTransaction(const string &groupName, const string &txnId) {
+		if (dir.empty()) {
 			return ptr(new TxnLog());
 		} else {
 			unsigned long long timestamp;
 			
-			timestamp = extractTimestamp(id);
+			timestamp = extractTimestamp(txnId);
 			if (timestamp == 0) {
 				TRACE_POINT();
-				throw ArgumentException("Invalid transaction ID '" + id + "'");
+				throw ArgumentException("Invalid transaction ID '" + txnId + "'");
 			}
-			return ptr(new TxnLog(openLogFile(sanitizedGroupName, timestamp),
-				sanitizedGroupName, id));
+			return ptr(new TxnLog(openLogFile(groupName, timestamp),
+				groupName, txnId));
 		}
 	}
 	
