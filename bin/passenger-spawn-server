@@ -40,6 +40,10 @@ begin
 	begin
 		socket_filename = owner_socket.readline.strip
 		socket_password = owner_socket.readline.strip
+		generation_path = owner_socket.readline.strip
+		logging_agent_address = owner_socket.readline.strip
+		logging_agent_username = owner_socket.readline.strip
+		logging_agent_password_base64 = owner_socket.readline.strip
 	rescue EOFError
 		exit
 	end
@@ -72,10 +76,19 @@ begin
 	if defined?(PhusionPassenger::NativeSupport)
 		PhusionPassenger::NativeSupport.disable_stdio_buffering
 	end
-	PhusionPassenger::Utils.passenger_tmpdir = ARGV[0]
+	PhusionPassenger::Utils.passenger_tmpdir = generation_path
+	if logging_agent_address.empty?
+		options = {}
+	else
+		options = {
+			"logging_agent_address" => logging_agent_address,
+			"logging_agent_username" => logging_agent_username,
+			"logging_agent_password_base64" => logging_agent_password_base64
+		}
+	end
 	
 	require 'phusion_passenger/spawn_manager'
-	spawn_manager = PhusionPassenger::SpawnManager.new
+	spawn_manager = PhusionPassenger::SpawnManager.new(options)
 	spawn_manager.start_synchronously(socket_filename, socket_password, server_socket, owner_socket)
 	spawn_manager.cleanup
 rescue => e

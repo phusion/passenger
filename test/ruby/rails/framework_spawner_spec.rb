@@ -30,7 +30,7 @@ describe Railz::FrameworkSpawner do
 			
 			framework_version = AppProcess.detect_framework_version(stub.app_root)
 			spawner = Railz::ApplicationSpawner.new(
-				:version => framework_version,
+				"framework_version" => framework_version,
 				"app_root" => stub.app_root)
 			spawner.start
 			spawner
@@ -40,7 +40,7 @@ describe Railz::FrameworkSpawner do
 	def spawn_stub_application(stub, extra_options = {})
 		framework_version = AppProcess.detect_framework_version(stub.app_root)
 		default_options = {
-			:version      => framework_version,
+			"framework_version" => framework_version,
 			"app_root"    => stub.app_root,
 			"lowest_user" => CONFIG['lowest_user']
 		}
@@ -67,7 +67,8 @@ describe Railz::FrameworkSpawner do
 	end
 	
 	def load_nonexistant_framework(options = {})
-		spawner = Railz::FrameworkSpawner.new(options.merge(:version => "1.9.827"))
+		spawner = Railz::FrameworkSpawner.new(options.merge(
+			"framework_version" => "1.9.827"))
 		begin
 			spawner.start
 		ensure

@@ -379,8 +379,6 @@ const char *getSystemTempDir();
  * If 'path' already exists, then nothing will happen.
  *
  * @param mode A mode string, as supported by parseModeString().
- * @throws IOException Something went wrong.
- * @throws SystemException Something went wrong.
  * @throws FileSystemException Something went wrong.
  * @throws InvalidModeStringException The mode string cannot be parsed.
  */

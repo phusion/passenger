@@ -259,12 +259,12 @@ public:
 		return handle == -1;
 	}
 	
-	string getTxnId() const {
-		return txnId;
-	}
-	
 	string getGroupName() const {
 		return groupName;
+	}
+	
+	string getTxnId() const {
+		return txnId;
 	}
 };
 
@@ -345,7 +345,7 @@ private:
 	Cache fileHandleCache;
 	
 	FileDescriptor openLogFile(const StaticString &groupName, unsigned long long timestamp) {
-		string logFile = determineLogFilename(dir, groupName, timestamp);
+		string logFile = determineLogFilename(dir, groupName, "web", timestamp);
 		Cache::iterator it;
 		lock_guard<boost::mutex> l(lock);
 		
@@ -378,14 +378,15 @@ private:
 			client.write("open log file",
 				groupName.c_str(),
 				toString(timestamp).c_str(),
+				"web",
 				NULL);
 			if (!client.read(args)) {
 				// TODO: retry in a short while because the watchdog may restart
 				// the logging server
-				throw IOException("The logging server unexpectedly closed the connection.");
+				throw IOException("The logging agent unexpectedly closed the connection.");
 			}
 			if (args[0] == "error") {
-				throw IOException("The logging server could not open the log file: " + args[1]);
+				throw IOException("The logging agent could not open the log file: " + args[1]);
 			}
 			fileHandle.fd = client.readFileDescriptor();
 			fileHandle.lastUsed = SystemTime::get();
@@ -415,55 +416,55 @@ public:
 		this->password       = password;
 	}
 	
-	static bool validateGroupId(const StaticString &groupId) {
-		if (groupId.empty()) {
-			return false;
-		}
-		string::size_type i;
-		bool result = true;
-		for (i = 0; i < groupId.size() && result; i++) {
-			char c = groupId[i];
-			result = result && (
-				(c >= '0' && c <= '9') ||
-				(c >= 'a' && c <= 'f') ||
-				(c >= 'A' && c <= 'F')
-			);
-		}
+	static string determineGroupDir(const string &dir, const StaticString &groupName) {
+		string result = dir;
+		appendVersionAndGroupId(result, groupName);
 		return result;
 	}
 	
-	static string determineGroupDir(const string &dir, const StaticString &groupName) {
-		string result = dir;
-		result.append("/1/");
-		
+	static void appendVersionAndGroupId(string &output, const StaticString &groupName) {
 		md5_state_t state;
 		md5_byte_t  digest[16];
 		char        groupId[32];
 		
+		if (output.capacity() < 3 + 32) {
+			output.reserve(3 + 32);
+		}
+		output.append("/1/", 3);
 		md5_init(&state);
 		md5_append(&state, (const md5_byte_t *) groupName.data(), groupName.size());
 		md5_finish(&state, digest);
 		toHex(StaticString((const char *) digest, 16), groupId);
-		result.append(groupId, 32);
-		
-		return result;
+		output.append(groupId, 32);
 	}
 	
 	static string determineLogFilename(const string &dir, const StaticString &groupName,
-		unsigned long long timestamp)
+		const StaticString &category, unsigned long long timestamp)
 	{
 		struct tm tm;
 		time_t time_value;
-		char dateName[14];
+		char time_str[14];
 		
 		time_value = timestamp / 1000000;
 		localtime_r(&time_value, &tm);
-		strftime(dateName, sizeof(dateName), "%G/%m/%d/%H", &tm);
+		strftime(time_str, sizeof(time_str), "%Y/%m/%d/%H", &tm);
 		
-		string filename = determineGroupDir(dir, groupName);
+		string filename;
+		filename.reserve(dir.size()
+			+ (3 + 32)           // version and group ID
+			+ 1                  // "/"
+			+ category.size()
+			+ 1                  // "/"
+			+ sizeof(time_str)   // including null terminator, which we use as space for "/"
+			+ sizeof("log.txt")
+		);
+		filename.append(dir);
+		appendVersionAndGroupId(filename, groupName);
 		filename.append(1, '/');
-		filename.append(dateName);
-		filename.append("/web_txns.txt");
+		filename.append(category.c_str(), category.size());
+		filename.append(1, '/');
+		filename.append(time_str);
+		filename.append("/log.txt");
 		return filename;
 	}
 	
@@ -481,7 +482,7 @@ public:
 	}
 	
 	TxnLogPtr continueTransaction(const string &groupName, const string &txnId) {
-		if (dir.empty()) {
+		if (dir.empty() || groupName.empty() || txnId.empty()) {
 			return ptr(new TxnLog());
 		} else {
 			unsigned long long timestamp;

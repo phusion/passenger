@@ -737,8 +737,11 @@ public:
 	Pool(const string &spawnServerCommand,
 	     const ServerInstanceDir::GenerationPtr &generation,
 	     const AccountsDatabasePtr &accountsDatabase = AccountsDatabasePtr(),
-	     const string &rubyCommand = "ruby")
-	   : data(new SharedData()),
+	     const string &rubyCommand = "ruby",
+	     const string &loggingAgentAddress = "",
+	     const string &loggingAgentUsername = "",
+	     const string &loggingAgentPassword = ""
+	) : data(new SharedData()),
 		cstat(DEFAULT_MAX_POOL_SIZE),
 		lock(data->lock),
 		activeOrMaxChanged(data->activeOrMaxChanged),
@@ -751,7 +754,8 @@ public:
 	{
 		TRACE_POINT();
 		this->spawnManager = ptr(new SpawnManager(spawnServerCommand, generation,
-			accountsDatabase, rubyCommand));
+			accountsDatabase, rubyCommand, loggingAgentAddress,
+			loggingAgentUsername, loggingAgentPassword));
 		initialize();
 	}
 	

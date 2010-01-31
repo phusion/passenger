@@ -198,7 +198,7 @@ public:
 		TRACE_POINT();
 		vector<string> args;
 		string messageSocketPassword;
-		string loggingSocketPassword;
+		string loggingAgentPassword;
 		
 		setLogLevel(logLevel);
 		this->feedbackFd  = feedbackFd;
@@ -212,7 +212,7 @@ public:
 			throw IOException("Unexpected input message '" + args[0] + "'");
 		}
 		messageSocketPassword = Base64::decode(args[2]);
-		loggingSocketPassword = Base64::decode(args[3]);
+		loggingAgentPassword  = Base64::decode(args[3]);
 		
 		generation        = serverInstanceDir.getGeneration(generationNumber);
 		accountsDatabase  = AccountsDatabase::createDefault(generation, userSwitching, defaultUser);
@@ -230,11 +230,13 @@ public:
 		UPDATE_TRACE_POINT();
 		txnLogger = ptr(new TxnLogger(analyticsLogDir,
 			generation->getPath() + "/logging.socket",
-			"logging", loggingSocketPassword));
+			"logging", loggingAgentPassword));
 		
 		pool = ptr(new ApplicationPool::Pool(
 			findSpawnServer(passengerRoot.c_str()), generation,
-			accountsDatabase, rubyCommand
+			accountsDatabase, rubyCommand,
+			generation->getPath() + "/logging.socket",
+			"logging", loggingAgentPassword
 		));
 		pool->setMax(maxPoolSize);
 		pool->setMaxPerApp(maxInstancesPerApp);

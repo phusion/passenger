@@ -294,9 +294,9 @@ class MessageChannel
 	#
 	# Might raise SystemCallError, IOError or SocketError when something
 	# goes wrong.
-	def recv_io
-		write("pass IO")
-		return @io.recv_io
+	def recv_io(klass = IO, negotiate = true)
+		write("pass IO") if negotiate
+		return @io.recv_io(klass)
 	end
 	
 	# Send an IO object (a file descriptor) over the channel. The other

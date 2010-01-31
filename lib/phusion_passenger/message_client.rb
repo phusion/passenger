@@ -103,6 +103,10 @@ class MessageClient
 		@channel.write_scalar(*args)
 	end
 	
+	def recv_io(klass = IO, negotiate = true)
+		return @channel.recv_io(klass, negotiate)
+	end
+	
 	def check_security_response
 		result = @channel.read
 		if result.nil?

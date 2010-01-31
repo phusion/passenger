@@ -27,6 +27,7 @@ require 'fcntl'
 require 'phusion_passenger'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/message_client'
+require 'phusion_passenger/analytics_logger'
 require 'phusion_passenger/utils'
 require 'phusion_passenger/utils/unseekable_socket'
 require 'phusion_passenger/native_support'
@@ -173,6 +174,7 @@ class AbstractRequestHandler
 		@server_sockets[:http] = [@http_socket_address, 'tcp', @http_socket]
 		
 		@owner_pipe = owner_pipe
+		@options = options
 		@previous_signal_handlers = {}
 		@main_loop_generation  = 0
 		@main_loop_thread_lock = Mutex.new
@@ -477,7 +479,18 @@ private
 		if socket_wrapper.source_of_exception?(e)
 			print_exception("Passenger RequestHandler's client socket", e)
 		else
-			raise
+			if analytics_logger && headers && headers["PASSENGER_TXN_ID"]
+				log = analytics_logger.continue_transaction(
+					headers["PASSENGER_GROUP_NAME"],
+					headers["PASSENGER_TXN_ID"],
+					:exceptions, true)
+				begin
+					log.message(e)
+				ensure
+					log.close
+				end
+			end
+			raise e
 		end
 	ensure
 		# The 'close_write' here prevents forked child
@@ -585,6 +598,20 @@ private
 	
 	def process_ping(env, input, output)
 		output.write("pong")
+	end
+	
+	def analytics_logger
+		if defined?(@analytics_logger)
+			return @analytics_logger
+		elsif @options["logging_agent_address"]
+			@analytics_logger = AnalyticsLogger.new(
+				@options["logging_agent_address"],
+				@options["logging_agent_username"],
+				@options["logging_agent_password_base64"].unpack('m').first)
+		else
+			@analytics_logger = nil
+		end
+		return @analytics_logger
 	end
 	
 	def self.determine_passenger_header

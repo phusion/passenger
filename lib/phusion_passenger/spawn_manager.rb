@@ -59,8 +59,9 @@ module PhusionPassenger
 class SpawnManager < AbstractServer
 	include Utils
 	
-	def initialize
+	def initialize(options = {})
 		super("", "")
+		@options = options
 		@spawners = AbstractServerCollection.new
 		define_message_handler(:spawn_application, :handle_spawn_application)
 		define_message_handler(:reload, :handle_reload)
@@ -260,16 +261,15 @@ private
 			end
 			if framework_version.nil? || framework_version == :vendor
 				key = "app:#{app_group_name}"
-				create_spawner = proc { Railz::ApplicationSpawner.new(options) }
+				create_spawner = proc do
+					Railz::ApplicationSpawner.new(@options.merge(options))
+				end
 				spawner_timeout = options["app_spawner_timeout"]
 			else
 				key = "version:#{framework_version}"
 				create_spawner = proc do
-					framework_options = { :version => framework_version }
-					if options.has_key?(:print_framework_loading_exceptions)
-						framework_options[:print_framework_loading_exceptions] = options[:print_framework_loading_exceptions]
-					end
-					Railz::FrameworkSpawner.new(framework_options)
+					options["framework_version"] = framework_version
+					Railz::FrameworkSpawner.new(@options.merge(options))
 				end
 				spawner_timeout = options["framework_spawner_timeout"]
 			end
@@ -291,7 +291,8 @@ private
 				end
 			end
 		else
-			return Railz::ApplicationSpawner.spawn_application(options)
+			return Railz::ApplicationSpawner.spawn_application(
+				@options.merge(options))
 		end
 	end
 	
@@ -308,7 +309,8 @@ private
 				key = "app:#{app_group_name}"
 				spawner = @spawners.lookup_or_add(key) do
 					spawner_timeout = options["app_spawner_timeout"]
-					spawner = Rack::ApplicationSpawner.new(options)
+					spawner = Rack::ApplicationSpawner.new(
+						@options.merge(options))
 					if spawner_timeout != -1
 						spawner.max_idle_time = spawner_timeout
 					end
@@ -323,7 +325,8 @@ private
 				end
 			end
 		else
-			return Rack::ApplicationSpawner.spawn_application(options)
+			return Rack::ApplicationSpawner.spawn_application(
+				@options.merge(options))
 		end
 	end
 	

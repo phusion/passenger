@@ -49,7 +49,7 @@ static string  analyticsLogPermissions;
 
 static ServerInstanceDirPtr serverInstanceDir;
 static ServerInstanceDir::GenerationPtr generation;
-static string loggingSocketPassword;
+static string loggingAgentPassword;
 static RandomGenerator randomGenerator;
 static EventFd errorEvent;
 
@@ -522,7 +522,7 @@ protected:
 		channel.write("passwords",
 			Base64::encode(requestSocketPassword).c_str(),
 			Base64::encode(messageSocketPassword).c_str(),
-			Base64::encode(loggingSocketPassword).c_str(),
+			Base64::encode(loggingAgentPassword).c_str(),
 			NULL);
 	}
 	
@@ -586,8 +586,8 @@ protected:
 	
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
 		MessageChannel channel(fd);
-		channel.write("logging socket password",
-			Base64::encode(loggingSocketPassword).c_str(),
+		channel.write("logging agent password",
+			Base64::encode(loggingAgentPassword).c_str(),
 			NULL);
 	}
 	
@@ -606,7 +606,7 @@ public:
 	
 	virtual void sendStartupInfo(MessageChannel &channel) {
 		channel.write("LoggingServer info",
-			Base64::encode(loggingSocketPassword).c_str(),
+			Base64::encode(loggingAgentPassword).c_str(),
 			NULL);
 	}
 };
@@ -848,7 +848,7 @@ main(int argc, char *argv[]) {
 		maxInstancesPerAppString = toString(maxInstancesPerApp);
 		poolIdleTimeString = toString(poolIdleTime);
 		
-		loggingSocketPassword = randomGenerator.generateByteString(32);
+		loggingAgentPassword = randomGenerator.generateByteString(32);
 		
 		HelperServerWatcher helperServerWatcher;
 		LoggingAgentWatcher loggingAgentWatcher;

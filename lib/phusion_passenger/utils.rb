@@ -527,6 +527,9 @@ protected
 		options["lower_privilege"]           = to_boolean(options["lower_privilege"])
 		options["framework_spawner_timeout"] = options["framework_spawner_timeout"].to_i
 		options["app_spawner_timeout"]       = options["app_spawner_timeout"].to_i
+		if options.has_key?("print_framework_loading_exceptions")
+			options["print_framework_loading_exceptions"] = to_boolean(options["print_framework_loading_exceptions"])
+		end
 		# Force this to be a boolean for easy use with Utils#unmarshal_and_raise_errors.
 		options["print_exceptions"]          = to_boolean(options["print_exceptions"])
 		return options

@@ -55,7 +55,7 @@ class FrameworkSpawner < AbstractServer
 	# Creates a new instance of FrameworkSpawner.
 	#
 	# Extra supported options:
-	# - <tt>:version</tt>: The Ruby on Rails version to use. It is not checked whether
+	# - <tt>framework_version</tt>: The Ruby on Rails version to use. It is not checked whether
 	#   this version is actually installed.
 	#
 	# All other options will be passed on to ApplicationSpawner and RequestHandler.
@@ -67,17 +67,18 @@ class FrameworkSpawner < AbstractServer
 		if !options.respond_to?(:'[]')
 			raise ArgumentError, "The 'options' argument does not seem to be an options hash"
 		end
-		@version = options[:version]
-		if options.has_key?(:print_framework_loading_exceptions)
-			@print_framework_loading_exceptions = options[:print_framework_loading_exceptions]
+		@framework_version = options["framework_version"]
+		if options.has_key?("print_framework_loading_exceptions")
+			@print_framework_loading_exceptions = options["print_framework_loading_exceptions"]
 		else
 			@print_framework_loading_exceptions = true
 		end
-		if !@version
-			raise ArgumentError, "The 'version' option must specified"
+		if !@framework_version
+			raise ArgumentError, "The 'framework_version' option must specified"
 		end
 		
 		super()
+		@options = options
 		self.max_idle_time = DEFAULT_FRAMEWORK_SPAWNER_MAX_IDLE_TIME
 		define_message_handler(:spawn_application, :handle_spawn_application)
 		define_message_handler(:reload, :handle_reload)
@@ -101,9 +102,9 @@ class FrameworkSpawner < AbstractServer
 			if status == 'exception'
 				child_exception = unmarshal_exception(channel.read_scalar)
 				stop
-				message = "Could not load Ruby on Rails framework version #{@version}: " <<
+				message = "Could not load Ruby on Rails framework version #{@framework_version}: " <<
 					"#{child_exception.class} (#{child_exception.message})"
-				options = { :version => @version }
+				options = { :version => @framework_version }
 				if @print_framework_loading_exceptions
 					print_exception(self.class.to_s, child_exception)
 				end
@@ -208,7 +209,7 @@ protected
 
 	# Overrided method.
 	def initialize_server # :nodoc:
-		$0 = "Passenger FrameworkSpawner: #{@version}"
+		$0 = "Passenger FrameworkSpawner: #{@framework_version}"
 		@spawners = AbstractServerCollection.new
 		channel = MessageChannel.new(@owner_socket)
 		begin
@@ -229,7 +230,7 @@ protected
 private
 	def preload_rails
 		Object.const_set(:RAILS_ROOT, ".")
-		gem 'rails', "=#{@version}"
+		gem 'rails', "=#{@framework_version}"
 		require 'initializer'
 		require 'active_support'
 		require 'active_record'
@@ -260,7 +261,7 @@ private
 		@spawners.synchronize do
 			begin
 				spawner = @spawners.lookup_or_add(app_group_name) do
-					spawner = ApplicationSpawner.new(options)
+					spawner = ApplicationSpawner.new(@options.merge(options))
 					if options["app_spawner_timeout"] && options["app_spawner_timeout"] != -1
 						spawner.max_idle_time = options["app_spawner_timeout"]
 					end

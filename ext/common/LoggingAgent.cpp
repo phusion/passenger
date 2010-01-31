@@ -229,7 +229,7 @@ main(int argc, char *argv[]) {
 		
 		if (!feedbackChannel.read(args)) {
 			throw IOException("The watchdog unexpectedly closed the connection.");
-		} else if (args[0] != "logging socket password") {
+		} else if (args[0] != "logging agent password") {
 			throw IOException("Unexpected input message '" + args[0] + "'");
 		}
 		

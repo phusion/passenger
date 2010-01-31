@@ -99,6 +99,9 @@ private:
 	ServerInstanceDir::GenerationPtr generation;
 	AccountsDatabasePtr accountsDatabase;
 	string rubyCommand;
+	string loggingAgentAddress;
+	string loggingAgentUsername;
+	string loggingAgentPassword;
 	
 	boost::mutex lock;
 	RandomGenerator random;
@@ -201,7 +204,6 @@ private:
 			execlp(rubyCommand.c_str(),
 				rubyCommand.c_str(),
 				spawnServerCommand.c_str(),
-				generation->getPath().c_str(),
 				/* The spawn server changes the process names of the subservers
 				 * that it starts, for better usability. However, the process name length
 				 * (as shown by ps) is limited. Here, we try to expand that limit by
@@ -230,9 +232,14 @@ private:
 			syscalls::close(fds[1]);
 			serverSocket.close();
 			
+			// Pass arguments to spawn server.
 			MessageChannel ownerSocketChannel(ownerSocket);
 			ownerSocketChannel.writeRaw(socketFilename + "\n");
 			ownerSocketChannel.writeRaw(socketPassword + "\n");
+			ownerSocketChannel.writeRaw(generation->getPath() + "\n");
+			ownerSocketChannel.writeRaw(loggingAgentAddress + "\n");
+			ownerSocketChannel.writeRaw(loggingAgentUsername + "\n");
+			ownerSocketChannel.writeRaw(Base64::encode(loggingAgentPassword) + "\n");
 			
 			this->ownerSocket    = ownerSocket;
 			this->socketFilename = socketFilename;
@@ -508,12 +515,19 @@ public:
 	SpawnManager(const string &spawnServerCommand,
 	             const ServerInstanceDir::GenerationPtr &generation,
 	             const AccountsDatabasePtr &accountsDatabase = AccountsDatabasePtr(),
-	             const string &rubyCommand = "ruby") {
+	             const string &rubyCommand = "ruby",
+	             const string &loggingAgentAddress = "",
+	             const string &loggingAgentUsername = "",
+	             const string &loggingAgentPassword = ""
+	) {
 		TRACE_POINT();
 		this->spawnServerCommand = spawnServerCommand;
 		this->generation  = generation;
 		this->accountsDatabase = accountsDatabase;
 		this->rubyCommand = rubyCommand;
+		this->loggingAgentAddress = loggingAgentAddress;
+		this->loggingAgentUsername = loggingAgentUsername;
+		this->loggingAgentPassword = loggingAgentPassword;
 		pid = 0;
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;

@@ -461,9 +461,11 @@ private:
 			options.frameworkSpawnerTimeout = atol(parser.getHeader("PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME"));
 			options.appSpawnerTimeout       = atol(parser.getHeader("PASSENGER_APP_SPAWNER_IDLE_TIME"));
 			
+			UPDATE_TRACE_POINT();
 			TxnLogPtr log;
 			if (enableAnalytics) {
 				log = txnLogger->newTransaction(options.getAppGroupName());
+				options.log = log;
 			} else {
 				log.reset(new TxnLog());
 			}
@@ -489,15 +491,40 @@ private:
 				
 				char headers[parser.getHeaderData().size() +
 					sizeof("PASSENGER_CONNECT_PASSWORD") +
-					session->getConnectPassword().size() + 1];
-				memcpy(headers, parser.getHeaderData().c_str(), parser.getHeaderData().size());
-				memcpy(headers + parser.getHeaderData().size(),
-					"PASSENGER_CONNECT_PASSWORD",
-					sizeof("PASSENGER_CONNECT_PASSWORD"));
-				memcpy(headers + parser.getHeaderData().size() + sizeof("PASSENGER_CONNECT_PASSWORD"),
-					session->getConnectPassword().c_str(),
+					session->getConnectPassword().size() + 1 +
+					sizeof("PASSENGER_GROUP_NAME") +
+					options.getAppGroupName().size() + 1 +
+					sizeof("PASSENGER_TXN_ID") +
+					log->getTxnId().size() + 1];
+				char *end = headers;
+				
+				memcpy(end, parser.getHeaderData().c_str(), parser.getHeaderData().size());
+				end += parser.getHeaderData().size();
+				
+				memcpy(end, "PASSENGER_CONNECT_PASSWORD", sizeof("PASSENGER_CONNECT_PASSWORD"));
+				end += sizeof("PASSENGER_CONNECT_PASSWORD");
+				
+				memcpy(end, session->getConnectPassword().c_str(),
 					session->getConnectPassword().size() + 1);
-				session->sendHeaders(headers, sizeof(headers));
+				end += session->getConnectPassword().size() + 1;
+				
+				if (enableAnalytics) {
+					memcpy(end, "PASSENGER_GROUP_NAME", sizeof("PASSENGER_GROUP_NAME"));
+					end += sizeof("PASSENGER_GROUP_NAME");
+					
+					memcpy(end, log->getGroupName().c_str(),
+						log->getGroupName().size() + 1);
+					end += log->getGroupName().size() + 1;
+					
+					memcpy(end, "PASSENGER_TXN_ID", sizeof("PASSENGER_TXN_ID"));
+					end += sizeof("PASSENGER_TXN_ID");
+					
+					memcpy(end, log->getTxnId().c_str(),
+						log->getTxnId().size() + 1);
+					end += log->getTxnId().size() + 1;
+				}
+				
+				session->sendHeaders(headers, end - headers);
 				
 				contentLength = atol(
 					parser.getHeader("CONTENT_LENGTH").c_str());
@@ -768,7 +795,7 @@ public:
 	{
 		vector<string> args;
 		string messageSocketPassword;
-		string loggingSocketPassword;
+		string loggingAgentPassword;
 		
 		TRACE_POINT();
 		this->feedbackFd    = feedbackFd;
@@ -786,7 +813,7 @@ public:
 		}
 		requestSocketPassword = Base64::decode(args[1]);
 		messageSocketPassword = Base64::decode(args[2]);
-		loggingSocketPassword = Base64::decode(args[3]);
+		loggingAgentPassword  = Base64::decode(args[3]);
 		generation = serverInstanceDir.getGeneration(generationNumber);
 		startListening();
 		accountsDatabase = AccountsDatabase::createDefault(generation, userSwitching, defaultUser);
@@ -800,11 +827,13 @@ public:
 		UPDATE_TRACE_POINT();
 		txnLogger = ptr(new TxnLogger(analyticsLogDir,
 			generation->getPath() + "/logging.socket",
-			"logging", loggingSocketPassword));
+			"logging", loggingAgentPassword));
 		
 		pool = ptr(new ApplicationPool::Pool(
 			findSpawnServer(passengerRoot.c_str()), generation,
-			accountsDatabase, rubyCommand
+			accountsDatabase, rubyCommand,
+			generation->getPath() + "/logging.socket",
+			"logging", loggingAgentPassword
 		));
 		pool->setMax(maxPoolSize);
 		pool->setMaxPerApp(maxInstancesPerApp);

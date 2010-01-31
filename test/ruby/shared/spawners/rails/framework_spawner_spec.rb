@@ -3,7 +3,7 @@ require File.expand_path(File.dirname(__FILE__) + '/../../../spec_helper')
 shared_examples_for "a Railz::FrameworkSpawner" do
 	it "raises FrameworkInitError if the framework could not be loaded" do
 		block = lambda do
-			load_nonexistant_framework(:print_framework_loading_exceptions => false).close
+			load_nonexistant_framework("print_framework_loading_exceptions" => false).close
 		end
 		block.should raise_error(FrameworkInitError)
 	end
