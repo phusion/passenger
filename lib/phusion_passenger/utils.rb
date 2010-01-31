@@ -219,6 +219,13 @@ protected
 	# an ApplicationSpawner that has preloaded the app code.
 	# +options+ are the spawn options that were passed.
 	def before_handling_requests(forked, options)
+		if defined?(ActionController)
+			require 'phusion_passenger/railz/analytics_logging'
+			if PhusionPassenger::Railz::AnalyticsLogging.installable?(options)
+				PhusionPassenger::Railz::AnalyticsLogging.install!(options)
+			end
+		end
+		
 		PhusionPassenger.call_event(:starting_worker_process, forked)
 		if options["pool_account_username"] && options["pool_account_password_base64"]
 			password = options["pool_account_password_base64"].unpack('m').first

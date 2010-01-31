@@ -485,7 +485,16 @@ private
 					headers["PASSENGER_TXN_ID"],
 					:exceptions, true)
 				begin
-					log.message(e)
+					message = e.message
+					message = e.to_s if message.empty?
+					message = [message].pack('m')
+					message.gsub!("\n", "")
+					backtrace_string = [e.backtrace.join("\n")].pack('m')
+					backtrace_string.gsub!("\n", "")
+					
+					log.message("Message: #{message}")
+					log.message("Class: #{e.class.name}")
+					log.message("Backtrace: #{backtrace_string}")
 				ensure
 					log.close
 				end
@@ -603,15 +612,10 @@ private
 	def analytics_logger
 		if defined?(@analytics_logger)
 			return @analytics_logger
-		elsif @options["logging_agent_address"]
-			@analytics_logger = AnalyticsLogger.new(
-				@options["logging_agent_address"],
-				@options["logging_agent_username"],
-				@options["logging_agent_password_base64"].unpack('m').first)
 		else
-			@analytics_logger = nil
+			@analytics_logger = AnalyticsLogger.new_from_options(@options)
+			return @analytics_logger
 		end
-		return @analytics_logger
 	end
 	
 	def self.determine_passenger_header
