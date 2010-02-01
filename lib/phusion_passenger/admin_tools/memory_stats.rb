@@ -34,6 +34,7 @@ class MemoryStats
 		attr_accessor :threads
 		attr_accessor :vm_size              # in KB
 		attr_accessor :rss                  # in KB
+		attr_accessor :cpu
 		attr_accessor :name
 		attr_accessor :private_dirty_rss    # in KB
 		
@@ -237,13 +238,13 @@ private
 		processes = []
 		case RUBY_PLATFORM
 		when /solaris/
-			list = `#{ps} -o pid,ppid,nlwp,vsz,rss,comm`.split("\n")
+			list = `#{ps} -o pid,ppid,nlwp,vsz,rss,%cpu,comm`.split("\n")
 			threads_known = true
 		when /darwin/
-			list = `#{ps} -w -o pid,ppid,vsz,rss,command`.split("\n")
+			list = `#{ps} -w -o pid,ppid,vsz,rss,%cpu,command`.split("\n")
 			threads_known = false
 		else
-			list = `#{ps} -w -o pid,ppid,nlwp,vsz,rss,command`.split("\n")
+			list = `#{ps} -w -o pid,ppid,nlwp,vsz,rss,%cpu,command`.split("\n")
 			threads_known = true
 		end
 		list.shift
@@ -253,9 +254,9 @@ private
 			
 			p = Process.new
 			if threads_known
-				p.pid, p.ppid, p.threads, p.vm_size, p.rss, p.name = line.split(/ +/, 6)
+				p.pid, p.ppid, p.threads, p.vm_size, p.rss, p.cpu, p.name = line.split(/ +/, 7)
 			else
-				p.pid, p.ppid, p.vm_size, p.rss, p.name = line.split(/ +/, 5)
+				p.pid, p.ppid, p.vm_size, p.rss, p.cpu, p.name = line.split(/ +/, 6)
 			end
 			p.name.sub!(/\Aruby: /, '')
 			p.name.sub!(/ \(ruby\)\Z/, '')
