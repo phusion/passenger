@@ -22,10 +22,13 @@
 #  THE SOFTWARE.
 
 require 'rbconfig'
+require 'phusion_passenger'
+require 'phusion_passenger/packaging'
 require 'phusion_passenger/platform_info'
 require 'phusion_passenger/platform_info/apache'
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/platform_info/linux'
+require 'phusion_passenger/platform_info/documentation_tools'
 
 module PhusionPassenger
 
@@ -104,6 +107,14 @@ module Dependencies # :nodoc: all
 	# Ruby interpreter.
 	def self.fastthread_required?
 		return (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby") && RUBY_VERSION < "1.8.7"
+	end
+	
+	# Returns whether asciidoc is required in order to be able to package all files
+	# in the packaging list.
+	def self.asciidoc_required?
+		return Packaging::ASCII_DOCS.any? do |fn|
+			!File.exist?("#{SOURCE_ROOT}/#{fn}")
+		end
 	end
 
 	GCC = Dependency.new do |dep|
@@ -522,6 +533,25 @@ module Dependencies # :nodoc: all
 			rescue LoadError
 				result.not_found
 			end
+		end
+	end
+	
+	AsciiDoc = Dependency.new do |dep|
+		dep.name = "Asciidoc"
+		dep.define_checker do |result|
+			if PlatformInfo.asciidoc.nil?
+				result.not_found
+			else
+				result.found(PlatformInfo.asciidoc)
+			end
+		end
+		if RUBY_PLATFORM =~ /darwin/
+			# Installing asciidoc with source-highlight is too much of a pain on OS X,
+			# so recommend Mizuho instead.
+			dep.website = "http://github.com/FooBarWidget/mizuho"
+			dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo.gem_command || "gem"} install mizuho</b>"
+		else
+			dep.website = "http://www.methods.co.nz/asciidoc/"
 		end
 	end
 end
