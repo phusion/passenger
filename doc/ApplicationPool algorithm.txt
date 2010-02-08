@@ -97,6 +97,9 @@ explicitly define some special types:
           for all process_info objects p that have once been in this.processes:
               p.detached
 
+  * environment (string): Does nothing. Data is stored in memory for analytics
+    purposes.
+
 - ProcessInfo
   A compound type (class) which contains a reference to an application process
   object, as well as various metadata, such as iterators for various linked
@@ -154,6 +157,8 @@ explicitly define some special types:
   * restart_dir (string) - The directory in which the algorithm should look for
     restart.txt and always_restart.txt. The existance and modification times of
     these files tell the algorithm whether an application should be restarted.
+  * environment (string) - The environment (RAILS_ENV/RACK_ENV) in which the app
+    should run.
 
 === Special functions
 
@@ -371,6 +376,7 @@ private function checkout_without_lock(app_root, options):
 		group.size = 1
 		group.max_requests = options.max_requests
 		group.min_processes = options.min_processes
+		group.environment = options.environment
 		groups[options.app_group_name] = group
 		iterator = group.processes.add_to_back(process_info)
 		process_info.iterator = iterator

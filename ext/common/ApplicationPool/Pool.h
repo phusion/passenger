@@ -125,6 +125,7 @@ private:
 		bool detached;
 		unsigned long maxRequests;
 		unsigned long minProcesses;
+		string environment;
 		
 		Group() {
 			size = 0;
@@ -676,6 +677,7 @@ private:
 				group->size = 1;
 				group->maxRequests = options.maxRequests;
 				group->minProcesses = options.minProcesses;
+				group->environment = options.environment;
 				groups[appGroupName] = ptr(group);
 				processes = &group->processes;
 				processes->push_back(processInfo);
@@ -933,6 +935,7 @@ public:
 			result << "<group>";
 			result << "<app_root>" << escapeForXml(group->appRoot) << "</app_root>";
 			result << "<name>" << escapeForXml(group->name) << "</name>";
+			result << "<environment>" << escapeForXml(group->environment) << "</environment>";
 			
 			result << "<processes>";
 			for (lit = processes->begin(); lit != processes->end(); lit++) {
