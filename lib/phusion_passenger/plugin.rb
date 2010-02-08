@@ -83,7 +83,9 @@ class Plugin
 	def call_hook(name, *args, &block)
 		if @instances
 			@instances.each do |instance|
-				instance.__send__(name.to_sym, *args, &block)
+				if instance.respond_to?(name.to_sym)
+					instance.__send__(name.to_sym, *args, &block)
+				end
 			end
 		end
 	end
