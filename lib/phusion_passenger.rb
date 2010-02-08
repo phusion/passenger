@@ -66,7 +66,10 @@ module PhusionPassenger
 		DOCDIR             = File.join(SOURCE_ROOT, "doc")
 	end
 	
-	LITE_INTERFACE_VERSION = 1
+	PREFERRED_NGINX_VERSION = '0.7.65'
+	PREFERRED_PCRE_VERSION  = '8.01'
+	
+	LITE_INTERFACE_VERSION  = 1
 	
 	if $LOAD_PATH.first != LIBDIR
 		$LOAD_PATH.unshift(LIBDIR)

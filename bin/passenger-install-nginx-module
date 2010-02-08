@@ -35,8 +35,6 @@ class Installer < PhusionPassenger::AbstractInstaller
 	include PhusionPassenger
 	include PhusionPassenger::PlatformInfo
 	
-	NGINX_VERSION = "0.7.64"
-	
 	def dependencies
 		result = [
 			Dependencies::GCC,
@@ -121,7 +119,7 @@ private
 	def should_we_download_and_install_nginx_automatically?
 		new_screen
 		render_template 'nginx/query_download_and_install',
-			:nginx_version => NGINX_VERSION
+			:nginx_version => PREFERRED_NGINX_VERSION
 		puts
 		
 		if @auto_download
@@ -150,8 +148,8 @@ private
 		new_screen
 		color_puts "<banner>PCRE (required by Nginx) not installed, downloading it...</banner>"
 		
-		basename = "pcre-8.00.tar.gz"
-		dirname = "pcre-8.00"
+		basename = "pcre-#{PREFERRED_PCRE_VERSION}.tar.gz"
+		dirname  = "pcre-#{PREFERRED_PCRE_VERSION}"
 		url = "ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/#{basename}"
 		File.unlink("/tmp/#{basename}") rescue nil
 		FileUtils.rm_rf("/tmp/#{dirname}")
@@ -182,16 +180,16 @@ private
 		new_screen
 		color_puts "<banner>Downloading Nginx...</banner>"
 		
-		basename = "nginx-#{NGINX_VERSION}.tar.gz"
+		basename = "nginx-#{PREFERRED_NGINX_VERSION}.tar.gz"
 		url = "http://sysoev.ru/nginx/#{basename}"
 		File.unlink("/tmp/#{basename}") rescue nil
-		FileUtils.rm_rf("/tmp/nginx-#{NGINX_VERSION}")
+		FileUtils.rm_rf("/tmp/nginx-#{PREFERRED_NGINX_VERSION}")
 		
 		if download(url, "/tmp/#{basename}")
 			Dir.chdir("/tmp") do
 				color_puts "<banner>Extracting Nginx source tarball...</banner>"
 				if sh("tar", "xzvf", basename)
-					return "/tmp/nginx-#{NGINX_VERSION}"
+					return "/tmp/nginx-#{PREFERRED_NGINX_VERSION}"
 				else
 					return nil
 				end
