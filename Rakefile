@@ -26,12 +26,14 @@ require 'rake/gempackagetask'
 require 'rake/extensions'
 require 'rake/cplusplus'
 require 'phusion_passenger'
+require 'phusion_passenger/packaging'
 require 'phusion_passenger/platform_info'
 require 'phusion_passenger/platform_info/operating_system'
 require 'phusion_passenger/platform_info/binary_compatibility'
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/platform_info/apache'
 require 'phusion_passenger/platform_info/compiler'
+require 'phusion_passenger/platform_info/documentation_tools'
 require "#{source_root}/config" if File.exist?("#{source_root}/config.rb")
 
 verbose true unless ENV['REALLY_QUIET']
@@ -769,53 +771,47 @@ end
 
 ##### Documentation
 
-subdir 'doc' do
-	ASCIIDOC = 'asciidoc'
-	ASCIIDOC_FLAGS = "-a toc -a numbered -a toclevels=3 -a icons"
-	ASCII_DOCS = ['Security of user switching support',
-		'Users guide Apache', 'Users guide Nginx',
-		'Architectural overview']
+ASCIIDOC_FLAGS = "-a toc -a numbered -a toclevels=3 -a icons"
+DOXYGEN = 'doxygen'
 
-	DOXYGEN = 'doxygen'
-	
-	desc "Generate all documentation"
-	task :doc => [:rdoc]
-	
-	if PlatformInfo.find_command(DOXYGEN)
-		task :doc => :doxygen
-	end
+desc "Generate all documentation"
+task :doc => [:rdoc]
 
-	task :doc => ASCII_DOCS.map{ |x| "#{x}.html" }
+if PlatformInfo.find_command(DOXYGEN)
+	task :doc => :doxygen
+end
 
-	ASCII_DOCS.each do |name|
-		file "#{name}.html" => ["#{name}.txt"] + Dir["users_guide_snippets/*"] do
-			if PlatformInfo.find_command(ASCIIDOC)
-		  		sh "#{ASCIIDOC} #{ASCIIDOC_FLAGS} '#{name}.txt'"
-			else
-				sh "echo 'asciidoc required to build docs' > '#{name}.html'"
-			end
+task :doc => Packaging::ASCII_DOCS
+
+Packaging::ASCII_DOCS.each do |target|
+	source = target.sub(/\.html$/, '.txt')
+	file target => [source] + Dir["users_guide_snippets/*"] do
+		if PlatformInfo.asciidoc
+	  		sh "#{PlatformInfo.asciidoc} #{ASCIIDOC_FLAGS} '#{source}'"
+		else
+			sh "echo 'asciidoc required to build docs' > '#{target}'"
 		end
 	end
-	
-	task :clobber => [:'doxygen:clobber'] do
-		sh "rm -f *.html"
-	end
-	
-	desc "Generate Doxygen C++ API documentation if necessary"
-	task :doxygen => ['cxxapi']
-	file 'cxxapi' => Dir['../ext/apache2/*.{h,c,cpp}'] do
-		sh "doxygen"
-	end
+end
 
-	desc "Force generation of Doxygen C++ API documentation"
-	task :'doxygen:force' do
-		sh "doxygen"
-	end
+task :clobber => [:'doxygen:clobber'] do
+	sh "rm -f *.html"
+end
 
-	desc "Remove generated Doxygen C++ API documentation"
-	task :'doxygen:clobber' do
-		sh "rm -rf cxxapi"
-	end
+desc "Generate Doxygen C++ API documentation if necessary"
+task :doxygen => ['doc/cxxapi']
+file 'doc/cxxapi' => Dir['ext/apache2/*.{h,c,cpp}'] do
+	sh "cd doc && doxygen"
+end
+
+desc "Force generation of Doxygen C++ API documentation"
+task :'doxygen:force' do
+	sh "cd doc && doxygen"
+end
+
+desc "Remove generated Doxygen C++ API documentation"
+task :'doxygen:clobber' do
+	sh "rm -rf doc/cxxapi"
 end
 
 Rake::RDocTask.new(:clobber_rdoc => "rdoc:clobber", :rerdoc => "rdoc:force") do |rd|
@@ -849,63 +845,7 @@ spec = Gem::Specification.new do |s|
 	s.add_dependency 'daemon_controller', '>= 0.2.5'
 	s.add_dependency 'file-tail'
 	s.add_dependency 'rack'
-	s.files = FileList[
-		'Rakefile',
-		'README',
-		'DEVELOPERS.TXT',
-		'PACKAGING.TXT',
-		'LICENSE',
-		'INSTALL',
-		'NEWS',
-		'lib/*.rb',
-		'lib/**/*.rb',
-		'lib/**/*.py',
-		'lib/phusion_passenger/templates/*',
-		'lib/phusion_passenger/templates/apache2/*',
-		'lib/phusion_passenger/templates/nginx/*',
-		'lib/phusion_passenger/templates/lite/*',
-		'lib/phusion_passenger/templates/lite_default_root/*',
-		'bin/*',
-		'doc/*',
-		
-		# If you're running 'rake package' for the first time, then these
-		# files don't exist yet, and so won't be matched by the above glob.
-		# So we add these filenames manually.
-		'doc/Users guide Apache.html',
-		'doc/Users guide Nginx.html',
-		'doc/Security of user switching support.html',
-		
-		'doc/*/*',
-		'doc/*/*/*',
-		'doc/*/*/*/*',
-		'doc/*/*/*/*/*',
-		'doc/*/*/*/*/*/*',
-		'man/*',
-		'debian/*',
-		'ext/common/*.{cpp,c,h,hpp}',
-		'ext/common/ApplicationPool/*.h',
-		'ext/apache2/*.{cpp,h,c,TXT}',
-		'ext/nginx/*.{c,cpp,h}',
-		'ext/nginx/config',
-		'ext/boost/*.{hpp,TXT}',
-		'ext/boost/**/*.{hpp,cpp,pl,inl,ipp}',
-		'ext/google/*',
-		'ext/google/sparsehash/*',
-		'ext/oxt/*.hpp',
-		'ext/oxt/*.cpp',
-		'ext/oxt/detail/*.hpp',
-		'ext/phusion_passenger/*.{c,rb}',
-		'misc/*',
-		'misc/*/*',
-		'test/*.example',
-		'test/support/*.{cpp,h,rb}',
-		'test/tut/*',
-		'test/cxx/*.{cpp,h}',
-		'test/oxt/*.{cpp,hpp}',
-		'test/ruby/**/*',
-		'test/integration_tests/**/*',
-		'test/stub/**/*'
-	]
+	s.files = FileList[*PhusionPassenger::Packaging::GLOB]
 	s.executables = [
 		'passenger',
 		'passenger-spawn-server',
@@ -930,7 +870,7 @@ Rake::GemPackageTask.new(spec) do |pkg|
 	pkg.need_tar_gz = true
 end
 
-task 'package:filelist' do
+task 'package:filelist' => Packaging::ASCII_DOCS do
 	puts spec.files
 end
 
