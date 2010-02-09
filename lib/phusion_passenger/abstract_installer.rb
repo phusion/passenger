@@ -28,26 +28,46 @@ require 'phusion_passenger/platform_info'
 
 module PhusionPassenger
 
-# Abstract base class for installers. Used by passenger-install-apache2-module
-# and passenger-install-nginx-module.
+# Abstract base class for text mode installers. Used by
+# passenger-install-apache2-module and passenger-install-nginx-module.
+#
+# Subclasses must at least implement the #install! method which handles
+# the installation itself.
+#
+# Usage:
+#
+#   installer = ConcereteInstallerClass.new(options...)
+#   installer.start
 class AbstractInstaller
 	PASSENGER_WEBSITE = "http://www.modrails.com/"
 	PHUSION_WEBSITE = "www.phusion.nl"
 
+	# Create an AbstractInstaller. All options will be stored as instance
+	# variables, for example:
+	#
+	#   installer = AbstractInstaller.new(:foo => "bar")
+	#   installer.instance_variable_get(:"@foo")   # => "bar"
 	def initialize(options = {})
 		options.each_pair do |key, value|
 			instance_variable_set(:"@#{key}", value)
 		end
 	end
 	
+	# Start the installation by calling the #install! method.
 	def start
+		before_install
 		install!
 	ensure
-		reset_terminal_colors
+		after_install
 	end
 
 private
-	def reset_terminal_colors
+	def before_install
+		# Hook for subclasses.
+	end
+	
+	def after_install
+		# Reset terminal colors.
 		STDOUT.write("\e[0m")
 		STDOUT.flush
 	end
@@ -197,7 +217,7 @@ private
 		if PlatformInfo.find_command("wget")
 			return sh("wget", "-O", output, url)
 		else
-			return sh("curl", url, "-o", output)
+			return sh("curl", url, "-L", "-o", output)
 		end
 	end
 end
