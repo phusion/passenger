@@ -70,6 +70,7 @@ module PhusionPassenger
 	PREFERRED_PCRE_VERSION  = '8.01'
 	
 	LITE_INTERFACE_VERSION  = 1
+	LITE_BINARIES_URL_ROOT  = "http://lite-binaries.modrails.com"
 	
 	if $LOAD_PATH.first != LIBDIR
 		$LOAD_PATH.unshift(LIBDIR)
