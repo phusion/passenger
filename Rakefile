@@ -785,7 +785,7 @@ task :doc => Packaging::ASCII_DOCS
 
 Packaging::ASCII_DOCS.each do |target|
 	source = target.sub(/\.html$/, '.txt')
-	file target => [source] + Dir["users_guide_snippets/*"] do
+	file target => [source] + Dir["doc/users_guide_snippets/**/*"] do
 		if PlatformInfo.asciidoc
 	  		sh "#{PlatformInfo.asciidoc} #{ASCIIDOC_FLAGS} '#{source}'"
 		else

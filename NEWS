@@ -9,6 +9,7 @@ Release 2.9.1
  * 100% Ruby 1.9 support, passes entire unit test suite
  * [Nginx] passenger_set_cgi_param
  * [Nginx] passenger_app_rights
+ * [Nginx] Now installs Nginx 0.7.65 by default.
 
 
 Release 2.9.0

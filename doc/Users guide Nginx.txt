@@ -19,26 +19,30 @@ This guide assumes that the reader is somewhat familiar with Nginx and with
 using the commandline.
 
 
-== Supported operating systems ==
+== Support information ==
+
+=== Supported operating systems ===
 
 Phusion Passenger works on any POSIX-compliant operating system. In other
 words: practically any operating system on earth, except Microsoft Windows.
 
-Phusion Passenger for Nginx has been tested on:
-
-- Ubuntu Linux 8.04 (x86)
-- Gentoo Linux (AMD64)
-- MacOS X Leopard (x86)
-
-Other operating systems have not been tested, but Phusion Passenger will probably
-work fine on them. Please
+Phusion Passenger is confirmed on a large number of operating systems and Linux
+distributions, including, but not limited to, Ubuntu, Debian, CentOS/Fedora/RHEL,
+Gentoo, Mac OS X, FreeBSD and Solaris. Both 32-bit and 64-bit platforms are supported.
+Please
 link:http://code.google.com/p/phusion-passenger/issues/list[report a bug]
 or
-link:http://groups.google.com/group/phusion-passenger[join our discussion list]
-if it doesn't.
+link:http://groups.google.com/group/phusion-passenger[join our discussion forum]
+if it doesn't work on your POSIX-compliant operating system.
+
+=== Where to get support ===
+
+* link:http://code.google.com/p/phusion-passenger/issues/list[Issue tracker] - report
+  bugs here.
+* link:http://groups.google.com/group/phusion-passenger[Discussion forum] - post a
+  message here if you're experiencing problems.
 
 
-[[install_passenger]]
 == Installing Phusion Passenger ==
 
 === Overview ===
@@ -162,6 +166,113 @@ If you installed Phusion Passenger via a source tarball, then 'path-to-passenger
 is the directory which contains the Phusion Passenger source code. So if you
 extracted the Phusion Passenger source code to '/opt/passenger-x.x.x', then you'll
 have to specify `--add-module=/opt/passenger-x.x.x/ext/nginx`.
+
+After having installed Nginx with Phusion Passenger support, you must paste the following
+line into your Nginx configuration file:
+
+------------------------------------------
+passenger_root /path-to-passenger-root;
+------------------------------------------
+
+After having done so, restart Nginx.
+
+=== Upgrading or downgrading Phusion Passenger or Nginx itself ===
+
+Whether you're upgrading/downgrading Phusion Passenger or Nginx itself (or perhaps both),
+Nginx will have to be recompiled and reinstalled. The procedure is exactly the same as
+a normal installation so just follow the instructions in section 2.3 or 2.4.
+
+When following the installation instructions, eventually `passenger-install-nginx-module`
+or this document will instruct you to copy & paste some settings into the Nginx
+configuration file; something that looks along the lines of:
+
+------------------------------------------
+passenger_root ...;
+passenger_ruby ...;
+------------------------------------------
+
+Because you already had Phusion Passenger installed, you already had similar settings
+in your Nginx configuration file, just with different values. *Replace* the old settings with
+the new ones that you are instructed to paste. It is important that the old settings are
+removed, otherwise Phusion Passenger may malfunction.
+
+When you're done, restart Nginx.
+
+=== Unloading (disabling) Phusion Passenger from Nginx without uninstalling it ===
+
+You can temporarily unload (disable) Phusion Passenger from Nginx, without
+uninstalling the Phusion Passenger files, so that Nginx behaves as if Phusion
+Passenger was never installed in the first place. This might be useful to you if,
+for example, you seem to be experiencing a problem caused by Phusion Passenger,
+but you want to make sure whether that's actually the case, without having
+to through the hassle of uninstalling Phusion Passenger completely. When disabled,
+Phusion Passenger will not occupy any memory or CPU or otherwise interfere with
+Nginx.
+
+To unload Phusion Passenger, edit your Nginx configuration file(s)
+and comment out all Phusion Passenger configuration directives.
+
+For example, if your configuration file looks like this...
+
+-----------------------------------
+...
+
+http {
+    passenger_root /somewhere/passenger-x.x.x;
+    passenger_ruby /usr/bin/ruby;
+    passenger_max_pool_size 10;
+    
+    gzip on;
+    
+    server {
+        server_name www.foo.com;
+        listen 80;
+        root /webapps/foo/public;
+        passenger_enabled on;
+        passenger_use_global_queue on;
+    }
+}
+-----------------------------------
+
+...then comment out the relevant directives, so that it looks like this:
+
+-----------------------------------
+...
+
+http {
+    # passenger_root /somewhere/passenger-x.x.x;
+    # passenger_ruby /usr/bin/ruby;
+    # passenger_max_pool_size 10;
+    
+    gzip on;
+    
+    server {
+        server_name www.foo.com;
+        listen 80;
+        root /webapps/foo/public;
+        # passenger_enabled on;
+        # passenger_use_global_queue on;
+    }
+}
+-----------------------------------
+
+After you've done this, save the file and restart Nginx.
+
+=== Uninstalling Phusion Passenger ===
+
+To uninstall Phusion Passenger, please first remove all Phusion Passenger
+configuration directives from your Nginx configuration file(s). After you've
+done this, you need to remove the Phusion Passenger files.
+
+- If you installed Phusion Passenger via a gem, then type `gem uninstall passenger`.
+  You might have to run this as root.
+- If you installed Phusion Passenger via a source tarball, then remove the directory
+  in which you placed the extracted Phusion Passenger files. This directory is the
+  same as the one pointed to the by 'PassengerRoot' configuration directive.
+
+After having done so, recompile and reinstall Nginx itself, this time without
+Phusion Passenger support, in order to purge any Phusion Passenger code from the
+Nginx binary.
 
 
 [[deploying_a_ror_app]]
@@ -914,6 +1025,49 @@ include::users_guide_snippets/analysis_and_system_maintenance_tools.txt[]
 == Tips ==
 
 include::users_guide_snippets/tips.txt[]
+
+
+== Under the hood ==
+Phusion Passenger hides a lot of complexity for the end user (i.e. the web server
+system administrator), but sometimes it is desirable to know what is going on.
+This section describes a few things that Phusion Passenger does under the hood.
+
+=== Page caching support ===
+include::users_guide_snippets/under_the_hood/page_caching_support.txt[]
+
+[[application_detection]]
+=== How Phusion Passenger detects whether a virtual host is a web application ===
+After you've read the deployment instructions you might wonder how Phusion Passenger
+knows that the server root points to a web application that Phusion Passenger is
+able to serve, and how it knows what kind of web application it is (e.g. Rails or Rack).
+
+Phusion Passenger checks whether the virtual host is a Rails application by checking
+whether the following file exists:
+
+------------------------------------------------
+dirname(DocumentRoot) + "/config/environment.rb"
+------------------------------------------------
+
+If you're not a programmer and don't understand the above pseudo-code snippet, it means
+that Phusion Passenger will:
+
+1. Extract the parent directory filename from the value of the ``root'' directive.
+2. Append the text "/config/environment.rb" to the result, and check whether the resulting
+   filename exists.
+
+So suppose that your server root is '/webapps/foo/public'. Phusion Passenger will check
+whether the file '/webapps/foo/config/environment.rb' exists.
+
+Note that Phusion Passenger for Nginx does *not* resolve any symlinks in the root path.
+So for example, suppose that your root points to '/home/www/example.com', which in
+turn is a symlink to '/webapps/example.com/public'. Phusion Passenger for Nginx will check for
+'/home/www/config/environment.rb', *not* '/webapps/example.com/config/environment.rb'.
+This file of course doesn't exist, and as a result Phusion Passenger will not activate
+itself for this virtual host, and you'll most likely see some output generated by the
+Nginx default directory handler such as a Forbidden error message.
+
+Detection of Rack applications happens through the same mechanism, exception that
+Phusion Passenger will look for 'config.ru' instead of 'config/environment.rb'.
 
 
 include::users_guide_snippets/appendix_a_about.txt[]
