@@ -1823,9 +1823,9 @@ for all Phusion Passenger hosts.
 VirtualDocumentRoot is not compatible with Phusion Passenger at the moment.
 
 
-== Analysis and system maintenance tools ==
+== Analysis and system maintenance ==
 
-include::users_guide_snippets/analysis_and_system_maintenance_tools.txt[]
+include::users_guide_snippets/analysis_and_system_maintenance.txt[]
 
 
 == Tips ==

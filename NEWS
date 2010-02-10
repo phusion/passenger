@@ -10,6 +10,7 @@ Release 2.9.1
  * [Nginx] passenger_set_cgi_param
  * [Nginx] passenger_app_rights
  * [Nginx] Now installs Nginx 0.7.65 by default.
+ * passenger-status -v displays individual processes' HTTP addresses.
 
 
 Release 2.9.0

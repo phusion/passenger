@@ -296,7 +296,9 @@ private:
 		int i, nServerSockets, ownerPipe;
 		Process::SocketInfoMap serverSockets;
 		string detachKey = Base64::encode(random.generateByteString(32));
-		string connectPassword = Base64::encode(random.generateByteString(32));
+		// The connect password must be a URL-friendly string because users will
+		// insert it in HTTP headers.
+		string connectPassword = Base64::encodeForUrl(random.generateByteString(32));
 		AccountPtr account;
 		function<void ()> destructionCallback;
 		
