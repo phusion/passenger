@@ -220,28 +220,34 @@ syscalls::socketpair(int d, int type, int protocol, int sv[2]) {
 ssize_t
 syscalls::recvmsg(int s, struct msghdr *msg, int flags) {
 	ssize_t ret;
-	CHECK_INTERRUPTION(
-		ret == -1,
-		#ifdef _AIX53
+	#ifdef _AIX53
+		CHECK_INTERRUPTION(
+			ret == -1,
 			ret = ::nrecvmsg(s, msg, flags)
-		#else
+		);
+	#else
+		CHECK_INTERRUPTION(
+			ret == -1,
 			ret = ::recvmsg(s, msg, flags)
-		#endif
-	);
+		);
+	#endif
 	return ret;
 }
 
 ssize_t
 syscalls::sendmsg(int s, const struct msghdr *msg, int flags) {
 	ssize_t ret;
-	CHECK_INTERRUPTION(
-		ret == -1,
-		#ifdef _AIX53
+	#ifdef _AIX53
+		CHECK_INTERRUPTION(
+			ret == -1,
 			ret = ::nsendmsg(s, msg, flags)
-		#else
+		);
+	#else
+		CHECK_INTERRUPTION(
+			ret == -1,
 			ret = ::sendmsg(s, msg, flags)
-		#endif
-	);
+		);
+	#endif
 	return ret;
 }
 
