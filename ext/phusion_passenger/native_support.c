@@ -850,11 +850,7 @@ fs_watcher_init(VALUE arg) {
 		
 		watcher->fds[i] = fd;
 		watcher->fds_len++;
-		if (S_ISDIR(buf.st_mode)) {
-			fflags = NOTE_WRITE | NOTE_RENAME | NOTE_DELETE | NOTE_REVOKE;
-		} else {
-			fflags = NOTE_RENAME | NOTE_DELETE | NOTE_REVOKE;
-		}
+		fflags = NOTE_WRITE | NOTE_RENAME | NOTE_DELETE | NOTE_REVOKE;
 		EV_SET(&events[i], fd, EVFILT_VNODE, EV_ADD | EV_ENABLE | EV_CLEAR,
 			fflags, 0, 0);
 	}
@@ -951,7 +947,7 @@ fs_watcher_wait_on_kqueue(void *arg) {
 	nevents = kevent(watcher->kq, NULL, 0, events, watcher->events_len, NULL);
 	if (nevents == -1) {
 		ret = write(watcher->notification_fd[1], "e", 1);
-	} else if (nevents == 1 && (
+	} else if (nevents >= 1 && (
 		   events[0].ident == (uintptr_t) watcher->termination_fd
 		|| events[0].ident == (uintptr_t) watcher->interruption_fd[0]
 	)) {
@@ -1082,7 +1078,7 @@ fs_watcher_wait_for_change(VALUE self) {
 		rb_raise(rb_eRuntimeError, "Unknown error: unexpected EOF");
 		return Qnil;
 	} else if (read_data.byte == 't') {
-		/* termination_fd became readable */
+		/* termination_fd or interruption_fd became readable */
 		return Qnil;
 	} else if (read_data.byte == 'f') {
 		/* a file or directory changed */
