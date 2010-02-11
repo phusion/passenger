@@ -37,6 +37,7 @@ module Utils
 #   or its access revoked. This will cause +true+ to be returned.
 # - +termination_pipe+ (as passed to the constructor) becomes readable.
 #   This will cause +nil+ to be returned.
+# - The thread is interrupted. This will cause +nil+ to be returned.
 # 
 # The constructor will attempt to stat and possible also open all specified
 # files/directories. If one of them cannot be statted or opened, then

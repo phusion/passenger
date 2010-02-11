@@ -736,14 +736,35 @@ typedef struct {
 	VALUE filenames;
 	VALUE termination_pipe;
 	
+	/* File descriptor of termination_pipe. */
+	int termination_fd;
+	
+	/* Whether something went wrong during initialization. */
 	int preparation_error;
+	
+	/* Information for kqueue. */
 	unsigned int events_len;
 	int *fds;
 	unsigned int fds_len;
 	int kq;
+	
+	/* When the watcher thread is done it'll write to this pipe
+	 * to signal the main (Ruby) thread.
+	 */
 	int notification_fd[2];
-	int termination_fd;
+	
+	/* When the main (Ruby) thread is interrupted it'll write to
+	 * this pipe to tell the watcher thread to exit.
+	 */
+	int interruption_fd[2];
 } FSWatcher;
+
+typedef struct {
+	int fd;
+	ssize_t ret;
+	char byte;
+	int error;
+} FSWatcherReadByteData;
 
 static void
 fs_watcher_real_close(FSWatcher *watcher) {
@@ -760,6 +781,14 @@ fs_watcher_real_close(FSWatcher *watcher) {
 	if (watcher->notification_fd[1] != -1) {
 		close(watcher->notification_fd[1]);
 		watcher->notification_fd[1] = -1;
+	}
+	if (watcher->interruption_fd[0] != -1) {
+		close(watcher->interruption_fd[0]);
+		watcher->interruption_fd[0] = -1;
+	}
+	if (watcher->interruption_fd[1] != -1) {
+		close(watcher->interruption_fd[1]);
+		watcher->interruption_fd[1] = -1;
 	}
 	if (watcher->fds != NULL) {
 		for (i = 0; i < watcher->fds_len; i++) {
@@ -791,7 +820,8 @@ fs_watcher_init(VALUE arg) {
 	
 	/* Open each file in the filenames list and add each one to the events array. */
 	
-	events = alloca((RARRAY_LEN(watcher->filenames) + 1) * sizeof(struct kevent));
+	/* +2 for the termination pipe and the interruption pipe. */
+	events = alloca((RARRAY_LEN(watcher->filenames) + 2) * sizeof(struct kevent));
 	watcher->fds = malloc(RARRAY_LEN(watcher->filenames) * sizeof(int));
 	if (watcher->fds == NULL) {
 		rb_raise(rb_eNoMemError, "Cannot allocate memory.");
@@ -831,9 +861,13 @@ fs_watcher_init(VALUE arg) {
 	
 	watcher->events_len = watcher->fds_len;
 	
-	/* Create a pipe for inter-thread communication. */
+	/* Create pipes for inter-thread communication. */
 	
 	if (pipe(watcher->notification_fd) == -1) {
+		rb_sys_fail("pipe()");
+		return Qnil;
+	}
+	if (pipe(watcher->interruption_fd) == -1) {
 		rb_sys_fail("pipe()");
 		return Qnil;
 	}
@@ -854,6 +888,9 @@ fs_watcher_init(VALUE arg) {
 		watcher->termination_fd = NUM2INT(filenum);
 		watcher->events_len++;
 	}
+	EV_SET(&events[watcher->events_len], watcher->interruption_fd[0],
+		EVFILT_READ, EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0, 0);
+	watcher->events_len++;
 	
 	if (kevent(watcher->kq, events, watcher->events_len, NULL, 0, NULL) == -1) {
 		rb_sys_fail("kevent()");
@@ -887,10 +924,12 @@ fs_watcher_new(VALUE klass, VALUE filenames, VALUE termination_pipe) {
 	watcher->klass = klass;
 	watcher->filenames = filenames;
 	watcher->termination_pipe = termination_pipe;
+	watcher->termination_fd = -1;
 	watcher->kq = -1;
 	watcher->notification_fd[0] = -1;
 	watcher->notification_fd[1] = -1;
-	watcher->termination_fd = -1;
+	watcher->interruption_fd[0] = -1;
+	watcher->interruption_fd[1] = -1;
 	
 	result = rb_protect(fs_watcher_init, (VALUE) watcher, &status);
 	if (status) {
@@ -912,7 +951,10 @@ fs_watcher_wait_on_kqueue(void *arg) {
 	nevents = kevent(watcher->kq, NULL, 0, events, watcher->events_len, NULL);
 	if (nevents == -1) {
 		ret = write(watcher->notification_fd[1], "e", 1);
-	} else if (nevents == 1 && events[0].ident == (uintptr_t) watcher->termination_fd) {
+	} else if (nevents == 1 && (
+		   events[0].ident == (uintptr_t) watcher->termination_fd
+		|| events[0].ident == (uintptr_t) watcher->interruption_fd[0]
+	)) {
 		ret = write(watcher->notification_fd[1], "t", 1);
 	} else {
 		ret = write(watcher->notification_fd[1], "f", 1);
@@ -925,12 +967,44 @@ fs_watcher_wait_on_kqueue(void *arg) {
 }
 
 static VALUE
+fs_watcher_wait_fd(VALUE _fd) {
+	int fd = (int) _fd;
+	rb_thread_wait_fd(fd);
+	return Qnil;
+}
+
+#ifndef TRAP_BEG
+	static VALUE
+	fs_watcher_read_byte_from_fd_wrapper(void *_arg) {
+		FSWatcherReadByteData *data = (FSWatcherReadByteData *) _arg;
+		data->ret = read(data->fd, &data->byte, 1);
+		data->error = errno;
+		return Qnil;
+	}
+#endif
+
+static VALUE
+fs_watcher_read_byte_from_fd(VALUE _arg) {
+	FSWatcherReadByteData *data = (FSWatcherReadByteData *) _arg;
+	#ifdef TRAP_BEG
+		TRAP_BEG;
+		data->ret = read(data->fd, &data->byte, 1);
+		TRAP_END;
+		data->error = errno;
+	#else
+		rb_thread_blocking_region(fs_watcher_read_byte_from_fd_wrapper,
+			data, RUBY_UBF_IO, 0);
+	#endif
+	return Qnil;
+}
+
+static VALUE
 fs_watcher_wait_for_change(VALUE self) {
 	FSWatcher *watcher;
 	pthread_t thr;
 	ssize_t ret;
-	int e;
-	char c;
+	int e, interrupted = 0;
+	FSWatcherReadByteData read_data;
 	
 	Data_Get_Struct(self, FSWatcher, watcher);
 	
@@ -940,8 +1014,9 @@ fs_watcher_wait_for_change(VALUE self) {
 	
 	/* Spawn a thread, and let the thread perform the blocking kqueue
 	 * wait. When kevent() returns the thread will write its status to the
-	 * pipe. In the mean time we let the Ruby interpreter wait on the other
-	 * side of the pipe for us so that we don't block Ruby threads.
+	 * notification pipe. In the mean time we let the Ruby interpreter wait
+	 * on the other side of the pipe for us so that we don't block Ruby
+	 * threads.
 	 */
 	
 	e = pthread_create(&thr, NULL, fs_watcher_wait_on_kqueue, watcher);
@@ -950,33 +1025,71 @@ fs_watcher_wait_for_change(VALUE self) {
 		rb_sys_fail("pthread_create()");
 		return Qnil;
 	}
-	/* We don't cleanup anything if we're interrupted, so don't use Thread#interrupt. */
-	rb_thread_wait_fd(watcher->notification_fd[0]);
+	
+	/* Note that rb_thread_wait() does not wait for the fd when the app
+	 * is single threaded, so we must join the thread after we've read
+	 * from the notification fd.
+	 */
+	rb_protect(fs_watcher_wait_fd, (VALUE) watcher->notification_fd[0], &interrupted);
+	if (interrupted) {
+		/* We got interrupted so tell the watcher thread to exit. */
+		ret = write(watcher->interruption_fd[1], "x", 1);
+		if (ret == -1) {
+			e = errno;
+			fs_watcher_real_close(watcher);
+			errno = e;
+			rb_sys_fail("write() to interruption pipe");
+			return Qnil;
+		}
+		pthread_join(thr, NULL);
+		
+		/* Now clean up stuff. */
+		fs_watcher_real_close(watcher);
+		rb_jump_tag(interrupted);
+		return Qnil;
+	}
+	
+	read_data.fd = watcher->notification_fd[0];
+	rb_protect(fs_watcher_read_byte_from_fd, (VALUE) &read_data, &interrupted);
+	if (interrupted) {
+		/* We got interrupted so tell the watcher thread to exit. */
+		ret = write(watcher->interruption_fd[1], "x", 1);
+		if (ret == -1) {
+			e = errno;
+			fs_watcher_real_close(watcher);
+			errno = e;
+			rb_sys_fail("write() to interruption pipe");
+			return Qnil;
+		}
+		pthread_join(thr, NULL);
+		
+		/* Now clean up stuff. */
+		fs_watcher_real_close(watcher);
+		rb_jump_tag(interrupted);
+		return Qnil;
+	}
+	
 	pthread_join(thr, NULL);
 	
-	ret = read(watcher->notification_fd[0], &c, 1);
-	if (ret == -1) {
-		e = errno;
+	if (read_data.ret == -1) {
 		fs_watcher_real_close(watcher);
-		errno = e;
+		errno = read_data.error;
 		rb_sys_fail("read()");
 		return Qnil;
-	} else if (ret == 0) {
-		e = errno;
+	} else if (read_data.ret == 0) {
 		fs_watcher_real_close(watcher);
-		errno = e;
+		errno = read_data.error;
 		rb_raise(rb_eRuntimeError, "Unknown error: unexpected EOF");
 		return Qnil;
-	} else if (c == 't') {
+	} else if (read_data.byte == 't') {
 		/* termination_fd became readable */
 		return Qnil;
-	} else if (c == 'f') {
+	} else if (read_data.byte == 'f') {
 		/* a file or directory changed */
 		return Qtrue;
 	} else {
-		e = errno;
 		fs_watcher_real_close(watcher);
-		errno = e;
+		errno = read_data.error;
 		rb_raise(rb_eRuntimeError, "Unknown error: unexpected notification data");
 		return Qnil;
 	}
