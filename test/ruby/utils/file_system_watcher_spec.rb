@@ -99,10 +99,17 @@ describe Utils::FileSystemWatcher do
 			result.should be_true
 		end
 		
-		specify "a watched file has been modified" do
+		specify "a watched file has been written to" do
 			File.touch("#{@tmpdir}/foo")
 			result = test_block(["#{@tmpdir}/foo"]) do
 				File.write("#{@tmpdir}/foo", "bar")
+			end
+		end
+		
+		specify "a watched file has been truncated" do
+			File.touch("#{@tmpdir}/foo")
+			result = test_block(["#{@tmpdir}/foo"]) do
+				File.open("#{@tmpdir}/foo", "w").close
 			end
 		end
 		

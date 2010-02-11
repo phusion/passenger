@@ -850,7 +850,7 @@ fs_watcher_init(VALUE arg) {
 		
 		watcher->fds[i] = fd;
 		watcher->fds_len++;
-		fflags = NOTE_WRITE | NOTE_RENAME | NOTE_DELETE | NOTE_REVOKE;
+		fflags = NOTE_WRITE | NOTE_EXTEND | NOTE_RENAME | NOTE_DELETE | NOTE_REVOKE;
 		EV_SET(&events[i], fd, EVFILT_VNODE, EV_ADD | EV_ENABLE | EV_CLEAR,
 			fflags, 0, 0);
 	}
