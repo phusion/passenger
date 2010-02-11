@@ -158,10 +158,14 @@ recv_fd(VALUE self, VALUE socket_fd) {
 	}
 	
 	control_header = CMSG_FIRSTHDR(&msg);
+	if (control_header == NULL) {
+		rb_raise(rb_eIOError, "No valid file descriptor received.");
+		return Qnil;
+	}
 	if (control_header->cmsg_len   != EXPECTED_CMSG_LEN
 	 || control_header->cmsg_level != SOL_SOCKET
 	 || control_header->cmsg_type  != SCM_RIGHTS) {
-		rb_sys_fail("No valid file descriptor received.");
+		rb_raise(rb_eIOError, "No valid file descriptor received.");
 		return Qnil;
 	}
 	#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)

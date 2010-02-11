@@ -319,12 +319,23 @@ public:
 	 * descriptor is a Unix socket.
 	 *
 	 * @param fileDescriptor The file descriptor to pass.
+	 * @param negotiate See Ruby's MessageChannel#send_io method's comments.
 	 * @throws SystemException Something went wrong during file descriptor passing.
 	 * @throws boost::thread_interrupted
 	 * @pre <tt>fileDescriptor >= 0</tt>
 	 * @see readFileDescriptor()
 	 */
-	void writeFileDescriptor(int fileDescriptor) {
+	void writeFileDescriptor(int fileDescriptor, bool negotiate = true) {
+		if (negotiate) {
+			vector<string> args;
+			
+			if (!read(args)) {
+				throw IOException("Unexpected end of stream encountered");
+			} else if (args.size() != 1 || args[0] != "pass IO") {
+				throw IOException("FD passing negotiation message expected.");
+			}
+		}
+		
 		struct msghdr msg;
 		struct iovec vec;
 		char dummy[1];
@@ -492,6 +503,7 @@ public:
 	 * Receive a file descriptor, which had been passed over the underlying
 	 * file descriptor.
 	 *
+	 * @param negotiate See Ruby's MessageChannel#send_io method's comments.
 	 * @return The passed file descriptor.
 	 * @throws SystemException If something went wrong during the
 	 *            receiving of a file descriptor. Perhaps the underlying
@@ -500,7 +512,11 @@ public:
 	 *            file descriptor.
 	 * @throws boost::thread_interrupted
 	 */
-	int readFileDescriptor() {
+	int readFileDescriptor(bool negotiate = true) {
+		if (negotiate) {
+			write("pass IO", NULL);
+		}
+		
 		struct msghdr msg;
 		struct iovec vec;
 		char dummy[1];
@@ -538,6 +554,9 @@ public:
 		}
 		
 		control_header = CMSG_FIRSTHDR(&msg);
+		if (control_header == NULL) {
+			throw IOException("No valid file descriptor received.");
+		}
 		if (control_header->cmsg_len   != EXPECTED_CMSG_LEN
 		 || control_header->cmsg_level != SOL_SOCKET
 		 || control_header->cmsg_type  != SCM_RIGHTS) {
