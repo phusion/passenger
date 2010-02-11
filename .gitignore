@@ -8,6 +8,7 @@ scgi_demo
 *.pyc
 *.a
 *.dSYM
+.DS_Store
 ext/apache2/*.la
 ext/apache2/*.lo
 ext/apache2/*.slo
