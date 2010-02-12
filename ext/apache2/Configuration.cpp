@@ -186,6 +186,7 @@ passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
 	ServerConfig *config = create_server_config_struct(p);
 	ServerConfig *base = (ServerConfig *) basev;
 	ServerConfig *add = (ServerConfig *) addv;
+	set<string>::const_iterator it;
 	
 	MERGE_STR_CONFIG(ruby);
 	MERGE_STR_CONFIG(root);
@@ -205,6 +206,10 @@ passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
 	MERGE_STR_CONFIG(analyticsLogUser);
 	MERGE_STR_CONFIG(analyticsLogGroup);
 	MERGE_STR_CONFIG(analyticsLogPermissions);
+	
+	for (it = add->prestartURLs.begin(); it != add->prestartURLs.end(); it++) {
+		base->prestartURLs.insert(*it);
+	}
 	return config;
 }
 
@@ -212,6 +217,7 @@ void
 passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 	ServerConfig *final = (ServerConfig *) passenger_config_create_server(pool, main_server);
 	server_rec *s;
+	set<string>::const_iterator it;
 	
 	#define MERGE_SERVER_STR_CONFIGS(field) \
 		final->field = (final->field != NULL) ? final->field : config->field
@@ -237,6 +243,10 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 		MERGE_SERVER_STR_CONFIGS(analyticsLogUser);
 		MERGE_SERVER_STR_CONFIGS(analyticsLogGroup);
 		MERGE_SERVER_STR_CONFIGS(analyticsLogPermissions);
+		
+		for (it = config->prestartURLs.begin(); it != config->prestartURLs.end(); it++) {
+			final->prestartURLs.insert(*it);
+		}
 	}
 	final->finalize();
 	for (s = main_server; s != NULL; s = s->next) {
@@ -486,6 +496,14 @@ DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_dir, analyticsLogDir
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_user, analyticsLogUser)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_group, analyticsLogGroup)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_permissions, analyticsLogPermissions)
+
+static const char *
+cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
+	ServerConfig *config = (ServerConfig *) ap_get_module_config(
+		cmd->server->module_config, &passenger_module);
+	config->prestartURLs.insert(arg);
+	return NULL;
+}
 
 
 /*************************************************
@@ -760,6 +778,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The permissions of analytics files."),
+	AP_INIT_TAKE1("PassengerPreStart",
+		(Take1Func) cmd_passenger_pre_start,
+		NULL,
+		RSRC_CONF,
+		"Prestart the given web applications during startup."),
 	
 	/*****************************/
 

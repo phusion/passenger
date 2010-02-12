@@ -13,6 +13,7 @@ Release 2.9.1
  * passenger-status -v displays individual processes' HTTP addresses.
  * Passenger Lite allows customization of domain names via passenger.conf.
  * Touches files in the server instance dir every 6 hours. Fixes bug #365.
+ * PassengerPreStart/passenger_pre_start, for prestarting apps.
 
 
 Release 2.9.0

@@ -54,6 +54,7 @@ module Packaging
 		'doc/**/*',
 		'man/*',
 		'debian/*',
+		'helper-scripts/*',
 		'ext/common/*.{cpp,c,h,hpp}',
 		'ext/common/ApplicationPool/*.h',
 		'ext/apache2/*.{cpp,h,c,TXT}',

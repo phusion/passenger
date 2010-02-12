@@ -50,6 +50,7 @@ static const uid_t USER_NOT_GIVEN = (uid_t) -1;
 static const gid_t GROUP_NOT_GIVEN = (gid_t) -1;
 
 typedef struct CachedFileStat CachedFileStat;
+class ResourceLocator;
 
 /** Enumeration which indicates what kind of file a file is. */
 typedef enum {
@@ -170,7 +171,7 @@ void split(const string &str, char sep, vector<string> &output);
  * @throws boost::thread_interrupted
  * @ingroup Support
  */
-bool fileExists(const char *filename, CachedFileStat *cstat = 0,
+bool fileExists(const StaticString &filename, CachedFileStat *cstat = 0,
                 unsigned int throttleRate = 0);
 
 /**
@@ -434,6 +435,8 @@ bool verifyRackDir(const string &dir, CachedFileStat *cstat = 0,
  */
 bool verifyWSGIDir(const string &dir, CachedFileStat *cstat = 0,
                    unsigned int throttleRate = 0);
+
+void prestartWebApps(const ResourceLocator &locator, const string &serializedprestartURLs);
 
 /**
  * Generate a secure, random token of the <tt>size</tt> bytes and put

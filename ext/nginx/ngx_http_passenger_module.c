@@ -215,6 +215,9 @@ static ngx_int_t
 start_helper_server(ngx_cycle_t *cycle) {
     ngx_core_conf_t *core_conf;
     ngx_int_t        ret, result;
+    ngx_uint_t       i;
+    ngx_str_t       *prestart_uris;
+    char           **prestart_uris_ary = NULL;
     u_char  filename[NGX_MAX_PATH], *last;
     char   *default_user = NULL;
     char   *passenger_root = NULL;
@@ -237,6 +240,19 @@ start_helper_server(ngx_cycle_t *cycle) {
     analytics_log_group = ngx_str_null_terminate(&passenger_main_conf.analytics_log_group);
     analytics_log_permissions = ngx_str_null_terminate(&passenger_main_conf.analytics_log_permissions);
     
+    prestart_uris = (ngx_str_t *) passenger_main_conf.prestart_uris->elts;
+    prestart_uris_ary = calloc(sizeof(char *), passenger_main_conf.prestart_uris->nelts);
+    for (i = 0; i < passenger_main_conf.prestart_uris->nelts; i++) {
+        prestart_uris_ary[i] = malloc(prestart_uris[i].len + 1);
+        if (prestart_uris_ary[i] == NULL) {
+            ngx_log_error(NGX_LOG_ALERT, cycle->log, ENOMEM, "Cannot allocate memory");
+            result = NGX_ERROR;
+            goto cleanup;
+        }
+        memcpy(prestart_uris_ary[i], prestart_uris[i].data, prestart_uris[i].len);
+        prestart_uris_ary[i][prestart_uris[i].len] = '\0';
+    }
+    
     ret = agents_starter_start(passenger_agents_starter,
         passenger_main_conf.log_level, getpid(),
         "", passenger_main_conf.user_switching,
@@ -246,6 +262,7 @@ start_helper_server(ngx_cycle_t *cycle) {
         passenger_main_conf.pool_idle_time,
         analytics_log_dir, analytics_log_user,
         analytics_log_group, analytics_log_permissions,
+        (const char **) prestart_uris_ary, passenger_main_conf.prestart_uris->nelts,
         starting_helper_server_after_fork,
         cycle,
         &error_message);
@@ -313,6 +330,12 @@ cleanup:
     free(analytics_log_group);
     free(analytics_log_permissions);
     free(error_message);
+    if (prestart_uris_ary != NULL) {
+        for (i = 0; i < passenger_main_conf.prestart_uris->nelts; i++) {
+            free(prestart_uris_ary[i]);
+        }
+        free(prestart_uris_ary);
+    }
     return result;
 }
 

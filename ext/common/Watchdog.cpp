@@ -46,6 +46,7 @@ static string  analyticsLogDir;
 static string  analyticsLogUser;
 static string  analyticsLogGroup;
 static string  analyticsLogPermissions;
+static string  serializedPrestartURLs;
 
 static ServerInstanceDirPtr serverInstanceDir;
 static ServerInstanceDir::GenerationPtr generation;
@@ -518,6 +519,7 @@ protected:
 			maxInstancesPerAppString.c_str(),
 			poolIdleTimeString.c_str(),
 			analyticsLogDir.c_str(),
+			serializedPrestartURLs.c_str(),
 			(char *) 0);
 	}
 	
@@ -675,7 +677,7 @@ private:
 					_exit(1);
 				}
 				
-				execlp("/bin/sh", "/bin/sh", "-c", "find . | xargs touch", NULL);
+				execlp("/bin/sh", "/bin/sh", "-c", "find . | xargs touch", (char *) 0);
 				e = errno;
 				fprintf(stderr, "Cannot execute 'find . | xargs touch': %s (%d)\n",
 					strerror(e), e);
@@ -906,6 +908,7 @@ main(int argc, char *argv[]) {
 	analyticsLogUser        = argv[16];
 	analyticsLogGroup       = argv[17];
 	analyticsLogPermissions = argv[18];
+	serializedPrestartURLs  = argv[19];
 	
 	/* Become the session leader so that Apache can't kill this
 	 * watchdog with killpg() during shutdown, and so that a

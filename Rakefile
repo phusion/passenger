@@ -196,11 +196,12 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 			Base64.h),
 		'md5.o' => %w(
 			md5.cpp
-			md5.h
-		),
+			md5.h),
 		'Utils.o' => %w(
 			Utils.cpp
-			Utils.h),
+			Utils.h
+			Base64.h
+			ResourceLocator.h),
 		'AccountsDatabase.o' => %w(
 			AccountsDatabase.cpp
 			AccountsDatabase.h
@@ -396,6 +397,7 @@ end
 		'ext/common/Logging.h',
 		'ext/common/SpawnManager.h',
 		'ext/common/Account.h',
+		'ext/common/ResourceLocator.h',
 		'ext/common/ApplicationPool/Interface.h',
 		'ext/common/ApplicationPool/Pool.h',
 		'ext/common/ApplicationPool/Server.h',
@@ -459,6 +461,7 @@ end
 		'ext/common/BacktracesServer.h',
 		'ext/common/SpawnManager.h',
 		'ext/common/Logging.h',
+		'ext/common/ResourceLocator.h',
 		'ext/common/ApplicationPool/Interface.h',
 		'ext/common/ApplicationPool/Pool.h',
 		'ext/common/ApplicationPool/Server.h'

@@ -52,6 +52,7 @@
 #include "MessageServer.h"
 #include "BacktracesServer.h"
 #include "FileDescriptor.h"
+#include "ResourceLocator.h"
 #include "Timer.h"
 #include "ServerInstanceDir.h"
 #include "Exceptions.h"
@@ -686,6 +687,8 @@ private:
 	ApplicationPool::Ptr pool;
 	AccountsDatabasePtr accountsDatabase;
 	MessageServerPtr messageServer;
+	ResourceLocator resourceLocator;
+	shared_ptr<oxt::thread> prestarterThread;
 	shared_ptr<oxt::thread> messageServerThread;
 	EventFd exitEvent;
 	
@@ -790,8 +793,9 @@ public:
 		bool userSwitching, const string &defaultUser, uid_t workerUid, gid_t workerGid,
 		const string &passengerRoot, const string &rubyCommand, unsigned int generationNumber,
 		unsigned int maxPoolSize, unsigned int maxInstancesPerApp, unsigned int poolIdleTime,
-		const string &analyticsLogDir)
-		: serverInstanceDir(webServerPid, tempDir, false)
+		const string &analyticsLogDir, const string &serializedPrestartURIs)
+		: serverInstanceDir(webServerPid, tempDir, false),
+		  resourceLocator(passengerRoot)
 	{
 		vector<string> args;
 		string messageSocketPassword;
@@ -848,6 +852,10 @@ public:
 			getRequestSocketFilename().c_str(),
 			messageServer->getSocketFilename().c_str(),
 			NULL);
+		
+		prestarterThread = ptr(new oxt::thread(
+			boost::bind(prestartWebApps, resourceLocator, serializedPrestartURIs)
+		));
 	}
 	
 	~Server() {
@@ -859,6 +867,7 @@ public:
 		unsigned int i = 0;
 		
 		P_DEBUG("Shutting down helper server...");
+		prestarterThread->interrupt_and_join();
 		if (messageServerThread != NULL) {
 			messageServerThread->interrupt_and_join();
 		}
@@ -969,6 +978,7 @@ main(int argc, char *argv[]) {
 		unsigned int maxInstancesPerApp = atoi(argv[13]);
 		unsigned int poolIdleTime       = atoi(argv[14]);
 		string  analyticsLogDir = argv[15];
+		string  serializedPrestartURIs = argv[16];
 		
 		// Change process title.
 		strncpy(argv[0], "PassengerHelperServer", strlen(argv[0]));
@@ -982,7 +992,7 @@ main(int argc, char *argv[]) {
 			userSwitching, defaultUser, workerUid, workerGid,
 			passengerRoot, rubyCommand, generationNumber,
 			maxPoolSize, maxInstancesPerApp, poolIdleTime,
-			analyticsLogDir);
+			analyticsLogDir, serializedPrestartURIs);
 		P_DEBUG("Passenger helper server started on PID " << getpid());
 		
 		UPDATE_TRACE_POINT();

@@ -30,6 +30,7 @@ int  agents_starter_start(AgentsStarter *as,
                           unsigned int poolIdleTime,
                           const char *analyticsLogDir, const char *analyticsLogUser,
                           const char *analyticsLogGroup, const char *analyticsLogPermissions,
+                          const char **prestartURLs, unsigned int prestartURLsCount,
                           const AfterForkCallback afterFork,
                           void *callbackArgument,
                           char **errorMessage);

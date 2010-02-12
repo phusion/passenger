@@ -1279,7 +1279,8 @@ public:
 			config->root, config->getRuby(), config->maxPoolSize,
 			config->maxInstancesPerApp, config->poolIdleTime,
 			config->analyticsLogDir, config->getAnalyticsLogUser(),
-			config->getAnalyticsLogGroup(), config->getAnalyticsLogPermissions());
+			config->getAnalyticsLogGroup(), config->getAnalyticsLogPermissions(),
+			config->prestartURLs);
 		
 		txnLogger = ptr(new TxnLogger(config->analyticsLogDir,
 			agentsStarter.getLoggingSocketFilename(),

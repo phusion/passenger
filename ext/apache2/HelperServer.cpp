@@ -45,6 +45,7 @@
 #include "MessageServer.h"
 #include "BacktracesServer.h"
 #include "ServerInstanceDir.h"
+#include "ResourceLocator.h"
 #include "MessageChannel.h"
 #include "FileDescriptor.h"
 #include "Timer.h"
@@ -132,6 +133,8 @@ private:
 	AccountsDatabasePtr accountsDatabase;
 	MessageServerPtr messageServer;
 	ApplicationPool::PoolPtr pool;
+	ResourceLocator resourceLocator;
+	shared_ptr<oxt::thread> prestarterThread;
 	shared_ptr<oxt::thread> messageServerThread;
 	EventFd exitEvent;
 	Timer exitTimer;
@@ -192,8 +195,9 @@ public:
 		const string &passengerRoot, const string &rubyCommand,
 		unsigned int generationNumber, unsigned int maxPoolSize,
 		unsigned int maxInstancesPerApp, unsigned int poolIdleTime,
-		const string &analyticsLogDir)
-		: serverInstanceDir(webServerPid, tempDir, false)
+		const string &analyticsLogDir, const string &serializedPrestartURIs)
+		: serverInstanceDir(webServerPid, tempDir, false),
+		  resourceLocator(passengerRoot)
 	{
 		TRACE_POINT();
 		vector<string> args;
@@ -252,10 +256,15 @@ public:
 			"",  // Request socket filename; not available in the Apache helper server.
 			messageServer->getSocketFilename().c_str(),
 			NULL);
+		
+		prestarterThread = ptr(new oxt::thread(
+			boost::bind(prestartWebApps, resourceLocator, serializedPrestartURIs)
+		));
 	}
 	
 	~Server() {
 		TRACE_POINT();
+		prestarterThread->interrupt_and_join();
 		if (messageServerThread != NULL) {
 			messageServerThread->interrupt_and_join();
 		}
@@ -341,6 +350,7 @@ main(int argc, char *argv[]) {
 		unsigned int maxInstancesPerApp = atoi(argv[13]);
 		unsigned int poolIdleTime       = atoi(argv[14]);
 		string  analyticsLogDir = argv[15];
+		string  serializedPrestartURIs = argv[16];
 		
 		// Change process title.
 		strncpy(argv[0], "PassengerHelperServer", strlen(argv[0]));
@@ -353,8 +363,7 @@ main(int argc, char *argv[]) {
 			userSwitching, defaultUser, workerUid, workerGid,
 			passengerRoot, rubyCommand, generationNumber,
 			maxPoolSize, maxInstancesPerApp, poolIdleTime,
-			analyticsLogDir);
-		P_DEBUG("Phusion Passenger helper server started on PID " << getpid());
+			analyticsLogDir, serializedPrestartURIs);
 		
 		UPDATE_TRACE_POINT();
 		server.mainLoop();

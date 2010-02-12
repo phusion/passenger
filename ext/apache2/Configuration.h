@@ -370,6 +370,8 @@
 			const char *analyticsLogGroup;
 			const char *analyticsLogPermissions;
 			
+			set<string> prestartURLs;
+			
 			/** Called at the end of the server config merging process, inside
 			 * the control process.
 			 */

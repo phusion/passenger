@@ -29,6 +29,7 @@
 #include <oxt/system_calls.hpp>
 #include <string>
 #include <vector>
+#include <set>
 
 #include <sys/types.h>
 #include <unistd.h>
@@ -137,6 +138,17 @@ private:
 		} catch (const SecurityException &) {
 		}
 		return false;
+	}
+	
+	string serializePrestartURLs(const set<string> &prestartURLs) const {
+		set<string>::const_iterator it;
+		string result;
+		
+		for (it = prestartURLs.begin(); it != prestartURLs.end(); it++) {
+			result.append(*it);
+			result.append(1, '\0');
+		}
+		return Base64::encode(result);
 	}
 	
 public:
@@ -268,6 +280,7 @@ public:
 	           unsigned int poolIdleTime,
 	           const string &analyticsLogDir, const string &analyticsLogUser,
 	           const string &analyticsLogGroup, const string &analyticsLogPermissions,
+	           const set<string> &prestartURLs,
 	           const function<void ()> &afterFork = function<void ()>())
 	{
 		TRACE_POINT();
@@ -345,6 +358,7 @@ public:
 				analyticsLogUser.c_str(),
 				analyticsLogGroup.c_str(),
 				analyticsLogPermissions.c_str(),
+				serializePrestartURLs(prestartURLs).c_str(),
 				(char *) 0);
 			e = errno;
 			try {

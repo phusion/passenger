@@ -82,6 +82,11 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->analytics_log_permissions.data = NULL;
     conf->analytics_log_permissions.len  = 0;
     
+    conf->prestart_uris = ngx_array_create(cf->pool, 1, sizeof(ngx_str_t));
+    if (conf->prestart_uris == NULL) {
+        return NGX_CONF_ERROR;
+    }
+    
     return conf;
 }
 
@@ -1066,6 +1071,13 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, analytics_log_permissions),
+      NULL },
+
+    { ngx_string("passenger_pre_start"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_array_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, prestart_uris),
       NULL },
 
     { ngx_string("passenger_pass_header"),
