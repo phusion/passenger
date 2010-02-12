@@ -53,11 +53,24 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 #define MERGE_STRING_CONFIG(field) \
 	config->field = (add->field.empty()) ? base->field : add->field
 
+#define DEFINE_SERVER_STR_CONFIG_SETTER(functionName, fieldName)                 \
+	static const char *                                                      \
+	functionName(cmd_parms *cmd, void *dummy, const char *arg) {             \
+		ServerConfig *config = (ServerConfig *) ap_get_module_config(    \
+			cmd->server->module_config, &passenger_module);          \
+		config->fieldName = arg;                                         \
+		return NULL;                                                     \
+	}
+
+
 template<typename T> static apr_status_t
 destroy_config_struct(void *x) {
 	delete (T *) x;
 	return APR_SUCCESS;
 }
+
+
+extern "C" {
 
 static DirConfig *
 create_dir_config_struct(apr_pool_t *pool) {
@@ -72,8 +85,6 @@ create_server_config_struct(apr_pool_t *pool) {
 	apr_pool_cleanup_register(pool, config, destroy_config_struct<ServerConfig>, apr_pool_cleanup_null);
 	return config;
 }
-
-extern "C" {
 
 void *
 passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
@@ -239,13 +250,8 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
  * Passenger settings
  *************************************************/
 
-static const char *
-cmd_passenger_root(cmd_parms *cmd, void *pcfg, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	config->root = arg;
-	return NULL;
-}
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_root, root)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_ruby, ruby)
 
 static const char *
 cmd_passenger_log_level(cmd_parms *cmd, void *pcfg, const char *arg) {
@@ -263,14 +269,6 @@ cmd_passenger_log_level(cmd_parms *cmd, void *pcfg, const char *arg) {
 		config->logLevel = (unsigned int) result;
 		return NULL;
 	}
-}
-
-static const char *
-cmd_passenger_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	config->ruby = arg;
-	return NULL;
 }
 
 static const char *
@@ -366,21 +364,8 @@ cmd_passenger_user_switching(cmd_parms *cmd, void *pcfg, int arg) {
 	return NULL;
 }
 
-static const char *
-cmd_passenger_default_user(cmd_parms *cmd, void *dummy, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	config->defaultUser = arg;
-	return NULL;
-}
-
-static const char *
-cmd_passenger_temp_dir(cmd_parms *cmd, void *dummy, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	config->tempDir = arg;
-	return NULL;
-}
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_user, defaultUser)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_temp_dir, tempDir)
 
 static const char *
 cmd_passenger_max_requests(cmd_parms *cmd, void *pcfg, const char *arg) {
@@ -496,6 +481,11 @@ cmd_passenger_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
 	}
 	return NULL;
 }
+
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_dir, analyticsLogDir)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_user, analyticsLogUser)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_group, analyticsLogGroup)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_permissions, analyticsLogPermissions)
 
 
 /*************************************************
@@ -645,16 +635,16 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The Passenger root folder."),
-	AP_INIT_TAKE1("PassengerLogLevel",
-		(Take1Func) cmd_passenger_log_level,
-		NULL,
-		RSRC_CONF,
-		"Passenger log verbosity."),
 	AP_INIT_TAKE1("PassengerRuby",
 		(Take1Func) cmd_passenger_ruby,
 		NULL,
 		RSRC_CONF,
 		"The Ruby interpreter to use."),
+	AP_INIT_TAKE1("PassengerLogLevel",
+		(Take1Func) cmd_passenger_log_level,
+		NULL,
+		RSRC_CONF,
+		"Passenger log verbosity."),
 	AP_INIT_TAKE1("PassengerMaxPoolSize",
 		(Take1Func) cmd_passenger_max_pool_size,
 		NULL,
@@ -750,6 +740,26 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The spawn method to use."),
+	AP_INIT_TAKE1("PassengerAnalyticsLogDir",
+		(Take1Func) cmd_passenger_analytics_log_dir,
+		NULL,
+		RSRC_CONF,
+		"Directory in which to store analytics logs."),
+	AP_INIT_TAKE1("PassengerAnalyticsLogUser",
+		(Take1Func) cmd_passenger_analytics_log_user,
+		NULL,
+		RSRC_CONF,
+		"The owner of analytics files."),
+	AP_INIT_TAKE1("PassengerAnalyticsLogGroup",
+		(Take1Func) cmd_passenger_analytics_log_group,
+		NULL,
+		RSRC_CONF,
+		"The group of analytics files."),
+	AP_INIT_TAKE1("PassengerAnalyticsLogPermissions",
+		(Take1Func) cmd_passenger_analytics_log_permissions,
+		NULL,
+		RSRC_CONF,
+		"The permissions of analytics files."),
 	
 	/*****************************/
 
