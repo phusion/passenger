@@ -369,6 +369,5 @@ main(int argc, char *argv[]) {
 		throw;
 	}
 	
-	P_TRACE(2, "Phusion Passenger Helper server exited.");
 	return 0;
 }

@@ -156,7 +156,6 @@ private:
 						syscalls::usleep(100000);
 					}
 				}
-				P_TRACE(2, "Spawn server has exited.");
 			}
 			pid = 0;
 		}
@@ -549,10 +548,8 @@ public:
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
 			syscalls::unlink(socketFilename.c_str());
-			P_TRACE(2, "Shutting down spawn manager (PID " << pid << ").");
 			ownerSocket.close();
 			syscalls::waitpid(pid, NULL, 0);
-			P_TRACE(2, "Spawn manager exited.");
 		}
 	}
 	
