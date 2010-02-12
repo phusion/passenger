@@ -275,6 +275,10 @@ public:
 				}
 			}
 			
+			/* Become the process group leader so that the watchdog can kill the
+			 * agent as well as all its descendant processes. */
+			setpgid(getpid(), getpid());
+			
 			try {
 				execProgram();
 			} catch (...) {

@@ -949,10 +949,6 @@ int
 main(int argc, char *argv[]) {
 	TRACE_POINT();
 	try {
-		/* Become the process group leader so that the watchdog can kill the
-		 * HelperServer as well as all descendant processes. */
-		setpgid(getpid(), getpid());
-		
 		ignoreSigpipe();
 		setup_syscall_interruption_support();
 		setvbuf(stdout, NULL, _IONBF, 0);
