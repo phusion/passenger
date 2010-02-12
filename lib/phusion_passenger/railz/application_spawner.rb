@@ -169,6 +169,10 @@ class ApplicationSpawner < AbstractServer
 					if @lower_privilege
 						lower_privilege('config/environment.rb', @lowest_user)
 					end
+					# Make sure RubyGems uses any new environment variable values
+					# that have been set now (e.g. $HOME, $GEM_HOME, etc) and that
+					# it is able to detect newly installed gems.
+					Gem.clear_paths
 					
 					require File.expand_path('config/environment')
 					require 'dispatcher'
