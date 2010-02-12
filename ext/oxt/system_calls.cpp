@@ -341,6 +341,33 @@ syscalls::time(time_t *t) {
 	return ret;
 }
 
+unsigned int
+syscalls::sleep(unsigned int seconds) {
+	// We use syscalls::nanosleep() here not only to reuse interruption
+	// handling code, but also to avoid potentional infinite loops
+	// in combination with oxt::thread::interrupt_and_join().
+	// Upon interruption sleep() returns the number of seconds unslept
+	// but interrupt_and_join() keeps interrupting the thread every 10
+	// msec. Depending on the implementation of sleep(), it might return
+	// the same value as its original argument. A naive implementation
+	// of syscalls::sleep() that sleeps again with the return value
+	// could easily cause an infinite loop. nanosleep() has a large
+	// enough resolution so it won't trigger the problem.
+	struct timespec spec, rem;
+	int ret;
+	
+	spec.tv_sec = seconds;
+	spec.tv_nsec = 0;
+	ret = syscalls::nanosleep(&spec, &rem);
+	if (ret == 0) {
+		return 0;
+	} else if (errno == EINTR) {
+		return rem.tv_sec;
+	} else {
+		return -1;
+	}
+}
+
 int
 syscalls::usleep(useconds_t usec) {
 	// We use syscalls::nanosleep() here to reuse the code that sleeps

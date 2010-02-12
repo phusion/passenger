@@ -613,6 +613,97 @@ public:
 
 
 /**
+ * Touch all files in the server instance dir every 6 hours in order to prevent /tmp
+ * cleaners from weaking havoc:
+ * http://code.google.com/p/phusion-passenger/issues/detail?id=365
+ */
+class ServerInstanceDirToucher {
+private:
+	oxt::thread *thr;
+	
+	static void
+	threadMain() {
+		while (!this_thread::interruption_requested()) {
+			syscalls::sleep(60 * 60 * 6);
+			
+			begin_touch:
+			
+			this_thread::disable_interruption di;
+			this_thread::disable_syscall_interruption dsi;
+			// Fork a process which touches everything in the server instance dir.
+			pid_t pid = syscalls::fork();
+			if (pid == 0) {
+				// Child
+				int prio, ret, e;
+				long max_fds, i;
+				
+				// Close all unnecessary file descriptors.
+				max_fds = sysconf(_SC_OPEN_MAX);
+				for (i = 3; i < max_fds; i++) {
+					syscalls::close(i);
+				}
+				
+				// Make process nicer.
+				do {
+					prio = getpriority(PRIO_PROCESS, getpid());
+				} while (prio == -1 && errno == EINTR);
+				if (prio != -1) {
+					prio++;
+					if (prio > 20) {
+						prio = 20;
+					}
+					do {
+						ret = setpriority(PRIO_PROCESS, getpid(), prio);
+					} while (ret == -1 && errno == EINTR);
+				} else {
+					perror("getpriority");
+				}
+				
+				do {
+					ret = chdir(serverInstanceDir->getPath().c_str());
+				} while (ret == -1 && errno == EINTR);
+				if (ret == -1) {
+					e = errno;
+					fprintf(stderr, "chdir(\"%s\") failed: %s (%d)\n",
+						serverInstanceDir->getPath().c_str(),
+						strerror(e), e);
+					fflush(stderr);
+					_exit(1);
+				}
+				
+				execlp("/bin/sh", "/bin/sh", "-c", "find . | xargs touch", NULL);
+				e = errno;
+				fprintf(stderr, "Cannot execute 'find . | xargs touch': %s (%d)\n",
+					strerror(e), e);
+				fflush(stderr);
+				_exit(1);
+			} else if (pid == -1) {
+				// Error
+				P_WARN("Could touch the server instance directory because "
+					"fork() failed. Retrying in 2 minutes...");
+				this_thread::restore_interruption si(di);
+				this_thread::restore_syscall_interruption rsi(dsi);
+				syscalls::sleep(60 * 2);
+				goto begin_touch;
+			} else {
+				syscalls::waitpid(pid, NULL, 0);
+			}
+		}
+	}
+
+public:
+	ServerInstanceDirToucher() {
+		thr = new oxt::thread(threadMain, "Server instance dir toucher", 96 * 1024);
+	}
+	
+	~ServerInstanceDirToucher() {
+		thr->interrupt_and_join();
+		delete thr;
+	}
+};
+
+
+/**
  * Most operating systems overcommit memory. We *know* that this watchdog process
  * doesn't use much memory; on OS X it uses about 200 KB of private RSS. If the
  * watchdog is killed by the system Out-Of-Memory Killer or then it's all over:
@@ -849,6 +940,8 @@ main(int argc, char *argv[]) {
 		poolIdleTimeString = toString(poolIdleTime);
 		
 		loggingAgentPassword = randomGenerator.generateByteString(32);
+		
+		ServerInstanceDirToucher serverInstanceDirToucher;
 		
 		HelperServerWatcher helperServerWatcher;
 		LoggingAgentWatcher loggingAgentWatcher;
