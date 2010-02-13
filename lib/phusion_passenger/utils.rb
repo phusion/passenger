@@ -210,6 +210,11 @@ protected
 				ENV[key] = value
 			end
 		end
+		
+		# Make sure RubyGems uses any new environment variable values
+		# that have been set now (e.g. $HOME, $GEM_HOME, etc) and that
+		# it is able to detect newly installed gems.
+		Gem.clear_paths
 	end
 	
 	# To be called before the request handler main loop is entered. This function
