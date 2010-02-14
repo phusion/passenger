@@ -634,13 +634,14 @@ protected
 			@@passenger_tmpdir = dir
 		end
 		if create && !File.exist?(dir)
-			# This is a very minimal implementation of the function
-			# passengerCreateTempDir() in Utils.cpp. This implementation
+			# This is a very minimal implementation of the subdirectory
+			# creation logic in ServerInstanceDir.h. This implementation
 			# is only meant to make the unit tests pass. For production
 			# systems one should pre-create the temp directory with
-			# passengerCreateTempDir().
+			# ServerInstanceDir.h.
 			system("mkdir", "-p", "-m", "u=wxs,g=wx,o=wx", dir)
 			system("mkdir", "-p", "-m", "u=wxs,g=wx,o=wx", "#{dir}/backends")
+			system("mkdir", "-p", "-m", "u=wxs,g=wx,o=wx", "#{dir}/spawn-server")
 		end
 		return dir
 	end

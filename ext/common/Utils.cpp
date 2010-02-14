@@ -201,45 +201,6 @@ createFile(const string &filename, const StaticString &contents, mode_t permissi
 }
 
 string
-findSpawnServer(const char *passengerRoot) {
-	if (passengerRoot != NULL) {
-		string root(passengerRoot);
-		if (root.at(root.size() - 1) != '/') {
-			root.append(1, '/');
-		}
-		
-		string path(root);
-		path.append("bin/passenger-spawn-server");
-		if (fileExists(path.c_str())) {
-			return path;
-		} else {
-			path.assign(root);
-			path.append("lib/phusion_passenger/passenger-spawn-server");
-			return path;
-		}
-		return path;
-	} else {
-		const char *path = getenv("PATH");
-		if (path == NULL) {
-			return "";
-		}
-		
-		vector<string> paths;
-		split(getenv("PATH"), ':', paths);
-		for (vector<string>::const_iterator it(paths.begin()); it != paths.end(); it++) {
-			if (!it->empty() && (*it).at(0) == '/') {
-				string filename(*it);
-				filename.append("/" SPAWN_SERVER_SCRIPT_NAME);
-				if (fileExists(filename.c_str())) {
-					return filename;
-				}
-			}
-		}
-		return "";
-	}
-}
-
-string
 canonicalizePath(const string &path) {
 	#ifdef __GLIBC__
 		// We're using a GNU extension here. See the 'BUGS'

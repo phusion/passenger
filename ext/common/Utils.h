@@ -212,19 +212,6 @@ void createFile(const string &filename, const StaticString &contents,
                 bool overwrite = true);
 
 /**
- * Find the location of the Passenger spawn server script.
- *
- * @param passengerRoot The Passenger root folder. If NULL is given, then
- *      the spawn server is found by scanning $PATH. For security reasons,
- *      only absolute paths are scanned.
- * @return An absolute path to the spawn server script, or
- *         an empty string on error.
- * @throws FileSystemException Unable to access parts of the filesystem.
- * @ingroup Support
- */
-string findSpawnServer(const char *passengerRoot = NULL);
-
-/**
  * Returns a canonical version of the specified path. All symbolic links
  * and relative path elements are resolved.
  *

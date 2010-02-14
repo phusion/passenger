@@ -225,8 +225,8 @@ public:
 		messageSocketPassword = Base64::decode(args[2]);
 		loggingAgentPassword  = Base64::decode(args[3]);
 		
-		generation        = serverInstanceDir.getGeneration(generationNumber);
-		accountsDatabase  = AccountsDatabase::createDefault(generation,
+		generation       = serverInstanceDir.getGeneration(generationNumber);
+		accountsDatabase = AccountsDatabase::createDefault(generation,
 			userSwitching, defaultUser, defaultGroup);
 		accountsDatabase->add("_web_server", messageSocketPassword, false,
 			Account::GET | Account::DETACH | Account::SET_PARAMETERS | Account::EXIT);
@@ -245,7 +245,7 @@ public:
 			"logging", loggingAgentPassword));
 		
 		pool = ptr(new ApplicationPool::Pool(
-			findSpawnServer(passengerRoot.c_str()), generation,
+			resourceLocator.getSpawnServerFilename(), generation,
 			accountsDatabase, rubyCommand,
 			generation->getPath() + "/logging.socket",
 			"logging", loggingAgentPassword

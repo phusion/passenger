@@ -838,7 +838,7 @@ public:
 			"logging", loggingAgentPassword));
 		
 		pool = ptr(new ApplicationPool::Pool(
-			findSpawnServer(passengerRoot.c_str()), generation,
+			resourceLocator.getSpawnServerFilename(), generation,
 			accountsDatabase, rubyCommand,
 			generation->getPath() + "/logging.socket",
 			"logging", loggingAgentPassword

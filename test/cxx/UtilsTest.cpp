@@ -93,30 +93,6 @@ namespace tut {
 	}
 	
 	
-	/**** Test findSpawnServer() ****/
-	
-	TEST_METHOD(8) {
-		// If $PATH is empty, it should not find anything.
-		setenv("PATH", "", 1);
-		ensure_equals(findSpawnServer(), "");
-	}
-	
-	TEST_METHOD(9) {
-		// It should ignore relative paths.
-		setenv("PATH", "../bin", 1);
-		ensure_equals(findSpawnServer(), "");
-	}
-	
-	TEST_METHOD(10) {
-		// It should find in $PATH.
-		char cwd[PATH_MAX];
-		string binpath(getcwd(cwd, sizeof(cwd)));
-		binpath.append("/../bin");
-		setenv("PATH", binpath.c_str(), 1);
-		ensure("Spawn server is found.", !findSpawnServer().empty());
-	}
-	
-	
 	/***** Test getSystemTempDir() *****/
 	
 	TEST_METHOD(11) {

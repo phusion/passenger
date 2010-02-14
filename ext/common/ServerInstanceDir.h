@@ -115,37 +115,51 @@ public:
 				makeDirTree(path + "/buffered_uploads", "u=rwxs,g=,o=");
 			}
 			
+			/* The web server must be able to directly connect to a backend. */
 			if (runningAsRoot) {
 				if (userSwitching) {
-					/* If user switching is possible and turned on, then each backend
-					 * process may be running as a different user, so the backends
-					 * subdirectory must be world-writable. However we don't want
-					 * everybody to be able to know the sockets' filenames, so
-					 * the directory is not readable, not even by its owner.
+					/* Each backend process may be running as a different user,
+					 * so the backends subdirectory must be world-writable.
+					 * However we don't want everybody to be able to know the
+					 * sockets' filenames, so the directory is not readable.
 					 */
 					makeDirTree(path + "/backends", "u=rwxs,g=wx,o=wx");
 				} else {
-					/* If user switching is off then all backend processes will be
-					 * running as defaultUser, so make defaultUser the owner of the
-					 * directory. Nobody else (except root) may access this directory.
+					/* All backend processes are running as defaultUser/defaultGroup,
+					 * so make defaultUser/defaultGroup the owner and group of the
+					 * subdirecory.
 					 *
 					 * The directory is not readable as a security precaution:
 					 * nobody should be able to know the sockets' filenames without
 					 * having access to the application pool.
 					 */
-					makeDirTree(path + "/backends", "u=rwxs,g=,o=", defaultUid, defaultGid);
+					makeDirTree(path + "/backends", "u=rwxs,g=x,o=x", defaultUid, defaultGid);
 				}
 			} else {
-				/* If user switching is not possible then all backend processes will
-				 * be running as the same user as the web server. So we'll make the
-				 * backends subdirectory only writable by this user. Nobody else
-				 * (except root) may access this subdirectory.
-				 *
-				 * The directory is not readable as a security precaution:
-				 * nobody should be able to know the sockets' filenames without having
-				 * access to the application pool.
+				/* All backend processes are running as the same user as the web server,
+				 * so only allow access for this user.
 				 */
 				makeDirTree(path + "/backends", "u=rwxs,g=,o=");
+			}
+			
+			/* The helper server (containing the application pool) must be able to access
+			 * the spawn server's socket.
+			 */
+			if (runningAsRoot) {
+				if (userSwitching) {
+					/* Both the helper server and the spawn server are
+					 * running as root.
+					 */
+					makeDirTree(path + "/spawn-server", "u=rwxs,g=,o=");
+				} else {
+					/* Both the helper server and the spawn server are
+					 * running as defaultUser/defaultGroup.
+					 */
+					makeDirTree(path + "/spawn-server", "u=rwxs,g=,o=",
+						defaultUid, defaultGid);
+				}
+			} else {
+				makeDirTree(path + "/spawn-server", "u=rwxs,g=,o=");
 			}
 			
 			owner = true;

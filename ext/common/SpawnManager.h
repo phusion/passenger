@@ -166,7 +166,7 @@ private:
 		int ret, fds[2];
 		
 		UPDATE_TRACE_POINT();
-		socketFilename = generation->getPath() + "/server." +
+		socketFilename = generation->getPath() + "/spawn-server/socket." +
 			toString(getpid()) + "." +
 			toString((unsigned long long) this);
 		socketPassword = Base64::encode(random.generateByteString(32));
