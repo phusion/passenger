@@ -162,6 +162,31 @@ shared_examples_for "a spawner" do
 		end
 	end
 	
+	it "calls #at_exit blocks upon exiting" do
+		before_start %q{
+			history_file = "#{PhusionPassenger::Utils.passenger_tmpdir}/history.txt"
+			at_exit do
+				File.open(history_file, "a") do |f|
+					f.puts "at_exit 1"
+				end
+			end
+			at_exit do
+				File.open(history_file, "a") do |f|
+					f.puts "at_exit 2"
+				end
+			end
+		}
+		
+		spawn_some_application.close
+		history_file = "#{PhusionPassenger::Utils.passenger_tmpdir}/history.txt"
+		eventually do
+			File.exist?(history_file) &&
+			File.read(history_file) ==
+				"at_exit 2\n" +
+				"at_exit 1\n"
+		end
+	end
+	
 	it "lowers privilege using Utils#lower_privilege" do
 		filename = "#{PhusionPassenger::Utils.passenger_tmpdir}/called.txt"
 		PhusionPassenger::Utils.stub!(:lower_privilege_called).and_return do

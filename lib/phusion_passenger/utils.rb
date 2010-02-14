@@ -213,6 +213,26 @@ protected
 		# that have been set now (e.g. $HOME, $GEM_HOME, etc) and that
 		# it is able to detect newly installed gems.
 		Gem.clear_paths
+		
+		# Because spawned app processes exit using #exit!, #at_exit
+		# blocks aren't called. Here we ninja patch Kernel so that
+		# we can call #at_exit blocks during app process shutdown.
+		Kernel.class_eval do
+			alias passenger_orig_at_exit at_exit
+			
+			@@passenger_at_exit_blocks = []
+			
+			def self.passenger_call_at_exit_blocks
+				@@passenger_at_exit_blocks.reverse_each do |block|
+					block.call
+				end
+			end
+			
+			def at_exit(&block)
+				@@passenger_at_exit_blocks << block
+				return block
+			end
+		end
 	end
 	
 	# To be called before the request handler main loop is entered. This function
@@ -243,6 +263,7 @@ protected
 	# will fire off necessary events perform necessary cleanup tasks.
 	def after_handling_requests
 		PhusionPassenger.call_event(:stopping_worker_process)
+		Kernel.passenger_call_at_exit_blocks
 	end
 	
 	# This method is to be called after an application process has been forked
