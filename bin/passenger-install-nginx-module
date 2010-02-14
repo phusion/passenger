@@ -104,6 +104,19 @@ class Installer < PhusionPassenger::AbstractInstaller
 		end
 	end
 
+	def before_install
+		super
+		myself = `whoami`.strip
+		@working_dir = "/tmp/#{myself}-passenger-#{Process.pid}"
+		FileUtils.rm_rf(@working_dir)
+		FileUtils.mkdir_p(@working_dir)
+	end
+	
+	def after_install
+		super
+		FileUtils.rm_rf(@working_dir)
+	end
+
 private
 	def show_welcome_screen
 		render_template 'nginx/welcome', :version => VERSION_STRING
@@ -148,17 +161,15 @@ private
 		new_screen
 		color_puts "<banner>PCRE (required by Nginx) not installed, downloading it...</banner>"
 		
-		basename = "pcre-#{PREFERRED_PCRE_VERSION}.tar.gz"
-		dirname  = "pcre-#{PREFERRED_PCRE_VERSION}"
-		url = "ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/#{basename}"
-		File.unlink("/tmp/#{basename}") rescue nil
-		FileUtils.rm_rf("/tmp/#{dirname}")
+		url = "ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-#{PREFERRED_PCRE_VERSION}.tar.gz"
+		dirname = "pcre-#{PREFERRED_PCRE_VERSION}"
+		tarball = "#{@working_dir}/pcre.tar.gz"
 		
-		if download(url, "/tmp/#{basename}")
-			Dir.chdir("/tmp") do
+		if download(url, tarball)
+			Dir.chdir(@working_dir) do
 				color_puts "<banner>Extracting PCRE source tarball...</banner>"
-				if sh("tar", "xzvf", basename)
-					return "/tmp/#{dirname}"
+				if sh("tar", "xzvf", tarball)
+					return "#{@working_dir}/#{dirname}"
 				else
 					new_screen
 					render_template "nginx/pcre_could_not_be_extracted"
@@ -180,16 +191,15 @@ private
 		new_screen
 		color_puts "<banner>Downloading Nginx...</banner>"
 		
-		basename = "nginx-#{PREFERRED_NGINX_VERSION}.tar.gz"
-		url = "http://sysoev.ru/nginx/#{basename}"
-		File.unlink("/tmp/#{basename}") rescue nil
-		FileUtils.rm_rf("/tmp/nginx-#{PREFERRED_NGINX_VERSION}")
+		url = "http://sysoev.ru/nginx/nginx-#{PREFERRED_NGINX_VERSION}.tar.gz"
+		dirname = "nginx-#{PREFERRED_NGINX_VERSION}"
+		tarball = "#{@working_dir}/nginx.tar.gz"
 		
-		if download(url, "/tmp/#{basename}")
-			Dir.chdir("/tmp") do
+		if download(url, tarball)
+			Dir.chdir(@working_dir) do
 				color_puts "<banner>Extracting Nginx source tarball...</banner>"
-				if sh("tar", "xzvf", basename)
-					return "/tmp/nginx-#{PREFERRED_NGINX_VERSION}"
+				if sh("tar", "xzvf", tarball)
+					return "#{@working_dir}/#{dirname}"
 				else
 					return nil
 				end
@@ -379,7 +389,7 @@ private
 	end
 	
 	def build_nginx_configure_command(prefix, extra_configure_flags = nil)
-		command = "./configure --prefix='#{prefix}' --with-http_ssl_module "
+		command = "sh ./configure --prefix='#{prefix}' --with-http_ssl_module "
 		if @pcre_source_dir
 			command << "--with-pcre='#{@pcre_source_dir}' "
 		elsif !pcre_is_installed?

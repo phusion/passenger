@@ -14,6 +14,10 @@ Release 2.9.1
  * Passenger Lite allows customization of domain names via passenger.conf.
  * Touches files in the server instance dir every 6 hours. Fixes bug #365.
  * PassengerPreStart/passenger_pre_start, for prestarting apps.
+ * [Nginx] Nginx can now be compiled no noexec /tmp filesystems. Fixes
+   issue #380.
+ * [Nginx] Allow multiple concurrent instances of
+   passenger-install-nginx-module.
 
 
 Release 2.9.0
