@@ -20,6 +20,7 @@ Release 2.9.1
    passenger-install-nginx-module.
  * PassengerUser/PassengerGroup and passenger_user/passenger_group.
  * PassengerDefaultGroup/passenger_default_group.
+ * #at_exit blocks are called during app shutdown.
 
 
 Release 2.9.0
