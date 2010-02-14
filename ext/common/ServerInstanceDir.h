@@ -79,13 +79,13 @@ public:
 			
 			defaultUserEntry = getpwnam(defaultUser.c_str());
 			if (defaultUserEntry == NULL) {
-				throw NonExistentUserException("Default user ''" + defaultUser +
+				throw NonExistentUserException("Default user '" + defaultUser +
 					"' does not exist.");
 			}
 			defaultUid = defaultUserEntry->pw_uid;
 			defaultGroupEntry = getgrnam(defaultGroup.c_str());
 			if (defaultGroupEntry == NULL) {
-				throw NonExistentGroupException("Default group ''" + defaultGroup +
+				throw NonExistentGroupException("Default group '" + defaultGroup +
 					"' does not exist.");
 			}
 			defaultGid = defaultGroupEntry->gr_gid;

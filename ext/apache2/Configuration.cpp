@@ -46,6 +46,8 @@ using namespace Passenger;
 
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
+namespace Passenger { ServerConfig serverConfig; }
+
 #define MERGE_THREEWAY_CONFIG(field) \
 	config->field = (add->field == DirConfig::UNSET) ? base->field : add->field
 #define MERGE_STR_CONFIG(field) \
@@ -64,10 +66,44 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 #define DEFINE_SERVER_STR_CONFIG_SETTER(functionName, fieldName)                 \
 	static const char *                                                      \
 	functionName(cmd_parms *cmd, void *dummy, const char *arg) {             \
-		ServerConfig *config = (ServerConfig *) ap_get_module_config(    \
-			cmd->server->module_config, &passenger_module);          \
-		config->fieldName = arg;                                         \
+		serverConfig.fieldName = arg;                                    \
 		return NULL;                                                     \
+	}
+#define DEFINE_SERVER_BOOLEAN_CONFIG_SETTER(functionName, fieldName)             \
+	static const char *                                                      \
+	functionName(cmd_parms *cmd, void *dummy, int arg) {                     \
+		serverConfig.fieldName = arg;                                    \
+		return NULL;                                                     \
+	}
+#define DEFINE_SERVER_INT_CONFIG_SETTER(functionName, fieldName, integerType, minValue)         \
+	static const char *                                                                     \
+	functionName(cmd_parms *cmd, void *pcfg, const char *arg) {                             \
+		char *end;                                                                      \
+		long int result;                                                                \
+		                                                                                \
+		result = strtol(arg, &end, 10);                                                 \
+		if (*end != '\0') {                                                             \
+			string message = "Invalid number specified for ";                       \
+			message.append(cmd->directive->directive);                              \
+			message.append(".");                                                    \
+			                                                                        \
+			char *messageStr = (char *) apr_palloc(cmd->temp_pool,                  \
+				message.size() + 1);                                            \
+			memcpy(messageStr, message.c_str(), message.size() + 1);                \
+			return messageStr;                                                      \
+		} else if (result < minValue) {                                                 \
+			string message = "Value for ";                                          \
+			message.append(cmd->directive->directive);                              \
+			message.append(" must be greater than or equal to " #minValue ".");     \
+			                                                                        \
+			char *messageStr = (char *) apr_palloc(cmd->temp_pool,                  \
+				message.size() + 1);                                            \
+			memcpy(messageStr, message.c_str(), message.size() + 1);                \
+			return messageStr;                                                      \
+		} else {                                                                        \
+			serverConfig.fieldName = (integerType) result;                          \
+			return NULL;                                                            \
+		}                                                                               \
 	}
 
 
@@ -84,13 +120,6 @@ static DirConfig *
 create_dir_config_struct(apr_pool_t *pool) {
 	DirConfig *config = new DirConfig();
 	apr_pool_cleanup_register(pool, config, destroy_config_struct<DirConfig>, apr_pool_cleanup_null);
-	return config;
-}
-
-static ServerConfig *
-create_server_config_struct(apr_pool_t *pool) {
-	ServerConfig *config = new ServerConfig();
-	apr_pool_cleanup_register(pool, config, destroy_config_struct<ServerConfig>, apr_pool_cleanup_null);
 	return config;
 }
 
@@ -171,104 +200,6 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	return config;
 }
 
-void *
-passenger_config_create_server(apr_pool_t *p, server_rec *s) {
-	ServerConfig *config = create_server_config_struct(p);
-	config->ruby = NULL;
-	config->root = NULL;
-	config->logLevel = DEFAULT_LOG_LEVEL;
-	config->maxPoolSize = DEFAULT_MAX_POOL_SIZE;
-	config->maxPoolSizeSpecified = false;
-	config->maxInstancesPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
-	config->maxInstancesPerAppSpecified = false;
-	config->poolIdleTime = DEFAULT_POOL_IDLE_TIME;
-	config->poolIdleTimeSpecified = false;
-	config->userSwitching = true;
-	config->userSwitchingSpecified = false;
-	config->defaultUser = NULL;
-	config->defaultGroup = NULL;
-	config->tempDir = NULL;
-	config->analyticsLogUser = NULL;
-	config->analyticsLogGroup = NULL;
-	config->analyticsLogPermissions = NULL;
-	return config;
-}
-
-void *
-passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
-	ServerConfig *config = create_server_config_struct(p);
-	ServerConfig *base = (ServerConfig *) basev;
-	ServerConfig *add = (ServerConfig *) addv;
-	set<string>::const_iterator it;
-	
-	MERGE_STR_CONFIG(ruby);
-	MERGE_STR_CONFIG(root);
-	config->logLevel = (add->logLevel) ? base->logLevel : add->logLevel;
-	config->maxPoolSize = (add->maxPoolSizeSpecified) ? base->maxPoolSize : add->maxPoolSize;
-	config->maxPoolSizeSpecified = base->maxPoolSizeSpecified || add->maxPoolSizeSpecified;
-	config->maxInstancesPerApp = (add->maxInstancesPerAppSpecified) ? base->maxInstancesPerApp : add->maxInstancesPerApp;
-	config->maxInstancesPerAppSpecified = base->maxInstancesPerAppSpecified || add->maxInstancesPerAppSpecified;
-	config->poolIdleTime = (add->poolIdleTime) ? base->poolIdleTime : add->poolIdleTime;
-	config->poolIdleTimeSpecified = base->poolIdleTimeSpecified || add->poolIdleTimeSpecified;
-	config->userSwitching = (add->userSwitchingSpecified) ? add->userSwitching : base->userSwitching;
-	config->userSwitchingSpecified = base->userSwitchingSpecified || add->userSwitchingSpecified;
-	MERGE_STR_CONFIG(defaultUser);
-	MERGE_STR_CONFIG(defaultGroup);
-	MERGE_STR_CONFIG(tempDir);
-	MERGE_STRING_CONFIG(analyticsLogDir);
-	MERGE_STR_CONFIG(analyticsLogUser);
-	MERGE_STR_CONFIG(analyticsLogGroup);
-	MERGE_STR_CONFIG(analyticsLogPermissions);
-	
-	for (it = add->prestartURLs.begin(); it != add->prestartURLs.end(); it++) {
-		base->prestartURLs.insert(*it);
-	}
-	return config;
-}
-
-void
-passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
-	ServerConfig *final = (ServerConfig *) passenger_config_create_server(pool, main_server);
-	server_rec *s;
-	set<string>::const_iterator it;
-	
-	#define MERGE_SERVER_STR_CONFIGS(field) \
-		final->field = (final->field != NULL) ? final->field : config->field
-	#define MERGE_SERVER_STRING_CONFIGS(field) \
-		final->field = (!final->field.empty()) ? final->field : config->field
-	
-	for (s = main_server; s != NULL; s = s->next) {
-		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
-		MERGE_SERVER_STR_CONFIGS(ruby);
-		MERGE_SERVER_STR_CONFIGS(root);
-		final->logLevel = (final->logLevel != 0) ? final->logLevel : config->logLevel;
-		final->maxPoolSize = (final->maxPoolSizeSpecified) ? final->maxPoolSize : config->maxPoolSize;
-		final->maxPoolSizeSpecified = final->maxPoolSizeSpecified || config->maxPoolSizeSpecified;
-		final->maxInstancesPerApp = (final->maxInstancesPerAppSpecified) ? final->maxInstancesPerApp : config->maxInstancesPerApp;
-		final->maxInstancesPerAppSpecified = final->maxInstancesPerAppSpecified || config->maxInstancesPerAppSpecified;
-		final->poolIdleTime = (final->poolIdleTimeSpecified) ? final->poolIdleTime : config->poolIdleTime;
-		final->poolIdleTimeSpecified = final->poolIdleTimeSpecified || config->poolIdleTimeSpecified;
-		final->userSwitching = (config->userSwitchingSpecified) ? config->userSwitching : final->userSwitching;
-		final->userSwitchingSpecified = final->userSwitchingSpecified || config->userSwitchingSpecified;
-		MERGE_SERVER_STR_CONFIGS(defaultUser);
-		MERGE_SERVER_STR_CONFIGS(defaultGroup);
-		MERGE_SERVER_STR_CONFIGS(tempDir);
-		MERGE_SERVER_STRING_CONFIGS(analyticsLogDir);
-		MERGE_SERVER_STR_CONFIGS(analyticsLogUser);
-		MERGE_SERVER_STR_CONFIGS(analyticsLogGroup);
-		MERGE_SERVER_STR_CONFIGS(analyticsLogPermissions);
-		
-		for (it = config->prestartURLs.begin(); it != config->prestartURLs.end(); it++) {
-			final->prestartURLs.insert(*it);
-		}
-	}
-	final->finalize();
-	for (s = main_server; s != NULL; s = s->next) {
-		ServerConfig *config = (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
-		*config = *final;
-	}
-}
-
 
 /*************************************************
  * Passenger settings
@@ -276,42 +207,23 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_root, root)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_ruby, ruby)
+DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_log_level, logLevel, unsigned int, 0)
+DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_max_pool_size, maxPoolSize, unsigned int, 1)
+DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_max_instances_per_app, maxInstancesPerApp, unsigned int, 0)
+DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_pool_idle_time, poolIdleTime, unsigned int, 0)
+DEFINE_SERVER_BOOLEAN_CONFIG_SETTER(cmd_passenger_user_switching, userSwitching)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_user, defaultUser)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_group, defaultGroup)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_temp_dir, tempDir)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_dir, analyticsLogDir)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_user, analyticsLogUser)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_group, analyticsLogGroup)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_permissions, analyticsLogPermissions)
 
 static const char *
-cmd_passenger_log_level(cmd_parms *cmd, void *pcfg, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	char *end;
-	long int result;
-	
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		return "Invalid number specified for PassengerLogLevel.";
-	} else if (result < 0 || result > 9) {
-		return "Value for PassengerLogLevel must be between 0 and 9.";
-	} else {
-		config->logLevel = (unsigned int) result;
-		return NULL;
-	}
-}
-
-static const char *
-cmd_passenger_max_pool_size(cmd_parms *cmd, void *pcfg, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	char *end;
-	long int result;
-	
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		return "Invalid number specified for PassengerMaxPoolSize.";
-	} else if (result <= 0) {
-		return "Value for PassengerMaxPoolSize must be greater than 0.";
-	} else {
-		config->maxPoolSize = (unsigned int) result;
-		config->maxPoolSizeSpecified = true;
-		return NULL;
-	}
+cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.prestartURLs.insert(arg);
+	return NULL;
 }
 
 static const char *
@@ -333,42 +245,6 @@ cmd_passenger_min_instances(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
-cmd_passenger_max_instances_per_app(cmd_parms *cmd, void *pcfg, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	char *end;
-	long int result;
-	
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		return "Invalid number specified for PassengerMaxInstancesPerApp.";
-	} else {
-		config->maxInstancesPerApp = (unsigned int) result;
-		config->maxInstancesPerAppSpecified = true;
-		return NULL;
-	}
-}
-
-static const char *
-cmd_passenger_pool_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	char *end;
-	long int result;
-	
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		return "Invalid number specified for PassengerPoolIdleTime.";
-	} else if (result < 0) {
-		return "Value for PassengerPoolIdleTime must be greater than or equal to 0.";
-	} else {
-		config->poolIdleTime = (unsigned int) result;
-		config->poolIdleTimeSpecified = true;
-		return NULL;
-	}
-}
-
-static const char *
 cmd_passenger_use_global_queue(cmd_parms *cmd, void *pcfg, int arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	if (arg) {
@@ -378,19 +254,6 @@ cmd_passenger_use_global_queue(cmd_parms *cmd, void *pcfg, int arg) {
 	}
 	return NULL;
 }
-
-static const char *
-cmd_passenger_user_switching(cmd_parms *cmd, void *pcfg, int arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	config->userSwitching = arg;
-	config->userSwitchingSpecified = true;
-	return NULL;
-}
-
-DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_user, defaultUser)
-DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_group, defaultGroup)
-DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_temp_dir, tempDir)
 
 static const char *
 cmd_passenger_max_requests(cmd_parms *cmd, void *pcfg, const char *arg) {
@@ -489,19 +352,6 @@ cmd_passenger_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
 	} else {
 		return "PassengerSpawnMethod may only be 'smart', 'smart-lv2' or 'conservative'.";
 	}
-	return NULL;
-}
-
-DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_dir, analyticsLogDir)
-DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_user, analyticsLogUser)
-DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_group, analyticsLogGroup)
-DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_permissions, analyticsLogPermissions)
-
-static const char *
-cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
-	ServerConfig *config = (ServerConfig *) ap_get_module_config(
-		cmd->server->module_config, &passenger_module);
-	config->prestartURLs.insert(arg);
 	return NULL;
 }
 

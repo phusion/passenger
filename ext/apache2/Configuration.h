@@ -40,14 +40,6 @@ void *passenger_config_create_dir(apr_pool_t *p, char *dirspec);
 /** Configuration hook for per-directory configuration structure merging. */
 void *passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv);
 
-/** Configuration hook for per-server configuration structure creation. */
-void *passenger_config_create_server(apr_pool_t *p, server_rec *s);
-
-/** Configuration hook for per-server configuration structure merging. */
-void *passenger_config_merge_server(apr_pool_t *p, void *basev, void *overridesv);
-
-void passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server);
-
 /** Apache module commands array. */
 extern const command_rec passenger_commands[];
 

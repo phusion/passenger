@@ -215,10 +215,6 @@ private:
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
 	}
 	
-	inline ServerConfig *getServerConfig(server_rec *s) {
-		return (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
-	}
-	
 	/**
 	 * The existance of a request note means that the handler should be run.
 	 */
@@ -584,7 +580,6 @@ private:
 			
 			UPDATE_TRACE_POINT();
 			try {
-				ServerConfig *sconfig = getServerConfig(r->server);
 				string publicDirectory(mapper.getPublicDirectory());
 				PoolOptions options(
 					config->getAppRoot(publicDirectory.c_str()),
@@ -594,8 +589,8 @@ private:
 					config->getSpawnMethodString(),
 					config->getUser(),
 					config->getGroup(),
-					sconfig->getDefaultUser(),
-					sconfig->getDefaultGroup(),
+					serverConfig.defaultUser,
+					serverConfig.defaultGroup,
 					config->frameworkSpawnerTimeout,
 					config->appSpawnerTimeout,
 					mapper.getBaseURI(),
@@ -1257,9 +1252,8 @@ public:
 	    : cstat(1024),
 	      agentsStarter(AgentsStarter::APACHE)
 	{
-		passenger_config_merge_all_servers(pconf, s);
-		ServerConfig *config = getServerConfig(s);
-		Passenger::setLogLevel(config->logLevel);
+		serverConfig.finalize();
+		Passenger::setLogLevel(serverConfig.logLevel);
 		m_hasModRewrite = UNKNOWN;
 		m_hasModDir = UNKNOWN;
 		m_hasModAutoIndex = UNKNOWN;
@@ -1267,25 +1261,25 @@ public:
 		P_DEBUG("Initializing Phusion Passenger...");
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
 		
-		if (config->root == NULL) {
+		if (serverConfig.root == NULL) {
 			throw ConfigurationException("The 'PassengerRoot' configuration option "
 				"is not specified. This option is required, so please specify it. "
 				"TIP: The correct value for this option was given to you by "
 				"'passenger-install-apache2-module'.");
 		}
 		
-		agentsStarter.start(config->logLevel,
-			getpid(), config->getTempDir(),
-			config->userSwitchingEnabled(),
-			config->getDefaultUser(), config->getDefaultGroup(),
+		agentsStarter.start(serverConfig.logLevel,
+			getpid(), serverConfig.tempDir,
+			serverConfig.userSwitching,
+			serverConfig.defaultUser, serverConfig.defaultGroup,
 			unixd_config.user_id, unixd_config.group_id,
-			config->root, config->getRuby(), config->maxPoolSize,
-			config->maxInstancesPerApp, config->poolIdleTime,
-			config->analyticsLogDir, config->getAnalyticsLogUser(),
-			config->getAnalyticsLogGroup(), config->getAnalyticsLogPermissions(),
-			config->prestartURLs);
+			serverConfig.root, serverConfig.ruby, serverConfig.maxPoolSize,
+			serverConfig.maxInstancesPerApp, serverConfig.poolIdleTime,
+			serverConfig.analyticsLogDir, serverConfig.analyticsLogUser,
+			serverConfig.analyticsLogGroup, serverConfig.analyticsLogPermissions,
+			serverConfig.prestartURLs);
 		
-		txnLogger = ptr(new TxnLogger(config->analyticsLogDir,
+		txnLogger = ptr(new TxnLogger(serverConfig.analyticsLogDir,
 			agentsStarter.getLoggingSocketFilename(),
 			"logging", agentsStarter.getLoggingSocketPassword()));
 		

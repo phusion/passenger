@@ -342,59 +342,72 @@ struct ServerConfig {
 	 * instances. */
 	unsigned int maxPoolSize;
 	
-	/** Whether the maxPoolSize option was explicitly specified in
-	 * this server config. */
-	bool maxPoolSizeSpecified;
-	
 	/** The maximum number of simultaneously alive Rails application
 	 * that a single Rails application may occupy. */
 	unsigned int maxInstancesPerApp;
-	
-	/** Whether the maxInstancesPerApp option was explicitly specified in
-	 * this server config. */
-	bool maxInstancesPerAppSpecified;
 	
 	/** The maximum number of seconds that an application may be
 	 * idle before it gets terminated. */
 	unsigned int poolIdleTime;
 	
-	/** Whether the poolIdleTime option was explicitly specified in
-	 * this server config. */
-	bool poolIdleTimeSpecified;
-	
 	/** Whether user switching support is enabled. */
 	bool userSwitching;
 	
-	/** Whether the userSwitching option was explicitly specified in
-	 * this server config. */
-	bool userSwitchingSpecified;
-
 	/** See PoolOptions for more info. */
-	const char *defaultUser;
+	string defaultUser;
 	/** See PoolOptions for more info. */
-	const char *defaultGroup;
+	string defaultGroup;
 	
-	/** The temp directory that Passenger should use. NULL
-	 * means unspecified.
-	 */
-	const char *tempDir;
+	/** The temp directory that Passenger should use. */
+	string tempDir;
 	
-	/**
-	 * Directory in which analytics logs should be saved. The
-	 * empty string means unspecified.
-	 */
+	/** Directory in which analytics logs should be saved. */
 	string analyticsLogDir;
-	
-	const char *analyticsLogUser;
-	const char *analyticsLogGroup;
-	const char *analyticsLogPermissions;
+	string analyticsLogUser;
+	string analyticsLogGroup;
+	string analyticsLogPermissions;
 	
 	set<string> prestartURLs;
 	
-	/** Called at the end of the server config merging process, inside
+	ServerConfig() {
+		ruby               = "ruby";
+		root               = NULL;
+		logLevel           = DEFAULT_LOG_LEVEL;
+		maxPoolSize        = DEFAULT_MAX_POOL_SIZE;
+		maxInstancesPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
+		poolIdleTime       = DEFAULT_POOL_IDLE_TIME;
+		userSwitching      = true;
+		defaultUser        = DEFAULT_WEB_APP_USER;
+		tempDir            = getSystemTempDir();
+		analyticsLogUser   = DEFAULT_ANALYTICS_LOG_USER;
+		analyticsLogGroup  = DEFAULT_ANALYTICS_LOG_GROUP;
+		analyticsLogPermissions = DEFAULT_ANALYTICS_LOG_PERMISSIONS;
+	}
+	
+	/** Called after the configuration files have been loaded, inside
 	 * the control process.
 	 */
 	void finalize() {
+		if (defaultGroup.empty()) {
+			struct passwd *userEntry = getpwnam(defaultUser.c_str());
+			if (userEntry == NULL) {
+				throw ConfigurationException(
+					string("The user that PassengerDefaultUser refers to, '") +
+					defaultUser + "', does not exist.");
+			}
+			
+			struct group *groupEntry = getgrgid(userEntry->pw_gid);
+			if (groupEntry == NULL) {
+				throw ConfigurationException(
+					string("The option PassengerDefaultUser is set to '" +
+					defaultUser + "', but its primary group doesn't exist. "
+					"In other words, your system's user account database "
+					"is broken. Please fix it."));
+			}
+			
+			defaultGroup = groupEntry->gr_name;
+		}
+		
 		if (analyticsLogDir.empty() && geteuid() == 0) {
 			analyticsLogDir = "/var/log/passenger-analytics";
 		} else if (analyticsLogDir.empty()) {
@@ -411,72 +424,9 @@ struct ServerConfig {
 				username;
 		}
 	}
-	
-	const char *getRuby() const {
-		if (ruby != NULL) {
-			return ruby;
-		} else {
-			return "ruby";
-		}
-	}
-	
-	bool userSwitchingEnabled() const {
-		if (userSwitchingSpecified) {
-			return userSwitching;
-		} else {
-			return true;
-		}
-	}
-	
-	const char *getDefaultUser() const {
-		if (defaultUser != NULL) {
-			return defaultUser;
-		} else {
-			return "nobody";
-		}
-	}
-	
-	const char *getDefaultGroup() const {
-		if (defaultGroup != NULL) {
-			return defaultGroup;
-		} else {
-			// FIXME: should be primary group of defaultUser
-			return "nobody";
-		}
-	}
-	
-	const char *getTempDir() const {
-		if (tempDir != NULL) {
-			return tempDir;
-		} else {
-			return getSystemTempDir();
-		}
-	}
-	
-	const char *getAnalyticsLogUser() const {
-		if (analyticsLogUser != NULL) {
-			return analyticsLogUser;
-		} else {
-			return DEFAULT_ANALYTICS_LOG_USER;
-		}
-	}
-	
-	const char *getAnalyticsLogGroup() const {
-		if (analyticsLogGroup != NULL) {
-			return analyticsLogGroup;
-		} else {
-			return DEFAULT_ANALYTICS_LOG_GROUP;
-		}
-	}
-	
-	const char *getAnalyticsLogPermissions() const {
-		if (analyticsLogPermissions != NULL) {
-			return analyticsLogPermissions;
-		} else {
-			return DEFAULT_ANALYTICS_LOG_PERMISSIONS;
-		}
-	}
 };
+
+extern ServerConfig serverConfig;
 
 
 } // namespace Passenger
