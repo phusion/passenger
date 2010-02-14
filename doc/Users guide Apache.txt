@@ -19,25 +19,6 @@ This guide assumes that the reader is somewhat familiar with Apache and with
 using the commandline.
 
 
-== Supported operating systems ==
-
-Phusion Passenger works on any POSIX-compliant operating system. In other
-words: practically any operating system on earth, except Microsoft Windows.
-
-Phusion Passenger is confirmed on a large number of operating systems and Linux
-distributions, including, but not limited to, Ubuntu, Debian, CentOS/Fedora/RHEL,
-Gentoo, Mac OS X, FreeBSD and Solaris. Both 32-bit and 64-bit platforms are supported.
-
-The only POSIX-compliant operating system on which Phusion Passenger for Apache is
-known not to work at this time, is OpenBSD. Please use Phusion Passenger for Nginx
-instead.
-
-If Phusion Passenger does not work on your platform then please
-link:http://code.google.com/p/phusion-passenger/issues/list[report a bug]
-or
-link:http://groups.google.com/group/phusion-passenger[join our discussion list].
-
-
 == Support information ==
 
 === Supported operating systems ===
