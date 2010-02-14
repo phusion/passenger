@@ -48,7 +48,7 @@
 #include <oxt/macros.hpp>
 #include "Hooks.h"
 #include "Bucket.h"
-#include "Configuration.h"
+#include "Configuration.hpp"
 #include "Utils.h"
 #include "Logging.h"
 #include "AgentsStarter.hpp"

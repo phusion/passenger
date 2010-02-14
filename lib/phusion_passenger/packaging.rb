@@ -57,7 +57,7 @@ module Packaging
 		'helper-scripts/*',
 		'ext/common/*.{cpp,c,h,hpp}',
 		'ext/common/ApplicationPool/*.h',
-		'ext/apache2/*.{cpp,h,c,TXT}',
+		'ext/apache2/*.{cpp,h,hpp,c,TXT}',
 		'ext/nginx/*.{c,cpp,h}',
 		'ext/nginx/config',
 		'ext/boost/**/*',

@@ -34,7 +34,7 @@
 #include <ap_config.h>
 #undef AP_HAVE_DESIGNATED_INITIALIZER
 
-#include "Configuration.h"
+#include "Configuration.hpp"
 #include "Utils.h"
 
 /* The APR headers must come after the Passenger headers. See Hooks.cpp

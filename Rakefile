@@ -303,6 +303,7 @@ end
 		'ext/apache2/Configuration.o' => %w(
 			ext/apache2/Configuration.cpp
 			ext/apache2/Configuration.h
+			ext/apache2/Configuration.hpp
 			ext/common/Constants.h),
 		'ext/apache2/Bucket.o' => %w(
 			ext/apache2/Bucket.cpp
@@ -311,6 +312,7 @@ end
 			ext/apache2/Hooks.cpp
 			ext/apache2/Hooks.h
 			ext/apache2/Configuration.h
+			ext/apache2/Configuration.hpp
 			ext/apache2/Bucket.h
 			ext/apache2/DirectoryMapper.h
 			ext/common/AgentsStarter.hpp
