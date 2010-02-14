@@ -131,8 +131,8 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     }
     
     if (conf->default_user.len == 0) {
-        conf->default_user.len  = sizeof("nobody") - 1;
-        conf->default_user.data = (u_char *) "nobody";
+        conf->default_user.len  = sizeof(DEFAULT_WEB_APP_USER) - 1;
+        conf->default_user.data = (u_char *) DEFAULT_WEB_APP_USER;
     }
     
     if (conf->default_group.len == 0) {
