@@ -44,6 +44,8 @@ typedef struct {
     ngx_flag_t   friendly_error_pages;
     ngx_flag_t   analytics;
     ngx_str_t    environment;
+    ngx_str_t    user;
+    ngx_str_t    group;
     ngx_str_t    spawn_method;
     ngx_str_t    app_group_name;
     ngx_str_t    app_rights;
@@ -64,6 +66,7 @@ typedef struct {
     ngx_uint_t   pool_idle_time;
     ngx_flag_t   user_switching;
     ngx_str_t    default_user;
+    ngx_str_t    default_group;
     ngx_str_t    analytics_log_dir;
     ngx_str_t    analytics_log_user;
     ngx_str_t    analytics_log_group;

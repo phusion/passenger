@@ -8,7 +8,8 @@ void createServerInstanceDirAndGeneration(ServerInstanceDirPtr &serverInstanceDi
                                           ServerInstanceDir::GenerationPtr &generation)
 {
 	serverInstanceDir.reset(new ServerInstanceDir(getpid()));
-	generation = serverInstanceDir->newGeneration(geteuid() == 0, "nobody", geteuid(), getegid());
+	generation = serverInstanceDir->newGeneration(geteuid() == 0,
+		"nobody", "nobody", geteuid(), getegid());
 }
 
 string

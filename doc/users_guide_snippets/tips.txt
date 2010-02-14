@@ -15,19 +15,25 @@ Passenger will launch the corresponding Rails application as 'joe' as well.
 This behavior is the default, and you don't need to configure anything. But
 there are things that you should keep in mind:
 
-- The owner of 'environment.rb' must have read access to the Rails application's
-  folder, and read/write access to the Rails application's 'logs' folder.
-  Likewise, the owner of 'config.ru' must have read access to the Rack application's
-  folder.
+- The owner of 'environment.rb'/'config.ru' must have read access to the application's
+  root directory, and read/write access to the application's 'logs' directory.
 - This feature is only available if Apache is started by 'root'. This is the
   case on most Apache installations.
 - Under no circumstances will applications be run as 'root'. If
   'environment.rb'/'config.ru' is owned as root or by an unknown user, then the
   Rails/Rack application will run as the user specified by
-  <<PassengerDefaultUser,PassengerDefaultUser (Apache)>>/<<PassengerDefaultUser,passenger_default_user (Nginx)>>.
+ifdef::apache[]
+  <<PassengerDefaultUser,PassengerDefaultUser>> and
+  <<PassengerDefaultGroup,PassengerDefaultGroup>>.
+endif::[]
+ifdef::nginx[]
+  <<PassengerDefaultUser,passenger_default_user>> and
+  <<PassengerDefaultGroup,passenger_default_group>>.
+endif::[]
 
 User switching can be disabled with the
-<<PassengerUserSwitching,PassengerUserSwitching (Apache)>>/<<PassengerUserSwitching,passenger_user_switching (Nginx)>>
+ifdef::apache[<<PassengerUserSwitching,PassengerUserSwitching>>]
+ifdef::nginx[<<PassengerUserSwitching,passenger_user_switching>>]
 option.
 
 

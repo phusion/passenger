@@ -162,6 +162,17 @@ shared_examples_for "a spawner" do
 		end
 	end
 	
+	it "lowers privilege using Utils#lower_privilege" do
+		filename = "#{PhusionPassenger::Utils.passenger_tmpdir}/called.txt"
+		PhusionPassenger::Utils.stub!(:lower_privilege_called).and_return do
+			File.touch(filename)
+		end
+		spawn_some_application.close
+		eventually do
+			File.exist?(filename).should be_true
+		end
+	end
+	
 	describe "error handling" do
 		it "raises an AppInitError if the spawned app raises a standard exception during startup" do
 			before_start %q{
@@ -228,109 +239,6 @@ shared_examples_for "a spawner" do
 				file.close rescue nil
 				File.unlink('output.tmp') rescue nil
 			end
-		end
-		
-		
-	end
-	
-	when_user_switching_possible do
-		before :each do
-			before_start %q{
-				require 'yaml'
-				info = {
-					:username => `whoami`.strip,
-					:user_id  => `id -u`.strip.to_i,
-					:group_id => `id -g`.strip.to_i,
-					:groups   => `groups "#{`whoami`.strip}"`.strip,
-					:home     => ENV['HOME']
-				}
-				File.open("dump.yml", 'w') do |f|
-					YAML::dump(info, f)
-				end
-			}
-		end
-		
-		def spawn_some_application_as(options)
-			if options[:role]
-				user = CONFIG[options.delete(:role)]
-			elsif options[:username]
-				user = options.delete(:username)
-			else
-				user = options.delete(:uid).to_s
-			end
-			@app = spawn_some_application(options) do |stub|
-				system("chown", "-R", user, stub.app_root)
-			end
-		end
-		
-		def username_for(role)
-			return CONFIG[role]
-		end
-		
-		def uid_for(role)
-			return Etc.getpwnam(CONFIG[role]).uid
-		end
-		
-		def gid_for(role)
-			return Etc.getpwnam(CONFIG[role]).gid
-		end
-		
-		def read_dump
-			@dump ||= YAML.load_file("#{@app.app_root}/dump.yml")
-		end
-		
-		def my_username
-			return `whoami`.strip
-		end
-		
-		it "lowers the application's privilege to the owner of the startup file" do
-			spawn_some_application_as(:role => 'normal_user_1')
-			dump_yml_uid = File.stat("#{@app.app_root}/dump.yml").uid
-			dump_yml_uid.should == uid_for('normal_user_1')
-			read_dump[:username].should == username_for('normal_user_1')
-			read_dump[:user_id].should  == uid_for('normal_user_1')
-		end
-		
-		it "switches the group to the owner's primary group" do
-			spawn_some_application_as(:role => 'normal_user_1')
-			dump_yml_gid = File.stat("#{@app.app_root}/dump.yml").gid
-			parent_dir_gid = File.stat(@app.app_root).gid
-			# POSIX allows dump.yml to be owned by the process's group,
-			# OR by the parent directory's group.
-			[gid_for('normal_user_1'), parent_dir_gid].should include(dump_yml_gid)
-			read_dump[:group_id].should == gid_for('normal_user_1')
-		end
-		
-		it "switches supplementary groups to the owner's default supplementary groups" do
-			spawn_some_application_as(:role => 'normal_user_1')
-			default_groups = `groups "#{CONFIG['normal_user_1']}"`.strip
-			read_dump[:groups].should == default_groups
-		end
-		
-		it "lowers its privileges to 'lowest_user' if the startup file is owned by root" do
-			spawn_some_application_as(:username => 'root')
-			read_dump[:username].should == CONFIG['lowest_user']
-		end
-		
-		it "lowers its privileges to 'lowest_user' if the startup file is owned by a nonexistant user" do
-			spawn_some_application_as(:uid => CONFIG['nonexistant_uid'])
-			read_dump[:username].should == CONFIG['lowest_user']
-		end
-		
-		it "doesn't switch user if the startup file is owned by a nonexistant user, and 'lowest_user' doesn't exist either" do
-			spawn_some_application_as(:uid => CONFIG['nonexistant_uid'],
-				"lowest_user" => CONFIG['nonexistant_user'])
-			read_dump[:username].should == my_username
-		end
-		
-		it "doesn't switch user if 'lower_privilege' is set to false" do
-			@app = spawn_some_application("lower_privilege" => false)
-			read_dump[:username].should == my_username
-		end
-		
-		it "sets $HOME to the user's home directory, after privilege lowering" do
-			spawn_some_application_as(:role => 'normal_user_1')
-			read_dump[:home].should == Etc.getpwnam(CONFIG['normal_user_1']).dir
 		end
 	end
 end

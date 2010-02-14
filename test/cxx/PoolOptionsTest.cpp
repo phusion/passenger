@@ -25,8 +25,7 @@ namespace tut {
 		
 		PoolOptions copy(args, 2);
 		ensure_equals(options.appRoot, copy.appRoot);
-		ensure_equals(options.lowerPrivilege, copy.lowerPrivilege);
-		ensure_equals(options.lowestUser, copy.lowestUser);
+		ensure_equals(options.rights, copy.rights);
 		ensure_equals(options.environment, copy.environment);
 		ensure_equals(options.spawnMethod, copy.spawnMethod);
 		ensure_equals(options.appType, copy.appType);

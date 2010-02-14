@@ -53,6 +53,14 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 #define MERGE_STRING_CONFIG(field) \
 	config->field = (add->field.empty()) ? base->field : add->field
 
+#define DEFINE_DIR_STR_CONFIG_SETTER(functionName, fieldName)                    \
+	static const char *                                                      \
+	functionName(cmd_parms *cmd, void *pcfg, const char *arg) {              \
+		DirConfig *config = (DirConfig *) pcfg;                          \
+		config->fieldName = arg;                                         \
+		return NULL;                                                     \
+	}
+
 #define DEFINE_SERVER_STR_CONFIG_SETTER(functionName, fieldName)                 \
 	static const char *                                                      \
 	functionName(cmd_parms *cmd, void *dummy, const char *arg) {             \
@@ -96,6 +104,8 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->railsEnv = NULL;
 	config->rackEnv = NULL;
 	config->appRoot = NULL;
+	config->user = NULL;
+	config->group = NULL;
 	config->spawnMethod = DirConfig::SM_UNSET;
 	config->frameworkSpawnerTimeout = -1;
 	config->appSpawnerTimeout = -1;
@@ -139,6 +149,8 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	MERGE_STR_CONFIG(railsEnv);
 	MERGE_STR_CONFIG(rackEnv);
 	MERGE_STR_CONFIG(appRoot);
+	MERGE_STR_CONFIG(user);
+	MERGE_STR_CONFIG(group);
 	config->spawnMethod = (add->spawnMethod == DirConfig::SM_UNSET) ? base->spawnMethod : add->spawnMethod;
 	config->frameworkSpawnerTimeout = (add->frameworkSpawnerTimeout == -1) ? base->frameworkSpawnerTimeout : add->frameworkSpawnerTimeout;
 	config->appSpawnerTimeout = (add->appSpawnerTimeout == -1) ? base->appSpawnerTimeout : add->appSpawnerTimeout;
@@ -174,6 +186,7 @@ passenger_config_create_server(apr_pool_t *p, server_rec *s) {
 	config->userSwitching = true;
 	config->userSwitchingSpecified = false;
 	config->defaultUser = NULL;
+	config->defaultGroup = NULL;
 	config->tempDir = NULL;
 	config->analyticsLogUser = NULL;
 	config->analyticsLogGroup = NULL;
@@ -199,8 +212,8 @@ passenger_config_merge_server(apr_pool_t *p, void *basev, void *addv) {
 	config->poolIdleTimeSpecified = base->poolIdleTimeSpecified || add->poolIdleTimeSpecified;
 	config->userSwitching = (add->userSwitchingSpecified) ? add->userSwitching : base->userSwitching;
 	config->userSwitchingSpecified = base->userSwitchingSpecified || add->userSwitchingSpecified;
-	config->defaultUser = (add->defaultUser == NULL) ? base->defaultUser : add->defaultUser;
 	MERGE_STR_CONFIG(defaultUser);
+	MERGE_STR_CONFIG(defaultGroup);
 	MERGE_STR_CONFIG(tempDir);
 	MERGE_STRING_CONFIG(analyticsLogDir);
 	MERGE_STR_CONFIG(analyticsLogUser);
@@ -238,6 +251,7 @@ passenger_config_merge_all_servers(apr_pool_t *pool, server_rec *main_server) {
 		final->userSwitching = (config->userSwitchingSpecified) ? config->userSwitching : final->userSwitching;
 		final->userSwitchingSpecified = final->userSwitchingSpecified || config->userSwitchingSpecified;
 		MERGE_SERVER_STR_CONFIGS(defaultUser);
+		MERGE_SERVER_STR_CONFIGS(defaultGroup);
 		MERGE_SERVER_STR_CONFIGS(tempDir);
 		MERGE_SERVER_STRING_CONFIGS(analyticsLogDir);
 		MERGE_SERVER_STR_CONFIGS(analyticsLogUser);
@@ -375,6 +389,7 @@ cmd_passenger_user_switching(cmd_parms *cmd, void *pcfg, int arg) {
 }
 
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_user, defaultUser)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_group, defaultGroup)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_temp_dir, tempDir)
 
 static const char *
@@ -435,26 +450,11 @@ cmd_passenger_stat_throttle_rate(cmd_parms *cmd, void *pcfg, const char *arg) {
 	}
 }
 
-static const char *
-cmd_passenger_restart_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->restartDir = arg;
-	return NULL;
-}
-
-static const char *
-cmd_passenger_app_root(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->appRoot = arg;
-	return NULL;
-}
-
-static const char *
-cmd_passenger_upload_buffer_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->uploadBufferDir = arg;
-	return NULL;
-}
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_root, appRoot)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_user, user)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_group, group)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_restart_dir, restartDir)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_upload_buffer_dir, uploadBufferDir)
 
 static const char *
 cmd_passenger_resolve_symlinks_in_document_root(cmd_parms *cmd, void *pcfg, int arg) {
@@ -693,11 +693,26 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Whether to enable user switching support."),
+	AP_INIT_TAKE1("PassengerUser",
+		(Take1Func) cmd_passenger_user,
+		NULL,
+		ACCESS_CONF | RSRC_CONF,
+		"The user that Ruby applications must run as."),
+	AP_INIT_TAKE1("PassengerGroup",
+		(Take1Func) cmd_passenger_group,
+		NULL,
+		ACCESS_CONF | RSRC_CONF,
+		"The group that Ruby applications must run as."),
 	AP_INIT_TAKE1("PassengerDefaultUser",
 		(Take1Func) cmd_passenger_default_user,
 		NULL,
 		RSRC_CONF,
-		"The user that Rails/Rack applications must run as when user switching fails or is disabled."),
+		"The user that Ruby applications must run as when user switching fails or is disabled."),
+	AP_INIT_TAKE1("PassengerDefaultGroup",
+		(Take1Func) cmd_passenger_default_group,
+		NULL,
+		RSRC_CONF,
+		"The group that Ruby applications must run as when user switching fails or is disabled."),
 	AP_INIT_TAKE1("PassengerTempDir",
 		(Take1Func) cmd_passenger_temp_dir,
 		NULL,

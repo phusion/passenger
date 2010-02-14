@@ -73,6 +73,8 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->user_switching = NGX_CONF_UNSET;
     conf->default_user.data = NULL;
     conf->default_user.len  = 0;
+    conf->default_group.data = NULL;
+    conf->default_group.len  = 0;
     conf->analytics_log_dir.data = NULL;
     conf->analytics_log_dir.len  = 0;
     conf->analytics_log_user.data = NULL;
@@ -96,7 +98,9 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     passenger_main_conf_t *conf;
     u_char                 filename[NGX_MAX_PATH], *last;
     ngx_str_t              str;
-    struct passwd         *user;
+    struct passwd         *user_entry;
+    struct group          *group_entry;
+    char buf[128];
     
     conf = &passenger_main_conf;
     *conf = *((passenger_main_conf_t *) conf_pointer);
@@ -131,9 +135,17 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
         conf->default_user.data = (u_char *) "nobody";
     }
     
-    if (conf->default_user.len == 0) {
-        conf->default_user.len  = sizeof("nobody") - 1;
-        conf->default_user.data = (u_char *) "nobody";
+    if (conf->default_group.len == 0) {
+        if (conf->default_user.len > sizeof(buf) - 1) {
+            return "Value for 'default_user' is too long.";
+        }
+        memcpy(buf, conf->default_user.data, sizeof(buf));
+        buf[conf->default_user.len] = '\0';
+        
+        group_entry = getgrnam(buf);
+        conf->default_group.len  = strlen(group_entry->gr_name);
+        conf->default_group.data = ngx_palloc(cf->pool, conf->default_group.len + 1);
+        memcpy(conf->default_group.data, group_entry->gr_name, conf->default_group.len + 1);
     }
     
     if (conf->analytics_log_dir.len == 0) {
@@ -141,15 +153,15 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
             conf->analytics_log_dir.data = (u_char *) "/var/log/passenger-analytics";
             conf->analytics_log_dir.len  = sizeof("/var/log/passenger-analytics") - 1;
         } else {
-            user = getpwuid(geteuid());
-            if (user == NULL) {
+            user_entry = getpwuid(geteuid());
+            if (user_entry == NULL) {
                 last = ngx_snprintf(filename, sizeof(filename),
                                     "/tmp/passenger-analytics-logs.user-%L",
                                     (int64_t) geteuid());
             } else {
                 last = ngx_snprintf(filename, sizeof(filename),
                                     "/tmp/passenger-analytics-logs.%s",
-                                    user->pw_name);
+                                    user_entry->pw_name);
             }
             str.data = filename;
             str.len  = last - filename;
@@ -213,6 +225,10 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->environment.len = 0;
     conf->spawn_method.data = NULL;
     conf->spawn_method.len = 0;
+    conf->user.data = NULL;
+    conf->user.len = 0;
+    conf->group.data = NULL;
+    conf->group.len = 0;
     conf->app_group_name.data = NULL;
     conf->app_group_name.len = 0;
     conf->app_rights.data = NULL;
@@ -300,6 +316,8 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->analytics, prev->analytics, 0);
     ngx_conf_merge_str_value(conf->environment, prev->environment, "production");
     ngx_conf_merge_str_value(conf->spawn_method, prev->spawn_method, "smart-lv2");
+    ngx_conf_merge_str_value(conf->user, prev->user, "");
+    ngx_conf_merge_str_value(conf->group, prev->group, "");
     ngx_conf_merge_str_value(conf->app_group_name, prev->app_group_name, NULL);
     ngx_conf_merge_str_value(conf->app_rights, prev->app_rights, NULL);
     ngx_conf_merge_value(conf->min_instances, prev->min_instances, (ngx_int_t) -1);
@@ -1017,11 +1035,32 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_main_conf_t, user_switching),
       NULL },
 
+    { ngx_string("passenger_user"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, user),
+      NULL },
+
+    { ngx_string("passenger_group"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, group),
+      NULL },
+
     { ngx_string("passenger_default_user"),
       NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, default_user),
+      NULL },
+
+    { ngx_string("passenger_default_group"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, default_group),
       NULL },
 
     { ngx_string("passenger_app_group_name"),

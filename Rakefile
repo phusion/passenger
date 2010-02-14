@@ -790,7 +790,14 @@ Packaging::ASCII_DOCS.each do |target|
 	source = target.sub(/\.html$/, '.txt')
 	file target => [source] + Dir["doc/users_guide_snippets/**/*"] do
 		if PlatformInfo.asciidoc
-	  		sh "#{PlatformInfo.asciidoc} #{ASCIIDOC_FLAGS} '#{source}'"
+			if target =~ /apache/i
+				type = "-a apache"
+			elsif target =~ /nginx/i
+				type = "-a nginx"
+			else
+				type = nil
+			end
+	  		sh "#{PlatformInfo.asciidoc} #{ASCIIDOC_FLAGS} #{type} '#{source}'"
 		else
 			sh "echo 'asciidoc required to build docs' > '#{target}'"
 		end

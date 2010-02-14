@@ -40,26 +40,29 @@ using namespace std;
  * This struct encapsulates information for ApplicationPool::get() and for
  * SpawnManager::spawn(), such as which application is to be spawned.
  *
- * <h2>Notes on privilege lowering support</h2>
+ * <h2>Privilege lowering support</h2>
  *
- * If <tt>lowerPrivilege</tt> is true, then it will be attempt to
- * switch the spawned application instance to the user who owns the
- * application's <tt>config/environment.rb</tt>, and to the default
- * group of that user.
+ * If <em>user</em> is given and isn't the empty string, then the application process
+ * will run as the given username. Otherwise, the owner of the application's startup
+ * file (e.g. config/environment.rb or config.ru) will be used.
  *
- * If that user doesn't exist on the system, or if that user is root,
- * then it will be attempted to switch to the username given by
- * <tt>lowestUser</tt> (and to the default group of that user).
- * If <tt>lowestUser</tt> doesn't exist either, or if switching user failed
- * (because the spawn server process does not have the privilege to do so),
- * then the application will be spawned anyway, without reporting an error.
- *
- * It goes without saying that lowering privilege is only possible if
- * the spawn server is running as root (and thus, by induction, that
- * Phusion Passenger and Apache's control process are also running as root).
- * Note that if Apache is listening on port 80, then its control process must
- * be running as root. See "doc/Security of user switching.txt" for
- * a detailed explanation.
+ * If <em>group</em> is given and isn't the empty string, then the application process
+ * will run as the given group name. If it's set to the special value
+ * "!STARTUP_FILE!", then the startup file's group will be used. Otherwise,
+ * the primary group of the user that the application process will run as,
+ * will be used as group.
+ * 
+ * If the user or group that the application process attempts to switch to
+ * doesn't exist, then <em>default_user</em> and <em>default_group</em>, respectively,
+ * will be used.
+ * 
+ * Phusion Passenger will attempt to avoid running the application process as
+ * root: if <em>user</em> or <em>group</em> is set to the root user or the root group,
+ * or if the startup file is owned by root, then <em>default_user</em> and
+ * <em>default_group</em> will be used instead.
+ * 
+ * All this only happen if Phusion Passenger has root privileges. If not, then
+ * these options have no effect.
  */
 struct PoolOptions {
 	/**
@@ -68,29 +71,6 @@ struct PoolOptions {
 	 * etc. This must be a valid directory, but the path does not have to be absolute.
 	 */
 	string appRoot;
-	
-	/** Whether to lower the application's privileges. */
-	bool lowerPrivilege;
-	
-	/**
-	 * The user to fallback to if lowering privilege fails.
-	 */
-	string lowestUser;
-	
-	/**
-	 * The RAILS_ENV/RACK_ENV environment that should be used. May not be an
-	 * empty string.
-	 */
-	string environment;
-	
-	/**
-	 * The spawn method to use. Either "smart", "smart-lv2" or "conservative". See
-	 * the Ruby class <tt>SpawnManager</tt> for details.
-	 */
-	string spawnMethod;
-	
-	/** The application type. Either "rails", "rack" or "wsgi". */
-	string appType;
 	
 	/**
 	 * A name used by ApplicationPool to uniquely identify an application.
@@ -103,27 +83,73 @@ struct PoolOptions {
 	 */
 	string appGroupName;
 	
+	/** The application type. Either "rails" (default), "rack" or "wsgi". */
+	string appType;
+	
 	/**
-	 * The idle timeout, in seconds, of Rails framework spawners.
+	 * The RAILS_ENV/RACK_ENV environment that should be used. May not be an
+	 * empty string. The default is "production".
+	 */
+	string environment;
+	
+	/**
+	 * Method with which application processes should be spawned. Different methods
+	 * have different performance and compatibility properties. Available methods are
+	 * "smart-lv2" (default), "smart" and "conservative". The different spawning methods
+	 * are explained in the "Spawning methods explained" section of the users guide.
+	 */
+	string spawnMethod;
+	
+	/** See overview. */
+	string user;
+	/** See class overview. */
+	string group;
+	/** See class overview. Defaults to "nobody". */
+	string defaultUser;
+	/** See class overview. Defaults to the defaultUser's primary group. */
+	string defaultGroup;
+	
+	/**
+	 * The idle timeout, in seconds, of framework spawners. See the "Spawning methods
+	 * explained" section of the users guide for information about framework spawners.
+	 *
 	 * A timeout of 0 means that the framework spawner should never idle timeout. A timeout
 	 * of -1 means that the default timeout value should be used.
-	 *
-	 * For more details about Rails framework spawners, please
-	 * read the documentation on the Railz::FrameworkSpawner
-	 * Ruby class.
 	 */
 	long frameworkSpawnerTimeout;
 	
 	/**
-	 * The idle timeout, in seconds, of Rails application spawners.
+	 * The idle timeout, in seconds, of application spawners. See the "Spawning methods
+	 * explained" section of the users guide for information about application spawners.
+	 *
 	 * A timeout of 0 means that the application spawner should never idle timeout. A timeout
 	 * of -1 means that the default timeout value should be used.
-	 *
-	 * For more details about Rails application spawners, please
-	 * read the documentation on the Railz::ApplicationSpawner
-	 * Ruby class.
 	 */
 	long appSpawnerTimeout;
+	
+	/**
+	 * Environment variables which should be passed to the spawned application
+	 * process.
+	 *
+	 * If a new application process is started, then the getItems() method
+	 * on this object will be called, which is to return environment
+	 * variables that should be passed to the newly spawned backend process.
+	 * Odd indices in the resulting array contain keys, even indices contain
+	 * the value for the key in the previous index.
+	 *
+	 * May be set to NULL.
+	 *
+	 * @invariant environmentVariables.size() is an even number.
+	 */
+	StringListCreatorPtr environmentVariables;
+	
+	/**
+	 * The base URI on which the application runs. If the application is
+	 * running on the root URI, then this value must be "/".
+	 *
+	 * @invariant baseURI != ""
+	 */
+	string baseURI;
 	
 	/**
 	 * The maximum number of requests that the spawned application may process
@@ -163,27 +189,6 @@ struct PoolOptions {
 	string restartDir;
 	
 	/**
-	 * If a new backend process is started, then the getItems() method
-	 * on this object will be called, which is to return environment
-	 * variables that should be passed to the newly spawned backend process.
-	 * Odd indices in the resulting array contain keys, even indices contain
-	 * the value for the key in the previous index.
-	 *
-	 * May be set to NULL.
-	 *
-	 * @invariant environmentVariables.size() is an even number.
-	 */
-	StringListCreatorPtr environmentVariables;
-	
-	/**
-	 * The base URI on which the application runs. If the application is
-	 * running on the root URI, then this value must be "/".
-	 *
-	 * @invariant baseURI != ""
-	 */
-	string baseURI;
-	
-	/**
 	 * Any rights that the spawned application process may have. The SpawnManager
 	 * will create a new account for each spawned app, and that account will be
 	 * assigned these rights.
@@ -203,8 +208,8 @@ struct PoolOptions {
 	bool initiateSession;
 	
 	/**
-	 * Whether application processes should print exceptions during spawning
-	 * to STDERR. Defaults to true.
+	 * Whether application processes should print exceptions that occurred during
+	 * application initialization. Defaults to true.
 	 */
 	bool printExceptions;
 	
@@ -215,18 +220,16 @@ struct PoolOptions {
 	 * One must still set appRoot manually, after having used this constructor.
 	 */
 	PoolOptions() {
-		lowerPrivilege          = true;
-		lowestUser              = "nobody";
+		appType                 = "rails";
 		environment             = "production";
 		spawnMethod             = "smart-lv2";
-		appType                 = "rails";
 		frameworkSpawnerTimeout = -1;
 		appSpawnerTimeout       = -1;
+		baseURI                 = "/";
 		maxRequests             = 0;
 		minProcesses            = 0;
 		useGlobalQueue          = false;
 		statThrottleRate        = 0;
-		baseURI                 = "/";
 		rights                  = DEFAULT_BACKEND_ACCOUNT_RIGHTS;
 		initiateSession         = true;
 		printExceptions         = true;
@@ -238,38 +241,42 @@ struct PoolOptions {
 	 * Creates a new PoolOptions object with the given values.
 	 */
 	PoolOptions(const string &appRoot,
-		bool lowerPrivilege          = true,
-		const string &lowestUser     = "nobody",
+		string appGroupName          = "",
+		const string &appType        = "rails",
 		const string &environment    = "production",
 		const string &spawnMethod    = "smart-lv2",
-		const string &appType        = "rails",
-		string appGroupName          = "",
+		const string &user           = "",
+		const string &group          = "",
+		const string &defaultUser    = "",
+		const string &defaultGroup   = "",
 		long frameworkSpawnerTimeout = -1,
 		long appSpawnerTimeout       = -1,
+		const string &baseURI        = "/",
 		unsigned long maxRequests    = 0,
 		unsigned long minProcesses   = 0,
 		bool useGlobalQueue          = false,
 		unsigned long statThrottleRate = 0,
 		const string &restartDir     = "",
-		const string &baseURI        = "/",
 		Account::Rights rights       = DEFAULT_BACKEND_ACCOUNT_RIGHTS,
 		const TxnLogPtr &log         = TxnLogPtr()
 	) {
 		this->appRoot                 = appRoot;
-		this->lowerPrivilege          = lowerPrivilege;
-		this->lowestUser              = lowestUser;
+		this->appGroupName            = appGroupName;
+		this->appType                 = appType;
 		this->environment             = environment;
 		this->spawnMethod             = spawnMethod;
-		this->appType                 = appType;
-		this->appGroupName            = appGroupName;
+		this->user                    = user;
+		this->group                   = group;
+		this->defaultUser             = defaultUser;
+		this->defaultGroup            = defaultGroup;
 		this->frameworkSpawnerTimeout = frameworkSpawnerTimeout;
 		this->appSpawnerTimeout       = appSpawnerTimeout;
+		this->baseURI                 = baseURI;
 		this->maxRequests             = maxRequests;
 		this->minProcesses            = minProcesses;
 		this->useGlobalQueue          = useGlobalQueue;
 		this->statThrottleRate        = statThrottleRate;
 		this->restartDir              = restartDir;
-		this->baseURI                 = baseURI;
 		this->rights                  = rights;
 		this->log                     = log;
 		this->initiateSession         = true;
@@ -306,20 +313,22 @@ struct PoolOptions {
 		bool hasEnvVars;
 		
 		appRoot          = vec[startIndex + offset];                 offset += 2;
-		lowerPrivilege   = vec[startIndex + offset] == "true";       offset += 2;
-		lowestUser       = vec[startIndex + offset];                 offset += 2;
+		appGroupName     = vec[startIndex + offset];                 offset += 2;
+		appType          = vec[startIndex + offset];                 offset += 2;
 		environment      = vec[startIndex + offset];                 offset += 2;
 		spawnMethod      = vec[startIndex + offset];                 offset += 2;
-		appType          = vec[startIndex + offset];                 offset += 2;
-		appGroupName     = vec[startIndex + offset];                 offset += 2;
+		user             = vec[startIndex + offset];                 offset += 2;
+		group            = vec[startIndex + offset];                 offset += 2;
+		defaultUser      = vec[startIndex + offset];                 offset += 2;
+		defaultGroup     = vec[startIndex + offset];                 offset += 2;
 		frameworkSpawnerTimeout = atol(vec[startIndex + offset]);    offset += 2;
 		appSpawnerTimeout       = atol(vec[startIndex + offset]);    offset += 2;
+		baseURI          = vec[startIndex + offset];                 offset += 2;
 		maxRequests      = atol(vec[startIndex + offset]);           offset += 2;
 		minProcesses     = atol(vec[startIndex + offset]);           offset += 2;
 		useGlobalQueue   = vec[startIndex + offset] == "true";       offset += 2;
 		statThrottleRate = atol(vec[startIndex + offset]);           offset += 2;
 		restartDir       = vec[startIndex + offset];                 offset += 2;
-		baseURI          = vec[startIndex + offset];                 offset += 2;
 		rights           = (Account::Rights) atol(vec[startIndex + offset]);
 		                                                             offset += 2;
 		if (vec[startIndex + offset - 1] == "txn_log_group_name") {
@@ -355,20 +364,22 @@ struct PoolOptions {
 			vec.reserve(vec.size() + 40);
 		}
 		appendKeyValue (vec, "app_root",           appRoot);
-		appendKeyValue4(vec, "lower_privilege",    lowerPrivilege);
-		appendKeyValue (vec, "lowest_user",        lowestUser);
+		appendKeyValue (vec, "app_group_name",     getAppGroupName());
+		appendKeyValue (vec, "app_type",           appType);
 		appendKeyValue (vec, "environment",        environment);
 		appendKeyValue (vec, "spawn_method",       spawnMethod);
-		appendKeyValue (vec, "app_type",           appType);
-		appendKeyValue (vec, "app_group_name",     getAppGroupName());
+		appendKeyValue (vec, "user",               user);
+		appendKeyValue (vec, "group",              group);
+		appendKeyValue (vec, "default_user",       defaultUser);
+		appendKeyValue (vec, "default_group",      defaultGroup);
 		appendKeyValue2(vec, "framework_spawner_timeout", frameworkSpawnerTimeout);
 		appendKeyValue2(vec, "app_spawner_timeout",       appSpawnerTimeout);
+		appendKeyValue (vec, "base_uri",           baseURI);
 		appendKeyValue3(vec, "max_requests",       maxRequests);
 		appendKeyValue3(vec, "min_processes",      minProcesses);
 		appendKeyValue4(vec, "use_global_queue",   useGlobalQueue);
 		appendKeyValue3(vec, "stat_throttle_rate", statThrottleRate);
 		appendKeyValue (vec, "restart_dir",        restartDir);
-		appendKeyValue (vec, "base_uri",           baseURI);
 		appendKeyValue3(vec, "rights",             rights);
 		if (log) {
 			appendKeyValue(vec, "txn_log_group_name", log->getGroupName());

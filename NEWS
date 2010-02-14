@@ -18,6 +18,8 @@ Release 2.9.1
    issue #380.
  * [Nginx] Allow multiple concurrent instances of
    passenger-install-nginx-module.
+ * PassengerUser/PassengerGroup and passenger_user/passenger_group.
+ * PassengerDefaultGroup/passenger_default_group.
 
 
 Release 2.9.0

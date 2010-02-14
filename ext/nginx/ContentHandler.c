@@ -418,6 +418,8 @@ create_request(ngx_http_request_t *r)
     len += sizeof("PASSENGER_APP_TYPE") + app_type_string_len;
     ANALYZE_STR_CONFIG_LENGTH("PASSENGER_APP_GROUP_NAME", slcf, app_group_name);
     ANALYZE_STR_CONFIG_LENGTH("PASSENGER_APP_RIGHTS", slcf, app_rights);
+    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_USER", slcf, user);
+    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_GROUP", slcf, group);
     
     end = ngx_snprintf(min_instances_string,
                        sizeof(min_instances_string) - 1,
@@ -630,6 +632,10 @@ create_request(ngx_http_request_t *r)
                               slcf, app_group_name);
     SERIALIZE_STR_CONFIG_DATA("PASSENGER_APP_RIGHTS",
                               slcf, app_rights);
+    SERIALIZE_STR_CONFIG_DATA("PASSENGER_USER",
+                              slcf, user);
+    SERIALIZE_STR_CONFIG_DATA("PASSENGER_GROUP",
+                              slcf, group);
 
     b->last = ngx_copy(b->last, "PASSENGER_APP_TYPE",
                        sizeof("PASSENGER_APP_TYPE"));

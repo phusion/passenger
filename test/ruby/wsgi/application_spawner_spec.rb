@@ -17,8 +17,9 @@ describe WSGI::ApplicationSpawner do
 	end
 	
 	def spawn(app_root)
-		WSGI::ApplicationSpawner.spawn_application(app_root,
-			true, CONFIG['lowest_user'])
+		WSGI::ApplicationSpawner.spawn_application(
+			"app_root"     => app_root,
+			"default_user" => CONFIG['default_user'])
 	end
 	
 	it "can spawn our stub application" do

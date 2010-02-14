@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <pwd.h>
+#include <grp.h>
 
 #include <set>
 #include <vector>
@@ -124,12 +125,8 @@ private:
 	/** This client's password. */
 	string password;
 	
-	/** Whether privilege lowering should be used. */
-	bool lowerPrivilege;
-	
-	/** The user that spawned processes should run as, if initial attempt
-	 * at privilege lowering failed. */
-	string lowestUser;
+	string defaultUser;
+	string defaultGroup;
 	
 	/** The server socket file descriptor. */
 	int serverSocket;
@@ -452,8 +449,10 @@ private:
 			options.useGlobalQueue = parser.getHeader("PASSENGER_USE_GLOBAL_QUEUE") == "true";
 			options.environment    = parser.getHeader("PASSENGER_ENVIRONMENT");
 			options.spawnMethod    = parser.getHeader("PASSENGER_SPAWN_METHOD");
-			options.lowerPrivilege = lowerPrivilege;
-			options.lowestUser     = lowestUser;
+			options.user           = parser.getHeader("PASSENGER_USER");
+			options.group          = parser.getHeader("PASSENGER_GROUP");
+			options.defaultUser    = defaultUser;
+			options.defaultUser    = defaultGroup;
 			options.appType        = parser.getHeader("PASSENGER_APP_TYPE");
 			options.rights         = Account::parseRightsString(
 				parser.getHeader("PASSENGER_APP_RIGHTS"),
@@ -610,22 +609,19 @@ public:
 	 * @param pool The application pool where this client belongs to.
 	 * @param password The password that is required to connect to this client handler.
 	 *   This value is determined and assigned by the server.
-	 * @param lowerPrivilege Whether privilege lowering should be used.
-	 * @param lowestUser The user that spawned processes should run as, if
-	 *   initial attempt at privilege lowering failed.
 	 * @param serverSocket The server socket to accept this clients connection from.
 	 */
 	Client(unsigned int number, ApplicationPool::Ptr pool,
-	       const string &password, bool lowerPrivilege,
-	       const string &lowestUser, int serverSocket,
+	       const string &password, const string &defaultUser,
+	       const string &defaultGroup, int serverSocket,
 	       TxnLoggerPtr logger)
 		: inactivityTimer(false)
 	{
 		this->number = number;
 		this->pool = pool;
 		this->password = password;
-		this->lowerPrivilege = lowerPrivilege;
-		this->lowestUser = lowestUser;
+		this->defaultUser = defaultUser;
+		this->defaultGroup = defaultGroup;
 		this->serverSocket = serverSocket;
 		this->txnLogger = logger;
 		thr = new oxt::thread(
@@ -676,6 +672,7 @@ private:
 	FileDescriptor feedbackFd;
 	bool userSwitching;
 	string defaultUser;
+	string defaultGroup;
 	unsigned int numberOfThreads;
 	FileDescriptor requestSocket;
 	string requestSocketPassword;
@@ -724,44 +721,49 @@ private:
 	void startClientHandlerThreads() {
 		for (unsigned int i = 0; i < numberOfThreads; i++) {
 			ClientPtr client(new Client(i + 1, pool, requestSocketPassword,
-				userSwitching, defaultUser, requestSocket, txnLogger));
+				defaultUser, defaultGroup, requestSocket, txnLogger));
 			clients.insert(client);
 		}
 	}
 	
 	/**
-	 * Lowers this process's privilege to that of <em>username</em>.
+	 * Lowers this process's privilege to that of <em>username</em> and <em>groupname</em>.
 	 */
-	void lowerPrivilege(const string &username) {
-		struct passwd *entry;
+	void lowerPrivilege(const string &username, const string &groupname) {
+		struct passwd *userEntry;
+		struct group  *groupEntry;
+		int            e;
 		
-		entry = getpwnam(username.c_str());
-		if (entry != NULL) {
-			if (initgroups(username.c_str(), entry->pw_gid) != 0) {
-				int e = errno;
-				P_WARN("WARNING: Unable to lower Passenger HelperServer's "
-					"privilege to that of user '" << username <<
-					"': cannot set supplementary groups for this "
-					"user: " << strerror(e) << " (" << e << ")");
-			}
-			if (setgid(entry->pw_gid) != 0) {
-				int e = errno;
-				P_WARN("WARNING: Unable to lower Passenger HelperServer's "
-					"privilege to that of user '" << username <<
-					"': cannot set group ID: " << strerror(e) <<
-					" (" << e << ")");
-			}
-			if (setuid(entry->pw_uid) != 0) {
-				int e = errno;
-				P_WARN("WARNING: Unable to lower Passenger HelperServer's "
-					"privilege to that of user '" << username <<
-					"': cannot set user ID: " << strerror(e) <<
-					" (" << e << ")");
-			}
-		} else {
-			P_WARN("WARNING: Unable to lower Passenger HelperServer's "
-				"privilege to that of user '" << username <<
+		userEntry = getpwnam(username.c_str());
+		if (userEntry == NULL) {
+			throw NonExistentUserException(string("Unable to lower Passenger "
+				"HelperServer's privilege to that of user '") + username +
 				"': user does not exist.");
+		}
+		groupEntry = getgrnam(groupname.c_str());
+		if (groupEntry == NULL) {
+			throw NonExistentGroupException(string("Unable to lower Passenger "
+				"HelperServer's privilege to that of user '") + username +
+				"': user does not exist.");
+		}
+		
+		if (initgroups(username.c_str(), userEntry->pw_gid) != 0) {
+			e = errno;
+			throw SystemException(string("Unable to lower Passenger HelperServer's "
+				"privilege to that of user '") + username +
+				"': cannot set supplementary groups for this user", e);
+		}
+		if (setgid(groupEntry->gr_gid) != 0) {
+			e = errno;
+			throw SystemException(string("Unable to lower Passenger HelperServer's "
+				"privilege to that of user '") + username +
+				"': cannot set group ID", e);
+		}
+		if (setuid(userEntry->pw_uid) != 0) {
+			e = errno;
+			throw SystemException(string("Unable to lower Passenger HelperServer's "
+				"privilege to that of user '") + username +
+				"': cannot set user ID", e);
 		}
 	}
 	
@@ -790,7 +792,7 @@ private:
 	
 public:
 	Server(FileDescriptor feedbackFd, pid_t webServerPid, const string &tempDir,
-		bool userSwitching, const string &defaultUser, uid_t workerUid, gid_t workerGid,
+		bool userSwitching, const string &defaultUser, const string &defaultGroup,
 		const string &passengerRoot, const string &rubyCommand, unsigned int generationNumber,
 		unsigned int maxPoolSize, unsigned int maxInstancesPerApp, unsigned int poolIdleTime,
 		const string &analyticsLogDir, const string &serializedPrestartURIs)
@@ -805,6 +807,7 @@ public:
 		this->feedbackFd    = feedbackFd;
 		this->userSwitching = userSwitching;
 		this->defaultUser   = defaultUser;
+		this->defaultGroup  = defaultGroup;
 		feedbackChannel     = MessageChannel(feedbackFd);
 		numberOfThreads     = maxPoolSize * 4;
 		
@@ -820,12 +823,13 @@ public:
 		loggingAgentPassword  = Base64::decode(args[3]);
 		generation = serverInstanceDir.getGeneration(generationNumber);
 		startListening();
-		accountsDatabase = AccountsDatabase::createDefault(generation, userSwitching, defaultUser);
+		accountsDatabase = AccountsDatabase::createDefault(generation,
+			userSwitching, defaultUser, defaultGroup);
 		accountsDatabase->add("_web_server", messageSocketPassword, false, Account::EXIT);
 		messageServer = ptr(new MessageServer(generation->getPath() + "/socket", accountsDatabase));
 		
 		if (geteuid() == 0 && !userSwitching) {
-			lowerPrivilege(defaultUser);
+			lowerPrivilege(defaultUser, defaultGroup);
 		}
 		
 		UPDATE_TRACE_POINT();
@@ -969,16 +973,15 @@ main(int argc, char *argv[]) {
 		string  tempDir       = argv[4];
 		bool    userSwitching = strcmp(argv[5], "true") == 0;
 		string  defaultUser   = argv[6];
-		uid_t   workerUid     = (uid_t) atoll(argv[7]);
-		gid_t   workerGid     = (uid_t) atoll(argv[8]);
-		string  passengerRoot = argv[9];
-		string  rubyCommand   = argv[10];
-		unsigned int generationNumber   = atoll(argv[11]);
-		unsigned int maxPoolSize        = atoi(argv[12]);
-		unsigned int maxInstancesPerApp = atoi(argv[13]);
-		unsigned int poolIdleTime       = atoi(argv[14]);
-		string  analyticsLogDir = argv[15];
-		string  serializedPrestartURIs = argv[16];
+		string  defaultGroup  = argv[7];
+		string  passengerRoot = argv[8];
+		string  rubyCommand   = argv[9];
+		unsigned int generationNumber   = atoll(argv[10]);
+		unsigned int maxPoolSize        = atoi(argv[11]);
+		unsigned int maxInstancesPerApp = atoi(argv[12]);
+		unsigned int poolIdleTime       = atoi(argv[13]);
+		string  analyticsLogDir = argv[14];
+		string  serializedPrestartURIs = argv[15];
 		
 		// Change process title.
 		strncpy(argv[0], "PassengerHelperServer", strlen(argv[0]));
@@ -989,7 +992,7 @@ main(int argc, char *argv[]) {
 		UPDATE_TRACE_POINT();
 		setLogLevel(logLevel);
 		Server server(feedbackFd, webServerPid, tempDir,
-			userSwitching, defaultUser, workerUid, workerGid,
+			userSwitching, defaultUser, defaultGroup,
 			passengerRoot, rubyCommand, generationNumber,
 			maxPoolSize, maxInstancesPerApp, poolIdleTime,
 			analyticsLogDir, serializedPrestartURIs);

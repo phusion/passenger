@@ -20,8 +20,8 @@ describe Rack::ApplicationSpawner do
 			yield stub if block_given?
 			
 			defaults = {
-				"app_root"    => stub.app_root,
-				"lowest_user" => CONFIG['lowest_user']
+				"app_root"     => stub.app_root,
+				"default_user" => CONFIG['default_user']
 			}
 			options = defaults.merge(extra_options)
 			app = Rack::ApplicationSpawner.spawn_application(options)
@@ -51,8 +51,8 @@ describe Rack::ApplicationSpawner do
 			yield stub if block_given?
 			
 			defaults = {
-				"app_root"    => stub.app_root,
-				"lowest_user" => CONFIG['lowest_user']
+				"app_root"     => stub.app_root,
+				"default_user" => CONFIG['default_user']
 			}
 			options = defaults.merge(extra_options)
 			@spawner ||= begin

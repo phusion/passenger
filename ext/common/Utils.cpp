@@ -34,7 +34,6 @@
 #include <netdb.h>
 #include <libgen.h>
 #include <fcntl.h>
-#include <pwd.h>
 #include "CachedFileStat.hpp"
 #include "FileDescriptor.h"
 #include "MessageChannel.h"
@@ -385,23 +384,6 @@ getProcessUsername() {
 		return strings;
 	} else {
 		return result->pw_name;
-	}
-}
-
-void
-determineLowestUserAndGroup(const string &user, uid_t &uid, gid_t &gid) {
-	struct passwd *ent;
-	
-	ent = getpwnam(user.c_str());
-	if (ent == NULL) {
-		ent = getpwnam("nobody");
-	}
-	if (ent == NULL) {
-		uid = USER_NOT_GIVEN;
-		gid = GROUP_NOT_GIVEN;
-	} else {
-		uid = ent->pw_uid;
-		gid = ent->pw_gid;
 	}
 }
 

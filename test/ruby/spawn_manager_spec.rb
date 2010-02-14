@@ -26,7 +26,7 @@ describe SpawnManager do
 			default_options = {
 				"app_root"     => stub.app_root,
 				"spawn_method" => @spawn_method,
-				"lowest_user"  => CONFIG['lowest_user']
+				"default_user" => CONFIG['default_user']
 			}
 			options = default_options.merge(extra_options)
 			app = spawner.spawn_application(options)
@@ -103,7 +103,7 @@ describe SpawnManager do
 				"app_root"     => stub.app_root,
 				"app_type"     => "rack",
 				"spawn_method" => @spawn_method,
-				"lowest_user"  => CONFIG['lowest_user']
+				"default_user" => CONFIG['default_user']
 			}
 			options = default_options.merge(extra_options)
 			@spawner ||= SpawnManager.new

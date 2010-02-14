@@ -41,8 +41,8 @@ describe Railz::FrameworkSpawner do
 		framework_version = AppProcess.detect_framework_version(stub.app_root)
 		default_options = {
 			"framework_version" => framework_version,
-			"app_root"    => stub.app_root,
-			"lowest_user" => CONFIG['lowest_user']
+			"app_root"     => stub.app_root,
+			"default_user" => CONFIG['default_user']
 		}
 		options = default_options.merge(extra_options)
 		@spawner ||= begin

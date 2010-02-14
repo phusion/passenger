@@ -31,6 +31,8 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <pwd.h>
+#include <grp.h>
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -65,12 +67,28 @@ public:
 			owner = false;
 		}
 		
-		void create(bool userSwitching, const string &defaultUser, uid_t workerUid, gid_t workerGid) {
+		void create(bool userSwitching, const string &defaultUser,
+		            const string &defaultGroup, uid_t webServerWorkerUid,
+		            gid_t webServerWorkerGid)
+		{
 			bool runningAsRoot = geteuid() == 0;
+			struct passwd *defaultUserEntry;
+			struct group  *defaultGroupEntry;
 			uid_t defaultUid;
 			gid_t defaultGid;
 			
-			determineLowestUserAndGroup(defaultUser, defaultUid, defaultGid);
+			defaultUserEntry = getpwnam(defaultUser.c_str());
+			if (defaultUserEntry == NULL) {
+				throw NonExistentUserException("Default user ''" + defaultUser +
+					"' does not exist.");
+			}
+			defaultUid = defaultUserEntry->pw_uid;
+			defaultGroupEntry = getgrnam(defaultGroup.c_str());
+			if (defaultGroupEntry == NULL) {
+				throw NonExistentGroupException("Default group ''" + defaultGroup +
+					"' does not exist.");
+			}
+			defaultGid = defaultGroupEntry->gr_gid;
 			
 			/* We set a very tight permission here: no read or write access for
 			 * anybody except the owner. The individual files and subdirectories
@@ -91,7 +109,8 @@ public:
 			 * directory.
 			 */
 			if (runningAsRoot) {
-				makeDirTree(path + "/buffered_uploads", "u=rwxs,g=,o=", workerUid, workerGid);
+				makeDirTree(path + "/buffered_uploads", "u=rwxs,g=,o=",
+					webServerWorkerUid, webServerWorkerGid);
 			} else {
 				makeDirTree(path + "/buffered_uploads", "u=rwxs,g=,o=");
 			}
@@ -236,7 +255,10 @@ public:
 		owner = false;
 	}
 	
-	GenerationPtr newGeneration(bool userSwitching, const string &defaultUser, uid_t workerUid, gid_t workerGid) {
+	GenerationPtr newGeneration(bool userSwitching, const string &defaultUser,
+	                            const string &defaultGroup, uid_t webServerWorkerUid,
+	                            gid_t webServerWorkerGid)
+	{
 		GenerationPtr newestGeneration = getNewestGeneration();
 		unsigned int newNumber;
 		if (newestGeneration != NULL) {
@@ -246,7 +268,8 @@ public:
 		}
 		
 		GenerationPtr generation(new Generation(path, newNumber));
-		generation->create(userSwitching, defaultUser, workerUid, workerGid);
+		generation->create(userSwitching, defaultUser, defaultGroup,
+			webServerWorkerUid, webServerWorkerGid);
 		return generation;
 	}
 	

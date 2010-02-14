@@ -35,8 +35,9 @@ static pid_t   webServerPid;
 static string  tempDir;
 static bool    userSwitching;
 static string  defaultUser;
-static uid_t   workerUid;
-static gid_t   workerGid;
+static string  defaultGroup;
+static uid_t   webServerWorkerUid;
+static gid_t   webServerWorkerGid;
 static string  passengerRoot;
 static string  rubyCommand;
 static unsigned int maxPoolSize;
@@ -56,8 +57,6 @@ static EventFd errorEvent;
 
 static string logLevelString;
 static string webServerPidString;
-static string workerUidString;
-static string workerGidString;
 static string generationNumber;
 static string maxPoolSizeString;
 static string maxInstancesPerAppString;
@@ -510,8 +509,7 @@ protected:
 			tempDir.c_str(),
 			userSwitching ? "true" : "false",
 			defaultUser.c_str(),
-			workerUidString.c_str(),
-			workerGidString.c_str(),
+			defaultGroup.c_str(),
 			passengerRoot.c_str(),
 			rubyCommand.c_str(),
 			generationNumber.c_str(),
@@ -897,18 +895,19 @@ main(int argc, char *argv[]) {
 	tempDir       = argv[5];
 	userSwitching = strcmp(argv[6], "true") == 0;
 	defaultUser   = argv[7];
-	workerUid     = (uid_t) atoll(argv[8]);
-	workerGid     = (uid_t) atoll(argv[9]);
-	passengerRoot = argv[10];
-	rubyCommand   = argv[11];
-	maxPoolSize        = atoi(argv[12]);
-	maxInstancesPerApp = atoi(argv[13]);
-	poolIdleTime       = atoi(argv[14]);
-	analyticsLogDir    = argv[15];
-	analyticsLogUser        = argv[16];
-	analyticsLogGroup       = argv[17];
-	analyticsLogPermissions = argv[18];
-	serializedPrestartURLs  = argv[19];
+	defaultGroup  = argv[8];
+	webServerWorkerUid = (uid_t) atoll(argv[9]);
+	webServerWorkerGid = (uid_t) atoll(argv[10]);
+	passengerRoot = argv[11];
+	rubyCommand   = argv[12];
+	maxPoolSize        = atoi(argv[13]);
+	maxInstancesPerApp = atoi(argv[14]);
+	poolIdleTime       = atoi(argv[15]);
+	analyticsLogDir    = argv[16];
+	analyticsLogUser        = argv[17];
+	analyticsLogGroup       = argv[18];
+	analyticsLogPermissions = argv[19];
+	serializedPrestartURLs  = argv[20];
 	
 	/* Become the session leader so that Apache can't kill this
 	 * watchdog with killpg() during shutdown, and so that a
@@ -932,15 +931,14 @@ main(int argc, char *argv[]) {
 	try {
 		MessageChannel feedbackChannel(feedbackFd);
 		serverInstanceDir.reset(new ServerInstanceDir(webServerPid, tempDir));
-		generation = serverInstanceDir->newGeneration(userSwitching, defaultUser, workerUid, workerGid);
+		generation = serverInstanceDir->newGeneration(userSwitching, defaultUser,
+			defaultGroup, webServerWorkerUid, webServerWorkerGid);
 		
 		/* Pre-convert some integers to strings so that we don't have to do this
 		 * after forking.
 		 */
 		logLevelString     = toString(logLevel);
 		webServerPidString = toString(webServerPid);
-		workerUidString    = toString(workerUid);
-		workerGidString    = toString(workerGid);
 		generationNumber   = toString(generation->getNumber());
 		maxPoolSizeString  = toString(maxPoolSize);
 		maxInstancesPerAppString = toString(maxInstancesPerApp);

@@ -588,20 +588,22 @@ private:
 				string publicDirectory(mapper.getPublicDirectory());
 				PoolOptions options(
 					config->getAppRoot(publicDirectory.c_str()),
-					true,
-					sconfig->getDefaultUser(),
+					"",
+					mapper.getApplicationTypeString(),
 					mapper.getEnvironment(),
 					config->getSpawnMethodString(),
-					mapper.getApplicationTypeString(),
-					"",
+					config->getUser(),
+					config->getGroup(),
+					sconfig->getDefaultUser(),
+					sconfig->getDefaultGroup(),
 					config->frameworkSpawnerTimeout,
 					config->appSpawnerTimeout,
+					mapper.getBaseURI(),
 					config->getMaxRequests(),
 					config->getMinInstances(),
 					config->usingGlobalQueue(),
 					config->getStatThrottleRate(),
-					config->getRestartDir(),
-					mapper.getBaseURI()
+					config->getRestartDir()
 				);
 				options.environmentVariables = ptr(new EnvironmentVariablesStringListCreator(r));
 				
@@ -1274,7 +1276,8 @@ public:
 		
 		agentsStarter.start(config->logLevel,
 			getpid(), config->getTempDir(),
-			config->userSwitchingEnabled(), config->getDefaultUser(),
+			config->userSwitchingEnabled(),
+			config->getDefaultUser(), config->getDefaultGroup(),
 			unixd_config.user_id, unixd_config.group_id,
 			config->root, config->getRuby(), config->maxPoolSize,
 			config->maxInstancesPerApp, config->poolIdleTime,

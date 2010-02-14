@@ -56,6 +56,7 @@
 	
 	#include <sys/types.h>
 	#include <pwd.h>
+	#include <grp.h>
 
 	namespace Passenger {
 	
@@ -102,6 +103,11 @@
 			
 			/** The spawn method to use. */
 			SpawnMethod spawnMethod;
+			
+			/** See PoolOptions for more info. */
+			const char *user;
+			/** See PoolOptions for more info. */
+			const char *group;
 			
 			/**
 			 * The idle timeout, in seconds, of Rails framework spawners.
@@ -212,6 +218,22 @@
 					}
 				} else {
 					return appRoot;
+				}
+			}
+			
+			const char *getUser() const {
+				if (user != NULL) {
+					return user;
+				} else {
+					return "";
+				}
+			}
+			
+			const char *getGroup() const {
+				if (group != NULL) {
+					return group;
+				} else {
+					return "";
 				}
 			}
 			
@@ -350,10 +372,10 @@
 			 * this server config. */
 			bool userSwitchingSpecified;
 
-			/** The user that applications must run as if user switching
-			 * fails or is disabled. NULL means the option is not specified.
-			 */
+			/** See PoolOptions for more info. */
 			const char *defaultUser;
+			/** See PoolOptions for more info. */
+			const char *defaultGroup;
 			
 			/** The temp directory that Passenger should use. NULL
 			 * means unspecified.
@@ -413,6 +435,15 @@
 				if (defaultUser != NULL) {
 					return defaultUser;
 				} else {
+					return "nobody";
+				}
+			}
+			
+			const char *getDefaultGroup() const {
+				if (defaultGroup != NULL) {
+					return defaultGroup;
+				} else {
+					// FIXME: should be primary group of defaultUser
 					return "nobody";
 				}
 			}

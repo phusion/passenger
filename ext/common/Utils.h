@@ -279,15 +279,6 @@ string escapeForXml(const string &input);
 string getProcessUsername();
 
 /**
- * Given a username that's supposed to be the "lowest user" in the user switching mechanism,
- * checks whether this username exists. If so, this users's UID and GID will be stored into
- * the arguments of the same names. If not, <em>uid</em> and <em>gid</em> will be set to
- * the UID and GID of the "nobody" user. If that user doesn't exist either, then <em>uid</em>
- * and <em>gid</em> will be set to -1.
- */
-void determineLowestUserAndGroup(const string &user, uid_t &uid, gid_t &gid);
-
-/**
  * Converts a mode string into a mode_t value.
  *
  * At this time only the symbolic mode strings are supported, e.g. something like looks
