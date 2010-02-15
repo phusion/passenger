@@ -97,6 +97,8 @@ struct DirConfig {
 	 * Rack applications should operate. */
 	const char *rackEnv;
 	
+	string appGroupName;
+	
 	/** The spawn method to use. */
 	SpawnMethod spawnMethod;
 	

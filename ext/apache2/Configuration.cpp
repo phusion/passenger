@@ -224,6 +224,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	MERGE_STR_CONFIG(railsEnv);
 	MERGE_STR_CONFIG(rackEnv);
 	MERGE_STR_CONFIG(appRoot);
+	MERGE_STRING_CONFIG(appGroupName);
 	MERGE_STR_CONFIG(user);
 	MERGE_STR_CONFIG(group);
 	config->spawnMethod = (add->spawnMethod == DirConfig::SM_UNSET) ? base->spawnMethod : add->spawnMethod;
@@ -276,6 +277,7 @@ DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_high_performance, highPerformanc
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_enabled, enabled)
 DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_stat_throttle_rate, statThrottleRate, unsigned long, 0)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_root, appRoot)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_group_name, appGroupName)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_user, user)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_group, group)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_restart_dir, restartDir)
@@ -500,6 +502,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_ALL,
 		"Enable or disable Phusion Passenger."),
+	AP_INIT_TAKE1("PassengerAppGroupName",
+		(Take1Func) cmd_passenger_app_group_name,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"The temp directory that Passenger should use."),
 	AP_INIT_TAKE1("PassengerStatThrottleRate",
 		(Take1Func) cmd_passenger_stat_throttle_rate,
 		NULL,
