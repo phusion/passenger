@@ -34,6 +34,8 @@
 #include <sys/select.h>
 #include <unistd.h>
 #include <signal.h>
+#include <pwd.h>
+#include <grp.h>
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
@@ -45,6 +47,7 @@
 #include "MessageServer.h"
 #include "BacktracesServer.h"
 #include "ServerInstanceDir.h"
+#include "ResourceLocator.h"
 #include "MessageChannel.h"
 #include "FileDescriptor.h"
 #include "Timer.h"
@@ -132,6 +135,8 @@ private:
 	AccountsDatabasePtr accountsDatabase;
 	MessageServerPtr messageServer;
 	ApplicationPool::PoolPtr pool;
+	ResourceLocator resourceLocator;
+	shared_ptr<oxt::thread> prestarterThread;
 	shared_ptr<oxt::thread> messageServerThread;
 	EventFd exitEvent;
 	Timer exitTimer;
@@ -150,50 +155,56 @@ private:
 	}
 	
 	/**
-	 * Lowers this process's privilege to that of <em>username</em>.
+	 * Lowers this process's privilege to that of <em>username</em> and <em>groupname</em>.
 	 */
-	void lowerPrivilege(const string &username) {
-		struct passwd *entry;
+	void lowerPrivilege(const string &username, const string &groupname) {
+		struct passwd *userEntry;
+		struct group  *groupEntry;
+		int            e;
 		
-		entry = getpwnam(username.c_str());
-		if (entry != NULL) {
-			if (initgroups(username.c_str(), entry->pw_gid) != 0) {
-				int e = errno;
-				P_WARN("WARNING: Unable to lower ApplicationPoolServerExecutable's "
-					"privilege to that of user '" << username <<
-					"': cannot set supplementary groups for this "
-					"user: " << strerror(e) << " (" << e << ")");
-			}
-			if (setgid(entry->pw_gid) != 0) {
-				int e = errno;
-				P_WARN("WARNING: Unable to lower ApplicationPoolServerExecutable's "
-					"privilege to that of user '" << username <<
-					"': cannot set group ID: " << strerror(e) <<
-					" (" << e << ")");
-			}
-			if (setuid(entry->pw_uid) != 0) {
-				int e = errno;
-				P_WARN("WARNING: Unable to lower ApplicationPoolServerExecutable's "
-					"privilege to that of user '" << username <<
-					"': cannot set user ID: " << strerror(e) <<
-					" (" << e << ")");
-			}
-		} else {
-			P_WARN("WARNING: Unable to lower ApplicationPoolServerExecutable's "
-				"privilege to that of user '" << username <<
+		userEntry = getpwnam(username.c_str());
+		if (userEntry == NULL) {
+			throw NonExistentUserException(string("Unable to lower Passenger "
+				"HelperServer's privilege to that of user '") + username +
 				"': user does not exist.");
+		}
+		groupEntry = getgrnam(groupname.c_str());
+		if (groupEntry == NULL) {
+			throw NonExistentGroupException(string("Unable to lower Passenger "
+				"HelperServer's privilege to that of user '") + username +
+				"': user does not exist.");
+		}
+		
+		if (initgroups(username.c_str(), userEntry->pw_gid) != 0) {
+			e = errno;
+			throw SystemException(string("Unable to lower Passenger HelperServer's "
+				"privilege to that of user '") + username +
+				"': cannot set supplementary groups for this user", e);
+		}
+		if (setgid(groupEntry->gr_gid) != 0) {
+			e = errno;
+			throw SystemException(string("Unable to lower Passenger HelperServer's "
+				"privilege to that of user '") + username +
+				"': cannot set group ID", e);
+		}
+		if (setuid(userEntry->pw_uid) != 0) {
+			e = errno;
+			throw SystemException(string("Unable to lower Passenger HelperServer's "
+				"privilege to that of user '") + username +
+				"': cannot set user ID", e);
 		}
 	}
 	
 public:
 	Server(unsigned int logLevel, FileDescriptor feedbackFd,
 		pid_t webServerPid, const string &tempDir,
-		bool userSwitching, const string &defaultUser, uid_t workerUid, gid_t workerGid,
+		bool userSwitching, const string &defaultUser, const string &defaultGroup,
 		const string &passengerRoot, const string &rubyCommand,
 		unsigned int generationNumber, unsigned int maxPoolSize,
 		unsigned int maxInstancesPerApp, unsigned int poolIdleTime,
-		const string &analyticsLogDir)
-		: serverInstanceDir(webServerPid, tempDir, false)
+		const string &analyticsLogDir, const string &serializedPrestartURIs)
+		: serverInstanceDir(webServerPid, tempDir, false),
+		  resourceLocator(passengerRoot)
 	{
 		TRACE_POINT();
 		vector<string> args;
@@ -214,8 +225,9 @@ public:
 		messageSocketPassword = Base64::decode(args[2]);
 		loggingAgentPassword  = Base64::decode(args[3]);
 		
-		generation        = serverInstanceDir.getGeneration(generationNumber);
-		accountsDatabase  = AccountsDatabase::createDefault(generation, userSwitching, defaultUser);
+		generation       = serverInstanceDir.getGeneration(generationNumber);
+		accountsDatabase = AccountsDatabase::createDefault(generation,
+			userSwitching, defaultUser, defaultGroup);
 		accountsDatabase->add("_web_server", messageSocketPassword, false,
 			Account::GET | Account::DETACH | Account::SET_PARAMETERS | Account::EXIT);
 		messageServer = ptr(new MessageServer(generation->getPath() + "/socket", accountsDatabase));
@@ -224,7 +236,7 @@ public:
 			toString(getpid()), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 		
 		if (geteuid() == 0 && !userSwitching) {
-			lowerPrivilege(defaultUser);
+			lowerPrivilege(defaultUser, defaultGroup);
 		}
 		
 		UPDATE_TRACE_POINT();
@@ -233,7 +245,7 @@ public:
 			"logging", loggingAgentPassword));
 		
 		pool = ptr(new ApplicationPool::Pool(
-			findSpawnServer(passengerRoot.c_str()), generation,
+			resourceLocator.getSpawnServerFilename(), generation,
 			accountsDatabase, rubyCommand,
 			generation->getPath() + "/logging.socket",
 			"logging", loggingAgentPassword
@@ -252,10 +264,15 @@ public:
 			"",  // Request socket filename; not available in the Apache helper server.
 			messageServer->getSocketFilename().c_str(),
 			NULL);
+		
+		prestarterThread = ptr(new oxt::thread(
+			boost::bind(prestartWebApps, resourceLocator, serializedPrestartURIs)
+		));
 	}
 	
 	~Server() {
 		TRACE_POINT();
+		prestarterThread->interrupt_and_join();
 		if (messageServerThread != NULL) {
 			messageServerThread->interrupt_and_join();
 		}
@@ -321,10 +338,6 @@ int
 main(int argc, char *argv[]) {
 	TRACE_POINT();
 	try {
-		/* Become the process group leader so that the watchdog can kill the
-		 * HelperServer as well as all descendant processes. */
-		setpgid(getpid(), getpid());
-		
 		ignoreSigpipe();
 		setup_syscall_interruption_support();
 		setvbuf(stdout, NULL, _IONBF, 0);
@@ -336,15 +349,15 @@ main(int argc, char *argv[]) {
 		string  tempDir       = argv[4];
 		bool    userSwitching = strcmp(argv[5], "true") == 0;
 		string  defaultUser   = argv[6];
-		uid_t   workerUid     = (uid_t) atoll(argv[7]);
-		gid_t   workerGid     = (uid_t) atoll(argv[8]);
-		string  passengerRoot = argv[9];
-		string  rubyCommand   = argv[10];
-		unsigned int generationNumber  = atoll(argv[11]);
-		unsigned int maxPoolSize        = atoi(argv[12]);
-		unsigned int maxInstancesPerApp = atoi(argv[13]);
-		unsigned int poolIdleTime       = atoi(argv[14]);
-		string  analyticsLogDir = argv[15];
+		string  defaultGroup  = argv[7];
+		string  passengerRoot = argv[8];
+		string  rubyCommand   = argv[9];
+		unsigned int generationNumber  = atoll(argv[10]);
+		unsigned int maxPoolSize        = atoi(argv[11]);
+		unsigned int maxInstancesPerApp = atoi(argv[12]);
+		unsigned int poolIdleTime       = atoi(argv[13]);
+		string  analyticsLogDir = argv[14];
+		string  serializedPrestartURIs = argv[15];
 		
 		// Change process title.
 		strncpy(argv[0], "PassengerHelperServer", strlen(argv[0]));
@@ -354,11 +367,10 @@ main(int argc, char *argv[]) {
 		
 		UPDATE_TRACE_POINT();
 		Server server(logLevel, feedbackFd, webServerPid, tempDir,
-			userSwitching, defaultUser, workerUid, workerGid,
+			userSwitching, defaultUser, defaultGroup,
 			passengerRoot, rubyCommand, generationNumber,
 			maxPoolSize, maxInstancesPerApp, poolIdleTime,
-			analyticsLogDir);
-		P_DEBUG("Phusion Passenger helper server started on PID " << getpid());
+			analyticsLogDir, serializedPrestartURIs);
 		
 		UPDATE_TRACE_POINT();
 		server.mainLoop();
@@ -373,6 +385,5 @@ main(int argc, char *argv[]) {
 		throw;
 	}
 	
-	P_TRACE(2, "Phusion Passenger Helper server exited.");
 	return 0;
 }

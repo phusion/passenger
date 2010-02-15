@@ -1,4 +1,5 @@
-= Phusion Passenger users guide =
+Phusion Passenger users guide
+=============================
 
 image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
@@ -17,25 +18,6 @@ This users guide will teach you:
 
 This guide assumes that the reader is somewhat familiar with Apache and with
 using the commandline.
-
-
-== Supported operating systems ==
-
-Phusion Passenger works on any POSIX-compliant operating system. In other
-words: practically any operating system on earth, except Microsoft Windows.
-
-Phusion Passenger is confirmed on a large number of operating systems and Linux
-distributions, including, but not limited to, Ubuntu, Debian, CentOS/Fedora/RHEL,
-Gentoo, Mac OS X, FreeBSD and Solaris. Both 32-bit and 64-bit platforms are supported.
-
-The only POSIX-compliant operating system on which Phusion Passenger for Apache is
-known not to work at this time, is OpenBSD. Please use Phusion Passenger for Nginx
-instead.
-
-If Phusion Passenger does not work on your platform then please
-link:http://code.google.com/p/phusion-passenger/issues/list[report a bug]
-or
-link:http://groups.google.com/group/phusion-passenger[join our discussion list].
 
 
 == Support information ==
@@ -968,14 +950,57 @@ Whether to enable <<user_switching,user switching support>>.
 This option may only occur once, in the global server configuration.
 The default value is 'on'.
 
+==== PassengerUser <username> ====
+If <<user_switching,user switching support>> is enabled, then Phusion Passenger will
+by default run the web application as the owner if the file 'config/environment.rb'
+(for Rails apps) or 'config.ru' (for Rack apps). This option allows you to override
+that behavior and explicitly set a user to run the web application as, regardless
+of the ownership of 'environment.rb'/'config.ru'.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+
+In each place, it may be specified at most once.
+
+==== PassengerGroup <group name> ====
+If <<user_switching,user switching support>> is enabled, then Phusion Passenger will
+by default run the web application as the primary group of the owner of the file
+'config/environment.rb' (for Rails apps) or 'config.ru' (for Rack apps). This option
+allows you to override that behavior and explicitly set a group to run the web application
+as, regardless of the ownership of 'environment.rb'/'config.ru'.
+
+'<group name>' may also be set to the special value '!STARTUP_FILE!', in which case
+the web application's group will be set to 'environment.rb'/'config.ru''s group.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+
+In each place, it may be specified at most once.
+
 [[PassengerDefaultUser]]
 ==== PassengerDefaultUser <username> ====
 Phusion Passenger enables <<user_switching,user switching support>> by default.
-This configuration option allows one to specify which user Rails/Rack
-applications must run as, if user switching fails or is disabled.
+This configuration option allows one to specify the user that applications must
+run as, if user switching fails or is disabled.
 
 This option may only occur once, in the global server configuration.
 The default value is 'nobody'.
+
+[[PassengerDefaultGroup]]
+==== PassengerDefaultGroup <group name> ====
+Phusion Passenger enables <<user_switching,user switching support>> by default.
+This configuration option allows one to specify the group that applications must
+run as, if user switching fails or is disabled.
+
+This option may only occur once, in the global server configuration.
+The default value is the primary group of the user specifified by
+<<PassengerDefaultUser,PassengerDefaultUser>>.
 
 ==== PassengerFriendlyErrorPages <on|off> ====
 Phusion Passenger can display friendly error pages whenever an application fails
@@ -1823,9 +1848,9 @@ for all Phusion Passenger hosts.
 VirtualDocumentRoot is not compatible with Phusion Passenger at the moment.
 
 
-== Analysis and system maintenance tools ==
+== Analysis and system maintenance ==
 
-include::users_guide_snippets/analysis_and_system_maintenance_tools.txt[]
+include::users_guide_snippets/analysis_and_system_maintenance.txt[]
 
 
 == Tips ==

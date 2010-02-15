@@ -273,6 +273,56 @@ module TestHelper
 		end
 		FileUtils.rm_rf(dir)
 	end
+	
+	# Run a script in a Ruby subprocess. *args are program arguments to
+	# pass to the script. Returns the script's stdout output.
+	def run_script(code, *args)
+		stdin_child, stdin_parent = IO.pipe
+		stdout_parent, stdout_child = IO.pipe
+		program_args = [PlatformInfo::RUBY, "-e",
+			"eval(STDIN.read, binding, '(script)', 0)",
+			LIBDIR, *args]
+		if Process.respond_to?(:spawn)
+			program_args << {
+				STDIN  => stdin_child,
+				STDOUT => stdout_child,
+				STDERR => STDERR,
+				:close_others => true
+			}
+			pid = Process.spawn(*program_args)
+		else
+			pid = fork do
+				stdin_parent.close
+				stdout_parent.close
+				STDIN.reopen(stdin_child)
+				STDOUT.reopen(stdout_child)
+				stdin_child.close
+				stdout_child.close
+				exec(*program_args)
+			end
+		end
+		stdin_child.close
+		stdout_child.close
+		stdin_parent.write(
+			%Q[require(ARGV.shift + "/phusion_passenger")
+			#{code}])
+		stdin_parent.close
+		result = stdout_parent.read
+		stdout_parent.close
+		Process.waitpid(pid)
+		return result
+	rescue Exception
+		Process.kill('SIGKILL', pid) if pid
+		raise
+	ensure
+		[stdin_child, stdout_child, stdin_parent, stdout_parent].each do |io|
+			io.close if io && !io.closed?
+		end
+		begin
+			Process.waitpid(pid) if pid
+		rescue Errno::ECHILD, Errno::ESRCH
+		end
+	end
 end
 
 File.class_eval do

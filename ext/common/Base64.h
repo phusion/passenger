@@ -43,6 +43,32 @@ public:
 		return encode((const unsigned char *) data.data(), data.size());
 	}
 	
+	/** Encode using a modified Base64 format, suitable for inclusion in URLs without
+	 * needing escaping.
+	 */
+	static string encodeForUrl(const StaticString &data) {
+		string result = encode(data);
+		string::size_type i;
+		int paddingSize = 0;
+		
+		for (i = 0; i < result.size(); i++) {
+			char c = result[i];
+			if (c == '+') {
+				result[i] = '-';
+			} else if (c == '/') {
+				result[i] = '_';
+			} else if (c == '=') {
+				paddingSize++;
+			}
+		}
+		
+		if (paddingSize > 0) {
+			result.resize(result.size() - paddingSize);
+		}
+		
+		return result;
+	}
+	
 	static string decode(const StaticString &base64_data) {
 		return decode((const unsigned char *) base64_data.data(), base64_data.size());
 	}

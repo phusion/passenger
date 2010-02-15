@@ -44,6 +44,8 @@ typedef struct {
     ngx_flag_t   friendly_error_pages;
     ngx_flag_t   analytics;
     ngx_str_t    environment;
+    ngx_str_t    user;
+    ngx_str_t    group;
     ngx_str_t    spawn_method;
     ngx_str_t    app_group_name;
     ngx_str_t    app_rights;
@@ -56,18 +58,20 @@ typedef struct {
 } passenger_loc_conf_t;
 
 typedef struct {
-    ngx_str_t   root_dir;
-    ngx_str_t   ruby;
-    ngx_uint_t  log_level;
-    ngx_uint_t  max_pool_size;
-    ngx_uint_t  max_instances_per_app;
-    ngx_uint_t  pool_idle_time;
-    ngx_flag_t  user_switching;
-    ngx_str_t   default_user;
-    ngx_str_t   analytics_log_dir;
-    ngx_str_t   analytics_log_user;
-    ngx_str_t   analytics_log_group;
-    ngx_str_t   analytics_log_permissions;
+    ngx_str_t    root_dir;
+    ngx_str_t    ruby;
+    ngx_uint_t   log_level;
+    ngx_uint_t   max_pool_size;
+    ngx_uint_t   max_instances_per_app;
+    ngx_uint_t   pool_idle_time;
+    ngx_flag_t   user_switching;
+    ngx_str_t    default_user;
+    ngx_str_t    default_group;
+    ngx_str_t    analytics_log_dir;
+    ngx_str_t    analytics_log_user;
+    ngx_str_t    analytics_log_group;
+    ngx_str_t    analytics_log_permissions;
+    ngx_array_t *prestart_uris;
 } passenger_main_conf_t;
 
 extern const ngx_command_t   passenger_commands[];

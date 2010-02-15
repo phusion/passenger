@@ -142,3 +142,60 @@ the Apache error log.
 
 NOTE: It is safe to kill application instances, even in live environments. Phusion Passenger
 will restart killed application instances, as if nothing bad happened.
+
+
+=== Accessing individual application processes ===
+
+When a request is sent to the web server, Phusion Passenger will automatically forward
+the request to the most suitable application process, but sometimes it is desirable to
+be able to directly access the individual application processes. Use cases include, but
+are not limited to:
+
+* One wants to debug a memory leak or memory bloat problem that only seems to appear on
+  certain URIs. One can send a request to a specific process to see whether that request
+  causes the process's memory usage to rise.
+* The application caches data in local memory, and one wants to tell a specific
+  application process to clear that local data.
+* Other debugging use cases.
+
+All individual application processes are accessible via HTTP, so you can use standard
+HTTP tools like 'curl'. The exact addresses can be obtained with the command
+`passenger-status --verbose`. These sockets are all bound to 127.0.0.1, but the port
+number is dynamically assigned. As a security measure, the sockets are also protected
+with a process-specific random password, which you can see in the
+`passenger-status --verbose` output. This password must be sent through the
+``X-Passenger-Connect-Password'' HTTP header.
+
+Example:
+
+[listing]
+......................................
+bash# passenger-status --verbose
+----------- General information -----------
+max      = 6
+count    = 2
+active   = 0
+inactive = 2
+Waiting on global queue: 0
+
+----------- Application groups -----------
+/Users/hongli/Sites/rack.test:
+  App root: /Users/hongli/Sites/rack.test
+  * PID: 24235   Sessions: 0    Processed: 7       Uptime: 17s
+      URL     : http://127.0.0.1:58122
+      Password: nFfVOX1F8LjZ90HJh28Sd_htJOsgRsNne2QXKf8NIXw
+  * PID: 24250   Sessions: 0    Processed: 4       Uptime: 1s
+      URL     : http://127.0.0.1:57933
+      Password: _RGXlQ9EGDGJKLevQ_qflUtF1KmxEo2UiRzMwIE1sBY
+......................................
+
+Here we see that the web application 'rack.test' has two processes.
+Process 24235 is accessible via http://127.0.0.1:58122, and
+process 24250 is accessible via http://127.0.0.1:57933.
+
+To access 24235 we must send its password, 'nFfVOX1F8LjZ90HJh28Sd_htJOsgRsNne2QXKf8NIXw',
+through the 'X-Passenger-Connect-Password' HTTP header, like this:
+
+-------------------------------------------
+bash# curl -H "X-Passenger-Connect-Password: nFfVOX1F8LjZ90HJh28Sd_htJOsgRsNne2QXKf8NIXw" http://127.0.0.1:58122/
+-------------------------------------------

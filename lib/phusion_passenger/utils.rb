@@ -188,9 +188,7 @@ protected
 	def prepare_app_process(startup_file, options)
 		Dir.chdir(options["app_root"])
 		
-		if options["lower_privilege"]
-			lower_privilege(startup_file, options["lowest_user"])
-		end
+		lower_privilege(startup_file, options)
 		
 		ENV["RAILS_ENV"] = ENV["RACK_ENV"] = options["environment"]
 		
@@ -208,6 +206,31 @@ protected
 			env_vars = Hash[*env_vars_array]
 			env_vars.each_pair do |key, value|
 				ENV[key] = value
+			end
+		end
+		
+		# Make sure RubyGems uses any new environment variable values
+		# that have been set now (e.g. $HOME, $GEM_HOME, etc) and that
+		# it is able to detect newly installed gems.
+		Gem.clear_paths
+		
+		# Because spawned app processes exit using #exit!, #at_exit
+		# blocks aren't called. Here we ninja patch Kernel so that
+		# we can call #at_exit blocks during app process shutdown.
+		Kernel.class_eval do
+			alias passenger_orig_at_exit at_exit
+			
+			@@passenger_at_exit_blocks = []
+			
+			def self.passenger_call_at_exit_blocks
+				@@passenger_at_exit_blocks.reverse_each do |block|
+					block.call
+				end
+			end
+			
+			def at_exit(&block)
+				@@passenger_at_exit_blocks << block
+				return block
 			end
 		end
 	end
@@ -240,6 +263,7 @@ protected
 	# will fire off necessary events perform necessary cleanup tasks.
 	def after_handling_requests
 		PhusionPassenger.call_event(:stopping_worker_process)
+		Kernel.passenger_call_at_exit_blocks
 	end
 	
 	# This method is to be called after an application process has been forked
@@ -448,42 +472,91 @@ protected
 		raise exception if exception
 	end
 	
-	# Lower the current process's privilege to the owner of the given file.
-	# No exceptions will be raised in the event that privilege lowering fails.
-	def lower_privilege(filename, lowest_user = "nobody")
-		stat = File.lstat(filename)
-		begin
-			if !switch_to_user(stat.uid)
-				switch_to_user(lowest_user)
-			end
-		rescue Errno::EPERM
-			# No problem if we were unable to switch user.
-		end
+	# No-op, hook for unit tests.
+	def self.lower_privilege_called
 	end
-
-	def switch_to_user(user)
-		begin
-			if user.is_a?(String)
-				pw = Etc.getpwnam(user)
-				username = user
-				uid = pw.uid
-				gid = pw.gid
-			else
-				pw = Etc.getpwuid(user)
-				username = pw.name
-				uid = user
-				gid = pw.gid
-			end
-		rescue
-			return false
-		end
-		if uid == 0
-			return false
+	
+	# Lowers the current process's privilege based on the documented rules for
+	# the "user", "group", "default_user" and "default_group" options.
+	def lower_privilege(startup_file, options)
+		Utils.lower_privilege_called
+		return if Process.euid != 0
+		
+		if options["default_user"] && !options["default_user"].empty?
+			default_user = options["default_user"]
 		else
-			NativeSupport.switch_user(username, uid, gid)
-			ENV['HOME'] = pw.dir
-			return true
+			default_user = "nobody"
 		end
+		if options["default_group"] && !options["default_group"].empty?
+			default_group = options["default_group"]
+		else
+			default_group = Etc.getgrgid(Etc.getpwnam(default_user).gid).name
+		end
+
+		if options["user"] && !options["user"].empty?
+			begin
+				user_info = Etc.getpwnam(options["user"])
+			rescue ArgumentError
+				user_info = nil
+			end
+		else
+			uid = File.lstat(startup_file).uid
+			begin
+				user_info = Etc.getpwuid(uid)
+			rescue ArgumentError
+				user_info = nil
+			end
+		end
+		if !user_info || user_info.uid == 0
+			begin
+				user_info = Etc.getpwnam(default_user)
+			rescue ArgumentError
+				user_info = nil
+			end
+		end
+
+		if options["group"] && !options["group"].empty?
+			if options["group"] == "!STARTUP_FILE!"
+				gid = File.lstat(startup_file).gid
+				begin
+					group_info = Etc.getgrgid(gid)
+				rescue ArgumentError
+					group_info = nil
+				end
+			else
+				begin
+					group_info = Etc.getgrnam(options["group"])
+				rescue ArgumentError
+					group_info = nil
+				end
+			end
+		elsif user_info
+			begin
+				group_info = Etc.getgrgid(user_info.gid)
+			rescue ArgumentError
+				group_info = nil
+			end
+		else
+			group_info = nil
+		end
+		if !group_info || group_info.gid == 0
+			begin
+				group_info = Etc.getgrnam(default_group)
+			rescue ArgumentError
+				group_info = nil
+			end
+		end
+
+		if !user_info
+			raise SecurityError, "Cannot determine a user to lower privilege to"
+		end
+		if !group_info
+			raise SecurityError, "Cannot determine a group to lower privilege to"
+		end
+
+		NativeSupport.switch_user(user_info.name, user_info.uid, group_info.gid)
+		ENV['USER'] = user_info.name
+		ENV['HOME'] = user_info.dir
 	end
 	
 	# Returns a string which reports the backtraces for all threads,
@@ -523,15 +596,12 @@ protected
 			"app_type"         => "rails",
 			"environment"      => "production",
 			"spawn_method"     => "smart-lv2",
-			"lower_privilege"  => true,
-			"lowest_user"      => "nobody",
 			"framework_spawner_timeout" => -1,
 			"app_spawner_timeout"       => -1,
 			"print_exceptions" => true
 		}
 		options = defaults.merge(options)
 		options["app_group_name"]            = options["app_root"] if !options["app_group_name"]
-		options["lower_privilege"]           = to_boolean(options["lower_privilege"])
 		options["framework_spawner_timeout"] = options["framework_spawner_timeout"].to_i
 		options["app_spawner_timeout"]       = options["app_spawner_timeout"].to_i
 		if options.has_key?("print_framework_loading_exceptions")
@@ -585,13 +655,14 @@ protected
 			@@passenger_tmpdir = dir
 		end
 		if create && !File.exist?(dir)
-			# This is a very minimal implementation of the function
-			# passengerCreateTempDir() in Utils.cpp. This implementation
+			# This is a very minimal implementation of the subdirectory
+			# creation logic in ServerInstanceDir.h. This implementation
 			# is only meant to make the unit tests pass. For production
 			# systems one should pre-create the temp directory with
-			# passengerCreateTempDir().
+			# ServerInstanceDir.h.
 			system("mkdir", "-p", "-m", "u=wxs,g=wx,o=wx", dir)
 			system("mkdir", "-p", "-m", "u=wxs,g=wx,o=wx", "#{dir}/backends")
+			system("mkdir", "-p", "-m", "u=wxs,g=wx,o=wx", "#{dir}/spawn-server")
 		end
 		return dir
 	end

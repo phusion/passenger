@@ -31,6 +31,8 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <pwd.h>
+#include <grp.h>
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -65,19 +67,34 @@ public:
 			owner = false;
 		}
 		
-		void create(bool userSwitching, const string &defaultUser, uid_t workerUid, gid_t workerGid) {
+		void create(bool userSwitching, const string &defaultUser,
+		            const string &defaultGroup, uid_t webServerWorkerUid,
+		            gid_t webServerWorkerGid)
+		{
 			bool runningAsRoot = geteuid() == 0;
+			struct passwd *defaultUserEntry;
+			struct group  *defaultGroupEntry;
 			uid_t defaultUid;
 			gid_t defaultGid;
 			
-			determineLowestUserAndGroup(defaultUser, defaultUid, defaultGid);
+			defaultUserEntry = getpwnam(defaultUser.c_str());
+			if (defaultUserEntry == NULL) {
+				throw NonExistentUserException("Default user '" + defaultUser +
+					"' does not exist.");
+			}
+			defaultUid = defaultUserEntry->pw_uid;
+			defaultGroupEntry = getgrnam(defaultGroup.c_str());
+			if (defaultGroupEntry == NULL) {
+				throw NonExistentGroupException("Default group '" + defaultGroup +
+					"' does not exist.");
+			}
+			defaultGid = defaultGroupEntry->gr_gid;
 			
 			/* We set a very tight permission here: no read or write access for
 			 * anybody except the owner. The individual files and subdirectories
 			 * decide for themselves whether they're readable by anybody.
 			 */
-			makeDirTree(path, "u=wxs,g=x,o=x");
-			ServerInstanceDir::createNonWritableFifo(path + "/.guard");
+			makeDirTree(path, "u=rwxs,g=x,o=x");
 			
 			/* Write structure version file. */
 			string structureVersionFile = path + "/structure_version.txt";
@@ -92,56 +109,58 @@ public:
 			 * directory.
 			 */
 			if (runningAsRoot) {
-				makeDirTree(path + "/buffered_uploads", "u=wxs,g=,o=", workerUid, workerGid);
+				makeDirTree(path + "/buffered_uploads", "u=rwxs,g=,o=",
+					webServerWorkerUid, webServerWorkerGid);
 			} else {
-				makeDirTree(path + "/buffered_uploads", "u=wxs,g=,o=");
+				makeDirTree(path + "/buffered_uploads", "u=rwxs,g=,o=");
 			}
-			ServerInstanceDir::createNonWritableFifo(path + "/buffered_uploads/.guard");
 			
-			if (runningAsRoot) {
-				/* If we're running as root then the directory should not be writable
-				 * by the owner, because we'll create the contents before lowering
-				 * privileges.
-				 */
-				makeDirTree(path + "/webserver_shared_resources", "u=xs,g=,o=", workerUid, workerGid);
-			} else {
-				makeDirTree(path + "/webserver_shared_resources", "u=wxs,g=,o=");
-			}
-			ServerInstanceDir::createNonWritableFifo(path + "/webserver_shared_resources/.guard");
-			
+			/* The web server must be able to directly connect to a backend. */
 			if (runningAsRoot) {
 				if (userSwitching) {
-					/* If user switching is possible and turned on, then each backend
-					 * process may be running as a different user, so the backends
-					 * subdirectory must be world-writable. However we don't want
-					 * everybody to be able to know the sockets' filenames, so
-					 * the directory is not readable, not even by its owner.
+					/* Each backend process may be running as a different user,
+					 * so the backends subdirectory must be world-writable.
+					 * However we don't want everybody to be able to know the
+					 * sockets' filenames, so the directory is not readable.
 					 */
-					makeDirTree(path + "/backends", "u=wxs,g=wx,o=wx");
+					makeDirTree(path + "/backends", "u=rwxs,g=wx,o=wx");
 				} else {
-					/* If user switching is off then all backend processes will be
-					 * running as defaultUser, so make defaultUser the owner of the
-					 * directory. Nobody else (except root) may access this directory.
+					/* All backend processes are running as defaultUser/defaultGroup,
+					 * so make defaultUser/defaultGroup the owner and group of the
+					 * subdirecory.
 					 *
 					 * The directory is not readable as a security precaution:
 					 * nobody should be able to know the sockets' filenames without
 					 * having access to the application pool.
 					 */
-					makeDirTree(path + "/backends", "u=wxs,g=,o=", defaultUid, defaultGid);
+					makeDirTree(path + "/backends", "u=rwxs,g=x,o=x", defaultUid, defaultGid);
 				}
 			} else {
-				/* If user switching is not possible then all backend processes will
-				 * be running as the same user as the web server. So we'll make the
-				 * backends subdirectory only writable by this user. Nobody else
-				 * (except root) may access this subdirectory.
-				 *
-				 * The directory is not readable as a security precaution:
-				 * nobody should be able to know the sockets' filenames without having
-				 * access to the application pool.
+				/* All backend processes are running as the same user as the web server,
+				 * so only allow access for this user.
 				 */
-				makeDirTree(path + "/backends", "u=wxs,g=,o=");
+				makeDirTree(path + "/backends", "u=rwxs,g=,o=");
 			}
-			ServerInstanceDir::createNonWritableFifo(path + "/backends/.guard");
+			
+			/* The helper server (containing the application pool) must be able to access
+			 * the spawn server's socket.
+			 */
+			if (runningAsRoot) {
+				if (userSwitching) {
+					/* Both the helper server and the spawn server are
+					 * running as root.
+					 */
+					makeDirTree(path + "/spawn-server", "u=rwxs,g=,o=");
+				} else {
+					/* Both the helper server and the spawn server are
+					 * running as defaultUser/defaultGroup.
+					 */
+					makeDirTree(path + "/spawn-server", "u=rwxs,g=,o=",
+						defaultUid, defaultGid);
+				}
+			} else {
+				makeDirTree(path + "/spawn-server", "u=rwxs,g=,o=");
+			}
 			
 			owner = true;
 		}
@@ -174,31 +193,6 @@ private:
 	
 	friend class Generation;
 	
-	/* Creates a non-writable FIFO file in order to prevent /tmp cleaners from removing
-	 * passenger temp dir subdirectories. See http://code.google.com/p/phusion-passenger/issues/detail?id=365
-	 * for details.
-	 */
-	static void
-	createNonWritableFifo(const string &filename) {
-		int ret, e;
-		
-		do {
-			ret = mkfifo(filename.c_str(), 0);
-		} while (ret == -1 && errno == EINTR);
-		if (ret == -1 && errno != EEXIST) {
-			e = errno;
-			throw FileSystemException("Cannot create FIFO file " + filename, e, filename);
-		}
-		
-		do {
-			ret = chmod(filename.c_str(), 0);
-		} while (ret == -1 && errno == EINTR);
-		if (ret == -1) {
-			e = errno;
-			throw FileSystemException("Cannot set permissions on file " + filename, e, filename);
-		}
-	}
-	
 	void initialize(const string &path, bool owner) {
 		this->path  = path;
 		this->owner = owner;
@@ -220,7 +214,6 @@ private:
 		 * generations no matter what user they're running as.
 		 */
 		makeDirTree(path, "u=rwxs,g=rx,o=rx");
-		createNonWritableFifo(path + "/.guard");
 	}
 	
 public:
@@ -276,7 +269,10 @@ public:
 		owner = false;
 	}
 	
-	GenerationPtr newGeneration(bool userSwitching, const string &defaultUser, uid_t workerUid, gid_t workerGid) {
+	GenerationPtr newGeneration(bool userSwitching, const string &defaultUser,
+	                            const string &defaultGroup, uid_t webServerWorkerUid,
+	                            gid_t webServerWorkerGid)
+	{
 		GenerationPtr newestGeneration = getNewestGeneration();
 		unsigned int newNumber;
 		if (newestGeneration != NULL) {
@@ -286,7 +282,8 @@ public:
 		}
 		
 		GenerationPtr generation(new Generation(path, newNumber));
-		generation->create(userSwitching, defaultUser, workerUid, workerGid);
+		generation->create(userSwitching, defaultUser, defaultGroup,
+			webServerWorkerUid, webServerWorkerGid);
 		return generation;
 	}
 	

@@ -24,13 +24,15 @@ int
 agents_starter_start(AgentsStarter *as,
                      unsigned int logLevel, pid_t webServerPid,
                      const char *tempDir, int userSwitching,
-                     const char *defaultUser, uid_t workerUid,
-                     gid_t workerGid, const char *passengerRoot,
+                     const char *defaultUser, const char *defaultGroup,
+                     uid_t webServerWorkerUid, gid_t webServerWorkerGid,
+                     const char *passengerRoot,
                      const char *rubyCommand, unsigned int maxPoolSize,
                      unsigned int maxInstancesPerApp,
                      unsigned int poolIdleTime,
                      const char *analyticsLogDir, const char *analyticsLogUser,
                      const char *analyticsLogGroup, const char *analyticsLogPermissions,
+                     const char **prestartURLs, unsigned int prestartURLsCount,
                      const AfterForkCallback afterFork,
                      void *callbackArgument,
                      char **errorMessage)
@@ -39,15 +41,23 @@ agents_starter_start(AgentsStarter *as,
 	this_thread::disable_syscall_interruption dsi;
 	try {
 		function<void ()> afterForkFunctionObject;
+		set<string> setOfprestartURLs;
+		unsigned int i;
 		
 		if (afterFork != NULL) {
 			afterForkFunctionObject = boost::bind(afterFork, callbackArgument);
 		}
+		for (i = 0; i < prestartURLsCount; i++) {
+			setOfprestartURLs.insert(prestartURLs[i]);
+		}
 		agentsStarter->start(logLevel, webServerPid, tempDir, userSwitching,
-			defaultUser, workerUid, workerGid, passengerRoot, rubyCommand,
+			defaultUser, defaultGroup,
+			webServerWorkerUid, webServerWorkerGid,
+			passengerRoot, rubyCommand,
 			maxPoolSize, maxInstancesPerApp, poolIdleTime,
 			analyticsLogDir, analyticsLogUser,
 			analyticsLogGroup, analyticsLogPermissions,
+			setOfprestartURLs,
 			afterForkFunctionObject);
 		return 1;
 	} catch (const Passenger::SystemException &e) {

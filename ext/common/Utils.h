@@ -50,6 +50,7 @@ static const uid_t USER_NOT_GIVEN = (uid_t) -1;
 static const gid_t GROUP_NOT_GIVEN = (gid_t) -1;
 
 typedef struct CachedFileStat CachedFileStat;
+class ResourceLocator;
 
 /** Enumeration which indicates what kind of file a file is. */
 typedef enum {
@@ -170,7 +171,7 @@ void split(const string &str, char sep, vector<string> &output);
  * @throws boost::thread_interrupted
  * @ingroup Support
  */
-bool fileExists(const char *filename, CachedFileStat *cstat = 0,
+bool fileExists(const StaticString &filename, CachedFileStat *cstat = 0,
                 unsigned int throttleRate = 0);
 
 /**
@@ -209,19 +210,6 @@ void createFile(const string &filename, const StaticString &contents,
                 mode_t permissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,
                 uid_t owner = USER_NOT_GIVEN, gid_t group = GROUP_NOT_GIVEN,
                 bool overwrite = true);
-
-/**
- * Find the location of the Passenger spawn server script.
- *
- * @param passengerRoot The Passenger root folder. If NULL is given, then
- *      the spawn server is found by scanning $PATH. For security reasons,
- *      only absolute paths are scanned.
- * @return An absolute path to the spawn server script, or
- *         an empty string on error.
- * @throws FileSystemException Unable to access parts of the filesystem.
- * @ingroup Support
- */
-string findSpawnServer(const char *passengerRoot = NULL);
 
 /**
  * Returns a canonical version of the specified path. All symbolic links
@@ -276,15 +264,6 @@ string escapeForXml(const string &input);
  * where xxxx is the current UID.
  */
 string getProcessUsername();
-
-/**
- * Given a username that's supposed to be the "lowest user" in the user switching mechanism,
- * checks whether this username exists. If so, this users's UID and GID will be stored into
- * the arguments of the same names. If not, <em>uid</em> and <em>gid</em> will be set to
- * the UID and GID of the "nobody" user. If that user doesn't exist either, then <em>uid</em>
- * and <em>gid</em> will be set to -1.
- */
-void determineLowestUserAndGroup(const string &user, uid_t &uid, gid_t &gid);
 
 /**
  * Converts a mode string into a mode_t value.
@@ -434,6 +413,8 @@ bool verifyRackDir(const string &dir, CachedFileStat *cstat = 0,
  */
 bool verifyWSGIDir(const string &dir, CachedFileStat *cstat = 0,
                    unsigned int throttleRate = 0);
+
+void prestartWebApps(const ResourceLocator &locator, const string &serializedprestartURLs);
 
 /**
  * Generate a secure, random token of the <tt>size</tt> bytes and put

@@ -81,13 +81,15 @@ class Plugin
 	end
 	
 	def call_hook(name, *args, &block)
+		last_result = nil
 		if @instances
 			@instances.each do |instance|
 				if instance.respond_to?(name.to_sym)
-					instance.__send__(name.to_sym, *args, &block)
+					last_result = instance.__send__(name.to_sym, *args, &block)
 				end
 			end
 		end
+		return last_result
 	end
 end
 

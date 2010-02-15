@@ -156,7 +156,6 @@ private:
 						syscalls::usleep(100000);
 					}
 				}
-				P_TRACE(2, "Spawn server has exited.");
 			}
 			pid = 0;
 		}
@@ -167,7 +166,7 @@ private:
 		int ret, fds[2];
 		
 		UPDATE_TRACE_POINT();
-		socketFilename = generation->getPath() + "/server." +
+		socketFilename = generation->getPath() + "/spawn-server/socket." +
 			toString(getpid()) + "." +
 			toString((unsigned long long) this);
 		socketPassword = Base64::encode(random.generateByteString(32));
@@ -296,7 +295,9 @@ private:
 		int i, nServerSockets, ownerPipe;
 		Process::SocketInfoMap serverSockets;
 		string detachKey = Base64::encode(random.generateByteString(32));
-		string connectPassword = Base64::encode(random.generateByteString(32));
+		// The connect password must be a URL-friendly string because users will
+		// insert it in HTTP headers.
+		string connectPassword = Base64::encodeForUrl(random.generateByteString(32));
 		AccountPtr account;
 		function<void ()> destructionCallback;
 		
@@ -547,10 +548,8 @@ public:
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
 			syscalls::unlink(socketFilename.c_str());
-			P_TRACE(2, "Shutting down spawn manager (PID " << pid << ").");
 			ownerSocket.close();
 			syscalls::waitpid(pid, NULL, 0);
-			P_TRACE(2, "Spawn manager exited.");
 		}
 	}
 	

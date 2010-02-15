@@ -196,11 +196,12 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 			Base64.h),
 		'md5.o' => %w(
 			md5.cpp
-			md5.h
-		),
+			md5.h),
 		'Utils.o' => %w(
 			Utils.cpp
-			Utils.h),
+			Utils.h
+			Base64.h
+			ResourceLocator.h),
 		'AccountsDatabase.o' => %w(
 			AccountsDatabase.cpp
 			AccountsDatabase.h
@@ -302,6 +303,7 @@ end
 		'ext/apache2/Configuration.o' => %w(
 			ext/apache2/Configuration.cpp
 			ext/apache2/Configuration.h
+			ext/apache2/Configuration.hpp
 			ext/common/Constants.h),
 		'ext/apache2/Bucket.o' => %w(
 			ext/apache2/Bucket.cpp
@@ -310,6 +312,7 @@ end
 			ext/apache2/Hooks.cpp
 			ext/apache2/Hooks.h
 			ext/apache2/Configuration.h
+			ext/apache2/Configuration.hpp
 			ext/apache2/Bucket.h
 			ext/apache2/DirectoryMapper.h
 			ext/common/AgentsStarter.hpp
@@ -396,6 +399,7 @@ end
 		'ext/common/Logging.h',
 		'ext/common/SpawnManager.h',
 		'ext/common/Account.h',
+		'ext/common/ResourceLocator.h',
 		'ext/common/ApplicationPool/Interface.h',
 		'ext/common/ApplicationPool/Pool.h',
 		'ext/common/ApplicationPool/Server.h',
@@ -459,6 +463,7 @@ end
 		'ext/common/BacktracesServer.h',
 		'ext/common/SpawnManager.h',
 		'ext/common/Logging.h',
+		'ext/common/ResourceLocator.h',
 		'ext/common/ApplicationPool/Interface.h',
 		'ext/common/ApplicationPool/Pool.h',
 		'ext/common/ApplicationPool/Server.h'
@@ -787,7 +792,14 @@ Packaging::ASCII_DOCS.each do |target|
 	source = target.sub(/\.html$/, '.txt')
 	file target => [source] + Dir["doc/users_guide_snippets/**/*"] do
 		if PlatformInfo.asciidoc
-	  		sh "#{PlatformInfo.asciidoc} #{ASCIIDOC_FLAGS} '#{source}'"
+			if target =~ /apache/i
+				type = "-a apache"
+			elsif target =~ /nginx/i
+				type = "-a nginx"
+			else
+				type = nil
+			end
+	  		sh "#{PlatformInfo.asciidoc} #{ASCIIDOC_FLAGS} #{type} '#{source}'"
 		else
 			sh "echo 'asciidoc required to build docs' > '#{target}'"
 		end

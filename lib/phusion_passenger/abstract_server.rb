@@ -115,7 +115,7 @@ class AbstractServer
 	def initialize(socket_filename = nil, password = nil)
 		@socket_filename = socket_filename
 		@password = password
-		@socket_filename ||= "#{passenger_tmpdir}/server.#{Process.pid}.#{object_id}"
+		@socket_filename ||= "#{passenger_tmpdir}/spawn-server/socket.#{Process.pid}.#{object_id}"
 		@password ||= generate_random_id(:base64)
 		
 		@message_handlers = {}

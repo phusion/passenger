@@ -153,6 +153,7 @@ namespace oxt {
 		int stat(const char *path, struct stat *buf);
 		
 		time_t time(time_t *t);
+		unsigned int sleep(unsigned int seconds);
 		int usleep(useconds_t usec);
 		int nanosleep(const struct timespec *req, struct timespec *rem);
 		

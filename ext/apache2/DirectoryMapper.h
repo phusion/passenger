@@ -32,7 +32,7 @@
 #include <oxt/backtrace.hpp>
 
 #include "CachedFileStat.hpp"
-#include "Configuration.h"
+#include "Configuration.hpp"
 #include "Utils.h"
 
 // The Apache/APR headers *must* come after the Boost headers, otherwise

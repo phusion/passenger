@@ -31,28 +31,48 @@ require 'optparse'
 include PhusionPassenger::AdminTools
 
 # ANSI color codes
-RESET   = "\e[0m"
-BOLD    = "\e[1m"
-YELLOW  = "\e[33m"
+RESET    = "\e[0m"
+BOLD     = "\e[1m"
+YELLOW   = "\e[33m"
 BLACK_BG = "\e[40m"
-BLUE_BG = "\e[44m"
+BLUE_BG  = "\e[44m"
 
 def show_status(server_instance, options = {})
 	server_instance.connect(:passenger_status) do
 		case options[:show]
 		when 'pool'
 			begin
-				text = server_instance.status
+				general_info = server_instance.status
 			rescue SystemCallError => e
 				STDERR.puts "*** ERROR: Cannot query status for Phusion Passenger instance #{server_instance.pid}:"
 				STDERR.puts e.to_s
 				exit 2
 			end
 			
-			# Colorize output
-			text.gsub!(/^(----)(.*)$/, YELLOW + BLUE_BG + BOLD + '\1\2' + RESET)
+			# Extract only the 'General information' section and colorize it.
+			general_info.sub!(/^(----)(.*)$/, YELLOW + BLUE_BG + BOLD + '\1\2' + RESET)
+			general_info.sub!(/^----.*/m, '')
+			general_info.strip!
+			puts general_info
+			puts
 			
-			puts text
+			puts "#{YELLOW}#{BLUE_BG}#{BOLD}----------- Application groups -----------#{RESET}"
+			server_instance.groups.each do |group|
+				puts "#{group.name}:"
+				if group.name !~ %r{^/} || true
+					puts "  App root: #{group.app_root}"
+				end
+				group.processes.each do |process|
+					printf "  * PID: %-5d   Sessions: %-2d   Processed: %-5d   Uptime: %s\n",
+						process.pid, process.sessions, process.processed,
+						process.uptime
+					if options[:verbose] && process.server_sockets[:http]
+						puts "      URL     : http://#{process.server_sockets[:http].address}"
+						puts "      Password: #{process.connect_password}"
+					end
+				end
+				puts
+			end
 		
 		when 'backtraces'
 			begin
@@ -143,6 +163,9 @@ def start
 			else
 				options[:show] = what
 			end
+		end
+		opts.on("--verbose", "-v", "Show verbose information.") do
+			options[:verbose] = true
 		end
 	end
 	begin

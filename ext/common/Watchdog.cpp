@@ -35,8 +35,9 @@ static pid_t   webServerPid;
 static string  tempDir;
 static bool    userSwitching;
 static string  defaultUser;
-static uid_t   workerUid;
-static gid_t   workerGid;
+static string  defaultGroup;
+static uid_t   webServerWorkerUid;
+static gid_t   webServerWorkerGid;
 static string  passengerRoot;
 static string  rubyCommand;
 static unsigned int maxPoolSize;
@@ -46,6 +47,7 @@ static string  analyticsLogDir;
 static string  analyticsLogUser;
 static string  analyticsLogGroup;
 static string  analyticsLogPermissions;
+static string  serializedPrestartURLs;
 
 static ServerInstanceDirPtr serverInstanceDir;
 static ServerInstanceDir::GenerationPtr generation;
@@ -55,8 +57,6 @@ static EventFd errorEvent;
 
 static string logLevelString;
 static string webServerPidString;
-static string workerUidString;
-static string workerGidString;
 static string generationNumber;
 static string maxPoolSizeString;
 static string maxInstancesPerAppString;
@@ -274,6 +274,10 @@ public:
 					syscalls::close(i);
 				}
 			}
+			
+			/* Become the process group leader so that the watchdog can kill the
+			 * agent as well as all its descendant processes. */
+			setpgid(getpid(), getpid());
 			
 			try {
 				execProgram();
@@ -505,8 +509,7 @@ protected:
 			tempDir.c_str(),
 			userSwitching ? "true" : "false",
 			defaultUser.c_str(),
-			workerUidString.c_str(),
-			workerGidString.c_str(),
+			defaultGroup.c_str(),
 			passengerRoot.c_str(),
 			rubyCommand.c_str(),
 			generationNumber.c_str(),
@@ -514,6 +517,7 @@ protected:
 			maxInstancesPerAppString.c_str(),
 			poolIdleTimeString.c_str(),
 			analyticsLogDir.c_str(),
+			serializedPrestartURLs.c_str(),
 			(char *) 0);
 	}
 	
@@ -608,6 +612,97 @@ public:
 		channel.write("LoggingServer info",
 			Base64::encode(loggingAgentPassword).c_str(),
 			NULL);
+	}
+};
+
+
+/**
+ * Touch all files in the server instance dir every 6 hours in order to prevent /tmp
+ * cleaners from weaking havoc:
+ * http://code.google.com/p/phusion-passenger/issues/detail?id=365
+ */
+class ServerInstanceDirToucher {
+private:
+	oxt::thread *thr;
+	
+	static void
+	threadMain() {
+		while (!this_thread::interruption_requested()) {
+			syscalls::sleep(60 * 60 * 6);
+			
+			begin_touch:
+			
+			this_thread::disable_interruption di;
+			this_thread::disable_syscall_interruption dsi;
+			// Fork a process which touches everything in the server instance dir.
+			pid_t pid = syscalls::fork();
+			if (pid == 0) {
+				// Child
+				int prio, ret, e;
+				long max_fds, i;
+				
+				// Close all unnecessary file descriptors.
+				max_fds = sysconf(_SC_OPEN_MAX);
+				for (i = 3; i < max_fds; i++) {
+					syscalls::close(i);
+				}
+				
+				// Make process nicer.
+				do {
+					prio = getpriority(PRIO_PROCESS, getpid());
+				} while (prio == -1 && errno == EINTR);
+				if (prio != -1) {
+					prio++;
+					if (prio > 20) {
+						prio = 20;
+					}
+					do {
+						ret = setpriority(PRIO_PROCESS, getpid(), prio);
+					} while (ret == -1 && errno == EINTR);
+				} else {
+					perror("getpriority");
+				}
+				
+				do {
+					ret = chdir(serverInstanceDir->getPath().c_str());
+				} while (ret == -1 && errno == EINTR);
+				if (ret == -1) {
+					e = errno;
+					fprintf(stderr, "chdir(\"%s\") failed: %s (%d)\n",
+						serverInstanceDir->getPath().c_str(),
+						strerror(e), e);
+					fflush(stderr);
+					_exit(1);
+				}
+				
+				execlp("/bin/sh", "/bin/sh", "-c", "find . | xargs touch", (char *) 0);
+				e = errno;
+				fprintf(stderr, "Cannot execute 'find . | xargs touch': %s (%d)\n",
+					strerror(e), e);
+				fflush(stderr);
+				_exit(1);
+			} else if (pid == -1) {
+				// Error
+				P_WARN("Could touch the server instance directory because "
+					"fork() failed. Retrying in 2 minutes...");
+				this_thread::restore_interruption si(di);
+				this_thread::restore_syscall_interruption rsi(dsi);
+				syscalls::sleep(60 * 2);
+				goto begin_touch;
+			} else {
+				syscalls::waitpid(pid, NULL, 0);
+			}
+		}
+	}
+
+public:
+	ServerInstanceDirToucher() {
+		thr = new oxt::thread(threadMain, "Server instance dir toucher", 96 * 1024);
+	}
+	
+	~ServerInstanceDirToucher() {
+		thr->interrupt_and_join();
+		delete thr;
 	}
 };
 
@@ -800,17 +895,19 @@ main(int argc, char *argv[]) {
 	tempDir       = argv[5];
 	userSwitching = strcmp(argv[6], "true") == 0;
 	defaultUser   = argv[7];
-	workerUid     = (uid_t) atoll(argv[8]);
-	workerGid     = (uid_t) atoll(argv[9]);
-	passengerRoot = argv[10];
-	rubyCommand   = argv[11];
-	maxPoolSize        = atoi(argv[12]);
-	maxInstancesPerApp = atoi(argv[13]);
-	poolIdleTime       = atoi(argv[14]);
-	analyticsLogDir    = argv[15];
-	analyticsLogUser        = argv[16];
-	analyticsLogGroup       = argv[17];
-	analyticsLogPermissions = argv[18];
+	defaultGroup  = argv[8];
+	webServerWorkerUid = (uid_t) atoll(argv[9]);
+	webServerWorkerGid = (uid_t) atoll(argv[10]);
+	passengerRoot = argv[11];
+	rubyCommand   = argv[12];
+	maxPoolSize        = atoi(argv[13]);
+	maxInstancesPerApp = atoi(argv[14]);
+	poolIdleTime       = atoi(argv[15]);
+	analyticsLogDir    = argv[16];
+	analyticsLogUser        = argv[17];
+	analyticsLogGroup       = argv[18];
+	analyticsLogPermissions = argv[19];
+	serializedPrestartURLs  = argv[20];
 	
 	/* Become the session leader so that Apache can't kill this
 	 * watchdog with killpg() during shutdown, and so that a
@@ -834,21 +931,22 @@ main(int argc, char *argv[]) {
 	try {
 		MessageChannel feedbackChannel(feedbackFd);
 		serverInstanceDir.reset(new ServerInstanceDir(webServerPid, tempDir));
-		generation = serverInstanceDir->newGeneration(userSwitching, defaultUser, workerUid, workerGid);
+		generation = serverInstanceDir->newGeneration(userSwitching, defaultUser,
+			defaultGroup, webServerWorkerUid, webServerWorkerGid);
 		
 		/* Pre-convert some integers to strings so that we don't have to do this
 		 * after forking.
 		 */
 		logLevelString     = toString(logLevel);
 		webServerPidString = toString(webServerPid);
-		workerUidString    = toString(workerUid);
-		workerGidString    = toString(workerGid);
 		generationNumber   = toString(generation->getNumber());
 		maxPoolSizeString  = toString(maxPoolSize);
 		maxInstancesPerAppString = toString(maxInstancesPerApp);
 		poolIdleTimeString = toString(poolIdleTime);
 		
 		loggingAgentPassword = randomGenerator.generateByteString(32);
+		
+		ServerInstanceDirToucher serverInstanceDirToucher;
 		
 		HelperServerWatcher helperServerWatcher;
 		LoggingAgentWatcher loggingAgentWatcher;

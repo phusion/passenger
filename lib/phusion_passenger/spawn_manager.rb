@@ -97,77 +97,27 @@ class SpawnManager < AbstractServer
 	# AppProcess object will be returned, which represents the spawned application
 	# process.
 	#
-	# The following options are mandatory:
+	# Most options are explained in PoolOptions.h.
 	#
-	# ['app_root']
-	#   The application's root directory. In case of a Rails app this is the directory
-	#   that contains 'app/', 'public/', etc.
+	# Mandatory options:
+	# - 'app_root'
 	#
 	# Optional options:
-	#
-	# ['app_type']
-	#   What kind of application is being spawned. Either "rails" (default), "rack" or
-	#   "wsgi".
-	# 
-	# ['environment']
-	#   Allows one to specify the RAILS_ENV and RACK_ENV environment to use. The default
-	#   is "production".
-	#
-	# ['spawn_method']
-	#   May be one of "smart", "smart-lv2" or "conservative". When "smart" is specified,
-	#   SpawnManager will internally cache the code of Rails applications, in
-	#   order to speed up future spawning attempts. This implies that, if you've changed
-	#   the application's code, you must do one of these things:
-	#   - Restart this SpawnManager by calling AbstractServer#stop, then AbstractServer#start.
-	#   - Reload the application by calling reload with the correct app_root argument.
-	#   
-	#   "smart" caches the Rails framework code in a framework spawner server, and application
-	#   code in an application spawner server. Sometimes it is desirable to skip the
-	#   framework spawning and going directly for the application spawner instead. The
-	#   "smart-lv2" method allows you to do that.
-	#   
-	#   Caching however can be incompatible with some applications. The "conservative"
-	#   spawning method does not involve any caching at all. Spawning will be slower,
-	#   but is guaranteed to be compatible with all applications.
-	#   
-	#   The default spawn method is "smart-lv2".
-	# 
-	# ['framework_spawner_timeout' and 'app_spawner_timeout']
-	#   These options allow you to specify the maximum idle timeout, in seconds, of the
-	#   framework spawner servers and application spawner servers that will be started under
-	#   the hood. These options are only used if +app_type+ equals "rails".
-	#   
-	#   A timeout of 0 means that the spawner server should never idle timeout. A timeout of
-	#   -1 means that the default timeout value should be used. The default value is -1.
-	#
-	# ['lower_privilege' and 'lowest_user']
-	#   If +lower_privilege+ is true, then the application process's user will be
-	#   switched to the owner of the file <tt>config.ru</tt> (for Rack apps) or
-	#   <tt>config/environment.rb</tt> (for Rails apps). The group will be set
-	#   to the default group of that user.
-	#   
-	#   If that user doesn't exist on the system, or if that user is root,
-	#   then the application process's user will be switched to the username
-	#   given by +lowest_user+ (and to the default group of that user).
-	#   If +lowest_user+ doesn't exist either, or if switching user failed
-	#   (because the current process does not have the privilege to do so),
-	#   then the application process will continue without reporting an error.
-	#   
-	#   +lower_privilege+ defaults to true, +lowest_user+ defaults to "nobody".
-	#
-	# ['environment_variables']
-	#   Environment variables which should be passed to the spawned application
-	#   process. This is NULL-seperated string of key-value pairs, encoded in
-	#   base64. The last byte in the unencoded data must be a NULL.
-	#
-	# ['base_uri']
-	#   The base URI on which this application is deployed. It equals "/"
-	#   if the application is deployed on the root URI. It must not equal
-	#   the empty string.
-	#
-	# ['print_exceptions']
-	#   Whether exceptions that have occurred during application initialization
-	#   should be printed to STDERR. The default is true.
+	# - 'app_type'
+	# - 'environment'
+	# - 'spawn_method'
+	# - 'user',
+	# - 'group'
+	# - 'default_user'
+	# - 'default_group'
+	# - 'framework_spawner_timeout'
+	# - 'app_spawner_timeout'
+	# - 'environment_variables': Environment variables which should be passed
+	#   to the spawned application process. This is NULL-seperated string of
+	#   key-value pairs, encoded in base64. The last byte in the unencoded
+	#   data must be a NULL.
+	# - 'base_uri'
+	# - 'print_exceptions'
 	#
 	# <b>Exceptions:</b>
 	# - InvalidPath: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
@@ -198,12 +148,7 @@ class SpawnManager < AbstractServer
 			if !defined?(WSGI::ApplicationSpawner)
 				require 'phusion_passenger/wsgi/application_spawner'
 			end
-			return WSGI::ApplicationSpawner.spawn_application(
-				options["app_root"],
-				options["lower_privilege"],
-				options["lowest_user"],
-				options["environment"]
-			)
+			return WSGI::ApplicationSpawner.spawn_application(options)
 		else
 			raise ArgumentError, "Unknown 'app_type' value '#{options["app_type"]}'."
 		end

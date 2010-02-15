@@ -22,8 +22,8 @@ describe Railz::ApplicationSpawner do
 			yield stub if block_given?
 			
 			default_options = {
-				"app_root"    => stub.app_root,
-				"lowest_user" => CONFIG['lowest_user']
+				"app_root"     => stub.app_root,
+				"default_user" => CONFIG['default_user']
 			}
 			options = default_options.merge(extra_options)
 			app = Railz::ApplicationSpawner.spawn_application(options)
@@ -57,8 +57,8 @@ describe Railz::ApplicationSpawner do
 			yield stub if block_given?
 			
 			default_options = {
-				"app_root"    => stub.app_root,
-				"lowest_user" => CONFIG['lowest_user']
+				"app_root"     => stub.app_root,
+				"default_user" => CONFIG['default_user']
 			}
 			options = default_options.merge(extra_options)
 			@spawner ||= begin

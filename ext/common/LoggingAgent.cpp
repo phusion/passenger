@@ -137,10 +137,6 @@ main(int argc, char *argv[]) {
 	
 	/********** Boilerplate environment setup code.... **********/
 	
-	/* Become the process group leader so that the watchdog can kill this
-	 * app as well as all descendant processes. */
-	setpgid(getpid(), getpid());
-	
 	ignoreSigpipe();
 	setup_syscall_interruption_support();
 	setvbuf(stdout, NULL, _IONBF, 0);

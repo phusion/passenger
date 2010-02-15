@@ -10,6 +10,17 @@ Release 2.9.1
  * [Nginx] passenger_set_cgi_param
  * [Nginx] passenger_app_rights
  * [Nginx] Now installs Nginx 0.7.65 by default.
+ * passenger-status -v displays individual processes' HTTP addresses.
+ * Passenger Lite allows customization of domain names via passenger.conf.
+ * Touches files in the server instance dir every 6 hours. Fixes bug #365.
+ * PassengerPreStart/passenger_pre_start, for prestarting apps.
+ * [Nginx] Nginx can now be compiled no noexec /tmp filesystems. Fixes
+   issue #380.
+ * [Nginx] Allow multiple concurrent instances of
+   passenger-install-nginx-module.
+ * PassengerUser/PassengerGroup and passenger_user/passenger_group.
+ * PassengerDefaultGroup/passenger_default_group.
+ * #at_exit blocks are called during app shutdown.
 
 
 Release 2.9.0

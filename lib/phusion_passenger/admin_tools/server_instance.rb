@@ -68,7 +68,7 @@ class ServerInstance
 	
 	class Process
 		attr_reader :group
-		attr_accessor :pid, :sessions, :processed, :uptime, :server_sockets
+		attr_accessor :pid, :sessions, :processed, :uptime, :server_sockets, :connect_password
 		INT_PROPERTIES = [:pid, :sessions, :processed]
 		
 		def initialize(group)
