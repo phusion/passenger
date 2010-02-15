@@ -54,6 +54,9 @@ namespace Passenger { ServerConfig serverConfig; }
 	config->field = (add->field == NULL) ? base->field : add->field
 #define MERGE_STRING_CONFIG(field) \
 	config->field = (add->field.empty()) ? base->field : add->field
+#define MERGE_INT_CONFIG(field) \
+	config->field = (add->field ## Specified) ? add->field : base->field; \
+	config->field ## Specified = base->field ## Specified || add->field ## Specified
 
 #define DEFINE_DIR_STR_CONFIG_SETTER(functionName, fieldName)                    \
 	static const char *                                                      \
@@ -61,6 +64,49 @@ namespace Passenger { ServerConfig serverConfig; }
 		DirConfig *config = (DirConfig *) pcfg;                          \
 		config->fieldName = arg;                                         \
 		return NULL;                                                     \
+	}
+#define DEFINE_DIR_INT_CONFIG_SETTER(functionName, fieldName, integerType, minValue)            \
+	static const char *                                                                     \
+	functionName(cmd_parms *cmd, void *pcfg, const char *arg) {                             \
+		DirConfig *config = (DirConfig *) pcfg;                                         \
+		char *end;                                                                      \
+		long int result;                                                                \
+		                                                                                \
+		result = strtol(arg, &end, 10);                                                 \
+		if (*end != '\0') {                                                             \
+			string message = "Invalid number specified for ";                       \
+			message.append(cmd->directive->directive);                              \
+			message.append(".");                                                    \
+			                                                                        \
+			char *messageStr = (char *) apr_palloc(cmd->temp_pool,                  \
+				message.size() + 1);                                            \
+			memcpy(messageStr, message.c_str(), message.size() + 1);                \
+			return messageStr;                                                      \
+		} else if (result < minValue) {                                                 \
+			string message = "Value for ";                                          \
+			message.append(cmd->directive->directive);                              \
+			message.append(" must be greater than or equal to " #minValue ".");     \
+			                                                                        \
+			char *messageStr = (char *) apr_palloc(cmd->temp_pool,                  \
+				message.size() + 1);                                            \
+			memcpy(messageStr, message.c_str(), message.size() + 1);                \
+			return messageStr;                                                      \
+		} else {                                                                        \
+			config->fieldName = (integerType) result;                               \
+			config->fieldName ## Specified = true;                                  \
+			return NULL;                                                            \
+		}                                                                               \
+	}
+#define DEFINE_DIR_THREEWAY_CONFIG_SETTER(functionName, fieldName)           \
+	static const char *                                                  \
+	functionName(cmd_parms *cmd, void *pcfg, const char *arg) {          \
+		DirConfig *config = (DirConfig *) pcfg;                      \
+		if (arg) {                                                   \
+			config->fieldName = DirConfig::ENABLED;              \
+		} else {                                      	             \
+			config->fieldName = DirConfig::DISABLED;             \
+		}                                                            \
+		return NULL;                                                 \
 	}
 
 #define DEFINE_SERVER_STR_CONFIG_SETTER(functionName, fieldName)                 \
@@ -183,14 +229,11 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	config->spawnMethod = (add->spawnMethod == DirConfig::SM_UNSET) ? base->spawnMethod : add->spawnMethod;
 	config->frameworkSpawnerTimeout = (add->frameworkSpawnerTimeout == -1) ? base->frameworkSpawnerTimeout : add->frameworkSpawnerTimeout;
 	config->appSpawnerTimeout = (add->appSpawnerTimeout == -1) ? base->appSpawnerTimeout : add->appSpawnerTimeout;
-	config->maxRequests = (add->maxRequestsSpecified) ? add->maxRequests : base->maxRequests;
-	config->maxRequestsSpecified = base->maxRequestsSpecified || add->maxRequestsSpecified;
-	config->minInstances = (add->minInstancesSpecified) ? add->minInstances : base->minInstances;
-	config->minInstancesSpecified = base->minInstancesSpecified || add->minInstancesSpecified;
+	MERGE_INT_CONFIG(maxRequests);
+	MERGE_INT_CONFIG(minInstances);
 	MERGE_THREEWAY_CONFIG(highPerformance);
 	MERGE_THREEWAY_CONFIG(useGlobalQueue);
-	config->statThrottleRate = (add->statThrottleRateSpecified) ? add->statThrottleRate : base->statThrottleRate;
-	config->statThrottleRateSpecified = base->statThrottleRateSpecified || add->statThrottleRateSpecified;
+	MERGE_INT_CONFIG(statThrottleRate);
 	MERGE_STR_CONFIG(restartDir);
 	MERGE_STR_CONFIG(uploadBufferDir);
 	MERGE_THREEWAY_CONFIG(resolveSymlinksInDocRoot);
@@ -226,119 +269,20 @@ cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
 	return NULL;
 }
 
-static const char *
-cmd_passenger_min_instances(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	char *end;
-	long int result;
-	
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		return "Invalid number specified for PassengerMinInstances.";
-	} else if (result < 0) {
-		return "Value for PassengerMinInstances must be greater than or equal to 0.";
-	} else {
-		config->minInstances = (unsigned long) result;
-		config->minInstancesSpecified = true;
-		return NULL;
-	}
-}
-
-static const char *
-cmd_passenger_use_global_queue(cmd_parms *cmd, void *pcfg, int arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	if (arg) {
-		config->useGlobalQueue = DirConfig::ENABLED;
-	} else {
-		config->useGlobalQueue = DirConfig::DISABLED;
-	}
-	return NULL;
-}
-
-static const char *
-cmd_passenger_max_requests(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	char *end;
-	long int result;
-	
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		return "Invalid number specified for PassengerMaxRequests.";
-	} else if (result < 0) {
-		return "Value for PassengerMaxRequests must be greater than or equal to 0.";
-	} else {
-		config->maxRequests = (unsigned long) result;
-		config->maxRequestsSpecified = true;
-		return NULL;
-	}
-}
-
-static const char *
-cmd_passenger_high_performance(cmd_parms *cmd, void *pcfg, int arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	if (arg) {
-		config->highPerformance = DirConfig::ENABLED;
-	} else {
-		config->highPerformance = DirConfig::DISABLED;
-	}
-	return NULL;
-}
-
-static const char *
-cmd_passenger_enabled(cmd_parms *cmd, void *pcfg, int arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	if (arg) {
-		config->enabled = DirConfig::ENABLED;
-	} else {
-		config->enabled = DirConfig::DISABLED;
-	}
-	return NULL;
-}
-
-static const char *
-cmd_passenger_stat_throttle_rate(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	char *end;
-	long int result;
-	
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		return "Invalid number specified for PassengerStatThrottleRate.";
-	} else if (result < 0) {
-		return "Value for PassengerStatThrottleRate must be greater than or equal to 0.";
-	} else {
-		config->statThrottleRate = (unsigned long) result;
-		config->statThrottleRateSpecified = true;
-		return NULL;
-	}
-}
-
+DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_min_instances, minInstances, unsigned long, 0)
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_use_global_queue, useGlobalQueue)
+DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_max_requests, maxRequests, unsigned long, 0)
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_high_performance, highPerformance)
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_enabled, enabled)
+DEFINE_DIR_INT_CONFIG_SETTER(cmd_passenger_stat_throttle_rate, statThrottleRate, unsigned long, 0)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_root, appRoot)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_user, user)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_group, group)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_restart_dir, restartDir)
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_upload_buffer_dir, uploadBufferDir)
-
-static const char *
-cmd_passenger_resolve_symlinks_in_document_root(cmd_parms *cmd, void *pcfg, int arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->resolveSymlinksInDocRoot = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
-	return NULL;
-}
-
-static const char *
-cmd_passenger_allow_encoded_slashes(cmd_parms *cmd, void *pcfg, int arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->allowEncodedSlashes = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
-	return NULL;
-}
-
-static const char *
-cmd_passenger_friendly_error_pages(cmd_parms *cmd, void *pcfg, int arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->friendlyErrorPages = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
-	return NULL;
-}
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_resolve_symlinks_in_document_root, resolveSymlinksInDocRoot)
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_allow_encoded_slashes, allowEncodedSlashes)
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_friendly_error_pages, friendlyErrorPages)
 
 static const char *
 cmd_passenger_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
@@ -375,19 +319,8 @@ cmd_rails_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 	}
 }
 
-static const char *
-cmd_rails_auto_detect(cmd_parms *cmd, void *pcfg, int arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->autoDetectRails = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
-	return NULL;
-}
-
-static const char *
-cmd_rails_env(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->railsEnv = arg;
-	return NULL;
-}
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_rails_auto_detect, autoDetectRails)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_rails_env, railsEnv)
 
 static const char *
 cmd_rails_framework_spawner_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
@@ -443,31 +376,15 @@ cmd_rack_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 	}
 }
 
-static const char *
-cmd_rack_auto_detect(cmd_parms *cmd, void *pcfg, int arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->autoDetectRack = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
-	return NULL;
-}
-
-static const char *
-cmd_rack_env(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->rackEnv = arg;
-	return NULL;
-}
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_rack_auto_detect, autoDetectRack)
+DEFINE_DIR_STR_CONFIG_SETTER(cmd_rack_env, rackEnv)
 
 
 /*************************************************
  * WSGI-specific settings
  *************************************************/
 
-static const char *
-cmd_wsgi_auto_detect(cmd_parms *cmd, void *pcfg, int arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->autoDetectWSGI = (arg) ? DirConfig::ENABLED : DirConfig::DISABLED;
-	return NULL;
-}
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_wsgi_auto_detect, autoDetectWSGI)
 
 
 /*************************************************
