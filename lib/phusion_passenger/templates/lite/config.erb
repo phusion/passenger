@@ -48,6 +48,7 @@ http {
         passenger_enabled on;
 	rails_env <%= app[:env] %>;
 	<% if app[:min_instances] %>passenger_min_instances <%= app[:min_instances] %>;<% end%>
+	<% if app[:analytics] %>passenger_analytics on;<% end %>
     }
     <% end %>
 }
