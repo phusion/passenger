@@ -49,6 +49,13 @@ http {
 	rails_env <%= app[:env] %>;
 	<% if app[:min_instances] %>passenger_min_instances <%= app[:min_instances] %>;<% end%>
 	<% if app[:analytics] %>passenger_analytics on;<% end %>
+	<%
+	# The following is to make Tower Top work. In Phusion Passenger Lite we don't
+	# care about inter-app security because it's meant for simple use cases; we
+	# don't even support user switching. People who care about inter-app security
+	# should just use Phusion Passenger for Apache or Nginx.
+	%>
+	passenger_app_rights inspect_basic_info;
     }
     <% end %>
 }
