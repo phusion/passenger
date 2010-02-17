@@ -583,7 +583,7 @@ private:
 				string publicDirectory(mapper.getPublicDirectory());
 				PoolOptions options(
 					config->getAppRoot(publicDirectory.c_str()),
-					"",
+					config->appGroupName,
 					mapper.getApplicationTypeString(),
 					mapper.getEnvironment(),
 					config->getSpawnMethodString(),

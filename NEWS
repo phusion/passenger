@@ -21,6 +21,7 @@ Release 2.9.1
  * PassengerUser/PassengerGroup and passenger_user/passenger_group.
  * PassengerDefaultGroup/passenger_default_group.
  * #at_exit blocks are called during app shutdown.
+ * PassengerAppGroupName/passenger_app_group_name
 
 
 Release 2.9.0

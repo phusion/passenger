@@ -890,16 +890,22 @@ TIP: We strongly recommend you to <<reducing_memory_usage,use Ruby Enterprise
 Edition>>. This allows you to reduce the memory usage of your Ruby on Rails applications
 by about 33%. And it's not hard to install.
 
+[[PassengerMinInstances]]
 ==== passenger_min_instances <integer> ====
 This specifies the minimum number of application instances that must be kept around
 whenever Phusion Passenger cleans up idle instances. You should set this option to a
 non-zero value if you want to avoid potentially long startup times after a website
 has been idle for an extended period.
 
-Please note that this option does *not* pre-spawn application instances during Nginx
-startup. It just makes sure that, once application instances are spawned, at least
-the given amount will be kept around. For example, suppose that you have the following
-configuration:
+Please note that this option does *not* pre-start application instances during Apache
+startup. It just makes sure that, once application instances are started, at least
+the given amount will be kept around. If you want to pre-start application instances
+during Nginx startup, then you should use the <<PassengerPreStart,passenger_pre_start>>
+directive, possibly in combination with passenger_min_instances. This behavior might
+seem counter-intuitive at first sight, but <<PassengerPreStart,passenger_pre_start>>
+explains the rationale behind it.
+
+For example, suppose that you have the following configuration:
 
 ---------------------------------
 http {
@@ -918,11 +924,11 @@ http {
 
 When you start Nginx, there are 0 application instances for 'foobar.com'. Things will
 stay that way until someone visits 'foobar.com'. Suppose that there is only 1 visitor.
-1 application instance will be spawned. After 10 seconds, when the idle timeout has
+1 application instance will be started. After 10 seconds, when the idle timeout has
 been reached, this 1 application instance will not be cleaned up.
 
 Now suppose that there's a sudden spike of traffic, and 100 users visit 'foobar.com'
-simultanously. Phusion Passenger will spawn 15 application instances. After the idle
+simultanously. Phusion Passenger will start 15 application instances. After the idle
 timeout of 10 seconds have passed, Phusion Passenger will clean up 13 application
 instances, keeping 2 instances around.
 
@@ -973,6 +979,196 @@ applications, each which must be available at all times.
 
 This option may only occur once, in the 'http' configuration block.
 The default value is '300'.
+
+[[PassengerPreStart]]
+==== passenger_pre_start <url> ====
+By default, Phusion Passenger does not start any application instances until said
+web application is first accessed. The result is that the first visitor of said
+web application might experience a small delay as Phusion Passenger is starting
+the web application on demand. If that is undesirable, then this directive can be
+used to pre-started application instances during Nginx startup.
+
+A few things to be careful of:
+
+- This directive accepts the *URL* of the web application you want to pre-start,
+  not a on/off value! This might seem a bit weird, but read on for rationale. As
+  for the specifics of the URL:
+  * The domain part of the URL must be equal to the value of the 'server_name'
+    directive of the server block that defines the web application.
+  * Unless the web application is deployed on port 80, the URL should contain
+    the web application's port number too.
+  * The path part of the URL must point to some URI that the web application
+    handles.
+- You will probably want to combine this option with
+  <<PassengerMinInstances,passenger_min_instances>> because application instances
+  started with passenger_pre_start are subject to the usual idle timeout rules.
+  See the example below for an explanation.
+
+This option may only occur in the 'http' configuration block. It may be specified
+any number of times.
+
+===== Example 1: basic usage =====
+
+Suppose that you have the following web applications.
+
+---------------------------
+server {
+    listen 80;
+    server_name foo.com;
+    root /webapps/foo/public;
+    passenger_enabled on;
+}
+
+server {
+    listen 3500;
+    server_name bar.com;
+    root /webapps/bar/public;
+    passenger_enabled on;
+}
+---------------------------
+
+You want both of them to be pre-started during Nginx startup. The URL for
+foo.com is 'http://foo.com/' (or, equivalently, 'http://foo.com:80/') and
+the URL for bar.com is 'http://bar.com:3500/'. So we add two passenger_pre_start
+directives, like this:
+
+---------------------------
+server {
+    listen 80;
+    server_name foo.com;
+    root /webapps/foo/public;
+    passenger_enabled on;
+}
+
+server {
+    listen 3500;
+    server_name bar.com;
+    root /webapps/bar/public;
+    passenger_enabled on;
+}
+
+passenger_pre_start http://foo.com/;           # <--- added
+passenger_pre_start http://bar.com:3500/;      # <--- added
+---------------------------
+
+===== Example 2: pre-starting apps that are deployed in sub-URIs =====
+
+Suppose that you have a web application deployed in a sub-URI '/store', like this:
+
+---------------------------
+server {
+    listen 80;
+    server_name myblog.com;
+    root /webapps/wordpress;
+    rails_base_uri /store;
+}
+---------------------------
+
+Then specify the 'server_name' valuue followed by the sub-URI, like this:
+
+---------------------------
+server {
+    listen 80;
+    server_name myblog.com;
+    root /webapps/wordpress;
+    rails_base_uri /store;
+}
+
+passenger_pre_start http://myblog.com/store;    # <----- added
+---------------------------
+
+The sub-URI *must* be included; if you don't then the directive will have no effect.
+The following example is wrong and won't pre-start the store web application:
+
+---------------------------
+passenger_pre_start http://myblog.com/;    # <----- WRONG! Missing "/store" part.
+---------------------------
+
+===== Example 3: combining with passenger_min_instances =====
+
+Application instances started with passenger_pre_start are
+also subject to the idle timeout rules as specified by
+<<PassengerPoolIdleTime,passenger_pool_idle_time>>! That means that by default,
+the pre-started application instances for foo.com are bar.com are shut down
+after a few minutes of inactivity. If you don't want that to happen, then
+you should combine passenger_pre_start with
+<<PassengerMinInstances,passenger_min_instances>>, like this:
+
+---------------------------
+server {
+    listen 80;
+    server_name foo.com;
+    root /webapps/foo/public;
+    passenger_enabled on;
+    passenger_min_instances 1;      # <--- added
+}
+
+server {
+    listen 3500;
+    server_name bar.com;
+    root /webapps/bar/public;
+    passenger_enabled on;
+    passenger_min_instances 1;      # <--- added
+}
+
+passenger_pre_start http://foo.com/;
+passenger_pre_start http://bar.com:3500/;
+---------------------------
+
+===== So why a URL? Why not just an on/off flag? =====
+
+A directive that accepts a simple on/off flag is definitely more intuitive,
+but due technical difficulties w.r.t. the way Nginx works, it's very hard
+to implement it like that:
+
+It is very hard to obtain a full list of web applications defined in the
+Nginx configuration file(s). In other words, it's hard for Phusion Passenger
+to know which web applications are deployed on Nginx until a web application
+is first accessed, and without such a list Phusion Passenger wouldn't know
+which web applications to pre-start. So as a compromise, we made it accept a
+URL.
+
+===== What does Phusion Passenger do with the URL? =====
+
+During Nginx startup, Phusion Passenger will send a dummy HEAD request to the
+given URL and discard the result. In other words, Phusion Passenger simulates a
+web access at the given URL. However this simulated request is always sent to
+localhost, *not* to the IP that the domain resolves to. Suppose that bar.com
+in example 1 resolves to 209.85.227.99; Phusion Passenger will
+send the following HTTP request to 127.0.0.1 port 3500 (and not to 209.85.227.99
+port 3500):
+
+----------------------
+HEAD / HTTP/1.1
+Host: bar.com
+Connection: close
+----------------------
+
+Similarly, for example 2, Phusion Passenger will send the following HTTP request
+to 127.0.0.1 port 80:
+
+----------------------
+HEAD /store HTTP/1.1
+Host: myblog.com
+Connection: close
+----------------------
+
+===== Do I need to edit /etc/hosts and point the domain in the URL to 127.0.0.1? =====
+
+No. See previous subsection.
+
+===== My web application consists of multiple web servers. What URL do I need to specify, and in which web server's Nginx config file? =====
+
+Put the web application's 'server_name' value and the server block's
+port in the URL, and put
+passenger_pre_start on all machines that you want to pre-start the web application
+on. The simulated web request is always sent to 127.0.0.1, with the domain name
+in the URL as value for the 'Host' HTTP header, so you don't need to worry about
+the request ending up at a different web server in the cluster.
+
+===== Does passenger_pre_start support https:// URLs? =====
+
+At this moment, no.
 
 === Ruby on Rails-specific options ===
 [[RailsEnv]]
