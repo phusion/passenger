@@ -29,6 +29,7 @@ require 'phusion_passenger/message_channel'
 require 'phusion_passenger/message_client'
 require 'phusion_passenger/analytics_logger'
 require 'phusion_passenger/utils'
+require 'phusion_passenger/utils/tmpdir'
 require 'phusion_passenger/utils/unseekable_socket'
 require 'phusion_passenger/native_support'
 

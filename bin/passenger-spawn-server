@@ -71,7 +71,7 @@ begin
 	$LOAD_PATH.unshift("#{source_root}/lib")
 	require 'rubygems' rescue nil
 	require 'phusion_passenger'
-	require 'phusion_passenger/utils'
+	require 'phusion_passenger/utils/tmpdir'
 	require 'phusion_passenger/native_support'
 	if defined?(PhusionPassenger::NativeSupport)
 		PhusionPassenger::NativeSupport.disable_stdio_buffering

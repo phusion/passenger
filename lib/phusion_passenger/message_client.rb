@@ -24,7 +24,7 @@
 
 require 'socket'
 require 'phusion_passenger/message_channel'
-require 'phusion_passenger/utils'
+require 'phusion_passenger/utils/tmpdir'
 
 module PhusionPassenger
 
