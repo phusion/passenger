@@ -954,7 +954,7 @@ main(int argc, char *argv[]) {
 		vector<AgentWatcher *> watchers;
 		vector<AgentWatcher *>::iterator it;
 		watchers.push_back(&helperServerWatcher);
-		watchers.push_back(&loggingAgentWatcher);
+		//watchers.push_back(&loggingAgentWatcher);
 		
 		for (it = watchers.begin(); it != watchers.end(); it++) {
 			try {
