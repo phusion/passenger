@@ -98,7 +98,7 @@ class MessageChannel
 	# Might raise SystemCallError, IOError or SocketError when something
 	# goes wrong.
 	def read
-		buffer = ''
+		buffer = new_buffer
 		if !@io.read(HEADER_SIZE, buffer)
 			return nil
 		end
@@ -149,7 +149,7 @@ class MessageChannel
 	# Might raise SystemCallError, IOError or SocketError when something
 	# goes wrong.
 	def read_hash
-		buffer = ''
+		buffer = new_buffer
 		if !@io.read(HEADER_SIZE, buffer)
 			return nil
 		end
@@ -217,7 +217,7 @@ class MessageChannel
 	# The +max_size+ argument allows one to specify the maximum allowed
 	# size for the scalar message. If the received scalar message's size
 	# is larger than +max_size+, then a SecurityError will be raised.
-	def read_scalar(buffer = '', max_size = nil)
+	def read_scalar(buffer = new_buffer, max_size = nil)
 		if !@io.read(4, buffer)
 			return nil
 		end
@@ -356,6 +356,16 @@ private
 	def check_argument(arg)
 		if arg.to_s.index(DELIMITER)
 			raise ArgumentError, "Message name and arguments may not contain #{DELIMITER_NAME}."
+		end
+	end
+	
+	if defined?(ByteString)
+		def new_buffer
+			return ByteString.new
+		end
+	else
+		def new_buffer
+			return ""
 		end
 	end
 end
