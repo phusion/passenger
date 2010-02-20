@@ -42,12 +42,12 @@
 
 #include "RandomGenerator.h"
 #include "FileDescriptor.h"
-#include "SystemTime.h"
 #include "MessageClient.h"
 #include "StaticString.h"
 #include "Exceptions.h"
-#include "md5.h"
 #include "Utils.h"
+#include "Utils/MD5.h"
+#include "Utils/SystemTime.h"
 
 
 namespace Passenger {

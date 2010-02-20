@@ -40,20 +40,20 @@
 #include <cstring>
 #include <cerrno>
 
+#include "HelperAgent/BacktracesServer.h"
 #include "ApplicationPool/Pool.h"
 #include "ApplicationPool/Server.h"
 #include "AccountsDatabase.h"
 #include "Account.h"
 #include "MessageServer.h"
-#include "BacktracesServer.h"
 #include "ServerInstanceDir.h"
 #include "ResourceLocator.h"
 #include "MessageChannel.h"
 #include "FileDescriptor.h"
-#include "Timer.h"
 #include "Logging.h"
 #include "Exceptions.h"
 #include "Utils.h"
+#include "Utils/Timer.h"
 
 using namespace std;
 using namespace boost;

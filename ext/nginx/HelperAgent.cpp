@@ -46,18 +46,18 @@
 #include "ScgiRequestParser.h"
 #include "HttpStatusExtractor.h"
 
+#include "HelperAgent/BacktracesServer.h"
 #include "ApplicationPool/Pool.h"
 #include "ApplicationPool/Server.h"
 #include "Session.h"
 #include "PoolOptions.h"
 #include "MessageServer.h"
-#include "BacktracesServer.h"
 #include "FileDescriptor.h"
 #include "ResourceLocator.h"
-#include "Timer.h"
 #include "ServerInstanceDir.h"
 #include "Exceptions.h"
 #include "Utils.h"
+#include "Utils/Timer.h"
 
 using namespace boost;
 using namespace oxt;
@@ -164,7 +164,7 @@ private:
 	
 	/**
 	 * Reads and checks the password of a client message channel identified by the given file descriptor.
-	 * The HelperServer makes extensive use of Unix Sockets that would normally allow other processes to
+	 * The HelperAgent makes extensive use of Unix Sockets that would normally allow other processes to
 	 * connect to it as well. In our case, we just want to limit this to Nginx and it is for this reason
 	 * that we've secured communication channels between this server and its clients with passwords.
 	 * This method indicates whether or not the password of this client channel matches the one known to
@@ -737,31 +737,31 @@ private:
 		userEntry = getpwnam(username.c_str());
 		if (userEntry == NULL) {
 			throw NonExistentUserException(string("Unable to lower Passenger "
-				"HelperServer's privilege to that of user '") + username +
+				"HelperAgent's privilege to that of user '") + username +
 				"': user does not exist.");
 		}
 		groupEntry = getgrnam(groupname.c_str());
 		if (groupEntry == NULL) {
 			throw NonExistentGroupException(string("Unable to lower Passenger "
-				"HelperServer's privilege to that of user '") + username +
+				"HelperAgent's privilege to that of user '") + username +
 				"': user does not exist.");
 		}
 		
 		if (initgroups(username.c_str(), userEntry->pw_gid) != 0) {
 			e = errno;
-			throw SystemException(string("Unable to lower Passenger HelperServer's "
+			throw SystemException(string("Unable to lower Passenger HelperAgent's "
 				"privilege to that of user '") + username +
 				"': cannot set supplementary groups for this user", e);
 		}
 		if (setgid(groupEntry->gr_gid) != 0) {
 			e = errno;
-			throw SystemException(string("Unable to lower Passenger HelperServer's "
+			throw SystemException(string("Unable to lower Passenger HelperAgent's "
 				"privilege to that of user '") + username +
 				"': cannot set group ID", e);
 		}
 		if (setuid(userEntry->pw_uid) != 0) {
 			e = errno;
-			throw SystemException(string("Unable to lower Passenger HelperServer's "
+			throw SystemException(string("Unable to lower Passenger HelperAgent's "
 				"privilege to that of user '") + username +
 				"': cannot set user ID", e);
 		}
@@ -870,7 +870,7 @@ public:
 		set<ClientPtr>::iterator it;
 		unsigned int i = 0;
 		
-		P_DEBUG("Shutting down helper server...");
+		P_DEBUG("Shutting down helper agent...");
 		prestarterThread->interrupt_and_join();
 		if (messageServerThread != NULL) {
 			messageServerThread->interrupt_and_join();
@@ -916,9 +916,9 @@ public:
 			/* If the watchdog has been killed then we'll kill all descendant
 			 * processes and exit. There's no point in keeping this helper
 			 * server running because we can't detect when the web server exits,
-			 * and because this helper server doesn't own the server instance
+			 * and because this helper agent doesn't own the server instance
 			 * directory. As soon as passenger-status is run, the server
-			 * instance directory will be cleaned up, making this helper server
+			 * instance directory will be cleaned up, making this helper agent
 			 * inaccessible.
 			 */
 			syscalls::killpg(getpgrp(), SIGKILL);
@@ -939,7 +939,7 @@ public:
  * Ignores the SIGPIPE signal that in general is raised when a computer program attempts
  * to write to a pipe without a processes connected to the other end. This is used to
  * prevent Nginx from getting killed by the default signal handler when it attempts to
- * write the server password to the HelperServer in the situation that the HelperServer
+ * write the server password to the HelperAgent in the situation that the HelperAgent
  * failed to start.
  */
 static void
@@ -952,7 +952,7 @@ ignoreSigpipe() {
 }
 
 /**
- * Initializes and starts the helper server that is responsible for handling communication
+ * Initializes and starts the helper agent that is responsible for handling communication
  * between Nginx and the backend Rails processes.
  *
  * @see Server
@@ -984,7 +984,7 @@ main(int argc, char *argv[]) {
 		string  serializedPrestartURIs = argv[15];
 		
 		// Change process title.
-		strncpy(argv[0], "PassengerHelperServer", strlen(argv[0]));
+		strncpy(argv[0], "PassengerHelperAgent", strlen(argv[0]));
 		for (int i = 1; i < argc; i++) {
 			memset(argv[i], '\0', strlen(argv[i]));
 		}
@@ -996,7 +996,7 @@ main(int argc, char *argv[]) {
 			passengerRoot, rubyCommand, generationNumber,
 			maxPoolSize, maxInstancesPerApp, poolIdleTime,
 			analyticsLogDir, serializedPrestartURIs);
-		P_DEBUG("Passenger helper server started on PID " << getpid());
+		P_DEBUG("Passenger helper agent started on PID " << getpid());
 		
 		UPDATE_TRACE_POINT();
 		server.mainLoop();
@@ -1011,6 +1011,6 @@ main(int argc, char *argv[]) {
 		throw;
 	}
 	
-	P_TRACE(2, "Helper server exited.");
+	P_TRACE(2, "Helper agent exited.");
 	return 0;
 }

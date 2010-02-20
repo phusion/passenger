@@ -36,7 +36,7 @@
 #include <boost/shared_ptr.hpp>
 #include <oxt/system_calls.hpp>
 
-#include "SystemTime.h"
+#include "Utils/SystemTime.h"
 
 namespace Passenger {
 

@@ -1,5 +1,5 @@
 #include "TestSupport.h"
-#include "SystemTime.h"
+#include "Utils/SystemTime.h"
 
 using namespace Passenger;
 using namespace std;

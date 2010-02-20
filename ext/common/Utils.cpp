@@ -40,8 +40,8 @@
 #include "MessageServer.h"
 #include "ResourceLocator.h"
 #include "Exceptions.h"
-#include "Base64.h"
 #include "Utils.h"
+#include "Utils/Base64.h"
 
 #define SPAWN_SERVER_SCRIPT_NAME "passenger-spawn-server"
 

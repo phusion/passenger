@@ -31,7 +31,7 @@
 
 #include <iostream>
 #include <string>
-#include "StaticString.h"
+#include "../StaticString.h"
 
 namespace Passenger {
 

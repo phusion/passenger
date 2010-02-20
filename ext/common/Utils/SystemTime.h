@@ -27,7 +27,7 @@
 
 #include <boost/thread.hpp>
 #include <oxt/system_calls.hpp>
-#include "Exceptions.h"
+#include "../Exceptions.h"
 
 namespace Passenger {
 

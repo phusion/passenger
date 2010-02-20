@@ -37,12 +37,12 @@
 #include <cstring>
 #include <grp.h>
 
-#include "MessageServer.h"
-#include "Logging.h"
-#include "SystemTime.h"
-#include "Exceptions.h"
-#include "FileDescriptor.h"
-#include "Utils.h"
+#include "../MessageServer.h"
+#include "../Logging.h"
+#include "../Exceptions.h"
+#include "../FileDescriptor.h"
+#include "../Utils.h"
+#include "../Utils/SystemTime.h"
 
 namespace Passenger {
 

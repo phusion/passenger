@@ -177,30 +177,30 @@ end
 
 
 ##### Static library for Passenger source files that are shared between
-##### the Apache module and the Nginx helper server.
+##### the Apache module and the Nginx helper agent.
 
 def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil)
 	components = {
 		'Logging.o' => %w(
 			Logging.cpp
 			Logging.h),
-		'SystemTime.o' => %w(
-			SystemTime.cpp
-			SystemTime.h),
 		'CachedFileStat.o' => %w(
 			CachedFileStat.cpp
 			CachedFileStat.h
 			CachedFileStat.hpp),
-		'Base64.o' => %w(
-			Base64.cpp
-			Base64.h),
-		'md5.o' => %w(
-			md5.cpp
-			md5.h),
+		'Utils/Base64.o' => %w(
+			Utils/Base64.cpp
+			Utils/Base64.h),
+		'Utils/MD5.o' => %w(
+			Utils/MD5.cpp
+			Utils/MD5.h),
+		'Utils/SystemTime.o' => %w(
+			Utils/SystemTime.cpp
+			Utils/SystemTime.h),
 		'Utils.o' => %w(
 			Utils.cpp
 			Utils.h
-			Base64.h
+			Utils/Base64.h
 			ResourceLocator.h),
 		'AccountsDatabase.o' => %w(
 			AccountsDatabase.cpp
@@ -235,13 +235,13 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 		
 		file object_file => dependencies do
 			sh "mkdir -p #{output_dir}" if !File.directory?(output_dir)
+			sh "mkdir -p #{output_dir}/Utils" if !File.directory?("#{output_dir}/Utils")
 			compile_cxx("ext/common/#{source_file}", "#{flags} -o #{object_file}")
 		end
 	end
 	
 	file(static_library => common_object_files) do
-		sh "mkdir -p #{output_dir}"
-		create_static_library(static_library, "#{output_dir}/*.o")
+		create_static_library(static_library, "#{output_dir}/*.o #{output_dir}/Utils/*.o")
 	end
 	
 	task "#{namespace}:clean" do
@@ -279,14 +279,15 @@ end
 	end
 	
 	logging_agent_dependencies = [
-		'ext/common/LoggingAgent.cpp',
-		'ext/common/LoggingServer.h',
+		'ext/common/LoggingAgent/Main.cpp',
+		'ext/common/LoggingAgent/LoggingServer.h',
 		'ext/common/ServerInstanceDir.h',
+		'ext/common/Logging.h',
 		COMMON_LIBRARY,
 		BOOST_OXT_LIBRARY]
 	file 'ext/common/PassengerLoggingAgent' => logging_agent_dependencies do
 		create_executable('ext/common/PassengerLoggingAgent',
-			'ext/common/LoggingAgent.cpp',
+			'ext/common/LoggingAgent/Main.cpp',
 			"-Iext -Iext/common #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
 			"#{COMMON_LIBRARY} " <<
 			"#{BOOST_OXT_LIBRARY} " <<
@@ -328,8 +329,8 @@ end
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
 			ext/common/Constants.h
-			ext/common/Timer.h
-			ext/common/Utils.h)
+			ext/common/Utils.h
+			ext/common/Utils/Timer.h)
 	}
 	APACHE2_MODULE_OBJECTS = APACHE2_MODULE_INPUT_FILES.keys
 	
@@ -347,7 +348,7 @@ end
 	
 	desc "Build Apache 2 module"
 	task :apache2 => ['ext/apache2/mod_passenger.so',
-		'ext/apache2/PassengerHelperServer',
+		'ext/apache2/PassengerHelperAgent',
 		'ext/common/PassengerWatchdog',
 		'ext/common/PassengerLoggingAgent',
 		:native_support]
@@ -391,23 +392,24 @@ end
 			" -o ext/apache2/mod_passenger.o")
 	end
 	
-	apache2_helper_server_dependencies = [
-		'ext/apache2/HelperServer.cpp',
+	apache2_helper_agent_dependencies = [
+		'ext/apache2/HelperAgent.cpp',
 		'ext/common/ServerInstanceDir.h',
 		'ext/common/MessageServer.h',
-		'ext/common/Timer.h',
 		'ext/common/Logging.h',
 		'ext/common/SpawnManager.h',
 		'ext/common/Account.h',
 		'ext/common/ResourceLocator.h',
+		'ext/common/Utils.h',
+		'ext/common/Utils/Timer.h',
 		'ext/common/ApplicationPool/Interface.h',
 		'ext/common/ApplicationPool/Pool.h',
 		'ext/common/ApplicationPool/Server.h',
 		APACHE2_HELPER_COMMON_LIBRARY,
 		APACHE2_HELPER_BOOST_OXT_LIBRARY]
-	file 'ext/apache2/PassengerHelperServer' => apache2_helper_server_dependencies do
-		create_executable('ext/apache2/PassengerHelperServer',
-			'ext/apache2/HelperServer.cpp',
+	file 'ext/apache2/PassengerHelperAgent' => apache2_helper_agent_dependencies do
+		create_executable('ext/apache2/PassengerHelperAgent',
+			'ext/apache2/HelperAgent.cpp',
 			"#{APACHE2_HELPER_CXXFLAGS} " <<
 			"#{APACHE2_HELPER_COMMON_LIBRARY} " <<
 			"#{APACHE2_HELPER_BOOST_OXT_LIBRARY} " <<
@@ -432,27 +434,27 @@ end
 		files += %w(
 			ext/apache2/mod_passenger.o
 			ext/apache2/mod_passenger.so
-			ext/apache2/PassengerHelperServer
+			ext/apache2/PassengerHelperAgent
 		)
 		sh("rm", "-rf", *files.flatten)
 	end
 
 
-##### Nginx helper server
+##### Nginx helper agent
 
 	NGINX_BOOST_OXT_LIBRARY = BOOST_OXT_LIBRARY
 	NGINX_COMMON_LIBRARY    = COMMON_LIBRARY
 	
-	desc "Build Nginx helper server"
-	task :nginx => ['ext/nginx/PassengerHelperServer',
+	desc "Build Nginx helper agent"
+	task :nginx => ['ext/nginx/PassengerHelperAgent',
 			'ext/common/PassengerWatchdog',
 			'ext/common/PassengerLoggingAgent',
 			:native_support]
 	
-	helper_server_dependencies = [
+	helper_agent_dependencies = [
 		NGINX_BOOST_OXT_LIBRARY,
 		NGINX_COMMON_LIBRARY,
-		'ext/nginx/HelperServer.cpp',
+		'ext/nginx/HelperAgent.cpp',
 		'ext/nginx/ScgiRequestParser.h',
 		'ext/nginx/HttpStatusExtractor.h',
 		'ext/common/StaticString.h',
@@ -460,17 +462,17 @@ end
 		'ext/common/AccountsDatabase.h',
 		'ext/common/MessageServer.h',
 		'ext/common/FileDescriptor.h',
-		'ext/common/BacktracesServer.h',
 		'ext/common/SpawnManager.h',
 		'ext/common/Logging.h',
 		'ext/common/ResourceLocator.h',
+		'ext/common/HelperAgent/BacktracesServer.h',
 		'ext/common/ApplicationPool/Interface.h',
 		'ext/common/ApplicationPool/Pool.h',
 		'ext/common/ApplicationPool/Server.h'
 		]
-	file 'ext/nginx/PassengerHelperServer' => helper_server_dependencies do
-		create_executable "ext/nginx/PassengerHelperServer",
-			'ext/nginx/HelperServer.cpp',
+	file 'ext/nginx/PassengerHelperAgent' => helper_agent_dependencies do
+		create_executable "ext/nginx/PassengerHelperAgent",
+			'ext/nginx/HelperAgent.cpp',
 			"-Iext -Iext/common " <<
 			"#{PlatformInfo.portability_cflags} " <<
 			"#{EXTRA_CXXFLAGS}  " <<
@@ -483,7 +485,7 @@ end
 	task :clean => 'nginx:clean'
 	desc "Clean all compiled Nginx files"
 	task 'nginx:clean' do
-		sh("rm", "-rf", "ext/nginx/PassengerHelperServer")
+		sh("rm", "-rf", "ext/nginx/PassengerHelperAgent")
 	end
 
 
@@ -560,8 +562,8 @@ end
 			test/cxx/MessageChannelTest.cpp
 			ext/common/MessageChannel.h
 			ext/common/Exceptions.h
-			ext/common/Timer.h
-			ext/common/Utils.h),
+			ext/common/Utils.h
+			ext/common/Utils/Timer.h),
 		'test/cxx/SpawnManagerTest.o' => %w(
 			test/cxx/SpawnManagerTest.cpp
 			ext/common/SpawnManager.h
@@ -627,8 +629,8 @@ end
 			ext/common/StaticString.h),
 		'test/cxx/Base64Test.o' => %w(
 			test/cxx/Base64Test.cpp
-			ext/common/Base64.h
-			ext/common/Base64.cpp),
+			ext/common/Utils/Base64.h
+			ext/common/Utils/Base64.cpp),
 		'test/cxx/ScgiRequestParserTest.o' => %w(
 			test/cxx/ScgiRequestParserTest.cpp
 			ext/nginx/ScgiRequestParser.h
@@ -638,7 +640,7 @@ end
 			ext/nginx/HttpStatusExtractor.h),
 		'test/cxx/LoggingTest.o' => %w(
 			test/cxx/LoggingTest.cpp
-			ext/common/LoggingServer.h
+			ext/common/LoggingAgent/LoggingServer.h
 			ext/common/Logging.h
 			ext/common/Utils.h
 			ext/common/MessageServer.h
@@ -668,8 +670,8 @@ end
 			ext/common/FileDescriptor.h),
 		'test/cxx/SystemTimeTest.o' => %w(
 			test/cxx/SystemTimeTest.cpp
-			ext/common/SystemTime.h
-			ext/common/SystemTime.cpp),
+			ext/common/Utils/SystemTime.h
+			ext/common/Utils/SystemTime.cpp),
 		'test/cxx/CachedFileStatTest.o' => %w(
 			test/cxx/CachedFileStatTest.cpp
 			ext/common/CachedFileStat.hpp

@@ -752,8 +752,8 @@ passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         passenger_conf->enabled = 1;
         
         /* Register a placeholder value as upstream address. The real upstream
-         * address (the helper server socket filename) will be set while processing
-         * requests, because we can't start the helper server until config
+         * address (the helper agent socket filename) will be set while processing
+         * requests, because we can't start the helper agent until config
          * loading is done.
          */
         ngx_memzero(&upstream_url, sizeof(ngx_url_t));

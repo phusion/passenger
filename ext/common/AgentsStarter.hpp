@@ -38,10 +38,10 @@
 #include "FileDescriptor.h"
 #include "MessageChannel.h"
 #include "MessageClient.h"
-#include "Base64.h"
 #include "ServerInstanceDir.h"
 #include "Exceptions.h"
 #include "Utils.h"
+#include "Utils/Base64.h"
 
 namespace Passenger {
 
@@ -70,8 +70,8 @@ private:
 	FileDescriptor feedbackFd;
 	
 	/**
-	 * The helper server's request socket filename. This socket only exists
-	 * for the Nginx helper server, and it's for serving SCGI requests.
+	 * The helper agent's request socket filename. This socket only exists
+	 * for the Nginx helper agent, and it's for serving SCGI requests.
 	 *
 	 * Only valid if pid != 0.
 	 */
@@ -83,7 +83,7 @@ private:
 	string requestSocketPassword;
 	
 	/**
-	 * The helper server's message server socket filename, on which e.g. the
+	 * The helper agent's message server socket filename, on which e.g. the
 	 * application pool server is listening. Only valid if pid != 0.
 	 *
 	 * The application pool server is available through the account "_web_server".
@@ -101,12 +101,12 @@ private:
 	string loggingSocketPassword;
 	
 	/**
-	 * The server instance dir of the helper server. Only valid if pid != 0.
+	 * The server instance dir of the agents. Only valid if pid != 0.
 	 */
 	ServerInstanceDirPtr serverInstanceDir;
 	
 	/**
-	 * The generation dir of the helper server. Only valid if pid != 0.
+	 * The generation dir of the agents. Only valid if pid != 0.
 	 */
 	ServerInstanceDir::GenerationPtr generation;
 	
@@ -153,10 +153,10 @@ private:
 	
 public:
 	/**
-	 * Construct a AgentsStarter object. The watchdog and the helper server
+	 * Construct a AgentsStarter object. The watchdog and the agents
 	 * aren't started yet until you call start().
 	 *
-	 * @param type Whether one wants to start the Apache or the Nginx helper server.
+	 * @param type Whether one wants to start the Apache or the Nginx helper agent.
 	 */
 	AgentsStarter(Type type) {
 		pid = 0;
@@ -212,7 +212,7 @@ public:
 	}
 	
 	/**
-	 * The helper server's request socket filename, on which it's listening
+	 * The helper agent's request socket filename, on which it's listening
 	 * for SCGI requests.
 	 *
 	 * @pre getPid() != 0 && getType() == NGINX
@@ -247,7 +247,7 @@ public:
 	}
 	
 	/**
-	 * Returns the server instance dir of the helper server.
+	 * Returns the server instance dir of the agents.
 	 *
 	 * @pre getPid() != 0
 	 */
@@ -256,7 +256,7 @@ public:
 	}
 	
 	/**
-	 * Returns the generation dir of the helper server.
+	 * Returns the generation dir of the agents.
 	 *
 	 * @pre getPid() != 0
 	 */
@@ -265,11 +265,11 @@ public:
 	}
 	
 	/**
-	 * Start the helper server through the watchdog, with the given parameters.
+	 * Start the agents through the watchdog, with the given parameters.
 	 *
 	 * @throws SystemException Something went wrong.
-	 * @throws IOException Something went wrong while communicating with the
-	 *                     helper server during its initialization phase.
+	 * @throws IOException Something went wrong while communicating with one
+	 *                     of the agents during its initialization phase.
 	 * @throws RuntimeException Something went wrong.
 	 */
 	void start(unsigned int logLevel,
@@ -508,7 +508,7 @@ public:
 					throw;
 				}
 				
-				if (args[0] == "HelperServer info") {
+				if (args[0] == "HelperAgent info") {
 					UPDATE_TRACE_POINT();
 					if (args.size() == 5) {
 						this->pid = pid;

@@ -1,5 +1,5 @@
 #include "TestSupport.h"
-#include "Base64.h"
+#include "Utils/Base64.h"
 
 using namespace Passenger;
 using namespace std;

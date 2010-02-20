@@ -50,12 +50,12 @@
 #include "Bucket.h"
 #include "Configuration.hpp"
 #include "Utils.h"
+#include "Utils/Timer.h"
 #include "Logging.h"
 #include "AgentsStarter.hpp"
 #include "ApplicationPool/Client.h"
 #include "MessageChannel.h"
 #include "DirectoryMapper.h"
-#include "Timer.h"
 #include "Constants.h"
 
 /* The Apache/APR headers *must* come after the Boost headers, otherwise

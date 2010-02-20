@@ -28,8 +28,8 @@
 #include <string>
 #include <vector>
 #include <boost/shared_ptr.hpp>
-#include "Base64.h"
 #include "Utils.h"
+#include "Utils/Base64.h"
 
 namespace Passenger {
 
