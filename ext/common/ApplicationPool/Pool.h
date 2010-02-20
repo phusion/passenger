@@ -107,7 +107,7 @@ class Server;
 class Pool: public ApplicationPool::Interface {
 public:
 	static const int CLEANER_THREAD_STACK_SIZE = 1024 * 64;
-	static const int PROCESS_METRICS_COLLECTOR_THREAD_STACK_SIZE = 1024 * 64;
+	static const int ANALYTICS_COLLECTION_THREAD_STACK_SIZE = 1024 * 64;
 	static const unsigned int MAX_GET_ATTEMPTS = 10;
 
 private:
@@ -128,12 +128,18 @@ private:
 		unsigned long maxRequests;
 		unsigned long minProcesses;
 		string environment;
+		bool analytics;
+		
+		/*****************/
+		/*****************/
 		
 		Group() {
-			size = 0;
-			detached = false;
-			maxRequests = 0;
+			size         = 0;
+			detached     = false;
+			maxRequests  = 0;
 			minProcesses = 0;
+			analytics    = false;
+			/*****************/
 		}
 	};
 	
@@ -158,6 +164,7 @@ private:
 			sessions   = 0;
 			processed  = 0;
 			detached   = false;
+			/*****************/
 		}
 		
 		/**
@@ -267,9 +274,10 @@ private:
 	};
 	
 	AbstractSpawnManagerPtr spawnManager;
+	AnalyticsLoggerPtr analyticsLogger;
 	SharedDataPtr data;
 	oxt::thread *cleanerThread;
-	oxt::thread *processMetricsCollectorThread;
+	oxt::thread *analyticsCollectionThread;
 	bool done;
 	unsigned int maxIdleTime;
 	unsigned int waitingOnGlobalQueue;
@@ -402,6 +410,48 @@ private:
 		struct stat buf;
 		return cstat.stat(alwaysRestartFile, &buf, options.statThrottleRate) == 0 ||
 		       fileChangeChecker.changed(restartFile, options.statThrottleRate);
+	}
+	
+	void dumpProcessInfoAsXml(const ProcessInfo *processInfo, bool includeSensitiveInformation,
+	                          stringstream &result) const
+	{
+		result << "<process>";
+		result << "<pid>" << processInfo->process->getPid() << "</pid>";
+		result << "<sessions>" << processInfo->sessions << "</sessions>";
+		result << "<processed>" << processInfo->processed << "</processed>";
+		result << "<uptime>" << processInfo->uptime() << "</uptime>";
+		if (processInfo->metrics.isValid()) {
+			const ProcessMetrics &metrics = processInfo->metrics;
+			result << "<has_metrics/>";
+			result << "<cpu>" << (int) metrics.cpu << "</cpu>";
+			result << "<rss>" << metrics.rss << "</rss>";
+			if (metrics.realMemory != 0) {
+				result << "<real_memory>" << metrics.realMemory << "</real_memory>";
+			}
+			result << "<vmsize>" << metrics.vmsize << "</vmsize>";
+			result << "<process_group_id>" << metrics.processGroupId << "</process_group_id>";
+			result << "<command>" << escapeForXml(metrics.command) << "</command>";
+		}
+		if (includeSensitiveInformation) {
+			const ProcessPtr &process = processInfo->process;
+			const Process::SocketInfoMap *serverSockets;
+			Process::SocketInfoMap::const_iterator sit;
+			
+			result << "<connect_password>" << process->getConnectPassword() << "</connect_password>";
+			result << "<server_sockets>";
+			serverSockets = process->getServerSockets();
+			for (sit = serverSockets->begin(); sit != serverSockets->end(); sit++) {
+				const string &name = sit->first;
+				const Process::SocketInfo &info = sit->second;
+				result << "<server_socket>";
+				result << "<name>" << escapeForXml(name) << "</name>";
+				result << "<address>" << escapeForXml(info.address) << "</address>";
+				result << "<type>" << escapeForXml(info.type) << "</type>";
+				result << "</server_socket>";
+			}
+			result << "</server_sockets>";
+		}
+		result << "</process>";
 	}
 	
 	ProcessInfoPtr selectProcess(ProcessInfoList *processes, const PoolOptions &options,
@@ -559,7 +609,7 @@ private:
 		}
 	}
 	
-	void processMetricsCollectorThreadMainLoop() {
+	void analyticsCollectionThreadMainLoop() {
 		try {
 			syscalls::sleep(3);
 			while (!this_thread::interruption_requested()) {
@@ -587,9 +637,9 @@ private:
 					}
 				}
 				
-				// Now collect the process metrics and store them in the
-				// data structures.
 				try {
+					// Now collect the process metrics and store them in the
+					// data structures, and log the state into the analytics logs.
 					ProcessMetricsCollector::Map allMetrics =
 						processMetricsCollector.collect(pids);
 					
@@ -602,7 +652,13 @@ private:
 						ProcessInfoList &processes = group->processes;
 						ProcessInfoList::iterator process_info_it = processes.begin();
 						ProcessInfoList::iterator process_info_it_end = processes.end();
+						AnalyticsLogPtr log;
+						stringstream xml;
 						
+						if (group->analytics && analyticsLogger != NULL) {
+							log = analyticsLogger->newTransaction(group->name,
+								"processes", true);
+						}
 						for (; process_info_it != process_info_it_end; process_info_it++) {
 							ProcessInfoPtr &processInfo = *process_info_it;
 							ProcessMetricsCollector::Map::const_iterator metrics_it =
@@ -610,13 +666,20 @@ private:
 							if (metrics_it != allMetrics.end()) {
 								processInfo->metrics = metrics_it->second;
 							}
+							if (log != NULL) {
+								dumpProcessInfoAsXml(processInfo.get(),
+									false, xml);
+							}
+						}
+						if (log != NULL) {
+							log->message(xml.str());
 						}
 					}
 				} catch (const ProcessMetricsCollector::ParseException &) {
 					P_WARN("Unable to collect process metrics: cannot parse 'ps' output.");
-				} catch (const SystemException &e) {
-					P_WARN("Error while collecting process metrics: " << e.what());
-				} catch (const RuntimeException &e) {
+				} catch (const thread_interrupted &) {
+					throw;
+				} catch (const std::exception &e) {
 					P_WARN("Error while collecting process metrics: " << e.what());
 				}
 				
@@ -762,6 +825,7 @@ private:
 				group->maxRequests = options.maxRequests;
 				group->minProcesses = options.minProcesses;
 				group->environment = options.environment;
+				group->analytics = options.log != NULL;
 				groups[appGroupName] = ptr(group);
 				processes = &group->processes;
 				processes->push_back(processInfo);
@@ -795,7 +859,7 @@ private:
 	}
 	
 	/** @throws boost::thread_resource_error */
-	void initialize() {
+	void initialize(const AnalyticsLoggerPtr &analyticsLogger) {
 		done = false;
 		max = DEFAULT_MAX_POOL_SIZE;
 		count = 0;
@@ -808,11 +872,16 @@ private:
 			"ApplicationPool cleaner",
 			CLEANER_THREAD_STACK_SIZE
 		);
-		processMetricsCollectorThread = new oxt::thread(
-			bind(&Pool::processMetricsCollectorThreadMainLoop, this),
-			"ApplicationPool process metrics collector",
-			PROCESS_METRICS_COLLECTOR_THREAD_STACK_SIZE
-		);
+		if (analyticsLogger != NULL) {
+			this->analyticsLogger = analyticsLogger;
+			analyticsCollectionThread = new oxt::thread(
+				bind(&Pool::analyticsCollectionThreadMainLoop, this),
+				"ApplicationPool analytics collector",
+				ANALYTICS_COLLECTION_THREAD_STACK_SIZE
+			);
+		} else {
+			analyticsCollectionThread = NULL;
+		}
 	}
 	
 public:
@@ -829,6 +898,7 @@ public:
 	     const ServerInstanceDir::GenerationPtr &generation,
 	     const AccountsDatabasePtr &accountsDatabase = AccountsDatabasePtr(),
 	     const string &rubyCommand = "ruby",
+	     const AnalyticsLoggerPtr &analyticsLogger = AnalyticsLoggerPtr(),
 	     const string &loggingAgentAddress = "",
 	     const string &loggingAgentUsername = "",
 	     const string &loggingAgentPassword = ""
@@ -847,7 +917,7 @@ public:
 		this->spawnManager = ptr(new SpawnManager(spawnServerCommand, generation,
 			accountsDatabase, rubyCommand, loggingAgentAddress,
 			loggingAgentUsername, loggingAgentPassword));
-		initialize();
+		initialize(analyticsLogger);
 	}
 	
 	/**
@@ -856,8 +926,9 @@ public:
 	 *
 	 * @throws boost::thread_resource_error Cannot spawn a new thread.
 	 */
-	Pool(AbstractSpawnManagerPtr spawnManager)
-	   : data(new SharedData()),
+	Pool(AbstractSpawnManagerPtr spawnManager,
+	     const AnalyticsLoggerPtr &analyticsLogger = AnalyticsLoggerPtr()
+	) : data(new SharedData()),
 	     cstat(DEFAULT_MAX_POOL_SIZE),
 	     lock(data->lock),
 	     activeOrMaxChanged(data->activeOrMaxChanged),
@@ -870,7 +941,7 @@ public:
 	{
 		TRACE_POINT();
 		this->spawnManager = spawnManager;
-		initialize();
+		initialize(analyticsLogger);
 	}
 	
 	virtual ~Pool() {
@@ -883,8 +954,10 @@ public:
 		}
 		cleanerThread->join();
 		delete cleanerThread;
-		processMetricsCollectorThread->interrupt_and_join();
-		delete processMetricsCollectorThread;
+		if (analyticsCollectionThread != NULL) {
+			analyticsCollectionThread->interrupt_and_join();
+			delete analyticsCollectionThread;
+		}
 	}
 	
 	virtual SessionPtr get(const string &appRoot) {
@@ -1031,44 +1104,7 @@ public:
 			result << "<processes>";
 			for (lit = processes->begin(); lit != processes->end(); lit++) {
 				ProcessInfo *processInfo = lit->get();
-				
-				result << "<process>";
-				result << "<pid>" << processInfo->process->getPid() << "</pid>";
-				result << "<sessions>" << processInfo->sessions << "</sessions>";
-				result << "<processed>" << processInfo->processed << "</processed>";
-				result << "<uptime>" << processInfo->uptime() << "</uptime>";
-				if (processInfo->metrics.isValid()) {
-					const ProcessMetrics &metrics = processInfo->metrics;
-					result << "<has_metrics/>";
-					result << "<cpu>" << (int) metrics.cpu << "</cpu>";
-					result << "<rss>" << metrics.rss << "</rss>";
-					if (metrics.realMemory != 0) {
-						result << "<real_memory>" << metrics.realMemory << "</real_memory>";
-					}
-					result << "<vmsize>" << metrics.vmsize << "</vmsize>";
-					result << "<process_group_id>" << metrics.processGroupId << "</process_group_id>";
-					result << "<command>" << escapeForXml(metrics.command) << "</command>";
-				}
-				if (includeSensitiveInformation) {
-					const ProcessPtr &process = processInfo->process;
-					const Process::SocketInfoMap *serverSockets;
-					Process::SocketInfoMap::const_iterator sit;
-					
-					result << "<connect_password>" << process->getConnectPassword() << "</connect_password>";
-					result << "<server_sockets>";
-					serverSockets = process->getServerSockets();
-					for (sit = serverSockets->begin(); sit != serverSockets->end(); sit++) {
-						const string &name = sit->first;
-						const Process::SocketInfo &info = sit->second;
-						result << "<server_socket>";
-						result << "<name>" << escapeForXml(name) << "</name>";
-						result << "<address>" << escapeForXml(info.address) << "</address>";
-						result << "<type>" << escapeForXml(info.type) << "</type>";
-						result << "</server_socket>";
-					}
-					result << "</server_sockets>";
-				}
-				result << "</process>";
+				dumpProcessInfoAsXml(processInfo, includeSensitiveInformation, result);
 			}
 			result << "</processes>";
 			
