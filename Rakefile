@@ -409,6 +409,7 @@ end
 		'ext/common/ResourceLocator.h',
 		'ext/common/Utils.h',
 		'ext/common/Utils/Timer.h',
+		'ext/common/Utils/ProcessMetricsCollector.h',
 		'ext/common/ApplicationPool/Interface.h',
 		'ext/common/ApplicationPool/Pool.h',
 		'ext/common/ApplicationPool/Server.h',
@@ -473,6 +474,7 @@ end
 		'ext/common/SpawnManager.h',
 		'ext/common/Logging.h',
 		'ext/common/ResourceLocator.h',
+		'ext/common/Utils/ProcessMetricsCollector.h',
 		'ext/common/HelperAgent/BacktracesServer.h',
 		'ext/common/ApplicationPool/Interface.h',
 		'ext/common/ApplicationPool/Pool.h',
@@ -597,7 +599,8 @@ end
 			ext/common/Session.h
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
-			ext/common/MessageChannel.h),
+			ext/common/MessageChannel.h
+			ext/common/Utils/ProcessMetricsCollector.h),
 		'test/cxx/ApplicationPool_Server_PoolTest.o' => %w(
 			test/cxx/ApplicationPool_Server_PoolTest.cpp
 			test/cxx/ApplicationPool_PoolTestCases.cpp
@@ -614,7 +617,8 @@ end
 			ext/common/StringListCreator.h
 			ext/common/Process.h
 			ext/common/Session.h
-			ext/common/MessageChannel.h),
+			ext/common/MessageChannel.h
+			ext/common/Utils/ProcessMetricsCollector.h),
 		'test/cxx/ApplicationPool_PoolTest.o' => %w(
 			test/cxx/ApplicationPool_PoolTest.cpp
 			test/cxx/ApplicationPool_PoolTestCases.cpp

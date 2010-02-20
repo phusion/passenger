@@ -131,8 +131,8 @@ private:
 	/** The server socket file descriptor. */
 	int serverSocket;
 	
-	/** The transaction logger to use. */
-	TxnLoggerPtr txnLogger;
+	/** The analytics logger to use. */
+	AnalyticsLoggerPtr analyticsLogger;
 	
 	/** This client's thread. */
 	oxt::thread *thr;
@@ -462,15 +462,15 @@ private:
 			options.appSpawnerTimeout       = atol(parser.getHeader("PASSENGER_APP_SPAWNER_IDLE_TIME"));
 			
 			UPDATE_TRACE_POINT();
-			TxnLogPtr log;
+			AnalyticsLogPtr log;
 			if (enableAnalytics) {
-				log = txnLogger->newTransaction(options.getAppGroupName());
+				log = analyticsLogger->newTransaction(options.getAppGroupName());
 				options.log = log;
 			} else {
-				log.reset(new TxnLog());
+				log.reset(new AnalyticsLog());
 			}
 			
-			TxnScopeLog requestProcessingScope(log, "request processing");
+			AnalyticsScopeLog requestProcessingScope(log, "request processing");
 			log->message("URI: " + parser.getHeader("REQUEST_URI"));
 			
 			/***********************/
@@ -480,14 +480,14 @@ private:
 				SessionPtr session;
 				
 				{
-					TxnScopeLog sl(log, "get from pool");
+					AnalyticsScopeLog sl(log, "get from pool");
 					session = pool->get(options);
 					sl.success();
 					log->message("Application PID: " + toString(session->getPid()));
 				}
 				
 				UPDATE_TRACE_POINT();
-				TxnScopeLog requestProxyingScope(log, "request proxying");
+				AnalyticsScopeLog requestProxyingScope(log, "request proxying");
 				
 				char headers[parser.getHeaderData().size() +
 					sizeof("PASSENGER_CONNECT_PASSWORD") +
@@ -614,7 +614,7 @@ public:
 	Client(unsigned int number, ApplicationPool::Ptr pool,
 	       const string &password, const string &defaultUser,
 	       const string &defaultGroup, int serverSocket,
-	       TxnLoggerPtr logger)
+	       const AnalyticsLoggerPtr &logger)
 		: inactivityTimer(false)
 	{
 		this->number = number;
@@ -623,7 +623,7 @@ public:
 		this->defaultUser = defaultUser;
 		this->defaultGroup = defaultGroup;
 		this->serverSocket = serverSocket;
-		this->txnLogger = logger;
+		this->analyticsLogger = logger;
 		thr = new oxt::thread(
 			bind(&Client::threadMain, this),
 			"Client thread " + toString(number),
@@ -680,7 +680,7 @@ private:
 	ServerInstanceDir serverInstanceDir;
 	ServerInstanceDir::GenerationPtr generation;
 	set<ClientPtr> clients;
-	TxnLoggerPtr txnLogger;
+	AnalyticsLoggerPtr analyticsLogger;
 	ApplicationPool::Ptr pool;
 	AccountsDatabasePtr accountsDatabase;
 	MessageServerPtr messageServer;
@@ -721,7 +721,8 @@ private:
 	void startClientHandlerThreads() {
 		for (unsigned int i = 0; i < numberOfThreads; i++) {
 			ClientPtr client(new Client(i + 1, pool, requestSocketPassword,
-				defaultUser, defaultGroup, requestSocket, txnLogger));
+				defaultUser, defaultGroup, requestSocket,
+				analyticsLogger));
 			clients.insert(client);
 		}
 	}
@@ -833,13 +834,14 @@ public:
 		}
 		
 		UPDATE_TRACE_POINT();
-		txnLogger = ptr(new TxnLogger(analyticsLogDir,
+		analyticsLogger = ptr(new AnalyticsLogger(analyticsLogDir,
 			generation->getPath() + "/logging.socket",
 			"logging", loggingAgentPassword));
 		
 		pool = ptr(new ApplicationPool::Pool(
 			resourceLocator.getSpawnServerFilename(), generation,
 			accountsDatabase, rubyCommand,
+			analyticsLogger,
 			generation->getPath() + "/logging.socket",
 			"logging", loggingAgentPassword
 		));

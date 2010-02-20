@@ -58,6 +58,7 @@
 #include "../Utils/SystemTime.h"
 #include "../Utils/FileChangeChecker.h"
 #include "../Utils/CachedFileStat.hpp"
+#include "../Utils/ProcessMetricsCollector.h"
 
 namespace Passenger {
 namespace ApplicationPool {
@@ -106,6 +107,7 @@ class Server;
 class Pool: public ApplicationPool::Interface {
 public:
 	static const int CLEANER_THREAD_STACK_SIZE = 1024 * 64;
+	static const int PROCESS_METRICS_COLLECTOR_THREAD_STACK_SIZE = 1024 * 64;
 	static const unsigned int MAX_GET_ATTEMPTS = 10;
 
 private:
@@ -145,6 +147,10 @@ private:
 		ProcessInfoList::iterator iterator;
 		ProcessInfoList::iterator ia_iterator;
 		bool detached;
+		ProcessMetrics metrics;
+		
+		/****************/
+		/****************/
 		
 		ProcessInfo() {
 			startTime  = SystemTime::getMsec();
@@ -263,12 +269,14 @@ private:
 	AbstractSpawnManagerPtr spawnManager;
 	SharedDataPtr data;
 	oxt::thread *cleanerThread;
+	oxt::thread *processMetricsCollectorThread;
 	bool done;
 	unsigned int maxIdleTime;
 	unsigned int waitingOnGlobalQueue;
 	condition_variable cleanerThreadSleeper;
 	CachedFileStat cstat;
 	FileChangeChecker fileChangeChecker;
+	ProcessMetricsCollector processMetricsCollector;
 	
 	// Shortcuts for instance variables in SharedData. Saves typing in get()
 	// and other methods.
@@ -551,6 +559,82 @@ private:
 		}
 	}
 	
+	void processMetricsCollectorThreadMainLoop() {
+		try {
+			syscalls::sleep(3);
+			while (!this_thread::interruption_requested()) {
+				this_thread::disable_interruption di;
+				this_thread::disable_syscall_interruption dsi;
+				vector<pid_t> pids;
+				
+				// Collect all the PIDs.
+				{
+					lock_guard<boost::mutex> l(lock);
+					GroupMap::const_iterator group_it;
+					GroupMap::const_iterator group_it_end = groups.end();
+					
+					pids.reserve(count);
+					for (group_it = groups.begin(); group_it != group_it_end; group_it++) {
+						const GroupPtr &group = group_it->second;
+						const ProcessInfoList &processes = group->processes;
+						ProcessInfoList::const_iterator process_info_it = processes.begin();
+						ProcessInfoList::const_iterator process_info_it_end = processes.end();
+						
+						for (; process_info_it != process_info_it_end; process_info_it++) {
+							const ProcessInfoPtr &processInfo = *process_info_it;
+							pids.push_back(processInfo->process->getPid());
+						}
+					}
+				}
+				
+				// Now collect the process metrics and store them in the
+				// data structures.
+				try {
+					ProcessMetricsCollector::Map allMetrics =
+						processMetricsCollector.collect(pids);
+					
+					lock_guard<boost::mutex> l(lock);
+					GroupMap::iterator group_it;
+					GroupMap::iterator group_it_end = groups.end();
+					
+					for (group_it = groups.begin(); group_it != group_it_end; group_it++) {
+						GroupPtr &group = group_it->second;
+						ProcessInfoList &processes = group->processes;
+						ProcessInfoList::iterator process_info_it = processes.begin();
+						ProcessInfoList::iterator process_info_it_end = processes.end();
+						
+						for (; process_info_it != process_info_it_end; process_info_it++) {
+							ProcessInfoPtr &processInfo = *process_info_it;
+							ProcessMetricsCollector::Map::const_iterator metrics_it =
+								allMetrics.find(processInfo->process->getPid());
+							if (metrics_it != allMetrics.end()) {
+								processInfo->metrics = metrics_it->second;
+							}
+						}
+					}
+				} catch (const ProcessMetricsCollector::ParseException &) {
+					P_WARN("Unable to collect process metrics: cannot parse 'ps' output.");
+				} catch (const SystemException &e) {
+					P_WARN("Error while collecting process metrics: " << e.what());
+				} catch (const RuntimeException &e) {
+					P_WARN("Error while collecting process metrics: " << e.what());
+				}
+				
+				pids.resize(0);
+				
+				// Sleep for about 3 seconds, aligned to seconds boundary
+				// for saving power on laptops.
+				unsigned long long currentTime = SystemTime::getUsec();
+				unsigned long long deadline =
+					roundUp<unsigned long long>(currentTime, 1000000) + 3000000;
+				syscalls::usleep(deadline - currentTime);
+			}
+		} catch (const thread_interrupted &) {
+		} catch (const std::exception &e) {
+			P_ERROR("Uncaught exception: " << e.what());
+		}
+	}
+	
 	/**
 	 * @throws boost::thread_interrupted
 	 * @throws SpawnException
@@ -724,6 +808,11 @@ private:
 			"ApplicationPool cleaner",
 			CLEANER_THREAD_STACK_SIZE
 		);
+		processMetricsCollectorThread = new oxt::thread(
+			bind(&Pool::processMetricsCollectorThreadMainLoop, this),
+			"ApplicationPool process metrics collector",
+			PROCESS_METRICS_COLLECTOR_THREAD_STACK_SIZE
+		);
 	}
 	
 public:
@@ -794,6 +883,8 @@ public:
 		}
 		cleanerThread->join();
 		delete cleanerThread;
+		processMetricsCollectorThread->interrupt_and_join();
+		delete processMetricsCollectorThread;
 	}
 	
 	virtual SessionPtr get(const string &appRoot) {
@@ -946,6 +1037,18 @@ public:
 				result << "<sessions>" << processInfo->sessions << "</sessions>";
 				result << "<processed>" << processInfo->processed << "</processed>";
 				result << "<uptime>" << processInfo->uptime() << "</uptime>";
+				if (processInfo->metrics.isValid()) {
+					const ProcessMetrics &metrics = processInfo->metrics;
+					result << "<has_metrics/>";
+					result << "<cpu>" << (int) metrics.cpu << "</cpu>";
+					result << "<rss>" << metrics.rss << "</rss>";
+					if (metrics.realMemory != 0) {
+						result << "<real_memory>" << metrics.realMemory << "</real_memory>";
+					}
+					result << "<vmsize>" << metrics.vmsize << "</vmsize>";
+					result << "<process_group_id>" << metrics.processGroupId << "</process_group_id>";
+					result << "<command>" << escapeForXml(metrics.command) << "</command>";
+				}
 				if (includeSensitiveInformation) {
 					const ProcessPtr &process = processInfo->process;
 					const Process::SocketInfoMap *serverSockets;

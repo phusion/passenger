@@ -196,10 +196,10 @@ struct PoolOptions {
 	Account::Rights rights;
 	
 	/**
-	 * A transaction log object to log things to. May be the null pointer,
-	 * in which case transaction logging is disabled.
+	 * An analytics log object to log things to. May be the null pointer,
+	 * in which case analytics logging is disabled.
 	 */
-	TxnLogPtr log;
+	AnalyticsLogPtr log;
 	
 	/**
 	 * Whether the session returned by ApplicationPool::Interface::get()
@@ -258,7 +258,7 @@ struct PoolOptions {
 		unsigned long statThrottleRate = 0,
 		const string &restartDir     = "",
 		Account::Rights rights       = DEFAULT_BACKEND_ACCOUNT_RIGHTS,
-		const TxnLogPtr &log         = TxnLogPtr()
+		const AnalyticsLogPtr &log   = AnalyticsLogPtr()
 	) {
 		this->appRoot                 = appRoot;
 		this->appGroupName            = appGroupName;
@@ -303,11 +303,11 @@ struct PoolOptions {
 	 *
 	 * @param vec The vector containing spawn options information.
 	 * @param startIndex The index in vec at which the information starts.
-	 * @param txnLogger If given, and the vector contains logging information,
-	 *                  then the 'log' member will be constructed using this logger.
+	 * @param analyticsLogger If given, and the vector contains logging information,
+	 *                        then the 'log' member will be constructed using this logger.
 	 */
 	PoolOptions(const vector<string> &vec, unsigned int startIndex = 0,
-	            TxnLoggerPtr txnLogger = TxnLoggerPtr()
+	            AnalyticsLoggerPtr analyticsLogger = AnalyticsLoggerPtr()
 	) {
 		int offset = 1;
 		bool hasEnvVars;
@@ -331,11 +331,11 @@ struct PoolOptions {
 		restartDir       = vec[startIndex + offset];                 offset += 2;
 		rights           = (Account::Rights) atol(vec[startIndex + offset]);
 		                                                             offset += 2;
-		if (vec[startIndex + offset - 1] == "txn_log_group_name") {
-			if (txnLogger != NULL) {
+		if (vec[startIndex + offset - 1] == "analytics_log_group_name") {
+			if (analyticsLogger != NULL) {
 				string groupName = vec[startIndex + offset];
 				string txnId = vec[startIndex + offset + 2];
-				log = txnLogger->continueTransaction(groupName, txnId);
+				log = analyticsLogger->continueTransaction(groupName, txnId);
 			}
 			offset += 4;
 		}
@@ -382,8 +382,8 @@ struct PoolOptions {
 		appendKeyValue (vec, "restart_dir",        restartDir);
 		appendKeyValue3(vec, "rights",             rights);
 		if (log) {
-			appendKeyValue(vec, "txn_log_group_name", log->getGroupName());
-			appendKeyValue(vec, "txn_log_id", log->getTxnId());
+			appendKeyValue(vec, "analytics_log_group_name", log->getGroupName());
+			appendKeyValue(vec, "analytics_log_id", log->getTxnId());
 		}
 		appendKeyValue4(vec, "initiate_session",   initiateSession);
 		appendKeyValue4(vec, "print_exceptions",   printExceptions);

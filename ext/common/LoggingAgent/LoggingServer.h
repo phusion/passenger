@@ -43,6 +43,7 @@
 #include "../FileDescriptor.h"
 #include "../Utils.h"
 #include "../Utils/SystemTime.h"
+#include "../Utils/FileHandleGuard.h"
 
 namespace Passenger {
 
@@ -82,8 +83,8 @@ public:
 			string groupDir;
 			string filename;
 			try {
-				groupDir = TxnLogger::determineGroupDir(dir, groupName);
-				filename = TxnLogger::determineLogFilename(dir,
+				groupDir = AnalyticsLogger::determineGroupDir(dir, groupName);
+				filename = AnalyticsLogger::determineLogFilename(dir,
 					groupName, category, timestamp);
 			} catch (const ArgumentException &e) {
 				commonContext.channel.write("error", e.what(), NULL);
@@ -120,6 +121,7 @@ public:
 				return true;
 			}
 			
+			FileHandleGuard guard(fd);
 			do {
 				ret = fchmod(fd, filePermissions);
 			} while (ret == -1 && errno == EINTR);

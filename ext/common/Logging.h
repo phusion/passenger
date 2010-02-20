@@ -143,13 +143,42 @@ void setDebugFile(const char *logFile = NULL);
 
 /********** Transaction logging facilities *********/
 
-class TxnLog {
+class AnalyticsLog {
 private:
 	static const int INT64_STR_BUFSIZE = 22; // Long enough for a 64-bit number.
 	
 	FileDescriptor handle;
 	string groupName;
 	string txnId;
+	bool largeMessages;
+	
+	class FileLock {
+	private:
+		int handle;
+	public:
+		FileLock(const int &handle) {
+			this->handle = handle;
+			int ret;
+			do {
+				ret = flock(handle, LOCK_EX);
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1) {
+				int e = errno;
+				throw SystemException("Cannot lock analytics log file", e);
+			}
+		}
+		
+		~FileLock() {
+			int ret;
+			do {
+				ret = flock(handle, LOCK_UN);
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1) {
+				int e = errno;
+				throw SystemException("Cannot unlock analytics log file", e);
+			};
+		}
+	};
 	
 	/**
 	 * @throws SystemException
@@ -197,23 +226,36 @@ private:
 	}
 	
 public:
-	TxnLog() { }
+	AnalyticsLog() { }
 	
-	TxnLog(const FileDescriptor &handle, const string &groupName, const string &txnId) {
+	AnalyticsLog(const FileDescriptor &handle, const string &groupName, const string &txnId,
+	             bool largeMessages)
+	{
 		this->handle    = handle;
 		this->groupName = groupName;
 		this->txnId     = txnId;
+		this->largeMessages = largeMessages;
 		message("ATTACH");
 	}
 	
-	~TxnLog() {
+	~AnalyticsLog() {
 		if (handle != -1) {
 			message("DETACH");
 		}
 	}
 	
 	void message(const StaticString &text) {
-		if (handle != -1) {
+		if (handle != -1 && largeMessages) {
+			// "txn-id-here 123456 "
+			char header[txnId.size() + 1 + INT64_STR_BUFSIZE + 1];
+			char *end = insertTxnIdAndTimestamp(header);
+			
+			MessageChannel channel(handle);
+			FileLock lock(handle);
+			channel.writeRaw(header, end - header);
+			channel.writeRaw(text);
+			channel.writeRaw("\n");
+		} else if (handle != -1 && !largeMessages) {
 			// We want: "txn-id-here 123456 log message here\n"
 			char data[txnId.size() + 1 + INT64_STR_BUFSIZE + 1 + text.size() + 1];
 			char *end;
@@ -234,7 +276,22 @@ public:
 	}
 	
 	void abort(const StaticString &text) {
-		if (handle != -1) {
+		if (handle != -1 && largeMessages) {
+			char header[txnId.size() + 1 + INT64_STR_BUFSIZE + 1 + sizeof("ABORT: ") - 1];
+			char *end;
+			
+			// "txn-id-here 123456 "
+			end = insertTxnIdAndTimestamp(header);
+			// "txn-id-here 123456 ABORT: "
+			memcpy(end, "ABORT: ", sizeof("ABORT: ") - 1);
+			end += sizeof("ABORT: ") - 1;
+			
+			MessageChannel channel(handle);
+			FileLock lock(handle);
+			channel.writeRaw(header, end - header);
+			channel.writeRaw(text);
+			channel.writeRaw("\n");
+		} else if (handle != -1 && !largeMessages) {
 			// We want: "txn-id-here 123456 ABORT: log message here\n"
 			char data[txnId.size() + 1 + INT64_STR_BUFSIZE + 1 +
 				(sizeof("ABORT: ") - 1) + text.size() + 1];
@@ -268,11 +325,11 @@ public:
 	}
 };
 
-typedef shared_ptr<TxnLog> TxnLogPtr;
+typedef shared_ptr<AnalyticsLog> AnalyticsLogPtr;
 
-class TxnScopeLog {
+class AnalyticsScopeLog {
 private:
-	TxnLog *log;
+	AnalyticsLog *log;
 	enum {
 		NAME,
 		GRANULAR
@@ -286,7 +343,7 @@ private:
 	} data;
 	bool ok;
 public:
-	TxnScopeLog(const TxnLogPtr &log, const char *name) {
+	AnalyticsScopeLog(const AnalyticsLogPtr &log, const char *name) {
 		this->log = log.get();
 		type = NAME;
 		data.name = name;
@@ -294,8 +351,8 @@ public:
 		log->message(string("BEGIN: ") + name);
 	}
 	
-	TxnScopeLog(const TxnLogPtr &log, const char *beginMessage,
-	            const char *endMessage, const char *abortMessage = NULL
+	AnalyticsScopeLog(const AnalyticsLogPtr &log, const char *beginMessage,
+	                  const char *endMessage, const char *abortMessage = NULL
 	) {
 		this->log = log.get();
 		type = GRANULAR;
@@ -305,7 +362,7 @@ public:
 		log->message(beginMessage);
 	}
 	
-	~TxnScopeLog() {
+	~AnalyticsScopeLog() {
 		if (type == NAME) {
 			if (ok) {
 				log->message(string("END: ") + data.name);
@@ -326,7 +383,7 @@ public:
 	}
 };
 
-class TxnLogger {
+class AnalyticsLogger {
 private:
 	struct CachedFileHandle {
 		FileDescriptor fd;
@@ -344,8 +401,10 @@ private:
 	boost::mutex lock;
 	Cache fileHandleCache;
 	
-	FileDescriptor openLogFile(const StaticString &groupName, unsigned long long timestamp) {
-		string logFile = determineLogFilename(dir, groupName, "web", timestamp);
+	FileDescriptor openLogFile(const StaticString &groupName, unsigned long long timestamp,
+	                           const StaticString &category = "web")
+	{
+		string logFile = determineLogFilename(dir, groupName, category, timestamp);
 		Cache::iterator it;
 		lock_guard<boost::mutex> l(lock);
 		
@@ -407,9 +466,11 @@ private:
 	}
 	
 public:
-	TxnLogger() { }
+	AnalyticsLogger() { }
 	
-	TxnLogger(const string &dir, const string &socketFilename, const string &username, const string &password) {
+	AnalyticsLogger(const string &dir, const string &socketFilename,
+	                const string &username, const string &password)
+	{
 		this->dir            = dir;
 		this->socketFilename = socketFilename;
 		this->username       = username;
@@ -468,22 +529,27 @@ public:
 		return filename;
 	}
 	
-	TxnLogPtr newTransaction(const string &groupName) {
+	AnalyticsLogPtr newTransaction(const string &groupName, const StaticString &category = "web",
+	                               bool largeMessages = false)
+	{
 		if (dir.empty()) {
-			return ptr(new TxnLog());
+			return ptr(new AnalyticsLog());
 		} else {
 			unsigned long long timestamp = SystemTime::getUsec();
 			string txnId = randomGenerator.generateHexString(4);
 			txnId.append("-");
 			txnId.append(toString(timestamp));
-			return ptr(new TxnLog(openLogFile(groupName, timestamp),
-				groupName, txnId));
+			return ptr(new AnalyticsLog(openLogFile(groupName, timestamp, category),
+				groupName, txnId, largeMessages));
 		}
 	}
 	
-	TxnLogPtr continueTransaction(const string &groupName, const string &txnId) {
+	AnalyticsLogPtr continueTransaction(const string &groupName, const string &txnId,
+	                                    const StaticString &category = "web",
+	                                    bool largeMessages = false)
+	{
 		if (dir.empty() || groupName.empty() || txnId.empty()) {
-			return ptr(new TxnLog());
+			return ptr(new AnalyticsLog());
 		} else {
 			unsigned long long timestamp;
 			
@@ -492,8 +558,8 @@ public:
 				TRACE_POINT();
 				throw ArgumentException("Invalid transaction ID '" + txnId + "'");
 			}
-			return ptr(new TxnLog(openLogFile(groupName, timestamp),
-				groupName, txnId));
+			return ptr(new AnalyticsLog(openLogFile(groupName, timestamp, category),
+				groupName, txnId, largeMessages));
 		}
 	}
 	
@@ -502,7 +568,7 @@ public:
 	}
 };
 
-typedef shared_ptr<TxnLogger> TxnLoggerPtr;
+typedef shared_ptr<AnalyticsLogger> AnalyticsLoggerPtr;
 
 } // namespace Passenger
 
