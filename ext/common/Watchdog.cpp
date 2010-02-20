@@ -54,7 +54,7 @@ using namespace Passenger;
 
 static string         webServerType;        // "apache" or "nginx"
 static unsigned int   logLevel;
-static FileDescriptor feedbackFd;  // This is the feedback fd to the web server, not to the helper server.
+static FileDescriptor feedbackFd;  // This is the feedback fd to the web server, not to the helper agent.
 static pid_t   webServerPid;
 static string  tempDir;
 static bool    userSwitching;
@@ -508,25 +508,25 @@ public:
 };
 
 
-class HelperServerWatcher: public AgentWatcher {
+class HelperAgentWatcher: public AgentWatcher {
 protected:
 	string         requestSocketPassword;
 	string         messageSocketPassword;
-	string         helperServerFilename;
+	string         helperAgentFilename;
 	string         requestSocketFilename;
 	string         messageSocketFilename;
 	
 	virtual const char *name() const {
-		return "Phusion Passenger helper server";
+		return "Phusion Passenger helper agent";
 	}
 	
 	virtual string getExeFilename() const {
-		return helperServerFilename;
+		return helperAgentFilename;
 	}
 	
 	virtual void execProgram() const {
-		execl(helperServerFilename.c_str(),
-			"PassengerHelperServer",
+		execl(helperAgentFilename.c_str(),
+			"PassengerHelperAgent",
 			logLevelString.c_str(),
 			"3",  // feedback fd
 			webServerPidString.c_str(),
@@ -565,18 +565,18 @@ protected:
 	}
 	
 public:
-	HelperServerWatcher() {
+	HelperAgentWatcher() {
 		requestSocketPassword = randomGenerator.generateByteString(REQUEST_SOCKET_PASSWORD_SIZE);
 		messageSocketPassword = randomGenerator.generateByteString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
 		if (webServerType == "apache") {
-			helperServerFilename = passengerRoot + "/ext/apache2/PassengerHelperServer";
+			helperAgentFilename = passengerRoot + "/ext/apache2/PassengerHelperAgent";
 		} else {
-			helperServerFilename = passengerRoot + "/ext/nginx/PassengerHelperServer";
+			helperAgentFilename = passengerRoot + "/ext/nginx/PassengerHelperAgent";
 		}
 	}
 	
 	virtual void sendStartupInfo(MessageChannel &channel) {
-		channel.write("HelperServer info",
+		channel.write("HelperAgent info",
 			requestSocketFilename.c_str(),
 			Base64::encode(requestSocketPassword).c_str(),
 			messageSocketFilename.c_str(),
@@ -972,12 +972,12 @@ main(int argc, char *argv[]) {
 		
 		ServerInstanceDirToucher serverInstanceDirToucher;
 		
-		HelperServerWatcher helperServerWatcher;
+		HelperAgentWatcher helperAgentWatcher;
 		LoggingAgentWatcher loggingAgentWatcher;
 		
 		vector<AgentWatcher *> watchers;
 		vector<AgentWatcher *>::iterator it;
-		watchers.push_back(&helperServerWatcher);
+		watchers.push_back(&helperAgentWatcher);
 		//watchers.push_back(&loggingAgentWatcher);
 		
 		for (it = watchers.begin(); it != watchers.end(); it++) {

@@ -13,8 +13,8 @@ ext/apache2/*.la
 ext/apache2/*.lo
 ext/apache2/*.slo
 ext/apache2/.libs
-ext/apache2/PassengerHelperServer
-ext/nginx/PassengerHelperServer
+ext/apache2/PassengerHelperAgent
+ext/nginx/PassengerHelperAgent
 ext/common/PassengerWatchdog
 ext/common/PassengerLoggingAgent
 ext/phusion_passenger/*/Makefile

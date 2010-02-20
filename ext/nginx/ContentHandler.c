@@ -234,10 +234,10 @@ set_upstream_server_address(ngx_http_upstream_t *upstream, ngx_http_upstream_con
     
     /* The Nginx API makes it extremely difficult to register an upstream server
      * address outside of the configuration loading phase. However we don't know
-     * the helper server's request socket filename until we're done with loading
+     * the helper agent's request socket filename until we're done with loading
      * the configuration. So during configuration loading we register a placeholder
      * address for the upstream configuration, and while processing requests
-     * we substitute the placeholder filename with the real helper server request
+     * we substitute the placeholder filename with the real helper agent request
      * socket filename.
      */
     if (address->name.data == passenger_placeholder_upstream_address.data) {
@@ -315,8 +315,8 @@ static ngx_int_t
 create_request(ngx_http_request_t *r)
 {
     u_char                         ch;
-    const char *                   helper_server_request_socket_password_data;
-    unsigned int                   helper_server_request_socket_password_len;
+    const char *                   helper_agent_request_socket_password_data;
+    unsigned int                   helper_agent_request_socket_password_len;
     u_char                         buf[sizeof("4294967296")];
     size_t                         len, size, key_len, val_len, content_length;
     const u_char                  *app_type_string;
@@ -530,10 +530,10 @@ create_request(ngx_http_request_t *r)
      * Build the request header data.
      **************************************************/
     
-    helper_server_request_socket_password_data =
+    helper_agent_request_socket_password_data =
         agents_starter_get_request_socket_password(passenger_agents_starter,
-            &helper_server_request_socket_password_len);
-    size = helper_server_request_socket_password_len +
+            &helper_agent_request_socket_password_len);
+    size = helper_agent_request_socket_password_len +
         /* netstring length + ":" + trailing "," */
         /* note: 10 == sizeof("4294967296") - 1 */
         len + 10 + 1 + 1;
@@ -551,8 +551,8 @@ create_request(ngx_http_request_t *r)
     cl->buf = b;
     
     /* Build SCGI header netstring length part. */
-    b->last = ngx_copy(b->last, helper_server_request_socket_password_data,
-                       helper_server_request_socket_password_len);
+    b->last = ngx_copy(b->last, helper_agent_request_socket_password_data,
+                       helper_agent_request_socket_password_len);
 
     b->last = ngx_snprintf(b->last, 10, "%ui", len);
     *b->last++ = (u_char) ':';

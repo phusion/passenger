@@ -177,7 +177,7 @@ end
 
 
 ##### Static library for Passenger source files that are shared between
-##### the Apache module and the Nginx helper server.
+##### the Apache module and the Nginx helper agent.
 
 def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil)
 	components = {
@@ -348,7 +348,7 @@ end
 	
 	desc "Build Apache 2 module"
 	task :apache2 => ['ext/apache2/mod_passenger.so',
-		'ext/apache2/PassengerHelperServer',
+		'ext/apache2/PassengerHelperAgent',
 		'ext/common/PassengerWatchdog',
 		'ext/common/PassengerLoggingAgent',
 		:native_support]
@@ -392,8 +392,8 @@ end
 			" -o ext/apache2/mod_passenger.o")
 	end
 	
-	apache2_helper_server_dependencies = [
-		'ext/apache2/HelperServer.cpp',
+	apache2_helper_agent_dependencies = [
+		'ext/apache2/HelperAgent.cpp',
 		'ext/common/ServerInstanceDir.h',
 		'ext/common/MessageServer.h',
 		'ext/common/Logging.h',
@@ -407,9 +407,9 @@ end
 		'ext/common/ApplicationPool/Server.h',
 		APACHE2_HELPER_COMMON_LIBRARY,
 		APACHE2_HELPER_BOOST_OXT_LIBRARY]
-	file 'ext/apache2/PassengerHelperServer' => apache2_helper_server_dependencies do
-		create_executable('ext/apache2/PassengerHelperServer',
-			'ext/apache2/HelperServer.cpp',
+	file 'ext/apache2/PassengerHelperAgent' => apache2_helper_agent_dependencies do
+		create_executable('ext/apache2/PassengerHelperAgent',
+			'ext/apache2/HelperAgent.cpp',
 			"#{APACHE2_HELPER_CXXFLAGS} " <<
 			"#{APACHE2_HELPER_COMMON_LIBRARY} " <<
 			"#{APACHE2_HELPER_BOOST_OXT_LIBRARY} " <<
@@ -434,27 +434,27 @@ end
 		files += %w(
 			ext/apache2/mod_passenger.o
 			ext/apache2/mod_passenger.so
-			ext/apache2/PassengerHelperServer
+			ext/apache2/PassengerHelperAgent
 		)
 		sh("rm", "-rf", *files.flatten)
 	end
 
 
-##### Nginx helper server
+##### Nginx helper agent
 
 	NGINX_BOOST_OXT_LIBRARY = BOOST_OXT_LIBRARY
 	NGINX_COMMON_LIBRARY    = COMMON_LIBRARY
 	
-	desc "Build Nginx helper server"
-	task :nginx => ['ext/nginx/PassengerHelperServer',
+	desc "Build Nginx helper agent"
+	task :nginx => ['ext/nginx/PassengerHelperAgent',
 			'ext/common/PassengerWatchdog',
 			'ext/common/PassengerLoggingAgent',
 			:native_support]
 	
-	helper_server_dependencies = [
+	helper_agent_dependencies = [
 		NGINX_BOOST_OXT_LIBRARY,
 		NGINX_COMMON_LIBRARY,
-		'ext/nginx/HelperServer.cpp',
+		'ext/nginx/HelperAgent.cpp',
 		'ext/nginx/ScgiRequestParser.h',
 		'ext/nginx/HttpStatusExtractor.h',
 		'ext/common/StaticString.h',
@@ -470,9 +470,9 @@ end
 		'ext/common/ApplicationPool/Pool.h',
 		'ext/common/ApplicationPool/Server.h'
 		]
-	file 'ext/nginx/PassengerHelperServer' => helper_server_dependencies do
-		create_executable "ext/nginx/PassengerHelperServer",
-			'ext/nginx/HelperServer.cpp',
+	file 'ext/nginx/PassengerHelperAgent' => helper_agent_dependencies do
+		create_executable "ext/nginx/PassengerHelperAgent",
+			'ext/nginx/HelperAgent.cpp',
 			"-Iext -Iext/common " <<
 			"#{PlatformInfo.portability_cflags} " <<
 			"#{EXTRA_CXXFLAGS}  " <<
@@ -485,7 +485,7 @@ end
 	task :clean => 'nginx:clean'
 	desc "Clean all compiled Nginx files"
 	task 'nginx:clean' do
-		sh("rm", "-rf", "ext/nginx/PassengerHelperServer")
+		sh("rm", "-rf", "ext/nginx/PassengerHelperAgent")
 	end
 
 
