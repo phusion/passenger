@@ -131,7 +131,7 @@ private:
 	ServerInstanceDir::GenerationPtr generation;
 	FileDescriptor feedbackFd;
 	MessageChannel feedbackChannel;
-	TxnLoggerPtr txnLogger;
+	AnalyticsLoggerPtr analyticsLogger;
 	AccountsDatabasePtr accountsDatabase;
 	MessageServerPtr messageServer;
 	ApplicationPool::PoolPtr pool;
@@ -240,13 +240,14 @@ public:
 		}
 		
 		UPDATE_TRACE_POINT();
-		txnLogger = ptr(new TxnLogger(analyticsLogDir,
+		analyticsLogger = ptr(new AnalyticsLogger(analyticsLogDir,
 			generation->getPath() + "/logging.socket",
 			"logging", loggingAgentPassword));
 		
 		pool = ptr(new ApplicationPool::Pool(
 			resourceLocator.getSpawnServerFilename(), generation,
 			accountsDatabase, rubyCommand,
+			analyticsLogger,
 			generation->getPath() + "/logging.socket",
 			"logging", loggingAgentPassword
 		));

@@ -209,7 +209,7 @@ private:
 	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex;
 	CachedFileStat cstat;
 	AgentsStarter agentsStarter;
-	TxnLoggerPtr txnLogger;
+	AnalyticsLoggerPtr analyticsLogger;
 	
 	inline DirConfig *getDirConfig(request_rec *r) {
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
@@ -1279,7 +1279,7 @@ public:
 			serverConfig.analyticsLogGroup, serverConfig.analyticsLogPermissions,
 			serverConfig.prestartURLs);
 		
-		txnLogger = ptr(new TxnLogger(serverConfig.analyticsLogDir,
+		analyticsLogger = ptr(new AnalyticsLogger(serverConfig.analyticsLogDir,
 			agentsStarter.getLoggingSocketFilename(),
 			"logging", agentsStarter.getLoggingSocketPassword()));
 		

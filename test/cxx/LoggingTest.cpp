@@ -24,7 +24,7 @@ namespace tut {
 		AccountsDatabasePtr accountsDatabase;
 		MessageServerPtr server;
 		shared_ptr<oxt::thread> serverThread;
-		TxnLoggerPtr logger;
+		AnalyticsLoggerPtr logger;
 		
 		LoggingTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
@@ -39,7 +39,7 @@ namespace tut {
 				boost::bind(&MessageServer::mainLoop, server.get())
 			));
 			
-			logger = ptr(new TxnLogger(loggingDir, socketFilename, "test", "1234"));
+			logger = ptr(new AnalyticsLogger(loggingDir, socketFilename, "test", "1234"));
 		}
 		
 		~LoggingTest() {
@@ -53,7 +53,7 @@ namespace tut {
 	TEST_METHOD(1) {
 		// Test logging of new transaction.
 		SystemTime::forceUsec(YESTERDAY);
-		TxnLogPtr log = logger->newTransaction("foobar");
+		AnalyticsLogPtr log = logger->newTransaction("foobar");
 		log->message("hello");
 		log->message("world");
 		
@@ -69,11 +69,11 @@ namespace tut {
 		// Test logging of existing transaction.
 		SystemTime::forceUsec(YESTERDAY);
 		
-		TxnLogPtr log = logger->newTransaction("foobar");
+		AnalyticsLogPtr log = logger->newTransaction("foobar");
 		ensure_equals(log->getGroupName(), "foobar");
 		log->message("message 1");
 		
-		TxnLogPtr log2 = logger->continueTransaction(log->getGroupName(), log->getTxnId());
+		AnalyticsLogPtr log2 = logger->continueTransaction(log->getGroupName(), log->getTxnId());
 		log->message("message 2");
 		
 		string data = readAll(loggingDir + "/1/" FOOBAR_MD5 "/web/2010/01/12/13/log.txt");
@@ -84,16 +84,16 @@ namespace tut {
 	TEST_METHOD(3) {
 		// Test logging with different points in time.
 		SystemTime::forceUsec(YESTERDAY);
-		TxnLogPtr log = logger->newTransaction("foobar");
+		AnalyticsLogPtr log = logger->newTransaction("foobar");
 		log->message("message 1");
 		SystemTime::forceUsec(TODAY);
 		log->message("message 2");
 		
 		SystemTime::forceUsec(TOMORROW);
-		TxnLogPtr log2 = logger->continueTransaction(log->getGroupName(), log->getTxnId());
+		AnalyticsLogPtr log2 = logger->continueTransaction(log->getGroupName(), log->getTxnId());
 		log2->message("message 3");
 		
-		TxnLogPtr log3 = logger->newTransaction("foobar");
+		AnalyticsLogPtr log3 = logger->newTransaction("foobar");
 		log3->message("message 4");
 		
 		string yesterdayData = readAll(loggingDir + "/1/" FOOBAR_MD5 "/web/2010/01/12/13/log.txt");
@@ -107,12 +107,12 @@ namespace tut {
 	
 	TEST_METHOD(4) {
 		// newTransaction() and continueTransaction() write a ATTACH message
-		// to the log file, while TxnLogPtr writes an DETACH message upon
+		// to the log file, while AnalyticsLogPtr writes an DETACH message upon
 		// destruction.
 		SystemTime::forceUsec(YESTERDAY);
-		TxnLogPtr log = logger->newTransaction("foobar");
+		AnalyticsLogPtr log = logger->newTransaction("foobar");
 		SystemTime::forceUsec(TODAY);
-		TxnLogPtr log2 = logger->continueTransaction(log->getGroupName(), log->getTxnId());
+		AnalyticsLogPtr log2 = logger->continueTransaction(log->getGroupName(), log->getTxnId());
 		log2.reset();
 		SystemTime::forceUsec(TOMORROW);
 		log.reset();
@@ -127,10 +127,10 @@ namespace tut {
 	TEST_METHOD(5) {
 		// newTransaction() generates a new ID, while continueTransaction()
 		// reuses the ID.
-		TxnLogPtr log = logger->newTransaction("foobar");
-		TxnLogPtr log2 = logger->newTransaction("foobar");
-		TxnLogPtr log3 = logger->continueTransaction(log->getGroupName(), log->getTxnId());
-		TxnLogPtr log4 = logger->continueTransaction(log2->getGroupName(), log2->getTxnId());
+		AnalyticsLogPtr log = logger->newTransaction("foobar");
+		AnalyticsLogPtr log2 = logger->newTransaction("foobar");
+		AnalyticsLogPtr log3 = logger->continueTransaction(log->getGroupName(), log->getTxnId());
+		AnalyticsLogPtr log4 = logger->continueTransaction(log2->getGroupName(), log2->getTxnId());
 		
 		ensure_equals(log->getTxnId(), log3->getTxnId());
 		ensure_equals(log2->getTxnId(), log4->getTxnId());
@@ -138,19 +138,19 @@ namespace tut {
 	}
 	
 	TEST_METHOD(6) {
-		// An empty TxnLog doesn't do anything.
-		TxnLog log;
+		// An empty AnalyticsLog doesn't do anything.
+		AnalyticsLog log;
 		ensure(log.isNull());
 		log.message("hello world");
 		ensure_equals(getFileType(loggingDir), FT_NONEXISTANT);
 	}
 	
 	TEST_METHOD(7) {
-		// An empty TxnLogger doesn't do anything.
-		TxnLogger logger;
+		// An empty AnalyticsLogger doesn't do anything.
+		AnalyticsLogger logger;
 		ensure(logger.isNull());
 		
-		TxnLogPtr log = logger.newTransaction("foo");
+		AnalyticsLogPtr log = logger.newTransaction("foo");
 		ensure(log->isNull());
 		log->message("hello world");
 		ensure_equals(getFileType(loggingDir), FT_NONEXISTANT);
