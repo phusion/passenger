@@ -249,9 +249,15 @@ public:
 			// "txn-id-here 123456 "
 			char header[txnId.size() + 1 + INT64_STR_BUFSIZE + 1];
 			char *end = insertTxnIdAndTimestamp(header);
+			char sizeHeader[7];
+			
+			snprintf(sizeHeader, sizeof(sizeHeader) - 1,
+				"%4x ", (int) (end - header) + (int) text.size() + 1);
+			sizeHeader[sizeof(sizeHeader) - 1] = '\0';
 			
 			MessageChannel channel(handle);
 			FileLock lock(handle);
+			channel.writeRaw(sizeHeader, strlen(sizeHeader));
 			channel.writeRaw(header, end - header);
 			channel.writeRaw(text);
 			channel.writeRaw("\n");
@@ -279,6 +285,7 @@ public:
 		if (handle != -1 && largeMessages) {
 			char header[txnId.size() + 1 + INT64_STR_BUFSIZE + 1 + sizeof("ABORT: ") - 1];
 			char *end;
+			char sizeHeader[7];
 			
 			// "txn-id-here 123456 "
 			end = insertTxnIdAndTimestamp(header);
@@ -286,8 +293,13 @@ public:
 			memcpy(end, "ABORT: ", sizeof("ABORT: ") - 1);
 			end += sizeof("ABORT: ") - 1;
 			
+			snprintf(sizeHeader, sizeof(sizeHeader) - 1,
+				"%4x ", (int) (end - header) + (int) text.size() + 1);
+			sizeHeader[sizeof(sizeHeader) - 1] = '\0';
+			
 			MessageChannel channel(handle);
 			FileLock lock(handle);
+			channel.writeRaw(sizeHeader, strlen(sizeHeader));
 			channel.writeRaw(header, end - header);
 			channel.writeRaw(text);
 			channel.writeRaw("\n");
@@ -392,7 +404,6 @@ private:
 	
 	typedef map<string, CachedFileHandle> Cache;
 	
-	string dir;
 	string socketFilename;
 	string username;
 	string password;
@@ -404,7 +415,7 @@ private:
 	FileDescriptor openLogFile(const StaticString &groupName, unsigned long long timestamp,
 	                           const StaticString &category = "web")
 	{
-		string logFile = determineLogFilename(dir, groupName, category, timestamp);
+		string logFile = determineLogFilename("", groupName, category, timestamp);
 		Cache::iterator it;
 		lock_guard<boost::mutex> l(lock);
 		
@@ -437,7 +448,7 @@ private:
 			client.write("open log file",
 				groupName.c_str(),
 				toString(timestamp).c_str(),
-				"web",
+				category.c_str(),
 				NULL);
 			if (!client.read(args)) {
 				// TODO: retry in a short while because the watchdog may restart
@@ -468,10 +479,7 @@ private:
 public:
 	AnalyticsLogger() { }
 	
-	AnalyticsLogger(const string &dir, const string &socketFilename,
-	                const string &username, const string &password)
-	{
-		this->dir            = dir;
+	AnalyticsLogger(const string &socketFilename, const string &username, const string &password) {
 		this->socketFilename = socketFilename;
 		this->username       = username;
 		this->password       = password;
@@ -532,7 +540,7 @@ public:
 	AnalyticsLogPtr newTransaction(const string &groupName, const StaticString &category = "web",
 	                               bool largeMessages = false)
 	{
-		if (dir.empty()) {
+		if (socketFilename.empty()) {
 			return ptr(new AnalyticsLog());
 		} else {
 			unsigned long long timestamp = SystemTime::getUsec();
@@ -548,7 +556,7 @@ public:
 	                                    const StaticString &category = "web",
 	                                    bool largeMessages = false)
 	{
-		if (dir.empty() || groupName.empty() || txnId.empty()) {
+		if (socketFilename.empty() || groupName.empty() || txnId.empty()) {
 			return ptr(new AnalyticsLog());
 		} else {
 			unsigned long long timestamp;
@@ -564,7 +572,7 @@ public:
 	}
 	
 	bool isNull() const {
-		return dir.empty();
+		return socketFilename.empty();
 	}
 };
 
