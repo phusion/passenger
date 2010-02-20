@@ -40,6 +40,7 @@
 #include "MessageClient.h"
 #include "ServerInstanceDir.h"
 #include "Exceptions.h"
+#include "ResourceLocator.h"
 #include "Utils.h"
 #include "Utils/Base64.h"
 
@@ -290,9 +291,10 @@ public:
 		int fds[2], e, ret;
 		pid_t pid;
 		string theTempDir;
+		ResourceLocator resourceLocator(passengerRoot);
 		string watchdogFilename;
 		
-		watchdogFilename = passengerRoot + "/ext/common/PassengerWatchdog";
+		watchdogFilename = resourceLocator.getAgentsDir() + "/PassengerWatchdog";
 		if (tempDir.empty()) {
 			theTempDir = getSystemTempDir();
 		}

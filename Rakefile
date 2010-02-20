@@ -211,7 +211,11 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 		'AgentsStarter.o' => %w(
 			AgentsStarter.cpp
 			AgentsStarter.h
-			AgentsStarter.hpp),
+			AgentsStarter.hpp
+			ResourceLocator.h
+			MessageClient.h
+			MessageChannel.h
+			ServerInstanceDir.h),
 		'BCrypt.o' => %w(
 			BCrypt.cpp
 			BCrypt.h
@@ -260,16 +264,18 @@ end
 		"ext/common/libpassenger_common")
 	
 	task :clean => 'common:clean' do
-		sh "rm -f ext/common/PassengerWatchdog ext/common/PassengerLoggingAgent"
+		sh "rm -f agents/PassengerWatchdog agents/PassengerLoggingAgent"
 	end
 	
 	watchdog_dependencies = [
 		'ext/common/Watchdog.cpp',
 		'ext/common/ServerInstanceDir.h',
+		'ext/common/ResourceLocator.h',
 		COMMON_LIBRARY,
 		BOOST_OXT_LIBRARY]
-	file 'ext/common/PassengerWatchdog' => watchdog_dependencies do
-		create_executable('ext/common/PassengerWatchdog',
+	file 'agents/PassengerWatchdog' => watchdog_dependencies do
+		sh "mkdir -p agents" if !File.directory?("agents")
+		create_executable('agents/PassengerWatchdog',
 			'ext/common/Watchdog.cpp',
 			"-Iext -Iext/common #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
 			"#{COMMON_LIBRARY} " <<
@@ -285,8 +291,9 @@ end
 		'ext/common/Logging.h',
 		COMMON_LIBRARY,
 		BOOST_OXT_LIBRARY]
-	file 'ext/common/PassengerLoggingAgent' => logging_agent_dependencies do
-		create_executable('ext/common/PassengerLoggingAgent',
+	file 'agents/PassengerLoggingAgent' => logging_agent_dependencies do
+		sh "mkdir -p agents" if !File.directory?("agents")
+		create_executable('agents/PassengerLoggingAgent',
 			'ext/common/LoggingAgent/Main.cpp',
 			"-Iext -Iext/common #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
 			"#{COMMON_LIBRARY} " <<
@@ -348,9 +355,9 @@ end
 	
 	desc "Build Apache 2 module"
 	task :apache2 => ['ext/apache2/mod_passenger.so',
-		'ext/apache2/PassengerHelperAgent',
-		'ext/common/PassengerWatchdog',
-		'ext/common/PassengerLoggingAgent',
+		'agents/apache2/PassengerHelperAgent',
+		'agents/PassengerWatchdog',
+		'agents/PassengerLoggingAgent',
 		:native_support]
 	
 	mod_passenger_dependencies = [APACHE2_MODULE_COMMON_LIBRARY,
@@ -407,8 +414,9 @@ end
 		'ext/common/ApplicationPool/Server.h',
 		APACHE2_HELPER_COMMON_LIBRARY,
 		APACHE2_HELPER_BOOST_OXT_LIBRARY]
-	file 'ext/apache2/PassengerHelperAgent' => apache2_helper_agent_dependencies do
-		create_executable('ext/apache2/PassengerHelperAgent',
+	file 'agents/apache2/PassengerHelperAgent' => apache2_helper_agent_dependencies do
+		sh "mkdir -p agents/apache2" if !File.directory?("agents/apache2")
+		create_executable('agents/apache2/PassengerHelperAgent',
 			'ext/apache2/HelperAgent.cpp',
 			"#{APACHE2_HELPER_CXXFLAGS} " <<
 			"#{APACHE2_HELPER_COMMON_LIBRARY} " <<
@@ -434,7 +442,7 @@ end
 		files += %w(
 			ext/apache2/mod_passenger.o
 			ext/apache2/mod_passenger.so
-			ext/apache2/PassengerHelperAgent
+			agents/apache2/PassengerHelperAgent
 		)
 		sh("rm", "-rf", *files.flatten)
 	end
@@ -446,9 +454,9 @@ end
 	NGINX_COMMON_LIBRARY    = COMMON_LIBRARY
 	
 	desc "Build Nginx helper agent"
-	task :nginx => ['ext/nginx/PassengerHelperAgent',
-			'ext/common/PassengerWatchdog',
-			'ext/common/PassengerLoggingAgent',
+	task :nginx => ['agents/nginx/PassengerHelperAgent',
+			'agents/PassengerWatchdog',
+			'agents/PassengerLoggingAgent',
 			:native_support]
 	
 	helper_agent_dependencies = [
@@ -470,8 +478,9 @@ end
 		'ext/common/ApplicationPool/Pool.h',
 		'ext/common/ApplicationPool/Server.h'
 		]
-	file 'ext/nginx/PassengerHelperAgent' => helper_agent_dependencies do
-		create_executable "ext/nginx/PassengerHelperAgent",
+	file 'agents/nginx/PassengerHelperAgent' => helper_agent_dependencies do
+		sh "mkdir -p agents/nginx" if !File.directory?("agents/nginx")
+		create_executable "agents/nginx/PassengerHelperAgent",
 			'ext/nginx/HelperAgent.cpp',
 			"-Iext -Iext/common " <<
 			"#{PlatformInfo.portability_cflags} " <<
@@ -485,7 +494,7 @@ end
 	task :clean => 'nginx:clean'
 	desc "Clean all compiled Nginx files"
 	task 'nginx:clean' do
-		sh("rm", "-rf", "ext/nginx/PassengerHelperAgent")
+		sh("rm", "-rf", "agents/nginx/PassengerHelperAgent")
 	end
 
 
