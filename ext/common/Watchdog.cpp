@@ -42,6 +42,7 @@
 #include "RandomGenerator.h"
 #include "Logging.h"
 #include "Exceptions.h"
+#include "ResourceLocator.h"
 #include "Utils.h"
 #include "Utils/Base64.h"
 #include "Utils/Timer.h"
@@ -565,13 +566,13 @@ protected:
 	}
 	
 public:
-	HelperAgentWatcher() {
+	HelperAgentWatcher(const ResourceLocator &resourceLocator) {
 		requestSocketPassword = randomGenerator.generateByteString(REQUEST_SOCKET_PASSWORD_SIZE);
 		messageSocketPassword = randomGenerator.generateByteString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
 		if (webServerType == "apache") {
-			helperAgentFilename = passengerRoot + "/ext/apache2/PassengerHelperAgent";
+			helperAgentFilename = resourceLocator.getAgentsDir() + "/apache2/PassengerHelperAgent";
 		} else {
-			helperAgentFilename = passengerRoot + "/ext/nginx/PassengerHelperAgent";
+			helperAgentFilename = resourceLocator.getAgentsDir() + "/nginx/PassengerHelperAgent";
 		}
 	}
 	
@@ -628,8 +629,8 @@ protected:
 	}
 	
 public:
-	LoggingAgentWatcher() {
-		agentFilename = passengerRoot + "/ext/common/PassengerLoggingAgent";
+	LoggingAgentWatcher(const ResourceLocator &resourceLocator) {
+		agentFilename = resourceLocator.getAgentsDir() + "/PassengerLoggingAgent";
 	}
 	
 	virtual void sendStartupInfo(MessageChannel &channel) {
@@ -971,9 +972,10 @@ main(int argc, char *argv[]) {
 		loggingAgentPassword = randomGenerator.generateByteString(32);
 		
 		ServerInstanceDirToucher serverInstanceDirToucher;
+		ResourceLocator resourceLocator(passengerRoot);
 		
-		HelperAgentWatcher helperAgentWatcher;
-		LoggingAgentWatcher loggingAgentWatcher;
+		HelperAgentWatcher helperAgentWatcher(resourceLocator);
+		LoggingAgentWatcher loggingAgentWatcher(resourceLocator);
 		
 		vector<AgentWatcher *> watchers;
 		vector<AgentWatcher *>::iterator it;
