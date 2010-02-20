@@ -68,8 +68,12 @@ class ServerInstance
 	
 	class Process
 		attr_reader :group
-		attr_accessor :pid, :sessions, :processed, :uptime, :server_sockets, :connect_password
-		INT_PROPERTIES = [:pid, :sessions, :processed]
+		attr_accessor :pid, :sessions, :processed, :uptime, :server_sockets,
+			:has_metrics, :cpu, :rss, :real_memory, :vmsize, :process_group_id, :command,
+			:connect_password
+		INT_PROPERTIES = [:pid, :sessions, :processed, :cpu, :rss, :real_memory,
+				:vmsize, :process_group_id]
+		BOOL_PROPERTIES = [:has_metrics]
 		
 		def initialize(group)
 			@group = group
@@ -263,6 +267,8 @@ class ServerInstance
 						if process.respond_to?("#{element.name}=")
 							if Process::INT_PROPERTIES.include?(element.name.to_sym)
 								value = element.text.to_i
+							elsif Process::BOOL_PROPERTIES.include?(element.name.to_sym)
+								value = element.text == "true"
 							else
 								value = element.text
 							end

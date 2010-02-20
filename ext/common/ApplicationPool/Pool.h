@@ -422,7 +422,7 @@ private:
 		result << "<uptime>" << processInfo->uptime() << "</uptime>";
 		if (processInfo->metrics.isValid()) {
 			const ProcessMetrics &metrics = processInfo->metrics;
-			result << "<has_metrics/>";
+			result << "<has_metrics>true</has_metrics>";
 			result << "<cpu>" << (int) metrics.cpu << "</cpu>";
 			result << "<rss>" << metrics.rss << "</rss>";
 			if (metrics.realMemory != 0) {
