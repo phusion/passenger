@@ -149,6 +149,12 @@ int atoi(const string &s);
  */
 long atol(const string &s);
 
+/** Round <em>number</em> up to the nearest multiple of <em>multiple</em>. */
+template<typename IntType> IntType
+roundUp(IntType number, IntType multiple) {
+	return (number + multiple - 1) / multiple * multiple;
+}
+
 /**
  * Split the given string using the given separator.
  *

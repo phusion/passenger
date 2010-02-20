@@ -137,6 +137,9 @@ def format_with_xmllint(xml)
 		thread3.join
 		
 		if stdout_text.nil? || stdout_text.empty?
+			if stderr_text !~ /No such file or directory/ && stderr_text !~ /command not found/
+				STDERR.puts stderr_text
+			end
 			return nil
 		else
 			return stdout_text
