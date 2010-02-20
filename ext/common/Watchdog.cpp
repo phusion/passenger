@@ -603,6 +603,7 @@ protected:
 		execl(agentFilename.c_str(),
 			"PassengerLoggingAgent",
 			"3",  // feedback fd
+			logLevelString.c_str(),
 			webServerPidString.c_str(),
 			tempDir.c_str(),
 			generationNumber.c_str(),

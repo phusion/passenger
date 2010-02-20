@@ -150,13 +150,14 @@ lowerPrivilege(const string &username, const struct passwd *user, const struct g
 int
 main(int argc, char *argv[]) {
 	int    feedbackFd       = atoi(argv[1]);
-	pid_t  webServerPid     = (pid_t) atoll(argv[2]);
-	string tempDir          = argv[3];
-	int    generationNumber = atoi(argv[4]);
-	string loggingDir       = argv[5];
-	string username         = argv[6];
-	string groupname        = argv[7];
-	string permissions      = argv[8];
+	int    logLevel         = atoi(argv[2]);
+	pid_t  webServerPid     = (pid_t) atoll(argv[3]);
+	string tempDir          = argv[4];
+	int    generationNumber = atoi(argv[5]);
+	string loggingDir       = argv[6];
+	string username         = argv[7];
+	string groupname        = argv[8];
+	string permissions      = argv[9];
 	
 	/********** Boilerplate environment setup code.... **********/
 	
@@ -170,6 +171,8 @@ main(int argc, char *argv[]) {
 	for (int i = 1; i < argc; i++) {
 		memset(argv[i], '\0', strlen(argv[i]));
 	}
+	
+	setLogLevel(logLevel);
 	
 	
 	try {
