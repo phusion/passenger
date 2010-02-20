@@ -386,6 +386,9 @@ public:
 					break;
 				}
 				if (beginsWith(line, "Pss:")) {
+					/* Linux supports Proportional Set Size since kernel 2.6.25.
+					 * See kernel commit ec4dd3eb35759f9fbeb5c1abb01403b2fde64cc9.
+					 */
 					readNextWord(&buf);
 					pss += readNextWordAsLongLong(&buf);
 					if (readNextWord(&buf) != "kB") {
