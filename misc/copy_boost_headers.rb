@@ -34,6 +34,9 @@ ESSENTIALS = [
 	"boost/date_time/date_formatting_limited.hpp",
 	"boost/non_type.hpp"
 ]
+EXCLUDE = [
+	"libs/thread/src/win32/*"
+]
 PROGRAM_SOURCE = %q{
 	#include <boost/shared_ptr.hpp>
 	#include <boost/weak_ptr.hpp>
@@ -43,6 +46,8 @@ PROGRAM_SOURCE = %q{
 	#include <boost/bind.hpp>
 	#include <boost/date_time/posix_time/posix_time.hpp>
 }
+
+require 'fileutils'
 BOOST_DIR = ARGV[0]
 Dir.chdir(File.dirname(__FILE__) + "/../ext")
 
@@ -64,12 +69,14 @@ def install(source_filename, target_filename)
 	sh(*command)
 end
 
-def copy_boost_files(*patterns)
+def copy_boost_files(patterns, exclude = nil)
 	patterns.each do |pattern|
-		Dir["#{BOOST_DIR}/#{pattern}"].each do |source|
+		files = Dir["#{BOOST_DIR}/#{pattern}"]
+		files -= exclude if exclude
+		files.each do |source|
 			if File.directory?(source)
 				source.slice!(0 .. BOOST_DIR.size)
-				copy_boost_files("#{source}/*")
+				copy_boost_files(["#{source}/*"], exclude)
 			else
 				target = source.slice(BOOST_DIR.size + 1 .. source.size - 1)
 				target.sub!(%r{^libs/thread/}, 'boost/')
@@ -82,7 +89,11 @@ def copy_boost_files(*patterns)
 end
 
 def copy_essential_files
-	copy_boost_files(*ESSENTIALS)
+	exclude = []
+	EXCLUDE.each do |pattern|
+		exclude.concat(Dir["#{BOOST_DIR}/#{pattern}"])
+	end
+	copy_boost_files(ESSENTIALS, exclude)
 end
 
 def prepare
@@ -92,6 +103,9 @@ def prepare
 end
 
 def cleanup
+	FileUtils.rm_rf("boost/thread/win32")
+	FileUtils.rm_rf("boost/src/win32")
+	FileUtils.rm_rf("boost/asio/win32")
 	File.unlink("test.cpp") rescue nil
 end
 

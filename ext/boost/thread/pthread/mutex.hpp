@@ -37,41 +37,27 @@ namespace boost
             int const res=pthread_mutex_init(&m,NULL);
             if(res)
             {
-                throw thread_resource_error("Cannot initialize a mutex", res);
+                throw thread_resource_error();
             }
         }
         ~mutex()
         {
-            int ret;
-            do {
-                ret = pthread_mutex_destroy(&m);
-            } while (ret == EINTR);
+            BOOST_VERIFY(!pthread_mutex_destroy(&m));
         }
         
         void lock()
         {
-            int ret;
-            do {
-                ret = pthread_mutex_lock(&m);
-            } while (ret == EINTR);
-            BOOST_VERIFY(!ret);
+            BOOST_VERIFY(!pthread_mutex_lock(&m));
         }
 
         void unlock()
         {
-            int ret;
-            do {
-                ret = pthread_mutex_unlock(&m);
-            } while (ret == EINTR);
-            BOOST_VERIFY(!ret);
+            BOOST_VERIFY(!pthread_mutex_unlock(&m));
         }
         
         bool try_lock()
         {
-            int res;
-            do {
-                res = pthread_mutex_trylock(&m);
-            } while (res == EINTR);
+            int const res=pthread_mutex_trylock(&m);
             BOOST_ASSERT(!res || res==EBUSY);
             return !res;
         }
@@ -103,14 +89,14 @@ namespace boost
             int const res=pthread_mutex_init(&m,NULL);
             if(res)
             {
-                throw thread_resource_error("Cannot initialize a mutex", res);
+                throw thread_resource_error();
             }
 #ifndef BOOST_PTHREAD_HAS_TIMEDLOCK
             int const res2=pthread_cond_init(&cond,NULL);
             if(res2)
             {
                 BOOST_VERIFY(!pthread_mutex_destroy(&m));
-                throw thread_resource_error("Cannot initialize a condition variable", res2);
+                throw thread_resource_error();
             }
             is_locked=false;
 #endif

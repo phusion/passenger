@@ -21,7 +21,6 @@
 #elif defined BOOST_HAS_UNISTD_H
 #include <unistd.h>
 #endif
-#include <cassert>
 
 #include "timeconv.inl"
 
@@ -180,28 +179,14 @@ namespace boost
     thread::thread()
     {}
 
-    void thread::start_thread(unsigned int stack_size)
+    void thread::start_thread()
     {
         thread_info->self=thread_info;
-        pthread_attr_t attr;
-        int res = pthread_attr_init(&attr);
-        if (res != 0) {
-            throw thread_resource_error("Cannot initialize thread attributes", res);
-        }
-        if (stack_size > 0) {
-            res = pthread_attr_setstacksize(&attr, stack_size);
-            if (res != 0) {
-                pthread_attr_destroy(&attr);
-                throw thread_resource_error("Cannot set thread stack size attribute", res);
-            }
-        }
-        
-        res = pthread_create(&thread_info->thread_handle, &attr, &thread_proxy, thread_info.get());
-        pthread_attr_destroy(&attr);
+        int const res = pthread_create(&thread_info->thread_handle, 0, &thread_proxy, thread_info.get());
         if (res != 0)
         {
             thread_info->self.reset();
-            throw thread_resource_error("Cannot create a thread", res);
+            throw thread_resource_error();
         }
     }
 

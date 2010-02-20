@@ -3,11 +3,11 @@
 #define _DATE_TIME_FACET__HPP__
 
 /* Copyright (c) 2004-2005 CrystalClear Software, Inc.
- * Use, modification and distribution is subject to the 
+ * Use, modification and distribution is subject to the
  * Boost Software License, Version 1.0. (See accompanying
  * file LICENSE_1_0.txt or http://www.boost.org/LICENSE_1_0.txt)
  * Author:  Martin Andrian, Jeff Garland, Bart Garst
- * $Date: 2009-10-03 06:04:00 -0400 (Sat, 03 Oct 2009) $
+ * $Date: 2010-01-10 14:17:23 -0500 (Sun, 10 Jan 2010) $
  */
 
 #include <cctype>
@@ -56,129 +56,129 @@ namespace date_time {
       static const char_type iso_time_format_specifier[18];
       static const char_type iso_time_format_extended_specifier[22];
       //default ptime format is YYYY-Mon-DD HH:MM:SS[.fff...][ zzz]
-      static const char_type default_time_format[23]; 
+      static const char_type default_time_format[23];
       // default_time_input_format uses a posix_time_zone_string instead of a time zone abbrev
-      static const char_type default_time_input_format[24]; 
+      static const char_type default_time_input_format[24];
       //default time_duration format is HH:MM:SS[.fff...]
       static const char_type default_time_duration_format[11];
   };
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
   time_formats<CharT>::fractional_seconds_format[3] = {'%','f'};
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
   time_formats<CharT>::fractional_seconds_or_none_format[3] = {'%','F'};
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
-  time_formats<CharT>::seconds_with_fractional_seconds_format[3] = 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
+  time_formats<CharT>::seconds_with_fractional_seconds_format[3] =
     {'%','s'};
 
   template <class CharT>
-  const typename time_formats<CharT>::char_type 
+  const typename time_formats<CharT>::char_type
   time_formats<CharT>::seconds_format[3] =  {'%','S'};
 
   template <class CharT>
-  const typename time_formats<CharT>::char_type 
+  const typename time_formats<CharT>::char_type
   time_formats<CharT>::hours_format[3] =  {'%','H'};
 
   template <class CharT>
-  const typename time_formats<CharT>::char_type 
+  const typename time_formats<CharT>::char_type
   time_formats<CharT>::unrestricted_hours_format[3] =  {'%','O'};
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
   //time_formats<CharT>::standard_format[5] =  {'%','c',' ','%','z'};
   time_formats<CharT>::standard_format[9] =  {'%','x',' ','%','X',' ','%','z'};
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
   time_formats<CharT>::zone_abbrev_format[3] =  {'%','z'};
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
   time_formats<CharT>::zone_name_format[3] =  {'%','Z'};
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
   time_formats<CharT>::zone_iso_format[3] =  {'%','q'};
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
   time_formats<CharT>::zone_iso_extended_format[3] ={'%','Q'};
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
   time_formats<CharT>::posix_zone_string_format[4] ={'%','Z','P'};
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
   time_formats<CharT>::duration_seperator[2] =  {':'};
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
   time_formats<CharT>::negative_sign[2] =  {'-'};
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
   time_formats<CharT>::positive_sign[2] =  {'+'};
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
   time_formats<CharT>::duration_sign_negative_only[3] ={'%','-'};
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
   time_formats<CharT>::duration_sign_always[3] ={'%','+'};
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
-  time_formats<CharT>::iso_time_format_specifier[18] =  
-    {'%', 'Y', '%', 'm', '%', 'd', 'T', 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
+  time_formats<CharT>::iso_time_format_specifier[18] =
+    {'%', 'Y', '%', 'm', '%', 'd', 'T',
      '%', 'H', '%', 'M', '%', 'S', '%', 'F', '%','q' };
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
-  time_formats<CharT>::iso_time_format_extended_specifier[22] =  
-    {'%', 'Y', '-', '%', 'm', '-', '%', 'd', ' ', 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
+  time_formats<CharT>::iso_time_format_extended_specifier[22] =
+    {'%', 'Y', '-', '%', 'm', '-', '%', 'd', ' ',
      '%', 'H', ':', '%', 'M', ':', '%', 'S', '%', 'F','%','Q'};
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
-  time_formats<CharT>::default_time_format[23] = 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
+  time_formats<CharT>::default_time_format[23] =
     {'%','Y','-','%','b','-','%','d',' ',
       '%','H',':','%','M',':','%','S','%','F',' ','%','z'};
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
-  time_formats<CharT>::default_time_input_format[24] = 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
+  time_formats<CharT>::default_time_input_format[24] =
     {'%','Y','-','%','b','-','%','d',' ',
       '%','H',':','%','M',':','%','S','%','F',' ','%','Z','P'};
 
-  template <class CharT>  
-  const typename time_formats<CharT>::char_type 
-  time_formats<CharT>::default_time_duration_format[11] = 
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
+  time_formats<CharT>::default_time_duration_format[11] =
     {'%','O',':','%','M',':','%','S','%','F'};
 
 
 
-  /*! Facet used for format-based output of time types 
+  /*! Facet used for format-based output of time types
    * This class provides for the use of format strings to output times.  In addition
    * to the flags for formatting date elements, the following are the allowed format flags:
    *  - %x %X => default format - enables addition of more flags to default (ie. "%x %X %z")
    *  - %f => fractional seconds ".123456"
    *  - %F => fractional seconds or none: like frac sec but empty if frac sec == 0
-   *  - %s => seconds w/ fractional sec "02.123" (this is the same as "%S%f) 
+   *  - %s => seconds w/ fractional sec "02.123" (this is the same as "%S%f)
    *  - %S => seconds "02"
    *  - %z => abbreviated time zone "EDT"
    *  - %Z => full time zone name "Eastern Daylight Time"
    */
   template <class time_type,
-            class CharT, 
+            class CharT,
             class OutItrT = std::ostreambuf_iterator<CharT, std::char_traits<CharT> > >
-  class time_facet : 
+  class time_facet :
     public boost::date_time::date_facet<typename time_type::date_type , CharT, OutItrT> {
    public:
     typedef typename time_type::date_type date_type;
@@ -211,7 +211,7 @@ namespace date_time {
     static const char_type* iso_time_format_extended_specifier;
 
     //default ptime format is YYYY-Mon-DD HH:MM:SS[.fff...][ zzz]
-    static const char_type* default_time_format; 
+    static const char_type* default_time_format;
     //default time_duration format is HH:MM:SS[.fff...]
     static const char_type* default_time_duration_format;
     static std::locale::id id;
@@ -228,20 +228,20 @@ namespace date_time {
 
     //! Construct the facet with an explicitly specified format
     explicit time_facet(const char_type* a_format,
-                        period_formatter_type period_formatter = period_formatter_type(), 
-                        const special_values_formatter_type& special_value_formatter = special_values_formatter_type(), 
+                        period_formatter_type period_formatter = period_formatter_type(),
+                        const special_values_formatter_type& special_value_formatter = special_values_formatter_type(),
                         date_gen_formatter_type dg_formatter = date_gen_formatter_type(),
-                         ::size_t a_ref = 0) 
-      : base_type(a_format, 
+                         ::size_t a_ref = 0)
+      : base_type(a_format,
                   period_formatter,
-                  special_value_formatter, 
-                  dg_formatter, 
+                  special_value_formatter,
+                  dg_formatter,
                   a_ref),
         m_time_duration_format(string_type(duration_sign_negative_only) + default_time_duration_format)
     {}
 
     //! Changes format for time_duration
-    void time_duration_format(const char_type* const format) 
+    void time_duration_format(const char_type* const format)
     {
       m_time_duration_format = format;
     }
@@ -255,33 +255,33 @@ namespace date_time {
       this->m_format = iso_time_format_extended_specifier;
     }
 
-    OutItrT put(OutItrT a_next, 
-                std::ios_base& a_ios, 
-                char_type a_fill, 
-                const time_type& a_time) const 
+    OutItrT put(OutItrT a_next,
+                std::ios_base& a_ios,
+                char_type a_fill,
+                const time_type& a_time) const
     {
-      if (a_time.is_special()) { 
-        return this->do_put_special(a_next, a_ios, a_fill, 
+      if (a_time.is_special()) {
+        return this->do_put_special(a_next, a_ios, a_fill,
                               a_time.date().as_special());
       }
       string_type format(this->m_format);
 
       string_type frac_str;
       if (format.find(seconds_with_fractional_seconds_format) != string_type::npos) {
-        // replace %s with %S.nnn 
-        frac_str = 
+        // replace %s with %S.nnn
+        frac_str =
           fractional_seconds_as_string(a_time.time_of_day(), false);
         char_type sep = std::use_facet<std::numpunct<char_type> >(a_ios.getloc()).decimal_point();
-        
+
         string_type replace_string(seconds_format);
         replace_string += sep;
         replace_string += frac_str;
-        boost::algorithm::replace_all(format, 
-                                      seconds_with_fractional_seconds_format, 
+        boost::algorithm::replace_all(format,
+                                      seconds_with_fractional_seconds_format,
                                       replace_string);
       }
       /* NOTE: replacing posix_zone_string_format must be done BEFORE
-       * zone_name_format: "%ZP" & "%Z", if Z is checked first it will 
+       * zone_name_format: "%ZP" & "%Z", if Z is checked first it will
        * incorrectly replace a zone_name where a posix_string should go */
       if (format.find(posix_zone_string_format) != string_type::npos) {
         if(a_time.zone_abbrev().empty()) {
@@ -297,8 +297,8 @@ namespace date_time {
       }
       if (format.find(zone_name_format) != string_type::npos) {
         if(a_time.zone_name().empty()) {
-          /* TODO: this'll probably create problems if a user places 
-           * the zone_*_format flag in the format with a ptime. This 
+          /* TODO: this'll probably create problems if a user places
+           * the zone_*_format flag in the format with a ptime. This
            * code removes the flag from the default formats */
 
           // if zone_name() returns an empty string, we want to
@@ -315,8 +315,8 @@ namespace date_time {
       }
       if (format.find(zone_abbrev_format) != string_type::npos) {
         if(a_time.zone_abbrev(false).empty()) {
-          /* TODO: this'll probably create problems if a user places 
-           * the zone_*_format flag in the format with a ptime. This 
+          /* TODO: this'll probably create problems if a user places
+           * the zone_*_format flag in the format with a ptime. This
            * code removes the flag from the default formats */
 
           // if zone_abbrev() returns an empty string, we want to
@@ -333,8 +333,8 @@ namespace date_time {
       }
       if (format.find(zone_iso_extended_format) != string_type::npos) {
         if(a_time.zone_name(true).empty()) {
-          /* TODO: this'll probably create problems if a user places 
-           * the zone_*_format flag in the format with a ptime. This 
+          /* TODO: this'll probably create problems if a user places
+           * the zone_*_format flag in the format with a ptime. This
            * code removes the flag from the default formats */
 
           // if zone_name() returns an empty string, we want to
@@ -350,8 +350,8 @@ namespace date_time {
 
       if (format.find(zone_iso_format) != string_type::npos) {
         if(a_time.zone_abbrev(true).empty()) {
-          /* TODO: this'll probably create problems if a user places 
-           * the zone_*_format flag in the format with a ptime. This 
+          /* TODO: this'll probably create problems if a user places
+           * the zone_*_format flag in the format with a ptime. This
            * code removes the flag from the default formats */
 
           // if zone_abbrev() returns an empty string, we want to
@@ -370,13 +370,13 @@ namespace date_time {
           frac_str = fractional_seconds_as_string(a_time.time_of_day(), false);
         }
         boost::algorithm::replace_all(format,
-                                      fractional_seconds_format, 
+                                      fractional_seconds_format,
                                       frac_str);
       }
 
       if (format.find(fractional_seconds_or_none_format) != string_type::npos) {
         // replace %F with nnnnnnn or nothing if fs == 0
-        frac_str = 
+        frac_str =
           fractional_seconds_as_string(a_time.time_of_day(), true);
         if (frac_str.size()) {
           char_type sep = std::use_facet<std::numpunct<char_type> >(a_ios.getloc()).decimal_point();
@@ -384,7 +384,7 @@ namespace date_time {
           replace_string += sep;
           replace_string += frac_str;
           boost::algorithm::replace_all(format,
-                                        fractional_seconds_or_none_format, 
+                                        fractional_seconds_or_none_format,
                                         replace_string);
         }
         else {
@@ -393,46 +393,46 @@ namespace date_time {
         }
       }
 
-      return this->do_put_tm(a_next, a_ios, a_fill, 
+      return this->do_put_tm(a_next, a_ios, a_fill,
                        to_tm(a_time), format);
     }
 
     //! put function for time_duration
-    OutItrT put(OutItrT a_next, 
-                std::ios_base& a_ios, 
-                char_type a_fill, 
-                const time_duration_type& a_time_dur) const 
+    OutItrT put(OutItrT a_next,
+                std::ios_base& a_ios,
+                char_type a_fill,
+                const time_duration_type& a_time_dur) const
     {
-      if (a_time_dur.is_special()) { 
-        return this->do_put_special(a_next, a_ios, a_fill, 
+      if (a_time_dur.is_special()) {
+        return this->do_put_special(a_next, a_ios, a_fill,
                               a_time_dur.get_rep().as_special());
       }
 
       string_type format(m_time_duration_format);
       if (a_time_dur.is_negative()) {
         // replace %- with minus sign.  Should we use the numpunct facet?
-        boost::algorithm::replace_all(format, 
-                                      duration_sign_negative_only, 
+        boost::algorithm::replace_all(format,
+                                      duration_sign_negative_only,
                                       negative_sign);
           // remove all the %+ in the string with '-'
-        boost::algorithm::replace_all(format, 
-                                      duration_sign_always, 
+        boost::algorithm::replace_all(format,
+                                      duration_sign_always,
                                       negative_sign);
       }
       else { //duration is positive
         // remove all the %- combos from the string
         boost::algorithm::erase_all(format, duration_sign_negative_only);
         // remove all the %+ in the string with '+'
-        boost::algorithm::replace_all(format, 
-                                      duration_sign_always, 
+        boost::algorithm::replace_all(format,
+                                      duration_sign_always,
                                       positive_sign);
       }
 
       /*
-       * It is possible for a time duration to span more then 24 hours.  
-       * Standard time_put::put is obliged to behave the same as strftime 
-       * (See ISO 14882-2003 22.2.5.3.1 par. 1) and strftime's behavior is 
-       * unspecified for the case when tm_hour field is outside 0-23 range 
+       * It is possible for a time duration to span more then 24 hours.
+       * Standard time_put::put is obliged to behave the same as strftime
+       * (See ISO 14882-2003 22.2.5.3.1 par. 1) and strftime's behavior is
+       * unspecified for the case when tm_hour field is outside 0-23 range
        * (See ISO 9899-1999 7.23.3.5 par. 3). So we must output %H and %O
        * here ourself.
        */
@@ -453,16 +453,16 @@ namespace date_time {
 
       string_type frac_str;
       if (format.find(seconds_with_fractional_seconds_format) != string_type::npos) {
-        // replace %s with %S.nnn 
-        frac_str = 
+        // replace %s with %S.nnn
+        frac_str =
           fractional_seconds_as_string(a_time_dur, false);
         char_type sep = std::use_facet<std::numpunct<char_type> >(a_ios.getloc()).decimal_point();
-        
+
         string_type replace_string(seconds_format);
         replace_string += sep;
         replace_string += frac_str;
-        boost::algorithm::replace_all(format, 
-                                      seconds_with_fractional_seconds_format, 
+        boost::algorithm::replace_all(format,
+                                      seconds_with_fractional_seconds_format,
                                       replace_string);
       }
       if (format.find(fractional_seconds_format) != string_type::npos) {
@@ -471,13 +471,13 @@ namespace date_time {
           frac_str = fractional_seconds_as_string(a_time_dur, false);
         }
         boost::algorithm::replace_all(format,
-                                      fractional_seconds_format, 
+                                      fractional_seconds_format,
                                       frac_str);
       }
 
       if (format.find(fractional_seconds_or_none_format) != string_type::npos) {
         // replace %F with nnnnnnn or nothing if fs == 0
-        frac_str = 
+        frac_str =
           fractional_seconds_as_string(a_time_dur, true);
         if (frac_str.size()) {
           char_type sep = std::use_facet<std::numpunct<char_type> >(a_ios.getloc()).decimal_point();
@@ -485,7 +485,7 @@ namespace date_time {
           replace_string += sep;
           replace_string += frac_str;
           boost::algorithm::replace_all(format,
-                                        fractional_seconds_or_none_format, 
+                                        fractional_seconds_or_none_format,
                                         replace_string);
         }
         else {
@@ -494,12 +494,12 @@ namespace date_time {
         }
       }
 
-      return this->do_put_tm(a_next, a_ios, a_fill, 
+      return this->do_put_tm(a_next, a_ios, a_fill,
                        to_tm(a_time_dur), format);
     }
-    
-    OutItrT put(OutItrT next, std::ios_base& a_ios, 
-                char_type fill, const period_type& p) const 
+
+    OutItrT put(OutItrT next, std::ios_base& a_ios,
+                char_type fill, const period_type& p) const
     {
       return this->m_period_formatter.put_period(next, a_ios, fill,p,*this);
     }
@@ -507,12 +507,12 @@ namespace date_time {
 
   protected:
 
-    static 
-    string_type 
+    static
+    string_type
     fractional_seconds_as_string(const time_duration_type& a_time,
-                                 bool null_when_zero) 
+                                 bool null_when_zero)
     {
-      typename time_duration_type::fractional_seconds_type frac_sec = 
+      typename time_duration_type::fractional_seconds_type frac_sec =
         a_time.fractional_seconds();
 
       if (null_when_zero && (frac_sec == 0)) {
@@ -539,7 +539,7 @@ namespace date_time {
     {
       std::basic_ostringstream<char_type> ss;
       ss.imbue(std::locale::classic()); // don't want any formatting
-      ss << std::setw(width) 
+      ss << std::setw(width)
         << std::setfill(static_cast<char_type>('0'));
 #if (defined(BOOST_MSVC) && (_MSC_VER < 1300))
       // JDG [7/6/02 VC++ compatibility]
@@ -556,105 +556,105 @@ namespace date_time {
 
   };
 
-  template <class time_type, class CharT, class OutItrT>  
+  template <class time_type, class CharT, class OutItrT>
   std::locale::id time_facet<time_type, CharT, OutItrT>::id;
 
-  template <class time_type, class CharT, class OutItrT>  
-  const typename time_facet<time_type, CharT, OutItrT>::char_type* 
+  template <class time_type, class CharT, class OutItrT>
+  const typename time_facet<time_type, CharT, OutItrT>::char_type*
   time_facet<time_type, CharT, OutItrT>::fractional_seconds_format = time_formats<CharT>::fractional_seconds_format;
 
-  template <class time_type, class CharT, class OutItrT>  
-  const typename time_facet<time_type, CharT, OutItrT>::char_type* 
+  template <class time_type, class CharT, class OutItrT>
+  const typename time_facet<time_type, CharT, OutItrT>::char_type*
   time_facet<time_type, CharT, OutItrT>::fractional_seconds_or_none_format = time_formats<CharT>::fractional_seconds_or_none_format;
 
-  template <class time_type, class CharT, class OutItrT>  
-  const typename time_facet<time_type, CharT, OutItrT>::char_type* 
-  time_facet<time_type, CharT, OutItrT>::seconds_with_fractional_seconds_format = 
+  template <class time_type, class CharT, class OutItrT>
+  const typename time_facet<time_type, CharT, OutItrT>::char_type*
+  time_facet<time_type, CharT, OutItrT>::seconds_with_fractional_seconds_format =
     time_formats<CharT>::seconds_with_fractional_seconds_format;
 
 
-  template <class time_type, class CharT, class OutItrT>  
+  template <class time_type, class CharT, class OutItrT>
   const typename time_facet<time_type, CharT, OutItrT>::char_type*
   time_facet<time_type, CharT, OutItrT>::zone_name_format =  time_formats<CharT>::zone_name_format;
 
-  template <class time_type, class CharT, class OutItrT>  
+  template <class time_type, class CharT, class OutItrT>
   const typename time_facet<time_type, CharT, OutItrT>::char_type*
   time_facet<time_type, CharT, OutItrT>::zone_abbrev_format =  time_formats<CharT>::zone_abbrev_format;
 
-  template <class time_type, class CharT, class OutItrT>  
+  template <class time_type, class CharT, class OutItrT>
   const typename time_facet<time_type, CharT, OutItrT>::char_type*
   time_facet<time_type, CharT, OutItrT>::zone_iso_extended_format =time_formats<CharT>::zone_iso_extended_format;
 
-  template <class time_type, class CharT, class OutItrT>  
+  template <class time_type, class CharT, class OutItrT>
   const typename time_facet<time_type, CharT, OutItrT>::char_type*
   time_facet<time_type, CharT, OutItrT>::posix_zone_string_format =time_formats<CharT>::posix_zone_string_format;
 
-  template <class time_type, class CharT, class OutItrT>  
+  template <class time_type, class CharT, class OutItrT>
   const typename time_facet<time_type, CharT, OutItrT>::char_type*
   time_facet<time_type, CharT, OutItrT>::zone_iso_format =  time_formats<CharT>::zone_iso_format;
 
-  template <class time_type, class CharT, class OutItrT>  
+  template <class time_type, class CharT, class OutItrT>
   const typename time_facet<time_type, CharT, OutItrT>::char_type*
   time_facet<time_type, CharT, OutItrT>::seconds_format =  time_formats<CharT>::seconds_format;
 
-  template <class time_type, class CharT, class OutItrT>  
+  template <class time_type, class CharT, class OutItrT>
   const typename time_facet<time_type, CharT, OutItrT>::char_type*
   time_facet<time_type, CharT, OutItrT>::hours_format =  time_formats<CharT>::hours_format;
 
-  template <class time_type, class CharT, class OutItrT>  
+  template <class time_type, class CharT, class OutItrT>
   const typename time_facet<time_type, CharT, OutItrT>::char_type*
   time_facet<time_type, CharT, OutItrT>::unrestricted_hours_format =  time_formats<CharT>::unrestricted_hours_format;
 
-  template <class time_type, class CharT, class OutItrT>  
+  template <class time_type, class CharT, class OutItrT>
   const typename time_facet<time_type, CharT, OutItrT>::char_type*
   time_facet<time_type, CharT, OutItrT>::standard_format =  time_formats<CharT>::standard_format;
 
-  template <class time_type, class CharT, class OutItrT>  
+  template <class time_type, class CharT, class OutItrT>
   const typename time_facet<time_type, CharT, OutItrT>::char_type*
   time_facet<time_type, CharT, OutItrT>::duration_seperator =  time_formats<CharT>::duration_seperator;
 
-  template <class time_type, class CharT, class OutItrT>  
+  template <class time_type, class CharT, class OutItrT>
   const typename time_facet<time_type, CharT, OutItrT>::char_type*
   time_facet<time_type, CharT, OutItrT>::negative_sign =  time_formats<CharT>::negative_sign;
 
-  template <class time_type, class CharT, class OutItrT>  
+  template <class time_type, class CharT, class OutItrT>
   const typename time_facet<time_type, CharT, OutItrT>::char_type*
   time_facet<time_type, CharT, OutItrT>::positive_sign =  time_formats<CharT>::positive_sign;
 
-  template <class time_type, class CharT, class OutItrT>  
+  template <class time_type, class CharT, class OutItrT>
   const typename time_facet<time_type, CharT, OutItrT>::char_type*
   time_facet<time_type, CharT, OutItrT>::duration_sign_negative_only =  time_formats<CharT>::duration_sign_negative_only;
 
-  template <class time_type, class CharT, class OutItrT>  
+  template <class time_type, class CharT, class OutItrT>
   const typename time_facet<time_type, CharT, OutItrT>::char_type*
   time_facet<time_type, CharT, OutItrT>::duration_sign_always =  time_formats<CharT>::duration_sign_always;
 
-  template <class time_type, class CharT, class OutItrT>  
+  template <class time_type, class CharT, class OutItrT>
   const typename time_facet<time_type,CharT, OutItrT>::char_type*
   time_facet<time_type,CharT, OutItrT>::iso_time_format_specifier = time_formats<CharT>::iso_time_format_specifier;
 
-  template <class time_type, class CharT, class OutItrT>  
+  template <class time_type, class CharT, class OutItrT>
   const typename time_facet<time_type, CharT, OutItrT>::char_type*
   time_facet<time_type, CharT, OutItrT>::iso_time_format_extended_specifier = time_formats<CharT>::iso_time_format_extended_specifier;
 
-  template <class time_type, class CharT, class OutItrT>  
+  template <class time_type, class CharT, class OutItrT>
   const typename time_facet<time_type, CharT, OutItrT>::char_type*
-  time_facet<time_type, CharT, OutItrT>::default_time_format = 
+  time_facet<time_type, CharT, OutItrT>::default_time_format =
     time_formats<CharT>::default_time_format;
 
-  template <class time_type, class CharT, class OutItrT>  
-  const typename time_facet<time_type, CharT, OutItrT>::char_type* 
-  time_facet<time_type, CharT, OutItrT>::default_time_duration_format = 
+  template <class time_type, class CharT, class OutItrT>
+  const typename time_facet<time_type, CharT, OutItrT>::char_type*
+  time_facet<time_type, CharT, OutItrT>::default_time_duration_format =
     time_formats<CharT>::default_time_duration_format;
 
 
-  //! Facet for format-based input.  
+  //! Facet for format-based input.
   /*!
    */
   template <class time_type,
-            class CharT, 
+            class CharT,
             class InItrT = std::istreambuf_iterator<CharT, std::char_traits<CharT> > >
-  class time_input_facet : 
+  class time_input_facet :
     public boost::date_time::date_input_facet<typename time_type::date_type , CharT, InItrT> {
     public:
       typedef typename time_type::date_type date_type;
@@ -687,13 +687,13 @@ namespace date_time {
       static const char_type* duration_seperator;
       static const char_type* iso_time_format_specifier;
       static const char_type* iso_time_format_extended_specifier;
-      static const char_type* default_time_input_format; 
+      static const char_type* default_time_input_format;
       static const char_type* default_time_duration_format;
       static std::locale::id id;
 
       //! Constructor that takes a format string for a ptime
-      explicit time_input_facet(const string_type& format, ::size_t a_ref = 0) 
-        : base_type(format, a_ref), 
+      explicit time_input_facet(const string_type& format, ::size_t a_ref = 0)
+        : base_type(format, a_ref),
           m_time_duration_format(default_time_duration_format)
       { }
 
@@ -708,16 +708,16 @@ namespace date_time {
                     sv_parser,
                     per_parser,
                     date_gen_parser,
-                    a_ref), 
+                    a_ref),
           m_time_duration_format(default_time_duration_format)
       {}
 
       //! sets default formats for ptime, local_date_time, and time_duration
-      explicit time_input_facet(::size_t a_ref = 0) 
-        : base_type(default_time_input_format, a_ref), 
+      explicit time_input_facet(::size_t a_ref = 0)
+        : base_type(default_time_input_format, a_ref),
           m_time_duration_format(default_time_duration_format)
       { }
-      
+
       //! Set the format for time_duration
       void time_duration_format(const char_type* const format) {
         m_time_duration_format = format;
@@ -730,47 +730,47 @@ namespace date_time {
       {
         this->m_format = iso_time_format_extended_specifier;
       }
-      
+
       InItrT get(InItrT& sitr,
                  InItrT& stream_end,
                  std::ios_base& a_ios,
                  period_type& p) const
       {
-        p = this->m_period_parser.get_period(sitr, 
-                                             stream_end, 
-                                             a_ios, 
-                                             p, 
-                                             time_duration_type::unit(), 
+        p = this->m_period_parser.get_period(sitr,
+                                             stream_end,
+                                             a_ios,
+                                             p,
+                                             time_duration_type::unit(),
                                              *this);
         return sitr;
       }
-      
+
       //default ptime format is YYYY-Mon-DD HH:MM:SS[.fff...][ zzz]
       //default time_duration format is %H:%M:%S%F HH:MM:SS[.fff...]
 
-      InItrT get(InItrT& sitr, 
-                 InItrT& stream_end, 
-                 std::ios_base& a_ios, 
+      InItrT get(InItrT& sitr,
+                 InItrT& stream_end,
+                 std::ios_base& a_ios,
                  time_duration_type& td) const
       {
         // skip leading whitespace
         while((sitr != stream_end) && std::isspace(*sitr)) { ++sitr; }
-        
+
         bool use_current_char = false;
-        
+
         // num_get will consume the +/-, we may need a copy if special_value
         char_type c = '\0';
         if((sitr != stream_end) && (*sitr == '-' || *sitr == '+')) {
           c = *sitr;
         }
-        
+
         typedef typename time_duration_type::hour_type hour_type;
         typedef typename time_duration_type::min_type min_type;
         typedef typename time_duration_type::sec_type sec_type;
 
-        hour_type hour = 0; 
-        min_type min = 0; 
-        sec_type sec = 0; 
+        hour_type hour = 0;
+        min_type min = 0;
+        sec_type sec = 0;
         typename time_duration_type::fractional_seconds_type frac(0);
 
         typedef std::num_get<CharT, InItrT> num_get;
@@ -779,25 +779,25 @@ namespace date_time {
           std::locale loc = std::locale(a_ios.getloc(), ng);
           a_ios.imbue(loc);
         }
-       
+
         const_itr itr(m_time_duration_format.begin());
         while (itr != m_time_duration_format.end() && (sitr != stream_end)) {
           if (*itr == '%') {
             ++itr;
             if (*itr != '%') {
               switch(*itr) {
-              case 'O': 
+              case 'O':
                 {
                   // A period may span more than 24 hours. In that case the format
                   // string should be composed with the unrestricted hours specifier.
-                  hour = var_string_to_int<hour_type, CharT>(sitr, stream_end, 
+                  hour = var_string_to_int<hour_type, CharT>(sitr, stream_end,
                                       std::numeric_limits<hour_type>::digits10 + 1);
                   if(hour == -1){
                      return check_special_value(sitr, stream_end, td, c);
                   }
                   break;
                 }
-              case 'H': 
+              case 'H':
                 {
                   match_results mr;
                   hour = fixed_string_to_int<hour_type, CharT>(sitr, stream_end, mr, 2);
@@ -806,7 +806,7 @@ namespace date_time {
                   }
                   break;
                 }
-              case 'M': 
+              case 'M':
                 {
                   match_results mr;
                   min = fixed_string_to_int<min_type, CharT>(sitr, stream_end, mr, 2);
@@ -816,7 +816,7 @@ namespace date_time {
                   break;
                 }
               case 's':
-              case 'S': 
+              case 'S':
                 {
                   match_results mr;
                   sec = fixed_string_to_int<sec_type, CharT>(sitr, stream_end, mr, 2);
@@ -833,7 +833,7 @@ namespace date_time {
                   if(*sitr == '.') {
                     ++sitr;
                     parse_frac_type(sitr, stream_end, frac);
-                    // sitr will point to next expected char after this parsing 
+                    // sitr will point to next expected char after this parsing
                     // is complete so no need to advance it
                     use_current_char = true;
                   }
@@ -842,13 +842,13 @@ namespace date_time {
                   }
                   break;
                 }
-              case 'F': 
+              case 'F':
                 {
                   // check for decimal, skip if missing
                   if(*sitr == '.') {
                     ++sitr;
                     parse_frac_type(sitr, stream_end, frac);
-                    // sitr will point to next expected char after this parsing 
+                    // sitr will point to next expected char after this parsing
                     // is complete so no need to advance it
                     use_current_char = true;
                   }
@@ -865,12 +865,12 @@ namespace date_time {
             else { // itr == '%', second consecutive
               ++sitr;
             }
-        
+
             ++itr; //advance past format specifier
           }
           else {  //skip past chars in format and in buffer
             ++itr;
-            // set use_current_char when sitr is already 
+            // set use_current_char when sitr is already
             // pointing at the next character to process
             if (use_current_char) {
               use_current_char = false;
@@ -884,21 +884,21 @@ namespace date_time {
         td = time_duration_type(hour, min, sec, frac);
         return sitr;
       }
-    
+
 
       //! Parses a time object from the input stream
-      InItrT get(InItrT& sitr, 
-                 InItrT& stream_end, 
-                 std::ios_base& a_ios, 
+      InItrT get(InItrT& sitr,
+                 InItrT& stream_end,
+                 std::ios_base& a_ios,
                  time_type& t) const
       {
         string_type tz_str;
         return get(sitr, stream_end, a_ios, t, tz_str, false);
       }
       //! Expects a time_zone in the input stream
-      InItrT get_local_time(InItrT& sitr, 
-                            InItrT& stream_end, 
-                            std::ios_base& a_ios, 
+      InItrT get_local_time(InItrT& sitr,
+                            InItrT& stream_end,
+                            std::ios_base& a_ios,
                             time_type& t,
                             string_type& tz_str) const
       {
@@ -907,19 +907,19 @@ namespace date_time {
 
     protected:
 
-      InItrT get(InItrT& sitr, 
-                 InItrT& stream_end, 
-                 std::ios_base& a_ios, 
+      InItrT get(InItrT& sitr,
+                 InItrT& stream_end,
+                 std::ios_base& a_ios,
                  time_type& t,
                  string_type& tz_str,
                  bool time_is_local) const
       {
         // skip leading whitespace
         while((sitr != stream_end) && std::isspace(*sitr)) { ++sitr; }
-        
+
         bool use_current_char = false;
         bool use_current_format_char = false; // used whith two character flags
-        
+
         // num_get will consume the +/-, we may need a copy if special_value
         char_type c = '\0';
         if((sitr != stream_end) && (*sitr == '-' || *sitr == '+')) {
@@ -931,27 +931,27 @@ namespace date_time {
         typedef typename time_duration_type::sec_type sec_type;
 
         // time elements
-        hour_type hour = 0; 
-        min_type min = 0; 
-        sec_type sec = 0; 
+        hour_type hour = 0;
+        min_type min = 0;
+        sec_type sec = 0;
         typename time_duration_type::fractional_seconds_type frac(0);
         // date elements
         short day_of_year(0);
-        /* Initialized the following to their minimum values. These intermediate 
-         * objects are used so we get specific exceptions when part of the input 
-         * is unparsable. 
+        /* Initialized the following to their minimum values. These intermediate
+         * objects are used so we get specific exceptions when part of the input
+         * is unparsable.
          * Ex: "205-Jan-15" will throw a bad_year, "2005-Jsn-15"- bad_month, etc.*/
         year_type t_year(1400);
         month_type t_month(1);
         day_type t_day(1);
-        
+
         typedef std::num_get<CharT, InItrT> num_get;
         if(!std::has_facet<num_get>(a_ios.getloc())) {
           num_get* ng = new num_get();
           std::locale loc = std::locale(a_ios.getloc(), ng);
           a_ios.imbue(loc);
         }
-       
+
         const_itr itr(this->m_format.begin());
         while (itr != this->m_format.end() && (sitr != stream_end)) {
           if (*itr == '%') {
@@ -1066,7 +1066,7 @@ namespace date_time {
                     break;
                   }
                 // time flags
-                case 'H': 
+                case 'H':
                   {
                     match_results mr;
                     hour = fixed_string_to_int<hour_type, CharT>(sitr, stream_end, mr, 2);
@@ -1075,7 +1075,7 @@ namespace date_time {
                     }
                     break;
                   }
-                case 'M': 
+                case 'M':
                   {
                     match_results mr;
                     min = fixed_string_to_int<min_type, CharT>(sitr, stream_end, mr, 2);
@@ -1085,7 +1085,7 @@ namespace date_time {
                     break;
                   }
                 case 's':
-                case 'S': 
+                case 'S':
                   {
                     match_results mr;
                     sec = fixed_string_to_int<sec_type, CharT>(sitr, stream_end, mr, 2);
@@ -1102,7 +1102,7 @@ namespace date_time {
                     if(*sitr == '.') {
                       ++sitr;
                       parse_frac_type(sitr, stream_end, frac);
-                      // sitr will point to next expected char after this parsing 
+                      // sitr will point to next expected char after this parsing
                       // is complete so no need to advance it
                       use_current_char = true;
                     }
@@ -1111,13 +1111,13 @@ namespace date_time {
                     }
                     break;
                   }
-                case 'F': 
+                case 'F':
                   {
                     // check for decimal, skip if missing
                     if(*sitr == '.') {
                       ++sitr;
                       parse_frac_type(sitr, stream_end, frac);
-                      // sitr will point to next expected char after this parsing 
+                      // sitr will point to next expected char after this parsing
                       // is complete so no need to advance it
                       use_current_char = true;
                     }
@@ -1147,34 +1147,34 @@ namespace date_time {
                       else {
                         use_current_format_char = true;
                       }
-                    
+
                     }
                     else {
                       // nothing was parsed so we don't want to advance sitr
                       use_current_char = true;
                     }
-                   
+
                     break;
                   }
                 default:
                 {} // ignore what we don't understand?
               }// switch
-            } 
+            }
             else { // itr == '%', second consecutive
               ++sitr;
             }
-       
+
             if(use_current_format_char) {
               use_current_format_char = false;
             }
             else {
               ++itr; //advance past format specifier
             }
-             
+
           }
           else {  //skip past chars in format and in buffer
             ++itr;
-            // set use_current_char when sitr is already 
+            // set use_current_char when sitr is already
             // pointing at the next character to process
             if (use_current_char) {
               use_current_char = false;
@@ -1184,7 +1184,7 @@ namespace date_time {
             }
           }
         }
-        
+
         date_type d(not_a_date_time);
         if (day_of_year > 0) {
           d = date_type(static_cast<unsigned short>(t_year-1),12,31) + date_duration_type(day_of_year);
@@ -1199,8 +1199,8 @@ namespace date_time {
       }
 
       //! Helper function to check for special_value
-      /*! First character may have been consumed during original parse 
-       * attempt. Parameter 'c' should be a copy of that character. 
+      /*! First character may have been consumed during original parse
+       * attempt. Parameter 'c' should be a copy of that character.
        * Throws ios_base::failure if parse fails. */
       template<class temporal_type>
       inline
@@ -1216,13 +1216,13 @@ namespace date_time {
           boost::throw_exception(std::ios_base::failure("Parse failed. No match found for '" + tmp + "'"));
           BOOST_DATE_TIME_UNREACHABLE_EXPRESSION(return sitr); // should never reach
         }
-        tt = temporal_type(static_cast<special_values>(mr.current_match)); 
+        tt = temporal_type(static_cast<special_values>(mr.current_match));
         return sitr;
       }
 
       //! Helper function for parsing a fractional second type from the stream
-      void parse_frac_type(InItrT& sitr, 
-                           InItrT& stream_end, 
+      void parse_frac_type(InItrT& sitr,
+                           InItrT& stream_end,
                            fracional_seconds_type& frac) const
       {
         string_type cache;
@@ -1243,7 +1243,7 @@ namespace date_time {
           }
         }
       }
-      
+
     private:
       string_type m_time_duration_format;
 
@@ -1264,60 +1264,60 @@ namespace date_time {
 template <class time_type, class CharT, class InItrT>
   std::locale::id time_input_facet<time_type, CharT, InItrT>::id;
 
-template <class time_type, class CharT, class InItrT>  
-  const typename time_input_facet<time_type, CharT, InItrT>::char_type* 
+template <class time_type, class CharT, class InItrT>
+  const typename time_input_facet<time_type, CharT, InItrT>::char_type*
   time_input_facet<time_type, CharT, InItrT>::fractional_seconds_format = time_formats<CharT>::fractional_seconds_format;
 
-  template <class time_type, class CharT, class InItrT>  
-  const typename time_input_facet<time_type, CharT, InItrT>::char_type* 
+  template <class time_type, class CharT, class InItrT>
+  const typename time_input_facet<time_type, CharT, InItrT>::char_type*
   time_input_facet<time_type, CharT, InItrT>::fractional_seconds_or_none_format = time_formats<CharT>::fractional_seconds_or_none_format;
 
-  template <class time_type, class CharT, class InItrT>  
-  const typename time_input_facet<time_type, CharT, InItrT>::char_type* 
+  template <class time_type, class CharT, class InItrT>
+  const typename time_input_facet<time_type, CharT, InItrT>::char_type*
   time_input_facet<time_type, CharT, InItrT>::seconds_with_fractional_seconds_format = time_formats<CharT>::seconds_with_fractional_seconds_format;
 
-  template <class time_type, class CharT, class InItrT>  
-  const typename time_input_facet<time_type, CharT, InItrT>::char_type* 
+  template <class time_type, class CharT, class InItrT>
+  const typename time_input_facet<time_type, CharT, InItrT>::char_type*
   time_input_facet<time_type, CharT, InItrT>::seconds_format = time_formats<CharT>::seconds_format;
 
-  template <class time_type, class CharT, class InItrT>  
-  const typename time_input_facet<time_type, CharT, InItrT>::char_type* 
+  template <class time_type, class CharT, class InItrT>
+  const typename time_input_facet<time_type, CharT, InItrT>::char_type*
   time_input_facet<time_type, CharT, InItrT>::standard_format = time_formats<CharT>::standard_format;
 
-  template <class time_type, class CharT, class InItrT>  
-  const typename time_input_facet<time_type, CharT, InItrT>::char_type* 
+  template <class time_type, class CharT, class InItrT>
+  const typename time_input_facet<time_type, CharT, InItrT>::char_type*
   time_input_facet<time_type, CharT, InItrT>::zone_abbrev_format = time_formats<CharT>::zone_abbrev_format;
 
-  template <class time_type, class CharT, class InItrT>  
-  const typename time_input_facet<time_type, CharT, InItrT>::char_type* 
+  template <class time_type, class CharT, class InItrT>
+  const typename time_input_facet<time_type, CharT, InItrT>::char_type*
   time_input_facet<time_type, CharT, InItrT>::zone_name_format = time_formats<CharT>::zone_name_format;
 
-  template <class time_type, class CharT, class InItrT>  
-  const typename time_input_facet<time_type, CharT, InItrT>::char_type* 
+  template <class time_type, class CharT, class InItrT>
+  const typename time_input_facet<time_type, CharT, InItrT>::char_type*
   time_input_facet<time_type, CharT, InItrT>::zone_iso_format = time_formats<CharT>::zone_iso_format;
 
-  template <class time_type, class CharT, class InItrT>  
-  const typename time_input_facet<time_type, CharT, InItrT>::char_type* 
+  template <class time_type, class CharT, class InItrT>
+  const typename time_input_facet<time_type, CharT, InItrT>::char_type*
   time_input_facet<time_type, CharT, InItrT>::zone_iso_extended_format = time_formats<CharT>::zone_iso_extended_format;
 
-  template <class time_type, class CharT, class InItrT>  
-  const typename time_input_facet<time_type, CharT, InItrT>::char_type* 
+  template <class time_type, class CharT, class InItrT>
+  const typename time_input_facet<time_type, CharT, InItrT>::char_type*
   time_input_facet<time_type, CharT, InItrT>::duration_seperator = time_formats<CharT>::duration_seperator;
 
-  template <class time_type, class CharT, class InItrT>  
-  const typename time_input_facet<time_type, CharT, InItrT>::char_type* 
+  template <class time_type, class CharT, class InItrT>
+  const typename time_input_facet<time_type, CharT, InItrT>::char_type*
   time_input_facet<time_type, CharT, InItrT>::iso_time_format_specifier = time_formats<CharT>::iso_time_format_specifier;
 
-  template <class time_type, class CharT, class InItrT>  
-  const typename time_input_facet<time_type, CharT, InItrT>::char_type* 
+  template <class time_type, class CharT, class InItrT>
+  const typename time_input_facet<time_type, CharT, InItrT>::char_type*
   time_input_facet<time_type, CharT, InItrT>::iso_time_format_extended_specifier = time_formats<CharT>::iso_time_format_extended_specifier;
 
-  template <class time_type, class CharT, class InItrT>  
-  const typename time_input_facet<time_type, CharT, InItrT>::char_type* 
+  template <class time_type, class CharT, class InItrT>
+  const typename time_input_facet<time_type, CharT, InItrT>::char_type*
   time_input_facet<time_type, CharT, InItrT>::default_time_input_format = time_formats<CharT>::default_time_input_format;
 
-  template <class time_type, class CharT, class InItrT>  
-  const typename time_input_facet<time_type, CharT, InItrT>::char_type* 
+  template <class time_type, class CharT, class InItrT>
+  const typename time_input_facet<time_type, CharT, InItrT>::char_type*
   time_input_facet<time_type, CharT, InItrT>::default_time_duration_format = time_formats<CharT>::default_time_duration_format;
 
 

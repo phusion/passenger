@@ -30,15 +30,12 @@ namespace boost
             int const res=pthread_cond_init(&cond,NULL);
             if(res)
             {
-                throw thread_resource_error("Cannot initialize a condition variable", res);
+                throw thread_resource_error();
             }
         }
         ~condition_variable()
         {
-            int ret;
-            do {
-                ret = pthread_cond_destroy(&cond);
-            } while (ret == EINTR);
+            BOOST_VERIFY(!pthread_cond_destroy(&cond));
         }
 
         void wait(unique_lock<mutex>& m);

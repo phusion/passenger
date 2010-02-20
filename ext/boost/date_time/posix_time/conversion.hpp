@@ -2,11 +2,11 @@
 #define POSIX_TIME_CONVERSION_HPP___
 
 /* Copyright (c) 2002-2005 CrystalClear Software, Inc.
- * Use, modification and distribution is subject to the 
+ * Use, modification and distribution is subject to the
  * Boost Software License, Version 1.0. (See accompanying
  * file LICENSE_1_0.txt or http://www.boost.org/LICENSE_1_0.txt)
  * Author: Jeff Garland, Bart Garst
- * $Date: 2009-09-28 14:10:02 -0400 (Mon, 28 Sep 2009) $
+ * $Date: 2010-01-10 14:17:23 -0500 (Sun, 10 Jan 2010) $
  */
 
 #include <boost/date_time/posix_time/ptime.hpp>
@@ -29,18 +29,18 @@ namespace posix_time {
     return start + seconds(static_cast<long>(t));
   }
 
-  //! Convert a time to a tm structure truncating any fractional seconds 
+  //! Convert a time to a tm structure truncating any fractional seconds
   inline
   std::tm to_tm(const boost::posix_time::ptime& t) {
     std::tm timetm = boost::gregorian::to_tm(t.date());
     boost::posix_time::time_duration td = t.time_of_day();
-    timetm.tm_hour = td.hours(); 
-    timetm.tm_min = td.minutes(); 
+    timetm.tm_hour = td.hours();
+    timetm.tm_min = td.minutes();
     timetm.tm_sec = td.seconds();
-    timetm.tm_isdst = -1; // -1 used when dst info is unknown 
+    timetm.tm_isdst = -1; // -1 used when dst info is unknown
     return timetm;
   }
-  //! Convert a time_duration to a tm structure truncating any fractional seconds and zeroing fields for date components 
+  //! Convert a time_duration to a tm structure truncating any fractional seconds and zeroing fields for date components
   inline
   std::tm to_tm(const boost::posix_time::time_duration& td) {
     std::tm timetm = {};
@@ -60,12 +60,12 @@ namespace posix_time {
 
 
 #if defined(BOOST_HAS_FTIME)
-  
+
   //! Function to create a time object from an initialized FILETIME struct.
   /*! Function to create a time object from an initialized FILETIME struct.
-   * A FILETIME struct holds 100-nanosecond units (0.0000001). When 
-   * built with microsecond resolution the FILETIME's sub second value 
-   * will be truncated. Nanosecond resolution has no truncation. 
+   * A FILETIME struct holds 100-nanosecond units (0.0000001). When
+   * built with microsecond resolution the FILETIME's sub second value
+   * will be truncated. Nanosecond resolution has no truncation.
    *
    * \note FILETIME is part of the Win32 API, so it is not portable to non-windows
    * platforms.

@@ -113,6 +113,8 @@ namespace boost
         mutable boost::mutex thread_info_mutex;
         detail::thread_data_ptr thread_info;
 
+        void start_thread();
+        
         explicit thread(detail::thread_data_ptr data);
 
         detail::thread_data_ptr get_thread_info() const;
@@ -140,31 +142,20 @@ namespace boost
         }
 
         struct dummy;
-    
-    protected:
-        template <class F>
-        void set_thread_main_function(F f)
-        {
-            thread_info = make_thread_info(f);
-        }
-        
-        void start_thread(unsigned int stack_size = 0);
-        
-        
 #endif
     public:
 #ifdef __SUNPRO_CC 
         thread(const volatile thread&); 
 #endif 
         thread();
-        virtual ~thread();
+        ~thread();
 
 #ifdef BOOST_HAS_RVALUE_REFS
         template <class F>
-        thread(F&& f, unsigned int stack_size = 0):
+        thread(F&& f):
             thread_info(make_thread_info(static_cast<F&&>(f)))
         {
-            start_thread(stack_size);
+            start_thread();
         }
 
         thread(thread&& other)
@@ -187,25 +178,25 @@ namespace boost
 #else
 #ifdef BOOST_NO_SFINAE
         template <class F>
-        explicit thread(F f, unsigned int stack_size = 0):
+        explicit thread(F f):
             thread_info(make_thread_info(f))
         {
-            start_thread(stack_size);
+            start_thread();
         }
 #else
         template <class F>
-        explicit thread(F f,typename disable_if<boost::is_convertible<F&,detail::thread_move_t<F> >, dummy* >::type=0, unsigned int stack_size = 0):
+        explicit thread(F f,typename disable_if<boost::is_convertible<F&,detail::thread_move_t<F> >, dummy* >::type=0):
             thread_info(make_thread_info(f))
         {
-            start_thread(stack_size);
+            start_thread();
         }
 #endif
         
         template <class F>
-        explicit thread(detail::thread_move_t<F> f, unsigned int stack_size = 0):
+        explicit thread(detail::thread_move_t<F> f):
             thread_info(make_thread_info(f))
         {
-            start_thread(stack_size);
+            start_thread();
         }
 
         thread(detail::thread_move_t<thread> x)
@@ -242,65 +233,65 @@ namespace boost
 #endif
 
         template <class F,class A1>
-        thread(F f,A1 a1, unsigned int stack_size = 0):
+        thread(F f,A1 a1):
             thread_info(make_thread_info(boost::bind(boost::type<void>(),f,a1)))
         {
-            start_thread(stack_size);
+            start_thread();
         }
         template <class F,class A1,class A2>
-        thread(F f,A1 a1,A2 a2, unsigned int stack_size = 0):
+        thread(F f,A1 a1,A2 a2):
             thread_info(make_thread_info(boost::bind(boost::type<void>(),f,a1,a2)))
         {
-            start_thread(stack_size);
+            start_thread();
         }
 
         template <class F,class A1,class A2,class A3>
-        thread(F f,A1 a1,A2 a2,A3 a3, unsigned int stack_size = 0):
+        thread(F f,A1 a1,A2 a2,A3 a3):
             thread_info(make_thread_info(boost::bind(boost::type<void>(),f,a1,a2,a3)))
         {
-            start_thread(stack_size);
+            start_thread();
         }
 
         template <class F,class A1,class A2,class A3,class A4>
-        thread(F f,A1 a1,A2 a2,A3 a3,A4 a4, unsigned int stack_size = 0):
+        thread(F f,A1 a1,A2 a2,A3 a3,A4 a4):
             thread_info(make_thread_info(boost::bind(boost::type<void>(),f,a1,a2,a3,a4)))
         {
-            start_thread(stack_size);
+            start_thread();
         }
 
         template <class F,class A1,class A2,class A3,class A4,class A5>
-        thread(F f,A1 a1,A2 a2,A3 a3,A4 a4,A5 a5, unsigned int stack_size = 0):
+        thread(F f,A1 a1,A2 a2,A3 a3,A4 a4,A5 a5):
             thread_info(make_thread_info(boost::bind(boost::type<void>(),f,a1,a2,a3,a4,a5)))
         {
-            start_thread(stack_size);
+            start_thread();
         }
 
         template <class F,class A1,class A2,class A3,class A4,class A5,class A6>
-        thread(F f,A1 a1,A2 a2,A3 a3,A4 a4,A5 a5,A6 a6, unsigned int stack_size = 0):
+        thread(F f,A1 a1,A2 a2,A3 a3,A4 a4,A5 a5,A6 a6):
             thread_info(make_thread_info(boost::bind(boost::type<void>(),f,a1,a2,a3,a4,a5,a6)))
         {
-            start_thread(stack_size);
+            start_thread();
         }
 
         template <class F,class A1,class A2,class A3,class A4,class A5,class A6,class A7>
-        thread(F f,A1 a1,A2 a2,A3 a3,A4 a4,A5 a5,A6 a6,A7 a7, unsigned int stack_size = 0):
+        thread(F f,A1 a1,A2 a2,A3 a3,A4 a4,A5 a5,A6 a6,A7 a7):
             thread_info(make_thread_info(boost::bind(boost::type<void>(),f,a1,a2,a3,a4,a5,a6,a7)))
         {
-            start_thread(stack_size);
+            start_thread();
         }
 
         template <class F,class A1,class A2,class A3,class A4,class A5,class A6,class A7,class A8>
-        thread(F f,A1 a1,A2 a2,A3 a3,A4 a4,A5 a5,A6 a6,A7 a7,A8 a8, unsigned int stack_size = 0):
+        thread(F f,A1 a1,A2 a2,A3 a3,A4 a4,A5 a5,A6 a6,A7 a7,A8 a8):
             thread_info(make_thread_info(boost::bind(boost::type<void>(),f,a1,a2,a3,a4,a5,a6,a7,a8)))
         {
-            start_thread(stack_size);
+            start_thread();
         }
 
         template <class F,class A1,class A2,class A3,class A4,class A5,class A6,class A7,class A8,class A9>
-        thread(F f,A1 a1,A2 a2,A3 a3,A4 a4,A5 a5,A6 a6,A7 a7,A8 a8,A9 a9, unsigned int stack_size = 0):
+        thread(F f,A1 a1,A2 a2,A3 a3,A4 a4,A5 a5,A6 a6,A7 a7,A8 a8,A9 a9):
             thread_info(make_thread_info(boost::bind(boost::type<void>(),f,a1,a2,a3,a4,a5,a6,a7,a8,a9)))
         {
-            start_thread(stack_size);
+            start_thread();
         }
 
         void swap(thread& x)
