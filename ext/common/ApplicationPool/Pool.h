@@ -56,8 +56,8 @@
 #include "../FileChangeChecker.h"
 #include "../CachedFileStat.hpp"
 #include "../SpawnManager.h"
-#include "../SystemTime.h"
 #include "../Constants.h"
+#include "../Utils/SystemTime.h"
 
 namespace Passenger {
 namespace ApplicationPool {

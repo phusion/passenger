@@ -46,18 +46,18 @@
 #include "ScgiRequestParser.h"
 #include "HttpStatusExtractor.h"
 
+#include "HelperAgent/BacktracesServer.h"
 #include "ApplicationPool/Pool.h"
 #include "ApplicationPool/Server.h"
 #include "Session.h"
 #include "PoolOptions.h"
 #include "MessageServer.h"
-#include "BacktracesServer.h"
 #include "FileDescriptor.h"
 #include "ResourceLocator.h"
-#include "Timer.h"
 #include "ServerInstanceDir.h"
 #include "Exceptions.h"
 #include "Utils.h"
+#include "Utils/Timer.h"
 
 using namespace boost;
 using namespace oxt;

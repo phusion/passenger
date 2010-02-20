@@ -51,10 +51,10 @@
 #include "Constants.h"
 #include "MessageChannel.h"
 #include "AccountsDatabase.h"
-#include "Base64.h"
 #include "RandomGenerator.h"
 #include "Exceptions.h"
 #include "Logging.h"
+#include "Utils/Base64.h"
 
 namespace Passenger {
 

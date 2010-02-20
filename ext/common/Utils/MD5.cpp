@@ -51,10 +51,10 @@
   1999-05-03 lpd Original version.
  */
 
-#include "md5.h"
+#include "MD5.h"
 #include <string.h>
 #include <boost/detail/endian.hpp>
-#include "Utils.h"
+#include "../Utils.h"
 
 namespace Passenger {
 

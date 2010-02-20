@@ -38,10 +38,10 @@
 #include "FileDescriptor.h"
 #include "MessageChannel.h"
 #include "MessageClient.h"
-#include "Base64.h"
 #include "ServerInstanceDir.h"
 #include "Exceptions.h"
 #include "Utils.h"
+#include "Utils/Base64.h"
 
 namespace Passenger {
 

@@ -52,8 +52,8 @@
 #endif
 
 #include "Exceptions.h"
-#include "Timer.h"
 #include "Utils.h"
+#include "Utils/Timer.h"
 
 namespace Passenger {
 

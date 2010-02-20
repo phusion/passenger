@@ -1,6 +1,6 @@
 #include "TestSupport.h"
 #include "FileChangeChecker.h"
-#include "SystemTime.h"
+#include "Utils/SystemTime.h"
 #include <unistd.h>
 
 using namespace Passenger;

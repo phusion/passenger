@@ -47,12 +47,12 @@
   1999-05-03 lpd Original version.
  */
 
-#ifndef md5_INCLUDED
-#  define md5_INCLUDED
+#ifndef _PASSENGER_MD5_H_
+#define _PASSENGER_MD5_H_
 
 #include <string>
 #include <boost/cstdint.hpp>
-#include "StaticString.h"
+#include "../StaticString.h"
 
 /*
  * This package supports both compile-time and run-time determination of CPU
@@ -90,4 +90,4 @@ std::string md5_hex(const StaticString &input);
 
 } // namespace Passenger
 
-#endif /* md5_INCLUDED */
+#endif /* _PASSENGER_MD5_H_ */
