@@ -2,11 +2,11 @@
 #define GREG_DATE_HPP___
 
 /* Copyright (c) 2002,2003 CrystalClear Software, Inc.
- * Use, modification and distribution is subject to the 
+ * Use, modification and distribution is subject to the
  * Boost Software License, Version 1.0. (See accompanying
  * file LICENSE_1_0.txt or http://www.boost.org/LICENSE_1_0.txt)
- * Author: Jeff Garland 
- * $Date: 2009-09-28 14:10:02 -0400 (Mon, 28 Sep 2009) $
+ * Author: Jeff Garland
+ * $Date: 2010-01-10 14:17:23 -0500 (Sun, 10 Jan 2010) $
  */
 
 #include <boost/throw_exception.hpp>
@@ -28,10 +28,10 @@ namespace gregorian {
   using date_time::min_date_time;
 
   //! A date type based on gregorian_calendar
-  /*! This class is the primary interface for programming with 
+  /*! This class is the primary interface for programming with
       greogorian dates.  The is a lightweight type that can be
-      freely passed by value.  All comparison operators are 
-      supported.  
+      freely passed by value.  All comparison operators are
+      supported.
       \ingroup date_basics
   */
   class date : public date_time::date<date, gregorian_calendar, date_duration>
@@ -52,7 +52,7 @@ namespace gregorian {
     {}
 #endif // DATE_TIME_NO_DEFAULT_CONSTRUCTOR
     //! Main constructor with year, month, day
-    date(year_type y, month_type m, day_type d) 
+    date(year_type y, month_type m, day_type d)
       : date_time::date<date, gregorian_calendar, date_duration>(y, m, d)
     {
       if (gregorian_calendar::end_of_month_day(y, m) < d) {
@@ -60,7 +60,7 @@ namespace gregorian {
       }
     }
     //! Constructor from a ymd_type structure
-    explicit date(const ymd_type& ymd) 
+    explicit date(const ymd_type& ymd)
       : date_time::date<date, gregorian_calendar, date_duration>(ymd)
     {}
     //! Needed copy constructor
@@ -102,13 +102,13 @@ namespace gregorian {
     date_int_type modjulian_day() const
     {
       ymd_type ymd = year_month_day();
-      return gregorian_calendar::modjulian_day_number(ymd);      
+      return gregorian_calendar::modjulian_day_number(ymd);
     }
     //!Return the iso 8601 week number 1..53
     int week_number() const
     {
       ymd_type ymd = year_month_day();
-      return gregorian_calendar::week_number(ymd);      
+      return gregorian_calendar::week_number(ymd);
     }
     //! Return the day number from the calendar
     date_int_type day_number() const
@@ -118,7 +118,7 @@ namespace gregorian {
     //! Return the last day of the current month
     date end_of_month() const
     {
-      ymd_type ymd = year_month_day(); 
+      ymd_type ymd = year_month_day();
       short eom_day =  gregorian_calendar::end_of_month_day(ymd.year, ymd.month);
       return date(ymd.year, ymd.month, eom_day);
     }
@@ -126,7 +126,7 @@ namespace gregorian {
    private:
 
   };
-  
+
 
 
 } } //namespace gregorian

@@ -23,10 +23,25 @@
 #ifndef BOOST_CSTDINT_HPP
 #define BOOST_CSTDINT_HPP
 
+//
+// Since we always define the INT#_C macros as per C++0x, 
+// define __STDC_CONSTANT_MACROS so that <stdint.h> does the right
+// thing if possible, and so that the user knows that the macros 
+// are actually defined as per C99.
+//
+#ifndef __STDC_CONSTANT_MACROS
+#  define __STDC_CONSTANT_MACROS
+#endif
+
 #include <boost/config.hpp>
 
-
-#ifdef BOOST_HAS_STDINT_H
+//
+// Note that GLIBC is a bit inconsistent about whether int64_t is defined or not
+// depending upon what headers happen to have been included first...
+// so we disable use of stdint.h when GLIBC does not define __GLIBC_HAVE_LONG_LONG.
+// See https://svn.boost.org/trac/boost/ticket/3548 and http://sources.redhat.com/bugzilla/show_bug.cgi?id=10990
+//
+#if defined(BOOST_HAS_STDINT_H) && (!defined(__GLIBC__) || defined(__GLIBC_HAVE_LONG_LONG))
 
 // The following #include is an implementation artifact; not part of interface.
 # ifdef __hpux
@@ -222,6 +237,15 @@ namespace boost
      typedef unsigned short  uint_least16_t;
      typedef unsigned short  uint_fast16_t;
 #  endif
+# elif (USHRT_MAX == 0xffffffff) && defined(__MTA__) 
+      // On MTA / XMT short is 32 bits unless the -short16 compiler flag is specified 
+      // MTA / XMT does support the following non-standard integer types 
+      typedef __short16           int16_t; 
+      typedef __short16           int_least16_t; 
+      typedef __short16           int_fast16_t; 
+      typedef unsigned __short16  uint16_t; 
+      typedef unsigned __short16  uint_least16_t; 
+      typedef unsigned __short16  uint_fast16_t; 
 # elif (USHRT_MAX == 0xffffffff) && defined(CRAY)
      // no 16-bit types on Cray:
      typedef short           int_least16_t;
@@ -248,6 +272,14 @@ namespace boost
      typedef unsigned int    uint32_t;
      typedef unsigned int    uint_least32_t;
      typedef unsigned int    uint_fast32_t;
+# elif (UINT_MAX == 0xffffffffffffffff) && defined(__MTA__) 
+      // Integers are 64 bits on the MTA / XMT 
+      typedef __int32           int32_t; 
+      typedef __int32           int_least32_t; 
+      typedef __int32           int_fast32_t; 
+      typedef unsigned __int32  uint32_t; 
+      typedef unsigned __int32  uint_least32_t; 
+      typedef unsigned __int32  uint_fast32_t; 
 # else
 #    error defaults not correct; you must hand modify boost/cstdint.hpp
 # endif
@@ -328,19 +360,16 @@ namespace boost
 
 Macro definition section:
 
-Define various INTXX_C macros only if
-__STDC_CONSTANT_MACROS is defined.
-
-Undefine the macros if __STDC_CONSTANT_MACROS is
-not defined and the macros are (cf <cassert>).
-
 Added 23rd September 2000 (John Maddock).
 Modified 11th September 2001 to be excluded when
 BOOST_HAS_STDINT_H is defined (John Maddock).
+Modified 11th Dec 2009 to always define the
+INT#_C macros if they're not already defined (John Maddock).
 
 ******************************************************/
 
-#if defined(__STDC_CONSTANT_MACROS) && !defined(BOOST__STDC_CONSTANT_MACROS_DEFINED) && !defined(BOOST_HAS_STDINT_H)
+#if !defined(BOOST__STDC_CONSTANT_MACROS_DEFINED) && !defined(INT8_C)
+#include <limits.h>
 # define BOOST__STDC_CONSTANT_MACROS_DEFINED
 # if defined(BOOST_HAS_MS_INT64)
 //
@@ -393,27 +422,40 @@ BOOST_HAS_STDINT_H is defined (John Maddock).
 //  64-bit types + intmax_t and uintmax_t  ----------------------------------//
 
 #  if defined(BOOST_HAS_LONG_LONG) && \
-    (defined(ULLONG_MAX) || defined(ULONG_LONG_MAX) || defined(ULONGLONG_MAX))
+    (defined(ULLONG_MAX) || defined(ULONG_LONG_MAX) || defined(ULONGLONG_MAX) || defined(_LLONG_MAX))
 
 #    if defined(__hpux)
-     // HP-UX's value of ULONG_LONG_MAX is unusable in preprocessor expressions
-#    elif (defined(ULLONG_MAX) && ULLONG_MAX == 18446744073709551615U) ||  \
-        (defined(ULONG_LONG_MAX) && ULONG_LONG_MAX == 18446744073709551615U) ||  \
-        (defined(ULONGLONG_MAX) && ULONGLONG_MAX == 18446744073709551615U)
+        // HP-UX's value of ULONG_LONG_MAX is unusable in preprocessor expressions
+#       define INT64_C(value) value##LL
+#       define UINT64_C(value) value##uLL
+#    elif (defined(ULLONG_MAX) && ULLONG_MAX == 18446744073709551615ULL) ||  \
+        (defined(ULONG_LONG_MAX) && ULONG_LONG_MAX == 18446744073709551615ULL) ||  \
+        (defined(ULONGLONG_MAX) && ULONGLONG_MAX == 18446744073709551615ULL) || \
+        (defined(_LLONG_MAX) && _LLONG_MAX == 18446744073709551615ULL)
 
+#       define INT64_C(value) value##LL
+#       define UINT64_C(value) value##uLL
 #    else
 #       error defaults not correct; you must hand modify boost/cstdint.hpp
 #    endif
-#    define INT64_C(value) value##LL
-#    define UINT64_C(value) value##uLL
 #  elif ULONG_MAX != 0xffffffff
 
-#    if ULONG_MAX == 18446744073709551615 // 2**64 - 1
+#    if ULONG_MAX == 18446744073709551615U // 2**64 - 1
 #       define INT64_C(value) value##L
 #       define UINT64_C(value) value##uL
 #    else
 #       error defaults not correct; you must hand modify boost/cstdint.hpp
 #    endif
+#  elif defined(BOOST_HAS_LONG_LONG)
+     // Usual macros not defined, work things out for ourselves:
+#    if(~0uLL == 18446744073709551615ULL)
+#       define INT64_C(value) value##LL
+#       define UINT64_C(value) value##uLL
+#    else
+#       error defaults not correct; you must hand modify boost/cstdint.hpp
+#    endif
+#  else
+#    error defaults not correct; you must hand modify boost/cstdint.hpp
 #  endif
 
 #  ifdef BOOST_NO_INT64_T
@@ -426,23 +468,7 @@ BOOST_HAS_STDINT_H is defined (John Maddock).
 
 # endif // Borland/Microsoft specific width suffixes
 
-
-#elif defined(BOOST__STDC_CONSTANT_MACROS_DEFINED) && !defined(__STDC_CONSTANT_MACROS) && !defined(BOOST_HAS_STDINT_H)
-//
-// undef all the macros:
-//
-# undef INT8_C
-# undef INT16_C
-# undef INT32_C
-# undef INT64_C
-# undef UINT8_C
-# undef UINT16_C
-# undef UINT32_C
-# undef UINT64_C
-# undef INTMAX_C
-# undef UINTMAX_C
-
-#endif // __STDC_CONSTANT_MACROS_DEFINED etc.
+#endif // INT#_C macros.
 
 
 
