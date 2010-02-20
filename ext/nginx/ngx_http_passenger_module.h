@@ -29,8 +29,8 @@
 #define _PASSENGER_NGINX_MODULE_H_
 
 #include <ngx_core.h>
-#include "../common/CachedFileStat.h"
 #include "../common/AgentsStarter.h"
+#include "../common/Utils/CachedFileStat.h"
 
 /**
  * The Nginx version number as an integer.

@@ -34,7 +34,6 @@
 #include <netdb.h>
 #include <libgen.h>
 #include <fcntl.h>
-#include "CachedFileStat.hpp"
 #include "FileDescriptor.h"
 #include "MessageChannel.h"
 #include "MessageServer.h"
@@ -42,6 +41,7 @@
 #include "Exceptions.h"
 #include "Utils.h"
 #include "Utils/Base64.h"
+#include "Utils/CachedFileStat.hpp"
 
 #define SPAWN_SERVER_SCRIPT_NAME "passenger-spawn-server"
 

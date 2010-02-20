@@ -53,11 +53,11 @@
 
 #include "Interface.h"
 #include "../Logging.h"
-#include "../FileChangeChecker.h"
-#include "../CachedFileStat.hpp"
 #include "../SpawnManager.h"
 #include "../Constants.h"
 #include "../Utils/SystemTime.h"
+#include "../Utils/FileChangeChecker.h"
+#include "../Utils/CachedFileStat.hpp"
 
 namespace Passenger {
 namespace ApplicationPool {
