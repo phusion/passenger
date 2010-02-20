@@ -184,10 +184,10 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 		'Logging.o' => %w(
 			Logging.cpp
 			Logging.h),
-		'CachedFileStat.o' => %w(
-			CachedFileStat.cpp
-			CachedFileStat.h
-			CachedFileStat.hpp),
+		'Utils/CachedFileStat.o' => %w(
+			Utils/CachedFileStat.cpp
+			Utils/CachedFileStat.h
+			Utils/CachedFileStat.hpp),
 		'Utils/Base64.o' => %w(
 			Utils/Base64.cpp
 			Utils/Base64.h),
@@ -615,8 +615,8 @@ end
 			ext/common/SpawnManager.h
 			ext/common/PoolOptions.h
 			ext/common/StringListCreator.h
-			ext/common/FileChangeChecker.h
-			ext/common/CachedFileStat.hpp
+			ext/common/Utils/FileChangeChecker.h
+			ext/common/Utils/CachedFileStat.hpp
 			ext/common/Process.h
 			ext/common/Session.h),
 		'test/cxx/PoolOptionsTest.o' => %w(
@@ -663,8 +663,8 @@ end
 			ext/common/Utils.h),
 		'test/cxx/FileChangeCheckerTest.o' => %w(
 			test/cxx/FileChangeCheckerTest.cpp
-			ext/common/FileChangeChecker.h
-			ext/common/CachedFileStat.hpp),
+			ext/common/Utils/FileChangeChecker.h
+			ext/common/Utils/CachedFileStat.hpp),
 		'test/cxx/FileDescriptorTest.o' => %w(
 			test/cxx/FileDescriptorTest.cpp
 			ext/common/FileDescriptor.h),
@@ -674,8 +674,8 @@ end
 			ext/common/Utils/SystemTime.cpp),
 		'test/cxx/CachedFileStatTest.o' => %w(
 			test/cxx/CachedFileStatTest.cpp
-			ext/common/CachedFileStat.hpp
-			ext/common/CachedFileStat.cpp),
+			ext/common/Utils/CachedFileStat.hpp
+			ext/common/Utils/CachedFileStat.cpp),
 		'test/cxx/UtilsTest.o' => %w(
 			test/cxx/UtilsTest.cpp
 			ext/common/Utils.h)

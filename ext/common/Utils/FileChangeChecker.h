@@ -31,7 +31,7 @@
 #include <errno.h>
 
 #include "CachedFileStat.hpp"
-#include "Utils/SystemTime.h"
+#include "SystemTime.h"
 
 namespace Passenger {
 

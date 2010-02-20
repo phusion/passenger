@@ -31,9 +31,9 @@
 
 #include <oxt/backtrace.hpp>
 
-#include "CachedFileStat.hpp"
 #include "Configuration.hpp"
 #include "Utils.h"
+#include "Utils/CachedFileStat.hpp"
 
 // The Apache/APR headers *must* come after the Boost headers, otherwise
 // compilation will fail on OpenBSD.
