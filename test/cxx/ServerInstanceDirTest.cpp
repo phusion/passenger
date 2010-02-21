@@ -8,9 +8,11 @@ namespace tut {
 	struct ServerInstanceDirTest {
 		string parentDir;
 		TempDir tmpDir;
+		string nobodyGroup;
 		
 		ServerInstanceDirTest(): tmpDir("server_instance_dir_test.tmp") {
 			parentDir = "server_instance_dir_test.tmp";
+			nobodyGroup = getPrimaryGroupName("nobody");
 		}
 		
 		void createGenerationDir(const string &instanceDir, unsigned int number) {
@@ -91,7 +93,7 @@ namespace tut {
 		ServerInstanceDir dir(1234, parentDir);
 		unsigned int ncontents = listDir(dir.getPath()).size();
 		ServerInstanceDir::GenerationPtr generation = dir.newGeneration(true,
-			"nobody", "nobody", 0, 0);
+			"nobody", nobodyGroup, 0, 0);
 		
 		ensure_equals(generation->getNumber(), 0u);
 		ensure_equals(getFileType(generation->getPath()), FT_DIRECTORY);
@@ -103,7 +105,7 @@ namespace tut {
 		// generation directory upon destruction.
 		ServerInstanceDir dir(1234, parentDir);
 		ServerInstanceDir::GenerationPtr generation = dir.newGeneration(true,
-			"nobody", "nobody", 0, 0);
+			"nobody", nobodyGroup, 0, 0);
 		string path = generation->getPath();
 		generation.reset();
 		ensure_equals(getFileType(path), FT_NONEXISTANT);
@@ -112,10 +114,10 @@ namespace tut {
 	TEST_METHOD(8) {
 		// getNewestGeneration() returns the newest generation.
 		ServerInstanceDir dir(1234, parentDir);
-		ServerInstanceDir::GenerationPtr generation0 = dir.newGeneration(true, "nobody", "nobody", 0, 0);
-		ServerInstanceDir::GenerationPtr generation1 = dir.newGeneration(true, "nobody", "nobody", 0, 0);
-		ServerInstanceDir::GenerationPtr generation2 = dir.newGeneration(true, "nobody", "nobody", 0, 0);
-		ServerInstanceDir::GenerationPtr generation3 = dir.newGeneration(true, "nobody", "nobody", 0, 0);
+		ServerInstanceDir::GenerationPtr generation0 = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
+		ServerInstanceDir::GenerationPtr generation1 = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
+		ServerInstanceDir::GenerationPtr generation2 = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
+		ServerInstanceDir::GenerationPtr generation3 = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
 		
 		generation2.reset();
 		ensure_equals(dir.getNewestGeneration()->getNumber(), 3u);
@@ -133,7 +135,7 @@ namespace tut {
 		// A Generation object returned by getNewestGeneration() doesn't delete
 		// the associated generation directory upon destruction.
 		ServerInstanceDir dir(1234, parentDir);
-		ServerInstanceDir::GenerationPtr generation = dir.newGeneration(true, "nobody", "nobody", 0, 0);
+		ServerInstanceDir::GenerationPtr generation = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
 		ServerInstanceDir::GenerationPtr newestGeneration = dir.getNewestGeneration();
 		newestGeneration.reset();
 		ensure_equals(getFileType(generation->getPath()), FT_DIRECTORY);
@@ -142,10 +144,10 @@ namespace tut {
 	TEST_METHOD(11) {
 		// getGeneration() returns the given generation.
 		ServerInstanceDir dir(1234, parentDir);
-		ServerInstanceDir::GenerationPtr generation0 = dir.newGeneration(true, "nobody", "nobody", 0, 0);
-		ServerInstanceDir::GenerationPtr generation1 = dir.newGeneration(true, "nobody", "nobody", 0, 0);
-		ServerInstanceDir::GenerationPtr generation2 = dir.newGeneration(true, "nobody", "nobody", 0, 0);
-		ServerInstanceDir::GenerationPtr generation3 = dir.newGeneration(true, "nobody", "nobody", 0, 0);
+		ServerInstanceDir::GenerationPtr generation0 = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
+		ServerInstanceDir::GenerationPtr generation1 = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
+		ServerInstanceDir::GenerationPtr generation2 = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
+		ServerInstanceDir::GenerationPtr generation3 = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
 		
 		ensure_equals(dir.getGeneration(0)->getNumber(), 0u);
 		ensure_equals(dir.getGeneration(3)->getNumber(), 3u);
@@ -155,8 +157,8 @@ namespace tut {
 		// A Generation object returned by getGeneration() doesn't delete the
 		// associated generation directory upon destruction.
 		ServerInstanceDir dir(1234, parentDir);
-		ServerInstanceDir::GenerationPtr generation0 = dir.newGeneration(true, "nobody", "nobody", 0, 0);
-		ServerInstanceDir::GenerationPtr generation1 = dir.newGeneration(true, "nobody", "nobody", 0, 0);
+		ServerInstanceDir::GenerationPtr generation0 = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
+		ServerInstanceDir::GenerationPtr generation1 = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
 		
 		dir.getGeneration(0).reset();
 		dir.getGeneration(1).reset();
@@ -168,7 +170,7 @@ namespace tut {
 		// A detached Generation doesn't delete the associated generation
 		// directory upon destruction.
 		ServerInstanceDir dir(1234, parentDir);
-		ServerInstanceDir::GenerationPtr generation = dir.newGeneration(true, "nobody", "nobody", 0, 0);
+		ServerInstanceDir::GenerationPtr generation = dir.newGeneration(true, "nobody", nobodyGroup, 0, 0);
 		string path = generation->getPath();
 		generation->detach();
 		generation.reset();

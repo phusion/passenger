@@ -95,6 +95,11 @@ void touchFile(const char *filename, time_t timestamp = (time_t) - 1);
  */
 vector<string> listDir(const string &path);
 
+/**
+ * Returns the name of the primary group of the given user.
+ */
+string getPrimaryGroupName(const string &username);
+
 
 /**
  * Class which creates a temporary directory of the given name, and deletes

@@ -9,20 +9,10 @@ namespace TestSupport {
 void createServerInstanceDirAndGeneration(ServerInstanceDirPtr &serverInstanceDir,
                                           ServerInstanceDir::GenerationPtr &generation)
 {
-	struct passwd *nobody;
-	struct group  *nobodyGroup;
-	
-	nobody = getpwnam("nobody");
-	if (nobody == NULL) {
-		throw RuntimeException("User 'nobody' does not exist.");
-	}
-	nobodyGroup = getgrgid(nobody->pw_gid);
-	if (nobodyGroup == NULL) {
-		throw RuntimeException("Primary group for 'nobody' user does not exist.");
-	}
 	serverInstanceDir.reset(new ServerInstanceDir(getpid()));
 	generation = serverInstanceDir->newGeneration(geteuid() == 0,
-		"nobody", nobodyGroup->gr_name, geteuid(), getegid());
+		"nobody", getPrimaryGroupName("nobody"),
+		geteuid(), getegid());
 }
 
 string
@@ -154,6 +144,23 @@ listDir(const string &path) {
 		result.push_back(ent->d_name);
 	}
 	return result;
+}
+
+string
+getPrimaryGroupName(const string &username) {
+	struct passwd *user;
+	struct group  *group;
+	
+	user = getpwnam(username.c_str());
+	if (user == NULL) {
+		throw RuntimeException(string("User '") + username + "' does not exist.");
+	}
+	group = getgrgid(user->pw_gid);
+	if (group == NULL) {
+		throw RuntimeException(string("Primary group for user '") + username + "' does not exist.");
+	}
+	
+	return group->gr_name;
 }
 
 } // namespace TestSupport
