@@ -842,7 +842,7 @@ if ruby_engine == "ruby" && defined?(PhusionPassenger::NativeSupport) && (
 	require 'socket'
 	UNIXSocket.class_eval do
 		def recv_io(klass = IO)
-			return klass.new(PhusionPassenger::NativeSupport.recv_fd(self.fileno))
+			return klass.for_fd(PhusionPassenger::NativeSupport.recv_fd(self.fileno))
 		end
 		
 		def send_io(io)
