@@ -1,5 +1,4 @@
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
-require 'phusion_passenger/utils'
 require 'phusion_passenger/utils/file_system_watcher'
 
 describe Utils::FileSystemWatcher do

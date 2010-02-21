@@ -21,7 +21,7 @@ $LOAD_PATH.unshift("#{source_root}/test")
 require 'fileutils'
 require 'support/test_helper'
 require 'phusion_passenger'
-require 'phusion_passenger/utils'
+require 'phusion_passenger/utils/tmpdir'
 
 include PhusionPassenger
 include TestHelper
