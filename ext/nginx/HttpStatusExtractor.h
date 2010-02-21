@@ -26,6 +26,7 @@
 #include <string>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 
 namespace Passenger {
 
