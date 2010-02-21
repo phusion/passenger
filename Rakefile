@@ -914,6 +914,8 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 	fake_bindir = "#{fakeroot}/usr/bin"
 	fake_sbindir = "#{fakeroot}/usr/sbin"
 	fake_source_root = "#{fakeroot}#{NATIVELY_PACKAGED_SOURCE_ROOT}"
+	fake_apache2_module = "#{fakeroot}#{NATIVELY_PACKAGED_APACHE2_MODULE}"
+	fake_apache2_module_dir = File.dirname(fake_apache2_module)
 	
 	sh "rm -rf #{fakeroot}"
 	sh "mkdir -p #{fakeroot}"
@@ -953,6 +955,9 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 	Packaging::SUPER_USER_EXECUTABLES.each do |exe|
 		sh "cp bin/#{exe} #{fake_sbindir}/"
 	end
+	
+	sh "mkdir -p #{fake_apache2_module_dir}"
+	sh "cp #{APACHE2_MODULE} #{fake_apache2_module_dir}/"
 	
 	sh "mkdir -p #{fake_source_root}"
 	spec.files.each do |filename|
