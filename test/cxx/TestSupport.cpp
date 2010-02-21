@@ -1,5 +1,7 @@
 #include <dirent.h>
 #include <unistd.h>
+#include <pwd.h>
+#include <grp.h>
 #include "TestSupport.h"
 
 namespace TestSupport {
@@ -7,9 +9,20 @@ namespace TestSupport {
 void createServerInstanceDirAndGeneration(ServerInstanceDirPtr &serverInstanceDir,
                                           ServerInstanceDir::GenerationPtr &generation)
 {
+	struct passwd *nobody;
+	struct group  *nobodyGroup;
+	
+	nobody = getpwnam("nobody");
+	if (nobody == NULL) {
+		throw RuntimeException("User 'nobody' does not exist.");
+	}
+	nobodyGroup = getgrgid(nobody->pw_gid);
+	if (nobodyGroup == NULL) {
+		throw RuntimeException("Primary group for 'nobody' user does not exist.");
+	}
 	serverInstanceDir.reset(new ServerInstanceDir(getpid()));
 	generation = serverInstanceDir->newGeneration(geteuid() == 0,
-		"nobody", "nobody", geteuid(), getegid());
+		"nobody", nobodyGroup->gr_name, geteuid(), getegid());
 }
 
 string
