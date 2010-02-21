@@ -26,6 +26,10 @@ require 'phusion_passenger/constants'
 require 'phusion_passenger/console_text_template'
 require 'phusion_passenger/platform_info'
 
+# IMPORTANT: do not directly or indirectly require native_support; we can't compile
+# it yet until we have a compiler, and installers usually check whether a compiler
+# is installed.
+
 module PhusionPassenger
 
 # Abstract base class for text mode installers. Used by
