@@ -326,13 +326,14 @@ public:
 	 * @see readFileDescriptor()
 	 */
 	void writeFileDescriptor(int fileDescriptor, bool negotiate = true) {
+		// See message_channel.rb for more info about negotiation.
 		if (negotiate) {
 			vector<string> args;
 			
 			if (!read(args)) {
-				throw IOException("Unexpected end of stream encountered");
+				throw IOException("Unexpected end of stream encountered while pre-negotiating a file descriptor");
 			} else if (args.size() != 1 || args[0] != "pass IO") {
-				throw IOException("FD passing negotiation message expected.");
+				throw IOException("FD passing pre-negotiation message expected.");
 			}
 		}
 		
@@ -378,6 +379,16 @@ public:
 		ret = syscalls::sendmsg(fd, &msg, 0);
 		if (ret == -1) {
 			throw SystemException("Cannot send file descriptor with sendmsg()", errno);
+		}
+		
+		if (negotiate) {
+			vector<string> args;
+			
+			if (!read(args)) {
+				throw IOException("Unexpected end of stream encountered while post-negotiating a file descriptor");
+			} else if (args.size() != 1 || args[0] != "got IO") {
+				throw IOException("FD passing post-negotiation message expected.");
+			}
 		}
 	}
 	
@@ -513,6 +524,7 @@ public:
 	 * @throws boost::thread_interrupted
 	 */
 	int readFileDescriptor(bool negotiate = true) {
+		// See message_channel.rb for more info about negotiation.
 		if (negotiate) {
 			write("pass IO", NULL);
 		}
@@ -562,11 +574,24 @@ public:
 		 || control_header->cmsg_type  != SCM_RIGHTS) {
 			throw IOException("No valid file descriptor received.");
 		}
+		
 		#if defined(__APPLE__) || defined(__SOLARIS__) || defined(__arm__)
-			return control_data.fd;
+			int fd = control_data.fd;
 		#else
-			return *((int *) CMSG_DATA(control_header));
+			int fd = *((int *) CMSG_DATA(control_header));
 		#endif
+		
+		if (negotiate) {
+			try {
+				write("got IO", NULL);
+			} catch (...) {
+				this_thread::disable_syscall_interruption dsi;
+				syscalls::close(fd);
+				throw;
+			}
+		}
+		
+		return fd;
 	}
 	
 	/**
