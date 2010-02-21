@@ -28,6 +28,8 @@
 
 #include <sys/select.h>
 #include <sys/types.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <unistd.h>
 #include <signal.h>
 #include <cstdio>
