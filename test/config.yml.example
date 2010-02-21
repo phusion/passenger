@@ -12,11 +12,11 @@
 normal_user_1: games
 normal_user_2: daemon
 # Must not be "nobody".
-default_user: tty
+default_user: man
 # Must not be normal_user_1's primary group.
 normal_group_1: daemon
 # Must not be normal_user_2's primary group.
-normal_group_2: tty
+normal_group_2: man
 # Must not be default_user's primary group. Must not be "nobody".
 default_group: games
 
