@@ -42,7 +42,7 @@ namespace tut {
 			clientAccount = accountsDatabase->add("test", "12345", false);
 			
 			messageServer = ptr(new MessageServer(socketFilename, accountsDatabase));
-			realPool      = ptr(new Pool("../bin/passenger-spawn-server", generation));
+			realPool      = ptr(new Pool("../helper-scripts/passenger-spawn-server", generation));
 			poolServer    = ptr(new Server(realPool));
 			messageServer->addHandler(poolServer);
 			serverThread = ptr(new oxt::thread(

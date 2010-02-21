@@ -872,18 +872,8 @@ spec = Gem::Specification.new do |s|
 	s.add_dependency 'daemon_controller', '>= 0.2.5'
 	s.add_dependency 'file-tail'
 	s.add_dependency 'rack'
-	s.files = FileList[*PhusionPassenger::Packaging::GLOB]
-	s.executables = [
-		'passenger',
-		'passenger-spawn-server',
-		'passenger-install-apache2-module',
-		'passenger-install-nginx-module',
-		'passenger-config',
-		'passenger-memory-stats',
-		'passenger-make-enterprisey',
-		'passenger-status',
-		'passenger-stress-test'
-	]
+	s.files = FileList[*Packaging::GLOB]
+	s.executables = Packaging::USER_EXECUTABLES + Packaging::SUPER_USER_EXECUTABLES
 	s.has_rdoc = true
 	s.extra_rdoc_files = ['README']
 	s.rdoc_options <<
@@ -907,40 +897,73 @@ Rake::Task['package:force'].prerequisites.unshift(:doc)
 task :clobber => :'package:clean'
 
 desc "Create a fakeroot, useful for building native packages"
-task :fakeroot => [:apache2, :native_support, :doc] do
+task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 	require 'rbconfig'
+	require 'fileutils'
 	include Config
 	fakeroot = "pkg/fakeroot"
-
+	
 	# We don't use CONFIG['archdir'] and the like because we want
 	# the files to be installed to /usr, and the Ruby interpreter
 	# on the packaging machine might be in /usr/local.
-	libdir = "#{fakeroot}/usr/lib/ruby/#{CONFIG['ruby_version']}"
-	extdir = "#{libdir}/#{CONFIG['arch']}"
-	bindir = "#{fakeroot}/usr/bin"
-	docdir = "#{fakeroot}/usr/share/doc/phusion_passenger"
-	libexecdir = "#{fakeroot}/usr/lib/phusion_passenger"
+	fake_libdir = "#{fakeroot}/usr/lib/ruby/#{CONFIG['ruby_version']}"
+	fake_native_support_dir = "#{fakeroot}#{NATIVELY_PACKAGED_NATIVE_SUPPORT_DIR}"
+	fake_agents_dir = "#{fakeroot}#{NATIVELY_PACKAGED_AGENTS_DIR}"
+	fake_helper_scripts_dir = "#{fakeroot}#{NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR}"
+	fake_docdir = "#{fakeroot}#{NATIVELY_PACKAGED_DOCDIR}"
+	fake_bindir = "#{fakeroot}/usr/bin"
+	fake_sbindir = "#{fakeroot}/usr/sbin"
+	fake_source_root = "#{fakeroot}#{NATIVELY_PACKAGED_SOURCE_ROOT}"
 	
 	sh "rm -rf #{fakeroot}"
 	sh "mkdir -p #{fakeroot}"
 	
-	sh "mkdir -p #{libdir}"
-	sh "cp -R lib/phusion_passenger #{libdir}/"
-
-	sh "mkdir -p #{extdir}/phusion_passenger"
-	sh "cp -R ext/phusion_passenger/*.#{LIBEXT} #{extdir}/phusion_passenger/"
+	sh "mkdir -p #{fake_libdir}"
+	sh "cp #{LIBDIR}/phusion_passenger.rb #{fake_libdir}/"
+	sh "cp -R #{LIBDIR}/phusion_passenger #{fake_libdir}/"
 	
-	sh "mkdir -p #{bindir}"
-	sh "cp bin/* #{bindir}/"
+	sh "mkdir -p #{fake_native_support_dir}"
+	Dir["#{NATIVE_SUPPORT_DIR}/*"].each do |subdir|
+		next unless File.directory?(subdir)
+		subdirname = File.basename(subdir)
+		sh "mkdir -p #{fake_native_support_dir}/#{subdirname}"
+		sh "cp -R #{subdir}/*.#{LIBEXT} #{fake_native_support_dir}/#{subdirname}/"
+	end
 	
-	sh "mkdir -p #{libexecdir}"
-	sh "cp ext/apache2/mod_passenger.so #{libexecdir}/"
-	sh "mv #{fakeroot}/usr/bin/passenger-spawn-server #{libexecdir}/"
-	sh "cp ext/apache2/ApplicationPoolServerExecutable #{libexecdir}/"
+	sh "mkdir -p #{fake_agents_dir}"
+	sh "cp -R #{AGENTS_DIR}/* #{fake_agents_dir}/"
+	sh "rm -rf #{fake_agents_dir}/*.dSYM"
+	sh "rm -rf #{fake_agents_dir}/*/*.dSYM"
 	
-	sh "mkdir -p #{docdir}"
-	sh "cp -R doc/* #{docdir}/"
-	sh "rm", "-rf", *Dir["#{docdir}/{definitions.h,Doxyfile,template}"]
+	sh "mkdir -p #{fake_helper_scripts_dir}"
+	sh "cp -R #{HELPER_SCRIPTS_DIR}/* #{fake_helper_scripts_dir}/"
+	
+	sh "mkdir -p #{fake_docdir}"
+	Packaging::ASCII_DOCS.each do |docfile|
+		sh "cp", docfile, "#{fake_docdir}/"
+	end
+	sh "cp -R doc/images #{fake_docdir}/"
+	
+	sh "mkdir -p #{fake_bindir}"
+	Packaging::USER_EXECUTABLES.each do |exe|
+		sh "cp bin/#{exe} #{fake_bindir}/"
+	end
+	
+	sh "mkdir -p #{fake_sbindir}"
+	Packaging::SUPER_USER_EXECUTABLES.each do |exe|
+		sh "cp bin/#{exe} #{fake_sbindir}/"
+	end
+	
+	sh "mkdir -p #{fake_source_root}"
+	spec.files.each do |filename|
+		next if File.directory?(filename)
+		dirname = File.dirname(filename)
+		if !File.directory?("#{fake_source_root}/#{dirname}")
+			sh "mkdir -p '#{fake_source_root}/#{dirname}'"
+		end
+		puts "cp '#{filename}' '#{fake_source_root}/#{dirname}/'"
+		FileUtils.cp(filename, "#{fake_source_root}/#{dirname}/")
+	end
 end
 
 desc "Create a Debian package"

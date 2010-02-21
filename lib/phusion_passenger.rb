@@ -22,6 +22,19 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
+	###### Version numbers ######
+	
+	# Phusion Passenger version number. Don't forget to edit ext/common/Constants.h too.
+	VERSION_STRING = '2.9.1'
+	
+	PREFERRED_NGINX_VERSION = '0.7.65'
+	PREFERRED_PCRE_VERSION  = '8.01'
+	LITE_INTERFACE_VERSION  = 1
+	
+	
+	###### Directories ######
+	# Don't forget to modify ext/common/ResourceLocator.h too.
+	
 	# Returns whether this Phusion Passenger installation is packaged
 	# using the OS's native package management system, i.e. as opposed
 	# to being installed from source or with RubyGems.
@@ -33,9 +46,11 @@ module PhusionPassenger
 		return @natively_packaged
 	end
 	
-	# Phusion Passenger version number.
-	# Don't forget to edit ext/common/Constants.h too.
-	VERSION_STRING = '2.9.1'
+	NATIVELY_PACKAGED_SOURCE_ROOT        = "/usr/share/phusion-passenger/source"
+	NATIVELY_PACKAGED_NATIVE_SUPPORT_DIR = "/usr/lib/phusion-passenger/native_support/#{VERSION_STRING}"
+	NATIVELY_PACKAGED_DOCDIR             = "/usr/share/doc/phusion-passenger"
+	NATIVELY_PACKAGED_AGENTS_DIR         = "/usr/lib/phusion-passenger/agents"
+	NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR = "/usr/share/phusion-passenger/helper-scripts"
 	
 	# Directory containing the Phusion Passenger Ruby libraries.
 	LIBDIR         = File.expand_path(File.dirname(__FILE__))
@@ -51,11 +66,7 @@ module PhusionPassenger
 		"/usr/local/share/phusion-passenger/plugins",
 		"~/#{LOCAL_DIR}/plugins"]
 	
-	if natively_packaged?
-		SOURCE_ROOT        = "/usr/lib/phusion-passenger/source"
-		NATIVE_SUPPORT_DIR = "/usr/lib/phusion-passenger/native_support/#{VERSION_STRING}"
-		DOCDIR             = "/usr/share/doc/phusion-passenger"
-	else
+	if !natively_packaged?
 		# Top directory of the Phusion Passenger source code.
 		SOURCE_ROOT        = File.expand_path(File.join(LIBDIR, ".."))
 		
@@ -64,13 +75,25 @@ module PhusionPassenger
 		
 		# Documentation directory.
 		DOCDIR             = File.join(SOURCE_ROOT, "doc")
+		
+		# Directory containing Phusion Passenger agent executables.
+		AGENTS_DIR         = File.join(SOURCE_ROOT, "agents")
+		
+		# Directory containing Phusion Passenger helper scripts.
+		HELPER_SCRIPTS_DIR = File.join(SOURCE_ROOT, "helper-scripts")
+	else
+		SOURCE_ROOT        = NATIVELY_PACKAGED_SOURCE_DIR
+		NATIVE_SUPPORT_DIR = NATIVELY_PACKAGED_NATIVE_SUPPORT_DIR
+		DOCDIR             = NATIVELY_PACKAGED_DOCDIR
+		AGENTS_DIR         = NATIVELY_PACKAGED_AGENTS_DIR
+		HELPER_SCRIPTS_DIR = NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR
 	end
 	
-	PREFERRED_NGINX_VERSION = '0.7.65'
-	PREFERRED_PCRE_VERSION  = '8.01'
 	
-	LITE_INTERFACE_VERSION  = 1
+	###### Other resource locations ######
+	
 	LITE_BINARIES_URL_ROOT  = "http://lite-binaries.modrails.com"
+	
 	
 	if $LOAD_PATH.first != LIBDIR
 		$LOAD_PATH.unshift(LIBDIR)

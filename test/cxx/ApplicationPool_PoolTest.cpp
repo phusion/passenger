@@ -12,7 +12,7 @@ namespace tut {
 		
 		ApplicationPool_PoolTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
-			pool = ptr(new ApplicationPool::Pool("../bin/passenger-spawn-server", generation));
+			pool = ptr(new ApplicationPool::Pool("../helper-scripts/passenger-spawn-server", generation));
 			pool2 = pool;
 		}
 		

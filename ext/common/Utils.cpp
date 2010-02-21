@@ -588,7 +588,7 @@ prestartWebApps(const ResourceLocator &locator, const string &serializedprestart
 	this_thread::disable_syscall_interruption dsi;
 	vector<string> prestartURLs;
 	vector<string>::const_iterator it;
-	string prespawnScript = locator.getHelperScriptDir() + "/prespawn";
+	string prespawnScript = locator.getHelperScriptsDir() + "/prespawn";
 	
 	split(Base64::decode(serializedprestartURLs), '\0', prestartURLs);
 	it = prestartURLs.begin();

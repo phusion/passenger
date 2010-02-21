@@ -604,7 +604,7 @@
 		TempDirCopy c1("stub/rack", "rackapp1.tmp");
 		TempDirCopy c2("stub/rack", "rackapp2.tmp");
 		shared_ptr<ReloadLoggingSpawnManager> spawnManager(
-			new ReloadLoggingSpawnManager("../bin/passenger-spawn-server", generation)
+			new ReloadLoggingSpawnManager("../helper-scripts/passenger-spawn-server", generation)
 		);
 		reinitializeWithSpawnManager(spawnManager);
 		

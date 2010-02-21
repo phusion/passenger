@@ -1,13 +1,6 @@
-Release 2.9.1
+Release 2.9.2
 -------------
 
- * Auto-compilation of native_support.so.
- * passenger-install-*-module only cleans its own files so that e.g. running
-   passenger-install-nginx-module won't delete the Apache module.
- * passenger-install-nginx-module: compile with SSL support by default.
- * Support for Nginx 0.8
- * 100% Ruby 1.9 support, passes entire unit test suite
- * [Nginx] passenger_set_cgi_param
  * [Nginx] passenger_app_rights
  * [Nginx] Now installs Nginx 0.7.65 by default.
  * passenger-status -v displays individual processes' HTTP addresses.
@@ -22,6 +15,18 @@ Release 2.9.1
  * PassengerDefaultGroup/passenger_default_group.
  * #at_exit blocks are called during app shutdown.
  * PassengerAppGroupName/passenger_app_group_name
+
+
+Release 2.9.1
+-------------
+
+ * Auto-compilation of native_support.so.
+ * passenger-install-*-module only cleans its own files so that e.g. running
+   passenger-install-nginx-module won't delete the Apache module.
+ * passenger-install-nginx-module: compile with SSL support by default.
+ * Support for Nginx 0.8
+ * 100% Ruby 1.9 support, passes entire unit test suite
+ * [Nginx] passenger_set_cgi_param
 
 
 Release 2.9.0

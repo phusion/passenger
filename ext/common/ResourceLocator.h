@@ -58,7 +58,7 @@ public:
 		}
 	}
 	
-	string getHelperScriptDir() const {
+	string getHelperScriptsDir() const {
 		if (nativelyPackaged) {
 			return "/usr/share/phusion-passenger/helper-scripts";
 		} else {
@@ -67,7 +67,7 @@ public:
 	}
 	
 	string getSpawnServerFilename() const {
-		return root + "/bin/passenger-spawn-server";
+		return getHelperScriptsDir() + "/passenger-spawn-server";
 	}
 };
 

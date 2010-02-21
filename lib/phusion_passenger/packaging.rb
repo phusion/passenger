@@ -32,6 +32,20 @@ module Packaging
 		'doc/Architectural overview.html'
 	]
 	
+	USER_EXECUTABLES = [
+		'passenger',
+		'passenger-install-apache2-module',
+		'passenger-install-nginx-module',
+		'passenger-config',
+		'passenger-stress-test'
+	]
+	
+	SUPER_USER_EXECUTABLES = [
+		'passenger-status',
+		'passenger-memory-stats',
+		'passenger-make-enterprisey'
+	]
+	
 	# A list of globs which match all files that should be packaged
 	# in the Phusion Passenger gem or tarball.
 	GLOB = [

@@ -23,7 +23,7 @@ namespace tut {
 		}
 		
 		void initialize() {
-			manager = ptr(new SpawnManager("../bin/passenger-spawn-server", generation,
+			manager = ptr(new SpawnManager("../helper-scripts/passenger-spawn-server", generation,
 				accountsDatabase));
 		}
 		
