@@ -8,7 +8,7 @@
 # These users and groups MUST be able to access this 'test' directory,
 # otherwise the tests will fail.
 
-# Good values for Linux:
+### Good values for Linux and FreeBSD:
 normal_user_1: games
 normal_user_2: daemon
 # Must not be "nobody".
@@ -20,7 +20,7 @@ normal_group_2: tty
 # Must not be default_user's primary group. Must not be "nobody".
 default_group: games
 
-# Good values for OS X. Same restrictions apply.
+### Good values for OS X. Same restrictions apply.
 # normal_user_1: _www
 # normal_user_2: daemon
 # default_user: _sandbox
