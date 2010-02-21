@@ -52,7 +52,6 @@ end
 include PhusionPassenger
 include PhusionPassenger::PlatformInfo
 
-PACKAGE_VERSION = VERSION_STRING
 OPTIMIZE = ["yes", "on", "true"].include?(ENV['OPTIMIZE'])
 
 CC  = PlatformInfo.env_defined?('CC')  ? ENV['CC']  : 'gcc'
@@ -862,7 +861,7 @@ spec = Gem::Specification.new do |s|
 	s.homepage = "http://www.modrails.com/"
 	s.summary = "Easy and robust Ruby web application deployment"
 	s.name = "passenger"
-	s.version = PACKAGE_VERSION
+	s.version = VERSION_STRING
 	s.rubyforge_project = "passenger"
 	s.author = "Phusion - http://www.phusion.nl/"
 	s.email = "info@phusion.nl"
@@ -991,11 +990,11 @@ task 'package:debian' => :fakeroot do
 		raw_arch
 	end
 	
-	sh "sed -i 's/Version: .*/Version: #{PACKAGE_VERSION}/' debian/control"
+	sh "sed -i 's/Version: .*/Version: #{VERSION_STRING}/' debian/control"
 	sh "cp -R debian #{fakeroot}/DEBIAN"
 	sh "sed -i 's/: any/: #{arch}/' #{fakeroot}/DEBIAN/control"
 	sh "chown -R root:root #{fakeroot}"
-	sh "dpkg -b #{fakeroot} pkg/passenger_#{PACKAGE_VERSION}-#{arch}.deb"
+	sh "dpkg -b #{fakeroot} pkg/passenger_#{VERSION_STRING}-#{arch}.deb"
 end
 
 
