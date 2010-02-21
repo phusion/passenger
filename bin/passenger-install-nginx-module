@@ -22,8 +22,8 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) + "/..")
-$LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
+passenger_root = File.expand_path("..", File.dirname(__FILE__))
+$LOAD_PATH.unshift("#{passenger_root}/lib")
 require 'phusion_passenger'
 require 'optparse'
 require 'fileutils'
@@ -59,11 +59,11 @@ class Installer < PhusionPassenger::AbstractInstaller
 	end
 	
 	def install!
-		Dir.chdir(PASSENGER_ROOT)
+		Dir.chdir(SOURCE_ROOT)
 		show_welcome_screen
 		check_dependencies || exit(1)
 		
-		check_whether_we_can_write_to(PASSENGER_ROOT) || exit(1)
+		check_whether_we_can_write_to(SOURCE_ROOT) || exit(1)
 		
 		download_and_install = should_we_download_and_install_nginx_automatically?
 		if pcre_is_installed?
@@ -338,7 +338,7 @@ private
 		new_screen
 		render_template 'nginx/config_snippets',
 			:config_file => locate_nginx_config_file(prefix),
-			:passenger_root => PASSENGER_ROOT,
+			:passenger_root => SOURCE_ROOT,
 			:ruby => RUBY
 		wait
 	end
@@ -374,7 +374,7 @@ private
 		contents = File.read(config_file)
 		contents.sub!(/^http \{/,
 			"http {\n" <<
-			"    passenger_root #{PASSENGER_ROOT};\n" <<
+			"    passenger_root #{SOURCE_ROOT};\n" <<
 			"    passenger_ruby #{RUBY};\n")
 		File.open(config_file, 'w') do |f|
 			f.write(contents)
@@ -383,7 +383,7 @@ private
 		new_screen
 		render_template 'nginx/config_snippets_inserted',
 			:config_file => config_file,
-			:passenger_root => PASSENGER_ROOT,
+			:passenger_root => SOURCE_ROOT,
 			:ruby => RUBY
 		wait
 	end
@@ -395,7 +395,7 @@ private
 		elsif !pcre_is_installed?
 			command << "--without-http_rewrite_module "
 		end
-		command << "--add-module='#{PASSENGER_ROOT}/ext/nginx' #{extra_configure_flags}"
+		command << "--add-module='#{SOURCE_ROOT}/ext/nginx' #{extra_configure_flags}"
 		command.strip!
 		return command
 	end
