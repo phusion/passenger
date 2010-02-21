@@ -58,13 +58,15 @@ using namespace boost;
 using namespace std;
 using namespace oxt;
 
+/** All sizes are in KB. */
 struct ProcessMetrics {
 	pid_t   pid;
 	pid_t   ppid;
 	uint8_t cpu;
 	size_t  rss;
 	size_t  realMemory;
-	size_t  vmsize; /** Incorrect on OS X. */
+	/** OS X Snow Leopard does not report the VM size correctly, so don't use this. */
+	size_t  vmsize;
 	pid_t   processGroupId;
 	string  command;
 	
@@ -77,6 +79,10 @@ struct ProcessMetrics {
 	}
 };
 
+/**
+ * Utility class for collection metrics on processes, such as CPU usage, memory usage,
+ * command name, etc.
+ */
 class ProcessMetricsCollector {
 public:
 	struct ParseException {};
@@ -141,7 +147,7 @@ private:
 		}
 	}
 	
-	virtual string runCommandAndCaptureOutput(const char **command) const {
+	string runCommandAndCaptureOutput(const char **command) const {
 		pid_t pid;
 		int e, p[2];
 		
@@ -278,9 +284,16 @@ public:
 		#endif
 	}
 	
-	virtual ~ProcessMetricsCollector() {}
-	
-	/** */
+	/**
+	 * Collect metrics for the given process IDs. Nonexistant PIDs are not
+	 * included in the result.
+	 *
+	 * Returns a map which maps a given PID to its collected metrics.
+	 *
+	 * @throws ProcessMetricsCollector::ParseException
+	 * @throws SystemException
+	 * @throws RuntimeException
+	 */
 	template<typename Collection, typename ConstIterator>
 	Map collect(const Collection &pids) const {
 		if (pids.empty()) {
@@ -319,6 +332,18 @@ public:
 		return collect< vector<pid_t>, vector<pid_t>::const_iterator >(pids);
 	}
 	
+	/**
+	 * Attempt to measure a process's "real" memory usage. This is either the
+	 * proportional set size (total size of a process's pages that are in
+	 * memory, where the size of each page is divided by the number of processes
+	 * sharing it) or the private dirty RSS.
+	 * 
+	 * At this time only OS X and recent Linux versions (>= 2.6.25) support
+	 * measuring the proportional set size. Usually root privileges are required.
+	 *
+	 * Returns 0 if measuring fails, e.g. because we do not have permission
+	 * to do so or because the OS does not support it.
+	 */
 	static size_t measureRealMemory(pid_t pid) {
 		#ifdef __APPLE__
 			kern_return_t ret;
@@ -365,7 +390,7 @@ public:
 			smapsFilename.append(toString(pid));
 			smapsFilename.append("/smaps");
 			
-			FILE *f = fopen(smapsFilename.c_str(), "r");
+			FILE *f = syscalls::fopen(smapsFilename.c_str(), "r");
 			if (f == NULL) {
 				return 0;
 			}
@@ -381,27 +406,30 @@ public:
 				buf = fgets(line, sizeof(line), f);
 				if (buf == NULL) {
 					if (ferror(f)) {
-						privateDirty = pss = 0;
+						return 0;
+					} else {
+						break;
 					}
-					break;
 				}
-				if (beginsWith(line, "Pss:")) {
-					/* Linux supports Proportional Set Size since kernel 2.6.25.
-					 * See kernel commit ec4dd3eb35759f9fbeb5c1abb01403b2fde64cc9.
-					 */
-					readNextWord(&buf);
-					pss += readNextWordAsLongLong(&buf);
-					if (readNextWord(&buf) != "kB") {
-						privateDirty = pss = 0;
-						break;
+				try {
+					if (beginsWith(line, "Pss:")) {
+						/* Linux supports Proportional Set Size since kernel 2.6.25.
+						 * See kernel commit ec4dd3eb35759f9fbeb5c1abb01403b2fde64cc9.
+						 */
+						readNextWord(&buf);
+						pss += readNextWordAsLongLong(&buf);
+						if (readNextWord(&buf) != "kB") {
+							return 0;
+						}
+					} else if (beginsWith(line, "Private_Dirty:")) {
+						readNextWord(&buf);
+						privateDirty += readNextWordAsLongLong(&buf);
+						if (readNextWord(&buf) != "kB") {
+							return 0;
+						}
 					}
-				} else if (beginsWith(line, "Private_Dirty:")) {
-					readNextWord(&buf);
-					privateDirty += readNextWordAsLongLong(&buf);
-					if (readNextWord(&buf) != "kB") {
-						privateDirty = pss = 0;
-						break;
-					}
+				} catch (const ParseException &) {
+					return 0;
 				}
 			}
 			
