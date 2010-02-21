@@ -143,7 +143,7 @@ else
 					subfilename = "#{@filename}/#{entry}"
 				
 					file_info = @subfiles[entry]
-					if !file_info || file_info.changed?
+					if !file_info || file_info.changed?(false)
 						return true
 					else
 						count += 1
@@ -164,7 +164,12 @@ else
 			
 			def changed?(check_mtime = true)
 				new_stat = File.stat(@filename)
-				return @stat.ino != new_stat.ino || @stat.ftype != new_stat.ftype
+				if check_mtime
+					mtime_changed = @stat.mtime != new_stat.mtime || @stat.size != new_stat.size
+				else
+					mtime_changed = false
+				end
+				return @stat.ino != new_stat.ino || @stat.ftype != new_stat.ftype || mtime_changed
 			rescue Errno::EACCES, Errno::ENOENT
 				return true
 			end

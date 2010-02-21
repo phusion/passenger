@@ -106,7 +106,7 @@ describe Utils::FileSystemWatcher do
 		end
 		
 		specify "a watched file has been truncated" do
-			File.touch("#{@tmpdir}/foo")
+			File.write("#{@tmpdir}/foo", "contents")
 			result = test_block(["#{@tmpdir}/foo"]) do
 				File.open("#{@tmpdir}/foo", "w").close
 			end
@@ -189,7 +189,7 @@ describe Utils::FileSystemWatcher do
 			end
 		end
 		
-		specify "a watched file is merely modified" do
+		specify "a file in a watched directory is merely modified" do
 			File.touch("#{@tmpdir}/hello", 10)
 			test_block([@tmpdir, @tmpdir2]) do
 				File.touch("#{@tmpdir}/hello", 4567)
