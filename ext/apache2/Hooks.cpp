@@ -1279,8 +1279,7 @@ public:
 			serverConfig.analyticsLogGroup, serverConfig.analyticsLogPermissions,
 			serverConfig.prestartURLs);
 		
-		analyticsLogger = ptr(new AnalyticsLogger(serverConfig.analyticsLogDir,
-			agentsStarter.getLoggingSocketFilename(),
+		analyticsLogger = ptr(new AnalyticsLogger(agentsStarter.getLoggingSocketFilename(),
 			"logging", agentsStarter.getLoggingSocketPassword()));
 		
 		// Store some relevant information in the generation directory.

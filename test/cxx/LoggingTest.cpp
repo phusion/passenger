@@ -39,7 +39,7 @@ namespace tut {
 				boost::bind(&MessageServer::mainLoop, server.get())
 			));
 			
-			logger = ptr(new AnalyticsLogger(loggingDir, socketFilename, "test", "1234"));
+			logger = ptr(new AnalyticsLogger(socketFilename, "test", "1234"));
 		}
 		
 		~LoggingTest() {
