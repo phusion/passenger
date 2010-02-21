@@ -31,6 +31,7 @@
 
 #include <sys/types.h>
 #include <sys/time.h>
+#include <sys/file.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <string>
@@ -160,7 +161,7 @@ private:
 			this->handle = handle;
 			int ret;
 			do {
-				ret = flock(handle, LOCK_EX);
+				ret = ::flock(handle, LOCK_EX);
 			} while (ret == -1 && errno == EINTR);
 			if (ret == -1) {
 				int e = errno;
@@ -171,7 +172,7 @@ private:
 		~FileLock() {
 			int ret;
 			do {
-				ret = flock(handle, LOCK_UN);
+				ret = ::flock(handle, LOCK_UN);
 			} while (ret == -1 && errno == EINTR);
 			if (ret == -1) {
 				int e = errno;
