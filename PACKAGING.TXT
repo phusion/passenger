@@ -2,42 +2,19 @@ Notes for packagers
 -------------------
 By default Phusion Passenger locates all of its resource files under its
 source root directory, however it also supports FHS-complaint packaging.
+When packaging Phusion Passenger, be sure to follow these guidelines:
 
-Resource files are located through constants defined in phusion_passenger.rb.
-This file automatically detects whether it's FHS-packaged or not by
-checking whether ../Rakefile exists (when packaged, "../Rakefile" evaluates
-to something like "/usr/lib/ruby/1.8/.." and so returns false).
+- You can generate a fakeroot with the command 'rake fakeroot'. This will
+  generate an FHS-compliant directory tree in pkg/fakeroot, which you can
+  directly package or with minor modifications.
 
-Packagers should pay attention to the following:
-- Documentation like "Users guide Apache.html" must be located
-  in /usr/share/doc/phusion-passenger.
-- Phusion Passenger has a Ruby extension called native_support.so.
-  This must be located in
-
-     /usr/lib/phusion-passenger/native_support/<VERSION>/<SOME ARCH NAME>
-
-  where "<VERSION>" is the Phusion Passenger version number, and
-  "<SOME ARCH NAME>" can be obtained by running the following command
-  from the Phusion Passenger source root:
-
-     ruby -Ilib -rphusion_passenger/platform_info/binary_compatibility \
-     -e 'include PhusionPassenger' \
-     -e 'ids = PlatformInfo.ruby_extension_binary_compatibility_ids' \
-     -e 'puts ids.join("-")'
-
-- There must be a full copy of the Phusion Passenger source tree located
-  in /usr/lib/phusion-passenger/source. The reasons are as follows:
-  
-  * passenger-install-nginx-module and Phusion Passenger Lite must compile
-    Nginx, and this process requires the Phusion Passenger source code to
-    be available.
-  * native_support.so is strongly tied to the Ruby interpreter it was
-    compiled for and may not work with a different Ruby interpreter. Since
-    the user can change the active Ruby interpreter at will by changing the
-    PassengerRuby Apache directive or the passenger_ruby Nginx directive,
-    Phusion Passenger recompiles native_support.so on-the-fly if it is run
-    in a different Ruby interpreter.
-  
-  We urge packagers to specify gcc, g++ and make as dependencies. Without
-  the source code and without a compiler toolchain, Phusion Passenger will
-  still work, except for the aforementioned features.
+  If the default fakeroot structure is not sufficient, please consider
+  sending a patch.
+- Be sure to set Apache's PassengerRoot directive or Nginx's passenger_root
+  directive to /usr. This is a hint to Phusion Passenger that it's packaged
+  in an FHS-compliant way.
+- Inside the fakeroot you will encounter a directory
+  /usr/share/phusion-passenger/source, which contains the entire Phusion
+  Passenger source root. This is normal! It's to allow
+  passenger-install-nginx-module and Phusion Passenger Lite to work; they
+  both require the Phusion Passenger source code in order to compile Nginx.

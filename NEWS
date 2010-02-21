@@ -15,6 +15,7 @@ Release 2.9.2
  * PassengerDefaultGroup/passenger_default_group.
  * #at_exit blocks are called during app shutdown.
  * PassengerAppGroupName/passenger_app_group_name
+ * Packaging guidelines and revamped fakeroot task.
 
 
 Release 2.9.1
