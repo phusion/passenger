@@ -26,7 +26,7 @@
 #define _PASSENGER_CONSTANTS_H_
 
 /* Don't forget to update lib/phusion_passenger.rb too. */
-#define PASSENGER_VERSION "2.9.1"
+#define PASSENGER_VERSION "2.9.2"
 
 #define DEFAULT_LOG_LEVEL 0
 #define DEFAULT_MAX_POOL_SIZE 6
