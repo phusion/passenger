@@ -217,20 +217,23 @@ protected
 		# Because spawned app processes exit using #exit!, #at_exit
 		# blocks aren't called. Here we ninja patch Kernel so that
 		# we can call #at_exit blocks during app process shutdown.
-		Kernel.class_eval do
-			alias passenger_orig_at_exit at_exit
-			
-			@@passenger_at_exit_blocks = []
-			
-			def self.passenger_call_at_exit_blocks
-				@@passenger_at_exit_blocks.reverse_each do |block|
+		class << Kernel
+			def passenger_call_at_exit_blocks
+				@passenger_at_exit_blocks ||= []
+				@passenger_at_exit_blocks.reverse_each do |block|
 					block.call
 				end
 			end
 			
-			def at_exit(&block)
-				@@passenger_at_exit_blocks << block
+			def passenger_at_exit(&block)
+				@passenger_at_exit_blocks ||= []
+				@passenger_at_exit_blocks << block
 				return block
+			end
+		end
+		Kernel.class_eval do
+			def at_exit(&block)
+				return Kernel.passenger_at_exit(&block)
 			end
 		end
 	end
