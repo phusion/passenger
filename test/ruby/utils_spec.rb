@@ -343,6 +343,10 @@ describe Utils do
 				gid = Etc.getpwnam(username).gid
 				return Etc.getgrgid(gid).name
 			end
+
+			def uid_for(username)
+				return Etc.getpwnam(username).uid
+			end
 			
 			def gid_for(group_name)
 				return Etc.getgrnam(group_name).gid
@@ -509,7 +513,7 @@ describe Utils do
 			describe "if 'user' is not given" do
 				describe "and the startup file's owner exists" do
 					before :each do
-						File.lchown(gid_for(CONFIG["normal_user_1"]),
+						File.lchown(uid_for(CONFIG["normal_user_1"]),
 							-1,
 							@startup_file)
 					end
@@ -520,10 +524,10 @@ describe Utils do
 					end
 					
 					specify "if the startup file is a symlink, then it uses the symlink's owner, not the target's owner" do
-						File.lchown(gid_for(CONFIG["normal_user_2"]),
+						File.lchown(uid_for(CONFIG["normal_user_2"]),
 							-1,
 							@startup_file)
-						File.chown(gid_for(CONFIG["normal_user_1"]),
+						File.chown(uid_for(CONFIG["normal_user_1"]),
 							-1,
 							@startup_file_target)
 						run
@@ -658,6 +662,7 @@ describe Utils do
 			it "changes supplementary groups to the owner's default supplementary groups" do
 				run("user" => CONFIG["normal_user_1"])
 				default_groups = `groups "#{CONFIG['normal_user_1']}"`.strip
+				default_groups.gsub!(/.*: */, '')
 				@groups.should == default_groups
 			end
 			
