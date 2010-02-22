@@ -413,7 +413,7 @@ namespace tut {
 		unsigned long long timeout = 100;
 		writer.writeRaw("hi", 2);
 		ensure("Data is available", reader.waitUntilReadable(&timeout));
-		ensure_equals("Timeout is not modified", timeout, 100u);
+		ensure("Timeout is not modified", timeout >= 100 - 5);
 	}
 	
 	TEST_METHOD(19) {
