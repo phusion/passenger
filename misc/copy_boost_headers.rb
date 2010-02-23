@@ -27,6 +27,7 @@ ESSENTIALS = [
 	"boost/config/*",
 	"boost/smart_ptr/detail/sp_counted_*",
 	"boost/smart_ptr/detail/atomic_count*",
+	"boost/smart_ptr/detail/spinlock*",
 	"boost/thread/*",
 	"boost/thread/*/*",
 	"libs/thread/src/*",
@@ -106,6 +107,7 @@ def cleanup
 	FileUtils.rm_rf("boost/thread/win32")
 	FileUtils.rm_rf("boost/src/win32")
 	FileUtils.rm_rf("boost/asio/win32")
+	FileUtils.rm_rf("boost/smart_ptr/detail/spinlock_w32.hpp")
 	File.unlink("test.cpp") rescue nil
 end
 
