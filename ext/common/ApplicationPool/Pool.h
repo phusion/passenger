@@ -658,6 +658,7 @@ private:
 						if (group->analytics && analyticsLogger != NULL) {
 							log = analyticsLogger->newTransaction(group->name,
 								"processes", true);
+							xml << "Processes: <processes>";
 						}
 						for (; process_info_it != process_info_it_end; process_info_it++) {
 							ProcessInfoPtr &processInfo = *process_info_it;
@@ -672,6 +673,7 @@ private:
 							}
 						}
 						if (log != NULL) {
+							xml << "</processes>";
 							log->message(xml.str());
 						}
 					}
