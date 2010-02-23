@@ -62,39 +62,43 @@ private
 		eval("#{variable_name} = nil")
 		eval("#{check_variable_name} = false")
 		source = %Q{
-		   def self.#{method}(*args)                                   # def self.httpd(*args)
-		      if args.empty?                                           #    if args.empty?
-		         if !#{check_variable_name}                            #       if !@@has_memoized_httpd
-		            cache_file = ".cache/#{method}"                    #          cache_file = ".cache/httpd"
-		            read_from_cache_file = false                       #          read_from_cache_file = false
-		            if #{cache_to_disk} && File.exist?(cache_file)     #          if #{cache_to_disk} && File.exist?(cache_file)
-		               cache_file_stat = File.stat(cache_file)         #             cache_file_stat = File.stat(cache_file)
-		               read_from_cache_file =                          #             read_from_cache_file =
-		                  Time.now - cache_file_stat.mtime < 3600 &&   #                Time.now - cache_file_stat.mtime < 3600 &&
-		                  cache_file_stat.mtime > THIS_FILE_MTIME      #                cache_file_stat.mtime > THIS_FILE_MTIME
-		            end                                                #             end
-		            if read_from_cache_file                            #          if read_from_cache_file
-		               data = File.read(cache_file)                    #             data = File.read(cache_file)
-		               #{variable_name} = Marshal.load(data).freeze    #             @@memoized_httpd = Marshal.load(data).freeze
-		               #{check_variable_name} = true                   #             @@has_memoized_httpd = true
-		            else                                               #          else
-		               #{variable_name} = _unmemoized_#{method}.freeze #             @@memoized_httpd = _unmemoized_httpd.freeze
-		               #{check_variable_name} = true                   #             @@has_memoized_httpd = true
-		               if #{cache_to_disk}                             #             if #{cache_to_disk}
-		                  if !File.directory?(".cache")                #                if !File.directory?(".cache")
-		                     Dir.mkdir(".cache")                       #                   Dir.mkdir(".cache")
-		                  end                                          #                end
-		                  File.open(cache_file, "wb") do |f|           #                File.open(cache_file, "wb") do |f|
-		                     f.write(Marshal.dump(#{variable_name}))   #                   f.write(Marshal.dump(@@memoized_httpd))
-		                  end                                          #                end
-		               end                                             #             end
-		            end                                                #          end
-		         end                                                   #       end
-		         return #{variable_name}                               #       return @@memoized_httpd
-		      else                                                     #    else
-		         return _unmemoized_#{method}(*args)                   #       return _unmemoized_httpd(*args)
-		      end                                                      #    end
-		   end                                                         # end
+		   def self.#{method}(*args)                                     # def self.httpd(*args)
+		      if args.empty?                                             #    if args.empty?
+		         if !#{check_variable_name}                              #       if !@@has_memoized_httpd
+		            cache_file = ".cache/#{method}"                      #          cache_file = ".cache/httpd"
+		            read_from_cache_file = false                         #          read_from_cache_file = false
+		            if #{cache_to_disk} && File.exist?(cache_file)       #          if #{cache_to_disk} && File.exist?(cache_file)
+		               cache_file_stat = File.stat(cache_file)           #             cache_file_stat = File.stat(cache_file)
+		               read_from_cache_file =                            #             read_from_cache_file =
+		                  Time.now - cache_file_stat.mtime < 3600 &&     #                Time.now - cache_file_stat.mtime < 3600 &&
+		                  cache_file_stat.mtime > THIS_FILE_MTIME        #                cache_file_stat.mtime > THIS_FILE_MTIME
+		            end                                                  #             end
+		            if read_from_cache_file                              #          if read_from_cache_file
+		               data = File.read(cache_file)                      #             data = File.read(cache_file)
+		               #{variable_name} = Marshal.load(data).freeze      #             @@memoized_httpd = Marshal.load(data).freeze
+		               #{check_variable_name} = true                     #             @@has_memoized_httpd = true
+		            else                                                 #          else
+		               #{variable_name} = _unmemoized_#{method}.freeze   #             @@memoized_httpd = _unmemoized_httpd.freeze
+		               #{check_variable_name} = true                     #             @@has_memoized_httpd = true
+		               if #{cache_to_disk}                               #             if #{cache_to_disk}
+		                  begin                                          #                begin
+		                     if !File.directory?(".cache")               #                   if !File.directory?(".cache")
+		                        Dir.mkdir(".cache")                      #                      Dir.mkdir(".cache")
+		                     end                                         #                   end
+		                     File.open(cache_file, "wb") do |f|          #                   File.open(cache_file, "wb") do |f|
+		                        f.write(Marshal.dump(#{variable_name}))  #                      f.write(Marshal.dump(@@memoized_httpd))
+		                     end                                         #                   end
+		                  rescue Errno::EACCES                           #                rescue Errno::EACCES
+		                    # Ignore permission error.                   #                   # Ignore permission error.
+		                  end                                            #                end
+		               end                                               #             end
+		            end                                                  #          end
+		         end                                                     #       end
+		         return #{variable_name}                                 #       return @@memoized_httpd
+		      else                                                       #    else
+		         return _unmemoized_#{method}(*args)                     #       return _unmemoized_httpd(*args)
+		      end                                                        #    end
+		   end                                                           # end
 		}
 		class_eval(source)
 	end
