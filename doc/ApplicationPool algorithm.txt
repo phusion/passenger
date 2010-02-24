@@ -374,14 +374,15 @@ private function checkout_without_lock(app_root, options):
 		group.name = options.app_group_name
 		group.app_root = app_root
 		group.size = 1
-		group.max_requests = options.max_requests
-		group.min_processes = options.min_processes
-		group.environment = options.environment
 		groups[options.app_group_name] = group
 		iterator = group.processes.add_to_back(process_info)
 		process_info.iterator = iterator
 		count++
 		active++
+	
+	group.max_requests = options.max_requests
+	group.min_processes = options.min_processes
+	group.environment = options.environment
 	
 	process_info.last_used = current_time()
 	process_info.sessions++

@@ -824,10 +824,6 @@ private:
 				group->name = appGroupName;
 				group->appRoot = appRoot;
 				group->size = 1;
-				group->maxRequests = options.maxRequests;
-				group->minProcesses = options.minProcesses;
-				group->environment = options.environment;
-				group->analytics = options.log != NULL;
 				groups[appGroupName] = ptr(group);
 				processes = &group->processes;
 				processes->push_back(processInfo);
@@ -854,6 +850,11 @@ private:
 			message.append(e.what());
 			throw SpawnException(message);
 		}
+		
+		group->maxRequests = options.maxRequests;
+		group->minProcesses = options.minProcesses;
+		group->environment = options.environment;
+		group->analytics = options.log != NULL;
 		
 		processInfo->lastUsed = time(NULL);
 		processInfo->sessions++;
