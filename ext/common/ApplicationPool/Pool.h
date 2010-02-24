@@ -851,13 +851,16 @@ private:
 			throw SpawnException(message);
 		}
 		
-		group->maxRequests = options.maxRequests;
+		process_selected:
+		
+		group->maxRequests  = options.maxRequests;
 		group->minProcesses = options.minProcesses;
-		group->environment = options.environment;
-		group->analytics = options.log != NULL;
+		group->environment  = options.environment;
+		group->analytics    = options.log != NULL;
 		
 		processInfo->lastUsed = time(NULL);
 		processInfo->sessions++;
+		
 		return make_pair(processInfo, group);
 	}
 	
