@@ -286,7 +286,7 @@ private function checkout_without_lock(app_root, options):
 	
 	if needs_restart(app_root, options):
 		Tell spawn server to reload code for options.app_group_name.
-		if (group != nil):
+		if (group != null):
 			for all process_info in group.processes:
 				if (process_info.sessions == 0):
 					inactive_apps.remove(process_info.ia_iterator)
@@ -297,9 +297,9 @@ private function checkout_without_lock(app_root, options):
 				count--
 			group.detached = true
 			groups.remove(options.app_group_name)
-			group = nil
+			group = null
 	
-	if group != nil:
+	if (group != null):
 		# There are existing processes for this app group.
 		processes = group.processes
 		
