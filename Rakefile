@@ -886,7 +886,36 @@ Rake::GemPackageTask.new(spec) do |pkg|
 	pkg.need_tar_gz = true
 end
 
-task 'package:filelist' => Packaging::ASCII_DOCS do
+task 'package:filelist' do
+	# The package:filelist task is used by Phusion Passenger Lite
+	# to obtain a list of files that it must copy to a temporary
+	# directory in order to compile Nginx and to compile Phusion
+	# Passenger. The original Phusion Passenger sources might not
+	# be writiable, e.g. when installed via a gem as root, hence
+	# the reason for copying.
+	#
+	# The Asciidoc HTML files are in the packaging list, but
+	# they're auto-generated and aren't included in the source
+	# repository, so here we ensure that they exist. This is
+	# generally only for people who are developing Phusion
+	# Passenger itself; users who installed Phusion Passenger
+	# via a gem, tarball or native package already have the
+	# HTML files.
+	#
+	# The reason why we don't just specify Packaging::ASCII_DOCS
+	# as a task dependency is because we only want to generate
+	# the HTML files if they don't already exist; we don't want
+	# to regenerate if they exist but their source .txt files
+	# are modified. When the user installs Phusion Passenger
+	# via a gem/tarball/package, all file timestamps are set
+	# to the current clock time, which could lead Rake into
+	# thinking that the source .txt files are modified. Since
+	# the user probably has no write permission to the original
+	# Phusion Passenger sources we want to avoid trying to
+	# regenerate the HTML files.
+	Packaging::ASCII_DOCS.each do |ascii_doc|
+		Rake::Task[ascii_doc].invoke if !File.exist?(ascii_doc)
+	end
 	puts spec.files
 end
 
