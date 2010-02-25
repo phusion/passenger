@@ -223,7 +223,7 @@ private:
 			this->processInfo = processInfo;
 		}
 		
-		void operator()() {
+		void operator()(const StandardSession *) {
 			ProcessInfoPtr processInfo = this->processInfo.lock();
 			if (processInfo == NULL || processInfo->detached) {
 				return;
@@ -850,8 +850,6 @@ private:
 			message.append(e.what());
 			throw SpawnException(message);
 		}
-		
-		process_selected:
 		
 		group->maxRequests  = options.maxRequests;
 		group->minProcesses = options.minProcesses;

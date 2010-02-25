@@ -312,9 +312,12 @@ typedef shared_ptr<Session> SessionPtr;
  * A "standard" implementation of Session.
  */
 class StandardSession: public Session {
+public:
+	typedef function<void (const StandardSession *)> CloseCallback;
+	
 protected:
 	pid_t pid;
-	function<void()> closeCallback;
+	CloseCallback closeCallback;
 	string socketType;
 	string socketName;
 	
@@ -324,7 +327,7 @@ protected:
 	
 public:
 	StandardSession(pid_t pid,
-	                const function<void()> &closeCallback,
+	                const CloseCallback &closeCallback,
 	                const string &socketType,
 	                const string &socketName,
 	                const string &detachKey,
@@ -348,7 +351,7 @@ public:
 		TRACE_POINT();
 		closeStream();
 		if (closeCallback != NULL) {
-			closeCallback();
+			closeCallback(this);
 		}
 	}
 	

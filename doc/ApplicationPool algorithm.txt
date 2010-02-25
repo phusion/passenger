@@ -249,6 +249,8 @@ Here's an UML diagram in ASCII art:
 # 'app_root' refers to an application root.
 # 'options' is an object of type 'PoolOptions', which contains additional
 # information which may be relevant for spawning.
+#
+# Returns a Session object, representing a single HTTP request/response pair.
 function get(app_root, options):
 	MAX_ATTEMPTS = 10
 	attempt = 0
@@ -380,8 +382,6 @@ private function checkout_without_lock(app_root, options):
 		count++
 		active++
 	
-	label process_selected:
-	
 	group.max_requests = options.max_requests
 	group.min_processes = options.min_processes
 	group.environment = options.environment
@@ -447,7 +447,7 @@ private function detach_without_lock(identifier):
 # _process_info_ is a weak reference to the ProcessInfo that belongs to
 # the process whose session has been closed; it evaluates to NULL if the
 # ProcessInfo object that it belongs to has been destroyed.
-callback session_has_been_closed(process_info):
+callback session_has_been_closed(session, process_info):
 	Convert process_info into a normal reference.
 	
 	# We check process_info.detached without locking. This should be safe:
@@ -483,7 +483,6 @@ callback session_has_been_closed(process_info):
 		else:
 			process_info.last_used = current_time()
 			process_info.sessions--
-			process_info.processed++
 			if (process_info.sessions == 0):
 				processes.move_to_front(process_info.iterator)
 				process_info.ia_iterator = inactive_apps.add_to_back(process_info.process)
