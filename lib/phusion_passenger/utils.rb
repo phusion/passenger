@@ -236,6 +236,15 @@ protected
 				return Kernel.passenger_at_exit(&block)
 			end
 		end
+		
+		if options["debugger"]
+			require 'ruby-debug'
+			if !Debugger.respond_to?(:ctrl_port)
+				raise "Your version of ruby-debug is too old. Please upgrade to the latest version."
+			end
+			Debugger.start_remote('127.0.0.1', [0, 0])
+			Debugger.start
+		end
 	end
 	
 	# To be called before the request handler main loop is entered. This function
@@ -612,6 +621,11 @@ protected
 		end
 		# Force this to be a boolean for easy use with Utils#unmarshal_and_raise_errors.
 		options["print_exceptions"]          = to_boolean(options["print_exceptions"])
+		
+		# Smart spawning is not supported when using ruby-debug.
+		options["debugger"]     = to_boolean(options["debugger"])
+		options["spawn_method"] = "conservative" if options["debugger"]
+		
 		return options
 	end
 	

@@ -413,6 +413,8 @@ create_request(ngx_http_request_t *r)
                                   slcf, friendly_error_pages);
     ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_ANALYTICS",
                                   slcf, analytics);
+    ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_DEBUGGER",
+                                  slcf, debugger);
     len += sizeof("PASSENGER_ENVIRONMENT") + slcf->environment.len + 1;
     len += sizeof("PASSENGER_SPAWN_METHOD") + slcf->spawn_method.len + 1;
     len += sizeof("PASSENGER_APP_TYPE") + app_type_string_len;
@@ -617,6 +619,8 @@ create_request(ngx_http_request_t *r)
                                   slcf, friendly_error_pages);
     SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_ANALYTICS",
                                   slcf, analytics);
+    SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_DEBUGGER",
+                                  slcf, debugger);
     
     b->last = ngx_copy(b->last, "PASSENGER_ENVIRONMENT",
                        sizeof("PASSENGER_ENVIRONMENT"));

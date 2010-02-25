@@ -598,7 +598,10 @@ private:
 					config->getMinInstances(),
 					config->usingGlobalQueue(),
 					config->getStatThrottleRate(),
-					config->getRestartDir()
+					config->getRestartDir(),
+					DEFAULT_BACKEND_ACCOUNT_RIGHTS,
+					false,
+					AnalyticsLogPtr()
 				);
 				options.environmentVariables = ptr(new EnvironmentVariablesStringListCreator(r));
 				

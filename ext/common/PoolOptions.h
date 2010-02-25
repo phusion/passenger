@@ -195,6 +195,9 @@ struct PoolOptions {
 	 */
 	Account::Rights rights;
 	
+	/** Whether debugger support should be enabled. */
+	bool debugger;
+	
 	/**
 	 * An analytics log object to log things to. May be the null pointer,
 	 * in which case analytics logging is disabled.
@@ -231,6 +234,7 @@ struct PoolOptions {
 		useGlobalQueue          = false;
 		statThrottleRate        = 0;
 		rights                  = DEFAULT_BACKEND_ACCOUNT_RIGHTS;
+		debugger                = false;
 		initiateSession         = true;
 		printExceptions         = true;
 		
@@ -258,6 +262,7 @@ struct PoolOptions {
 		unsigned long statThrottleRate = 0,
 		const string &restartDir     = "",
 		Account::Rights rights       = DEFAULT_BACKEND_ACCOUNT_RIGHTS,
+		bool debugger                = false,
 		const AnalyticsLogPtr &log   = AnalyticsLogPtr()
 	) {
 		this->appRoot                 = appRoot;
@@ -278,6 +283,7 @@ struct PoolOptions {
 		this->statThrottleRate        = statThrottleRate;
 		this->restartDir              = restartDir;
 		this->rights                  = rights;
+		this->debugger                = debugger;
 		this->log                     = log;
 		this->initiateSession         = true;
 		this->printExceptions         = true;
@@ -331,6 +337,7 @@ struct PoolOptions {
 		restartDir       = vec[startIndex + offset];                 offset += 2;
 		rights           = (Account::Rights) atol(vec[startIndex + offset]);
 		                                                             offset += 2;
+		debugger         = vec[startIndex + offset] == "true";       offset += 2;
 		if (vec[startIndex + offset - 1] == "analytics_log_group_name") {
 			if (analyticsLogger != NULL) {
 				string groupName = vec[startIndex + offset];
@@ -381,6 +388,7 @@ struct PoolOptions {
 		appendKeyValue3(vec, "stat_throttle_rate", statThrottleRate);
 		appendKeyValue (vec, "restart_dir",        restartDir);
 		appendKeyValue3(vec, "rights",             rights);
+		appendKeyValue4(vec, "debugger",           debugger);
 		if (log) {
 			appendKeyValue(vec, "analytics_log_group_name", log->getGroupName());
 			appendKeyValue(vec, "analytics_log_id", log->getTxnId());

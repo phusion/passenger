@@ -47,8 +47,9 @@ http {
         root <%= app[:root] %>/public;
         passenger_enabled on;
         rails_env <%= app[:env] %>;
-        <% if app[:min_instances] %>passenger_min_instances <%= app[:min_instances] %>;<% end%>
+        <% if app[:min_instances] %>passenger_min_instances <%= app[:min_instances] %>;<% end %>
         <% if app[:analytics] %>passenger_analytics on;<% end %>
+        <% if app[:debugger] %>passenger_debugger on;<% end %>
         <%
         # The following is to make Tower Top work. In Phusion Passenger Lite we don't
         # care about inter-app security because it's meant for simple use cases; we

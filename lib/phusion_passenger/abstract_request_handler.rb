@@ -193,6 +193,12 @@ class AbstractRequestHandler
 		@stderr             = STDERR
 		@main_loop_running  = false
 		
+		@debugger = @options["debugger"]
+		if @debugger
+			@server_sockets[:ruby_debug_cmd] = ["127.0.0.1:#{Debugger.cmd_port}", 'tcp']
+			@server_sockets[:ruby_debug_ctrl] = ["127.0.0.1:#{Debugger.ctrl_port}", 'tcp']
+		end
+		
 		#############
 	end
 	
@@ -242,7 +248,8 @@ class AbstractRequestHandler
 				
 				@selectable_sockets = []
 				@server_sockets.each_value do |value|
-					@selectable_sockets << value[2]
+					socket = value[2]
+					@selectable_sockets << socket if socket
 				end
 				@selectable_sockets << @owner_pipe
 				@selectable_sockets << @graceful_termination_pipe[0]
