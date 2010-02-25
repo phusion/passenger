@@ -193,8 +193,11 @@ class MessageChannel
 	#
 	# Might raise SystemCallError, IOError or SocketError when something
 	# goes wrong.
-	def recv_io
-		return @io.recv_io
+	def recv_io(klass = IO, negotiate = true)
+		write("pass IO") if negotiate
+		io = @io.recv_io(klass)
+		write("got IO") if negotiate
+		return io
 	end
 	
 	# Send an IO object (a file descriptor) over the channel. The other
@@ -204,7 +207,46 @@ class MessageChannel
 	# Might raise SystemCallError, IOError or SocketError when something
 	# goes wrong.
 	def send_io(io)
-		@io.send_io(io)
+		# We read a message before actually calling #send_io
+		# in order to prevent the other side from accidentally
+		# read()ing past the normal data and reading our file
+		# descriptor too.
+		#
+		# For example suppose that side A looks like this:
+		#
+		#   read(fd, buf, 1024)
+		#   read_io(fd)
+		#
+		# and side B:
+		#
+		#   write(fd, buf, 100)
+		#   send_io(fd_to_pass)
+		#
+		# If B completes both write() and send_io(), then A's read() call
+		# reads past the 100 bytes that B sent. On some platforms, like
+		# Linux, this will cause read_io() to fail. And it just so happens
+		# that Ruby's IO#read method slurps more than just the given amount
+		# of bytes.
+		result = read
+		if !result
+			raise EOFError, "End of stream"
+		elsif result != ["pass IO"]
+			raise IOError, "IO passing pre-negotiation header expected"
+		else
+			@io.send_io(io)
+			# Once you've sent the IO you expect to be able to close it on the
+			# sender's side, even if the other side hasn't read the IO yet.
+			# Not so: on some operating systems (I'm looking at you OS X) this
+			# can cause the receiving side to receive a bad file descriptor.
+			# The post negotiation protocol ensures that we block until the
+			# other side has really received the IO.
+			result = read
+			if !result
+				raise EOFError, "End of stream"
+			elsif result != ["got IO"]
+				raise IOError, "IO passing post-negotiation header expected"
+			end
+		end
 	end
 	
 	# Return the file descriptor of the underlying IO object.

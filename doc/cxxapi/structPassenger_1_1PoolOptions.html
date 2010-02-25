@@ -10,6 +10,7 @@
     <ul>
       <li><a href="main.html"><span>Main&nbsp;Page</span></a></li>
       <li><a href="modules.html"><span>Modules</span></a></li>
+      <li><a href="namespaces.html"><span>Namespaces</span></a></li>
       <li class="current"><a href="annotated.html"><span>Classes</span></a></li>
       <li><a href="files.html"><span>Files</span></a></li>
     </ul>
@@ -21,11 +22,11 @@
       <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
     </ul>
   </div>
-  <div class="navpath"><b>Passenger</b>::<a class="el" href="structPassenger_1_1PoolOptions.html">PoolOptions</a>
+  <div class="navpath"><a class="el" href="namespacePassenger.html">Passenger</a>::<a class="el" href="structPassenger_1_1PoolOptions.html">PoolOptions</a>
   </div>
 </div>
 <div class="contents">
-<h1>Passenger::PoolOptions Struct Reference</h1><!-- doxytag: class="Passenger::PoolOptions" -->This struct encapsulates information for <a class="el" href="classPassenger_1_1ApplicationPool.html#0b206eb4eb2869423d75c042a0653c67" title="Open a new session with the application specified by PoolOptions.appRoot.">ApplicationPool::get()</a> and for <a class="el" href="classPassenger_1_1SpawnManager.html#af035d564cc4e6683508939c9d6dbb64" title="Spawn a new instance of an application.">SpawnManager::spawn()</a>, such as which application is to be spawned.  
+<h1>Passenger::PoolOptions Struct Reference</h1><!-- doxytag: class="Passenger::PoolOptions" -->This struct encapsulates information for ApplicationPool::get() and for <a class="el" href="classPassenger_1_1SpawnManager.html#88a94ba4d41dab492cb1dc8a0f998973" title="Spawn a new application process.">SpawnManager::spawn()</a>, such as which application is to be spawned.  
 <a href="#_details">More...</a>
 <p>
 <code>#include &lt;<a class="el" href="PoolOptions_8h-source.html">PoolOptions.h</a>&gt;</code>
@@ -38,48 +39,69 @@
 <tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#b2b7c72144c108657e3ad4ac9f6e26f4">PoolOptions</a> ()</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Creates a new <a class="el" href="structPassenger_1_1PoolOptions.html" title="This struct encapsulates information for ApplicationPool::get() and for SpawnManager::spawn()...">PoolOptions</a> object with the default values filled in.  <a href="#b2b7c72144c108657e3ad4ac9f6e26f4"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="038861a1ee8bda738325c38ce511347d"></a><!-- doxytag: member="Passenger::PoolOptions::PoolOptions" ref="038861a1ee8bda738325c38ce511347d" args="(const string &amp;appRoot, bool lowerPrivilege=true, const string &amp;lowestUser=&quot;nobody&quot;, const string &amp;environment=&quot;production&quot;, const string &amp;spawnMethod=&quot;smart&quot;, const string &amp;appType=&quot;rails&quot;, long frameworkSpawnerTimeout=&#45;1, long appSpawnerTimeout=&#45;1, unsigned long maxRequests=0, unsigned long memoryLimit=0, bool useGlobalQueue=false, unsigned long statThrottleRate=0, const string &amp;restartDir=&quot;&quot;)" -->
-&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#038861a1ee8bda738325c38ce511347d">PoolOptions</a> (const string &amp;<a class="el" href="structPassenger_1_1PoolOptions.html#822039d204b48d9ed49184646734acf3">appRoot</a>, bool <a class="el" href="structPassenger_1_1PoolOptions.html#7feed1c0a150ffc9bd003f5535d675db">lowerPrivilege</a>=true, const string &amp;<a class="el" href="structPassenger_1_1PoolOptions.html#ec92a9f5d0a265a77fbfdb549f39557a">lowestUser</a>=&quot;nobody&quot;, const string &amp;<a class="el" href="structPassenger_1_1PoolOptions.html#4324bb724859905f9991faa9b90aedbc">environment</a>=&quot;production&quot;, const string &amp;<a class="el" href="structPassenger_1_1PoolOptions.html#feb629e3ced79f5a2dbccc1beeeeab9e">spawnMethod</a>=&quot;smart&quot;, const string &amp;<a class="el" href="structPassenger_1_1PoolOptions.html#5e1c129ae0b8be350c7ed238eec8a8c9">appType</a>=&quot;rails&quot;, long <a class="el" href="structPassenger_1_1PoolOptions.html#cbbea86958b42ffa7989680ed1587c70">frameworkSpawnerTimeout</a>=-1, long <a class="el" href="structPassenger_1_1PoolOptions.html#5a2f27a853e33c22da71430216d798cf">appSpawnerTimeout</a>=-1, unsigned long <a class="el" href="structPassenger_1_1PoolOptions.html#70251ed3cb3713cb26a0b166c6b015c0">maxRequests</a>=0, unsigned long <a class="el" href="structPassenger_1_1PoolOptions.html#f61aa527e17a4f2bb5d66260749d17cd">memoryLimit</a>=0, bool <a class="el" href="structPassenger_1_1PoolOptions.html#b610e568a7b5d3bb27460d6e35952b7e">useGlobalQueue</a>=false, unsigned long <a class="el" href="structPassenger_1_1PoolOptions.html#eaf5a998b4a5da2246685c2dfb8a8c6d">statThrottleRate</a>=0, const string &amp;<a class="el" href="structPassenger_1_1PoolOptions.html#b0f889f70a3ed22f2423d110ddaf26f5">restartDir</a>=&quot;&quot;)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="3e80ba601729a1a1eedc33cbc2217949"></a><!-- doxytag: member="Passenger::PoolOptions::PoolOptions" ref="3e80ba601729a1a1eedc33cbc2217949" args="(const string &amp;appRoot, string appGroupName=&quot;&quot;, const string &amp;appType=&quot;rails&quot;, const string &amp;environment=&quot;production&quot;, const string &amp;spawnMethod=&quot;smart&#45;lv2&quot;, const string &amp;user=&quot;&quot;, const string &amp;group=&quot;&quot;, const string &amp;defaultUser=&quot;&quot;, const string &amp;defaultGroup=&quot;&quot;, long frameworkSpawnerTimeout=&#45;1, long appSpawnerTimeout=&#45;1, const string &amp;baseURI=&quot;/&quot;, unsigned long maxRequests=0, unsigned long minProcesses=0, bool useGlobalQueue=false, unsigned long statThrottleRate=0, const string &amp;restartDir=&quot;&quot;, Account::Rights rights=DEFAULT_BACKEND_ACCOUNT_RIGHTS, const AnalyticsLogPtr &amp;log=AnalyticsLogPtr())" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#3e80ba601729a1a1eedc33cbc2217949">PoolOptions</a> (const string &amp;<a class="el" href="structPassenger_1_1PoolOptions.html#822039d204b48d9ed49184646734acf3">appRoot</a>, string <a class="el" href="structPassenger_1_1PoolOptions.html#dce57f30c4f33d8b55726d0eaa15addf">appGroupName</a>=&quot;&quot;, const string &amp;<a class="el" href="structPassenger_1_1PoolOptions.html#5e1c129ae0b8be350c7ed238eec8a8c9">appType</a>=&quot;rails&quot;, const string &amp;<a class="el" href="structPassenger_1_1PoolOptions.html#4324bb724859905f9991faa9b90aedbc">environment</a>=&quot;production&quot;, const string &amp;<a class="el" href="structPassenger_1_1PoolOptions.html#feb629e3ced79f5a2dbccc1beeeeab9e">spawnMethod</a>=&quot;smart-lv2&quot;, const string &amp;<a class="el" href="structPassenger_1_1PoolOptions.html#7bb617271b0a61645b17b9815ebf300c">user</a>=&quot;&quot;, const string &amp;<a class="el" href="structPassenger_1_1PoolOptions.html#6292899199727c513fd641d313c42372">group</a>=&quot;&quot;, const string &amp;<a class="el" href="structPassenger_1_1PoolOptions.html#f9e15d356066ebd5f1454dca7937374f">defaultUser</a>=&quot;&quot;, const string &amp;<a class="el" href="structPassenger_1_1PoolOptions.html#fdbe6d3418132ff3ca17427778e0948c">defaultGroup</a>=&quot;&quot;, long <a class="el" href="structPassenger_1_1PoolOptions.html#cbbea86958b42ffa7989680ed1587c70">frameworkSpawnerTimeout</a>=-1, long <a class="el" href="structPassenger_1_1PoolOptions.html#5a2f27a853e33c22da71430216d798cf">appSpawnerTimeout</a>=-1, const string &amp;<a class="el" href="structPassenger_1_1PoolOptions.html#85c99df1b3d74b47c73049e20f0a7192">baseURI</a>=&quot;/&quot;, unsigned long <a class="el" href="structPassenger_1_1PoolOptions.html#70251ed3cb3713cb26a0b166c6b015c0">maxRequests</a>=0, unsigned long <a class="el" href="structPassenger_1_1PoolOptions.html#9d887031bbee2ad75ed88c8533ce41c1">minProcesses</a>=0, bool <a class="el" href="structPassenger_1_1PoolOptions.html#b610e568a7b5d3bb27460d6e35952b7e">useGlobalQueue</a>=false, unsigned long <a class="el" href="structPassenger_1_1PoolOptions.html#eaf5a998b4a5da2246685c2dfb8a8c6d">statThrottleRate</a>=0, const string &amp;<a class="el" href="structPassenger_1_1PoolOptions.html#b0f889f70a3ed22f2423d110ddaf26f5">restartDir</a>=&quot;&quot;, Account::Rights <a class="el" href="structPassenger_1_1PoolOptions.html#45665fffc8a20ea60a3fcafaff8627ab">rights</a>=DEFAULT_BACKEND_ACCOUNT_RIGHTS, const AnalyticsLogPtr &amp;<a class="el" href="structPassenger_1_1PoolOptions.html#ce54185a9981f103a036a7ac3e768612">log</a>=AnalyticsLogPtr())</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Creates a new <a class="el" href="structPassenger_1_1PoolOptions.html" title="This struct encapsulates information for ApplicationPool::get() and for SpawnManager::spawn()...">PoolOptions</a> object with the given values. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#eaa4faa9716475b2592c7506d2834ba6">PoolOptions</a> (const vector&lt; string &gt; &amp;vec, unsigned int startIndex=0)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#0caa024c33da2f68b5c79b41122397b3">PoolOptions</a> (const vector&lt; string &gt; &amp;vec, unsigned int startIndex=0, AnalyticsLoggerPtr analyticsLogger=AnalyticsLoggerPtr())</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Creates a new <a class="el" href="structPassenger_1_1PoolOptions.html" title="This struct encapsulates information for ApplicationPool::get() and for SpawnManager::spawn()...">PoolOptions</a> object from the given string vector.  <a href="#eaa4faa9716475b2592c7506d2834ba6"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#b5e62e9abf7b89b8d3e5cdfb14e9d2af">toVector</a> (vector&lt; string &gt; &amp;vec) const </td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Creates a new <a class="el" href="structPassenger_1_1PoolOptions.html" title="This struct encapsulates information for ApplicationPool::get() and for SpawnManager::spawn()...">PoolOptions</a> object from the given string vector.  <a href="#0caa024c33da2f68b5c79b41122397b3"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#437e077b0ab037f4e86680e9164a694e">toVector</a> (vector&lt; string &gt; &amp;vec, bool storeEnvVars=true) const </td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Append the information in this <a class="el" href="structPassenger_1_1PoolOptions.html" title="This struct encapsulates information for ApplicationPool::get() and for SpawnManager::spawn()...">PoolOptions</a> object to the given string vector.  <a href="#b5e62e9abf7b89b8d3e5cdfb14e9d2af"></a><br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Append the information in this <a class="el" href="structPassenger_1_1PoolOptions.html" title="This struct encapsulates information for ApplicationPool::get() and for SpawnManager::spawn()...">PoolOptions</a> object to the given string vector.  <a href="#437e077b0ab037f4e86680e9164a694e"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#43eb2294bff16bbcbafec569babca883">getAppGroupName</a> () const </td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Returns the app group name.  <a href="#43eb2294bff16bbcbafec569babca883"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#cb2df1a0b558e7fa457e46373c17b679">serializeEnvironmentVariables</a> () const </td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Serializes the items in environmentVariables into a string, which can be used to create a SimpleStringListCreator object.  <a href="#cb2df1a0b558e7fa457e46373c17b679"></a><br></td></tr>
 <tr><td colspan="2"><br><h2>Public Attributes</h2></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#822039d204b48d9ed49184646734acf3">appRoot</a></td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The root directory of the application to spawn.  <a href="#822039d204b48d9ed49184646734acf3"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#7feed1c0a150ffc9bd003f5535d675db">lowerPrivilege</a></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#dce57f30c4f33d8b55726d0eaa15addf">appGroupName</a></td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Whether to lower the application's privileges.  <a href="#7feed1c0a150ffc9bd003f5535d675db"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="ec92a9f5d0a265a77fbfdb549f39557a"></a><!-- doxytag: member="Passenger::PoolOptions::lowestUser" ref="ec92a9f5d0a265a77fbfdb549f39557a" args="" -->
-string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#ec92a9f5d0a265a77fbfdb549f39557a">lowestUser</a></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">A name used by ApplicationPool to uniquely identify an application.  <a href="#dce57f30c4f33d8b55726d0eaa15addf"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#5e1c129ae0b8be350c7ed238eec8a8c9">appType</a></td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The user to fallback to if lowering privilege fails. <br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The application type.  <a href="#5e1c129ae0b8be350c7ed238eec8a8c9"></a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#4324bb724859905f9991faa9b90aedbc">environment</a></td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The RAILS_ENV/RACK_ENV environment that should be used.  <a href="#4324bb724859905f9991faa9b90aedbc"></a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#feb629e3ced79f5a2dbccc1beeeeab9e">spawnMethod</a></td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The spawn method to use.  <a href="#feb629e3ced79f5a2dbccc1beeeeab9e"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#5e1c129ae0b8be350c7ed238eec8a8c9">appType</a></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Method with which application processes should be spawned.  <a href="#feb629e3ced79f5a2dbccc1beeeeab9e"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#7bb617271b0a61645b17b9815ebf300c">user</a></td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The application type.  <a href="#5e1c129ae0b8be350c7ed238eec8a8c9"></a><br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">See overview.  <a href="#7bb617271b0a61645b17b9815ebf300c"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#6292899199727c513fd641d313c42372">group</a></td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">See class overview.  <a href="#6292899199727c513fd641d313c42372"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#f9e15d356066ebd5f1454dca7937374f">defaultUser</a></td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">See class overview.  <a href="#f9e15d356066ebd5f1454dca7937374f"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#fdbe6d3418132ff3ca17427778e0948c">defaultGroup</a></td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">See class overview.  <a href="#fdbe6d3418132ff3ca17427778e0948c"></a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">long&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#cbbea86958b42ffa7989680ed1587c70">frameworkSpawnerTimeout</a></td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The idle timeout, in seconds, of Rails framework spawners.  <a href="#cbbea86958b42ffa7989680ed1587c70"></a><br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The idle timeout, in seconds, of framework spawners.  <a href="#cbbea86958b42ffa7989680ed1587c70"></a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">long&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#5a2f27a853e33c22da71430216d798cf">appSpawnerTimeout</a></td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The idle timeout, in seconds, of Rails application spawners.  <a href="#5a2f27a853e33c22da71430216d798cf"></a><br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The idle timeout, in seconds, of application spawners.  <a href="#5a2f27a853e33c22da71430216d798cf"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">StringListCreatorPtr&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#aa4f5d4ae1534ada8613fbe497a38924">environmentVariables</a></td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Environment variables which should be passed to the spawned application process.  <a href="#aa4f5d4ae1534ada8613fbe497a38924"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#85c99df1b3d74b47c73049e20f0a7192">baseURI</a></td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The base URI on which the application runs.  <a href="#85c99df1b3d74b47c73049e20f0a7192"></a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">unsigned long&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#70251ed3cb3713cb26a0b166c6b015c0">maxRequests</a></td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The maximum number of requests that the spawned application may process before exiting.  <a href="#70251ed3cb3713cb26a0b166c6b015c0"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">unsigned long&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#f61aa527e17a4f2bb5d66260749d17cd">memoryLimit</a></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="9d887031bbee2ad75ed88c8533ce41c1"></a><!-- doxytag: member="Passenger::PoolOptions::minProcesses" ref="9d887031bbee2ad75ed88c8533ce41c1" args="" -->
+unsigned long&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#9d887031bbee2ad75ed88c8533ce41c1">minProcesses</a></td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The maximum amount of memory (in MB) the spawned application may use.  <a href="#f61aa527e17a4f2bb5d66260749d17cd"></a><br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The minimum number of processes for the current group that the application pool's cleaner thread should keep around. <br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#b610e568a7b5d3bb27460d6e35952b7e">useGlobalQueue</a></td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Whether to use a global queue instead of a per-backend process queue.  <a href="#b610e568a7b5d3bb27460d6e35952b7e"></a><br></td></tr>
@@ -89,15 +111,29 @@ string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="st
 <tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#b0f889f70a3ed22f2423d110ddaf26f5">restartDir</a></td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The directory which contains restart.txt and always_restart.txt.  <a href="#b0f889f70a3ed22f2423d110ddaf26f5"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">Account::Rights&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#45665fffc8a20ea60a3fcafaff8627ab">rights</a></td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Any rights that the spawned application process may have.  <a href="#45665fffc8a20ea60a3fcafaff8627ab"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">AnalyticsLogPtr&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#ce54185a9981f103a036a7ac3e768612">log</a></td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">An analytics log object to log things to.  <a href="#ce54185a9981f103a036a7ac3e768612"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#1709d96d9d5d59ce79c90434a45cb076">initiateSession</a></td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Whether the session returned by ApplicationPool::Interface::get() should be automatically initiated.  <a href="#1709d96d9d5d59ce79c90434a45cb076"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1PoolOptions.html#d3d545cee2806198797fc6b4197ff87b">printExceptions</a></td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Whether application processes should print exceptions that occurred during application initialization.  <a href="#d3d545cee2806198797fc6b4197ff87b"></a><br></td></tr>
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
-This struct encapsulates information for <a class="el" href="classPassenger_1_1ApplicationPool.html#0b206eb4eb2869423d75c042a0653c67" title="Open a new session with the application specified by PoolOptions.appRoot.">ApplicationPool::get()</a> and for <a class="el" href="classPassenger_1_1SpawnManager.html#af035d564cc4e6683508939c9d6dbb64" title="Spawn a new instance of an application.">SpawnManager::spawn()</a>, such as which application is to be spawned. 
+This struct encapsulates information for ApplicationPool::get() and for <a class="el" href="classPassenger_1_1SpawnManager.html#88a94ba4d41dab492cb1dc8a0f998973" title="Spawn a new application process.">SpawnManager::spawn()</a>, such as which application is to be spawned. 
 <p>
-<h2>Notes on privilege lowering support</h2>
+<h2>Privilege lowering support</h2>
 <p>
-If <code>lowerPrivilege</code> is true, then it will be attempt to switch the spawned application instance to the user who owns the application's <code>config/environment.rb</code>, and to the default group of that user.<p>
-If that user doesn't exist on the system, or if that user is root, then it will be attempted to switch to the username given by <code>lowestUser</code> (and to the default group of that user). If <code>lowestUser</code> doesn't exist either, or if switching user failed (because the spawn server process does not have the privilege to do so), then the application will be spawned anyway, without reporting an error.<p>
-It goes without saying that lowering privilege is only possible if the spawn server is running as root (and thus, by induction, that Phusion Passenger and Apache's control process are also running as root). Note that if Apache is listening on port 80, then its control process must be running as root. See "doc/Security of user switching.txt" for a detailed explanation. <hr><h2>Constructor &amp; Destructor Documentation</h2>
+If <em>user</em> is given and isn't the empty string, then the application process will run as the given username. Otherwise, the owner of the application's startup file (e.g. config/environment.rb or config.ru) will be used.<p>
+If <em>group</em> is given and isn't the empty string, then the application process will run as the given group name. If it's set to the special value "!STARTUP_FILE!", then the startup file's group will be used. Otherwise, the primary group of the user that the application process will run as, will be used as group.<p>
+If the user or group that the application process attempts to switch to doesn't exist, then <em>default_user</em> and <em>default_group</em>, respectively, will be used.<p>
+Phusion <a class="el" href="namespacePassenger.html" title="A random.">Passenger</a> will attempt to avoid running the application process as root: if <em>user</em> or <em>group</em> is set to the root user or the root group, or if the startup file is owned by root, then <em>default_user</em> and <em>default_group</em> will be used instead.<p>
+All this only happen if Phusion <a class="el" href="namespacePassenger.html" title="A random.">Passenger</a> has root privileges. If not, then these options have no effect. <hr><h2>Constructor &amp; Destructor Documentation</h2>
 <a class="anchor" name="b2b7c72144c108657e3ad4ac9f6e26f4"></a><!-- doxytag: member="Passenger::PoolOptions::PoolOptions" ref="b2b7c72144c108657e3ad4ac9f6e26f4" args="()" -->
 <div class="memitem">
 <div class="memproto">
@@ -119,7 +155,7 @@ Creates a new <a class="el" href="structPassenger_1_1PoolOptions.html" title="Th
 One must still set appRoot manually, after having used this constructor. 
 </div>
 </div><p>
-<a class="anchor" name="eaa4faa9716475b2592c7506d2834ba6"></a><!-- doxytag: member="Passenger::PoolOptions::PoolOptions" ref="eaa4faa9716475b2592c7506d2834ba6" args="(const vector&lt; string &gt; &amp;vec, unsigned int startIndex=0)" -->
+<a class="anchor" name="0caa024c33da2f68b5c79b41122397b3"></a><!-- doxytag: member="Passenger::PoolOptions::PoolOptions" ref="0caa024c33da2f68b5c79b41122397b3" args="(const vector&lt; string &gt; &amp;vec, unsigned int startIndex=0, AnalyticsLoggerPtr analyticsLogger=AnalyticsLoggerPtr())" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -133,7 +169,13 @@ One must still set appRoot manually, after having used this constructor.
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">unsigned int&nbsp;</td>
-          <td class="paramname"> <em>startIndex</em> = <code>0</code></td><td>&nbsp;</td>
+          <td class="paramname"> <em>startIndex</em> = <code>0</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">AnalyticsLoggerPtr&nbsp;</td>
+          <td class="paramname"> <em>analyticsLogger</em> = <code>AnalyticsLoggerPtr()</code></td><td>&nbsp;</td>
         </tr>
         <tr>
           <td></td>
@@ -147,7 +189,7 @@ One must still set appRoot manually, after having used this constructor.
 <p>
 Creates a new <a class="el" href="structPassenger_1_1PoolOptions.html" title="This struct encapsulates information for ApplicationPool::get() and for SpawnManager::spawn()...">PoolOptions</a> object from the given string vector. 
 <p>
-This vector contains information that's written to by <a class="el" href="structPassenger_1_1PoolOptions.html#b5e62e9abf7b89b8d3e5cdfb14e9d2af" title="Append the information in this PoolOptions object to the given string vector.">toVector()</a>.<p>
+This vector contains information that's written to by <a class="el" href="structPassenger_1_1PoolOptions.html#437e077b0ab037f4e86680e9164a694e" title="Append the information in this PoolOptions object to the given string vector.">toVector()</a>.<p>
 For example: <div class="fragment"><pre class="fragment">   <a class="code" href="structPassenger_1_1PoolOptions.html#b2b7c72144c108657e3ad4ac9f6e26f4" title="Creates a new PoolOptions object with the default values filled in.">PoolOptions</a> options(...);
    vector&lt;string&gt; vec;
 
@@ -161,21 +203,21 @@ For example: <div class="fragment"><pre class="fragment">   <a class="code" href
   <table border="0" cellspacing="2" cellpadding="0">
     <tr><td valign="top"></td><td valign="top"><em>vec</em>&nbsp;</td><td>The vector containing spawn options information. </td></tr>
     <tr><td valign="top"></td><td valign="top"><em>startIndex</em>&nbsp;</td><td>The index in vec at which the information starts. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>analyticsLogger</em>&nbsp;</td><td>If given, and the vector contains logging information, then the 'log' member will be constructed using this logger. </td></tr>
   </table>
 </dl>
 
 </div>
 </div><p>
 <hr><h2>Member Function Documentation</h2>
-<a class="anchor" name="b5e62e9abf7b89b8d3e5cdfb14e9d2af"></a><!-- doxytag: member="Passenger::PoolOptions::toVector" ref="b5e62e9abf7b89b8d3e5cdfb14e9d2af" args="(vector&lt; string &gt; &amp;vec) const " -->
+<a class="anchor" name="43eb2294bff16bbcbafec569babca883"></a><!-- doxytag: member="Passenger::PoolOptions::getAppGroupName" ref="43eb2294bff16bbcbafec569babca883" args="() const " -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void Passenger::PoolOptions::toVector           </td>
+          <td class="memname">string Passenger::PoolOptions::getAppGroupName           </td>
           <td>(</td>
-          <td class="paramtype">vector&lt; string &gt; &amp;&nbsp;</td>
-          <td class="paramname"> <em>vec</em>          </td>
+          <td class="paramname">          </td>
           <td>&nbsp;)&nbsp;</td>
           <td> const<code> [inline]</code></td>
         </tr>
@@ -184,12 +226,99 @@ For example: <div class="fragment"><pre class="fragment">   <a class="code" href
 <div class="memdoc">
 
 <p>
+Returns the app group name. 
+<p>
+If there is no explicitly set app group name then the app root is considered to be the app group name. 
+</div>
+</div><p>
+<a class="anchor" name="cb2df1a0b558e7fa457e46373c17b679"></a><!-- doxytag: member="Passenger::PoolOptions::serializeEnvironmentVariables" ref="cb2df1a0b558e7fa457e46373c17b679" args="() const " -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">string Passenger::PoolOptions::serializeEnvironmentVariables           </td>
+          <td>(</td>
+          <td class="paramname">          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td> const<code> [inline]</code></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+Serializes the items in environmentVariables into a string, which can be used to create a SimpleStringListCreator object. 
+<p>
+<dl compact><dt><b>Exceptions:</b></dt><dd>
+  <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em>Anything</em>&nbsp;</td><td>thrown by environmentVariables-&gt;getItems(). </td></tr>
+  </table>
+</dl>
+
+</div>
+</div><p>
+<a class="anchor" name="437e077b0ab037f4e86680e9164a694e"></a><!-- doxytag: member="Passenger::PoolOptions::toVector" ref="437e077b0ab037f4e86680e9164a694e" args="(vector&lt; string &gt; &amp;vec, bool storeEnvVars=true) const " -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Passenger::PoolOptions::toVector           </td>
+          <td>(</td>
+          <td class="paramtype">vector&lt; string &gt; &amp;&nbsp;</td>
+          <td class="paramname"> <em>vec</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&nbsp;</td>
+          <td class="paramname"> <em>storeEnvVars</em> = <code>true</code></td><td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td><td> const<code> [inline]</code></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
 Append the information in this <a class="el" href="structPassenger_1_1PoolOptions.html" title="This struct encapsulates information for ApplicationPool::get() and for SpawnManager::spawn()...">PoolOptions</a> object to the given string vector. 
 <p>
-The resulting array could, for example, be used as a message to be sent to the spawn server. 
+The resulting array could, for example, be used as a message to be sent to the spawn server.<p>
+<dl compact><dt><b>Parameters:</b></dt><dd>
+  <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em>vec</em>&nbsp;</td><td>The vector to store the information in. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>storeEnvVars</em>&nbsp;</td><td>Whether to store environment variable information into vec as well. </td></tr>
+  </table>
+</dl>
+<dl compact><dt><b>Exceptions:</b></dt><dd>
+  <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em>Anything</em>&nbsp;</td><td>thrown by environmentVariables-&gt;getItems(). </td></tr>
+  </table>
+</dl>
+
 </div>
 </div><p>
 <hr><h2>Member Data Documentation</h2>
+<a class="anchor" name="dce57f30c4f33d8b55726d0eaa15addf"></a><!-- doxytag: member="Passenger::PoolOptions::appGroupName" ref="dce57f30c4f33d8b55726d0eaa15addf" args="" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">string <a class="el" href="structPassenger_1_1PoolOptions.html#dce57f30c4f33d8b55726d0eaa15addf">Passenger::PoolOptions::appGroupName</a>          </td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+A name used by ApplicationPool to uniquely identify an application. 
+<p>
+If one tries to get() from the application pool with name "A", then get() again with name "B", then the latter will spawn a new application process, even if both get() requests have the same app root.<p>
+If left empty (the default), then the app root is used as the app group name. 
+</div>
+</div><p>
 <a class="anchor" name="822039d204b48d9ed49184646734acf3"></a><!-- doxytag: member="Passenger::PoolOptions::appRoot" ref="822039d204b48d9ed49184646734acf3" args="" -->
 <div class="memitem">
 <div class="memproto">
@@ -219,10 +348,10 @@ In case of a Ruby on Rails application, this is the folder that contains 'app/',
 <div class="memdoc">
 
 <p>
-The idle timeout, in seconds, of Rails application spawners. 
+The idle timeout, in seconds, of application spawners. 
 <p>
-A timeout of 0 means that the application spawner should never idle timeout. A timeout of -1 means that the default timeout value should be used.<p>
-For more details about Rails application spawners, please read the documentation on the Railz::ApplicationSpawner Ruby class. 
+See the "Spawning methods explained" section of the users guide for information about application spawners.<p>
+A timeout of 0 means that the application spawner should never idle timeout. A timeout of -1 means that the default timeout value should be used. 
 </div>
 </div><p>
 <a class="anchor" name="5e1c129ae0b8be350c7ed238eec8a8c9"></a><!-- doxytag: member="Passenger::PoolOptions::appType" ref="5e1c129ae0b8be350c7ed238eec8a8c9" args="" -->
@@ -239,7 +368,60 @@ For more details about Rails application spawners, please read the documentation
 <p>
 The application type. 
 <p>
-Either "rails", "rack" or "wsgi". 
+Either "rails" (default), "rack" or "wsgi". 
+</div>
+</div><p>
+<a class="anchor" name="85c99df1b3d74b47c73049e20f0a7192"></a><!-- doxytag: member="Passenger::PoolOptions::baseURI" ref="85c99df1b3d74b47c73049e20f0a7192" args="" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">string <a class="el" href="structPassenger_1_1PoolOptions.html#85c99df1b3d74b47c73049e20f0a7192">Passenger::PoolOptions::baseURI</a>          </td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+The base URI on which the application runs. 
+<p>
+If the application is running on the root URI, then this value must be "/".<p>
+<dl class="invariant" compact><dt><b>Invariant:</b></dt><dd>baseURI != "" </dd></dl>
+
+</div>
+</div><p>
+<a class="anchor" name="fdbe6d3418132ff3ca17427778e0948c"></a><!-- doxytag: member="Passenger::PoolOptions::defaultGroup" ref="fdbe6d3418132ff3ca17427778e0948c" args="" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">string <a class="el" href="structPassenger_1_1PoolOptions.html#fdbe6d3418132ff3ca17427778e0948c">Passenger::PoolOptions::defaultGroup</a>          </td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+See class overview. 
+<p>
+Defaults to the defaultUser's primary group. 
+</div>
+</div><p>
+<a class="anchor" name="f9e15d356066ebd5f1454dca7937374f"></a><!-- doxytag: member="Passenger::PoolOptions::defaultUser" ref="f9e15d356066ebd5f1454dca7937374f" args="" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">string <a class="el" href="structPassenger_1_1PoolOptions.html#f9e15d356066ebd5f1454dca7937374f">Passenger::PoolOptions::defaultUser</a>          </td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+See class overview. 
+<p>
+Defaults to "nobody". 
 </div>
 </div><p>
 <a class="anchor" name="4324bb724859905f9991faa9b90aedbc"></a><!-- doxytag: member="Passenger::PoolOptions::environment" ref="4324bb724859905f9991faa9b90aedbc" args="" -->
@@ -256,7 +438,27 @@ Either "rails", "rack" or "wsgi".
 <p>
 The RAILS_ENV/RACK_ENV environment that should be used. 
 <p>
-May not be an empty string. 
+May not be an empty string. The default is "production". 
+</div>
+</div><p>
+<a class="anchor" name="aa4f5d4ae1534ada8613fbe497a38924"></a><!-- doxytag: member="Passenger::PoolOptions::environmentVariables" ref="aa4f5d4ae1534ada8613fbe497a38924" args="" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">StringListCreatorPtr <a class="el" href="structPassenger_1_1PoolOptions.html#aa4f5d4ae1534ada8613fbe497a38924">Passenger::PoolOptions::environmentVariables</a>          </td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+Environment variables which should be passed to the spawned application process. 
+<p>
+If a new application process is started, then the getItems() method on this object will be called, which is to return environment variables that should be passed to the newly spawned backend process. Odd indices in the resulting array contain keys, even indices contain the value for the key in the previous index.<p>
+May be set to NULL.<p>
+<dl class="invariant" compact><dt><b>Invariant:</b></dt><dd>environmentVariables.size() is an even number. </dd></dl>
+
 </div>
 </div><p>
 <a class="anchor" name="cbbea86958b42ffa7989680ed1587c70"></a><!-- doxytag: member="Passenger::PoolOptions::frameworkSpawnerTimeout" ref="cbbea86958b42ffa7989680ed1587c70" args="" -->
@@ -271,27 +473,61 @@ May not be an empty string.
 <div class="memdoc">
 
 <p>
-The idle timeout, in seconds, of Rails framework spawners. 
+The idle timeout, in seconds, of framework spawners. 
 <p>
-A timeout of 0 means that the framework spawner should never idle timeout. A timeout of -1 means that the default timeout value should be used.<p>
-For more details about Rails framework spawners, please read the documentation on the Railz::FrameworkSpawner Ruby class. 
+See the "Spawning methods explained" section of the users guide for information about framework spawners.<p>
+A timeout of 0 means that the framework spawner should never idle timeout. A timeout of -1 means that the default timeout value should be used. 
 </div>
 </div><p>
-<a class="anchor" name="7feed1c0a150ffc9bd003f5535d675db"></a><!-- doxytag: member="Passenger::PoolOptions::lowerPrivilege" ref="7feed1c0a150ffc9bd003f5535d675db" args="" -->
+<a class="anchor" name="6292899199727c513fd641d313c42372"></a><!-- doxytag: member="Passenger::PoolOptions::group" ref="6292899199727c513fd641d313c42372" args="" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">bool <a class="el" href="structPassenger_1_1PoolOptions.html#7feed1c0a150ffc9bd003f5535d675db">Passenger::PoolOptions::lowerPrivilege</a>          </td>
+          <td class="memname">string <a class="el" href="structPassenger_1_1PoolOptions.html#6292899199727c513fd641d313c42372">Passenger::PoolOptions::group</a>          </td>
         </tr>
       </table>
 </div>
 <div class="memdoc">
 
 <p>
-Whether to lower the application's privileges. 
+See class overview. 
 <p>
 
+</div>
+</div><p>
+<a class="anchor" name="1709d96d9d5d59ce79c90434a45cb076"></a><!-- doxytag: member="Passenger::PoolOptions::initiateSession" ref="1709d96d9d5d59ce79c90434a45cb076" args="" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool <a class="el" href="structPassenger_1_1PoolOptions.html#1709d96d9d5d59ce79c90434a45cb076">Passenger::PoolOptions::initiateSession</a>          </td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+Whether the session returned by ApplicationPool::Interface::get() should be automatically initiated. 
+<p>
+Defaults to true. 
+</div>
+</div><p>
+<a class="anchor" name="ce54185a9981f103a036a7ac3e768612"></a><!-- doxytag: member="Passenger::PoolOptions::log" ref="ce54185a9981f103a036a7ac3e768612" args="" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">AnalyticsLogPtr <a class="el" href="structPassenger_1_1PoolOptions.html#ce54185a9981f103a036a7ac3e768612">Passenger::PoolOptions::log</a>          </td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+An analytics log object to log things to. 
+<p>
+May be the null pointer, in which case analytics logging is disabled. 
 </div>
 </div><p>
 <a class="anchor" name="70251ed3cb3713cb26a0b166c6b015c0"></a><!-- doxytag: member="Passenger::PoolOptions::maxRequests" ref="70251ed3cb3713cb26a0b166c6b015c0" args="" -->
@@ -311,21 +547,21 @@ The maximum number of requests that the spawned application may process before e
 A value of 0 means unlimited. 
 </div>
 </div><p>
-<a class="anchor" name="f61aa527e17a4f2bb5d66260749d17cd"></a><!-- doxytag: member="Passenger::PoolOptions::memoryLimit" ref="f61aa527e17a4f2bb5d66260749d17cd" args="" -->
+<a class="anchor" name="d3d545cee2806198797fc6b4197ff87b"></a><!-- doxytag: member="Passenger::PoolOptions::printExceptions" ref="d3d545cee2806198797fc6b4197ff87b" args="" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">unsigned long <a class="el" href="structPassenger_1_1PoolOptions.html#f61aa527e17a4f2bb5d66260749d17cd">Passenger::PoolOptions::memoryLimit</a>          </td>
+          <td class="memname">bool <a class="el" href="structPassenger_1_1PoolOptions.html#d3d545cee2806198797fc6b4197ff87b">Passenger::PoolOptions::printExceptions</a>          </td>
         </tr>
       </table>
 </div>
 <div class="memdoc">
 
 <p>
-The maximum amount of memory (in MB) the spawned application may use. 
+Whether application processes should print exceptions that occurred during application initialization. 
 <p>
-A value of 0 means unlimited. 
+Defaults to true. 
 </div>
 </div><p>
 <a class="anchor" name="b0f889f70a3ed22f2423d110ddaf26f5"></a><!-- doxytag: member="Passenger::PoolOptions::restartDir" ref="b0f889f70a3ed22f2423d110ddaf26f5" args="" -->
@@ -345,6 +581,23 @@ The directory which contains restart.txt and always_restart.txt.
 An empty string means that the default directory should be used. 
 </div>
 </div><p>
+<a class="anchor" name="45665fffc8a20ea60a3fcafaff8627ab"></a><!-- doxytag: member="Passenger::PoolOptions::rights" ref="45665fffc8a20ea60a3fcafaff8627ab" args="" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">Account::Rights <a class="el" href="structPassenger_1_1PoolOptions.html#45665fffc8a20ea60a3fcafaff8627ab">Passenger::PoolOptions::rights</a>          </td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+Any rights that the spawned application process may have. 
+<p>
+The <a class="el" href="classPassenger_1_1SpawnManager.html" title="An AbstractSpawnManager implementation.">SpawnManager</a> will create a new account for each spawned app, and that account will be assigned these rights. 
+</div>
+</div><p>
 <a class="anchor" name="feb629e3ced79f5a2dbccc1beeeeab9e"></a><!-- doxytag: member="Passenger::PoolOptions::spawnMethod" ref="feb629e3ced79f5a2dbccc1beeeeab9e" args="" -->
 <div class="memitem">
 <div class="memproto">
@@ -357,9 +610,9 @@ An empty string means that the default directory should be used.
 <div class="memdoc">
 
 <p>
-The spawn method to use. 
+Method with which application processes should be spawned. 
 <p>
-Either "smart" or "conservative". See the Ruby class <code><a class="el" href="classPassenger_1_1SpawnManager.html" title="Spawning of Ruby on Rails/Rack application instances.">SpawnManager</a></code> for details. 
+Different methods have different performance and compatibility properties. Available methods are "smart-lv2" (default), "smart" and "conservative". The different spawning methods are explained in the "Spawning methods explained" section of the users guide. 
 </div>
 </div><p>
 <a class="anchor" name="eaf5a998b4a5da2246685c2dfb8a8c6d"></a><!-- doxytag: member="Passenger::PoolOptions::statThrottleRate" ref="eaf5a998b4a5da2246685c2dfb8a8c6d" args="" -->
@@ -376,7 +629,7 @@ Either "smart" or "conservative". See the Ruby class <code><a class="el" href="c
 <p>
 A throttling rate for file stats. 
 <p>
-When set to a non-zero value N, restart.txt and other files which are usually stat()ted on every <a class="el" href="classPassenger_1_1ApplicationPool.html#0b206eb4eb2869423d75c042a0653c67" title="Open a new session with the application specified by PoolOptions.appRoot.">ApplicationPool::get()</a> call will be stat()ed at most every N seconds. 
+When set to a non-zero value N, restart.txt and other files which are usually stat()ted on every ApplicationPool::get() call will be stat()ed at most every N seconds. 
 </div>
 </div><p>
 <a class="anchor" name="b610e568a7b5d3bb27460d6e35952b7e"></a><!-- doxytag: member="Passenger::PoolOptions::useGlobalQueue" ref="b610e568a7b5d3bb27460d6e35952b7e" args="" -->
@@ -393,14 +646,31 @@ When set to a non-zero value N, restart.txt and other files which are usually st
 <p>
 Whether to use a global queue instead of a per-backend process queue. 
 <p>
-This option is only used by <a class="el" href="classPassenger_1_1ApplicationPool.html#0b206eb4eb2869423d75c042a0653c67" title="Open a new session with the application specified by PoolOptions.appRoot.">ApplicationPool::get()</a>.<p>
+This option is only used by ApplicationPool::get().<p>
 If enabled, when all backend processes are active, get() will wait until there's at least one backend process that's idle, instead of queuing the request into a random process's private queue. This is especially useful if a website has one or more long-running requests. 
+</div>
+</div><p>
+<a class="anchor" name="7bb617271b0a61645b17b9815ebf300c"></a><!-- doxytag: member="Passenger::PoolOptions::user" ref="7bb617271b0a61645b17b9815ebf300c" args="" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">string <a class="el" href="structPassenger_1_1PoolOptions.html#7bb617271b0a61645b17b9815ebf300c">Passenger::PoolOptions::user</a>          </td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+See overview. 
+<p>
+
 </div>
 </div><p>
 <hr>The documentation for this struct was generated from the following file:<ul>
 <li><a class="el" href="PoolOptions_8h-source.html">PoolOptions.h</a></ul>
 </div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Wed Apr 8 22:35:12 2009 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Sun Feb 21 12:22:48 2010 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.8 </small></address>
 </body>

@@ -10,6 +10,7 @@
     <ul>
       <li><a href="main.html"><span>Main&nbsp;Page</span></a></li>
       <li><a href="modules.html"><span>Modules</span></a></li>
+      <li><a href="namespaces.html"><span>Namespaces</span></a></li>
       <li class="current"><a href="annotated.html"><span>Classes</span></a></li>
       <li><a href="files.html"><span>Files</span></a></li>
     </ul>
@@ -21,7 +22,7 @@
       <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
     </ul>
   </div>
-  <div class="navpath"><b>Passenger</b>::<a class="el" href="classPassenger_1_1BufferedUpload.html">BufferedUpload</a>
+  <div class="navpath"><a class="el" href="namespacePassenger.html">Passenger</a>::<a class="el" href="classPassenger_1_1BufferedUpload.html">BufferedUpload</a>
   </div>
 </div>
 <div class="contents">
@@ -38,13 +39,9 @@
 <a href="classPassenger_1_1BufferedUpload-members.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
 <tr><td colspan="2"><br><h2>Public Member Functions</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1BufferedUpload.html#b85f5986340242fd2389b81ce4304e6b">BufferedUpload</a> (const char *identifier=&quot;temp&quot;)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1BufferedUpload.html#51489619731ea95c2ece27faab9e24fc">BufferedUpload</a> (const string &amp;dir, const char *identifier=&quot;temp&quot;)</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Create an empty upload bufer file, and open it for reading and writing.  <a href="#b85f5986340242fd2389b81ce4304e6b"></a><br></td></tr>
-<tr><td colspan="2"><br><h2>Static Public Member Functions</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">static string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1BufferedUpload.html#fab496fee959db6320d909069ca6c2b9">getDir</a> ()</td></tr>
-
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Returns the directory in which upload buffer files are stored.  <a href="#fab496fee959db6320d909069ca6c2b9"></a><br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Create an empty upload bufer file, and open it for reading and writing.  <a href="#51489619731ea95c2ece27faab9e24fc"></a><br></td></tr>
 <tr><td colspan="2"><br><h2>Public Attributes</h2></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">FILE *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1BufferedUpload.html#0a340f2d972ae791f56f893901109dac">handle</a></td></tr>
 
@@ -52,17 +49,26 @@
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
 Represents a buffered upload file. <hr><h2>Constructor &amp; Destructor Documentation</h2>
-<a class="anchor" name="b85f5986340242fd2389b81ce4304e6b"></a><!-- doxytag: member="Passenger::BufferedUpload::BufferedUpload" ref="b85f5986340242fd2389b81ce4304e6b" args="(const char *identifier=&quot;temp&quot;)" -->
+<a class="anchor" name="51489619731ea95c2ece27faab9e24fc"></a><!-- doxytag: member="Passenger::BufferedUpload::BufferedUpload" ref="51489619731ea95c2ece27faab9e24fc" args="(const string &amp;dir, const char *identifier=&quot;temp&quot;)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
           <td class="memname">Passenger::BufferedUpload::BufferedUpload           </td>
           <td>(</td>
+          <td class="paramtype">const string &amp;&nbsp;</td>
+          <td class="paramname"> <em>dir</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype">const char *&nbsp;</td>
-          <td class="paramname"> <em>identifier</em> = <code>&quot;temp&quot;</code>          </td>
-          <td>&nbsp;)&nbsp;</td>
-          <td><code> [inline]</code></td>
+          <td class="paramname"> <em>identifier</em> = <code>&quot;temp&quot;</code></td><td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td><td><code> [inline]</code></td>
         </tr>
       </table>
 </div>
@@ -77,28 +83,6 @@ Create an empty upload bufer file, and open it for reading and writing.
   </table>
 </dl>
 
-</div>
-</div><p>
-<hr><h2>Member Function Documentation</h2>
-<a class="anchor" name="fab496fee959db6320d909069ca6c2b9"></a><!-- doxytag: member="Passenger::BufferedUpload::getDir" ref="fab496fee959db6320d909069ca6c2b9" args="()" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">static string Passenger::BufferedUpload::getDir           </td>
-          <td>(</td>
-          <td class="paramname">          </td>
-          <td>&nbsp;)&nbsp;</td>
-          <td><code> [inline, static]</code></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>
-Returns the directory in which upload buffer files are stored. 
-<p>
-This is a subdirectory of the directory returned by <a class="el" href="group__Support.html#g69deb6b299b45039dc24b60ad9175541" title="Return the path name for the directory in which Phusion Passenger-specific temporary...">getPassengerTempDir()</a>. 
 </div>
 </div><p>
 <hr><h2>Member Data Documentation</h2>
@@ -122,7 +106,7 @@ The file handle.
 <hr>The documentation for this class was generated from the following file:<ul>
 <li><a class="el" href="Utils_8h-source.html">Utils.h</a></ul>
 </div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Wed Apr 8 22:35:12 2009 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Sun Feb 21 12:22:48 2010 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.8 </small></address>
 </body>

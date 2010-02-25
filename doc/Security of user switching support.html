@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.4.2" />
+<meta name="generator" content="AsciiDoc 8.5.2" />
 <title>Security of user switching support in Passenger</title>
 <style type="text/css">
 /* Debug borders */
@@ -91,7 +91,7 @@ span#author {
 }
 span#email {
 }
-span#revision {
+span#revnumber, span#revdate, span#revremark {
   font-family: sans-serif;
 }
 
@@ -118,12 +118,14 @@ div#preamble {
 div.tableblock, div.imageblock, div.exampleblock, div.verseblock,
 div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
 div.admonitionblock {
-  margin-top: 1.5em;
+  margin-top: 1.0em;
   margin-bottom: 1.5em;
 }
 div.admonitionblock {
-  margin-top: 2.5em;
-  margin-bottom: 2.5em;
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
 }
 
 div.content { /* Block element content. */
@@ -165,19 +167,19 @@ div.listingblock > div.content {
   padding: 0.5em;
 }
 
-div.quoteblock {
-  padding-left: 2.0em;
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
   margin-right: 10%;
+  border-left: 5px solid #dddddd;
+  color: #777777;
 }
+
 div.quoteblock > div.attribution {
   padding-top: 0.5em;
   text-align: right;
 }
 
-div.verseblock {
-  padding-left: 2.0em;
-  margin-right: 10%;
-}
 div.verseblock > div.content {
   white-space: pre;
 }
@@ -200,17 +202,17 @@ div.admonitionblock .icon {
 }
 div.admonitionblock td.content {
   padding-left: 0.5em;
-  border-left: 2px solid silver;
+  border-left: 3px solid #dddddd;
 }
 
 div.exampleblock > div.content {
-  border-left: 2px solid silver;
-  padding: 0.5em;
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
 }
 
 div.imageblock div.content { padding-left: 0; }
-div.imageblock img { border: 1px solid silver; }
 span.image img { border-style: none; }
+a.image:visited { color: white; }
 
 dl {
   margin-top: 0.8em;
@@ -255,7 +257,7 @@ div.compact div, div.compact div {
 div.tableblock > table {
   border: 3px solid #527bbd;
 }
-thead {
+thead, p.table.header {
   font-family: sans-serif;
   font-weight: bold;
 }
@@ -310,8 +312,40 @@ div.hdlist.compact tr {
   background: yellow;
 }
 
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+
 @media print {
   div#footer-badges { display: none; }
+}
+
+div#toc {
+  margin-bottom: 2.5em;
 }
 
 div#toctitle {
@@ -339,10 +373,57 @@ div.toclevel4 {
   margin-left: 6em;
   font-size: 0.9em;
 }
+/* Workarounds for IE6's broken and incomplete CSS2. */
+
+div.sidebar-content {
+  background: #ffffee;
+  border: 1px solid silver;
+  padding: 0.5em;
+}
+div.sidebar-title, div.image-title {
+  color: #527bbd;
+  font-family: sans-serif;
+  font-weight: bold;
+  margin-top: 0.0em;
+  margin-bottom: 0.5em;
+}
+
+div.listingblock div.content {
+  border: 1px solid silver;
+  background: #f4f4f4;
+  padding: 0.5em;
+}
+
+div.quoteblock-attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock-content {
+  white-space: pre;
+}
+div.verseblock-attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+
+div.exampleblock-content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+/* IE6 sets dynamically generated links as visited. */
+div#toc a:visited { color: blue; }
 </style>
 <script type="text/javascript">
 /*<![CDATA[*/
-window.onload = function(){generateToc(3)}
+window.onload = function(){asciidoc.footnotes(); asciidoc.toc(3);}
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
 /* Author: Mihai Bazon, September 2002
  * http://students.infoiasi.ro/~mishoo
  *
@@ -354,53 +435,55 @@ window.onload = function(){generateToc(3)}
  */
 
  /* modified by Troy D. Hanson, September 2006. License: GPL */
- /* modified by Stuart Rackham, October 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
 
-function getText(el) {
-  var text = "";
-  for (var i = el.firstChild; i != null; i = i.nextSibling) {
-    if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
-      text += i.data;
-    else if (i.firstChild != null)
-      text += getText(i);
-  }
-  return text;
-}
+// toclevels = 1..4.
+toc: function (toclevels) {
 
-function TocEntry(el, text, toclevel) {
-  this.element = el;
-  this.text = text;
-  this.toclevel = toclevel;
-}
-
-function tocEntries(el, toclevels) {
-  var result = new Array;
-  var re = new RegExp('[hH]([2-'+(toclevels+1)+'])');
-  // Function that scans the DOM tree for header elements (the DOM2
-  // nodeIterator API would be a better technique but not supported by all
-  // browsers).
-  var iterate = function (el) {
+  function getText(el) {
+    var text = "";
     for (var i = el.firstChild; i != null; i = i.nextSibling) {
-      if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
-        var mo = re.exec(i.tagName)
-        if (mo)
-          result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
-        iterate(i);
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([2-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
       }
     }
+    iterate(el);
+    return result;
   }
-  iterate(el);
-  return result;
-}
 
-// This function does the work. toclevels = 1..4.
-function generateToc(toclevels) {
   var toc = document.getElementById("toc");
-  var entries = tocEntries(document.getElementsByTagName("body")[0], toclevels);
+  var entries = tocEntries(document.getElementById("content"), toclevels);
   for (var i = 0; i < entries.length; ++i) {
     var entry = entries[i];
     if (entry.element.id == "")
-      entry.element.id = "toc" + i;
+      entry.element.id = "_toc_" + i;
     var a = document.createElement("a");
     a.href = "#" + entry.element.id;
     a.appendChild(document.createTextNode(entry.text));
@@ -410,7 +493,58 @@ function generateToc(toclevels) {
     toc.appendChild(div);
   }
   if (entries.length == 0)
-    document.getElementById("header").removeChild(toc);
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  var cont = document.getElementById("content");
+  var noteholder = document.getElementById("footnotes");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      // Use [\s\S] in place of . so multi-line matches work.
+      // Because JavaScript has no s (dotall) regex flag.
+      note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      spans[i].innerHTML =
+        "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+        "' title='View footnote' class='footnote'>" + n + "</a>]";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+}
+
 }
 /*]]>*/
 </script>
@@ -423,6 +557,7 @@ function generateToc(toclevels) {
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
 </div>
 </div>
+<div id="content">
 <h2 id="_problem_description">1. Problem description</h2>
 <div class="sectionbody">
 <div class="admonitionblock">
@@ -485,7 +620,7 @@ Using <em>sudo</em>.
 </li>
 </ol></div>
 <div class="paragraph"><p>Let us take a look at each method in detail.</p></div>
-<h3 id="apache_root">2.1. Apache must already be running as root</h3>
+<h3 id="apache_root">2.1. Apache must already be running as root</h3><div style="clear:left"></div>
 <div class="paragraph"><p>First, let us take a look at the typical Apache setup, in which Apache is bound
 to port 80, and uses the prefork MPM. Binding to any port lower than 1024
 requires root privileges, so Apache is typically run as root. This poses an
@@ -501,7 +636,7 @@ control process) is run as root. This is also true for
 Passenger can already launch Rails applications as a different user. But now we
 have to ask this question:</p></div>
 <div class="exampleblock">
-<div class="content">
+<div class="exampleblock-content">
 <div class="paragraph"><p>If Apache is not running as root, are there still any Passenger users who
 want to run Rails applications as different users?</p></div>
 </div></div>
@@ -510,7 +645,7 @@ want to run Rails applications as different users?</p></div>
 incredibly easy, and requires no new framework to be written. However, testing
 this method in automated unit tests will require running the unit test suit as
 root.</p></div>
-<h3 id="_using_apache_8217_s_suexec">2.2. Using Apache&#8217;s suEXEC</h3>
+<h3 id="_using_apache_8217_s_suexec">2.2. Using Apache&#8217;s suEXEC</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Apache&#8217;s <a href="http://httpd.apache.org/docs/2.0/suexec.html">suEXEC</a> allows one to
 run CGI processes as different users. But it seems that suEXEC can only be
 used for CGI, and is not a general-purpose mechanism. The
@@ -518,7 +653,7 @@ used for CGI, and is not a general-purpose mechanism. The
 PHP applications via suEXEC, but it requires patching suEXEC. If Passenger is
 to use suEXEC, then it is likely that we&#8217;ll have to patch suEXEC. The suEXEC
 website strongly discourages patching.</p></div>
-<h3 id="_using_a_setuid_root_wrapper_application">2.3. Using a setuid root wrapper application</h3>
+<h3 id="_using_a_setuid_root_wrapper_application">2.3. Using a setuid root wrapper application</h3><div style="clear:left"></div>
 <div class="paragraph"><p>If we use this method, we must be extremely careful. It must not be possible
 for arbitrary processes to gain root privileges. We want Passenger, and only
 Passenger, to be able to gain root privileges.</p></div>
@@ -559,7 +694,7 @@ allowed to use the wrapper. The wrapper can then check whether the calling
 process&#8217;s user is in the whitelist.</p></div>
 <div class="paragraph"><p>Writing a wrapper is not too hard. Furthermore, unit tests do not have to be
 run as root, in contrast to the run-Apache-as-root method.</p></div>
-<h3 id="setuid_root">2.4. Using a setuid $X wrapper application</h3>
+<h3 id="setuid_root">2.4. Using a setuid $X wrapper application</h3><div style="clear:left"></div>
 <div class="paragraph"><p>A setuid $X wrapper will work in a fashion similar to the setuid root wrapper,
 i.e. it will use a password file for authorization.</p></div>
 <div class="paragraph"><p>Passenger does not spawn Rails applications itself, but does so via the spawn
@@ -575,10 +710,10 @@ memory with each other, so a lot of memory is wasted compared to the other
 methods.</p></div>
 <div class="paragraph"><p>Implementing this will also take more work. One has to create a different
 wrapper for each user, and to install it.</p></div>
-<h3 id="_using_em_su_em">2.5. Using <em>su</em></h3>
+<h3 id="_using_em_su_em">2.5. Using <em>su</em></h3><div style="clear:left"></div>
 <div class="paragraph"><p>The standard Unix <em>su</em> tool asks for the root password. It&#8217;s a bad idea for
 Apache to know the root password, so using <em>su</em> is not a viable alternative.</p></div>
-<h3 id="_using_em_sudo_em">2.6. Using <em>sudo</em></h3>
+<h3 id="_using_em_sudo_em">2.6. Using <em>sudo</em></h3><div style="clear:left"></div>
 <div class="paragraph"><p>It might be possible to use the <em>sudo</em> utility. sudo can be configured in
 such a way that the user Apache runs as can use sudo without having to enter a
 password.</p></div>
@@ -591,7 +726,7 @@ potential security problems. Note that passing information via program arguments
 is not secure: it is possible to view that information with tools like <em>ps</em>,
 or (on Linux) by reading the file <tt>/proc/$PID/cmdline</tt>.</p></div>
 <div class="paragraph"><p>So it seems <em>sudo</em> is not a viable alternative.</p></div>
-<h3 id="_common_security_issues">2.7. Common security issues</h3>
+<h3 id="_common_security_issues">2.7. Common security issues</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Whatever method Passenger will use, the following security principles must be
 honored:</p></div>
 <div class="ulist"><ul>
@@ -634,9 +769,11 @@ convinced that implementing suEXEC&#8217;s full security model will provide
 significant benefits, but if you have good reasons to think otherwise, please
 feel free to discuss it with us.</p></div>
 </div>
+</div>
+<div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-11-24 04:33:45 PDT
+Last updated 2009-11-24 13:33:45 CEST
 </div>
 </div>
 </body>

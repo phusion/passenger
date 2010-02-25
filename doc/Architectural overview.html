@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.4.2" />
+<meta name="generator" content="AsciiDoc 8.5.2" />
 <title>Passenger architectural overview</title>
 <style type="text/css">
 /* Debug borders */
@@ -91,7 +91,7 @@ span#author {
 }
 span#email {
 }
-span#revision {
+span#revnumber, span#revdate, span#revremark {
   font-family: sans-serif;
 }
 
@@ -118,12 +118,14 @@ div#preamble {
 div.tableblock, div.imageblock, div.exampleblock, div.verseblock,
 div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
 div.admonitionblock {
-  margin-top: 1.5em;
+  margin-top: 1.0em;
   margin-bottom: 1.5em;
 }
 div.admonitionblock {
-  margin-top: 2.5em;
-  margin-bottom: 2.5em;
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
 }
 
 div.content { /* Block element content. */
@@ -165,19 +167,19 @@ div.listingblock > div.content {
   padding: 0.5em;
 }
 
-div.quoteblock {
-  padding-left: 2.0em;
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
   margin-right: 10%;
+  border-left: 5px solid #dddddd;
+  color: #777777;
 }
+
 div.quoteblock > div.attribution {
   padding-top: 0.5em;
   text-align: right;
 }
 
-div.verseblock {
-  padding-left: 2.0em;
-  margin-right: 10%;
-}
 div.verseblock > div.content {
   white-space: pre;
 }
@@ -200,17 +202,17 @@ div.admonitionblock .icon {
 }
 div.admonitionblock td.content {
   padding-left: 0.5em;
-  border-left: 2px solid silver;
+  border-left: 3px solid #dddddd;
 }
 
 div.exampleblock > div.content {
-  border-left: 2px solid silver;
-  padding: 0.5em;
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
 }
 
 div.imageblock div.content { padding-left: 0; }
-div.imageblock img { border: 1px solid silver; }
 span.image img { border-style: none; }
+a.image:visited { color: white; }
 
 dl {
   margin-top: 0.8em;
@@ -255,7 +257,7 @@ div.compact div, div.compact div {
 div.tableblock > table {
   border: 3px solid #527bbd;
 }
-thead {
+thead, p.table.header {
   font-family: sans-serif;
   font-weight: bold;
 }
@@ -310,8 +312,40 @@ div.hdlist.compact tr {
   background: yellow;
 }
 
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+
 @media print {
   div#footer-badges { display: none; }
+}
+
+div#toc {
+  margin-bottom: 2.5em;
 }
 
 div#toctitle {
@@ -339,10 +373,57 @@ div.toclevel4 {
   margin-left: 6em;
   font-size: 0.9em;
 }
+/* Workarounds for IE6's broken and incomplete CSS2. */
+
+div.sidebar-content {
+  background: #ffffee;
+  border: 1px solid silver;
+  padding: 0.5em;
+}
+div.sidebar-title, div.image-title {
+  color: #527bbd;
+  font-family: sans-serif;
+  font-weight: bold;
+  margin-top: 0.0em;
+  margin-bottom: 0.5em;
+}
+
+div.listingblock div.content {
+  border: 1px solid silver;
+  background: #f4f4f4;
+  padding: 0.5em;
+}
+
+div.quoteblock-attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock-content {
+  white-space: pre;
+}
+div.verseblock-attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+
+div.exampleblock-content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+/* IE6 sets dynamically generated links as visited. */
+div#toc a:visited { color: blue; }
 </style>
 <script type="text/javascript">
 /*<![CDATA[*/
-window.onload = function(){generateToc(3)}
+window.onload = function(){asciidoc.footnotes(); asciidoc.toc(3);}
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
 /* Author: Mihai Bazon, September 2002
  * http://students.infoiasi.ro/~mishoo
  *
@@ -354,53 +435,55 @@ window.onload = function(){generateToc(3)}
  */
 
  /* modified by Troy D. Hanson, September 2006. License: GPL */
- /* modified by Stuart Rackham, October 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
 
-function getText(el) {
-  var text = "";
-  for (var i = el.firstChild; i != null; i = i.nextSibling) {
-    if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
-      text += i.data;
-    else if (i.firstChild != null)
-      text += getText(i);
-  }
-  return text;
-}
+// toclevels = 1..4.
+toc: function (toclevels) {
 
-function TocEntry(el, text, toclevel) {
-  this.element = el;
-  this.text = text;
-  this.toclevel = toclevel;
-}
-
-function tocEntries(el, toclevels) {
-  var result = new Array;
-  var re = new RegExp('[hH]([2-'+(toclevels+1)+'])');
-  // Function that scans the DOM tree for header elements (the DOM2
-  // nodeIterator API would be a better technique but not supported by all
-  // browsers).
-  var iterate = function (el) {
+  function getText(el) {
+    var text = "";
     for (var i = el.firstChild; i != null; i = i.nextSibling) {
-      if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
-        var mo = re.exec(i.tagName)
-        if (mo)
-          result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
-        iterate(i);
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([2-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
       }
     }
+    iterate(el);
+    return result;
   }
-  iterate(el);
-  return result;
-}
 
-// This function does the work. toclevels = 1..4.
-function generateToc(toclevels) {
   var toc = document.getElementById("toc");
-  var entries = tocEntries(document.getElementsByTagName("body")[0], toclevels);
+  var entries = tocEntries(document.getElementById("content"), toclevels);
   for (var i = 0; i < entries.length; ++i) {
     var entry = entries[i];
     if (entry.element.id == "")
-      entry.element.id = "toc" + i;
+      entry.element.id = "_toc_" + i;
     var a = document.createElement("a");
     a.href = "#" + entry.element.id;
     a.appendChild(document.createTextNode(entry.text));
@@ -410,7 +493,58 @@ function generateToc(toclevels) {
     toc.appendChild(div);
   }
   if (entries.length == 0)
-    document.getElementById("header").removeChild(toc);
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  var cont = document.getElementById("content");
+  var noteholder = document.getElementById("footnotes");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      // Use [\s\S] in place of . so multi-line matches work.
+      // Because JavaScript has no s (dotall) regex flag.
+      note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      spans[i].innerHTML =
+        "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+        "' title='View footnote' class='footnote'>" + n + "</a>]";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+}
+
 }
 /*]]>*/
 </script>
@@ -423,6 +557,7 @@ function generateToc(toclevels) {
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
 </div>
 </div>
+<div id="content">
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph"><p>This document describes Passenger&#8217;s architure in a global way. The purpose of
@@ -433,7 +568,7 @@ as to explain (some of the) design choices that we have made.</p></div>
 </div>
 <h2 id="_about_the_involved_technologies">1. About the involved technologies</h2>
 <div class="sectionbody">
-<h3 id="typical_web_applications">1.1. Typical web applications</h3>
+<h3 id="typical_web_applications">1.1. Typical web applications</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Before we describe Passenger, it is important to understand how typical web
 applications work, from the point of view of someone who wants to connect the
 application to a web server.</p></div>
@@ -444,7 +579,7 @@ to exit. This does not necessarily mean that the web application speaks HTTP
 directly: it just means that the web application accepts some kind of
 representation of an HTTP request.</p></div>
 <div class="paragraph"><p><span class="image">
-<img src="images/typical_isolated_web_application.png" alt="Architecture of a typical web application in isolation" title="Architecture of a typical web application in isolation" />
+<img src="images/typical_isolated_web_application.png" alt="Architecture of a typical web application in isolation" />
 </span></p></div>
 <div class="paragraph"><p>Few web applications are accessible directly by HTTP clients. Common setups
 are:</p></div>
@@ -504,7 +639,7 @@ could multiplex I/O with a single thread (e.g. by using <tt>select(2)</tt> or
 processes.</p></div>
 <div class="paragraph"><p>Of course, there are many variations possible. For example, load balancers
 could be used. But that is outside the scope of this document.</p></div>
-<h3 id="_ruby_on_rails">1.2. Ruby on Rails</h3>
+<h3 id="_ruby_on_rails">1.2. Ruby on Rails</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Every Ruby on Rails application has a <em>dispatcher</em>. This dispatcher is
 responsible for processing HTTP requests. It does not speak HTTP directly.
 Instead, it accepts data structures that contain the information of an
@@ -523,7 +658,7 @@ syntax tree (AST)</a>) in memory. This is observed through the use of the
 memory statistics function in <a href="http://www.rubyenterpriseedition.com/">Ruby
 Enterprise Edition</a>. Also, a lot of the startup time of a Ruby on Rails
 application is spent on bootstrapping the Rails framework.</p></div>
-<h3 id="_apache">1.3. Apache</h3>
+<h3 id="_apache">1.3. Apache</h3><div style="clear:left"></div>
 <div class="paragraph"><p>The Apache web server has a pluggable I/O multiprocessing (the ability to
 handle more than 1 concurrent HTTP client at the same time) architecture. An
 Apache module which implements a particular multiprocessing strategy, is called
@@ -536,13 +671,13 @@ The next section contains a diagram which shows the prefork MPM&#8217;s architec
 </div>
 <h2 id="_passenger_architecture">2. Passenger architecture</h2>
 <div class="sectionbody">
-<h3 id="_overview">2.1. Overview</h3>
+<h3 id="_overview">2.1. Overview</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Passenger&#8217;s architecture is a lot like setup #2 described in
 <a href="#typical_web_applications">Typical web applications</a>. In other words,
 Passenger extends Apache and allows it to act like an application server.
 Passenger&#8217;s architecture&#8201;&#8212;&#8201;assuming Apache 2 with the prefork MPM is used&#8201;&#8212;&#8201;is shown in the following diagram:</p></div>
 <div class="paragraph"><p><span class="image">
-<img src="images/passenger_architecture.png" alt="Passenger&#8217;s architecture" title="Passenger&#8217;s architecture" />
+<img src="images/passenger_architecture.png" alt="Passenger&#8217;s architecture" />
 </span></p></div>
 <div class="paragraph"><p>Passenger consists of an Apache module, <em>mod_passenger</em>. This is written in
 C++, and can be found in the directory <em>ext/apache2</em>. The module is active in
@@ -558,7 +693,7 @@ mod_ruby. If the Rails application crashes or leak memory, it will have no
 effect on Apache. In fact, stability is one of our highest goals. Passenger
 is carefully designed and implemented so that Apache shouldn&#8217;t crash because
 of Passenger.</p></div>
-<h3 id="_spawning_and_caching_of_code_and_applications">2.2. Spawning and caching of code and applications</h3>
+<h3 id="_spawning_and_caching_of_code_and_applications">2.2. Spawning and caching of code and applications</h3><div style="clear:left"></div>
 <div class="paragraph"><p>A very naive implementation of Passenger would spawn a Ruby on Rails
 application every time an HTTP request is received, just like CGI would.
 However, spawning Ruby on Rails applications is expensive. It can take 1 or 2
@@ -626,7 +761,7 @@ in particular the documentation about the <tt>ApplicationPool</tt>,
 <div class="paragraph"><p>The application pool is responsible for spawning applications, caching
 spawned applications' handles, and cleaning up applications which have been
 idle for an extended period of time.</p></div>
-<h3 id="spawn_server">2.3. The spawn server</h3>
+<h3 id="spawn_server">2.3. The spawn server</h3><div style="clear:left"></div>
 <div class="paragraph"><p>The spawn server is written in Ruby, and its code can be found in the directory
 <em>lib/passenger</em>. Its main executable is <em>bin/passenger-spawn-server</em>.
 <a href="rdoc/index.html">The spawn server&#8217;s RDoc documentation</a> documents the
@@ -662,7 +797,7 @@ implementation in detail.</p></div>
 </li>
 </ol></div>
 <div class="paragraph"><p><span class="image">
-<img src="images/spawn_server_architecture.png" alt="The spawn server&#8217;s architecture" title="The spawn server&#8217;s architecture" />
+<img src="images/spawn_server_architecture.png" alt="The spawn server&#8217;s architecture" />
 </span></p></div>
 <div class="paragraph"><p>As you can see, we have two layers of code caching: when the spawn server
 receives a request to spawn a new application instance, it will forward the
@@ -710,7 +845,7 @@ startup times. You just won&#8217;t be able to benefit from memory sharing.</p><
 </div>
 <div class="paragraph"><p>Note that <a href="http://rubini.us/">Rubinius</a>'s garbage collector is already
 copy-on-write friendly.</p></div>
-<h3 id="concurrent_requests">2.4. Handling of concurrent requests</h3>
+<h3 id="concurrent_requests">2.4. Handling of concurrent requests</h3><div style="clear:left"></div>
 <div class="paragraph"><p>As explained earlier, a single Rails application instance can only handle a
 single request at the same time. This is obviously undesirable. But before we
 dive into the solution, let us take a look how the &#8220;competition&#8221; solves this
@@ -755,9 +890,11 @@ Attribution-Share Alike 3.0 Unported License</a>.</p></div>
 </a>
 </span></p></div>
 </div>
+</div>
+<div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-11-24 04:33:45 PDT
+Last updated 2009-11-24 13:33:45 CEST
 </div>
 </div>
 </body>

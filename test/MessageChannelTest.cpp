@@ -1,6 +1,8 @@
 #include "tut.h"
 #include "MessageChannel.h"
 
+#include <boost/bind.hpp>
+#include <boost/thread.hpp>
 #include <cstring>
 #include <cstdio>
 
@@ -144,8 +146,14 @@ namespace tut {
 		MessageChannel channel2(s[1]);
 		
 		pipe(my_pipe);
-		channel1.writeFileDescriptor(my_pipe[1]);
+		boost::thread thr(boost::bind(
+			&MessageChannel::writeFileDescriptor,
+			&channel1,
+			my_pipe[1],
+			true
+		));
 		fd = channel2.readFileDescriptor();
+		thr.join();
 		
 		char buf[5];
 		write(fd, "hello", 5);

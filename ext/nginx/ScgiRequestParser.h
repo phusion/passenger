@@ -25,6 +25,7 @@
 
 #include <string>
 #include <map>
+#include <cstdlib>
 
 #include "StaticString.h"
 

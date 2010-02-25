@@ -10,6 +10,7 @@
     <ul>
       <li><a href="main.html"><span>Main&nbsp;Page</span></a></li>
       <li><a href="modules.html"><span>Modules</span></a></li>
+      <li><a href="namespaces.html"><span>Namespaces</span></a></li>
       <li class="current"><a href="annotated.html"><span>Classes</span></a></li>
       <li><a href="files.html"><span>Files</span></a></li>
     </ul>
@@ -23,7 +24,7 @@
   </div>
 </div>
 <div class="contents">
-<h1>Client Class Reference</h1><!-- doxytag: class="Client" -->Represents a single ApplicationPool client, connected to this server.  
+<h1>Client Class Reference</h1><!-- doxytag: class="Client" -->A representation of a <a class="el" href="classClient.html" title="A representation of a Client from the Server&#39;s point of view.">Client</a> from the Server's point of view.  
 <a href="#_details">More...</a>
 <p>
 
@@ -31,33 +32,63 @@
 <a href="classClient-members.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
 <tr><td colspan="2"><br><h2>Public Member Functions</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classClient.html#e625bb32c95bde75bfa4bdfdb8ee56db">Client</a> (Server &amp;the_server, int connection)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classClient.html#975a3a3d2a4fa5fcf320be38581e99a7">Client</a> (unsigned int number, ApplicationPool::Ptr pool, const string &amp;password, const string &amp;defaultUser, const string &amp;defaultGroup, int serverSocket, const AnalyticsLoggerPtr &amp;logger)</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Create a new <a class="el" href="classClient.html" title="Represents a single ApplicationPool client, connected to this server.">Client</a> object.  <a href="#e625bb32c95bde75bfa4bdfdb8ee56db"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classClient.html#c0a8dd9e23393c045064b109355a7daf">start</a> (const weak_ptr&lt; <a class="el" href="classClient.html">Client</a> &gt; self)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Constructs a client handler for the server with the given arguments and runs it in its own thread.  <a href="#975a3a3d2a4fa5fcf320be38581e99a7"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="840e519ca781888cbd54181572ebe3a7"></a><!-- doxytag: member="Client::~Client" ref="840e519ca781888cbd54181572ebe3a7" args="()" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classClient.html#840e519ca781888cbd54181572ebe3a7">~Client</a> ()</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Start the thread for handling the connection with this client.  <a href="#c0a8dd9e23393c045064b109355a7daf"></a><br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Destroys this client and its thread. <br></td></tr>
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
-Represents a single ApplicationPool client, connected to this server. 
+A representation of a <a class="el" href="classClient.html" title="A representation of a Client from the Server&#39;s point of view.">Client</a> from the Server's point of view. 
 <p>
-<dl class="invariant" compact><dt><b>Invariant:</b></dt><dd>The life time of a <a class="el" href="classClient.html" title="Represents a single ApplicationPool client, connected to this server.">Client</a> object is guaranteed to be less than that of its associated Server object. </dd></dl>
-<hr><h2>Constructor &amp; Destructor Documentation</h2>
-<a class="anchor" name="e625bb32c95bde75bfa4bdfdb8ee56db"></a><!-- doxytag: member="Client::Client" ref="e625bb32c95bde75bfa4bdfdb8ee56db" args="(Server &amp;the_server, int connection)" -->
+This class contains the methods used to communicate from a server to a connected client, i.e. it is a client handler. These <a class="el" href="classClient.html" title="A representation of a Client from the Server&#39;s point of view.">Client</a> instances will communicate concurrently with the server through threads. Considering the overhead of these threads, i.e. setup and teardown costs and the volatility of client requests, these client instances will be pooled. It is for this reason that the State design pattern has been applied: this class can be considered as being a skeleton implemention whose state --e.g. the client file descriptor-- needs to be provided in order to function properly. <hr><h2>Constructor &amp; Destructor Documentation</h2>
+<a class="anchor" name="975a3a3d2a4fa5fcf320be38581e99a7"></a><!-- doxytag: member="Client::Client" ref="975a3a3d2a4fa5fcf320be38581e99a7" args="(unsigned int number, ApplicationPool::Ptr pool, const string &amp;password, const string &amp;defaultUser, const string &amp;defaultGroup, int serverSocket, const AnalyticsLoggerPtr &amp;logger)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
           <td class="memname">Client::Client           </td>
           <td>(</td>
-          <td class="paramtype">Server &amp;&nbsp;</td>
-          <td class="paramname"> <em>the_server</em>, </td>
+          <td class="paramtype">unsigned int&nbsp;</td>
+          <td class="paramname"> <em>number</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">ApplicationPool::Ptr&nbsp;</td>
+          <td class="paramname"> <em>pool</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const string &amp;&nbsp;</td>
+          <td class="paramname"> <em>password</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const string &amp;&nbsp;</td>
+          <td class="paramname"> <em>defaultUser</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const string &amp;&nbsp;</td>
+          <td class="paramname"> <em>defaultGroup</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">int&nbsp;</td>
-          <td class="paramname"> <em>connection</em></td><td>&nbsp;</td>
+          <td class="paramname"> <em>serverSocket</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const AnalyticsLoggerPtr &amp;&nbsp;</td>
+          <td class="paramname"> <em>logger</em></td><td>&nbsp;</td>
         </tr>
         <tr>
           <td></td>
@@ -69,50 +100,23 @@ Represents a single ApplicationPool client, connected to this server.
 <div class="memdoc">
 
 <p>
-Create a new <a class="el" href="classClient.html" title="Represents a single ApplicationPool client, connected to this server.">Client</a> object. 
+Constructs a client handler for the server with the given arguments and runs it in its own thread. 
 <p>
 <dl compact><dt><b>Parameters:</b></dt><dd>
   <table border="0" cellspacing="2" cellpadding="0">
-    <tr><td valign="top"></td><td valign="top"><em>the_server</em>&nbsp;</td><td>The Server object that this <a class="el" href="classClient.html" title="Represents a single ApplicationPool client, connected to this server.">Client</a> belongs to. </td></tr>
-    <tr><td valign="top"></td><td valign="top"><em>connection</em>&nbsp;</td><td>The connection to the ApplicationPool client.</td></tr>
-  </table>
-</dl>
-<dl class="note" compact><dt><b>Note:</b></dt><dd><code>connection</code> will be closed upon destruction </dd></dl>
-
-</div>
-</div><p>
-<hr><h2>Member Function Documentation</h2>
-<a class="anchor" name="c0a8dd9e23393c045064b109355a7daf"></a><!-- doxytag: member="Client::start" ref="c0a8dd9e23393c045064b109355a7daf" args="(const weak_ptr&lt; Client &gt; self)" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void Client::start           </td>
-          <td>(</td>
-          <td class="paramtype">const weak_ptr&lt; <a class="el" href="classClient.html">Client</a> &gt;&nbsp;</td>
-          <td class="paramname"> <em>self</em>          </td>
-          <td>&nbsp;)&nbsp;</td>
-          <td><code> [inline]</code></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>
-Start the thread for handling the connection with this client. 
-<p>
-<dl compact><dt><b>Parameters:</b></dt><dd>
-  <table border="0" cellspacing="2" cellpadding="0">
-    <tr><td valign="top"></td><td valign="top"><em>self</em>&nbsp;</td><td>The iterator of this <a class="el" href="classClient.html" title="Represents a single ApplicationPool client, connected to this server.">Client</a> object inside the server's <code>clients</code> set. This is used to remove itself from the <code>clients</code> set once the client has closed the connection. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>number</em>&nbsp;</td><td>The id assigned by the server to identify this client by. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>pool</em>&nbsp;</td><td>The application pool where this client belongs to. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>password</em>&nbsp;</td><td>The password that is required to connect to this client handler. This value is determined and assigned by the server. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>serverSocket</em>&nbsp;</td><td>The server socket to accept this clients connection from. </td></tr>
   </table>
 </dl>
 
 </div>
 </div><p>
 <hr>The documentation for this class was generated from the following file:<ul>
-<li>ApplicationPoolServerExecutable.cpp</ul>
+<li>nginx/HelperAgent.cpp</ul>
 </div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Wed Apr 8 22:35:11 2009 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Sun Feb 21 12:22:46 2010 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.8 </small></address>
 </body>

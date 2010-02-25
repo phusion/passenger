@@ -538,8 +538,8 @@ class IO
 		# This only works if this IO channel is a Unix socket.
 		#
 		# Raises SystemCallError if something went wrong.
-		def recv_io
-			return IO.new(PhusionPassenger::NativeSupport.recv_fd(self.fileno))
+		def recv_io(klass = IO)
+			return klass.for_fd(PhusionPassenger::NativeSupport.recv_fd(self.fileno))
 		end
 	end
 	
@@ -590,7 +590,7 @@ end
 if RUBY_PLATFORM =~ /freebsd/ || RUBY_PLATFORM =~ /openbsd/ || (RUBY_PLATFORM =~ /darwin/ && RUBY_PLATFORM !~ /universal/)
 	require 'socket'
 	UNIXSocket.class_eval do
-		def recv_io
+		def recv_io(klass = IO)
 			super
 		end
 

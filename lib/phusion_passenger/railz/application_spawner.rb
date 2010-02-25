@@ -169,6 +169,10 @@ class ApplicationSpawner < AbstractServer
 					if @lower_privilege
 						lower_privilege('config/environment.rb', @lowest_user)
 					end
+					# Make sure RubyGems uses any new environment variable values
+					# that have been set now (e.g. $HOME, $GEM_HOME, etc) and that
+					# it is able to detect newly installed gems.
+					Gem.clear_paths
 					
 					require File.expand_path('config/environment')
 					require 'dispatcher'
@@ -346,9 +350,12 @@ private
 	end
 
 	def handle_spawn_application
+		a, b = UNIXSocket.pair
 		safe_fork('application', true) do
 			begin
-				start_request_handler(client, true)
+				a.close
+				client.close
+				start_request_handler(MessageChannel.new(b), true)
 			rescue SignalException => e
 				if e.message != AbstractRequestHandler::HARD_TERMINATION_SIGNAL &&
 				   e.message != AbstractRequestHandler::SOFT_TERMINATION_SIGNAL
@@ -356,6 +363,17 @@ private
 				end
 			end
 		end
+		
+		b.close
+		worker_channel = MessageChannel.new(a)
+		info = worker_channel.read
+		owner_pipe = worker_channel.recv_io
+		client.write(*info)
+		client.send_io(owner_pipe)
+	ensure
+		a.close if a
+		b.close if b && !b.closed?
+		owner_pipe.close if owner_pipe
 	end
 	
 	# Initialize the request handler and enter its main loop.
