@@ -432,12 +432,15 @@ public:
 			int ret = syscalls::close(fd);
 			fd = -1;
 			if (ret == -1) {
+				int e = errno;
 				if (errno == EIO) {
-					throw SystemException("A write operation on the session stream failed",
-						errno);
+					throw SystemException(
+						"A write operation on the session stream failed",
+						e);
 				} else {
-					throw SystemException("Cannot close the session stream",
-						errno);
+					throw SystemException(
+						"Cannot close the session stream",
+						e);
 				}
 			}
 		}

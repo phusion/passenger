@@ -223,7 +223,7 @@ private:
 			this->processInfo = processInfo;
 		}
 		
-		void operator()(const StandardSession *) {
+		void operator()(const StandardSession *session) {
 			ProcessInfoPtr processInfo = this->processInfo.lock();
 			if (processInfo == NULL || processInfo->detached) {
 				return;
