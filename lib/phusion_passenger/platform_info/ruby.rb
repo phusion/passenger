@@ -64,7 +64,6 @@ module PlatformInfo
 	end
 	memoize :rspec
 	
-private
 	def self.locate_ruby_executable(name)
 		if RUBY_PLATFORM =~ /darwin/ &&
 		   RUBY =~ %r(\A/System/Library/Frameworks/Ruby.framework/Versions/.*?/usr/bin/ruby\Z)
@@ -94,7 +93,6 @@ private
 			end
 		end
 	end
-	private_class_method :locate_ruby_executable
 end
 
 end # module PhusionPassenger

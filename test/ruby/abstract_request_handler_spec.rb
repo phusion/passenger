@@ -22,32 +22,20 @@ describe AbstractRequestHandler do
 		FileUtils.rm_rf("abstract_request_handler_spec.tmp")
 	end
 	
-	def connect
-		if @request_handler.server_sockets[:main][1] == "unix"
-			return UNIXSocket.new(@request_handler.server_sockets[:main][0])
+	def connect(socket_name = :main)
+		if @request_handler.server_sockets[socket_name][1] == "unix"
+			return UNIXSocket.new(@request_handler.server_sockets[socket_name][0])
 		else
-			addr, port = @request_handler.server_sockets[:main][0].split(/:/)
+			addr, port = @request_handler.server_sockets[socket_name][0].split(/:/)
 			return TCPSocket.new(addr, port.to_i)
 		end
-	end
-	
-	def connect_http
-		addr, port = @request_handler.server_sockets[:http][0].split(/:/)
-		port = port.to_i
-		return TCPSocket.new(addr, port)
 	end
 	
 	it "exits if the owner pipe is closed" do
 		@request_handler.start_main_loop_thread
 		@owner_pipe[0].close
-		begin
-			Timeout.timeout(5) do
-				wait_until do
-					!@request_handler.main_loop_running?
-				end
-			end
-		rescue Timeout::Error
-			violated
+		eventually do
+			!@request_handler.main_loop_running?
 		end
 	end
 	
@@ -56,7 +44,7 @@ describe AbstractRequestHandler do
 			return nil
 		end
 		@request_handler.start_main_loop_thread
-		wait_until do
+		eventually do
 			@request_handler.iterations != 0
 		end
 		@request_handler.processed_requests.should == 0
@@ -140,7 +128,7 @@ describe AbstractRequestHandler do
 		@request_handler.stderr = StringIO.new
 		@request_handler.start_main_loop_thread
 		begin
-			client = connect_http
+			client = connect(:http)
 			client.sync = true
 			block = lambda do
 				client.write("GET /")
@@ -161,7 +149,7 @@ describe AbstractRequestHandler do
 		@request_handler.connect_password = "1234"
 		@request_handler.start_main_loop_thread
 		begin
-			client = connect_http
+			client = connect(:http)
 			client.write("PING / HTTP/1.1\r\n")
 			client.write("\r\n")
 			client.read.should == ""
@@ -169,7 +157,7 @@ describe AbstractRequestHandler do
 			client.close rescue nil
 		end
 		begin
-			client = connect_http
+			client = connect(:http)
 			client.write("PING / HTTP/1.1\r\n")
 			client.write("X-Passenger-Connect-Password: 1234\r\n")
 			client.write("\r\n")
@@ -315,10 +303,4 @@ describe AbstractRequestHandler do
 	end
 	
 	############################
-	
-	def wait_until
-		while !yield
-			sleep 0.01
-		end
-	end
 end
