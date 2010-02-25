@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.4.2" />
+<meta name="generator" content="AsciiDoc 8.5.2" />
 <title>Phusion Passenger users guide, Nginx version</title>
 <style type="text/css">
 /* Debug borders */
@@ -91,7 +91,7 @@ span#author {
 }
 span#email {
 }
-span#revision {
+span#revnumber, span#revdate, span#revremark {
   font-family: sans-serif;
 }
 
@@ -118,12 +118,14 @@ div#preamble {
 div.tableblock, div.imageblock, div.exampleblock, div.verseblock,
 div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
 div.admonitionblock {
-  margin-top: 1.5em;
+  margin-top: 1.0em;
   margin-bottom: 1.5em;
 }
 div.admonitionblock {
-  margin-top: 2.5em;
-  margin-bottom: 2.5em;
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
 }
 
 div.content { /* Block element content. */
@@ -165,19 +167,19 @@ div.listingblock > div.content {
   padding: 0.5em;
 }
 
-div.quoteblock {
-  padding-left: 2.0em;
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
   margin-right: 10%;
+  border-left: 5px solid #dddddd;
+  color: #777777;
 }
+
 div.quoteblock > div.attribution {
   padding-top: 0.5em;
   text-align: right;
 }
 
-div.verseblock {
-  padding-left: 2.0em;
-  margin-right: 10%;
-}
 div.verseblock > div.content {
   white-space: pre;
 }
@@ -200,17 +202,17 @@ div.admonitionblock .icon {
 }
 div.admonitionblock td.content {
   padding-left: 0.5em;
-  border-left: 2px solid silver;
+  border-left: 3px solid #dddddd;
 }
 
 div.exampleblock > div.content {
-  border-left: 2px solid silver;
-  padding: 0.5em;
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
 }
 
 div.imageblock div.content { padding-left: 0; }
-div.imageblock img { border: 1px solid silver; }
 span.image img { border-style: none; }
+a.image:visited { color: white; }
 
 dl {
   margin-top: 0.8em;
@@ -255,7 +257,7 @@ div.compact div, div.compact div {
 div.tableblock > table {
   border: 3px solid #527bbd;
 }
-thead {
+thead, p.table.header {
   font-family: sans-serif;
   font-weight: bold;
 }
@@ -310,8 +312,40 @@ div.hdlist.compact tr {
   background: yellow;
 }
 
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+
 @media print {
   div#footer-badges { display: none; }
+}
+
+div#toc {
+  margin-bottom: 2.5em;
 }
 
 div#toctitle {
@@ -339,10 +373,57 @@ div.toclevel4 {
   margin-left: 6em;
   font-size: 0.9em;
 }
+/* Workarounds for IE6's broken and incomplete CSS2. */
+
+div.sidebar-content {
+  background: #ffffee;
+  border: 1px solid silver;
+  padding: 0.5em;
+}
+div.sidebar-title, div.image-title {
+  color: #527bbd;
+  font-family: sans-serif;
+  font-weight: bold;
+  margin-top: 0.0em;
+  margin-bottom: 0.5em;
+}
+
+div.listingblock div.content {
+  border: 1px solid silver;
+  background: #f4f4f4;
+  padding: 0.5em;
+}
+
+div.quoteblock-attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock-content {
+  white-space: pre;
+}
+div.verseblock-attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+
+div.exampleblock-content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+/* IE6 sets dynamically generated links as visited. */
+div#toc a:visited { color: blue; }
 </style>
 <script type="text/javascript">
 /*<![CDATA[*/
-window.onload = function(){generateToc(3)}
+window.onload = function(){asciidoc.footnotes(); asciidoc.toc(3);}
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
 /* Author: Mihai Bazon, September 2002
  * http://students.infoiasi.ro/~mishoo
  *
@@ -354,53 +435,55 @@ window.onload = function(){generateToc(3)}
  */
 
  /* modified by Troy D. Hanson, September 2006. License: GPL */
- /* modified by Stuart Rackham, October 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
 
-function getText(el) {
-  var text = "";
-  for (var i = el.firstChild; i != null; i = i.nextSibling) {
-    if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
-      text += i.data;
-    else if (i.firstChild != null)
-      text += getText(i);
-  }
-  return text;
-}
+// toclevels = 1..4.
+toc: function (toclevels) {
 
-function TocEntry(el, text, toclevel) {
-  this.element = el;
-  this.text = text;
-  this.toclevel = toclevel;
-}
-
-function tocEntries(el, toclevels) {
-  var result = new Array;
-  var re = new RegExp('[hH]([2-'+(toclevels+1)+'])');
-  // Function that scans the DOM tree for header elements (the DOM2
-  // nodeIterator API would be a better technique but not supported by all
-  // browsers).
-  var iterate = function (el) {
+  function getText(el) {
+    var text = "";
     for (var i = el.firstChild; i != null; i = i.nextSibling) {
-      if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
-        var mo = re.exec(i.tagName)
-        if (mo)
-          result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
-        iterate(i);
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([2-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
       }
     }
+    iterate(el);
+    return result;
   }
-  iterate(el);
-  return result;
-}
 
-// This function does the work. toclevels = 1..4.
-function generateToc(toclevels) {
   var toc = document.getElementById("toc");
-  var entries = tocEntries(document.getElementsByTagName("body")[0], toclevels);
+  var entries = tocEntries(document.getElementById("content"), toclevels);
   for (var i = 0; i < entries.length; ++i) {
     var entry = entries[i];
     if (entry.element.id == "")
-      entry.element.id = "toc" + i;
+      entry.element.id = "_toc_" + i;
     var a = document.createElement("a");
     a.href = "#" + entry.element.id;
     a.appendChild(document.createTextNode(entry.text));
@@ -410,7 +493,58 @@ function generateToc(toclevels) {
     toc.appendChild(div);
   }
   if (entries.length == 0)
-    document.getElementById("header").removeChild(toc);
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  var cont = document.getElementById("content");
+  var noteholder = document.getElementById("footnotes");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      // Use [\s\S] in place of . so multi-line matches work.
+      // Because JavaScript has no s (dotall) regex flag.
+      note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      spans[i].innerHTML =
+        "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+        "' title='View footnote' class='footnote'>" + n + "</a>]";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+}
+
 }
 /*]]>*/
 </script>
@@ -423,6 +557,7 @@ function generateToc(toclevels) {
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
 </div>
 </div>
+<div id="content">
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph"><p><span class="image">
@@ -497,7 +632,7 @@ if it doesn&#8217;t.</p></div>
 </div>
 <h2 id="install_passenger">2. Installing Phusion Passenger</h2>
 <div class="sectionbody">
-<h3 id="_overview">2.1. Overview</h3>
+<h3 id="_overview">2.1. Overview</h3><div style="clear:left"></div>
 <div class="paragraph"><p>As you might already know, Nginx does not support loadable modules, in contrast
 to most other web servers (e.g. Apache). Therefore, to install Phusion Passenger
 for Nginx, one must recompile and reinstall Nginx with Phusion Passenger support.
@@ -531,7 +666,7 @@ as <em>root</em>. If the installer fails because of permission errors, it will t
 you.</td>
 </tr></table>
 </div>
-<h3 id="specifying_ruby_installation">2.2. Specifying the correct Ruby installation</h3>
+<h3 id="specifying_ruby_installation">2.2. Specifying the correct Ruby installation</h3><div style="clear:left"></div>
 <div class="paragraph"><p>If your system has multiple Ruby installations&#8201;&#8212;&#8201;which is likely the case on
 MacOS X, or if you&#8217;ve also installed
 <a href="http://www.rubyenterpriseedition.com">Ruby Enterprise Edition</a>&#8201;&#8212;&#8201;then you
@@ -559,7 +694,7 @@ following Ruby installations:</p></div>
 <div class="content">
 <pre><tt>export PATH=/opt/myruby/bin:$PATH</tt></pre>
 </div></div>
-<h3 id="_installing_phusion_passenger_for_nginx_through_the_installer">2.3. Installing Phusion Passenger for Nginx through the installer</h3>
+<h3 id="_installing_phusion_passenger_for_nginx_through_the_installer">2.3. Installing Phusion Passenger for Nginx through the installer</h3><div style="clear:left"></div>
 <h4 id="_obtaining_the_phusion_passenger_files_and_running_the_installer">2.3.1. Obtaining the Phusion Passenger files and running the installer</h4>
 <div class="paragraph"><p>You must obtain the Phusion Passenger files in order to run the installer.
 This can be done either by installing the Phusion Passenger gem, or by
@@ -608,7 +743,7 @@ then you can do so by passing various answers to the installer through command
 line options.</p></div>
 <div class="paragraph"><p>Please run the installer with <tt>--help</tt> for a list of available command line
 options.</p></div>
-<h3 id="_installing_phusion_passenger_for_nginx_manually">2.4. Installing Phusion Passenger for Nginx manually</h3>
+<h3 id="_installing_phusion_passenger_for_nginx_manually">2.4. Installing Phusion Passenger for Nginx manually</h3><div style="clear:left"></div>
 <div class="paragraph"><p>You can also install Phusion Passenger the way you install any other Nginx module.
 To do this, run Nginx&#8217;s configure script with <tt>--add-module=/path-to-passenger-root/ext/nginx</tt>.</p></div>
 <div class="paragraph"><p>If you installed Phusion Passenger via the gem, then <em>path-to-passenger-root</em>
@@ -641,7 +776,7 @@ are run, is &#8220;production&#8221;. You can change this by changing the
 <a href="#RailsEnv">rails_env</a> configuration option.</td>
 </tr></table>
 </div>
-<h3 id="_deploying_to_a_virtual_host_8217_s_root">3.1. Deploying to a virtual host&#8217;s root</h3>
+<h3 id="_deploying_to_a_virtual_host_8217_s_root">3.1. Deploying to a virtual host&#8217;s root</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Add a <em>server</em> virtual host entry to your Nginx configuration file. The virtual
 host&#8217;s root must point to your Ruby on Rails application&#8217;s <em>public</em> folder.</p></div>
 <div class="paragraph"><p>Inside the <em>server</em> block, set <em>passenger_enabled on</em>.</p></div>
@@ -662,7 +797,7 @@ host&#8217;s root must point to your Ruby on Rails application&#8217;s <em>publi
 }</tt></pre>
 </div></div>
 <div class="paragraph"><p>Then restart Nginx. The application has now been deployed.</p></div>
-<h3 id="deploying_rails_to_sub_uri">3.2. Deploying to a sub URI</h3>
+<h3 id="deploying_rails_to_sub_uri">3.2. Deploying to a sub URI</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Suppose that you already have a <em>server</em> virtual host entry:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -725,7 +860,7 @@ option to the <em>server</em> block:</p></div>
 </td>
 </tr></table>
 </div>
-<h3 id="_redeploying_restarting_the_ruby_on_rails_application">3.3. Redeploying (restarting the Ruby on Rails application)</h3>
+<h3 id="_redeploying_restarting_the_ruby_on_rails_application">3.3. Redeploying (restarting the Ruby on Rails application)</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Deploying a new version of a Ruby on Rails application is as simple as
 re-uploading the application files, and restarting the application.</p></div>
 <div class="paragraph"><p>There are two ways to restart the application:</p></div>
@@ -753,12 +888,12 @@ command line:</p></div>
 is not automatically deleted. Phusion Passenger checks whether the timestamp
 of this file has changed in order to determine whether the application should
 be restarted.</p></div>
-<h3 id="_migrations">3.4. Migrations</h3>
+<h3 id="_migrations">3.4. Migrations</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Phusion Passenger is not related to Ruby on Rails migrations in any way. To
 run migrations on your deployment server, please login to your deployment
 server (e.g. with <em>ssh</em>) and type <tt>rake db:migrate RAILS_ENV=production</tt> in
 a shell console, just like one would normally run migrations.</p></div>
-<h3 id="_capistrano_integration">3.5. Capistrano integration</h3>
+<h3 id="_capistrano_integration">3.5. Capistrano integration</h3><div style="clear:left"></div>
 <div class="paragraph"><p>See <a href="#capistrano">Capistrano recipe</a>.</p></div>
 </div>
 <h2 id="deploying_a_rack_app">4. Deploying a Rack-based Ruby application</h2>
@@ -812,7 +947,7 @@ are run, is &#8220;production&#8221;. You can change this by changing the
 <a href="#RackEnv">rack_env</a> configuration option.</td>
 </tr></table>
 </div>
-<h3 id="_tutorial_example_writing_and_deploying_a_hello_world_rack_application">4.1. Tutorial/example: writing and deploying a Hello World Rack application</h3>
+<h3 id="_tutorial_example_writing_and_deploying_a_hello_world_rack_application">4.1. Tutorial/example: writing and deploying a Hello World Rack application</h3><div style="clear:left"></div>
 <div class="paragraph"><p>First we create a Phusion Passenger-compliant Rack directory structure:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -849,7 +984,7 @@ the Apache configuration file:</p></div>
 </div></div>
 <div class="paragraph"><p>And we&#8217;re done! After an Nginx restart, the above Rack application will be available
 under the URL <em>http://www.rackexample.com/</em>.</p></div>
-<h3 id="_deploying_to_a_virtual_host_8217_s_root_2">4.2. Deploying to a virtual host&#8217;s root</h3>
+<h3 id="_deploying_to_a_virtual_host_8217_s_root_2">4.2. Deploying to a virtual host&#8217;s root</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Add a <em>server</em> virtual host entry to your Nginx configuration file. The virtual host&#8217;s
 root must point to your Rack application&#8217;s <em>public</em> folder. You must also set
 <em>passenger_enabled on</em> in the <em>server</em> block.</p></div>
@@ -868,7 +1003,7 @@ root must point to your Rack application&#8217;s <em>public</em> folder. You mus
 }</tt></pre>
 </div></div>
 <div class="paragraph"><p>Then restart Nginx. The application has now been deployed.</p></div>
-<h3 id="deploying_rack_to_sub_uri">4.3. Deploying to a sub URI</h3>
+<h3 id="deploying_rack_to_sub_uri">4.3. Deploying to a sub URI</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Suppose that you already have a virtual host:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -932,7 +1067,7 @@ option to the <em>server</em> block:</p></div>
 </td>
 </tr></table>
 </div>
-<h3 id="_redeploying_restarting_the_rack_application">4.4. Redeploying (restarting the Rack application)</h3>
+<h3 id="_redeploying_restarting_the_rack_application">4.4. Redeploying (restarting the Rack application)</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Deploying a new version of a Rack application is as simple as
 re-uploading the application files, and restarting the application.</p></div>
 <div class="paragraph"><p>There are two ways to restart the application:</p></div>
@@ -956,7 +1091,7 @@ command line:</p></div>
 <div class="content">
 <pre><tt>touch /webapps/rackapp/tmp/restart.txt</tt></pre>
 </div></div>
-<h3 id="_rackup_specifications_for_various_web_frameworks">4.5. Rackup specifications for various web frameworks</h3>
+<h3 id="_rackup_specifications_for_various_web_frameworks">4.5. Rackup specifications for various web frameworks</h3><div style="clear:left"></div>
 <div class="paragraph"><p>This subsection shows example <em>config.ru</em> files for various web frameworks.</p></div>
 <h4 id="_camping">4.5.1. Camping</h4>
 <div class="listingblock">
@@ -1034,7 +1169,7 @@ run Sinatra::Application</tt></pre>
 Nevertheless, the system administrator may be interested in changing
 Phusion Passenger&#8217;s behavior. Phusion Passenger supports the following configuration
 options in the Nginx configuration file:</p></div>
-<h3 id="_passenger_root_lt_directory_gt">5.1. passenger_root &lt;directory&gt;</h3>
+<h3 id="_passenger_root_lt_directory_gt">5.1. passenger_root &lt;directory&gt;</h3><div style="clear:left"></div>
 <div class="paragraph"><p>The location to the Phusion Passenger root directory. This configuration option
 is essential to Phusion Passenger, and allows Phusion Passenger to locate its own
 data files. The correct value is given by the installer.</p></div>
@@ -1042,7 +1177,7 @@ data files. The correct value is given by the installer.</p></div>
 this option as well. Please read
 <a href="#moving_phusion_passenger">Moving Phusion Passenger to a different directory</a> for more information.</p></div>
 <div class="paragraph"><p>This required option may only occur once, in the <em>http</em> configuration block.</p></div>
-<h3 id="_passenger_log_level_lt_integer_gt">5.2. passenger_log_level &lt;integer&gt;</h3>
+<h3 id="_passenger_log_level_lt_integer_gt">5.2. passenger_log_level &lt;integer&gt;</h3><div style="clear:left"></div>
 <div class="paragraph"><p>This option allows one to specify how much information Phusion Passenger should
 write to the Apache error log file. A higher log level value means that more
 information will be logged.</p></div>
@@ -1073,11 +1208,11 @@ information will be logged.</p></div>
 </ul></div>
 <div class="paragraph"><p>This option may only occur once, in the <em>http</em> configuration block.
 The default is <em>0</em>.</p></div>
-<h3 id="_passenger_ruby_lt_filename_gt">5.3. passenger_ruby &lt;filename&gt;</h3>
+<h3 id="_passenger_ruby_lt_filename_gt">5.3. passenger_ruby &lt;filename&gt;</h3><div style="clear:left"></div>
 <div class="paragraph"><p>This option allows one to specify the Ruby interpreter to use.</p></div>
 <div class="paragraph"><p>This option may only occur once, in the <em>http</em> configuration block.
 The default is <em>ruby</em>.</p></div>
-<h3 id="PassengerUseGlobalQueue">5.4. passenger_use_global_queue &lt;on|off&gt;</h3>
+<h3 id="PassengerUseGlobalQueue">5.4. passenger_use_global_queue &lt;on|off&gt;</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Turns the use of global queuing on or off.</p></div>
 <div class="paragraph"><p>This option may occur in the following places:</p></div>
 <div class="ulist"><ul>
@@ -1171,17 +1306,17 @@ process that becomes available will take from the queue, and so this
 <div class="paragraph"><p>Turning global queuing off will yield a minor performance improvement (about 5%,
 depending on how fast/slow your web application is), which is why it&#8217;s off by
 default.</p></div>
-<h3 id="PassengerUserSwitching">5.5. passenger_user_switching &lt;on|off&gt;</h3>
+<h3 id="PassengerUserSwitching">5.5. passenger_user_switching &lt;on|off&gt;</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Whether to enable <a href="#user_switching">user switching support</a>.</p></div>
 <div class="paragraph"><p>This option may only occur once, in the <em>http</em> configuration block.
 The default value is <em>on</em>.</p></div>
-<h3 id="PassengerDefaultUser">5.6. passenger_default_user &lt;username&gt;</h3>
+<h3 id="PassengerDefaultUser">5.6. passenger_default_user &lt;username&gt;</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Phusion Passenger enables <a href="#user_switching">user switching support</a> by default.
 This configuration option allows one to specify which user Rails/Rack
 applications must run as, if user switching fails or is disabled.</p></div>
 <div class="paragraph"><p>This option may only occur once, in the <em>http</em> configuration block.
 The default value is <em>nobody</em>.</p></div>
-<h3 id="_important_deployment_options">5.7. Important deployment options</h3>
+<h3 id="_important_deployment_options">5.7. Important deployment options</h3><div style="clear:left"></div>
 <h4 id="_passenger_enabled_lt_on_off_gt">5.7.1. passenger_enabled &lt;on|off&gt;</h4>
 <div class="paragraph"><p>This option may be specified in a <em>server</em> configuration block, a
 <em>location</em> configuration block or an <em>if</em> configuration scope, to
@@ -1216,7 +1351,7 @@ In an <em>if</em> configuration scope.
 </p>
 </li>
 </ul></div>
-<h3 id="_resource_control_and_optimization_options">5.8. Resource control and optimization options</h3>
+<h3 id="_resource_control_and_optimization_options">5.8. Resource control and optimization options</h3><div style="clear:left"></div>
 <h4 id="PassengerMaxPoolSize">5.8.1. passenger_max_pool_size &lt;integer&gt;</h4>
 <div class="paragraph"><p>The maximum number of Ruby on Rails or Rack application instances that may
 be simultaneously active. A larger number results in higher memory usage,
@@ -1272,7 +1407,7 @@ recommended if you&#8217;re on a non-shared host that&#8217;s only running a few
 applications, each which must be available at all times.</p></div>
 <div class="paragraph"><p>This option may only occur once, in the <em>http</em> configuration block.
 The default value is <em>300</em>.</p></div>
-<h3 id="_ruby_on_rails_specific_options">5.9. Ruby on Rails-specific options</h3>
+<h3 id="_ruby_on_rails_specific_options">5.9. Ruby on Rails-specific options</h3><div style="clear:left"></div>
 <h4 id="RailsEnv">5.9.1. rails_env &lt;string&gt;</h4>
 <div class="paragraph"><p>This option allows one to specify the default <tt>RAILS_ENV</tt> value.</p></div>
 <div class="paragraph"><p>This option may occur in the following places:</p></div>
@@ -1305,7 +1440,7 @@ In an <em>if</em> configuration scope.
 <div class="paragraph"><p>This subsection attempts to describe spawn methods, but it&#8217;s okay if you don&#8217;t (want to)
 understand it, as it&#8217;s mostly a technical detail. You can basically follow this rule of thumb:</p></div>
 <div class="sidebarblock">
-<div class="content">
+<div class="sidebar-content">
 <div class="paragraph"><p>If your application works on Mongrel, but not on Phusion Passenger, then set
 <tt>rails_spawn_method</tt> to <em>conservative</em>. Otherwise, leave it at <em>smart-lv2</em> (the default).</p></div>
 </div></div>
@@ -1471,7 +1606,7 @@ In an <em>if</em> configuration scope.
 </li>
 </ul></div>
 <div class="paragraph"><p>In each place, it may be specified at most once. The default value is <em>600</em> (10 minutes).</p></div>
-<h3 id="_rack_specific_options">5.10. Rack-specific options</h3>
+<h3 id="_rack_specific_options">5.10. Rack-specific options</h3><div style="clear:left"></div>
 <h4 id="RackEnv">5.10.1. rack_env &lt;string&gt;</h4>
 <div class="paragraph"><p>This option allows one to specify the default <tt>RACK_ENV</tt> value.</p></div>
 <div class="paragraph"><p>This option may occur in the following places:</p></div>
@@ -1498,7 +1633,7 @@ In an <em>if</em> configuration scope.
 <div class="sectionbody">
 <div class="paragraph"><p>Phusion Passenger provides a set of tools, which are useful for system analysis,
 maintenance and troubleshooting.</p></div>
-<h3 id="_inspecting_memory_usage">6.1. Inspecting memory usage</h3>
+<h3 id="_inspecting_memory_usage">6.1. Inspecting memory usage</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Process inspection tools such as <tt>ps</tt> and <tt>top</tt> are useful, but they
 <a href="http://groups.google.com/group/phusion-passenger/msg/1fd1c233456d3180">rarely show the correct memory usage</a>.
 The real memory usage is usually lower than what <tt>ps</tt> and <tt>top</tt> report.</p></div>
@@ -1548,7 +1683,7 @@ don&#8217;t provide facilities for determining processes' private dirty RSS. On 
 the Resident Set Size is reported instead.</td>
 </tr></table>
 </div>
-<h3 id="_inspecting_phusion_passenger_8217_s_internal_status">6.2. Inspecting Phusion Passenger&#8217;s internal status</h3>
+<h3 id="_inspecting_phusion_passenger_8217_s_internal_status">6.2. Inspecting Phusion Passenger&#8217;s internal status</h3><div style="clear:left"></div>
 <div class="paragraph"><p>One can inspect Phusion Passenger&#8217;s internal status with the tool <tt>passenger-status</tt>.
 This tool must typically be run as root. For example:</p></div>
 <div class="listingblock">
@@ -1675,7 +1810,7 @@ Your application is frozen, i.e. has stopped responding. See
 </p>
 </li>
 </ol></div>
-<h3 id="debugging_frozen">6.3. Debugging frozen applications</h3>
+<h3 id="debugging_frozen">6.3. Debugging frozen applications</h3><div style="clear:left"></div>
 <div class="paragraph"><p>If one of your application instances is frozen (stopped responding), then you
 can figure out where it is frozen by killing it with <em>SIGABRT</em>. This will cause the
 application to raise an exception, with a backtrace.</p></div>
@@ -1698,7 +1833,7 @@ will restart killed application instances, as if nothing bad happened.</td>
 </div>
 <h2 id="_tips">7. Tips</h2>
 <div class="sectionbody">
-<h3 id="user_switching">7.1. User switching (security)</h3>
+<h3 id="user_switching">7.1. User switching (security)</h3><div style="clear:left"></div>
 <div class="paragraph"><p>There is a problem that plagues most PHP web hosts, namely the fact that all PHP
 applications are run in the same user context as the web server. So for
 example, Joe&#8217;s PHP application will be able to read Jane&#8217;s PHP application&#8217;s
@@ -1737,12 +1872,12 @@ Under no circumstances will applications be run as <em>root</em>. If
 <div class="paragraph"><p>User switching can be disabled with the
 <a href="#PassengerUserSwitching">PassengerUserSwitching (Apache)</a>/<a href="#PassengerUserSwitching">passenger_user_switching (Nginx)</a>
 option.</p></div>
-<h3 id="reducing_memory_usage">7.2. Reducing memory consumption of Ruby on Rails applications by 33%</h3>
+<h3 id="reducing_memory_usage">7.2. Reducing memory consumption of Ruby on Rails applications by 33%</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Is it possible to reduce memory consumption of your Rails applications by 33% on average,
 by using <a href="http://www.rubyenterpriseedition.com/">Ruby Enterprise Edition</a>.
 Please visit the website for details.</p></div>
 <div class="paragraph"><p>Note that this feature does not apply to Rack applications.</p></div>
-<h3 id="capistrano">7.3. Capistrano recipe</h3>
+<h3 id="capistrano">7.3. Capistrano recipe</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Phusion Passenger can be combined with <a href="http://capify.org/">Capistrano</a>.
 The following Capistrano recipe demonstrates Phusion Passenger support.
 It assumes that you&#8217;re using Git as version control system.</p></div>
@@ -1774,7 +1909,7 @@ namespace :deploy do
   end
 end</tt></pre>
 </div></div>
-<h3 id="moving_phusion_passenger">7.4. Moving Phusion Passenger to a different directory</h3>
+<h3 id="moving_phusion_passenger">7.4. Moving Phusion Passenger to a different directory</h3><div style="clear:left"></div>
 <div class="paragraph"><p>It is possible to relocate the Phusion Passenger files to a different directory. It
 involves two steps:</p></div>
 <div class="olist arabic"><ol class="arabic">
@@ -1811,7 +1946,7 @@ Edit your Apache configuration file, and set:
 </div></div>
 </li>
 </ol></div>
-<h3 id="_installing_multiple_ruby_on_rails_versions">7.5. Installing multiple Ruby on Rails versions</h3>
+<h3 id="_installing_multiple_ruby_on_rails_versions">7.5. Installing multiple Ruby on Rails versions</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Each Ruby on Rails applications that are going to be deployed may require a
 specific Ruby on Rails version. You can install a specific version with
 this command:</p></div>
@@ -1822,7 +1957,7 @@ this command:</p></div>
 <div class="paragraph"><p>where <em>X.X.X</em> is the version number of Ruby on Rails.</p></div>
 <div class="paragraph"><p>All of these versions will exist in parallel, and will not conflict with each
 other. Phusion Passenger will automatically make use of the correct version.</p></div>
-<h3 id="_making_the_application_restart_after_each_request">7.6. Making the application restart after each request</h3>
+<h3 id="_making_the_application_restart_after_each_request">7.6. Making the application restart after each request</h3><div style="clear:left"></div>
 <div class="paragraph"><p>In some situations it might be desirable to restart the web application after
 each request, for example when developing a non-Rails application that doesn&#8217;t
 support code reloading, or when developing a web framework.</p></div>
@@ -1843,7 +1978,7 @@ or when you&#8217;re not developing a Rails application and your web framework
 does not support code reloading.</td>
 </tr></table>
 </div>
-<h3 id="sub_uri_deployment_uri_fix">7.7. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments</h3>
+<h3 id="sub_uri_deployment_uri_fix">7.7. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Some people experience broken images and other broken static assets when they
 deploy their application to a sub-URI (i.e. <em>http://mysite.com/railsapp/</em>).
 The reason for this usually is that you used a
@@ -1899,7 +2034,7 @@ Attribution-Share Alike 3.0 Unported License</a>.</p></div>
 </div>
 <h2 id="_appendix_b_terminology">9. Appendix B: Terminology</h2>
 <div class="sectionbody">
-<h3 id="application_root">9.1. Application root</h3>
+<h3 id="application_root">9.1. Application root</h3><div style="clear:left"></div>
 <div class="paragraph"><p>The root directory of an application that&#8217;s served by Phusion Passenger.</p></div>
 <div class="paragraph"><p>In case of Ruby on Rails applications, this is the directory that contains
 <em>Rakefile</em>, <em>app/</em>, <em>config/</em>, <em>public/</em>, etc. In other words, the directory
@@ -1966,7 +2101,7 @@ processes.</p></div>
 <div class="paragraph"><p>While this may sound simple, there&#8217;s not just one way to spawn worker processes.
 Let&#8217;s go over the different spawning methods. For simplicity&#8217;s sake, let&#8217;s
 assume that we&#8217;re only talking about Ruby on Rails applications.</p></div>
-<h3 id="_the_most_straightforward_and_traditional_way_conservative_spawning">10.1. The most straightforward and traditional way: conservative spawning</h3>
+<h3 id="_the_most_straightforward_and_traditional_way_conservative_spawning">10.1. The most straightforward and traditional way: conservative spawning</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Phusion Passenger could create a new Ruby process, which will then load the
 Rails application along with the entire Rails framework. This process will then
 enter an request handling main loop.</p></div>
@@ -1981,7 +2116,7 @@ programmers jargon, mongrel_cluster creates new Ruby processes by forking the
 current process and exec()-ing a new Ruby interpreter. Phusion Passenger on the
 other hand creates processes that reuse the already loaded Ruby interpreter. In
 programmers jargon, Phusion Passenger calls fork(), but not exec().</p></div>
-<h3 id="_the_smart_spawning_method">10.2. The smart spawning method</h3>
+<h3 id="_the_smart_spawning_method">10.2. The smart spawning method</h3><div style="clear:left"></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -1995,7 +2130,7 @@ programmers jargon, Phusion Passenger calls fork(), but not exec().</p></div>
 because each worker process has its own private copy of the Rails application
 as well as the Rails framework. This wastes memory as well as startup time.</p></div>
 <div class="paragraph"><p><span class="image">
-<img src="images/conservative_spawning.png" alt="Worker processes and conservative spawning" title="Worker processes and conservative spawning" />
+<img src="images/conservative_spawning.png" alt="Worker processes and conservative spawning" />
 </span><br />
 <em>Figure: Worker processes and conservative spawning. Each worker process has its
 own private copy of the application code and Rails framework code.</em></p></div>
@@ -2088,7 +2223,7 @@ process).</p></div>
 assuming that your Ruby interpreter is <a href="#reducing_memory_usage">copy-on-write friendly</a>.</p></div>
 <div class="paragraph"><p>Of course, smart spawning is not without gotchas. But if you understand the
 gotchas you can easily reap the benefits of smart spawning.</p></div>
-<h3 id="_smart_spawning_gotcha_1_unintential_file_descriptor_sharing">10.3. Smart spawning gotcha #1: unintential file descriptor sharing</h3>
+<h3 id="_smart_spawning_gotcha_1_unintential_file_descriptor_sharing">10.3. Smart spawning gotcha #1: unintential file descriptor sharing</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Because worker processes are created by forking from an ApplicationSpawner
 server, it will share all file descriptors that are opened by the
 ApplicationSpawner server. (This is part of the semantics of the Unix
@@ -2219,7 +2354,7 @@ data in the log file is interleaved.</p></div>
 must synchronize write access via an inter-process synchronization mechanism,
 such as file locks. Reopening the log file, like you would have done in the
 Memcached example, doesn&#8217;t help.</p></div>
-<h3 id="_smart_spawning_gotcha_2_the_need_to_revive_threads">10.4. Smart spawning gotcha #2: the need to revive threads</h3>
+<h3 id="_smart_spawning_gotcha_2_the_need_to_revive_threads">10.4. Smart spawning gotcha #2: the need to revive threads</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Another part of the <em>fork()</em> system call&#8217;s semantics is the fact that threads
 disappear after a fork call. So if you&#8217;ve created any threads in environment.rb,
 then those threads will no longer be running in newly created worker process.
@@ -2240,7 +2375,7 @@ http://www.gnu.org/software/src-highlite -->
         <span style="font-weight: bold"><span style="color: #0000FF">end</span></span>
     <span style="font-weight: bold"><span style="color: #0000FF">end</span></span>
 <span style="font-weight: bold"><span style="color: #0000FF">end</span></span></tt></pre></div></div>
-<h3 id="_smart_spawning_gotcha_3_code_load_order">10.5. Smart spawning gotcha #3: code load order</h3>
+<h3 id="_smart_spawning_gotcha_3_code_load_order">10.5. Smart spawning gotcha #3: code load order</h3><div style="clear:left"></div>
 <div class="paragraph"><p>This gotcha is only applicable to the <em>smart</em> spawn method, not the <em>smart-lv2</em>
 spawn method.</p></div>
 <div class="paragraph"><p>If your application expects the Rails framework to be not loaded during the
@@ -2257,9 +2392,11 @@ spawning is used, the patched version of <em>base.rb</em> is properly loaded. Wh
 because it was already loaded, so a subsequent <tt>require "active_record/base"</tt>
 has no effect.</p></div>
 </div>
+</div>
+<div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2010-01-08 11:24:06 CEST
+Last updated 2010-02-22 13:16:14 CEST
 </div>
 </div>
 </body>

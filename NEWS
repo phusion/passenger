@@ -1,3 +1,13 @@
+Release 2.2.10
+--------------
+
+ * Fixed some Bundler compatibility problems.
+ * Fixed some file descriptor passing problems, which previously
+   could lead to mysterious crashes.
+ * Fixed some compilation problems on newer GCC versions. Issue #430.
+ * Support #size method in rack.input.
+
+
 Release 2.2.9
 -------------
 

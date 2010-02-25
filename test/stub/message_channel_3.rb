@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
-$LOAD_PATH << "#{File.dirname(__FILE__)}/../../lib"
-$LOAD_PATH << "#{File.dirname(__FILE__)}/../../ext"
+$LOAD_PATH.unshift("#{File.dirname(__FILE__)}/../../lib")
+$LOAD_PATH.unshift("#{File.dirname(__FILE__)}/../../ext")
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/utils'
 

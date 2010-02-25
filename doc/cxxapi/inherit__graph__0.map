@@ -1,1 +1,1 @@
-<area shape="rect" href="$classClient.html" title="Represents a single ApplicationPool client, connected to this server." alt="" coords="7,5,63,32">
+<area shape="rect" href="$classAgentWatcher.html" title="Abstract base class for watching agent processes." alt="" coords="5,5,115,32">

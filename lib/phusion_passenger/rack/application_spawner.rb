@@ -97,6 +97,10 @@ private
 			if options["lower_privilege"]
 				lower_privilege('config.ru', options["lowest_user"])
 			end
+			# Make sure RubyGems uses any new environment variable values
+			# that have been set now (e.g. $HOME, $GEM_HOME, etc) and that
+			# it is able to detect newly installed gems.
+			Gem.clear_paths
 			app = load_rack_app
 		end
 		
