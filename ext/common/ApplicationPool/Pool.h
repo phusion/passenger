@@ -610,6 +610,7 @@ private:
 	}
 	
 	void analyticsCollectionThreadMainLoop() {
+		TRACE_POINT();
 		try {
 			syscalls::sleep(3);
 			while (!this_thread::interruption_requested()) {
@@ -619,10 +620,12 @@ private:
 				
 				// Collect all the PIDs.
 				{
+					UPDATE_TRACE_POINT();
 					lock_guard<boost::mutex> l(lock);
 					GroupMap::const_iterator group_it;
 					GroupMap::const_iterator group_it_end = groups.end();
 					
+					UPDATE_TRACE_POINT();
 					pids.reserve(count);
 					for (group_it = groups.begin(); group_it != group_it_end; group_it++) {
 						const GroupPtr &group = group_it->second;
@@ -640,13 +643,16 @@ private:
 				try {
 					// Now collect the process metrics and store them in the
 					// data structures, and log the state into the analytics logs.
+					UPDATE_TRACE_POINT();
 					ProcessMetricsCollector::Map allMetrics =
 						processMetricsCollector.collect(pids);
 					
+					UPDATE_TRACE_POINT();
 					lock_guard<boost::mutex> l(lock);
 					GroupMap::iterator group_it;
 					GroupMap::iterator group_it_end = groups.end();
 					
+					UPDATE_TRACE_POINT();
 					for (group_it = groups.begin(); group_it != group_it_end; group_it++) {
 						GroupPtr &group = group_it->second;
 						ProcessInfoList &processes = group->processes;
@@ -689,6 +695,7 @@ private:
 				
 				// Sleep for about 3 seconds, aligned to seconds boundary
 				// for saving power on laptops.
+				UPDATE_TRACE_POINT();
 				unsigned long long currentTime = SystemTime::getUsec();
 				unsigned long long deadline =
 					roundUp<unsigned long long>(currentTime, 1000000) + 3000000;
