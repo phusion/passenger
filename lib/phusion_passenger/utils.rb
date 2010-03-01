@@ -255,9 +255,9 @@ protected
 	# +options+ are the spawn options that were passed.
 	def before_handling_requests(forked, options)
 		if defined?(ActionController)
-			require 'phusion_passenger/railz/analytics_logging'
-			if PhusionPassenger::Railz::AnalyticsLogging.installable?(options)
-				PhusionPassenger::Railz::AnalyticsLogging.install!(options)
+			require 'phusion_passenger/railz/framework_extensions/analytics_logging'
+			if PhusionPassenger::Railz::FrameworkExtensions::AnalyticsLogging.installable?(options)
+				PhusionPassenger::Railz::FrameworkExtensions::AnalyticsLogging.install!(options)
 			end
 		end
 		

@@ -65,6 +65,7 @@ private
 					headers[X_POWERED_BY] = PASSENGER_HEADER
 					passenger_orig_perform_action(*whatever)
 				end
+				private :perform_action
 			end
 		end
 	end

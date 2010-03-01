@@ -128,7 +128,7 @@ module TestHelper
 	end
 	
 	def describe_each_rails_version(&block)
-		if ENV['ONLY_RAILS_VERSION']
+		if ENV['ONLY_RAILS_VERSION'] && !ENV['ONLY_RAILS_VERSION'].empty?
 			versions = [ENV['ONLY_RAILS_VERSION']]
 		else
 			versions = Dir.entries("stub/rails_apps").grep(/^\d+\.\d+$/)
