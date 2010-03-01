@@ -6,6 +6,7 @@ module AnalyticsLogging
 module ACBaseExtension
 private
 	def perform_action_with_passenger(*args)
+		# Log controller and action name.
 		AnalyticsLogging.continue_transaction_logging(request) do |log|
 			log.message("Controller action: #{controller_class_name}##{action_name}")
 		end
