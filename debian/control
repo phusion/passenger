@@ -25,7 +25,7 @@ Description: Rails and Rack support for Apache2
 
 Package: libapache2-mod-passenger
 Architecture: any
-Depends: ${shlibs:Depends}, apache2-mpm-worker | apache2-mpm-prefork, 
+Depends: ${shlibs:Depends}, apache2.2-common
  passenger-common (= ${binary:Version})
 Suggests: python, rails, passenger-doc, rubygems (>= 1.0)
 Description: Rails and Rack support for Apache2
