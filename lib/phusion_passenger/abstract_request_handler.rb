@@ -27,7 +27,6 @@ require 'fcntl'
 require 'phusion_passenger'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/message_client'
-require 'phusion_passenger/analytics_logger'
 require 'phusion_passenger/utils'
 require 'phusion_passenger/utils/tmpdir'
 require 'phusion_passenger/utils/unseekable_socket'
@@ -106,7 +105,14 @@ class AbstractRequestHandler
 	X_POWERED_BY        = 'X-Powered-By'        # :nodoc:
 	REQUEST_METHOD      = 'REQUEST_METHOD'      # :nodoc:
 	PING                = 'PING'                # :nodoc:
-	PASSENGER_CONNECT_PASSWORD = "PASSENGER_CONNECT_PASSWORD"   # :nodoc:
+	PASSENGER_CONNECT_PASSWORD  = "PASSENGER_CONNECT_PASSWORD"   # :nodoc:
+	PASSENGER_TXN_ID            = "PASSENGER_TXN_ID"             # :nodoc:
+	PASSENGER_GROUP_NAME        = "PASSENGER_GROUP_NAME"         # :nodoc:
+	PASSENGER_ANALYTICS_WEB_LOG = "PASSENGER_ANALYTICS_WEB_LOG"  # :nodoc:
+	
+	OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS = ObjectSpace.respond_to?(:live_objects)
+	OBJECT_SPACE_SUPPORTS_ALLOCATED_OBJECTS = ObjectSpace.respond_to?(:allocated_objects)
+	GC_SUPPORTS_TIME = GC.respond_to?(:time)
 	
 	# A hash containing all server sockets that this request handler listens on.
 	# The hash is in the form of:
@@ -187,6 +193,7 @@ class AbstractRequestHandler
 		if options["pool_account_password_base64"]
 			@pool_account_password = options["pool_account_password_base64"].unpack('m').first
 		end
+		@analytics_logger      = options["analytics_logger"]
 		@iterations         = 0
 		@processed_requests = 0
 		@soft_termination_linger_time = 3
@@ -476,10 +483,15 @@ private
 		end
 		
 		if headers
-			if headers[REQUEST_METHOD] == PING
-				process_ping(headers, input_stream, connection)
-			else
-				process_request(headers, input_stream, connection, full_http_response)
+			prepare_request(headers)
+			begin
+				if headers[REQUEST_METHOD] == PING
+					process_ping(headers, input_stream, connection)
+				else
+					process_request(headers, input_stream, connection, full_http_response)
+				end
+			ensure
+				finalize_request(headers)
 			end
 		end
 		return true
@@ -490,10 +502,10 @@ private
 				print_exception("Passenger RequestHandler's client socket", e)
 			end
 		else
-			if analytics_logger && headers && headers["PASSENGER_TXN_ID"]
-				log = analytics_logger.continue_transaction(
-					headers["PASSENGER_GROUP_NAME"],
-					headers["PASSENGER_TXN_ID"],
+			if @analytics_logger && headers && headers[PASSENGER_TXN_ID]
+				log = @analytics_logger.continue_transaction(
+					headers[PASSENGER_GROUP_NAME],
+					headers[PASSENGER_TXN_ID],
 					:exceptions, true)
 				begin
 					message = e.message
@@ -620,15 +632,6 @@ private
 		output.write("pong")
 	end
 	
-	def analytics_logger
-		if defined?(@analytics_logger)
-			return @analytics_logger
-		else
-			@analytics_logger = AnalyticsLogger.new_from_options(@options)
-			return @analytics_logger
-		end
-	end
-	
 	def self.determine_passenger_header
 		header = "Phusion Passenger (mod_rails/mod_rack) #{VERSION_STRING}"
 		if File.exist?("#{SOURCE_ROOT}/enterprisey.txt") ||
@@ -636,6 +639,47 @@ private
 			header << ", Enterprise Edition"
 		end
 		return header
+	end
+	
+	def prepare_request(headers)
+		if @analytics_logger && headers[PASSENGER_TXN_ID]
+			log = @analytics_logger.continue_transaction(
+				headers[PASSENGER_GROUP_NAME],
+				headers[PASSENGER_TXN_ID])
+			headers[PASSENGER_ANALYTICS_WEB_LOG] = log
+			if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS
+				log.message("Initial objects on heap: #{ObjectSpace.live_objects}")
+			end
+			if OBJECT_SPACE_SUPPORTS_ALLOCATED_OBJECTS
+				log.message("Initial objects allocated so far: #{ObjectSpace.allocated_objects}")
+			end
+			if GC_SUPPORTS_TIME
+				log.message("Initial GC time: #{GC.time}")
+			end
+		end
+		
+		#################
+	end
+	
+	def finalize_request(headers)
+		log = headers[PASSENGER_ANALYTICS_WEB_LOG]
+		if log
+			begin
+				if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS
+					log.message("Final objects on heap: #{ObjectSpace.live_objects}")
+				end
+				if OBJECT_SPACE_SUPPORTS_ALLOCATED_OBJECTS
+					log.message("Final objects allocated so far: #{ObjectSpace.allocated_objects}")
+				end
+				if GC_SUPPORTS_TIME
+					log.message("Final GC time: #{GC.time}")
+				end
+			ensure
+				log.close
+			end
+		end
+		
+		#################
 	end
 
 public

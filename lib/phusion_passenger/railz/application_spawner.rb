@@ -289,7 +289,7 @@ private
 		$0 = "Rails: #{app_root}"
 		reader, writer = IO.pipe
 		begin
-			fix_framework_after_forking
+			fix_framework_after_forking(options)
 			reader.close_on_exec!
 			
 			if Rails::VERSION::STRING >= '2.3.0'

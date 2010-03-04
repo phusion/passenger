@@ -6,7 +6,7 @@ module AnalyticsLogging
 	@@analytics_logger = nil
 	
 	def self.installable?(options)
-		return options["logging_agent_address"] && (
+		return options["analytics_logger"] && (
 			ac_base_extension_installable? ||
 			ac_rescue_extension_installable?
 		)
@@ -23,8 +23,7 @@ module AnalyticsLogging
 	end
 	
 	def self.install!(options)
-		@@analytics_logger = AnalyticsLogger.new_from_options(options)
-		require 'phusion_passenger/analytics_logger'
+		@@analytics_logger = options["analytics_logger"]
 		if ac_base_extension_installable?
 			require 'phusion_passenger/railz/framework_extensions/analytics_logging/ac_base_extension'
 			ActionController::Base.class_eval do

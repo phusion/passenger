@@ -185,6 +185,9 @@ protected
 	# +startup_file+ is the application type's startup file, e.g.
 	# "config/environment.rb" for Rails apps and "config.ru" for Rack apps.
 	# See SpawnManager#spawn_application for options.
+	#
+	# This function may modify +options+. The modified options are to be
+	# passed to the request handler.
 	def prepare_app_process(startup_file, options)
 		Dir.chdir(options["app_root"])
 		
@@ -207,6 +210,15 @@ protected
 			env_vars.each_pair do |key, value|
 				ENV[key] = value
 			end
+		end
+		
+		# Instantiate the analytics logger if requested.
+		require 'phusion_passenger/analytics_logger'
+		options["analytics_logger"] = AnalyticsLogger.new_from_options(options)
+		# If the Ruby interpreter supports GC statistics then turn it on if analytics
+		# are also turned on.
+		if options["analytics_logger"] && GC.respond_to?(:enable_stats)
+			GC.enable_stats
 		end
 		
 		# Make sure RubyGems uses any new environment variable values
@@ -254,13 +266,6 @@ protected
 	# an ApplicationSpawner that has preloaded the app code.
 	# +options+ are the spawn options that were passed.
 	def before_handling_requests(forked, options)
-		if defined?(ActionController)
-			require 'phusion_passenger/railz/framework_extensions/analytics_logging'
-			if PhusionPassenger::Railz::FrameworkExtensions::AnalyticsLogging.installable?(options)
-				PhusionPassenger::Railz::FrameworkExtensions::AnalyticsLogging.install!(options)
-			end
-		end
-		
 		PhusionPassenger.call_event(:starting_worker_process, forked)
 		if options["pool_account_username"] && options["pool_account_password_base64"]
 			password = options["pool_account_password_base64"].unpack('m').first
@@ -282,7 +287,7 @@ protected
 	# off from an ApplicationSpawner that had preloaded the application code.
 	# It fixes various things in supported framework, e.g. in case of Rails it'll
 	# clear the database connections and stuff.
-	def fix_framework_after_forking
+	def fix_framework_after_forking(options)
 		# Clear or re-establish connection if a connection was established
 		# in environment.rb. This prevents us from concurrently
 		# accessing the same database connection handle.
@@ -294,6 +299,13 @@ protected
 			elsif ::ActiveRecord::Base.respond_to?(:connected?) &&
 			      ::ActiveRecord::Base.connected?
 				::ActiveRecord::Base.establish_connection
+			end
+		end
+		
+		if defined?(ActionController)
+			require 'phusion_passenger/railz/framework_extensions/analytics_logging'
+			if PhusionPassenger::Railz::FrameworkExtensions::AnalyticsLogging.installable?(options)
+				PhusionPassenger::Railz::FrameworkExtensions::AnalyticsLogging.install!(options)
 			end
 		end
 	end

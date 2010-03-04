@@ -7,9 +7,8 @@ module ACBaseExtension
 private
 	def perform_action_with_passenger(*args)
 		# Log controller and action name.
-		AnalyticsLogging.continue_transaction_logging(request) do |log|
-			log.message("Controller action: #{controller_class_name}##{action_name}")
-		end
+		log = request.env[AbstractRequestHandler::PASSENGER_ANALYTICS_WEB_LOG]
+		log.message("Controller action: #{controller_class_name}##{action_name}") if log
 		perform_action_without_passenger(*args)
 	end
 end
