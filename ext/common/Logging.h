@@ -516,7 +516,7 @@ public:
 		char time_str[14];
 		
 		time_value = timestamp / 1000000;
-		localtime_r(&time_value, &tm);
+		gmtime_r(&time_value, &tm);
 		strftime(time_str, sizeof(time_str), "%Y/%m/%d/%H", &tm);
 		
 		string filename;

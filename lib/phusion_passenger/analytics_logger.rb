@@ -135,7 +135,7 @@ private
 		group_id = Digest::MD5.hexdigest(group_name)
 		timestamp_sec  = timestamp / 1000000
 		timestamp_usec = timestamp % 1000000
-		time = Time.at(timestamp_sec, timestamp_usec)
+		time = Time.at(timestamp_sec, timestamp_usec).utc
 		date_name = time.strftime("%Y/%m/%d/%H")
 		log_file_path = "1/#{group_id}/#{category}/#{date_name}/log.txt"
 		
