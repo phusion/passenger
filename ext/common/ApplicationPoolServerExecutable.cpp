@@ -701,7 +701,7 @@ Server::start() {
 			}
 			
 			UPDATE_TRACE_POINT();
-			MessageChannel(serverSocket).writeFileDescriptor(fds[1]);
+			MessageChannel(serverSocket).writeFileDescriptor(fds[1], false);
 			syscalls::close(fds[1]);
 			
 			UPDATE_TRACE_POINT();
