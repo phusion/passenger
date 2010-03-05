@@ -752,7 +752,7 @@ public:
 			// Write some random data to wake up the server.
 			channel.writeRaw("x", 1);
 			
-			clientConnection = channel.readFileDescriptor();
+			clientConnection = channel.readFileDescriptor(false);
 			return ptr(new Client(clientConnection));
 		} catch (const SystemException &e) {
 			throw SystemException("Could not connect to the ApplicationPool server", e.code());
