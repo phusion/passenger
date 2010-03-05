@@ -2,8 +2,8 @@ Source: passenger
 Section: web
 Priority: optional
 Maintainer: John Leach <john@brightbox.co.uk>
-Build-Depends: apache2-threaded-dev, apache2-mpm-worker | apache2-mpm-prefork, libapr1-dev, ruby,
- rubygems, debhelper (>= 5.0.44), ruby1.8-dev, doxygen,
+Build-Depends: apache2-threaded-dev, apache2-mpm-worker | apache2-mpm-prefork,
+ libapr1-dev, ruby, rubygems, debhelper (>= 5.0.44), ruby1.8-dev, doxygen,
  asciidoc (>= 8.2), graphviz, rake, cdbs, source-highlight
 Standards-Version: 3.8.0
 Homepage: http://www.modrails.com/
@@ -25,7 +25,7 @@ Description: Rails and Rack support for Apache2
 
 Package: libapache2-mod-passenger
 Architecture: any
-Depends: ${shlibs:Depends}, apache2.2-common
+Depends: ${shlibs:Depends}, apache2.2-common, 
  passenger-common (= ${binary:Version})
 Suggests: python, rails, passenger-doc, rubygems (>= 1.0)
 Description: Rails and Rack support for Apache2

@@ -1,3 +1,9 @@
+passenger (2.2.11-1bbox2) hardy; urgency=low
+
+  * Fix dependency on passenger-common
+
+ -- John Leach <john@brightbox.co.uk>  Fri, 05 Mar 2010 19:32:37 +0000
+
 passenger (2.2.11-1bbox1) hardy; urgency=low
 
   * New Upstream Version, 2.2.11
