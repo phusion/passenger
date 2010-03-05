@@ -1,3 +1,9 @@
+passenger (2.2.11-1bbox1) hardy; urgency=low
+
+  * New Upstream Version, 2.2.11
+
+ -- John Leach <john@brightbox.co.uk>  Fri, 05 Mar 2010 15:03:50 +0000
+
 passenger (2.2.10-1bbox2) hardy; urgency=low
 
   * Change depency from apache mpm to apache common package
