@@ -12,9 +12,9 @@ using namespace oxt;
 
 namespace tut {
 	struct LoggingTest {
-		static const unsigned long long YESTERDAY = 1263299017000000ull;  // January 12, 2009, 13:23:37
-		static const unsigned long long TODAY     = 1263385422000000ull;  // January 13, 2009, 13:23:42
-		static const unsigned long long TOMORROW  = 1263471822000000ull;  // January 14, 2009, 13:23:42
+		static const unsigned long long YESTERDAY = 1263299017000000ull;  // January 12, 2009, 12:23:37 UTC
+		static const unsigned long long TODAY     = 1263385422000000ull;  // January 13, 2009, 12:23:42 UTC
+		static const unsigned long long TOMORROW  = 1263471822000000ull;  // January 14, 2009, 12:23:42 UTC
 		#define FOOBAR_MD5 "3858f62230ac3c915f300c664312c63f"
 		
 		ServerInstanceDirPtr serverInstanceDir;
@@ -57,7 +57,7 @@ namespace tut {
 		log->message("hello");
 		log->message("world");
 		
-		string data = readAll(loggingDir + "/1/" FOOBAR_MD5 "/web/2010/01/12/13/log.txt");
+		string data = readAll(loggingDir + "/1/" FOOBAR_MD5 "/web/2010/01/12/12/log.txt");
 		ensure(data.find("hello\n") != string::npos);
 		ensure(data.find("world\n") != string::npos);
 		
@@ -76,7 +76,7 @@ namespace tut {
 		AnalyticsLogPtr log2 = logger->continueTransaction(log->getGroupName(), log->getTxnId());
 		log->message("message 2");
 		
-		string data = readAll(loggingDir + "/1/" FOOBAR_MD5 "/web/2010/01/12/13/log.txt");
+		string data = readAll(loggingDir + "/1/" FOOBAR_MD5 "/web/2010/01/12/12/log.txt");
 		ensure(data.find("message 1\n") != string::npos);
 		ensure(data.find("message 2\n") != string::npos);
 	}
@@ -96,8 +96,8 @@ namespace tut {
 		AnalyticsLogPtr log3 = logger->newTransaction("foobar");
 		log3->message("message 4");
 		
-		string yesterdayData = readAll(loggingDir + "/1/" FOOBAR_MD5 "/web/2010/01/12/13/log.txt");
-		string tomorrowData = readAll(loggingDir + "/1/" FOOBAR_MD5 "/web/2010/01/14/13/log.txt");
+		string yesterdayData = readAll(loggingDir + "/1/" FOOBAR_MD5 "/web/2010/01/12/12/log.txt");
+		string tomorrowData = readAll(loggingDir + "/1/" FOOBAR_MD5 "/web/2010/01/14/12/log.txt");
 		
 		ensure("(1)", yesterdayData.find(toString(YESTERDAY) + " message 1\n") != string::npos);
 		ensure("(2)", yesterdayData.find(toString(TODAY) + " message 2\n") != string::npos);
@@ -117,7 +117,7 @@ namespace tut {
 		SystemTime::forceUsec(TOMORROW);
 		log.reset();
 		
-		string data = readAll(loggingDir + "/1/" FOOBAR_MD5 "/web/2010/01/12/13/log.txt");
+		string data = readAll(loggingDir + "/1/" FOOBAR_MD5 "/web/2010/01/12/12/log.txt");
 		ensure("(1)", data.find(toString(YESTERDAY) + " ATTACH\n") != string::npos);
 		ensure("(2)", data.find(toString(TODAY) + " ATTACH\n") != string::npos);
 		ensure("(3)", data.find(toString(TODAY) + " DETACH\n") != string::npos);
