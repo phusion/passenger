@@ -285,6 +285,7 @@ private:
 	CachedFileStat cstat;
 	FileChangeChecker fileChangeChecker;
 	ProcessMetricsCollector processMetricsCollector;
+	string analyticsServerIdentifier;
 	
 	// Shortcuts for instance variables in SharedData. Saves typing in get()
 	// and other methods.
@@ -681,6 +682,9 @@ private:
 						}
 						if (log != NULL) {
 							xml << "</processes>";
+							if (!analyticsServerIdentifier.empty()) {
+								log->message("Server identifier: " + analyticsServerIdentifier);
+							}
 							log->message(xml.str());
 						}
 					}
@@ -871,7 +875,9 @@ private:
 	}
 	
 	/** @throws boost::thread_resource_error */
-	void initialize(const AnalyticsLoggerPtr &analyticsLogger) {
+	void initialize(const AnalyticsLoggerPtr &analyticsLogger,
+	                const string &analyticsServerIdentifier)
+	{
 		done = false;
 		max = DEFAULT_MAX_POOL_SIZE;
 		count = 0;
@@ -884,6 +890,7 @@ private:
 			"ApplicationPool cleaner",
 			CLEANER_THREAD_STACK_SIZE
 		);
+		this->analyticsServerIdentifier = analyticsServerIdentifier;
 		if (analyticsLogger != NULL) {
 			this->analyticsLogger = analyticsLogger;
 			analyticsCollectionThread = new oxt::thread(
@@ -911,6 +918,7 @@ public:
 	     const AccountsDatabasePtr &accountsDatabase = AccountsDatabasePtr(),
 	     const string &rubyCommand = "ruby",
 	     const AnalyticsLoggerPtr &analyticsLogger = AnalyticsLoggerPtr(),
+	     const string &analyticsServerIdentifier = "",
 	     const string &loggingAgentAddress = "",
 	     const string &loggingAgentUsername = "",
 	     const string &loggingAgentPassword = ""
@@ -929,7 +937,7 @@ public:
 		this->spawnManager = ptr(new SpawnManager(spawnServerCommand, generation,
 			accountsDatabase, rubyCommand, loggingAgentAddress,
 			loggingAgentUsername, loggingAgentPassword));
-		initialize(analyticsLogger);
+		initialize(analyticsLogger, analyticsServerIdentifier);
 	}
 	
 	/**
@@ -939,7 +947,8 @@ public:
 	 * @throws boost::thread_resource_error Cannot spawn a new thread.
 	 */
 	Pool(AbstractSpawnManagerPtr spawnManager,
-	     const AnalyticsLoggerPtr &analyticsLogger = AnalyticsLoggerPtr()
+	     const AnalyticsLoggerPtr &analyticsLogger = AnalyticsLoggerPtr(),
+	     const string &analyticsServerIdentifier = ""
 	) : data(new SharedData()),
 	     cstat(DEFAULT_MAX_POOL_SIZE),
 	     lock(data->lock),
@@ -953,7 +962,7 @@ public:
 	{
 		TRACE_POINT();
 		this->spawnManager = spawnManager;
-		initialize(analyticsLogger);
+		initialize(analyticsLogger, analyticsServerIdentifier);
 	}
 	
 	virtual ~Pool() {

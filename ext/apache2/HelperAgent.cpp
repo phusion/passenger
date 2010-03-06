@@ -246,7 +246,7 @@ public:
 		pool = ptr(new ApplicationPool::Pool(
 			resourceLocator.getSpawnServerFilename(), generation,
 			accountsDatabase, rubyCommand,
-			analyticsLogger,
+			analyticsLogger, "",
 			generation->getPath() + "/logging.socket",
 			"logging", loggingAgentPassword
 		));

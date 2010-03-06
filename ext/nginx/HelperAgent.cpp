@@ -31,6 +31,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
+#include <limits.h>
 #include <pwd.h>
 #include <grp.h>
 
@@ -64,6 +65,17 @@ using namespace oxt;
 using namespace Passenger;
 
 #define REQUEST_SOCKET_PASSWORD_SIZE     64
+
+#ifndef HOST_NAME_MAX
+	#if defined(_POSIX_HOST_NAME_MAX)
+		#define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
+	#elif defined(_SC_HOST_NAME_MAX)
+		#define HOST_NAME_MAX sysconf(_SC_HOST_NAME_MAX)
+	#else
+		#define HOST_NAME_MAX 255
+	#endif
+#endif
+
 
 struct ClientDisconnectedException { };
 
@@ -130,6 +142,8 @@ private:
 	
 	/** The server socket file descriptor. */
 	int serverSocket;
+	
+	string analyticsServerIdentifier;
 	
 	/** The analytics logger to use. */
 	AnalyticsLoggerPtr analyticsLogger;
@@ -472,6 +486,7 @@ private:
 			}
 			
 			AnalyticsScopeLog requestProcessingScope(log, "request processing");
+			log->message("Server identifier: " + analyticsServerIdentifier);
 			log->message("URI: " + parser.getHeader("REQUEST_URI"));
 			
 			/***********************/
@@ -616,6 +631,7 @@ public:
 	Client(unsigned int number, ApplicationPool::Ptr pool,
 	       const string &password, const string &defaultUser,
 	       const string &defaultGroup, int serverSocket,
+	       const string &analyticsServerIdentifier,
 	       const AnalyticsLoggerPtr &logger)
 		: inactivityTimer(false)
 	{
@@ -625,6 +641,7 @@ public:
 		this->defaultUser = defaultUser;
 		this->defaultGroup = defaultGroup;
 		this->serverSocket = serverSocket;
+		this->analyticsServerIdentifier = analyticsServerIdentifier;
 		this->analyticsLogger = logger;
 		thr = new oxt::thread(
 			bind(&Client::threadMain, this),
@@ -682,6 +699,7 @@ private:
 	ServerInstanceDir serverInstanceDir;
 	ServerInstanceDir::GenerationPtr generation;
 	set<ClientPtr> clients;
+	string analyticsServerIdentifier;
 	AnalyticsLoggerPtr analyticsLogger;
 	ApplicationPool::Ptr pool;
 	AccountsDatabasePtr accountsDatabase;
@@ -724,7 +742,7 @@ private:
 		for (unsigned int i = 0; i < numberOfThreads; i++) {
 			ClientPtr client(new Client(i + 1, pool, requestSocketPassword,
 				defaultUser, defaultGroup, requestSocket,
-				analyticsLogger));
+				analyticsServerIdentifier, analyticsLogger));
 			clients.insert(client);
 		}
 	}
@@ -805,6 +823,7 @@ public:
 		vector<string> args;
 		string messageSocketPassword;
 		string loggingAgentPassword;
+		char hostname[HOST_NAME_MAX + 1];
 		
 		TRACE_POINT();
 		this->feedbackFd    = feedbackFd;
@@ -813,6 +832,10 @@ public:
 		this->defaultGroup  = defaultGroup;
 		feedbackChannel     = MessageChannel(feedbackFd);
 		numberOfThreads     = maxPoolSize * 4;
+		if (gethostname(hostname, sizeof(hostname)) == 0) {
+			hostname[sizeof(hostname) - 1] = '\0';
+			analyticsServerIdentifier = hostname;
+		}
 		
 		UPDATE_TRACE_POINT();
 		if (!feedbackChannel.read(args)) {
@@ -843,6 +866,7 @@ public:
 			resourceLocator.getSpawnServerFilename(), generation,
 			accountsDatabase, rubyCommand,
 			analyticsLogger,
+			analyticsServerIdentifier,
 			generation->getPath() + "/logging.socket",
 			"logging", loggingAgentPassword
 		));
