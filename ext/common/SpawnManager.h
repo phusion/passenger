@@ -299,7 +299,7 @@ private:
 		// The connect password must be a URL-friendly string because users will
 		// insert it in HTTP headers.
 		string connectPassword = Base64::encodeForUrl(random.generateByteString(32));
-		string gupid = toString(SystemTime::get()) + "-" + Base64::encodeForUrl(random.generateByteString(8));
+		string gupid = Base64::encodeForUrl(random.generateByteString(8)) + "-" + toString(SystemTime::get());
 		AccountPtr account;
 		function<void ()> destructionCallback;
 		
