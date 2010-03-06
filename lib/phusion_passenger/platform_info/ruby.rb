@@ -30,7 +30,7 @@ module PlatformInfo
 	# The absolute path to the current Ruby interpreter.
 	RUBY = Config::CONFIG['bindir'] + '/' + Config::CONFIG['RUBY_INSTALL_NAME'] + Config::CONFIG['EXEEXT']
 	
-	RUBY_ENGINE = defined?(::RUBY_ENGINE) ? ::RUBY_ENGINE : "ruby"
+	RUBY_ENGINE = "ruby" if !defined?(RUBY_ENGINE)
 	
 	# Returns whether the Ruby interpreter supports process forking.
 	def self.fork_supported?
