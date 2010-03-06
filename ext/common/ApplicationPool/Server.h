@@ -318,6 +318,7 @@ private:
 					session->getSocketName().c_str(),
 					session->getDetachKey().c_str(),
 					session->getConnectPassword().c_str(),
+					session->getGupid().c_str(),
 					toString(specificContext->lastSessionID - 1).c_str(),
 					NULL);
 				UPDATE_TRACE_POINT();

@@ -132,7 +132,8 @@ protected:
 	public:
 		RemoteSession(SharedDataPtr data, pid_t pid, const string &socketType,
 		              const string &socketName, const string &detachKey,
-		              const string &connectPassword, int id)
+		              const string &connectPassword, const string &gupid,
+		              int id)
 		{
 			this->data = data;
 			this->pid = pid;
@@ -140,6 +141,7 @@ protected:
 			this->socketName = socketName;
 			this->detachKey  = detachKey;
 			this->connectPassword = connectPassword;
+			this->gupid      = gupid;
 			this->id = id;
 			fd = -1;
 			isInitiated = false;
@@ -671,10 +673,11 @@ public:
 				string socketName = reply[3];
 				string detachKey = reply[4];
 				string connectPassword = reply[5];
-				int sessionID = atoi(reply[6]);
+				string gupid = reply[6];
+				int sessionID = atoi(reply[7]);
 				
 				SessionPtr session(new RemoteSession(data, pid, socketType, socketName,
-					detachKey, connectPassword, sessionID));
+					detachKey, connectPassword, gupid, sessionID));
 				if (options.initiateSession) {
 					try {
 						session->initiate();

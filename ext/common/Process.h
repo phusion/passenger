@@ -75,6 +75,7 @@ private:
 	int ownerPipe;
 	string detachKey;
 	string connectPassword;
+	string gupid;
 	SocketInfoMap serverSockets;
 	SocketInfo *mainServerSocket;
 	function<void ()> destructionCallback;
@@ -92,11 +93,12 @@ public:
 	 * @param detachKey A detach key. Used by the ApplicationPool algorithm.
 	 * @param connectPassword The password to use when connecting to this process.
 	 *                        Must be valid ASCII.
+	 * @param gupid A string which uniquely identifies this process.
 	 * @param destructionCallback A callback to be called when this Process is destroyed.
 	 * @throws ArgumentException If serverSockets has no socket named 'main'.
 	 */
 	Process(const string &appRoot, pid_t pid, int ownerPipe, const SocketInfoMap &serverSockets,
-	        const string &detachKey, const string &connectPassword,
+	        const string &detachKey, const string &connectPassword, const string &gupid,
 	        const function<void ()> &destructionCallback = function<void ()>())
 	{
 		this->appRoot         = appRoot;
@@ -105,6 +107,7 @@ public:
 		this->serverSockets   = serverSockets;
 		this->detachKey       = detachKey;
 		this->connectPassword = connectPassword;
+		this->gupid           = gupid;
 		this->destructionCallback = destructionCallback;
 		if (serverSockets.find("main") == serverSockets.end()) {
 			TRACE_POINT();
@@ -170,6 +173,14 @@ public:
 	}
 	
 	/**
+	 * Returns this process's gupid. This is like a PID, but does not rotate
+	 * and is even unique over multiple servers.
+	 */
+	string getGupid() const {
+		return gupid;
+	}
+	
+	/**
 	 * Returns a map containing all server sockets that this process
 	 * listens on.
 	 */
@@ -228,7 +239,7 @@ public:
 	{
 		SessionPtr session(new StandardSession(pid, closeCallback,
 			mainServerSocket->type, mainServerSocket->address,
-			detachKey, connectPassword));
+			detachKey, connectPassword, gupid));
 		if (initiateNow) {
 			session->initiate();
 		}

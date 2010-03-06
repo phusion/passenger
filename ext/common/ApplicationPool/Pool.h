@@ -417,6 +417,7 @@ private:
 	{
 		result << "<process>";
 		result << "<pid>" << processInfo->process->getPid() << "</pid>";
+		result << "<gupid>" << processInfo->process->getGupid() << "</gupid>";
 		result << "<sessions>" << processInfo->sessions << "</sessions>";
 		result << "<processed>" << processInfo->processed << "</processed>";
 		result << "<uptime>" << processInfo->uptime() << "</uptime>";

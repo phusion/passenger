@@ -80,6 +80,7 @@ class Session {
 protected:
 	string detachKey;
 	string connectPassword;
+	string gupid;
 	
 public:
 	/**
@@ -303,6 +304,10 @@ public:
 	const string getConnectPassword() const {
 		return connectPassword;
 	}
+	
+	const string getGupid() const {
+		return gupid;
+	}
 };
 
 typedef shared_ptr<Session> SessionPtr;
@@ -331,7 +336,8 @@ public:
 	                const string &socketType,
 	                const string &socketName,
 	                const string &detachKey,
-	                const string &connectPassword)
+	                const string &connectPassword,
+	                const string &gupid)
 	{
 		TRACE_POINT();
 		if (socketType != "unix" && socketType != "tcp") {
@@ -343,6 +349,7 @@ public:
 		this->socketName    = socketName;
 		this->detachKey     = detachKey;
 		this->connectPassword = connectPassword;
+		this->gupid         = gupid;
 		fd = -1;
 		isInitiated = false;
 	}

@@ -484,7 +484,8 @@ private:
 					AnalyticsScopeLog sl(log, "get from pool");
 					session = pool->get(options);
 					sl.success();
-					log->message("Application PID: " + toString(session->getPid()));
+					log->message("Application PID: " + toString(session->getPid()) +
+						" (GUPID: " + session->getGupid() + ")");
 				}
 				
 				UPDATE_TRACE_POINT();

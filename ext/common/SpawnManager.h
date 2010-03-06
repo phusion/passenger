@@ -55,6 +55,7 @@
 #include "Exceptions.h"
 #include "Logging.h"
 #include "Utils/Base64.h"
+#include "Utils/SystemTime.h"
 
 namespace Passenger {
 
@@ -298,6 +299,7 @@ private:
 		// The connect password must be a URL-friendly string because users will
 		// insert it in HTTP headers.
 		string connectPassword = Base64::encodeForUrl(random.generateByteString(32));
+		string gupid = toString(SystemTime::get()) + "-" + Base64::encodeForUrl(random.generateByteString(8));
 		AccountPtr account;
 		function<void ()> destructionCallback;
 		
@@ -396,7 +398,7 @@ private:
 		
 		UPDATE_TRACE_POINT();
 		return ProcessPtr(new Process(appRoot, appPid, ownerPipe, serverSockets,
-			detachKey, connectPassword, destructionCallback));
+			detachKey, connectPassword, gupid, destructionCallback));
 	}
 	
 	/**
