@@ -844,7 +844,7 @@ run as, if user switching fails or is disabled.
 
 This option may only occur once, in the 'http' configuration block.
 The default value is the primary group of the user specifified by
-<<PassengerDefaultUser,Passenger_default_user>>.
+<<PassengerDefaultUser,passenger_default_user>>.
 
 ==== passenger_friendly_error_pages <on|off> ====
 Phusion Passenger can display friendly error pages whenever an application fails
