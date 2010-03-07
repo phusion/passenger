@@ -473,7 +473,6 @@ private:
 			}
 			
 			AnalyticsScopeLog requestProcessingScope(log, "request processing");
-			log->message("Node name: " + analyticsLogger->getNodeName());
 			log->message("URI: " + parser.getHeader("REQUEST_URI"));
 			
 			/***********************/

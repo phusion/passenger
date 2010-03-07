@@ -684,7 +684,6 @@ private:
 						}
 						if (log != NULL) {
 							xml << "</processes>";
-							log->message("Node name: " + analyticsLogger->getNodeName());
 							log->message(xml.str());
 						}
 					}
