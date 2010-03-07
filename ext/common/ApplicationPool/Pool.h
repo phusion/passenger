@@ -931,16 +931,18 @@ public:
 		string loggingAgentAddress;
 		string loggingAgentUsername;
 		string loggingAgentPassword;
+		string nodeName;
 		
 		if (analyticsLogger != NULL) {
 			loggingAgentAddress  = analyticsLogger->getAddress();
 			loggingAgentUsername = analyticsLogger->getUsername();
 			loggingAgentPassword = analyticsLogger->getPassword();
+			nodeName = analyticsLogger->getNodeName();
 		}
 		this->spawnManager = ptr(new SpawnManager(spawnServerCommand, generation,
 			accountsDatabase, rubyCommand,
 			loggingAgentAddress, loggingAgentUsername,
-			loggingAgentPassword));
+			loggingAgentPassword, nodeName));
 		initialize(analyticsLogger);
 	}
 	

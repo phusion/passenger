@@ -415,9 +415,9 @@ private:
 	Cache fileHandleCache;
 	
 	FileDescriptor openLogFile(const StaticString &groupName, unsigned long long timestamp,
-	                           const StaticString &category = "web")
+	                           const StaticString &nodeName, const StaticString &category = "web")
 	{
-		string logFile = determineLogFilename("", groupName, category, timestamp);
+		string logFile = determineLogFilename("", groupName, nodeName, category, timestamp);
 		Cache::iterator it;
 		lock_guard<boost::mutex> l(lock);
 		
@@ -450,6 +450,7 @@ private:
 			client.write("open log file",
 				groupName.c_str(),
 				toString(timestamp).c_str(),
+				nodeName.c_str(),
 				category.c_str(),
 				NULL);
 			if (!client.read(args)) {
@@ -494,29 +495,45 @@ public:
 		}
 	}
 	
-	static string determineGroupDir(const string &dir, const StaticString &groupName) {
+	static void determineGroupAndNodeDir(const string &dir, const StaticString &groupName,
+		const StaticString &nodeName, string &groupDir, string &nodeDir)
+	{
 		string result = dir;
 		appendVersionAndGroupId(result, groupName);
-		return result;
+		groupDir = result;
+		result.append(1, '/');
+		appendNodeId(result, nodeName);
+		nodeDir = result;
 	}
 	
 	static void appendVersionAndGroupId(string &output, const StaticString &groupName) {
 		md5_state_t state;
-		md5_byte_t  digest[16];
-		char        groupId[32];
+		md5_byte_t  digest[MD5_SIZE];
+		char        checksum[MD5_HEX_SIZE];
 		
-		if (output.capacity() < 3 + 32) {
-			output.reserve(3 + 32);
-		}
 		output.append("/1/", 3);
+		
 		md5_init(&state);
 		md5_append(&state, (const md5_byte_t *) groupName.data(), groupName.size());
 		md5_finish(&state, digest);
-		toHex(StaticString((const char *) digest, 16), groupId);
-		output.append(groupId, 32);
+		toHex(StaticString((const char *) digest, MD5_SIZE), checksum);
+		output.append(checksum, MD5_HEX_SIZE);
 	}
 	
-	static string determineLogFilename(const string &dir, const StaticString &groupName,
+	static void appendNodeId(string &output, const StaticString &nodeName) {
+		md5_state_t state;
+		md5_byte_t  digest[MD5_SIZE];
+		char        checksum[MD5_HEX_SIZE];
+		
+		md5_init(&state);
+		md5_append(&state, (const md5_byte_t *) nodeName.data(), nodeName.size());
+		md5_finish(&state, digest);
+		toHex(StaticString((const char *) digest, MD5_SIZE), checksum);
+		output.append(checksum, MD5_HEX_SIZE);
+	}
+	
+	static string determineLogFilename(const StaticString &dir,
+		const StaticString &groupName, const StaticString &nodeName,
 		const StaticString &category, unsigned long long timestamp)
 	{
 		struct tm tm;
@@ -529,15 +546,19 @@ public:
 		
 		string filename;
 		filename.reserve(dir.size()
-			+ (3 + 32)           // version and group ID
+			+ (3 + MD5_HEX_SIZE) // version and group ID
+			+ 1                  // "/"
+			+ MD5_HEX_SIZE       // node ID
 			+ 1                  // "/"
 			+ category.size()
 			+ 1                  // "/"
 			+ sizeof(time_str)   // including null terminator, which we use as space for "/"
 			+ sizeof("log.txt")
 		);
-		filename.append(dir);
+		filename.append(dir.c_str(), dir.size());
 		appendVersionAndGroupId(filename, groupName);
+		filename.append(1, '/');
+		appendNodeId(filename, nodeName);
 		filename.append(1, '/');
 		filename.append(category.c_str(), category.size());
 		filename.append(1, '/');
@@ -556,7 +577,8 @@ public:
 			string txnId = randomGenerator.generateHexString(4);
 			txnId.append("-");
 			txnId.append(toString(timestamp));
-			return ptr(new AnalyticsLog(openLogFile(groupName, timestamp, category),
+			return ptr(new AnalyticsLog(
+				openLogFile(groupName, timestamp, nodeName, category),
 				groupName, txnId, largeMessages));
 		}
 	}
@@ -575,7 +597,8 @@ public:
 				TRACE_POINT();
 				throw ArgumentException("Invalid transaction ID '" + txnId + "'");
 			}
-			return ptr(new AnalyticsLog(openLogFile(groupName, timestamp, category),
+			return ptr(new AnalyticsLog(
+				openLogFile(groupName, timestamp, nodeName, category),
 				groupName, txnId, largeMessages));
 		}
 	}

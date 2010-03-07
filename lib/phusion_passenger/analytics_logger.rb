@@ -89,16 +89,23 @@ class AnalyticsLogger
 		if options["logging_agent_address"]
 			return new(options["logging_agent_address"],
 				options["logging_agent_username"],
-				options["logging_agent_password_base64"].unpack('m').first)
+				options["logging_agent_password_base64"].unpack('m').first,
+				options["node_name"])
 		else
 			return nil
 		end
 	end
 	
-	def initialize(logging_agent_address, username, password)
+	def initialize(logging_agent_address, username, password, node_name)
 		@server_address = logging_agent_address
 		@username = username
 		@password = password
+		if node_name && !node_name.empty?
+			@node_name = node_name
+		else
+			@node_name = `hostname`.strip
+		end
+		@node_id = Digest::MD5.hexdigest(node_name)
 		@file_handle_cache = {}
 	end
 	
@@ -137,7 +144,7 @@ private
 		timestamp_usec = timestamp % 1000000
 		time = Time.at(timestamp_sec, timestamp_usec).utc
 		date_name = time.strftime("%Y/%m/%d/%H")
-		log_file_path = "1/#{group_id}/#{category}/#{date_name}/log.txt"
+		log_file_path = "1/#{group_id}/#{@node_id}/#{category}/#{date_name}/log.txt"
 		
 		handle = @file_handle_cache[log_file_path]
 		if handle
@@ -160,7 +167,8 @@ private
 			client = MessageClient.new(@username, @password, @server_address)
 			log_file_io = nil
 			begin
-				client.write("open log file", group_name, timestamp, category)
+				client.write("open log file", group_name, timestamp,
+					@node_name, category)
 				result = client.read
 				if !result
 					raise IOError, "The logging agent unexpectedly closed the connection."

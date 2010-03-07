@@ -69,6 +69,11 @@ namespace Passenger {
 typedef uint8_t md5_byte_t; /* 8-bit byte */
 typedef uint32_t md5_word_t; /* 32-bit word */
 
+/** Size of an MD5 checksum, in bytes. */
+#define MD5_SIZE      16
+/** Size of an MD5 checksum encoded in hex, in bytes. */
+#define MD5_HEX_SIZE  32
+
 /* Define the state of the MD5 Algorithm. */
 typedef struct md5_state_s {
     md5_word_t count[2];	/* message length in bits, lsw first */
@@ -83,7 +88,7 @@ void md5_init(md5_state_t *pms);
 void md5_append(md5_state_t *pms, const md5_byte_t *data, int nbytes);
 
 /* Finish the message and return the digest. */
-void md5_finish(md5_state_t *pms, md5_byte_t digest[16]);
+void md5_finish(md5_state_t *pms, md5_byte_t digest[MD5_SIZE]);
 
 /* Convenience method for directly converting data into a hexadecimal MD5 string. */
 std::string md5_hex(const StaticString &input);

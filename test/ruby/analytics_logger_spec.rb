@@ -3,11 +3,12 @@ require 'stringio'
 require 'phusion_passenger/analytics_logger'
 
 describe AnalyticsLogger do
-	TODAY = 1263385422000000  # January 13, 2009, 13:23:42
-	FOOBAR_MD5 = "3858f62230ac3c915f300c664312c63f"
+	TODAY = 1263385422000000  # January 13, 2009, 12:23:42 UTC
+	FOOBAR_MD5 = Digest::MD5.hexdigest("foobar")
+	LOCALHOST_MD5 = Digest::MD5.hexdigest("localhost")
 	
 	before :each do
-		@logger = AnalyticsLogger.new("/socket", "logging", "1234")
+		@logger = AnalyticsLogger.new("/socket", "logging", "1234", "localhost")
 		@io = StringIO.new
 	end
 	
@@ -18,7 +19,7 @@ describe AnalyticsLogger do
 	
 	def mock_message_client(timestamp)
 		client = mock(:name => "MessageClient")
-		client.should_receive(:write).once.with("open log file", "foobar", timestamp, :web)
+		client.should_receive(:write).once.with("open log file", "foobar", timestamp, "localhost", :web)
 		client.should_receive(:read).once.and_return(["ok"])
 		client.should_receive(:recv_io).once.and_return(@io)
 		client.should_receive(:close).once
@@ -50,7 +51,7 @@ describe AnalyticsLogger do
 		mock_message_client(TODAY)
 		@logger.continue_transaction("foobar", "abcdef-#{TODAY}")
 		@logger.instance_variable_get(:'@file_handle_cache').keys.should ==
-			["1/#{FOOBAR_MD5}/web/2010/01/13/13/log.txt"]
+			["1/#{FOOBAR_MD5}/#{LOCALHOST_MD5}/web/2010/01/13/12/log.txt"]
 	end
 	
 	it "writes short messages in the same way the C++ implementation does" do

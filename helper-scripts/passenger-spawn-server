@@ -44,6 +44,7 @@ begin
 		logging_agent_address = owner_socket.readline.strip
 		logging_agent_username = owner_socket.readline.strip
 		logging_agent_password_base64 = owner_socket.readline.strip
+		node_name = owner_socket.readline.strip
 	rescue EOFError
 		exit
 	end
@@ -83,7 +84,8 @@ begin
 		options = {
 			"logging_agent_address" => logging_agent_address,
 			"logging_agent_username" => logging_agent_username,
-			"logging_agent_password_base64" => logging_agent_password_base64
+			"logging_agent_password_base64" => logging_agent_password_base64,
+			"node_name" => node_name
 		}
 	end
 	

@@ -103,6 +103,7 @@ private:
 	string loggingAgentAddress;
 	string loggingAgentUsername;
 	string loggingAgentPassword;
+	string nodeName;
 	
 	boost::mutex lock;
 	RandomGenerator random;
@@ -240,6 +241,7 @@ private:
 			ownerSocketChannel.writeRaw(loggingAgentAddress + "\n");
 			ownerSocketChannel.writeRaw(loggingAgentUsername + "\n");
 			ownerSocketChannel.writeRaw(Base64::encode(loggingAgentPassword) + "\n");
+			ownerSocketChannel.writeRaw(nodeName + "\n");
 			
 			this->ownerSocket    = ownerSocket;
 			this->socketFilename = socketFilename;
@@ -521,7 +523,8 @@ public:
 	             const string &rubyCommand = "ruby",
 	             const string &loggingAgentAddress = "",
 	             const string &loggingAgentUsername = "",
-	             const string &loggingAgentPassword = ""
+	             const string &loggingAgentPassword = "",
+	             const string &nodeName = ""
 	) {
 		TRACE_POINT();
 		this->spawnServerCommand = spawnServerCommand;
@@ -531,6 +534,7 @@ public:
 		this->loggingAgentAddress = loggingAgentAddress;
 		this->loggingAgentUsername = loggingAgentUsername;
 		this->loggingAgentPassword = loggingAgentPassword;
+		this->nodeName = nodeName;
 		pid = 0;
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;

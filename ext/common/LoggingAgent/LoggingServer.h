@@ -70,9 +70,17 @@ public:
 	                            const vector<string> &args)
 	{
 		if (args[0] == "open log file") {
+			if (args.size() != 5) {
+				commonContext.channel.write("error",
+					"Invalid arguments sent for the 'open log file' command",
+					NULL);
+				return true;
+			}
+			
 			string groupName = args[1];
 			unsigned long long timestamp = atoll(args[2].c_str());
-			string category = args[3];
+			string nodeName = args[3];
+			string category = args[4];
 			
 			if (timestamp > SystemTime::getUsec()) {
 				commonContext.channel.write("error",
@@ -80,12 +88,12 @@ public:
 				return true;
 			}
 			
-			string groupDir;
-			string filename;
+			string groupDir, nodeDir, filename;
 			try {
-				groupDir = AnalyticsLogger::determineGroupDir(dir, groupName);
+				AnalyticsLogger::determineGroupAndNodeDir(dir,
+					groupName, nodeName, groupDir, nodeDir);
 				filename = AnalyticsLogger::determineLogFilename(dir,
-					groupName, category, timestamp);
+					groupName, nodeName, category, timestamp);
 			} catch (const ArgumentException &e) {
 				commonContext.channel.write("error", e.what(), NULL);
 				return true;
@@ -104,6 +112,16 @@ public:
 			
 			try {
 				createFile(groupDir + "/group_name.txt", groupName,
+					S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,
+					USER_NOT_GIVEN, GROUP_NOT_GIVEN,
+					false);
+			} catch (const FileSystemException &e) {
+				commonContext.channel.write("error", e.what(), NULL);
+				return true;
+			}
+			
+			try {
+				createFile(nodeDir + "/node_name.txt", nodeName,
 					S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,
 					USER_NOT_GIVEN, GROUP_NOT_GIVEN,
 					false);
