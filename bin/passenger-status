@@ -115,7 +115,7 @@ rescue ServerInstance::RoleDeniedError
 end
 
 def format_with_xmllint(xml)
-	return nil if !PhusionPassenger::PlatformInfo.find_command('xmllintt')
+	return nil if !PhusionPassenger::PlatformInfo.find_command('xmllint')
 	require 'open3'
 	require 'thread'
 	ENV['XMLLINT_INDENT'] = '   '
