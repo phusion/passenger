@@ -22,8 +22,12 @@ http {
     default_type application/octet-stream;
     client_max_body_size 50m;
     access_log off;
-    gzip on;
     keepalive_timeout 60;
+    gzip on;
+    gzip_comp_level 3;
+    gzip_min_length 150;
+    gzip_proxied any;
+    gzip_types text/plain text/css application/javascript application/x-javascript;
     
     <% if @apps.size > 1 %>
     # Default server entry.
