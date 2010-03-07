@@ -642,29 +642,6 @@ prestartWebApps(const ResourceLocator &locator, const string &serializedprestart
 	}
 }
 
-void
-generateSecureToken(void *buf, unsigned int size) {
-	FILE *f;
-	
-	/* Opening /dev/urandom is sloooow on MacOS X and OpenBSD. :-(
-	 * If this turns out to be a problem we should open /dev/urandom
-	 * only once and keep it open indefinitely.
-	 */
-	
-	f = syscalls::fopen("/dev/urandom", "r");
-	if (f == NULL) {
-		throw FileSystemException("Cannot open /dev/urandom",
-			errno, "/dev/urandom");
-	}
-	
-	this_thread::disable_syscall_interruption dsi;
-	size_t ret = syscalls::fread(buf, 1, size, f);
-	syscalls::fclose(f);
-	if (ret != size) {
-		throw IOException("Cannot read sufficient data from /dev/urandom");
-	}
-}
-
 string
 fillInMiddle(unsigned int max, const string &prefix, const string &middle, const string &postfix) {
 	if (max <= prefix.size() + postfix.size()) {

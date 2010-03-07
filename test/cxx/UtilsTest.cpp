@@ -178,31 +178,6 @@ namespace tut {
 		ensure_equals(resolveSymlink("tmp.symlinks/absolute_symlink"), "/usr/bin");
 	}
 	
-	/***** Test generateSecureToken() *****/
-	
-	TEST_METHOD(28) {
-		char buf[10], buf2[10];
-		generateSecureToken(buf, sizeof(buf));
-		generateSecureToken(buf2, sizeof(buf2));
-		ensure(memcmp(buf, buf2, sizeof(buf)) != 0);
-	}
-	
-	/***** Test toHex() *****/
-	
-	TEST_METHOD(29) {
-		ensure_equals(toHex(""), "");
-		ensure_equals(toHex(StaticString("\x00", 1)), "00");
-		ensure_equals(toHex(StaticString("\x00\x01", 2)), "0001");
-		ensure_equals(toHex(StaticString("\x00\x01\x02", 3)), "000102");
-		ensure_equals(toHex(StaticString("\x00\x01\xF0\xAF\xFF\x98", 6)), "0001f0afff98");
-		ensure_equals(toHex("hello world!"), "68656c6c6f20776f726c6421");
-		
-		char output[sizeof("hello world!") * 2];
-		memset(output, 0, sizeof(output));
-		toHex("hello world!", output);
-		ensure_equals(string(output), "68656c6c6f20776f726c6421");
-	}
-	
 	/***** Test fillInMiddle() *****/
 	
 	TEST_METHOD(30) {

@@ -423,19 +423,6 @@ bool verifyWSGIDir(const string &dir, CachedFileStat *cstat = 0,
 void prestartWebApps(const ResourceLocator &locator, const string &serializedprestartURLs);
 
 /**
- * Generate a secure, random token of the <tt>size</tt> bytes and put
- * the result into <tt>buf</tt>.
- *
- * This method is thread-safe.
- *
- * @throws FileSystemException
- * @throws IOException
- * @throws boost::thread_interrupted A system call has been interrupted.
- * @ingroup Support
- */
-void generateSecureToken(void *buf, unsigned int size);
-
-/**
  * Given a prefix string, a middle string and a postfix string, try to build a string
  * that looks like <tt>prefix + middle + postfix</tt>, with as many characters from
  * <tt>midle</tt> preserved as possible.
