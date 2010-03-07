@@ -134,18 +134,37 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
         conf->default_user.len  = sizeof(DEFAULT_WEB_APP_USER) - 1;
         conf->default_user.data = (u_char *) DEFAULT_WEB_APP_USER;
     }
+    if (conf->default_user.len > sizeof(buf) - 1) {
+        return "Value for 'default_user' is too long.";
+    }
+    memcpy(buf, conf->default_user.data, conf->default_user.len);
+    buf[conf->default_user.len] = '\0';
+    user_entry = getpwnam(buf);
+    if (user_entry == NULL) {
+        return "The user specified by the 'default_user' option does not exist.";
+    }
     
     if (conf->default_group.len == 0) {
-        if (conf->default_user.len > sizeof(buf) - 1) {
-            return "Value for 'default_user' is too long.";
+        group_entry = getgrgid(user_entry->pw_gid);
+        if (group_entry != NULL) {
+            conf->default_group.len  = strlen(group_entry->gr_name);
+            conf->default_group.data = ngx_palloc(cf->pool, conf->default_group.len + 1);
+            memcpy(conf->default_group.data, group_entry->gr_name, conf->default_group.len + 1);
+        } else {
+            return "The primary group of the user specified by the 'default_user' "
+                   "option does not exist. Your system's user account database is "
+                   "probably broken, please fix it.";
         }
-        memcpy(buf, conf->default_user.data, sizeof(buf));
-        buf[conf->default_user.len] = '\0';
-        
+    } else {
+        if (conf->default_group.len > sizeof(buf) - 1) {
+            return "Value for 'default_group' is too long.";
+        }
+        memcpy(buf, conf->default_group.data, conf->default_group.len);
+        buf[conf->default_group.len] = '\0';
         group_entry = getgrnam(buf);
-        conf->default_group.len  = strlen(group_entry->gr_name);
-        conf->default_group.data = ngx_palloc(cf->pool, conf->default_group.len + 1);
-        memcpy(conf->default_group.data, group_entry->gr_name, conf->default_group.len + 1);
+        if (group_entry == NULL) {
+            return "The group specified by the 'default_group' option does not exist.";
+        }
     }
     
     if (conf->analytics_log_dir.len == 0) {
