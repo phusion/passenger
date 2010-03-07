@@ -34,6 +34,7 @@
 #include <netdb.h>
 #include <libgen.h>
 #include <fcntl.h>
+#include <limits.h>
 #include "FileDescriptor.h"
 #include "MessageChannel.h"
 #include "MessageServer.h"
@@ -44,6 +45,16 @@
 #include "Utils/CachedFileStat.hpp"
 
 #define SPAWN_SERVER_SCRIPT_NAME "passenger-spawn-server"
+
+#ifndef HOST_NAME_MAX
+	#if defined(_POSIX_HOST_NAME_MAX)
+		#define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
+	#elif defined(_SC_HOST_NAME_MAX)
+		#define HOST_NAME_MAX sysconf(_SC_HOST_NAME_MAX)
+	#else
+		#define HOST_NAME_MAX 255
+	#endif
+#endif
 
 namespace Passenger {
 
@@ -639,6 +650,18 @@ prestartWebApps(const ResourceLocator &locator, const string &serializedprestart
 		this_thread::restore_syscall_interruption ssi(dsi);
 		syscalls::sleep(1);
 		it++;
+	}
+}
+
+string
+getHostName() {
+	char hostname[HOST_NAME_MAX + 1];
+	if (gethostname(hostname, sizeof(hostname)) == 0) {
+		hostname[sizeof(hostname) - 1] = '\0';
+		return hostname;
+	} else {
+		int e = errno;
+		throw SystemException("Unable to query the system's host name", e);
 	}
 }
 

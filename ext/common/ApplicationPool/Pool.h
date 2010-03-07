@@ -285,7 +285,6 @@ private:
 	CachedFileStat cstat;
 	FileChangeChecker fileChangeChecker;
 	ProcessMetricsCollector processMetricsCollector;
-	string analyticsServerIdentifier;
 	
 	// Shortcuts for instance variables in SharedData. Saves typing in get()
 	// and other methods.
@@ -612,6 +611,9 @@ private:
 	}
 	
 	void analyticsCollectionThreadMainLoop() {
+		/* Invariant inside this thread:
+		 * analyticsLogger != NULL
+		 */
 		TRACE_POINT();
 		try {
 			syscalls::sleep(3);
@@ -682,9 +684,7 @@ private:
 						}
 						if (log != NULL) {
 							xml << "</processes>";
-							if (!analyticsServerIdentifier.empty()) {
-								log->message("Server identifier: " + analyticsServerIdentifier);
-							}
+							log->message("Node name: " + analyticsLogger->getNodeName());
 							log->message(xml.str());
 						}
 					}
@@ -875,8 +875,7 @@ private:
 	}
 	
 	/** @throws boost::thread_resource_error */
-	void initialize(const AnalyticsLoggerPtr &analyticsLogger,
-	                const string &analyticsServerIdentifier)
+	void initialize(const AnalyticsLoggerPtr &analyticsLogger)
 	{
 		done = false;
 		max = DEFAULT_MAX_POOL_SIZE;
@@ -890,7 +889,6 @@ private:
 			"ApplicationPool cleaner",
 			CLEANER_THREAD_STACK_SIZE
 		);
-		this->analyticsServerIdentifier = analyticsServerIdentifier;
 		if (analyticsLogger != NULL) {
 			this->analyticsLogger = analyticsLogger;
 			analyticsCollectionThread = new oxt::thread(
@@ -917,11 +915,7 @@ public:
 	     const ServerInstanceDir::GenerationPtr &generation,
 	     const AccountsDatabasePtr &accountsDatabase = AccountsDatabasePtr(),
 	     const string &rubyCommand = "ruby",
-	     const AnalyticsLoggerPtr &analyticsLogger = AnalyticsLoggerPtr(),
-	     const string &analyticsServerIdentifier = "",
-	     const string &loggingAgentAddress = "",
-	     const string &loggingAgentUsername = "",
-	     const string &loggingAgentPassword = ""
+	     const AnalyticsLoggerPtr &analyticsLogger = AnalyticsLoggerPtr()
 	) : data(new SharedData()),
 		cstat(DEFAULT_MAX_POOL_SIZE),
 		lock(data->lock),
@@ -934,10 +928,20 @@ public:
 		inactiveApps(data->inactiveApps)
 	{
 		TRACE_POINT();
+		string loggingAgentAddress;
+		string loggingAgentUsername;
+		string loggingAgentPassword;
+		
+		if (analyticsLogger != NULL) {
+			loggingAgentAddress  = analyticsLogger->getAddress();
+			loggingAgentUsername = analyticsLogger->getUsername();
+			loggingAgentPassword = analyticsLogger->getPassword();
+		}
 		this->spawnManager = ptr(new SpawnManager(spawnServerCommand, generation,
-			accountsDatabase, rubyCommand, loggingAgentAddress,
-			loggingAgentUsername, loggingAgentPassword));
-		initialize(analyticsLogger, analyticsServerIdentifier);
+			accountsDatabase, rubyCommand,
+			loggingAgentAddress, loggingAgentUsername,
+			loggingAgentPassword));
+		initialize(analyticsLogger);
 	}
 	
 	/**
@@ -947,8 +951,7 @@ public:
 	 * @throws boost::thread_resource_error Cannot spawn a new thread.
 	 */
 	Pool(AbstractSpawnManagerPtr spawnManager,
-	     const AnalyticsLoggerPtr &analyticsLogger = AnalyticsLoggerPtr(),
-	     const string &analyticsServerIdentifier = ""
+	     const AnalyticsLoggerPtr &analyticsLogger = AnalyticsLoggerPtr()
 	) : data(new SharedData()),
 	     cstat(DEFAULT_MAX_POOL_SIZE),
 	     lock(data->lock),
@@ -962,7 +965,7 @@ public:
 	{
 		TRACE_POINT();
 		this->spawnManager = spawnManager;
-		initialize(analyticsLogger, analyticsServerIdentifier);
+		initialize(analyticsLogger);
 	}
 	
 	virtual ~Pool() {

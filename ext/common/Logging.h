@@ -408,6 +408,7 @@ private:
 	string socketFilename;
 	string username;
 	string password;
+	string nodeName;
 	RandomGenerator randomGenerator;
 	
 	boost::mutex lock;
@@ -480,10 +481,17 @@ private:
 public:
 	AnalyticsLogger() { }
 	
-	AnalyticsLogger(const string &socketFilename, const string &username, const string &password) {
+	AnalyticsLogger(const string &socketFilename, const string &username,
+	                const string &password, const string &nodeName = "")
+	{
 		this->socketFilename = socketFilename;
 		this->username       = username;
 		this->password       = password;
+		if (nodeName.empty()) {
+			this->nodeName = getHostName();
+		} else {
+			this->nodeName = nodeName;
+		}
 	}
 	
 	static string determineGroupDir(const string &dir, const StaticString &groupName) {
@@ -574,6 +582,25 @@ public:
 	
 	bool isNull() const {
 		return socketFilename.empty();
+	}
+	
+	string getAddress() const {
+		return socketFilename;
+	}
+	
+	string getUsername() const {
+		return username;
+	}
+	
+	string getPassword() const {
+		return password;
+	}
+	
+	/**
+	 * @post !result.empty()
+	 */
+	string getNodeName() const {
+		return nodeName;
 	}
 };
 
