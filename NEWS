@@ -72,6 +72,20 @@ Release 2.9.0
    implementation.
 
 
+Release 2.2.11
+--------------
+
+ * This release fixes a regression that appeared in 2.2.10 which only
+   affects Apache. When under high load, Apache might freeze and stop
+   responding to requests. It is caused by a race condition which is
+   why it escaped our last release testing.
+   
+   This problem does not affect Nginx; you only have to upgrade if
+   you're using Apache.
+   
+   http://groups.google.com/group/phusion-passenger/t/d5bb2f17c8446ea0
+
+
 Release 2.2.10
 --------------
 
