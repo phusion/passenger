@@ -453,7 +453,7 @@ private:
 			options.user           = parser.getHeader("PASSENGER_USER");
 			options.group          = parser.getHeader("PASSENGER_GROUP");
 			options.defaultUser    = defaultUser;
-			options.defaultUser    = defaultGroup;
+			options.defaultGroup   = defaultGroup;
 			options.appType        = parser.getHeader("PASSENGER_APP_TYPE");
 			options.rights         = Account::parseRightsString(
 				parser.getHeader("PASSENGER_APP_RIGHTS"),
