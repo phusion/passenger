@@ -415,7 +415,7 @@ private:
 	Cache fileHandleCache;
 	
 	FileDescriptor openLogFile(const StaticString &groupName, unsigned long long timestamp,
-	                           const StaticString &nodeName, const StaticString &category = "web")
+	                           const StaticString &nodeName, const StaticString &category = "requests")
 	{
 		string logFile = determineLogFilename("", groupName, nodeName, category, timestamp);
 		Cache::iterator it;
@@ -567,7 +567,7 @@ public:
 		return filename;
 	}
 	
-	AnalyticsLogPtr newTransaction(const string &groupName, const StaticString &category = "web",
+	AnalyticsLogPtr newTransaction(const string &groupName, const StaticString &category = "requests",
 	                               bool largeMessages = false)
 	{
 		if (socketFilename.empty()) {
@@ -584,7 +584,7 @@ public:
 	}
 	
 	AnalyticsLogPtr continueTransaction(const string &groupName, const string &txnId,
-	                                    const StaticString &category = "web",
+	                                    const StaticString &category = "requests",
 	                                    bool largeMessages = false)
 	{
 		if (socketFilename.empty() || groupName.empty() || txnId.empty()) {

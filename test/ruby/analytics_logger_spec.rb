@@ -19,7 +19,7 @@ describe AnalyticsLogger do
 	
 	def mock_message_client(timestamp)
 		client = mock(:name => "MessageClient")
-		client.should_receive(:write).once.with("open log file", "foobar", timestamp, "localhost", :web)
+		client.should_receive(:write).once.with("open log file", "foobar", timestamp, "localhost", :requests)
 		client.should_receive(:read).once.and_return(["ok"])
 		client.should_receive(:recv_io).once.and_return(@io)
 		client.should_receive(:close).once
@@ -28,7 +28,7 @@ describe AnalyticsLogger do
 	end
 	
 	specify "#continue_transaction opens the log file and returns a Log object, suitable for logging" do
-		@logger.should_receive(:open_log_file).with("foobar", 5678, :web).and_return(@io)
+		@logger.should_receive(:open_log_file).with("foobar", 5678, :requests).and_return(@io)
 		log = @logger.continue_transaction("foobar", "abcdef-5678")
 		log.group_name.should == "foobar"
 		log.txn_id.should == "abcdef-5678"
@@ -51,7 +51,7 @@ describe AnalyticsLogger do
 		mock_message_client(TODAY)
 		@logger.continue_transaction("foobar", "abcdef-#{TODAY}")
 		@logger.instance_variable_get(:'@file_handle_cache').keys.should ==
-			["1/#{FOOBAR_MD5}/#{LOCALHOST_MD5}/web/2010/01/13/12/log.txt"]
+			["1/#{FOOBAR_MD5}/#{LOCALHOST_MD5}/requests/2010/01/13/12/log.txt"]
 	end
 	
 	it "writes short messages in the same way the C++ implementation does" do
@@ -74,7 +74,7 @@ describe AnalyticsLogger do
 		@io.should_receive(:flock).with(File::LOCK_UN).exactly(3).times
 		
 		AnalyticsLogger::Log.should_receive(:timestamp).and_return(10)
-		log = @logger.continue_transaction("foobar", "abcdef-5678", :web, true)
+		log = @logger.continue_transaction("foobar", "abcdef-5678", :requests, true)
 		AnalyticsLogger::Log.should_receive(:timestamp).and_return(20)
 		log.message("hello world")
 		AnalyticsLogger::Log.should_receive(:timestamp).and_return(30)

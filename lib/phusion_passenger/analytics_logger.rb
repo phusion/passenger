@@ -115,7 +115,7 @@ class AnalyticsLogger
 		end
 	end
 	
-	def continue_transaction(group_name, txn_id, category = :web, large_messages = false)
+	def continue_transaction(group_name, txn_id, category = :requests, large_messages = false)
 		if group_name.empty? || txn_id.empty?
 			return Log.new
 		else

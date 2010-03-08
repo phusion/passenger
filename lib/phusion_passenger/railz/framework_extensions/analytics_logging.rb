@@ -40,7 +40,7 @@ module AnalyticsLogging
 		end
 	end
 	
-	def self.continue_transaction_logging(request, category = :web, large_messages = false)
+	def self.continue_transaction_logging(request, category = :requests, large_messages = false)
 		if request.env["PASSENGER_TXN_ID"]
 			log = @@analytics_logger.continue_transaction(
 				request.env["PASSENGER_GROUP_NAME"],
