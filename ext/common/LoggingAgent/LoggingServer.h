@@ -44,6 +44,7 @@
 #include "../Utils.h"
 #include "../Utils/SystemTime.h"
 #include "../Utils/FileHandleGuard.h"
+#include "../Utils/Base64.h"
 
 namespace Passenger {
 
@@ -52,10 +53,15 @@ using namespace oxt;
 
 class LoggingServer: public MessageServer::Handler {
 private:
+	RandomGenerator randomGenerator;
 	string dir;
 	string dirPermissions;
 	mode_t filePermissions;
 	gid_t gid;
+	
+	string generateUuid() {
+		return Base64::encodeForUrl(randomGenerator.generateByteString(32));
+	}
 	
 public:
 	LoggingServer(const string &dir, const string &permissions = "u=rwx,g=rx,o=rx", gid_t gid = GROUP_NOT_GIVEN) {
@@ -115,6 +121,12 @@ public:
 					S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,
 					USER_NOT_GIVEN, GROUP_NOT_GIVEN,
 					false);
+				if (getFileType(groupDir + "/uuid.txt") == FT_NONEXISTANT) {
+					createFile(groupDir + "/uuid.txt", generateUuid(),
+						S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,
+						USER_NOT_GIVEN, GROUP_NOT_GIVEN,
+						false);
+				}
 			} catch (const FileSystemException &e) {
 				commonContext.channel.write("error", e.what(), NULL);
 				return true;
@@ -125,6 +137,12 @@ public:
 					S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,
 					USER_NOT_GIVEN, GROUP_NOT_GIVEN,
 					false);
+				if (getFileType(nodeDir + "/uuid.txt") == FT_NONEXISTANT) {
+					createFile(nodeDir + "/uuid.txt", generateUuid(),
+						S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,
+						USER_NOT_GIVEN, GROUP_NOT_GIVEN,
+						false);
+				}
 			} catch (const FileSystemException &e) {
 				commonContext.channel.write("error", e.what(), NULL);
 				return true;
