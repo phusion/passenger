@@ -249,15 +249,6 @@ protected
 			end
 		end
 		
-		if options["debugger"]
-			require 'ruby-debug'
-			if !Debugger.respond_to?(:ctrl_port)
-				raise "Your version of ruby-debug is too old. Please upgrade to the latest version."
-			end
-			Debugger.start_remote('127.0.0.1', [0, 0])
-			Debugger.start
-		end
-		
 		
 		# Rack::ApplicationSpawner depends on the 'rack' library, but the app
 		# might want us to use a bundled version instead of a
@@ -308,24 +299,42 @@ protected
 			Bundler.setup
 		end
 		
+		# Bundler might remove Phusion Passenger from the load path in its zealous
+		# attempt to un-require RubyGems, so here we put Phusion Passenger back
+		# into the load path. This must be done before loading the app's startup
+		# file because the app might require() Phusion Passenger files.
+		if $LOAD_PATH.first != LIBDIR
+			$LOAD_PATH.unshift(LIBDIR)
+			$LOAD_PATH.uniq!
+		end
+		
+		
 		# !!! NOTE !!!
-		# Past this point we may not require any non-Phusion Passenger
-		# libraries because Bundler might remove all RubyGems load paths.
-		# If we ever need to require non-Phusion Passenger libraries then
-		# we must instruct the user to add 'passenger' to their Gemfile.
+		# If the app is using Bundler then any dependencies required past this
+		# point must be specified in the Gemfile. Like ruby-debug in debugging is on...
+		
+		if options["debugger"]
+			require 'ruby-debug'
+			if !Debugger.respond_to?(:ctrl_port)
+				raise "Your version of ruby-debug is too old. Please upgrade to the latest version."
+			end
+			Debugger.start_remote('127.0.0.1', [0, 0])
+			Debugger.start
+		end
 	end
 	
-	# To be called before the request handler main loop is entered. This function
-	# will fire off necessary events and perform necessary preparation tasks.
+	# To be called before the request handler main loop is entered, but after the app
+	# startup file has been loaded. This function will fire off necessary events
+	# and perform necessary preparation tasks.
 	#
 	# +forked+ indicates whether the current worker process is forked off from
 	# an ApplicationSpawner that has preloaded the app code.
 	# +options+ are the spawn options that were passed.
 	def before_handling_requests(forked, options)
-		# Some libraries like Bundler mess with the Ruby load path and removes
-		# Phusion Passenger's libdir from the load path. Here we ensure that
-		# Phusion Passenger's libdir is in the load path so that we can
-		# require our own files.
+		# Even though prepare_app_process() restores the Phusion Passenger
+		# load path after setting up Bundler, the app itself might also
+		# remove Phusion Passenger from the load path for whatever reason,
+		# so here we restore the load path again.
 		if $LOAD_PATH.first != LIBDIR
 			$LOAD_PATH.unshift(LIBDIR)
 			$LOAD_PATH.uniq!
