@@ -257,6 +257,62 @@ protected
 			Debugger.start_remote('127.0.0.1', [0, 0])
 			Debugger.start
 		end
+		
+		
+		# Rack::ApplicationSpawner depends on the 'rack' library, but the app
+		# might want us to use a bundled version instead of a
+		# gem/apt-get/yum/whatever-installed version. Therefore we must setup
+		# the correct load paths before requiring 'rack'.
+		#
+		# The most popular tool for bundling dependencies is Bundler. Bundler
+		# works as follows:
+		# - If the bundle is locked then a file .bundle/environment.rb exists
+		#   which will setup the load paths.
+		# - If the bundle is not locked then the load paths must be set up by
+		#   calling Bundler.setup.
+		# - Rails 3's boot.rb automatically loads .bundle/environment.rb or
+		#   calls Bundler.setup if that's not available.
+		# - Other Rack apps might not have a boot.rb but we still want to setup
+		#   Bundler.
+		#
+		# So the strategy is as follows:
+		
+		# Our strategy might be completely unsuitable for the app or the
+		# developer is using something other than Bundler, so we let the user
+		# manually specify a load path setup file.
+		if options["load_path_setup_file"]
+			require File.expand(options["load_path_setup_file"])
+		
+		# If the Bundler lock environment file exists then load that. If it
+		# exists then there's a 99.9% chance that loading it is the correct
+		# thing to do.
+		elsif File.exist?('.bundle/environment.rb')
+			require File.expand_path('.bundle/environment')
+		
+		# If the Bundler environment file doesn't exist then there are two
+		# possibilities:
+		# 1. Bundler is not used, in which case we don't have to do anything.
+		# 2. Bundler *is* used, but the gems are not locked and we're supposed
+		#    to call Bundler.setup.
+		#
+		# The existence of Gemfile indicates whether (2) is true:
+		elsif File.exist?('Gemfile')
+			# In case of Rails 3, config/boot.rb already calls Bundler.setup.
+			# However older versions of Rails don't so loading boot.rb might
+			# not be the correct thing to do. To be on the safe side we
+			# call Bundler.setup ourselves; if this isn't the correct thing
+			# to do after all then there's always the load_path_setup_file
+			# option.
+			require 'rubygems'
+			require 'bundler'
+			Bundler.setup
+		end
+		
+		# !!! NOTE !!!
+		# Past this point we may not require any non-Phusion Passenger
+		# libraries because Bundler might remove all RubyGems load paths.
+		# If we ever need to require non-Phusion Passenger libraries then
+		# we must instruct the user to add 'passenger' to their Gemfile.
 	end
 	
 	# To be called before the request handler main loop is entered. This function
