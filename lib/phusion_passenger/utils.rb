@@ -260,12 +260,45 @@ protected
 	end
 	
 	# To be called before the request handler main loop is entered. This function
-	# will fire off necessary events perform necessary preparation tasks.
+	# will fire off necessary events and perform necessary preparation tasks.
 	#
 	# +forked+ indicates whether the current worker process is forked off from
 	# an ApplicationSpawner that has preloaded the app code.
 	# +options+ are the spawn options that were passed.
 	def before_handling_requests(forked, options)
+		# Some libraries like Bundler mess with the Ruby load path and removes
+		# Phusion Passenger's libdir from the load path. Here we ensure that
+		# Phusion Passenger's libdir is in the load path so that we can
+		# require our own files.
+		if $LOAD_PATH.first != LIBDIR
+			$LOAD_PATH.unshift(LIBDIR)
+			$LOAD_PATH.uniq!
+		end
+		
+		# If we were forked from a preloader process then clear or
+		# re-establish ActiveRecord database connections. This prevents
+		# child processes from concurrently accessing the same
+		# database connection handles.
+		if forked && defined?(::ActiveRecord::Base)
+			if ::ActiveRecord::Base.respond_to?(:clear_all_connections!)
+				::ActiveRecord::Base.clear_all_connections!
+			elsif ::ActiveRecord::Base.respond_to?(:clear_active_connections!)
+				::ActiveRecord::Base.clear_active_connections!
+			elsif ::ActiveRecord::Base.respond_to?(:connected?) &&
+			      ::ActiveRecord::Base.connected?
+				::ActiveRecord::Base.establish_connection
+			end
+		end
+		
+		# Install analytics hooks, if requested and possible.
+		if defined?(ActionController)
+			require 'phusion_passenger/railz/framework_extensions/analytics_logging'
+			if PhusionPassenger::Railz::FrameworkExtensions::AnalyticsLogging.installable?(options)
+				PhusionPassenger::Railz::FrameworkExtensions::AnalyticsLogging.install!(options)
+			end
+		end
+		
+		# Fire off events.
 		PhusionPassenger.call_event(:starting_worker_process, forked)
 		if options["pool_account_username"] && options["pool_account_password_base64"]
 			password = options["pool_account_password_base64"].unpack('m').first
@@ -281,33 +314,6 @@ protected
 	def after_handling_requests
 		PhusionPassenger.call_event(:stopping_worker_process)
 		Kernel.passenger_call_at_exit_blocks
-	end
-	
-	# This method is to be called after an application process has been forked
-	# off from an ApplicationSpawner that had preloaded the application code.
-	# It fixes various things in supported framework, e.g. in case of Rails it'll
-	# clear the database connections and stuff.
-	def fix_framework_after_forking(options)
-		# Clear or re-establish connection if a connection was established
-		# in environment.rb. This prevents us from concurrently
-		# accessing the same database connection handle.
-		if defined?(::ActiveRecord::Base)
-			if ::ActiveRecord::Base.respond_to?(:clear_all_connections!)
-				::ActiveRecord::Base.clear_all_connections!
-			elsif ::ActiveRecord::Base.respond_to?(:clear_active_connections!)
-				::ActiveRecord::Base.clear_active_connections!
-			elsif ::ActiveRecord::Base.respond_to?(:connected?) &&
-			      ::ActiveRecord::Base.connected?
-				::ActiveRecord::Base.establish_connection
-			end
-		end
-		
-		if defined?(ActionController)
-			require 'phusion_passenger/railz/framework_extensions/analytics_logging'
-			if PhusionPassenger::Railz::FrameworkExtensions::AnalyticsLogging.installable?(options)
-				PhusionPassenger::Railz::FrameworkExtensions::AnalyticsLogging.install!(options)
-			end
-		end
 	end
 	
 	# Fork a new process and run the given block inside the child process, just like
