@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/file.h>
+#include <sys/resource.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <string>
@@ -355,13 +356,36 @@ private:
 		} granular;
 	} data;
 	bool ok;
+	
+	static string timevalToMsecString(struct timeval &tv) {
+		unsigned long long i = (unsigned long long) tv.tv_sec * 1000000 + tv.tv_usec;
+		return toString<unsigned long long>(i);
+	}
+	
 public:
 	AnalyticsScopeLog(const AnalyticsLogPtr &log, const char *name) {
 		this->log = log.get();
 		type = NAME;
 		data.name = name;
 		ok = false;
-		log->message(string("BEGIN: ") + name);
+		if (!log->isNull()) {
+			string message;
+			struct rusage usage;
+			
+			message.reserve(150);
+			message.append("BEGIN: ");
+			message.append(name);
+			message.append(" (utime = ");
+			if (getrusage(RUSAGE_SELF, &usage) == -1) {
+				int e = errno;
+				throw SystemException("getrusage() failed", e);
+			}
+			message.append(timevalToMsecString(usage.ru_utime));
+			message.append(", stime = ");
+			message.append(timevalToMsecString(usage.ru_stime));
+			message.append(")");
+			log->message(message);
+		}
 	}
 	
 	AnalyticsScopeLog(const AnalyticsLogPtr &log, const char *beginMessage,
@@ -377,10 +401,27 @@ public:
 	
 	~AnalyticsScopeLog() {
 		if (type == NAME) {
-			if (ok) {
-				log->message(string("END: ") + data.name);
-			} else {
-				log->message(string("FAIL: ") + data.name);
+			if (!log->isNull()) {
+				string message;
+				struct rusage usage;
+				
+				message.reserve(150);
+				if (ok) {
+					message.append("END: ");
+				} else {
+					message.append("FAIL: ");
+				}
+				message.append(data.name);
+				message.append(" (utime = ");
+				if (getrusage(RUSAGE_SELF, &usage) == -1) {
+					int e = errno;
+					throw SystemException("getrusage() failed", e);
+				}
+				message.append(timevalToMsecString(usage.ru_utime));
+				message.append(", stime = ");
+				message.append(timevalToMsecString(usage.ru_stime));
+				message.append(")");
+				log->message(message);
 			}
 		} else {
 			if (ok) {
