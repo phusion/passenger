@@ -927,21 +927,9 @@ public:
 		inactiveApps(data->inactiveApps)
 	{
 		TRACE_POINT();
-		string loggingAgentAddress;
-		string loggingAgentUsername;
-		string loggingAgentPassword;
-		string nodeName;
 		
-		if (analyticsLogger != NULL) {
-			loggingAgentAddress  = analyticsLogger->getAddress();
-			loggingAgentUsername = analyticsLogger->getUsername();
-			loggingAgentPassword = analyticsLogger->getPassword();
-			nodeName = analyticsLogger->getNodeName();
-		}
 		this->spawnManager = ptr(new SpawnManager(spawnServerCommand, generation,
-			accountsDatabase, rubyCommand,
-			loggingAgentAddress, loggingAgentUsername,
-			loggingAgentPassword, nodeName));
+			accountsDatabase, rubyCommand, analyticsLogger));
 		initialize(analyticsLogger);
 	}
 	

@@ -368,7 +368,7 @@ public:
 		type = NAME;
 		data.name = name;
 		ok = false;
-		if (!log->isNull()) {
+		if (log != NULL && !log->isNull()) {
 			string message;
 			struct rusage usage;
 			
@@ -392,14 +392,19 @@ public:
 	                  const char *endMessage, const char *abortMessage = NULL
 	) {
 		this->log = log.get();
-		type = GRANULAR;
-		data.granular.endMessage = endMessage;
-		data.granular.abortMessage = abortMessage;
-		ok = abortMessage == NULL;
-		log->message(beginMessage);
+		if (log != NULL) {
+			type = GRANULAR;
+			data.granular.endMessage = endMessage;
+			data.granular.abortMessage = abortMessage;
+			ok = abortMessage == NULL;
+			log->message(beginMessage);
+		}
 	}
 	
 	~AnalyticsScopeLog() {
+		if (log == NULL) {
+			return;
+		}
 		if (type == NAME) {
 			if (!log->isNull()) {
 				string message;

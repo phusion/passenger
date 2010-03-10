@@ -100,10 +100,7 @@ private:
 	ServerInstanceDir::GenerationPtr generation;
 	AccountsDatabasePtr accountsDatabase;
 	string rubyCommand;
-	string loggingAgentAddress;
-	string loggingAgentUsername;
-	string loggingAgentPassword;
-	string nodeName;
+	AnalyticsLoggerPtr analyticsLogger;
 	
 	boost::mutex lock;
 	RandomGenerator random;
@@ -238,10 +235,17 @@ private:
 			ownerSocketChannel.writeRaw(socketFilename + "\n");
 			ownerSocketChannel.writeRaw(socketPassword + "\n");
 			ownerSocketChannel.writeRaw(generation->getPath() + "\n");
-			ownerSocketChannel.writeRaw(loggingAgentAddress + "\n");
-			ownerSocketChannel.writeRaw(loggingAgentUsername + "\n");
-			ownerSocketChannel.writeRaw(Base64::encode(loggingAgentPassword) + "\n");
-			ownerSocketChannel.writeRaw(nodeName + "\n");
+			if (analyticsLogger != NULL) {
+				ownerSocketChannel.writeRaw(analyticsLogger->getAddress() + "\n");
+				ownerSocketChannel.writeRaw(analyticsLogger->getUsername() + "\n");
+				ownerSocketChannel.writeRaw(Base64::encode(analyticsLogger->getPassword()) + "\n");
+				ownerSocketChannel.writeRaw(analyticsLogger->getNodeName() + "\n");
+			} else {
+				ownerSocketChannel.writeRaw("\n");
+				ownerSocketChannel.writeRaw("\n");
+				ownerSocketChannel.writeRaw("\n");
+				ownerSocketChannel.writeRaw("\n");
+			}
 			
 			this->ownerSocket    = ownerSocket;
 			this->socketFilename = socketFilename;
@@ -521,20 +525,14 @@ public:
 	             const ServerInstanceDir::GenerationPtr &generation,
 	             const AccountsDatabasePtr &accountsDatabase = AccountsDatabasePtr(),
 	             const string &rubyCommand = "ruby",
-	             const string &loggingAgentAddress = "",
-	             const string &loggingAgentUsername = "",
-	             const string &loggingAgentPassword = "",
-	             const string &nodeName = ""
+	             const AnalyticsLoggerPtr &analyticsLogger = AnalyticsLoggerPtr()
 	) {
 		TRACE_POINT();
 		this->spawnServerCommand = spawnServerCommand;
 		this->generation  = generation;
 		this->accountsDatabase = accountsDatabase;
 		this->rubyCommand = rubyCommand;
-		this->loggingAgentAddress = loggingAgentAddress;
-		this->loggingAgentUsername = loggingAgentUsername;
-		this->loggingAgentPassword = loggingAgentPassword;
-		this->nodeName = nodeName;
+		this->analyticsLogger = analyticsLogger;
 		pid = 0;
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
@@ -561,16 +559,21 @@ public:
 	
 	virtual ProcessPtr spawn(const PoolOptions &options) {
 		TRACE_POINT();
+		AnalyticsScopeLog scope(options.log, "spawn app process");
+		ProcessPtr result;
 		boost::mutex::scoped_lock l(lock);
+		
 		try {
-			return sendSpawnCommand(options);
+			result = sendSpawnCommand(options);
 		} catch (const SpawnException &e) {
 			if (e.hasErrorPage()) {
 				throw;
 			} else {
-				return handleSpawnException(e, options);
+				result = handleSpawnException(e, options);
 			}
 		}
+		scope.success();
+		return result;
 	}
 	
 	virtual void reload(const string &appRoot) {
