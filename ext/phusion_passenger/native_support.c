@@ -84,6 +84,7 @@ extern int login_tty(int fd);
 
 static VALUE mPassenger;
 static VALUE mNativeSupport;
+static VALUE S_ProcessTimes;
 #ifdef HAVE_KQUEUE
 	static VALUE cFileSystemWatcher;
 #endif
@@ -611,6 +612,20 @@ switch_user(VALUE self, VALUE username, VALUE uid, VALUE gid) {
 	return Qnil;
 }
 
+static VALUE
+process_times(VALUE self) {
+	struct rusage usage;
+	unsigned long long utime, stime;
+	
+	if (getrusage(RUSAGE_SELF, &usage) == -1) {
+		rb_sys_fail("getrusage()");
+	}
+	
+	utime = (unsigned long long) usage.ru_utime.tv_sec * 1000000 + usage.ru_utime.tv_usec;
+	stime = (unsigned long long) usage.ru_stime.tv_sec * 1000000 + usage.ru_stime.tv_usec;
+	return rb_struct_new(S_ProcessTimes, rb_ull2inum(utime), rb_ull2inum(stime));
+}
+
 typedef struct {
 	const char **command_ary;
 	int master;
@@ -1115,6 +1130,8 @@ Init_native_support() {
 	 */
 	mNativeSupport = rb_define_module_under(mPassenger, "NativeSupport");
 	
+	S_ProcessTimes = rb_struct_define("ProcessTimes", "utime", "stime", NULL);
+	
 	rb_define_singleton_method(mNativeSupport, "send_fd", send_fd, 2);
 	rb_define_singleton_method(mNativeSupport, "recv_fd", recv_fd, 1);
 	rb_define_singleton_method(mNativeSupport, "create_unix_socket", create_unix_socket, 2);
@@ -1125,6 +1142,7 @@ Init_native_support() {
 	rb_define_singleton_method(mNativeSupport, "writev2", f_writev2, 3);
 	rb_define_singleton_method(mNativeSupport, "writev3", f_writev3, 4);
 	rb_define_singleton_method(mNativeSupport, "switch_user", switch_user, 3);
+	rb_define_singleton_method(mNativeSupport, "process_times", process_times, 0);
 	rb_define_singleton_method(mNativeSupport, "spawn_in_pty", spawn_in_pty, 1);
 	rb_define_singleton_method(mNativeSupport, "tcflush", f_tcflush, 1);
 	

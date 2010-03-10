@@ -65,6 +65,32 @@ class AnalyticsLogger
 			end
 		end
 		
+		def begin_measure(name)
+			times = NativeSupport.process_times
+			message "BEGIN: #{name} (utime = #{times.utime}, stime = #{times.stime})"
+		end
+		
+		def end_measure(name, error_encountered = false)
+			times = NativeSupport.process_times
+			if error_encountered
+				message "FAIL: #{name} (utime = #{times.utime}, stime = #{times.stime})"
+			else
+				message "END: #{name} (utime = #{times.utime}, stime = #{times.stime})"
+			end
+		end
+		
+		def measure(name)
+			begin_measure(name)
+			begin
+				yield
+			rescue Exception
+				error = true
+				raise
+			ensure
+				end_measure(name, error)
+			end
+		end
+		
 		def close
 			if @io
 				message("DETACH")

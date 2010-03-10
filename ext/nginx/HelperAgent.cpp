@@ -421,7 +421,6 @@ private:
 		TRACE_POINT();
 		ScgiRequestParser parser(MAX_HEADER_SIZE);
 		string partialRequestBody;
-		unsigned long contentLength;
 		
 		if (!readAndCheckPassword(clientFd)) {
 			P_ERROR("Client did not send a correct password.");
@@ -482,9 +481,9 @@ private:
 				SessionPtr session;
 				
 				{
-					AnalyticsScopeLog sl(log, "get from pool");
+					AnalyticsScopeLog scope(log, "get from pool");
 					session = pool->get(options);
-					sl.success();
+					scope.success();
 					log->message("Application PID: " + toString(session->getPid()) +
 						" (GUPID: " + session->getGupid() + ")");
 				}
@@ -527,18 +526,23 @@ private:
 					end += log->getTxnId().size() + 1;
 				}
 				
-				session->sendHeaders(headers, end - headers);
+				{
+					AnalyticsScopeLog scope(log, "send request headers");
+					session->sendHeaders(headers, end - headers);
+					scope.success();
+				}
+				{
+					AnalyticsScopeLog scope(log, "send request body");
+					unsigned long contentLength = atol(
+						parser.getHeader("CONTENT_LENGTH").c_str());
+					sendRequestBody(session,
+						clientFd,
+						partialRequestBody,
+						contentLength);
+					session->shutdownWriter();
+					scope.success();
+				}
 				
-				contentLength = atol(
-					parser.getHeader("CONTENT_LENGTH").c_str());
-				
-				sendRequestBody(session,
-					clientFd,
-					partialRequestBody,
-					contentLength);
-				
-				session->shutdownWriter();
-				log->message("Forwarding response");
 				forwardResponse(session, clientFd);
 				
 				requestProxyingScope.success();

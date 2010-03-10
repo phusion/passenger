@@ -490,8 +490,11 @@ private
 				else
 					process_request(headers, input_stream, connection, full_http_response)
 				end
+			rescue Exception
+				has_error = true
+				raise
 			ensure
-				finalize_request(headers)
+				finalize_request(headers, has_error)
 			end
 		end
 		return true
@@ -656,15 +659,17 @@ private
 			if GC_SUPPORTS_TIME
 				log.message("Initial GC time: #{GC.time}")
 			end
+			log.begin_measure("app request handler processing")
 		end
 		
 		#################
 	end
 	
-	def finalize_request(headers)
+	def finalize_request(headers, has_error)
 		log = headers[PASSENGER_ANALYTICS_WEB_LOG]
 		if log
 			begin
+				log.end_measure("app request handler processing", has_error)
 				if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS
 					log.message("Final objects on heap: #{ObjectSpace.live_objects}")
 				end

@@ -14,7 +14,8 @@ module AnalyticsLogging
 	
 	def self.ac_base_extension_installable?
 		return defined?(ActionController::Base) &&
-			ActionController::Base.private_method_defined?(:perform_action)
+			ActionController::Base.private_method_defined?(:perform_action) &&
+			ActionController::Base.method_defined?(:render)
 	end
 	
 	def self.ac_rescue_extension_installable?
@@ -29,6 +30,7 @@ module AnalyticsLogging
 			ActionController::Base.class_eval do
 				include ACBaseExtension
 				alias_method_chain :perform_action, :passenger
+				alias_method_chain :render, :passenger
 			end
 		end
 		if ac_rescue_extension_installable?
