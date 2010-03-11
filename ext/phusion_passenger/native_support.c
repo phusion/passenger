@@ -36,6 +36,8 @@
 #include <sys/un.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
