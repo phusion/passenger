@@ -10,7 +10,7 @@ private
 		log = request.env[AbstractRequestHandler::PASSENGER_ANALYTICS_WEB_LOG]
 		if log
 			log.measure("framework request processing") do
-				log.message("Controller action: #{controller_class_name}##{action_name}") if log
+				log.message("Controller action: #{controller_class_name}##{action_name}")
 				perform_action_without_passenger(*args)
 			end
 		else
