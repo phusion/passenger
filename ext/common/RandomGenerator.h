@@ -110,6 +110,33 @@ public:
 		return toHex(StaticString(buf, size));
 	}
 	
+	/**
+	 * Generates a random string of <em>size</em> bytes which is also
+	 * valid ASCII. The result consists only of the characters A-Z,
+	 * a-z and 0-9, and therefore the total number of possibilities
+	 * given a size of N is 62**N. However not every character has an
+	 * equal chance of being chosen: a-i have 5/256 chance of being
+	 * chosen, while other characters have 4/256 chance of being chosen.
+	 * Therefore, to match the entropy of a random binary string of
+	 * size N, one should choose a <em>size</em> which yields slightly
+	 * more possibilities than 2**N.
+	 */
+	string generateAsciiString(unsigned int size) {
+		static const char chars[] = {
+			'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+			'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+			'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+			'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+		};
+		unsigned char buf[size];
+		generateBytes(buf, size);
+		for (unsigned int i = 0; i < size; i++) {
+			buf[i] = chars[buf[i] % sizeof(chars)];
+		}
+		return string((const char *) buf, size);
+	}
+	
 	int generateInt() {
 		int ret;
 		generateBytes(&ret, sizeof(ret));
