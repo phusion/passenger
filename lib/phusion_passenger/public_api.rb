@@ -22,22 +22,34 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
+class << self
 	@@event_starting_worker_process = []
 	@@event_stopping_worker_process = []
 	@@event_credentials = []
 	
-	def self.on_event(name, &block)
+	def on_event(name, &block)
 		callback_list_for_event(name) << block
 	end
 	
-	def self.call_event(name, *args)
+	def call_event(name, *args)
 		callback_list_for_event(name).each do |callback|
 			callback.call(*args)
 		end
 	end
+	
+	def benchmark(env, title = "Benchmarking")
+		log = env[PASSENGER_ANALYTICS_WEB_LOG]
+		if log
+			log.measure("BENCHMARK: #{title}") do
+				yield
+			end
+		else
+			yield
+		end
+	end
 
 private
-	def self.callback_list_for_event(name)
+	def callback_list_for_event(name)
 		return case name
 		when :starting_worker_process
 			@@event_starting_worker_process
@@ -50,4 +62,5 @@ private
 		end
 	end
 
+end
 end # module PhusionPassenger
