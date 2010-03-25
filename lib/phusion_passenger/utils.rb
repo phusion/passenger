@@ -179,8 +179,7 @@ protected
 	end
 	
 	# Prepare an application process using rules for the given spawn options.
-	# This method is to be called in a forked off application process, before
-	# loading the application code.
+	# This method is to be called before loading the application code.
 	#
 	# +startup_file+ is the application type's startup file, e.g.
 	# "config/environment.rb" for Rails apps and "config.ru" for Rack apps.
@@ -212,14 +211,9 @@ protected
 			end
 		end
 		
-		# Instantiate the analytics logger if requested.
+		# Instantiate the analytics logger if requested. Can be nil.
 		require 'phusion_passenger/analytics_logger'
 		options["analytics_logger"] = AnalyticsLogger.new_from_options(options)
-		# If the Ruby interpreter supports GC statistics then turn it on if analytics
-		# are also turned on.
-		if options["analytics_logger"] && GC.respond_to?(:enable_stats)
-			GC.enable_stats
-		end
 		
 		# Make sure RubyGems uses any new environment variable values
 		# that have been set now (e.g. $HOME, $GEM_HOME, etc) and that
@@ -323,6 +317,22 @@ protected
 		end
 	end
 	
+	# Prepare an application process using rules for the given spawn options.
+	# This method is to be called before loading the application code.
+	def after_loading_app_code(options)
+		# Install analytics hooks, if requested and possible.
+		if defined?(ActionController)
+			require 'phusion_passenger/railz/framework_extensions/analytics_logging'
+			if PhusionPassenger::Railz::FrameworkExtensions::AnalyticsLogging.installable?(options)
+				PhusionPassenger::Railz::FrameworkExtensions::AnalyticsLogging.install!(options)
+				
+				# If the Ruby interpreter supports GC statistics then turn it on
+				# so that the info can be logged.
+				GC.enable_stats if GC.respond_to?(:enable_stats)
+			end
+		end
+	end
+	
 	# To be called before the request handler main loop is entered, but after the app
 	# startup file has been loaded. This function will fire off necessary events
 	# and perform necessary preparation tasks.
@@ -352,14 +362,6 @@ protected
 			elsif ::ActiveRecord::Base.respond_to?(:connected?) &&
 			      ::ActiveRecord::Base.connected?
 				::ActiveRecord::Base.establish_connection
-			end
-		end
-		
-		# Install analytics hooks, if requested and possible.
-		if defined?(ActionController)
-			require 'phusion_passenger/railz/framework_extensions/analytics_logging'
-			if PhusionPassenger::Railz::FrameworkExtensions::AnalyticsLogging.installable?(options)
-				PhusionPassenger::Railz::FrameworkExtensions::AnalyticsLogging.install!(options)
 			end
 		end
 		

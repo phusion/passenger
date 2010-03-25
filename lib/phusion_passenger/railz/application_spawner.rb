@@ -91,6 +91,7 @@ class ApplicationSpawner < AbstractServer
 				prepare_app_process('config/environment.rb', options)
 				require File.expand_path('config/environment')
 				require 'dispatcher'
+				after_loading_app_code(options)
 			end
 			if success
 				start_request_handler(channel, false, options)
@@ -176,6 +177,7 @@ protected
 				Object.const_set(:RAILS_ENV, ENV['RAILS_ENV'])
 			end
 			preload_application
+			after_loading_app_code(@options)
 		end
 	end
 	

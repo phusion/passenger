@@ -164,6 +164,7 @@ private
 		end
 	end
 	
+	# TODO: we need to make this thread-safe...
 	def open_log_file(group_name, timestamp, category)
 		group_id = Digest::MD5.hexdigest(group_name)
 		timestamp_sec  = timestamp / 1000000

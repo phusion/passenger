@@ -70,6 +70,7 @@ class ApplicationSpawner < AbstractServer
 			success = report_app_init_status(channel) do
 				prepare_app_process('config.ru', options)
 				app = load_rack_app
+				after_loading_app_code(options)
 			end
 			if success
 				start_request_handler(channel, app, false, options)
@@ -151,6 +152,7 @@ protected
 			$0 = "Passenger ApplicationSpawner: #{@app_root}"
 			prepare_app_process('config.ru', @options)
 			@app = self.class.send(:load_rack_app)
+			after_loading_app_code(@options)
 		end
 	end
 

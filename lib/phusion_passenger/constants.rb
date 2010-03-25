@@ -27,4 +27,6 @@ module PhusionPassenger
 	
 	ROOT_UID = 0
 	ROOT_GID = 0
+	
+	PASSENGER_ANALYTICS_WEB_LOG = "PASSENGER_ANALYTICS_WEB_LOG"
 end

@@ -3,12 +3,14 @@ module Railz
 module FrameworkExtensions
 
 module AnalyticsLogging
+	# Instantiated from prepare_app_process in utils.rb.
 	@@analytics_logger = nil
 	
 	def self.installable?(options)
 		return options["analytics_logger"] && (
 			ac_base_extension_installable? ||
-			ac_rescue_extension_installable?
+			ac_rescue_extension_installable? ||
+			av_benchmark_helper_extension_installable?
 		)
 	end
 	
@@ -21,6 +23,11 @@ module AnalyticsLogging
 	def self.ac_rescue_extension_installable?
 		return defined?(ActionController::Rescue) &&
 			ActionController::Rescue.method_defined?(:rescue_action)
+	end
+	
+	def self.av_benchmark_helper_extension_installable?
+		return defined?(ActionView::Helpers::BenchmarkHelper) &&
+			ActionView::Helpers::BenchmarkHelper.method_defined?(:benchmark)
 	end
 	
 	def self.install!(options)
@@ -38,6 +45,13 @@ module AnalyticsLogging
 			ActionController::Rescue.class_eval do
 				include ACRescueExtension
 				alias_method_chain :rescue_action, :passenger
+			end
+		end
+		if av_benchmark_helper_extension_installable?
+			require 'phusion_passenger/railz/framework_extensions/analytics_logging/av_benchmark_helper_extension'
+			ActionView::Helpers::BenchmarkHelper.class_eval do
+				include AVBenchmarkHelperExtension
+				alias_method_chain :benchmark, :passenger
 			end
 		end
 	end

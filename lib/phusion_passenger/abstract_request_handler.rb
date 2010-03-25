@@ -108,7 +108,6 @@ class AbstractRequestHandler
 	PASSENGER_CONNECT_PASSWORD  = "PASSENGER_CONNECT_PASSWORD"   # :nodoc:
 	PASSENGER_TXN_ID            = "PASSENGER_TXN_ID"             # :nodoc:
 	PASSENGER_GROUP_NAME        = "PASSENGER_GROUP_NAME"         # :nodoc:
-	PASSENGER_ANALYTICS_WEB_LOG = "PASSENGER_ANALYTICS_WEB_LOG"  # :nodoc:
 	
 	OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS = ObjectSpace.respond_to?(:live_objects)
 	OBJECT_SPACE_SUPPORTS_ALLOCATED_OBJECTS = ObjectSpace.respond_to?(:allocated_objects)
