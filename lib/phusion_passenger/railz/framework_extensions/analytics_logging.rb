@@ -21,6 +21,11 @@ module AnalyticsLogging
 			ActionController::Base.method_defined?(:render)
 	end
 	
+	def self.ac_benchmarking_extension_installable?
+		return defined?(ActionController::Benchmarking::ClassMethods) &&
+			ActionController::Benchmarking::ClassMethods.method_defined?(:benchmark)
+	end
+	
 	def self.ac_rescue_extension_installable?
 		return defined?(ActionController::Rescue) &&
 			ActionController::Rescue.method_defined?(:rescue_action)
@@ -44,6 +49,13 @@ module AnalyticsLogging
 				include ACBaseExtension
 				alias_method_chain :perform_action, :passenger
 				alias_method_chain :render, :passenger
+			end
+		end
+		if ac_benchmarking_extension_installable?
+			require 'phusion_passenger/railz/framework_extensions/analytics_logging/ac_benchmarking_extension'
+			ActionController::Benchmarking::ClassMethods.class_eval do
+				include ACBenchmarkingExtension
+				alias_method_chain :benchmark, :passenger
 			end
 		end
 		if ac_rescue_extension_installable?
