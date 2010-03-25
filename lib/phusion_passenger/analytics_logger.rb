@@ -21,6 +21,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'thread'
 require 'digest/md5'
 require 'phusion_passenger/message_client'
 
@@ -133,6 +134,7 @@ class AnalyticsLogger
 		end
 		@node_id = Digest::MD5.hexdigest(node_name)
 		@file_handle_cache = {}
+		@mutex = Mutex.new
 	end
 	
 	def close
@@ -164,7 +166,6 @@ private
 		end
 	end
 	
-	# TODO: we need to make this thread-safe...
 	def open_log_file(group_name, timestamp, category)
 		group_id = Digest::MD5.hexdigest(group_name)
 		timestamp_sec  = timestamp / 1000000
@@ -173,45 +174,47 @@ private
 		date_name = time.strftime("%Y/%m/%d/%H")
 		log_file_path = "1/#{group_id}/#{@node_id}/#{category}/#{date_name}/log.txt"
 		
-		handle = @file_handle_cache[log_file_path]
-		if handle
-			handle.last_used = Time.now
-			return handle.io
-		else
-			# I think we only need to cache 1 file handle...
-			while @file_handle_cache.size > 2
-				oldest = nil
+		@mutex.synchronize do
+			handle = @file_handle_cache[log_file_path]
+			if handle
+				handle.last_used = Time.now
+				return handle.io
+			else
+				# I think we only need to cache 1 file handle...
+				while @file_handle_cache.size > 2
+					oldest = nil
 				
-				@file_handle_cache.each_pair do |log_file_path, handle|
-					if !oldest || handle.last_used < @file_handle_cache[oldest].last_used
-						oldest = log_file_path
+					@file_handle_cache.each_pair do |log_file_path, handle|
+						if !oldest || handle.last_used < @file_handle_cache[oldest].last_used
+							oldest = log_file_path
+						end
 					end
+					@file_handle_cache[oldest].close
+					@file_handle_cache.delete(oldest)
 				end
-				@file_handle_cache[oldest].close
-				@file_handle_cache.delete(oldest)
-			end
 			
-			client = MessageClient.new(@username, @password, @server_address)
-			log_file_io = nil
-			begin
-				client.write("open log file", group_name, timestamp,
-					@node_name, category)
-				result = client.read
-				if !result
-					raise IOError, "The logging agent unexpectedly closed the connection."
-				elsif result[0] == "error"
-					raise IOError, "The logging agent could not open the log file: #{result[1]}"
+				client = MessageClient.new(@username, @password, @server_address)
+				log_file_io = nil
+				begin
+					client.write("open log file", group_name, timestamp,
+						@node_name, category)
+					result = client.read
+					if !result
+						raise IOError, "The logging agent unexpectedly closed the connection."
+					elsif result[0] == "error"
+						raise IOError, "The logging agent could not open the log file: #{result[1]}"
+					end
+					io = client.recv_io(File)
+					io.sync = true
+					handle = CachedFileHandle.new(io, Time.now)
+					@file_handle_cache[log_file_path] = handle
+					return io
+				rescue Exception
+					log_file_io.close if log_file_io
+					raise
+				ensure
+					client.close
 				end
-				io = client.recv_io(File)
-				io.sync = true
-				handle = CachedFileHandle.new(io, Time.now)
-				@file_handle_cache[log_file_path] = handle
-				return io
-			rescue Exception
-				log_file_io.close if log_file_io
-				raise
-			ensure
-				client.close
 			end
 		end
 	end
