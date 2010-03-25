@@ -10,7 +10,8 @@ module AnalyticsLogging
 		return options["analytics_logger"] && (
 			ac_base_extension_installable? ||
 			ac_rescue_extension_installable? ||
-			av_benchmark_helper_extension_installable?
+			av_benchmark_helper_extension_installable? ||
+			ar_abstract_adapter_extension_installable?
 		)
 	end
 	
@@ -28,6 +29,11 @@ module AnalyticsLogging
 	def self.av_benchmark_helper_extension_installable?
 		return defined?(ActionView::Helpers::BenchmarkHelper) &&
 			ActionView::Helpers::BenchmarkHelper.method_defined?(:benchmark)
+	end
+	
+	def self.ar_abstract_adapter_extension_installable?
+		return defined?(ActiveRecord::ConnectionAdapters::AbstractAdapter) &&
+			ActiveRecord::ConnectionAdapters::AbstractAdapter.method_defined?(:log)
 	end
 	
 	def self.install!(options)
@@ -52,6 +58,13 @@ module AnalyticsLogging
 			ActionView::Helpers::BenchmarkHelper.class_eval do
 				include AVBenchmarkHelperExtension
 				alias_method_chain :benchmark, :passenger
+			end
+		end
+		if ar_abstract_adapter_extension_installable? && false
+			require 'phusion_passenger/railz/framework_extensions/analytics_logging/ar_abstract_adapter_extension'
+			ActiveRecord::ConnectionAdapters::AbstractAdapter.class_eval do
+				include ARAbstractAdapterExtension
+				alias_method_chain :log, :passenger
 			end
 		end
 	end

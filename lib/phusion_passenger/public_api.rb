@@ -37,8 +37,12 @@ class << self
 		end
 	end
 	
-	def benchmark(env, title = "Benchmarking")
-		log = env[PASSENGER_ANALYTICS_WEB_LOG]
+	def benchmark(env = nil, title = "Benchmarking")
+		if env
+			log = env[PASSENGER_ANALYTICS_WEB_LOG]
+		else
+			log = Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
+		end
 		if log
 			log.measure("BENCHMARK: #{title}") do
 				yield

@@ -649,6 +649,7 @@ private
 				headers[PASSENGER_GROUP_NAME],
 				headers[PASSENGER_TXN_ID])
 			headers[PASSENGER_ANALYTICS_WEB_LOG] = log
+			Thread.current[PASSENGER_ANALYTICS_WEB_LOG] = log
 			if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS
 				log.message("Initial objects on heap: #{ObjectSpace.live_objects}")
 			end
@@ -678,6 +679,7 @@ private
 				if GC_SUPPORTS_TIME
 					log.message("Final GC time: #{GC.time}")
 				end
+				Thread.current[PASSENGER_ANALYTICS_WEB_LOG] = nil
 			ensure
 				log.close
 			end
