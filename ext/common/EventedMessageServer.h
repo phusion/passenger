@@ -27,8 +27,10 @@
 
 #include <boost/shared_ptr.hpp>
 #include <ev++.h>
+#include <cstdarg>
 #include "EventedServer.h"
 #include "MessageReadersWriters.h"
+#include "Constants.h"
 #include "Utils.h"
 
 namespace Passenger {
@@ -38,6 +40,8 @@ using namespace boost;
 
 class EventedMessageServer: public EventedServer {
 protected:
+	/******** Types ********/
+	
 	enum State {
 		MS_READING_USERNAME,
 		MS_READING_PASSWORD,
@@ -52,12 +56,15 @@ protected:
 		ScalarReader scalarReader;
 		ArrayReader arrayReader;
 		string username;
-		string password;
 		
 		Context(EventedServer *server)
 			: authenticationTimer(server->getLoop())
-		{
-			arrayReader.reserve(5);
+		{ }
+		
+		~Context() {
+			/* Its buffer might contain password data so make sure
+			 * it's properly zeroed out. */
+			scalarReader.reset(true);
 		}
 	};
 	
@@ -80,6 +87,9 @@ protected:
 	typedef shared_ptr<Client> ClientPtr;
 	friend class Client;
 	
+	
+	/******** Overrided hooks and methods ********/
+	
 	virtual EventedServer::ClientPtr createClient() {
 		return ClientPtr(new Client(this));
 	}
@@ -92,9 +102,16 @@ protected:
 	
 	virtual void onNewClient(const EventedServer::ClientPtr &_client) {
 		ClientPtr client = static_pointer_cast<Client>(_client);
-		client->messageServer.authenticationTimer.set
+		Context *context = &client->messageServer;
+		
+		context->authenticationTimer.set
 			<Client, &Client::_authenticationTimedOut>(client.get());
-		client->messageServer.authenticationTimer.start(10);
+		context->authenticationTimer.start(10);
+		
+		context->arrayReader.reserve(5);
+		context->scalarReader.setMaxSize(MESSAGE_SERVER_MAX_USERNAME_SIZE);
+		
+		writeArrayMessage(client, "version", protocolVersion(), NULL);
 	}
 	
 	virtual void onClientReadable(const EventedServer::ClientPtr &_client) {
@@ -130,11 +147,75 @@ protected:
 		}
 	}
 	
-	void onDataReceived(const ClientPtr &client, const char *data, size_t size) {
+	
+	/******** New EventedMessageServer overridable hooks and API methods ********/
+	
+	virtual void onClientAuthenticated(const ClientPtr &client) {
+		// Do nothing.
+	}
+	
+	virtual bool onMessageReceived(const ClientPtr &client, const vector<StaticString> &args) {
+		return true;
+	}
+	
+	virtual void onEndOfStream(const ClientPtr &client) {
+		// Do nothing.
+	}
+	
+	virtual pair<size_t, bool> onOtherDataReceived(const ClientPtr &client,
+		const char *data, size_t size)
+	{
+		abort();
+	}
+	
+	virtual const char *protocolVersion() const {
+		return "1";
+	}
+	
+	void writeArrayMessage(const ClientPtr &client, const char *name, ...) {
+		va_list ap;
+		unsigned int count = 0;
+		
+		va_start(ap, name);
+		while (va_arg(ap, const char *) != NULL) {
+			count++;
+		}
+		va_end(ap);
+		
+		StaticString args[count + 1];
+		unsigned int i = 1;
+		
+		args[0] = name;
+		va_start(ap, name);
+		while (true) {
+			const char *arg = va_arg(ap, const char *);
+			if (arg != NULL) {
+				args[i] = arg;
+				i++;
+			} else {
+				break;
+			}
+		}
+		va_end(ap);
+		
+		writeArrayMessage(client, args, count + 1);
+	}
+	
+	void writeArrayMessage(const ClientPtr &client, StaticString args[], unsigned int count) {
+		char headerBuf[sizeof(uint16_t)];
+		StaticString out[2 * count + 1];
+		
+		ArrayReader::generate(args, count, headerBuf,
+			out, sizeof(out) / sizeof(StaticString));
+		write(client, out, sizeof(out) / sizeof(StaticString));
+	}
+
+private:
+	void onDataReceived(const ClientPtr &client, char *data, size_t size) {
 		size_t consumed = 0;
 		Context *context = &client->messageServer;
 		
-		while (consumed < size) {
+		while (consumed < size && context->state != MS_DISCONNECTED) {
 			const char *current = data + consumed;
 			size_t rest = size - consumed;
 			
@@ -142,43 +223,70 @@ protected:
 			case MS_READING_USERNAME:
 				consumed += context->scalarReader.feed(current, rest);
 				if (context->scalarReader.hasError()) {
-					context->authenticationTimer.stop();
+					writeArrayMessage(client,
+						"The supplied username is too long.",
+						NULL);
 					disconnect(client);
 				} else if (context->scalarReader.done()) {
 					context->username = context->scalarReader.value();
 					context->scalarReader.reset();
+					context->scalarReader.setMaxSize(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
 					context->state = MS_READING_PASSWORD;
 				}
 				break;
-			case MS_READING_PASSWORD:
-				consumed += context->scalarReader.feed(current, rest);
+				
+			case MS_READING_PASSWORD: {
+				size_t begin, locallyConsumed;
+				
+				begin = consumed;
+				locallyConsumed = context->scalarReader.feed(current, rest);
+				consumed += locallyConsumed;
+				
+				// The buffer contains password data so make sure we zero
+				// it out when we're done.
+				MemZeroGuard passwordGuard(data + begin, locallyConsumed);
+				
 				if (context->scalarReader.hasError()) {
-					context->authenticationTimer.stop();
+					context->scalarReader.reset(true);
+					writeArrayMessage(client,
+						"The supplied password is too long.",
+						NULL);
 					disconnect(client);
 				} else if (context->scalarReader.done()) {
 					context->authenticationTimer.stop();
-					context->password = context->scalarReader.value();
-					context->scalarReader.reset();
-					if (authenticate(client)) {
+					if (authenticate(context->username, context->scalarReader.value())) {
+						context->scalarReader.reset(true);
 						context->state = MS_READING_MESSAGE;
+						writeArrayMessage(client, "ok", NULL);
+						onClientAuthenticated(client);
 					} else {
+						context->scalarReader.reset(true);
+						writeArrayMessage(client,
+							"Invalid username or password.",
+							NULL);
 						disconnect(client);
 					}
 				}
 				break;
+			}
+			
 			case MS_READING_MESSAGE:
 				consumed += context->arrayReader.feed(current, rest);
 				if (context->arrayReader.hasError()) {
 					disconnect(client);
 				} else if (context->arrayReader.done()) {
 					context->state = MS_PROCESSING_MESSAGE;
-					if (onMessageReceived(client, context->arrayReader.value())
-					 && context->state == MS_PROCESSING_MESSAGE) {
+					if (context->arrayReader.value().empty()) {
+						logError(client, "Client sent an empty message.");
+						disconnect(client);
+					} else if (onMessageReceived(client, context->arrayReader.value())
+					   && context->state == MS_PROCESSING_MESSAGE) {
 						context->state = MS_READING_MESSAGE;
 					}
 					context->arrayReader.reset();
 				}
 				break;
+				
 			case MS_PROCESSING_MESSAGE: {
 				pair<size_t, bool> ret = onOtherDataReceived(client, current, rest);
 				consumed += ret.first;
@@ -187,31 +295,17 @@ protected:
 				}
 				break;
 			}
-			case MS_DISCONNECTED:
-				consumed += rest;
-				break;
+			
 			default:
+				// Never reached.
 				abort();
 			}
 		}
 	}
 	
-	virtual bool onMessageReceived(const ClientPtr &client, const vector<StaticString> &message) {
-		return true;
-	}
-	
-	virtual void onEndOfStream(const ClientPtr &client) { }
-	
-	virtual pair<size_t, bool> onOtherDataReceived(const ClientPtr &client,
-		const char *data, size_t size)
+	bool authenticate(const StaticString &username, const StaticString &password) const
 	{
-		abort();
-	}
-
-private:
-	bool authenticate(const ClientPtr &client) const {
-		return client->messageServer.username == "foo" &&
-			client->messageServer.password == "bar";
+		return username == "foo" && password == "bar";
 	}
 	
 	void authenticationTimedOut(const ClientPtr &client) {

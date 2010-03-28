@@ -516,15 +516,6 @@ private:
 		return it->second.fd;
 	}
 	
-	unsigned long long extractTimestamp(const string &txnId) const {
-		const char *timestampBegin = strchr(txnId.c_str(), '-');
-		if (timestampBegin != NULL) {
-			return atoll(timestampBegin + 1);
-		} else {
-			return 0;
-		}
-	}
-	
 public:
 	AnalyticsLogger() { }
 	
@@ -611,6 +602,15 @@ public:
 		filename.append(time_str);
 		filename.append("/log.txt");
 		return filename;
+	}
+	
+	static unsigned long long extractTimestamp(const StaticString &txnId) {
+		const char *timestampBegin = memchr(txnId.c_str(), '-', txnId.size());
+		if (timestampBegin != NULL) {
+			return atoll(timestampBegin + 1);
+		} else {
+			return 0;
+		}
 	}
 	
 	AnalyticsLogPtr newTransaction(const string &groupName, const StaticString &category = "requests",

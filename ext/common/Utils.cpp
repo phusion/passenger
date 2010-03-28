@@ -103,6 +103,17 @@ atol(const string &s) {
 	return ::atol(s.c_str());
 }
 
+long long
+atoll(const StaticString &s) {
+	if (s.size() > 50) {
+		throw ArgumentException("Input too large.");
+	}
+	char data[s.size() + 1];
+	memcpy(data, s.c_str(), s.size());
+	data[s.size()] = '\0';
+	return ::atoll(data);
+}
+
 void
 split(const string &str, char sep, vector<string> &output) {
 	string::size_type start, pos;
@@ -887,8 +898,10 @@ createTcpServer(const char *address, unsigned short port, unsigned int backlogSi
 	
 	optval = 1;
 	try {
-		syscalls::setsockopt(fd, SOL_SOCKET, SO_REUSEPORT,
-			&optval, sizeof(optval));
+		if (syscalls::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+			&optval, sizeof(optval)) == -1) {
+				printf("so_reuseaddr failed: %s\n", strerror(errno));
+			}
 	} catch (...) {
 		do {
 			ret = close(fd);

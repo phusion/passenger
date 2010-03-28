@@ -172,6 +172,12 @@ int atoi(const string &s);
  */
 long atol(const string &s);
 
+/**
+ * Converts the given string to a long long integer.
+ * @ingroup Support
+ */
+long long atoll(const StaticString &s);
+
 /** Round <em>number</em> up to the nearest multiple of <em>multiple</em>. */
 template<typename IntType> IntType
 roundUp(IntType number, IntType multiple) {
@@ -516,7 +522,7 @@ int createUnixServer(const char *filename, unsigned int backlogSize = 0, bool au
 
 /**
  * Create a new TCP server socket which is bounded to the given address and port.
- * SO_REUSEPORT will be set on the socket.
+ * SO_REUSEADDR will be set on the socket.
  *
  * @param address The IP address to bind the socket to.
  * @param port The port to bind the socket to, or 0 to have the OS automatically
@@ -603,71 +609,6 @@ public:
 	
 	~BufferedUpload() {
 		fclose(handle);
-	}
-};
-
-/**
- * Fills the given memory space or string with zeroes when a MemoryZeroGuard object
- * is destroyed. Useful for ensuring that buffers containing password data or
- * other sensitive information is cleared when it goes out of scope.
- */
-class MemZeroGuard {
-private:
-	void *data;
-	unsigned int size;
-	string *str;
-	
-	static void securelyZeroMemory(volatile void *data, unsigned int size) {
-		/* We do not use memset() here because the compiler may
-		 * optimize out memset() calls. Instead, the following
-		 * code is guaranteed to zero the memory.
-		 * http://www.dwheeler.com/secure-programs/Secure-Programs-HOWTO/protect-secrets.html
-		 */
-		volatile char *p = (volatile char *) data;
-		while (size--) {
-			*p++ = 0;
-		}
-	}
-	
-public:
-	/**
-	 * Creates a new MemZeroGuard object with a memory region to zero.
-	 *
-	 * @param data The data to zero after destruction.
-	 * @param size The size of the data.
-	 * @pre data != NULL
-	 */
-	MemZeroGuard(void *data, unsigned int size) {
-		this->data = data;
-		this->size = size;
-		this->str  = NULL;
-	}
-	
-	/**
-	 * Creates a new MemoryZeroGuard object with a string to zero.
-	 *
-	 * @param str The string to zero after destruction.
-	 */
-	MemZeroGuard(string &str) {
-		this->data = NULL;
-		this->size = NULL;
-		this->str  = &str;
-	}
-	
-	/**
-	 * Zero the data immediately. The data will still be zeroed after
-	 * destruction of this object.
-	 */
-	void zeroNow() {
-		if (str == NULL) {
-			securelyZeroMemory(data, size);
-		} else {
-			securelyZeroMemory((volatile void *) str->c_str(), str->size());
-		}
-	}
-	
-	~MemZeroGuard() {
-		zeroNow();
 	}
 };
 

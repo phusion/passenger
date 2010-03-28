@@ -26,6 +26,7 @@
 #define _PASSENGER_MESSAGE_READERS_WRITERS_H_
 
 #include <boost/cstdint.hpp>
+#include <oxt/macros.hpp>
 #include <algorithm>
 #include <vector>
 #include <string>
@@ -33,6 +34,8 @@
 #include <cstring>
 #include <arpa/inet.h>
 #include "StaticString.h"
+#include "Exceptions.h"
+#include "Utils/MemZeroGuard.h"
 
 /**
  * This file provides a bunch of classes for reading and writing messages in the
@@ -148,7 +151,7 @@ public:
 		return val;
 	}
 	
-	void generate(void *buf, uint16_t val) const {
+	static void generate(void *buf, uint16_t val) {
 		val = htons(val);
 		memcpy(buf, &val, sizeof(val));
 	}
@@ -317,6 +320,48 @@ public:
 	const vector<StaticString> &value() const {
 		return result;
 	}
+	
+	/**
+	 * Given a bunch of array items, generates an array message. The message is
+	 * generated in the form of an array of StaticStrings which must all be written
+	 * out (e.g. with writev()) in the given order. These StaticStrings point
+	 * to the buffers pointed to by <em>args</em> as well as <em>headerBuf</em>,
+	 * so <em>args</em> and <em>headerBuf</em> must stay valid until the message
+	 * has been written out or copied.
+	 *
+	 * @param args An array of array items to be included in the array message.
+	 * @param argsCount The number of items in <em>args</em>.
+	 * @param headerBuf A pointer to a buffer in which the array message header
+	 *                  is to be stored.
+	 * @param out A pointer to a StaticString array in which the generated array
+	 *            message data will be stored. This array must have space for at
+	 *            least <tt>argsCount * 2 + 1</tt> items.
+	 * @param outCount The number of items in <em>out</em>.
+	 */
+	static void generate(StaticString args[], unsigned int argsCount,
+		char headerBuf[sizeof(uint16_t)], StaticString *out, unsigned int outCount)
+	{
+		if (OXT_UNLIKELY(outCount < argsCount * 2 + 1)) {
+			throw ArgumentException("outCount too small.");
+		}
+		
+		unsigned int size = 0;
+		unsigned int i;
+		
+		for (i = 0; i < argsCount; i++) {
+			size += args[i].size() + 1;
+		}
+		if (OXT_UNLIKELY(size > 0xFFFF)) {
+			throw ArgumentException("Data size exceeds maximum size for array messages.");
+		}
+		
+		Uint16Reader::generate(headerBuf, size);
+		out[0] = StaticString(headerBuf, sizeof(uint16_t));
+		for (i = 0; i < argsCount; i++) {
+			out[1 + 2 * i] = args[i];
+			out[1 + 2 * i + 1] = StaticString("\0", 1);
+		}
+	}
 };
 
 /**
@@ -349,8 +394,23 @@ public:
 		this->maxSize = maxSize;
 	}
 	
-	void reset() {
+	void setMaxSize(uint32_t maxSize) {
+		this->maxSize = maxSize;
+	}
+	
+	/**
+	 * Resets the internal state so that this object can be used for processing
+	 * another scalar message.
+	 *
+	 * If <em>zeroBuffer</em> is true, then the contents of the internal buffer
+	 * will be securely filled with zeroes. This is useful if e.g. the buffer
+	 * might contain sensitive password data.
+	 */
+	void reset(bool zeroBuffer = false) {
 		state = READING_HEADER;
+		if (zeroBuffer) {
+			MemZeroGuard guard(buffer);
+		}
 		headerReader.reset();
 		buffer.clear();
 	}

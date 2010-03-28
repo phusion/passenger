@@ -217,6 +217,10 @@ protected:
 		}
 	}
 	
+	void logError(const ClientPtr &client, const string &message) {
+		P_ERROR("Error in client " << client->name() << ": " << message);
+	}
+	
 	void logSystemError(const ClientPtr &client, const string &message, int errorCode) {
 		P_ERROR("Error in client " << client->name() << ": " <<
 			message << ": " << strerror(errorCode) << " (" << errorCode << ")");

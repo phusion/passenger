@@ -357,7 +357,7 @@ protected:
 		
 		try {
 			try {
-				if (!channel.readScalar(username, 50, &timeout)) {
+				if (!channel.readScalar(username, MESSAGE_SERVER_MAX_USERNAME_SIZE, &timeout)) {
 					return AccountPtr();
 				}
 			} catch (const SecurityException &) {
