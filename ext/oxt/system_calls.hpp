@@ -31,6 +31,7 @@
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <sys/select.h>
+#include <sys/uio.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -127,6 +128,7 @@ namespace oxt {
 		int open(const char *path, int oflag, mode_t mode);
 		ssize_t read(int fd, void *buf, size_t count);
 		ssize_t write(int fd, const void *buf, size_t count);
+		ssize_t writev(int fd, const struct iovec *iov, int iovcnt);
 		int close(int fd);
 		int pipe(int filedes[2]);
 		int dup2(int filedes, int filedes2);

@@ -103,18 +103,41 @@ struct AnythingToString {
 
 /**
  * Used internally by toString(). Do not use directly.
- *
  * @internal
  */
 template<>
 struct AnythingToString< vector<string> > {
 	string operator()(const vector<string> &v) {
-		string result("[");
+		string result = "[";
 		vector<string>::const_iterator it;
 		unsigned int i;
 		for (it = v.begin(), i = 0; it != v.end(); it++, i++) {
 			result.append("'");
 			result.append(*it);
+			if (i == v.size() - 1) {
+				result.append("'");
+			} else {
+				result.append("', ");
+			}
+		}
+		result.append("]");
+		return result;
+	}
+};
+
+/**
+ * Used internally by toString(). Do not use directly.
+ * @internal
+ */
+template<>
+struct AnythingToString< vector<StaticString> > {
+	string operator()(const vector<StaticString> &v) {
+		string result = "[";
+		vector<StaticString>::const_iterator it;
+		unsigned int i;
+		for (it = v.begin(), i = 0; it != v.end(); it++, i++) {
+			result.append("'");
+			result.append(it->data(), it->size());
 			if (i == v.size() - 1) {
 				result.append("'");
 			} else {
@@ -263,6 +286,14 @@ string extractBaseName(const StaticString &path);
  * @ingroup Support
  */
 string escapeForXml(const string &input);
+
+/**
+ * Sets a socket in non-blocking mode.
+ *
+ * @throws SystemException Something went wrong.
+ * @ingroup Support
+ */
+void setNonBlocking(int fd);
 
 /**
  * Returns the username of the user that the current process is running as.

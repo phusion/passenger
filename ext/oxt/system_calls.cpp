@@ -125,6 +125,16 @@ syscalls::write(int fd, const void *buf, size_t count) {
 	return ret;
 }
 
+ssize_t
+syscalls::writev(int fd, const struct iovec *iov, int iovcnt) {
+	ssize_t ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::writev(fd, iov, iovcnt)
+	);
+	return ret;
+}
+
 int
 syscalls::close(int fd) {
 	int ret;
