@@ -81,6 +81,7 @@ using namespace oxt;
  */
 class EventedServer {
 protected:
+	/** Contains various client information. */
 	struct Client: public enable_shared_from_this<Client> {
 		enum {
 			/**
@@ -139,6 +140,7 @@ protected:
 			server->onClientWritable(shared_from_this());
 		}
 		
+		/** Returns an identifier for this client. */
 		string name() const {
 			return toString(fd);
 		}
@@ -154,6 +156,17 @@ protected:
 		write(client, &data, 1);
 	}
 	
+	/**
+	 * Sends data to the given client. This method will try to send the data
+	 * immediately (in which no intermediate copies of the data will be made),
+	 * but if the client is not yet ready to receive data then the data will
+	 * be buffered and scheduled for sending later.
+	 *
+	 * If an I/O error was encountered then the client connection will be closed.
+	 *
+	 * If the client connection has already been closed then this method
+	 * does nothing.
+	 */
 	void write(const ClientPtr &client, const StaticString data[], size_t count) {
 		if (client->state == Client::ES_DISCONNECTED) {
 			return;
@@ -186,7 +199,7 @@ protected:
 				
 				// Schedule unsent data for sending later.
 				// TODO: reserve capacity
-				findEndOfDataInVectors(iov, count + 1, ret, &index, &offset);
+				findDataPositionIndexAndOffset(iov, count + 1, ret, &index, &offset);
 				for (size_t i = index; i < count; i++) {
 					if (i == index) {
 						client->outbox.append(data[i].data() + offset,
@@ -225,7 +238,7 @@ protected:
 					// Looks like everything in the outbox was sent.
 					// Schedule the rest of the data for sending later.
 					// TODO: reserve capacity
-					findEndOfDataInVectors(iov, count + 1, ret, &index, &offset);
+					findDataPositionIndexAndOffset(iov, count + 1, ret, &index, &offset);
 					for (size_t i = index; i < count + 1; i++) {
 						if (i == index) {
 							client->outbox.append(
@@ -316,6 +329,7 @@ private:
 	ev::io acceptWatcher;
 	set<ClientPtr> clients;
 	
+	/** Converts an array of StaticStrings to a corresponding array of iovec structures. */
 	size_t staticStringArrayToIoVec(const StaticString ary[], size_t count, struct iovec *vec) {
 		size_t total = 0;
 		for (size_t i = 0; i < count; i++) {
@@ -326,18 +340,32 @@ private:
 		return total;
 	}
 	
-	void findEndOfDataInVectors(struct iovec iov[], size_t count, size_t dataSize,
-		size_t *index, size_t *offset)
+	/**
+	 * Suppose that the given IO vectors are placed adjacent to each other
+	 * in a single contiguous block of memory. Given a position inside this
+	 * block of memory, this function will calculate the index of in the IO
+	 * vector array and the offset inside that IO vector that corresponds
+	 * with the position.
+	 *
+	 * For example, given the following array of IO vectors:
+	 * ["AAA", "BBBB", "CC"]
+	 * Position 0 would correspond to the first item, offset 0.
+	 * Position 1 would correspond to the first item, offset 1.
+	 * Position 5 would correspond to the second item, offset 2.
+	 * And so forth.
+	 */
+	void findDataPositionIndexAndOffset(struct iovec iov[], size_t count, size_t position,
+		size_t *index, size_t *offset) const
 	{
 		size_t i, begin;
 		
 		begin = 0;
 		for (i = 0; OXT_LIKELY(i < count); i++) {
 			size_t end = begin + iov[i].iov_len;
-			if (OXT_LIKELY(begin <= dataSize)) {
-				if (dataSize < end) {
+			if (OXT_LIKELY(begin <= position)) {
+				if (position < end) {
 					*index = i;
-					*offset = dataSize - begin;
+					*offset = position - begin;
 					return;
 				} else {
 					begin = end;
