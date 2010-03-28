@@ -50,13 +50,69 @@ using namespace std;
 using namespace boost;
 using namespace oxt;
 
+
+/**
+ * A base class for writing single-threaded, evented servers that use non-blocking I/O.
+ * It uses libev for its event loop. EventedServer handles much of the situps regarding
+ * client connection management and output buffering and tries to make it easy to
+ * implement a zero-copy architecture.
+ *
+ * <h2>Basic usage</h2>
+ * Derived classes can override the onClientReadable() method, which is called every time
+ * a specific becomes readable. It is passed a Client object which contains information
+ * about the client, such as its file descriptor. One can use the read() system call in
+ * that method to receive data from the client. Please note that client file descriptors
+ * are always set to non-blocking mode so you need to handle this gracefully.
+ *
+ * EventedServer provides the write() method for sending data to the client. This method
+ * will attempt to send the data to the client immediately; if it fails with EAGAIN then
+ * EventedServer will take care of scheduling the send at a later time when the client
+ * is ready again to receive data.
+ *
+ * To disconnect the client, call disconnect(). The connection might not be actually
+ * closed until all pending outgoing data have been sent out, but all the gory details
+ * is taken care of for you.
+ *
+ * <h2>Keeping per-client information</h2>
+ * If you need to keep per-client information then you can override the createClient()
+ * method and make it return an object that's a subclass of EventedServer::Client. This
+ * object is passed to onClientReadable(), so in there you can just cast the client object
+ * to your subclass.
+ */
 class EventedServer {
 protected:
 	struct Client: public enable_shared_from_this<Client> {
 		enum {
+			/**
+			 * This is the initial state for a client. It means we're
+			 * connected to the client, ready to receive data and
+			 * there's no pending outgoing data.
+			 */
 			ES_CONNECTED,
+			
+			/**
+			 * This state is entered from ES_CONNECTED when the write()
+			 * method fails and EventedServer schedules data to be sent
+			 * later. In here we might be watching for read events, but
+			 * not if there's too much pending data, in which case
+			 * EventedServer will concentrate on sending out all
+			 * pending data before watching read events again.
+			 */
 			ES_WRITES_PENDING,
+			
+			/**
+			 * This state is entered from ES_WRITES_PENDING state when
+			 * disconnect() is called. It means that we want to close
+			 * the connection as soon as all pending outgoing data has
+			 * been sent. As soon as that happens it'll transition
+			 * to ES_DISCONNECTED.
+			 */
 			ES_DISCONNECTING_WITH_WRITES_PENDING,
+			
+			/**
+			 * Final state. Client connection has been closed. No
+			 * I/O with the client is possible.
+			 */
 			ES_DISCONNECTED
 		} state;
 		
@@ -66,6 +122,7 @@ protected:
 		ev::io writeWatcher;
 		bool readWatcherStarted;
 		bool writeWatcherStarted;
+		/** Pending outgoing data is stored here. */
 		string outbox;
 		
 		Client(EventedServer *_server)
@@ -113,6 +170,8 @@ protected:
 			ret = syscalls::writev(client->fd, iov, count);
 			if (ret == -1) {
 				if (errno == EAGAIN) {
+					// Schedule all data for sending later.
+					// TODO: reserve capacity
 					for (size_t i = 0; i < count; i++) {
 						client->outbox.append(data[i].data(), data[i].size());
 					}
@@ -125,6 +184,8 @@ protected:
 			} else if ((size_t) ret < totalSize) {
 				size_t index, offset;
 				
+				// Schedule unsent data for sending later.
+				// TODO: reserve capacity
 				findEndOfDataInVectors(iov, count + 1, ret, &index, &offset);
 				for (size_t i = index; i < count; i++) {
 					if (i == index) {
@@ -151,15 +212,19 @@ protected:
 					logSystemError(client, "Cannot write data to client", e);
 					return;
 				}
-				// else: wait until next writable event.
+				// else: send the outbox on the next writable event.
 			} else {
 				string::size_type outboxSize = client->outbox.size();
 				size_t outboxSent = std::min((size_t) ret, outboxSize);
 				
+				// Remove everything in the outbox that we've been able to sent.
 				client->outbox.erase(0, outboxSent);
 				if (client->outbox.empty()) {
 					size_t index, offset;
 					
+					// Looks like everything in the outbox was sent.
+					// Schedule the rest of the data for sending later.
+					// TODO: reserve capacity
 					findEndOfDataInVectors(iov, count + 1, ret, &index, &offset);
 					for (size_t i = index; i < count + 1; i++) {
 						if (i == index) {
@@ -173,9 +238,10 @@ protected:
 						}
 					}
 				} else {
-					// the outbox could only be partially written, so nothing
-					// in 'data' could be written. add everything in 'data'
-					// into the outbox...
+					// The outbox could only be partially sent out, so
+					// nothing in 'data' could be sent. Add everything
+					// in 'data' into the outbox.
+					// TODO: reserve capacity
 					for (size_t i = 1; i < count + 1; i++) {
 						client->outbox.append(data[i - 1].data(),
 							data[i - 1].size());
@@ -186,7 +252,7 @@ protected:
 		if (client->outbox.empty()) {
 			outboxFlushed(client);
 		} else {
-			outboxNotFlushed(client);
+			outboxPartiallyFlushed(client);
 		}
 	}
 	
@@ -198,6 +264,8 @@ protected:
 	 * received from the client.
 	 */
 	virtual void disconnect(const ClientPtr &client, bool force = false) {
+		this_thread::disable_syscall_interruption dsi;
+		
 		if (client->state == Client::ES_CONNECTED
 		 || (force && client->state != Client::ES_DISCONNECTED)) {
 			watchReadEvents(client, false);
@@ -212,7 +280,12 @@ protected:
 		} else if (client->state == Client::ES_WRITES_PENDING) {
 			watchReadEvents(client, false);
 			watchWriteEvents(client, true);
-			shutdown(client->fd, SHUT_RD);
+			if (syscalls::shutdown(client->fd, SHUT_RD) == -1) {
+				int e = errno;
+				logSystemError(client,
+					"Cannot shutdown reader half of the client socket",
+					e);
+			}
 			client->state = Client::ES_DISCONNECTING_WITH_WRITES_PENDING;
 		}
 	}
@@ -278,6 +351,9 @@ private:
 		abort();
 	}
 	
+	/**
+	 * To be called when the entire outbox has been successfully sent out.
+	 */
 	void outboxFlushed(const ClientPtr &client) {
 		switch (client->state) {
 		case Client::ES_CONNECTED:
@@ -304,7 +380,10 @@ private:
 		}
 	}
 	
-	void outboxNotFlushed(const ClientPtr &client) {
+	/**
+	 * To be called when the outbox has been partially sent out.
+	 */
+	void outboxPartiallyFlushed(const ClientPtr &client) {
 		switch (client->state) {
 		case Client::ES_CONNECTED:
 			client->state = Client::ES_WRITES_PENDING;
@@ -377,7 +456,7 @@ private:
 		if (client->outbox.empty()) {
 			outboxFlushed(client);
 		} else {
-			outboxNotFlushed(client);
+			outboxPartiallyFlushed(client);
 		}
 	}
 	
@@ -446,6 +525,7 @@ public:
 		return loop;
 	}
 };
+
 
 } // namespace Passenger
 

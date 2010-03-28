@@ -605,7 +605,7 @@ public:
 	}
 	
 	static unsigned long long extractTimestamp(const StaticString &txnId) {
-		const char *timestampBegin = memchr(txnId.c_str(), '-', txnId.size());
+		const char *timestampBegin = (const char *) memchr(txnId.c_str(), '-', txnId.size());
 		if (timestampBegin != NULL) {
 			return atoll(timestampBegin + 1);
 		} else {
