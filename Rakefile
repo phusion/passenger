@@ -74,7 +74,6 @@ EXTRA_LDFLAGS  = ""
 # Whether to use the vendored libev or the system one.
 USE_VENDORED_LIBEV = ["", "yes", "true", "1"].include?(ENV['USE_VENDORED_LIBEV'].to_s)
 
-
 #### Default tasks
 
 desc "Build everything"
@@ -181,7 +180,7 @@ end
 ##### libev
 
 if USE_VENDORED_LIBEV
-	LIBEV_INCLUDES = "-Iext/libev"
+	LIBEV_CFLAGS = "-Iext/libev"
 	LIBEV_LIBS = "ext/libev/.libs/libev.a"
 	
 	task :libev => "ext/libev/.libs/libev.a"
@@ -196,7 +195,7 @@ if USE_VENDORED_LIBEV
 		sh "cd ext/libev && make libev.la"
 	end
 else
-	LIBEV_INCLUDES = ""
+	LIBEV_CFLAGS = ""
 	LIBEV_LIBS = ""
 	task :libev
 end
@@ -1170,7 +1169,7 @@ task :news_as_html do
 	puts "</dl>"
 end
 
-task :compile_app => [COMMON_LIBRARY, BOOST_OXT_LIBRARY] do
+task :compile_app => [COMMON_LIBRARY, BOOST_OXT_LIBRARY, :libev] do
 	source = ENV['SOURCE'] || ENV['FILE'] || ENV['F']
 	if !source
 		STDERR.puts "Please specify the source filename with SOURCE=(...)"
@@ -1178,11 +1177,12 @@ task :compile_app => [COMMON_LIBRARY, BOOST_OXT_LIBRARY] do
 	end
 	exe    = source.sub(/\.cpp$/, '')
 	create_executable(exe, source,
-		"-Iext -Iext/common " <<
+		"-Iext -Iext/common #{LIBEV_CFLAGS} " <<
 		"#{PlatformInfo.portability_cflags} " <<
 		"#{EXTRA_CXXFLAGS} " <<
 		"#{COMMON_LIBRARY} " <<
 		"#{BOOST_OXT_LIBRARY} " <<
+		"#{LIBEV_LIBS} " <<
 		"#{PlatformInfo.portability_ldflags} " <<
 		"#{EXTRA_LDFLAGS}")
 end
