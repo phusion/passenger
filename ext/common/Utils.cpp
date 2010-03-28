@@ -29,6 +29,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <cassert>
 #include <cstring>
 #include <netdb.h>
@@ -334,30 +336,6 @@ escapeForXml(const string &input) {
 	}
 	
 	return result;
-}
-
-void
-setNonBlocking(int fd) {
-	int flags, ret;
-	
-	do {
-		flags = fcntl(fd, F_GETFL);
-	} while (flags == -1 && errno == EINTR);
-	if (flags == -1) {
-		int e = errno;
-		throw SystemException("Cannot set socket to non-blocking mode: "
-			"cannot get socket flags",
-			e);
-	}
-	do {
-		ret = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-	} while (ret == -1 && errno == EINTR);
-	if (ret == -1) {
-		int e = errno;
-		throw SystemException("Cannot set socket to non-blocking mode: "
-			"cannot set socket flags",
-			e);
-	}
 }
 
 string
@@ -763,6 +741,30 @@ getSignalName(int sig) {
 	}
 }
 
+void
+setNonBlocking(int fd) {
+	int flags, ret;
+	
+	do {
+		flags = fcntl(fd, F_GETFL);
+	} while (flags == -1 && errno == EINTR);
+	if (flags == -1) {
+		int e = errno;
+		throw SystemException("Cannot set socket to non-blocking mode: "
+			"cannot get socket flags",
+			e);
+	}
+	do {
+		ret = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+	} while (ret == -1 && errno == EINTR);
+	if (ret == -1) {
+		int e = errno;
+		throw SystemException("Cannot set socket to non-blocking mode: "
+			"cannot set socket flags",
+			e);
+	}
+}
+
 int
 createUnixServer(const char *filename, unsigned int backlogSize, bool autoDelete) {
 	struct sockaddr_un addr;
@@ -775,12 +777,13 @@ createUnixServer(const char *filename, unsigned int backlogSize, bool autoDelete
 		throw RuntimeException(message);
 	}
 	
-	fd = syscalls::socket(PF_UNIX, SOCK_STREAM, 0);
+	fd = syscalls::socket(PF_LOCAL, SOCK_STREAM, 0);
 	if (fd == -1) {
-		throw SystemException("Cannot create a Unix socket file descriptor", errno);
+		int e = errno;
+		throw SystemException("Cannot create a Unix socket file descriptor", e);
 	}
 	
-	addr.sun_family = AF_UNIX;
+	addr.sun_family = AF_LOCAL;
 	strncpy(addr.sun_path, filename, sizeof(addr.sun_path));
 	addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
 	
@@ -825,6 +828,92 @@ createUnixServer(const char *filename, unsigned int backlogSize, bool autoDelete
 		string message = "Cannot listen on Unix socket '";
 		message.append(filename);
 		message.append("'");
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw SystemException(message, e);
+	}
+	
+	return fd;
+}
+
+int
+createTcpServer(const char *address, unsigned short port, unsigned int backlogSize) {
+	struct sockaddr_in addr;
+	int fd, ret, optval;
+	
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	ret = inet_pton(AF_INET, address, &addr.sin_addr.s_addr);
+	if (ret < 0) {
+		int e = errno;
+		string message = "Cannot parse the IP address '";
+		message.append(address);
+		message.append("'");
+		throw SystemException(message, e);
+	} else if (ret == 0) {
+		string message = "Cannot parse the IP address '";
+		message.append(address);
+		message.append("'");
+		throw ArgumentException(message);
+	}
+	addr.sin_port = htons(port);
+	
+	fd = syscalls::socket(PF_INET, SOCK_STREAM, 0);
+	if (fd == -1) {
+		int e = errno;
+		throw SystemException("Cannot create a TCP socket file descriptor", e);
+	}
+	
+	try {
+		ret = syscalls::bind(fd, (const struct sockaddr *) &addr, sizeof(addr));
+	} catch (...) {
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw;
+	}
+	if (ret == -1) {
+		int e = errno;
+		string message = "Cannot bind a TCP socket on address '";
+		message.append(address);
+		message.append("' port ");
+		message.append(toString(port));
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw SystemException(message, e);
+	}
+	
+	optval = 1;
+	try {
+		syscalls::setsockopt(fd, SOL_SOCKET, SO_REUSEPORT,
+			&optval, sizeof(optval));
+	} catch (...) {
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw;
+	}
+	// Ignore SO_REUSEPORT error, it's not fatal.
+	
+	if (backlogSize == 0) {
+		backlogSize = 1024;
+	}
+	try {
+		ret = syscalls::listen(fd, backlogSize);
+	} catch (...) {
+		do {
+			ret = close(fd);
+		} while (ret == -1 && errno == EINTR);
+		throw;
+	}
+	if (ret == -1) {
+		int e = errno;
+		string message = "Cannot listen on TCP socket '";
+		message.append(address);
+		message.append("' port ");
+		message.append(toString(port));
 		do {
 			ret = close(fd);
 		} while (ret == -1 && errno == EINTR);

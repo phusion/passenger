@@ -288,14 +288,6 @@ string extractBaseName(const StaticString &path);
 string escapeForXml(const string &input);
 
 /**
- * Sets a socket in non-blocking mode.
- *
- * @throws SystemException Something went wrong.
- * @ingroup Support
- */
-void setNonBlocking(int fd);
-
-/**
  * Returns the username of the user that the current process is running as.
  * If the user has no associated username, then "UID xxxx" is returned,
  * where xxxx is the current UID.
@@ -500,6 +492,14 @@ void toHex(const StaticString &data, char *output);
 string getSignalName(int sig);
 
 /**
+ * Sets a socket in non-blocking mode.
+ *
+ * @throws SystemException Something went wrong.
+ * @ingroup Support
+ */
+void setNonBlocking(int fd);
+
+/**
  * Create a new Unix server socket which is bounded to <tt>filename</tt>.
  *
  * @param filename The filename to bind the socket to.
@@ -513,6 +513,23 @@ string getSignalName(int sig);
  * @ingroup Support
  */
 int createUnixServer(const char *filename, unsigned int backlogSize = 0, bool autoDelete = true);
+
+/**
+ * Create a new TCP server socket which is bounded to the given address and port.
+ * SO_REUSEPORT will be set on the socket.
+ *
+ * @param address The IP address to bind the socket to.
+ * @param port The port to bind the socket to, or 0 to have the OS automatically
+ *             select a free port.
+ * @param backlogSize The size of the socket's backlog. Specify 0 to use the
+ *                    platform's maximum allowed backlog size.
+ * @return The file descriptor of the newly created server socket.
+ * @throws SystemException Something went wrong while creating the server socket.
+ * @throws ArgumentException The given address cannot be parsed.
+ * @throws boost::thread_interrupted A system call has been interrupted.
+ * @ingroup Support
+ */
+int createTcpServer(const char *address = "0.0.0.0", unsigned short port = 0, unsigned int backlogSize = 0);
 
 /**
  * Connect to a Unix server socket at <tt>filename</tt>.

@@ -382,7 +382,8 @@ private:
 		int i = 0;
 		bool done = false;
 		
-		// Accept at most 100 connections on every accept readiness event.
+		// Accept at most 100 connections on every accept readiness event
+		// in order to give other events the chance to be processed.
 		while (i < 100 && !done) {
 			// Reserve enough space to hold both a Unix domain socket
 			// address and an IP socket address.
@@ -401,7 +402,11 @@ private:
 				done = true;
 			} else {
 				FileDescriptor clientfdGuard = clientfd;
+				int optval = 1;
+				
 				setNonBlocking(clientfdGuard);
+				syscalls::setsockopt(clientfd, SOL_SOCKET, SO_KEEPALIVE,
+					&optval, sizeof(optval));
 				
 				ClientPtr client = createClient();
 				client->state = Client::ES_CONNECTED;

@@ -100,9 +100,12 @@ protected:
 	virtual void onClientReadable(const EventedServer::ClientPtr &_client) {
 		ClientPtr client = static_pointer_cast<Client>(_client);
 		this_thread::disable_syscall_interruption dsi;
+		int i = 0;
 		bool done = false;
 		
-		while (!done) {
+		// read() from the client at most 100 times on every read readiness event
+		// in order to give other events the chance to be processed.
+		while (i < 100 && !done) {
 			char buf[1024 * 4];
 			ssize_t ret;
 			
@@ -121,6 +124,7 @@ protected:
 			} else {
 				onDataReceived(client, buf, ret);
 			}
+			i++;
 			done = done || (client->state != Client::ES_CONNECTED &&
 				client->state != Client::ES_WRITES_PENDING);
 		}
@@ -215,8 +219,8 @@ private:
 	}
 
 public:
-	EventedMessageServer(struct ev_loop *loop, const string &filename)
-		: EventedServer(loop, createUnixServer(filename.c_str()))
+	EventedMessageServer(struct ev_loop *loop, FileDescriptor fd)
+		: EventedServer(loop, fd)
 	{ }
 };
 
