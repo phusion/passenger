@@ -53,8 +53,8 @@ protected:
 	struct Context {
 		State state;
 		ev::timer authenticationTimer;
-		ScalarReader scalarReader;
-		ArrayReader arrayReader;
+		ScalarMessage scalarReader;
+		ArrayMessage arrayReader;
 		string username;
 		
 		Context(EventedServer *server)
@@ -205,7 +205,7 @@ protected:
 		char headerBuf[sizeof(uint16_t)];
 		StaticString out[2 * count + 1];
 		
-		ArrayReader::generate(args, count, headerBuf,
+		ArrayMessage::generate(args, count, headerBuf,
 			out, sizeof(out) / sizeof(StaticString));
 		write(client, out, sizeof(out) / sizeof(StaticString));
 	}

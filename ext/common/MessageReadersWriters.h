@@ -40,65 +40,65 @@
 /**
  * This file provides a bunch of classes for reading and writing messages in the
  * MessageChannel format. Unlike MessageChannel, whose operations take control over
- * the I/O handle and may block, these classes are like parsers and data generators.
- * Reader classes require the user to feed data to them. Writer classes generate a
- * bunch of bytes that the user can send out. These classes will never block, making
+ * the I/O handle and may block, these classes act like parsers and data generators.
+ * To read messages one must feed data to them. To write messages one must instruct
+ * the classes to generate a bunch of data. These classes will never block, making
  * them ideal for use in evented servers.
  *
  * <h2>Reading messages</h2>
- * To read a single message, one must instantiate a reader object and feed network
+ * To read a single message, one must instantiate a message object and feed network
  * data to it with the feed() method. This method returns the number of bytes
- * actually processed by the reader (i.e. the number of bytes that it has recognized
- * as part of the message).
+ * actually processed by the message object (i.e. the number of bytes that it has
+ * recognized as part of the message).
  *
- * When the reader has either successfully parsed the data or encountered an error,
- * it will indicate so via the done() method. With hasError() one can check whether
- * an error was encountered or whether the reader succeeded, and with errorCode()
- * one can obtain the exact error reason. Not all readers support hasError() and
- * errorCode() because some readers can never encounter errors and some readers
- * only have a single reason to fail.
+ * When the message object has either successfully parsed the data or encountered
+ * an error, it will indicate so via the done() method. With hasError() one can
+ * check whether an error was encountered or whether the reader succeeded, and
+ * with errorCode() one can obtain the exact error reason. Not all message objects
+ * support hasError() and errorCode() because some of them can never encounter
+ * errors and some of them can only fail for a single reason.
  *
  * When successful, the parsed message can be obtained with value(). This method
  * may only be called when done() is true and there is no error, otherwise the
  * return value is undefined.
  *
- * At this point, the reader object cannot process any more data and feed() will
+ * At this point, the message object cannot process any more data and feed() will
  * always return 0. To reuse the object for processing another message, one must
  * reset its state by calling reset().
  *
  * The following example demonstrates how to read a continuous stream of 32-bit
  * integers:
  * @code
-   Uint32Reader intReader;
+   Uint32Message intMessage;
    while (true) {
        // Read a bunch of network data...
        char buf[1024];
        ssize_t size = recv(fd, buf, sizeof(buf));
        size_t consumed = 0;
        
-       // ...and process it all. We only feed data to the reader that
-       // hasn't already been fed.
+       // ...and process it all. We only feed data to the message object
+       // that hasn't already been fed.
        while (consumed < size) {
            consumed += intReader.feed(buf + consumed, size - consumed);
-           if (intReader.done()) {
-               printf("Integer: %d\n", (int) intReader.value());
+           if (intMessage.done()) {
+               printf("Integer: %d\n", (int) intMessage.value());
                // The state must be reset before the reader can be reused.
-               intReader.reset();
+               intMessage.reset();
            }
        }
    }
  * @endcode
  *
- * Some readers return non-primitive values in their value() methods, such as
- * ArrayReader and ScalarReader which return <tt>const vector<StaticString> &</tt>
+ * Some message objects return non-primitive values in their value() methods, such as
+ * ArrayMessage and ScalarMessage which return <tt>const vector<StaticString> &</tt>
  * and <tt>StaticString</tt>, respectively. These values are only valid until either
  * of the following things occur:
  *
  * - The buffer containing last the fed data has been destroyed or modified.
- * - The reader itself has been destroyed.
+ * - The message object itself has been destroyed.
  *
- * This is because the readers try to apply copy-zero optimizations whenever
- * possible. For example, in case of ScalarReader, it'll check whether the data
+ * This is because the message objects try to apply copy-zero optimizations whenever
+ * possible. For example, in case of ScalarMessage, it'll check whether the data
  * that has been fed in the first feed() call already contains a full scalar message.
  * If so then it'll just return a StaticString that points to the scalar message
  * in the fed data; it will not copy the fed data. In this case it is important
@@ -106,8 +106,8 @@
  * StaticString is in use.
  * If the first feed() call does not supply a full scalar message then it will
  * buffer all fed data until the buffer contains a full scalar message, and the
- * result will point to this buffer. Because the buffer is owned by the reader,
- * the result will be invalidated as soon as the reader is destroyed.
+ * result will point to this buffer. Because the buffer is owned by the message
+ * object, the result will be invalidated as soon as the message object is destroyed.
  */
 
 namespace Passenger {
@@ -115,15 +115,15 @@ namespace Passenger {
 using namespace std;
 
 /**
- * Class for reading a 16-bit big-endian integer.
+ * For 16-bit big-endian integers.
  */
-class Uint16Reader {
+class Uint16Message {
 private:
 	uint16_t val;
 	uint8_t  consumed;
 	
 public:
-	Uint16Reader() {
+	Uint16Message() {
 		consumed = 0;
 	}
 	
@@ -158,15 +158,15 @@ public:
 };
 
 /**
- * Class for reading a 32-bit big-endian integer.
+ * For 32-bit big-endian integers.
  */
-class Uint32Reader {
+class Uint32Message {
 private:
 	uint32_t val;
 	uint8_t  consumed;
 	
 public:
-	Uint32Reader() {
+	Uint32Message() {
 		consumed = 0;
 	}
 	
@@ -196,9 +196,9 @@ public:
 };
 
 /**
- * Class for reading a an array message.
+ * For array messages.
  */
-class ArrayReader {
+class ArrayMessage {
 public:
 	enum Error {
 		TOO_LARGE
@@ -214,7 +214,7 @@ private:
 	
 	uint16_t toReserve;
 	uint16_t maxSize;
-	Uint16Reader headerReader;
+	Uint16Message headerReader;
 	uint8_t state;
 	uint8_t error;
 	string buffer;
@@ -234,7 +234,7 @@ private:
 	}
 	
 public:
-	ArrayReader() {
+	ArrayMessage() {
 		state = READING_HEADER;
 		toReserve = 0;
 		maxSize = 0;
@@ -355,7 +355,7 @@ public:
 			throw ArgumentException("Data size exceeds maximum size for array messages.");
 		}
 		
-		Uint16Reader::generate(headerBuf, size);
+		Uint16Message::generate(headerBuf, size);
 		out[0] = StaticString(headerBuf, sizeof(uint16_t));
 		for (i = 0; i < argsCount; i++) {
 			out[1 + 2 * i] = args[i];
@@ -367,7 +367,7 @@ public:
 /**
  * Class for reading a scalar message.
  */
-class ScalarReader {
+class ScalarMessage {
 public:
 	enum Error {
 		TOO_LARGE
@@ -384,12 +384,12 @@ private:
 	uint8_t state;
 	uint8_t error;
 	uint32_t maxSize;
-	Uint32Reader headerReader;
+	Uint32Message headerReader;
 	string buffer;
 	StaticString result;
 	
 public:
-	ScalarReader(uint32_t maxSize = 0) {
+	ScalarMessage(uint32_t maxSize = 0) {
 		state = READING_HEADER;
 		this->maxSize = maxSize;
 	}

@@ -379,9 +379,7 @@ private:
 		abort();
 	}
 	
-	/**
-	 * To be called when the entire outbox has been successfully sent out.
-	 */
+	/** To be called when the entire outbox has been successfully sent out. */
 	void outboxFlushed(const ClientPtr &client) {
 		switch (client->state) {
 		case Client::ES_CONNECTED:
@@ -408,9 +406,7 @@ private:
 		}
 	}
 	
-	/**
-	 * To be called when the outbox has been partially sent out.
-	 */
+	/** To be called when the outbox has been partially sent out. */
 	void outboxPartiallyFlushed(const ClientPtr &client) {
 		switch (client->state) {
 		case Client::ES_CONNECTED:
