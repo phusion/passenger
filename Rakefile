@@ -71,6 +71,9 @@ EXTRA_CXXFLAGS = "-Wall #{OPTIMIZATION_FLAGS}"
 # Should be included last in the command string, even after PlatformInfo.portability_ldflags.
 EXTRA_LDFLAGS  = ""
 
+# Whether to use the vendored libev or the system one.
+USE_VENDORED_LIBEV = ["", "yes", "true", "1"].include?(ENV['USE_VENDORED_LIBEV'].to_s)
+
 
 #### Default tasks
 
@@ -172,6 +175,30 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
 	end
 	
 	return output_file
+end
+
+
+##### libev
+
+if USE_VENDORED_LIBEV
+	LIBEV_INCLUDES = "-Iext/libev"
+	LIBEV_LIBS = "ext/libev/.libs/libev.a"
+	
+	task :libev => "ext/libev/.libs/libev.a"
+	
+	file "ext/libev/Makefile" => ["ext/libev/configure", "ext/libev/config.h.in", "ext/libev/Makefile.am"] do
+		sh "cd ext/libev && ./configure --disable-shared --enable-static"
+	end
+	
+	libev_sources = Dir["ext/libev/{*.c,*.h}"]
+	file "ext/libev/.libs/libev.a" => ["ext/libev/Makefile"] + libev_sources do
+		sh "rm -f ext/libev/libev.la"
+		sh "cd ext/libev && make libev.la"
+	end
+else
+	LIBEV_INCLUDES = ""
+	LIBEV_LIBS = ""
+	task :libev
 end
 
 
