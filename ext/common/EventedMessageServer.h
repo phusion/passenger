@@ -71,45 +71,49 @@ protected:
 			messageServer.state = MS_READING_USERNAME;
 		}
 		
-		void _authenticationTimedout(ev::timer &t, int revents) {
-			printf("timeout!\n");
+		void _authenticationTimedOut(ev::timer &t, int revents) {
+			((EventedMessageServer *) server)->authenticationTimedOut(
+				static_pointer_cast<Client>(shared_from_this()));
 		}
 	};
 	
 	typedef shared_ptr<Client> ClientPtr;
+	friend class Client;
 	
 	virtual EventedServer::ClientPtr createClient() {
 		return ClientPtr(new Client(this));
 	}
 	
-	virtual void disconnect(const EventedServer::ClientPtr &_client) {
+	virtual void disconnect(const EventedServer::ClientPtr &_client, bool force = true) {
 		ClientPtr client = static_pointer_cast<Client>(_client);
-		EventedServer::disconnect(client);
+		EventedServer::disconnect(client, true);
 		client->messageServer.state = MS_DISCONNECTED;
 	}
 	
 	virtual void onNewClient(const EventedServer::ClientPtr &_client) {
 		ClientPtr client = static_pointer_cast<Client>(_client);
 		client->messageServer.authenticationTimer.set
-			<Client, &Client::_authenticationTimedout>(client.get());
-		client->messageServer.authenticationTimer.start(10, 0);
+			<Client, &Client::_authenticationTimedOut>(client.get());
+		client->messageServer.authenticationTimer.start(10);
 	}
 	
 	virtual void onClientReadable(const EventedServer::ClientPtr &_client) {
 		ClientPtr client = static_pointer_cast<Client>(_client);
+		this_thread::disable_syscall_interruption dsi;
 		bool done = false;
 		
 		while (!done) {
 			char buf[1024 * 4];
 			ssize_t ret;
 			
-			ret = read(client->fd, buf, sizeof(buf));
+			ret = syscalls::read(client->fd, buf, sizeof(buf));
 			if (ret == -1) {
-				if (errno == EAGAIN) {
-					done = true;
-				} else {
-					printf("read error\n");
+				if (errno != EAGAIN) {
+					int e = errno;
+					disconnect(client, true);
+					logSystemError(client, "Cannot read data from client", e);
 				}
+				done = true;
 			} else if (ret == 0) {
 				done = true;
 				disconnect(client);
@@ -154,7 +158,6 @@ protected:
 					if (authenticate(client)) {
 						context->state = MS_READING_MESSAGE;
 					} else {
-						context->state = MS_DISCONNECTED;
 						disconnect(client);
 					}
 				}
@@ -205,6 +208,10 @@ private:
 	bool authenticate(const ClientPtr &client) const {
 		return client->messageServer.username == "foo" &&
 			client->messageServer.password == "bar";
+	}
+	
+	void authenticationTimedOut(const ClientPtr &client) {
+		disconnect(client);
 	}
 
 public:

@@ -38,8 +38,10 @@
 #include <sys/uio.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <cerrno>
 #include "FileDescriptor.h"
 #include "StaticString.h"
+#include "Logging.h"
 #include "Utils.h"
 
 namespace Passenger {
@@ -79,6 +81,10 @@ protected:
 		void _onWritable(ev::io &w, int revents) {
 			server->onClientWritable(shared_from_this());
 		}
+		
+		string name() const {
+			return toString(fd);
+		}
 	};
 	
 	typedef shared_ptr<Client> ClientPtr;
@@ -91,7 +97,7 @@ protected:
 		write(client, &data, 1);
 	}
 	
-	virtual void write(const ClientPtr &client, const StaticString data[], size_t count) {
+	void write(const ClientPtr &client, const StaticString data[], size_t count) {
 		if (client->state == Client::ES_DISCONNECTED) {
 			return;
 		}
@@ -111,7 +117,10 @@ protected:
 						client->outbox.append(data[i].data(), data[i].size());
 					}
 				} else {
-					printf("write error\n");
+					int e = errno;
+					disconnect(client, true);
+					logSystemError(client, "Cannot write data to client", e);
+					return;
 				}
 			} else if ((size_t) ret < totalSize) {
 				size_t index, offset;
@@ -137,7 +146,10 @@ protected:
 			ret = syscalls::writev(client->fd, iov, count + 1);
 			if (ret == -1) {
 				if (errno != EAGAIN) {
-					printf("write error\n");
+					int e = errno;
+					disconnect(client, true);
+					logSystemError(client, "Cannot write data to client", e);
+					return;
 				}
 				// else: wait until next writable event.
 			} else {
@@ -190,7 +202,11 @@ protected:
 		 || (force && client->state != Client::ES_DISCONNECTED)) {
 			watchReadEvents(client, false);
 			watchWriteEvents(client, false);
-			client->fd.close();
+			try {
+				client->fd.close();
+			} catch (const SystemException &e) {
+				logSystemError(client, e.brief(), e.code());
+			}
 			client->state = Client::ES_DISCONNECTED;
 			clients.erase(client);
 		} else if (client->state == Client::ES_WRITES_PENDING) {
@@ -199,6 +215,15 @@ protected:
 			shutdown(client->fd, SHUT_RD);
 			client->state = Client::ES_DISCONNECTING_WITH_WRITES_PENDING;
 		}
+	}
+	
+	void logSystemError(const ClientPtr &client, const string &message, int errorCode) {
+		P_ERROR("Error in client " << client->name() << ": " <<
+			message << ": " << strerror(errorCode) << " (" << errorCode << ")");
+	}
+	
+	void logSystemError(const string &message, int errorCode) {
+		P_ERROR(message << ": " << strerror(errorCode) << " (" << errorCode << ")");
 	}
 	
 	virtual ClientPtr createClient() {
@@ -262,7 +287,11 @@ private:
 			break;
 		case Client::ES_DISCONNECTING_WITH_WRITES_PENDING:
 			client->state = Client::ES_DISCONNECTED;
-			client->fd.close();
+			try {
+				client->fd.close();
+			} catch (const SystemException &e) {
+				logSystemError(client, e.brief(), e.code());
+			}
 			clients.erase(client);
 			break;
 		default:
@@ -326,7 +355,10 @@ private:
 				client->outbox.size() - sent);
 			if (ret == -1) {
 				if (errno != EAGAIN) {
-					printf("write error\n");
+					int e = errno;
+					disconnect(client, true);
+					logSystemError(client, "Cannot write data to client", e);
+					return;
 				}
 				done = true;
 			} else {
@@ -363,7 +395,8 @@ private:
 			int clientfd = syscalls::accept(fd, (struct sockaddr *) &addr, &len);
 			if (clientfd == -1) {
 				if (errno != EAGAIN && errno != EWOULDBLOCK) {
-					printf("accept error!\n");
+					int e = errno;
+					logSystemError("Cannot accept new client", e);
 				}
 				done = true;
 			} else {
