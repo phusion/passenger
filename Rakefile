@@ -194,6 +194,12 @@ if USE_VENDORED_LIBEV
 		sh "rm -f ext/libev/libev.la"
 		sh "cd ext/libev && make libev.la"
 	end
+	
+	task :clean do
+		if File.exist?("ext/libev/Makefile")
+			sh "cd ext/libev && make maintainer-clean"
+		end
+	end
 else
 	LIBEV_CFLAGS = ""
 	LIBEV_LIBS = ""
