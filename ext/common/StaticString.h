@@ -125,15 +125,17 @@ public:
 	}
 	
 	bool operator==(const char *other) const {
-		return memcmp(content, other, strlen(other)) == 0;
+		size_t other_len = strlen(other);
+		return len == other_len && memcmp(content, other, other_len) == 0;
 	}
 	
 	bool operator!=(const StaticString &other) const {
-		return len == other.len && memcmp(content, other.content, len) != 0;
+		return len != other.len || memcmp(content, other.content, len) != 0;
 	}
 	
 	bool operator!=(const char *other) const {
-		return memcmp(content, other, strlen(other)) != 0;
+		size_t other_len = strlen(other);
+		return len != other_len || memcmp(content, other, other_len) != 0;
 	}
 	
 	bool operator<(const StaticString &other) const {

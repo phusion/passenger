@@ -15,9 +15,32 @@ namespace tut {
 		ensure(StaticString("") == "");
 		ensure(StaticString("foo") == "foo");
 		ensure(!(StaticString("foo") == "bar"));
+		ensure(!(StaticString("barr") == "bar"));
+		ensure(!(StaticString("bar") == "barr"));
+		
+		ensure(StaticString("") == StaticString(""));
+		ensure(StaticString("foo") == StaticString("foo"));
+		ensure(!(StaticString("foo") == StaticString("bar")));
+		ensure(!(StaticString("barr") == StaticString("bar")));
+		ensure(!(StaticString("bar") == StaticString("barr")));
 	}
 	
 	TEST_METHOD(2) {
+		// Test != operator
+		ensure(!(StaticString("") != ""));
+		ensure(!(StaticString("foo") != "foo"));
+		ensure(StaticString("foo") != "bar");
+		ensure(StaticString("barr") != "bar");
+		ensure(StaticString("bar") != "barr");
+		
+		ensure(!(StaticString("") != StaticString("")));
+		ensure(!(StaticString("foo") != StaticString("foo")));
+		ensure(StaticString("foo") != StaticString("bar"));
+		ensure(StaticString("barr") != StaticString("bar"));
+		ensure(StaticString("bar") != StaticString("barr"));
+	}
+	
+	TEST_METHOD(3) {
 		// Test < operator.
 		ensure_equals("Assertion 1",
 			StaticString("") < "",
