@@ -216,7 +216,7 @@ private:
 		Context *context = &client->messageServer;
 		
 		while (consumed < size && context->state != MS_DISCONNECTED) {
-			const char *current = data + consumed;
+			char *current = data + consumed;
 			size_t rest = size - consumed;
 			
 			switch (context->state) {
@@ -236,15 +236,14 @@ private:
 				break;
 				
 			case MS_READING_PASSWORD: {
-				size_t begin, locallyConsumed;
+				size_t locallyConsumed;
 				
-				begin = consumed;
 				locallyConsumed = context->scalarReader.feed(current, rest);
 				consumed += locallyConsumed;
 				
 				// The buffer contains password data so make sure we zero
 				// it out when we're done.
-				MemZeroGuard passwordGuard(data + begin, locallyConsumed);
+				MemZeroGuard passwordGuard(current, locallyConsumed);
 				
 				if (context->scalarReader.hasError()) {
 					context->scalarReader.reset(true);
@@ -286,7 +285,7 @@ private:
 					context->arrayReader.reset();
 				}
 				break;
-				
+			
 			case MS_PROCESSING_MESSAGE: {
 				pair<size_t, bool> ret = onOtherDataReceived(client, current, rest);
 				consumed += ret.first;

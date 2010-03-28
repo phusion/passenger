@@ -135,7 +135,7 @@ public:
 		size_t locallyConsumed;
 		
 		locallyConsumed = std::min(size, sizeof(uint16_t) - consumed);
-		memcpy(&val + consumed, data, locallyConsumed);
+		memcpy((char *) &val + consumed, data, locallyConsumed);
 		consumed += locallyConsumed;
 		if (done()) {
 			val = ntohs(val);
@@ -178,7 +178,7 @@ public:
 		size_t locallyConsumed;
 		
 		locallyConsumed = std::min(size, sizeof(uint32_t) - consumed);
-		memcpy(&val + consumed, data, locallyConsumed);
+		memcpy((char *) &val + consumed, data, locallyConsumed);
 		consumed += locallyConsumed;
 		if (done()) {
 			val = ntohl(val);
