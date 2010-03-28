@@ -14,7 +14,6 @@
 #include <sys/uio.h>
 #include <netinet/in.h>
 #include <unistd.h>
-#include "MessageReadersWriters.h"
 #include "FileDescriptor.h"
 #include "StaticString.h"
 #include "Utils.h"
