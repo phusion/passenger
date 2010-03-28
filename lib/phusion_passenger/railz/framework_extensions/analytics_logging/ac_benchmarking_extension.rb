@@ -13,7 +13,9 @@ module ACBenchmarkingExtension
 				end
 			end
 		else
-			benchmark_without_passenger(title, *args, &block)
+			benchmark_without_passenger(title, *args) do
+				yield
+			end
 		end
 	end
 end
