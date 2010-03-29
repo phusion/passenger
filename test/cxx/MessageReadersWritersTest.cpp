@@ -561,33 +561,14 @@ namespace tut {
 		ensure("(2)", !m.hasError());
 		ensure_equals("(3)", m.value().size(), 0u);
 	}
-	/*
-	TEST_METHOD(50) {
-		// generate() complains if output array has less than the
-		// expected number of items.
-		StaticString args[] = { "hello", "world" };
-		char buf[sizeof(uint16_t)];
-		try {
-			ArrayMessage::generate(args, 2, buf, NULL,
-				ArrayMessage::outputSize(2) - 1);
-			fail();
-		} catch (const ArgumentException &) {
-			// Success.
-		}
-	}
 	
-	TEST_METHOD(51) {
+	TEST_METHOD(50) {
 		// generate() works.
-		StaticString args[] = { "ab", "cde" };
-		StaticString out[ArrayMessage::outputSize(2)];
-		char buf[sizeof(uint16_t)];
-		ArrayMessage::generate(args, 2, buf, out, ArrayMessage::outputSize(2));
+		char buf[sizeof(uint32_t)];
+		StaticString out[2];
+		ScalarMessage::generate("hello", buf, out);
 		
-		string concat;
-		for (unsigned int i = 0; i < ArrayMessage::outputSize(2); i++) {
-			concat.append(out[i].data(), out[i].size());
-		}
-		ensure_equals(concat, string("\x00\x07" "ab\0cde\0", 9));
+		ensure(out[0] == StaticString("\x00\x00\x00\x05", 4));
+		ensure(out[1] == "hello");
 	}
-	*/
 }

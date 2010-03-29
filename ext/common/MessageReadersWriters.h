@@ -489,6 +489,18 @@ public:
 	const StaticString &value() const {
 		return result;
 	}
+	
+	static void generate(const StaticString &data, char headerBuf[sizeof(uint32_t)],
+		StaticString output[2])
+	{
+		if (OXT_UNLIKELY(data.size() > 0xFFFFFFFF)) {
+			throw ArgumentException("Data size exceeds maximum size for scalar messages.");
+		}
+		
+		Uint32Message::generate(headerBuf, data.size());
+		output[0] = StaticString(headerBuf, sizeof(uint32_t));
+		output[1] = data;
+	}
 };
 
 } // namespace Passenger
