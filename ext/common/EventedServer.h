@@ -290,6 +290,7 @@ protected:
 			}
 			client->state = Client::ES_DISCONNECTED;
 			clients.erase(client);
+			onClientDisconnected(client);
 		} else if (client->state == Client::ES_WRITES_PENDING) {
 			watchReadEvents(client, false);
 			watchWriteEvents(client, true);
@@ -322,6 +323,14 @@ protected:
 	
 	virtual void onNewClient(const ClientPtr &client) { }
 	virtual void onClientReadable(const ClientPtr &client) { }
+	
+	/**
+	 * Called when a client has been disconnected. This may or may not be triggered
+	 * by disconnect(), so if you call disconnect() from onClientReadable() you need
+	 * take care of the possibility that control returns to onClientReadable() after
+	 * this method is done.
+	 */
+	virtual void onClientDisconnected(const ClientPtr &client) { }
 
 private:
 	struct ev_loop *loop;
@@ -399,6 +408,7 @@ private:
 				logSystemError(client, e.brief(), e.code());
 			}
 			clients.erase(client);
+			onClientDisconnected(client);
 			break;
 		default:
 			// Never reached.
