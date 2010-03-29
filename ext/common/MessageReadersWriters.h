@@ -137,7 +137,7 @@ public:
 		locallyConsumed = std::min(size, sizeof(uint16_t) - consumed);
 		memcpy((char *) &val + consumed, data, locallyConsumed);
 		consumed += locallyConsumed;
-		if (done()) {
+		if (locallyConsumed > 0 && done()) {
 			val = ntohs(val);
 		}
 		return locallyConsumed;
@@ -180,7 +180,7 @@ public:
 		locallyConsumed = std::min(size, sizeof(uint32_t) - consumed);
 		memcpy((char *) &val + consumed, data, locallyConsumed);
 		consumed += locallyConsumed;
-		if (done()) {
+		if (locallyConsumed > 0 && done()) {
 			val = ntohl(val);
 		}
 		return locallyConsumed;
@@ -192,6 +192,11 @@ public:
 	
 	uint32_t value() const {
 		return val;
+	}
+	
+	static void generate(void *buf, uint32_t val) {
+		val = htonl(val);
+		memcpy(buf, &val, sizeof(val));
 	}
 };
 
@@ -273,6 +278,8 @@ public:
 					if (maxSize > 0 && headerReader.value() > maxSize) {
 						state = ERROR;
 						error = TOO_LARGE;
+					} else if (headerReader.value() == 0) {
+						state = DONE;
 					} else {
 						state = READING_BODY;
 					}
@@ -334,14 +341,14 @@ public:
 	 * @param headerBuf A pointer to a buffer in which the array message header
 	 *                  is to be stored.
 	 * @param out A pointer to a StaticString array in which the generated array
-	 *            message data will be stored. This array must have space for at
-	 *            least <tt>argsCount * 2 + 1</tt> items.
+	 *            message data will be stored. Exactly <tt>outputSize(argsCount)</tt>
+	 *            items will be stored in this array.
 	 * @param outCount The number of items in <em>out</em>.
 	 */
 	static void generate(StaticString args[], unsigned int argsCount,
 		char headerBuf[sizeof(uint16_t)], StaticString *out, unsigned int outCount)
 	{
-		if (OXT_UNLIKELY(outCount < argsCount * 2 + 1)) {
+		if (OXT_UNLIKELY(outCount < outputSize(argsCount))) {
 			throw ArgumentException("outCount too small.");
 		}
 		
@@ -361,6 +368,10 @@ public:
 			out[1 + 2 * i] = args[i];
 			out[1 + 2 * i + 1] = StaticString("\0", 1);
 		}
+	}
+	
+	static unsigned int outputSize(unsigned int argsCount) {
+		return argsCount * 2 + 1;
 	}
 };
 
@@ -429,6 +440,8 @@ public:
 					if (maxSize > 0 && headerReader.value() > maxSize) {
 						state = ERROR;
 						error = TOO_LARGE;
+					} else if (headerReader.value() == 0) {
+						state = DONE;
 					} else {
 						state = READING_BODY;
 					}
@@ -473,7 +486,7 @@ public:
 		return (Error) error;
 	}
 	
-	StaticString value() const {
+	const StaticString &value() const {
 		return result;
 	}
 };

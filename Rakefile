@@ -606,6 +606,12 @@ end
 			ext/common/Exceptions.h
 			ext/common/Utils.h
 			ext/common/Utils/Timer.h),
+		'test/cxx/MessageReadersWritersTest.o' => %w(
+			test/cxx/MessageReadersWritersTest.cpp
+			ext/common/MessageReadersWriters.h
+			ext/common/Exceptions.h
+			ext/common/StaticString.h
+			ext/common/Utils/MemZeroGuard.h),
 		'test/cxx/SpawnManagerTest.o' => %w(
 			test/cxx/SpawnManagerTest.cpp
 			ext/common/SpawnManager.h

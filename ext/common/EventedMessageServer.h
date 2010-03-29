@@ -203,11 +203,11 @@ protected:
 	
 	void writeArrayMessage(const ClientPtr &client, StaticString args[], unsigned int count) {
 		char headerBuf[sizeof(uint16_t)];
-		StaticString out[2 * count + 1];
+		unsigned int outSize = ArrayMessage::outputSize(count);
+		StaticString out[outSize];
 		
-		ArrayMessage::generate(args, count, headerBuf,
-			out, sizeof(out) / sizeof(StaticString));
-		write(client, out, sizeof(out) / sizeof(StaticString));
+		ArrayMessage::generate(args, count, headerBuf, out, outSize);
+		write(client, out, outSize);
 	}
 
 private:
