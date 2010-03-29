@@ -705,12 +705,13 @@ toHex(const StaticString &data) {
 	return result;
 }
 
+static const char hex_chars[] = {
+	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+	'a', 'b', 'c', 'd', 'e', 'f'
+};
+
 void
 toHex(const StaticString &data, char *output) {
-	static const char hex_chars[] = {
-		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-		'a', 'b', 'c', 'd', 'e', 'f'
-	};
 	const char *data_buf = data.c_str();
 	string::size_type i;
 	
@@ -718,6 +719,25 @@ toHex(const StaticString &data, char *output) {
 		output[i * 2] = hex_chars[(unsigned char) data_buf[i] / 16];
 		output[i * 2 + 1] = hex_chars[(unsigned char) data_buf[i] % 16];
 	}
+}
+
+unsigned int
+toHex(unsigned int value, char *output) {
+	char buf[sizeof(value) * 2];
+	unsigned int remainder = value;
+	unsigned int size = 0;
+	
+	do {
+		buf[size] = hex_chars[remainder % 16];
+		remainder = remainder / 16;
+		size++;
+	} while (remainder != 0);
+	
+	for (unsigned int i = 0; i < size; i++) {
+		output[size - i - 1] = buf[i];
+	}
+	output[size] = '\0';
+	return size;
 }
 
 string

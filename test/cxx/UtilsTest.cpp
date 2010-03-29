@@ -355,4 +355,28 @@ namespace tut {
 		ensure_equals(stringToULL("18446744073709551615"), 18446744073709551615ull);
 		ensure_equals(stringToULL("    5abcdef1234"), 5ull);
 	}
+	
+	/***** Test toHex() *****/
+	
+	TEST_METHOD(48) {
+		char buf[sizeof(unsigned int) * 2 + 1];
+		
+		ensure_equals(toHex(0x0, buf), 1u);
+		ensure(strcmp(buf, "0") == 0);
+		
+		ensure_equals(toHex(0x1, buf), 1u);
+		ensure(strcmp(buf, "1") == 0);
+		
+		ensure_equals(toHex(0x9, buf), 1u);
+		ensure(strcmp(buf, "9") == 0);
+		
+		ensure_equals(toHex(0xe, buf), 1u);
+		ensure(strcmp(buf, "e") == 0);
+		
+		ensure_equals(toHex(0xdeadbeef, buf), 8u);
+		ensure(strcmp(buf, "deadbeef") == 0);
+		
+		ensure_equals(toHex(0x1234f, buf), 5u);
+		ensure(strcmp(buf, "1234f") == 0);
+	}
 }

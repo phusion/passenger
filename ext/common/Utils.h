@@ -488,9 +488,20 @@ string toHex(const StaticString &data);
 
 /**
  * Convert the given binary data to hexadecimal. This form accepts an
- * output buffer which must be at least data.size() * 2 bytes large.
+ * output buffer which must be at least <tt>data.size() * 2</tt> bytes large.
  */
 void toHex(const StaticString &data, char *output);
+
+/**
+ * Convert the given integer to hexadecimal, placing the result
+ * into the given output buffer. This buffer must be at least
+ * <tt>2 * sizeof(unsigned int) + 1</tt> bytes. The output buffer
+ * will be NULL terminated.
+ *
+ * @return The size of the created hexadecimal string, excluding
+ *         terminating NULL.
+ */
+unsigned int toHex(unsigned int value, char *output);
 
 /**
  * Convert a signal number to its associated name.
