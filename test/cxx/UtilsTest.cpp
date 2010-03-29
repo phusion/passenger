@@ -340,4 +340,19 @@ namespace tut {
 		stat("tmp.dir", &buf2);
 		ensure_equals(buf.st_mode, buf2.st_mode);
 	}
+	
+	/***** Test stringToULL() *****/
+	
+	TEST_METHOD(47) {
+		ensure_equals(stringToULL(""), 0ull);
+		ensure_equals(stringToULL("0"), 0ull);
+		ensure_equals(stringToULL("000"), 0ull);
+		ensure_equals(stringToULL("1"), 1ull);
+		ensure_equals(stringToULL("9"), 9ull);
+		ensure_equals(stringToULL("010"), 10ull);
+		ensure_equals(stringToULL("928"), 928ull);
+		ensure_equals(stringToULL("2937104"), 2937104ull);
+		ensure_equals(stringToULL("18446744073709551615"), 18446744073709551615ull);
+		ensure_equals(stringToULL("    5abcdef1234"), 5ull);
+	}
 }

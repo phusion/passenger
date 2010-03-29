@@ -173,10 +173,10 @@ int atoi(const string &s);
 long atol(const string &s);
 
 /**
- * Converts the given string to a long long integer.
+ * Converts the given string to an unsigned long long integer.
  * @ingroup Support
  */
-long long atoll(const StaticString &s);
+unsigned long long stringToULL(const StaticString &str);
 
 /** Round <em>number</em> up to the nearest multiple of <em>multiple</em>. */
 template<typename IntType> IntType

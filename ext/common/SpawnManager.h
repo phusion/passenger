@@ -368,7 +368,7 @@ private:
 			}
 			
 			appRoot = args[0];
-			appPid  = (pid_t) atoll(args[1].c_str());
+			appPid  = (pid_t) stringToULL(args[1]);
 			nServerSockets = atoi(args[2]);
 			
 			UPDATE_TRACE_POINT();

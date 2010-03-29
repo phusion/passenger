@@ -607,7 +607,9 @@ public:
 	static unsigned long long extractTimestamp(const StaticString &txnId) {
 		const char *timestampBegin = (const char *) memchr(txnId.c_str(), '-', txnId.size());
 		if (timestampBegin != NULL) {
-			return atoll(timestampBegin + 1);
+			timestampBegin++;
+			string::size_type len = txnId.size() - (timestampBegin - txnId.data());
+			return stringToULL(StaticString(timestampBegin, len));
 		} else {
 			return 0;
 		}

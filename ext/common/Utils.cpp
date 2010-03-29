@@ -103,15 +103,21 @@ atol(const string &s) {
 	return ::atol(s.c_str());
 }
 
-long long
-atoll(const StaticString &s) {
-	if (s.size() > 50) {
-		throw ArgumentException("Input too large.");
+unsigned long long
+stringToULL(const StaticString &str) {
+	unsigned long long result = 0;
+	string::size_type i = 0;
+	const char *data = str.data();
+	
+	while (data[i] == ' ' && i < str.size()) {
+		i++;
 	}
-	char data[s.size() + 1];
-	memcpy(data, s.c_str(), s.size());
-	data[s.size()] = '\0';
-	return ::atoll(data);
+	while (data[i] >= '0' && data[i] <= '9' && i < str.size()) {
+		result *= 10;
+		result += data[i] - '0';
+		i++;
+	}
+	return result;
 }
 
 void
