@@ -161,6 +161,7 @@ class ApplicationSpawner < AbstractServer
 				channel = MessageChannel.new(b)
 				success = report_app_init_status(channel) do
 					ENV['RAILS_ENV'] = @environment
+					ENV['RACK_ENV'] = @environment
 					ENV['RAILS_RELATIVE_URL_ROOT'] = @base_uri
 					Dir.chdir(@app_root)
 					if @encoded_environment_variables
@@ -173,6 +174,7 @@ class ApplicationSpawner < AbstractServer
 					# that have been set now (e.g. $HOME, $GEM_HOME, etc) and that
 					# it is able to detect newly installed gems.
 					Gem.clear_paths
+					setup_bundler_support
 					
 					require File.expand_path('config/environment')
 					require 'dispatcher'
@@ -237,6 +239,7 @@ protected
 		report_app_init_status(client) do
 			$0 = "Passenger ApplicationSpawner: #{@app_root}"
 			ENV['RAILS_ENV'] = @environment
+			ENV['RACK_ENV'] = @environment
 			ENV['RAILS_RELATIVE_URL_ROOT'] = @base_uri
 			if defined?(RAILS_ENV)
 				Object.send(:remove_const, :RAILS_ENV)
@@ -249,6 +252,11 @@ protected
 			if @lower_privilege
 				lower_privilege('config/environment.rb', @lowest_user)
 			end
+			# Make sure RubyGems uses any new environment variable values
+			# that have been set now (e.g. $HOME, $GEM_HOME, etc) and that
+			# it is able to detect newly installed gems.
+			Gem.clear_paths
+			setup_bundler_support
 			preload_application
 		end
 	end

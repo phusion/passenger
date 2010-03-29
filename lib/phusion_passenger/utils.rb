@@ -32,6 +32,7 @@ require 'etc'
 require 'fcntl'
 require 'tempfile'
 require 'stringio'
+require 'phusion_passenger/packaging'
 require 'phusion_passenger/exceptions'
 if !defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby"
 	require 'phusion_passenger/native_support'
@@ -160,6 +161,59 @@ protected
 		if !exception.is_a?(SystemExit)
 			destination.puts(exception.backtrace_string(current_location))
 			destination.flush if destination.respond_to?(:flush)
+		end
+	end
+	
+	def setup_bundler_support
+		# Rack::ApplicationSpawner depends on the 'rack' library, but the app
+		# might want us to use a bundled version instead of a
+		# gem/apt-get/yum/whatever-installed version. Therefore we must setup
+		# the correct load paths before requiring 'rack'.
+		#
+		# The most popular tool for bundling dependencies is Bundler. Bundler
+		# works as follows:
+		# - If the bundle is locked then a file .bundle/environment.rb exists
+		#   which will setup the load paths.
+		# - If the bundle is not locked then the load paths must be set up by
+		#   calling Bundler.setup.
+		# - Rails 3's boot.rb automatically loads .bundle/environment.rb or
+		#   calls Bundler.setup if that's not available.
+		# - Other Rack apps might not have a boot.rb but we still want to setup
+		#   Bundler.
+		#
+		# So the strategy is as follows:
+
+		# If the Bundler lock environment file exists then load that. If it
+		# exists then there's a 99.9% chance that loading it is the correct
+		# thing to do.
+		if File.exist?('.bundle/environment.rb')
+			require File.expand_path('.bundle/environment')
+
+		# If the Bundler environment file doesn't exist then there are two
+		# possibilities:
+		# 1. Bundler is not used, in which case we don't have to do anything.
+		# 2. Bundler *is* used, but the gems are not locked and we're supposed
+		#    to call Bundler.setup.
+		#
+		# The existence of Gemfile indicates whether (2) is true:
+		elsif File.exist?('Gemfile')
+			# In case of Rails 3, config/boot.rb already calls Bundler.setup.
+			# However older versions of Rails don't so loading boot.rb might
+			# not be the correct thing to do. To be on the safe side we
+			# call Bundler.setup ourselves; if this isn't the correct thing
+			# to do after all then there's always the load_path_setup_file
+			# option.
+			require 'rubygems'
+			require 'bundler'
+			Bundler.setup
+		end
+
+		# Bundler might remove Phusion Passenger from the load path in its zealous
+		# attempt to un-require RubyGems, so here we put Phusion Passenger back
+		# into the load path.
+		if $LOAD_PATH.first != LIBDIR
+			$LOAD_PATH.unshift(LIBDIR)
+			$LOAD_PATH.uniq!
 		end
 	end
 	
