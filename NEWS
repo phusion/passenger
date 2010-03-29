@@ -1,3 +1,11 @@
+Release 2.2.12
+--------------
+
+ * Improved Bundler support.
+   Previous versions might not be able to correctly load gems bundled
+   by Bundler.
+
+
 Release 2.2.11
 --------------
 
