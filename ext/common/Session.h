@@ -44,6 +44,7 @@
 #include "MessageChannel.h"
 #include "StaticString.h"
 #include "Exceptions.h"
+#include "Utils.h"
 
 namespace Passenger {
 
