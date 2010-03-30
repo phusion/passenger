@@ -167,7 +167,7 @@ protected:
 	 * If the client connection has already been closed then this method
 	 * does nothing.
 	 */
-	void write(const ClientPtr &client, const StaticString data[], size_t count) {
+	void write(const ClientPtr &client, const StaticString data[], unsigned int count) {
 		if (client->state == Client::ES_DISCONNECTED) {
 			return;
 		}
@@ -195,7 +195,8 @@ protected:
 					return;
 				}
 			} else if ((size_t) ret < totalSize) {
-				size_t index, offset;
+				unsigned int index;
+				size_t offset;
 				
 				// Schedule unsent data for sending later.
 				// TODO: reserve capacity
@@ -233,7 +234,8 @@ protected:
 				// Remove everything in the outbox that we've been able to sent.
 				client->outbox.erase(0, outboxSent);
 				if (client->outbox.empty()) {
-					size_t index, offset;
+					unsigned int index;
+					size_t offset;
 					
 					// Looks like everything in the outbox was sent.
 					// Schedule the rest of the data for sending later.
@@ -342,6 +344,10 @@ private:
 	size_t staticStringArrayToIoVec(const StaticString ary[], size_t count, struct iovec *vec) {
 		size_t total = 0;
 		for (size_t i = 0; i < count; i++) {
+			/* I know writev() doesn't write to iov_base, but on some
+			 * platforms it's still defined as non-const char *
+			 * :-(
+			 */
 			vec[i].iov_base = (char *) ary[i].data();
 			vec[i].iov_len  = ary[i].size();
 			total += ary[i].size();
@@ -352,25 +358,28 @@ private:
 	/**
 	 * Suppose that the given IO vectors are placed adjacent to each other
 	 * in a single contiguous block of memory. Given a position inside this
-	 * block of memory, this function will calculate the index of in the IO
-	 * vector array and the offset inside that IO vector that corresponds
-	 * with the position.
+	 * block of memory, this function will calculate the index in the IO vector
+	 * array and the offset inside that IO vector that corresponds with
+	 * the position.
 	 *
 	 * For example, given the following array of IO vectors:
-	 * ["AAA", "BBBB", "CC"]
+	 * { "AAA", "BBBB", "CC" }
 	 * Position 0 would correspond to the first item, offset 0.
 	 * Position 1 would correspond to the first item, offset 1.
 	 * Position 5 would correspond to the second item, offset 2.
 	 * And so forth.
+	 *
+	 * If the position is outside the bounds of the array, then index will be
+	 * set to count + 1 and offset to 0.
 	 */
-	void findDataPositionIndexAndOffset(struct iovec iov[], size_t count, size_t position,
-		size_t *index, size_t *offset) const
+	void findDataPositionIndexAndOffset(struct iovec data[], unsigned int count,
+		size_t position, unsigned int *index, size_t *offset) const
 	{
-		size_t i, begin;
-		
-		begin = 0;
-		for (i = 0; OXT_LIKELY(i < count); i++) {
-			size_t end = begin + iov[i].iov_len;
+		unsigned int i;
+		size_t begin = 0;
+
+		for (i = 0; i < count; i++) {
+			size_t end = begin + data[i].iov_len;
 			if (OXT_LIKELY(begin <= position)) {
 				if (position < end) {
 					*index = i;
@@ -384,8 +393,8 @@ private:
 				abort();
 			}
 		}
-		// Never reached.
-		abort();
+		*index = count;
+		*offset = 0;
 	}
 	
 	/** To be called when the entire outbox has been successfully sent out. */
