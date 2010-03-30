@@ -4,6 +4,7 @@
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
 #include <oxt/thread.hpp>
+#include <utility>
 
 #include <cstring>
 #include <cstdio>
@@ -667,5 +668,94 @@ namespace tut {
 		} catch (const TimeoutException &e) {
 			ensure_equals("Timeout unchanged", timeout, 0u);
 		}
+	}
+	
+	/****** Test writeRawGather() *****/
+	
+	struct FakeWritevController {
+		unsigned int called;
+		ssize_t writeSize;
+		string data;
+		
+		FakeWritevController() {
+			called = 0;
+			writeSize = 0;
+		}
+	};
+	
+	struct FakeWritevSystemCall {
+		FakeWritevController *controller;
+		
+		FakeWritevSystemCall(FakeWritevController *controller) {
+			this->controller = controller;
+		}
+		
+		ssize_t operator()(int fd, const struct iovec *iov, int iovcnt) {
+			controller->called++;
+			
+			string data;
+			for (int i = 0; i < iovcnt; i++) {
+				data.append((const char *) iov[i].iov_base, iov[i].iov_len);
+			}
+			controller->data.append(data.substr(0, controller->writeSize));
+			
+			return std::min(controller->writeSize, (ssize_t) data.size());
+		}
+	};
+	
+	TEST_METHOD(40) {
+		// It doesn't call writev() if requested to send 0 bytes.
+		FakeWritevController controller;
+		StaticString data[2];
+		
+		writer.writeRawGather<FakeWritevSystemCall, FakeWritevController *>(
+			&controller, data, 0);
+		writer.writeRawGather<FakeWritevSystemCall, FakeWritevController *>(
+			&controller, data, 2);
+		ensure_equals(controller.called, 0u);
+	}
+	
+	TEST_METHOD(41) {
+		// Test sending all data in a single writev() call.
+		StaticString data[] = { "hello", "my", "world" };
+		writer.writeRawGather(data, 3);
+		writer.close();
+		ensure_equals(readAll(reader.filenum()), "hellomyworld");
+	}
+	
+	TEST_METHOD(42) {
+		// Test writev() writing byte-by-byte.
+		FakeWritevController controller;
+		StaticString data[] = { "hello", "my", "world", "!!" };
+		
+		controller.writeSize = 1;
+		writer.writeRawGather<FakeWritevSystemCall, FakeWritevController *>(
+			&controller, data, 4);
+		ensure_equals(controller.called, 14u);
+		ensure_equals(controller.data, "hellomyworld!!");
+	}
+	
+	TEST_METHOD(43) {
+		// Test writev() writing in chunks of 2 bytes.
+		FakeWritevController controller;
+		StaticString data[] = { "hello", "my", "world", "!!" };
+		
+		controller.writeSize = 2;
+		writer.writeRawGather<FakeWritevSystemCall, FakeWritevController *>(
+			&controller, data, 4);
+		ensure_equals(controller.called, 7u);
+		ensure_equals(controller.data, "hellomyworld!!");
+	}
+	
+	TEST_METHOD(44) {
+		// Test writev() writing in chunks of 4 bytes.
+		FakeWritevController controller;
+		StaticString data[] = { "hello", "my", "world", "!!" };
+		
+		controller.writeSize = 4;
+		writer.writeRawGather<FakeWritevSystemCall, FakeWritevController *>(
+			&controller, data, 4);
+		ensure_equals(controller.called, 4u);
+		ensure_equals(controller.data, "hellomyworld!!");
 	}
 }

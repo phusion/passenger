@@ -51,6 +51,7 @@
 	#define APR_HAVE_IOVEC 1
 #endif
 
+#include "StaticString.h"
 #include "Exceptions.h"
 #include "Utils/Timer.h"
 #include "Utils/MemZeroGuard.h"
@@ -129,6 +130,56 @@ private:
 		typedef u_int32_t uint32_t;
 		typedef u_int16_t uint16_t;
 	#endif
+	
+	struct RealWritevSystemCall {
+		RealWritevSystemCall(int x) { }
+		
+		ssize_t operator()(int fd, const struct iovec *iov, int iovcnt) {
+			return syscalls::writev(fd, iov, iovcnt);
+		}
+	};
+	
+	/**
+	 * Suppose that the given StaticStrings are placed adjacent to each other
+	 * in a single contiguous block of memory. Given a position inside this
+	 * block of memory, this function will calculate the index in the StaticString
+	 * array and the offset inside that StaticString that corresponds with
+	 * the position.
+	 *
+	 * For example, given the following array of StaticStrings:
+	 * { "AAA", "BBBB", "CC" }
+	 * Position 0 would correspond to the first item, offset 0.
+	 * Position 1 would correspond to the first item, offset 1.
+	 * Position 5 would correspond to the second item, offset 2.
+	 * And so forth.
+	 *
+	 * If the position is outside the bounds of the array, then index will be
+	 * set to count + 1 and offset to 0.
+	 */
+	void findDataPositionIndexAndOffset(StaticString data[], unsigned int count,
+		size_t position, unsigned int *index, size_t *offset) const
+	{
+		unsigned int i;
+		size_t begin = 0;
+		
+		for (i = 0; i < count; i++) {
+			size_t end = begin + data[i].size();
+			if (OXT_LIKELY(begin <= position)) {
+				if (position < end) {
+					*index = i;
+					*offset = position - begin;
+					return;
+				} else {
+					begin = end;
+				}
+			} else {
+				// Never reached.
+				abort();
+			}
+		}
+		*index = count;
+		*offset = 0;
+	}
 
 public:
 	/**
@@ -457,6 +508,78 @@ public:
 				throw IOException("FD passing post-negotiation message expected.");
 			}
 		}
+	}
+	
+	/**
+	 * Send a bunch of data over the underlying file descriptor. Unlike writeRaw(),
+	 * this method accepts an array of strings, which are all written out in the
+	 * order as they appear. This is done with a single system call without
+	 * concatenating all data into a single buffer.
+	 *
+	 * This method is a convenience wrapper around writev() but it blocks until all data
+	 * has been written and takes care of handling system limits (IOV_MAX) for you.
+	 *
+	 * @param data An array of strings to be written.
+	 * @param count Number of items in <em>data</em>.
+	 */
+	void writeRawGather(StaticString data[], unsigned int count) {
+		writeRawGather<RealWritevSystemCall, int>(0, data, count);
+	}
+	
+	/**
+	 * This is like the non-template version of writeRawGather(); the template
+	 * parameter allows us to stub the actual writev() call so that we can unit
+	 * test the logic. Don't use.
+	 */
+	template<typename WritevSystemCall, typename ConstructorType>
+	void writeRawGather(ConstructorType constructorArg, StaticString data[], unsigned int count) {
+		struct iovec iov[count];
+		WritevSystemCall writev(constructorArg);
+		size_t written = 0;
+		size_t total = 0;
+		unsigned int itemsLeft = count;
+		
+		for (unsigned int i = 0; i < count; i++) {
+			/* I know writev() doesn't write to iov_base, but on some
+			 * platforms it's still defined as non-const char *
+			 * :-(
+			 */
+			iov[i].iov_base = (char *) data[i].data();
+			iov[i].iov_len  = data[i].size();
+			total += iov[i].iov_len;
+		}
+		
+		while (written < total) {
+			#ifdef IOV_MAX
+				unsigned int iovMax = IOV_MAX;
+			#else
+				// Linux doesn't define IOV_MAX in limits.h for some reason.
+				unsigned int iovMax = sysconf(_SC_IOV_MAX);
+			#endif
+			ssize_t ret = writev(fd, iov, std::min(itemsLeft, iovMax));
+			if (ret == -1) {
+				int e = errno;
+				throw SystemException("Unable to write all data", e);
+			} else {
+				unsigned int index;
+				size_t offset;
+				
+				written += ret;
+				findDataPositionIndexAndOffset(data, count, written, &index, &offset);
+				for (unsigned int i = index; i < count; i++) {
+					if (i == index) {
+						iov[i - index].iov_base = (char *) data[i].data() + offset;
+						iov[i - index].iov_len  = data[i].size() - offset;
+					} else {
+						iov[i - index].iov_base = (char *) data[i].data();
+						iov[i - index].iov_len  = data[i].size();
+					}
+				}
+				
+				itemsLeft = count - index;
+			}
+		}
+		assert(written == total);
 	}
 	
 	/**
