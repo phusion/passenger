@@ -65,14 +65,14 @@ private:
 		}
 		
 		~SharedData() {
-			if (fd != -1) {
+			if (fd >= 0) {
 				this_thread::disable_syscall_interruption dsi;
 				syscalls::close(fd);
 			}
 		}
 		
 		void close() {
-			if (fd != -1) {
+			if (fd >= 0) {
 				this_thread::disable_syscall_interruption dsi;
 				int theFd = fd;
 				fd = -1;
@@ -102,7 +102,19 @@ public:
 	 * @post *this == fd
 	 */
 	FileDescriptor(int fd) {
-		data.reset(new SharedData(fd));
+		if (fd >= 0) {
+			/* Make sure that the 'new' operator doesn't overwrite
+			 * errno so that we can write code like this:
+			 *
+			 *    FileDescriptor fd = open(...);
+			 *    if (fd == -1) {
+			 *       print_error(errno);
+			 *    }
+			 */
+			int e = errno;
+			data.reset(new SharedData(fd));
+			errno = e;
+		}
 	}
 	
 	/**
@@ -116,6 +128,7 @@ public:
 	void close() {
 		if (data != NULL) {
 			data->close();
+			data.reset();
 		}
 	}
 	
@@ -131,6 +144,43 @@ public:
 		} else {
 			return data->fd;
 		}
+	}
+	
+	FileDescriptor &operator=(int fd) {
+		/* Make sure that the 'new' and 'delete' operators don't
+		 * overwrite errno so that we can write code like this:
+		 *
+		 *    FileDescriptor fd;
+		 *    fd = open(...);
+		 *    if (fd == -1) {
+		 *       print_error(errno);
+		 *    }
+		 */
+		int e = errno;
+		if (fd >= 0) {
+			data.reset(new SharedData(fd));
+		} else {
+			data.reset();
+		}
+		errno = e;
+		return *this;
+	}
+	
+	FileDescriptor &operator=(const FileDescriptor &other) {
+		/* Make sure that the 'delete' operator implicitly invoked by
+		 * shared_ptr doesn't overwrite errno so that we can write code
+		 * like this:
+		 *
+		 *    FileDescriptor fd;
+		 *    fd = other_file_descriptor_object;
+		 *    if (fd == -1) {
+		 *       print_error(errno);
+		 *    }
+		 */
+		int e = errno;
+		data = other.data;
+		errno = e;
+		return *this;
 	}
 };
 
