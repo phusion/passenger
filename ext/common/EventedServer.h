@@ -147,6 +147,11 @@ protected:
 	};
 	
 	typedef shared_ptr<Client> ClientPtr;
+	typedef set<ClientPtr> ClientSet;
+	
+	const ClientSet &getClients() const {
+		return clients;
+	}
 	
 	void write(const ClientPtr &client, const char *data) {
 		write(client, StaticString(data));
@@ -338,7 +343,7 @@ private:
 	struct ev_loop *loop;
 	FileDescriptor fd;
 	ev::io acceptWatcher;
-	set<ClientPtr> clients;
+	ClientSet clients;
 	
 	/** Converts an array of StaticStrings to a corresponding array of iovec structures. */
 	size_t staticStringArrayToIoVec(const StaticString ary[], size_t count, struct iovec *vec) {

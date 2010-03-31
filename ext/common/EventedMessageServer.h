@@ -30,6 +30,7 @@
 #include <cstdarg>
 #include "EventedServer.h"
 #include "MessageReadersWriters.h"
+#include "AccountsDatabase.h"
 #include "Constants.h"
 #include "Utils.h"
 
@@ -52,6 +53,8 @@ protected:
 	
 	struct Context {
 		State state;
+		AccountPtr account;
+		
 		ev::timer authenticationTimer;
 		ScalarMessage scalarReader;
 		ArrayMessage arrayReader;
@@ -86,6 +89,8 @@ protected:
 	
 	typedef shared_ptr<Client> ClientPtr;
 	friend class Client;
+	
+	AccountsDatabasePtr accountsDatabase;
 	
 	
 	/******** Overrided hooks and methods ********/
@@ -253,7 +258,11 @@ private:
 					disconnect(client);
 				} else if (context->scalarReader.done()) {
 					context->authenticationTimer.stop();
-					if (authenticate(context->username, context->scalarReader.value())) {
+					context->account = accountsDatabase->authenticate(
+						context->username, context->scalarReader.value());
+					passwordGuard.zeroNow();
+					context->username.clear();
+					if (context->account) {
 						context->scalarReader.reset(true);
 						context->state = MS_READING_MESSAGE;
 						writeArrayMessage(client, "ok", NULL);
@@ -302,19 +311,17 @@ private:
 		}
 	}
 	
-	bool authenticate(const StaticString &username, const StaticString &password) const
-	{
-		return username == "foo" && password == "bar";
-	}
-	
 	void authenticationTimedOut(const ClientPtr &client) {
 		disconnect(client);
 	}
 
 public:
-	EventedMessageServer(struct ev_loop *loop, FileDescriptor fd)
+	EventedMessageServer(struct ev_loop *loop, FileDescriptor fd,
+		const AccountsDatabasePtr &accountsDatabase)
 		: EventedServer(loop, fd)
-	{ }
+	{
+		this->accountsDatabase = accountsDatabase;
+	}
 };
 
 

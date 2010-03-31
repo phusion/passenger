@@ -76,7 +76,7 @@ public:
 		INSPECT_BACKTRACES        = 1 << 8,
 		
 		// Other rights.
-		EXIT                      = 1 << 9
+		EXIT                      = 1 << 31
 	};
 
 private:
