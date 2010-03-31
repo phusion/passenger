@@ -153,6 +153,12 @@ public:
 		SystemTimeData::hasForcedUsecValue = true;
 		SystemTimeData::forcedUsecValue = value;
 	}
+	
+	static void forceAll(unsigned long long usec) {
+		force(usec / 1000000);
+		forceMsec(usec / 1000);
+		forceUsec(usec);
+	}
 
 	/**
 	 * Release the previously forced seconds value, so that get()
