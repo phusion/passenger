@@ -442,6 +442,21 @@ public:
 		FileDescriptor fd = connectToUnixServer(socketFilename.c_str());
 		UPDATE_TRACE_POINT();
 		data = ptr(new SharedData(fd));
+		
+		UPDATE_TRACE_POINT();
+		vector<string> args;
+		if (!data->channel.read(args)) {
+			throw IOException("The ApplicationPool server closed the connection before sending a version identifier.");
+		}
+		if (args.size() != 2 || args[0] != "version") {
+			throw IOException("The ApplicationPool server didn't sent a valid version identifier.");
+		}
+		if (args[1] != "1") {
+			string message = string("Unsupported message server protocol version ") +
+				args[1] + ".";
+			throw IOException(message);
+		}
+		
 		UPDATE_TRACE_POINT();
 		authenticate(username, userSuppliedPassword);
 		return this;

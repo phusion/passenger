@@ -43,6 +43,7 @@ class MessageClient {
 protected:
 	FileDescriptor fd;
 	MessageChannel channel;
+	bool shouldAutoDisconnect;
 	
 	/* sendUsername() and sendPassword() exist and are virtual in order to facilitate unit testing. */
 	
@@ -70,18 +71,20 @@ protected:
 		sendPassword(channel, userSuppliedPassword);
 		
 		if (!channel.read(args)) {
-			throw IOException("The ApplicationPool server did not send an authentication response.");
+			throw IOException("The message server did not send an authentication response.");
 		} else if (args.size() != 1) {
-			throw IOException("The authentication response that the ApplicationPool server sent is not valid.");
+			throw IOException("The authentication response that the message server sent is not valid.");
 		} else if (args[0] != "ok") {
-			throw SecurityException("The ApplicationPool server denied authentication: " + args[0]);
+			throw SecurityException("The message server denied authentication: " + args[0]);
 		}
 	}
 	
-	/** Closes the connection without throwing close exceptions. */
-	void silentDisconnect() {
-		fd = FileDescriptor();
-		channel = MessageChannel();
+	void autoDisconnect() {
+		if (shouldAutoDisconnect) {
+			// Closes the connection without throwing close exceptions.
+			fd = FileDescriptor();
+			channel = MessageChannel();
+		}
 	}
 	
 public:
@@ -94,6 +97,7 @@ public:
 		 * certain methods virtual for unit testing purposes. We can't call
 		 * virtual methods in the constructor. :-(
 		 */
+		shouldAutoDisconnect = true;
 	}
 	
 	virtual ~MessageClient() { }
@@ -118,36 +122,53 @@ public:
 	 * @post connected()
 	 */
 	MessageClient *connect(const string &socketFilename, const string &username, const StaticString &userSuppliedPassword) {
+		TRACE_POINT();
 		try {
 			fd = connectToUnixServer(socketFilename.c_str());
 			channel = MessageChannel(fd);
+			
+			vector<string> args;
+			if (!read(args)) {
+				throw IOException("The message server closed the connection before sending a version identifier.");
+			}
+			if (args.size() != 2 || args[0] != "version") {
+				throw IOException("The message server didn't sent a valid version identifier.");
+			}
+			if (args[1] != "1") {
+				string message = string("Unsupported message server protocol version ") +
+					args[1] + ".";
+				throw IOException(message);
+			}
+			
 			authenticate(username, userSuppliedPassword);
 			return this;
 		} catch (const RuntimeException &) {
-			silentDisconnect();
+			autoDisconnect();
 			throw;
 		} catch (const SystemException &) {
-			silentDisconnect();
+			autoDisconnect();
 			throw;
 		} catch (const IOException &) {
-			silentDisconnect();
+			autoDisconnect();
 			throw;
 		} catch (const boost::thread_interrupted &) {
-			silentDisconnect();
+			autoDisconnect();
 			throw;
 		}
 	}
 	
 	void disconnect() {
-		if (fd != -1) {
-			fd.close();
-			fd = FileDescriptor();
-			channel = MessageChannel();
-		}
+		fd.close();
+		fd = FileDescriptor();
+		channel = MessageChannel();
 	}
 	
 	bool connected() const {
 		return fd != -1;
+	}
+	
+	void setAutoDisconnect(bool value) {
+		shouldAutoDisconnect = value;
 	}
 	
 	/**
@@ -158,7 +179,7 @@ public:
 		try {
 			return channel.read(args);
 		} catch (const SystemException &e) {
-			silentDisconnect();
+			autoDisconnect();
 			throw;
 		}
 	}
@@ -173,13 +194,13 @@ public:
 		try {
 			return channel.readScalar(output, maxSize, timeout);
 		} catch (const SystemException &) {
-			silentDisconnect();
+			autoDisconnect();
 			throw;
 		} catch (const SecurityException &) {
-			silentDisconnect();
+			autoDisconnect();
 			throw;
 		} catch (const TimeoutException &) {
-			silentDisconnect();
+			autoDisconnect();
 			throw;
 		}
 	}
@@ -193,10 +214,10 @@ public:
 		try {
 			return channel.readFileDescriptor(negotiate);
 		} catch (const SystemException &) {
-			silentDisconnect();
+			autoDisconnect();
 			throw;
 		} catch (const IOException &) {
-			silentDisconnect();
+			autoDisconnect();
 			throw;
 		}
 	}
@@ -212,7 +233,7 @@ public:
 			try {
 				channel.write(name, ap);
 			} catch (const SystemException &) {
-				silentDisconnect();
+				autoDisconnect();
 				throw;
 			}
 			va_end(ap);
@@ -230,7 +251,7 @@ public:
 		try {
 			channel.writeScalar(data, size);
 		} catch (const SystemException &) {
-			silentDisconnect();
+			autoDisconnect();
 			throw;
 		}
 	}
@@ -243,7 +264,7 @@ public:
 		try {
 			channel.writeScalar(data.c_str(), data.size());
 		} catch (const SystemException &) {
-			silentDisconnect();
+			autoDisconnect();
 			throw;
 		}
 	}
@@ -256,7 +277,7 @@ public:
 		try {
 			channel.writeFileDescriptor(fileDescriptor, negotiate);
 		} catch (const SystemException &) {
-			silentDisconnect();
+			autoDisconnect();
 			throw;
 		}
 	}

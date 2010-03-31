@@ -356,6 +356,8 @@ protected:
 		unsigned long long timeout = loginTimeout;
 		
 		try {
+			channel.write("version", "1", NULL);
+			
 			try {
 				if (!channel.readScalar(username, MESSAGE_SERVER_MAX_USERNAME_SIZE, &timeout)) {
 					return AccountPtr();
