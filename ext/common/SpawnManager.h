@@ -167,7 +167,7 @@ private:
 		UPDATE_TRACE_POINT();
 		socketFilename = generation->getPath() + "/spawn-server/socket." +
 			toString(getpid()) + "." +
-			toString((unsigned long long) this);
+			pointerToIntString(this);
 		socketPassword = Base64::encode(random.generateByteString(32));
 		serverSocket = createUnixServer(socketFilename.c_str());
 		do {

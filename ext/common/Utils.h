@@ -137,6 +137,8 @@ toString(T something) {
 	return AnythingToString<T>()(something);
 }
 
+string pointerToIntString(void *pointer);
+
 /**
  * Converts the given string to an integer.
  * @ingroup Support
