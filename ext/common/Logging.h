@@ -159,26 +159,30 @@ private:
 		int handle;
 	public:
 		FileLock(const int &handle) {
-			this->handle = handle;
-			int ret;
-			do {
-				ret = ::flock(handle, LOCK_EX);
-			} while (ret == -1 && errno == EINTR);
-			if (ret == -1) {
-				int e = errno;
-				throw SystemException("Cannot lock analytics log file", e);
-			}
+			#ifndef __sun__
+				this->handle = handle;
+				int ret;
+				do {
+					ret = ::flock(handle, LOCK_EX);
+				} while (ret == -1 && errno == EINTR);
+				if (ret == -1) {
+					int e = errno;
+					throw SystemException("Cannot lock analytics log file", e);
+				}
+			#endif
 		}
 		
 		~FileLock() {
-			int ret;
-			do {
-				ret = ::flock(handle, LOCK_UN);
-			} while (ret == -1 && errno == EINTR);
-			if (ret == -1) {
-				int e = errno;
-				throw SystemException("Cannot unlock analytics log file", e);
-			};
+			#ifndef __sun__
+				int ret;
+				do {
+					ret = ::flock(handle, LOCK_UN);
+				} while (ret == -1 && errno == EINTR);
+				if (ret == -1) {
+					int e = errno;
+					throw SystemException("Cannot unlock analytics log file", e);
+				};
+			#endif
 		}
 	};
 	
