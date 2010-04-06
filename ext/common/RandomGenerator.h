@@ -122,6 +122,12 @@ public:
 	 * more possibilities than 2**N.
 	 */
 	string generateAsciiString(unsigned int size) {
+		char buf[size];
+		generateAsciiString(buf, size);
+		return string(buf, size);
+	}
+	
+	void generateAsciiString(char *_buf, unsigned int size) {
 		static const char chars[] = {
 			'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
 			'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
@@ -129,12 +135,11 @@ public:
 			'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
 			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
 		};
-		unsigned char buf[size];
+		unsigned char *buf = (unsigned char *) _buf;
 		generateBytes(buf, size);
 		for (unsigned int i = 0; i < size; i++) {
 			buf[i] = chars[buf[i] % sizeof(chars)];
 		}
-		return string((const char *) buf, size);
 	}
 	
 	int generateInt() {

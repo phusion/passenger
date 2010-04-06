@@ -120,6 +120,31 @@ stringToULL(const StaticString &str) {
 	return result;
 }
 
+unsigned long long
+hexToULL(const StaticString &hex) {
+	unsigned long long result = 0;
+	string::size_type i = 0;
+	bool done = false;
+	
+	while (i < hex.size() && !done) {
+		char c = hex[i];
+		if (c >= '0' && c <= '9') {
+			result *= 16;
+			result += c - '0';
+		} else if (c >= 'a' && c <= 'f') {
+			result *= 16;
+			result += 10 + (c - 'a');
+		} else if (c >= 'A' && c <= 'Z') {
+			result *= 16;
+			result += 10 + (c - 'A');
+		} else {
+			done = true;
+		}
+		i++;
+	}
+	return result;
+}
+
 void
 split(const string &str, char sep, vector<string> &output) {
 	string::size_type start, pos;
@@ -719,25 +744,6 @@ toHex(const StaticString &data, char *output) {
 		output[i * 2] = hex_chars[(unsigned char) data_buf[i] / 16];
 		output[i * 2 + 1] = hex_chars[(unsigned char) data_buf[i] % 16];
 	}
-}
-
-unsigned int
-toHex(unsigned int value, char *output) {
-	char buf[sizeof(value) * 2];
-	unsigned int remainder = value;
-	unsigned int size = 0;
-	
-	do {
-		buf[size] = hex_chars[remainder % 16];
-		remainder = remainder / 16;
-		size++;
-	} while (remainder != 0);
-	
-	for (unsigned int i = 0; i < size; i++) {
-		output[size - i - 1] = buf[i];
-	}
-	output[size] = '\0';
-	return size;
 }
 
 string

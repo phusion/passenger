@@ -37,6 +37,16 @@ class MessageClient
 		@socket = UNIXSocket.new(filename)
 		begin
 			@channel = MessageChannel.new(@socket)
+			
+			result = @channel.read
+			if result.nil?
+				raise EOFError
+			elsif result.size != 2 || result[0] != "version"
+				raise IOError, "The message server didn't sent a valid version identifier"
+			elsif result[1] != "1"
+				raise IOError, "Unsupported message server protocol version #{result[1]}"
+			end
+			
 			@channel.write_scalar(username)
 			@channel.write_scalar(password)
 		
@@ -54,6 +64,11 @@ class MessageClient
 	
 	def close
 		@socket.close
+		@channel = @socket = nil
+	end
+	
+	def connected?
+		return !!@channel
 	end
 	
 	### ApplicationPool::Server methods ###
@@ -70,49 +85,84 @@ class MessageClient
 	end
 	
 	def status
-		@channel.write("inspect")
+		write("inspect")
 		check_security_response
-		return @channel.read_scalar
+		return read_scalar
+	rescue
+		auto_disconnect
+		raise
 	end
 	
 	def xml
-		@channel.write("toXml", true)
+		write("toXml", true)
 		check_security_response
-		return @channel.read_scalar
+		return read_scalar
 	end
 	
 	### BacktracesServer methods ###
 	
 	def backtraces
-		@channel.write("backtraces")
+		write("backtraces")
 		check_security_response
-		return @channel.read_scalar
+		return read_scalar
 	end
 	
 	### Low level I/O methods ###
 	
 	def read
 		return @channel.read
+	rescue
+		auto_disconnect
+		raise
 	end
 	
 	def write(*args)
 		@channel.write(*args)
+	rescue
+		auto_disconnect
+		raise
 	end
 	
 	def write_scalar(*args)
 		@channel.write_scalar(*args)
+	rescue
+		auto_disconnect
+		raise
+	end
+	
+	def read_scalar
+		return @channel.read_scalar
+	rescue
+		auto_disconnect
+		raise
 	end
 	
 	def recv_io(klass = IO, negotiate = true)
 		return @channel.recv_io(klass, negotiate)
+	rescue
+		auto_disconnect
+		raise
 	end
 	
 	def check_security_response
-		result = @channel.read
+		begin
+			result = @channel.read
+		rescue
+			auto_disconnect
+			raise
+		end
 		if result.nil?
 			raise EOFError
 		elsif result[0] != "Passed security"
 			raise SecurityError, result[0]
+		end
+	end
+
+private
+	def auto_disconnect
+		if @channel
+			@socket.close rescue nil
+			@socket = @channel = nil
 		end
 	end
 end

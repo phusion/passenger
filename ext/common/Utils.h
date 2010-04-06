@@ -178,6 +178,12 @@ long atol(const string &s);
  */
 unsigned long long stringToULL(const StaticString &str);
 
+/**
+ * Converts the given hexadecimal string to an unsigned long long integer.
+ * @ingroup Support
+ */
+unsigned long long hexToULL(const StaticString &str);
+
 /** Round <em>number</em> up to the nearest multiple of <em>multiple</em>. */
 template<typename IntType> IntType
 roundUp(IntType number, IntType multiple) {
@@ -495,13 +501,35 @@ void toHex(const StaticString &data, char *output);
 /**
  * Convert the given integer to hexadecimal, placing the result
  * into the given output buffer. This buffer must be at least
- * <tt>2 * sizeof(unsigned int) + 1</tt> bytes. The output buffer
+ * <tt>2 * sizeof(IntegerType) + 1</tt> bytes. The output buffer
  * will be NULL terminated.
  *
  * @return The size of the created hexadecimal string, excluding
  *         terminating NULL.
  */
-unsigned int toHex(unsigned int value, char *output);
+template<typename IntegerType>
+unsigned int
+integerToHex(IntegerType value, char *output) {
+	static const char hex_chars[] = {
+		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+		'a', 'b', 'c', 'd', 'e', 'f'
+	};
+	char buf[sizeof(value) * 2];
+	IntegerType remainder = value;
+	unsigned int size = 0;
+	
+	do {
+		buf[size] = hex_chars[remainder % 16];
+		remainder = remainder / 16;
+		size++;
+	} while (remainder != 0);
+	
+	for (unsigned int i = 0; i < size; i++) {
+		output[size - i - 1] = buf[i];
+	}
+	output[size] = '\0';
+	return size;
+}
 
 /**
  * Convert a signal number to its associated name.

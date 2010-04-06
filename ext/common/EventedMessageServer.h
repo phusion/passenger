@@ -38,6 +38,7 @@ namespace Passenger {
 
 using namespace boost;
 
+/* This source file follows the security guidelines written in Account.h. */
 
 class EventedMessageServer: public EventedServer {
 protected:

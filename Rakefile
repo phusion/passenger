@@ -257,7 +257,7 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 	static_library = "#{output_dir}.a"
 	
 	# Define compilation targets for the object files in libpassenger_common.
-	flags =  "-Iext -Iext/common #{extra_compiler_flags} "
+	flags =  "-Iext -Iext/common #{LIBEV_CFLAGS} #{extra_compiler_flags} "
 	flags << "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 	common_object_files = []
 	components.each_pair do |object_name, dependencies|
@@ -321,14 +321,16 @@ end
 		'ext/common/ServerInstanceDir.h',
 		'ext/common/Logging.h',
 		COMMON_LIBRARY,
-		BOOST_OXT_LIBRARY]
+		BOOST_OXT_LIBRARY,
+		:libev]
 	file 'agents/PassengerLoggingAgent' => logging_agent_dependencies do
 		sh "mkdir -p agents" if !File.directory?("agents")
 		create_executable('agents/PassengerLoggingAgent',
 			'ext/common/LoggingAgent/Main.cpp',
-			"-Iext -Iext/common #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
+			"-Iext -Iext/common #{LIBEV_CFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
 			"#{COMMON_LIBRARY} " <<
 			"#{BOOST_OXT_LIBRARY} " <<
+			"#{LIBEV_LIBS} " <<
 			"#{PlatformInfo.portability_ldflags} " <<
 			"#{EXTRA_LDFLAGS}")
 	end
@@ -589,10 +591,10 @@ end
 	
 	### C++ components tests ###
 	
-	TEST_CXX_CFLAGS = "-Iext -Iext/common -Iext/nginx -Itest/support " <<
+	TEST_CXX_CFLAGS = "-Iext -Iext/common -Iext/nginx #{LIBEV_CFLAGS} -Itest/support " <<
 		"#{PlatformInfo.apr_flags} #{PlatformInfo.apu_flags} #{TEST_COMMON_CFLAGS}"
 	TEST_CXX_LDFLAGS = "#{PlatformInfo.apr_libs} #{PlatformInfo.apu_libs} " <<
-		"#{TEST_COMMON_LIBRARY} #{TEST_BOOST_OXT_LIBRARY} " <<
+		"#{TEST_COMMON_LIBRARY} #{TEST_BOOST_OXT_LIBRARY} #{LIBEV_LIBS} " <<
 		"#{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
 	TEST_CXX_OBJECTS = {
 		'test/cxx/CxxTestMain.o' => %w(
@@ -617,6 +619,7 @@ end
 			ext/common/SpawnManager.h
 			ext/common/AbstractSpawnManager.h
 			ext/common/PoolOptions.h
+			ext/common/Logging.h
 			ext/common/StringListCreator.h
 			ext/common/Process.h
 			ext/common/AccountsDatabase.h
@@ -635,6 +638,7 @@ end
 			ext/common/MessageServer.h
 			ext/common/Session.h
 			ext/common/PoolOptions.h
+			ext/common/Logging.h
 			ext/common/StringListCreator.h
 			ext/common/MessageChannel.h
 			ext/common/Utils/ProcessMetricsCollector.h),
@@ -651,6 +655,7 @@ end
 			ext/common/MessageServer.h
 			ext/common/SpawnManager.h
 			ext/common/PoolOptions.h
+			ext/common/Logging.h
 			ext/common/StringListCreator.h
 			ext/common/Process.h
 			ext/common/Session.h
@@ -664,6 +669,7 @@ end
 			ext/common/AbstractSpawnManager.h
 			ext/common/SpawnManager.h
 			ext/common/PoolOptions.h
+			ext/common/Logging.h
 			ext/common/StringListCreator.h
 			ext/common/Utils/FileChangeChecker.h
 			ext/common/Utils/CachedFileStat.hpp
@@ -673,6 +679,7 @@ end
 			test/cxx/PoolOptionsTest.cpp
 			ext/common/PoolOptions.h
 			ext/common/Session.h
+			ext/common/Logging.h
 			ext/common/StringListCreator.h),
 		'test/cxx/StaticStringTest.o' => %w(
 			test/cxx/StaticStringTest.cpp
@@ -693,7 +700,9 @@ end
 			ext/common/LoggingAgent/LoggingServer.h
 			ext/common/Logging.h
 			ext/common/Utils.h
-			ext/common/MessageServer.h
+			ext/common/EventedServer.h
+			ext/common/EventedMessageServer.h
+			ext/common/MessageReadersWriters.h
 			ext/common/MessageClient.h),
 		'test/cxx/MessageServerTest.o' => %w(
 			test/cxx/MessageServerTest.cpp
@@ -702,6 +711,7 @@ end
 			ext/common/PoolOptions.h
 			ext/common/SpawnManager.h
 			ext/common/Session.h
+			ext/common/Logging.h
 			ext/common/Account.h
 			ext/common/AccountsDatabase.h
 			ext/common/Session.h
@@ -741,7 +751,7 @@ end
                 end
 	end
 	
-	cxx_tests_dependencies = [TEST_CXX_OBJECTS.keys,
+	cxx_tests_dependencies = [TEST_CXX_OBJECTS.keys, :libev,
 		TEST_BOOST_OXT_LIBRARY, TEST_COMMON_LIBRARY]
 	file 'test/cxx/CxxTestMain' => cxx_tests_dependencies.flatten do
 		objects = TEST_CXX_OBJECTS.keys.join(' ')

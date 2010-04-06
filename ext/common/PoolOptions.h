@@ -338,13 +338,12 @@ struct PoolOptions {
 		rights           = (Account::Rights) atol(vec[startIndex + offset]);
 		                                                             offset += 2;
 		debugger         = vec[startIndex + offset] == "true";       offset += 2;
-		if (vec[startIndex + offset - 1] == "analytics_log_group_name") {
+		if (vec[startIndex + offset - 1] == "analytics_log_txn_id") {
 			if (analyticsLogger != NULL) {
-				string groupName = vec[startIndex + offset];
-				string txnId = vec[startIndex + offset + 2];
-				log = analyticsLogger->continueTransaction(groupName, txnId);
+				string txnId = vec[startIndex + offset];
+				log = analyticsLogger->continueTransaction(txnId);
 			}
-			offset += 4;
+			offset += 2;
 		}
 		initiateSession  = vec[startIndex + offset] == "true";       offset += 2;
 		printExceptions  = vec[startIndex + offset] == "true";       offset += 2;
@@ -390,8 +389,7 @@ struct PoolOptions {
 		appendKeyValue3(vec, "rights",             rights);
 		appendKeyValue4(vec, "debugger",           debugger);
 		if (log) {
-			appendKeyValue(vec, "analytics_log_group_name", log->getGroupName());
-			appendKeyValue(vec, "analytics_log_id", log->getTxnId());
+			appendKeyValue(vec, "analytics_log_txn_id", log->getTxnId());
 		}
 		appendKeyValue4(vec, "initiate_session",   initiateSession);
 		appendKeyValue4(vec, "print_exceptions",   printExceptions);

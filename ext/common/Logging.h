@@ -145,59 +145,19 @@ void setDebugFile(const char *logFile = NULL);
 
 /********** Transaction logging facilities *********/
 
+struct AnalyticsLoggerSharedData {
+	boost::mutex lock;
+	MessageClient client;
+};
+typedef shared_ptr<AnalyticsLoggerSharedData> AnalyticsLoggerSharedDataPtr;
+
 class AnalyticsLog {
 private:
 	static const int INT64_STR_BUFSIZE = 22; // Long enough for a 64-bit number.
 	
-	FileDescriptor handle;
-	string groupName;
+	AnalyticsLoggerSharedDataPtr sharedData;
 	string txnId;
-	bool largeMessages;
-	
-	class FileLock {
-	private:
-		int handle;
-	public:
-		FileLock(const int &handle) {
-			this->handle = handle;
-			int ret;
-			do {
-				ret = ::flock(handle, LOCK_EX);
-			} while (ret == -1 && errno == EINTR);
-			if (ret == -1) {
-				int e = errno;
-				throw SystemException("Cannot lock analytics log file", e);
-			}
-		}
-		
-		~FileLock() {
-			int ret;
-			do {
-				ret = ::flock(handle, LOCK_UN);
-			} while (ret == -1 && errno == EINTR);
-			if (ret == -1) {
-				int e = errno;
-				throw SystemException("Cannot unlock analytics log file", e);
-			};
-		}
-	};
-	
-	/**
-	 * @throws SystemException
-	 * @throws IOException
-	 * @throws boost::thread_interrupted
-	 */
-	void atomicWrite(const char *data, unsigned int size) {
-		int ret;
-		
-		ret = syscalls::write(handle, data, size);
-		if (ret == -1) {
-			int e = errno;
-			throw SystemException("Cannot write to the transaction log", e);
-		} else if ((unsigned int) ret != size) {
-			throw IOException("Cannot atomically write to the transaction log");
-		}
-	}
+	bool shouldFlushToDiskAfterDestruction;
 	
 	/**
 	 * Buffer must be at least txnId.size() + 1 + INT64_STR_BUFSIZE + 1 bytes.
@@ -230,108 +190,79 @@ private:
 public:
 	AnalyticsLog() { }
 	
-	AnalyticsLog(const FileDescriptor &handle, const string &groupName, const string &txnId,
-	             bool largeMessages)
-	{
-		this->handle    = handle;
-		this->groupName = groupName;
-		this->txnId     = txnId;
-		this->largeMessages = largeMessages;
-		message("ATTACH");
+	AnalyticsLog(const AnalyticsLoggerSharedDataPtr &sharedData, const string &txnId) {
+		this->sharedData = sharedData;
+		this->txnId      = txnId;
+		shouldFlushToDiskAfterDestruction = false;
 	}
 	
 	~AnalyticsLog() {
-		if (handle != -1) {
-			message("DETACH");
+		if (sharedData != NULL) {
+			lock_guard<boost::mutex> l(sharedData->lock);
+			if (sharedData->client.connected()) {
+				try {
+					char timestamp[2 * sizeof(unsigned long long) + 1];
+					integerToHex<unsigned long long>(SystemTime::getUsec(),
+						timestamp);
+					sharedData->client.write("closeTransaction",
+						txnId.c_str(), timestamp, NULL);
+				} catch (const SystemException &e) {
+					if (e.code() == EPIPE || e.code() == ECONNRESET) {
+						TRACE_POINT();
+						// Maybe the server sent us an error message and closed
+						// the connection. Let's check.
+						vector<string> args;
+						if (sharedData->client.read(args)) {
+							if (args[0] == "error") {
+								throw IOException("The logging server responded with an error: " + args[1]);
+							} else {
+								throw IOException("The logging server sent an unexpected error reply.");
+							}
+						} else {
+							throw IOException("The logging server unexpectedly closed the connection.");
+						}
+					} else {
+						throw;
+					}
+				}
+				
+				if (shouldFlushToDiskAfterDestruction) {
+					vector<string> args;
+					sharedData->client.write("flush", NULL);
+					sharedData->client.read(args);
+				}
+			}
 		}
 	}
 	
 	void message(const StaticString &text) {
-		if (handle != -1 && largeMessages) {
-			// "txn-id-here 123456 "
-			char header[txnId.size() + 1 + INT64_STR_BUFSIZE + 1];
-			char *end = insertTxnIdAndTimestamp(header);
-			char sizeHeader[7];
-			
-			snprintf(sizeHeader, sizeof(sizeHeader) - 1,
-				"%4x ", (int) (end - header) + (int) text.size() + 1);
-			sizeHeader[sizeof(sizeHeader) - 1] = '\0';
-			
-			MessageChannel channel(handle);
-			FileLock lock(handle);
-			channel.writeRaw(sizeHeader, strlen(sizeHeader));
-			channel.writeRaw(header, end - header);
-			channel.writeRaw(text);
-			channel.writeRaw("\n");
-		} else if (handle != -1 && !largeMessages) {
-			// We want: "txn-id-here 123456 log message here\n"
-			char data[txnId.size() + 1 + INT64_STR_BUFSIZE + 1 + text.size() + 1];
-			char *end;
-			
-			// "txn-id-here 123456 "
-			end = insertTxnIdAndTimestamp(data);
-			
-			// "txn-id-here 123456 log message here"
-			memcpy(end, text.c_str(), text.size());
-			end += text.size();
-			
-			// "txn-id-here 123456 log message here\n"
-			*end = '\n';
-			end++;
-			
-			atomicWrite(data, end - data);
+		if (sharedData != NULL) {
+			lock_guard<boost::mutex> l(sharedData->lock);
+			if (sharedData->client.connected()) {
+				char timestamp[2 * sizeof(unsigned long long) + 1];
+				integerToHex<unsigned long long>(SystemTime::getUsec(), timestamp);
+				sharedData->client.write("log", txnId.c_str(),
+					timestamp, NULL);
+				sharedData->client.writeScalar(text);
+			}
 		}
 	}
 	
 	void abort(const StaticString &text) {
-		if (handle != -1 && largeMessages) {
-			char header[txnId.size() + 1 + INT64_STR_BUFSIZE + 1 + sizeof("ABORT: ") - 1];
-			char *end;
-			char sizeHeader[7];
-			
-			// "txn-id-here 123456 "
-			end = insertTxnIdAndTimestamp(header);
-			// "txn-id-here 123456 ABORT: "
-			memcpy(end, "ABORT: ", sizeof("ABORT: ") - 1);
-			end += sizeof("ABORT: ") - 1;
-			
-			snprintf(sizeHeader, sizeof(sizeHeader) - 1,
-				"%4x ", (int) (end - header) + (int) text.size() + 1);
-			sizeHeader[sizeof(sizeHeader) - 1] = '\0';
-			
-			MessageChannel channel(handle);
-			FileLock lock(handle);
-			channel.writeRaw(sizeHeader, strlen(sizeHeader));
-			channel.writeRaw(header, end - header);
-			channel.writeRaw(text);
-			channel.writeRaw("\n");
-		} else if (handle != -1 && !largeMessages) {
-			// We want: "txn-id-here 123456 ABORT: log message here\n"
-			char data[txnId.size() + 1 + INT64_STR_BUFSIZE + 1 +
-				(sizeof("ABORT: ") - 1) + text.size() + 1];
-			char *end;
-			
-			// "txn-id-here 123456 "
-			end = insertTxnIdAndTimestamp(data);
-			
-			// "txn-id-here 123456 ABORT: "
-			memcpy(end, "ABORT: ", sizeof("ABORT: ") - 1);
-			end += sizeof("ABORT: ") - 1;
-			
-			// "txn-id-here 123456 ABORT: log message here\n"
-			*end = '\n';
-			end++;
-			
-			atomicWrite(data, end - data);
+		if (sharedData != NULL) {
+			lock_guard<boost::mutex> l(sharedData->lock);
+			if (sharedData->client.connected()) {
+				message("ABORT");
+			}
 		}
 	}
 	
-	bool isNull() const {
-		return handle == -1;
+	void flushToDiskAfterDestruction(bool value) {
+		shouldFlushToDiskAfterDestruction = value;
 	}
 	
-	string getGroupName() const {
-		return groupName;
+	bool isNull() const {
+		return sharedData == NULL;
 	}
 	
 	string getTxnId() const {
@@ -444,76 +375,31 @@ public:
 
 class AnalyticsLogger {
 private:
-	struct CachedFileHandle {
-		FileDescriptor fd;
-		time_t lastUsed;
-	};
-	
-	typedef map<string, CachedFileHandle> Cache;
-	
 	string socketFilename;
 	string username;
 	string password;
 	string nodeName;
 	RandomGenerator randomGenerator;
 	
-	boost::mutex lock;
-	Cache fileHandleCache;
+	/** @invariant sharedData != NULL */
+	AnalyticsLoggerSharedDataPtr sharedData;
 	
-	FileDescriptor openLogFile(const StaticString &groupName, unsigned long long timestamp,
-	                           const StaticString &nodeName, const StaticString &category = "requests")
-	{
-		string logFile = determineLogFilename("", groupName, nodeName, category, timestamp);
-		Cache::iterator it;
-		lock_guard<boost::mutex> l(lock);
-		
-		it = fileHandleCache.find(logFile);
-		if (it == fileHandleCache.end()) {
-			/* If there are more than 10 analytics groups then this server is probably
-			 * a low-traffic server or a shared host. In such a situation opening the
-			 * transaction log file won't be a significant performance bottleneck.
-			 * Therefore I think the hardcoded cache limit of 10 is justified.
-			 */
-			while (fileHandleCache.size() >= 10) {
-				Cache::iterator oldest_it = fileHandleCache.begin();
-				it = oldest_it;
-				it++;
-				
-				for (; it != fileHandleCache.end(); it++) {
-					if (it->second.lastUsed < oldest_it->second.lastUsed) {
-						oldest_it = it;
-					}
-				}
-				
-				fileHandleCache.erase(oldest_it);
-			}
-			
-			MessageClient client;
-			CachedFileHandle fileHandle;
-			vector<string> args;
-			
-			client.connect(socketFilename, username, password);
-			client.write("open log file",
-				groupName.c_str(),
-				toString(timestamp).c_str(),
-				nodeName.c_str(),
-				category.c_str(),
-				NULL);
-			if (!client.read(args)) {
-				// TODO: retry in a short while because the watchdog may restart
-				// the logging server
-				throw IOException("The logging agent unexpectedly closed the connection.");
-			}
-			if (args[0] == "error") {
-				throw IOException("The logging agent could not open the log file: " + args[1]);
-			}
-			fileHandle.fd = client.readFileDescriptor();
-			fileHandle.lastUsed = SystemTime::get();
-			it = fileHandleCache.insert(make_pair(logFile, fileHandle)).first;
-		} else {
-			it->second.lastUsed = SystemTime::get();
-		}
-		return it->second.fd;
+	bool connected() const {
+		return sharedData->client.connected();
+	}
+	
+	void connect() {
+		sharedData->client.connect(socketFilename, username, password);
+		sharedData->client.write("init", nodeName.c_str(), NULL);
+		sharedData->client.setAutoDisconnect(false);
+	}
+	
+	void disconnect() {
+		sharedData->client.disconnect();
+		// We create a new SharedData here so that existing AnalyticsLog
+		// objects still refer to the old client object and don't interfere
+		// with any newly-established connections.
+		sharedData.reset(new AnalyticsLoggerSharedData());
 	}
 	
 public:
@@ -530,124 +416,116 @@ public:
 		} else {
 			this->nodeName = nodeName;
 		}
-	}
-	
-	static void determineGroupAndNodeDir(const string &dir, const StaticString &groupName,
-		const StaticString &nodeName, string &groupDir, string &nodeDir)
-	{
-		string result = dir;
-		appendVersionAndGroupId(result, groupName);
-		groupDir = result;
-		result.append(1, '/');
-		appendNodeId(result, nodeName);
-		nodeDir = result;
-	}
-	
-	static void appendVersionAndGroupId(string &output, const StaticString &groupName) {
-		md5_state_t state;
-		md5_byte_t  digest[MD5_SIZE];
-		char        checksum[MD5_HEX_SIZE];
-		
-		output.append("/1/", 3);
-		
-		md5_init(&state);
-		md5_append(&state, (const md5_byte_t *) groupName.data(), groupName.size());
-		md5_finish(&state, digest);
-		toHex(StaticString((const char *) digest, MD5_SIZE), checksum);
-		output.append(checksum, MD5_HEX_SIZE);
-	}
-	
-	static void appendNodeId(string &output, const StaticString &nodeName) {
-		md5_state_t state;
-		md5_byte_t  digest[MD5_SIZE];
-		char        checksum[MD5_HEX_SIZE];
-		
-		md5_init(&state);
-		md5_append(&state, (const md5_byte_t *) nodeName.data(), nodeName.size());
-		md5_finish(&state, digest);
-		toHex(StaticString((const char *) digest, MD5_SIZE), checksum);
-		output.append(checksum, MD5_HEX_SIZE);
-	}
-	
-	static string determineLogFilename(const StaticString &dir,
-		const StaticString &groupName, const StaticString &nodeName,
-		const StaticString &category, unsigned long long timestamp)
-	{
-		struct tm tm;
-		time_t time_value;
-		char time_str[14];
-		
-		time_value = timestamp / 1000000;
-		gmtime_r(&time_value, &tm);
-		strftime(time_str, sizeof(time_str), "%Y/%m/%d/%H", &tm);
-		
-		string filename;
-		filename.reserve(dir.size()
-			+ (3 + MD5_HEX_SIZE) // version and group ID
-			+ 1                  // "/"
-			+ MD5_HEX_SIZE       // node ID
-			+ 1                  // "/"
-			+ category.size()
-			+ 1                  // "/"
-			+ sizeof(time_str)   // including null terminator, which we use as space for "/"
-			+ sizeof("log.txt")
-		);
-		filename.append(dir.c_str(), dir.size());
-		appendVersionAndGroupId(filename, groupName);
-		filename.append(1, '/');
-		appendNodeId(filename, nodeName);
-		filename.append(1, '/');
-		filename.append(category.c_str(), category.size());
-		filename.append(1, '/');
-		filename.append(time_str);
-		filename.append("/log.txt");
-		return filename;
-	}
-	
-	static unsigned long long extractTimestamp(const StaticString &txnId) {
-		const char *timestampBegin = (const char *) memchr(txnId.c_str(), '-', txnId.size());
-		if (timestampBegin != NULL) {
-			timestampBegin++;
-			string::size_type len = txnId.size() - (timestampBegin - txnId.data());
-			return stringToULL(StaticString(timestampBegin, len));
-		} else {
-			return 0;
+		if (!socketFilename.empty()) {
+			sharedData.reset(new AnalyticsLoggerSharedData());
 		}
 	}
 	
-	AnalyticsLogPtr newTransaction(const string &groupName, const StaticString &category = "requests",
-	                               bool largeMessages = false)
-	{
+	AnalyticsLogPtr newTransaction(const string &groupName, const StaticString &category = "requests") {
 		if (socketFilename.empty()) {
 			return ptr(new AnalyticsLog());
 		} else {
 			unsigned long long timestamp = SystemTime::getUsec();
-			string txnId = randomGenerator.generateHexString(4);
-			txnId.append("-");
-			txnId.append(toString(timestamp));
-			return ptr(new AnalyticsLog(
-				openLogFile(groupName, timestamp, nodeName, category),
-				groupName, txnId, largeMessages));
+			char txnId[
+				2 * sizeof(unsigned int) +    // max hex timestamp size
+				11 +                          // space for a random identifier
+				1                             // null terminator
+			];
+			char *end;
+			unsigned int timestampSize;
+			
+			// "[timestamp]"
+			// Our timestamp is like a Unix timestamp but with minutes
+			// resolution instead of seconds. 32 bits will last us for
+			// about 8000 years.
+			timestampSize = integerToHex<unsigned int>(timestamp / 1000000 / 60,
+				txnId);
+			end = txnId + timestampSize;
+			
+			// "[timestamp]-"
+			*end = '-';
+			end++;
+			
+			// "[timestamp]-[random id]"
+			randomGenerator.generateAsciiString(end, 11);
+			end += 11;
+			*end = '\0';
+			
+			lock_guard<boost::mutex> l(sharedData->lock);
+			
+			if (!connected()) {
+				TRACE_POINT();
+				connect();
+			}
+			try {
+				char timestampStr[2 * sizeof(unsigned long long) + 1];
+				integerToHex<unsigned long long>(timestamp, timestampStr);
+				sharedData->client.write("newTransaction", groupName.c_str(), txnId,
+					category.c_str(), timestampStr, NULL);
+			} catch (const SystemException &e) {
+				if (e.code() == EPIPE || e.code() == ECONNRESET) {
+					TRACE_POINT();
+					// Maybe the server sent us an error message and closed
+					// the connection. Let's check.
+					vector<string> args;
+					if (sharedData->client.read(args)) {
+						disconnect();
+						if (args[0] == "error") {
+							throw IOException("The logging server responded with an error: " + args[1]);
+						} else {
+							throw IOException("The logging server sent an unexpected reply.");
+						}
+					} else {
+						disconnect();
+						throw IOException("The logging server unexpectedly closed the connection.");
+					}
+				} else {
+					disconnect();
+					throw;
+				}
+			}
+			return ptr(new AnalyticsLog(sharedData, string(txnId, end - txnId)));
 		}
 	}
 	
-	AnalyticsLogPtr continueTransaction(const string &groupName, const string &txnId,
-	                                    const StaticString &category = "requests",
-	                                    bool largeMessages = false)
-	{
-		if (socketFilename.empty() || groupName.empty() || txnId.empty()) {
+	AnalyticsLogPtr continueTransaction(const string &txnId) {
+		if (socketFilename.empty() || txnId.empty()) {
 			return ptr(new AnalyticsLog());
 		} else {
-			unsigned long long timestamp;
+			lock_guard<boost::mutex> l(sharedData->lock);
 			
-			timestamp = extractTimestamp(txnId);
-			if (timestamp == 0) {
+			if (!connected()) {
 				TRACE_POINT();
-				throw ArgumentException("Invalid transaction ID '" + txnId + "'");
+				connect();
 			}
-			return ptr(new AnalyticsLog(
-				openLogFile(groupName, timestamp, nodeName, category),
-				groupName, txnId, largeMessages));
+			try {
+				char timestampStr[2 * sizeof(unsigned long long) + 1];
+				integerToHex<unsigned long long>(SystemTime::getUsec(), timestampStr);
+				sharedData->client.write("continueTransaction", txnId.c_str(),
+					timestampStr, NULL);
+			} catch (const SystemException &e) {
+				if (e.code() == EPIPE || e.code() == ECONNRESET) {
+					TRACE_POINT();
+					// Maybe the server sent us an error message and closed
+					// the connection. Let's check.
+					vector<string> args;
+					if (sharedData->client.read(args)) {
+						disconnect();
+						if (args[0] == "error") {
+							throw IOException("The logging server responded with an error: " + args[1]);
+						} else {
+							throw IOException("The logging server sent an unexpected reply.");
+						}
+					} else {
+						disconnect();
+						throw IOException("The logging server unexpectedly closed the connection.");
+					}
+				} else {
+					disconnect();
+					throw;
+				}
+			}
+			return ptr(new AnalyticsLog(sharedData, txnId));
 		}
 	}
 	

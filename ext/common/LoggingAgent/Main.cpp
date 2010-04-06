@@ -40,18 +40,20 @@
 #include "../AccountsDatabase.h"
 #include "../Account.h"
 #include "../ServerInstanceDir.h"
-#include "../MessageServer.h"
 #include "LoggingServer.h"
 #include "../Exceptions.h"
 #include "../Utils.h"
 #include "../Utils/Base64.h"
-#include "../Utils/Timer.h"
 
 using namespace oxt;
 using namespace Passenger;
 
 
-class TimerUpdateHandler: public MessageServer::Handler {
+static struct ev_loop *eventLoop;
+static bool feedbackFdBecameReadable = false;
+
+
+/* class TimerUpdateHandler: public MessageServer::Handler {
 private:
 	Timer &timer;
 	unsigned int clients;
@@ -82,34 +84,7 @@ public:
 	{
 		return false;
 	}
-};
-
-class ExitHandler: public MessageServer::Handler {
-private:
-	EventFd &exitEvent;
-	
-public:
-	ExitHandler(EventFd &_exitEvent)
-		: exitEvent(_exitEvent)
-	{ }
-	
-	virtual bool processMessage(MessageServer::CommonClientContext &commonContext,
-	                            MessageServer::ClientContextPtr &handlerSpecificContext,
-	                            const vector<string> &args)
-	{
-		if (args[0] == "exit") {
-			TRACE_POINT();
-			commonContext.requireRights(Account::EXIT);
-			UPDATE_TRACE_POINT();
-			exitEvent.notify();
-			UPDATE_TRACE_POINT();
-			commonContext.channel.write("exit command received", NULL);
-			return true;
-		} else {
-			return false;
-		}
-	}
-};
+}; */
 
 
 static void
@@ -119,6 +94,24 @@ ignoreSigpipe() {
 	action.sa_flags   = 0;
 	sigemptyset(&action.sa_mask);
 	sigaction(SIGPIPE, &action, NULL);
+}
+
+static struct ev_loop *
+createEventLoop() {
+	// libev doesn't like choosing epoll and kqueue because the author thinks they're broken,
+	// so let's try to force it.
+	ev_default_loop(EVBACKEND_EPOLL);
+	if (eventLoop == NULL) {
+		eventLoop = ev_default_loop(EVBACKEND_KQUEUE);
+	}
+	if (eventLoop == NULL) {
+		eventLoop = ev_default_loop(0);
+	}
+	if (eventLoop == NULL) {
+		throw RuntimeException("Cannot create an event loop");
+	} else {
+		return eventLoop;
+	}
 }
 
 static void
@@ -145,6 +138,12 @@ lowerPrivilege(const string &username, const struct passwd *user, const struct g
 			"': cannot set user ID: " << strerror(e) <<
 			" (" << e << ")");
 	}
+}
+
+void
+stopLoopBecauseOfFeedbackFd(ev::io &watcher, int revents) {
+	ev_unloop(eventLoop, EVUNLOOP_ONE);
+	feedbackFdBecameReadable = true;
 }
 
 int
@@ -178,19 +177,21 @@ main(int argc, char *argv[]) {
 	try {
 		/********** Now begins the real initialization **********/
 		
-		/* Create all the necessary objects... */
+		/* Create all the necessary objects and sockets... */
 		ServerInstanceDirPtr serverInstanceDir;
 		ServerInstanceDir::GenerationPtr generation;
 		AccountsDatabasePtr  accountsDatabase;
-		MessageServerPtr     messageServer;
+		FileDescriptor       serverSocketFd;
 		struct passwd       *user;
 		struct group        *group;
 		
+		eventLoop = createEventLoop();
 		serverInstanceDir = ptr(new ServerInstanceDir(webServerPid, tempDir, false));
 		generation = serverInstanceDir->getGeneration(generationNumber);
 		accountsDatabase = ptr(new AccountsDatabase());
-		messageServer = ptr(new MessageServer(generation->getPath() + "/logging.socket",
-			accountsDatabase));
+		serverSocketFd = createUnixServer((generation->getPath() + "/logging.socket").c_str());
+		
+		/* Sanity check user accounts. */
 		
 		user = getpwnam(username.c_str());
 		if (user == NULL) {
@@ -256,41 +257,22 @@ main(int argc, char *argv[]) {
 		}
 		
 		/* Now setup the actual logging server. */
-		oxt::thread *messageServerThread;
-		Timer        exitTimer;
-		EventFd      exitEvent;
-		
 		accountsDatabase->add("logging", Base64::decode(args[1]), false);
-		messageServer->addHandler(ptr(new TimerUpdateHandler(exitTimer)));
-		messageServer->addHandler(ptr(new LoggingServer(loggingDir, permissions,
-			group->gr_gid)));
-		messageServer->addHandler(ptr(new ExitHandler(exitEvent)));
-		messageServerThread = new oxt::thread(
-			boost::bind(&MessageServer::mainLoop, messageServer.get())
-		);
+		LoggingServer server(eventLoop, serverSocketFd,
+			accountsDatabase, loggingDir);
+		ev::io feedbackFdWatcher(eventLoop);
+		feedbackFdWatcher.set<&stopLoopBecauseOfFeedbackFd>();
+		feedbackFdWatcher.start(feedbackFd, ev::READ);
 		
 		
 		/********** Initialized! Enter main loop... **********/
 		
 		feedbackChannel.write("initialized", NULL);
-		
-		/* Wait until the watchdog closes the feedback fd (meaning it
-		 * was killed) or until we receive an exit message.
+		/* When the watchdog closes the feedback fd (meaning it was killed)
+		 * or when we receive an exit message, the loop will be stopped.
 		 */
-		this_thread::disable_syscall_interruption dsi;
-		fd_set fds;
-		int largestFd;
-		
-		FD_ZERO(&fds);
-		FD_SET(feedbackFd, &fds);
-		FD_SET(exitEvent.fd(), &fds);
-		largestFd = (feedbackFd > exitEvent.fd()) ? (int) feedbackFd : exitEvent.fd();
-		if (syscalls::select(largestFd + 1, &fds, NULL, NULL, NULL) == -1) {
-			int e = errno;
-			throw SystemException("select() failed", e);
-		}
-		
-		if (FD_ISSET(feedbackFd, &fds)) {
+		ev_loop(eventLoop, 0);
+		if (feedbackFdBecameReadable) {
 			/* If the watchdog has been killed then we'll kill all descendant
 			 * processes and exit. There's no point in keeping this agent
 			 * running because we can't detect when the web server exits,
@@ -302,14 +284,14 @@ main(int argc, char *argv[]) {
 			syscalls::killpg(getpgrp(), SIGKILL);
 			_exit(2); // In case killpg() fails.
 		} else {
-			/* We received an exit command. We want to exit 5 seconds after
-			 * the last client has disconnected, .
+			/* We want to exit 5 seconds after the last client has exited,
+			 * so install some checking watchers and timers and start the
+			 * loop again.
 			 */
-			exitTimer.start();
-			exitTimer.wait(5000);
+			//ev_loop(loop, 0);
+			//exitTimer.start();
+			//exitTimer.wait(5000);
 		}
-		
-		messageServerThread->interrupt_and_join();
 		
 		return 0;
 	} catch (const tracable_exception &e) {

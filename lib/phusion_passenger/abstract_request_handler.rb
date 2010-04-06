@@ -505,11 +505,11 @@ private
 			end
 		else
 			if @analytics_logger && headers && headers[PASSENGER_TXN_ID]
-				log = @analytics_logger.continue_transaction(
+				log = @analytics_logger.new_transaction(
 					headers[PASSENGER_GROUP_NAME],
-					headers[PASSENGER_TXN_ID],
-					:exceptions, true)
+					:exceptions)
 				begin
+					request_txn_id = headers[PASSENGER_TXN_ID]
 					message = e.message
 					message = e.to_s if message.empty?
 					message = [message].pack('m')
@@ -517,13 +517,14 @@ private
 					backtrace_string = [e.backtrace.join("\n")].pack('m')
 					backtrace_string.gsub!("\n", "")
 					
+					log.message("Request transaction ID: #{request_txn_id}")
 					log.message("Message: #{message}")
 					log.message("Class: #{e.class.name}")
 					log.message("Backtrace: #{backtrace_string}")
 				ensure
 					log.close
 				end
-			end
+			end if false
 			raise e
 		end
 	ensure
@@ -645,9 +646,8 @@ private
 	
 	def prepare_request(headers)
 		if @analytics_logger && headers[PASSENGER_TXN_ID]
-			log = @analytics_logger.continue_transaction(
-				headers[PASSENGER_GROUP_NAME],
-				headers[PASSENGER_TXN_ID])
+			puts "##### transaction #{headers[PASSENGER_TXN_ID]}"
+			log = @analytics_logger.continue_transaction(headers[PASSENGER_TXN_ID])
 			headers[PASSENGER_ANALYTICS_WEB_LOG] = log
 			Thread.current[PASSENGER_ANALYTICS_WEB_LOG] = log
 			if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS

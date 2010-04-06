@@ -514,9 +514,9 @@ private:
 					memcpy(end, "PASSENGER_GROUP_NAME", sizeof("PASSENGER_GROUP_NAME"));
 					end += sizeof("PASSENGER_GROUP_NAME");
 					
-					memcpy(end, log->getGroupName().c_str(),
-						log->getGroupName().size() + 1);
-					end += log->getGroupName().size() + 1;
+					memcpy(end, options.getAppGroupName().c_str(),
+						options.getAppGroupName().size() + 1);
+					end += options.getAppGroupName().size() + 1;
 					
 					memcpy(end, "PASSENGER_TXN_ID", sizeof("PASSENGER_TXN_ID"));
 					end += sizeof("PASSENGER_TXN_ID");

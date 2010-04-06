@@ -22,48 +22,32 @@
 #  THE SOFTWARE.
 
 require 'thread'
-require 'digest/md5'
 require 'phusion_passenger/message_client'
 
 module PhusionPassenger
 
 class AnalyticsLogger
 	class Log
-		attr_reader :group_name
 		attr_reader :txn_id
 		
-		def initialize(io = nil, group_name = nil, txn_id = nil, large_messages = false)
-			if io
-				@io = io
-				@group_name = group_name
+		def initialize(shared_data = nil, txn_id = nil)
+			if shared_data
+				@shared_data = shared_data
 				@txn_id = txn_id
-				@large_messages = large_messages
-				message("ATTACH")
+				shared_data.ref
 			end
 		end
 		
 		def null?
-			return !!@io
+			return !!@shared_data
 		end
 		
 		def message(text)
-			if @io
-				if @large_messages
-					@io.flock(File::LOCK_EX)
-					begin
-						data = "#{@txn_id} #{Log.timestamp} #{text}\n"
-						if data.size > 0xffff
-							raise IOError, "Cannot log messages larger than #{0xffff} bytes."
-						end
-						@io.write(sprintf("%4x ", data.size))
-						@io.write(data)
-					ensure
-						@io.flock(File::LOCK_UN)
-					end
-				else
-					@io.write("#{@txn_id} #{Log.timestamp} #{text}\n")
-				end
-			end
+			@shared_data.synchronize do
+				@shared_data.client.write("log", @txn_id,
+					AnalyticsLogger.timestamp_string)
+				@shared_data.client.write_scalar(text)
+			end if @shared_data
 		end
 		
 		def begin_measure(name)
@@ -93,22 +77,12 @@ class AnalyticsLogger
 		end
 		
 		def close
-			if @io
-				message("DETACH")
-				# Don't close the IO object, it's cached by AnalyticsLogger.
-			end
-		end
-	
-	private
-		def self.timestamp
-			time = Time.now
-			return time.to_i * 1000000 + time.usec
-		end
-	end
-	
-	class CachedFileHandle < Struct.new(:io, :last_used)
-		def close
-			io.close
+			@shared_data.synchronize do
+				@shared_data.client.write("closeTransaction", @txn_id,
+					AnalyticsLogger.timestamp_string)
+				@shared_data.unref
+				@shared_data = nil
+			end if @shared_data
 		end
 	end
 	
@@ -132,91 +106,118 @@ class AnalyticsLogger
 		else
 			@node_name = `hostname`.strip
 		end
-		@node_id = Digest::MD5.hexdigest(node_name)
-		@file_handle_cache = {}
-		@mutex = Mutex.new
+		@random_dev = File.open("/dev/urandom")
+		@shared_data = SharedData.new
 	end
 	
 	def close
-		@file_handle_cache.each_value do |handle|
-			handle.close
+		@shared_data.synchronize do
+			@shared_data.unref
+			@shared_data = nil
+		end
+		@random_dev.close
+	end
+	
+	def new_transaction(group_name, category = :requests)
+		if !@server_address || !group_name
+			return Log.new
+		else
+			txn_id = (AnalyticsLogger.current_time.to_i / 60).to_s(16)
+			txn_id << "-#{random_token(11)}"
+			@shared_data.synchronize do
+				connect if !connected?
+				begin
+					@shared_data.client.write("newTransaction", group_name,
+						txn_id, category, AnalyticsLogger.timestamp_string)
+					return Log.new(@shared_data, txn_id)
+				rescue
+					disconnect
+					raise
+				end
+			end
 		end
 	end
 	
-	def continue_transaction(group_name, txn_id, category = :requests, large_messages = false)
-		if group_name.empty? || txn_id.empty?
+	def continue_transaction(txn_id)
+		if !@server_address || !txn_id
 			return Log.new
 		else
-			timestamp = extract_timestamp(txn_id)
-			if !timestamp
-				raise ArgumentError, "Invalid transaction ID '#{txn_id}'"
+			@shared_data.synchronize do
+				connect if !connected?
+				begin
+					@shared_data.client.write("continueTransaction",
+						txn_id, AnalyticsLogger.timestamp_string)
+					return Log.new(@shared_data, txn_id)
+				rescue
+					disconnect
+					raise
+				end
 			end
-			return Log.new(open_log_file(group_name, timestamp, category),
-				group_name, txn_id, large_messages)
 		end
 	end
 
 private
-	def extract_timestamp(txn_id)
-		timestamp_str = txn_id.split('-', 2)[1]
-		if timestamp_str
-			return timestamp_str.to_i
-		else
-			return nil
+	RANDOM_CHARS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+		'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+		'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+	
+	class SharedData
+		attr_accessor :client
+		
+		def initialize
+			@mutex = Mutex.new
+			@refcount = 1
+		end
+		
+		def ref
+			@refcount += 1
+		end
+		
+		def unref
+			@refcount -= 1
+			if @refcount == 0
+				@client.close if @client
+			end
+		end
+		
+		def synchronize
+			@mutex.synchronize do
+				yield
+			end
 		end
 	end
 	
-	def open_log_file(group_name, timestamp, category)
-		group_id = Digest::MD5.hexdigest(group_name)
-		timestamp_sec  = timestamp / 1000000
-		timestamp_usec = timestamp % 1000000
-		time = Time.at(timestamp_sec, timestamp_usec).utc
-		date_name = time.strftime("%Y/%m/%d/%H")
-		log_file_path = "1/#{group_id}/#{@node_id}/#{category}/#{date_name}/log.txt"
-		
-		@mutex.synchronize do
-			handle = @file_handle_cache[log_file_path]
-			if handle
-				handle.last_used = Time.now
-				return handle.io
-			else
-				# I think we only need to cache 1 file handle...
-				while @file_handle_cache.size > 2
-					oldest = nil
-				
-					@file_handle_cache.each_pair do |log_file_path, handle|
-						if !oldest || handle.last_used < @file_handle_cache[oldest].last_used
-							oldest = log_file_path
-						end
-					end
-					@file_handle_cache[oldest].close
-					@file_handle_cache.delete(oldest)
-				end
-			
-				client = MessageClient.new(@username, @password, @server_address)
-				log_file_io = nil
-				begin
-					client.write("open log file", group_name, timestamp,
-						@node_name, category)
-					result = client.read
-					if !result
-						raise IOError, "The logging agent unexpectedly closed the connection."
-					elsif result[0] == "error"
-						raise IOError, "The logging agent could not open the log file: #{result[1]}"
-					end
-					io = client.recv_io(File)
-					io.sync = true
-					handle = CachedFileHandle.new(io, Time.now)
-					@file_handle_cache[log_file_path] = handle
-					return io
-				rescue Exception
-					log_file_io.close if log_file_io
-					raise
-				ensure
-					client.close
-				end
-			end
+	def connected?
+		return @shared_data.client && @shared_data.client.connected?
+	end
+	
+	def connect
+		@shared_data.client = MessageClient.new(@username, @password, @server_address)
+		@shared_data.client.write("init", @node_name)
+	end
+	
+	def disconnect
+		@shared_data.unref
+		@shared_data = SharedData.new
+	end
+	
+	def random_token(length)
+		token = ""
+		@random_dev.read(length).each_char do |c|
+			token << RANDOM_CHARS[c.ord % RANDOM_CHARS.size]
 		end
+		return token
+	end
+	
+	def self.current_time
+		return Time.now
+	end
+	
+	def self.timestamp_string(time = current_time)
+		timestamp = time.to_i * 1_000_000 + time.usec
+		return timestamp.to_s(16)
 	end
 end
 

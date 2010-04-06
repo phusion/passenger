@@ -119,7 +119,8 @@ public:
 	
 	/**
 	 * Close the underlying file descriptor. If it was already closed, then
-	 * nothing will happen.
+	 * nothing will happen. If there are multiple copies of this FileDescriptor
+	 * then the underlying file descriptor will be closed for every one of them.
 	 *
 	 * @throws SystemException Something went wrong while closing
 	 *                         the file descriptor.

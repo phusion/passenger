@@ -345,6 +345,7 @@ namespace tut {
 	
 	TEST_METHOD(47) {
 		ensure_equals(stringToULL(""), 0ull);
+		ensure_equals(stringToULL("bla"), 0ull);
 		ensure_equals(stringToULL("0"), 0ull);
 		ensure_equals(stringToULL("000"), 0ull);
 		ensure_equals(stringToULL("1"), 1ull);
@@ -359,24 +360,43 @@ namespace tut {
 	/***** Test toHex() *****/
 	
 	TEST_METHOD(48) {
-		char buf[sizeof(unsigned int) * 2 + 1];
+		char buf[sizeof(int) * 2 + 1];
 		
-		ensure_equals(toHex(0x0, buf), 1u);
+		ensure_equals(integerToHex<int>(0x0, buf), 1u);
 		ensure(strcmp(buf, "0") == 0);
 		
-		ensure_equals(toHex(0x1, buf), 1u);
+		ensure_equals(integerToHex<int>(0x1, buf), 1u);
 		ensure(strcmp(buf, "1") == 0);
 		
-		ensure_equals(toHex(0x9, buf), 1u);
+		ensure_equals(integerToHex<int>(0x9, buf), 1u);
 		ensure(strcmp(buf, "9") == 0);
 		
-		ensure_equals(toHex(0xe, buf), 1u);
+		ensure_equals(integerToHex<int>(0xe, buf), 1u);
 		ensure(strcmp(buf, "e") == 0);
 		
-		ensure_equals(toHex(0xdeadbeef, buf), 8u);
+		ensure_equals(integerToHex<unsigned int>(0xdeadbeef, buf), 8u);
 		ensure(strcmp(buf, "deadbeef") == 0);
 		
-		ensure_equals(toHex(0x1234f, buf), 5u);
+		ensure_equals(integerToHex<int>(0x1234f, buf), 5u);
 		ensure(strcmp(buf, "1234f") == 0);
+	}
+	
+	/***** Test hexToULL() *****/
+	
+	TEST_METHOD(49) {
+		ensure_equals(hexToULL(""), 0ull);
+		ensure_equals(hexToULL("   "), 0ull);
+		ensure_equals(hexToULL("1"), 1ull);
+		ensure_equals(hexToULL("9"), 9ull);
+		ensure_equals(hexToULL("a"), 10ull);
+		ensure_equals(hexToULL("B"), 11ull);
+		ensure_equals(hexToULL("1234"), 4660ull);
+		ensure_equals(hexToULL("1a6b"), 6763ull);
+		ensure_equals(hexToULL("1A6B"), 6763ull);
+		ensure_equals(hexToULL("1a6B"), 6763ull);
+		ensure_equals(hexToULL("deadbeef"), 3735928559ull);
+		ensure_equals(hexToULL("dEaDbEeF"), 3735928559ull);
+		ensure_equals(hexToULL("09a2s89"), 2466ull);
+		ensure_equals(hexToULL(" 9a2s89"), 0ull);
 	}
 }
