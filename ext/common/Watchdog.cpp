@@ -233,7 +233,7 @@ public:
 		pid = 0;
 	}
 	
-	~AgentWatcher() {
+	virtual ~AgentWatcher() {
 		delete thr;
 	}
 	
