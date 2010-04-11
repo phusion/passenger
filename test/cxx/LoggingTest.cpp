@@ -82,7 +82,7 @@ namespace tut {
 		AnalyticsLogPtr log = logger->newTransaction("foobar");
 		log->message("hello");
 		log->message("world");
-		log->flushToDiskAfterDestruction(true);
+		log->flushToDiskAfterClose(true);
 		
 		ensure(!logger->isNull());
 		ensure(!log->isNull());
@@ -100,11 +100,12 @@ namespace tut {
 		
 		AnalyticsLogPtr log = logger->newTransaction("foobar");
 		log->message("message 1");
-		log->flushToDiskAfterDestruction(true);
+		log->flushToDiskAfterClose(true);
 		
-		AnalyticsLogPtr log2 = logger2->continueTransaction(log->getTxnId());
+		AnalyticsLogPtr log2 = logger2->continueTransaction(log->getTxnId(),
+			log->getGroupName(), log->getCategory());
 		log2->message("message 2");
-		log2->flushToDiskAfterDestruction(true);
+		log2->flushToDiskAfterClose(true);
 
 		log.reset();
 		log2.reset();
@@ -121,16 +122,17 @@ namespace tut {
 		log->message("message 1");
 		SystemTime::forceAll(TODAY);
 		log->message("message 2");
-		log->flushToDiskAfterDestruction(true);
+		log->flushToDiskAfterClose(true);
 		
 		SystemTime::forceAll(TOMORROW);
-		AnalyticsLogPtr log2 = logger2->continueTransaction(log->getTxnId());
+		AnalyticsLogPtr log2 = logger2->continueTransaction(log->getTxnId(),
+			log->getGroupName(), log->getCategory());
 		log2->message("message 3");
-		log2->flushToDiskAfterDestruction(true);
+		log2->flushToDiskAfterClose(true);
 		
 		AnalyticsLogPtr log3 = logger3->newTransaction("foobar");
 		log3->message("message 4");
-		log3->flushToDiskAfterDestruction(true);
+		log3->flushToDiskAfterClose(true);
 		
 		log.reset();
 		log2.reset();
@@ -152,12 +154,13 @@ namespace tut {
 		AnalyticsLogPtr log = logger->newTransaction("foobar");
 		
 		SystemTime::forceAll(TODAY);
-		AnalyticsLogPtr log2 = logger2->continueTransaction(log->getTxnId());
-		log2->flushToDiskAfterDestruction(true);
+		AnalyticsLogPtr log2 = logger2->continueTransaction(log->getTxnId(),
+			log->getGroupName(), log->getCategory());
+		log2->flushToDiskAfterClose(true);
 		log2.reset();
 		
 		SystemTime::forceAll(TOMORROW);
-		log->flushToDiskAfterDestruction(true);
+		log->flushToDiskAfterClose(true);
 		log.reset();
 		
 		string data = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt");
@@ -172,8 +175,10 @@ namespace tut {
 		// reuses the ID.
 		AnalyticsLogPtr log = logger->newTransaction("foobar");
 		AnalyticsLogPtr log2 = logger2->newTransaction("foobar");
-		AnalyticsLogPtr log3 = logger3->continueTransaction(log->getTxnId());
-		AnalyticsLogPtr log4 = logger4->continueTransaction(log2->getTxnId());
+		AnalyticsLogPtr log3 = logger3->continueTransaction(log->getTxnId(),
+			log->getGroupName(), log->getCategory());
+		AnalyticsLogPtr log4 = logger4->continueTransaction(log2->getTxnId(),
+			log2->getGroupName(), log2->getCategory());
 		
 		ensure_equals(log->getTxnId(), log3->getTxnId());
 		ensure_equals(log2->getTxnId(), log4->getTxnId());
@@ -202,7 +207,7 @@ namespace tut {
 	TEST_METHOD(8) {
 		// It creates a file group_name.txt under the group directory.
 		AnalyticsLogPtr log = logger->newTransaction("foobar");
-		log->flushToDiskAfterDestruction(true);
+		log->flushToDiskAfterClose(true);
 		log.reset();
 		string data = readAll(loggingDir + "/1/" FOOBAR_MD5 "/group_name.txt");
 		ensure_equals(data, "foobar");
@@ -211,7 +216,7 @@ namespace tut {
 	TEST_METHOD(9) {
 		// It creates a file node_name.txt under the node directory.
 		AnalyticsLogPtr log = logger->newTransaction("foobar");
-		log->flushToDiskAfterDestruction(true);
+		log->flushToDiskAfterClose(true);
 		log.reset();
 		string data = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/node_name.txt");
 		ensure_equals(data, "localhost");

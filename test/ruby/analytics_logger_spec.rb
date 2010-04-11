@@ -10,6 +10,7 @@ describe AnalyticsLogger do
 	before :each do
 		@logger = AnalyticsLogger.new("/socket", "logging", "1234", "localhost")
 		@io = StringIO.new
+		@time = Time.utc(2010, 4, 11, 12, 56, 02)
 	end
 	
 	after :each do
@@ -17,14 +18,28 @@ describe AnalyticsLogger do
 		@io.close if !@io.closed?
 	end
 	
-	def mock_message_client(timestamp)
-		client = mock(:name => "MessageClient")
-		client.should_receive(:write).once.with("open log file", "foobar", timestamp, "localhost", :requests)
-		client.should_receive(:read).once.and_return(["ok"])
-		client.should_receive(:recv_io).once.and_return(@io)
-		client.should_receive(:close).once
-		MessageClient.should_receive(:new).once.with("logging", "1234", "/socket").and_return(client)
-		return client
+	def mock_connection
+		connection = mock(:name => "MessageClient")
+		@logger.should_receive(:connect).and_return do
+			@logger.instance_variable_get(:"@shared_data").client = connection
+		end
+		return connection
+	end
+	
+	if false
+	specify "#new_transaction returns a Log object, suitable for logging" do
+		AnalyticsLogger.should_receive(:current_time).any_number_of_times.and_return(@time)
+		connection = mock_connection
+		connection.should_receive(:write).
+			with("openTransaction",
+				an_instance_of(String), "foobar", :requests,
+				an_instance_of(String))
+		log = @logger.new_transaction("foobar")
+		connection.should_receive(:write).
+			with("log", log.txn_id, @time.to_i * 1_000_000 + @time.usec)
+		connection.should_receive(:write_scalar).
+			with("hello world")
+		log.message("hello world")
 	end
 	
 	specify "#continue_transaction opens the log file and returns a Log object, suitable for logging" do
@@ -84,5 +99,6 @@ describe AnalyticsLogger do
 			"  16 abcdef-5678 10 ATTACH\n" +
 			"  1b abcdef-5678 20 hello world\n" +
 			"  16 abcdef-5678 30 DETACH\n"
+	end
 	end
 end

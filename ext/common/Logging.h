@@ -157,7 +157,9 @@ private:
 	
 	AnalyticsLoggerSharedDataPtr sharedData;
 	string txnId;
-	bool shouldFlushToDiskAfterDestruction;
+	string groupName;
+	string category;
+	bool shouldFlushToDiskAfterClose;
 	
 	/**
 	 * Buffer must be at least txnId.size() + 1 + INT64_STR_BUFSIZE + 1 bytes.
@@ -190,10 +192,14 @@ private:
 public:
 	AnalyticsLog() { }
 	
-	AnalyticsLog(const AnalyticsLoggerSharedDataPtr &sharedData, const string &txnId) {
+	AnalyticsLog(const AnalyticsLoggerSharedDataPtr &sharedData, const string &txnId,
+		const string &groupName, const string &category)
+	{
 		this->sharedData = sharedData;
 		this->txnId      = txnId;
-		shouldFlushToDiskAfterDestruction = false;
+		this->groupName  = groupName;
+		this->category   = category;
+		shouldFlushToDiskAfterClose = false;
 	}
 	
 	~AnalyticsLog() {
@@ -226,7 +232,7 @@ public:
 					}
 				}
 				
-				if (shouldFlushToDiskAfterDestruction) {
+				if (shouldFlushToDiskAfterClose) {
 					vector<string> args;
 					sharedData->client.write("flush", NULL);
 					sharedData->client.read(args);
@@ -257,8 +263,8 @@ public:
 		}
 	}
 	
-	void flushToDiskAfterDestruction(bool value) {
-		shouldFlushToDiskAfterDestruction = value;
+	void flushToDiskAfterClose(bool value) {
+		shouldFlushToDiskAfterClose = value;
 	}
 	
 	bool isNull() const {
@@ -267,6 +273,14 @@ public:
 	
 	string getTxnId() const {
 		return txnId;
+	}
+	
+	string getGroupName() const {
+		return groupName;
+	}
+	
+	string getCategory() const {
+		return category;
 	}
 };
 
@@ -421,7 +435,7 @@ public:
 		}
 	}
 	
-	AnalyticsLogPtr newTransaction(const string &groupName, const StaticString &category = "requests") {
+	AnalyticsLogPtr newTransaction(const string &groupName, const string &category = "requests") {
 		if (socketFilename.empty()) {
 			return ptr(new AnalyticsLog());
 		} else {
@@ -460,8 +474,12 @@ public:
 			try {
 				char timestampStr[2 * sizeof(unsigned long long) + 1];
 				integerToHex<unsigned long long>(timestamp, timestampStr);
-				sharedData->client.write("newTransaction", groupName.c_str(), txnId,
-					category.c_str(), timestampStr, NULL);
+				sharedData->client.write("openTransaction",
+					txnId,
+					groupName.c_str(),
+					category.c_str(),
+					timestampStr,
+					NULL);
 			} catch (const SystemException &e) {
 				if (e.code() == EPIPE || e.code() == ECONNRESET) {
 					TRACE_POINT();
@@ -484,11 +502,14 @@ public:
 					throw;
 				}
 			}
-			return ptr(new AnalyticsLog(sharedData, string(txnId, end - txnId)));
+			return ptr(new AnalyticsLog(sharedData, string(txnId, end - txnId),
+				groupName, category));
 		}
 	}
 	
-	AnalyticsLogPtr continueTransaction(const string &txnId) {
+	AnalyticsLogPtr continueTransaction(const string &txnId, const string &groupName,
+		const string &category = "requests")
+	{
 		if (socketFilename.empty() || txnId.empty()) {
 			return ptr(new AnalyticsLog());
 		} else {
@@ -501,8 +522,12 @@ public:
 			try {
 				char timestampStr[2 * sizeof(unsigned long long) + 1];
 				integerToHex<unsigned long long>(SystemTime::getUsec(), timestampStr);
-				sharedData->client.write("continueTransaction", txnId.c_str(),
-					timestampStr, NULL);
+				sharedData->client.write("openTransaction",
+					txnId.c_str(),
+					groupName.c_str(),
+					category.c_str(),
+					timestampStr,
+					NULL);
 			} catch (const SystemException &e) {
 				if (e.code() == EPIPE || e.code() == ECONNRESET) {
 					TRACE_POINT();
@@ -525,7 +550,7 @@ public:
 					throw;
 				}
 			}
-			return ptr(new AnalyticsLog(sharedData, txnId));
+			return ptr(new AnalyticsLog(sharedData, txnId, groupName, category));
 		}
 	}
 	

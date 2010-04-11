@@ -124,6 +124,10 @@ public:
 		return len == other.len && memcmp(content, other.content, len) == 0;
 	}
 	
+	bool operator==(const string &other) const {
+		return len == other.size() && memcmp(content, other.data(), len) == 0;
+	}
+	
 	bool operator==(const char *other) const {
 		size_t other_len = strlen(other);
 		return len == other_len && memcmp(content, other, other_len) == 0;
@@ -131,6 +135,10 @@ public:
 	
 	bool operator!=(const StaticString &other) const {
 		return len != other.len || memcmp(content, other.content, len) != 0;
+	}
+	
+	bool operator!=(const string &other) const {
+		return len != other.size() || memcmp(content, other.data(), len) != 0;
 	}
 	
 	bool operator!=(const char *other) const {

@@ -127,8 +127,9 @@ class AnalyticsLogger
 			@shared_data.synchronize do
 				connect if !connected?
 				begin
-					@shared_data.client.write("newTransaction", group_name,
-						txn_id, category, AnalyticsLogger.timestamp_string)
+					@shared_data.client.write("openTransaction",
+						txn_id, group_name, category,
+						AnalyticsLogger.timestamp_string)
 					return Log.new(@shared_data, txn_id)
 				rescue
 					disconnect
@@ -138,15 +139,16 @@ class AnalyticsLogger
 		end
 	end
 	
-	def continue_transaction(txn_id)
+	def continue_transaction(txn_id, group_name, category = :requests)
 		if !@server_address || !txn_id
 			return Log.new
 		else
 			@shared_data.synchronize do
 				connect if !connected?
 				begin
-					@shared_data.client.write("continueTransaction",
-						txn_id, AnalyticsLogger.timestamp_string)
+					@shared_data.client.write("openTransaction",
+						txn_id, group_name, category,
+						AnalyticsLogger.timestamp_string)
 					return Log.new(@shared_data, txn_id)
 				rescue
 					disconnect
@@ -206,7 +208,7 @@ private
 	def random_token(length)
 		token = ""
 		@random_dev.read(length).each_char do |c|
-			token << RANDOM_CHARS[c.ord % RANDOM_CHARS.size]
+			token << RANDOM_CHARS[c[0].ord % RANDOM_CHARS.size]
 		end
 		return token
 	end

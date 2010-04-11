@@ -23,6 +23,12 @@ namespace tut {
 		ensure(!(StaticString("foo") == StaticString("bar")));
 		ensure(!(StaticString("barr") == StaticString("bar")));
 		ensure(!(StaticString("bar") == StaticString("barr")));
+		
+		ensure(StaticString("") == string(""));
+		ensure(StaticString("foo") == string("foo"));
+		ensure(!(StaticString("foo") == string("bar")));
+		ensure(!(StaticString("barr") == string("bar")));
+		ensure(!(StaticString("bar") == string("barr")));
 	}
 	
 	TEST_METHOD(2) {
@@ -38,6 +44,12 @@ namespace tut {
 		ensure(StaticString("foo") != StaticString("bar"));
 		ensure(StaticString("barr") != StaticString("bar"));
 		ensure(StaticString("bar") != StaticString("barr"));
+		
+		ensure(!(StaticString("") != string("")));
+		ensure(!(StaticString("foo") != string("foo")));
+		ensure(StaticString("foo") != string("bar"));
+		ensure(StaticString("barr") != string("bar"));
+		ensure(StaticString("bar") != string("barr"));
 	}
 	
 	TEST_METHOD(3) {

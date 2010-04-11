@@ -646,8 +646,9 @@ private
 	
 	def prepare_request(headers)
 		if @analytics_logger && headers[PASSENGER_TXN_ID]
-			puts "##### transaction #{headers[PASSENGER_TXN_ID]}"
-			log = @analytics_logger.continue_transaction(headers[PASSENGER_TXN_ID])
+			log = @analytics_logger.continue_transaction(
+				headers[PASSENGER_TXN_ID],
+				headers[PASSENGER_GROUP_NAME])
 			headers[PASSENGER_ANALYTICS_WEB_LOG] = log
 			Thread.current[PASSENGER_ANALYTICS_WEB_LOG] = log
 			if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS

@@ -340,10 +340,13 @@ struct PoolOptions {
 		debugger         = vec[startIndex + offset] == "true";       offset += 2;
 		if (vec[startIndex + offset - 1] == "analytics_log_txn_id") {
 			if (analyticsLogger != NULL) {
-				string txnId = vec[startIndex + offset];
-				log = analyticsLogger->continueTransaction(txnId);
+				string txnId     = vec[startIndex + offset];
+				string groupName = vec[startIndex + offset + 2];
+				string category  = vec[startIndex + offset + 4];
+				log = analyticsLogger->continueTransaction(txnId,
+					groupName, category);
 			}
-			offset += 2;
+			offset += 6;
 		}
 		initiateSession  = vec[startIndex + offset] == "true";       offset += 2;
 		printExceptions  = vec[startIndex + offset] == "true";       offset += 2;
@@ -390,6 +393,8 @@ struct PoolOptions {
 		appendKeyValue4(vec, "debugger",           debugger);
 		if (log) {
 			appendKeyValue(vec, "analytics_log_txn_id", log->getTxnId());
+			appendKeyValue(vec, "analytics_log_group_name", log->getGroupName());
+			appendKeyValue(vec, "analytics_log_category", log->getCategory());
 		}
 		appendKeyValue4(vec, "initiate_session",   initiateSession);
 		appendKeyValue4(vec, "print_exceptions",   printExceptions);

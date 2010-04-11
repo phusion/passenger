@@ -110,6 +110,8 @@ private:
 	struct Transaction {
 		LogFilePtr logFile;
 		string txnId;
+		string groupName;
+		string category;
 		unsigned int refcount;
 	};
 	
@@ -406,14 +408,14 @@ protected:
 				}
 			}
 			
-		} else if (args[0] == "newTransaction") {
+		} else if (args[0] == "openTransaction") {
 			if (OXT_UNLIKELY( !expectingArgumentsCount(eclient, args, 5)
 			               || !expectingInitialized(eclient) )) {
 				return true;
 			}
 			
-			StaticString groupName = args[1];
-			string       txnId     = args[2];
+			string       txnId     = args[1];
+			StaticString groupName = args[2];
 			StaticString category  = args[3];
 			StaticString timestamp = args[4];
 			
@@ -422,61 +424,51 @@ protected:
 				disconnect(eclient);
 				return true;
 			}
-			if (OXT_UNLIKELY( !supportedCategory(category) )) {
-				sendErrorToClient(eclient, "Unsupported category");
+			if (OXT_UNLIKELY( client->openTransactions.find(txnId) !=
+				client->openTransactions.end()))
+			{
+				sendErrorToClient(eclient, "Cannot open transaction: transaction already opened in this connection");
 				disconnect(eclient);
 				return true;
 			}
 			
-			string filename = determineFilename(groupName, client->nodeId, category, txnId);
-			TransactionMap::iterator it = transactions.find(txnId);
-			if (OXT_LIKELY( it == transactions.end() )) {
-				TransactionPtr transaction = ptr(new Transaction());
+			TransactionPtr transaction = transactions[txnId];
+			if (transaction == NULL) {
+				if (OXT_UNLIKELY( !supportedCategory(category) )) {
+					sendErrorToClient(eclient, "Unsupported category");
+					disconnect(eclient);
+					return true;
+				}
+				
+				string filename = determineFilename(groupName, client->nodeId,
+					category, txnId);
+				transaction.reset(new Transaction());
 				if (!openLogFileWithCache(filename, transaction->logFile)) {
 					setupGroupAndNodeDir(client, groupName);
 				}
-				transaction->txnId    = txnId;
-				transaction->refcount = 1;
-				transactions[txnId]   = transaction;
-				client->openTransactions.insert(txnId);
-				writeLogEntry(client, transaction, timestamp,
-					"ATTACH");
+				transaction->txnId     = txnId;
+				transaction->groupName = groupName;
+				transaction->category  = category;
+				transaction->refcount  = 1;
+				transactions[txnId]    = transaction;
 			} else {
-				sendErrorToClient(eclient,
-					"Cannot open new transaction: transaction ID already exists");
-				disconnect(eclient);
-			}
-			
-		} else if (args[0] == "continueTransaction") {
-			if (OXT_UNLIKELY( !expectingArgumentsCount(eclient, args, 3)
-			               || !expectingInitialized(eclient) )) {
-				return true;
-			}
-			
-			string txnId = args[1];
-			StaticString timestamp = args[2];
-			
-			TransactionMap::iterator it = transactions.find(txnId);
-			if (OXT_UNLIKELY( it == transactions.end() )) {
-				sendErrorToClient(eclient,
-					"Cannot continue transaction " + txnId +
-					": transaction does not exist");
-				disconnect(eclient);
-			} else {
-				set<string>::const_iterator sit = client->openTransactions.find(txnId);
-				if (OXT_LIKELY(sit == client->openTransactions.end())) {
-					TransactionPtr &transaction = it->second;
-					transaction->refcount++;
-					client->openTransactions.insert(txnId);
-					writeLogEntry(client, transaction, timestamp,
-						"ATTACH");
-				} else {
-					sendErrorToClient(eclient,
-						"Cannot continue transaction: transaction already opened in this connection");
+				if (OXT_UNLIKELY( groupName != transaction->groupName )) {
+					sendErrorToClient(eclient, "Cannot open transaction: transaction already opened with a different group name");
 					disconnect(eclient);
+					return true;
 				}
+				if (OXT_UNLIKELY( category != transaction->category )) {
+					sendErrorToClient(eclient, "Cannot open transaction: transaction already opened with a different category name");
+					disconnect(eclient);
+					return true;
+				}
+				
+				transaction->refcount++;
 			}
-		
+			client->openTransactions.insert(txnId);
+			writeLogEntry(client, transaction, timestamp,
+				"ATTACH");
+			
 		} else if (args[0] == "closeTransaction") {
 			if (OXT_UNLIKELY( !expectingArgumentsCount(eclient, args, 3)
 			               || !expectingInitialized(eclient) )) {
