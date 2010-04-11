@@ -182,14 +182,23 @@ main(int argc, char *argv[]) {
 		ServerInstanceDir::GenerationPtr generation;
 		AccountsDatabasePtr  accountsDatabase;
 		FileDescriptor       serverSocketFd;
+		string               loggingSocketFilename;
 		struct passwd       *user;
 		struct group        *group;
+		int                  ret;
 		
 		eventLoop = createEventLoop();
 		serverInstanceDir = ptr(new ServerInstanceDir(webServerPid, tempDir, false));
 		generation = serverInstanceDir->getGeneration(generationNumber);
 		accountsDatabase = ptr(new AccountsDatabase());
-		serverSocketFd = createUnixServer((generation->getPath() + "/logging.socket").c_str());
+		loggingSocketFilename = generation->getPath() + "/logging.socket";
+		serverSocketFd = createUnixServer(loggingSocketFilename.c_str());
+		do {
+			ret = chmod(loggingSocketFilename.c_str(), S_ISVTX |
+				S_IRUSR | S_IWUSR | S_IXUSR |
+				S_IRGRP | S_IWGRP | S_IXGRP |
+				S_IROTH | S_IWOTH | S_IXOTH);
+		} while (ret == -1 && errno == EINTR);
 		
 		/* Sanity check user accounts. */
 		
