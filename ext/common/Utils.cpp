@@ -93,6 +93,29 @@ namespace {
 }
 
 
+string
+pointerToIntString(void *pointer) {
+	// Use wierd union construction to avoid compiler warnings.
+	if (sizeof(void *) == sizeof(unsigned int)) {
+		union {
+			void *pointer;
+			unsigned int value;
+		} u;
+		u.pointer = pointer;
+		return toString(u.value);
+	} else if (sizeof(void *) == sizeof(unsigned long long)) {
+		union {
+			void *pointer;
+			unsigned long long value;
+		} u;
+		u.pointer = pointer;
+		return toString(u.value);
+	} else {
+		P_ERROR("Pointer size unsupported...");
+		abort();
+	}
+}
+
 int
 atoi(const string &s) {
 	return ::atoi(s.c_str());

@@ -216,6 +216,17 @@ private:
 		makeDirTree(path, "u=rwxs,g=rx,o=rx");
 	}
 	
+	bool isDirectory(const string &dir, struct dirent *entry) const {
+		#ifdef __sun__
+			string path = dir;
+			path.append("/");
+			path.append(entry->d_name);
+			return getFileType(path) == FT_DIRECTORY;
+		#else
+			return entry->d_type == DT_DIR;
+		#endif
+	}
+	
 public:
 	ServerInstanceDir(pid_t webServerPid, const string &parentDir = "", bool owner = true) {
 		string theParentDir;
@@ -302,7 +313,7 @@ public:
 				e, path);
 		}
 		while ((entry = readdir(dir)) != NULL) {
-			if (entry->d_type == DT_DIR
+			if (isDirectory(path, entry)
 			 && strncmp(entry->d_name, "generation-", sizeof("generation-") - 1) == 0) {
 				const char *numberString = entry->d_name + sizeof("generation-") - 1;
 				int number = atoi(numberString);

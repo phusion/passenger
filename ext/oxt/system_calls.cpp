@@ -374,7 +374,10 @@ syscalls::sleep(unsigned int seconds) {
 	} else if (errno == EINTR) {
 		return rem.tv_sec;
 	} else {
-		return -1;
+		// No sure what to do here. There's an error
+		// but we can't return -1. Let's just hope
+		// this never happens.
+		return 0;
 	}
 }
 

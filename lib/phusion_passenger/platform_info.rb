@@ -27,6 +27,7 @@ module PhusionPassenger
 # provides that information through constants.
 module PlatformInfo
 private
+	THIS_DIR = File.expand_path(File.dirname(__FILE__))
 	THIS_FILE_MTIME = File.stat(__FILE__).mtime
 	
 	def self.private_class_method(name)
@@ -65,7 +66,8 @@ private
 		   def self.#{method}(*args)                                     # def self.httpd(*args)
 		      if args.empty?                                             #    if args.empty?
 		         if !#{check_variable_name}                              #       if !@@has_memoized_httpd
-		            cache_file = ".cache/#{method}"                      #          cache_file = ".cache/httpd"
+		            cache_dir = File.join(THIS_DIR, ".cache")            #          cache_dir = File.join(THIS_DIR, ".cache")
+		            cache_file = File.join(cache_dir, "#{method}")       #          cache_file = File.join(cache_dir, "httpd")
 		            read_from_cache_file = false                         #          read_from_cache_file = false
 		            if #{cache_to_disk} && File.exist?(cache_file)       #          if #{cache_to_disk} && File.exist?(cache_file)
 		               cache_file_stat = File.stat(cache_file)           #             cache_file_stat = File.stat(cache_file)
@@ -82,8 +84,8 @@ private
 		               #{check_variable_name} = true                     #             @@has_memoized_httpd = true
 		               if #{cache_to_disk}                               #             if #{cache_to_disk}
 		                  begin                                          #                begin
-		                     if !File.directory?(".cache")               #                   if !File.directory?(".cache")
-		                        Dir.mkdir(".cache")                      #                      Dir.mkdir(".cache")
+		                     if !File.directory?(cache_dir)              #                   if !File.directory?(cache_dir)
+		                        Dir.mkdir(cache_dir)                     #                      Dir.mkdir(cache_dir)
 		                     end                                         #                   end
 		                     File.open(cache_file, "wb") do |f|          #                   File.open(cache_file, "wb") do |f|
 		                        f.write(Marshal.dump(#{variable_name}))  #                      f.write(Marshal.dump(@@memoized_httpd))
