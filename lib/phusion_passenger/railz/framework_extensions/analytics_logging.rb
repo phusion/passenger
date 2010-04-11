@@ -74,7 +74,7 @@ module AnalyticsLogging
 				alias_method_chain :benchmark, :passenger
 			end
 		end
-		if ar_abstract_adapter_extension_installable? && false
+		if ar_abstract_adapter_extension_installable?
 			require 'phusion_passenger/railz/framework_extensions/analytics_logging/ar_abstract_adapter_extension'
 			ActiveRecord::ConnectionAdapters::AbstractAdapter.class_eval do
 				include ARAbstractAdapterExtension

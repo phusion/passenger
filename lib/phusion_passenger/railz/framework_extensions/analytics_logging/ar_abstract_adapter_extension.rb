@@ -11,7 +11,7 @@ protected
 		if log
 			sql_base64 = [sql].pack("m")
 			sql_base64.strip!
-			log.measure("DB BENCHMARK: #{sql_base64} #{name}") do
+			log.measure("DB BENCHMARK: #{sql_base64} #{name.strip}") do
 				log_without_passenger(sql, name, &block)
 			end
 		else
