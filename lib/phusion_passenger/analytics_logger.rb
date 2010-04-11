@@ -207,8 +207,8 @@ private
 	
 	def random_token(length)
 		token = ""
-		@random_dev.read(length).each_char do |c|
-			token << RANDOM_CHARS[c[0].ord % RANDOM_CHARS.size]
+		@random_dev.read(length).each_byte do |c|
+			token << RANDOM_CHARS[c % RANDOM_CHARS.size]
 		end
 		return token
 	end
