@@ -25,6 +25,7 @@
 require 'socket'
 require 'fcntl'
 require 'phusion_passenger'
+require 'phusion_passenger/constants'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/message_client'
 require 'phusion_passenger/utils'
@@ -106,8 +107,6 @@ class AbstractRequestHandler
 	REQUEST_METHOD      = 'REQUEST_METHOD'      # :nodoc:
 	PING                = 'PING'                # :nodoc:
 	PASSENGER_CONNECT_PASSWORD  = "PASSENGER_CONNECT_PASSWORD"   # :nodoc:
-	PASSENGER_TXN_ID            = "PASSENGER_TXN_ID"             # :nodoc:
-	PASSENGER_GROUP_NAME        = "PASSENGER_GROUP_NAME"         # :nodoc:
 	
 	OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS = ObjectSpace.respond_to?(:live_objects)
 	OBJECT_SPACE_SUPPORTS_ALLOCATED_OBJECTS = ObjectSpace.respond_to?(:allocated_objects)
@@ -646,11 +645,13 @@ private
 	
 	def prepare_request(headers)
 		if @analytics_logger && headers[PASSENGER_TXN_ID]
-			log = @analytics_logger.continue_transaction(
-				headers[PASSENGER_TXN_ID],
-				headers[PASSENGER_GROUP_NAME])
+			txn_id = headers[PASSENGER_TXN_ID]
+			group_name = headers[PASSENGER_GROUP_NAME]
+			log = @analytics_logger.continue_transaction(txn_id, group_name)
 			headers[PASSENGER_ANALYTICS_WEB_LOG] = log
 			Thread.current[PASSENGER_ANALYTICS_WEB_LOG] = log
+			Thread.current[PASSENGER_TXN_ID] = txn_id
+			Thread.current[PASSENGER_GROUP_NAME] = group_name
 			if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS
 				log.message("Initial objects on heap: #{ObjectSpace.live_objects}")
 			end

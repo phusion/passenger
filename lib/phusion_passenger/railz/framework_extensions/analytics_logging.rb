@@ -1,3 +1,5 @@
+require 'phusion_passenger/constants'
+
 module PhusionPassenger
 module Railz
 module FrameworkExtensions
@@ -81,9 +83,9 @@ module AnalyticsLogging
 		end
 	end
 	
-	def self.new_transaction_log(request, category = :requests)
-		if request.env["PASSENGER_TXN_ID"]
-			group_name = request.env["PASSENGER_GROUP_NAME"]
+	def self.new_transaction_log(env, category = :requests)
+		if env[PASSENGER_TXN_ID]
+			group_name = env[PASSENGER_GROUP_NAME]
 			log = @@analytics_logger.new_transaction(group_name, category)
 			begin
 				yield log

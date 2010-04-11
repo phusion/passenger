@@ -9,7 +9,7 @@ protected
 		# When a controller action crashes, log the exception.
 		# But ignore routing errors (404s and stuff).
 		if !defined?(ActionController::RoutingError) || !exception.is_a?(ActionController::RoutingError)
-			AnalyticsLogging.new_transaction_log(request, :exceptions) do |log|
+			AnalyticsLogging.new_transaction_log(request.env, :exceptions) do |log|
 				request_txn_id = request["PASSENGER_TXN_ID"]
 				message = exception.message
 				message = exception.to_s if message.empty?
