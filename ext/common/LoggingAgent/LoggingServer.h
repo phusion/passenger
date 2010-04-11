@@ -112,6 +112,7 @@ private:
 		string txnId;
 		string groupName;
 		string category;
+		unsigned int writeCount;
 		unsigned int refcount;
 	};
 	
@@ -318,14 +319,19 @@ private:
 	{
 		// TODO: validate timestamp
 		// TODO: validate contents: must be valid ascii and containing no newlines
+		char writeCountStr[sizeof(unsigned int) * 2 + 1];
+		integerToHex(transaction->writeCount, writeCountStr);
 		StaticString args[] = {
 			transaction->txnId,
 			" ",
 			timestamp,
 			" ",
+			writeCountStr,
+			" ",
 			data,
 			"\n"
 		};
+		transaction->writeCount++;
 		transaction->logFile->append(args, sizeof(args) / sizeof(StaticString));
 	}
 	
@@ -446,11 +452,12 @@ protected:
 				if (!openLogFileWithCache(filename, transaction->logFile)) {
 					setupGroupAndNodeDir(client, groupName);
 				}
-				transaction->txnId     = txnId;
-				transaction->groupName = groupName;
-				transaction->category  = category;
-				transaction->refcount  = 1;
-				transactions[txnId]    = transaction;
+				transaction->txnId      = txnId;
+				transaction->groupName  = groupName;
+				transaction->category   = category;
+				transaction->writeCount = 0;
+				transaction->refcount   = 1;
+				transactions[txnId]     = transaction;
 			} else {
 				if (OXT_UNLIKELY( groupName != transaction->groupName )) {
 					sendErrorToClient(eclient, "Cannot open transaction: transaction already opened with a different group name");
