@@ -32,8 +32,8 @@
 #include <oxt/system_calls.hpp>
 
 #include "StaticString.h"
-#include "Utils.h"
 #include "Exceptions.h"
+#include "Utils/StrIntUtils.h"
 
 
 /**

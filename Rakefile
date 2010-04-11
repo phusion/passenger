@@ -228,10 +228,14 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 		'Utils/SystemTime.o' => %w(
 			Utils/SystemTime.cpp
 			Utils/SystemTime.h),
+		'Utils/StrIntUtils.o' => %w(
+			Utils/StrIntUtils.cpp
+			Utils/StrIntUtils.h),
 		'Utils.o' => %w(
 			Utils.cpp
 			Utils.h
 			Utils/Base64.h
+			Utils/StrIntUtils.h
 			ResourceLocator.h),
 		'AccountsDatabase.o' => %w(
 			AccountsDatabase.cpp

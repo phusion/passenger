@@ -1,5 +1,6 @@
 #include "TestSupport.h"
 #include "Utils.h"
+#include "Utils/StrIntUtils.h"
 #include "Utils/MemZeroGuard.h"
 #include <sys/types.h>
 #include <sys/stat.h>

@@ -29,7 +29,8 @@
 #include <vector>
 #include <boost/shared_ptr.hpp>
 #include "StaticString.h"
-#include "Utils.h"
+#include "Exceptions.h"
+#include "Utils/StrIntUtils.h"
 
 namespace Passenger {
 

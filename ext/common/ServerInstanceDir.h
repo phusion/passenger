@@ -39,6 +39,7 @@
 
 #include "Exceptions.h"
 #include "Utils.h"
+#include "Utils/StrIntUtils.h"
 
 namespace Passenger {
 

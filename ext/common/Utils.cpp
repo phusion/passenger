@@ -45,6 +45,7 @@
 #include "Utils.h"
 #include "Utils/Base64.h"
 #include "Utils/CachedFileStat.hpp"
+#include "Utils/StrIntUtils.h"
 
 #define SPAWN_SERVER_SCRIPT_NAME "passenger-spawn-server"
 
@@ -90,94 +91,6 @@ namespace {
 			committed = true;
 		}
 	};
-}
-
-
-string
-pointerToIntString(void *pointer) {
-	// Use wierd union construction to avoid compiler warnings.
-	if (sizeof(void *) == sizeof(unsigned int)) {
-		union {
-			void *pointer;
-			unsigned int value;
-		} u;
-		u.pointer = pointer;
-		return toString(u.value);
-	} else if (sizeof(void *) == sizeof(unsigned long long)) {
-		union {
-			void *pointer;
-			unsigned long long value;
-		} u;
-		u.pointer = pointer;
-		return toString(u.value);
-	} else {
-		P_ERROR("Pointer size unsupported...");
-		abort();
-	}
-}
-
-int
-atoi(const string &s) {
-	return ::atoi(s.c_str());
-}
-
-long
-atol(const string &s) {
-	return ::atol(s.c_str());
-}
-
-unsigned long long
-stringToULL(const StaticString &str) {
-	unsigned long long result = 0;
-	string::size_type i = 0;
-	const char *data = str.data();
-	
-	while (data[i] == ' ' && i < str.size()) {
-		i++;
-	}
-	while (data[i] >= '0' && data[i] <= '9' && i < str.size()) {
-		result *= 10;
-		result += data[i] - '0';
-		i++;
-	}
-	return result;
-}
-
-unsigned long long
-hexToULL(const StaticString &hex) {
-	unsigned long long result = 0;
-	string::size_type i = 0;
-	bool done = false;
-	
-	while (i < hex.size() && !done) {
-		char c = hex[i];
-		if (c >= '0' && c <= '9') {
-			result *= 16;
-			result += c - '0';
-		} else if (c >= 'a' && c <= 'f') {
-			result *= 16;
-			result += 10 + (c - 'a');
-		} else if (c >= 'A' && c <= 'Z') {
-			result *= 16;
-			result += 10 + (c - 'A');
-		} else {
-			done = true;
-		}
-		i++;
-	}
-	return result;
-}
-
-void
-split(const string &str, char sep, vector<string> &output) {
-	string::size_type start, pos;
-	start = 0;
-	output.clear();
-	while ((pos = str.find(sep, start)) != string::npos) {
-		output.push_back(str.substr(start, pos - start));
-		start = pos + 1;
-	}
-	output.push_back(str.substr(start));
 }
 
 bool
@@ -729,43 +642,6 @@ getHostName() {
 	} else {
 		int e = errno;
 		throw SystemException("Unable to query the system's host name", e);
-	}
-}
-
-string
-fillInMiddle(unsigned int max, const string &prefix, const string &middle, const string &postfix) {
-	if (max <= prefix.size() + postfix.size()) {
-		throw ArgumentException("Impossible to build string with the given size constraint.");
-	}
-	
-	unsigned int fillSize = max - (prefix.size() + postfix.size());
-	if (fillSize > middle.size()) {
-		return prefix + middle + postfix;
-	} else {
-		return prefix + middle.substr(0, fillSize) + postfix;
-	}
-}
-
-string
-toHex(const StaticString &data) {
-	string result(data.size() * 2, '\0');
-	toHex(data, (char *) result.data());
-	return result;
-}
-
-static const char hex_chars[] = {
-	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-	'a', 'b', 'c', 'd', 'e', 'f'
-};
-
-void
-toHex(const StaticString &data, char *output) {
-	const char *data_buf = data.c_str();
-	string::size_type i;
-	
-	for (i = 0; i < data.size(); i++) {
-		output[i * 2] = hex_chars[(unsigned char) data_buf[i] / 16];
-		output[i * 2 + 1] = hex_chars[(unsigned char) data_buf[i] % 16];
 	}
 }
 
