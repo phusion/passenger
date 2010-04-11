@@ -140,10 +140,10 @@ namespace tut {
 		
 		string yesterdayData = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt");
 		string tomorrowData = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/14/12/log.txt");
-		ensure("(1)", yesterdayData.find(timestampString(YESTERDAY) + " message 1\n") != string::npos);
-		ensure("(2)", yesterdayData.find(timestampString(TODAY) + " message 2\n") != string::npos);
-		ensure("(3)", yesterdayData.find(timestampString(TOMORROW) + " message 3\n") != string::npos);
-		ensure("(4)", tomorrowData.find(timestampString(TOMORROW) + " message 4\n") != string::npos);
+		ensure("(1)", yesterdayData.find(timestampString(YESTERDAY) + " 1 message 1\n") != string::npos);
+		ensure("(2)", yesterdayData.find(timestampString(TODAY) + " 2 message 2\n") != string::npos);
+		ensure("(3)", yesterdayData.find(timestampString(TOMORROW) + " 4 message 3\n") != string::npos);
+		ensure("(4)", tomorrowData.find(timestampString(TOMORROW) + " 1 message 4\n") != string::npos);
 	}
 	
 	TEST_METHOD(4) {
@@ -164,10 +164,10 @@ namespace tut {
 		log.reset();
 		
 		string data = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt");
-		ensure("(1)", data.find(timestampString(YESTERDAY) + " ATTACH\n") != string::npos);
-		ensure("(2)", data.find(timestampString(TODAY) + " ATTACH\n") != string::npos);
-		ensure("(3)", data.find(timestampString(TODAY) + " DETACH\n") != string::npos);
-		ensure("(4)", data.find(timestampString(TOMORROW) + " DETACH\n") != string::npos);
+		ensure("(1)", data.find(timestampString(YESTERDAY) + " 0 ATTACH\n") != string::npos);
+		ensure("(2)", data.find(timestampString(TODAY) + " 1 ATTACH\n") != string::npos);
+		ensure("(3)", data.find(timestampString(TODAY) + " 2 DETACH\n") != string::npos);
+		ensure("(4)", data.find(timestampString(TOMORROW) + " 3 DETACH\n") != string::npos);
 	}
 	
 	TEST_METHOD(5) {
