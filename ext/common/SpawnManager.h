@@ -301,11 +301,12 @@ private:
 		pid_t appPid;
 		int i, nServerSockets, ownerPipe;
 		Process::SocketInfoMap serverSockets;
-		string detachKey = Base64::encode(random.generateByteString(32));
+		string detachKey = random.generateAsciiString(43);
 		// The connect password must be a URL-friendly string because users will
 		// insert it in HTTP headers.
-		string connectPassword = Base64::encodeForUrl(random.generateByteString(32));
-		string gupid = random.generateAsciiString(11) + "-" + toString(SystemTime::get());
+		string connectPassword = random.generateAsciiString(43);
+		string gupid = integerToHex(SystemTime::get() / 60) + "-" +
+			random.generateAsciiString(11);
 		AccountPtr account;
 		function<void ()> destructionCallback;
 		
