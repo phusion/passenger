@@ -4,6 +4,7 @@ Release 2.2.12
  * Improved Bundler support.
    Previous versions might not be able to correctly load gems bundled
    by Bundler.
+ * Fixed some Ruby 1.9 tempfile.rb compatibility problems.
 
 
 Release 2.2.11
