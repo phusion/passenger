@@ -47,7 +47,6 @@
 #include <limits.h>
 #include <grp.h>
 #include <signal.h>
-#include <termios.h>
 #ifdef HAVE_ALLOCA_H
 	#include <alloca.h>
 #endif
@@ -57,13 +56,6 @@
 	#include <sys/event.h>
 	#include <sys/time.h>
 #endif
-
-/* These functions are defined in pty.h (Linux) or util.h (OS X, BSD) but unfortunately
- * Ruby itself has a header called util.h so we can't #include that. Here we define
- * the function prototypes ourselves.
- */
-extern int openpty(int *amaster, int *aslave, char *name, struct termios *termp, struct winsize *winp);
-extern int login_tty(int fd);
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #ifndef RARRAY_LEN
@@ -628,125 +620,6 @@ process_times(VALUE self) {
 	return rb_struct_new(S_ProcessTimes, rb_ull2inum(utime), rb_ull2inum(stime));
 }
 
-typedef struct {
-	const char **command_ary;
-	int master;
-	int slave;
-} SpawnInPty;
-
-static VALUE
-real_spawn_in_pty(VALUE _arg) {
-	SpawnInPty *arg = (SpawnInPty *) _arg;
-	int ret, master, slave, e;
-	struct termios termios;
-	VALUE result, master_io, slave_io;
-	sigset_t signal_set;
-	pid_t pid;
-	long i;
-	
-	ret = openpty(&master, &slave, NULL, &termios, NULL);
-	if (ret == -1) {
-		rb_sys_fail("openpty()");
-		return Qnil;
-	}
-	
-	tcgetattr(master, &termios);
-	cfmakeraw(&termios);
-	termios.c_lflag = termios.c_lflag & ~ECHO;
-	termios.c_lflag = termios.c_lflag & ~ECHONL;
-	tcsetattr(master, TCSANOW, &termios);
-	
-	pid = fork();
-	if (pid == 0) {
-		/* Child */
-		close(master);
-		login_tty(slave);
-		for (i = sysconf(_SC_OPEN_MAX) - 1; i >= 2; i--) {
-			close((int) i);
-		}
-		
-		ioctl(0, TIOCSCTTY, (const char *) 0);
-		tcsetpgrp(0, getpid());
-		setenv("TERM", "xterm", 1);
-		
-		sigemptyset(&signal_set);
-		do {
-			ret = sigprocmask(SIG_SETMASK, &signal_set, NULL);
-		} while (ret == -1 && errno == EINTR);
-		
-		execvp(arg->command_ary[0], (char * const *) arg->command_ary);
-		e = errno;
-		fprintf(stderr, "Cannot execute %s: %s (%d)\n",
-			arg->command_ary[0], strerror(e), e);
-		fflush(stderr);
-		_exit(1);
-		
-	} else if (pid == -1) {
-		/* Error */
-		close(master);
-		close(slave);
-		rb_sys_fail("fork()");
-		return Qnil;
-		
-	} else {
-		/* Parent */
-		arg->master = master;
-		arg->slave  = slave;
-		
-		master_io = rb_funcall(rb_cIO, rb_intern("for_fd"), 2,
-			INT2NUM(master), rb_str_new2("r+"));
-		arg->master = -1;
-		rb_funcall(master_io, rb_intern("sync="), 1, Qtrue);
-		
-		slave_io = rb_funcall(rb_cIO, rb_intern("for_fd"), 2,
-			INT2NUM(slave), rb_str_new2("r+"));
-		arg->slave = -1;
-		rb_funcall(slave_io, rb_intern("sync="), 1, Qtrue);
-		
-		result = rb_ary_new();
-		rb_ary_push(result, master_io);
-		rb_ary_push(result, slave_io);
-		rb_ary_push(result, INT2NUM(pid));
-		return result;
-	}
-}
-
-static VALUE
-spawn_in_pty(VALUE self, VALUE command) {
-	SpawnInPty arg;
-	VALUE entry, result;
-	int status;
-	long i;
-	
-	Check_Type(command, T_ARRAY);
-	arg.command_ary = alloca(sizeof(const char *) * (RARRAY_LEN(command) + 1));
-	for (i = 0; i < RARRAY_LEN(command); i++) {
-		entry = rb_ary_entry(command, i);
-		Check_Type(entry, T_STRING);
-		arg.command_ary[i] = RSTRING_PTR(entry);
-	}
-	arg.command_ary[i] = NULL;
-	arg.master = -1;
-	
-	result = rb_protect(real_spawn_in_pty, (VALUE) &arg, &status);
-	if (status) {
-		if (arg.master != -1) {
-			close(arg.master);
-		}
-		if (arg.slave != -1) {
-			close(arg.slave);
-		}
-		rb_jump_tag(status);
-	} else {
-		return result;
-	}
-}
-
-static VALUE
-f_tcflush(VALUE self, VALUE fd) {
-	return INT2NUM(tcflush(NUM2INT(fd), TCIOFLUSH));
-}
-
 #if defined(HAVE_KQUEUE) || defined(IN_DOXYGEN)
 typedef struct {
 	VALUE klass;
@@ -1145,8 +1018,6 @@ Init_native_support() {
 	rb_define_singleton_method(mNativeSupport, "writev3", f_writev3, 4);
 	rb_define_singleton_method(mNativeSupport, "switch_user", switch_user, 3);
 	rb_define_singleton_method(mNativeSupport, "process_times", process_times, 0);
-	rb_define_singleton_method(mNativeSupport, "spawn_in_pty", spawn_in_pty, 1);
-	rb_define_singleton_method(mNativeSupport, "tcflush", f_tcflush, 1);
 	
 	#ifdef HAVE_KQUEUE
 		cFileSystemWatcher = rb_define_class_under(mNativeSupport,
