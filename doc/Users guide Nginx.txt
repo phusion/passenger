@@ -1168,7 +1168,7 @@ the request ending up at a different web server in the cluster.
 
 ===== Does passenger_pre_start support https:// URLs? =====
 
-At this moment, no.
+Yes. And it does not perform any certificate validation.
 
 === Ruby on Rails-specific options ===
 [[RailsEnv]]

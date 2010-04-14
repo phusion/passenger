@@ -41,13 +41,23 @@ end
 require 'socket'
 path = uri.path.empty? ? "/" : uri.path
 socket = TCPSocket.new('127.0.0.1', uri.port)
+if uri.scheme == 'https'
+	require 'openssl'
+	socket = OpenSSL::SSL::SSLSocket.new(socket)
+	socket.sync_close = true
+	socket.connect
+end
 begin
 	socket.write("HEAD #{path} HTTP/1.1\r\n")
 	socket.write("Host: #{uri.host}\r\n")
 	socket.write("Connection: close\r\n")
 	socket.write("\r\n")
-	socket.close_write
-	socket.read
+	if socket.respond_to?(:close_write)
+		socket.close_write
+		socket.read
+	else
+		socket.readline
+	end
 ensure
 	socket.close
 end

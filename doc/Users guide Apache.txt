@@ -1384,7 +1384,7 @@ the request ending up at a different web server in the cluster.
 
 ===== Does PassengerPreStart support https:// URLs? =====
 
-At this moment, no.
+Yes. And it does not perform any certificate validation.
 
 [[PassengerHighPerformance]]
 ==== PassengerHighPerformance <on|off> ====
