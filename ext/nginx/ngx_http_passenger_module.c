@@ -142,20 +142,29 @@ save_master_process_pid(ngx_cycle_t *cycle) {
 static void
 starting_helper_server_after_fork(void *arg) {
     ngx_cycle_t *cycle = (void *) arg;
-    ngx_str_t   *log_filename;
+    char        *log_filename;
     FILE        *log_file;
     
     /* At this point, stdout and stderr may still point to the console.
      * Make sure that they're both redirected to the log file.
      */
     log_file = NULL;
-    log_filename = &cycle->new_log.file->name;
-    if (log_filename->len > 0) {
-        log_file = fopen((const char *) log_filename->data, "a");
+    if (cycle->new_log.file->name.len > 0) {
+        log_filename = ngx_str_null_terminate(&cycle->new_log.file->name);
+        log_file = fopen((const char *) log_filename, "a");
         if (log_file == NULL) {
             ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
                           "could not open the error log file for writing");
         }
+        free(log_filename);
+    } else if (cycle->log != NULL && cycle->log->file->name.len > 0) {
+        log_filename = ngx_str_null_terminate(&cycle->log->file->name);
+        log_file = fopen((const char *) log_filename, "a");
+        if (log_file == NULL) {
+            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                          "could not open the error log file for writing");
+        }
+        free(log_filename);
     }
     if (log_file == NULL) {
         /* If the log file cannot be opened then we redirect stdout
