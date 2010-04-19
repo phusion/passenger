@@ -144,6 +144,7 @@ class AbstractServer
 		before_fork
 		@pid = fork
 		if @pid.nil?
+			has_exception = false
 			begin
 				STDOUT.sync = true
 				STDERR.sync = true
@@ -179,10 +180,12 @@ class AbstractServer
 				start_synchronously(@socket_filename, @password, server_socket, b)
 			rescue Interrupt
 				# Do nothing.
+				has_exception = true
 			rescue Exception => e
+				has_exception = true
 				print_exception(self.class.to_s, e)
 			ensure
-				exit!
+				exit!(has_exception ? 1 : 0)
 			end
 		end
 		server_socket.close

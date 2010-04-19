@@ -396,6 +396,7 @@ protected
 	def safe_fork(current_location = self.class, double_fork = false)
 		pid = fork
 		if pid.nil?
+			has_exception = false
 			begin
 				if double_fork
 					pid2 = fork
@@ -408,9 +409,10 @@ protected
 					yield
 				end
 			rescue Exception => e
+				has_exception = true
 				print_exception(current_location.to_s, e)
 			ensure
-				exit!
+				exit!(has_exception ? 1 : 0)
 			end
 		else
 			if double_fork
