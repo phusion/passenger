@@ -320,6 +320,15 @@ protected
 	# Prepare an application process using rules for the given spawn options.
 	# This method is to be called before loading the application code.
 	def after_loading_app_code(options)
+		# Even though prepare_app_process() restores the Phusion Passenger
+		# load path after setting up Bundler, the app itself might also
+		# remove Phusion Passenger from the load path for whatever reason,
+		# so here we restore the load path again.
+		if $LOAD_PATH.first != LIBDIR
+			$LOAD_PATH.unshift(LIBDIR)
+			$LOAD_PATH.uniq!
+		end
+		
 		# Install analytics hooks, if requested and possible.
 		if defined?(ActionController)
 			require 'phusion_passenger/railz/framework_extensions/analytics_logging'
@@ -341,15 +350,6 @@ protected
 	# an ApplicationSpawner that has preloaded the app code.
 	# +options+ are the spawn options that were passed.
 	def before_handling_requests(forked, options)
-		# Even though prepare_app_process() restores the Phusion Passenger
-		# load path after setting up Bundler, the app itself might also
-		# remove Phusion Passenger from the load path for whatever reason,
-		# so here we restore the load path again.
-		if $LOAD_PATH.first != LIBDIR
-			$LOAD_PATH.unshift(LIBDIR)
-			$LOAD_PATH.uniq!
-		end
-		
 		# If we were forked from a preloader process then clear or
 		# re-establish ActiveRecord database connections. This prevents
 		# child processes from concurrently accessing the same
