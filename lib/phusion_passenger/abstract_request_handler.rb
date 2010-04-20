@@ -499,9 +499,12 @@ private
 	rescue => e
 		if socket_wrapper.source_of_exception?(e)
 			# EPIPE is harmless, it just means that the client closed the connection.
+			# Other errors might indicate a problem so we print them, but they're
+			# probably not bad enough to warrant stopping the request handler.
 			if !e.is_a?(Errno::EPIPE)
 				print_exception("Passenger RequestHandler's client socket", e)
 			end
+			return true
 		else
 			if @analytics_logger && headers && headers[PASSENGER_TXN_ID]
 				log = @analytics_logger.new_transaction(
