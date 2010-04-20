@@ -261,6 +261,8 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     /******************************/
     /******************************/
 
+    conf->upstream_config.pass_headers = ngx_array_create(cf->pool, 1, sizeof(ngx_keyval_t));
+
     conf->upstream_config.store = NGX_CONF_UNSET;
     conf->upstream_config.store_access = NGX_CONF_UNSET_UINT;
     conf->upstream_config.buffering = NGX_CONF_UNSET;
