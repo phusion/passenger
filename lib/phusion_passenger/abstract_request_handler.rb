@@ -523,7 +523,7 @@ private
 				ensure
 					log.close
 				end
-			end if false
+			end
 			raise e
 		end
 	ensure
