@@ -537,8 +537,11 @@ protected:
 			
 		} else if (args[0] == "exit") {
 			if (!requireRights(eclient, Account::EXIT)) {
+				disconnect(eclient);
 				return true;
 			}
+			writeArrayMessage(eclient, "Passed security");
+			writeArrayMessage(eclient, "exit command received");
 			ev_unloop(getLoop(), EVUNLOOP_ONE);
 			
 		} else {
