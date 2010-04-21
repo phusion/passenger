@@ -400,4 +400,27 @@ namespace tut {
 		ensure_equals(hexToULL("09a2s89"), 2466ull);
 		ensure_equals(hexToULL(" 9a2s89"), 0ull);
 	}
+	
+	/***** Test stringToLL() *****/
+	
+	TEST_METHOD(50) {
+		ensure_equals(stringToLL(""), 0ll);
+		ensure_equals(stringToLL("bla"), 0ll);
+		ensure_equals(stringToLL("0"), 0ll);
+		ensure_equals(stringToLL("000"), 0ll);
+		ensure_equals(stringToLL("1"), 1ll);
+		ensure_equals(stringToLL("9"), 9ll);
+		ensure_equals(stringToLL("010"), 10ll);
+		ensure_equals(stringToLL("928"), 928ll);
+		ensure_equals(stringToLL("2937104"), 2937104ll);
+		ensure_equals(stringToLL("18446744073709551615"), 18446744073709551615ll);
+		ensure_equals(stringToLL("    5abcdef1234"), 5ll);
+		
+		ensure_equals(stringToLL("-0"), 0ll);
+		ensure_equals(stringToLL("-1"), -1ll);
+		ensure_equals(stringToLL("-010"), -10ll);
+		ensure_equals(stringToLL("-9876"), -9876ll);
+		ensure_equals(stringToLL("-9223372036854775808"), -9223372036854775808ll);
+		ensure_equals(stringToLL("    -5abcdef1234"), -5ll);
+	}
 }

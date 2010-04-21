@@ -121,6 +121,32 @@ stringToULL(const StaticString &str) {
 	return result;
 }
 
+long long
+stringToLL(const StaticString &str) {
+	long long result = 0;
+	string::size_type i = 0;
+	const char *data = str.data();
+	bool minus;
+	
+	while (data[i] == ' ' && i < str.size()) {
+		i++;
+	}
+	if (data[i] == '-') {
+		minus = true;
+		i++;
+	}
+	while (data[i] >= '0' && data[i] <= '9' && i < str.size()) {
+		result *= 10;
+		result += data[i] - '0';
+		i++;
+	}
+	if (minus) {
+		return -result;
+	} else {
+		return result;
+	}
+}
+
 unsigned long long
 hexToULL(const StaticString &hex) {
 	unsigned long long result = 0;
