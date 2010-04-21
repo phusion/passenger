@@ -110,6 +110,13 @@ class AnalyticsLogger
 		@shared_data = SharedData.new
 	end
 	
+	def clear_connections
+		@shared_data.synchronize do
+			@shared_data.unref
+			@shared_data = SharedData.new
+		end
+	end
+	
 	def close
 		@shared_data.synchronize do
 			@shared_data.unref

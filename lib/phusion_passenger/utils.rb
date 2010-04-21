@@ -350,6 +350,10 @@ protected
 	# an ApplicationSpawner that has preloaded the app code.
 	# +options+ are the spawn options that were passed.
 	def before_handling_requests(forked, options)
+		if forked && options["analytics_logger"]
+			options["analytics_logger"].clear_connections
+		end
+		
 		# If we were forked from a preloader process then clear or
 		# re-establish ActiveRecord database connections. This prevents
 		# child processes from concurrently accessing the same
