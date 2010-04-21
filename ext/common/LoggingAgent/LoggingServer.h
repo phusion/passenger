@@ -149,9 +149,11 @@ private:
 	mode_t filePermissions;
 	ev::timer garbageCollectionTimer;
 	ev::timer logFlushingTimer;
+	ev::timer exitTimer;
 	TransactionMap transactions;
 	LogFileCache logFileCache;
 	RandomGenerator randomGenerator;
+	bool exitRequested;
 	
 	void sendErrorToClient(const EventedMessageServer::ClientPtr &client, const string &message) {
 		writeArrayMessage(client, "error", message.c_str(), NULL);
@@ -376,6 +378,10 @@ private:
 		}
 	}
 	
+	void stopLoop(ev::timer &timer, int revents = 0) {
+		ev_unloop(getLoop(), EVUNLOOP_ONE);
+	}
+	
 protected:
 	virtual EventedServer::ClientPtr createClient() {
 		return ClientPtr(new Client(this));
@@ -542,7 +548,8 @@ protected:
 			}
 			writeArrayMessage(eclient, "Passed security");
 			writeArrayMessage(eclient, "exit command received");
-			ev_unloop(getLoop(), EVUNLOOP_ONE);
+			// We shut down a few seconds after the last client has exited.
+			exitRequested = true;
 			
 		} else {
 			sendErrorToClient(eclient, "Unknown command");
@@ -572,11 +579,20 @@ protected:
 		}
 	}
 	
+	virtual void onNewClient(const EventedServer::ClientPtr &client) {
+		EventedMessageServer::onNewClient(client);
+		if (exitRequested) {
+			exitTimer.stop();
+		}
+	}
+	
 	virtual void onClientDisconnected(const EventedServer::ClientPtr &_client) {
+		EventedMessageServer::onClientDisconnected(_client);
 		Client *client = static_cast<Client *>(_client.get());
 		set<string>::const_iterator sit;
 		set<string>::const_iterator send = client->openTransactions.end();
 		
+		// Close any transactions that this client had opened.
 		for (sit = client->openTransactions.begin(); sit != send; sit++) {
 			const string &txnId = *sit;
 			TransactionMap::iterator it = transactions.find(txnId);
@@ -596,6 +612,11 @@ protected:
 			}
 		}
 		client->openTransactions.clear();
+		
+		// Possibly start exit timer.
+		if (exitRequested && getClients().empty()) {
+			exitTimer.start();
+		}
 	}
 
 public:
@@ -604,7 +625,8 @@ public:
 		const string &permissions = "u=rwx,g=rx,o=rx", gid_t gid = GROUP_NOT_GIVEN)
 		: EventedMessageServer(loop, fd, accountsDatabase),
 		  garbageCollectionTimer(loop),
-		  logFlushingTimer(loop)
+		  logFlushingTimer(loop),
+		  exitTimer(loop)
 	{
 		this->dir = dir;
 		this->gid = gid;
@@ -614,6 +636,9 @@ public:
 		garbageCollectionTimer.start(60 * 60, 60 * 60);
 		logFlushingTimer.set<LoggingServer, &LoggingServer::flushAllLogs>(this);
 		logFlushingTimer.start(1, 1);
+		exitTimer.set<LoggingServer, &LoggingServer::stopLoop>(this);
+		exitTimer.set(5, 0);
+		exitRequested = false;
 	}
 };
 

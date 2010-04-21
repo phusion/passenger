@@ -22,7 +22,6 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#include <boost/bind.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
 #include <oxt/thread.hpp>
@@ -50,42 +49,6 @@ using namespace Passenger;
 
 
 static struct ev_loop *eventLoop;
-static bool feedbackFdBecameReadable = false;
-
-
-/* class TimerUpdateHandler: public MessageServer::Handler {
-private:
-	Timer &timer;
-	unsigned int clients;
-	
-public:
-	TimerUpdateHandler(Timer &_timer): timer(_timer) {
-		clients = 0;
-	}
-	
-	virtual MessageServer::ClientContextPtr newClient(MessageServer::CommonClientContext &commonContext) {
-		clients++;
-		timer.stop();
-		return MessageServer::ClientContextPtr();
-	}
-	
-	virtual void clientDisconnected(MessageServer::CommonClientContext &commonContext,
-	                                MessageServer::ClientContextPtr &handlerSpecificContext)
-	{
-		clients--;
-		if (clients == 0) {
-			timer.start();
-		}
-	}
-	
-	virtual bool processMessage(MessageServer::CommonClientContext &commonContext,
-	                            MessageServer::ClientContextPtr &handlerSpecificContext,
-	                            const vector<string> &args)
-	{
-		return false;
-	}
-}; */
-
 
 static void
 ignoreSigpipe() {
@@ -98,19 +61,21 @@ ignoreSigpipe() {
 
 static struct ev_loop *
 createEventLoop() {
+	struct ev_loop *loop;
+	
 	// libev doesn't like choosing epoll and kqueue because the author thinks they're broken,
 	// so let's try to force it.
-	ev_default_loop(EVBACKEND_EPOLL);
-	if (eventLoop == NULL) {
-		eventLoop = ev_default_loop(EVBACKEND_KQUEUE);
+	loop = ev_default_loop(EVBACKEND_EPOLL);
+	if (loop == NULL) {
+		loop = ev_default_loop(EVBACKEND_KQUEUE);
 	}
-	if (eventLoop == NULL) {
-		eventLoop = ev_default_loop(0);
+	if (loop == NULL) {
+		loop = ev_default_loop(0);
 	}
-	if (eventLoop == NULL) {
+	if (loop == NULL) {
 		throw RuntimeException("Cannot create an event loop");
 	} else {
-		return eventLoop;
+		return loop;
 	}
 }
 
@@ -141,9 +106,17 @@ lowerPrivilege(const string &username, const struct passwd *user, const struct g
 }
 
 void
-stopLoopBecauseOfFeedbackFd(ev::io &watcher, int revents) {
-	ev_unloop(eventLoop, EVUNLOOP_ONE);
-	feedbackFdBecameReadable = true;
+feedbackFdBecameReadable(ev::io &watcher, int revents) {
+	/* If the watchdog has been killed then we'll kill all descendant
+	 * processes and exit. There's no point in keeping this agent
+	 * running because we can't detect when the web server exits,
+	 * and because this agent doesn't own the server instance
+	 * directory. As soon as passenger-status is run, the server
+	 * instance directory will be cleaned up, making this agent's
+	 * services inaccessible.
+	 */
+	syscalls::killpg(getpgrp(), SIGKILL);
+	_exit(2); // In case killpg() fails.
 }
 
 int
@@ -270,38 +243,14 @@ main(int argc, char *argv[]) {
 		LoggingServer server(eventLoop, serverSocketFd,
 			accountsDatabase, loggingDir);
 		ev::io feedbackFdWatcher(eventLoop);
-		feedbackFdWatcher.set<&stopLoopBecauseOfFeedbackFd>();
+		feedbackFdWatcher.set<&feedbackFdBecameReadable>();
 		feedbackFdWatcher.start(feedbackFd, ev::READ);
 		
 		
 		/********** Initialized! Enter main loop... **********/
 		
 		feedbackChannel.write("initialized", NULL);
-		/* When the watchdog closes the feedback fd (meaning it was killed)
-		 * or when we receive an exit message, the loop will be stopped.
-		 */
 		ev_loop(eventLoop, 0);
-		if (feedbackFdBecameReadable) {
-			/* If the watchdog has been killed then we'll kill all descendant
-			 * processes and exit. There's no point in keeping this agent
-			 * running because we can't detect when the web server exits,
-			 * and because this agent doesn't own the server instance
-			 * directory. As soon as passenger-status is run, the server
-			 * instance directory will be cleaned up, making this agent's
-			 * services inaccessible.
-			 */
-			syscalls::killpg(getpgrp(), SIGKILL);
-			_exit(2); // In case killpg() fails.
-		} else {
-			/* We want to exit 5 seconds after the last client has exited,
-			 * so install some checking watchers and timers and start the
-			 * loop again.
-			 */
-			//ev_loop(loop, 0);
-			//exitTimer.start();
-			//exitTimer.wait(5000);
-		}
-		
 		return 0;
 	} catch (const tracable_exception &e) {
 		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
