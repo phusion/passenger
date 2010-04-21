@@ -94,6 +94,14 @@ public:
 private:
 	bool canMeasureRealMemory;
 	
+	/**
+	 * Scan the given data for the first word that appears on the first line.
+	 * Leading whitespaces (but not newlines) are ignored. If a word is found
+	 * then the word is returned and the data pointer is moved to the end of
+	 * the word. Otherwise, a ParseException is thrown.
+	 *
+	 * @post result.size() > 0
+	 */
 	static StaticString readNextWord(const char **data) {
 		// Skip leading whitespaces.
 		while (**data == ' ') {

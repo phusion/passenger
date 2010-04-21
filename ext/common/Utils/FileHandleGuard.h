@@ -37,6 +37,9 @@ using namespace oxt;
 /**
  * Simple scope-level guard object for ensuring that a given FILE handle
  * or file descriptor is closed when the object goes out of scope.
+ * Unlike FileDescriptor, which internally uses a shared_ptr and allocates
+ * data structure on the heap, this class is much more lightweight and
+ * does not allocate anything on the heap.
  */
 class FileHandleGuard: public boost::noncopyable {
 private:
