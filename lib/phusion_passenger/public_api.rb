@@ -38,17 +38,33 @@ class << self
 	end
 	
 	def benchmark(env = nil, title = "Benchmarking")
-		if env
-			log = env[PASSENGER_ANALYTICS_WEB_LOG]
-		else
-			log = Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
-		end
+		log = analytics_log(env)
 		if log
 			log.measure("BENCHMARK: #{title}") do
 				yield
 			end
 		else
 			yield
+		end
+	end
+	
+	def log_cache_hit(env, name)
+		log = analytics_log(env)
+		if log
+			log.message("CACHE HIT: #{name}")
+			return true
+		else
+			return false
+		end
+	end
+	
+	def log_cache_miss(env, name)
+		log = analytics_log(env)
+		if log
+			log.message("CACHE MISS: #{name}")
+			return true
+		else
+			return false
 		end
 	end
 
@@ -63,6 +79,14 @@ private
 			@@event_credentials
 		else
 			raise ArgumentError, "Unknown event name '#{name}'"
+		end
+	end
+	
+	def analytics_log(env)
+		if env
+			return env[PASSENGER_ANALYTICS_WEB_LOG]
+		else
+			return Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
 		end
 	end
 
