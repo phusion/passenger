@@ -27,6 +27,7 @@
 
 #include <boost/function.hpp>
 #include <oxt/system_calls.hpp>
+#include <oxt/backtrace.hpp>
 #include <string>
 #include <vector>
 #include <set>
@@ -35,6 +36,7 @@
 #include <unistd.h>
 #include <signal.h>
 
+#include "Constants.h"
 #include "FileDescriptor.h"
 #include "MessageChannel.h"
 #include "MessageClient.h"
@@ -43,6 +45,7 @@
 #include "ResourceLocator.h"
 #include "Utils.h"
 #include "Utils/Base64.h"
+#include "Utils/VariantMap.h"
 
 namespace Passenger {
 
@@ -288,16 +291,33 @@ public:
 		TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
+		
+		VariantMap watchdogArgs;
+		watchdogArgs
+			.set    ("web_server_type", type == APACHE ? "apache" : "nginx")
+			.setInt ("log_level",       logLevel)
+			.setPid ("web_server_pid",  webServerPid)
+			.set    ("temp_dir",        tempDir.empty() ? getSystemTempDir() : tempDir)
+			.setBool("user_switching",  userSwitching)
+			.set    ("default_user",    defaultUser)
+			.set    ("default_group",   defaultGroup)
+			.setUid ("web_server_worker_uid", webServerWorkerUid)
+			.setGid ("web_server_worker_gid", webServerWorkerGid)
+			.set    ("passenger_root",  passengerRoot)
+			.set    ("ruby",            rubyCommand)
+			.setInt ("max_pool_size",   maxPoolSize)
+			.setInt ("max_instances_per_app",     maxInstancesPerApp)
+			.setInt ("pool_idle_time",            poolIdleTime)
+			.set    ("analytics_log_dir",         analyticsLogDir)
+			.set    ("analytics_log_user",        analyticsLogUser)
+			.set    ("analytics_log_group",       analyticsLogGroup)
+			.set    ("analytics_log_permissions", analyticsLogPermissions)
+			.set    ("prestart_urls",   serializePrestartURLs(prestartURLs));
+		
 		int fds[2], e, ret;
 		pid_t pid;
-		string theTempDir;
-		ResourceLocator resourceLocator(passengerRoot);
-		string watchdogFilename;
-		
-		watchdogFilename = resourceLocator.getAgentsDir() + "/PassengerWatchdog";
-		if (tempDir.empty()) {
-			theTempDir = getSystemTempDir();
-		}
+		string watchdogFilename = ResourceLocator(passengerRoot).getAgentsDir() +
+			"/PassengerWatchdog";
 		
 		if (syscalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
 			e = errno;
@@ -313,8 +333,8 @@ public:
 			// except stdin, stdout, stderr and 3.
 			syscalls::close(fds[0]);
 			
-			if (fds[1] != 3) {
-				if (syscalls::dup2(fds[1], 3) == -1) {
+			if (fds[1] != FEEDBACK_FD) {
+				if (syscalls::dup2(fds[1], FEEDBACK_FD) == -1) {
 					e = errno;
 					try {
 						MessageChannel(fds[1]).write("system error",
@@ -331,7 +351,7 @@ public:
 				}
 			}
 			max_fds = sysconf(_SC_OPEN_MAX);
-			for (i = 4; i < max_fds; i++) {
+			for (i = FEEDBACK_FD + 1; i < max_fds; i++) {
 				if (i != fds[1]) {
 					syscalls::close(i);
 				}
@@ -341,29 +361,7 @@ public:
 				afterFork();
 			}
 			
-			execl(watchdogFilename.c_str(),
-				"PassengerWatchdog",
-				type == APACHE ? "apache" : "nginx",
-				toString(logLevel).c_str(),
-				"3",  // feedback fd
-				toString(webServerPid).c_str(),
-				theTempDir.c_str(),
-				userSwitching ? "true" : "false",
-				defaultUser.c_str(),
-				defaultGroup.c_str(),
-				toString(webServerWorkerUid).c_str(),
-				toString(webServerWorkerGid).c_str(),
-				passengerRoot.c_str(),
-				rubyCommand.c_str(),
-				toString(maxPoolSize).c_str(),
-				toString(maxInstancesPerApp).c_str(),
-				toString(poolIdleTime).c_str(),
-				analyticsLogDir.c_str(),
-				analyticsLogUser.c_str(),
-				analyticsLogGroup.c_str(),
-				analyticsLogPermissions.c_str(),
-				serializePrestartURLs(prestartURLs).c_str(),
-				(char *) 0);
+			execl(watchdogFilename.c_str(), "PassengerWatchdog", (char *) 0);
 			e = errno;
 			try {
 				MessageChannel(3).write("exec error", toString(e).c_str(), NULL);
@@ -393,10 +391,43 @@ public:
 			ServerInstanceDir::GenerationPtr generation;
 			
 			syscalls::close(fds[1]);
-			this_thread::restore_interruption ri(di);
-			this_thread::restore_syscall_interruption rsi(dsi);
+			
+			/****** Send arguments to watchdog through the feedback channel ******/
+			
+			UPDATE_TRACE_POINT();
+			try {
+				watchdogArgs.writeToChannel(feedbackChannel);
+			} catch (const SystemException &) {
+				/* Did the watchdog crash? */
+				ret = syscalls::waitpid(pid, &status, WNOHANG);
+				if (ret == 0) {
+					/* Doesn't look like it; it seems it's still running.
+					 * We can't do anything in this state anyway, so
+					 * throw an exception.
+					 */
+					killAndWait(pid);
+					throw RuntimeException(
+						"Unable to start the Phusion Passenger watchdog: "
+						"an unknown error occurred during its startup");
+				} else if (ret != -1 && WIFSIGNALED(status)) {
+					/* Looks like a crash which caused a signal. */
+					throw RuntimeException(
+						"Unable to start the Phusion Passenger watchdog: "
+						"it seems to have been killed with signal " +
+						getSignalName(WTERMSIG(status)) + " during startup");
+				} else {
+					/* Looks like it exited for a different reason. */
+					throw RuntimeException(
+						"Unable to start the Phusion Passenger watchdog: "
+						"it seems to have crashed during startup for an unknown reason");
+				}
+			}
 			
 			/****** Read basic startup information ******/
+			
+			this_thread::restore_interruption ri(di);
+			this_thread::restore_syscall_interruption rsi(dsi);
+			UPDATE_TRACE_POINT();
 			
 			try {
 				if (!feedbackChannel.read(args)) {
@@ -439,6 +470,7 @@ public:
 				throw;
 			}
 			
+			UPDATE_TRACE_POINT();
 			if (args[0] == "Basic startup info") {
 				if (args.size() == 3) {
 					serverInstanceDir.reset(new ServerInstanceDir(args[1], false));

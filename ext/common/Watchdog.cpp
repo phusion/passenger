@@ -31,12 +31,13 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <unistd.h>
-#include <signal.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
 
+#include "Constants.h"
+#include "AgentBase.h"
 #include "ServerInstanceDir.h"
 #include "FileDescriptor.h"
 #include "MessageChannel.h"
@@ -48,6 +49,7 @@
 #include "Utils.h"
 #include "Utils/Base64.h"
 #include "Utils/Timer.h"
+#include "Utils/VariantMap.h"
 
 using namespace std;
 using namespace boost;
@@ -55,9 +57,10 @@ using namespace oxt;
 using namespace Passenger;
 
 
+/** The options that were passed to AgentsStarter. */
+static VariantMap     agentsOptions;
 static string         webServerType;        // "apache" or "nginx"
 static unsigned int   logLevel;
-static FileDescriptor feedbackFd;  // This is the feedback fd to the web server, not to the helper agent.
 static pid_t   webServerPid;
 static string  tempDir;
 static bool    userSwitching;
@@ -70,10 +73,6 @@ static string  rubyCommand;
 static unsigned int maxPoolSize;
 static unsigned int maxInstancesPerApp;
 static unsigned int poolIdleTime;
-static string  analyticsLogDir;
-static string  analyticsLogUser;
-static string  analyticsLogGroup;
-static string  analyticsLogPermissions;
 static string  serializedPrestartURLs;
 
 static ServerInstanceDirPtr serverInstanceDir;
@@ -543,7 +542,6 @@ protected:
 			maxPoolSizeString.c_str(),
 			maxInstancesPerAppString.c_str(),
 			poolIdleTimeString.c_str(),
-			analyticsLogDir.c_str(),
 			serializedPrestartURLs.c_str(),
 			(char *) 0);
 	}
@@ -571,7 +569,7 @@ public:
 	HelperAgentWatcher(const ResourceLocator &resourceLocator) {
 		requestSocketPassword = randomGenerator.generateByteString(REQUEST_SOCKET_PASSWORD_SIZE);
 		messageSocketPassword = randomGenerator.generateByteString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
-		if (webServerType == "apache") {
+		if (agentsOptions.get("web_server_type") == "apache") {
 			helperAgentFilename = resourceLocator.getAgentsDir() + "/apache2/PassengerHelperAgent";
 		} else {
 			helperAgentFilename = resourceLocator.getAgentsDir() + "/nginx/PassengerHelperAgent";
@@ -602,25 +600,13 @@ protected:
 	}
 	
 	virtual void execProgram() const {
-		execl(agentFilename.c_str(),
-			"PassengerLoggingAgent",
-			"3",  // feedback fd
-			logLevelString.c_str(),
-			webServerPidString.c_str(),
-			tempDir.c_str(),
-			generationNumber.c_str(),
-			analyticsLogDir.c_str(),
-			analyticsLogUser.c_str(),
-			analyticsLogGroup.c_str(),
-			analyticsLogPermissions.c_str(),
-			(char *) 0);
+		execl(agentFilename.c_str(), "PassengerLoggingAgent", (char *) 0);
 	}
 	
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
-		MessageChannel channel(fd);
-		channel.write("logging agent password",
-			Base64::encode(loggingAgentPassword).c_str(),
-			NULL);
+		VariantMap options = agentsOptions;
+		options.set("logging_agent_password", Base64::encode(loggingAgentPassword));
+		options.writeToFd(fd);
 	}
 	
 	virtual bool processStartupInfo(pid_t pid, FileDescriptor &fd, const vector<string> &args) {
@@ -755,15 +741,6 @@ disableOomKiller() {
 	}
 }
 
-static void
-ignoreSigpipe() {
-	struct sigaction action;
-	action.sa_handler = SIG_IGN;
-	action.sa_flags   = 0;
-	sigemptyset(&action.sa_mask);
-	sigaction(SIGPIPE, &action, NULL);
-}
-
 /**
  * Wait until the starter process has exited or sent us an exit command,
  * or until one of the watcher threads encounter an error. If a thread
@@ -780,11 +757,11 @@ waitForStarterProcessOrWatchers(vector<AgentWatcher *> &watchers) {
 	char x;
 	
 	FD_ZERO(&fds);
-	FD_SET(feedbackFd, &fds);
+	FD_SET(FEEDBACK_FD, &fds);
 	FD_SET(errorEvent.fd(), &fds);
 	
-	if (feedbackFd > errorEvent.fd()) {
-		max = feedbackFd;
+	if (FEEDBACK_FD > errorEvent.fd()) {
+		max = FEEDBACK_FD;
 	} else {
 		max = errorEvent.fd();
 	}
@@ -814,7 +791,7 @@ waitForStarterProcessOrWatchers(vector<AgentWatcher *> &watchers) {
 		}
 		return false;
 	} else {
-		ret = syscalls::read(feedbackFd, &x, 1);
+		ret = syscalls::read(FEEDBACK_FD, &x, 1);
 		return ret == 1 && x == 'c';
 	}
 }
@@ -914,53 +891,36 @@ forceAllAgentsShutdown(vector<AgentWatcher *> &watchers) {
 
 int
 main(int argc, char *argv[]) {
-	#define READ_ARG(index, expr, defaultValue) ((argc > index) ? (expr) : (defaultValue))
-	
-	webServerType = argv[1];
-	logLevel      = atoi(argv[2]);
-	feedbackFd    = atoi(argv[3]);
-	webServerPid  = (pid_t) atoll(argv[4]);
-	tempDir       = argv[5];
-	userSwitching = strcmp(argv[6], "true") == 0;
-	defaultUser   = argv[7];
-	defaultGroup  = argv[8];
-	webServerWorkerUid = (uid_t) atoll(argv[9]);
-	webServerWorkerGid = (uid_t) atoll(argv[10]);
-	passengerRoot = argv[11];
-	rubyCommand   = argv[12];
-	maxPoolSize        = atoi(argv[13]);
-	maxInstancesPerApp = atoi(argv[14]);
-	poolIdleTime       = atoi(argv[15]);
-	analyticsLogDir    = argv[16];
-	analyticsLogUser        = argv[17];
-	analyticsLogGroup       = argv[18];
-	analyticsLogPermissions = argv[19];
-	serializedPrestartURLs  = argv[20];
-	
 	/* Become the session leader so that Apache can't kill this
 	 * watchdog with killpg() during shutdown, and so that a
 	 * Ctrl-C only affects the web server.
 	 */
 	setsid();
-	
 	disableOomKiller();
-	ignoreSigpipe();
-	setup_syscall_interruption_support();
-	setvbuf(stdout, NULL, _IONBF, 0);
-	setvbuf(stderr, NULL, _IONBF, 0);
-	setLogLevel(logLevel);
 	
-	// Change process title.
-	strncpy(argv[0], "PassengerWatchdog", strlen(argv[0]));
-	for (int i = 1; i < argc; i++) {
-		memset(argv[i], '\0', strlen(argv[i]));
-	}
+	agentsOptions = initializeAgent(argc, argv, "PassengerWatchdog");
+	logLevel      = agentsOptions.getInt("log_level");
+	webServerPid  = agentsOptions.getPid("web_server_pid");
+	tempDir       = agentsOptions.get("temp_dir");
+	userSwitching = agentsOptions.getBool("user_switching");
+	defaultUser   = agentsOptions.get("default_user");
+	defaultGroup  = agentsOptions.get("default_group");
+	webServerWorkerUid = agentsOptions.getUid("web_server_worker_uid");
+	webServerWorkerGid = agentsOptions.getGid("web_server_worker_gid");
+	passengerRoot = agentsOptions.get("passenger_root");
+	rubyCommand   = agentsOptions.get("ruby");
+	maxPoolSize        = agentsOptions.getInt("max_pool_size");
+	maxInstancesPerApp = agentsOptions.getInt("max_instances_per_app");
+	poolIdleTime       = agentsOptions.getInt("pool_idle_time");
+	serializedPrestartURLs  = agentsOptions.get("prestart_urls");
 	
 	try {
-		MessageChannel feedbackChannel(feedbackFd);
+		MessageChannel feedbackChannel(FEEDBACK_FD);
 		serverInstanceDir.reset(new ServerInstanceDir(webServerPid, tempDir));
 		generation = serverInstanceDir->newGeneration(userSwitching, defaultUser,
 			defaultGroup, webServerWorkerUid, webServerWorkerGid);
+		agentsOptions.set("server_instance_dir", serverInstanceDir->getPath());
+		agentsOptions.setInt("generation_number", generation->getNumber());
 		
 		/* Pre-convert some integers to strings so that we don't have to do this
 		 * after forking.

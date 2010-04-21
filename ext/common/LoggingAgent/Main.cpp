@@ -28,7 +28,6 @@
 
 #include <sys/types.h>
 #include <unistd.h>
-#include <signal.h>
 #include <pwd.h>
 #include <grp.h>
 #include <cstdio>
@@ -36,6 +35,7 @@
 #include <cstring>
 #include <cerrno>
 
+#include "../AgentBase.h"
 #include "../AccountsDatabase.h"
 #include "../Account.h"
 #include "../ServerInstanceDir.h"
@@ -43,21 +43,13 @@
 #include "../Exceptions.h"
 #include "../Utils.h"
 #include "../Utils/Base64.h"
+#include "../Utils/VariantMap.h"
 
 using namespace oxt;
 using namespace Passenger;
 
 
 static struct ev_loop *eventLoop;
-
-static void
-ignoreSigpipe() {
-	struct sigaction action;
-	action.sa_handler = SIG_IGN;
-	action.sa_flags   = 0;
-	sigemptyset(&action.sa_mask);
-	sigaction(SIGPIPE, &action, NULL);
-}
 
 static struct ev_loop *
 createEventLoop() {
@@ -107,7 +99,8 @@ lowerPrivilege(const string &username, const struct passwd *user, const struct g
 
 void
 feedbackFdBecameReadable(ev::io &watcher, int revents) {
-	/* If the watchdog has been killed then we'll kill all descendant
+	/* This event indicates that the watchdog has been killed.
+	 * In this case we'll kill all descendant
 	 * processes and exit. There's no point in keeping this agent
 	 * running because we can't detect when the web server exits,
 	 * and because this agent doesn't own the server instance
@@ -121,31 +114,14 @@ feedbackFdBecameReadable(ev::io &watcher, int revents) {
 
 int
 main(int argc, char *argv[]) {
-	int    feedbackFd       = atoi(argv[1]);
-	int    logLevel         = atoi(argv[2]);
-	pid_t  webServerPid     = (pid_t) atoll(argv[3]);
-	string tempDir          = argv[4];
-	int    generationNumber = atoi(argv[5]);
-	string loggingDir       = argv[6];
-	string username         = argv[7];
-	string groupname        = argv[8];
-	string permissions      = argv[9];
-	
-	/********** Boilerplate environment setup code.... **********/
-	
-	ignoreSigpipe();
-	setup_syscall_interruption_support();
-	setvbuf(stdout, NULL, _IONBF, 0);
-	setvbuf(stderr, NULL, _IONBF, 0);
-	
-	// Change process title.
-	strncpy(argv[0], "PassengerLoggingAgent", strlen(argv[0]));
-	for (int i = 1; i < argc; i++) {
-		memset(argv[i], '\0', strlen(argv[i]));
-	}
-	
-	setLogLevel(logLevel);
-	
+	VariantMap options        = initializeAgent(argc, argv, "PassengerLoggingAgent");
+	string serverInstancePath = options.get("server_instance_dir");
+	int    generationNumber   = options.getInt("generation_number");
+	string loggingDir         = options.get("analytics_log_dir");
+	string username           = options.get("analytics_log_user");
+	string groupname          = options.get("analytics_log_group");
+	string permissions        = options.get("analytics_log_permissions");
+	string password           = options.get("logging_agent_password");
 	
 	try {
 		/********** Now begins the real initialization **********/
@@ -161,7 +137,7 @@ main(int argc, char *argv[]) {
 		int                  ret;
 		
 		eventLoop = createEventLoop();
-		serverInstanceDir = ptr(new ServerInstanceDir(webServerPid, tempDir, false));
+		serverInstanceDir = ptr(new ServerInstanceDir(serverInstancePath, false));
 		generation = serverInstanceDir->getGeneration(generationNumber);
 		accountsDatabase = ptr(new AccountsDatabase());
 		loggingSocketFilename = generation->getPath() + "/logging.socket";
@@ -228,28 +204,22 @@ main(int argc, char *argv[]) {
 			lowerPrivilege(username, user, group);
 		}
 		
-		/* Retrieve desired password for protecting the logging socket */
-		MessageChannel feedbackChannel(feedbackFd);
-		vector<string> args;
-		
-		if (!feedbackChannel.read(args)) {
-			throw IOException("The watchdog unexpectedly closed the connection.");
-		} else if (args[0] != "logging agent password") {
-			throw IOException("Unexpected input message '" + args[0] + "'");
-		}
-		
 		/* Now setup the actual logging server. */
-		accountsDatabase->add("logging", Base64::decode(args[1]), false);
+		accountsDatabase->add("logging", Base64::decode(password), false);
 		LoggingServer server(eventLoop, serverSocketFd,
 			accountsDatabase, loggingDir);
-		ev::io feedbackFdWatcher(eventLoop);
-		feedbackFdWatcher.set<&feedbackFdBecameReadable>();
-		feedbackFdWatcher.start(feedbackFd, ev::READ);
+		
+		if (feedbackFdAvailable()) {
+			MessageChannel feedbackChannel(FEEDBACK_FD);
+			ev::io feedbackFdWatcher(eventLoop);
+			feedbackFdWatcher.set<&feedbackFdBecameReadable>();
+			feedbackFdWatcher.start(FEEDBACK_FD, ev::READ);
+			feedbackChannel.write("initialized", NULL);
+		}
 		
 		
 		/********** Initialized! Enter main loop... **********/
 		
-		feedbackChannel.write("initialized", NULL);
 		ev_loop(eventLoop, 0);
 		return 0;
 	} catch (const tracable_exception &e) {

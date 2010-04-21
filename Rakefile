@@ -250,7 +250,12 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 			ResourceLocator.h
 			MessageClient.h
 			MessageChannel.h
-			ServerInstanceDir.h),
+			ServerInstanceDir.h
+			Utils/VariantMap.h),
+		'AgentBase.o' => %w(
+			AgentBase.cpp
+			AgentBase.h
+			Utils/VariantMap.h),
 		'BCrypt.o' => %w(
 			BCrypt.cpp
 			BCrypt.h
@@ -306,6 +311,7 @@ end
 		'ext/common/Watchdog.cpp',
 		'ext/common/ServerInstanceDir.h',
 		'ext/common/ResourceLocator.h',
+		'ext/common/Utils/VariantMap.h',
 		COMMON_LIBRARY,
 		BOOST_OXT_LIBRARY]
 	file 'agents/PassengerWatchdog' => watchdog_dependencies do
@@ -324,6 +330,7 @@ end
 		'ext/common/LoggingAgent/LoggingServer.h',
 		'ext/common/ServerInstanceDir.h',
 		'ext/common/Logging.h',
+		'ext/common/Utils/VariantMap.h',
 		COMMON_LIBRARY,
 		BOOST_OXT_LIBRARY,
 		:libev]
@@ -512,6 +519,7 @@ end
 		'ext/common/Logging.h',
 		'ext/common/ResourceLocator.h',
 		'ext/common/Utils/ProcessMetricsCollector.h',
+		'ext/common/Utils/VariantMap.h',
 		'ext/common/HelperAgent/BacktracesServer.h',
 		'ext/common/ApplicationPool/Interface.h',
 		'ext/common/ApplicationPool/Pool.h',
@@ -740,6 +748,10 @@ end
 			test/cxx/CachedFileStatTest.cpp
 			ext/common/Utils/CachedFileStat.hpp
 			ext/common/Utils/CachedFileStat.cpp),
+		'test/cxx/VariantMapTest.o' => %w(
+			test/cxx/VariantMapTest.cpp
+			ext/common/MessageChannel.h
+			ext/common/Utils/VariantMap.h),
 		'test/cxx/UtilsTest.o' => %w(
 			test/cxx/UtilsTest.cpp
 			ext/common/Utils.h)

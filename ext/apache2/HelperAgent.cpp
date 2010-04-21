@@ -202,7 +202,7 @@ public:
 		const string &passengerRoot, const string &rubyCommand,
 		unsigned int generationNumber, unsigned int maxPoolSize,
 		unsigned int maxInstancesPerApp, unsigned int poolIdleTime,
-		const string &analyticsLogDir, const string &serializedPrestartURIs)
+		const string &serializedPrestartURIs)
 		: serverInstanceDir(webServerPid, tempDir, false),
 		  resourceLocator(passengerRoot)
 	{
@@ -354,8 +354,7 @@ main(int argc, char *argv[]) {
 		unsigned int maxPoolSize        = atoi(argv[11]);
 		unsigned int maxInstancesPerApp = atoi(argv[12]);
 		unsigned int poolIdleTime       = atoi(argv[13]);
-		string  analyticsLogDir = argv[14];
-		string  serializedPrestartURIs = argv[15];
+		string  serializedPrestartURIs  = argv[14];
 		
 		// Change process title.
 		strncpy(argv[0], "PassengerHelperServer", strlen(argv[0]));
@@ -368,7 +367,7 @@ main(int argc, char *argv[]) {
 			userSwitching, defaultUser, defaultGroup,
 			passengerRoot, rubyCommand, generationNumber,
 			maxPoolSize, maxInstancesPerApp, poolIdleTime,
-			analyticsLogDir, serializedPrestartURIs);
+			serializedPrestartURIs);
 		
 		UPDATE_TRACE_POINT();
 		server.mainLoop();

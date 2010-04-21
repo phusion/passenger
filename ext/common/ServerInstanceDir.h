@@ -27,6 +27,7 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
+#include <oxt/backtrace.hpp>
 
 #include <sys/types.h>
 #include <dirent.h>
@@ -72,6 +73,7 @@ public:
 		            const string &defaultGroup, uid_t webServerWorkerUid,
 		            gid_t webServerWorkerGid)
 		{
+			TRACE_POINT();
 			bool runningAsRoot = geteuid() == 0;
 			struct passwd *defaultUserEntry;
 			struct group  *defaultGroupEntry;
@@ -195,6 +197,7 @@ private:
 	friend class Generation;
 	
 	void initialize(const string &path, bool owner) {
+		TRACE_POINT();
 		this->path  = path;
 		this->owner = owner;
 		
