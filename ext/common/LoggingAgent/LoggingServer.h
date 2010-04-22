@@ -549,8 +549,8 @@ protected:
 			if (args.size() == 2 && args[1] == "immediately") {
 				ev_unloop(getLoop(), EVUNLOOP_ONE);
 			} else {
-				writeArrayMessage(eclient, "Passed security");
-				writeArrayMessage(eclient, "exit command received");
+				writeArrayMessage(eclient, "Passed security", NULL);
+				writeArrayMessage(eclient, "exit command received", NULL);
 				// We shut down a few seconds after the last client has exited.
 				exitRequested = true;
 			}
