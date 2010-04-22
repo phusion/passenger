@@ -333,6 +333,28 @@ module TestHelper
 		rescue Errno::ECHILD, Errno::ESRCH
 		end
 	end
+	
+	def spawn_logging_agent(log_dir, password)
+		pid = spawn_process("#{AGENTS_DIR}/PassengerLoggingAgent",
+			"server_instance_dir", Utils.passenger_tmpdir,
+			"generation_number",   "0",
+			"analytics_log_dir",   log_dir,
+			"analytics_log_user",  CONFIG['normal_user_1'],
+			"analytics_log_group", CONFIG['normal_group_1'],
+			"analytics_log_permissions", "u=rwx,g=rwx,o=rwx",
+			"logging_agent_password", [password].pack("m"))
+		socket_filename = "#{Utils.passenger_tmpdir}/generation-0/logging.socket"
+		eventually do
+			File.exist?(socket_filename)
+		end
+		return [pid, socket_filename]
+	rescue Exception => e
+		if pid
+			Process.kill('KILL', pid)
+			Process.waitpid(pid)
+		end
+		raise e
+	end
 end
 
 File.class_eval do

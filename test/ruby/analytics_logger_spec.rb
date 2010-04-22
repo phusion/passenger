@@ -13,13 +13,9 @@ describe AnalyticsLogger do
 		@username = "logging"
 		@password = "1234"
 		@log_dir  = Utils.passenger_tmpdir
-		@socket_filename = "#{Utils.passenger_tmpdir}/generation-0/logging.socket"
-		@agent_pid = spawn_logging_agent
-		eventually do
-			File.exist?(@socket_filename)
-		end
-		@logger = AnalyticsLogger.new(@socket_filename, "logging", "1234", "localhost")
-		@logger2 = AnalyticsLogger.new(@socket_filename, "logging", "1234", "localhost")
+		@agent_pid, @socket_filename = spawn_logging_agent(@log_dir, @password)
+		@logger = AnalyticsLogger.new(@socket_filename, @username, @password, "localhost")
+		@logger2 = AnalyticsLogger.new(@socket_filename, @username, @password, "localhost")
 	end
 	
 	after :each do
@@ -29,17 +25,6 @@ describe AnalyticsLogger do
 			Process.kill('KILL', @agent_pid)
 			Process.waitpid(@agent_pid)
 		end
-	end
-	
-	def spawn_logging_agent
-		spawn_process("#{AGENTS_DIR}/PassengerLoggingAgent",
-			"server_instance_dir", Utils.passenger_tmpdir,
-			"generation_number",   "0",
-			"analytics_log_dir",   @log_dir,
-			"analytics_log_user",  CONFIG['normal_user_1'],
-			"analytics_log_group", CONFIG['normal_group_1'],
-			"analytics_log_permissions", "u=rwx,g=rwx,o=rwx",
-			"logging_agent_password", [@password].pack("m"))
 	end
 	
 	def mock_time(time)
@@ -182,7 +167,7 @@ describe AnalyticsLogger do
 		@logger.new_transaction("foobar").close
 		Process.kill('KILL', @agent_pid)
 		Process.waitpid(@agent_pid)
-		@agent_pid = spawn_logging_agent
+		@agent_pid, @socket_filename = spawn_logging_agent(@log_dir, @password)
 		
 		log = @logger.new_transaction("foobar")
 		begin

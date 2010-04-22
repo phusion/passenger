@@ -298,7 +298,11 @@ class AbstractRequestHandler
 	def start_main_loop_thread
 		current_generation = @main_loop_generation
 		@main_loop_thread = Thread.new do
-			main_loop
+			begin
+				main_loop
+			rescue Exception => e
+				print_exception(self.class, e, @stderr)
+			end
 		end
 		@main_loop_thread_lock.synchronize do
 			while @main_loop_generation == current_generation

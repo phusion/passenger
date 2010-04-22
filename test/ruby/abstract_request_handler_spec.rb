@@ -1,14 +1,16 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'phusion_passenger/abstract_request_handler'
+require 'phusion_passenger/analytics_logger'
 
 require 'fileutils'
 
 describe AbstractRequestHandler do
 	before :each do
+		preinitialize if respond_to?(:preinitialize)
 		@old_passenger_tmpdir = Utils.passenger_tmpdir
 		Utils.passenger_tmpdir = "abstract_request_handler_spec.tmp"
 		@owner_pipe = IO.pipe
-		@request_handler = AbstractRequestHandler.new(@owner_pipe[1])
+		@request_handler = AbstractRequestHandler.new(@owner_pipe[1], @options || {})
 		def @request_handler.process_request(*args)
 			# Do nothing.
 		end
@@ -29,6 +31,16 @@ describe AbstractRequestHandler do
 			addr, port = @request_handler.server_sockets[socket_name][0].split(/:/)
 			return TCPSocket.new(addr, port.to_i)
 		end
+	end
+	
+	def send_binary_request(socket, env)
+		channel = MessageChannel.new(socket)
+		data = ""
+		env.each_pair do |key, value|
+			data << key << "\0"
+			data << value << "\0"
+		end
+		channel.write_scalar(data)
 	end
 	
 	it "exits if the owner pipe is closed" do
@@ -164,6 +176,76 @@ describe AbstractRequestHandler do
 			client.read.should == "pong"
 		ensure
 			client.close rescue nil
+		end
+	end
+	
+	describe "if analytics logger is given" do
+		def preinitialize
+			if @agent_pid
+				Process.kill('KILL', @agent_pid)
+				Process.waitpid(@agent_pid)
+			end
+			@log_dir = Utils.passenger_tmpdir
+			@agent_pid, @socket_filename = spawn_logging_agent(@log_dir, "1234")
+			
+			@logger = AnalyticsLogger.new(@socket_filename, "logging",
+				"1234", "localhost")
+			@options = { "analytics_logger" => @logger }
+		end
+		
+		after :each do
+			if @agent_pid
+				Process.kill('KILL', @agent_pid)
+				Process.waitpid(@agent_pid)
+			end
+		end
+		
+		it "makes the analytics log object available through the request env and a thread-local variable" do
+			header_value = nil
+			thread_value = nil
+			@request_handler.should_receive(:process_request).and_return do |headers, input, output, status_line_desired|
+				header_value = headers[PASSENGER_ANALYTICS_WEB_LOG]
+				thread_value = Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
+			end
+			@request_handler.start_main_loop_thread
+			client = connect
+			begin
+				send_binary_request(client,
+					"REQUEST_METHOD" => "GET",
+					"PASSENGER_TXN_ID" => "1234-abcd",
+					"PASSENGER_GROUP_NAME" => "foobar")
+				client.read
+			ensure
+				client.close
+			end
+			header_value.should be_kind_of(AnalyticsLogger::Log)
+			thread_value.should be_kind_of(AnalyticsLogger::Log)
+			header_value.should == thread_value
+		end
+		
+		it "logs uncaught exceptions for requests that have a transaction ID" do
+			@request_handler.should_receive(:process_request).and_return do |headers, input, output, status_line_desired|
+				raise "something went wrong"
+			end
+			@request_handler.stderr = StringIO.new
+			@request_handler.start_main_loop_thread
+			client = connect
+			begin
+				send_binary_request(client,
+					"REQUEST_METHOD" => "GET",
+					"PASSENGER_TXN_ID" => "1234-abcd",
+					"PASSENGER_GROUP_NAME" => "foobar")
+			ensure
+				client.close
+			end
+			eventually do
+				log_file = Dir["#{@log_dir}/1/*/*/exceptions/**/log.txt"].first
+				log_file &&
+				File.exist?(log_file) &&
+				File.read(log_file).include?("Request transaction ID: 1234-abcd\n") &&
+				File.read(log_file).include?("Message: " + ["something went wrong"].pack('m')) &&
+				File.read(log_file) =~ /Class: RuntimeError/
+			end
 		end
 	end
 	
