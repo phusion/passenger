@@ -316,6 +316,7 @@ private
 			end
 		end
 		trap('HUP', IGNORE)
+		PhusionPassenger.call_event(:after_installing_signal_handlers)
 	end
 	
 	def install_useful_signal_handlers
