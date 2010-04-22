@@ -57,7 +57,7 @@ namespace tut {
 		~LoggingTest() {
 			MessageClient client;
 			client.connect(socketFilename, "test", "1234");
-			client.write("exit", NULL);
+			client.write("exit", "immediately", NULL);
 			serverThread->join();
 			SystemTime::releaseAll();
 		}

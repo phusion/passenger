@@ -546,10 +546,14 @@ protected:
 				disconnect(eclient);
 				return true;
 			}
-			writeArrayMessage(eclient, "Passed security");
-			writeArrayMessage(eclient, "exit command received");
-			// We shut down a few seconds after the last client has exited.
-			exitRequested = true;
+			if (args.size() == 2 && args[1] == "immediately") {
+				ev_unloop(getLoop(), EVUNLOOP_ONE);
+			} else {
+				writeArrayMessage(eclient, "Passed security");
+				writeArrayMessage(eclient, "exit command received");
+				// We shut down a few seconds after the last client has exited.
+				exitRequested = true;
+			}
 			
 		} else {
 			sendErrorToClient(eclient, "Unknown command");
