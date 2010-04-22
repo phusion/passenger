@@ -3,102 +3,195 @@ require 'stringio'
 require 'phusion_passenger/analytics_logger'
 
 describe AnalyticsLogger do
-	TODAY = 1263385422000000  # January 13, 2009, 12:23:42 UTC
+	YESTERDAY = Time.utc(2010, 4, 11, 11, 56, 02)
+	TODAY     = Time.utc(2010, 4, 11, 12, 56, 02)
+	TOMORROW  = Time.utc(2010, 4, 11, 13, 56, 02)
 	FOOBAR_MD5 = Digest::MD5.hexdigest("foobar")
 	LOCALHOST_MD5 = Digest::MD5.hexdigest("localhost")
 	
 	before :each do
-		@logger = AnalyticsLogger.new("/socket", "logging", "1234", "localhost")
-		@io = StringIO.new
-		@time = Time.utc(2010, 4, 11, 12, 56, 02)
+		@username = "logging"
+		@password = "1234"
+		@log_dir  = Utils.passenger_tmpdir
+		@socket_filename = "#{Utils.passenger_tmpdir}/generation-0/logging.socket"
+		@agent_pid = spawn_logging_agent
+		eventually do
+			File.exist?(@socket_filename)
+		end
+		@logger = AnalyticsLogger.new(@socket_filename, "logging", "1234", "localhost")
+		@logger2 = AnalyticsLogger.new(@socket_filename, "logging", "1234", "localhost")
 	end
 	
 	after :each do
 		@logger.close
-		@io.close if !@io.closed?
-	end
-	
-	def mock_connection
-		connection = mock(:name => "MessageClient")
-		@logger.should_receive(:connect).and_return do
-			@logger.instance_variable_get(:"@shared_data").client = connection
+		@logger2.close
+		if @agent_pid
+			Process.kill('KILL', @agent_pid)
+			Process.waitpid(@agent_pid)
 		end
-		return connection
 	end
 	
-	if false
-	specify "#new_transaction returns a Log object, suitable for logging" do
-		AnalyticsLogger.should_receive(:current_time).any_number_of_times.and_return(@time)
-		connection = mock_connection
-		connection.should_receive(:write).
-			with("openTransaction",
-				an_instance_of(String), "foobar", :requests,
-				an_instance_of(String))
+	def spawn_logging_agent
+		spawn_process("#{AGENTS_DIR}/PassengerLoggingAgent",
+			"server_instance_dir", Utils.passenger_tmpdir,
+			"generation_number",   "0",
+			"analytics_log_dir",   @log_dir,
+			"analytics_log_user",  CONFIG['normal_user_1'],
+			"analytics_log_group", CONFIG['normal_group_1'],
+			"analytics_log_permissions", "u=rwx,g=rwx,o=rwx",
+			"logging_agent_password", [@password].pack("m"))
+	end
+	
+	def mock_time(time)
+		AnalyticsLogger.should_receive(:current_time).any_number_of_times.and_return(time)
+	end
+	
+	specify "logging with #new_transaction works" do
+		mock_time(TODAY)
+		
 		log = @logger.new_transaction("foobar")
-		connection.should_receive(:write).
-			with("log", log.txn_id, @time.to_i * 1_000_000 + @time.usec)
-		connection.should_receive(:write_scalar).
-			with("hello world")
-		log.message("hello world")
-	end
-	
-	specify "#continue_transaction opens the log file and returns a Log object, suitable for logging" do
-		@logger.should_receive(:open_log_file).with("foobar", 5678, :requests).and_return(@io)
-		log = @logger.continue_transaction("foobar", "abcdef-5678")
-		log.group_name.should == "foobar"
-		log.txn_id.should == "abcdef-5678"
-		log.message("hello world")
-		@io.string.should =~ /hello world/
-	end
-	
-	specify "#continue_transaction opens the log file through the logging agent and caches this file handle" do
-		mock_message_client(5678)
-		log = @logger.continue_transaction("foobar", "abcdef-5678")
-		log.message("hello world")
-		@io.string.should =~ /hello world/
+		log.should_not be_null
+		begin
+			log.message("hello")
+		ensure
+			log.close(true)
+		end
 		
-		log = @logger.continue_transaction("foobar", "abcdef-5678")
-		log.message("hi")
-		@io.string.should =~ /hi/
+		log_file = "#{@log_dir}/1/#{FOOBAR_MD5}/#{LOCALHOST_MD5}/requests/2010/04/11/12/log.txt"
+		File.read(log_file).should =~ /hello/
+		
+		log = @logger.new_transaction("foobar", :processes)
+		log.should_not be_null
+		begin
+			log.message("world")
+		ensure
+			log.close(true)
+		end
+		
+		log_file = "#{@log_dir}/1/#{FOOBAR_MD5}/#{LOCALHOST_MD5}/processes/2010/04/11/12/log.txt"
+		File.read(log_file).should =~ /world/
 	end
 	
-	it "calculates the log file path in the same way the C++ implementation does" do
-		mock_message_client(TODAY)
-		@logger.continue_transaction("foobar", "abcdef-#{TODAY}")
-		@logger.instance_variable_get(:'@file_handle_cache').keys.should ==
-			["1/#{FOOBAR_MD5}/#{LOCALHOST_MD5}/requests/2010/01/13/12/log.txt"]
+	specify "#new_transaction reestablishes the connection if disconnected" do
+		mock_time(TODAY)
+		
+		@logger.new_transaction("foobar").close(true)
+		shared_data = @logger.instance_variable_get(:"@shared_data")
+		shared_data.synchronize do
+			shared_data.client.close
+		end
+		
+		log = @logger.new_transaction("foobar")
+		begin
+			log.message("hello")
+		ensure
+			log.close(true)
+		end
+		
+		log_file = "#{@log_dir}/1/#{FOOBAR_MD5}/#{LOCALHOST_MD5}/requests/2010/04/11/12/log.txt"
+		File.read(log_file).should =~ /hello/
 	end
 	
-	it "writes short messages in the same way the C++ implementation does" do
-		mock_message_client(5678)
-		AnalyticsLogger::Log.should_receive(:timestamp).and_return(10)
-		log = @logger.continue_transaction("foobar", "abcdef-5678")
-		AnalyticsLogger::Log.should_receive(:timestamp).and_return(20)
-		log.message("hello world")
-		AnalyticsLogger::Log.should_receive(:timestamp).and_return(30)
+	specify "logging with #continue_transaction works" do
+		mock_time(TODAY)
+		
+		log = @logger.new_transaction("foobar", :processes)
+		begin
+			log.message("hello")
+			log2 = @logger2.continue_transaction(log.txn_id, "foobar", :processes)
+			log2.should_not be_null
+			log2.txn_id.should == log.txn_id
+			begin
+				log2.message("world")
+			ensure
+				log2.close(true)
+			end
+		ensure
+			log.close(true)
+		end
+		
+		log_file = "#{@log_dir}/1/#{FOOBAR_MD5}/#{LOCALHOST_MD5}/processes/2010/04/11/12/log.txt"
+		File.read(log_file).should =~ /#{Regexp.escape log.txn_id} .* hello$/
+		File.read(log_file).should =~ /#{Regexp.escape log.txn_id} .* world$/
+	end
+	
+	specify "#continue_transaction reestablishes the connection if disconnected" do
+		mock_time(TODAY)
+		
+		log = @logger.new_transaction("foobar")
+		log.close(true)
+		log2 = @logger2.continue_transaction(log.txn_id, "foobar")
+		log2.close(true)
+		
+		shared_data = @logger2.instance_variable_get(:"@shared_data")
+		shared_data.synchronize do
+			shared_data.client.close
+		end
+		
+		log2 = @logger2.continue_transaction(log.txn_id, "foobar")
+		begin
+			log2.message("hello")
+		ensure
+			log2.close(true)
+		end
+		
+		log_file = "#{@log_dir}/1/#{FOOBAR_MD5}/#{LOCALHOST_MD5}/requests/2010/04/11/12/log.txt"
+		File.read(log_file).should =~ /hello/
+	end
+	
+	specify "AnalyticsLogger only creates null Log objects if no server address is given" do
+		logger = AnalyticsLogger.new(nil, nil, nil, nil)
+		begin
+			logger.new_transaction("foobar").should be_null
+		ensure
+			logger.close
+		end
+	end
+	
+	specify "once a Log object is closed, be becomes null" do
+		log = @logger.new_transaction("foobar")
 		log.close
-		@io.string.should ==
-			"abcdef-5678 10 ATTACH\n" +
-			"abcdef-5678 20 hello world\n" +
-			"abcdef-5678 30 DETACH\n"
+		log.should be_null
 	end
 	
-	it "writes long messages in the expected format and locks the file while doing so" do
-		mock_message_client(5678)
-		@io.should_receive(:flock).with(File::LOCK_EX).exactly(3).times
-		@io.should_receive(:flock).with(File::LOCK_UN).exactly(3).times
+	specify "null Log objects don't do anything" do
+		logger = AnalyticsLogger.new(nil, nil, nil, nil)
+		begin
+			log = logger.new_transaction("foobar")
+			log.message("hello")
+			log.close(true)
+		ensure
+			logger.close
+		end
 		
-		AnalyticsLogger::Log.should_receive(:timestamp).and_return(10)
-		log = @logger.continue_transaction("foobar", "abcdef-5678", :requests, true)
-		AnalyticsLogger::Log.should_receive(:timestamp).and_return(20)
-		log.message("hello world")
-		AnalyticsLogger::Log.should_receive(:timestamp).and_return(30)
-		log.close
-		
-		@io.string.should ==
-			"  16 abcdef-5678 10 ATTACH\n" +
-			"  1b abcdef-5678 20 hello world\n" +
-			"  16 abcdef-5678 30 DETACH\n"
+		File.exist?("#{@log_dir}/1").should be_false
 	end
+	
+	specify "#clear_connection closes the connection" do
+		@logger.new_transaction("foobar").close
+		@logger.clear_connection
+		shared_data = @logger.instance_variable_get(:"@shared_data")
+		shared_data.synchronize do
+			shared_data.client.should be_nil
+		end
+	end
+	
+	it "reestablishes the connection to the logging server if the logging server crashed and was restarted" do
+		mock_time(TODAY)
+		
+		@logger.new_transaction("foobar").close
+		Process.kill('KILL', @agent_pid)
+		Process.waitpid(@agent_pid)
+		@agent_pid = spawn_logging_agent
+		
+		log = @logger.new_transaction("foobar")
+		begin
+			log.message("hello")
+		ensure
+			log.close(true)
+		end
+		
+		log_file = "#{@log_dir}/1/#{FOOBAR_MD5}/#{LOCALHOST_MD5}/requests/2010/04/11/12/log.txt"
+		File.read(log_file).should =~ /hello/
 	end
 end

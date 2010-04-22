@@ -54,9 +54,10 @@ protected
 			# is only meant to make the unit tests pass. For production
 			# systems one should pre-create the temp directory with
 			# ServerInstanceDir.h.
-			system("mkdir", "-p", "-m", "u=wxs,g=wx,o=wx", dir)
-			system("mkdir", "-p", "-m", "u=wxs,g=wx,o=wx", "#{dir}/backends")
-			system("mkdir", "-p", "-m", "u=wxs,g=wx,o=wx", "#{dir}/spawn-server")
+			system("mkdir", "-p", "-m", "u=rwxs,g=rwx,o=rwx", dir)
+			system("mkdir", "-p", "-m", "u=rwxs,g=rwx,o=rwx", "#{dir}/generation-0")
+			system("mkdir", "-p", "-m", "u=rwxs,g=rwx,o=rwx", "#{dir}/backends")
+			system("mkdir", "-p", "-m", "u=rwxs,g=rwx,o=rwx", "#{dir}/spawn-server")
 		end
 		return dir
 	end

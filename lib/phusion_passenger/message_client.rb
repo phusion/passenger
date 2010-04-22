@@ -63,7 +63,7 @@ class MessageClient
 	end
 	
 	def close
-		@socket.close
+		@socket.close if @socket
 		@channel = @socket = nil
 	end
 	

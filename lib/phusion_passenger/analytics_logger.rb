@@ -27,6 +27,9 @@ require 'phusion_passenger/message_client'
 module PhusionPassenger
 
 class AnalyticsLogger
+	MAX_RETRIES = 10
+	RETRY_SLEEP = 0.2
+	
 	class Log
 		attr_reader :txn_id
 		
@@ -39,7 +42,7 @@ class AnalyticsLogger
 		end
 		
 		def null?
-			return !!@shared_data
+			return !@shared_data
 		end
 		
 		def message(text)
@@ -76,10 +79,17 @@ class AnalyticsLogger
 			end
 		end
 		
-		def close
+		def close(flush_to_disk = false)
 			@shared_data.synchronize do
 				@shared_data.client.write("closeTransaction", @txn_id,
 					AnalyticsLogger.timestamp_string)
+				if flush_to_disk
+					@shared_data.client.write("flush")
+					result = @shared_data.client.read
+					if result != ["ok"]
+						raise "Invalid logging server response #{result.inspect} to the 'flush' command"
+					end
+				end
 				@shared_data.unref
 				@shared_data = nil
 			end if @shared_data
@@ -110,7 +120,7 @@ class AnalyticsLogger
 		@shared_data = SharedData.new
 	end
 	
-	def clear_connections
+	def clear_connection
 		@shared_data.synchronize do
 			@shared_data.unref
 			@shared_data = SharedData.new
@@ -132,15 +142,21 @@ class AnalyticsLogger
 			txn_id = (AnalyticsLogger.current_time.to_i / 60).to_s(16)
 			txn_id << "-#{random_token(11)}"
 			@shared_data.synchronize do
-				connect if !connected?
-				begin
-					@shared_data.client.write("openTransaction",
-						txn_id, group_name, category,
-						AnalyticsLogger.timestamp_string)
-					return Log.new(@shared_data, txn_id)
-				rescue
-					disconnect
-					raise
+				retry_count = 0
+				while retry_count < MAX_RETRIES
+					connect if !connected?
+					begin
+						@shared_data.client.write("openTransaction",
+							txn_id, group_name, category,
+							AnalyticsLogger.timestamp_string)
+						return Log.new(@shared_data, txn_id)
+					rescue Errno::EPIPE, Errno::ECONNREFUSED
+						retry_count += 1
+						sleep RETRY_SLEEP
+					rescue Exception => e
+						disconnect
+						raise e
+					end
 				end
 			end
 		end
@@ -151,15 +167,21 @@ class AnalyticsLogger
 			return Log.new
 		else
 			@shared_data.synchronize do
-				connect if !connected?
-				begin
-					@shared_data.client.write("openTransaction",
-						txn_id, group_name, category,
-						AnalyticsLogger.timestamp_string)
-					return Log.new(@shared_data, txn_id)
-				rescue
-					disconnect
-					raise
+				retry_count = 0
+				while retry_count < MAX_RETRIES
+					connect if !connected?
+					begin
+						@shared_data.client.write("openTransaction",
+							txn_id, group_name, category,
+							AnalyticsLogger.timestamp_string)
+						return Log.new(@shared_data, txn_id)
+					rescue Errno::EPIPE
+						retry_count += 1
+						sleep RETRY_SLEEP
+					rescue Exception => e
+						disconnect
+						raise e
+					end
 				end
 			end
 		end

@@ -784,7 +784,7 @@ end
 	### Ruby components tests ###
 	
 	desc "Run unit tests for the Ruby libraries"
-	task 'test:ruby' => :native_support do
+	task 'test:ruby' => [:native_support, 'agents/PassengerLoggingAgent'] do
 		if PlatformInfo.rspec.nil?
 			abort "RSpec is not installed for Ruby interpreter '#{PlatformInfo::RUBY}'. Please install it."
 		else

@@ -15,6 +15,8 @@ rescue Errno::ENOENT
 	exit 1
 end
 
+AGENTS_DIR = "#{source_root}/agents"
+
 $LOAD_PATH.unshift("#{source_root}/lib")
 $LOAD_PATH.unshift("#{source_root}/test")
 

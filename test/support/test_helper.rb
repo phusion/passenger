@@ -274,6 +274,16 @@ module TestHelper
 		FileUtils.rm_rf(dir)
 	end
 	
+	def spawn_process(*args)
+		if Process.respond_to?(:spawn)
+			return Process.spawn(*args)
+		else
+			return fork do
+				exec(*args)
+			end
+		end
+	end
+	
 	# Run a script in a Ruby subprocess. *args are program arguments to
 	# pass to the script. Returns the script's stdout output.
 	def run_script(code, *args)

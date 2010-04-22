@@ -351,7 +351,7 @@ protected
 	# +options+ are the spawn options that were passed.
 	def before_handling_requests(forked, options)
 		if forked && options["analytics_logger"]
-			options["analytics_logger"].clear_connections
+			options["analytics_logger"].clear_connection
 		end
 		
 		# If we were forked from a preloader process then clear or
