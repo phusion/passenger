@@ -512,11 +512,11 @@ public:
 
 class HelperAgentWatcher: public AgentWatcher {
 protected:
-	string         requestSocketPassword;
-	string         messageSocketPassword;
-	string         helperAgentFilename;
-	string         requestSocketFilename;
-	string         messageSocketFilename;
+	string requestSocketFilename;
+	string messageSocketFilename;
+	string helperAgentFilename;
+	string requestSocketPassword;
+	string messageSocketPassword;
 	
 	virtual const char *name() const {
 		return "Phusion Passenger helper agent";
@@ -567,13 +567,13 @@ protected:
 	
 public:
 	HelperAgentWatcher(const ResourceLocator &resourceLocator) {
-		requestSocketPassword = randomGenerator.generateByteString(REQUEST_SOCKET_PASSWORD_SIZE);
-		messageSocketPassword = randomGenerator.generateByteString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
 		if (agentsOptions.get("web_server_type") == "apache") {
 			helperAgentFilename = resourceLocator.getAgentsDir() + "/apache2/PassengerHelperAgent";
 		} else {
 			helperAgentFilename = resourceLocator.getAgentsDir() + "/nginx/PassengerHelperAgent";
 		}
+		requestSocketPassword = randomGenerator.generateByteString(REQUEST_SOCKET_PASSWORD_SIZE);
+		messageSocketPassword = randomGenerator.generateByteString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
 	}
 	
 	virtual void sendStartupInfo(MessageChannel &channel) {
@@ -590,6 +590,7 @@ public:
 class LoggingAgentWatcher: public AgentWatcher {
 protected:
 	string agentFilename;
+	string password;
 	
 	virtual const char *name() const {
 		return "Phusion Passenger logging agent";
@@ -605,7 +606,7 @@ protected:
 	
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
 		VariantMap options = agentsOptions;
-		options.set("logging_agent_password", Base64::encode(loggingAgentPassword));
+		options.set("logging_agent_password", Base64::encode(password));
 		options.writeToFd(fd);
 	}
 	
@@ -620,11 +621,12 @@ protected:
 public:
 	LoggingAgentWatcher(const ResourceLocator &resourceLocator) {
 		agentFilename = resourceLocator.getAgentsDir() + "/PassengerLoggingAgent";
+		password = randomGenerator.generateByteString(32);
 	}
 	
 	virtual void sendStartupInfo(MessageChannel &channel) {
 		channel.write("LoggingServer info",
-			Base64::encode(loggingAgentPassword).c_str(),
+			Base64::encode(password).c_str(),
 			NULL);
 	}
 };
@@ -931,8 +933,6 @@ main(int argc, char *argv[]) {
 		maxPoolSizeString  = toString(maxPoolSize);
 		maxInstancesPerAppString = toString(maxInstancesPerApp);
 		poolIdleTimeString = toString(poolIdleTime);
-		
-		loggingAgentPassword = randomGenerator.generateByteString(32);
 		
 		ServerInstanceDirToucher serverInstanceDirToucher;
 		ResourceLocator resourceLocator(passengerRoot);
