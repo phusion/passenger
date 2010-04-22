@@ -28,6 +28,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cerrno>
+#include <fcntl.h>
 #include <signal.h>
 
 #include "Constants.h"
@@ -59,8 +61,24 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 	
 	_feedbackFdAvailable = argc == 1;
 	try {
-		if (_feedbackFdAvailable) {
-			options.readFrom(FEEDBACK_FD);
+		if (argc == 1) {
+			int ret = fcntl(FEEDBACK_FD, F_GETFL);
+			if (ret == -1) {
+				if (errno == EBADF) {
+					fprintf(stderr,
+						"You're not supposed to start this program from the command line. "
+						"It's used internally by Phusion Passenger.\n");
+					exit(1);
+				} else {
+					int e = errno;
+					fprintf(stderr,
+						"Encountered an error in feedback file descriptor 3: %s (%d)\n",
+							strerror(e), e);
+					exit(1);
+				}
+			} else {
+				options.readFrom(FEEDBACK_FD);
+			}
 		} else {
 			options.readFrom((const char **) argv + 1, argc - 1);
 		}

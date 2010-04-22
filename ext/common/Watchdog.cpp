@@ -78,8 +78,8 @@ static string  serializedPrestartURLs;
 static ServerInstanceDirPtr serverInstanceDir;
 static ServerInstanceDir::GenerationPtr generation;
 static string loggingAgentPassword;
-static RandomGenerator randomGenerator;
-static EventFd errorEvent;
+static RandomGenerator *randomGenerator;
+static EventFd *errorEvent;
 
 static string logLevelString;
 static string webServerPidString;
@@ -147,15 +147,15 @@ private:
 			lock_guard<boost::mutex> l(lock);
 			threadExceptionMessage = e.what();
 			threadExceptionBacktrace = e.backtrace();
-			errorEvent.notify();
+			errorEvent->notify();
 		} catch (const std::exception &e) {
 			lock_guard<boost::mutex> l(lock);
 			threadExceptionMessage = e.what();
-			errorEvent.notify();
+			errorEvent->notify();
 		} catch (...) {
 			lock_guard<boost::mutex> l(lock);
 			threadExceptionMessage = "Unknown error";
-			errorEvent.notify();
+			errorEvent->notify();
 		}
 	}
 	
@@ -271,34 +271,37 @@ public:
 			// Child
 			long max_fds, i;
 			
-			/* Make sure the feedback fd (fds[1]) is 3 and close
-			 * all other file descriptors.
+			/* Make sure file descriptor FEEDBACK_FD refers to the newly created
+			 * feedback fd (fds[1]) and close all other file descriptors.
+			 * In this child process we don't care about the original FEEDBACK_FD
+			 * (which is used by the Watchdog to communicate with the agents starter.)
+			 *
+			 * fds[1] is guaranteed to be != FEEDBACK_FD because the watchdog
+			 * is started with FEEDBACK_FD already allocated.
 			 */
 			syscalls::close(fds[0]);
-			if (fds[1] != 3) {
-				if (syscalls::dup2(fds[1], 3) == -1) {
-					/* Something went wrong, report error through feedback fd. */
-					e = errno;
-					try {
-						MessageChannel(fds[1]).write("system error before fork",
-							"dup2() failed",
-							toString(e).c_str(),
-							NULL);
-						_exit(1);
-					} catch (...) {
-						fprintf(stderr, "Passenger Watchdog: dup2() failed: %s (%d)\n",
-							strerror(e), e);
-						fflush(stderr);
-						_exit(1);
-					}
+			
+			if (syscalls::dup2(fds[1], FEEDBACK_FD) == -1) {
+				/* Something went wrong, report error through feedback fd. */
+				e = errno;
+				try {
+					MessageChannel(fds[1]).write("system error before fork",
+						"dup2() failed",
+						toString(e).c_str(),
+						NULL);
+					_exit(1);
+				} catch (...) {
+					fprintf(stderr, "Passenger Watchdog: dup2() failed: %s (%d)\n",
+						strerror(e), e);
+					fflush(stderr);
+					_exit(1);
 				}
 			}
-			/* Close all file descriptors except 0-3. */
+			
+			/* Close all file descriptors except 0-FEEDBACK_FD. */
 			max_fds = sysconf(_SC_OPEN_MAX);
-			for (i = 4; i < max_fds; i++) {
-				if (i != fds[1]) {
-					syscalls::close(i);
-				}
+			for (i = FEEDBACK_FD + 1; i < max_fds; i++) {
+				syscalls::close(i);
 			}
 			
 			/* Become the process group leader so that the watchdog can kill the
@@ -314,7 +317,8 @@ public:
 			}
 			e = errno;
 			try {
-				MessageChannel(3).write("exec error", toString(e).c_str(), NULL);
+				MessageChannel(FEEDBACK_FD).write("exec error",
+					toString(e).c_str(), NULL);
 				_exit(1);
 			} catch (...) {
 				fprintf(stderr, "Passenger Watchdog: could not execute %s: %s (%d)\n",
@@ -572,8 +576,8 @@ public:
 		} else {
 			helperAgentFilename = resourceLocator.getAgentsDir() + "/nginx/PassengerHelperAgent";
 		}
-		requestSocketPassword = randomGenerator.generateByteString(REQUEST_SOCKET_PASSWORD_SIZE);
-		messageSocketPassword = randomGenerator.generateByteString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
+		requestSocketPassword = randomGenerator->generateByteString(REQUEST_SOCKET_PASSWORD_SIZE);
+		messageSocketPassword = randomGenerator->generateByteString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
 	}
 	
 	virtual void sendStartupInfo(MessageChannel &channel) {
@@ -621,7 +625,7 @@ protected:
 public:
 	LoggingAgentWatcher(const ResourceLocator &resourceLocator) {
 		agentFilename = resourceLocator.getAgentsDir() + "/PassengerLoggingAgent";
-		password = randomGenerator.generateByteString(32);
+		password = randomGenerator->generateByteString(32);
 	}
 	
 	virtual void sendStartupInfo(MessageChannel &channel) {
@@ -760,12 +764,12 @@ waitForStarterProcessOrWatchers(vector<AgentWatcher *> &watchers) {
 	
 	FD_ZERO(&fds);
 	FD_SET(FEEDBACK_FD, &fds);
-	FD_SET(errorEvent.fd(), &fds);
+	FD_SET(errorEvent->fd(), &fds);
 	
-	if (FEEDBACK_FD > errorEvent.fd()) {
+	if (FEEDBACK_FD > errorEvent->fd()) {
 		max = FEEDBACK_FD;
 	} else {
-		max = errorEvent.fd();
+		max = errorEvent->fd();
 	}
 	
 	ret = syscalls::select(max + 1, &fds, NULL, NULL, NULL);
@@ -775,7 +779,7 @@ waitForStarterProcessOrWatchers(vector<AgentWatcher *> &watchers) {
 		return false;
 	}
 	
-	if (FD_ISSET(errorEvent.fd(), &fds)) {
+	if (FD_ISSET(errorEvent->fd(), &fds)) {
 		vector<AgentWatcher *>::const_iterator it;
 		string message, backtrace, watcherName;
 		
@@ -917,6 +921,9 @@ main(int argc, char *argv[]) {
 	serializedPrestartURLs  = agentsOptions.get("prestart_urls");
 	
 	try {
+		randomGenerator = new RandomGenerator();
+		errorEvent = new EventFd();
+		
 		MessageChannel feedbackChannel(FEEDBACK_FD);
 		serverInstanceDir.reset(new ServerInstanceDir(webServerPid, tempDir));
 		generation = serverInstanceDir->newGeneration(userSwitching, defaultUser,
