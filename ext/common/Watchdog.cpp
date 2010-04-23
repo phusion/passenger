@@ -81,13 +81,6 @@ static string loggingAgentPassword;
 static RandomGenerator *randomGenerator;
 static EventFd *errorEvent;
 
-static string logLevelString;
-static string webServerPidString;
-static string generationNumber;
-static string maxPoolSizeString;
-static string maxInstancesPerAppString;
-static string poolIdleTimeString;
-
 #define REQUEST_SOCKET_PASSWORD_SIZE     64
 
 
@@ -274,10 +267,10 @@ public:
 			/* Make sure file descriptor FEEDBACK_FD refers to the newly created
 			 * feedback fd (fds[1]) and close all other file descriptors.
 			 * In this child process we don't care about the original FEEDBACK_FD
-			 * (which is used by the Watchdog to communicate with the agents starter.)
+			 * (which is the Watchdog's communication channel to the agents starter.)
 			 *
 			 * fds[1] is guaranteed to be != FEEDBACK_FD because the watchdog
-			 * is started with FEEDBACK_FD already allocated.
+			 * is started with FEEDBACK_FD already assigned.
 			 */
 			syscalls::close(fds[0]);
 			
@@ -531,32 +524,15 @@ protected:
 	}
 	
 	virtual void execProgram() const {
-		execl(helperAgentFilename.c_str(),
-			"PassengerHelperAgent",
-			logLevelString.c_str(),
-			"3",  // feedback fd
-			webServerPidString.c_str(),
-			tempDir.c_str(),
-			userSwitching ? "true" : "false",
-			defaultUser.c_str(),
-			defaultGroup.c_str(),
-			passengerRoot.c_str(),
-			rubyCommand.c_str(),
-			generationNumber.c_str(),
-			maxPoolSizeString.c_str(),
-			maxInstancesPerAppString.c_str(),
-			poolIdleTimeString.c_str(),
-			serializedPrestartURLs.c_str(),
-			(char *) 0);
+		execl(helperAgentFilename.c_str(), "PassengerHelperAgent", (char *) 0);
 	}
 	
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
-		MessageChannel channel(fd);
-		channel.write("passwords",
-			Base64::encode(requestSocketPassword).c_str(),
-			Base64::encode(messageSocketPassword).c_str(),
-			Base64::encode(loggingAgentPassword).c_str(),
-			NULL);
+		VariantMap options = agentsOptions;
+		options.set("request_socket_password", Base64::encode(requestSocketPassword)).
+			set("message_socket_password", Base64::encode(messageSocketPassword)).
+			set("logging_agent_password", Base64::encode(loggingAgentPassword));
+		options.writeToFd(fd);
 	}
 	
 	virtual bool processStartupInfo(pid_t pid, FileDescriptor &fd, const vector<string> &args) {
@@ -594,7 +570,6 @@ public:
 class LoggingAgentWatcher: public AgentWatcher {
 protected:
 	string agentFilename;
-	string password;
 	
 	virtual const char *name() const {
 		return "Phusion Passenger logging agent";
@@ -610,7 +585,7 @@ protected:
 	
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
 		VariantMap options = agentsOptions;
-		options.set("logging_agent_password", Base64::encode(password));
+		options.set("logging_agent_password", Base64::encode(loggingAgentPassword));
 		options.writeToFd(fd);
 	}
 	
@@ -625,12 +600,11 @@ protected:
 public:
 	LoggingAgentWatcher(const ResourceLocator &resourceLocator) {
 		agentFilename = resourceLocator.getAgentsDir() + "/PassengerLoggingAgent";
-		password = randomGenerator->generateByteString(32);
 	}
 	
 	virtual void sendStartupInfo(MessageChannel &channel) {
 		channel.write("LoggingServer info",
-			Base64::encode(password).c_str(),
+			Base64::encode(loggingAgentPassword).c_str(),
 			NULL);
 	}
 };
@@ -931,18 +905,9 @@ main(int argc, char *argv[]) {
 		agentsOptions.set("server_instance_dir", serverInstanceDir->getPath());
 		agentsOptions.setInt("generation_number", generation->getNumber());
 		
-		/* Pre-convert some integers to strings so that we don't have to do this
-		 * after forking.
-		 */
-		logLevelString     = toString(logLevel);
-		webServerPidString = toString(webServerPid);
-		generationNumber   = toString(generation->getNumber());
-		maxPoolSizeString  = toString(maxPoolSize);
-		maxInstancesPerAppString = toString(maxInstancesPerApp);
-		poolIdleTimeString = toString(poolIdleTime);
-		
 		ServerInstanceDirToucher serverInstanceDirToucher;
 		ResourceLocator resourceLocator(passengerRoot);
+		loggingAgentPassword = randomGenerator->generateByteString(32);
 		
 		HelperAgentWatcher helperAgentWatcher(resourceLocator);
 		LoggingAgentWatcher loggingAgentWatcher(resourceLocator);

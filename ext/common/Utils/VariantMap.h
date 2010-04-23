@@ -329,6 +329,28 @@ public:
 		}
 		channel.write(args);
 	}
+	
+	string inspect() const {
+		map<string, string>::const_iterator it;
+		map<string, string>::const_iterator end = store.end();
+		string result;
+		unsigned int i = 0;
+		
+		result.append("{ ");
+		for (it = store.begin(); it != end; it++, i++) {
+			result.append("'");
+			result.append(it->first);
+			result.append("' => '");
+			result.append(it->second);
+			if (i == store.size() - 1) {
+				result.append("'");
+			} else {
+				result.append("', ");
+			}
+		}
+		result.append(" }");
+		return result;
+	}
 };
 
 } // namespace Passenger

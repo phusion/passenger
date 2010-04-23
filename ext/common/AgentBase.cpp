@@ -59,7 +59,11 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 	TRACE_POINT();
 	VariantMap options;
 	
-	_feedbackFdAvailable = argc == 1;
+	ignoreSigpipe();
+	setup_syscall_interruption_support();
+	setvbuf(stdout, NULL, _IONBF, 0);
+	setvbuf(stderr, NULL, _IONBF, 0);
+	
 	try {
 		if (argc == 1) {
 			int ret = fcntl(FEEDBACK_FD, F_GETFL);
@@ -77,6 +81,7 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 					exit(1);
 				}
 			} else {
+				_feedbackFdAvailable = true;
 				options.readFrom(FEEDBACK_FD);
 			}
 		} else {
@@ -87,10 +92,6 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 		exit(1);
 	}
 	
-	ignoreSigpipe();
-	setup_syscall_interruption_support();
-	setvbuf(stdout, NULL, _IONBF, 0);
-	setvbuf(stderr, NULL, _IONBF, 0);
 	setLogLevel(options.getInt("log_level", false, 1));
 	
 	// Change process title.

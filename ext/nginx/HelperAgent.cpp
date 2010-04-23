@@ -30,7 +30,6 @@
 #include <cstring>
 #include <unistd.h>
 #include <errno.h>
-#include <signal.h>
 #include <limits.h>
 #include <pwd.h>
 #include <grp.h>
@@ -47,7 +46,9 @@
 #include "ScgiRequestParser.h"
 #include "HttpStatusExtractor.h"
 
+#include "AgentBase.h"
 #include "HelperAgent/BacktracesServer.h"
+#include "Constants.h"
 #include "ApplicationPool/Pool.h"
 #include "ApplicationPool/Server.h"
 #include "Session.h"
@@ -567,8 +568,6 @@ private:
 			P_ERROR("Uncaught exception in PassengerServer client thread:\n"
 				<< "   exception: " << e.what() << "\n"
 				<< "   backtrace: not available");
-		} catch (...) {
-			P_ERROR("Uncaught unknown exception in PassengerServer client thread.");
 		}
 	}
 	
@@ -803,11 +802,10 @@ public:
 		bool userSwitching, const string &defaultUser, const string &defaultGroup,
 		const string &passengerRoot, const string &rubyCommand, unsigned int generationNumber,
 		unsigned int maxPoolSize, unsigned int maxInstancesPerApp, unsigned int poolIdleTime,
-		const string &serializedPrestartURIs)
+		const VariantMap &options)
 		: serverInstanceDir(webServerPid, tempDir, false),
 		  resourceLocator(passengerRoot)
 	{
-		vector<string> args;
 		string messageSocketPassword;
 		string loggingAgentPassword;
 		
@@ -820,15 +818,9 @@ public:
 		numberOfThreads     = maxPoolSize * 4;
 		
 		UPDATE_TRACE_POINT();
-		if (!feedbackChannel.read(args)) {
-			throw IOException("The watchdog unexpectedly closed the connection.");
-		}
-		if (args[0] != "passwords") {
-			throw IOException("Unexpected input message '" + args[0] + "'");
-		}
-		requestSocketPassword = Base64::decode(args[1]);
-		messageSocketPassword = Base64::decode(args[2]);
-		loggingAgentPassword  = Base64::decode(args[3]);
+		requestSocketPassword = Base64::decode(options.get("request_socket_password"));
+		messageSocketPassword = Base64::decode(options.get("message_socket_password"));
+		loggingAgentPassword  = Base64::decode(options.get("logging_agent_password"));
 		generation = serverInstanceDir.getGeneration(generationNumber);
 		startListening();
 		accountsDatabase = AccountsDatabase::createDefault(generation,
@@ -864,7 +856,7 @@ public:
 			NULL);
 		
 		prestarterThread = ptr(new oxt::thread(
-			boost::bind(prestartWebApps, resourceLocator, serializedPrestartURIs)
+			boost::bind(prestartWebApps, resourceLocator, options.get("prestart_urls"))
 		));
 	}
 	
@@ -942,22 +934,6 @@ public:
 };
 
 /**
- * Ignores the SIGPIPE signal that in general is raised when a computer program attempts
- * to write to a pipe without a processes connected to the other end. This is used to
- * prevent Nginx from getting killed by the default signal handler when it attempts to
- * write the server password to the HelperAgent in the situation that the HelperAgent
- * failed to start.
- */
-static void
-ignoreSigpipe() {
-	struct sigaction action;
-	action.sa_handler = SIG_IGN;
-	action.sa_flags   = 0;
-	sigemptyset(&action.sa_mask);
-	sigaction(SIGPIPE, &action, NULL);
-}
-
-/**
  * Initializes and starts the helper agent that is responsible for handling communication
  * between Nginx and the backend Rails processes.
  *
@@ -967,40 +943,26 @@ ignoreSigpipe() {
 int
 main(int argc, char *argv[]) {
 	TRACE_POINT();
+	VariantMap options = initializeAgent(argc, argv, "PassengerHelperAgent");
+	pid_t   webServerPid  = options.getPid("web_server_pid");
+	string  tempDir       = options.get("temp_dir");
+	bool    userSwitching = options.getBool("user_switching");
+	string  defaultUser   = options.get("default_user");
+	string  defaultGroup  = options.get("default_group");
+	string  passengerRoot = options.get("passenger_root");
+	string  rubyCommand   = options.get("ruby");
+	unsigned int generationNumber   = options.getInt("generation_number");
+	unsigned int maxPoolSize        = options.getInt("max_pool_size");
+	unsigned int maxInstancesPerApp = options.getInt("max_instances_per_app");
+	unsigned int poolIdleTime       = options.getInt("pool_idle_time");
+	
 	try {
-		ignoreSigpipe();
-		setup_syscall_interruption_support();
-		setvbuf(stdout, NULL, _IONBF, 0);
-		setvbuf(stderr, NULL, _IONBF, 0);
-		
-		unsigned int   logLevel   = atoi(argv[1]);
-		FileDescriptor feedbackFd = atoi(argv[2]);
-		pid_t   webServerPid  = (pid_t) atoll(argv[3]);
-		string  tempDir       = argv[4];
-		bool    userSwitching = strcmp(argv[5], "true") == 0;
-		string  defaultUser   = argv[6];
-		string  defaultGroup  = argv[7];
-		string  passengerRoot = argv[8];
-		string  rubyCommand   = argv[9];
-		unsigned int generationNumber   = atoll(argv[10]);
-		unsigned int maxPoolSize        = atoi(argv[11]);
-		unsigned int maxInstancesPerApp = atoi(argv[12]);
-		unsigned int poolIdleTime       = atoi(argv[13]);
-		string  serializedPrestartURIs  = argv[14];
-		
-		// Change process title.
-		strncpy(argv[0], "PassengerHelperAgent", strlen(argv[0]));
-		for (int i = 1; i < argc; i++) {
-			memset(argv[i], '\0', strlen(argv[i]));
-		}
-		
 		UPDATE_TRACE_POINT();
-		setLogLevel(logLevel);
-		Server server(feedbackFd, webServerPid, tempDir,
+		Server server(FEEDBACK_FD, webServerPid, tempDir,
 			userSwitching, defaultUser, defaultGroup,
 			passengerRoot, rubyCommand, generationNumber,
 			maxPoolSize, maxInstancesPerApp, poolIdleTime,
-			serializedPrestartURIs);
+			options);
 		P_DEBUG("Passenger helper agent started on PID " << getpid());
 		
 		UPDATE_TRACE_POINT();
@@ -1011,9 +973,6 @@ main(int argc, char *argv[]) {
 	} catch (const std::exception &e) {
 		P_ERROR(e.what());
 		return 1;
-	} catch (...) {
-		P_ERROR("Unknown exception thrown in main thread.");
-		throw;
 	}
 	
 	P_TRACE(2, "Helper agent exited.");

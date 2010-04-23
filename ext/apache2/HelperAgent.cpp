@@ -33,14 +33,15 @@
 #include <sys/types.h>
 #include <sys/select.h>
 #include <unistd.h>
-#include <signal.h>
 #include <pwd.h>
 #include <grp.h>
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
 
+#include "AgentBase.h"
 #include "HelperAgent/BacktracesServer.h"
+#include "Constants.h"
 #include "ApplicationPool/Pool.h"
 #include "ApplicationPool/Server.h"
 #include "AccountsDatabase.h"
@@ -196,34 +197,26 @@ private:
 	}
 	
 public:
-	Server(unsigned int logLevel, FileDescriptor feedbackFd,
+	Server(FileDescriptor feedbackFd,
 		pid_t webServerPid, const string &tempDir,
 		bool userSwitching, const string &defaultUser, const string &defaultGroup,
 		const string &passengerRoot, const string &rubyCommand,
 		unsigned int generationNumber, unsigned int maxPoolSize,
 		unsigned int maxInstancesPerApp, unsigned int poolIdleTime,
-		const string &serializedPrestartURIs)
+		const VariantMap &options)
 		: serverInstanceDir(webServerPid, tempDir, false),
 		  resourceLocator(passengerRoot)
 	{
 		TRACE_POINT();
-		vector<string> args;
 		string messageSocketPassword;
 		string loggingAgentPassword;
 		
-		setLogLevel(logLevel);
 		this->feedbackFd  = feedbackFd;
 		feedbackChannel   = MessageChannel(feedbackFd);
 		
 		UPDATE_TRACE_POINT();
-		if (!feedbackChannel.read(args)) {
-			throw IOException("The watchdog unexpectedly closed the connection.");
-		}
-		if (args[0] != "passwords") {
-			throw IOException("Unexpected input message '" + args[0] + "'");
-		}
-		messageSocketPassword = Base64::decode(args[2]);
-		loggingAgentPassword  = Base64::decode(args[3]);
+		messageSocketPassword = Base64::decode(options.get("message_socket_password"));
+		loggingAgentPassword  = Base64::decode(options.get("logging_agent_password"));
 		
 		generation       = serverInstanceDir.getGeneration(generationNumber);
 		accountsDatabase = AccountsDatabase::createDefault(generation,
@@ -264,7 +257,7 @@ public:
 			NULL);
 		
 		prestarterThread = ptr(new oxt::thread(
-			boost::bind(prestartWebApps, resourceLocator, serializedPrestartURIs)
+			boost::bind(prestartWebApps, resourceLocator, options.get("prestart_urls"))
 		));
 	}
 	
@@ -323,51 +316,29 @@ public:
 	}
 };
 
-static void
-ignoreSigpipe() {
-	struct sigaction action;
-	action.sa_handler = SIG_IGN;
-	action.sa_flags   = 0;
-	sigemptyset(&action.sa_mask);
-	sigaction(SIGPIPE, &action, NULL);
-}
-
 int
 main(int argc, char *argv[]) {
 	TRACE_POINT();
+	VariantMap options = initializeAgent(argc, argv, "PassengerHelperAgent");
+	pid_t   webServerPid  = options.getPid("web_server_pid");
+	string  tempDir       = options.get("temp_dir");
+	bool    userSwitching = options.getBool("user_switching");
+	string  defaultUser   = options.get("default_user");
+	string  defaultGroup  = options.get("default_group");
+	string  passengerRoot = options.get("passenger_root");
+	string  rubyCommand   = options.get("ruby");
+	unsigned int generationNumber   = options.getInt("generation_number");
+	unsigned int maxPoolSize        = options.getInt("max_pool_size");
+	unsigned int maxInstancesPerApp = options.getInt("max_instances_per_app");
+	unsigned int poolIdleTime       = options.getInt("pool_idle_time");
+	
 	try {
-		ignoreSigpipe();
-		setup_syscall_interruption_support();
-		setvbuf(stdout, NULL, _IONBF, 0);
-		setvbuf(stderr, NULL, _IONBF, 0);
-		
-		unsigned int   logLevel   = atoi(argv[1]);
-		FileDescriptor feedbackFd = atoi(argv[2]);
-		pid_t   webServerPid  = (pid_t) atoll(argv[3]);
-		string  tempDir       = argv[4];
-		bool    userSwitching = strcmp(argv[5], "true") == 0;
-		string  defaultUser   = argv[6];
-		string  defaultGroup  = argv[7];
-		string  passengerRoot = argv[8];
-		string  rubyCommand   = argv[9];
-		unsigned int generationNumber  = atoll(argv[10]);
-		unsigned int maxPoolSize        = atoi(argv[11]);
-		unsigned int maxInstancesPerApp = atoi(argv[12]);
-		unsigned int poolIdleTime       = atoi(argv[13]);
-		string  serializedPrestartURIs  = argv[14];
-		
-		// Change process title.
-		strncpy(argv[0], "PassengerHelperServer", strlen(argv[0]));
-		for (int i = 1; i < argc; i++) {
-			memset(argv[i], '\0', strlen(argv[i]));
-		}
-		
 		UPDATE_TRACE_POINT();
-		Server server(logLevel, feedbackFd, webServerPid, tempDir,
+		Server server(FEEDBACK_FD, webServerPid, tempDir,
 			userSwitching, defaultUser, defaultGroup,
 			passengerRoot, rubyCommand, generationNumber,
 			maxPoolSize, maxInstancesPerApp, poolIdleTime,
-			serializedPrestartURIs);
+			options);
 		
 		UPDATE_TRACE_POINT();
 		server.mainLoop();
