@@ -30,10 +30,10 @@ module PhusionPassenger
 # AbstractServerCollection also automatically takes care of cleaning up
 # AbstractServers that have been idle for too long.
 #
-# This class exists because both SpawnManager and Railz::FrameworkSpawner need this kind
-# of functionality. SpawnManager maintains a collection of Railz::FrameworkSpawner
-# and Railz::ApplicationSpawner objects, while Railz::FrameworkSpawner maintains a
-# collection of Railz::ApplicationSpawner objects.
+# This class exists because both SpawnManager and ClassicRails::FrameworkSpawner need this kind
+# of functionality. SpawnManager maintains a collection of ClassicRails::FrameworkSpawner
+# and ClassicRails::ApplicationSpawner objects, while ClassicRails::FrameworkSpawner maintains a
+# collection of ClassicRails::ApplicationSpawner objects.
 #
 # This class is thread-safe as long as the specified thread-safety rules are followed.
 class AbstractServerCollection

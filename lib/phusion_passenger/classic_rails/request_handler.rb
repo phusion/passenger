@@ -23,9 +23,9 @@
 #  THE SOFTWARE.
 
 require 'phusion_passenger/abstract_request_handler'
-require 'phusion_passenger/railz/cgi_fixed'
+require 'phusion_passenger/classic_rails/cgi_fixed'
 module PhusionPassenger
-module Railz
+module ClassicRails
 
 # A request handler for Ruby on Rails applications.
 class RequestHandler < AbstractRequestHandler
@@ -71,5 +71,5 @@ private
 	end
 end
 
-end # module Railz
+end # module ClassicRails
 end # module PhusionPassenger

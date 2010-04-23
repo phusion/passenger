@@ -1,7 +1,7 @@
 require 'phusion_passenger/constants'
 
 module PhusionPassenger
-module Railz
+module ClassicRails
 module FrameworkExtensions
 
 module AnalyticsLogging
@@ -46,7 +46,7 @@ module AnalyticsLogging
 	def self.install!(options)
 		@@analytics_logger = options["analytics_logger"]
 		if ac_base_extension_installable?
-			require 'phusion_passenger/railz/framework_extensions/analytics_logging/ac_base_extension'
+			require 'phusion_passenger/ClassicRails/framework_extensions/analytics_logging/ac_base_extension'
 			ActionController::Base.class_eval do
 				include ACBaseExtension
 				alias_method_chain :perform_action, :passenger
@@ -54,28 +54,28 @@ module AnalyticsLogging
 			end
 		end
 		if ac_benchmarking_extension_installable?
-			require 'phusion_passenger/railz/framework_extensions/analytics_logging/ac_benchmarking_extension'
+			require 'phusion_passenger/ClassicRails/framework_extensions/analytics_logging/ac_benchmarking_extension'
 			ActionController::Benchmarking::ClassMethods.class_eval do
 				include ACBenchmarkingExtension
 				alias_method_chain :benchmark, :passenger
 			end
 		end
 		if ac_rescue_extension_installable?
-			require 'phusion_passenger/railz/framework_extensions/analytics_logging/ac_rescue_extension'
+			require 'phusion_passenger/ClassicRails/framework_extensions/analytics_logging/ac_rescue_extension'
 			ActionController::Rescue.class_eval do
 				include ACRescueExtension
 				alias_method_chain :rescue_action, :passenger
 			end
 		end
 		if av_benchmark_helper_extension_installable?
-			require 'phusion_passenger/railz/framework_extensions/analytics_logging/av_benchmark_helper_extension'
+			require 'phusion_passenger/ClassicRails/framework_extensions/analytics_logging/av_benchmark_helper_extension'
 			ActionView::Helpers::BenchmarkHelper.class_eval do
 				include AVBenchmarkHelperExtension
 				alias_method_chain :benchmark, :passenger
 			end
 		end
 		if ar_abstract_adapter_extension_installable?
-			require 'phusion_passenger/railz/framework_extensions/analytics_logging/ar_abstract_adapter_extension'
+			require 'phusion_passenger/ClassicRails/framework_extensions/analytics_logging/ar_abstract_adapter_extension'
 			ActiveRecord::ConnectionAdapters::AbstractAdapter.class_eval do
 				include ARAbstractAdapterExtension
 				alias_method_chain :log, :passenger

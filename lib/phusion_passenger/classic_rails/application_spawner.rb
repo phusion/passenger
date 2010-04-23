@@ -28,18 +28,18 @@ require 'fcntl'
 require 'phusion_passenger/abstract_server'
 require 'phusion_passenger/app_process'
 require 'phusion_passenger/constants'
-require 'phusion_passenger/railz/request_handler'
+require 'phusion_passenger/classic_rails/request_handler'
 require 'phusion_passenger/rack/request_handler'
 require 'phusion_passenger/public_api'
 require 'phusion_passenger/exceptions'
 require 'phusion_passenger/utils'
 
 module PhusionPassenger
-module Railz
+module ClassicRails
 
-# Spawning of Rails applications.
+# Spawning of Rails 1 and Rails 2 applications.
 #
-# Railz::ApplicationSpawner can operate in two modes:
+# ClassicRails::ApplicationSpawner can operate in two modes:
 # - Smart mode. In this mode, the Rails application's code is first preloaded into
 #   a temporary process, which can then further fork off application processes.
 #   Once the code has been preloaded, forking off application processes is very fast,
@@ -318,5 +318,5 @@ private
 	private_class_method :start_request_handler
 end
 
-end # module Railz
+end # module ClassicRails
 end # module PhusionPassenger

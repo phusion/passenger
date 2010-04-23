@@ -331,9 +331,9 @@ protected
 		
 		# Install analytics hooks, if requested and possible.
 		if defined?(ActionController)
-			require 'phusion_passenger/railz/framework_extensions/analytics_logging'
-			if PhusionPassenger::Railz::FrameworkExtensions::AnalyticsLogging.installable?(options)
-				PhusionPassenger::Railz::FrameworkExtensions::AnalyticsLogging.install!(options)
+			require 'phusion_passenger/classic_rails/framework_extensions/analytics_logging'
+			if PhusionPassenger::ClassicRails::FrameworkExtensions::AnalyticsLogging.installable?(options)
+				PhusionPassenger::ClassicRails::FrameworkExtensions::AnalyticsLogging.install!(options)
 				
 				# If the Ruby interpreter supports GC statistics then turn it on
 				# so that the info can be logged.

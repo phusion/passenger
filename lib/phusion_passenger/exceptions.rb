@@ -51,8 +51,8 @@ class InitializationError < StandardError
 	end
 end
 
-# Raised when Rack::ApplicationSpawner, Railz::ApplicationSpawner,
-# Railz::FrameworkSpawner or SpawnManager was unable to spawn an application,
+# Raised when Rack::ApplicationSpawner, ClassicRails::ApplicationSpawner,
+# ClassicRails::FrameworkSpawner or SpawnManager was unable to spawn an application,
 # because the application either threw an exception or called exit.
 #
 # If the application called exit, then +child_exception+ is an instance of
@@ -70,7 +70,7 @@ class AppInitError < InitializationError
 	end
 end
 
-# Raised when Railz::FrameworkSpawner or Railz::SpawnManager was unable to load a
+# Raised when ClassicRails::FrameworkSpawner or ClassicRails::SpawnManager was unable to load a
 # version of the Ruby on Rails framework. The +child_exception+ attribute is guaranteed
 # non-nil.
 class FrameworkInitError < InitializationError

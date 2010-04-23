@@ -50,11 +50,11 @@ module PhusionPassenger
 # will preload and cache Ruby on Rails frameworks, as well as application
 # code, so subsequent spawns will be very fast.
 #
-# Internally, SpawnManager uses Railz::FrameworkSpawner to preload and cache
-# Ruby on Rails frameworks. Railz::FrameworkSpawner, in turn, uses
-# Railz::ApplicationSpawner to preload and cache application code.
+# Internally, SpawnManager uses ClassicRails::FrameworkSpawner to preload and cache
+# Ruby on Rails frameworks. ClassicRails::FrameworkSpawner, in turn, uses
+# ClassicRails::ApplicationSpawner to preload and cache application code.
 #
-# In case you're wondering why the namespace is "Railz" and not "Rails":
+# In case you're wondering why the namespace is "ClassicRails" and not "Rails":
 # it's to work around an obscure bug in ActiveSupport's Dispatcher.
 class SpawnManager < AbstractServer
 	include Utils
@@ -75,8 +75,8 @@ class SpawnManager < AbstractServer
 			# Preload libraries for copy-on-write semantics.
 			require 'base64'
 			require 'phusion_passenger/app_process'
-			require 'phusion_passenger/railz/framework_spawner'
-			require 'phusion_passenger/railz/application_spawner'
+			require 'phusion_passenger/classic_rails/framework_spawner'
+			require 'phusion_passenger/classic_rails/application_spawner'
 			require 'phusion_passenger/rack/application_spawner'
 			require 'phusion_passenger/html_template'
 			require 'phusion_passenger/platform_info'
@@ -134,9 +134,9 @@ class SpawnManager < AbstractServer
 		
 		case options["app_type"]
 		when "rails"
-			if !defined?(Railz::FrameworkSpawner)
-				require 'phusion_passenger/railz/framework_spawner'
-				require 'phusion_passenger/railz/application_spawner'
+			if !defined?(ClassicRails::FrameworkSpawner)
+				require 'phusion_passenger/classic_rails/framework_spawner'
+				require 'phusion_passenger/classic_rails/application_spawner'
 			end
 			return spawn_rails_application(options)
 		when "rack"
@@ -207,14 +207,14 @@ private
 			if framework_version.nil? || framework_version == :vendor
 				key = "app:#{app_group_name}"
 				create_spawner = proc do
-					Railz::ApplicationSpawner.new(@options.merge(options))
+					ClassicRails::ApplicationSpawner.new(@options.merge(options))
 				end
 				spawner_timeout = options["app_spawner_timeout"]
 			else
 				key = "version:#{framework_version}"
 				create_spawner = proc do
 					options["framework_version"] = framework_version
-					Railz::FrameworkSpawner.new(@options.merge(options))
+					ClassicRails::FrameworkSpawner.new(@options.merge(options))
 				end
 				spawner_timeout = options["framework_spawner_timeout"]
 			end
@@ -236,7 +236,7 @@ private
 				end
 			end
 		else
-			return Railz::ApplicationSpawner.spawn_application(
+			return ClassicRails::ApplicationSpawner.spawn_application(
 				@options.merge(options))
 		end
 	end

@@ -17,7 +17,7 @@ describe SpawnManager do
 		@spawner.cleanup if @spawner
 	end
 	
-	describe_each_rails_version do
+	describe_rails_versions('<= 2.3') do
 		def spawner
 			@spawner ||= SpawnManager.new
 		end

@@ -1,18 +1,18 @@
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
 require 'phusion_passenger/app_process'
-require 'phusion_passenger/railz/framework_spawner'
+require 'phusion_passenger/classic_rails/framework_spawner'
 
 require 'ruby/shared/abstract_server_spec'
 require 'ruby/shared/spawners/spawn_server_spec'
 require 'ruby/shared/spawners/spawner_spec'
 require 'ruby/shared/spawners/reload_single_spec'
 require 'ruby/shared/spawners/reload_all_spec'
-require 'ruby/shared/spawners/rails/spawner_spec'
-require 'ruby/shared/spawners/rails/framework_spawner_spec'
+require 'ruby/shared/spawners/classic_rails/spawner_spec'
+require 'ruby/shared/spawners/classic_rails/framework_spawner_spec'
 
 # TODO: test whether FrameworkSpawner restarts ApplicationSpawner if it crashed
 
-describe Railz::FrameworkSpawner do
+describe ClassicRails::FrameworkSpawner do
 	include SpawnerSpecHelper
 	
 	after :each do
@@ -29,7 +29,7 @@ describe Railz::FrameworkSpawner do
 			yield stub if block_given?
 			
 			framework_version = AppProcess.detect_framework_version(stub.app_root)
-			spawner = Railz::ApplicationSpawner.new(
+			spawner = ClassicRails::ApplicationSpawner.new(
 				"framework_version" => framework_version,
 				"app_root" => stub.app_root)
 			spawner.start
@@ -46,7 +46,7 @@ describe Railz::FrameworkSpawner do
 		}
 		options = default_options.merge(extra_options)
 		@spawner ||= begin
-			spawner = Railz::FrameworkSpawner.new(options)
+			spawner = ClassicRails::FrameworkSpawner.new(options)
 			spawner.start
 			spawner
 		end
@@ -67,7 +67,7 @@ describe Railz::FrameworkSpawner do
 	end
 	
 	def load_nonexistant_framework(options = {})
-		spawner = Railz::FrameworkSpawner.new(options.merge(
+		spawner = ClassicRails::FrameworkSpawner.new(options.merge(
 			"framework_version" => "1.9.827"))
 		begin
 			spawner.start
@@ -76,12 +76,12 @@ describe Railz::FrameworkSpawner do
 		end
 	end
 	
-	describe_each_rails_version do
+	describe_each_rails_version('<= 2.3') do
 		it_should_behave_like "an AbstractServer"
 		it_should_behave_like "a spawn server"
 		it_should_behave_like "a spawner"
 		it_should_behave_like "a Rails spawner"
-		it_should_behave_like "a Railz::FrameworkSpawner"
+		it_should_behave_like "a ClassicRails::FrameworkSpawner"
 		it_should_behave_like "a Rails spawner that supports #reload(app_group_name)"
 		it_should_behave_like "a Rails spawner that supports #reload()"
 	end

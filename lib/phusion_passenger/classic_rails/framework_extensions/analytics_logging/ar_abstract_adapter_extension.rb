@@ -1,5 +1,5 @@
 module PhusionPassenger
-module Railz
+module ClassicRails
 module FrameworkExtensions
 module AnalyticsLogging
 

@@ -25,12 +25,12 @@ require 'rubygems'
 require 'phusion_passenger/abstract_server'
 require 'phusion_passenger/abstract_server_collection'
 require 'phusion_passenger/app_process'
-require 'phusion_passenger/railz/application_spawner'
+require 'phusion_passenger/ClassicRails/application_spawner'
 require 'phusion_passenger/exceptions'
 require 'phusion_passenger/constants'
 require 'phusion_passenger/utils'
 module PhusionPassenger
-module Railz
+module ClassicRails
 
 # This class is capable of spawning Ruby on Rails application instances
 # quickly. This is done by preloading the Ruby on Rails framework into memory,
@@ -307,5 +307,5 @@ private
 	end
 end
 
-end # module Railz
+end # module ClassicRails
 end # module PhusionPassenger

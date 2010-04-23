@@ -27,7 +27,7 @@
 require 'cgi'
 
 module PhusionPassenger
-module Railz
+module ClassicRails
 
 # Modifies CGI so that we can use it.  Main thing it does is expose
 # the stdinput and stdoutput so RequestHandler can connect them to
@@ -64,5 +64,5 @@ class CGIFixed < ::CGI
 	end
 end
 
-end # module Railz
+end # module ClassicRails
 end # module PhusionPassenger

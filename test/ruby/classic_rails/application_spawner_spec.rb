@@ -1,15 +1,15 @@
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
-require 'phusion_passenger/railz/application_spawner'
+require 'phusion_passenger/classic_rails/application_spawner'
 
 require 'ruby/shared/abstract_server_spec'
 require 'ruby/shared/spawners/spawn_server_spec'
 require 'ruby/shared/spawners/spawner_spec'
 require 'ruby/shared/spawners/preloading_spawner_spec'
 require 'ruby/shared/spawners/non_preloading_spawner_spec'
-require 'ruby/shared/spawners/rails/spawner_spec'
-require 'ruby/shared/spawners/rails/lack_of_rails_gem_version_spec'
+require 'ruby/shared/spawners/classic_rails/spawner_spec'
+require 'ruby/shared/spawners/classic_rails/lack_of_rails_gem_version_spec'
 
-describe Railz::ApplicationSpawner do
+describe ClassicRails::ApplicationSpawner do
 	include SpawnerSpecHelper
 	
 	after :each do
@@ -26,11 +26,11 @@ describe Railz::ApplicationSpawner do
 				"default_user" => CONFIG['default_user']
 			}
 			options = default_options.merge(extra_options)
-			app = Railz::ApplicationSpawner.spawn_application(options)
+			app = ClassicRails::ApplicationSpawner.spawn_application(options)
 			return register_app(app)
 		end
 		
-		describe_each_rails_version do
+		describe_rails_versions('<= 2.3') do
 			it_should_behave_like "a spawner"
 			it_should_behave_like "a spawner that does not preload app code"
 			it_should_behave_like "a Rails spawner"
@@ -46,7 +46,7 @@ describe Railz::ApplicationSpawner do
 		def spawner
 			@spawner ||= begin
 				stub = register_stub(RailsStub.new("#{rails_version}/empty"))
-				spawner = Railz::ApplicationSpawner.new("app_root" => stub.app_root)
+				spawner = ClassicRails::ApplicationSpawner.new("app_root" => stub.app_root)
 				spawner.start
 				spawner
 			end
@@ -62,7 +62,7 @@ describe Railz::ApplicationSpawner do
 			}
 			options = default_options.merge(extra_options)
 			@spawner ||= begin
-				spawner = Railz::ApplicationSpawner.new(options)
+				spawner = ClassicRails::ApplicationSpawner.new(options)
 				spawner.start
 				spawner
 			end
@@ -70,7 +70,7 @@ describe Railz::ApplicationSpawner do
 			return register_app(app)
 		end
 		
-		describe_each_rails_version do
+		describe_rails_versions('<= 2.3') do
 			it_should_behave_like "an AbstractServer"
 			it_should_behave_like "a spawn server"
 			it_should_behave_like "a spawner"

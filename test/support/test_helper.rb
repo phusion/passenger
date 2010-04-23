@@ -127,19 +127,40 @@ module TestHelper
 		end
 	end
 	
-	def describe_each_rails_version(&block)
+	def describe_rails_versions(matcher, &block)
 		if ENV['ONLY_RAILS_VERSION'] && !ENV['ONLY_RAILS_VERSION'].empty?
-			versions = [ENV['ONLY_RAILS_VERSION']]
+			found_versions = [ENV['ONLY_RAILS_VERSION']]
 		else
-			versions = Dir.entries("stub/rails_apps").grep(/^\d+\.\d+$/)
+			found_versions = Dir.entries("stub/rails_apps").grep(/^\d+\.\d+$/)
 			if RUBY_VERSION >= '1.9.0'
 				# Only Rails >= 2.3 is compatible with Ruby 1.9.
-				versions.reject! do |version|
+				found_versions.reject! do |version|
 					version < '2.3'
 				end
 			end
 		end
-		versions.sort.each do |version|
+		
+		case matcher
+		when /^<= (.+)$/
+			max_version = $1
+			found_versions.reject! do |version|
+				version > max_version
+			end
+		when /^>= (.+)$/
+			min_version = $1
+			found_versions.reject! do |version|
+				version < min_version
+			end
+		when /^= (.+)$/
+			exact_version = $1
+			found_versions.reject! do |version|
+				version != exact_version
+			end
+		else
+			raise ArgumentError, "Unknown matcher string '#{matcher}'"
+		end
+		
+		found_versions.sort.each do |version|
 			klass = describe("Rails #{version}", &block)
 			klass.send(:define_method, :rails_version) do
 				version
