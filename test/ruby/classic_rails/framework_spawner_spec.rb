@@ -76,7 +76,7 @@ describe ClassicRails::FrameworkSpawner do
 		end
 	end
 	
-	describe_each_rails_version('<= 2.3') do
+	describe_rails_versions('<= 2.3') do
 		it_should_behave_like "an AbstractServer"
 		it_should_behave_like "a spawn server"
 		it_should_behave_like "a spawner"

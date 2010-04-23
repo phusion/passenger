@@ -317,8 +317,8 @@ protected
 		end
 	end
 	
-	# Prepare an application process using rules for the given spawn options.
-	# This method is to be called before loading the application code.
+	# This method is to be called after loading the application code but
+	# before forking a worker process.
 	def after_loading_app_code(options)
 		# Even though prepare_app_process() restores the Phusion Passenger
 		# load path after setting up Bundler, the app itself might also
@@ -329,15 +329,15 @@ protected
 			$LOAD_PATH.uniq!
 		end
 		
-		# Install analytics hooks, if requested and possible.
-		if defined?(ActionController)
-			require 'phusion_passenger/classic_rails/framework_extensions/analytics_logging'
-			if PhusionPassenger::ClassicRails::FrameworkExtensions::AnalyticsLogging.installable?(options)
-				PhusionPassenger::ClassicRails::FrameworkExtensions::AnalyticsLogging.install!(options)
-				
-				# If the Ruby interpreter supports GC statistics then turn it on
-				# so that the info can be logged.
-				GC.enable_stats if GC.respond_to?(:enable_stats)
+		# Install framework extensions.
+		require 'rails/version' if defined?(::Rails) && !defined?(::Rails::VERSION)
+		if defined?(::Rails)
+			if ::Rails::VERSION::MAJOR <= 2
+				require 'phusion_passenger/classic_rails_extensions/init'
+				ClassicRailsExtensions.init!(options)
+			elsif ::Rails::VERSION::MAJOR == 3
+				require 'phusion_passenger/rails3_extensions/init'
+				Rails3Extensions.init!(options)
 			end
 		end
 	end

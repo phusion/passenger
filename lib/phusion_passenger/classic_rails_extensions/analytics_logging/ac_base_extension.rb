@@ -1,6 +1,5 @@
 module PhusionPassenger
-module ClassicRails
-module FrameworkExtensions
+module ClassicRailsExtensions
 module AnalyticsLogging
 
 module ACBaseExtension
@@ -31,7 +30,6 @@ protected
 	end
 end
 
-end
 end
 end
 end

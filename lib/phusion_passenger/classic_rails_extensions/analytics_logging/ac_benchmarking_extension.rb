@@ -1,6 +1,5 @@
 module PhusionPassenger
-module ClassicRails
-module FrameworkExtensions
+module ClassicRailsExtensions
 module AnalyticsLogging
 
 module ACBenchmarkingExtension
@@ -21,7 +20,6 @@ module ACBenchmarkingExtension
 	end
 end
 
-end
 end
 end
 end

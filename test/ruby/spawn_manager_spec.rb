@@ -5,8 +5,8 @@ require 'phusion_passenger/spawn_manager'
 require 'ruby/shared/spawners/spawner_spec'
 require 'ruby/shared/spawners/reload_single_spec'
 require 'ruby/shared/spawners/reload_all_spec'
-require 'ruby/shared/spawners/rails/spawner_spec'
-require 'ruby/shared/spawners/rails/lack_of_rails_gem_version_spec'
+require 'ruby/shared/spawners/classic_rails/spawner_spec'
+require 'ruby/shared/spawners/classic_rails/lack_of_rails_gem_version_spec'
 
 # TODO: test whether SpawnManager restarts the subspawner if it crashed
 
