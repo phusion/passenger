@@ -65,7 +65,7 @@ class RequestHandler < AbstractRequestHandler
 protected
 	# Overrided method.
 	def process_request(env, input, output, full_http_response)
-		rewindable_input = Utils::RewindableInput.new(input)
+		rewindable_input = PhusionPassenger::Utils::RewindableInput.new(input)
 		begin
 			env[RACK_VERSION]      = RACK_VERSION_VALUE
 			env[RACK_INPUT]        = rewindable_input

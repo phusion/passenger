@@ -137,6 +137,11 @@ module TestHelper
 				found_versions.reject! do |version|
 					version < '2.3'
 				end
+			elsif RUBY_VERSION <= '1.8.6'
+				# Rails >= 3 dropped support for 1.8.6 and older.
+				found_versions.reject! do |version|
+					version >= '3.0'
+				end
 			end
 		end
 		

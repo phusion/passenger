@@ -32,13 +32,13 @@ module AnalyticsLogging
 				alias_method_chain :perform_action, :passenger
 				alias_method_chain :render, :passenger
 			end
-		
+			
 			require 'phusion_passenger/classic_rails_extensions/analytics_logging/ac_benchmarking_extension'
 			ActionController::Benchmarking::ClassMethods.class_eval do
 				include ACBenchmarkingExtension
 				alias_method_chain :benchmark, :passenger
 			end
-		
+			
 			require 'phusion_passenger/classic_rails_extensions/analytics_logging/ac_rescue_extension'
 			ActionController::Rescue.class_eval do
 				include ACRescueExtension

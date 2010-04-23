@@ -8,6 +8,7 @@ require 'ruby/shared/spawners/preloading_spawner_spec'
 require 'ruby/shared/spawners/non_preloading_spawner_spec'
 require 'ruby/shared/spawners/classic_rails/spawner_spec'
 require 'ruby/shared/spawners/classic_rails/lack_of_rails_gem_version_spec'
+require 'ruby/shared/rails/analytics_logging_extensions_spec'
 
 describe ClassicRails::ApplicationSpawner do
 	include SpawnerSpecHelper
@@ -35,6 +36,7 @@ describe ClassicRails::ApplicationSpawner do
 			it_should_behave_like "a spawner that does not preload app code"
 			it_should_behave_like "a Rails spawner"
 			include_shared_example_group "a Rails app that lacks RAILS_GEM_VERSION"
+			include_shared_example_group "analytics logging extensions for Rails"
 		end
 	end
 	
@@ -77,6 +79,7 @@ describe ClassicRails::ApplicationSpawner do
 			it_should_behave_like "a spawner that preloads app code"
 			it_should_behave_like "a Rails spawner"
 			include_shared_example_group "a Rails app that lacks RAILS_GEM_VERSION"
+			include_shared_example_group "analytics logging extensions for Rails"
 		end
 	end
 end

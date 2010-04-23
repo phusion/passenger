@@ -122,6 +122,7 @@ class AnalyticsLogger
 	
 	def clear_connection
 		@shared_data.synchronize do
+			@random_dev = File.open("/dev/urandom") if @random_dev.closed?
 			@shared_data.unref
 			@shared_data = SharedData.new
 		end
@@ -129,15 +130,17 @@ class AnalyticsLogger
 	
 	def close
 		@shared_data.synchronize do
+			@random_dev.close
 			@shared_data.unref
 			@shared_data = nil
 		end
-		@random_dev.close
 	end
 	
 	def new_transaction(group_name, category = :requests)
-		if !@server_address || !group_name
+		if !@server_address
 			return Log.new
+		elsif !group_name || group_name.empty?
+			raise ArgumentError, "Group name may not be empty"
 		else
 			txn_id = (AnalyticsLogger.current_time.to_i / 60).to_s(16)
 			txn_id << "-#{random_token(11)}"
@@ -163,8 +166,10 @@ class AnalyticsLogger
 	end
 	
 	def continue_transaction(txn_id, group_name, category = :requests)
-		if !@server_address || !txn_id
+		if !@server_address
 			return Log.new
+		elsif !txn_id || txn_id.empty?
+			raise ArgumentError, "Transaction ID may not be empty"
 		else
 			@shared_data.synchronize do
 				retry_count = 0
