@@ -24,6 +24,8 @@
  */
 #include <oxt/thread.hpp>
 #include <oxt/system_calls.hpp>
+#include <boost/function.hpp>
+#include <boost/bind.hpp>
 #include <string>
 
 #include <sys/select.h>
@@ -82,6 +84,37 @@ static RandomGenerator *randomGenerator;
 static EventFd *errorEvent;
 
 #define REQUEST_SOCKET_PASSWORD_SIZE     64
+
+
+class FailGuard {
+private:
+	function<void ()> func;
+public:
+	FailGuard() { }
+	FailGuard(const function<void ()> &_func): func(_func) { }
+	
+	~FailGuard() {
+		if (func != NULL) {
+			func();
+		}
+	}
+	
+	void runNow() {
+		if (func != NULL) {
+			function<void ()> func = this->func;
+			this->func = NULL;
+			func();
+		}
+	}
+	
+	void set(const function<void ()> &func) {
+		this->func = func;
+	}
+	
+	void clear() {
+		func = NULL;
+	}
+};
 
 
 /**
@@ -208,7 +241,7 @@ protected:
 	 * Kill a process with SIGKILL, and attempt to kill its children too. 
 	 * Then wait until it has quit.
 	 */
-	void killAndWait(pid_t pid) {
+	static void killAndWait(pid_t pid) {
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		// If the process is a process group leader then killing the
@@ -217,6 +250,25 @@ protected:
 			syscalls::kill(pid, SIGKILL);
 		}
 		syscalls::waitpid(pid, NULL, 0);
+	}
+	
+	/**
+	 * Behaves like <tt>waitpid(pid, status, WNOHANG)</tt>, but waits at most
+	 * <em>timeout</em> miliseconds for the process to exit.
+	 */
+	static int timedWaitPid(pid_t pid, int *status, unsigned long long timeout) {
+		Timer timer;
+		int ret;
+		
+		do {
+			ret = syscalls::waitpid(pid, status, WNOHANG);
+			if (ret > 0 || ret == -1) {
+				return ret;
+			} else {
+				syscalls::usleep(10000);
+			}
+		} while (timer.elapsed() < timeout);
+		return 0; // timed out
 	}
 	
 public:
@@ -333,18 +385,15 @@ public:
 			syscalls::close(fds[1]);
 			this_thread::restore_interruption ri(di);
 			this_thread::restore_syscall_interruption rsi(dsi);
+			FailGuard failGuard(boost::bind(killAndWait, pid));
 			
 			// Send startup arguments.
 			try {
 				sendStartupArguments(pid, feedbackFd);
 			} catch (const SystemException &ex) {
-				killAndWait(pid);
 				throw SystemException(string("Unable to start the ") + name() +
 					": an error occurred while sending startup arguments",
 					ex.code());
-			} catch (...) {
-				killAndWait(pid);
-				throw;
 			}
 			
 			// Now read its feedback.
@@ -359,14 +408,20 @@ public:
 				
 				/* The feedback fd was closed for an unknown reason.
 				 * Did the agent process crash?
+				 *
+				 * We use timedWaitPid() here because if the process crashed
+				 * because of an uncaught exception, the file descriptor
+				 * might be closed before the process has printed an error
+				 * message, so we give it some time to print the error
+				 * before we kill it.
 				 */
-				ret = syscalls::waitpid(pid, &status, WNOHANG);
+				ret = timedWaitPid(pid, &status, 1000);
 				if (ret == 0) {
 					/* Doesn't look like it; it seems it's still running.
 					 * We can't do anything without proper feedback so kill
 					 * the agent process and throw an exception.
 					 */
-					killAndWait(pid);
+					failGuard.runNow();
 					throw RuntimeException(string("Unable to start the ") + name() +
 						": an unknown error occurred during its startup");
 				} else if (ret != -1 && WIFSIGNALED(status)) {
@@ -380,7 +435,6 @@ public:
 						": it seems to have crashed during startup for an unknown reason");
 				}
 			} catch (const SystemException &e) {
-				killAndWait(pid);
 				throw SystemException(string("Unable to start the ") + name() +
 					": unable to read its startup information",
 					e.code());
@@ -388,39 +442,26 @@ public:
 				/* Rethrow without killing the PID because the process
 				 * is already dead.
 				 */
-				throw;
-			} catch (...) {
-				killAndWait(pid);
+				failGuard.clear();
 				throw;
 			}
 			
 			if (args[0] == "system error before exec") {
-				killAndWait(pid);
 				throw SystemException(string("Unable to start the ") + name() +
 					": " + args[1], atoi(args[2]));
 			} else if (args[0] == "exec error") {
-				killAndWait(pid);
 				throw SystemException(string("Unable to start the ") + name(),
 					atoi(args[1]));
-			} else {
-				bool processed;
-				try {
-					processed = processStartupInfo(pid, feedbackFd, args);
-				} catch (...) {
-					killAndWait(pid);
-					throw;
-				}
-				if (!processed) {
-					killAndWait(pid);
-					throw RuntimeException(string("The ") + name() +
-						" sent an unknown startup info message '" +
-						args[0] + "'");
-				}
+			} else if (!processStartupInfo(pid, feedbackFd, args)) {
+				throw RuntimeException(string("The ") + name() +
+					" sent an unknown startup info message '" +
+					args[0] + "'");
 			}
 			
 			lock_guard<boost::mutex> l(lock);
 			this->feedbackFd = feedbackFd;
 			this->pid = pid;
+			failGuard.clear();
 			return pid;
 		}
 	}
