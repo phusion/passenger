@@ -1,3 +1,5 @@
+require 'phusion_passenger/constants'
+
 module PhusionPassenger
 module ClassicRailsExtensions
 module AnalyticsLogging
@@ -9,7 +11,7 @@ protected
 		# But ignore routing errors (404s and stuff).
 		if !defined?(ActionController::RoutingError) || !exception.is_a?(ActionController::RoutingError)
 			AnalyticsLogging.new_transaction_log(request.env, :exceptions) do |log|
-				request_txn_id = request["PASSENGER_TXN_ID"]
+				request_txn_id = request.env[PASSENGER_TXN_ID]
 				message = exception.message
 				message = exception.to_s if message.empty?
 				message = [message].pack('m')

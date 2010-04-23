@@ -53,13 +53,15 @@ shared_examples_for "analytics logging extensions for Rails" do
 		if filename
 			return File.read(filename)
 		else
-			return nil
+			return ""
 		end
 	end
 	
 	def base64(data)
 		return [data].pack('m').gsub("\n", "")
 	end
+	
+	it "doesn't install analytics logging extensions if analytics logging is turned off"
 	
 	it "logs the controller and action name" do
 		app = spawn_some_application(@options) do |stub|
@@ -71,9 +73,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 				end
 			})
 		end
-		send_request_to_app(app,
-			"PATH_INFO"   => "/foo",
-			"REQUEST_URI" => "/foo")
+		send_request_to_app(app, "PATH_INFO" => "/foo")
 		eventually(5) do
 			log = read_log("requests/**/log.txt")
 			log.include?("Controller action: FooController#index\n")
@@ -90,12 +90,13 @@ shared_examples_for "analytics logging extensions for Rails" do
 				end
 			})
 		end
-		send_request_to_app(app,
-			"PATH_INFO"   => "/crash",
-			"REQUEST_URI" => "/crash")
+		send_request_to_app(app, "PATH_INFO" => "/crash")
 		eventually(5) do
 			log = read_log("exceptions/**/log.txt")
-			log.include?(base64("something went wrong")) &&
+			log.include?("Request transaction ID: 1234-abcd\n") &&
+				log.include?("Message: " + base64("something went wrong")) &&
+				log.include?("Class: RuntimeError") &&
+				log.include?("Backtrace: ") &&
 				log.include?("Controller action: CrashController#index")
 		end
 	end
@@ -114,9 +115,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 				end
 			})
 		end
-		send_request_to_app(app,
-			"PATH_INFO"   => "/foo",
-			"REQUEST_URI" => "/foo")
+		send_request_to_app(app, "PATH_INFO" => "/foo")
 		eventually(5) do
 			log = read_log("requests/**/log.txt")
 			log.include?('BEGIN: BENCHMARK: hello') &&
@@ -136,9 +135,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 				<% end %>
 			})
 		end
-		send_request_to_app(app,
-			"PATH_INFO"   => "/foo",
-			"REQUEST_URI" => "/foo")
+		send_request_to_app(app, "PATH_INFO" => "/foo")
 		eventually(5) do
 			log = read_log("requests/**/log.txt")
 			log.include?('BEGIN: BENCHMARK: hello') &&
@@ -163,13 +160,29 @@ shared_examples_for "analytics logging extensions for Rails" do
 				end
 			})
 		end
-		send_request_to_app(app,
-			"PATH_INFO"   => "/foo",
-			"REQUEST_URI" => "/foo")
+		send_request_to_app(app, "PATH_INFO" => "/foo")
 		eventually(5) do
 			log = read_log("requests/**/log.txt")
 			log.include?("DB BENCHMARK: " + base64("CREATE TABLE foobar (id INT)")) &&
 				log.include?("DB BENCHMARK: " + base64("INSERT INTO foobar VALUES (1)"))
+		end
+	end
+	
+	it "logs controller processing time" do
+		app = spawn_some_application(@options) do |stub|
+			File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
+				class FooController < ActionController::Base
+					def index
+						render :nothing => true
+					end
+				end
+			})
+		end
+		send_request_to_app(app, "PATH_INFO" => "/foo")
+		eventually(5) do
+			log = read_log("requests/**/log.txt")
+			log.include?("BEGIN: framework request processing") &&
+				log.include?("END: framework request processing")
 		end
 	end
 	
@@ -186,8 +199,10 @@ shared_examples_for "analytics logging extensions for Rails" do
 		send_request_to_app(app, "PATH_INFO" => "/foo")
 		eventually(5) do
 			log = read_log("requests/**/log.txt")
-			log.include?("BEGIN: view rendering") &&
-				log.include?("END: view rendering")
+			( log.include?("BEGIN: view rendering") &&
+				log.include?("END: view rendering") ) ||
+				log.include?("MEASURED: view rendering") ||
+				log.include?("INTERVAL: view rendering")
 		end
 	end
 end

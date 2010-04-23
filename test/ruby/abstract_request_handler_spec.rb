@@ -200,6 +200,10 @@ describe AbstractRequestHandler do
 			end
 		end
 		
+		def base64(data)
+			return [data].pack('m').gsub("\n", "")
+		end
+		
 		it "makes the analytics log object available through the request env and a thread-local variable" do
 			header_value = nil
 			thread_value = nil
@@ -238,13 +242,17 @@ describe AbstractRequestHandler do
 			ensure
 				client.close
 			end
-			eventually do
+			eventually(5) do
 				log_file = Dir["#{@log_dir}/1/*/*/exceptions/**/log.txt"].first
-				log_file &&
-				File.exist?(log_file) &&
-				File.read(log_file).include?("Request transaction ID: 1234-abcd\n") &&
-				File.read(log_file).include?("Message: " + ["something went wrong"].pack('m')) &&
-				File.read(log_file) =~ /Class: RuntimeError/
+				if log_file
+					log_data = File.read(log_file)
+				else
+					log_data = ""
+				end
+				log_data.include?("Request transaction ID: 1234-abcd\n") &&
+					log_data.include?("Message: " + base64("something went wrong")) &&
+					log_data.include?("Class: RuntimeError") &&
+					log_data.include?("Backtrace: ")
 			end
 		end
 	end

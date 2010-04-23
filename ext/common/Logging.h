@@ -320,7 +320,9 @@ public:
 			message.reserve(150);
 			message.append("BEGIN: ");
 			message.append(name);
-			message.append(" (utime = ");
+			message.append(" (time = ");
+			message.append(toString(SystemTime::getUsec()));
+			message.append(", utime = ");
 			if (getrusage(RUSAGE_SELF, &usage) == -1) {
 				int e = errno;
 				throw SystemException("getrusage() failed", e);
@@ -362,7 +364,9 @@ public:
 					message.append("FAIL: ");
 				}
 				message.append(data.name);
-				message.append(" (utime = ");
+				message.append(" (time = ");
+				message.append(toString(SystemTime::getUsec()));
+				message.append(", utime = ");
 				if (getrusage(RUSAGE_SELF, &usage) == -1) {
 					int e = errno;
 					throw SystemException("getrusage() failed", e);

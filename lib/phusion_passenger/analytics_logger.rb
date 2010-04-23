@@ -55,15 +55,15 @@ class AnalyticsLogger
 		
 		def begin_measure(name)
 			times = NativeSupport.process_times
-			message "BEGIN: #{name} (utime = #{times.utime}, stime = #{times.stime})"
+			message "BEGIN: #{name} (time = #{current_timestamp}, utime = #{times.utime}, stime = #{times.stime})"
 		end
 		
 		def end_measure(name, error_encountered = false)
 			times = NativeSupport.process_times
 			if error_encountered
-				message "FAIL: #{name} (utime = #{times.utime}, stime = #{times.stime})"
+				message "FAIL: #{name} (time = #{current_timestamp}, utime = #{times.utime}, stime = #{times.stime})"
 			else
-				message "END: #{name} (utime = #{times.utime}, stime = #{times.stime})"
+				message "END: #{name} (time = #{current_timestamp}, utime = #{times.utime}, stime = #{times.stime})"
 			end
 		end
 		
@@ -79,14 +79,15 @@ class AnalyticsLogger
 			end
 		end
 		
-		def measured(name, duration)
-			message "MEASURED: #{name} (#{duration})"
+		def measured_interval(name, interval)
+			message "MEASURED: #{name} (#{interval})"
 		end
 		
-		def interval(name, begin_time, end_time)
+		def measured_time_points(name, begin_time, end_time)
 			begin_timestamp = begin_time.to_i * 1_000_000 + begin_time.usec
 			end_timestamp = end_time.to_i * 1_000_000 + end_time.usec
-			message "INTERVAL: #{name} (#{begin_timestamp}..#{end_timestamp})"
+			message "BEGIN: #{name} (time = #{begin_timestamp})"
+			message "END: #{name} (time = #{end_timestamp})"
 		end
 		
 		def close(flush_to_disk = false)
@@ -103,6 +104,12 @@ class AnalyticsLogger
 				@shared_data.unref
 				@shared_data = nil
 			end if @shared_data
+		end
+	
+	private
+		def current_timestamp
+			time = AnalyticsLogger.current_time
+			return time.to_i * 1_000_000 + time.usec
 		end
 	end
 	

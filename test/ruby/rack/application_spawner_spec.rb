@@ -6,6 +6,7 @@ require 'ruby/shared/spawners/spawn_server_spec'
 require 'ruby/shared/spawners/spawner_spec'
 require 'ruby/shared/spawners/preloading_spawner_spec'
 require 'ruby/shared/spawners/non_preloading_spawner_spec'
+require 'ruby/shared/rails/analytics_logging_extensions_spec'
 
 describe Rack::ApplicationSpawner do
 	include SpawnerSpecHelper
@@ -30,6 +31,23 @@ describe Rack::ApplicationSpawner do
 		
 		it_should_behave_like "a spawner"
 		it_should_behave_like "a spawner that does not preload app code"
+		
+		describe_rails_versions('>= 3.0') do
+			def spawn_some_application(extra_options = {})
+				stub = register_stub(RailsStub.new("#{rails_version}/empty"))
+				yield stub if block_given?
+				
+				defaults = {
+					"app_root"     => stub.app_root,
+					"default_user" => CONFIG['default_user']
+				}
+				options = defaults.merge(extra_options)
+				app = Rack::ApplicationSpawner.spawn_application(options)
+				return register_app(app)
+			end
+			
+			include_shared_example_group "analytics logging extensions for Rails"
+		end
 	end
 	
 	describe "smart spawning" do
@@ -68,5 +86,27 @@ describe Rack::ApplicationSpawner do
 		it_should_behave_like "a spawn server"
 		it_should_behave_like "a spawner"
 		it_should_behave_like "a spawner that preloads app code"
+		
+		describe_rails_versions('>= 3.0') do
+			def spawn_some_application(extra_options = {})
+				stub = register_stub(RailsStub.new("#{rails_version}/empty"))
+				yield stub if block_given?
+
+				defaults = {
+					"app_root"     => stub.app_root,
+					"default_user" => CONFIG['default_user']
+				}
+				options = defaults.merge(extra_options)
+				@spawner ||= begin
+					spawner = Rack::ApplicationSpawner.new(options)
+					spawner.start
+					spawner
+				end
+				app = @spawner.spawn_application(options)
+				return register_app(app)
+			end
+			
+			include_shared_example_group "analytics logging extensions for Rails"
+		end
 	end
 end

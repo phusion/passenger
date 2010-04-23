@@ -9,6 +9,7 @@ protected
 		log = Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
 		if log
 			sql_base64 = [sql].pack("m")
+			sql_base64.gsub!("\n", "")
 			sql_base64.strip!
 			if name
 				name = name.strip
