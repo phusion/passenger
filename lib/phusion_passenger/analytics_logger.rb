@@ -79,6 +79,16 @@ class AnalyticsLogger
 			end
 		end
 		
+		def measured(name, duration)
+			message "MEASURED: #{name} (#{duration})"
+		end
+		
+		def interval(name, begin_time, end_time)
+			begin_timestamp = begin_time.to_i * 1_000_000 + begin_time.usec
+			end_timestamp = end_time.to_i * 1_000_000 + end_time.usec
+			message "INTERVAL: #{name} (#{begin_timestamp}..#{end_timestamp})"
+		end
+		
 		def close(flush_to_disk = false)
 			@shared_data.synchronize do
 				@shared_data.client.write("closeTransaction", @txn_id,
