@@ -330,7 +330,7 @@ public:
 				/* Something went wrong, report error through feedback fd. */
 				e = errno;
 				try {
-					MessageChannel(fds[1]).write("system error before fork",
+					MessageChannel(fds[1]).write("system error before exec",
 						"dup2() failed",
 						toString(e).c_str(),
 						NULL);
