@@ -511,25 +511,7 @@ private
 			return true
 		else
 			if @analytics_logger && headers && headers[PASSENGER_TXN_ID]
-				log = @analytics_logger.new_transaction(
-					headers[PASSENGER_GROUP_NAME],
-					:exceptions)
-				begin
-					request_txn_id = headers[PASSENGER_TXN_ID]
-					message = e.message
-					message = e.to_s if message.empty?
-					message = [message].pack('m')
-					message.gsub!("\n", "")
-					backtrace_string = [e.backtrace.join("\n")].pack('m')
-					backtrace_string.gsub!("\n", "")
-					
-					log.message("Request transaction ID: #{request_txn_id}")
-					log.message("Message: #{message}")
-					log.message("Class: #{e.class.name}")
-					log.message("Backtrace: #{backtrace_string}")
-				ensure
-					log.close
-				end
+				log_analytics_exception(headers, e)
 			end
 			raise e
 		end
@@ -695,6 +677,28 @@ private
 		end
 		
 		#################
+	end
+	
+	def log_analytics_exception(env, exception)
+		log = @analytics_logger.new_transaction(
+			env[PASSENGER_GROUP_NAME],
+			:exceptions)
+		begin
+			request_txn_id = env[PASSENGER_TXN_ID]
+			message = exception.message
+			message = exception.to_s if message.empty?
+			message = [message].pack('m')
+			message.gsub!("\n", "")
+			backtrace_string = [exception.backtrace.join("\n")].pack('m')
+			backtrace_string.gsub!("\n", "")
+
+			log.message("Request transaction ID: #{request_txn_id}")
+			log.message("Message: #{message}")
+			log.message("Class: #{exception.class.name}")
+			log.message("Backtrace: #{backtrace_string}")
+		ensure
+			log.close
+		end
 	end
 
 public
