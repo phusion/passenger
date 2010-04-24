@@ -171,7 +171,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 		end
 	end
 	
-	it "logs controller processing time" do
+	it "logs controller processing time of successful actions" do
 		app = spawn_some_application(@options) do |stub|
 			File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
 				class FooController < ActionController::Base
@@ -189,12 +189,12 @@ shared_examples_for "analytics logging extensions for Rails" do
 		end
 	end
 	
-	it "logs view rendering time" do
+	it "logs controller processing time of failed actions" do
 		app = spawn_some_application(@options) do |stub|
 			File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
 				class FooController < ActionController::Base
 					def index
-						render :nothing => true
+						raise "crash"
 					end
 				end
 			})
@@ -202,10 +202,51 @@ shared_examples_for "analytics logging extensions for Rails" do
 		send_request_to_app(app, "PATH_INFO" => "/foo")
 		eventually(5) do
 			log = read_log("requests/**/log.txt")
-			( log.include?("BEGIN: view rendering") &&
-				log.include?("END: view rendering") ) ||
-				log.include?("MEASURED: view rendering") ||
-				log.include?("INTERVAL: view rendering")
+			log.include?("BEGIN: framework request processing") &&
+				log.include?("FAIL: framework request processing")
+		end
+	end
+	
+	it "logs view rendering time of successful actions" do
+		app = spawn_some_application(@options) do |stub|
+			File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
+				class FooController < ActionController::Base
+					def index
+					end
+				end
+			})
+			FileUtils.mkdir_p("#{stub.app_root}/app/views/foo")
+			File.write("#{stub.app_root}/app/views/foo/index.rhtml", %Q{
+				hello world
+			})
+		end
+		send_request_to_app(app, "PATH_INFO" => "/foo")
+		eventually(5) do
+			log = read_log("requests/**/log.txt")
+			log.include?("BEGIN: view rendering") &&
+				log.include?("END: view rendering") &&
+				log.include?("View rendering time:")
+		end
+	end
+	
+	it "logs view rendering time of failed actions" do
+		app = spawn_some_application(@options) do |stub|
+			File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
+				class FooController < ActionController::Base
+					def index
+					end
+				end
+			})
+			FileUtils.mkdir_p("#{stub.app_root}/app/views/foo")
+			File.write("#{stub.app_root}/app/views/foo/index.rhtml", %Q{
+				<% raise "crash!" %>
+			})
+		end
+		send_request_to_app(app, "PATH_INFO" => "/foo")
+		eventually(5) do
+			log = read_log("requests/**/log.txt")
+			log.include?("BEGIN: view rendering") &&
+				log.include?("FAIL: view rendering")
 		end
 	end
 end
