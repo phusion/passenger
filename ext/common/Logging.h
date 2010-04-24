@@ -374,7 +374,7 @@ public:
 				message.append(timevalToMsecString(usage.ru_utime));
 				message.append(",");
 				message.append(timevalToMsecString(usage.ru_stime));
-				message.append(") ");
+				message.append(")");
 				log->message(message);
 			}
 		} else {
