@@ -9,6 +9,7 @@ protected
 	def rescue_action_with_passenger(exception)
 		# When a controller action crashes, log the exception.
 		# But ignore routing errors (404s and stuff).
+		request.env["PASSENGER_ACTION_FAILED"] = true
 		if !defined?(ActionController::RoutingError) || !exception.is_a?(ActionController::RoutingError)
 			AnalyticsLogging.new_transaction_log(request.env, :exceptions) do |log|
 				request_txn_id = request.env[PASSENGER_TXN_ID]

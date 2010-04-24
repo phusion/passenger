@@ -182,7 +182,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 				class FooController < ActionController::Base
 					def index
 						db = ActiveRecord::Base.connection
-						db.execute("SELECT 1")
+						db.execute("INVALID QUERY")
 						render :nothing => true
 					end
 				end
@@ -261,7 +261,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 			log = read_log("requests/**/log.txt")
 			log.include?("BEGIN: view rendering") &&
 				log.include?("END: view rendering") &&
-				log.include?("View rendering time:")
+				log =~ /View rendering time: \d+$/
 		end
 	end
 	
