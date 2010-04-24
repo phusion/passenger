@@ -2,6 +2,8 @@ require File.expand_path(File.dirname(__FILE__) + '/../../spec_helper')
 require 'stringio'
 require 'phusion_passenger/message_channel'
 
+module PhusionPassenger
+
 shared_examples_for "a pseudo stderr created by #report_app_init_status" do
 	before :each do
 		@sink = StringIO.new
@@ -54,3 +56,5 @@ shared_examples_for "a pseudo stderr created by #report_app_init_status" do
 		pseudo_stderr.instance_variable_get(:@buffer).should be_nil
 	end
 end
+
+end # module PhusionPassenger

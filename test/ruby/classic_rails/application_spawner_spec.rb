@@ -10,6 +10,8 @@ require 'ruby/shared/spawners/classic_rails/spawner_spec'
 require 'ruby/shared/spawners/classic_rails/lack_of_rails_gem_version_spec'
 require 'ruby/shared/rails/analytics_logging_extensions_spec'
 
+module PhusionPassenger
+
 describe ClassicRails::ApplicationSpawner do
 	include SpawnerSpecHelper
 	
@@ -83,3 +85,5 @@ describe ClassicRails::ApplicationSpawner do
 		end
 	end
 end
+
+end # module PhusionPassenger

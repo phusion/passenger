@@ -2,6 +2,8 @@ require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'stringio'
 require 'phusion_passenger/analytics_logger'
 
+module PhusionPassenger
+
 describe AnalyticsLogger do
 	YESTERDAY = Time.utc(2010, 4, 11, 11, 56, 02)
 	TODAY     = Time.utc(2010, 4, 11, 12, 56, 02)
@@ -180,3 +182,5 @@ describe AnalyticsLogger do
 		File.read(log_file).should =~ /hello/
 	end
 end
+
+end # module PhusionPassenger

@@ -1,6 +1,8 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'phusion_passenger/abstract_server'
 
+module PhusionPassenger
+
 describe AbstractServer do
 	before :each do
 		@server = AbstractServer.new
@@ -55,3 +57,5 @@ describe AbstractServer do
 		end
 	end
 end
+
+end # module PhusionPassenger

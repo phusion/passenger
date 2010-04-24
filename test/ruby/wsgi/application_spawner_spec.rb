@@ -4,6 +4,8 @@ require 'phusion_passenger/utils'
 require 'fileutils'
 require 'tempfile'
 
+module PhusionPassenger
+
 describe WSGI::ApplicationSpawner do
 	include Utils
 	
@@ -45,3 +47,4 @@ describe WSGI::ApplicationSpawner do
 	end
 end
 
+end # module PhusionPassenger

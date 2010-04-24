@@ -1,7 +1,10 @@
+require File.expand_path(File.dirname(__FILE__) + '/../../spec_helper')
 require 'socket'
 require 'fileutils'
 require 'phusion_passenger/analytics_logger'
 require 'phusion_passenger/utils/tmpdir'
+
+module PhusionPassenger
 
 shared_examples_for "analytics logging extensions for Rails" do
 	before :each do
@@ -206,3 +209,5 @@ shared_examples_for "analytics logging extensions for Rails" do
 		end
 	end
 end
+
+end # module PhusionPassenger

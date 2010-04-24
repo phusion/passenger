@@ -1,6 +1,8 @@
 require File.expand_path(File.dirname(__FILE__) + '/../../spec_helper')
 require 'ruby/shared/abstract_server_spec'
 
+module PhusionPassenger
+
 shared_examples_for "a spawn server" do
 	it "raises an AbstractServer::ServerError if the server was killed" do
 		spawner   # Start the spawn server.
@@ -22,3 +24,5 @@ shared_examples_for "a spawn server" do
 		File.exist?(filename).should be_true
 	end
 end
+
+end # module PhusionPassenger

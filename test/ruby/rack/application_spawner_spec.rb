@@ -8,6 +8,8 @@ require 'ruby/shared/spawners/preloading_spawner_spec'
 require 'ruby/shared/spawners/non_preloading_spawner_spec'
 require 'ruby/shared/rails/analytics_logging_extensions_spec'
 
+module PhusionPassenger
+
 describe Rack::ApplicationSpawner do
 	include SpawnerSpecHelper
 	
@@ -110,3 +112,5 @@ describe Rack::ApplicationSpawner do
 		end
 	end
 end
+
+end # module PhusionPassenger

@@ -1,5 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + '/../../spec_helper')
 
+module PhusionPassenger
+
 shared_examples_for "a Rails spawner that supports #reload()" do
 	it "#reload() reloads all applications" do
 		use_some_stub do |stub1|
@@ -30,3 +32,5 @@ shared_examples_for "a Rails spawner that supports #reload()" do
 		end
 	end
 end
+
+end # module PhusionPassenger

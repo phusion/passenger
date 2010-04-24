@@ -4,6 +4,8 @@ require 'phusion_passenger/utils'
 require 'phusion_passenger/admin_tools'
 require 'phusion_passenger/admin_tools/server_instance'
 
+module PhusionPassenger
+
 describe AdminTools do
 	include Utils
 	
@@ -279,3 +281,5 @@ describe AdminTools::ServerInstance do
 		end
 	end
 end
+
+end # module PhusionPassenger

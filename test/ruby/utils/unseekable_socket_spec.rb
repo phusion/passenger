@@ -1,6 +1,8 @@
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
 require 'phusion_passenger/utils/unseekable_socket'
 
+module PhusionPassenger
+
 describe Utils::UnseekableSocket do
 	class MyException < StandardError
 	end
@@ -60,3 +62,5 @@ describe Utils::UnseekableSocket do
 		Utils::UnseekableSocket.new.source_of_exception?(e2).should be_false
 	end
 end
+
+end # module PhusionPassenger

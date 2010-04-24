@@ -1,5 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + '/../../spec_helper')
 
+module PhusionPassenger
+
 shared_examples_for "a spawner that does not preload app code" do
 	specify "the starting_worker_process event is called with forked=false" do
 		after_start %q{
@@ -21,3 +23,5 @@ shared_examples_for "a spawner that does not preload app code" do
 		end
 	end
 end
+
+end # module PhusionPassenger

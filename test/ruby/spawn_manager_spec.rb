@@ -10,6 +10,8 @@ require 'ruby/shared/spawners/classic_rails/lack_of_rails_gem_version_spec'
 
 # TODO: test whether SpawnManager restarts the subspawner if it crashed
 
+module PhusionPassenger
+
 describe SpawnManager do
 	include SpawnerSpecHelper
 	
@@ -128,3 +130,5 @@ describe SpawnManager do
 		end
 	end
 end
+
+end # module PhusionPassenger

@@ -1,5 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + '/../../../spec_helper')
 
+module PhusionPassenger
+
 shared_examples_for "a Rails spawner" do
 	it "sets RAILS_ENV" do
 		after_start %q{
@@ -9,3 +11,5 @@ shared_examples_for "a Rails spawner" do
 		File.read("#{app.app_root}/rails_env.txt").should == "staging"
 	end
 end
+
+end # module PhusionPassenger

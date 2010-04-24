@@ -2,6 +2,8 @@ require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'phusion_passenger/abstract_server'
 require 'phusion_passenger/abstract_server_collection'
 
+module PhusionPassenger
+
 describe AbstractServerCollection do
 	before :each do
 		@collection = AbstractServerCollection.new
@@ -241,3 +243,5 @@ describe AbstractServerCollection do
 		block.should_not raise_error
 	end
 end
+
+end # module PhusionPassenger

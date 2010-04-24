@@ -2,6 +2,8 @@ require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
 require 'phusion_passenger/utils/hosts_file_parser'
 require 'stringio'
 
+module PhusionPassenger
+
 describe Utils::HostsFileParser do
 	before :each do
 		@io = StringIO.new
@@ -252,3 +254,5 @@ describe Utils::HostsFileParser do
 		end
 	end
 end
+
+end # module PhusionPassenger

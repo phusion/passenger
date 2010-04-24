@@ -1,5 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + '/../../../spec_helper')
 
+module PhusionPassenger
+
 shared_examples_for "a Rails app that lacks RAILS_GEM_VERSION" do
 	it "loads a random Rails version if the app doesn't specify RAILS_GEM_VERSION" do
 		after_start %q{
@@ -13,3 +15,5 @@ shared_examples_for "a Rails app that lacks RAILS_GEM_VERSION" do
 		File.read("#{app.app_root}/rails_version.txt").should =~ /^(\d+.)+\d+$/
 	end
 end
+
+end # module PhusionPassenger

@@ -25,7 +25,6 @@ require 'support/test_helper'
 require 'phusion_passenger'
 require 'phusion_passenger/utils/tmpdir'
 
-include PhusionPassenger
 include TestHelper
 
 # Seed the pseudo-random number generator here
@@ -66,7 +65,7 @@ module SpawnerSpecHelper
 				# hog memory for the next test case.
 				eventually(5) do
 					@apps.all? do |app|
-						!Utils.process_is_alive?(app.pid)
+						!PhusionPassenger::Utils.process_is_alive?(app.pid)
 					end
 				end
 			ensure

@@ -2,6 +2,8 @@ require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'socket'
 require 'phusion_passenger/message_channel'
 
+module PhusionPassenger
+
 describe MessageChannel do
 	describe "scenarios with a single channel" do
 		before :each do
@@ -190,3 +192,5 @@ describe MessageChannel do
 		end
 	end
 end
+
+end # module PhusionPassenger

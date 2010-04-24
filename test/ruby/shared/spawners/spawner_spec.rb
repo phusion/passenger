@@ -2,6 +2,8 @@ require File.expand_path(File.dirname(__FILE__) + '/../../spec_helper')
 require 'yaml'
 require 'etc'
 
+module PhusionPassenger
+
 shared_examples_for "a spawner" do
 	def ping_app(app, connect_password)
 		if app.server_sockets[:main][1] == "unix"
@@ -267,3 +269,5 @@ shared_examples_for "a spawner" do
 		end
 	end
 end
+
+end # module PhusionPassenger

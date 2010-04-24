@@ -1,5 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + '/../../../spec_helper')
 
+module PhusionPassenger
+
 shared_examples_for "a ClassicRails::FrameworkSpawner" do
 	it "raises FrameworkInitError if the framework could not be loaded" do
 		block = lambda do
@@ -32,3 +34,5 @@ shared_examples_for "a ClassicRails::FrameworkSpawner" do
 		end
 	end
 end
+
+end # module PhusionPassenger

@@ -1,6 +1,8 @@
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
 require 'phusion_passenger/utils/file_system_watcher'
 
+module PhusionPassenger
+
 describe Utils::FileSystemWatcher do
 	before :each do
 		@tmpdir = "tmp.fs_watcher"
@@ -215,3 +217,5 @@ describe Utils::FileSystemWatcher do
 		@watcher.close
 	end
 end
+
+end # module PhusionPassenger

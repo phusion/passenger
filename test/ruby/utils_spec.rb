@@ -9,6 +9,8 @@ require 'phusion_passenger/utils'
 
 require 'ruby/shared/utils/pseudo_io_spec'
 
+module PhusionPassenger
+
 describe Utils do
 	include Utils
 	
@@ -680,3 +682,5 @@ describe Utils do
 	
 	######################
 end
+
+end # module PhusionPassenger

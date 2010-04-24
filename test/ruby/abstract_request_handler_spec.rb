@@ -4,6 +4,8 @@ require 'phusion_passenger/analytics_logger'
 
 require 'fileutils'
 
+module PhusionPassenger
+
 describe AbstractRequestHandler do
 	before :each do
 		preinitialize if respond_to?(:preinitialize)
@@ -394,3 +396,5 @@ describe AbstractRequestHandler do
 	
 	############################
 end
+
+end # module PhusionPassenger

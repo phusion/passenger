@@ -12,6 +12,8 @@ require 'ruby/shared/spawners/classic_rails/framework_spawner_spec'
 
 # TODO: test whether FrameworkSpawner restarts ApplicationSpawner if it crashed
 
+module PhusionPassenger
+
 describe ClassicRails::FrameworkSpawner do
 	include SpawnerSpecHelper
 	
@@ -86,3 +88,5 @@ describe ClassicRails::FrameworkSpawner do
 		it_should_behave_like "a Rails spawner that supports #reload()"
 	end
 end
+
+end # module PhusionPassenger

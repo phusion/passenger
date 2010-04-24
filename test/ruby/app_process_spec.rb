@@ -1,6 +1,8 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'phusion_passenger/app_process'
 
+module PhusionPassenger
+
 describe AppProcess do
 	before :each do
 		@stub = RailsStub.new('2.3/foobar')
@@ -37,3 +39,5 @@ describe AppProcess do
 		detector.should raise_error(::PhusionPassenger::VersionNotFound)
 	end
 end
+
+end # module PhusionPassenger
