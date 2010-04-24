@@ -1,3 +1,6 @@
+require 'phusion_passenger/constants'
+require 'digest/md5'
+
 module PhusionPassenger
 module ClassicRailsExtensions
 module AnalyticsLogging
@@ -8,15 +11,13 @@ protected
 		# Log SQL queries and durations.
 		log = Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
 		if log
-			sql_base64 = [sql].pack("m")
-			sql_base64.gsub!("\n", "")
-			sql_base64.strip!
 			if name
 				name = name.strip
 			else
 				name = "SQL"
 			end
-			log.measure("DB BENCHMARK: #{sql_base64} #{name}") do
+			digest = Digest::MD5.hexdigest("#{name}\0#{sql}")
+			log.measure("DB BENCHMARK: #{digest}", "#{name}\n#{sql}") do
 				log_without_passenger(sql, name, &block)
 			end
 		else

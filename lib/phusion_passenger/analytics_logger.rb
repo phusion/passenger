@@ -53,22 +53,29 @@ class AnalyticsLogger
 			end if @shared_data
 		end
 		
-		def begin_measure(name)
+		def begin_measure(name, extra_info = nil)
+			if extra_info
+				extra_info_base64 = [extra_info].pack("m")
+				extra_info_base64.gsub!("\n", "")
+				extra_info_base64.strip!
+			else
+				extra_info_base64 = nil
+			end
 			times = NativeSupport.process_times
-			message "BEGIN: #{name} (time = #{current_timestamp}, utime = #{times.utime}, stime = #{times.stime})"
+			message "BEGIN: #{name} (#{current_timestamp},#{times.utime},#{times.stime}) #{extra_info_base64}"
 		end
 		
 		def end_measure(name, error_encountered = false)
 			times = NativeSupport.process_times
 			if error_encountered
-				message "FAIL: #{name} (time = #{current_timestamp}, utime = #{times.utime}, stime = #{times.stime})"
+				message "FAIL: #{name} (#{current_timestamp},#{times.utime},#{times.stime})"
 			else
-				message "END: #{name} (time = #{current_timestamp}, utime = #{times.utime}, stime = #{times.stime})"
+				message "END: #{name} (#{current_timestamp},#{times.utime},#{times.stime})"
 			end
 		end
 		
-		def measure(name)
-			begin_measure(name)
+		def measure(name, extra_info = nil)
+			begin_measure(name, extra_info)
 			begin
 				yield
 			rescue Exception
@@ -79,15 +86,18 @@ class AnalyticsLogger
 			end
 		end
 		
-		def measured_interval(name, interval)
-			message "MEASURED: #{name} (#{interval})"
-		end
-		
-		def measured_time_points(name, begin_time, end_time)
+		def measured_time_points(name, begin_time, end_time, extra_info = nil)
+			if extra_info
+				extra_info_base64 = [extra_info].pack("m")
+				extra_info_base64.gsub!("\n", "")
+				extra_info_base64.strip!
+			else
+				extra_info_base64 = nil
+			end
 			begin_timestamp = begin_time.to_i * 1_000_000 + begin_time.usec
 			end_timestamp = end_time.to_i * 1_000_000 + end_time.usec
-			message "BEGIN: #{name} (time = #{begin_timestamp})"
-			message "END: #{name} (time = #{end_timestamp})"
+			message "BEGIN: #{name} (#{begin_timestamp}) #{extra_info_base64}"
+			message "END: #{name} (#{end_timestamp})"
 		end
 		
 		def close(flush_to_disk = false)

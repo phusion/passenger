@@ -320,17 +320,17 @@ public:
 			message.reserve(150);
 			message.append("BEGIN: ");
 			message.append(name);
-			message.append(" (time = ");
+			message.append(" (");
 			message.append(toString(SystemTime::getUsec()));
-			message.append(", utime = ");
+			message.append(",");
 			if (getrusage(RUSAGE_SELF, &usage) == -1) {
 				int e = errno;
 				throw SystemException("getrusage() failed", e);
 			}
 			message.append(timevalToMsecString(usage.ru_utime));
-			message.append(", stime = ");
+			message.append(",");
 			message.append(timevalToMsecString(usage.ru_stime));
-			message.append(")");
+			message.append(") ");
 			log->message(message);
 		}
 	}
@@ -364,17 +364,17 @@ public:
 					message.append("FAIL: ");
 				}
 				message.append(data.name);
-				message.append(" (time = ");
+				message.append(" (");
 				message.append(toString(SystemTime::getUsec()));
-				message.append(", utime = ");
+				message.append(",");
 				if (getrusage(RUSAGE_SELF, &usage) == -1) {
 					int e = errno;
 					throw SystemException("getrusage() failed", e);
 				}
 				message.append(timevalToMsecString(usage.ru_utime));
-				message.append(", stime = ");
+				message.append(",");
 				message.append(timevalToMsecString(usage.ru_stime));
-				message.append(")");
+				message.append(") ");
 				log->message(message);
 			}
 		} else {

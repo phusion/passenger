@@ -146,7 +146,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 		end
 	end
 	
-	it "logs SQL queries" do
+	it "logs successful SQL queries" do
 		app = spawn_some_application(@options) do |stub|
 			File.write("#{stub.app_root}/config/database.yml",
 				"production:\n" +
@@ -164,10 +164,46 @@ shared_examples_for "analytics logging extensions for Rails" do
 			})
 		end
 		send_request_to_app(app, "PATH_INFO" => "/foo")
+		extra_info_regex = Regexp.escape(base64("SQL\nCREATE TABLE foobar (id INT)"))
 		eventually(5) do
 			log = read_log("requests/**/log.txt")
-			log.include?("DB BENCHMARK: " + base64("CREATE TABLE foobar (id INT)")) &&
-				log.include?("DB BENCHMARK: " + base64("INSERT INTO foobar VALUES (1)"))
+			log =~ /BEGIN: DB BENCHMARK: .* \(.*\) #{extra_info_regex}$/ &&
+				log =~ /END: DB BENCHMARK: .* \(.*\)$/
+		end
+	end
+	
+	it "logs failed SQL queries" do
+		app = spawn_some_application(@options) do |stub|
+			File.write("#{stub.app_root}/config/database.yml",
+				"production:\n" +
+				"  adapter: sqlite3\n" +
+				"  database: db.sqlite3\n")
+			File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
+				class FooController < ActionController::Base
+					def index
+						db = ActiveRecord::Base.connection
+						db.execute("SELECT 1")
+						render :nothing => true
+					end
+				end
+			})
+		end
+		send_request_to_app(app, "PATH_INFO" => "/foo")
+		extra_info_regex = Regexp.escape(base64("SQL\nINVALID QUERY"))
+		if rails_version >= '3.0'
+			pending do
+				eventually(5) do
+					log = read_log("requests/**/log.txt")
+					log =~ /BEGIN: DB BENCHMARK: .* \(.*\) #{extra_info_regex}$/ &&
+						log =~ /FAIL: DB BENCHMARK: .* \(.*\)$/
+				end
+			end
+		else
+			eventually(5) do
+				log = read_log("requests/**/log.txt")
+				log =~ /BEGIN: DB BENCHMARK: .* \(.*\) #{extra_info_regex}$/ &&
+					log =~ /FAIL: DB BENCHMARK: .* \(.*\)$/
+			end
 		end
 	end
 	

@@ -1,4 +1,5 @@
 require 'phusion_passenger/constants'
+require 'digest/md5'
 
 module PhusionPassenger
 
@@ -58,16 +59,11 @@ class AnalyticsLogging < Rails::LogSubscriber
 	def sql(event)
 		log = Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
 		if log
-			sql_base64 = [event.payload[:sql]].pack("m")
-			sql_base64.gsub!("\n", "")
-			sql_base64.strip!
-			if event.payload[:name]
-				name = event.payload[:name].strip
-			else
-				name = "SQL"
-			end
-			log.measured_time_points("DB BENCHMARK: #{sql_base64} #{name}",
-				event.time, event.end)
+			name = event.payload[:name]
+			sql = event.payload[:sql]
+			digest = Digest::MD5.hexdigest("#{name}\0#{sql}")
+			log.measured_time_points("DB BENCHMARK: #{digest}",
+				event.time, event.end, "#{name}\n#{sql}")
 		end
 	end
 	
