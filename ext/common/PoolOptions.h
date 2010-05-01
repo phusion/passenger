@@ -198,9 +198,14 @@ struct PoolOptions {
 	/** Whether debugger support should be enabled. */
 	bool debugger;
 	
+	/** In case an app process needs to be spawned, whether analytics logging
+	 * should be enabled.
+	 */
+	bool analytics;
+	
 	/**
 	 * An analytics log object to log things to. May be the null pointer,
-	 * in which case analytics logging is disabled.
+	 * in which case analytics logging is disabled for this request.
 	 */
 	AnalyticsLogPtr log;
 	
@@ -235,6 +240,7 @@ struct PoolOptions {
 		statThrottleRate        = 0;
 		rights                  = DEFAULT_BACKEND_ACCOUNT_RIGHTS;
 		debugger                = false;
+		analytics               = false;
 		initiateSession         = true;
 		printExceptions         = true;
 		
@@ -263,6 +269,7 @@ struct PoolOptions {
 		const string &restartDir     = "",
 		Account::Rights rights       = DEFAULT_BACKEND_ACCOUNT_RIGHTS,
 		bool debugger                = false,
+		bool analytics               = false,
 		const AnalyticsLogPtr &log   = AnalyticsLogPtr()
 	) {
 		this->appRoot                 = appRoot;
@@ -284,6 +291,7 @@ struct PoolOptions {
 		this->restartDir              = restartDir;
 		this->rights                  = rights;
 		this->debugger                = debugger;
+		this->analytics               = analytics;
 		this->log                     = log;
 		this->initiateSession         = true;
 		this->printExceptions         = true;
@@ -338,6 +346,7 @@ struct PoolOptions {
 		rights           = (Account::Rights) atol(vec[startIndex + offset]);
 		                                                             offset += 2;
 		debugger         = vec[startIndex + offset] == "true";       offset += 2;
+		analytics        = vec[startIndex + offset] == "true";       offset += 2;
 		if (vec[startIndex + offset - 1] == "analytics_log_txn_id") {
 			if (analyticsLogger != NULL) {
 				string txnId     = vec[startIndex + offset];
@@ -391,6 +400,7 @@ struct PoolOptions {
 		appendKeyValue (vec, "restart_dir",        restartDir);
 		appendKeyValue3(vec, "rights",             rights);
 		appendKeyValue4(vec, "debugger",           debugger);
+		appendKeyValue4(vec, "analytics",          analytics);
 		if (log) {
 			appendKeyValue(vec, "analytics_log_txn_id", log->getTxnId());
 			appendKeyValue(vec, "analytics_log_group_name", log->getGroupName());

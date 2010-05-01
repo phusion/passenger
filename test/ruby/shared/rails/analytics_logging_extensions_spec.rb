@@ -10,6 +10,7 @@ shared_examples_for "analytics logging extensions for Rails" do
 	before :each do
 		@agent_pid, @socket_filename = spawn_logging_agent(Utils.passenger_tmpdir, "1234")
 		@options = {
+			"analytics" => true,
 			"logging_agent_address" => @socket_filename,
 			"logging_agent_username" => "logging",
 			"logging_agent_password_base64" => base64("1234"),
@@ -64,7 +65,26 @@ shared_examples_for "analytics logging extensions for Rails" do
 		return [data].pack('m').gsub("\n", "")
 	end
 	
-	it "doesn't install analytics logging extensions if analytics logging is turned off"
+	it "doesn't install analytics logging extensions if analytics logging is turned off" do
+		@options.delete("analytics")
+		app = spawn_some_application(@options) do |stub|
+			File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
+				class FooController < ActionController::Base
+					def index
+						File.open("out.txt", "w") do |f|
+							f.write(request.env["PASSENGER_ANALYTICS_WEB_LOG"].class.to_s)
+						end
+						render :nothing => true
+					end
+				end
+			})
+		end
+		send_request_to_app(app, "PATH_INFO" => "/foo")
+		eventually(5) do
+			filename = "#{app.app_root}/out.txt"
+			File.exist?(filename) && File.read(filename) == "NilClass"
+		end
+	end
 	
 	it "logs the controller and action name" do
 		app = spawn_some_application(@options) do |stub|

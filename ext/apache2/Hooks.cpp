@@ -601,6 +601,7 @@ private:
 					config->getRestartDir(),
 					DEFAULT_BACKEND_ACCOUNT_RIGHTS,
 					false,
+					false,
 					AnalyticsLogPtr()
 				);
 				options.environmentVariables = ptr(new EnvironmentVariablesStringListCreator(r));

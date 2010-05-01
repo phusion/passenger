@@ -467,6 +467,7 @@ private:
 			AnalyticsLogPtr log;
 			if (enableAnalytics) {
 				log = analyticsLogger->newTransaction(options.getAppGroupName());
+				options.analytics = true;
 				options.log = log;
 			} else {
 				log.reset(new AnalyticsLog());

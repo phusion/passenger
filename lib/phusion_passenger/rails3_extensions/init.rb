@@ -8,7 +8,7 @@ module Rails3Extensions
 		if !AnalyticsLogging.install!(options)
 			# Remove code to save memory.
 			PhusionPassenger::Rails3Extensions.send(:remove_const, :AnalyticsLogging)
-			PhusionPassenger.send(:remove_const, Rails3Extensions)
+			PhusionPassenger.send(:remove_const, :Rails3Extensions)
 		end
 	end
 end

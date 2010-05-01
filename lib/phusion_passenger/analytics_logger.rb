@@ -124,7 +124,7 @@ class AnalyticsLogger
 	end
 	
 	def self.new_from_options(options)
-		if options["logging_agent_address"]
+		if options["analytics"] && options["logging_agent_address"]
 			return new(options["logging_agent_address"],
 				options["logging_agent_username"],
 				options["logging_agent_password_base64"].unpack('m').first,
