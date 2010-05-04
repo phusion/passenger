@@ -206,7 +206,7 @@ private:
 	enum Threeway { YES, NO, UNKNOWN };
 
 	thread_specific_ptr<ApplicationPool::Client> threadSpecificApplicationPool;
-	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex;
+	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex, m_hasModXsendfile;
 	CachedFileStat cstat;
 	AgentsStarter agentsStarter;
 	AnalyticsLoggerPtr analyticsLogger;
@@ -350,6 +350,17 @@ private:
 			}
 		}
 		return m_hasModAutoIndex == YES;
+	}
+	
+	bool hasModXsendfile() {
+		if (m_hasModXsendfile == UNKNOWN) {
+			if (ap_find_linked_module("mod_xsendfile.c")) {
+				m_hasModXsendfile = YES;
+			} else {
+				m_hasModXsendfile = NO;
+			}
+		}
+		return m_hasModXsendfile == YES;
 	}
 	
 	int reportDocumentRootDeterminationError(request_rec *r) {
@@ -706,6 +717,9 @@ private:
 				}
 				apr_table_setn(r->headers_out, "Status", r->status_line);
 				
+				bool xsendfile = hasModXsendfile() &&
+					apr_table_get(r->err_headers_out, "X-Sendfile");
+				
 				UPDATE_TRACE_POINT();
 				ap_pass_brigade(r->output_filters, bb);
 				
@@ -718,7 +732,9 @@ private:
 						"this is normal. You might also want to increase Apache's "
 						"TimeOut configuration option if you experience this "
 						"problem often.");
-				} else if (!bucketState->completed) {
+				} else if (!bucketState->completed && !xsendfile) {
+					// mod_xsendfile drops the entire output bucket so
+					// suppress this message when mod_xsendfile is active.
 					P_WARN("Apache stopped forwarding the backend's response, "
 						"even though the HTTP client did not close the "
 						"connection. Is this an Apache bug?");
@@ -1261,6 +1277,7 @@ public:
 		m_hasModRewrite = UNKNOWN;
 		m_hasModDir = UNKNOWN;
 		m_hasModAutoIndex = UNKNOWN;
+		m_hasModXsendfile = UNKNOWN;
 		
 		P_DEBUG("Initializing Phusion Passenger...");
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);

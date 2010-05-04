@@ -78,6 +78,16 @@ Release 2.2.12
  * Improved Bundler support.
    Previous versions might not be able to correctly load gems bundled
    by Bundler.
+ * Worked around some user account handling bugs in Ruby.
+ * Fixed some Ruby 1.9 tempfile.rb compatibility problems.
+ * Fixed some compilation problems on some ARM Linux platforms.
+ * [Apache] Suppress bogus mod_xsendfile-related error messages.
+   When mod_xsendfile is being used, Phusion Passenger might print
+   bogus error messages like "EPIPE" or "Apache stopped forwarding
+   the backend's response" to the log file. These messages are
+   normal, are harmless and can be safely ignored, but they pollute
+   the log file. So in this release we've added code to suppress
+   these messages when mod_xsendfile is being used.
 
 
 Release 2.2.11
