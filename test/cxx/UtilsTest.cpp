@@ -413,14 +413,14 @@ namespace tut {
 		ensure_equals(stringToLL("010"), 10ll);
 		ensure_equals(stringToLL("928"), 928ll);
 		ensure_equals(stringToLL("2937104"), 2937104ll);
-		ensure_equals(stringToLL("18446744073709551615"), 18446744073709551615ll);
+		ensure_equals(stringToLL("9223372036854775807"), 9223372036854775807ll);
 		ensure_equals(stringToLL("    5abcdef1234"), 5ll);
 		
 		ensure_equals(stringToLL("-0"), 0ll);
 		ensure_equals(stringToLL("-1"), -1ll);
 		ensure_equals(stringToLL("-010"), -10ll);
 		ensure_equals(stringToLL("-9876"), -9876ll);
-		ensure_equals(stringToLL("-9223372036854775808"), -9223372036854775808ll);
+		ensure_equals(stringToLL("-9223372036854775807"), -9223372036854775807ll);
 		ensure_equals(stringToLL("    -5abcdef1234"), -5ll);
 	}
 }
