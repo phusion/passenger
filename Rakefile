@@ -604,9 +604,8 @@ end
 	### C++ components tests ###
 	
 	TEST_CXX_CFLAGS = "-Iext -Iext/common -Iext/nginx #{LIBEV_CFLAGS} -Itest/support " <<
-		"#{PlatformInfo.apr_flags} #{PlatformInfo.apu_flags} #{TEST_COMMON_CFLAGS}"
-	TEST_CXX_LDFLAGS = "#{PlatformInfo.apr_libs} #{PlatformInfo.apu_libs} " <<
-		"#{TEST_COMMON_LIBRARY} #{TEST_BOOST_OXT_LIBRARY} #{LIBEV_LIBS} " <<
+		"#{TEST_COMMON_CFLAGS}"
+	TEST_CXX_LDFLAGS = "#{TEST_COMMON_LIBRARY} #{TEST_BOOST_OXT_LIBRARY} #{LIBEV_LIBS} " <<
 		"#{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
 	TEST_CXX_OBJECTS = {
 		'test/cxx/CxxTestMain.o' => %w(
