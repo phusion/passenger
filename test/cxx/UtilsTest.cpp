@@ -265,13 +265,17 @@ namespace tut {
 	}
 	
 	TEST_METHOD(37) {
-		ensure_equals("(1)", parseModeString("u=rwx"), S_IRWXU);
-		ensure_equals("(2)", parseModeString("g=rwx"), S_IRWXG);
-		ensure_equals("(3)", parseModeString("o=rwx"), S_IRWXO);
-		ensure_equals("(4)", parseModeString("u=r,g=,o=rx"), S_IRUSR | S_IROTH | S_IXOTH);
-		ensure_equals("(5)", parseModeString("o=r,g=wx"), S_IROTH | S_IWGRP | S_IXGRP);
-		ensure_equals("(6)", parseModeString("u=r,g=w,o=x,u=x"), S_IRUSR | S_IXUSR | S_IWGRP | S_IXOTH);
-		ensure_equals("(7)", parseModeString("u=rs,g=ws"), S_IRUSR | S_ISUID | S_IWGRP | S_ISGID);
+		ensure_equals("(1)", parseModeString("u=rwx"), (mode_t) S_IRWXU);
+		ensure_equals("(2)", parseModeString("g=rwx"), (mode_t) S_IRWXG);
+		ensure_equals("(3)", parseModeString("o=rwx"), (mode_t) S_IRWXO);
+		ensure_equals("(4)", parseModeString("u=r,g=,o=rx"),
+			(mode_t) (S_IRUSR | S_IROTH | S_IXOTH));
+		ensure_equals("(5)", parseModeString("o=r,g=wx"),
+			(mode_t) (S_IROTH | S_IWGRP | S_IXGRP));
+		ensure_equals("(6)", parseModeString("u=r,g=w,o=x,u=x"),
+			(mode_t) (S_IRUSR | S_IXUSR | S_IWGRP | S_IXOTH));
+		ensure_equals("(7)", parseModeString("u=rs,g=ws"),
+			(mode_t) (S_IRUSR | S_ISUID | S_IWGRP | S_ISGID));
 	}
 	
 	TEST_METHOD(38) {
