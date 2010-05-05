@@ -126,7 +126,7 @@ stringToLL(const StaticString &str) {
 	long long result = 0;
 	string::size_type i = 0;
 	const char *data = str.data();
-	bool minus;
+	bool minus = false;
 	
 	while (data[i] == ' ' && i < str.size()) {
 		i++;
