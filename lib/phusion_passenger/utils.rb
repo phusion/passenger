@@ -164,7 +164,7 @@ protected
 		end
 	end
 	
-	def setup_bundler_support
+	def setup_bundler_support(options = {})
 		# Rack::ApplicationSpawner depends on the 'rack' library, but the app
 		# might want us to use a bundled version instead of a
 		# gem/apt-get/yum/whatever-installed version. Therefore we must setup
@@ -180,13 +180,26 @@ protected
 		#   calls Bundler.setup if that's not available.
 		# - Other Rack apps might not have a boot.rb but we still want to setup
 		#   Bundler.
+		# - Some Rails 2 apps might have explicitly added Bundler support.
+		#   These apps call Bundler.setup in their preinitializer.rb.
 		#
 		# So the strategy is as follows:
 
+		# Our strategy might be completely unsuitable for the app or the
+		# developer is using something other than Bundler (or possibly an
+		# older version of Bundler which is API incompatible with the latest
+		# version), so we let the user manually specify a load path setup file.
+		if options["load_path_setup_file"]
+			require File.expand(options["load_path_setup_file"])
+		
+		# The app developer may also override our strategy with this magic file.
+		elsif File.exist?('config/setup_load_paths.rb')
+			require File.expand('config/setup_load_paths')
+		
 		# If the Bundler lock environment file exists then load that. If it
 		# exists then there's a 99.9% chance that loading it is the correct
 		# thing to do.
-		if File.exist?('.bundle/environment.rb')
+		elsif File.exist?('.bundle/environment.rb')
 			require File.expand_path('.bundle/environment')
 
 		# If the Bundler environment file doesn't exist then there are two
@@ -198,11 +211,12 @@ protected
 		# The existence of Gemfile indicates whether (2) is true:
 		elsif File.exist?('Gemfile')
 			# In case of Rails 3, config/boot.rb already calls Bundler.setup.
-			# However older versions of Rails don't so loading boot.rb might
+			# However older versions of Rails may not so loading boot.rb might
 			# not be the correct thing to do. To be on the safe side we
-			# call Bundler.setup ourselves; if this isn't the correct thing
-			# to do after all then there's always the load_path_setup_file
-			# option.
+			# call Bundler.setup ourselves; calling Bundler.setup twice is
+			# harmless. If this isn't the correct thing to do after all then
+			# there's always the load_path_setup_file option and
+			# setup_load_paths.rb.
 			require 'rubygems'
 			require 'bundler'
 			Bundler.setup
