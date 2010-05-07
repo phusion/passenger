@@ -359,7 +359,14 @@ createNonWritableFifo(const string &filename) {
 	do {
 		ret = mkfifo(filename.c_str(), 0);
 	} while (ret == -1 && errno == EINTR);
-	if (ret == -1 && errno != EEXIST) {
+	if (ret == -1) {
+		if (errno == EEXIST && geteuid() != 0) {
+			// Don't try to change the permissions on the FIFO file;
+			// it was likely created by root, but after lowering privilege
+			// createPassengerTempDir() is called again, and this time
+			// we won't be able to set permissions.
+			return;
+		}
 		e = errno;
 		throw FileSystemException("Cannot create FIFO file " + filename, e, filename);
 	}
