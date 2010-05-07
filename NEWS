@@ -16,7 +16,7 @@ Release 2.2.12
    the backend's response" to the log file. These messages are
    normal, are harmless and can be safely ignored, but they pollute
    the log file. So in this release we've added code to suppress
-   these messages when mod_xsendfile is being used.
+   these messages when mod_xsendfile is being used. Issue #474.
  * [Nginx] Fixed "passenger_user_switching off" permission problems
    If Nginx is running as root and passenger_user_switching is turned
    off, then Phusion Passenger would fail to initialize because of
