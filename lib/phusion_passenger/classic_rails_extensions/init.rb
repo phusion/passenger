@@ -3,7 +3,7 @@ require 'phusion_passenger/constants'
 module PhusionPassenger
 module ClassicRailsExtensions
 	def self.init!(options)
-		if options["analytics_logger"]
+		if options["analytics_logger"] && options["analytics"]
 			AnalyticsLogging.install!(options)
 		else
 			# Remove code to save memory.

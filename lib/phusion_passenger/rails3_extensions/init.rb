@@ -17,7 +17,7 @@ module Rails3Extensions
 class AnalyticsLogging < Rails::LogSubscriber
 	def self.install!(options)
 		analytics_logger = options["analytics_logger"]
-		return false if !analytics_logger
+		return false if !analytics_logger || !options["analytics"]
 		
 		# If the Ruby interpreter supports GC statistics then turn it on
 		# so that the info can be logged.
