@@ -25,6 +25,7 @@
  */
 
 #include "StaticContentHandler.h"
+#include "ngx_http_passenger_module.h"
 
 static void
 set_request_extension(ngx_http_request_t *r, ngx_str_t *filename) {
@@ -66,9 +67,11 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
         return NGX_DECLINED;
     }
 
-    if (r->zero_in_uri) {
-        return NGX_DECLINED;
-    }
+    #if NGINX_VERSION_NUM < 8038
+        if (r->zero_in_uri) {
+            return NGX_DECLINED;
+        }
+    #endif
 
     log = r->connection->log;
 

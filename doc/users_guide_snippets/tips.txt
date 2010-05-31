@@ -82,6 +82,34 @@ end
 --------------------------------------------------
 
 
+[[bundler_support]]
+=== Bundler support ===
+
+Phusion Passenger has automatic support for link:http://gembundler.com/git.html[Bundler].
+It works as follows:
+
+- If you have a '.bundle/environment.rb' in your application root, then Phusion
+  Passenger will require that file before loading your application.
+- Otherwise, if you have a 'Gemfile', then Phusion Passenger will automatically call
+  `Bundler.setup()` before loading your application.
+
+It's possible that your application also calls `Bundler.setup` during loading, e.g. in
+'config.ru' or in 'config/boot.rb'. This is the case with Rails 3, and is also the case if you
+modified your 'config/boot.rb' according to the
+link:http://gembundler.com/rails23.html[Bundler Rails 2.3 instructions].
+This leads to `Bundler.setup` being called twice, once before the application startup file
+is required and once during application startup. However this is harmless and doesn't
+have any negative effects.
+
+Phusion Passenger assumes that you're using Bundler >= 0.9.5. If you don't want Phusion
+Passenger to run its Bundler support code, e.g. because you need to use an older version
+of Bundler with an incompatible API or because you use a system other than Bundler, then
+you can override Phusion Passenger's Bundler support code by creating a file
+'config/setup_load_paths.rb'. If this file exists then it will be required before loading
+the application startup file. In this file you can do whatever you need to setup Bundler
+or a similar system.
+
+
 [[moving_phusion_passenger]]
 === Moving Phusion Passenger to a different directory ===
 

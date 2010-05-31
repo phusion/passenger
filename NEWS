@@ -77,8 +77,11 @@ Release 2.2.12
 
  * Improved Bundler support.
    Previous versions might not be able to correctly load gems bundled
-   by Bundler.
- * Worked around some user account handling bugs in Ruby.
+   by Bundler. We've also documented how our Bundler support works and
+   how to override our support if you need special behavior.
+   Please refer to the Phusion Passenger Users Guide, section
+   "Bundler support".
+ * Worked around some user account handling bugs in Ruby. Issue #192.
  * Fixed some Ruby 1.9 tempfile.rb compatibility problems.
  * Fixed some compilation problems on some ARM Linux platforms.
  * [Apache] Suppress bogus mod_xsendfile-related error messages.
@@ -87,7 +90,15 @@ Release 2.2.12
    the backend's response" to the log file. These messages are
    normal, are harmless and can be safely ignored, but they pollute
    the log file. So in this release we've added code to suppress
-   these messages when mod_xsendfile is being used.
+   these messages when mod_xsendfile is being used. Issue #474.
+ * [Nginx] Fixed "passenger_user_switching off" permission problems
+   If Nginx is running as root and passenger_user_switching is turned
+   off, then Phusion Passenger would fail to initialize because of
+   a permission problem. This has been fixed. Issue #458.
+ * [Nginx] Nginx >= 0.8.38 is now supported.
+   Thanks to Sergey A. Osokin for reporting the problem.
+ * [Nginx] passenger-install-nginx-module upgraded
+    It now defaults to installing Nginx 0.7.65 instead of 0.7.64.
 
 
 Release 2.2.11
