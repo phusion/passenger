@@ -194,7 +194,7 @@ protected
 		
 		# The app developer may also override our strategy with this magic file.
 		elsif File.exist?('config/setup_load_paths.rb')
-			require File.expand('config/setup_load_paths')
+			require File.expand_path('config/setup_load_paths')
 		
 		# If the Bundler lock environment file exists then load that. If it
 		# exists then there's a 99.9% chance that loading it is the correct
