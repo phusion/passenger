@@ -551,6 +551,7 @@ private:
 			AnalyticsLogPtr log;
 			if (config->analyticsEnabled()) {
 				log = analyticsLogger->newTransaction(config->getAppGroupName(appRoot));
+				log->message(string("URI: ") + r->uri);
 			} else {
 				log.reset(new AnalyticsLog());
 			}
@@ -641,6 +642,8 @@ private:
 				session = getSession(options);
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
 				scope.success();
+				log->message("Application PID: " + toString(session->getPid()) +
+					" (GUPID: " + session->getGupid() + ")");
 			} catch (const SpawnException &e) {
 				r->status = 500;
 				if (e.hasErrorPage() && config->showFriendlyErrorPages()) {
