@@ -188,6 +188,11 @@ struct DirConfig {
 	 */
 	Threeway friendlyErrorPages;
 	
+	/**
+	 * Whether analytics logging should be enabled.
+	 */
+	Threeway analytics;
+	
 	/*************************************/
 	/*************************************/
 	
@@ -248,6 +253,14 @@ struct DirConfig {
 			return rackEnv;
 		} else {
 			return "production";
+		}
+	}
+	
+	string getAppGroupName(const string &appRoot) const {
+		if (appGroupName.empty()) {
+			return appRoot;
+		} else {
+			return appGroupName;
 		}
 	}
 	
@@ -318,6 +331,10 @@ struct DirConfig {
 	
 	bool showFriendlyErrorPages() const {
 		return friendlyErrorPages != DISABLED;
+	}
+	
+	bool analyticsEnabled() const {
+		return analytics == ENABLED;
 	}
 	
 	/*************************************/

@@ -527,21 +527,41 @@ private:
 		
 		TRACE_POINT();
 		DirConfig *config = note->config;
-		DirectoryMapper &mapper(note->mapper);
-		
-		if (mapper.getPublicDirectory().empty()) {
-			return reportDocumentRootDeterminationError(r);
-		}
-		
-		
-		/********** Step 2: handle HTTP upload data, if any **********/
-		
-		int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_DECHUNK);
-    		if (httpStatus != OK) {
-			return httpStatus;
-		}
+		DirectoryMapper &mapper = note->mapper;
+		string publicDirectory, appRoot;
 		
 		try {
+			publicDirectory = mapper.getPublicDirectory();
+			if (publicDirectory.empty()) {
+				return reportDocumentRootDeterminationError(r);
+			}
+			appRoot = config->getAppRoot(publicDirectory.c_str());
+		} catch (const FileSystemException &e) {
+			/* The application root cannot be determined. This could
+			 * happen if, for example, the user specified 'RailsBaseURI /foo'
+			 * while there is no filesystem entry called "foo" in the virtual
+			 * host's document root.
+			 */
+			return ReportFileSystemError(e).report(r);
+		}
+		
+		
+		UPDATE_TRACE_POINT();
+		try {
+			AnalyticsLogPtr log;
+			if (config->analyticsEnabled()) {
+				log = analyticsLogger->newTransaction(config->getAppGroupName(appRoot));
+			} else {
+				log.reset(new AnalyticsLog());
+			}
+			
+			/********** Step 2: handle HTTP upload data, if any **********/
+			
+			int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_DECHUNK);
+	    		if (httpStatus != OK) {
+				return httpStatus;
+			}
+			
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
 			SessionPtr session;
@@ -589,12 +609,13 @@ private:
 			/********** Step 3: forwarding the request to a backend
 			                    process from the application pool **********/
 			
-			UPDATE_TRACE_POINT();
+			AnalyticsScopeLog requestProcessingScope(log, "request processing");
+			
 			try {
-				string publicDirectory(mapper.getPublicDirectory());
+				AnalyticsScopeLog scope(log, "get from pool");
 				PoolOptions options(
-					config->getAppRoot(publicDirectory.c_str()),
-					config->appGroupName,
+					appRoot,
+					config->getAppGroupName(appRoot),
 					mapper.getApplicationTypeString(),
 					mapper.getEnvironment(),
 					config->getSpawnMethodString(),
@@ -612,13 +633,14 @@ private:
 					config->getRestartDir(),
 					DEFAULT_BACKEND_ACCOUNT_RIGHTS,
 					false,
-					false,
-					AnalyticsLogPtr()
+					config->analyticsEnabled(),
+					log->isNull() ? AnalyticsLogPtr() : log
 				);
 				options.environmentVariables = ptr(new EnvironmentVariablesStringListCreator(r));
 				
 				session = getSession(options);
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
+				scope.success();
 			} catch (const SpawnException &e) {
 				r->status = 500;
 				if (e.hasErrorPage() && config->showFriendlyErrorPages()) {
@@ -628,26 +650,27 @@ private:
 				} else {
 					throw;
 				}
-			} catch (const FileSystemException &e) {
-				/* The application root cannot be determined. This could
-				 * happen if, for example, the user specified 'RailsBaseURI /foo'
-				 * while there is no filesystem entry called "foo" in the virtual
-				 * host's document root.
-				 */
-				return ReportFileSystemError(e).report(r);
 			} catch (const BusyException &e) {
 				return reportBusyException(r);
 			}
 			
 			UPDATE_TRACE_POINT();
-			sendHeaders(r, config, session, mapper.getBaseURI());
+			AnalyticsScopeLog requestProxyingScope(log, "request proxying");
+			
+			{
+				AnalyticsScopeLog scope(log, "send request headers");
+				sendHeaders(r, config, session, mapper.getBaseURI(), log, appRoot);
+				scope.success();
+			}
 			if (expectingUploadData) {
+				AnalyticsScopeLog scope(log, "send request body");
 				if (uploadDataFile != NULL) {
 					sendRequestBody(r, session, uploadDataFile);
 					uploadDataFile.reset();
 				} else {
 					sendRequestBody(r, session, uploadDataMemory);
 				}
+				scope.success();
 			}
 			try {
 				session->shutdownWriter();
@@ -738,6 +761,9 @@ private:
 					P_WARN("Apache stopped forwarding the backend's response, "
 						"even though the HTTP client did not close the "
 						"connection. Is this an Apache bug?");
+				} else {
+					requestProxyingScope.success();
+					requestProcessingScope.success();
 				}
 				
 				return OK;
@@ -866,7 +892,9 @@ private:
 		}
 	}
 	
-	apr_status_t sendHeaders(request_rec *r, DirConfig *config, SessionPtr &session, const char *baseURI) {
+	apr_status_t sendHeaders(request_rec *r, DirConfig *config, SessionPtr &session,
+		const char *baseURI, const AnalyticsLogPtr &log, const string &appRoot)
+	{
 		apr_table_t *headers;
 		headers = apr_table_make(r->pool, 40);
 		if (headers == NULL) {
@@ -940,6 +968,12 @@ private:
 		env = (apr_table_entry_t*) env_arr->elts;
 		for (i = 0; i < env_arr->nelts; ++i) {
 			addHeader(headers, env[i].key, env[i].val);
+		}
+		
+		if (config->analyticsEnabled()) {
+			addHeader(headers, "PASSENGER_GROUP_NAME",
+				config->getAppGroupName(appRoot).c_str());
+			addHeader(headers, "PASSENGER_TXN_ID", log->getTxnId().c_str());
 		}
 		
 		// Now send the headers.

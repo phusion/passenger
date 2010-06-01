@@ -197,6 +197,7 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->restartDir = NULL;
 	config->uploadBufferDir = NULL;
 	config->friendlyErrorPages = DirConfig::UNSET;
+	config->analytics = DirConfig::UNSET;
 	/*************************************/
 	return config;
 }
@@ -240,6 +241,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	MERGE_THREEWAY_CONFIG(resolveSymlinksInDocRoot);
 	MERGE_THREEWAY_CONFIG(allowEncodedSlashes);
 	MERGE_THREEWAY_CONFIG(friendlyErrorPages);
+	MERGE_THREEWAY_CONFIG(analytics);
 	/*************************************/
 	return config;
 }
@@ -285,6 +287,7 @@ DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_upload_buffer_dir, uploadBufferDir)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_resolve_symlinks_in_document_root, resolveSymlinksInDocRoot)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_allow_encoded_slashes, allowEncodedSlashes)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_friendly_error_pages, friendlyErrorPages)
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_analytics, analytics)
 
 static const char *
 cmd_passenger_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
@@ -572,6 +575,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Prestart the given web applications during startup."),
+	AP_INIT_TAKE1("PassengerAnalytics",
+		(Take1Func) cmd_passenger_analytics,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Whether to enable analytics logging."),
 	
 	/*****************************/
 
