@@ -73,6 +73,14 @@ Release 2.9.0
    implementation.
 
 
+Release 2.2.13
+--------------
+
+ * Fixed some Rails 3 compatibility issues that were recently introduced.
+ * Fixed a typo that causes config/setup_load_paths.rb not to be loaded
+   correctly.
+
+
 Release 2.2.12
 --------------
 
