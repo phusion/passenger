@@ -225,8 +225,17 @@ private
 		   && ActionController::Dispatcher.respond_to?(:error_file_path)
 			ActionController::Dispatcher.error_file_path = "#{RAILS_ROOT}/public"
 		end
+		
+		require 'rails/version' if !defined?(::Rails::VERSION)
 		if !defined?(Dispatcher)
-			require 'dispatcher'
+			begin
+				require 'dispatcher'
+			rescue LoadError
+				# Early versions of Rails 3 still had the dispatcher, but
+				# later versions disposed of it, in which case we'll need
+				# to use the application object.
+				raise if Rails::VERSION::MAJOR < 3
+			end
 		end
 		
 		# - No point in preloading the application sources if the garbage collector
@@ -249,7 +258,7 @@ private
 		if defined?(Rails::Initializer)
 			return ::Rails::Initializer.method_defined?(:load_application_classes)
 		else
-			return defined?(::Rails3)
+			return Rails::VERSION::MAJOR >= 3
 		end
 	end
 
@@ -294,7 +303,7 @@ private
 			reader.close_on_exec!
 			
 			if Rails::VERSION::STRING >= '2.3.0'
-				rack_app = ::ActionController::Dispatcher.new
+				rack_app = find_rack_app
 				handler = Rack::RequestHandler.new(reader, rack_app, options)
 			else
 				handler = RequestHandler.new(reader, options)
@@ -316,6 +325,17 @@ private
 		end
 	end
 	private_class_method :start_request_handler
+	
+	def self.find_rack_app
+		if Rails::VERSION::MAJOR >= 3
+			File.read("config/application.rb") =~ /^module (.+)$/
+			app_module = Object.const_get($1)
+			return app_module::Application
+		else
+			return ActionController::Dispatcher.new
+		end
+	end
+	private_class_method :find_rack_app
 end
 
 end # module ClassicRails
