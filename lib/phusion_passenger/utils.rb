@@ -322,6 +322,8 @@ protected
 			Debugger.start_remote('127.0.0.1', [0, 0])
 			Debugger.start
 		end
+		
+		PhusionPassenger._spawn_options = options
 	end
 	
 	# This method is to be called after loading the application code but
@@ -336,17 +338,17 @@ protected
 			$LOAD_PATH.uniq!
 		end
 		
-		# Install framework extensions.
+		# Post-install framework extensions. Possibly preceded by a call to
+		# PhusionPassenger.install_framework_extensions!
 		require 'rails/version' if defined?(::Rails) && !defined?(::Rails::VERSION)
-		if defined?(::Rails)
-			if ::Rails::VERSION::MAJOR <= 2
-				require 'phusion_passenger/classic_rails_extensions/init'
-				ClassicRailsExtensions.init!(options)
-			elsif ::Rails::VERSION::MAJOR == 3
-				require 'phusion_passenger/rails3_extensions/init'
-				Rails3Extensions.init!(options)
-			end
+		if defined?(::Rails) && ::Rails::VERSION::MAJOR <= 2
+			require 'phusion_passenger/classic_rails_extensions/init'
+			ClassicRailsExtensions.init!(options)
+			# Rails 3 extensions are installed by
+			# PhusionPassenger.install_framework_extensions!
 		end
+		
+		PhusionPassenger._spawn_options = nil
 	end
 	
 	# To be called before the request handler main loop is entered, but after the app

@@ -27,13 +27,11 @@ class AnalyticsLogging < Rails::LogSubscriber
 		Rails::LogSubscriber.add(:action_controller, subscriber)
 		Rails::LogSubscriber.add(:active_record, subscriber)
 		
-		index = Rails::Application.middleware.find_index do |m|
-			m.klass.name == 'ActionDispatch::ShowExceptions'
+		if defined?(ActionDispatch::ShowExceptions)
+			Rails::Application.middleware.insert_after(
+				ActionDispatch::ShowExceptions,
+				ExceptionLogger, analytics_logger)
 		end
-		Rails::Application.middleware.insert_after(index,
-			ExceptionLogger, analytics_logger)
-		# Make sure Rails rebuilds the middleware stack.
-		Rails::Application.instance.instance_variable_set(:'@app', nil)
 		
 		if defined?(ActionController::Base)
 			ActionController::Base.class_eval do
