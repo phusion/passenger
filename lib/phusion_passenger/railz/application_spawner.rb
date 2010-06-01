@@ -177,7 +177,14 @@ class ApplicationSpawner < AbstractServer
 					setup_bundler_support
 					
 					require File.expand_path('config/environment')
-					require 'dispatcher'
+					begin
+						require 'dispatcher'
+					rescue LoadError
+						# Early versions of Rails 3 still had the dispatcher, but
+						# later versions disposed of it, in which case we'll need
+						# to use the application object.
+						raise if Rails::VERSION::MAJOR < 3
+					end
 				end
 				if success
 					start_request_handler(channel, false)
@@ -316,8 +323,16 @@ private
 		   && ActionController::Dispatcher.respond_to?(:error_file_path)
 			ActionController::Dispatcher.error_file_path = "#{RAILS_ROOT}/public"
 		end
+		require 'rails/version' if !defined?(::Rails::VERSION)
 		if !defined?(Dispatcher)
-			require 'dispatcher'
+			begin
+				require 'dispatcher'
+			rescue LoadError
+				# Early versions of Rails 3 still had the dispatcher, but
+				# later versions disposed of it, in which case we'll need
+				# to use the application object.
+				raise if Rails::VERSION::MAJOR < 3
+			end
 		end
 		# Rails 2.2+ uses application_controller.rb while older versions use application.rb.
 		begin
@@ -353,7 +368,7 @@ private
 		if defined?(Rails::Initializer)
 			return ::Rails::Initializer.method_defined?(:load_application_classes)
 		else
-			return defined?(::Rails3)
+			return Rails::VERSION::MAJOR >= 3
 		end
 	end
 
@@ -410,7 +425,7 @@ private
 			reader.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
 			
 			if Rails::VERSION::STRING >= '2.3.0'
-				rack_app = ::ActionController::Dispatcher.new
+				rack_app = find_rack_app
 				handler = Rack::RequestHandler.new(reader, rack_app, @options)
 			else
 				handler = RequestHandler.new(reader, @options)
@@ -429,6 +444,16 @@ private
 			writer.close rescue nil
 			handler.cleanup rescue nil
 			PhusionPassenger.call_event(:stopping_worker_process)
+		end
+	end
+	
+	def find_rack_app
+		if Rails::VERSION::MAJOR >= 3
+			File.read("config/application.rb") =~ /^module (.+)$/
+			app_module = Object.const_get($1)
+			return app_module::Application
+		else
+			return ActionController::Dispatcher.new
 		end
 	end
 end
