@@ -268,7 +268,7 @@ protected
 		# developer is using something other than Bundler, so we let the user
 		# manually specify a load path setup file.
 		if options["load_path_setup_file"]
-			require File.expand(options["load_path_setup_file"])
+			require File.expand_path(options["load_path_setup_file"])
 		
 		# The app developer may also override our strategy with this magic file.
 		elsif File.exist?('config/setup_load_paths.rb')
