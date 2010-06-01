@@ -16,6 +16,7 @@ Release 2.9.2
  * #at_exit blocks are called during app shutdown.
  * PassengerAppGroupName/passenger_app_group_name
  * Packaging guidelines and revamped fakeroot task.
+ * [Apache] passenger-install-apache2-module now supports --snippet
 
 
 Release 2.9.1
