@@ -75,6 +75,11 @@ class Installer < PhusionPassenger::AbstractInstaller
 	end
 	
 	def install!
+		if @snippet
+			show_apache2_config_snippets(true)
+			exit
+		end
+		
 		if PhusionPassenger.natively_packaged?
 			check_dependencies || exit(1)
 			show_apache2_config_snippets
@@ -159,17 +164,23 @@ private
 		end
 	end
 	
-	def show_apache2_config_snippets
-		puts
-		line
-		render_template 'apache2/config_snippets',
-			:module_location => APACHE2_MODULE,
-			:passenger_root => PASSENGER_ROOT,
-			:ruby => RUBY
-		if PhusionPassenger.natively_packaged?
-			wait(10)
+	def show_apache2_config_snippets(bare = false)
+		if bare
+			puts "LoadModule #{APACHE2_MODULE}"
+			puts "PassengerRoot #{PASSENGER_ROOT}"
+			puts "PassengerRuby #{RUBY}"
 		else
-			wait
+			puts
+			line
+			render_template 'apache2/config_snippets',
+				:module_location => APACHE2_MODULE,
+				:passenger_root => PASSENGER_ROOT,
+				:ruby => RUBY
+			if PhusionPassenger.natively_packaged?
+				wait(10)
+			else
+				wait
+			end
 		end
 	end
 	
@@ -206,6 +217,9 @@ parser = OptionParser.new do |opts|
 	end
 	opts.on("--apr-config-path PATH", String, "Path to 'apr-config' command.") do |value|
 		ENV['APR_CONFIG'] = value
+	end
+	opts.on("--snippet", "Show just the Apache config snippet.") do
+		options[:snippet] = true
 	end
 end
 begin
