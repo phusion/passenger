@@ -34,7 +34,7 @@ require 'tempfile'
 require 'stringio'
 require 'phusion_passenger/packaging'
 require 'phusion_passenger/exceptions'
-if !defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby"
+if !defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby" || RUBY_ENGINE == "rbx"
 	require 'phusion_passenger/native_support'
 end
 
