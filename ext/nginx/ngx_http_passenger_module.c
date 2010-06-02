@@ -349,6 +349,11 @@ cleanup:
         }
         free(prestart_uris_ary);
     }
+    
+    if (passenger_main_conf.abort_on_startup_error) {
+        exit(1);
+    }
+    
     return result;
 }
 

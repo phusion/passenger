@@ -14,6 +14,7 @@ http {
     proxy_temp_path <%= @temp_dir %>/proxy;
     passenger_ruby <%= PlatformInfo::RUBY %>;
     passenger_root <%= passenger_root %>;
+    passenger_abort_on_startup_error on;
     passenger_user_switching off;
     passenger_max_pool_size <%= @options[:max_pool_size] %>;
     passenger_min_instances <%= @options[:min_instances] %>;

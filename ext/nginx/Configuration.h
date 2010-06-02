@@ -62,6 +62,7 @@ typedef struct {
     ngx_str_t    root_dir;
     ngx_str_t    ruby;
     ngx_uint_t   log_level;
+    ngx_flag_t   abort_on_startup_error;
     ngx_uint_t   max_pool_size;
     ngx_uint_t   max_instances_per_app;
     ngx_uint_t   pool_idle_time;
