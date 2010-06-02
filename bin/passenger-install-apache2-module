@@ -166,7 +166,7 @@ private
 	
 	def show_apache2_config_snippets(bare = false)
 		if bare
-			puts "LoadModule #{APACHE2_MODULE}"
+			puts "LoadModule passenger_module #{APACHE2_MODULE}"
 			puts "PassengerRoot #{PASSENGER_ROOT}"
 			puts "PassengerRuby #{RUBY}"
 		else
