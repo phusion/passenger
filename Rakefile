@@ -186,7 +186,7 @@ if USE_VENDORED_LIBEV
 	task :libev => "ext/libev/.libs/libev.a"
 	
 	file "ext/libev/Makefile" => ["ext/libev/configure", "ext/libev/config.h.in", "ext/libev/Makefile.am"] do
-		sh "cd ext/libev && ./configure --disable-shared --enable-static"
+		sh "cd ext/libev && sh ./configure --disable-shared --enable-static"
 	end
 	
 	libev_sources = Dir["ext/libev/{*.c,*.h}"]
