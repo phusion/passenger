@@ -450,7 +450,8 @@ public:
 				throw SystemException(string("Unable to start the ") + name() +
 					": " + args[1], atoi(args[2]));
 			} else if (args[0] == "exec error") {
-				throw SystemException(string("Unable to start the ") + name(),
+				throw SystemException(string("Unable to start the ") + name() +
+					" because exec(\"" + getExeFilename() + "\") failed",
 					atoi(args[1]));
 			} else if (!processStartupInfo(pid, feedbackFd, args)) {
 				throw RuntimeException(string("The ") + name() +
