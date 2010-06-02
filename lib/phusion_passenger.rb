@@ -67,6 +67,12 @@ module PhusionPassenger
 		"/usr/local/share/phusion-passenger/plugins",
 		"~/#{LOCAL_DIR}/plugins"]
 	
+	# Directory under $HOME for storing Phusion Passenger Lite resource files.
+	LOCAL_LITE_RESOURCE_DIR  = File.join(LOCAL_DIR, "lite")
+	
+	# System-wide directory for storing Phusion Passenger Lite resource files.
+	GLOBAL_LITE_RESOURCE_DIR = "/var/lib/passenger-lite"
+	
 	if !natively_packaged?
 		# Top directory of the Phusion Passenger source code.
 		SOURCE_ROOT        = File.expand_path(File.join(LIBDIR, ".."))
