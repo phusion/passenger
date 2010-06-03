@@ -93,7 +93,7 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 	}
 	
 	setLogLevel(options.getInt("log_level", false, 1));
-	if (!options.get("debug_log_file").empty()) {
+	if (!options.get("debug_log_file", false).empty()) {
 		setDebugFile(options.get("debug_log_file").c_str());
 	}
 	
