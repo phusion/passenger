@@ -127,6 +127,10 @@ protected
 			data[:is_initialization_error] = true
 			if exception.child_exception
 				data[:child_exception] = marshal_exception(exception.child_exception)
+				child_exception = exception.child_exception
+				exception.child_exception = nil
+				data[:exception] = Marshal.dump(exception)
+				exception.child_exception = child_exception
 			end
 		else
 			begin
@@ -149,15 +153,9 @@ protected
 				child_exception = nil
 			end
 			
-			case hash[:class]
-			when AppInitError.to_s
-				exception_class = AppInitError
-			when FrameworkInitError.to_s
-				exception_class = FrameworkInitError
-			else
-				exception_class = InitializationError
-			end
-			return exception_class.new(hash[:message], child_exception)
+			exception = Marshal.load(hash[:exception])
+			exception.child_exception = child_exception
+			return exception
 		else
 			begin
 				return Marshal.load(hash[:exception])
