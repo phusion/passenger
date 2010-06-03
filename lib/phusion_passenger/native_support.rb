@@ -105,4 +105,4 @@ module PhusionPassenger
 		])
 		require "#{target_dir}/native_support.#{libext}"
 	end
-end if !defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby"
+end if !defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby" || RUBY_ENGINE == "rbx"

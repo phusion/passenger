@@ -73,6 +73,13 @@ Release 2.9.0
    implementation.
 
 
+Release 2.2.14
+--------------
+
+ * Added support for Rubinius
+   Patch contributed by Evan Phoenix.
+
+
 Release 2.2.13
 --------------
 
