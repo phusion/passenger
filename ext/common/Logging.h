@@ -80,14 +80,14 @@ void setDebugFile(const char *logFile = NULL);
 	do { \
 		if (stream != 0) { \
 			time_t the_time;			\
-			struct tm *the_tm;			\
+			struct tm the_tm;			\
 			char datetime_buf[60];			\
 			struct timeval tv;			\
 			std::stringstream sstream;              \
 								\
 			the_time = time(NULL);			\
-			the_tm = localtime(&the_time);		\
-			strftime(datetime_buf, sizeof(datetime_buf), "%F %H:%M:%S", the_tm); \
+			localtime_r(&the_time, &the_tm);	\
+			strftime(datetime_buf, sizeof(datetime_buf), "%F %H:%M:%S", &the_tm); \
 			gettimeofday(&tv, NULL); \
 			sstream << \
 				"[ pid=" << ((unsigned long) getpid()) <<  \
