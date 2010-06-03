@@ -914,7 +914,9 @@ public:
 	     const ServerInstanceDir::GenerationPtr &generation,
 	     const AccountsDatabasePtr &accountsDatabase = AccountsDatabasePtr(),
 	     const string &rubyCommand = "ruby",
-	     const AnalyticsLoggerPtr &analyticsLogger = AnalyticsLoggerPtr()
+	     const AnalyticsLoggerPtr &analyticsLogger = AnalyticsLoggerPtr(),
+	     int logLevel = 0,
+	     const string &debugLogFile = ""
 	) : data(new SharedData()),
 		cstat(DEFAULT_MAX_POOL_SIZE),
 		lock(data->lock),
@@ -929,7 +931,8 @@ public:
 		TRACE_POINT();
 		
 		this->spawnManager = ptr(new SpawnManager(spawnServerCommand, generation,
-			accountsDatabase, rubyCommand, analyticsLogger));
+			accountsDatabase, rubyCommand, analyticsLogger, logLevel,
+			debugLogFile));
 		initialize(analyticsLogger);
 	}
 	

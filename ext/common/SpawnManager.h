@@ -101,6 +101,8 @@ private:
 	AccountsDatabasePtr accountsDatabase;
 	string rubyCommand;
 	AnalyticsLoggerPtr analyticsLogger;
+	int logLevel;
+	string debugLogFile;
 	
 	boost::mutex lock;
 	RandomGenerator random;
@@ -246,6 +248,8 @@ private:
 				ownerSocketChannel.writeRaw("\n");
 				ownerSocketChannel.writeRaw("\n");
 			}
+			ownerSocketChannel.writeRaw(toString(logLevel) + "\n");
+			ownerSocketChannel.writeRaw(debugLogFile + "\n");
 			
 			this->ownerSocket    = ownerSocket;
 			this->socketFilename = socketFilename;
@@ -526,7 +530,9 @@ public:
 	             const ServerInstanceDir::GenerationPtr &generation,
 	             const AccountsDatabasePtr &accountsDatabase = AccountsDatabasePtr(),
 	             const string &rubyCommand = "ruby",
-	             const AnalyticsLoggerPtr &analyticsLogger = AnalyticsLoggerPtr()
+	             const AnalyticsLoggerPtr &analyticsLogger = AnalyticsLoggerPtr(),
+	             int logLevel = 0,
+	             const string &debugLogFile = ""
 	) {
 		TRACE_POINT();
 		this->spawnServerCommand = spawnServerCommand;
@@ -534,6 +540,8 @@ public:
 		this->accountsDatabase = accountsDatabase;
 		this->rubyCommand = rubyCommand;
 		this->analyticsLogger = analyticsLogger;
+		this->logLevel = logLevel;
+		this->debugLogFile = debugLogFile;
 		pid = 0;
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;

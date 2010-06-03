@@ -228,6 +228,7 @@ start_helper_server(ngx_cycle_t *cycle) {
     ngx_str_t       *prestart_uris;
     char           **prestart_uris_ary = NULL;
     u_char  filename[NGX_MAX_PATH], *last;
+    char   *debug_log_file = NULL;
     char   *default_user = NULL;
     char   *default_group = NULL;
     char   *passenger_root = NULL;
@@ -242,6 +243,7 @@ start_helper_server(ngx_cycle_t *cycle) {
     result    = NGX_OK;
     
     /* Create null-terminated versions of some strings. */
+    debug_log_file = ngx_str_null_terminate(&passenger_main_conf.debug_log_file);
     default_user   = ngx_str_null_terminate(&passenger_main_conf.default_user);
     default_group  = ngx_str_null_terminate(&passenger_main_conf.default_group);
     passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
@@ -265,7 +267,7 @@ start_helper_server(ngx_cycle_t *cycle) {
     }
     
     ret = agents_starter_start(passenger_agents_starter,
-        passenger_main_conf.log_level, getpid(),
+        passenger_main_conf.log_level, debug_log_file, getpid(),
         "", passenger_main_conf.user_switching,
         default_user, default_group,
         core_conf->user, core_conf->group,
@@ -334,6 +336,7 @@ start_helper_server(ngx_cycle_t *cycle) {
     }
 
 cleanup:
+    free(debug_log_file);
     free(default_user);
     free(default_group);
     free(passenger_root);

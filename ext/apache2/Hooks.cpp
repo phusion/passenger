@@ -1326,7 +1326,7 @@ public:
 				"'passenger-install-apache2-module'.");
 		}
 		
-		agentsStarter.start(serverConfig.logLevel,
+		agentsStarter.start(serverConfig.logLevel, "",
 			getpid(), serverConfig.tempDir,
 			serverConfig.userSwitching,
 			serverConfig.defaultUser, serverConfig.defaultGroup,

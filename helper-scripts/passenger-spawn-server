@@ -45,6 +45,8 @@ begin
 		logging_agent_username = owner_socket.readline.strip
 		logging_agent_password_base64 = owner_socket.readline.strip
 		node_name = owner_socket.readline.strip
+		log_level = owner_socket.readline.to_i
+		debug_log_file = owner_socket.readline.strip
 	rescue EOFError
 		exit
 	end
@@ -72,11 +74,14 @@ begin
 	$LOAD_PATH.unshift("#{source_root}/lib")
 	require 'rubygems' rescue nil
 	require 'phusion_passenger'
+	require 'phusion_passenger/debug_logging'
 	require 'phusion_passenger/utils/tmpdir'
 	require 'phusion_passenger/native_support'
 	if defined?(PhusionPassenger::NativeSupport)
 		PhusionPassenger::NativeSupport.disable_stdio_buffering
 	end
+	PhusionPassenger::DebugLogging.log_level = log_level
+	PhusionPassenger::DebugLogging.log_file  = debug_log_file
 	PhusionPassenger::Utils.passenger_tmpdir = generation_path
 	if logging_agent_address.empty?
 		options = {}

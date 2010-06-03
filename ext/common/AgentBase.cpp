@@ -93,6 +93,9 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 	}
 	
 	setLogLevel(options.getInt("log_level", false, 1));
+	if (!options.get("debug_log_file").empty()) {
+		setDebugFile(options.get("debug_log_file").c_str());
+	}
 	
 	// Change process title.
 	strncpy(argv[0], processName, strlen(argv[0]));

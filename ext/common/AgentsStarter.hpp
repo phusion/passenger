@@ -276,7 +276,7 @@ public:
 	 *                     of the agents during its initialization phase.
 	 * @throws RuntimeException Something went wrong.
 	 */
-	void start(unsigned int logLevel,
+	void start(unsigned int logLevel, const string &debugLogFile,
 	           pid_t webServerPid, const string &tempDir,
 	           bool userSwitching, const string &defaultUser, const string &defaultGroup,
 	           uid_t webServerWorkerUid, gid_t webServerWorkerGid,
@@ -296,6 +296,7 @@ public:
 		watchdogArgs
 			.set    ("web_server_type", type == APACHE ? "apache" : "nginx")
 			.setInt ("log_level",       logLevel)
+			.set    ("debug_log_file",  debugLogFile)
 			.setPid ("web_server_pid",  webServerPid)
 			.set    ("temp_dir",        tempDir.empty() ? getSystemTempDir() : tempDir)
 			.setBool("user_switching",  userSwitching)
