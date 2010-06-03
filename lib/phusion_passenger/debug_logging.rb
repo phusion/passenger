@@ -24,10 +24,19 @@
 module PhusionPassenger
 
 module DebugLogging
+	# We don't refer to STDERR directly because STDERR's reference might
+	# change during runtime.
 	@@log_level = 0
-	# We don't refer to STDERR because STDERR's reference might change during runtime.
 	@@log_device = nil
 	@@log_filename = nil
+	@@stderr_evaluator = lambda { STDERR }
+	
+	def self.included(klass)
+		klass.class_eval do
+			private :debug
+			private :trace
+		end
+	end
 	
 	def self.log_level=(level)
 		@@log_level = level
@@ -43,6 +52,18 @@ module DebugLogging
 		@@log_device = nil
 	end
 	
+	def self._log_device
+		return @@log_device
+	end
+	
+	def self.stderr_evaluator=(block)
+		if block
+			@@stderr_evaluator = block
+		else
+			@@stderr_evaluator = lambda { STDERR }
+		end
+	end
+	
 	def debug(message)
 		trace(1, message, 1)
 	end
@@ -56,7 +77,7 @@ module DebugLogging
 				end
 				output = @@log_device
 			else
-				output = STDERR
+				output = @@stderr_evaluator.call
 			end
 			location = caller[nesting_level].sub(/.*phusion_passenger\//, '')
 			location.sub!(/(.*):.*/, '\1')
