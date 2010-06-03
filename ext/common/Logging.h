@@ -35,6 +35,7 @@
 #include <sys/resource.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <string>
 #include <map>
 #include <ostream>
@@ -91,8 +92,10 @@ void setDebugFile(const char *logFile = NULL);
 			sstream << \
 				"[ pid=" << ((unsigned long) getpid()) <<  \
 				" file=" << __FILE__ << ":" << (unsigned long) __LINE__ << \
-				" time=" << datetime_buf << "." << (unsigned long) (tv.tv_usec / 1000) << " ]:" << \
-				"\n  " << expr << std::endl;	\
+				" thr=" << pthread_self() << \
+				" time=" << datetime_buf << "." << (unsigned long) (tv.tv_usec / 1000) << \
+				" ]: " << \
+				expr << std::endl;	\
 			*stream << sstream.str();		\
 			stream->flush();			\
 		} \

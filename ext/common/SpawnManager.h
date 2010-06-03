@@ -288,6 +288,8 @@ private:
 		FileDescriptor connection;
 		MessageChannel channel;
 		
+		P_DEBUG("Spawning a new application process for " << options.appRoot << "...");
+		
 		try {
 			connection = connect();
 			channel = MessageChannel(connection);
@@ -408,6 +410,7 @@ private:
 		}
 		
 		UPDATE_TRACE_POINT();
+		P_DEBUG("Application process " << appPid << " spawned");
 		return ProcessPtr(new Process(appRoot, appPid, ownerPipe, serverSockets,
 			detachKey, connectPassword, gupid, destructionCallback));
 	}

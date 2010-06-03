@@ -279,7 +279,7 @@ class AbstractRequestHandler
 			end
 		rescue EOFError
 			# Exit main loop.
-			trace(2, "Request handler main loop interrupted by Interrupt EOFError")
+			trace(2, "Request handler main loop interrupted by EOFError exception")
 		rescue Interrupt
 			# Exit main loop.
 			trace(2, "Request handler main loop interrupted by Interrupt exception")
@@ -289,6 +289,9 @@ class AbstractRequestHandler
 			   signal.message != SOFT_TERMINATION_SIGNAL
 				raise
 			end
+		rescue Exception => e
+			trace(2, "Request handler main loop interrupted by #{e.class} exception")
+			raise
 		ensure
 			debug("Exiting request handler main loop")
 			revert_signal_handlers

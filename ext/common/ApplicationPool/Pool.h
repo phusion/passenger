@@ -242,6 +242,7 @@ private:
 			processInfo->processed++;
 			
 			if (group->maxRequests > 0 && processInfo->processed >= group->maxRequests) {
+				P_DEBUG("MaxRequests for process " << processInfo->process->getPid() << " reached");
 				processInfo->detached = true;
 				processes->erase(processInfo->iterator);
 				group->size--;
@@ -499,6 +500,7 @@ private:
 				ProcessInfoPtr processInfo = *process_info_it;
 				if (processInfo->process->getDetachKey() == detachKey) {
 					// Found a matching process.
+					P_DEBUG("Detaching process " << processInfo->process->getPid());
 					processInfo->detached = true;
 					processes.erase(processInfo->iterator);
 					group->size--;
@@ -808,6 +810,8 @@ private:
 					goto beginning_of_function;
 				} else if (count == max) {
 					processInfo = inactiveApps.front();
+					P_DEBUG("Killing process " << processInfo->process->getPid() <<
+						" because an extra slot is necessary for spawning");
 					inactiveApps.pop_front();
 					processInfo->detached = true;
 					group = groups[processInfo->groupName].get();
@@ -1005,6 +1009,8 @@ public:
 				return session;
 				
 			} catch (SystemException &e) {
+				P_DEBUG("Exception occurred while connecting to a checked out process: " <<
+					e.what());
 				{
 					unique_lock<boost::mutex> l(lock);
 					detachWithoutLock(processInfo->process->getDetachKey());
@@ -1024,6 +1030,8 @@ public:
 				} // else retry
 				
 			} catch (std::exception &e) {
+				P_DEBUG("Exception occurred while connecting to a checked out process: " <<
+					e.what());
 				{
 					unique_lock<boost::mutex> l(lock);
 					detachWithoutLock(processInfo->process->getDetachKey());
@@ -1052,6 +1060,7 @@ public:
 	
 	virtual void clear() {
 		lock_guard<boost::mutex> l(lock);
+		P_DEBUG("Clearing pool");
 		markAllAsDetached();
 		groups.clear();
 		inactiveApps.clear();

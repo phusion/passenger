@@ -114,7 +114,7 @@ public:
 			throw ArgumentException("There must be a server socket named 'main'.");
 		}
 		mainServerSocket = &this->serverSockets["main"];
-		P_TRACE(3, "Application process " << this << ": created.");
+		P_TRACE(3, "Application process " << pid << " (" << this << "): created.");
 	}
 	
 	virtual ~Process() {
@@ -135,7 +135,7 @@ public:
 				} while (ret == -1 && errno == EINTR);
 			}
 		}
-		P_TRACE(3, "Application process " << this << ": destroyed.");
+		P_TRACE(3, "Application process " << pid << " (" << this << "): destroyed.");
 		
 		if (destructionCallback) {
 			destructionCallback();
