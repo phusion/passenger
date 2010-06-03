@@ -28,6 +28,7 @@ require 'phusion_passenger'
 require 'phusion_passenger/constants'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/message_client'
+require 'phusion_passenger/debug_logging'
 require 'phusion_passenger/utils'
 require 'phusion_passenger/utils/tmpdir'
 require 'phusion_passenger/utils/unseekable_socket'
@@ -93,6 +94,8 @@ module PhusionPassenger
 # The web server transforms the HTTP request to the aforementioned format,
 # and sends it to the request handler.
 class AbstractRequestHandler
+	include DebugLogging
+	
 	# Signal which will cause the Rails application to exit immediately.
 	HARD_TERMINATION_SIGNAL = "SIGTERM"
 	# Signal which will cause the Rails application to exit as soon as it's done processing a request.
@@ -238,6 +241,7 @@ class AbstractRequestHandler
 	
 	# Enter the request handler's main loop.
 	def main_loop
+		debug("Entering request handler main loop")
 		reset_signal_handlers
 		begin
 			@graceful_termination_pipe = IO.pipe
@@ -268,20 +272,25 @@ class AbstractRequestHandler
 			while true
 				@iterations += 1
 				if !accept_and_process_next_request(socket_wrapper, channel, buffer)
+					trace(2, "Request handler main loop exited normally")
 					break
 				end
 				@processed_requests += 1
 			end
 		rescue EOFError
 			# Exit main loop.
+			trace(2, "Request handler main loop interrupted by Interrupt EOFError")
 		rescue Interrupt
 			# Exit main loop.
+			trace(2, "Request handler main loop interrupted by Interrupt exception")
 		rescue SignalException => signal
+			trace(2, "Request handler main loop interrupted by SignalException")
 			if signal.message != HARD_TERMINATION_SIGNAL &&
 			   signal.message != SOFT_TERMINATION_SIGNAL
 				raise
 			end
 		ensure
+			debug("Exiting request handler main loop")
 			revert_signal_handlers
 			@main_loop_thread_lock.synchronize do
 				@graceful_termination_pipe[1].close rescue nil
@@ -446,16 +455,19 @@ private
 			# This can only happen after we've received a soft termination
 			# signal. No connection was accepted for @select_timeout seconds,
 			# so now we quit the main loop.
+			trace(2, "Soft termination timeout")
 			return false
 		end
 		
 		ios = select_result.first
 		if ios.include?(@main_socket)
+			trace(3, "Accepting new request on main socket")
 			connection = socket_wrapper.wrap(@main_socket.accept)
 			channel.io = connection
 			headers, input_stream = parse_native_request(connection, channel, buffer)
 			full_http_response = false
 		elsif ios.include?(@http_socket)
+			trace(3, "Accepting new request on HTTP socket")
 			connection = socket_wrapper.wrap(@http_socket.accept)
 			headers, input_stream = parse_http_request(connection)
 			full_http_response = true
@@ -481,6 +493,11 @@ private
 				@selectable_sockets.delete(@owner_pipe)
 				return true
 			else
+				if ios.include?(@owner_pipe)
+					trace(2, "Owner pipe closed")
+				elsif ios.include?(@graceful_termination_pipe[0])
+					trace(2, "Graceful termination pipe closed")
+				end
 				return false
 			end
 		end
