@@ -77,7 +77,7 @@ module PhusionPassenger
 		# Top directory of the Phusion Passenger source code.
 		SOURCE_ROOT        = File.expand_path(File.join(LIBDIR, ".."))
 		
-		# Directory containing native_support.so.
+		# Directory containing #{archdir}/native_support.so.
 		NATIVE_SUPPORT_DIR = File.join(SOURCE_ROOT, "ext", "phusion_passenger")
 		
 		# Documentation directory.
