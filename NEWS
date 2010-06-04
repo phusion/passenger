@@ -3,6 +3,8 @@ Release 2.2.14
 
  * Added support for Rubinius
    Patch contributed by Evan Phoenix.
+ * Fixed a mistake in the SIGQUIT backtrace message.
+   Patch contributed by Christoffer Sawicki.
 
 
 Release 2.2.13
