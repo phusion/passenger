@@ -114,9 +114,15 @@ private:
 	static const unsigned int MAX_HEADER_SIZE = 1024 * 128;
 	/** The client thread stack size in bytes. */
 	static const int CLIENT_THREAD_STACK_SIZE =
-		// Give 64 KB of normal stack space and more stack space
-		// for storing the session header.
-		(1024 * 64) + MAX_HEADER_SIZE + 1024;
+		// Give a small amount of normal stack space
+		#ifdef __FreeBSD__
+			// localtime() on FreeBSD needs some more stack space.
+			1024 * 96
+		#else
+			1024 * 64
+		#endif
+		// and some more stack space for storing the session header.
+		+ MAX_HEADER_SIZE + 1024;
 	
 	/** The client number for this Client object, assigned by Server. */
 	unsigned int number;

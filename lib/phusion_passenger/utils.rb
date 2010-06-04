@@ -679,7 +679,8 @@ protected
 				output << "# Thread: #{thread.inspect}, "
 				if thread == Thread.main
 					output << "[main thread], "
-				else
+				end
+				if thread == Thread.current
 					output << "[current thread], "
 				end
 				output << "alive = #{thread.alive?}\n"
