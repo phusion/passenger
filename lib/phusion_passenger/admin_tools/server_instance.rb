@@ -186,7 +186,10 @@ class ServerInstance
 			when :passenger_status
 				username = "_passenger-status"
 				begin
-					password = File.read("#{@generation_path}/passenger-status-password.txt")
+					filename = "#{@generation_path}/passenger-status-password.txt"
+					password = File.open(filename, "rb") do |f|
+						f.read
+					end
 				rescue Errno::EACCES
 					raise RoleDeniedError
 				end
