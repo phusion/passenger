@@ -23,6 +23,7 @@ $LOAD_PATH.unshift("#{source_root}/test")
 require 'fileutils'
 require 'support/test_helper'
 require 'phusion_passenger'
+require 'phusion_passenger/debug_logging'
 require 'phusion_passenger/utils/tmpdir'
 
 include TestHelper
@@ -37,6 +38,10 @@ end
 
 Spec::Runner.configure do |config|
 	config.append_before do
+		# Suppress warning messages.
+		PhusionPassenger::DebugLogging.log_level = -1
+		PhusionPassenger::DebugLogging.log_file = nil
+		
 		# Create the temp directory.
 		PhusionPassenger::Utils.passenger_tmpdir
 	end

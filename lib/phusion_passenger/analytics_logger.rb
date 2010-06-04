@@ -22,12 +22,12 @@
 #  THE SOFTWARE.
 
 require 'thread'
+require 'phusion_passenger/debug_logging'
 require 'phusion_passenger/message_client'
 
 module PhusionPassenger
 
 class AnalyticsLogger
-	MAX_RETRIES = 10
 	RETRY_SLEEP = 0.2
 	
 	class Log
@@ -134,6 +134,9 @@ class AnalyticsLogger
 		end
 	end
 	
+	attr_accessor :max_connect_tries
+	attr_accessor :reconnect_timeout
+	
 	def initialize(logging_agent_address, username, password, node_name)
 		@server_address = logging_agent_address
 		@username = username
@@ -145,6 +148,13 @@ class AnalyticsLogger
 		end
 		@random_dev = File.open("/dev/urandom")
 		@shared_data = SharedData.new
+		if local_address?(@server_address)
+			@max_connect_tries = 10
+		else
+			@max_connect_tries = 1
+		end
+		@reconnect_timeout = 60
+		@next_reconnect_time = Time.utc(1980, 1, 1)
 	end
 	
 	def clear_connection
@@ -172,22 +182,29 @@ class AnalyticsLogger
 			txn_id = (AnalyticsLogger.current_time.to_i / 60).to_s(16)
 			txn_id << "-#{random_token(11)}"
 			@shared_data.synchronize do
-				retry_count = 0
-				while retry_count < MAX_RETRIES
-					connect if !connected?
-					begin
-						@shared_data.client.write("openTransaction",
-							txn_id, group_name, category,
-							AnalyticsLogger.timestamp_string)
-						return Log.new(@shared_data, txn_id)
-					rescue Errno::EPIPE, Errno::ECONNREFUSED
-						retry_count += 1
-						sleep RETRY_SLEEP
-					rescue Exception => e
-						disconnect
-						raise e
+				try_count = 0
+				if current_time >= @next_reconnect_time
+					while try_count < @max_connect_tries
+						begin
+							connect if !connected?
+							@shared_data.client.write("openTransaction",
+								txn_id, group_name, category,
+								AnalyticsLogger.timestamp_string)
+							return Log.new(@shared_data, txn_id)
+						rescue Errno::ENOENT, Errno::EPIPE, Errno::ECONNREFUSED, Errno::ECONNRESET => e
+							try_count += 1
+							sleep RETRY_SLEEP if try_count < @max_connect_tries
+						rescue Exception => e
+							disconnect
+							raise e
+						end
 					end
+					# Failed to connect.
+					DebugLogging.warn("Cannot connect to the logging agent (#{@server_address}); " +
+						"retrying in #{@reconnect_timeout} seconds.")
+					@next_reconnect_time = current_time + @reconnect_timeout
 				end
+				return Log.new
 			end
 		end
 	end
@@ -199,22 +216,29 @@ class AnalyticsLogger
 			raise ArgumentError, "Transaction ID may not be empty"
 		else
 			@shared_data.synchronize do
-				retry_count = 0
-				while retry_count < MAX_RETRIES
-					connect if !connected?
-					begin
-						@shared_data.client.write("openTransaction",
-							txn_id, group_name, category,
-							AnalyticsLogger.timestamp_string)
-						return Log.new(@shared_data, txn_id)
-					rescue Errno::EPIPE
-						retry_count += 1
-						sleep RETRY_SLEEP
-					rescue Exception => e
-						disconnect
-						raise e
+				try_count = 0
+				if current_time >= @next_reconnect_time
+					while try_count < @max_connect_tries
+						begin
+							connect if !connected?
+							@shared_data.client.write("openTransaction",
+								txn_id, group_name, category,
+								AnalyticsLogger.timestamp_string)
+							return Log.new(@shared_data, txn_id)
+						rescue Errno::ENOENT, Errno::EPIPE, Errno::ECONNREFUSED, Errno::ECONNRESET
+							try_count += 1
+							sleep RETRY_SLEEP if try_count < @max_connect_tries
+						rescue Exception => e
+							disconnect
+							raise e
+						end
 					end
+					# Failed to connect.
+					DebugLogging.warn("Cannot connect to the logging agent (#{@server_address}); " +
+						"retrying in #{@reconnect_timeout} seconds.")
+					@next_reconnect_time = current_time + @reconnect_timeout
 				end
+				return Log.new
 			end
 		end
 	end
@@ -252,6 +276,11 @@ private
 		end
 	end
 	
+	def local_address?(address)
+		#return address == "127.0.0.1" || address == "localhost" || address == "::1"
+		return true
+	end
+	
 	def connected?
 		return @shared_data.client && @shared_data.client.connected?
 	end
@@ -262,7 +291,7 @@ private
 	end
 	
 	def disconnect
-		@shared_data.unref
+		@shared_data.unref if @shared_data
 		@shared_data = SharedData.new
 	end
 	
@@ -272,6 +301,10 @@ private
 			token << RANDOM_CHARS[c % RANDOM_CHARS.size]
 		end
 		return token
+	end
+	
+	def current_time
+		return self.class.current_time
 	end
 	
 	def self.current_time

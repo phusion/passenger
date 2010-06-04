@@ -15,7 +15,7 @@ describe AnalyticsLogger do
 		@username = "logging"
 		@password = "1234"
 		@log_dir  = Utils.passenger_tmpdir
-		@agent_pid, @socket_filename = spawn_logging_agent(@log_dir, @password)
+		start_agent
 		@logger = AnalyticsLogger.new(@socket_filename, @username, @password, "localhost")
 		@logger2 = AnalyticsLogger.new(@socket_filename, @username, @password, "localhost")
 	end
@@ -30,7 +30,20 @@ describe AnalyticsLogger do
 	end
 	
 	def mock_time(time)
-		AnalyticsLogger.should_receive(:current_time).any_number_of_times.and_return(time)
+		AnalyticsLogger.stub!(:current_time).and_return(time)
+	end
+	
+	def start_agent
+		@agent_pid, @socket_filename = spawn_logging_agent(@log_dir, @password)
+	end
+	
+	def kill_agent
+		if @agent_pid
+			Process.kill('KILL', @agent_pid)
+			Process.waitpid(@agent_pid)
+			File.unlink(@socket_filename)
+			@agent_pid = nil
+		end
 	end
 	
 	specify "logging with #new_transaction works" do
@@ -77,6 +90,40 @@ describe AnalyticsLogger do
 		
 		log_file = "#{@log_dir}/1/#{FOOBAR_MD5}/#{LOCALHOST_MD5}/requests/2010/04/11/12/log.txt"
 		File.read(log_file).should =~ /hello/
+	end
+	
+	specify "#new_transaction reestablishes the connection to the logging server if the logging server crashed and was restarted" do
+		mock_time(TODAY)
+		
+		@logger.new_transaction("foobar").close
+		kill_agent
+		start_agent
+		
+		log = @logger.new_transaction("foobar")
+		begin
+			log.message("hello")
+		ensure
+			log.close(true)
+		end
+		
+		log_file = "#{@log_dir}/1/#{FOOBAR_MD5}/#{LOCALHOST_MD5}/requests/2010/04/11/12/log.txt"
+		File.read(log_file).should =~ /hello/
+	end
+	
+	specify "#new_transaction does not reconnect to the server for a short period of time if connecting failed" do
+		@logger.reconnect_timeout = 60
+		@logger.max_connect_tries = 1
+		
+		mock_time(TODAY)
+		kill_agent
+		@logger.new_transaction("foobar").should be_null
+		
+		mock_time(TODAY + 30)
+		start_agent
+		@logger.new_transaction("foobar").should be_null
+		
+		mock_time(TODAY + 61)
+		@logger.new_transaction("foobar").should_not be_null
 	end
 	
 	specify "logging with #continue_transaction works" do
@@ -126,6 +173,45 @@ describe AnalyticsLogger do
 		File.read(log_file).should =~ /hello/
 	end
 	
+	specify "#continue_transaction reestablishes the connection to the logging server if the logging server crashed and was restarted" do
+		mock_time(TODAY)
+		
+		log = @logger.new_transaction("foobar")
+		@logger2.continue_transaction(log.txn_id, "foobar").close
+		kill_agent
+		start_agent
+		
+		log2 = @logger2.continue_transaction(log.txn_id, "foobar")
+		begin
+			log2.message("hello")
+		ensure
+			log2.close(true)
+		end
+		
+		log_file = "#{@log_dir}/1/#{FOOBAR_MD5}/#{LOCALHOST_MD5}/requests/2010/04/11/12/log.txt"
+		File.read(log_file).should =~ /hello/
+	end
+	
+	specify "#continue_transaction does not reconnect to the server for a short period of time if connecting failed" do
+		@logger.reconnect_timeout = 60
+		@logger.max_connect_tries = 1
+		@logger2.reconnect_timeout = 60
+		@logger2.max_connect_tries = 1
+		
+		mock_time(TODAY)
+		log = @logger.new_transaction("foobar")
+		@logger2.continue_transaction(log.txn_id, "foobar")
+		kill_agent
+		@logger2.continue_transaction(log.txn_id, "foobar").should be_null
+		
+		mock_time(TODAY + 30)
+		start_agent
+		@logger2.continue_transaction(log.txn_id, "foobar").should be_null
+		
+		mock_time(TODAY + 61)
+		@logger2.continue_transaction(log.txn_id, "foobar").should_not be_null
+	end
+	
 	specify "AnalyticsLogger only creates null Log objects if no server address is given" do
 		logger = AnalyticsLogger.new(nil, nil, nil, nil)
 		begin
@@ -161,25 +247,6 @@ describe AnalyticsLogger do
 		shared_data.synchronize do
 			shared_data.client.should be_nil
 		end
-	end
-	
-	it "reestablishes the connection to the logging server if the logging server crashed and was restarted" do
-		mock_time(TODAY)
-		
-		@logger.new_transaction("foobar").close
-		Process.kill('KILL', @agent_pid)
-		Process.waitpid(@agent_pid)
-		@agent_pid, @socket_filename = spawn_logging_agent(@log_dir, @password)
-		
-		log = @logger.new_transaction("foobar")
-		begin
-			log.message("hello")
-		ensure
-			log.close(true)
-		end
-		
-		log_file = "#{@log_dir}/1/#{FOOBAR_MD5}/#{LOCALHOST_MD5}/requests/2010/04/11/12/log.txt"
-		File.read(log_file).should =~ /hello/
 	end
 end
 

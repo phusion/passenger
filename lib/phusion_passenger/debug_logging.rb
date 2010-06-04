@@ -64,6 +64,11 @@ module DebugLogging
 		end
 	end
 	
+	def warn(message)
+		trace(0, message, 1)
+	end
+	module_function :warn
+	
 	def debug(message)
 		trace(1, message, 1)
 	end
