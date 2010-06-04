@@ -244,10 +244,12 @@ protected:
 	/* sendUsername() and sendPassword() exist and are virtual in order to facilitate unit testing. */
 	
 	virtual void sendUsername(MessageChannel &channel, const string &username) {
+		TRACE_POINT();
 		channel.writeScalar(username);
 	}
 	
 	virtual void sendPassword(MessageChannel &channel, const StaticString &userSuppliedPassword) {
+		TRACE_POINT();
 		channel.writeScalar(userSuppliedPassword.c_str(), userSuppliedPassword.size());
 	}
 	
@@ -260,12 +262,14 @@ protected:
 	 * @throws boost::thread_interrupted
 	 */
 	void authenticate(const string &username, const StaticString &userSuppliedPassword) {
+		TRACE_POINT();
 		MessageChannel &channel(data->channel);
 		vector<string> args;
 		
 		sendUsername(channel, username);
 		sendPassword(channel, userSuppliedPassword);
 		
+		UPDATE_TRACE_POINT();
 		if (!channel.read(args)) {
 			throw IOException("The ApplicationPool server did not send an authentication response.");
 		} else if (args.size() != 1) {
