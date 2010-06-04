@@ -588,6 +588,8 @@ private:
 							
 							P_DEBUG("Cleaning idle process " << process->getAppRoot() <<
 								" (PID " << process->getPid() << ")");
+							P_TRACE(2, "Group size = " << group->size << ", "
+								"min processes = " << group->minProcesses);
 							processes->erase(processInfo->iterator);
 							processInfo->detached = true;
 							
@@ -786,6 +788,8 @@ private:
 					}
 				} else {
 					ProcessPtr process;
+					P_DEBUG("Spawning another process for " << appRoot <<
+						" in order to handle the load");
 					{
 						this_thread::restore_interruption ri(di);
 						this_thread::restore_syscall_interruption rsi(dsi);
@@ -804,6 +808,8 @@ private:
 					activeOrMaxChanged.notify_all();
 				}
 			} else {
+				P_DEBUG("Spawning a process for " << appRoot <<
+					" because there are none for this app group");
 				if (active >= max) {
 					UPDATE_TRACE_POINT();
 					activeOrMaxChanged.wait(l);
