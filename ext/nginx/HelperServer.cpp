@@ -139,7 +139,13 @@ struct ClientDisconnectedException { };
 class Client {
 private:
 	/** The client thread stack size in bytes. */
-	static const int CLIENT_THREAD_STACK_SIZE = 1024 * 64;
+	static const int CLIENT_THREAD_STACK_SIZE =
+		#ifdef __FreeBSD__
+			// localtime() on FreeBSD needs some more stack space.
+			1024 * 96;
+		#else
+			1024 * 64;
+		#endif
 	
 	/** The client number for this Client object, assigned by Server. */
 	unsigned int number;

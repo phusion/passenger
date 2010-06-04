@@ -5,6 +5,8 @@ Release 2.2.14
    Patch contributed by Evan Phoenix.
  * Fixed a mistake in the SIGQUIT backtrace message.
    Patch contributed by Christoffer Sawicki.
+ * [Nginx] Fix a localtime() crash on FreeBSD
+   This was caused by insufficient stack space for threads. Issue #499.
 
 
 Release 2.2.13
