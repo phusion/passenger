@@ -48,6 +48,7 @@
 #include "Logging.h"
 #include "Exceptions.h"
 #include "Utils/StrIntUtils.h"
+#include "Utils/IOUtils.h"
 
 namespace Passenger {
 

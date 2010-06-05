@@ -1,6 +1,7 @@
 #include "TestSupport.h"
 #include "Utils.h"
 #include "Utils/StrIntUtils.h"
+#include "Utils/IOUtils.h"
 #include "Utils/MemZeroGuard.h"
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -426,5 +427,46 @@ namespace tut {
 		ensure_equals(stringToLL("-9876"), -9876ll);
 		ensure_equals(stringToLL("-9223372036854775807"), -9223372036854775807ll);
 		ensure_equals(stringToLL("    -5abcdef1234"), -5ll);
+	}
+	
+	/***** Test getSocketAddressType() *****/
+	
+	TEST_METHOD(51) {
+		ensure_equals(getSocketAddressType(""), SAT_UNKNOWN);
+		ensure_equals(getSocketAddressType("/foo.socket"), SAT_UNKNOWN);
+		ensure_equals(getSocketAddressType("unix:"), SAT_UNKNOWN);
+		ensure_equals(getSocketAddressType("unix:/"), SAT_UNIX);
+		ensure_equals(getSocketAddressType("unix:/foo.socket"), SAT_UNIX);
+		ensure_equals(getSocketAddressType("tcp:"), SAT_UNKNOWN);
+		ensure_equals(getSocketAddressType("tcp://"), SAT_UNKNOWN);
+		// Doesn't check whether it contains port
+		ensure_equals(getSocketAddressType("tcp://127.0.0.1"), SAT_TCP);
+		ensure_equals(getSocketAddressType("tcp://127.0.0.1:80"), SAT_TCP);
+	}
+	
+	TEST_METHOD(52) {
+		ensure_equals(parseUnixSocketAddress("unix:/foo.socket"), "/foo.socket");
+		try {
+			parseUnixSocketAddress("unix:");
+			fail("ArgumentException expected");
+		} catch (const ArgumentException &e) {
+			// Pass.
+		}
+	}
+	
+	TEST_METHOD(53) {
+		string host;
+		unsigned short port;
+		
+		parseTcpSocketAddress("tcp://127.0.0.1:80", host, port);
+		ensure_equals(host, "127.0.0.1");
+		ensure_equals(port, 80);
+		
+		try {
+			parseTcpSocketAddress("tcp://", host, port);
+			fail("ArgumentException expected");
+		} catch (const ArgumentException &e) {
+			// Pass.
+		}
 	}
 }

@@ -231,6 +231,9 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 		'Utils/StrIntUtils.o' => %w(
 			Utils/StrIntUtils.cpp
 			Utils/StrIntUtils.h),
+		'Utils/IOUtils.o' => %w(
+			Utils/IOUtils.cpp
+			Utils/IOUtils.h),
 		'Utils.o' => %w(
 			Utils.cpp
 			Utils.h

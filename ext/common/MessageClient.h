@@ -31,7 +31,7 @@
 #include "StaticString.h"
 #include "MessageChannel.h"
 #include "Exceptions.h"
-#include "Utils.h"
+#include "Utils/IOUtils.h"
 
 
 namespace Passenger {
