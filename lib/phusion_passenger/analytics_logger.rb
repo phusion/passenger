@@ -29,7 +29,7 @@ module PhusionPassenger
 
 class AnalyticsLogger
 	RETRY_SLEEP = 0.2
-	NETWORK_ERRORS = [Errno::ENOENT, Errno::EPIPE, Errno::ECONNREFUSED, Errno::ECONNRESET,
+	NETWORK_ERRORS = [Errno::EPIPE, Errno::ECONNREFUSED, Errno::ECONNRESET,
 		Errno::EHOSTUNREACH, Errno::ENETDOWN, Errno::ENETUNREACH, Errno::ETIMEDOUT]
 	
 	class Log
@@ -180,35 +180,35 @@ class AnalyticsLogger
 			return Log.new
 		elsif !group_name || group_name.empty?
 			raise ArgumentError, "Group name may not be empty"
-		else
-			txn_id = (AnalyticsLogger.current_time.to_i / 60).to_s(16)
-			txn_id << "-#{random_token(11)}"
-			@shared_data.synchronize do
-				try_count = 0
-				if current_time >= @next_reconnect_time
-					while try_count < @max_connect_tries
-						begin
-							connect if !connected?
-							@shared_data.client.write("openTransaction",
-								txn_id, group_name, category,
-								AnalyticsLogger.timestamp_string)
-							return Log.new(@shared_data, txn_id)
-						rescue *NETWORK_ERRORS
-							try_count += 1
-							disconnect
-							sleep RETRY_SLEEP if try_count < @max_connect_tries
-						rescue Exception => e
-							disconnect
-							raise e
-						end
+		end
+		
+		txn_id = (AnalyticsLogger.current_time.to_i / 60).to_s(16)
+		txn_id << "-#{random_token(11)}"
+		@shared_data.synchronize do
+			try_count = 0
+			if current_time >= @next_reconnect_time
+				while try_count < @max_connect_tries
+					begin
+						connect if !connected?
+						@shared_data.client.write("openTransaction",
+							txn_id, group_name, category,
+							AnalyticsLogger.timestamp_string)
+						return Log.new(@shared_data, txn_id)
+					rescue Errno::ENOENT, *NETWORK_ERRORS
+						try_count += 1
+						disconnect(true)
+						sleep RETRY_SLEEP if try_count < @max_connect_tries
+					rescue Exception => e
+						disconnect
+						raise e
 					end
-					# Failed to connect.
-					DebugLogging.warn("Cannot connect to the logging agent (#{@server_address}); " +
-						"retrying in #{@reconnect_timeout} seconds.")
-					@next_reconnect_time = current_time + @reconnect_timeout
 				end
-				return Log.new
+				# Failed to connect.
+				DebugLogging.warn("Cannot connect to the logging agent (#{@server_address}); " +
+					"retrying in #{@reconnect_timeout} seconds.")
+				@next_reconnect_time = current_time + @reconnect_timeout
 			end
+			return Log.new
 		end
 	end
 	
@@ -217,33 +217,33 @@ class AnalyticsLogger
 			return Log.new
 		elsif !txn_id || txn_id.empty?
 			raise ArgumentError, "Transaction ID may not be empty"
-		else
-			@shared_data.synchronize do
-				try_count = 0
-				if current_time >= @next_reconnect_time
-					while try_count < @max_connect_tries
-						begin
-							connect if !connected?
-							@shared_data.client.write("openTransaction",
-								txn_id, group_name, category,
-								AnalyticsLogger.timestamp_string)
-							return Log.new(@shared_data, txn_id)
-						rescue *NETWORK_ERRORS
-							try_count += 1
-							disconnect
-							sleep RETRY_SLEEP if try_count < @max_connect_tries
-						rescue Exception => e
-							disconnect
-							raise e
-						end
+		end
+		
+		@shared_data.synchronize do
+			try_count = 0
+			if current_time >= @next_reconnect_time
+				while try_count < @max_connect_tries
+					begin
+						connect if !connected?
+						@shared_data.client.write("openTransaction",
+							txn_id, group_name, category,
+							AnalyticsLogger.timestamp_string)
+						return Log.new(@shared_data, txn_id)
+					rescue Errno::ENOENT, *NETWORK_ERRORS
+						try_count += 1
+						disconnect(true)
+						sleep RETRY_SLEEP if try_count < @max_connect_tries
+					rescue Exception => e
+						disconnect
+						raise e
 					end
-					# Failed to connect.
-					DebugLogging.warn("Cannot connect to the logging agent (#{@server_address}); " +
-						"retrying in #{@reconnect_timeout} seconds.")
-					@next_reconnect_time = current_time + @reconnect_timeout
 				end
-				return Log.new
+				# Failed to connect.
+				DebugLogging.warn("Cannot connect to the logging agent (#{@server_address}); " +
+					"retrying in #{@reconnect_timeout} seconds.")
+				@next_reconnect_time = current_time + @reconnect_timeout
 			end
+			return Log.new
 		end
 	end
 
@@ -262,6 +262,11 @@ private
 			@refcount = 1
 		end
 		
+		def disconnect(check_error_response = false)
+			# TODO: implement check_error_response support
+			@client.close if @client
+		end
+		
 		def ref
 			@refcount += 1
 		end
@@ -269,7 +274,7 @@ private
 		def unref
 			@refcount -= 1
 			if @refcount == 0
-				@client.close if @client
+				disconnect
 			end
 		end
 		
@@ -294,8 +299,9 @@ private
 		@shared_data.client.write("init", @node_name)
 	end
 	
-	def disconnect
-		@shared_data.unref if @shared_data
+	def disconnect(check_error_response = false)
+		@shared_data.disconnect(check_error_response)
+		@shared_data.unref
 		@shared_data = SharedData.new
 	end
 	

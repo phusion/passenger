@@ -62,12 +62,12 @@ using namespace oxt;
 
 /********** Debug logging facilities **********/
 
-extern unsigned int _logLevel;
+extern int _logLevel;
 extern ostream *_logStream;
 extern ostream *_debugStream;
 
-unsigned int getLogLevel();
-void setLogLevel(unsigned int value);
+int getLogLevel();
+void setLogLevel(int value);
 void setDebugFile(const char *logFile = NULL);
 
 /**
@@ -110,7 +110,12 @@ void setDebugFile(const char *logFile = NULL);
  * Write the given expression, which represents a warning,
  * to the log stream.
  */
-#define P_WARN(expr) P_LOG(expr)
+#define P_WARN(expr) \
+	do { \
+		if (Passenger::_logLevel >= 0) { \
+			P_LOG(expr); \
+		} \
+	} while (false)
 
 /**
  * Write the given expression, which represents an error,
@@ -151,6 +156,36 @@ void setDebugFile(const char *logFile = NULL);
 struct AnalyticsLoggerSharedData {
 	boost::mutex lock;
 	MessageClient client;
+	
+	void disconnect(bool checkErrorResponse = false) {
+		if (checkErrorResponse && client.connected()) {
+			// Maybe the server sent us an error message and closed
+			// the connection. Let's check.
+			TRACE_POINT();
+			vector<string> args;
+			bool hasData = true;
+			
+			try {
+				hasData = client.read(args);
+			} catch (const SystemException &e) {
+				if (e.code() != ECONNRESET) {
+					throw;
+				}
+			}
+			
+			UPDATE_TRACE_POINT();
+			client.disconnect();
+			if (hasData) {
+				if (args[0] == "error") {
+					throw IOException("The logging server responded with an error: " + args[1]);
+				} else {
+					throw IOException("The logging server sent an unexpected reply.");
+				}
+			}
+		} else {
+			client.disconnect();
+		}
+	}
 };
 typedef shared_ptr<AnalyticsLoggerSharedData> AnalyticsLoggerSharedDataPtr;
 
@@ -218,18 +253,7 @@ public:
 				} catch (const SystemException &e) {
 					if (e.code() == EPIPE || e.code() == ECONNRESET) {
 						TRACE_POINT();
-						// Maybe the server sent us an error message and closed
-						// the connection. Let's check.
-						vector<string> args;
-						if (sharedData->client.read(args)) {
-							if (args[0] == "error") {
-								throw IOException("The logging server responded with an error: " + args[1]);
-							} else {
-								throw IOException("The logging server sent an unexpected error reply.");
-							}
-						} else {
-							throw IOException("The logging server unexpectedly closed the connection.");
-						}
+						sharedData->disconnect(true);
 					} else {
 						throw;
 					}
@@ -396,11 +420,16 @@ public:
 
 class AnalyticsLogger {
 private:
+	static const int RETRY_SLEEP = 200000; // microseconds
+	
 	string socketFilename;
 	string username;
 	string password;
 	string nodeName;
 	RandomGenerator randomGenerator;
+	unsigned int maxConnectTries;
+	unsigned long long reconnectTimeout;
+	unsigned long long nextReconnectTime;
 	
 	/** @invariant sharedData != NULL */
 	AnalyticsLoggerSharedDataPtr sharedData;
@@ -410,17 +439,26 @@ private:
 	}
 	
 	void connect() {
+		TRACE_POINT();
 		sharedData->client.connect(socketFilename, username, password);
 		sharedData->client.write("init", nodeName.c_str(), NULL);
+		// Upon a write() error we want to attempt to read() the error
+		// message before closing the socket.
 		sharedData->client.setAutoDisconnect(false);
 	}
 	
-	void disconnect() {
-		sharedData->client.disconnect();
+	void disconnect(bool checkErrorResponse = false) {
+		sharedData->disconnect(checkErrorResponse);
 		// We create a new SharedData here so that existing AnalyticsLog
 		// objects still refer to the old client object and don't interfere
 		// with any newly-established connections.
 		sharedData.reset(new AnalyticsLoggerSharedData());
+	}
+	
+	bool isNetworkError(int code) const {
+		return code == EPIPE || code == ECONNREFUSED || code == ECONNRESET
+			|| code == EHOSTUNREACH || code == ENETDOWN || code == ENETUNREACH
+			|| code == ETIMEDOUT;
 	}
 	
 public:
@@ -440,78 +478,86 @@ public:
 		if (!socketFilename.empty()) {
 			sharedData.reset(new AnalyticsLoggerSharedData());
 		}
+		maxConnectTries   = 10;
+		reconnectTimeout  = 60 * 1000000;
+		nextReconnectTime = 0;
 	}
 	
 	AnalyticsLogPtr newTransaction(const string &groupName, const string &category = "requests") {
 		if (socketFilename.empty()) {
 			return ptr(new AnalyticsLog());
-		} else {
-			unsigned long long timestamp = SystemTime::getUsec();
-			char txnId[
-				2 * sizeof(unsigned int) +    // max hex timestamp size
-				11 +                          // space for a random identifier
-				1                             // null terminator
-			];
-			char *end;
-			unsigned int timestampSize;
+		}
+		
+		unsigned long long timestamp = SystemTime::getUsec();
+		char txnId[
+			2 * sizeof(unsigned int) +    // max hex timestamp size
+			11 +                          // space for a random identifier
+			1                             // null terminator
+		];
+		char *end;
+		unsigned int timestampSize;
+		char timestampStr[2 * sizeof(unsigned long long) + 1];
+		
+		// "[timestamp]"
+		// Our timestamp is like a Unix timestamp but with minutes
+		// resolution instead of seconds. 32 bits will last us for
+		// about 8000 years.
+		timestampSize = integerToHex<unsigned int>(timestamp / 1000000 / 60,
+			txnId);
+		end = txnId + timestampSize;
+		
+		// "[timestamp]-"
+		*end = '-';
+		end++;
+		
+		// "[timestamp]-[random id]"
+		randomGenerator.generateAsciiString(end, 11);
+		end += 11;
+		*end = '\0';
+		
+		integerToHex<unsigned long long>(timestamp, timestampStr);
+		
+		lock_guard<boost::mutex> l(sharedData->lock);
+		
+		if (SystemTime::getUsec() >= nextReconnectTime) {
+			unsigned int tryCount = 0;
 			
-			// "[timestamp]"
-			// Our timestamp is like a Unix timestamp but with minutes
-			// resolution instead of seconds. 32 bits will last us for
-			// about 8000 years.
-			timestampSize = integerToHex<unsigned int>(timestamp / 1000000 / 60,
-				txnId);
-			end = txnId + timestampSize;
-			
-			// "[timestamp]-"
-			*end = '-';
-			end++;
-			
-			// "[timestamp]-[random id]"
-			randomGenerator.generateAsciiString(end, 11);
-			end += 11;
-			*end = '\0';
-			
-			lock_guard<boost::mutex> l(sharedData->lock);
-			
-			if (!connected()) {
-				TRACE_POINT();
-				connect();
-			}
-			try {
-				char timestampStr[2 * sizeof(unsigned long long) + 1];
-				integerToHex<unsigned long long>(timestamp, timestampStr);
-				sharedData->client.write("openTransaction",
-					txnId,
-					groupName.c_str(),
-					category.c_str(),
-					timestampStr,
-					NULL);
-			} catch (const SystemException &e) {
-				if (e.code() == EPIPE || e.code() == ECONNRESET) {
+			while (tryCount < maxConnectTries) {
+				try {
+					if (!connected()) {
+						TRACE_POINT();
+						connect();
+					}
+					sharedData->client.write("openTransaction",
+						txnId,
+						groupName.c_str(),
+						category.c_str(),
+						timestampStr,
+						NULL);
+					return ptr(new AnalyticsLog(sharedData,
+						string(txnId, end - txnId),
+						groupName, category));
+				} catch (const SystemException &e) {
 					TRACE_POINT();
-					// Maybe the server sent us an error message and closed
-					// the connection. Let's check.
-					vector<string> args;
-					if (sharedData->client.read(args)) {
-						disconnect();
-						if (args[0] == "error") {
-							throw IOException("The logging server responded with an error: " + args[1]);
-						} else {
-							throw IOException("The logging server sent an unexpected reply.");
+					if (e.code() == ENOENT || isNetworkError(e.code())) {
+						tryCount++;
+						disconnect(true);
+						if (tryCount < maxConnectTries) {
+							syscalls::usleep(RETRY_SLEEP);
 						}
 					} else {
 						disconnect();
-						throw IOException("The logging server unexpectedly closed the connection.");
+						throw;
 					}
-				} else {
-					disconnect();
-					throw;
 				}
+				
+				// Failed to connect.
+				P_WARN("Cannot connect to the logging agent (" << socketFilename << "); " <<
+					"retrying in " << reconnectTimeout / 1000000 << " seconds.");
+				nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
 			}
-			return ptr(new AnalyticsLog(sharedData, string(txnId, end - txnId),
-				groupName, category));
 		}
+		return ptr(new AnalyticsLog());
 	}
 	
 	AnalyticsLogPtr continueTransaction(const string &txnId, const string &groupName,
@@ -519,46 +565,61 @@ public:
 	{
 		if (socketFilename.empty() || txnId.empty()) {
 			return ptr(new AnalyticsLog());
-		} else {
-			lock_guard<boost::mutex> l(sharedData->lock);
+		}
+		
+		char timestampStr[2 * sizeof(unsigned long long) + 1];
+		integerToHex<unsigned long long>(SystemTime::getUsec(), timestampStr);
+		
+		lock_guard<boost::mutex> l(sharedData->lock);
+		
+		if (SystemTime::getUsec() >= nextReconnectTime) {
+			unsigned int tryCount = 0;
 			
-			if (!connected()) {
-				TRACE_POINT();
-				connect();
-			}
-			try {
-				char timestampStr[2 * sizeof(unsigned long long) + 1];
-				integerToHex<unsigned long long>(SystemTime::getUsec(), timestampStr);
-				sharedData->client.write("openTransaction",
-					txnId.c_str(),
-					groupName.c_str(),
-					category.c_str(),
-					timestampStr,
-					NULL);
-			} catch (const SystemException &e) {
-				if (e.code() == EPIPE || e.code() == ECONNRESET) {
+			while (tryCount < maxConnectTries) {
+				try {
+					if (!connected()) {
+						TRACE_POINT();
+						connect();
+					}
+					sharedData->client.write("openTransaction",
+						txnId.c_str(),
+						groupName.c_str(),
+						category.c_str(),
+						timestampStr,
+						NULL);
+					return ptr(new AnalyticsLog(sharedData,
+						txnId, groupName, category));
+				} catch (const SystemException &e) {
 					TRACE_POINT();
-					// Maybe the server sent us an error message and closed
-					// the connection. Let's check.
-					vector<string> args;
-					if (sharedData->client.read(args)) {
-						disconnect();
-						if (args[0] == "error") {
-							throw IOException("The logging server responded with an error: " + args[1]);
-						} else {
-							throw IOException("The logging server sent an unexpected reply.");
+					if (e.code() == EPIPE || isNetworkError(e.code())) {
+						tryCount++;
+						disconnect(true);
+						if (tryCount < maxConnectTries) {
+							syscalls::usleep(RETRY_SLEEP);
 						}
 					} else {
 						disconnect();
-						throw IOException("The logging server unexpectedly closed the connection.");
+						throw;
 					}
-				} else {
-					disconnect();
-					throw;
 				}
 			}
-			return ptr(new AnalyticsLog(sharedData, txnId, groupName, category));
+			
+			// Failed to connect.
+			P_WARN("Cannot connect to the logging agent (" << socketFilename << "); " <<
+				"retrying in " << reconnectTimeout / 1000000 << " seconds.");
+			nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
 		}
+		return ptr(new AnalyticsLog());
+	}
+	
+	void setMaxConnectTries(unsigned int value) {
+		lock_guard<boost::mutex> l(sharedData->lock);
+		maxConnectTries = value;
+	}
+	
+	void setReconnectTimeout(unsigned long long usec) {
+		lock_guard<boost::mutex> l(sharedData->lock);
+		reconnectTimeout = usec;
 	}
 	
 	bool isNull() const {

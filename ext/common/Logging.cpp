@@ -28,17 +28,17 @@
 
 namespace Passenger {
 
-unsigned int _logLevel = 0;
+int _logLevel = 0;
 ostream *_logStream = &cerr;
 ostream *_debugStream = &cerr;
 
-unsigned int
+int
 getLogLevel() {
 	return _logLevel;
 }
 
 void
-setLogLevel(unsigned int value) {
+setLogLevel(int value) {
 	_logLevel = value;
 }
 

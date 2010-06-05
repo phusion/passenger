@@ -36,14 +36,9 @@ namespace tut {
 			loggingDir = generation->getPath() + "/logs";
 			accountsDatabase = ptr(new AccountsDatabase());
 			accountsDatabase->add("test", "1234", false);
+			setLogLevel(-1);
 			
-			server = ptr(new LoggingServer(eventLoop,
-				createUnixServer(socketFilename.c_str()),
-				accountsDatabase, loggingDir));
-			serverThread = ptr(new oxt::thread(
-				boost::bind(&LoggingTest::runLoop, this)
-			));
-			
+			startLoggingServer();
 			logger = ptr(new AnalyticsLogger(socketFilename, "test", "1234",
 				"localhost"));
 			logger2 = ptr(new AnalyticsLogger(socketFilename, "test", "1234",
@@ -55,11 +50,30 @@ namespace tut {
 		}
 		
 		~LoggingTest() {
-			MessageClient client;
-			client.connect(socketFilename, "test", "1234");
-			client.write("exit", "immediately", NULL);
-			serverThread->join();
+			stopLoggingServer();
 			SystemTime::releaseAll();
+			setLogLevel(0);
+		}
+		
+		void startLoggingServer() {
+			server = ptr(new LoggingServer(eventLoop,
+				createUnixServer(socketFilename.c_str()),
+				accountsDatabase, loggingDir));
+			serverThread = ptr(new oxt::thread(
+				boost::bind(&LoggingTest::runLoop, this)
+			));
+		}
+		
+		void stopLoggingServer() {
+			if (server != NULL) {
+				MessageClient client;
+				client.connect(socketFilename, "test", "1234");
+				client.write("exit", "immediately", NULL);
+				serverThread->join();
+				serverThread.reset();
+				server.reset();
+				unlink(socketFilename.c_str());
+			}
 		}
 		
 		void runLoop() {
@@ -220,5 +234,82 @@ namespace tut {
 		log.reset();
 		string data = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/node_name.txt");
 		ensure_equals(data, "localhost");
+	}
+	
+	TEST_METHOD(10) {
+		// newTransaction() reestablishes the connection to the logging
+		// server if the logging server crashed and was restarted
+		SystemTime::forceAll(TODAY);
+		
+		logger->newTransaction("foobar");
+		stopLoggingServer();
+		startLoggingServer();
+		
+		AnalyticsLogPtr log = logger->newTransaction("foobar");
+		log->message("hello");
+		log->flushToDiskAfterClose(true);
+		log.reset();
+		
+		string data = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/13/12/log.txt");
+		ensure("(1)", data.find("hello\n") != string::npos);
+	}
+	
+	TEST_METHOD(11) {
+		// newTransaction() does not reconnect to the server for a short
+		// period of time if connecting failed
+		logger->setReconnectTimeout(60 * 1000000);
+		logger->setMaxConnectTries(1);
+		
+		SystemTime::forceAll(TODAY);
+		stopLoggingServer();
+		ensure(logger->newTransaction("foobar")->isNull());
+		
+		SystemTime::forceAll(TODAY + 30 * 1000000);
+		startLoggingServer();
+		ensure(logger->newTransaction("foobar")->isNull());
+		
+		SystemTime::forceAll(TODAY + 61 * 1000000);
+		ensure(!logger->newTransaction("foobar")->isNull());
+	}
+	
+	TEST_METHOD(12) {
+		// continueTransaction() reestablishes the connection to the logging
+		// server if the logging server crashed and was restarted
+		SystemTime::forceAll(TODAY);
+		
+		AnalyticsLogPtr log = logger->newTransaction("foobar");
+		logger2->continueTransaction(log->getTxnId(), "foobar");
+		stopLoggingServer();
+		startLoggingServer();
+		
+		AnalyticsLogPtr log2 = logger2->continueTransaction(log->getTxnId(), "foobar");
+		log2->message("hello");
+		log2->flushToDiskAfterClose(true);
+		log2.reset();
+		
+		string data = readAll(loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/13/12/log.txt");
+		ensure("(1)", data.find("hello\n") != string::npos);
+	}
+	
+	TEST_METHOD(13) {
+		// continueTransaction() does not reconnect to the server for a short
+		// period of time if connecting failed
+		logger->setReconnectTimeout(60 * 1000000);
+		logger->setMaxConnectTries(1);
+		logger2->setReconnectTimeout(60 * 1000000);
+		logger2->setMaxConnectTries(1);
+		
+		SystemTime::forceAll(TODAY);
+		AnalyticsLogPtr log = logger->newTransaction("foobar");
+		logger2->continueTransaction(log->getTxnId(), "foobar");
+		stopLoggingServer();
+		ensure(logger2->continueTransaction(log->getTxnId(), "foobar")->isNull());
+		
+		SystemTime::forceAll(TODAY + 30 * 1000000);
+		startLoggingServer();
+		ensure(logger2->continueTransaction(log->getTxnId(), "foobar")->isNull());
+		
+		SystemTime::forceAll(TODAY + 61 * 1000000);
+		ensure(!logger2->continueTransaction(log->getTxnId(), "foobar")->isNull());
 	}
 }
