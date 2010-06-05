@@ -29,6 +29,8 @@ module PhusionPassenger
 
 class AnalyticsLogger
 	RETRY_SLEEP = 0.2
+	NETWORK_ERRORS = [Errno::ENOENT, Errno::EPIPE, Errno::ECONNREFUSED, Errno::ECONNRESET,
+		Errno::EHOSTUNREACH, Errno::ENETDOWN, Errno::ENETUNREACH, Errno::ETIMEDOUT]
 	
 	class Log
 		attr_reader :txn_id
@@ -191,8 +193,9 @@ class AnalyticsLogger
 								txn_id, group_name, category,
 								AnalyticsLogger.timestamp_string)
 							return Log.new(@shared_data, txn_id)
-						rescue Errno::ENOENT, Errno::EPIPE, Errno::ECONNREFUSED, Errno::ECONNRESET => e
+						rescue *NETWORK_ERRORS
 							try_count += 1
+							disconnect
 							sleep RETRY_SLEEP if try_count < @max_connect_tries
 						rescue Exception => e
 							disconnect
@@ -225,8 +228,9 @@ class AnalyticsLogger
 								txn_id, group_name, category,
 								AnalyticsLogger.timestamp_string)
 							return Log.new(@shared_data, txn_id)
-						rescue Errno::ENOENT, Errno::EPIPE, Errno::ECONNREFUSED, Errno::ECONNRESET
+						rescue *NETWORK_ERRORS
 							try_count += 1
+							disconnect
 							sleep RETRY_SLEEP if try_count < @max_connect_tries
 						rescue Exception => e
 							disconnect
