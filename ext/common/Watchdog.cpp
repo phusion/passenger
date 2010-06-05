@@ -612,6 +612,7 @@ public:
 class LoggingAgentWatcher: public AgentWatcher {
 protected:
 	string agentFilename;
+	string socketAddress;
 	
 	virtual const char *name() const {
 		return "Phusion Passenger logging agent";
@@ -627,6 +628,7 @@ protected:
 	
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
 		VariantMap options = agentsOptions;
+		options.set("logging_agent_address", socketAddress);
 		options.set("logging_agent_password", Base64::encode(loggingAgentPassword));
 		options.writeToFd(fd);
 	}
@@ -642,6 +644,7 @@ protected:
 public:
 	LoggingAgentWatcher(const ResourceLocator &resourceLocator) {
 		agentFilename = resourceLocator.getAgentsDir() + "/PassengerLoggingAgent";
+		socketAddress = "unix:" + generation->getPath() + "/logging.socket";
 	}
 	
 	virtual void sendStartupInfo(MessageChannel &channel) {

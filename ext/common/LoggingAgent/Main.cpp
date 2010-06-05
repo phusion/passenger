@@ -115,8 +115,7 @@ feedbackFdBecameReadable(ev::io &watcher, int revents) {
 int
 main(int argc, char *argv[]) {
 	VariantMap options        = initializeAgent(argc, argv, "PassengerLoggingAgent");
-	string serverInstancePath = options.get("server_instance_dir");
-	int    generationNumber   = options.getInt("generation_number");
+	string socketAddress      = options.get("logging_agent_address");
 	string loggingDir         = options.get("analytics_log_dir");
 	string username           = options.get("analytics_log_user");
 	string groupname          = options.get("analytics_log_group");
@@ -127,8 +126,6 @@ main(int argc, char *argv[]) {
 		/********** Now begins the real initialization **********/
 		
 		/* Create all the necessary objects and sockets... */
-		ServerInstanceDirPtr serverInstanceDir;
-		ServerInstanceDir::GenerationPtr generation;
 		AccountsDatabasePtr  accountsDatabase;
 		FileDescriptor       serverSocketFd;
 		string               loggingSocketFilename;
@@ -137,11 +134,8 @@ main(int argc, char *argv[]) {
 		int                  ret;
 		
 		eventLoop = createEventLoop();
-		serverInstanceDir = ptr(new ServerInstanceDir(serverInstancePath, false));
-		generation = serverInstanceDir->getGeneration(generationNumber);
 		accountsDatabase = ptr(new AccountsDatabase());
-		loggingSocketFilename = generation->getPath() + "/logging.socket";
-		serverSocketFd = createUnixServer(loggingSocketFilename.c_str());
+		serverSocketFd = createServer(socketAddress.c_str());
 		do {
 			ret = chmod(loggingSocketFilename.c_str(), S_ISVTX |
 				S_IRUSR | S_IWUSR | S_IXUSR |

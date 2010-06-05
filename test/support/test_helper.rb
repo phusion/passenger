@@ -362,15 +362,14 @@ module TestHelper
 	
 	def spawn_logging_agent(log_dir, password)
 		passenger_tmpdir = PhusionPassenger::Utils.passenger_tmpdir
+		socket_filename = "#{passenger_tmpdir}/logging.socket"
 		pid = spawn_process("#{AGENTS_DIR}/PassengerLoggingAgent",
-			"server_instance_dir", passenger_tmpdir,
-			"generation_number",   "0",
 			"analytics_log_dir",   log_dir,
 			"analytics_log_user",  CONFIG['normal_user_1'],
 			"analytics_log_group", CONFIG['normal_group_1'],
 			"analytics_log_permissions", "u=rwx,g=rwx,o=rwx",
+			"logging_agent_address", "unix:#{socket_filename}",
 			"logging_agent_password", [password].pack("m"))
-		socket_filename = "#{passenger_tmpdir}/generation-0/logging.socket"
 		eventually do
 			File.exist?(socket_filename)
 		end
