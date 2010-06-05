@@ -42,6 +42,7 @@
 #include "LoggingServer.h"
 #include "../Exceptions.h"
 #include "../Utils.h"
+#include "../Utils/IOUtils.h"
 #include "../Utils/Base64.h"
 #include "../Utils/VariantMap.h"
 
@@ -128,7 +129,6 @@ main(int argc, char *argv[]) {
 		/* Create all the necessary objects and sockets... */
 		AccountsDatabasePtr  accountsDatabase;
 		FileDescriptor       serverSocketFd;
-		string               loggingSocketFilename;
 		struct passwd       *user;
 		struct group        *group;
 		int                  ret;
@@ -136,12 +136,15 @@ main(int argc, char *argv[]) {
 		eventLoop = createEventLoop();
 		accountsDatabase = ptr(new AccountsDatabase());
 		serverSocketFd = createServer(socketAddress.c_str());
-		do {
-			ret = chmod(loggingSocketFilename.c_str(), S_ISVTX |
-				S_IRUSR | S_IWUSR | S_IXUSR |
-				S_IRGRP | S_IWGRP | S_IXGRP |
-				S_IROTH | S_IWOTH | S_IXOTH);
-		} while (ret == -1 && errno == EINTR);
+		if (getSocketAddressType(socketAddress) == SAT_UNIX) {
+			do {
+				ret = chmod(parseUnixSocketAddress(socketAddress).c_str(),
+					S_ISVTX |
+					S_IRUSR | S_IWUSR | S_IXUSR |
+					S_IRGRP | S_IWGRP | S_IXGRP |
+					S_IROTH | S_IWOTH | S_IXOTH);
+			} while (ret == -1 && errno == EINTR);
+		}
 		
 		/* Sanity check user accounts. */
 		

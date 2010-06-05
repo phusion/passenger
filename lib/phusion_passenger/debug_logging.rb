@@ -89,7 +89,7 @@ module DebugLogging
 			now = Time.now
 			time_str = now.strftime("%Y-%m-%d %H:%M:%S.")
 			time_str << sprintf("%03d", now.usec / 1000)
-			output.write("[ pid=#{$$} file=#{location} thr=#{Thread.current.object_id} time=#{time_str} ]: #{message}\n")
+			output.write("[ pid=#{$$} thr=#{Thread.current.object_id} file=#{location} time=#{time_str} ]: #{message}\n")
 			output.flush
 		end
 	end

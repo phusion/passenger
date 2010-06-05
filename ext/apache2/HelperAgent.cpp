@@ -239,7 +239,9 @@ public:
 		pool = ptr(new ApplicationPool::Pool(
 			resourceLocator.getSpawnServerFilename(), generation,
 			accountsDatabase, rubyCommand,
-			analyticsLogger
+			analyticsLogger,
+			options.getInt("log_level"),
+			options.get("debug_log_file")
 		));
 		pool->setMax(maxPoolSize);
 		pool->setMaxPerApp(maxInstancesPerApp);
