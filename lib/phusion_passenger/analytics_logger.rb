@@ -153,7 +153,7 @@ class AnalyticsLogger
 		end
 		@random_dev = File.open("/dev/urandom")
 		@shared_data = SharedData.new
-		if local_socket_address?(@server_address)
+		if @server_address && local_socket_address?(@server_address)
 			@max_connect_tries = 10
 		else
 			@max_connect_tries = 1

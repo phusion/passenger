@@ -8,10 +8,10 @@ module PhusionPassenger
 
 shared_examples_for "analytics logging extensions for Rails" do
 	before :each do
-		@agent_pid, @socket_filename = spawn_logging_agent(Utils.passenger_tmpdir, "1234")
+		@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(Utils.passenger_tmpdir, "1234")
 		@options = {
 			"analytics" => true,
-			"logging_agent_address" => @socket_filename,
+			"logging_agent_address" => @socket_address,
 			"logging_agent_username" => "logging",
 			"logging_agent_password_base64" => base64("1234"),
 			"node_name" => "localhost"

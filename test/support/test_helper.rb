@@ -373,7 +373,7 @@ module TestHelper
 		eventually do
 			File.exist?(socket_filename)
 		end
-		return [pid, socket_filename]
+		return [pid, socket_filename, "unix:#{socket_filename}"]
 	rescue Exception => e
 		if pid
 			Process.kill('KILL', pid)

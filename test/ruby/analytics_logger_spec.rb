@@ -16,8 +16,8 @@ describe AnalyticsLogger do
 		@password = "1234"
 		@log_dir  = Utils.passenger_tmpdir
 		start_agent
-		@logger = AnalyticsLogger.new(@socket_filename, @username, @password, "localhost")
-		@logger2 = AnalyticsLogger.new(@socket_filename, @username, @password, "localhost")
+		@logger = AnalyticsLogger.new(@socket_address, @username, @password, "localhost")
+		@logger2 = AnalyticsLogger.new(@socket_address, @username, @password, "localhost")
 	end
 	
 	after :each do
@@ -34,7 +34,7 @@ describe AnalyticsLogger do
 	end
 	
 	def start_agent
-		@agent_pid, @socket_filename = spawn_logging_agent(@log_dir, @password)
+		@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(@log_dir, @password)
 	end
 	
 	def kill_agent
