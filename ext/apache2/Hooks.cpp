@@ -1333,11 +1333,12 @@ public:
 			unixd_config.user_id, unixd_config.group_id,
 			serverConfig.root, serverConfig.ruby, serverConfig.maxPoolSize,
 			serverConfig.maxInstancesPerApp, serverConfig.poolIdleTime,
+			"",
 			serverConfig.analyticsLogDir, serverConfig.analyticsLogUser,
 			serverConfig.analyticsLogGroup, serverConfig.analyticsLogPermissions,
 			serverConfig.prestartURLs);
 		
-		analyticsLogger = ptr(new AnalyticsLogger(agentsStarter.getLoggingSocketFilename(),
+		analyticsLogger = ptr(new AnalyticsLogger(agentsStarter.getLoggingSocketAddress(),
 			"logging", agentsStarter.getLoggingSocketPassword()));
 		
 		// Store some relevant information in the generation directory.

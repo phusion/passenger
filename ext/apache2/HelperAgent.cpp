@@ -233,7 +233,7 @@ public:
 		}
 		
 		UPDATE_TRACE_POINT();
-		analyticsLogger = ptr(new AnalyticsLogger(generation->getPath() + "/logging.socket",
+		analyticsLogger = ptr(new AnalyticsLogger(options.get("logging_agent_address"),
 			"logging", loggingAgentPassword));
 		
 		pool = ptr(new ApplicationPool::Pool(

@@ -394,6 +394,41 @@ protected
 		Kernel.passenger_call_at_exit_blocks
 	end
 	
+	def get_socket_address_type(address)
+		if address =~ %r{^unix:.}
+			return :unix
+		elsif address =~ %r{^tcp://.}
+			return :tcp
+		else
+			return :unknown
+		end
+	end
+	
+	def connect_to_server(address)
+		case get_socket_address_type(address)
+		when :unix
+			return UNIXSocket.new(address.sub(/^unix:/, ''))
+		when :tcp
+			host, port = address.sub(%r{^tcp://}, '').split(':', 2)
+			port = port.to_i
+			return TCPSocket.new(host, port)
+		else
+			raise ArgumentError, "Unknown socket address type for '#{address}'."
+		end
+	end
+	
+	def local_socket_address?(address)
+		case get_socket_address_type(address)
+		when :unix
+			return true
+		when :tcp
+			host, port = address.sub(%r{^tcp://}, '').split(':', 2)
+			return host == "127.0.0.1" || host == "::1" || host == "localhost"
+		else
+			raise ArgumentError, "Unknown socket address type for '#{address}'."
+		end
+	end
+	
 	# Fork a new process and run the given block inside the child process, just like
 	# fork(). Unlike fork(), this method is safe, i.e. there's no way for the child
 	# process to escape the block. Any uncaught exceptions in the child process will

@@ -274,6 +274,7 @@ start_helper_server(ngx_cycle_t *cycle) {
         passenger_root, ruby, passenger_main_conf.max_pool_size,
         passenger_main_conf.max_instances_per_app,
         passenger_main_conf.pool_idle_time,
+        "",
         analytics_log_dir, analytics_log_user,
         analytics_log_group, analytics_log_permissions,
         (const char **) prestart_uris_ary, passenger_main_conf.prestart_uris->nelts,

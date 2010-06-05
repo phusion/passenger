@@ -109,7 +109,8 @@ public:
 	 * If this MessageClient was in a connected state, and this method throws an exception,
 	 * then old connection will be broken.
 	 *
-	 * @param socketFilename The filename of the server socket to connect to.
+	 * @param serverAddress The address of the server to connect to, in the format
+	 *                      as specified by getSocketAddressType().
 	 * @param username The username to use for authenticating with the server.
 	 * @param userSuppliedPassword The password to use for authenticating with the server.
 	 * @return this
@@ -121,10 +122,10 @@ public:
 	 * @throws boost::thread_interrupted
 	 * @post connected()
 	 */
-	MessageClient *connect(const string &socketFilename, const string &username, const StaticString &userSuppliedPassword) {
+	MessageClient *connect(const string &serverAddress, const string &username, const StaticString &userSuppliedPassword) {
 		TRACE_POINT();
 		try {
-			fd = connectToUnixServer(socketFilename.c_str());
+			fd = connectToServer(serverAddress.c_str());
 			channel = MessageChannel(fd);
 			
 			vector<string> args;

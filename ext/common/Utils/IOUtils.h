@@ -26,6 +26,7 @@
 #define _PASSENGER_IO_UTILS_H_
 
 #include <string>
+#include "../StaticString.h"
 
 namespace Passenger {
 
@@ -51,7 +52,7 @@ enum ServerAddressType {
  * Other
  *    Returns: SAT_UNKNOWN
  */
-ServerAddressType getSocketAddressType(const char *address);
+ServerAddressType getSocketAddressType(const StaticString &address);
 
 /**
  * Parses a Unix domain socket address, as accepted by getSocketAddressType(),
@@ -59,7 +60,7 @@ ServerAddressType getSocketAddressType(const char *address);
  *
  * @throw ArgumentException <tt>address</tt> is not a valid Unix domain socket address.
  */
-string parseUnixSocketAddress(const char *address);
+string parseUnixSocketAddress(const StaticString &address);
 
 /**
  * Parses a TCP socket address, as accepted by getSocketAddressType(),
@@ -67,7 +68,15 @@ string parseUnixSocketAddress(const char *address);
  *
  * @throw ArgumentException <tt>address</tt> is not a valid TCP socket address.
  */
-void parseTcpSocketAddress(const char *address, string &host, unsigned short &port);
+void parseTcpSocketAddress(const StaticString &address, string &host, unsigned short &port);
+
+/**
+ * Returns whether the given socket address (as accepted by getSocketAddressType())
+ * is an address that can only refer to a server on the local system.
+ *
+ * @throw ArgumentException <tt>address</tt> is not a valid TCP socket address.
+ */
+bool isLocalSocketAddress(const StaticString &address);
 
 /**
  * Sets a socket in non-blocking mode.
@@ -93,7 +102,7 @@ void setNonBlocking(int fd);
  * @throws boost::thread_interrupted A system call has been interrupted.
  * @ingroup Support
  */
-int createServer(const char *address, unsigned int backlogSize = 0, bool autoDelete = true);
+int createServer(const StaticString &address, unsigned int backlogSize = 0, bool autoDelete = true);
 
 /**
  * Create a new Unix server socket which is bounded to <tt>filename</tt>.
@@ -108,7 +117,7 @@ int createServer(const char *address, unsigned int backlogSize = 0, bool autoDel
  * @throws boost::thread_interrupted A system call has been interrupted.
  * @ingroup Support
  */
-int createUnixServer(const char *filename, unsigned int backlogSize = 0, bool autoDelete = true);
+int createUnixServer(const StaticString &filename, unsigned int backlogSize = 0, bool autoDelete = true);
 
 /**
  * Create a new TCP server socket which is bounded to the given address and port.
@@ -128,6 +137,19 @@ int createUnixServer(const char *filename, unsigned int backlogSize = 0, bool au
 int createTcpServer(const char *address = "0.0.0.0", unsigned short port = 0, unsigned int backlogSize = 0);
 
 /**
+ * Connect to a server at the given address.
+ *
+ * @param address An address as accepted by getSocketAddressType().
+ * @return The file descriptor of the connected client socket.
+ * @throws RuntimeException Something went wrong.
+ * @throws SystemException Something went wrong while connecting to the server.
+ * @throws IOException Something went wrong while connecting to the server.
+ * @throws boost::thread_interrupted A system call has been interrupted.
+ * @ingroup Support
+ */
+int connectToServer(const StaticString &address);
+
+/**
  * Connect to a Unix server socket at <tt>filename</tt>.
  *
  * @param filename The filename of the socket to connect to.
@@ -137,7 +159,7 @@ int createTcpServer(const char *address = "0.0.0.0", unsigned short port = 0, un
  * @throws boost::thread_interrupted A system call has been interrupted.
  * @ingroup Support
  */
-int connectToUnixServer(const char *filename);
+int connectToUnixServer(const StaticString &filename);
 
 /**
  * Connect to a TCP server socket at the given host name and port.
@@ -146,11 +168,11 @@ int connectToUnixServer(const char *filename);
  * @param port The port number of the TCP server.
  * @return The file descriptor of the connected client socket.
  * @throws IOException Something went wrong while connecting to the Unix server.
- * @throws SystemException Something went wrong while connecting to the Unix server.
+ * @throws SystemException Something went wrong while connecting to the server.
  * @throws boost::thread_interrupted A system call has been interrupted.
  * @ingroup Support
  */
-int connectToTcpServer(const char *hostname, unsigned int port);
+int connectToTcpServer(const StaticString &hostname, unsigned int port);
 
 } // namespace Passenger
 

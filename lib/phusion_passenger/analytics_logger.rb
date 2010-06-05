@@ -22,6 +22,7 @@
 #  THE SOFTWARE.
 
 require 'thread'
+require 'phusion_passenger/utils'
 require 'phusion_passenger/debug_logging'
 require 'phusion_passenger/message_client'
 
@@ -31,6 +32,8 @@ class AnalyticsLogger
 	RETRY_SLEEP = 0.2
 	NETWORK_ERRORS = [Errno::EPIPE, Errno::ECONNREFUSED, Errno::ECONNRESET,
 		Errno::EHOSTUNREACH, Errno::ENETDOWN, Errno::ENETUNREACH, Errno::ETIMEDOUT]
+	
+	include Utils
 	
 	class Log
 		attr_reader :txn_id
@@ -150,7 +153,7 @@ class AnalyticsLogger
 		end
 		@random_dev = File.open("/dev/urandom")
 		@shared_data = SharedData.new
-		if local_address?(@server_address)
+		if local_socket_address?(@server_address)
 			@max_connect_tries = 10
 		else
 			@max_connect_tries = 1

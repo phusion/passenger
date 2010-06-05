@@ -423,7 +423,7 @@ class AnalyticsLogger {
 private:
 	static const int RETRY_SLEEP = 200000; // microseconds
 	
-	string socketFilename;
+	string serverAddress;
 	string username;
 	string password;
 	string nodeName;
@@ -441,7 +441,7 @@ private:
 	
 	void connect() {
 		TRACE_POINT();
-		sharedData->client.connect(socketFilename, username, password);
+		sharedData->client.connect(serverAddress, username, password);
 		sharedData->client.write("init", nodeName.c_str(), NULL);
 		// Upon a write() error we want to attempt to read() the error
 		// message before closing the socket.
@@ -465,10 +465,10 @@ private:
 public:
 	AnalyticsLogger() { }
 	
-	AnalyticsLogger(const string &socketFilename, const string &username,
+	AnalyticsLogger(const string &serverAddress, const string &username,
 	                const string &password, const string &nodeName = "")
 	{
-		this->socketFilename = socketFilename;
+		this->serverAddress  = serverAddress;
 		this->username       = username;
 		this->password       = password;
 		if (nodeName.empty()) {
@@ -476,8 +476,13 @@ public:
 		} else {
 			this->nodeName = nodeName;
 		}
-		if (!socketFilename.empty()) {
+		if (!serverAddress.empty()) {
 			sharedData.reset(new AnalyticsLoggerSharedData());
+		}
+		if (isLocalSocketAddress(serverAddress)) {
+			maxConnectTries = 10;
+		} else {
+			maxConnectTries = 1;
 		}
 		maxConnectTries   = 10;
 		reconnectTimeout  = 60 * 1000000;
@@ -485,7 +490,7 @@ public:
 	}
 	
 	AnalyticsLogPtr newTransaction(const string &groupName, const string &category = "requests") {
-		if (socketFilename.empty()) {
+		if (serverAddress.empty()) {
 			return ptr(new AnalyticsLog());
 		}
 		
@@ -553,7 +558,7 @@ public:
 				}
 				
 				// Failed to connect.
-				P_WARN("Cannot connect to the logging agent (" << socketFilename << "); " <<
+				P_WARN("Cannot connect to the logging agent (" << serverAddress << "); " <<
 					"retrying in " << reconnectTimeout / 1000000 << " seconds.");
 				nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
 			}
@@ -564,7 +569,7 @@ public:
 	AnalyticsLogPtr continueTransaction(const string &txnId, const string &groupName,
 		const string &category = "requests")
 	{
-		if (socketFilename.empty() || txnId.empty()) {
+		if (serverAddress.empty() || txnId.empty()) {
 			return ptr(new AnalyticsLog());
 		}
 		
@@ -606,7 +611,7 @@ public:
 			}
 			
 			// Failed to connect.
-			P_WARN("Cannot connect to the logging agent (" << socketFilename << "); " <<
+			P_WARN("Cannot connect to the logging agent (" << serverAddress << "); " <<
 				"retrying in " << reconnectTimeout / 1000000 << " seconds.");
 			nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
 		}
@@ -624,11 +629,11 @@ public:
 	}
 	
 	bool isNull() const {
-		return socketFilename.empty();
+		return serverAddress.empty();
 	}
 	
 	string getAddress() const {
-		return socketFilename;
+		return serverAddress;
 	}
 	
 	string getUsername() const {

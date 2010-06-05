@@ -24,6 +24,7 @@
 
 require 'socket'
 require 'phusion_passenger/message_channel'
+require 'phusion_passenger/utils'
 require 'phusion_passenger/utils/tmpdir'
 
 module PhusionPassenger
@@ -31,10 +32,12 @@ module PhusionPassenger
 # A convenience class for communicating with MessageServer servers,
 # for example the ApplicationPool server.
 class MessageClient
+	include Utils
+	
 	# Connect to the given server. By default it connects to the current
 	# generation's helper server.
-	def initialize(username, password, filename = "#{Utils.passenger_tmpdir}/socket")
-		@socket = UNIXSocket.new(filename)
+	def initialize(username, password, address = "unix:#{Utils.passenger_tmpdir}/socket")
+		@socket = connect_to_server(address)
 		begin
 			@channel = MessageChannel.new(@socket)
 			

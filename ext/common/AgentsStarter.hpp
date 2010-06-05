@@ -44,6 +44,7 @@
 #include "Exceptions.h"
 #include "ResourceLocator.h"
 #include "Utils.h"
+#include "Utils/IOUtils.h"
 #include "Utils/Base64.h"
 #include "Utils/VariantMap.h"
 
@@ -101,7 +102,8 @@ private:
 	 */
 	string messageSocketPassword;
 	
-	string loggingSocketFilename;
+	bool loggingAgentRunningLocally;
+	string loggingSocketAddress;
 	string loggingSocketPassword;
 	
 	/**
@@ -133,7 +135,7 @@ private:
 			MessageClient client;
 			vector<string> args;
 			
-			client.connect(socketFilename, username, password);
+			client.connect("unix:" + socketFilename, username, password);
 			client.write("exit", NULL);
 			return client.read(args) && args[0] == "Passed security" &&
 			       client.read(args) && args[0] == "exit command received";
@@ -164,6 +166,7 @@ public:
 	 */
 	AgentsStarter(Type type) {
 		pid = 0;
+		loggingAgentRunningLocally = false;
 		this->type = type;
 	}
 	
@@ -172,9 +175,12 @@ public:
 			this_thread::disable_syscall_interruption dsi;
 			bool cleanShutdown = gracefullyShutdownAgent(messageSocketFilename,
 				"_web_server", messageSocketPassword);
-			cleanShutdown = cleanShutdown &&
-				gracefullyShutdownAgent(loggingSocketFilename,
-					"logging", loggingSocketPassword);
+			if (loggingAgentRunningLocally) {
+				string filename = parseUnixSocketAddress(loggingSocketAddress);
+				cleanShutdown = cleanShutdown &&
+					gracefullyShutdownAgent(filename,
+						"logging", loggingSocketPassword);
+			}
 			
 			/* Send a message down the feedback fd to tell the watchdog
 			 * Whether this is a clean shutdown. Closing the fd without
@@ -242,8 +248,8 @@ public:
 		return messageSocketPassword;
 	}
 	
-	string getLoggingSocketFilename() const {
-		return loggingSocketFilename;
+	string getLoggingSocketAddress() const {
+		return loggingSocketAddress;
 	}
 	
 	string getLoggingSocketPassword() const {
@@ -283,6 +289,7 @@ public:
 	           const string &passengerRoot, const string &rubyCommand,
 	           unsigned int maxPoolSize, unsigned int maxInstancesPerApp,
 	           unsigned int poolIdleTime,
+	           const string &analyticsServer,
 	           const string &analyticsLogDir, const string &analyticsLogUser,
 	           const string &analyticsLogGroup, const string &analyticsLogPermissions,
 	           const set<string> &prestartURLs,
@@ -309,6 +316,7 @@ public:
 			.setInt ("max_pool_size",   maxPoolSize)
 			.setInt ("max_instances_per_app",     maxInstancesPerApp)
 			.setInt ("pool_idle_time",            poolIdleTime)
+			.set    ("analytics_server",          analyticsServer)
 			.set    ("analytics_log_dir",         analyticsLogDir)
 			.set    ("analytics_log_user",        analyticsLogUser)
 			.set    ("analytics_log_group",       analyticsLogGroup)
@@ -561,9 +569,10 @@ public:
 					}
 				} else if (args[0] == "LoggingServer info") {
 					UPDATE_TRACE_POINT();
-					if (args.size() == 2) {
-						loggingSocketFilename = generation->getPath() + "/logging.socket";
-						loggingSocketPassword = Base64::decode(args[1]);
+					if (args.size() == 3) {
+						loggingAgentRunningLocally = true;
+						loggingSocketAddress  = args[1];
+						loggingSocketPassword = Base64::decode(args[2]);
 					} else {
 						killAndWait(pid);
 						throw IOException("Unable to start the Phusion Passenger watchdog: "

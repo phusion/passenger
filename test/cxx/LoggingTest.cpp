@@ -23,6 +23,7 @@ namespace tut {
 		ServerInstanceDirPtr serverInstanceDir;
 		ServerInstanceDir::GenerationPtr generation;
 		string socketFilename;
+		string socketAddress;
 		string loggingDir;
 		AccountsDatabasePtr accountsDatabase;
 		ev::dynamic_loop eventLoop;
@@ -33,19 +34,20 @@ namespace tut {
 		LoggingTest() {
 			createServerInstanceDirAndGeneration(serverInstanceDir, generation);
 			socketFilename = generation->getPath() + "/logging.socket";
+			socketAddress = "unix:" + socketFilename;
 			loggingDir = generation->getPath() + "/logs";
 			accountsDatabase = ptr(new AccountsDatabase());
 			accountsDatabase->add("test", "1234", false);
 			setLogLevel(-1);
 			
 			startLoggingServer();
-			logger = ptr(new AnalyticsLogger(socketFilename, "test", "1234",
+			logger = ptr(new AnalyticsLogger(socketAddress, "test", "1234",
 				"localhost"));
-			logger2 = ptr(new AnalyticsLogger(socketFilename, "test", "1234",
+			logger2 = ptr(new AnalyticsLogger(socketAddress, "test", "1234",
 				"localhost"));
-			logger3 = ptr(new AnalyticsLogger(socketFilename, "test", "1234",
+			logger3 = ptr(new AnalyticsLogger(socketAddress, "test", "1234",
 				"localhost"));
-			logger4 = ptr(new AnalyticsLogger(socketFilename, "test", "1234",
+			logger4 = ptr(new AnalyticsLogger(socketAddress, "test", "1234",
 				"localhost"));
 		}
 		
@@ -67,7 +69,7 @@ namespace tut {
 		void stopLoggingServer() {
 			if (server != NULL) {
 				MessageClient client;
-				client.connect(socketFilename, "test", "1234");
+				client.connect(socketAddress, "test", "1234");
 				client.write("exit", "immediately", NULL);
 				serverThread->join();
 				serverThread.reset();

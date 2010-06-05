@@ -51,6 +51,7 @@
 #include "Utils.h"
 #include "Utils/Base64.h"
 #include "Utils/Timer.h"
+#include "Utils/IOUtils.h"
 #include "Utils/VariantMap.h"
 
 using namespace std;
@@ -79,6 +80,7 @@ static string  serializedPrestartURLs;
 
 static ServerInstanceDirPtr serverInstanceDir;
 static ServerInstanceDir::GenerationPtr generation;
+static string loggingAgentAddress;
 static string loggingAgentPassword;
 static RandomGenerator *randomGenerator;
 static EventFd *errorEvent;
@@ -573,6 +575,7 @@ protected:
 		VariantMap options = agentsOptions;
 		options.set("request_socket_password", Base64::encode(requestSocketPassword)).
 			set("message_socket_password", Base64::encode(messageSocketPassword)).
+			set("logging_agent_address", loggingAgentAddress).
 			set("logging_agent_password", Base64::encode(loggingAgentPassword));
 		options.writeToFd(fd);
 	}
@@ -628,7 +631,7 @@ protected:
 	
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
 		VariantMap options = agentsOptions;
-		options.set("logging_agent_address", socketAddress);
+		options.set("logging_agent_address", loggingAgentAddress);
 		options.set("logging_agent_password", Base64::encode(loggingAgentPassword));
 		options.writeToFd(fd);
 	}
@@ -644,11 +647,11 @@ protected:
 public:
 	LoggingAgentWatcher(const ResourceLocator &resourceLocator) {
 		agentFilename = resourceLocator.getAgentsDir() + "/PassengerLoggingAgent";
-		socketAddress = "unix:" + generation->getPath() + "/logging.socket";
 	}
 	
 	virtual void sendStartupInfo(MessageChannel &channel) {
 		channel.write("LoggingServer info",
+			loggingAgentAddress.c_str(),
 			Base64::encode(loggingAgentPassword).c_str(),
 			NULL);
 	}
@@ -952,7 +955,14 @@ main(int argc, char *argv[]) {
 		
 		ServerInstanceDirToucher serverInstanceDirToucher;
 		ResourceLocator resourceLocator(passengerRoot);
-		loggingAgentPassword = randomGenerator->generateByteString(32);
+		if (agentsOptions.get("analytics_server", false).empty()) {
+			// Using local, server instance specific logging agent.
+			loggingAgentAddress  = "unix:" + generation->getPath() + "/logging.socket";
+			loggingAgentPassword = randomGenerator->generateByteString(32);
+		} else {
+			// Using remote logging agent.
+			loggingAgentAddress = agentsOptions.get("analytics_server");
+		}
 		
 		HelperAgentWatcher helperAgentWatcher(resourceLocator);
 		LoggingAgentWatcher loggingAgentWatcher(resourceLocator);
@@ -960,7 +970,9 @@ main(int argc, char *argv[]) {
 		vector<AgentWatcher *> watchers;
 		vector<AgentWatcher *>::iterator it;
 		watchers.push_back(&helperAgentWatcher);
-		watchers.push_back(&loggingAgentWatcher);
+		if (agentsOptions.get("analytics_server", false).empty()) {
+			watchers.push_back(&loggingAgentWatcher);
+		}
 		
 		for (it = watchers.begin(); it != watchers.end(); it++) {
 			try {

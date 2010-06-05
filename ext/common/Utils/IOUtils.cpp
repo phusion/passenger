@@ -49,37 +49,59 @@ using namespace std;
 using namespace oxt;
 
 
-ServerAddressType getSocketAddressType(const char *address) {
-	size_t len = strlen(address);
+ServerAddressType
+getSocketAddressType(const StaticString &address) {
+	const char *data = address.c_str();
+	size_t len = address.size();
 	
-	if (len > sizeof("unix:") - 1 && memcmp(address, "unix:", sizeof("unix:") - 1) == 0) {
+	if (len > sizeof("unix:") - 1 && memcmp(data, "unix:", sizeof("unix:") - 1) == 0) {
 		return SAT_UNIX;
-	} else if (len > sizeof("tcp://") - 1 && memcmp(address, "tcp://", sizeof("tcp://") - 1) == 0) {
+	} else if (len > sizeof("tcp://") - 1 && memcmp(data, "tcp://", sizeof("tcp://") - 1) == 0) {
 		return SAT_TCP;
 	} else {
 		return SAT_UNKNOWN;
 	}
 }
 
-string parseUnixSocketAddress(const char *address) {
+string
+parseUnixSocketAddress(const StaticString &address) {
 	if (getSocketAddressType(address) != SAT_UNIX) {
 		throw ArgumentException("Not a valid Unix socket address");
 	}
-	return string(address + sizeof("unix:") - 1);
+	return string(address.c_str() + sizeof("unix:") - 1, address.size() - sizeof("unix:") + 1);
 }
 
-void parseTcpSocketAddress(const char *address, string &host, unsigned short &port) {
+void
+parseTcpSocketAddress(const StaticString &address, string &host, unsigned short &port) {
 	if (getSocketAddressType(address) != SAT_TCP) {
 		throw ArgumentException("Not a valid TCP socket address");
 	}
 	
 	vector<string> args;
-	split(address + sizeof("tcp://") - 1, ':', args);
+	string begin(address.c_str() + sizeof("tcp://") - 1, address.size() - sizeof("tcp://") + 1);
+	split(begin, ':', args);
 	if (args.size() != 2) {
 		throw ArgumentException("Not a valid TCP socket address");
 	} else {
 		host = args[0];
 		port = atoi(args[1].c_str());
+	}
+}
+
+bool
+isLocalSocketAddress(const StaticString &address) {
+	switch (getSocketAddressType(address)) {
+	case SAT_UNIX:
+		return true;
+	case SAT_TCP: {
+		string host;
+		unsigned short port;
+		
+		parseTcpSocketAddress(address, host, port);
+		return host == "127.0.0.1" || host == "::1" || host == "localhost";
+	}
+	default:
+		throw ArgumentException("Unsupported socket address type");
 	}
 }
 
@@ -108,11 +130,11 @@ setNonBlocking(int fd) {
 }
 
 int
-createServer(const char *address, unsigned int backlogSize, bool autoDelete) {
+createServer(const StaticString &address, unsigned int backlogSize, bool autoDelete) {
 	TRACE_POINT();
 	switch (getSocketAddressType(address)) {
 	case SAT_UNIX:
-		return createUnixServer(parseUnixSocketAddress(address).c_str(),
+		return createUnixServer(parseUnixSocketAddress(address),
 			backlogSize, autoDelete);
 	case SAT_TCP: {
 		string host;
@@ -127,13 +149,13 @@ createServer(const char *address, unsigned int backlogSize, bool autoDelete) {
 }
 
 int
-createUnixServer(const char *filename, unsigned int backlogSize, bool autoDelete) {
+createUnixServer(const StaticString &filename, unsigned int backlogSize, bool autoDelete) {
 	struct sockaddr_un addr;
 	int fd, ret;
 	
-	if (strlen(filename) > sizeof(addr.sun_path) - 1) {
+	if (filename.size() > sizeof(addr.sun_path) - 1) {
 		string message = "Cannot create Unix socket '";
-		message.append(filename);
+		message.append(filename.toString());
 		message.append("': filename is too long.");
 		throw RuntimeException(message);
 	}
@@ -145,12 +167,12 @@ createUnixServer(const char *filename, unsigned int backlogSize, bool autoDelete
 	}
 	
 	addr.sun_family = AF_LOCAL;
-	strncpy(addr.sun_path, filename, sizeof(addr.sun_path));
-	addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
+	strncpy(addr.sun_path, filename.c_str(), filename.size());
+	addr.sun_path[filename.size()] = '\0';
 	
 	if (autoDelete) {
 		do {
-			ret = unlink(filename);
+			ret = unlink(filename.c_str());
 		} while (ret == -1 && errno == EINTR);
 	}
 	
@@ -165,7 +187,7 @@ createUnixServer(const char *filename, unsigned int backlogSize, bool autoDelete
 	if (ret == -1) {
 		int e = errno;
 		string message = "Cannot bind Unix socket '";
-		message.append(filename);
+		message.append(filename.toString());
 		message.append("'");
 		do {
 			ret = close(fd);
@@ -187,7 +209,7 @@ createUnixServer(const char *filename, unsigned int backlogSize, bool autoDelete
 	if (ret == -1) {
 		int e = errno;
 		string message = "Cannot listen on Unix socket '";
-		message.append(filename);
+		message.append(filename.toString());
 		message.append("'");
 		do {
 			ret = close(fd);
@@ -287,13 +309,31 @@ createTcpServer(const char *address, unsigned short port, unsigned int backlogSi
 }
 
 int
-connectToUnixServer(const char *filename) {
+connectToServer(const StaticString &address) {
+	TRACE_POINT();
+	switch (getSocketAddressType(address)) {
+	case SAT_UNIX:
+		return connectToUnixServer(parseUnixSocketAddress(address));
+	case SAT_TCP: {
+		string host;
+		unsigned short port;
+		
+		parseTcpSocketAddress(address, host, port);
+		return connectToTcpServer(host, port);
+	}
+	default:
+		throw ArgumentException(string("Unknown address type for '") + address + "'");
+	}
+}
+
+int
+connectToUnixServer(const StaticString &filename) {
 	int fd, ret;
 	struct sockaddr_un addr;
 	
-	if (strlen(filename) > sizeof(addr.sun_path) - 1) {
+	if (filename.size() > sizeof(addr.sun_path) - 1) {
 		string message = "Cannot connect to Unix socket '";
-		message.append(filename);
+		message.append(filename.toString());
 		message.append("': filename is too long.");
 		throw RuntimeException(message);
 	}
@@ -305,8 +345,8 @@ connectToUnixServer(const char *filename) {
 	}
 	
 	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, filename, sizeof(addr.sun_path));
-	addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
+	memcpy(addr.sun_path, filename.c_str(), filename.size());
+	addr.sun_path[filename.size()] = '\0';
 	
 	try {
 		ret = syscalls::connect(fd, (const sockaddr *) &addr, sizeof(addr));
@@ -319,7 +359,7 @@ connectToUnixServer(const char *filename) {
 	if (ret == -1) {
 		int e = errno;
 		string message("Cannot connect to Unix socket '");
-		message.append(filename);
+		message.append(filename.toString());
 		message.append("'");
 		do {
 			ret = close(fd);
@@ -331,17 +371,17 @@ connectToUnixServer(const char *filename) {
 }
 
 int
-connectToTcpServer(const char *hostname, unsigned int port) {
+connectToTcpServer(const StaticString &hostname, unsigned int port) {
 	struct addrinfo hints, *res;
 	int ret, e, fd;
 	
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family   = PF_INET;
 	hints.ai_socktype = SOCK_STREAM;
-	ret = getaddrinfo(hostname, toString(port).c_str(), &hints, &res);
+	ret = getaddrinfo(hostname.c_str(), toString(port).c_str(), &hints, &res);
 	if (ret != 0) {
 		string message = "Cannot resolve IP address '";
-		message.append(hostname);
+		message.append(hostname.toString());
 		message.append(":");
 		message.append(toString(port));
 		message.append("': ");
@@ -374,7 +414,7 @@ connectToTcpServer(const char *hostname, unsigned int port) {
 	freeaddrinfo(res);
 	if (ret == -1) {
 		string message = "Cannot connect to TCP socket '";
-		message.append(hostname);
+		message.append(hostname.toString());
 		message.append(":");
 		message.append(toString(port));
 		message.append("'");
