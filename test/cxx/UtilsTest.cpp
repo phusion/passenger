@@ -323,12 +323,12 @@ namespace tut {
 	
 	TEST_METHOD(43) {
 		// It correctly parses the permission string.
-		testMakeDirTreeMode("empty 1", "", 0);
-		testMakeDirTreeMode("empty 2", "u=", 0);
-		testMakeDirTreeMode("empty 3", "g=", 0);
-		testMakeDirTreeMode("empty 4", "o=", 0);
-		testMakeDirTreeMode("empty 5", "u=,g=", 0);
-		testMakeDirTreeMode("empty 6", "g=,o=", 0);
+		testMakeDirTreeMode("empty 1", "", (mode_t) 0);
+		testMakeDirTreeMode("empty 2", "u=", (mode_t) 0);
+		testMakeDirTreeMode("empty 3", "g=", (mode_t) 0);
+		testMakeDirTreeMode("empty 4", "o=", (mode_t) 0);
+		testMakeDirTreeMode("empty 5", "u=,g=", (mode_t) 0);
+		testMakeDirTreeMode("empty 6", "g=,o=", (mode_t) 0);
 		
 		testMakeDirTreeMode("(1)", "u=rwxs,g=rwxs,o=rwx",
 			S_IRWXU | S_ISUID | S_IRWXG | S_ISGID | S_IRWXO);

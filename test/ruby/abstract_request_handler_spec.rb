@@ -188,9 +188,9 @@ describe AbstractRequestHandler do
 				Process.waitpid(@agent_pid)
 			end
 			@log_dir = Utils.passenger_tmpdir
-			@agent_pid, @socket_filename = spawn_logging_agent(@log_dir, "1234")
+			@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(@log_dir, "1234")
 			
-			@logger = AnalyticsLogger.new(@socket_filename, "logging",
+			@logger = AnalyticsLogger.new(@socket_address, "logging",
 				"1234", "localhost")
 			@options = { "analytics_logger" => @logger }
 		end
