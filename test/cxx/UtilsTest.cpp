@@ -256,13 +256,13 @@ namespace tut {
 	}
 	
 	TEST_METHOD(36) {
-		ensure_equals(parseModeString(""), 0);
-		ensure_equals(parseModeString("u="), 0);
-		ensure_equals(parseModeString("u=,u="), 0);
-		ensure_equals(parseModeString("u=,g="), 0);
-		ensure_equals(parseModeString("u=,g=,o="), 0);
-		ensure_equals(parseModeString("u=,g=,o=,u=,g="), 0);
-		ensure_equals(parseModeString("o="), 0);
+		ensure_equals(parseModeString(""), (mode_t) 0);
+		ensure_equals(parseModeString("u="), (mode_t) 0);
+		ensure_equals(parseModeString("u=,u="), (mode_t) 0);
+		ensure_equals(parseModeString("u=,g="), (mode_t) 0);
+		ensure_equals(parseModeString("u=,g=,o="), (mode_t) 0);
+		ensure_equals(parseModeString("u=,g=,o=,u=,g="), (mode_t) 0);
+		ensure_equals(parseModeString("o="), (mode_t) 0);
 	}
 	
 	TEST_METHOD(37) {
