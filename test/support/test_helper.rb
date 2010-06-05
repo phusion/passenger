@@ -3,6 +3,8 @@ require 'resolv'
 require 'net/http'
 require 'uri'
 require 'support/multipart'
+require 'phusion_passenger'
+require 'phusion_passenger/platform_info/ruby'
 
 # Module containing helper methods, to be included in unit tests.
 module TestHelper
@@ -315,9 +317,9 @@ module TestHelper
 	def run_script(code, *args)
 		stdin_child, stdin_parent = IO.pipe
 		stdout_parent, stdout_child = IO.pipe
-		program_args = [PlatformInfo::RUBY, "-e",
+		program_args = [PhusionPassenger::PlatformInfo::RUBY, "-e",
 			"eval(STDIN.read, binding, '(script)', 0)",
-			LIBDIR, *args]
+			PhusionPassenger::LIBDIR, *args]
 		if Process.respond_to?(:spawn)
 			program_args << {
 				STDIN  => stdin_child,
