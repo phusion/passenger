@@ -306,6 +306,8 @@ private:
 		// Invariants for _groups_.
 		GroupMap::const_iterator it;
 		unsigned int totalSize = 0;
+		unsigned int expectedActive = 0;
+		
 		for (it = groups.begin(); it != groups.end(); it++) {
 			const string &appRoot = it->first;
 			Group *group = it->second.get();
@@ -322,11 +324,8 @@ private:
 			P_ASSERT(!group->detached, false,
 				"groups['" << appRoot << "'].detached is true");
 			
-			ProcessInfoList::const_iterator prev_lit;
-			ProcessInfoList::const_iterator lit;
-			prev_lit = processes->begin();
-			lit = prev_lit;
-			lit++;
+			
+			ProcessInfoList::const_iterator lit = processes->begin();
 			for (; lit != processes->end(); lit++) {
 				const ProcessInfoPtr &processInfo = *lit;
 				
@@ -334,18 +333,32 @@ private:
 				P_ASSERT(processInfo->groupName == group->name, false,
 					"groups['" << appRoot << "'].processes[x].groupName "
 					"equals groups['" << appRoot << "'].name");
+				P_ASSERT(!processInfo->detached, false,
+					"groups['" << appRoot << "'].processes[x].detached is false");
+				if (processInfo->sessions > 0) {
+					expectedActive++;
+				}
+			}
+			
+			ProcessInfoList::const_iterator prev_lit;
+			prev_lit = processes->begin();
+			lit = prev_lit;
+			lit++;
+			for (; lit != processes->end(); lit++) {
+				const ProcessInfoPtr &processInfo = *lit;
+				
+				// Invariants for ProcessInfo that depend on the previous item.
 				if ((*prev_lit)->sessions > 0) {
 					P_ASSERT(processInfo->sessions > 0, false,
 						"groups['" << appRoot << "'].processes "
 						"is sorted from nonactive to active");
-					P_ASSERT(!processInfo->detached, false,
-						"groups['" << appRoot << "'].processes[x].detached "
-						"is false");
 				}
 			}
 		}
 		P_ASSERT(totalSize == count, false, "(sum of all d.size in groups) == count");
 		
+		P_ASSERT(active == expectedActive, false,
+			"active (" << active << ") == " << expectedActive);
 		P_ASSERT(active <= count, false,
 			"active (" << active << ") < count (" << count << ")");
 		P_ASSERT(inactiveApps.size() == count - active, false,
