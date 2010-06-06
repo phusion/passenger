@@ -419,6 +419,14 @@ struct PoolOptions {
 		/*********************************/
 	}
 	
+	PoolOptions own() const {
+		PoolOptions copy = *this;
+		if (copy.environmentVariables != NULL) {
+			copy.environmentVariables->getItems(); // Prefetch items now while we still can.
+		}
+		return copy;
+	}
+	
 	/**
 	 * Returns the app group name. If there is no explicitly set app group name
 	 * then the app root is considered to be the app group name.

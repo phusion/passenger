@@ -329,6 +329,30 @@ public:
 	}
 };
 
+/**
+ * Like boost::lock_guard, but is interruptable.
+ */
+template<typename TimedLockable>
+class interruptable_lock_guard {
+private:
+	TimedLockable &mutex;
+public:
+	interruptable_lock_guard(TimedLockable &m): mutex(m) {
+		bool locked = false;
+		
+		while (!locked) {
+			locked = m.timed_lock(boost::posix_time::milliseconds(10));
+			if (!locked) {
+				boost::this_thread::interruption_point();
+			}
+		}
+	}
+	
+	~interruptable_lock_guard() {
+		mutex.unlock();
+	}
+};
+
 } // namespace oxt
 
 #endif /* _OXT_THREAD_HPP_ */

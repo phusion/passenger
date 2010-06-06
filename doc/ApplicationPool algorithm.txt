@@ -88,6 +88,12 @@ explicitly define some special types:
     The minimum number of processes that the cleaner thread should keep in
     this group. Defaults to 0.
 
+  * spawning (boolean): Whether a background thread is currently spawning
+    a new process for this group.
+
+  * spawner_thread: A handle to the background thread that is currently
+    spawning a new process. Only valid if _spawning_ is true.
+
   * detached (boolean): If true, then it indicates that this Group is
     no longer accessible via _groups_.
     Set to false by the constructor.
@@ -244,6 +250,7 @@ Here's an UML diagram in ASCII art:
 # Thread-safetiness notes:
 # - All wait commands are to unlock the lock during waiting.
 
+
 # Connect to an existing application process, or spawn a new application process
 # and connect to that if necessary.
 # 'app_root' refers to an application root.
@@ -301,40 +308,27 @@ private function checkout_without_lock(app_root, options):
 			process_info = processes.front
 			processes.move_to_back(process_info.iterator)
 			inactive_apps.remove(process_info.ia_iterator)
-			active++
-		else if	(count >= max) or (
-			(max_per_app != 0) and (group.size >= max_per_app)
-			):
-			# All processes are active, and the pool is full. 
-			#  -OR-
-			# All processes are active and the maximum number of
-			# allowed processes for this application group has
-			# been reached.
-			#
-			# We're not allowed to spawn a new application process.
-			process_info = select_process(processes, options)
-			if process_info == null:
-				goto beginning of function
+			mutate_max(active + 1)
 		else:
-			# All processes are active, but the pool hasn't reached its
-			# maximum yet. So we spawn a new process.
-			process = spawn(app_root, options)
-			process_info = new ProcessInfo
-			process_info.process = process
-			process_info.group_name = options.app_group_name
-			iterator = processes.add_to_back(process_info)
-			process_info.iterator = iterator
-			group.size++
-			count++
-			active++
+			# All existing processes are active. We either use
+			# one of them now or we wait until one of them becomes
+			# available. And, if we're allowed to, we spawn an
+			# extra process in the background.
+			if ( count < max ) and
+			   ( (max_per_app == 0) or (group.size < max_per_app) ) and
+			   ( !group.spawning ):
+				spawn_in_background(group, options)
+			process_info = select_process(processes, options)
+			if (process_info == null):
+				goto beginning of function
 	else:
 		# There are no processes for this app group.
 		if (active >= max):
 			# Looks like the pool is full and all processes are busy.
-			# We wait until there's at least 1 idle process, or until
-			# there's an empty slot in the pool, then restart this
-			# function.
-			wait until _active_ has changed
+			# Wait until the pool appears to have changed in such a
+			# way that we can spawn a new app group, and restart
+			# this function.
+			new_app_group_creatable.wait
 			goto beginning of function
 		elsif count == max:
 			# The pool is full, and not all processes are busy, but
@@ -358,7 +352,7 @@ private function checkout_without_lock(app_root, options):
 				detach_group_without_lock(group)
 			else:
 				group.size--
-			count--
+			mutate_count(count - 1)
 		process_info = new ProcessInfo
 		process_info.process = spawn(app_root, options)
 		process_info.group_name = options.app_group_name
@@ -369,8 +363,10 @@ private function checkout_without_lock(app_root, options):
 		groups[options.app_group_name] = group
 		iterator = group.processes.add_to_back(process_info)
 		process_info.iterator = iterator
-		count++
-		active++
+		mutate_count(count + 1)
+		mutate_active(active + 1)
+		if (options.min_processes > 1) and (count < max):
+			spawn_in_background(group, options)
 	
 	group.max_requests = options.max_requests
 	group.min_processes = options.min_processes
@@ -380,6 +376,29 @@ private function checkout_without_lock(app_root, options):
 	process_info.sessions++
 	
 	return [process_info, group]
+
+
+private function mutate_active(value):
+	if (value < active):
+		new_app_group_creatable.notify_all
+		global_queue_position_became_available.notify_all
+	active = value
+
+private function mutate_count(value):
+	# No point in notifying new_app_group_creatable here;
+	# if _count_ is being increased then that means the pool
+	# isn't full, and nobody is waiting on
+	# new_app_group_creatable.
+	global_queue_position_became_available.notify_all
+	count = value
+
+private function mutate_max(value):
+	if (value > max):
+		new_app_group_creatable.notify_all
+		# We will want any code waiting on the global queue
+		# to go ahead and spawn another process.
+		global_queue_position_became_available.notify_all
+	max = value
 
 
 private function needs_restart(app_root, options):
@@ -401,10 +420,14 @@ private function detach_group_without_lock(group):
 		if (process_info.sessions == 0):
 			inactive_apps.remove(process_info.ia_iterator)
 		else:
-			active--
+			mutate_active(active - 1)
 		group.processes.remove(process_info.iterator)
 		process_info.detached = true
-		count--
+		mutate_count(count - 1)
+	if (group.spawning):
+		group.spawner_thread.interrupt_and_join
+		group.spawner_thread = null
+		group.spawning = false
 	group.detached = true
 	groups.remove(options.app_group_name)
 
@@ -414,7 +437,7 @@ private function select_process(processes, options):
 		# So we wait until _active_ has changed, then
 		# we restart this function and try again.
 		waiting_on_global_queue++
-		wait until _active_ has changed
+		global_queue_position_became_available.wait
 		waiting_on_global_queue--
 		return null
 	else:
@@ -424,6 +447,57 @@ private function select_process(processes, options):
 		process_info = an element in _processes_ with the smallest _session_ value
 		processes.move_to_back(process_info.iterator)
 		return process_info
+
+
+# Preconditions:
+#   !group.detached
+#   !group.spawning
+private function spawn_in_background(group, options):
+	group.spawning = true
+	group.spawner_thread = new thread(spawner_thread_callback,
+		with these arguments to the thread function:
+		group, options)
+
+
+private function spawner_thread_callback(group, options):
+	Ignore thread interruptions in this function
+	while true:
+		try:
+			Allow thread interruptions in this block
+			process = spawn(app_root, options)
+		on thread interruption:
+			lock.synchronize:
+				group.spawning = false
+				group.spawner_thread = null
+				return
+		on exception:
+			lock.synchronize:
+				# We want to report the error to the browser
+				# but there's no way to do this in this thread, so
+				# we just remove the entire group and have the next
+				# get() call spawn the process and display the
+				# error.
+				if (!group.detached):
+					group.spawning = false
+					group.spawner_thread = null
+					remove_group_without_lock(group)
+				return
+		
+		lock.synchronize:
+			if (group.detached):
+				return
+			else:
+				process_info = new ProcessInfo
+				process_info.process = process
+				process_info.group_name = options.app_group_name
+				process_info.iterator = group.processes.add_to_front(process_info)
+				process_info.ia_iterator = inactive_apps.add_to_back(process_info)
+				group.size++
+				mutate_count(count + 1)
+				if (group.size >= options.min_processes):
+					group.spawning = false
+					group.spawner_thread = null
+					return
 
 
 private function detach_without_lock(identifier):
@@ -440,8 +514,8 @@ private function detach_without_lock(identifier):
 				if process_info.sessions == 0:
 					inactive_apps.remove(process_info.ia_iterator)
 				else:
-					active--
-				count--
+					mutate_active(active - 1)
+				mutate_count(count - 1)
 				return true
 	return false
 
@@ -477,18 +551,18 @@ callback session_has_been_closed(session, process_info):
 			group.size--
 			if processes.empty():
 				detach_group_without_lock(group)
-			count--
+			mutate_count(count - 1)
 			if (process_info.sessions == 0):
 				inactive_apps.remove(process_info.ia_iterator)
 			else:
-				active--
+				mutate_active(active - 1)
 		else:
 			process_info.last_used = current_time()
 			process_info.sessions--
 			if (process_info.sessions == 0):
 				processes.move_to_front(process_info.iterator)
 				process_info.ia_iterator = inactive_apps.add_to_back(process_info)
-				active--
+				mutate_active(active - 1)
 
 
 # The following thread will be responsible for cleaning up idle application
@@ -531,7 +605,7 @@ thread cleaner:
 						process_info.detached = true
 						inactive_apps.remove(process_info.ia_iterator)
 						group.size--
-						count--
+						mutate_count(count - 1)
 						if processes.empty():
 							detach_group_without_lock(group)
 

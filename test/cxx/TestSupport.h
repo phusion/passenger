@@ -10,6 +10,8 @@
 #include <cstdio>
 #include <cerrno>
 #include <cstring>
+#include <ctime>
+#include <unistd.h>
 #include <utime.h>
 
 #include <oxt/thread.hpp>
@@ -35,6 +37,21 @@ using namespace oxt;
 			cerr << e.what() << "\n" << e.backtrace();    \
 			throw;                                        \
 		}                                                     \
+	} while (0)
+
+#define EVENTUALLY(deadline, code)					\
+	do {								\
+		time_t deadlineTime = time(NULL) + deadline;		\
+		bool result = false;					\
+		while (!result && time(NULL) < deadlineTime) {		\
+			code						\
+			if (!result) {					\
+				usleep(10000);				\
+			}						\
+		}							\
+		if (!result) {						\
+			fail("EVENTUALLY(" #code ") failed");		\
+		}							\
 	} while (0)
 
 
