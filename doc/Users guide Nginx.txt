@@ -897,13 +897,16 @@ whenever Phusion Passenger cleans up idle instances. You should set this option 
 non-zero value if you want to avoid potentially long startup times after a website
 has been idle for an extended period.
 
-Please note that this option does *not* pre-start application instances during Apache
-startup. It just makes sure that, once application instances are started, at least
-the given amount will be kept around. If you want to pre-start application instances
-during Nginx startup, then you should use the <<PassengerPreStart,passenger_pre_start>>
-directive, possibly in combination with passenger_min_instances. This behavior might
-seem counter-intuitive at first sight, but <<PassengerPreStart,passenger_pre_start>>
-explains the rationale behind it.
+Please note that this option does *not* pre-start application instances during Nginx
+startup. It just makes sure that when the application is first accessed:
+
+1. at least the given number of instances will be spawned.
+2. the given number of processes will be kept around even when instances are being
+   idle cleaned (see <<PassengerPoolIdleTime,passenger_pool_idle_time>>).
+
+If you want to pre-start application instances during Nginx startup, then you should use the <<PassengerPreStart,passenger_pre_start>> directive, possibly in combination with
+'passenger_min_instances'. This behavior might seem counter-intuitive at first sight,
+but <<PassengerPreStart,passenger_pre_start>> explains the rationale behind it.
 
 For example, suppose that you have the following configuration:
 
@@ -917,20 +920,21 @@ http {
         listen 80;
         server_name foobar.com;
         root /webapps/foobar/public;
-        passenger_min_instances 2;
+        passenger_min_instances 3;
     }
 }
 ---------------------------------
 
 When you start Nginx, there are 0 application instances for 'foobar.com'. Things will
 stay that way until someone visits 'foobar.com'. Suppose that there is only 1 visitor.
-1 application instance will be started. After 10 seconds, when the idle timeout has
-been reached, this 1 application instance will not be cleaned up.
+1 application instance will be started immediately to serve the visitor, while 2 will
+be spawned in the background. After 10 seconds, when the idle timeout has
+been reached, these 3 application instances will not be cleaned up.
 
 Now suppose that there's a sudden spike of traffic, and 100 users visit 'foobar.com'
-simultanously. Phusion Passenger will start 15 application instances. After the idle
-timeout of 10 seconds have passed, Phusion Passenger will clean up 13 application
-instances, keeping 2 instances around.
+simultanously. Phusion Passenger will start 12 more application instances. After the idle
+timeout of 10 seconds have passed, Phusion Passenger will clean up 12 application
+instances, keeping 3 instances around.
 
 The passenger_min_instances option may occur in the following places:
 
@@ -1001,7 +1005,7 @@ A few things to be careful of:
     handles.
 - You will probably want to combine this option with
   <<PassengerMinInstances,passenger_min_instances>> because application instances
-  started with passenger_pre_start are subject to the usual idle timeout rules.
+  started with 'passenger_pre_start' are subject to the usual idle timeout rules.
   See the example below for an explanation.
 
 This option may only occur in the 'http' configuration block. It may be specified
