@@ -475,14 +475,14 @@ private function spawner_thread_callback(group, options):
 				return
 		on exception:
 			lock.synchronize:
-				# We want to report the error to the browser
-				# but there's no way to do this in this thread, so
-				# we just remove the entire group and have the next
-				# get() call spawn the process and display the
-				# error.
 				if (!group.detached):
 					group.spawning = false
 					group.spawner_thread = null
+					# We want to report the error to the browser
+					# but there's no way to do this in this thread, so
+					# we just remove the entire group and have the next
+					# get() call spawn the process and display the
+					# error.
 					remove_group_without_lock(group)
 				return
 		
