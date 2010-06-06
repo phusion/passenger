@@ -463,6 +463,11 @@ private:
 		       fileChangeChecker.changed(restartFile, options.statThrottleRate);
 	}
 	
+	bool spawningAllowed(const GroupPtr &group, const PoolOptions &options) const {
+		return ( count < max ) &&
+			( (maxPerApp == 0) || (group->size < maxPerApp) );
+	}
+	
 	void dumpProcessInfoAsXml(const ProcessInfo *processInfo, bool includeSensitiveInformation,
 	                          stringstream &result) const
 	{
@@ -634,7 +639,8 @@ private:
 			P_ASSERT_WITH_VOID_RETURN(verifyState(),
 				"ApplicationPool state is valid:\n" << inspectWithoutLock());
 			
-			if (group->size >= options.minProcesses) {
+			if (group->size >= options.minProcesses
+			 || !spawningAllowed(group, options)) {
 				group->spawning = false;
 				group->spawnerThread.reset();
 				return;
@@ -893,11 +899,7 @@ private:
 					inactiveApps.erase(processInfo->ia_iterator);
 					mutateActive(active + 1);
 				} else {
-					bool spawningAllowed =
-						( count < max ) &&
-						( (maxPerApp == 0) || (group->size < maxPerApp) ) &&
-						( !group->spawning );
-					if (spawningAllowed) {
+					if (!group->spawning && spawningAllowed(group, options)) {
 						P_DEBUG("Spawning another process for " << appRoot <<
 							" in the background in order to handle the load");
 						spawnInBackground(group, options);
@@ -953,7 +955,7 @@ private:
 				processInfo->iterator--;
 				mutateCount(count + 1);
 				mutateActive(active + 1);
-				if (options.minProcesses > 1 && count < max) {
+				if (options.minProcesses > 1 && spawningAllowed(group, options)) {
 					spawnInBackground(group, options);
 				}
 			}

@@ -314,9 +314,7 @@ private function checkout_without_lock(app_root, options):
 			# one of them now or we wait until one of them becomes
 			# available. And, if we're allowed to, we spawn an
 			# extra process in the background.
-			if ( count < max ) and
-			   ( (max_per_app == 0) or (group.size < max_per_app) ) and
-			   ( !group.spawning ):
+			if spawning_allowed(group, options) and !group.spawning:
 				spawn_in_background(group, options)
 			process_info = select_process(processes, options)
 			if (process_info == null):
@@ -365,7 +363,7 @@ private function checkout_without_lock(app_root, options):
 		process_info.iterator = iterator
 		mutate_count(count + 1)
 		mutate_active(active + 1)
-		if (options.min_processes > 1) and (count < max):
+		if (options.min_processes > 1) and spawning_allowed(group, options):
 			spawn_in_background(group, options)
 	
 	group.max_requests = options.max_requests
@@ -412,6 +410,11 @@ private function needs_restart(app_root, options):
 	return (file_exists("$restart_dir/always_restart.txt")) or
 	       (we haven't seen "$restart_dir/restart.txt" before) or
 	       ("$restart_dir/restart.txt" changed since the last time we checked)
+
+
+private function spawning_allowed(group, options):
+	return ( count < max ) and
+		( (max_per_app == 0) or (group.size < max_per_app) )
 
 
 # Precondition: !group.detached
@@ -494,7 +497,8 @@ private function spawner_thread_callback(group, options):
 				process_info.ia_iterator = inactive_apps.add_to_back(process_info)
 				group.size++
 				mutate_count(count + 1)
-				if (group.size >= options.min_processes):
+				if (group.size >= options.min_processes) or
+				   (!spawning_allowed(group, options)):
 					group.spawning = false
 					group.spawner_thread = null
 					return
