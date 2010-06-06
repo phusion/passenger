@@ -550,26 +550,6 @@ private:
 		return false;
 	}
 	
-	/**
-	 * Marks all ProcessInfo objects as detached. Doesn't lock the data structures.
-	 */
-	void markAllAsDetached() {
-		GroupMap::iterator group_it;
-		GroupMap::iterator group_it_end = groups.end();
-		
-		for (group_it = groups.begin(); group_it != group_it_end; group_it++) {
-			GroupPtr &group = group_it->second;
-			ProcessInfoList &processes = group->processes;
-			ProcessInfoList::iterator process_info_it = processes.begin();
-			ProcessInfoList::iterator process_info_it_end = processes.end();
-			
-			for (; process_info_it != process_info_it_end; process_info_it++) {
-				ProcessInfoPtr &processInfo = *process_info_it;
-				processInfo->detached = true;
-			}
-		}
-	}
-	
 	void cleanerThreadMainLoop() {
 		this_thread::disable_syscall_interruption dsi;
 		unique_lock<boost::mutex> l(lock);
@@ -984,10 +964,13 @@ public:
 			lock_guard<boost::mutex> l(lock);
 			destroying = true;
 			cleanerThreadSleeper.notify_one();
-			markAllAsDetached();
+			while (!groups.empty()) {
+				detachGroupWithoutLock(groups.begin()->second);
+			}
 		}
 		cleanerThread->join();
 		delete cleanerThread;
+		
 		if (analyticsCollectionThread != NULL) {
 			analyticsCollectionThread->interrupt_and_join();
 			delete analyticsCollectionThread;
@@ -1075,12 +1058,23 @@ public:
 	virtual void clear() {
 		lock_guard<boost::mutex> l(lock);
 		P_DEBUG("Clearing pool");
-		markAllAsDetached();
-		groups.clear();
-		inactiveApps.clear();
-		count = 0;
-		active = 0;
+		
+		while (!groups.empty()) {
+			detachGroupWithoutLock(groups.begin()->second);
+		}
 		activeOrMaxChanged.notify_all();
+		
+		P_ASSERT_WITH_VOID_RETURN(groups.size() == 0,
+			"groups.size() == 0\n" << inspectWithoutLock());
+		P_ASSERT_WITH_VOID_RETURN(inactiveApps.size() == 0,
+			"inactiveApps.size() == 0\n" << inspectWithoutLock());
+		P_ASSERT_WITH_VOID_RETURN(count == 0,
+			"count == 0\n" << inspectWithoutLock());
+		P_ASSERT_WITH_VOID_RETURN(active == 0,
+			"active == 0\n" << inspectWithoutLock());
+		P_ASSERT_WITH_VOID_RETURN(verifyState(),
+			"ApplicationPool state is valid:\n" << inspectWithoutLock());
+		
 		// TODO: clear cstat and fileChangeChecker, and reload all spawner servers.
 	}
 	

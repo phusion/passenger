@@ -145,10 +145,18 @@ void setDebugFile(const char *logFile = NULL);
 				return result_if_failed; \
 			} \
 		} while (false)
+	#define P_ASSERT_WITH_VOID_RETURN(expr, message) \
+		do { \
+			if (!(expr)) { \
+				P_ERROR("Assertion failed: " << message); \
+				return; \
+			} \
+		} while (false)
 #else
 	#define P_TRACE(level, expr) do { /* nothing */ } while (false)
 	
 	#define P_ASSERT(expr, result_if_failed, message) do { /* nothing */ } while (false)
+	#define P_ASSERT_WITH_VOID_RETURN(expr, message) do { /* nothing */ } while (false)
 #endif
 
 
