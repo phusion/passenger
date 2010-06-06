@@ -289,16 +289,7 @@ private function checkout_without_lock(app_root, options):
 	if needs_restart(app_root, options):
 		Tell spawn server to reload code for options.app_group_name.
 		if (group != null):
-			for all process_info in group.processes:
-				if (process_info.sessions == 0):
-					inactive_apps.remove(process_info.ia_iterator)
-				else:
-					active--
-				group.processes.remove(process_info.iterator)
-				process_info.detached = true
-				count--
-			group.detached = true
-			groups.remove(options.app_group_name)
+			detach_group_without_lock(group)
 			group = null
 	
 	if (group != null):
@@ -364,8 +355,7 @@ private function checkout_without_lock(app_root, options):
 			processes = group.processes
 			processes.remove(process_info.iterator)
 			if processes.empty():
-				group.detached = true
-				groups.remove(process_info.group_name)
+				detach_group_without_lock(group)
 			else:
 				group.size--
 			count--
@@ -405,6 +395,20 @@ private function needs_restart(app_root, options):
 	       ("$restart_dir/restart.txt" changed since the last time we checked)
 
 
+# Precondition: !group.detached
+private function detach_group_without_lock(group):
+	for all process_info in group.processes:
+		if (process_info.sessions == 0):
+			inactive_apps.remove(process_info.ia_iterator)
+		else:
+			active--
+		group.processes.remove(process_info.iterator)
+		process_info.detached = true
+		count--
+	group.detached = true
+	groups.remove(options.app_group_name)
+
+
 private function select_process(processes, options):
 	if options.use_global_queue:
 		# So we wait until _active_ has changed, then
@@ -432,8 +436,7 @@ private function detach_without_lock(identifier):
 				processes.remove(process_info.iterator)
 				group.size--
 				if processes.empty():
-					group.detached = true
-					groups.remove(group.name)
+					detach_group_without_lock(group)
 				if process_info.sessions == 0:
 					inactive_apps.remove(process_info.ia_iterator)
 				else:
@@ -473,8 +476,7 @@ callback session_has_been_closed(session, process_info):
 			processes.remove(process_info.iterator)
 			group.size--
 			if processes.empty():
-				group.detached = true
-				groups.remove(group.name)
+				detach_group_without_lock(group)
 			count--
 			if (process_info.sessions == 0):
 				inactive_apps.remove(process_info.ia_iterator)
@@ -531,6 +533,5 @@ thread cleaner:
 						group.size--
 						count--
 						if processes.empty():
-							group.detached = true
-							groups.remove(group.name)
+							detach_group_without_lock(group)
 

@@ -47,6 +47,7 @@
 #include <unistd.h>
 #include <ctime>
 #include <cerrno>
+#include <cassert>
 #ifdef TESTING_APPLICATION_POOL
 	#include <cstdlib>
 #endif
@@ -236,7 +237,7 @@ private:
 			
 			GroupMap::iterator it;
 			it = data->groups.find(processInfo->groupName);
-			Group *group = it->second.get();
+			GroupPtr group = it->second;
 			ProcessInfoList *processes = &group->processes;
 			
 			processInfo->processed++;
@@ -247,8 +248,7 @@ private:
 				processes->erase(processInfo->iterator);
 				group->size--;
 				if (processes->empty()) {
-					group->detached = true;
-					data->groups.erase(processInfo->groupName);
+					Pool::detachGroupWithoutLock(data, group);
 				}
 				data->count--;
 				if (processInfo->sessions == 0) {
@@ -456,6 +456,35 @@ private:
 		result << "</process>";
 	}
 	
+	static void detachGroupWithoutLock(const SharedDataPtr &data, const GroupPtr &group) {
+		assert(!group->detached);
+		
+		ProcessInfoList *processes = &group->processes;
+		ProcessInfoList::iterator list_it;
+		
+		for (list_it = processes->begin(); list_it != processes->end(); list_it++) {
+			ProcessInfoPtr processInfo = *list_it;
+			
+			if (processInfo->sessions == 0) {
+				data->inactiveApps.erase(processInfo->ia_iterator);
+			} else {
+				data->active--;
+				data->activeOrMaxChanged.notify_all();
+			}
+			list_it--;
+			processes->erase(processInfo->iterator);
+			processInfo->detached = true;
+			data->count--;
+		}
+		
+		group->detached = true;
+		data->groups.erase(group->name);
+	}
+	
+	void detachGroupWithoutLock(const GroupPtr &group) {
+		Pool::detachGroupWithoutLock(data, group);
+	}
+	
 	ProcessInfoPtr selectProcess(ProcessInfoList *processes, const PoolOptions &options,
 	                             unique_lock<boost::mutex> &l)
 	{
@@ -505,8 +534,7 @@ private:
 					processes.erase(processInfo->iterator);
 					group->size--;
 					if (processes.empty()) {
-						group->detached = true;
-						groups.erase(group->name);
+						detachGroupWithoutLock(group);
 					}
 					if (processInfo->sessions == 0) {
 						inactiveApps.erase(processInfo->ia_iterator);
@@ -602,8 +630,7 @@ private:
 							count--;
 							
 							if (processes->empty()) {
-								group->detached = true;
-								groups.erase(group->name);
+								detachGroupWithoutLock(group);
 							}
 						}
 					}
@@ -722,7 +749,7 @@ private:
 	 * @throws TimeRetrievalException Something went wrong while retrieving the system time.
 	 * @throws Anything thrown by options.environmentVariables->getItems().
 	 */
-	pair<ProcessInfoPtr, Group *>
+	pair<ProcessInfoPtr, GroupPtr>
 	checkoutWithoutLock(unique_lock<boost::mutex> &l, const PoolOptions &options) {
 		beginning_of_function:
 		
@@ -732,7 +759,7 @@ private:
 		const string &appRoot = options.appRoot;
 		const string appGroupName = options.getAppGroupName();
 		ProcessInfoPtr processInfo;
-		Group *group;
+		GroupPtr group;
 		ProcessInfoList *processes;
 		
 		try {
@@ -742,31 +769,13 @@ private:
 				P_DEBUG("Restarting " << appGroupName);
 				spawnManager->reload(appGroupName);
 				if (group_it != groups.end()) {
-					ProcessInfoList::iterator list_it;
-					group = group_it->second.get();
-					processes = &group->processes;
-					for (list_it = processes->begin(); list_it != processes->end(); list_it++) {
-						processInfo = *list_it;
-						if (processInfo->sessions == 0) {
-							inactiveApps.erase(processInfo->ia_iterator);
-						} else {
-							active--;
-							activeOrMaxChanged.notify_all();
-						}
-						list_it--;
-						processes->erase(processInfo->iterator);
-						processInfo->detached = true;
-						count--;
-					}
-					
-					group->detached = true;
-					groups.erase(appGroupName);
+					detachGroupWithoutLock(group_it->second);
 					group_it = groups.end();
 				}
 			}
 			
 			if (group_it != groups.end()) {
-				group = group_it->second.get();
+				group = group_it->second;
 				processes = &group->processes;
 				
 				if (processes->front()->sessions == 0) {
@@ -820,12 +829,11 @@ private:
 						" because an extra slot is necessary for spawning");
 					inactiveApps.pop_front();
 					processInfo->detached = true;
-					group = groups[processInfo->groupName].get();
+					group = groups[processInfo->groupName];
 					processes = &group->processes;
 					processes->erase(processInfo->iterator);
 					if (processes->empty()) {
-						group->detached = true;
-						groups.erase(processInfo->groupName);
+						detachGroupWithoutLock(group);
 					} else {
 						group->size--;
 					}
@@ -841,11 +849,11 @@ private:
 				}
 				processInfo->groupName = appGroupName;
 				processInfo->sessions = 0;
-				group = new Group();
+				group = ptr(new Group());
 				group->name = appGroupName;
 				group->appRoot = appRoot;
 				group->size = 1;
-				groups[appGroupName] = ptr(group);
+				groups[appGroupName] = group;
 				processes = &group->processes;
 				processes->push_back(processInfo);
 				processInfo->iterator = processes->end();
@@ -997,7 +1005,7 @@ public:
 		while (true) {
 			attempt++;
 			
-			pair<ProcessInfoPtr, Group *> p;
+			pair<ProcessInfoPtr, GroupPtr> p;
 			{
 				unique_lock<boost::mutex> l(lock);
 				p = checkoutWithoutLock(l, options);
