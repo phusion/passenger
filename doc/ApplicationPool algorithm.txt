@@ -487,7 +487,7 @@ callback session_has_been_closed(session, process_info):
 			process_info.sessions--
 			if (process_info.sessions == 0):
 				processes.move_to_front(process_info.iterator)
-				process_info.ia_iterator = inactive_apps.add_to_back(process_info.process)
+				process_info.ia_iterator = inactive_apps.add_to_back(process_info)
 				active--
 
 

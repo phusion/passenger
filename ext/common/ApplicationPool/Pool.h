@@ -279,7 +279,7 @@ private:
 	SharedDataPtr data;
 	oxt::thread *cleanerThread;
 	oxt::thread *analyticsCollectionThread;
-	bool done;
+	bool destroying;
 	unsigned int maxIdleTime;
 	unsigned int waitingOnGlobalQueue;
 	condition_variable cleanerThreadSleeper;
@@ -574,10 +574,10 @@ private:
 		this_thread::disable_syscall_interruption dsi;
 		unique_lock<boost::mutex> l(lock);
 		try {
-			while (!done && !this_thread::interruption_requested()) {
+			while (!destroying && !this_thread::interruption_requested()) {
 				if (maxIdleTime == 0) {
 					cleanerThreadSleeper.wait(l);
-					if (done) {
+					if (destroying) {
 						// ApplicationPool::Pool is being destroyed.
 						break;
 					} else {
@@ -590,7 +590,7 @@ private:
 					xt.sec += maxIdleTime + 1;
 					if (cleanerThreadSleeper.timed_wait(l, xt)) {
 						// Condition was woken up.
-						if (done) {
+						if (destroying) {
 							// ApplicationPool::Pool is being destroyed.
 							break;
 						} else {
@@ -894,7 +894,7 @@ private:
 	/** @throws boost::thread_resource_error */
 	void initialize(const AnalyticsLoggerPtr &analyticsLogger)
 	{
-		done = false;
+		destroying = false;
 		max = DEFAULT_MAX_POOL_SIZE;
 		count = 0;
 		active = 0;
@@ -982,7 +982,7 @@ public:
 		this_thread::disable_interruption di;
 		{
 			lock_guard<boost::mutex> l(lock);
-			done = true;
+			destroying = true;
 			cleanerThreadSleeper.notify_one();
 			markAllAsDetached();
 		}
