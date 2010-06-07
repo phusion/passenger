@@ -282,7 +282,7 @@ public:
 	 *                     of the agents during its initialization phase.
 	 * @throws RuntimeException Something went wrong.
 	 */
-	void start(unsigned int logLevel, const string &debugLogFile,
+	void start(int logLevel, const string &debugLogFile,
 	           pid_t webServerPid, const string &tempDir,
 	           bool userSwitching, const string &defaultUser, const string &defaultGroup,
 	           uid_t webServerWorkerUid, gid_t webServerWorkerGid,

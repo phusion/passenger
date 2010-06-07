@@ -66,7 +66,7 @@ passenger_create_main_conf(ngx_conf_t *cf)
         return NGX_CONF_ERROR;
     }
     
-    conf->log_level     = (ngx_uint_t) NGX_CONF_UNSET;
+    conf->log_level     = (ngx_int_t) NGX_CONF_UNSET;
     conf->debug_log_file.data = NULL;
     conf->debug_log_file.len = 0;
     conf->abort_on_startup_error = NGX_CONF_UNSET;
@@ -113,7 +113,7 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
         conf->ruby.len  = sizeof("ruby") - 1;
     }
     
-    if (conf->log_level == (ngx_uint_t) NGX_CONF_UNSET) {
+    if (conf->log_level == (ngx_int_t) NGX_CONF_UNSET) {
         conf->log_level = DEFAULT_LOG_LEVEL;
     }
     

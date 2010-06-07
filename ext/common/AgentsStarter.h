@@ -46,7 +46,7 @@ typedef void (*AfterForkCallback)(void *);
 
 AgentsStarter *agents_starter_new(AgentsStarterType type, char **error_message);
 int  agents_starter_start(AgentsStarter *as,
-                          unsigned int logLevel, const char *debugLogFile,
+                          int logLevel, const char *debugLogFile,
                           pid_t webServerPid,
                           const char *tempDir, int userSwitching,
                           const char *defaultUser, const char *defaultGroup,

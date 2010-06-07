@@ -61,7 +61,7 @@ typedef struct {
 typedef struct {
     ngx_str_t    root_dir;
     ngx_str_t    ruby;
-    ngx_uint_t   log_level;
+    ngx_int_t    log_level;
     ngx_str_t    debug_log_file;
     ngx_flag_t   abort_on_startup_error;
     ngx_uint_t   max_pool_size;
