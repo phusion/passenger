@@ -383,6 +383,17 @@ module TestHelper
 		end
 		raise e
 	end
+	
+	def inspect_server(name)
+		instance = PhusionPassenger::AdminTools::ServerInstance.list.first
+		if name
+			instance.connect(:passenger_status) do
+				return instance.send(name)
+			end
+		else
+			return instance
+		end
+	end
 end
 
 File.class_eval do

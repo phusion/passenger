@@ -1224,6 +1224,11 @@ public:
 		return count;
 	}
 	
+	virtual unsigned int getGlobalQueueSize() const {
+		lock_guard<boost::timed_mutex> l(lock);
+		return waitingOnGlobalQueue;
+	}
+	
 	virtual void setMaxPerApp(unsigned int maxPerApp) {
 		lock_guard<boost::timed_mutex> l(lock);
 		this->maxPerApp = maxPerApp;
@@ -1247,6 +1252,11 @@ public:
 		
 		result << "<?xml version=\"1.0\" encoding=\"iso8859-1\" ?>\n";
 		result << "<info>";
+		
+		result << "<active>" << toString(active) << "</active>";
+		result << "<count>" << toString(count) << "</count>";
+		result << "<max>" << toString(max) << "</max>";
+		result << "<global_queue_size>" << toString(waitingOnGlobalQueue) << "</global_queue_size>";
 		
 		result << "<groups>";
 		for (it = groups.begin(); it != groups.end(); it++) {

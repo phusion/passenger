@@ -245,6 +245,11 @@ class ServerInstance
 		return @client.xml
 	end
 	
+	def global_queue_size
+		doc = REXML::Document.new(xml)
+		return doc.elements["info/global_queue_size"].text.to_i
+	end
+	
 	def groups
 		doc = REXML::Document.new(xml)
 		

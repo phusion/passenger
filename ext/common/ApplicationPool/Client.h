@@ -590,6 +590,27 @@ public:
 		}
 	}
 	
+	virtual unsigned int getGlobalQueueSize() const {
+		TRACE_POINT();
+		checkConnection();
+		MessageChannel &channel(data->channel);
+		vector<string> args;
+		
+		try {
+			channel.write("getGlobalQueueSize", NULL);
+			checkSecurityResponse();
+			channel.read(args);
+			return atoi(args[0].c_str());
+		} catch (const SecurityException &) {
+			// Don't disconnect.
+			throw;
+		} catch (...) {
+			this_thread::disable_syscall_interruption dsi;
+			data->disconnect();
+			throw;
+		}
+	}
+	
 	virtual void setMaxPerApp(unsigned int max) {
 		TRACE_POINT();
 		checkConnection();

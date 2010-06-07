@@ -234,6 +234,19 @@ public:
 	virtual unsigned int getCount() const = 0;
 	
 	/**
+	 * Returns the number of clients waiting on the global queue.
+	 *
+	 * This method exposes an implementation detail of the underlying pooling algorithm.
+	 * It is used by unit tests to verify that the implementation is correct,
+	 * and thus should not be called directly.
+	 *
+	 * @throws IOException
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
+	 */
+	virtual unsigned int getGlobalQueueSize() const = 0;
+	
+	/**
 	 * Set a hard limit on the number of application instances that a single application
 	 * may spawn in this ApplicationPool. The exact behavior depends on the used algorithm, 
 	 * and is not specified by these API docs.

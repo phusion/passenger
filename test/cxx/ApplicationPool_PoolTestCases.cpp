@@ -662,7 +662,10 @@
 		// Previous session hasn't been closed yet, so pool should still
 		// be waiting.
 		usleep(100000);
-		ensure(!done);
+		ensure("(1)", !done);
+		ensure_equals("(2)", pool->getGlobalQueueSize(), 1u);
+		ensure_equals("(3)", pool->getActive(), 1u);
+		ensure_equals("(4)", pool->getCount(), 1u);
 		
 		// Close the previous session. The thread should now finish.
 		session.reset();
@@ -804,6 +807,7 @@
 		options.minProcesses = 3;
 		pool->setMax(3);
 		
+		// Spawn a single process.
 		SessionPtr session1 = pool->get(options);
 		ensure_equals(pool->getActive(), 1u);
 		ensure_equals(pool->getCount(), 1u);
@@ -812,6 +816,8 @@
 			"sleep 0.1\n"
 			"run lambda {}\n");
 		
+		// Now call get(); this one will use the previous process
+		// and spawn a new one in the background.
 		SessionPtr session2 = pool2->get(options);
 		ensure_equals(pool->getActive(), 1u);
 		ensure_equals(pool->getCount(), 1u);
@@ -865,6 +871,7 @@
 		
 		usleep(20000);
 		ensure("Still waiting on global queue", !done);
+		ensure_equals(pool->getGlobalQueueSize(), 1u);
 		
 		// Make 1 process available.
 		session1.reset();
@@ -922,6 +929,7 @@
 		// busy, and 2 threads waiting on the global queue.
 		usleep(20000);
 		ensure("Still waiting on global queue", !done1 && !done2);
+		ensure_equals(pool->getGlobalQueueSize(), 2u);
 		
 		// Increasing the max will cause one of the threads to wake
 		// up, start a spawn action in the background, and go to sleep

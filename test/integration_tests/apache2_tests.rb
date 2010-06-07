@@ -218,7 +218,6 @@ describe "Apache 2 module" do
 			@apache2.set_vhost('3.passenger.test', "#{@foobar.full_app_root}/public") do |vhost|
 				vhost << "RailsEnv development"
 				vhost << "PassengerSpawnMethod conservative"
-				vhost << "PassengerUseGlobalQueue on"
 				vhost << "PassengerRestartDir #{@foobar.full_app_root}/public"
 			end
 			
@@ -228,6 +227,20 @@ describe "Apache 2 module" do
 				vhost << "PassengerAppRoot #{@mycook2.full_app_root}"
 			end
 			
+			# These are used by global queueing tests.
+			@mycook3 = RailsStub.new('2.3/mycook')
+			@mycook3_url_root = "http://5.passenger.test:#{@apache2.port}"
+			@apache2.set_vhost('5.passenger.test', "#{@mycook3.full_app_root}/sites/some.site/public") do |vhost|
+				vhost << "PassengerAppRoot #{@mycook3.full_app_root}"
+				vhost << "PassengerMinInstances 3"
+			end
+			@mycook4 = RailsStub.new('2.3/mycook')
+			@mycook4_url_root = "http://6.passenger.test:#{@apache2.port}"
+			@apache2.set_vhost('6.passenger.test', "#{@mycook4.full_app_root}/public") do |vhost|
+				vhost << "PassengerUseGlobalQueue on"
+				vhost << "PassengerMinInstances 3"
+			end
+			
 			@apache2.start
 		end
 		
@@ -235,12 +248,14 @@ describe "Apache 2 module" do
 			@mycook.destroy
 			@foobar.destroy
 			@mycook2.destroy
+			@mycook3.destroy
 		end
 		
 		before :each do
 			@mycook.reset
 			@foobar.reset
 			@mycook2.reset
+			@mycook3.reset
 		end
 		
 		it "ignores the Rails application if RailsAutoDetect is off" do
@@ -303,23 +318,29 @@ describe "Apache 2 module" do
 		end
 		
 		describe "PassengerUseGlobalQueue" do
+			before :each do
+				
+			end
+			
 			after :each do
 				# Restart Apache in order to reset the application pool's state.
 				@apache2.stop
-				@apache2.start
 			end
 			
 			it "is off by default" do
-				@server = @mycook_url_root
+				@server = @mycook3_url_root
 				
-				# Spawn the application.
+				# Spawn 3 application processes.
 				get('/')
+				eventually do
+					inspect_server(:processes).size == 3
+				end
 				
-				threads = []
 				# Reserve all application pool slots.
+				threads = []
 				3.times do |i|
 					thread = Thread.new do
-						File.unlink("#{@mycook.app_root}/#{i}.txt") rescue nil
+						File.unlink("#{@mycook3.app_root}/#{i}.txt") rescue nil
 						get("/welcome/sleep_until_exists?name=#{i}.txt")
 					end
 					threads << thread
@@ -327,11 +348,17 @@ describe "Apache 2 module" do
 				
 				# Wait until all application instances are waiting
 				# for the quit file.
-				while !File.exist?("#{@mycook.app_root}/waiting_0.txt") ||
-				      !File.exist?("#{@mycook.app_root}/waiting_1.txt") ||
-				      !File.exist?("#{@mycook.app_root}/waiting_2.txt")
-					sleep 0.1
+				eventually(5) do
+					File.exist?("#{@mycook3.app_root}/waiting_0.txt") &&
+					File.exist?("#{@mycook3.app_root}/waiting_1.txt") &&
+					File.exist?("#{@mycook3.app_root}/waiting_2.txt")
 				end
+				processes = inspect_server(:processes)
+				processes.should have(3).items
+				processes.each do |process|
+					process.sessions.should == 1
+				end
+				inspect_server(:global_queue_size).should == 0
 				
 				# While all slots are reserved, make two more requests.
 				first_request_done = false
@@ -348,54 +375,65 @@ describe "Apache 2 module" do
 				threads << thread
 				
 				# These requests should both block.
-				sleep 0.5
+				eventually(5) do
+					sessions = []
+					inspect_server(:processes).each do |process|
+						sessions << process.sessions
+					end
+					sessions.sort == [1, 2, 2]
+				end
 				first_request_done.should be_false
 				second_request_done.should be_false
+				inspect_server(:global_queue_size).should == 0
 				
-				# One of the requests should still be blocked
+				# At least one of the requests should still be blocked
 				# if one application instance frees up.
-				File.open("#{@mycook.app_root}/2.txt", 'w')
-				begin
-					Timeout.timeout(5) do
-						while !first_request_done && !second_request_done
-							sleep 0.1
-						end
-					end
-				rescue Timeout::Error
-				end
-				(first_request_done || second_request_done).should be_true
+				File.touch("#{@mycook3.app_root}/2.txt")
+				sleep 1
+				(!first_request_done || !second_request_done).should be_true
 				
-				File.open("#{@mycook.app_root}/0.txt", 'w')
-				File.open("#{@mycook.app_root}/1.txt", 'w')
-				File.open("#{@mycook.app_root}/2.txt", 'w')
+				File.touch("#{@mycook3.app_root}/0.txt")
+				File.touch("#{@mycook3.app_root}/1.txt")
+				eventually(5) do
+					first_request_done && second_request_done
+				end
 				threads.each do |thread|
 					thread.join
 				end
 			end
 			
 			it "works and is per-virtual host" do
-				@server = @foobar_url_root
+				@server = @mycook4_url_root
 				
-				# Spawn the application.
+				# Spawn 3 application processes.
 				get('/')
+				eventually do
+					inspect_server(:processes).size == 3
+				end
 				
-				threads = []
 				# Reserve all application pool slots.
+				threads = []
 				3.times do |i|
 					thread = Thread.new do
-						File.unlink("#{@foobar.app_root}/#{i}.txt") rescue nil
-						get("/foo/sleep_until_exists?name=#{i}.txt")
+						File.unlink("#{@mycook4.app_root}/#{i}.txt") rescue nil
+						get("/welcome/sleep_until_exists?name=#{i}.txt")
 					end
 					threads << thread
 				end
 				
 				# Wait until all application instances are waiting
 				# for the quit file.
-				while !File.exist?("#{@foobar.app_root}/waiting_0.txt") ||
-				      !File.exist?("#{@foobar.app_root}/waiting_1.txt") ||
-				      !File.exist?("#{@foobar.app_root}/waiting_2.txt")
-					sleep 0.1
+				eventually(5) do
+					File.exist?("#{@mycook4.app_root}/waiting_0.txt") &&
+					File.exist?("#{@mycook4.app_root}/waiting_1.txt") &&
+					File.exist?("#{@mycook4.app_root}/waiting_2.txt")
 				end
+				processes = inspect_server(:processes)
+				processes.should have(3).items
+				processes.each do |process|
+					process.sessions.should == 1
+				end
+				inspect_server(:global_queue_size).should == 0
 				
 				# While all slots are reserved, make two more requests.
 				first_request_done = false
@@ -411,27 +449,25 @@ describe "Apache 2 module" do
 				end
 				threads << thread
 				
-				# These requests should both block.
-				sleep 0.5
-				first_request_done.should be_false
-				second_request_done.should be_false
+				# These requests should both be waiting on the global queue.
+				sleep 1
+				processes = inspect_server(:processes)
+				processes.should have(3).items
+				processes.each do |process|
+					process.sessions.should == 1
+				end
+				inspect_server(:global_queue_size).should == 2
 				
 				# Both requests should be processed if one application instance frees up.
-				File.open("#{@foobar.app_root}/2.txt", 'w')
-				begin
-					Timeout.timeout(5) do
-						while !first_request_done || !second_request_done
-							sleep 0.1
-						end
-					end
-				rescue Timeout::Error
+				File.touch("#{@mycook4.app_root}/2.txt")
+				eventually(5) do
+					first_request_done && second_request_done
 				end
-				first_request_done.should be_true
-				second_request_done.should be_true
+				inspect_server(:global_queue_size).should == 0
 				
-				File.open("#{@foobar.app_root}/0.txt", 'w')
-				File.open("#{@foobar.app_root}/1.txt", 'w')
-				File.open("#{@foobar.app_root}/2.txt", 'w')
+				File.touch("#{@mycook4.app_root}/0.txt")
+				File.touch("#{@mycook4.app_root}/1.txt")
+				File.touch("#{@mycook4.app_root}/2.txt")
 				threads.each do |thread|
 					thread.join
 				end

@@ -378,6 +378,12 @@ private:
 		commonContext.channel.write(toString(pool->getCount()).c_str(), NULL);
 	}
 	
+	void processGetGlobalQueueSize(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
+		TRACE_POINT();
+		commonContext.requireRights(Account::GET_PARAMETERS);
+		commonContext.channel.write(toString(pool->getGlobalQueueSize()).c_str(), NULL);
+	}
+	
 	void processSetMaxPerApp(CommonClientContext &commonContext, SpecificContext *specificContext, unsigned int maxPerApp) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::SET_PARAMETERS);
@@ -441,6 +447,8 @@ public:
 				processGetActive(commonContext, specificContext, args);
 			} else if (args[0] == "getCount" && args.size() == 1) {
 				processGetCount(commonContext, specificContext, args);
+			} else if (args[0] == "getGlobalQueueSize" && args.size() == 1) {
+				processGetGlobalQueueSize(commonContext, specificContext, args);
 			} else if (args[0] == "setMaxPerApp" && args.size() == 2) {
 				processSetMaxPerApp(commonContext, specificContext, atoi(args[1]));
 			} else if (args[0] == "getSpawnServerPid" && args.size() == 1) {
