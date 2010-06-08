@@ -203,6 +203,9 @@ private
 	
 	def print_dependency_installation_instructions(dep)
 		color_puts " * To install <yellow>#{dep.name}</yellow>:"
+		if dep.install_comments
+			color_puts "   " << dep.install_comments
+		end
 		if !dep.install_command.nil?
 			color_puts "   Please run <b>#{dep.install_command}</b> as root."
 		elsif !dep.install_instructions.nil?

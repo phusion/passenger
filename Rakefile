@@ -32,6 +32,7 @@ require 'phusion_passenger/platform_info/operating_system'
 require 'phusion_passenger/platform_info/binary_compatibility'
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/platform_info/apache'
+require 'phusion_passenger/platform_info/curl'
 require 'phusion_passenger/platform_info/compiler'
 require 'phusion_passenger/platform_info/documentation_tools'
 require "#{source_root}/config" if File.exist?("#{source_root}/config.rb")
@@ -341,10 +342,12 @@ end
 		sh "mkdir -p agents" if !File.directory?("agents")
 		create_executable('agents/PassengerLoggingAgent',
 			'ext/common/LoggingAgent/Main.cpp',
-			"-Iext -Iext/common #{LIBEV_CFLAGS} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
+			"-Iext -Iext/common #{LIBEV_CFLAGS} #{PlatformInfo.curl_flags} " <<
+			"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
 			"#{COMMON_LIBRARY} " <<
 			"#{BOOST_OXT_LIBRARY} " <<
 			"#{LIBEV_LIBS} " <<
+			"#{PlatformInfo.curl_libs} " <<
 			"#{PlatformInfo.portability_ldflags} " <<
 			"#{EXTRA_LDFLAGS}")
 	end
@@ -606,9 +609,11 @@ end
 	
 	### C++ components tests ###
 	
-	TEST_CXX_CFLAGS = "-Iext -Iext/common -Iext/nginx #{LIBEV_CFLAGS} -Itest/support " <<
+	TEST_CXX_CFLAGS = "-Iext -Iext/common -Iext/nginx " <<
+		"#{LIBEV_CFLAGS} #{PlatformInfo.curl_flags} -Itest/support " <<
 		"#{TEST_COMMON_CFLAGS}"
 	TEST_CXX_LDFLAGS = "#{TEST_COMMON_LIBRARY} #{TEST_BOOST_OXT_LIBRARY} #{LIBEV_LIBS} " <<
+		"#{PlatformInfo.curl_libs} " <<
 		"#{PlatformInfo.portability_ldflags} #{EXTRA_LDFLAGS}"
 	TEST_CXX_OBJECTS = {
 		'test/cxx/CxxTestMain.o' => %w(

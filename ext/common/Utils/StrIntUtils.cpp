@@ -26,6 +26,7 @@
 #include "StrIntUtils.h"
 #include <cstdio>
 #include <cstdlib>
+#include <cctype>
 
 namespace Passenger {
 
@@ -41,6 +42,24 @@ fillInMiddle(unsigned int max, const string &prefix, const string &middle, const
 	} else {
 		return prefix + middle.substr(0, fillSize) + postfix;
 	}
+}
+
+bool
+startsWith(const StaticString &str, const StaticString &substr) {
+	if (str.size() >= substr.size()) {
+		return memcmp(str.c_str(), substr.c_str(), substr.size()) == 0;
+	} else {
+		return false;
+	}
+}
+
+string
+toLowerCase(const StaticString &str) {
+	string result(str.size(), '\0');
+	for (string::size_type i = 0; i < str.size(); i++) {
+		result[i] = tolower(str[i]);
+	}
+	return result;
 }
 
 void

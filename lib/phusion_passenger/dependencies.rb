@@ -28,6 +28,7 @@ require 'phusion_passenger/platform_info'
 require 'phusion_passenger/platform_info/apache'
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/platform_info/linux'
+require 'phusion_passenger/platform_info/curl'
 require 'phusion_passenger/platform_info/documentation_tools'
 
 module PhusionPassenger
@@ -421,6 +422,54 @@ module Dependencies # :nodoc: all
 			end
 		end
 		dep.install_instructions = "Please install RubyGems first, then run <b>#{PlatformInfo.gem_command || "gem"} install rack</b>"
+	end
+	
+	Curl_Dev = Dependency.new do |dep|
+		dep.name = "Curl development headers with SSL support"
+		dep.define_checker do |result|
+			source_file = '/tmp/passenger-curl-check.c'
+			output_file = '/tmp/passenger-curl-check'
+			begin
+				found = true
+				File.open(source_file, 'w') do |f|
+					f.puts("#include <curl/curl.h>")
+					f.puts("int main() {")
+					f.puts("  curl_global_init(CURL_GLOBAL_ALL);")
+					f.puts("  return 0;")
+					f.puts("}")
+				end
+				Dir.chdir(File.dirname(source_file)) do
+					command = "(gcc #{ENV['CFLAGS']} " +
+						"-o '#{output_file}' '#{source_file}' " +
+						"#{PlatformInfo.curl_flags} #{PlatformInfo.curl_libs}) " +
+						">/dev/null 2>/dev/null"
+					if !system(command)
+						found = false
+					end
+				end
+				
+				if found && !PlatformInfo.curl_supports_ssl?
+					dep.install_comments = "Curl was found, but it doesn't support SSL."
+					found = false
+				end
+				result.found(found)
+			ensure
+				File.unlink(source_file) rescue nil
+				File.unlink(output_file) rescue nil
+			end
+		end
+		dep.install_instructions = "Please download Curl from <b>http://curl.haxx.se/libcurl</b> " +
+			"and make sure you install it <b>with SSL support</b>."
+		if RUBY_PLATFORM =~ /linux/
+			tags = PlatformInfo.linux_distro_tags
+			if tags.include?(:debian)
+				dep.install_instructions = "Please run " +
+					"<b>apt-get install libcurl4-openssl-dev</b> " +
+					"or <b>libcurl4-gnutls-dev</b>, whichever you prefer."
+			elsif tags.include?(:redhat)
+				dep.install_command = "yum install curl-devel"
+			end
+		end
 	end
 	
 	OpenSSL_Dev = Dependency.new do |dep|

@@ -472,7 +472,10 @@ private:
 			UPDATE_TRACE_POINT();
 			AnalyticsLogPtr log;
 			if (enableAnalytics) {
-				log = analyticsLogger->newTransaction(options.getAppGroupName());
+				log = analyticsLogger->newTransaction(
+					options.getAppGroupName(),
+					"requests",
+					parser.getHeader("PASSENGER_UNION_STATION_KEY"));
 				options.analytics = true;
 				options.log = log;
 			} else {

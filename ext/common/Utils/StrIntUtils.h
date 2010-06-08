@@ -59,6 +59,16 @@ string fillInMiddle(unsigned int max, const string &prefix, const string &middle
 	const string &postfix = "");
 
 /**
+ * Checks whether <tt>str</tt> starts with <tt>substr</tt>.
+ */
+bool startsWith(const StaticString &str, const StaticString &substr);
+
+/**
+ * Converts the string to lowercase.
+ */
+string toLowerCase(const StaticString &str);
+
+/**
  * Split the given string using the given separator.
  *
  * @param str The string to split.

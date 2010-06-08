@@ -85,7 +85,9 @@ module AnalyticsLogging
 	def self.new_transaction_log(env, category = :requests)
 		if env[PASSENGER_TXN_ID]
 			group_name = env[PASSENGER_GROUP_NAME]
-			log = @@analytics_logger.new_transaction(group_name, category)
+			union_station_key = env[PASSENGER_UNION_STATION_KEY]
+			log = @@analytics_logger.new_transaction(group_name, category,
+				union_station_key)
 			begin
 				yield log
 			ensure

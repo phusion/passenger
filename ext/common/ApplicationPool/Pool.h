@@ -133,6 +133,7 @@ private:
 		shared_ptr<oxt::thread> spawnerThread;
 		string environment;
 		bool analytics;
+		string unionStationKey;
 		
 		/*****************/
 		/*****************/
@@ -822,7 +823,7 @@ private:
 						
 						if (group->analytics && analyticsLogger != NULL) {
 							log = analyticsLogger->newTransaction(group->name,
-								"processes");
+								"processes", group->unionStationKey);
 							xml << "Processes: <processes>";
 						}
 						for (; process_info_it != process_info_it_end; process_info_it++) {
@@ -995,6 +996,9 @@ private:
 		group->minProcesses = options.minProcesses;
 		group->environment  = options.environment;
 		group->analytics    = options.log != NULL;
+		if (group->analytics) {
+			group->unionStationKey = options.log->getUnionStationKey();
+		}
 		
 		processInfo->lastUsed = time(NULL);
 		processInfo->sessions++;

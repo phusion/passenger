@@ -178,7 +178,7 @@ class AnalyticsLogger
 		end
 	end
 	
-	def new_transaction(group_name, category = :requests)
+	def new_transaction(group_name, category = :requests, union_station_key = nil)
 		if !@server_address
 			return Log.new
 		elsif !group_name || group_name.empty?
@@ -195,7 +195,8 @@ class AnalyticsLogger
 						connect if !connected?
 						@shared_data.client.write("openTransaction",
 							txn_id, group_name, category,
-							AnalyticsLogger.timestamp_string)
+							AnalyticsLogger.timestamp_string,
+							union_station_key)
 						return Log.new(@shared_data, txn_id)
 					rescue Errno::ENOENT, *NETWORK_ERRORS
 						try_count += 1
@@ -215,7 +216,7 @@ class AnalyticsLogger
 		end
 	end
 	
-	def continue_transaction(txn_id, group_name, category = :requests)
+	def continue_transaction(txn_id, group_name, category = :requests, union_station_key = nil)
 		if !@server_address
 			return Log.new
 		elsif !txn_id || txn_id.empty?
@@ -230,7 +231,8 @@ class AnalyticsLogger
 						connect if !connected?
 						@shared_data.client.write("openTransaction",
 							txn_id, group_name, category,
-							AnalyticsLogger.timestamp_string)
+							AnalyticsLogger.timestamp_string,
+							union_station_key)
 						return Log.new(@shared_data, txn_id)
 					rescue Errno::ENOENT, *NETWORK_ERRORS
 						try_count += 1
@@ -286,11 +288,6 @@ private
 				yield
 			end
 		end
-	end
-	
-	def local_address?(address)
-		#return address == "127.0.0.1" || address == "localhost" || address == "::1"
-		return true
 	end
 	
 	def connected?

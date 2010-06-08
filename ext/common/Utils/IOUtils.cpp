@@ -32,6 +32,7 @@
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
 #include <oxt/macros.hpp>
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <sys/socket.h>
@@ -146,6 +147,40 @@ setNonBlocking(int fd) {
 			"cannot set socket flags",
 			e);
 	}
+}
+
+vector<string>
+resolveHostname(const string &hostname, unsigned int port, bool shuffle) {
+	string portString = toString(port);
+	struct addrinfo hints, *res, *current;
+	vector<string> result;
+	int ret;
+	
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family   = PF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	ret = getaddrinfo(hostname.c_str(), (port == 0) ? NULL : portString.c_str(),
+		&hints, &res);
+	if (ret != 0) {
+		return result;
+	}
+	
+	for (current = res; current != NULL; current = current->ai_next) {
+		char host[NI_MAXHOST];
+		
+		ret = getnameinfo(current->ai_addr, current->ai_addrlen,
+			host, sizeof(host) - 1,
+			NULL, 0,
+			NI_NUMERICHOST);
+		if (ret == 0) {
+			result.push_back(host);
+		}
+	}
+	freeaddrinfo(res);
+	if (shuffle) {
+		random_shuffle(result.begin(), result.end());
+	}
+	return result;
 }
 
 int
@@ -418,7 +453,7 @@ connectToTcpServer(const StaticString &hostname, unsigned int port) {
 	int ret, e, fd;
 	
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family   = PF_INET;
+	hints.ai_family   = PF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	ret = getaddrinfo(hostname.c_str(), toString(port).c_str(), &hints, &res);
 	if (ret != 0) {

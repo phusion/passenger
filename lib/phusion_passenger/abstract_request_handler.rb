@@ -651,11 +651,14 @@ private
 		if @analytics_logger && headers[PASSENGER_TXN_ID]
 			txn_id = headers[PASSENGER_TXN_ID]
 			group_name = headers[PASSENGER_GROUP_NAME]
-			log = @analytics_logger.continue_transaction(txn_id, group_name)
+			union_station_key = headers[PASSENGER_UNION_STATION_KEY]
+			log = @analytics_logger.continue_transaction(txn_id, group_name,
+				:requests, union_station_key)
 			headers[PASSENGER_ANALYTICS_WEB_LOG] = log
 			Thread.current[PASSENGER_ANALYTICS_WEB_LOG] = log
 			Thread.current[PASSENGER_TXN_ID] = txn_id
 			Thread.current[PASSENGER_GROUP_NAME] = group_name
+			Thread.current[PASSENGER_UNION_STATION_KEY] = union_station_key
 			if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS
 				log.message("Initial objects on heap: #{ObjectSpace.live_objects}")
 			end
@@ -707,7 +710,8 @@ private
 	def log_analytics_exception(env, exception)
 		log = @analytics_logger.new_transaction(
 			env[PASSENGER_GROUP_NAME],
-			:exceptions)
+			:exceptions,
+			env[PASSENGER_UNION_STATION_KEY])
 		begin
 			request_txn_id = env[PASSENGER_TXN_ID]
 			message = exception.message

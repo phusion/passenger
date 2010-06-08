@@ -31,6 +31,7 @@
 #include <string>
 #include <map>
 #include <ev++.h>
+#include <curl/curl.h>
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -44,9 +45,11 @@
 #include "../StaticString.h"
 #include "../Exceptions.h"
 #include "../MessageChannel.h"
+#include "../Constants.h"
 #include "../Utils.h"
 #include "../Utils/MD5.h"
 #include "../Utils/IOUtils.h"
+#include "../Utils/StrIntUtils.h"
 
 
 namespace Passenger {
@@ -56,21 +59,61 @@ using namespace boost;
 using namespace oxt;
 
 
+#define UNION_STATION_SERVICE_HOSTNAME "service.unionstationapp.com"
+
+
 class LoggingServer: public EventedMessageServer {
 private:
-	struct LogFile {
+	struct LogSink {
+		time_t lastUsed;
+		time_t lastFlushed;
+		
+		LogSink() {
+			lastUsed = time(NULL);
+			lastFlushed = 0;
+		}
+		
+		virtual ~LogSink() {
+			flush();
+		}
+		
+		virtual bool isRemote() const {
+			return false;
+		}
+		
+		virtual void append(const StaticString data[], unsigned int count) = 0;
+		virtual void flush() { }
+	};
+	
+	typedef shared_ptr<LogSink> LogSinkPtr;
+	
+	struct LogFile: public LogSink {
 		static const unsigned int BUFFER_CAPACITY = 8 * 1024;
 		
 		FileDescriptor fd;
-		time_t lastUsed;
 		char buffer[BUFFER_CAPACITY];
 		unsigned int bufferSize;
 		
-		LogFile() {
+		LogFile(const string &filename, mode_t filePermissions)
+			: LogSink()
+		{
+			int ret;
+			
 			bufferSize = 0;
+			
+			fd = syscalls::open(filename.c_str(),
+				O_CREAT | O_WRONLY | O_APPEND,
+				filePermissions);
+			if (fd == -1) {
+				int e = errno;
+				throw FileSystemException("Cannnot open file", e, filename);
+			}
+			do {
+				ret = fchmod(fd, filePermissions);
+			} while (ret == -1 && errno == EINTR);
 		}
 		
-		void append(const StaticString data[], unsigned int count) {
+		virtual void append(const StaticString data[], unsigned int count) {
 			size_t totalSize = 0;
 			unsigned int i;
 			
@@ -84,6 +127,7 @@ private:
 				for (i = 0; i < count; i++) {
 					data2[i + 1] = data[i];
 				}
+				lastFlushed = time(NULL);
 				gatheredWrite(fd, data2, count + 1);
 				bufferSize = 0;
 			} else {
@@ -94,22 +138,72 @@ private:
 			}
 		}
 		
-		void flush() {
+		virtual void flush() {
 			if (bufferSize > 0) {
+				lastFlushed = time(NULL);
 				MessageChannel(fd).writeRaw(StaticString(buffer, bufferSize));
 				bufferSize = 0;
 			}
-		}
-		
-		~LogFile() {
-			flush();
 		}
 	};
 	
 	typedef shared_ptr<LogFile> LogFilePtr;
 	
+	struct RemoteSink: public LogSink {
+		static const unsigned int BUFFER_CAPACITY = 8 * 1024;
+		
+		LoggingServer *server;
+		char buffer[BUFFER_CAPACITY];
+		unsigned int bufferSize;
+		string unionStationKey;
+		
+		RemoteSink(LoggingServer *server, const string &unionStationKey) {
+			this->server = server;
+			this->bufferSize = 0;
+			this->unionStationKey = unionStationKey;
+		}
+		
+		virtual bool isRemote() const {
+			return true;
+		}
+		
+		virtual void append(const StaticString data[], unsigned int count) {
+			size_t totalSize = 0;
+			unsigned int i;
+			
+			for (i = 0; i < count; i++) {
+				totalSize += data[i].size();
+			}
+			if (bufferSize + totalSize > BUFFER_CAPACITY) {
+				StaticString data2[count + 1];
+				
+				data2[0] = StaticString(buffer, bufferSize);
+				for (i = 0; i < count; i++) {
+					data2[i + 1] = data[i];
+				}
+				lastFlushed = time(NULL);
+				server->sendToRemoteServer(unionStationKey, data2, count + 1);
+				bufferSize = 0;
+			} else {
+				for (i = 0; i < count; i++) {
+					memcpy(buffer + bufferSize, data[i].data(), data[i].size());
+					bufferSize += data[i].size();
+				}
+			}
+		}
+		
+		virtual void flush() {
+			if (bufferSize > 0) {
+				lastFlushed = time(NULL);
+				StaticString data(buffer, bufferSize);
+				server->sendToRemoteServer(unionStationKey, &data, 1);
+				bufferSize = 0;
+			}
+		}
+	};
+	
 	struct Transaction {
-		LogFilePtr logFile;
+		LogSinkPtr logSink;
 		string txnId;
 		string groupName;
 		string category;
@@ -119,7 +213,146 @@ private:
 	};
 	
 	typedef shared_ptr<Transaction> TransactionPtr;
-	typedef map<string, LogFilePtr> LogFileCache;
+	typedef map<string, LogSinkPtr> LogSinkCache;
+	
+	struct RemoteServer {
+		string ip;
+		unsigned int port;
+		CURL *curl;
+		struct curl_slist *headers;
+		char lastErrorMessage[CURL_ERROR_SIZE];
+		string responseBody;
+		
+		RemoteServer(const string &ip, unsigned int port) {
+			TRACE_POINT();
+			this->ip   = ip;
+			this->port = port;
+			curl = curl_easy_init();
+			if (curl == NULL) {
+				throw IOException("Unable to create a CURL handle");
+			}
+			headers = NULL;
+			headers = curl_slist_append(headers, "Host: " UNION_STATION_SERVICE_HOSTNAME);
+			if (headers == NULL) {
+				throw IOException("Unable to create a CURL linked list");
+			}
+			resetConnection();
+		}
+		
+		~RemoteServer() {
+			if (curl != NULL) {
+				curl_easy_cleanup(curl);
+			}
+			curl_slist_free_all(headers);
+		}
+		
+		void resetConnection() {
+			curl_easy_reset(curl);
+			curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, lastErrorMessage);
+			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlDataReceived);
+			curl_easy_setopt(curl, CURLOPT_WRITEDATA, this);
+			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+		}
+		
+		bool sendData(const string &unionStationKey, const StaticString data[],
+			unsigned int count)
+		{
+			unsigned int fullSize = 0;
+			unsigned int i;
+			for (i = 0; i < count; i++) {
+				fullSize += data[i].size();
+			}
+			
+			string fullData;
+			fullData.reserve(fullSize);
+			for (i = 0; i < count; i++) {
+				fullData.append(data[i].c_str(), data[i].size());
+			}
+			
+			ScopeGuard guard(boost::bind(&RemoteServer::resetConnection, this));
+			prepareRequest("/sink");
+			
+			struct curl_httppost *post = NULL;
+			struct curl_httppost *last = NULL;
+			curl_formadd(&post, &last,
+				CURLFORM_PTRNAME, "key",
+				CURLFORM_PTRCONTENTS, unionStationKey.c_str(),
+				CURLFORM_END);
+			curl_formadd(&post, &last,
+				CURLFORM_PTRNAME, "data",
+				CURLFORM_PTRCONTENTS, fullData.c_str(),
+				CURLFORM_CONTENTSLENGTH, (long) fullData.size(),
+				CURLFORM_END);
+			
+			curl_easy_setopt(curl, CURLOPT_HTTPGET, 0);
+			curl_easy_setopt(curl, CURLOPT_HTTPPOST, post);
+			CURLcode code = curl_easy_perform(curl);
+			curl_formfree(post);
+			
+			if (code == 0) {
+				guard.success();
+				return true;
+			} else {
+				P_DEBUG("Could not send data to the Union Station service server: " <<
+					lastErrorMessage);
+				return false;
+			}
+		}
+		
+		bool ping() {
+			ScopeGuard guard(boost::bind(&RemoteServer::resetConnection, this));
+			prepareRequest("/ping");
+			curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
+			if (curl_easy_perform(curl) != 0) {
+				P_DEBUG("Could not ping Union Station service server: " <<
+					lastErrorMessage);
+				return false;
+			}
+			if (responseBody == "pong") {
+				guard.success();
+				return true;
+			} else {
+				P_DEBUG("Union Station service server returned an "
+					"unexpected ping message: " << responseBody);
+				return false;
+			}
+		}
+	
+	private:
+		class ScopeGuard {
+		private:
+			function<void ()> func;
+		public:
+			ScopeGuard(const function<void()> &func) {
+				this->func = func;
+			}
+			
+			~ScopeGuard() {
+				if (func) {
+					func();
+				}
+			}
+			
+			void success() {
+				func = function<void()>();
+			}
+		};
+		
+		void prepareRequest(const string &uri) {
+			string url = string("https://") + ip + ":" + toString(port) + uri;
+			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+			responseBody.clear();
+		}
+		
+		static size_t curlDataReceived(void *buffer, size_t size, size_t nmemb, void *userData) {
+			RemoteServer *self = (RemoteServer *) userData;
+			self->responseBody.append((const char *) buffer, size * nmemb);
+			return size * nmemb;
+		}
+	};
+	
+	typedef shared_ptr<RemoteServer> RemoteServerPtr;
 	
 	struct Client: public EventedMessageServer::Client {
 		string nodeName;
@@ -155,9 +388,19 @@ private:
 	ev::timer logFlushingTimer;
 	ev::timer exitTimer;
 	TransactionMap transactions;
-	LogFileCache logFileCache;
+	LogSinkCache logSinkCache;
 	RandomGenerator randomGenerator;
 	bool exitRequested;
+	
+	boost::mutex remoteServersLock;
+	bool remoteServersFirstQueried;
+	bool remoteServerWentDown;
+	condition_variable remoteServersChanged;
+	unsigned int currentRemoteServer;
+	vector<RemoteServerPtr> remoteServers;
+	shared_ptr<oxt::thread> remoteServerCheckThread;
+	string unionStationServiceIp;
+	unsigned short unionStationServicePort;
 	
 	void sendErrorToClient(const EventedMessageServer::ClientPtr &client, const string &message) {
 		writeArrayMessage(client, "error", message.c_str(), NULL);
@@ -257,32 +500,18 @@ private:
 		return filename;
 	}
 	
-	bool openLogFileWithCache(const string &filename, LogFilePtr &theLogFile) {
-		LogFileCache::iterator it = logFileCache.find(filename);
-		if (it == logFileCache.end()) {
+	bool openLogFileWithCache(const string &filename, LogSinkPtr &theLogSink) {
+		string cacheKey = "file:" + filename;
+		LogSinkCache::iterator it = logSinkCache.find(cacheKey);
+		if (it == logSinkCache.end()) {
 			makeDirTree(extractDirName(filename), dirPermissions,
 				USER_NOT_GIVEN, gid);
-			
-			LogFilePtr logFile = ptr(new LogFile());
-			int ret;
-			
-			logFile->fd = syscalls::open(filename.c_str(),
-				O_CREAT | O_WRONLY | O_APPEND,
-				filePermissions);
-			if (logFile->fd == -1) {
-				int e = errno;
-				throw FileSystemException("Cannnot open file", e, filename);
-			}
-			do {
-				ret = fchmod(logFile->fd, filePermissions);
-			} while (ret == -1 && errno == EINTR);
-			logFile->lastUsed = time(NULL);
-			logFileCache[filename] = logFile;
-			theLogFile = logFile;
+			LogFilePtr logFile(new LogFile(filename, filePermissions));
+			theLogSink = logSinkCache[cacheKey] = logFile;
 			return false;
 		} else {
-			theLogFile = it->second;
-			theLogFile->lastUsed = time(NULL);
+			theLogSink = it->second;
+			theLogSink->lastUsed = time(NULL);
 			return true;
 		}
 	}
@@ -319,6 +548,56 @@ private:
 		}
 	}
 	
+	void openRemoteSink(const StaticString &unionStationKey, const string &nodeName,
+		LogSinkPtr &theLogSink)
+	{
+		string cacheKey = "remote:";
+		cacheKey.append(unionStationKey.c_str(), unionStationKey.size());
+		cacheKey.append(1, '\0');
+		cacheKey.append(nodeName);
+		
+		LogSinkCache::iterator it = logSinkCache.find(cacheKey);
+		if (it == logSinkCache.end()) {
+			theLogSink = ptr(new RemoteSink(this, unionStationKey));
+			logSinkCache[cacheKey] = theLogSink;
+		} else {
+			theLogSink = it->second;
+			theLogSink->lastUsed = time(NULL);
+		}
+	}
+	
+	void sendToRemoteServer(const string &unionStationKey, const StaticString data[],
+		unsigned int count)
+	{
+		TRACE_POINT();
+		unique_lock<boost::mutex> l(remoteServersLock);
+		while (!remoteServersFirstQueried) {
+			remoteServersChanged.wait(l);
+		}
+		
+		UPDATE_TRACE_POINT();
+		bool sent = false;
+		
+		// Try to send the data to whichever server is up.
+		while (remoteServers.size() > 0 && !sent) {
+			currentRemoteServer = currentRemoteServer % remoteServers.size();
+			RemoteServerPtr server = remoteServers[currentRemoteServer];
+			if (server->sendData(unionStationKey, data, count)) {
+				// Have the next send command send to another
+				// server for load balancing.
+				currentRemoteServer++;
+				sent = true;
+			} else {
+				// If the server is down then remove it.
+				remoteServers.erase(remoteServers.begin() + currentRemoteServer);
+				remoteServerWentDown = true;
+				remoteServersChanged.notify_all();
+			}
+		}
+		
+		// If no servers are up then discard the data.
+	}
+	
 	void writeLogEntry(const TransactionPtr &transaction, const StaticString &timestamp,
 		const StaticString &data)
 	{
@@ -337,7 +616,7 @@ private:
 			"\n"
 		};
 		transaction->writeCount++;
-		transaction->logFile->append(args, sizeof(args) / sizeof(StaticString));
+		transaction->logSink->append(args, sizeof(args) / sizeof(StaticString));
 	}
 	
 	bool requireRights(const EventedMessageServer::ClientPtr &eclient, Account::Rights rights) {
@@ -355,13 +634,13 @@ private:
 	}
 	
 	void garbageCollect(ev::timer &timer, int revents) {
-		LogFileCache::iterator it;
-		LogFileCache::iterator end = logFileCache.end();
+		LogSinkCache::iterator it;
+		LogSinkCache::iterator end = logSinkCache.end();
 		time_t now = time(NULL);
 		vector<string> toDelete;
 		
-		// Delete all cached file handles that haven't been used for more than 2 hours.
-		for (it = logFileCache.begin(); it != end; it++) {
+		// Release all log sinks that haven't been used for more than 2 hours.
+		for (it = logSinkCache.begin(); it != end; it++) {
 			if (now - it->second->lastUsed > 2 * 60 * 60) {
 				toDelete.push_back(it->first);
 			}
@@ -369,20 +648,97 @@ private:
 		
 		vector<string>::const_iterator it2;
 		for (it2 = toDelete.begin(); it2 != toDelete.end(); it2++) {
-			logFileCache.erase(*it2);
+			logSinkCache.erase(*it2);
 		}
 	}
 	
 	void flushAllLogs(ev::timer &timer, int revents = 0) {
-		LogFileCache::iterator it;
-		LogFileCache::iterator end = logFileCache.end();
-		for (it = logFileCache.begin(); it != end; it++) {
-			it->second->flush();
+		LogSinkCache::iterator it;
+		LogSinkCache::iterator end = logSinkCache.end();
+		time_t now = time(NULL);
+		
+		// Flush log files every second, remote sinks every 10 seconds.
+		for (it = logSinkCache.begin(); it != end; it++) {
+			LogSink *sink = it->second.get();
+			
+			if (sink->isRemote()) {
+				if (now - sink->lastFlushed >= 10) {
+					sink->flush();
+				}
+			} else {
+				sink->flush();
+			}
 		}
 	}
 	
 	void stopLoop(ev::timer &timer, int revents = 0) {
 		ev_unloop(getLoop(), EVUNLOOP_ONE);
+	}
+	
+	void remoteServerCheckThreadMain() {
+		vector<string> ips;
+		vector<string>::const_iterator it;
+		
+		P_DEBUG("Initial attempt to resolve Union Station service host names");
+		if (unionStationServiceIp.empty()) {
+			ips = resolveHostname(UNION_STATION_SERVICE_HOSTNAME,
+				unionStationServicePort);
+		} else {
+			ips.push_back(unionStationServiceIp);
+		}
+		
+		unique_lock<boost::mutex> l(remoteServersLock);
+		for (it = ips.begin(); it != ips.end(); it++) {
+			RemoteServerPtr server(new RemoteServer(*it, unionStationServicePort));
+			remoteServers.push_back(server);
+		}
+		remoteServersFirstQueried = true;
+		remoteServersChanged.notify_all();
+		P_DEBUG("Initial attempt to resolve Union Station service host names succeeded: " <<
+			toString(ips));
+		
+		while (!this_thread::interruption_requested()) {
+			bool timedOut = false;
+			
+			while (!this_thread::interruption_requested() && !remoteServerWentDown && !timedOut) {
+				timedOut = !remoteServersChanged.timed_wait(l,
+					posix_time::seconds(6 * 60 * 60));
+			}
+			if (this_thread::interruption_requested()) {
+				break;
+			} else {
+				vector<RemoteServerPtr> remoteServers;
+				
+				l.unlock();
+				P_DEBUG("Re-resolving Union Station service host names");
+				if (unionStationServiceIp.empty()) {
+					ips = resolveHostname(UNION_STATION_SERVICE_HOSTNAME,
+						unionStationServicePort);
+				} else {
+					ips.clear();
+					ips.push_back(unionStationServiceIp);
+				}
+				for (it = ips.begin(); it != ips.end(); it++) {
+					RemoteServerPtr server(new RemoteServer(*it, unionStationServicePort));
+					P_DEBUG("Pinging Union Station server " << *it);
+					if (server->ping()) {
+						P_DEBUG("Union Station server " << *it << " up");
+						remoteServers.push_back(server);
+					} else {
+						P_DEBUG("Union Station server " << *it << " down");
+					}
+				}
+				l.lock();
+				this->remoteServers = remoteServers;
+				if (remoteServerWentDown) {
+					remoteServerWentDown = false;
+					// Don't recheck for 1 minute.
+					l.unlock();
+					syscalls::sleep(60);
+					l.lock();
+				}
+			}
+		}
 	}
 	
 protected:
@@ -427,7 +783,7 @@ protected:
 			}
 			
 		} else if (args[0] == "openTransaction") {
-			if (OXT_UNLIKELY( !expectingArgumentsCount(eclient, args, 5)
+			if (OXT_UNLIKELY( !expectingArgumentsCount(eclient, args, 6)
 			               || !expectingInitialized(eclient) )) {
 				return true;
 			}
@@ -436,6 +792,7 @@ protected:
 			StaticString groupName = args[2];
 			StaticString category  = args[3];
 			StaticString timestamp = args[4];
+			StaticString unionStationKey = args[5];
 			
 			if (OXT_UNLIKELY( !validTxnId(txnId) )) {
 				sendErrorToClient(eclient, "Invalid transaction ID format");
@@ -459,11 +816,16 @@ protected:
 					return true;
 				}
 				
-				string filename = determineFilename(groupName, client->nodeId,
-					category, txnId);
 				transaction.reset(new Transaction());
-				if (!openLogFileWithCache(filename, transaction->logFile)) {
-					setupGroupAndNodeDir(client, groupName);
+				if (unionStationKey.empty()) {
+					string filename = determineFilename(groupName, client->nodeId,
+						category, txnId);
+					if (!openLogFileWithCache(filename, transaction->logSink)) {
+						setupGroupAndNodeDir(client, groupName);
+					}
+				} else {
+					openRemoteSink(unionStationKey, client->nodeName,
+						transaction->logSink);
 				}
 				transaction->txnId      = txnId;
 				transaction->groupName  = groupName;
@@ -644,7 +1006,9 @@ protected:
 public:
 	LoggingServer(struct ev_loop *loop, FileDescriptor fd,
 		const AccountsDatabasePtr &accountsDatabase, const string &dir,
-		const string &permissions = "u=rwx,g=rx,o=rx", gid_t gid = GROUP_NOT_GIVEN)
+		const string &permissions = "u=rwx,g=rx,o=rx", gid_t gid = GROUP_NOT_GIVEN,
+		const string &unionStationServiceIp = "",
+		unsigned short unionStationServicePort = DEFAULT_UNION_STATION_SERVICE_PORT)
 		: EventedMessageServer(loop, fd, accountsDatabase),
 		  garbageCollectionTimer(loop),
 		  logFlushingTimer(loop),
@@ -661,9 +1025,21 @@ public:
 		exitTimer.set<LoggingServer, &LoggingServer::stopLoop>(this);
 		exitTimer.set(5, 0);
 		exitRequested = false;
+		
+		this->unionStationServiceIp   = unionStationServiceIp;
+		this->unionStationServicePort = unionStationServicePort;
+		remoteServersFirstQueried = false;
+		remoteServerWentDown = false;
+		remoteServerCheckThread.reset(new oxt::thread(
+			boost::bind(&LoggingServer::remoteServerCheckThreadMain, this),
+			"Remote server checking thread",
+			1024 * 128
+		));
 	}
 	
 	~LoggingServer() {
+		remoteServerCheckThread->interrupt_and_join();
+		
 		TransactionMap::const_iterator it, end = transactions.end();
 		for (it = transactions.begin(); it != end; it++) {
 			char timestamp[2 * sizeof(unsigned long long) + 1];

@@ -21,15 +21,36 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'phusion_passenger/platform_info'
+
 module PhusionPassenger
-	DEFAULT_FRAMEWORK_SPAWNER_MAX_IDLE_TIME = 30 * 60
-	DEFAULT_APP_SPAWNER_MAX_IDLE_TIME       = 10 * 60
+
+module PlatformInfo
+	def self.curl_flags
+		result = `(curl-config --cflags) 2>/dev/null`.strip
+		if result.empty?
+			return nil
+		else
+			return result
+		end
+	end
+	memoize :curl_flags
 	
-	ROOT_UID = 0
-	ROOT_GID = 0
+	def self.curl_libs
+		result = `(curl-config --libs) 2>/dev/null`.strip
+		if result.empty?
+			return nil
+		else
+			return result
+		end
+	end
+	memoize :curl_libs
 	
-	PASSENGER_ANALYTICS_WEB_LOG = "PASSENGER_ANALYTICS_WEB_LOG"
-	PASSENGER_TXN_ID = "PASSENGER_TXN_ID"
-	PASSENGER_GROUP_NAME = "PASSENGER_GROUP_NAME"
-	PASSENGER_UNION_STATION_KEY = "PASSENGER_UNION_STATION_KEY"
+	def self.curl_supports_ssl?
+		features = `(curl-config --features) 2>/dev/null`
+		return features =~ /SSL/
+	end
+	memoize :curl_supports_ssl?
 end
+
+end # module PhusionPassenger

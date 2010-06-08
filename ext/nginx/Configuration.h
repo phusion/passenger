@@ -53,6 +53,7 @@ typedef struct {
     ngx_int_t    min_instances;
     ngx_int_t    framework_spawner_idle_time;
     ngx_int_t    app_spawner_idle_time;
+    ngx_str_t    union_station_key;
     ngx_array_t *base_uris;
 
     /************************************/
@@ -74,6 +75,8 @@ typedef struct {
     ngx_str_t    analytics_log_user;
     ngx_str_t    analytics_log_group;
     ngx_str_t    analytics_log_permissions;
+    ngx_str_t    union_station_service_ip;
+    ngx_uint_t   union_station_service_port;
     ngx_array_t *prestart_uris;
 } passenger_main_conf_t;
 

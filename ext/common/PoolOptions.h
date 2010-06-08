@@ -352,10 +352,11 @@ struct PoolOptions {
 				string txnId     = vec[startIndex + offset];
 				string groupName = vec[startIndex + offset + 2];
 				string category  = vec[startIndex + offset + 4];
+				string unionStationKey = vec[startIndex + offset + 6];
 				log = analyticsLogger->continueTransaction(txnId,
-					groupName, category);
+					groupName, category, unionStationKey);
 			}
-			offset += 6;
+			offset += 8;
 		}
 		initiateSession  = vec[startIndex + offset] == "true";       offset += 2;
 		printExceptions  = vec[startIndex + offset] == "true";       offset += 2;
@@ -405,6 +406,7 @@ struct PoolOptions {
 			appendKeyValue(vec, "analytics_log_txn_id", log->getTxnId());
 			appendKeyValue(vec, "analytics_log_group_name", log->getGroupName());
 			appendKeyValue(vec, "analytics_log_category", log->getCategory());
+			appendKeyValue(vec, "union_station_key", log->getUnionStationKey());
 		}
 		appendKeyValue4(vec, "initiate_session",   initiateSession);
 		appendKeyValue4(vec, "print_exceptions",   printExceptions);

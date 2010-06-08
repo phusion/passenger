@@ -103,7 +103,8 @@ class AnalyticsLogging < Rails::LogSubscriber
 		def log_analytics_exception(env, exception)
 			log = @analytics_logger.new_transaction(
 				env[PASSENGER_GROUP_NAME],
-				:exceptions)
+				:exceptions,
+				env[PASSENGER_UNION_STATION_KEY])
 			begin
 				request = ActionDispatch::Request.new(env)
 				controller = request.parameters['controller'].humanize + "Controller"

@@ -86,6 +86,9 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->analytics_log_group.len  = 0;
     conf->analytics_log_permissions.data = NULL;
     conf->analytics_log_permissions.len  = 0;
+    conf->union_station_service_ip.data = NULL;
+    conf->union_station_service_ip.len = 0;
+    conf->union_station_service_port = (ngx_uint_t) NGX_CONF_UNSET;
     
     conf->prestart_uris = ngx_array_create(cf->pool, 1, sizeof(ngx_str_t));
     if (conf->prestart_uris == NULL) {
@@ -215,6 +218,14 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
         conf->analytics_log_permissions.data = (u_char *) DEFAULT_ANALYTICS_LOG_PERMISSIONS;
     }
     
+    if (conf->union_station_service_ip.len == 0) {
+        conf->union_station_service_ip.data = (u_char *) "";
+    }
+    
+    if (conf->union_station_service_port == (ngx_uint_t) NGX_CONF_UNSET) {
+        conf->union_station_service_port = DEFAULT_UNION_STATION_SERVICE_PORT;
+    }
+    
     return NGX_CONF_OK;
 }
 
@@ -256,6 +267,8 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->environment.len = 0;
     conf->spawn_method.data = NULL;
     conf->spawn_method.len = 0;
+    conf->union_station_key.data = NULL;
+    conf->union_station_key.len = 0;
     conf->user.data = NULL;
     conf->user.len = 0;
     conf->group.data = NULL;
@@ -350,6 +363,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->debugger, prev->debugger, 0);
     ngx_conf_merge_str_value(conf->environment, prev->environment, "production");
     ngx_conf_merge_str_value(conf->spawn_method, prev->spawn_method, "smart-lv2");
+    ngx_conf_merge_str_value(conf->union_station_key, prev->union_station_key, NULL);
     ngx_conf_merge_str_value(conf->user, prev->user, "");
     ngx_conf_merge_str_value(conf->group, prev->group, "");
     ngx_conf_merge_str_value(conf->app_group_name, prev->app_group_name, NULL);
@@ -1160,6 +1174,20 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_main_conf_t, analytics_log_permissions),
       NULL },
 
+    { ngx_string("union_station_service_ip"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, union_station_service_ip),
+      NULL },
+
+    { ngx_string("union_station_service_port"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_num_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, union_station_service_port),
+      NULL },
+
     { ngx_string("passenger_debugger"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
@@ -1200,6 +1228,13 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, spawn_method),
+      NULL },
+
+    { ngx_string("union_station_key"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, union_station_key),
       NULL },
 
     { ngx_string("rails_env"),

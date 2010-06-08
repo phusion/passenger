@@ -122,6 +122,11 @@ main(int argc, char *argv[]) {
 	string groupname          = options.get("analytics_log_group");
 	string permissions        = options.get("analytics_log_permissions");
 	string password           = options.get("logging_agent_password");
+	string unionStationServiceIp = options.get("union_station_service_ip", false);
+	int    unionStationServicePort = options.getInt("union_station_service_port",
+		false, DEFAULT_UNION_STATION_SERVICE_PORT);
+	
+	curl_global_init(CURL_GLOBAL_ALL);
 	
 	try {
 		/********** Now begins the real initialization **********/
@@ -204,7 +209,9 @@ main(int argc, char *argv[]) {
 		/* Now setup the actual logging server. */
 		accountsDatabase->add("logging", Base64::decode(password), false);
 		LoggingServer server(eventLoop, serverSocketFd,
-			accountsDatabase, loggingDir);
+			accountsDatabase, loggingDir,
+			"u=rwx,g=rx,o=rx", GROUP_NOT_GIVEN,
+			unionStationServiceIp, unionStationServicePort);
 		
 		if (feedbackFdAvailable()) {
 			MessageChannel feedbackChannel(FEEDBACK_FD);

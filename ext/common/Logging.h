@@ -205,6 +205,7 @@ private:
 	string txnId;
 	string groupName;
 	string category;
+	string unionStationKey;
 	bool shouldFlushToDiskAfterClose;
 	
 	/**
@@ -239,12 +240,13 @@ public:
 	AnalyticsLog() { }
 	
 	AnalyticsLog(const AnalyticsLoggerSharedDataPtr &sharedData, const string &txnId,
-		const string &groupName, const string &category)
+		const string &groupName, const string &category, const string &unionStationKey)
 	{
 		this->sharedData = sharedData;
 		this->txnId      = txnId;
 		this->groupName  = groupName;
 		this->category   = category;
+		this->unionStationKey = unionStationKey;
 		shouldFlushToDiskAfterClose = false;
 	}
 	
@@ -316,6 +318,10 @@ public:
 	
 	string getCategory() const {
 		return category;
+	}
+	
+	string getUnionStationKey() const {
+		return unionStationKey;
 	}
 };
 
@@ -496,7 +502,9 @@ public:
 		nextReconnectTime = 0;
 	}
 	
-	AnalyticsLogPtr newTransaction(const string &groupName, const string &category = "requests") {
+	AnalyticsLogPtr newTransaction(const string &groupName, const string &category = "requests",
+		const string &unionStationKey = "")
+	{
 		if (serverAddress.empty()) {
 			return ptr(new AnalyticsLog());
 		}
@@ -546,10 +554,12 @@ public:
 						groupName.c_str(),
 						category.c_str(),
 						timestampStr,
+						unionStationKey.c_str(),
 						NULL);
 					return ptr(new AnalyticsLog(sharedData,
 						string(txnId, end - txnId),
-						groupName, category));
+						groupName, category,
+						unionStationKey));
 				} catch (const SystemException &e) {
 					TRACE_POINT();
 					if (e.code() == ENOENT || isNetworkError(e.code())) {
@@ -574,7 +584,7 @@ public:
 	}
 	
 	AnalyticsLogPtr continueTransaction(const string &txnId, const string &groupName,
-		const string &category = "requests")
+		const string &category = "requests", const string &unionStationKey = "")
 	{
 		if (serverAddress.empty() || txnId.empty()) {
 			return ptr(new AnalyticsLog());
@@ -599,9 +609,11 @@ public:
 						groupName.c_str(),
 						category.c_str(),
 						timestampStr,
+						unionStationKey.c_str(),
 						NULL);
 					return ptr(new AnalyticsLog(sharedData,
-						txnId, groupName, category));
+						txnId, groupName, category,
+						unionStationKey));
 				} catch (const SystemException &e) {
 					TRACE_POINT();
 					if (e.code() == EPIPE || isNetworkError(e.code())) {
