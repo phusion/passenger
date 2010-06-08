@@ -55,6 +55,10 @@ class ServerInstance
 	class RoleDeniedError < StandardError
 	end
 	
+	class Stats
+		attr_accessor :max, :count, :active, :global_queue_size
+	end
+	
 	class Group
 		attr_reader :app_root, :name, :environment, :processes
 		
@@ -68,7 +72,7 @@ class ServerInstance
 	
 	class Process
 		attr_reader :group
-		attr_accessor :pid, :sessions, :processed, :uptime, :server_sockets,
+		attr_accessor :pid, :gupid, :sessions, :processed, :uptime, :server_sockets,
 			:has_metrics, :cpu, :rss, :real_memory, :vmsize, :process_group_id, :command,
 			:connect_password
 		INT_PROPERTIES = [:pid, :sessions, :processed, :cpu, :rss, :real_memory,
@@ -91,6 +95,10 @@ class ServerInstance
 				host, port = socket_info.address.split(':', 2)
 				return TCPSocket.new(host, port.to_i)
 			end
+		end
+		
+		def has_metrics?
+			return @has_metrics
 		end
 	end
 
@@ -245,9 +253,18 @@ class ServerInstance
 		return @client.xml
 	end
 	
-	def global_queue_size
+	def stats
 		doc = REXML::Document.new(xml)
-		return doc.elements["info/global_queue_size"].text.to_i
+		stats = Stats.new
+		stats.max = doc.elements["info/max"].text.to_i
+		stats.count = doc.elements["info/count"].text.to_i
+		stats.active = doc.elements["info/active"].text.to_i
+		stats.global_queue_size = doc.elements["info/global_queue_size"].text.to_i
+		return stats
+	end
+	
+	def global_queue_size
+		return stats.global_queue_size
 	end
 	
 	def groups
