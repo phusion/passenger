@@ -156,7 +156,7 @@ private:
 	 * If the position is outside the bounds of the array, then index will be
 	 * set to count + 1 and offset to 0.
 	 */
-	void findDataPositionIndexAndOffset(StaticString data[], unsigned int count,
+	void findDataPositionIndexAndOffset(const StaticString data[], unsigned int count,
 		size_t position, unsigned int *index, size_t *offset) const
 	{
 		unsigned int i;
@@ -522,7 +522,7 @@ public:
 	 * @param data An array of strings to be written.
 	 * @param count Number of items in <em>data</em>.
 	 */
-	void writeRawGather(StaticString data[], unsigned int count) {
+	void writeRawGather(const StaticString data[], unsigned int count) {
 		writeRawGather<RealWritevSystemCall, int>(0, data, count);
 	}
 	
@@ -532,7 +532,7 @@ public:
 	 * test the logic. Don't use.
 	 */
 	template<typename WritevSystemCall, typename ConstructorType>
-	void writeRawGather(ConstructorType constructorArg, StaticString data[], unsigned int count) {
+	void writeRawGather(ConstructorType constructorArg, const StaticString data[], unsigned int count) {
 		struct iovec iov[count];
 		WritevSystemCall writev(constructorArg);
 		size_t written = 0;
