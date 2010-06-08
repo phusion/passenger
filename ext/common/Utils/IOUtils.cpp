@@ -48,6 +48,14 @@ namespace Passenger {
 using namespace std;
 using namespace oxt;
 
+// Urgh, Solaris :-(
+#ifndef AF_LOCAL
+	#define AF_LOCAL AF_UNIX
+#endif
+#ifndef PF_LOCAL
+	#define PF_LOCAL PF_UNIX
+#endif
+
 
 ServerAddressType
 getSocketAddressType(const StaticString &address) {
