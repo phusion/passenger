@@ -637,7 +637,7 @@ private:
 			mutateCount(count + 1);
 			
 			P_ASSERT_WITH_VOID_RETURN(verifyState(),
-				"ApplicationPool state is valid:\n" << inspectWithoutLock());
+				"Background spawning: ApplicationPool state is valid:\n" << inspectWithoutLock());
 			
 			if (group->size >= options.minProcesses
 			 || !spawningAllowed(group, options)) {
@@ -1114,7 +1114,7 @@ public:
 				unique_lock<boost::timed_mutex> l(lock);
 				p = checkoutWithoutLock(l, options);
 				P_ASSERT(verifyState(), SessionPtr(),
-					"ApplicationPool state is valid:\n" << inspectWithoutLock());
+					"get(): ApplicationPool state is valid:\n" << inspectWithoutLock());
 			}
 			ProcessInfoPtr &processInfo = p.first;
 			
@@ -1134,7 +1134,7 @@ public:
 					detachWithoutLock(processInfo->process->getDetachKey());
 					processInfo->sessions--;
 					P_ASSERT(verifyState(), SessionPtr(),
-						"ApplicationPool state is valid:\n" << inspectWithoutLock());
+						"get(): ApplicationPool state is valid:\n" << inspectWithoutLock());
 				}
 				if (e.code() == EMFILE || attempt == MAX_GET_ATTEMPTS) {
 					/* A "too many open files" (EMFILE) error is probably unrecoverable,
@@ -1158,7 +1158,7 @@ public:
 					detachWithoutLock(processInfo->process->getDetachKey());
 					processInfo->sessions--;
 					P_ASSERT(verifyState(), SessionPtr(),
-						"ApplicationPool state is valid:\n" << inspectWithoutLock());
+						"get(): ApplicationPool state is valid:\n" << inspectWithoutLock());
 				}
 				if (attempt == MAX_GET_ATTEMPTS) {
 					string message("Cannot connect to an existing "
