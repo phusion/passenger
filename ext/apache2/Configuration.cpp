@@ -254,6 +254,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_root, root)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_ruby, ruby)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_log_level, logLevel, unsigned int, 0)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_debug_log_file, debugLogFile)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_max_pool_size, maxPoolSize, unsigned int, 1)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_max_instances_per_app, maxInstancesPerApp, unsigned int, 0)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_pool_idle_time, poolIdleTime, unsigned int, 0)
@@ -435,6 +436,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Passenger log verbosity."),
+	AP_INIT_TAKE1("PassengerDebugLogFile",
+		(Take1Func) cmd_passenger_debug_log_file,
+		NULL,
+		RSRC_CONF,
+		"Passenger debug log file."),
 	AP_INIT_TAKE1("PassengerMaxPoolSize",
 		(Take1Func) cmd_passenger_max_pool_size,
 		NULL,

@@ -1311,6 +1311,9 @@ public:
 	{
 		serverConfig.finalize();
 		Passenger::setLogLevel(serverConfig.logLevel);
+		if (serverConfig.debugLogFile != NULL) {
+			Passenger::setDebugFile(serverConfig.debugLogFile);
+		}
 		m_hasModRewrite = UNKNOWN;
 		m_hasModDir = UNKNOWN;
 		m_hasModAutoIndex = UNKNOWN;
@@ -1326,7 +1329,8 @@ public:
 				"'passenger-install-apache2-module'.");
 		}
 		
-		agentsStarter.start(serverConfig.logLevel, "",
+		agentsStarter.start(serverConfig.logLevel,
+			(serverConfig.debugLogFile == NULL) ? "" : serverConfig.debugLogFile,
 			getpid(), serverConfig.tempDir,
 			serverConfig.userSwitching,
 			serverConfig.defaultUser, serverConfig.defaultGroup,

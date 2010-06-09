@@ -357,6 +357,9 @@ struct ServerConfig {
 	/** The log verbosity. */
 	int logLevel;
 	
+	/** A file to print debug messages to, or NULL to just use STDERR. */
+	const char *debugLogFile;
+	
 	/** The maximum number of simultaneously alive application
 	 * instances. */
 	unsigned int maxPoolSize;
@@ -392,6 +395,7 @@ struct ServerConfig {
 		ruby               = "ruby";
 		root               = NULL;
 		logLevel           = DEFAULT_LOG_LEVEL;
+		debugLogFile       = NULL;
 		maxPoolSize        = DEFAULT_MAX_POOL_SIZE;
 		maxInstancesPerApp = DEFAULT_MAX_INSTANCES_PER_APP;
 		poolIdleTime       = DEFAULT_POOL_IDLE_TIME;
