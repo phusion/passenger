@@ -512,6 +512,7 @@ private:
 	}
 	
 	static void detachGroupWithoutLock(const SharedDataPtr &data, const GroupPtr &group) {
+		TRACE_POINT();
 		assert(!group->detached);
 		
 		ProcessInfoList *processes = &group->processes;
@@ -532,6 +533,7 @@ private:
 		}
 		
 		if (group->spawning) {
+			UPDATE_TRACE_POINT();
 			group->spawnerThread->interrupt_and_join();
 			group->spawnerThread.reset();
 			group->spawning = false;
@@ -591,6 +593,7 @@ private:
 	}
 	
 	void spawnerThreadCallback(GroupPtr group, PoolOptions options) {
+		TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		
@@ -598,15 +601,19 @@ private:
 			ProcessPtr process;
 			
 			try {
+				UPDATE_TRACE_POINT();
 				this_thread::restore_interruption ri(di);
 				this_thread::restore_syscall_interruption rsi(dsi);
+				P_DEBUG("Background spawning a process for " << options.appRoot);
 				process = spawnManager->spawn(options);
 			} catch (const thread_interrupted &) {
+				UPDATE_TRACE_POINT();
 				interruptable_lock_guard<boost::timed_mutex> l(lock);
 				group->spawning = false;
 				group->spawnerThread.reset();
 				return;
 			} catch (const std::exception &e) {
+				UPDATE_TRACE_POINT();
 				P_DEBUG("Background spawning of " << options.appRoot <<
 					" failed; removing entire group." <<
 					" Error: " << e.what());
@@ -619,6 +626,7 @@ private:
 				return;
 			}
 			
+			UPDATE_TRACE_POINT();
 			lock_guard<boost::timed_mutex> l(lock);
 			ProcessInfoPtr processInfo;
 			
@@ -649,6 +657,7 @@ private:
 	}
 	
 	bool detachWithoutLock(const string &detachKey) {
+		TRACE_POINT();
 		GroupMap::iterator group_it;
 		GroupMap::iterator group_it_end = groups.end();
 		
@@ -1175,6 +1184,7 @@ public:
 	}
 	
 	virtual bool detach(const string &detachKey) {
+		TRACE_POINT();
 		unique_lock<boost::timed_mutex> l(lock);
 		return detachWithoutLock(detachKey);
 	}
