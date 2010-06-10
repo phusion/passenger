@@ -608,6 +608,8 @@ private:
 				process = spawnManager->spawn(options);
 			} catch (const thread_interrupted &) {
 				UPDATE_TRACE_POINT();
+				this_thread::restore_interruption ri(di);
+				this_thread::restore_syscall_interruption rsi(dsi);
 				interruptable_lock_guard<boost::timed_mutex> l(lock);
 				group->spawning = false;
 				group->spawnerThread.reset();
@@ -617,6 +619,8 @@ private:
 				P_DEBUG("Background spawning of " << options.appRoot <<
 					" failed; removing entire group." <<
 					" Error: " << e.what());
+				this_thread::restore_interruption ri(di);
+				this_thread::restore_syscall_interruption rsi(dsi);
 				interruptable_lock_guard<boost::timed_mutex> l(lock);
 				if (!group->detached) {
 					group->spawning = false;
