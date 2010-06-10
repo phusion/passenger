@@ -341,7 +341,7 @@ public:
 		bool locked = false;
 		
 		while (!locked) {
-			locked = m.timed_lock(boost::posix_time::milliseconds(10));
+			locked = m.timed_lock(boost::posix_time::milliseconds(20));
 			if (!locked) {
 				boost::this_thread::interruption_point();
 			}
