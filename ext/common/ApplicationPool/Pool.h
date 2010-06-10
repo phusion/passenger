@@ -1089,6 +1089,7 @@ public:
 	}
 	
 	virtual ~Pool() {
+		TRACE_POINT();
 		this_thread::disable_interruption di;
 		{
 			lock_guard<boost::timed_mutex> l(lock);
