@@ -1257,6 +1257,13 @@ public:
 	
 	~Hooks() {
 		removeDirTree(getPassengerTempDir().c_str());
+		/* mod_passenger is loaded twice during Apache startup (load, unload, load),
+		 * but on OS X sometimes the old memory values of global variables can
+		 * stay behind and affect the next load. So here we empty the temp dir variable
+		 * explicitly so that the next load correctly calculates a new temp dir
+		 * filename using the after-daemonization Apache PID.
+		 */
+		setPassengerTempDir("");
 	}
 	
 	int prepareRequestWhenInHighPerformanceMode(request_rec *r) {
