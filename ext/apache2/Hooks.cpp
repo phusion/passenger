@@ -506,17 +506,23 @@ private:
 			 */
 			if (expectingUploadData) {
 				if (contentLength == NULL || atol(contentLength) > LARGE_UPLOAD_THRESHOLD) {
-					uploadDataFile = receiveRequestBody(r, contentLength);
+					uploadDataFile = receiveRequestBody(r);
 				} else {
 					receiveRequestBody(r, contentLength, uploadDataMemory);
 				}
 			}
 			
-			if (expectingUploadData && contentLength == NULL) {
-				/* In case of "chunked" transfer encoding, we'll set the
-				 * Content-Length header to the length of the received upload
-				 * data. Rails requires this header for its HTTP upload data
-				 * multipart parsing process.
+			if (expectingUploadData) {
+				/* We'll set the Content-Length header to the length of the
+				 * received upload data. Rails requires this header for its
+				 * HTTP upload data multipart parsing process.
+				 * There are two reasons why we don't rely on the Content-Length
+				 * header as sent by the client:
+				 * - The client doesn't always send Content-Length, e.g. in case
+				 *   of "chunked" transfer encoding.
+				 * - mod_deflate input compression can make it so that the
+				 *   amount of upload we receive doesn't match Content-Length:
+				 *   http://httpd.apache.org/docs/2.0/mod/mod_deflate.html#enable
 				 */
 				if (uploadDataFile != NULL) {
 					apr_table_set(r->headers_in, "Content-Length",
@@ -1088,15 +1094,11 @@ private:
 	 * Receive the HTTP upload data and buffer it into a BufferedUpload temp file.
 	 *
 	 * @param r The request.
-	 * @param contentLength The value of the HTTP Content-Length header. This is used
-	 *                      to check whether the HTTP client has sent complete upload
-	 *                      data. NULL indicates that there is no Content-Length header,
-	 *                      i.e. that the HTTP client used chunked transfer encoding.
 	 * @throws RuntimeException
 	 * @throws SystemException
 	 * @throws IOException
 	 */
-	shared_ptr<BufferedUpload> receiveRequestBody(request_rec *r, const char *contentLength) {
+	shared_ptr<BufferedUpload> receiveRequestBody(request_rec *r) {
 		TRACE_POINT();
 		DirConfig *config = getDirConfig(r);
 		shared_ptr<BufferedUpload> tempFile;
@@ -1120,17 +1122,6 @@ private:
 				written += ret;
 			} while (written < (size_t) len);
 			total_written += written;
-		}
-		
-		if (contentLength != NULL && ftell(tempFile->handle) != atol(contentLength)) {
-			string message = "It looks like the browser did not finish the file upload: "
-				"it said it will upload ";
-			message.append(contentLength);
-			message.append(" bytes, but it closed the connection after sending ");
-			message.append(toString(ftell(tempFile->handle)));
-			message.append(" bytes. The user probably clicked Stop in the browser "
-				"or his Internet connection stalled.");
-			throw IOException(message);
 		}
 		return tempFile;
 	}
@@ -1161,17 +1152,6 @@ private:
 		
 		while ((len = readRequestBodyFromApache(r, buf, sizeof(buf))) > 0) {
 			buffer.append(buf, len);
-		}
-		
-		if (contentLength != NULL && buffer.size() != l_contentLength) {
-			string message = "It looks like the browser did not finish the file upload: "
-				"it said it will upload ";
-			message.append(contentLength);
-			message.append(" bytes, but it closed the connection after sending ");
-			message.append(toString(buffer.size()));
-			message.append(" bytes. The user probably clicked Stop in the browser "
-				"or his Internet connection stalled.");
-			throw IOException(message);
 		}
 	}
 	
