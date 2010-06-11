@@ -21,6 +21,11 @@ Release 2.2.15
    Thanks to Potamianos Gregory for reporting this issue. Issue #500.
  * [Nginx] Default Nginx version changed to 0.7.66
    The previous default version was 0.7.65.
+ * Fixed more Bundler problems
+   Previous versions of Phusion Passenger would preload some popular
+   libraries such as mysql and sqlite3 in order to utilize copy-on-write
+   optimizations better. However this behavior conflicts with Bundler
+   so we've removed it.
 
 
 Release 2.2.14
