@@ -67,7 +67,8 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
         return NGX_DECLINED;
     }
 
-    #if NGINX_VERSION_NUM < 8038
+    #if (PASSENGER_NGINX_MINOR_VERSION == 8 && PASSENGER_NGINX_MICRO_VERSION < 38) || \
+        (PASSENGER_NGINX_MINOR_VERSION == 7 && PASSENGER_NGINX_MICRO_VERSION < 66)
         if (r->zero_in_uri) {
             return NGX_DECLINED;
         }
