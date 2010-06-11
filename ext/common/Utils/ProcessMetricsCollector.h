@@ -317,12 +317,17 @@ public:
 			pidsArg.append(toString(*it));
 			pidsArg.append(",");
 		}
-		if (pidsArg[pidsArg.size() - 1] == ',') {
+		if (!pidsArg.empty() && pidsArg[pidsArg.size() - 1] == ',') {
 			pidsArg.resize(pidsArg.size() - 1);
 		}
 		
 		const char *command[] = {
-			"ps", "-o", "pid,ppid,%cpu,rss,vsize,pgid,command",
+			"ps", "-o",
+			#if defined(sun) || defined(__sun)
+				"pid,ppid,pcpu,rss,vsz,pgid,args",
+			#else
+				"pid,ppid,%cpu,rss,vsize,pgid,command",
+			#endif
 			"-p", pidsArg.c_str(), NULL
 		};
 		string psOutput = runCommandAndCaptureOutput(command);

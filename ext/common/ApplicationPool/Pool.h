@@ -1018,21 +1018,17 @@ private:
 			"ApplicationPool cleaner",
 			CLEANER_THREAD_STACK_SIZE
 		);
-		#if defined(sun) || defined(__sun)
-			// Doesn't work on Solaris yet.
+		
+		if (analyticsLogger != NULL) {
+			this->analyticsLogger = analyticsLogger;
+			analyticsCollectionThread = new oxt::thread(
+				bind(&Pool::analyticsCollectionThreadMainLoop, this),
+				"ApplicationPool analytics collector",
+				ANALYTICS_COLLECTION_THREAD_STACK_SIZE
+			);
+		} else {
 			analyticsCollectionThread = NULL;
-		#else
-			if (analyticsLogger != NULL) {
-				this->analyticsLogger = analyticsLogger;
-				analyticsCollectionThread = new oxt::thread(
-					bind(&Pool::analyticsCollectionThreadMainLoop, this),
-					"ApplicationPool analytics collector",
-					ANALYTICS_COLLECTION_THREAD_STACK_SIZE
-				);
-			} else {
-				analyticsCollectionThread = NULL;
-			}
-		#endif
+		}
 	}
 	
 public:
