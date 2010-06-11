@@ -81,15 +81,6 @@ class SpawnManager < AbstractServer
 			require 'phusion_passenger/html_template'
 			require 'phusion_passenger/platform_info'
 			require 'phusion_passenger/exceptions'
-			
-			# Commonly used libraries.
-			['mysql', 'sqlite3'].each do |lib|
-				begin
-					require lib
-				rescue LoadError
-					# Do nothing; ignore if not present.
-				end
-			end
 		end
 	end
 	
