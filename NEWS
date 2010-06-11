@@ -1,3 +1,17 @@
+Release 2.2.15
+--------------
+
+ * [Apache] Fixed incorrect temp dir cleanup by passenger-status
+   On some systems, running passenger-status could print the following
+   message:
+   
+      *** Cleaning stale folder /tmp/passenger.1234
+   
+   ...after which Phusion Passenger breaks because that directory is
+   necessary for it to function properly. The cause of this problem
+   has been found and has been fixed.
+
+
 Release 2.2.14
 --------------
 
