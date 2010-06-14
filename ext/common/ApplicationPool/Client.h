@@ -155,6 +155,7 @@ protected:
 		}
 		
 		virtual void initiate() {
+			TRACE_POINT();
 			if (socketType == "unix") {
 				fd = connectToUnixServer(socketName.c_str());
 			} else {
@@ -722,7 +723,21 @@ public:
 					try {
 						session->initiate();
 						return session;
-					} catch (...) {
+					} catch (SystemException &e) {
+						P_TRACE(2, "Exception occurred while connecting to checked out "
+							"process " << pid << ": " << e.what());
+						detach(detachKey);
+						if (attempts == Pool::MAX_GET_ATTEMPTS) {
+							e.setBriefMessage(
+								"Cannot initiate a session with process " +
+								toString(pid) + ": " + e.brief());
+							throw;
+						} // else retry
+					} catch (const thread_interrupted &) {
+						throw;
+					} catch (const std::exception &e) {
+						P_TRACE(2, "Exception occurred while connecting to checked out "
+							"process " << pid << ": " << e.what());
 						detach(detachKey);
 						if (attempts == Pool::MAX_GET_ATTEMPTS) {
 							throw;

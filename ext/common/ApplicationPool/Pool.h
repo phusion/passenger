@@ -1142,7 +1142,8 @@ public:
 				return session;
 				
 			} catch (SystemException &e) {
-				P_DEBUG("Exception occurred while connecting to a checked out process: " <<
+				P_TRACE(2, "Exception occurred while connecting to checked out "
+					"process " << processInfo->process->getPid() << ": " <<
 					e.what());
 				{
 					unique_lock<boost::timed_mutex> l(lock);
@@ -1166,7 +1167,8 @@ public:
 				throw;
 			
 			} catch (std::exception &e) {
-				P_DEBUG("Exception occurred while connecting to a checked out process: " <<
+				P_TRACE(2, "Exception occurred while connecting to checked out "
+					"process " << processInfo->process->getPid() << ": " <<
 					e.what());
 				{
 					unique_lock<boost::timed_mutex> l(lock);
