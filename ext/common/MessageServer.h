@@ -469,8 +469,8 @@ protected:
 				args.clear();
 			}
 			
-			client.close();
 			P_TRACE(4, "MessageServer client thread " << (int) client << " exited.");
+			client.close();
 		} catch (const boost::thread_interrupted &) {
 			P_TRACE(2, "MessageServer client thread " << (int) client << " interrupted.");
 		} catch (const tracable_exception &e) {
