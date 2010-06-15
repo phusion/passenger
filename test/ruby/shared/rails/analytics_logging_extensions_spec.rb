@@ -305,6 +305,57 @@ shared_examples_for "analytics logging extensions for Rails" do
 				log.include?("FAIL: view rendering")
 		end
 	end
+	
+	it "logs cache hits" do
+		if rails_version >= '2.1'
+			app = spawn_some_application(@options) do |stub|
+				File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
+					class FooController < ActionController::Base
+						def index
+							Rails.cache.write("key1", "foo")
+							Rails.cache.write("key2", "foo")
+							Rails.cache.write("key3", "foo")
+							Rails.cache.read("key1")
+							Rails.cache.fetch("key2")
+							Rails.cache.fetch("key3") { "bar" }
+							render :text => 'ok'
+						end
+					end
+				})
+			end
+			send_request_to_app(app, "PATH_INFO" => "/foo")
+			eventually(5) do
+				log = read_log("requests/**/log.txt")
+				log.include?("Cache hit: key1") &&
+					log.include?("Cache hit: key2") &&
+					log.include?("Cache hit: key3")
+			end
+		end
+	end
+	
+	it "logs cache misses" do
+		if rails_version >= '2.1'
+			app = spawn_some_application(@options) do |stub|
+				File.write("#{stub.app_root}/app/controllers/foo_controller.rb", %Q{
+					class FooController < ActionController::Base
+						def index
+							Rails.cache.read("key1")
+							Rails.cache.fetch("key2")
+							Rails.cache.fetch("key3") { "bar" }
+							render :text => 'ok'
+						end
+					end
+				})
+			end
+			send_request_to_app(app, "PATH_INFO" => "/foo")
+			eventually(5) do
+				log = read_log("requests/**/log.txt")
+				log.include?("Cache miss: key1") &&
+					log.include?("Cache miss: key2") &&
+					log =~ /Cache miss \(\d+\): key3/
+			end
+		end
+	end
 end
 
 end # module PhusionPassenger

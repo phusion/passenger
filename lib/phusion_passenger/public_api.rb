@@ -50,7 +50,7 @@ class << self
 	end
 	
 	def benchmark(env = nil, title = "Benchmarking")
-		log = analytics_log(env)
+		log = lookup_analytics_log(env)
 		if log
 			log.measure("BENCHMARK: #{title}") do
 				yield
@@ -61,19 +61,23 @@ class << self
 	end
 	
 	def log_cache_hit(env, name)
-		log = analytics_log(env)
+		log = lookup_analytics_log(env)
 		if log
-			log.message("CACHE HIT: #{name}")
+			log.message("Cache hit: #{name}")
 			return true
 		else
 			return false
 		end
 	end
 	
-	def log_cache_miss(env, name)
-		log = analytics_log(env)
+	def log_cache_miss(env, name, generation_time = nil)
+		log = lookup_analytics_log(env)
 		if log
-			log.message("CACHE MISS: #{name}")
+			if generation_time
+				log.message("Cache miss (#{generation_time.to_i}): #{name}")
+			else
+				log.message("Cache miss: #{name}")
+			end
 			return true
 		else
 			return false
@@ -96,7 +100,7 @@ private
 		end
 	end
 	
-	def analytics_log(env)
+	def lookup_analytics_log(env)
 		if env
 			return env[PASSENGER_ANALYTICS_WEB_LOG]
 		else

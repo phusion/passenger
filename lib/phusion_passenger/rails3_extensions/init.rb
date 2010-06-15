@@ -26,6 +26,10 @@ class AnalyticsLogging < Rails::LogSubscriber
 		subscriber = self.new
 		Rails::LogSubscriber.add(:action_controller, subscriber)
 		Rails::LogSubscriber.add(:active_record, subscriber)
+		if defined?(ActiveSupport::Cache::Store)
+			ActiveSupport::Cache::Store.instrument = true
+			Rails::LogSubscriber.add(:active_support, subscriber)
+		end
 		
 		if defined?(ActionDispatch::ShowExceptions)
 			Rails::Application.middleware.insert_after(
@@ -63,6 +67,23 @@ class AnalyticsLogging < Rails::LogSubscriber
 			log.measured_time_points("DB BENCHMARK: #{digest}",
 				event.time, event.end, "#{name}\n#{sql}")
 		end
+	end
+	
+	def cache_read(event)
+		if event.payload[:hit]
+			PhusionPassenger.log_cache_hit(nil, event.payload[:key])
+		else
+			PhusionPassenger.log_cache_miss(nil, event.payload[:key])
+		end
+	end
+	
+	def cache_fetch_hit(event)
+		PhusionPassenger.log_cache_hit(nil, event.payload[:key])
+	end
+	
+	def cache_generate(event)
+		PhusionPassenger.log_cache_miss(nil, event.payload[:key],
+			event.duration * 1000)
 	end
 	
 	class ExceptionLogger

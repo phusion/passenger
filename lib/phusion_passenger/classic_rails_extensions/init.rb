@@ -61,6 +61,25 @@ module AnalyticsLogging
 				alias_method_chain :log, :passenger
 			end
 		end
+		
+		if defined?(ActiveSupport::Cache::Store) && Rails.cache
+			require 'phusion_passenger/classic_rails_extensions/analytics_logging/as_cache_extension'
+			ActiveSupport::Cache::Store.class_eval do
+				include CacheStoreExtension
+				case Rails::VERSION::MINOR
+				when 1
+					# Rails 2.1
+					alias_method :fetch, :fetch_2_1
+				when 2
+					# Rails 2.2
+					alias_method :fetch, :fetch_2_2
+				when 3
+					# Rails 2.3
+					alias_method :fetch, :fetch_2_3
+				end
+			end
+			Rails.cache.extend(ConcreteCacheStoreExtension)
+		end
 	end
 	
 	def self.new_transaction_log(env, category = :requests)
