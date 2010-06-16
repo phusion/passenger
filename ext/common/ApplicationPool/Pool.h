@@ -594,23 +594,19 @@ private:
 	
 	void spawnerThreadCallback(GroupPtr group, PoolOptions options) {
 		TRACE_POINT();
-		this_thread::disable_interruption di;
-		this_thread::disable_syscall_interruption dsi;
 		
 		while (true) {
 			ProcessPtr process;
 			
 			try {
 				UPDATE_TRACE_POINT();
-				this_thread::restore_interruption ri(di);
-				this_thread::restore_syscall_interruption rsi(dsi);
 				P_DEBUG("Background spawning a process for " << options.appRoot);
 				process = spawnManager->spawn(options);
 			} catch (const thread_interrupted &) {
 				UPDATE_TRACE_POINT();
-				this_thread::restore_interruption ri(di);
-				this_thread::restore_syscall_interruption rsi(dsi);
 				interruptable_lock_guard<boost::timed_mutex> l(lock);
+				this_thread::disable_interruption di;
+				this_thread::disable_syscall_interruption dsi;
 				group->spawning = false;
 				group->spawnerThread.reset();
 				return;
@@ -619,9 +615,9 @@ private:
 				P_DEBUG("Background spawning of " << options.appRoot <<
 					" failed; removing entire group." <<
 					" Error: " << e.what());
-				this_thread::restore_interruption ri(di);
-				this_thread::restore_syscall_interruption rsi(dsi);
 				interruptable_lock_guard<boost::timed_mutex> l(lock);
+				this_thread::disable_interruption di;
+				this_thread::disable_syscall_interruption dsi;
 				if (!group->detached) {
 					group->spawning = false;
 					group->spawnerThread.reset();
@@ -631,7 +627,9 @@ private:
 			}
 			
 			UPDATE_TRACE_POINT();
-			lock_guard<boost::timed_mutex> l(lock);
+			interruptable_lock_guard<boost::timed_mutex> l(lock);
+			this_thread::disable_interruption di;
+			this_thread::disable_syscall_interruption dsi;
 			ProcessInfoPtr processInfo;
 			
 			processInfo = ptr(new ProcessInfo());
@@ -649,7 +647,8 @@ private:
 			mutateCount(count + 1);
 			
 			P_ASSERT_WITH_VOID_RETURN(verifyState(),
-				"Background spawning: ApplicationPool state is valid:\n" << inspectWithoutLock());
+				"Background spawning: ApplicationPool state is valid:\n" <<
+				inspectWithoutLock());
 			
 			if (group->size >= options.minProcesses
 			 || !spawningAllowed(group, options)) {
