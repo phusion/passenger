@@ -238,7 +238,7 @@ private
 		processes = []
 		case RUBY_PLATFORM
 		when /solaris/
-			list = `#{ps} -o pid,ppid,nlwp,vsz,rss,%cpu,comm`.split("\n")
+			list = `#{ps} -o pid,ppid,nlwp,vsz,rss,pcpu,comm`.split("\n")
 			threads_known = true
 		when /darwin/
 			list = `#{ps} -w -o pid,ppid,vsz,rss,%cpu,command`.split("\n")
