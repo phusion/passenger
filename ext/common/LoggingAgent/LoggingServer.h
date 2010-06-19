@@ -156,11 +156,17 @@ private:
 		char buffer[BUFFER_CAPACITY];
 		unsigned int bufferSize;
 		string unionStationKey;
+		string nodeName;
+		string category;
 		
-		RemoteSink(LoggingServer *server, const string &unionStationKey) {
+		RemoteSink(LoggingServer *server, const string &unionStationKey,
+			const string &nodeName, const string &category)
+		{
 			this->server = server;
 			this->bufferSize = 0;
 			this->unionStationKey = unionStationKey;
+			this->nodeName = nodeName;
+			this->category = category;
 		}
 		
 		virtual bool isRemote() const {
@@ -182,7 +188,8 @@ private:
 					data2[i + 1] = data[i];
 				}
 				lastFlushed = time(NULL);
-				server->sendToRemoteServer(unionStationKey, data2, count + 1);
+				server->sendToRemoteServer(unionStationKey, nodeName, category,
+					data2, count + 1);
 				bufferSize = 0;
 			} else {
 				for (i = 0; i < count; i++) {
@@ -196,7 +203,8 @@ private:
 			if (bufferSize > 0) {
 				lastFlushed = time(NULL);
 				StaticString data(buffer, bufferSize);
-				server->sendToRemoteServer(unionStationKey, &data, 1);
+				server->sendToRemoteServer(unionStationKey, nodeName,
+					category, &data, 1);
 				bufferSize = 0;
 			}
 		}
@@ -255,7 +263,8 @@ private:
 			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
 		}
 		
-		bool sendData(const string &unionStationKey, const StaticString data[],
+		bool sendData(const string &unionStationKey, const StaticString &nodeName,
+			const StaticString &category, const StaticString data[],
 			unsigned int count)
 		{
 			unsigned int fullSize = 0;
@@ -278,6 +287,16 @@ private:
 			curl_formadd(&post, &last,
 				CURLFORM_PTRNAME, "key",
 				CURLFORM_PTRCONTENTS, unionStationKey.c_str(),
+				CURLFORM_END);
+			curl_formadd(&post, &last,
+				CURLFORM_PTRNAME, "node_name",
+				CURLFORM_PTRCONTENTS, nodeName.c_str(),
+				CURLFORM_CONTENTSLENGTH, (long) nodeName.size(),
+				CURLFORM_END);
+			curl_formadd(&post, &last,
+				CURLFORM_PTRNAME, "category",
+				CURLFORM_PTRCONTENTS, category.c_str(),
+				CURLFORM_CONTENTSLENGTH, (long) category.size(),
 				CURLFORM_END);
 			curl_formadd(&post, &last,
 				CURLFORM_PTRNAME, "data",
@@ -549,16 +568,19 @@ private:
 	}
 	
 	void openRemoteSink(const StaticString &unionStationKey, const string &nodeName,
-		LogSinkPtr &theLogSink)
+		const string &category, LogSinkPtr &theLogSink)
 	{
 		string cacheKey = "remote:";
 		cacheKey.append(unionStationKey.c_str(), unionStationKey.size());
 		cacheKey.append(1, '\0');
 		cacheKey.append(nodeName);
+		cacheKey.append(1, '\0');
+		cacheKey.append(category);
 		
 		LogSinkCache::iterator it = logSinkCache.find(cacheKey);
 		if (it == logSinkCache.end()) {
-			theLogSink = ptr(new RemoteSink(this, unionStationKey));
+			theLogSink = ptr(new RemoteSink(this, unionStationKey,
+				nodeName, category));
 			logSinkCache[cacheKey] = theLogSink;
 		} else {
 			theLogSink = it->second;
@@ -566,8 +588,8 @@ private:
 		}
 	}
 	
-	void sendToRemoteServer(const string &unionStationKey, const StaticString data[],
-		unsigned int count)
+	void sendToRemoteServer(const string &unionStationKey, const StaticString &nodeName,
+		const StaticString &category, const StaticString data[], unsigned int count)
 	{
 		TRACE_POINT();
 		unique_lock<boost::mutex> l(remoteServersLock);
@@ -582,7 +604,7 @@ private:
 		while (remoteServers.size() > 0 && !sent) {
 			currentRemoteServer = currentRemoteServer % remoteServers.size();
 			RemoteServerPtr server = remoteServers[currentRemoteServer];
-			if (server->sendData(unionStationKey, data, count)) {
+			if (server->sendData(unionStationKey, nodeName, category, data, count)) {
 				// Have the next send command send to another
 				// server for load balancing.
 				currentRemoteServer++;
@@ -825,7 +847,7 @@ protected:
 					}
 				} else {
 					openRemoteSink(unionStationKey, client->nodeName,
-						transaction->logSink);
+						category, transaction->logSink);
 				}
 				transaction->txnId      = txnId;
 				transaction->groupName  = groupName;
