@@ -38,6 +38,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
+#include <cmath>
 
 #include "IOUtils.h"
 #include "StrIntUtils.h"
@@ -356,26 +357,47 @@ connectToUnixServer(const StaticString &filename) {
 	memcpy(addr.sun_path, filename.c_str(), filename.size());
 	addr.sun_path[filename.size()] = '\0';
 	
-	try {
-		ret = syscalls::connect(fd, (const sockaddr *) &addr, sizeof(addr));
-	} catch (...) {
-		do {
-			ret = close(fd);
-		} while (ret == -1 && errno == EINTR);
-		throw;
+	bool retry = true;
+	int counter = 0;
+	while (retry) {
+		try {
+			ret = syscalls::connect(fd, (const sockaddr *) &addr, sizeof(addr));
+		} catch (...) {
+			do {
+				ret = close(fd);
+			} while (ret == -1 && errno == EINTR);
+			throw;
+		}
+		if (ret == -1) {
+			#if defined(sun) || defined(__sun)
+				/* Solaris has this nice kernel bug where connecting to
+				 * a newly created Unix socket which is obviously
+				 * connectable can cause an ECONNREFUSED. So we retry
+				 * in a loop.
+				 */
+				retry = errno == ECONNREFUSED;
+			#else
+				retry = false;
+			#endif
+			retry = retry && counter < 9;
+			
+			if (retry) {
+				counter++;
+				syscalls::usleep((useconds_t) (10000 * pow((double) 2, (double) counter)));
+			} else {
+				int e = errno;
+				string message("Cannot connect to Unix socket '");
+				message.append(filename.toString());
+				message.append("'");
+				do {
+					ret = close(fd);
+				} while (ret == -1 && errno == EINTR);
+				throw SystemException(message, e);
+			}
+		} else {
+			return fd;
+		}
 	}
-	if (ret == -1) {
-		int e = errno;
-		string message("Cannot connect to Unix socket '");
-		message.append(filename.toString());
-		message.append("'");
-		do {
-			ret = close(fd);
-		} while (ret == -1 && errno == EINTR);
-		throw SystemException(message, e);
-	}
-	
-	return fd;
 }
 
 int
