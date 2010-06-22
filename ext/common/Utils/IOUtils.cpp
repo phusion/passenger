@@ -382,8 +382,8 @@ connectToUnixServer(const StaticString &filename) {
 			retry = retry && counter < 9;
 			
 			if (retry) {
-				counter++;
 				syscalls::usleep((useconds_t) (10000 * pow((double) 2, (double) counter)));
+				counter++;
 			} else {
 				int e = errno;
 				string message("Cannot connect to Unix socket '");
@@ -398,6 +398,8 @@ connectToUnixServer(const StaticString &filename) {
 			return fd;
 		}
 	}
+	abort();   // Never reached.
+	return -1; // Shut up compiler warning.
 }
 
 int
