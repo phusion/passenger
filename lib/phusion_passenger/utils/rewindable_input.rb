@@ -64,12 +64,16 @@ module Utils
     
     private
     
-    # Ruby's Tempfile class has a bug. Subclass it and fix it.
-    class Tempfile < ::Tempfile
-      def _close
-        @tmpfile.close if @tmpfile
-        @data[1] = nil if @data
-        @tmpfile = nil
+    if RUBY_VERSION < '1.9.0'
+      # Many Ruby 1.8's tempfile libraries have a bug that can cause
+      # the #close method to raise an exception. Subclass it and fix
+      # it.
+      class Tempfile < ::Tempfile
+        def _close
+          @tmpfile.close if @tmpfile
+          @data[1] = nil if @data
+          @tmpfile = nil
+        end
       end
     end
 

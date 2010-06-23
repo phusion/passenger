@@ -46,9 +46,9 @@ Inheritance diagram for Passenger::SpawnManager:</div>
 <a href="classPassenger_1_1SpawnManager-members.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
 <tr><td colspan="2"><br><h2>Public Member Functions</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1SpawnManager.html#5805c2919457e5bcb0eaf4f7107ba555">SpawnManager</a> (const string &amp;spawnServerCommand, const ServerInstanceDir::GenerationPtr &amp;generation, const AccountsDatabasePtr &amp;accountsDatabase=AccountsDatabasePtr(), const string &amp;rubyCommand=&quot;ruby&quot;, const string &amp;loggingAgentAddress=&quot;&quot;, const string &amp;loggingAgentUsername=&quot;&quot;, const string &amp;loggingAgentPassword=&quot;&quot;)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1SpawnManager.html#9dcfe537ec598125fc83a1625ba50552">SpawnManager</a> (const string &amp;spawnServerCommand, const ServerInstanceDir::GenerationPtr &amp;generation, const AccountsDatabasePtr &amp;accountsDatabase=AccountsDatabasePtr(), const string &amp;rubyCommand=&quot;ruby&quot;, const AnalyticsLoggerPtr &amp;analyticsLogger=AnalyticsLoggerPtr())</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Construct a new <a class="el" href="classPassenger_1_1SpawnManager.html" title="An AbstractSpawnManager implementation.">SpawnManager</a>.  <a href="#5805c2919457e5bcb0eaf4f7107ba555"></a><br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Construct a new <a class="el" href="classPassenger_1_1SpawnManager.html" title="An AbstractSpawnManager implementation.">SpawnManager</a>.  <a href="#9dcfe537ec598125fc83a1625ba50552"></a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">virtual <a class="el" href="namespacePassenger.html#ced1f248465136b313c6dec5fe6ca492">ProcessPtr</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1SpawnManager.html#88a94ba4d41dab492cb1dc8a0f998973">spawn</a> (const <a class="el" href="structPassenger_1_1PoolOptions.html">PoolOptions</a> &amp;options)</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Spawn a new application process.  <a href="#88a94ba4d41dab492cb1dc8a0f998973"></a><br></td></tr>
@@ -74,7 +74,7 @@ If the spawn server dies during the middle of an operation, it will be restarted
 The communication channel with the server is anonymous, i.e. no other processes can access the communication channel, so communication is guaranteed to be safe (unless, of course, if the spawn server itself is a trojan).<p>
 The server will try to keep the spawning time as small as possible, by keeping corresponding Ruby on Rails frameworks and application code in memory. So the second time a process of the same application is spawned, the spawn time is significantly lower than the first time. Nevertheless, spawning is a relatively expensive operation (compared to the processing of a typical HTTP request/response), and so should be avoided whenever possible.<p>
 See the documentation of the spawn server for full implementation details. <hr><h2>Constructor &amp; Destructor Documentation</h2>
-<a class="anchor" name="5805c2919457e5bcb0eaf4f7107ba555"></a><!-- doxytag: member="Passenger::SpawnManager::SpawnManager" ref="5805c2919457e5bcb0eaf4f7107ba555" args="(const string &amp;spawnServerCommand, const ServerInstanceDir::GenerationPtr &amp;generation, const AccountsDatabasePtr &amp;accountsDatabase=AccountsDatabasePtr(), const string &amp;rubyCommand=&quot;ruby&quot;, const string &amp;loggingAgentAddress=&quot;&quot;, const string &amp;loggingAgentUsername=&quot;&quot;, const string &amp;loggingAgentPassword=&quot;&quot;)" -->
+<a class="anchor" name="9dcfe537ec598125fc83a1625ba50552"></a><!-- doxytag: member="Passenger::SpawnManager::SpawnManager" ref="9dcfe537ec598125fc83a1625ba50552" args="(const string &amp;spawnServerCommand, const ServerInstanceDir::GenerationPtr &amp;generation, const AccountsDatabasePtr &amp;accountsDatabase=AccountsDatabasePtr(), const string &amp;rubyCommand=&quot;ruby&quot;, const AnalyticsLoggerPtr &amp;analyticsLogger=AnalyticsLoggerPtr())" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -105,20 +105,8 @@ See the documentation of the spawn server for full implementation details. <hr><
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const string &amp;&nbsp;</td>
-          <td class="paramname"> <em>loggingAgentAddress</em> = <code>&quot;&quot;</code>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const string &amp;&nbsp;</td>
-          <td class="paramname"> <em>loggingAgentUsername</em> = <code>&quot;&quot;</code>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const string &amp;&nbsp;</td>
-          <td class="paramname"> <em>loggingAgentPassword</em> = <code>&quot;&quot;</code></td><td>&nbsp;</td>
+          <td class="paramtype">const AnalyticsLoggerPtr &amp;&nbsp;</td>
+          <td class="paramname"> <em>analyticsLogger</em> = <code>AnalyticsLoggerPtr()</code></td><td>&nbsp;</td>
         </tr>
         <tr>
           <td></td>
@@ -292,7 +280,7 @@ It doesn't do anything by default and serves as a hook for unit tests.
 <hr>The documentation for this class was generated from the following file:<ul>
 <li><a class="el" href="SpawnManager_8h-source.html">SpawnManager.h</a></ul>
 </div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Sun Feb 21 12:22:48 2010 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Sun Mar 28 14:11:59 2010 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.8 </small></address>
 </body>

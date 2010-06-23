@@ -50,7 +50,7 @@ string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="cl
 <hr><a name="_details"></a><h2>Detailed Description</h2>
 Utility class for extracting the HTTP status value from an HTTP response. 
 <p>
-This class is used for generating a proper HTTP response. The response data that <a class="el" href="namespacePassenger.html" title="A random.">Passenger</a> backend processes generate are like CGI responses, and do not include an initial "HTTP/1.1 [status here]" line, so this class used to extract the status from the response in order to generate a proper initial HTTP response line.<p>
+This class is used for generating a proper HTTP response. The response data that <a class="el" href="namespacePassenger.html" title="This file provides a bunch of classes for reading and writing messages in the MessageChannel...">Passenger</a> backend processes generate are like CGI responses, and do not include an initial "HTTP/1.1 [status here]" line, so this class used to extract the status from the response in order to generate a proper initial HTTP response line.<p>
 This class is supposed to be used as follows:<ul>
 <li>Keep feeding HTTP response data until <a class="el" href="classPassenger_1_1HttpStatusExtractor.html#ca6fd77038e76b313830757730780d51" title="Feed HTTP response data to this HttpStatusExtractor.">feed()</a> returns true. <a class="el" href="classPassenger_1_1HttpStatusExtractor.html#ca6fd77038e76b313830757730780d51" title="Feed HTTP response data to this HttpStatusExtractor.">feed()</a> buffers all fed data until it is able to extract the HTTP status.</li><li>Call <a class="el" href="classPassenger_1_1HttpStatusExtractor.html#f0db266fc713f532047880c5eaae44d5" title="Returns the HTTP status line that has been determined.">getStatusLine()</a> to retrieve the status line, and use this to generate an HTTP response line.</li><li>Call <a class="el" href="classPassenger_1_1HttpStatusExtractor.html#3749842ba4f8f59b6b69c594da963f22" title="Get the data that has been fed so far.">getBuffer()</a> to retrieve all fed data so far. This data can be sent to the HTTP client.</li></ul>
 <p>
@@ -121,7 +121,7 @@ The default value is "200 OK\r\n", which is returned if the HTTP response data t
 <hr>The documentation for this class was generated from the following file:<ul>
 <li><a class="el" href="HttpStatusExtractor_8h-source.html">HttpStatusExtractor.h</a></ul>
 </div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Sun Feb 21 12:22:48 2010 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Sun Mar 28 14:11:59 2010 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.8 </small></address>
 </body>

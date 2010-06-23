@@ -39,9 +39,9 @@
 <a href="classPassenger_1_1Process-members.html">List of all members.</a><table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
 <tr><td colspan="2"><br><h2>Public Member Functions</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Process.html#cbc73466ae557c68cf040fcce925096c">Process</a> (const string &amp;appRoot, pid_t pid, int ownerPipe, const SocketInfoMap &amp;serverSockets, const string &amp;detachKey, const string &amp;connectPassword, const function&lt; void()&gt; &amp;destructionCallback=function&lt; void()&gt;())</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Process.html#52c89242f2ff9298f302b4e2f75aea8f">Process</a> (const string &amp;appRoot, pid_t pid, int ownerPipe, const SocketInfoMap &amp;serverSockets, const string &amp;detachKey, const string &amp;connectPassword, const string &amp;gupid, const function&lt; void()&gt; &amp;destructionCallback=function&lt; void()&gt;())</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Construct a new <a class="el" href="classPassenger_1_1Process.html" title="Represents a single application process, as spawned by SpawnManager or by ApplicationPool::Interface...">Process</a> object.  <a href="#cbc73466ae557c68cf040fcce925096c"></a><br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Construct a new <a class="el" href="classPassenger_1_1Process.html" title="Represents a single application process, as spawned by SpawnManager or by ApplicationPool::Interface...">Process</a> object.  <a href="#52c89242f2ff9298f302b4e2f75aea8f"></a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Process.html#ce9e949fa460ce09228cc08d76fc38e7">getAppRoot</a> () const </td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Returns the application root for this application process.  <a href="#ce9e949fa460ce09228cc08d76fc38e7"></a><br></td></tr>
@@ -56,17 +56,20 @@ string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="cl
 <tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Process.html#002791d7909d4d7a6566eb26ec491552">getConnectPassword</a> () const </td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Returns this process's connect password.  <a href="#002791d7909d4d7a6566eb26ec491552"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Process.html#6997775fdfa7c0d9e681102bd044c40b">getGupid</a> () const </td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Returns this process's gupid.  <a href="#6997775fdfa7c0d9e681102bd044c40b"></a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="fe06f5be540203452a5e787da15ee5e4"></a><!-- doxytag: member="Passenger::Process::getServerSockets" ref="fe06f5be540203452a5e787da15ee5e4" args="() const " -->
 const SocketInfoMap *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Process.html#fe06f5be540203452a5e787da15ee5e4">getServerSockets</a> () const </td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Returns a map containing all server sockets that this process listens on. <br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">SessionPtr&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Process.html#a5bd9ad8220bf64e5edf3d025004547a">newSession</a> (const function&lt; void()&gt; &amp;closeCallback=function&lt; void()&gt;(), bool initiateNow=true)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">SessionPtr&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Process.html#4df3ce126ba64c864c1759d916f25635">newSession</a> (const StandardSession::CloseCallback &amp;closeCallback=StandardSession::CloseCallback(), bool initiateNow=true)</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Request a new session from this application process by connecting to its main server socket.  <a href="#a5bd9ad8220bf64e5edf3d025004547a"></a><br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Request a new session from this application process by connecting to its main server socket.  <a href="#4df3ce126ba64c864c1759d916f25635"></a><br></td></tr>
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
 Represents a single application process, as spawned by <a class="el" href="classPassenger_1_1SpawnManager.html" title="An AbstractSpawnManager implementation.">SpawnManager</a> or by ApplicationPool::Interface::get(). <hr><h2>Constructor &amp; Destructor Documentation</h2>
-<a class="anchor" name="cbc73466ae557c68cf040fcce925096c"></a><!-- doxytag: member="Passenger::Process::Process" ref="cbc73466ae557c68cf040fcce925096c" args="(const string &amp;appRoot, pid_t pid, int ownerPipe, const SocketInfoMap &amp;serverSockets, const string &amp;detachKey, const string &amp;connectPassword, const function&lt; void()&gt; &amp;destructionCallback=function&lt; void()&gt;())" -->
+<a class="anchor" name="52c89242f2ff9298f302b4e2f75aea8f"></a><!-- doxytag: member="Passenger::Process::Process" ref="52c89242f2ff9298f302b4e2f75aea8f" args="(const string &amp;appRoot, pid_t pid, int ownerPipe, const SocketInfoMap &amp;serverSockets, const string &amp;detachKey, const string &amp;connectPassword, const string &amp;gupid, const function&lt; void()&gt; &amp;destructionCallback=function&lt; void()&gt;())" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -109,6 +112,12 @@ Represents a single application process, as spawned by <a class="el" href="class
         <tr>
           <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">const string &amp;&nbsp;</td>
+          <td class="paramname"> <em>gupid</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype">const function&lt; void()&gt; &amp;&nbsp;</td>
           <td class="paramname"> <em>destructionCallback</em> = <code>function&lt;void&nbsp;()&gt;()</code></td><td>&nbsp;</td>
         </tr>
@@ -132,6 +141,7 @@ Construct a new <a class="el" href="classPassenger_1_1Process.html" title="Repre
     <tr><td valign="top"></td><td valign="top"><em>serverSockets</em>&nbsp;</td><td>All the server sockets that this process listens on. There must a server socket with the name 'main'. </td></tr>
     <tr><td valign="top"></td><td valign="top"><em>detachKey</em>&nbsp;</td><td>A detach key. Used by the ApplicationPool algorithm. </td></tr>
     <tr><td valign="top"></td><td valign="top"><em>connectPassword</em>&nbsp;</td><td>The password to use when connecting to this process. Must be valid ASCII. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>gupid</em>&nbsp;</td><td>A string which uniquely identifies this process. </td></tr>
     <tr><td valign="top"></td><td valign="top"><em>destructionCallback</em>&nbsp;</td><td>A callback to be called when this <a class="el" href="classPassenger_1_1Process.html" title="Represents a single application process, as spawned by SpawnManager or by ApplicationPool::Interface...">Process</a> is destroyed. </td></tr>
   </table>
 </dl>
@@ -186,15 +196,36 @@ Returns this process's connect password.
 This password is guaranteed to be valid ASCII. 
 </div>
 </div><p>
-<a class="anchor" name="a5bd9ad8220bf64e5edf3d025004547a"></a><!-- doxytag: member="Passenger::Process::newSession" ref="a5bd9ad8220bf64e5edf3d025004547a" args="(const function&lt; void()&gt; &amp;closeCallback=function&lt; void()&gt;(), bool initiateNow=true)" -->
+<a class="anchor" name="6997775fdfa7c0d9e681102bd044c40b"></a><!-- doxytag: member="Passenger::Process::getGupid" ref="6997775fdfa7c0d9e681102bd044c40b" args="() const " -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">string Passenger::Process::getGupid           </td>
+          <td>(</td>
+          <td class="paramname">          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td> const<code> [inline]</code></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+Returns this process's gupid. 
+<p>
+This is like a PID, but does not rotate and is even unique over multiple servers. 
+</div>
+</div><p>
+<a class="anchor" name="4df3ce126ba64c864c1759d916f25635"></a><!-- doxytag: member="Passenger::Process::newSession" ref="4df3ce126ba64c864c1759d916f25635" args="(const StandardSession::CloseCallback &amp;closeCallback=StandardSession::CloseCallback(), bool initiateNow=true)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
           <td class="memname">SessionPtr Passenger::Process::newSession           </td>
           <td>(</td>
-          <td class="paramtype">const function&lt; void()&gt; &amp;&nbsp;</td>
-          <td class="paramname"> <em>closeCallback</em> = <code>function&lt;void()&gt;()</code>, </td>
+          <td class="paramtype">const StandardSession::CloseCallback &amp;&nbsp;</td>
+          <td class="paramname"> <em>closeCallback</em> = <code>StandardSession::CloseCallback()</code>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -259,7 +290,7 @@ You <b>must</b> close a session when you no longer need it. If you call connect(
 <hr>The documentation for this class was generated from the following file:<ul>
 <li><a class="el" href="Process_8h-source.html">Process.h</a></ul>
 </div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Sun Feb 21 12:22:48 2010 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Sun Mar 28 14:11:59 2010 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.8 </small></address>
 </body>

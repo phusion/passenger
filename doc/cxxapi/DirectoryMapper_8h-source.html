@@ -10,6 +10,7 @@
     <ul>
       <li><a href="main.html"><span>Main&nbsp;Page</span></a></li>
       <li><a href="modules.html"><span>Modules</span></a></li>
+      <li><a href="namespaces.html"><span>Namespaces</span></a></li>
       <li><a href="annotated.html"><span>Classes</span></a></li>
       <li class="current"><a href="files.html"><span>Files</span></a></li>
     </ul>
@@ -21,7 +22,7 @@
   </div>
 <h1>DirectoryMapper.h</h1><div class="fragment"><pre class="fragment"><a name="l00001"></a>00001 <span class="comment">/*</span>
 <a name="l00002"></a>00002 <span class="comment"> *  Phusion Passenger - http://www.modrails.com/</span>
-<a name="l00003"></a>00003 <span class="comment"> *  Copyright (c) 2008, 2009 Phusion</span>
+<a name="l00003"></a>00003 <span class="comment"> *  Copyright (c) 2010 Phusion</span>
 <a name="l00004"></a>00004 <span class="comment"> *</span>
 <a name="l00005"></a>00005 <span class="comment"> *  "Phusion Passenger" is a trademark of Hongli Lai &amp; Ninh Bui.</span>
 <a name="l00006"></a>00006 <span class="comment"> *</span>
@@ -52,9 +53,9 @@
 <a name="l00031"></a>00031 
 <a name="l00032"></a>00032 <span class="preprocessor">#include &lt;oxt/backtrace.hpp&gt;</span>
 <a name="l00033"></a>00033 
-<a name="l00034"></a>00034 <span class="preprocessor">#include "CachedFileStat.hpp"</span>
-<a name="l00035"></a>00035 <span class="preprocessor">#include "Configuration.h"</span>
-<a name="l00036"></a>00036 <span class="preprocessor">#include "Utils.h"</span>
+<a name="l00034"></a>00034 <span class="preprocessor">#include "Configuration.hpp"</span>
+<a name="l00035"></a>00035 <span class="preprocessor">#include "Utils.h"</span>
+<a name="l00036"></a>00036 <span class="preprocessor">#include "Utils/CachedFileStat.hpp"</span>
 <a name="l00037"></a>00037 
 <a name="l00038"></a>00038 <span class="comment">// The Apache/APR headers *must* come after the Boost headers, otherwise</span>
 <a name="l00039"></a>00039 <span class="comment">// compilation will fail on OpenBSD.</span>
@@ -192,7 +193,7 @@
 <a name="l00171"></a>00171                 
 <a name="l00172"></a>00172                 UPDATE_TRACE_POINT();
 <a name="l00173"></a>00173                 <span class="keywordflow">if</span> (shouldAutoDetectRack()
-<a name="l00174"></a>00174                  &amp;&amp; verifyRackDir(config-&gt;getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
+<a name="l00174"></a>00174                  &amp;&amp; <a class="code" href="group__Support.html#g53969f8e3ee68d1d99ffe75af8db9be8" title="Check whether the specified directory is a valid Rack application root directory...">verifyRackDir</a>(config-&gt;getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
 <a name="l00175"></a>00175                         baseURIKnown = <span class="keyword">true</span>;
 <a name="l00176"></a>00176                         baseURI = <span class="stringliteral">"/"</span>;
 <a name="l00177"></a>00177                         appType = RACK;
@@ -201,7 +202,7 @@
 <a name="l00180"></a>00180                 
 <a name="l00181"></a>00181                 UPDATE_TRACE_POINT();
 <a name="l00182"></a>00182                 <span class="keywordflow">if</span> (shouldAutoDetectRails()
-<a name="l00183"></a>00183                  &amp;&amp; verifyRailsDir(config-&gt;getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
+<a name="l00183"></a>00183                  &amp;&amp; <a class="code" href="group__Support.html#g5e6bc7ff22b7c61238d7913521936f71" title="Check whether the specified directory is a valid Ruby on Rails application root directory...">verifyRailsDir</a>(config-&gt;getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
 <a name="l00184"></a>00184                         baseURIKnown = <span class="keyword">true</span>;
 <a name="l00185"></a>00185                         baseURI = <span class="stringliteral">"/"</span>;
 <a name="l00186"></a>00186                         appType = RAILS;
@@ -210,7 +211,7 @@
 <a name="l00189"></a>00189                 
 <a name="l00190"></a>00190                 UPDATE_TRACE_POINT();
 <a name="l00191"></a>00191                 <span class="keywordflow">if</span> (shouldAutoDetectWSGI()
-<a name="l00192"></a>00192                  &amp;&amp; verifyWSGIDir(config-&gt;getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
+<a name="l00192"></a>00192                  &amp;&amp; <a class="code" href="group__Support.html#gaec51d2912999d611994c49341f36247" title="Check whether the specified directory is a valid WSGI application root directory...">verifyWSGIDir</a>(config-&gt;getAppRoot(ap_document_root(r)), cstat, throttleRate)) {
 <a name="l00193"></a>00193                         baseURIKnown = <span class="keyword">true</span>;
 <a name="l00194"></a>00194                         baseURI = <span class="stringliteral">"/"</span>;
 <a name="l00195"></a>00195                         appType = WSGI;
@@ -252,7 +253,7 @@
 <a name="l00231"></a>00231 <span class="comment">                                 * This is probably a symlink, so let's resolve it.</span>
 <a name="l00232"></a>00232 <span class="comment">                                 */</span>
 <a name="l00233"></a>00233                                 path.append(baseURI);
-<a name="l00234"></a>00234                                 path = resolveSymlink(path);
+<a name="l00234"></a>00234                                 path = <a class="code" href="group__Support.html#gc3d2b3d608188527d888e63d22c5163c" title="If path refers to a symlink, then this function resolves the symlink for 1 level...">resolveSymlink</a>(path);
 <a name="l00235"></a>00235                         }
 <a name="l00236"></a>00236                         <span class="keywordflow">return</span> path;
 <a name="l00237"></a>00237                 } <span class="keywordflow">else</span> {
@@ -316,7 +317,7 @@
 <a name="l00295"></a>00295 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_DIRECTORY_MAPPER_H_ */</span>
 <a name="l00296"></a>00296 
 </pre></div></div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Fri Mar 5 11:13:03 2010 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Sun Mar 28 14:11:56 2010 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.8 </small></address>
 </body>

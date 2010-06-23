@@ -86,6 +86,7 @@ private
 		app = nil
 		success = report_app_init_status(channel) do
 			ENV['RACK_ENV'] = options["environment"]
+			ENV['RAILS_ENV'] = options["environment"]
 			if options["base_uri"] && options["base_uri"] != "/"
 				ENV['RACK_BASE_URI'] = options["base_uri"]
 				ENV['RAILS_RELATIVE_URL_ROOT'] = options["base_uri"]
@@ -101,6 +102,7 @@ private
 			# that have been set now (e.g. $HOME, $GEM_HOME, etc) and that
 			# it is able to detect newly installed gems.
 			Gem.clear_paths
+			setup_bundler_support
 			app = load_rack_app
 		end
 		

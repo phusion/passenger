@@ -23,7 +23,7 @@
   </div>
 </div>
 <div class="contents">
-<h1>Passenger Namespace Reference</h1>A random.  
+<h1>Passenger Namespace Reference</h1>This file provides a bunch of classes for reading and writing messages in the <a class="el" href="classPassenger_1_1MessageChannel.html" title="Convenience class for I/O operations on file descriptors.">MessageChannel</a> format.  
 <a href="#_details">More...</a>
 <p>
 <table border="0" cellpadding="0" cellspacing="0">
@@ -83,6 +83,18 @@
 <tr><td class="memItemLeft" nowrap align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1MessageChannel.html">MessageChannel</a></td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Convenience class for I/O operations on file descriptors.  <a href="classPassenger_1_1MessageChannel.html#_details">More...</a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Uint16Reader.html">Uint16Reader</a></td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Class for reading a 16-bit big-endian integer.  <a href="classPassenger_1_1Uint16Reader.html#_details">More...</a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1Uint32Reader.html">Uint32Reader</a></td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Class for reading a 32-bit big-endian integer.  <a href="classPassenger_1_1Uint32Reader.html#_details">More...</a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1ArrayReader.html">ArrayReader</a></td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Class for reading a an array message.  <a href="classPassenger_1_1ArrayReader.html#_details">More...</a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1ScalarReader.html">ScalarReader</a></td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Class for reading a scalar message.  <a href="classPassenger_1_1ScalarReader.html#_details">More...</a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1MessageServer.html">MessageServer</a></td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Simple pluggable request/response messaging server framework.  <a href="classPassenger_1_1MessageServer.html#_details">More...</a><br></td></tr>
@@ -113,6 +125,9 @@
 <tr><td class="memItemLeft" nowrap align="right" valign="top">struct &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1AnythingToString_3_01vector_3_01string_01_4_01_4.html">AnythingToString&lt; vector&lt; string &gt; &gt;</a></td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Used internally by <a class="el" href="group__Support.html#gf6fab368d70c18fdf16bf5a24f630407" title="Convert anything to a string.">toString()</a>.  <a href="structPassenger_1_1AnythingToString_3_01vector_3_01string_01_4_01_4.html#_details">More...</a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">struct &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structPassenger_1_1AnythingToString_3_01vector_3_01StaticString_01_4_01_4.html">AnythingToString&lt; vector&lt; StaticString &gt; &gt;</a></td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Used internally by <a class="el" href="group__Support.html#gf6fab368d70c18fdf16bf5a24f630407" title="Convert anything to a string.">toString()</a>.  <a href="structPassenger_1_1AnythingToString_3_01vector_3_01StaticString_01_4_01_4.html#_details">More...</a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classPassenger_1_1BufferedUpload.html">BufferedUpload</a></td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Represents a buffered upload file.  <a href="classPassenger_1_1BufferedUpload.html#_details">More...</a><br></td></tr>
@@ -185,6 +200,9 @@ string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="gr
 <tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Support.html#ge74addedf73782a1eb1f6dd48d6fce06">escapeForXml</a> (const string &amp;input)</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Escape the given raw string into an XML value.  <a href="group__Support.html#ge74addedf73782a1eb1f6dd48d6fce06"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Support.html#g7e3fdc923bdf6efeab407cdd325883a8">setNonBlocking</a> (int fd)</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Sets a socket in non-blocking mode.  <a href="group__Support.html#g7e3fdc923bdf6efeab407cdd325883a8"></a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacePassenger.html#de80218e8b836b796f8b960b6225b439">getProcessUsername</a> ()</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Returns the username of the user that the current process is running as.  <a href="#de80218e8b836b796f8b960b6225b439"></a><br></td></tr>
@@ -209,9 +227,9 @@ string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="gr
 <tr><td class="memItemLeft" nowrap align="right" valign="top">bool&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Support.html#gaec51d2912999d611994c49341f36247">verifyWSGIDir</a> (const string &amp;dir, CachedFileStat *cstat=0, unsigned int throttleRate=0)</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Check whether the specified directory is a valid WSGI application root directory.  <a href="group__Support.html#gaec51d2912999d611994c49341f36247"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__Support.html#geb1ed5adc17a8f98fbc9a4e96bb3ae95">generateSecureToken</a> (void *buf, unsigned int size)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacePassenger.html#1d0a66b0e207c46dc6124ff3b2f331e6">getHostName</a> ()</td></tr>
 
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Generate a secure, random token of the <code>size</code> bytes and put the result into <code>buf</code>.  <a href="group__Support.html#geb1ed5adc17a8f98fbc9a4e96bb3ae95"></a><br></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Returns the system's host name.  <a href="#1d0a66b0e207c46dc6124ff3b2f331e6"></a><br></td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top">string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacePassenger.html#d88884ee6e2184ef8656fc20f0549b0b">fillInMiddle</a> (unsigned int max, const string &amp;prefix, const string &amp;middle, const string &amp;postfix=&quot;&quot;)</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Given a prefix string, a middle string and a postfix string, try to build a string that looks like <code>prefix + middle + postfix</code>, with as many characters from <code>midle</code> preserved as possible.  <a href="#d88884ee6e2184ef8656fc20f0549b0b"></a><br></td></tr>
@@ -249,7 +267,40 @@ string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="na
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Round <em>number</em> up to the nearest multiple of <em>multiple</em>.  <a href="#6b2bc9d6fa3848e01fd8c164d30737cc"></a><br></td></tr>
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
-A random. 
+This file provides a bunch of classes for reading and writing messages in the <a class="el" href="classPassenger_1_1MessageChannel.html" title="Convenience class for I/O operations on file descriptors.">MessageChannel</a> format. 
+<p>
+A random.<p>
+Unlike <a class="el" href="classPassenger_1_1MessageChannel.html" title="Convenience class for I/O operations on file descriptors.">MessageChannel</a>, whose operations take control over the I/O handle and may block, these classes are like parsers and data generators. Reader classes require the user to feed data to them. Writer classes generate a bunch of bytes that the user can send out. These classes will never block, making them ideal for use in evented servers.<p>
+<h2>Reading messages</h2>
+<p>
+To read a single message, one must instantiate a reader object and feed network data to it with the feed() method. This method returns the number of bytes actually processed by the reader (i.e. the number of bytes that it has recognized as part of the message).<p>
+When the reader has either successfully parsed the data or encountered an error, it will indicate so via the done() method. With hasError() one can check whether an error was encountered or whether the reader succeeded, and with errorCode() one can obtain the exact error reason. Not all readers support hasError() and errorCode() because some readers can never encounter errors and some readers only have a single reason to fail.<p>
+When successful, the parsed message can be obtained with value(). This method may only be called when done() is true and there is no error, otherwise the return value is undefined.<p>
+At this point, the reader object cannot process any more data and feed() will always return 0. To reuse the object for processing another message, one must reset its state by calling reset().<p>
+The following example demonstrates how to read a continuous stream of 32-bit integers: <div class="fragment"><pre class="fragment">   Uint32Reader intReader;
+   <span class="keywordflow">while</span> (<span class="keyword">true</span>) {
+       <span class="comment">// Read a bunch of network data...</span>
+       <span class="keywordtype">char</span> buf[1024];
+       ssize_t size = recv(fd, buf, <span class="keyword">sizeof</span>(buf));
+       <span class="keywordtype">size_t</span> consumed = 0;
+       
+       <span class="comment">// ...and process it all. We only feed data to the reader that</span>
+       <span class="comment">// hasn't already been fed.</span>
+       <span class="keywordflow">while</span> (consumed &lt; size) {
+           consumed += intReader.feed(buf + consumed, size - consumed);
+           <span class="keywordflow">if</span> (intReader.done()) {
+               printf(<span class="stringliteral">"Integer: %d\n"</span>, (<span class="keywordtype">int</span>) intReader.value());
+               <span class="comment">// The state must be reset before the reader can be reused.</span>
+               intReader.reset();
+           }
+       }
+   }
+</pre></div><p>
+Some readers return non-primitive values in their value() methods, such as <a class="el" href="classPassenger_1_1ArrayReader.html" title="Class for reading a an array message.">ArrayReader</a> and <a class="el" href="classPassenger_1_1ScalarReader.html" title="Class for reading a scalar message.">ScalarReader</a> which return <code>const vector&lt;StaticString&gt; &amp;</code> and <code><a class="el" href="classPassenger_1_1StaticString.html" title="An immutable, static byte buffer.">StaticString</a></code>, respectively. These values are only valid until either of the following things occur:<p>
+<ul>
+<li>The buffer containing last the fed data has been destroyed or modified.</li><li>The reader itself has been destroyed.</li></ul>
+<p>
+This is because the readers try to apply copy-zero optimizations whenever possible. For example, in case of <a class="el" href="classPassenger_1_1ScalarReader.html" title="Class for reading a scalar message.">ScalarReader</a>, it'll check whether the data that has been fed in the first feed() call already contains a full scalar message. If so then it'll just return a <a class="el" href="classPassenger_1_1StaticString.html" title="An immutable, static byte buffer.">StaticString</a> that points to the scalar message in the fed data; it will not copy the fed data. In this case it is important that the buffer containing the fed data is not modified or destroyed while the <a class="el" href="classPassenger_1_1StaticString.html" title="An immutable, static byte buffer.">StaticString</a> is in use. If the first feed() call does not supply a full scalar message then it will buffer all fed data until the buffer contains a full scalar message, and the result will point to this buffer. Because the buffer is owned by the reader, the result will be invalidated as soon as the reader is destroyed. 
 <p>
 <hr><h2>Typedef Documentation</h2>
 <a class="anchor" name="fd60d942a89fbb7f306e330d75704570"></a><!-- doxytag: member="Passenger::AbstractSpawnManagerPtr" ref="fd60d942a89fbb7f306e330d75704570" args="" -->
@@ -394,6 +445,32 @@ If <code>prefix + middle + postfix</code> does not fit in <code>max</code> chara
   </table>
 </dl>
 <dl class="post" compact><dt><b>Postcondition:</b></dt><dd>result.size() &lt;= max </dd></dl>
+
+</div>
+</div><p>
+<a class="anchor" name="1d0a66b0e207c46dc6124ff3b2f331e6"></a><!-- doxytag: member="Passenger::getHostName" ref="1d0a66b0e207c46dc6124ff3b2f331e6" args="()" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">string Passenger::getHostName           </td>
+          <td>(</td>
+          <td class="paramname">          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+Returns the system's host name. 
+<p>
+<dl compact><dt><b>Exceptions:</b></dt><dd>
+  <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em><a class="el" href="classPassenger_1_1SystemException.html" title="Represents an error returned by a system call or a standard library call.">SystemException</a></em>&nbsp;</td><td>The host name cannot be retrieved. </td></tr>
+  </table>
+</dl>
 
 </div>
 </div><p>
@@ -644,7 +721,7 @@ This form accepts an output buffer which must be at least data.size() * 2 bytes 
 </div>
 </div><p>
 </div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Sun Feb 21 12:22:48 2010 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Sun Mar 28 14:11:58 2010 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.8 </small></address>
 </body>

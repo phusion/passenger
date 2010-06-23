@@ -316,6 +316,7 @@ private
 			end
 		end
 		trap('HUP', IGNORE)
+		PhusionPassenger.call_event(:after_installing_signal_handlers)
 	end
 	
 	def install_useful_signal_handlers
@@ -337,7 +338,8 @@ private
 					output << "# Thread: #{thread.inspect}, "
 					if thread == Thread.main
 						output << "[main thread], "
-					else
+					end
+					if thread == Thread.current
 						output << "[current thread], "
 					end
 					output << "alive = #{thread.alive?}\n"

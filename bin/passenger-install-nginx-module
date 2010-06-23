@@ -36,7 +36,7 @@ include PlatformInfo
 class Installer < PhusionPassenger::AbstractInstaller
 	include PhusionPassenger
 	
-	NGINX_VERSION = "0.7.64"
+	NGINX_VERSION = "0.7.65"
 	
 	def dependencies
 		result = [
