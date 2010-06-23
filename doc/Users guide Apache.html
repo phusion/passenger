@@ -3123,7 +3123,38 @@ namespace :deploy do
   end
 end</tt></pre>
 </div></div>
-<h3 id="moving_phusion_passenger">8.4. Moving Phusion Passenger to a different directory</h3><div style="clear:left"></div>
+<h3 id="bundler_support">8.4. Bundler support</h3><div style="clear:left"></div>
+<div class="paragraph"><p>Phusion Passenger has automatic support for <a href="http://gembundler.com/git.html">Bundler</a>.
+It works as follows:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+If you have a <em>.bundle/environment.rb</em> in your application root, then Phusion
+  Passenger will require that file before loading your application.
+</p>
+</li>
+<li>
+<p>
+Otherwise, if you have a <em>Gemfile</em>, then Phusion Passenger will automatically call
+  <tt>Bundler.setup()</tt> before loading your application.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>It&#8217;s possible that your application also calls <tt>Bundler.setup</tt> during loading, e.g. in
+<em>config.ru</em> or in <em>config/boot.rb</em>. This is the case with Rails 3, and is also the case if you
+modified your <em>config/boot.rb</em> according to the
+<a href="http://gembundler.com/rails23.html">Bundler Rails 2.3 instructions</a>.
+This leads to <tt>Bundler.setup</tt> being called twice, once before the application startup file
+is required and once during application startup. However this is harmless and doesn&#8217;t
+have any negative effects.</p></div>
+<div class="paragraph"><p>Phusion Passenger assumes that you&#8217;re using Bundler &gt;= 0.9.5. If you don&#8217;t want Phusion
+Passenger to run its Bundler support code, e.g. because you need to use an older version
+of Bundler with an incompatible API or because you use a system other than Bundler, then
+you can override Phusion Passenger&#8217;s Bundler support code by creating a file
+<em>config/setup_load_paths.rb</em>. If this file exists then it will be required before loading
+the application startup file. In this file you can do whatever you need to setup Bundler
+or a similar system.</p></div>
+<h3 id="moving_phusion_passenger">8.5. Moving Phusion Passenger to a different directory</h3><div style="clear:left"></div>
 <div class="paragraph"><p>It is possible to relocate the Phusion Passenger files to a different directory. It
 involves two steps:</p></div>
 <div class="olist arabic"><ol class="arabic">
@@ -3160,7 +3191,7 @@ Edit your Apache configuration file, and set:
 </div></div>
 </li>
 </ol></div>
-<h3 id="_installing_multiple_ruby_on_rails_versions">8.5. Installing multiple Ruby on Rails versions</h3><div style="clear:left"></div>
+<h3 id="_installing_multiple_ruby_on_rails_versions">8.6. Installing multiple Ruby on Rails versions</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Each Ruby on Rails applications that are going to be deployed may require a
 specific Ruby on Rails version. You can install a specific version with
 this command:</p></div>
@@ -3171,7 +3202,7 @@ this command:</p></div>
 <div class="paragraph"><p>where <em>X.X.X</em> is the version number of Ruby on Rails.</p></div>
 <div class="paragraph"><p>All of these versions will exist in parallel, and will not conflict with each
 other. Phusion Passenger will automatically make use of the correct version.</p></div>
-<h3 id="_making_the_application_restart_after_each_request">8.6. Making the application restart after each request</h3><div style="clear:left"></div>
+<h3 id="_making_the_application_restart_after_each_request">8.7. Making the application restart after each request</h3><div style="clear:left"></div>
 <div class="paragraph"><p>In some situations it might be desirable to restart the web application after
 each request, for example when developing a non-Rails application that doesn&#8217;t
 support code reloading, or when developing a web framework.</p></div>
@@ -3192,7 +3223,7 @@ or when you&#8217;re not developing a Rails application and your web framework
 does not support code reloading.</td>
 </tr></table>
 </div>
-<h3 id="sub_uri_deployment_uri_fix">8.7. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments</h3><div style="clear:left"></div>
+<h3 id="sub_uri_deployment_uri_fix">8.8. How to fix broken images/CSS/JavaScript URIs in sub-URI deployments</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Some people experience broken images and other broken static assets when they
 deploy their application to a sub-URI (i.e. <em>http://mysite.com/railsapp/</em>).
 The reason for this usually is that you used a
@@ -3227,10 +3258,10 @@ so that your images will always work no matter what sub-URI you&#8217;ve deploye
 append a timestamp to the URI to better facilitate HTTP caching. For more information,
 please refer to
 <a href="http://api.rubyonrails.org/classes/ActionView/Helpers/AssetTagHelper.html">the Rails API docs</a>.</p></div>
-<h3 id="_x_sendfile_support">8.8. X-Sendfile support</h3><div style="clear:left"></div>
+<h3 id="_x_sendfile_support">8.9. X-Sendfile support</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Phusion Passenger does not provide X-Sendfile support by itself. Please install
 <a href="http://tn123.ath.cx/mod_xsendfile/">mod_xsendfile</a> for X-Sendfile support.</p></div>
-<h3 id="_upload_progress">8.9. Upload progress</h3><div style="clear:left"></div>
+<h3 id="_upload_progress">8.10. Upload progress</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Phusion Passenger does not provide upload progress support by itself. Please
 try drogus&#8217;s <a href="http://github.com/drogus/apache-upload-progress-module/tree/master">
 Apache upload progress module</a> instead.</p></div>
@@ -3718,7 +3749,7 @@ has no effect.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2010-03-05 10:35:16 CEST
+Last updated 2010-06-04 12:37:15 CEST
 </div>
 </div>
 </body>

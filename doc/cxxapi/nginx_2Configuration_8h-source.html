@@ -65,49 +65,50 @@
 <a name="l00043"></a>00043     ngx_flag_t   use_global_queue;
 <a name="l00044"></a>00044     ngx_flag_t   friendly_error_pages;
 <a name="l00045"></a>00045     ngx_flag_t   analytics;
-<a name="l00046"></a>00046     ngx_str_t    environment;
-<a name="l00047"></a>00047     ngx_str_t    user;
-<a name="l00048"></a>00048     ngx_str_t    group;
-<a name="l00049"></a>00049     ngx_str_t    spawn_method;
-<a name="l00050"></a>00050     ngx_str_t    app_group_name;
-<a name="l00051"></a>00051     ngx_str_t    app_rights;
-<a name="l00052"></a>00052     ngx_int_t    min_instances;
-<a name="l00053"></a>00053     ngx_int_t    framework_spawner_idle_time;
-<a name="l00054"></a>00054     ngx_int_t    app_spawner_idle_time;
-<a name="l00055"></a>00055     ngx_array_t *base_uris;
-<a name="l00056"></a>00056 
-<a name="l00057"></a>00057     <span class="comment">/************************************/</span>
-<a name="l00058"></a>00058 } passenger_loc_conf_t;
-<a name="l00059"></a>00059 
-<a name="l00060"></a>00060 <span class="keyword">typedef</span> <span class="keyword">struct </span>{
-<a name="l00061"></a>00061     ngx_str_t    root_dir;
-<a name="l00062"></a>00062     ngx_str_t    ruby;
-<a name="l00063"></a>00063     ngx_uint_t   log_level;
-<a name="l00064"></a>00064     ngx_uint_t   max_pool_size;
-<a name="l00065"></a>00065     ngx_uint_t   max_instances_per_app;
-<a name="l00066"></a>00066     ngx_uint_t   pool_idle_time;
-<a name="l00067"></a>00067     ngx_flag_t   user_switching;
-<a name="l00068"></a>00068     ngx_str_t    default_user;
-<a name="l00069"></a>00069     ngx_str_t    default_group;
-<a name="l00070"></a>00070     ngx_str_t    analytics_log_dir;
-<a name="l00071"></a>00071     ngx_str_t    analytics_log_user;
-<a name="l00072"></a>00072     ngx_str_t    analytics_log_group;
-<a name="l00073"></a>00073     ngx_str_t    analytics_log_permissions;
-<a name="l00074"></a>00074     ngx_array_t *prestart_uris;
-<a name="l00075"></a>00075 } passenger_main_conf_t;
-<a name="l00076"></a>00076 
-<a name="l00077"></a>00077 <span class="keyword">extern</span> <span class="keyword">const</span> ngx_command_t   passenger_commands[];
-<a name="l00078"></a>00078 <span class="keyword">extern</span> passenger_main_conf_t passenger_main_conf;
-<a name="l00079"></a>00079 
-<a name="l00080"></a>00080 <span class="keywordtype">void</span> *passenger_create_main_conf(ngx_conf_t *cf);
-<a name="l00081"></a>00081 <span class="keywordtype">char</span> *passenger_init_main_conf(ngx_conf_t *cf, <span class="keywordtype">void</span> *conf_pointer);
-<a name="l00082"></a>00082 <span class="keywordtype">void</span> *passenger_create_loc_conf(ngx_conf_t *cf);
-<a name="l00083"></a>00083 <span class="keywordtype">char</span> *passenger_merge_loc_conf(ngx_conf_t *cf, <span class="keywordtype">void</span> *parent, <span class="keywordtype">void</span> *child);
-<a name="l00084"></a>00084 
-<a name="l00085"></a>00085 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_NGINX_CONFIGURATION_H_ */</span>
-<a name="l00086"></a>00086 
+<a name="l00046"></a>00046     ngx_flag_t   debugger;
+<a name="l00047"></a>00047     ngx_str_t    environment;
+<a name="l00048"></a>00048     ngx_str_t    user;
+<a name="l00049"></a>00049     ngx_str_t    group;
+<a name="l00050"></a>00050     ngx_str_t    spawn_method;
+<a name="l00051"></a>00051     ngx_str_t    app_group_name;
+<a name="l00052"></a>00052     ngx_str_t    app_rights;
+<a name="l00053"></a>00053     ngx_int_t    min_instances;
+<a name="l00054"></a>00054     ngx_int_t    framework_spawner_idle_time;
+<a name="l00055"></a>00055     ngx_int_t    app_spawner_idle_time;
+<a name="l00056"></a>00056     ngx_array_t *base_uris;
+<a name="l00057"></a>00057 
+<a name="l00058"></a>00058     <span class="comment">/************************************/</span>
+<a name="l00059"></a>00059 } passenger_loc_conf_t;
+<a name="l00060"></a>00060 
+<a name="l00061"></a>00061 <span class="keyword">typedef</span> <span class="keyword">struct </span>{
+<a name="l00062"></a>00062     ngx_str_t    root_dir;
+<a name="l00063"></a>00063     ngx_str_t    ruby;
+<a name="l00064"></a>00064     ngx_uint_t   log_level;
+<a name="l00065"></a>00065     ngx_uint_t   max_pool_size;
+<a name="l00066"></a>00066     ngx_uint_t   max_instances_per_app;
+<a name="l00067"></a>00067     ngx_uint_t   pool_idle_time;
+<a name="l00068"></a>00068     ngx_flag_t   user_switching;
+<a name="l00069"></a>00069     ngx_str_t    default_user;
+<a name="l00070"></a>00070     ngx_str_t    default_group;
+<a name="l00071"></a>00071     ngx_str_t    analytics_log_dir;
+<a name="l00072"></a>00072     ngx_str_t    analytics_log_user;
+<a name="l00073"></a>00073     ngx_str_t    analytics_log_group;
+<a name="l00074"></a>00074     ngx_str_t    analytics_log_permissions;
+<a name="l00075"></a>00075     ngx_array_t *prestart_uris;
+<a name="l00076"></a>00076 } passenger_main_conf_t;
+<a name="l00077"></a>00077 
+<a name="l00078"></a>00078 <span class="keyword">extern</span> <span class="keyword">const</span> ngx_command_t   passenger_commands[];
+<a name="l00079"></a>00079 <span class="keyword">extern</span> passenger_main_conf_t passenger_main_conf;
+<a name="l00080"></a>00080 
+<a name="l00081"></a>00081 <span class="keywordtype">void</span> *passenger_create_main_conf(ngx_conf_t *cf);
+<a name="l00082"></a>00082 <span class="keywordtype">char</span> *passenger_init_main_conf(ngx_conf_t *cf, <span class="keywordtype">void</span> *conf_pointer);
+<a name="l00083"></a>00083 <span class="keywordtype">void</span> *passenger_create_loc_conf(ngx_conf_t *cf);
+<a name="l00084"></a>00084 <span class="keywordtype">char</span> *passenger_merge_loc_conf(ngx_conf_t *cf, <span class="keywordtype">void</span> *parent, <span class="keywordtype">void</span> *child);
+<a name="l00085"></a>00085 
+<a name="l00086"></a>00086 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_NGINX_CONFIGURATION_H_ */</span>
+<a name="l00087"></a>00087 
 </pre></div></div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Sun Feb 21 12:22:45 2010 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Sun Mar 28 14:11:56 2010 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.8 </small></address>
 </body>

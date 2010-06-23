@@ -105,7 +105,7 @@ Represents a single request/response pair of an application process.
 <ol type=1>
 <li>Serialize the HTTP request headers into a format as expected by <a class="el" href="classPassenger_1_1Session.html#8f8a39f78dd2672b00f1ff01e4d6d671" title="Send HTTP request headers to the application.">sendHeaders()</a>, then send that string by calling <a class="el" href="classPassenger_1_1Session.html#8f8a39f78dd2672b00f1ff01e4d6d671" title="Send HTTP request headers to the application.">sendHeaders()</a>.</li><li>In case of a POST of PUT request, send the HTTP request body by calling <a class="el" href="classPassenger_1_1Session.html#2203d81e25fe5066aed351608deecf7b" title="Send a chunk of HTTP request body data to the application.">sendBodyBlock()</a>, possibly multiple times.</li><li>Shutdown the writer end of the session channel (<a class="el" href="classPassenger_1_1Session.html#8263c568a8ac4567b33728d820cbd920" title="Indicate that we don&#39;t want to write data anymore to the I/O channel.">shutdownWriter()</a>) since you're now done sending data.</li><li>The HTTP response can now be read through the session channel (<a class="el" href="classPassenger_1_1Session.html#949c7a46f4bb0c628730ded2041d2489" title="Returns this session&#39;s channel&#39;s file descriptor.">getStream()</a>).</li><li>When the HTTP response has been read, the session must be closed. This is done by destroying the <a class="el" href="classPassenger_1_1Session.html" title="Represents a single request/response pair of an application process.">Session</a> object.</li></ol>
 <p>
-A usage example is shown in <a class="el" href="classPassenger_1_1Process.html#a5bd9ad8220bf64e5edf3d025004547a" title="Request a new session from this application process by connecting to its main server...">Process::newSession()</a>.<p>
+A usage example is shown in <a class="el" href="classPassenger_1_1Process.html#4df3ce126ba64c864c1759d916f25635" title="Request a new session from this application process by connecting to its main server...">Process::newSession()</a>.<p>
 <a class="el" href="classPassenger_1_1Session.html" title="Represents a single request/response pair of an application process.">Session</a> is an abstract base class. Concrete implementations can be found in <a class="el" href="classPassenger_1_1StandardSession.html" title="A &quot;standard&quot; implementation of Session.">StandardSession</a> and ApplicationPool::Client::RemoteSession.<p>
 <a class="el" href="classPassenger_1_1Session.html" title="Represents a single request/response pair of an application process.">Session</a> is not guaranteed to be thread-safe. <hr><h2>Member Function Documentation</h2>
 <a class="anchor" name="7ab85388f15388cb8e65873d1ad310a5"></a><!-- doxytag: member="Passenger::Session::closeStream" ref="7ab85388f15388cb8e65873d1ad310a5" args="()=0" -->
@@ -570,7 +570,7 @@ Calling this method after <a class="el" href="classPassenger_1_1Session.html#7ab
 <hr>The documentation for this class was generated from the following file:<ul>
 <li><a class="el" href="Session_8h-source.html">Session.h</a></ul>
 </div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Sun Feb 21 12:22:48 2010 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Sun Mar 28 14:11:59 2010 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.8 </small></address>
 </body>

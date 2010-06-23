@@ -131,25 +131,52 @@
 <a name="l00109"></a>00109                 generateBytes(buf, size);
 <a name="l00110"></a>00110                 <span class="keywordflow">return</span> <a class="code" href="namespacePassenger.html#1d4b16a419fe7231bc8b7036266f8131" title="Convert the given binary data to hexadecimal.">toHex</a>(<a class="code" href="classPassenger_1_1StaticString.html" title="An immutable, static byte buffer.">StaticString</a>(buf, size));
 <a name="l00111"></a>00111         }
-<a name="l00112"></a>00112         
-<a name="l00113"></a>00113         <span class="keywordtype">int</span> generateInt() {
-<a name="l00114"></a>00114                 <span class="keywordtype">int</span> ret;
-<a name="l00115"></a>00115                 generateBytes(&amp;ret, <span class="keyword">sizeof</span>(ret));
-<a name="l00116"></a>00116                 <span class="keywordflow">return</span> ret;
-<a name="l00117"></a>00117         }
-<a name="l00118"></a>00118         
-<a name="l00119"></a>00119         <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> generateUint() {
-<a name="l00120"></a>00120                 <span class="keywordflow">return</span> (<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span>) generateInt();
-<a name="l00121"></a>00121         }
-<a name="l00122"></a>00122 };
-<a name="l00123"></a>00123 
-<a name="l00124"></a>00124 <span class="keyword">typedef</span> shared_ptr&lt;RandomGenerator&gt; RandomGeneratorPtr;
-<a name="l00125"></a>00125 
-<a name="l00126"></a>00126 } <span class="comment">// namespace Passenger</span>
-<a name="l00127"></a>00127 
-<a name="l00128"></a>00128 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_RANDOM_GENERATOR_H_ */</span>
+<a name="l00112"></a>00112         <span class="comment"></span>
+<a name="l00113"></a>00113 <span class="comment">        /**</span>
+<a name="l00114"></a>00114 <span class="comment">         * Generates a random string of &lt;em&gt;size&lt;/em&gt; bytes which is also</span>
+<a name="l00115"></a>00115 <span class="comment">         * valid ASCII. The result consists only of the characters A-Z,</span>
+<a name="l00116"></a>00116 <span class="comment">         * a-z and 0-9, and therefore the total number of possibilities</span>
+<a name="l00117"></a>00117 <span class="comment">         * given a size of N is 62**N. However not every character has an</span>
+<a name="l00118"></a>00118 <span class="comment">         * equal chance of being chosen: a-i have 5/256 chance of being</span>
+<a name="l00119"></a>00119 <span class="comment">         * chosen, while other characters have 4/256 chance of being chosen.</span>
+<a name="l00120"></a>00120 <span class="comment">         * Therefore, to match the entropy of a random binary string of</span>
+<a name="l00121"></a>00121 <span class="comment">         * size N, one should choose a &lt;em&gt;size&lt;/em&gt; which yields slightly</span>
+<a name="l00122"></a>00122 <span class="comment">         * more possibilities than 2**N.</span>
+<a name="l00123"></a>00123 <span class="comment">         */</span>
+<a name="l00124"></a><a class="code" href="classPassenger_1_1RandomGenerator.html#d9d9a489f6dbfabafb35da326f5ed967">00124</a>         <span class="keywordtype">string</span> <a class="code" href="classPassenger_1_1RandomGenerator.html#d9d9a489f6dbfabafb35da326f5ed967" title="Generates a random string of size bytes which is also valid ASCII.">generateAsciiString</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> size) {
+<a name="l00125"></a>00125                 <span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">char</span> chars[] = {
+<a name="l00126"></a>00126                         <span class="charliteral">'a'</span>, <span class="charliteral">'b'</span>, <span class="charliteral">'c'</span>, <span class="charliteral">'d'</span>, <span class="charliteral">'e'</span>, <span class="charliteral">'f'</span>, <span class="charliteral">'g'</span>, <span class="charliteral">'h'</span>, <span class="charliteral">'i'</span>, <span class="charliteral">'j'</span>, <span class="charliteral">'k'</span>, <span class="charliteral">'l'</span>, <span class="charliteral">'m'</span>,
+<a name="l00127"></a>00127                         <span class="charliteral">'n'</span>, <span class="charliteral">'o'</span>, <span class="charliteral">'p'</span>, <span class="charliteral">'q'</span>, <span class="charliteral">'r'</span>, <span class="charliteral">'s'</span>, <span class="charliteral">'t'</span>, <span class="charliteral">'u'</span>, <span class="charliteral">'v'</span>, <span class="charliteral">'w'</span>, <span class="charliteral">'x'</span>, <span class="charliteral">'y'</span>, <span class="charliteral">'z'</span>,
+<a name="l00128"></a>00128                         <span class="charliteral">'A'</span>, <span class="charliteral">'B'</span>, <span class="charliteral">'C'</span>, <span class="charliteral">'D'</span>, <span class="charliteral">'E'</span>, <span class="charliteral">'F'</span>, <span class="charliteral">'G'</span>, <span class="charliteral">'H'</span>, <span class="charliteral">'I'</span>, <span class="charliteral">'J'</span>, <span class="charliteral">'K'</span>, <span class="charliteral">'L'</span>, <span class="charliteral">'M'</span>,
+<a name="l00129"></a>00129                         <span class="charliteral">'N'</span>, <span class="charliteral">'O'</span>, <span class="charliteral">'P'</span>, <span class="charliteral">'Q'</span>, <span class="charliteral">'R'</span>, <span class="charliteral">'S'</span>, <span class="charliteral">'T'</span>, <span class="charliteral">'U'</span>, <span class="charliteral">'V'</span>, <span class="charliteral">'W'</span>, <span class="charliteral">'X'</span>, <span class="charliteral">'Y'</span>, <span class="charliteral">'Z'</span>,
+<a name="l00130"></a>00130                         <span class="charliteral">'0'</span>, <span class="charliteral">'1'</span>, <span class="charliteral">'2'</span>, <span class="charliteral">'3'</span>, <span class="charliteral">'4'</span>, <span class="charliteral">'5'</span>, <span class="charliteral">'6'</span>, <span class="charliteral">'7'</span>, <span class="charliteral">'8'</span>, <span class="charliteral">'9'</span>
+<a name="l00131"></a>00131                 };
+<a name="l00132"></a>00132                 <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> buf[size];
+<a name="l00133"></a>00133                 generateBytes(buf, size);
+<a name="l00134"></a>00134                 <span class="keywordflow">for</span> (<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> i = 0; i &lt; size; i++) {
+<a name="l00135"></a>00135                         buf[i] = chars[buf[i] % <span class="keyword">sizeof</span>(chars)];
+<a name="l00136"></a>00136                 }
+<a name="l00137"></a>00137                 <span class="keywordflow">return</span> string((<span class="keyword">const</span> <span class="keywordtype">char</span> *) buf, size);
+<a name="l00138"></a>00138         }
+<a name="l00139"></a>00139         
+<a name="l00140"></a>00140         <span class="keywordtype">int</span> generateInt() {
+<a name="l00141"></a>00141                 <span class="keywordtype">int</span> ret;
+<a name="l00142"></a>00142                 generateBytes(&amp;ret, <span class="keyword">sizeof</span>(ret));
+<a name="l00143"></a>00143                 <span class="keywordflow">return</span> ret;
+<a name="l00144"></a>00144         }
+<a name="l00145"></a>00145         
+<a name="l00146"></a>00146         <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> generateUint() {
+<a name="l00147"></a>00147                 <span class="keywordflow">return</span> (<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span>) generateInt();
+<a name="l00148"></a>00148         }
+<a name="l00149"></a>00149 };
+<a name="l00150"></a>00150 
+<a name="l00151"></a>00151 <span class="keyword">typedef</span> shared_ptr&lt;RandomGenerator&gt; RandomGeneratorPtr;
+<a name="l00152"></a>00152 
+<a name="l00153"></a>00153 } <span class="comment">// namespace Passenger</span>
+<a name="l00154"></a>00154 
+<a name="l00155"></a>00155 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_RANDOM_GENERATOR_H_ */</span>
 </pre></div></div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Sun Feb 21 12:22:46 2010 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Sun Mar 28 14:11:56 2010 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.8 </small></address>
 </body>

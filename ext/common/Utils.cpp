@@ -355,19 +355,30 @@ setPassengerTempDir(const string &dir) {
 static void
 createNonWritableFifo(const string &filename) {
 	int ret, e;
+	bool ignoreChmodErrors = false;
 	
 	do {
 		ret = mkfifo(filename.c_str(), 0);
 	} while (ret == -1 && errno == EINTR);
-	if (ret == -1 && errno != EEXIST) {
-		e = errno;
-		throw FileSystemException("Cannot create FIFO file " + filename, e, filename);
+	if (ret == -1) {
+		if (errno == EEXIST) {
+			/* The FIFO file was likely created by root, but after lowering
+			 * privilege createPassengerTempDir() is called again, and this
+			 * time we won't be able to set permissions. So in this case
+			 * we'll want to ignore any chmod errors.
+			 */
+			ignoreChmodErrors = geteuid() != 0;
+		} else {
+			e = errno;
+			throw FileSystemException("Cannot create FIFO file " + filename,
+				e, filename);
+		}
 	}
 	
 	do {
 		ret = chmod(filename.c_str(), 0);
 	} while (ret == -1 && errno == EINTR);
-	if (ret == -1) {
+	if (ret == -1 && !ignoreChmodErrors) {
 		e = errno;
 		throw FileSystemException("Cannot set permissions on file " + filename, e, filename);
 	}

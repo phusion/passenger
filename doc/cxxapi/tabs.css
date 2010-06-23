@@ -57,7 +57,7 @@ DIV.tabs SPAN
    white-space      : nowrap;
 }
 
-DIV.tabs INPUT
+DIV.tabs #MSearchBox
 {
    float            : right;
    display          : inline;

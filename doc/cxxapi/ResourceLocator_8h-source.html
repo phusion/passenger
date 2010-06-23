@@ -80,7 +80,7 @@
 <a name="l00058"></a>00058                 }
 <a name="l00059"></a>00059         }
 <a name="l00060"></a>00060         
-<a name="l00061"></a>00061         <span class="keywordtype">string</span> getHelperScriptDir()<span class="keyword"> const </span>{
+<a name="l00061"></a>00061         <span class="keywordtype">string</span> getHelperScriptsDir()<span class="keyword"> const </span>{
 <a name="l00062"></a>00062                 <span class="keywordflow">if</span> (nativelyPackaged) {
 <a name="l00063"></a>00063                         <span class="keywordflow">return</span> <span class="stringliteral">"/usr/share/phusion-passenger/helper-scripts"</span>;
 <a name="l00064"></a>00064                 } <span class="keywordflow">else</span> {
@@ -89,7 +89,7 @@
 <a name="l00067"></a>00067         }
 <a name="l00068"></a>00068         
 <a name="l00069"></a>00069         <span class="keywordtype">string</span> getSpawnServerFilename()<span class="keyword"> const </span>{
-<a name="l00070"></a>00070                 <span class="keywordflow">return</span> root + <span class="stringliteral">"/bin/passenger-spawn-server"</span>;
+<a name="l00070"></a>00070                 <span class="keywordflow">return</span> getHelperScriptsDir() + <span class="stringliteral">"/passenger-spawn-server"</span>;
 <a name="l00071"></a>00071         }
 <a name="l00072"></a>00072 };
 <a name="l00073"></a>00073 
@@ -97,7 +97,7 @@
 <a name="l00075"></a>00075 
 <a name="l00076"></a>00076 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_RESOURCE_LOCATOR_H_ */</span>
 </pre></div></div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Sun Feb 21 12:22:46 2010 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Sun Mar 28 14:11:56 2010 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.8 </small></address>
 </body>

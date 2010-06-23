@@ -10,6 +10,7 @@
     <ul>
       <li><a href="main.html"><span>Main&nbsp;Page</span></a></li>
       <li><a href="modules.html"><span>Modules</span></a></li>
+      <li><a href="namespaces.html"><span>Namespaces</span></a></li>
       <li><a href="annotated.html"><span>Classes</span></a></li>
       <li class="current"><a href="files.html"><span>Files</span></a></li>
     </ul>
@@ -21,7 +22,7 @@
   </div>
 <h1>Bucket.h</h1><div class="fragment"><pre class="fragment"><a name="l00001"></a>00001 <span class="comment">/*</span>
 <a name="l00002"></a>00002 <span class="comment"> *  Phusion Passenger - http://www.modrails.com/</span>
-<a name="l00003"></a>00003 <span class="comment"> *  Copyright (c) 2008, 2009 Phusion</span>
+<a name="l00003"></a>00003 <span class="comment"> *  Copyright (c) 2010 Phusion</span>
 <a name="l00004"></a>00004 <span class="comment"> *</span>
 <a name="l00005"></a>00005 <span class="comment"> *  "Phusion Passenger" is a trademark of Hongli Lai &amp; Ninh Bui.</span>
 <a name="l00006"></a>00006 <span class="comment"> *</span>
@@ -48,7 +49,7 @@
 <a name="l00027"></a>00027 <span class="preprocessor"></span>
 <a name="l00028"></a>00028 <span class="preprocessor">#include &lt;boost/shared_ptr.hpp&gt;</span>
 <a name="l00029"></a>00029 <span class="preprocessor">#include &lt;apr_buckets.h&gt;</span>
-<a name="l00030"></a>00030 <span class="preprocessor">#include "Application.h"</span>
+<a name="l00030"></a>00030 <span class="preprocessor">#include "Session.h"</span>
 <a name="l00031"></a>00031 
 <a name="l00032"></a>00032 <span class="keyword">namespace </span>Passenger {
 <a name="l00033"></a>00033 
@@ -99,7 +100,7 @@
 <a name="l00078"></a>00078 <span class="comment"> *   strange I/O problems.</span>
 <a name="l00079"></a>00079 <span class="comment"> * - It can store its current state in a PassengerBucketState data structure.</span>
 <a name="l00080"></a>00080 <span class="comment"> */</span>
-<a name="l00081"></a>00081 apr_bucket *passenger_bucket_create(Passenger::Application::SessionPtr session,
+<a name="l00081"></a>00081 apr_bucket *<a class="code" href="namespacePassenger.html#35b11c8ce90e90d01380f182d82f8cac" title="We used to use an apr_bucket_pipe for forwarding the backend process&amp;#39;s response...">passenger_bucket_create</a>(SessionPtr session,
 <a name="l00082"></a>00082                                     PassengerBucketStatePtr state,
 <a name="l00083"></a>00083                                     apr_bucket_alloc_t *list);
 <a name="l00084"></a>00084 
@@ -107,7 +108,7 @@
 <a name="l00086"></a>00086 
 <a name="l00087"></a>00087 <span class="preprocessor">#endif </span><span class="comment">/* _PASSENGER_BUCKET_H_ */</span>
 </pre></div></div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Fri Mar 5 11:13:03 2010 for Passenger by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Sun Mar 28 14:11:56 2010 for Passenger by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.8 </small></address>
 </body>
