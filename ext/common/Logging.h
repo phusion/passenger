@@ -65,7 +65,6 @@ using namespace oxt;
 
 extern int _logLevel;
 extern ostream *_logStream;
-extern ostream *_debugStream;
 
 int getLogLevel();
 void setLogLevel(int value);
@@ -134,7 +133,7 @@ void setDebugFile(const char *logFile = NULL);
 	#define P_TRACE(level, expr) \
 		do { \
 			if (Passenger::_logLevel >= level) { \
-				P_LOG_TO(expr, Passenger::_debugStream); \
+				P_LOG_TO(expr, Passenger::_logStream); \
 			} \
 		} while (false)
 	

@@ -30,7 +30,6 @@ namespace Passenger {
 
 int _logLevel = 0;
 ostream *_logStream = &cerr;
-ostream *_debugStream = &cerr;
 
 int
 getLogLevel() {
@@ -50,13 +49,13 @@ setDebugFile(const char *logFile) {
 			if (stream->fail()) {
 				delete stream;
 			} else {
-				if (_debugStream != NULL && _debugStream != &cerr) {
-					delete _debugStream;
+				if (_logStream != NULL && _logStream != &cerr) {
+					delete _logStream;
 				}
-				_debugStream = stream;
+				_logStream = stream;
 			}
 		} else {
-			_debugStream = &cerr;
+			_logStream = &cerr;
 		}
 	#endif
 }
