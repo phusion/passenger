@@ -93,9 +93,9 @@ Release 2.2.15
    be a mismatch e.g. because of mod_deflate input compression, so
    we can't trust Content-Length anyway and we're being too strict.
    The check has now been removed.
- * [Nginx] Fixed compilation issues with Nginx 0.7.66
+ * [Nginx] Fixed compilation issues with Nginx >= 0.7.66
    Thanks to Potamianos Gregory for reporting this issue. Issue #500.
- * [Nginx] Default Nginx version changed to 0.7.66
+ * [Nginx] Default Nginx version changed to 0.7.67
    The previous default version was 0.7.65.
  * Fixed more Bundler problems
    Previous versions of Phusion Passenger would preload some popular
