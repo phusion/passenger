@@ -36,7 +36,7 @@ include PlatformInfo
 class Installer < PhusionPassenger::AbstractInstaller
 	include PhusionPassenger
 	
-	NGINX_VERSION = "0.7.66"
+	NGINX_VERSION = "0.7.67"
 	
 	def dependencies
 		result = [
@@ -149,8 +149,8 @@ private
 		new_screen
 		color_puts "<banner>PCRE (required by Nginx) not installed, downloading it...</banner>"
 		
-		basename = "pcre-8.00.tar.gz"
-		dirname = "pcre-8.00"
+		basename = "pcre-8.02.tar.gz"
+		dirname = "pcre-8.02"
 		url = "ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/#{basename}"
 		File.unlink("/tmp/#{basename}") rescue nil
 		FileUtils.rm_rf("/tmp/#{dirname}")
