@@ -41,6 +41,7 @@ Spec::Runner.configure do |config|
 		# Suppress warning messages.
 		PhusionPassenger::DebugLogging.log_level = -1
 		PhusionPassenger::DebugLogging.log_file = nil
+		PhusionPassenger::DebugLogging.stderr_evaluator = nil
 		
 		# Create the temp directory.
 		PhusionPassenger::Utils.passenger_tmpdir

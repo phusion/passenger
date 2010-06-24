@@ -156,9 +156,6 @@ class AbstractRequestHandler
 	# A password with which clients must authenticate. Default is unauthenticated.
 	attr_accessor :connect_password
 	
-	# Stream to write error messages to. Defaults to STDERR.
-	attr_accessor :stderr
-	
 	# Create a new RequestHandler with the given owner pipe.
 	# +owner_pipe+ must be the readable part of a pipe IO object.
 	#
@@ -199,7 +196,6 @@ class AbstractRequestHandler
 		@iterations         = 0
 		@processed_requests = 0
 		@soft_termination_linger_time = 3
-		@stderr             = STDERR
 		@main_loop_running  = false
 		
 		@debugger = @options["debugger"]
@@ -314,7 +310,7 @@ class AbstractRequestHandler
 			begin
 				main_loop
 			rescue Exception => e
-				print_exception(self.class, e, @stderr)
+				print_exception(self.class, e)
 			end
 		end
 		@main_loop_thread_lock.synchronize do
@@ -442,8 +438,7 @@ private
 		end if trappable_signals.has_key?('ABRT')
 		
 		trap('QUIT') do
-			@stderr.puts(global_backtrace_report)
-			@stderr.flush
+			warn(global_backtrace_report)
 		end if trappable_signals.has_key?('QUIT')
 	end
 	
@@ -569,17 +564,15 @@ private
 		end
 		headers = split_by_null_into_hash(headers_data)
 		if @connect_password && headers[PASSENGER_CONNECT_PASSWORD] != @connect_password
-			@stderr.puts "*** Passenger RequestHandler #{$$} warning: " <<
+			warn "*** Passenger RequestHandler warning: " <<
 				"someone tried to connect with an invalid connect password."
-			@stderr.flush
 			return
 		else
 			return [headers, socket]
 		end
 	rescue SecurityError => e
-		@stderr.puts("*** Passenger RequestHandler #{$$} warning: " <<
+		warn("*** Passenger RequestHandler warning: " <<
 			"HTTP header size exceeded maximum.")
-		@stderr.flush
 		return nil
 	end
 	
@@ -594,9 +587,8 @@ private
 			data << socket.readpartial(16 * 1024)
 		end
 		if data.size >= MAX_HEADER_SIZE
-			@stderr.puts("*** Passenger RequestHandler #{$$} warning: " <<
+			warn("*** Passenger RequestHandler warning: " <<
 				"HTTP header size exceeded maximum.")
-			@stderr.flush
 			return nil
 		end
 		
@@ -630,9 +622,8 @@ private
 		end
 		
 		if @connect_password && headers["HTTP_X_PASSENGER_CONNECT_PASSWORD"] != @connect_password
-			@stderr.puts "*** Passenger RequestHandler #{$$} warning: " <<
+			warn "*** Passenger RequestHandler warning: " <<
 				"someone tried to connect with an invalid connect password."
-			@stderr.flush
 			return
 		else
 			return [headers, socket]

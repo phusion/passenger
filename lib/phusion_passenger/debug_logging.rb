@@ -64,6 +64,11 @@ module DebugLogging
 		end
 	end
 	
+	def error(message)
+		trace(-1, message, 1)
+	end
+	module_function :error
+	
 	def warn(message)
 		trace(0, message, 1)
 	end
@@ -75,7 +80,7 @@ module DebugLogging
 	module_function :debug
 	
 	def trace(level, message, nesting_level = 0)
-		if level <= @@log_level
+		if @@log_level >= level
 			if @@log_filename
 				if !@@log_device || @@log_device.closed?
 					@@log_device = File.open(@@log_filename, "a")

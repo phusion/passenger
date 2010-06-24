@@ -72,7 +72,9 @@ describe AbstractRequestHandler do
 	end
 	
 	specify "the main socket rejects headers that are too large" do
-		@request_handler.stderr = StringIO.new
+		stderr = StringIO.new
+		DebugLogging.log_level = 0
+		DebugLogging.stderr_evaluator = lambda { stderr }
 		@request_handler.start_main_loop_thread
 		begin
 			client = connect
@@ -84,14 +86,13 @@ describe AbstractRequestHandler do
 				MessageChannel.new(client).write_scalar(data)
 			end
 			block.should raise_error(Errno::EPIPE)
-			@request_handler.stderr.string.should_not be_empty
+			stderr.string.should_not be_empty
 		ensure
 			client.close rescue nil
 		end
 	end
 	
 	specify "the main socket rejects unauthenticated connections, if a connect password is supplied" do
-		@request_handler.stderr = StringIO.new
 		@request_handler.connect_password = "1234"
 		@request_handler.start_main_loop_thread
 		begin
@@ -139,7 +140,9 @@ describe AbstractRequestHandler do
 	end
 	
 	specify "the HTTP socket rejects headers that are too large" do
-		@request_handler.stderr = StringIO.new
+		stderr = StringIO.new
+		DebugLogging.log_level = 0
+		DebugLogging.stderr_evaluator = lambda { stderr }
 		@request_handler.start_main_loop_thread
 		begin
 			client = connect(:http)
@@ -152,14 +155,14 @@ describe AbstractRequestHandler do
 				client.write(" HTTP/1.1\r\n")
 			end
 			block.should raise_error(SystemCallError)
-			@request_handler.stderr.string.should_not be_empty
+			stderr.string.should_not be_empty
 		ensure
 			client.close rescue nil
 		end
 	end
 	
 	specify "the HTTP socket rejects unauthenticated connections, if a connect password is supplied" do
-		@request_handler.stderr = StringIO.new
+		DebugLogging.log_level = -1
 		@request_handler.connect_password = "1234"
 		@request_handler.start_main_loop_thread
 		begin
@@ -233,10 +236,10 @@ describe AbstractRequestHandler do
 			@request_handler.should_receive(:process_request).and_return do |headers, input, output, status_line_desired|
 				raise "something went wrong"
 			end
-			@request_handler.stderr = StringIO.new
 			@request_handler.start_main_loop_thread
 			client = connect
 			begin
+				DebugLogging.log_level = -2
 				send_binary_request(client,
 					"REQUEST_METHOD" => "GET",
 					"PASSENGER_TXN_ID" => "1234-abcd",

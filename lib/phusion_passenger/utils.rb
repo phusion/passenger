@@ -169,10 +169,16 @@ protected
 	#
 	# +current_location+ is a string which describes where the code is
 	# currently at. Usually the current class name will be enough.
-	def print_exception(current_location, exception, destination = STDERR)
+	def print_exception(current_location, exception, destination = nil)
 		if !exception.is_a?(SystemExit)
-			destination.puts(exception.backtrace_string(current_location))
-			destination.flush if destination.respond_to?(:flush)
+			data = exception.backtrace_string(current_location)
+			if defined?(DebugLogging) && self.is_a?(DebugLogging)
+				error(data)
+			else
+				destination ||= STDERR
+				destination.puts(data)
+				destination.flush if destination.respond_to?(:flush)
+			end
 		end
 	end
 	

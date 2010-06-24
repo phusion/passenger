@@ -27,6 +27,7 @@ require 'phusion_passenger/constants'
 require 'phusion_passenger/message_channel'
 require 'phusion_passenger/abstract_server'
 require 'phusion_passenger/abstract_request_handler'
+require 'phusion_passenger/debug_logging'
 require 'phusion_passenger/public_api'
 require 'phusion_passenger/utils'
 require 'phusion_passenger/native_support'
@@ -39,6 +40,7 @@ module Rack
 class ApplicationSpawner < AbstractServer
 	include Utils
 	extend Utils
+	include DebugLogging
 	
 	# This exception means that the ApplicationSpawner server process exited unexpectedly.
 	class Error < AbstractServer::ServerError

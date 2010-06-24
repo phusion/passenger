@@ -28,6 +28,7 @@ require 'fcntl'
 require 'phusion_passenger/abstract_server'
 require 'phusion_passenger/app_process'
 require 'phusion_passenger/constants'
+require 'phusion_passenger/debug_logging'
 require 'phusion_passenger/classic_rails/request_handler'
 require 'phusion_passenger/rack/request_handler'
 require 'phusion_passenger/public_api'
@@ -53,6 +54,7 @@ module ClassicRails
 class ApplicationSpawner < AbstractServer
 	include Utils
 	extend Utils
+	include DebugLogging
 	
 	# This exception means that the ApplicationSpawner server process exited unexpectedly.
 	class Error < AbstractServer::ServerError
