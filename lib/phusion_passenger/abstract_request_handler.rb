@@ -114,7 +114,9 @@ class AbstractRequestHandler
 	
 	OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS = ObjectSpace.respond_to?(:live_objects)
 	OBJECT_SPACE_SUPPORTS_ALLOCATED_OBJECTS = ObjectSpace.respond_to?(:allocated_objects)
+	OBJECT_SPACE_SUPPORTS_COUNT_OBJECTS = ObjectSpace.respond_to?(:count_objects)
 	GC_SUPPORTS_TIME = GC.respond_to?(:time)
+	GC_SUPPORTS_CLEAR_STATS = GC.respond_to?(:clear_stats)
 	
 	# A hash containing all server sockets that this request handler listens on.
 	# The hash is in the form of:
@@ -659,9 +661,16 @@ private
 			end
 			if OBJECT_SPACE_SUPPORTS_ALLOCATED_OBJECTS
 				log.message("Initial objects allocated so far: #{ObjectSpace.allocated_objects}")
+			elsif OBJECT_SPACE_SUPPORTS_COUNT_OBJECTS
+				count = ObjectSpace.count_objects
+				log.message("Initial objects allocated so far: #{count[:TOTAL] - count[:FREE]}")
 			end
 			if GC_SUPPORTS_TIME
 				log.message("Initial GC time: #{GC.time}")
+			end
+			if GC_SUPPORTS_CLEAR_STATS
+				# Clear statistics to void integer wraps.
+				GC.clear_stats
 			end
 			log.begin_measure("app request handler processing")
 		end
@@ -679,6 +688,9 @@ private
 				end
 				if OBJECT_SPACE_SUPPORTS_ALLOCATED_OBJECTS
 					log.message("Final objects allocated so far: #{ObjectSpace.allocated_objects}")
+				elsif OBJECT_SPACE_SUPPORTS_COUNT_OBJECTS
+					count = ObjectSpace.count_objects
+					log.message("Final objects allocated so far: #{count[:TOTAL] - count[:FREE]}")
 				end
 				if GC_SUPPORTS_TIME
 					log.message("Final GC time: #{GC.time}")
