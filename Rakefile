@@ -259,11 +259,11 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 			AgentBase.cpp
 			AgentBase.h
 			Utils/VariantMap.h),
-		'BCrypt.o' => %w(
-			BCrypt.cpp
-			BCrypt.h
-			Blowfish.h
-			Blowfish.c)
+		#'BCrypt.o' => %w(
+		#	BCrypt.cpp
+		#	BCrypt.h
+		#	Blowfish.h
+		#	Blowfish.c)
 	}
 	
 	static_library = "#{output_dir}.a"
