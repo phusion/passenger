@@ -217,7 +217,20 @@ private:
 		string category;
 		unsigned int writeCount;
 		unsigned int refcount;
+		/** Number of stateful clients that current have this Transaction open.
+		 * @invariant statefulRefcount <= refcount
+		 */
+		unsigned int statefulRefcount;
+		/** Last time this Transaction was used. Hint for garbage collector. */
 		time_t lastUsed;
+		
+		bool garbageCollectable() const {
+			return statefulRefcount == 0;
+		}
+		
+		bool stale(time_t currentTime) const {
+			return currentTime - lastUsed >= 60 * 60;
+		}
 	};
 	
 	typedef shared_ptr<Transaction> TransactionPtr;
@@ -641,6 +654,16 @@ private:
 		transaction->logSink->append(args, sizeof(args) / sizeof(StaticString));
 	}
 	
+	void writeDetachEntry(const TransactionPtr &transaction) {
+		char timestamp[2 * sizeof(unsigned long long) + 1];
+		integerToHex<unsigned long long>(SystemTime::getUsec(), timestamp);
+		writeDetachEntry(transaction, timestamp);
+	}
+	
+	void writeDetachEntry(const TransactionPtr &transaction, const StaticString &timestamp) {
+		writeLogEntry(transaction, timestamp, "DETACH");
+	}
+	
 	bool requireRights(const EventedMessageServer::ClientPtr &eclient, Account::Rights rights) {
 		Client *client = (Client *) eclient.get();
 		if (client->messageServer.account->hasRights(rights)) {
@@ -655,13 +678,12 @@ private:
 		}
 	}
 	
-	void garbageCollect(ev::timer &timer, int revents) {
+	/* Release all log sinks that haven't been used for more than 2 hours. */
+	void releaseStaleLogSinks(time_t now) {
 		LogSinkCache::iterator it;
 		LogSinkCache::iterator end = logSinkCache.end();
-		time_t now = time(NULL);
 		vector<string> toDelete;
 		
-		// Release all log sinks that haven't been used for more than 2 hours.
 		for (it = logSinkCache.begin(); it != end; it++) {
 			if (now - it->second->lastUsed > 2 * 60 * 60) {
 				toDelete.push_back(it->first);
@@ -672,6 +694,27 @@ private:
 		for (it2 = toDelete.begin(); it2 != toDelete.end(); it2++) {
 			logSinkCache.erase(*it2);
 		}
+	}
+	
+	void releaseStaleTransactions(time_t now) {
+		TransactionMap::iterator it;
+		TransactionMap::iterator end = transactions.end();
+		
+		for (it = transactions.begin(); it != end; it++) {
+			TransactionPtr &transaction = it->second;
+			if (transaction->garbageCollectable() && transaction->stale(now)) {
+				P_DEBUG("Garbage collecting transaction " << it->first);
+				it--;
+				transactions.erase(it);
+				writeDetachEntry(transaction);
+			}
+		}
+	}
+	
+	void garbageCollect(ev::timer &timer, int revents) {
+		time_t now = time(NULL);
+		releaseStaleLogSinks(now);
+		releaseStaleTransactions(now);
 	}
 	
 	void flushAllLogs(ev::timer &timer, int revents = 0) {
@@ -853,7 +896,8 @@ protected:
 				transaction->groupName  = groupName;
 				transaction->category   = category;
 				transaction->writeCount = 0;
-				transaction->refcount   = 1;
+				transaction->refcount   = 0;
+				transaction->statefulRefcount = 0;
 				transactions[txnId]     = transaction;
 			} else {
 				if (OXT_UNLIKELY( groupName != transaction->groupName )) {
@@ -866,13 +910,13 @@ protected:
 					disconnect(eclient);
 					return true;
 				}
-				
-				transaction->refcount++;
 			}
 			
 			if (!client->stateless) {
 				client->openTransactions.insert(txnId);
+				transaction->statefulRefcount++;
 			}
+			transaction->refcount++;
 			transaction->lastUsed = time(NULL);
 			writeLogEntry(transaction, timestamp, "ATTACH");
 			
@@ -892,6 +936,8 @@ protected:
 					": transaction does not exist");
 				disconnect(eclient);
 			} else {
+				TransactionPtr &transaction = it->second;
+				
 				if (!client->stateless) {
 					set<string>::const_iterator sit = client->openTransactions.find(txnId);
 					if (OXT_UNLIKELY( sit == client->openTransactions.end() )) {
@@ -902,10 +948,11 @@ protected:
 						return true;
 					} else {
 						client->openTransactions.erase(sit);
+						transaction->statefulRefcount--;
 					}
 				}
-				TransactionPtr &transaction = it->second;
-				writeLogEntry(transaction, timestamp, "DETACH");
+				
+				writeDetachEntry(transaction, timestamp);
 				transaction->refcount--;
 				if (transaction->refcount == 0) {
 					transactions.erase(it);
@@ -1006,14 +1053,12 @@ protected:
 			}
 			
 			TransactionPtr &transaction = it->second;
-			char timestamp[2 * sizeof(unsigned long long) + 1];
-			integerToHex<unsigned long long>(SystemTime::getUsec(), timestamp);
-			
-			writeLogEntry(transaction, timestamp, "DETACH");
+			writeDetachEntry(transaction);
 			transaction->refcount--;
 			if (transaction->refcount == 0) {
 				transactions.erase(it);
 			} else {
+				transaction->statefulRefcount--;
 				transaction->lastUsed = time(NULL);
 			}
 		}
@@ -1064,9 +1109,7 @@ public:
 		
 		TransactionMap::const_iterator it, end = transactions.end();
 		for (it = transactions.begin(); it != end; it++) {
-			char timestamp[2 * sizeof(unsigned long long) + 1];
-			integerToHex<unsigned long long>(SystemTime::getUsec(), timestamp);
-			writeLogEntry(it->second, timestamp, "DETACH");
+			writeDetachEntry(it->second);
 		}
 		transactions.clear();
 	}
