@@ -42,7 +42,7 @@
 #include "FileDescriptor.h"
 #include "StaticString.h"
 #include "Logging.h"
-#include "Utils.h"
+#include "Utils/IOUtils.h"
 
 namespace Passenger {
 
@@ -59,7 +59,7 @@ using namespace oxt;
  *
  * <h2>Basic usage</h2>
  * Derived classes can override the onClientReadable() method, which is called every time
- * a specific becomes readable. It is passed a Client object which contains information
+ * a specific client becomes readable. It is passed a Client object which contains information
  * about the client, such as its file descriptor. One can use the read() system call in
  * that method to receive data from the client. Please note that client file descriptors
  * are always set to non-blocking mode so you need to handle this gracefully.
@@ -93,9 +93,10 @@ protected:
 			
 			/**
 			 * This state is entered from ES_CONNECTED when the write()
-			 * method fails and EventedServer schedules data to be sent
-			 * later. In here we might be watching for read events, but
-			 * not if there's too much pending data, in which case
+			 * method fails to send all data immediately and EventedServer
+			 * schedules some data to be sent later, when the socket becomes
+			 * readable again. In here we might be watching for read events,
+			 * but not if there's too much pending data, in which case
 			 * EventedServer will concentrate on sending out all
 			 * pending data before watching read events again.
 			 */
@@ -178,97 +179,16 @@ protected:
 		}
 		
 		ssize_t ret;
-		size_t totalSize;
 		this_thread::disable_syscall_interruption dsi;
 		
-		if (client->outbox.empty()) {
-			struct iovec iov[count];
-			
-			totalSize = staticStringArrayToIoVec(data, count, iov);
-			ret = syscalls::writev(client->fd, iov, count);
-			if (ret == -1) {
-				if (errno == EAGAIN) {
-					// Schedule all data for sending later.
-					// TODO: reserve capacity
-					for (size_t i = 0; i < count; i++) {
-						client->outbox.append(data[i].data(), data[i].size());
-					}
-				} else {
-					int e = errno;
-					disconnect(client, true);
-					logSystemError(client, "Cannot write data to client", e);
-					return;
-				}
-			} else if ((size_t) ret < totalSize) {
-				unsigned int index;
-				size_t offset;
-				
-				// Schedule unsent data for sending later.
-				// TODO: reserve capacity
-				findDataPositionIndexAndOffset(iov, count + 1, ret, &index, &offset);
-				for (size_t i = index; i < count; i++) {
-					if (i == index) {
-						client->outbox.append(data[i].data() + offset,
-							data[i].size() - offset);
-					} else {
-						client->outbox.append(data[i].data(),
-							data[i].size());
-					}
-				}
-			}
-		} else {
-			struct iovec iov[count + 1];
-			
-			iov[0].iov_base = (char *) client->outbox.data();
-			iov[0].iov_len  = client->outbox.size();
-			totalSize = staticStringArrayToIoVec(data, count, iov + 1);
-			
-			ret = syscalls::writev(client->fd, iov, count + 1);
-			if (ret == -1) {
-				if (errno != EAGAIN) {
-					int e = errno;
-					disconnect(client, true);
-					logSystemError(client, "Cannot write data to client", e);
-					return;
-				}
-				// else: send the outbox on the next writable event.
-			} else {
-				string::size_type outboxSize = client->outbox.size();
-				size_t outboxSent = std::min((size_t) ret, outboxSize);
-				
-				// Remove everything in the outbox that we've been able to sent.
-				client->outbox.erase(0, outboxSent);
-				if (client->outbox.empty()) {
-					unsigned int index;
-					size_t offset;
-					
-					// Looks like everything in the outbox was sent.
-					// Schedule the rest of the data for sending later.
-					// TODO: reserve capacity
-					findDataPositionIndexAndOffset(iov, count + 1, ret, &index, &offset);
-					for (size_t i = index; i < count + 1; i++) {
-						if (i == index) {
-							client->outbox.append(
-								data[i - 1].data() + offset,
-								data[i - 1].size() - offset);
-						} else {
-							client->outbox.append(
-								data[i - 1].data(),
-								data[i - 1].size());
-						}
-					}
-				} else {
-					// The outbox could only be partially sent out, so
-					// nothing in 'data' could be sent. Add everything
-					// in 'data' into the outbox.
-					// TODO: reserve capacity
-					for (size_t i = 1; i < count + 1; i++) {
-						client->outbox.append(data[i - 1].data(),
-							data[i - 1].size());
-					}
-				}
-			}
+		ret = gatheredWrite(client->fd, data, count, client->outbox);
+		if (ret == -1) {
+			int e = errno;
+			disconnect(client, true);
+			logSystemError(client, "Cannot write data to client", e);
+			return;
 		}
+		
 		if (client->outbox.empty()) {
 			outboxFlushed(client);
 		} else {
@@ -344,63 +264,6 @@ private:
 	FileDescriptor fd;
 	ev::io acceptWatcher;
 	ClientSet clients;
-	
-	/** Converts an array of StaticStrings to a corresponding array of iovec structures. */
-	size_t staticStringArrayToIoVec(const StaticString ary[], size_t count, struct iovec *vec) {
-		size_t total = 0;
-		for (size_t i = 0; i < count; i++) {
-			/* I know writev() doesn't write to iov_base, but on some
-			 * platforms it's still defined as non-const char *
-			 * :-(
-			 */
-			vec[i].iov_base = (char *) ary[i].data();
-			vec[i].iov_len  = ary[i].size();
-			total += ary[i].size();
-		}
-		return total;
-	}
-	
-	/**
-	 * Suppose that the given IO vectors are placed adjacent to each other
-	 * in a single contiguous block of memory. Given a position inside this
-	 * block of memory, this function will calculate the index in the IO vector
-	 * array and the offset inside that IO vector that corresponds with
-	 * the position.
-	 *
-	 * For example, given the following array of IO vectors:
-	 * { "AAA", "BBBB", "CC" }
-	 * Position 0 would correspond to the first item, offset 0.
-	 * Position 1 would correspond to the first item, offset 1.
-	 * Position 5 would correspond to the second item, offset 2.
-	 * And so forth.
-	 *
-	 * If the position is outside the bounds of the array, then index will be
-	 * set to count + 1 and offset to 0.
-	 */
-	void findDataPositionIndexAndOffset(struct iovec data[], unsigned int count,
-		size_t position, unsigned int *index, size_t *offset) const
-	{
-		unsigned int i;
-		size_t begin = 0;
-
-		for (i = 0; i < count; i++) {
-			size_t end = begin + data[i].iov_len;
-			if (OXT_LIKELY(begin <= position)) {
-				if (position < end) {
-					*index = i;
-					*offset = position - begin;
-					return;
-				} else {
-					begin = end;
-				}
-			} else {
-				// Never reached.
-				abort();
-			}
-		}
-		*index = count;
-		*offset = 0;
-	}
 	
 	/** To be called when the entire outbox has been successfully sent out. */
 	void outboxFlushed(const ClientPtr &client) {
