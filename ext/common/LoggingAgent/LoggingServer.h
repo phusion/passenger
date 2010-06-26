@@ -464,7 +464,7 @@ private:
 	string unionStationServiceIp;
 	unsigned short unionStationServicePort;
 	
-	void sendErrorToClient(const EventedMessageServer::ClientPtr &client, const string &message) {
+	void sendErrorToClient(const EventedServer::ClientPtr &client, const string &message) {
 		writeArrayMessage(client, "error", message.c_str(), NULL);
 		logError(client, message);
 	}
@@ -502,6 +502,19 @@ private:
 		// must be hexadecimal
 		// must not be too large
 		return !key.empty();
+	}
+	
+	bool validLogContent(const StaticString &data) const {
+		const char *current = data.c_str();
+		const char *end = current + data.size();
+		while (current < end) {
+			char c = *current;
+			if ((c < 1 && c > 126) || c == '\n' || c == '\r') {
+				return false;
+			}
+			current++;
+		}
+		return true;
 	}
 	
 	bool supportedCategory(const StaticString &category) const {
@@ -669,35 +682,48 @@ private:
 		// If no servers are up then discard the data.
 	}
 	
-	void writeLogEntry(const TransactionPtr &transaction, const StaticString &timestamp,
+	bool writeLogEntry(const EventedServer::ClientPtr &eclient,
+		const TransactionPtr &transaction, const StaticString &timestamp,
 		const StaticString &data)
 	{
 		// TODO: validate timestamp
-		// TODO: validate contents: must be valid ascii and containing no newlines
-		char writeCountStr[sizeof(unsigned int) * 2 + 1];
-		integerToHex(transaction->writeCount, writeCountStr);
-		StaticString args[] = {
-			transaction->txnId,
-			" ",
-			timestamp,
-			" ",
-			writeCountStr,
-			" ",
-			data,
-			"\n"
-		};
-		transaction->writeCount++;
-		transaction->logSink->append(args, sizeof(args) / sizeof(StaticString));
+		if (OXT_LIKELY( validLogContent(data) )) {
+			char writeCountStr[sizeof(unsigned int) * 2 + 1];
+			integerToHex(transaction->writeCount, writeCountStr);
+			StaticString args[] = {
+				transaction->txnId,
+				" ",
+				timestamp,
+				" ",
+				writeCountStr,
+				" ",
+				data,
+				"\n"
+			};
+			transaction->writeCount++;
+			transaction->logSink->append(args, sizeof(args) / sizeof(StaticString));
+			return true;
+		} else if (eclient != NULL) {
+			sendErrorToClient(eclient, "Log entry data contains an invalid character.");
+			disconnect(eclient);
+			return false;
+		} else {
+			return false;
+		}
 	}
 	
-	void writeDetachEntry(const TransactionPtr &transaction) {
+	void writeDetachEntry(const EventedServer::ClientPtr &eclient,
+		const TransactionPtr &transaction)
+	{
 		char timestamp[2 * sizeof(unsigned long long) + 1];
 		integerToHex<unsigned long long>(SystemTime::getUsec(), timestamp);
-		writeDetachEntry(transaction, timestamp);
+		writeDetachEntry(eclient, transaction, timestamp);
 	}
 	
-	void writeDetachEntry(const TransactionPtr &transaction, const StaticString &timestamp) {
-		writeLogEntry(transaction, timestamp, "DETACH");
+	void writeDetachEntry(const EventedServer::ClientPtr &eclient,
+		const TransactionPtr &transaction, const StaticString &timestamp)
+	{
+		writeLogEntry(eclient, transaction, timestamp, "DETACH");
 	}
 	
 	bool requireRights(const EventedMessageServer::ClientPtr &eclient, Account::Rights rights) {
@@ -743,7 +769,7 @@ private:
 				P_DEBUG("Garbage collecting transaction " << it->first);
 				it--;
 				transactions.erase(it);
-				writeDetachEntry(transaction);
+				writeDetachEntry(EventedServer::ClientPtr(), transaction);
 			} else {
 				P_TRACE(2, "Transaction" << it->first <<
 					": not garbage collectible; " <<
@@ -968,7 +994,7 @@ protected:
 			}
 			transaction->refcount++;
 			transaction->lastUsed = time(NULL);
-			writeLogEntry(transaction, timestamp, "ATTACH");
+			writeLogEntry(eclient, transaction, timestamp, "ATTACH");
 			
 		} else if (args[0] == "closeTransaction") {
 			if (OXT_UNLIKELY( !expectingArgumentsCount(eclient, args, 3)
@@ -1002,7 +1028,7 @@ protected:
 					}
 				}
 				
-				writeDetachEntry(transaction, timestamp);
+				writeDetachEntry(eclient, transaction, timestamp);
 				transaction->refcount--;
 				if (transaction->refcount == 0) {
 					transactions.erase(it);
@@ -1073,7 +1099,8 @@ protected:
 		Client *client = static_cast<Client *>(_client.get());
 		size_t consumed = client->dataReader.feed(data, size);
 		if (client->dataReader.done()) {
-			writeLogEntry(client->currentTransaction,
+			writeLogEntry(_client,
+				client->currentTransaction,
 				client->currentTimestamp,
 				client->dataReader.value());
 			client->currentTransaction.reset();
@@ -1108,7 +1135,7 @@ protected:
 			}
 			
 			TransactionPtr &transaction = it->second;
-			writeDetachEntry(transaction);
+			writeDetachEntry(_client, transaction);
 			transaction->refcount--;
 			if (transaction->refcount == 0) {
 				transactions.erase(it);
@@ -1164,7 +1191,7 @@ public:
 		
 		TransactionMap::const_iterator it, end = transactions.end();
 		for (it = transactions.begin(); it != end; it++) {
-			writeDetachEntry(it->second);
+			writeDetachEntry(EventedServer::ClientPtr(), it->second);
 		}
 		transactions.clear();
 	}

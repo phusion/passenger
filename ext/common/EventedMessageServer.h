@@ -178,7 +178,7 @@ protected:
 		return "1";
 	}
 	
-	void writeArrayMessage(const ClientPtr &client, const char *name, ...) {
+	void writeArrayMessage(const EventedServer::ClientPtr &client, const char *name, ...) {
 		va_list ap;
 		unsigned int count = 0;
 		
@@ -207,7 +207,9 @@ protected:
 		writeArrayMessage(client, args, count + 1);
 	}
 	
-	void writeArrayMessage(const ClientPtr &client, StaticString args[], unsigned int count) {
+	void writeArrayMessage(const EventedServer::ClientPtr &client, StaticString args[],
+		unsigned int count)
+	{
 		char headerBuf[sizeof(uint16_t)];
 		unsigned int outSize = ArrayMessage::outputSize(count);
 		StaticString out[outSize];
