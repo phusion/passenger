@@ -156,16 +156,6 @@ protected:
 		return clients;
 	}
 	
-	/**
-	 * Disables Nagle's algorithm on the given client's socket. Nagle's algorithm
-	 * is enabled by default.
-	 */
-	void setNoDelay(const ClientPtr &client) const {
-		int optval = 1;
-		syscalls::setsockopt(clientfd, IPPROTO_TCP, TCP_NODELAY,
-			&optval, sizeof(optval));
-	}
-	
 	void write(const ClientPtr &client, const StaticString &data) {
 		write(client, &data, 1);
 	}
@@ -260,10 +250,14 @@ protected:
 	virtual void onClientReadable(const ClientPtr &client) { }
 	
 	/**
-	 * Called when a client has been disconnected. This may or may not be triggered
-	 * by disconnect(), so if you call disconnect() from onClientReadable() you need
-	 * take care of the possibility that control returns to onClientReadable() after
-	 * this method is done.
+	 * Called when a client has been disconnected. This may either be triggered
+	 * immediately by disconnect() or triggered after pending data has been sent
+	 * out. This means that if you call disconnect() from onClientReadable() you
+	 * need take care of the possibility that control returns to onClientReadable()
+	 * after this method is done.
+	 *
+	 * Please note that when EventedServer is being destroyed,
+	 * onClientDisconnected() is *not* triggered.
 	 */
 	virtual void onClientDisconnected(const ClientPtr &client) { }
 
