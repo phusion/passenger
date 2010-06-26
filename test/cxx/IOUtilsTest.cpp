@@ -14,14 +14,15 @@ namespace tut {
 	static string writevData;
 	
 	static ssize_t writev_mock(int fildes, const struct iovec *iov, int iovcnt) {
-		writevData.clear();
 		if (writevResult >= 0) {
-			for (int i = 0; i < iovcnt && writevData.size() < (size_t) writevResult; i++) {
-				writevData.append(
+			string data;
+			for (int i = 0; i < iovcnt && data.size() < (size_t) writevResult; i++) {
+				data.append(
 					(const char *) iov[i].iov_base,
 					iov[i].iov_len);
 			}
-			writevData.resize(writevResult);
+			data.resize(writevResult);
+			writevData.append(data);
 		}
 		writevCalled++;
 		errno = writevErrno;
@@ -338,5 +339,60 @@ namespace tut {
 		ensure_equals(gatheredWrite(0, data, 3, restBuffer), writevResult);
 		ensure_equals(writevData, "oh hello world");
 		ensure_equals(restBuffer, "");
+	}
+	
+	
+	/***** Test gatheredWrite() blocking version *****/
+	
+	TEST_METHOD(35) {
+		// It doesn't call writev() if requested to send 0 bytes.
+		StaticString data[2] = { "", "" };
+		gatheredWrite(0, data, 2);
+		ensure_equals(writevCalled, 0);
+	}
+	
+	TEST_METHOD(36) {
+		// Test sending all data in a single writev() call.
+		StaticString data[] = { "hello", "my", "world" };
+		writevResult = strlen("hellomyworld");
+		gatheredWrite(0, data, 3);
+		ensure_equals(writevData, "hellomyworld");
+		ensure_equals(writevCalled, 1);
+	}
+	
+	TEST_METHOD(42) {
+		// Test writing byte-by-byte.
+		StaticString data[] = { "hello", "my", "world", "!!" };
+		writevResult = 1;
+		gatheredWrite(0, data, 4);
+		ensure_equals(writevCalled, (int) strlen("hellomyworld!!"));
+		ensure_equals(writevData, "hellomyworld!!");
+	}
+	
+	TEST_METHOD(43) {
+		// Test writev() writing in chunks of 2 bytes.
+		StaticString data[] = { "hello", "my", "world", "!!" };
+		writevResult = 2;
+		gatheredWrite(0, data, 4);
+		ensure_equals(writevCalled, (int) strlen("hellomyworld!!") / 2);
+		ensure_equals(writevData, "hellomyworld!!");
+	}
+	
+	static ssize_t writev_mock_44(int fildes, const struct iovec *iov, int iovcnt) {
+		if (writevCalled == 3) {
+			// Have the last call return 2 instead of 4.
+			writevResult = 2;
+		}
+		return writev_mock(fildes, iov, iovcnt);
+	}
+	
+	TEST_METHOD(44) {
+		// Test writev() writing in chunks of 4 bytes.
+		setWritevFunction(writev_mock_44);
+		StaticString data[] = { "hello", "my", "world", "!!" };
+		writevResult = 4;
+		gatheredWrite(0, data, 4);
+		ensure_equals(writevCalled, 4);
+		ensure_equals(writevData, "hellomyworld!!");
 	}
 }

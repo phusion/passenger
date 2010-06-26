@@ -46,6 +46,7 @@
 #include "../MessageChannel.h"
 #include "../Utils.h"
 #include "../Utils/MD5.h"
+#include "../Utils/IOUtils.h"
 
 
 namespace Passenger {
@@ -83,7 +84,7 @@ private:
 				for (i = 0; i < count; i++) {
 					data2[i + 1] = data[i];
 				}
-				MessageChannel(fd).writeRawGather(data2, count + 1);
+				gatheredWrite(fd, data2, count + 1);
 				bufferSize = 0;
 			} else {
 				for (i = 0; i < count; i++) {

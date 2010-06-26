@@ -210,6 +210,25 @@ int connectToTcpServer(const StaticString &hostname, unsigned int port);
 ssize_t gatheredWrite(int fd, const StaticString data[], unsigned int dataCount, string &restBuffer);
 
 /**
+ * Writes a bunch of data to the given file descriptor using a gathering I/O interface.
+ * Instead of accepting a single buffer, this function accepts multiple buffers
+ * which are all written out in the order as they appear. This is done with a single
+ * system call without concatenating all data into a single buffer.
+ *
+ * This method is a convenience wrapper around writev() but it blocks until all data
+ * has been written and takes care of handling system limits (IOV_MAX) for you.
+ *
+ * This version is designed for blocking sockets so do not use it on non-blocking ones.
+ *
+ * @param fd The file descriptor to write to.
+ * @param data An array of buffers to be written.
+ * @param count Number of items in <em>data</em>.
+ * @throws SystemException Something went wrong.
+ * @throws boost::thread_interrupted
+ */
+void    gatheredWrite(int fd, const StaticString data[], unsigned int dataCount);
+
+/**
  * Sets a writev-emulating function that gatheredWrite() should call instead of the real writev().
  * Useful for unit tests. Pass NULL to restore back to the real writev().
  */

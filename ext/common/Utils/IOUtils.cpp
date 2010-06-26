@@ -23,6 +23,12 @@
  *  THE SOFTWARE.
  */
 
+#ifndef _GNU_SOURCE
+	// Needed for IOV_MAX on Linux:
+	// https://bugzilla.redhat.com/show_bug.cgi?id=165427
+	#define _GNU_SOURCE
+#endif
+
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
 #include <oxt/macros.hpp>
@@ -537,13 +543,6 @@ gatheredWrite(int fd, const StaticString data[], unsigned int dataCount, string 
 	size_t totalSize, iovCount, i;
 	ssize_t ret;
 	
-	#ifdef IOV_MAX
-		size_t iovMax = IOV_MAX;
-	#else
-		// Linux doesn't define IOV_MAX in limits.h for some reason.
-		size_t iovMax = sysconf(_SC_IOV_MAX);
-	#endif
-	
 	if (restBuffer.empty()) {
 		struct iovec iov[dataCount];
 		
@@ -553,7 +552,7 @@ gatheredWrite(int fd, const StaticString data[], unsigned int dataCount, string 
 			return 0;
 		}
 		
-		ret = writevFunction(fd, iov, std::min(iovCount, iovMax));
+		ret = writevFunction(fd, iov, std::min(iovCount, (size_t) IOV_MAX));
 		if (ret == -1) {
 			if (errno == EAGAIN || errno == EWOULDBLOCK) {
 				// Nothing could be written without blocking, so put
@@ -606,7 +605,7 @@ gatheredWrite(int fd, const StaticString data[], unsigned int dataCount, string 
 		totalSize += restBuffer.size();
 		iovCount++;
 		
-		ret = writevFunction(fd, iov, std::min(iovCount, iovMax));
+		ret = writevFunction(fd, iov, std::min(iovCount, (size_t) IOV_MAX));
 		if (ret == -1) {
 			if (errno == EAGAIN || errno == EWOULDBLOCK) {
 				// Nothing could be written without blocking, so
@@ -666,6 +665,45 @@ gatheredWrite(int fd, const StaticString data[], unsigned int dataCount, string 
 			return ret;
 		}
 	}
+}
+
+static size_t
+eraseBeginningOfIoVec(struct iovec *iov, size_t count, size_t index, size_t offset) {
+	size_t i, newCount;
+	for (i = index, newCount = 0; i < count; i++, newCount++) {
+		if (newCount == 0) {
+			iov[newCount].iov_base = (char *) iov[i].iov_base + offset;
+			iov[newCount].iov_len  = iov[i].iov_len - offset;
+		} else {
+			iov[newCount].iov_base = iov[i].iov_base;
+			iov[newCount].iov_len  = iov[i].iov_len;
+		}
+	}
+	return newCount;
+}
+
+void
+gatheredWrite(int fd, const StaticString data[], unsigned int count) {
+	struct iovec iov[count];
+	size_t total, iovCount;
+	size_t written = 0;
+	
+	total = staticStringArrayToIoVec(data, count, iov, iovCount);
+	
+	while (written < total) {
+		ssize_t ret = writevFunction(fd, iov, std::min(iovCount, (size_t) IOV_MAX));
+		if (ret == -1) {
+			int e = errno;
+			throw SystemException("Unable to write all data", e);
+		} else {
+			size_t index, offset;
+			
+			written += ret;
+			findDataPositionIndexAndOffset(iov, iovCount, ret, &index, &offset);
+			iovCount = eraseBeginningOfIoVec(iov, iovCount, index, offset);
+		}
+	}
+	assert(written == total);
 }
 
 void
