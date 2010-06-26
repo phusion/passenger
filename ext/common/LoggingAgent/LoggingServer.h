@@ -229,7 +229,11 @@ private:
 		}
 		
 		bool stale(time_t currentTime) const {
-			return currentTime - lastUsed >= 60 * 60;
+			return age(currentTime) >= 60 * 60;
+		}
+		
+		time_t age(time_t currentTime) const {
+			return currentTime - lastUsed;
 		}
 	};
 	
@@ -700,6 +704,7 @@ private:
 		TransactionMap::iterator it;
 		TransactionMap::iterator end = transactions.end();
 		
+		P_TRACE(2, "Currently open transactions: " << transactions.size());
 		for (it = transactions.begin(); it != end; it++) {
 			TransactionPtr &transaction = it->second;
 			if (transaction->garbageCollectable() && transaction->stale(now)) {
@@ -707,12 +712,17 @@ private:
 				it--;
 				transactions.erase(it);
 				writeDetachEntry(transaction);
+			} else {
+				P_TRACE(2, "Transaction" << it->first <<
+					": not garbage collectible; " <<
+					transaction->age(now) << " secs old");
 			}
 		}
 	}
 	
 	void garbageCollect(ev::timer &timer, int revents) {
 		time_t now = time(NULL);
+		P_DEBUG("Garbage collection time");
 		releaseStaleLogSinks(now);
 		releaseStaleTransactions(now);
 	}
@@ -797,8 +807,10 @@ private:
 				this->remoteServers = remoteServers;
 				if (remoteServerWentDown) {
 					remoteServerWentDown = false;
-					// Don't recheck for 1 minute.
+					// We were woken up because a Union Station server went down,
+					// so don't recheck for 1 minute.
 					l.unlock();
+					P_DEBUG("Sleeping for 1 minute before re-checking Union Station servers.");
 					syscalls::sleep(60);
 					l.lock();
 				}
