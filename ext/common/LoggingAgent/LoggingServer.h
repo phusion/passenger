@@ -84,6 +84,7 @@ private:
 		
 		virtual void append(const StaticString data[], unsigned int count) = 0;
 		virtual void flush() { }
+		virtual void dump(stringstream &stream) const { };
 	};
 	
 	typedef shared_ptr<LogSink> LogSinkPtr;
@@ -91,6 +92,7 @@ private:
 	struct LogFile: public LogSink {
 		static const unsigned int BUFFER_CAPACITY = 8 * 1024;
 		
+		string filename;
 		FileDescriptor fd;
 		char buffer[BUFFER_CAPACITY];
 		unsigned int bufferSize;
@@ -102,6 +104,7 @@ private:
 			
 			bufferSize = 0;
 			
+			this->filename = filename;
 			fd = syscalls::open(filename.c_str(),
 				O_CREAT | O_WRONLY | O_APPEND,
 				filePermissions);
@@ -145,6 +148,11 @@ private:
 				MessageChannel(fd).writeRaw(StaticString(buffer, bufferSize));
 				bufferSize = 0;
 			}
+		}
+		
+		virtual void dump(stringstream &stream) const {
+			stream << "   Log file: file=" << filename << ", "
+				"age = " << (lastUsed - time(NULL)) << "\n";
 		}
 	};
 	
@@ -208,6 +216,14 @@ private:
 					category, &data, 1);
 				bufferSize = 0;
 			}
+		}
+		
+		virtual void dump(stringstream &stream) const {
+			stream << "   Remote sink: "
+				"key=" << unionStationKey << ", "
+				"node=" << nodeName << ", "
+				"category=" << category << ", "
+				"age=" << (lastUsed - time(NULL)) << "\n";
 		}
 	};
 	
@@ -1163,7 +1179,14 @@ public:
 			const TransactionPtr &transaction = it->second;
 			transaction->dump(stream);
 		}
+		
+		LogSinkCache::const_iterator sit;
+		LogSinkCache::const_iterator send = logSinkCache.end();
 		stream << "Log sinks: " << logSinkCache.size() << "\n";
+		for (sit = logSinkCache.begin(); sit != send; sit++) {
+			const LogSinkPtr &logSink = sit->second;
+			logSink->dump(stream);
+		}
 	}
 };
 
