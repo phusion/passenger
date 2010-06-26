@@ -299,7 +299,7 @@ private
 	
 	def connect
 		@shared_data.client = MessageClient.new(@username, @password, @server_address)
-		@shared_data.client.write("init", @node_name)
+		@shared_data.client.write("init", @node_name, "false")
 	end
 	
 	def disconnect(check_error_response = false)

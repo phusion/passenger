@@ -449,7 +449,7 @@ private:
 	void connect() {
 		TRACE_POINT();
 		sharedData->client.connect(serverAddress, username, password);
-		sharedData->client.write("init", nodeName.c_str(), NULL);
+		sharedData->client.write("init", nodeName.c_str(), "false", NULL);
 		// Upon a write() error we want to attempt to read() the error
 		// message before closing the socket.
 		sharedData->client.setAutoDisconnect(false);
