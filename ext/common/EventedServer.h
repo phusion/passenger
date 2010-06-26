@@ -154,8 +154,14 @@ protected:
 		return clients;
 	}
 	
-	void write(const ClientPtr &client, const char *data) {
-		write(client, StaticString(data));
+	/**
+	 * Disables Nagle's algorithm on the given client's socket. Nagle's algorithm
+	 * is enabled by default.
+	 */
+	void setNoDelay(const ClientPtr &client) const {
+		int optval = 1;
+		syscalls::setsockopt(clientfd, IPPROTO_TCP, TCP_NODELAY,
+			&optval, sizeof(optval));
 	}
 	
 	void write(const ClientPtr &client, const StaticString &data) {
