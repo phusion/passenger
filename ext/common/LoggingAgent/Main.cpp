@@ -125,6 +125,7 @@ main(int argc, char *argv[]) {
 	string unionStationServiceIp = options.get("union_station_service_ip", false);
 	int    unionStationServicePort = options.getInt("union_station_service_port",
 		false, DEFAULT_UNION_STATION_SERVICE_PORT);
+	string unionStationServiceCert = options.get("union_station_service_cert", false);
 	
 	curl_global_init(CURL_GLOBAL_ALL);
 	
@@ -211,7 +212,8 @@ main(int argc, char *argv[]) {
 		LoggingServer server(eventLoop, serverSocketFd,
 			accountsDatabase, loggingDir,
 			"u=rwx,g=rx,o=rx", GROUP_NOT_GIVEN,
-			unionStationServiceIp, unionStationServicePort);
+			unionStationServiceIp, unionStationServicePort,
+			unionStationServiceCert);
 		
 		if (feedbackFdAvailable()) {
 			MessageChannel feedbackChannel(FEEDBACK_FD);

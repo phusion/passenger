@@ -269,15 +269,17 @@ private:
 	struct RemoteServer {
 		string ip;
 		unsigned int port;
+		string cert;
 		CURL *curl;
 		struct curl_slist *headers;
 		char lastErrorMessage[CURL_ERROR_SIZE];
 		string responseBody;
 		
-		RemoteServer(const string &ip, unsigned int port) {
+		RemoteServer(const string &ip, unsigned int port, const string &cert) {
 			TRACE_POINT();
 			this->ip   = ip;
 			this->port = port;
+			this->cert = cert;
 			curl = curl_easy_init();
 			if (curl == NULL) {
 				throw IOException("Unable to create a CURL handle");
@@ -303,7 +305,13 @@ private:
 			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlDataReceived);
 			curl_easy_setopt(curl, CURLOPT_WRITEDATA, this);
-			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+			if (cert.empty()) {
+				curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+			} else {
+				curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1);
+				curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
+				curl_easy_setopt(curl, CURLOPT_SSLCERT, cert.c_str());
+			}
 		}
 		
 		bool sendData(const string &unionStationKey, const StaticString &nodeName,
@@ -463,6 +471,7 @@ private:
 	shared_ptr<oxt::thread> remoteServerCheckThread;
 	string unionStationServiceIp;
 	unsigned short unionStationServicePort;
+	string unionStationServiceCert;
 	
 	void sendErrorToClient(const EventedServer::ClientPtr &client, const string &message) {
 		writeArrayMessage(client, "error", message.c_str(), NULL);
@@ -822,7 +831,8 @@ private:
 		
 		unique_lock<boost::mutex> l(remoteServersLock);
 		for (it = ips.begin(); it != ips.end(); it++) {
-			RemoteServerPtr server(new RemoteServer(*it, unionStationServicePort));
+			RemoteServerPtr server(new RemoteServer(*it, unionStationServicePort,
+				unionStationServiceCert));
 			remoteServers.push_back(server);
 		}
 		remoteServersFirstQueried = true;
@@ -852,7 +862,8 @@ private:
 					ips.push_back(unionStationServiceIp);
 				}
 				for (it = ips.begin(); it != ips.end(); it++) {
-					RemoteServerPtr server(new RemoteServer(*it, unionStationServicePort));
+					RemoteServerPtr server(new RemoteServer(*it, unionStationServicePort,
+						unionStationServiceCert));
 					P_DEBUG("Pinging Union Station server " << *it);
 					if (server->ping()) {
 						P_DEBUG("Union Station server " << *it << " up");
@@ -1153,11 +1164,15 @@ protected:
 	}
 
 public:
-	LoggingServer(struct ev_loop *loop, FileDescriptor fd,
-		const AccountsDatabasePtr &accountsDatabase, const string &dir,
-		const string &permissions = "u=rwx,g=rx,o=rx", gid_t gid = GROUP_NOT_GIVEN,
+	LoggingServer(struct ev_loop *loop,
+		FileDescriptor fd,
+		const AccountsDatabasePtr &accountsDatabase,
+		const string &dir,
+		const string &permissions = "u=rwx,g=rx,o=rx",
+		gid_t gid = GROUP_NOT_GIVEN,
 		const string &unionStationServiceIp = "",
-		unsigned short unionStationServicePort = DEFAULT_UNION_STATION_SERVICE_PORT)
+		unsigned short unionStationServicePort = DEFAULT_UNION_STATION_SERVICE_PORT,
+		const string &unionStationServiceCert = "")
 		: EventedMessageServer(loop, fd, accountsDatabase),
 		  garbageCollectionTimer(loop),
 		  logFlushingTimer(loop),
@@ -1177,6 +1192,7 @@ public:
 		
 		this->unionStationServiceIp   = unionStationServiceIp;
 		this->unionStationServicePort = unionStationServicePort;
+		this->unionStationServiceCert = unionStationServiceCert;
 		remoteServersFirstQueried = false;
 		remoteServerWentDown = false;
 		remoteServerCheckThread.reset(new oxt::thread(

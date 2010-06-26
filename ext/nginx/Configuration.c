@@ -89,6 +89,8 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->union_station_service_ip.data = NULL;
     conf->union_station_service_ip.len = 0;
     conf->union_station_service_port = (ngx_uint_t) NGX_CONF_UNSET;
+    conf->union_station_service_cert.data = NULL;
+    conf->union_station_service_cert.len = 0;
     
     conf->prestart_uris = ngx_array_create(cf->pool, 1, sizeof(ngx_str_t));
     if (conf->prestart_uris == NULL) {
@@ -224,6 +226,10 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     
     if (conf->union_station_service_port == (ngx_uint_t) NGX_CONF_UNSET) {
         conf->union_station_service_port = DEFAULT_UNION_STATION_SERVICE_PORT;
+    }
+    
+    if (conf->union_station_service_cert.len == 0) {
+        conf->union_station_service_cert.data = (u_char *) "";
     }
     
     return NGX_CONF_OK;
@@ -1186,6 +1192,13 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_num_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, union_station_service_port),
+      NULL },
+
+    { ngx_string("union_station_service_cert"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, union_station_service_cert),
       NULL },
 
     { ngx_string("passenger_debugger"),

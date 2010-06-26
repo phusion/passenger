@@ -293,12 +293,22 @@ public:
 	           const string &analyticsLogDir, const string &analyticsLogUser,
 	           const string &analyticsLogGroup, const string &analyticsLogPermissions,
 	           const string &unionStationServiceIp, unsigned short unionStationServicePort,
+	           const string &unionStationServiceCert,
 	           const set<string> &prestartURLs,
 	           const function<void ()> &afterFork = function<void ()>())
 	{
 		TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
+		ResourceLocator locator(passengerRoot);
+		
+		string realUnionStationServiceCert;
+		if (unionStationServiceCert.empty()) {
+			realUnionStationServiceCert = locator.getCertificatesDir() + "/union_station.crt";
+		} else if (unionStationServiceCert != "-") {
+			realUnionStationServiceCert = unionStationServiceCert;
+		}
+		string watchdogFilename = locator.getAgentsDir() + "/PassengerWatchdog";
 		
 		VariantMap watchdogArgs;
 		watchdogArgs
@@ -324,12 +334,11 @@ public:
 			.set    ("analytics_log_permissions", analyticsLogPermissions)
 			.set    ("union_station_service_ip",  unionStationServiceIp)
 			.setInt ("union_station_service_port", unionStationServicePort)
+			.set    ("union_station_service_cert",  realUnionStationServiceCert)
 			.set    ("prestart_urls",   serializePrestartURLs(prestartURLs));
 		
 		int fds[2], e, ret;
 		pid_t pid;
-		string watchdogFilename = ResourceLocator(passengerRoot).getAgentsDir() +
-			"/PassengerWatchdog";
 		
 		if (syscalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
 			e = errno;

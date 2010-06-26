@@ -1320,6 +1320,7 @@ public:
 			"",
 			serverConfig.analyticsLogDir, serverConfig.analyticsLogUser,
 			serverConfig.analyticsLogGroup, serverConfig.analyticsLogPermissions,
+			"", DEFAULT_UNION_STATION_SERVICE_PORT, "",
 			serverConfig.prestartURLs);
 		
 		analyticsLogger = ptr(new AnalyticsLogger(agentsStarter.getLoggingSocketAddress(),

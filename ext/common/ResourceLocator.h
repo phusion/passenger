@@ -69,6 +69,14 @@ public:
 	string getSpawnServerFilename() const {
 		return getHelperScriptsDir() + "/passenger-spawn-server";
 	}
+	
+	string getCertificatesDir() const {
+		if (nativelyPackaged) {
+			return "/usr/share/phusion-passenger/certificates";
+		} else {
+			return root + "/misc/certificates";
+		}
+	}
 };
 
 }
