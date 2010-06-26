@@ -756,7 +756,10 @@ end
 			ext/common/Utils/VariantMap.h),
 		'test/cxx/UtilsTest.o' => %w(
 			test/cxx/UtilsTest.cpp
-			ext/common/Utils.h)
+			ext/common/Utils.h),
+		'test/cxx/IOUtilsTest.o' => %w(
+			test/cxx/IOUtilsTest.cpp
+			ext/common/Utils/IOUtils.h)
 	}
 	
 	desc "Run unit tests for the Apache 2 and Nginx C++ components"

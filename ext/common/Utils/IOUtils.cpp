@@ -25,6 +25,7 @@
 
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
+#include <oxt/macros.hpp>
 #include <string>
 #include <vector>
 #include <sys/socket.h>
@@ -35,6 +36,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
@@ -56,6 +58,8 @@ using namespace oxt;
 #ifndef PF_LOCAL
 	#define PF_LOCAL PF_UNIX
 #endif
+
+static WritevFunction writevFunction = syscalls::writev;
 
 
 ServerAddressType
@@ -457,6 +461,220 @@ connectToTcpServer(const StaticString &hostname, unsigned int port) {
 	}
 	
 	return fd;
+}
+
+/**
+ * Converts an array of StaticStrings to a corresponding array of iovec structures,
+ * returning the size sum in bytes of all StaticStrings.
+ */
+static size_t
+staticStringArrayToIoVec(const StaticString ary[], size_t count, struct iovec *vec, size_t &vecCount) {
+	size_t total = 0;
+	size_t i;
+	for (i = 0, vecCount = 0; i < count; i++) {
+		/* No idea whether all writev() implementations support iov_len == 0,
+		 * but I'd rather not risk finding out.
+		 */
+		if (ary[i].size() > 0) {
+			/* I know writev() doesn't write to iov_base, but on some
+			 * platforms it's still defined as non-const char *
+			 * :-(
+			 */
+			vec[vecCount].iov_base = (char *) ary[i].data();
+			vec[vecCount].iov_len  = ary[i].size();
+			total += ary[i].size();
+			vecCount++;
+		}
+	}
+	return total;
+}
+
+/**
+ * Suppose that the given IO vectors are placed adjacent to each other
+ * in a single contiguous block of memory. Given a position inside this
+ * block of memory, this function will calculate the index in the IO vector
+ * array and the offset inside that IO vector that corresponds with
+ * the position.
+ *
+ * For example, given the following array of IO vectors:
+ * { "AAA", "BBBB", "CC" }
+ * Position 0 would correspond to the first item, offset 0.
+ * Position 1 would correspond to the first item, offset 1.
+ * Position 5 would correspond to the second item, offset 2.
+ * And so forth.
+ *
+ * If the position is outside the bounds of the array, then index will be
+ * set to count + 1 and offset to 0.
+ */
+static void
+findDataPositionIndexAndOffset(struct iovec data[], size_t count,
+	size_t position, size_t *index, size_t *offset)
+{
+	size_t i;
+	size_t begin = 0;
+
+	for (i = 0; i < count; i++) {
+		size_t end = begin + data[i].iov_len;
+		if (OXT_LIKELY(begin <= position)) {
+			if (position < end) {
+				*index = i;
+				*offset = position - begin;
+				return;
+			} else {
+				begin = end;
+			}
+		} else {
+			// Never reached.
+			abort();
+		}
+	}
+	*index = count;
+	*offset = 0;
+}
+
+ssize_t
+gatheredWrite(int fd, const StaticString data[], unsigned int dataCount, string &restBuffer) {
+	size_t totalSize, iovCount, i;
+	ssize_t ret;
+	
+	#ifdef IOV_MAX
+		size_t iovMax = IOV_MAX;
+	#else
+		// Linux doesn't define IOV_MAX in limits.h for some reason.
+		size_t iovMax = sysconf(_SC_IOV_MAX);
+	#endif
+	
+	if (restBuffer.empty()) {
+		struct iovec iov[dataCount];
+		
+		totalSize = staticStringArrayToIoVec(data, dataCount, iov, iovCount);
+		if (totalSize == 0) {
+			errno = 0;
+			return 0;
+		}
+		
+		ret = writevFunction(fd, iov, std::min(iovCount, iovMax));
+		if (ret == -1) {
+			if (errno == EAGAIN || errno == EWOULDBLOCK) {
+				// Nothing could be written without blocking, so put
+				// everything in the rest buffer.
+				int e = errno;
+				restBuffer.reserve(totalSize);
+				for (i = 0; i < iovCount; i++) {
+					restBuffer.append((const char *) iov[i].iov_base,
+						iov[i].iov_len);
+				}
+				errno = e;
+				return 0;
+			} else {
+				return -1;
+			}
+		} else if ((size_t) ret < totalSize) {
+			size_t index, offset;
+			
+			// Put all unsent data in the rest buffer.
+			restBuffer.reserve(ret);
+			findDataPositionIndexAndOffset(iov, iovCount, ret, &index, &offset);
+			for (i = index; i < iovCount; i++) {
+				if (i == index) {
+					restBuffer.append(
+						((const char *) iov[i].iov_base) + offset,
+						iov[i].iov_len - offset);
+				} else {
+					restBuffer.append(
+						(const char *) iov[i].iov_base,
+						iov[i].iov_len);
+				}
+			}
+			
+			// TODO: we should call writev() again if iovCount > iovMax
+			// in order to send out the rest of the data without
+			// putting them in the rest buffer.
+			
+			return ret;
+		} else {
+			// Everything is sent, and the rest buffer was empty anyway, so
+			// just return.
+			return totalSize;
+		}
+	} else {
+		struct iovec iov[dataCount + 1];
+		
+		iov[0].iov_base = (char *) restBuffer.data();
+		iov[0].iov_len  = restBuffer.size();
+		totalSize = staticStringArrayToIoVec(data, dataCount, iov + 1, iovCount);
+		totalSize += restBuffer.size();
+		iovCount++;
+		
+		ret = writevFunction(fd, iov, std::min(iovCount, iovMax));
+		if (ret == -1) {
+			if (errno == EAGAIN || errno == EWOULDBLOCK) {
+				// Nothing could be written without blocking, so
+				// append all data into the rest buffer.
+				int e = errno;
+				restBuffer.reserve(totalSize);
+				for (i = 1; i < iovCount; i++) {
+					restBuffer.append(
+						(const char *) iov[i].iov_base,
+						iov[i].iov_len);
+				}
+				errno = e;
+				return 0;
+			} else {
+				return -1;
+			}
+		} else {
+			string::size_type restBufferSize = restBuffer.size();
+			size_t restBufferSent = std::min((size_t) ret, (size_t) restBufferSize);
+			
+			// Remove everything in the rest buffer that we've been able to send.
+			restBuffer.erase(0, restBufferSent);
+			if (restBuffer.empty()) {
+				size_t index, offset;
+				
+				// Looks like everything in the rest buffer was sent.
+				// Put all unsent data into the rest buffer.
+				findDataPositionIndexAndOffset(iov, iovCount, ret,
+					&index, &offset);
+				for (i = index; i < iovCount; i++) {
+					if (i == index) {
+						restBuffer.append(
+							((const char *) iov[i].iov_base) + offset,
+							iov[i].iov_len - offset);
+					} else {
+						restBuffer.append(
+							(const char *) iov[i].iov_base,
+							iov[i].iov_len);
+					}
+				}
+				
+				// TODO: we should call writev() again if
+				// iovCount > iovMax && ret < totalSize
+				// in order to send out the rest of the data without
+				// putting them in the rest buffer.
+			} else {
+				// The rest buffer could only be partially sent out, so
+				// nothing in 'data' could be sent. Append everything
+				// in 'data' into the rest buffer.
+				restBuffer.reserve(totalSize - ret);
+				for (i = 1; i < iovCount; i++) {
+					restBuffer.append(
+						(const char *) iov[i].iov_base,
+						iov[i].iov_len);
+				}
+			}
+			return ret;
+		}
+	}
+}
+
+void
+setWritevFunction(WritevFunction func) {
+	if (func != NULL) {
+		writevFunction = func;
+	} else {
+		writevFunction = syscalls::writev;
+	}
 }
 
 

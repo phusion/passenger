@@ -25,6 +25,9 @@
 #ifndef _PASSENGER_IO_UTILS_H_
 #define _PASSENGER_IO_UTILS_H_
 
+#include <sys/types.h>
+#include <sys/uio.h>
+#include <unistd.h>
 #include <string>
 #include "../StaticString.h"
 
@@ -37,6 +40,8 @@ enum ServerAddressType {
 	SAT_TCP,
 	SAT_UNKNOWN
 };
+
+typedef ssize_t (*WritevFunction)(int fildes, const struct iovec *iov, int iovcnt);
 
 /**
  * Accepts a server address in one of the following formats, and returns which one it is:
@@ -173,6 +178,42 @@ int connectToUnixServer(const StaticString &filename);
  * @ingroup Support
  */
 int connectToTcpServer(const StaticString &hostname, unsigned int port);
+
+/**
+ * Writes a bunch of data to the given file descriptor using a gathering I/O interface.
+ * Instead of accepting a single buffer, this function accepts multiple buffers plus
+ * a special 'rest' buffer. The rest buffer is written out first, and the data buffers
+ * are then written out in the order as they appear. This all is done with a single
+ * writev() system call without concatenating all data into a single buffer.
+ *
+ * This function is designed for use with non-blocking sockets. It returns the number
+ * of bytes that have been written, and ensures that restBuffer will contain all data
+ * that has not been written, i.e. should be written out as soon as the file descriptor
+ * is writeable again. If everything has been successfully written out then restBuffer
+ * will be empty.
+ * A return value of 0 indicates that nothing could be written without blocking.
+ *
+ * Returns -1 if an error occurred other than one which indicates blocking. In this
+ * case, <tt>errno</tt> is set appropriately.
+ *
+ * This function also takes care of all the stupid writev() limitations such as
+ * IOV_MAX. It ensures that no more than IOV_MAX items will be passed to writev().
+ *
+ * @param fd The file descriptor to write to.
+ * @param data The data to write.
+ * @param dataCount Number of elements in <tt>data</tt>.
+ * @param restBuffer The rest buffer, as documented above.
+ * @return The number of bytes that have been written out, or -1 on any error that
+ *         isn't related to non-blocking writes.
+ * @throws boost::thread_interrupted
+ */
+ssize_t gatheredWrite(int fd, const StaticString data[], unsigned int dataCount, string &restBuffer);
+
+/**
+ * Sets a writev-emulating function that gatheredWrite() should call instead of the real writev().
+ * Useful for unit tests. Pass NULL to restore back to the real writev().
+ */
+void setWritevFunction(WritevFunction func);
 
 } // namespace Passenger
 
