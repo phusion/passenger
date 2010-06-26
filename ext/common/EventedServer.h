@@ -98,7 +98,9 @@ protected:
 			 * readable again. In here we might be watching for read events,
 			 * but not if there's too much pending data, in which case
 			 * EventedServer will concentrate on sending out all
-			 * pending data before watching read events again.
+			 * pending data before watching read events again. When all
+			 * pending data has been sent out the system will transition to
+			 * ES_CONNECTED.
 			 */
 			ES_WRITES_PENDING,
 			
