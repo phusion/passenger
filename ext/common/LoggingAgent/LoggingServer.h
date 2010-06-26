@@ -29,6 +29,7 @@
 #include <oxt/macros.hpp>
 #include <boost/shared_ptr.hpp>
 #include <string>
+#include <sstream>
 #include <map>
 #include <ev++.h>
 #include <curl/curl.h>
@@ -234,6 +235,15 @@ private:
 		
 		time_t age(time_t currentTime) const {
 			return currentTime - lastUsed;
+		}
+		
+		void dump(stringstream &stream) const {
+			stream << "   Transaction " << txnId << ":\n";
+			stream << "      Group: " << groupName << "\n";
+			stream << "      Category: " << category << "\n";
+			stream << "      Refcount: " << refcount << "\n";
+			stream << "      StatefulRefcount: " << statefulRefcount << "\n";
+			stream << "      Age: " << age(time(NULL)) << "\n";
 		}
 	};
 	
@@ -470,6 +480,12 @@ private:
 		// must contain random id
 		// must not be too large
 		return !txnId.empty();
+	}
+	
+	bool validUnionStationKey(const StaticString &key) const {
+		// must be hexadecimal
+		// must not be too large
+		return !key.empty();
 	}
 	
 	bool supportedCategory(const StaticString &category) const {
@@ -876,6 +892,12 @@ protected:
 				disconnect(eclient);
 				return true;
 			}
+			if (!unionStationKey.empty()
+			 && OXT_UNLIKELY( !validUnionStationKey(unionStationKey) )) {
+				sendErrorToClient(eclient, "Invalid Union Station key format");
+				disconnect(eclient);
+				return true;
+			}
 			if (!client->stateless
 			 && OXT_UNLIKELY( client->openTransactions.find(txnId) !=
 				client->openTransactions.end() ))
@@ -1000,6 +1022,11 @@ protected:
 			flushAllLogs(logFlushingTimer);
 			writeArrayMessage(eclient, "ok", NULL);
 			
+		} else if (args[0] == "info") {
+			stringstream stream;
+			dump(stream);
+			writeArrayMessage(eclient, "info", stream.str().c_str(), NULL);
+		
 		} else if (args[0] == "exit") {
 			if (!requireRights(eclient, Account::EXIT)) {
 				disconnect(eclient);
@@ -1124,6 +1151,19 @@ public:
 			writeDetachEntry(it->second);
 		}
 		transactions.clear();
+	}
+	
+	void dump(stringstream &stream) const {
+		TransactionMap::const_iterator it;
+		TransactionMap::const_iterator end = transactions.end();
+		
+		stream << "Number of clients: " << getClients().size() << "\n";
+		stream << "Open transactions: " << transactions.size() << "\n";
+		for (it = transactions.begin(); it != end; it++) {
+			const TransactionPtr &transaction = it->second;
+			transaction->dump(stream);
+		}
+		stream << "Log sinks: " << logSinkCache.size() << "\n";
 	}
 };
 
