@@ -237,7 +237,7 @@ start_helper_server(ngx_cycle_t *cycle) {
     char   *analytics_log_user;
     char   *analytics_log_group;
     char   *analytics_log_permissions;
-    char   *union_station_service_ip;
+    char   *union_station_service_address;
     char   *union_station_service_cert;
     char   *error_message = NULL;
     
@@ -254,7 +254,7 @@ start_helper_server(ngx_cycle_t *cycle) {
     analytics_log_user = ngx_str_null_terminate(&passenger_main_conf.analytics_log_user);
     analytics_log_group = ngx_str_null_terminate(&passenger_main_conf.analytics_log_group);
     analytics_log_permissions = ngx_str_null_terminate(&passenger_main_conf.analytics_log_permissions);
-    union_station_service_ip = ngx_str_null_terminate(&passenger_main_conf.union_station_service_ip);
+    union_station_service_address = ngx_str_null_terminate(&passenger_main_conf.union_station_service_address);
     union_station_service_cert = ngx_str_null_terminate(&passenger_main_conf.union_station_service_cert);
     
     prestart_uris = (ngx_str_t *) passenger_main_conf.prestart_uris->elts;
@@ -281,7 +281,7 @@ start_helper_server(ngx_cycle_t *cycle) {
         "",
         analytics_log_dir, analytics_log_user,
         analytics_log_group, analytics_log_permissions,
-        union_station_service_ip,
+        union_station_service_address,
         passenger_main_conf.union_station_service_port,
         union_station_service_cert,
         (const char **) prestart_uris_ary, passenger_main_conf.prestart_uris->nelts,
@@ -353,7 +353,7 @@ cleanup:
     free(analytics_log_user);
     free(analytics_log_group);
     free(analytics_log_permissions);
-    free(union_station_service_ip);
+    free(union_station_service_address);
     free(union_station_service_cert);
     free(error_message);
     if (prestart_uris_ary != NULL) {

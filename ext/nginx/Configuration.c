@@ -86,8 +86,8 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->analytics_log_group.len  = 0;
     conf->analytics_log_permissions.data = NULL;
     conf->analytics_log_permissions.len  = 0;
-    conf->union_station_service_ip.data = NULL;
-    conf->union_station_service_ip.len = 0;
+    conf->union_station_service_address.data = NULL;
+    conf->union_station_service_address.len = 0;
     conf->union_station_service_port = (ngx_uint_t) NGX_CONF_UNSET;
     conf->union_station_service_cert.data = NULL;
     conf->union_station_service_cert.len = 0;
@@ -220,8 +220,8 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
         conf->analytics_log_permissions.data = (u_char *) DEFAULT_ANALYTICS_LOG_PERMISSIONS;
     }
     
-    if (conf->union_station_service_ip.len == 0) {
-        conf->union_station_service_ip.data = (u_char *) "";
+    if (conf->union_station_service_address.len == 0) {
+        conf->union_station_service_address.data = (u_char *) "";
     }
     
     if (conf->union_station_service_port == (ngx_uint_t) NGX_CONF_UNSET) {
@@ -1180,11 +1180,11 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_main_conf_t, analytics_log_permissions),
       NULL },
 
-    { ngx_string("union_station_service_ip"),
+    { ngx_string("union_station_service_address"),
       NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, union_station_service_ip),
+      offsetof(passenger_main_conf_t, union_station_service_address),
       NULL },
 
     { ngx_string("union_station_service_port"),

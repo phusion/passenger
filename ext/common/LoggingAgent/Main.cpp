@@ -122,7 +122,8 @@ main(int argc, char *argv[]) {
 	string groupname          = options.get("analytics_log_group");
 	string permissions        = options.get("analytics_log_permissions");
 	string password           = options.get("logging_agent_password");
-	string unionStationServiceIp = options.get("union_station_service_ip", false);
+	string unionStationServiceAddress = options.get("union_station_service_address",
+		false, DEFAULT_UNION_STATION_SERVICE_ADDRESS);
 	int    unionStationServicePort = options.getInt("union_station_service_port",
 		false, DEFAULT_UNION_STATION_SERVICE_PORT);
 	string unionStationServiceCert = options.get("union_station_service_cert", false);
@@ -212,7 +213,8 @@ main(int argc, char *argv[]) {
 		LoggingServer server(eventLoop, serverSocketFd,
 			accountsDatabase, loggingDir,
 			"u=rwx,g=rx,o=rx", GROUP_NOT_GIVEN,
-			unionStationServiceIp, unionStationServicePort,
+			unionStationServiceAddress,
+			unionStationServicePort,
 			unionStationServiceCert);
 		
 		if (feedbackFdAvailable()) {

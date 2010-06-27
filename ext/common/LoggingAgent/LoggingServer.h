@@ -32,7 +32,6 @@
 #include <sstream>
 #include <map>
 #include <ev++.h>
-#include <curl/curl.h>
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -41,6 +40,7 @@
 #include <cstring>
 #include <ctime>
 
+#include "RemoteSender.h"
 #include "../EventedMessageServer.h"
 #include "../MessageReadersWriters.h"
 #include "../StaticString.h"
@@ -162,20 +162,20 @@ private:
 		static const unsigned int BUFFER_CAPACITY = 8 * 1024;
 		
 		LoggingServer *server;
-		char buffer[BUFFER_CAPACITY];
-		unsigned int bufferSize;
 		string unionStationKey;
 		string nodeName;
 		string category;
+		char buffer[BUFFER_CAPACITY];
+		unsigned int bufferSize;
 		
 		RemoteSink(LoggingServer *server, const string &unionStationKey,
 			const string &nodeName, const string &category)
 		{
 			this->server = server;
-			this->bufferSize = 0;
 			this->unionStationKey = unionStationKey;
 			this->nodeName = nodeName;
 			this->category = category;
+			this->bufferSize = 0;
 		}
 		
 		virtual bool isRemote() const {
@@ -197,8 +197,8 @@ private:
 					data2[i + 1] = data[i];
 				}
 				lastFlushed = time(NULL);
-				server->sendToRemoteServer(unionStationKey, nodeName, category,
-					data2, count + 1);
+				server->remoteSender.schedule(unionStationKey, nodeName,
+					category, data2, count + 1);
 				bufferSize = 0;
 			} else {
 				for (i = 0; i < count; i++) {
@@ -212,7 +212,7 @@ private:
 			if (bufferSize > 0) {
 				lastFlushed = time(NULL);
 				StaticString data(buffer, bufferSize);
-				server->sendToRemoteServer(unionStationKey, nodeName,
+				server->remoteSender.schedule(unionStationKey, nodeName,
 					category, &data, 1);
 				bufferSize = 0;
 			}
@@ -266,164 +266,6 @@ private:
 	typedef shared_ptr<Transaction> TransactionPtr;
 	typedef map<string, LogSinkPtr> LogSinkCache;
 	
-	struct RemoteServer {
-		string ip;
-		unsigned int port;
-		string cert;
-		CURL *curl;
-		struct curl_slist *headers;
-		char lastErrorMessage[CURL_ERROR_SIZE];
-		string responseBody;
-		
-		RemoteServer(const string &ip, unsigned int port, const string &cert) {
-			TRACE_POINT();
-			this->ip   = ip;
-			this->port = port;
-			this->cert = cert;
-			curl = curl_easy_init();
-			if (curl == NULL) {
-				throw IOException("Unable to create a CURL handle");
-			}
-			headers = NULL;
-			headers = curl_slist_append(headers, "Host: " UNION_STATION_SERVICE_HOSTNAME);
-			if (headers == NULL) {
-				throw IOException("Unable to create a CURL linked list");
-			}
-			resetConnection();
-		}
-		
-		~RemoteServer() {
-			if (curl != NULL) {
-				curl_easy_cleanup(curl);
-			}
-			curl_slist_free_all(headers);
-		}
-		
-		void resetConnection() {
-			curl_easy_reset(curl);
-			curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, lastErrorMessage);
-			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlDataReceived);
-			curl_easy_setopt(curl, CURLOPT_WRITEDATA, this);
-			if (cert.empty()) {
-				curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
-			} else {
-				curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1);
-				curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
-				curl_easy_setopt(curl, CURLOPT_SSLCERT, cert.c_str());
-			}
-		}
-		
-		bool sendData(const string &unionStationKey, const StaticString &nodeName,
-			const StaticString &category, const StaticString data[],
-			unsigned int count)
-		{
-			unsigned int fullSize = 0;
-			unsigned int i;
-			for (i = 0; i < count; i++) {
-				fullSize += data[i].size();
-			}
-			
-			string fullData;
-			fullData.reserve(fullSize);
-			for (i = 0; i < count; i++) {
-				fullData.append(data[i].c_str(), data[i].size());
-			}
-			
-			ScopeGuard guard(boost::bind(&RemoteServer::resetConnection, this));
-			prepareRequest("/sink");
-			
-			struct curl_httppost *post = NULL;
-			struct curl_httppost *last = NULL;
-			curl_formadd(&post, &last,
-				CURLFORM_PTRNAME, "key",
-				CURLFORM_PTRCONTENTS, unionStationKey.c_str(),
-				CURLFORM_END);
-			curl_formadd(&post, &last,
-				CURLFORM_PTRNAME, "node_name",
-				CURLFORM_PTRCONTENTS, nodeName.c_str(),
-				CURLFORM_CONTENTSLENGTH, (long) nodeName.size(),
-				CURLFORM_END);
-			curl_formadd(&post, &last,
-				CURLFORM_PTRNAME, "category",
-				CURLFORM_PTRCONTENTS, category.c_str(),
-				CURLFORM_CONTENTSLENGTH, (long) category.size(),
-				CURLFORM_END);
-			curl_formadd(&post, &last,
-				CURLFORM_PTRNAME, "data",
-				CURLFORM_PTRCONTENTS, fullData.c_str(),
-				CURLFORM_CONTENTSLENGTH, (long) fullData.size(),
-				CURLFORM_END);
-			
-			curl_easy_setopt(curl, CURLOPT_HTTPGET, 0);
-			curl_easy_setopt(curl, CURLOPT_HTTPPOST, post);
-			CURLcode code = curl_easy_perform(curl);
-			curl_formfree(post);
-			
-			if (code == 0) {
-				guard.success();
-				return true;
-			} else {
-				P_DEBUG("Could not send data to the Union Station service server: " <<
-					lastErrorMessage);
-				return false;
-			}
-		}
-		
-		bool ping() {
-			ScopeGuard guard(boost::bind(&RemoteServer::resetConnection, this));
-			prepareRequest("/ping");
-			curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
-			if (curl_easy_perform(curl) != 0) {
-				P_DEBUG("Could not ping Union Station service server: " <<
-					lastErrorMessage);
-				return false;
-			}
-			if (responseBody == "pong") {
-				guard.success();
-				return true;
-			} else {
-				P_DEBUG("Union Station service server returned an "
-					"unexpected ping message: " << responseBody);
-				return false;
-			}
-		}
-	
-	private:
-		class ScopeGuard {
-		private:
-			function<void ()> func;
-		public:
-			ScopeGuard(const function<void()> &func) {
-				this->func = func;
-			}
-			
-			~ScopeGuard() {
-				if (func) {
-					func();
-				}
-			}
-			
-			void success() {
-				func = function<void()>();
-			}
-		};
-		
-		void prepareRequest(const string &uri) {
-			string url = string("https://") + ip + ":" + toString(port) + uri;
-			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-			responseBody.clear();
-		}
-		
-		static size_t curlDataReceived(void *buffer, size_t size, size_t nmemb, void *userData) {
-			RemoteServer *self = (RemoteServer *) userData;
-			self->responseBody.append((const char *) buffer, size * nmemb);
-			return size * nmemb;
-		}
-	};
-	
-	typedef shared_ptr<RemoteServer> RemoteServerPtr;
-	
 	struct Client: public EventedMessageServer::Client {
 		string nodeName;
 		bool stateless;
@@ -454,6 +296,7 @@ private:
 	gid_t gid;
 	string dirPermissions;
 	mode_t filePermissions;
+	RemoteSender remoteSender;
 	ev::timer garbageCollectionTimer;
 	ev::timer logFlushingTimer;
 	ev::timer exitTimer;
@@ -461,17 +304,6 @@ private:
 	LogSinkCache logSinkCache;
 	RandomGenerator randomGenerator;
 	bool exitRequested;
-	
-	boost::mutex remoteServersLock;
-	bool remoteServersFirstQueried;
-	bool remoteServerWentDown;
-	condition_variable remoteServersChanged;
-	unsigned int currentRemoteServer;
-	vector<RemoteServerPtr> remoteServers;
-	shared_ptr<oxt::thread> remoteServerCheckThread;
-	string unionStationServiceIp;
-	unsigned short unionStationServicePort;
-	string unionStationServiceCert;
 	
 	void sendErrorToClient(const EventedServer::ClientPtr &client, const string &message) {
 		writeArrayMessage(client, "error", message.c_str(), NULL);
@@ -659,38 +491,6 @@ private:
 		}
 	}
 	
-	void sendToRemoteServer(const string &unionStationKey, const StaticString &nodeName,
-		const StaticString &category, const StaticString data[], unsigned int count)
-	{
-		TRACE_POINT();
-		unique_lock<boost::mutex> l(remoteServersLock);
-		while (!remoteServersFirstQueried) {
-			remoteServersChanged.wait(l);
-		}
-		
-		UPDATE_TRACE_POINT();
-		bool sent = false;
-		
-		// Try to send the data to whichever server is up.
-		while (remoteServers.size() > 0 && !sent) {
-			currentRemoteServer = currentRemoteServer % remoteServers.size();
-			RemoteServerPtr server = remoteServers[currentRemoteServer];
-			if (server->sendData(unionStationKey, nodeName, category, data, count)) {
-				// Have the next send command send to another
-				// server for load balancing.
-				currentRemoteServer++;
-				sent = true;
-			} else {
-				// If the server is down then remove it.
-				remoteServers.erase(remoteServers.begin() + currentRemoteServer);
-				remoteServerWentDown = true;
-				remoteServersChanged.notify_all();
-			}
-		}
-		
-		// If no servers are up then discard the data.
-	}
-	
 	bool writeLogEntry(const EventedServer::ClientPtr &eclient,
 		const TransactionPtr &transaction, const StaticString &timestamp,
 		const StaticString &data)
@@ -815,76 +615,6 @@ private:
 	
 	void stopLoop(ev::timer &timer, int revents = 0) {
 		ev_unloop(getLoop(), EVUNLOOP_ONE);
-	}
-	
-	void remoteServerCheckThreadMain() {
-		vector<string> ips;
-		vector<string>::const_iterator it;
-		
-		P_DEBUG("Initial attempt to resolve Union Station service host names");
-		if (unionStationServiceIp.empty()) {
-			ips = resolveHostname(UNION_STATION_SERVICE_HOSTNAME,
-				unionStationServicePort);
-		} else {
-			ips.push_back(unionStationServiceIp);
-		}
-		
-		unique_lock<boost::mutex> l(remoteServersLock);
-		for (it = ips.begin(); it != ips.end(); it++) {
-			RemoteServerPtr server(new RemoteServer(*it, unionStationServicePort,
-				unionStationServiceCert));
-			remoteServers.push_back(server);
-		}
-		remoteServersFirstQueried = true;
-		remoteServersChanged.notify_all();
-		P_DEBUG("Initial attempt to resolve Union Station service host names succeeded: " <<
-			toString(ips));
-		
-		while (!this_thread::interruption_requested()) {
-			bool timedOut = false;
-			
-			while (!this_thread::interruption_requested() && !remoteServerWentDown && !timedOut) {
-				timedOut = !remoteServersChanged.timed_wait(l,
-					posix_time::seconds(6 * 60 * 60));
-			}
-			if (this_thread::interruption_requested()) {
-				break;
-			} else {
-				vector<RemoteServerPtr> remoteServers;
-				
-				l.unlock();
-				P_DEBUG("Re-resolving Union Station service host names");
-				if (unionStationServiceIp.empty()) {
-					ips = resolveHostname(UNION_STATION_SERVICE_HOSTNAME,
-						unionStationServicePort);
-				} else {
-					ips.clear();
-					ips.push_back(unionStationServiceIp);
-				}
-				for (it = ips.begin(); it != ips.end(); it++) {
-					RemoteServerPtr server(new RemoteServer(*it, unionStationServicePort,
-						unionStationServiceCert));
-					P_DEBUG("Pinging Union Station server " << *it);
-					if (server->ping()) {
-						P_DEBUG("Union Station server " << *it << " up");
-						remoteServers.push_back(server);
-					} else {
-						P_DEBUG("Union Station server " << *it << " down");
-					}
-				}
-				l.lock();
-				this->remoteServers = remoteServers;
-				if (remoteServerWentDown) {
-					remoteServerWentDown = false;
-					// We were woken up because a Union Station server went down,
-					// so don't recheck for 1 minute.
-					l.unlock();
-					P_DEBUG("Sleeping for 1 minute before re-checking Union Station servers.");
-					syscalls::sleep(60);
-					l.lock();
-				}
-			}
-		}
 	}
 	
 protected:
@@ -1168,12 +898,15 @@ public:
 		FileDescriptor fd,
 		const AccountsDatabasePtr &accountsDatabase,
 		const string &dir,
-		const string &permissions = "u=rwx,g=rx,o=rx",
+		const string &permissions = DEFAULT_ANALYTICS_LOG_PERMISSIONS,
 		gid_t gid = GROUP_NOT_GIVEN,
-		const string &unionStationServiceIp = "",
+		const string &unionStationServiceAddress = DEFAULT_UNION_STATION_SERVICE_ADDRESS,
 		unsigned short unionStationServicePort = DEFAULT_UNION_STATION_SERVICE_PORT,
 		const string &unionStationServiceCert = "")
 		: EventedMessageServer(loop, fd, accountsDatabase),
+		  remoteSender(unionStationServiceAddress,
+		               unionStationServicePort,
+		               unionStationServiceCert),
 		  garbageCollectionTimer(loop),
 		  logFlushingTimer(loop),
 		  exitTimer(loop)
@@ -1189,22 +922,9 @@ public:
 		exitTimer.set<LoggingServer, &LoggingServer::stopLoop>(this);
 		exitTimer.set(5, 0);
 		exitRequested = false;
-		
-		this->unionStationServiceIp   = unionStationServiceIp;
-		this->unionStationServicePort = unionStationServicePort;
-		this->unionStationServiceCert = unionStationServiceCert;
-		remoteServersFirstQueried = false;
-		remoteServerWentDown = false;
-		remoteServerCheckThread.reset(new oxt::thread(
-			boost::bind(&LoggingServer::remoteServerCheckThreadMain, this),
-			"Remote server checking thread",
-			1024 * 128
-		));
 	}
 	
 	~LoggingServer() {
-		remoteServerCheckThread->interrupt_and_join();
-		
 		TransactionMap::const_iterator it, end = transactions.end();
 		for (it = transactions.begin(); it != end; it++) {
 			writeDetachEntry(EventedServer::ClientPtr(), it->second);

@@ -336,9 +336,11 @@ end
 	logging_agent_dependencies = [
 		'ext/common/LoggingAgent/Main.cpp',
 		'ext/common/LoggingAgent/LoggingServer.h',
+		'ext/common/LoggingAgent/RemoteSender.h',
 		'ext/common/ServerInstanceDir.h',
 		'ext/common/Logging.h',
 		'ext/common/Utils/VariantMap.h',
+		'ext/common/Utils/BlockingQueue.h',
 		COMMON_LIBRARY,
 		BOOST_OXT_LIBRARY,
 		:libev]

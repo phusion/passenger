@@ -292,7 +292,8 @@ public:
 	           const string &analyticsServer,
 	           const string &analyticsLogDir, const string &analyticsLogUser,
 	           const string &analyticsLogGroup, const string &analyticsLogPermissions,
-	           const string &unionStationServiceIp, unsigned short unionStationServicePort,
+	           const string &unionStationServiceAddress,
+	           unsigned short unionStationServicePort,
 	           const string &unionStationServiceCert,
 	           const set<string> &prestartURLs,
 	           const function<void ()> &afterFork = function<void ()>())
@@ -332,7 +333,7 @@ public:
 			.set    ("analytics_log_user",        analyticsLogUser)
 			.set    ("analytics_log_group",       analyticsLogGroup)
 			.set    ("analytics_log_permissions", analyticsLogPermissions)
-			.set    ("union_station_service_ip",  unionStationServiceIp)
+			.set    ("union_station_service_address",  unionStationServiceAddress)
 			.setInt ("union_station_service_port", unionStationServicePort)
 			.set    ("union_station_service_cert",  realUnionStationServiceCert)
 			.set    ("prestart_urls",   serializePrestartURLs(prestartURLs));
