@@ -64,6 +64,9 @@ else
 	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS"
 end
 
+# Extra linker flags for backtrace_symbols() to generate useful output (see AgentsBase.cpp).
+AGENT_LDFLAGS = PlatformInfo.export_dynamic_flags
+
 # Extra compiler flags that should always be passed to the C/C++ compiler.
 # Should be included last in the command string, even after PlatformInfo.portability_cflags.
 EXTRA_CXXFLAGS = "-Wall #{OPTIMIZATION_FLAGS}"
@@ -326,6 +329,7 @@ end
 			"#{COMMON_LIBRARY} " <<
 			"#{BOOST_OXT_LIBRARY} " <<
 			"#{PlatformInfo.portability_ldflags} " <<
+			"#{AGENT_LDFLAGS} " <<
 			"#{EXTRA_LDFLAGS}")
 	end
 	
@@ -349,6 +353,7 @@ end
 			"#{LIBEV_LIBS} " <<
 			"#{PlatformInfo.curl_libs} " <<
 			"#{PlatformInfo.portability_ldflags} " <<
+			"#{AGENT_LDFLAGS} " <<
 			"#{EXTRA_LDFLAGS}")
 	end
 
@@ -473,6 +478,7 @@ end
 			"#{APACHE2_HELPER_COMMON_LIBRARY} " <<
 			"#{APACHE2_HELPER_BOOST_OXT_LIBRARY} " <<
 			"#{PlatformInfo.portability_ldflags} " <<
+			"#{AGENT_LDFLAGS} " <<
 			"#{EXTRA_LDFLAGS}")
 	end
 
@@ -541,6 +547,7 @@ end
 			"#{NGINX_COMMON_LIBRARY} " <<
 			"#{NGINX_BOOST_OXT_LIBRARY} " <<
 			"#{PlatformInfo.portability_ldflags} " <<
+			"#{AGENT_LDFLAGS} " <<
 			"#{EXTRA_LDFLAGS}"
 	end
 	

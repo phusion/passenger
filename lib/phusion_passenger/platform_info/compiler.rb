@@ -119,6 +119,14 @@ module PlatformInfo
 			return '-g'
 		end
 	end
+	
+	def self.export_dynamic_flags
+		if RUBY_PLATFORM =~ /linux/
+			return '-rdynamic'
+		else
+			return nil
+		end
+	end
 
 private
 	def self.try_compile(language, source, flags = nil)
