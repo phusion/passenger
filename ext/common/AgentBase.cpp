@@ -30,10 +30,12 @@
 #include <cstring>
 #include <cerrno>
 #include <fcntl.h>
+#include <unistd.h>
 #include <signal.h>
 
 #include "Constants.h"
 #include "AgentBase.h"
+#include "Exceptions.h"
 #include "Logging.h"
 
 namespace Passenger {
@@ -87,14 +89,34 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 		} else {
 			options.readFrom((const char **) argv + 1, argc - 1);
 		}
+		
+		setLogLevel(options.getInt("log_level", false, 0));
+		if (!options.get("debug_log_file", false).empty()) {
+			if (strcmp(processName, "PassengerWatchdog") == 0) {
+				/* Have the watchdog set STDOUT and STDERR to the debug
+				 * log file so that system abort() calls that stuff
+				 * are properly logged.
+				 */
+				string filename = options.get("debug_log_file");
+				options.erase("debug_log_file");
+				
+				int fd = open(filename.c_str(), O_CREAT | O_WRONLY | O_APPEND, 0644);
+				if (fd == -1) {
+					int e = errno;
+					throw FileSystemException("Cannot open debug log file " +
+						filename, e, filename);
+				}
+				
+				dup2(fd, STDOUT_FILENO);
+				dup2(fd, STDERR_FILENO);
+				close(fd);
+			} else {
+				setDebugFile(options.get("debug_log_file").c_str());
+			}
+		}
 	} catch (const tracable_exception &e) {
 		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
 		exit(1);
-	}
-	
-	setLogLevel(options.getInt("log_level", false, 0));
-	if (!options.get("debug_log_file", false).empty()) {
-		setDebugFile(options.get("debug_log_file").c_str());
 	}
 	
 	// Change process title.

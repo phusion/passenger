@@ -241,7 +241,7 @@ public:
 			accountsDatabase, rubyCommand,
 			analyticsLogger,
 			options.getInt("log_level"),
-			options.get("debug_log_file")
+			options.get("debug_log_file", false)
 		));
 		pool->setMax(maxPoolSize);
 		pool->setMaxPerApp(maxInstancesPerApp);

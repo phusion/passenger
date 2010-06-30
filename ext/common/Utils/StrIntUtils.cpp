@@ -118,7 +118,7 @@ pointerToIntString(void *pointer) {
 		u.pointer = pointer;
 		return toString(u.value);
 	} else {
-		fprintf(stderr, "Pointer size unsupported...");
+		fprintf(stderr, "Pointer size unsupported...\n");
 		abort();
 	}
 }

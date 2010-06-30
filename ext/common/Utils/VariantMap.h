@@ -294,6 +294,10 @@ public:
 		return result;
 	}
 	
+	bool erase(const string &name) {
+		return store.erase(name) != 0;
+	}
+	
 	/** Checks whether the specified key is in this map. */
 	bool has(const string &name) const {
 		return store.find(name) != store.end();
