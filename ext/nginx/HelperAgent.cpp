@@ -609,10 +609,6 @@ private:
 			P_ERROR("Uncaught exception in PassengerServer client thread:\n"
 				<< "   exception: " << e.what() << "\n"
 				<< "   backtrace: not available");
-			abort();
-		} catch (...) {
-			P_ERROR("Uncaught unknown exception in PassengerServer client thread.");
-			throw;
 		}
 	}
 	

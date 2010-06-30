@@ -478,13 +478,6 @@ protected:
 				<< "   message: " << toString(args) << "\n"
 				<< "   exception: " << e.what() << "\n"
 				<< "   backtrace:\n" << e.backtrace());
-		} catch (const std::exception &e) {
-			P_TRACE(2, "An error occurred in a MessageServer client thread " << (int) client <<":\n"
-				<< "   message: " << toString(args) << "\n"
-				<< "   exception: " << e.what() << "\n"
-				<< "   backtrace: not available");
-		} catch (...) {
-			P_TRACE(2, "An unknown exception occurred in a MessageServer client thread.");
 		}
 	}
 	
