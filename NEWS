@@ -1,3 +1,33 @@
+Release 2.2.15
+--------------
+
+ * [Apache] Fixed incorrect temp dir cleanup by passenger-status
+   On some systems, running passenger-status could print the following
+   message:
+   
+      *** Cleaning stale folder /tmp/passenger.1234
+   
+   ...after which Phusion Passenger breaks because that directory is
+   necessary for it to function properly. The cause of this problem
+   has been found and has been fixed.
+ * [Apache] Fixed some upload handling problems
+   Previous versions of Phusion Passenger check whether the size of
+   the received upload data matches the contents of the Content-Length
+   header as received by the client. It turns out that there could
+   be a mismatch e.g. because of mod_deflate input compression, so
+   we can't trust Content-Length anyway and we're being too strict.
+   The check has now been removed.
+ * [Nginx] Fixed compilation issues with Nginx >= 0.7.66
+   Thanks to Potamianos Gregory for reporting this issue. Issue #500.
+ * [Nginx] Default Nginx version changed to 0.7.67
+   The previous default version was 0.7.65.
+ * Fixed more Bundler problems
+   Previous versions of Phusion Passenger would preload some popular
+   libraries such as mysql and sqlite3 in order to utilize copy-on-write
+   optimizations better. However this behavior conflicts with Bundler
+   so we've removed it.
+
+
 Release 2.2.14
 --------------
 
