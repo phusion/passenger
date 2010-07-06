@@ -1,3 +1,9 @@
+passenger (2.2.15-1bbox1) hardy; urgency=low
+
+  * New Upstream Version, 2.2.15
+
+ -- root <ben@brightbox.co.uk>  Tue, 06 Jul 2010 14:37:38 +0100
+
 passenger (2.2.14-1bbox2) hardy; urgency=low
 
   * New Upstream Version, 2.2.14
