@@ -154,6 +154,9 @@ private:
 		for (current = data.c_str(); current != end; current++) {
 			if (isName && *current == '\0') {
 				key = StaticString(startOfString, current - startOfString);
+				if (key.empty()) {
+					return false;
+				}
 				startOfString = current + 1;
 				isName = false;
 			} else if (!isName && *current == '\0') {

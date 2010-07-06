@@ -116,7 +116,7 @@ string toHex(const StaticString &data);
  * Convert the given binary data to hexadecimal. This form accepts an
  * output buffer which must be at least <tt>data.size() * 2</tt> bytes large.
  */
-void toHex(const StaticString &data, char *output);
+void toHex(const StaticString &data, char *output, bool upperCase = false);
 
 /**
  * Convert the given integer to a hexadecimal string.
@@ -174,6 +174,12 @@ IntegerType
 roundUp(IntegerType number, IntegerType multiple) {
 	return (number + multiple - 1) / multiple * multiple;
 }
+
+/**
+ * Escape non-ASCII-printable characters in the given string with C-style escape sequences,
+ * e.g. "foo\nbar\0" becomes "foo\\nbar\\0".
+ */
+string cEscapeString(const StaticString &input);
 
 } // namespace Passenger
 

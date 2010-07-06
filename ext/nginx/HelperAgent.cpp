@@ -232,7 +232,8 @@ private:
 			 && parser.getErrorReason() == ScgiRequestParser::LIMIT_REACHED) {
 				P_ERROR("SCGI header too large.");
 			} else {
-				P_ERROR("Invalid SCGI header received.");
+				P_ERROR("Invalid SCGI header received: " <<
+					cEscapeString(parser.getHeaderData()));
 			}
 			return false;
 		} else if (!parser.hasHeader("DOCUMENT_ROOT")) {

@@ -240,6 +240,13 @@ namespace tut {
 			parser.getState(), ScgiRequestParser::ERROR);
 	}
 	
+	TEST_METHOD(25) {
+		// An empty header name.
+		ensure_equals(parser.feed("5:\0bar\0,", 8), 7u);
+		ensure_equals("Parser is in the error state.",
+			parser.getState(), ScgiRequestParser::ERROR);
+	}
+	
 	/***** Test parsing invalid SCGI requests in multiple passes. *****/
 	
 	TEST_METHOD(27) {
@@ -325,6 +332,14 @@ namespace tut {
 			parser.getState(), ScgiRequestParser::ERROR);
 		ensure_equals(parser.getErrorReason(),
 			ScgiRequestParser::LIMIT_REACHED);
+	}
+	
+	TEST_METHOD(37) {
+		// An empty header name.
+		ensure_equals(parser.feed("5:\0", 3), 3u);
+		ensure_equals(parser.feed("bar\0,", 5), 4u);
+		ensure_equals("Parser is in the error state.",
+			parser.getState(), ScgiRequestParser::ERROR);
 	}
 	
 	/***** Test parsing incomplete SCGI requests. *****/

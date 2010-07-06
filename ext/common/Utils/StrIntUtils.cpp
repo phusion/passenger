@@ -203,14 +203,26 @@ static const char hex_chars[] = {
 	'a', 'b', 'c', 'd', 'e', 'f'
 };
 
+static const char upcase_hex_chars[] = {
+	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+	'A', 'B', 'C', 'D', 'E', 'F'
+};
+
 void
-toHex(const StaticString &data, char *output) {
+toHex(const StaticString &data, char *output, bool upperCase) {
 	const char *data_buf = data.c_str();
 	string::size_type i;
 	
-	for (i = 0; i < data.size(); i++) {
-		output[i * 2] = hex_chars[(unsigned char) data_buf[i] / 16];
-		output[i * 2 + 1] = hex_chars[(unsigned char) data_buf[i] % 16];
+	if (upperCase) {
+		for (i = 0; i < data.size(); i++) {
+			output[i * 2] = upcase_hex_chars[(unsigned char) data_buf[i] / 16];
+			output[i * 2 + 1] = upcase_hex_chars[(unsigned char) data_buf[i] % 16];
+		}
+	} else {
+		for (i = 0; i < data.size(); i++) {
+			output[i * 2] = hex_chars[(unsigned char) data_buf[i] / 16];
+			output[i * 2 + 1] = hex_chars[(unsigned char) data_buf[i] % 16];
+		}
 	}
 }
 
@@ -229,6 +241,53 @@ atoi(const string &s) {
 long
 atol(const string &s) {
 	return ::atol(s.c_str());
+}
+
+string
+cEscapeString(const StaticString &input) {
+	string result;
+	const char *current = input.c_str();
+	const char *end = current + input.size();
+	
+	result.reserve(input.size());
+	while (current < end) {
+		char c = *current;
+		if (c >= 32 && c <= 126) {
+			// Printable ASCII.
+			result.append(1, c);
+		} else {
+			char buf[sizeof("\\xFF")];
+			
+			switch (c) {
+			case '\0':
+				// Explicitly in hex format in order to avoid confusion
+				// with any '0' characters that come after this byte.
+				result.append("\\x00");
+				break;
+			case '\t':
+				result.append("\\t");
+				break;
+			case '\n':
+				result.append("\\n");
+				break;
+			case '\r':
+				result.append("\\r");
+				break;
+			case '\e':
+				result.append("\\e");
+				break;
+			default:
+				buf[0] = '\\';
+				buf[1] = 'x';
+				toHex(StaticString(current, 1), buf + 2, true);
+				buf[4] = '\0';
+				result.append(buf, sizeof(buf) - 1);
+				break;
+			}
+		}
+		current++;
+	}
+	return result;
 }
 
 } // namespace Passenger

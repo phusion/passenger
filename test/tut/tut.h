@@ -63,6 +63,12 @@ static int setenv(const char *name, const char *value, int override) {
 	typedef factory::object object; \
 	factory name## _group(#name)
 
+#define DEFINE_TEST_GROUP_WITH_LIMIT(name, limit) \
+	using namespace tut; \
+	typedef test_group<name, limit> factory; \
+	typedef factory::object object; \
+	factory name## _group(#name)
+
 #define TEST_METHOD(i) \
 	template<> template<> \
 	void object::test<i>()
