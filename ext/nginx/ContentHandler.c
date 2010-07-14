@@ -427,7 +427,7 @@ create_request(ngx_http_request_t *r)
     end = ngx_snprintf(min_instances_string,
                        sizeof(min_instances_string) - 1,
                        "%d",
-                       (slcf->min_instances == (ngx_int_t) -1) ? 0 : slcf->min_instances);
+                       (slcf->min_instances == (ngx_int_t) -1) ? 1 : slcf->min_instances);
     *end = '\0';
     len += sizeof("PASSENGER_MIN_INSTANCES") +
            ngx_strlen(min_instances_string) + 1;

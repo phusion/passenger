@@ -186,7 +186,7 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->appSpawnerTimeout = -1;
 	config->maxRequests = 0;
 	config->maxRequestsSpecified = false;
-	config->minInstances = 0;
+	config->minInstances = 1;
 	config->minInstancesSpecified = false;
 	config->highPerformance = DirConfig::UNSET;
 	config->useGlobalQueue = DirConfig::UNSET;

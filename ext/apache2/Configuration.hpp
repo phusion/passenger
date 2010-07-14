@@ -298,7 +298,7 @@ struct DirConfig {
 	}
 	
 	bool usingGlobalQueue() const {
-		return useGlobalQueue == ENABLED;
+		return useGlobalQueue != DISABLED;
 	}
 	
 	bool allowsEncodedSlashes() const {

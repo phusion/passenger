@@ -363,7 +363,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_script_copy_code_t  *copy;
 
     ngx_conf_merge_value(conf->enabled, prev->enabled, 0);
-    ngx_conf_merge_value(conf->use_global_queue, prev->use_global_queue, 0);
+    ngx_conf_merge_value(conf->use_global_queue, prev->use_global_queue, 1);
     ngx_conf_merge_value(conf->friendly_error_pages, prev->friendly_error_pages, 1);
     ngx_conf_merge_value(conf->analytics, prev->analytics, 0);
     ngx_conf_merge_value(conf->debugger, prev->debugger, 0);

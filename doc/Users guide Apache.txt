@@ -783,7 +783,7 @@ This option may occur in the following places:
  * In the global server configuration.
  * In a virtual host configuration block.
 
-In each place, it may be specified at most once. The default value is 'off'.
+In each place, it may be specified at most once. The default value is 'on'.
 
 'This feature is sponsored by http://www.37signals.com/[37signals].'
 
@@ -1096,7 +1096,7 @@ The PassengerMinInstances option may occur in the following places:
  * In a `<Directory>` or `<Location>` block.
  * In '.htaccess', if `AllowOverride Limits` is on.
 
-In each place, it may be specified at most once. The default value is '0'.
+In each place, it may be specified at most once. The default value is '1'.
 
 ==== PassengerMaxInstancesPerApp <integer> ====
 The maximum number of application instances that may be simultaneously active

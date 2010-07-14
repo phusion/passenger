@@ -703,7 +703,7 @@ This option may occur in the following places:
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
 
-In each place, it may be specified at most once. The default value is 'off'.
+In each place, it may be specified at most once. The default value is 'on'.
 
 'This feature is sponsored by http://www.37signals.com/[37signals].'
 
@@ -943,7 +943,7 @@ The passenger_min_instances option may occur in the following places:
  * In a 'location' configuration block.
  * In an 'if' configuration scope.
 
-In each place, it may be specified at most once. The default value is '0'.
+In each place, it may be specified at most once. The default value is '1'.
 
 ==== passenger_max_instances_per_app <integer> ====
 The maximum number of application instances that may be simultaneously active

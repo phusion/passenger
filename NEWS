@@ -1,6 +1,14 @@
 Release 2.9.3
 -------------
 
+ * Fixed some more bugs.
+ * All Phusion Passenger agents will now gather crashing information if they
+   crash because of SIGABRT.
+ * Support Ruby 1.9 memory usage instrumentation.
+ * PassengerDebugLogFile
+ * MinInstances now set to 1 by default.
+ * Global queuing now turned on by default.
+
 
 Release 2.9.2
 -------------
