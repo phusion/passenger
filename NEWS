@@ -8,6 +8,7 @@ Release 2.9.3
  * PassengerDebugLogFile
  * MinInstances now set to 1 by default.
  * Global queuing now turned on by default.
+ * [Nginx] passenger_buffer_response
 
 
 Release 2.9.2

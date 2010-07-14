@@ -1236,6 +1236,13 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_loc_conf_t, upstream_config.ignore_client_abort),
       NULL },
 
+    { ngx_string("passenger_buffer_response"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_CONF_FLAG,
+      ngx_conf_set_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, upstream_config.buffering),
+      NULL },
+
     { ngx_string("passenger_spawn_method"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
