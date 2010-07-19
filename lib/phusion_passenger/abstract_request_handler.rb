@@ -671,10 +671,6 @@ private
 			if GC_SUPPORTS_TIME
 				log.message("Initial GC time: #{GC.time}")
 			end
-			if GC_SUPPORTS_CLEAR_STATS
-				# Clear statistics to void integer wraps.
-				GC.clear_stats
-			end
 			log.begin_measure("app request handler processing")
 		end
 		
@@ -697,6 +693,10 @@ private
 				end
 				if GC_SUPPORTS_TIME
 					log.message("Final GC time: #{GC.time}")
+				end
+				if GC_SUPPORTS_CLEAR_STATS
+					# Clear statistics to void integer wraps.
+					GC.clear_stats
 				end
 				Thread.current[PASSENGER_ANALYTICS_WEB_LOG] = nil
 			ensure
