@@ -159,7 +159,11 @@ private:
 	typedef shared_ptr<LogFile> LogFilePtr;
 	
 	struct RemoteSink: public LogSink {
-		static const unsigned int BUFFER_CAPACITY = 8 * 1024;
+		/* A little less than the TCP maximum segment size so that we can
+		 * hopefully send this data + HTTP(S) overhead to the remote in
+		 * a single TCP segment.
+		 */
+		static const unsigned int BUFFER_CAPACITY = 60 * 1024;
 		
 		LoggingServer *server;
 		string unionStationKey;
@@ -599,12 +603,12 @@ private:
 		LogSinkCache::iterator end = logSinkCache.end();
 		time_t now = time(NULL);
 		
-		// Flush log files every second, remote sinks every 10 seconds.
+		// Flush log files every second, remote sinks every 30 seconds.
 		for (it = logSinkCache.begin(); it != end; it++) {
 			LogSink *sink = it->second.get();
 			
 			if (sink->isRemote()) {
-				if (now - sink->lastFlushed >= 10) {
+				if (now - sink->lastFlushed >= 30) {
 					sink->flush();
 				}
 			} else {
