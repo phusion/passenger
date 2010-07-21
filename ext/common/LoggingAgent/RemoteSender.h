@@ -182,24 +182,37 @@ private:
 	time_t nextCheckupTime;
 	
 	void threadMain() {
-		recheckServers();
 		ScopeGuard guard(boost::bind(&RemoteSender::freeThreadData, this));
+		nextCheckupTime = 0;
 		
 		while (true) {
 			Item item;
-			bool hasItem = queue.timedGet(item, msecUntilNextCheckup());
+			bool hasItem;
+			
+			if (firstStarted()) {
+				item = queue.get();
+				hasItem = true;
+			} else {
+				hasItem = queue.timedGet(item, msecUntilNextCheckup());
+			}
 			
 			if (hasItem) {
 				if (item.exit) {
 					return;
 				} else {
+					if (timeForCheckup()) {
+						recheckServers();
+					}
 					sendOut(item);
 				}
-			}
-			if (timeForCheckup()) {
+			} else if (timeForCheckup()) {
 				recheckServers();
 			}
 		}
+	}
+	
+	bool firstStarted() const {
+		return nextCheckupTime == 0;
 	}
 	
 	void recheckServers() {
@@ -235,8 +248,16 @@ private:
 		servers.clear(); // Invoke destructors inside this thread.
 	}
 	
+	/**
+	 * Schedules the next checkup to be run after the given number
+	 * of seconds, unless there's already a checkup scheduled for
+	 * earlier.
+	 */
 	void scheduleNextCheckup(unsigned int seconds) {
-		nextCheckupTime = SystemTime::get() + seconds;
+		time_t now = SystemTime::get();
+		if (now > nextCheckupTime || now + seconds < nextCheckupTime) {
+			nextCheckupTime = now + seconds;
+		}
 	}
 	
 	unsigned int msecUntilNextCheckup() const {
@@ -271,13 +292,9 @@ private:
 		
 		if (someServersWentDown) {
 			if (servers.empty()) {
-				// TODO:
-				// schedule a checkup in 5 minutes unless there
-				// was already something scheduled earlier
+				scheduleNextCheckup(5 * 60);
 			} else {
-				// TODO:
-				// schedule a checkup in 1 hour unless there
-				// was already something scheduled earlier
+				scheduleNextCheckup(60 * 60);
 			}
 		}
 		
