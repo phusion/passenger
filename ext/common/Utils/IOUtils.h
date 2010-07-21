@@ -110,11 +110,11 @@ vector<string> resolveHostname(const string &hostname, unsigned int port = 0, bo
  *
  * @param address An address as defined by getSocketAddressType().
  * @param backlogSize The size of the socket's backlog. Specify 0 to use
- *                    the paltform's maximu mallowed backlog size.
+ *                    the paltform's maximum allowed backlog size.
  * @param autoDelete If <tt>address</tt> is a Unix socket that already exists,
  *                   whether that should be deleted. Otherwise this argument
  *                   is ignored.
- * @return The file descriptor of the newly created Unix server socket.
+ * @return The file descriptor of the newly created server socket.
  * @throws ArgumentException The given address cannot be parsed.
  * @throws RuntimeException Something went wrong.
  * @throws SystemException Something went wrong while creating the Unix server socket.
