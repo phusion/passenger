@@ -2,13 +2,15 @@
 #define _PASSENGER_REMOTE_SENDER_H_
 
 #include <sys/types.h>
-#include <curl/curl.h>
 #include <ctime>
-#include <string>
+#include <cassert>
+#include <curl/curl.h>
+#include <zlib.h>
 
 #include <boost/shared_ptr.hpp>
 #include <boost/bind.hpp>
 #include <oxt/thread.hpp>
+#include <string>
 #include <list>
 
 #include "../Logging.h"
@@ -16,6 +18,7 @@
 #include "../Utils/BlockingQueue.h"
 #include "../Utils/SystemTime.h"
 #include "../Utils/ScopeGuard.h"
+#include "../Utils/Base64.h"
 
 namespace Passenger {
 
@@ -28,6 +31,7 @@ class RemoteSender {
 private:
 	struct Item {
 		bool exit;
+		bool compressed;
 		string unionStationKey;
 		string nodeName;
 		string category;
@@ -35,6 +39,7 @@ private:
 		
 		Item() {
 			exit = false;
+			compressed = false;
 		}
 	};
 	
@@ -133,6 +138,8 @@ private:
 			
 			struct curl_httppost *post = NULL;
 			struct curl_httppost *last = NULL;
+			string base64_data;
+			
 			curl_formadd(&post, &last,
 				CURLFORM_PTRNAME, "key",
 				CURLFORM_PTRCONTENTS, item.unionStationKey.c_str(),
@@ -148,11 +155,24 @@ private:
 				CURLFORM_PTRCONTENTS, item.category.c_str(),
 				CURLFORM_CONTENTSLENGTH, (long) item.category.size(),
 				CURLFORM_END);
-			curl_formadd(&post, &last,
-				CURLFORM_PTRNAME, "data",
-				CURLFORM_PTRCONTENTS, item.data.c_str(),
-				CURLFORM_CONTENTSLENGTH, (long) item.data.size(),
-				CURLFORM_END);
+			if (item.compressed) {
+				base64_data = Base64::encode(item.data);
+				curl_formadd(&post, &last,
+					CURLFORM_PTRNAME, "data",
+					CURLFORM_PTRCONTENTS, base64_data.c_str(),
+					CURLFORM_CONTENTSLENGTH, (long) base64_data.size(),
+					CURLFORM_END);
+				curl_formadd(&post, &last,
+					CURLFORM_PTRNAME, "compressed",
+					CURLFORM_PTRCONTENTS, "1",
+					CURLFORM_END);
+			} else {
+				curl_formadd(&post, &last,
+					CURLFORM_PTRNAME, "data",
+					CURLFORM_PTRCONTENTS, item.data.c_str(),
+					CURLFORM_CONTENTSLENGTH, (long) item.data.size(),
+					CURLFORM_END);
+			}
 			
 			curl_easy_setopt(curl, CURLOPT_HTTPGET, 0);
 			curl_easy_setopt(curl, CURLOPT_HTTPPOST, post);
@@ -304,6 +324,46 @@ private:
 		 */
 	}
 	
+	bool compress(const StaticString data[], unsigned int count, string &output) {
+		if (count == 0) {
+			StaticString newdata;
+			return compress(&newdata, 1, output);
+		}
+		
+		unsigned char out[128 * 1024];
+		z_stream strm;
+		int ret, flush;
+		unsigned int i, have;
+		
+		strm.zalloc = Z_NULL;
+		strm.zfree  = Z_NULL;
+		strm.opaque = Z_NULL;
+		ret = deflateInit(&strm, Z_DEFAULT_COMPRESSION);
+		if (ret != Z_OK) {
+			return false;
+		}
+		
+		for (i = 0; i < count; i++) {
+			strm.avail_in = data[i].size();
+			strm.next_in  = (unsigned char *) data[i].c_str();
+			flush = (i == count - 1) ? Z_FINISH : Z_NO_FLUSH;
+			
+			do {
+				strm.avail_out = sizeof(out);
+				strm.next_out  = out;
+				ret = deflate(&strm, flush);
+				assert(ret != Z_STREAM_ERROR);
+				have = sizeof(out) - strm.avail_out;
+				output.append((const char *) out, have);
+			} while (strm.avail_out == 0);
+			assert(strm.avail_in == 0);
+		}
+		assert(ret == Z_STREAM_END);
+		
+		deflateEnd(&strm);
+		return true;
+	}
+	
 public:
 	RemoteSender(const string &serviceAddress, unsigned short servicePort, const string &certificate)
 		: queue(1024)
@@ -336,19 +396,24 @@ public:
 		unsigned int count)
 	{
 		Item item;
-		size_t size = 0;
-		unsigned int i;
 		
 		item.unionStationKey = unionStationKey;
 		item.nodeName = nodeName;
 		item.category = category;
 		
-		for (i = 0; i < count; i++) {
-			size += data[i].size();
-		}
-		item.data.reserve(size);
-		for (i = 0; i < count; i++) {
-			item.data.append(data[i].c_str(), data[i].size());
+		if (compress(data, count, item.data)) {
+			item.compressed = true;
+		} else {
+			size_t size = 0;
+			unsigned int i;
+			
+			for (i = 0; i < count; i++) {
+				size += data[i].size();
+			}
+			item.data.reserve(size);
+			for (i = 0; i < count; i++) {
+				item.data.append(data[i].c_str(), data[i].size());
+			}
 		}
 		
 		queue.add(item);

@@ -159,11 +159,15 @@ private:
 	typedef shared_ptr<LogFile> LogFilePtr;
 	
 	struct RemoteSink: public LogSink {
-		/* A little less than the TCP maximum segment size so that we can
-		 * hopefully send this data + HTTP(S) overhead to the remote in
-		 * a single TCP segment.
+		/* RemoteSender compresses the data with zlib before sending it
+		 * to the server. Even including Base64 and URL encoding overhead,
+		 * this compresses the data to about 25% of its original size.
+		 * Therefore we set a buffer capacity of a little less than 4 times
+		 * the TCP maximum segment size so that we can send as much
+		 * data as possible to the server in a single TCP segment, taking
+		 * HTTPS overhead into account.
 		 */
-		static const unsigned int BUFFER_CAPACITY = 60 * 1024;
+		static const unsigned int BUFFER_CAPACITY = 4 * 64 * 1024 - 10 * 1024;
 		
 		LoggingServer *server;
 		string unionStationKey;

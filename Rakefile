@@ -33,6 +33,7 @@ require 'phusion_passenger/platform_info/binary_compatibility'
 require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/platform_info/apache'
 require 'phusion_passenger/platform_info/curl'
+require 'phusion_passenger/platform_info/zlib'
 require 'phusion_passenger/platform_info/compiler'
 require 'phusion_passenger/platform_info/documentation_tools'
 require "#{source_root}/config" if File.exist?("#{source_root}/config.rb")
@@ -348,12 +349,15 @@ end
 		sh "mkdir -p agents" if !File.directory?("agents")
 		create_executable('agents/PassengerLoggingAgent',
 			'ext/common/LoggingAgent/Main.cpp',
-			"-Iext -Iext/common #{LIBEV_CFLAGS} #{PlatformInfo.curl_flags} " <<
+			"-Iext -Iext/common #{LIBEV_CFLAGS} " <<
+			"#{PlatformInfo.curl_flags} " <<
+			"#{PlatformInfo.zlib_flags} " <<
 			"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
 			"#{COMMON_LIBRARY} " <<
 			"#{BOOST_OXT_LIBRARY} " <<
 			"#{LIBEV_LIBS} " <<
 			"#{PlatformInfo.curl_libs} " <<
+			"#{PlatformInfo.zlib_libs} " <<
 			"#{PlatformInfo.portability_ldflags} " <<
 			"#{AGENT_LDFLAGS} " <<
 			"#{EXTRA_LDFLAGS}")
