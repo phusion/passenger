@@ -958,7 +958,11 @@ public:
 				transaction->discard();
 			}
 		}
+		
+		// Invoke destructors, causing all transactions and log sinks to
+		// be flushed before RemoteSender is being destroyed.
 		transactions.clear();
+		logSinkCache.clear();
 	}
 	
 	void dump(stringstream &stream) const {
