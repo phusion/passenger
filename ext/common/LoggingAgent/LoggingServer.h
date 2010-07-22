@@ -635,7 +635,7 @@ private:
 		LogSinkCache::iterator end = logSinkCache.end();
 		time_t now = time(NULL);
 		
-		// Flush log files every second, remote sinks every 30 seconds.
+		// Flush log files every 5 seconds, remote sinks every 30 seconds.
 		for (it = logSinkCache.begin(); it != end; it++) {
 			LogSink *sink = it->second.get();
 			
@@ -942,7 +942,7 @@ public:
 		garbageCollectionTimer.set<LoggingServer, &LoggingServer::garbageCollect>(this);
 		garbageCollectionTimer.start(60 * 60, 60 * 60);
 		logFlushingTimer.set<LoggingServer, &LoggingServer::flushAllLogs>(this);
-		logFlushingTimer.start(1, 1);
+		logFlushingTimer.start(5, 5);
 		exitTimer.set<LoggingServer, &LoggingServer::stopLoop>(this);
 		exitTimer.set(5, 0);
 		exitRequested = false;
