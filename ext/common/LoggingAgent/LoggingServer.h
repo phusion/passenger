@@ -846,7 +846,7 @@ protected:
 			}
 			
 		} else {
-			sendErrorToClient(eclient, "Unknown command");
+			sendErrorToClient(eclient, "Unknown command '" + args[0] + "'");
 			disconnect(eclient);
 		}
 		

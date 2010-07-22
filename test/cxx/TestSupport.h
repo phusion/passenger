@@ -21,6 +21,7 @@
 #include "ServerInstanceDir.h"
 #include "Exceptions.h"
 #include "Utils.h"
+#include "Utils/SystemTime.h"
 
 namespace TestSupport {
 
@@ -52,6 +53,21 @@ using namespace oxt;
 		if (!result) {						\
 			fail("EVENTUALLY(" #code ") failed");		\
 		}							\
+	} while (0)
+
+#define SHOULD_NEVER_HAPPEN(deadline, code)						\
+	do {										\
+		unsigned long long deadlineTime = SystemTime::getMsec(true) + deadline;	\
+		bool result = false;							\
+		while (!result && SystemTime::getMsec(true) < deadlineTime) {		\
+			code								\
+			if (!result) {							\
+				usleep(10000);						\
+			}								\
+		}									\
+		if (result) {								\
+			fail("SHOULD_NEVER_HAPPEN(" #code ") failed");			\
+		}									\
 	} while (0)
 
 

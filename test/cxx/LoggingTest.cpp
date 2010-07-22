@@ -19,6 +19,8 @@ namespace tut {
 		#define FOOBAR_MD5 "3858f62230ac3c915f300c664312c63f"
 		#define LOCALHOST_MD5 "421aa90e079fa326b6494f812ad13e79"
 		#define FOOBAR_LOCALHOST_PREFIX FOOBAR_MD5 "/" LOCALHOST_MD5
+		#define TODAY_TXN_ID "1414ba7-abcd"
+		#define TODAY_TIMESTAMP_STR "47d0ad74aef80"
 		
 		ServerInstanceDirPtr serverInstanceDir;
 		ServerInstanceDir::GenerationPtr generation;
@@ -86,6 +88,13 @@ namespace tut {
 			char str[2 * sizeof(unsigned long long) + 1];
 			integerToHex<unsigned long long>(timestamp, str);
 			return str;
+		}
+		
+		MessageClient createConnection() {
+			MessageClient client;
+			client.connect(socketAddress, "test", "1234");
+			client.write("init", "localhost", NULL);
+			return client;
 		}
 	};
 	
@@ -313,5 +322,118 @@ namespace tut {
 		
 		SystemTime::forceAll(TODAY + 61 * 1000000);
 		ensure(!logger2->continueTransaction(log->getTxnId(), "foobar")->isNull());
+	}
+	
+	TEST_METHOD(14) {
+		// If a client disconnects from the logging server then all its
+		// transactions that are no longer referenced and have crash protection enabled
+		// will be closed and written to to the sink.
+		MessageClient client1 = createConnection();
+		MessageClient client2 = createConnection();
+		MessageClient client3 = createConnection();
+		vector<string> args;
+		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/13/12/log.txt";
+		
+		SystemTime::forceAll(TODAY);
+		
+		client1.write("openTransaction",
+			TODAY_TXN_ID, "foobar", "requests", TODAY_TIMESTAMP_STR,
+			"", "true", NULL);
+		client2.write("openTransaction",
+			TODAY_TXN_ID, "foobar", "requests", TODAY_TIMESTAMP_STR,
+			"", "true", NULL);
+		client2.write("flush", NULL);
+		client2.read(args);
+		client2.disconnect();
+		
+		SHOULD_NEVER_HAPPEN(100,
+			result = fileExists(filename) && !readAll(filename).empty();
+		);
+		
+		client1.disconnect();
+		client3.write("flush", NULL);
+		client3.read(args);
+		EVENTUALLY(5,
+			result = fileExists(filename) && !readAll(filename).empty();
+		);
+	}
+	
+	TEST_METHOD(15) {
+		// If a client disconnects from the logging server then all its
+		// transactions that are no longer referenced and don't have crash
+		// protection enabled will be closed and discarded.
+		MessageClient client1 = createConnection();
+		MessageClient client2 = createConnection();
+		MessageClient client3 = createConnection();
+		vector<string> args;
+		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/13/12/log.txt";
+		
+		SystemTime::forceAll(TODAY);
+		
+		client1.write("openTransaction",
+			TODAY_TXN_ID, "foobar", "requests", TODAY_TIMESTAMP_STR,
+			"", "false", NULL);
+		client2.write("openTransaction",
+			TODAY_TXN_ID, "foobar", "requests", TODAY_TIMESTAMP_STR,
+			"", "false", NULL);
+		client2.write("flush", NULL);
+		client2.read(args);
+		client2.disconnect();
+		client1.disconnect();
+		client3.write("flush", NULL);
+		client3.read(args);
+		SHOULD_NEVER_HAPPEN(500,
+			result = fileExists(filename) && !readAll(filename).empty();
+		);
+	}
+	
+	TEST_METHOD(16) {
+		// Upon server shutdown, all transaction that have crash protection enabled
+		// will be closed and written to to the sink.
+		MessageClient client1 = createConnection();
+		MessageClient client2 = createConnection();
+		vector<string> args;
+		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/13/12/log.txt";
+		
+		SystemTime::forceAll(TODAY);
+		
+		client1.write("openTransaction",
+			TODAY_TXN_ID, "foobar", "requests", TODAY_TIMESTAMP_STR,
+			"", "true", NULL);
+		client2.write("openTransaction",
+			TODAY_TXN_ID, "foobar", "requests", TODAY_TIMESTAMP_STR,
+			"", "true", NULL);
+		client2.write("flush", NULL);
+		client2.read(args);
+		
+		stopLoggingServer();
+		EVENTUALLY(5,
+			result = fileExists(filename) && !readAll(filename).empty();
+		);
+	}
+	
+	TEST_METHOD(17) {
+		// Upon server shutdown, all transaction that don't have crash protection
+		// enabled will be discarded.
+		MessageClient client1 = createConnection();
+		MessageClient client2 = createConnection();
+		vector<string> args;
+		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/13/12/log.txt";
+		
+		SystemTime::forceAll(TODAY);
+		
+		client1.write("openTransaction",
+			TODAY_TXN_ID, "foobar", "requests", TODAY_TIMESTAMP_STR,
+			"", "false", NULL);
+		client2.write("openTransaction",
+			TODAY_TXN_ID, "foobar", "requests", TODAY_TIMESTAMP_STR,
+			"", "false", NULL);
+		client2.write("flush", NULL);
+		client2.read(args);
+		
+		stopLoggingServer();
+		SHOULD_NEVER_HAPPEN(200,
+			result = fileExists(filename) && !readAll(filename).empty();
+		);
 	}
 }

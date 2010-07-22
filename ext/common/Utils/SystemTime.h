@@ -80,11 +80,12 @@ public:
 	 * Returns the time since the Epoch, measured in milliseconds. Or, if a
 	 * time was forced with forceMsec(), then the forced time is returned instead.
 	 *
+	 * @param real Whether to get the real time, even if a value was forced.
 	 * @throws TimeRetrievalException Something went wrong while retrieving the time.
 	 * @throws boost::thread_interrupted
 	 */
-	static unsigned long long getMsec() {
-		if (SystemTimeData::hasForcedMsecValue) {
+	static unsigned long long getMsec(bool real = false) {
+		if (SystemTimeData::hasForcedMsecValue && !real) {
 			return SystemTimeData::forcedMsecValue;
 		} else {
 			struct timeval t;
