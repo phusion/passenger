@@ -65,6 +65,8 @@ using namespace oxt;
 
 class LoggingServer: public EventedMessageServer {
 private:
+	static const int MAX_LOG_SINK_CACHE_SIZE = 512;
+	
 	struct LogSink {
 		time_t lastUsed;
 		time_t lastFlushed;
@@ -75,7 +77,8 @@ private:
 		}
 		
 		virtual ~LogSink() {
-			flush();
+			// We really want to flush() here but can't call virtual
+			// functions in destructor. :(
 		}
 		
 		virtual bool isRemote() const {
@@ -115,6 +118,10 @@ private:
 			do {
 				ret = fchmod(fd, filePermissions);
 			} while (ret == -1 && errno == EINTR);
+		}
+		
+		virtual ~LogFile() {
+			flush();
 		}
 		
 		virtual void append(const StaticString data[], unsigned int count) {
@@ -191,6 +198,10 @@ private:
 			this->nodeName = nodeName;
 			this->category = category;
 			this->bufferSize = 0;
+		}
+		
+		virtual ~RemoteSink() {
+			flush();
 		}
 		
 		virtual bool isRemote() const {
@@ -443,6 +454,7 @@ private:
 		string cacheKey = "file:" + filename;
 		LogSinkCache::iterator it = logSinkCache.find(cacheKey);
 		if (it == logSinkCache.end()) {
+			trimLogSinkCache(MAX_LOG_SINK_CACHE_SIZE - 1);
 			makeDirTree(extractDirName(filename), dirPermissions,
 				USER_NOT_GIVEN, gid);
 			LogFilePtr logFile(new LogFile(filename, filePermissions));
@@ -452,6 +464,22 @@ private:
 			theLogSink = it->second;
 			theLogSink->lastUsed = time(NULL);
 			return true;
+		}
+	}
+	
+	void trimLogSinkCache(unsigned int size) {
+		while (logSinkCache.size() > size) {
+			LogSinkCache::iterator it = logSinkCache.begin();
+			LogSinkCache::iterator end = logSinkCache.end();
+			LogSinkCache::iterator smallest_it = it;
+			
+			// Find least recently used log sink and remove it.
+			for (it++; it != end; it++) {
+				if (it->second->lastUsed < smallest_it->second->lastUsed) {
+					smallest_it = it;
+				}
+			}
+			logSinkCache.erase(smallest_it);
 		}
 	}
 	
