@@ -164,10 +164,17 @@ private:
 		 * this compresses the data to about 25% of its original size.
 		 * Therefore we set a buffer capacity of a little less than 4 times
 		 * the TCP maximum segment size so that we can send as much
-		 * data as possible to the server in a single TCP segment, taking
-		 * HTTPS overhead into account.
+		 * data as possible to the server in a single TCP segment.
+		 * With the "little less" we take into account:
+		 * - HTTPS overhead. This can be as high as 2 KB.
+		 * - The fact that RemoteSink.append() might try to flush the
+		 *   current buffer the current data. Empirical evidence has
+		 *   shown that the data for a request transaction is usually
+		 *   less than 5 KB.
 		 */
-		static const unsigned int BUFFER_CAPACITY = 4 * 64 * 1024 - 10 * 1024;
+		static const unsigned int BUFFER_CAPACITY =
+			4 * 64 * 1024 -
+			16 * 1024;
 		
 		LoggingServer *server;
 		string unionStationKey;
