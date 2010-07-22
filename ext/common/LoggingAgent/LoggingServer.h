@@ -60,9 +60,6 @@ using namespace boost;
 using namespace oxt;
 
 
-#define UNION_STATION_SERVICE_HOSTNAME "service.unionstationapp.com"
-
-
 class LoggingServer: public EventedMessageServer {
 private:
 	static const int MAX_LOG_SINK_CACHE_SIZE = 512;
