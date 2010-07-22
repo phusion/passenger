@@ -248,6 +248,16 @@ private:
 		unsigned int statefulRefcount;
 		/** Last time this Transaction was used. Hint for garbage collector. */
 		time_t lastUsed;
+		string data;
+		
+		Transaction() {
+			data.reserve(8 * 1024);
+		}
+		
+		~Transaction() {
+			StaticString data = this->data;
+			logSink->append(&data, 1);
+		}
 		
 		bool garbageCollectable() const {
 			return statefulRefcount == 0;
@@ -363,6 +373,12 @@ private:
 			}
 			current++;
 		}
+		return true;
+	}
+	
+	bool validTimestamp(const StaticString &timestamp) const {
+		// must be hexadecimal
+		// must not be too large
 		return true;
 	}
 	
@@ -503,30 +519,42 @@ private:
 		const TransactionPtr &transaction, const StaticString &timestamp,
 		const StaticString &data)
 	{
-		// TODO: validate timestamp
-		if (OXT_LIKELY( validLogContent(data) )) {
-			char writeCountStr[sizeof(unsigned int) * 2 + 1];
-			integerToHex(transaction->writeCount, writeCountStr);
-			StaticString args[] = {
-				transaction->txnId,
-				" ",
-				timestamp,
-				" ",
-				writeCountStr,
-				" ",
-				data,
-				"\n"
-			};
-			transaction->writeCount++;
-			transaction->logSink->append(args, sizeof(args) / sizeof(StaticString));
-			return true;
-		} else if (eclient != NULL) {
-			sendErrorToClient(eclient, "Log entry data contains an invalid character.");
-			disconnect(eclient);
-			return false;
-		} else {
+		if (OXT_UNLIKELY( !validLogContent(data) )) {
+			if (eclient != NULL) {
+				sendErrorToClient(eclient, "Log entry data contains an invalid character.");
+				disconnect(eclient);
+			}
 			return false;
 		}
+		if (OXT_UNLIKELY( !validTimestamp(timestamp) )) {
+			if (eclient != NULL) {
+				sendErrorToClient(eclient, "Log entry timestamp is invalid.");
+				disconnect(eclient);
+			}
+			return false;
+		}
+		
+		char writeCountStr[sizeof(unsigned int) * 2 + 1];
+		integerToHex(transaction->writeCount, writeCountStr);
+		transaction->writeCount++;
+		transaction->data.reserve(transaction->data.size() +
+			transaction->txnId.size() +
+			1 +
+			timestamp.size() +
+			1 +
+			strlen(writeCountStr) +
+			1 +
+			data.size() +
+			1);
+		transaction->data.append(transaction->txnId);
+		transaction->data.append(" ");
+		transaction->data.append(timestamp);
+		transaction->data.append(" ");
+		transaction->data.append(writeCountStr);
+		transaction->data.append(" ");
+		transaction->data.append(data);
+		transaction->data.append("\n");
+		return true;
 	}
 	
 	void writeDetachEntry(const EventedServer::ClientPtr &eclient,
