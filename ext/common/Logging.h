@@ -455,7 +455,7 @@ private:
 	void connect() {
 		TRACE_POINT();
 		sharedData->client.connect(serverAddress, username, password);
-		sharedData->client.write("init", nodeName.c_str(), "false", NULL);
+		sharedData->client.write("init", nodeName.c_str(), NULL);
 		// Upon a write() error we want to attempt to read() the error
 		// message before closing the socket.
 		sharedData->client.setAutoDisconnect(false);
@@ -555,6 +555,7 @@ public:
 						category.c_str(),
 						timestampStr,
 						unionStationKey.c_str(),
+						"true",
 						NULL);
 					return ptr(new AnalyticsLog(sharedData,
 						string(txnId, end - txnId),
@@ -610,6 +611,7 @@ public:
 						category.c_str(),
 						timestampStr,
 						unionStationKey.c_str(),
+						"true",
 						NULL);
 					return ptr(new AnalyticsLog(sharedData,
 						txnId, groupName, category,

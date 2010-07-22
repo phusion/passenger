@@ -196,7 +196,8 @@ class AnalyticsLogger
 						@shared_data.client.write("openTransaction",
 							txn_id, group_name, category,
 							AnalyticsLogger.timestamp_string,
-							union_station_key)
+							union_station_key,
+							"true")
 						return Log.new(@shared_data, txn_id)
 					rescue Errno::ENOENT, *NETWORK_ERRORS
 						try_count += 1
@@ -232,7 +233,8 @@ class AnalyticsLogger
 						@shared_data.client.write("openTransaction",
 							txn_id, group_name, category,
 							AnalyticsLogger.timestamp_string,
-							union_station_key)
+							union_station_key,
+							"true")
 						return Log.new(@shared_data, txn_id)
 					rescue Errno::ENOENT, *NETWORK_ERRORS
 						try_count += 1
@@ -296,7 +298,7 @@ private
 	
 	def connect
 		@shared_data.client = MessageClient.new(@username, @password, @server_address)
-		@shared_data.client.write("init", @node_name, "false")
+		@shared_data.client.write("init", @node_name)
 	end
 	
 	def disconnect(check_error_response = false)

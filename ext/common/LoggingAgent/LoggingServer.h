@@ -249,12 +249,7 @@ private:
 		string category;
 		unsigned int writeCount;
 		unsigned int refcount;
-		/** Number of stateful clients that current have this Transaction open.
-		 * @invariant statefulRefcount <= refcount
-		 */
-		unsigned int statefulRefcount;
-		/** Last time this Transaction was used. Hint for garbage collector. */
-		time_t lastUsed;
+		bool crashProtect, discarded;
 		string data;
 		
 		Transaction() {
@@ -262,20 +257,15 @@ private:
 		}
 		
 		~Transaction() {
-			StaticString data = this->data;
-			logSink->append(&data, 1);
+			if (!discarded) {
+				StaticString data = this->data;
+				logSink->append(&data, 1);
+			}
 		}
 		
-		bool garbageCollectable() const {
-			return statefulRefcount == 0;
-		}
-		
-		bool stale(time_t currentTime) const {
-			return age(currentTime) >= 60 * 60;
-		}
-		
-		time_t age(time_t currentTime) const {
-			return currentTime - lastUsed;
+		void discard() {
+			data.clear();
+			discarded = true;
 		}
 		
 		void dump(stringstream &stream) const {
@@ -283,8 +273,6 @@ private:
 			stream << "      Group: " << groupName << "\n";
 			stream << "      Category: " << category << "\n";
 			stream << "      Refcount: " << refcount << "\n";
-			stream << "      StatefulRefcount: " << statefulRefcount << "\n";
-			stream << "      Age: " << age(time(NULL)) << "\n";
 		}
 	};
 	
@@ -293,7 +281,6 @@ private:
 	
 	struct Client: public EventedMessageServer::Client {
 		string nodeName;
-		bool stateless;
 		bool initialized;
 		char nodeId[MD5_HEX_SIZE];
 		/**
@@ -308,7 +295,6 @@ private:
 		Client(LoggingServer *server)
 			: EventedMessageServer::Client(server)
 		{
-			stateless = false;
 			initialized = false;
 			dataReader.setMaxSize(1024 * 128);
 		}
@@ -610,31 +596,10 @@ private:
 		}
 	}
 	
-	void releaseStaleTransactions(time_t now) {
-		TransactionMap::iterator it;
-		TransactionMap::iterator end = transactions.end();
-		
-		P_TRACE(2, "Currently open transactions: " << transactions.size());
-		for (it = transactions.begin(); it != end; it++) {
-			TransactionPtr &transaction = it->second;
-			if (transaction->garbageCollectable() && transaction->stale(now)) {
-				P_DEBUG("Garbage collecting transaction " << it->first);
-				it--;
-				transactions.erase(it);
-				writeDetachEntry(EventedServer::ClientPtr(), transaction);
-			} else {
-				P_TRACE(2, "Transaction" << it->first <<
-					": not garbage collectible; " <<
-					transaction->age(now) << " secs old");
-			}
-		}
-	}
-	
 	void garbageCollect(ev::timer &timer, int revents) {
 		time_t now = time(NULL);
 		P_DEBUG("Garbage collection time");
 		releaseStaleLogSinks(now);
-		releaseStaleTransactions(now);
 	}
 	
 	void flushAllLogs(ev::timer &timer, int revents = 0) {
@@ -684,25 +649,22 @@ protected:
 					NULL);
 				disconnect(eclient);
 			} else {
-				if (!client->stateless) {
-					set<string>::iterator sit = client->openTransactions.find(txnId);
-					if (OXT_UNLIKELY( sit == client->openTransactions.end() )) {
-						writeArrayMessage(eclient, "error",
-							"Cannot log data: transaction not opened in this connection",
-							NULL);
-						disconnect(eclient);
-						return true;
-					}
+				set<string>::iterator sit = client->openTransactions.find(txnId);
+				if (OXT_UNLIKELY( sit == client->openTransactions.end() )) {
+					writeArrayMessage(eclient, "error",
+						"Cannot log data: transaction not opened in this connection",
+						NULL);
+					disconnect(eclient);
+					return true;
 				}
 				// Expecting the log data in a scalar message.
 				client->currentTransaction = it->second;
 				client->currentTimestamp = timestamp;
-				it->second->lastUsed = time(NULL);
 				return false;
 			}
 			
 		} else if (args[0] == "openTransaction") {
-			if (OXT_UNLIKELY( !expectingArgumentsCount(eclient, args, 6)
+			if (OXT_UNLIKELY( !expectingArgumentsCount(eclient, args, 7)
 			               || !expectingInitialized(eclient) )) {
 				return true;
 			}
@@ -712,6 +674,7 @@ protected:
 			StaticString category  = args[3];
 			StaticString timestamp = args[4];
 			StaticString unionStationKey = args[5];
+			bool         crashProtect    = args[6] == "true";
 			
 			if (OXT_UNLIKELY( !validTxnId(txnId) )) {
 				sendErrorToClient(eclient, "Invalid transaction ID format");
@@ -724,8 +687,7 @@ protected:
 				disconnect(eclient);
 				return true;
 			}
-			if (!client->stateless
-			 && OXT_UNLIKELY( client->openTransactions.find(txnId) !=
+			if (OXT_UNLIKELY( client->openTransactions.find(txnId) !=
 				client->openTransactions.end() ))
 			{
 				sendErrorToClient(eclient, "Cannot open transaction: transaction already opened in this connection");
@@ -752,13 +714,14 @@ protected:
 					openRemoteSink(unionStationKey, client->nodeName,
 						category, transaction->logSink);
 				}
-				transaction->txnId      = txnId;
-				transaction->groupName  = groupName;
-				transaction->category   = category;
-				transaction->writeCount = 0;
-				transaction->refcount   = 0;
-				transaction->statefulRefcount = 0;
-				transactions[txnId]     = transaction;
+				transaction->txnId        = txnId;
+				transaction->groupName    = groupName;
+				transaction->category     = category;
+				transaction->writeCount   = 0;
+				transaction->refcount     = 0;
+				transaction->crashProtect = crashProtect;
+				transaction->discarded    = false;
+				transactions[txnId]       = transaction;
 			} else {
 				if (OXT_UNLIKELY( groupName != transaction->groupName )) {
 					sendErrorToClient(eclient, "Cannot open transaction: transaction already opened with a different group name");
@@ -772,12 +735,8 @@ protected:
 				}
 			}
 			
-			if (!client->stateless) {
-				client->openTransactions.insert(txnId);
-				transaction->statefulRefcount++;
-			}
+			client->openTransactions.insert(txnId);
 			transaction->refcount++;
-			transaction->lastUsed = time(NULL);
 			writeLogEntry(eclient, transaction, timestamp, "ATTACH");
 			
 		} else if (args[0] == "closeTransaction") {
@@ -798,26 +757,21 @@ protected:
 			} else {
 				TransactionPtr &transaction = it->second;
 				
-				if (!client->stateless) {
-					set<string>::const_iterator sit = client->openTransactions.find(txnId);
-					if (OXT_UNLIKELY( sit == client->openTransactions.end() )) {
-						sendErrorToClient(eclient,
-							"Cannot close transaction " + txnId +
-							": transaction not opened in this connection");
-						disconnect(eclient);
-						return true;
-					} else {
-						client->openTransactions.erase(sit);
-						transaction->statefulRefcount--;
-					}
+				set<string>::const_iterator sit = client->openTransactions.find(txnId);
+				if (OXT_UNLIKELY( sit == client->openTransactions.end() )) {
+					sendErrorToClient(eclient,
+						"Cannot close transaction " + txnId +
+						": transaction not opened in this connection");
+					disconnect(eclient);
+					return true;
+				} else {
+					client->openTransactions.erase(sit);
 				}
 				
 				writeDetachEntry(eclient, transaction, timestamp);
 				transaction->refcount--;
 				if (transaction->refcount == 0) {
 					transactions.erase(it);
-				} else {
-					transaction->lastUsed = time(NULL);
 				}
 			}
 		
@@ -827,13 +781,12 @@ protected:
 				disconnect(eclient);
 				return true;
 			}
-			if (OXT_UNLIKELY( !expectingArgumentsCount(eclient, args, 3) )) {
+			if (OXT_UNLIKELY( !expectingArgumentsCount(eclient, args, 2) )) {
 				return true;
 			}
 			
 			StaticString nodeName = args[1];
 			client->nodeName = nodeName;
-			client->stateless = args[2] == "true";
 			
 			md5_state_t state;
 			md5_byte_t  digest[MD5_SIZE];
@@ -908,8 +861,7 @@ protected:
 		set<string>::const_iterator sit;
 		set<string>::const_iterator send = client->openTransactions.end();
 		
-		// Close any transactions that this client had opened. If the client is in
-		// stateless mode then this loop does nothing because openTransactions is empty.
+		// Close any transactions that this client had opened.
 		for (sit = client->openTransactions.begin(); sit != send; sit++) {
 			const string &txnId = *sit;
 			TransactionMap::iterator it = transactions.find(txnId);
@@ -919,13 +871,14 @@ protected:
 			}
 			
 			TransactionPtr &transaction = it->second;
-			writeDetachEntry(_client, transaction);
+			if (transaction->crashProtect) {
+				writeDetachEntry(_client, transaction);
+			} else {
+				transaction->discard();
+			}
 			transaction->refcount--;
 			if (transaction->refcount == 0) {
 				transactions.erase(it);
-			} else {
-				transaction->statefulRefcount--;
-				transaction->lastUsed = time(NULL);
 			}
 		}
 		client->openTransactions.clear();
@@ -968,9 +921,14 @@ public:
 	}
 	
 	~LoggingServer() {
-		TransactionMap::const_iterator it, end = transactions.end();
+		TransactionMap::iterator it, end = transactions.end();
 		for (it = transactions.begin(); it != end; it++) {
-			writeDetachEntry(EventedServer::ClientPtr(), it->second);
+			TransactionPtr &transaction = it->second;
+			if (transaction->crashProtect) {
+				writeDetachEntry(EventedServer::ClientPtr(), transaction);
+			} else {
+				transaction->discard();
+			}
 		}
 		transactions.clear();
 	}
