@@ -17,7 +17,7 @@ private:
 	condition_variable_any added;
 	condition_variable_any removed;
 	unsigned int max;
-	queue<T> queue;
+	std::queue<T> queue;
 	
 	bool atMaxCapacity() const {
 		return max > 0 && queue.size() >= max;

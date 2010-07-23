@@ -275,7 +275,7 @@ private:
 	 */
 	void scheduleNextCheckup(unsigned int seconds) {
 		time_t now = SystemTime::get();
-		if (now > nextCheckupTime || now + seconds < nextCheckupTime) {
+		if (now > nextCheckupTime || (time_t) (now + seconds) < nextCheckupTime) {
 			nextCheckupTime = now + seconds;
 		}
 	}
