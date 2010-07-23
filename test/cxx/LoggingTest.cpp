@@ -19,8 +19,8 @@ namespace tut {
 		#define FOOBAR_MD5 "3858f62230ac3c915f300c664312c63f"
 		#define LOCALHOST_MD5 "421aa90e079fa326b6494f812ad13e79"
 		#define FOOBAR_LOCALHOST_PREFIX FOOBAR_MD5 "/" LOCALHOST_MD5
-		#define TODAY_TXN_ID "1414ba7-abcd"
-		#define TODAY_TIMESTAMP_STR "47d0ad74aef80"
+		#define TODAY_TXN_ID "cjb8n-abcd"
+		#define TODAY_TIMESTAMP_STR "cftz90m3k0"
 		
 		ServerInstanceDirPtr serverInstanceDir;
 		ServerInstanceDir::GenerationPtr generation;
@@ -86,7 +86,7 @@ namespace tut {
 		
 		string timestampString(unsigned long long timestamp) {
 			char str[2 * sizeof(unsigned long long) + 1];
-			integerToHex<unsigned long long>(timestamp, str);
+			integerToHexatri<unsigned long long>(timestamp, str);
 			return str;
 		}
 		
@@ -349,7 +349,6 @@ namespace tut {
 		SHOULD_NEVER_HAPPEN(100,
 			result = fileExists(filename) && !readAll(filename).empty();
 		);
-		
 		client1.disconnect();
 		client3.write("flush", NULL);
 		client3.read(args);

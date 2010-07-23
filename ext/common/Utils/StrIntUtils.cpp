@@ -180,8 +180,33 @@ hexToULL(const StaticString &hex) {
 		} else if (c >= 'a' && c <= 'f') {
 			result *= 16;
 			result += 10 + (c - 'a');
-		} else if (c >= 'A' && c <= 'Z') {
+		} else if (c >= 'A' && c <= 'F') {
 			result *= 16;
+			result += 10 + (c - 'A');
+		} else {
+			done = true;
+		}
+		i++;
+	}
+	return result;
+}
+
+unsigned long long
+hexatriToULL(const StaticString &str) {
+	unsigned long long result = 0;
+	string::size_type i = 0;
+	bool done = false;
+	
+	while (i < str.size() && !done) {
+		char c = str[i];
+		if (c >= '0' && c <= '9') {
+			result *= 36;
+			result += c - '0';
+		} else if (c >= 'a' && c <= 'z') {
+			result *= 36;
+			result += 10 + (c - 'a');
+		} else if (c >= 'A' && c <= 'Z') {
+			result *= 36;
 			result += 10 + (c - 'A');
 		} else {
 			done = true;
@@ -200,12 +225,16 @@ toHex(const StaticString &data) {
 
 static const char hex_chars[] = {
 	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-	'a', 'b', 'c', 'd', 'e', 'f'
+	'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
+	'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+	'u', 'v', 'w', 'x', 'y', 'z'
 };
 
 static const char upcase_hex_chars[] = {
 	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-	'A', 'B', 'C', 'D', 'E', 'F'
+	'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+	'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+	'U', 'V', 'W', 'X', 'Y', 'Z'
 };
 
 void
@@ -230,6 +259,13 @@ string
 integerToHex(long long value) {
 	char buf[sizeof(long long) * 2 + 1];
 	integerToHex(value, buf);
+	return string(buf);
+}
+
+string
+integerToHexatri(long long value) {
+	char buf[sizeof(long long) * 2 + 1];
+	integerToHexatri(value, buf);
 	return string(buf);
 }
 

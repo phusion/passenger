@@ -108,6 +108,11 @@ long long stringToLL(const StaticString &str);
 unsigned long long hexToULL(const StaticString &str);
 
 /**
+ * Converts the given hexatridecimal (base 36) string to an unsigned long long integer.
+ */
+unsigned long long hexatriToULL(const StaticString &str);
+
+/**
  * Convert the given binary data to hexadecimal.
  */
 string toHex(const StaticString &data);
@@ -119,9 +124,39 @@ string toHex(const StaticString &data);
 void toHex(const StaticString &data, char *output, bool upperCase = false);
 
 /**
- * Convert the given integer to a hexadecimal string.
+ * Convert the given integer to some other radix, placing
+ * the result into the given output buffer. This buffer must be at
+ * least <tt>2 * sizeof(IntegerType) + 1</tt> bytes. The output buffer
+ * will be NULL terminated. Supported radices are 2-36.
+ *
+ * @return The size of the created string, excluding
+ *         terminating NULL.
  */
-string integerToHex(long long value);
+template<typename IntegerType, int radix>
+unsigned int
+integerToOtherBase(IntegerType value, char *output) {
+	static const char hex_chars[] = {
+		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+		'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
+		'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+		'u', 'v', 'w', 'x', 'y', 'z'
+	};
+	char buf[sizeof(value) * 2];
+	IntegerType remainder = value;
+	unsigned int size = 0;
+	
+	do {
+		buf[size] = hex_chars[remainder % radix];
+		remainder = remainder / radix;
+		size++;
+	} while (remainder != 0);
+	
+	for (unsigned int i = 0; i < size; i++) {
+		output[size - i - 1] = buf[i];
+	}
+	output[size] = '\0';
+	return size;
+}
 
 /**
  * Convert the given integer to hexadecimal, placing the result
@@ -135,26 +170,33 @@ string integerToHex(long long value);
 template<typename IntegerType>
 unsigned int
 integerToHex(IntegerType value, char *output) {
-	static const char hex_chars[] = {
-		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-		'a', 'b', 'c', 'd', 'e', 'f'
-	};
-	char buf[sizeof(value) * 2];
-	IntegerType remainder = value;
-	unsigned int size = 0;
-	
-	do {
-		buf[size] = hex_chars[remainder % 16];
-		remainder = remainder / 16;
-		size++;
-	} while (remainder != 0);
-	
-	for (unsigned int i = 0; i < size; i++) {
-		output[size - i - 1] = buf[i];
-	}
-	output[size] = '\0';
-	return size;
+	return integerToOtherBase<IntegerType, 16>(value, output);
 }
+
+/**
+ * Convert the given integer to a hexadecimal string.
+ */
+string integerToHex(long long value);
+
+/**
+ * Convert the given integer to hexatridecimal (Base 36), placing the
+ * result into the given output buffer. This buffer must be at least
+ * <tt>2 * sizeof(IntegerType) + 1</tt> bytes. The output buffer
+ * will be NULL terminated.
+ *
+ * @return The size of the created hexatridecimal string, excluding
+ *         terminating NULL.
+ */
+template<typename IntegerType>
+unsigned int
+integerToHexatri(IntegerType value, char *output) {
+	return integerToOtherBase<IntegerType, 36>(value, output);
+}
+
+/**
+ * Convert the given integer to a hexatridecimal string.
+ */
+string integerToHexatri(long long value);
 
 /**
  * Converts the given string to an integer.

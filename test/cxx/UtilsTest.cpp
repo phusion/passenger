@@ -363,31 +363,53 @@ namespace tut {
 		ensure_equals(stringToULL("    5abcdef1234"), 5ull);
 	}
 	
-	/***** Test toHex() *****/
+	/***** Test integerToHex() and integerToHexatri() *****/
 	
 	TEST_METHOD(48) {
 		char buf[sizeof(int) * 2 + 1];
 		
-		ensure_equals(integerToHex<int>(0x0, buf), 1u);
-		ensure(strcmp(buf, "0") == 0);
+		ensure_equals("(1)", integerToHex<int>(0x0, buf), 1u);
+		ensure("(1)", strcmp(buf, "0") == 0);
 		
-		ensure_equals(integerToHex<int>(0x1, buf), 1u);
-		ensure(strcmp(buf, "1") == 0);
+		ensure_equals("(2)", integerToHex<int>(0x1, buf), 1u);
+		ensure("(2)", strcmp(buf, "1") == 0);
 		
-		ensure_equals(integerToHex<int>(0x9, buf), 1u);
-		ensure(strcmp(buf, "9") == 0);
+		ensure_equals("(3)", integerToHex<int>(0x9, buf), 1u);
+		ensure("(3)", strcmp(buf, "9") == 0);
 		
-		ensure_equals(integerToHex<int>(0xe, buf), 1u);
-		ensure(strcmp(buf, "e") == 0);
+		ensure_equals("(4)", integerToHex<int>(0xe, buf), 1u);
+		ensure("(4)", strcmp(buf, "e") == 0);
 		
-		ensure_equals(integerToHex<unsigned int>(0xdeadbeef, buf), 8u);
-		ensure(strcmp(buf, "deadbeef") == 0);
+		ensure_equals("(5)", integerToHex<unsigned int>(0xdeadbeef, buf), 8u);
+		ensure("(5)", strcmp(buf, "deadbeef") == 0);
 		
-		ensure_equals(integerToHex<int>(0x1234f, buf), 5u);
-		ensure(strcmp(buf, "1234f") == 0);
+		ensure_equals("(6)", integerToHex<int>(0x1234f, buf), 5u);
+		ensure("(6)", strcmp(buf, "1234f") == 0);
+		
+		
+		ensure_equals("(7)", integerToHexatri<int>(0x0, buf), 1u);
+		ensure("(7)", strcmp(buf, "0") == 0);
+		
+		ensure_equals("(8)", integerToHexatri<int>(0x1, buf), 1u);
+		ensure("(8)", strcmp(buf, "1") == 0);
+		
+		ensure_equals("(9)", integerToHexatri<int>(0x9, buf), 1u);
+		ensure("(9)", strcmp(buf, "9") == 0);
+		
+		ensure_equals("(10)", integerToHexatri<int>(0xe, buf), 1u);
+		ensure("(10)", strcmp(buf, "e") == 0);
+		
+		ensure_equals("(11)", integerToHexatri<int>(35, buf), 1u);
+		ensure("(11)", strcmp(buf, "z") == 0);
+		
+		ensure_equals(integerToHexatri<unsigned int>(0xdeadbeef, buf), 7u);
+		ensure(strcmp(buf, "1ps9wxb") == 0);
+		
+		ensure_equals(integerToHexatri<int>(0x1234f, buf), 4u);
+		ensure(strcmp(buf, "1ljj") == 0);
 	}
 	
-	/***** Test hexToULL() *****/
+	/***** Test hexToULL() and hexatriToULL() *****/
 	
 	TEST_METHOD(49) {
 		ensure_equals(hexToULL(""), 0ull);
@@ -404,6 +426,21 @@ namespace tut {
 		ensure_equals(hexToULL("dEaDbEeF"), 3735928559ull);
 		ensure_equals(hexToULL("09a2s89"), 2466ull);
 		ensure_equals(hexToULL(" 9a2s89"), 0ull);
+		
+		ensure_equals(hexatriToULL(""), 0ull);
+		ensure_equals(hexatriToULL("   "), 0ull);
+		ensure_equals(hexatriToULL("1"), 1ull);
+		ensure_equals(hexatriToULL("9"), 9ull);
+		ensure_equals(hexatriToULL("a"), 10ull);
+		ensure_equals(hexatriToULL("B"), 11ull);
+		ensure_equals(hexatriToULL("1234"), 49360ull);
+		ensure_equals(hexatriToULL("1a6z"), 59867ull);
+		ensure_equals(hexatriToULL("1A6Z"), 59867ull);
+		ensure_equals(hexatriToULL("1a6Z"), 59867ull);
+		ensure_equals(hexatriToULL("deadroof"), 1049836874415ull);
+		ensure_equals(hexatriToULL("dEaDrOoF"), 1049836874415ull);
+		ensure_equals(hexatriToULL("09a2s89"), 561121641ull);
+		ensure_equals(hexatriToULL(" 9a2s89"), 0ull);
 	}
 	
 	/***** Test stringToLL() *****/

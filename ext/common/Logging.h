@@ -256,7 +256,7 @@ public:
 			if (sharedData->client.connected()) {
 				try {
 					char timestamp[2 * sizeof(unsigned long long) + 1];
-					integerToHex<unsigned long long>(SystemTime::getUsec(),
+					integerToHexatri<unsigned long long>(SystemTime::getUsec(),
 						timestamp);
 					sharedData->client.write("closeTransaction",
 						txnId.c_str(), timestamp, NULL);
@@ -283,7 +283,7 @@ public:
 			lock_guard<boost::mutex> l(sharedData->lock);
 			if (sharedData->client.connected()) {
 				char timestamp[2 * sizeof(unsigned long long) + 1];
-				integerToHex<unsigned long long>(SystemTime::getUsec(), timestamp);
+				integerToHexatri<unsigned long long>(SystemTime::getUsec(), timestamp);
 				sharedData->client.write("log", txnId.c_str(),
 					timestamp, NULL);
 				sharedData->client.writeScalar(text);
@@ -523,7 +523,7 @@ public:
 		// Our timestamp is like a Unix timestamp but with minutes
 		// resolution instead of seconds. 32 bits will last us for
 		// about 8000 years.
-		timestampSize = integerToHex<unsigned int>(timestamp / 1000000 / 60,
+		timestampSize = integerToHexatri<unsigned int>(timestamp / 1000000 / 60,
 			txnId);
 		end = txnId + timestampSize;
 		
@@ -536,7 +536,7 @@ public:
 		end += 11;
 		*end = '\0';
 		
-		integerToHex<unsigned long long>(timestamp, timestampStr);
+		integerToHexatri<unsigned long long>(timestamp, timestampStr);
 		
 		lock_guard<boost::mutex> l(sharedData->lock);
 		
@@ -592,7 +592,7 @@ public:
 		}
 		
 		char timestampStr[2 * sizeof(unsigned long long) + 1];
-		integerToHex<unsigned long long>(SystemTime::getUsec(), timestampStr);
+		integerToHexatri<unsigned long long>(SystemTime::getUsec(), timestampStr);
 		
 		lock_guard<boost::mutex> l(sharedData->lock);
 		

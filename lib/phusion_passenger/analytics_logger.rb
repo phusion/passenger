@@ -185,7 +185,7 @@ class AnalyticsLogger
 			raise ArgumentError, "Group name may not be empty"
 		end
 		
-		txn_id = (AnalyticsLogger.current_time.to_i / 60).to_s(16)
+		txn_id = (AnalyticsLogger.current_time.to_i / 60).to_s(36)
 		txn_id << "-#{random_token(11)}"
 		@shared_data.synchronize do
 			try_count = 0
@@ -325,7 +325,7 @@ private
 	
 	def self.timestamp_string(time = current_time)
 		timestamp = time.to_i * 1_000_000 + time.usec
-		return timestamp.to_s(16)
+		return timestamp.to_s(36)
 	end
 end
 

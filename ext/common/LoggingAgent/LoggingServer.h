@@ -392,7 +392,7 @@ private:
 		if (timestampEnd == NULL) {
 			return 0;
 		} else {
-			time_t timestamp = hexToULL(
+			time_t timestamp = hexatriToULL(
 				StaticString(txnId.c_str(), timestampEnd - txnId.c_str())
 			);
 			return timestamp * 60;
@@ -553,7 +553,7 @@ private:
 		}
 		
 		char writeCountStr[sizeof(unsigned int) * 2 + 1];
-		integerToHex(transaction->writeCount, writeCountStr);
+		integerToHexatri(transaction->writeCount, writeCountStr);
 		transaction->writeCount++;
 		transaction->data.reserve(transaction->data.size() +
 			transaction->txnId.size() +
@@ -579,7 +579,7 @@ private:
 		const TransactionPtr &transaction)
 	{
 		char timestamp[2 * sizeof(unsigned long long) + 1];
-		integerToHex<unsigned long long>(SystemTime::getUsec(), timestamp);
+		integerToHexatri<unsigned long long>(SystemTime::getUsec(), timestamp);
 		writeDetachEntry(eclient, transaction, timestamp);
 	}
 	
