@@ -1,3 +1,11 @@
+Release 2.9.4
+-------------
+
+ * Bug fixes.
+ * Analytics logging changes. Changed log format for better disk space
+   efficiency.
+
+
 Release 2.9.3
 -------------
 
