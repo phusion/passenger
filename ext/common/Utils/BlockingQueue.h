@@ -109,4 +109,4 @@ public:
 
 } // namespace Passenger
 
-#endif _PASSENGER_BLOCKING_QUEUE_H_
+#endif /* _PASSENGER_BLOCKING_QUEUE_H_ */
