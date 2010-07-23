@@ -29,7 +29,7 @@ module PhusionPassenger
 	
 	PREFERRED_NGINX_VERSION = '0.7.67'
 	PREFERRED_PCRE_VERSION  = '8.02'
-	LITE_INTERFACE_VERSION  = 1
+	STANDALONE_INTERFACE_VERSION  = 1
 	
 	
 	###### Directories ######
@@ -67,11 +67,11 @@ module PhusionPassenger
 		"/usr/local/share/phusion-passenger/plugins",
 		"~/#{LOCAL_DIR}/plugins"]
 	
-	# Directory under $HOME for storing Phusion Passenger Lite resource files.
-	LOCAL_LITE_RESOURCE_DIR  = File.join(LOCAL_DIR, "lite")
+	# Directory under $HOME for storing Phusion Passenger Standalone resource files.
+	LOCAL_STANDALONE_RESOURCE_DIR  = File.join(LOCAL_DIR, "standalone")
 	
-	# System-wide directory for storing Phusion Passenger Lite resource files.
-	GLOBAL_LITE_RESOURCE_DIR = "/var/lib/passenger-lite"
+	# System-wide directory for storing Phusion Passenger Standalone resource files.
+	GLOBAL_STANDALONE_RESOURCE_DIR = "/var/lib/passenger-standalone"
 	
 	if !natively_packaged?
 		# Top directory of the Phusion Passenger source code.
@@ -103,7 +103,7 @@ module PhusionPassenger
 	
 	###### Other resource locations ######
 	
-	LITE_BINARIES_URL_ROOT  = "http://lite-binaries.modrails.com"
+	STANDALONE_BINARIES_URL_ROOT  = "http://standalone-binaries.modrails.com"
 	
 	
 	if $LOAD_PATH.first != LIBDIR

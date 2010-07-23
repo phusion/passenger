@@ -34,14 +34,14 @@ http {
     # Default server entry.
     server {
         listen <%= nginx_listen_address %>;
-        root <%= LIBDIR %>/phusion_passenger/templates/lite_default_root;
+        root <%= LIBDIR %>/phusion_passenger/templates/standalone_default_root;
     }
     <% end %>
 
     <% if @options[:ping_port] %>
     server {
         listen <%= nginx_listen_address(true) %>;
-        root <%= LIBDIR %>/phusion_passenger/templates/lite_default_root;
+        root <%= LIBDIR %>/phusion_passenger/templates/standalone_default_root;
     }
     <% end %>
     
@@ -57,7 +57,7 @@ http {
         <% if app[:analytics] %>passenger_analytics on;<% end %>
         <% if app[:debugger] %>passenger_debugger on;<% end %>
         <%
-        # The following is to make Tower Top work. In Phusion Passenger Lite we don't
+        # The following is to make Tower Top work. In Phusion Passenger Standalone we don't
         # care about inter-app security because it's meant for simple use cases; we
         # don't even support user switching. People who care about inter-app security
         # should just use Phusion Passenger for Apache or Nginx.
