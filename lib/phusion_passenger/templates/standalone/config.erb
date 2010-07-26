@@ -1,4 +1,5 @@
-master_process off;
+master_process on;
+worker_processes 1;
 daemon on;
 error_log <%= @options[:log_file] %>;
 pid <%= @options[:pid_file] %>;

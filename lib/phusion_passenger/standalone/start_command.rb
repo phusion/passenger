@@ -67,12 +67,12 @@ class StartCommand < Command
 		extra_controller_options = {}
 		@plugin.call_hook(:before_creating_nginx_controller, extra_controller_options)
 		create_nginx_controller(extra_controller_options)
-		start_nginx
-		show_intro_message
 		
-		daemonize if @options[:daemonize]
-		Thread.abort_on_exception = true
 		begin
+			start_nginx
+			show_intro_message
+			daemonize if @options[:daemonize]
+			Thread.abort_on_exception = true
 			@plugin.call_hook(:nginx_started, @nginx)
 			########################
 			########################

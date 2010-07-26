@@ -111,6 +111,8 @@ class AppFinder
 	ensure
 		watcher.close if watcher
 	end
+	
+	##################
 
 private
 	def find_app_root
