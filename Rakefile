@@ -736,6 +736,9 @@ end
 			ext/common/EventedMessageServer.h
 			ext/common/MessageReadersWriters.h
 			ext/common/MessageClient.h),
+		'test/cxx/EventedClientTest.o' => %w(
+			test/cxx/EventedClientTest.cpp
+			ext/common/EventedClient.h),
 		'test/cxx/MessageServerTest.o' => %w(
 			test/cxx/MessageServerTest.cpp
 			ext/common/ApplicationPool/Client.h

@@ -217,6 +217,36 @@ public:
 	}
 };
 
+
+class AtomicInt {
+private:
+	mutable boost::mutex lock;
+	int val;
+public:
+	AtomicInt() {
+		val = 0;
+	}
+	
+	int get() const {
+		lock_guard<boost::mutex> l(lock);
+		return val;
+	}
+	
+	void set(int value) {
+		lock_guard<boost::mutex> l(lock);
+		val = value;
+	}
+	
+	AtomicInt &operator=(int value) {
+		set(value);
+		return *this;
+	}
+	
+	operator int() const {
+		return get();
+	}
+};
+
 } // namespace TestSupport
 
 using namespace TestSupport;
