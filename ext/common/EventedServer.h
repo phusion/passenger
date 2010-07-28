@@ -79,6 +79,11 @@ using namespace oxt;
  * method and make it return an object that's a subclass of EventedServer::Client. This
  * object is passed to onClientReadable(), so in there you can just cast the client object
  * to your subclass.
+ *
+ * <h2>Client object life times</h2>
+ * All client objects are destroyed along with the EventedServer. Disconnecting
+ * a client also causes it to be destroyed after the current event handler has
+ * run or a short period of time after that.
  */
 class EventedServer {
 protected:
@@ -107,10 +112,6 @@ protected:
 	
 	virtual EventedClient *createClient(const FileDescriptor &fd) {
 		return new EventedClient(loop, fd);
-	}
-	
-	virtual void destroyClient(EventedClient *client) {
-		delete client;
 	}
 	
 	virtual void onNewClient(EventedClient *client) { }
@@ -143,20 +144,25 @@ private:
 		ClientSet::iterator end = clients.end();
 		
 		for (it = clients.begin(); it != clients.end(); it++) {
-			destroyClient(*it);
+			(*it)->unref();
 		}
 		clients.clear();
 	}
 	
 	static void _onReadable(EventedClient *client) {
 		EventedServer *server = (EventedServer *) client->userData;
+		client->ref();
+		ScopeGuard guard(boost::bind(&EventedClient::unref, client));
 		server->onClientReadable((EventedClient *) client);
 	}
 	
 	static void _onDisconnect(EventedClient *client) {
 		EventedServer *server = (EventedServer *) client->userData;
-		ScopeGuard guard(boost::bind(&EventedServer::destroyClient,
-			server, (EventedClient *) client));
+		ScopeGuard guard1(boost::bind(&EventedClient::unref, client));
+		
+		client->ref();
+		ScopeGuard guard2(boost::bind(&EventedClient::unref, client));
+		
 		server->removeClient(client);
 		server->onClientDisconnected((EventedClient *) client);
 	}
@@ -198,8 +204,8 @@ private:
 					&optval, sizeof(optval));
 				
 				EventedClient *client = createClient(clientfdGuard);
-				ScopeGuard clientGuard(boost::bind(&EventedServer::destroyClient,
-					this, client));
+				ScopeGuard clientGuard(boost::bind(&EventedClient::unref,
+					client));
 				client->onReadable    = _onReadable;
 				client->onDisconnect  = _onDisconnect;
 				client->onSystemError = _onSystemError;

@@ -127,10 +127,6 @@ protected:
 		return new EventedMessageClient(getLoop(), fd);
 	}
 	
-	virtual void destroyClient(EventedClient *client) {
-		delete (EventedMessageClient *) client;
-	}
-	
 	virtual void onNewClient(EventedClient *_client) {
 		EventedMessageClient *client = (EventedMessageClient *) _client;
 		EventedMessageClientContext *context = &client->messageServer;

@@ -650,10 +650,6 @@ protected:
 		return new Client(getLoop(), fd);
 	}
 	
-	virtual void destroyClient(EventedClient *client) {
-		delete (Client *) client;
-	}
-	
 	virtual bool onMessageReceived(EventedMessageClient *_client, const vector<StaticString> &args) {
 		Client *client = (Client *) _client;
 		

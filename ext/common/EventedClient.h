@@ -73,6 +73,7 @@ private:
 	/** A libev watcher on for watching write events on <tt>fd</tt>. */
 	ev::io writeWatcher;
 	string outbox;
+	int refcount;
 	bool m_notifyReads;
 	unsigned int outboxLimit;
 	
@@ -222,6 +223,7 @@ public:
 		  fd(_fd)
 	{
 		state           = EC_CONNECTED;
+		refcount        = 1;
 		m_notifyReads   = false;
 		outboxLimit     = 1024 * 32;
 		onReadable      = NULL;
@@ -232,6 +234,19 @@ public:
 		readWatcher.set<EventedClient, &EventedClient::_onReadable>(this);
 		writeWatcher.set<EventedClient, &EventedClient::onWritable>(this);
 		writeWatcher.set(fd, ev::WRITE);
+	}
+	
+	virtual ~EventedClient() { }
+	
+	void ref() {
+		refcount++;
+	}
+	
+	void unref() {
+		refcount--;
+		if (refcount <= 0) {
+			delete this;
+		}
 	}
 	
 	/**
