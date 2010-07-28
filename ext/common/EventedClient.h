@@ -194,8 +194,8 @@ private:
 	}
 	
 	void emitSystemErrorEvent(const string &message, int code) {
-		if (onSystemError) {
-			onSystemError(message, code);
+		if (onSystemError != NULL) {
+			onSystemError(this, message, code);
 		}
 	}
 	
@@ -207,14 +207,14 @@ private:
 	
 public:
 	typedef void (*Callback)(EventedClient *client);
+	typedef void (*SystemErrorCallback)(EventedClient *client, const string &message, int code);
 	
 	/** The client's file descriptor. Could be -1: see <tt>ioAllowed()</tt>. */
 	FileDescriptor fd;
 	Callback onReadable;
 	Callback onDisconnect;
+	SystemErrorCallback onSystemError;
 	void *userData;
-	
-	function<void (const string &message, int code)> onSystemError;
 	
 	EventedClient(struct ev_loop *loop, const FileDescriptor &_fd)
 		: readWatcher(loop),
@@ -226,6 +226,7 @@ public:
 		outboxLimit     = 1024 * 32;
 		onReadable      = NULL;
 		onDisconnect    = NULL;
+		onSystemError   = NULL;
 		userData        = NULL;
 		readWatcher.set(fd, ev::READ);
 		readWatcher.set<EventedClient, &EventedClient::_onReadable>(this);

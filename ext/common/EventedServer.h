@@ -161,6 +161,11 @@ private:
 		server->onClientDisconnected((EventedClient *) client);
 	}
 	
+	static void _onSystemError(EventedClient *client, const string &message, int code) {
+		EventedServer *server = (EventedServer *) client->userData;
+		server->logSystemError(client, message, code);
+	}
+	
 	void onAcceptable(ev::io &w, int revents) {
 		this_thread::disable_syscall_interruption dsi;
 		int i = 0;
@@ -195,9 +200,10 @@ private:
 				EventedClient *client = createClient(clientfdGuard);
 				ScopeGuard clientGuard(boost::bind(&EventedServer::destroyClient,
 					this, client));
-				client->onReadable   = _onReadable;
-				client->onDisconnect = _onDisconnect;
-				client->userData     = this;
+				client->onReadable    = _onReadable;
+				client->onDisconnect  = _onDisconnect;
+				client->onSystemError = _onSystemError;
+				client->userData      = this;
 				client->notifyReads(true);
 				clients.insert(client);
 				
