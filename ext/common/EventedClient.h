@@ -72,6 +72,7 @@ private:
 	ev::io readWatcher;
 	/** A libev watcher on for watching write events on <tt>fd</tt>. */
 	ev::io writeWatcher;
+	/** Storage for data that could not be sent out immediately. */
 	string outbox;
 	int refcount;
 	bool m_notifyReads;
