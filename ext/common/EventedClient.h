@@ -68,10 +68,19 @@ private:
 		EC_DISCONNECTED
 	} state;
 	
+	/** A libev watcher on for watching read events on <tt>fd</tt>. */
+	ev::io readWatcher;
+	/** A libev watcher on for watching write events on <tt>fd</tt>. */
 	ev::io writeWatcher;
 	string outbox;
 	bool m_notifyReads;
 	unsigned int outboxLimit;
+	
+	void _onReadable(ev::io &w, int revents) {
+		if (onReadable != NULL) {
+			onReadable(this);
+		}
+	}
 	
 	void onWritable(ev::io &w, int revents) {
 		assert(state != EC_DISCONNECTED);
@@ -191,29 +200,35 @@ private:
 	}
 	
 	void emitDisconnectEvent() {
-		if (onDisconnect) {
-			onDisconnect();
+		if (onDisconnect != NULL) {
+			onDisconnect(this);
 		}
 	}
 	
 public:
+	typedef void (*Callback)(EventedClient *client);
+	
 	/** The client's file descriptor. Could be -1: see <tt>ioAllowed()</tt>. */
 	FileDescriptor fd;
-	/** A libev watcher on for watching read events on <tt>fd</tt>. */
-	ev::io readWatcher;
+	Callback onReadable;
+	Callback onDisconnect;
+	void *userData;
 	
 	function<void (const string &message, int code)> onSystemError;
-	function<void ()> onDisconnect;
 	
 	EventedClient(struct ev_loop *loop, const FileDescriptor &_fd)
-		: writeWatcher(loop),
-		  fd(_fd),
-		  readWatcher(loop)
+		: readWatcher(loop),
+		  writeWatcher(loop),
+		  fd(_fd)
 	{
-		state = EC_CONNECTED;
+		state           = EC_CONNECTED;
 		m_notifyReads   = false;
 		outboxLimit     = 1024 * 32;
+		onReadable      = NULL;
+		onDisconnect    = NULL;
+		userData        = NULL;
 		readWatcher.set(fd, ev::READ);
+		readWatcher.set<EventedClient, &EventedClient::_onReadable>(this);
 		writeWatcher.set<EventedClient, &EventedClient::onWritable>(this);
 		writeWatcher.set(fd, ev::WRITE);
 	}
@@ -228,6 +243,10 @@ public:
 	bool ioAllowed() const {
 		return state != EC_DISCONNECTING_WITH_WRITES_PENDING
 			&& state != EC_DISCONNECTED;
+	}
+	
+	bool readWatcherActive() const {
+		return readWatcher.is_active();
 	}
 	
 	/**

@@ -39,10 +39,11 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <cerrno>
+#include "EventedClient.h"
 #include "FileDescriptor.h"
 #include "StaticString.h"
 #include "Logging.h"
-#include "Utils/IOUtils.h"
+#include "Utils/ScopeGuard.h"
 
 namespace Passenger {
 
@@ -81,160 +82,22 @@ using namespace oxt;
  */
 class EventedServer {
 protected:
-	/** Contains various client information. */
-	struct Client: public enable_shared_from_this<Client> {
-		enum {
-			/**
-			 * This is the initial state for a client. It means we're
-			 * connected to the client, ready to receive data and
-			 * there's no pending outgoing data.
-			 */
-			ES_CONNECTED,
-			
-			/**
-			 * This state is entered from ES_CONNECTED when the write()
-			 * method fails to send all data immediately and EventedServer
-			 * schedules some data to be sent later, when the socket becomes
-			 * readable again. In here we might be watching for read events,
-			 * but not if there's too much pending data, in which case
-			 * EventedServer will concentrate on sending out all
-			 * pending data before watching read events again. When all
-			 * pending data has been sent out the system will transition to
-			 * ES_CONNECTED.
-			 */
-			ES_WRITES_PENDING,
-			
-			/**
-			 * This state is entered from ES_WRITES_PENDING state when
-			 * disconnect() is called. It means that we want to close
-			 * the connection as soon as all pending outgoing data has
-			 * been sent. As soon as that happens it'll transition
-			 * to ES_DISCONNECTED.
-			 */
-			ES_DISCONNECTING_WITH_WRITES_PENDING,
-			
-			/**
-			 * Final state. Client connection has been closed. No
-			 * I/O with the client is possible.
-			 */
-			ES_DISCONNECTED
-		} state;
-		
-		EventedServer *server;
-		FileDescriptor fd;
-		ev::io readWatcher;
-		ev::io writeWatcher;
-		bool readWatcherStarted;
-		bool writeWatcherStarted;
-		/** Pending outgoing data is stored here. */
-		string outbox;
-		
-		Client(EventedServer *_server)
-			: server(_server),
-			  readWatcher(_server->loop),
-			  writeWatcher(_server->loop)
-		{ }
-		
-		void _onReadable(ev::io &w, int revents) {
-			server->onClientReadable(shared_from_this());
-		}
-		
-		void _onWritable(ev::io &w, int revents) {
-			server->onClientWritable(shared_from_this());
-		}
-		
-		/** Returns an identifier for this client. */
-		string name() const {
-			return toString(fd);
-		}
-	};
-	
-	typedef shared_ptr<Client> ClientPtr;
-	typedef set<ClientPtr> ClientSet;
+	typedef set<EventedClient *> ClientSet;
 	
 	const ClientSet &getClients() const {
 		return clients;
 	}
 	
-	void write(const ClientPtr &client, const StaticString &data) {
-		write(client, &data, 1);
+	string getClientName(const EventedClient *client) const {
+		return toString(client->fd);
 	}
 	
-	/**
-	 * Sends data to the given client. This method will try to send the data
-	 * immediately (in which no intermediate copies of the data will be made),
-	 * but if the client is not yet ready to receive data then the data will
-	 * be buffered and scheduled for sending later.
-	 *
-	 * If an I/O error was encountered then the client connection will be closed.
-	 *
-	 * If the client connection has already been closed then this method
-	 * does nothing.
-	 */
-	void write(const ClientPtr &client, const StaticString data[], unsigned int count) {
-		if (client->state == Client::ES_DISCONNECTED) {
-			return;
-		}
-		
-		ssize_t ret;
-		this_thread::disable_syscall_interruption dsi;
-		
-		ret = gatheredWrite(client->fd, data, count, client->outbox);
-		if (ret == -1) {
-			int e = errno;
-			disconnect(client, true);
-			logSystemError(client, "Cannot write data to client", e);
-			return;
-		}
-		
-		if (client->outbox.empty()) {
-			outboxFlushed(client);
-		} else {
-			outboxPartiallyFlushed(client);
-		}
+	void logError(const EventedClient *client, const string &message) {
+		P_ERROR("Error in client " << getClientName(client) << ": " << message);
 	}
 	
-	/**
-	 * Disconnects the client. If <em>force</em> is true then the client will
-	 * be disconnected immediately, and any pending outgoing data will be
-	 * discarded. Otherwise the client will be disconnected after all pending
-	 * outgoing data have been sent; in the mean time no new data can be
-	 * received from the client.
-	 */
-	virtual void disconnect(const ClientPtr &client, bool force = false) {
-		this_thread::disable_syscall_interruption dsi;
-		
-		if (client->state == Client::ES_CONNECTED
-		 || (force && client->state != Client::ES_DISCONNECTED)) {
-			watchReadEvents(client, false);
-			watchWriteEvents(client, false);
-			try {
-				client->fd.close();
-			} catch (const SystemException &e) {
-				logSystemError(client, e.brief(), e.code());
-			}
-			client->state = Client::ES_DISCONNECTED;
-			clients.erase(client);
-			onClientDisconnected(client);
-		} else if (client->state == Client::ES_WRITES_PENDING) {
-			watchReadEvents(client, false);
-			watchWriteEvents(client, true);
-			if (syscalls::shutdown(client->fd, SHUT_RD) == -1) {
-				int e = errno;
-				logSystemError(client,
-					"Cannot shutdown reader half of the client socket",
-					e);
-			}
-			client->state = Client::ES_DISCONNECTING_WITH_WRITES_PENDING;
-		}
-	}
-	
-	void logError(const ClientPtr &client, const string &message) {
-		P_ERROR("Error in client " << client->name() << ": " << message);
-	}
-	
-	void logSystemError(const ClientPtr &client, const string &message, int errorCode) {
-		P_ERROR("Error in client " << client->name() << ": " <<
+	void logSystemError(const EventedClient *client, const string &message, int errorCode) {
+		P_ERROR("Error in client " << getClientName(client) << ": " <<
 			message << ": " << strerror(errorCode) << " (" << errorCode << ")");
 	}
 	
@@ -242,12 +105,16 @@ protected:
 		P_ERROR(message << ": " << strerror(errorCode) << " (" << errorCode << ")");
 	}
 	
-	virtual ClientPtr createClient() {
-		return ClientPtr(new Client(this));
+	virtual EventedClient *createClient(const FileDescriptor &fd) {
+		return new EventedClient(loop, fd);
 	}
 	
-	virtual void onNewClient(const ClientPtr &client) { }
-	virtual void onClientReadable(const ClientPtr &client) { }
+	virtual void destroyClient(EventedClient *client) {
+		delete client;
+	}
+	
+	virtual void onNewClient(EventedClient *client) { }
+	virtual void onClientReadable(EventedClient *client) { }
 	
 	/**
 	 * Called when a client has been disconnected. This may either be triggered
@@ -259,7 +126,7 @@ protected:
 	 * Please note that when EventedServer is being destroyed,
 	 * onClientDisconnected() is *not* triggered.
 	 */
-	virtual void onClientDisconnected(const ClientPtr &client) { }
+	virtual void onClientDisconnected(EventedClient *client) { }
 
 private:
 	struct ev_loop *loop;
@@ -267,110 +134,31 @@ private:
 	ev::io acceptWatcher;
 	ClientSet clients;
 	
-	/** To be called when the entire outbox has been successfully sent out. */
-	void outboxFlushed(const ClientPtr &client) {
-		switch (client->state) {
-		case Client::ES_CONNECTED:
-			watchReadEvents(client, true);
-			watchWriteEvents(client, false);
-			break;
-		case Client::ES_WRITES_PENDING:
-			client->state = Client::ES_CONNECTED;
-			watchReadEvents(client, true);
-			watchWriteEvents(client, false);
-			break;
-		case Client::ES_DISCONNECTING_WITH_WRITES_PENDING:
-			client->state = Client::ES_DISCONNECTED;
-			try {
-				client->fd.close();
-			} catch (const SystemException &e) {
-				logSystemError(client, e.brief(), e.code());
-			}
-			clients.erase(client);
-			onClientDisconnected(client);
-			break;
-		default:
-			// Never reached.
-			abort();
-		}
+	void removeClient(EventedClient *client) {
+		clients.erase(client);
 	}
 	
-	/** To be called when the outbox has been partially sent out. */
-	void outboxPartiallyFlushed(const ClientPtr &client) {
-		switch (client->state) {
-		case Client::ES_CONNECTED:
-			client->state = Client::ES_WRITES_PENDING;
-			// If we have way too much stuff in the outbox then
-			// suspend reading until we've sent out the entire outbox.
-			watchReadEvents(client, client->outbox.size() < 1024 * 32);
-			watchWriteEvents(client, true);
-			break;
-		case Client::ES_WRITES_PENDING:
-		case Client::ES_DISCONNECTING_WITH_WRITES_PENDING:
-			watchReadEvents(client, false);
-			watchWriteEvents(client, true);
-			break;
-		default:
-			// Never reached.
-			abort();
-		}
-	}
-	
-	void watchReadEvents(const ClientPtr &client, bool enable = true) {
-		if (client->readWatcherStarted && !enable) {
-			client->readWatcherStarted = false;
-			client->readWatcher.stop();
-		} else if (!client->readWatcherStarted && enable) {
-			client->readWatcherStarted = true;
-			client->readWatcher.start();
-		}
-	}
-	
-	void watchWriteEvents(const ClientPtr &client, bool enable = true) {
-		if (client->writeWatcherStarted && !enable) {
-			client->writeWatcherStarted = false;
-			client->writeWatcher.stop();
-		} else if (!client->writeWatcherStarted && enable) {
-			client->writeWatcherStarted = true;
-			client->writeWatcher.start();
-		}
-	}
-	
-	void onClientWritable(const ClientPtr &client) {
-		if (client->state == Client::ES_DISCONNECTED) {
-			return;
-		}
+	void freeAllClients() {
+		ClientSet::iterator it;
+		ClientSet::iterator end = clients.end();
 		
-		this_thread::disable_syscall_interruption dsi;
-		size_t sent = 0;
-		bool done = client->outbox.empty();
-		
-		while (!done) {
-			ssize_t ret = syscalls::write(client->fd,
-				client->outbox.data() + sent,
-				client->outbox.size() - sent);
-			if (ret == -1) {
-				if (errno != EAGAIN) {
-					int e = errno;
-					disconnect(client, true);
-					logSystemError(client, "Cannot write data to client", e);
-					return;
-				}
-				done = true;
-			} else {
-				sent += ret;
-				done = sent == client->outbox.size();
-			}
+		for (it = clients.begin(); it != clients.end(); it++) {
+			destroyClient(*it);
 		}
-		if (sent > 0) {
-			client->outbox.erase(0, sent);
-		}
-		
-		if (client->outbox.empty()) {
-			outboxFlushed(client);
-		} else {
-			outboxPartiallyFlushed(client);
-		}
+		clients.clear();
+	}
+	
+	static void _onReadable(EventedClient *client) {
+		EventedServer *server = (EventedServer *) client->userData;
+		server->onClientReadable((EventedClient *) client);
+	}
+	
+	static void _onDisconnect(EventedClient *client) {
+		EventedServer *server = (EventedServer *) client->userData;
+		ScopeGuard guard(boost::bind(&EventedServer::destroyClient,
+			server, (EventedClient *) client));
+		server->removeClient(client);
+		server->onClientDisconnected((EventedClient *) client);
 	}
 	
 	void onAcceptable(ev::io &w, int revents) {
@@ -378,9 +166,9 @@ private:
 		int i = 0;
 		bool done = false;
 		
-		// Accept at most 100 connections on every accept readiness event
+		// Accept at most 10 connections on every accept readiness event
 		// in order to give other events the chance to be processed.
-		while (i < 100 && !done) {
+		while (i < 10 && !done) {
 			// Reserve enough space to hold both a Unix domain socket
 			// address and an IP socket address.
 			union {
@@ -404,18 +192,21 @@ private:
 				syscalls::setsockopt(clientfd, SOL_SOCKET, SO_KEEPALIVE,
 					&optval, sizeof(optval));
 				
-				ClientPtr client = createClient();
-				client->state = Client::ES_CONNECTED;
-				client->fd = clientfdGuard;
-				client->readWatcher.set<Client, &Client::_onReadable>(client.get());
-				client->readWatcher.set(client->fd, ev::READ);
-				client->readWatcher.start();
-				client->readWatcherStarted = true;
-				client->writeWatcher.set<Client, &Client::_onWritable>(client.get());
-				client->writeWatcher.set(client->fd, ev::WRITE);
-				client->writeWatcherStarted = false;
+				EventedClient *client = createClient(clientfdGuard);
+				ScopeGuard clientGuard(boost::bind(&EventedServer::destroyClient,
+					this, client));
+				client->onReadable   = _onReadable;
+				client->onDisconnect = _onDisconnect;
+				client->userData     = this;
+				client->notifyReads(true);
 				clients.insert(client);
+				
+				ScopeGuard clientSetGuard(boost::bind(&EventedServer::removeClient,
+					this, client));
 				onNewClient(client);
+				
+				clientSetGuard.clear();
+				clientGuard.clear();
 			}
 			i++;
 		}
@@ -432,10 +223,16 @@ public:
 		acceptWatcher.start(fd, ev::READ);
 	}
 	
-	virtual ~EventedServer() { }
+	virtual ~EventedServer() {
+		freeAllClients();
+	}
 	
 	struct ev_loop *getLoop() const {
 		return loop;
+	}
+	
+	FileDescriptor getServerFd() const {
+		return fd;
 	}
 };
 

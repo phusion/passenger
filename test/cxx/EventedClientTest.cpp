@@ -63,12 +63,14 @@ namespace tut {
 			eventLoop.unloop();
 		}
 		
-		void setIntToOne(ev::io &watcher, int revents) {
-			integer = 1;
+		static void setIntToOne(EventedClient *client) {
+			EventedClientTest *test = (EventedClientTest *) client->userData;
+			test->integer = 1;
 		}
 		
-		void setIntToTwo() {
-			integer = 2;
+		static void setIntToTwo(EventedClient *client) {
+			EventedClientTest *test = (EventedClientTest *) client->userData;
+			test->integer = 2;
 		}
 	};
 
@@ -80,7 +82,8 @@ namespace tut {
 		// It doesn't watch read events by default.
 		EventedClient client(eventLoop, fd2);
 		write(fd1, "x", 1);
-		client.readWatcher.set<EventedClientTest, &EventedClientTest::setIntToOne>(this);
+		client.userData = this;
+		client.onReadable = EventedClientTest::setIntToOne;
 		
 		EVENT_LOOP_GUARD;
 		startEventLoop();
@@ -94,7 +97,8 @@ namespace tut {
 		// It watches read events after calling notifyReads(true).
 		EventedClient client(eventLoop, fd2);
 		write(fd1, "x", 1);
-		client.readWatcher.set<EventedClientTest, &EventedClientTest::setIntToOne>(this);
+		client.userData = this;
+		client.onReadable = EventedClientTest::setIntToOne;
 		client.notifyReads(true);
 		
 		EVENT_LOOP_GUARD;
@@ -140,9 +144,10 @@ namespace tut {
 		client.write(&data, 1);
 		ensure(client.pendingWrites() > 0);
 		
-		client.readWatcher.set<EventedClientTest, &EventedClientTest::setIntToOne>(this);
+		client.userData = this;
+		client.onReadable = EventedClientTest::setIntToOne;
 		client.notifyReads(true);
-		ensure(client.readWatcher.is_active());
+		ensure(client.readWatcherActive());
 		
 		EVENT_LOOP_GUARD;
 		startEventLoop();
@@ -162,14 +167,15 @@ namespace tut {
 		StaticString data = str;
 		EventedClient client(eventLoop, fd2);
 		client.setOutboxLimit(1);
-		client.readWatcher.set<EventedClientTest, &EventedClientTest::setIntToOne>(this);
+		client.userData = this;
+		client.onReadable = EventedClientTest::setIntToOne;
 		
 		client.notifyReads(true);
 		client.write(&data, 1);
 		ensure("(1)", client.pendingWrites() > 0);
-		ensure("(2)", !client.readWatcher.is_active());
+		ensure("(2)", !client.readWatcherActive());
 		client.notifyReads(true);
-		ensure("(3)", !client.readWatcher.is_active());
+		ensure("(3)", !client.readWatcherActive());
 		
 		startEventLoop();
 		EVENT_LOOP_GUARD;
@@ -181,13 +187,14 @@ namespace tut {
 		
 		// readWatcher will become active again after all pending data has been sent.
 		stopEventLoop();
-		ensure(client.readWatcher.is_active());
+		ensure(client.readWatcherActive());
 	}
 	
 	TEST_METHOD(7) {
 		// disconnect() closes the connection and emits a disconnection event.
 		EventedClient client(eventLoop, fd2);
-		client.onDisconnect = boost::bind(&EventedClientTest::setIntToTwo, this);
+		client.userData = this;
+		client.onDisconnect = EventedClientTest::setIntToTwo;
 		client.disconnect();
 		ensure(!client.ioAllowed());
 		
@@ -207,14 +214,15 @@ namespace tut {
 		StaticString data = str;
 		EventedClient client(eventLoop, fd2);
 		client.setOutboxLimit(str.size() + 1);
-		client.readWatcher.set<EventedClientTest, &EventedClientTest::setIntToOne>(this);
+		client.userData = this;
+		client.onReadable = EventedClientTest::setIntToOne;
 		client.notifyReads(true);
-		client.onDisconnect = boost::bind(&EventedClientTest::setIntToTwo, this);
+		client.onDisconnect = EventedClientTest::setIntToTwo;
 		client.write(&data, 1);
 		client.disconnect();
 		
 		ensure(!client.ioAllowed());
-		ensure(!client.readWatcher.is_active());
+		ensure(!client.readWatcherActive());
 		
 		char buf[str.size()];
 		ensure(!client.ioAllowed());
@@ -247,13 +255,14 @@ namespace tut {
 		string str(1024 * 256, '\1');
 		StaticString data = str;
 		EventedClient client(eventLoop, fd2);
-		client.onDisconnect = boost::bind(&EventedClientTest::setIntToTwo, this);
+		client.userData = this;
+		client.onDisconnect = EventedClientTest::setIntToTwo;
 		client.setOutboxLimit(str.size() + 1);
 		client.write(&data, 1);
 		client.disconnect(true);
 		
 		ensure(!client.ioAllowed());
-		ensure(!client.readWatcher.is_active());
+		ensure(!client.readWatcherActive());
 		ensure(client.pendingWrites() > 0);
 		ensure_equals(integer, 2);
 		

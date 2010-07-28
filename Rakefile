@@ -340,6 +340,8 @@ end
 		'ext/common/LoggingAgent/RemoteSender.h',
 		'ext/common/ServerInstanceDir.h',
 		'ext/common/Logging.h',
+		'ext/common/EventedServer.h',
+		'ext/common/EventedClient.h',
 		'ext/common/Utils/VariantMap.h',
 		'ext/common/Utils/BlockingQueue.h',
 		COMMON_LIBRARY,
@@ -733,6 +735,7 @@ end
 			ext/common/Logging.h
 			ext/common/Utils.h
 			ext/common/EventedServer.h
+			ext/common/EventedClient.h
 			ext/common/EventedMessageServer.h
 			ext/common/MessageReadersWriters.h
 			ext/common/MessageClient.h),
