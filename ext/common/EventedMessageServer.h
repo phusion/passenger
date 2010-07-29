@@ -198,8 +198,14 @@ protected:
 	virtual const char *protocolVersion() const {
 		return "1";
 	}
+	
+	void discardReadData() {
+		readDataDiscarded = true;
+	}
 
 private:
+	bool readDataDiscarded;
+	
 	static void onAuthenticationTimeout(ev::timer &t, int revents) {
 		EventedMessageClient *client = (EventedMessageClient *) t.data;
 		client->disconnect();
@@ -209,7 +215,8 @@ private:
 		EventedMessageClientContext *context = &client->messageServer;
 		size_t consumed = 0;
 		
-		while (consumed < size && client->ioAllowed()) {
+		readDataDiscarded = false;
+		while (consumed < size && client->ioAllowed() && !readDataDiscarded) {
 			char *current = data + consumed;
 			size_t rest = size - consumed;
 			

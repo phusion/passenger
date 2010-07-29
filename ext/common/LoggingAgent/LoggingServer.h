@@ -41,6 +41,7 @@
 #include <ctime>
 
 #include "RemoteSender.h"
+#include "ChangeNotifier.h"
 #include "../EventedMessageServer.h"
 #include "../MessageReadersWriters.h"
 #include "../StaticString.h"
@@ -287,9 +288,15 @@ private:
 	typedef shared_ptr<Transaction> TransactionPtr;
 	typedef map<string, LogSinkPtr> LogSinkCache;
 	
+	enum ClientType {
+		UNINITIALIZED,
+		LOGGER,
+		WATCHER
+	};
+	
 	struct Client: public EventedMessageClient {
 		string nodeName;
-		bool initialized;
+		ClientType type;
 		char nodeId[MD5_HEX_SIZE];
 		/**
 		 * Set of transaction IDs opened by this client.
@@ -303,7 +310,7 @@ private:
 		Client(struct ev_loop *loop, const FileDescriptor &fd)
 			: EventedMessageClient(loop, fd)
 		{
-			initialized = false;
+			type = UNINITIALIZED;
 			dataReader.setMaxSize(1024 * 128);
 		}
 	};
@@ -316,6 +323,7 @@ private:
 	string dirPermissions;
 	mode_t filePermissions;
 	RemoteSender remoteSender;
+	ChangeNotifier changeNotifier;
 	ev::timer garbageCollectionTimer;
 	ev::timer logFlushingTimer;
 	ev::timer exitTimer;
@@ -339,11 +347,11 @@ private:
 		}
 	}
 	
-	bool expectingInitialized(Client *client) {
-		if (client->initialized) {
+	bool expectingLoggerType(Client *client) {
+		if (client->type == LOGGER) {
 			return true;
 		} else {
-			sendErrorToClient(client, "Not yet initialized");
+			sendErrorToClient(client, "Client not initialized as logger");
 			client->disconnect();
 			return false;
 		}
@@ -598,6 +606,25 @@ private:
 		}
 	}
 	
+	string getLastPos(const StaticString &groupName, const StaticString &nodeName,
+		const StaticString &category)
+	{
+		// TODO
+		return string();
+	}
+	
+	static void pendingDataFlushed(EventedClient *_client) {
+		Client *client = (Client *) _client;
+		LoggingServer *self = (LoggingServer *) client->userData;
+		
+		if (OXT_UNLIKELY( client->type != WATCHER )) {
+			P_WARN("BUG: pendingDataFlushed() called even though client type is not WATCHER.");
+			client->disconnect(true);
+		} else {
+			self->changeNotifier.addClient(client->detach());
+		}
+	}
+	
 	/* Release all log sinks that haven't been used for more than 2 hours. */
 	void releaseStaleLogSinks(time_t now) {
 		LogSinkCache::iterator it;
@@ -655,7 +682,7 @@ protected:
 		
 		if (args[0] == "log") {
 			if (OXT_UNLIKELY( !expectingArgumentsCount(client, args, 3)
-			               || !expectingInitialized(client) )) {
+			               || !expectingLoggerType(client) )) {
 				return true;
 			}
 			
@@ -682,7 +709,7 @@ protected:
 			
 		} else if (args[0] == "openTransaction") {
 			if (OXT_UNLIKELY( !expectingArgumentsCount(client, args, 7)
-			               || !expectingInitialized(client) )) {
+			               || !expectingLoggerType(client) )) {
 				return true;
 			}
 			
@@ -760,7 +787,7 @@ protected:
 			
 		} else if (args[0] == "closeTransaction") {
 			if (OXT_UNLIKELY( !expectingArgumentsCount(client, args, 3)
-			               || !expectingInitialized(client) )) {
+			               || !expectingLoggerType(client) )) {
 				return true;
 			}
 			
@@ -795,7 +822,7 @@ protected:
 			}
 		
 		} else if (args[0] == "init") {
-			if (OXT_UNLIKELY( client->initialized )) {
+			if (OXT_UNLIKELY( client->type != UNINITIALIZED )) {
 				sendErrorToClient(client, "Already initialized");
 				client->disconnect();
 				return true;
@@ -814,7 +841,24 @@ protected:
 			md5_finish(&state, digest);
 			toHex(StaticString((const char *) digest, MD5_SIZE), client->nodeId);
 			
-			client->initialized = true;
+			client->type = LOGGER;
+			
+		} else if (args[0] == "watchChanges") {
+			if (OXT_UNLIKELY( client->type != UNINITIALIZED )) {
+				sendErrorToClient(client, "This command cannot be invoked "
+					"if the 'init' command is already invoked.");
+				client->disconnect();
+				return true;
+			}
+			
+			client->type = WATCHER;
+			client->notifyReads(false);
+			discardReadData();
+			
+			// Add to the change notifier after all pending data
+			// has been written out.
+			client->onPendingDataFlushed = pendingDataFlushed;
+			client->writeArrayMessage("ok", NULL);
 			
 		} else if (args[0] == "flush") {
 			flushAllLogs(logFlushingTimer);
@@ -922,6 +966,7 @@ public:
 		  remoteSender(unionStationServiceAddress,
 		               unionStationServicePort,
 		               unionStationServiceCert),
+		  changeNotifier(loop),
 		  garbageCollectionTimer(loop),
 		  logFlushingTimer(loop),
 		  exitTimer(loop)
@@ -930,6 +975,8 @@ public:
 		this->gid = gid;
 		dirPermissions = permissions;
 		filePermissions = parseModeString(permissions) & ~(S_IXUSR | S_IXGRP | S_IXOTH);
+		changeNotifier.getLastPos = boost::bind(&LoggingServer::getLastPos,
+			this, _1, _2, _3);
 		garbageCollectionTimer.set<LoggingServer, &LoggingServer::garbageCollect>(this);
 		garbageCollectionTimer.start(60 * 60, 60 * 60);
 		logFlushingTimer.set<LoggingServer, &LoggingServer::flushAllLogs>(this);
