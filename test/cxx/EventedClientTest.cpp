@@ -229,8 +229,8 @@ namespace tut {
 		ensure_equals(read(fd1, buf, 1), (ssize_t) 1);
 		ensure_equals(buf[0], '\1');
 		
-		EVENT_LOOP_GUARD;
 		startEventLoop();
+		EVENT_LOOP_GUARD;
 		
 		// No disconnection event yet.
 		SHOULD_NEVER_HAPPEN(100,
@@ -301,8 +301,8 @@ namespace tut {
 		client.write(&data, 1);
 		ensure_equals(client.pendingWrites(), pending);
 		
-		EVENT_LOOP_GUARD;
 		startEventLoop();
+		EVENT_LOOP_GUARD;
 		
 		string result = readAll(fd1);
 		ensure_equals(result, str1);
@@ -350,5 +350,37 @@ namespace tut {
 		client.onDetach = &EventedClientTest::setIntToTwo;
 		ensure_equals(client.detach(), -1);
 		ensure_equals(integer, 0);
+	}
+	
+	TEST_METHOD(15) {
+		// EventedClient.write() emits a pending data flushed event
+		// if no outgoing data needs to be scheduled for later.
+		EventedClient client(eventLoop, fd2);
+		client.userData = this;
+		client.onPendingDataFlushed = &EventedClientTest::setIntToTwo;
+		client.write("hi");
+		ensure_equals(client.pendingWrites(), (size_t) 0);
+		ensure_equals(integer, 2);
+	}
+	
+	TEST_METHOD(16) {
+		// EventedClient emits a pending data flushed event
+		// after all pending outgoing data is flushed.
+		string str(1024 * 256, '\1');
+		EventedClient client(eventLoop, fd2);
+		client.userData = this;
+		client.onPendingDataFlushed = &EventedClientTest::setIntToTwo;
+		client.write(str);
+		ensure(client.pendingWrites() > 0);
+		ensure_equals(integer, 0);
+		
+		startEventLoop();
+		EVENT_LOOP_GUARD;
+		
+		char buf[str.size()];
+		MessageChannel(fd1).readRaw(buf, str.size());
+		EVENTUALLY(2,
+			result = integer == 2;
+		);
 	}
 }

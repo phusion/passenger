@@ -47,6 +47,10 @@ using namespace oxt;
 
 
 class EventedClient {
+public:
+	typedef void (*Callback)(EventedClient *client);
+	typedef void (*SystemErrorCallback)(EventedClient *client, const string &message, int code);
+	
 private:
 	enum {
 		/**
@@ -106,9 +110,7 @@ private:
 	unsigned int outboxLimit;
 	
 	void _onReadable(ev::io &w, int revents) {
-		if (onReadable != NULL) {
-			onReadable(this);
-		}
+		emitEvent(onReadable);
 	}
 	
 	void onWritable(ev::io &w, int revents) {
@@ -141,6 +143,9 @@ private:
 		}
 		
 		updateWatcherStates();
+		if (outbox.empty()) {
+			emitEvent(onPendingDataFlushed);
+		}
 	}
 	
 	bool outboxTooLarge() {
@@ -169,7 +174,7 @@ private:
 				} catch (const SystemException &e) {
 					emitSystemErrorEvent(e.brief(), e.code());
 				}
-				emitDisconnectEvent();
+				emitEvent(onDisconnect);
 				break;
 			default:
 				// Should never be reached.
@@ -222,27 +227,25 @@ private:
 		}
 	}
 	
+	void emitEvent(Callback callback) {
+		if (callback != NULL) {
+			callback(this);
+		}
+	}
+	
 	void emitSystemErrorEvent(const string &message, int code) {
 		if (onSystemError != NULL) {
 			onSystemError(this, message, code);
 		}
 	}
 	
-	void emitDisconnectEvent() {
-		if (onDisconnect != NULL) {
-			onDisconnect(this);
-		}
-	}
-	
 public:
-	typedef void (*Callback)(EventedClient *client);
-	typedef void (*SystemErrorCallback)(EventedClient *client, const string &message, int code);
-	
 	/** The client's file descriptor. Could be -1: see <tt>ioAllowed()</tt>. */
 	FileDescriptor fd;
 	Callback onReadable;
 	Callback onDisconnect;
 	Callback onDetach;
+	Callback onPendingDataFlushed;
 	SystemErrorCallback onSystemError;
 	void *userData;
 	
@@ -258,6 +261,7 @@ public:
 		onReadable      = NULL;
 		onDisconnect    = NULL;
 		onDetach        = NULL;
+		onPendingDataFlushed = NULL;
 		onSystemError   = NULL;
 		userData        = NULL;
 		readWatcher.set(fd, ev::READ);
@@ -386,6 +390,9 @@ public:
 		}
 		
 		updateWatcherStates();
+		if (outbox.empty()) {
+			emitEvent(onPendingDataFlushed);
+		}
 	}
 	
 	/**
@@ -419,7 +426,7 @@ public:
 			} catch (const SystemException &e) {
 				emitSystemErrorEvent(e.brief(), e.code());
 			}
-			emitDisconnectEvent();
+			emitEvent(onDisconnect);
 		} else {
 			state = EC_DISCONNECTING_WITH_WRITES_PENDING;
 			watchReadEvents(false);
@@ -453,9 +460,7 @@ public:
 			watchReadEvents(false);
 			watchWriteEvents(false);
 			fd = -1;
-			if (onDetach != NULL) {
-				onDetach(this);
-			}
+			emitEvent(onDetach);
 			return oldFd;
 		}
 	}
