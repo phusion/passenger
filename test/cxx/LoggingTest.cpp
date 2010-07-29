@@ -68,14 +68,16 @@ namespace tut {
 			));
 		}
 		
-		void stopLoggingServer() {
-			if (server != NULL) {
+		void stopLoggingServer(bool destroy = true) {
+			if (serverThread != NULL) {
 				MessageClient client;
 				client.connect(socketAddress, "test", "1234");
 				client.write("exit", "immediately", NULL);
 				serverThread->join();
 				serverThread.reset();
-				server.reset();
+				if (destroy) {
+					server.reset();
+				}
 				unlink(socketFilename.c_str());
 			}
 		}
@@ -99,6 +101,9 @@ namespace tut {
 	};
 	
 	DEFINE_TEST_GROUP(LoggingTest);
+	
+	
+	/*********** Logging interface tests ***********/
 	
 	TEST_METHOD(1) {
 		// Test logging of new transaction.
@@ -434,5 +439,55 @@ namespace tut {
 		SHOULD_NEVER_HAPPEN(200,
 			result = fileExists(filename) && !readAll(filename).empty();
 		);
+	}
+	
+	
+	/*********** LoggingServer tests ***********/
+	
+	TEST_METHOD(30) {
+		// getLastPos() works
+		SystemTime::forceAll(YESTERDAY);
+		
+		AnalyticsLogPtr log = logger->newTransaction("foobar");
+		log->message("hello world");
+		log->flushToDiskAfterClose(true);
+		log.reset();
+		
+		SystemTime::forceAll(TODAY);
+		
+		log = logger->newTransaction("foobar");
+		log->message("hello world");
+		log->flushToDiskAfterClose(true);
+		log.reset();
+		
+		stopLoggingServer(false);
+		
+		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/13/12/log.txt";
+		struct stat buf;
+		ensure_equals(stat(filename.c_str(), &buf), 0);
+		string lastPos = server->getLastPos("foobar", "localhost", "requests");
+		ensure_equals(lastPos, "2010/01/13/12/" + toString(buf.st_size));
+	}
+	
+	TEST_METHOD(31) {
+		// getLastPos() returns the empty string if log.txt or if one of
+		// the subdirectories are missing.
+		SystemTime::forceAll(YESTERDAY);
+		
+		AnalyticsLogPtr log = logger->newTransaction("foobar");
+		log->message("hello world");
+		log->flushToDiskAfterClose(true);
+		log.reset();
+		
+		stopLoggingServer(false);
+		
+		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt";
+		unlink(filename.c_str());
+		
+		string lastPos = server->getLastPos("foobar", "localhost", "requests");
+		ensure_equals(lastPos, "");
+		
+		lastPos = server->getLastPos("baz", "localhost", "requests");
+		ensure_equals(lastPos, "");
 	}
 }

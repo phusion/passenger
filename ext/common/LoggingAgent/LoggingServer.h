@@ -670,49 +670,6 @@ private:
 		return true;
 	}
 	
-	string getLastPos(const StaticString &groupName, const StaticString &nodeName,
-		const StaticString &category) const
-	{
-		md5_state_t state;
-		md5_byte_t  digest[MD5_SIZE];
-		char        nodeId[MD5_HEX_SIZE];
-		md5_init(&state);
-		md5_append(&state, (const md5_byte_t *) nodeName.data(), nodeName.size());
-		md5_finish(&state, digest);
-		toHex(StaticString((const char *) digest, MD5_SIZE), nodeId);
-		
-		string dir = determineFilename(groupName, nodeId, category);
-		string subdir, component;
-		subdir.reserve(13); // It's a string that looks like: "2010/06/24/12"
-		
-		// Loop 4 times to process year, month, day, hour.
-		for (int i = 0; i < 4; i++) {
-			bool found = getLastEntryInDirectory(dir, component);
-			if (!found) {
-				return "";
-			}
-			dir.append("/");
-			dir.append(component);
-			if (i != 0) {
-				subdir.append("/");
-			}
-			subdir.append(component);
-		}
-		// After the loop, new dir == old dir + "/" + subdir
-		
-		string &filename = dir;
-		filename.append("/log.txt");
-		
-		struct stat buf;
-		if (stat(filename.c_str(), &buf) == -1) {
-			int e = errno;
-			throw FileSystemException("Cannot stat() " + filename, e,
-				filename);
-		} else {
-			return subdir + "/" + toString(buf.st_size);
-		}
-	}
-	
 	static void pendingDataFlushed(EventedClient *_client) {
 		Client *client = (Client *) _client;
 		LoggingServer *self = (LoggingServer *) client->userData;
@@ -1101,6 +1058,61 @@ public:
 		// be flushed before RemoteSender is being destroyed.
 		transactions.clear();
 		logSinkCache.clear();
+	}
+	
+	string getLastPos(const StaticString &groupName, const StaticString &nodeName,
+		const StaticString &category) const
+	{
+		md5_state_t state;
+		md5_byte_t  digest[MD5_SIZE];
+		char        nodeId[MD5_HEX_SIZE];
+		md5_init(&state);
+		md5_append(&state, (const md5_byte_t *) nodeName.data(), nodeName.size());
+		md5_finish(&state, digest);
+		toHex(StaticString((const char *) digest, MD5_SIZE), nodeId);
+		
+		string dir = determineFilename(groupName, nodeId, category);
+		string subdir, component;
+		subdir.reserve(13); // It's a string that looks like: "2010/06/24/12"
+		
+		try {
+			// Loop 4 times to process year, month, day, hour.
+			for (int i = 0; i < 4; i++) {
+				bool found = getLastEntryInDirectory(dir, component);
+				if (!found) {
+					return string();
+				}
+				dir.append("/");
+				dir.append(component);
+				if (i != 0) {
+					subdir.append("/");
+				}
+				subdir.append(component);
+			}
+			// After the loop, new dir == old dir + "/" + subdir
+		} catch (const SystemException &e) {
+			if (e.code() == ENOENT) {
+				return string();
+			} else {
+				throw;
+			}
+		}
+		
+		string &filename = dir;
+		filename.append("/log.txt");
+		
+		struct stat buf;
+		if (stat(filename.c_str(), &buf) == -1) {
+			if (errno == ENOENT) {
+				return string();
+			} else {
+				int e = errno;
+				throw FileSystemException("Cannot stat() " + filename, e,
+					filename);
+			}
+		} else {
+			return subdir + "/" + toString(buf.st_size);
+		}
 	}
 	
 	void dump(stringstream &stream) const {
