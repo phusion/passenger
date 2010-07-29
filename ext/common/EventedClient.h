@@ -46,6 +46,63 @@ using namespace boost;
 using namespace oxt;
 
 
+/**
+ * A utility class for making I/O handling in non-blocking libev evented servers
+ * much easier.
+ * - An EventedClient is associated with a reference counted file descriptor.
+ * - It contains connection state information (i.e. whether the connection is
+ *   established or closed). Callbacks are provided for watching connection
+ *   state changes (e.g. <tt>onDisconnect</tt>).
+ * - It provides reference counting features for simpler memory management
+ *   (<tt>ref()</tt> and <tt>unref()</tt>).
+ * - It installs input and output readiness watchers that are unregistered
+ *   when the EventedClient is destroyed. One can hook into input readiness
+ *   watcher with the <tt>onReadable</tt> callback.
+ * - Makes zero-copy writes easy. The <tt>write()</tt> method accepts an array
+ *   of buffers. Whenever possible, all of these buffers are written out in
+ *   the given order, using a single system call, without copying them into a
+ *   single temporary buffer.
+ * - Makes non-blocking writes easy. Normally a write() system call on a
+ *   non-blocking socket can fail with EAGAIN if the socket send buffer is
+ *   full. EventedClient schedules the data to be sent later when the socket is
+ *   writable again. It automatically integrates into the main loop in order
+ *   to do this. This allows one to have write operations occur concurrently
+ *   with read operations.
+ *   In case too many scheduled writes are being piled up, EventedClient
+ *   is smart enough to temporarily disable read notifications and wait until
+ *   everything is written out before enabling read notifications again.
+ *   The definition of "too many" is customizable (<tt>setOutboxLimit()</tt>).
+ * - EventedClient's <tt>disconnect</tt> method respects pending writes. It
+ *   will disconnect after all pending outgoing data have been written out.
+ *
+ * <h2>Basic usage</h2>
+ * Construct an EventedClient with a libev loop and a file descriptor:
+ *
+ * @code
+ * EventedClient *client = new EventedClient(loop, fd);
+ * @endcode
+ *
+ * You are probably interested in read readiness notifications on <tt>fd</tt>.
+ * However these notifications are disabled by default. You need to set the
+ * <tt>onReadable</tt> callback (which is called every time the fd is
+ * readable) and enable read notifications.
+ *
+ * @code
+ * void onReadable(EventedClient *client) {
+ *     // do whatever you want
+ * }
+ * 
+ * ...
+ * client->onReadable = onReadable;
+ * client->notifyReads(true);
+ * @endcode
+ *
+ * <h2>Error handling</h2>
+ * EventedClient never raises exceptions, except when your callbacks do.
+ * It reports errors with the <tt>onSystemError</tt> callback. That said,
+ * EventedClient is exception-aware and will ensure that its internal
+ * state stays consistent even when your callbacks throw exceptions.
+ */
 class EventedClient {
 public:
 	typedef void (*Callback)(EventedClient *client);
@@ -242,13 +299,52 @@ private:
 public:
 	/** The client's file descriptor. Could be -1: see <tt>ioAllowed()</tt>. */
 	FileDescriptor fd;
+	
+	/**
+	 * Called when the file descriptor becomes readable and read notifications
+	 * are enabled (see <tt>notifyRead()</tt>). When there's too much pending
+	 * outgoing data, readability notifications are temporarily disabled; see
+	 * <tt>write()</tt> for details.
+	 */
 	Callback onReadable;
+	
+	/**
+	 * Called when the client is disconnected. This happens either immediately
+	 * when <tt>disconnect()</tt> is called, or a short amount of time later.
+	 * See the documentation for that function for details.
+	 *
+	 * Please note that destroying an EventedClient object does *not* cause
+	 * this callback to be called.
+	 */
 	Callback onDisconnect;
+	
+	/**
+	 * Called when <tt>detach()</tt> is called for the first time.
+	 */
 	Callback onDetach;
+	
+	/**
+	 * Called after all pending outgoing data have been written out.
+	 * If <tt>write()</tt> can be completed immediately without scheduling
+	 * data for later, then <tt>write()</tt> will call this callback
+	 * immediately after writing.
+	 */
 	Callback onPendingDataFlushed;
+	
+	/**
+	 * System call errors are reported with this callback.
+	 */
 	SystemErrorCallback onSystemError;
+	
+	/**
+	 * EventedClient doesn't do anything with this. Set it to whatever you want.
+	 */
 	void *userData;
 	
+	/**
+	 * Creates a new EventedClient with the given libev loop and file descriptor.
+	 * The initial reference count is 1.
+	 */
 	EventedClient(struct ev_loop *loop, const FileDescriptor &_fd)
 		: readWatcher(loop),
 		  writeWatcher(loop),
@@ -272,10 +368,17 @@ public:
 	
 	virtual ~EventedClient() { }
 	
+	/**
+	 * Increase reference count.
+	 */
 	void ref() {
 		refcount++;
 	}
 	
+	/**
+	 * Decrease reference count. Upon reaching 0, this EventedClient object
+	 * will be destroyed.
+	 */
 	void unref() {
 		refcount--;
 		if (refcount <= 0) {
@@ -295,6 +398,7 @@ public:
 			&& state != EC_DISCONNECTED;
 	}
 	
+	/** Used by unit tests. */
 	bool readWatcherActive() const {
 		return readWatcher.is_active();
 	}
@@ -311,11 +415,11 @@ public:
 	
 	/**
 	 * Sets whether you're interested in read events. This will start or
-	 * stop <tt>readWatcher</tt> appropriately according to the current
-	 * state.
+	 * stop the input readiness watcher appropriately according to the
+	 * current state.
 	 *
-	 * If the client connection is already being or has already been closed
-	 * then this method does nothing.
+	 * If the client connection is already being closed or has already
+	 * been closed then this method does nothing.
 	 */
 	void notifyReads(bool enable) {
 		if (!ioAllowed()) {
@@ -341,8 +445,8 @@ public:
 	 *
 	 * The default value is some non-zero value.
 	 *
-	 * If the client connection is already being or has already been closed
-	 * then this method does nothing.
+	 * If the client connection is already being closed or has already
+	 * been closed then this method does nothing.
 	 */
 	void setOutboxLimit(unsigned int size) {
 		if (!ioAllowed()) {
@@ -368,10 +472,15 @@ public:
 	 *
 	 * If an I/O error was encountered then the client connection will be
 	 * closed by calling <tt>disconnect(true)</tt>. This means this method
-	 * could potentially emit a disconnect event.
+	 * could potentially call the <tt>onDisconnect</tt> callback.
 	 *
-	 * If the client connection is already being or has already been closed
-	 * then this method does nothing.
+	 * If the client connection is already being closed or has already
+	 * been closed then this method does nothing.
+	 *
+	 * The <tt>onPendingDataFlushed</tt> callback will be called after
+	 * this data and whatever existing pending data have been written
+	 * out. That may either be immediately or after a short period of
+	 * of time.
 	 */
 	void write(const StaticString data[], unsigned int count) {
 		if (!ioAllowed()) {
@@ -387,18 +496,21 @@ public:
 			int e = errno;
 			disconnect(true);
 			emitSystemErrorEvent("Cannot write data to client", e);
-		}
-		
-		updateWatcherStates();
-		if (outbox.empty()) {
-			emitEvent(onPendingDataFlushed);
+		} else {
+			updateWatcherStates();
+			if (outbox.empty()) {
+				emitEvent(onPendingDataFlushed);
+			}
 		}
 	}
 	
 	/**
-	 * Disconnects the client. If <em>force</em> is true then the client will
-	 * be disconnected immediately, and any pending outgoing data will be
-	 * discarded. Otherwise the client will be disconnected after all pending
+	 * Disconnects the client. This actually closes the underlying file
+	 * descriptor, even if the FileDescriptor object still has references.
+	 *
+	 * If <em>force</em> is true then the client will be disconnected
+	 * immediately, and any pending outgoing data will be discarded.
+	 * Otherwise the client will be disconnected after all pending
 	 * outgoing data have been sent; in the mean time no new data can be
 	 * received from or sent to the client.
 	 *
@@ -406,11 +518,19 @@ public:
 	 * immediately or after a short period of time), a disconnect event will
 	 * be emitted.
 	 *
-	 * If the client connection is already being or has already been closed
-	 * then this method does nothing.
+	 * If the client connection has already been closed then this method
+	 * does nothing. If the client connection is being closed (because
+	 * there's pending outgoing data) then the behavior depends on the
+	 * <tt>force</tt> argument: if true then the connection is closed
+	 * immediately and the pending data is discarded, otherwise this
+	 * method does nothing.
+	 *
+	 * The <tt>onDisconnect</tt> callback will be called after the file
+	 * descriptor is closed, which is either immediately or after all
+	 * pending data has been sent out.
 	 */
 	void disconnect(bool force = false) {
-		if (!ioAllowed()) {
+		if (!ioAllowed() && !(state == EC_DISCONNECTING_WITH_WRITES_PENDING && force)) {
 			return;
 		}
 		
@@ -445,8 +565,8 @@ public:
 	 * has any control over it. Any EventedClient I/O watchers on the client file
 	 * descriptor will be stopped and further I/O on the file descriptor via
 	 * EventedClient will become impossible. The original client file descriptor
-	 * is returned and a detach event is emitted. Subsequent calls to this
-	 * function will return -1 and will no longer emit detach events.
+	 * is returned and <tt>onDetach</tt> is called. Subsequent calls to this
+	 * function will return -1 and will no longer call <tt>onDetach</tt>.
 	 *
 	 * @post !ioAllowed()
 	 * @post fd == -1
