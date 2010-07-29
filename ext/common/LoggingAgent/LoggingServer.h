@@ -421,15 +421,17 @@ private:
 	}
 	
 	string determineFilename(const StaticString &groupName, const char *nodeId,
-		const StaticString &category, const StaticString &txnId) const
+		const StaticString &category, const StaticString &txnId = "") const
 	{
 		time_t timestamp;
 		struct tm tm;
 		char time_str[14];
 		
-		timestamp = extractTimestamp(txnId);
-		gmtime_r(&timestamp, &tm);
-		strftime(time_str, sizeof(time_str), "%Y/%m/%d/%H", &tm);
+		if (!txnId.empty()) {
+			timestamp = extractTimestamp(txnId);
+			gmtime_r(&timestamp, &tm);
+			strftime(time_str, sizeof(time_str), "%Y/%m/%d/%H", &tm);
+		}
 		
 		string filename;
 		filename.reserve(dir.size()
@@ -448,9 +450,11 @@ private:
 		filename.append(nodeId, MD5_HEX_SIZE);
 		filename.append(1, '/');
 		filename.append(category.c_str(), category.size());
-		filename.append(1, '/');
-		filename.append(time_str);
-		filename.append("/log.txt");
+		if (!txnId.empty()) {
+			filename.append(1, '/');
+			filename.append(time_str);
+			filename.append("/log.txt");
+		}
 		return filename;
 	}
 	
@@ -606,11 +610,107 @@ private:
 		}
 	}
 	
+	bool isDirectory(const string &dir, struct dirent *entry) const {
+		#ifdef __sun__
+			string path = dir;
+			path.append("/");
+			path.append(entry->d_name);
+			return getFileType(path) == FT_DIRECTORY;
+		#else
+			return entry->d_type == DT_DIR;
+		#endif
+	}
+	
+	bool looksLikeNumber(const char *str) const {
+		const char *current = str;
+		while (*current != '\0') {
+			char c = *current;
+			if (!(c >= '0' && c <= '9')) {
+				return false;
+			}
+			current++;
+		}
+		return true;
+	}
+	
+	bool getLastEntryInDirectory(const string &path, string &result) const {
+		DIR *dir = opendir(path.c_str());
+		struct dirent *entry;
+		vector<string> subdirs;
+		
+		if (dir == NULL) {
+			int e = errno;
+			throw FileSystemException("Cannot open directory " + path,
+				e, path);
+		}
+		while ((entry = readdir(dir)) != NULL) {
+			if (isDirectory(path, entry) && looksLikeNumber(entry->d_name)) {
+				subdirs.push_back(entry->d_name);
+			}
+		}
+		closedir(dir);
+		
+		if (subdirs.empty()) {
+			return false;
+		}
+		
+		vector<string>::const_iterator it = subdirs.begin();
+		vector<string>::const_iterator end = subdirs.end();
+		vector<string>::const_iterator largest_it = subdirs.begin();
+		int largest = atoi(subdirs[0]);
+		for (it++; it != end; it++) {
+			const string &subdir = *it;
+			int number = atoi(subdir.c_str());
+			if (number > largest) {
+				largest_it = it;
+				largest = number;
+			}
+		}
+		result = *largest_it;
+		return true;
+	}
+	
 	string getLastPos(const StaticString &groupName, const StaticString &nodeName,
-		const StaticString &category)
+		const StaticString &category) const
 	{
-		// TODO
-		return string();
+		md5_state_t state;
+		md5_byte_t  digest[MD5_SIZE];
+		char        nodeId[MD5_HEX_SIZE];
+		md5_init(&state);
+		md5_append(&state, (const md5_byte_t *) nodeName.data(), nodeName.size());
+		md5_finish(&state, digest);
+		toHex(StaticString((const char *) digest, MD5_SIZE), nodeId);
+		
+		string dir = determineFilename(groupName, nodeId, category);
+		string subdir, component;
+		subdir.reserve(13); // It's a string that looks like: "2010/06/24/12"
+		
+		// Loop 4 times to process year, month, day, hour.
+		for (int i = 0; i < 4; i++) {
+			bool found = getLastEntryInDirectory(dir, component);
+			if (!found) {
+				return "";
+			}
+			dir.append("/");
+			dir.append(component);
+			if (i != 0) {
+				subdir.append("/");
+			}
+			subdir.append(component);
+		}
+		// After the loop, new dir == old dir + "/" + subdir
+		
+		string &filename = dir;
+		filename.append("/log.txt");
+		
+		struct stat buf;
+		if (stat(filename.c_str(), &buf) == -1) {
+			int e = errno;
+			throw FileSystemException("Cannot stat() " + filename, e,
+				filename);
+		} else {
+			return subdir + "/" + toString(buf.st_size);
+		}
 	}
 	
 	static void pendingDataFlushed(EventedClient *_client) {
