@@ -249,6 +249,7 @@ describe "Apache 2 module" do
 			@foobar.destroy
 			@mycook2.destroy
 			@mycook3.destroy
+			@mycook4.destroy
 		end
 		
 		before :each do
@@ -256,6 +257,7 @@ describe "Apache 2 module" do
 			@foobar.reset
 			@mycook2.reset
 			@mycook3.reset
+			@mycook4.reset
 		end
 		
 		it "ignores the Rails application if RailsAutoDetect is off" do
