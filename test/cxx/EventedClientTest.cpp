@@ -307,4 +307,48 @@ namespace tut {
 		string result = readAll(fd1);
 		ensure_equals(result, str1);
 	}
+	
+	TEST_METHOD(12) {
+		// EventedClient.detach() returns the original file descriptor
+		// and makes I/O to the file descriptor via its own object
+		// impossible.
+		EventedClient client(eventLoop, fd2);
+		FileDescriptor fd3 = client.detach();
+		ensure_equals(fd3, fd2);
+		ensure_equals(client.fd, -1);
+		ensure(!client.ioAllowed());
+		ensure(!client.readWatcherActive());
+		
+		StaticString data = "hi";
+		client.write(&data, 1);
+		
+		char buf[2];
+		ssize_t ret;
+		int e;
+		setNonBlocking(fd1);
+		ret = read(fd1, buf, 2);
+		e = errno;
+		ensure_equals(ret, -1);
+		ensure_equals(e, EAGAIN);
+	}
+	
+	TEST_METHOD(13) {
+		// EventedClient.detach() emits a detach event.
+		EventedClient client(eventLoop, fd2);
+		client.userData = this;
+		client.onDetach = &EventedClientTest::setIntToTwo;
+		client.detach();
+		ensure_equals(integer, 2);
+	}
+	
+	TEST_METHOD(14) {
+		// Subsequent calls to EventedClient.detach() return -1
+		// and no longer emit detach events.
+		EventedClient client(eventLoop, fd2);
+		client.detach();
+		client.userData = this;
+		client.onDetach = &EventedClientTest::setIntToTwo;
+		ensure_equals(client.detach(), -1);
+		ensure_equals(integer, 0);
+	}
 }

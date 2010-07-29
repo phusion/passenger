@@ -167,6 +167,16 @@ private:
 		server->onClientDisconnected((EventedClient *) client);
 	}
 	
+	static void _onDetach(EventedClient *client) {
+		EventedServer *server = (EventedServer *) client->userData;
+		ScopeGuard guard1(boost::bind(&EventedClient::unref, client));
+		
+		client->ref();
+		ScopeGuard guard2(boost::bind(&EventedClient::unref, client));
+		
+		server->removeClient(client);
+	}
+	
 	static void _onSystemError(EventedClient *client, const string &message, int code) {
 		EventedServer *server = (EventedServer *) client->userData;
 		server->logSystemError(client, message, code);
@@ -208,6 +218,7 @@ private:
 					client));
 				client->onReadable    = _onReadable;
 				client->onDisconnect  = _onDisconnect;
+				client->onDetach      = _onDetach;
 				client->onSystemError = _onSystemError;
 				client->userData      = this;
 				client->notifyReads(true);

@@ -215,6 +215,7 @@ public:
 	FileDescriptor fd;
 	Callback onReadable;
 	Callback onDisconnect;
+	Callback onDetach;
 	SystemErrorCallback onSystemError;
 	void *userData;
 	
@@ -229,6 +230,7 @@ public:
 		outboxLimit     = 1024 * 32;
 		onReadable      = NULL;
 		onDisconnect    = NULL;
+		onDetach        = NULL;
 		onSystemError   = NULL;
 		userData        = NULL;
 		readWatcher.set(fd, ev::READ);
@@ -401,6 +403,33 @@ public:
 					"Cannot shutdown reader half of the client socket",
 					e);
 			}
+		}
+	}
+	
+	/**
+	 * Detaches the client file descriptor so that this EventedClient no longer
+	 * has any control over it. Any EventedClient I/O watchers on the client file
+	 * descriptor will be stopped and further I/O on the file descriptor via
+	 * EventedClient will become impossible. The original client file descriptor
+	 * is returned and a detach event is emitted. Subsequent calls to this
+	 * function will return -1 and will no longer emit detach events.
+	 *
+	 * @post !ioAllowed()
+	 * @post fd == -1
+	 */
+	FileDescriptor detach() {
+		if (state == EC_DISCONNECTED) {
+			return fd;
+		} else {
+			FileDescriptor oldFd = fd;
+			state = EC_DISCONNECTED;
+			watchReadEvents(false);
+			watchWriteEvents(false);
+			fd = -1;
+			if (onDetach != NULL) {
+				onDetach(this);
+			}
+			return oldFd;
 		}
 	}
 };
