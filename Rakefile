@@ -338,6 +338,7 @@ end
 		'ext/common/LoggingAgent/Main.cpp',
 		'ext/common/LoggingAgent/LoggingServer.h',
 		'ext/common/LoggingAgent/RemoteSender.h',
+		'ext/common/LoggingAgent/ChangeNotifier.h',
 		'ext/common/ServerInstanceDir.h',
 		'ext/common/Logging.h',
 		'ext/common/EventedServer.h',
@@ -732,6 +733,8 @@ end
 		'test/cxx/LoggingTest.o' => %w(
 			test/cxx/LoggingTest.cpp
 			ext/common/LoggingAgent/LoggingServer.h
+			ext/common/LoggingAgent/RemoteSender.h
+			ext/common/LoggingAgent/ChangeNotifier.h
 			ext/common/Logging.h
 			ext/common/Utils.h
 			ext/common/EventedServer.h
