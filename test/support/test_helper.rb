@@ -371,7 +371,7 @@ module TestHelper
 			"analytics_log_group", CONFIG['normal_group_1'],
 			"analytics_log_permissions", "u=rwx,g=rwx,o=rwx",
 			"logging_agent_address", "unix:#{socket_filename}",
-			"logging_agent_password", [password].pack("m"))
+			"logging_agent_password", password)
 		eventually do
 			File.exist?(socket_filename)
 		end

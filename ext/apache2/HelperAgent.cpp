@@ -216,7 +216,7 @@ public:
 		
 		UPDATE_TRACE_POINT();
 		messageSocketPassword = Base64::decode(options.get("message_socket_password"));
-		loggingAgentPassword  = Base64::decode(options.get("logging_agent_password"));
+		loggingAgentPassword  = options.get("logging_agent_password");
 		
 		generation       = serverInstanceDir.getGeneration(generationNumber);
 		accountsDatabase = AccountsDatabase::createDefault(generation,

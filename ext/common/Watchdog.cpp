@@ -576,7 +576,7 @@ protected:
 		options.set("request_socket_password", Base64::encode(requestSocketPassword)).
 			set("message_socket_password", Base64::encode(messageSocketPassword)).
 			set("logging_agent_address", loggingAgentAddress).
-			set("logging_agent_password", Base64::encode(loggingAgentPassword));
+			set("logging_agent_password", loggingAgentPassword);
 		options.writeToFd(fd);
 	}
 	
@@ -632,7 +632,7 @@ protected:
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
 		VariantMap options = agentsOptions;
 		options.set("logging_agent_address", loggingAgentAddress);
-		options.set("logging_agent_password", Base64::encode(loggingAgentPassword));
+		options.set("logging_agent_password", loggingAgentPassword);
 		options.writeToFd(fd);
 	}
 	
@@ -652,7 +652,7 @@ public:
 	virtual void sendStartupInfo(MessageChannel &channel) {
 		channel.write("LoggingServer info",
 			loggingAgentAddress.c_str(),
-			Base64::encode(loggingAgentPassword).c_str(),
+			loggingAgentPassword.c_str(),
 			NULL);
 	}
 };
@@ -958,7 +958,7 @@ main(int argc, char *argv[]) {
 		if (agentsOptions.get("analytics_server", false).empty()) {
 			// Using local, server instance specific logging agent.
 			loggingAgentAddress  = "unix:" + generation->getPath() + "/logging.socket";
-			loggingAgentPassword = randomGenerator->generateByteString(32);
+			loggingAgentPassword = randomGenerator->generateAsciiString(64);
 		} else {
 			// Using remote logging agent.
 			loggingAgentAddress = agentsOptions.get("analytics_server");

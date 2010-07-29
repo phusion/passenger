@@ -224,7 +224,7 @@ main(int argc, char *argv[]) {
 		}
 		
 		/* Now setup the actual logging server. */
-		accountsDatabase->add("logging", Base64::decode(password), false);
+		accountsDatabase->add("logging", password, false);
 		LoggingServer server(eventLoop, serverSocketFd,
 			accountsDatabase, loggingDir,
 			"u=rwx,g=rx,o=rx", GROUP_NOT_GIVEN,

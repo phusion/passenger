@@ -335,7 +335,7 @@ public:
 			.set    ("analytics_log_permissions", analyticsLogPermissions)
 			.set    ("union_station_service_address",  unionStationServiceAddress)
 			.setInt ("union_station_service_port", unionStationServicePort)
-			.set    ("union_station_service_cert",  realUnionStationServiceCert)
+			.set    ("union_station_service_cert", realUnionStationServiceCert)
 			.set    ("prestart_urls",   serializePrestartURLs(prestartURLs));
 		
 		int fds[2], e, ret;
@@ -585,7 +585,7 @@ public:
 					if (args.size() == 3) {
 						loggingAgentRunningLocally = true;
 						loggingSocketAddress  = args[1];
-						loggingSocketPassword = Base64::decode(args[2]);
+						loggingSocketPassword = args[2];
 					} else {
 						killAndWait(pid);
 						throw IOException("Unable to start the Phusion Passenger watchdog: "
