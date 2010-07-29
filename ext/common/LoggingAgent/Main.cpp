@@ -113,15 +113,30 @@ feedbackFdBecameReadable(ev::io &watcher, int revents) {
 	_exit(2); // In case killpg() fails.
 }
 
+static string
+myself() {
+	struct passwd *entry = getpwuid(geteuid());
+	if (entry != NULL) {
+		return entry->pw_name;
+	} else {
+		throw NonExistentUserException(string("The current user, UID ") +
+			toString(geteuid()) + ", doesn't have a corresponding " +
+			"entry in the system's user database. Please fix your " +
+			"system's user database first.");
+	}
+}
+
 int
 main(int argc, char *argv[]) {
 	VariantMap options        = initializeAgent(argc, argv, "PassengerLoggingAgent");
 	string socketAddress      = options.get("logging_agent_address");
 	string loggingDir         = options.get("analytics_log_dir");
-	string username           = options.get("analytics_log_user");
-	string groupname          = options.get("analytics_log_group");
-	string permissions        = options.get("analytics_log_permissions");
 	string password           = options.get("logging_agent_password");
+	string username           = options.get("analytics_log_user",
+		false, myself());
+	string groupname          = options.get("analytics_log_group", false);
+	string permissions        = options.get("analytics_log_permissions",
+		false, DEFAULT_ANALYTICS_LOG_PERMISSIONS);
 	string unionStationServiceAddress = options.get("union_station_service_address",
 		false, DEFAULT_UNION_STATION_SERVICE_ADDRESS);
 	int    unionStationServicePort = options.getInt("union_station_service_port",
