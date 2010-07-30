@@ -72,7 +72,7 @@ private:
 	typedef map<string, LogSinkPtr> LogSinkCache;
 	
 	struct LogSink {
-		struct ev_loop *loop;
+		LoggingServer *server;
 		
 		/**
 		 * Marks how many times this LogSink is currently opened, i.e. the
@@ -99,10 +99,10 @@ private:
 		 */
 		list<LogSinkPtr>::iterator inactiveLogSinksIterator;
 		
-		LogSink(struct ev_loop *_loop) {
-			loop = _loop;
+		LogSink(LoggingServer *_server) {
+			server = _server;
 			opened = 0;
-			lastUsed = ev_now(loop);
+			lastUsed = ev_now(server->getLoop());
 			lastFlushed = 0;
 		}
 		
@@ -128,8 +128,8 @@ private:
 		char buffer[BUFFER_CAPACITY];
 		unsigned int bufferSize;
 		
-		LogFile(struct ev_loop *loop, const string &filename, mode_t filePermissions)
-			: LogSink(loop)
+		LogFile(LoggingServer *server, const string &filename, mode_t filePermissions)
+			: LogSink(server)
 		{
 			int ret;
 			
@@ -166,7 +166,7 @@ private:
 				for (i = 0; i < count; i++) {
 					data2[i + 1] = data[i];
 				}
-				lastFlushed = ev_now(loop);
+				lastFlushed = ev_now(server->getLoop());
 				gatheredWrite(fd, data2, count + 1);
 				bufferSize = 0;
 			} else {
@@ -179,7 +179,7 @@ private:
 		
 		virtual void flush() {
 			if (bufferSize > 0) {
-				lastFlushed = ev_now(loop);
+				lastFlushed = ev_now(server->getLoop());
 				MessageChannel(fd).writeRaw(StaticString(buffer, bufferSize));
 				bufferSize = 0;
 			}
@@ -188,7 +188,7 @@ private:
 		virtual void dump(stringstream &stream) const {
 			stream << "   Log file: file=" << filename << ", "
 				"opened=" << opened << ", "
-				"age=" << (lastUsed - ev_now(loop)) << "\n";
+				"age=" << long(lastUsed - ev_now(server->getLoop())) << "\n";
 		}
 	};
 	
@@ -212,7 +212,6 @@ private:
 			4 * 64 * 1024 -
 			16 * 1024;
 		
-		LoggingServer *server;
 		string unionStationKey;
 		string nodeName;
 		string category;
@@ -221,9 +220,8 @@ private:
 		
 		RemoteSink(LoggingServer *server, const string &unionStationKey,
 			const string &nodeName, const string &category)
-			: LogSink(server->getLoop())
+			: LogSink(server)
 		{
-			this->server = server;
 			this->unionStationKey = unionStationKey;
 			this->nodeName = nodeName;
 			this->category = category;
@@ -252,7 +250,7 @@ private:
 				for (i = 0; i < count; i++) {
 					data2[i + 1] = data[i];
 				}
-				lastFlushed = ev_now(loop);
+				lastFlushed = ev_now(server->getLoop());
 				server->remoteSender.schedule(unionStationKey, nodeName,
 					category, data2, count + 1);
 				bufferSize = 0;
@@ -266,7 +264,7 @@ private:
 		
 		virtual void flush() {
 			if (bufferSize > 0) {
-				lastFlushed = ev_now(loop);
+				lastFlushed = ev_now(server->getLoop());
 				StaticString data(buffer, bufferSize);
 				server->remoteSender.schedule(unionStationKey, nodeName,
 					category, &data, 1);
@@ -280,7 +278,7 @@ private:
 				"node=" << nodeName << ", "
 				"category=" << category << ", "
 				"opened=" << opened << ", "
-				"age=" << (lastUsed - ev_now(loop)) << "\n";
+				"age=" << long(lastUsed - ev_now(server->getLoop())) << "\n";
 		}
 	};
 	
@@ -543,7 +541,7 @@ private:
 			trimLogSinkCache(MAX_LOG_SINK_CACHE_SIZE - 1);
 			makeDirTree(extractDirName(filename), dirPermissions,
 				USER_NOT_GIVEN, gid);
-			theLogSink.reset(new LogFile(getLoop(), filename, filePermissions));
+			theLogSink.reset(new LogFile(this, filename, filePermissions));
 			pair<LogSinkCache::iterator, bool> p =
 				logSinkCache.insert(make_pair(cacheKey, theLogSink));
 			theLogSink->cacheIterator = p.first;
