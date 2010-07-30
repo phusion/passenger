@@ -39,6 +39,7 @@
 #include <grp.h>
 #include <cstring>
 #include <ctime>
+#include <cassert>
 
 #include "RemoteSender.h"
 #include "ChangeNotifier.h"
@@ -64,13 +65,44 @@ using namespace oxt;
 class LoggingServer: public EventedMessageServer {
 private:
 	static const int MAX_LOG_SINK_CACHE_SIZE = 512;
+	static const int GARBAGE_COLLECTION_TIMEOUT = 1.25 * 60 * 60;  // 1 hour 15 minutes
+	
+	struct LogSink;
+	typedef shared_ptr<LogSink> LogSinkPtr;
+	typedef map<string, LogSinkPtr> LogSinkCache;
 	
 	struct LogSink {
-		time_t lastUsed;
-		time_t lastFlushed;
+		struct ev_loop *loop;
 		
-		LogSink() {
-			lastUsed = time(NULL);
+		/**
+		 * Marks how many times this LogSink is currently opened, i.e. the
+		 * number of Transaction objects currently referencing this LogSink.
+		 * @invariant
+		 *    (opened == 0) == (this LogSink is in LoggingServer.inactiveLogSinks)
+		 */
+		int opened;
+		
+		/** Last time this LogSink hit an open count of 0. */
+		ev_tstamp lastUsed;
+		
+		/** Last time data was actually written to the underlying storage device. */
+		ev_tstamp lastFlushed;
+		
+		/**
+		 * This LogSink's iterator inside LoggingServer.logSinkCache.
+		 */
+		LogSinkCache::iterator cacheIterator;
+		
+		/**
+		 * This LogSink's iterator inside LoggingServer.inactiveLogSinks.
+		 * Only valid when opened == 0.
+		 */
+		list<LogSinkPtr>::iterator inactiveLogSinksIterator;
+		
+		LogSink(struct ev_loop *_loop) {
+			loop = _loop;
+			opened = 0;
+			lastUsed = ev_now(loop);
 			lastFlushed = 0;
 		}
 		
@@ -88,8 +120,6 @@ private:
 		virtual void dump(stringstream &stream) const { };
 	};
 	
-	typedef shared_ptr<LogSink> LogSinkPtr;
-	
 	struct LogFile: public LogSink {
 		static const unsigned int BUFFER_CAPACITY = 8 * 1024;
 		
@@ -98,8 +128,8 @@ private:
 		char buffer[BUFFER_CAPACITY];
 		unsigned int bufferSize;
 		
-		LogFile(const string &filename, mode_t filePermissions)
-			: LogSink()
+		LogFile(struct ev_loop *loop, const string &filename, mode_t filePermissions)
+			: LogSink(loop)
 		{
 			int ret;
 			
@@ -136,7 +166,7 @@ private:
 				for (i = 0; i < count; i++) {
 					data2[i + 1] = data[i];
 				}
-				lastFlushed = time(NULL);
+				lastFlushed = ev_now(loop);
 				gatheredWrite(fd, data2, count + 1);
 				bufferSize = 0;
 			} else {
@@ -149,7 +179,7 @@ private:
 		
 		virtual void flush() {
 			if (bufferSize > 0) {
-				lastFlushed = time(NULL);
+				lastFlushed = ev_now(loop);
 				MessageChannel(fd).writeRaw(StaticString(buffer, bufferSize));
 				bufferSize = 0;
 			}
@@ -157,7 +187,8 @@ private:
 		
 		virtual void dump(stringstream &stream) const {
 			stream << "   Log file: file=" << filename << ", "
-				"age = " << (lastUsed - time(NULL)) << "\n";
+				"opened=" << opened << ", "
+				"age=" << (lastUsed - ev_now(loop)) << "\n";
 		}
 	};
 	
@@ -190,6 +221,7 @@ private:
 		
 		RemoteSink(LoggingServer *server, const string &unionStationKey,
 			const string &nodeName, const string &category)
+			: LogSink(server->getLoop())
 		{
 			this->server = server;
 			this->unionStationKey = unionStationKey;
@@ -220,7 +252,7 @@ private:
 				for (i = 0; i < count; i++) {
 					data2[i + 1] = data[i];
 				}
-				lastFlushed = time(NULL);
+				lastFlushed = ev_now(loop);
 				server->remoteSender.schedule(unionStationKey, nodeName,
 					category, data2, count + 1);
 				bufferSize = 0;
@@ -234,7 +266,7 @@ private:
 		
 		virtual void flush() {
 			if (bufferSize > 0) {
-				lastFlushed = time(NULL);
+				lastFlushed = ev_now(loop);
 				StaticString data(buffer, bufferSize);
 				server->remoteSender.schedule(unionStationKey, nodeName,
 					category, &data, 1);
@@ -247,28 +279,34 @@ private:
 				"key=" << unionStationKey << ", "
 				"node=" << nodeName << ", "
 				"category=" << category << ", "
-				"age=" << (lastUsed - time(NULL)) << "\n";
+				"opened=" << opened << ", "
+				"age=" << (lastUsed - ev_now(loop)) << "\n";
 		}
 	};
 	
 	struct Transaction {
+		LoggingServer *server;
 		LogSinkPtr logSink;
 		string txnId;
 		string groupName;
 		string category;
 		unsigned int writeCount;
-		unsigned int refcount;
+		int refcount;
 		bool crashProtect, discarded;
 		string data;
 		
-		Transaction() {
+		Transaction(LoggingServer *server) {
+			this->server = server;
 			data.reserve(8 * 1024);
 		}
 		
 		~Transaction() {
-			if (!discarded) {
-				StaticString data = this->data;
-				logSink->append(&data, 1);
+			if (logSink != NULL) {
+				if (!discarded) {
+					StaticString data = this->data;
+					logSink->append(&data, 1);
+				}
+				server->closeLogSink(logSink);
 			}
 		}
 		
@@ -286,7 +324,6 @@ private:
 	};
 	
 	typedef shared_ptr<Transaction> TransactionPtr;
-	typedef map<string, LogSinkPtr> LogSinkCache;
 	
 	enum ClientType {
 		UNINITIALIZED,
@@ -325,10 +362,19 @@ private:
 	RemoteSender remoteSender;
 	ChangeNotifier changeNotifier;
 	ev::timer garbageCollectionTimer;
-	ev::timer logFlushingTimer;
+	ev::timer sinkFlushingTimer;
 	ev::timer exitTimer;
 	TransactionMap transactions;
 	LogSinkCache logSinkCache;
+	/**
+	 * @invariant
+	 *    inactiveLogSinks is sorted from oldest to youngest (by lastTime member).
+	 *    for all s in inactiveLogSinks:
+	 *       s.opened == 0
+	 *    inactiveLogSinks.size() == inactiveLogSinksCount
+	 */
+	list<LogSinkPtr> inactiveLogSinks;
+	int inactiveLogSinksCount;
 	RandomGenerator randomGenerator;
 	bool exitRequested;
 	
@@ -458,39 +504,6 @@ private:
 		return filename;
 	}
 	
-	bool openLogFileWithCache(const string &filename, LogSinkPtr &theLogSink) {
-		string cacheKey = "file:" + filename;
-		LogSinkCache::iterator it = logSinkCache.find(cacheKey);
-		if (it == logSinkCache.end()) {
-			trimLogSinkCache(MAX_LOG_SINK_CACHE_SIZE - 1);
-			makeDirTree(extractDirName(filename), dirPermissions,
-				USER_NOT_GIVEN, gid);
-			LogFilePtr logFile(new LogFile(filename, filePermissions));
-			theLogSink = logSinkCache[cacheKey] = logFile;
-			return false;
-		} else {
-			theLogSink = it->second;
-			theLogSink->lastUsed = time(NULL);
-			return true;
-		}
-	}
-	
-	void trimLogSinkCache(unsigned int size) {
-		while (logSinkCache.size() > size) {
-			LogSinkCache::iterator it = logSinkCache.begin();
-			LogSinkCache::iterator end = logSinkCache.end();
-			LogSinkCache::iterator smallest_it = it;
-			
-			// Find least recently used log sink and remove it.
-			for (it++; it != end; it++) {
-				if (it->second->lastUsed < smallest_it->second->lastUsed) {
-					smallest_it = it;
-				}
-			}
-			logSinkCache.erase(smallest_it);
-		}
-	}
-	
 	void setupGroupAndNodeDir(Client *client, const StaticString &groupName) {
 		string filename, groupDir, nodeDir;
 		
@@ -523,6 +536,30 @@ private:
 		}
 	}
 	
+	bool openLogFileWithCache(const string &filename, LogSinkPtr &theLogSink) {
+		string cacheKey = "file:" + filename;
+		LogSinkCache::iterator it = logSinkCache.find(cacheKey);
+		if (it == logSinkCache.end()) {
+			trimLogSinkCache(MAX_LOG_SINK_CACHE_SIZE - 1);
+			makeDirTree(extractDirName(filename), dirPermissions,
+				USER_NOT_GIVEN, gid);
+			theLogSink.reset(new LogFile(getLoop(), filename, filePermissions));
+			pair<LogSinkCache::iterator, bool> p =
+				logSinkCache.insert(make_pair(cacheKey, theLogSink));
+			theLogSink->cacheIterator = p.first;
+			theLogSink->opened = 1;
+			return false;
+		} else {
+			theLogSink = it->second;
+			theLogSink->opened++;
+			if (theLogSink->opened == 1) {
+				inactiveLogSinks.erase(theLogSink->inactiveLogSinksIterator);
+				inactiveLogSinksCount--;
+			}
+			return true;
+		}
+	}
+	
 	void openRemoteSink(const StaticString &unionStationKey, const string &nodeName,
 		const string &category, LogSinkPtr &theLogSink)
 	{
@@ -535,18 +572,60 @@ private:
 		
 		LogSinkCache::iterator it = logSinkCache.find(cacheKey);
 		if (it == logSinkCache.end()) {
-			theLogSink = ptr(new RemoteSink(this, unionStationKey,
+			trimLogSinkCache(MAX_LOG_SINK_CACHE_SIZE - 1);
+			theLogSink.reset(new RemoteSink(this, unionStationKey,
 				nodeName, category));
-			logSinkCache[cacheKey] = theLogSink;
+			pair<LogSinkCache::iterator, bool> p =
+				logSinkCache.insert(make_pair(cacheKey, theLogSink));
+			theLogSink->cacheIterator = p.first;
+			theLogSink->opened = 1;
 		} else {
 			theLogSink = it->second;
-			theLogSink->lastUsed = time(NULL);
+			theLogSink->opened++;
+			if (theLogSink->opened == 1) {
+				inactiveLogSinks.erase(theLogSink->inactiveLogSinksIterator);
+				inactiveLogSinksCount--;
+			}
+		}
+	}
+	
+	/**
+	 * 'Closes' the given log sink. It's not actually deleted from memory;
+	 * instead it's marked as inactive and cached for later use. May be
+	 * deleted later when resources are low.
+	 *
+	 * No need to call this manually. Automatically called by Transaction's
+	 * destructor.
+	 */
+	void closeLogSink(const LogSinkPtr &logSink) {
+		logSink->opened--;
+		assert(logSink->opened >= 0);
+		logSink->lastUsed = ev_now(getLoop());
+		if (logSink->opened == 0) {
+			inactiveLogSinks.push_back(logSink);
+			logSink->inactiveLogSinksIterator = inactiveLogSinks.end();
+			logSink->inactiveLogSinksIterator--;
+			inactiveLogSinksCount++;
+			trimLogSinkCache(MAX_LOG_SINK_CACHE_SIZE);
+		}
+	}
+	
+	/** Try to reduce the log sink cache size to the given size. */
+	void trimLogSinkCache(unsigned int size) {
+		while (!inactiveLogSinks.empty() && logSinkCache.size() > size) {
+			const LogSinkPtr logSink = inactiveLogSinks.front();
+			inactiveLogSinks.pop_front();
+			inactiveLogSinksCount--;
+			logSinkCache.erase(logSink->cacheIterator);
 		}
 	}
 	
 	bool writeLogEntry(Client *client, const TransactionPtr &transaction,
 		const StaticString &timestamp, const StaticString &data)
 	{
+		if (transaction->discarded) {
+			return true;
+		}
 		if (OXT_UNLIKELY( !validLogContent(data) )) {
 			if (client != NULL) {
 				sendErrorToClient(client, "Log entry data contains an invalid character.");
@@ -587,6 +666,8 @@ private:
 	
 	void writeDetachEntry(Client *client, const TransactionPtr &transaction) {
 		char timestamp[2 * sizeof(unsigned long long) + 1];
+		// Must use System::getUsec() here instead of ev_now() because the
+		// precision of the time is very important.
 		integerToHexatri<unsigned long long>(SystemTime::getUsec(), timestamp);
 		writeDetachEntry(client, transaction, timestamp);
 	}
@@ -682,36 +763,36 @@ private:
 		}
 	}
 	
-	/* Release all log sinks that haven't been used for more than 2 hours. */
-	void releaseStaleLogSinks(time_t now) {
-		LogSinkCache::iterator it;
-		LogSinkCache::iterator end = logSinkCache.end();
-		vector<string> toDelete;
+	/* Release all inactive log sinks that have been inactive for more than
+	 * GARBAGE_COLLECTION_TIMEOUT seconds.
+	 */
+	void releaseInactiveLogSinks(ev_tstamp now) {
+		bool done = false;
 		
-		for (it = logSinkCache.begin(); it != end; it++) {
-			if (now - it->second->lastUsed > 2 * 60 * 60) {
-				toDelete.push_back(it->first);
+		while (!done && !inactiveLogSinks.empty()) {
+			const LogSinkPtr logSink = inactiveLogSinks.front();
+			if (now - logSink->lastUsed >= GARBAGE_COLLECTION_TIMEOUT) {
+				inactiveLogSinks.pop_front();
+				inactiveLogSinksCount--;
+				logSinkCache.erase(logSink->cacheIterator);
+			} else {
+				done = true;
 			}
-		}
-		
-		vector<string>::const_iterator it2;
-		for (it2 = toDelete.begin(); it2 != toDelete.end(); it2++) {
-			logSinkCache.erase(*it2);
 		}
 	}
 	
 	void garbageCollect(ev::timer &timer, int revents) {
-		time_t now = time(NULL);
 		P_DEBUG("Garbage collection time");
-		releaseStaleLogSinks(now);
+		releaseInactiveLogSinks(ev_now(getLoop()));
 	}
 	
-	void flushAllLogs(ev::timer &timer, int revents = 0) {
+	void flushAllSinks(ev::timer &timer, int revents = 0) {
+		P_TRACE(2, "Flushing all sinks");
 		LogSinkCache::iterator it;
 		LogSinkCache::iterator end = logSinkCache.end();
-		time_t now = time(NULL);
+		ev_tstamp now = ev_now(getLoop());
 		
-		// Flush log files every 5 seconds, remote sinks every 30 seconds.
+		// Flush log file sinks every 5 seconds, remote sinks every 30 seconds.
 		for (it = logSinkCache.begin(); it != end; it++) {
 			LogSink *sink = it->second.get();
 			
@@ -804,7 +885,7 @@ protected:
 					return true;
 				}
 				
-				transaction.reset(new Transaction());
+				transaction.reset(new Transaction(this));
 				if (unionStationKey.empty()) {
 					string filename = determineFilename(groupName, client->nodeId,
 						category, txnId);
@@ -873,6 +954,7 @@ protected:
 				
 				writeDetachEntry(client, transaction, timestamp);
 				transaction->refcount--;
+				assert(transaction->refcount >= 0);
 				if (transaction->refcount == 0) {
 					transactions.erase(it);
 				}
@@ -918,7 +1000,7 @@ protected:
 			client->writeArrayMessage("ok", NULL);
 			
 		} else if (args[0] == "flush") {
-			flushAllLogs(logFlushingTimer);
+			flushAllSinks(sinkFlushingTimer);
 			client->writeArrayMessage("ok", NULL);
 			
 		} else if (args[0] == "info") {
@@ -985,7 +1067,7 @@ protected:
 		for (sit = client->openTransactions.begin(); sit != send; sit++) {
 			const string &txnId = *sit;
 			TransactionMap::iterator it = transactions.find(txnId);
-			if (OXT_UNLIKELY(it == transactions.end())) {
+			if (OXT_UNLIKELY( it == transactions.end() )) {
 				P_ERROR("Bug: client->openTransactions is not a subset of this->transactions!");
 				abort();
 			}
@@ -997,6 +1079,7 @@ protected:
 				transaction->discard();
 			}
 			transaction->refcount--;
+			assert(transaction->refcount >= 0);
 			if (transaction->refcount == 0) {
 				transactions.erase(it);
 			}
@@ -1025,7 +1108,7 @@ public:
 		               unionStationServiceCert),
 		  changeNotifier(loop),
 		  garbageCollectionTimer(loop),
-		  logFlushingTimer(loop),
+		  sinkFlushingTimer(loop),
 		  exitTimer(loop)
 	{
 		this->dir = dir;
@@ -1035,12 +1118,13 @@ public:
 		changeNotifier.getLastPos = boost::bind(&LoggingServer::getLastPos,
 			this, _1, _2, _3);
 		garbageCollectionTimer.set<LoggingServer, &LoggingServer::garbageCollect>(this);
-		garbageCollectionTimer.start(60 * 60, 60 * 60);
-		logFlushingTimer.set<LoggingServer, &LoggingServer::flushAllLogs>(this);
-		logFlushingTimer.start(5, 5);
+		garbageCollectionTimer.start(GARBAGE_COLLECTION_TIMEOUT, GARBAGE_COLLECTION_TIMEOUT);
+		sinkFlushingTimer.set<LoggingServer, &LoggingServer::flushAllSinks>(this);
+		sinkFlushingTimer.start(5, 5);
 		exitTimer.set<LoggingServer, &LoggingServer::stopLoop>(this);
 		exitTimer.set(5, 0);
 		exitRequested = false;
+		inactiveLogSinksCount = 0;
 	}
 	
 	~LoggingServer() {
@@ -1128,7 +1212,8 @@ public:
 		
 		LogSinkCache::const_iterator sit;
 		LogSinkCache::const_iterator send = logSinkCache.end();
-		stream << "Log sinks: " << logSinkCache.size() << "\n";
+		stream << "Log sinks: " << logSinkCache.size() <<
+			" (" << inactiveLogSinksCount << " inactive)\n";
 		for (sit = logSinkCache.begin(); sit != send; sit++) {
 			const LogSinkPtr &logSink = sit->second;
 			logSink->dump(stream);

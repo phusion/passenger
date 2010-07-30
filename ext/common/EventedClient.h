@@ -381,7 +381,8 @@ public:
 	 */
 	void unref() {
 		refcount--;
-		if (refcount <= 0) {
+		assert(refcount >= 0);
+		if (refcount == 0) {
 			delete this;
 		}
 	}
