@@ -339,6 +339,7 @@ end
 		'ext/common/LoggingAgent/LoggingServer.h',
 		'ext/common/LoggingAgent/RemoteSender.h',
 		'ext/common/LoggingAgent/ChangeNotifier.h',
+		'ext/common/LoggingAgent/DataStoreId.h',
 		'ext/common/ServerInstanceDir.h',
 		'ext/common/Logging.h',
 		'ext/common/EventedServer.h',
@@ -735,6 +736,7 @@ end
 			ext/common/LoggingAgent/LoggingServer.h
 			ext/common/LoggingAgent/RemoteSender.h
 			ext/common/LoggingAgent/ChangeNotifier.h
+			ext/common/LoggingAgent/DataStoreId.h
 			ext/common/Logging.h
 			ext/common/Utils.h
 			ext/common/EventedServer.h

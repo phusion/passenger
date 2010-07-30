@@ -41,6 +41,7 @@
 #include <ctime>
 #include <cassert>
 
+#include "DataStoreId.h"
 #include "RemoteSender.h"
 #include "ChangeNotifier.h"
 #include "../EventedMessageServer.h"
@@ -115,9 +116,10 @@ private:
 			return false;
 		}
 		
-		virtual void append(const StaticString data[], unsigned int count) = 0;
+		virtual void append(const DataStoreId &dataStoreId,
+			const StaticString &data) = 0;
 		virtual void flush() { }
-		virtual void dump(stringstream &stream) const { };
+		virtual void dump(stringstream &stream) const { }
 	};
 	
 	struct LogFile: public LogSink {
@@ -127,6 +129,12 @@ private:
 		FileDescriptor fd;
 		char buffer[BUFFER_CAPACITY];
 		unsigned int bufferSize;
+		
+		/**
+		 * Contains every (groupName, nodeName, category) tuple for
+		 * which their data is currently buffered in this sink.
+		 */
+		set<DataStoreId> dataStoreIds;
 		
 		LogFile(LoggingServer *server, const string &filename, mode_t filePermissions)
 			: LogSink(server)
@@ -152,28 +160,30 @@ private:
 			flush();
 		}
 		
-		virtual void append(const StaticString data[], unsigned int count) {
-			size_t totalSize = 0;
-			unsigned int i;
+		void notifyChanges() {
+			set<DataStoreId>::const_iterator it;
+			set<DataStoreId>::const_iterator end = dataStoreIds.end();
 			
-			for (i = 0; i < count; i++) {
-				totalSize += data[i].size();
+			for (it = dataStoreIds.begin(); it != dataStoreIds.end(); it++) {
+				server->changeNotifier.changed(*it);
 			}
-			if (bufferSize + totalSize > BUFFER_CAPACITY) {
-				StaticString data2[count + 1];
-				
+			dataStoreIds.clear();
+		}
+		
+		virtual void append(const DataStoreId &dataStoreId, const StaticString &data) {
+			dataStoreIds.insert(dataStoreId);
+			if (bufferSize + data.size() > BUFFER_CAPACITY) {
+				StaticString data2[2];
 				data2[0] = StaticString(buffer, bufferSize);
-				for (i = 0; i < count; i++) {
-					data2[i + 1] = data[i];
-				}
+				data2[1] = data;
+				
+				gatheredWrite(fd, data2, 2);
 				lastFlushed = ev_now(server->getLoop());
-				gatheredWrite(fd, data2, count + 1);
 				bufferSize = 0;
+				notifyChanges();
 			} else {
-				for (i = 0; i < count; i++) {
-					memcpy(buffer + bufferSize, data[i].data(), data[i].size());
-					bufferSize += data[i].size();
-				}
+				memcpy(buffer + bufferSize, data.data(), data.size());
+				bufferSize += data.size();
 			}
 		}
 		
@@ -182,6 +192,7 @@ private:
 				lastFlushed = ev_now(server->getLoop());
 				MessageChannel(fd).writeRaw(StaticString(buffer, bufferSize));
 				bufferSize = 0;
+				notifyChanges();
 			}
 		}
 		
@@ -236,29 +247,19 @@ private:
 			return true;
 		}
 		
-		virtual void append(const StaticString data[], unsigned int count) {
-			size_t totalSize = 0;
-			unsigned int i;
-			
-			for (i = 0; i < count; i++) {
-				totalSize += data[i].size();
-			}
-			if (bufferSize + totalSize > BUFFER_CAPACITY) {
-				StaticString data2[count + 1];
-				
+		virtual void append(const DataStoreId &dataStoreId, const StaticString &data) {
+			if (bufferSize + data.size() > BUFFER_CAPACITY) {
+				StaticString data2[2];
 				data2[0] = StaticString(buffer, bufferSize);
-				for (i = 0; i < count; i++) {
-					data2[i + 1] = data[i];
-				}
-				lastFlushed = ev_now(server->getLoop());
+				data2[1] = data;
+				
 				server->remoteSender.schedule(unionStationKey, nodeName,
-					category, data2, count + 1);
+					category, data2, 2);
+				lastFlushed = ev_now(server->getLoop());
 				bufferSize = 0;
 			} else {
-				for (i = 0; i < count; i++) {
-					memcpy(buffer + bufferSize, data[i].data(), data[i].size());
-					bufferSize += data[i].size();
-				}
+				memcpy(buffer + bufferSize, data.data(), data.size());
+				bufferSize += data.size();
 			}
 		}
 		
@@ -286,8 +287,7 @@ private:
 		LoggingServer *server;
 		LogSinkPtr logSink;
 		string txnId;
-		string groupName;
-		string category;
+		DataStoreId dataStoreId;
 		unsigned int writeCount;
 		int refcount;
 		bool crashProtect, discarded;
@@ -301,11 +301,22 @@ private:
 		~Transaction() {
 			if (logSink != NULL) {
 				if (!discarded) {
-					StaticString data = this->data;
-					logSink->append(&data, 1);
+					logSink->append(dataStoreId, data);
 				}
 				server->closeLogSink(logSink);
 			}
+		}
+		
+		StaticString getGroupName() const {
+			return dataStoreId.getGroupName();
+		}
+		
+		StaticString getNodeName() const {
+			return dataStoreId.getNodeName();
+		}
+		
+		StaticString getCategory() const {
+			return dataStoreId.getCategory();
 		}
 		
 		void discard() {
@@ -315,8 +326,9 @@ private:
 		
 		void dump(stringstream &stream) const {
 			stream << "   Transaction " << txnId << ":\n";
-			stream << "      Group: " << groupName << "\n";
-			stream << "      Category: " << category << "\n";
+			stream << "      Group   : " << getGroupName() << "\n";
+			stream << "      Node    : " << getNodeName() << "\n";
+			stream << "      Category: " << getCategory() << "\n";
 			stream << "      Refcount: " << refcount << "\n";
 		}
 	};
@@ -875,8 +887,9 @@ protected:
 				return true;
 			}
 			
-			TransactionPtr transaction = transactions[txnId];
-			if (transaction == NULL) {
+			TransactionMap::iterator it = transactions.find(txnId);
+			TransactionPtr transaction;
+			if (it == transactions.end()) {
 				if (OXT_UNLIKELY( !supportedCategory(category) )) {
 					sendErrorToClient(client, "Unsupported category");
 					client->disconnect();
@@ -895,21 +908,28 @@ protected:
 						category, transaction->logSink);
 				}
 				transaction->txnId        = txnId;
-				transaction->groupName    = groupName;
-				transaction->category     = category;
+				transaction->dataStoreId  = DataStoreId(groupName,
+					client->nodeName, category);
 				transaction->writeCount   = 0;
 				transaction->refcount     = 0;
 				transaction->crashProtect = crashProtect;
 				transaction->discarded    = false;
-				transactions[txnId]       = transaction;
+				transactions.insert(make_pair(txnId, transaction));
 			} else {
-				if (OXT_UNLIKELY( groupName != transaction->groupName )) {
+				transaction = it->second;
+				if (OXT_UNLIKELY( transaction->getGroupName() != groupName )) {
 					sendErrorToClient(client,
 						"Cannot open transaction: transaction already opened with a different group name");
 					client->disconnect();
 					return true;
 				}
-				if (OXT_UNLIKELY( category != transaction->category )) {
+				if (OXT_UNLIKELY( transaction->getNodeName() != client->nodeName )) {
+					sendErrorToClient(client,
+						"Cannot open transaction: transaction already opened with a different node name");
+					client->disconnect();
+					return true;
+				}
+				if (OXT_UNLIKELY( transaction->getCategory() != category )) {
 					sendErrorToClient(client,
 						"Cannot open transaction: transaction already opened with a different category name");
 					client->disconnect();
