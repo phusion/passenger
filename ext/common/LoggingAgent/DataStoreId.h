@@ -129,6 +129,18 @@ public:
 		return toStaticString() < other.toStaticString();
 	}
 	
+	bool operator==(const DataStoreId &other) const {
+		if (id == NULL) {
+			return other.id == NULL;
+		} else {
+			if (other.id == NULL) {
+				return false;
+			} else {
+				return toStaticString() == other.toStaticString();
+			}
+		}
+	}
+	
 	StaticString getGroupName() const {
 		if (id != NULL) {
 			return StaticString(id, groupNameSize);
