@@ -115,6 +115,9 @@ public:
 		} else {
 			if (totalSize() != other.totalSize()) {
 				delete id;
+				id = NULL;
+			}
+			if (id == NULL) {
 				id = new char[other.totalSize()];
 			}
 			memcpy(id, other.id, other.totalSize());

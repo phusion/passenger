@@ -796,16 +796,17 @@ private:
 		releaseInactiveLogSinks(ev_now(getLoop()));
 	}
 	
-	void flushAllSinks(ev::timer &timer, int revents = 0) {
-		P_TRACE(2, "Flushing all sinks");
+	void sinkFlushTimeout(ev::timer &timer, int revents) {
+		P_TRACE(2, "Flushing all sinks (periodic action)");
 		LogSinkCache::iterator it;
 		LogSinkCache::iterator end = logSinkCache.end();
 		ev_tstamp now = ev_now(getLoop());
 		
-		// Flush log file sinks every 5 seconds, remote sinks every 30 seconds.
 		for (it = logSinkCache.begin(); it != end; it++) {
 			LogSink *sink = it->second.get();
 			
+			// Flush log file sinks every 5 seconds,
+			// remote sinks every 30 seconds.
 			if (sink->isRemote()) {
 				if (now - sink->lastFlushed >= 30) {
 					sink->flush();
@@ -813,6 +814,17 @@ private:
 			} else {
 				sink->flush();
 			}
+		}
+	}
+	
+	void flushAllSinks() {
+		P_TRACE(2, "Flushing all sinks");
+		LogSinkCache::iterator it;
+		LogSinkCache::iterator end = logSinkCache.end();
+		
+		for (it = logSinkCache.begin(); it != end; it++) {
+			LogSink *sink = it->second.get();
+			sink->flush();
 		}
 	}
 	
@@ -1018,7 +1030,7 @@ protected:
 			client->writeArrayMessage("ok", NULL);
 			
 		} else if (args[0] == "flush") {
-			flushAllSinks(sinkFlushingTimer);
+			flushAllSinks();
 			client->writeArrayMessage("ok", NULL);
 			
 		} else if (args[0] == "info") {
@@ -1137,7 +1149,7 @@ public:
 			this, _1, _2, _3);
 		garbageCollectionTimer.set<LoggingServer, &LoggingServer::garbageCollect>(this);
 		garbageCollectionTimer.start(GARBAGE_COLLECTION_TIMEOUT, GARBAGE_COLLECTION_TIMEOUT);
-		sinkFlushingTimer.set<LoggingServer, &LoggingServer::flushAllSinks>(this);
+		sinkFlushingTimer.set<LoggingServer, &LoggingServer::sinkFlushTimeout>(this);
 		sinkFlushingTimer.start(5, 5);
 		exitTimer.set<LoggingServer, &LoggingServer::stopLoop>(this);
 		exitTimer.set(5, 0);

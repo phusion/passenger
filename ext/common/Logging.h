@@ -665,6 +665,10 @@ public:
 		return password;
 	}
 	
+	FileDescriptor getConnection() const {
+		return sharedData->client.getConnection();
+	}
+	
 	/**
 	 * @post !result.empty()
 	 */

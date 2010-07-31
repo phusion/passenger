@@ -122,7 +122,9 @@ public:
 	 * @throws boost::thread_interrupted
 	 * @post connected()
 	 */
-	MessageClient *connect(const string &serverAddress, const string &username, const StaticString &userSuppliedPassword) {
+	MessageClient *connect(const string &serverAddress, const string &username,
+		const StaticString &userSuppliedPassword)
+	{
 		TRACE_POINT();
 		try {
 			fd = connectToServer(serverAddress.c_str());
@@ -170,6 +172,10 @@ public:
 	
 	void setAutoDisconnect(bool value) {
 		shouldAutoDisconnect = value;
+	}
+	
+	FileDescriptor getConnection() const {
+		return fd;
 	}
 	
 	/**

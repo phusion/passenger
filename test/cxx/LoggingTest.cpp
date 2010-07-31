@@ -442,9 +442,80 @@ namespace tut {
 	}
 	
 	
-	/*********** LoggingServer tests ***********/
+	/*********** LoggingServer implementation tests ***********/
 	
 	TEST_METHOD(30) {
+		// Test DataStoreId
+		{
+			// Empty construction.
+			DataStoreId id;
+			ensure_equals(id.getGroupName(), "");
+			ensure_equals(id.getNodeName(), "");
+			ensure_equals(id.getCategory(), "");
+		}
+		{
+			// Normal construction.
+			DataStoreId id("ab", "cd", "ef");
+			ensure_equals(id.getGroupName(), "ab");
+			ensure_equals(id.getNodeName(), "cd");
+			ensure_equals(id.getCategory(), "ef");
+		}
+		{
+			// Copy constructor.
+			DataStoreId id("ab", "cd", "ef");
+			DataStoreId id2(id);
+			ensure_equals(id2.getGroupName(), "ab");
+			ensure_equals(id2.getNodeName(), "cd");
+			ensure_equals(id2.getCategory(), "ef");
+		}
+		{
+			// Assignment operator.
+			DataStoreId id("ab", "cd", "ef");
+			DataStoreId id2;
+			id2 = id;
+			ensure_equals(id2.getGroupName(), "ab");
+			ensure_equals(id2.getNodeName(), "cd");
+			ensure_equals(id2.getCategory(), "ef");
+			
+			DataStoreId id3("gh", "ij", "kl");
+			id3 = id;
+			ensure_equals(id3.getGroupName(), "ab");
+			ensure_equals(id3.getNodeName(), "cd");
+			ensure_equals(id3.getCategory(), "ef");
+		}
+		{
+			// < operator
+			DataStoreId id, id2;
+			ensure(!(id < id2));
+			
+			id = DataStoreId("ab", "cd", "ef");
+			id2 = DataStoreId("ab", "cd", "ef");
+			ensure(!(id < id2));
+			
+			id = DataStoreId("ab", "cd", "ef");
+			id2 = DataStoreId("bb", "cd", "ef");
+			ensure(id < id2);
+			
+			id = DataStoreId("ab", "cd", "ef");
+			id2 = DataStoreId();
+			ensure(id2 < id);
+			
+			id = DataStoreId();
+			id2 = DataStoreId("ab", "cd", "ef");
+			ensure(id < id2);
+		}
+		{
+			// == operator
+			ensure(DataStoreId() == DataStoreId());
+			ensure(DataStoreId("ab", "cd", "ef") == DataStoreId("ab", "cd", "ef"));
+			ensure(!(DataStoreId("ab", "cd", "ef") == DataStoreId()));
+			ensure(!(DataStoreId("ab", "cd", "ef") == DataStoreId("ab", "cd", "e")));
+			ensure(!(DataStoreId("ab", "cd", "ef") == DataStoreId("ab", "c", "ef")));
+			ensure(!(DataStoreId("ab", "cd", "ef") == DataStoreId("a", "cd", "ef")));
+		}
+	}
+	
+	TEST_METHOD(31) {
 		// getLastPos() works
 		SystemTime::forceAll(YESTERDAY);
 		
@@ -469,7 +540,7 @@ namespace tut {
 		ensure_equals(lastPos, "2010/01/13/12/" + toString(buf.st_size));
 	}
 	
-	TEST_METHOD(31) {
+	TEST_METHOD(32) {
 		// getLastPos() returns the empty string if log.txt or if one of
 		// the subdirectories are missing.
 		SystemTime::forceAll(YESTERDAY);
@@ -489,5 +560,86 @@ namespace tut {
 		
 		lastPos = server->getLastPos("baz", "localhost", "requests");
 		ensure_equals(lastPos, "");
+	}
+	
+	TEST_METHOD(34) {
+		// The server temporarily buffers data in memory.
+		SystemTime::forceAll(YESTERDAY);
+		
+		AnalyticsLogPtr log = logger->newTransaction("foobar");
+		log->message("hello world");
+		log.reset();
+		
+		// Give server some time to process these commands.
+		usleep(20000);
+		
+		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt";
+		struct stat buf;
+		ensure_equals(stat(filename.c_str(), &buf), 0);
+		ensure_equals(buf.st_size, (off_t) 0);
+	}
+	
+	TEST_METHOD(35) {
+		// The destructor flushes all data.
+		SystemTime::forceAll(YESTERDAY);
+		
+		AnalyticsLogPtr log = logger->newTransaction("foobar");
+		log->message("hello world");
+		log.reset();
+		stopLoggingServer();
+		
+		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt";
+		struct stat buf;
+		ensure_equals(stat(filename.c_str(), &buf), 0);
+		ensure(buf.st_size > 0);
+	}
+	
+	TEST_METHOD(36) {
+		// The 'flush' command flushes all data.
+		SystemTime::forceAll(YESTERDAY);
+		
+		AnalyticsLogPtr log = logger->newTransaction("foobar");
+		log->message("hello world");
+		log.reset();
+		
+		vector<string> args;
+		MessageChannel channel(logger->getConnection());
+		channel.write("flush", NULL);
+		ensure(channel.read(args));
+		ensure_equals(args.size(), 1u);
+		ensure_equals(args[0], "ok");
+		
+		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt";
+		struct stat buf;
+		ensure_equals(stat(filename.c_str(), &buf), 0);
+		ensure(buf.st_size > 0);
+	}
+	
+	TEST_METHOD(37) {
+		// A transaction's data is not written out by the server
+		// until the transaction is fully closed.
+		SystemTime::forceAll(YESTERDAY);
+		vector<string> args;
+		
+		AnalyticsLogPtr log = logger->newTransaction("foobar");
+		log->message("hello world");
+		
+		AnalyticsLogPtr log2 = logger2->continueTransaction(log->getTxnId(),
+			log->getGroupName(), log->getCategory());
+		log2->message("message 2");
+		log2.reset();
+		
+		MessageChannel channel(logger->getConnection());
+		channel.write("flush", NULL);
+		ensure(channel.read(args));
+		
+		channel = MessageChannel(logger2->getConnection());
+		channel.write("flush", NULL);
+		ensure(channel.read(args));
+		
+		string filename = loggingDir + "/1/" FOOBAR_LOCALHOST_PREFIX "/requests/2010/01/12/12/log.txt";
+		struct stat buf;
+		ensure_equals(stat(filename.c_str(), &buf), 0);
+		ensure_equals(buf.st_size, (off_t) 0);
 	}
 }

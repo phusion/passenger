@@ -198,6 +198,26 @@ operator<<(ostream &os, const StaticString &str) {
 	return os;
 }
 
+inline bool
+operator==(const string &other, const StaticString &str) {
+	return str == other;
+}
+
+inline bool
+operator==(const char *other, const StaticString &str) {
+	return str == other;
+}
+
+inline bool
+operator!=(const string &other, const StaticString &str) {
+	return str != other;
+}
+
+inline bool
+operator!=(const char *other, const StaticString &str) {
+	return str != other;
+}
+
 } // namespace Passenger
 
 #endif /* _PASSENGER_STATIC_STRING_H_ */
