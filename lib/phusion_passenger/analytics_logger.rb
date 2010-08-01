@@ -299,6 +299,16 @@ private
 	def connect
 		@shared_data.client = MessageClient.new(@username, @password, @server_address)
 		@shared_data.client.write("init", @node_name)
+		args = @shared_data.client.read
+		if !args
+			raise Errno::ECONNREFUSED, "Cannot connect to logging server"
+		elsif args.size != 1
+			raise IOError, "Logging server returned an invalid reply for the 'init' command"
+		elsif args[0] == "server shutting down"
+			raise Errno::ECONNREFUSED, "Cannot connect to logging server"
+		elsif args[0] != "ok"
+			raise IOError, "Logging server returned an invalid reply for the 'init' command"
+		end
 	end
 	
 	def disconnect(check_error_response = false)

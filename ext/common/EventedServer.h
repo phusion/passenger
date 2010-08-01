@@ -44,6 +44,7 @@
 #include "StaticString.h"
 #include "Logging.h"
 #include "Utils/ScopeGuard.h"
+#include "Utils/StrIntUtils.h"
 
 namespace Passenger {
 
@@ -94,7 +95,7 @@ protected:
 	}
 	
 	string getClientName(const EventedClient *client) const {
-		return toString(client->fd);
+		return toString(client);
 	}
 	
 	void logError(const EventedClient *client, const string &message) {
@@ -182,6 +183,20 @@ private:
 		server->logSystemError(client, message, code);
 	}
 	
+	void exceptionThrownWhileInitializingClient(EventedClient *client, ClientSet::iterator it) {
+		if (!client->ioAllowed()) {
+			// onNewClient() disconnected or detached the
+			// client, so client refcount == 1
+			client->unref();
+		} else {
+			// client refcount == 2
+			client->unref();
+			client->unref();
+			clients.erase(it);
+		}
+		// Now client refcount == 0
+	}
+	
 	void onAcceptable(ev::io &w, int revents) {
 		this_thread::disable_syscall_interruption dsi;
 		int i = 0;
@@ -214,22 +229,37 @@ private:
 					&optval, sizeof(optval));
 				
 				EventedClient *client = createClient(clientfdGuard);
-				ScopeGuard clientGuard(boost::bind(&EventedClient::unref,
-					client));
 				client->onReadable    = _onReadable;
 				client->onDisconnect  = _onDisconnect;
 				client->onDetach      = _onDetach;
 				client->onSystemError = _onSystemError;
 				client->userData      = this;
 				client->notifyReads(true);
-				clients.insert(client);
 				
-				ScopeGuard clientSetGuard(boost::bind(&EventedServer::removeClient,
-					this, client));
-				onNewClient(client);
+				pair<ClientSet::iterator, bool> p = clients.insert(client);
 				
-				clientSetGuard.clear();
-				clientGuard.clear();
+				client->ref();
+				// client refcount == 2
+				{
+					ScopeGuard g(boost::bind(
+						&EventedServer::exceptionThrownWhileInitializingClient,
+						this,
+						client,
+						p.first));
+					onNewClient(client);
+					g.clear();
+					// If exception occurred: client refcount == 0
+				}
+				
+				/* No exception occured.
+				 * If onNewClient() disconnected or detached the client:
+				 *     client refcount == 1
+				 *     We want the refcount to become 0.
+				 * If not:
+				 *     client refcount == 2
+				 *     We want the refcount to become 1.
+				 */
+				client->unref();
 			}
 			i++;
 		}

@@ -76,9 +76,9 @@ void setDebugFile(const char *logFile = NULL);
  * @param expr The expression to write.
  * @param stream A pointer to an object that accepts the '<<' operator.
  */
-#define P_LOG_TO(expr, stream) \
+#define P_LOG_TO(level, expr, stream) \
 	do { \
-		if (stream != 0) { \
+		if (stream != 0 && Passenger::_logLevel >= level) { \
 			time_t the_time;			\
 			struct tm the_tm;			\
 			char datetime_buf[60];			\
@@ -104,24 +104,19 @@ void setDebugFile(const char *logFile = NULL);
 /**
  * Write the given expression to the log stream.
  */
-#define P_LOG(expr) P_LOG_TO(expr, Passenger::_logStream)
+#define P_LOG(level, expr) P_LOG_TO(level, expr, Passenger::_logStream)
 
 /**
  * Write the given expression, which represents a warning,
  * to the log stream.
  */
-#define P_WARN(expr) \
-	do { \
-		if (Passenger::_logLevel >= 0) { \
-			P_LOG(expr); \
-		} \
-	} while (false)
+#define P_WARN(expr) P_LOG(0, expr)
 
 /**
  * Write the given expression, which represents an error,
  * to the log stream.
  */
-#define P_ERROR(expr) P_LOG(expr)
+#define P_ERROR(expr) P_LOG(-1, expr)
 
 /**
  * Write the given expression, which represents a debugging message,
@@ -130,12 +125,7 @@ void setDebugFile(const char *logFile = NULL);
 #define P_DEBUG(expr) P_TRACE(1, expr)
 
 #ifdef PASSENGER_DEBUG
-	#define P_TRACE(level, expr) \
-		do { \
-			if (Passenger::_logLevel >= level) { \
-				P_LOG_TO(expr, Passenger::_logStream); \
-			} \
-		} while (false)
+	#define P_TRACE(level, expr) P_LOG_TO(level, expr, Passenger::_logStream)
 	
 	#define P_ASSERT(expr, result_if_failed, message) \
 		do { \
@@ -454,8 +444,20 @@ private:
 	
 	void connect() {
 		TRACE_POINT();
+		vector<string> args;
+		
 		sharedData->client.connect(serverAddress, username, password);
 		sharedData->client.write("init", nodeName.c_str(), NULL);
+		if (!sharedData->client.read(args)) {
+			throw SystemException("Cannot connect to logging server", ECONNREFUSED);
+		} else if (args.size() != 1) {
+			throw IOException("Logging server returned an invalid reply for the 'init' command");
+		} else if (args[0] == "server shutting down") {
+			throw SystemException("Cannot connect to server", ECONNREFUSED);
+		} else if (args[0] != "ok") {
+			throw IOException("Logging server returned an invalid reply for the 'init' command");
+		}
+		
 		// Upon a write() error we want to attempt to read() the error
 		// message before closing the socket.
 		sharedData->client.setAutoDisconnect(false);

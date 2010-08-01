@@ -116,6 +116,11 @@ public:
 	}
 };
 
+/**
+ * Note when overriding onNewClient: call the parent method first! It does
+ * some initialization but might disconnect the client if that initialization
+ * fails. The override should check for this.
+ */
 class EventedMessageServer: public EventedServer {
 protected:
 	AccountsDatabasePtr accountsDatabase;
