@@ -162,17 +162,21 @@ private:
 		}
 		
 		void notifyChanges() {
-			set<DataStoreId>::const_iterator it;
-			set<DataStoreId>::const_iterator end = dataStoreIds.end();
+			if (server->changeNotifier != NULL) {
+				set<DataStoreId>::const_iterator it;
+				set<DataStoreId>::const_iterator end = dataStoreIds.end();
 			
-			for (it = dataStoreIds.begin(); it != dataStoreIds.end(); it++) {
-				server->changeNotifier.changed(*it);
+				for (it = dataStoreIds.begin(); it != dataStoreIds.end(); it++) {
+					server->changeNotifier->changed(*it);
+				}
 			}
 			dataStoreIds.clear();
 		}
 		
 		virtual void append(const DataStoreId &dataStoreId, const StaticString &data) {
-			dataStoreIds.insert(dataStoreId);
+			if (server->changeNotifier != NULL) {
+				dataStoreIds.insert(dataStoreId);
+			}
 			if (bufferSize + data.size() > BUFFER_CAPACITY) {
 				StaticString data2[2];
 				data2[0] = StaticString(buffer, bufferSize);
@@ -371,7 +375,7 @@ private:
 	string dirPermissions;
 	mode_t filePermissions;
 	RemoteSender remoteSender;
-	ChangeNotifier changeNotifier;
+	ChangeNotifierPtr changeNotifier;
 	ev::timer garbageCollectionTimer;
 	ev::timer sinkFlushingTimer;
 	ev::timer exitTimer;
@@ -778,11 +782,14 @@ private:
 		Client *client = (Client *) _client;
 		LoggingServer *self = (LoggingServer *) client->userData;
 		
+		client->onPendingDataFlushed = NULL;
 		if (OXT_UNLIKELY( client->type != WATCHER )) {
 			P_WARN("BUG: pendingDataFlushed() called even though client type is not WATCHER.");
-			client->disconnect(true);
+			client->disconnect();
+		} else if (self->changeNotifier != NULL) {
+			self->changeNotifier->addClient(client->detach());
 		} else {
-			self->changeNotifier.addClient(client->detach());
+			client->disconnect();
 		}
 	}
 	
@@ -1177,7 +1184,6 @@ public:
 		  remoteSender(unionStationServiceAddress,
 		               unionStationServicePort,
 		               unionStationServiceCert),
-		  changeNotifier(loop),
 		  garbageCollectionTimer(loop),
 		  sinkFlushingTimer(loop),
 		  exitTimer(loop)
@@ -1186,8 +1192,6 @@ public:
 		this->gid = gid;
 		dirPermissions = permissions;
 		filePermissions = parseModeString(permissions) & ~(S_IXUSR | S_IXGRP | S_IXOTH);
-		changeNotifier.getLastPos = boost::bind(&LoggingServer::getLastPos,
-			this, _1, _2, _3);
 		garbageCollectionTimer.set<LoggingServer, &LoggingServer::garbageCollect>(this);
 		garbageCollectionTimer.start(GARBAGE_COLLECTION_TIMEOUT, GARBAGE_COLLECTION_TIMEOUT);
 		sinkFlushingTimer.set<LoggingServer, &LoggingServer::sinkFlushTimeout>(this);
@@ -1216,6 +1220,12 @@ public:
 		transactions.clear();
 		logSinkCache.clear();
 		inactiveLogSinks.clear();
+	}
+	
+	void setChangeNotifier(const ChangeNotifierPtr &_changeNotifier) {
+		changeNotifier = _changeNotifier;
+		changeNotifier->getLastPos = boost::bind(&LoggingServer::getLastPos,
+			this, _1, _2, _3);
 	}
 	
 	string getLastPos(const StaticString &groupName, const StaticString &nodeName,

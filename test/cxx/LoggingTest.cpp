@@ -6,6 +6,7 @@
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 #include <oxt/thread.hpp>
+#include <set>
 
 using namespace Passenger;
 using namespace std;
@@ -60,10 +61,13 @@ namespace tut {
 			setLogLevel(0);
 		}
 		
-		void startLoggingServer() {
+		void startLoggingServer(const function<void ()> &initFunc = function<void ()>()) {
 			serverFd = createUnixServer(socketFilename.c_str());
 			server = ptr(new LoggingServer(eventLoop,
 				serverFd, accountsDatabase, loggingDir));
+			if (initFunc) {
+				initFunc();
+			}
 			serverThread = ptr(new oxt::thread(
 				boost::bind(&LoggingTest::runLoop, this)
 			));
@@ -98,21 +102,50 @@ namespace tut {
 			return str;
 		}
 		
-		MessageClient createConnection() {
+		MessageClient createConnection(bool sendInitCommand = true) {
 			MessageClient client;
 			vector<string> args;
 			client.connect(socketAddress, "test", "1234");
-			client.write("init", "localhost", NULL);
-			client.read(args);
+			if (sendInitCommand) {
+				client.write("init", "localhost", NULL);
+				client.read(args);
+			}
 			return client;
 		}
+		
+		void setChangeNotifier(const ChangeNotifierPtr &notifier) {
+			server->setChangeNotifier(notifier);
+		}
+		
+		
+		class MyChangeNotifier: public ChangeNotifier {
+		public:
+			boost::mutex lock;
+			AtomicInt added;
+			set<DataStoreId> changes;
+			
+			MyChangeNotifier(struct ev_loop *loop)
+				: ChangeNotifier(loop)
+				{ }
+			
+			virtual void addClient(const FileDescriptor &fd) {
+				added = added + 1;
+			}
+		
+			virtual void changed(const DataStoreId &dataStoreId) {
+				lock_guard<boost::mutex> l(lock);
+				changes.insert(dataStoreId);
+			}
+		};
+		
+		typedef shared_ptr<MyChangeNotifier> MyChangeNotifierPtr;
 	};
 	
 	DEFINE_TEST_GROUP(LoggingTest);
 	
 	
 	/*********** Logging interface tests ***********/
-	#if 0
+	
 	TEST_METHOD(1) {
 		// Test logging of new transaction.
 		SystemTime::forceAll(YESTERDAY);
@@ -675,7 +708,7 @@ namespace tut {
 		
 		client.disconnect();
 		setLogLevel(-2);
-		usleep
+		usleep(25000); // Give server some time to process the connection closes.
 		
 		// No clients now, but we can still connect because the timeout
 		// hasn't passed yet.
@@ -703,7 +736,7 @@ namespace tut {
 		
 		joinLoggingServer();
 	}
-	#endif
+	
 	TEST_METHOD(26) {
 		// The 'exit semi-gracefully' command causes the logging server to
 		// refuse new clients while exiting some time after the last client has
@@ -770,4 +803,91 @@ namespace tut {
 		AnalyticsLogPtr log = logger->newTransaction("foobar");
 		ensure(log->isNull());
 	}
+	
+	TEST_METHOD(30) {
+		// The "watchChanges" command causes the server to detach the
+		// client and to pass it to the change notifier.
+		MyChangeNotifierPtr notifier(new MyChangeNotifier(eventLoop));
+		stopLoggingServer();
+		startLoggingServer(boost::bind(&LoggingTest::setChangeNotifier, this, notifier));
+		
+		vector<string> args;
+		MessageClient client = createConnection(false);
+		client.write("watchChanges", NULL, NULL);
+		ensure(client.read(args));
+		EVENTUALLY(1,
+			result = notifier->added == 1;
+		);
+		// MyChangeNotifier doesn't store the client file descriptor
+		// so should be closed.
+		ensure(!client.read(args));
+	}
+	
+	TEST_METHOD(31) {
+		// The server notifies the given ChangeNotifier with the
+		// appropriate changes whenever a log file sink is flushed.
+		MyChangeNotifierPtr notifier(new MyChangeNotifier(eventLoop));
+		stopLoggingServer();
+		startLoggingServer(boost::bind(&LoggingTest::setChangeNotifier, this, notifier));
+		
+		AnalyticsLogPtr log = logger->newTransaction("foo", "requests");
+		log->message("hello world");
+		log.reset();
+		
+		log = logger->newTransaction("bar", "requests");
+		log->message("hello world");
+		log.reset();
+		
+		SHOULD_NEVER_HAPPEN(100,
+			lock_guard<boost::mutex> l(notifier->lock);
+			result = !notifier->changes.empty();
+		);
+		
+		MessageChannel channel(logger->getConnection());
+		vector<string> args;
+		channel.write("flush", NULL);
+		ensure("(1)", channel.read(args));
+		
+		EVENTUALLY(1,
+			lock_guard<boost::mutex> l(notifier->lock);
+			result = notifier->changes.size() == 2;
+		);
+		unique_lock<boost::mutex> l(notifier->lock);
+		ensure("(2)",
+			notifier->changes.find(DataStoreId("foo", "localhost", "requests")) !=
+			notifier->changes.end());
+		ensure("(3)",
+			notifier->changes.find(DataStoreId("bar", "localhost", "requests")) !=
+			notifier->changes.end());
+		notifier->changes.clear();
+		l.unlock();
+		
+		
+		log = logger->newTransaction("baz", "exceptions");
+		log->message("hello world");
+		log.reset();
+		
+		channel.write("flush", NULL);
+		ensure("(4)", channel.read(args));
+		
+		log = logger->newTransaction("bazz", "exceptions");
+		log->message("hello world");
+		log.reset();
+		
+		EVENTUALLY(1,
+			lock_guard<boost::mutex> l(notifier->lock);
+			result = notifier->changes.size() == 1;
+		);
+		l.lock();
+		ensure("(5)",
+			notifier->changes.find(DataStoreId("baz", "localhost", "exceptions")) !=
+			notifier->changes.end());
+		l.unlock();
+		SHOULD_NEVER_HAPPEN(100,
+			lock_guard<boost::mutex> l(notifier->lock);
+			result = notifier->changes.size() != 1;
+		);
+	}
+	
+	/************************************/
 }

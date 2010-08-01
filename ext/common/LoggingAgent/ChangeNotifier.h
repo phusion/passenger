@@ -26,6 +26,7 @@
 #define _PASSENGER_CHANGE_NOTIFIER_H_
 
 #include <boost/function.hpp>
+#include <boost/shared_ptr.hpp>
 #include <string>
 #include <ev++.h>
 #include "DataStoreId.h"
@@ -47,11 +48,14 @@ public:
 	GetLastPosFunction getLastPos;
 	
 	ChangeNotifier(struct ev_loop *_loop) { }
+	virtual ~ChangeNotifier() { }
 	
-	void addClient(const FileDescriptor &fd) { }
+	virtual void addClient(const FileDescriptor &fd) { }
 	
-	void changed(const DataStoreId &dataStoreId) { }
+	virtual void changed(const DataStoreId &dataStoreId) { }
 };
+
+typedef shared_ptr<ChangeNotifier> ChangeNotifierPtr;
 
 
 } // namespace Passenger
