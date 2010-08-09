@@ -89,8 +89,12 @@ private:
 				curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
 			} else {
 				curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1);
-				curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
-				curl_easy_setopt(curl, CURLOPT_SSLCERT, certificate.c_str());
+				/* No host name verification because Curl thinks the
+				 * host name is the IP address. Doesn't matter as
+				 * long as we have the certificate.
+				 */
+				curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+				curl_easy_setopt(curl, CURLOPT_CAINFO, certificate.c_str());
 			}
 			responseBody.clear();
 		}
