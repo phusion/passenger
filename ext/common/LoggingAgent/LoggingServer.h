@@ -531,7 +531,9 @@ private:
 		return filename;
 	}
 	
-	void setupGroupAndNodeDir(Client *client, const StaticString &groupName) {
+	void setupGroupAndNodeDir(const StaticString &groupName, const StaticString &nodeName,
+		const char *nodeId)
+	{
 		string filename, groupDir, nodeDir;
 		
 		filename.append(dir);
@@ -539,7 +541,7 @@ private:
 		groupDir = filename;
 		
 		filename.append("/");
-		filename.append(client->nodeId, MD5_HEX_SIZE);
+		filename.append(nodeId, MD5_HEX_SIZE);
 		nodeDir = filename;
 		
 		createFile(groupDir + "/group_name.txt", groupName,
@@ -552,7 +554,7 @@ private:
 				false);
 		}
 		
-		createFile(nodeDir + "/node_name.txt", client->nodeName,
+		createFile(nodeDir + "/node_name.txt", nodeName,
 			filePermissions, USER_NOT_GIVEN, GROUP_NOT_GIVEN,
 			false);
 		if (getFileType(nodeDir + "/uuid.txt") == FT_NONEXISTANT) {
@@ -906,10 +908,6 @@ protected:
 			StaticString unionStationKey = args[6];
 			bool         crashProtect    = args[7] == "true";
 			
-			if (nodeName.empty()) {
-				nodeName = client->nodeName;
-			}
-			
 			if (OXT_UNLIKELY( !validTxnId(txnId) )) {
 				sendErrorToClient(client, "Invalid transaction ID format");
 				client->disconnect();
@@ -940,14 +938,16 @@ protected:
 				
 				transaction.reset(new Transaction(this));
 				if (unionStationKey.empty()) {
-					string filename;
+					char tempNodeId[MD5_HEX_SIZE];
+					StaticString theNodeName;
+					const char *theNodeId;
+					
 					if (nodeName.empty()) {
-						filename = determineFilename(groupName, client->nodeId,
-							category, txnId);
+						theNodeName = client->nodeName;
+						theNodeId = client->nodeId;
 					} else {
 						md5_state_t state;
 						md5_byte_t  digest[MD5_SIZE];
-						char        nodeId[MD5_HEX_SIZE];
 						
 						md5_init(&state);
 						md5_append(&state,
@@ -955,13 +955,16 @@ protected:
 							nodeName.size());
 						md5_finish(&state, digest);
 						toHex(StaticString((const char *) digest, MD5_SIZE),
-							nodeId);
+							tempNodeId);
 						
-						filename = determineFilename(groupName, nodeId,
-							category, txnId);
+						theNodeName = nodeName;
+						theNodeId = tempNodeId;
 					}
+					
+					string filename = determineFilename(groupName, theNodeId,
+						category, txnId);
 					if (!openLogFileWithCache(filename, transaction->logSink)) {
-						setupGroupAndNodeDir(client, groupName);
+						setupGroupAndNodeDir(groupName, theNodeName, theNodeId);
 					}
 				} else {
 					openRemoteSink(unionStationKey, client->nodeName,

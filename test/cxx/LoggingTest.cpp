@@ -19,7 +19,9 @@ namespace tut {
 		static const unsigned long long TOMORROW  = 1263471822000000ull;  // January 14, 2009, 12:23:42 UTC
 		#define FOOBAR_MD5 "3858f62230ac3c915f300c664312c63f"
 		#define LOCALHOST_MD5 "421aa90e079fa326b6494f812ad13e79"
+		#define REMOTEHOST_MD5 "2c18e486683a3db1e645ad8523223b72"
 		#define FOOBAR_LOCALHOST_PREFIX FOOBAR_MD5 "/" LOCALHOST_MD5
+		#define FOOBAR_REMOTEHOST_PREFIX FOOBAR_MD5 "/" REMOTEHOST_MD5
 		#define TODAY_TXN_ID "cjb8n-abcd"
 		#define TODAY_TIMESTAMP_STR "cftz90m3k0"
 		
@@ -887,6 +889,25 @@ namespace tut {
 			lock_guard<boost::mutex> l(notifier->lock);
 			result = notifier->changes.size() != 1;
 		);
+	}
+	
+	TEST_METHOD(32) {
+		// One can supply a custom node name per openTransaction command.
+		MessageClient client1 = createConnection();
+		vector<string> args;
+		string filename = loggingDir + "/1/" FOOBAR_REMOTEHOST_PREFIX "/requests/2010/01/13/12/log.txt";
+		
+		SystemTime::forceAll(TODAY);
+		
+		client1.write("openTransaction",
+			TODAY_TXN_ID, "foobar", "remote", "requests", TODAY_TIMESTAMP_STR,
+			"", "true", NULL);
+		client1.write("closeTransaction", TODAY_TXN_ID, TODAY_TIMESTAMP_STR, NULL);
+		client1.write("flush", NULL);
+		client1.read(args);
+		client1.disconnect();
+		
+		ensure(fileExists(filename));
 	}
 	
 	/************************************/
