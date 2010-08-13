@@ -927,6 +927,15 @@ protected:
 				return true;
 			}
 			
+			const char *nodeId;
+			
+			if (nodeName.empty()) {
+				nodeName = client->nodeName;
+				nodeId = client->nodeId;
+			} else {
+				nodeId = NULL;
+			}
+			
 			TransactionMap::iterator it = transactions.find(txnId);
 			TransactionPtr transaction;
 			if (it == transactions.end()) {
@@ -939,16 +948,11 @@ protected:
 				transaction.reset(new Transaction(this));
 				if (unionStationKey.empty()) {
 					char tempNodeId[MD5_HEX_SIZE];
-					StaticString theNodeName;
-					const char *theNodeId;
 					
-					if (nodeName.empty()) {
-						theNodeName = client->nodeName;
-						theNodeId = client->nodeId;
-					} else {
+					if (nodeId == NULL) {
 						md5_state_t state;
 						md5_byte_t  digest[MD5_SIZE];
-						
+
 						md5_init(&state);
 						md5_append(&state,
 							(const md5_byte_t *) nodeName.data(),
@@ -956,15 +960,13 @@ protected:
 						md5_finish(&state, digest);
 						toHex(StaticString((const char *) digest, MD5_SIZE),
 							tempNodeId);
-						
-						theNodeName = nodeName;
-						theNodeId = tempNodeId;
+						nodeId = tempNodeId;
 					}
 					
-					string filename = determineFilename(groupName, theNodeId,
+					string filename = determineFilename(groupName, nodeId,
 						category, txnId);
 					if (!openLogFileWithCache(filename, transaction->logSink)) {
-						setupGroupAndNodeDir(groupName, theNodeName, theNodeId);
+						setupGroupAndNodeDir(groupName, nodeName, nodeId);
 					}
 				} else {
 					openRemoteSink(unionStationKey, client->nodeName,
