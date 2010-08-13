@@ -273,6 +273,10 @@ initializeAgent(int argc, char *argv[], const char *processName) {
 			} else {
 				_feedbackFdAvailable = true;
 				options.readFrom(FEEDBACK_FD);
+				if (options.getBool("fire_and_forget", false)) {
+					_feedbackFdAvailable = false;
+					close(FEEDBACK_FD);
+				}
 			}
 		} else {
 			options.readFrom((const char **) argv + 1, argc - 1);

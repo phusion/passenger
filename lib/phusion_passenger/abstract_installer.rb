@@ -193,10 +193,12 @@ private
 				print_dependency_installation_instructions(dep)
 				puts
 			end
-			color_puts "If the aforementioned instructions didn't solve your problem, then please take"
-			color_puts "a look at the Users Guide:"
-			puts
-			color_puts "  <yellow>#{users_guide}</yellow>"
+			if respond_to?(:users_guide)
+				color_puts "If the aforementioned instructions didn't solve your problem, then please take"
+				color_puts "a look at the Users Guide:"
+				puts
+				color_puts "  <yellow>#{users_guide}</yellow>"
+			end
 			return false
 		end
 	end
