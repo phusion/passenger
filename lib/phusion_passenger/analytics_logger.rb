@@ -194,10 +194,10 @@ class AnalyticsLogger
 					begin
 						connect if !connected?
 						@shared_data.client.write("openTransaction",
-							txn_id, group_name, category,
+							txn_id, group_name, "", category,
 							AnalyticsLogger.timestamp_string,
 							union_station_key,
-							"true")
+							true)
 						return Log.new(@shared_data, txn_id)
 					rescue Errno::ENOENT, *NETWORK_ERRORS
 						try_count += 1
@@ -231,10 +231,10 @@ class AnalyticsLogger
 					begin
 						connect if !connected?
 						@shared_data.client.write("openTransaction",
-							txn_id, group_name, category,
+							txn_id, group_name, "", category,
 							AnalyticsLogger.timestamp_string,
 							union_station_key,
-							"true")
+							true)
 						return Log.new(@shared_data, txn_id)
 					rescue Errno::ENOENT, *NETWORK_ERRORS
 						try_count += 1

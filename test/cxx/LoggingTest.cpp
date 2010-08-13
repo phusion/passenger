@@ -383,10 +383,10 @@ namespace tut {
 		SystemTime::forceAll(TODAY);
 		
 		client1.write("openTransaction",
-			TODAY_TXN_ID, "foobar", "requests", TODAY_TIMESTAMP_STR,
+			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
 			"", "true", NULL);
 		client2.write("openTransaction",
-			TODAY_TXN_ID, "foobar", "requests", TODAY_TIMESTAMP_STR,
+			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
 			"", "true", NULL);
 		client2.write("flush", NULL);
 		client2.read(args);
@@ -416,10 +416,10 @@ namespace tut {
 		SystemTime::forceAll(TODAY);
 		
 		client1.write("openTransaction",
-			TODAY_TXN_ID, "foobar", "requests", TODAY_TIMESTAMP_STR,
+			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
 			"", "false", NULL);
 		client2.write("openTransaction",
-			TODAY_TXN_ID, "foobar", "requests", TODAY_TIMESTAMP_STR,
+			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
 			"", "false", NULL);
 		client2.write("flush", NULL);
 		client2.read(args);
@@ -443,10 +443,10 @@ namespace tut {
 		SystemTime::forceAll(TODAY);
 		
 		client1.write("openTransaction",
-			TODAY_TXN_ID, "foobar", "requests", TODAY_TIMESTAMP_STR,
+			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
 			"", "true", NULL);
 		client2.write("openTransaction",
-			TODAY_TXN_ID, "foobar", "requests", TODAY_TIMESTAMP_STR,
+			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
 			"", "true", NULL);
 		client2.write("flush", NULL);
 		client2.read(args);
@@ -468,10 +468,10 @@ namespace tut {
 		SystemTime::forceAll(TODAY);
 		
 		client1.write("openTransaction",
-			TODAY_TXN_ID, "foobar", "requests", TODAY_TIMESTAMP_STR,
+			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
 			"", "false", NULL);
 		client2.write("openTransaction",
-			TODAY_TXN_ID, "foobar", "requests", TODAY_TIMESTAMP_STR,
+			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
 			"", "false", NULL);
 		client2.write("flush", NULL);
 		client2.read(args);

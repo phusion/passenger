@@ -893,17 +893,22 @@ protected:
 			}
 			
 		} else if (args[0] == "openTransaction") {
-			if (OXT_UNLIKELY( !expectingArgumentsCount(client, args, 7)
+			if (OXT_UNLIKELY( !expectingArgumentsCount(client, args, 8)
 			               || !expectingLoggerType(client) )) {
 				return true;
 			}
 			
 			string       txnId     = args[1];
 			StaticString groupName = args[2];
-			StaticString category  = args[3];
-			StaticString timestamp = args[4];
-			StaticString unionStationKey = args[5];
-			bool         crashProtect    = args[6] == "true";
+			StaticString nodeName  = args[3];
+			StaticString category  = args[4];
+			StaticString timestamp = args[5];
+			StaticString unionStationKey = args[6];
+			bool         crashProtect    = args[7] == "true";
+			
+			if (nodeName.empty()) {
+				nodeName = client->nodeName;
+			}
 			
 			if (OXT_UNLIKELY( !validTxnId(txnId) )) {
 				sendErrorToClient(client, "Invalid transaction ID format");
@@ -935,8 +940,26 @@ protected:
 				
 				transaction.reset(new Transaction(this));
 				if (unionStationKey.empty()) {
-					string filename = determineFilename(groupName, client->nodeId,
-						category, txnId);
+					string filename;
+					if (nodeName.empty()) {
+						filename = determineFilename(groupName, client->nodeId,
+							category, txnId);
+					} else {
+						md5_state_t state;
+						md5_byte_t  digest[MD5_SIZE];
+						char        nodeId[MD5_HEX_SIZE];
+						
+						md5_init(&state);
+						md5_append(&state,
+							(const md5_byte_t *) nodeName.data(),
+							nodeName.size());
+						md5_finish(&state, digest);
+						toHex(StaticString((const char *) digest, MD5_SIZE),
+							nodeId);
+						
+						filename = determineFilename(groupName, nodeId,
+							category, txnId);
+					}
 					if (!openLogFileWithCache(filename, transaction->logSink)) {
 						setupGroupAndNodeDir(client, groupName);
 					}
@@ -945,8 +968,13 @@ protected:
 						category, transaction->logSink);
 				}
 				transaction->txnId        = txnId;
-				transaction->dataStoreId  = DataStoreId(groupName,
-					client->nodeName, category);
+				if (nodeName.empty()) {
+					transaction->dataStoreId  = DataStoreId(groupName,
+						client->nodeName, category);
+				} else {
+					transaction->dataStoreId  = DataStoreId(groupName,
+						nodeName, category);
+				}
 				transaction->writeCount   = 0;
 				transaction->refcount     = 0;
 				transaction->crashProtect = crashProtect;
@@ -960,7 +988,7 @@ protected:
 					client->disconnect();
 					return true;
 				}
-				if (OXT_UNLIKELY( transaction->getNodeName() != client->nodeName )) {
+				if (OXT_UNLIKELY( transaction->getNodeName() != nodeName )) {
 					sendErrorToClient(client,
 						"Cannot open transaction: transaction already opened with a different node name");
 					client->disconnect();
