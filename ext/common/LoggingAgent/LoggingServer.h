@@ -973,13 +973,8 @@ protected:
 						category, transaction->logSink);
 				}
 				transaction->txnId        = txnId;
-				if (nodeName.empty()) {
-					transaction->dataStoreId  = DataStoreId(groupName,
-						client->nodeName, category);
-				} else {
-					transaction->dataStoreId  = DataStoreId(groupName,
-						nodeName, category);
-				}
+				transaction->dataStoreId  = DataStoreId(groupName,
+					nodeName, category);
 				transaction->writeCount   = 0;
 				transaction->refcount     = 0;
 				transaction->crashProtect = crashProtect;
