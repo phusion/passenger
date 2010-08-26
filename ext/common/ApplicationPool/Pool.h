@@ -853,12 +853,12 @@ private:
 				
 				pids.resize(0);
 				
-				// Sleep for about 3 seconds, aligned to seconds boundary
+				// Sleep for about 4 seconds, aligned to seconds boundary
 				// for saving power on laptops.
 				UPDATE_TRACE_POINT();
 				unsigned long long currentTime = SystemTime::getUsec();
 				unsigned long long deadline =
-					roundUp<unsigned long long>(currentTime, 1000000) + 3000000;
+					roundUp<unsigned long long>(currentTime, 1000000) + 4000000;
 				syscalls::usleep(deadline - currentTime);
 			}
 		} catch (const thread_interrupted &) {
