@@ -67,15 +67,15 @@ class AnalyticsLogger
 				extra_info_base64 = nil
 			end
 			times = NativeSupport.process_times
-			message "BEGIN: #{name} (#{current_timestamp},#{times.utime},#{times.stime}) #{extra_info_base64}"
+			message "BEGIN: #{name} (#{current_timestamp.to_s(36)},#{times.utime.to_s(36)},#{times.stime.to_s(36)}) #{extra_info_base64}"
 		end
 		
 		def end_measure(name, error_encountered = false)
 			times = NativeSupport.process_times
 			if error_encountered
-				message "FAIL: #{name} (#{current_timestamp},#{times.utime},#{times.stime})"
+				message "FAIL: #{name} (#{current_timestamp.to_s(36)},#{times.utime.to_s(36)},#{times.stime.to_s(36)})"
 			else
-				message "END: #{name} (#{current_timestamp},#{times.utime},#{times.stime})"
+				message "END: #{name} (#{current_timestamp.to_s(36)},#{times.utime.to_s(36)},#{times.stime.to_s(36)})"
 			end
 		end
 		
@@ -101,8 +101,8 @@ class AnalyticsLogger
 			end
 			begin_timestamp = begin_time.to_i * 1_000_000 + begin_time.usec
 			end_timestamp = end_time.to_i * 1_000_000 + end_time.usec
-			message "BEGIN: #{name} (#{begin_timestamp}) #{extra_info_base64}"
-			message "END: #{name} (#{end_timestamp})"
+			message "BEGIN: #{name} (#{begin_timestamp.to_s(36)}) #{extra_info_base64}"
+			message "END: #{name} (#{end_timestamp.to_s(36)})"
 		end
 		
 		def close(flush_to_disk = false)

@@ -333,9 +333,15 @@ private:
 	} data;
 	bool ok;
 	
-	static string timevalToMsecString(struct timeval &tv) {
+	static string timevalToString(struct timeval &tv) {
 		unsigned long long i = (unsigned long long) tv.tv_sec * 1000000 + tv.tv_usec;
-		return toString<unsigned long long>(i);
+		return usecToString(i);
+	}
+	
+	static string usecToString(unsigned long long usec) {
+		char timestamp[2 * sizeof(unsigned long long) + 1];
+		integerToHexatri<unsigned long long>(usec, timestamp);
+		return timestamp;
 	}
 	
 public:
@@ -352,15 +358,15 @@ public:
 			message.append("BEGIN: ");
 			message.append(name);
 			message.append(" (");
-			message.append(toString(SystemTime::getUsec()));
+			message.append(usecToString(SystemTime::getUsec()));
 			message.append(",");
 			if (getrusage(RUSAGE_SELF, &usage) == -1) {
 				int e = errno;
 				throw SystemException("getrusage() failed", e);
 			}
-			message.append(timevalToMsecString(usage.ru_utime));
+			message.append(timevalToString(usage.ru_utime));
 			message.append(",");
-			message.append(timevalToMsecString(usage.ru_stime));
+			message.append(timevalToString(usage.ru_stime));
 			message.append(") ");
 			log->message(message);
 		}
@@ -396,15 +402,15 @@ public:
 				}
 				message.append(data.name);
 				message.append(" (");
-				message.append(toString(SystemTime::getUsec()));
+				message.append(usecToString(SystemTime::getUsec()));
 				message.append(",");
 				if (getrusage(RUSAGE_SELF, &usage) == -1) {
 					int e = errno;
 					throw SystemException("getrusage() failed", e);
 				}
-				message.append(timevalToMsecString(usage.ru_utime));
+				message.append(timevalToString(usage.ru_utime));
 				message.append(",");
-				message.append(timevalToMsecString(usage.ru_stime));
+				message.append(timevalToString(usage.ru_stime));
 				message.append(")");
 				log->message(message);
 			}
