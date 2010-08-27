@@ -37,7 +37,7 @@ module Rails3Extensions
 end
 
 module Rails3Extensions
-class AnalyticsLogging < Rails::LogSubscriber
+class AnalyticsLogging < ActiveSupport::LogSubscriber
 	def self.install!(options)
 		analytics_logger = options["analytics_logger"]
 		return false if !analytics_logger || !options["analytics"]
@@ -47,11 +47,11 @@ class AnalyticsLogging < Rails::LogSubscriber
 		GC.enable_stats if GC.respond_to?(:enable_stats)
 		
 		subscriber = self.new
-		Rails::LogSubscriber.add(:action_controller, subscriber)
-		Rails::LogSubscriber.add(:active_record, subscriber)
+		AnalyticsLogging.attach_to(:action_controller, subscriber)
+		AnalyticsLogging.attach_to(:active_record, subscriber)
 		if defined?(ActiveSupport::Cache::Store)
 			ActiveSupport::Cache::Store.instrument = true
-			Rails::LogSubscriber.add(:active_support, subscriber)
+			AnalyticsLogging.attach_to(:active_support, subscriber)
 		end
 		
 		if defined?(ActionDispatch::ShowExceptions)

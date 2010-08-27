@@ -39,4 +39,5 @@ test/stub/apache2/*.pid
 test/stub/apache2/httpd.conf
 test/stub/zsfa/mycook
 test/stub/zsfa/foo
+test/stub/rails_apps/3.0/*/help
 pkg

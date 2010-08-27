@@ -97,6 +97,10 @@ module Packaging
 	# files don't exist yet, and so won't be matched by the glob.
 	# So we add these filenames manually.
 	] + ASCII_DOCS
+	
+	EXCLUDE_GLOB = [
+		'test/stub/rails_apps/3.0/empty/help/**/*'
+	]
 end
 
 end # module PhusionPassenger

@@ -969,7 +969,7 @@ spec = Gem::Specification.new do |s|
 	s.add_dependency 'daemon_controller', '>= 0.2.5'
 	s.add_dependency 'file-tail'
 	s.add_dependency 'rack'
-	s.files = FileList[*Packaging::GLOB]
+	s.files = FileList[*Packaging::GLOB] - FileList[*Packaging::EXCLUDE_GLOB]
 	s.executables = Packaging::USER_EXECUTABLES + Packaging::SUPER_USER_EXECUTABLES
 	s.has_rdoc = true
 	s.extra_rdoc_files = ['README']
