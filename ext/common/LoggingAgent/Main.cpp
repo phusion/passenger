@@ -52,6 +52,7 @@ using namespace Passenger;
 
 
 static struct ev_loop *eventLoop;
+static LoggingServer *loggingServer;
 
 static struct ev_loop *
 createEventLoop() {
@@ -118,6 +119,12 @@ void
 caughtExitSignal(ev::sig &watcher, int revents) {
 	P_DEBUG("Caught signal, exiting...");
 	ev_unloop(eventLoop, EVUNLOOP_ONE);
+}
+
+void
+printInfo(ev::sig &watcher, int revents) {
+	loggingServer->dump(cout);
+	cout.flush();
 }
 
 static string
@@ -238,11 +245,13 @@ main(int argc, char *argv[]) {
 			unionStationServiceAddress,
 			unionStationServicePort,
 			unionStationServiceCert);
+		loggingServer = &server;
 		
 		
 		ev::io feedbackFdWatcher(eventLoop);
 		ev::sig sigintWatcher(eventLoop);
 		ev::sig sigtermWatcher(eventLoop);
+		ev::sig siginfoWatcher(eventLoop);
 		
 		if (feedbackFdAvailable()) {
 			MessageChannel feedbackChannel(FEEDBACK_FD);
@@ -254,6 +263,8 @@ main(int argc, char *argv[]) {
 		sigintWatcher.start(SIGINT);
 		sigtermWatcher.set<&caughtExitSignal>();
 		sigtermWatcher.start(SIGTERM);
+		siginfoWatcher.set<&printInfo>();
+		siginfoWatcher.start(SIGINFO);
 		
 		
 		/********** Initialized! Enter main loop... **********/
