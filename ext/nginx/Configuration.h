@@ -75,9 +75,9 @@ typedef struct {
     ngx_str_t    analytics_log_user;
     ngx_str_t    analytics_log_group;
     ngx_str_t    analytics_log_permissions;
-    ngx_str_t    union_station_service_address;
-    ngx_uint_t   union_station_service_port;
-    ngx_str_t    union_station_service_cert;
+    ngx_str_t    union_station_gateway_address;
+    ngx_uint_t   union_station_gateway_port;
+    ngx_str_t    union_station_gateway_cert;
     ngx_array_t *prestart_uris;
 } passenger_main_conf_t;
 

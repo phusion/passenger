@@ -151,11 +151,11 @@ main(int argc, char *argv[]) {
 	string groupname          = options.get("analytics_log_group", false);
 	string permissions        = options.get("analytics_log_permissions",
 		false, DEFAULT_ANALYTICS_LOG_PERMISSIONS);
-	string unionStationServiceAddress = options.get("union_station_service_address",
-		false, DEFAULT_UNION_STATION_SERVICE_ADDRESS);
-	int    unionStationServicePort = options.getInt("union_station_service_port",
-		false, DEFAULT_UNION_STATION_SERVICE_PORT);
-	string unionStationServiceCert = options.get("union_station_service_cert", false);
+	string unionStationGatewayAddress = options.get("union_station_gateway_address",
+		false, DEFAULT_UNION_STATION_GATEWAY_ADDRESS);
+	int    unionStationGatewayPort = options.getInt("union_station_gateway_port",
+		false, DEFAULT_UNION_STATION_GATEWAY_PORT);
+	string unionStationGatewayCert = options.get("union_station_gateway_cert", false);
 	
 	curl_global_init(CURL_GLOBAL_ALL);
 	
@@ -242,9 +242,9 @@ main(int argc, char *argv[]) {
 		LoggingServer server(eventLoop, serverSocketFd,
 			accountsDatabase, loggingDir,
 			"u=rwx,g=rx,o=rx", GROUP_NOT_GIVEN,
-			unionStationServiceAddress,
-			unionStationServicePort,
-			unionStationServiceCert);
+			unionStationGatewayAddress,
+			unionStationGatewayPort,
+			unionStationGatewayCert);
 		loggingServer = &server;
 		
 		

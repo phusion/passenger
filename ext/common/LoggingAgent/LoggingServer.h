@@ -204,7 +204,7 @@ private:
 		virtual void dump(ostream &stream) const {
 			stream << "   Log file: file=" << filename << ", "
 				"opened=" << opened << ", "
-				"age=" << long(lastUsed - ev_now(server->getLoop())) << "\n";
+				"age=" << long(ev_now(server->getLoop()) - lastUsed) << "\n";
 		}
 	};
 	
@@ -1205,8 +1205,8 @@ public:
 		const string &dir,
 		const string &permissions = DEFAULT_ANALYTICS_LOG_PERMISSIONS,
 		gid_t gid = GROUP_NOT_GIVEN,
-		const string &unionStationServiceAddress = DEFAULT_UNION_STATION_SERVICE_ADDRESS,
-		unsigned short unionStationServicePort = DEFAULT_UNION_STATION_SERVICE_PORT,
+		const string &unionStationServiceAddress = DEFAULT_UNION_STATION_GATEWAY_ADDRESS,
+		unsigned short unionStationServicePort = DEFAULT_UNION_STATION_GATEWAY_PORT,
 		const string &unionStationServiceCert = "")
 		: EventedMessageServer(loop, fd, accountsDatabase),
 		  remoteSender(unionStationServiceAddress,

@@ -1320,8 +1320,8 @@ public:
 			"",
 			serverConfig.analyticsLogDir, serverConfig.analyticsLogUser,
 			serverConfig.analyticsLogGroup, serverConfig.analyticsLogPermissions,
-			DEFAULT_UNION_STATION_SERVICE_ADDRESS,
-			DEFAULT_UNION_STATION_SERVICE_PORT,
+			DEFAULT_UNION_STATION_GATEWAY_ADDRESS,
+			DEFAULT_UNION_STATION_GATEWAY_PORT,
 			"",
 			serverConfig.prestartURLs);
 		
