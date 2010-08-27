@@ -34,6 +34,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
+#include <signal.h>
 
 #include "../AgentBase.h"
 #include "../AccountsDatabase.h"
@@ -111,6 +112,12 @@ feedbackFdBecameReadable(ev::io &watcher, int revents) {
 	 */
 	syscalls::killpg(getpgrp(), SIGKILL);
 	_exit(2); // In case killpg() fails.
+}
+
+void
+caughtExitSignal(ev::sig &watcher, int revents) {
+	P_DEBUG("Caught signal, exiting...");
+	ev_unloop(eventLoop, EVUNLOOP_ONE);
 }
 
 static string
@@ -232,13 +239,21 @@ main(int argc, char *argv[]) {
 			unionStationServicePort,
 			unionStationServiceCert);
 		
+		
+		ev::io feedbackFdWatcher(eventLoop);
+		ev::sig sigintWatcher(eventLoop);
+		ev::sig sigtermWatcher(eventLoop);
+		
 		if (feedbackFdAvailable()) {
 			MessageChannel feedbackChannel(FEEDBACK_FD);
-			ev::io feedbackFdWatcher(eventLoop);
 			feedbackFdWatcher.set<&feedbackFdBecameReadable>();
 			feedbackFdWatcher.start(FEEDBACK_FD, ev::READ);
 			feedbackChannel.write("initialized", NULL);
 		}
+		sigintWatcher.set<&caughtExitSignal>();
+		sigintWatcher.start(SIGINT);
+		sigtermWatcher.set<&caughtExitSignal>();
+		sigtermWatcher.start(SIGTERM);
 		
 		
 		/********** Initialized! Enter main loop... **********/
