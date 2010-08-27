@@ -251,7 +251,7 @@ main(int argc, char *argv[]) {
 		ev::io feedbackFdWatcher(eventLoop);
 		ev::sig sigintWatcher(eventLoop);
 		ev::sig sigtermWatcher(eventLoop);
-		ev::sig siginfoWatcher(eventLoop);
+		ev::sig sighupWatcher(eventLoop);
 		
 		if (feedbackFdAvailable()) {
 			MessageChannel feedbackChannel(FEEDBACK_FD);
@@ -263,8 +263,8 @@ main(int argc, char *argv[]) {
 		sigintWatcher.start(SIGINT);
 		sigtermWatcher.set<&caughtExitSignal>();
 		sigtermWatcher.start(SIGTERM);
-		siginfoWatcher.set<&printInfo>();
-		siginfoWatcher.start(SIGINFO);
+		sighupWatcher.set<&printInfo>();
+		sighupWatcher.start(SIGHUP);
 		
 		
 		/********** Initialized! Enter main loop... **********/
