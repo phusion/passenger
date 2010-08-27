@@ -39,7 +39,7 @@ protected
 			else
 				name = "SQL"
 			end
-			digest = Digest::MD5.hexdigest("#{name}\0#{sql}")
+			digest = Digest::MD5.hexdigest("#{name}\0#{sql}\0#{rand}")
 			log.measure("DB BENCHMARK: #{digest}", "#{name}\n#{sql}") do
 				log_without_passenger(sql, name, &block)
 			end

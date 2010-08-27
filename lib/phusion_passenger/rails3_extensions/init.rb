@@ -86,7 +86,7 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 		if log
 			name = event.payload[:name]
 			sql = event.payload[:sql]
-			digest = Digest::MD5.hexdigest("#{name}\0#{sql}")
+			digest = Digest::MD5.hexdigest("#{name}\0#{sql}\0#{rand}")
 			log.measured_time_points("DB BENCHMARK: #{digest}",
 				event.time, event.end, "#{name}\n#{sql}")
 		end
