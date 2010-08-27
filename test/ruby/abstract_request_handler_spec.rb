@@ -191,7 +191,9 @@ describe AbstractRequestHandler do
 				Process.waitpid(@agent_pid)
 			end
 			@log_dir = Utils.passenger_tmpdir
-			@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(@log_dir, "1234")
+			@logging_agent_password = "1234"
+			@agent_pid, @socket_filename, @socket_address = spawn_logging_agent(@log_dir,
+				@logging_agent_password)
 			
 			@logger = AnalyticsLogger.new(@socket_address, "logging",
 				"1234", "localhost")
@@ -248,6 +250,7 @@ describe AbstractRequestHandler do
 				client.close
 			end
 			eventually(5) do
+				flush_logging_agent(@logging_agent_password, @socket_address)
 				log_file = Dir["#{@log_dir}/1/*/*/exceptions/**/log.txt"].first
 				if log_file
 					log_data = File.read(log_file)
