@@ -1,8 +1,6 @@
 source 'http://rubygems.org'
 
-gem 'rails', :path => '/Users/hongli/Projects/rails'
-gem 'arel',  :git => 'git://github.com/rails/arel.git'
-
+gem 'rails', '~> 3.0.0'
 gem 'sqlite3-ruby', :require => 'sqlite3'
 
 # Use unicorn as the web server

@@ -1,1 +1,1 @@
-PhusionPassenger.install_framework_extensions!
+PhusionPassenger.install_framework_extensions! if defined?(PhusionPassenger)
