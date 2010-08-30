@@ -1205,13 +1205,13 @@ public:
 		const string &dir,
 		const string &permissions = DEFAULT_ANALYTICS_LOG_PERMISSIONS,
 		gid_t gid = GROUP_NOT_GIVEN,
-		const string &unionStationServiceAddress = DEFAULT_UNION_STATION_GATEWAY_ADDRESS,
-		unsigned short unionStationServicePort = DEFAULT_UNION_STATION_GATEWAY_PORT,
-		const string &unionStationServiceCert = "")
+		const string &unionStationGatewayAddress = DEFAULT_UNION_STATION_GATEWAY_ADDRESS,
+		unsigned short unionStationGatewayPort = DEFAULT_UNION_STATION_GATEWAY_PORT,
+		const string &unionStationGatewayCert = "")
 		: EventedMessageServer(loop, fd, accountsDatabase),
-		  remoteSender(unionStationServiceAddress,
-		               unionStationServicePort,
-		               unionStationServiceCert),
+		  remoteSender(unionStationGatewayAddress,
+		               unionStationGatewayPort,
+		               unionStationGatewayCert),
 		  garbageCollectionTimer(loop),
 		  sinkFlushingTimer(loop),
 		  exitTimer(loop)

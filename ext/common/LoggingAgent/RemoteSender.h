@@ -222,8 +222,8 @@ private:
 	
 	typedef shared_ptr<Server> ServerPtr;
 	
-	string serviceAddress;
-	unsigned short servicePort;
+	string gatewayAddress;
+	unsigned short gatewayPort;
 	string certificate;
 	BlockingQueue<Item> queue;
 	oxt::thread *thr;
@@ -266,19 +266,19 @@ private:
 	}
 	
 	void recheckServers() {
-		P_DEBUG("Rechecking Union Station gateway servers (" << serviceAddress << ")...");
+		P_DEBUG("Rechecking Union Station gateway servers (" << gatewayAddress << ")...");
 		
 		vector<string> ips;
 		vector<string>::const_iterator it;
 		string hostName;
 		bool someServersAreDown = false;
 		
-		ips = resolveHostname(serviceAddress, servicePort);
+		ips = resolveHostname(gatewayAddress, gatewayPort);
 		P_DEBUG(ips.size() << " Union Station gateway servers found");
 		
 		servers.clear();
 		for (it = ips.begin(); it != ips.end(); it++) {
-			ServerPtr server(new Server(*it, serviceAddress, servicePort, certificate));
+			ServerPtr server(new Server(*it, gatewayAddress, gatewayPort, certificate));
 			if (server->ping()) {
 				servers.push_back(server);
 			} else {
@@ -396,11 +396,11 @@ private:
 	}
 	
 public:
-	RemoteSender(const string &serviceAddress, unsigned short servicePort, const string &certificate)
+	RemoteSender(const string &gatewayAddress, unsigned short gatewayPort, const string &certificate)
 		: queue(1024)
 	{
-		this->serviceAddress = serviceAddress;
-		this->servicePort = servicePort;
+		this->gatewayAddress = gatewayAddress;
+		this->gatewayPort = gatewayPort;
 		this->certificate = certificate;
 		thr = new oxt::thread(
 			boost::bind(&RemoteSender::threadMain, this),
