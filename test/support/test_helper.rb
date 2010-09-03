@@ -317,7 +317,7 @@ module TestHelper
 	def run_script(code, *args)
 		stdin_child, stdin_parent = IO.pipe
 		stdout_parent, stdout_child = IO.pipe
-		program_args = [PhusionPassenger::PlatformInfo::RUBY, "-e",
+		program_args = [PhusionPassenger::PlatformInfo.ruby_command, "-e",
 			"eval(STDIN.read, binding, '(script)', 0)",
 			PhusionPassenger::LIBDIR, *args]
 		if Process.respond_to?(:spawn)

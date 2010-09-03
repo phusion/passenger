@@ -77,7 +77,7 @@ module PlatformInfo
 			else
 				# Something like:
 				# "/opt/ruby-enterprise/bin/ruby: Mach-O 64-bit executable x86_64"
-				ruby_arch = `file -L "#{RUBY}"`.strip
+				ruby_arch = `file -L "#{ruby_command}"`.strip
 				ruby_arch.sub!(/.* /, '')
 			end
 		elsif RUBY_PLATFORM == "java"

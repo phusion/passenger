@@ -13,7 +13,7 @@ http {
     include <%= nginx_dir %>/conf/mime.types;
     client_body_temp_path <%= @temp_dir %>/client;
     proxy_temp_path <%= @temp_dir %>/proxy;
-    passenger_ruby <%= PlatformInfo::RUBY %>;
+    passenger_ruby <%= PlatformInfo.ruby_command %>;
     passenger_root <%= passenger_root %>;
     passenger_abort_on_startup_error on;
     passenger_user_switching off;

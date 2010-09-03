@@ -7,7 +7,7 @@
 		The application <tt class="filename"><%=h @app_root %></tt> requires
 		Ruby on Rails version <b><%=h @error.gem_version_spec %></b>,
 		which is not installed. Please install it with the following command:
-		<pre class="commands">sudo gem install rails --version <%=h @error.gem_version_spec %></pre>
+		<pre class="commands"><%= PlatformInfo.ruby_sudo_command %> <%= PlatformInfo.gem_command %> install rails --version <%=h @error.gem_version_spec %></pre>
 		
 	<% else %>
 		

@@ -314,11 +314,10 @@ private
 	end
 	
 	def rake
-		return "#{PlatformInfo::RUBY} #{PlatformInfo.rake}"
+		return PlatformInfo.rake_command
 	end
 	
 	def run_rake_task!(target)
-		rake = "#{PlatformInfo::RUBY} #{PlatformInfo.rake}"
 		total_lines = `#{rake} #{target} --dry-run`.split("\n").size - 1
 		backlog = ""
 		

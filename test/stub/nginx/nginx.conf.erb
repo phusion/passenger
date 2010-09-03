@@ -19,7 +19,7 @@ http {
     access_log <%= @nginx_root %>/access.log main;
     
     passenger_root <%= @passenger_root %>;
-    passenger_ruby <%= PlatformInfo::RUBY %>;
+    passenger_ruby <%= PlatformInfo.ruby_command %>;
     passenger_default_user <%= CONFIG['default_user'] %>;
     passenger_default_group <%= CONFIG['default_group'] %>;
 

@@ -9,8 +9,10 @@ The tests need the following software installed:
 * Ruby on Rails 2.0.x
 * Ruby on Rails 2.2.x
 * Ruby on Rails 2.3.x
+* Ruby on Rails 3.0.x
 * rspec >= 1.1.2
 * mime-types >= 1.15
+* sqlite3-ruby
 
 The following software is optional:
 

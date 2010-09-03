@@ -159,11 +159,11 @@ private
 		color_puts '<banner>Compiling and installing Apache 2 module...</banner>'
 		puts "cd #{PASSENGER_ROOT}"
 		if ENV['TRACE']
-			puts "#{RUBY} -S #{PlatformInfo.rake} --trace clean apache2"
-			return sh(RUBY, "-S", PlatformInfo.rake, "--trace", "apache2:clean", "apache2")
+			puts "#{PlatformInfo.rake_command} --trace clean apache2"
+			return sh("#{PlatformInfo.rake_command} --trace apache2:clean apache2")
 		else
-			puts "#{RUBY} -S #{PlatformInfo.rake} clean apache2"
-			return sh(RUBY, "-S", PlatformInfo.rake, "apache2:clean", "apache2")
+			puts "#{PlatformInfo.rake_command} clean apache2"
+			return sh("#{PlatformInfo.rake_command} apache2:clean apache2")
 		end
 	end
 	
@@ -171,14 +171,14 @@ private
 		if bare
 			puts "LoadModule passenger_module #{APACHE2_MODULE}"
 			puts "PassengerRoot #{PASSENGER_ROOT}"
-			puts "PassengerRuby #{RUBY}"
+			puts "PassengerRuby #{PlatformInfo.ruby_command}"
 		else
 			puts
 			line
 			render_template 'apache2/config_snippets',
 				:module_location => APACHE2_MODULE,
 				:passenger_root => PASSENGER_ROOT,
-				:ruby => RUBY
+				:ruby => PlatformInfo.ruby_command
 			if PhusionPassenger.natively_packaged?
 				wait(10)
 			else

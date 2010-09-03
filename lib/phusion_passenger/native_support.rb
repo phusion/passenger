@@ -77,7 +77,7 @@ module PhusionPassenger
 					Dir.chdir(target_dir) do
 						extconf_rb = File.join(SOURCE_ROOT, "ext",
 							"phusion_passenger", "extconf.rb")
-						sh.call(PlatformInfo::RUBY, extconf_rb)
+						sh.call(PlatformInfo.ruby_command, extconf_rb)
 						sh.call("make")
 					end
 					result = target_dir

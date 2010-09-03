@@ -224,12 +224,13 @@ private
 			begin
 				TCPServer.new('127.0.0.1', @options[:port]).close
 			rescue Errno::EACCES
+				require 'phusion_passenger/platform_info/ruby'
 				myself = `whoami`.strip
 				error "Only the 'root' user can run this program on port #{@options[:port]}. " <<
 				      "You are currently running as '#{myself}'. Please re-run this program " <<
 				      "with root privileges with the following command:\n\n" <<
 				      
-				      "  sudo passenger start #{@original_args.join(' ')} --user=#{myself}\n\n" <<
+				      "  #{PlatformInfo.ruby_sudo_command} passenger start #{@original_args.join(' ')} --user=#{myself}\n\n" <<
 				      
 				      "Don't forget the '--user' part! That will make Phusion Passenger Standalone " <<
 				      "drop root privileges and switch to '#{myself}' after it has obtained " <<
