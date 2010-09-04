@@ -24,6 +24,7 @@
 require 'socket'
 require 'phusion_passenger/app_process'
 require 'phusion_passenger/message_channel'
+require 'phusion_passenger/public_api'
 require 'phusion_passenger/utils'
 require 'phusion_passenger/utils/tmpdir'
 require 'phusion_passenger/native_support'

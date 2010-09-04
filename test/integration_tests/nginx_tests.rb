@@ -32,6 +32,14 @@ describe "Phusion Passenger for Nginx" do
 		end
 	end
 	
+	before :each do
+		File.open("test.log", "a") do |f|
+			# Make sure that all Nginx log output is prepended by the test description
+			# so that we know which messages are associated with which tests.
+			f.puts "\n#### #{self.class.description} : #{description}"
+		end
+	end
+	
 	
 	describe "MyCook(tm) beta running a root URI" do
 		before :all do

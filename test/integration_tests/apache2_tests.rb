@@ -37,7 +37,7 @@ describe "Apache 2 module" do
 	end
 	
 	before :each do
-		File.open("apache2.log", "a") do |f|
+		File.open("test.log", "a") do |f|
 			# Make sure that all Apache log output is prepended by the test description
 			# so that we know which messages are associated with which tests.
 			f.puts "\n#### #{self.class.description} : #{description}"
