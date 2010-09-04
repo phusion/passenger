@@ -73,6 +73,7 @@ public:
 	void start() {
 		// TODO: We really use should clock_gettime() and the monotonic
 		// clock whenever possible, instead of gettimeofday()...
+		// On OS X we can use mach_absolute_time()
 		lock_guard<boost::mutex> l(lock);
 		int ret;
 		do {
