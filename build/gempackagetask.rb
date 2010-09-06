@@ -7,7 +7,7 @@
 
 require 'rubygems'
 require 'rake'
-require 'rake/packagetask'
+require 'build/packagetask'
 require 'rubygems/user_interaction'
 require 'rubygems/builder'
 

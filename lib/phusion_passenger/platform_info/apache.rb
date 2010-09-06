@@ -221,7 +221,7 @@ module PlatformInfo
 		end
 		return flags.compact.join(' ').strip
 	end
-	memoize :apache2_module_cflags
+	memoize :apache2_module_cflags, true
 	
 	# Linker flags that are necessary for linking an Apache module.
 	# Already includes APR and APU linker flags.
@@ -309,7 +309,7 @@ private
 			return [flags, libs]
 		end
 	end
-	memoize :determine_apr_info
+	memoize :determine_apr_info, true
 	private_class_method :determine_apr_info
 
 	def self.determine_apu_info
