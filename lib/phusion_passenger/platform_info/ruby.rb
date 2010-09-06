@@ -33,12 +33,12 @@ module PlatformInfo
 		RUBY_ENGINE = "ruby"
 	end
 	
-	# Returns the absolute path to the current Ruby interpreter.
+	# Returns correct command for invoking the current Ruby interpreter.
 	# In case of RVM this function will return the path to the RVM wrapper script
 	# that executes the current Ruby interpreter in the currently active gem set.
 	def self.ruby_command
 		@@ruby_command ||= begin
-			filename = Config::CONFIG['bindir'] + '/' + Config::CONFIG['RUBY_INSTALL_NAME'] + Config::CONFIG['EXEEXT']
+			filename = ruby_executable
 			if filename =~ %r{(.*)/.rvm/rubies/(.+?)/bin/(.+)}
 				home = $1
 				name = $2
@@ -53,6 +53,14 @@ module PlatformInfo
 			end
 			filename
 		end
+	end
+	
+	# Returns the full path to the current Ruby interpreter's executable file.
+	# This might not be the actual correct command to use for invoking the Ruby
+	# interpreter; use ruby_command instead.
+	def self.ruby_executable
+		@@ruby_executable ||=
+			Config::CONFIG['bindir'] + '/' + Config::CONFIG['RUBY_INSTALL_NAME'] + Config::CONFIG['EXEEXT']
 	end
 	
 	# Returns whether the Ruby interpreter supports process forking.
