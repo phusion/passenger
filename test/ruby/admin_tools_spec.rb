@@ -52,7 +52,7 @@ describe AdminTools::ServerInstance do
 	end
 	
 	def create_generation(dir, number = 0, major = GENERATION_STRUCTURE_MAJOR_VERSION, minor = GENERATION_STRUCTURE_MINOR_VERSION)
-		dir = "#{dir}/generation-0"
+		dir = "#{dir}/generation-#{number}"
 		Dir.mkdir(dir)
 		File.write("#{dir}/structure_version.txt", "#{major}.#{minor}")
 		return dir
@@ -123,9 +123,39 @@ describe AdminTools::ServerInstance do
 			instances[0].pid.should == @process2.pid
 		end
 		
-		it "doesn't list server instance directories with no generations"
-		it "doesn't list server instance directories for which the newest generation has a different major version"
-		it "doesn't list server instance directories for which the newest generation has the same major version but a larger minor version"
+		it "doesn't list server instance directories with no generations" do
+			@process1 = spawn_process
+			create_instance_dir(@process1.pid)
+			AdminTools::ServerInstance.list.should be_empty
+		end
+		
+		it "doesn't list server instance directories for which the newest generation has a different major version" do
+			@process1 = spawn_process
+			@process2 = spawn_process
+			dir1 = create_instance_dir(@process1.pid)
+			create_generation(dir1, 0, GENERATION_STRUCTURE_MAJOR_VERSION)
+			create_generation(dir1, 1, GENERATION_STRUCTURE_MAJOR_VERSION + 1)
+			dir2 = create_instance_dir(@process2.pid)
+			create_generation(dir2)
+			
+			instances = AdminTools::ServerInstance.list
+			instances.should have(1).item
+			instances[0].pid.should == @process2.pid
+		end
+		
+		it "doesn't list server instance directories for which the newest generation has the same major version but a larger minor version" do
+			@process1 = spawn_process
+			@process2 = spawn_process
+			dir1 = create_instance_dir(@process1.pid)
+			create_generation(dir1, 0, GENERATION_STRUCTURE_MAJOR_VERSION)
+			create_generation(dir1, 1, GENERATION_STRUCTURE_MAJOR_VERSION + 1, GENERATION_STRUCTURE_MINOR_VERSION + 1)
+			dir2 = create_instance_dir(@process2.pid)
+			create_generation(dir2)
+			
+			instances = AdminTools::ServerInstance.list
+			instances.should have(1).item
+			instances[0].pid.should == @process2.pid
+		end
 		
 		it "cleans up server instance directories for which its PID doesn't exist" do
 			@process1 = spawn_process
@@ -155,10 +185,57 @@ describe AdminTools::ServerInstance do
 			File.exist?(dir3).should be_false
 		end
 		
-		it "doesn't clean up server instance directories for which the major structure version is different"
-		it "doesn't clean up server instance directories for which the major structure version is the same but the minor structure version is larger"
-		it "doesn't clean up server instance directories for which the latest generation has a different major version"
-		it "doesn't clean up server instance directories for which the latest generation has the same major version but a larger minor version"
+		it "doesn't clean up server instance directories for which the major structure version is different" do
+			process1 = spawn_process
+			dir1 = create_instance_dir(process1.pid, DIR_STRUCTURE_MAJOR_VERSION + 1)
+			create_generation(dir1)
+			Process.kill('KILL', process1.pid) rescue nil
+			process1.close
+			
+			AdminTools::ServerInstance.should_not_receive(:log_cleaning_action)
+			instances = AdminTools::ServerInstance.list
+			instances.should be_empty
+			File.exist?(dir1).should be_true
+		end
+		
+		it "doesn't clean up server instance directories for which the major structure version is the same but the minor structure version is larger" do
+			process1 = spawn_process
+			dir1 = create_instance_dir(process1.pid, DIR_STRUCTURE_MAJOR_VERSION, DIR_STRUCTURE_MINOR_VERSION + 1)
+			create_generation(dir1)
+			Process.kill('KILL', process1.pid) rescue nil
+			process1.close
+			
+			AdminTools::ServerInstance.should_not_receive(:log_cleaning_action)
+			instances = AdminTools::ServerInstance.list
+			instances.should be_empty
+			File.exist?(dir1).should be_true
+		end
+		
+		it "doesn't clean up server instance directories for which the latest generation has a different major version" do
+			process1 = spawn_process
+			dir1 = create_instance_dir(process1.pid)
+			create_generation(dir1, 0, GENERATION_STRUCTURE_MAJOR_VERSION + 1)
+			Process.kill('KILL', process1.pid) rescue nil
+			process1.close
+			
+			AdminTools::ServerInstance.should_not_receive(:log_cleaning_action)
+			instances = AdminTools::ServerInstance.list
+			instances.should be_empty
+			File.exist?(dir1).should be_true
+		end
+		
+		it "doesn't clean up server instance directories for which the latest generation has the same major version but a larger minor version" do
+			process1 = spawn_process
+			dir1 = create_instance_dir(process1.pid)
+			create_generation(dir1, 0, GENERATION_STRUCTURE_MAJOR_VERSION, GENERATION_STRUCTURE_MINOR_VERSION + 1)
+			Process.kill('KILL', process1.pid) rescue nil
+			process1.close
+			
+			AdminTools::ServerInstance.should_not_receive(:log_cleaning_action)
+			instances = AdminTools::ServerInstance.list
+			instances.should be_empty
+			File.exist?(dir1).should be_true
+		end
 		
 		it "cleans up server instance directories that contain a corrupted control_process.pid" do
 			@process1 = spawn_process

@@ -148,11 +148,6 @@ class ServerInstance
 			path =~ /passenger\.\d+\.\d+\.(\d+)\Z/
 			@pid = $1.to_i
 		end
-		if @pid == 0
-			raise CorruptedDirectoryError, "Instance directory contains corrupted control_process.pid file."
-		elsif !AdminTools.process_is_alive?(@pid)
-			raise StaleDirectoryError, "There is no instance with PID #{@pid}."
-		end
 		
 		generations = Dir["#{path}/generation-*"]
 		if generations.empty?
@@ -180,6 +175,12 @@ class ServerInstance
 		minor = minor.to_i
 		if major != GENERATION_STRUCTURE_MAJOR_VERSION || minor > GENERATION_STRUCTURE_MINOR_VERSION
 			raise UnsupportedGenerationStructureVersionError, "Unsupported generation directory structure version."
+		end
+		
+		if @pid == 0
+			raise CorruptedDirectoryError, "Instance directory contains corrupted control_process.pid file."
+		elsif !AdminTools.process_is_alive?(@pid)
+			raise StaleDirectoryError, "There is no instance with PID #{@pid}."
 		end
 	end
 	
