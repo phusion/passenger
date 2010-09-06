@@ -340,7 +340,7 @@ private
 		render_template 'nginx/config_snippets',
 			:config_file => locate_nginx_config_file(prefix),
 			:passenger_root => SOURCE_ROOT,
-			:ruby => RUBY
+			:ruby => PlatformInfo.ruby_command
 		wait
 	end
 	
@@ -376,7 +376,7 @@ private
 		contents.sub!(/^http \{/,
 			"http {\n" <<
 			"    passenger_root #{SOURCE_ROOT};\n" <<
-			"    passenger_ruby #{RUBY};\n")
+			"    passenger_ruby #{PlatformInfo.ruby_command};\n")
 		File.open(config_file, 'w') do |f|
 			f.write(contents)
 		end
@@ -385,7 +385,7 @@ private
 		render_template 'nginx/config_snippets_inserted',
 			:config_file => config_file,
 			:passenger_root => SOURCE_ROOT,
-			:ruby => RUBY
+			:ruby => PlatformInfo.ruby_command
 		wait
 	end
 	
