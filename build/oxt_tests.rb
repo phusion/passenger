@@ -50,7 +50,3 @@ TEST_OXT_OBJECTS.each_pair do |target, sources|
 		end
 	end
 end
-
-task 'test:clean' do
-	sh("rm -rf test/oxt/oxt_test_main test/oxt/*.o test/cxx/CxxTestMain test/cxx/*.o")
-end

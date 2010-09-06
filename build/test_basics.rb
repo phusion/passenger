@@ -24,5 +24,8 @@ desc "Run all unit tests and integration tests"
 task :test => ['test:oxt', 'test:cxx', 'test:ruby', 'test:integration']
 
 desc "Clean all compiled test files"
-task 'test:clean'
+task 'test:clean' do
+	sh("rm -rf test/oxt/oxt_test_main test/oxt/*.o test/cxx/CxxTestMain test/cxx/*.o")
+end
+
 task :clean => 'test:clean'
