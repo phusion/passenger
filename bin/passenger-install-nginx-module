@@ -127,7 +127,7 @@ private
 	def compile_passenger_support_files
 		new_screen
 		color_puts "<banner>Compiling Passenger support files...</banner>"
-		return sh("#{PlatformInfo.rake_command} nginx:clean nginx")
+		return sh("#{PlatformInfo.rake_command} nginx:clean nginx CACHING=no")
 	end
 	
 	def should_we_download_and_install_nginx_automatically?

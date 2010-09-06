@@ -160,10 +160,10 @@ private
 		puts "cd #{PASSENGER_ROOT}"
 		if ENV['TRACE']
 			puts "#{PlatformInfo.rake_command} --trace clean apache2"
-			return sh("#{PlatformInfo.rake_command} --trace apache2:clean apache2")
+			return sh("#{PlatformInfo.rake_command} --trace apache2:clean apache2 CACHING=no")
 		else
 			puts "#{PlatformInfo.rake_command} clean apache2"
-			return sh("#{PlatformInfo.rake_command} apache2:clean apache2")
+			return sh("#{PlatformInfo.rake_command} apache2:clean apache2 CACHING=no")
 		end
 	end
 	
