@@ -284,7 +284,9 @@ private:
 				"node=" << nodeName << ", "
 				"category=" << category << ", "
 				"opened=" << opened << ", "
-				"age=" << long(lastUsed - ev_now(server->getLoop())) << "\n";
+				"age=" << long(ev_now(server->getLoop()) - lastUsed) << ", "
+				"bufferSize=" << bufferSize <<
+				"\n";
 		}
 	};
 	
