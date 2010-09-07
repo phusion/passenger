@@ -30,13 +30,12 @@ task :sloccount do
 		sh "sloccount", *Dir[
 			"#{tmpdir}/*",
 			"lib/phusion_passenger",
-			"lib/rake/{cplusplus,extensions}.rb",
 			"ext/apache2",
 			"ext/nginx",
 			"ext/common",
 			"ext/oxt",
 			"ext/phusion_passenger/*.c",
-			"test/**/*.{cpp,rb}"
+			"test/**/*.{cpp,rb,h}"
 		]
 	ensure
 		system "rm -rf #{tmpdir}"
