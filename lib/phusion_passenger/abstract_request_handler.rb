@@ -199,6 +199,7 @@ class AbstractRequestHandler
 		@processed_requests = 0
 		@soft_termination_linger_time = 3
 		@main_loop_running  = false
+		@passenger_header   = determine_passenger_header
 		
 		@debugger = @options["debugger"]
 		if @debugger
@@ -638,8 +639,11 @@ private
 		output.write("pong")
 	end
 	
-	def self.determine_passenger_header
-		header = "Phusion Passenger (mod_rails/mod_rack) #{VERSION_STRING}"
+	def determine_passenger_header
+		header = "Phusion Passenger (mod_rails/mod_rack)"
+		if @options["show_version_in_header"]
+			header << " #{VERSION_STRING}"
+		end
 		if File.exist?("#{SOURCE_ROOT}/enterprisey.txt") ||
 		   File.exist?("/etc/passenger_enterprisey.txt")
 			header << ", Enterprise Edition"
@@ -729,9 +733,6 @@ private
 			log.close
 		end
 	end
-
-public
-	PASSENGER_HEADER = determine_passenger_header
 end
 
 end # module PhusionPassenger

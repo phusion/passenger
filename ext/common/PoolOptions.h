@@ -176,6 +176,12 @@ struct PoolOptions {
 	bool useGlobalQueue;
 	
 	/**
+	 * Whether to show the Phusion Passenger version number in the
+	 * X-Powered-By header.
+	 */
+	bool showVersionInHeader;
+	
+	/**
 	 * A throttling rate for file stats. When set to a non-zero value N,
 	 * restart.txt and other files which are usually stat()ted on every
 	 * ApplicationPool::get() call will be stat()ed at most every N seconds.
@@ -237,6 +243,7 @@ struct PoolOptions {
 		maxRequests             = 0;
 		minProcesses            = 0;
 		useGlobalQueue          = false;
+		showVersionInHeader     = true;
 		statThrottleRate        = 0;
 		rights                  = DEFAULT_BACKEND_ACCOUNT_RIGHTS;
 		debugger                = false;
@@ -265,6 +272,7 @@ struct PoolOptions {
 		unsigned long maxRequests    = 0,
 		unsigned long minProcesses   = 0,
 		bool useGlobalQueue          = false,
+		bool showVersionInHeader     = true,
 		unsigned long statThrottleRate = 0,
 		const string &restartDir     = "",
 		Account::Rights rights       = DEFAULT_BACKEND_ACCOUNT_RIGHTS,
@@ -287,6 +295,7 @@ struct PoolOptions {
 		this->maxRequests             = maxRequests;
 		this->minProcesses            = minProcesses;
 		this->useGlobalQueue          = useGlobalQueue;
+		this->showVersionInHeader     = showVersionInHeader;
 		this->statThrottleRate        = statThrottleRate;
 		this->restartDir              = restartDir;
 		this->rights                  = rights;
@@ -341,6 +350,7 @@ struct PoolOptions {
 		maxRequests      = atol(vec[startIndex + offset]);           offset += 2;
 		minProcesses     = atol(vec[startIndex + offset]);           offset += 2;
 		useGlobalQueue   = vec[startIndex + offset] == "true";       offset += 2;
+		showVersionInHeader = vec[startIndex + offset] == "true";    offset += 2;
 		statThrottleRate = atol(vec[startIndex + offset]);           offset += 2;
 		restartDir       = vec[startIndex + offset];                 offset += 2;
 		rights           = (Account::Rights) atol(vec[startIndex + offset]);
@@ -397,6 +407,7 @@ struct PoolOptions {
 		appendKeyValue3(vec, "max_requests",       maxRequests);
 		appendKeyValue3(vec, "min_processes",      minProcesses);
 		appendKeyValue4(vec, "use_global_queue",   useGlobalQueue);
+		appendKeyValue4(vec, "show_version_in_header", showVersionInHeader);
 		appendKeyValue3(vec, "stat_throttle_rate", statThrottleRate);
 		appendKeyValue (vec, "restart_dir",        restartDir);
 		appendKeyValue3(vec, "rights",             rights);

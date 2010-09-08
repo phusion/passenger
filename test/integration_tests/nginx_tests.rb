@@ -187,6 +187,12 @@ describe "Phusion Passenger for Nginx" do
 					}
 				}
 			end
+			@nginx.add_server do |server|
+				server[:server_name] = "1.passenger.test"
+				server[:root]        = "#{@stub.full_app_root}/public"
+				server[:passenger_app_group_name] = "secondary"
+				server[:passenger_show_version_in_header] = "off"
+			end
 			@nginx.start
 		end
 		
@@ -227,6 +233,19 @@ describe "Phusion Passenger for Nginx" do
 			data = get('/crash_without_friendly_error_page')
 			data.should_not =~ /#{@error_page_signature}/
 			data.should_not =~ /my error/
+		end
+		
+		it "appends an X-Powered-By header containing the Phusion Passenger version number" do
+			response = get_response('/')
+			response["X-Powered-By"].should include("Phusion Passenger")
+			response["X-Powered-By"].should include(PhusionPassenger::VERSION_STRING)
+		end
+		
+		it "omits the version number in X-Powered-By when passenger_show_version_in_header is off" do
+			@server = "http://1.passenger.test:#{@nginx.port}/"
+			response = get_response('/')
+			response["X-Powered-By"].should include("Phusion Passenger")
+			response["X-Powered-By"].should_not include(PhusionPassenger::VERSION_STRING)
 		end
 	end
 	

@@ -62,7 +62,7 @@ private
 				alias passenger_orig_perform_action perform_action
 				
 				def perform_action(*whatever)
-					headers[X_POWERED_BY] = PASSENGER_HEADER
+					headers[X_POWERED_BY] = @passenger_header
 					passenger_orig_perform_action(*whatever)
 				end
 				private :perform_action

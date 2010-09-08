@@ -636,6 +636,7 @@ private:
 					config->getMaxRequests(),
 					config->getMinInstances(),
 					config->usingGlobalQueue(),
+					true,
 					config->getStatThrottleRate(),
 					config->getRestartDir(),
 					DEFAULT_BACKEND_ACCOUNT_RIGHTS,

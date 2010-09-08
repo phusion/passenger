@@ -269,6 +269,7 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->friendly_error_pages = NGX_CONF_UNSET;
     conf->analytics = NGX_CONF_UNSET;
     conf->debugger = NGX_CONF_UNSET;
+    conf->show_version_in_header = NGX_CONF_UNSET;
     conf->environment.data = NULL;
     conf->environment.len = 0;
     conf->spawn_method.data = NULL;
@@ -367,6 +368,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->friendly_error_pages, prev->friendly_error_pages, 1);
     ngx_conf_merge_value(conf->analytics, prev->analytics, 0);
     ngx_conf_merge_value(conf->debugger, prev->debugger, 0);
+    ngx_conf_merge_value(conf->show_version_in_header, prev->show_version_in_header, 1);
     ngx_conf_merge_str_value(conf->environment, prev->environment, "production");
     ngx_conf_merge_str_value(conf->spawn_method, prev->spawn_method, "smart-lv2");
     ngx_conf_merge_str_value(conf->union_station_key, prev->union_station_key, NULL);
@@ -1206,6 +1208,13 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_flag_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, debugger),
+      NULL },
+
+    { ngx_string("passenger_show_version_in_header"),
+      NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+      ngx_conf_set_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(passenger_loc_conf_t, show_version_in_header),
       NULL },
 
     { ngx_string("passenger_pre_start"),

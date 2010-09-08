@@ -113,6 +113,12 @@ describe "Apache 2 module" do
 				end
 			end
 		end
+		
+		it "appends an X-Powered-By header containing the Phusion Passenger version number" do
+			response = get_response('/')
+			response["X-Powered-By"].should include("Phusion Passenger")
+			response["X-Powered-By"].should include(PhusionPassenger::VERSION_STRING)
+		end
 	end
 	
 	describe ": MyCook(tm) beta running in a sub-URI" do

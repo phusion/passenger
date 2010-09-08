@@ -5,6 +5,7 @@ Release 2.9.4
  * Analytics logging changes. Changed log format for better disk space
    efficiency.
  * Better RVM support.
+ * [Nginx] passenger_show_version_in_header
 
 
 Release 2.9.3

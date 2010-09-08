@@ -762,7 +762,8 @@ protected
 		# Force this to be a boolean for easy use with Utils#unmarshal_and_raise_errors.
 		options["print_exceptions"]          = to_boolean(options["print_exceptions"])
 		
-		options["analytics"]    = to_boolean(options["analytics"])
+		options["analytics"]                 = to_boolean(options["analytics"])
+		options["show_version_in_header"]    = to_boolean(options["show_version_in_header"])
 		
 		# Smart spawning is not supported when using ruby-debug.
 		options["debugger"]     = to_boolean(options["debugger"])

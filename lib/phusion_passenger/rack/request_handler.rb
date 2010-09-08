@@ -101,7 +101,7 @@ protected
 				end
 				headers_output = [
 					STATUS, status.to_i.to_s, CRLF,
-					X_POWERED_BY, PASSENGER_HEADER, CRLF
+					X_POWERED_BY, @passenger_header, CRLF
 				]
 				headers.each do |key, values|
 					if values.is_a?(String)
