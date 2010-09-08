@@ -201,7 +201,7 @@ private
 			opts.on("--nginx-tarball FILENAME", String,
 				wrap_desc("If Nginx needs to be installed, then the given tarball will " +
 				          "be used instead of downloading from the Internet")) do |value|
-				@options[:nginx_tarball] = value
+				@options[:nginx_tarball] = File.expand_path(value)
 			end
 		end
 		@plugin.call_hook(:done_parsing_options)
