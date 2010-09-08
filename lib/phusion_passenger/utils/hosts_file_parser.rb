@@ -1,3 +1,4 @@
+# encoding: binary
 #  Phusion Passenger - http://www.modrails.com/
 #  Copyright (c) 2010 Phusion
 #
@@ -36,7 +37,7 @@ class HostsFileParser
 		if filename_or_io.respond_to?(:readline)
 			read_and_parse(filename_or_io)
 		else
-			File.open(filename_or_io, "r") do |f|
+			File.open(filename_or_io, "rb") do |f|
 				read_and_parse(f)
 			end
 		end
