@@ -609,23 +609,6 @@ this option as well. Please read
 
 This required option may only occur once, in the 'http' configuration block.
 
-=== passenger_log_level <integer> ===
-This option allows one to specify how much information Phusion Passenger should
-write to the Nginx error log file. A higher log level value means that more
-information will be logged.
-
-Possible values are:
-
-- '0': Show only errors and warnings.
-- '1': Show the most important debugging information. This might be useful for
-       system administrators who are trying to figure out the cause of a
-       problem.
-- '2': Show more debugging information. This is typically only useful for developers.
-- '3': Show even more debugging information.
-
-This option may only occur once, in the 'http' configuration block.
-The default is '0'.
-
 === passenger_ruby <filename> ===
 This option allows one to specify the Ruby interpreter to use.
 
@@ -1232,6 +1215,33 @@ the request ending up at a different web server in the cluster.
 ===== Does passenger_pre_start support https:// URLs? =====
 
 Yes. And it does not perform any certificate validation.
+
+
+=== Logging and debugging options ===
+=== passenger_log_level <integer> ===
+This option allows one to specify how much information Phusion Passenger should
+write to the Nginx error log file. A higher log level value means that more
+information will be logged.
+
+Possible values are:
+
+- '0': Show only errors and warnings.
+- '1': Show the most important debugging information. This might be useful for
+       system administrators who are trying to figure out the cause of a
+       problem.
+- '2': Show more debugging information. This is typically only useful for developers.
+- '3': Show even more debugging information.
+
+This option may only occur once, in the 'http' configuration block.
+The default is '0'.
+
+=== passenger_debug_log_file <filename> ===
+By default Phusion Passenger debugging and error messages are written to the global
+web server error log. This option allows one to specify the file that debugging and
+error messages should be written to instead.
+
+This option may only occur once, in the 'http' configuration block.
+
 
 === Ruby on Rails-specific options ===
 [[RailsEnv]]
