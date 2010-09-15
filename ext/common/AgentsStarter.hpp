@@ -46,6 +46,7 @@
 #include "Utils.h"
 #include "Utils/IOUtils.h"
 #include "Utils/Base64.h"
+#include "Utils/Timer.h"
 #include "Utils/VariantMap.h"
 
 namespace Passenger {
@@ -117,10 +118,31 @@ private:
 	ServerInstanceDir::GenerationPtr generation;
 	
 	static void
-	killAndWait(pid_t pid) {
-		this_thread::disable_syscall_interruption dsi;
-		syscalls::kill(pid, SIGKILL);
-		syscalls::waitpid(pid, NULL, 0);
+	killAndWait(pid_t pid, unsigned long long timeout = 0) {
+		if (timeout == 0 || timedWaitPid(pid, NULL, timeout) == 0) {
+			this_thread::disable_syscall_interruption dsi;
+			syscalls::kill(pid, SIGKILL);
+			syscalls::waitpid(pid, NULL, 0);
+		}
+	}
+	
+	/**
+	 * Behaves like <tt>waitpid(pid, status, WNOHANG)</tt>, but waits at most
+	 * <em>timeout</em> miliseconds for the process to exit.
+	 */
+	static int timedWaitPid(pid_t pid, int *status, unsigned long long timeout) {
+		Timer timer;
+		int ret;
+		
+		do {
+			ret = syscalls::waitpid(pid, status, WNOHANG);
+			if (ret > 0 || ret == -1) {
+				return ret;
+			} else {
+				syscalls::usleep(10000);
+			}
+		} while (timer.elapsed() < timeout);
+		return 0; // timed out
 	}
 	
 	/**
@@ -420,8 +442,12 @@ public:
 			try {
 				watchdogArgs.writeToChannel(feedbackChannel);
 			} catch (const SystemException &) {
-				/* Did the watchdog crash? */
-				ret = syscalls::waitpid(pid, &status, WNOHANG);
+				/* Did the watchdog crash?
+				 * At the time the channel was closed it might not have
+				 * exited yet so give it a short while to exit and to
+				 * print an error.
+				 */
+				ret = timedWaitPid(pid, &status, 2000);
 				if (ret == 0) {
 					/* Doesn't look like it; it seems it's still running.
 					 * We can't do anything in this state anyway, so
@@ -437,11 +463,17 @@ public:
 						"Unable to start the Phusion Passenger watchdog: "
 						"it seems to have been killed with signal " +
 						getSignalName(WTERMSIG(status)) + " during startup");
-				} else {
-					/* Looks like it exited for a different reason. */
+				} else if (ret == -1) {
+					/* Looks like it exited for a different reason and has no exit code. */
 					throw RuntimeException(
 						"Unable to start the Phusion Passenger watchdog: "
 						"it seems to have crashed during startup for an unknown reason");
+				} else {
+					/* Looks like it exited for a different reason, but has an exit code. */
+					throw RuntimeException(
+						"Unable to start the Phusion Passenger watchdog: "
+						"it seems to have crashed during startup for an unknown reason, "
+						"with exit code " + toString(WEXITSTATUS(status)));
 				}
 			}
 			
@@ -459,7 +491,7 @@ public:
 					/* The feedback fd was closed for an unknown reason.
 					 * Did the watchdog crash?
 					 */
-					ret = syscalls::waitpid(pid, &status, WNOHANG);
+					ret = timedWaitPid(pid, &status, 2000);
 					if (ret == 0) {
 						/* Doesn't look like it; it seems it's still running.
 						 * We can't do anything without proper feedback so kill
@@ -473,14 +505,19 @@ public:
 						throw RuntimeException("Unable to start the Phusion Passenger watchdog: "
 							"it seems to have been killed with signal " +
 							getSignalName(WTERMSIG(status)) + " during startup");
-					} else {
+					} else if (ret == -1) {
 						/* Looks like it exited after detecting an error. */
 						throw RuntimeException("Unable to start the Phusion Passenger watchdog: "
 							"it seems to have crashed during startup for an unknown reason");
+					} else {
+						throw RuntimeException(
+							"Unable to start the Phusion Passenger watchdog: "
+							"it seems to have crashed during startup for an unknown reason, "
+							"with exit code " + toString(WEXITSTATUS(status)));
 					}
 				}
 			} catch (const SystemException &ex) {
-				killAndWait(pid);
+				killAndWait(pid, 2000);
 				throw SystemException("Unable to start the Phusion Passenger watchdog: "
 					"unable to read its startup information",
 					ex.code());
@@ -488,7 +525,7 @@ public:
 				// Watchdog has already exited, no need to kill it.
 				throw;
 			} catch (...) {
-				killAndWait(pid);
+				killAndWait(pid, 2000);
 				throw;
 			}
 			
@@ -498,7 +535,7 @@ public:
 					serverInstanceDir.reset(new ServerInstanceDir(args[1], false));
 					generation = serverInstanceDir->getGeneration(atoi(args[2]));
 				} else {
-					killAndWait(pid);
+					killAndWait(pid, 2000);
 					throw IOException("Unable to start the Phusion Passenger watchdog: "
 						"it returned an invalid basic startup information message");
 				}
@@ -508,10 +545,10 @@ public:
 					"because it encountered the following error during startup: " +
 					args[1]);
 			} else if (args[0] == "system error") {
-				killAndWait(pid);
+				killAndWait(pid, 2000);
 				throw SystemException(args[1], atoi(args[2]));
 			} else if (args[0] == "exec error") {
-				killAndWait(pid);
+				killAndWait(pid, 2000);
 				throw SystemException("Unable to start the Phusion Passenger watchdog (" +
 					watchdogFilename + ")", atoi(args[1]));
 			}
@@ -537,7 +574,7 @@ public:
 							 * We can't do anything without proper feedback so kill
 							 * the watchdo and throw an exception.
 							 */
-							killAndWait(pid);
+							killAndWait(pid, 2000);
 							throw RuntimeException("Unable to start the Phusion Passenger watchdog: "
 								"an unknown error occurred during its startup");
 						} else if (ret != -1 && WIFSIGNALED(status)) {
@@ -552,7 +589,7 @@ public:
 						}
 					}
 				} catch (const SystemException &ex) {
-					killAndWait(pid);
+					killAndWait(pid, 2000);
 					throw SystemException("Unable to start the Phusion Passenger watchdog: "
 						"unable to read all agent startup information",
 						ex.code());
@@ -560,7 +597,7 @@ public:
 					// Watchdog has already exited, no need to kill it.
 					throw;
 				} catch (...) {
-					killAndWait(pid);
+					killAndWait(pid, 2000);
 					throw;
 				}
 				
@@ -587,7 +624,7 @@ public:
 						loggingSocketAddress  = args[1];
 						loggingSocketPassword = args[2];
 					} else {
-						killAndWait(pid);
+						killAndWait(pid, 2000);
 						throw IOException("Unable to start the Phusion Passenger watchdog: "
 							"it returned an invalid initialization feedback message");
 					}
@@ -595,7 +632,7 @@ public:
 					allAgentsStarted = true;
 				} else {
 					UPDATE_TRACE_POINT();
-					killAndWait(pid);
+					killAndWait(pid, 2000);
 					throw RuntimeException("One of the Passenger agents sent an unknown feedback message '" + args[0] + "'");
 				}
 			}
