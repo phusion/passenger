@@ -1,9 +1,8 @@
-require 'support/config'
-require 'support/test_helper'
+require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'phusion_passenger/abstract_server'
 require 'phusion_passenger/abstract_server_collection'
 
-include PhusionPassenger
+module PhusionPassenger
 
 describe AbstractServerCollection do
 	before :each do
@@ -244,3 +243,5 @@ describe AbstractServerCollection do
 		block.should_not raise_error
 	end
 end
+
+end # module PhusionPassenger

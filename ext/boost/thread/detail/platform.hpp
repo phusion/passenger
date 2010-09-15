@@ -42,9 +42,9 @@
 #elif defined(__QNXNTO__)
 #  define BOOST_THREAD_QNXNTO
 #elif defined(unix) || defined(__unix) || defined(_XOPEN_SOURCE) || defined(_POSIX_SOURCE)
-#	if defined(BOOST_HAS_PTHREADS) && !defined(BOOST_THREAD_POSIX)
-#		define BOOST_THREAD_POSIX
-#	endif
+#       if defined(BOOST_HAS_PTHREADS) && !defined(BOOST_THREAD_POSIX)
+#               define BOOST_THREAD_POSIX
+#       endif
 #endif
 
 // For every supported platform add a new entry into the dispatch table below.

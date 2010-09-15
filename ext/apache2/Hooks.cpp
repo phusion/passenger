@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2008, 2009 Phusion
+ *  Copyright (c) 2010 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -22,6 +22,21 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+
+/*
+ * This is the main source file which interfaces directly with Apache by
+ * installing hooks. The code here can look a bit convoluted, but it'll make
+ * more sense if you read:
+ * http://httpd.apache.org/docs/2.2/developer/request.html
+ *
+ * Scroll all the way down to passenger_register_hooks to get an idea of
+ * what we're hooking into and what we do in those hooks. There are many
+ * hooks but the gist is implemented in just two methods: prepareRequest()
+ * and handleRequest(). Most hooks exist for implementing compatibility
+ * with other Apache modules. These hooks create an environment in which
+ * prepareRequest() and handleRequest() can be comfortably run.
+ */
+
 #include <boost/thread.hpp>
 
 #include <sys/time.h>
@@ -33,21 +48,22 @@
 #include <oxt/macros.hpp>
 #include "Hooks.h"
 #include "Bucket.h"
-#include "Configuration.h"
+#include "Configuration.hpp"
 #include "Utils.h"
+#include "Utils/Timer.h"
 #include "Logging.h"
-#include "ApplicationPoolServer.h"
+#include "AgentsStarter.hpp"
+#include "ApplicationPool/Client.h"
 #include "MessageChannel.h"
 #include "DirectoryMapper.h"
-#include "Timer.h"
-#include "Version.h"
+#include "Constants.h"
 
 /* The Apache/APR headers *must* come after the Boost headers, otherwise
  * compilation will fail on OpenBSD.
  *
  * apr_want.h *must* come after MessageChannel.h, otherwise compilation will
  * fail on platforms on which apr_want.h tries to redefine 'struct iovec'.
- * http://tinyurl.com/b6aatw
+ * http://groups.google.com/group/phusion-passenger/browse_thread/thread/7e162f60df212e9c
  */
 #include <ap_config.h>
 #include <httpd.h>
@@ -68,17 +84,6 @@ using namespace Passenger;
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
 
-/*
- * This is the main source file which interfaces directly with Apache by
- * installing hooks. The code here can look a bit convoluted, but it'll make
- * more sense if you read:
- * http://httpd.apache.org/docs/2.2/developer/request.html
- *
- * Scroll all the way down to passenger_register_hooks to get an idea of
- * what we're hooking into and what we do in those hooks.
- */
-
-
 /**
  * If the HTTP client sends POST data larger than this value (in bytes),
  * then the POST data will be fully buffered into a temporary file, before
@@ -95,38 +100,17 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
  */
 class Hooks {
 private:
-	struct AprDestructable {
-		virtual ~AprDestructable() { }
-		
-		static apr_status_t cleanup(void *p) {
-			delete (AprDestructable *) p;
-			return APR_SUCCESS;
-		}
-	};
-	
-	struct RequestNote: public AprDestructable {
-		DirectoryMapper mapper;
-		DirConfig *config;
-		bool forwardToBackend;
-		const char *handlerBeforeModRewrite;
-		char *filenameBeforeModRewrite;
-		apr_filetype_e oldFileType;
-		const char *handlerBeforeModAutoIndex;
-		
-		RequestNote(const DirectoryMapper &m)
-			: mapper(m) {
-			forwardToBackend = false;
-			filenameBeforeModRewrite = NULL;
-		}
-	};
-	
-	struct ErrorReport: public AprDestructable {
+	class ErrorReport {
+	public:
+		virtual ~ErrorReport() { }
 		virtual int report(request_rec *r) = 0;
 	};
 	
-	struct ReportFileSystemError: public ErrorReport {
+	class ReportFileSystemError: public ErrorReport {
+	private:
 		FileSystemException e;
-		
+	
+	public:
 		ReportFileSystemError(const FileSystemException &ex): e(ex) { }
 		
 		int report(request_rec *r) {
@@ -150,6 +134,37 @@ private:
 		}
 	};
 	
+	struct RequestNote {
+		DirectoryMapper mapper;
+		DirConfig *config;
+		ErrorReport *errorReport;
+		
+		const char *handlerBeforeModRewrite;
+		char *filenameBeforeModRewrite;
+		apr_filetype_e oldFileType;
+		const char *handlerBeforeModAutoIndex;
+		
+		RequestNote(const DirectoryMapper &m, DirConfig *c)
+			: mapper(m),
+			  config(c)
+		{
+			errorReport      = NULL;
+			handlerBeforeModRewrite   = NULL;
+			filenameBeforeModRewrite  = NULL;
+			oldFileType               = APR_NOFILE;
+			handlerBeforeModAutoIndex = NULL;
+		}
+		
+		~RequestNote() {
+			delete errorReport;
+		}
+		
+		static apr_status_t cleanup(void *p) {
+			delete (RequestNote *) p;
+			return APR_SUCCESS;
+		}
+	};
+	
 	/**
 	 * A StringListCreator which returns a list of environment variable
 	 * names and values, as found in r->subprocess_env.
@@ -157,27 +172,31 @@ private:
 	class EnvironmentVariablesStringListCreator: public StringListCreator {
 	private:
 		request_rec *r;
+		mutable StringListPtr result;
 	public:
 		EnvironmentVariablesStringListCreator(request_rec *r) {
 			this->r = r;
 		}
 		
 		virtual const StringListPtr getItems() const {
-			const apr_array_header_t *env_arr;
-			apr_table_entry_t *env_entries;
-			StringListPtr result = ptr(new StringList());
-			
-			// Some standard CGI headers.
-			result->push_back("SERVER_SOFTWARE");
-			result->push_back(ap_get_server_version());
-			
-			// Subprocess environment variables.
-			env_arr = apr_table_elts(r->subprocess_env);
-			env_entries = (apr_table_entry_t *) env_arr->elts;
-			for (int i = 0; i < env_arr->nelts; ++i) {
-				if (env_entries[i].key != NULL && env_entries[i].val != NULL) {
-					result->push_back(env_entries[i].key);
-					result->push_back(env_entries[i].val);
+			if (!result) {
+				const apr_array_header_t *env_arr;
+				apr_table_entry_t *env_entries;
+				
+				result.reset(new StringList());
+				
+				// Some standard CGI headers.
+				result->push_back("SERVER_SOFTWARE");
+				result->push_back(ap_get_server_version());
+				
+				// Subprocess environment variables.
+				env_arr = apr_table_elts(r->subprocess_env);
+				env_entries = (apr_table_entry_t *) env_arr->elts;
+				for (int i = 0; i < env_arr->nelts; ++i) {
+					if (env_entries[i].key != NULL && env_entries[i].val != NULL) {
+						result->push_back(env_entries[i].key);
+						result->push_back(env_entries[i].val);
+					}
 				}
 			}
 			return result;
@@ -186,19 +205,19 @@ private:
 	
 	enum Threeway { YES, NO, UNKNOWN };
 
-	ApplicationPoolServerPtr applicationPoolServer;
-	thread_specific_ptr<ApplicationPoolPtr> threadSpecificApplicationPool;
+	thread_specific_ptr<ApplicationPool::Client> threadSpecificApplicationPool;
 	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex, m_hasModXsendfile;
 	CachedFileStat cstat;
+	AgentsStarter agentsStarter;
+	AnalyticsLoggerPtr analyticsLogger;
 	
 	inline DirConfig *getDirConfig(request_rec *r) {
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
 	}
 	
-	inline ServerConfig *getServerConfig(server_rec *s) {
-		return (ServerConfig *) ap_get_module_config(s->module_config, &passenger_module);
-	}
-	
+	/**
+	 * The existance of a request note means that the handler should be run.
+	 */
 	inline RequestNote *getRequestNote(request_rec *r) {
 		// The union is needed in order to be compliant with
 		// C99/C++'s strict aliasing rules. http://tinyurl.com/g5hgh
@@ -212,27 +231,92 @@ private:
 	}
 	
 	/**
-	 * Returns a usable ApplicationPool object.
+	 * Returns a usable ApplicationPool::Client object.
 	 *
-	 * When using the worker MPM and global queuing, deadlocks can occur, for
-	 * the same reason described in ApplicationPoolServer::connect(). This
-	 * method allows us to avoid this deadlock by making sure that each
-	 * thread gets its own connection to the application pool server.
+	 * When using the worker MPM and global queuing, deadlocks can occur, as
+	 * explained by ApplicationPool::Client's overview. This method allows us
+	 * to avoid deadlocks by making sure that each thread gets its own connection
+	 * to the application pool server.
 	 *
 	 * It also checks whether the currently cached ApplicationPool object
 	 * is disconnected (which can happen if an error previously occured).
-	 * If so, it will reconnect to the ApplicationPool server.
+	 * If so, it will reconnect to the application pool server.
+	 *
+	 * @throws SystemException
+	 * @throws IOException
+	 * @throws RuntimeException
+	 * @throws SecurityException
 	 */
-	ApplicationPoolPtr getApplicationPool() {
-		ApplicationPoolPtr *pool_ptr = threadSpecificApplicationPool.get();
-		if (pool_ptr == NULL) {
-			pool_ptr = new ApplicationPoolPtr(applicationPoolServer->connect());
-			threadSpecificApplicationPool.reset(pool_ptr);
-		} else if (!(*pool_ptr)->connected()) {
-			P_DEBUG("Reconnecting to ApplicationPool server");
-			*pool_ptr = applicationPoolServer->connect();
+	ApplicationPool::Client *getApplicationPool() {
+		TRACE_POINT();
+		ApplicationPool::Client *pool = threadSpecificApplicationPool.get();
+		if (pool == NULL || !pool->connected()) {
+			UPDATE_TRACE_POINT();
+			if (pool != NULL) {
+				P_DEBUG("Reconnecting to ApplicationPool server");
+			}
+			auto_ptr<ApplicationPool::Client> pool_ptr(new ApplicationPool::Client);
+			pool_ptr->connect(agentsStarter.getMessageSocketFilename(),
+				"_web_server", agentsStarter.getMessageSocketPassword());
+			pool = pool_ptr.release();
+			threadSpecificApplicationPool.reset(pool);
 		}
-		return *pool_ptr;
+		return pool;
+	}
+	
+	/**
+	 * Get a session from the application pool, similar to how
+	 * ApplicationPool::Interface::get() works. This method also checks whether
+	 * the helper server has crashed. If it did then it will attempt to
+	 * reconnect to the helper server for a small period of time until it's up
+	 * again.
+	 *
+	 * @throws SystemException
+	 * @throws IOException
+	 * @throws RuntimeException
+	 * @throws SecurityExcepion
+	 */
+	SessionPtr getSession(const PoolOptions &options) {
+		TRACE_POINT();
+		ApplicationPool::Client *pool = getApplicationPool();
+		try {
+			return pool->get(options);
+		} catch (const SystemException &e) {
+			if (e.code() == EPIPE) {
+				UPDATE_TRACE_POINT();
+				
+				// Maybe the helper server crashed. First wait 50 ms.
+				usleep(50000);
+				
+				// Then try to reconnect to the helper server for the
+				// next 5 seconds.
+				time_t deadline = time(NULL) + 5;
+				while (time(NULL) < deadline) {
+					try {
+						pool = getApplicationPool();
+					} catch (const SystemException &e) {
+						if (e.code() == ECONNREFUSED || e.code() == ECONNRESET) {
+							// Looks like the helper server hasn't been
+							// restarted yet. Wait between 20 and 100 ms.
+							usleep(20000 + rand() % 80000);
+							// Don't care about thread-safety of rand()
+						} else {
+							throw;
+						}
+					}
+				}
+				
+				UPDATE_TRACE_POINT();
+				if (pool != NULL && pool->connected()) {
+					return pool->get(options);
+				} else {
+					UPDATE_TRACE_POINT();
+					throw IOException("Cannot connect to the helper server");
+				}
+			} else {
+				throw;
+			}
+		}
 	}
 	
 	bool hasModRewrite() {
@@ -293,31 +377,29 @@ private:
 	}
 	
 	/**
-	 * Gather some information about the request and do some preparations. In this method,
-	 * it will be determined whether the request URI should be served statically by Apache
-	 * (in case of static assets or in case there's a page cache file available) or
-	 * whether it should be forwarded to the backend application.
+	 * Gather some information about the request and do some preparations.
 	 *
-	 * The strategy is as follows:
-	 *
-	 * We check whether Phusion Passenger is enabled for this URI (A).
-	 * If so, then we check whether the following situations are true:
+	 * This method will determine whether the Phusion Passenger handler method
+	 * should be run for this request, through the following checks:
 	 * (B) There is a backend application defined for this URI.
-	 * (C) r->filename already exists.
-	 * (D) There is a page cache file for the URI.
+	 * (C) r->filename already exists, meaning that this URI already maps to an existing file.
+	 * (D) There is a page cache file for this URI.
 	 *
-	 * - If A is not true, or if B is not true, or if C is true, then don't do anything.
-	 *   Passenger will be disabled during the rest of this request.
+	 * - If B is not true, or if C is true, then the handler shouldn't be run.
 	 * - If D is true, then we first transform r->filename to the page cache file's
-	 *   filename, and then we let Apache serve it statically.
-	 * - If D is not true, then we forward the request to the backend application.
+	 *   filename, and then we let Apache serve it statically. The Phusion Passenger
+	 *   handler shouldn't be run.
+	 * - If D is not true, then the handler should be run.
 	 *
-	 * @pre The (A) condition must be true.
+	 * @pre config->isEnabled()
 	 * @param coreModuleWillBeRun Whether the core.c map_to_storage hook might be called after this.
-	 * @return Whether the Passenger handler hook method should be run.
+	 * @return Whether the Phusion Passenger handler hook method should be run.
+	 *         When true, this method will save a request note object so that future hooks
+	 *         can store request-specific information.
 	 */
 	bool prepareRequest(request_rec *r, DirConfig *config, const char *filename, bool coreModuleWillBeRun = false) {
 		TRACE_POINT();
+		
 		DirectoryMapper mapper(r, config, &cstat, config->getStatThrottleRate());
 		try {
 			if (mapper.getBaseURI() == NULL) {
@@ -339,34 +421,19 @@ private:
 			 * Phusion Passenger for the rest of the request.
 			 */
 			if (e.code() == EACCES || e.code() == EPERM) {
-				// TODO: filesystem error is not always reported. need
-				// to figure out why. test case:
-				// - mkdir /foo
-				// - mkdir /foo/public
-				// - mkdir /foo/config
-				// - chmod 000 /foo/config
-				// - add vhost 'foo' with document root /foo/public
-				// - curl http://foo/
-				apr_pool_userdata_set(new ReportFileSystemError(e),
-					"Phusion Passenger: error report",
-					ReportFileSystemError::cleanup,
-					r->pool);
+				auto_ptr<RequestNote> note(new RequestNote(mapper, config));
+				note->errorReport = new ReportFileSystemError(e);
+				apr_pool_userdata_set(note.release(), "Phusion Passenger",
+					RequestNote::cleanup, r->pool);
 				return true;
 			} else {
 				return false;
 			}
 		}
 		
-		/* Save some information for the hook methods that are called later.
-		 * The existance of this note indicates that the URI belongs to a Phusion
-		 * Passenger-served application.
-		 */
-		RequestNote *note = new RequestNote(mapper);
-		note->config = config;
-		apr_pool_userdata_set(note, "Phusion Passenger", RequestNote::cleanup, r->pool);
+		// (B) is true.
 		
 		try {
-			// (B) is true.
 			FileType fileType = getFileType(filename);
 			if (fileType == FT_REGULAR) {
 				// (C) is true.
@@ -417,7 +484,9 @@ private:
 				return false;
 			} else {
 				// (D) is not true.
-				note->forwardToBackend = true;
+				RequestNote *note = new RequestNote(mapper, config);
+				apr_pool_userdata_set(note, "Phusion Passenger",
+					RequestNote::cleanup, r->pool);
 				return true;
 			}
 		} catch (const FileSystemException &e) {
@@ -443,25 +512,14 @@ private:
 		 * to the browser.
 		 */
 		
-		// The union is needed in order to be compliant with
-		// C99/C++'s strict aliasing rules. http://tinyurl.com/g5hgh
-		union {
-			ErrorReport *errorReport;
-			void *pointer;
-		} u;
-		
-		/* Did an error occur in any of the previous hook methods during
-		 * this request? If so, show the error and stop here.
-		 */
-		u.errorReport = 0;
-		apr_pool_userdata_get(&u.pointer, "Phusion Passenger: error report", r->pool);
-		if (u.errorReport != 0) {
-			return u.errorReport->report(r);
-		}
-		
 		RequestNote *note = getRequestNote(r);
-		if (note == 0 || !note->forwardToBackend) {
+		if (note == NULL) {
 			return DECLINED;
+		} else if (note->errorReport != NULL) {
+			/* Did an error occur in any of the previous hook methods during
+			 * this request? If so, show the error and stop here.
+			 */
+			return note->errorReport->report(r);
 		} else if (r->handler != NULL && strcmp(r->handler, "redirect-handler") == 0) {
 			// mod_rewrite is at work.
 			return DECLINED;
@@ -469,24 +527,45 @@ private:
 		
 		TRACE_POINT();
 		DirConfig *config = note->config;
-		DirectoryMapper &mapper(note->mapper);
-		
-		if (mapper.getPublicDirectory().empty()) {
-			return reportDocumentRootDeterminationError(r);
-		}
-		
-		
-		/********** Step 2: handle HTTP upload data, if any **********/
-		
-		int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_DECHUNK);
-    		if (httpStatus != OK) {
-			return httpStatus;
-		}
+		DirectoryMapper &mapper = note->mapper;
+		string publicDirectory, appRoot;
 		
 		try {
+			publicDirectory = mapper.getPublicDirectory();
+			if (publicDirectory.empty()) {
+				return reportDocumentRootDeterminationError(r);
+			}
+			appRoot = config->getAppRoot(publicDirectory.c_str());
+		} catch (const FileSystemException &e) {
+			/* The application root cannot be determined. This could
+			 * happen if, for example, the user specified 'RailsBaseURI /foo'
+			 * while there is no filesystem entry called "foo" in the virtual
+			 * host's document root.
+			 */
+			return ReportFileSystemError(e).report(r);
+		}
+		
+		
+		UPDATE_TRACE_POINT();
+		try {
+			AnalyticsLogPtr log;
+			if (config->analyticsEnabled()) {
+				log = analyticsLogger->newTransaction(config->getAppGroupName(appRoot));
+				log->message(string("URI: ") + r->uri);
+			} else {
+				log.reset(new AnalyticsLog());
+			}
+			
+			/********** Step 2: handle HTTP upload data, if any **********/
+			
+			int httpStatus = ap_setup_client_block(r, REQUEST_CHUNKED_DECHUNK);
+	    		if (httpStatus != OK) {
+				return httpStatus;
+			}
+			
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
-			Application::SessionPtr session;
+			SessionPtr session;
 			bool expectingUploadData;
 			string uploadDataMemory;
 			shared_ptr<BufferedUpload> uploadDataFile;
@@ -537,59 +616,71 @@ private:
 			/********** Step 3: forwarding the request to a backend
 			                    process from the application pool **********/
 			
-			UPDATE_TRACE_POINT();
+			AnalyticsScopeLog requestProcessingScope(log, "request processing");
+			
 			try {
-				ServerConfig *sconfig = getServerConfig(r->server);
-				string publicDirectory(mapper.getPublicDirectory());
+				AnalyticsScopeLog scope(log, "get from pool");
 				PoolOptions options(
-					config->getAppRoot(publicDirectory.c_str()),
-					true,
-					sconfig->getDefaultUser(),
+					appRoot,
+					config->getAppGroupName(appRoot),
+					mapper.getApplicationTypeString(),
 					mapper.getEnvironment(),
 					config->getSpawnMethodString(),
-					mapper.getApplicationTypeString(),
+					config->getUser(),
+					config->getGroup(),
+					serverConfig.defaultUser,
+					serverConfig.defaultGroup,
 					config->frameworkSpawnerTimeout,
 					config->appSpawnerTimeout,
+					mapper.getBaseURI(),
 					config->getMaxRequests(),
-					config->getMemoryLimit(),
+					config->getMinInstances(),
 					config->usingGlobalQueue(),
+					true,
 					config->getStatThrottleRate(),
 					config->getRestartDir(),
-					mapper.getBaseURI()
+					DEFAULT_BACKEND_ACCOUNT_RIGHTS,
+					false,
+					config->analyticsEnabled(),
+					log->isNull() ? AnalyticsLogPtr() : log
 				);
 				options.environmentVariables = ptr(new EnvironmentVariablesStringListCreator(r));
 				
-				session = getApplicationPool()->get(options);
+				session = getSession(options);
 				P_TRACE(3, "Forwarding " << r->uri << " to PID " << session->getPid());
+				scope.success();
+				log->message("Application PID: " + toString(session->getPid()) +
+					" (GUPID: " + session->getGupid() + ")");
 			} catch (const SpawnException &e) {
 				r->status = 500;
-				if (e.hasErrorPage()) {
+				if (e.hasErrorPage() && config->showFriendlyErrorPages()) {
 					ap_set_content_type(r, "text/html; charset=utf-8");
 					ap_rputs(e.getErrorPage().c_str(), r);
 					return OK;
 				} else {
 					throw;
 				}
-			} catch (const FileSystemException &e) {
-				/* The application root cannot be determined. This could
-				 * happen if, for example, the user specified 'RailsBaseURI /foo'
-				 * while there is no filesystem entry called "foo" in the virtual
-				 * host's document root.
-				 */
-				return ReportFileSystemError(e).report(r);
 			} catch (const BusyException &e) {
 				return reportBusyException(r);
 			}
 			
 			UPDATE_TRACE_POINT();
-			sendHeaders(r, config, session, mapper.getBaseURI());
+			AnalyticsScopeLog requestProxyingScope(log, "request proxying");
+			
+			{
+				AnalyticsScopeLog scope(log, "send request headers");
+				sendHeaders(r, config, session, mapper.getBaseURI(), log, appRoot);
+				scope.success();
+			}
 			if (expectingUploadData) {
+				AnalyticsScopeLog scope(log, "send request body");
 				if (uploadDataFile != NULL) {
 					sendRequestBody(r, session, uploadDataFile);
 					uploadDataFile.reset();
 				} else {
 					sendRequestBody(r, session, uploadDataMemory);
 				}
+				scope.success();
 			}
 			try {
 				session->shutdownWriter();
@@ -680,6 +771,9 @@ private:
 					P_WARN("Apache stopped forwarding the backend's response, "
 						"even though the HTTP client did not close the "
 						"connection. Is this an Apache bug?");
+				} else {
+					requestProxyingScope.success();
+					requestProcessingScope.success();
 				}
 				
 				return OK;
@@ -749,7 +843,7 @@ private:
 				e.what() << "\n" << "  Backtrace:\n" << e.backtrace());
 			return HTTP_INTERNAL_SERVER_ERROR;
 		
-		} catch (const exception &e) {
+		} catch (const std::exception &e) {
 			P_ERROR("Unexpected error in mod_passenger: " <<
 				e.what() << "\n" << "  Backtrace: not available");
 			return HTTP_INTERNAL_SERVER_ERROR;
@@ -808,7 +902,9 @@ private:
 		}
 	}
 	
-	apr_status_t sendHeaders(request_rec *r, DirConfig *config, Application::SessionPtr &session, const char *baseURI) {
+	apr_status_t sendHeaders(request_rec *r, DirConfig *config, SessionPtr &session,
+		const char *baseURI, const AnalyticsLogPtr &log, const string &appRoot)
+	{
 		apr_table_t *headers;
 		headers = apr_table_make(r->pool, 40);
 		if (headers == NULL) {
@@ -884,6 +980,12 @@ private:
 			addHeader(headers, env[i].key, env[i].val);
 		}
 		
+		if (config->analyticsEnabled()) {
+			addHeader(headers, "PASSENGER_GROUP_NAME",
+				config->getAppGroupName(appRoot).c_str());
+			addHeader(headers, "PASSENGER_TXN_ID", log->getTxnId().c_str());
+		}
+		
 		// Now send the headers.
 		string buffer;
 		
@@ -896,6 +998,14 @@ private:
 			buffer.append(hdrs[i].val);
 			buffer.append(1, '\0');
 		}
+		
+		buffer.append("PASSENGER_CONNECT_PASSWORD");
+		buffer.append(1, '\0');
+		buffer.append(session->getConnectPassword());
+		buffer.append(1, '\0');
+		
+		/*********************/
+		/*********************/
 		
 		/*
 		 * If the last header value is an empty string, then the buffer
@@ -932,7 +1042,8 @@ private:
 		string message("An error occured while "
 			"buffering HTTP upload data to "
 			"a temporary file in ");
-		message.append(config->getUploadBufferDir());
+		ServerInstanceDir::GenerationPtr generation = agentsStarter.getGeneration();
+		message.append(config->getUploadBufferDir(generation));
 		
 		switch (code) {
 		case ENOSPC:
@@ -1103,7 +1214,9 @@ private:
 		DirConfig *config = getDirConfig(r);
 		shared_ptr<BufferedUpload> tempFile;
 		try {
-			tempFile.reset(new BufferedUpload(config->getUploadBufferDir()));
+			ServerInstanceDir::GenerationPtr generation = agentsStarter.getGeneration();
+			string uploadBufferDir = config->getUploadBufferDir(generation);
+			tempFile.reset(new BufferedUpload(uploadBufferDir));
 		} catch (const SystemException &e) {
 			throwUploadBufferingException(r, e.code());
 		}
@@ -1155,7 +1268,7 @@ private:
 		}
 	}
 	
-	void sendRequestBody(request_rec *r, Application::SessionPtr &session, shared_ptr<BufferedUpload> &uploadData) {
+	void sendRequestBody(request_rec *r, SessionPtr &session, shared_ptr<BufferedUpload> &uploadData) {
 		TRACE_POINT();
 		rewind(uploadData->handle);
 		while (!feof(uploadData->handle)) {
@@ -1168,16 +1281,20 @@ private:
 		}
 	}
 	
-	void sendRequestBody(request_rec *r, Application::SessionPtr &session, const string &buffer) {
+	void sendRequestBody(request_rec *r, SessionPtr &session, const string &buffer) {
 		session->sendBodyBlock(buffer.c_str(), buffer.size());
 	}
 
 public:
 	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
-	    : cstat(1024) {
-		passenger_config_merge_all_servers(pconf, s);
-		ServerConfig *config = getServerConfig(s);
-		Passenger::setLogLevel(config->logLevel);
+	    : cstat(1024),
+	      agentsStarter(AgentsStarter::APACHE)
+	{
+		serverConfig.finalize();
+		Passenger::setLogLevel(serverConfig.logLevel);
+		if (serverConfig.debugLogFile != NULL) {
+			Passenger::setDebugFile(serverConfig.debugLogFile);
+		}
 		m_hasModRewrite = UNKNOWN;
 		m_hasModDir = UNKNOWN;
 		m_hasModAutoIndex = UNKNOWN;
@@ -1186,64 +1303,50 @@ public:
 		P_DEBUG("Initializing Phusion Passenger...");
 		ap_add_version_component(pconf, "Phusion_Passenger/" PASSENGER_VERSION);
 		
-		const char *user;
-		string applicationPoolServerExe, spawnServer;
-		
-		createPassengerTempDir(config->getTempDir(), config->userSwitching,
-			config->getDefaultUser(), unixd_config.user_id,
-			unixd_config.group_id);
-		
-		if (config->userSwitching) {
-			user = "";
-		} else {
-			user = config->getDefaultUser();
-		}
-		
-		if (config->root == NULL) {
+		if (serverConfig.root == NULL) {
 			throw ConfigurationException("The 'PassengerRoot' configuration option "
 				"is not specified. This option is required, so please specify it. "
 				"TIP: The correct value for this option was given to you by "
 				"'passenger-install-apache2-module'.");
 		}
 		
-		spawnServer = findSpawnServer(config->root);
-		if (!fileExists(spawnServer.c_str())) {
-			string message("The Passenger spawn server script, '");
-			message.append(spawnServer);
-			message.append("', does not exist. Please check whether the 'PassengerRoot' "
-				"option is specified correctly.");
-			throw FileNotFoundException(message);
-		}
-		applicationPoolServerExe = findApplicationPoolServer(config->root);
-		if (!fileExists(applicationPoolServerExe.c_str())) {
-			string message("The Passenger application pool server, '");
-			message.append(applicationPoolServerExe);
-			message.append("', does not exist. Please check whether the 'PassengerRoot' "
-				"option is specified correctly.");
-			throw FileNotFoundException(message);
-		}
+		agentsStarter.start(serverConfig.logLevel,
+			(serverConfig.debugLogFile == NULL) ? "" : serverConfig.debugLogFile,
+			getpid(), serverConfig.tempDir,
+			serverConfig.userSwitching,
+			serverConfig.defaultUser, serverConfig.defaultGroup,
+			unixd_config.user_id, unixd_config.group_id,
+			serverConfig.root, serverConfig.ruby, serverConfig.maxPoolSize,
+			serverConfig.maxInstancesPerApp, serverConfig.poolIdleTime,
+			"",
+			serverConfig.analyticsLogDir, serverConfig.analyticsLogUser,
+			serverConfig.analyticsLogGroup, serverConfig.analyticsLogPermissions,
+			DEFAULT_UNION_STATION_GATEWAY_ADDRESS,
+			DEFAULT_UNION_STATION_GATEWAY_PORT,
+			"",
+			serverConfig.prestartURLs);
 		
-		applicationPoolServer = ptr(
-			new ApplicationPoolServer(
-				applicationPoolServerExe, spawnServer, "",
-				config->getRuby(), user)
-		);
+		analyticsLogger = ptr(new AnalyticsLogger(agentsStarter.getLoggingSocketAddress(),
+			"logging", agentsStarter.getLoggingSocketPassword()));
 		
-		ApplicationPoolPtr pool(applicationPoolServer->connect());
-		pool->setMax(config->maxPoolSize);
-		pool->setMaxPerApp(config->maxInstancesPerApp);
-		pool->setMaxIdleTime(config->poolIdleTime);
+		// Store some relevant information in the generation directory.
+		string generationPath = agentsStarter.getGeneration()->getPath();
+		server_rec *server;
+		string configFiles;
+		
+		createFile(generationPath + "/web_server.txt", ap_get_server_description());
+		
+		for (server = s; server != NULL; server = server->next) {
+			if (server->defn_name != NULL) {
+				configFiles.append(server->defn_name);
+				configFiles.append(1, '\n');
+			}
+		}
+		createFile(generationPath + "/config_files.txt", configFiles);
 	}
 	
-	~Hooks() {
-		removeDirTree(getPassengerTempDir().c_str());
-		/* mod_passenger is loaded twice during Apache startup (load, unload, load),
-		 * but on OS X sometimes the old memory values of global variables can
-		 * stay behind and affect the next load. So here we empty the temp dir variable
-		 * explicitly so that the next load correctly calculates a new temp dir
-		 * filename using the after-daemonization Apache PID.
-		 */
-		setPassengerTempDir("");
+	void childInit(apr_pool_t *pchild, server_rec *s) {
+		agentsStarter.detach();
 	}
 	
 	int prepareRequestWhenInHighPerformanceMode(request_rec *r) {
@@ -1470,7 +1573,7 @@ destroy_hooks(void *arg) {
 	} catch (const thread_interrupted &) {
 		// Ignore interruptions, we're shutting down anyway.
 		P_TRACE(3, "A system call was interrupted during shutdown of mod_passenger.");
-	} catch (const exception &e) {
+	} catch (const std::exception &e) {
 		// Ignore other exceptions, we're shutting down anyway.
 		P_TRACE(3, "Exception during shutdown of mod_passenger: " << e.what());
 	}
@@ -1558,12 +1661,19 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 		
 		return DECLINED;
 		
-	} catch (const exception &e) {
+	} catch (const std::exception &e) {
 		ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,
 			"*** Passenger could not be initialized because of this error: %s",
 			e.what());
 		hooks = NULL;
 		return DECLINED;
+	}
+}
+
+static void
+child_init(apr_pool_t *pchild, server_rec *s) {
+	if (OXT_LIKELY(hooks != NULL)) {
+		hooks->childInit(pchild, s);
 	}
 }
 
@@ -1597,8 +1707,11 @@ passenger_register_hooks(apr_pool_t *p) {
 	static const char * const rewrite_module[] = { "mod_rewrite.c", NULL };
 	static const char * const dir_module[] = { "mod_dir.c", NULL };
 	static const char * const autoindex_module[] = { "mod_autoindex.c", NULL };
-
+	
 	ap_hook_post_config(init_module, NULL, NULL, APR_HOOK_MIDDLE);
+	ap_hook_child_init(child_init, NULL, NULL, APR_HOOK_MIDDLE);
+	
+	// The hooks here are defined in the order that they're called.
 	
 	ap_hook_map_to_storage(prepare_request_when_in_high_performance_mode, NULL, NULL, APR_HOOK_FIRST);
 	ap_hook_map_to_storage(save_original_filename, NULL, NULL, APR_HOOK_LAST);

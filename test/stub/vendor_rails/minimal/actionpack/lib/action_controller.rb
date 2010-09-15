@@ -16,4 +16,7 @@ module ActionController
 		def self.session(*whatever)
 		end
 	end
+
+	class Dispatcher
+	end
 end

@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2008, 2009 Phusion
+#  Copyright (c) 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -22,6 +22,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'phusion_passenger'
 require 'phusion_passenger/abstract_server'
 require 'phusion_passenger/abstract_server_collection'
 require 'phusion_passenger/constants'
@@ -49,17 +50,18 @@ module PhusionPassenger
 # will preload and cache Ruby on Rails frameworks, as well as application
 # code, so subsequent spawns will be very fast.
 #
-# Internally, SpawnManager uses Railz::FrameworkSpawner to preload and cache
-# Ruby on Rails frameworks. Railz::FrameworkSpawner, in turn, uses
-# Railz::ApplicationSpawner to preload and cache application code.
+# Internally, SpawnManager uses ClassicRails::FrameworkSpawner to preload and cache
+# Ruby on Rails frameworks. ClassicRails::FrameworkSpawner, in turn, uses
+# ClassicRails::ApplicationSpawner to preload and cache application code.
 #
-# In case you're wondering why the namespace is "Railz" and not "Rails":
+# In case you're wondering why the namespace is "ClassicRails" and not "Rails":
 # it's to work around an obscure bug in ActiveSupport's Dispatcher.
 class SpawnManager < AbstractServer
 	include Utils
 	
-	def initialize
-		super()
+	def initialize(options = {})
+		super("", "")
+		@options = options
 		@spawners = AbstractServerCollection.new
 		define_message_handler(:spawn_application, :handle_spawn_application)
 		define_message_handler(:reload, :handle_reload)
@@ -72,9 +74,9 @@ class SpawnManager < AbstractServer
 		if GC.copy_on_write_friendly?
 			# Preload libraries for copy-on-write semantics.
 			require 'base64'
-			require 'phusion_passenger/application'
-			require 'phusion_passenger/railz/framework_spawner'
-			require 'phusion_passenger/railz/application_spawner'
+			require 'phusion_passenger/app_process'
+			require 'phusion_passenger/classic_rails/framework_spawner'
+			require 'phusion_passenger/classic_rails/application_spawner'
 			require 'phusion_passenger/rack/application_spawner'
 			require 'phusion_passenger/html_template'
 			require 'phusion_passenger/platform_info'
@@ -82,46 +84,31 @@ class SpawnManager < AbstractServer
 		end
 	end
 	
-	# Spawn an application with the given spawn options. When successful, an
-	# Application object will be returned, which represents the spawned application.
-	# At least one option must be given: +app_root+. This is the application's root
-	# folder.
+	# Spawns an application with the given spawn options. When successful, an
+	# AppProcess object will be returned, which represents the spawned application
+	# process.
 	#
-	# Other options are:
+	# Most options are explained in PoolOptions.h.
 	#
-	# ['lower_privilege', 'lowest_user', 'environment', 'environment_variables', 'base_uri' and 'print_exceptions']
-	#   See Railz::ApplicationSpawner.new for an explanation of these options.
-	# 
-	# ['app_type']
-	#   What kind of application is being spawned. Either "rails" (default), "rack" or "wsgi".
-	# 
-	# ['spawn_method']
-	#   May be one of "smart", "smart-lv2" or "conservative". When "smart" is specified,
-	#   SpawnManager will internally cache the code of Rails applications, in
-	#   order to speed up future spawning attempts. This implies that, if you've changed
-	#   the application's
-	#   code, you must do one of these things:
-	#   - Restart this SpawnManager by calling AbstractServer#stop, then AbstractServer#start.
-	#   - Reload the application by calling reload with the correct app_root argument.
-	#   
-	#   "smart" caches the Rails framework code in a framework spawner server, and application
-	#   code in an application spawner server. Sometimes it is desirable to skip the
-	#   framework spawning and going directly for the application spawner instead. The
-	#   "smart-lv2" method allows you to do that.
-	#   
-	#   Caching however can be incompatible with some applications. The "conservative"
-	#   spawning method does not involve any caching at all. Spawning will be slower,
-	#   but is guaranteed to be compatible with all applications.
-	#   
-	#   The default spawn method is "smart-lv2".
-	# 
-	# ['framework_spawner_timeout' and 'app_spawner_timeout']
-	#   These options allow you to specify the maximum idle timeout, in seconds, of the
-	#   framework spawner servers and application spawner servers that will be started under
-	#   the hood. These options are only used if +app_type+ equals "rails".
-	#   
-	#   A timeout of 0 means that the spawner server should never idle timeout. A timeout of
-	#   -1 means that the default timeout value should be used. The default value is -1.
+	# Mandatory options:
+	# - 'app_root'
+	#
+	# Optional options:
+	# - 'app_type'
+	# - 'environment'
+	# - 'spawn_method'
+	# - 'user',
+	# - 'group'
+	# - 'default_user'
+	# - 'default_group'
+	# - 'framework_spawner_timeout'
+	# - 'app_spawner_timeout'
+	# - 'environment_variables': Environment variables which should be passed
+	#   to the spawned application process. This is NULL-seperated string of
+	#   key-value pairs, encoded in base64. The last byte in the unencoded
+	#   data must be a NULL.
+	# - 'base_uri'
+	# - 'print_exceptions'
 	#
 	# <b>Exceptions:</b>
 	# - InvalidPath: +app_root+ doesn't appear to be a valid Ruby on Rails application root.
@@ -136,36 +123,31 @@ class SpawnManager < AbstractServer
 		end
 		options = sanitize_spawn_options(options)
 		
-		if options["app_type"] == "rails"
-			if !defined?(Railz::FrameworkSpawner)
-				require 'phusion_passenger/application'
-				require 'phusion_passenger/railz/framework_spawner'
-				require 'phusion_passenger/railz/application_spawner'
+		case options["app_type"]
+		when "rails"
+			if !defined?(ClassicRails::FrameworkSpawner)
+				require 'phusion_passenger/classic_rails/framework_spawner'
+				require 'phusion_passenger/classic_rails/application_spawner'
 			end
 			return spawn_rails_application(options)
-		elsif options["app_type"] == "rack"
+		when "rack"
 			if !defined?(Rack::ApplicationSpawner)
 				require 'phusion_passenger/rack/application_spawner'
 			end
-			return Rack::ApplicationSpawner.spawn_application(
-				options["app_root"], options
-			)
-		elsif options["app_type"] == "wsgi"
-			require 'phusion_passenger/wsgi/application_spawner'
-			return WSGI::ApplicationSpawner.spawn_application(
-				options["app_root"],
-				options["lower_privilege"],
-				options["lowest_user"],
-				options["environment"]
-			)
+			return spawn_rack_application(options)
+		when "wsgi"
+			if !defined?(WSGI::ApplicationSpawner)
+				require 'phusion_passenger/wsgi/application_spawner'
+			end
+			return WSGI::ApplicationSpawner.spawn_application(options)
 		else
 			raise ArgumentError, "Unknown 'app_type' value '#{options["app_type"]}'."
 		end
 	end
 	
-	# Remove the cached application instances at the given application root.
-	# If nil is specified as application root, then all cached application
-	# instances will be removed, no matter the application root.
+	# Remove the cached application instances at the given group name.
+	# If nil is specified as group name, then all cached application
+	# instances will be removed, no matter the group name.
 	#
 	# <b>Long description:</b>
 	# Application code might be cached in memory. But once it a while, it will
@@ -176,28 +158,20 @@ class SpawnManager < AbstractServer
 	# loaded into memory.
 	#
 	# Raises AbstractServer::SpawnError if something went wrong.
-	def reload(app_root = nil)
+	def reload(app_group_name = nil)
 		@spawners.synchronize do
-			if app_root
-				# Delete associated ApplicationSpawner.
-				@spawners.delete("app:#{app_root}")
-			else
-				# Delete all ApplicationSpawners.
-				keys_to_delete = []
-				@spawners.each_pair do |key, spawner|
-					if spawner.is_a?(Railz::ApplicationSpawner)
-						keys_to_delete << key
+			if app_group_name
+				# Stop and delete associated ApplicationSpawner.
+				@spawners.delete("app:#{app_group_name}")
+				# Propagate reload command to associated FrameworkSpawner.
+				@spawners.each do |spawner|
+					if spawner.respond_to?(:reload)
+						spawner.reload(app_group_name)
 					end
 				end
-				keys_to_delete.each do |key|
-					@spawners.delete(key)
-				end
-			end
-			@spawners.each do |spawner|
-				# Reload all FrameworkSpawners.
-				if spawner.respond_to?(:reload)
-					spawner.reload(app_root)
-				end
+			else
+				# Stop and delete all spawners.
+				@spawners.clear
 			end
 		end
 	end
@@ -209,75 +183,96 @@ class SpawnManager < AbstractServer
 
 private
 	def spawn_rails_application(options)
-		spawn_method = options["spawn_method"]
-		app_root     = options["app_root"]
+		app_root       = options["app_root"]
+		app_group_name = options["app_group_name"]
+		spawn_method   = options["spawn_method"]
+		spawner        = nil
+		create_spawner = nil
+		key            = nil
 		
-		if [nil, "", "smart", "smart-lv2"].include?(spawn_method)
-			spawner_must_be_started = true
+		case spawn_method
+		when nil, "", "smart", "smart-lv2"
 			if spawn_method != "smart-lv2"
-				framework_version = Application.detect_framework_version(app_root)
+				framework_version = AppProcess.detect_framework_version(app_root)
 			end
 			if framework_version.nil? || framework_version == :vendor
-				key = "app:#{app_root}"
+				key = "app:#{app_group_name}"
 				create_spawner = proc do
-					Railz::ApplicationSpawner.new(app_root, options)
+					ClassicRails::ApplicationSpawner.new(@options.merge(options))
 				end
 				spawner_timeout = options["app_spawner_timeout"]
 			else
 				key = "version:#{framework_version}"
 				create_spawner = proc do
-					framework_options = { :version => framework_version }
-					if options.has_key?(:print_framework_loading_exceptions)
-						framework_options[:print_framework_loading_exceptions] = options[:print_framework_loading_exceptions]
-					end
-					Railz::FrameworkSpawner.new(framework_options)
+					options["framework_version"] = framework_version
+					ClassicRails::FrameworkSpawner.new(@options.merge(options))
 				end
 				spawner_timeout = options["framework_spawner_timeout"]
 			end
-		else
-			key = "app:#{app_root}"
-			create_spawner = proc do
-				Railz::ApplicationSpawner.new(app_root, options)
-			end
-			spawner_timeout = options["app_spawner_timeout"]
-			spawner_must_be_started = false
-		end
-		
-		@spawners.synchronize do
-			spawner = @spawners.lookup_or_add(key) do
-				spawner = create_spawner.call
-				if spawner_timeout != -1
-					spawner.max_idle_time = spawner_timeout
-				end
-				if spawner_must_be_started
+			
+			@spawners.synchronize do
+				spawner = @spawners.lookup_or_add(key) do
+					spawner = create_spawner.call
+					if spawner_timeout != -1
+						spawner.max_idle_time = spawner_timeout
+					end
 					spawner.start
+					spawner
 				end
-				spawner
-			end
-			begin
-				if spawner.is_a?(Railz::FrameworkSpawner)
-					return spawner.spawn_application(app_root, options)
-				elsif spawner.started?
-					return spawner.spawn_application
-				else
-					return spawner.spawn_application!
+				begin
+					return spawner.spawn_application(options)
+				rescue AbstractServer::ServerError
+					@spawners.delete(key)
+					raise
 				end
-			rescue AbstractServer::ServerError
-				@spawners.delete(key)
-				raise
 			end
+		else
+			return ClassicRails::ApplicationSpawner.spawn_application(
+				@options.merge(options))
 		end
 	end
 	
-	def handle_spawn_application(*options)
-		options = sanitize_spawn_options(Hash[*options])
-		app = nil
-		app_root = options["app_root"]
-		app_type = options["app_type"]
+	def spawn_rack_application(options)
+		app_group_name = options["app_group_name"]
+		spawn_method   = options["spawn_method"]
+		spawner        = nil
+		create_spawner = nil
+		key            = nil
+		
+		case spawn_method
+		when nil, "", "smart", "smart-lv2"
+			@spawners.synchronize do
+				key = "app:#{app_group_name}"
+				spawner = @spawners.lookup_or_add(key) do
+					spawner_timeout = options["app_spawner_timeout"]
+					spawner = Rack::ApplicationSpawner.new(
+						@options.merge(options))
+					if spawner_timeout != -1
+						spawner.max_idle_time = spawner_timeout
+					end
+					spawner.start
+					spawner
+				end
+				begin
+					return spawner.spawn_application(options)
+				rescue AbstractServer::ServerError
+					@spawners.delete(key)
+					raise
+				end
+			end
+		else
+			return Rack::ApplicationSpawner.spawn_application(
+				@options.merge(options))
+		end
+	end
+	
+	def handle_spawn_application(client, *options)
+		options     = sanitize_spawn_options(Hash[*options])
+		app_process = nil
+		app_root    = options["app_root"]
+		app_type    = options["app_type"]
 		begin
-			app = spawn_application(options)
-		rescue InvalidPath => e
-			send_error_page(client, 'invalid_app_root', :error => e, :app_root => app_root)
+			app_process = spawn_application(options)
 		rescue AbstractServer::ServerError => e
 			send_error_page(client, 'general_error', :error => e)
 		rescue VersionNotFound => e
@@ -305,29 +300,30 @@ private
 		rescue FrameworkInitError => e
 			send_error_page(client, 'framework_init_error', :error => e)
 		end
-		if app
+		if app_process
 			begin
 				client.write('ok')
-				client.write(app.pid, app.listen_socket_name,
-					app.listen_socket_type)
-				client.send_io(app.owner_pipe)
+				app_process.write_to_channel(client)
 			rescue Errno::EPIPE
 				# The Apache module may be interrupted during a spawn command,
 				# in which case it will close the connection. We ignore this error.
 			ensure
-				app.close
+				app_process.close
 			end
 		end
 	end
 	
-	def handle_reload(app_root)
-		reload(app_root)
+	def handle_reload(client, app_group_name)
+		reload(app_group_name)
 	end
 	
 	def send_error_page(channel, template_name, options = {})
 		require 'phusion_passenger/html_template' unless defined?(HTMLTemplate)
-		require 'phusion_passenger/platform_info' unless defined?(PlatformInfo)
-		options["enterprisey"] = File.exist?("#{File.dirname(__FILE__)}/../../enterprisey.txt") ||
+		if !defined?(PlatformInfo)
+			require 'phusion_passenger/platform_info'
+			require 'phusion_passenger/platform_info/ruby'
+		end
+		options["enterprisey"] = File.exist?("#{SOURCE_ROOT}/enterprisey.txt") ||
 			File.exist?("/etc/passenger_enterprisey.txt")
 		data = HTMLTemplate.new(template_name, options).result
 		channel.write('error_page')

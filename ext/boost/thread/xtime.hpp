@@ -1,6 +1,6 @@
 // Copyright (C) 2001-2003
 // William E. Kempf
-// Copyright (C) 2007 Anthony Williams
+// Copyright (C) 2007-8 Anthony Williams
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying 
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -13,6 +13,8 @@
 #include <boost/cstdint.hpp>
 #include <boost/thread/thread_time.hpp>
 #include <boost/date_time/posix_time/conversion.hpp>
+
+#include <boost/config/abi_prefix.hpp>
 
 namespace boost {
 
@@ -56,7 +58,7 @@ struct xtime
 
 inline xtime get_xtime(boost::system_time const& abs_time)
 {
-    xtime res={0};
+    xtime res;
     boost::posix_time::time_duration const time_since_epoch=abs_time-boost::posix_time::from_time_t(0);
             
     res.sec=static_cast<xtime::xtime_sec_t>(time_since_epoch.total_seconds());
@@ -84,5 +86,7 @@ inline int xtime_cmp(const xtime& xt1, const xtime& xt2)
 }
 
 } // namespace boost
+
+#include <boost/config/abi_suffix.hpp>
 
 #endif //BOOST_XTIME_WEK070601_HPP

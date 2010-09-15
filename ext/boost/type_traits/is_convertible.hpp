@@ -1,7 +1,7 @@
 
 // Copyright 2000 John Maddock (john@johnmaddock.co.uk)
 // Copyright 2000 Jeremy Siek (jsiek@lsc.nd.edu)
-// Copyright 1999, 2000 Jaakko J„rvi (jaakko.jarvi@cs.utu.fi)
+// Copyright 1999, 2000 Jaakko Jarvi (jaakko.jarvi@cs.utu.fi)
 //
 //  Use, modification and distribution are subject to the Boost Software License,
 //  Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
@@ -12,6 +12,8 @@
 #ifndef BOOST_TT_IS_CONVERTIBLE_HPP_INCLUDED
 #define BOOST_TT_IS_CONVERTIBLE_HPP_INCLUDED
 
+#include <boost/type_traits/intrinsics.hpp>
+#ifndef BOOST_IS_CONVERTIBLE
 #include <boost/type_traits/detail/yes_no_type.hpp>
 #include <boost/type_traits/config.hpp>
 #include <boost/type_traits/is_array.hpp>
@@ -28,10 +30,14 @@
 #include <boost/type_traits/remove_reference.hpp>
 #endif
 
+#endif // BOOST_IS_CONVERTIBLE
+
 // should be always the last #include directive
 #include <boost/type_traits/detail/bool_trait_def.hpp>
 
 namespace boost {
+
+#ifndef BOOST_IS_CONVERTIBLE
 
 // is one type convertable to another?
 //
@@ -250,7 +256,7 @@ struct is_convertible_basic_impl
 #ifdef BOOST_MSVC
 #pragma warning(push)
 #pragma warning(disable:4244)
-#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400)
+#if BOOST_WORKAROUND(BOOST_MSVC_FULL_VER, >= 140050000)
 #pragma warning(disable:6334)
 #endif
 #endif
@@ -410,6 +416,12 @@ BOOST_TT_AUX_BOOL_TRAIT_IMPL_PARTIAL_SPEC2_1(typename From,is_convertible,From,v
 } // namespace detail
 
 BOOST_TT_AUX_BOOL_TRAIT_DEF2(is_convertible,From,To,(::boost::detail::is_convertible_impl_dispatch<From,To>::value))
+
+#else
+
+BOOST_TT_AUX_BOOL_TRAIT_DEF2(is_convertible,From,To,BOOST_IS_CONVERTIBLE(From,To))
+
+#endif
 
 } // namespace boost
 

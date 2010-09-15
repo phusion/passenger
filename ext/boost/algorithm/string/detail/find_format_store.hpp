@@ -20,6 +20,10 @@ namespace boost {
 
 //  temporary format and find result storage --------------------------------//
 
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400)
+#pragma warning(push)
+#pragma warning(disable:4512) //assignment operator could not be generated
+#endif
             template< 
                 typename ForwardIteratorT,
                 typename FormatterT,
@@ -64,6 +68,9 @@ namespace boost {
                 const formatter_type& m_Formatter;
             };
 
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400)
+#pragma warning(pop)
+#endif
         } // namespace detail
     } // namespace algorithm
 } // namespace boost

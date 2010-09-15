@@ -43,10 +43,15 @@ module Rails
 		end
 	end
 	
+	class GemDependency
+		def self.add_frozen_gem_path
+		end
+	end
+	
 	module VERSION
 		MAJOR = 2
-		MINOR = 0
-		TINY = 0
+		MINOR = 3
+		TINY = 4
 		STRING = [MAJOR, MINOR, TINY].join('.')
 	end
 end

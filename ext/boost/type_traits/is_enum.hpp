@@ -11,6 +11,8 @@
 #ifndef BOOST_TT_IS_ENUM_HPP_INCLUDED
 #define BOOST_TT_IS_ENUM_HPP_INCLUDED
 
+#include <boost/type_traits/intrinsics.hpp>
+#ifndef BOOST_IS_ENUM
 #include <boost/type_traits/add_reference.hpp>
 #include <boost/type_traits/is_arithmetic.hpp>
 #include <boost/type_traits/is_reference.hpp>
@@ -24,13 +26,14 @@
 #  include <boost/type_traits/is_class.hpp>
 #  include <boost/type_traits/is_union.hpp>
 #endif
-
+#endif
 
 // should be the last #include
 #include <boost/type_traits/detail/bool_trait_def.hpp>
 
 namespace boost {
 
+#ifndef BOOST_IS_ENUM
 #if !(defined(__BORLANDC__) && (__BORLANDC__ <= 0x551))
 
 namespace detail {
@@ -170,6 +173,12 @@ BOOST_TT_AUX_BOOL_TRAIT_DEF1(is_enum,T,::boost::detail::is_enum_impl<T>::value)
 // buggy is_convertible prevents working
 // implementation of is_enum:
 BOOST_TT_AUX_BOOL_TRAIT_DEF1(is_enum,T,false)
+
+#endif
+
+#else // BOOST_IS_ENUM
+
+BOOST_TT_AUX_BOOL_TRAIT_DEF1(is_enum,T,BOOST_IS_ENUM(T))
 
 #endif
 

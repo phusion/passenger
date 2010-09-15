@@ -21,8 +21,6 @@
 #     define BOOST_NO_EXCEPTIONS
 # endif
 
-#define BOOST_COMPILER "Kai C++ version " BOOST_STRINGIZE(__KCC_VERSION)
-
 //
 // last known and checked version is 4001:
 #if (__KCC_VERSION > 4001)

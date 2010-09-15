@@ -11,7 +11,7 @@
 #define BOOST_FUNCTION_PROLOGUE_HPP
 #  include <cassert>
 #  include <algorithm>
-#  include <functional> // unary_function, binary_function
+#  include <boost/config/no_tr1/functional.hpp> // unary_function, binary_function
 #  include <boost/throw_exception.hpp>
 #  include <boost/config.hpp>
 #  include <boost/function/function_base.hpp>
@@ -22,4 +22,5 @@
 #  include <boost/preprocessor/cat.hpp>
 #  include <boost/preprocessor/repeat.hpp>
 #  include <boost/preprocessor/inc.hpp>
+#  include <boost/type_traits/is_void.hpp>
 #endif // BOOST_FUNCTION_PROLOGUE_HPP

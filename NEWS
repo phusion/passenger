@@ -1,3 +1,9 @@
+Release 3.0.0 beta 1
+--------------------
+
+This is a major release with many changes. Please read our blog for details.
+
+
 Release 2.2.15
 --------------
 
@@ -81,7 +87,7 @@ Release 2.2.11
 
  * This release fixes a regression that appeared in 2.2.10 which only
    affects Apache. When under high load, Apache might freeze and stop
-   responding to requests. It is caused by a race conditions which is
+   responding to requests. It is caused by a race condition which is
    why it escaped our last release testing.
    
    This problem does not affect Nginx; you only have to upgrade if
@@ -98,6 +104,7 @@ Release 2.2.10
    could lead to mysterious crashes.
  * Fixed some compilation problems on newer GCC versions. Issue #430.
  * Support #size method in rack.input.
+
 
 
 Release 2.2.9

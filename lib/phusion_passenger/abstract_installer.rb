@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2008, 2009 Phusion
+#  Copyright (c) 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -21,32 +21,57 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'phusion_passenger'
 require 'phusion_passenger/constants'
-require 'phusion_passenger/packaging'
 require 'phusion_passenger/console_text_template'
+require 'phusion_passenger/platform_info'
+
+# IMPORTANT: do not directly or indirectly require native_support; we can't compile
+# it yet until we have a compiler, and installers usually check whether a compiler
+# is installed.
 
 module PhusionPassenger
 
-# Abstract base class for installers. Used by passenger-install-apache2-module
-# and passenger-install-nginx-module.
+# Abstract base class for text mode installers. Used by
+# passenger-install-apache2-module and passenger-install-nginx-module.
+#
+# Subclasses must at least implement the #install! method which handles
+# the installation itself.
+#
+# Usage:
+#
+#   installer = ConcereteInstallerClass.new(options...)
+#   installer.start
 class AbstractInstaller
 	PASSENGER_WEBSITE = "http://www.modrails.com/"
 	PHUSION_WEBSITE = "www.phusion.nl"
 
+	# Create an AbstractInstaller. All options will be stored as instance
+	# variables, for example:
+	#
+	#   installer = AbstractInstaller.new(:foo => "bar")
+	#   installer.instance_variable_get(:"@foo")   # => "bar"
 	def initialize(options = {})
 		options.each_pair do |key, value|
 			instance_variable_set(:"@#{key}", value)
 		end
 	end
 	
+	# Start the installation by calling the #install! method.
 	def start
+		before_install
 		install!
 	ensure
-		reset_terminal_colors
+		after_install
 	end
 
 private
-	def reset_terminal_colors
+	def before_install
+		# Hook for subclasses.
+	end
+	
+	def after_install
+		# Reset terminal colors.
 		STDOUT.write("\e[0m")
 		STDOUT.flush
 	end
@@ -127,8 +152,8 @@ private
 		return []
 	end
 	
-	def check_dependencies
-		new_screen
+	def check_dependencies(show_new_screen = true)
+		new_screen if show_new_screen
 		missing_dependencies = []
 		color_puts "<banner>Checking for required software...</banner>"
 		puts
@@ -168,16 +193,21 @@ private
 				print_dependency_installation_instructions(dep)
 				puts
 			end
-			color_puts "If the aforementioned instructions didn't solve your problem, then please take"
-			color_puts "a look at the Users Guide:"
-			puts
-			color_puts "  <yellow>#{users_guide}</yellow>"
+			if respond_to?(:users_guide)
+				color_puts "If the aforementioned instructions didn't solve your problem, then please take"
+				color_puts "a look at the Users Guide:"
+				puts
+				color_puts "  <yellow>#{users_guide}</yellow>"
+			end
 			return false
 		end
 	end
 	
 	def print_dependency_installation_instructions(dep)
 		color_puts " * To install <yellow>#{dep.name}</yellow>:"
+		if dep.install_comments
+			color_puts "   " << dep.install_comments
+		end
 		if !dep.install_command.nil?
 			color_puts "   Please run <b>#{dep.install_command}</b> as root."
 		elsif !dep.install_instructions.nil?
@@ -189,6 +219,14 @@ private
 			end
 		else
 			color_puts "   Search Google."
+		end
+	end
+	
+	def download(url, output)
+		if PlatformInfo.find_command("wget")
+			return sh("wget", "-O", output, url)
+		else
+			return sh("curl", url, "-L", "-o", output)
 		end
 	end
 end

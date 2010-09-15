@@ -10,9 +10,9 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source$
-// $Date: 2005-08-25 12:27:28 -0400 (Thu, 25 Aug 2005) $
-// $Revision: 30670 $
+// $Id: yes_no.hpp 49267 2008-10-11 06:19:02Z agurtovoy $
+// $Date: 2008-10-11 02:19:02 -0400 (Sat, 11 Oct 2008) $
+// $Revision: 49267 $
 
 #include <boost/mpl/aux_/nttp_decl.hpp>
 #include <boost/mpl/aux_/config/arrays.hpp>

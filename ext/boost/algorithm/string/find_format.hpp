@@ -62,21 +62,24 @@ namespace boost {
             FormatterT Formatter )
         {
             // Concept check
-            function_requires< 
-                FinderConcept<FinderT,
-                BOOST_STRING_TYPENAME range_const_iterator<RangeT>::type> >();
-            function_requires< 
+            BOOST_CONCEPT_ASSERT((
+                FinderConcept<
+                    FinderT,
+                    BOOST_STRING_TYPENAME range_const_iterator<RangeT>::type>
+                ));
+            BOOST_CONCEPT_ASSERT((
                 FormatterConcept<
                     FormatterT,
-                    FinderT,BOOST_STRING_TYPENAME range_const_iterator<RangeT>::type> >();
+                    FinderT,BOOST_STRING_TYPENAME range_const_iterator<RangeT>::type>
+                ));
 
-            iterator_range<BOOST_STRING_TYPENAME range_const_iterator<RangeT>::type> lit_input(as_literal(Input));
+            iterator_range<BOOST_STRING_TYPENAME range_const_iterator<RangeT>::type> lit_input(::boost::as_literal(Input));
 
             return detail::find_format_copy_impl(
                 Output,
                 lit_input,
                 Formatter,
-                Finder( begin(lit_input), end(lit_input) ) );
+                Finder( ::boost::begin(lit_input), ::boost::end(lit_input) ) );
         }
 
         //! Generic replace algorithm
@@ -93,18 +96,21 @@ namespace boost {
             FormatterT Formatter )
         {
             // Concept check
-            function_requires< 
-                FinderConcept<FinderT,
-                BOOST_STRING_TYPENAME range_const_iterator<SequenceT>::type> >();
-            function_requires< 
+            BOOST_CONCEPT_ASSERT((
+                FinderConcept<
+                    FinderT,
+                    BOOST_STRING_TYPENAME range_const_iterator<SequenceT>::type>
+                ));
+            BOOST_CONCEPT_ASSERT((
                 FormatterConcept<
                     FormatterT,
-                    FinderT,BOOST_STRING_TYPENAME range_const_iterator<SequenceT>::type> >();
+                    FinderT,BOOST_STRING_TYPENAME range_const_iterator<SequenceT>::type>
+                ));
 
             return detail::find_format_copy_impl(
                 Input,
                 Formatter,
-                Finder(begin(Input), end(Input)));
+                Finder(::boost::begin(Input), ::boost::end(Input)));
         }
 
         //! Generic replace algorithm
@@ -126,18 +132,21 @@ namespace boost {
             FormatterT Formatter)
         {
             // Concept check
-            function_requires< 
-                FinderConcept<FinderT,
-                BOOST_STRING_TYPENAME range_const_iterator<SequenceT>::type> >();
-            function_requires< 
+            BOOST_CONCEPT_ASSERT((
+                FinderConcept<
+                    FinderT,
+                    BOOST_STRING_TYPENAME range_const_iterator<SequenceT>::type>
+                ));
+            BOOST_CONCEPT_ASSERT(( 
                 FormatterConcept<
                     FormatterT,
-                    FinderT,BOOST_STRING_TYPENAME range_const_iterator<SequenceT>::type> >();
+                    FinderT,BOOST_STRING_TYPENAME range_const_iterator<SequenceT>::type>
+                ));
 
             detail::find_format_impl(
                 Input,
                 Formatter,
-                Finder(begin(Input), end(Input)));
+                Finder(::boost::begin(Input), ::boost::end(Input)));
         }
 
 
@@ -172,22 +181,25 @@ namespace boost {
             FormatterT Formatter)
         {
             // Concept check
-            function_requires< 
-                FinderConcept<FinderT,
-                BOOST_STRING_TYPENAME range_const_iterator<RangeT>::type> >();
-            function_requires< 
+            BOOST_CONCEPT_ASSERT(( 
+                FinderConcept<
+                    FinderT,
+                    BOOST_STRING_TYPENAME range_const_iterator<RangeT>::type>
+                ));
+            BOOST_CONCEPT_ASSERT(( 
                 FormatterConcept<
                     FormatterT,
-                    FinderT,BOOST_STRING_TYPENAME range_const_iterator<RangeT>::type> >();
+                    FinderT,BOOST_STRING_TYPENAME range_const_iterator<RangeT>::type>
+                ));
 
-            iterator_range<BOOST_STRING_TYPENAME range_const_iterator<RangeT>::type> lit_input(as_literal(Input));
+            iterator_range<BOOST_STRING_TYPENAME range_const_iterator<RangeT>::type> lit_input(::boost::as_literal(Input));
 
             return detail::find_format_all_copy_impl(
                 Output,
                 lit_input,
                 Finder,
                 Formatter,
-                Finder(begin(lit_input), end(lit_input)));
+                Finder(::boost::begin(lit_input), ::boost::end(lit_input)));
         }
 
         //! Generic replace all algorithm
@@ -204,19 +216,22 @@ namespace boost {
             FormatterT Formatter )
         {
             // Concept check
-            function_requires< 
-                FinderConcept<FinderT,
-                BOOST_STRING_TYPENAME range_const_iterator<SequenceT>::type> >();
-            function_requires< 
+            BOOST_CONCEPT_ASSERT((
+                FinderConcept<
+                    FinderT,
+                    BOOST_STRING_TYPENAME range_const_iterator<SequenceT>::type>
+                ));
+            BOOST_CONCEPT_ASSERT((
                 FormatterConcept<
                     FormatterT,
-                    FinderT,BOOST_STRING_TYPENAME range_const_iterator<SequenceT>::type> >();
+                    FinderT,BOOST_STRING_TYPENAME range_const_iterator<SequenceT>::type>
+                ));
 
             return detail::find_format_all_copy_impl(
                 Input,
                 Finder,
                 Formatter,
-                Finder( begin(Input), end(Input) ) );
+                Finder( ::boost::begin(Input), ::boost::end(Input) ) );
         }
 
         //! Generic replace all algorithm
@@ -239,19 +254,22 @@ namespace boost {
             FormatterT Formatter )
         {
             // Concept check
-            function_requires< 
-                FinderConcept<FinderT,
-                BOOST_STRING_TYPENAME range_const_iterator<SequenceT>::type> >();
-            function_requires< 
+            BOOST_CONCEPT_ASSERT((
+                FinderConcept<
+                    FinderT,
+                    BOOST_STRING_TYPENAME range_const_iterator<SequenceT>::type>
+                ));
+            BOOST_CONCEPT_ASSERT((
                 FormatterConcept<
                     FormatterT,
-                    FinderT,BOOST_STRING_TYPENAME range_const_iterator<SequenceT>::type> >();
+                    FinderT,BOOST_STRING_TYPENAME range_const_iterator<SequenceT>::type>
+                ));
 
             detail::find_format_all_impl(
                 Input,
                 Finder,
                 Formatter,
-                Finder(begin(Input), end(Input)));
+                Finder(::boost::begin(Input), ::boost::end(Input)));
 
         }
 

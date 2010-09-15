@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2008 Phusion
+ * Copyright (c) 2010 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,7 @@ namespace oxt {
  */
 class spin_lock {
 private:
-	int exclusion;
+	volatile int exclusion;
 
 public:
 	/**
@@ -73,8 +73,7 @@ public:
 	 * @throws boost::thread_resource_error Something went wrong.
 	 */
 	void unlock() {
-		__sync_synchronize(); // Memory barrier.
-		exclusion = 0;
+		__sync_lock_release(&exclusion);
 	}
 };
 

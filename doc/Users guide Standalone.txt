@@ -1,0 +1,40 @@
+= Phusion Passenger Standalone users guide =
+
+image:images/phusion_banner.png[link="http://www.phusion.nl/"]
+
+Phusion Passenger Standalone is a web server that allows one to run Ruby web applications.
+Here are some of the highlights:
+
+- Unlike Phusion Passenger for Apache and Phusion Passenger for Nginx, Phusion Passenger
+  Standalone does not require an external web server, it is its own and therefore
+  extremely easy to get started.
+- It is powered by an Nginx core. This allows it to serve static files at blazing speeds,
+  makes it secure enough to be directly attached to port 80, and allows it to handle slow
+  clients. You don't need to have Nginx already installed.
+- Automatically spawns and shuts down application processes. One Phusion Passenger
+  Standalone instance can therefore handle multiple simultaneous connections and handles
+  resource management for you. Crashing application processes are automatically restarted.
+- Can listen on a Unix socket, for use in reverse proxy setups.
+
+== Installation ==
+
+------------------------------
+gem install passenger
+------------------------------
+
+== Usage ==
+
+Go to your application's root directory, and run:
+
+------------------------------
+passenger start
+------------------------------
+
+This will start Phusion Passenger on port 3000. If you want to run it on a different port,
+use the `-p` option, e.g.:
+
+------------------------------
+sudo passenger start -p 80
+------------------------------
+
+See `--help` for all available options.

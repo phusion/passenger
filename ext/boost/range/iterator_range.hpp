@@ -11,8 +11,15 @@
 #ifndef BOOST_RANGE_ITERATOR_RANGE_HPP
 #define BOOST_RANGE_ITERATOR_RANGE_HPP
 
-// From boost/dynamic_bitset.hpp; thanks to Matthias Troyer for Cray X1 patch.
 #include <boost/config.hpp> // Define __STL_CONFIG_H, if appropriate.
+#include <boost/detail/workaround.hpp>
+
+#if BOOST_WORKAROUND(BOOST_MSVC, BOOST_TESTED_AT(1500))
+    #pragma warning( push )
+    #pragma warning( disable : 4996 )
+#endif
+
+// From boost/dynamic_bitset.hpp; thanks to Matthias Troyer for Cray X1 patch.
 #ifndef BOOST_OLD_IOSTREAMS 
 # if defined(__STL_CONFIG_H) && \
     !defined (__STL_USE_NEW_IOSTREAMS) && !defined(__crayx1) \
@@ -21,12 +28,13 @@
 # endif
 #endif // #ifndef BOOST_OLD_IOSTREAMS
 
-#include <boost/detail/workaround.hpp>
+#include <boost/assert.hpp>
+#include <boost/iterator/iterator_traits.hpp>    
+#include <boost/type_traits/is_abstract.hpp>
 #include <boost/range/functions.hpp>
 #include <boost/range/iterator.hpp>
 #include <boost/range/difference_type.hpp>
-#include <boost/iterator/iterator_traits.hpp>    
-#include <boost/assert.hpp>
+#include <boost/utility/enable_if.hpp>
 #include <iterator>
 #include <algorithm>
 #ifndef _STLP_NO_IOSTREAMS
@@ -37,10 +45,6 @@
 # endif
 #endif // _STLP_NO_IOSTREAMS
 #include <cstddef>
-
-#if BOOST_WORKAROUND(BOOST_MSVC, == 1310) || BOOST_WORKAROUND(BOOST_MSVC, == 1400) 
-    #pragma warning( disable : 4996 )
-#endif
 
 /*! \file
     Defines the \c iterator_class and related functions. 
@@ -163,6 +167,12 @@ namespace boost
             //! iterator type
             typedef IteratorT iterator;
 
+        private: // for return value of operator()()
+            typedef BOOST_DEDUCED_TYPENAME 
+                boost::mpl::if_< boost::is_abstract<value_type>,
+                                 reference, value_type >::type abstract_value_type;
+
+        public:
             iterator_range() : m_Begin( iterator() ), m_End( iterator() )
                 #ifndef NDEBUG
             , singular( true )
@@ -175,7 +185,7 @@ namespace boost
                 m_Begin(Begin), m_End(End)
                 #ifndef NDEBUG
             , singular(false) 
-                 #endif
+                #endif
             {}
 
             //! Constructor from a Range
@@ -200,7 +210,7 @@ namespace boost
             template< class Range >
             iterator_range( const Range& r, iterator_range_detail::const_range_tag ) : 
                 m_Begin( impl::adl_begin( r ) ), m_End( impl::adl_end( r ) )
-                 #ifndef NDEBUG
+                #ifndef NDEBUG
             , singular(false) 
                 #endif
             {}
@@ -209,7 +219,7 @@ namespace boost
             template< class Range >
             iterator_range( Range& r, iterator_range_detail::range_tag ) : 
                 m_Begin( impl::adl_begin( r ) ), m_End( impl::adl_end( r ) )
-                 #ifndef NDEBUG
+                #ifndef NDEBUG
             , singular(false) 
                 #endif
             {}
@@ -350,8 +360,8 @@ namespace boost
            // When storing transform iterators, operator[]()
            // fails because it returns by reference. Therefore
            // operator()() is provided for these cases.
-           //
-           value_type operator()( difference_type at ) const
+           // 
+           abstract_value_type operator()( difference_type at ) const                              
            {
                BOOST_ASSERT( at >= 0 && at < size() );
                return m_Begin[at];               
@@ -380,13 +390,15 @@ namespace boost
             bool      singular;
             #endif
 
-            #ifndef NDEBUG
         public:
             bool is_singular() const
             {
+                 #ifndef NDEBUG
                  return singular;
+                 #else
+                 return false;
+                 #endif
             }
-            #endif
 
         protected:
             //
@@ -638,6 +650,10 @@ namespace boost
 } // namespace 'boost'
 
 #undef BOOST_OLD_IOSTREAMS
+
+#if BOOST_WORKAROUND(BOOST_MSVC, BOOST_TESTED_AT(1500)) 
+    #pragma warning( pop )
+#endif
 
 #endif
 

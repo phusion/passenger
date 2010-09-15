@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2008, 2009 Phusion
+ *  Copyright (c) 2010 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -24,59 +24,83 @@
  */
 
 #include <oxt/system_calls.hpp>
+#include <boost/thread.hpp>
 
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/un.h>
 #include <cassert>
+#include <cstring>
 #include <libgen.h>
-#include <pwd.h>
-#include "CachedFileStat.hpp"
+#include <fcntl.h>
+#include <limits.h>
+#include "FileDescriptor.h"
+#include "MessageChannel.h"
+#include "MessageServer.h"
+#include "ResourceLocator.h"
 #include "Exceptions.h"
 #include "Utils.h"
+#include "Utils/Base64.h"
+#include "Utils/CachedFileStat.hpp"
+#include "Utils/StrIntUtils.h"
 
 #define SPAWN_SERVER_SCRIPT_NAME "passenger-spawn-server"
+
+#ifndef HOST_NAME_MAX
+	#if defined(_POSIX_HOST_NAME_MAX)
+		#define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
+	#elif defined(_SC_HOST_NAME_MAX)
+		#define HOST_NAME_MAX sysconf(_SC_HOST_NAME_MAX)
+	#else
+		#define HOST_NAME_MAX 255
+	#endif
+#endif
 
 namespace Passenger {
 
 static string passengerTempDir;
 
-int
-atoi(const string &s) {
-	return ::atoi(s.c_str());
-}
-
-long
-atol(const string &s) {
-	return ::atol(s.c_str());
-}
-
-void
-split(const string &str, char sep, vector<string> &output) {
-	string::size_type start, pos;
-	start = 0;
-	output.clear();
-	while ((pos = str.find(sep, start)) != string::npos) {
-		output.push_back(str.substr(start, pos - start));
-		start = pos + 1;
-	}
-	output.push_back(str.substr(start));
+namespace {
+	/**
+	 * Given a filename, FileGuard will unlink the file in its destructor, unless
+	 * commit() was called. Used in file operation functions that don't want to
+	 * leave behind half-finished files after error conditions.
+	 */
+	struct FileGuard {
+		string filename;
+		bool committed;
+		
+		FileGuard(const string &filename) {
+			this->filename = filename;
+			committed = false;
+		}
+		
+		~FileGuard() {
+			if (!committed) {
+				int ret;
+				do {
+					ret = unlink(filename.c_str());
+				} while (ret == -1 && errno == EINTR);
+			}
+		}
+		
+		void commit() {
+			committed = true;
+		}
+	};
 }
 
 bool
-fileExists(const char *filename, CachedFileStat *cstat, unsigned int throttleRate) {
+fileExists(const StaticString &filename, CachedFileStat *cstat, unsigned int throttleRate) {
 	return getFileType(filename, cstat, throttleRate) == FT_REGULAR;
 }
 
 FileType
-getFileType(const char *filename, CachedFileStat *cstat, unsigned int throttleRate) {
+getFileType(const StaticString &filename, CachedFileStat *cstat, unsigned int throttleRate) {
 	struct stat buf;
 	int ret;
 	
 	if (cstat != NULL) {
-		ret = cstat->stat(filename, &buf, throttleRate);
+		ret = cstat->stat(filename.toString(), &buf, throttleRate);
 	} else {
-		ret = stat(filename, &buf);
+		ret = stat(filename.c_str(), &buf);
 	}
 	if (ret == 0) {
 		if (S_ISREG(buf.st_mode)) {
@@ -99,61 +123,65 @@ getFileType(const char *filename, CachedFileStat *cstat, unsigned int throttleRa
 	}
 }
 
-string
-findSpawnServer(const char *passengerRoot) {
-	if (passengerRoot != NULL) {
-		string root(passengerRoot);
-		if (root.at(root.size() - 1) != '/') {
-			root.append(1, '/');
+void
+createFile(const string &filename, const StaticString &contents, mode_t permissions, uid_t owner,
+	gid_t group, bool overwrite)
+{
+	FileDescriptor fd;
+	int ret, e, options;
+	
+	options = O_WRONLY | O_CREAT | O_TRUNC;
+	if (!overwrite) {
+		options |= O_EXCL;
+	}
+	do {
+		fd = open(filename.c_str(), options, permissions);
+	} while (fd == -1 && errno == EINTR);
+	if (fd != -1) {
+		FileGuard guard(filename);
+		
+		// The file permission may not be as expected because of the active
+		// umask, so fchmod() it here to ensure correct permissions.
+		do {
+			ret = fchmod(fd, permissions);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
+			e = errno;
+			throw FileSystemException("Cannot set permissions on " + filename,
+				e, filename);
 		}
 		
-		string path(root);
-		path.append("bin/passenger-spawn-server");
-		if (fileExists(path.c_str())) {
-			return path;
-		} else {
-			path.assign(root);
-			path.append("lib/phusion_passenger/passenger-spawn-server");
-			return path;
-		}
-		return path;
-	} else {
-		const char *path = getenv("PATH");
-		if (path == NULL) {
-			return "";
-		}
-	
-		vector<string> paths;
-		split(getenv("PATH"), ':', paths);
-		for (vector<string>::const_iterator it(paths.begin()); it != paths.end(); it++) {
-			if (!it->empty() && (*it).at(0) == '/') {
-				string filename(*it);
-				filename.append("/" SPAWN_SERVER_SCRIPT_NAME);
-				if (fileExists(filename.c_str())) {
-					return filename;
-				}
+		if (owner != USER_NOT_GIVEN && group != GROUP_NOT_GIVEN) {
+			if (owner == USER_NOT_GIVEN) {
+				owner = (uid_t) -1; // Don't let fchown change file owner.
+			}
+			if (group == GROUP_NOT_GIVEN) {
+				group = (gid_t) -1; // Don't let fchown change file group.
+			}
+			do {
+				ret = fchown(fd, owner, group);
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1) {
+				e = errno;
+				throw FileSystemException("Cannot set ownership for " + filename,
+					e, filename);
 			}
 		}
-		return "";
-	}
-}
-
-string
-findApplicationPoolServer(const char *passengerRoot) {
-	assert(passengerRoot != NULL);
-	string root(passengerRoot);
-	if (root.at(root.size() - 1) != '/') {
-		root.append(1, '/');
-	}
-	
-	string path(root);
-	path.append("ext/apache2/ApplicationPoolServerExecutable");
-	if (fileExists(path.c_str())) {
-		return path;
+		
+		try {
+			MessageChannel(fd).writeRaw(contents);
+			fd.close();
+		} catch (const SystemException &e) {
+			throw FileSystemException("Cannot write to file " + filename,
+				e.code(), filename);
+		}
+		guard.commit();
 	} else {
-		path.assign(root);
-		path.append("lib/phusion_passenger/ApplicationPoolServerExecutable");
-		return path;
+		e = errno;
+		if (overwrite || e != EEXIST) {
+			throw FileSystemException("Cannot create file " + filename,
+				e, filename);
+		}
 	}
 }
 
@@ -226,10 +254,18 @@ resolveSymlink(const string &path) {
 }
 
 string
-extractDirName(const string &path) {
+extractDirName(const StaticString &path) {
 	char *path_copy = strdup(path.c_str());
 	char *result = dirname(path_copy);
 	string result_string(result);
+	free(path_copy);
+	return result_string;
+}
+
+string
+extractBaseName(const StaticString &path) {
+	char *path_copy = strdup(path.c_str());
+	string result_string = basename(path_copy);
 	free(path_copy);
 	return result_string;
 }
@@ -246,7 +282,8 @@ escapeForXml(const string &input) {
 		
 		if ((ch >= 'A' && ch <= 'z')
 		 || (ch >= '0' && ch <= '9')
-		 || ch == '/' || ch == ' ' || ch == '_' || ch == '.') {
+		 || ch == '/' || ch == ' ' || ch == '_' || ch == '.'
+		 || ch == ':' || ch == '+' || ch == '-') {
 			// This is an ASCII character. Ignore it and
 			// go to next character.
 			result_pos++;
@@ -296,232 +333,181 @@ getProcessUsername() {
 	}
 }
 
-void
-determineLowestUserAndGroup(const string &user, uid_t &uid, gid_t &gid) {
-	struct passwd *ent;
+mode_t
+parseModeString(const StaticString &mode) {
+	mode_t modeBits = 0;
+	vector<string> clauses;
+	vector<string>::iterator it;
 	
-	ent = getpwnam(user.c_str());
-	if (ent == NULL) {
-		ent = getpwnam("nobody");
+	split(mode, ',', clauses);
+	for (it = clauses.begin(); it != clauses.end(); it++) {
+		const string &clause = *it;
+		
+		if (clause.empty()) {
+			continue;
+		} else if (clause.size() < 2 || clause[1] != '=') {
+			throw InvalidModeStringException("Invalid mode clause specification '" + clause + "'");
+		}
+		
+		switch (clause[0]) {
+		case 'u':
+			for (string::size_type i = 2; i < clause.size(); i++) {
+				switch (clause[i]) {
+				case 'r':
+					modeBits |= S_IRUSR;
+					break;
+				case 'w':
+					modeBits |= S_IWUSR;
+					break;
+				case 'x':
+					modeBits |= S_IXUSR;
+					break;
+				case 's':
+					modeBits |= S_ISUID;
+					break;
+				default:
+					throw InvalidModeStringException("Invalid permission '" +
+						string(1, clause[i]) +
+						"' in mode clause specification '" +
+						clause + "'");
+				}
+			}
+			break;
+		case 'g':
+			for (string::size_type i = 2; i < clause.size(); i++) {
+				switch (clause[i]) {
+				case 'r':
+					modeBits |= S_IRGRP;
+					break;
+				case 'w':
+					modeBits |= S_IWGRP;
+					break;
+				case 'x':
+					modeBits |= S_IXGRP;
+					break;
+				case 's':
+					modeBits |= S_ISGID;
+					break;
+				default:
+					throw InvalidModeStringException("Invalid permission '" +
+						string(1, clause[i]) +
+						"' in mode clause specification '" +
+						clause + "'");
+				}
+			}
+			break;
+		case 'o':
+			for (string::size_type i = 2; i < clause.size(); i++) {
+				switch (clause[i]) {
+				case 'r':
+					modeBits |= S_IROTH;
+					break;
+				case 'w':
+					modeBits |= S_IWOTH;
+					break;
+				case 'x':
+					modeBits |= S_IXOTH;
+					break;
+				default:
+					throw InvalidModeStringException("Invalid permission '" +
+						string(1, clause[i]) +
+						"' in mode clause specification '" +
+						clause + "'");
+				}
+			}
+			break;
+		default:
+			throw InvalidModeStringException("Invalid owner '" + string(1, clause[0]) +
+				"' in mode clause specification '" + clause + "'");
+		}
 	}
-	if (ent == NULL) {
-		uid = (uid_t) -1;
-		gid = (gid_t) -1;
-	} else {
-		uid = ent->pw_uid;
-		gid = ent->pw_gid;
-	}
+	
+	return modeBits;
 }
 
 const char *
 getSystemTempDir() {
-	const char *temp_dir = getenv("TMPDIR");
+	const char *temp_dir = getenv("PASSENGER_TEMP_DIR");
 	if (temp_dir == NULL || *temp_dir == '\0') {
-		temp_dir = "/tmp";
+		temp_dir = getenv("PASSENGER_TMPDIR");
+		if (temp_dir == NULL || *temp_dir == '\0') {
+			temp_dir = "/tmp";
+		}
 	}
 	return temp_dir;
 }
 
-string
-getPassengerTempDir(bool bypassCache, const string &parentDir) {
-	if (!bypassCache && !passengerTempDir.empty()) {
-		return passengerTempDir;
-	} else {
-		string theParentDir;
-		char buffer[PATH_MAX];
-		
-		if (parentDir.empty()) {
-			theParentDir = getSystemTempDir();
-		} else {
-			theParentDir = parentDir;
-		}
-		snprintf(buffer, sizeof(buffer), "%s/passenger.%lu",
-			theParentDir.c_str(), (unsigned long) getpid());
-		buffer[sizeof(buffer) - 1] = '\0';
-		passengerTempDir = buffer;
-		return passengerTempDir;
-	}
-}
-
 void
-setPassengerTempDir(const string &dir) {
-	passengerTempDir = dir;
-}
-
-/* Creates a non-writable FIFO file in order to prevent /tmp cleaners from removing
- * passenger temp dir subdirectories. See http://code.google.com/p/phusion-passenger/issues/detail?id=365
- * for details.
- */
-static void
-createNonWritableFifo(const string &filename) {
-	int ret, e;
-	bool ignoreChmodErrors = false;
-	
-	do {
-		ret = mkfifo(filename.c_str(), 0);
-	} while (ret == -1 && errno == EINTR);
-	if (ret == -1) {
-		if (errno == EEXIST) {
-			/* The FIFO file was likely created by root, but after lowering
-			 * privilege createPassengerTempDir() is called again, and this
-			 * time we won't be able to set permissions. So in this case
-			 * we'll want to ignore any chmod errors.
-			 */
-			ignoreChmodErrors = geteuid() != 0;
-		} else {
-			e = errno;
-			throw FileSystemException("Cannot create FIFO file " + filename,
-				e, filename);
-		}
-	}
-	
-	do {
-		ret = chmod(filename.c_str(), 0);
-	} while (ret == -1 && errno == EINTR);
-	if (ret == -1 && !ignoreChmodErrors) {
-		e = errno;
-		throw FileSystemException("Cannot set permissions on file " + filename, e, filename);
-	}
-}
-
-void
-createPassengerTempDir(const string &parentDir, bool userSwitching,
-                       const string &lowestUser, uid_t workerUid, gid_t workerGid) {
-	string tmpDir(getPassengerTempDir(false, parentDir));
-	uid_t lowestUid;
-	gid_t lowestGid;
-	
-	determineLowestUserAndGroup(lowestUser, lowestUid, lowestGid);
-	
-	/* Create the temp directory with the current user as owner (which
-	 * is root if the web server was started as root). Only the owner
-	 * may write to this directory. Everybody else may only access the
-	 * directory. The permissions on the subdirectories will determine
-	 * whether a user may access that specific subdirectory.
-	 */
-	makeDirTree(tmpDir, "u=wxs,g=x,o=x");
-	createNonWritableFifo(tmpDir + "/.guard");
-	
-	/* We want this upload buffer directory to be only accessible by the web server's
-	 * worker processs.
-	 *
-	 * It only makes sense to chown webserver_private to workerUid and workerGid if the web server
-	 * is actually able to change the user of the worker processes. That is, if the web server
-	 * is running as root.
-	 */
-	if (geteuid() == 0) {
-		makeDirTree(tmpDir + "/webserver_private", "u=wxs,g=,o=", workerUid, workerGid);
-	} else {
-		makeDirTree(tmpDir + "/webserver_private", "u=wxs,g=,o=");
-	}
-	createNonWritableFifo(tmpDir + "/webserver_private/.guard");
-	
-	/* If the web server is running as root (i.e. user switching is possible to begin with)
-	 * but user switching is off...
-	 */
-	if (geteuid() == 0 && !userSwitching) {
-		/* ...then the 'info' subdirectory must be owned by lowestUser, so that only root
-		 * or lowestUser can query Phusion Passenger information.
-		 */
-		makeDirTree(tmpDir + "/info", "u=rwxs,g=,o=", lowestUid, lowestGid);
-	} else {
-		/* Otherwise just use the current user and the directory's owner.
-		 * This way, only the user that the web server's control process
-		 * is running as will be able to query information.
-		 */
-		makeDirTree(tmpDir + "/info", "u=rwxs,g=,o=");
-	}
-	createNonWritableFifo(tmpDir + "/info/.guard");
-	
-	if (geteuid() == 0) {
-		if (userSwitching) {
-			makeDirTree(tmpDir + "/master", "u=wxs,g=,o=", workerUid, workerGid);
-		} else {
-			makeDirTree(tmpDir + "/master", "u=wxs,g=x,o=x", lowestUid, lowestGid);
-		}
-	} else {
-		makeDirTree(tmpDir + "/master", "u=wxs,g=,o=");
-	}
-	createNonWritableFifo(tmpDir + "/master/.guard");
-	
-	if (geteuid() == 0) {
-		if (userSwitching) {
-			/* If user switching is possible and turned on, then each backend
-			 * process may be running as a different user, so the backends
-			 * subdirectory must be world-writable. However we don't want
-			 * everybody to be able to know the sockets' filenames, so
-			 * the directory is not readable, not even by its owner.
-			 */
-			makeDirTree(tmpDir + "/backends", "u=wxs,g=wx,o=wx");
-		} else {
-			/* If user switching is off then all backend processes will be
-			 * running as lowestUser, so make lowestUser the owner of the
-			 * directory. Nobody else (except root) may access this directory.
-			 *
-			 * The directory is not readable as a security precaution:
-			 * nobody should be able to know the sockets' filenames without
-			 * having access to the application pool.
-			 */
-			makeDirTree(tmpDir + "/backends", "u=wxs,g=,o=", lowestUid, lowestGid);
-		}
-	} else {
-		/* If user switching is not possible then all backend processes will
-		 * be running as the same user as the web server. So we'll make the
-		 * backends subdirectory only writable by this user. Nobody else
-		 * (except root) may access this subdirectory.
-		 *
-		 * The directory is not readable as a security precaution:
-		 * nobody should be able to know the sockets' filenames without having
-		 * access to the application pool.
-		 */
-		makeDirTree(tmpDir + "/backends", "u=wxs,g=,o=");
-	}
-	createNonWritableFifo(tmpDir + "/backends/.guard");
-}
-
-void
-makeDirTree(const string &path, const char *mode, uid_t owner, gid_t group) {
-	char command[PATH_MAX + 10];
+makeDirTree(const string &path, const StaticString &mode, uid_t owner, gid_t group) {
 	struct stat buf;
+	vector<string> paths;
+	vector<string>::reverse_iterator rit;
+	string current = path;
+	mode_t modeBits;
+	int ret;
 	
 	if (stat(path.c_str(), &buf) == 0) {
 		return;
 	}
 	
-	snprintf(command, sizeof(command), "mkdir -p -m \"%s\" \"%s\"", mode, path.c_str());
-	command[sizeof(command) - 1] = '\0';
+	modeBits = parseModeString(mode);
 	
-	int result;
-	do {
-		result = system(command);
-	} while (result == -1 && errno == EINTR);
-	if (result != 0) {
-		char message[1024];
-		int e = errno;
-		
-		snprintf(message, sizeof(message) - 1, "Cannot create directory '%s'",
-			path.c_str());
-		message[sizeof(message) - 1] = '\0';
-		if (result == -1) {
-			throw SystemException(message, e);
-		} else {
-			throw IOException(message);
-		}
+	/* Create a list of parent paths that don't exist. For example, given
+	 * path == "/a/b/c/d/e" and that only /a exists, the list will become
+	 * as follows:
+	 *
+	 * /a/b/c/d
+	 * /a/b/c
+	 * /a/b
+	 */
+	while (current != "/" && current != "." && getFileType(current) == FT_NONEXISTANT) {
+		paths.push_back(current);
+		current = extractDirName(current);
 	}
 	
-	if (owner != (uid_t) -1 && group != (gid_t) -1) {
+	/* Now traverse the list in reverse order and create directories that don't exist. */
+	for (rit = paths.rbegin(); rit != paths.rend(); rit++) {
+		current = *rit;
+		
 		do {
-			result = chown(path.c_str(), owner, group);
-		} while (result == -1 && errno == EINTR);
-		if (result != 0) {
-			char message[1024];
-			int e = errno;
-			
-			snprintf(message, sizeof(message) - 1,
-				"Cannot change the directory '%s' its UID to %lld and GID to %lld",
-				path.c_str(), (long long) owner, (long long) group);
-			message[sizeof(message) - 1] = '\0';
-			throw FileSystemException(message, e, path);
+			ret = mkdir(current.c_str(), modeBits);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
+			if (errno == EEXIST) {
+				// Ignore error and don't chmod/chown.
+				continue;
+			} else {
+				int e = errno;
+				throw FileSystemException("Cannot create directory '" + current + "'",
+					e, current);
+			}
+		}
+		
+		/* Chmod in order to override the umask. */
+		do {
+			ret = chmod(current.c_str(), modeBits);
+		} while (ret == -1 && errno == EINTR);
+		
+		if (owner != USER_NOT_GIVEN && group != GROUP_NOT_GIVEN) {
+			if (owner == USER_NOT_GIVEN) {
+				owner = (uid_t) -1; // Don't let chown change file owner.
+			}
+			if (group == GROUP_NOT_GIVEN) {
+				group = (gid_t) -1; // Don't let chown change file group.
+			}
+			do {
+				ret = chown(current.c_str(), owner, group);
+			} while (ret == -1 && errno == EINTR);
+			if (ret == -1) {
+				char message[1024];
+				int e = errno;
+				
+				snprintf(message, sizeof(message) - 1,
+					"Cannot change the directory '%s' its UID to %lld and GID to %lld",
+					current.c_str(), (long long) owner, (long long) group);
+				message[sizeof(message) - 1] = '\0';
+				throw FileSystemException(message, e, path);
+			}
 		}
 	}
 }
@@ -556,137 +542,139 @@ bool
 verifyRailsDir(const string &dir, CachedFileStat *cstat, unsigned int throttleRate) {
 	string temp(dir);
 	temp.append("/config/environment.rb");
-	return fileExists(temp.c_str(), cstat, throttleRate);
+	return fileExists(temp, cstat, throttleRate);
 }
 
 bool
 verifyRackDir(const string &dir, CachedFileStat *cstat, unsigned int throttleRate) {
 	string temp(dir);
 	temp.append("/config.ru");
-	return fileExists(temp.c_str(), cstat, throttleRate);
+	return fileExists(temp, cstat, throttleRate);
 }
 
 bool
 verifyWSGIDir(const string &dir, CachedFileStat *cstat, unsigned int throttleRate) {
 	string temp(dir);
 	temp.append("/passenger_wsgi.py");
-	return fileExists(temp.c_str(), cstat, throttleRate);
+	return fileExists(temp, cstat, throttleRate);
 }
 
-int
-createUnixServer(const char *filename, unsigned int backlogSize, bool autoDelete) {
-	struct sockaddr_un addr;
-	int fd, ret;
+void
+prestartWebApps(const ResourceLocator &locator, const string &serializedprestartURLs) {
+	/* Apache calls the initialization routines twice during startup, and
+	 * as a result it starts two helper servers, where the first one exits
+	 * after a short idle period. We want any prespawning requests to reach
+	 * the second helper server, so we sleep for a short period before
+	 * executing the prespawning scripts.
+	 */
+	syscalls::sleep(2);
 	
-	if (strlen(filename) > sizeof(addr.sun_path) - 1) {
-		string message = "Cannot create Unix socket '";
-		message.append(filename);
-		message.append("': filename is too long.");
-		throw RuntimeException(message);
-	}
+	this_thread::disable_interruption di;
+	this_thread::disable_syscall_interruption dsi;
+	vector<string> prestartURLs;
+	vector<string>::const_iterator it;
+	string prespawnScript = locator.getHelperScriptsDir() + "/prespawn";
 	
-	fd = syscalls::socket(PF_UNIX, SOCK_STREAM, 0);
-	if (fd == -1) {
-		throw SystemException("Cannot create a Unix socket file descriptor", errno);
+	split(Base64::decode(serializedprestartURLs), '\0', prestartURLs);
+	it = prestartURLs.begin();
+	while (it != prestartURLs.end() && !this_thread::interruption_requested()) {
+		if (it->empty()) {
+			it++;
+			continue;
+		}
+		
+		pid_t pid;
+		
+		pid = fork();
+		if (pid == 0) {
+			long max_fds, i;
+			int e;
+			
+			// Close all unnecessary file descriptors.
+			max_fds = sysconf(_SC_OPEN_MAX);
+			for (i = 3; i < max_fds; i++) {
+				syscalls::close(i);
+			}
+			
+			execlp(prespawnScript.c_str(),
+				prespawnScript.c_str(),
+				it->c_str(),
+				(char *) 0);
+			e = errno;
+			fprintf(stderr, "Cannot execute '%s %s': %s (%d)\n",
+				prespawnScript.c_str(), it->c_str(),
+				strerror(e), e);
+			fflush(stderr);
+			_exit(1);
+		} else if (pid == -1) {
+			perror("fork()");
+		} else {
+			try {
+				this_thread::restore_interruption si(di);
+				this_thread::restore_syscall_interruption ssi(dsi);
+				syscalls::waitpid(pid, NULL, 0);
+			} catch (const thread_interrupted &) {
+				syscalls::kill(SIGKILL, pid);
+				syscalls::waitpid(pid, NULL, 0);
+				throw;
+			}
+		}
+		
+		this_thread::restore_interruption si(di);
+		this_thread::restore_syscall_interruption ssi(dsi);
+		syscalls::sleep(1);
+		it++;
 	}
-	
-	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, filename, sizeof(addr.sun_path));
-	addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
-	
-	if (autoDelete) {
-		do {
-			ret = unlink(filename);
-		} while (ret == -1 && errno == EINTR);
-	}
-	
-	try {
-		ret = syscalls::bind(fd, (const struct sockaddr *) &addr, sizeof(addr));
-	} catch (...) {
-		do {
-			ret = close(fd);
-		} while (ret == -1 && errno == EINTR);
-		throw;
-	}
-	if (ret == -1) {
-		int e = errno;
-		string message = "Cannot bind Unix socket '";
-		message.append(filename);
-		message.append("'");
-		do {
-			ret = close(fd);
-		} while (ret == -1 && errno == EINTR);
-		throw SystemException(message, e);
-	}
-	
-	if (backlogSize == 0) {
-		backlogSize = 1024;
-	}
-	try {
-		ret = syscalls::listen(fd, backlogSize);
-	} catch (...) {
-		do {
-			ret = close(fd);
-		} while (ret == -1 && errno == EINTR);
-		throw;
-	}
-	if (ret == -1) {
-		int e = errno;
-		string message = "Cannot listen on Unix socket '";
-		message.append(filename);
-		message.append("'");
-		do {
-			ret = close(fd);
-		} while (ret == -1 && errno == EINTR);
-		throw SystemException(message, e);
-	}
-	
-	return fd;
 }
 
-int
-connectToUnixServer(const char *filename) {
-	int fd, ret;
-	struct sockaddr_un addr;
-	
-	if (strlen(filename) > sizeof(addr.sun_path) - 1) {
-		string message = "Cannot connect to Unix socket '";
-		message.append(filename);
-		message.append("': filename is too long.");
-		throw RuntimeException(message);
-	}
-	
-	do {
-		fd = syscalls::socket(PF_UNIX, SOCK_STREAM, 0);
-	} while (fd == -1 && errno == EINTR);
-	if (fd == -1) {
-		throw SystemException("Cannot create a Unix socket file descriptor", errno);
-	}
-	
-	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, filename, sizeof(addr.sun_path));
-	addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
-	
-	try {
-		ret = syscalls::connect(fd, (const sockaddr *) &addr, sizeof(addr));
-	} catch (...) {
-		do {
-			ret = close(fd);
-		} while (ret == -1 && errno == EINTR);
-		throw;
-	}
-	if (ret == -1) {
+string
+getHostName() {
+	char hostname[HOST_NAME_MAX + 1];
+	if (gethostname(hostname, sizeof(hostname)) == 0) {
+		hostname[sizeof(hostname) - 1] = '\0';
+		return hostname;
+	} else {
 		int e = errno;
-		string message("Cannot connect to Unix socket '");
-		message.append(filename);
-		message.append("'");
-		do {
-			ret = close(fd);
-		} while (ret == -1 && errno == EINTR);
-		throw SystemException(message, e);
+		throw SystemException("Unable to query the system's host name", e);
 	}
-	
-	return fd;
+}
+
+string
+getSignalName(int sig) {
+	switch (sig) {
+	case SIGHUP:
+		return "SIGHUP";
+	case SIGINT:
+		return "SIGINT";
+	case SIGQUIT:
+		return "SIGQUIT";
+	case SIGILL:
+		return "SIGILL";
+	case SIGTRAP:
+		return "SIGTRAP";
+	case SIGABRT:
+		return "SIGABRT";
+	case SIGFPE:
+		return "SIGFPE";
+	case SIGKILL:
+		return "SIGKILL";
+	case SIGBUS:
+		return "SIGBUS";
+	case SIGSEGV:
+		return "SIGSEGV";
+	case SIGPIPE:
+		return "SIGPIPE";
+	case SIGALRM:
+		return "SIGARLM";
+	case SIGTERM:
+		return "SIGTERM";
+	case SIGUSR1:
+		return "SIGUSR1";
+	case SIGUSR2:
+		return "SIGUSR2";
+	default:
+		return toString(sig);
+	}
 }
 
 } // namespace Passenger

@@ -6,7 +6,7 @@
 #ifndef BOOST_MPL_QUOTE_HPP_INCLUDED
 #define BOOST_MPL_QUOTE_HPP_INCLUDED
 
-// Copyright Aleksey Gurtovoy 2000-2004
+// Copyright Aleksey Gurtovoy 2000-2008
 //
 // Distributed under the Boost Software License, Version 1.0. 
 // (See accompanying file LICENSE_1_0.txt or copy at 
@@ -14,18 +14,20 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source$
-// $Date: 2006-05-02 23:27:58 -0400 (Tue, 02 May 2006) $
-// $Revision: 33913 $
+// $Id: quote.hpp 49272 2008-10-11 06:50:46Z agurtovoy $
+// $Date: 2008-10-11 02:50:46 -0400 (Sat, 11 Oct 2008) $
+// $Revision: 49272 $
 
 #if !defined(BOOST_MPL_PREPROCESSING_MODE)
 #   include <boost/mpl/void.hpp>
 #   include <boost/mpl/aux_/has_type.hpp>
 #endif
 
+#include <boost/mpl/aux_/config/bcc.hpp>
 #include <boost/mpl/aux_/config/ttp.hpp>
 
-#if defined(BOOST_MPL_CFG_NO_TEMPLATE_TEMPLATE_PARAMETERS)
+#if defined(BOOST_MPL_CFG_NO_TEMPLATE_TEMPLATE_PARAMETERS) \
+    && !defined(BOOST_MPL_CFG_BCC590_WORKAROUNDS)
 #   define BOOST_MPL_CFG_NO_QUOTE_TEMPLATE
 #endif
 
@@ -123,17 +125,26 @@ template<
 struct BOOST_PP_CAT(quote,i_)
 {
     template< BOOST_MPL_PP_PARAMS(i_, typename U) > struct apply
-#if !defined(BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION)
+#if defined(BOOST_MPL_CFG_BCC590_WORKAROUNDS)
+    {
+        typedef typename quote_impl<
+              F< BOOST_MPL_PP_PARAMS(i_, U) >
+            , aux::has_type< F< BOOST_MPL_PP_PARAMS(i_, U) > >::value
+            >::type type;
+    };
+#elif !defined(BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION)
         : quote_impl<
               F< BOOST_MPL_PP_PARAMS(i_, U) >
             , aux::has_type< F< BOOST_MPL_PP_PARAMS(i_, U) > >::value
             >
+    {
+    };
 #else
         : quote_impl< aux::has_type< F< BOOST_MPL_PP_PARAMS(i_, U) > >::value >
             ::template result_< F< BOOST_MPL_PP_PARAMS(i_, U) > >
-#endif
     {
     };
+#endif
 };
 
 #undef i_

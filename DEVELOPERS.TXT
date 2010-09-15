@@ -5,11 +5,14 @@
 The tests need the following software installed:
 
 * All the usual Phusion Passenger dependencies.
-* Ruby on Rails 2.0.1 (*exactly* 2.0.1)
+* Ruby on Rails 1.2.x
+* Ruby on Rails 2.0.x
+* Ruby on Rails 2.2.x
+* Ruby on Rails 2.3.x
+* Ruby on Rails 3.0.x
 * rspec >= 1.1.2
 * mime-types >= 1.15
-* daemon_controller (only for running the Nginx integration test). Install
-  with: gem install FooBarWidget-daemon_controller -s http://gems.github.com
+* sqlite3-ruby
 
 The following software is optional:
 
@@ -69,18 +72,16 @@ Less important directories:
   Miscellaneous tools.
 [ misc/rake ]
   Rake tasks.
-[ vendor ]
-  Various vendored libraries.
 
 == Tests
 
 Run all tests:
 
- rake
+ rake test
 
-Run just the tests for the Apache 2 module:
+Run only the unit tests for the C++ components:
 
- rake test:apache2
+ rake test:cxx
 
 Run just the unit tests for the Ruby spawn server:
 
@@ -88,10 +89,18 @@ Run just the unit tests for the Ruby spawn server:
 
 Run just the integration tests:
 
- rake test:integration
+ rake test:integration            # All integration tests.
+ rake test:integration:apache2    # Just integration tests for Apache 2.
+ rake test:integration:nginx      # Just integration tests for Nginx.
 
-*Note*: some tests, such as the ones that test privilege lowering, require
-root privileges. Those will only be run if Rake is run as root.
+Notes:
+- Some tests, such as the ones that test privilege lowering, require
+  root privileges. Those will only be run if Rake is run as root.
+- Some tests will be run against multiple Rails versions in order to
+  test compatibility. This can take a long time. If you want to test
+  against only a single Rails version, then set the environment variable
+  ONLY_RAILS_VERSION to one of the subdirectory names in
+  test/stub/rails_apps, e.g. 'export ONLY_RAILS_VERSION=2.3'
 
 == Documentation
 

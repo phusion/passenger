@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2008 Phusion
+ * Copyright (c) 2010 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,13 +35,13 @@ namespace oxt {
 using namespace std;
 
 tracable_exception::tracable_exception() {
-	spin_lock *lock = _get_backtrace_lock();
-	if (OXT_LIKELY(lock != NULL)) {
+	vector<trace_point *> *backtrace_list;
+	spin_lock *lock;
+	if (OXT_LIKELY(_get_backtrace_list_and_its_lock(&backtrace_list, &lock))) {
 		spin_lock::scoped_lock l(*lock);
-		vector<trace_point *> *bt = _get_current_backtrace();
 		vector<trace_point *>::const_iterator it;
 		
-		for (it = bt->begin(); it != bt->end(); it++) {
+		for (it = backtrace_list->begin(); it != backtrace_list->end(); it++) {
 			trace_point *p = new trace_point(
 				(*it)->function,
 				(*it)->source,

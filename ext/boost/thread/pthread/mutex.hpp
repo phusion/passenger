@@ -1,6 +1,6 @@
 #ifndef BOOST_THREAD_PTHREAD_MUTEX_HPP
 #define BOOST_THREAD_PTHREAD_MUTEX_HPP
-// (C) Copyright 2007 Anthony Williams
+// (C) Copyright 2007-8 Anthony Williams
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -10,10 +10,8 @@
 #include <boost/thread/exceptions.hpp>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/thread_time.hpp>
+#include <boost/thread/xtime.hpp>
 #include <boost/assert.hpp>
-#ifndef WIN32
-#include <unistd.h>
-#endif
 #include <errno.h>
 #include "timespec.hpp"
 #include "pthread_mutex_scoped_lock.hpp"
@@ -23,6 +21,8 @@
 #define BOOST_PTHREAD_HAS_TIMEDLOCK
 #endif
 #endif
+
+#include <boost/config/abi_prefix.hpp>
 
 namespace boost
 {
@@ -83,7 +83,7 @@ namespace boost
         }
 
         typedef unique_lock<mutex> scoped_lock;
-        typedef scoped_lock scoped_try_lock;
+        typedef detail::try_lock_wrapper<mutex> scoped_try_lock;
     };
 
     typedef mutex try_mutex;
@@ -128,6 +128,10 @@ namespace boost
         {
             return timed_lock(get_system_time()+relative_time);
         }
+        bool timed_lock(boost::xtime const & absolute_time)
+        {
+            return timed_lock(system_time(absolute_time));
+        }
 
 #ifdef BOOST_PTHREAD_HAS_TIMEDLOCK
         void lock()
@@ -150,9 +154,16 @@ namespace boost
         {
             struct timespec const timeout=detail::get_timespec(abs_time);
             int const res=pthread_mutex_timedlock(&m,&timeout);
-            BOOST_ASSERT(!res || res==EBUSY);
+            BOOST_ASSERT(!res || res==ETIMEDOUT);
             return !res;
         }
+
+        typedef pthread_mutex_t* native_handle_type;
+        native_handle_type native_handle()
+        {
+            return &m;
+        }
+
 #else
         void lock()
         {
@@ -201,11 +212,13 @@ namespace boost
 #endif
 
         typedef unique_lock<timed_mutex> scoped_timed_lock;
-        typedef scoped_timed_lock scoped_try_lock;
+        typedef detail::try_lock_wrapper<timed_mutex> scoped_try_lock;
         typedef scoped_timed_lock scoped_lock;
     };
 
 }
+
+#include <boost/config/abi_suffix.hpp>
 
 
 #endif

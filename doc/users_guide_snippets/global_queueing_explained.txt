@@ -72,7 +72,3 @@ This problem will be avoided entirely if you turn global queuing on. With global
 queuing, all backend processes will share the same queue. The first backend
 process that becomes available will take from the queue, and so this
 ``queuing-behind-long-running-request'' problem will never occur.
-
-Turning global queuing off will yield a minor performance improvement (about 5%,
-depending on how fast/slow your web application is), which is why it's off by
-default.

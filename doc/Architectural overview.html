@@ -2,8 +2,8 @@
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.5.2" />
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.1" />
 <title>Passenger architectural overview</title>
 <style type="text/css">
 /* Debug borders */
@@ -180,8 +180,8 @@ div.quoteblock > div.attribution {
   text-align: right;
 }
 
-div.verseblock > div.content {
-  white-space: pre;
+div.verseblock > pre.content {
+  font-family: inherit;
 }
 div.verseblock > div.attribution {
   padding-top: 0.75em;
@@ -260,6 +260,7 @@ div.tableblock > table {
 thead, p.table.header {
   font-family: sans-serif;
   font-weight: bold;
+  color: #527bbd;
 }
 tfoot {
   font-weight: bold;
@@ -339,6 +340,14 @@ span.footnote, span.footnoteref {
   min-width: 100px;
 }
 
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
 
 @media print {
   div#footer-badges { display: none; }
@@ -373,47 +382,7 @@ div.toclevel4 {
   margin-left: 6em;
   font-size: 0.9em;
 }
-/* Workarounds for IE6's broken and incomplete CSS2. */
 
-div.sidebar-content {
-  background: #ffffee;
-  border: 1px solid silver;
-  padding: 0.5em;
-}
-div.sidebar-title, div.image-title {
-  color: #527bbd;
-  font-family: sans-serif;
-  font-weight: bold;
-  margin-top: 0.0em;
-  margin-bottom: 0.5em;
-}
-
-div.listingblock div.content {
-  border: 1px solid silver;
-  background: #f4f4f4;
-  padding: 0.5em;
-}
-
-div.quoteblock-attribution {
-  padding-top: 0.5em;
-  text-align: right;
-}
-
-div.verseblock-content {
-  white-space: pre;
-}
-div.verseblock-attribution {
-  padding-top: 0.75em;
-  text-align: left;
-}
-
-div.exampleblock-content {
-  border-left: 3px solid #dddddd;
-  padding-left: 0.5em;
-}
-
-/* IE6 sets dynamically generated links as visited. */
-div#toc a:visited { color: blue; }
 </style>
 <script type="text/javascript">
 /*<![CDATA[*/
@@ -549,7 +518,7 @@ footnotes: function () {
 /*]]>*/
 </script>
 </head>
-<body>
+<body class="article">
 <div id="header">
 <h1>Passenger architectural overview</h1>
 <div id="toc">
@@ -566,9 +535,11 @@ as to explain (some of the) design choices that we have made.</p></div>
 <div class="paragraph"><p>Or it can be a fun read for people who just want to know how Passenger works.</p></div>
 </div>
 </div>
+<div class="sect1">
 <h2 id="_about_the_involved_technologies">1. About the involved technologies</h2>
 <div class="sectionbody">
-<h3 id="typical_web_applications">1.1. Typical web applications</h3><div style="clear:left"></div>
+<div class="sect2">
+<h3 id="typical_web_applications">1.1. Typical web applications</h3>
 <div class="paragraph"><p>Before we describe Passenger, it is important to understand how typical web
 applications work, from the point of view of someone who wants to connect the
 application to a web server.</p></div>
@@ -639,7 +610,9 @@ could multiplex I/O with a single thread (e.g. by using <tt>select(2)</tt> or
 processes.</p></div>
 <div class="paragraph"><p>Of course, there are many variations possible. For example, load balancers
 could be used. But that is outside the scope of this document.</p></div>
-<h3 id="_ruby_on_rails">1.2. Ruby on Rails</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="_ruby_on_rails">1.2. Ruby on Rails</h3>
 <div class="paragraph"><p>Every Ruby on Rails application has a <em>dispatcher</em>. This dispatcher is
 responsible for processing HTTP requests. It does not speak HTTP directly.
 Instead, it accepts data structures that contain the information of an
@@ -658,7 +631,9 @@ syntax tree (AST)</a>) in memory. This is observed through the use of the
 memory statistics function in <a href="http://www.rubyenterpriseedition.com/">Ruby
 Enterprise Edition</a>. Also, a lot of the startup time of a Ruby on Rails
 application is spent on bootstrapping the Rails framework.</p></div>
-<h3 id="_apache">1.3. Apache</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="_apache">1.3. Apache</h3>
 <div class="paragraph"><p>The Apache web server has a pluggable I/O multiprocessing (the ability to
 handle more than 1 concurrent HTTP client at the same time) architecture. An
 Apache module which implements a particular multiprocessing strategy, is called
@@ -669,9 +644,13 @@ spawns multiple worker child processes. HTTP requests are first accepted by a
 so-called control process, and then forwarded to one of the worker processes.
 The next section contains a diagram which shows the prefork MPM&#8217;s architecture.</p></div>
 </div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_passenger_architecture">2. Passenger architecture</h2>
 <div class="sectionbody">
-<h3 id="_overview">2.1. Overview</h3><div style="clear:left"></div>
+<div class="sect2">
+<h3 id="_overview">2.1. Overview</h3>
 <div class="paragraph"><p>Passenger&#8217;s architecture is a lot like setup #2 described in
 <a href="#typical_web_applications">Typical web applications</a>. In other words,
 Passenger extends Apache and allows it to act like an application server.
@@ -693,7 +672,9 @@ mod_ruby. If the Rails application crashes or leak memory, it will have no
 effect on Apache. In fact, stability is one of our highest goals. Passenger
 is carefully designed and implemented so that Apache shouldn&#8217;t crash because
 of Passenger.</p></div>
-<h3 id="_spawning_and_caching_of_code_and_applications">2.2. Spawning and caching of code and applications</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="_spawning_and_caching_of_code_and_applications">2.2. Spawning and caching of code and applications</h3>
 <div class="paragraph"><p>A very naive implementation of Passenger would spawn a Ruby on Rails
 application every time an HTTP request is received, just like CGI would.
 However, spawning Ruby on Rails applications is expensive. It can take 1 or 2
@@ -761,7 +742,9 @@ in particular the documentation about the <tt>ApplicationPool</tt>,
 <div class="paragraph"><p>The application pool is responsible for spawning applications, caching
 spawned applications' handles, and cleaning up applications which have been
 idle for an extended period of time.</p></div>
-<h3 id="spawn_server">2.3. The spawn server</h3><div style="clear:left"></div>
+</div>
+<div class="sect2">
+<h3 id="spawn_server">2.3. The spawn server</h3>
 <div class="paragraph"><p>The spawn server is written in Ruby, and its code can be found in the directory
 <em>lib/passenger</em>. Its main executable is <em>bin/passenger-spawn-server</em>.
 <a href="rdoc/index.html">The spawn server&#8217;s RDoc documentation</a> documents the
@@ -815,6 +798,7 @@ application instance&#8217;s life time (through the application pool).</p></div>
 <div class="paragraph"><p>Also note that each layer is a seperate process. This is required because a
 single Ruby process can only load a single Ruby on Rails framework and a
 single application.</p></div>
+<div class="sect3">
 <h4 id="_memory_sharing">2.3.1. Memory sharing</h4>
 <div class="paragraph"><p>On most modern Unix operating systems, when a child process is created, it will
 share most of its memory with the parent process. Processes are not supposed to
@@ -845,7 +829,10 @@ startup times. You just won&#8217;t be able to benefit from memory sharing.</p><
 </div>
 <div class="paragraph"><p>Note that <a href="http://rubini.us/">Rubinius</a>'s garbage collector is already
 copy-on-write friendly.</p></div>
-<h3 id="concurrent_requests">2.4. Handling of concurrent requests</h3><div style="clear:left"></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="concurrent_requests">2.4. Handling of concurrent requests</h3>
 <div class="paragraph"><p>As explained earlier, a single Rails application instance can only handle a
 single request at the same time. This is obviously undesirable. But before we
 dive into the solution, let us take a look how the &#8220;competition&#8221; solves this
@@ -879,6 +866,9 @@ that are either heavily loaded or have little memory.</p></div>
 algorithm, which is non-trivial. The algorithm is documented in detail in
 <a href="ApplicationPool%20algorithm.txt">ApplicationPool algorithm.txt</a>.</p></div>
 </div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_appendix_a_about_this_document">3. Appendix A: About this document</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>The text of this document is licensed under the
@@ -891,10 +881,11 @@ Attribution-Share Alike 3.0 Unported License</a>.</p></div>
 </span></p></div>
 </div>
 </div>
+</div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-11-24 13:33:45 CEST
+Last updated 2009-11-24 13:33:45 CET
 </div>
 </div>
 </body>

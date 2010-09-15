@@ -9,7 +9,7 @@
 // See http://www.boost.org/libs/tokenizer/ for documentation.
 
 // Revision History:
-// 01 Oct 2004   Joaquín M López Muñoz
+// 01 Oct 2004   Joaquin M Lopez Munoz
 //      Workaround for a problem with string::assign in msvc-stlport
 // 06 Apr 2004   John Bandela
 //      Fixed a bug involving using char_delimiter with a true input iterator

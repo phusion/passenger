@@ -2,7 +2,7 @@
 #ifndef BOOST_MPL_AUX_CONFIG_COMPILER_HPP_INCLUDED
 #define BOOST_MPL_AUX_CONFIG_COMPILER_HPP_INCLUDED
 
-// Copyright Aleksey Gurtovoy 2001-2004
+// Copyright Aleksey Gurtovoy 2001-2008
 //
 // Distributed under the Boost Software License, Version 1.0. 
 // (See accompanying file LICENSE_1_0.txt or copy at 
@@ -10,9 +10,9 @@
 //
 // See http://www.boost.org/libs/mpl for documentation.
 
-// $Source$
-// $Date: 2004-09-02 11:41:37 -0400 (Thu, 02 Sep 2004) $
-// $Revision: 24874 $
+// $Id: compiler.hpp 53189 2009-05-22 20:07:55Z hkaiser $
+// $Date: 2009-05-22 16:07:55 -0400 (Fri, 22 May 2009) $
+// $Revision: 53189 $
 
 #if !defined(BOOST_MPL_CFG_COMPILER_DIR)
 
@@ -32,11 +32,13 @@
 #   elif BOOST_WORKAROUND(BOOST_MPL_CFG_GCC, BOOST_TESTED_AT(0x0304))
 #       define BOOST_MPL_CFG_COMPILER_DIR gcc
 
-#   elif BOOST_WORKAROUND(__BORLANDC__, < 0x600)
+#   elif BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x610))
 #       if !defined(BOOST_MPL_CFG_NO_DEFAULT_PARAMETERS_IN_NESTED_TEMPLATES)
 #           define BOOST_MPL_CFG_COMPILER_DIR bcc551
-#       else
+#       elif BOOST_WORKAROUND(__BORLANDC__, >= 0x590)
 #           define BOOST_MPL_CFG_COMPILER_DIR bcc
+#       else
+#           define BOOST_MPL_CFG_COMPILER_DIR bcc_pre590
 #       endif
 
 #   elif BOOST_WORKAROUND(__DMC__, BOOST_TESTED_AT(0x840))

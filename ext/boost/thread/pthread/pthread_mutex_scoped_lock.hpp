@@ -1,6 +1,6 @@
 #ifndef BOOST_PTHREAD_MUTEX_SCOPED_LOCK_HPP
 #define BOOST_PTHREAD_MUTEX_SCOPED_LOCK_HPP
-//  (C) Copyright 2007 Anthony Williams 
+//  (C) Copyright 2007-8 Anthony Williams 
 //
 //  Distributed under the Boost Software License, Version 1.0. (See
 //  accompanying file LICENSE_1_0.txt or copy at
@@ -8,6 +8,8 @@
 
 #include <pthread.h>
 #include <boost/assert.hpp>
+
+#include <boost/config/abi_prefix.hpp>
 
 namespace boost
 {
@@ -46,5 +48,7 @@ namespace boost
         };
     }
 }
+
+#include <boost/config/abi_suffix.hpp>
 
 #endif

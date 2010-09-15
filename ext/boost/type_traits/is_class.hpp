@@ -11,6 +11,8 @@
 #define BOOST_TT_IS_CLASS_HPP_INCLUDED
 
 #include <boost/type_traits/config.hpp>
+#include <boost/type_traits/intrinsics.hpp>
+#ifndef BOOST_IS_CLASS
 #   include <boost/type_traits/is_union.hpp>
 #   include <boost/type_traits/detail/ice_and.hpp>
 #   include <boost/type_traits/detail/ice_not.hpp>
@@ -25,6 +27,8 @@
 #   include <boost/type_traits/is_function.hpp>
 #endif
 
+#endif // BOOST_IS_CLASS
+
 #ifdef __EDG_VERSION__
 #   include <boost/type_traits/remove_cv.hpp>
 #endif
@@ -36,6 +40,7 @@ namespace boost {
 
 namespace detail {
 
+#ifndef BOOST_IS_CLASS
 #ifdef BOOST_TT_HAS_CONFORMING_IS_CLASS_IMPLEMENTATION
 
 // This is actually the conforming implementation which works with
@@ -111,6 +116,13 @@ struct is_class_impl
 };
 
 # endif // BOOST_TT_HAS_CONFORMING_IS_CLASS_IMPLEMENTATION
+# else // BOOST_IS_CLASS
+template <typename T>
+struct is_class_impl
+{
+    BOOST_STATIC_CONSTANT(bool, value = BOOST_IS_CLASS(T));
+};
+# endif // BOOST_IS_CLASS
 
 } // namespace detail
 

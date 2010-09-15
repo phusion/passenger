@@ -1,0 +1,106 @@
+#!/usr/bin/env ruby
+#  Phusion Passenger - http://www.modrails.com/
+#  Copyright (c) 2010 Phusion
+#
+#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+#
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
+#
+#  The above copyright notice and this permission notice shall be included in
+#  all copies or substantial portions of the Software.
+#
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#  THE SOFTWARE.
+
+require 'socket'
+
+SERVER_SOCKET_FD = 3
+OWNER_SOCKET_FD  = 4
+
+begin
+	STDOUT.sync = true
+	STDERR.sync = true
+	$0 = "Passenger spawn server"
+	if GC.respond_to?(:copy_on_write_friendly=)
+		GC.copy_on_write_friendly = true
+	end
+	
+	server_socket = UNIXServer.for_fd(SERVER_SOCKET_FD)
+	owner_socket  = UNIXSocket.for_fd(OWNER_SOCKET_FD)
+	begin
+		socket_filename = owner_socket.readline.strip
+		socket_password = owner_socket.readline.strip
+		generation_path = owner_socket.readline.strip
+		logging_agent_address = owner_socket.readline.strip
+		logging_agent_username = owner_socket.readline.strip
+		logging_agent_password_base64 = owner_socket.readline.strip
+		node_name = owner_socket.readline.strip
+		log_level = owner_socket.readline.to_i
+		debug_log_file = owner_socket.readline.strip
+	rescue EOFError
+		exit
+	end
+	
+	# Optimization for decreasing startup time. Since Apache starts the spawn
+	# server twice during startup, we don't want to load the Passenger classes
+	# if we don't need them.
+	# We check whether Apache immediately closes the connection. If so,
+	# we exit without loading the rest of Passenger. If Apache doesn't close
+	# the connection within 4 seconds then we continue with loading Passenger,
+	# so that loading doesn't happen during the first spawn.
+	begin
+		ios = select([server_socket, owner_socket], nil, nil, 4)
+		if ios
+			readable = ios[0]
+			if !readable.include?(server_socket) && readable.include?(owner_socket)
+				exit
+			end
+		end
+	rescue Interrupt
+		exit
+	end
+	
+	source_root = File.expand_path(File.dirname(__FILE__) + "/..")
+	$LOAD_PATH.unshift("#{source_root}/lib")
+	require 'rubygems' rescue nil
+	require 'phusion_passenger'
+	require 'phusion_passenger/debug_logging'
+	require 'phusion_passenger/utils/tmpdir'
+	require 'phusion_passenger/native_support'
+	if defined?(PhusionPassenger::NativeSupport)
+		PhusionPassenger::NativeSupport.disable_stdio_buffering
+	end
+	PhusionPassenger::DebugLogging.log_level = log_level
+	PhusionPassenger::DebugLogging.log_file  = debug_log_file
+	PhusionPassenger::Utils.passenger_tmpdir = generation_path
+	if logging_agent_address.empty?
+		options = {}
+	else
+		options = {
+			"logging_agent_address" => logging_agent_address,
+			"logging_agent_username" => logging_agent_username,
+			"logging_agent_password_base64" => logging_agent_password_base64,
+			"node_name" => node_name
+		}
+	end
+	
+	require 'phusion_passenger/spawn_manager'
+	spawn_manager = PhusionPassenger::SpawnManager.new(options)
+	spawn_manager.start_synchronously(socket_filename, socket_password, server_socket, owner_socket)
+	spawn_manager.cleanup
+rescue => e
+	require 'phusion_passenger/utils'
+	include PhusionPassenger::Utils
+	print_exception("spawn manager", e)
+	exit 10
+end

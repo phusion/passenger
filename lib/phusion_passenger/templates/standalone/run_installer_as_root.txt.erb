@@ -1,0 +1,8 @@
+<red>Permission problems</red>
+
+Phusion Passenger Standalone must be able to write to the following directory:
+
+  <b><%= @dir %></b>
+
+But it can't do that, because you're running Phusion Passenger Standalone as
+<b><%= `whoami`.strip %></b>. Please re-run Phusion Passenger Standalone as <b>root</b>.

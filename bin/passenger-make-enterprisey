@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
+# encoding: utf-8
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2008, 2009 Phusion
+#  Copyright (c) 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -22,7 +23,9 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) << "/..")
+source_root = File.expand_path(File.dirname(__FILE__) + "/..")
+$LOAD_PATH.unshift("#{source_root}/lib")
+require 'phusion_passenger'
 require 'digest/md5'
 
 ##############################################################################
@@ -42,13 +45,9 @@ require 'digest/md5'
 
 
 
-
-def natively_packaged?
-	return File.expand_path(File.dirname(__FILE__)) == "/usr/bin"
-end
-
+include PhusionPassenger
 trap("INT") { exit 1 }
-if File.exist?("#{PASSENGER_ROOT}/enterprisey.txt") || File.exist?("/etc/passenger_enterprisey.txt")
+if File.exist?("#{SOURCE_ROOT}/enterprisey.txt") || File.exist?("/etc/passenger_enterprisey.txt")
 	puts "Congratulations, your Passenger Enterprise License has already been activated!"
 else
 	puts %{
@@ -71,7 +70,7 @@ else
 	if natively_packaged?
 		enterprise_file = "/etc/passenger_enterprisey.txt"
 	else
-		enterprise_file = "#{PASSENGER_ROOT}/enterprisey.txt"
+		enterprise_file = "#{SOURCE_ROOT}/enterprisey.txt"
 	end
 	if system("touch", enterprise_file)
 		puts "Congratulations! Your Passenger Enterprise License has been activated!"

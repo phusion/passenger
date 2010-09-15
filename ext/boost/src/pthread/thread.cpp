@@ -1,6 +1,6 @@
 // Copyright (C) 2001-2003
 // William E. Kempf
-// Copyright (C) 2007 Anthony Williams
+// Copyright (C) 2007-8 Anthony Williams
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying 
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -18,9 +18,10 @@
 #elif defined(__APPLE__) || defined(__FreeBSD__)
 #include <sys/types.h>
 #include <sys/sysctl.h>
-#elif defined(__sun)
+#elif defined BOOST_HAS_UNISTD_H
 #include <unistd.h>
 #endif
+#include <cassert>
 
 #include "timeconv.inl"
 
@@ -28,6 +29,9 @@ namespace boost
 {
     namespace detail
     {
+        thread_data_base::~thread_data_base()
+        {}
+
         struct thread_exit_callback_node
         {
             boost::detail::thread_exit_function_base* func;
@@ -36,19 +40,6 @@ namespace boost
             thread_exit_callback_node(boost::detail::thread_exit_function_base* func_,
                                       thread_exit_callback_node* next_):
                 func(func_),next(next_)
-            {}
-        };
-
-        struct tss_data_node
-        {
-            void const* key;
-            boost::shared_ptr<boost::detail::tss_cleanup_function> func;
-            void* value;
-            tss_data_node* next;
-
-            tss_data_node(void const* key_,boost::shared_ptr<boost::detail::tss_cleanup_function> func_,void* value_,
-                          tss_data_node* next_):
-                key(key_),func(func_),value(value_),next(next_)
             {}
         };
 
@@ -64,7 +55,7 @@ namespace boost
                     boost::detail::thread_data_base* thread_info=static_cast<boost::detail::thread_data_base*>(data);
                     if(thread_info)
                     {
-                        while(thread_info->tss_data || thread_info->thread_exit_callbacks)
+                        while(!thread_info->tss_data.empty() || thread_info->thread_exit_callbacks)
                         {
                             while(thread_info->thread_exit_callbacks)
                             {
@@ -77,15 +68,18 @@ namespace boost
                                 }
                                 delete current_node;
                             }
-                            while(thread_info->tss_data)
+                            for(std::map<void const*,tss_data_node>::iterator next=thread_info->tss_data.begin(),
+                                    current,
+                                    end=thread_info->tss_data.end();
+                                next!=end;)
                             {
-                                detail::tss_data_node* const current_node=thread_info->tss_data;
-                                thread_info->tss_data=current_node->next;
-                                if(current_node->func)
+                                current=next;
+                                ++next;
+                                if(current->second.func && current->second.value)
                                 {
-                                    (*current_node->func)(current_node->value);
+                                    (*current->second.func)(current->second.value);
                                 }
-                                delete current_node;
+                                thread_info->tss_data.erase(current);
                             }
                         }
                         thread_info->self.reset();
@@ -119,7 +113,7 @@ namespace boost
         {
             void* thread_proxy(void* param)
             {
-                boost::shared_ptr<boost::detail::thread_data_base> thread_info = static_cast<boost::detail::thread_data_base*>(param)->self;
+                boost::detail::thread_data_ptr thread_info = static_cast<boost::detail::thread_data_base*>(param)->self;
                 thread_info->self.reset();
                 detail::set_current_thread_data(thread_info.get());
                 try
@@ -129,10 +123,12 @@ namespace boost
                 catch(thread_interrupted const&)
                 {
                 }
-                catch(...)
-                {
-                    std::terminate();
-                }
+// Removed as it stops the debugger identifying the cause of the exception
+// Unhandled exceptions still cause the application to terminate
+//                 catch(...)
+//                 {
+//                     std::terminate();
+//                 }
 
                 detail::tls_destructor(thread_info.get());
                 detail::set_current_thread_data(0);
@@ -153,6 +149,10 @@ namespace boost
             
             void run()
             {}
+
+        private:
+            externally_launched_thread(externally_launched_thread&);
+            void operator=(externally_launched_thread&);
         };
 
         detail::thread_data_base* make_external_thread_data()
@@ -208,51 +208,6 @@ namespace boost
     thread::~thread()
     {
         detach();
-    }
-
-    thread::thread(detail::thread_move_t<thread> x)
-    {
-        lock_guard<mutex> lock(x->thread_info_mutex);
-        thread_info=x->thread_info;
-        x->thread_info.reset();
-    }
-    
-    thread& thread::operator=(detail::thread_move_t<thread> x)
-    {
-        thread new_thread(x);
-        swap(new_thread);
-        return *this;
-    }
-        
-    thread::operator detail::thread_move_t<thread>()
-    {
-        return move();
-    }
-
-    detail::thread_move_t<thread> thread::move()
-    {
-        detail::thread_move_t<thread> x(*this);
-        return x;
-    }
-
-    void thread::swap(thread& x)
-    {
-        thread_info.swap(x.thread_info);
-    }
-    
-    pthread_t thread::native_handle() const {
-        return thread_info->thread_handle;
-    }
-
-
-    bool thread::operator==(const thread& other) const
-    {
-        return get_id()==other.get_id();
-    }
-
-    bool thread::operator!=(const thread& other) const
-    {
-        return !operator==(other);
     }
 
     detail::thread_data_ptr thread::get_thread_info() const
@@ -379,70 +334,74 @@ namespace boost
         }
     }
 
-    void thread::sleep(const system_time& st)
+    namespace this_thread
     {
-        detail::thread_data_base* const thread_info=detail::get_current_thread_data();
         
-        if(thread_info)
+        void sleep(const system_time& st)
         {
-            unique_lock<mutex> lk(thread_info->sleep_mutex);
-            while(thread_info->sleep_condition.timed_wait(lk,st));
-        }
-        else
-        {
-            xtime const xt=get_xtime(st);
-            
-            for (int foo=0; foo < 5; ++foo)
+            detail::thread_data_base* const thread_info=detail::get_current_thread_data();
+        
+            if(thread_info)
             {
+                unique_lock<mutex> lk(thread_info->sleep_mutex);
+                while(thread_info->sleep_condition.timed_wait(lk,st));
+            }
+            else
+            {
+                xtime const xt=get_xtime(st);
+            
+                for (int foo=0; foo < 5; ++foo)
+                {
 #   if defined(BOOST_HAS_PTHREAD_DELAY_NP)
-                timespec ts;
-                to_timespec_duration(xt, ts);
-                BOOST_VERIFY(!pthread_delay_np(&ts));
+                    timespec ts;
+                    to_timespec_duration(xt, ts);
+                    BOOST_VERIFY(!pthread_delay_np(&ts));
 #   elif defined(BOOST_HAS_NANOSLEEP)
-                timespec ts;
-                to_timespec_duration(xt, ts);
+                    timespec ts;
+                    to_timespec_duration(xt, ts);
                 
-                //  nanosleep takes a timespec that is an offset, not
-                //  an absolute time.
-                nanosleep(&ts, 0);
+                    //  nanosleep takes a timespec that is an offset, not
+                    //  an absolute time.
+                    nanosleep(&ts, 0);
 #   else
-                mutex mx;
-                mutex::scoped_lock lock(mx);
-                condition cond;
-                cond.timed_wait(lock, xt);
+                    mutex mx;
+                    mutex::scoped_lock lock(mx);
+                    condition cond;
+                    cond.timed_wait(lock, xt);
 #   endif
-                xtime cur;
-                xtime_get(&cur, TIME_UTC);
-                if (xtime_cmp(xt, cur) <= 0)
-                    return;
+                    xtime cur;
+                    xtime_get(&cur, TIME_UTC);
+                    if (xtime_cmp(xt, cur) <= 0)
+                        return;
+                }
             }
         }
-    }
 
-    void thread::yield()
-    {
+        void yield()
+        {
 #   if defined(BOOST_HAS_SCHED_YIELD)
-        BOOST_VERIFY(!sched_yield());
+            BOOST_VERIFY(!sched_yield());
 #   elif defined(BOOST_HAS_PTHREAD_YIELD)
-        BOOST_VERIFY(!pthread_yield());
+            BOOST_VERIFY(!pthread_yield());
 #   else
-        xtime xt;
-        xtime_get(&xt, TIME_UTC);
-        sleep(xt);
+            xtime xt;
+            xtime_get(&xt, TIME_UTC);
+            sleep(xt);
 #   endif
+        }
     }
 
     unsigned thread::hardware_concurrency()
     {
 #if defined(PTW32_VERSION) || defined(__hpux)
         return pthread_num_processors_np();
-#elif defined(__linux__)
+#elif defined(_GNU_SOURCE)
         return get_nprocs();
 #elif defined(__APPLE__) || defined(__FreeBSD__)
         int count;
         size_t size=sizeof(count);
         return sysctlbyname("hw.ncpu",&count,&size,NULL,0)?0:count;
-#elif defined(__sun)
+#elif defined(BOOST_HAS_UNISTD_H) && defined(_SC_NPROCESSORS_ONLN)
         int const count=sysconf(_SC_NPROCESSORS_ONLN);
         return (count>0)?count:0;
 #else
@@ -490,6 +449,21 @@ namespace boost
             return false;
         }
     }
+
+    thread::native_handle_type thread::native_handle()
+    {
+        detail::thread_data_ptr const local_thread_info=get_thread_info();
+        if(local_thread_info)
+        {
+            lock_guard<mutex> lk(local_thread_info->data_mutex);
+            return local_thread_info->thread_handle;
+        }
+        else
+        {
+            return pthread_t();
+        }
+    }
+    
     
 
     namespace this_thread
@@ -583,14 +557,11 @@ namespace boost
             detail::thread_data_base* const current_thread_data(get_current_thread_data());
             if(current_thread_data)
             {
-                detail::tss_data_node* current_node=current_thread_data->tss_data;
-                while(current_node)
+                std::map<void const*,tss_data_node>::iterator current_node=
+                    current_thread_data->tss_data.find(key);
+                if(current_node!=current_thread_data->tss_data.end())
                 {
-                    if(current_node->key==key)
-                    {
-                        return current_node;
-                    }
-                    current_node=current_node->next;
+                    return &current_node->second;
                 }
             }
             return NULL;
@@ -604,106 +575,47 @@ namespace boost
             }
             return NULL;
         }
+
+        void add_new_tss_node(void const* key,
+                              boost::shared_ptr<tss_cleanup_function> func,
+                              void* tss_data)
+        {
+            detail::thread_data_base* const current_thread_data(get_or_make_current_thread_data());
+            current_thread_data->tss_data.insert(std::make_pair(key,tss_data_node(func,tss_data)));
+        }
+
+        void erase_tss_node(void const* key)
+        {
+            detail::thread_data_base* const current_thread_data(get_or_make_current_thread_data());
+            current_thread_data->tss_data.erase(key);
+        }
         
-        void set_tss_data(void const* key,boost::shared_ptr<tss_cleanup_function> func,void* tss_data,bool cleanup_existing)
+        void set_tss_data(void const* key,
+                          boost::shared_ptr<tss_cleanup_function> func,
+                          void* tss_data,bool cleanup_existing)
         {
             if(tss_data_node* const current_node=find_tss_data(key))
             {
-                if(cleanup_existing && current_node->func)
+                if(cleanup_existing && current_node->func && current_node->value)
                 {
                     (*current_node->func)(current_node->value);
                 }
-                current_node->func=func;
-                current_node->value=tss_data;
+                if(func || tss_data)
+                {
+                    current_node->func=func;
+                    current_node->value=tss_data;
+                }
+                else
+                {
+                    erase_tss_node(key);
+                }
             }
             else
             {
-                detail::thread_data_base* const current_thread_data(get_or_make_current_thread_data());
-                tss_data_node* const new_node=new tss_data_node(key,func,tss_data,current_thread_data->tss_data);
-                current_thread_data->tss_data=new_node;
+                add_new_tss_node(key,func,tss_data);
             }
         }
     }
 
-    thread_group::thread_group()
-    {
-    }
-
-    thread_group::~thread_group()
-    {
-        // We shouldn't have to scoped_lock here, since referencing this object
-        // from another thread while we're deleting it in the current thread is
-        // going to lead to undefined behavior any way.
-        for (std::list<thread*>::iterator it = m_threads.begin();
-             it != m_threads.end(); ++it)
-        {
-            delete (*it);
-        }
-    }
-
-    thread* thread_group::create_thread(const function0<void>& threadfunc)
-    {
-        // No scoped_lock required here since the only "shared data" that's
-        // modified here occurs inside add_thread which does scoped_lock.
-        std::auto_ptr<thread> thrd(new thread(threadfunc));
-        add_thread(thrd.get());
-        return thrd.release();
-    }
-
-    void thread_group::add_thread(thread* thrd)
-    {
-        mutex::scoped_lock scoped_lock(m_mutex);
-
-        // For now we'll simply ignore requests to add a thread object multiple
-        // times. Should we consider this an error and either throw or return an
-        // error value?
-        std::list<thread*>::iterator it = std::find(m_threads.begin(),
-                                                    m_threads.end(), thrd);
-        BOOST_ASSERT(it == m_threads.end());
-        if (it == m_threads.end())
-            m_threads.push_back(thrd);
-    }
-
-    void thread_group::remove_thread(thread* thrd)
-    {
-        mutex::scoped_lock scoped_lock(m_mutex);
-
-        // For now we'll simply ignore requests to remove a thread object that's
-        // not in the group. Should we consider this an error and either throw or
-        // return an error value?
-        std::list<thread*>::iterator it = std::find(m_threads.begin(),
-                                                    m_threads.end(), thrd);
-        BOOST_ASSERT(it != m_threads.end());
-        if (it != m_threads.end())
-            m_threads.erase(it);
-    }
-
-    void thread_group::join_all()
-    {
-        mutex::scoped_lock scoped_lock(m_mutex);
-        for (std::list<thread*>::iterator it = m_threads.begin();
-             it != m_threads.end(); ++it)
-        {
-            (*it)->join();
-        }
-    }
-
-    void thread_group::interrupt_all()
-    {
-        boost::lock_guard<mutex> guard(m_mutex);
-            
-        for(std::list<thread*>::iterator it=m_threads.begin(),end=m_threads.end();
-            it!=end;
-            ++it)
-        {
-            (*it)->interrupt();
-        }
-    }
-        
-
-    size_t thread_group::size() const
-    {
-        return m_threads.size();
-    }
 
 }

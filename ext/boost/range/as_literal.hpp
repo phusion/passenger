@@ -8,8 +8,8 @@
 // For more information, see http://www.boost.org/libs/range/
 //
 
-#ifndef BOOST_RANGE_DETAIL_AS_LITERAL_HPP
-#define BOOST_RANGE_DETAIL_AS_LITERAL_HPP
+#ifndef BOOST_RANGE_AS_LITERAL_HPP
+#define BOOST_RANGE_AS_LITERAL_HPP
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
 # pragma once
@@ -25,7 +25,9 @@
 #include <boost/detail/workaround.hpp>
 
 #include <cstring>
+#ifndef BOOST_NO_CWCHAR 
 #include <cwchar>
+#endif
 
 namespace boost
 {
@@ -36,10 +38,12 @@ namespace boost
             return strlen( s );
         }
 
+#ifndef BOOST_NO_CWCHAR  
         inline std::size_t length( const wchar_t* s )
         {
             return wcslen( s );
         }
+#endif        
 
         //
         // Remark: the compiler cannot choose between T* and T[sz]
@@ -57,7 +61,7 @@ namespace boost
             return true;
         }
 
-        
+#ifndef BOOST_NO_CWCHAR  
         inline bool is_char_ptr( wchar_t* )
         {
             return true;
@@ -67,6 +71,7 @@ namespace boost
         {
             return true;
         }
+#endif
         
         template< class T >
         inline long is_char_ptr( T /* r */ )
@@ -107,22 +112,13 @@ namespace boost
     template< class Char, std::size_t sz >
     inline iterator_range<Char*> as_literal( Char (&arr)[sz] )
     {
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x590)) && __BORLANDC__ >= 0x590
-        return boost::make_iterator_range<Char*>( arr, arr + sz - 1 );
-#else
-        return boost::make_iterator_range( arr, arr + sz - 1 );
-#endif
+        return range_detail::make_range( arr, range_detail::is_char_ptr(arr) );        
     }
-
     
     template< class Char, std::size_t sz >
     inline iterator_range<const Char*> as_literal( const Char (&arr)[sz] )
     {
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x590)) && __BORLANDC__ >= 0x590
-        return boost::make_iterator_range<const Char*>( arr, arr + sz - 1 );
-#else
-        return boost::make_iterator_range( arr, arr + sz - 1 );
-#endif
+        return range_detail::make_range( arr, range_detail::is_char_ptr(arr) );
     }
 }
 

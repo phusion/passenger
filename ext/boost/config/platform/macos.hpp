@@ -47,6 +47,14 @@
 #    define BOOST_NO_STDC_NAMESPACE
 #  endif
 
+#  if (__GNUC__ == 4)
+
+// Both gcc and intel require these.  
+#    define BOOST_HAS_PTHREAD_MUTEXATTR_SETTYPE
+#    define BOOST_HAS_NANOSLEEP
+
+#  endif
+
 #else
 
 // Using the MSL C library.

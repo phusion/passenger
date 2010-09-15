@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2009 Phusion
+#  Copyright (c) 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -22,30 +22,30 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) << "/..")
-$LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
-$LOAD_PATH.unshift("#{PASSENGER_ROOT}/ext")
-
+passenger_root = File.expand_path("..", File.dirname(__FILE__))
+$LOAD_PATH.unshift("#{passenger_root}/lib")
+require 'phusion_passenger'
 require 'optparse'
 require 'fileutils'
-require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/ruby'
 require 'phusion_passenger/dependencies'
 require 'phusion_passenger/abstract_installer'
-include PlatformInfo
 
 class Installer < PhusionPassenger::AbstractInstaller
 	include PhusionPassenger
-	
-	NGINX_VERSION = "0.7.67"
+	include PhusionPassenger::PlatformInfo
 	
 	def dependencies
 		result = [
 			Dependencies::GCC,
+			Dependencies::Make,
+			Dependencies::DownloadTool,
 			Dependencies::Ruby_DevHeaders,
 			Dependencies::Ruby_OpenSSL,
 			Dependencies::RubyGems,
 			Dependencies::Rake,
 			Dependencies::Rack,
+			Dependencies::Curl_Dev,
 			Dependencies::OpenSSL_Dev,
 			Dependencies::Zlib_Dev
 		]
@@ -60,11 +60,11 @@ class Installer < PhusionPassenger::AbstractInstaller
 	end
 	
 	def install!
-		Dir.chdir(PASSENGER_ROOT)
+		Dir.chdir(SOURCE_ROOT)
 		show_welcome_screen
 		check_dependencies || exit(1)
 		
-		check_whether_we_can_write_to(PASSENGER_ROOT) || exit(1)
+		check_whether_we_can_write_to(SOURCE_ROOT) || exit(1)
 		
 		download_and_install = should_we_download_and_install_nginx_automatically?
 		if pcre_is_installed?
@@ -105,6 +105,19 @@ class Installer < PhusionPassenger::AbstractInstaller
 		end
 	end
 
+	def before_install
+		super
+		myself = `whoami`.strip
+		@working_dir = "/tmp/#{myself}-passenger-#{Process.pid}"
+		FileUtils.rm_rf(@working_dir)
+		FileUtils.mkdir_p(@working_dir)
+	end
+	
+	def after_install
+		super
+		FileUtils.rm_rf(@working_dir)
+	end
+
 private
 	def show_welcome_screen
 		render_template 'nginx/welcome', :version => VERSION_STRING
@@ -114,13 +127,13 @@ private
 	def compile_passenger_support_files
 		new_screen
 		color_puts "<banner>Compiling Passenger support files...</banner>"
-		return sh(RUBY, "-S", PlatformInfo.rake, "clean", "nginx")
+		return sh("#{PlatformInfo.rake_command} nginx:clean nginx CACHING=no")
 	end
 	
 	def should_we_download_and_install_nginx_automatically?
 		new_screen
 		render_template 'nginx/query_download_and_install',
-			:nginx_version => NGINX_VERSION
+			:nginx_version => PREFERRED_NGINX_VERSION
 		puts
 		
 		if @auto_download
@@ -149,17 +162,15 @@ private
 		new_screen
 		color_puts "<banner>PCRE (required by Nginx) not installed, downloading it...</banner>"
 		
-		basename = "pcre-8.02.tar.gz"
-		dirname = "pcre-8.02"
-		url = "ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/#{basename}"
-		File.unlink("/tmp/#{basename}") rescue nil
-		FileUtils.rm_rf("/tmp/#{dirname}")
+		url = "ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-#{PREFERRED_PCRE_VERSION}.tar.gz"
+		dirname = "pcre-#{PREFERRED_PCRE_VERSION}"
+		tarball = "#{@working_dir}/pcre.tar.gz"
 		
-		if download(url, "/tmp/#{basename}")
-			Dir.chdir("/tmp") do
+		if download(url, tarball)
+			Dir.chdir(@working_dir) do
 				color_puts "<banner>Extracting PCRE source tarball...</banner>"
-				if sh("tar", "xzvf", basename)
-					return "/tmp/#{dirname}"
+				if sh("tar", "xzvf", tarball)
+					return "#{@working_dir}/#{dirname}"
 				else
 					new_screen
 					render_template "nginx/pcre_could_not_be_extracted"
@@ -181,16 +192,15 @@ private
 		new_screen
 		color_puts "<banner>Downloading Nginx...</banner>"
 		
-		basename = "nginx-#{NGINX_VERSION}.tar.gz"
-		url = "http://sysoev.ru/nginx/#{basename}"
-		File.unlink("/tmp/#{basename}") rescue nil
-		FileUtils.rm_rf("/tmp/nginx-#{NGINX_VERSION}")
+		url = "http://sysoev.ru/nginx/nginx-#{PREFERRED_NGINX_VERSION}.tar.gz"
+		dirname = "nginx-#{PREFERRED_NGINX_VERSION}"
+		tarball = "#{@working_dir}/nginx.tar.gz"
 		
-		if download(url, "/tmp/#{basename}")
-			Dir.chdir("/tmp") do
+		if download(url, tarball)
+			Dir.chdir(@working_dir) do
 				color_puts "<banner>Extracting Nginx source tarball...</banner>"
-				if sh("tar", "xzvf", basename)
-					return "/tmp/nginx-#{NGINX_VERSION}"
+				if sh("tar", "xzvf", tarball)
+					return "#{@working_dir}/#{dirname}"
 				else
 					return nil
 				end
@@ -329,8 +339,8 @@ private
 		new_screen
 		render_template 'nginx/config_snippets',
 			:config_file => locate_nginx_config_file(prefix),
-			:passenger_root => PASSENGER_ROOT,
-			:ruby => RUBY
+			:passenger_root => SOURCE_ROOT,
+			:ruby => PlatformInfo.ruby_command
 		wait
 	end
 	
@@ -365,8 +375,8 @@ private
 		contents = File.read(config_file)
 		contents.sub!(/^http \{/,
 			"http {\n" <<
-			"    passenger_root #{PASSENGER_ROOT};\n" <<
-			"    passenger_ruby #{RUBY};\n")
+			"    passenger_root #{SOURCE_ROOT};\n" <<
+			"    passenger_ruby #{PlatformInfo.ruby_command};\n")
 		File.open(config_file, 'w') do |f|
 			f.write(contents)
 		end
@@ -374,19 +384,19 @@ private
 		new_screen
 		render_template 'nginx/config_snippets_inserted',
 			:config_file => config_file,
-			:passenger_root => PASSENGER_ROOT,
-			:ruby => RUBY
+			:passenger_root => SOURCE_ROOT,
+			:ruby => PlatformInfo.ruby_command
 		wait
 	end
 	
 	def build_nginx_configure_command(prefix, extra_configure_flags = nil)
-		command = "./configure --prefix='#{prefix}' "
+		command = "sh ./configure --prefix='#{prefix}' --with-http_ssl_module "
 		if @pcre_source_dir
 			command << "--with-pcre='#{@pcre_source_dir}' "
 		elsif !pcre_is_installed?
 			command << "--without-http_rewrite_module "
 		end
-		command << "--add-module='#{PASSENGER_ROOT}/ext/nginx' #{extra_configure_flags}"
+		command << "--add-module='#{SOURCE_ROOT}/ext/nginx' #{extra_configure_flags}"
 		command.strip!
 		return command
 	end
@@ -409,14 +419,6 @@ private
 			end
 		end
 		return @pcre_is_installed
-	end
-	
-	def download(url, output)
-		if PlatformInfo.find_command("wget")
-			return sh("wget", "-O", output, url)
-		else
-			return sh("curl", url, "-o", output)
-		end
 	end
 end
 
