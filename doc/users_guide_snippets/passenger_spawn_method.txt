@@ -1,0 +1,49 @@
+Internally, Phusion Passenger spawns multiple Ruby application processes in order to handle
+requests. But there are multiple ways with which processes can be spawned, each having
+its own set of pros and cons. Supported spawn methods are:
+
+'smart'::
+When this spawn method is used, Phusion Passenger will attempt to cache any
+framework code (e.g. Ruby on Rails itself) and application code for a limited
+period of time. Please read <<spawning_methods_explained,Spawning methods explained>>
+for a more detailed explanation of what smart spawning exactly does.
++
+*Pros:*
+This can significantly decrease spawn time (by as much as 90%). And, when Ruby Enterprise
+Edition is used, <<reducing_memory_usage,memory usage can be reduced by 33% on average>>.
++
+*Cons:*
+Some applications and libraries are not compatible with smart spawning.
+If that's the case for your application, then you should use 'conservative' as
+spawning method. Please read <<spawning_methods_explained,Spawning methods explained>>
+for possible compatibility issues.
+
+'smart-lv2'::
+This spawning method is similar to 'smart' but it skips the framework spawner
+and uses the application spawner directly. This means the framework code is not
+cached between multiple applications, although it is still cached within
+instances of the same application. Please read
+<<spawning_methods_explained,Spawning methods explained>> for a more detailed
+explanation of what smart-lv2 spawning exactly does.
++
+*Pros:* It is compatible with a larger number of applications when compared to
+the 'smart' method, and still performs some caching.
++
+*Cons:* It is slower than smart spawning if you have many applications which
+use the same framework version. It is therefore advised that shared hosts use the
+'smart' method instead.
+
+'conservative'::
+This spawning method is similar to the one used in Mongrel Cluster. It does not
+perform any code caching at all. Please read
+<<spawning_methods_explained,Spawning methods explained>> for a more detailed
+explanation of what conservative spawning exactly does.
++
+*Pros:*
+Conservative spawning is guaranteed to be compatible with all applications
+and libraries.
++
+*Cons:*
+Much slower than smart spawning. Every spawn action will be equally slow, though no slower than
+the startup time of a single server in Mongrel Cluster. Conservative spawning will also
+render <<reducing_memory_usage,Ruby Enterprise Edition's memory reduction technology>> useless.

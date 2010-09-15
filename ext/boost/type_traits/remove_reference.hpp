@@ -27,7 +27,7 @@ namespace boost {
 BOOST_TT_AUX_TYPE_TRAIT_DEF1(remove_reference,T,T)
 BOOST_TT_AUX_TYPE_TRAIT_PARTIAL_SPEC1_1(typename T,remove_reference,T&,T)
 
-#if defined(__BORLANDC__) && (__BORLANDC__ < 0x600)
+#if defined(BOOST_ILLEGAL_CV_REFERENCES)
 // these are illegal specialisations; cv-qualifies applied to
 // references have no effect according to [8.3.2p1],
 // C++ Builder requires them though as it treats cv-qualified

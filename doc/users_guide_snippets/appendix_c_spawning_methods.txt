@@ -31,8 +31,7 @@ programmers jargon, Phusion Passenger calls fork(), but not exec().
 
 === The smart spawning method ===
 
-NOTE: Smart spawning is only available for Ruby on Rails applications, not for
-      Rack applications or WSGI applications.
+NOTE: Smart spawning is supported for all Ruby applications but not for WSGI applications.
 
 While conservative spawning works well, it's not as efficient as it could be
 because each worker process has its own private copy of the Rails application

@@ -10,7 +10,7 @@
 //  STLPort standard library config:
 
 #if !defined(__SGI_STL_PORT) && !defined(_STLPORT_VERSION)
-#  include <boost/config/no_tr1/utility.hpp>
+#  include <cstddef>
 #  if !defined(__SGI_STL_PORT) && !defined(_STLPORT_VERSION)
 #      error "This is not STLPort!"
 #  endif
@@ -61,6 +61,14 @@
 #  endif
 #endif
 
+#if defined(_STLPORT_VERSION) && ((_STLPORT_VERSION < 0x500) || (_STLPORT_VERSION >= 0x520))
+#  define BOOST_NO_STD_UNORDERED
+#endif
+
+#if defined(_STLPORT_VERSION) && (_STLPORT_VERSION >= 0x520)
+#  define BOOST_HAS_TR1_UNORDERED_SET
+#  define BOOST_HAS_TR1_UNORDERED_MAP
+#endif
 //
 // Without member template support enabled, their are no template
 // iterate constructors, and no std::allocator:
@@ -98,8 +106,10 @@
 //
 // We always have SGI style hash_set, hash_map, and slist:
 //
+#ifndef _STLP_NO_EXTENSIONS
 #define BOOST_HAS_HASH
 #define BOOST_HAS_SLIST
+#endif
 
 //
 // STLport does a good job of importing names into namespace std::,
@@ -189,6 +199,31 @@ namespace std{ using _STLP_VENDOR_CSTD::strcmp; using _STLP_VENDOR_CSTD::strcpy;
 #  define BOOST_USING_STD_MAX() ((void)0)
 namespace boost { using std::min; using std::max; }
 #endif
+
+//  C++0x headers not yet implemented
+//
+#  define BOOST_NO_0X_HDR_ARRAY
+#  define BOOST_NO_0X_HDR_CHRONO
+#  define BOOST_NO_0X_HDR_CODECVT
+#  define BOOST_NO_0X_HDR_CONCEPTS
+#  define BOOST_NO_0X_HDR_CONDITION_VARIABLE
+#  define BOOST_NO_0X_HDR_CONTAINER_CONCEPTS
+#  define BOOST_NO_0X_HDR_FORWARD_LIST
+#  define BOOST_NO_0X_HDR_FUTURE
+#  define BOOST_NO_0X_HDR_INITIALIZER_LIST
+#  define BOOST_NO_0X_HDR_ITERATOR_CONCEPTS
+#  define BOOST_NO_0X_HDR_MEMORY_CONCEPTS
+#  define BOOST_NO_0X_HDR_MUTEX
+#  define BOOST_NO_0X_HDR_RANDOM
+#  define BOOST_NO_0X_HDR_RATIO
+#  define BOOST_NO_0X_HDR_REGEX
+#  define BOOST_NO_0X_HDR_SYSTEM_ERROR
+#  define BOOST_NO_0X_HDR_THREAD
+#  define BOOST_NO_0X_HDR_TUPLE
+#  define BOOST_NO_0X_HDR_TYPE_TRAITS
+#  define BOOST_NO_STD_UNORDERED        // deprecated; see following
+#  define BOOST_NO_0X_HDR_UNORDERED_MAP
+#  define BOOST_NO_0X_HDR_UNORDERED_SET
 
 #define BOOST_STDLIB "STLPort standard library version " BOOST_STRINGIZE(__SGI_STL_PORT)
 

@@ -1,12 +1,12 @@
 // Boost enable_if library
 
-// Copyright 2003 © The Trustees of Indiana University.
+// Copyright 2003 (c) The Trustees of Indiana University.
 
 // Use, modification, and distribution is subject to the Boost Software
 // License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-//    Authors: Jaakko Järvi (jajarvi at osl.iu.edu)
+//    Authors: Jaakko Jarvi (jajarvi at osl.iu.edu)
 //             Jeremiah Willcock (jewillco at osl.iu.edu)
 //             Andrew Lumsdaine (lums at osl.iu.edu)
 

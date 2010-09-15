@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2008, 2009 Phusion
+#  Copyright (c) 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -51,6 +51,10 @@ class RequestHandler < AbstractRequestHandler
 	ON             = "on"     # :nodoc:
 	ONE            = "1"      # :nodoc:
 	CRLF           = "\r\n"   # :nodoc:
+	NEWLINE        = "\n"     # :nodoc:
+	STATUS         = "Status: "       # :nodoc:
+	X_POWERED_BY   = "X-Powered-By: "   # :nodoc:
+	NAME_VALUE_SEPARATOR = ": "       # :nodoc:
 
 	# +app+ is the Rack application object.
 	def initialize(owner_pipe, app, options = {})
@@ -60,8 +64,8 @@ class RequestHandler < AbstractRequestHandler
 
 protected
 	# Overrided method.
-	def process_request(env, input, output)
-		rewindable_input = Utils::RewindableInput.new(input)
+	def process_request(env, input, output, full_http_response)
+		rewindable_input = PhusionPassenger::Utils::RewindableInput.new(input)
 		begin
 			env[RACK_VERSION]      = RACK_VERSION_VALUE
 			env[RACK_INPUT]        = rewindable_input
@@ -91,22 +95,41 @@ protected
 			
 			status, headers, body = @app.call(env)
 			begin
-				output.write("Status: #{status.to_i}#{CRLF}")
-				output.write("X-Powered-By: #{PASSENGER_HEADER}#{CRLF}")
+				if full_http_response
+					output.write("HTTP/1.1 #{status.to_i.to_s} Whatever#{CRLF}")
+					output.write("Connection: close#{CRLF}")
+				end
+				headers_output = [
+					STATUS, status.to_i.to_s, CRLF,
+					X_POWERED_BY, @passenger_header, CRLF
+				]
 				headers.each do |key, values|
 					if values.is_a?(String)
-						values = values.split("\n")
+						values = values.split(NEWLINE)
 					end
 					values.each do |value|
-						output.write("#{key}: #{value}#{CRLF}")
+						headers_output << key
+						headers_output << NAME_VALUE_SEPARATOR
+						headers_output << value
+						headers_output << CRLF
 					end
 				end
-				output.write(CRLF)
-				if body.is_a?(String)
-					output.write(body)
-				elsif body
-					body.each do |s|
-						output.write(s)
+				headers_output << CRLF
+				
+				if body.is_a?(Array)
+					# The body may be an ActionController::StringCoercion::UglyBody
+					# object instead of a real Array, even when #is_a? claims so.
+					# Call #to_a just to be sure.
+					output.writev2(headers_output, body.to_a)
+				elsif body.is_a?(String)
+					headers_output << body
+					output.writev(headers_output)
+				else
+					output.writev(headers_output)
+					if body
+						body.each do |s|
+							output.write(s)
+						end
 					end
 				end
 			ensure

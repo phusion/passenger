@@ -41,7 +41,9 @@
 
 namespace boost {
 
-#ifndef BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION
+#if defined( __CODEGEARC__ )
+BOOST_TT_AUX_BOOL_TRAIT_DEF1(is_volatile,T,__is_volatile(T))
+#elif !defined(BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION)
 
 //* is a type T declared volatile - is_volatile<T>
 #if BOOST_WORKAROUND(BOOST_MSVC, < 1400)
@@ -51,7 +53,7 @@ namespace boost {
 #endif
 BOOST_TT_AUX_BOOL_TRAIT_PARTIAL_SPEC1_1(typename T,is_volatile,T&,false)
 
-#if defined(__BORLANDC__) && (__BORLANDC__ < 0x600)
+#if  defined(BOOST_ILLEGAL_CV_REFERENCES)
 // these are illegal specialisations; cv-qualifies applied to
 // references have no effect according to [8.3.2p1],
 // C++ Builder requires them though as it treats cv-qualified

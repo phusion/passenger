@@ -16,6 +16,13 @@
 #define BOOST_HAS_UNISTD_H
 #include <boost/config/posix_features.hpp>
 
+//
+// pthreads don't actually work with gcc unless _PTHREADS is defined:
+//
+#if defined(__GNUC__) && defined(_POSIX_THREADS) && !defined(_PTHREADS)
+# undef BOOST_HAS_PTHREADS
+#endif
+
 
 
 

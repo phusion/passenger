@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2008 Phusion
+ * Copyright (C) 2010 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,25 +49,12 @@
 #define HELPER_SERVER_PASSWORD_SIZE     64
 
 
-static int        first_start = 1;
-static ngx_str_t  ngx_http_scgi_script_name = ngx_string("scgi_script_name");
-static pid_t      helper_server_pid = 0;
-static int        helper_server_admin_pipe;
-static u_char     helper_server_password_data[HELPER_SERVER_PASSWORD_SIZE];
-/** perl_module destroys the original environment variables for some reason,
- * so when we get a SIGHUP (for restarting Nginx) $TMPDIR might not have the
- * same value as it had during Nginx startup. We need the original $TMPDIR
- * value for calculating the Passenger temp dir location, so here we cache
- * the original value instead of getenv()'ing it every time.
- */
-const char       *system_temp_dir = NULL;
-const char        passenger_temp_dir[NGX_MAX_PATH];
-ngx_str_t         passenger_schema_string;
-ngx_str_t         passenger_helper_server_password;
-const char        passenger_helper_server_socket[NGX_MAX_PATH];
-CachedFileStat   *passenger_stat_cache;
-
-static void shutdown_helper_server(ngx_cycle_t *cycle);
+static int      first_start = 1;
+ngx_str_t       passenger_schema_string;
+ngx_str_t       passenger_placeholder_upstream_address;
+CachedFileStat *passenger_stat_cache;
+AgentsStarter  *passenger_agents_starter = NULL;
+ngx_cycle_t    *passenger_current_cycle;
 
 
 /*
@@ -109,287 +96,22 @@ ignore_sigpipe()
     sigaction(SIGPIPE, &action, NULL);
 }
 
-static ngx_int_t
-start_helper_server(ngx_cycle_t *cycle)
-{
-    passenger_main_conf_t *main_conf = &passenger_main_conf;
-    ngx_core_conf_t       *ccf;
-    u_char                 helper_server_filename[NGX_MAX_PATH];
-    u_char                 log_level_string[10];
-    u_char                 max_pool_size_string[10];
-    u_char                 max_instances_per_app_string[10];
-    u_char                 pool_idle_time_string[10];
-    u_char                 user_switching_string[2];
-    u_char                 worker_uid_string[15];
-    u_char                 worker_gid_string[15];
-    u_char                 filename[NGX_MAX_PATH];
-    u_char                *last;
-    int                    admin_pipe[2], feedback_pipe[2], e;
-    pid_t                  pid;
-    long                   i;
-    ssize_t                ret;
-    char                   buf;
-    ngx_str_t             *log_filename;
-    FILE                  *f, *log_file;
-    
-    shutdown_helper_server(cycle);
-    
-    if (main_conf->root_dir.len == 0) {
-        ngx_log_error(NGX_LOG_ALERT, cycle->log, 0,
-                      "Phusion Passenger is disabled because the "
-                      "'passenger_root' option is not set. Please set "
-                      "this option if you want to enable Phusion Passenger.");
-        return NGX_OK;
-    }
-    
-    ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
-    
-    if (first_start) {
-        first_start = 0;
-        
-        /* Ignore SIGPIPE now so that, if the helper server fails to start,
-         * nginx doesn't get killed by the default SIGPIPE handler upon
-         * writing the password to the helper server.
-         */
-        ignore_sigpipe();
-    }
-    
-    /* Build strings that we need later. */
-    
-    ngx_memzero(helper_server_filename, sizeof(helper_server_filename));
-    ngx_snprintf(helper_server_filename, sizeof(helper_server_filename),
-                     "%s/ext/nginx/HelperServer",
-                     main_conf->root_dir.data);
-    
-    ngx_memzero(log_level_string, sizeof(log_level_string));
-    ngx_snprintf(log_level_string, sizeof(log_level_string), "%d",
-                 (int) main_conf->log_level);
-    
-    ngx_memzero(max_pool_size_string, sizeof(max_pool_size_string));
-    ngx_snprintf(max_pool_size_string, sizeof(max_pool_size_string), "%d",
-                 (int) main_conf->max_pool_size);
-    
-    ngx_memzero(max_instances_per_app_string, sizeof(max_instances_per_app_string));
-    ngx_snprintf(max_instances_per_app_string, sizeof(max_instances_per_app_string), "%d",
-                 (int) main_conf->max_instances_per_app);
-    
-    ngx_memzero(pool_idle_time_string, sizeof(pool_idle_time_string));
-    ngx_snprintf(pool_idle_time_string, sizeof(pool_idle_time_string), "%d",
-                 (int) main_conf->pool_idle_time);
-    
-    ngx_memzero(user_switching_string, sizeof(user_switching_string));
-    ngx_snprintf(user_switching_string, 1, "%d",
-                 (int) main_conf->user_switching);
-    
-    ngx_memzero(worker_uid_string, sizeof(worker_uid_string));
-    ngx_snprintf(worker_uid_string, sizeof(worker_uid_string), "%L",
-                 (long long) ccf->user);
-    
-    ngx_memzero(worker_gid_string, sizeof(worker_gid_string));
-    ngx_snprintf(worker_gid_string, sizeof(worker_gid_string), "%L",
-                 (long long) ccf->group);
-    
-    /* Generate random password for the helper server. */
-    
-    f = fopen("/dev/urandom", "r");
-    if (f == NULL) {
-        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                      "could not generate a random password for the "
-                      "Passenger helper server: cannot open /dev/urandom");
-        return NGX_ERROR;
-    }
-    ngx_memzero(helper_server_password_data, HELPER_SERVER_PASSWORD_SIZE);
-    if (fread(helper_server_password_data, 1, HELPER_SERVER_PASSWORD_SIZE, f)
-              != HELPER_SERVER_PASSWORD_SIZE) {
-        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                      "could not generate a random password for the "
-                      "Passenger helper server: cannot read sufficient "
-                      "data from /dev/urandom");
-        return NGX_ERROR;
-    }
-    fclose(f);
-    passenger_helper_server_password.data = helper_server_password_data;
-    passenger_helper_server_password.len  = HELPER_SERVER_PASSWORD_SIZE;
-    
-    
-    /* Now spawn the helper server. */
-    if (pipe(admin_pipe) == -1) {
-        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                      "could not start the Passenger helper server: pipe() failed");
-        return NGX_ERROR;
-    }
-    if (pipe(feedback_pipe) == -1) {
-        close(admin_pipe[0]);
-        close(admin_pipe[1]);
-        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                      "could not start the Passenger helper server: pipe() failed");
-        return NGX_ERROR;
-    }
-    
-    pid = fork();
-    switch (pid) {
-    case 0:
-        /* Child process. */
-        close(admin_pipe[1]);
-        close(feedback_pipe[0]);
-        
-        /* At this point, stdout and stderr may still point to the console.
-         * Make sure that they're both redirected to the log file.
-         */
-        log_file = NULL;
-        #if NGINX_VERSION_NUM < 7000
-            log_filename = &cycle->new_log->file->name;
-        #else
-            log_filename = &cycle->new_log.file->name;
-        #endif
-        if (log_filename->len > 0) {
-            log_file = fopen((const char *) log_filename->data, "a");
-            if (log_file == NULL) {
-                ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                              "could not open the error log file for writing");
-            }
-        }
-        if (log_file == NULL) {
-            /* If the log file cannot be opened then we redirect stdout
-             * and stderr to /dev/null, because if the user disconnects
-             * from the console on which Nginx is started, then on Linux
-             * any writes to stdout or stderr will result in an EIO error.
-             */
-            log_file = fopen("/dev/null", "w");
-        }
-        if (log_file != NULL) {
-            dup2(fileno(log_file), 1);
-            dup2(fileno(log_file), 2);
-            fclose(log_file);
-        }
-        
-        /* Close all file descriptors except stdin, stdout, stderr and
-         * the reader part of the pipe we just created. 
-         */
-        if (dup2(admin_pipe[0], 3) == -1) {
-            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                          "could not start the Passenger helper server: "
-                          "dup2() failed");
-        }
-        if (dup2(feedback_pipe[1], 4) == -1) {
-            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                          "could not start the Passenger helper server: "
-                          "dup2() failed");
-        }
-        for (i = sysconf(_SC_OPEN_MAX) - 1; i > 4; i--) {
-            close(i);
-        }
-        
-        setenv("SERVER_SOFTWARE", NGINX_VER, 1);
-        
-        execlp((const char *) helper_server_filename,
-               "PassengerNginxHelperServer",
-               main_conf->root_dir.data,
-               main_conf->ruby.data,
-               "3",  /* Admin pipe file descriptor number. */
-               "4",  /* Feedback pipe file descriptor number. */
-               log_level_string,
-               max_pool_size_string,
-               max_instances_per_app_string,
-               pool_idle_time_string,
-               user_switching_string,
-               main_conf->default_user.data,
-               worker_uid_string,
-               worker_gid_string,
-               passenger_temp_dir,
-               (char *) 0);
-        e = errno;
-        fprintf(stderr, "*** Could not start the Passenger helper server (%s): "
-                "exec() failed: %s (%d)\n",
-                (const char *) helper_server_filename, strerror(e), e);
-        _exit(1);
-        
-    case -1:
-        /* Error */
-        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                      "could not start the Passenger helper server: "
-                      "fork() failed");
-        close(admin_pipe[0]);
-        close(admin_pipe[1]);
-        close(feedback_pipe[0]);
-        close(feedback_pipe[1]);
-        return NGX_ERROR;
-        
-    default:
-        /* Parent process. */
-        close(admin_pipe[0]);
-        close(feedback_pipe[1]);
-        
-        /* Pass our auto-generated password to the helper server. */
-        i = 0;
-        do {
-            ret = write(admin_pipe[1], helper_server_password_data,
-                        HELPER_SERVER_PASSWORD_SIZE - i);
-            if (ret == -1) {
-                ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                              "could not send password to the Passenger helper server: "
-                              "write() failed");
-                close(admin_pipe[1]);
-                kill(pid, SIGTERM);
-                waitpid(pid, NULL, 0);
-                return NGX_ERROR;
-            } else {
-                i += ret;
-            }
-        } while (i < HELPER_SERVER_PASSWORD_SIZE);
-        
-        /* Wait until the HelperServer has done initializing. */
-        do {
-            /* We must do something with read()'s return value
-             * because otherwise on some platform it might raise a
-             * compile warning.
-             */
-            ret = read(feedback_pipe[0], &buf, 1);
-        } while (ret == -1 && errno == EINTR);
-        close(feedback_pipe[0]);
-        
-        /* Create the file passenger_temp_dir + "/control_process.pid"
-         * and make it writable by the worker processes. This is because
-         * save_master_process_pid is run after Nginx has lowered privileges.
-         */
-        last = ngx_snprintf(filename, sizeof(filename) - 1,
-                            "%s/control_process.pid", passenger_temp_dir);
-        *last = (u_char) '\0';
-        f = fopen((const char *) filename, "w");
-        if (f != NULL) {
-            /* We must do something with these return values because
-             * otherwise on some platforms it will cause a compiler
-             * warning.
-             */
-            do {
-                ret = fchmod(fileno(f), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-            } while (ret == -1 && errno == EINTR);
-            do {
-                ret = fchown(fileno(f), ccf->user, ccf->group);
-            } while (ret == -1 && errno == EINTR);
-            fclose(f);
-        } else {
-            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                          "could not create %s", filename);
-        }
-        
-        helper_server_pid        = pid;
-        helper_server_admin_pipe = admin_pipe[1];
-        break;
-    }
-    
-    return NGX_OK;
+char *
+ngx_str_null_terminate(ngx_str_t *str) {
+    char *result = malloc(str->len + 1);
+    memcpy(result, str->data, str->len);
+    result[str->len] = '\0';
+    return result;
 }
 
 /**
- * Save the Nginx master process's PID into a file under the Phusion Passenger
- * temp directory.
+ * Save the Nginx master process's PID into a file under the server instance directory.
  *
- * A bug/limitation in Nginx doesn't allow us to initialize the temp dir *after*
- * Nginx has daemonized, so the temp dir's filename contains Nginx's PID before
- * daemonization. Normally PhusionPassenger::AdminTools::ControlProcess (used
- * by e.g. passenger-status) will think that the temp dir is stale because the
- * PID in the filename doesn't exist. This PID file tells AdminTools::ControlProcess
+ * A bug/limitation in Nginx doesn't allow us to create the server instance dir
+ * *after* Nginx has daemonized, so the server instance dir's filename contains Nginx's
+ * PID before daemonization. Normally PhusionPassenger::AdminTools::ServerInstance (used
+ * by e.g. passenger-status) will think that the server instance dir is stale because the
+ * PID in the filename doesn't exist. This PID file tells AdminTools::ServerInstance
  * what the actual PID is.
  */
 static ngx_int_t
@@ -398,12 +120,8 @@ save_master_process_pid(ngx_cycle_t *cycle) {
     u_char *last;
     FILE *f;
     
-    if (passenger_main_conf.root_dir.len == 0) {
-        return NGX_OK;
-    }
-    
-    last = ngx_snprintf(filename, sizeof(filename) - 1,
-        "%s/control_process.pid", passenger_temp_dir);
+    last = ngx_snprintf(filename, sizeof(filename) - 1, "%s/control_process.pid",
+        agents_starter_get_server_instance_dir(passenger_agents_starter));
     *last = (u_char) '\0';
     
     f = fopen((const char *) filename, "w");
@@ -418,207 +136,335 @@ save_master_process_pid(ngx_cycle_t *cycle) {
     return NGX_OK;
 }
 
+/**
+ * This function is called after forking and just before exec()ing the helper server.
+ */
 static void
-shutdown_helper_server(ngx_cycle_t *cycle)
-{
-    time_t begin_time;
-    int    helper_server_exited, ret;
-    u_char command[NGX_MAX_PATH + 10];
+starting_helper_server_after_fork(void *arg) {
+    ngx_cycle_t *cycle = (void *) arg;
+    char        *log_filename;
+    FILE        *log_file;
     
-    if (helper_server_pid == 0) {
-        return;
-    }
-    
-    /* We write one byte to the admin pipe, doesn't matter what the byte is.
-     * The helper server will detect this as an exit command.
+    /* At this point, stdout and stderr may still point to the console.
+     * Make sure that they're both redirected to the log file.
      */
-    do {
-        ret = write(helper_server_admin_pipe, "x", 1);
-    } while ((ret == -1 && errno == EINTR) || ret == 0);
-    close(helper_server_admin_pipe);
-    
-    /* Wait at most HELPER_SERVER_MAX_SHUTDOWN_TIME seconds for the helper
-     * server to exit.
-     */
-    begin_time = time(NULL);
-    helper_server_exited = 0;
-    ngx_log_debug1(NGX_LOG_DEBUG_HTTP, cycle->log, 0,
-                   "Waiting for Passenger helper server (PID %l) to exit...",
-                   (long) helper_server_pid);
-    while (!helper_server_exited && time(NULL) - begin_time < HELPER_SERVER_MAX_SHUTDOWN_TIME) {
-        pid_t ret;
-        
-        ret = waitpid(helper_server_pid, NULL, WNOHANG);
-        if (ret > 0 || (ret == -1 && errno == ECHILD)) {
-            helper_server_exited = 1;
-        } else {
-            usleep(100000);
-        }
-    }
-    
-    /* Kill helper server if it did not exit in time. */
-    if (!helper_server_exited) {
-        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, cycle->log, 0,
-                       "Passenger helper server did not exit in time. "
-                       "Killing it...");
-        kill(helper_server_pid, SIGKILL);
-        waitpid(helper_server_pid, NULL, 0);
-    }
-    
-    ngx_log_debug0(NGX_LOG_DEBUG_HTTP, cycle->log, 0,
-                   "Passenger helper server exited.");
-
-    
-    /* Remove Passenger temp dir. */
-    ngx_memzero(command, sizeof(command));
-    if (ngx_snprintf(command, sizeof(command), "chmod -R u=rwx \"%s\"",
-                     passenger_temp_dir) != NULL) {
-        do {
-            ret = system((const char *) command);
-        } while (ret == -1 && errno == EINTR);
-    }
-    
-    ngx_memzero(command, sizeof(command));
-    if (ngx_snprintf(command, sizeof(command), "rm -rf \"%s\"",
-                     passenger_temp_dir) != NULL) {
-        ngx_log_debug1(NGX_LOG_DEBUG_HTTP, cycle->log, 0,
-                       "Removing Passenger temp folder with command: %s",
-                       command);
-        errno = 0;
-        if (system((const char *) command) != 0) {
+    log_file = NULL;
+    if (cycle->new_log.file->name.len > 0) {
+        log_filename = ngx_str_null_terminate(&cycle->new_log.file->name);
+        log_file = fopen((const char *) log_filename, "a");
+        if (log_file == NULL) {
             ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                          "Could not remove Passenger temp folder '%s'",
-                          passenger_temp_dir);
+                          "could not open the error log file for writing");
         }
+        free(log_filename);
+    } else if (cycle->log != NULL && cycle->log->file->name.len > 0) {
+        log_filename = ngx_str_null_terminate(&cycle->log->file->name);
+        log_file = fopen((const char *) log_filename, "a");
+        if (log_file == NULL) {
+            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                          "could not open the error log file for writing");
+        }
+        free(log_filename);
     }
-    helper_server_pid = 0;
+    if (log_file == NULL) {
+        /* If the log file cannot be opened then we redirect stdout
+         * and stderr to /dev/null, because if the user disconnects
+         * from the console on which Nginx is started, then on Linux
+         * any writes to stdout or stderr will result in an EIO error.
+         */
+        log_file = fopen("/dev/null", "w");
+    }
+    if (log_file != NULL) {
+        dup2(fileno(log_file), 1);
+        dup2(fileno(log_file), 2);
+        fclose(log_file);
+    }
+    
+    /* Set SERVER_SOFTWARE so that application processes know what web
+     * server they're running on during startup. */
+    setenv("SERVER_SOFTWARE", NGINX_VER, 1);
 }
 
 static ngx_int_t
-ngx_http_scgi_script_name_variable(ngx_http_request_t *r,
-    ngx_http_variable_value_t *v, uintptr_t data)
-{
-    u_char                *p;
-    passenger_loc_conf_t  *slcf;
+create_file(ngx_cycle_t *cycle, const u_char *filename, const u_char *contents, size_t len) {
+    FILE  *f;
+    int    ret;
+    size_t total_written = 0, written;
 
-    if (r->uri.len) {
-        v->valid = 1;
-        v->no_cacheable = 0;
-        v->not_found = 0;
-
-        slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
-
-        if (r->uri.data[r->uri.len - 1] != '/') {
-            v->len = r->uri.len;
-            v->data = r->uri.data;
-            return NGX_OK;
-        }
-
-        v->len = r->uri.len + slcf->index.len;
-
-        v->data = ngx_palloc(r->pool, v->len);
-        if (v->data == NULL) {
-            return NGX_ERROR;
-        }
-
-        p = ngx_copy(v->data, r->uri.data, r->uri.len);
-        ngx_memcpy(p, slcf->index.data, slcf->index.len);
-
-    } else {
-        v->len = 0;
-        v->valid = 1;
-        v->no_cacheable = 0;
-        v->not_found = 0;
-        v->data = NULL;
-
+    f = fopen((const char *) filename, "w");
+    if (f != NULL) {
+        /* We must do something with these return values because
+         * otherwise on some platforms it will cause a compiler
+         * warning.
+         */
+        do {
+            ret = fchmod(fileno(f), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        } while (ret == -1 && errno == EINTR);
+        do {
+            written = fwrite(contents + total_written, 1,
+                len - total_written, f);
+            total_written += written;
+        } while (total_written < len);
+        fclose(f);
         return NGX_OK;
+    } else {
+        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+            "could not create %s", filename);
+            return NGX_ERROR;
     }
-
-    return NGX_OK;
 }
 
+/**
+ * Start the helper server and save its runtime information into various variables.
+ *
+ * @pre The helper server isn't already started.
+ * @pre The Nginx configuration has been loaded.
+ */
 static ngx_int_t
-add_variables(ngx_conf_t *cf)
-{
-    ngx_http_variable_t  *var;
-
-    var = ngx_http_add_variable(cf, &ngx_http_scgi_script_name,
-                                NGX_HTTP_VAR_NOHASH|NGX_HTTP_VAR_NOCACHEABLE);
-    if (var == NULL) {
-        return NGX_ERROR;
+start_helper_server(ngx_cycle_t *cycle) {
+    ngx_core_conf_t *core_conf;
+    ngx_int_t        ret, result;
+    ngx_uint_t       i;
+    ngx_str_t       *prestart_uris;
+    char           **prestart_uris_ary = NULL;
+    u_char  filename[NGX_MAX_PATH], *last;
+    char   *debug_log_file = NULL;
+    char   *default_user = NULL;
+    char   *default_group = NULL;
+    char   *passenger_root = NULL;
+    char   *ruby = NULL;
+    char   *analytics_log_dir;
+    char   *analytics_log_user;
+    char   *analytics_log_group;
+    char   *analytics_log_permissions;
+    char   *union_station_gateway_address;
+    char   *union_station_gateway_cert;
+    char   *error_message = NULL;
+    
+    core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
+    result    = NGX_OK;
+    
+    /* Create null-terminated versions of some strings. */
+    debug_log_file = ngx_str_null_terminate(&passenger_main_conf.debug_log_file);
+    default_user   = ngx_str_null_terminate(&passenger_main_conf.default_user);
+    default_group  = ngx_str_null_terminate(&passenger_main_conf.default_group);
+    passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
+    ruby           = ngx_str_null_terminate(&passenger_main_conf.ruby);
+    analytics_log_dir = ngx_str_null_terminate(&passenger_main_conf.analytics_log_dir);
+    analytics_log_user = ngx_str_null_terminate(&passenger_main_conf.analytics_log_user);
+    analytics_log_group = ngx_str_null_terminate(&passenger_main_conf.analytics_log_group);
+    analytics_log_permissions = ngx_str_null_terminate(&passenger_main_conf.analytics_log_permissions);
+    union_station_gateway_address = ngx_str_null_terminate(&passenger_main_conf.union_station_gateway_address);
+    union_station_gateway_cert = ngx_str_null_terminate(&passenger_main_conf.union_station_gateway_cert);
+    
+    prestart_uris = (ngx_str_t *) passenger_main_conf.prestart_uris->elts;
+    prestart_uris_ary = calloc(sizeof(char *), passenger_main_conf.prestart_uris->nelts);
+    for (i = 0; i < passenger_main_conf.prestart_uris->nelts; i++) {
+        prestart_uris_ary[i] = malloc(prestart_uris[i].len + 1);
+        if (prestart_uris_ary[i] == NULL) {
+            ngx_log_error(NGX_LOG_ALERT, cycle->log, ENOMEM, "Cannot allocate memory");
+            result = NGX_ERROR;
+            goto cleanup;
+        }
+        memcpy(prestart_uris_ary[i], prestart_uris[i].data, prestart_uris[i].len);
+        prestart_uris_ary[i][prestart_uris[i].len] = '\0';
+    }
+    
+    ret = agents_starter_start(passenger_agents_starter,
+        passenger_main_conf.log_level, debug_log_file, getpid(),
+        "", passenger_main_conf.user_switching,
+        default_user, default_group,
+        core_conf->user, core_conf->group,
+        passenger_root, ruby, passenger_main_conf.max_pool_size,
+        passenger_main_conf.max_instances_per_app,
+        passenger_main_conf.pool_idle_time,
+        "",
+        analytics_log_dir, analytics_log_user,
+        analytics_log_group, analytics_log_permissions,
+        union_station_gateway_address,
+        passenger_main_conf.union_station_gateway_port,
+        union_station_gateway_cert,
+        (const char **) prestart_uris_ary, passenger_main_conf.prestart_uris->nelts,
+        starting_helper_server_after_fork,
+        cycle,
+        &error_message);
+    if (!ret) {
+        ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno, "%s", error_message);
+        result = NGX_ERROR;
+        goto cleanup;
+    }
+    
+    /* Create the file passenger_temp_dir + "/control_process.pid"
+     * and make it writable by the worker processes. This is because
+     * save_master_process_pid is run after Nginx has lowered privileges.
+     */
+    last = ngx_snprintf(filename, sizeof(filename) - 1,
+                        "%s/control_process.pid",
+                        agents_starter_get_server_instance_dir(passenger_agents_starter));
+    *last = (u_char) '\0';
+    if (create_file(cycle, filename, (const u_char *) "", 0) != NGX_OK) {
+        result = NGX_ERROR;
+        goto cleanup;
+    }
+    do {
+        ret = chown((const char *) filename, (uid_t) core_conf->user, (gid_t) -1);
+    } while (ret == -1 && errno == EINTR);
+    if (ret == -1) {
+        result = NGX_ERROR;
+        goto cleanup;
     }
 
-    var->get_handler = ngx_http_scgi_script_name_variable;
+    /* Create various other info files. */
+    last = ngx_snprintf(filename, sizeof(filename) - 1,
+                        "%s/web_server.txt",
+                        agents_starter_get_generation_dir(passenger_agents_starter));
+    *last = (u_char) '\0';
+    if (create_file(cycle, filename, (const u_char *) NGINX_VER, strlen(NGINX_VER)) != NGX_OK) {
+        result = NGX_ERROR;
+        goto cleanup;
+    }
 
-    return NGX_OK;
+    last = ngx_snprintf(filename, sizeof(filename) - 1,
+                        "%s/config_files.txt",
+                        agents_starter_get_generation_dir(passenger_agents_starter));
+    *last = (u_char) '\0';
+    if (create_file(cycle, filename, cycle->conf_file.data, cycle->conf_file.len) != NGX_OK) {
+        result = NGX_ERROR;
+        goto cleanup;
+    }
+    
+    last = ngx_snprintf(filename, sizeof(filename) - 1,
+                        "%s/analytics_log_dir.txt",
+                        agents_starter_get_generation_dir(passenger_agents_starter));
+    *last = (u_char) '\0';
+    if (create_file(cycle, filename, passenger_main_conf.analytics_log_dir.data,
+                    passenger_main_conf.analytics_log_dir.len) != NGX_OK) {
+        result = NGX_ERROR;
+        goto cleanup;
+    }
+
+cleanup:
+    free(debug_log_file);
+    free(default_user);
+    free(default_group);
+    free(passenger_root);
+    free(ruby);
+    free(analytics_log_dir);
+    free(analytics_log_user);
+    free(analytics_log_group);
+    free(analytics_log_permissions);
+    free(union_station_gateway_address);
+    free(union_station_gateway_cert);
+    free(error_message);
+    if (prestart_uris_ary != NULL) {
+        for (i = 0; i < passenger_main_conf.prestart_uris->nelts; i++) {
+            free(prestart_uris_ary[i]);
+        }
+        free(prestart_uris_ary);
+    }
+    
+    if (result == NGX_ERROR && passenger_main_conf.abort_on_startup_error) {
+        exit(1);
+    }
+    
+    return result;
 }
 
+/**
+ * Shutdown the helper server, if there's one running.
+ */
+static void
+shutdown_helper_server() {
+    if (passenger_agents_starter != NULL) {
+        agents_starter_free(passenger_agents_starter);
+        passenger_agents_starter = NULL;
+    }
+}
+
+
+/**
+ * Called when:
+ * - Nginx is started, before the configuration is loaded and before daemonization.
+ * - Nginx is restarted, before the configuration is reloaded.
+ */
 static ngx_int_t
 pre_config_init(ngx_conf_t *cf)
 {
-    ngx_int_t   ret;
-    u_char      command[NGX_MAX_PATH + 30];
-    u_char     *last;
+    char *error_message;
+    
+    shutdown_helper_server();
     
     ngx_memzero(&passenger_main_conf, sizeof(passenger_main_conf_t));
-    
-    passenger_schema_string.data = (u_char *) "passenger://";
-    passenger_schema_string.len  = sizeof("passenger://") - 1;
-    
+    passenger_schema_string.data = (u_char *) "passenger:";
+    passenger_schema_string.len  = sizeof("passenger:") - 1;
+    passenger_placeholder_upstream_address.data = (u_char *) "unix:/passenger_helper_server";
+    passenger_placeholder_upstream_address.len  = sizeof("unix:/passenger_helper_server") - 1;
     passenger_stat_cache = cached_file_stat_new(1024);
+    passenger_agents_starter = agents_starter_new(AS_NGINX, &error_message);
     
-    ret = add_variables(cf);
-    if (ret != NGX_OK) {
-        return ret;
-    }
-    
-    /* Setup Passenger temp folder. */
-    
-    if (system_temp_dir == NULL) {
-        const char *tmp = getenv("TMPDIR");
-        if (tmp == NULL || *tmp == '\0') {
-            system_temp_dir = "/tmp";
-        } else {
-            system_temp_dir = strdup(tmp);
-        }
-    }
-    
-    ngx_memzero(&passenger_temp_dir, sizeof(passenger_temp_dir));
-    if (ngx_snprintf((u_char *) passenger_temp_dir, sizeof(passenger_temp_dir),
-                     "%s/passenger.%d", system_temp_dir, getpid()) == NULL) {
-        ngx_log_error(NGX_LOG_ALERT, cf->log, ngx_errno,
-                      "could not create Passenger temp dir string");
+    if (passenger_agents_starter == NULL) {
+        ngx_log_error(NGX_LOG_ALERT, cf->log, ngx_errno, "%s", error_message);
+        free(error_message);
         return NGX_ERROR;
-    }
-    
-    /* Temporarily create this temp directory. It must exist before the configuration is loaded,
-     * because during Configuration loading Nginx's upstream module will attempt to create
-     * the directory passenger_temp_dir + "/webserver_private".
-     *
-     * passenger_temp_dir will be removed and recreated by the HelperServer, with the right
-     * permissions. So right now we don't have to pay any attention to the permissions.
-     */
-    ngx_memzero(command, sizeof(command));
-    ngx_snprintf(command, sizeof(command), "mkdir -p \"%s\"", passenger_temp_dir);
-    do {
-        ret = system((const char *) command);
-    } while (ret == -1 && errno == EINTR);
-    
-    /* Build helper server socket filename string. */
-    
-    last = ngx_snprintf((u_char *) passenger_helper_server_socket, NGX_MAX_PATH,
-                        "unix:%s/master/helper_server.sock",
-                        passenger_temp_dir);
-    if (last == NULL) {
-        ngx_log_error(NGX_LOG_ALERT, cf->log, ngx_errno,
-                      "could not create Passenger helper server "
-                      "socket filename string");
-        return NGX_ERROR;
-    } else {
-        *last = (u_char) '\0';
     }
     
     return NGX_OK;
+}
+
+/**
+ * Called when:
+ * - Nginx is started, before daemonization and after the configuration has loaded.
+ * - Nginx is restarted, after the configuration has reloaded.
+ */
+static ngx_int_t
+init_module(ngx_cycle_t *cycle) {
+    if (passenger_main_conf.root_dir.len != 0) {
+        if (first_start) {
+            /* Ignore SIGPIPE now so that, if the helper server fails to start,
+             * Nginx doesn't get killed by the default SIGPIPE handler upon
+             * writing the password to the helper server.
+             */
+            ignore_sigpipe();
+            first_start = 0;
+        }
+        if (start_helper_server(cycle) != NGX_OK) {
+            passenger_main_conf.root_dir.len = 0;
+            return NGX_OK;
+        }
+        passenger_current_cycle = cycle;
+    }
+    return NGX_OK;
+}
+
+/**
+ * Called when an Nginx worker process is started. This happens after init_module
+ * is called.
+ *
+ * If 'master_process' is turned off, then there is only one single Nginx process
+ * in total, and this process also acts as the worker process. In this case
+ * init_worker_process is only called when Nginx is started, but not when it's restarted.
+ */
+static ngx_int_t
+init_worker_process(ngx_cycle_t *cycle) {
+    ngx_core_conf_t *core_conf;
+    
+    if (passenger_main_conf.root_dir.len != 0) {
+        save_master_process_pid(cycle);
+        
+        core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
+        if (core_conf->master) {
+            agents_starter_detach(passenger_agents_starter);
+        }
+    }
+    return NGX_OK;
+}
+
+/**
+ * Called when Nginx exits. Not called when Nginx is restarted.
+ */
+static void
+exit_master(ngx_cycle_t *cycle) {
+    shutdown_helper_server(cycle);
 }
 
 
@@ -643,11 +489,11 @@ ngx_module_t ngx_http_passenger_module = {
     (ngx_command_t *) passenger_commands,   /* module directives */
     NGX_HTTP_MODULE,                        /* module type */
     NULL,                                   /* init master */
-    start_helper_server,                    /* init module */
-    save_master_process_pid,                /* init process */
+    init_module,                            /* init module */
+    init_worker_process,                    /* init process */
     NULL,                                   /* init thread */
     NULL,                                   /* exit thread */
     NULL,                                   /* exit process */
-    shutdown_helper_server,                 /* exit master */
+    exit_master,                            /* exit master */
     NGX_MODULE_V1_PADDING
 };

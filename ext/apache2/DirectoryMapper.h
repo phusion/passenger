@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2008, 2009 Phusion
+ *  Copyright (c) 2010 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -31,9 +31,9 @@
 
 #include <oxt/backtrace.hpp>
 
-#include "CachedFileStat.hpp"
-#include "Configuration.h"
+#include "Configuration.hpp"
 #include "Utils.h"
+#include "Utils/CachedFileStat.hpp"
 
 // The Apache/APR headers *must* come after the Boost headers, otherwise
 // compilation will fail on OpenBSD.

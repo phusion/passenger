@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2008, 2009 Phusion
+#  Copyright (c) 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -22,9 +22,13 @@
 #  THE SOFTWARE.
 
 require 'socket'
-require 'phusion_passenger/application'
+require 'phusion_passenger/app_process'
 require 'phusion_passenger/message_channel'
+require 'phusion_passenger/public_api'
 require 'phusion_passenger/utils'
+require 'phusion_passenger/utils/tmpdir'
+require 'phusion_passenger/native_support'
+
 module PhusionPassenger
 module WSGI
 
@@ -46,7 +50,7 @@ class ApplicationSpawner
 	# - AppInitError: The WSGI application raised an exception or called
 	#   exit() during startup.
 	# - SystemCallError, IOError, SocketError: Something went wrong.
-	def spawn_application(app_root, lower_privilege = true, lowest_user = "nobody", environment = "production")
+	def spawn_application(options)
 		a, b = UNIXSocket.pair
 		pid = safe_fork(self.class.to_s, true) do
 			a.close
@@ -55,36 +59,36 @@ class ApplicationSpawner
 			NativeSupport.close_all_file_descriptors(file_descriptors_to_leave_open)
 			close_all_io_objects_for_fds(file_descriptors_to_leave_open)
 			
-			run(MessageChannel.new(b), app_root, lower_privilege, lowest_user, environment)
+			run(MessageChannel.new(b), options)
 		end
 		b.close
 		Process.waitpid(pid) rescue nil
 		
 		channel = MessageChannel.new(a)
-		pid, socket_name, socket_type = channel.read
-		if pid.nil?
-			raise IOError, "Connection closed"
-		end
-		owner_pipe = channel.recv_io
-		return Application.new(@app_root, pid, socket_name,
-			socket_type, owner_pipe)
+		return AppProcess.read_from_channel(channel)
 	end
 
 private
-	def run(channel, app_root, lower_privilege, lowest_user, environment)
-		$0 = "WSGI: #{app_root}"
-		ENV['WSGI_ENV'] = environment
-		Dir.chdir(app_root)
-		if lower_privilege
-			lower_privilege('passenger_wsgi.py', lowest_user)
+	def run(channel, options)
+		$0 = "WSGI: #{options['app_root']}"
+		prepare_app_process("passenger_wsgi.py", options)
+		ENV['WSGI_ENV'] = options['environment']
+		
+		if defined?(NativeSupport)
+			unix_path_max = NativeSupport::UNIX_PATH_MAX
+		else
+			unix_path_max = 100
 		end
 		
-		socket_file = "#{passenger_tmpdir}/backends/wsgi_backend.#{Process.pid}.#{rand 10000000}"
+		socket_file = "#{passenger_tmpdir}/backends/wsgi.#{Process.pid}.#{rand 10000000}"
+		socket_file = socket_file.slice(0, unix_path_max - 1)
 		server = UNIXServer.new(socket_file)
 		begin
+			File.chmod(0666, socket_file)
 			reader, writer = IO.pipe
-			channel.write(Process.pid, socket_file, "unix")
-			channel.send_io(writer)
+			app_process = AppProcess.new(options["app_root"], Process.pid, writer,
+				:main => [socket_file, 'unix'])
+			app_process.write_to_channel(channel)
 			writer.close
 			channel.close
 			

@@ -1,0 +1,63 @@
+#!/usr/bin/env ruby
+#  Phusion Passenger - http://www.modrails.com/
+#  Copyright (c) 2010 Phusion
+#
+#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+#
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
+#
+#  The above copyright notice and this permission notice shall be included in
+#  all copies or substantial portions of the Software.
+#
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#  THE SOFTWARE.
+
+STDOUT.sync = true
+STDERR.sync = true
+
+require 'uri'
+url = ARGV[0]
+begin
+	uri = URI.parse(url)
+rescue URI::InvaludURIError
+	STDERR.puts "*** ERROR: '#{url}' is not a valid URL."
+	exit 1
+end
+if uri.scheme.nil? || uri.host.nil? || uri.port.nil? || uri.path.nil?
+	STDERR.puts "*** ERROR: '#{url}' is not a valid URL."
+	exit 1
+end
+
+require 'socket'
+path = uri.path.empty? ? "/" : uri.path
+socket = TCPSocket.new('127.0.0.1', uri.port)
+if uri.scheme == 'https'
+	require 'openssl'
+	socket = OpenSSL::SSL::SSLSocket.new(socket)
+	socket.sync_close = true
+	socket.connect
+end
+begin
+	socket.write("HEAD #{path} HTTP/1.1\r\n")
+	socket.write("Host: #{uri.host}\r\n")
+	socket.write("Connection: close\r\n")
+	socket.write("\r\n")
+	if socket.respond_to?(:close_write)
+		socket.close_write
+		socket.read
+	else
+		socket.readline
+	end
+ensure
+	socket.close
+end

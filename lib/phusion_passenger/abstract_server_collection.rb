@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2008, 2009 Phusion
+#  Copyright (c) 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -30,10 +30,10 @@ module PhusionPassenger
 # AbstractServerCollection also automatically takes care of cleaning up
 # AbstractServers that have been idle for too long.
 #
-# This class exists because both SpawnManager and Railz::FrameworkSpawner need this kind
-# of functionality. SpawnManager maintains a collection of Railz::FrameworkSpawner
-# and Railz::ApplicationSpawner objects, while Railz::FrameworkSpawner maintains a
-# collection of Railz::ApplicationSpawner objects.
+# This class exists because both SpawnManager and ClassicRails::FrameworkSpawner need this kind
+# of functionality. SpawnManager maintains a collection of ClassicRails::FrameworkSpawner
+# and ClassicRails::ApplicationSpawner objects, while ClassicRails::FrameworkSpawner maintains a
+# collection of ClassicRails::ApplicationSpawner objects.
 #
 # This class is thread-safe as long as the specified thread-safety rules are followed.
 class AbstractServerCollection
@@ -77,25 +77,30 @@ class AbstractServerCollection
 	# operation.
 	def synchronize
 		@lock.synchronize do
-			yield
-			if @next_cleaning_time.nil?
-				@collection.each_value do |server|
-					if @next_cleaning_time.nil? ||
-					   (eligable_for_cleanup?(server) &&
-					    server.next_cleaning_time < @next_cleaning_time
-					   )
-						@next_cleaning_time = server.next_cleaning_time
-					end
-				end
+			@in_synchronize_block = true
+			begin
+				yield
+			ensure
 				if @next_cleaning_time.nil?
-					# There are no servers in the collection with an idle timeout.
-					@next_cleaning_time = Time.now + 60 * 60
+					@collection.each_value do |server|
+						if @next_cleaning_time.nil? ||
+						   (eligable_for_cleanup?(server) &&
+						    server.next_cleaning_time < @next_cleaning_time
+						   )
+							@next_cleaning_time = server.next_cleaning_time
+						end
+					end
+					if @next_cleaning_time.nil?
+						# There are no servers in the collection with an idle timeout.
+						@next_cleaning_time = Time.now + 60 * 60
+					end
+					@next_cleaning_time_changed = true
 				end
-				@next_cleaning_time_changed = true
-			end
-			if @next_cleaning_time_changed
-				@next_cleaning_time_changed = false
-				@cond.signal
+				if @next_cleaning_time_changed
+					@next_cleaning_time_changed = false
+					@cond.signal
+				end
+				@in_synchronize_block = false
 			end
 		end
 	end
@@ -118,6 +123,7 @@ class AbstractServerCollection
 	# Precondition: this method must be called within a #synchronize block.
 	def lookup_or_add(key)
 		raise ArgumentError, "cleanup() has already been called." if @done
+		must_be_in_synchronize_block
 		server = @collection[key]
 		if server
 			register_activity(server)
@@ -143,6 +149,7 @@ class AbstractServerCollection
 	#
 	# Precondition: this method must be called within a #synchronize block.
 	def has_key?(key)
+		must_be_in_synchronize_block
 		return @collection.has_key?(key)
 	end
 	
@@ -150,6 +157,7 @@ class AbstractServerCollection
 	#
 	# Precondition: this method must be called within a #synchronize block.
 	def empty?
+		must_be_in_synchronize_block
 		return @collection.empty?
 	end
 	
@@ -161,6 +169,7 @@ class AbstractServerCollection
 	# Precondition: this method must be called within a #synchronize block.
 	def delete(key)
 		raise ArgumentError, "cleanup() has already been called." if @done
+		must_be_in_synchronize_block
 		server = @collection[key]
 		if server
 			if server.started?
@@ -183,6 +192,7 @@ class AbstractServerCollection
 	#
 	# Precondition: this method must be called within a #synchronize block.
 	def register_activity(server)
+		must_be_in_synchronize_block
 		if eligable_for_cleanup?(server)
 			if server.next_cleaning_time == @next_cleaning_time
 				@next_cleaning_time = nil
@@ -196,6 +206,7 @@ class AbstractServerCollection
 	#
 	# Precondition: this method must NOT be called within a #synchronize block.
 	def check_idle_servers!
+		must_not_be_in_synchronize_block
 		@lock.synchronize do
 			@next_cleaning_time = Time.now - 60 * 60
 			@cond.signal
@@ -206,6 +217,7 @@ class AbstractServerCollection
 	#
 	# Precondition: this method must be called within a #synchronize block.
 	def each
+		must_be_in_synchronize_block
 		each_pair do |key, server|
 			yield server
 		end
@@ -216,6 +228,7 @@ class AbstractServerCollection
 	# Precondition: this method must be called within a #synchronize block.
 	def each_pair
 		raise ArgumentError, "cleanup() has already been called." if @done
+		must_be_in_synchronize_block
 		@collection.each_pair do |key, server|
 			yield(key, server)
 		end
@@ -226,6 +239,7 @@ class AbstractServerCollection
 	#
 	# Precondition: this method must be called within a #synchronize block.
 	def clear
+		must_be_in_synchronize_block
 		@collection.each_value do |server|
 			if server.started?
 				server.stop
@@ -244,6 +258,7 @@ class AbstractServerCollection
 	#
 	# Precondition: this method must *NOT* be called within a #synchronize block.
 	def cleanup
+		must_not_be_in_synchronize_block
 		@cleanup_lock.synchronize do
 			return if @done
 			@lock.synchronize do
@@ -251,7 +266,9 @@ class AbstractServerCollection
 				@cond.signal
 			end
 			@cleaner_thread.join
-			clear
+			synchronize do
+				clear
+			end
 		end
 	end
 
@@ -300,6 +317,18 @@ private
 	# Checks whether the given server is eligible for being idle cleaned.
 	def eligable_for_cleanup?(server)
 		return server.max_idle_time && server.max_idle_time != 0
+	end
+	
+	def must_be_in_synchronize_block
+		if !@in_synchronize_block
+			raise RuntimeError, "This method may only be called within a #synchronize block!"
+		end
+	end
+	
+	def must_not_be_in_synchronize_block
+		if @in_synchronize_block
+			raise RuntimeError, "This method may NOT be called within a #synchronize block!"
+		end
 	end
 end
 

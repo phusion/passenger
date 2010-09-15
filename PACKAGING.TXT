@@ -1,0 +1,25 @@
+Notes for packagers
+-------------------
+By default Phusion Passenger locates all of its resource files under its
+source root directory, however it also supports FHS-complaint packaging.
+When packaging Phusion Passenger, be sure to follow these guidelines:
+
+- You can generate a fakeroot with the command 'rake fakeroot'. This will
+  generate an FHS-compliant directory tree in pkg/fakeroot, which you can
+  directly package or with minor modifications.
+
+  If the default fakeroot structure is not sufficient, please consider
+  sending a patch.
+- Be sure to set Apache's PassengerRoot directive or Nginx's passenger_root
+  directive to /usr. This is a hint to Phusion Passenger that it's packaged
+  in an FHS-compliant way.
+- Inside the fakeroot you will encounter a directory
+  /usr/share/phusion-passenger/source, which contains the entire Phusion
+  Passenger source root. This is normal! It's to allow
+  passenger-install-nginx-module and Phusion Passenger Lite to work; they
+  both require the Phusion Passenger source code in order to compile Nginx.
+- Phusion Passenger vendors libev in order to make installation easier for
+  users on operating systems without proper package management, like OS X.
+  If you want Phusion Passenger to compile against the system-provided
+  libev instead, then set the environment variable USE_VENDORED_LIBEV to
+  'no' before compiling.

@@ -1,0 +1,69 @@
+master_process on;
+worker_processes 1;
+daemon on;
+error_log <%= @options[:log_file] %>;
+pid <%= @options[:pid_file] %>;
+<% if @options[:user] %>user <%= @options[:user] %> <%= default_group_for(@options[:user]) %>;<% end %>
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include <%= nginx_dir %>/conf/mime.types;
+    client_body_temp_path <%= @temp_dir %>/client;
+    proxy_temp_path <%= @temp_dir %>/proxy;
+    passenger_ruby <%= PlatformInfo.ruby_command %>;
+    passenger_root <%= passenger_root %>;
+    passenger_abort_on_startup_error on;
+    passenger_user_switching off;
+    passenger_max_pool_size <%= @options[:max_pool_size] %>;
+    passenger_min_instances <%= @options[:min_instances] %>;
+    <% if @options[:user] %>passenger_default_user <%= @options[:user] %>;<% end %>
+    
+    default_type application/octet-stream;
+    client_max_body_size 50m;
+    access_log off;
+    keepalive_timeout 60;
+    gzip on;
+    gzip_comp_level 3;
+    gzip_min_length 150;
+    gzip_proxied any;
+    gzip_types text/plain text/css application/javascript application/x-javascript;
+    
+    <% if @apps.size > 1 %>
+    # Default server entry.
+    server {
+        listen <%= nginx_listen_address %>;
+        root <%= LIBDIR %>/phusion_passenger/templates/standalone_default_root;
+    }
+    <% end %>
+
+    <% if @options[:ping_port] %>
+    server {
+        listen <%= nginx_listen_address(true) %>;
+        root <%= LIBDIR %>/phusion_passenger/templates/standalone_default_root;
+    }
+    <% end %>
+    
+    <% for app in @apps %>
+    server {
+        listen <%= @options[:address] %>:<%= @options[:port] %>;
+        server_name <%= app[:server_names].join(' ') %>;
+        root <%= app[:root] %>/public;
+        passenger_enabled on;
+        rails_env <%= app[:env] %>;
+        passenger_spawn_method <%= app[:spawn_method] %>;
+        <% if app[:min_instances] %>passenger_min_instances <%= app[:min_instances] %>;<% end %>
+        <% if app[:analytics] %>passenger_analytics on;<% end %>
+        <% if app[:debugger] %>passenger_debugger on;<% end %>
+        <%
+        # The following is to make Tower Top work. In Phusion Passenger Standalone we don't
+        # care about inter-app security because it's meant for simple use cases; we
+        # don't even support user switching. People who care about inter-app security
+        # should just use Phusion Passenger for Apache or Nginx.
+        %>
+        passenger_app_rights inspect_basic_info;
+    }
+    <% end %>
+}

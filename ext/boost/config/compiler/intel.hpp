@@ -99,7 +99,7 @@
 #     define BOOST_FUNCTION_SCOPE_USING_DECLARATION_BREAKS_ADL
 #  endif
 #endif
-#if (defined(__GNUC__) && (__GNUC__ < 4)) || defined(_WIN32)
+#if (defined(__GNUC__) && (__GNUC__ < 4)) || defined(_WIN32) || (BOOST_INTEL_CXX_VERSION <= 1110)
 // GCC or VC emulation:
 #define BOOST_NO_TWO_PHASE_NAME_LOOKUP
 #endif
@@ -146,9 +146,20 @@ template<> struct assert_intrinsic_wchar_t<unsigned short> {};
 #if BOOST_INTEL_CXX_VERSION < 500
 #  error "Compiler not supported or configured - please reconfigure"
 #endif
+
+// Intel on MacOS requires
+#if defined(__APPLE__) && defined(__INTEL_COMPILER)
+#  define BOOST_NO_TWO_PHASE_NAME_LOOKUP
+#endif
+
+// Intel on Altix Itanium
+#if defined(__itanium__) && defined(__INTEL_COMPILER)
+#  define BOOST_NO_TWO_PHASE_NAME_LOOKUP
+#endif
+
 //
 // last known and checked version:
-#if (BOOST_INTEL_CXX_VERSION > 1010)
+#if (BOOST_INTEL_CXX_VERSION > 1110)
 #  if defined(BOOST_ASSERT_CONFIG)
 #     error "Unknown compiler version - please run the configure tests and report the results"
 #  elif defined(_MSC_VER)

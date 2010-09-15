@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2008, 2009 Phusion
+ *  Copyright (c) 2010 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -26,9 +26,10 @@
 #define _PASSENGER_SPAWN_MANAGER_H_
 
 #include <string>
-#include <list>
+#include <vector>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
+#include <boost/function.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
 
@@ -44,11 +45,17 @@
 #include <pwd.h>
 #include <signal.h>
 
-#include "Application.h"
-#include "PoolOptions.h"
+#include "AbstractSpawnManager.h"
+#include "ServerInstanceDir.h"
+#include "FileDescriptor.h"
+#include "Constants.h"
 #include "MessageChannel.h"
+#include "AccountsDatabase.h"
+#include "RandomGenerator.h"
 #include "Exceptions.h"
 #include "Logging.h"
+#include "Utils/Base64.h"
+#include "Utils/SystemTime.h"
 
 namespace Passenger {
 
@@ -57,14 +64,8 @@ using namespace boost;
 using namespace oxt;
 
 /**
- * @brief Spawning of Ruby on Rails/Rack application instances.
+ * An AbstractSpawnManager implementation.
  *
- * This class is responsible for spawning new instances of Ruby on Rails or
- * Rack applications. Use the spawn() method to do so.
- *
- * @note This class is fully thread-safe.
- *
- * <h2>Implementation details</h2>
  * Internally, this class makes use of a spawn server, which is written in Ruby. This server
  * is automatically started when a SpawnManager instance is created, and automatically
  * shutdown when that instance is destroyed. The existance of the spawn server is almost
@@ -80,7 +81,7 @@ using namespace oxt;
  *
  * The server will try to keep the spawning time as small as possible, by keeping
  * corresponding Ruby on Rails frameworks and application code in memory. So the second
- * time an instance of the same application is spawned, the spawn time is significantly
+ * time a process of the same application is spawned, the spawn time is significantly
  * lower than the first time. Nevertheless, spawning is a relatively expensive operation
  * (compared to the processing of a typical HTTP request/response), and so should be
  * avoided whenever possible.
@@ -89,37 +90,51 @@ using namespace oxt;
  *
  * @ingroup Support
  */
-class SpawnManager {
+class SpawnManager: public AbstractSpawnManager {
 private:
-	static const int SPAWN_SERVER_INPUT_FD = 3;
+	static const int SERVER_SOCKET_FD = 3;
+	static const int OWNER_SOCKET_FD  = 4;
+	static const int HIGHEST_FD       = OWNER_SOCKET_FD;
 
 	string spawnServerCommand;
-	string logFile;
+	ServerInstanceDir::GenerationPtr generation;
+	AccountsDatabasePtr accountsDatabase;
 	string rubyCommand;
-	string user;
+	AnalyticsLoggerPtr analyticsLogger;
+	int logLevel;
+	string debugLogFile;
 	
 	boost::mutex lock;
+	RandomGenerator random;
 	
-	MessageChannel channel;
 	pid_t pid;
+	FileDescriptor ownerSocket;
+	string socketFilename;
+	string socketPassword;
 	bool serverNeedsRestart;
-
+	
+	static void deleteAccount(AccountsDatabasePtr accountsDatabase, const string &username) {
+		accountsDatabase->remove(username);
+	}
+	
 	/**
 	 * Restarts the spawn server.
 	 *
 	 * @pre System call interruption is disabled.
+	 * @throws RuntimeException An error occurred while creating a Unix server socket.
 	 * @throws SystemException An error occured while trying to setup the spawn server.
-	 * @throws IOException The specified log file could not be opened.
+	 * @throws IOException An error occurred while generating random data.
 	 */
 	void restartServer() {
 		TRACE_POINT();
 		if (pid != 0) {
 			UPDATE_TRACE_POINT();
-			channel.close();
+			ownerSocket.close();
 			
-			// Wait at most 5 seconds for the spawn server to exit.
-			// If that doesn't work, kill it, then wait at most 5 seconds
-			// for it to exit.
+			/* Wait at most 5 seconds for the spawn server to exit.
+			 * If that doesn't work, kill it, then wait at most 5 seconds
+			 * for it to exit.
+			 */
 			time_t begin = syscalls::time(NULL);
 			bool done = false;
 			while (!done && syscalls::time(NULL) - begin < 5) {
@@ -142,88 +157,60 @@ private:
 						syscalls::usleep(100000);
 					}
 				}
-				P_TRACE(2, "Spawn server has exited.");
 			}
 			pid = 0;
 		}
 		
-		int fds[2];
-		FILE *logFileHandle = NULL;
+		FileDescriptor serverSocket;
+		string socketFilename;
+		string socketPassword;
+		int ret, fds[2];
 		
-		serverNeedsRestart = true;
-		if (syscalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
-			throw SystemException("Cannot create a Unix socket", errno);
+		UPDATE_TRACE_POINT();
+		socketFilename = generation->getPath() + "/spawn-server/socket." +
+			toString(getpid()) + "." +
+			pointerToIntString(this);
+		socketPassword = Base64::encode(random.generateByteString(32));
+		serverSocket = createUnixServer(socketFilename.c_str());
+		do {
+			ret = chmod(socketFilename.c_str(), S_IRUSR | S_IWUSR | S_IXUSR);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
+			int e = errno;
+			syscalls::unlink(socketFilename.c_str());
+			throw FileSystemException("Cannot set permissions on '" + socketFilename + "'",
+				e, socketFilename);
 		}
-		if (!logFile.empty()) {
-			logFileHandle = syscalls::fopen(logFile.c_str(), "a");
-			if (logFileHandle == NULL) {
-				string message("Cannot open log file '");
-				message.append(logFile);
-				message.append("' for writing.");
-				throw IOException(message);
-			}
+		
+		if (syscalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
+			int e = errno;
+			syscalls::unlink(socketFilename.c_str());
+			throw SystemException("Cannot create a Unix socket", e);
 		}
 
 		UPDATE_TRACE_POINT();
 		pid = syscalls::fork();
 		if (pid == 0) {
-			if (!logFile.empty()) {
-				dup2(fileno(logFileHandle), STDERR_FILENO);
-				fclose(logFileHandle);
-			}
-			dup2(STDERR_FILENO, STDOUT_FILENO);
-			dup2(fds[1], SPAWN_SERVER_INPUT_FD);
+			dup2(serverSocket, HIGHEST_FD + 1);
+			dup2(fds[1], HIGHEST_FD + 2);
+			dup2(HIGHEST_FD + 1, SERVER_SOCKET_FD);
+			dup2(HIGHEST_FD + 2, OWNER_SOCKET_FD);
 			
 			// Close all unnecessary file descriptors
-			for (long i = sysconf(_SC_OPEN_MAX) - 1; i > SPAWN_SERVER_INPUT_FD; i--) {
+			for (long i = sysconf(_SC_OPEN_MAX) - 1; i > HIGHEST_FD; i--) {
 				close(i);
-			}
-			
-			if (!user.empty()) {
-				struct passwd *entry = getpwnam(user.c_str());
-				if (entry != NULL) {
-					if (initgroups(user.c_str(), entry->pw_gid) != 0) {
-						int e = errno;
-						fprintf(stderr, "*** Passenger: cannot set supplementary "
-							"groups for user %s: %s (%d)\n",
-							user.c_str(),
-							strerror(e),
-							e);
-					}
-					if (setgid(entry->pw_gid) != 0) {
-						int e = errno;
-						fprintf(stderr, "*** Passenger: cannot run spawn "
-							"manager as group %d: %s (%d)\n",
-							entry->pw_gid,
-							strerror(e),
-							e);
-					}
-					if (setuid(entry->pw_uid) != 0) {
-						int e = errno;
-						fprintf(stderr, "*** Passenger: cannot run spawn "
-							"manager as user %s (%d): %s (%d)\n",
-							user.c_str(), entry->pw_uid,
-							strerror(e),
-							e);
-					}
-				} else {
-					fprintf(stderr, "*** Passenger: cannot run spawn manager "
-						"as nonexistant user '%s'.\n",
-						user.c_str());
-				}
-				fflush(stderr);
 			}
 			
 			execlp(rubyCommand.c_str(),
 				rubyCommand.c_str(),
 				spawnServerCommand.c_str(),
-				getPassengerTempDir().c_str(),
-				// The spawn server changes the process names of the subservers
-				// that it starts, for better usability. However, the process name length
-				// (as shown by ps) is limited. Here, we try to expand that limit by
-				// deliberately passing a useless whitespace string to the spawn server.
-				// This argument is ignored by the spawn server. This works on some
-				// systems, such as Ubuntu Linux.
+				/* The spawn server changes the process names of the subservers
+				 * that it starts, for better usability. However, the process name length
+				 * (as shown by ps) is limited. Here, we try to expand that limit by
+				 * deliberately passing a useless whitespace string to the spawn server.
+				 * This argument is ignored by the spawn server. This works on some
+				 * systems, such as Ubuntu Linux.
+				 */
 				"                                                             ",
 				(char *) NULL);
 			int e = errno;
@@ -235,46 +222,121 @@ private:
 			_exit(1);
 		} else if (pid == -1) {
 			int e = errno;
+			syscalls::unlink(socketFilename.c_str());
 			syscalls::close(fds[0]);
 			syscalls::close(fds[1]);
-			if (logFileHandle != NULL) {
-				syscalls::fclose(logFileHandle);
-			}
 			pid = 0;
 			throw SystemException("Unable to fork a process", e);
 		} else {
+			FileDescriptor ownerSocket = fds[0];
 			syscalls::close(fds[1]);
-			if (!logFile.empty()) {
-				syscalls::fclose(logFileHandle);
-			}
-			channel = MessageChannel(fds[0]);
-			serverNeedsRestart = false;
+			serverSocket.close();
 			
-			#ifdef TESTING_SPAWN_MANAGER
-				if (nextRestartShouldFail) {
-					syscalls::kill(pid, SIGTERM);
-					syscalls::usleep(500000);
-				}
-			#endif
+			// Pass arguments to spawn server.
+			MessageChannel ownerSocketChannel(ownerSocket);
+			ownerSocketChannel.writeRaw(socketFilename + "\n");
+			ownerSocketChannel.writeRaw(socketPassword + "\n");
+			ownerSocketChannel.writeRaw(generation->getPath() + "\n");
+			if (analyticsLogger != NULL) {
+				ownerSocketChannel.writeRaw(analyticsLogger->getAddress() + "\n");
+				ownerSocketChannel.writeRaw(analyticsLogger->getUsername() + "\n");
+				ownerSocketChannel.writeRaw(Base64::encode(analyticsLogger->getPassword()) + "\n");
+				ownerSocketChannel.writeRaw(analyticsLogger->getNodeName() + "\n");
+			} else {
+				ownerSocketChannel.writeRaw("\n");
+				ownerSocketChannel.writeRaw("\n");
+				ownerSocketChannel.writeRaw("\n");
+				ownerSocketChannel.writeRaw("\n");
+			}
+			ownerSocketChannel.writeRaw(toString(logLevel) + "\n");
+			ownerSocketChannel.writeRaw(debugLogFile + "\n");
+			
+			this->ownerSocket    = ownerSocket;
+			this->socketFilename = socketFilename;
+			this->socketPassword = socketPassword;
+			spawnServerStarted();
 		}
+	}
+	
+	/**
+	 * Connects to the spawn server and returns the connection.
+	 *
+	 * @throws RuntimeException
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
+	 */
+	FileDescriptor connect() const {
+		TRACE_POINT();
+		FileDescriptor fd = connectToUnixServer(socketFilename.c_str());
+		MessageChannel channel(fd);
+		UPDATE_TRACE_POINT();
+		channel.writeScalar(socketPassword);
+		return fd;
 	}
 	
 	/**
 	 * Send the spawn command to the spawn server.
 	 *
 	 * @param PoolOptions The spawn options to use.
-	 * @return An Application smart pointer, representing the spawned application.
+	 * @return A Process smart pointer, representing the spawned process.
 	 * @throws SpawnException Something went wrong.
 	 * @throws Anything thrown by options.environmentVariables->getItems().
+	 * @throws boost::thread_interrupted
 	 */
-	ApplicationPtr sendSpawnCommand(const PoolOptions &options) {
+	ProcessPtr sendSpawnCommand(const PoolOptions &options) {
 		TRACE_POINT();
+		FileDescriptor connection;
+		MessageChannel channel;
+		
+		P_DEBUG("Spawning a new application process for " << options.appRoot << "...");
+		
+		try {
+			connection = connect();
+			channel = MessageChannel(connection);
+		} catch (const SystemException &e) {
+			throw SpawnException(string("Could not connect to the spawn server: ") +
+				e.sys());
+		} catch (const std::exception &e) {
+			throw SpawnException(string("Could not connect to the spawn server: ") +
+				e.what());
+		}
+		
+		UPDATE_TRACE_POINT();
 		vector<string> args;
-		int ownerPipe;
+		string appRoot;
+		pid_t appPid;
+		int i, nServerSockets, ownerPipe;
+		Process::SocketInfoMap serverSockets;
+		string detachKey = random.generateAsciiString(43);
+		// The connect password must be a URL-friendly string because users will
+		// insert it in HTTP headers.
+		string connectPassword = random.generateAsciiString(43);
+		string gupid = integerToHex(SystemTime::get() / 60) + "-" +
+			random.generateAsciiString(11);
+		AccountPtr account;
+		function<void ()> destructionCallback;
 		
 		try {
 			args.push_back("spawn_application");
 			options.toVector(args);
+			
+			args.push_back("detach_key");
+			args.push_back(detachKey);
+			args.push_back("connect_password");
+			args.push_back(connectPassword);
+			if (accountsDatabase != NULL) {
+				string username = "_backend-" + toString(accountsDatabase->getUniqueNumber());
+				string password = random.generateByteString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
+				account = accountsDatabase->add(username, password, false, options.rights);
+				destructionCallback = boost::bind(&SpawnManager::deleteAccount,
+					accountsDatabase, username);
+				
+				args.push_back("pool_account_username");
+				args.push_back(username);
+				args.push_back("pool_account_password_base64");
+				args.push_back(Base64::encode(password));
+			}
+			
 			channel.write(args);
 		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not write 'spawn_application' "
@@ -291,6 +353,7 @@ private:
 				throw SpawnException("The spawn server sent an invalid message.");
 			}
 			if (args[0] == "error_page") {
+				UPDATE_TRACE_POINT();
 				string errorPage;
 				
 				if (!channel.readScalar(errorPage)) {
@@ -303,8 +366,31 @@ private:
 			}
 			
 			// Read application info.
+			UPDATE_TRACE_POINT();
 			if (!channel.read(args)) {
 				throw SpawnException("The spawn server has exited unexpectedly.");
+			}
+			if (args.size() != 3) {
+				throw SpawnException("The spawn server sent an invalid message.");
+			}
+			
+			appRoot = args[0];
+			appPid  = (pid_t) stringToULL(args[1]);
+			nServerSockets = atoi(args[2]);
+			
+			UPDATE_TRACE_POINT();
+			for (i = 0; i < nServerSockets; i++) {
+				if (!channel.read(args)) {
+					throw SpawnException("The spawn server has exited unexpectedly.");
+				}
+				if (args.size() != 3) {
+					throw SpawnException("The spawn server sent an invalid message.");
+				}
+				serverSockets[args[0]] = Process::SocketInfo(args[1], args[2]);
+			}
+			if (serverSockets.find("main") == serverSockets.end()) {
+				UPDATE_TRACE_POINT();
+				throw SpawnException("The spawn server sent an invalid message.");
 			}
 		} catch (const SystemException &e) {
 			throw SpawnException(string("Could not read from the spawn server: ") + e.sys());
@@ -323,39 +409,17 @@ private:
 				e.what());
 		}
 		
-		if (args.size() != 3) {
-			UPDATE_TRACE_POINT();
-			syscalls::close(ownerPipe);
-			throw SpawnException("The spawn server sent an invalid message.");
-		}
-		
-		pid_t pid = atoi(args[0]);
-		
 		UPDATE_TRACE_POINT();
-		if (args[2] == "unix") {
-			/* Set tighter permissions on the spawned backend process's
-			 * Unix socket. We try to make it only readable and writable
-			 * by the process that contains the application pool, because
-			 * all attempts to connect to a backend process happens
-			 * through the application pool.
-			 */
-			int ret;
-			do {
-				ret = chmod(args[1].c_str(), S_IRUSR | S_IWUSR);
-			} while (ret == -1 && errno == EINTR);
-			do {
-				ret = chown(args[1].c_str(), getuid(), getgid());
-			} while (ret == -1 && errno == EINTR);
-		}
-		return ApplicationPtr(new Application(options.appRoot,
-			pid, args[1], args[2], ownerPipe));
+		P_DEBUG("Application process " << appPid << " spawned");
+		return ProcessPtr(new Process(appRoot, appPid, ownerPipe, serverSockets,
+			detachKey, connectPassword, gupid, destructionCallback));
 	}
 	
 	/**
 	 * @throws boost::thread_interrupted
 	 * @throws Anything thrown by options.environmentVariables->getItems().
 	 */
-	ApplicationPtr
+	ProcessPtr
 	handleSpawnException(const SpawnException &e, const PoolOptions &options) {
 		TRACE_POINT();
 		bool restarted;
@@ -383,15 +447,31 @@ private:
 	 * Send the reload command to the spawn server.
 	 *
 	 * @param appRoot The application root to reload.
-	 * @throws SystemException Something went wrong.
+	 * @throws RuntimeException 
+	 * @throws SystemException
+	 * @throws boost::thread_interrupted
 	 */
 	void sendReloadCommand(const string &appRoot) {
 		TRACE_POINT();
+		FileDescriptor connection;
+		MessageChannel channel;
+		
+		try {
+			connection = connect();
+			channel = MessageChannel(connection);
+		} catch (SystemException &e) {
+			e.setBriefMessage("Could not connect to the spawn server");
+			throw;
+		} catch (const RuntimeException &e) {
+			throw RuntimeException(string("Could not connect to the spawn server: ") +
+				e.what());
+		}
+		
 		try {
 			channel.write("reload", appRoot.c_str(), NULL);
-		} catch (const SystemException &e) {
-			throw SystemException("Could not write 'reload' command "
-				"to the spawn server", e.code());
+		} catch (SystemException &e) {
+			e.setBriefMessage("Could not write 'reload' command to the spawn server");
+			throw;
 		}
 	}
 	
@@ -425,43 +505,47 @@ private:
 		return SystemException(message + ": " + e.brief(), e.code());
 	}
 
+protected:
+	/**
+	 * A method which is called after the spawn server has started.
+	 * It doesn't do anything by default and serves as a hook for unit tests.
+	 */
+	virtual void spawnServerStarted() { }
+	
 public:
-	#ifdef TESTING_SPAWN_MANAGER
-		bool nextRestartShouldFail;
-	#endif
-
 	/**
 	 * Construct a new SpawnManager.
 	 *
 	 * @param spawnServerCommand The filename of the spawn server to use.
-	 * @param logFile Specify a log file that the spawn server should use.
-	 *            Messages on its standard output and standard error channels
-	 *            will be written to this log file. If an empty string is
-	 *            specified, no log file will be used, and the spawn server
-	 *            will use the same standard output/error channels as the
-	 *            current process.
+	 * @param generation The server instance dir generation in which
+	 *                   generation-specific are stored.
+	 * @param accountsDatabase An accounts database. SpawnManager will automatically
+	 *                         create a new account for each spawned process, assigning
+	 *                         it the rights as set in the PoolOptions object. This
+	 *                         account is also automatically deleted when no longer needed.
+	 *                         May be a null pointer.
 	 * @param rubyCommand The Ruby interpreter's command.
-	 * @param user The user that the spawn manager should run as. This
-	 *             parameter only has effect if the current process is
-	 *             running as root. If the empty string is given, or if
-	 *             the <tt>user</tt> is not a valid username, then
-	 *             the spawn manager will be run as the current user.
+	 * @throws RuntimeException An error occurred while creating a Unix server socket.
 	 * @throws SystemException An error occured while trying to setup the spawn server.
-	 * @throws IOException The specified log file could not be opened.
+	 * @throws IOException An error occurred while generating random data.
 	 */
 	SpawnManager(const string &spawnServerCommand,
-	             const string &logFile = "",
+	             const ServerInstanceDir::GenerationPtr &generation,
+	             const AccountsDatabasePtr &accountsDatabase = AccountsDatabasePtr(),
 	             const string &rubyCommand = "ruby",
-	             const string &user = "") {
+	             const AnalyticsLoggerPtr &analyticsLogger = AnalyticsLoggerPtr(),
+	             int logLevel = 0,
+	             const string &debugLogFile = ""
+	) {
 		TRACE_POINT();
 		this->spawnServerCommand = spawnServerCommand;
-		this->logFile = logFile;
+		this->generation  = generation;
+		this->accountsDatabase = accountsDatabase;
 		this->rubyCommand = rubyCommand;
-		this->user = user;
+		this->analyticsLogger = analyticsLogger;
+		this->logLevel = logLevel;
+		this->debugLogFile = debugLogFile;
 		pid = 0;
-		#ifdef TESTING_SPAWN_MANAGER
-			nextRestartShouldFail = false;
-		#endif
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		try {
@@ -473,67 +557,38 @@ public:
 		}
 	}
 	
-	~SpawnManager() throw() {
+	virtual ~SpawnManager() {
 		TRACE_POINT();
 		if (pid != 0) {
 			UPDATE_TRACE_POINT();
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
-			P_TRACE(2, "Shutting down spawn manager (PID " << pid << ").");
-			channel.close();
+			syscalls::unlink(socketFilename.c_str());
+			ownerSocket.close();
 			syscalls::waitpid(pid, NULL, 0);
-			P_TRACE(2, "Spawn manager exited.");
 		}
 	}
 	
-	/**
-	 * Spawn a new instance of an application. Spawning details are to be passed
-	 * via the <tt>PoolOptions</tt> parameter.
-	 *
-	 * If the spawn server died during the spawning process, then the server
-	 * will be automatically restarted, and another spawn attempt will be made.
-	 * If restarting the server fails, or if the second spawn attempt fails,
-	 * then an exception will be thrown.
-	 *
-	 * @param PoolOptions An object containing the details for this spawn operation,
-	 *                     such as which application to spawn. See PoolOptions for details.
-	 * @return A smart pointer to an Application object, which represents the application
-	 *         instance that has been spawned. Use this object to communicate with the
-	 *         spawned application.
-	 * @throws SpawnException Something went wrong.
-	 * @throws boost::thread_interrupted
-	 * @throws Anything thrown by options.environmentVariables->getItems().
-	 */
-	ApplicationPtr spawn(const PoolOptions &options) {
+	virtual ProcessPtr spawn(const PoolOptions &options) {
 		TRACE_POINT();
+		AnalyticsScopeLog scope(options.log, "spawn app process");
+		ProcessPtr result;
 		boost::mutex::scoped_lock l(lock);
+		
 		try {
-			return sendSpawnCommand(options);
+			result = sendSpawnCommand(options);
 		} catch (const SpawnException &e) {
 			if (e.hasErrorPage()) {
 				throw;
 			} else {
-				return handleSpawnException(e, options);
+				result = handleSpawnException(e, options);
 			}
 		}
+		scope.success();
+		return result;
 	}
 	
-	/**
-	 * Remove the cached application instances at the given application root.
-	 *
-	 * Application code might be cached in memory. But once it a while, it will
-	 * be necessary to reload the code for an application, such as after
-	 * deploying a new version of the application. This method makes sure that
-	 * any cached application code is removed, so that the next time an
-	 * application instance is spawned, the application code will be freshly
-	 * loaded into memory.
-	 *
-	 * @throws SystemException Unable to communicate with the spawn server,
-	 *         even after a restart.
-	 * @throws SpawnException The spawn server died unexpectedly, and a
-	 *         restart was attempted, but it failed.
-	 */
-	void reload(const string &appRoot) {
+	virtual void reload(const string &appRoot) {
 		TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
@@ -544,11 +599,11 @@ public:
 		}
 	}
 	
-	/**
-	 * Get the Process ID of the spawn server. This method is used in the unit tests
-	 * and should not be used directly.
-	 */
-	pid_t getServerPid() const {
+	virtual void killSpawnServer() const {
+		kill(pid, SIGKILL);
+	}
+	
+	virtual pid_t getServerPid() const {
 		return pid;
 	}
 };

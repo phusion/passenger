@@ -68,6 +68,60 @@
 #  define BOOST_HAS_SLIST
 #  define BOOST_HAS_HASH
 #  define BOOST_SLIST_HEADER <ext/slist>
-#  define BOOST_HASH_SET_HEADER <ext/hash_set>
-#  define BOOST_HASH_MAP_HEADER <ext/hash_map>
+# if !defined(__GNUC__) || __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 3)
+#   define BOOST_HASH_SET_HEADER <ext/hash_set>
+#   define BOOST_HASH_MAP_HEADER <ext/hash_map>
+# else
+#   define BOOST_HASH_SET_HEADER <backward/hash_set>
+#   define BOOST_HASH_MAP_HEADER <backward/hash_map>
+# endif
 #endif
+
+//  stdlibc++ C++0x support is detected via __GNUC__, __GNUC_MINOR__, and possibly
+//  __GNUC_PATCHLEVEL__ at the suggestion of Jonathan Wakely, one of the stdlibc++
+//  developers. He also commented:
+//
+//       "I'm not sure how useful __GLIBCXX__ is for your purposes, for instance in
+//       GCC 4.2.4 it is set to 20080519 but in GCC 4.3.0 it is set to 20080305.
+//       Although 4.3.0 was released earlier than 4.2.4, it has better C++0x support
+//       than any release in the 4.2 series."
+//
+//  Another resource for understanding stdlibc++ features is:
+//  http://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html#manual.intro.status.standard.200x
+
+//  C++0x headers in GCC 4.3.0 and later
+//
+#if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 3) || !defined(__GXX_EXPERIMENTAL_CXX0X__)
+#  define BOOST_NO_0X_HDR_ARRAY
+#  define BOOST_NO_0X_HDR_RANDOM
+#  define BOOST_NO_0X_HDR_REGEX
+#  define BOOST_NO_0X_HDR_TUPLE
+#  define BOOST_NO_0X_HDR_TYPE_TRAITS
+#  define BOOST_NO_STD_UNORDERED  // deprecated; see following
+#  define BOOST_NO_0X_HDR_UNORDERED_MAP
+#  define BOOST_NO_0X_HDR_UNORDERED_SET
+#endif
+
+//  C++0x headers in GCC 4.4.0 and later
+//
+#if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 4) || !defined(__GXX_EXPERIMENTAL_CXX0X__)
+#  define BOOST_NO_0X_HDR_CHRONO
+#  define BOOST_NO_0X_HDR_CONDITION_VARIABLE
+#  define BOOST_NO_0X_HDR_FORWARD_LIST
+#  define BOOST_NO_0X_HDR_INITIALIZER_LIST
+#  define BOOST_NO_0X_HDR_MUTEX
+#  define BOOST_NO_0X_HDR_RATIO
+#  define BOOST_NO_0X_HDR_SYSTEM_ERROR
+#  define BOOST_NO_0X_HDR_THREAD
+#endif
+
+//  C++0x headers not yet implemented
+//
+#  define BOOST_NO_0X_HDR_CODECVT
+#  define BOOST_NO_0X_HDR_CONCEPTS
+#  define BOOST_NO_0X_HDR_CONTAINER_CONCEPTS
+#  define BOOST_NO_0X_HDR_FUTURE
+#  define BOOST_NO_0X_HDR_ITERATOR_CONCEPTS
+#  define BOOST_NO_0X_HDR_MEMORY_CONCEPTS
+
+//  --- end ---

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2008, 2009 Phusion
+ *  Copyright (c) 2010 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -27,6 +27,9 @@
 
 #include <string>
 #include <vector>
+#include "Account.h"
+#include "Logging.h"
+#include "Constants.h"
 #include "StringListCreator.h"
 
 namespace Passenger {
@@ -37,26 +40,29 @@ using namespace std;
  * This struct encapsulates information for ApplicationPool::get() and for
  * SpawnManager::spawn(), such as which application is to be spawned.
  *
- * <h2>Notes on privilege lowering support</h2>
+ * <h2>Privilege lowering support</h2>
  *
- * If <tt>lowerPrivilege</tt> is true, then it will be attempt to
- * switch the spawned application instance to the user who owns the
- * application's <tt>config/environment.rb</tt>, and to the default
- * group of that user.
+ * If <em>user</em> is given and isn't the empty string, then the application process
+ * will run as the given username. Otherwise, the owner of the application's startup
+ * file (e.g. config/environment.rb or config.ru) will be used.
  *
- * If that user doesn't exist on the system, or if that user is root,
- * then it will be attempted to switch to the username given by
- * <tt>lowestUser</tt> (and to the default group of that user).
- * If <tt>lowestUser</tt> doesn't exist either, or if switching user failed
- * (because the spawn server process does not have the privilege to do so),
- * then the application will be spawned anyway, without reporting an error.
- *
- * It goes without saying that lowering privilege is only possible if
- * the spawn server is running as root (and thus, by induction, that
- * Phusion Passenger and Apache's control process are also running as root).
- * Note that if Apache is listening on port 80, then its control process must
- * be running as root. See "doc/Security of user switching.txt" for
- * a detailed explanation.
+ * If <em>group</em> is given and isn't the empty string, then the application process
+ * will run as the given group name. If it's set to the special value
+ * "!STARTUP_FILE!", then the startup file's group will be used. Otherwise,
+ * the primary group of the user that the application process will run as,
+ * will be used as group.
+ * 
+ * If the user or group that the application process attempts to switch to
+ * doesn't exist, then <em>default_user</em> and <em>default_group</em>, respectively,
+ * will be used.
+ * 
+ * Phusion Passenger will attempt to avoid running the application process as
+ * root: if <em>user</em> or <em>group</em> is set to the root user or the root group,
+ * or if the startup file is owned by root, then <em>default_user</em> and
+ * <em>default_group</em> will be used instead.
+ * 
+ * All this only happen if Phusion Passenger has root privileges. If not, then
+ * these options have no effect.
  */
 struct PoolOptions {
 	/**
@@ -66,90 +72,66 @@ struct PoolOptions {
 	 */
 	string appRoot;
 	
-	/** Whether to lower the application's privileges. */
-	bool lowerPrivilege;
-	
 	/**
-	 * The user to fallback to if lowering privilege fails.
+	 * A name used by ApplicationPool to uniquely identify an application.
+	 * If one tries to get() from the application pool with name "A", then get()
+	 * again with name "B", then the latter will spawn a new application process,
+	 * even if both get() requests have the same app root.
+	 *
+	 * If left empty (the default), then the app root is used as the app group
+	 * name.
 	 */
-	string lowestUser;
+	string appGroupName;
+	
+	/** The application type. Either "rails" (default), "rack" or "wsgi". */
+	string appType;
 	
 	/**
 	 * The RAILS_ENV/RACK_ENV environment that should be used. May not be an
-	 * empty string.
+	 * empty string. The default is "production".
 	 */
 	string environment;
 	
 	/**
-	 * The spawn method to use. Either "smart" or "conservative". See the Ruby
-	 * class <tt>SpawnManager</tt> for details.
+	 * Method with which application processes should be spawned. Different methods
+	 * have different performance and compatibility properties. Available methods are
+	 * "smart-lv2" (default), "smart" and "conservative". The different spawning methods
+	 * are explained in the "Spawning methods explained" section of the users guide.
 	 */
 	string spawnMethod;
 	
-	/** The application type. Either "rails", "rack" or "wsgi". */
-	string appType;
+	/** See overview. */
+	string user;
+	/** See class overview. */
+	string group;
+	/** See class overview. Defaults to "nobody". */
+	string defaultUser;
+	/** See class overview. Defaults to the defaultUser's primary group. */
+	string defaultGroup;
 	
 	/**
-	 * The idle timeout, in seconds, of Rails framework spawners.
+	 * The idle timeout, in seconds, of framework spawners. See the "Spawning methods
+	 * explained" section of the users guide for information about framework spawners.
+	 *
 	 * A timeout of 0 means that the framework spawner should never idle timeout. A timeout
 	 * of -1 means that the default timeout value should be used.
-	 *
-	 * For more details about Rails framework spawners, please
-	 * read the documentation on the Railz::FrameworkSpawner
-	 * Ruby class.
 	 */
 	long frameworkSpawnerTimeout;
 	
 	/**
-	 * The idle timeout, in seconds, of Rails application spawners.
+	 * The idle timeout, in seconds, of application spawners. See the "Spawning methods
+	 * explained" section of the users guide for information about application spawners.
+	 *
 	 * A timeout of 0 means that the application spawner should never idle timeout. A timeout
 	 * of -1 means that the default timeout value should be used.
-	 *
-	 * For more details about Rails application spawners, please
-	 * read the documentation on the Railz::ApplicationSpawner
-	 * Ruby class.
 	 */
 	long appSpawnerTimeout;
 	
 	/**
-	 * The maximum number of requests that the spawned application may process
-	 * before exiting. A value of 0 means unlimited.
-	 */
-	unsigned long maxRequests;
-	
-	/**
-	 * The maximum amount of memory (in MB) the spawned application may use.
-	 * A value of 0 means unlimited.
-	 */
-	unsigned long memoryLimit;
-	
-	/**
-	 * Whether to use a global queue instead of a per-backend process
-	 * queue. This option is only used by ApplicationPool::get().
+	 * Environment variables which should be passed to the spawned application
+	 * process.
 	 *
-	 * If enabled, when all backend processes are active, get() will
-	 * wait until there's at least one backend process that's idle, instead
-	 * of queuing the request into a random process's private queue.
-	 * This is especially useful if a website has one or more long-running
-	 * requests.
-	 */
-	bool useGlobalQueue;
-	
-	/**
-	 * A throttling rate for file stats. When set to a non-zero value N,
-	 * restart.txt and other files which are usually stat()ted on every
-	 * ApplicationPool::get() call will be stat()ed at most every N seconds.
-	 */
-	unsigned long statThrottleRate;
-	
-	/**
-	 * The directory which contains restart.txt and always_restart.txt.
-	 * An empty string means that the default directory should be used.
-	 */
-	string restartDir;
-	
-	/**
-	 * If a new backend process is started, then the getItems() method
+	 * If a new application process is started, then the getItems() method
 	 * on this object will be called, which is to return environment
 	 * variables that should be passed to the newly spawned backend process.
 	 * Odd indices in the resulting array contain keys, even indices contain
@@ -169,6 +151,82 @@ struct PoolOptions {
 	 */
 	string baseURI;
 	
+	/**
+	 * The maximum number of requests that the spawned application may process
+	 * before exiting. A value of 0 means unlimited.
+	 */
+	unsigned long maxRequests;
+	
+	/**
+	 * The minimum number of processes for the current group that the application
+	 * pool's cleaner thread should keep around.
+	 */
+	unsigned long minProcesses;
+	
+	/**
+	 * Whether to use a global queue instead of a per-backend process
+	 * queue. This option is only used by ApplicationPool::get().
+	 *
+	 * If enabled, when all backend processes are active, get() will
+	 * wait until there's at least one backend process that's idle, instead
+	 * of queuing the request into a random process's private queue.
+	 * This is especially useful if a website has one or more long-running
+	 * requests.
+	 */
+	bool useGlobalQueue;
+	
+	/**
+	 * Whether to show the Phusion Passenger version number in the
+	 * X-Powered-By header.
+	 */
+	bool showVersionInHeader;
+	
+	/**
+	 * A throttling rate for file stats. When set to a non-zero value N,
+	 * restart.txt and other files which are usually stat()ted on every
+	 * ApplicationPool::get() call will be stat()ed at most every N seconds.
+	 */
+	unsigned long statThrottleRate;
+	
+	/**
+	 * The directory which contains restart.txt and always_restart.txt.
+	 * An empty string means that the default directory should be used.
+	 */
+	string restartDir;
+	
+	/**
+	 * Any rights that the spawned application process may have. The SpawnManager
+	 * will create a new account for each spawned app, and that account will be
+	 * assigned these rights.
+	 */
+	Account::Rights rights;
+	
+	/** Whether debugger support should be enabled. */
+	bool debugger;
+	
+	/** In case an app process needs to be spawned, whether analytics logging
+	 * should be enabled.
+	 */
+	bool analytics;
+	
+	/**
+	 * An analytics log object to log things to. May be the null pointer,
+	 * in which case analytics logging is disabled for this request.
+	 */
+	AnalyticsLogPtr log;
+	
+	/**
+	 * Whether the session returned by ApplicationPool::Interface::get()
+	 * should be automatically initiated. Defaults to true.
+	 */
+	bool initiateSession;
+	
+	/**
+	 * Whether application processes should print exceptions that occurred during
+	 * application initialization. Defaults to true.
+	 */
+	bool printExceptions;
+	
 	/*********************************/
 	
 	/**
@@ -176,52 +234,78 @@ struct PoolOptions {
 	 * One must still set appRoot manually, after having used this constructor.
 	 */
 	PoolOptions() {
-		lowerPrivilege = true;
-		lowestUser     = "nobody";
-		environment    = "production";
-		spawnMethod    = "smart";
-		appType        = "rails";
+		appType                 = "rails";
+		environment             = "production";
+		spawnMethod             = "smart-lv2";
 		frameworkSpawnerTimeout = -1;
 		appSpawnerTimeout       = -1;
-		maxRequests    = 0;
-		memoryLimit    = 0;
-		useGlobalQueue = false;
+		baseURI                 = "/";
+		maxRequests             = 0;
+		minProcesses            = 0;
+		useGlobalQueue          = false;
+		showVersionInHeader     = true;
 		statThrottleRate        = 0;
-		baseURI        = "/";
+		rights                  = DEFAULT_BACKEND_ACCOUNT_RIGHTS;
+		debugger                = false;
+		analytics               = false;
+		initiateSession         = true;
+		printExceptions         = true;
+		
+		/*********************************/
 	}
 	
 	/**
 	 * Creates a new PoolOptions object with the given values.
 	 */
 	PoolOptions(const string &appRoot,
-		bool lowerPrivilege       = true,
-		const string &lowestUser  = "nobody",
-		const string &environment = "production",
-		const string &spawnMethod = "smart",
-		const string &appType     = "rails",
+		string appGroupName          = "",
+		const string &appType        = "rails",
+		const string &environment    = "production",
+		const string &spawnMethod    = "smart-lv2",
+		const string &user           = "",
+		const string &group          = "",
+		const string &defaultUser    = "",
+		const string &defaultGroup   = "",
 		long frameworkSpawnerTimeout = -1,
 		long appSpawnerTimeout       = -1,
+		const string &baseURI        = "/",
 		unsigned long maxRequests    = 0,
-		unsigned long memoryLimit    = 0,
+		unsigned long minProcesses   = 0,
 		bool useGlobalQueue          = false,
+		bool showVersionInHeader     = true,
 		unsigned long statThrottleRate = 0,
-		const string &restartDir  = "",
-		const string &baseURI     = "/"
+		const string &restartDir     = "",
+		Account::Rights rights       = DEFAULT_BACKEND_ACCOUNT_RIGHTS,
+		bool debugger                = false,
+		bool analytics               = false,
+		const AnalyticsLogPtr &log   = AnalyticsLogPtr()
 	) {
-		this->appRoot        = appRoot;
-		this->lowerPrivilege = lowerPrivilege;
-		this->lowestUser     = lowestUser;
-		this->environment    = environment;
-		this->spawnMethod    = spawnMethod;
-		this->appType        = appType;
+		this->appRoot                 = appRoot;
+		this->appGroupName            = appGroupName;
+		this->appType                 = appType;
+		this->environment             = environment;
+		this->spawnMethod             = spawnMethod;
+		this->user                    = user;
+		this->group                   = group;
+		this->defaultUser             = defaultUser;
+		this->defaultGroup            = defaultGroup;
 		this->frameworkSpawnerTimeout = frameworkSpawnerTimeout;
 		this->appSpawnerTimeout       = appSpawnerTimeout;
-		this->maxRequests    = maxRequests;
-		this->memoryLimit    = memoryLimit;
-		this->useGlobalQueue = useGlobalQueue;
+		this->baseURI                 = baseURI;
+		this->maxRequests             = maxRequests;
+		this->minProcesses            = minProcesses;
+		this->useGlobalQueue          = useGlobalQueue;
+		this->showVersionInHeader     = showVersionInHeader;
 		this->statThrottleRate        = statThrottleRate;
-		this->restartDir     = restartDir;
-		this->baseURI        = baseURI;
+		this->restartDir              = restartDir;
+		this->rights                  = rights;
+		this->debugger                = debugger;
+		this->analytics               = analytics;
+		this->log                     = log;
+		this->initiateSession         = true;
+		this->printExceptions         = true;
+		
+		/*********************************/
 	}
 	
 	/**
@@ -242,25 +326,57 @@ struct PoolOptions {
 	 *
 	 * @param vec The vector containing spawn options information.
 	 * @param startIndex The index in vec at which the information starts.
+	 * @param analyticsLogger If given, and the vector contains logging information,
+	 *                        then the 'log' member will be constructed using this logger.
 	 */
-	PoolOptions(const vector<string> &vec, unsigned int startIndex = 0) {
-		appRoot        = vec[startIndex + 1];
-		lowerPrivilege = vec[startIndex + 3] == "true";
-		lowestUser     = vec[startIndex + 5];
-		environment    = vec[startIndex + 7];
-		spawnMethod    = vec[startIndex + 9];
-		appType        = vec[startIndex + 11];
-		frameworkSpawnerTimeout = atol(vec[startIndex + 13]);
-		appSpawnerTimeout       = atol(vec[startIndex + 15]);
-		maxRequests    = atol(vec[startIndex + 17]);
-		memoryLimit    = atol(vec[startIndex + 19]);
-		useGlobalQueue = vec[startIndex + 21] == "true";
-		statThrottleRate = atol(vec[startIndex + 23]);
-		restartDir     = vec[startIndex + 25];
-		baseURI        = vec[startIndex + 27];
-		if (vec.size() > startIndex + 29) {
-			environmentVariables = ptr(new SimpleStringListCreator(vec[startIndex + 29]));
+	PoolOptions(const vector<string> &vec, unsigned int startIndex = 0,
+	            AnalyticsLoggerPtr analyticsLogger = AnalyticsLoggerPtr()
+	) {
+		int offset = 1;
+		bool hasEnvVars;
+		
+		appRoot          = vec[startIndex + offset];                 offset += 2;
+		appGroupName     = vec[startIndex + offset];                 offset += 2;
+		appType          = vec[startIndex + offset];                 offset += 2;
+		environment      = vec[startIndex + offset];                 offset += 2;
+		spawnMethod      = vec[startIndex + offset];                 offset += 2;
+		user             = vec[startIndex + offset];                 offset += 2;
+		group            = vec[startIndex + offset];                 offset += 2;
+		defaultUser      = vec[startIndex + offset];                 offset += 2;
+		defaultGroup     = vec[startIndex + offset];                 offset += 2;
+		frameworkSpawnerTimeout = atol(vec[startIndex + offset]);    offset += 2;
+		appSpawnerTimeout       = atol(vec[startIndex + offset]);    offset += 2;
+		baseURI          = vec[startIndex + offset];                 offset += 2;
+		maxRequests      = atol(vec[startIndex + offset]);           offset += 2;
+		minProcesses     = atol(vec[startIndex + offset]);           offset += 2;
+		useGlobalQueue   = vec[startIndex + offset] == "true";       offset += 2;
+		showVersionInHeader = vec[startIndex + offset] == "true";    offset += 2;
+		statThrottleRate = atol(vec[startIndex + offset]);           offset += 2;
+		restartDir       = vec[startIndex + offset];                 offset += 2;
+		rights           = (Account::Rights) atol(vec[startIndex + offset]);
+		                                                             offset += 2;
+		debugger         = vec[startIndex + offset] == "true";       offset += 2;
+		analytics        = vec[startIndex + offset] == "true";       offset += 2;
+		if (vec[startIndex + offset - 1] == "analytics_log_txn_id") {
+			if (analyticsLogger != NULL) {
+				string txnId     = vec[startIndex + offset];
+				string groupName = vec[startIndex + offset + 2];
+				string category  = vec[startIndex + offset + 4];
+				string unionStationKey = vec[startIndex + offset + 6];
+				log = analyticsLogger->continueTransaction(txnId,
+					groupName, category, unionStationKey);
+			}
+			offset += 8;
 		}
+		initiateSession  = vec[startIndex + offset] == "true";       offset += 2;
+		printExceptions  = vec[startIndex + offset] == "true";       offset += 2;
+		hasEnvVars       = vec[startIndex + offset] == "true";       offset += 2;
+		if (hasEnvVars) {
+			environmentVariables = ptr(new SimpleStringListCreator(vec[startIndex + offset]));
+		}
+		offset += 2;
+		
+		/*********************************/
 	}
 	
 	/**
@@ -273,26 +389,66 @@ struct PoolOptions {
 	 * @throws Anything thrown by environmentVariables->getItems().
 	 */
 	void toVector(vector<string> &vec, bool storeEnvVars = true) const {
-		if (vec.capacity() < vec.size() + 30) {
-			vec.reserve(vec.size() + 30);
+		if (vec.capacity() < vec.size() + 40) {
+			vec.reserve(vec.size() + 40);
 		}
-		appendKeyValue (vec, "app_root",        appRoot);
-		appendKeyValue (vec, "lower_privilege", lowerPrivilege ? "true" : "false");
-		appendKeyValue (vec, "lowest_user",     lowestUser);
-		appendKeyValue (vec, "environment",     environment);
-		appendKeyValue (vec, "spawn_method",    spawnMethod);
-		appendKeyValue (vec, "app_type",        appType);
+		appendKeyValue (vec, "app_root",           appRoot);
+		appendKeyValue (vec, "app_group_name",     getAppGroupName());
+		appendKeyValue (vec, "app_type",           appType);
+		appendKeyValue (vec, "environment",        environment);
+		appendKeyValue (vec, "spawn_method",       spawnMethod);
+		appendKeyValue (vec, "user",               user);
+		appendKeyValue (vec, "group",              group);
+		appendKeyValue (vec, "default_user",       defaultUser);
+		appendKeyValue (vec, "default_group",      defaultGroup);
 		appendKeyValue2(vec, "framework_spawner_timeout", frameworkSpawnerTimeout);
 		appendKeyValue2(vec, "app_spawner_timeout",       appSpawnerTimeout);
-		appendKeyValue3(vec, "max_requests",    maxRequests);
-		appendKeyValue3(vec, "memory_limit",    memoryLimit);
-		appendKeyValue (vec, "use_global_queue", useGlobalQueue ? "true" : "false");
+		appendKeyValue (vec, "base_uri",           baseURI);
+		appendKeyValue3(vec, "max_requests",       maxRequests);
+		appendKeyValue3(vec, "min_processes",      minProcesses);
+		appendKeyValue4(vec, "use_global_queue",   useGlobalQueue);
+		appendKeyValue4(vec, "show_version_in_header", showVersionInHeader);
 		appendKeyValue3(vec, "stat_throttle_rate", statThrottleRate);
-		appendKeyValue (vec, "restart_dir",     restartDir);
-		appendKeyValue (vec, "base_uri",        baseURI);
+		appendKeyValue (vec, "restart_dir",        restartDir);
+		appendKeyValue3(vec, "rights",             rights);
+		appendKeyValue4(vec, "debugger",           debugger);
+		appendKeyValue4(vec, "analytics",          analytics);
+		if (log) {
+			appendKeyValue(vec, "analytics_log_txn_id", log->getTxnId());
+			appendKeyValue(vec, "analytics_log_group_name", log->getGroupName());
+			appendKeyValue(vec, "analytics_log_category", log->getCategory());
+			appendKeyValue(vec, "union_station_key", log->getUnionStationKey());
+		}
+		appendKeyValue4(vec, "initiate_session",   initiateSession);
+		appendKeyValue4(vec, "print_exceptions",   printExceptions);
 		if (storeEnvVars) {
-			vec.push_back("environment_variables");
-			vec.push_back(serializeEnvironmentVariables());
+			appendKeyValue(vec, "has_environment_variables", "true");
+			appendKeyValue(vec, "environment_variables", serializeEnvironmentVariables());
+		} else {
+			appendKeyValue(vec, "has_environment_variables", "false");
+			appendKeyValue(vec, "environment_variables", "");
+		}
+		
+		/*********************************/
+	}
+	
+	PoolOptions own() const {
+		PoolOptions copy = *this;
+		if (copy.environmentVariables != NULL) {
+			copy.environmentVariables->getItems(); // Prefetch items now while we still can.
+		}
+		return copy;
+	}
+	
+	/**
+	 * Returns the app group name. If there is no explicitly set app group name
+	 * then the app root is considered to be the app group name.
+	 */
+	string getAppGroupName() const {
+		if (appGroupName.empty()) {
+			return appRoot;
+		} else {
+			return appGroupName;
 		}
 	}
 	
@@ -346,6 +502,12 @@ private:
 	appendKeyValue3(vector<string> &vec, const char *key, unsigned long value) {
 		vec.push_back(key);
 		vec.push_back(toString(value));
+	}
+	
+	static inline void
+	appendKeyValue4(vector<string> &vec, const char *key, bool value) {
+		vec.push_back(key);
+		vec.push_back(value ? "true" : "false");
 	}
 };
 

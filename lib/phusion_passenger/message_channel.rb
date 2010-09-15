@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2008, 2009 Phusion
+#  Copyright (c) 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -75,13 +75,20 @@ class MessageChannel
 	HEADER_SIZE = 2                  # :nodoc:
 	DELIMITER = "\0"                 # :nodoc:
 	DELIMITER_NAME = "null byte"     # :nodoc:
+	UINT16_PACK_FORMAT = "n"         # :nodoc:
+	UINT32_PACK_FORMAT = "N"         # :nodoc:
+	
+	class InvalidHashError < StandardError
+	end
 	
 	# The wrapped IO object.
-	attr_reader :io
+	attr_accessor :io
 
 	# Create a new MessageChannel by wrapping the given IO object.
-	def initialize(io)
+	def initialize(io = nil)
 		@io = io
+		# Make it binary just in case.
+		@io.binmode if @io
 	end
 	
 	# Read an array message from the underlying file descriptor.
@@ -91,15 +98,30 @@ class MessageChannel
 	# Might raise SystemCallError, IOError or SocketError when something
 	# goes wrong.
 	def read
-		buffer = ''
+		buffer = new_buffer
+		if !@io.read(HEADER_SIZE, buffer)
+			return nil
+		end
 		while buffer.size < HEADER_SIZE
-			buffer << @io.readpartial(HEADER_SIZE - buffer.size)
+			tmp = @io.read(HEADER_SIZE - buffer.size)
+			if tmp.empty?
+				return nil
+			else
+				buffer << tmp
+			end
 		end
 		
-		chunk_size = buffer.unpack('n')[0]
-		buffer = ''
+		chunk_size = buffer.unpack(UINT16_PACK_FORMAT)[0]
+		if !@io.read(chunk_size, buffer)
+			return nil
+		end
 		while buffer.size < chunk_size
-			buffer << @io.readpartial(chunk_size - buffer.size)
+			tmp = @io.read(chunk_size - buffer.size)
+			if tmp.empty?
+				return nil
+			else
+				buffer << tmp
+			end
 		end
 		
 		message = []
@@ -117,7 +139,68 @@ class MessageChannel
 		return message
 	rescue Errno::ECONNRESET
 		return nil
-	rescue EOFError
+	end
+	
+	# Read an array message from the underlying file descriptor and return the
+	# result as a hash instead of an array. This assumes that the array message
+	# has an even number of elements.
+	# Returns nil when end-of-stream has been reached.
+	#
+	# Might raise SystemCallError, IOError or SocketError when something
+	# goes wrong.
+	def read_hash
+		buffer = new_buffer
+		if !@io.read(HEADER_SIZE, buffer)
+			return nil
+		end
+		while buffer.size < HEADER_SIZE
+			tmp = @io.read(HEADER_SIZE - buffer.size)
+			if tmp.empty?
+				return nil
+			else
+				buffer << tmp
+			end
+		end
+		
+		chunk_size = buffer.unpack(UINT16_PACK_FORMAT)[0]
+		if !@io.read(chunk_size, buffer)
+			return nil
+		end
+		while buffer.size < chunk_size
+			tmp = @io.read(chunk_size - buffer.size)
+			if tmp.empty?
+				return nil
+			else
+				buffer << tmp
+			end
+		end
+		
+		result = {}
+		offset = 0
+		delimiter_pos = buffer.index(DELIMITER, offset)
+		while !delimiter_pos.nil?
+			if delimiter_pos == 0
+				name = ""
+			else
+				name = buffer[offset .. delimiter_pos - 1]
+			end
+			
+			offset = delimiter_pos + 1
+			delimiter_pos = buffer.index(DELIMITER, offset)
+			if delimiter_pos.nil?
+				raise InvalidHashError
+			elsif delimiter_pos == 0
+				value = ""
+			else
+				value = buffer[offset .. delimiter_pos - 1]
+			end
+			
+			result[name] = value
+			offset = delimiter_pos + 1
+			delimiter_pos = buffer.index(DELIMITER, offset)
+		end
+		return result
+	rescue Errno::ECONNRESET
 		return nil
 	end
 
@@ -127,33 +210,51 @@ class MessageChannel
 	# Might raise SystemCallError, IOError or SocketError when something
 	# goes wrong.
 	#
+	# The +buffer+ argument specifies a buffer in which #read_scalar
+	# stores the read data. It is good practice to reuse existing buffers
+	# in order to minimize stress on the garbage collector.
+	#
 	# The +max_size+ argument allows one to specify the maximum allowed
 	# size for the scalar message. If the received scalar message's size
 	# is larger than +max_size+, then a SecurityError will be raised.
-	def read_scalar(max_size = nil)
-		buffer = ''
-		temp = ''
-		while buffer.size < 4
-			buffer << @io.readpartial(4 - buffer.size, temp)
+	def read_scalar(buffer = new_buffer, max_size = nil)
+		if !@io.read(4, buffer)
+			return nil
 		end
-		size = buffer.unpack('N')[0]
+		while buffer.size < 4
+			tmp = @io.read(4 - buffer.size)
+			if tmp.empty?
+				return nil
+			else
+				buffer << tmp
+			end
+		end
+		
+		size = buffer.unpack(UINT32_PACK_FORMAT)[0]
 		if size == 0
-			return ''
+			buffer.replace('')
+			return buffer
 		else
 			if !max_size.nil? && size > max_size
 				raise SecurityError, "Scalar message size (#{size}) " <<
 					"exceeds maximum allowed size (#{max_size})."
 			end
-			buffer = ''
-			while buffer.size < size
-				temp = '' # JRuby doesn't clear the buffer. TODO: remove this when JRuby has been fixed.
-				buffer << @io.readpartial(size - buffer.size, temp)
+			if !@io.read(size, buffer)
+				return nil
+			end
+			if buffer.size < size
+				tmp = ''
+				while buffer.size < size
+					if !@io.read(size - buffer.size, tmp)
+						return nil
+					else
+						buffer << tmp
+					end
+				end
 			end
 			return buffer
 		end
 	rescue Errno::ECONNRESET
-		return nil
-	rescue EOFError
 		return nil
 	end
 	
@@ -259,11 +360,26 @@ class MessageChannel
 	def close
 		@io.close
 	end
+	
+	# Checks whether the underlying IO stream is closed.
+	def closed?
+		return @io.closed?
+	end
 
 private
 	def check_argument(arg)
 		if arg.to_s.index(DELIMITER)
 			raise ArgumentError, "Message name and arguments may not contain #{DELIMITER_NAME}."
+		end
+	end
+	
+	if defined?(ByteString)
+		def new_buffer
+			return ByteString.new
+		end
+	else
+		def new_buffer
+			return ""
 		end
 	end
 end

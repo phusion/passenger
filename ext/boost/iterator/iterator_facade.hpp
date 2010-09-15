@@ -470,8 +470,7 @@ namespace boost
   //
   class iterator_core_access
   {
-# if defined(BOOST_NO_MEMBER_TEMPLATE_FRIENDS)                  \
-    || BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x551))
+# if defined(BOOST_NO_MEMBER_TEMPLATE_FRIENDS)                  
       // Tasteless as this may seem, making all members public allows member templates
       // to work in the absence of member template friends.
    public:

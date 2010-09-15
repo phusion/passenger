@@ -1,28 +1,27 @@
-require 'support/config'
-require 'support/test_helper'
+require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
 require 'phusion_passenger/wsgi/application_spawner'
 require 'phusion_passenger/utils'
 require 'fileutils'
 require 'tempfile'
 
-include PhusionPassenger
+module PhusionPassenger
 
-describe PhusionPassenger::WSGI::ApplicationSpawner do
-	include TestHelper
-	include PhusionPassenger::Utils
+describe WSGI::ApplicationSpawner do
+	include Utils
 	
 	before :each do
-		@old_passenger_tmpdir = Utils.passenger_tmpdir
-		Utils.passenger_tmpdir = "#{Dir.tmpdir}/wsgi_test.tmp"
-		@stub = setup_stub('wsgi')
+		@stub = Stub.new('wsgi')
 		File.unlink("#{@stub.app_root}/passenger_wsgi.pyc") rescue nil
 	end
 	
 	after :each do
 		@stub.destroy
-		FileUtils.chmod_R(0700, Utils.passenger_tmpdir)
-		FileUtils.rm_rf(Utils.passenger_tmpdir)
-		Utils.passenger_tmpdir = @old_passenger_tmpdir
+	end
+	
+	def spawn(app_root)
+		WSGI::ApplicationSpawner.spawn_application(
+			"app_root"     => app_root,
+			"default_user" => CONFIG['default_user'])
 	end
 	
 	it "can spawn our stub application" do
@@ -33,7 +32,7 @@ describe PhusionPassenger::WSGI::ApplicationSpawner do
 		begin
 			app = spawn(@stub.app_root)
 			File.chmod(0700, "#{passenger_tmpdir}/backends")
-			Dir["#{passenger_tmpdir}/backends/wsgi_backend.*"].should have(1).item
+			Dir["#{passenger_tmpdir}/backends/wsgi.*"].should have(1).item
 		ensure
 			app.close rescue nil
 		end
@@ -41,14 +40,11 @@ describe PhusionPassenger::WSGI::ApplicationSpawner do
 	
 	specify "the backend process deletes its socket upon termination" do
 		spawn(@stub.app_root).close
-		sleep 0.25 # Give it some time to terminate.
 		File.chmod(0700, "#{passenger_tmpdir}/backends")
-		Dir["#{passenger_tmpdir}/backends/wsgi_backend.*"].should be_empty
-	end
-	
-	def spawn(app_root)
-		PhusionPassenger::WSGI::ApplicationSpawner.spawn_application(app_root,
-			true, CONFIG['lowest_user'])
+		eventually do
+			Dir["#{passenger_tmpdir}/backends/wsgi.*"].empty?
+		end
 	end
 end
 
+end # module PhusionPassenger

@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2008, 2009 Phusion
+#  Copyright (c) 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -25,17 +25,30 @@
 ESSENTIALS = [
 	"boost/detail/{limits,endian}.hpp",
 	"boost/config/*",
-	"boost/detail/sp_counted_*",
-	"boost/detail/atomic_count*",
-	"libs/thread/src/*"
+	"boost/smart_ptr/detail/sp_counted_*",
+	"boost/smart_ptr/detail/atomic_count*",
+	"boost/smart_ptr/detail/spinlock*",
+	"boost/thread/*",
+	"boost/thread/*/*",
+	"libs/thread/src/*",
+	"boost/date_time/gregorian/formatters_limited.hpp",
+	"boost/date_time/date_formatting_limited.hpp",
+	"boost/non_type.hpp"
+]
+EXCLUDE = [
+	"libs/thread/src/win32/*"
 ]
 PROGRAM_SOURCE = %q{
 	#include <boost/shared_ptr.hpp>
+	#include <boost/weak_ptr.hpp>
 	#include <boost/thread.hpp>
+	#include <boost/noncopyable.hpp>
 	#include <boost/function.hpp>
 	#include <boost/bind.hpp>
 	#include <boost/date_time/posix_time/posix_time.hpp>
 }
+
+require 'fileutils'
 BOOST_DIR = ARGV[0]
 Dir.chdir(File.dirname(__FILE__) + "/../ext")
 
@@ -49,16 +62,22 @@ def sh(*command)
 end
 
 def install(source_filename, target_filename)
-	command = ["install", "-D", "--mode=u+rw,g+r,o+r", source_filename, target_filename]
+	dir = File.dirname(target_filename)
+	if !File.exist?(dir)
+		sh "mkdir", "-p", dir
+	end
+	command = ["install", "-m", "u+rw,g+r,o+r", source_filename, target_filename]
 	sh(*command)
 end
 
-def copy_boost_files(*patterns)
+def copy_boost_files(patterns, exclude = nil)
 	patterns.each do |pattern|
-		Dir["#{BOOST_DIR}/#{pattern}"].each do |source|
+		files = Dir["#{BOOST_DIR}/#{pattern}"]
+		files -= exclude if exclude
+		files.each do |source|
 			if File.directory?(source)
 				source.slice!(0 .. BOOST_DIR.size)
-				copy_boost_files("#{source}/*")
+				copy_boost_files(["#{source}/*"], exclude)
 			else
 				target = source.slice(BOOST_DIR.size + 1 .. source.size - 1)
 				target.sub!(%r{^libs/thread/}, 'boost/')
@@ -71,7 +90,11 @@ def copy_boost_files(*patterns)
 end
 
 def copy_essential_files
-	copy_boost_files(*ESSENTIALS)
+	exclude = []
+	EXCLUDE.each do |pattern|
+		exclude.concat(Dir["#{BOOST_DIR}/#{pattern}"])
+	end
+	copy_boost_files(ESSENTIALS, exclude)
 end
 
 def prepare
@@ -81,6 +104,10 @@ def prepare
 end
 
 def cleanup
+	FileUtils.rm_rf("boost/thread/win32")
+	FileUtils.rm_rf("boost/src/win32")
+	FileUtils.rm_rf("boost/asio/win32")
+	FileUtils.rm_rf("boost/smart_ptr/detail/spinlock_w32.hpp")
 	File.unlink("test.cpp") rescue nil
 end
 

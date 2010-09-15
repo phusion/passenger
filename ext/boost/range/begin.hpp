@@ -73,15 +73,15 @@ namespace range_detail
     // May this be discarded? Or is it needed for bad compilers?
     //
     template< typename T, std::size_t sz >
-    inline const T* range_begin( const T (&array)[sz] )
+    inline const T* range_begin( const T (&a)[sz] )
     {
-        return array;
+        return a;
     }
 
     template< typename T, std::size_t sz >
-    inline T* range_begin( T (&array)[sz] )
+    inline T* range_begin( T (&a)[sz] )
     {
-        return array;
+        return a;
     }
 
 

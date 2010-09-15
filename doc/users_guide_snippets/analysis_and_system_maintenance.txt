@@ -1,0 +1,201 @@
+Phusion Passenger provides a set of tools, which are useful for system analysis,
+maintenance and troubleshooting.
+
+
+=== Inspecting memory usage ===
+
+Process inspection tools such as `ps` and `top` are useful, but they
+link:http://groups.google.com/group/phusion-passenger/msg/1fd1c233456d3180[rarely show the correct memory usage].
+The real memory usage is usually lower than what `ps` and `top` report.
+
+There are many technical reasons why this is so, but an explanation is beyond
+the scope of this Users Guide. We kindly refer the interested reader to
+operating systems literature about 'virtual memory' and 'copy-on-write'.
+
+The tool `passenger-memory-stats` allows one to easily analyze Phusion Passenger's
+and Apache's real memory usage. For example:
+
+-------------------------------------------------------
+[bash@localhost root]# passenger-memory-stats
+------------- Apache processes --------------.
+PID    PPID  Threads  VMSize   Private  Name
+---------------------------------------------.
+5947   1     9        90.6 MB  0.5 MB   /usr/sbin/apache2 -k start
+5948   5947  1        18.9 MB  0.7 MB   /usr/sbin/fcgi-pm -k start
+6029   5947  1        42.7 MB  0.5 MB   /usr/sbin/apache2 -k start
+6030   5947  1        42.7 MB  0.5 MB   /usr/sbin/apache2 -k start
+6031   5947  1        42.5 MB  0.3 MB   /usr/sbin/apache2 -k start
+6033   5947  1        42.5 MB  0.4 MB   /usr/sbin/apache2 -k start
+6034   5947  1        50.5 MB  0.4 MB   /usr/sbin/apache2 -k start
+23482  5947  1        82.6 MB  0.4 MB   /usr/sbin/apache2 -k start
+### Processes: 8
+### Total private dirty RSS: 3.50 MB
+
+--------- Passenger processes ---------.
+PID    Threads  VMSize   Private  Name
+---------------------------------------.
+6026   1        10.9 MB  4.7 MB   Passenger spawn server
+23481  1        26.7 MB  3.0 MB   Passenger FrameworkSpawner: 2.0.2
+23791  1        26.8 MB  2.9 MB   Passenger ApplicationSpawner: /var/www/projects/app1-foobar
+23793  1        26.9 MB  17.1 MB  Rails: /var/www/projects/app1-foobar
+### Processes: 4
+### Total private dirty RSS: 27.76 M
+-------------------------------------------------------
+
+The 'Private' or 'private dirty RSS' field shows the *real* memory usage of processes. Here,
+we see that all the Apache worker processes only take less than 1 MB memory each.
+This is a lot less than the 50 MB-ish memory usage as shown in the 'VMSize' column
+(which is what a lot of people think is the real memory usage, but is actually not).
+
+NOTE: Private dirty RSS reporting only works on Linux. Unfortunately other operating systems
+don't provide facilities for determining processes' private dirty RSS. On non-Linux systems,
+the Resident Set Size is reported instead.
+
+
+=== Inspecting Phusion Passenger's internal status ===
+
+One can inspect Phusion Passenger's internal status with the tool `passenger-status`.
+This tool must typically be run as root. For example:
+
+--------------------------------------------------
+[bash@localhost root]# passenger-status
+----------- General information -----------
+max      = 6
+count    = 1
+active   = 0
+inactive = 1
+
+----------- Domains -----------
+/var/www/projects/app1-foobar: 
+  PID: 9617      Sessions: 0    Processed: 7       Uptime: 2m 23s
+--------------------------------------------------
+
+The 'general information' section shows the following information:
+
+max:: The maximum number of application instances that Phusion Passenger will
+spawn. This equals the value given for <<PassengerMaxPoolSize,PassengerMaxPoolSize>> (Apache)
+or <<PassengerMaxPoolSize,passenger_max_pool_size>> (Nginx).
+count:: The number of application instances that are currently alive. This value
+is always less than or equal to 'max'.
+active:: The number of application instances that are currently processing
+requests. This value is always less than or equal to 'count'.
+inactive:: The number of application instances that are currently *not* processing
+requests, i.e. are idle. Idle application instances will be shutdown after a while,
+as can be specified with <<PassengerPoolIdleTime,PassengerPoolIdleTime (Apache)>>/<<PassengerPoolIdleTime,passenger_pool_idle_time (Nginx)>> (unless this
+value is set to 0, in which case application instances are never shut down via idle
+time). The value of 'inactive' equals `count - active`.
+
+The 'domains' section shows, for each application directory, information about running
+application instances:
+
+Sessions:: Shows how many HTTP client are currently in the queue of that application
+Instance, waiting to be processed.
+Processed:: Indicates how many requests the instance has served until now. *Tip:* it's
+possible to limit this number with the <<PassengerMaxRequests,PassengerMaxRequests>>
+configuration directive.
+Uptime:: Shows for how long the application instance has been running.
+
+Since Phusion Passenger uses fair load balancing by default, the number of sessions for the
+application instances should be fairly close to each other. For example, this is fairly
+normal:
+--------------------------------
+  PID: 4281      Sessions: 2      Processed: 7      Uptime: 5m 11s
+  PID: 4268      Sessions: 0      Processed: 5      Uptime: 4m 52s
+  PID: 4265      Sessions: 1      Processed: 6      Uptime: 5m 38s
+  PID: 4275      Sessions: 1      Processed: 7      Uptime: 3m 14s
+--------------------------------
+
+But if you see a "spike", i.e. an application instance has an unusually high number of
+sessions compared to the others, then there might be a problem:
+--------------------------------
+  PID: 4281      Sessions: 2      Processed: 7      Uptime: 5m 11s
+  PID: 17468     Sessions: 8 <-+  Processed: 2      Uptime: 4m 47s
+  PID: 4265      Sessions: 1   |  Processed: 6      Uptime: 5m 38s
+  PID: 4275      Sessions: 1   |  Processed: 7      Uptime: 3m 14s
+                               |
+                               +---- "spike"
+--------------------------------
+
+Possible reasons why spikes can occur:
+
+. Your application is busy processing a request that takes a very long time.
+  If this is the case, then you might want to turn
+  <<PassengerUseGlobalQueue,global queuing>> on.
+. Your application is frozen, i.e. has stopped responding. See
+  <<debugging_frozen,Debugging frozen applications>> for tips.
+
+
+[[debugging_frozen]]
+=== Debugging frozen applications ===
+
+If one of your application instances is frozen (stopped responding), then you
+can figure out where it is frozen by killing it with 'SIGABRT'. This will cause the
+application to raise an exception, with a backtrace.
+
+The exception (with full backtrace information) is normally logged into the Apache
+error log. But if your application or if its web framework has its own exception logging
+routines, then exceptions might be logged into the application's log files instead.
+This is the case with Ruby on Rails. So if you kill a Ruby on Rails application with
+'SIGABRT', please check the application's 'production.log' first (assuming that you're
+running it in a 'production' environment). If you don't see a backtrace there, check
+the Apache error log.
+
+NOTE: It is safe to kill application instances, even in live environments. Phusion Passenger
+will restart killed application instances, as if nothing bad happened.
+
+
+=== Accessing individual application processes ===
+
+When a request is sent to the web server, Phusion Passenger will automatically forward
+the request to the most suitable application process, but sometimes it is desirable to
+be able to directly access the individual application processes. Use cases include, but
+are not limited to:
+
+* One wants to debug a memory leak or memory bloat problem that only seems to appear on
+  certain URIs. One can send a request to a specific process to see whether that request
+  causes the process's memory usage to rise.
+* The application caches data in local memory, and one wants to tell a specific
+  application process to clear that local data.
+* Other debugging use cases.
+
+All individual application processes are accessible via HTTP, so you can use standard
+HTTP tools like 'curl'. The exact addresses can be obtained with the command
+`passenger-status --verbose`. These sockets are all bound to 127.0.0.1, but the port
+number is dynamically assigned. As a security measure, the sockets are also protected
+with a process-specific random password, which you can see in the
+`passenger-status --verbose` output. This password must be sent through the
+``X-Passenger-Connect-Password'' HTTP header.
+
+Example:
+
+[listing]
+......................................
+bash# passenger-status --verbose
+----------- General information -----------
+max      = 6
+count    = 2
+active   = 0
+inactive = 2
+Waiting on global queue: 0
+
+----------- Application groups -----------
+/Users/hongli/Sites/rack.test:
+  App root: /Users/hongli/Sites/rack.test
+  * PID: 24235   Sessions: 0    Processed: 7       Uptime: 17s
+      URL     : http://127.0.0.1:58122
+      Password: nFfVOX1F8LjZ90HJh28Sd_htJOsgRsNne2QXKf8NIXw
+  * PID: 24250   Sessions: 0    Processed: 4       Uptime: 1s
+      URL     : http://127.0.0.1:57933
+      Password: _RGXlQ9EGDGJKLevQ_qflUtF1KmxEo2UiRzMwIE1sBY
+......................................
+
+Here we see that the web application 'rack.test' has two processes.
+Process 24235 is accessible via http://127.0.0.1:58122, and
+process 24250 is accessible via http://127.0.0.1:57933.
+
+To access 24235 we must send its password, 'nFfVOX1F8LjZ90HJh28Sd_htJOsgRsNne2QXKf8NIXw',
+through the 'X-Passenger-Connect-Password' HTTP header, like this:
+
+-------------------------------------------
+bash# curl -H "X-Passenger-Connect-Password: nFfVOX1F8LjZ90HJh28Sd_htJOsgRsNne2QXKf8NIXw" http://127.0.0.1:58122/
+-------------------------------------------

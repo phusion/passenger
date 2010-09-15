@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2008 Phusion
+ * Copyright (c) 2010 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,8 +30,11 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
+#include <sys/select.h>
+#include <sys/uio.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <cstdio>
 #include <ctime>
@@ -96,7 +99,7 @@
 // This is one of the things that Java is good at and C++ sucks at. Sigh...
 
 namespace oxt {
-	static const int INTERRUPTION_SIGNAL = SIGUSR2;
+	static const int INTERRUPTION_SIGNAL = SIGUSR1; // SIGUSR2 is reserved by Valgrind...
 	
 	/**
 	 * Setup system call interruption support.
@@ -121,9 +124,14 @@ namespace oxt {
 	 * by oxt::thread::interrupt() or oxt::thread::interrupt_and_join().
 	 */
 	namespace syscalls {
+		int open(const char *path, int oflag);
+		int open(const char *path, int oflag, mode_t mode);
 		ssize_t read(int fd, void *buf, size_t count);
 		ssize_t write(int fd, const void *buf, size_t count);
+		ssize_t writev(int fd, const struct iovec *iov, int iovcnt);
 		int close(int fd);
+		int pipe(int filedes[2]);
+		int dup2(int filedes, int filedes2);
 		
 		int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 		int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
@@ -137,17 +145,23 @@ namespace oxt {
 			socklen_t optlen);
 		int shutdown(int s, int how);
 		
+		int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds,
+		           struct timeval *timeout);
+		
 		FILE *fopen(const char *path, const char *mode);
+		size_t fread(void *ptr, size_t size, size_t nitems, FILE *stream);
 		int fclose(FILE *fp);
 		int unlink(const char *pathname);
 		int stat(const char *path, struct stat *buf);
 		
 		time_t time(time_t *t);
+		unsigned int sleep(unsigned int seconds);
 		int usleep(useconds_t usec);
 		int nanosleep(const struct timespec *req, struct timespec *rem);
 		
 		pid_t fork();
 		int kill(pid_t pid, int sig);
+		int killpg(pid_t pgrp, int sig);
 		pid_t waitpid(pid_t pid, int *status, int options);
 	}
 

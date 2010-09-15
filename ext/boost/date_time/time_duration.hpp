@@ -6,18 +6,19 @@
  * Boost Software License, Version 1.0. (See accompanying
  * file LICENSE_1_0.txt or http://www.boost.org/LICENSE_1_0.txt)
  * Author: Jeff Garland, Bart Garst
- * $Date: 2008-02-27 15:00:24 -0500 (Wed, 27 Feb 2008) $
+ * $Date: 2009-06-04 04:24:49 -0400 (Thu, 04 Jun 2009) $
  */
 
-#include "boost/operators.hpp"
-#include "boost/date_time/time_defs.hpp"
-#include "boost/date_time/special_defs.hpp"
-#include "boost/date_time/compiler_config.hpp"
+#include <boost/cstdint.hpp>
+#include <boost/operators.hpp>
+#include <boost/date_time/time_defs.hpp>
+#include <boost/date_time/special_defs.hpp>
+#include <boost/date_time/compiler_config.hpp>
 
 namespace boost {
 namespace date_time {
 
-  
+
   //! Represents some amount of elapsed time measure to a given resolution
   /*! This class represents a standard set of capabilities for all
       counted time durations.  Time duration implementations should derive
@@ -30,13 +31,13 @@ namespace date_time {
   */
   template<class T, typename rep_type>
   class time_duration : private
-      boost::less_than_comparable<T 
+      boost::less_than_comparable<T
     , boost::equality_comparable<T
     > >
   /* dividable, addable, and subtractable operator templates
-   * won't work with this class (MSVC++ 6.0). return type 
-   * from '+=' is different than expected return type 
-   * from '+'. multipliable probably wont work 
+   * won't work with this class (MSVC++ 6.0). return type
+   * from '+=' is different than expected return type
+   * from '+'. multipliable probably wont work
    * either (haven't tried) */
   {
   public:
@@ -50,12 +51,12 @@ namespace date_time {
     typedef typename rep_type::tick_type tick_type;
     typedef typename rep_type::impl_type impl_type;
 
-    time_duration() : ticks_(0) {} 
-    time_duration(hour_type hours_in, 
-                  min_type minutes_in, 
+    time_duration() : ticks_(0) {}
+    time_duration(hour_type hours_in,
+                  min_type minutes_in,
                   sec_type seconds_in=0,
                   fractional_seconds_type frac_sec_in = 0) :
-      ticks_(rep_type::to_tick_count(hours_in,minutes_in,seconds_in,frac_sec_in)) 
+      ticks_(rep_type::to_tick_count(hours_in,minutes_in,seconds_in,frac_sec_in))
     {}
     // copy constructor required for dividable<>
     //! Construct from another time_duration (Copy constructor)
@@ -136,17 +137,17 @@ namespace date_time {
     }
     duration_type invert_sign() const
     {
-      return duration_type(ticks_ * (-1)); 
-    }    
+      return duration_type(ticks_ * (-1));
+    }
     bool is_negative() const
     {
       return ticks_ < 0;
-    }    
-    bool operator<(const time_duration& rhs)  const 
+    }
+    bool operator<(const time_duration& rhs)  const
     {
       return ticks_ <  rhs.ticks_;
     }
-    bool operator==(const time_duration& rhs)  const 
+    bool operator==(const time_duration& rhs)  const
     {
       return ticks_ ==  rhs.ticks_;
     }
@@ -188,13 +189,13 @@ namespace date_time {
     {
       return duration_type(ticks_ * rhs);
     }
-    duration_type operator*=(int divisor) 
+    duration_type operator*=(int divisor)
     {
       ticks_ = ticks_ * divisor;
       return duration_type(ticks_);
     }
-    tick_type ticks() const 
-    { 
+    tick_type ticks() const
+    {
       return traits_type::as_number(ticks_);
     }
 
@@ -258,9 +259,9 @@ namespace date_time {
 
   //! Template for instantiating derived adjusting durations
   /* These templates are designed to work with multiples of
-   * 10 for frac_of_second and resoultion adjustment 
+   * 10 for frac_of_second and resoultion adjustment
    */
-   template<class base_duration, boost::int64_t frac_of_second>
+  template<class base_duration, boost::int64_t frac_of_second>
   class subsecond_duration : public base_duration
   {
   public:
@@ -270,8 +271,8 @@ namespace date_time {
     {}
   };
 
-  
-  
+
+
 } } //namespace date_time
 
 

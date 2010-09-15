@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2008, 2009 Phusion
+ *  Copyright (c) 2010 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -27,7 +27,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <apr_buckets.h>
-#include "Application.h"
+#include "Session.h"
 
 namespace Passenger {
 
@@ -78,7 +78,7 @@ typedef shared_ptr<PassengerBucketState> PassengerBucketStatePtr;
  *   strange I/O problems.
  * - It can store its current state in a PassengerBucketState data structure.
  */
-apr_bucket *passenger_bucket_create(Passenger::Application::SessionPtr session,
+apr_bucket *passenger_bucket_create(SessionPtr session,
                                     PassengerBucketStatePtr state,
                                     apr_bucket_alloc_t *list);
 

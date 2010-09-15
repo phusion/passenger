@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2008, 2009 Phusion
+ * Copyright (c) 2010 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -230,8 +230,9 @@ public:
 	
 	/**
 	 * Interrupt the thread. This method behaves just like
-	 * boost::thread::interrupt(), but will also respect the interruption
-	 * points defined in oxt::syscalls.
+	 * boost::thread::interrupt(), but if <em>interruptSyscalls</em> is true
+	 * then it will also respect the interruption points defined in
+	 * oxt::syscalls.
 	 *
 	 * Note that an interruption request may get lost, depending on the
 	 * current execution point of the thread. Thus, one should call this
@@ -239,26 +240,30 @@ public:
 	 * interrupt_and_join() is a convenience method that implements this
 	 * pattern.
 	 */
-	void interrupt() {
+	void interrupt(bool interruptSyscalls = true) {
 		int ret;
 		
 		boost::thread::interrupt();
-		do {
-			ret = pthread_kill(native_handle(),
-				INTERRUPTION_SIGNAL);
-		} while (ret == EINTR);
+		if (interruptSyscalls) {
+			do {
+				ret = pthread_kill(native_handle(),
+					INTERRUPTION_SIGNAL);
+			} while (ret == EINTR);
+		}
 	}
 	
 	/**
 	 * Keep interrupting the thread until it's done, then join it.
 	 *
+	 * @param interruptSyscalls Whether oxt::syscalls calls should also
+	 *    be eligable for interruption.
 	 * @throws boost::thread_interrupted The calling thread has been
 	 *    interrupted before we could join this thread.
 	 */
-	void interrupt_and_join() {
+	void interrupt_and_join(bool interruptSyscalls = true) {
 		bool done = false;
 		while (!done) {
-			interrupt();
+			interrupt(interruptSyscalls);
 			done = timed_join(boost::posix_time::millisec(10));
 		}
 	}
@@ -269,18 +274,20 @@ public:
 	 *
 	 * @param timeout The maximum number of milliseconds that this method
 	 *                should keep trying.
+	 * @param interruptSyscalls Whether oxt::syscalls calls should also
+	 *    be eligable for interruption.
 	 * @return True if the thread was successfully joined, false if the
 	 *         timeout has been reached.
 	 * @throws boost::thread_interrupted The calling thread has been
 	 *    interrupted before we could join this thread.
 	 */
-	bool interrupt_and_join(unsigned int timeout) {
+	bool interrupt_and_join(unsigned int timeout, bool interruptSyscalls = true) {
 		bool joined = false, timed_out = false;
 		boost::posix_time::ptime deadline =
 			boost::posix_time::microsec_clock::local_time() +
 			boost::posix_time::millisec(timeout);
 		while (!joined && !timed_out) {
-			interrupt();
+			interrupt(interruptSyscalls);
 			joined = timed_join(boost::posix_time::millisec(10));
 			timed_out = !joined && boost::posix_time::microsec_clock::local_time() > deadline;
 		}
@@ -295,11 +302,15 @@ public:
 	 *
 	 * @param threads An array of threads to join.
 	 * @param size The number of elements in <em>threads</em>.
+	 * @param interruptSyscalls Whether oxt::syscalls calls should also
+	 *    be eligable for interruption.
 	 * @throws boost::thread_interrupted The calling thread has been
 	 *    interrupted before all threads have been joined. Some threads
 	 *    may have been successfully joined while others haven't.
 	 */
-	static void interrupt_and_join_multiple(oxt::thread **threads, unsigned int size) {
+	static void interrupt_and_join_multiple(oxt::thread **threads, unsigned int size,
+		bool interruptSyscalls = true)
+	{
 		std::list<oxt::thread *> remaining_threads;
 		std::list<oxt::thread *>::iterator it, current;
 		oxt::thread *thread;
@@ -312,7 +323,7 @@ public:
 		while (!remaining_threads.empty()) {
 			for (it = remaining_threads.begin(); it != remaining_threads.end(); it++) {
 				thread = *it;
-				thread->interrupt();
+				thread->interrupt(interruptSyscalls);
 			}
 			for (it = remaining_threads.begin(); it != remaining_threads.end(); it++) {
 				thread = *it;
@@ -326,6 +337,30 @@ public:
 				syscalls::usleep(10000);
 			}
 		}
+	}
+};
+
+/**
+ * Like boost::lock_guard, but is interruptable.
+ */
+template<typename TimedLockable>
+class interruptable_lock_guard {
+private:
+	TimedLockable &mutex;
+public:
+	interruptable_lock_guard(TimedLockable &m): mutex(m) {
+		bool locked = false;
+		
+		while (!locked) {
+			locked = m.timed_lock(boost::posix_time::milliseconds(20));
+			if (!locked) {
+				boost::this_thread::interruption_point();
+			}
+		}
+	}
+	
+	~interruptable_lock_guard() {
+		mutex.unlock();
 	}
 };
 

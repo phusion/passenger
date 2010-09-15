@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2009 Phusion
+ *  Copyright (c) 2010 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -27,6 +27,7 @@
 
 #include <string>
 #include <cstring>
+#include <ostream>
 
 namespace Passenger {
 
@@ -45,6 +46,20 @@ private:
 	string::size_type len;
 	
 public:
+	/** A hash function object for StaticString. */
+	struct Hash {
+		size_t operator()(const StaticString &str) const {
+			size_t result = 0;
+			const char *data = str.content;
+			const char *end  = data + str.len;
+			while (data != end) {
+				result = result * 33 + *data;
+				data++;
+			}
+			return result;
+		}
+	};
+	
 	StaticString() {
 		content = "";
 		len = 0;
@@ -78,12 +93,24 @@ public:
 		return len;
 	}
 	
+	char operator[](string::size_type i) const {
+		return content[i];
+	}
+	
+	char at(string::size_type i) const {
+		return content[i];
+	}
+	
 	const char *c_str() const {
 		return content;
 	}
 	
 	const char *data() const {
 		return content;
+	}
+	
+	string toString() const {
+		return string(content, len);
 	}
 	
 	bool equals(const StaticString &other) const {
@@ -98,16 +125,26 @@ public:
 		return len == other.len && memcmp(content, other.content, len) == 0;
 	}
 	
+	bool operator==(const string &other) const {
+		return len == other.size() && memcmp(content, other.data(), len) == 0;
+	}
+	
 	bool operator==(const char *other) const {
-		return memcmp(content, other, strlen(other)) == 0;
+		size_t other_len = strlen(other);
+		return len == other_len && memcmp(content, other, other_len) == 0;
 	}
 	
 	bool operator!=(const StaticString &other) const {
-		return len == other.len && memcmp(content, other.content, len) != 0;
+		return len != other.len || memcmp(content, other.content, len) != 0;
+	}
+	
+	bool operator!=(const string &other) const {
+		return len != other.size() || memcmp(content, other.data(), len) != 0;
 	}
 	
 	bool operator!=(const char *other) const {
-		return memcmp(content, other, strlen(other)) != 0;
+		size_t other_len = strlen(other);
+		return len != other_len || memcmp(content, other, other_len) != 0;
 	}
 	
 	bool operator<(const StaticString &other) const {
@@ -142,6 +179,44 @@ public:
 		return string(content, len);
 	}
 };
+
+inline string
+operator+(const char *lhs, const StaticString &rhs) {
+	return StaticString(lhs) + rhs;
+}
+
+inline string
+operator+(const string &lhs, const StaticString &rhs) {
+	string result = lhs;
+	result.append(rhs.data(), rhs.size());
+	return result;
+}
+
+inline ostream &
+operator<<(ostream &os, const StaticString &str) {
+	os.write(str.data(), str.size());
+	return os;
+}
+
+inline bool
+operator==(const string &other, const StaticString &str) {
+	return str == other;
+}
+
+inline bool
+operator==(const char *other, const StaticString &str) {
+	return str == other;
+}
+
+inline bool
+operator!=(const string &other, const StaticString &str) {
+	return str != other;
+}
+
+inline bool
+operator!=(const char *other, const StaticString &str) {
+	return str != other;
+}
 
 } // namespace Passenger
 

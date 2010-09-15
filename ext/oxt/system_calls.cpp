@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2008 Phusion
+ * Copyright (c) 2010 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -85,6 +85,26 @@ oxt::setup_syscall_interruption_support() {
 		errno = _my_errno; \
 	} while (false)
 
+int
+syscalls::open(const char *path, int oflag) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::open(path, oflag)
+	);
+	return ret;
+}
+
+int
+syscalls::open(const char *path, int oflag, mode_t mode) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::open(path, oflag, mode)
+	);
+	return ret;
+}
+
 ssize_t
 syscalls::read(int fd, void *buf, size_t count) {
 	ssize_t ret;
@@ -105,12 +125,42 @@ syscalls::write(int fd, const void *buf, size_t count) {
 	return ret;
 }
 
+ssize_t
+syscalls::writev(int fd, const struct iovec *iov, int iovcnt) {
+	ssize_t ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::writev(fd, iov, iovcnt)
+	);
+	return ret;
+}
+
 int
 syscalls::close(int fd) {
 	int ret;
 	CHECK_INTERRUPTION(
 		ret == -1,
 		ret = ::close(fd)
+	);
+	return ret;
+}
+
+int
+syscalls::pipe(int filedes[2]) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::pipe(filedes)
+	);
+	return ret;
+}
+
+int
+syscalls::dup2(int filedes, int filedes2) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::dup2(filedes, filedes2)
 	);
 	return ret;
 }
@@ -180,28 +230,34 @@ syscalls::socketpair(int d, int type, int protocol, int sv[2]) {
 ssize_t
 syscalls::recvmsg(int s, struct msghdr *msg, int flags) {
 	ssize_t ret;
-	CHECK_INTERRUPTION(
-		ret == -1,
-		#ifdef _AIX53
+	#ifdef _AIX53
+		CHECK_INTERRUPTION(
+			ret == -1,
 			ret = ::nrecvmsg(s, msg, flags)
-		#else
+		);
+	#else
+		CHECK_INTERRUPTION(
+			ret == -1,
 			ret = ::recvmsg(s, msg, flags)
-		#endif
-	);
+		);
+	#endif
 	return ret;
 }
 
 ssize_t
 syscalls::sendmsg(int s, const struct msghdr *msg, int flags) {
 	ssize_t ret;
-	CHECK_INTERRUPTION(
-		ret == -1,
-		#ifdef _AIX53
+	#ifdef _AIX53
+		CHECK_INTERRUPTION(
+			ret == -1,
 			ret = ::nsendmsg(s, msg, flags)
-		#else
+		);
+	#else
+		CHECK_INTERRUPTION(
+			ret == -1,
 			ret = ::sendmsg(s, msg, flags)
-		#endif
-	);
+		);
+	#endif
 	return ret;
 }
 
@@ -225,12 +281,32 @@ syscalls::shutdown(int s, int how) {
 	return ret;
 }
 
+int
+syscalls::select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, struct timeval *timeout) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::select(nfds, readfds, writefds, errorfds, timeout)
+	);
+	return ret;
+}
+
 FILE *
 syscalls::fopen(const char *path, const char *mode) {
 	FILE *ret;
 	CHECK_INTERRUPTION(
 		ret == NULL,
 		ret = ::fopen(path, mode)
+	);
+	return ret;
+}
+
+size_t
+syscalls::fread(void *ptr, size_t size, size_t nitems, FILE *stream) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == 0 && ferror(stream),
+		ret = ::fread(ptr, size, nitems, stream)
 	);
 	return ret;
 }
@@ -273,6 +349,36 @@ syscalls::time(time_t *t) {
 		ret = ::time(t)
 	);
 	return ret;
+}
+
+unsigned int
+syscalls::sleep(unsigned int seconds) {
+	// We use syscalls::nanosleep() here not only to reuse interruption
+	// handling code, but also to avoid potentional infinite loops
+	// in combination with oxt::thread::interrupt_and_join().
+	// Upon interruption sleep() returns the number of seconds unslept
+	// but interrupt_and_join() keeps interrupting the thread every 10
+	// msec. Depending on the implementation of sleep(), it might return
+	// the same value as its original argument. A naive implementation
+	// of syscalls::sleep() that sleeps again with the return value
+	// could easily cause an infinite loop. nanosleep() has a large
+	// enough resolution so it won't trigger the problem.
+	struct timespec spec, rem;
+	int ret;
+	
+	spec.tv_sec = seconds;
+	spec.tv_nsec = 0;
+	ret = syscalls::nanosleep(&spec, &rem);
+	if (ret == 0) {
+		return 0;
+	} else if (errno == EINTR) {
+		return rem.tv_sec;
+	} else {
+		// No sure what to do here. There's an error
+		// but we can't return -1. Let's just hope
+		// this never happens.
+		return 0;
+	}
 }
 
 int
@@ -322,6 +428,16 @@ syscalls::kill(pid_t pid, int sig) {
 	CHECK_INTERRUPTION(
 		ret == -1,
 		ret = ::kill(pid, sig)
+	);
+	return ret;
+}
+
+int
+syscalls::killpg(pid_t pgrp, int sig) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		ret = ::killpg(pgrp, sig)
 	);
 	return ret;
 }

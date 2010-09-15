@@ -144,6 +144,8 @@ namespace boost
     void const_constraints(const TT& b) {
 #if !defined(_ITERATOR_) // back_insert_iterator broken for VC++ STL
       a = b;              // const required for argument to assignment
+#else
+      ignore_unused_variable_warning(b);
 #endif
     }
    private:
@@ -169,6 +171,11 @@ namespace boost
     TT b;
   };
 
+#if (defined _MSC_VER)
+# pragma warning( push )
+# pragma warning( disable : 4510 ) // default constructor could not be generated
+# pragma warning( disable : 4610 ) // object 'class' can never be instantiated - user-defined constructor required
+#endif
   // The SGI STL version of Assignable requires copy constructor and operator=
   BOOST_concept(SGIAssignable,(TT))
   {
@@ -190,6 +197,9 @@ namespace boost
     }
     TT a;
   };
+#if (defined _MSC_VER)
+# pragma warning( pop )
+#endif
 
   BOOST_concept(Convertible,(X)(Y))
   {

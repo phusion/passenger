@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2008, 2009 Phusion
+#  Copyright (c) 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -24,9 +24,17 @@
 
 require 'socket'
 require 'fcntl'
-require 'phusion_passenger/message_channel'
-require 'phusion_passenger/utils'
+require 'phusion_passenger'
 require 'phusion_passenger/constants'
+require 'phusion_passenger/public_api'
+require 'phusion_passenger/message_channel'
+require 'phusion_passenger/message_client'
+require 'phusion_passenger/debug_logging'
+require 'phusion_passenger/utils'
+require 'phusion_passenger/utils/tmpdir'
+require 'phusion_passenger/utils/unseekable_socket'
+require 'phusion_passenger/native_support'
+
 module PhusionPassenger
 
 # The request handler is the layer which connects Apache with the underlying application's
@@ -87,31 +95,44 @@ module PhusionPassenger
 # The web server transforms the HTTP request to the aforementioned format,
 # and sends it to the request handler.
 class AbstractRequestHandler
+	include DebugLogging
+	
 	# Signal which will cause the Rails application to exit immediately.
 	HARD_TERMINATION_SIGNAL = "SIGTERM"
 	# Signal which will cause the Rails application to exit as soon as it's done processing a request.
 	SOFT_TERMINATION_SIGNAL = "SIGUSR1"
-	BACKLOG_SIZE    = 100
+	BACKLOG_SIZE    = 500
 	MAX_HEADER_SIZE = 128 * 1024
 	
 	# String constants which exist to relieve Ruby's garbage collector.
 	IGNORE              = 'IGNORE'              # :nodoc:
 	DEFAULT             = 'DEFAULT'             # :nodoc:
-	NULL                = "\0"                  # :nodoc:
 	X_POWERED_BY        = 'X-Powered-By'        # :nodoc:
 	REQUEST_METHOD      = 'REQUEST_METHOD'      # :nodoc:
-	PING                = 'ping'                # :nodoc:
+	PING                = 'PING'                # :nodoc:
+	PASSENGER_CONNECT_PASSWORD  = "PASSENGER_CONNECT_PASSWORD"   # :nodoc:
 	
-	# The name of the socket on which the request handler accepts
-	# new connections. At this moment, this value is always the filename
-	# of a Unix domain socket.
+	OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS = ObjectSpace.respond_to?(:live_objects)
+	OBJECT_SPACE_SUPPORTS_ALLOCATED_OBJECTS = ObjectSpace.respond_to?(:allocated_objects)
+	OBJECT_SPACE_SUPPORTS_COUNT_OBJECTS = ObjectSpace.respond_to?(:count_objects)
+	GC_SUPPORTS_TIME = GC.respond_to?(:time)
+	GC_SUPPORTS_CLEAR_STATS = GC.respond_to?(:clear_stats)
+	
+	# A hash containing all server sockets that this request handler listens on.
+	# The hash is in the form of:
 	#
-	# See also #socket_type.
-	attr_reader :socket_name
-	
-	# The type of socket that #socket_name refers to. At the moment, the
-	# value is always 'unix', which indicates a Unix domain socket.
-	attr_reader :socket_type
+	#   {
+	#      name1 => [socket_address1, socket_type1, socket1],
+	#      name2 => [socket_address2, socket_type2, socket2],
+	#      ...
+	#   }
+	#
+	# +name+ is a Symbol. +socket_addressx+ is the address of the socket,
+	# +socket_typex+ is the socket's type (either 'unix' or 'tcp') and
+	# +socketx+ is the actual socket IO objec.
+	# There's guaranteed to be at least one server socket, namely one with the
+	# name +:main+.
+	attr_reader :server_sockets
 	
 	# Specifies the maximum allowed memory usage, in MB. If after having processed
 	# a request AbstractRequestHandler detects that memory usage has risen above
@@ -129,27 +150,64 @@ class AbstractRequestHandler
 	# exceptions.
 	attr_reader :processed_requests
 	
+	# If a soft termination signal was received, then the main loop will quit
+	# the given amount of seconds after the last time a connection was accepted.
+	# Defaults to 3 seconds.
+	attr_accessor :soft_termination_linger_time
+	
+	# A password with which clients must authenticate. Default is unauthenticated.
+	attr_accessor :connect_password
+	
 	# Create a new RequestHandler with the given owner pipe.
 	# +owner_pipe+ must be the readable part of a pipe IO object.
 	#
 	# Additionally, the following options may be given:
 	# - memory_limit: Used to set the +memory_limit+ attribute.
+	# - detach_key
+	# - connect_password
+	# - pool_account_username
+	# - pool_account_password_base64
 	def initialize(owner_pipe, options = {})
+		@server_sockets = {}
+		
 		if should_use_unix_sockets?
-			create_unix_socket_on_filesystem
+			@main_socket_address, @main_socket = create_unix_socket_on_filesystem
+			@server_sockets[:main] = [@main_socket_address, 'unix', @main_socket]
 		else
-			create_tcp_socket
+			@main_socket_address, @main_socket = create_tcp_socket
+			@server_sockets[:main] = [@main_socket_address, 'tcp', @main_socket]
 		end
-		@socket.close_on_exec!
+		
+		@http_socket_address, @http_socket = create_tcp_socket
+		@server_sockets[:http] = [@http_socket_address, 'tcp', @http_socket]
+		
 		@owner_pipe = owner_pipe
+		@options = options
 		@previous_signal_handlers = {}
 		@main_loop_generation  = 0
 		@main_loop_thread_lock = Mutex.new
 		@main_loop_thread_cond = ConditionVariable.new
-		@memory_limit = options["memory_limit"] || 0
-		@iterations = 0
+		@memory_limit          = options["memory_limit"] || 0
+		@connect_password      = options["connect_password"]
+		@detach_key            = options["detach_key"]
+		@pool_account_username = options["pool_account_username"]
+		if options["pool_account_password_base64"]
+			@pool_account_password = options["pool_account_password_base64"].unpack('m').first
+		end
+		@analytics_logger      = options["analytics_logger"]
+		@iterations         = 0
 		@processed_requests = 0
-		@main_loop_running = false
+		@soft_termination_linger_time = 3
+		@main_loop_running  = false
+		@passenger_header   = determine_passenger_header
+		
+		@debugger = @options["debugger"]
+		if @debugger
+			@server_sockets[:ruby_debug_cmd] = ["127.0.0.1:#{Debugger.cmd_port}", 'tcp']
+			@server_sockets[:ruby_debug_ctrl] = ["127.0.0.1:#{Debugger.ctrl_port}", 'tcp']
+		end
+		
+		#############
 	end
 	
 	# Clean up temporary stuff created by the request handler.
@@ -166,9 +224,14 @@ class AbstractRequestHandler
 			end
 			@main_loop_thread.join
 		end
-		@socket.close rescue nil
+		@server_sockets.each_value do |value|
+			address, type, socket = value
+			socket.close rescue nil
+			if type == 'unix'
+				File.unlink(address) rescue nil
+			end
+		end
 		@owner_pipe.close rescue nil
-		File.unlink(@socket_name) rescue nil
 	end
 	
 	# Check whether the main loop's currently running.
@@ -178,6 +241,7 @@ class AbstractRequestHandler
 	
 	# Enter the request handler's main loop.
 	def main_loop
+		debug("Entering request handler main loop")
 		reset_signal_handlers
 		begin
 			@graceful_termination_pipe = IO.pipe
@@ -188,52 +252,53 @@ class AbstractRequestHandler
 				@main_loop_generation += 1
 				@main_loop_running = true
 				@main_loop_thread_cond.broadcast
+				
+				@select_timeout = nil
+				
+				@selectable_sockets = []
+				@server_sockets.each_value do |value|
+					socket = value[2]
+					@selectable_sockets << socket if socket
+				end
+				@selectable_sockets << @owner_pipe
+				@selectable_sockets << @graceful_termination_pipe[0]
 			end
 			
 			install_useful_signal_handlers
+			socket_wrapper = Utils::UnseekableSocket.new
+			channel        = MessageChannel.new
+			buffer         = ''
 			
 			while true
 				@iterations += 1
-				client = accept_connection
-				if client.nil?
+				if !accept_and_process_next_request(socket_wrapper, channel, buffer)
+					trace(2, "Request handler main loop exited normally")
 					break
-				end
-				begin
-					headers, input = parse_request(client)
-					if headers
-						if headers[REQUEST_METHOD] == PING
-							process_ping(headers, input, client)
-						else
-							process_request(headers, input, client)
-						end
-					end
-				rescue IOError, SocketError, SystemCallError => e
-					print_exception("Passenger RequestHandler", e)
-				ensure
-					# 'input' is the same as 'client' so we don't
-					# need to close that.
-					# The 'close_write' here prevents forked child
-					# processes from unintentionally keeping the
-					# connection open.
-					client.close_write rescue nil
-					client.close rescue nil
 				end
 				@processed_requests += 1
 			end
 		rescue EOFError
 			# Exit main loop.
+			trace(2, "Request handler main loop interrupted by EOFError exception")
 		rescue Interrupt
 			# Exit main loop.
+			trace(2, "Request handler main loop interrupted by Interrupt exception")
 		rescue SignalException => signal
+			trace(2, "Request handler main loop interrupted by SignalException")
 			if signal.message != HARD_TERMINATION_SIGNAL &&
 			   signal.message != SOFT_TERMINATION_SIGNAL
 				raise
 			end
+		rescue Exception => e
+			trace(2, "Request handler main loop interrupted by #{e.class} exception")
+			raise
 		ensure
+			debug("Exiting request handler main loop")
 			revert_signal_handlers
 			@main_loop_thread_lock.synchronize do
-				@graceful_termination_pipe[0].close rescue nil
 				@graceful_termination_pipe[1].close rescue nil
+				@graceful_termination_pipe[0].close rescue nil
+				@selectable_sockets = []
 				@main_loop_generation += 1
 				@main_loop_running = false
 				@main_loop_thread_cond.broadcast
@@ -245,11 +310,35 @@ class AbstractRequestHandler
 	def start_main_loop_thread
 		current_generation = @main_loop_generation
 		@main_loop_thread = Thread.new do
-			main_loop
+			begin
+				main_loop
+			rescue Exception => e
+				print_exception(self.class, e)
+			end
 		end
 		@main_loop_thread_lock.synchronize do
 			while @main_loop_generation == current_generation
 				@main_loop_thread_cond.wait(@main_loop_thread_lock)
+			end
+		end
+	end
+	
+	# Remove this request handler from the application pool so that no
+	# new connections will come in. Then make the main loop quit a few
+	# seconds after the last time a connection came in. This all is to
+	# ensure that no connections come in while we're shutting down.
+	#
+	# May only be called while the main loop is running. May be called
+	# from any thread.
+	def soft_shutdown
+		@select_timeout = @soft_termination_linger_time
+		@graceful_termination_pipe[1].close rescue nil
+		if @detach_key && @pool_account_username && @pool_account_password
+			client = MessageClient.new(@pool_account_username, @pool_account_password)
+			begin
+				client.detach(@detach_key)
+			ensure
+				client.close
 			end
 		end
 	end
@@ -258,34 +347,50 @@ private
 	include Utils
 	
 	def should_use_unix_sockets?
-		# There seems to be a bug in MacOS X w.r.t. Unix sockets.
-		# When the Unix socket subsystem is under high stress, a
-		# recv()/read() on a Unix socket can return 0 even when EOF is
-		# not reached. We work around this by using TCP sockets on
-		# MacOS X.
-		return RUBY_PLATFORM !~ /darwin/
+		# Historical note:
+		# There seems to be a bug in MacOS X Leopard w.r.t. Unix server
+		# sockets file descriptors that are passed to another process.
+		# Usually Unix server sockets work fine, but when they're passed
+		# to another process, then clients that connect to the socket
+		# can incorrectly determine that the client socket is closed,
+		# even though that's not actually the case. More specifically:
+		# recv()/read() calls on these client sockets can return 0 even
+		# when we know EOF is not reached.
+		#
+		# The ApplicationPool infrastructure used to connect to a backend
+		# process's Unix socket in the helper server process, and then
+		# pass the connection file descriptor to the web server, which
+		# triggers this kernel bug. We used to work around this by using
+		# TCP sockets instead of Unix sockets; TCP sockets can still fail
+		# with this fake-EOF bug once in a while, but not nearly as often
+		# as with Unix sockets.
+		#
+		# This problem no longer applies today. The client socket is now
+		# created directly in the web server, and the bug is no longer
+		# triggered. Nevertheless, we keep this function intact so that
+		# if something like this ever happens again, we know why, and we
+		# can easily reactivate the workaround. Or maybe if we just need
+		# TCP sockets for some other reason.
+		
+		#return RUBY_PLATFORM !~ /darwin/
+		return true
 	end
 
 	def create_unix_socket_on_filesystem
-		done = false
-		while !done
+		while true
 			begin
 				if defined?(NativeSupport)
 					unix_path_max = NativeSupport::UNIX_PATH_MAX
 				else
 					unix_path_max = 100
 				end
-				@socket_name = "#{passenger_tmpdir}/backends/backend.#{generate_random_id(:base64)}"
-				@socket_name = @socket_name.slice(0, unix_path_max - 1)
-				@socket = UNIXServer.new(@socket_name)
-				@socket.listen(BACKLOG_SIZE)
-				@socket_type = "unix"
-				File.chmod(0600, @socket_name)
-				
-				# The SpawnManager class will set tighter permissions on the
-				# socket later on. See sendSpawnCommand in SpawnManager.h.
-				
-				done = true
+				socket_address = "#{passenger_tmpdir}/backends/ruby.#{generate_random_id(:base64)}"
+				socket_address = socket_address.slice(0, unix_path_max - 1)
+				socket = UNIXServer.new(socket_address)
+				socket.listen(BACKLOG_SIZE)
+				socket.close_on_exec!
+				File.chmod(0666, socket_address)
+				return [socket_address, socket]
 			rescue Errno::EADDRINUSE
 				# Do nothing, try again with another name.
 			end
@@ -295,10 +400,11 @@ private
 	def create_tcp_socket
 		# We use "127.0.0.1" as address in order to force
 		# TCPv4 instead of TCPv6.
-		@socket = TCPServer.new('127.0.0.1', 0)
-		@socket.listen(BACKLOG_SIZE)
-		@socket_name = "127.0.0.1:#{@socket.addr[1]}"
-		@socket_type = "tcp"
+		socket = TCPServer.new('127.0.0.1', 0)
+		socket.listen(BACKLOG_SIZE)
+		socket.close_on_exec!
+		socket_address = "127.0.0.1:#{socket.addr[1]}"
+		return [socket_address, socket]
 	end
 
 	# Reset signal handlers to their default handler, and install some
@@ -323,7 +429,11 @@ private
 		trappable_signals = Signal.list_trappable
 		
 		trap(SOFT_TERMINATION_SIGNAL) do
-			@graceful_termination_pipe[1].close rescue nil
+			begin
+				soft_shutdown
+			rescue => e
+				print_exception("Passenger RequestHandler soft shutdown routine", e)
+			end
 		end if trappable_signals.has_key?(SOFT_TERMINATION_SIGNAL.sub(/^SIG/, ''))
 		
 		trap('ABRT') do
@@ -331,31 +441,7 @@ private
 		end if trappable_signals.has_key?('ABRT')
 		
 		trap('QUIT') do
-			if Kernel.respond_to?(:caller_for_all_threads)
-				output = "========== Process #{Process.pid}: backtrace dump ==========\n"
-				caller_for_all_threads.each_pair do |thread, stack|
-					output << ("-" * 60) << "\n"
-					output << "# Thread: #{thread.inspect}, "
-					if thread == Thread.main
-						output << "[main thread], "
-					end
-					if thread == Thread.current
-						output << "[current thread], "
-					end
-					output << "alive = #{thread.alive?}\n"
-					output << ("-" * 60) << "\n"
-					output << "    " << stack.join("\n    ")
-					output << "\n\n"
-				end
-			else
-				output = "========== Process #{Process.pid}: backtrace dump ==========\n"
-				output << ("-" * 60) << "\n"
-				output << "# Current thread: #{Thread.current.inspect}\n"
-				output << ("-" * 60) << "\n"
-				output << "    " << caller.join("\n    ")
-			end
-			STDERR.puts(output)
-			STDERR.flush
+			warn(global_backtrace_report)
 		end if trappable_signals.has_key?('QUIT')
 	end
 	
@@ -365,58 +451,106 @@ private
 		end
 	end
 	
-	def accept_connection
-		ios = select([@socket, @owner_pipe, @graceful_termination_pipe[0]]).first
-		if ios.include?(@socket)
-			client = @socket.accept
-			client.close_on_exec!
-			
-			# Some people report that sometimes their Ruby (MRI/REE)
-			# processes get stuck with 100% CPU usage. Upon further
-			# inspection with strace, it turns out that these Ruby
-			# processes are continuously calling lseek() on a socket,
-			# which of course returns ESPIPE as error. gdb reveals
-			# lseek() is called by fwrite(), which in turn is called
-			# by rb_fwrite(). The affected socket is the
-			# AbstractRequestHandler client socket.
-			#
-			# I inspected the MRI source code and didn't find
-			# anything that would explain this behavior. This makes
-			# me think that it's a glibc bug, but that's very
-			# unlikely.
-			#
-			# The rb_fwrite() implementation takes an entirely
-			# different code path if I set 'sync' to true: it will
-			# skip fwrite() and use write() instead. So here we set
-			# 'sync' to true in the hope that this will work around
-			# the problem.
-			client.sync = true
-			
-			# We monkeypatch the 'sync=' method to a no-op so that
-			# sync mode can't be disabled.
-			def client.sync=(value)
-			end
-			
-			# The real input stream is not seekable (calling _seek_
-			# or _rewind_ on it will raise an exception). But some
-			# frameworks (e.g. Merb) call _rewind_ if the object
-			# responds to it. So we simply undefine _seek_ and
-			# _rewind_.
-			client.instance_eval do
-				undef seek if respond_to?(:seek)
-				undef rewind if respond_to?(:rewind)
-			end
-			
-			# There's no need to set the encoding for Ruby 1.9 because this
-			# source file is tagged with 'encoding: binary'.
-			
-			return client
+	def accept_and_process_next_request(socket_wrapper, channel, buffer)
+		select_result = select(@selectable_sockets, nil, nil, @select_timeout)
+		if select_result.nil?
+			# This can only happen after we've received a soft termination
+			# signal. No connection was accepted for @select_timeout seconds,
+			# so now we quit the main loop.
+			trace(2, "Soft termination timeout")
+			return false
+		end
+		
+		ios = select_result.first
+		if ios.include?(@main_socket)
+			trace(3, "Accepting new request on main socket")
+			connection = socket_wrapper.wrap(@main_socket.accept)
+			channel.io = connection
+			headers, input_stream = parse_native_request(connection, channel, buffer)
+			full_http_response = false
+		elsif ios.include?(@http_socket)
+			trace(3, "Accepting new request on HTTP socket")
+			connection = socket_wrapper.wrap(@http_socket.accept)
+			headers, input_stream = parse_http_request(connection)
+			full_http_response = true
 		else
 			# The other end of the owner pipe has been closed, or the
 			# graceful termination pipe has been closed. This is our
 			# call to gracefully terminate (after having processed all
 			# incoming requests).
-			return nil
+			if @select_timeout
+				# But if @select_timeout is set then it means that we
+				# received a soft termination signal. In that case
+				# we don't want to quit immediately, but @select_timeout
+				# seconds after the last time a connection was accepted.
+				#
+				# #soft_shutdown not only closes the graceful termination
+				# pipe, but it also tells the application pool to remove
+				# this process from the pool, which will cause the owner
+				# pipe to be closed. So we remove both IO objects
+				# from @selectable_sockets in order to prevent the
+				# next select call from immediately returning, allowing
+				# it to time out.
+				@selectable_sockets.delete(@graceful_termination_pipe[0])
+				@selectable_sockets.delete(@owner_pipe)
+				return true
+			else
+				if ios.include?(@owner_pipe)
+					trace(2, "Owner pipe closed")
+				elsif ios.include?(@graceful_termination_pipe[0])
+					trace(2, "Graceful termination pipe closed")
+				end
+				return false
+			end
+		end
+		
+		if headers
+			prepare_request(headers)
+			begin
+				if headers[REQUEST_METHOD] == PING
+					process_ping(headers, input_stream, connection)
+				else
+					process_request(headers, input_stream, connection, full_http_response)
+				end
+			rescue Exception
+				has_error = true
+				raise
+			ensure
+				finalize_request(headers, has_error)
+			end
+		end
+		return true
+	rescue => e
+		if socket_wrapper.source_of_exception?(e)
+			# EPIPE is harmless, it just means that the client closed the connection.
+			# Other errors might indicate a problem so we print them, but they're
+			# probably not bad enough to warrant stopping the request handler.
+			if !e.is_a?(Errno::EPIPE)
+				print_exception("Passenger RequestHandler's client socket", e)
+			end
+			return true
+		else
+			if @analytics_logger && headers && headers[PASSENGER_TXN_ID]
+				log_analytics_exception(headers, e)
+			end
+			raise e
+		end
+	ensure
+		# The 'close_write' here prevents forked child
+		# processes from unintentionally keeping the
+		# connection open.
+		if connection && !connection.closed?
+			begin
+				connection.close_write
+			rescue SystemCallError
+			end
+			begin
+				connection.close
+			rescue SystemCallError
+			end
+		end
+		if input_stream && !input_stream.closed?
+			input_stream.close rescue nil
 		end
 	end
 	
@@ -426,52 +560,179 @@ private
 	# reading HTTP POST data.
 	#
 	# Returns nil if end-of-stream was encountered.
-	def parse_request(socket)
-		channel = MessageChannel.new(socket)
-		headers_data = channel.read_scalar(MAX_HEADER_SIZE)
+	def parse_native_request(socket, channel, buffer)
+		headers_data = channel.read_scalar(buffer, MAX_HEADER_SIZE)
 		if headers_data.nil?
 			return
 		end
-		headers = Hash[*headers_data.split(NULL)]
-		return [headers, socket]
+		headers = split_by_null_into_hash(headers_data)
+		if @connect_password && headers[PASSENGER_CONNECT_PASSWORD] != @connect_password
+			warn "*** Passenger RequestHandler warning: " <<
+				"someone tried to connect with an invalid connect password."
+			return
+		else
+			return [headers, socket]
+		end
 	rescue SecurityError => e
-		STDERR.puts("*** Passenger RequestHandler: HTTP header size exceeded maximum.")
-		STDERR.flush
-		print_exception("Passenger RequestHandler", e)
+		warn("*** Passenger RequestHandler warning: " <<
+			"HTTP header size exceeded maximum.")
+		return nil
+	end
+	
+	# Like parse_native_request, but parses an HTTP request. This is a very minimalistic
+	# HTTP parser and is not intended to be complete, fast or secure, since the HTTP server
+	# socket is intended to be used for debugging purposes only.
+	def parse_http_request(socket)
+		headers = {}
+		
+		data = ""
+		while data !~ /\r\n\r\n/ && data.size < MAX_HEADER_SIZE
+			data << socket.readpartial(16 * 1024)
+		end
+		if data.size >= MAX_HEADER_SIZE
+			warn("*** Passenger RequestHandler warning: " <<
+				"HTTP header size exceeded maximum.")
+			return nil
+		end
+		
+		data.gsub!(/\r\n\r\n.*/, '')
+		data.split("\r\n").each_with_index do |line, i|
+			if i == 0
+				# GET / HTTP/1.1
+				line =~ /^([A-Za-z]+) (.+?) (HTTP\/\d\.\d)$/
+				request_method = $1
+				request_uri    = $2
+				protocol       = $3
+				path_info, query_string    = request_uri.split("?", 2)
+				headers[REQUEST_METHOD]    = request_method
+				headers["REQUEST_URI"]     = request_uri
+				headers["QUERY_STRING"]    = query_string || ""
+				headers["SCRIPT_NAME"]     = ""
+				headers["PATH_INFO"]       = path_info
+				headers["SERVER_NAME"]     = "127.0.0.1"
+				headers["SERVER_PORT"]     = socket.addr[1].to_s
+				headers["SERVER_PROTOCOL"] = protocol
+			else
+				header, value = line.split(/\s*:\s*/, 2)
+				header.upcase!            # "Foo-Bar" => "FOO-BAR"
+				header.gsub!("-", "_")    #           => "FOO_BAR"
+				if header == "CONTENT_LENGTH" || header == "CONTENT_TYPE"
+					headers[header] = value
+				else
+					headers["HTTP_#{header}"] = value
+				end
+			end
+		end
+		
+		if @connect_password && headers["HTTP_X_PASSENGER_CONNECT_PASSWORD"] != @connect_password
+			warn "*** Passenger RequestHandler warning: " <<
+				"someone tried to connect with an invalid connect password."
+			return
+		else
+			return [headers, socket]
+		end
+	rescue EOFError
+		return nil
 	end
 	
 	def process_ping(env, input, output)
 		output.write("pong")
 	end
 	
-	# Generate a long, cryptographically secure random ID string, which
-	# is also a valid filename.
-	def generate_random_id(method)
-		case method
-		when :base64
-			require 'base64' unless defined?(Base64)
-			data = Base64.encode64(File.read("/dev/urandom", 64))
-			data.gsub!("\n", '')
-			data.gsub!("+", '')
-			data.gsub!("/", '')
-			data.gsub!(/==$/, '')
-		when :hex
-			data = File.read("/dev/urandom", 64).unpack('H*')[0]
+	def determine_passenger_header
+		header = "Phusion Passenger (mod_rails/mod_rack)"
+		if @options["show_version_in_header"]
+			header << " #{VERSION_STRING}"
 		end
-		return data
-	end
-	
-	def self.determine_passenger_header
-		header = "Phusion Passenger (mod_rails/mod_rack) #{VERSION_STRING}"
-		if File.exist?("#{File.dirname(__FILE__)}/../../enterprisey.txt") ||
+		if File.exist?("#{SOURCE_ROOT}/enterprisey.txt") ||
 		   File.exist?("/etc/passenger_enterprisey.txt")
 			header << ", Enterprise Edition"
 		end
 		return header
 	end
+	
+	def prepare_request(headers)
+		if @analytics_logger && headers[PASSENGER_TXN_ID]
+			txn_id = headers[PASSENGER_TXN_ID]
+			group_name = headers[PASSENGER_GROUP_NAME]
+			union_station_key = headers[PASSENGER_UNION_STATION_KEY]
+			log = @analytics_logger.continue_transaction(txn_id, group_name,
+				:requests, union_station_key)
+			headers[PASSENGER_ANALYTICS_WEB_LOG] = log
+			Thread.current[PASSENGER_ANALYTICS_WEB_LOG] = log
+			Thread.current[PASSENGER_TXN_ID] = txn_id
+			Thread.current[PASSENGER_GROUP_NAME] = group_name
+			Thread.current[PASSENGER_UNION_STATION_KEY] = union_station_key
+			if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS
+				log.message("Initial objects on heap: #{ObjectSpace.live_objects}")
+			end
+			if OBJECT_SPACE_SUPPORTS_ALLOCATED_OBJECTS
+				log.message("Initial objects allocated so far: #{ObjectSpace.allocated_objects}")
+			elsif OBJECT_SPACE_SUPPORTS_COUNT_OBJECTS
+				count = ObjectSpace.count_objects
+				log.message("Initial objects allocated so far: #{count[:TOTAL] - count[:FREE]}")
+			end
+			if GC_SUPPORTS_TIME
+				log.message("Initial GC time: #{GC.time}")
+			end
+			log.begin_measure("app request handler processing")
+		end
+		
+		#################
+	end
+	
+	def finalize_request(headers, has_error)
+		log = headers[PASSENGER_ANALYTICS_WEB_LOG]
+		if log
+			begin
+				log.end_measure("app request handler processing", has_error)
+				if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS
+					log.message("Final objects on heap: #{ObjectSpace.live_objects}")
+				end
+				if OBJECT_SPACE_SUPPORTS_ALLOCATED_OBJECTS
+					log.message("Final objects allocated so far: #{ObjectSpace.allocated_objects}")
+				elsif OBJECT_SPACE_SUPPORTS_COUNT_OBJECTS
+					count = ObjectSpace.count_objects
+					log.message("Final objects allocated so far: #{count[:TOTAL] - count[:FREE]}")
+				end
+				if GC_SUPPORTS_TIME
+					log.message("Final GC time: #{GC.time}")
+				end
+				if GC_SUPPORTS_CLEAR_STATS
+					# Clear statistics to void integer wraps.
+					GC.clear_stats
+				end
+				Thread.current[PASSENGER_ANALYTICS_WEB_LOG] = nil
+			ensure
+				log.close
+			end
+		end
+		
+		#################
+	end
+	
+	def log_analytics_exception(env, exception)
+		log = @analytics_logger.new_transaction(
+			env[PASSENGER_GROUP_NAME],
+			:exceptions,
+			env[PASSENGER_UNION_STATION_KEY])
+		begin
+			request_txn_id = env[PASSENGER_TXN_ID]
+			message = exception.message
+			message = exception.to_s if message.empty?
+			message = [message].pack('m')
+			message.gsub!("\n", "")
+			backtrace_string = [exception.backtrace.join("\n")].pack('m')
+			backtrace_string.gsub!("\n", "")
 
-public
-	PASSENGER_HEADER = determine_passenger_header
+			log.message("Request transaction ID: #{request_txn_id}")
+			log.message("Message: #{message}")
+			log.message("Class: #{exception.class.name}")
+			log.message("Backtrace: #{backtrace_string}")
+		ensure
+			log.close
+		end
+	end
 end
 
 end # module PhusionPassenger

@@ -3,35 +3,17 @@
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
-// (C) Copyright 2007 Anthony Williams
+// (C) Copyright 2007-8 Anthony Williams
 
-#include <limits.h>
-#include <boost/assert.hpp>
-#include <algorithm>
-#include <pthread.h>
 #include "timespec.hpp"
 #include "pthread_mutex_scoped_lock.hpp"
 #include "thread_data.hpp"
 #include "condition_variable_fwd.hpp"
 
+#include <boost/config/abi_prefix.hpp>
+
 namespace boost
 {
-    inline condition_variable::condition_variable()
-    {
-        int const res=pthread_cond_init(&cond,NULL);
-        if(res)
-        {
-            throw thread_resource_error("Cannot initialize a condition variable", res);
-        }
-    }
-    inline condition_variable::~condition_variable()
-    {
-        int ret;
-        do {
-            ret = pthread_cond_destroy(&cond);
-        } while (ret == EINTR);
-    }
-
     inline void condition_variable::wait(unique_lock<mutex>& m)
     {
         detail::interruption_checker check_for_interruption(&cond);
@@ -142,6 +124,17 @@ namespace boost
             }
             return true;
         }
+        template<typename lock_type>
+        bool timed_wait(lock_type& m,xtime const& wait_until)
+        {
+            return timed_wait(m,system_time(wait_until));
+        }
+
+        template<typename lock_type,typename duration_type>
+        bool timed_wait(lock_type& m,duration_type const& wait_duration)
+        {
+            return timed_wait(m,get_system_time()+wait_duration);
+        }
 
         template<typename lock_type,typename predicate_type>
         bool timed_wait(lock_type& m,boost::system_time const& wait_until,predicate_type pred)
@@ -180,5 +173,7 @@ namespace boost
     };
 
 }
+
+#include <boost/config/abi_suffix.hpp>
 
 #endif

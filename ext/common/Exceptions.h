@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - http://www.modrails.com/
- *  Copyright (c) 2008, 2009 Phusion
+ *  Copyright (c) 2010 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -173,6 +173,17 @@ public:
 };
 
 /**
+ * An unexpected end-of-file I/O error.
+ *
+ * @ingroup Exceptions
+ */
+class EOFException: public IOException {
+public:
+	EOFException(const string &message): IOException(message) {}
+	virtual ~EOFException() throw() {}
+};
+
+/**
  * Thrown when an invalid configuration is given.
  */
 class ConfigurationException: public oxt::tracable_exception {
@@ -226,6 +237,28 @@ public:
 };
 
 /**
+ * Indicates that a specified argument is incorrect or violates a requirement.
+ *
+ * @ingroup Exceptions
+ */
+class ArgumentException: public oxt::tracable_exception {
+private:
+	string msg;
+public:
+	ArgumentException(const string &message): msg(message) {}
+	virtual ~ArgumentException() throw() {}
+	virtual const char *what() const throw() { return msg.c_str(); }
+};
+
+/*
+ * @ingroup Exceptions
+ */
+class InvalidModeStringException: public ArgumentException {
+public:
+	InvalidModeStringException(const string &message): ArgumentException(message) {}
+};
+
+/**
  * A generic runtime exception.
  *
  * @ingroup Exceptions
@@ -237,6 +270,50 @@ public:
 	RuntimeException(const string &message): msg(message) {}
 	virtual ~RuntimeException() throw() {}
 	virtual const char *what() const throw() { return msg.c_str(); }
+};
+
+/**
+ * An exception indicating that some timeout expired.
+ *
+ * @ingroup Exceptions
+ */
+class TimeoutException: public oxt::tracable_exception {
+private:
+	string msg;
+public:
+	TimeoutException(const string &message): msg(message) {}
+	virtual ~TimeoutException() throw() {}
+	virtual const char *what() const throw() { return msg.c_str(); }
+};
+
+/**
+ * Represents some kind of security error.
+ *
+ * @ingroup Exceptions
+ */
+class SecurityException: public oxt::tracable_exception {
+private:
+	string msg;
+public:
+	SecurityException(const string &message): msg(message) {}
+	virtual ~SecurityException() throw() {}
+	virtual const char *what() const throw() { return msg.c_str(); }
+};
+
+/**
+ * @ingroup Exceptions
+ */
+class NonExistentUserException: public SecurityException {
+public:
+	NonExistentUserException(const string &message): SecurityException(message) {}
+};
+
+/**
+ * @ingroup Exceptions
+ */
+class NonExistentGroupException: public SecurityException {
+public:
+	NonExistentGroupException(const string &message): SecurityException(message) {}
 };
 
 /**

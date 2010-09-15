@@ -1,6 +1,6 @@
 /*
  * Copyright (C) Igor Sysoev
- * Copyright (C) 2009 Phusion
+ * Copyright (C) 2010 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -85,6 +85,9 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
     #if NGINX_VERSION_NUM < 7000
         of.test_dir = 0;
     #else
+        #if NGX_VERSION_NUM >= 8000
+            of.read_ahead = clcf->read_ahead;
+        #endif
         of.directio = clcf->directio;
     #endif
     of.valid = clcf->open_file_cache_valid;

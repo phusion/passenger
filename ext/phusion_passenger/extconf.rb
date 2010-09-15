@@ -1,5 +1,5 @@
 #  Phusion Passenger - http://www.modrails.com/
-#  Copyright (c) 2008, 2009 Phusion
+#  Copyright (c) 2010 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -21,15 +21,20 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 require 'mkmf'
-$LIBS=""
+$LIBS = ""
+$CFLAGS << " -g"
 
 if RUBY_PLATFORM =~ /solaris/
 	have_library('xnet')
 	$CFLAGS << " -D_XPG4_2"
+	$CFLAGS << " -D__EXTENSIONS__"
 	if RUBY_PLATFORM =~ /solaris2.9/
 		$CFLAGS << " -D__SOLARIS9__"
 	end
 end
+
+have_header('alloca.h')
+have_header('ruby/io.h')
 
 with_cflags($CFLAGS) do
 	create_makefile('native_support')

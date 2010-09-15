@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2008, 2009 Phusion
+ * Copyright (C) 2010 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 #include "ContentHandler.h"
 #include "StaticContentHandler.h"
 #include "Configuration.h"
-#include "../common/Version.h"
+#include "../common/Constants.h"
 
 
 #define NGX_HTTP_SCGI_PARSE_NO_HEADER  20
@@ -220,15 +220,108 @@ find_base_uri(ngx_http_request_t *r, const passenger_loc_conf_t *loc,
     }
 }
 
+static void
+set_upstream_server_address(ngx_http_upstream_t *upstream, ngx_http_upstream_conf_t *upstream_config) {
+    ngx_http_upstream_server_t *servers = upstream_config->upstream->servers->elts;
+    #if NGINX_VERSION_NUM >= 8000
+        ngx_addr_t             *address = &servers[0].addrs[0];
+    #else
+        ngx_peer_addr_t        *address = &servers[0].addrs[0];
+    #endif
+    const char                 *request_socket_filename;
+    unsigned int                request_socket_filename_len;
+    struct sockaddr_un         *sockaddr;
+    
+    /* The Nginx API makes it extremely difficult to register an upstream server
+     * address outside of the configuration loading phase. However we don't know
+     * the helper agent's request socket filename until we're done with loading
+     * the configuration. So during configuration loading we register a placeholder
+     * address for the upstream configuration, and while processing requests
+     * we substitute the placeholder filename with the real helper agent request
+     * socket filename.
+     */
+    if (address->name.data == passenger_placeholder_upstream_address.data) {
+        sockaddr = (struct sockaddr_un *) address->sockaddr;
+        request_socket_filename =
+            agents_starter_get_request_socket_filename(passenger_agents_starter,
+                                                       &request_socket_filename_len);
+        
+        address->name.data = (u_char *) request_socket_filename;
+        address->name.len  = request_socket_filename_len;
+        strncpy(sockaddr->sun_path, request_socket_filename, sizeof(sockaddr->sun_path));
+        sockaddr->sun_path[sizeof(sockaddr->sun_path) - 1] = '\0';
+    }
+}
+
+
+/* Convenience macros for building the SCGI header in create_request(). */
+
+#define ANALYZE_BOOLEAN_CONFIG_LENGTH(name, container, config_field)    \
+    do {                                                                \
+        if (container->config_field) {                                  \
+            len += sizeof(name) + sizeof("true");                       \
+        } else {                                                        \
+            len += sizeof(name) + sizeof("false");                      \
+        }                                                               \
+    } while (0)
+
+#define SERIALIZE_BOOLEAN_CONFIG_DATA(name, container, config_field)    \
+    do {                                                                \
+        b->last = ngx_copy(b->last, name, sizeof(name));                \
+        if (container->config_field) {                                  \
+            b->last = ngx_copy(b->last, "true", sizeof("true"));        \
+        } else {                                                        \
+            b->last = ngx_copy(b->last, "false", sizeof("false"));      \
+        }                                                               \
+    } while (0)
+
+#define PREPARE_INT_CONFIG_DATA(name, container, config_field)      \
+    do {                                                            \
+        end = ngx_snprintf(config_field ## _string,                 \
+                           sizeof(config_field ## _string) - 1,     \
+                           "%d",                                    \
+                           container->config_field);                \
+        *end = '\0';                                                \
+        len += sizeof(name) + (end - config_field ## _string) + 1;  \
+    } while (0)
+
+#define SERIALIZE_INT_CONFIG_DATA(name, container, config_field)        \
+    do {                                                                \
+        b->last = ngx_copy(b->last, name, sizeof(name));                \
+        b->last = ngx_copy(b->last, config_field ## _string,            \
+                           ngx_strlen(config_field ## _string) + 1);    \
+    } while (0)
+
+#define ANALYZE_STR_CONFIG_LENGTH(name, container, config_field)        \
+    do {                                                                \
+        if (container->config_field.data != NULL) {                     \
+            len += sizeof(name) + (container->config_field.len) + 1;    \
+        }                                                               \
+    } while (0)
+
+#define SERIALIZE_STR_CONFIG_DATA(name, container, config_field)        \
+    do {                                                                \
+        if (container->config_field.data != NULL) {                     \
+            b->last = ngx_copy(b->last, name, sizeof(name));            \
+            b->last = ngx_copy(b->last, container->config_field.data,   \
+                               container->config_field.len);            \
+            *b->last = '\0';                                            \
+            b->last++;                                                  \
+        }                                                               \
+    } while (0)
+
 
 static ngx_int_t
 create_request(ngx_http_request_t *r)
 {
     u_char                         ch;
+    const char *                   helper_agent_request_socket_password_data;
+    unsigned int                   helper_agent_request_socket_password_len;
     u_char                         buf[sizeof("4294967296")];
     size_t                         len, size, key_len, val_len, content_length;
     const u_char                  *app_type_string;
     size_t                         app_type_string_len;
+    u_char                         min_instances_string[12];
     u_char                         framework_spawner_idle_time_string[12];
     u_char                         app_spawner_idle_time_string[12];
     u_char                        *end;
@@ -314,14 +407,32 @@ create_request(ngx_http_request_t *r)
     #endif
     
     /* Lengths of Passenger application pool options. */
-    if (slcf->use_global_queue) {
-        len += sizeof("PASSENGER_USE_GLOBAL_QUEUE") + sizeof("true");
-    } else {
-        len += sizeof("PASSENGER_USE_GLOBAL_QUEUE") + sizeof("false");
-    }
+    ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_USE_GLOBAL_QUEUE",
+                                  slcf, use_global_queue);
+    ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_FRIENDLY_ERROR_PAGES",
+                                  slcf, friendly_error_pages);
+    ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_ANALYTICS",
+                                  slcf, analytics);
+    ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_DEBUGGER",
+                                  slcf, debugger);
+    ANALYZE_BOOLEAN_CONFIG_LENGTH("PASSENGER_SHOW_VERSION_IN_HEADER",
+                                  slcf, show_version_in_header);
     len += sizeof("PASSENGER_ENVIRONMENT") + slcf->environment.len + 1;
     len += sizeof("PASSENGER_SPAWN_METHOD") + slcf->spawn_method.len + 1;
     len += sizeof("PASSENGER_APP_TYPE") + app_type_string_len;
+    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_APP_GROUP_NAME", slcf, app_group_name);
+    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_APP_RIGHTS", slcf, app_rights);
+    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_USER", slcf, user);
+    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_GROUP", slcf, group);
+    ANALYZE_STR_CONFIG_LENGTH("PASSENGER_UNION_STATION_KEY", slcf, union_station_key);
+    
+    end = ngx_snprintf(min_instances_string,
+                       sizeof(min_instances_string) - 1,
+                       "%d",
+                       (slcf->min_instances == (ngx_int_t) -1) ? 1 : slcf->min_instances);
+    *end = '\0';
+    len += sizeof("PASSENGER_MIN_INSTANCES") +
+           ngx_strlen(min_instances_string) + 1;
     
     end = ngx_snprintf(framework_spawner_idle_time_string,
                        sizeof(framework_spawner_idle_time_string) - 1,
@@ -340,6 +451,10 @@ create_request(ngx_http_request_t *r)
     *end = '\0';
     len += sizeof("PASSENGER_APP_SPAWNER_IDLE_TIME") +
            ngx_strlen(app_spawner_idle_time_string) + 1;
+
+
+    /***********************/
+    /***********************/
 
     /* Lengths of various CGI variables. */
     if (slcf->vars_len) {
@@ -366,7 +481,7 @@ create_request(ngx_http_request_t *r)
     }
 
     /* Lengths of HTTP headers. */
-    if (slcf->upstream.pass_request_headers) {
+    if (slcf->upstream_config.pass_request_headers) {
 
         part = &r->headers_in.headers.part;
         header = part->elts;
@@ -390,29 +505,29 @@ create_request(ngx_http_request_t *r)
 
     /* Trailing dummy header.
      *
-	 * If the last header value is an empty string, then the buffer
-	 * will end with "\0\0". For example, if 'SSL_CLIENT_CERT'
-	 * is the last header and it has an empty value, then the SCGI header
-	 * will end with:
-	 *
-	 *   "SSL_CLIENT_CERT\0\0"
-	 *
-	 * The data in the buffer will be processed by the AbstractRequestHandler class,
-	 * which is implemented in Ruby. But it uses Hash[*data.split("\0")] to
-	 * unserialize the data. Unfortunately String#split will not transform
-	 * the trailing "\0\0" into an empty string:
-	 *
-	 *   "SSL_CLIENT_CERT\0\0".split("\0")
-	 *   # => desired result: ["SSL_CLIENT_CERT", ""]
-	 *   # => actual result:  ["SSL_CLIENT_CERT"]
-	 *
-	 * When that happens, Hash[..] will raise an ArgumentError because
-	 * data.split("\0") does not return an array with a length that is a
-	 * multiple of 2.
-	 *
-	 * So here, we add a dummy header to prevent situations like that from
-	 * happening.
-	 */
+     * If the last header value is an empty string, then the buffer
+     * will end with "\0\0". For example, if 'SSL_CLIENT_CERT'
+     * is the last header and it has an empty value, then the SCGI header
+     * will end with:
+     *
+     *   "SSL_CLIENT_CERT\0\0"
+     *
+     * The data in the buffer will be processed by the AbstractRequestHandler class,
+     * which is implemented in Ruby. But it uses Hash[*data.split("\0")] to
+     * unserialize the data. Unfortunately String#split will not transform
+     * the trailing "\0\0" into an empty string:
+     *
+     *   "SSL_CLIENT_CERT\0\0".split("\0")
+     *   # => desired result: ["SSL_CLIENT_CERT", ""]
+     *   # => actual result:  ["SSL_CLIENT_CERT"]
+     *
+     * When that happens, Hash[..] will raise an ArgumentError because
+     * data.split("\0") does not return an array with a length that is a
+     * multiple of 2.
+     *
+     * So here, we add a dummy header to prevent situations like that from
+     * happening.
+     */
     len += sizeof("_") + sizeof("_");
 
 
@@ -420,7 +535,10 @@ create_request(ngx_http_request_t *r)
      * Build the request header data.
      **************************************************/
     
-    size = passenger_helper_server_password.len +
+    helper_agent_request_socket_password_data =
+        agents_starter_get_request_socket_password(passenger_agents_starter,
+            &helper_agent_request_socket_password_len);
+    size = helper_agent_request_socket_password_len +
         /* netstring length + ":" + trailing "," */
         /* note: 10 == sizeof("4294967296") - 1 */
         len + 10 + 1 + 1;
@@ -438,8 +556,8 @@ create_request(ngx_http_request_t *r)
     cl->buf = b;
     
     /* Build SCGI header netstring length part. */
-    b->last = ngx_copy(b->last, passenger_helper_server_password.data,
-                       passenger_helper_server_password.len);
+    b->last = ngx_copy(b->last, helper_agent_request_socket_password_data,
+                       helper_agent_request_socket_password_len);
 
     b->last = ngx_snprintf(b->last, 10, "%ui", len);
     *b->last++ = (u_char) ':';
@@ -498,13 +616,16 @@ create_request(ngx_http_request_t *r)
     
 
     /* Build Passenger application pool option headers. */
-    b->last = ngx_copy(b->last, "PASSENGER_USE_GLOBAL_QUEUE",
-                       sizeof("PASSENGER_USE_GLOBAL_QUEUE"));
-    if (slcf->use_global_queue) {
-        b->last = ngx_copy(b->last, "true", sizeof("true"));
-    } else {
-        b->last = ngx_copy(b->last, "false", sizeof("false"));
-    }
+    SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_USE_GLOBAL_QUEUE",
+                                  slcf, use_global_queue);
+    SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_FRIENDLY_ERROR_PAGES",
+                                  slcf, friendly_error_pages);
+    SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_ANALYTICS",
+                                  slcf, analytics);
+    SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_DEBUGGER",
+                                  slcf, debugger);
+    SERIALIZE_BOOLEAN_CONFIG_DATA("PASSENGER_SHOW_VERSION_IN_HEADER",
+                                  slcf, show_version_in_header);
     
     b->last = ngx_copy(b->last, "PASSENGER_ENVIRONMENT",
                        sizeof("PASSENGER_ENVIRONMENT"));
@@ -516,9 +637,25 @@ create_request(ngx_http_request_t *r)
     b->last = ngx_copy(b->last, slcf->spawn_method.data,
                        slcf->spawn_method.len + 1);
 
+    SERIALIZE_STR_CONFIG_DATA("PASSENGER_APP_GROUP_NAME",
+                              slcf, app_group_name);
+    SERIALIZE_STR_CONFIG_DATA("PASSENGER_APP_RIGHTS",
+                              slcf, app_rights);
+    SERIALIZE_STR_CONFIG_DATA("PASSENGER_USER",
+                              slcf, user);
+    SERIALIZE_STR_CONFIG_DATA("PASSENGER_GROUP",
+                              slcf, group);
+    SERIALIZE_STR_CONFIG_DATA("PASSENGER_UNION_STATION_KEY",
+                              slcf, union_station_key);
+
     b->last = ngx_copy(b->last, "PASSENGER_APP_TYPE",
                        sizeof("PASSENGER_APP_TYPE"));
     b->last = ngx_copy(b->last, app_type_string, app_type_string_len);
+
+    b->last = ngx_copy(b->last, "PASSENGER_MIN_INSTANCES",
+                       sizeof("PASSENGER_MIN_INSTANCES"));
+    b->last = ngx_copy(b->last, min_instances_string,
+                       ngx_strlen(min_instances_string) + 1);
 
     b->last = ngx_copy(b->last, "PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME",
                        sizeof("PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME"));
@@ -529,6 +666,9 @@ create_request(ngx_http_request_t *r)
                        sizeof("PASSENGER_APP_SPAWNER_IDLE_TIME"));
     b->last = ngx_copy(b->last, app_spawner_idle_time_string,
                        ngx_strlen(app_spawner_idle_time_string) + 1);
+
+    /***********************/
+    /***********************/
 
     if (slcf->vars_len) {
         ngx_memzero(&e, sizeof(ngx_http_script_engine_t));
@@ -561,7 +701,7 @@ create_request(ngx_http_request_t *r)
     }
 
 
-    if (slcf->upstream.pass_request_headers) {
+    if (slcf->upstream_config.pass_request_headers) {
 
         part = &r->headers_in.headers.part;
         header = part->elts;
@@ -607,7 +747,7 @@ create_request(ngx_http_request_t *r)
 
     *b->last++ = (u_char) ',';
 
-    if (slcf->upstream.pass_request_body) {
+    if (slcf->upstream_config.pass_request_body) {
 
         body = r->upstream->request_bufs;
         r->upstream->request_bufs = cl;
@@ -947,11 +1087,7 @@ process_header(ngx_http_request_t *r)
 
     for ( ;;  ) {
 
-        #if NGINX_VERSION_NUM >= 7000
-            rc = ngx_http_parse_header_line(r, &r->upstream->buffer, 1);
-        #else
-            rc = ngx_http_parse_header_line(r, &r->upstream->buffer);
-        #endif
+        rc = ngx_http_parse_header_line(r, &r->upstream->buffer, 1);
 
         if (rc == NGX_OK) {
 
@@ -1183,9 +1319,7 @@ passenger_content_handler(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
     
-#if NGINX_VERSION_NUM >= 7000
     u->schema = passenger_schema_string;
-#endif
 
     u->peer.log = r->connection->log;
     u->peer.log_error = NGX_ERROR_ERR;
@@ -1195,7 +1329,8 @@ passenger_content_handler(ngx_http_request_t *r)
 
     u->output.tag = (ngx_buf_tag_t) &ngx_http_passenger_module;
 
-    u->conf = &slcf->upstream;
+    set_upstream_server_address(u, &slcf->upstream_config);
+    u->conf = &slcf->upstream_config;
 
     u->create_request   = create_request;
     u->reinit_request   = reinit_request;
@@ -1203,8 +1338,8 @@ passenger_content_handler(ngx_http_request_t *r)
     u->abort_request    = abort_request;
     u->finalize_request = finalize_request;
 
-    u->buffering = 0;
-
+    u->buffering = slcf->upstream_config.buffering;
+    
     u->pipe = ngx_pcalloc(r->pool, sizeof(ngx_event_pipe_t));
     if (u->pipe == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
