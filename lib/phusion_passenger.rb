@@ -92,7 +92,7 @@ module PhusionPassenger
 		# Location of the Apache 2 module.
 		APACHE2_MODULE     = File.join(SOURCE_ROOT, "ext", "apache2", "mod_passenger.so")
 	else
-		SOURCE_ROOT        = NATIVELY_PACKAGED_SOURCE_DIR
+		SOURCE_ROOT        = NATIVELY_PACKAGED_SOURCE_ROOT
 		NATIVE_SUPPORT_DIR = NATIVELY_PACKAGED_NATIVE_SUPPORT_DIR
 		DOCDIR             = NATIVELY_PACKAGED_DOCDIR
 		AGENTS_DIR         = NATIVELY_PACKAGED_AGENTS_DIR
