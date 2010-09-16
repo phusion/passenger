@@ -1,8 +1,15 @@
+passenger (3.0.0-1bbox1~pre1) hardy; urgency=low
+
+  * New Upstream Version, 3.0.0~pre1
+  * Applied packaging fixed from latest git head 9c90235
+
+ -- John Leach <john@brightbox.co.uk>  Wed, 15 Sep 2010 16:33:09 +0100
+
 passenger (2.2.15-1bbox1) hardy; urgency=low
 
   * New Upstream Version, 2.2.15
 
- -- root <ben@brightbox.co.uk>  Tue, 06 Jul 2010 14:37:38 +0100
+ -- Ben Arblaster <ben@brightbox.co.uk>  Tue, 06 Jul 2010 14:37:38 +0100
 
 passenger (2.2.14-1bbox2) hardy; urgency=low
 

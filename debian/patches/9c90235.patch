@@ -1,0 +1,569 @@
+diff --git a/DEVELOPERS.TXT b/DEVELOPERS.TXT
+index cd9532d..69a2dac 100644
+--- a/DEVELOPERS.TXT
++++ b/DEVELOPERS.TXT
+@@ -70,8 +70,8 @@ Less important directories:
+   Man pages.
+ [ misc ]
+   Miscellaneous tools.
+-[ misc/rake ]
+-  Rake tasks.
++[ build ]
++  Rake tasks used by the build system.
+ 
+ == Tests
+ 
+diff --git a/build/packaging.rb b/build/packaging.rb
+index 7671fed..5a5dc21 100644
+--- a/build/packaging.rb
++++ b/build/packaging.rb
+@@ -147,7 +147,7 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
+ 	sh "cp #{APACHE2_MODULE} #{fake_apache2_module_dir}/"
+ 	
+ 	sh "mkdir -p #{fake_certificates_dir}"
+-	sh "cp #{CERTIFICATES_DIR}/*.crt #{fake_certificates_dir}/"
++	sh "cp misc/certificates/*.crt #{fake_certificates_dir}/"
+ 	
+ 	sh "mkdir -p #{fake_source_root}"
+ 	spec.files.each do |filename|
+diff --git a/doc/Users guide Apache.txt b/doc/Users guide Apache.txt
+index 2cdfdec..4ae5c6f 100644
+--- a/doc/Users guide Apache.txt	
++++ b/doc/Users guide Apache.txt	
+@@ -1523,7 +1523,7 @@ displaying maintenance.html will work fine even for URLs starting with "/users".
+ 
+ === Logging and debugging options ===
+ 
+-=== PassengerLogLevel <integer> ===
++==== PassengerLogLevel <integer> ====
+ This option allows one to specify how much information Phusion Passenger should
+ write to the Apache error log file. A higher log level value means that more
+ information will be logged.
+@@ -1540,7 +1540,7 @@ Possible values are:
+ This option may only occur once, in the global server configuration.
+ The default is '0'.
+ 
+-=== PassengerDebugLogFile <filename> ===
++==== PassengerDebugLogFile <filename> ====
+ By default Phusion Passenger debugging and error messages are written to the global
+ web server error log. This option allows one to specify the file that debugging and
+ error messages should be written to instead.
+diff --git a/doc/Users guide Nginx.txt b/doc/Users guide Nginx.txt
+index 135aa78..a8c2b3e 100644
+--- a/doc/Users guide Nginx.txt	
++++ b/doc/Users guide Nginx.txt	
+@@ -1218,7 +1218,8 @@ Yes. And it does not perform any certificate validation.
+ 
+ 
+ === Logging and debugging options ===
+-=== passenger_log_level <integer> ===
++
++==== passenger_log_level <integer> ====
+ This option allows one to specify how much information Phusion Passenger should
+ write to the Nginx error log file. A higher log level value means that more
+ information will be logged.
+@@ -1235,7 +1236,7 @@ Possible values are:
+ This option may only occur once, in the 'http' configuration block.
+ The default is '0'.
+ 
+-=== passenger_debug_log_file <filename> ===
++==== passenger_debug_log_file <filename> ====
+ By default Phusion Passenger debugging and error messages are written to the global
+ web server error log. This option allows one to specify the file that debugging and
+ error messages should be written to instead.
+diff --git a/ext/common/AgentsStarter.hpp b/ext/common/AgentsStarter.hpp
+index 8424a6e..511799d 100644
+--- a/ext/common/AgentsStarter.hpp
++++ b/ext/common/AgentsStarter.hpp
+@@ -46,6 +46,7 @@
+ #include "Utils.h"
+ #include "Utils/IOUtils.h"
+ #include "Utils/Base64.h"
++#include "Utils/Timer.h"
+ #include "Utils/VariantMap.h"
+ 
+ namespace Passenger {
+@@ -117,10 +118,31 @@ private:
+ 	ServerInstanceDir::GenerationPtr generation;
+ 	
+ 	static void
+-	killAndWait(pid_t pid) {
+-		this_thread::disable_syscall_interruption dsi;
+-		syscalls::kill(pid, SIGKILL);
+-		syscalls::waitpid(pid, NULL, 0);
++	killAndWait(pid_t pid, unsigned long long timeout = 0) {
++		if (timeout == 0 || timedWaitPid(pid, NULL, timeout) == 0) {
++			this_thread::disable_syscall_interruption dsi;
++			syscalls::kill(pid, SIGKILL);
++			syscalls::waitpid(pid, NULL, 0);
++		}
++	}
++	
++	/**
++	 * Behaves like <tt>waitpid(pid, status, WNOHANG)</tt>, but waits at most
++	 * <em>timeout</em> miliseconds for the process to exit.
++	 */
++	static int timedWaitPid(pid_t pid, int *status, unsigned long long timeout) {
++		Timer timer;
++		int ret;
++		
++		do {
++			ret = syscalls::waitpid(pid, status, WNOHANG);
++			if (ret > 0 || ret == -1) {
++				return ret;
++			} else {
++				syscalls::usleep(10000);
++			}
++		} while (timer.elapsed() < timeout);
++		return 0; // timed out
+ 	}
+ 	
+ 	/**
+@@ -420,8 +442,12 @@ public:
+ 			try {
+ 				watchdogArgs.writeToChannel(feedbackChannel);
+ 			} catch (const SystemException &) {
+-				/* Did the watchdog crash? */
+-				ret = syscalls::waitpid(pid, &status, WNOHANG);
++				/* Did the watchdog crash?
++				 * At the time the channel was closed it might not have
++				 * exited yet so give it a short while to exit and to
++				 * print an error.
++				 */
++				ret = timedWaitPid(pid, &status, 2000);
+ 				if (ret == 0) {
+ 					/* Doesn't look like it; it seems it's still running.
+ 					 * We can't do anything in this state anyway, so
+@@ -437,11 +463,17 @@ public:
+ 						"Unable to start the Phusion Passenger watchdog: "
+ 						"it seems to have been killed with signal " +
+ 						getSignalName(WTERMSIG(status)) + " during startup");
+-				} else {
+-					/* Looks like it exited for a different reason. */
++				} else if (ret == -1) {
++					/* Looks like it exited for a different reason and has no exit code. */
+ 					throw RuntimeException(
+ 						"Unable to start the Phusion Passenger watchdog: "
+ 						"it seems to have crashed during startup for an unknown reason");
++				} else {
++					/* Looks like it exited for a different reason, but has an exit code. */
++					throw RuntimeException(
++						"Unable to start the Phusion Passenger watchdog: "
++						"it seems to have crashed during startup for an unknown reason, "
++						"with exit code " + toString(WEXITSTATUS(status)));
+ 				}
+ 			}
+ 			
+@@ -459,7 +491,7 @@ public:
+ 					/* The feedback fd was closed for an unknown reason.
+ 					 * Did the watchdog crash?
+ 					 */
+-					ret = syscalls::waitpid(pid, &status, WNOHANG);
++					ret = timedWaitPid(pid, &status, 2000);
+ 					if (ret == 0) {
+ 						/* Doesn't look like it; it seems it's still running.
+ 						 * We can't do anything without proper feedback so kill
+@@ -473,14 +505,19 @@ public:
+ 						throw RuntimeException("Unable to start the Phusion Passenger watchdog: "
+ 							"it seems to have been killed with signal " +
+ 							getSignalName(WTERMSIG(status)) + " during startup");
+-					} else {
++					} else if (ret == -1) {
+ 						/* Looks like it exited after detecting an error. */
+ 						throw RuntimeException("Unable to start the Phusion Passenger watchdog: "
+ 							"it seems to have crashed during startup for an unknown reason");
++					} else {
++						throw RuntimeException(
++							"Unable to start the Phusion Passenger watchdog: "
++							"it seems to have crashed during startup for an unknown reason, "
++							"with exit code " + toString(WEXITSTATUS(status)));
+ 					}
+ 				}
+ 			} catch (const SystemException &ex) {
+-				killAndWait(pid);
++				killAndWait(pid, 2000);
+ 				throw SystemException("Unable to start the Phusion Passenger watchdog: "
+ 					"unable to read its startup information",
+ 					ex.code());
+@@ -488,7 +525,7 @@ public:
+ 				// Watchdog has already exited, no need to kill it.
+ 				throw;
+ 			} catch (...) {
+-				killAndWait(pid);
++				killAndWait(pid, 2000);
+ 				throw;
+ 			}
+ 			
+@@ -498,7 +535,7 @@ public:
+ 					serverInstanceDir.reset(new ServerInstanceDir(args[1], false));
+ 					generation = serverInstanceDir->getGeneration(atoi(args[2]));
+ 				} else {
+-					killAndWait(pid);
++					killAndWait(pid, 2000);
+ 					throw IOException("Unable to start the Phusion Passenger watchdog: "
+ 						"it returned an invalid basic startup information message");
+ 				}
+@@ -508,10 +545,10 @@ public:
+ 					"because it encountered the following error during startup: " +
+ 					args[1]);
+ 			} else if (args[0] == "system error") {
+-				killAndWait(pid);
++				killAndWait(pid, 2000);
+ 				throw SystemException(args[1], atoi(args[2]));
+ 			} else if (args[0] == "exec error") {
+-				killAndWait(pid);
++				killAndWait(pid, 2000);
+ 				throw SystemException("Unable to start the Phusion Passenger watchdog (" +
+ 					watchdogFilename + ")", atoi(args[1]));
+ 			}
+@@ -537,7 +574,7 @@ public:
+ 							 * We can't do anything without proper feedback so kill
+ 							 * the watchdo and throw an exception.
+ 							 */
+-							killAndWait(pid);
++							killAndWait(pid, 2000);
+ 							throw RuntimeException("Unable to start the Phusion Passenger watchdog: "
+ 								"an unknown error occurred during its startup");
+ 						} else if (ret != -1 && WIFSIGNALED(status)) {
+@@ -552,7 +589,7 @@ public:
+ 						}
+ 					}
+ 				} catch (const SystemException &ex) {
+-					killAndWait(pid);
++					killAndWait(pid, 2000);
+ 					throw SystemException("Unable to start the Phusion Passenger watchdog: "
+ 						"unable to read all agent startup information",
+ 						ex.code());
+@@ -560,7 +597,7 @@ public:
+ 					// Watchdog has already exited, no need to kill it.
+ 					throw;
+ 				} catch (...) {
+-					killAndWait(pid);
++					killAndWait(pid, 2000);
+ 					throw;
+ 				}
+ 				
+@@ -587,7 +624,7 @@ public:
+ 						loggingSocketAddress  = args[1];
+ 						loggingSocketPassword = args[2];
+ 					} else {
+-						killAndWait(pid);
++						killAndWait(pid, 2000);
+ 						throw IOException("Unable to start the Phusion Passenger watchdog: "
+ 							"it returned an invalid initialization feedback message");
+ 					}
+@@ -595,7 +632,7 @@ public:
+ 					allAgentsStarted = true;
+ 				} else {
+ 					UPDATE_TRACE_POINT();
+-					killAndWait(pid);
++					killAndWait(pid, 2000);
+ 					throw RuntimeException("One of the Passenger agents sent an unknown feedback message '" + args[0] + "'");
+ 				}
+ 			}
+diff --git a/ext/common/Utils/MemZeroGuard.h b/ext/common/Utils/MemZeroGuard.h
+index fab7f0e..5ccb232 100644
+--- a/ext/common/Utils/MemZeroGuard.h
++++ b/ext/common/Utils/MemZeroGuard.h
+@@ -76,7 +76,7 @@ public:
+ 	 */
+ 	MemZeroGuard(string &str) {
+ 		this->data = NULL;
+-		this->size = NULL;
++		this->size = 0;
+ 		this->str  = &str;
+ 	}
+ 	
+diff --git a/lib/phusion_passenger.rb b/lib/phusion_passenger.rb
+index 720367e..5fb2a72 100644
+--- a/lib/phusion_passenger.rb
++++ b/lib/phusion_passenger.rb
+@@ -92,7 +92,7 @@ module PhusionPassenger
+ 		# Location of the Apache 2 module.
+ 		APACHE2_MODULE     = File.join(SOURCE_ROOT, "ext", "apache2", "mod_passenger.so")
+ 	else
+-		SOURCE_ROOT        = NATIVELY_PACKAGED_SOURCE_DIR
++		SOURCE_ROOT        = NATIVELY_PACKAGED_SOURCE_ROOT
+ 		NATIVE_SUPPORT_DIR = NATIVELY_PACKAGED_NATIVE_SUPPORT_DIR
+ 		DOCDIR             = NATIVELY_PACKAGED_DOCDIR
+ 		AGENTS_DIR         = NATIVELY_PACKAGED_AGENTS_DIR
+diff --git a/lib/phusion_passenger/platform_info/apache.rb b/lib/phusion_passenger/platform_info/apache.rb
+index 541ccc3..5667212 100644
+--- a/lib/phusion_passenger/platform_info/apache.rb
++++ b/lib/phusion_passenger/platform_info/apache.rb
+@@ -165,6 +165,9 @@ module PlatformInfo
+ 		flags = ["-fPIC"]
+ 		if compiler_supports_visibility_flag?
+ 			flags << "-fvisibility=hidden -DVISIBILITY_ATTRIBUTE_SUPPORTED"
++			if compiler_visibility_flag_generates_warnings?
++				flags << "-Wno-attributes"
++			end
+ 		end
+ 		if with_apr_flags
+ 			flags << apr_flags
+diff --git a/lib/phusion_passenger/platform_info/binary_compatibility.rb b/lib/phusion_passenger/platform_info/binary_compatibility.rb
+index 60d069e..e89bd85 100644
+--- a/lib/phusion_passenger/platform_info/binary_compatibility.rb
++++ b/lib/phusion_passenger/platform_info/binary_compatibility.rb
+@@ -34,7 +34,9 @@ module PlatformInfo
+ 	# be running on a different architectural mode than the default one.
+ 	def self.cpu_architecture
+ 		result = `uname -p`.strip
+-		if result == "unknown"
++		# On some systems 'uname -p' returns something like
++		# 'Intel(R) Pentium(R) M processor 1400MHz'.
++		if result == "unknown" || result =~ / /
+ 			result = `uname -m`.strip
+ 		end
+ 		return result
+diff --git a/lib/phusion_passenger/platform_info/compiler.rb b/lib/phusion_passenger/platform_info/compiler.rb
+index 7dfb4c5..0ba243b 100644
+--- a/lib/phusion_passenger/platform_info/compiler.rb
++++ b/lib/phusion_passenger/platform_info/compiler.rb
+@@ -26,11 +26,34 @@ require 'phusion_passenger/platform_info'
+ module PhusionPassenger
+ 
+ module PlatformInfo
++	def self.cc
++		return ENV['CC'] || "gcc"
++	end
++	
++	def self.cxx
++		return ENV['CXX'] || "g++"
++	end
++	
+ 	def self.compiler_supports_visibility_flag?
+ 		return try_compile(:c, '', '-fvisibility=hidden')
+ 	end
+ 	memoize :compiler_supports_visibility_flag?, true
+ 	
++	# Returns whether compiling C++ with -fvisibility=hidden might result
++	# in tons of useless warnings, like this:
++	# http://code.google.com/p/phusion-passenger/issues/detail?id=526
++	# This appears to be a bug in older g++ versions:
++	# http://gcc.gnu.org/ml/gcc-patches/2006-07/msg00861.html
++	# Warnings should be suppressed with -Wno-attributes.
++	def self.compiler_visibility_flag_generates_warnings?
++		if `#{cxx} -v 2>&1` =~ /gcc version (.*?)/
++			return $1 <= "4.1.2"
++		else
++			return false
++		end
++	end
++	memoize :compiler_visibility_flag_generates_warnings?, true
++	
+ 	# Compiler flags that should be used for compiling every C/C++ program,
+ 	# for portability reasons. These flags should be specified as last
+ 	# when invoking the compiler.
+@@ -131,9 +154,9 @@ module PlatformInfo
+ private
+ 	def self.try_compile(language, source, flags = nil)
+ 		if language == :c
+-			compiler = 'gcc'
++			compiler = cc
+ 		elsif language == :cxx
+-			compiler = 'g++'
++			compiler = cxx
+ 		else
+ 			raise ArgumentError,"Unsupported language '#{language}'"
+ 		end
+diff --git a/lib/phusion_passenger/platform_info/ruby.rb b/lib/phusion_passenger/platform_info/ruby.rb
+index 9277df4..5329dfa 100644
+--- a/lib/phusion_passenger/platform_info/ruby.rb
++++ b/lib/phusion_passenger/platform_info/ruby.rb
+@@ -27,6 +27,15 @@ require 'phusion_passenger/platform_info'
+ module PhusionPassenger
+ 
+ module PlatformInfo
++	# Store original $GEM_HOME value so that even if the app customizes
++	# $GEM_HOME we can still work with the original value.
++	gem_home = ENV['GEM_HOME']
++	if gem_home
++		gem_home = gem_home.strip.freeze
++		gem_home = nil if gem_home.empty?
++	end
++	GEM_HOME = gem_home
++	
+ 	if defined?(::RUBY_ENGINE)
+ 		RUBY_ENGINE = ::RUBY_ENGINE
+ 	else
+@@ -37,23 +46,26 @@ module PlatformInfo
+ 	# In case of RVM this function will return the path to the RVM wrapper script
+ 	# that executes the current Ruby interpreter in the currently active gem set.
+ 	def self.ruby_command
+-		@@ruby_command ||= begin
+-			filename = ruby_executable
+-			if filename =~ %r{(.*)/.rvm/rubies/(.+?)/bin/(.+)}
+-				home = $1
+-				name = $2
+-				exename = $3
+-				if !ENV['rvm_gemset_name'].to_s.empty?
+-					name << "@#{ENV['rvm_gemset_name']}"
+-				end
+-				new_filename = "#{home}/.rvm/wrappers/#{name}/#{exename}"
+-				if File.exist?(new_filename)
+-					filename = new_filename
+-				end
++		if in_rvm?
++			name = rvm_ruby_string
++			dir = rvm_path
++			if name && dir
++				return "#{dir}/wrappers/#{name}/ruby"
++			else
++				# Something's wrong with the user's RVM installation.
++				# Raise an error so that the user knows this instead of
++				# having things fail randomly later on.
++				# 'name' is guaranteed to be non-nil because rvm_ruby_string
++				# already raises an exception on error.
++				raise "Your RVM installation appears to be broken: the RVM " +
++					"path cannot be found. Please fix your RVM installation " +
++					"or contact the RVM developers for support."
+ 			end
+-			filename
++		else
++			return ruby_executable
+ 		end
+ 	end
++	memoize :ruby_command
+ 	
+ 	# Returns the full path to the current Ruby interpreter's executable file.
+ 	# This might not be the actual correct command to use for invoking the Ruby
+@@ -122,6 +134,68 @@ module PlatformInfo
+ 		return Config::CONFIG['bindir'].include?('/.rvm/')
+ 	end
+ 	
++	# If the current Ruby interpreter is managed by RVM, returns the
++	# directory in which RVM places its working files. Otherwise returns
++	# nil.
++	def self.rvm_path
++		if in_rvm?
++			[ENV['rvm_path'], "~/.rvm", "/usr/local/rvm"].each do |path|
++				next if path.nil?
++				path = File.expand_path(path)
++				return path if File.directory?(path)
++			end
++		end
++		return nil
++	end
++	memoize :rvm_path
++	
++	# If the current Ruby interpreter is managed by RVM, returns the
++	# RVM name which identifies the current Ruby interpreter plus the
++	# currently active gemset, e.g. something like this:
++	# "ruby-1.9.2-p0@mygemset"
++	#
++	# Returns nil otherwise.
++	def self.rvm_ruby_string
++		if in_rvm?
++			# RVM used to export the necessary information through
++			# environment variables, but doesn't always do that anymore
++			# in the latest versions in order to fight env var pollution.
++			# Scanning $LOAD_PATH seems to be the only way to obtain
++			# the information.
++			
++			# Getting the RVM name of the Ruby interpreter ("ruby-1.9.2")
++			# isn't so hard, we can extract it from the #ruby_executable
++			# string. Getting the gemset name is a bit harder, so let's
++			# try various strategies...
++			
++			# $GEM_HOME usually contains the gem set name.
++			if GEM_HOME && GEM_HOME.include?("rvm/gems/")
++				return File.basename(GEM_HOME)
++			end
++			
++			# User somehow managed to nuke $GEM_HOME. Extract info
++			# from $LOAD_PATH.
++			matching_path = $LOAD_PATH.find_all do |item|
++				item.include?("rvm/gems/")
++			end
++			if matching_path
++				subpath = matching_path.to_s.gsub(/^.*rvm\/gems\//, '')
++				result = subpath.split('/').first
++				return result if result
++			end
++			
++			# On Ruby 1.9, $LOAD_PATH does not contain any gem paths until
++			# at least one gem has been required so the above can fail.
++			# We're out of options now, we can't detect the gem set.
++			# Raise an exception so that the user knows what's going on
++			# instead of having things fail in obscure ways later.
++			raise "Unable to autodetect the currently active RVM gem " +
++				"set name. Please contact this program's author for support."
++		end
++		return nil
++	end
++	memoize :rvm_ruby_string
++	
+ 	# Returns either 'sudo' or 'rvmsudo' depending on whether the current
+ 	# Ruby interpreter is managed by RVM.
+ 	def self.ruby_sudo_command
+diff --git a/lib/phusion_passenger/templates/standalone/config.erb b/lib/phusion_passenger/templates/standalone/config.erb
+index 8b31b5d..d9dccec 100644
+--- a/lib/phusion_passenger/templates/standalone/config.erb
++++ b/lib/phusion_passenger/templates/standalone/config.erb
+@@ -1,8 +1,8 @@
+ master_process on;
+ worker_processes 1;
+ daemon on;
+-error_log <%= @options[:log_file] %>;
+-pid <%= @options[:pid_file] %>;
++error_log '<%= @options[:log_file] %>';
++pid '<%= @options[:pid_file] %>';
+ <% if @options[:user] %>user <%= @options[:user] %> <%= default_group_for(@options[:user]) %>;<% end %>
+ 
+ events {
+@@ -10,11 +10,11 @@ events {
+ }
+ 
+ http {
+-    include <%= nginx_dir %>/conf/mime.types;
+-    client_body_temp_path <%= @temp_dir %>/client;
+-    proxy_temp_path <%= @temp_dir %>/proxy;
++    include '<%= nginx_dir %>/conf/mime.types';
++    client_body_temp_path '<%= @temp_dir %>/client';
++    proxy_temp_path '<%= @temp_dir %>/proxy';
+     passenger_ruby <%= PlatformInfo.ruby_command %>;
+-    passenger_root <%= passenger_root %>;
++    passenger_root '<%= passenger_root %>';
+     passenger_abort_on_startup_error on;
+     passenger_user_switching off;
+     passenger_max_pool_size <%= @options[:max_pool_size] %>;
+@@ -35,14 +35,14 @@ http {
+     # Default server entry.
+     server {
+         listen <%= nginx_listen_address %>;
+-        root <%= LIBDIR %>/phusion_passenger/templates/standalone_default_root;
++        root '<%= LIBDIR %>/phusion_passenger/templates/standalone_default_root';
+     }
+     <% end %>
+ 
+     <% if @options[:ping_port] %>
+     server {
+         listen <%= nginx_listen_address(true) %>;
+-        root <%= LIBDIR %>/phusion_passenger/templates/standalone_default_root;
++        root '<%= LIBDIR %>/phusion_passenger/templates/standalone_default_root';
+     }
+     <% end %>
+     
+@@ -50,20 +50,13 @@ http {
+     server {
+         listen <%= @options[:address] %>:<%= @options[:port] %>;
+         server_name <%= app[:server_names].join(' ') %>;
+-        root <%= app[:root] %>/public;
++        root '<%= app[:root] %>/public';
+         passenger_enabled on;
+         rails_env <%= app[:env] %>;
+         passenger_spawn_method <%= app[:spawn_method] %>;
+         <% if app[:min_instances] %>passenger_min_instances <%= app[:min_instances] %>;<% end %>
+         <% if app[:analytics] %>passenger_analytics on;<% end %>
+         <% if app[:debugger] %>passenger_debugger on;<% end %>
+-        <%
+-        # The following is to make Tower Top work. In Phusion Passenger Standalone we don't
+-        # care about inter-app security because it's meant for simple use cases; we
+-        # don't even support user switching. People who care about inter-app security
+-        # should just use Phusion Passenger for Apache or Nginx.
+-        %>
+-        passenger_app_rights inspect_basic_info;
+     }
+     <% end %>
+ }
