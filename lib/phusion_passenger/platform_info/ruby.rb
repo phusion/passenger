@@ -64,23 +64,6 @@ module PlatformInfo
 		else
 			return ruby_executable
 		end
-		
-		@@ruby_command ||= begin
-			filename = ruby_executable
-			if filename =~ %r{(.*)/.rvm/rubies/(.+?)/bin/(.+)}
-				home = $1
-				name = $2
-				exename = $3
-				if !ENV['rvm_gemset_name'].to_s.empty?
-					name << "@#{ENV['rvm_gemset_name']}"
-				end
-				new_filename = "#{home}/.rvm/wrappers/#{name}/#{exename}"
-				if File.exist?(new_filename)
-					filename = new_filename
-				end
-			end
-			filename
-		end
 	end
 	memoize :ruby_command
 	
