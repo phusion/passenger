@@ -48,7 +48,7 @@ end
 
 desc "Remove compiled files"
 task :clean do
-	sh "rm -rf .cache"
+	sh "rm -rf build/cache"
 end
 
 desc "Remove all generated files"
