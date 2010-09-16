@@ -165,6 +165,9 @@ module PlatformInfo
 		flags = ["-fPIC"]
 		if compiler_supports_visibility_flag?
 			flags << "-fvisibility=hidden -DVISIBILITY_ATTRIBUTE_SUPPORTED"
+			if compiler_visibility_flag_generates_warnings?
+				flags << "-Wno-attributes"
+			end
 		end
 		if with_apr_flags
 			flags << apr_flags
