@@ -50,16 +50,29 @@ module PlatformInfo
 			name = rvm_ruby_string
 			dir = rvm_path
 			if name && dir
-				return "#{dir}/wrappers/#{name}/ruby"
+				filename = "#{dir}/wrappers/#{name}/ruby"
+				if File.exist?(filename)
+					contents = File.open(filename, 'rb') do |f|
+						f.read
+					end
+					# Old wrapper scripts reference $HOME which causes
+					# things to blow up when run by a different user.
+					if !contents.include?("$HOME")
+						return filename
+					end
+				end
+				STDERR.puts "Your RVM wrapper scripts are too old. Please update them first by running 'rvm update --head'."
+				exit 1
 			else
 				# Something's wrong with the user's RVM installation.
 				# Raise an error so that the user knows this instead of
 				# having things fail randomly later on.
 				# 'name' is guaranteed to be non-nil because rvm_ruby_string
 				# already raises an exception on error.
-				raise "Your RVM installation appears to be broken: the RVM " +
+				STDERR.puts "Your RVM installation appears to be broken: the RVM " +
 					"path cannot be found. Please fix your RVM installation " +
 					"or contact the RVM developers for support."
+				exit 1
 			end
 		else
 			return ruby_executable
@@ -189,8 +202,9 @@ module PlatformInfo
 			# We're out of options now, we can't detect the gem set.
 			# Raise an exception so that the user knows what's going on
 			# instead of having things fail in obscure ways later.
-			raise "Unable to autodetect the currently active RVM gem " +
+			STDERR.puts "Unable to autodetect the currently active RVM gem " +
 				"set name. Please contact this program's author for support."
+			exit 1
 		end
 		return nil
 	end
