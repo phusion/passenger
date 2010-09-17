@@ -57,12 +57,19 @@ module PlatformInfo
 					end
 					# Old wrapper scripts reference $HOME which causes
 					# things to blow up when run by a different user.
-					if !contents.include?("$HOME")
-						return filename
+					if contents.include?("$HOME")
+						filename = nil
 					end
+				else
+					filename = nil
 				end
-				STDERR.puts "Your RVM wrapper scripts are too old. Please update them first by running 'rvm update --head'."
-				exit 1
+				if filename
+					return filename
+				else
+					STDERR.puts "Your RVM wrapper scripts are too old. Please " +
+						"update them first by running 'rvm update --head'."
+					exit 1
+				end
 			else
 				# Something's wrong with the user's RVM installation.
 				# Raise an error so that the user knows this instead of
