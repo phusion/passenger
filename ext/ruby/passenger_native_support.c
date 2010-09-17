@@ -994,7 +994,7 @@ fs_watcher_close(VALUE self) {
 /***************************/
 
 void
-Init_native_support() {
+Init_passenger_native_support() {
 	struct sockaddr_un addr;
 	
 	/* */

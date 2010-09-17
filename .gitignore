@@ -23,8 +23,8 @@ ext/libev/stamp-h1
 ext/libev/ev.3
 ext/libev/ev.pod
 ext/libev/.libs
-ext/phusion_passenger/*/Makefile
-ext/phusion_passenger/*/mkmf.log
+ext/ruby/*/Makefile
+ext/ruby/*/mkmf.log
 ext/*.a
 doc/rdoc
 doc/cxxapi
