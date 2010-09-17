@@ -464,7 +464,7 @@ init_worker_process(ngx_cycle_t *cycle) {
  */
 static void
 exit_master(ngx_cycle_t *cycle) {
-    shutdown_helper_server(cycle);
+    shutdown_helper_server();
 }
 
 
