@@ -185,8 +185,6 @@ protected
 	# Prepare an application process using rules for the given spawn options.
 	# This method is to be called before loading the application code.
 	#
-	# options["app_root"] must be a canonical path.
-	#
 	# +startup_file+ is the application type's startup file, e.g.
 	# "config/environment.rb" for Rails apps and "config.ru" for Rack apps.
 	# See SpawnManager#spawn_application for options.
@@ -194,6 +192,7 @@ protected
 	# This function may modify +options+. The modified options are to be
 	# passed to the request handler.
 	def prepare_app_process(startup_file, options)
+		options["app_root"] = canonicalize_path(options["app_root"])
 		Dir.chdir(options["app_root"])
 		
 		lower_privilege(startup_file, options)
