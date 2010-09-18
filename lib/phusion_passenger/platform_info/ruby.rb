@@ -164,8 +164,15 @@ module PlatformInfo
 				path = File.expand_path(path)
 				return path if File.directory?(path)
 			end
+			# Failure to locate the RVM path is probably caused by the
+			# user customizing $rvm_path. Older RVM versions don't
+			# export $rvm_path, making us unable to detect its value.
+			STDERR.puts "Unable to locate the RVM path. Your RVM installation " +
+				"is probably too old. Please update it with 'rvm update --head'."
+			exit 1
+		else
+			return nil
 		end
-		return nil
 	end
 	memoize :rvm_path
 	
