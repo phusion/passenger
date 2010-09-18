@@ -338,7 +338,7 @@ protected
 		
 		# !!! NOTE !!!
 		# If the app is using Bundler then any dependencies required past this
-		# point must be specified in the Gemfile. Like ruby-debug in debugging is on...
+		# point must be specified in the Gemfile. Like ruby-debug if debugging is on...
 		
 		if options["debugger"]
 			require 'ruby-debug'
