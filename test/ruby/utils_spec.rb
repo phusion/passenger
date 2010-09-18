@@ -680,6 +680,68 @@ describe Utils do
 		end
 	end
 	
+	describe "#check_directory_tree_permissions" do
+		before :each do
+			@root = PhusionPassenger::Utils.passenger_tmpdir
+		end
+		
+		def primary_group_for(username)
+			gid = Etc.getpwnam(username).gid
+			return Etc.getgrgid(gid).name
+		end
+		
+		it "raises an error for the top-most parent directory that has wrong permissions" do
+			FileUtils.mkdir_p("#{@root}/a/b/c/d")
+			
+			when_running_as_root do
+				user = CONFIG['normal_user_1']
+				group = primary_group_for(user)
+				system("chown -R #{user} #{@root}/a")
+				system("chgrp -R #{group} #{@root}/a")
+				
+				output = run_script(%q{
+					require 'phusion_passenger/utils'
+					include PhusionPassenger::Utils
+					@root = ARGV[0]
+					lower_privilege(nil,
+						"user" => ARGV[1],
+						"group" => ARGV[2])
+					
+					File.chmod(0600, "#{@root}/a/b/c/d")
+					File.chmod(0600, "#{@root}/a/b/c")
+					File.chmod(0600, "#{@root}/a")
+					p check_directory_tree_permissions("#{@root}/a/b/c/d")
+					File.chmod(0700, "#{@root}/a")
+					p check_directory_tree_permissions("#{@root}/a/b/c/d")
+					File.chmod(0700, "#{@root}/a/b/c")
+					p check_directory_tree_permissions("#{@root}/a/b/c/d")
+					File.chmod(0700, "#{@root}/a/b/c/d")
+					p check_directory_tree_permissions("#{@root}/a/b/c/d")
+				}, @root, user, group)
+				lines = output.split("\n")
+				lines[0].should == ["#{@root}/a", true].inspect
+				lines[1].should == ["#{@root}/a/b/c", true].inspect
+				lines[2].should == ["#{@root}/a/b/c/d", false].inspect
+				lines[3].should == "nil"
+			end
+			when_not_running_as_root do
+				File.chmod(0000, "#{@root}/a/b/c/d")
+				File.chmod(0600, "#{@root}/a/b/c")
+				File.chmod(0600, "#{@root}/a")
+				check_directory_tree_permissions("#{@root}/a/b/c/d").should ==
+					["#{@root}/a", true]
+				File.chmod(0700, "#{@root}/a")
+				check_directory_tree_permissions("#{@root}/a/b/c/d").should ==
+					["#{@root}/a/b/c", true]
+				File.chmod(0700, "#{@root}/a/b/c")
+				check_directory_tree_permissions("#{@root}/a/b/c/d").should ==
+					["#{@root}/a/b/c/d", false]
+				File.chmod(0700, "#{@root}/a/b/c/d")
+				check_directory_tree_permissions("#{@root}/a/b/c/d").should be_nil
+			end
+		end
+	end
+	
 	######################
 end
 
