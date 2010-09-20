@@ -192,9 +192,31 @@ protected
 	# This function may modify +options+. The modified options are to be
 	# passed to the request handler.
 	def prepare_app_process(startup_file, options)
+		options["app_root"] = canonicalize_path(options["app_root"])
 		Dir.chdir(options["app_root"])
 		
 		lower_privilege(startup_file, options)
+		path, is_parent = check_directory_tree_permissions(options["app_root"])
+		if path
+			username = Etc.getpwuid(Process.euid).name
+			groupname = Etc.getgrgid(Process.egid).name
+			message = "This application process is currently running as " +
+				"user '#{username}' and group '#{groupname}' and must be " +
+				"able to access its application root directory " +
+				"'#{options["app_root"]}'. "
+			if is_parent
+				message << "However the parent directory '#{path}' " +
+					"has wrong permissions, thereby preventing " +
+					"this process from accessing its application " +
+					"root directory. Please fix the permissions " +
+					"of the directory '#{path}' first."
+			else
+				message << "However this directory is not accessible " +
+					"because it has wrong permissions. Please fix " +
+					"these permissions first."
+			end
+			raise(message)
+		end
 		
 		ENV["RAILS_ENV"] = ENV["RACK_ENV"] = options["environment"]
 		
@@ -316,7 +338,7 @@ protected
 		
 		# !!! NOTE !!!
 		# If the app is using Bundler then any dependencies required past this
-		# point must be specified in the Gemfile. Like ruby-debug in debugging is on...
+		# point must be specified in the Gemfile. Like ruby-debug if debugging is on...
 		
 		if options["debugger"]
 			require 'ruby-debug'
@@ -708,6 +730,45 @@ protected
 		NativeSupport.switch_user(user_info.name, user_info.uid, group_info.gid)
 		ENV['USER'] = user_info.name
 		ENV['HOME'] = user_info.dir
+	end
+	
+	# Checks the permissions of all parent directories of +dir+ as
+	# well as +dir+ itself.
+	#
+	# +dir+ must be a canonical path.
+	#
+	# If one of the parent directories has wrong permissions, causing
+	# +dir+ to be inaccessible by the current process, then this function
+	# returns [path, true] where +path+ is the path of the top-most
+	# directory with wrong permissions.
+	# 
+	# If +dir+ itself is not executable by the current process then
+	# this function returns [dir, false].
+	#
+	# Otherwise, nil is returned.
+	def check_directory_tree_permissions(dir)
+		components = dir.split("/")
+		components.shift
+		i = 0
+		# We can't use File.readable() and friends here because they
+		# don't always work right with ACLs. Instead of we use 'real'
+		# checks.
+		while i < components.size
+			path = "/" + components[0..i].join("/")
+			begin
+				File.stat(path)
+			rescue Errno::EACCES
+				return [File.dirname(path), true]
+			end
+			i += 1
+		end
+		begin
+			Dir.chdir(dir) do
+				return nil
+			end
+		rescue Errno::EACCES
+			return [dir, false]
+		end
 	end
 	
 	# Returns a string which reports the backtraces for all threads,

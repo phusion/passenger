@@ -111,7 +111,7 @@ def show_status(server_instance, options = {})
 rescue ServerInstance::RoleDeniedError
 	require 'phusion_passenger/platform_info/ruby'
 	STDERR.puts "*** ERROR: You are not authorized to query the status for this Phusion " <<
-		"Passenger instance. Please try again with '#{PlatformInfo.ruby_sudo_command}'."
+		"Passenger instance. Please try again with '#{PhusionPassenger::PlatformInfo.ruby_sudo_command}'."
 	exit 2
 end
 

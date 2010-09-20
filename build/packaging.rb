@@ -93,7 +93,7 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 	# the files to be installed to /usr, and the Ruby interpreter
 	# on the packaging machine might be in /usr/local.
 	fake_libdir = "#{fakeroot}/usr/lib/ruby/#{CONFIG['ruby_version']}"
-	fake_native_support_dir = "#{fakeroot}#{NATIVELY_PACKAGED_NATIVE_SUPPORT_DIR}"
+	fake_native_support_dir = "#{fakeroot}/usr/lib/ruby/#{CONFIG['ruby_version']}/#{CONFIG['arch']}"
 	fake_agents_dir = "#{fakeroot}#{NATIVELY_PACKAGED_AGENTS_DIR}"
 	fake_helper_scripts_dir = "#{fakeroot}#{NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR}"
 	fake_docdir = "#{fakeroot}#{NATIVELY_PACKAGED_DOCDIR}"
@@ -112,12 +112,9 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 	sh "cp -R #{LIBDIR}/phusion_passenger #{fake_libdir}/"
 	
 	sh "mkdir -p #{fake_native_support_dir}"
-	Dir["#{NATIVE_SUPPORT_DIR}/*"].each do |subdir|
-		next unless File.directory?(subdir)
-		subdirname = File.basename(subdir)
-		sh "mkdir -p #{fake_native_support_dir}/#{subdirname}"
-		sh "cp -R #{subdir}/*.#{LIBEXT} #{fake_native_support_dir}/#{subdirname}/"
-	end
+	native_support_archdir = PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")
+	sh "mkdir -p #{fake_native_support_dir}"
+	sh "cp -R ext/ruby/#{native_support_archdir}/*.#{LIBEXT} #{fake_native_support_dir}/"
 	
 	sh "mkdir -p #{fake_agents_dir}"
 	sh "cp -R #{AGENTS_DIR}/* #{fake_agents_dir}/"
@@ -147,7 +144,7 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 	sh "cp #{APACHE2_MODULE} #{fake_apache2_module_dir}/"
 	
 	sh "mkdir -p #{fake_certificates_dir}"
-	sh "cp #{CERTIFICATES_DIR}/*.crt #{fake_certificates_dir}/"
+	sh "cp misc/*.crt #{fake_certificates_dir}/"
 	
 	sh "mkdir -p #{fake_source_root}"
 	spec.files.each do |filename|

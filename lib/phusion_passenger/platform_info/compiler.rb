@@ -26,10 +26,57 @@ require 'phusion_passenger/platform_info'
 module PhusionPassenger
 
 module PlatformInfo
+	def self.cc
+		return ENV['CC'] || "gcc"
+	end
+	
+	def self.cxx
+		return ENV['CXX'] || "g++"
+	end
+	
+	def self.gnu_make
+		gmake = find_command('gmake')
+		if !gmake
+			gmake = find_command('make')
+			if gmake
+				if `#{gmake} --version 2>&1` =~ /GNU/
+					return gmake
+				else
+					return nil
+				end
+			else
+				return nil
+			end
+		else
+			return gmake
+		end
+	end
+	memoize :gnu_make, true
+	
 	def self.compiler_supports_visibility_flag?
 		return try_compile(:c, '', '-fvisibility=hidden')
 	end
 	memoize :compiler_supports_visibility_flag?, true
+	
+	def self.compiler_supports_wno_attributes_flag?
+		return try_compile(:c, '', '-Wno-attributes')
+	end
+	memoize :compiler_supports_wno_attributes_flag?, true
+	
+	# Returns whether compiling C++ with -fvisibility=hidden might result
+	# in tons of useless warnings, like this:
+	# http://code.google.com/p/phusion-passenger/issues/detail?id=526
+	# This appears to be a bug in older g++ versions:
+	# http://gcc.gnu.org/ml/gcc-patches/2006-07/msg00861.html
+	# Warnings should be suppressed with -Wno-attributes.
+	def self.compiler_visibility_flag_generates_warnings?
+		if RUBY_PLATFORM =~ /linux/ && `#{cxx} -v 2>&1` =~ /gcc version (.*?)/
+			return $1 <= "4.1.2"
+		else
+			return false
+		end
+	end
+	memoize :compiler_visibility_flag_generates_warnings?, true
 	
 	# Compiler flags that should be used for compiling every C/C++ program,
 	# for portability reasons. These flags should be specified as last
@@ -131,9 +178,9 @@ module PlatformInfo
 private
 	def self.try_compile(language, source, flags = nil)
 		if language == :c
-			compiler = 'gcc'
+			compiler = cc
 		elsif language == :cxx
-			compiler = 'g++'
+			compiler = cxx
 		else
 			raise ArgumentError,"Unsupported language '#{language}'"
 		end

@@ -1523,7 +1523,7 @@ displaying maintenance.html will work fine even for URLs starting with "/users".
 
 === Logging and debugging options ===
 
-=== PassengerLogLevel <integer> ===
+==== PassengerLogLevel <integer> ====
 This option allows one to specify how much information Phusion Passenger should
 write to the Apache error log file. A higher log level value means that more
 information will be logged.
@@ -1540,7 +1540,7 @@ Possible values are:
 This option may only occur once, in the global server configuration.
 The default is '0'.
 
-=== PassengerDebugLogFile <filename> ===
+==== PassengerDebugLogFile <filename> ====
 By default Phusion Passenger debugging and error messages are written to the global
 web server error log. This option allows one to specify the file that debugging and
 error messages should be written to instead.

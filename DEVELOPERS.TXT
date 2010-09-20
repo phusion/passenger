@@ -70,8 +70,8 @@ Less important directories:
   Man pages.
 [ misc ]
   Miscellaneous tools.
-[ misc/rake ]
-  Rake tasks.
+[ build ]
+  Rake tasks used by the build system.
 
 == Tests
 

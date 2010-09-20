@@ -226,7 +226,7 @@ private
 		if PlatformInfo.find_command("wget")
 			return sh("wget", "-O", output, url)
 		else
-			return sh("curl", url, "-L", "-o", output)
+			return sh("curl", url, "-f", "-L", "-o", output)
 		end
 	end
 end
