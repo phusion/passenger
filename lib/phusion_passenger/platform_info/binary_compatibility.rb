@@ -34,7 +34,9 @@ module PlatformInfo
 	# be running on a different architectural mode than the default one.
 	def self.cpu_architecture
 		result = `uname -p`.strip
-		if result == "unknown"
+		# On some systems 'uname -p' returns something like
+		# 'Intel(R) Pentium(R) M processor 1400MHz'.
+		if result == "unknown" || result =~ / /
 			result = `uname -m`.strip
 		end
 		return result

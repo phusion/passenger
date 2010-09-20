@@ -66,6 +66,7 @@
  * http://groups.google.com/group/phusion-passenger/browse_thread/thread/7e162f60df212e9c
  */
 #include <ap_config.h>
+#include <ap_release.h>
 #include <httpd.h>
 #include <http_config.h>
 #include <http_core.h>
@@ -91,6 +92,17 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
  * File uploads smaller than this are buffered into memory instead.
  */
 #define LARGE_UPLOAD_THRESHOLD 1024 * 8
+
+
+#if HTTP_VERSION(AP_SERVER_MAJORVERSION_NUMBER, AP_SERVER_MINORVERSION_NUMBER) > 2002
+	// Apache > 2.2.x
+	#define AP_GET_SERVER_VERSION_DEPRECATED
+#elif HTTP_VERSION(AP_SERVER_MAJORVERSION_NUMBER, AP_SERVER_MINORVERSION_NUMBER) == 2002
+	// Apache == 2.2.x
+	#if AP_SERVER_PATCHLEVEL_NUMBER >= 14
+		#define AP_GET_SERVER_VERSION_DEPRECATED
+	#endif
+#endif
 
 
 /**
@@ -187,7 +199,11 @@ private:
 				
 				// Some standard CGI headers.
 				result->push_back("SERVER_SOFTWARE");
-				result->push_back(ap_get_server_version());
+				#ifdef AP_GET_SERVER_VERSION_DEPRECATED
+					result->push_back(ap_get_server_banner());
+				#else
+					result->push_back(ap_get_server_version());
+				#endif
 				
 				// Subprocess environment variables.
 				env_arr = apr_table_elts(r->subprocess_env);
@@ -1334,7 +1350,13 @@ public:
 		server_rec *server;
 		string configFiles;
 		
-		createFile(generationPath + "/web_server.txt", ap_get_server_description());
+		#ifdef AP_GET_SERVER_VERSION_DEPRECATED
+			createFile(generationPath + "/web_server.txt",
+				ap_get_server_description());
+		#else
+			createFile(generationPath + "/web_server.txt",
+				ap_get_server_version());
+		#endif
 		
 		for (server = s; server != NULL; server = server->next) {
 			if (server->defn_name != NULL) {

@@ -255,6 +255,8 @@ module TestHelper
 		end
 	end
 	
+	alias when_running_as_root when_user_switching_possible
+	
 	def when_not_running_as_root
 		if Process.euid != 0
 			yield

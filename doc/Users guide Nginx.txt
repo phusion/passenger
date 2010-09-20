@@ -1218,7 +1218,8 @@ Yes. And it does not perform any certificate validation.
 
 
 === Logging and debugging options ===
-=== passenger_log_level <integer> ===
+
+==== passenger_log_level <integer> ====
 This option allows one to specify how much information Phusion Passenger should
 write to the Nginx error log file. A higher log level value means that more
 information will be logged.
@@ -1235,7 +1236,7 @@ Possible values are:
 This option may only occur once, in the 'http' configuration block.
 The default is '0'.
 
-=== passenger_debug_log_file <filename> ===
+==== passenger_debug_log_file <filename> ====
 By default Phusion Passenger debugging and error messages are written to the global
 web server error log. This option allows one to specify the file that debugging and
 error messages should be written to instead.

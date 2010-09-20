@@ -15,16 +15,16 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 native_support_archdir = PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")
-output_dir  = "ext/phusion_passenger/#{native_support_archdir}"
-output_name = "native_support.#{LIBEXT}"
-source_dir  = "ext/phusion_passenger"
+output_dir  = "ext/ruby/#{native_support_archdir}"
+output_name = "passenger_native_support.#{LIBEXT}"
+source_dir  = "ext/ruby"
 
 task :native_support => "#{output_dir}/#{output_name}"
 task :clean => 'native_support:clean'
 
 dependencies = [
 	"#{output_dir}/Makefile",
-	"#{source_dir}/native_support.c"
+	"#{source_dir}/passenger_native_support.c"
 ]
 file("#{output_dir}/#{output_name}" => dependencies) do
 	sh "mkdir -p '#{output_dir}'" if !File.exist?(output_dir)
@@ -38,7 +38,7 @@ file "#{output_dir}/Makefile" => "#{source_dir}/extconf.rb" do
 end
 
 task 'native_support:clean' do
-	Dir["ext/phusion_passenger/*"].each do |entry|
+	Dir["ext/ruby/*"].each do |entry|
 		if File.exist?("#{entry}/Makefile")
 			sh "rm -rf #{entry}"
 		end

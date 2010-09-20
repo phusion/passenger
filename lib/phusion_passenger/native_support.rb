@@ -22,87 +22,145 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
-	require 'phusion_passenger'
-	require 'phusion_passenger/platform_info/operating_system'
-	require 'phusion_passenger/platform_info/binary_compatibility'
+
+class NativeSupportLoader
+	def supported?
+		return !defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby" || RUBY_ENGINE == "rbx"
+	end
 	
-	libext  = PlatformInfo.library_extension
-	archdir = PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")
-	loaded  = false
-	begin
-		require "#{NATIVE_SUPPORT_DIR}/#{archdir}/native_support.#{libext}"
-		loaded = true
-	rescue LoadError
-		require 'etc'
-		
-		home = Etc.getpwuid(Process.uid).dir
-		begin
-			require "#{home}/#{LOCAL_DIR}/native_support/#{VERSION_STRING}/#{archdir}/native_support.#{libext}"
-			loaded = true
-		rescue LoadError
+	def start
+		require 'phusion_passenger'
+		load_from_source_dir ||
+		load_from_load_path ||
+		load_from_home ||
+		compile_and_load
+	end
+
+private
+	def archdir
+		@archdir ||= begin
+			require 'phusion_passenger/platform_info/binary_compatibility'
+			PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")
 		end
 	end
 	
-	if !loaded
-		STDERR.puts "*** Phusion Passenger: no native_support.#{libext} found for " +
+	def libext
+		@libext ||= begin
+			require 'phusion_passenger/platform_info/operating_system'
+			PlatformInfo.library_extension
+		end
+	end
+	
+	def home
+		@home ||= begin
+			require 'etc' if !defined?(Etc)
+			home = Etc.getpwuid(Process.uid).dir
+		end
+	end
+	
+	def library_name
+		return "passenger_native_support.#{libext}"
+	end
+	
+	def extconf_rb
+		File.join(SOURCE_ROOT, "ext", "ruby", "extconf.rb")
+	end
+	
+	def load_from_source_dir
+		if defined?(NATIVE_SUPPORT_DIR)
+			begin
+				require "#{NATIVE_SUPPORT_DIR}/#{archdir}/#{library_name}"
+				return true
+			rescue LoadError
+				return false
+			end
+		else
+			return false
+		end
+	end
+	
+	def load_from_load_path
+		require 'passenger_native_support'
+		return true
+	rescue LoadError
+		return false
+	end
+	
+	def load_from_home
+		begin
+			require "#{home}/#{LOCAL_DIR}/native_support/#{VERSION_STRING}/#{archdir}/#{library_name}"
+			return true
+		rescue LoadError
+			return false
+		end
+	end
+	
+	def compile_and_load
+		STDERR.puts "*** Phusion Passenger: no #{library_name} found for " +
 			"the current Ruby interpreter. Compiling one..."
 		
 		require 'fileutils'
 		require 'phusion_passenger/platform_info/ruby'
 		
-		mkdir = proc do |dir|
+		target_dirs = []
+		if defined?(NATIVE_SUPPORT_DIR)
+			target_dirs << "#{NATIVE_SUPPORT_DIR}/#{archdir}"
+		end
+		target_dirs << "#{home}/#{LOCAL_DIR}/native_support/#{VERSION_STRING}/#{archdir}"
+		
+		target_dir = compile(target_dirs)
+		require "#{target_dir}/#{library_name}"
+	end
+	
+	def mkdir(dir)
+		begin
+			STDERR.puts "# mkdir -p #{dir}"
+			FileUtils.mkdir_p(dir)
+		rescue Errno::EEXIST
+		end
+	end
+	
+	def sh(*args)
+		command_string = args.join(' ')
+		STDERR.puts "# #{command_string}"
+		if !system(*args)
+			raise "Could not compile #{library_name} ('#{command_string}' failed)"
+		end
+	end
+	
+	def compile(target_dirs)
+		result = nil
+		target_dirs.each_with_index do |target_dir, i|
 			begin
-				STDERR.puts "# mkdir -p #{dir}"
-				FileUtils.mkdir_p(dir)
-			rescue Errno::EEXIST
-			end
-		end
-		
-		sh = proc do |*args|
-			command_string = args.join(' ')
-			STDERR.puts "# #{command_string}"
-			if !system(*args)
-				raise "Could not compile native_support.#{libext} ('#{command_string}' failed)"
-			end
-		end
-		
-		compile = proc do |target_dirs|
-			result = nil
-			target_dirs.each_with_index do |target_dir, i|
-				begin
-					mkdir.call(target_dir)
-					File.open("#{target_dir}/.permission_test", "w").close
-					File.unlink("#{target_dir}/.permission_test")
-					STDERR.puts "# cd #{target_dir}"
-					Dir.chdir(target_dir) do
-						extconf_rb = File.join(SOURCE_ROOT, "ext",
-							"phusion_passenger", "extconf.rb")
-						sh.call(PlatformInfo.ruby_command, extconf_rb)
-						sh.call("make")
-					end
-					result = target_dir
-					break
-				rescue Errno::EACCES
-					# If we encountered a permission error, then try
-					# the next target directory. If we get a permission
-					# error on the last one too then propagate the
-					# exception.
-					if i == target_dirs.size - 1
-						raise
-					else
-						STDERR.puts "Encountered permission error, " +
-							"trying a different directory..."
-						STDERR.puts "-------------------------------"
-					end
+				mkdir(target_dir)
+				File.open("#{target_dir}/.permission_test", "w").close
+				File.unlink("#{target_dir}/.permission_test")
+				STDERR.puts "# cd #{target_dir}"
+				Dir.chdir(target_dir) do
+					sh("#{PlatformInfo.ruby_command} '#{extconf_rb}'")
+					sh("make")
+				end
+				result = target_dir
+				break
+			rescue Errno::EACCES
+				# If we encountered a permission error, then try
+				# the next target directory. If we get a permission
+				# error on the last one too then propagate the
+				# exception.
+				if i == target_dirs.size - 1
+					raise
+				else
+					STDERR.puts "Encountered permission error, " +
+						"trying a different directory..."
+					STDERR.puts "-------------------------------"
 				end
 			end
-			result
 		end
-		
-		target_dir = compile.call([
-			"#{NATIVE_SUPPORT_DIR}/#{archdir}",
-			"#{home}/#{LOCAL_DIR}/native_support/#{VERSION_STRING}/#{archdir}"
-		])
-		require "#{target_dir}/native_support.#{libext}"
+		return result
 	end
-end if !defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby" || RUBY_ENGINE == "rbx"
+end
+
+end
+
+loader = PhusionPassenger::NativeSupportLoader.new
+loader.start if loader.supported?

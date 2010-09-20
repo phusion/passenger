@@ -76,7 +76,7 @@ public:
 	 */
 	MemZeroGuard(string &str) {
 		this->data = NULL;
-		this->size = NULL;
+		this->size = 0;
 		this->str  = &str;
 	}
 	
