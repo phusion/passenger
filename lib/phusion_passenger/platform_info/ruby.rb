@@ -67,7 +67,8 @@ module PlatformInfo
 					return filename
 				else
 					STDERR.puts "Your RVM wrapper scripts are too old. Please " +
-						"update them first by running 'rvm update --head'."
+						"update them first by running 'rvm update --head && " +
+						"rvm reload && rvm repair all'."
 					exit 1
 				end
 			else
@@ -168,7 +169,8 @@ module PlatformInfo
 			# user customizing $rvm_path. Older RVM versions don't
 			# export $rvm_path, making us unable to detect its value.
 			STDERR.puts "Unable to locate the RVM path. Your RVM installation " +
-				"is probably too old. Please update it with 'rvm update --head'."
+				"is probably too old. Please update it with " +
+				"'rvm update --head && rvm reload && rvm repair all'."
 			exit 1
 		else
 			return nil
