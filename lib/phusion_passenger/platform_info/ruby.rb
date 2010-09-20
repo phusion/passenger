@@ -152,7 +152,8 @@ module PlatformInfo
 	
 	# Returns whether the current Ruby interpreter is managed by RVM.
 	def self.in_rvm?
-		return Config::CONFIG['bindir'].include?('/.rvm/')
+		bindir = Config::CONFIG['bindir']
+		return bindir.include?('/.rvm/') || bindir.include?('/rvm/')
 	end
 	
 	# If the current Ruby interpreter is managed by RVM, returns the
