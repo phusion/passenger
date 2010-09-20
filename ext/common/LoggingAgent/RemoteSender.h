@@ -285,6 +285,7 @@ private:
 				someServersAreDown = true;
 			}
 		}
+		P_DEBUG(servers.size() << " Union Station gateway servers are up");
 		
 		if (servers.empty()) {
 			scheduleNextCheckup(5 * 60);
@@ -308,6 +309,7 @@ private:
 		time_t now = SystemTime::get();
 		if (now > nextCheckupTime || (time_t) (now + seconds) < nextCheckupTime) {
 			nextCheckupTime = now + seconds;
+			P_DEBUG("Next checkup time in about " << seconds << " seconds");
 		}
 	}
 	
