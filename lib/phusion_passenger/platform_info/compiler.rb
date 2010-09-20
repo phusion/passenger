@@ -39,6 +39,11 @@ module PlatformInfo
 	end
 	memoize :compiler_supports_visibility_flag?, true
 	
+	def self.compiler_supports_wno_attributes_flag?
+		return try_compile(:c, '', '-Wno-attributes')
+	end
+	memoize :compiler_supports_wno_attributes_flag?, true
+	
 	# Returns whether compiling C++ with -fvisibility=hidden might result
 	# in tons of useless warnings, like this:
 	# http://code.google.com/p/phusion-passenger/issues/detail?id=526
@@ -46,7 +51,7 @@ module PlatformInfo
 	# http://gcc.gnu.org/ml/gcc-patches/2006-07/msg00861.html
 	# Warnings should be suppressed with -Wno-attributes.
 	def self.compiler_visibility_flag_generates_warnings?
-		if `#{cxx} -v 2>&1` =~ /gcc version (.*?)/
+		if RUBY_PLATFORM =~ /linux/ && `#{cxx} -v 2>&1` =~ /gcc version (.*?)/
 			return $1 <= "4.1.2"
 		else
 			return false
