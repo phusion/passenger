@@ -34,6 +34,25 @@ module PlatformInfo
 		return ENV['CXX'] || "g++"
 	end
 	
+	def self.gnu_make
+		gmake = find_command('gmake')
+		if !gmake
+			gmake = find_command('make')
+			if gmake
+				if `#{gmake} --version 2>&1` =~ /GNU/
+					return gmake
+				else
+					return nil
+				end
+			else
+				return nil
+			end
+		else
+			return gmake
+		end
+	end
+	memoize :gnu_make, true
+	
 	def self.compiler_supports_visibility_flag?
 		return try_compile(:c, '', '-fvisibility=hidden')
 	end

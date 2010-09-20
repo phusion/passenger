@@ -76,7 +76,7 @@ protected
 	def dependencies
 		result = [
 			Dependencies::GCC,
-			Dependencies::Make,
+			Dependencies::GnuMake,
 			Dependencies::DownloadTool,
 			Dependencies::Ruby_DevHeaders,
 			Dependencies::Ruby_OpenSSL,
@@ -427,6 +427,7 @@ private
 	end
 	
 	def install_nginx_from_source(source_dir)
+		require 'phusion_passenger/platform_info/compiler'
 		Dir.chdir(source_dir) do
 			command = "sh ./configure '--prefix=#{@nginx_dir}' --without-pcre " <<
 				"--without-http_rewrite_module " <<
@@ -437,8 +438,8 @@ private
 			end
 			
 			backlog = ""
-			total_lines = `make --dry-run`.split("\n").size
-			IO.popen("make 2>&1", "r") do |io|
+			total_lines = `#{PlatformInfo.gnu_make} --dry-run`.split("\n").size
+			IO.popen("#{PlatformInfo.gnu_make} 2>&1", "r") do |io|
 				progress = 1
 				while !io.eof?
 					line = io.readline
@@ -454,7 +455,7 @@ private
 				exit 1
 			end
 			
-			command = "make install"
+			command = "#{PlatformInfo.gnu_make} install"
 			run_command_with_throbber(command, "Copying files...") do |status_text|
 				yield(1, 1, status_text)
 			end
