@@ -20,10 +20,10 @@ passengermodule = usr/lib/apache2/modules/mod_passenger.so
 clean::
 	rake clean
 	rake clobber
+	rm -rf $(CURDIR)/build/cache
 
 build/passenger-common build/libapache2-mod-passenger build/passenger-doc::
-	cd $(builddir) && patch -p1 $(CURDIR)/debian/patches/9c90235.patch
-	USE_VENDORED_LIBEV=no LIBEV_LIBS="-lev" rake fakeroot
+	APXS2=/usr/bin/apxs2 USE_VENDORED_LIBEV=no LIBEV_LIBS="-lev" rake fakeroot
 	rm -rf $(DEB_DESTDIR)
 	mv $(builddir) $(DEB_DESTDIR)
 
