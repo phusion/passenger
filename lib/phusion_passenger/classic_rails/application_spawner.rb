@@ -257,11 +257,7 @@ private
 	end
 	
 	def rails_will_preload_app_code?
-		if defined?(Rails::Initializer)
-			return ::Rails::Initializer.method_defined?(:load_application_classes)
-		else
-			return Rails::VERSION::MAJOR >= 3
-		end
+		return Rails::VERSION::MAJOR >= 3 || (defined?(Rails::Initializer) && ::Rails::Initializer.method_defined?(:load_application_classes))
 	end
 
 	def handle_spawn_application(client, *options)
