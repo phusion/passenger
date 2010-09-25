@@ -108,7 +108,7 @@ module PlatformInfo
 	
 	# Returns the correct 'gem' command for this Ruby interpreter.
 	def self.gem_command
-		return locate_ruby_executable('gem')
+		return locate_ruby_tool('gem')
 	end
 	memoize :gem_command
 	
@@ -119,7 +119,7 @@ module PlatformInfo
 	# The return value may not be the actual correct invocation
 	# for Rake. Use rake_command for that.
 	def self.rake
-		return locate_ruby_executable('rake')
+		return locate_ruby_tool('rake')
 	end
 	memoize :rake
 	
@@ -146,7 +146,7 @@ module PlatformInfo
 	# belongs to the current Ruby interpreter. Returns nil if it
 	# doesn't exist.
 	def self.rspec
-		return locate_ruby_executable('spec')
+		return locate_ruby_tool('spec')
 	end
 	memoize :rspec
 	
@@ -237,12 +237,19 @@ module PlatformInfo
 		end
 	end
 	
-	# Locate a Ruby tool command, e.g. 'gem', 'rake', 'bundle', etc. Instead of
+	# Locates a Ruby tool command, e.g. 'gem', 'rake', 'bundle', etc. Instead of
 	# naively looking in $PATH, this function uses a variety of search heuristics
 	# to find the command that's really associated with the current Ruby interpreter.
 	# It should never locate a command that's actually associated with a different
 	# Ruby interpreter.
-	def self.locate_ruby_executable(name)
+	# Returns nil when nothing's found.
+	def self.locate_ruby_tool(name)
+		return locate_ruby_tool_by_basename(name) ||
+			locate_ruby_tool_by_basename("#{name}#{Config::CONFIG['EXEEXT']}")
+	end
+
+private
+	def self.locate_ruby_tool_by_basename(name)
 		if RUBY_PLATFORM =~ /darwin/ &&
 		   ruby_command =~ %r(\A/System/Library/Frameworks/Ruby.framework/Versions/.*?/usr/bin/ruby\Z)
 			# On OS X we must look for Ruby binaries in /usr/bin.
@@ -288,8 +295,8 @@ module PlatformInfo
 
 		filename
 	end
-
-private
+	private_class_method :locate_ruby_tool_by_basename
+	
 	def self.is_ruby_program?(filename)
 		File.open(filename, 'rb') do |f|
 			return f.readline =~ /ruby/
