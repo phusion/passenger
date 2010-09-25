@@ -375,7 +375,7 @@ private
 		pid = fork
 		if pid
 			# Parent
-			exit!
+			exit!(0)
 		else
 			# Child
 			trap "HUP", "IGNORE"
