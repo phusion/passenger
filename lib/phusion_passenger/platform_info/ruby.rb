@@ -97,7 +97,7 @@ module PlatformInfo
 	end
 	
 	# Returns whether the Ruby interpreter supports process forking.
-	def self.fork_supported?
+	def self.ruby_supports_fork?
 		# MRI >= 1.9.2's respond_to? returns false for methods
 		# that are not implemented.
 		return Process.respond_to?(:fork) &&
