@@ -244,8 +244,21 @@ module PlatformInfo
 	# Ruby interpreter.
 	# Returns nil when nothing's found.
 	def self.locate_ruby_tool(name)
-		return locate_ruby_tool_by_basename(name) ||
-			locate_ruby_tool_by_basename("#{name}#{Config::CONFIG['EXEEXT']}")
+		result = locate_ruby_tool_by_basename(name)
+		if !result
+			exeext = Config::CONFIG['EXEEXT']
+			exeext = nil if exeext.empty?
+			if exeext
+				result = locate_ruby_tool_by_basename("#{name}#{exeext}")
+			end
+			if !result
+				result = locate_ruby_tool_by_basename(transform_according_to_ruby_exec_format(name))
+			end
+			if !result && exeext
+				result = locate_ruby_tool_by_basename(transform_according_to_ruby_exec_format(name) + exeext)
+			end
+		end
+		return result
 	end
 
 private
@@ -305,6 +318,21 @@ private
 		return false
 	end
 	private_class_method :is_ruby_program?
+	
+	# Deduce Ruby's --program-prefix and --program-suffix from its install name
+	# and transforms the given input name accordingly.
+	#
+	#   transform_according_to_ruby_exec_format("rake")    => "jrake", "rake1.8", etc
+	def self.transform_according_to_ruby_exec_format(name)
+		install_name = Config::CONFIG['RUBY_INSTALL_NAME']
+		if install_name.include?('ruby')
+			format = install_name.sub('ruby', '%s')
+			return sprintf(format, name)
+		else
+			return name
+		end
+	end
+	private_class_method :transform_according_to_ruby_exec_format
 end
 
 end # module PhusionPassenger
