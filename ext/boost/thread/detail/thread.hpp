@@ -118,8 +118,6 @@ namespace boost
 
         detail::thread_data_ptr thread_info;
 
-        void start_thread(unsigned int stack_size = 0);
-
         explicit thread(detail::thread_data_ptr data);
 
         detail::thread_data_ptr get_thread_info BOOST_PREVENT_MACRO_SUBSTITUTION () const;
@@ -148,12 +146,22 @@ namespace boost
 
 #endif
         struct dummy;
+        
+    protected:
+        template <class F>
+        void set_thread_main_function(F f)
+        {
+            thread_info = make_thread_info(f);
+        }
+        
+        void start_thread(unsigned int stack_size = 0);
+        
     public:
 #if BOOST_WORKAROUND(__SUNPRO_CC, < 0x5100)
         thread(const volatile thread&);
 #endif
         thread();
-        ~thread();
+        virtual ~thread();
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
 #ifdef BOOST_MSVC
