@@ -504,6 +504,36 @@ connectToTcpServer(const StaticString &hostname, unsigned int port) {
 	return fd;
 }
 
+SocketPair
+createUnixSocketpair() {
+	int fds[2];
+	FileDescriptor sockets[2];
+	
+	if (syscalls::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1) {
+		int e = errno;
+		throw SystemException("Cannot create a Unix socket pair", e);
+	} else {
+		sockets[0] = fds[0];
+		sockets[1] = fds[1];
+		return make_pair(sockets[0], sockets[1]);
+	}
+}
+
+Pipe
+createPipe() {
+	int fds[2];
+	FileDescriptor p[2];
+	
+	if (syscalls::pipe(fds) == -1) {
+		int e = errno;
+		throw SystemException("Cannot create a pipe", e);
+	} else {
+		p[0] = fds[0];
+		p[1] = fds[1];
+		return make_pair(p[0], p[1]);
+	}
+}
+
 /**
  * Converts an array of StaticStrings to a corresponding array of iovec structures,
  * returning the size sum in bytes of all StaticStrings.
@@ -747,6 +777,23 @@ setWritevFunction(WritevFunction func) {
 		writevFunction = func;
 	} else {
 		writevFunction = syscalls::writev;
+	}
+}
+
+void
+safelyClose(int fd) {
+	if (syscalls::close(fd) == -1) {
+		/* FreeBSD has a kernel bug which can cause close() to return ENOTCONN.
+		 * This is harmless, ignore it. We check for this problem on all
+		 * platforms because some OSes might borrow Unix domain socket
+		 * code from FreeBSD.
+		 * http://www.freebsd.org/cgi/query-pr.cgi?pr=79138
+		 * http://www.freebsd.org/cgi/query-pr.cgi?pr=144061
+		 */
+		if (errno != ENOTCONN) {
+			int e = errno;
+			throw SystemException("Cannot close file descriptor", e);
+		}
 	}
 }
 

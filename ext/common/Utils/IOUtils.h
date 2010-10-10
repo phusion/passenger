@@ -30,7 +30,8 @@
 #include <unistd.h>
 #include <string>
 #include <vector>
-#include "../StaticString.h"
+#include <StaticString.h>
+#include <FileDescriptor.h>
 
 namespace Passenger {
 
@@ -194,6 +195,22 @@ int connectToUnixServer(const StaticString &filename);
 int connectToTcpServer(const StaticString &hostname, unsigned int port);
 
 /**
+ * Creates a Unix domain socket pair.
+ *
+ * @throws SystemException
+ * @throws boost::thread_interrupted
+ */
+SocketPair createUnixSocketpair();
+
+/**
+ * Creates a pipe.
+ *
+ * @throws SystemException
+ * @throws boost::thread_interrupted
+ */
+Pipe createPipe();
+
+/**
  * Writes a bunch of data to the given file descriptor using a gathering I/O interface.
  * Instead of accepting a single buffer, this function accepts multiple buffers plus
  * a special 'rest' buffer. The rest buffer is written out first, and the data buffers
@@ -247,6 +264,15 @@ void    gatheredWrite(int fd, const StaticString data[], unsigned int dataCount)
  * Useful for unit tests. Pass NULL to restore back to the real writev().
  */
 void setWritevFunction(WritevFunction func);
+
+/**
+ * Closes the given file descriptor and throws an exception if anything goes wrong.
+ * This function also works around certain close() bugs on certain operating systems.
+ *
+ * @throws SystemException
+ * @throws boost::thread_interrupted
+ */
+void safelyClose(int fd);
 
 } // namespace Passenger
 

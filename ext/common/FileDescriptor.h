@@ -26,18 +26,24 @@
 #define _PASSENGER_FILE_DESCRIPTOR_H_
 
 #include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
 #include <oxt/system_calls.hpp>
 
+#include <utility>
 #include <unistd.h>
 #include <cerrno>
 
-#include "MessageChannel.h"
-#include "Exceptions.h"
+#include <MessageChannel.h>
+#include <Exceptions.h>
 
 namespace Passenger {
 
+using namespace std;
 using namespace boost;
 using namespace oxt;
+
+
+void safelyClose(int fd);
 
 
 /**
@@ -76,11 +82,12 @@ private:
 				this_thread::disable_syscall_interruption dsi;
 				int theFd = fd;
 				fd = -1;
-				if (syscalls::close(theFd) == -1 && errno != ENOTCONN) {
-					int e = errno;
-					throw SystemException("Cannot close file descriptor", e);
-				}
+				safelyClose(theFd);
 			}
+		}
+		
+		void detach() {
+			fd = -1;
 		}
 	};
 
@@ -112,7 +119,7 @@ public:
 			 *    }
 			 */
 			int e = errno;
-			data.reset(new SharedData(fd));
+			data = make_shared<SharedData>(fd);
 			errno = e;
 		}
 	}
@@ -130,6 +137,25 @@ public:
 		if (data != NULL) {
 			data->close();
 			data.reset();
+		}
+	}
+	
+	/**
+	 * Detach from the underlying file descriptor without closing it.
+	 * This FileDescriptor and all copies will no longer affect the
+	 * underlying file descriptors.
+	 *
+	 * @return The underlying file descriptor, or -1 if already closed.
+	 * @post *this == -1
+	 */
+	int detach() {
+		if (data != NULL) {
+			int fd = data->fd;
+			data->detach();
+			data.reset();
+			return fd;
+		} else {
+			return -1;
 		}
 	}
 	
@@ -159,7 +185,7 @@ public:
 		 */
 		int e = errno;
 		if (fd >= 0) {
-			data.reset(new SharedData(fd));
+			data = make_shared<SharedData>(fd);
 		} else {
 			data.reset();
 		}
@@ -184,6 +210,9 @@ public:
 		return *this;
 	}
 };
+
+typedef pair<FileDescriptor, FileDescriptor> Pipe;
+typedef pair<FileDescriptor, FileDescriptor> SocketPair;
 
 /**
  * A synchronization mechanism that's implemented with file descriptors,

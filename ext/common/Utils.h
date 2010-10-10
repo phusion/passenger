@@ -356,6 +356,13 @@ string getHostName();
  */
 string getSignalName(int sig);
 
+/**
+ * Close all file descriptors that are higher than <em>lastToKeepOpen</em>.
+ * This function is async-signal safe. But make sure there are no other
+ * threads running that might open file descriptors!
+ */
+void closeAllFileDescriptors(int lastToKeepOpen);
+
 
 /**
  * Represents a buffered upload file.
