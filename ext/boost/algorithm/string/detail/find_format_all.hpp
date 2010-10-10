@@ -57,9 +57,9 @@ namespace boost {
                 while( M )
                 {
                     // Copy the beginning of the sequence
-                    std::copy( LastMatch, M.begin(), Output );
+                    Output = std::copy( LastMatch, M.begin(), Output );
                     // Copy formated result
-                    std::copy( ::boost::begin(M.format_result()), ::boost::end(M.format_result()), Output );
+                    Output = std::copy( ::boost::begin(M.format_result()), ::boost::end(M.format_result()), Output );
 
                     // Proceed to the next match
                     LastMatch=M.end();
@@ -67,7 +67,7 @@ namespace boost {
                 }
 
                 // Copy the rest of the sequence
-                std::copy( LastMatch, ::boost::end(Input), Output );
+                Output = std::copy( LastMatch, ::boost::end(Input), Output );
 
                 return Output;
             }
@@ -85,6 +85,7 @@ namespace boost {
                 FormatterT Formatter,
                 const FindResultT& FindResult )
             {       
+                if( ::boost::algorithm::detail::check_find_result(Input, FindResult) ) {
                 return ::boost::algorithm::detail::find_format_all_copy_impl2( 
                     Output,
                     Input,
@@ -92,6 +93,9 @@ namespace boost {
                     Formatter,
                     FindResult,
                     Formatter(FindResult) );
+                } else {
+                    return std::copy( ::boost::begin(Input), ::boost::end(Input), Output );
+            }
             }
 
  // find_format_all_copy implementation ----------------------------------------------//
@@ -156,12 +160,16 @@ namespace boost {
                 FormatterT Formatter,
                 const FindResultT& FindResult)
             {
+                if( ::boost::algorithm::detail::check_find_result(Input, FindResult) ) {
                 return ::boost::algorithm::detail::find_format_all_copy_impl2(
                     Input,
                     Finder,
                     Formatter,
                     FindResult,
                     Formatter(FindResult) );
+                } else {
+                    return Input;
+            }
             }
 
  // find_format_all implementation ------------------------------------------------//
@@ -248,12 +256,14 @@ namespace boost {
                 FormatterT Formatter,
                 FindResultT FindResult)
             {
+                if( ::boost::algorithm::detail::check_find_result(Input, FindResult) ) {
                 ::boost::algorithm::detail::find_format_all_impl2(
                     Input,
                     Finder,
                     Formatter,
                     FindResult,
                     Formatter(FindResult) );
+            }
             }
 
         } // namespace detail

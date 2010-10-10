@@ -7,7 +7,7 @@
  * Boost Software License, Version 1.0. (See accompanying
  * file LICENSE_1_0.txt or http://www.boost.org/LICENSE_1_0.txt)
  * Author:  Martin Andrian, Jeff Garland, Bart Garst
- * $Date: 2010-01-10 14:17:23 -0500 (Sun, 10 Jan 2010) $
+ * $Date: 2010-06-09 12:39:31 -0400 (Wed, 09 Jun 2010) $
  */
 
 #include <cctype>
@@ -21,6 +21,7 @@
 #include <boost/assert.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/throw_exception.hpp>
+#include <boost/range/as_literal.hpp>
 #include <boost/algorithm/string/erase.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/date_time/compiler_config.hpp>
@@ -42,6 +43,10 @@ namespace date_time {
       static const char_type seconds_format[3];                          // S
       static const char_type hours_format[3];                            // H
       static const char_type unrestricted_hours_format[3];               // O
+      static const char_type full_24_hour_time_format[3];                // T
+      static const char_type full_24_hour_time_expanded_format[9];       // HH:MM:SS
+      static const char_type short_24_hour_time_format[3];               // R
+      static const char_type short_24_hour_time_expanded_format[6];      // HH:MM
       static const char_type standard_format[9];                         // x X
       static const char_type zone_abbrev_format[3];                      // z
       static const char_type zone_name_format[3];                        // Z
@@ -73,8 +78,7 @@ namespace date_time {
 
   template <class CharT>
   const typename time_formats<CharT>::char_type
-  time_formats<CharT>::seconds_with_fractional_seconds_format[3] =
-    {'%','s'};
+  time_formats<CharT>::seconds_with_fractional_seconds_format[3] = {'%','s'};
 
   template <class CharT>
   const typename time_formats<CharT>::char_type
@@ -87,6 +91,24 @@ namespace date_time {
   template <class CharT>
   const typename time_formats<CharT>::char_type
   time_formats<CharT>::unrestricted_hours_format[3] =  {'%','O'};
+
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
+  time_formats<CharT>::full_24_hour_time_format[3] =  {'%','T'};
+
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
+  time_formats<CharT>::full_24_hour_time_expanded_format[9] =
+  {'%','H',':','%','M',':','%','S'};
+
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
+  time_formats<CharT>::short_24_hour_time_format[3] =  {'%','R'};
+
+  template <class CharT>
+  const typename time_formats<CharT>::char_type
+  time_formats<CharT>::short_24_hour_time_expanded_format[6] =
+  {'%','H',':','%','M'};
 
   template <class CharT>
   const typename time_formats<CharT>::char_type
@@ -180,6 +202,7 @@ namespace date_time {
             class OutItrT = std::ostreambuf_iterator<CharT, std::char_traits<CharT> > >
   class time_facet :
     public boost::date_time::date_facet<typename time_type::date_type , CharT, OutItrT> {
+    typedef time_formats< CharT > formats_type;
    public:
     typedef typename time_type::date_type date_type;
     typedef typename time_type::time_duration_type time_duration_type;
@@ -265,6 +288,14 @@ namespace date_time {
                               a_time.date().as_special());
       }
       string_type format(this->m_format);
+
+      // %T and %R have to be replaced here since they are not standard
+      boost::algorithm::replace_all(format,
+        boost::as_literal(formats_type::full_24_hour_time_format),
+        boost::as_literal(formats_type::full_24_hour_time_expanded_format));
+      boost::algorithm::replace_all(format,
+        boost::as_literal(formats_type::short_24_hour_time_format),
+        boost::as_literal(formats_type::short_24_hour_time_expanded_format));
 
       string_type frac_str;
       if (format.find(seconds_with_fractional_seconds_format) != string_type::npos) {
@@ -366,7 +397,7 @@ namespace date_time {
       }
       if (format.find(fractional_seconds_format) != string_type::npos) {
         // replace %f with nnnnnnn
-        if (!frac_str.size()) {
+        if (frac_str.empty()) {
           frac_str = fractional_seconds_as_string(a_time.time_of_day(), false);
         }
         boost::algorithm::replace_all(format,
@@ -427,6 +458,14 @@ namespace date_time {
                                       duration_sign_always,
                                       positive_sign);
       }
+
+      // %T and %R have to be replaced here since they are not standard
+      boost::algorithm::replace_all(format,
+        boost::as_literal(formats_type::full_24_hour_time_format),
+        boost::as_literal(formats_type::full_24_hour_time_expanded_format));
+      boost::algorithm::replace_all(format,
+        boost::as_literal(formats_type::short_24_hour_time_format),
+        boost::as_literal(formats_type::short_24_hour_time_expanded_format));
 
       /*
        * It is possible for a time duration to span more then 24 hours.
