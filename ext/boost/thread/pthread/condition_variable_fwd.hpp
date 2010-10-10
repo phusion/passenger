@@ -31,7 +31,7 @@ namespace boost
             int const res=pthread_cond_init(&cond,NULL);
             if(res)
             {
-                boost::throw_exception(thread_resource_error());
+                boost::throw_exception(thread_resource_error("Cannot initialize a condition variable", res));
             }
         }
         ~condition_variable()

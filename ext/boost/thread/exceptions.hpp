@@ -18,6 +18,8 @@
 
 #include <string>
 #include <stdexcept>
+#include <sstream>
+#include <cstring>
 
 #include <boost/config/abi_prefix.hpp>
 
@@ -31,13 +33,28 @@ namespace boost
         public std::exception
     {
     protected:
+        std::string message;
+        
         thread_exception():
             m_sys_err(0)
         {}
     
+        thread_exception(const std::string &description, int sys_err_code):
+            m_sys_err(sys_err_code)
+        {
+            std::ostringstream s;
+            s << description << ": ";
+            s << strerror(sys_err_code) << " (" << sys_err_code << ")";
+            message.assign(s.str());
+        }
+    
         thread_exception(int sys_err_code):
             m_sys_err(sys_err_code)
-        {}
+        {
+            std::ostringstream s;
+            s << strerror(sys_err_code) << " (" << sys_err_code << ")";
+            message.assign(s.str());
+        }
     
 
     public:
@@ -49,8 +66,19 @@ namespace boost
         {
             return m_sys_err;
         }
+        
+        virtual const char *what() const throw()
+        {
+            if(message.empty())
+            {
+                return std::exception::what();
+            }
+            else
+            {
+                return message.c_str();
+            }
+        }
     
-
     private:
         int m_sys_err;
     };
@@ -98,13 +126,24 @@ namespace boost
             thread_exception(sys_err_code)
         {}
     
+        thread_resource_error(const std::string &description, int sys_err_code):
+            thread_exception(description, sys_err_code)
+        {}
+    
         ~thread_resource_error() throw()
         {}
     
 
         virtual const char* what() const throw()
         {
-            return "boost::thread_resource_error";
+            if(message.empty())
+            {
+                return "boost::thread_resource_error";
+            }
+            else
+            {
+                return message.c_str();
+            }
         }
     
     };

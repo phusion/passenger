@@ -57,13 +57,13 @@ namespace boost
             int const res=pthread_mutex_init(&internal_mutex,NULL);
             if(res)
             {
-                boost::throw_exception(thread_resource_error());
+                boost::throw_exception(thread_resource_error("Cannot initialize a mutex", res));
             }
             int const res2=pthread_cond_init(&cond,NULL);
             if(res2)
             {
                 BOOST_VERIFY(!pthread_mutex_destroy(&internal_mutex));
-                boost::throw_exception(thread_resource_error());
+                boost::throw_exception(thread_resource_error("Cannot initialize a condition variable", res2));
             }
         }
         ~condition_variable_any()
