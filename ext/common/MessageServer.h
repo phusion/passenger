@@ -157,7 +157,13 @@ using namespace oxt;
  */
 class MessageServer {
 public:
-	static const unsigned int CLIENT_THREAD_STACK_SIZE = 64 * 1024;
+	static const unsigned int CLIENT_THREAD_STACK_SIZE =
+		#ifdef __FreeBSD__
+			// localtime() on FreeBSD needs some more stack space.
+			1024 * 96;
+		#else
+			1024 * 64;
+		#endif
 	
 	/** Interface for client context objects. */
 	class ClientContext {
