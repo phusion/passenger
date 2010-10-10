@@ -32,7 +32,7 @@ namespace boost
             int const res=pthread_mutex_init(&internal_mutex,NULL);
             if(res)
             {
-                boost::throw_exception(thread_resource_error());
+                boost::throw_exception(thread_resource_error("Cannot initialize a condition variable", res));
             }
             int const res2=pthread_cond_init(&cond,NULL);
             if(res2)

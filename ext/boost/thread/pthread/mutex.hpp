@@ -39,7 +39,7 @@ namespace boost
             int const res=pthread_mutex_init(&m,NULL);
             if(res)
             {
-                boost::throw_exception(thread_resource_error());
+                boost::throw_exception(thread_resource_error("Cannot initialize a mutex", res));
             }
         }
         ~mutex()
@@ -118,14 +118,14 @@ namespace boost
             int const res=pthread_mutex_init(&m,NULL);
             if(res)
             {
-                boost::throw_exception(thread_resource_error());
+                boost::throw_exception(thread_resource_error("Cannot initialize a mutex", res));
             }
 #ifndef BOOST_PTHREAD_HAS_TIMEDLOCK
             int const res2=pthread_cond_init(&cond,NULL);
             if(res2)
             {
                 BOOST_VERIFY(!pthread_mutex_destroy(&m));
-                boost::throw_exception(thread_resource_error());
+                boost::throw_exception(thread_resource_error("Cannot initialize a condition variable", res2));
             }
             is_locked=false;
 #endif
