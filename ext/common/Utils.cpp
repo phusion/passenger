@@ -181,7 +181,7 @@ createFile(const string &filename, const StaticString &contents, mode_t permissi
 		}
 		
 		try {
-			MessageChannel(fd).writeRaw(contents);
+			writeExact(fd, contents);
 			fd.close();
 		} catch (const SystemException &e) {
 			throw FileSystemException("Cannot write to file " + filename,

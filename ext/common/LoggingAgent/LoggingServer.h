@@ -195,7 +195,7 @@ private:
 		virtual void flush() {
 			if (bufferSize > 0) {
 				lastFlushed = ev_now(server->getLoop());
-				MessageChannel(fd).writeRaw(StaticString(buffer, bufferSize));
+				writeExact(fd, buffer, bufferSize);
 				bufferSize = 0;
 				notifyChanges();
 			}

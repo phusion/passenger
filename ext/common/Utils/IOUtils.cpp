@@ -49,6 +49,7 @@
 #include <cerrno>
 #include <cmath>
 
+#include "Timer.h"
 #include "IOUtils.h"
 #include "StrIntUtils.h"
 #include "../Exceptions.h"
@@ -532,6 +533,86 @@ createPipe() {
 		p[1] = fds[1];
 		return make_pair(p[0], p[1]);
 	}
+}
+
+static bool
+waitUntilIOEvent(int fd, short event, unsigned long long *timeout) {
+	struct pollfd pfd;
+	int ret;
+	
+	pfd.fd = fd;
+	pfd.events = event;
+	pfd.revents = 0;
+	
+	Timer timer;
+	ret = syscalls::poll(&pfd, 1, *timeout / 1000);
+	if (ret == -1) {
+		int e = errno;
+		throw SystemException("poll() failed", e);
+	} else {
+		unsigned long long elapsed = timer.usecElapsed();
+		if (elapsed > *timeout) {
+			*timeout = 0;
+		} else {
+			*timeout -= elapsed;
+		}
+		return ret != 0;
+	}
+}
+
+bool
+waitUntilReadable(int fd, unsigned long long *timeout) {
+	return waitUntilIOEvent(fd, POLLIN, timeout);
+}
+
+bool
+waitUntilWritable(int fd, unsigned long long *timeout) {
+	return waitUntilIOEvent(fd, POLLOUT | POLLHUP, timeout);
+}
+
+unsigned int
+readExact(int fd, void *buf, unsigned int size, unsigned long long *timeout) {
+	ssize_t ret;
+	unsigned int alreadyRead = 0;
+	
+	while (alreadyRead < size) {
+		if (timeout != NULL && !waitUntilReadable(fd, timeout)) {
+			throw TimeoutException("Cannot read enough data within the specified timeout");
+		}
+		ret = syscalls::read(fd, (char *) buf + alreadyRead, size - alreadyRead);
+		if (ret == -1) {
+			int e = errno;
+			throw SystemException("read() failed", e);
+		} else if (ret == 0) {
+			return alreadyRead;
+		} else {
+			alreadyRead += ret;
+		}
+	}
+	return alreadyRead;
+}
+
+void
+writeExact(int fd, const void *data, unsigned int size, unsigned long long *timeout) {
+	ssize_t ret;
+	unsigned int written = 0;
+	while (written < size) {
+		if (timeout != NULL && !waitUntilWritable(fd, timeout)) {
+			throw TimeoutException("Cannot write enough data within the specified timeout");
+		}
+		ret = syscalls::write(fd, (const char *) data + written, size - written);
+		if (ret == -1) {
+			int e = errno;
+			throw SystemException("write() failed", e);
+		} else {
+			written += ret;
+		}
+	}
+}
+
+void
+writeExact(int fd, const StaticString &data, unsigned long long *timeout) {
+	writeExact(fd, data.c_str(), data.size(), timeout);
 }
 
 /**

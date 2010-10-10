@@ -1,5 +1,6 @@
 #include "TestSupport.h"
 #include "EventedClient.h"
+#include "MessageChannel.h"
 #include "Utils/ScopeGuard.h"
 #include "Utils/IOUtils.h"
 

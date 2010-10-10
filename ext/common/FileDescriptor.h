@@ -33,7 +33,6 @@
 #include <unistd.h>
 #include <cerrno>
 
-#include <MessageChannel.h>
 #include <Exceptions.h>
 
 namespace Passenger {
@@ -245,7 +244,11 @@ public:
 	}
 	
 	void notify() {
-		MessageChannel(writer).writeRaw("x", 1);
+		ssize_t ret = syscalls::write(writer, "x", 1);
+		if (ret == -1 && errno != EAGAIN) {
+			int e = errno;
+			throw SystemException("Cannot write notification data", e);
+		}
 	}
 	
 	int fd() const {
