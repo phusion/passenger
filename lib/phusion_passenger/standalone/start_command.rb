@@ -484,16 +484,16 @@ private
 	
 	#### Config file template helpers ####
 	
-	def nginx_listen_address(for_ping_port = false)
-		if @options[:socket_file]
-			return "unix:" + File.expand_path(@options[:socket_file])
+	def nginx_listen_address(options = @options, for_ping_port = false)
+		if options[:socket_file]
+			return "unix:" + File.expand_path(options[:socket_file])
 		else
 			if for_ping_port
-				port = @options[:ping_port]
+				port = options[:ping_port]
 			else
-				port = @options[:port]
+				port = options[:port]
 			end
-			return "#{@options[:address]}:#{port}"
+			return "#{options[:address]}:#{port}"
 		end
 	end
 	
