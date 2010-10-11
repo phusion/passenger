@@ -752,4 +752,45 @@ namespace tut {
 		writeExact(p.second, buf, sizeof(buf), &timeout);
 		ensure("Timeout not modified", timeout >= 95000);
 	}
+	
+	/***** Test getSocketAddressType() *****/
+	
+	TEST_METHOD(70) {
+		ensure_equals(getSocketAddressType(""), SAT_UNKNOWN);
+		ensure_equals(getSocketAddressType("/foo.socket"), SAT_UNKNOWN);
+		ensure_equals(getSocketAddressType("unix:"), SAT_UNKNOWN);
+		ensure_equals(getSocketAddressType("unix:/"), SAT_UNIX);
+		ensure_equals(getSocketAddressType("unix:/foo.socket"), SAT_UNIX);
+		ensure_equals(getSocketAddressType("tcp:"), SAT_UNKNOWN);
+		ensure_equals(getSocketAddressType("tcp://"), SAT_UNKNOWN);
+		// Doesn't check whether it contains port
+		ensure_equals(getSocketAddressType("tcp://127.0.0.1"), SAT_TCP);
+		ensure_equals(getSocketAddressType("tcp://127.0.0.1:80"), SAT_TCP);
+	}
+	
+	TEST_METHOD(71) {
+		ensure_equals(parseUnixSocketAddress("unix:/foo.socket"), "/foo.socket");
+		try {
+			parseUnixSocketAddress("unix:");
+			fail("ArgumentException expected");
+		} catch (const ArgumentException &e) {
+			// Pass.
+		}
+	}
+	
+	TEST_METHOD(72) {
+		string host;
+		unsigned short port;
+		
+		parseTcpSocketAddress("tcp://127.0.0.1:80", host, port);
+		ensure_equals(host, "127.0.0.1");
+		ensure_equals(port, 80);
+		
+		try {
+			parseTcpSocketAddress("tcp://", host, port);
+			fail("ArgumentException expected");
+		} catch (const ArgumentException &e) {
+			// Pass.
+		}
+	}
 }
