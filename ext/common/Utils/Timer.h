@@ -97,7 +97,21 @@ public:
 	 * in miliseconds. If the timer is currently stopped, then 0 is returned.
 	 */
 	unsigned long long elapsed() const {
-		return usecElapsed() / 1000;
+		lock_guard<boost::mutex> l(lock);
+		if (startTime.tv_sec == 0 && startTime.tv_usec == 0) {
+			return 0;
+		} else {
+			struct timeval t;
+			unsigned long long now, beginning;
+			int ret;
+			
+			do {
+				ret = gettimeofday(&t, NULL);
+			} while (ret == -1 && errno == EINTR);
+			now = (unsigned long long) t.tv_sec * 1000 + t.tv_usec / 1000;
+			beginning = (unsigned long long) startTime.tv_sec * 1000 + startTime.tv_usec / 1000;
+			return now - beginning;
+		}
 	}
 	
 	/**

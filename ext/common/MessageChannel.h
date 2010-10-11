@@ -40,6 +40,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <cstdarg>
+#include <cmath>
 #if !APR_HAVE_IOVEC
 	// We don't want apr_want.h to redefine 'struct iovec'.
 	// http://groups.google.com/group/phusion-passenger/browse_thread/thread/7e162f60df212e9c
@@ -576,10 +577,10 @@ public:
 			unsigned int ret;
 			try {
 				ret = Passenger::readExact(fd, buf, size, &t);
-				*timeout = t / 1000;
+				*timeout = llroundl((long double) t / 1000);
 				return ret == size;
 			} catch (...) {
-				*timeout = t / 1000;
+				*timeout = llroundl((long double) t / 1000);
 				throw;
 			}
 		} else {
