@@ -169,6 +169,10 @@ TEST_CXX_OBJECTS = {
 		test/cxx/CachedFileStatTest.cpp
 		ext/common/Utils/CachedFileStat.hpp
 		ext/common/Utils/CachedFileStat.cpp),
+	'test/cxx/BufferedIOTest.o' => %w(
+		test/cxx/BufferedIOTest.cpp
+		ext/common/Utils/BufferedIO.h
+		ext/common/Utils/Timer.h),
 	'test/cxx/VariantMapTest.o' => %w(
 		test/cxx/VariantMapTest.cpp
 		ext/common/MessageChannel.h
