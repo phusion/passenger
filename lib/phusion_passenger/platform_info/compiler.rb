@@ -139,6 +139,7 @@ module PlatformInfo
 			# http://groups.google.com/group/phusion-passenger/browse_thread/thread/aad4bd9d8d200561
 			flags << '-DBOOST_SP_USE_PTHREADS'
 		end
+		flags << '-lmath'
 		return flags.compact.join(" ").strip
 	end
 	memoize :portability_cflags, true
