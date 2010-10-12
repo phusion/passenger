@@ -476,4 +476,16 @@ namespace tut {
 			"\\x00\\x01\\x02\\x03\\x04\\x05\\x06\\x07\\x08\\t");
 		ensure_equals(cEscapeString("\xFF\xFE\t\xD0"), "\\xFF\\xFE\\t\\xD0");
 	}
+	
+	/***** Test escapeHTML() *****/
+	
+	TEST_METHOD(52) {
+		const char weird[] = "Weird \x01\x00 characters?";
+		ensure_equals(escapeHTML(""), "");
+		ensure_equals(escapeHTML("hello\n\r\t WORLD!"), "hello\n\r\t WORLD!");
+		ensure_equals(escapeHTML("<b>bold</b>"), "&lt;b&gt;bold&lt;/b&gt;");
+		ensure_equals(escapeHTML(StaticString(weird, sizeof(weird) - 1)),
+			"Weird &#1;&#0; characters?");
+		ensure_equals(escapeHTML("UTF-8: ☃ ☀; ☁ ☂\x01"), "UTF-8: ☃ ☀; ☁ ☂&#1;");
+	}
 }

@@ -223,6 +223,14 @@ roundUp(IntegerType number, IntegerType multiple) {
  */
 string cEscapeString(const StaticString &input);
 
+/**
+ * Escapes HTML special characters the given input string, which is assumed to
+ * contain UTF-8 data. Returns a UTF-8 encoded string.
+ *
+ * @throws utf8::exception A UTF-8 decoding error occurred.
+ */
+string escapeHTML(const StaticString &input);
+
 } // namespace Passenger
 
 #endif /* _PASSENGER_STR_INT_UTILS_H_ */

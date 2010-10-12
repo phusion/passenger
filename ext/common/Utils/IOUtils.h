@@ -200,7 +200,7 @@ int connectToTcpServer(const StaticString &hostname, unsigned int port);
  * @throws SystemException
  * @throws boost::thread_interrupted
  */
-SocketPair createUnixSocketpair();
+SocketPair createUnixSocketPair();
 
 /**
  * Creates a pipe.

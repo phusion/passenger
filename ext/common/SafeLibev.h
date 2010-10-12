@@ -29,6 +29,7 @@
 #include <vector>
 #include <boost/thread.hpp>
 #include <boost/function.hpp>
+#include <boost/bind.hpp>
 
 namespace Passenger {
 
@@ -106,7 +107,8 @@ public:
 		} else {
 			unique_lock<boost::mutex> l(syncher);
 			bool done = false;
-			commands.push_back(boost::bind(startWatcherAndNotify, this, &watcher, &done));
+			commands.push_back(boost::bind(&SafeLibev::startWatcherAndNotify<Watcher>,
+				this, &watcher, &done));
 			ev_async_send(loop, &async);
 			while (!done) {
 				cond.wait(l);
@@ -121,7 +123,8 @@ public:
 		} else {
 			unique_lock<boost::mutex> l(syncher);
 			bool done = false;
-			commands.push_back(boost::bind(stopWatcherAndNotify, this, &watcher, &done));
+			commands.push_back(boost::bind(&SafeLibev::stopWatcherAndNotify<Watcher>,
+				this, &watcher, &done));
 			ev_async_send(loop, &async);
 			while (!done) {
 				cond.wait(l);

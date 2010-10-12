@@ -506,7 +506,7 @@ connectToTcpServer(const StaticString &hostname, unsigned int port) {
 }
 
 SocketPair
-createUnixSocketpair() {
+createUnixSocketPair() {
 	int fds[2];
 	FileDescriptor sockets[2];
 	
