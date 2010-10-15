@@ -26,7 +26,7 @@ Summary: Easy and robust Ruby web application deployment
 Name: rubygem-%{gemname}
 Version: %{version}
 Release: %{release}
-Group: Development/Languages
+Group: System Environment/Daemons
 License: Modified BSD
 URL: http://www.modrails.com/
 Source0: %{gemname}-%{version}.tar.gz
@@ -37,10 +37,12 @@ Requires: rubygem(fastthread) >= 1.0.1
 Requires: rubygem(daemon_controller) >= 0.2.5
 Requires: rubygem(file-tail)
 Requires: rubygem(rack)
-BuildRequires: doxygen
-BuildRequires: asciidoc
+BuildRequires: ruby-devel
+BuildRequires: httpd-devel
 BuildRequires: rubygems
 BuildRequires: rubygem(rake) >= 0.8.1
+BuildRequires: doxygen
+BuildRequires: asciidoc
 BuildArch: noarch
 Provides: rubygem(%{gemname}) = %{version}
 
