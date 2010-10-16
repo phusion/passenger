@@ -1,6 +1,7 @@
 # RPM Spec file for Phusion Passenger
 #
 
+%define gemname passenger
 %define version 3.0.0.pre4
 %define release 1%{?dist}
 
@@ -19,7 +20,6 @@
 
 %define ruby_sitelib %(%{ruby} -rrbconfig -e "puts Config::CONFIG['sitelibdir']")
 %define gemdir %(%{ruby} -rubygems -e 'puts Gem::dir' 2>/dev/null)
-%define gemname passenger
 %define geminstdir %{gemdir}/gems/%{gemname}-%{gemversion}
 
 Summary: Easy and robust Ruby web application deployment
@@ -43,7 +43,8 @@ BuildRequires: rubygems
 BuildRequires: rubygem(rake) >= 0.8.1
 BuildRequires: doxygen
 BuildRequires: asciidoc
-BuildArch: noarch
+# Can't have a noarch package with an arch'd subpackage
+#BuildArch: noarch
 Provides: rubygem(%{gemname}) = %{version}
 
 %description
@@ -52,6 +53,30 @@ of Ruby web applications, such as those built on the revolutionary
 Ruby on Rails web framework, a breeze. It follows the usual Ruby on
 Rails conventions, such as “Don’t-Repeat-Yourself”.
 
+%package standalone
+Summary: Standalone Phusion Passenger Server
+Group: System Environment/Daemons
+Requires: %name
+%description standalone
+Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes deployment
+of Ruby web applications, such as those built on the revolutionary
+Ruby on Rails web framework, a breeze. It follows the usual Ruby on
+Rails conventions, such as “Don’t-Repeat-Yourself”.
+
+This package contains the standalone Passenger server
+
+%package apache
+Summary: Apache Module for Phusion Passenger
+Group: System Environment/Daemons
+Requires: %name
+#BuildArch: %_target_arch
+%description apache
+Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes deployment
+of Ruby web applications, such as those built on the revolutionary
+Ruby on Rails web framework, a breeze. It follows the usual Ruby on
+Rails conventions, such as “Don’t-Repeat-Yourself”.
+
+This package contains the pluggable Apache server module for Passenger.
 
 %prep
 %setup -q -n %{gemname}-%{version}
@@ -72,6 +97,7 @@ Rails conventions, such as “Don’t-Repeat-Yourself”.
 
 %build
 rake package
+./bin/passenger-install-apache2-module --auto
 
 %install
 rm -rf %{buildroot}
@@ -87,13 +113,15 @@ rmdir %{buildroot}%{gemdir}/bin
 # RPM finds these in shebangs and assumes they're requirements. Clean them up.
 find %{buildroot}%{geminstdir} -type f -print0 | xargs -0 perl -pi -e 's{#!(/opt/ruby.*|/usr/bin/ruby1.8)}{%{ruby}}g'
 
+mkdir -p %{buildroot}/%{_libdir}/httpd/modules
+install -m 0644 ext/apache2/mod_passenger.so %{buildroot}/%{_libdir}/httpd/modules
+
 
 %clean
 rm -rf %{buildroot}
 
 %files
 %defattr(-, root, root, -)
-%{_bindir}/passenger
 %{_bindir}/passenger-install-apache2-module
 %{_bindir}/passenger-install-nginx-module
 %{_bindir}/passenger-config
@@ -107,6 +135,15 @@ rm -rf %{buildroot}
 %{gemdir}/cache/%{gemname}-%{gemversion}.gem
 %{gemdir}/specifications/%{gemname}-%{gemversion}.gemspec
 
+%files standalone
+%doc doc/Users\ guide\ Standalone.html
+%doc doc/Users\ guide\ Standalone.txt
+%{_bindir}/passenger
+
+%files apache
+%doc doc/Users\ guide\ Apache.html
+%doc doc/Users\ guide\ Apache.txt
+%{_libdir}/httpd/modules/mod_passenger.so
 
 %changelog
 * Mon Oct 11 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0.pre4-1
