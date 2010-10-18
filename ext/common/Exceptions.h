@@ -204,16 +204,20 @@ class SpawnException: public oxt::tracable_exception {
 private:
 	string msg;
 	bool m_hasErrorPage;
+	bool m_isHTML;
 	string m_errorPage;
 public:
 	SpawnException(const string &message)
 		: msg(message) {
 		m_hasErrorPage = false;
+		m_isHTML = false;
 	}
 	
-	SpawnException(const string &message, const string &errorPage)
-		: msg(message), m_errorPage(errorPage) {
+	SpawnException(const string &message, const string &errorPage, bool isHTML = true)
+		: msg(message), m_errorPage(errorPage)
+	{
 		m_hasErrorPage = true;
+		m_isHTML = isHTML;
 	}
 	
 	virtual ~SpawnException() throw() {}
@@ -233,6 +237,15 @@ public:
 	 */
 	const string getErrorPage() const {
 		return m_errorPage;
+	}
+	
+	/**
+	 * Whether the error page content is HTML.
+	 *
+	 * @pre hasErrorPage()
+	 */
+	bool isHTML() const {
+		return m_isHTML;
 	}
 };
 
