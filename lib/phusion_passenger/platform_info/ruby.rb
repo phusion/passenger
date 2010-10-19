@@ -97,7 +97,7 @@ module PlatformInfo
 	end
 	
 	# Returns whether the Ruby interpreter supports process forking.
-	def self.fork_supported?
+	def self.ruby_supports_fork?
 		# MRI >= 1.9.2's respond_to? returns false for methods
 		# that are not implemented.
 		return Process.respond_to?(:fork) &&
@@ -108,7 +108,7 @@ module PlatformInfo
 	
 	# Returns the correct 'gem' command for this Ruby interpreter.
 	def self.gem_command
-		return locate_ruby_executable('gem')
+		return locate_ruby_tool('gem')
 	end
 	memoize :gem_command
 	
@@ -119,7 +119,7 @@ module PlatformInfo
 	# The return value may not be the actual correct invocation
 	# for Rake. Use rake_command for that.
 	def self.rake
-		return locate_ruby_executable('rake')
+		return locate_ruby_tool('rake')
 	end
 	memoize :rake
 	
@@ -146,7 +146,7 @@ module PlatformInfo
 	# belongs to the current Ruby interpreter. Returns nil if it
 	# doesn't exist.
 	def self.rspec
-		return locate_ruby_executable('spec')
+		return locate_ruby_tool('spec')
 	end
 	memoize :rspec
 	
@@ -237,12 +237,32 @@ module PlatformInfo
 		end
 	end
 	
-	# Locate a Ruby tool command, e.g. 'gem', 'rake', 'bundle', etc. Instead of
+	# Locates a Ruby tool command, e.g. 'gem', 'rake', 'bundle', etc. Instead of
 	# naively looking in $PATH, this function uses a variety of search heuristics
 	# to find the command that's really associated with the current Ruby interpreter.
 	# It should never locate a command that's actually associated with a different
 	# Ruby interpreter.
-	def self.locate_ruby_executable(name)
+	# Returns nil when nothing's found.
+	def self.locate_ruby_tool(name)
+		result = locate_ruby_tool_by_basename(name)
+		if !result
+			exeext = Config::CONFIG['EXEEXT']
+			exeext = nil if exeext.empty?
+			if exeext
+				result = locate_ruby_tool_by_basename("#{name}#{exeext}")
+			end
+			if !result
+				result = locate_ruby_tool_by_basename(transform_according_to_ruby_exec_format(name))
+			end
+			if !result && exeext
+				result = locate_ruby_tool_by_basename(transform_according_to_ruby_exec_format(name) + exeext)
+			end
+		end
+		return result
+	end
+
+private
+	def self.locate_ruby_tool_by_basename(name)
 		if RUBY_PLATFORM =~ /darwin/ &&
 		   ruby_command =~ %r(\A/System/Library/Frameworks/Ruby.framework/Versions/.*?/usr/bin/ruby\Z)
 			# On OS X we must look for Ruby binaries in /usr/bin.
@@ -288,8 +308,8 @@ module PlatformInfo
 
 		filename
 	end
-
-private
+	private_class_method :locate_ruby_tool_by_basename
+	
 	def self.is_ruby_program?(filename)
 		File.open(filename, 'rb') do |f|
 			return f.readline =~ /ruby/
@@ -298,6 +318,21 @@ private
 		return false
 	end
 	private_class_method :is_ruby_program?
+	
+	# Deduce Ruby's --program-prefix and --program-suffix from its install name
+	# and transforms the given input name accordingly.
+	#
+	#   transform_according_to_ruby_exec_format("rake")    => "jrake", "rake1.8", etc
+	def self.transform_according_to_ruby_exec_format(name)
+		install_name = Config::CONFIG['RUBY_INSTALL_NAME']
+		if install_name.include?('ruby')
+			format = install_name.sub('ruby', '%s')
+			return sprintf(format, name)
+		else
+			return name
+		end
+	end
+	private_class_method :transform_according_to_ruby_exec_format
 end
 
 end # module PhusionPassenger

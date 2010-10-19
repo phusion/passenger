@@ -126,7 +126,13 @@ public:
 
 class Server {
 private:
-	static const unsigned int MESSAGE_SERVER_STACK_SIZE = 64 * 1024;
+	static const unsigned int MESSAGE_SERVER_STACK_SIZE =
+		#ifdef __FreeBSD__
+			// localtime() on FreeBSD needs some more stack space.
+			1024 * 96;
+		#else
+			1024 * 64;
+		#endif
 	
 	ServerInstanceDir serverInstanceDir;
 	ServerInstanceDir::GenerationPtr generation;
