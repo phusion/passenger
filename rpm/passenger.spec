@@ -166,7 +166,14 @@ mkdir -p %{buildroot}/%{nginx_datadir}
 mkdir -p %{buildroot}/%{nginx_confdir}
 mkdir -p %{buildroot}/%{nginx_logdir}
 
-# This should probably be in the #build, with apache, but it installs directly
+##### Nginx. This should probably be in the %%build, with apache, but
+##### it installs directly
+
+# THIS is beyond ugly. But it corrects the check-buildroot error on
+# the string saved for 'nginx -V'
+#
+# In any case, fix it correctly later
+perl -pi -e 's{^install:\s*$}{$&\tperl -pi -e '\''s<%{_builddir}><%%{_builddir}>g;s<%{buildroot}><%%{buildroot}>g;'\'' objs/ngx_auto_config.h\n}' %{_builddir}/nginx-%{nginx_version}/auto/install
 
 ### Stolen [and hacked] from the nginx spec file
 export DESTDIR=%{buildroot}
