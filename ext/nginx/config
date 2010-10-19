@@ -9,6 +9,18 @@ if ! test -f "$ngx_addon_dir/../common/libpassenger_common.a" || \
     fi
 fi
 
+ngx_feature="Math library"
+ngx_feature_name=
+ngx_feature_run=no
+ngx_feature_incs="#include <math.h>"
+ngx_feature_path=
+ngx_feature_libs="-lm"
+ngx_feature_test="pow(1, 2)"
+. auto/feature
+if [ $ngx_found = yes ]; then
+    CORE_LIBS="$CORE_LIBS -lm"
+fi
+
 ngx_addon_name=ngx_http_passenger_module
 HTTP_MODULES="$HTTP_MODULES ngx_http_passenger_module"
 NGX_ADDON_SRCS="$NGX_ADDON_SRCS \
@@ -26,9 +38,6 @@ CORE_LIBS="$CORE_LIBS  \
     ${ngx_addon_dir}/../common/libpassenger_common.a \
     ${ngx_addon_dir}/../common/libboost_oxt.a \
     -lstdc++ -lpthread"
-if test x`uname` = xOpenBSD; then
-    CORE_LIBS="$CORE_LIBS -lm"
-fi
 
 nginx_version=`grep 'NGINX_VERSION ' src/core/nginx.h | awk '{ print $3 }' | sed 's/"//g'`
 

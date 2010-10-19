@@ -82,14 +82,10 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
     clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
 
     ngx_memzero(&of, sizeof(ngx_open_file_info_t));
-    #if NGINX_VERSION_NUM < 7000
-        of.test_dir = 0;
-    #else
-        #if NGX_VERSION_NUM >= 8000
-            of.read_ahead = clcf->read_ahead;
-        #endif
-        of.directio = clcf->directio;
+    #if NGX_VERSION_NUM >= 8000
+        of.read_ahead = clcf->read_ahead;
     #endif
+    of.directio = clcf->directio;
     of.valid = clcf->open_file_cache_valid;
     of.min_uses = clcf->open_file_cache_min_uses;
     of.errors = clcf->open_file_cache_errors;
@@ -157,11 +153,7 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
                 len += r->args.len + 1;
             }
 
-            #if NGINX_VERSION_NUM < 7000
-                location = ngx_palloc(r->pool, len);
-            #else
-            	location = ngx_pnalloc(r->pool, len);
-            #endif
+            location = ngx_pnalloc(r->pool, len);
             if (location == NULL) {
                 return NGX_HTTP_INTERNAL_SERVER_ERROR;
             }
@@ -190,7 +182,7 @@ passenger_static_content_handler(ngx_http_request_t *r, ngx_str_t *filename)
 #if !(NGX_WIN32) /* the not regular files are probably Unix specific */
 
     if (!of.is_file) {
-        ngx_log_error(NGX_LOG_CRIT, log, ngx_errno,
+        ngx_log_error(NGX_LOG_CRIT, log, 0,
                       "\"%s\" is not a regular file", filename->data);
 
         return NGX_HTTP_NOT_FOUND;
