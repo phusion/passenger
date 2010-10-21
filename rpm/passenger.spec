@@ -181,7 +181,7 @@ mkdir -p %{buildroot}/%{nginx_logdir}
 # the string saved for 'nginx -V'
 #
 # In any case, fix it correctly later
-perl -pi -e 's{^install:\s*$}{$&\tperl -pi -e '\''s<%{_builddir}><%%{_builddir}>g;s<%{buildroot}><>g;'\'' objs/ngx_auto_config.h\n}' %{_builddir}/nginx-%{nginx_version}/auto/install
+perl -pi -e 's{^install:\s*$}{$&\tperl -pi -e '\''s<%{buildroot}><>g;s<%{_builddir}><%%{_builddir}>g;'\'' objs/ngx_auto_config.h\n}' %{_builddir}/nginx-%{nginx_version}/auto/install
 
 ### Stolen [and hacked] from the nginx spec file
 export DESTDIR=%{buildroot}
