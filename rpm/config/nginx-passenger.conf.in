@@ -1,0 +1,12 @@
+# You may just want to integrate this into your own config
+#  http {
+#      passenger_root %ROOT;
+#      passenger_ruby /usr/bin/ruby;
+#  }
+#
+# server {
+#    listen 80;
+#    server_name www.yourhost.com;
+#    root /somewhere/public;   # <--- be sure to point to 'public'!
+#    passenger_enabled on;
+# }
