@@ -3,7 +3,7 @@
 
 %define gemname passenger
 %define passenger_version 3.0.0
-%define passenger_release 1%{?dist}
+%define passenger_release 2%{?dist}
 %define passenger_epoch 1
 
 %define nginx_version 0.8.52
@@ -93,13 +93,14 @@ Rails conventions, such as “Don’t-Repeat-Yourself”.
 
 This package contains the standalone Passenger server
 
-%package apache
+%package -n mod_passenger
 Summary: Apache Module for Phusion Passenger
 Group: System Environment/Daemons
 Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
 #BuildArch: %_target_arch
+Obsoletes: rubygem-passenger-apache
 Epoch: %{passenger_epoch}
-%description apache
+%description -n mod_passenger
 Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes deployment
 of Ruby web applications, such as those built on the revolutionary
 Ruby on Rails web framework, a breeze. It follows the usual Ruby on
@@ -247,7 +248,7 @@ rm -rf %{buildroot}
 %doc doc/Users\ guide\ Standalone.txt
 %{_bindir}/passenger
 
-%files apache
+%files -n mod_passenger
 %doc doc/Users\ guide\ Apache.html
 %doc doc/Users\ guide\ Apache.txt
 %{_libdir}/httpd/modules/mod_passenger.so
@@ -259,6 +260,9 @@ rm -rf %{buildroot}
 /usr/sbin/nginx.passenger
 
 %changelog
+* Thu Oct 21 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-2
+- rename rubygem-passenger-apache => mod_passenger
+
 * Thu Oct 21 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-1
 - Version bump to 3.0.0
 
