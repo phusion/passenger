@@ -2,8 +2,9 @@
 #
 
 %define gemname passenger
-%define passenger_version 3.0.0.pre4
-%define passenger_release 2%{?dist}
+%define passenger_version 3.0.0
+%define passenger_release 1%{?dist}
+%define passenger_epoch 1
 
 %define nginx_version 0.8.52
 %define nginx_release %{passenger_version}_%{passenger_release}
@@ -66,6 +67,7 @@ BuildRequires: asciidoc
 # Can't have a noarch package with an arch'd subpackage
 #BuildArch: noarch
 Provides: rubygem(%{gemname}) = %{passenger_version}
+Epoch: %{passenger_epoch}
 
 %description
 Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes deployment
@@ -81,7 +83,8 @@ version, it is installed as %{gemversion} instead of %{passenger_version}.
 %package standalone
 Summary: Standalone Phusion Passenger Server
 Group: System Environment/Daemons
-Requires: %{name} = %{passenger_version}-%{passenger_release}
+Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
+Epoch: %{passenger_epoch}
 %description standalone
 Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes deployment
 of Ruby web applications, such as those built on the revolutionary
@@ -93,8 +96,9 @@ This package contains the standalone Passenger server
 %package apache
 Summary: Apache Module for Phusion Passenger
 Group: System Environment/Daemons
-Requires: %{name} = %{passenger_version}-%{passenger_release}
+Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
 #BuildArch: %_target_arch
+Epoch: %{passenger_epoch}
 %description apache
 Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes deployment
 of Ruby web applications, such as those built on the revolutionary
@@ -106,17 +110,18 @@ This package contains the pluggable Apache server module for Passenger.
 %package -n nginx-passenger
 Summary: nginx server with Phusion Passenger enabled
 Group: System Environment/Daemons
-Requires: %{name} = %{passenger_version}
+Requires: %{name} = %{passenger_epoch}:%{passenger_version}
 Version: %{nginx_version}
 Release: %{passenger_version}_%{release}
 BuildRequires: pcre-devel
 BuildRequires: zlib-devel
 BuildRequires: openssl-devel
-Requires: %{name} = %{passenger_version}-%{passenger_release}
+Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
 Requires: pcre
 Requires: zlib
 Requires: openssl
 Requires: nginx-alternatives
+Epoch: %{passenger_epoch}
 %description -n nginx-passenger
 Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes deployment
 of Ruby web applications, such as those built on the revolutionary
@@ -254,6 +259,9 @@ rm -rf %{buildroot}
 /usr/sbin/nginx.passenger
 
 %changelog
+* Thu Oct 21 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-1
+- Version bump to 3.0.0
+
 * Wed Oct 18 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0.pre4-2
 - use nginx-alternatives
 
