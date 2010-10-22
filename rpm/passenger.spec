@@ -17,6 +17,8 @@
 %define nginx_datadir   %{_datadir}/nginx
 %define nginx_webroot   %{nginx_datadir}/html
 
+%define httpd_confdir	%{_sysconfdir}/httpd/conf.d
+
 # Ruby Macro on the command-line overrides this default
 %if !%{?ruby:1}%{!?ruby:0}
   %define ruby /usr/bin/ruby
@@ -48,7 +50,8 @@ License: Modified BSD
 URL: http://www.modrails.com/
 Source0: %{gemname}-%{passenger_version}.tar.gz
 Source1: nginx-%{nginx_version}.tar.gz
-Source100: nginx-passenger.conf.in
+Source100: apache-passenger.conf.in
+Source101: nginx-passenger.conf.in
 Patch0: passenger-install-nginx-module.patch
 BuildRoot: %{_tmppath}/%{name}-%{passenger_version}-%{passenger_release}-root-%(%{__id_u} -n)
 Requires: rubygems
@@ -173,6 +176,7 @@ mkdir -p %{buildroot}/%{nginx_datadir}
 mkdir -p %{buildroot}/%{nginx_datadir}
 mkdir -p %{buildroot}/%{nginx_confdir}
 mkdir -p %{buildroot}/%{nginx_logdir}
+mkdir -p %{buildroot}/%{httpd_confdir}
 
 ##### Nginx. This should probably be in the %%build, with apache, but
 ##### it installs directly
@@ -209,11 +213,18 @@ export DESTDIR=%{buildroot}
 #     --with-cc-opt='%{optflags} %(pcre-config --cflags)' \
 #     --add-module=%{_builddir}/%{gemname}-%{passenger_version}/nginx-%{nginx_version}/nginx-upstream-fair \
 
+# I should probably figure out how to get these into the gem
+cp -ra agents %{buildroot}/%{geminstdir}
+mkdir -p %{buildroot}/%{geminstdir}/ext/ruby
+cp -ra ext/ruby/*-linux %{buildroot}/%{geminstdir}/ext/ruby
+
 # Clean up everything we don't care about
 rm -rf %{buildroot}/usr/share/nginx %{buildroot}/%{nginx_confdir}
 install -p -d -m 0755 %{buildroot}/%{nginx_confdir}/conf.d
-#install -m 0644 %{SOURCE100} %{buildroot}/%{nginx_confdir}/conf.d/passenger.conf
-perl -pe 's{%%ROOT}{%geminstdir}g' %{SOURCE100} > %{buildroot}/%{nginx_confdir}/conf.d/passenger.conf
+#install -m 0644 %{SOURCE100} %{buildroot}/%{httpd_confdir}/passenger.conf
+#install -m 0644 %{SOURCE101} %{buildroot}/%{nginx_confdir}/conf.d/passenger.conf
+perl -pe 's{%%ROOT}{%geminstdir}g' %{SOURCE100} > %{buildroot}/%{httpd_confdir}/passenger.conf
+perl -pe 's{%%ROOT}{%geminstdir}g' %{SOURCE101} > %{buildroot}/%{nginx_confdir}/conf.d/passenger.conf
 
 %post -n nginx-passenger
 if [ $1 == 1 ]; then
@@ -252,11 +263,12 @@ rm -rf %{buildroot}
 %doc doc/Users\ guide\ Apache.html
 %doc doc/Users\ guide\ Apache.txt
 %{_libdir}/httpd/modules/mod_passenger.so
+%{httpd_confdir}/passenger.conf
 
 %files -n nginx-passenger
 %doc doc/Users\ guide\ Nginx.html
 %doc doc/Users\ guide\ Nginx.txt
-/etc/nginx/conf.d/passenger.conf
+%{nginx_confdir}/conf.d/passenger.conf
 /usr/sbin/nginx.passenger
 
 %changelog
