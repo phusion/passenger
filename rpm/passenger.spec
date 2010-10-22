@@ -83,6 +83,19 @@ Rails conventions, such as “Don’t-Repeat-Yourself”.
 version, it is installed as %{gemversion} instead of %{passenger_version}.
 %endif
 
+%package native
+Summary: Phusion Passenger native extensions
+Group: System Environment/Daemons
+Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
+Epoch: %{passenger_epoch}
+%description native
+Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes deployment
+of Ruby web applications, such as those built on the revolutionary
+Ruby on Rails web framework, a breeze. It follows the usual Ruby on
+Rails conventions, such as “Don’t-Repeat-Yourself”.
+
+This package contains the native code extensions for Apache & Nginx bindings
+
 %package standalone
 Summary: Standalone Phusion Passenger Server
 Group: System Environment/Daemons
@@ -99,7 +112,7 @@ This package contains the standalone Passenger server
 %package -n mod_passenger
 Summary: Apache Module for Phusion Passenger
 Group: System Environment/Daemons
-Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
+Requires: %{name}-native = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
 #BuildArch: %_target_arch
 Obsoletes: rubygem-passenger-apache
 Epoch: %{passenger_epoch}
@@ -120,7 +133,7 @@ Release: %{passenger_version}_%{release}
 BuildRequires: pcre-devel
 BuildRequires: zlib-devel
 BuildRequires: openssl-devel
-Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
+Requires: %{name}-native = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
 Requires: pcre
 Requires: zlib
 Requires: openssl
@@ -253,6 +266,11 @@ rm -rf %{buildroot}
 %doc %{geminstdir}/README
 %{gemdir}/cache/%{gemname}-%{gemversion}.gem
 %{gemdir}/specifications/%{gemname}-%{gemversion}.gemspec
+
+%files native
+%{geminstdir}/agents
+# We should break this out into its own pacakge (and optionally just build it)
+%{geminstdir}/ext/ruby/*linux
 
 %files standalone
 %doc doc/Users\ guide\ Standalone.html
