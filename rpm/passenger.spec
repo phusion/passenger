@@ -3,7 +3,7 @@
 
 %define gemname passenger
 %define passenger_version 3.0.0
-%define passenger_release 2%{?dist}
+%define passenger_release 3%{?dist}
 %define passenger_epoch 1
 
 %define nginx_version 0.8.52
@@ -24,6 +24,10 @@
   %define ruby /usr/bin/ruby
 %endif
 
+%define ruby_sitelib %(%{ruby} -rrbconfig -e "puts Config::CONFIG['sitelibdir']")
+
+%define ruby_version_patch %(%{ruby} -e 'puts "#{RUBY_VERSION}.#{RUBY_PATCHLEVEL}"')
+
 # Does Gem::Version crash&burn on the version defined above? (RHEL might)
 %define broken_gem_version %(%{ruby} -rrubygems -e 'begin ; Gem::Version.create "%{passenger_version}" ; rescue => e ; puts 1 ; exit ; end ; puts 0')
 
@@ -37,9 +41,13 @@
 # Invoke a shell to do a comparison, silly but it works across versions of RPM
 %define gem_version_mismatch %([ '%{passenger_version}' != '%{gemversion}' ] && echo 1 || echo 0)
 
-%define ruby_sitelib %(%{ruby} -rrbconfig -e "puts Config::CONFIG['sitelibdir']")
 %define gemdir %(%{ruby} -rubygems -e 'puts Gem::dir' 2>/dev/null)
 %define geminstdir %{gemdir}/gems/%{gemname}-%{gemversion}
+
+# This may cause a chicken/egg problem where the dir isn't defined yet
+%define gemnativedir %(%{ruby} -I%{_builddir}/%{gemname}-%{passenger_version}/lib -rphusion_passenger/platform_info/binary_compatibility -e 'puts PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")')
+%define native_libs_release %(%{ruby} -I%{_builddir}/%{gemname}-%{passenger_version}/lib -rphusion_passenger/platform_info/binary_compatibility -e 'puts PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibility_ids[0,2].join("_")')
+
 
 Summary: Easy and robust Ruby web application deployment
 Name: rubygem-%{gemname}
@@ -96,6 +104,25 @@ Rails conventions, such as “Don’t-Repeat-Yourself”.
 
 This package contains the native code extensions for Apache & Nginx bindings
 
+%package native-libs
+Summary: Phusion Passenger native extensions
+Group: System Environment/Daemons
+Release: %{native_libs_release}
+Epoch: %{passenger_epoch}
+Requires: %{name}-native = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
+Requires: ruby = %{ruby_version_patch}
+Provides: rubygem-passenger-native-libs = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
+%description native-libs
+Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes deployment
+of Ruby web applications, such as those built on the revolutionary
+Ruby on Rails web framework, a breeze. It follows the usual Ruby on
+Rails conventions, such as “Don’t-Repeat-Yourself”.
+
+This package contains the native shared library for Apache & Nginx
+bindings, built against ruby sources. It has been separated so that
+installing a new ruby interpreter only necessitates rebuilding this
+package.
+
 %package standalone
 Summary: Standalone Phusion Passenger Server
 Group: System Environment/Daemons
@@ -129,11 +156,11 @@ Summary: nginx server with Phusion Passenger enabled
 Group: System Environment/Daemons
 Requires: %{name} = %{passenger_epoch}:%{passenger_version}
 Version: %{nginx_version}
-Release: %{passenger_version}_%{release}
+Release: %{passenger_version}_%{passenger_release}
 BuildRequires: pcre-devel
 BuildRequires: zlib-devel
 BuildRequires: openssl-devel
-Requires: %{name}-native = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
+Requires: %{name}-native-libs = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
 Requires: pcre
 Requires: zlib
 Requires: openssl
@@ -269,8 +296,9 @@ rm -rf %{buildroot}
 
 %files native
 %{geminstdir}/agents
-# We should break this out into its own pacakge (and optionally just build it)
-%{geminstdir}/ext/ruby/*linux
+
+%files native-libs
+%{geminstdir}/ext/ruby/%{gemnativedir}
 
 %files standalone
 %doc doc/Users\ guide\ Standalone.html
@@ -290,6 +318,9 @@ rm -rf %{buildroot}
 /usr/sbin/nginx.passenger
 
 %changelog
+* Fri Oct 22 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-3
+- Break the passenger_native_support.so into its own package
+
 * Thu Oct 21 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-2
 - rename rubygem-passenger-apache => mod_passenger
 
