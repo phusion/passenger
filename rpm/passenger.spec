@@ -236,8 +236,8 @@ rm -rf %{buildroot}/usr/share/nginx %{buildroot}/%{nginx_confdir}
 install -p -d -m 0755 %{buildroot}/%{nginx_confdir}/conf.d
 #install -m 0644 %{SOURCE100} %{buildroot}/%{httpd_confdir}/passenger.conf
 #install -m 0644 %{SOURCE101} %{buildroot}/%{nginx_confdir}/conf.d/passenger.conf
-perl -pe 's{%%ROOT}{%geminstdir}g' %{SOURCE100} > %{buildroot}/%{httpd_confdir}/passenger.conf
-perl -pe 's{%%ROOT}{%geminstdir}g' %{SOURCE101} > %{buildroot}/%{nginx_confdir}/conf.d/passenger.conf
+perl -pe 's{%%ROOT}{%geminstdir}g;s{%%RUBY}{%ruby}g' %{SOURCE100} > %{buildroot}/%{httpd_confdir}/passenger.conf
+perl -pe 's{%%ROOT}{%geminstdir}g;s{%%RUBY}{%ruby}g' %{SOURCE101} > %{buildroot}/%{nginx_confdir}/conf.d/passenger.conf
 
 %post -n nginx-passenger
 if [ $1 == 1 ]; then

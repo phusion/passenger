@@ -1,9 +1,7 @@
-# You may just want to integrate this into your own config
-#  http {
-#      passenger_root %ROOT;
-#      passenger_ruby /usr/bin/ruby;
-#  }
-#
+passenger_root %ROOT;
+passenger_ruby %RUBY;
+
+# You'll need to integrate this portion into your own config
 # server {
 #    listen 80;
 #    server_name www.yourhost.com;
