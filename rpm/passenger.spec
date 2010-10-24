@@ -3,7 +3,7 @@
 
 %define gemname passenger
 %define passenger_version 3.0.0
-%define passenger_release 4%{?dist}
+%define passenger_release 5%{?dist}
 %define passenger_epoch 1
 
 %define nginx_version 0.8.52
@@ -27,7 +27,7 @@
 
 %define ruby_sitelib %(%{ruby} -rrbconfig -e "puts Config::CONFIG['sitelibdir']")
 
-%define ruby_version_patch %(%{ruby} -e 'puts "#{RUBY_VERSION}.#{RUBY_PATCHLEVEL}"')
+%define ruby_version_patch %(%{ruby} -e 'puts "#{RUBY_VERSION}#{defined?(RUBY_PATCHLEVEL) ? %q{.} + RUBY_PATCHLEVEL.to_s : nil}"')
 
 # Does Gem::Version crash&burn on the version defined above? (RHEL might)
 %define broken_gem_version %(%{ruby} -rrubygems -e 'begin ; Gem::Version.create "%{passenger_version}" ; rescue => e ; puts 1 ; exit ; end ; puts 0')
@@ -345,6 +345,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Sat Oct 23 2010 Erik Ogan <erik@cloudshield.com> - 3.0.0-5
+- RHEL/CentOS Ruby is too old to support RUBY_PATCHLEVEL
+
 * Sat Oct 23 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-4
 - --define 'only_native_libs 1' to rebuild native_support.so for a
   different ruby engine.
