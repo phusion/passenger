@@ -45,9 +45,10 @@
 %define gemdir %(%{ruby} -rubygems -e 'puts Gem::dir' 2>/dev/null)
 %define geminstdir %{gemdir}/gems/%{gemname}-%{gemversion}
 
-# This may cause a chicken/egg problem where the dir isn't defined yet
-%define gemnativedir %(%{ruby} -I%{_builddir}/%{gemname}-%{passenger_version}/lib -rphusion_passenger/platform_info/binary_compatibility -e 'puts PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")')
-%define native_libs_release %(%{ruby} -I%{_builddir}/%{gemname}-%{passenger_version}/lib -rphusion_passenger/platform_info/binary_compatibility -e 'puts PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibility_ids[0,2].join("_")')
+# This will cause a chicken/egg problem where the dir isn't present yet
+#% define gemnativedir % (%{ruby} -I%{_builddir}/%{gemname}-%{passenger_version}/lib -rphusion_passenger/platform_info/binary_compatibility -e 'puts PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")')
+# %define native_libs_release %{passenger_release}_% (%{ruby} -I%{_builddir}/%{gemname}-%{passenger_version}/lib -rphusion_passenger/platform_info/binary_compatibility -e 'puts PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibility_ids[0,2].join("_")')
+%define native_libs_release %{passenger_release}_%{ruby_version_patch}
 
 %{!?only_native_libs: %define only_native_libs 0}
 
@@ -339,12 +340,16 @@ rm -rf %{buildroot}
 %endif # !only_native_libs
 
 %files native-libs
-%{geminstdir}/ext/ruby/%{gemnativedir}
+# %{geminstdir}/ext/ruby/%{gemnativedir}
+%{geminstdir}/ext/ruby/*-linux
+
 
 %changelog
 * Sat Oct 23 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-4
 - --define 'only_native_libs 1' to rebuild native_support.so for a
   different ruby engine.
+- make sure native-libs release includes passenger release and ruby patch level
+- remove the macros that rely on %%{_builddir} already being unpacked
 
 * Fri Oct 22 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-3
 - Break the passenger_native_support.so into its own package
