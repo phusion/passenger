@@ -19,10 +19,11 @@
 
 %define httpd_confdir	%{_sysconfdir}/httpd/conf.d
 
-# Ruby Macro on the command-line overrides this default
-%if !%{?ruby:1}%{!?ruby:0}
-  %define ruby /usr/bin/ruby
-%endif
+# Macros on the command-line overrides these defaults. You should also
+# make sure these match the binaries found in your PATH
+%{?!ruby: %define ruby /usr/bin/ruby}
+%{?!rake: %define rake /usr/bin/rake}
+%{?!gem:  %define gem  /usr/bin/gem}
 
 %define ruby_sitelib %(%{ruby} -rrbconfig -e "puts Config::CONFIG['sitelibdir']")
 
@@ -192,14 +193,14 @@ This package includes an nginx server with Passenger compiled in.
 %endif
 
 %build
-rake package
+%{rake} package
 ./bin/passenger-install-apache2-module --auto
 
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}%{gemdir}
-gem install --local --install-dir %{buildroot}%{gemdir} \
-            --force --rdoc pkg/%{gemname}-%{gemversion}.gem
+%{gem} install --local --install-dir %{buildroot}%{gemdir} \
+               --force --rdoc pkg/%{gemname}-%{gemversion}.gem
 mkdir -p %{buildroot}/%{_bindir}
 mv %{buildroot}%{gemdir}/bin/* %{buildroot}/%{_bindir}
 rmdir %{buildroot}%{gemdir}/bin
