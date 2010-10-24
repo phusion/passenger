@@ -3,7 +3,7 @@
 
 %define gemname passenger
 %define passenger_version 3.0.0
-%define passenger_release 3%{?dist}
+%define passenger_release 4%{?dist}
 %define passenger_epoch 1
 
 %define nginx_version 0.8.52
@@ -49,6 +49,7 @@
 %define gemnativedir %(%{ruby} -I%{_builddir}/%{gemname}-%{passenger_version}/lib -rphusion_passenger/platform_info/binary_compatibility -e 'puts PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")')
 %define native_libs_release %(%{ruby} -I%{_builddir}/%{gemname}-%{passenger_version}/lib -rphusion_passenger/platform_info/binary_compatibility -e 'puts PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibility_ids[0,2].join("_")')
 
+%{!?only_native_libs: %define only_native_libs 0}
 
 Summary: Easy and robust Ruby web application deployment
 Name: rubygem-%{gemname}
@@ -92,6 +93,8 @@ Rails conventions, such as “Don’t-Repeat-Yourself”.
 version, it is installed as %{gemversion} instead of %{passenger_version}.
 %endif
 
+%if !%{only_native_libs}
+
 %package native
 Summary: Phusion Passenger native extensions
 Group: System Environment/Daemons
@@ -104,6 +107,8 @@ Ruby on Rails web framework, a breeze. It follows the usual Ruby on
 Rails conventions, such as “Don’t-Repeat-Yourself”.
 
 This package contains the native code extensions for Apache & Nginx bindings
+
+%endif #! only_native_libs
 
 %package native-libs
 Summary: Phusion Passenger native extensions
@@ -123,6 +128,8 @@ This package contains the native shared library for Apache & Nginx
 bindings, built against ruby sources. It has been separated so that
 installing a new ruby interpreter only necessitates rebuilding this
 package.
+
+%if !%{only_native_libs}
 
 %package standalone
 Summary: Standalone Phusion Passenger Server
@@ -175,6 +182,8 @@ Rails conventions, such as “Don’t-Repeat-Yourself”.
 
 This package includes an nginx server with Passenger compiled in.
 
+%endif # !only_native_libs
+
 %prep
 %setup -q -n %{gemname}-%{passenger_version} -b 1
 %patch0 -p1
@@ -193,12 +202,19 @@ This package includes an nginx server with Passenger compiled in.
 %endif
 
 %build
-%{rake} package
-./bin/passenger-install-apache2-module --auto
+
+%if %{only_native_libs}
+  %{rake} native_support
+%else
+  %{rake} package
+  ./bin/passenger-install-apache2-module --auto
+%endif # !only_native_libs
 
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}%{gemdir}
+
+%if !%{only_native_libs}
 %{gem} install --local --install-dir %{buildroot}%{gemdir} \
                --force --rdoc pkg/%{gemname}-%{gemversion}.gem
 mkdir -p %{buildroot}/%{_bindir}
@@ -256,9 +272,13 @@ export DESTDIR=%{buildroot}
 
 # I should probably figure out how to get these into the gem
 cp -ra agents %{buildroot}/%{geminstdir}
+%endif #!only_native_libs
+
+##### NATIVE LIBS INSTALL
 mkdir -p %{buildroot}/%{geminstdir}/ext/ruby
 cp -ra ext/ruby/*-linux %{buildroot}/%{geminstdir}/ext/ruby
 
+%if !%{only_native_libs}
 # Clean up everything we don't care about
 rm -rf %{buildroot}/usr/share/nginx %{buildroot}/%{nginx_confdir}
 install -p -d -m 0755 %{buildroot}/%{nginx_confdir}/conf.d
@@ -276,10 +296,12 @@ fi
 if [ $1 == 0 ]; then
   /usr/sbin/alternatives --remove nginx /usr/sbin/nginx.passenger
 fi
+%endif # !only_native_libs
 
 %clean
 rm -rf %{buildroot}
 
+%if !%{only_native_libs}
 %files
 %defattr(-, root, root, -)
 %{_bindir}/passenger-install-apache2-module
@@ -298,9 +320,6 @@ rm -rf %{buildroot}
 %files native
 %{geminstdir}/agents
 
-%files native-libs
-%{geminstdir}/ext/ruby/%{gemnativedir}
-
 %files standalone
 %doc doc/Users\ guide\ Standalone.html
 %doc doc/Users\ guide\ Standalone.txt
@@ -317,8 +336,16 @@ rm -rf %{buildroot}
 %doc doc/Users\ guide\ Nginx.txt
 %{nginx_confdir}/conf.d/passenger.conf
 /usr/sbin/nginx.passenger
+%endif # !only_native_libs
+
+%files native-libs
+%{geminstdir}/ext/ruby/%{gemnativedir}
 
 %changelog
+* Sat Oct 23 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-4
+- --define 'only_native_libs 1' to rebuild native_support.so for a
+  different ruby engine.
+
 * Fri Oct 22 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-3
 - Break the passenger_native_support.so into its own package
 
