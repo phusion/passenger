@@ -1,3 +1,9 @@
+# RPM Spec file for nginx-alternatives
+# This is a stop-gap solution to having multiple compiles of nginx on
+# the same server.
+#
+# This package is meant to be obsoleted by a future nginx package that
+# will provide the same feature
 Summary: Alternatives aware nginx
 Name: nginx-alternatives
 Version: 0.0.1
