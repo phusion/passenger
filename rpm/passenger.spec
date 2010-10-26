@@ -76,9 +76,12 @@ BuildRequires: ruby-devel
 BuildRequires: httpd-devel
 BuildRequires: rubygems
 BuildRequires: rubygem(rake) >= 0.8.1
+BuildRequires: rubygem(rack)
 BuildRequires: rubygem(fastthread) >= 1.0.1
+BuildRequires: libcurl-devel
 BuildRequires: doxygen
 BuildRequires: asciidoc
+BuildRequires: source-highlight
 # Can't have a noarch package with an arch'd subpackage
 #BuildArch: noarch
 Provides: rubygem(%{gemname}) = %{passenger_version}
@@ -104,6 +107,7 @@ Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
 Requires(post): policycoreutils, initscripts
 Requires(preun): policycoreutils, initscripts
 Requires(postun): policycoreutils
+BuildRequires: selinux-policy
 Epoch: %{passenger_epoch}
 %description native
 Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes deployment
