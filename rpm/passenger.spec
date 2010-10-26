@@ -63,6 +63,7 @@ Source0: %{gemname}-%{passenger_version}.tar.gz
 Source1: nginx-%{nginx_version}.tar.gz
 Source100: apache-passenger.conf.in
 Source101: nginx-passenger.conf.in
+Source200: rubygem-passenger.te
 Patch0: passenger-install-nginx-module.patch
 BuildRoot: %{_tmppath}/%{name}-%{passenger_version}-%{passenger_release}-root-%(%{__id_u} -n)
 Requires: rubygems
@@ -100,6 +101,9 @@ version, it is installed as %{gemversion} instead of %{passenger_version}.
 Summary: Phusion Passenger native extensions
 Group: System Environment/Daemons
 Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
+Requires(post): policycoreutils, initscripts
+Requires(preun): policycoreutils, initscripts
+Requires(postun): policycoreutils
 Epoch: %{passenger_epoch}
 %description native
 Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes deployment
@@ -209,6 +213,16 @@ This package includes an nginx server with Passenger compiled in.
 %else
   %{rake} package
   ./bin/passenger-install-apache2-module --auto
+
+  ### SELINUX
+  rm -rf selinux
+  mkdir selinux
+  cd selinux
+  cp %{SOURCE200} .
+  echo '%{geminstdir}/agents/((apache2|nginx)/)?Passenger.*	system_u:object_r:httpd_exec_t:s0' > rubygem-passenger.fc
+  touch rubygem-passenger.if
+  make -f %{_datarootdir}/selinux/devel/Makefile
+  cd ..
 %endif # !only_native_libs
 
 %install
@@ -273,6 +287,10 @@ export DESTDIR=%{buildroot}
 
 # I should probably figure out how to get these into the gem
 cp -ra agents %{buildroot}/%{geminstdir}
+
+# SELINUX
+install -p -m 644 -D selinux/%{name}.pp %{buildroot}%{_datarootdir}/selinux/packages/%{name}/%{name}.pp
+
 %endif #!only_native_libs
 
 ##### NATIVE LIBS INSTALL
@@ -299,6 +317,24 @@ if [ $1 == 0 ]; then
 fi
 %endif # !only_native_libs
 
+%post native
+if [ "$1" -le "1" ] ; then # First install
+semodule -i %{_datarootdir}/selinux/packages/%{name}/%{name}.pp 2>/dev/null || :
+fixfiles -R %{name} restore
+fi
+
+%preun native
+if [ "$1" -lt "1" ] ; then # Final removal
+semodule -r rubygem_%{gemname} 2>/dev/null || :
+fixfiles -R %{name} restore
+fi
+
+%postun native
+if [ "$1" -ge "1" ] ; then # Upgrade
+semodule -i %{_datarootdir}/selinux/packages/%{name}/%{name}.pp 2>/dev/null || :
+fi
+
+
 %clean
 rm -rf %{buildroot}
 
@@ -320,6 +356,7 @@ rm -rf %{buildroot}
 
 %files native
 %{geminstdir}/agents
+%{_datarootdir}/selinux/packages/%{name}/%{name}.pp
 
 %files standalone
 %doc doc/Users\ guide\ Standalone.html
