@@ -52,6 +52,9 @@
 
 %{!?only_native_libs: %define only_native_libs 0}
 
+# Really wish they'd standardize this
+%define sharedir %{?fedora:%{_datarootdir}}%{?!fedora:%{_datadir}}
+
 Summary: Easy and robust Ruby web application deployment
 Name: rubygem-%{gemname}
 Version: %{passenger_version}
@@ -78,10 +81,14 @@ BuildRequires: rubygems
 BuildRequires: rubygem(rake) >= 0.8.1
 BuildRequires: rubygem(rack)
 BuildRequires: rubygem(fastthread) >= 1.0.1
+%if %{?fedora:1}%{?!fedora:0}
 BuildRequires: libcurl-devel
+BuildRequires: source-highlight
+%else
+BuildRequires: curl-devel
+%endif
 BuildRequires: doxygen
 BuildRequires: asciidoc
-BuildRequires: source-highlight
 # Can't have a noarch package with an arch'd subpackage
 #BuildArch: noarch
 Provides: rubygem(%{gemname}) = %{passenger_version}
@@ -107,7 +114,11 @@ Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
 Requires(post): policycoreutils, initscripts
 Requires(preun): policycoreutils, initscripts
 Requires(postun): policycoreutils
+%if %{?fedora:1}%{?!fedora:0}
 BuildRequires: selinux-policy
+%else
+BuildRequires: selinux-policy-devel
+%endif
 Epoch: %{passenger_epoch}
 %description native
 Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes deployment
@@ -225,7 +236,7 @@ This package includes an nginx server with Passenger compiled in.
   cp %{SOURCE200} .
   echo '%{geminstdir}/agents/((apache2|nginx)/)?Passenger.*	system_u:object_r:httpd_exec_t:s0' > rubygem-passenger.fc
   touch rubygem-passenger.if
-  make -f %{_datarootdir}/selinux/devel/Makefile
+  make -f %{sharedir}/selinux/devel/Makefile
   cd ..
 %endif # !only_native_libs
 
@@ -293,7 +304,7 @@ export DESTDIR=%{buildroot}
 cp -ra agents %{buildroot}/%{geminstdir}
 
 # SELINUX
-install -p -m 644 -D selinux/%{name}.pp %{buildroot}%{_datarootdir}/selinux/packages/%{name}/%{name}.pp
+install -p -m 644 -D selinux/%{name}.pp %{buildroot}%{sharedir}/selinux/packages/%{name}/%{name}.pp
 
 %endif #!only_native_libs
 
@@ -323,7 +334,7 @@ fi
 
 %post native
 if [ "$1" -le "1" ] ; then # First install
-semodule -i %{_datarootdir}/selinux/packages/%{name}/%{name}.pp 2>/dev/null || :
+semodule -i %{sharedir}/selinux/packages/%{name}/%{name}.pp 2>/dev/null || :
 fixfiles -R %{name} restore
 fi
 
@@ -335,7 +346,7 @@ fi
 
 %postun native
 if [ "$1" -ge "1" ] ; then # Upgrade
-semodule -i %{_datarootdir}/selinux/packages/%{name}/%{name}.pp 2>/dev/null || :
+semodule -i %{sharedir}/selinux/packages/%{name}/%{name}.pp 2>/dev/null || :
 fi
 
 
@@ -360,7 +371,7 @@ rm -rf %{buildroot}
 
 %files native
 %{geminstdir}/agents
-%{_datarootdir}/selinux/packages/%{name}/%{name}.pp
+%{sharedir}/selinux/packages/%{name}/%{name}.pp
 
 %files standalone
 %doc doc/Users\ guide\ Standalone.html

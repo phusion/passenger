@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+	  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <title><!--#echo var="REQUEST_URI" --> &mdash; The Phusion Passenger RPM Repository</title>
+    <style type="text/css">
+body {
+  font-family: baskerville, bodoni svtytwo os, bodoni, georgia, times new roman, serif;
+  margin: 0;
+  padding: 0;
+}
+h1 {
+  margin-top: 0;
+  padding: 0.5em;
+  color: #fff;
+  background-color: #666;
+}
+div#content {
+  padding: 0 1em;
+}
+pre {
+  /* I think Courier New looks the best, but Andale Mono is preferable to the default */
+  font-family: Courier New, Andale Mono, Courier, monospace;
+}
+    </style>
+  </head>
+
+  <body>
+    <h1>The Phusion Passenger RPM Repository</h1>
+
+    <div id="content">
+      <p>
+        Welcome to the repository. Here you&rsquo;ll find RPM packages of <a
+        href="http://modrails.com/">Phusion Passenger</a> (aka mod_rails) for
+        <a href="http://fedoraproject.org/">Fedora</a> and <a
+        href="http://www.redhat.com/rhel/">RedHat Enterprise Linux</a> (and
+        derivatives like <a href="http://centos.org">CentOS</a> and <a
+        href="https://www.scientificlinux.org/">Scientific Linux</a>).
+      </p>
+
+      <p>
+        The easiest way to install Passenger and keep it up to date is to
+        install the passenger-release package for <a
+        href="fedora/13/passenger-release-3-1.fc13.noarch.rpm">Fedora Core
+        13</a> or <a
+        href="rhel/5/passenger-release-3-1.el5.noarch.rpm">RHEL/CentOS 5</a>
+        (Note the RHEL/CentOS packages rely on <a
+        href="http://fedoraproject.org/wiki/EPEL">EPEL</a>)
+      </p>
+
+      <p>
+        The source files for these packages are maintained in <a
+        href="http://github.com/erikogan/rubygem-passenger">GitHub
+        repository</a>. Comments, questions, patches, and pull requests are
+        always welcome.
+      </p>
+
+      <h2><!--#echo var="REQUEST_URI" --></h2>
