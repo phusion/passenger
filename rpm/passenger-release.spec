@@ -1,7 +1,7 @@
 Summary: Phusion Passenger release RPM/Yum repository configuration
 Name: passenger-release
 Version: 3
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: MIT
 Group: Group: System Environment/Base
 URL: http://passenger.stealthymonkeys.com/
@@ -35,7 +35,7 @@ fi
 [passenger]
 name = $name \$releasever - Phusion Passenger
 baseurl = %{url}$path/\$releasever/\$basearch
-mirrorlist = %{url}$path/\$releasever/mirrors-passenger
+mirrorlist = %{url}$path/mirrors
 #mirrorlist = file:///etc/yum.repos.d/mirrors-passenger
 enabled = 1
 gpgkeky = file:///etc/pki/rpm-gpg/RPM-GPG-KEY-passenger
@@ -77,6 +77,9 @@ rm -rf %{buildroot}
 
 
 %changelog
-* Tue Oct 26 2010 Erik Ogan <erik@stealthymonkeys.com> - release-1
+* Thu Oct 28 2010 Erik Ogan <erik@stealthymonkeys.com> - 3-2
+- Update the mirrorlist URL
+
+* Tue Oct 26 2010 Erik Ogan <erik@stealthymonkeys.com> - 3-1
 - Initial build.
 
