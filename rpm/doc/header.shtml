@@ -51,8 +51,8 @@ pre {
       </p>
 
       <p>
-        The source files for these packages are maintained in <a
-        href="http://github.com/erikogan/rubygem-passenger">GitHub
+        The source files and documentation for these packages are maintained
+        in <a href="http://github.com/erikogan/rubygem-passenger">GitHub
         repository</a>. Comments, questions, patches, and pull requests are
         always welcome.
       </p>
