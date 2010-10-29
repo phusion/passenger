@@ -311,8 +311,13 @@ export FAIRDIR=%{_builddir}/nginx-%{nginx_version}/gnosek-nginx-upstream-fair-*
     --with-http_dav_module \
     --with-http_flv_module \
     --with-http_gzip_static_module \
-    --add-module=$FAIRDIR \
+    --with-http_random_index_module \
+    --with-http_secure_link_module \
     --with-http_stub_status_module \
+    --with-mail \
+    --with-mail_ssl_module \
+    --with-ipv6 \
+    --add-module=$FAIRDIR \
     --with-cc-opt='%{nginx_ccopt} %(pcre-config --cflags)' \
 "
 
