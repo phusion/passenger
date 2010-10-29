@@ -283,6 +283,14 @@ perl -pi -e 's{^install:\s*$}{$&\tperl -pi -e '\''s<%{buildroot}><>g;s<%{_buildd
 ### Stolen [and hacked] from the nginx spec file
 export DESTDIR=%{buildroot}
 export FAIRDIR=%{_builddir}/nginx-%{nginx_version}/gnosek-nginx-upstream-fair-*
+# I'm not sure why this fails on RHEL but not Fedora. I guess GCC 4.4 is
+# smarter about it than 4.1? It feels wrong to do this, but I don't see
+# an easier way out.
+%if %{?fedora:1}%{?!fedora:0}
+  %define nginx_ccopt %{optflags}
+%else
+  %define nginx_ccopt %(echo "%{optflags}" | sed -e 's/SOURCE=2/& -Wno-unused/')
+%endif
 
 ./bin/passenger-install-nginx-module --auto --nginx-source-dir=%{_builddir}/nginx-%{nginx_version} --prefix=%{buildroot}/%{nginx_datadir} --extra-make-install-flags='DESTDIR=%{buildroot} INSTALLDIRS=vendor' --extra-configure-flags="--user=%{nginx_user} \
     --group=%{nginx_group} \
@@ -305,8 +313,8 @@ export FAIRDIR=%{_builddir}/nginx-%{nginx_version}/gnosek-nginx-upstream-fair-*
     --with-http_gzip_static_module \
     --add-module=$FAIRDIR \
     --with-http_stub_status_module \
+    --with-cc-opt='%{nginx_ccopt} %(pcre-config --cflags)' \
 "
-#     --with-cc-opt='%{optflags} %(pcre-config --cflags)' \
 
 # I should probably figure out how to get these into the gem
 cp -ra agents %{buildroot}/%{geminstdir}
@@ -407,6 +415,7 @@ rm -rf %{buildroot}
 %changelog
 * Fri Oct 29 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-6
 - Add upstream-fair load-balancer back to nginx
+- Add the original CFLAGS back to nginx (with -Wno-unused kludge for RHEL5)
 
 * Sat Oct 23 2010 Erik Ogan <erik@cloudshield.com> - 3.0.0-5
 - RHEL/CentOS Ruby is too old to support RUBY_PATCHLEVEL
