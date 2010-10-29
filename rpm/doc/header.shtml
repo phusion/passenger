@@ -51,7 +51,9 @@ p#tm {
         13</a> or <a
         href="rhel/5/passenger-release.noarch.rpm">RHEL/CentOS 5</a>
         (Note the RHEL/CentOS packages rely on <a
-        href="http://fedoraproject.org/wiki/EPEL">EPEL</a>)
+        href="http://fedoraproject.org/wiki/EPEL">EPEL</a>). All the packages
+        are <a href="/RPM-GPG-KEY-stealthymonkeys.asc">cryptographically
+        signed</a>.
       </p>
 
       <p>
