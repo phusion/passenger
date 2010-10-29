@@ -3,7 +3,7 @@
 
 %define gemname passenger
 %define passenger_version 3.0.0
-%define passenger_release 5%{?dist}
+%define passenger_release 6%{?dist}
 %define passenger_epoch 1
 
 %define nginx_version 0.8.52
@@ -67,6 +67,9 @@ Source1: nginx-%{nginx_version}.tar.gz
 Source100: apache-passenger.conf.in
 Source101: nginx-passenger.conf.in
 Source200: rubygem-passenger.te
+# Ignore everything after the ?, it's meant to trick rpmbuild into
+# finding the correct file
+Source300: http://github.com/gnosek/nginx-upstream-fair/tarball/master?/nginx-upstream-fair.tar.gz
 Patch0: passenger-install-nginx-module.patch
 BuildRoot: %{_tmppath}/%{name}-%{passenger_version}-%{passenger_release}-root-%(%{__id_u} -n)
 Requires: rubygems
@@ -206,6 +209,9 @@ This package includes an nginx server with Passenger compiled in.
 
 %prep
 %setup -q -n %{gemname}-%{passenger_version} -b 1
+%setup -q -T -D -n nginx-%{nginx_version} -a 300
+# Fix the CWD
+%setup -q -T -D -n %{gemname}-%{passenger_version}
 %patch0 -p1
 
 %if %{gem_version_mismatch}
@@ -276,6 +282,8 @@ perl -pi -e 's{^install:\s*$}{$&\tperl -pi -e '\''s<%{buildroot}><>g;s<%{_buildd
 
 ### Stolen [and hacked] from the nginx spec file
 export DESTDIR=%{buildroot}
+export FAIRDIR=%{_builddir}/nginx-%{nginx_version}/gnosek-nginx-upstream-fair-*
+
 ./bin/passenger-install-nginx-module --auto --nginx-source-dir=%{_builddir}/nginx-%{nginx_version} --prefix=%{buildroot}/%{nginx_datadir} --extra-make-install-flags='DESTDIR=%{buildroot} INSTALLDIRS=vendor' --extra-configure-flags="--user=%{nginx_user} \
     --group=%{nginx_group} \
     --prefix=%{nginx_datadir} \
@@ -295,10 +303,10 @@ export DESTDIR=%{buildroot}
     --with-http_dav_module \
     --with-http_flv_module \
     --with-http_gzip_static_module \
+    --add-module=$FAIRDIR \
     --with-http_stub_status_module \
 "
 #     --with-cc-opt='%{optflags} %(pcre-config --cflags)' \
-#     --add-module=%{_builddir}/%{gemname}-%{passenger_version}/nginx-%{nginx_version}/nginx-upstream-fair \
 
 # I should probably figure out how to get these into the gem
 cp -ra agents %{buildroot}/%{geminstdir}
@@ -397,6 +405,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Fri Oct 29 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-6
+- Add upstream-fair load-balancer back to nginx
+
 * Sat Oct 23 2010 Erik Ogan <erik@cloudshield.com> - 3.0.0-5
 - RHEL/CentOS Ruby is too old to support RUBY_PATCHLEVEL
 
