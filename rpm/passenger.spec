@@ -3,7 +3,7 @@
 
 %define gemname passenger
 %define passenger_version 3.0.0
-%define passenger_release 6%{?dist}
+%define passenger_release 7%{?dist}
 %define passenger_epoch 1
 
 %define nginx_version 0.8.52
@@ -191,10 +191,17 @@ Release: %{passenger_version}_%{passenger_release}
 BuildRequires: pcre-devel
 BuildRequires: zlib-devel
 BuildRequires: openssl-devel
+%if %{?fedora:1}%{?!fedora:0}
+BuildRequires: perl-devel
+%else
+BuildRequires: perl
+%endif
+BuildRequires: perl(ExtUtils::Embed)
 Requires: %{name}-native-libs = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
 Requires: pcre
 Requires: zlib
 Requires: openssl
+Requires: perl(:MODULE_COMPAT_%(eval "`%{__perl} -V:version`"; echo $version))
 Requires: nginx-alternatives
 Epoch: %{passenger_epoch}
 %description -n nginx-passenger
@@ -314,6 +321,7 @@ export FAIRDIR=%{_builddir}/nginx-%{nginx_version}/gnosek-nginx-upstream-fair-*
     --with-http_random_index_module \
     --with-http_secure_link_module \
     --with-http_stub_status_module \
+    --with-http_perl_module \
     --with-mail \
     --with-mail_ssl_module \
     --with-ipv6 \
@@ -334,13 +342,16 @@ mkdir -p %{buildroot}/%{geminstdir}/ext/ruby
 cp -ra ext/ruby/*-linux %{buildroot}/%{geminstdir}/ext/ruby
 
 %if !%{only_native_libs}
-# Clean up everything we don't care about
-rm -rf %{buildroot}/usr/share/nginx %{buildroot}/%{nginx_confdir}
 install -p -d -m 0755 %{buildroot}/%{nginx_confdir}/conf.d
 #install -m 0644 %{SOURCE100} %{buildroot}/%{httpd_confdir}/passenger.conf
 #install -m 0644 %{SOURCE101} %{buildroot}/%{nginx_confdir}/conf.d/passenger.conf
 perl -pe 's{%%ROOT}{%geminstdir}g;s{%%RUBY}{%ruby}g' %{SOURCE100} > %{buildroot}/%{httpd_confdir}/passenger.conf
 perl -pe 's{%%ROOT}{%geminstdir}g;s{%%RUBY}{%ruby}g' %{SOURCE101} > %{buildroot}/%{nginx_confdir}/conf.d/passenger.conf
+
+#### Clean up everything we don't care about
+rm -rf %{buildroot}/usr/share/nginx %{buildroot}/%{nginx_confdir}
+# Assume the old version is good enough. Probably not wise.
+rm -rf %{buildroot}%{_libdir}/perl5 %{buildroot}{%_maindir}/man3/nginx.3pm*
 
 %post -n nginx-passenger
 if [ $1 == 1 ]; then
@@ -418,6 +429,10 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Fri Oct 29 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-7
+- Add back all the missing directives from nginx.spec (Perl is
+  untested and may be broken)
+
 * Fri Oct 29 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-6
 - Add upstream-fair load-balancer back to nginx
 - Add the original CFLAGS back to nginx (with -Wno-unused kludge for RHEL5)
