@@ -24,6 +24,10 @@ pre {
   /* I think Courier New looks the best, but Andale Mono is preferable to the default */
   font-family: Courier New, Andale Mono, Courier, monospace;
 }
+p#tm {
+  font-size: 80%;
+  text-align: right;
+}
     </style>
   </head>
 
