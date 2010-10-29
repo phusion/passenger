@@ -342,16 +342,16 @@ mkdir -p %{buildroot}/%{geminstdir}/ext/ruby
 cp -ra ext/ruby/*-linux %{buildroot}/%{geminstdir}/ext/ruby
 
 %if !%{only_native_libs}
+#### Clean up everything we don't care about
+rm -rf %{buildroot}/usr/share/nginx %{buildroot}/%{nginx_confdir}
+# Assume the old version is good enough. Probably not wise.
+rm -rf %{buildroot}%{_libdir}/perl5 %{buildroot}%{_mandir}/man3/nginx.3pm*
+
 install -p -d -m 0755 %{buildroot}/%{nginx_confdir}/conf.d
 #install -m 0644 %{SOURCE100} %{buildroot}/%{httpd_confdir}/passenger.conf
 #install -m 0644 %{SOURCE101} %{buildroot}/%{nginx_confdir}/conf.d/passenger.conf
 perl -pe 's{%%ROOT}{%geminstdir}g;s{%%RUBY}{%ruby}g' %{SOURCE100} > %{buildroot}/%{httpd_confdir}/passenger.conf
 perl -pe 's{%%ROOT}{%geminstdir}g;s{%%RUBY}{%ruby}g' %{SOURCE101} > %{buildroot}/%{nginx_confdir}/conf.d/passenger.conf
-
-#### Clean up everything we don't care about
-rm -rf %{buildroot}/usr/share/nginx %{buildroot}/%{nginx_confdir}
-# Assume the old version is good enough. Probably not wise.
-rm -rf %{buildroot}%{_libdir}/perl5 %{buildroot}{%_maindir}/man3/nginx.3pm*
 
 %post -n nginx-passenger
 if [ $1 == 1 ]; then
