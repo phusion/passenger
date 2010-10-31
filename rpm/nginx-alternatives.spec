@@ -4,6 +4,9 @@
 #
 # This package is meant to be obsoleted by a future nginx package that
 # will provide the same feature
+
+%define perldir %(perl -MConfig -e 'print $Config{installarchlib}')
+
 Summary: Alternatives aware nginx
 Name: nginx-alternatives
 Version: 0.0.1
@@ -39,15 +42,15 @@ rm -rf $RPM_BUILD_ROOT
 %triggerin -- nginx
 if [ ! -L /usr/sbin/nginx ] ; then
   mv /usr/sbin/nginx /usr/sbin/nginx.base
-  mv %{_libdir}/perl5/auto/nginx/nginx.so  %{_libdir}/perl5/auto/nginx/nginx_base.so
-  mv %{_libdir}/perl5/nginx.pm  %{_libdir}/perl5/nginx_base.pm
+  mv %{perldir}/auto/nginx/nginx.so  %{perldir}/auto/nginx/nginx_base.so
+  mv %{perldir}/nginx.pm  %{perldir}/nginx_base.pm
   mv %{_mandir}/man3/nginx.3pm.gz %{_mandir}/man3/nginx_base.3pm.gz
 
   /usr/sbin/alternatives --install /usr/sbin/nginx nginx \
 				   /usr/sbin/nginx.base 30 \
-    --slave %{_libdir}/perl5/auto/nginx/nginx.so nginx.so \
-	    %{_libdir}/perl5/auto/nginx/nginx_base.so \
-    --slave %{_libdir}/perl5/nginx.pm nginx.pm %{_libdir}/perl5/nginx_base.pm \
+    --slave %{perldir}/auto/nginx/nginx.so nginx.so \
+	    %{perldir}/auto/nginx/nginx_base.so \
+    --slave %{perldir}/nginx.pm nginx.pm %{perldir}/nginx_base.pm \
     --slave %{_mandir}/man3/nginx.3pm.gz nginx.man \
 	    %{_mandir}/man3/nginx_base.3pm.gz
 fi
@@ -57,14 +60,14 @@ fi
 # put the expected binary back in place.
 %define undo_link \
   bin=`readlink -f /usr/sbin/nginx` \
-  so=`readlink -f %{_libdir}/perl5/auto/nginx/nginx.so` \
-  pm=`readlink -f %{_libdir}/perl5/nginx.pm` \
+  so=`readlink -f %{perldir}/auto/nginx/nginx.so` \
+  pm=`readlink -f %{perldir}/nginx.pm` \
   man=`readlink -f %{_mandir}/man3/nginx.3pm.gz` \
   /usr/sbin/alternatives --remove nginx /usr/sbin/nginx.base \
   /usr/sbin/alternatives --remove nginx $bin \
   mv -f $bin /usr/sbin/nginx \
-  mv -f $so %{_libdir}/perl5/auto/nginx/nginx.so \
-  mv -f $pm %{_libdir}/perl5/nginx.pm \
+  mv -f $so %{perldir}/auto/nginx/nginx.so \
+  mv -f $pm %{perldir}/nginx.pm \
   mv -f $man %{_mandir}/man3/nginx.3pm.gz
 
 

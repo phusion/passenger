@@ -45,6 +45,8 @@
 %define gemdir %(%{ruby} -rubygems -e 'puts Gem::dir' 2>/dev/null)
 %define geminstdir %{gemdir}/gems/%{gemname}-%{gemversion}
 
+%define perldir %(perl -MConfig -e 'print $Config{installvendorarch}')
+
 # This will cause a chicken/egg problem where the dir isn't present yet
 #% define gemnativedir % (%{ruby} -I%{_builddir}/%{gemname}-%{passenger_version}/lib -rphusion_passenger/platform_info/binary_compatibility -e 'puts PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")')
 # %define native_libs_release %{passenger_release}_% (%{ruby} -I%{_builddir}/%{gemname}-%{passenger_version}/lib -rphusion_passenger/platform_info/binary_compatibility -e 'puts PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibility_ids[0,2].join("_")')
@@ -347,12 +349,14 @@ cp -ra ext/ruby/*-linux %{buildroot}/%{geminstdir}/ext/ruby
 %if !%{only_native_libs}
 #### Clean up everything we don't care about
 rm -rf %{buildroot}/usr/share/nginx %{buildroot}/%{nginx_confdir}
-# Assume the old version is good enough. Probably not wise.
-#rm -rf %{buildroot}%{_libdir}/perl5 %{buildroot}%{_mandir}/man3/nginx.3pm*
-rm -f %{buildroot}%{_libdir}/perl5/{auto/nginx/.packlist,perllocal.pod}
-mv %{buildroot}%{_libdir}/perl5/auto/nginx/nginx{,_passenger}.bs
-mv %{buildroot}%{_libdir}/perl5/auto/nginx/nginx{,_passenger}.so
-mv %{buildroot}%{_libdir}/perl5/nginx{,_passenger}.pm
+# # Assume the old version is good enough. Probably not wise.
+# rm -rf %{buildroot}%{perldir} %{buildroot}%{_mandir}/man3/nginx.3pm*
+rm -f %{buildroot}%{perldir}/{auto/nginx/.packlist,perllocal.pod}
+# RHEL distinguishes these dirs
+rm -f %{buildroot}%(perl -MConfig -e 'print $Config{installarchlib}')/perllocal.pod
+mv %{buildroot}%{perldir}/auto/nginx/nginx{,_passenger}.bs
+mv %{buildroot}%{perldir}/auto/nginx/nginx{,_passenger}.so
+mv %{buildroot}%{perldir}/nginx{,_passenger}.pm
 mv %{buildroot}%{_mandir}/man3/nginx.3pm{,_passenger}
 
 install -p -d -m 0755 %{buildroot}/%{nginx_confdir}/conf.d
@@ -365,11 +369,11 @@ perl -pe 's{%%ROOT}{%geminstdir}g;s{%%RUBY}{%ruby}g' %{SOURCE101} > %{buildroot}
 if [ $1 == 1 ]; then
   /usr/sbin/alternatives --install /usr/sbin/nginx nginx \
 				   /usr/sbin/nginx.passenger 50 \
-    --slave %{_libdir}/perl5/auto/nginx/nginx.so nginx.so \
-	    %{_libdir}/perl5/auto/nginx/nginx_passenger.so \
-    --slave %{_libdir}/perl5/auto/nginx/nginx.bs nginx.bs \
-	    %{_libdir}/perl5/auto/nginx/nginx_passenger.bs \
-    --slave %{_libdir}/perl5/nginx.pm nginx.pm %{_libdir}/perl5/nginx_passenger.pm \
+    --slave %{perldir}/auto/nginx/nginx.so nginx.so \
+	    %{perldir}/auto/nginx/nginx_passenger.so \
+    --slave %{perldir}/auto/nginx/nginx.bs nginx.bs \
+	    %{perldir}/auto/nginx/nginx_passenger.bs \
+    --slave %{perldir}/nginx.pm nginx.pm %{perldir}/nginx_passenger.pm \
     --slave %{_mandir}/man3/nginx.3pm.gz nginx.man \
 	    %{_mandir}/man3/nginx_passenger.3pm.gz
 fi
@@ -437,8 +441,8 @@ rm -rf %{buildroot}
 %doc doc/Users\ guide\ Nginx.txt
 %{nginx_confdir}/conf.d/passenger.conf
 /usr/sbin/nginx.passenger
-%{_libdir}/perl5/auto/nginx/nginx*
-%{_libdir}/perl5/nginx*
+%{perldir}/auto/nginx/nginx*
+%{perldir}/nginx*
 %{_mandir}/man3/nginx*
 %endif # !only_native_libs
 
