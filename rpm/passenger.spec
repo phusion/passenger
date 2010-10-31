@@ -3,7 +3,7 @@
 
 %define gemname passenger
 %define passenger_version 3.0.0
-%define passenger_release 7%{?dist}
+%define passenger_release 8%{?dist}
 %define passenger_epoch 1
 
 %define nginx_version 0.8.52
@@ -327,7 +327,10 @@ export FAIRDIR=%{_builddir}/nginx-%{nginx_version}/gnosek-nginx-upstream-fair-*
     --with-ipv6 \
     --add-module=$FAIRDIR \
     --with-cc-opt='%{nginx_ccopt} %(pcre-config --cflags)' \
+    --with-ld-opt=-Wl,-E
 "
+# Too tired to figure out why this isn't working (when the above does)
+#    --with-ld-opt='%(perl -MExtUtils::Embed -e ldopts)' \
 
 # I should probably figure out how to get these into the gem
 cp -ra agents %{buildroot}/%{geminstdir}
@@ -345,7 +348,12 @@ cp -ra ext/ruby/*-linux %{buildroot}/%{geminstdir}/ext/ruby
 #### Clean up everything we don't care about
 rm -rf %{buildroot}/usr/share/nginx %{buildroot}/%{nginx_confdir}
 # Assume the old version is good enough. Probably not wise.
-rm -rf %{buildroot}%{_libdir}/perl5 %{buildroot}%{_mandir}/man3/nginx.3pm*
+#rm -rf %{buildroot}%{_libdir}/perl5 %{buildroot}%{_mandir}/man3/nginx.3pm*
+rm -f %{buildroot}%{_libdir}/perl5/{auto/nginx/.packlist,perllocal.pod}
+mv %{buildroot}%{_libdir}/perl5/auto/nginx/nginx{,_passenger}.bs
+mv %{buildroot}%{_libdir}/perl5/auto/nginx/nginx{,_passenger}.so
+mv %{buildroot}%{_libdir}/perl5/nginx{,_passenger}.pm
+mv %{buildroot}%{_mandir}/man3/nginx.3pm{,_passenger}
 
 install -p -d -m 0755 %{buildroot}/%{nginx_confdir}/conf.d
 #install -m 0644 %{SOURCE100} %{buildroot}/%{httpd_confdir}/passenger.conf
@@ -355,7 +363,15 @@ perl -pe 's{%%ROOT}{%geminstdir}g;s{%%RUBY}{%ruby}g' %{SOURCE101} > %{buildroot}
 
 %post -n nginx-passenger
 if [ $1 == 1 ]; then
-  /usr/sbin/alternatives --install /usr/sbin/nginx nginx /usr/sbin/nginx.passenger 50
+  /usr/sbin/alternatives --install /usr/sbin/nginx nginx \
+				   /usr/sbin/nginx.passenger 50 \
+    --slave %{_libdir}/perl5/auto/nginx/nginx.so nginx.so \
+	    %{_libdir}/perl5/auto/nginx/nginx_passenger.so \
+    --slave %{_libdir}/perl5/auto/nginx/nginx.bs nginx.bs \
+	    %{_libdir}/perl5/auto/nginx/nginx_passenger.bs \
+    --slave %{_libdir}/perl5/nginx.pm nginx.pm %{_libdir}/perl5/nginx_passenger.pm \
+    --slave %{_mandir}/man3/nginx.3pm.gz nginx.man \
+	    %{_mandir}/man3/nginx_passenger.3pm.gz
 fi
 
 %postun -n nginx-passenger
@@ -421,6 +437,9 @@ rm -rf %{buildroot}
 %doc doc/Users\ guide\ Nginx.txt
 %{nginx_confdir}/conf.d/passenger.conf
 /usr/sbin/nginx.passenger
+%{_libdir}/perl5/auto/nginx/nginx*
+%{_libdir}/perl5/nginx*
+%{_mandir}/man3/nginx*
 %endif # !only_native_libs
 
 %files native-libs
@@ -429,6 +448,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Sun Oct 31 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-8
+- Fix embedded Perl module
+
 * Fri Oct 29 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-7
 - Add back all the missing directives from nginx.spec (Perl is
   untested and may be broken)
