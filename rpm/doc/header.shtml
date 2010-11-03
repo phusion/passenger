@@ -46,9 +46,10 @@ p#tm {
 
       <p>
         The easiest way to install Passenger and keep it up to date is to
-        install the passenger-release package for <a
-        href="fedora/13/passenger-release.noarch.rpm">Fedora Core
-        13</a> or <a
+        install the passenger-release package for Fedora Core <a
+        href="fedora/14/passenger-release.noarch.rpm">14</a>
+        (or <a
+        href="fedora/13/passenger-release.noarch.rpm">13</a>) or <a
         href="rhel/5/passenger-release.noarch.rpm">RHEL/CentOS 5</a>
         (Note the RHEL/CentOS packages rely on <a
         href="http://fedoraproject.org/wiki/EPEL">EPEL</a>). All the packages
