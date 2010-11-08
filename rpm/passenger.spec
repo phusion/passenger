@@ -382,7 +382,6 @@ fi
 if [ $1 == 0 ]; then
   /usr/sbin/alternatives --remove nginx /usr/sbin/nginx.passenger
 fi
-%endif # !only_native_libs
 
 %post native
 if [ "$1" -le "1" ] ; then # First install
@@ -400,7 +399,7 @@ fi
 if [ "$1" -ge "1" ] ; then # Upgrade
 semodule -i %{sharedir}/selinux/packages/%{name}/%{name}.pp 2>/dev/null || :
 fi
-
+%endif # !only_native_libs
 
 %clean
 rm -rf %{buildroot}
