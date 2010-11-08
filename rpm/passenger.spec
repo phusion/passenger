@@ -3,7 +3,7 @@
 
 %define gemname passenger
 %define passenger_version 3.0.0
-%define passenger_release 8%{?dist}
+%define passenger_release 9%{?dist}
 %define passenger_epoch 1
 
 %define nginx_version 0.8.52
@@ -250,6 +250,7 @@ This package includes an nginx server with Passenger compiled in.
   cd selinux
   cp %{SOURCE200} .
   echo '%{geminstdir}/agents/((apache2|nginx)/)?Passenger.*	system_u:object_r:httpd_exec_t:s0' > rubygem-passenger.fc
+  echo '%{_var}/log/passenger-analytics	system_u:object_r:httpd_log_t:s0' >> rubygem-passenger.fc
   touch rubygem-passenger.if
   make -f %{sharedir}/selinux/devel/Makefile
   cd ..
@@ -279,6 +280,7 @@ mkdir -p %{buildroot}/%{nginx_datadir}
 mkdir -p %{buildroot}/%{nginx_confdir}
 mkdir -p %{buildroot}/%{nginx_logdir}
 mkdir -p %{buildroot}/%{httpd_confdir}
+mkdir -p %{buildroot}/%{_var}/log/passenger-analytics
 
 ##### Nginx. This should probably be in the %%build, with apache, but
 ##### it installs directly
@@ -387,12 +389,14 @@ fi
 if [ "$1" -le "1" ] ; then # First install
 semodule -i %{sharedir}/selinux/packages/%{name}/%{name}.pp 2>/dev/null || :
 fixfiles -R %{name} restore
+fixfiles -R %{name}-native restore
 fi
 
 %preun native
 if [ "$1" -lt "1" ] ; then # Final removal
 semodule -r rubygem_%{gemname} 2>/dev/null || :
 fixfiles -R %{name} restore
+fixfiles -R %{name}-native restore
 fi
 
 %postun native
@@ -423,6 +427,7 @@ rm -rf %{buildroot}
 %files native
 %{geminstdir}/agents
 %{sharedir}/selinux/packages/%{name}/%{name}.pp
+%{_var}/log/passenger-analytics
 
 %files standalone
 %doc doc/Users\ guide\ Standalone.html
@@ -451,6 +456,10 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Sun Nov  7 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-9
+- Add passenger-analytics directory, so the server doesn't try to create
+  it. (SELinux violation)
+
 * Sun Oct 31 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-8
 - Fix embedded Perl module
 
