@@ -37,8 +37,8 @@ p#tm {
     <div id="content">
       <p>
         Welcome to the repository. Here you&rsquo;ll find RPM packages of <a
-        href="http://modrails.com/">Phusion Passenger</a> (aka mod_rails) for
-        <a href="http://fedoraproject.org/">Fedora</a> and <a
+        href="http://modrails.com/">Phusion Passenger</a> (aka mod_rails /
+        mod_rack) for <a href="http://fedoraproject.org/">Fedora</a> and <a
         href="http://www.redhat.com/rhel/">RedHat Enterprise Linux</a> (and
         derivatives like <a href="http://centos.org">CentOS</a> and <a
         href="https://www.scientificlinux.org/">Scientific Linux</a>).
@@ -59,7 +59,7 @@ p#tm {
 
       <p>
         The source files and documentation for these packages are maintained
-        in <a href="http://github.com/erikogan/rubygem-passenger">GitHub
+        in a <a href="http://github.com/erikogan/rubygem-passenger">GitHub
         repository</a>. Comments, questions, patches, and pull requests are
         always welcome.
       </p>
