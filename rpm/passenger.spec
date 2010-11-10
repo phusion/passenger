@@ -94,6 +94,22 @@ BuildRequires: curl-devel
 %endif
 BuildRequires: doxygen
 BuildRequires: asciidoc
+# native build deps
+%if %{?fedora:1}%{?!fedora:0}
+BuildRequires: selinux-policy
+%else
+BuildRequires: selinux-policy-devel
+%endif
+# nginx build deps
+BuildRequires: pcre-devel
+BuildRequires: zlib-devel
+BuildRequires: openssl-devel
+%if %{?fedora:1}%{?!fedora:0}
+BuildRequires: perl-devel
+%else
+BuildRequires: perl
+%endif
+BuildRequires: perl(ExtUtils::Embed)
 # Can't have a noarch package with an arch'd subpackage
 #BuildArch: noarch
 Provides: rubygem(%{gemname}) = %{passenger_version}
@@ -119,11 +135,6 @@ Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
 Requires(post): policycoreutils, initscripts
 Requires(preun): policycoreutils, initscripts
 Requires(postun): policycoreutils
-%if %{?fedora:1}%{?!fedora:0}
-BuildRequires: selinux-policy
-%else
-BuildRequires: selinux-policy-devel
-%endif
 Epoch: %{passenger_epoch}
 %description native
 Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes deployment
@@ -190,15 +201,6 @@ Group: System Environment/Daemons
 Requires: %{name} = %{passenger_epoch}:%{passenger_version}
 Version: %{nginx_version}
 Release: %{passenger_version}_%{passenger_release}
-BuildRequires: pcre-devel
-BuildRequires: zlib-devel
-BuildRequires: openssl-devel
-%if %{?fedora:1}%{?!fedora:0}
-BuildRequires: perl-devel
-%else
-BuildRequires: perl
-%endif
-BuildRequires: perl(ExtUtils::Embed)
 Requires: %{name}-native-libs = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
 Requires: pcre
 Requires: zlib
