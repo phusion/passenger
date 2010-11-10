@@ -1,0 +1,18 @@
+<comps>
+<!--  <meta> -->
+<!-- Meta information will go here eventually -->
+<!--  </meta> -->
+  <group>
+    <id>build-passenger</id>
+    <name>BuildPassenger</name>
+    <default>true</default>
+    <description>Build Requirements for Passenger</description>
+    <uservisible>true</uservisible>
+    <packagelist>
+      <packagereq type="default">rubygems</packagereq>
+      <packagereq type="default">pcre-devel</packagereq>
+      <packagereq type="default">perl-ExtUtils-Embed</packagereq>
+      <packagereq type="optional">rubygem-rake</packagereq>
+    </packagelist>
+  </group>
+</comps>
