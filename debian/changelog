@@ -1,3 +1,9 @@
+passenger (3.0.0-1bbox3) hardy; urgency=low
+
+  * Fixed clean of vendored libev
+
+ -- John Leach <john@brightbox.co.uk>  Thu, 11 Nov 2010 17:30:20 +0000
+
 passenger (3.0.0-1bbox2) hardy; urgency=low
 
   * Fixed packaging bug with vendored libev
