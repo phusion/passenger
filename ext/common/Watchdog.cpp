@@ -919,11 +919,6 @@ forceAllAgentsShutdown(vector<AgentWatcher *> &watchers) {
 
 int
 main(int argc, char *argv[]) {
-	/* Become the session leader so that Apache can't kill this
-	 * watchdog with killpg() during shutdown, and so that a
-	 * Ctrl-C only affects the web server.
-	 */
-	setsid();
 	disableOomKiller();
 	
 	agentsOptions = initializeAgent(argc, argv, "PassengerWatchdog");

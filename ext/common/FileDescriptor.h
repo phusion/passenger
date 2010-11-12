@@ -76,12 +76,16 @@ private:
 			}
 		}
 		
-		void close() {
+		void close(bool checkErrors = true) {
 			if (fd >= 0) {
 				this_thread::disable_syscall_interruption dsi;
 				int theFd = fd;
 				fd = -1;
-				safelyClose(theFd);
+				if (checkErrors) {
+					safelyClose(theFd);
+				} else {
+					syscalls::close(fd);
+				}
 			}
 		}
 		
@@ -128,13 +132,17 @@ public:
 	 * nothing will happen. If there are multiple copies of this FileDescriptor
 	 * then the underlying file descriptor will be closed for every one of them.
 	 *
+	 * @params checkErrors Whether a SystemException should be thrown in case
+	 *                     closing the file descriptor fails. If false, errors
+	 *                     are silently ignored.
 	 * @throws SystemException Something went wrong while closing
-	 *                         the file descriptor.
+	 *                         the file descriptor. Only thrown if
+	 *                         checkErrors is true.
 	 * @post *this == -1
 	 */
-	void close() {
+	void close(bool checkErrors = true) {
 		if (data != NULL) {
-			data->close();
+			data->close(checkErrors);
 			data.reset();
 		}
 	}
@@ -210,8 +218,26 @@ public:
 	}
 };
 
-typedef pair<FileDescriptor, FileDescriptor> Pipe;
-typedef pair<FileDescriptor, FileDescriptor> SocketPair;
+/**
+ * A structure containing two FileDescriptor objects. Behaves like a pair
+ * and like a two-element array.
+ */
+class FileDescriptorPair: public pair<FileDescriptor, FileDescriptor> {
+public:
+	FileDescriptor &operator[](int index) {
+		if (index == 0) {
+			return first;
+		} else if (index == 1) {
+			return second;
+		} else {
+			throw ArgumentException("Index must be either 0 of 1");
+		}
+	}
+};
+
+// Convenience aliases.
+typedef FileDescriptorPair Pipe;
+typedef FileDescriptorPair SocketPair;
 
 /**
  * A synchronization mechanism that's implemented with file descriptors,
