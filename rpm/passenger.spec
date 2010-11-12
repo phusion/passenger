@@ -1,5 +1,12 @@
 # RPM Spec file for Phusion Passenger
 #
+# The latest version of this file (as well as supporting files,
+# documentation, and scripts to help build it) can be found here:
+#
+# http://github.com/erikogan/rubygem-passenger
+#
+# (If you fork this project feel free to add your repo below, but please
+# do not remove the URL above.)
 
 %define gemname passenger
 %define passenger_version 3.0.0
