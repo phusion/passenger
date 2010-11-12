@@ -51,6 +51,7 @@
 #include "Utils.h"
 #include "Utils/Base64.h"
 #include "Utils/Timer.h"
+#include "Utils/ScopeGuard.h"
 #include "Utils/IOUtils.h"
 #include "Utils/VariantMap.h"
 
@@ -86,37 +87,6 @@ static RandomGenerator *randomGenerator;
 static EventFd *errorEvent;
 
 #define REQUEST_SOCKET_PASSWORD_SIZE     64
-
-
-class FailGuard {
-private:
-	function<void ()> func;
-public:
-	FailGuard() { }
-	FailGuard(const function<void ()> &_func): func(_func) { }
-	
-	~FailGuard() {
-		if (func != NULL) {
-			func();
-		}
-	}
-	
-	void runNow() {
-		if (func != NULL) {
-			function<void ()> func = this->func;
-			this->func = NULL;
-			func();
-		}
-	}
-	
-	void set(const function<void ()> &func) {
-		this->func = func;
-	}
-	
-	void clear() {
-		func = NULL;
-	}
-};
 
 
 /**
@@ -387,7 +357,7 @@ public:
 			syscalls::close(fds[1]);
 			this_thread::restore_interruption ri(di);
 			this_thread::restore_syscall_interruption rsi(dsi);
-			FailGuard failGuard(boost::bind(killAndWait, pid));
+			ScopeGuard failGuard(boost::bind(killAndWait, pid));
 			
 			// Send startup arguments.
 			try {
