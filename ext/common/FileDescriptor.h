@@ -224,6 +224,12 @@ public:
  */
 class FileDescriptorPair: public pair<FileDescriptor, FileDescriptor> {
 public:
+	FileDescriptorPair() { }
+	
+	FileDescriptorPair(const FileDescriptor &a, const FileDescriptor &b)
+		: pair<FileDescriptor, FileDescriptor>(a, b)
+		{ }
+	
 	FileDescriptor &operator[](int index) {
 		if (index == 0) {
 			return first;

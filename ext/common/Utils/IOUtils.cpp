@@ -516,7 +516,7 @@ createUnixSocketPair() {
 	} else {
 		sockets[0] = fds[0];
 		sockets[1] = fds[1];
-		return make_pair(sockets[0], sockets[1]);
+		return SocketPair(sockets[0], sockets[1]);
 	}
 }
 
@@ -531,7 +531,7 @@ createPipe() {
 	} else {
 		p[0] = fds[0];
 		p[1] = fds[1];
-		return make_pair(p[0], p[1]);
+		return Pipe(p[0], p[1]);
 	}
 }
 
