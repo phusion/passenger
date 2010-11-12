@@ -499,7 +499,7 @@ public:
 			try {
 				watchdogArgs.writeToChannel(feedbackChannel);
 			} catch (const SystemException &e) {
-				if (e.code() == EPIPE || e.code() == ECONNRESET) {
+				if (e.code() != EPIPE && e.code() != ECONNRESET) {
 					inspectWatchdogCrashReason(pid);
 				}
 			}
@@ -514,11 +514,15 @@ public:
 			try {
 				result = feedbackChannel.read(args);
 			} catch (const SystemException &ex) {
-				killProcessGroupAndWait(&pid, 5000);
-				guard.clear();
-				throw SystemException("Unable to start the Phusion Passenger watchdog: "
-					"unable to read its startup information",
-					ex.code());
+				if (ex.code() == ECONNRESET) {
+					inspectWatchdogCrashReason(pid);
+				} else {
+					killProcessGroupAndWait(&pid, 5000);
+					guard.clear();
+					throw SystemException("Unable to start the Phusion Passenger watchdog: "
+						"unable to read its startup information",
+						ex.code());
+				}
 			}
 			if (!result) {
 				UPDATE_TRACE_POINT();
