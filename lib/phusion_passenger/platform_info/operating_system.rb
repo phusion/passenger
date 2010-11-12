@@ -98,7 +98,7 @@ module PlatformInfo
 			arch = `uname -p`.strip
 			# On some systems 'uname -p' returns something like
 			# 'Intel(R) Pentium(R) M processor 1400MHz'.
-			if arch == "unknown" || result =~ / /
+			if arch == "unknown" || arch =~ / /
 				arch = `uname -m`.strip
 			end
 			if arch =~ /^i.86$/
