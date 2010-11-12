@@ -545,10 +545,19 @@ public:
 				guard.clear();
 				throw SystemException(args[1], atoi(args[2]));
 			} else if (args[0] == "exec error") {
+				e = atoi(args[1]);
 				killProcessGroupAndWait(&pid, 5000);
 				guard.clear();
-				throw SystemException("Unable to start the Phusion Passenger watchdog (" +
-					watchdogFilename + ")", atoi(args[1]));
+				if (e == ENOENT) {
+					throw RuntimeException("Unable to start the Phusion Passenger watchdog "
+						"because its executable (" + watchdogFilename + ") does "
+						"not exist. This probably means that your Phusion Passenger "
+						"installation is broken or incomplete. Please reinstall "
+						"Phusion Passenger");
+				} else {
+					throw SystemException("Unable to start the Phusion Passenger watchdog (" +
+						watchdogFilename + ")", e);
+				}
 			}
 			
 			
