@@ -161,10 +161,6 @@ private
 				wrap_desc("Specify Union Station key")) do |value|
 				@options[:union_station_key] = value
 			end
-			opts.on("--debugger",
-				wrap_desc("Enable debugger support")) do
-				@options[:debugger] = true
-			end
 			
 			opts.separator ""
 			opts.on("--ping-port NUMBER", Integer,
