@@ -566,7 +566,10 @@ private:
 		try {
 			AnalyticsLogPtr log;
 			if (config->analyticsEnabled()) {
-				log = analyticsLogger->newTransaction(config->getAppGroupName(appRoot));
+				log = analyticsLogger->newTransaction(
+					config->getAppGroupName(appRoot),
+					"requests",
+					config->unionStationKey);
 				log->message(string("URI: ") + r->uri);
 			} else {
 				log.reset(new AnalyticsLog());
@@ -640,7 +643,7 @@ private:
 					appRoot,
 					config->getAppGroupName(appRoot),
 					mapper.getApplicationTypeString(),
-					mapper.getEnvironment(),
+					config->getEnvironment(),
 					config->getSpawnMethodString(),
 					config->getUser(),
 					config->getGroup(),
@@ -1337,9 +1340,9 @@ public:
 			"",
 			serverConfig.analyticsLogDir, serverConfig.analyticsLogUser,
 			serverConfig.analyticsLogGroup, serverConfig.analyticsLogPermissions,
-			DEFAULT_UNION_STATION_GATEWAY_ADDRESS,
-			DEFAULT_UNION_STATION_GATEWAY_PORT,
-			"",
+			serverConfig.unionStationGatewayAddress,
+			serverConfig.unionStationGatewayPort,
+			serverConfig.unionStationGatewayCert,
 			serverConfig.prestartURLs);
 		
 		analyticsLogger = ptr(new AnalyticsLogger(agentsStarter.getLoggingSocketAddress(),
