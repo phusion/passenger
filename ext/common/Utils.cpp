@@ -684,6 +684,14 @@ getSignalName(int sig) {
 		return "SIGUSR1";
 	case SIGUSR2:
 		return "SIGUSR2";
+	#ifdef SIGEMT
+		case SIGEMT:
+			return "SIGEMT";
+	#endif
+	#ifdef SIGINFO
+		case SIGINFO:
+			return "SIGINFO";
+	#endif
 	default:
 		return toString(sig);
 	}
@@ -709,7 +717,9 @@ resetSignalHandlersAndMask() {
 	sigaction(SIGILL,  &action, NULL);
 	sigaction(SIGTRAP, &action, NULL);
 	sigaction(SIGABRT, &action, NULL);
-	sigaction(SIGEMT,  &action, NULL);
+	#ifdef SIGEMT
+		sigaction(SIGEMT,  &action, NULL);
+	#endif
 	sigaction(SIGFPE,  &action, NULL);
 	sigaction(SIGBUS,  &action, NULL);
 	sigaction(SIGSEGV, &action, NULL);
@@ -722,7 +732,9 @@ resetSignalHandlersAndMask() {
 	sigaction(SIGTSTP, &action, NULL);
 	sigaction(SIGCONT, &action, NULL);
 	sigaction(SIGCHLD, &action, NULL);
-	sigaction(SIGINFO, &action, NULL);
+	#ifdef SIGINFO
+		sigaction(SIGINFO, &action, NULL);
+	#endif
 	sigaction(SIGUSR1, &action, NULL);
 	sigaction(SIGUSR2, &action, NULL);
 }
