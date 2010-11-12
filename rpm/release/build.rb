@@ -9,11 +9,27 @@ stage_dir='./stage'
 mock_repo_dir = '/var/lib/mock/passenger-build-repo'
 
 mockdir='/etc/mock'
-mockdir='/tmp/mock'
+#mockdir='/tmp/mock'
 
 # If rpmbuild-md5 is installed, use it for the SRPM, so EPEL machines can read it.
 rpmbuild = '/usr/bin/rpmbuild' + (File.exist?('/usr/bin/rpmbuild-md5') ? '-md5' : '')
 rpmbuilddir = `rpm -E '%_topdir'`.chomp
+rpmarch = `rpm -E '%_arch'`.chomp
+
+@can_build   = {
+  'i386'    => %w{i586 i686},
+  'i686'    => %w{i586 i686},
+  'ppc'     => %w{},
+  'ppc64'   => %w{ppc},
+  's390x'   => %w{},
+  'sparc'   => %w{},
+  'sparc64' => %w{sparc},
+  'x86_64'  => %w{i386 i586 i686},
+}
+
+#@can_build.keys.each {|k| @can_build[k].push k}
+@can_build = @can_build[rpmarch]
+@can_build.push rpmarch
 
 bindir=File.dirname($0)
 
@@ -22,8 +38,10 @@ configs = Dir["#{mockdir}/{#{CFGLIMIT.join ','}}*"].map {|f| f.gsub(%r{.*/([^.]*
 def limit_configs(configs, limit)
   tree = configs.inject({}) do |m,c|
     (distro,version,arch) = c.split /-/
+    next m unless @can_build.include?(arch)
     [
-      # Rather than construct it programatically, just spell it out
+      # Rather than construct this list programatically, just spell it out
+      '',
       distro,
       "#{distro}-#{version}",
       "#{distro}-#{version}-#{arch}",
@@ -38,11 +56,11 @@ def limit_configs(configs, limit)
       end
       m[pattern].push c
     end
-
     m
   end
   tree.default = []
-  return tree[limit]
+  # By splitting and rejoining we normalize the distro--, etc. cases.
+  return tree[limit.join '-']
 end
 
 def noisy_system(*args)
@@ -50,11 +68,15 @@ def noisy_system(*args)
   system(*args)
 end
 
-if ARGV[0]
-  configs = limit_configs(configs, ARGV[0])
-  if configs.empty?
-    abort "Can't find a set of configs for '#{ARGV[0]}' (hint try 'fedora' or 'fedora-14' or even 'fedora-14-x86_64')"
-  end
+
+############################################################################
+limit = ARGV[0].to_s.split /-/
+if limit[2] && !@can_build.include?(limit[2])
+  abort "ERROR: Cannot build '#{limit[2]}' packages on '#{rpmarch}'"
+end
+configs = limit_configs(configs, limit)
+if configs.empty?
+  abort "Can't find a set of configs for '#{ARGV[0]}' (hint try 'fedora' or 'fedora-14' or even 'fedora-14-x86_64')"
 end
 
 puts "rm -rf #{stage_dir}"
