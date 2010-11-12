@@ -37,7 +37,7 @@ bindir=File.dirname($0)
 
 configs = Dir["#{mockdir}/{#{CFGLIMIT.join ','}}*"].map {|f| f.gsub(%r{.*/([^.]*).cfg}, '\1')}
 
-def limit_configs(configs, limit)
+def limit_configs(configs, limits)
   tree = configs.inject({}) do |m,c|
     (distro,version,arch) = c.split /-/
     next m unless @can_build.include?(arch)
@@ -61,8 +61,16 @@ def limit_configs(configs, limit)
     m
   end
   tree.default = []
+  # Special case for no arguments
+  limits = [nil] if limits.empty?
   # By splitting and rejoining we normalize the distro--, etc. cases.
-  return tree[limit.join '-']
+  return limits.map do |l|
+    parts = l.to_s.split(/-/).map {|v| v == '*' ? nil : v}
+    if parts[2] && !@can_build.include?(parts[2])
+      abort "ERROR: Cannot build '#{parts[2]}' packages on '#{rpmarch}'"
+    end
+    tree[parts.join '-']
+  end.flatten
 end
 
 def noisy_system(*args)
@@ -72,11 +80,8 @@ end
 
 
 ############################################################################
-limit = ARGV[0].to_s.split /-/
-if limit[2] && !@can_build.include?(limit[2])
-  abort "ERROR: Cannot build '#{limit[2]}' packages on '#{rpmarch}'"
-end
-configs = limit_configs(configs, limit)
+configs = limit_configs(configs, ARGV)
+
 if configs.empty?
   abort "Can't find a set of configs for '#{ARGV[0]}' (hint try 'fedora' or 'fedora-14' or even 'fedora-14-x86_64')"
 end
