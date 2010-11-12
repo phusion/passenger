@@ -16,6 +16,8 @@ rpmbuild = '/usr/bin/rpmbuild' + (File.exist?('/usr/bin/rpmbuild-md5') ? '-md5' 
 rpmbuilddir = `rpm -E '%_topdir'`.chomp
 rpmarch = `rpm -E '%_arch'`.chomp
 
+@verbosity = 0
+
 @can_build   = {
   'i386'    => %w{i586 i686},
   'i686'    => %w{i586 i686},
@@ -64,7 +66,7 @@ def limit_configs(configs, limit)
 end
 
 def noisy_system(*args)
-  puts args.join ' '
+  puts args.join ' ' if @verbosity > 0
   system(*args)
 end
 
@@ -79,10 +81,12 @@ if configs.empty?
   abort "Can't find a set of configs for '#{ARGV[0]}' (hint try 'fedora' or 'fedora-14' or even 'fedora-14-x86_64')"
 end
 
-puts "rm -rf #{stage_dir}"
-FileUtils.rm_rf(stage_dir)
-puts "mkdir -p #{stage_dir}"
-FileUtils.mkdir_p(stage_dir)
+puts "BUILD:\n  " + configs.join("\n  ") if @verbosity >= 2
+
+FileUtils.rm_rf(stage_dir, :verbose => @verbosity > 0)
+FileUtils.mkdir_p(stage_dir, :verbose => @verbosity > 0)
+
+ENV['BUILD_VERBOSITY'] = @verbosity.to_s
 
 # Check the ages of the configs for validity
 mtime = File.mtime("#{bindir}/mocksetup.sh")
@@ -98,32 +102,36 @@ EndErr
 end
 
 # No dist for SRPM
-noisy_system(rpmbuild, '--define', 'dist %nil', '-bs', 'passenger.spec')
+noisy_system(rpmbuild, *((@verbosity > 0 ? [] : %w{--quiet}) + ['--define', 'dist %nil', '-bs', 'passenger.spec']))
+
 # I really wish there was a way to query rpmbuild for this via the spec file,
 # but rpmbuild --eval doesn't seem to work
 srpm=`ls -1t $HOME/rpmbuild/SRPMS | head -1`.chomp
-puts "mkdir -p #{stage_dir}/SRPMS"
-FileUtils.mkdir_p(stage_dir + '/SRPMS')
-puts "cp #{rpmbuilddir}/SRPMS/#{srpm} #{stage_dir}/SRPMS"
-File.copy "#{rpmbuilddir}/SRPMS/#{srpm}", "#{stage_dir}/SRPMS"
+
+FileUtils.mkdir_p(stage_dir + '/SRPMS', :verbose => @verbosity > 0)
+
+FileUtils.cp("#{rpmbuilddir}/SRPMS/#{srpm}", "#{stage_dir}/SRPMS",
+:verbose => @verbosity > 0)
+
+mockvolume = @verbosity >= 2 ? %w{-v} : @verbosity < 0 ? %w{-q} : []
 
 configs.each do |cfg|
-  puts "---------------------- Building #{cfg}"
+  puts "---------------------- Building #{cfg}" if @verbosity >= 0
   pcfg = 'passenger-' + cfg
   idir = File.join stage_dir, cfg.split(/-/)
-  if noisy_system('mock', '-r', pcfg, "#{rpmbuilddir}/SRPMS/#{srpm}")
+  # Move *mockvolume to the end, since it causes Ruby to cry in the middle
+  # Alt sol'n: *(foo + ['bar'] )
+  if noisy_system('mock', '-r', pcfg, "#{rpmbuilddir}/SRPMS/#{srpm}", *mockvolume)
   else
     abort "Mock failed. See above for details"
   end
-  FileUtils.mkdir_p(idir, :verbose => true)
-  # puts "cp /var/lib/mock/#{pcfg}/result/*.rpm #{stage_dir}/#{idir}"
-  # Dir["cp /var/lib/mock/#{pcfg}/result/*.rpm"].each
+  FileUtils.mkdir_p(idir, :verbose => @verbosity > 0)
   FileUtils.cp(Dir["/var/lib/mock/#{pcfg}/result/*.rpm"],
-              idir, :verbose => true)
+  idir, :verbose => @verbosity > 0)
 end
 
 if File.directory?("#{stage_dir}/epel")
-  FileUtils.mv "#{stage_dir}/epel", "#{stage_dir}/rhel"
+  FileUtils.mv "#{stage_dir}/epel", "#{stage_dir}/rhel", :verbose => @verbosity > 0
 end
 
 noisy_system('rpm', '--addsign', *Dir["#{stage_dir}/**/*.rpm"])
