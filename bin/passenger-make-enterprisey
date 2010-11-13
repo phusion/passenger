@@ -67,7 +67,7 @@ else
 			STDERR.puts "Invalid key given. Please try again:"
 		end
 	end
-	if natively_packaged?
+	if PhusionPassenger.natively_packaged?
 		enterprise_file = "/etc/passenger_enterprisey.txt"
 	else
 		enterprise_file = "#{SOURCE_ROOT}/enterprisey.txt"
