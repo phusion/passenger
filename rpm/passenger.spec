@@ -10,10 +10,10 @@
 
 %define gemname passenger
 %define passenger_version 3.0.0
-%define passenger_release 9%{?dist}
+%define passenger_release 10%{?dist}
 %define passenger_epoch 1
 
-%define nginx_version 0.8.52
+%define nginx_version 0.8.53
 %define nginx_release %{passenger_version}_%{passenger_release}
 %define nginx_user	passenger
 %define nginx_group	%{nginx_user}
@@ -117,6 +117,9 @@ BuildRequires: perl-devel
 BuildRequires: perl
 %endif
 BuildRequires: perl(ExtUtils::Embed)
+BuildRequires: libxslt-devel
+BuildRequires: GeoIP-devel
+BuildRequires: gd-devel
 # Can't have a noarch package with an arch'd subpackage
 #BuildArch: noarch
 Provides: rubygem(%{gemname}) = %{passenger_version}
@@ -213,6 +216,8 @@ Requires: pcre
 Requires: zlib
 Requires: openssl
 Requires: perl(:MODULE_COMPAT_%(eval "`%{__perl} -V:version`"; echo $version))
+Requires: GeoIP
+Requires: gd
 Requires: nginx-alternatives
 Epoch: %{passenger_epoch}
 %description -n nginx-passenger
@@ -227,10 +232,10 @@ This package includes an nginx server with Passenger compiled in.
 
 %prep
 %setup -q -n %{gemname}-%{passenger_version} -b 1
-%setup -q -T -D -n nginx-%{nginx_version} -a 300
-# Fix the CWD
-%setup -q -T -D -n %{gemname}-%{passenger_version}
-%patch0 -p1
+# %setup -q -T -D -n nginx-%{nginx_version} -a 300
+# # Fix the CWD
+# %setup -q -T -D -n %{gemname}-%{passenger_version}
+#%patch0 -p1
 
 %if %{gem_version_mismatch}
   %{warn:
@@ -263,6 +268,69 @@ This package includes an nginx server with Passenger compiled in.
   touch rubygem-passenger.if
   make -f %{sharedir}/selinux/devel/Makefile
   cd ..
+
+  ### NGINX
+  cd ../nginx-%{nginx_version}
+
+  #export FAIRDIR=%{_builddir}/nginx-%{nginx_version}/gnosek-nginx-upstream-fair-*
+  # I'm not sure why this fails on RHEL but not Fedora. I guess GCC 4.4 is
+  # smarter about it than 4.1? It feels wrong to do this, but I don't see
+  # an easier way out.
+  %if %{?fedora:1}%{?!fedora:0}
+    %define nginx_ccopt %{optflags}
+  %else
+    %define nginx_ccopt %(echo "%{optflags}" | sed -e 's/SOURCE=2/& -Wno-unused/')
+  %endif
+
+  # THIS is beyond ugly. But it corrects the check-buildroot error on
+  # the string saved for 'nginx -V'
+  #
+  # In any case, fix it correctly later
+  perl -pi -e 's{^install:\s*$}{$&\tperl -pi -e '\''s<%{buildroot}><>g;s<%{_builddir}><%%{_builddir}>g;'\'' objs/ngx_auto_config.h\n}' %{_builddir}/nginx-%{nginx_version}/auto/install
+
+
+  ### Stolen [and hacked] from the nginx spec file
+  export DESTDIR=%{buildroot}
+  ./configure \
+    --user=%{nginx_user} \
+    --group=%{nginx_group} \
+    --prefix=%{nginx_datadir} \
+    --sbin-path=%{_sbindir}/nginx.passenger \
+    --conf-path=%{nginx_confdir}/nginx.conf \
+    --error-log-path=%{nginx_logdir}/error.log \
+    --http-log-path=%{nginx_logdir}/access.log \
+    --http-client-body-temp-path=%{nginx_home_tmp}/client_body \
+    --http-proxy-temp-path=%{nginx_home_tmp}/proxy \
+    --http-fastcgi-temp-path=%{nginx_home_tmp}/fastcgi \
+    --http-uwsgi-temp-path=%{nginx_home_tmp}/uwsgi \
+    --http-scgi-temp-path=%{nginx_home_tmp}/scgi \
+    --pid-path=%{_localstatedir}/run/nginx.pid \
+    --lock-path=%{_localstatedir}/lock/subsys/nginx \
+    --with-http_ssl_module \
+    --with-http_realip_module \
+    --with-http_addition_module \
+    --with-http_xslt_module \
+    --with-http_image_filter_module \
+    --with-http_geoip_module \
+    --with-http_sub_module \
+    --with-http_dav_module \
+    --with-http_flv_module \
+    --with-http_gzip_static_module \
+    --with-http_random_index_module \
+    --with-http_secure_link_module \
+    --with-http_degradation_module \
+    --with-http_stub_status_module \
+    --with-http_perl_module \
+    --with-mail \
+    --with-file-aio \
+    --with-mail_ssl_module \
+    --with-ipv6 \
+    --with-cc-opt="%{nginx_ccopt} $(pcre-config --cflags)" \
+    --with-ld-opt="-Wl,-E" # so the perl module finds its symbols
+
+  make %{?_smp_mflags} 
+
+  cd -
 %endif # !only_native_libs
 
 %install
@@ -291,66 +359,16 @@ mkdir -p %{buildroot}/%{nginx_logdir}
 mkdir -p %{buildroot}/%{httpd_confdir}
 mkdir -p %{buildroot}/%{_var}/log/passenger-analytics
 
-##### Nginx. This should probably be in the %%build, with apache, but
-##### it installs directly
-
-# THIS is beyond ugly. But it corrects the check-buildroot error on
-# the string saved for 'nginx -V'
-#
-# In any case, fix it correctly later
-perl -pi -e 's{^install:\s*$}{$&\tperl -pi -e '\''s<%{buildroot}><>g;s<%{_builddir}><%%{_builddir}>g;'\'' objs/ngx_auto_config.h\n}' %{_builddir}/nginx-%{nginx_version}/auto/install
-
-### Stolen [and hacked] from the nginx spec file
-export DESTDIR=%{buildroot}
-export FAIRDIR=%{_builddir}/nginx-%{nginx_version}/gnosek-nginx-upstream-fair-*
-# I'm not sure why this fails on RHEL but not Fedora. I guess GCC 4.4 is
-# smarter about it than 4.1? It feels wrong to do this, but I don't see
-# an easier way out.
-%if %{?fedora:1}%{?!fedora:0}
-  %define nginx_ccopt %{optflags}
-%else
-  %define nginx_ccopt %(echo "%{optflags}" | sed -e 's/SOURCE=2/& -Wno-unused/')
-%endif
-
-./bin/passenger-install-nginx-module --auto --nginx-source-dir=%{_builddir}/nginx-%{nginx_version} --prefix=%{buildroot}/%{nginx_datadir} --extra-make-install-flags='DESTDIR=%{buildroot} INSTALLDIRS=vendor' --extra-configure-flags="--user=%{nginx_user} \
-    --group=%{nginx_group} \
-    --prefix=%{nginx_datadir} \
-    --sbin-path=%{_sbindir}/nginx.passenger \
-    --conf-path=%{nginx_confdir}/nginx.conf \
-    --error-log-path=%{nginx_logdir}/error.log \
-    --http-log-path=%{nginx_logdir}/access.log \
-    --http-client-body-temp-path=%{nginx_home_tmp}/client_body \
-    --http-proxy-temp-path=%{nginx_home_tmp}/proxy \
-    --http-fastcgi-temp-path=%{nginx_home_tmp}/fastcgi \
-    --pid-path=%{_localstatedir}/run/nginx.pid \
-    --lock-path=%{_localstatedir}/lock/subsys/nginx \
-    --with-http_ssl_module \
-    --with-http_realip_module \
-    --with-http_addition_module \
-    --with-http_sub_module \
-    --with-http_dav_module \
-    --with-http_flv_module \
-    --with-http_gzip_static_module \
-    --with-http_random_index_module \
-    --with-http_secure_link_module \
-    --with-http_stub_status_module \
-    --with-http_perl_module \
-    --with-mail \
-    --with-mail_ssl_module \
-    --with-ipv6 \
-    --add-module=$FAIRDIR \
-    --with-cc-opt='%{nginx_ccopt} %(pcre-config --cflags)' \
-    --with-ld-opt=-Wl,-E
-"
-# Too tired to figure out why this isn't working (when the above does)
-#    --with-ld-opt='%(perl -MExtUtils::Embed -e ldopts)' \
-
 # I should probably figure out how to get these into the gem
 cp -ra agents %{buildroot}/%{geminstdir}
 
 # SELINUX
 install -p -m 644 -D selinux/%{name}.pp %{buildroot}%{sharedir}/selinux/packages/%{name}/%{name}.pp
 
+# NGINX
+cd ../nginx-%{nginx_version}
+make install DESTDIR=%{buildroot} INSTALLDIRS=vendor
+cd -
 %endif #!only_native_libs
 
 ##### NATIVE LIBS INSTALL
@@ -465,6 +483,10 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Fri Nov 12 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-10
+- Bump nginx to version 0.8.53 and build it by hand based on the newer
+  nginx specfile
+
 * Sun Nov  7 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-9
 - Add passenger-analytics directory, so the server doesn't try to create
   it. (SELinux violation)
