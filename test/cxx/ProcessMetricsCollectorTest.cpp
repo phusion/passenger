@@ -109,9 +109,9 @@ namespace tut {
 				ensure_equals(swap, (ssize_t) -1);
 			}
 		#elif defined(__linux__)
-			ensure(pss > 50000 && pss < 60000);
-			ensure(privateDirty > 50000 && privateDirty < 60000);
-			ensure(swap < 10000);
+			ensure("PSS is correct", (pss > 50000 && pss < 60000) || pss == -1);
+			ensure("Private dirty is correct", privateDirty > 50000 && privateDirty < 60000);
+			ensure("Swap is correct", swap < 10000);
 		#else
 			ensure((pss > 50000 && pss < 60000) || pss == -1);
 			ensure((privateDirty > 50000 && privateDirty < 60000) || privateDirty == -1);
