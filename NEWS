@@ -14,7 +14,7 @@ Release 3.0.1
    if something goes wrong during startup you will now more likely know why.
  * Curl < 7.12.1 is now supported
    The previous version fails to compile with Curl versions earlier than
-   7.12.1.
+   7.12.1. Issue #556.
  * passenger-make-enterprisey fixed
    This is the command that people can run after donating. It allows people
    to slightly modify Phusion Passenger's display name as a joke. In 3.0.0 it
@@ -24,7 +24,7 @@ Release 3.0.1
    while RackEnv only had effect on Rack apps. Because Rails 3 apps are
    considered Rack apps, setting RailsEnv had no effect on Rails 3 apps.
    Because this is confusing to users, we've now made RailsEnv and RackEnv
-   equivalent.
+   equivalent. Issue #579.
  * [Nginx] Fixed compilation problems on systems with unpowerful shells
    Most notable Solaris. Its default shell does not support some basic
    constructs that we used in the Nginx configure script.
