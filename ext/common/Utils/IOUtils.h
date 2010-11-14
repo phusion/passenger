@@ -94,6 +94,12 @@ bool isLocalSocketAddress(const StaticString &address);
 void setNonBlocking(int fd);
 
 /**
+ * Try to call the Linux accept4() system call. If the system call is
+ * not available, then -1 is returned and errno is set to ENOSYS.
+ */
+int callAccept4(int sock, struct sockaddr *addr, socklen_t *addr_len, int options);
+
+/**
  * Resolves the given host name and returns a list of IP addresses.
  * <em>hostname</em> may also be an IP address, in which case it is
  * returned. You may explicitly specify a <em>port</em> as a hint to

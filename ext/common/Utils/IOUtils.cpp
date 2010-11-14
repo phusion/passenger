@@ -49,6 +49,10 @@
 #include <cerrno>
 #include <cmath>
 
+#ifdef __linux__
+	#include <sys/syscall.h>
+#endif
+
 #include "Timer.h"
 #include "IOUtils.h"
 #include "StrIntUtils.h"
@@ -148,6 +152,33 @@ setNonBlocking(int fd) {
 			"cannot set socket flags",
 			e);
 	}
+}
+
+int
+tryAccept4(int sock, struct sockaddr *addr, socklen_t *addr_len, int options) {
+	#if defined(__linux__) && defined(__x86_64__)
+		int ret;
+		do {
+			ret = syscall(288, sock, addr, addr_len, options);
+		} while (ret == -1 && errno == EINTR);
+		return ret;
+	#elif defined(__linux__) && defined(__i386__)
+		int ret;
+		do {
+			ret = syscall(__NR_socketcall, 18,
+				sock, addr, addr_len, options);
+		} while (ret == -1 && errno == EINTR);
+		return ret;
+	#elif defined(SYS_ACCEPT4)
+		int ret;
+		do {
+			ret = ::accept4(sock, addr, addr_len, options);
+		} while (ret == -1 && errno == EINTR);
+		return ret;
+	#else
+		errno = ENOSYS;
+		return -1;
+	#endif
 }
 
 vector<string>
