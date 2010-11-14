@@ -11,6 +11,14 @@ body {
   margin: 0;
   padding: 0;
 }
+
+a {
+  color: #666;
+}
+a:visited {
+  color: #333;
+}
+
 h1 {
   margin-top: 0;
   padding: 0.5em;
@@ -20,13 +28,32 @@ h1 {
 div#content {
   padding: 0 1em;
 }
-pre {
+pre,
+.cmd,
+.per-distro-cmds dd {
   /* I think Courier New looks the best, but Andale Mono is preferable to the default */
   font-family: Courier New, Andale Mono, Courier, monospace;
 }
 p#tm {
   font-size: 80%;
   text-align: right;
+}
+.per-distro-cmds dd,
+.cmd {
+  display: block;
+  padding: 3px;
+  border: 1px solid #ccc;
+  background-color: #eee;
+  white-space: nowrap;
+}
+.per-distro-cmds dd {
+  margin-bottom: 0.5em;
+}
+.or {
+  padding: 0.5em;
+  font-size: 125%;
+  font-weight: bold;
+  text-align: center;
 }
     </style>
   </head>
@@ -46,16 +73,35 @@ p#tm {
 
       <p>
         The easiest way to install Passenger and keep it up to date is to
-        install the passenger-release package for Fedora Core <a
-        href="fedora/14/passenger-release.noarch.rpm">14</a>
-        (or <a
-        href="fedora/13/passenger-release.noarch.rpm">13</a>) or <a
-        href="rhel/5/passenger-release.noarch.rpm">RHEL/CentOS 5</a>
-        (Note the RHEL/CentOS packages rely on <a
-        href="http://fedoraproject.org/wiki/EPEL">EPEL</a>). All the packages
-        are <a href="/RPM-GPG-KEY-stealthymonkeys.asc">cryptographically
-        signed</a>.
+        install the passenger-release package:
       </p>
+
+      <dl class="per-distro-cmds">
+        <dt><strong>Fedora Core 14</strong>:</dt>
+        <dd>rpm -Uvh <a
+        href="fedora/14/passenger-release.noarch.rpm">http://<!--#echo var="SERVER_NAME" -->/fedora/14/passenger-release.noarch.rpm</a></dd>
+        <dt><strong>Fedora Core 13</strong>:</dt>
+        <dd>rpm -Uvh <a
+        href="fedora/13/passenger-release.noarch.rpm">http://<!--#echo var="SERVER_NAME" -->/fedora/13/passenger-release.noarch.rpm</a></dd>
+        <dt><strong>RHEL 5 / CentOS 5 / ScientificLinux 5</strong>: (note, these packages depend on <a
+        href="http://fedoraproject.org/wiki/EPEL">EPEL</a>)</dt>
+        <dd>rpm -Uvh <a
+        href="rhel/5/passenger-release.noarch.rpm">http://<!--#echo var="SERVER_NAME" -->/rhel/5/passenger-release.noarch.rpm</a></dd>
+      </dl>
+
+      <p>
+        From there you can use <a href="http://prefetch.net/articles/yum.html">Yum</a> to install packages. For example:
+      </p>
+
+      <div>
+        <div class="cmd">yum install nginx-passenger</div>
+        <div class="or">or</div>
+        <div class="cmd">yum install mod_passenger</div>
+        <div class="or">or</div>
+        <div class="cmd">yum install rubygem-passenger-standalone</div>
+      </div>
+
+      <h2>More Info?</h2>
 
       <p>
         The source files and documentation for these packages are maintained
