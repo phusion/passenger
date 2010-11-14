@@ -412,7 +412,8 @@ public:
 			
 			FileHandleGuard fileGuard(f);
 			size_t privateDirty = 0; // in KB
-			size_t pss = 0; // in KB
+			size_t pss = 0;          // in KB
+			size_t swap = 0;         // in KB
 			
 			while (!feof(f)) {
 				char line[1024 * 4];
@@ -442,6 +443,12 @@ public:
 						if (readNextWord(&buf) != "kB") {
 							return 0;
 						}
+					} else if (beginsWith(line, "Swap:")) {
+						readNextWord(&buf);
+						swap += readNextWordAsLongLong(&buf);
+						if (readNextWord(&buf) != "kB") {
+							return 0;
+						}
 					}
 				} catch (const ParseException &) {
 					return 0;
@@ -449,9 +456,9 @@ public:
 			}
 			
 			if (pss != 0) {
-				return pss;
+				return pss + swap;
 			} else {
-				return privateDirty;
+				return privateDirty + swap;
 			}
 		#endif
 	}
