@@ -96,13 +96,13 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 	fake_native_support_dir = "#{fakeroot}/usr/lib/ruby/#{CONFIG['ruby_version']}/#{CONFIG['arch']}"
 	fake_agents_dir = "#{fakeroot}#{NATIVELY_PACKAGED_AGENTS_DIR}"
 	fake_helper_scripts_dir = "#{fakeroot}#{NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR}"
+	fake_resources_dir = "#{fakeroot}/usr/share/phusion-passenger"
 	fake_docdir = "#{fakeroot}#{NATIVELY_PACKAGED_DOCDIR}"
 	fake_bindir = "#{fakeroot}/usr/bin"
 	fake_sbindir = "#{fakeroot}/usr/sbin"
 	fake_source_root = "#{fakeroot}#{NATIVELY_PACKAGED_SOURCE_ROOT}"
 	fake_apache2_module = "#{fakeroot}#{NATIVELY_PACKAGED_APACHE2_MODULE}"
 	fake_apache2_module_dir = File.dirname(fake_apache2_module)
-	fake_resources_dir = "#{fakeroot}/usr/share/phusion-passenger"
 	
 	sh "rm -rf #{fakeroot}"
 	sh "mkdir -p #{fakeroot}"
@@ -124,6 +124,9 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 	sh "mkdir -p #{fake_helper_scripts_dir}"
 	sh "cp -R #{HELPER_SCRIPTS_DIR}/* #{fake_helper_scripts_dir}/"
 	
+	sh "mkdir -p #{fake_resources_dir}"
+	sh "cp resources/* #{fake_resources_dir}/"
+	
 	sh "mkdir -p #{fake_docdir}"
 	Packaging::ASCII_DOCS.each do |docfile|
 		sh "cp", docfile, "#{fake_docdir}/"
@@ -142,9 +145,6 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 	
 	sh "mkdir -p #{fake_apache2_module_dir}"
 	sh "cp #{APACHE2_MODULE} #{fake_apache2_module_dir}/"
-	
-	sh "mkdir -p #{fake_resources_dir}"
-	sh "cp resources/* #{fake_resources_dir}/"
 	
 	sh "mkdir -p #{fake_source_root}"
 	spec.files.each do |filename|

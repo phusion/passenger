@@ -394,7 +394,7 @@ public:
 		
 		string realUnionStationGatewayCert;
 		if (unionStationGatewayCert.empty()) {
-			realUnionStationGatewayCert = locator.getCertificatesDir() + "/union_station_gateway.crt";
+			realUnionStationGatewayCert = locator.getResourcesDir() + "/union_station_gateway.crt";
 		} else if (unionStationGatewayCert != "-") {
 			realUnionStationGatewayCert = unionStationGatewayCert;
 		}
