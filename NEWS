@@ -1,3 +1,37 @@
+Release 3.0.1
+-------------
+
+ * Fixed malfunction after web server restart
+   On Linux systems that have a non-standard filesystem on /tmp, Phusion
+   Passenger could malfunction after restarting the web server because of
+   a bug that's only triggered on certain filesystems. Issue #569.
+ * Boost upgraded to version 1.44.0.
+   We were on 1.42.0.
+ * Much improved startup error messages
+   Phusion Passenger performs many extensive checks during startup to ensure
+   integrity. However the error message in some situation could be vague.
+   These startup error messages have now been improved dramatically, so that
+   if something goes wrong during startup you will now more likely know why.
+ * Curl < 7.12.1 is now supported
+   The previous version fails to compile with Curl versions earlier than
+   7.12.1.
+ * passenger-make-enterprisey fixed
+   This is the command that people can run after donating. It allows people
+   to slightly modify Phusion Passenger's display name as a joke. In 3.0.0 it
+   was broken because of a typo. This has been fixed.
+ * [Apache] RailsEnv and RackEnv configuration options are now equivalent
+   In previous versions, RailsEnv only had effect on Rails 1 and Rails 2 apps
+   while RackEnv only had effect on Rack apps. Because Rails 3 apps are
+   considered Rack apps, setting RailsEnv had no effect on Rails 3 apps.
+   Because this is confusing to users, we've now made RailsEnv and RackEnv
+   equivalent.
+ * [Nginx] Fixed compilation problems on systems with unpowerful shells
+   Most notable Solaris. Its default shell does not support some basic
+   constructs that we used in the Nginx configure script.
+ * [Nginx] Upgraded default Nginx version to to 0.8.53
+   The previous default was 0.8.52.
+
+
 Release 3.0.0
 -------------
 
