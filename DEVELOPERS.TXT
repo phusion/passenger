@@ -27,7 +27,8 @@ The following software is optional:
 
 Run the following command to compile everything:
 
- rake
+ rake apache
+ rake nginx
 
 == Directory structure
 
@@ -43,7 +44,7 @@ The most important directories are:
 [ ext/common ]
   Source code shared by the Apache and Nginx modules.
 [ bin ]
-  Executables.
+  User executables.
 [ doc ]
   Various documentation.
 [ test ]
