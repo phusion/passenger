@@ -804,7 +804,7 @@ private:
 					// Now collect the process metrics and store them in the
 					// data structures, and log the state into the analytics logs.
 					UPDATE_TRACE_POINT();
-					ProcessMetricsCollector::Map allMetrics =
+					ProcessMetricMap allMetrics =
 						processMetricsCollector.collect(pids);
 					
 					UPDATE_TRACE_POINT();
@@ -828,7 +828,7 @@ private:
 						}
 						for (; process_info_it != process_info_it_end; process_info_it++) {
 							ProcessInfoPtr &processInfo = *process_info_it;
-							ProcessMetricsCollector::Map::const_iterator metrics_it =
+							ProcessMetricMap::const_iterator metrics_it =
 								allMetrics.find(processInfo->process->getPid());
 							if (metrics_it != allMetrics.end()) {
 								processInfo->metrics = metrics_it->second;

@@ -177,6 +177,9 @@ TEST_CXX_OBJECTS = {
 		test/cxx/VariantMapTest.cpp
 		ext/common/MessageChannel.h
 		ext/common/Utils/VariantMap.h),
+	'test/cxx/ProcessMetricsCollectorTest.o' => %w(
+		test/cxx/ProcessMetricsCollectorTest.cpp
+		ext/common/Utils/ProcessMetricsCollector.h),
 	'test/cxx/UtilsTest.o' => %w(
 		test/cxx/UtilsTest.cpp
 		ext/common/Utils.h),

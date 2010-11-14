@@ -27,6 +27,7 @@
 
 #include <boost/cstdint.hpp>
 #include <boost/thread.hpp>
+#include <boost/bind.hpp>
 #include <oxt/system_calls.hpp>
 #include <string>
 #include <vector>
@@ -49,10 +50,10 @@
 #include <cerrno>
 #include <cstring>
 
-#include "StaticString.h"
-#include "Exceptions.h"
-#include "Utils.h"
-#include "Utils/FileHandleGuard.h"
+#include <StaticString.h>
+#include <Exceptions.h>
+#include <Utils.h>
+#include <Utils/ScopeGuard.h>
 
 namespace Passenger {
 
@@ -81,6 +82,8 @@ struct ProcessMetrics {
 	}
 };
 
+typedef map<pid_t, ProcessMetrics> ProcessMetricMap;
+
 /**
  * Utility class for collection metrics on processes, such as CPU usage, memory usage,
  * command name, etc.
@@ -89,10 +92,9 @@ class ProcessMetricsCollector {
 public:
 	struct ParseException {};
 	
-	typedef map<pid_t, ProcessMetrics> Map;
-	
 private:
 	bool canMeasureRealMemory;
+	string psOutput;
 	
 	/**
 	 * Scan the given data for the first word that appears on the first line.
@@ -237,8 +239,8 @@ private:
 		return string(data, endOfLine - data);
 	}
 	
-	Map parsePsOutput(const string &output) const {
-		Map result;
+	ProcessMetricMap parsePsOutput(const string &output) const {
+		ProcessMetricMap result;
 		// Ignore first line, it contains the column names.
 		const char *start = strchr(output.c_str(), '\n');
 		if (start != NULL) {
@@ -284,6 +286,11 @@ public:
 		#endif
 	}
 	
+	/** Mock 'ps' output, used by unit tests. */
+	void setPsOutput(const string &data) {
+		this->psOutput = data;
+	}
+	
 	/**
 	 * Collect metrics for the given process IDs. Nonexistant PIDs are not
 	 * included in the result.
@@ -295,9 +302,9 @@ public:
 	 * @throws RuntimeException
 	 */
 	template<typename Collection, typename ConstIterator>
-	Map collect(const Collection &pids) const {
+	ProcessMetricMap collect(const Collection &pids) const {
 		if (pids.empty()) {
-			return Map();
+			return ProcessMetricMap();
 		}
 		
 		ConstIterator it;
@@ -314,18 +321,22 @@ public:
 		const char *command[] = {
 			"ps", "-o",
 			#if defined(sun) || defined(__sun)
-				"pid,ppid,pcpu,rss,vsz,pgid,args",
+				"pid,ppid,pcpu,rss,vsz,pgid,args"
 			#else
-				"pid,ppid,%cpu,rss,vsize,pgid,command",
+				"pid,ppid,%cpu,rss,vsize,pgid,command"
 			#endif
 			"-p", pidsArg.c_str(), NULL
 		};
-		string psOutput = runCommandAndCaptureOutput(command);
+		
+		string psOutput = this->psOutput;
+		if (psOutput.empty()) {
+			psOutput = runCommandAndCaptureOutput(command);
+		}
 		pidsArg.resize(0);
-		Map result = parsePsOutput(psOutput);
+		ProcessMetricMap result = parsePsOutput(psOutput);
 		psOutput.resize(0);
 		if (canMeasureRealMemory) {
-			Map::iterator it;
+			ProcessMetricMap::iterator it;
 			for (it = result.begin(); it != result.end(); it++) {
 				it->second.realMemory = measureRealMemory(it->second.pid);
 			}
@@ -333,7 +344,7 @@ public:
 		return result;
 	}
 	
-	Map collect(const vector<pid_t> &pids) const {
+	ProcessMetricMap collect(const vector<pid_t> &pids) const {
 		return collect< vector<pid_t>, vector<pid_t>::const_iterator >(pids);
 	}
 	
@@ -341,7 +352,7 @@ public:
 	 * Attempt to measure a process's "real" memory usage. This is either the
 	 * proportional set size (total size of a process's pages that are in
 	 * memory, where the size of each page is divided by the number of processes
-	 * sharing it) or the private dirty RSS.
+	 * sharing it) or the private dirty RSS. Swap usage is also included.
 	 * 
 	 * At this time only OS X and recent Linux versions (>= 2.6.25) support
 	 * measuring the proportional set size. Usually root privileges are required.
@@ -400,7 +411,7 @@ public:
 				return 0;
 			}
 			
-			FileHandleGuard fileGuard(f);
+			ScopeGuard fileGuard(boost::bind(syscalls::fclose, f));
 			size_t privateDirty = 0; // in KB
 			size_t pss = 0;          // in KB
 			size_t swap = 0;         // in KB
