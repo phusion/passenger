@@ -1,4 +1,10 @@
+#include <sys/wait.h>
+#include <signal.h>
+#include <unistd.h>
+#include <cstdio>
+#include <cerrno>
 #include "TestSupport.h"
+#include "Utils/StrIntUtils.h"
 #include "Utils/ProcessMetricsCollector.h"
 
 using namespace Passenger;
@@ -6,6 +12,37 @@ using namespace Passenger;
 namespace tut {
 	struct ProcessMetricsCollectorTest {
 		ProcessMetricsCollector collector;
+		pid_t child;
+		
+		ProcessMetricsCollectorTest() {
+			child = -1;
+		}
+		
+		~ProcessMetricsCollectorTest() {
+			if (child != -1) {
+				kill(child, SIGKILL);
+				waitpid(child, NULL, 0);
+			}
+		}
+		
+		pid_t spawnChild(int memory) {
+			string memoryStr = toString(memory);
+			pid_t pid = fork();
+			if (pid == 0) {
+				execlp("support/allocate_memory",
+					"support/allocate_memory",
+					memoryStr.c_str(),
+					(char *) 0);
+				
+				int e = errno;
+				fprintf(stderr, "Cannot execute support/allocate_memory: %s\n",
+					strerror(e));
+				fflush(stderr);
+				_exit(1);
+			} else {
+				return pid;
+			}
+		}
 	};
 	
 	DEFINE_TEST_GROUP(ProcessMetricsCollectorTest);
@@ -53,5 +90,32 @@ namespace tut {
 		ensure_equals(result.size(), 1u);
 		ensure(result.find(1) != result.end());
 		ensure(result.find(34678) == result.end());
+	}
+	
+	TEST_METHOD(3) {
+		// Measuring real memory usage works.
+		ssize_t pss, privateDirty, swap;
+		child = spawnChild(50);
+		usleep(500000);
+		collector.measureRealMemory(child, pss, privateDirty, swap);
+		#ifdef __APPLE__
+			if (geteuid() == 0) {
+				ensure(pss > 50000 && pss < 60000);
+				ensure(privateDirty > 50000 && privateDirty < 60000);
+				ensure_equals(swap, (ssize_t) -1);
+			} else {
+				ensure_equals(pss, (ssize_t) -1);
+				ensure_equals(privateDirty, (ssize_t) -1);
+				ensure_equals(swap, (ssize_t) -1);
+			}
+		#elif defined(__linux__)
+			ensure(pss > 50000 && pss < 60000);
+			ensure(privateDirty > 50000 && privateDirty < 60000);
+			ensure(swap < 10000);
+		#else
+			ensure((pss > 50000 && pss < 60000) || pss == -1);
+			ensure((privateDirty > 50000 && privateDirty < 60000) || privateDirty == -1);
+			ensure(swap < 10000 || swap == -1);
+		#endif
 	}
 }

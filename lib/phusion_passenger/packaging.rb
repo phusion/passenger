@@ -88,7 +88,7 @@ module Packaging
 		'dev/*',
 		'resources/*',
 		'test/*.example',
-		'test/support/*.{cpp,h,rb}',
+		'test/support/*.{c,cpp,h,rb}',
 		'test/tut/*',
 		'test/cxx/*.{cpp,h}',
 		'test/oxt/*.{cpp,hpp}',

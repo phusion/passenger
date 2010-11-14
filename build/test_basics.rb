@@ -26,6 +26,11 @@ task :test => ['test:oxt', 'test:cxx', 'test:ruby', 'test:integration']
 desc "Clean all compiled test files"
 task 'test:clean' do
 	sh("rm -rf test/oxt/oxt_test_main test/oxt/*.o test/cxx/CxxTestMain test/cxx/*.o")
+	sh("rm -f test/support/allocate_memory")
 end
 
 task :clean => 'test:clean'
+
+file 'test/support/allocate_memory' => 'test/support/allocate_memory.c' do
+	create_c_executable('test/support/allocate_memory', 'test/support/allocate_memory.c')
+end
