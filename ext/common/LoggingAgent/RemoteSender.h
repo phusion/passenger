@@ -80,7 +80,20 @@ private:
 		string responseBody;
 		
 		void resetConnection() {
-			curl_easy_reset(curl);
+			if (curl != NULL) {
+				#ifdef HAS_CURL_EASY_RESET
+					curl_easy_reset(curl);
+				#else
+					curl_easy_cleanup(curl);
+					curl = NULL;
+				#endif
+			}
+			if (curl == NULL) {
+				curl = curl_easy_init();
+				if (curl == NULL) {
+					throw IOException("Unable to create a CURL handle");
+				}
+			}
 			curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, lastErrorMessage);
 			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlDataReceived);
@@ -117,11 +130,6 @@ private:
 			this->port = port;
 			certificate = cert;
 			
-			curl = curl_easy_init();
-			if (curl == NULL) {
-				throw IOException("Unable to create a CURL handle");
-			}
-			
 			hostHeader = "Host: " + hostName;
 			headers = NULL;
 			headers = curl_slist_append(headers, hostHeader.c_str());
@@ -129,6 +137,7 @@ private:
 				throw IOException("Unable to create a CURL linked list");
 			}
 			
+			curl = NULL;
 			resetConnection();
 		}
 		

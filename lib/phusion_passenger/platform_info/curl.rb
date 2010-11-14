@@ -31,6 +31,11 @@ module PlatformInfo
 		if result.empty?
 			return nil
 		else
+			version = `curl-config --vernum`.strip
+			if version >= '070c01'
+				# Curl >= 7.12.1 supports curl_easy_reset()
+				result << " -DHAS_CURL_EASY_RESET"
+			end
 			return result
 		end
 	end
@@ -47,7 +52,7 @@ module PlatformInfo
 	memoize :curl_libs
 	
 	def self.curl_supports_ssl?
-		features = `(curl-config --features) 2>/dev/null`
+		features = `(curl-config --feature) 2>/dev/null`
 		return features =~ /SSL/
 	end
 	memoize :curl_supports_ssl?
