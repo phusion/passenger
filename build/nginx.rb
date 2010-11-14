@@ -16,9 +16,9 @@
 
 desc "Build Nginx helper agent"
 task :nginx => [
-	'agents/nginx/PassengerHelperAgent',
-	'agents/PassengerWatchdog',
-	'agents/PassengerLoggingAgent',
+	AGENT_OUTPUT_DIR + 'nginx/PassengerHelperAgent',
+	AGENT_OUTPUT_DIR + 'PassengerWatchdog',
+	AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
 	:native_support
 ]
 
@@ -43,9 +43,10 @@ dependencies = [
 	LIBBOOST_OXT,
 	LIBCOMMON,
 ]
-file 'agents/nginx/PassengerHelperAgent' => dependencies do
-	sh "mkdir -p agents/nginx" if !File.directory?("agents/nginx")
-	create_executable "agents/nginx/PassengerHelperAgent",
+file AGENT_OUTPUT_DIR + 'nginx/PassengerHelperAgent' => dependencies do
+	output_dir = "#{AGENT_OUTPUT_DIR}nginx"
+	sh "mkdir -p #{output_dir}" if !File.directory?(output_dir)
+	create_executable "#{output_dir}/PassengerHelperAgent",
 		'ext/nginx/HelperAgent.cpp',
 		"-Iext -Iext/common " <<
 		"#{PlatformInfo.portability_cflags} " <<
@@ -60,5 +61,5 @@ end
 task :clean => 'nginx:clean'
 desc "Clean all compiled Nginx files"
 task 'nginx:clean' do
-	sh("rm", "-rf", "agents/nginx/PassengerHelperAgent")
+	sh("rm", "-rf", AGENT_OUTPUT_DIR + "nginx/PassengerHelperAgent")
 end

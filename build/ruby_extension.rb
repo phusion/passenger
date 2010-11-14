@@ -14,8 +14,7 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-native_support_archdir = PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")
-output_dir  = "ext/ruby/#{native_support_archdir}"
+output_dir  = RUBY_EXTENSION_OUTPUT_DIR
 output_name = "passenger_native_support.#{LIBEXT}"
 source_dir  = "ext/ruby"
 

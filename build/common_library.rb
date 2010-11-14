@@ -164,24 +164,31 @@ end
 ########## libev ##########
 
 if USE_VENDORED_LIBEV
+	LIBEV_SOURCE_DIR = File.expand_path("../ext/libev", File.dirname(__FILE__)) + "/"
 	LIBEV_CFLAGS = "-Iext/libev"
-	LIBEV_LIBS = "ext/libev/.libs/libev.a"
+	LIBEV_LIBS = LIBEV_OUTPUT_DIR + ".libs/libev.a"
 	
-	task :libev => "ext/libev/.libs/libev.a"
+	task :libev => LIBEV_OUTPUT_DIR + ".libs/libev.a"
 	
-	file "ext/libev/Makefile" => ["ext/libev/configure", "ext/libev/config.h.in", "ext/libev/Makefile.am"] do
-		sh "cd ext/libev && sh ./configure --disable-shared --enable-static"
+	dependencies = [
+		"ext/libev/configure",
+		"ext/libev/config.h.in",
+		"ext/libev/Makefile.am"
+	]
+	file LIBEV_OUTPUT_DIR + "Makefile" => dependencies do
+		sh "mkdir -p #{LIBEV_OUTPUT_DIR}" if !File.directory?(LIBEV_OUTPUT_DIR)
+		sh "cd #{LIBEV_OUTPUT_DIR} && sh #{LIBEV_SOURCE_DIR}configure --disable-shared --enable-static"
 	end
 	
 	libev_sources = Dir["ext/libev/{*.c,*.h}"]
-	file "ext/libev/.libs/libev.a" => ["ext/libev/Makefile"] + libev_sources do
-		sh "rm -f ext/libev/libev.la"
-		sh "cd ext/libev && make libev.la"
+	file LIBEV_OUTPUT_DIR + ".libs/libev.a" => [LIBEV_OUTPUT_DIR + "Makefile"] + libev_sources do
+		sh "rm -f #{LIBEV_OUTPUT_DIR}/libev.la"
+		sh "cd #{LIBEV_OUTPUT_DIR} && make libev.la"
 	end
 	
 	task :clean do
-		if File.exist?("ext/libev/Makefile")
-			sh "cd ext/libev && make maintainer-clean"
+		if File.exist?(LIBEV_OUTPUT_DIR + "Makefile")
+			sh "cd #{LIBEV_OUTPUT_DIR} && make maintainer-clean"
 		end
 	end
 else
@@ -194,5 +201,5 @@ end
 ##############################
 
 
-LIBBOOST_OXT = define_libboost_oxt_task("common", "ext/common/libboost_oxt")
-LIBCOMMON    = define_common_library_task("common", "ext/common/libpassenger_common")
+LIBBOOST_OXT = define_libboost_oxt_task("common", COMMON_OUTPUT_DIR + "libboost_oxt")
+LIBCOMMON    = define_common_library_task("common", COMMON_OUTPUT_DIR + "libpassenger_common")

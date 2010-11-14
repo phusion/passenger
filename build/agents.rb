@@ -22,9 +22,9 @@ dependencies = [
 	LIBBOOST_OXT,
 	LIBCOMMON
 ]
-file 'agents/PassengerWatchdog' => dependencies do
-	sh "mkdir -p agents" if !File.directory?("agents")
-	create_executable('agents/PassengerWatchdog',
+file AGENT_OUTPUT_DIR + 'PassengerWatchdog' => dependencies do
+	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
+	create_executable(AGENT_OUTPUT_DIR + 'PassengerWatchdog',
 		'ext/common/Watchdog.cpp',
 		"-Iext -Iext/common #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
 		"#{LIBCOMMON} " <<
@@ -50,9 +50,9 @@ dependencies = [
 	LIBBOOST_OXT,
 	:libev
 ]
-file 'agents/PassengerLoggingAgent' => dependencies do
-	sh "mkdir -p agents" if !File.directory?("agents")
-	create_executable('agents/PassengerLoggingAgent',
+file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
+	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
+	create_executable(AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
 		'ext/common/LoggingAgent/Main.cpp',
 		"-Iext -Iext/common #{LIBEV_CFLAGS} " <<
 		"#{PlatformInfo.curl_flags} " <<
@@ -69,5 +69,5 @@ file 'agents/PassengerLoggingAgent' => dependencies do
 end
 
 task :clean => 'common:clean' do
-	sh "rm -f agents/PassengerWatchdog agents/PassengerLoggingAgent"
+	sh "rm -f #{AGENT_OUTPUT_DIR}PassengerWatchdog #{AGENT_OUTPUT_DIR}PassengerLoggingAgent"
 end
