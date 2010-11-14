@@ -145,9 +145,9 @@ public:
 			} else {
 				acceptResult = acceptor(tmp, ret);
 				totalRead += acceptResult.first;
-				if (OXT_UNLIKELY(!acceptResult.second && acceptResult.first < ret)) {
+				if (OXT_UNLIKELY(!acceptResult.second && acceptResult.first < (unsigned int) ret)) {
 					throw RuntimeException("Acceptor function cannot return (x,false) where x is smaller than the input size");
-				} else if (OXT_UNLIKELY(acceptResult.first > ret)) {
+				} else if (OXT_UNLIKELY(acceptResult.first > (unsigned int) ret)) {
 					throw RuntimeException("Acceptor function cannot return a larger accept count than the input size");
 				}
 				if (acceptResult.second) {

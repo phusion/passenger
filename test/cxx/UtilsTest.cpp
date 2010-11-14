@@ -315,9 +315,9 @@ namespace tut {
 		stat("tmp.dir/foo", &buf);
 		stat("tmp.dir/foo/bar", &buf2);
 		ensure_equals(buf.st_mode, buf2.st_mode);
-		ensure_equals(buf.st_mode & 0xFFF,
-			S_IRUSR | S_IWUSR | S_IXUSR | S_ISUID |
-			S_IROTH | S_IXOTH);
+		ensure_equals((mode_t) (buf.st_mode & 0xFFF),
+			(mode_t) (S_IRUSR | S_IWUSR | S_IXUSR | S_ISUID |
+			S_IROTH | S_IXOTH));
 	}
 	
 	TEST_METHOD(43) {
