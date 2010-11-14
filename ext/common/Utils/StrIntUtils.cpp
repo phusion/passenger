@@ -55,15 +55,6 @@ startsWith(const StaticString &str, const StaticString &substr) {
 	}
 }
 
-string
-toLowerCase(const StaticString &str) {
-	string result(str.size(), '\0');
-	for (string::size_type i = 0; i < str.size(); i++) {
-		result[i] = tolower(str[i]);
-	}
-	return result;
-}
-
 void
 split(const string &str, char sep, vector<string> &output) {
 	string::size_type start, pos;
