@@ -17,6 +17,7 @@ build/cache
 ext/common/libboost_oxt
 ext/common/libpassenger_common
 ext/apache2/module_libboost_oxt
+ext/apache2/module_libpassenger_common
 ext/libev/Makefile
 ext/libev/config.h
 ext/libev/config.log
