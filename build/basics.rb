@@ -57,25 +57,6 @@ def boolean_option(name, default_value = false)
 	end
 end
 
-def output_dir(dir)
-	output_dir = string_option('OUTPUT_DIR')
-	if output_dir
-		return File.join(output_dir, dir)
-	else
-		return dir
-	end
-end
-
-def outputs(*targets)
-	return targets.map do |target|
-		if target.is_a?(Symbol)
-			target
-		else
-			output_dir(target)
-		end
-	end
-end
-
 #################################################
 
 if string_option('OUTPUT_DIR')
