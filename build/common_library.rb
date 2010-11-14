@@ -99,7 +99,11 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 		
 		file(aggregate_object => sources) do
 			sh "mkdir -p #{output_dir}" if !File.directory?(output_dir)
-			aggregate_content = ""
+			aggregate_content = %Q{
+				#ifndef _GNU_SOURCE
+					#define _GNU_SOURCE
+				#endif
+			}
 			sources.each do |source_file|
 				name = source_file.sub(/^ext\//, '')
 				aggregate_content << "#include \"#{name}\"\n"
@@ -153,7 +157,11 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
 		
 		file(aggregate_object => sources) do
 			sh "mkdir -p #{output_dir}" if !File.directory?(output_dir)
-			aggregate_content = ""
+			aggregate_content = %Q{
+				#ifndef _GNU_SOURCE
+					#define _GNU_SOURCE
+				#endif
+			}
 			sources.each do |source_file|
 				name = source_file.sub(/^ext\//, '')
 				aggregate_content << "#include \"#{name}\"\n"
