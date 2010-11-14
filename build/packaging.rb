@@ -144,7 +144,7 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 	sh "cp #{APACHE2_MODULE} #{fake_apache2_module_dir}/"
 	
 	sh "mkdir -p #{fake_certificates_dir}"
-	sh "cp misc/*.crt #{fake_certificates_dir}/"
+	sh "cp resources/*.crt #{fake_certificates_dir}/"
 	
 	sh "mkdir -p #{fake_source_root}"
 	spec.files.each do |filename|

@@ -74,7 +74,7 @@ public:
 		if (nativelyPackaged) {
 			return "/usr/share/phusion-passenger/certificates";
 		} else {
-			return root + "/misc";
+			return root + "/resources";
 		}
 	}
 };

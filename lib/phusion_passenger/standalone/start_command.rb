@@ -157,7 +157,7 @@ private
 				wrap_desc("The spawn method to use (default: #{@options[:spawn_method]})")) do |value|
 				@options[:spawn_method] = value
 			end
-			opts.on("--union-station-key", String,
+			opts.on("--union-station-key KEY", String,
 				wrap_desc("Specify Union Station key")) do |value|
 				@options[:union_station_key] = value
 			end
