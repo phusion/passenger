@@ -483,9 +483,16 @@ private:
 			result << "<has_metrics>true</has_metrics>";
 			result << "<cpu>" << (int) metrics.cpu << "</cpu>";
 			result << "<rss>" << metrics.rss << "</rss>";
-			if (metrics.realMemory != 0) {
-				result << "<real_memory>" << metrics.realMemory << "</real_memory>";
+			if (metrics.pss != -1) {
+				result << "<pss>" << metrics.pss << "</pss>";
 			}
+			if (metrics.privateDirty != -1) {
+				result << "<private_dirty>" << metrics.privateDirty << "</private_dirty>";
+			}
+			if (metrics.swap != -1) {
+				result << "<swap>" << metrics.swap << "</swap>";
+			}
+			result << "<real_memory>" << metrics.realMemory() << "</real_memory>";
 			result << "<vmsize>" << metrics.vmsize << "</vmsize>";
 			result << "<process_group_id>" << metrics.processGroupId << "</process_group_id>";
 			result << "<command>" << escapeForXml(metrics.command) << "</command>";
@@ -822,9 +829,14 @@ private:
 						stringstream xml;
 						
 						if (group->analytics && analyticsLogger != NULL) {
+							ssize_t shared;
 							log = analyticsLogger->newTransaction(group->name,
 								"processes", group->unionStationKey);
 							xml << "Processes: <processes>";
+							xml << "<total_memory>" << allMetrics.totalMemory(shared) << "</total_memory>";
+							if (shared != -1) {
+								xml << "<total_shared_memory>" << shared << "</total_shared_memory>";
+							}
 						}
 						for (; process_info_it != process_info_it_end; process_info_it++) {
 							ProcessInfoPtr &processInfo = *process_info_it;
