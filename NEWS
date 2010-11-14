@@ -1,6 +1,11 @@
 Release 3.0.1
 -------------
 
+ * MUCH faster compilation
+   We've applied code aggregation techniques, allowing Phusion Passenger
+   to be compiled much quicker now. For example, compiling the Nginx
+   component (not Nginx itself) now takes only 29 seconds instead of 51
+   seconds, an improvement of 75%!
  * Fixed malfunction after web server restart
    On Linux systems that have a non-standard filesystem on /tmp, Phusion
    Passenger could malfunction after restarting the web server because of

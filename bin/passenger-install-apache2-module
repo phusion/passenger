@@ -154,11 +154,11 @@ private
 		color_puts '<banner>Compiling and installing Apache 2 module...</banner>'
 		puts "cd #{PASSENGER_ROOT}"
 		if ENV['TRACE']
-			puts "#{PlatformInfo.rake_command} --trace clean apache2"
-			return sh("#{PlatformInfo.rake_command} --trace apache2:clean apache2 CACHING=no")
+			puts "#{PlatformInfo.rake_command} --trace apache2:clean apache2 RELEASE=yes"
+			return sh("#{PlatformInfo.rake_command} --trace apache2:clean apache2 RELEASE=yes")
 		else
-			puts "#{PlatformInfo.rake_command} clean apache2"
-			return sh("#{PlatformInfo.rake_command} apache2:clean apache2 CACHING=no")
+			puts "#{PlatformInfo.rake_command} apache2:clean apache2 RELEASE=yes"
+			return sh("#{PlatformInfo.rake_command} apache2:clean apache2 RELEASE=yes")
 		end
 	end
 	

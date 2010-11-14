@@ -420,7 +420,7 @@ private
 		# Then compile it.
 		yield(0, 1, 2, "Preparing Phusion Passenger...")
 		Dir.chdir(@support_dir) do
-			run_rake_task!("nginx CACHING=no") do |progress, total|
+			run_rake_task!("nginx RELEASE=yes") do |progress, total|
 				yield(progress, total, 2, "Compiling Phusion Passenger...")
 			end
 		end

@@ -89,7 +89,7 @@ if boolean_option('STDERR_TO_STDOUT')
 	$stderr = $stdout
 end
 
-if boolean_option('CACHING', true)
+if boolean_option('CACHING', true) && !boolean_option('RELEASE')
 	if OUTPUT_DIR.empty?
 		PlatformInfo.cache_dir = File.expand_path("cache", File.dirname(__FILE__))
 	else

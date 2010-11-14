@@ -85,24 +85,50 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 	# Define compilation targets for the object files in libpassenger_common.
 	flags =  "-Iext -Iext/common #{LIBEV_CFLAGS} #{extra_compiler_flags} "
 	flags << "#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
-	common_object_files = []
-	components.each_pair do |object_name, dependencies|
-		source_file = dependencies[0]
-		object_file = "#{output_dir}/#{object_name}"
-		common_object_files << object_file
-		dependencies = dependencies.map do |dep|
-			"ext/common/#{dep}"
+	
+	if boolean_option('RELEASE')
+		sources = []
+		components.each_pair do |object_name, dependencies|
+			sources << "ext/common/#{dependencies[0]}"
 		end
+		sources.sort!
 		
-		file object_file => dependencies do
+		aggregate_source = "#{output_dir}/aggregate.cpp"
+		aggregate_object = "#{output_dir}/aggregate.o"
+		object_files     = [aggregate_object]
+		
+		file(aggregate_object => sources) do
 			sh "mkdir -p #{output_dir}" if !File.directory?(output_dir)
-			sh "mkdir -p #{output_dir}/Utils" if !File.directory?("#{output_dir}/Utils")
-			compile_cxx("ext/common/#{source_file}", "#{flags} -o #{object_file}")
+			aggregate_content = ""
+			sources.each do |source_file|
+				name = source_file.sub(/^ext\//, '')
+				aggregate_content << "#include \"#{name}\"\n"
+			end
+			File.open(aggregate_source, 'w') do |f|
+				f.write(aggregate_content)
+			end
+			compile_cxx(aggregate_source, "#{flags} -o #{aggregate_object}")
+		end
+	else
+		object_files = []
+		components.each_pair do |object_name, dependencies|
+			source_file = dependencies[0]
+			object_file = "#{output_dir}/#{object_name}"
+			object_files << object_file
+			dependencies = dependencies.map do |dep|
+				"ext/common/#{dep}"
+			end
+		
+			file object_file => dependencies do
+				sh "mkdir -p #{output_dir}" if !File.directory?(output_dir)
+				sh "mkdir -p #{output_dir}/Utils" if !File.directory?("#{output_dir}/Utils")
+				compile_cxx("ext/common/#{source_file}", "#{flags} -o #{object_file}")
+			end
 		end
 	end
 	
-	file(static_library => common_object_files) do
-		create_static_library(static_library, "#{output_dir}/*.o #{output_dir}/Utils/*.o")
+	file(static_library => object_files) do
+		create_static_library(static_library, object_files.join(' '))
 	end
 	
 	task "#{namespace}:clean" do
@@ -117,40 +143,62 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
 	output_file = "#{output_dir}.a"
 	flags = "-Iext #{extra_compiler_flags} #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 	
-	# Define compilation targets for .cpp files in ext/boost/src/pthread.
-	boost_object_files = []
-	Dir['ext/boost/src/pthread/*.cpp'].each do |source_file|
-		object_name = File.basename(source_file.sub(/\.cpp$/, '.o'))
-		boost_output_dir  = "#{output_dir}/boost"
-		object_file = "#{boost_output_dir}/#{object_name}"
-		boost_object_files << object_file
+	if boolean_option('RELEASE')
+		sources = Dir['ext/boost/src/pthread/*.cpp'] + Dir['ext/oxt/*.cpp']
+		sources.sort!
 		
-		file object_file => source_file do
-			sh "mkdir -p #{boost_output_dir}" if !File.directory?(boost_output_dir)
-			compile_cxx(source_file, "#{flags} -o #{object_file}")
+		aggregate_source = "#{output_dir}/aggregate.cpp"
+		aggregate_object = "#{output_dir}/aggregate.o"
+		object_files     = [aggregate_object]
+		
+		file(aggregate_object => sources) do
+			sh "mkdir -p #{output_dir}" if !File.directory?(output_dir)
+			aggregate_content = ""
+			sources.each do |source_file|
+				name = source_file.sub(/^ext\//, '')
+				aggregate_content << "#include \"#{name}\"\n"
+			end
+			File.open(aggregate_source, 'w') do |f|
+				f.write(aggregate_content)
+			end
+			compile_cxx(aggregate_source, "#{flags} -o #{aggregate_object}")
 		end
+	else
+		# Define compilation targets for .cpp files in ext/boost/src/pthread.
+		boost_object_files = []
+		Dir['ext/boost/src/pthread/*.cpp'].each do |source_file|
+			object_name = File.basename(source_file.sub(/\.cpp$/, '.o'))
+			boost_output_dir  = "#{output_dir}/boost"
+			object_file = "#{boost_output_dir}/#{object_name}"
+			boost_object_files << object_file
+		
+			file object_file => source_file do
+				sh "mkdir -p #{boost_output_dir}" if !File.directory?(boost_output_dir)
+				compile_cxx(source_file, "#{flags} -o #{object_file}")
+			end
+		end
+		
+		# Define compilation targets for .cpp files in ext/oxt.
+		oxt_object_files = []
+		oxt_dependency_files = Dir["ext/oxt/*.hpp"] + Dir["ext/oxt/detail/*.hpp"]
+		Dir['ext/oxt/*.cpp'].each do |source_file|
+			object_name = File.basename(source_file.sub(/\.cpp$/, '.o'))
+			oxt_output_dir  = "#{output_dir}/oxt"
+			object_file = "#{oxt_output_dir}/#{object_name}"
+			oxt_object_files << object_file
+
+			file object_file => [source_file, *oxt_dependency_files] do
+				sh "mkdir -p #{oxt_output_dir}" if !File.directory?(oxt_output_dir)
+				compile_cxx(source_file, "#{flags} -o #{object_file}")
+			end
+		end
+		
+		object_files = boost_object_files + oxt_object_files
 	end
 	
-	# Define compilation targets for .cpp files in ext/oxt.
-	oxt_object_files = []
-	oxt_dependency_files = Dir["ext/oxt/*.hpp"] + Dir["ext/oxt/detail/*.hpp"]
-	Dir['ext/oxt/*.cpp'].each do |source_file|
-		object_name = File.basename(source_file.sub(/\.cpp$/, '.o'))
-		oxt_output_dir  = "#{output_dir}/oxt"
-		object_file = "#{oxt_output_dir}/#{object_name}"
-		oxt_object_files << object_file
-		
-		file object_file => [source_file, *oxt_dependency_files] do
-			sh "mkdir -p #{oxt_output_dir}" if !File.directory?(oxt_output_dir)
-			compile_cxx(source_file, "#{flags} -o #{object_file}")
-		end
-	end
-	
-	file(output_file => boost_object_files + oxt_object_files) do
-		sh "mkdir -p #{output_dir}/boost #{output_dir}/oxt"
-		create_static_library(output_file,
-			"#{output_dir}/boost/*.o " <<
-			"#{output_dir}/oxt/*.o")
+	file(output_file => object_files) do
+		sh "mkdir -p #{output_dir}"
+		create_static_library(output_file, object_files.join(' '))
 	end
 	
 	task "#{namespace}:clean" do
