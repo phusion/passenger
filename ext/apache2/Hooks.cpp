@@ -236,7 +236,8 @@ private:
 	 */
 	inline RequestNote *getRequestNote(request_rec *r) {
 		// The union is needed in order to be compliant with
-		// C99/C++'s strict aliasing rules. http://tinyurl.com/g5hgh
+		// C99/C++'s strict aliasing rules.
+		// http://cellperformance.beyond3d.com/articles/2006/06/understanding-strict-aliasing.html
 		union {
 			RequestNote *note;
 			void *pointer;
