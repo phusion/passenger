@@ -58,9 +58,9 @@ class StopCommand < Command
 			STDERR.puts "If you know that Phusion Passenger Standalone *is* running then one of these"
 			STDERR.puts "might be the cause of this error:"
 			STDERR.puts
-			STDERR.puts " * The Phusion Passenger Standalone instance that you want to stop isn't running on"
-			STDERR.puts "   port #{@options[:port]}, but on another port. If this is the case then you should"
-			STDERR.puts "   specify the right port with --port."
+			STDERR.puts " * The Phusion Passenger Standalone instance that you want to stop isn't running"
+			STDERR.puts "   on port #{@options[:port]}, but on another port. If this is the case then you"
+			STDERR.puts "   should specify the right port with --port."
 			STDERR.puts "   If the instance is listening on a Unix socket file instead of a TCP port,"
 			STDERR.puts "   then please specify the PID file's filename with --pid-file."
 			STDERR.puts " * The instance that you want to stop has stored its PID file in a non-standard"

@@ -10,9 +10,7 @@ events {
 }
 
 http {
-    include '<%= nginx_dir %>/conf/mime.types';
-    client_body_temp_path '<%= @temp_dir %>/client';
-    proxy_temp_path '<%= @temp_dir %>/proxy';
+    include '<%= PhusionPassenger::RESOURCES_DIR %>/mime.types';
     passenger_ruby <%= PlatformInfo.ruby_command %>;
     passenger_root '<%= passenger_root %>';
     passenger_abort_on_startup_error on;
@@ -20,6 +18,12 @@ http {
     passenger_max_pool_size <%= @options[:max_pool_size] %>;
     passenger_min_instances <%= @options[:min_instances] %>;
     <% if @options[:user] %>passenger_default_user <%= @options[:user] %>;<% end %>
+    
+    <% if @options[:union_station_gateway_address] %>
+        union_station_gateway_address <%= @options[:union_station_gateway_address] %>;
+        union_station_gateway_port <%= @options[:union_station_gateway_port] %>;
+        union_station_gateway_cert -;
+    <% end %>
     
     default_type application/octet-stream;
     client_max_body_size 50m;
