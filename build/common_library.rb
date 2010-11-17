@@ -248,8 +248,8 @@ if USE_VENDORED_LIBEV
 		end
 	end
 else
-	LIBEV_CFLAGS = string_option('LIBEV_CFLAGS', '')
-	LIBEV_LIBS   = string_option('LIBEV_LIBS', '')
+	LIBEV_CFLAGS = string_option('LIBEV_CFLAGS', '-I/usr/include/libev')
+	LIBEV_LIBS   = string_option('LIBEV_LIBS', '-lev')
 	task :libev  # do nothing
 end
 
