@@ -12,6 +12,9 @@
       <packagereq type="default">rubygems</packagereq>
       <packagereq type="default">pcre-devel</packagereq>
       <packagereq type="default">perl-ExtUtils-Embed</packagereq>
+      <!-- For the passenger-standalone build -->
+      <packagereq type="default">rubygem-file-tail</packagereq>
+      <packagereq type="default">rubygem-daemon_controller</packagereq>
       <packagereq type="optional">rubygem-rake</packagereq>
     </packagelist>
   </group>

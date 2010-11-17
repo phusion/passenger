@@ -10,7 +10,7 @@
 
 %define gemname passenger
 %define passenger_version 3.0.0
-%define passenger_release 10%{?dist}
+%define passenger_release 11%{?dist}
 %define passenger_epoch 1
 
 %define nginx_version 0.8.53
@@ -31,6 +31,9 @@
 %{?!ruby: %define ruby /usr/bin/ruby}
 %{?!rake: %define rake /usr/bin/rake}
 %{?!gem:  %define gem  /usr/bin/gem}
+
+# Debug packages are currently broken. So don't even build them
+%define debug_package %nil
 
 %define ruby_sitelib %(%{ruby} -rrbconfig -e "puts Config::CONFIG['sitelibdir']")
 
@@ -79,7 +82,7 @@ Source200: rubygem-passenger.te
 # Ignore everything after the ?, it's meant to trick rpmbuild into
 # finding the correct file
 Source300: http://github.com/gnosek/nginx-upstream-fair/tarball/master?/nginx-upstream-fair.tar.gz
-Patch0: passenger-install-nginx-module.patch
+Patch0: passenger-os-runtime.patch
 BuildRoot: %{_tmppath}/%{name}-%{passenger_version}-%{passenger_release}-root-%(%{__id_u} -n)
 Requires: rubygems
 Requires: rubygem(rake) >= 0.8.1
@@ -101,7 +104,12 @@ BuildRequires: curl-devel
 %endif
 BuildRequires: doxygen
 BuildRequires: asciidoc
+# standaline build deps
+BuildRequires: libev-devel
+BuildRequires: rubygem(daemon_controller) >= 0.2.5
+BuildRequires: rubygem(file-tail)
 # native build deps
+BuildRequires: libev-devel
 %if %{?fedora:1}%{?!fedora:0}
 BuildRequires: selinux-policy
 %else
@@ -142,6 +150,7 @@ version, it is installed as %{gemversion} instead of %{passenger_version}.
 Summary: Phusion Passenger native extensions
 Group: System Environment/Daemons
 Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
+Requires: libev
 Requires(post): policycoreutils, initscripts
 Requires(preun): policycoreutils, initscripts
 Requires(postun): policycoreutils
@@ -181,6 +190,7 @@ package.
 Summary: Standalone Phusion Passenger Server
 Group: System Environment/Daemons
 Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
+Requires: libev
 Epoch: %{passenger_epoch}
 %description standalone
 Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes deployment
@@ -230,13 +240,16 @@ This package includes an nginx server with Passenger compiled in.
 
 %endif # !only_native_libs
 
+%define perlfileckinner $SIG{__WARN__} = sub {die @_};
+%define perlfileck BEGIN { %perlfileckinner } ;
+%define perlfileescd %(echo '%{perlfileck}' | sed -e 's/[$@]/\\\\&/g')
+
 %prep
 %setup -q -n %{gemname}-%{passenger_version} -b 1
 # %setup -q -T -D -n nginx-%{nginx_version} -a 300
 # # Fix the CWD
 # %setup -q -T -D -n %{gemname}-%{passenger_version}
-#%patch0 -p1
-
+%patch0 -p1
 %if %{gem_version_mismatch}
   %{warn:
 ***
@@ -250,10 +263,42 @@ This package includes an nginx server with Passenger compiled in.
   sed -i -e 's/^\(#define PASSENGER_VERSION "[0-9]\+\.[0-9]\+\.[0-9]\+\)[^"]\+/\1/' ext/common/Constants.h
 %endif
 
+# Fix the preferred version
+perl -pi -e "s{(PREFERRED_NGINX_VERSION\s*=\s*(['\"]))[\d\.]+\2}{\${1}%{nginx_version}\$2}" lib/phusion_passenger.rb
+
+# The last argument of the package-runtime command gets inserted for
+# --prefix, so that means nginx thinks that dir exists
+%define trunc_path \#{\\@nginx_dir.gsub(%%r{^%{buildroot}},'')}
+perl -pi - lib/phusion_passenger/standalone/runtime_installer.rb <<'EOF'
+BEGIN {
+%perlfileckinner
+$insert = <<'EndInsert';
+qq{$1\n
+$2"--error-log-path=%{trunc_path}/logs/error.log " <<\n
+$2"--http-log-path=%{trunc_path}/logs/access.log " <<\n
+}
+EndInsert
+$insert =~ s/\n//gm;
+}
+s{(^(\s+)"--without-http_fastcgi_module\s*"\s*<<)}{$insert}eemx;
+s{(\./configure.*--prefix=)#{\@nginx_dir}}{${1}%{trunc_path}};
+s{(#\{PlatformInfo.gnu_make\})\s+(install)}{$1 DESTDIR=#{\@nginx_dir} INSTALLDIRS=vendor $2};
+EOF
+
+# RPM finds these in shebangs and assumes they're requirements. Clean them up here rather than in the install-dir.
+find test -type f -print0 | xargs -0 perl -pi -e '%{perlfileck} s{#!(/opt/ruby.*|/usr/bin/ruby1.8)}{%{ruby}}g'
+
+
 %build
+export USE_VENDORED_LIBEV=false
+# This isn't honored
+# export CFLAGS='%optflags -I/usr/include/libev'
+export LIBEV_CFLAGS='-I/usr/include/libev'
+export LIBEV_LIBS='-lev'
+
 
 %if %{only_native_libs}
-  %{rake} native_support
+   %{rake} native_support
 %else
   %{rake} package
   ./bin/passenger-install-apache2-module --auto
@@ -281,13 +326,6 @@ This package includes an nginx server with Passenger compiled in.
   %else
     %define nginx_ccopt %(echo "%{optflags}" | sed -e 's/SOURCE=2/& -Wno-unused/')
   %endif
-
-  # THIS is beyond ugly. But it corrects the check-buildroot error on
-  # the string saved for 'nginx -V'
-  #
-  # In any case, fix it correctly later
-  perl -pi -e 's{^install:\s*$}{$&\tperl -pi -e '\''s<%{buildroot}><>g;s<%{_builddir}><%%{_builddir}>g;'\'' objs/ngx_auto_config.h\n}' %{_builddir}/nginx-%{nginx_version}/auto/install
-
 
   ### Stolen [and hacked] from the nginx spec file
   export DESTDIR=%{buildroot}
@@ -328,12 +366,28 @@ This package includes an nginx server with Passenger compiled in.
     --with-cc-opt="%{nginx_ccopt} $(pcre-config --cflags)" \
     --with-ld-opt="-Wl,-E" # so the perl module finds its symbols
 
-  make %{?_smp_mflags} 
+  # THIS is ugly, yet greatly simplified. It corrects the
+  # check-buildroot error on the string saved for 'nginx -V'
+  #
+  # In any case, fix it correctly later
+  perl -pi -e '%{perlfileck} s<%{buildroot}><>g;s<%{_builddir}><%%{_builddir}>g;' objs/ngx_auto_config.h
+
+  # Also do it for passenger-standalone (and I thought the above was ugly)
+  perl -pi -0777 -e 's!(^\s*run_command_with_throbber.*"Preparing Nginx...".*\n(\s*))(yield.*?\n)!${2}\@\@hack_success = false\n$1yield_result = $3${2}abort "nginx-hack failed" unless \@\@hack_success || system(*(%w{perl -pi -e} + ["%{perlfileescd} s<%{buildroot}><>g;s<%{_builddir}><%%{_builddir}>g;", "objs/ngx_auto_config.h"]))\n${2}\# Why is this running many times?\n${2}\@\@hack_success = true\n${2}yield_result\n!im' %{_builddir}/passenger-%{passenger_version}/lib/phusion_passenger/standalone/runtime_installer.rb
+
+
+  make %{?_smp_mflags}
 
   cd -
 %endif # !only_native_libs
 
 %install
+export USE_VENDORED_LIBEV=false
+# This isn't honored
+# export CFLAGS='%optflags -I/usr/include/libev'
+export LIBEV_CFLAGS='-I/usr/include/libev'
+export LIBEV_LIBS='-lev'
+
 rm -rf %{buildroot}
 mkdir -p %{buildroot}%{gemdir}
 
@@ -345,9 +399,6 @@ mv %{buildroot}%{gemdir}/bin/* %{buildroot}/%{_bindir}
 rmdir %{buildroot}%{gemdir}/bin
 # Nothing there
 # find %{buildroot}%{geminstdir}/bin -type f | xargs chmod a+x
-
-# RPM finds these in shebangs and assumes they're requirements. Clean them up.
-find %{buildroot}%{geminstdir} -type f -print0 | xargs -0 perl -pi -e 's{#!(/opt/ruby.*|/usr/bin/ruby1.8)}{%{ruby}}g'
 
 mkdir -p %{buildroot}/%{_libdir}/httpd/modules
 install -m 0644 ext/apache2/mod_passenger.so %{buildroot}/%{_libdir}/httpd/modules
@@ -362,6 +413,16 @@ mkdir -p %{buildroot}/%{_var}/log/passenger-analytics
 # I should probably figure out how to get these into the gem
 cp -ra agents %{buildroot}/%{geminstdir}
 
+# PASSENGER STANDALONE (this is going to recompile nginx)
+./bin/passenger package-runtime --nginx-version %{nginx_version} --nginx-tarball %{SOURCE1} %{buildroot}/%{_var}/lib/passenger-standalone
+# Now unpack the tarballs it just created
+# It's 2am, revisit this insanity in the light of morning
+standalone_dir=$(bash -c 'ls -d $1 | tail -1' -- %{buildroot}/%{_var}/lib/passenger-standalone/%{passenger_version}-*)
+
+mkdir -p $standalone_dir/support
+tar -zx -C %{buildroot} -f $standalone_dir/nginx-%{nginx_version}.tar.gz
+tar -zx -C $standalone_dir/support -f $standalone_dir/support.tar.gz
+
 # SELINUX
 install -p -m 644 -D selinux/%{name}.pp %{buildroot}%{sharedir}/selinux/packages/%{name}/%{name}.pp
 
@@ -369,6 +430,7 @@ install -p -m 644 -D selinux/%{name}.pp %{buildroot}%{sharedir}/selinux/packages
 cd ../nginx-%{nginx_version}
 make install DESTDIR=%{buildroot} INSTALLDIRS=vendor
 cd -
+
 %endif #!only_native_libs
 
 ##### NATIVE LIBS INSTALL
@@ -393,6 +455,21 @@ install -p -d -m 0755 %{buildroot}/%{nginx_confdir}/conf.d
 #install -m 0644 %{SOURCE101} %{buildroot}/%{nginx_confdir}/conf.d/passenger.conf
 perl -pe 's{%%ROOT}{%geminstdir}g;s{%%RUBY}{%ruby}g' %{SOURCE100} > %{buildroot}/%{httpd_confdir}/passenger.conf
 perl -pe 's{%%ROOT}{%geminstdir}g;s{%%RUBY}{%ruby}g' %{SOURCE101} > %{buildroot}/%{nginx_confdir}/conf.d/passenger.conf
+
+# CLEANUP
+rm -f $standalone_dir/support/ext/ruby/ruby*/mkmf.log
+perl -pi -e '%perlfileck s{%buildroot}{%%buildroot}g' \
+	$standalone_dir/support/ext/ruby/ruby*/Makefile \
+	$standalone_dir/support/lib/phusion_passenger/standalone/runtime_installer.rb \
+	%{buildroot}/%{geminstdir}/lib/phusion_passenger/standalone/runtime_installer.rb
+
+# This feels wrong (reordering arch & os) but if it helps....
+# ...Going one step further and also stripping all the installed *.o files
+%define __spec_install_post \
+    %{?__debug_package:%{__debug_install_post}} \
+    %{__os_install_post} \
+    find $standalone_dir -name \*.o -o -name \*.so | xargs strip ; \
+    %{__arch_install_post}
 
 %post -n nginx-passenger
 if [ $1 == 1 ]; then
@@ -460,6 +537,7 @@ rm -rf %{buildroot}
 %doc doc/Users\ guide\ Standalone.html
 %doc doc/Users\ guide\ Standalone.txt
 %{_bindir}/passenger
+%{_var}/lib/passenger-standalone/%{passenger_version}-%{_target_cpu}-*/
 
 %files -n mod_passenger
 %doc doc/Users\ guide\ Apache.html
@@ -483,6 +561,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Mon Nov 15 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-11
+- Fix passenger-standalone
+
 * Fri Nov 12 2010 Erik Ogan <erik@stealthymonkeys.com> - 3.0.0-10
 - Bump nginx to version 0.8.53 and build it by hand based on the newer
   nginx specfile

@@ -1,0 +1,84 @@
+diff -uNr passenger-3.0.0.pristine/lib/phusion_passenger/platform_info/binary_compatibility.rb passenger-3.0.0/lib/phusion_passenger/platform_info/binary_compatibility.rb
+--- passenger-3.0.0.pristine/lib/phusion_passenger/platform_info/binary_compatibility.rb	2010-10-18 04:43:16.000000000 -0700
++++ passenger-3.0.0/lib/phusion_passenger/platform_info/binary_compatibility.rb	2010-11-14 22:20:51.000000000 -0800
+@@ -138,30 +138,60 @@
+ 			end
+ 		else
+ 			os_arch = cpu_architecture
++			if File.exists?('/etc/redhat-release')
++				# rpm = find_command('rpm')
++				# mock EPEL environments have a broken RPM db
++				# distro = `#{rpm} -qf --queryformat '%{name}\t%{version}\t%{release}\n' /etc/redhat-release`.strip
++				distro = ''
++				File.open('/etc/redhat-release', 'r') do |f|
++					distro=f.gets.strip
++				end
++				adjusted = nil
++				{
++					# /^(fedora)-release\t(\d+)\t\d+/ => '\1-\2',
++					# /redhat-release\t\S+\t(\d+\.\d+).*/ => 'rhel-\1',
++					# /(centos)-release\t(\d+)\t(\d+).*/ => '\1-\2.\3',
++					# /sl-release\t(\d+\.\d+)\t.*/ => 'SL-\1'
++					/^Fedora release (\d+).*/                   => 'fedora-\1',
++					/^Red Hat Enterprise.*release (\d+\.\d+).*/ => 'epel-\1',
++					# The mock environment claims CentOS, make it epel
++					/^CentOS release (\d+\.\d+).*/              => 'epel-\1',
++					/^Scientific Linux SL release (\d+\.\d+).*/ => 'epel-\1'
++				}.each_pair do |k,v|
++					if distro.gsub!(k,v)
++						adjusted = distro
++						break
++					end
++				end
++				os_runtime = adjusted
++			end
++
++			if os_runtime.to_s == ''
+ 			
+-			cpp = find_command('cpp')
+-			if cpp
+-				macros = `#{cpp} -dM < /dev/null`
++				cpp = find_command('cpp')
++				if cpp
++					macros = `#{cpp} -dM < /dev/null`
+ 				
+-				# Can be something like "4.3.2"
+-				# or "4.2.1 20070719 (FreeBSD)"
+-				macros =~ /__VERSION__ "(.+)"/
+-				compiler_version = $1
+-				compiler_version.gsub!(/ .*/, '') if compiler_version
++					# Can be something like "4.3.2"
++					# or "4.2.1 20070719 (FreeBSD)"
++					macros =~ /__VERSION__ "(.+)"/
++					compiler_version = $1
++					compiler_version.gsub!(/ .*/, '') if compiler_version
+ 				
+-				macros =~ /__GXX_ABI_VERSION (.+)$/
+-				cxx_abi_version = $1
+-			else
+-				compiler_version = nil
+-				cxx_abi_version = nil
+-			end
++					macros =~ /__GXX_ABI_VERSION (.+)$/
++					cxx_abi_version = $1
++				else
++					compiler_version = nil
++					cxx_abi_version = nil
++				end
+ 			
+-			if compiler_version && cxx_abi_version
+-				os_runtime = "gcc#{compiler_version}-#{cxx_abi_version}"
+-			else
+-				os_runtime = [compiler_version, cxx_abi_version].compact.join("-")
+-				if os_runtime.empty?
+-					os_runtime = `uname -r`.strip
++				if compiler_version && cxx_abi_version
++					os_runtime = "gcc#{compiler_version}-#{cxx_abi_version}"
++				else
++					os_runtime = [compiler_version, cxx_abi_version].compact.join("-")
++					if os_runtime.empty?
++						os_runtime = `uname -r`.strip
++					end
+ 				end
+ 			end
+ 		end

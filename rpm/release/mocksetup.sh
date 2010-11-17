@@ -10,7 +10,7 @@ etc=${2:-/etc/mock}
 # umask 002
 
 # For the non-groupinstall configs, pull the members out of the mock-comps.xml
-prereqs=`egrep 'packagereq.*default' $(dirname $0)/mock-comps.xml | cut -d\> -f2 | cut -d\< -f1 | tr '\n' ' '`
+prereqs=`egrep 'packagereq.*default' $(dirname $0)/mock-repo/comps.xml | cut -d\> -f2 | cut -d\< -f1 | tr '\n' ' '`
 
 for cfg in $etc/{fedora-{13,14},epel-5}-*.cfg
 do
@@ -42,8 +42,17 @@ EOF
 done
 
 mkdir -p $repo
-cat `dirname $0`/mock-comps.xml > $repo/comps.xml
+chmod g+s $repo 2>/dev/null || true
 
+if [ $BUILD_VERBOSITY -ge 1 ]; then
+    rsync_volume='-v'
+    if [ $BUILD_VERBOSITY -ge 2 ]; then
+	rsync_volume='-v --progress'
+    fi
+fi
+
+cp -ra `dirname $0`/mock-repo/* $repo
+chgrp -R mock $repo 2>/dev/null || true
 
 createrepo_volume=
 if [ $BUILD_VERBOSITY -gt 1 ]; then
