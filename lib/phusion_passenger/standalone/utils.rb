@@ -33,8 +33,12 @@ private
 	end
 	
 	def runtime_version_string
-		require_platform_info_binary_compatibility
-		return "#{VERSION_STRING}-#{PlatformInfo.passenger_binary_compatibility_id}"
+		if PhusionPassenger.natively_packaged?
+			return "natively-packaged"
+		else
+			require_platform_info_binary_compatibility
+			return "#{VERSION_STRING}-#{PlatformInfo.passenger_binary_compatibility_id}"
+		end
 	end
 end
 
