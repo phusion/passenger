@@ -1,5 +1,5 @@
-This package was debianized by Neil Wilson <neil@brightbox.co.uk> on
-Thu, 08 May 2008 17:36:47 +0100.
+This package was debianized by Neil Wilson <neil@brightbox.co.uk> and 
+John Leach <john@brightbox.co.uk>
 
 It was downloaded from http://www.modrails.com/install.html
 
@@ -9,25 +9,29 @@ Upstream Author:
 
 Copyright: 
 
-    Copyright (C) 2008  Phusion
+    Copyright (c) 2010  Phusion
 
 License:
 
-    Passenger is licensed under the GNU General Public License (GPL)
-    version 2, and *only* version 2 (i.e. not version 3 or any later
-    versions).  See `/usr/share/common-licenses/GPL-2'.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-    In addition to the GNU General Public License v2 licensing terms,
-    we explicitly grand you the permission to run any application on
-    top of Passenger, regardless of the application's own licensing
-    terms. The application will not be bound to the terms of the GPL in
-    any way. That is, the GPL only applies to Passenger itself, and not
-    to applications that are run through Passenger.
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
 
-    We also explicitly allow Apache to load the Passenger Apache module,
-    without Apache or any other loaded modules needing to be released
-    under the terms of the GPL.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 
 Packaging:
     (C) 2008 Neil Wilson, Brightbox Systems <neil@brightbox.co.uk>
-    Licensed under GPL-2. See `/usr/share/common-licenses/GPL-2'.
+		(C) 2010 John Leach, Brightbox Systems <john@brightbox.co.uk>
+    Licensed under MIT. See http://www.gnu.org/licenses/license-list.html#X11License
