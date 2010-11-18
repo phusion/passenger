@@ -13,5 +13,3 @@ for you.
 All you need do is add your virtual host to your setup, and reload
 Apache2. See the User Guide (passenger/Users guide.html or
 passenger/Users guide.txt.gz) for more information.
-
-Neil Wilson <neil@brightbox.co.uk> Fri 29 July 2008
