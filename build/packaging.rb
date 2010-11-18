@@ -159,28 +159,18 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 end
 
 desc "Create a Debian package"
-task 'package:debian' => :fakeroot do
-	if Process.euid != 0
-		STDERR.puts
-		STDERR.puts "*** ERROR: the 'package:debian' task must be run as root."
-		STDERR.puts
-		exit 1
-	end
-
-	fakeroot = "pkg/fakeroot"
-	raw_arch = `uname -m`.strip
-	arch = case raw_arch
-	when /^i.86$/
-		"i386"
-	when /^x86_64/
-		"amd64"
-	else
-		raw_arch
+task 'package:debian' do
+	checkbuilddeps = PlatformInfo.find_command("dpkg-checkbuilddeps")
+	debuild = PlatformInfo.find_command("debuild")
+	if !checkbuilddeps || !debuild
+		# devscripts requires dpkg-dev which contains dpkg-checkbuilddeps.
+		abort "Please run `apt-get install devscripts` first."
 	end
 	
-	sh "sed -i 's/Version: .*/Version: #{VERSION_STRING}/' debian/control"
-	sh "cp -R debian #{fakeroot}/DEBIAN"
-	sh "sed -i 's/: any/: #{arch}/' #{fakeroot}/DEBIAN/control"
-	sh "chown -R root:root #{fakeroot}"
-	sh "dpkg -b #{fakeroot} pkg/passenger_#{VERSION_STRING}-#{arch}.deb"
+	if !system(checkbuilddeps)
+		STDERR.puts
+		abort "Please install aforementioned build dependencies first."
+	end
+	
+	sh "debuild"
 end
