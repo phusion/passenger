@@ -26,6 +26,10 @@ Release 3.0.1
    This is the command that people can run after donating. It allows people
    to slightly modify Phusion Passenger's display name as a joke. In 3.0.0 it
    was broken because of a typo. This has been fixed.
+ * Removed passenger-stress-test
+   This tool was used during the early life of Phusion Passenger for stress
+   testing websites. Its performance has never been very good and there are
+   much better tools for stress testing, so this tool has now been removed.
  * [Apache] RailsEnv and RackEnv configuration options are now equivalent
    In previous versions, RailsEnv only had effect on Rails 1 and Rails 2 apps
    while RackEnv only had effect on Rack apps. Because Rails 3 apps are
