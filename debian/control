@@ -8,8 +8,8 @@ Build-Depends: apache2-threaded-dev, apache2-mpm-worker | apache2-mpm-prefork,
  libcurl4-openssl-dev
 Standards-Version: 3.8.0
 Homepage: http://www.modrails.com/
-XS-Vcs-git: git://github.com/johnl/deb-passenger/tree/master
-XS-Vcs-browser: http://github.com/johnl/deb-passenger/tree/master
+XS-Vcs-git: git://github.com/FooBarWidget/passenger.git
+XS-Vcs-browser: https://github.com/FooBarWidget/passenger
 
 Package: passenger-common
 Architecture: any
