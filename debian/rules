@@ -21,7 +21,7 @@ clean::
 	rake clean
 
 build/passenger-common build/libapache2-mod-passenger build/passenger-doc::
-	APXS2=/usr/bin/apxs2 USE_VENDORED_LIBEV=no rake fakeroot
+	rake fakeroot APXS2=/usr/bin/apxs2 USE_VENDORED_LIBEV=no RELEASE=yes
 	rm -rf $(DEB_DESTDIR)
 	mv $(builddir) $(DEB_DESTDIR)
 
