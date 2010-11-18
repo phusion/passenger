@@ -4,6 +4,7 @@
 .DS_Store
 *.o
 *.so
+*.bundle
 *.pyc
 *.a
 *.lo
