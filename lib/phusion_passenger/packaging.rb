@@ -72,7 +72,7 @@ module Packaging
 		'debian/*',
 		'helper-scripts/*',
 		'ext/common/**/*.{cpp,c,h,hpp}',
-		'ext/apache2/*.{cpp,h,hpp,c,TXT}',
+		'ext/apache2/*.{cpp,h,hpp,c}',
 		'ext/nginx/*.{c,cpp,h}',
 		'ext/nginx/config',
 		'ext/boost/**/*',
