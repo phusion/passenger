@@ -1,0 +1,15 @@
+#!/bin/sh
+
+set -e
+
+#DEBHELPER#
+
+if [ "$1" != "remove" -a "$1" != "purge" ]; then
+        exit 0
+fi;
+
+if [ -e /etc/apache2/apache2.conf ]; then
+	a2dismod passenger || true
+fi
+
+exit 0

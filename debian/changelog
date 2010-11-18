@@ -1,0 +1,185 @@
+passenger (3.0.0-1bbox3) hardy; urgency=low
+
+  * Fixed clean of vendored libev
+
+ -- John Leach <john@brightbox.co.uk>  Thu, 11 Nov 2010 17:30:20 +0000
+
+passenger (3.0.0-1bbox2) hardy; urgency=low
+
+  * Fixed packaging bug with vendored libev
+
+ -- John Leach <john@brightbox.co.uk>  Wed, 19 Oct 2010 21:37:19 +0100
+
+passenger (3.0.0-1bbox1) hardy; urgency=low
+
+  * New Upstream Version, 3.0.0
+
+ -- John Leach <john@brightbox.co.uk>  Wed, 19 Oct 2010 12:57:07 +0100
+
+passenger (3.0.0-1bbox1~pre3) hardy; urgency=low
+
+  * New Upstream Version, 3.0.0~pre3
+
+ -- John Leach <john@brightbox.co.uk>  Wed, 20 Sep 2010 17:27:09 +0100
+
+passenger (2.2.15-1bbox1) hardy; urgency=low
+
+  * New Upstream Version, 2.2.15
+
+ -- Ben Arblaster <ben@brightbox.co.uk>  Tue, 06 Jul 2010 14:37:38 +0100
+
+passenger (2.2.14-1bbox2) hardy; urgency=low
+
+  * New Upstream Version, 2.2.14
+
+ -- Ben Arblaster <ben@brightbox.co.uk>  Wed, 23 Jun 2010 11:32:26 +0100
+
+passenger (2.2.11-1bbox2) hardy; urgency=low
+
+  * Fix dependency on passenger-common
+
+ -- John Leach <john@brightbox.co.uk>  Fri, 18 Jun 2010 07:41:26 +0100
+
+passenger (2.2.11-1bbox1) hardy; urgency=low
+
+  * New Upstream Version, 2.2.11
+
+ -- John Leach <john@brightbox.co.uk>  Fri, 05 Mar 2010 15:03:50 +0000
+
+passenger (2.2.10-1bbox2) hardy; urgency=low
+
+  * Change depency from apache mpm to apache common package
+
+ -- John Leach <john@brightbox.co.uk>  Thu, 04 Mar 2010 14:52:46 +0000
+
+passenger (2.2.10-1bbox1) hardy; urgency=low
+
+  * New Upstream Version, 2.2.10
+
+ -- John Leach <john@brightbox.co.uk>  Thu, 25 Feb 2010 15:31:42 +0000
+
+passenger (2.2.9-1bbox1) hardy; urgency=low
+
+  * New Upstream Version, 2.2.9
+
+ -- John Leach <john@brightbox.co.uk>  Fri, 08 Jan 2010 11:37:10 +0000
+
+passenger (2.2.7-1bbox1) hardy; urgency=low
+
+  * New Upstream Version, 2.2.7
+
+ -- John Leach <john@brightbox.co.uk>  Mon, 23 Nov 2009 20:04:04 +0000
+
+passenger (2.2.5-1bbox1) hardy; urgency=low
+
+  * New Upstream Version, 2.2.5
+
+ -- John Leach <john@brightbox.co.uk>  Thu, 03 Sep 2009 08:13:14 +0100
+
+passenger (2.2.4-1bbox1) hardy; urgency=low
+
+  * New Upstream Version, 2.2.4
+
+ -- John Leach <john@brightbox.co.uk>  Mon, 29 Jun 2009 11:05:34 +0100
+
+passenger (2.2.2-1bbox2) hardy; urgency=low
+
+  * Changed dependency from librack to librack1.8
+
+ -- John Leach <john@brightbox.co.uk>  Fri, 01 May 2009 13:05:22 +0100
+
+passenger (2.2.2-1bbox1) hardy; urgency=low
+
+  * New Upstream Version, 2.2.2
+  * Updated dependency to librack 1.0.0
+
+ -- John Leach <john@brightbox.co.uk>  Fri, 01 May 2009 12:21:43 +0100
+
+passenger (2.2.1-1bbox2) hardy; urgency=low
+
+  * Conflicts with older versions of libapache2-mod-passenger
+  * libapache2-mod-passenger depends on exact version of passenger-common
+
+ -- John Leach <john@brightbox.co.uk>  Wed, 22 Apr 2009 18:49:42 +0100
+
+passenger (2.2.1-1bbox1) hardy; urgency=low
+
+  * New Upstream Version, 2.2.1
+  * Split into separate packages, to allow nginx support
+
+ -- John Leach <john@brightbox.co.uk>  Mon, 20 Apr 2009 17:18:09 +0100
+
+passenger (2.2.0-1bbox1) hardy; urgency=low
+
+  * New Upstream Version, 2.2
+
+ -- John Leach <john@brightbox.co.uk>  Fri, 17 Apr 2009 10:34:14 +0100
+
+passenger (2.1.3-1bbox1) hardy; urgency=low
+
+  * New upstream version, 2.1.3
+
+ -- John Leach <john@brightbox.co.uk>  Sun, 05 Apr 2009 15:14:34 +0100
+
+passenger (2.1.2-1bbox1) hardy; urgency=low
+
+  * New upstream version
+
+ -- John Leach <john@brightbox.co.uk>  Sat, 14 Mar 2009 17:34:17 +0000
+
+passenger (2.1.1.20090309-0bbox1) hardy; urgency=low
+
+  * New upstream version
+
+ -- John Leach <john@brightbox.co.uk>  Wed, 11 Mar 2009 00:05:15 +0000
+
+passenger (2.0.6-0bbox2) hardy; urgency=low
+
+  * Fixed depends to allow apache2-mpm-prefork instead of apache2-mpm-worker
+
+ -- John Leach <john@brightbox.co.uk>  Sun, 11 Jan 2009 15:01:22 +0000
+
+passenger (2.0.6-0bbox1) hardy; urgency=low
+
+  * New Upstream Version, 2.0.6
+
+ -- John Leach <john@brightbox.co.uk>  Mon, 15 Dec 2008 19:29:13 +0000
+
+passenger (2.0.5-0bbox1) hardy; urgency=low
+
+  * New Upstream Version, 2.0.5
+
+ -- John Leach <john@brightbox.co.uk>  Fri, 05 Dec 2008 14:22:41 +0000
+
+passenger (2.0.4-1bbox2) hardy; urgency=medium
+
+  * Added 11_fix_passenger-config_version.patch to fix bug in passenger-config
+    (Thanks to Rich Drummond)
+  * Changed depends to allow apache2-mpm-prefork instead of apache2-mpm-worker
+
+ -- John Leach <john@brightbox.co.uk>  Wed, 03 Dec 2008 18:14:46 +0000
+
+passenger (2.0.4-1bbox1) hardy; urgency=low
+
+  * New upstream version, 2.0.4
+
+ -- John Leach <john@brightbox.co.uk>  Mon, 01 Dec 2008 23:00:11 +0000
+
+passenger (2.0.3-1bbox4) hardy; urgency=low
+
+  * Tweaked build-depends for Ruby 1.8
+
+ -- John Leach <john@brightbox.co.uk>  Wed, 26 Nov 2008 17:41:07 +0000
+
+passenger (2.0.3-0ubuntu1~bbox3) hardy; urgency=low
+
+  * Change rubygems depends to suggests
+  * Fix typo in control that led to mod_passenger.so being put in /
+
+ -- John Leach <john@brightbox.co.uk>  Wed, 26 Nov 2008 14:02:29 +0000
+
+passenger (2.0.3-0ubuntu1~bbox2) intrepid; urgency=low
+
+  * Initial release: closes LP: #246719
+
+ -- Neil Wilson <neil@brightbox.co.uk>  Sun, 17 Aug 2008 22:30:35 +0100

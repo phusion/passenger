@@ -1,0 +1,33 @@
+This package was debianized by Neil Wilson <neil@brightbox.co.uk> on
+Thu, 08 May 2008 17:36:47 +0100.
+
+It was downloaded from http://www.modrails.com/install.html
+
+Upstream Author: 
+
+    Phusion: info@phusion.nl
+
+Copyright: 
+
+    Copyright (C) 2008  Phusion
+
+License:
+
+    Passenger is licensed under the GNU General Public License (GPL)
+    version 2, and *only* version 2 (i.e. not version 3 or any later
+    versions).  See `/usr/share/common-licenses/GPL-2'.
+
+    In addition to the GNU General Public License v2 licensing terms,
+    we explicitly grand you the permission to run any application on
+    top of Passenger, regardless of the application's own licensing
+    terms. The application will not be bound to the terms of the GPL in
+    any way. That is, the GPL only applies to Passenger itself, and not
+    to applications that are run through Passenger.
+
+    We also explicitly allow Apache to load the Passenger Apache module,
+    without Apache or any other loaded modules needing to be released
+    under the terms of the GPL.
+
+Packaging:
+    (C) 2008 Neil Wilson, Brightbox Systems <neil@brightbox.co.uk>
+    Licensed under GPL-2. See `/usr/share/common-licenses/GPL-2'.
