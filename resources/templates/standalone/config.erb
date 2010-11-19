@@ -66,14 +66,14 @@ http {
     # Default server entry.
     server {
         listen <%= nginx_listen_address %>;
-        root '<%= PhusionPassenger.templates_dir %>/standalone_default_root';
+        root '<%= PhusionPassenger.resources_dir %>/standalone_default_root';
     }
     <% end %>
 
     <% if @options[:ping_port] %>
     server {
         listen <%= nginx_listen_address(@options, true) %>;
-        root '<%= PhusionPassenger.templates_dir %>/standalone_default_root';
+        root '<%= PhusionPassenger.resources_dir %>/standalone_default_root';
     }
     <% end %>
     

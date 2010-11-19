@@ -187,7 +187,7 @@ module PhusionPassenger
 	end
 	
 	def self.templates_dir
-		return "#{ruby_libdir}/phusion_passenger/templates"
+		return "#{resources_dir}/templates"
 	end
 	
 	def self.runtime_libraries_compiled?
