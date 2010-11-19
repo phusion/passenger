@@ -91,7 +91,7 @@ module PhusionPassenger
 				end
 			end
 			
-			@natively_packaged     = get_bool_option(filename, options, 'natively_packaged')
+			@originally_packaged   = false
 			@bindir                = get_option(filename, options, 'bin')
 			@agents_dir            = get_option(filename, options, 'agents')
 			@helper_scripts_dir    = get_option(filename, options, 'helper_scripts')
@@ -103,19 +103,9 @@ module PhusionPassenger
 			@apache2_module_path   = get_option(filename, options, 'apache2_module')
 		else
 			root = root_or_file
-			@natively_packaged = !File.exist?("#{root}/Rakefile") ||
-			                     !File.exist?("#{root}/DEVELOPERS.TXT")
-			if @natively_packaged
-				@bin_dir               = NATIVELY_PACKAGED_BIN_DIR
-				@agents_dir            = NATIVELY_PACKAGED_AGENTS_DIR
-				@helper_scripts_dir    = NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR
-				@resources_dir         = NATIVELY_PACKAGED_RESOURCES_DIR
-				@doc_dir               = NATIVELY_PACKAGED_DOC_DIR
-				@compilable_source_dir = NATIVELY_PACKAGED_COMPILABLE_SOURCE_DIR
-				@runtime_libdir        = NATIVELY_PACKAGED_RUNTIME_LIBDIR
-				@header_dir            = NATIVELY_PACKAGED_HEADER_DIR
-				@apache2_module        = NATIVELY_PACKAGED_APACHE2_MODULE
-			else
+			@originally_packaged = File.exist?("#{root}/Rakefile") &&
+			                       File.exist?("#{root}/DEVELOPERS.TXT")
+			if @originally_packaged
 				@bin_dir               = "#{root}/bin".freeze
 				@agents_dir            = "#{root}/agents".freeze
 				@helper_scripts_dir    = "#{root}/helper-scripts".freeze
@@ -125,6 +115,16 @@ module PhusionPassenger
 				@runtime_libdir        = "#{root}/ext/common"
 				@header_dir            = "#{root}/ext/common"
 				@apache2_module        = "#{root}/ext/apache2/mod_passenger.so".freeze
+			else
+				@bin_dir               = NATIVELY_PACKAGED_BIN_DIR
+				@agents_dir            = NATIVELY_PACKAGED_AGENTS_DIR
+				@helper_scripts_dir    = NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR
+				@resources_dir         = NATIVELY_PACKAGED_RESOURCES_DIR
+				@doc_dir               = NATIVELY_PACKAGED_DOC_DIR
+				@compilable_source_dir = NATIVELY_PACKAGED_COMPILABLE_SOURCE_DIR
+				@runtime_libdir        = NATIVELY_PACKAGED_RUNTIME_LIBDIR
+				@header_dir            = NATIVELY_PACKAGED_HEADER_DIR
+				@apache2_module        = NATIVELY_PACKAGED_APACHE2_MODULE
 			end
 		end
 	end
@@ -133,11 +133,12 @@ module PhusionPassenger
 		return @root
 	end
 	
-	# Returns whether this Phusion Passenger installation is packaged
-	# using the OS's native package management system, i.e. as opposed
-	# to being installed from source or with RubyGems.
-	def self.natively_packaged?
-		return @natively_packaged
+	# Returns whether this Phusion Passenger installation's files are all
+	# located within the same directory, in the same manner as the source
+	# tarball or the gem. If Phusion Passenger is installed with the OS's
+	# native package manager (e.g. RPM/DEB) then the result is false.
+	def self.originally_packaged?
+		return @originally_packaged
 	end
 	
 	def self.bin_dir
@@ -187,6 +188,11 @@ module PhusionPassenger
 	
 	def self.templates_dir
 		return "#{ruby_libdir}/phusion_passenger/templates"
+	end
+	
+	def self.runtime_libraries_compiled?
+		return File.exist?("#{runtime_libdir}/libpassenger_common.a") &&
+			File.exist?("#{runtime_libdir}/libboost_oxt.a")
 	end
 	
 	

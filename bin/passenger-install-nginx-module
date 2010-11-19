@@ -59,11 +59,19 @@ class Installer < PhusionPassenger::AbstractInstaller
 	end
 	
 	def run_steps
-		Dir.chdir(SOURCE_ROOT)
+		# Make sure the configure script finds the correct
+		# passenger-config command.
+		ENV['PATH'] = PhusionPassenger.bin_dir + ":" + ENV['PATH']
+		
 		show_welcome_screen
 		check_dependencies || exit(1)
 		
-		check_whether_we_can_write_to(SOURCE_ROOT) || exit(1)
+		if PhusionPassenger.originally_packaged?
+			check_whether_we_can_write_to(PhusionPassenger.root) || exit(1)
+		elsif !PhusionPassenger.runtime_libraries_compiled?
+			incorrectly_installed
+			exit(1)
+		end
 		
 		download_and_install = should_we_download_and_install_nginx_automatically?
 		if pcre_is_installed?
@@ -90,7 +98,9 @@ class Installer < PhusionPassenger::AbstractInstaller
 		end
 		check_whether_we_can_write_to(nginx_prefix) || exit(1)
 		nginx_config_already_exists_before_installing = nginx_config_exists?(nginx_prefix)
-		compile_passenger_support_files || exit(1)
+		if PhusionPassenger.originally_packaged?
+			compile_passenger_support_files || exit(1)
+		end
 		if install_nginx(nginx_source_dir, nginx_prefix, extra_nginx_configure_flags)
 			if nginx_config_already_exists_before_installing || !locate_nginx_config_file(nginx_prefix)
 				show_passenger_config_snippets(nginx_prefix)
@@ -123,10 +133,17 @@ private
 		wait
 	end
 	
+	def incorrectly_installed
+		new_screen
+		render_template 'nginx/incorrectly_installed'
+	end
+	
 	def compile_passenger_support_files
 		new_screen
 		puts "<banner>Compiling Passenger support files...</banner>"
-		return sh("#{PlatformInfo.rake_command} nginx:clean nginx RELEASE=yes")
+		Dir.chdir(PhusionPassenger.root) do
+			return sh("#{PlatformInfo.rake_command} nginx:clean nginx RELEASE=yes")
+		end
 	end
 	
 	def should_we_download_and_install_nginx_automatically?
