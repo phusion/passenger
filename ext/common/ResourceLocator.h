@@ -40,6 +40,7 @@ using namespace boost;
  */
 class ResourceLocator {
 private:
+	string binDir;
 	string agentsDir;
 	string helperScriptsDir;
 	string resourcesDir;
@@ -61,6 +62,7 @@ public:
 		if (getFileType(rootOrFile) == FT_FILE) {
 			string file = rootOrFile;
 			IniFileSectionPtr options = IniFile(file).section("locations");
+			binDir              = getOption(file, options, "bin");
 			agentsDir           = getOption(file, options, "agents");
 			helperScriptsDir    = getOption(file, options, "helper_scripts");
 			resourcesDir        = getOption(file, options, "resources");
@@ -74,6 +76,7 @@ public:
 				!fileExists(root + "/DEVELOPERS.TXT");
 			
 			if (nativelyPackaged) {
+				binDir              = "/usr/bin";
 				agentsDir           = "/usr/lib/phusion-passenger/agents";
 				helperScriptsDir    = "/usr/share/phusion-passenger/helper-scripts";
 				resourcesDir        = "/usr/share/phusion-passenger";
@@ -82,6 +85,7 @@ public:
 				compilableSourceDir = "/usr/share/phusion-passenger/compilable-source";
 				apache2Module       = "/usr/lib/apache2/modules/mod_passenger.so";
 			} else {
+				binDir              = root + "/bin";
 				agentsDir           = root + "/agents";
 				helperScriptsDir    = root + "/helper-scripts";
 				resourcesDir        = root + "/resources";

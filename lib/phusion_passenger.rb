@@ -58,6 +58,7 @@ module PhusionPassenger
 	# System-wide directory for storing Phusion Passenger Standalone runtime files.
 	GLOBAL_STANDALONE_RESOURCE_DIR = "/var/lib/#{STANDALONE_NAMESPACE_DIRNAME}"
 	
+	NATIVELY_PACKAGED_BIN_DIR                = "/usr/bin".freeze
 	NATIVELY_PACKAGED_AGENTS_DIR             = "/usr/lib/#{NAMESPACE_DIRNAME}/agents".freeze
 	NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR     = "/usr/share/#{NAMESPACE_DIRNAME}/helper-scripts".freeze
 	NATIVELY_PACKAGED_RESOURCES_DIR          = "/usr/share/#{NAMESPACE_DIRNAME}".freeze
@@ -91,6 +92,7 @@ module PhusionPassenger
 			end
 			
 			@natively_packaged     = get_bool_option(filename, options, 'natively_packaged')
+			@bindir                = get_option(filename, options, 'bin')
 			@agents_dir            = get_option(filename, options, 'agents')
 			@helper_scripts_dir    = get_option(filename, options, 'helper_scripts')
 			@resources_dir         = get_option(filename, options, 'resources')
@@ -104,6 +106,7 @@ module PhusionPassenger
 			@natively_packaged = !File.exist?("#{root}/Rakefile") ||
 			                     !File.exist?("#{root}/DEVELOPERS.TXT")
 			if @natively_packaged
+				@bin_dir               = NATIVELY_PACKAGED_BIN_DIR
 				@agents_dir            = NATIVELY_PACKAGED_AGENTS_DIR
 				@helper_scripts_dir    = NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR
 				@resources_dir         = NATIVELY_PACKAGED_RESOURCES_DIR
@@ -113,6 +116,7 @@ module PhusionPassenger
 				@header_dir            = NATIVELY_PACKAGED_HEADER_DIR
 				@apache2_module        = NATIVELY_PACKAGED_APACHE2_MODULE
 			else
+				@bin_dir               = "#{root}/bin".freeze
 				@agents_dir            = "#{root}/agents".freeze
 				@helper_scripts_dir    = "#{root}/helper-scripts".freeze
 				@resources_dir         = "#{root}/resources".freeze
@@ -134,6 +138,10 @@ module PhusionPassenger
 	# to being installed from source or with RubyGems.
 	def self.natively_packaged?
 		return @natively_packaged
+	end
+	
+	def self.bin_dir
+		return @bin_dir
 	end
 	
 	def self.agents_dir
