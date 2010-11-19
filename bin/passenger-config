@@ -31,7 +31,7 @@ require 'phusion_passenger/platform_info/compiler'
 
 def help
 	puts "Tool for showing Passenger configuration information."
-	puts "Usage: passenger-config <OPTIONS>"
+	puts "Usage: passenger-config <OPTION>"
 	puts
 	puts "Options:"
 	puts "  --root       Show root directory."
