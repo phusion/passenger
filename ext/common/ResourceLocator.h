@@ -58,8 +58,17 @@ private:
 	
 public:
 	ResourceLocator(const string &rootOrFile) {
-		FileType rootOrFileType = getFileType(rootOrFile);
-		if (rootOrFileType == FT_DIRECTORY || rootOrFileType == FT_NONEXISTANT) {
+		if (getFileType(rootOrFile) == FT_FILE) {
+			string file = rootOrFile;
+			IniFileSectionPtr options = IniFile(file).section("locations");
+			agentsDir           = getOption(file, options, "agents");
+			helperScriptsDir    = getOption(file, options, "helper_scripts");
+			resourcesDir        = getOption(file, options, "resources");
+			docDir              = getOption(file, options, "doc");
+			rubyLibDir          = getOption(file, options, "rubylib");
+			compilableSourceDir = getOption(file, options, "compilable_source");
+			apache2Module       = getOption(file, options, "apache2_module");
+		} else {
 			string root = rootOrFile;
 			bool nativelyPackaged = !fileExists(root + "/Rakefile") ||
 				!fileExists(root + "/DEVELOPERS.TXT");
@@ -81,17 +90,6 @@ public:
 				compilableSourceDir = root;
 				apache2Module       = root + "ext/apache2/mod_passenger.so";
 			}
-			
-		} else {
-			string file = rootOrFile;
-			IniFileSectionPtr options = IniFile(file).section("locations");
-			agentsDir           = getOption(file, options, "agents");
-			helperScriptsDir    = getOption(file, options, "helper_scripts");
-			resourcesDir        = getOption(file, options, "resources");
-			docDir              = getOption(file, options, "doc");
-			rubyLibDir          = getOption(file, options, "rubylib");
-			compilableSourceDir = getOption(file, options, "compilable_source");
-			apache2Module       = getOption(file, options, "apache2_module");
 		}
 	}
 	

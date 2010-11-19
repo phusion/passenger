@@ -66,10 +66,19 @@ private
 		File.join(SOURCE_ROOT, "ext", "ruby", "extconf.rb")
 	end
 	
+	def native_support_dir_in_source_dir
+		if PhusionPassenger.natively_packaged?
+			return nil
+		else
+			@native_support_dir_in_source_dir ||=
+				File.expand_path("#{PhusionPassenger.libdir}/../ext/ruby")
+		end
+	end
+	
 	def load_from_source_dir
-		if defined?(NATIVE_SUPPORT_DIR)
+		if native_support_dir_in_source_dir
 			begin
-				require "#{NATIVE_SUPPORT_DIR}/#{archdir}/#{library_name}"
+				require "#{native_support_dir_in_source_dir}/#{archdir}/#{library_name}"
 				return true
 			rescue LoadError
 				return false
@@ -103,8 +112,8 @@ private
 		require 'phusion_passenger/platform_info/ruby'
 		
 		target_dirs = []
-		if defined?(NATIVE_SUPPORT_DIR)
-			target_dirs << "#{NATIVE_SUPPORT_DIR}/#{archdir}"
+		if native_support_dir_in_source_dir
+			target_dirs << "#{native_support_dir_in_source_dir}/#{archdir}"
 		end
 		target_dirs << "#{home}/#{LOCAL_DIR}/native_support/#{VERSION_STRING}/#{archdir}"
 		

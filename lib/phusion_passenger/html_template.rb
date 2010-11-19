@@ -30,7 +30,8 @@ module PhusionPassenger
 class HTMLTemplate
 	def initialize(template_name, options = {})
 		@buffer = ''
-		@template = ERB.new(File.read("#{TEMPLATES_DIR}/#{template_name}.html.erb"),
+		@template = ERB.new(
+			File.read("#{PhusionPassenger.templates_dir}/#{template_name}.html.erb"),
 			nil, nil, '@buffer')
 		options.each_pair do |name, value|
 			self[name] = value
@@ -57,7 +58,7 @@ private
 		options.each_pair do |name, value|
 			self[name] = value
 		end
-		layout_template = ERB.new(File.read("#{TEMPLATES_DIR}/#{template_name}.html.erb"))
+		layout_template = ERB.new(File.read("#{PhusionPassenger.templates_dir}/#{template_name}.html.erb"))
 		b = get_binding do
 			old_size = @buffer.size
 			yield
@@ -67,7 +68,7 @@ private
 	end
 	
 	def include(filename)
-		return File.read("#{TEMPLATES_DIR}/#{filename}")
+		return File.read("#{PhusionPassenger.templates_dir}/#{filename}")
 	end
 	
 	def backtrace_html_for(error)
@@ -83,7 +84,7 @@ private
 		in_passenger = false
 		error.backtrace.each_with_index do |item, i|
 			filename, line, location = item.split(':', 3)
-			in_passenger ||= starts_with(filename, "#{LIBDIR}/phusion_passenger")
+			in_passenger ||= starts_with(filename, "#{PhusionPassenger.ruby_libdir}/phusion_passenger")
 			class_names = in_passenger ? "passenger" : "framework"
 			class_names << ((i & 1 == 0) ? " uneven" : " even")
 			html << %Q{

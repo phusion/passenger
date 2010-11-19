@@ -25,19 +25,44 @@
 source_root = File.expand_path(File.dirname(__FILE__) + "/..")
 $LOAD_PATH.unshift("#{source_root}/lib")
 require 'phusion_passenger'
+PhusionPassenger.locate_directories
+require 'phusion_passenger/platform_info'
+require 'phusion_passenger/platform_info/compiler'
 
 def help
 	puts "Tool for showing Passenger configuration information."
 	puts "Usage: passenger-config <OPTIONS>"
 	puts
 	puts "Options:"
-	puts "  --root      Show Passenger's root directory."
-	puts "  --version   Show Passenger's version number."
+	puts "  --root       Show root directory."
+	puts "  --libs       Print runtime library flags."
+	puts "  --includedir Print header location."
+	puts "  --compiled   Check whether runtime libraries are compiled."
+	puts "  --version    Show version number."
 end
 
 case ARGV[0]
 when "--root"
-	puts PhusionPassenger::SOURCE_ROOT
+	puts PhusionPassenger.root
+when "--nginx-module-source-dir"
+	puts PhusionPassenger.nginx_module_source_dir
+when "--libs"
+	dir = PhusionPassenger.runtime_libdir
+	text = "#{dir}/libpassenger_common.a #{dir}/libboost_oxt.a"
+	if PhusionPassenger::PlatformInfo.has_math_library?
+		text << " -lm"
+	end
+	puts text
+when "--includedir"
+	puts PhusionPassenger.header_dir
+when "--compiled"
+	dir = PhusionPassenger.runtime_libdir
+	if File.exist?("#{dir}/libpassenger_common.a") &&
+	   File.exist?("#{dir}/libboost_oxt.a")
+		exit 0
+	else
+		exit 1
+	end
 when "--version"
 	puts PhusionPassenger::VERSION_STRING
 else

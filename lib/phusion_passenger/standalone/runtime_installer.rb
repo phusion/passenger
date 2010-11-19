@@ -98,7 +98,7 @@ protected
 	end
 	
 	def users_guide
-		return "#{DOCDIR}/Users guide Standalone.html"
+		return "#{PhusionPassenger.doc_dir}/Users guide Standalone.html"
 	end
 	
 	def run_steps

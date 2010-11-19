@@ -36,7 +36,7 @@ events {
 }
 
 http {
-    include '<%= PhusionPassenger::RESOURCES_DIR %>/mime.types';
+    include '<%= PhusionPassenger.resources_dir %>/mime.types';
     passenger_ruby <%= PlatformInfo.ruby_command %>;
     passenger_root '<%= passenger_root %>';
     passenger_abort_on_startup_error on;
@@ -66,14 +66,14 @@ http {
     # Default server entry.
     server {
         listen <%= nginx_listen_address %>;
-        root '<%= LIBDIR %>/phusion_passenger/templates/standalone_default_root';
+        root '<%= PhusionPassenger.templates_dir %>/standalone_default_root';
     }
     <% end %>
 
     <% if @options[:ping_port] %>
     server {
         listen <%= nginx_listen_address(@options, true) %>;
-        root '<%= LIBDIR %>/phusion_passenger/templates/standalone_default_root';
+        root '<%= PhusionPassenger.templates_dir %>/standalone_default_root';
     }
     <% end %>
     

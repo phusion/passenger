@@ -68,7 +68,7 @@ Less important directories:
 [ dev ]
   Tools for Phusion Passenger developers. Not used during production.
 [ resources ]
-  Various resource files, used during production.
+  Various non-executable resource files, used during production.
 [ debian ]
   Debian packaging files.
 [ man ]

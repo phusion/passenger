@@ -55,7 +55,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 	end
 	
 	def users_guide
-		return "#{DOCDIR}/Users guide Nginx.html"
+		return "#{PhusionPassenger.doc_dir}/Users guide Nginx.html"
 	end
 	
 	def run_steps

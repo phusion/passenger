@@ -73,7 +73,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 	end
 	
 	def users_guide
-		return "#{DOCDIR}/Users guide Apache.html"
+		return "#{PhusionPassenger.doc_dir}/Users guide Apache.html"
 	end
 	
 	def run_steps
@@ -163,15 +163,15 @@ private
 	
 	def show_apache2_config_snippets(bare = false)
 		if bare
-			puts "LoadModule passenger_module #{APACHE2_MODULE}"
-			puts "PassengerRoot #{PASSENGER_ROOT}"
+			puts "LoadModule passenger_module #{PhusionPassenger.apache2_module_path}"
+			puts "PassengerRoot #{PhusionPassenger.root}"
 			puts "PassengerRuby #{PlatformInfo.ruby_command}"
 		else
 			puts
 			line
 			render_template 'apache2/config_snippets',
-				:module_location => APACHE2_MODULE,
-				:passenger_root => PASSENGER_ROOT,
+				:module_location => PhusionPassenger.apache2_module_path,
+				:passenger_root => PhusionPassenger.root,
 				:ruby => PlatformInfo.ruby_command
 			if PhusionPassenger.natively_packaged?
 				wait(10)
