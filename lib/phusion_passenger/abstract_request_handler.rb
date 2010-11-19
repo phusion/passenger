@@ -644,7 +644,7 @@ private
 		if @options["show_version_in_header"]
 			header << " #{VERSION_STRING}"
 		end
-		if File.exist?("#{SOURCE_ROOT}/enterprisey.txt") ||
+		if File.exist?("#{PhusionPassenger.root}/enterprisey.txt") ||
 		   File.exist?("/etc/passenger_enterprisey.txt")
 			header << ", Enterprise Edition"
 		end

@@ -308,13 +308,14 @@ private
 			exit 1
 		end
 		
-		home           = Etc.getpwuid.dir
-		@runtime_dir   = "#{GLOBAL_STANDALONE_RESOURCE_DIR}/#{runtime_version_string}"
+		runtime_ver_str = runtime_version_string(@options[:nginx_version])
+		home            = Etc.getpwuid.dir
+		@runtime_dir    = "#{GLOBAL_STANDALONE_RESOURCE_DIR}/#{runtime_ver_str}"
 		if !File.exist?("#{nginx_dir}/sbin/nginx")
 			if Process.euid == 0
 				install_runtime
 			else
-				@runtime_dir = "#{home}/#{LOCAL_STANDALONE_RESOURCE_DIR}/#{runtime_version_string}"
+				@runtime_dir = "#{home}/#{LOCAL_STANDALONE_RESOURCE_DIR}/#{runtime_ver_str}"
 				if !File.exist?("#{nginx_dir}/sbin/nginx")
 					install_runtime
 				end

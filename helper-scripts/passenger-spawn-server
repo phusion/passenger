@@ -74,6 +74,7 @@ begin
 	$LOAD_PATH.unshift("#{source_root}/lib")
 	require 'rubygems' rescue nil
 	require 'phusion_passenger'
+	PhusionPassenger.locate_directories
 	require 'phusion_passenger/debug_logging'
 	require 'phusion_passenger/utils/tmpdir'
 	require 'phusion_passenger/native_support'

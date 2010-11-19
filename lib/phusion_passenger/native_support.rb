@@ -63,15 +63,15 @@ private
 	end
 	
 	def extconf_rb
-		File.join(SOURCE_ROOT, "ext", "ruby", "extconf.rb")
+		File.join(PhusionPassenger.compilable_source_dir, "ext", "ruby", "extconf.rb")
 	end
 	
 	def native_support_dir_in_source_dir
-		if PhusionPassenger.natively_packaged?
-			return nil
-		else
+		if PhusionPassenger.originally_packaged?
 			@native_support_dir_in_source_dir ||=
-				File.expand_path("#{PhusionPassenger.libdir}/../ext/ruby")
+				File.expand_path("#{PhusionPassenger.root}/ext/ruby")
+		else
+			return nil
 		end
 	end
 	
@@ -133,7 +133,7 @@ private
 		command_string = args.join(' ')
 		STDERR.puts "# #{command_string}"
 		if !system(*args)
-			raise "Could not compile #{library_name} ('#{command_string}' failed)"
+			raise "Could not compile #{library_name} (\"#{command_string}\" failed)"
 		end
 	end
 	

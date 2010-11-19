@@ -343,7 +343,8 @@ private
 	
 	def download_and_extract_passenger_binaries(target, &block)
 		puts "<banner>Downloading Passenger binaries for your platform, if available...</banner>"
-		url     = "#{@binaries_url_root}/#{runtime_version_string}/support.tar.gz"
+		runtime_ver_str = runtime_version_string(@version)
+		url     = "#{@binaries_url_root}/#{runtime_ver_str}/support.tar.gz"
 		tarball = "#{@working_dir}/support.tar.gz"
 		if !download(url, tarball)
 			puts "<b>Looks like it's not. But don't worry, the " +
@@ -361,8 +362,9 @@ private
 	
 	def download_and_extract_nginx_binaries(target, &block)
 		puts "<banner>Downloading Nginx binaries for your platform, if available...</banner>"
+		runtime_ver_str = runtime_version_string(@version)
 		basename = "nginx-#{@version}.tar.gz"
-		url      = "#{@binaries_url_root}/#{runtime_version_string}/#{basename}"
+		url      = "#{@binaries_url_root}/#{runtime_ver_str}/#{basename}"
 		tarball  = "#{@working_dir}/#{basename}"
 		if !download(url, tarball)
 			puts "<b>Looks like it's not. But don't worry, the " +

@@ -37,8 +37,6 @@ module PhusionPassenger
 	
 	###### Directories ######
 	
-	SOURCE_ROOT = File.dirname(FILE_LOCATION)
-	
 	NAMESPACE_DIRNAME            = "phusion-passenger"
 	STANDALONE_NAMESPACE_DIRNAME = "passenger-standalone"
 	

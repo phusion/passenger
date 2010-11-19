@@ -181,11 +181,6 @@ private
 			require_erb
 			erb = ERB.new(File.read(template_filename))
 			
-			if debugging?
-				passenger_root = SOURCE_ROOT
-			else
-				passenger_root = passenger_support_files_dir
-			end
 			# The template requires some helper methods which are defined in start_command.rb.
 			output = erb.result(binding)
 			f.write(output)

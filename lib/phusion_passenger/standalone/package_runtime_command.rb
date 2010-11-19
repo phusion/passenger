@@ -47,7 +47,7 @@ class PackageRuntimeCommand < Command
 		end
 		
 		destdir     = File.expand_path(@args[0]) if @args[0]
-		runtime_dir = "#{destdir}/#{runtime_version_string}"
+		runtime_dir = "#{destdir}/#{runtime_version_string(@options[:nginx_version])}"
 		support_dir = "#{runtime_dir}/support"
 		nginx_dir   = "#{runtime_dir}/nginx-#{@options[:nginx_version]}"
 		

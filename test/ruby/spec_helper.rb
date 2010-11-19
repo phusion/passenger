@@ -23,6 +23,7 @@ $LOAD_PATH.unshift("#{source_root}/test")
 require 'fileutils'
 require 'support/test_helper'
 require 'phusion_passenger'
+PhusionPassenger.locate_directories
 require 'phusion_passenger/debug_logging'
 require 'phusion_passenger/utils/tmpdir'
 
