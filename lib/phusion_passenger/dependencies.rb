@@ -114,7 +114,7 @@ module Dependencies # :nodoc: all
 	# in the packaging list.
 	def self.asciidoc_required?
 		return Packaging::ASCII_DOCS.any? do |fn|
-			!File.exist?("#{SOURCE_ROOT}/#{fn}")
+			!File.exist?("#{PhusionPassenger.doc_dir}/#{fn}")
 		end
 	end
 
