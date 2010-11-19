@@ -25,6 +25,7 @@
 PASSENGER_ROOT = File.expand_path(File.dirname(__FILE__) + "/..")
 $LOAD_PATH.unshift("#{PASSENGER_ROOT}/lib")
 require 'phusion_passenger'
+PhusionPassenger.locate_directories
 
 # The Apache executable may be located in an 'sbin' folder. We add
 # the 'sbin' folders to $PATH just in case. On some systems

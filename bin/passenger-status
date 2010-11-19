@@ -22,9 +22,11 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-source_root = File.expand_path(File.dirname(__FILE__) + "/..")
+source_root = File.expand_path("..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
 require 'phusion_passenger'
+PhusionPassenger.locate_directories
+
 require 'phusion_passenger/platform_info'
 require 'phusion_passenger/admin_tools/server_instance'
 require 'optparse'
