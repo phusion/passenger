@@ -22,9 +22,11 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-passenger_root = File.expand_path("..", File.dirname(__FILE__))
-$LOAD_PATH.unshift("#{passenger_root}/lib")
+source_root = File.expand_path("..", File.dirname(__FILE__))
+$LOAD_PATH.unshift("#{source_root}/lib")
 require 'phusion_passenger'
+PhusionPassenger.locate_directories
+
 require 'optparse'
 require 'fileutils'
 require 'phusion_passenger/platform_info/ruby'
@@ -355,7 +357,7 @@ private
 		new_screen
 		render_template 'nginx/config_snippets',
 			:config_file => locate_nginx_config_file(prefix),
-			:passenger_root => SOURCE_ROOT,
+			:passenger_root => PhusionPassenger.root,
 			:ruby => PlatformInfo.ruby_command
 		wait
 	end
@@ -391,7 +393,7 @@ private
 		contents = File.read(config_file)
 		contents.sub!(/^http \{/,
 			"http {\n" <<
-			"    passenger_root #{SOURCE_ROOT};\n" <<
+			"    passenger_root #{PhusionPassenger.root};\n" <<
 			"    passenger_ruby #{PlatformInfo.ruby_command};\n")
 		File.open(config_file, 'w') do |f|
 			f.write(contents)
@@ -400,7 +402,7 @@ private
 		new_screen
 		render_template 'nginx/config_snippets_inserted',
 			:config_file => config_file,
-			:passenger_root => SOURCE_ROOT,
+			:passenger_root => PhusionPassenger.root,
 			:ruby => PlatformInfo.ruby_command
 		wait
 	end
@@ -414,7 +416,7 @@ private
 		elsif !pcre_is_installed?
 			command << "--without-http_rewrite_module "
 		end
-		command << "--add-module='#{SOURCE_ROOT}/ext/nginx' #{extra_configure_flags}"
+		command << "--add-module='#{PhusionPassenger.nginx_module_source_dir}' #{extra_configure_flags}"
 		command.strip!
 		return command
 	end
