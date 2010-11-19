@@ -27,12 +27,10 @@ require 'phusion_passenger/utils/ansi_colors'
 module PhusionPassenger
 
 class ConsoleTextTemplate
-	TEMPLATE_DIR = "#{File.dirname(__FILE__)}/templates"
-
 	def initialize(input, options = {})
 		@buffer = ''
 		if input[:file]
-			data = File.read("#{TEMPLATE_DIR}/#{input[:file]}.txt.erb")
+			data = File.read("#{PhusionPassenger.templates_dir}/#{input[:file]}.txt.erb")
 		else
 			data = input[:text]
 		end
