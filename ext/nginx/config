@@ -27,7 +27,7 @@ NGX_ADDON_DEPS="$NGX_ADDON_DEPS \
     ${ngx_addon_dir}/ContentHandler.h \
     ${ngx_addon_dir}/StaticContentHandler.h \
     ${ngx_addon_dir}/ngx_http_passenger_module.h \
-    `passenger-config --includedir`/Constants.h"
+    `passenger-config --includedir`/common/Constants.h"
 CORE_LIBS="$CORE_LIBS `passenger-config --libs` -lstdc++ -lpthread"
 
 nginx_version=`grep 'NGINX_VERSION ' src/core/nginx.h | awk '{ print $3 }' | sed 's/"//g'`

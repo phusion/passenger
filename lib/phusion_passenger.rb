@@ -111,7 +111,7 @@ module PhusionPassenger
 				@doc_dir               = "#{root}/doc".freeze
 				@compilable_source_dir = root.dup.freeze
 				@runtime_libdir        = "#{root}/ext/common"
-				@header_dir            = "#{root}/ext/common"
+				@header_dir            = "#{root}/ext"
 				@apache2_module        = "#{root}/ext/apache2/mod_passenger.so".freeze
 			else
 				@bin_dir               = NATIVELY_PACKAGED_BIN_DIR

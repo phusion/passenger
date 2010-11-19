@@ -47,6 +47,7 @@ private:
 	string docDir;
 	string rubyLibDir;
 	string compilableSourceDir;
+	string headerDir;
 	string apache2Module;
 	
 	string getOption(const string &file, const IniFileSectionPtr &section, const string &key) const {
@@ -59,7 +60,7 @@ private:
 	
 public:
 	ResourceLocator(const string &rootOrFile) {
-		if (getFileType(rootOrFile) == FT_FILE) {
+		if (getFileType(rootOrFile) == FT_REGULAR) {
 			string file = rootOrFile;
 			IniFileSectionPtr options = IniFile(file).section("locations");
 			binDir              = getOption(file, options, "bin");
@@ -69,6 +70,7 @@ public:
 			docDir              = getOption(file, options, "doc");
 			rubyLibDir          = getOption(file, options, "rubylib");
 			compilableSourceDir = getOption(file, options, "compilable_source");
+			headerDir           = getOption(file, options, "headers");
 			apache2Module       = getOption(file, options, "apache2_module");
 		} else {
 			string root = rootOrFile;
@@ -83,6 +85,7 @@ public:
 				docDir              = "/usr/share/doc/phusion-passenger";
 				rubyLibDir          = "";
 				compilableSourceDir = "/usr/share/phusion-passenger/compilable-source";
+				headerDir           = "/usr/include/phusion-passenger";
 				apache2Module       = "/usr/lib/apache2/modules/mod_passenger.so";
 			} else {
 				binDir              = root + "/bin";
@@ -92,7 +95,8 @@ public:
 				docDir              = root + "/doc";
 				rubyLibDir          = root + "/lib";
 				compilableSourceDir = root;
-				apache2Module       = root + "ext/apache2/mod_passenger.so";
+				headerDir           = root + "/ext";
+				apache2Module       = root + "/ext/apache2/mod_passenger.so";
 			}
 		}
 	}
@@ -122,8 +126,14 @@ public:
 		return rubyLibDir;
 	}
 	
+	// Directory must contain native_support and Nginx module.
 	string getCompilableSourceDir() const {
 		return compilableSourceDir;
+	}
+	
+	// Directory must contain ext/boost, ext/oxt and ext/common headers.
+	string getHeaderDir() const {
+		return headerDir;
 	}
 	
 	string getApache2ModuleFilename() const {
