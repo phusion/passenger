@@ -55,7 +55,7 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 		end
 		
 		if defined?(ActionDispatch::ShowExceptions)
-			Rails::Application.middleware.insert_after(
+			Rails.application.middleware.insert_after(
 				ActionDispatch::ShowExceptions,
 				ExceptionLogger, analytics_logger)
 		end
@@ -78,7 +78,10 @@ class AnalyticsLogging < ActiveSupport::LogSubscriber
 	
 	def process_action(event)
 		log = Thread.current[PASSENGER_ANALYTICS_WEB_LOG]
-		log.message("View rendering time: #{(event.payload[:view_runtime] * 1000).to_i}") if log
+		if log
+			view_runtime = event.payload[:view_runtime]
+			log.message("View rendering time: #{(view_runtime * 1000).to_i}") if view_runtime
+		end
 	end
 	
 	def sql(event)
