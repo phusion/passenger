@@ -41,6 +41,11 @@ Release 3.0.1
    constructs that we used in the Nginx configure script.
  * [Nginx] Upgraded default Nginx version to to 0.8.53
    The previous default was 0.8.52.
+ * [Nginx] passenger_enabled now only accepts 'on' or 'off' values
+   Previously it would recognize any value not equal to 'on' as meaning
+   'off'. This caused confusion among users who thought they could also
+   specify 'true', so we now throw a proper error if the value is
+   unrecognized. Fixes issue #583.
 
 
 Release 3.0.0
