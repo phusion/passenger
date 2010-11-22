@@ -24,16 +24,9 @@ public:
 	enum State {
 		INITIALIZING,
 		READY,
-		RESTARTING
+		RESTARTING,
+		DESTROYING
 	}
-	
-	struct Component {
-		GroupPtr group;
-		bool     isDefault;
-		
-		/****************/
-		/****************/
-	};
 	
 private:
 	friend class Pool;
@@ -106,6 +99,9 @@ public:
 	weak_ptr<Pool> pool;
 	
 	State state;
+	/** Invariant:
+	 * components.empty() == (state == INITIALIZING)
+	 */
 	vector<Component> components;
 	Component *defaultComponent;
 	string name;
@@ -118,6 +114,13 @@ public:
 	
 	~SuperGroup() {
 		detachComponents(components);
+		cleanup();
+	}
+	
+	void garbageCollect() {
+		if (all groups are garbage collectable) {
+			cleanup();
+		}
 	}
 	
 	// Thread-safe.
@@ -155,13 +158,17 @@ public:
 	}
 	
 	unsigned int usage() const {
-		vector<Component>::const_iterator it, end = components.end();
-		unsigned int result = 0;
-		
-		for (it = components.begin(); it != end; it++) {
-			result += it->usage();
+		if (state == INITIALIZING) {
+			return 1;
+		} else {
+			vector<Component>::const_iterator it, end = components.end();
+			unsigned int result = 0;
+			
+			for (it = components.begin(); it != end; it++) {
+				result += it->usage();
+			}
+			return result;
 		}
-		return result;
 	}
 	
 	void needsRestart() const {

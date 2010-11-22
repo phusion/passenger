@@ -31,6 +31,7 @@ using namespace boost;
 
 class Pool: public enable_shared_from_this<Pool> {
 private:
+	friend class SuperGroup;
 	friend class Group;
 	
 	struct GetWaiter {
@@ -40,7 +41,9 @@ private:
 		GetWaiter(const Options &o, const GetCallback &cb)
 			: options(o),
 			  callback(cb)
-			{ }
+		{
+			options.persist();
+		}
 	};
 	
 	mutable boost::mutex syncher;
@@ -52,7 +55,7 @@ private:
 	
 	RandomGeneratorPtr randomGenerator;
 	ev::timer garbageCollectionTimer;
-	GroupMap groups;
+	SuperGroupMap superGroups;
 	/**
 	 * get() requests that...
 	 * - cannot be immediately satisfied because the pool is at full
@@ -98,6 +101,7 @@ private:
 	}
 	
 	ProcessPtr findMostIdleProcess() const {
+		// TODO
 		return ProcessPtr();
 	}
 	
@@ -301,12 +305,12 @@ public:
 		
 		verifyInvariants();
 		
-		Group *existingGroup = findMatchingGroup(options);
-		if (OXT_LIKELY(existingGroup != NULL)) {
-			/* Best case: the app group is already in the pool. Let's use it. */
-			existingGroup->verifyInvariants();
-			SessionPtr session = existingGroup->get(options, callback);
-			existingGroup->verifyInvariants();
+		SuperGroup *existingSuperGroup = findMatchingSuperGroup(options);
+		if (OXT_LIKELY(existingSuperGroup != NULL)) {
+			/* Best case: the app super group is already in the pool. Let's use it. */
+			existingSuperGroup->verifyInvariants();
+			SessionPtr session = existingSuperGroup->get(options, callback);
+			existingSuperGroup->verifyInvariants();
 			verifyInvariants();
 			lock.unlock();
 			if (session != NULL) {
@@ -314,22 +318,25 @@ public:
 			}
 		
 		} else if (!atFullCapacity(false)) {
-			/* The app group isn't in the pool and we have enough free
+			/* The app super group isn't in the pool and we have enough free
 			 * resources to make a new one.
 			 */
-			GroupPtr group = createGroupAndAsyncGetFromIt(options, callback);
-			group->verifyInvariants();
+			SuperGroupPtr superGroup = createSuperGroupAndAsyncGetFromIt(options, callback);
+			superGroup->verifyInvariants();
 			verifyInvariants();
 			
 		} else {
-			/* Uh oh, the app group isn't in the pool but we don't have
-			 * the resources to make a new one. The sysadmin should
+			/* Uh oh, the app super group isn't in the pool but we don't
+			 * have the resources to make a new one. The sysadmin should
 			 * configure the system to let something like this happen
 			 * as least as possible, but let's try to handle it as well
 			 * as we can.
 			 */
 			ProcessPtr process = findMostIdleProcess();
 			if (process == NULL) {
+				/* All processes are doing something. We have no choice
+				 * but to trash a process.
+				 */
 				process = findBestProcessToTrash();
 			} else {
 				// Check invariant.

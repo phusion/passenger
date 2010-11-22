@@ -88,6 +88,8 @@ private:
 		result.push_back(&restartDir);
 		result.push_back(&ruby);
 		result.push_back(&groupSecret);
+		result.push_back(&hostName);
+		result.push_back(&uri);
 		return result;
 	}
 	
