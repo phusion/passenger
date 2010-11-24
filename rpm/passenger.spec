@@ -105,11 +105,12 @@ BuildRequires: curl-devel
 BuildRequires: doxygen
 BuildRequires: asciidoc
 # standaline build deps
+%if %{?fedora:1}%{?!fedora:0}
 BuildRequires: libev-devel
+%endif
 BuildRequires: rubygem(daemon_controller) >= 0.2.5
 BuildRequires: rubygem(file-tail)
 # native build deps
-BuildRequires: libev-devel
 %if %{?fedora:1}%{?!fedora:0}
 BuildRequires: selinux-policy
 %else
@@ -150,7 +151,9 @@ version, it is installed as %{gemversion} instead of %{passenger_version}.
 Summary: Phusion Passenger native extensions
 Group: System Environment/Daemons
 Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
+%if %{?fedora:1}%{?!fedora:0}
 Requires: libev
+%endif
 Requires(post): policycoreutils, initscripts
 Requires(preun): policycoreutils, initscripts
 Requires(postun): policycoreutils
@@ -190,7 +193,9 @@ package.
 Summary: Standalone Phusion Passenger Server
 Group: System Environment/Daemons
 Requires: %{name} = %{passenger_epoch}:%{passenger_version}-%{passenger_release}
+%if %{?fedora:1}%{?!fedora:0}
 Requires: libev
+%endif
 Epoch: %{passenger_epoch}
 %description standalone
 Phusion Passenger™ — a.k.a. mod_rails or mod_rack — makes deployment
@@ -290,12 +295,13 @@ find test -type f -print0 | xargs -0 perl -pi -e '%{perlfileck} s{#!(/opt/ruby.*
 
 
 %build
+%if %{?fedora:1}%{?!fedora:0}
 export USE_VENDORED_LIBEV=false
 # This isn't honored
 # export CFLAGS='%optflags -I/usr/include/libev'
 export LIBEV_CFLAGS='-I/usr/include/libev'
 export LIBEV_LIBS='-lev'
-
+%endif
 
 %if %{only_native_libs}
    %{rake} native_support
@@ -382,11 +388,13 @@ export LIBEV_LIBS='-lev'
 %endif # !only_native_libs
 
 %install
+%if %{?fedora:1}%{?!fedora:0}
 export USE_VENDORED_LIBEV=false
 # This isn't honored
 # export CFLAGS='%optflags -I/usr/include/libev'
 export LIBEV_CFLAGS='-I/usr/include/libev'
 export LIBEV_LIBS='-lev'
+%endif
 
 rm -rf %{buildroot}
 mkdir -p %{buildroot}%{gemdir}
@@ -458,10 +466,21 @@ perl -pe 's{%%ROOT}{%geminstdir}g;s{%%RUBY}{%ruby}g' %{SOURCE101} > %{buildroot}
 
 # CLEANUP
 rm -f $standalone_dir/support/ext/ruby/ruby*/mkmf.log
-perl -pi -e '%perlfileck s{%buildroot}{%%buildroot}g' \
+# Reversed logic from most other tests
+%if %{?fedora:0}%{?!fedora:1}
+rm -f $standalone_dir/support/ext/libev/config.log
+%endif
+
+%if %{?fedora:1}%{?!fedora:0}
+  %define libevmunge %nil
+%else
+  %define libevmunge $standalone_dir/support/ext/libev/config.status $standalone_dir/support/ext/libev/Makefile
+%endif
+
+perl -pi -e '%perlfileck s{%buildroot}{}g;s<%{_builddir}><%%{_builddir}>g' \
 	$standalone_dir/support/ext/ruby/ruby*/Makefile \
 	$standalone_dir/support/lib/phusion_passenger/standalone/runtime_installer.rb \
-	%{buildroot}/%{geminstdir}/lib/phusion_passenger/standalone/runtime_installer.rb
+	%{buildroot}/%{geminstdir}/lib/phusion_passenger/standalone/runtime_installer.rb %libevmunge
 
 # This feels wrong (reordering arch & os) but if it helps....
 # ...Going one step further and also stripping all the installed *.o files
