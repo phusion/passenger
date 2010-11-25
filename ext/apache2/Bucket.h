@@ -27,7 +27,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <apr_buckets.h>
-#include "Session.h"
+#include <FileDescriptor.h>
 
 namespace Passenger {
 
@@ -51,10 +51,14 @@ struct PassengerBucketState {
 	 */
 	int errorCode;
 	
-	PassengerBucketState() {
-		bytesRead = 0;
-		completed = false;
-		errorCode = 0;
+	/** Connection to the helper agent. */
+	FileDescriptor connection;
+	
+	PassengerBucketState(const FileDescriptor &conn) {
+		bytesRead  = 0;
+		completed  = false;
+		errorCode  = 0;
+		connection = conn;
 	}
 };
 
@@ -71,15 +75,14 @@ typedef shared_ptr<PassengerBucketState> PassengerBucketStatePtr;
  *   to read less data than can actually be read.
  *
  * PassengerBucket is like apr_bucket_pipe, but:
- * - It also holds a reference to a Session. When a read error has occured
- *   or when end-of-stream has been reached, the Session will be
- *   dereferenced, so that the underlying file descriptor is closed.
+ * - It also holds a reference to the helper agent connection. When a read
+ *   error has occured or when end-of-stream has been reached this connection
+ *   will be closed.
  * - It ignores the APR_NONBLOCK_READ flag because that's known to cause
  *   strange I/O problems.
  * - It can store its current state in a PassengerBucketState data structure.
  */
-apr_bucket *passenger_bucket_create(SessionPtr session,
-                                    PassengerBucketStatePtr state,
+apr_bucket *passenger_bucket_create(const PassengerBucketStatePtr &state,
                                     apr_bucket_alloc_t *list);
 
 } // namespace Passenger

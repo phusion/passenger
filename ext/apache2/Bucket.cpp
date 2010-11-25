@@ -22,6 +22,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+
+#include <boost/make_shared.hpp>
 #include "Bucket.h"
 
 namespace Passenger {
@@ -41,25 +43,8 @@ static const apr_bucket_type_t apr_bucket_type_passenger_pipe = {
 };
 
 struct BucketData {
-	SessionPtr session;
+	FileDescriptor fd;
 	PassengerBucketStatePtr state;
-	int stream;
-	
-	~BucketData() {
-		/* The session here is an ApplicationPoolServer::RemoteSession.
-		 * The only reason why its destructor might fail is when sending
-		 * the 'close' command failed. We don't care about that, and we
-		 * don't want C++ exceptions to propagate onto a C stack (this
-		 * bucket is probably used by Apache's bucket brigade code, which
-		 * is written in C), so we ignore all errors in the session's
-		 * destructor.
-		 */
-		try {
-			session.reset();
-		} catch (const SystemException &e) {
-			// Do nothing.
-		}
-	}
 };
 
 static void
@@ -106,7 +91,7 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 	}
 	
 	do {
-		ret = read(data->stream, buf, APR_BUCKET_BUFF_SIZE);
+		ret = read(data->state->connection, buf, APR_BUCKET_BUFF_SIZE);
 	} while (ret == -1 && errno == EINTR);
 	
 	if (ret > 0) {
@@ -130,7 +115,7 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 		 * which can read the next chunk from the stream.
 		 */
 		APR_BUCKET_INSERT_AFTER(bucket, passenger_bucket_create(
-			data->session, data->state, bucket->list));
+			data->state, bucket->list));
 		
 		/* The newly created Passenger Bucket has a reference to the session
 		 * object, so we can delete data here.
@@ -163,10 +148,8 @@ bucket_read(apr_bucket *bucket, const char **str, apr_size_t *len, apr_read_type
 }
 
 static apr_bucket *
-passenger_bucket_make(apr_bucket *bucket, SessionPtr session, PassengerBucketStatePtr state) {
+passenger_bucket_make(apr_bucket *bucket, const PassengerBucketStatePtr &state) {
 	BucketData *data = new BucketData();
-	data->session  = session;
-	data->stream   = session->getStream();
 	data->state    = state;
 	
 	bucket->type   = &apr_bucket_type_passenger_pipe;
@@ -177,14 +160,14 @@ passenger_bucket_make(apr_bucket *bucket, SessionPtr session, PassengerBucketSta
 }
 
 apr_bucket *
-passenger_bucket_create(SessionPtr session, PassengerBucketStatePtr state, apr_bucket_alloc_t *list) {
+passenger_bucket_create(const PassengerBucketStatePtr &state, apr_bucket_alloc_t *list) {
 	apr_bucket *bucket;
 	
 	bucket = (apr_bucket *) apr_bucket_alloc(sizeof(*bucket), list);
 	APR_BUCKET_INIT(bucket);
 	bucket->free = apr_bucket_free;
 	bucket->list = list;
-	return passenger_bucket_make(bucket, session, state);
+	return passenger_bucket_make(bucket, state);
 }
 
 } // namespace Passenger

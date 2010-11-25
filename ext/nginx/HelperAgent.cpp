@@ -40,6 +40,7 @@
 
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
 #include "oxt/thread.hpp"
 #include "oxt/system_calls.hpp"
 
@@ -149,6 +150,31 @@ private:
 	 * nothing (i.e. waiting for a connection).
 	 */
 	Timer inactivityTimer;
+	
+	class EnvironmentVariablesStringListCreator: public StringListCreator {
+	public:
+		StaticString data;
+		mutable StringListPtr items;
+		
+		EnvironmentVariablesStringListCreator(const StaticString &data) {
+			this->data = data;
+		}
+		
+		virtual const StringListPtr getItems() const {
+			if (items == NULL) {
+				StringListPtr items = make_shared<StringList>();
+				if (!data.empty()) {
+					string::size_type start = 0, pos;
+					while ((pos = data.find('\0', start)) != string::npos) {
+						items->push_back(data.substr(start, pos - start));
+						start = pos + 1;
+					}
+				}
+				this->items = items;
+			}
+			return items;
+		}
+	};
 	
 	/**
 	 * Attempts to accept a connection made by the client.
@@ -313,7 +339,7 @@ private:
 	 *                                     before we were able to send back the
 	 *                                     full response.
 	 */
-	void forwardResponse(SessionPtr &session, FileDescriptor &clientFd) {
+	void forwardResponse(SessionPtr &session, bool printStatusLine, FileDescriptor &clientFd) {
 		TRACE_POINT();
 		HttpStatusExtractor ex;
 		int stream = session->getStream();
@@ -324,7 +350,7 @@ private:
 		/* Read data from the backend process until we're able to
 		 * extract the HTTP status line from it.
 		 */
-		while (!eof) {
+		while (printStatusLine && !eof) {
 			UPDATE_TRACE_POINT();
 			size = syscalls::read(stream, buf, sizeof(buf));
 			if (size == 0) {
@@ -386,12 +412,16 @@ private:
 	 *
 	 * @param fd The file descriptor identifying the message channel to write the given
 	 *   spawn exception <tt>e</tt> to.
+	 * @param printStatusLine Whether the response should start with an HTTP status line.
 	 * @param e The spawn exception to be written to the given <tt>fd</tt>'s message
 	 *   channel.
-	 * @param friendly Whether to show a friendly error page.
+	 * @param friendly Whether to show a friendly error page or to show a generic error page
+	 *   with no details.
 	 */
-	void handleSpawnException(FileDescriptor &fd, const SpawnException &e, bool friendly) {
-		writeExact(fd, "HTTP/1.1 500 Internal Server Error\x0D\x0A");
+	void handleSpawnException(FileDescriptor &fd, bool printStatusLine, const SpawnException &e, bool friendly) {
+		if (printStatusLine) {
+			writeExact(fd, "HTTP/1.1 500 Internal Server Error\x0D\x0A");
+		}
 		writeExact(fd, "Status: 500 Internal Server Error\x0D\x0A");
 		writeExact(fd, "Connection: close\x0D\x0A");
 		writeExact(fd, "Content-Type: text/html; charset=utf-8\x0D\x0A");
@@ -438,14 +468,26 @@ private:
 		
 		try {
 			bool enableAnalytics = parser.getHeader("PASSENGER_ANALYTICS") == "true";
+			StaticString scriptName = parser.getHeader("SCRIPT_NAME");
+			StaticString appRoot = parser.getHeader("PASSENGER_APP_ROOT");
 			StaticString appGroupName = parser.getHeader("PASSENGER_APP_GROUP_NAME");
+			StaticString printStatusLine = parser.getHeader("PASSENGER_STATUS_LINE");
 			PoolOptions options;
+			bool shouldPrintStatusLine = printStatusLine.empty() || printStatusLine == "true";
 			
-			if (parser.getHeader("SCRIPT_NAME").empty()) {
-				options.appRoot = extractDirName(parser.getHeader("DOCUMENT_ROOT"));
+			if (scriptName.empty()) {
+				if (appRoot.empty()) {
+					options.appRoot = extractDirName(parser.getHeader("DOCUMENT_ROOT"));
+				} else {
+					options.appRoot = appRoot;
+				}
 			} else {
-				options.appRoot = extractDirName(resolveSymlink(parser.getHeader("DOCUMENT_ROOT")));
-				options.baseURI = parser.getHeader("SCRIPT_NAME");
+				if (appRoot.empty()) {
+					options.appRoot = extractDirName(resolveSymlink(parser.getHeader("DOCUMENT_ROOT")));
+				} else {
+					options.appRoot = appRoot;
+				}
+				options.baseURI = scriptName;
 			}
 			if (appGroupName.empty()) {
 				options.appGroupName = options.appRoot;
@@ -468,6 +510,11 @@ private:
 			options.appSpawnerTimeout       = atol(parser.getHeader("PASSENGER_APP_SPAWNER_IDLE_TIME"));
 			options.debugger       = parser.getHeader("PASSENGER_DEBUGGER") == "true";
 			options.showVersionInHeader = parser.getHeader("PASSENGER_SHOW_VERSION_IN_HEADER") == "true";
+			options.maxRequests    = atol(parser.getHeader("PASSENGER_MAX_REQUESTS"));
+			options.statThrottleRate = atol(parser.getHeader("PASSENGER_STAT_THROTTLE_RATE"));
+			options.restartDir     = parser.getHeader("PASSENGER_RESTART_DIR");
+			options.environmentVariables = make_shared<EnvironmentVariablesStringListCreator>(
+				parser.getHeaderData());
 			
 			UPDATE_TRACE_POINT();
 			AnalyticsLogPtr log;
@@ -554,11 +601,12 @@ private:
 					scope.success();
 				}
 				
-				forwardResponse(session, clientFd);
+				
+				forwardResponse(session, shouldPrintStatusLine, clientFd);
 				
 				requestProxyingScope.success();
 			} catch (const SpawnException &e) {
-				handleSpawnException(clientFd, e,
+				handleSpawnException(clientFd, shouldPrintStatusLine, e,
 					parser.getHeader("PASSENGER_FRIENDLY_ERROR_PAGES") == "true");
 			} catch (const ClientDisconnectedException &) {
 				P_WARN("Couldn't forward the HTTP response back to the HTTP client: "

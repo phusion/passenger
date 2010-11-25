@@ -234,7 +234,7 @@ canonicalizePath(const string &path) {
 }
 
 string
-resolveSymlink(const string &path) {
+resolveSymlink(const StaticString &path) {
 	char buf[PATH_MAX];
 	ssize_t size;
 	
@@ -245,7 +245,7 @@ resolveSymlink(const string &path) {
 		} else {
 			int e = errno;
 			string message = "Cannot resolve possible symlink '";
-			message.append(path);
+			message.append(path.c_str(), path.size());
 			message.append("'");
 			throw FileSystemException(message, e, path);
 		}
@@ -253,7 +253,7 @@ resolveSymlink(const string &path) {
 		buf[size] = '\0';
 		if (buf[0] == '\0') {
 			string message = "The file '";
-			message.append(path);
+			message.append(path.c_str(), path.size());
 			message.append("' is a symlink, and it refers to an empty filename. This is not allowed.");
 			throw FileSystemException(message, ENOENT, path);
 		} else if (buf[0] == '/') {

@@ -159,13 +159,16 @@ string canonicalizePath(const string &path);
  * If <em>path</em> doesn't refer to a symlink then this method will return
  * <em>path</em>.
  *
+ * <em>path</em> MUST be null-terminated!
+ *
  * @throws FileSystemException Something went wrong.
  * @ingroup Support
  */
-string resolveSymlink(const string &path);
+string resolveSymlink(const StaticString &path);
 
 /**
  * Given a path, extracts its directory name.
+ * <em>path</em> MUST be null-terminated!
  *
  * @ingroup Support
  */
@@ -173,6 +176,7 @@ string extractDirName(const StaticString &path);
 
 /**
  * Given a path, extracts its base name.
+ * <em>path</em> MUST be null-terminated!
  *
  * @ingroup Support
  */

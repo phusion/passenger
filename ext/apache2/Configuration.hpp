@@ -202,7 +202,7 @@ struct DirConfig {
 		return enabled != DISABLED;
 	}
 	
-	string getAppRoot(const char *documentRoot) const {
+	string getAppRoot(const StaticString &documentRoot) const {
 		if (appRoot == NULL) {
 			if (resolveSymlinksInDocRoot == DirConfig::ENABLED) {
 				return extractDirName(resolveSymlink(documentRoot));
@@ -214,19 +214,7 @@ struct DirConfig {
 		}
 	}
 	
-	string getAppRoot(const string &documentRoot) const {
-		if (appRoot == NULL) {
-			if (resolveSymlinksInDocRoot == DirConfig::ENABLED) {
-				return extractDirName(resolveSymlink(documentRoot));
-			} else {
-				return extractDirName(documentRoot);
-			}
-		} else {
-			return appRoot;
-		}
-	}
-	
-	const char *getUser() const {
+	StaticString getUser() const {
 		if (user != NULL) {
 			return user;
 		} else {
@@ -234,7 +222,7 @@ struct DirConfig {
 		}
 	}
 	
-	const char *getGroup() const {
+	StaticString getGroup() const {
 		if (group != NULL) {
 			return group;
 		} else {
@@ -242,7 +230,7 @@ struct DirConfig {
 		}
 	}
 	
-	const char *getEnvironment() const {
+	StaticString getEnvironment() const {
 		if (environment != NULL) {
 			return environment;
 		} else {
@@ -250,7 +238,7 @@ struct DirConfig {
 		}
 	}
 	
-	string getAppGroupName(const string &appRoot) const {
+	StaticString getAppGroupName(const StaticString &appRoot) const {
 		if (appGroupName.empty()) {
 			return appRoot;
 		} else {
@@ -258,7 +246,7 @@ struct DirConfig {
 		}
 	}
 	
-	const char *getSpawnMethodString() const {
+	StaticString getSpawnMethodString() const {
 		switch (spawnMethod) {
 		case SM_SMART:
 			return "smart";
@@ -307,7 +295,7 @@ struct DirConfig {
 		}
 	}
 	
-	const char *getRestartDir() const {
+	StaticString getRestartDir() const {
 		if (restartDir != NULL) {
 			return restartDir;
 		} else {
