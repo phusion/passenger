@@ -62,7 +62,7 @@ class PackageRuntimeCommand < Command
 			:version     => @options[:nginx_version],
 			:tarball     => @options[:nginx_tarball],
 			:download_binaries => false)
-		installer.start
+		installer.run
 		
 		Dir.chdir(support_dir) do
 			support_dir_name = File.basename(support_dir)

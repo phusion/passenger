@@ -21,36 +21,39 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-require 'erb'
-require 'phusion_passenger/utils/ansi_colors'
-
 module PhusionPassenger
+module Utils
 
-class ConsoleTextTemplate
-	TEMPLATE_DIR = "#{File.dirname(__FILE__)}/templates"
-
-	def initialize(input, options = {})
-		@buffer = ''
-		if input[:file]
-			data = File.read("#{TEMPLATE_DIR}/#{input[:file]}.txt.erb")
-		else
-			data = input[:text]
-		end
-		@template = ERB.new(Utils::AnsiColors.ansi_colorize(data),
-			nil, nil, '@buffer')
-		options.each_pair do |name, value|
-			self[name] = value
+module AnsiColors
+	RESET    = "\e[0m".freeze
+	BOLD     = "\e[1m".freeze
+	RED      = "\e[31m".freeze
+	GREEN    = "\e[32m".freeze
+	YELLOW   = "\e[33m".freeze
+	WHITE    = "\e[37m".freeze
+	BLACK_BG = "\e[40m".freeze
+	BLUE_BG  = "\e[44m".freeze
+	DEFAULT_TERMINAL_COLOR = "#{RESET}#{WHITE}#{BLACK_BG}".freeze
+	
+	extend self  # Make methods available as class methods.
+	
+	def self.included(klass)
+		# When included into another class, make sure that Utils
+		# methods are made private.
+		public_instance_methods(false).each do |method_name|
+			klass.send(:private, method_name)
 		end
 	end
 	
-	def []=(name, value)
-		instance_variable_set("@#{name}".to_sym, value)
-		return self
-	end
-	
-	def result
-		return @template.result(binding)
+	def ansi_colorize(text)
+		text = text.gsub(%r{<b>(.*?)</b>}m, "#{BOLD}\\1#{DEFAULT_TERMINAL_COLOR}")
+		text.gsub!(%r{<red>(.*?)</red>}m, "#{BOLD}#{RED}\\1#{DEFAULT_TERMINAL_COLOR}")
+		text.gsub!(%r{<green>(.*?)</green>}m, "#{BOLD}#{GREEN}\\1#{DEFAULT_TERMINAL_COLOR}")
+		text.gsub!(%r{<yellow>(.*?)</yellow>}m, "#{BOLD}#{YELLOW}\\1#{DEFAULT_TERMINAL_COLOR}")
+		text.gsub!(%r{<banner>(.*?)</banner>}m, "#{BOLD}#{BLUE_BG}#{YELLOW}\\1#{DEFAULT_TERMINAL_COLOR}")
+		return text
 	end
 end
 
+end # module Utils
 end # module PhusionPassenger

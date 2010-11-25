@@ -102,7 +102,7 @@ protected
 		return "#{DOCDIR}/Users guide Standalone.html"
 	end
 	
-	def install!
+	def run_steps
 		if @support_dir && @nginx_dir
 			show_welcome_screen
 		end
@@ -156,7 +156,7 @@ protected
 		end
 		
 		puts
-		color_puts "<green><b>All done!</b></green>"
+		puts "<green><b>All done!</b></green>"
 		puts
 	end
 	
@@ -238,7 +238,7 @@ private
 	def begin_progress_bar
 		if !@begun
 			@begun = true
-			color_puts "<banner>Installing Phusion Passenger Standalone...</banner>"
+			puts "<banner>Installing Phusion Passenger Standalone...</banner>"
 		end
 	end
 	
@@ -343,11 +343,11 @@ private
 	end
 	
 	def download_and_extract_passenger_binaries(target, &block)
-		color_puts "<banner>Downloading Passenger binaries for your platform, if available...</banner>"
+		puts "<banner>Downloading Passenger binaries for your platform, if available...</banner>"
 		url     = "#{@binaries_url_root}/#{runtime_version_string}/support.tar.gz"
 		tarball = "#{@working_dir}/support.tar.gz"
 		if !download(url, tarball)
-			color_puts "<b>Looks like it's not. But don't worry, the " +
+			puts "<b>Looks like it's not. But don't worry, the " +
 				"necessary binaries will be compiled from source instead.</b>"
 			return nil
 		end
@@ -361,12 +361,12 @@ private
 	end
 	
 	def download_and_extract_nginx_binaries(target, &block)
-		color_puts "<banner>Downloading Nginx binaries for your platform, if available...</banner>"
+		puts "<banner>Downloading Nginx binaries for your platform, if available...</banner>"
 		basename = "nginx-#{@version}.tar.gz"
 		url      = "#{@binaries_url_root}/#{runtime_version_string}/#{basename}"
 		tarball  = "#{@working_dir}/#{basename}"
 		if !download(url, tarball)
-			color_puts "<b>Looks like it's not. But don't worry, the " +
+			puts "<b>Looks like it's not. But don't worry, the " +
 				"necessary binaries will be compiled from source instead.</b>"
 			return nil
 		end
@@ -383,7 +383,7 @@ private
 		if @tarball
 			tarball  = @tarball
 		else
-			color_puts "<banner>Downloading Nginx...</banner>"
+			puts "<banner>Downloading Nginx...</banner>"
 			basename = "nginx-#{@version}.tar.gz"
 			tarball  = "#{@working_dir}/#{basename}"
 			if !download("http://sysoev.ru/nginx/#{basename}", tarball)

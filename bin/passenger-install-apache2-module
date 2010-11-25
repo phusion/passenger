@@ -40,7 +40,6 @@ require 'phusion_passenger/abstract_installer'
 
 class Installer < PhusionPassenger::AbstractInstaller
 	include PhusionPassenger
-	include PhusionPassenger::PlatformInfo
 	
 	def dependencies
 		result = [
@@ -77,7 +76,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 		return "#{DOCDIR}/Users guide Apache.html"
 	end
 	
-	def install!
+	def run_steps
 		if PhusionPassenger.natively_packaged?
 			check_dependencies || exit(1)
 			show_apache2_config_snippets
@@ -151,7 +150,7 @@ private
 	def install_apache2_module
 		puts
 		line
-		color_puts '<banner>Compiling and installing Apache 2 module...</banner>'
+		puts '<banner>Compiling and installing Apache 2 module...</banner>'
 		puts "cd #{PASSENGER_ROOT}"
 		if ENV['TRACE']
 			puts "#{PlatformInfo.rake_command} --trace apache2:clean apache2 RELEASE=yes"
@@ -233,5 +232,5 @@ installer = Installer.new(options)
 if options[:snippet]
 	installer.send(:show_apache2_config_snippets, true)
 else
-	installer.start
+	installer.run
 end

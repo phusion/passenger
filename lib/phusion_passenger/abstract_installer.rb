@@ -25,6 +25,7 @@ require 'phusion_passenger'
 require 'phusion_passenger/constants'
 require 'phusion_passenger/console_text_template'
 require 'phusion_passenger/platform_info'
+require 'phusion_passenger/utils/ansi_colors'
 
 # IMPORTANT: do not directly or indirectly require native_support; we can't compile
 # it yet until we have a compiler, and installers usually check whether a compiler
@@ -35,13 +36,13 @@ module PhusionPassenger
 # Abstract base class for text mode installers. Used by
 # passenger-install-apache2-module and passenger-install-nginx-module.
 #
-# Subclasses must at least implement the #install! method which handles
+# Subclasses must at least implement the #run_steps method which handles
 # the installation itself.
 #
 # Usage:
 #
 #   installer = ConcereteInstallerClass.new(options...)
-#   installer.start
+#   installer.run
 class AbstractInstaller
 	PASSENGER_WEBSITE = "http://www.modrails.com/"
 	PHUSION_WEBSITE = "www.phusion.nl"
@@ -52,37 +53,135 @@ class AbstractInstaller
 	#   installer = AbstractInstaller.new(:foo => "bar")
 	#   installer.instance_variable_get(:"@foo")   # => "bar"
 	def initialize(options = {})
+		@stdout = STDOUT
+		@stderr = STDERR
 		options.each_pair do |key, value|
 			instance_variable_set(:"@#{key}", value)
 		end
 	end
 	
 	# Start the installation by calling the #install! method.
-	def start
+	def run
 		before_install
-		install!
+		run_steps
+		return true
+	rescue Abort
+		puts
+		return false
 	ensure
 		after_install
 	end
 
-private
+protected
+	class Abort < StandardError
+	end
+	
+	class CommandError < Abort
+	end
+	
+	
+	def interactive?
+		return !@auto
+	end
+
+	def non_interactive?
+		return !interactive?
+	end
+	
+	
 	def before_install
-		# Hook for subclasses.
+		STDOUT.write(Utils::AnsiColors::DEFAULT_TERMINAL_COLOR)
+		STDOUT.flush
 	end
 	
 	def after_install
-		# Reset terminal colors.
-		STDOUT.write("\e[0m")
+		STDOUT.write(Utils::AnsiColors::RESET)
 		STDOUT.flush
 	end
 	
-	def color_print(text)
-		STDOUT.write(ConsoleTextTemplate.new(:text => text).result)
-		STDOUT.flush
+	def dependencies
+		return []
 	end
 	
-	def color_puts(text)
-		color_print("#{text}\n")
+	def check_dependencies(show_new_screen = true)
+		new_screen if show_new_screen
+		missing_dependencies = []
+		puts "<banner>Checking for required software...</banner>"
+		puts
+		dependencies.each do |dep|
+			print " * #{dep.name}... "
+			result = dep.check
+			if result.found?
+				if result.found_at
+					puts "<green>found at #{result.found_at}</green>"
+				else
+					puts "<green>found</green>"
+				end
+			else
+				puts "<red>not found</red>"
+				missing_dependencies << dep
+			end
+		end
+		
+		if missing_dependencies.empty?
+			return true
+		else
+			puts
+			puts "<red>Some required software is not installed.</red>"
+			puts "But don't worry, this installer will tell you how to install them.\n"
+			puts "<b>Press Enter to continue, or Ctrl-C to abort.</b>"
+			if PhusionPassenger.natively_packaged?
+				wait(10)
+			else
+				wait
+			end
+			
+			line
+			puts
+			puts "<banner>Installation instructions for required software</banner>"
+			puts
+			missing_dependencies.each do |dep|
+				print_dependency_installation_instructions(dep)
+				puts
+			end
+			if respond_to?(:users_guide)
+				puts "If the aforementioned instructions didn't solve your problem, then please take"
+				puts "a look at the Users Guide:"
+				puts
+				puts "  <yellow>#{users_guide}</yellow>"
+			end
+			return false
+		end
+	end
+	
+	
+	def use_stderr
+		old_stdout = @stdout
+		begin
+			@stdout = STDERR
+			yield
+		ensure
+			@stdout = old_stdout
+		end
+	end
+	
+	def print(text)
+		@stdout.write(Utils::AnsiColors.ansi_colorize(text))
+		@stdout.flush
+	end
+	
+	def puts(text = nil)
+		if text
+			@stdout.puts(Utils::AnsiColors.ansi_colorize(text))
+		else
+			@stdout.puts
+		end
+		@stdout.flush
+	end
+
+	def puts_error(text)
+		@stderr.puts(Utils::AnsiColors.ansi_colorize("<red>#{text}</red>"))
+		@stderr.flush
 	end
 	
 	def render_template(name, options = {})
@@ -99,26 +198,50 @@ private
 		puts "--------------------------------------------"
 	end
 	
-	def prompt(message)
+	def prompt(message, default_value = nil)
 		done = false
 		while !done
-			color_print "#{message}: "
+			print "#{message}: "
+			
+			if non_interactive? && default_value
+				puts default_value
+				return default_value
+			end
+			
 			begin
 				result = STDIN.readline
 			rescue EOFError
 				exit 2
 			end
 			result.strip!
-			done = !block_given? || yield(result)
+			if result.empty?
+				if default_value
+					result = default_value
+					done = true
+				else
+					done = false
+				end
+			else
+				done = !block_given? || yield(result)
+			end
 		end
 		return result
-	rescue Interrupt
-		exit 2
 	end
 	
+	def prompt_confirmation(message)
+		result = prompt("#{message} [y/n]") do |value|
+			if value.downcase == 'y' || value.downcase == 'n'
+				true
+			else
+				puts_error "Invalid input '#{value}'; please enter either 'y' or 'n'."
+				false
+			end
+		end
+		return result.downcase == 'y'
+	end
+
 	def wait(timeout = nil)
-		return if @auto
-		begin
+		if interactive?
 			if timeout
 				require 'timeout' unless defined?(Timeout)
 				begin
@@ -131,10 +254,11 @@ private
 			else
 				STDIN.readline
 			end
-		rescue Interrupt
-			exit 2
 		end
+	rescue Interrupt
+		raise Abort
 	end
+	
 	
 	def sh(*args)
 		puts "# #{args.join(' ')}"
@@ -148,78 +272,29 @@ private
 		end
 	end
 	
-	def dependencies
-		return []
-	end
-	
-	def check_dependencies(show_new_screen = true)
-		new_screen if show_new_screen
-		missing_dependencies = []
-		color_puts "<banner>Checking for required software...</banner>"
-		puts
-		dependencies.each do |dep|
-			color_print " * #{dep.name}... "
-			result = dep.check
-			if result.found?
-				if result.found_at
-					color_puts "<green>found at #{result.found_at}</green>"
-				else
-					color_puts "<green>found</green>"
-				end
-			else
-				color_puts "<red>not found</red>"
-				missing_dependencies << dep
-			end
-		end
-		
-		if missing_dependencies.empty?
-			return true
-		else
-			puts
-			color_puts "<red>Some required software is not installed.</red>"
-			color_puts "But don't worry, this installer will tell you how to install them.\n"
-			color_puts "<b>Press Enter to continue, or Ctrl-C to abort.</b>"
-			if PhusionPassenger.natively_packaged?
-				wait(10)
-			else
-				wait
-			end
-			
-			line
-			puts
-			color_puts "<banner>Installation instructions for required software</banner>"
-			puts
-			missing_dependencies.each do |dep|
-				print_dependency_installation_instructions(dep)
-				puts
-			end
-			if respond_to?(:users_guide)
-				color_puts "If the aforementioned instructions didn't solve your problem, then please take"
-				color_puts "a look at the Users Guide:"
-				puts
-				color_puts "  <yellow>#{users_guide}</yellow>"
-			end
-			return false
+	def sh!(*args)
+		if !sh(*args)
+			puts_error "*** Command failed: #{args.join(' ')}"
+			raise CommandError
 		end
 	end
 	
-	def print_dependency_installation_instructions(dep)
-		color_puts " * To install <yellow>#{dep.name}</yellow>:"
-		if dep.install_comments
-			color_puts "   " << dep.install_comments
+	def rake(*args)
+		require 'phusion_passenger/platform_info/ruby'
+		if !PlatformInfo.rake_command
+			puts_error 'Cannot find Rake.'
+			raise Abort
 		end
-		if !dep.install_command.nil?
-			color_puts "   Please run <b>#{dep.install_command}</b> as root."
-		elsif !dep.install_instructions.nil?
-			color_puts "   " << dep.install_instructions
-		elsif !dep.website.nil?
-			color_puts "   Please download it from <b>#{dep.website}</b>"
-			if !dep.website_comments.nil?
-				color_puts "   (#{dep.website_comments})"
-			end
-		else
-			color_puts "   Search Google."
+		sh("#{PlatformInfo.rake_command} #{args.join(' ')}")
+	end
+
+	def rake!(*args)
+		require 'phusion_passenger/platform_info/ruby'
+		if !PlatformInfo.rake_command
+			puts_error 'Cannot find Rake.'
+			raise Abort
 		end
+		sh!("#{PlatformInfo.rake_command} #{args.join(' ')}")
 	end
 	
 	def download(url, output)
@@ -227,6 +302,26 @@ private
 			return sh("wget", "-O", output, url)
 		else
 			return sh("curl", url, "-f", "-L", "-o", output)
+		end
+	end
+
+private
+	def print_dependency_installation_instructions(dep)
+		puts " * To install <yellow>#{dep.name}</yellow>:"
+		if dep.install_comments
+			puts "   " << dep.install_comments
+		end
+		if !dep.install_command.nil?
+			puts "   Please run <b>#{dep.install_command}</b> as root."
+		elsif !dep.install_instructions.nil?
+			puts "   " << dep.install_instructions
+		elsif !dep.website.nil?
+			puts "   Please download it from <b>#{dep.website}</b>"
+			if !dep.website_comments.nil?
+				puts "   (#{dep.website_comments})"
+			end
+		else
+			puts "   Search Google."
 		end
 	end
 end

@@ -295,7 +295,7 @@ private
 			:version     => @options[:nginx_version],
 			:tarball     => @options[:nginx_tarball],
 			:plugin      => @plugin)
-		installer.start
+		installer.run
 	end
 	
 	def passenger_support_files_dir
