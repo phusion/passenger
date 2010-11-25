@@ -232,8 +232,8 @@ class ServerInstance
 		return config_files
 	end
 	
-	def helper_server_pid
-		return File.read("#{@generation_path}/helper_server.pid").strip.to_i
+	def helper_agent_pid
+		return File.read("#{@generation_path}/helper_agent.pid").strip.to_i
 	end
 	
 	def analytics_log_dir

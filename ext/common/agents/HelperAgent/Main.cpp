@@ -882,6 +882,9 @@ public:
 		accountsDatabase->add("_web_server", messageSocketPassword, false, Account::EXIT);
 		messageServer = ptr(new MessageServer(generation->getPath() + "/socket", accountsDatabase));
 		
+		createFile(generation->getPath() + "/helper_agent.pid",
+			toString(getpid()), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+		
 		if (geteuid() == 0 && !userSwitching) {
 			lowerPrivilege(defaultUser, defaultGroup);
 		}
