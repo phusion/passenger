@@ -47,17 +47,11 @@ APACHE2_MODULE_INPUT_FILES = {
 		ext/apache2/Bucket.h
 		ext/apache2/DirectoryMapper.h
 		ext/common/AgentsStarter.hpp
-		ext/common/ApplicationPool/Client.h
-		ext/common/SpawnManager.h
 		ext/common/Exceptions.h
-		ext/common/Process.h
-		ext/common/Session.h
 		ext/common/Logging.h
 		ext/common/RandomGenerator.h
 		ext/common/MessageChannel.h
 		ext/common/ServerInstanceDir.h
-		ext/common/PoolOptions.h
-		ext/common/StringListCreator.h
 		ext/common/Constants.h
 		ext/common/Utils.h
 		ext/common/Utils/Timer.h)

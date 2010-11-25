@@ -55,22 +55,16 @@ using namespace oxt;
 
 /**
  * ApplicationPool::Server exposes an application pool to external processes through
- * a MessageServer. This allows one to use an application pool in a multi-process
- * environment. ApplicationPool::Client can be used to access a pool that's exposed
- * via ApplicationPool::Server.
+ * a MessageServer. This allows one to query application pool information and to execute
+ * application pool actions in a multi-process environment.
  *
  * <h2>Usage</h2>
  * Construct a MessageServer and register an ApplicationPool::Server object as handler,
  * then start the MessageServer by calling mainLoop() on it.
  *
  * <h2>Concurrency model</h2>
- * Each client is handled by a seperate thread. This is necessary because the current
- * algorithm for ApplicationPool::Pool::get() can block (in the case that the spawning
- * limit has been exceeded or when global queuing is used and all application processes
- * are busy). While it is possible to get around this problem without using threads, a
- * thread-based implementation is easier to write.
- *
- * This concurrency model is implemented in MessageServer.
+ * Each client is handled by a seperate thread. This concurrency model is implemented
+ * in MessageServer.
  *
  * <h2>Authorization support</h2>
  * The account with which the client authenticated with dictates the actions that the
@@ -79,142 +73,6 @@ using namespace oxt;
  * @ingroup Support
  */
 class Server: public MessageServer::Handler {
-private:
-	/**
-	 * This exception indicates that something went wrong while comunicating with the client.
-	 * Only used within EnvironmentVariablesFetcher.
-	 */
-	class ClientCommunicationError: public oxt::tracable_exception {
-	private:
-		string briefMessage;
-		string systemMessage;
-		string fullMessage;
-		int m_code;
-	public:
-		/**
-		 * Create a new ClientCommunicationError.
-		 *
-		 * @param briefMessage A brief message describing the error.
-		 * @param errorCode An optional error code, i.e. the value of errno right after the error occured, if applicable.
-		 * @note A system description of the error will be appended to the given message.
-		 *    For example, if <tt>errorCode</tt> is <tt>EBADF</tt>, and <tt>briefMessage</tt>
-		 *    is <em>"Something happened"</em>, then what() will return <em>"Something happened: Bad
-		 *    file descriptor (10)"</em> (if 10 is the number for EBADF).
-		 * @post code() == errorCode
-		 * @post brief() == briefMessage
-		 */
-		ClientCommunicationError(const string &briefMessage, int errorCode = -1) {
-			if (errorCode != -1) {
-				stringstream str;
-				
-				str << strerror(errorCode) << " (" << errorCode << ")";
-				systemMessage = str.str();
-			}
-			setBriefMessage(briefMessage);
-			m_code = errorCode;
-		}
-
-		virtual ~ClientCommunicationError() throw() {}
-
-		virtual const char *what() const throw() {
-			return fullMessage.c_str();
-		}
-
-		void setBriefMessage(const string &message) {
-			briefMessage = message;
-			if (systemMessage.empty()) {
-				fullMessage = briefMessage;
-			} else {
-				fullMessage = briefMessage + ": " + systemMessage;
-			}
-		}
-
-		/**
-		 * The value of <tt>errno</tt> at the time the error occured.
-		 */
-		int code() const throw() {
-			return m_code;
-		}
-
-		/**
-		 * Returns a brief version of the exception message. This message does
-		 * not include the system error description, and is equivalent to the
-		 * value of the <tt>message</tt> parameter as passed to the constructor.
-		 */
-		string brief() const throw() {
-			return briefMessage;
-		}
-
-		/**
-		 * Returns the system's error message. This message contains both the
-		 * content of <tt>strerror(errno)</tt> and the errno number itself.
-		 *
-		 * @post if code() == -1: result.empty()
-		 */
-		string sys() const throw() {
-			return systemMessage;
-		}
-	};
-	
-	/**
-	 * A StringListCreator which fetches its items from the client.
-	 * Used as an optimization for ApplicationPool::Server::processGet():
-	 * environment variables are only serialized by the client process
-	 * if a new backend process is being spawned.
-	 */
-	class EnvironmentVariablesFetcher: public StringListCreator {
-	private:
-		MessageChannel &channel;
-		PoolOptions &options;
-		mutable StringListPtr result;
-	public:
-		EnvironmentVariablesFetcher(MessageChannel &theChannel, PoolOptions &theOptions)
-			: channel(theChannel),
-			  options(theOptions)
-		{ }
-		
-		/**
-		 * @throws ClientCommunicationError
-		 */
-		virtual const StringListPtr getItems() const {
-			if (result) {
-				return result;
-			}
-			
-			string data;
-			
-			/* If an I/O error occurred while communicating with the client,
-			 * then throw a ClientCommunicationException, which will bubble
-			 * all the way up to the MessageServer client thread main loop,
-			 * where the connection with the client will be broken.
-			 */
-			try {
-				channel.write("getEnvironmentVariables", NULL);
-			} catch (const SystemException &e) {
-				throw ClientCommunicationError(
-					"Unable to send a 'getEnvironmentVariables' request to the client",
-					e.code());
-			}
-			try {
-				if (!channel.readScalar(data)) {
-					throw ClientCommunicationError("Unable to read a reply from the client for the 'getEnvironmentVariables' request.");
-				}
-			} catch (const SystemException &e) {
-				throw ClientCommunicationError(
-					"Unable to read a reply from the client for the 'getEnvironmentVariables' request",
-					e.code());
-			}
-			
-			if (!data.empty()) {
-				SimpleStringListCreator list(data);
-				result = list.getItems();
-			} else {
-				result.reset(new StringList());
-			}
-			return result;
-		}
-	};
-	
 	struct SpecificContext: public MessageServer::ClientContext {
 		/**
 		 * Maps session ID to sessions created by ApplicationPool::get(). Session IDs
@@ -241,102 +99,6 @@ private:
 	/*********************************************
 	 * Message handler methods
 	 *********************************************/
-	
-	void processGet(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
-		/* Historical note:
-		 *
-		 * There seems to be a bug in MacOS X Leopard w.r.t. Unix server
-		 * sockets file descriptors that are passed to another process.
-		 * Usually Unix server sockets work fine, but when they're passed
-		 * to another process, then clients that connect to the socket
-		 * can incorrectly determine that the client socket is closed,
-		 * even though that's not actually the case. More specifically:
-		 * recv()/read() calls on these client sockets can return 0 even
-		 * when we know EOF is not reached.
-		 *
-		 * The ApplicationPool infrastructure used to connect to a backend
-		 * process's Unix socket in the helper server process, and then
-		 * pass the connection file descriptor to the web server, which
-		 * triggers this kernel bug. We used to work around this by using
-		 * TCP sockets instead of Unix sockets; TCP sockets can still fail
-		 * with this fake-EOF bug once in a while, but not nearly as often
-		 * as with Unix sockets.
-		 *
-		 * This problem no longer applies today. The client socket is now
-		 * created directly in the web server (implemented by the code below),
-		 * and the bug is no longer triggered.
-		 */
-		
-		TRACE_POINT();
-		SessionPtr session;
-		bool failed = false;
-		
-		commonContext.requireRights(Account::GET);
-		
-		try {
-			PoolOptions options(args, 1);
-			options.environmentVariables = ptr(new EnvironmentVariablesFetcher(
-				commonContext.channel, options));
-			options.initiateSession = false;
-			session = pool->get(options);
-			specificContext->sessions[specificContext->lastSessionID] = session;
-			specificContext->lastSessionID++;
-		} catch (const SpawnException &e) {
-			UPDATE_TRACE_POINT();
-			this_thread::disable_syscall_interruption dsi;
-			
-			if (e.hasErrorPage()) {
-				P_TRACE(3, "Client " << commonContext.name() << ": SpawnException "
-					"occured (with error page)");
-				commonContext.channel.write("SpawnException", e.what(), "true", NULL);
-				commonContext.channel.writeScalar(e.getErrorPage());
-			} else {
-				P_TRACE(3, "Client " << commonContext.name() << ": SpawnException "
-					"occured (no error page)");
-				commonContext.channel.write("SpawnException", e.what(), "false", NULL);
-			}
-			failed = true;
-		} catch (const BusyException &e) {
-			UPDATE_TRACE_POINT();
-			this_thread::disable_syscall_interruption dsi;
-			commonContext.channel.write("BusyException", e.what(), NULL);
-			failed = true;
-		} catch (const IOException &e) {
-			UPDATE_TRACE_POINT();
-			this_thread::disable_syscall_interruption dsi;
-			commonContext.channel.write("IOException", e.what(), NULL);
-			failed = true;
-		}
-		UPDATE_TRACE_POINT();
-		if (!failed) {
-			this_thread::disable_syscall_interruption dsi;
-			try {
-				UPDATE_TRACE_POINT();
-				commonContext.channel.write("ok",
-					toString(session->getPid()).c_str(),
-					session->getSocketType().c_str(),
-					session->getSocketName().c_str(),
-					session->getDetachKey().c_str(),
-					session->getConnectPassword().c_str(),
-					session->getGupid().c_str(),
-					toString(specificContext->lastSessionID - 1).c_str(),
-					NULL);
-				UPDATE_TRACE_POINT();
-				session->closeStream();
-			} catch (const std::exception &e) {
-				P_TRACE(3, "Client " << commonContext.name() << ": could not send "
-					"'ok' back to the ApplicationPool client: " <<
-					e.what());
-				specificContext->sessions.erase(specificContext->lastSessionID - 1);
-				throw;
-			}
-		}
-	}
-	
-	void processClose(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
-		TRACE_POINT();
-		specificContext->sessions.erase(atoi(args[1]));
-	}
 	
 	void processDetach(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
@@ -390,12 +152,6 @@ private:
 		pool->setMaxPerApp(maxPerApp);
 	}
 	
-	void processGetSpawnServerPid(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
-		TRACE_POINT();
-		commonContext.requireRights(Account::GET_PARAMETERS);
-		commonContext.channel.write(toString(pool->getSpawnServerPid()).c_str(), NULL);
-	}
-	
 	void processInspect(CommonClientContext &commonContext, SpecificContext *specificContext, const vector<string> &args) {
 		TRACE_POINT();
 		commonContext.requireRights(Account::INSPECT_BASIC_INFO);
@@ -431,11 +187,7 @@ public:
 	{
 		SpecificContext *specificContext = (SpecificContext *) _specificContext.get();
 		try {
-			if (args[0] == "get") {
-				processGet(commonContext, specificContext, args);
-			} else if (args[0] == "close" && args.size() == 2) {
-				processClose(commonContext, specificContext, args);
-			} else if (args[0] == "detach" && args.size() == 2) {
+			if (args[0] == "detach" && args.size() == 2) {
 				processDetach(commonContext, specificContext, args);
 			} else if (args[0] == "clear" && args.size() == 1) {
 				processClear(commonContext, specificContext, args);
@@ -451,8 +203,6 @@ public:
 				processGetGlobalQueueSize(commonContext, specificContext, args);
 			} else if (args[0] == "setMaxPerApp" && args.size() == 2) {
 				processSetMaxPerApp(commonContext, specificContext, atoi(args[1]));
-			} else if (args[0] == "getSpawnServerPid" && args.size() == 1) {
-				processGetSpawnServerPid(commonContext, specificContext, args);
 			} else if (args[0] == "inspect" && args.size() == 1) {
 				processInspect(commonContext, specificContext, args);
 			} else if (args[0] == "toXml" && args.size() == 2) {
