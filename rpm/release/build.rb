@@ -185,6 +185,7 @@ configs.each do |cfg|
   FileUtils.mkdir_p(idir, :verbose => @verbosity > 0)
   FileUtils.cp(Dir["/var/lib/mock/#{pcfg}/result/*.rpm"],
   idir, :verbose => @verbosity > 0)
+  FileUtils.rm_f(Dir["#{idir}/*.src.rpm"], :verbose => @verbosity > 1)
 end
 
 if File.directory?("#{stage_dir}/epel")
