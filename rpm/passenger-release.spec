@@ -1,7 +1,7 @@
 Summary: Phusion Passenger release RPM/Yum repository configuration
 Name: passenger-release
 Version: 3
-Release: 3%{?dist}
+Release: 4%{?dist}
 License: MIT
 Group: Group: System Environment/Base
 URL: http://passenger.stealthymonkeys.com/
@@ -19,10 +19,10 @@ well as the GPG signing key to verify them.
 #%setup -c
 
 %{?el5:name='Red Hat Enterprise' version='5' path='rhel'}
-%{?el6:name='Red Hat Enterprise' version='5' path='rhel'}
+%{?el6:name='Red Hat Enterprise' version='6' path='rhel'}
 
 %{?fc13:name='Fedora Core' version='13' path='fedora'}
-%{?fc14:name='Fedora Core' version='13' path='fedora'}
+%{?fc14:name='Fedora Core' version='14' path='fedora'}
 
 if [ -z "$name" ] ; then
  echo "Please specify a distro to build for (f'rex: el5 or fc13)" >&2
@@ -52,7 +52,7 @@ gpgcheck = 0
 EOF
 
 for mirror in $(%{__cat} %{SOURCE0}); do
-  echo "$mirror/$path/\$releasever/en/\$ARCH/"
+  echo "$mirror/$path/\$releasever/\$ARCH/"
 done > mirrors-passenger
 
 %build
@@ -77,6 +77,10 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Wed Nov 24 2010 Erik Ogan <erik@stealthymonkeys.com> - 3-4
+- Fix EL6 & FC14 version numbers.
+- Fix the errant /en in the mirrors file
+
 * Thu Oct 28 2010 Erik Ogan <erik@stealthymonkeys.com> - 3-3
 - Typo in the gpgkey directives
 
@@ -85,4 +89,3 @@ rm -rf %{buildroot}
 
 * Tue Oct 26 2010 Erik Ogan <erik@stealthymonkeys.com> - 3-1
 - Initial build.
-
