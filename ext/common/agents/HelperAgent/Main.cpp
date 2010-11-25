@@ -44,11 +44,11 @@
 #include "oxt/thread.hpp"
 #include "oxt/system_calls.hpp"
 
-#include "ScgiRequestParser.h"
-#include "HttpStatusExtractor.h"
+#include "agents/HelperAgent/ScgiRequestParser.h"
+#include "agents/HelperAgent/HttpStatusExtractor.h"
+#include "agents/HelperAgent/BacktracesServer.h"
 
 #include "AgentBase.h"
-#include "HelperAgent/BacktracesServer.h"
 #include "Constants.h"
 #include "ApplicationPool/Pool.h"
 #include "ApplicationPool/Server.h"

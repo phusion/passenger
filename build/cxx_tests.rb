@@ -23,7 +23,7 @@
 
 ### C++ components tests ###
 
-TEST_CXX_CFLAGS = "-Iext -Iext/common -Iext/nginx " <<
+TEST_CXX_CFLAGS = "-Iext -Iext/common " <<
 	"#{LIBEV_CFLAGS} #{PlatformInfo.curl_flags} -Itest/support " <<
 	"#{TEST_COMMON_CFLAGS}"
 TEST_CXX_LDFLAGS = "#{TEST_COMMON_LIBRARY} #{TEST_BOOST_OXT_LIBRARY} #{LIBEV_LIBS} " <<
@@ -123,11 +123,11 @@ TEST_CXX_OBJECTS = {
 		ext/common/Utils/Base64.cpp),
 	'test/cxx/ScgiRequestParserTest.o' => %w(
 		test/cxx/ScgiRequestParserTest.cpp
-		ext/nginx/ScgiRequestParser.h
+		ext/common/agents/HelperAgent/ScgiRequestParser.h
 		ext/common/StaticString.h),
 	'test/cxx/HttpStatusExtractorTest.o' => %w(
 		test/cxx/HttpStatusExtractorTest.cpp
-		ext/nginx/HttpStatusExtractor.h),
+		ext/common/agents/HelperAgent/HttpStatusExtractor.h),
 	'test/cxx/LoggingTest.o' => %w(
 		test/cxx/LoggingTest.cpp
 		ext/common/LoggingAgent/LoggingServer.h

@@ -67,7 +67,6 @@ APACHE2_MOD_PASSENGER_O = APACHE2_OUTPUT_DIR + "mod_passenger.o"
 
 APACHE2_MODULE_CXXFLAGS = "-Iext -Iext/common #{PlatformInfo.apache2_module_cflags} " <<
 	"#{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
-APACHE2_HELPER_CXXFLAGS = "-Iext -Iext/common #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS}"
 
 APACHE2_MODULE_BOOST_OXT_LIBRARY = define_libboost_oxt_task("apache2",
 	APACHE2_OUTPUT_DIR + "module_libboost_oxt",
@@ -80,7 +79,7 @@ APACHE2_MODULE_COMMON_LIBRARY    = define_common_library_task("apache2",
 desc "Build Apache 2 module"
 task :apache2 => [
 	APACHE2_MODULE,
-	AGENT_OUTPUT_DIR + 'apache2/PassengerHelperAgent',
+	AGENT_OUTPUT_DIR + 'PassengerHelperAgent',
 	AGENT_OUTPUT_DIR + 'PassengerWatchdog',
 	AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
 	:native_support
@@ -127,42 +126,11 @@ file APACHE2_MOD_PASSENGER_O => ['ext/apache2/mod_passenger.c'] do
 		"#{APACHE2_MODULE_CXXFLAGS} -o #{APACHE2_MOD_PASSENGER_O}")
 end
 
-dependencies = [
-	'ext/apache2/HelperAgent.cpp',
-	'ext/common/ServerInstanceDir.h',
-	'ext/common/MessageServer.h',
-	'ext/common/Logging.h',
-	'ext/common/SpawnManager.h',
-	'ext/common/Account.h',
-	'ext/common/ResourceLocator.h',
-	'ext/common/Utils.h',
-	'ext/common/Utils/Timer.h',
-	'ext/common/Utils/ProcessMetricsCollector.h',
-	'ext/common/ApplicationPool/Interface.h',
-	'ext/common/ApplicationPool/Pool.h',
-	'ext/common/ApplicationPool/Server.h',
-	LIBCOMMON,
-	LIBBOOST_OXT
-]
-file AGENT_OUTPUT_DIR + 'apache2/PassengerHelperAgent' => dependencies do
-	dir = "#{AGENT_OUTPUT_DIR}apache2"
-	sh "mkdir -p #{dir}" if !File.directory?(dir)
-	create_executable("#{dir}/PassengerHelperAgent",
-		'ext/apache2/HelperAgent.cpp',
-		"#{APACHE2_HELPER_CXXFLAGS} " <<
-		"#{LIBCOMMON} " <<
-		"#{LIBBOOST_OXT} " <<
-		"#{PlatformInfo.portability_ldflags} " <<
-		"#{AGENT_LDFLAGS} " <<
-		"#{EXTRA_LDFLAGS}")
-end
-
 task :clean => 'apache2:clean'
 desc "Clean all compiled Apache 2 files"
 task 'apache2:clean' => 'common:clean' do
 	files = APACHE2_MODULE_OBJECTS.dup
 	files << APACHE2_MOD_PASSENGER_O
 	files << APACHE2_MODULE
-	files << AGENT_OUTPUT_DIR + "PassengerHelperAgent"
 	sh("rm", "-rf", *files)
 end

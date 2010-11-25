@@ -63,7 +63,6 @@ using namespace Passenger;
 
 /** The options that were passed to AgentsStarter. */
 static VariantMap     agentsOptions;
-static string         webServerType;        // "apache" or "nginx"
 static unsigned int   logLevel;
 static pid_t   webServerPid;
 static string  tempDir;
@@ -569,11 +568,7 @@ protected:
 	
 public:
 	HelperAgentWatcher(const ResourceLocator &resourceLocator) {
-		if (agentsOptions.get("web_server_type") == "apache") {
-			helperAgentFilename = resourceLocator.getAgentsDir() + "/apache2/PassengerHelperAgent";
-		} else {
-			helperAgentFilename = resourceLocator.getAgentsDir() + "/nginx/PassengerHelperAgent";
-		}
+		helperAgentFilename = resourceLocator.getAgentsDir() + "/PassengerHelperAgent";
 		requestSocketPassword = randomGenerator->generateByteString(REQUEST_SOCKET_PASSWORD_SIZE);
 		messageSocketPassword = randomGenerator->generateByteString(MESSAGE_SERVER_MAX_PASSWORD_SIZE);
 	}

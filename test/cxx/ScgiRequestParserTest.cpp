@@ -1,5 +1,5 @@
 #include "TestSupport.h"
-#include "ScgiRequestParser.h"
+#include "agents/HelperAgent/ScgiRequestParser.h"
 
 using namespace Passenger;
 using namespace std;

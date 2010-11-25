@@ -42,6 +42,41 @@ file AGENT_OUTPUT_DIR + 'PassengerWatchdog' => dependencies do
 end
 
 dependencies = [
+	'ext/common/agents/HelperAgent/Main.cpp',
+	'ext/common/agents/HelperAgent/ScgiRequestParser.h',
+	'ext/common/agents/HelperAgent/HttpStatusExtractor.h',
+	'ext/common/agents/HelperAgent/BacktracesServer.h',
+	'ext/common/StaticString.h',
+	'ext/common/Account.h',
+	'ext/common/AccountsDatabase.h',
+	'ext/common/MessageServer.h',
+	'ext/common/FileDescriptor.h',
+	'ext/common/SpawnManager.h',
+	'ext/common/Logging.h',
+	'ext/common/ResourceLocator.h',
+	'ext/common/Utils/ProcessMetricsCollector.h',
+	'ext/common/Utils/VariantMap.h',
+	'ext/common/ApplicationPool/Interface.h',
+	'ext/common/ApplicationPool/Pool.h',
+	'ext/common/ApplicationPool/Server.h',
+	LIBBOOST_OXT,
+	LIBCOMMON,
+]
+file AGENT_OUTPUT_DIR + 'PassengerHelperAgent' => dependencies do
+	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
+	create_executable "#{AGENT_OUTPUT_DIR}PassengerHelperAgent",
+		'ext/common/agents/HelperAgent/Main.cpp',
+		"-Iext -Iext/common " <<
+		"#{PlatformInfo.portability_cflags} " <<
+		"#{EXTRA_CXXFLAGS}  " <<
+		"#{LIBCOMMON} " <<
+		"#{LIBBOOST_OXT} " <<
+		"#{PlatformInfo.portability_ldflags} " <<
+		"#{AGENT_LDFLAGS} " <<
+		"#{EXTRA_LDFLAGS}"
+end
+
+dependencies = [
 	'ext/common/LoggingAgent/Main.cpp',
 	'ext/common/LoggingAgent/LoggingServer.h',
 	'ext/common/LoggingAgent/RemoteSender.h',
@@ -76,5 +111,7 @@ file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
 end
 
 task 'common:clean' do
-	sh "rm -f #{AGENT_OUTPUT_DIR}PassengerWatchdog #{AGENT_OUTPUT_DIR}PassengerLoggingAgent"
+	sh "rm -rf #{AGENT_OUTPUT_DIR}PassengerWatchdog #{AGENT_OUTPUT_DIR}PassengerWatchdog.dSYM"
+	sh "rm -rf #{AGENT_OUTPUT_DIR}PassengerHelperAgent #{AGENT_OUTPUT_DIR}PassengerHelperAgent.dSYM"
+	sh "rm -rf #{AGENT_OUTPUT_DIR}PassengerLoggingAgent #{AGENT_OUTPUT_DIR}PassengerLoggingAgent.dSYM"
 end

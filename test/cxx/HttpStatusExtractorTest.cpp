@@ -1,5 +1,5 @@
 #include "TestSupport.h"
-#include "HttpStatusExtractor.h"
+#include "agents/HelperAgent/HttpStatusExtractor.h"
 
 using namespace Passenger;
 using namespace std;
