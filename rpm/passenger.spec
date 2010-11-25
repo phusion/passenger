@@ -556,7 +556,7 @@ rm -rf %{buildroot}
 %doc doc/Users\ guide\ Standalone.html
 %doc doc/Users\ guide\ Standalone.txt
 %{_bindir}/passenger
-%{_var}/lib/passenger-standalone/%{passenger_version}-%{_target_cpu}-*/
+%{_var}/lib/passenger-standalone/%{passenger_version}-*/
 
 %files -n mod_passenger
 %doc doc/Users\ guide\ Apache.html
