@@ -28,7 +28,7 @@
 #include <cstring>
 #include <climits>
 #include <cassert>
-#include "StaticString.h"
+#include <StaticString.h>
 
 namespace Passenger {
 

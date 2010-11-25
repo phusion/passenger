@@ -77,11 +77,11 @@ file AGENT_OUTPUT_DIR + 'PassengerHelperAgent' => dependencies do
 end
 
 dependencies = [
-	'ext/common/LoggingAgent/Main.cpp',
-	'ext/common/LoggingAgent/LoggingServer.h',
-	'ext/common/LoggingAgent/RemoteSender.h',
-	'ext/common/LoggingAgent/ChangeNotifier.h',
-	'ext/common/LoggingAgent/DataStoreId.h',
+	'ext/common/agents/LoggingAgent/Main.cpp',
+	'ext/common/agents/LoggingAgent/LoggingServer.h',
+	'ext/common/agents/LoggingAgent/RemoteSender.h',
+	'ext/common/agents/LoggingAgent/ChangeNotifier.h',
+	'ext/common/agents/LoggingAgent/DataStoreId.h',
 	'ext/common/ServerInstanceDir.h',
 	'ext/common/Logging.h',
 	'ext/common/EventedServer.h',
@@ -95,7 +95,7 @@ dependencies = [
 file AGENT_OUTPUT_DIR + 'PassengerLoggingAgent' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	create_executable(AGENT_OUTPUT_DIR + 'PassengerLoggingAgent',
-		'ext/common/LoggingAgent/Main.cpp',
+		'ext/common/agents/LoggingAgent/Main.cpp',
 		"-Iext -Iext/common #{LIBEV_CFLAGS} " <<
 		"#{PlatformInfo.curl_flags} " <<
 		"#{PlatformInfo.zlib_flags} " <<

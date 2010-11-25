@@ -1,7 +1,7 @@
 #include "TestSupport.h"
 #include "Logging.h"
 #include "MessageClient.h"
-#include "LoggingAgent/LoggingServer.h"
+#include "agents/LoggingAgent/LoggingServer.h"
 
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>

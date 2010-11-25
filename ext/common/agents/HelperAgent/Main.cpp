@@ -41,26 +41,26 @@
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
-#include "oxt/thread.hpp"
-#include "oxt/system_calls.hpp"
+#include <oxt/thread.hpp>
+#include <oxt/system_calls.hpp>
 
-#include "agents/HelperAgent/ScgiRequestParser.h"
-#include "agents/HelperAgent/HttpStatusExtractor.h"
-#include "agents/HelperAgent/BacktracesServer.h"
+#include <agents/HelperAgent/ScgiRequestParser.h>
+#include <agents/HelperAgent/HttpStatusExtractor.h>
+#include <agents/HelperAgent/BacktracesServer.h>
 
-#include "AgentBase.h"
-#include "Constants.h"
-#include "ApplicationPool/Pool.h"
-#include "ApplicationPool/Server.h"
-#include "Session.h"
-#include "PoolOptions.h"
-#include "MessageServer.h"
-#include "FileDescriptor.h"
-#include "ResourceLocator.h"
-#include "ServerInstanceDir.h"
-#include "Exceptions.h"
-#include "Utils.h"
-#include "Utils/Timer.h"
+#include <AgentBase.h>
+#include <Constants.h>
+#include <ApplicationPool/Pool.h>
+#include <ApplicationPool/Server.h>
+#include <Session.h>
+#include <PoolOptions.h>
+#include <MessageServer.h>
+#include <FileDescriptor.h>
+#include <ResourceLocator.h>
+#include <ServerInstanceDir.h>
+#include <Exceptions.h>
+#include <Utils.h>
+#include <Utils/Timer.h>
 
 using namespace boost;
 using namespace oxt;

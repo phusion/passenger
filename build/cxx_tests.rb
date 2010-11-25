@@ -130,10 +130,10 @@ TEST_CXX_OBJECTS = {
 		ext/common/agents/HelperAgent/HttpStatusExtractor.h),
 	'test/cxx/LoggingTest.o' => %w(
 		test/cxx/LoggingTest.cpp
-		ext/common/LoggingAgent/LoggingServer.h
-		ext/common/LoggingAgent/RemoteSender.h
-		ext/common/LoggingAgent/ChangeNotifier.h
-		ext/common/LoggingAgent/DataStoreId.h
+		ext/common/agents/LoggingAgent/LoggingServer.h
+		ext/common/agents/LoggingAgent/RemoteSender.h
+		ext/common/agents/LoggingAgent/ChangeNotifier.h
+		ext/common/agents/LoggingAgent/DataStoreId.h
 		ext/common/Logging.h
 		ext/common/Utils.h
 		ext/common/EventedServer.h

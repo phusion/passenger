@@ -27,7 +27,7 @@
 
 #include <oxt/thread.hpp>
 #include <oxt/backtrace.hpp>
-#include "MessageServer.h"
+#include <MessageServer.h>
 
 namespace Passenger {
 

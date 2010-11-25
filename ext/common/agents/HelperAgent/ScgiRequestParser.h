@@ -29,7 +29,7 @@
 #include <map>
 #include <cstdlib>
 
-#include "StaticString.h"
+#include <StaticString.h>
 
 namespace Passenger {
 

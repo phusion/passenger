@@ -36,16 +36,17 @@
 #include <cerrno>
 #include <signal.h>
 
-#include "../AgentBase.h"
-#include "../AccountsDatabase.h"
-#include "../Account.h"
-#include "../ServerInstanceDir.h"
-#include "LoggingServer.h"
-#include "../Exceptions.h"
-#include "../Utils.h"
-#include "../Utils/IOUtils.h"
-#include "../Utils/Base64.h"
-#include "../Utils/VariantMap.h"
+#include <agents/LoggingAgent/LoggingServer.h>
+
+#include <AgentBase.h>
+#include <AccountsDatabase.h>
+#include <Account.h>
+#include <ServerInstanceDir.h>
+#include <Exceptions.h>
+#include <Utils.h>
+#include <Utils/IOUtils.h>
+#include <Utils/Base64.h>
+#include <Utils/VariantMap.h>
 
 using namespace oxt;
 using namespace Passenger;

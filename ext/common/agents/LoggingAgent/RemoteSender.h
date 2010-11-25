@@ -37,12 +37,12 @@
 #include <string>
 #include <list>
 
-#include "../Logging.h"
-#include "../StaticString.h"
-#include "../Utils/BlockingQueue.h"
-#include "../Utils/SystemTime.h"
-#include "../Utils/ScopeGuard.h"
-#include "../Utils/Base64.h"
+#include <Logging.h>
+#include <StaticString.h>
+#include <Utils/BlockingQueue.h>
+#include <Utils/SystemTime.h>
+#include <Utils/ScopeGuard.h>
+#include <Utils/Base64.h>
 
 namespace Passenger {
 

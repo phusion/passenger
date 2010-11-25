@@ -42,19 +42,20 @@
 #include <ctime>
 #include <cassert>
 
-#include "DataStoreId.h"
-#include "RemoteSender.h"
-#include "ChangeNotifier.h"
-#include "../EventedMessageServer.h"
-#include "../MessageReadersWriters.h"
-#include "../StaticString.h"
-#include "../Exceptions.h"
-#include "../MessageChannel.h"
-#include "../Constants.h"
-#include "../Utils.h"
-#include "../Utils/MD5.h"
-#include "../Utils/IOUtils.h"
-#include "../Utils/StrIntUtils.h"
+#include <agents/LoggingAgent/DataStoreId.h>
+#include <agents/LoggingAgent/RemoteSender.h>
+#include <agents/LoggingAgent/ChangeNotifier.h>
+
+#include <EventedMessageServer.h>
+#include <MessageReadersWriters.h>
+#include <StaticString.h>
+#include <Exceptions.h>
+#include <MessageChannel.h>
+#include <Constants.h>
+#include <Utils.h>
+#include <Utils/MD5.h>
+#include <Utils/IOUtils.h>
+#include <Utils/StrIntUtils.h>
 
 
 namespace Passenger {

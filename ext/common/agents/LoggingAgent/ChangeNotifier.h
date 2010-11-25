@@ -29,10 +29,10 @@
 #include <boost/shared_ptr.hpp>
 #include <string>
 #include <ev++.h>
-#include "DataStoreId.h"
-#include "../EventedClient.h"
-#include "../FileDescriptor.h"
-#include "../StaticString.h"
+#include <agents/LoggingAgent/DataStoreId.h>
+#include <EventedClient.h>
+#include <FileDescriptor.h>
+#include <StaticString.h>
 
 namespace Passenger {
 
