@@ -54,16 +54,15 @@ module PhusionPassenger
 	LOCAL_STANDALONE_RESOURCE_DIR  = File.join(LOCAL_DIR, "standalone")
 	
 	# System-wide directory for storing Phusion Passenger Standalone runtime files.
-	GLOBAL_STANDALONE_RESOURCE_DIR = "/var/lib/#{STANDALONE_NAMESPACE_DIRNAME}"
+	GLOBAL_STANDALONE_RESOURCE_DIR = "/var/lib/#{STANDALONE_NAMESPACE_DIRNAME}".freeze
 	
 	NATIVELY_PACKAGED_BIN_DIR                = "/usr/bin".freeze
 	NATIVELY_PACKAGED_AGENTS_DIR             = "/usr/lib/#{NAMESPACE_DIRNAME}/agents".freeze
 	NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR     = "/usr/share/#{NAMESPACE_DIRNAME}/helper-scripts".freeze
 	NATIVELY_PACKAGED_RESOURCES_DIR          = "/usr/share/#{NAMESPACE_DIRNAME}".freeze
 	NATIVELY_PACKAGED_DOC_DIR                = "/usr/share/doc/#{NAMESPACE_DIRNAME}".freeze
-	NATIVELY_PACKAGED_COMPILABLE_SOURCE_DIR  = "/usr/share/#{NAMESPACE_DIRNAME}/compilable-source".freeze
-	NATIVELY_PACKAGED_RUNTIME_LIBDIR         = "/usr/lib/#{NAMESPACE_DIRNAME}"
-	NATIVELY_PACKAGED_HEADER_DIR             = "/usr/include/#{NAMESPACE_DIRNAME}"
+	NATIVELY_PACKAGED_RUNTIME_LIBDIR         = "/usr/lib/#{NAMESPACE_DIRNAME}".freeze
+	NATIVELY_PACKAGED_HEADER_DIR             = "/usr/include/#{NAMESPACE_DIRNAME}".freeze
 	NATIVELY_PACKAGED_APACHE2_MODULE         = "/usr/lib/apache2/modules/mod_passenger.so".freeze
 	
 	# Follows the logic of ext/common/ResourceLocator.h, so don't forget to modify that too.
@@ -95,7 +94,7 @@ module PhusionPassenger
 			@helper_scripts_dir    = get_option(filename, options, 'helper_scripts')
 			@resources_dir         = get_option(filename, options, 'resources')
 			@doc_dir               = get_option(filename, options, 'doc')
-			@compilable_source_dir = get_option(filename, options, 'compilable_source')
+			@compilable_source_dir = nil
 			@runtime_libdir        = get_option(filename, options, 'runtimelib')
 			@header_dir            = get_option(filename, options, 'headers')
 			@apache2_module_path   = get_option(filename, options, 'apache2_module')
@@ -110,8 +109,8 @@ module PhusionPassenger
 				@resources_dir         = "#{root}/resources".freeze
 				@doc_dir               = "#{root}/doc".freeze
 				@compilable_source_dir = root.dup.freeze
-				@runtime_libdir        = "#{root}/ext/common"
-				@header_dir            = "#{root}/ext"
+				@runtime_libdir        = "#{root}/libout/common".freeze
+				@header_dir            = "#{root}/ext".freeze
 				@apache2_module        = "#{root}/ext/apache2/mod_passenger.so".freeze
 			else
 				@bin_dir               = NATIVELY_PACKAGED_BIN_DIR
@@ -119,7 +118,7 @@ module PhusionPassenger
 				@helper_scripts_dir    = NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR
 				@resources_dir         = NATIVELY_PACKAGED_RESOURCES_DIR
 				@doc_dir               = NATIVELY_PACKAGED_DOC_DIR
-				@compilable_source_dir = NATIVELY_PACKAGED_COMPILABLE_SOURCE_DIR
+				@compilable_source_dir = nil
 				@runtime_libdir        = NATIVELY_PACKAGED_RUNTIME_LIBDIR
 				@header_dir            = NATIVELY_PACKAGED_HEADER_DIR
 				@apache2_module        = NATIVELY_PACKAGED_APACHE2_MODULE

@@ -71,12 +71,12 @@ else
 	OUTPUT_DIR = ""
 end
 AGENT_OUTPUT_DIR          = string_option('AGENT_OUTPUT_DIR', OUTPUT_DIR + "agents") + "/"
-COMMON_OUTPUT_DIR         = string_option('COMMON_OUTPUT_DIR', OUTPUT_DIR + "ext/common") + "/"
-APACHE2_OUTPUT_DIR        = string_option('APACHE2_OUTPUT_DIR', OUTPUT_DIR + "ext/apache2") + "/"
-LIBEV_OUTPUT_DIR          = string_option('LIBEV_OUTPUT_DIR', OUTPUT_DIR + "ext/libev") + "/"
-ruby_extension_archdir = PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")
+COMMON_OUTPUT_DIR         = string_option('COMMON_OUTPUT_DIR', OUTPUT_DIR + "libout/common") + "/"
+APACHE2_OUTPUT_DIR        = string_option('APACHE2_OUTPUT_DIR', OUTPUT_DIR + "libout/apache2") + "/"
+LIBEV_OUTPUT_DIR          = string_option('LIBEV_OUTPUT_DIR', OUTPUT_DIR + "libout/libev") + "/"
+ruby_extension_archdir    = PlatformInfo.ruby_extension_binary_compatibility_ids.join("-")
 RUBY_EXTENSION_OUTPUT_DIR = string_option('RUBY_EXTENSION_OUTPUT_DIR',
-	OUTPUT_DIR + "ext/ruby/" + ruby_extension_archdir) + "/"
+	OUTPUT_DIR + "libout/ruby/" + ruby_extension_archdir) + "/"
 
 LIBEXT = PlatformInfo.library_extension
 

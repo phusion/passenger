@@ -38,9 +38,14 @@ module Standalone
 #
 # The following option must be given:
 # - source_root: Path to the Phusion Passenger source root.
+# - targets: One of the following:
+#   * :nginx   - to indicate that you only want to compile and install Nginx.
+#   * :support_binaries - to indicate that you only want to compile and install the
+#                         Phusion Passenger support binary files.
+#   * :both - to indicate that you want to compile and install both Nginx
+#             and the Phusion Passenger support binary files.
 #
-# If you want RuntimeInstaller to compile and install Nginx, then you must
-# specify these options:
+# If targets is set to :nginx or :both, then you must also specify these options:
 # - nginx_dir: Nginx will be installed into this directory.
 # - support_dir: See below.
 # - version (optional): The Nginx version to download. If not given then a
@@ -50,15 +55,14 @@ module Standalone
 #   then Nginx will not be downloaded; it will be extracted from this tarball
 #   instead.
 #
-# If you want RuntimeInstaller to compile and install the Phusion Passenger
-# support files, then you must specify these:
-# - support_dir: The support files will be installed here. Should not equal
-#   +source_root+, or funny things might happen.
+# If targets is set to :support_binaries or :both, then you must also specify these
+# options:
+# - support_dir: The support binary files will be installed here.
 #
 # Other optional options:
 # - download_binaries: If true then RuntimeInstaller will attempt to download
-#   precompiled Nginx binaries and precompiled Phusion Passenger support files
-#   from the network, if they exist for the current platform. The default is
+#   precompiled Nginx binaries and precompiled Phusion Passenger support binary
+#   files from the network, if they exist for the current platform. The default is
 #   false.
 # - binaries_url_root: The URL on which to look for the aforementioned binaries.
 #   The default points to the Phusion website.
@@ -107,15 +111,15 @@ protected
 		end
 		check_dependencies(false) || exit(1)
 		puts
-		if passenger_support_files_need_to_be_installed?
+		if binary_support_files_should_be_installed?
 			check_whether_we_can_write_to(@support_dir) || exit(1)
 		end
 		if nginx_needs_to_be_installed?
 			check_whether_we_can_write_to(@nginx_dir) || exit(1)
 		end
 		
-		if passenger_support_files_need_to_be_installed? && should_download_binaries?
-			download_and_extract_passenger_binaries(@support_dir) do |progress, total|
+		if binary_support_files_should_be_installed? && should_download_binaries?
+			download_and_extract_binary_support_files(@support_dir) do |progress, total|
 				show_progress(progress, total, 1, 1, "Extracting Passenger binaries...")
 			end
 			puts
@@ -139,13 +143,9 @@ protected
 				exit(1)
 			end
 		end
-		if passenger_support_files_need_to_be_installed?
-			install_passenger_support_files do |progress, total, phase, status_text|
-				if phase == 1
-					show_progress(progress, total, 2, 7, status_text)
-				else
-					show_progress(progress, total, 3..5, 7, status_text)
-				end
+		if binary_support_files_should_be_installed?
+			install_binary_support_files do |progress, total, phase, status_text|
+				show_progress(progress, total, 2..5, 7, status_text)
 			end
 		end
 		if nginx_needs_to_be_installed?
@@ -177,11 +177,15 @@ protected
 
 private
 	def nginx_needs_to_be_installed?
-		return @nginx_dir && !File.exist?("#{@nginx_dir}/sbin/nginx")
+		return (@targets == :nginx || @targets == :both) &&
+			!File.exist?("#{@nginx_dir}/sbin/nginx")
 	end
 	
-	def passenger_support_files_need_to_be_installed?
-		return @support_dir && !File.exist?("#{@support_dir}/Rakefile")
+	def binary_support_files_should_be_installed?
+		return (@targets == :support_binaries || @targets == :both) && (
+			!File.exist?("#{@support_dir}/agents/PassengerHelperAgent") ||
+			!File.exist?("#{@support_dir}/ext/common/libpassenger_common.a")
+		)
 	end
 	
 	def should_download_binaries?
@@ -341,8 +345,8 @@ private
 		end
 	end
 	
-	def download_and_extract_passenger_binaries(target, &block)
-		puts "<banner>Downloading Passenger binaries for your platform, if available...</banner>"
+	def download_and_extract_binary_support_files(target, &block)
+		puts "<banner>Downloading Passenger support binaries for your platform, if available...</banner>"
 		runtime_ver_str = runtime_version_string(@version)
 		url     = "#{@binaries_url_root}/#{runtime_ver_str}/support.tar.gz"
 		tarball = "#{@working_dir}/support.tar.gz"
@@ -405,23 +409,11 @@ private
 		exit 2
 	end
 	
-	def install_passenger_support_files
+	def install_binary_support_files
 		begin_progress_bar
-		
-		# Copy Phusion Passenger sources to designated directory if necessary.
 		yield(0, 1, 1, "Preparing Phusion Passenger...")
-		FileUtils.rm_rf(@support_dir)
-		Dir.chdir(@source_root) do
-			files = `#{rake} package:filelist --silent`.split("\n")
-			copy_files(files, @support_dir) do |progress, total|
-				yield(progress, total, 1, "Copying files...")
-			end
-		end
-		
-		# Then compile it.
-		yield(0, 1, 2, "Preparing Phusion Passenger...")
-		Dir.chdir(@support_dir) do
-			run_rake_task!("nginx RELEASE=yes") do |progress, total|
+		Dir.chdir(PhusionPassenger.compilable_source_dir) do
+			run_rake_task!("nginx RELEASE=yes OUTPUT_DIR='#{@support_dir}'") do |progress, total|
 				yield(progress, total, 2, "Compiling Phusion Passenger...")
 			end
 		end
@@ -443,7 +435,7 @@ private
 				"--without-pcre " <<
 				"--without-http_rewrite_module " <<
 				"--without-http_fastcgi_module " <<
-				"'--add-module=#{@support_dir}/ext/nginx'"
+				"'--add-module=#{PhusionPassenger.compilable_source_dir}/ext/nginx'"
 			run_command_with_throbber(command, "Preparing Nginx...") do |status_text|
 				yield(0, 1, status_text)
 			end
