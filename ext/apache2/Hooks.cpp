@@ -543,13 +543,15 @@ private:
 			                    to the HelperAgent **********/
 			
 			vector<StaticString> requestData;
+			string headerData;
 			unsigned int size;
 			char sizeString[16];
 			int ret;
 			
-			requestData.reserve(32);
+			requestData.reserve(3);
+			headerData.reserve(1024 * 2);
 			requestData.push_back(StaticString());
-			size = constructHeaders(r, config, requestData, mapper, appRoot);
+			size = constructHeaders(r, config, requestData, mapper, appRoot, headerData);
 			requestData.push_back(",");
 			
 			ret = snprintf(sizeString, sizeof(sizeString) - 1, "%u:", size);
@@ -768,26 +770,27 @@ private:
 		return lookupInTable(r->subprocess_env, name);
 	}
 	
-	void addHeader(vector<StaticString> &headers, const char *name, const char *value) {
+	void addHeader(string &headers, const char *name, const char *value) {
 		if (name != NULL && value != NULL) {
-			headers.push_back(name);
-			headers.push_back(StaticString("\0", 1));
-			headers.push_back(value);
-			headers.push_back(StaticString("\0", 1));
+			headers.append(name);
+			headers.append(1, '\0');
+			headers.append(value);
+			headers.append(1, '\0');
 		}
 	}
 	
-	void addHeader(vector<StaticString> &headers, const char *name, const StaticString &value) {
+	void addHeader(string &headers, const char *name, const StaticString &value) {
 		if (name != NULL) {
-			headers.push_back(name);
-			headers.push_back(StaticString("\0", 1));
-			headers.push_back(value);
-			headers.push_back(StaticString("\0", 1));
+			headers.append(name);
+			headers.append(1, '\0');
+			headers.append(value.c_str(), value.size());
+			headers.append(1, '\0');
 		}
 	}
 	
 	unsigned int constructHeaders(request_rec *r, DirConfig *config,
-		vector<StaticString> &output, DirectoryMapper &mapper, const string &appRoot)
+		vector<StaticString> &requestData, DirectoryMapper &mapper, const string &appRoot,
+		string &output)
 	{
 		const char *baseURI = mapper.getBaseURI();
 		
@@ -897,13 +900,8 @@ private:
 		/*********************/
 		/*********************/
 		
-		unsigned int size = 0;
-		vector<StaticString>::const_iterator it, end = output.end();
-		
-		for (it = output.begin(); it != end; it++) {
-			size += it->size();
-		}
-		return size;
+		requestData.push_back(output);
+		return output.size();
 	}
 	
 	void throwUploadBufferingException(request_rec *r, int code) {
