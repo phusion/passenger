@@ -106,6 +106,10 @@ EndErr
   end
 end
 
+srcdir=`rpm -E '%{_sourcedir}'`.chomp
+
+FileUtils.ln_sf(Dir["#{ENV['PWD']}/{config/,patches/,release/GPG}*"], srcdir, :verbose => @verbosity > 0)
+
 # No dist for SRPM
 noisy_system(rpmbuild, *((@verbosity > 0 ? [] : %w{--quiet}) + ['--define', 'dist %nil', '-bs', 'passenger.spec']))
 
