@@ -2,14 +2,16 @@
 
 require 'fileutils'
 require 'ftools'
+require 'optparse'
 
 CFGLIMIT=%w{fedora-{13,14} epel-5}
 
 stage_dir='./stage'
-mock_repo_dir = '/var/lib/mock/passenger-build-repo'
 
-mockdir='/etc/mock'
-#mockdir='/tmp/mock'
+mock_base_dir = '/var/lib/mock'
+mock_repo_dir = "#{mock_base_dir}/passenger-build-repo"
+mock_etc_dir='/etc/mock'
+#mock_etc_dir='/tmp/mock'
 
 # If rpmbuild-md5 is installed, use it for the SRPM, so EPEL machines can read it.
 rpmbuild = '/usr/bin/rpmbuild' + (File.exist?('/usr/bin/rpmbuild-md5') ? '-md5' : '')
@@ -30,12 +32,12 @@ rpmarch = `rpm -E '%_arch'`.chomp
 }
 
 #@can_build.keys.each {|k| @can_build[k].push k}
-@can_build = @can_build[rpmarch]
+@can_build = @can_build[rpmarch.to_s == '' ? 'x86_64' : rpmarch]
 @can_build.push rpmarch
 
 bindir=File.dirname($0)
 
-configs = Dir["#{mockdir}/{#{CFGLIMIT.join ','}}*"].map {|f| f.gsub(%r{.*/([^.]*).cfg}, '\1')}
+configs = Dir["#{mock_etc_dir}/{#{CFGLIMIT.join ','}}*"].map {|f| f.gsub(%r{.*/([^.]*).cfg}, '\1')}
 
 def limit_configs(configs, limits)
   tree = configs.inject({}) do |m,c|
@@ -80,6 +82,52 @@ end
 
 
 ############################################################################
+options = {}
+OptionParser.new do |opts|
+  opts.banner = "Usage: #{$0} [options] [distro-version-arch] [distro-version] [distro--arch] [*--arch]"
+
+  opts.on("-v", "--[no-]verbose", "Run verbosely. Add more -v's to increase @verbosity") do |v|
+    @verbosity += v ? 1 : -1
+  end
+
+  # Do these with options, because the order matters
+  opts.on('-b', '--mock-base-dir DIR', "Mock's base directory. Default: #{mock_base_dir}") do |v|
+    #mock_repo_dir = v
+    options[:mock_base_dir] = v
+  end
+
+  opts.on('-r', '--mock-repo-dir DIR', "Directory for special mock yum repository. Default: #{mock_repo_dir}") do |v|
+    #mock_repo_dir = v
+    options[:mock_repo_dir] = v
+  end
+
+  opts.on("-c", "--mock-config-dir DIR", "Directory for mock configuration. Default: #{mock_etc_dir}") do |v|
+    if File.directory?(v)
+      mock_etc_dir=v
+    else
+      abort "No such directory: #{v}"
+    end
+  end
+
+  opts.on_tail("-h", "--help", "Show this message") do
+    puts opts
+    exit
+  end
+end.parse!
+
+if options.key?(:mock_base_dir) || options.key?(:mock_repo_dir)
+  if options.key?(:mock_base_dir)
+    mock_base_dir = options[:mock_base_dir]
+    mock_repo_dir = "#{mock_base_dir}/passenger-build-repo"
+  end
+  if options.key?(:mock_repo_dir)
+    mock_repo_dir = options[:mock_repo_dir]
+    unless mock_repo_dir[0] == '/'[0]
+      mock_repo_dir = "#{mock_base_dir}/#{mock_repo_dir}"
+    end
+  end
+end
+
 configs = limit_configs(configs, ARGV)
 
 if configs.empty?
@@ -95,8 +143,8 @@ ENV['BUILD_VERBOSITY'] = @verbosity.to_s
 
 # Check the ages of the configs for validity
 mtime = File.mtime("#{bindir}/mocksetup.sh")
-if configs.any? {|c| mtime > File.mtime("#{mockdir}/passenger-#{c}.cfg") rescue true }
-  unless noisy_system("#{bindir}/mocksetup.sh", mock_repo_dir)
+if configs.any? {|c| mtime > File.mtime("#{mock_etc_dir}/passenger-#{c}.cfg") rescue true }
+  unless noisy_system("#{bindir}/mocksetup.sh", mock_repo_dir, mock_etc_dir)
     abort <<EndErr
 Unable to run "#{bindir}/mocksetup.sh #{mock_repo_dir}". It is likely that you
 need to run this command as root the first time, but if you have already done

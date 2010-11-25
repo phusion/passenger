@@ -12,7 +12,7 @@ etc=${2:-/etc/mock}
 # For the non-groupinstall configs, pull the members out of the mock-comps.xml
 prereqs=`egrep 'packagereq.*default' $(dirname $0)/mock-comps.xml | cut -d\> -f2 | cut -d\< -f1 | tr '\n' ' '`
 
-for cfg in /etc/mock/{fedora-{13,14},epel-5}-*.cfg
+for cfg in $etc/{fedora-{13,14},epel-5}-*.cfg
 do
   [ $BUILD_VERBOSITY -ge 2 ] && echo $cfg
   dir=`dirname $cfg`
