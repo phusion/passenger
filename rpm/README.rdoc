@@ -22,11 +22,9 @@ Passenger}[http://modrails.org] for Fedora Core 13+, RHEL 5.5+, and CentOS
                   statically linked (nginx does not support dynamically
                   loadable modules)
 
-[rubygem-passenger-standalone] The passenger-standalone server. Currently
-                               downloads & installs a private version of
-                               nginx, and thus is more suited to a development
-                               environment. This may be fixed in a later
-                               release.
+[rubygem-passenger-standalone] The passenger-standalone server. As of
+			       3.0.0-11 this package is correctly built
+			       and installed and is now safe to use.
 
 === Supporting Packages
 
@@ -55,7 +53,11 @@ Passenger}[http://modrails.org] for Fedora Core 13+, RHEL 5.5+, and CentOS
 
 === Other Packages
 
-[rubygem-passenger-debuginfo] Standard debugger symbols for the above packages.
+[rubygem-passenger-debuginfo] Standard debugger symbols for the above
+			      packages. (Turned off in the 3.0.0 tree
+			      due to debugging symbols containing
+			      %builddir paths. This will be reinstaed in
+			      a later release)
 
 == Etc.
 
