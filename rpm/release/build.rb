@@ -183,8 +183,8 @@ configs.each do |cfg|
     abort "Mock failed. See above for details"
   end
   FileUtils.mkdir_p(idir, :verbose => @verbosity > 0)
-  FileUtils.cp(Dir["/var/lib/mock/#{pcfg}/result/*.rpm"],
-  idir, :verbose => @verbosity > 0)
+  FileUtils.cp(Dir["#{mock_base_dir}/#{pcfg}/result/*.rpm"],
+               idir, :verbose => @verbosity > 0)
   FileUtils.rm_f(Dir["#{idir}/*.src.rpm"], :verbose => @verbosity > 1)
 end
 
