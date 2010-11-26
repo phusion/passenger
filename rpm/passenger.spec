@@ -79,9 +79,11 @@ Source1: nginx-%{nginx_version}.tar.gz
 Source100: apache-passenger.conf.in
 Source101: nginx-passenger.conf.in
 Source200: rubygem-passenger.te
-# Ignore everything after the ?, it's meant to trick rpmbuild into
-# finding the correct file
-Source300: http://github.com/gnosek/nginx-upstream-fair/tarball/master?/nginx-upstream-fair.tar.gz
+# The most recent nginx RPM no longer includes this plugin. Remove it from the
+# SRPM
+# # Ignore everything after the ?, it's meant to trick rpmbuild into
+# # finding the correct file
+# Source300: http://github.com/gnosek/nginx-upstream-fair/tarball/master?/nginx-upstream-fair.tar.gz
 Patch0: passenger-os-runtime.patch
 BuildRoot: %{_tmppath}/%{name}-%{passenger_version}-%{passenger_release}-root-%(%{__id_u} -n)
 Requires: rubygems
