@@ -41,14 +41,14 @@ http {
 
     <% if @options[:ping_port] %>
     server {
-        listen <%= nginx_listen_address(true) %>;
+        listen <%= nginx_listen_address(@options, true) %>;
         root '<%= LIBDIR %>/phusion_passenger/templates/standalone_default_root';
     }
     <% end %>
     
     <% for app in @apps %>
     server {
-        listen <%= @options[:address] %>:<%= @options[:port] %>;
+        listen <%= nginx_listen_address(app) %>;
         server_name <%= app[:server_names].join(' ') %>;
         root '<%= app[:root] %>/public';
         passenger_enabled on;

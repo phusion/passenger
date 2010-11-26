@@ -78,11 +78,6 @@ class Installer < PhusionPassenger::AbstractInstaller
 	end
 	
 	def install!
-		if @snippet
-			show_apache2_config_snippets(true)
-			exit
-		end
-		
 		if PhusionPassenger.natively_packaged?
 			check_dependencies || exit(1)
 			show_apache2_config_snippets
@@ -234,4 +229,9 @@ rescue OptionParser::ParseError => e
 	exit 1
 end
 
-Installer.new(options).start
+installer = Installer.new(options)
+if options[:snippet]
+	installer.send(:show_apache2_config_snippets, true)
+else
+	installer.start
+end
