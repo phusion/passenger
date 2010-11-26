@@ -48,7 +48,7 @@
 #include <agents/HelperAgent/HttpStatusExtractor.h>
 #include <agents/HelperAgent/BacktracesServer.h>
 
-#include <AgentBase.h>
+#include <agents/Base.h>
 #include <Constants.h>
 #include <ApplicationPool/Pool.h>
 #include <ApplicationPool/Server.h>

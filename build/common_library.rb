@@ -76,9 +76,9 @@ def define_common_library_task(namespace, output_dir, extra_compiler_flags = nil
 			MessageChannel.h
 			ServerInstanceDir.h
 			Utils/VariantMap.h),
-		'AgentBase.o' => %w(
-			AgentBase.cpp
-			AgentBase.h
+		'AgentsBase.o' => %w(
+			agents/Base.cpp
+			agents/Base.h
 			Utils/VariantMap.h),
 		#'BCrypt.o' => %w(
 		#	BCrypt.cpp

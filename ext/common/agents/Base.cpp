@@ -40,8 +40,8 @@
 	#include <execinfo.h>
 #endif
 
+#include <agents/Base.h>
 #include "Constants.h"
-#include "AgentBase.h"
 #include "Exceptions.h"
 #include "Logging.h"
 

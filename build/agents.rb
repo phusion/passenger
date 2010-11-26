@@ -22,7 +22,7 @@
 #  THE SOFTWARE.
 
 dependencies = [
-	'ext/common/Watchdog.cpp',
+	'ext/common/agents/Watchdog/Main.cpp',
 	'ext/common/ServerInstanceDir.h',
 	'ext/common/ResourceLocator.h',
 	'ext/common/Utils/VariantMap.h',
@@ -32,7 +32,7 @@ dependencies = [
 file AGENT_OUTPUT_DIR + 'PassengerWatchdog' => dependencies do
 	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
 	create_executable(AGENT_OUTPUT_DIR + 'PassengerWatchdog',
-		'ext/common/Watchdog.cpp',
+		'ext/common/agents/Watchdog/Main.cpp',
 		"-Iext -Iext/common #{PlatformInfo.portability_cflags} #{EXTRA_CXXFLAGS} " <<
 		"#{LIBCOMMON} " <<
 		"#{LIBBOOST_OXT} " <<

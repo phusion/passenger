@@ -38,8 +38,8 @@
 #include <cstring>
 #include <cerrno>
 
+#include <agents/Base.h>
 #include "Constants.h"
-#include "AgentBase.h"
 #include "ServerInstanceDir.h"
 #include "FileDescriptor.h"
 #include "MessageChannel.h"

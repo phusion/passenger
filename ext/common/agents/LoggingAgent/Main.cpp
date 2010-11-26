@@ -36,9 +36,9 @@
 #include <cerrno>
 #include <signal.h>
 
+#include <agents/Base.h>
 #include <agents/LoggingAgent/LoggingServer.h>
 
-#include <AgentBase.h>
 #include <AccountsDatabase.h>
 #include <Account.h>
 #include <ServerInstanceDir.h>
